@@ -14,8 +14,8 @@ pub mod menu;
 pub mod options_dialog;
 pub mod properties;
 pub mod status;
-pub mod toolbar;
 pub mod tool_preview;
+pub mod toolbar;
 
 pub use dialogs::{
     handle_file_dialogs, show_dedup_dialog, show_heightmap_warning, show_marker_dialog,

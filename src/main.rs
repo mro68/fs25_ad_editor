@@ -195,10 +195,11 @@ impl EditorApp {
                     if let Some(hover_pos) = response.hover_pos() {
                         let local = hover_pos - rect.min;
                         let vp = glam::Vec2::new(viewport_size[0], viewport_size[1]);
-                        let cursor_world = self.state.view.camera.screen_to_world(
-                            glam::Vec2::new(local.x, local.y),
-                            vp,
-                        );
+                        let cursor_world = self
+                            .state
+                            .view
+                            .camera
+                            .screen_to_world(glam::Vec2::new(local.x, local.y), vp);
                         if let Some(rm) = self.state.road_map.as_deref() {
                             ui::render_tool_preview(
                                 &ui.painter_at(rect),

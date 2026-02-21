@@ -292,7 +292,14 @@ impl RouteTool for StraightLineTool {
     fn execute(&self, road_map: &RoadMap) -> Option<ToolResult> {
         let start = *self.start.as_ref()?;
         let end = *self.end.as_ref()?;
-        build_result(start, end, self.max_segment_length, self.direction, self.priority, road_map)
+        build_result(
+            start,
+            end,
+            self.max_segment_length,
+            self.direction,
+            self.priority,
+            road_map,
+        )
     }
 
     fn reset(&mut self) {
@@ -345,7 +352,14 @@ impl RouteTool for StraightLineTool {
     fn execute_from_anchors(&self, road_map: &RoadMap) -> Option<ToolResult> {
         let start = self.last_start_anchor?;
         let end = self.last_end_anchor?;
-        build_result(start, end, self.max_segment_length, self.direction, self.priority, road_map)
+        build_result(
+            start,
+            end,
+            self.max_segment_length,
+            self.direction,
+            self.priority,
+            road_map,
+        )
     }
 }
 
