@@ -288,12 +288,15 @@ impl BackgroundRenderer {
         visible: bool,
     ) {
         // Nichts zu rendern, wenn kein Background oder nicht visible
-        if !visible || self.bind_group.is_none() || self.current_bounds.is_none() {
+        if !visible {
             return;
         }
-
-        let bind_group = self.bind_group.as_ref().unwrap();
-        let bounds = self.current_bounds.as_ref().unwrap();
+        let Some(bind_group) = self.bind_group.as_ref() else {
+            return;
+        };
+        let Some(bounds) = self.current_bounds.as_ref() else {
+            return;
+        };
 
         // Update Uniforms
         let view_proj = super::types::build_view_projection(camera, viewport_size);

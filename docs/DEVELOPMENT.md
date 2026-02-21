@@ -64,6 +64,13 @@ struct RoadMap {
 6. ✅ `main.rs` in Runner/Adapter-orientierte Update-Schritte zerlegt
 7. ✅ Gezielte UI-/Render-Tests ergänzt (Input→Intent, Culling-Geometrie)
 
+## Architektur-Verbesserungen (2025-07-02)
+- ✅ Controller-Split: `handle_command()` in Feature-Handler aufgeteilt (`handlers/`)
+- ✅ UI→Core-Layerverletzung behoben: `properties.rs` importiert `RoadMap` via `app` Re-Export
+- ✅ CI-Check für Schichtgrenzen: `scripts/check_layer_boundaries.sh` + `make ci-check`
+- ✅ Alle `unwrap()` in Produktionscode durch graceful error handling ersetzt
+- ✅ Alle Markdown-Dokumentationen nachgeführt (API.md, ARCHITECTURE_PLAN.md, DATA_MODEL.md, ROADMAP.md)
+
 ## Aktuelle Arbeitsweise
 - Dokumentation wird derzeit manuell aktualisiert (kein automatischer Doku-Sync aktiv).
-- CI-Aktivierung ist momentan nicht Teil des aktiven Umfangs.
+- CI-Basis vorhanden: Layer-Boundary-Check via `make ci-check` (prüft dass `ui/` nicht direkt aus `core` importiert).

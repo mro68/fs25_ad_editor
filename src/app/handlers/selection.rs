@@ -1,0 +1,59 @@
+//! Handler für Selektions-Operationen.
+
+use crate::app::use_cases;
+use crate::app::AppState;
+
+pub fn select_nearest_node(
+    state: &mut AppState,
+    world_pos: glam::Vec2,
+    max_distance: f32,
+    additive: bool,
+    extend_path: bool,
+) {
+    use_cases::selection::select_nearest_node(state, world_pos, max_distance, additive, extend_path);
+}
+
+pub fn select_segment(
+    state: &mut AppState,
+    world_pos: glam::Vec2,
+    max_distance: f32,
+    additive: bool,
+) {
+    use_cases::selection::select_segment_between_nearest_intersections(
+        state,
+        world_pos,
+        max_distance,
+        additive,
+    );
+}
+
+pub fn select_in_rect(state: &mut AppState, min: glam::Vec2, max: glam::Vec2, additive: bool) {
+    use_cases::selection::select_nodes_in_rect(state, min, max, additive);
+}
+
+pub fn select_in_lasso(state: &mut AppState, polygon: &[glam::Vec2], additive: bool) {
+    use_cases::selection::select_nodes_in_lasso(state, polygon, additive);
+}
+
+pub fn move_selected(state: &mut AppState, delta_world: glam::Vec2) {
+    use_cases::selection::move_selected_nodes(state, delta_world);
+}
+
+pub fn begin_move(state: &mut AppState) {
+    state.record_undo_snapshot();
+}
+
+pub fn clear(state: &mut AppState) {
+    use_cases::selection::clear_selection(state);
+}
+
+pub fn select_all(state: &mut AppState) {
+    if let Some(road_map) = state.road_map.as_deref() {
+        state.selection.selected_node_ids = road_map.nodes.keys().copied().collect();
+        state.selection.selection_anchor_node_id = None;
+        log::info!(
+            "Alle {} Nodes selektiert",
+            state.selection.selected_node_ids.len()
+        );
+    }
+}
