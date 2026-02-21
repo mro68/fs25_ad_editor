@@ -5,6 +5,7 @@
 //! die Mutation erfolgt zentral in `apply_tool_result`.
 
 pub mod curve;
+pub mod spline;
 pub mod straight_line;
 
 use crate::core::{ConnectionDirection, ConnectionPriority, NodeFlag, RoadMap};
@@ -178,6 +179,7 @@ impl ToolManager {
         // Standard-Tools registrieren
         manager.register(Box::new(straight_line::StraightLineTool::new()));
         manager.register(Box::new(curve::CurveTool::new()));
+        manager.register(Box::new(spline::SplineTool::new()));
         manager
     }
 

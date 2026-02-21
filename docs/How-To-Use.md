@@ -94,8 +94,7 @@ Das Hauptfenster besteht aus folgenden Bereichen:
 Zeigt die verfügbaren Werkzeuge:
 - **⊹ Select (1)** — Standard-Werkzeug: Nodes selektieren und verschieben
 - **⟷ Connect (2)** — Verbindungen zwischen Nodes erstellen
-- **＋ Add Node (3)** — Neue Nodes auf der Karte platzieren
-- **🗑 Delete (Del)** — Selektierte Nodes löschen (nur aktiv bei Selektion)
+- **＋ Add Node (3)** — Neue Nodes auf der Karte platzieren- **Route-Tools (4)** — Route-Werkzeuge: Gerade Strecke, Bézier-Kurve, Spline- **🗑 Delete (Del)** — Selektierte Nodes löschen (nur aktiv bei Selektion)
 - **Hintergrund-Controls** — Opacity-Slider und Sichtbarkeits-Toggle (rechts, nur wenn Hintergrund geladen)
 
 ### Statusleiste
@@ -235,6 +234,59 @@ Platziert neue Wegpunkte auf der Karte.
 **Workflow:**
 - Klick auf eine beliebige Stelle → neuer Node wird an der Welt-Position eingefügt
 - Der neue Node erhält automatisch die nächste freie ID
+
+### Route-Tools (4)
+
+Erstellt Strecken und Kurse über vordefinierte Geometrien. Im Route-Modus stehen drei Sub-Tools zur Verfügung:
+
+#### 📏 Gerade Strecke
+
+Zeichnet eine gerade Linie zwischen zwei Punkten mit automatischen Zwischen-Nodes.
+
+**Workflow:**
+1. Startpunkt klicken
+2. Endpunkt klicken → Vorschau erscheint
+3. Enter → Strecke wird erstellt
+
+**Einstellungen:** Min. Abstand (Segment-Länge) und Anzahl Nodes.
+
+#### 🔀 Kurve (Bézier)
+
+Zeichnet eine Bézier-Kurve (Grad 2 oder 3) mit Steuerpunkten.
+
+**Workflow:**
+1. Startpunkt klicken
+2. Endpunkt klicken
+3. Steuerpunkt(e) klicken → Vorschau erscheint
+4. Optional: Punkte per Drag anpassen
+5. Enter → Kurve wird erstellt
+
+**Einstellungen:** Grad (Quadratisch/Kubisch), Min. Abstand, Anzahl Nodes.
+
+#### 〰️ Spline (Catmull-Rom)
+
+Zeichnet einen interpolierenden Spline, der durch **alle geklickten Punkte** führt. Im Gegensatz zur Bézier-Kurve (die Steuerpunkte nur annähert) verläuft der Spline exakt durch jeden gesetzten Punkt.
+
+**Workflow:**
+1. Beliebig viele Punkte nacheinander klicken (mindestens 2)
+2. Vorschau wird fortlaufend aktualisiert (Cursor = nächster Punkt)
+3. Enter → Spline wird erstellt
+
+**Einstellungen:** Min. Abstand (Segment-Länge) und Anzahl Nodes.
+
+**Besonderheiten:**
+- Ab 3 Punkten entsteht eine glatte Kurve (Catmull-Rom-Interpolation)
+- Mit 2 Punkten wird eine gerade Strecke erzeugt
+- Verkettung: Nach Enter wird der letzte Endpunkt automatisch als neuer Startpunkt übernommen
+- Nachbearbeitung: Segment-Länge / Node-Anzahl können nach Erstellung geändert werden
+
+#### Gemeinsame Eigenschaften aller Route-Tools
+
+- **Enter** bestätigt und erstellt die Route
+- **Escape** bricht ab und setzt das Tool zurück
+- **Verkettung:** Nach Erstellung wird der letzte Endpunkt als neuer Startpunkt übernommen
+- **Nachbearbeitung:** Segment-Länge/Node-Anzahl können nach Erstellung per Slider angepasst werden
+- **Snap:** Start- und Endpunkte rasten auf existierende Nodes ein (Snap-Radius: 3m)
 
 ---
 
@@ -474,7 +526,16 @@ Auch über **Edit → Undo / Redo** im Menü verfügbar (mit Anzeige ob verfügb
 4. Nodes bearbeiten (Select-Tool, Drag zum Verschieben)
 5. `Ctrl+S` → Speichern
 
-### Route erstellen
+### Route erstellen (mit Route-Tools)
+
+1. **Route-Tool (4)** aktivieren
+2. Sub-Tool wählen: Gerade Strecke, Kurve oder Spline
+3. Punkte auf der Karte klicken (Vorschau wird live angezeigt)
+4. Segment-Länge / Node-Anzahl per Slider anpassen
+5. **Enter** → Route wird erstellt
+6. Für weitere Segmente: Verkettung nutzt automatisch den letzten Endpunkt
+
+### Route manuell erstellen
 
 1. **Add-Node-Tool (3)** aktivieren
 2. Nacheinander Nodes auf der Karte platzieren
