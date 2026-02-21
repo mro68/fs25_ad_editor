@@ -31,8 +31,11 @@ impl InputState {
         }
     }
 
-    /// Sammelt Viewport-Events aus egui-Input und gibt AppIntents zurück.
     #[allow(clippy::too_many_arguments)]
+    /// Sammelt Viewport-Events aus egui-Input und gibt AppIntents zurück.
+    ///
+    /// Diese Methode ist der zentrale UI→Intent-Einstieg für Maus-, Scroll-
+    /// und Drag-Interaktionen im Viewport.
     pub fn collect_viewport_events(
         &mut self,
         ui: &egui::Ui,

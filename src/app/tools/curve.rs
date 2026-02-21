@@ -72,6 +72,7 @@ pub struct CurveTool {
 }
 
 impl CurveTool {
+    /// Erstellt ein neues Kurven-Tool mit Standardparametern.
     pub fn new() -> Self {
         Self {
             phase: Phase::Start,

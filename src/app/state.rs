@@ -232,6 +232,7 @@ impl AppState {
         self.history.can_undo()
     }
 
+    /// Gibt zurück, ob ein Redo-Schritt verfügbar ist.
     pub fn can_redo(&self) -> bool {
         self.history.can_redo()
     }

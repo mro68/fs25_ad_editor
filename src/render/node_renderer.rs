@@ -140,8 +140,11 @@ impl NodeRenderer {
         }
     }
 
-    /// Rendert alle Nodes der RoadMap
     #[allow(clippy::too_many_arguments)]
+    /// Rendert alle sichtbaren Nodes der RoadMap per GPU-Instancing.
+    ///
+    /// Führt Viewport-Culling durch und schreibt Instanzdaten in den
+    /// wiederverwendbaren Instance-Buffer.
     pub fn render(
         &mut self,
         device: &wgpu::Device,
