@@ -1,7 +1,11 @@
 //! Kurven-Tool: Zeichnet Bézier-Kurven 2. oder 3. Grades.
 //!
-//! **Quadratisch (Grad 2):** Start → End → 1 Steuerpunkt (Klick repositioniert) → Enter
-//! **Kubisch (Grad 3):** Start → End → CP1 per Linksklick, CP2 per Ctrl+Linksklick → Enter
+//! **Quadratisch (Grad 2):** Start → End → 1 Steuerpunkt (Klick) → Drag-Anpassung → Enter
+//! **Kubisch (Grad 3):** Start → End → CP1 (Klick) → CP2 (Klick) → Drag-Anpassung → Enter
+//!
+//! Nach Platzierung aller Punkte können Start, End und Steuerpunkte
+//! per Drag verschoben werden. Start/Ende rasten beim Loslassen auf
+//! nahe existierende Nodes ein (Re-Snap).
 //!
 //! Grad wird über `render_config` umgeschaltet (UI-Dropdown).
 

@@ -75,11 +75,13 @@
   - [x] Map-Auswahl UI (Datei-Dialog + Menü)
   - [x] Opacity- und Sichtbarkeits-Steuerung
   - [ ] Zoom-abhängige LOD
-- [ ] Kurven-Werkzeuge (Bezier, Arc-Spline)
-  - [ ] Bezier-Interpolation
+- [🟡] Kurven-Werkzeuge (Bezier, Arc-Spline)
+  - [x] Bezier-Interpolation (Grad 2 + 3)
   - [ ] Arc-Spline (FS25-spezifisch)
-  - [ ] Auto-Generation von Intermediate-Nodes
-  - [ ] Kurven-Preview
+  - [x] Auto-Generation von Intermediate-Nodes
+  - [x] Kurven-Preview
+  - [x] Sequentielle Steuerpunkt-Platzierung (kein Ctrl+Klick)
+  - [x] Drag-basierte Steuerpunkt-Anpassung
 - [🟡] Marker-Management
   - [x] Marker-Icons im Viewport (GPU-Instanced Pin-Symbole)
   - [x] Marker erstellen/löschen (Use-Case + Kontextmenü)
@@ -170,7 +172,7 @@
 - Phase 2: ✅ 100%
 - Phase 3: ✅ 98% (Theme fehlt)
 - Phase 4: ✅ 100% (alle Features implementiert, 100k-Benchmarks ausstehend)
-- Phase 5: 🟡 60% (DDS-Background + Marker-Editor fertig, Kurven-Werkzeuge ausstehend)
+- Phase 5: 🟡 75% (DDS-Background + Marker-Editor + Bézier-Kurven fertig, Arc-Spline ausstehend)
 - Phase 6: 🟡 40% (Handler-Split, CI-Checks, unwrap-Bereinigung, API-Docs nachgeführt)
 
 **Errungenschaften seit letztem Update (Modularisierungs-Session 2026-02-21):**
