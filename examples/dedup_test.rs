@@ -18,12 +18,26 @@ fn main() {
     let result = rm.deduplicate_nodes(0.01);
 
     println!("=== Duplikat-Bereinigung ===");
-    println!("Vorher:  {} Nodes, {} Connections, {} Marker", before_nodes, before_conns, before_markers);
-    println!("Nachher: {} Nodes, {} Connections, {} Marker", rm.node_count(), rm.connection_count(), rm.marker_count());
+    println!(
+        "Vorher:  {} Nodes, {} Connections, {} Marker",
+        before_nodes, before_conns, before_markers
+    );
+    println!(
+        "Nachher: {} Nodes, {} Connections, {} Marker",
+        rm.node_count(),
+        rm.connection_count(),
+        rm.marker_count()
+    );
     println!();
     println!("Entfernte Duplikat-Nodes:    {}", result.removed_nodes);
     println!("Positions-Gruppen:           {}", result.duplicate_groups);
-    println!("Umgeleitete Verbindungen:    {}", result.remapped_connections);
-    println!("Entfernte Selbstreferenzen:  {}", result.removed_self_connections);
+    println!(
+        "Umgeleitete Verbindungen:    {}",
+        result.remapped_connections
+    );
+    println!(
+        "Entfernte Selbstreferenzen:  {}",
+        result.removed_self_connections
+    );
     println!("Umgeleitete Marker:          {}", result.remapped_markers);
 }

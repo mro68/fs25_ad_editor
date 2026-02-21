@@ -1,6 +1,7 @@
-use criterion::{black_box, criterion_group, criterion_main, BenchmarkId, Criterion};
+use criterion::{criterion_group, criterion_main, BenchmarkId, Criterion};
 use fs25_auto_drive_editor::{parse_autodrive_config, MapNode, NodeFlag, RoadMap};
 use glam::Vec2;
+use std::hint::black_box;
 
 fn bench_xml_parsing(c: &mut Criterion) {
     let xml_content = include_str!("../tests/fixtures/simple_config.xml");
