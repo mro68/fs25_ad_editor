@@ -281,6 +281,21 @@ impl AppController {
             AppIntent::DeduplicateCancelled => {
                 vec![AppCommand::DismissDeduplicateDialog]
             }
+            AppIntent::RouteToolClicked { world_pos } => {
+                vec![AppCommand::RouteToolClick { world_pos }]
+            }
+            AppIntent::RouteToolExecuteRequested => {
+                vec![AppCommand::RouteToolExecute]
+            }
+            AppIntent::RouteToolCancelled => {
+                vec![AppCommand::RouteToolCancel]
+            }
+            AppIntent::SelectRouteToolRequested { index } => {
+                vec![AppCommand::SelectRouteTool { index }]
+            }
+            AppIntent::RouteToolConfigChanged => {
+                vec![AppCommand::RouteToolRecreate]
+            }
         }
     }
 
@@ -453,10 +468,18 @@ impl AppController {
             }
             AppCommand::SetDefaultDirection { direction } => {
                 state.editor.default_direction = direction;
+                // Aktives Route-Tool synchronisieren
+                if let Some(tool) = state.editor.tool_manager.active_tool_mut() {
+                    tool.set_direction(direction);
+                }
                 log::info!("Standard-Verbindungsrichtung: {:?}", direction);
             }
             AppCommand::SetDefaultPriority { priority } => {
                 state.editor.default_priority = priority;
+                // Aktives Route-Tool synchronisieren
+                if let Some(tool) = state.editor.tool_manager.active_tool_mut() {
+                    tool.set_priority(priority);
+                }
                 log::info!("Standard-Straßenart: {:?}", priority);
             }
             AppCommand::SetAllConnectionsDirectionBetweenSelected { direction } => {
@@ -547,10 +570,7 @@ impl AppController {
                 if let Some(road_map) = state.road_map.as_deref() {
                     state.selection.selected_node_ids = road_map.nodes.keys().copied().collect();
                     state.selection.selection_anchor_node_id = None;
-                    log::info!(
-                        "Alle {} Nodes selektiert",
-                        state.selection.selected_node_ids.len()
-                    );
+                    log::info!("Alle {} Nodes selektiert", state.selection.selected_node_ids.len());
                 }
             }
             AppCommand::DeduplicateNodes => {
@@ -559,6 +579,89 @@ impl AppController {
             AppCommand::DismissDeduplicateDialog => {
                 state.ui.show_dedup_dialog = false;
                 state.ui.status_message = None;
+            }
+            AppCommand::RouteToolClick { world_pos } => {
+                if let Some(road_map) = state.road_map.as_deref() {
+                    if let Some(tool) = state.editor.tool_manager.active_tool_mut() {
+                        let action = tool.on_click(world_pos, road_map);
+                        if action == crate::app::tools::ToolAction::ReadyToExecute {
+                            // Ergebnis erzeugen und anwenden
+                            if let Some(result) = state.editor.tool_manager
+                                .active_tool()
+                                .and_then(|t| t.execute(state.road_map.as_deref().unwrap())) {
+                                let ids = use_cases::editing::apply_tool_result(state, result);
+                                // IDs im Tool speichern (für Nachbearbeitung + Verkettung)
+                                if let Some(tool) = state.editor.tool_manager.active_tool_mut() {
+                                    tool.set_last_created(ids);
+                                    tool.reset();
+                                }
+                            } else if let Some(tool) = state.editor.tool_manager.active_tool_mut() {
+                                tool.reset();
+                            }
+                        }
+                    }
+                }
+            }
+            AppCommand::RouteToolExecute => {
+                if let Some(road_map) = state.road_map.as_deref() {
+                    if let Some(tool) = state.editor.tool_manager.active_tool() {
+                        if let Some(result) = tool.execute(road_map) {
+                            let ids = use_cases::editing::apply_tool_result(state, result);
+                            if let Some(tool) = state.editor.tool_manager.active_tool_mut() {
+                                tool.set_last_created(ids);
+                            }
+                        }
+                    }
+                    if let Some(tool) = state.editor.tool_manager.active_tool_mut() {
+                        tool.reset();
+                    }
+                }
+            }
+            AppCommand::RouteToolCancel => {
+                if let Some(tool) = state.editor.tool_manager.active_tool_mut() {
+                    tool.reset();
+                }
+            }
+            AppCommand::SelectRouteTool { index } => {
+                state.editor.tool_manager.set_active(index);
+                state.editor.active_tool = crate::app::state::EditorTool::Route;
+                state.editor.connect_source_node = None;
+                // Richtung/Straßenart vom Editor-Standard übernehmen
+                let dir = state.editor.default_direction;
+                let prio = state.editor.default_priority;
+                if let Some(tool) = state.editor.tool_manager.active_tool_mut() {
+                    tool.set_direction(dir);
+                    tool.set_priority(prio);
+                }
+                log::info!("Route-Tool aktiviert: Index {}", index);
+            }
+            AppCommand::RouteToolRecreate => {
+                // Alte Nodes löschen, Strecke mit neuen Parametern neu erstellen
+                if let Some(tool) = state.editor.tool_manager.active_tool() {
+                    let old_ids = tool.last_created_ids().to_vec();
+                    if !old_ids.is_empty() {
+                        // Undo-Snapshot VOR Löschung + Neuberechnung
+                        state.record_undo_snapshot();
+                        use_cases::editing::delete_nodes_by_ids(state, &old_ids);
+
+                        // Neu erstellen aus gespeicherten Ankern
+                        if let Some(result) = state.editor.tool_manager
+                            .active_tool()
+                            .and_then(|t| t.execute_from_anchors(state.road_map.as_deref().unwrap()))
+                        {
+                            let new_ids = use_cases::editing::apply_tool_result_no_snapshot(state, result);
+                            if let Some(tool) = state.editor.tool_manager.active_tool_mut() {
+                                tool.clear_recreate_flag();
+                                // Neue IDs speichern (Anker bleiben erhalten)
+                                let last_created = tool.last_created_ids().to_vec();
+                                // Nur die IDs aktualisieren, Anker bleiben
+                                let _ = last_created; // verwerfen, da set_last_created Anker überschreiben würde
+                                // Direkt IDs setzen ohne Anker zu überschreiben
+                                tool.set_last_created(new_ids);
+                            }
+                        }
+                    }
+                }
             }
         }
 

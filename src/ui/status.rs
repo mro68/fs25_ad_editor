@@ -70,6 +70,7 @@ pub fn render_status_bar(ctx: &egui::Context, state: &AppState) {
                 EditorTool::Select => "Select",
                 EditorTool::Connect => "Connect",
                 EditorTool::AddNode => "Add Node",
+                EditorTool::Route => "Route-Tool",
             };
             ui.label(format!("Tool: {}", tool_name));
 

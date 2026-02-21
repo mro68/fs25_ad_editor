@@ -1,6 +1,7 @@
 //! Application State — zentrale Datenhaltung.
 
 use super::history::Snapshot;
+use super::tools::ToolManager;
 use super::CommandLog;
 use crate::core::Camera2D;
 use crate::core::{BackgroundMap, ConnectionDirection, ConnectionPriority, RoadMap};
@@ -18,10 +19,11 @@ pub enum EditorTool {
     Connect,
     /// Neue Nodes auf der Karte platzieren
     AddNode,
+    /// Route-Tools (Linie, Parkplatz, Kurve, …)
+    Route,
 }
 
 /// Zustand des aktuellen Editor-Werkzeugs
-#[derive(Default)]
 pub struct EditorToolState {
     /// Aktives Werkzeug
     pub active_tool: EditorTool,
@@ -31,6 +33,14 @@ pub struct EditorToolState {
     pub default_direction: ConnectionDirection,
     /// Standard-Straßenart für neue Verbindungen
     pub default_priority: ConnectionPriority,
+    /// Route-Tool-Manager (Linie, Parkplatz, Kurve, …)
+    pub tool_manager: ToolManager,
+}
+
+impl Default for EditorToolState {
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 impl EditorToolState {
@@ -41,6 +51,7 @@ impl EditorToolState {
             connect_source_node: None,
             default_direction: ConnectionDirection::Regular,
             default_priority: ConnectionPriority::Regular,
+            tool_manager: ToolManager::new(),
         }
     }
 }

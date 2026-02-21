@@ -41,6 +41,28 @@ pub fn render_toolbar(ctx: &egui::Context, state: &AppState) -> Vec<AppIntent> {
 
             ui.separator();
 
+            // Route-Tools (dynamisch aus ToolManager)
+            let tool_names: Vec<(usize, String)> = state
+                .editor
+                .tool_manager
+                .tool_names()
+                .into_iter()
+                .map(|(i, name)| (i, name.to_string()))
+                .collect();
+            let active_route_index = if active == EditorTool::Route {
+                state.editor.tool_manager.active_index()
+            } else {
+                None
+            };
+            for (index, name) in &tool_names {
+                let is_active = active_route_index == Some(*index);
+                if ui.selectable_label(is_active, name.as_str()).clicked() {
+                    events.push(AppIntent::SelectRouteToolRequested { index: *index });
+                }
+            }
+
+            ui.separator();
+
             // Delete-Button (nur wenn Selektion vorhanden)
             let has_selection = !state.selection.selected_node_ids.is_empty();
             if ui
@@ -57,6 +79,14 @@ pub fn render_toolbar(ctx: &egui::Context, state: &AppState) -> Vec<AppIntent> {
                     ui.label(format!("Startknoten: {} → Wähle Zielknoten", source_id));
                 } else {
                     ui.label("Wähle Startknoten");
+                }
+            }
+
+            // Route-Tool Status
+            if active == EditorTool::Route {
+                ui.separator();
+                if let Some(tool) = state.editor.tool_manager.active_tool() {
+                    ui.label(tool.status_text());
                 }
             }
 
