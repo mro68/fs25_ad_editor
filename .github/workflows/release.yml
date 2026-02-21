@@ -45,14 +45,11 @@ jobs:
             - name: Strip binary
               run: strip target/release/${{ env.BIN_NAME }}
 
-            - name: Rename binary
-              run: cp target/release/${{ env.BIN_NAME }} ${{ env.BIN_NAME }}_x64_linux
-
             - name: Upload artifact
               uses: actions/upload-artifact@v4
               with:
                   name: linux-binary
-                  path: ${{ env.BIN_NAME }}_x64_linux
+                  path: target/release/${{ env.BIN_NAME }}
 
     build-windows:
         name: Build Windows x64
@@ -76,14 +73,11 @@ jobs:
             - name: Build
               run: cargo build --release
 
-            - name: Rename binary
-              run: copy target\release\${{ env.BIN_NAME }}.exe ${{ env.BIN_NAME }}_x64_windows.exe
-
             - name: Upload artifact
               uses: actions/upload-artifact@v4
               with:
                   name: windows-binary
-                  path: ${{ env.BIN_NAME }}_x64_windows.exe
+                  path: target/release/${{ env.BIN_NAME }}.exe
 
     release:
         name: Create GitHub Release
@@ -103,12 +97,12 @@ jobs:
                   name: windows-binary
 
             - name: Make Linux binary executable
-              run: chmod +x ${{ env.BIN_NAME }}_x64_linux
+              run: chmod +x ${{ env.BIN_NAME }}
 
             - name: Create Release
               uses: softprops/action-gh-release@v2
               with:
                   generate_release_notes: true
                   files: |
-                      ${{ env.BIN_NAME }}_x64_linux
-                      ${{ env.BIN_NAME }}_x64_windows.exe
+                      ${{ env.BIN_NAME }}
+                      ${{ env.BIN_NAME }}.exe
