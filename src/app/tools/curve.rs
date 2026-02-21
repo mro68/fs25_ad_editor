@@ -417,9 +417,16 @@ impl RouteTool for CurveTool {
             && self.last_control_point1.is_some();
 
         if adjusting {
-            let start_pos = self.last_start_anchor.unwrap().position();
-            let end_pos = self.last_end_anchor.unwrap().position();
-            let cp1 = self.last_control_point1.unwrap();
+            let (Some(start_anchor), Some(end_anchor), Some(cp1)) = (
+                self.last_start_anchor,
+                self.last_end_anchor,
+                self.last_control_point1,
+            ) else {
+                return changed;
+            };
+
+            let start_pos = start_anchor.position();
+            let end_pos = end_anchor.position();
             let cp2 = self.last_control_point2;
             let length = match self.degree {
                 CurveDegree::Quadratic => {
