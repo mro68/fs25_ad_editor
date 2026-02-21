@@ -1,0 +1,65 @@
+[package]
+name = "FS25-AutoDrive-Editor"
+version = "0.1.0"
+edition = "2021"
+authors = ["MRO"]
+
+[lib]
+name = "fs25_auto_drive_editor"
+path = "src/lib.rs"
+
+[[bin]]
+name = "FS25-AutoDrive-Editor"
+path = "src/main.rs"
+
+[[bench]]
+name = "core_bench"
+harness = false
+
+[dependencies]
+# UI Framework
+egui = "0.33.3"
+eframe = { version = "0.33.3", default-features = true, features = [
+    "default_fonts",
+    "glow",
+    "persistence",
+    "wgpu",
+] }
+egui_extras = { version = "0.33.3", features = ["all_loaders"] }
+egui-wgpu = "0.33.3"
+
+# Rendering
+wgpu = "27.0.1"                                        # Muss mit eframe/egui-wgpu kompatibel sein
+bytemuck = { version = "1.14", features = ["derive"] }
+glam = "0.32.0"
+
+# XML Processing
+quick-xml = "0.39.2"
+
+# Spatial Index
+kiddo = "5.2.4"
+
+# Image Processing
+image = { version = "0.25", features = ["dds", "png", "jpeg"] }
+
+# Serialization
+serde = { version = "1", features = ["derive"] }
+toml = "0.9.8"
+
+# Utility
+anyhow = "1.0.102"
+log = "0.4"
+env_logger = "0.11.9"
+rfd = "0.17.2"
+
+[dev-dependencies]
+approx = "0.5"
+criterion = "0.8.2"
+
+[profile.release]
+opt-level = 3
+lto = true
+codegen-units = 1
+
+[profile.dev]
+opt-level = 1

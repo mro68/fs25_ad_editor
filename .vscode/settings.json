@@ -1,0 +1,17 @@
+{
+  "[rust]": {
+    "editor.tabSize": 4
+  },
+  "files.watcherExclude": {
+    "**/target/**": true
+  },
+  "github.copilot.enable": {
+    "*": true,
+    "plaintext": false,
+    "markdown": true,
+    "rust": true
+  },
+  "window.zoomLevel": 0.5,
+  "rust-analyzer.checkOnSave": true,
+  "rust-analyzer.cargo.targetDir": ".tmp/rust-analyzer"
+}

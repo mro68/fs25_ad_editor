@@ -1,0 +1,9 @@
+{
+    "subject": "Rust build validation",
+    "fact": "Das Repository lässt sich erfolgreich mit `cargo check` im Workspace-Root prüfen.",
+    "citations": [
+        "Terminal-Ausführung am 2026-02-15 in /home/mro/Share/repos/fs25_auto_drive_editor mit Exit-Code 0"
+    ],
+    "reason": "Hilft bei zukünftigen Aufgaben, schnell den korrekten Standard-Validierungsschritt zu kennen.",
+    "category": "build"
+}
