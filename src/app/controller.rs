@@ -177,6 +177,13 @@ impl AppController {
             AppCommand::RouteToolCancel => handlers::route_tool::cancel(state),
             AppCommand::SelectRouteTool { index } => handlers::route_tool::select(state, index),
             AppCommand::RouteToolRecreate => handlers::route_tool::recreate(state),
+            AppCommand::RouteToolDragStart { world_pos } => {
+                handlers::route_tool::drag_start(state, world_pos)
+            }
+            AppCommand::RouteToolDragUpdate { world_pos } => {
+                handlers::route_tool::drag_update(state, world_pos)
+            }
+            AppCommand::RouteToolDragEnd => handlers::route_tool::drag_end(state),
 
             // === Dialoge & Anwendungssteuerung ===
             AppCommand::RequestExit => handlers::dialog::request_exit(state),
