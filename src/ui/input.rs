@@ -13,6 +13,8 @@ enum PrimaryDragMode {
     None,
     SelectionMove,
     CameraPan,
+    /// Drag eines Route-Tool-Steuerpunkts (Anker/CP)
+    RouteToolPointDrag,
 }
 
 /// Verwaltet den Input-Zustand für das Viewport (Drag, Selektion, Scroll)
@@ -36,6 +38,9 @@ impl InputState {
     ///
     /// Diese Methode ist der zentrale UI→Intent-Einstieg für Maus-, Scroll-
     /// und Drag-Interaktionen im Viewport.
+    ///
+    /// `drag_targets` enthält die Weltpositionen verschiebbarer Punkte
+    /// des aktiven Route-Tools (leer wenn kein Tool aktiv oder keine Targets).
     pub fn collect_viewport_events(
         &mut self,
         ui: &egui::Ui,
@@ -46,6 +51,7 @@ impl InputState {
         selected_node_ids: &HashSet<u64>,
         active_tool: EditorTool,
         options: &EditorOptions,
+        drag_targets: &[glam::Vec2],
     ) -> Vec<AppIntent> {
         let mut events = Vec::new();
 
@@ -88,10 +94,28 @@ impl InputState {
                     .pick_radius_world_scaled(viewport_size[1], options.selection_pick_radius_px);
                 let move_max_distance = base_max_distance * options.selection_size_factor;
 
+                // Route-Tool Drag-Target Hit-Test (hat Vorrang vor Node-Move)
+                let press_pos = ui.input(|i| i.pointer.press_origin());
+                let route_drag_hit = if active_tool == EditorTool::Route && !drag_targets.is_empty() {
+                    press_pos.and_then(|pointer_pos| {
+                        let world_pos =
+                            screen_pos_to_world(pointer_pos, response, viewport_size, camera);
+                        let hit = drag_targets.iter().any(|t| t.distance(world_pos) <= base_max_distance);
+                        if hit { Some(world_pos) } else { None }
+                    })
+                } else {
+                    None
+                };
+
+                if let Some(world_pos) = route_drag_hit {
+                    // Steuerpunkt-Drag im Route-Tool starten
+                    events.push(AppIntent::RouteToolDragStarted { world_pos });
+                    self.primary_drag_mode = PrimaryDragMode::RouteToolPointDrag;
+                } else {
+
                 // press_origin() liefert die exakte Klickposition (vor Drag-Schwelle),
                 // interact_pointer_pos() hingegen die Position *nach* Drag-Erkennung
                 // (offset um ~6px), was zu asymmetrischen Hitboxen führen kann.
-                let press_pos = ui.input(|i| i.pointer.press_origin());
                 let hit_info = press_pos.and_then(|pointer_pos| {
                     let world_pos =
                         screen_pos_to_world(pointer_pos, response, viewport_size, camera);
@@ -121,6 +145,8 @@ impl InputState {
                 } else {
                     self.primary_drag_mode = PrimaryDragMode::CameraPan;
                 }
+
+                } // Ende else-Branch (kein route_drag_hit)
             }
         }
 
@@ -192,6 +218,8 @@ impl InputState {
             // Wenn der Drag als SelectionMove lief, sende End-Move-Intent
             if self.primary_drag_mode == PrimaryDragMode::SelectionMove {
                 events.push(AppIntent::EndMoveSelectedNodesRequested);
+            } else if self.primary_drag_mode == PrimaryDragMode::RouteToolPointDrag {
+                events.push(AppIntent::RouteToolDragEnded);
             }
 
             self.primary_drag_mode = PrimaryDragMode::None;
@@ -266,6 +294,13 @@ impl InputState {
                                 pointer_delta.y * wpp,
                             ),
                         });
+                    }
+                    PrimaryDragMode::RouteToolPointDrag => {
+                        // Aktuelle Mausposition in Welt-Koordinaten
+                        if let Some(pointer_pos) = response.interact_pointer_pos() {
+                            let world_pos = screen_pos_to_world(pointer_pos, response, viewport_size, camera);
+                            events.push(AppIntent::RouteToolDragUpdated { world_pos });
+                        }
                     }
                     PrimaryDragMode::CameraPan | PrimaryDragMode::None => {
                         events.push(AppIntent::CameraPan {

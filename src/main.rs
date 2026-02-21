@@ -164,6 +164,12 @@ impl EditorApp {
 
                 let viewport_size = [rect.width(), rect.height()];
 
+                // Drag-Targets des aktiven Route-Tools für Hit-Test
+                let drag_targets = self.state.editor.tool_manager
+                    .active_tool()
+                    .map(|t| t.drag_targets())
+                    .unwrap_or_default();
+
                 events.extend(self.input.collect_viewport_events(
                     ui,
                     &response,
@@ -173,6 +179,7 @@ impl EditorApp {
                     &self.state.selection.selected_node_ids,
                     self.state.editor.active_tool,
                     &self.state.options,
+                    &drag_targets,
                 ));
 
                 let render_data = render::WgpuRenderData {
