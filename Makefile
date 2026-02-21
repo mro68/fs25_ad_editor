@@ -22,7 +22,7 @@ WIN_DBG_PDB := $(OUT_DIR)/$(BIN_NAME)_x64_windows_dbg.pdb
 
 .PHONY: all release debug linux windows \
         linux-release linux-debug windows-release windows-debug \
-        check-layers clean
+	check-layers ci-check clean
 
 # Default: nur Release
 release: linux-release windows-release
@@ -76,3 +76,5 @@ clean:
 
 check-layers:
 	@./scripts/check_layer_boundaries.sh
+
+ci-check: check-layers
