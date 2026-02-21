@@ -366,6 +366,8 @@ pub enum AppCommand {
 - `remove_all_connections_between_selected(state)` — Bulk: Alle Verbindungen zwischen Selektion trennen
 - `invert_all_connections_between_selected(state)` — Bulk: Richtung invertieren (start↔end)
 - `set_all_connections_priority_between_selected(state, priority)` — Bulk: Priorität ändern
+- `apply_tool_result(state, result) -> Vec<u64>` — Wendet ein `ToolResult` auf den AppState an (mit Undo-Snapshot): erstellt Nodes + Connections, setzt Selektion
+- `apply_tool_result_no_snapshot(state, result) -> Vec<u64>` — Wie `apply_tool_result`, aber ohne Undo-Snapshot (für Neuberechnung)
 
 ### `use_cases::viewport`
 - `resize(state, size)` — Viewport-Größe setzen
@@ -454,6 +456,60 @@ pub struct Snapshot { /* intern */ }
 
 **AppState Helper:**
 - `record_undo_snapshot(&mut self)` — Convenience-Methode, erstellt Snapshot und legt ihn auf den History-Stack
+
+---
+
+## Tools
+
+### `ToolManager`
+
+Verwaltet registrierte Route-Tools und den aktiven Tool-Index.
+
+```rust
+pub struct ToolManager { /* intern */ }
+```
+
+**Methoden:**
+- `new() → Self` — Erstellt ToolManager mit vorregistrierten Standard-Tools (StraightLine, Curve)
+- `register(tool)` — Neues Route-Tool registrieren
+- `tool_count() → usize` — Anzahl registrierter Tools
+- `tool_names() → Vec<(usize, &str)>` — Name + Index aller Tools
+- `set_active(index)` — Aktives Tool setzen (Reset des vorherigen)
+- `active_index() → Option<usize>` — Index des aktiven Tools
+- `active_tool() → Option<&dyn RouteTool>` — Referenz auf aktives Tool
+- `active_tool_mut() → Option<&mut dyn RouteTool>` — Mutable Referenz
+- `reset()` — Alle Tools zurücksetzen, aktives deaktivieren
+
+---
+
+### `RouteTool` (Trait)
+
+Schnittstelle für alle Route-Tools (Linie, Kurve, …). Tools sind zustandsbehaftet und erzeugen Preview-Geometrie + `ToolResult`.
+
+**Pflicht-Methoden:**
+- `name() → &str` — Anzeigename
+- `description() → &str` — Tooltip-Text
+- `status_text() → &str` — Statustext für Properties-Panel
+- `on_click(pos, road_map, ctrl) → ToolAction` — Viewport-Klick verarbeiten
+- `preview(cursor_pos, road_map) → ToolPreview` — Preview-Geometrie berechnen
+- `render_config(ui) → bool` — Tool-Konfiguration im Properties-Panel
+- `execute(road_map) → Option<ToolResult>` — Ergebnis erzeugen
+- `reset()` — Tool-Zustand zurücksetzen
+- `is_ready() → bool` — Bereit zur Ausführung?
+
+**Optionale Methoden (Default-Implementierung):**
+- `set_direction(dir)` / `set_priority(prio)` — Editor-Defaults übernehmen
+- `set_last_created(ids)` / `last_created_ids() → &[u64]` — Erstellte Node-IDs
+- `last_end_anchor() → Option<ToolAnchor>` — Letzter Endpunkt für Verkettung
+- `needs_recreate() → bool` / `clear_recreate_flag()` — Neuberechnung bei Config-Änderung
+- `execute_from_anchors(road_map) → Option<ToolResult>` — ToolResult aus gespeicherten Ankern
+
+---
+
+### Registrierte Tools
+
+- **`StraightLineTool`** — Gerade Strecke zwischen zwei Punkten mit konfigurierbarem Nodeabstand
+- **`CurveTool`** — Kurven-Strecke über Kontrollpunkte
 
 ---
 
