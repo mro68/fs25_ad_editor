@@ -1,6 +1,6 @@
+//! Render-Qualitätsstufen für Anti-Aliasing (shared zwischen App und Renderer).
+
 /// Qualitätsstufe für Render-Anti-Aliasing.
-///
-/// Lebt im shared-Modul, da sowohl `app` als auch `render` darauf zugreifen.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub enum RenderQuality {
     /// Minimales Anti-Aliasing (schnellste Darstellung)

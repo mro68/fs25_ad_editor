@@ -1,3 +1,5 @@
+//! Undo/Redo-History mit Arc-basierten Snapshots (Copy-on-Write).
+
 use super::SelectionState;
 use crate::core::RoadMap;
 use std::sync::Arc;
