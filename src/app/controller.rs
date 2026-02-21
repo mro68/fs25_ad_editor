@@ -280,8 +280,8 @@ impl AppController {
             AppIntent::DeduplicateCancelled => {
                 vec![AppCommand::DismissDeduplicateDialog]
             }
-            AppIntent::RouteToolClicked { world_pos } => {
-                vec![AppCommand::RouteToolClick { world_pos }]
+            AppIntent::RouteToolClicked { world_pos, ctrl } => {
+                vec![AppCommand::RouteToolClick { world_pos, ctrl }]
             }
             AppIntent::RouteToolExecuteRequested => {
                 vec![AppCommand::RouteToolExecute]
@@ -437,8 +437,8 @@ impl AppController {
             } => handlers::editing::update_marker(state, node_id, &name, &group),
 
             // === Route-Tool ===
-            AppCommand::RouteToolClick { world_pos } => {
-                handlers::route_tool::click(state, world_pos)
+            AppCommand::RouteToolClick { world_pos, ctrl } => {
+                handlers::route_tool::click(state, world_pos, ctrl)
             }
             AppCommand::RouteToolExecute => handlers::route_tool::execute(state),
             AppCommand::RouteToolCancel => handlers::route_tool::cancel(state),

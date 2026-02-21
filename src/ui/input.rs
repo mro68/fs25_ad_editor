@@ -51,7 +51,7 @@ impl InputState {
         });
 
         // Keyboard-Shortcuts (ausgelagert in keyboard.rs)
-        events.extend(keyboard::collect_keyboard_intents(ui, selected_node_ids));
+        events.extend(keyboard::collect_keyboard_intents(ui, selected_node_ids, active_tool));
 
         let modifiers = ui.input(|i| i.modifiers);
 
@@ -232,7 +232,10 @@ impl InputState {
                     }
                     EditorTool::Route => {
                         // Route-Tool: Klick an Viewport-Position
-                        events.push(AppIntent::RouteToolClicked { world_pos });
+                        events.push(AppIntent::RouteToolClicked {
+                            world_pos,
+                            ctrl: modifiers.command,
+                        });
                     }
                 }
             }
