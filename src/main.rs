@@ -109,7 +109,7 @@ impl EditorApp {
         ui::render_status_bar(ctx, &self.state);
         events.extend(ui::render_menu(ctx, &self.state));
         events.extend(ui::render_toolbar(ctx, &self.state));
-        events.extend(ui::render_properties_panel(ctx, &self.state));
+        events.extend(ui::render_properties_panel(ctx, &mut self.state));
         events.extend(ui::handle_file_dialogs(&mut self.state.ui));
         events.extend(ui::show_heightmap_warning(
             ctx,

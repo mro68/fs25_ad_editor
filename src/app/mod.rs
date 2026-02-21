@@ -9,6 +9,7 @@ pub mod render_scene;
 ///
 /// Dieses Modul verwaltet den Zustand der Anwendung (geladene Daten, View, Tools).
 pub mod state;
+pub mod tools;
 pub mod use_cases;
 
 pub use crate::core::Camera2D;
