@@ -10,7 +10,7 @@ Das `app`-Modul verwaltet den globalen State, verarbeitet `AppIntent`s zentral �
 
 ### `AppController`
 
-Zentrale Intent-Verarbeitung, Command-Ausführung und Render-Scene-Aufbau.
+Zentrale Intent-Verarbeitung, Command-Dispatch an Feature-Handler und Render-Scene-Aufbau.
 
 ```rust
 pub struct AppController;
@@ -29,8 +29,17 @@ let scene = controller.build_render_scene(&state, [width, height]);
 **Features:**
 - Verarbeitet UI- und Input-Intents gegen `AppState`
 - Mappt Intents auf Commands
-- Führt Commands über Use-Cases aus (z. B. Datei laden, Heightmap setzen)
+- Dispatcht Commands an Feature-Handler (`handlers/`)
 - Baut den expliziten Render-Vertrag (`RenderScene`)
+
+**Handler-Module** (`app/handlers/`):
+- `file_io` — Datei-Operationen (Öffnen, Speichern, Heightmap)
+- `view` — Kamera, Viewport, Background-Map
+- `selection` — Selektions-Operationen
+- `editing` — Node/Connection-Editing, Marker
+- `route_tool` — Route-Tool-Operationen
+- `dialog` — Dialog-State und Anwendungssteuerung
+- `history` — Undo/Redo
 
 ---
 
@@ -89,6 +98,7 @@ pub struct EditorToolState {
     pub connect_source_node: Option<u64>,
     pub default_direction: ConnectionDirection,
     pub default_priority: ConnectionPriority,
+    pub tool_manager: ToolManager,
 }
 ```
 
@@ -113,6 +123,7 @@ pub enum EditorTool {
     Select,   // Standard: Nodes selektieren und verschieben
     Connect,  // Verbindungen zwischen Nodes erstellen
     AddNode,  // Neue Nodes auf der Karte platzieren
+    Route,    // Route-Tools (Linie, Parkplatz, Kurve, …)
 }
 ```
 
@@ -201,44 +212,107 @@ pub enum AppIntent {
     ClearSelectionRequested,
     SelectAllRequested,
 
+    // Duplikat-Bereinigung
+    DeduplicateConfirmed,
+    DeduplicateCancelled,
+
     // Optionen
     OpenOptionsDialogRequested,
     CloseOptionsDialogRequested,
     OptionsChanged { options: EditorOptions },
     ResetOptionsRequested,
+
+    // Route-Tool
+    RouteToolClicked { world_pos: glam::Vec2 },
+    RouteToolExecuteRequested,
+    RouteToolCancelled,
+    SelectRouteToolRequested { index: usize },
+    RouteToolConfigChanged,
 }
 
 pub enum AppCommand {
     // Datei-Operationen
     LoadFile { path: String },
     SaveFile { path: String },
-    ExitApp,
+    RequestOpenFileDialog,
+    RequestSaveFileDialog,
+    RequestExit,
+    ConfirmAndSaveFile,
 
     // Kamera
     ResetCamera,
-    Pan { delta: glam::Vec2 },
-    ZoomTowards { factor: f32, focus_world: Option<glam::Vec2> },
-    CenterOnRoadMap,
+    ZoomIn,
+    ZoomOut,
+    PanCamera { delta: glam::Vec2 },
+    ZoomCamera { factor: f32, focus_world: Option<glam::Vec2> },
+    SetViewportSize { size: [f32; 2] },
     SetRenderQuality { quality: RenderQuality },
-    ResizeViewport { size: [f32; 2] },
 
     // Selektion
-    SelectNearest { world_pos: glam::Vec2, additive: bool, extend_path: bool },
-    SelectSegment { world_pos: glam::Vec2, additive: bool },
-    SelectInRect { min: glam::Vec2, max: glam::Vec2, additive: bool },
-    SelectInLasso { polygon: Vec<glam::Vec2>, additive: bool },
+    SelectNearestNode { world_pos: glam::Vec2, max_distance: f32, additive: bool, extend_path: bool },
+    SelectSegmentBetweenNearestIntersections { world_pos: glam::Vec2, max_distance: f32, additive: bool },
+    SelectNodesInRect { min: glam::Vec2, max: glam::Vec2, additive: bool },
+    SelectNodesInLasso { polygon: Vec<glam::Vec2>, additive: bool },
     ClearSelection,
-    SelectAll,
-    BeginMoveSelected,
-    MoveSelected { delta_world: glam::Vec2 },
-    EndMoveSelected,
+    SelectAllNodes,
+    BeginMoveSelectedNodes,
+    MoveSelectedNodes { delta_world: glam::Vec2 },
+    EndMoveSelectedNodes,
 
     // Editing
-    AddNode { world_pos: glam::Vec2 },
-    DeleteSelected,
-    ConnectToolPick { world_pos: glam::Vec2 },
+    SetEditorTool { tool: EditorTool },
+    AddNodeAtPosition { world_pos: glam::Vec2 },
+    DeleteSelectedNodes,
+    ConnectToolPickNode { world_pos: glam::Vec2, max_distance: f32 },
     AddConnection { from_id: u64, to_id: u64, direction: ConnectionDirection, priority: ConnectionPriority },
-    // ... und weitere Varianten für Connection-Bearbeitung, Marker, Background, Heightmap, Optionen
+    RemoveConnectionBetween { node_a: u64, node_b: u64 },
+    SetConnectionDirection { start_id: u64, end_id: u64, direction: ConnectionDirection },
+    SetConnectionPriority { start_id: u64, end_id: u64, priority: ConnectionPriority },
+    SetDefaultDirection { direction: ConnectionDirection },
+    SetDefaultPriority { priority: ConnectionPriority },
+    SetAllConnectionsDirectionBetweenSelected { direction: ConnectionDirection },
+    RemoveAllConnectionsBetweenSelected,
+    InvertAllConnectionsBetweenSelected,
+    SetAllConnectionsPriorityBetweenSelected { priority: ConnectionPriority },
+    ConnectSelectedNodes,
+
+    // Heightmap / Background
+    RequestHeightmapDialog,
+    RequestBackgroundMapDialog,
+    ClearHeightmap,
+    SetHeightmap { path: String },
+    DismissHeightmapWarning,
+    LoadBackgroundMap { path: String, crop_size: Option<u32> },
+    UpdateBackgroundOpacity { opacity: f32 },
+    ToggleBackgroundVisibility,
+
+    // Marker
+    CreateMarker { node_id: u64, name: String, group: String },
+    RemoveMarker { node_id: u64 },
+    OpenMarkerDialog { node_id: u64, is_new: bool },
+    UpdateMarker { node_id: u64, name: String, group: String },
+    CloseMarkerDialog,
+
+    // Duplikat-Bereinigung
+    DeduplicateNodes,
+    DismissDeduplicateDialog,
+
+    // Optionen
+    OpenOptionsDialog,
+    CloseOptionsDialog,
+    ApplyOptions { options: EditorOptions },
+    ResetOptions,
+
+    // Undo/Redo
+    Undo,
+    Redo,
+
+    // Route-Tool
+    RouteToolClick { world_pos: glam::Vec2 },
+    RouteToolExecute,
+    RouteToolCancel,
+    SelectRouteTool { index: usize },
+    RouteToolRecreate,
 }
 ```
 

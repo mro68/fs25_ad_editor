@@ -5,7 +5,7 @@
 
 use eframe::egui;
 use eframe::egui_wgpu;
-use fs25_auto_drive_editor::{render, ui, AppController, AppIntent, AppState, EditorOptions};
+use fs25_auto_drive_editor::{render, ui, AppController, AppIntent, AppState, EditorOptions, EditorTool};
 
 fn main() -> Result<(), eframe::Error> {
     AppRunner::run()
@@ -109,7 +109,7 @@ impl EditorApp {
         ui::render_status_bar(ctx, &self.state);
         events.extend(ui::render_menu(ctx, &self.state));
         events.extend(ui::render_toolbar(ctx, &self.state));
-        events.extend(ui::render_properties_panel(ctx, &self.state));
+        events.extend(ui::render_properties_panel(ctx, &mut self.state));
         events.extend(ui::handle_file_dialogs(&mut self.state.ui));
         events.extend(ui::show_heightmap_warning(
             ctx,
@@ -160,6 +160,74 @@ impl EditorApp {
 
                 ui.painter().add(callback);
 
+                // ── Tool-Preview-Overlay (egui-Painter) ─────────────
+                if self.state.editor.active_tool == EditorTool::Route {
+                    if let Some(hover_pos) = response.hover_pos() {
+                        let local = hover_pos - rect.min;
+                        let cursor_world = self.state.view.camera.screen_to_world(
+                            glam::Vec2::new(local.x, local.y),
+                            glam::Vec2::new(viewport_size[0], viewport_size[1]),
+                        );
+
+                        if let (Some(tool), Some(rm)) = (
+                            self.state.editor.tool_manager.active_tool(),
+                            self.state.road_map.as_deref(),
+                        ) {
+                            let preview = tool.preview(cursor_world, rm);
+                            let painter = ui.painter_at(rect);
+                            let cam = &self.state.view.camera;
+                            let vp = glam::Vec2::new(viewport_size[0], viewport_size[1]);
+
+                            // Verbindungen zeichnen
+                            let preview_color = egui::Color32::from_rgba_unmultiplied(0, 200, 255, 180);
+                            for &(a, b) in &preview.connections {
+                                if let (Some(&pa), Some(&pb)) = (preview.nodes.get(a), preview.nodes.get(b)) {
+                                    let sa = cam.world_to_screen(pa, vp);
+                                    let sb = cam.world_to_screen(pb, vp);
+                                    painter.line_segment(
+                                        [
+                                            egui::pos2(rect.min.x + sa.x, rect.min.y + sa.y),
+                                            egui::pos2(rect.min.x + sb.x, rect.min.y + sb.y),
+                                        ],
+                                        egui::Stroke::new(2.0, preview_color),
+                                    );
+                                }
+                            }
+
+                            // Nodes zeichnen
+                            for (i, &pos) in preview.nodes.iter().enumerate() {
+                                let sp = cam.world_to_screen(pos, vp);
+                                let screen_pos = egui::pos2(rect.min.x + sp.x, rect.min.y + sp.y);
+                                // Steuerpunkt(e) sind Nodes ohne Verbindung → andere Farbe/Form
+                                let is_control = !preview.connections.iter().any(|(a, b)| *a == i || *b == i);
+                                if is_control {
+                                    // Steuerpunkt: Raute
+                                    let s = 5.0;
+                                    let cp_color = egui::Color32::from_rgba_unmultiplied(255, 160, 0, 220);
+                                    painter.line_segment(
+                                        [egui::pos2(screen_pos.x, screen_pos.y - s), egui::pos2(screen_pos.x + s, screen_pos.y)],
+                                        egui::Stroke::new(2.0, cp_color),
+                                    );
+                                    painter.line_segment(
+                                        [egui::pos2(screen_pos.x + s, screen_pos.y), egui::pos2(screen_pos.x, screen_pos.y + s)],
+                                        egui::Stroke::new(2.0, cp_color),
+                                    );
+                                    painter.line_segment(
+                                        [egui::pos2(screen_pos.x, screen_pos.y + s), egui::pos2(screen_pos.x - s, screen_pos.y)],
+                                        egui::Stroke::new(2.0, cp_color),
+                                    );
+                                    painter.line_segment(
+                                        [egui::pos2(screen_pos.x - s, screen_pos.y), egui::pos2(screen_pos.x, screen_pos.y - s)],
+                                        egui::Stroke::new(2.0, cp_color),
+                                    );
+                                } else {
+                                    painter.circle_filled(screen_pos, 3.5, preview_color);
+                                }
+                            }
+                        }
+                    }
+                }
+
                 if self.state.road_map.is_none() {
                     ui.painter().text(
                         rect.center(),
@@ -188,12 +256,14 @@ impl EditorApp {
         }
         self.state.view.background_dirty = false;
 
+        let Ok(mut renderer) = self.renderer.lock() else {
+            log::error!("Renderer-Lock fehlgeschlagen (Mutex vergiftet)");
+            return;
+        };
         if let Some(bg_map) = self.state.view.background_map.as_deref() {
-            let mut renderer = self.renderer.lock().unwrap();
             renderer.set_background(&self.device, &self.queue, bg_map);
             log::info!("Background-Map in Renderer hochgeladen");
         } else {
-            let mut renderer = self.renderer.lock().unwrap();
             renderer.clear_background();
             log::info!("Background-Map aus Renderer entfernt");
         }
