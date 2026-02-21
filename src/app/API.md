@@ -223,7 +223,7 @@ pub enum AppIntent {
     ResetOptionsRequested,
 
     // Route-Tool
-    RouteToolClicked { world_pos: glam::Vec2 },
+    RouteToolClicked { world_pos: glam::Vec2, ctrl: bool },
     RouteToolExecuteRequested,
     RouteToolCancelled,
     SelectRouteToolRequested { index: usize },
@@ -411,7 +411,7 @@ AppIntent::CameraPan { delta: Vec2::new(-dx * wpp, -dy * wpp) }
 ## Design-Prinzipien
 
 1. **Single Source of Truth:** `AppState` hält die Laufzeitdaten (kein I/O)
-2. **Intent Boundary:** UI mutiert nicht direkt, sondern emittiert `AppIntent`
+2. **Intent Boundary:** UI emittiert primär `AppIntent`; reine UI-/Tool-Konfiguration im `AppState` kann gezielt direkt aktualisiert werden
 3. **Command Execution:** `AppController` mappt Intents auf Commands und führt diese aus
 4. **Render Contract:** Ausgabe an Renderer erfolgt nur über `RenderScene`
 5. **I/O in Use-Cases:** Dateisystem-Operationen sind in `use_cases::file_io` zentralisiert
@@ -429,9 +429,10 @@ pub struct CommandLog { /* intern */ }
 
 **Methoden:**
 - `new() → Self`
-- `log(command: &AppCommand)` — Command protokollieren
-- `entries() → &[String]` — Alle Einträge abrufen
-- `clear()` — Log leeren
+- `record(command: AppCommand)` — Command protokollieren
+- `len() → usize` — Anzahl geloggter Commands
+- `is_empty() → bool` — Prüfen, ob keine Einträge vorhanden sind
+- `entries() → &[AppCommand]` — Read-only Sicht auf alle Einträge
 
 ---
 
