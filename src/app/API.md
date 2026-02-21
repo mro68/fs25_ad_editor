@@ -373,7 +373,7 @@ pub enum AppCommand {
 
 ### `use_cases::background_map`
 - `request_background_map_dialog(state)` — Background-Map-Dialog öffnen
-- `load_background_map(state, path, crop_size)` — Background-Map laden (PNG/JPG/DDS)
+- `load_background_map(state, path, crop_size) -> anyhow::Result<()>` — Background-Map laden (PNG/JPG/DDS), Fehler werden an den Controller propagiert
 - `set_background_opacity(state, opacity)` — Opacity setzen (0.0–1.0)
 - `toggle_background_visibility(state)` — Sichtbarkeit umschalten
 - `clear_background_map(state)` — Background-Map entfernen
