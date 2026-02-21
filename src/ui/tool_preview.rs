@@ -4,7 +4,7 @@ use eframe::egui;
 use glam::Vec2;
 
 use crate::app::tools::{ToolManager, ToolPreview};
-use crate::core::{Camera2D, RoadMap};
+use crate::app::{Camera2D, RoadMap};
 
 /// Zeichnet das Tool-Preview-Overlay in den Viewport.
 ///
