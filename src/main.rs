@@ -165,7 +165,10 @@ impl EditorApp {
                 let viewport_size = [rect.width(), rect.height()];
 
                 // Drag-Targets des aktiven Route-Tools für Hit-Test
-                let drag_targets = self.state.editor.tool_manager
+                let drag_targets = self
+                    .state
+                    .editor
+                    .tool_manager
                     .active_tool()
                     .map(|t| t.drag_targets())
                     .unwrap_or_default();
@@ -208,10 +211,10 @@ impl EditorApp {
                     if let Some(hover_pos) = response.hover_pos() {
                         let local = hover_pos - rect.min;
                         self.last_cursor_world = Some(
-                            self.state.view.camera.screen_to_world(
-                                glam::Vec2::new(local.x, local.y),
-                                vp,
-                            ),
+                            self.state
+                                .view
+                                .camera
+                                .screen_to_world(glam::Vec2::new(local.x, local.y), vp),
                         );
                     }
 

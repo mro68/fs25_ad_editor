@@ -96,12 +96,19 @@ impl InputState {
 
                 // Route-Tool Drag-Target Hit-Test (hat Vorrang vor Node-Move)
                 let press_pos = ui.input(|i| i.pointer.press_origin());
-                let route_drag_hit = if active_tool == EditorTool::Route && !drag_targets.is_empty() {
+                let route_drag_hit = if active_tool == EditorTool::Route && !drag_targets.is_empty()
+                {
                     press_pos.and_then(|pointer_pos| {
                         let world_pos =
                             screen_pos_to_world(pointer_pos, response, viewport_size, camera);
-                        let hit = drag_targets.iter().any(|t| t.distance(world_pos) <= base_max_distance);
-                        if hit { Some(world_pos) } else { None }
+                        let hit = drag_targets
+                            .iter()
+                            .any(|t| t.distance(world_pos) <= base_max_distance);
+                        if hit {
+                            Some(world_pos)
+                        } else {
+                            None
+                        }
                     })
                 } else {
                     None
@@ -112,40 +119,38 @@ impl InputState {
                     events.push(AppIntent::RouteToolDragStarted { world_pos });
                     self.primary_drag_mode = PrimaryDragMode::RouteToolPointDrag;
                 } else {
+                    // press_origin() liefert die exakte Klickposition (vor Drag-Schwelle),
+                    // interact_pointer_pos() hingegen die Position *nach* Drag-Erkennung
+                    // (offset um ~6px), was zu asymmetrischen Hitboxen führen kann.
+                    let hit_info = press_pos.and_then(|pointer_pos| {
+                        let world_pos =
+                            screen_pos_to_world(pointer_pos, response, viewport_size, camera);
+                        road_map
+                            .and_then(|rm| rm.nearest_node(world_pos))
+                            .filter(|hit| hit.distance <= move_max_distance)
+                            .map(|hit| (hit.node_id, world_pos))
+                    });
 
-                // press_origin() liefert die exakte Klickposition (vor Drag-Schwelle),
-                // interact_pointer_pos() hingegen die Position *nach* Drag-Erkennung
-                // (offset um ~6px), was zu asymmetrischen Hitboxen führen kann.
-                let hit_info = press_pos.and_then(|pointer_pos| {
-                    let world_pos =
-                        screen_pos_to_world(pointer_pos, response, viewport_size, camera);
-                    road_map
-                        .and_then(|rm| rm.nearest_node(world_pos))
-                        .filter(|hit| hit.distance <= move_max_distance)
-                        .map(|hit| (hit.node_id, world_pos))
-                });
+                    if let Some((hit_node_id, world_pos)) = hit_info {
+                        let already_selected = selected_node_ids.contains(&hit_node_id);
 
-                if let Some((hit_node_id, world_pos)) = hit_info {
-                    let already_selected = selected_node_ids.contains(&hit_node_id);
+                        if !already_selected {
+                            // Node noch nicht selektiert → sofort selektieren (Mouse-Down)
+                            let extend_path = modifiers.shift;
+                            let additive = modifiers.command || extend_path;
+                            events.push(AppIntent::NodePickRequested {
+                                world_pos,
+                                additive,
+                                extend_path,
+                            });
+                        }
 
-                    if !already_selected {
-                        // Node noch nicht selektiert → sofort selektieren (Mouse-Down)
-                        let extend_path = modifiers.shift;
-                        let additive = modifiers.command || extend_path;
-                        events.push(AppIntent::NodePickRequested {
-                            world_pos,
-                            additive,
-                            extend_path,
-                        });
+                        // Move-Operation starten
+                        events.push(AppIntent::BeginMoveSelectedNodesRequested);
+                        self.primary_drag_mode = PrimaryDragMode::SelectionMove;
+                    } else {
+                        self.primary_drag_mode = PrimaryDragMode::CameraPan;
                     }
-
-                    // Move-Operation starten
-                    events.push(AppIntent::BeginMoveSelectedNodesRequested);
-                    self.primary_drag_mode = PrimaryDragMode::SelectionMove;
-                } else {
-                    self.primary_drag_mode = PrimaryDragMode::CameraPan;
-                }
-
                 } // Ende else-Branch (kein route_drag_hit)
             }
         }
@@ -298,7 +303,8 @@ impl InputState {
                     PrimaryDragMode::RouteToolPointDrag => {
                         // Aktuelle Mausposition in Welt-Koordinaten
                         if let Some(pointer_pos) = response.interact_pointer_pos() {
-                            let world_pos = screen_pos_to_world(pointer_pos, response, viewport_size, camera);
+                            let world_pos =
+                                screen_pos_to_world(pointer_pos, response, viewport_size, camera);
                             events.push(AppIntent::RouteToolDragUpdated { world_pos });
                         }
                     }
