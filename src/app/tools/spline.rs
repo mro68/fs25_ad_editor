@@ -90,10 +90,7 @@ fn catmull_rom_chain(points: &[Vec2], samples_per_segment: usize) -> Vec<Vec2> {
 
 /// Approximierte Länge einer Polyline.
 fn polyline_length(points: &[Vec2]) -> f32 {
-    points
-        .windows(2)
-        .map(|w| w[0].distance(w[1]))
-        .sum()
+    points.windows(2).map(|w| w[0].distance(w[1])).sum()
 }
 
 /// Verteilt Punkte gleichmäßig (Arc-Length) entlang einer Polyline.
@@ -262,18 +259,10 @@ impl SplineTool {
         let last_anchor = anchors.last()?;
 
         let mut new_nodes: Vec<(Vec2, NodeFlag)> = Vec::new();
-        let mut internal_connections: Vec<(
-            usize,
-            usize,
-            ConnectionDirection,
-            ConnectionPriority,
-        )> = Vec::new();
-        let mut external_connections: Vec<(
-            usize,
-            u64,
-            ConnectionDirection,
-            ConnectionPriority,
-        )> = Vec::new();
+        let mut internal_connections: Vec<(usize, usize, ConnectionDirection, ConnectionPriority)> =
+            Vec::new();
+        let mut external_connections: Vec<(usize, u64, ConnectionDirection, ConnectionPriority)> =
+            Vec::new();
 
         let mut pos_to_new_idx: Vec<Option<usize>> = Vec::with_capacity(positions.len());
 
@@ -665,9 +654,7 @@ mod tests {
         let resampled = resample_by_distance(&polyline, 3.0);
 
         assert!((resampled[0] - Vec2::ZERO).length() < 0.01);
-        assert!(
-            (resampled.last().unwrap().distance(Vec2::new(10.0, 0.0))) < 0.01
-        );
+        assert!((resampled.last().unwrap().distance(Vec2::new(10.0, 0.0))) < 0.01);
     }
 
     #[test]

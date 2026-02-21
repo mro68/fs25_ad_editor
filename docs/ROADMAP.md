@@ -75,9 +75,9 @@
   - [x] Map-Auswahl UI (Datei-Dialog + Menü)
   - [x] Opacity- und Sichtbarkeits-Steuerung
   - [ ] Zoom-abhängige LOD
-- [🟡] Kurven-Werkzeuge (Bezier, Arc-Spline)
+- [🟡] Kurven-Werkzeuge (Bezier, Spline)
   - [x] Bezier-Interpolation (Grad 2 + 3)
-  - [ ] Arc-Spline (FS25-spezifisch)
+  - [x] Catmull-Rom-Spline (interpolierend, durch alle Punkte)
   - [x] Auto-Generation von Intermediate-Nodes
   - [x] Kurven-Preview
   - [x] Sequentielle Steuerpunkt-Platzierung (kein Ctrl+Klick)
@@ -172,10 +172,18 @@
 - Phase 2: ✅ 100%
 - Phase 3: ✅ 98% (Theme fehlt)
 - Phase 4: ✅ 100% (alle Features implementiert, 100k-Benchmarks ausstehend)
-- Phase 5: 🟡 75% (DDS-Background + Marker-Editor + Bézier-Kurven fertig, Arc-Spline ausstehend)
+- Phase 5: 🟡 85% (DDS-Background + Marker-Editor + Bézier-Kurven + Catmull-Rom-Spline fertig)
 - Phase 6: 🟡 40% (Handler-Split, CI-Checks, unwrap-Bereinigung, API-Docs nachgeführt)
 
-**Errungenschaften seit letztem Update (Modularisierungs-Session 2026-02-21):**
+**Errungenschaften seit letztem Update (Spline-Tool 2026-02-21):**
+- ✅ Neues Route-Tool: Catmull-Rom-Spline (interpolierend, Kurs führt durch alle geklickten Punkte)
+- ✅ Arc-Length-Resampling für gleichmäßige Node-Verteilung
+- ✅ Fortlaufende Vorschau (Cursor als nächster Punkt)
+- ✅ Einstellungen: Min. Abstand / Anzahl Nodes (wie Linie/Kurve)
+- ✅ Verkettung und Nachbearbeitung unterstützt
+- ✅ 11 Unit-Tests (Geometrie + Tool-Flow)
+
+**Errungenschaften (Modularisierungs-Session 2026-02-21):**
 - ✅ Tool-Preview-Overlay aus `main.rs` in eigenständiges `ui/tool_preview.rs`-Modul extrahiert (65 Zeilen Inline-Code entfernt)
 - ✅ DRY-Refactor `apply_tool_result.rs`: gemeinsame Logik in `apply_result_inner()` + `create_nodes_and_connections()` extrahiert (~60 Zeilen Duplikation eliminiert)
 - ✅ DRY-Refactor `straight_line.rs`: gemeinsame `build_result()`-Funktion für `execute()` und `execute_from_anchors()` (~120 Zeilen Duplikation eliminiert)

@@ -333,7 +333,8 @@ src/
     tools/
       mod.rs            # RouteTool-Trait + ToolManager
       straight_line.rs  # Gerade-Linie-Tool
-      curve.rs          # Kurven-Tool
+      curve.rs          # Bézier-Kurven-Tool (Grad 2 + 3)
+      spline.rs         # Catmull-Rom-Spline-Tool (interpolierend)
       curve/
         geometry.rs     # Kurven-Geometrie (Interpolation)
     use_cases/
