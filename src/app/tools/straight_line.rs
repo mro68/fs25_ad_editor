@@ -290,112 +290,16 @@ impl RouteTool for StraightLineTool {
     }
 
     fn execute(&self, road_map: &RoadMap) -> Option<ToolResult> {
-        let start = self.start.as_ref()?;
-        let end = self.end.as_ref()?;
-
-        let start_pos = start.position();
-        let end_pos = end.position();
-        let positions = compute_line_positions(start_pos, end_pos, self.max_segment_length);
-
-        // Neue Nodes bestimmen (existierende Nodes nicht nochmal erstellen)
-        let mut new_nodes: Vec<(Vec2, NodeFlag)> = Vec::new();
-        let mut internal_connections: Vec<(usize, usize, ConnectionDirection, ConnectionPriority)> =
-            Vec::new();
-        let mut external_connections: Vec<(usize, u64, ConnectionDirection, ConnectionPriority)> =
-            Vec::new();
-
-        // Mapping: Position-Index → new_nodes-Index (oder None wenn existierender Node)
-        let mut pos_to_new_idx: Vec<Option<usize>> = Vec::with_capacity(positions.len());
-
-        for (i, &pos) in positions.iter().enumerate() {
-            let is_start = i == 0;
-            let is_end = i == positions.len() - 1;
-
-            // Start/End: Prüfen ob existierender Node (Snap)
-            let existing_id = if is_start {
-                match start {
-                    ToolAnchor::ExistingNode(id, _) => Some(*id),
-                    _ => None,
-                }
-            } else if is_end {
-                match end {
-                    ToolAnchor::ExistingNode(id, _) => Some(*id),
-                    _ => None,
-                }
-            } else {
-                // Zwischen-Nodes: Prüfen ob zufällig auf existierendem Node
-                road_map
-                    .nearest_node(pos)
-                    .filter(|hit| hit.distance < 0.01)
-                    .map(|hit| hit.node_id)
-            };
-
-            if existing_id.is_some() {
-                pos_to_new_idx.push(None);
-            } else {
-                let idx = new_nodes.len();
-                new_nodes.push((pos, NodeFlag::Regular));
-                pos_to_new_idx.push(Some(idx));
-            }
-        }
-
-        // Verbindungen aufbauen
-        for i in 0..positions.len().saturating_sub(1) {
-            let a_new_idx = pos_to_new_idx[i];
-            let b_new_idx = pos_to_new_idx[i + 1];
-
-            let is_start_a = i == 0;
-            let is_end_b = i + 1 == positions.len() - 1;
-
-            let a_existing = if is_start_a {
-                match start {
-                    ToolAnchor::ExistingNode(id, _) => Some(*id),
-                    _ => None,
-                }
-            } else {
-                None
-            };
-
-            let b_existing = if is_end_b {
-                match end {
-                    ToolAnchor::ExistingNode(id, _) => Some(*id),
-                    _ => None,
-                }
-            } else {
-                // Zwischen-Node auf existierendem Node?
-                if pos_to_new_idx[i + 1].is_none() {
-                    road_map
-                        .nearest_node(positions[i + 1])
-                        .filter(|hit| hit.distance < 0.01)
-                        .map(|hit| hit.node_id)
-                } else {
-                    None
-                }
-            };
-
-            match (a_new_idx, a_existing, b_new_idx, b_existing) {
-                // Beide neu → internal
-                (Some(a), _, Some(b), _) => {
-                    internal_connections.push((a, b, self.direction, self.priority));
-                }
-                // A neu, B existiert → external (A → existierend)
-                (Some(a), _, None, Some(b_id)) => {
-                    external_connections.push((a, b_id, self.direction, self.priority));
-                }
-                // A existiert, B neu → external (B ← existierend)
-                (None, Some(a_id), Some(b), _) => {
-                    external_connections.push((b, a_id, self.direction, self.priority));
-                }
-                // Beide existieren → wird hier nicht behandelt (bestehende Nodes)
-                _ => {}
-            }
-        }
-
-        Some(ToolResult {
-            new_nodes,
-            internal_connections,
-            external_connections,
-        })
+        let start = *self.start.as_ref()?;
+        let end = *self.end.as_ref()?;
+        build_result(
+            start,
+            end,
+            self.max_segment_length,
+            self.direction,
+            self.priority,
+            road_map,
+        )
     }
 
     fn reset(&mut self) {
@@ -448,100 +352,120 @@ impl RouteTool for StraightLineTool {
     fn execute_from_anchors(&self, road_map: &RoadMap) -> Option<ToolResult> {
         let start = self.last_start_anchor?;
         let end = self.last_end_anchor?;
-
-        let start_pos = start.position();
-        let end_pos = end.position();
-        let positions = compute_line_positions(start_pos, end_pos, self.max_segment_length);
-
-        // Gleicher Code wie execute(), aber mit gespeicherten Ankern
-        let mut new_nodes: Vec<(Vec2, NodeFlag)> = Vec::new();
-        let mut internal_connections: Vec<(usize, usize, ConnectionDirection, ConnectionPriority)> =
-            Vec::new();
-        let mut external_connections: Vec<(usize, u64, ConnectionDirection, ConnectionPriority)> =
-            Vec::new();
-
-        let mut pos_to_new_idx: Vec<Option<usize>> = Vec::with_capacity(positions.len());
-
-        for (i, &pos) in positions.iter().enumerate() {
-            let is_start = i == 0;
-            let is_end = i == positions.len() - 1;
-
-            let existing_id = if is_start {
-                match start {
-                    ToolAnchor::ExistingNode(id, _) => Some(id),
-                    _ => None,
-                }
-            } else if is_end {
-                match end {
-                    ToolAnchor::ExistingNode(id, _) => Some(id),
-                    _ => None,
-                }
-            } else {
-                road_map
-                    .nearest_node(pos)
-                    .filter(|hit| hit.distance < 0.01)
-                    .map(|hit| hit.node_id)
-            };
-
-            if existing_id.is_some() {
-                pos_to_new_idx.push(None);
-            } else {
-                let idx = new_nodes.len();
-                new_nodes.push((pos, NodeFlag::Regular));
-                pos_to_new_idx.push(Some(idx));
-            }
-        }
-
-        for i in 0..positions.len().saturating_sub(1) {
-            let a_new_idx = pos_to_new_idx[i];
-            let b_new_idx = pos_to_new_idx[i + 1];
-
-            let is_start_a = i == 0;
-            let is_end_b = i + 1 == positions.len() - 1;
-
-            let a_existing = if is_start_a {
-                match start {
-                    ToolAnchor::ExistingNode(id, _) => Some(id),
-                    _ => None,
-                }
-            } else {
-                None
-            };
-
-            let b_existing = if is_end_b {
-                match end {
-                    ToolAnchor::ExistingNode(id, _) => Some(id),
-                    _ => None,
-                }
-            } else if pos_to_new_idx[i + 1].is_none() {
-                road_map
-                    .nearest_node(positions[i + 1])
-                    .filter(|hit| hit.distance < 0.01)
-                    .map(|hit| hit.node_id)
-            } else {
-                None
-            };
-
-            match (a_new_idx, a_existing, b_new_idx, b_existing) {
-                (Some(a), _, Some(b), _) => {
-                    internal_connections.push((a, b, self.direction, self.priority));
-                }
-                (Some(a), _, None, Some(b_id)) => {
-                    external_connections.push((a, b_id, self.direction, self.priority));
-                }
-                (None, Some(a_id), Some(b), _) => {
-                    external_connections.push((b, a_id, self.direction, self.priority));
-                }
-                _ => {}
-            }
-        }
-
-        Some(ToolResult {
-            new_nodes,
-            internal_connections,
-            external_connections,
-        })
+        build_result(
+            start,
+            end,
+            self.max_segment_length,
+            self.direction,
+            self.priority,
+            road_map,
+        )
     }
+}
+
+/// Gemeinsame Logik für `execute()` und `execute_from_anchors()`:
+/// Berechnet Positionen, erstellt Nodes und Verbindungen.
+fn build_result(
+    start: ToolAnchor,
+    end: ToolAnchor,
+    max_segment_length: f32,
+    direction: ConnectionDirection,
+    priority: ConnectionPriority,
+    road_map: &RoadMap,
+) -> Option<ToolResult> {
+    let start_pos = start.position();
+    let end_pos = end.position();
+    let positions = compute_line_positions(start_pos, end_pos, max_segment_length);
+
+    let mut new_nodes: Vec<(Vec2, NodeFlag)> = Vec::new();
+    let mut internal_connections: Vec<(usize, usize, ConnectionDirection, ConnectionPriority)> =
+        Vec::new();
+    let mut external_connections: Vec<(usize, u64, ConnectionDirection, ConnectionPriority)> =
+        Vec::new();
+
+    // Mapping: Position-Index → new_nodes-Index (oder None wenn existierender Node)
+    let mut pos_to_new_idx: Vec<Option<usize>> = Vec::with_capacity(positions.len());
+
+    for (i, &pos) in positions.iter().enumerate() {
+        let is_start = i == 0;
+        let is_end = i == positions.len() - 1;
+
+        let existing_id = if is_start {
+            match start {
+                ToolAnchor::ExistingNode(id, _) => Some(id),
+                _ => None,
+            }
+        } else if is_end {
+            match end {
+                ToolAnchor::ExistingNode(id, _) => Some(id),
+                _ => None,
+            }
+        } else {
+            road_map
+                .nearest_node(pos)
+                .filter(|hit| hit.distance < 0.01)
+                .map(|hit| hit.node_id)
+        };
+
+        if existing_id.is_some() {
+            pos_to_new_idx.push(None);
+        } else {
+            let idx = new_nodes.len();
+            new_nodes.push((pos, NodeFlag::Regular));
+            pos_to_new_idx.push(Some(idx));
+        }
+    }
+
+    // Verbindungen aufbauen
+    for i in 0..positions.len().saturating_sub(1) {
+        let a_new_idx = pos_to_new_idx[i];
+        let b_new_idx = pos_to_new_idx[i + 1];
+
+        let is_start_a = i == 0;
+        let is_end_b = i + 1 == positions.len() - 1;
+
+        let a_existing = if is_start_a {
+            match start {
+                ToolAnchor::ExistingNode(id, _) => Some(id),
+                _ => None,
+            }
+        } else {
+            None
+        };
+
+        let b_existing = if is_end_b {
+            match end {
+                ToolAnchor::ExistingNode(id, _) => Some(id),
+                _ => None,
+            }
+        } else if pos_to_new_idx[i + 1].is_none() {
+            road_map
+                .nearest_node(positions[i + 1])
+                .filter(|hit| hit.distance < 0.01)
+                .map(|hit| hit.node_id)
+        } else {
+            None
+        };
+
+        match (a_new_idx, a_existing, b_new_idx, b_existing) {
+            (Some(a), _, Some(b), _) => {
+                internal_connections.push((a, b, direction, priority));
+            }
+            (Some(a), _, None, Some(b_id)) => {
+                external_connections.push((a, b_id, direction, priority));
+            }
+            (None, Some(a_id), Some(b), _) => {
+                external_connections.push((b, a_id, direction, priority));
+            }
+            _ => {}
+        }
+    }
+
+    Some(ToolResult {
+        new_nodes,
+        internal_connections,
+        external_connections,
+    })
 }
 
 #[cfg(test)]
