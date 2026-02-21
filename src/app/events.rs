@@ -180,6 +180,13 @@ pub enum AppIntent {
     SelectRouteToolRequested { index: usize },
     /// Route-Tool: Konfiguration geändert (Distanz/Anzahl) → Strecke neu berechnen
     RouteToolConfigChanged,
+
+    /// Route-Tool: Drag auf Steuerpunkt/Anker gestartet
+    RouteToolDragStarted { world_pos: glam::Vec2 },
+    /// Route-Tool: Drag-Position aktualisiert
+    RouteToolDragUpdated { world_pos: glam::Vec2 },
+    /// Route-Tool: Drag beendet (Punkt loslassen)
+    RouteToolDragEnded,
 }
 
 /// Commands sind mutierende Schritte, die zentral ausgeführt werden.
@@ -358,4 +365,11 @@ pub enum AppCommand {
     SelectRouteTool { index: usize },
     /// Route-Tool: Strecke neu berechnen (Config geändert)
     RouteToolRecreate,
+
+    /// Route-Tool: Drag auf Steuerpunkt/Anker starten
+    RouteToolDragStart { world_pos: glam::Vec2 },
+    /// Route-Tool: Drag-Position aktualisieren
+    RouteToolDragUpdate { world_pos: glam::Vec2 },
+    /// Route-Tool: Drag beenden
+    RouteToolDragEnd,
 }

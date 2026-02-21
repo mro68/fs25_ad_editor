@@ -59,6 +59,8 @@ struct EditorApp {
     device: eframe::wgpu::Device,
     queue: eframe::wgpu::Queue,
     input: ui::InputState,
+    /// Gecachte Cursor-Weltposition für Tool-Preview (bleibt erhalten wenn Maus den Viewport verlässt).
+    last_cursor_world: Option<glam::Vec2>,
 }
 
 impl EditorApp {
@@ -79,6 +81,7 @@ impl EditorApp {
             device: render_state.device.clone(),
             queue: render_state.queue.clone(),
             input: ui::InputState::new(),
+            last_cursor_world: None,
         }
     }
 }
@@ -161,6 +164,15 @@ impl EditorApp {
 
                 let viewport_size = [rect.width(), rect.height()];
 
+                // Drag-Targets des aktiven Route-Tools für Hit-Test
+                let drag_targets = self
+                    .state
+                    .editor
+                    .tool_manager
+                    .active_tool()
+                    .map(|t| t.drag_targets())
+                    .unwrap_or_default();
+
                 events.extend(self.input.collect_viewport_events(
                     ui,
                     &response,
@@ -170,6 +182,7 @@ impl EditorApp {
                     &self.state.selection.selected_node_ids,
                     self.state.editor.active_tool,
                     &self.state.options,
+                    &drag_targets,
                 ));
 
                 let render_data = render::WgpuRenderData {
@@ -192,14 +205,21 @@ impl EditorApp {
 
                 // ── Tool-Preview-Overlay ─────────────
                 if self.state.editor.active_tool == EditorTool::Route {
+                    let vp = glam::Vec2::new(viewport_size[0], viewport_size[1]);
+
+                    // Cursor-Position aktualisieren wenn Maus im Viewport
                     if let Some(hover_pos) = response.hover_pos() {
                         let local = hover_pos - rect.min;
-                        let vp = glam::Vec2::new(viewport_size[0], viewport_size[1]);
-                        let cursor_world = self
-                            .state
-                            .view
-                            .camera
-                            .screen_to_world(glam::Vec2::new(local.x, local.y), vp);
+                        self.last_cursor_world = Some(
+                            self.state
+                                .view
+                                .camera
+                                .screen_to_world(glam::Vec2::new(local.x, local.y), vp),
+                        );
+                    }
+
+                    // Preview mit gecachter Position rendern (bleibt sichtbar bei Maus im Panel)
+                    if let Some(cursor_world) = self.last_cursor_world {
                         if let Some(rm) = self.state.road_map.as_deref() {
                             ui::render_tool_preview(
                                 &ui.painter_at(rect),

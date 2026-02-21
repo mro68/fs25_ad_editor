@@ -228,6 +228,11 @@ pub enum AppIntent {
     RouteToolCancelled,
     SelectRouteToolRequested { index: usize },
     RouteToolConfigChanged,
+
+    // Route-Tool Drag (Steuerpunkt-Verschiebung)
+    RouteToolDragStarted { world_pos: glam::Vec2 },
+    RouteToolDragUpdated { world_pos: glam::Vec2 },
+    RouteToolDragEnded,
 }
 
 pub enum AppCommand {
@@ -313,6 +318,11 @@ pub enum AppCommand {
     RouteToolCancel,
     SelectRouteTool { index: usize },
     RouteToolRecreate,
+
+    // Route-Tool Drag (Steuerpunkt-Verschiebung)
+    RouteToolDragStart { world_pos: glam::Vec2 },
+    RouteToolDragUpdate { world_pos: glam::Vec2 },
+    RouteToolDragEnd,
 }
 ```
 
@@ -503,13 +513,17 @@ Schnittstelle für alle Route-Tools (Linie, Kurve, …). Tools sind zustandsbeha
 - `last_end_anchor() → Option<ToolAnchor>` — Letzter Endpunkt für Verkettung
 - `needs_recreate() → bool` / `clear_recreate_flag()` — Neuberechnung bei Config-Änderung
 - `execute_from_anchors(road_map) → Option<ToolResult>` — ToolResult aus gespeicherten Ankern
+- `drag_targets() → Vec<Vec2>` — Weltpositionen verschiebbarer Punkte (für Drag-Hit-Test)
+- `on_drag_start(pos, road_map, pick_radius) → bool` — Drag auf einen Punkt starten
+- `on_drag_update(pos)` — Position des gegriffenen Punkts aktualisieren
+- `on_drag_end(road_map)` — Drag beenden (Re-Snap bei Start/Ende)
 
 ---
 
 ### Registrierte Tools
 
 - **`StraightLineTool`** — Gerade Strecke zwischen zwei Punkten mit konfigurierbarem Nodeabstand
-- **`CurveTool`** — Kurven-Strecke über Kontrollpunkte
+- **`CurveTool`** — Bézier-Kurve (Grad 2 oder 3) mit sequentieller Punkt-Platzierung und Drag-basierter Anpassung
 
 ---
 
