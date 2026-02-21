@@ -46,6 +46,22 @@ if [ -n "$UI_OTHER_VIOLATIONS" ]; then
     VIOLATIONS=$((VIOLATIONS + 1))
 fi
 
+# Regel 5: UI darf keine vollständige mutable AppState-Referenz annehmen
+UI_MUT_APPSTATE_VIOLATIONS=$(grep -rn '&mut[[:space:]]\+AppState' src/ui/ --include='*.rs' 2>/dev/null || true)
+if [ -n "$UI_MUT_APPSTATE_VIOLATIONS" ]; then
+    echo "FEHLER: UI nutzt &mut AppState (Intent/Command-Boundary verletzt):"
+    echo "$UI_MUT_APPSTATE_VIOLATIONS"
+    VIOLATIONS=$((VIOLATIONS + 1))
+fi
+
+# Regel 6: UI darf keine direkten state.* Feldzuweisungen durchführen
+UI_STATE_ASSIGN_VIOLATIONS=$(grep -rn '\bstate\.[A-Za-z0-9_\.]*[[:space:]]*=' src/ui/ --include='*.rs' 2>/dev/null || true)
+if [ -n "$UI_STATE_ASSIGN_VIOLATIONS" ]; then
+    echo "FEHLER: UI enthält direkte state.* Zuweisungen (statt Intent/Command):"
+    echo "$UI_STATE_ASSIGN_VIOLATIONS"
+    VIOLATIONS=$((VIOLATIONS + 1))
+fi
+
 if [ "$VIOLATIONS" -eq 0 ]; then
     echo "✓ Alle Layer-Grenzen eingehalten."
     exit 0

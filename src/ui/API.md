@@ -2,7 +2,7 @@
 
 ## Überblick
 
-Das `ui`-Modul enthält egui-UI-Komponenten (Menüs, Statusbar, Input-Handling, Dialoge). Alle Interaktionen emittieren `AppIntent`s — keine direkte State-Mutation.
+Das `ui`-Modul enthält egui-UI-Komponenten (Menüs, Statusbar, Input-Handling, Dialoge). Interaktionen emittieren primär `AppIntent`s; direkte Mutation von Fachzustand wird vermieden.
 
 ## Module
 
@@ -34,15 +34,13 @@ pub fn render_menu(ctx: &egui::Context, state: &AppState) -> Vec<AppIntent>
   - Save As... (nur wenn Datei geladen) → `AppIntent::SaveAsRequested`
   - Select/Change Heightmap... → `AppIntent::HeightmapSelectionRequested`
   - Clear Heightmap (nur wenn gesetzt) → `AppIntent::HeightmapCleared`
-  - Select Background Map... → `AppIntent::BackgroundMapSelectionRequested`
-  - Background Opacity → `AppIntent::SetBackgroundOpacity`
-  - Toggle Background → `AppIntent::ToggleBackgroundVisibility`
-  - Exit → `AppIntent::ExitRequested` (setzt `state.should_exit = true`)
+  - Exit → `AppIntent::ExitRequested`
 
 - **View**
   - Reset Camera → `AppIntent::ResetCameraRequested`
   - Zoom In → `AppIntent::ZoomInRequested`
   - Zoom Out → `AppIntent::ZoomOutRequested`
+  - Hintergrund laden/ändern → `AppIntent::BackgroundMapSelectionRequested`
   - Render Quality → Submenu (Low/Medium/High) → `AppIntent::RenderQualityChanged`
   - Options... → `AppIntent::OpenOptionsDialogRequested`
 
@@ -66,7 +64,15 @@ pub fn render_toolbar(ctx: &egui::Context, state: &AppState) -> Vec<AppIntent>
 Rendert das Properties-Panel mit Detailanzeige selektierter Nodes (IDs, Positionen, Verbindungen).
 
 ```rust
-pub fn render_properties_panel(ctx: &egui::Context, state: &AppState) -> Vec<AppIntent>
+pub fn render_properties_panel(
+  ctx: &egui::Context,
+  road_map: Option<&RoadMap>,
+  selected_node_ids: &[u64],
+  default_direction: ConnectionDirection,
+  default_priority: ConnectionPriority,
+  active_tool: EditorTool,
+  tool_manager: Option<&mut ToolManager>,
+) -> Vec<AppIntent>
 ```
 
 ---
@@ -166,7 +172,11 @@ pub fn show_heightmap_warning(ctx: &egui::Context, show: bool) -> Vec<AppIntent>
 Zeigt den Optionen-Dialog als modales Fenster (Farben, Größen, Zoom-Schritte).
 
 ```rust
-pub fn show_options_dialog(ctx: &egui::Context, state: &mut AppState) -> Vec<AppIntent>
+pub fn show_options_dialog(
+  ctx: &egui::Context,
+  show: bool,
+  options: &EditorOptions,
+) -> Vec<AppIntent>
 ```
 
 ---
@@ -192,6 +202,6 @@ pub fn show_marker_dialog(
 
 1. **Intent-based:** Interaktions-Funktionen liefern `Vec<AppIntent>`
 2. **Read-only:** Statusbar zeigt nur State an
-3. **Kein State-Zugriff:** `state` wird nur gelesen, nie mutiert
+3. **State-Zugriff:** Fachzustand wird nicht direkt mutiert; Dialog-/UI-Lifecycle kann `UiState` lokal aktualisieren
 4. **Import-Regel:** UI importiert nur aus `app` (nie direkt aus `core`)
 5. **Sub-Modul-Delegation:** `input.rs` orchestriert, Logik steckt in `keyboard`, `drag`, `context_menu`

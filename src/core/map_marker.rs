@@ -1,5 +1,6 @@
 /// Repräsentiert einen Map-Marker aus der AutoDrive-Config
 /// Ein Map-Marker verweist auf einen Node und wird im Editor angezeigt.
+/// Beschreibt einen Map-Marker in der AutoDrive-Konfiguration.
 #[derive(Debug, Clone)]
 pub struct MapMarker {
     /// Node-ID des Markers
