@@ -112,8 +112,13 @@ impl EditorApp {
         events.extend(ui::render_menu(ctx, &self.state));
         events.extend(ui::render_toolbar(ctx, &self.state));
         let road_map_for_properties = self.state.road_map.clone();
-        let selected_for_properties: Vec<u64> =
-            self.state.selection.selected_node_ids.iter().copied().collect();
+        let selected_for_properties: Vec<u64> = self
+            .state
+            .selection
+            .selected_node_ids
+            .iter()
+            .copied()
+            .collect();
         let default_direction = self.state.editor.default_direction;
         let default_priority = self.state.editor.default_priority;
         let active_tool = self.state.editor.active_tool;
