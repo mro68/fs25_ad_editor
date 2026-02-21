@@ -70,10 +70,7 @@ pub fn set_default_priority(state: &mut AppState, priority: ConnectionPriority) 
     log::info!("Standard-Straßenart: {:?}", priority);
 }
 
-pub fn set_all_directions_between_selected(
-    state: &mut AppState,
-    direction: ConnectionDirection,
-) {
+pub fn set_all_directions_between_selected(state: &mut AppState, direction: ConnectionDirection) {
     use_cases::editing::set_all_connections_direction_between_selected(state, direction);
 }
 
@@ -85,10 +82,7 @@ pub fn invert_all_between_selected(state: &mut AppState) {
     use_cases::editing::invert_all_connections_between_selected(state);
 }
 
-pub fn set_all_priorities_between_selected(
-    state: &mut AppState,
-    priority: ConnectionPriority,
-) {
+pub fn set_all_priorities_between_selected(state: &mut AppState, priority: ConnectionPriority) {
     use_cases::editing::set_all_connections_priority_between_selected(state, priority);
 }
 

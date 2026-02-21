@@ -170,10 +170,7 @@ fn cubic_bezier(p0: Vec2, p1: Vec2, p2: Vec2, p3: Vec2, t: f32) -> Vec2 {
 }
 
 /// Gleichmäßig verteilte Punkte entlang einer parametrischen Kurve (Arc-Length).
-fn compute_curve_positions(
-    eval: impl Fn(f32) -> Vec2,
-    max_segment_length: f32,
-) -> Vec<Vec2> {
+fn compute_curve_positions(eval: impl Fn(f32) -> Vec2, max_segment_length: f32) -> Vec<Vec2> {
     let start = eval(0.0);
     let total_length = CurveTool::approx_length(&eval, 128);
     if total_length < f32::EPSILON {
@@ -356,12 +353,10 @@ impl RouteTool for CurveTool {
                 let cp1 = self.control_point1.unwrap_or(cursor_pos);
 
                 let positions = match self.degree {
-                    CurveDegree::Quadratic => {
-                        compute_curve_positions(
-                            |t| quadratic_bezier(start_pos, cp1, end_pos, t),
-                            self.max_segment_length,
-                        )
-                    }
+                    CurveDegree::Quadratic => compute_curve_positions(
+                        |t| quadratic_bezier(start_pos, cp1, end_pos, t),
+                        self.max_segment_length,
+                    ),
                     CurveDegree::Cubic => {
                         let cp2 = self.control_point2.unwrap_or(cursor_pos);
                         compute_curve_positions(
@@ -406,11 +401,7 @@ impl RouteTool for CurveTool {
                     CurveDegree::Quadratic,
                     "Quadratisch (Grad 2)",
                 );
-                ui.selectable_value(
-                    &mut self.degree,
-                    CurveDegree::Cubic,
-                    "Kubisch (Grad 3)",
-                );
+                ui.selectable_value(&mut self.degree, CurveDegree::Cubic, "Kubisch (Grad 3)");
             });
         if self.degree != old_degree {
             // Beim Gradwechsel CP2 zurücksetzen
@@ -436,10 +427,7 @@ impl RouteTool for CurveTool {
                 }
                 CurveDegree::Cubic => {
                     let cp2v = cp2.unwrap_or(cp1);
-                    CurveTool::approx_length(
-                        |t| cubic_bezier(start_pos, cp1, cp2v, end_pos, t),
-                        64,
-                    )
+                    CurveTool::approx_length(|t| cubic_bezier(start_pos, cp1, cp2v, end_pos, t), 64)
                 }
             };
 
@@ -522,8 +510,15 @@ impl RouteTool for CurveTool {
         let cp2 = self.control_point2;
 
         build_tool_result(
-            start, end, self.degree, cp1, cp2,
-            self.max_segment_length, self.direction, self.priority, road_map,
+            start,
+            end,
+            self.degree,
+            cp1,
+            cp2,
+            self.max_segment_length,
+            self.direction,
+            self.priority,
+            road_map,
         )
     }
 
@@ -587,8 +582,15 @@ impl RouteTool for CurveTool {
         let cp2 = self.last_control_point2;
 
         build_tool_result(
-            start, end, self.degree, cp1, cp2,
-            self.max_segment_length, self.direction, self.priority, road_map,
+            start,
+            end,
+            self.degree,
+            cp1,
+            cp2,
+            self.max_segment_length,
+            self.direction,
+            self.priority,
+            road_map,
         )
     }
 }
@@ -729,10 +731,7 @@ mod tests {
         let control = Vec2::new(5.0, 10.0);
         let end = Vec2::new(10.0, 0.0);
 
-        let positions = compute_curve_positions(
-            |t| quadratic_bezier(start, control, end, t),
-            2.0,
-        );
+        let positions = compute_curve_positions(|t| quadratic_bezier(start, control, end, t), 2.0);
         assert!(positions.len() >= 3);
         assert!((positions[0] - start).length() < 0.01);
         assert!((*positions.last().unwrap() - end).length() < 0.01);
@@ -744,10 +743,7 @@ mod tests {
         let control = Vec2::new(5.0, 10.0);
         let end = Vec2::new(10.0, 0.0);
 
-        let positions = compute_curve_positions(
-            |t| quadratic_bezier(start, control, end, t),
-            2.0,
-        );
+        let positions = compute_curve_positions(|t| quadratic_bezier(start, control, end, t), 2.0);
         for i in 0..positions.len() - 1 {
             let dist = positions[i].distance(positions[i + 1]);
             assert!(dist < 2.5, "Segment {} hat Abstand {:.2}m", i, dist);
@@ -790,10 +786,7 @@ mod tests {
         let cp2 = Vec2::new(7.0, 10.0);
         let end = Vec2::new(10.0, 0.0);
 
-        let positions = compute_curve_positions(
-            |t| cubic_bezier(start, cp1, cp2, end, t),
-            2.0,
-        );
+        let positions = compute_curve_positions(|t| cubic_bezier(start, cp1, cp2, end, t), 2.0);
         assert!(positions.len() >= 3);
         assert!((positions[0] - start).length() < 0.01);
         assert!((*positions.last().unwrap() - end).length() < 0.01);
@@ -860,8 +853,8 @@ mod tests {
 
         tool.on_click(Vec2::ZERO, &road_map, false);
         tool.on_click(Vec2::new(10.0, 0.0), &road_map, false);
-        tool.on_click(Vec2::new(3.0, 8.0), &road_map, false);   // CP1
-        tool.on_click(Vec2::new(7.0, 8.0), &road_map, true);    // CP2
+        tool.on_click(Vec2::new(3.0, 8.0), &road_map, false); // CP1
+        tool.on_click(Vec2::new(7.0, 8.0), &road_map, true); // CP2
 
         // CP1 nochmal verschieben
         tool.on_click(Vec2::new(2.0, 6.0), &road_map, false);
@@ -959,16 +952,15 @@ mod tests {
         tool.reset();
 
         tool.max_segment_length = 5.0;
-        let result = tool.execute_from_anchors(&road_map).expect("Ergebnis erwartet");
+        let result = tool
+            .execute_from_anchors(&road_map)
+            .expect("Ergebnis erwartet");
         assert!(result.new_nodes.len() < original.new_nodes.len());
     }
 
     #[test]
     fn test_approx_length_straight_line() {
-        let length = CurveTool::approx_length(
-            |t| Vec2::new(t * 10.0, 0.0),
-            128,
-        );
+        let length = CurveTool::approx_length(|t| Vec2::new(t * 10.0, 0.0), 128);
         assert!((length - 10.0).abs() < 0.1);
     }
 
@@ -978,10 +970,7 @@ mod tests {
         let end = Vec2::new(10.0, 0.0);
         let control = Vec2::new(5.0, 0.0);
 
-        let positions = compute_curve_positions(
-            |t| quadratic_bezier(start, control, end, t),
-            2.0,
-        );
+        let positions = compute_curve_positions(|t| quadratic_bezier(start, control, end, t), 2.0);
         for (i, pos) in positions.iter().enumerate() {
             assert!(
                 pos.y.abs() < 0.01,

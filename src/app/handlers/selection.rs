@@ -10,7 +10,13 @@ pub fn select_nearest_node(
     additive: bool,
     extend_path: bool,
 ) {
-    use_cases::selection::select_nearest_node(state, world_pos, max_distance, additive, extend_path);
+    use_cases::selection::select_nearest_node(
+        state,
+        world_pos,
+        max_distance,
+        additive,
+        extend_path,
+    );
 }
 
 pub fn select_segment(

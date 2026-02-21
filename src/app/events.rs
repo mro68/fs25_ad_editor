@@ -32,13 +32,9 @@ pub enum AppIntent {
     /// Stufenweise herauszoomen
     ZoomOutRequested,
     /// Viewport-Größe hat sich geändert
-    ViewportResized {
-        size: [f32; 2],
-    },
+    ViewportResized { size: [f32; 2] },
     /// Kamera um Delta verschieben (Welt-Einheiten)
-    CameraPan {
-        delta: glam::Vec2,
-    },
+    CameraPan { delta: glam::Vec2 },
     /// Kamera zoomen (optional auf einen Fokuspunkt)
     CameraZoom {
         factor: f32,
@@ -70,37 +66,25 @@ pub enum AppIntent {
     /// Move-Lifecycle Start: Drag-Verschieben selektierter Nodes beginnen
     BeginMoveSelectedNodesRequested,
     /// Move-Lifecycle Update: Selektierte Nodes um Delta verschieben
-    MoveSelectedNodesRequested {
-        delta_world: glam::Vec2,
-    },
+    MoveSelectedNodesRequested { delta_world: glam::Vec2 },
     /// Move-Lifecycle Ende: Drag-Verschieben abgeschlossen
     EndMoveSelectedNodesRequested,
 
     /// Render-Qualitätsstufe ändern
-    RenderQualityChanged {
-        quality: RenderQuality,
-    },
+    RenderQualityChanged { quality: RenderQuality },
     /// Datei wurde im Dialog ausgewählt (Laden)
-    FileSelected {
-        path: String,
-    },
+    FileSelected { path: String },
     /// Speicherpfad wurde im Dialog ausgewählt
-    SaveFilePathSelected {
-        path: String,
-    },
+    SaveFilePathSelected { path: String },
     /// Heightmap-Datei wurde im Dialog ausgewählt
-    HeightmapSelected {
-        path: String,
-    },
+    HeightmapSelected { path: String },
     /// Background-Map auswählen
     BackgroundMapSelected {
         path: String,
         crop_size: Option<u32>,
     },
     /// Background-Opacity ändern
-    SetBackgroundOpacity {
-        opacity: f32,
-    },
+    SetBackgroundOpacity { opacity: f32 },
     /// Background-Sichtbarkeit umschalten
     ToggleBackgroundVisibility,
     /// Undo: Letzte Aktion rückgängig machen
@@ -109,19 +93,13 @@ pub enum AppIntent {
     RedoRequested,
 
     /// Editor-Werkzeug wechseln
-    SetEditorToolRequested {
-        tool: EditorTool,
-    },
+    SetEditorToolRequested { tool: EditorTool },
     /// Neuen Node an Weltposition hinzufügen
-    AddNodeRequested {
-        world_pos: glam::Vec2,
-    },
+    AddNodeRequested { world_pos: glam::Vec2 },
     /// Selektierte Nodes löschen
     DeleteSelectedRequested,
     /// Connect-Tool: Node angeklickt (Source oder Target)
-    ConnectToolNodeClicked {
-        world_pos: glam::Vec2,
-    },
+    ConnectToolNodeClicked { world_pos: glam::Vec2 },
     /// Verbindung zwischen zwei Nodes erstellen (via Shortcut/Panel)
     AddConnectionRequested {
         from_id: u64,
@@ -130,10 +108,7 @@ pub enum AppIntent {
         priority: ConnectionPriority,
     },
     /// Alle Verbindungen zwischen zwei Nodes entfernen
-    RemoveConnectionBetweenRequested {
-        node_a: u64,
-        node_b: u64,
-    },
+    RemoveConnectionBetweenRequested { node_a: u64, node_b: u64 },
     /// Richtung einer Verbindung ändern
     SetConnectionDirectionRequested {
         start_id: u64,
@@ -147,39 +122,25 @@ pub enum AppIntent {
         priority: ConnectionPriority,
     },
     /// Standard-Richtung für neue Verbindungen ändern
-    SetDefaultDirectionRequested {
-        direction: ConnectionDirection,
-    },
+    SetDefaultDirectionRequested { direction: ConnectionDirection },
     /// Standard-Straßenart für neue Verbindungen ändern
-    SetDefaultPriorityRequested {
-        priority: ConnectionPriority,
-    },
+    SetDefaultPriorityRequested { priority: ConnectionPriority },
     /// Richtung aller Verbindungen zwischen selektierten Nodes ändern
-    SetAllConnectionsDirectionBetweenSelectedRequested {
-        direction: ConnectionDirection,
-    },
+    SetAllConnectionsDirectionBetweenSelectedRequested { direction: ConnectionDirection },
     /// Alle Verbindungen zwischen selektierten Nodes trennen
     RemoveAllConnectionsBetweenSelectedRequested,
     /// Richtung aller Verbindungen zwischen selektierten Nodes invertieren (start↔end tauschen)
     InvertAllConnectionsBetweenSelectedRequested,
     /// Priorität aller Verbindungen zwischen selektierten Nodes ändern
-    SetAllConnectionsPriorityBetweenSelectedRequested {
-        priority: ConnectionPriority,
-    },
+    SetAllConnectionsPriorityBetweenSelectedRequested { priority: ConnectionPriority },
     /// Zwei selektierte Nodes verbinden (mit Standard-Richtung/Priorität)
     ConnectSelectedNodesRequested,
     /// Map-Marker für einen Node erstellen
-    CreateMarkerRequested {
-        node_id: u64,
-    },
+    CreateMarkerRequested { node_id: u64 },
     /// Map-Marker für einen Node entfernen
-    RemoveMarkerRequested {
-        node_id: u64,
-    },
+    RemoveMarkerRequested { node_id: u64 },
     /// Map-Marker bearbeiten (Dialog öffnen)
-    EditMarkerRequested {
-        node_id: u64,
-    },
+    EditMarkerRequested { node_id: u64 },
     /// Marker-Dialog bestätigt (erstellen oder aktualisieren)
     MarkerDialogConfirmed {
         node_id: u64,
@@ -203,25 +164,18 @@ pub enum AppIntent {
     /// Options-Dialog schließen
     CloseOptionsDialogRequested,
     /// Optionen wurden geändert (sofortige Anwendung)
-    OptionsChanged {
-        options: EditorOptions,
-    },
+    OptionsChanged { options: EditorOptions },
     /// Optionen auf Standardwerte zurücksetzen
     ResetOptionsRequested,
 
     /// Route-Tool: Viewport-Klick
-    RouteToolClicked {
-        world_pos: glam::Vec2,
-        ctrl: bool,
-    },
+    RouteToolClicked { world_pos: glam::Vec2, ctrl: bool },
     /// Route-Tool: Ausführung bestätigt (Enter)
     RouteToolExecuteRequested,
     /// Route-Tool: Abbrechen (Escape)
     RouteToolCancelled,
     /// Route-Tool auswählen (per Index im ToolManager)
-    SelectRouteToolRequested {
-        index: usize,
-    },
+    SelectRouteToolRequested { index: usize },
     /// Route-Tool: Konfiguration geändert (Distanz/Anzahl) → Strecke neu berechnen
     RouteToolConfigChanged,
 }
@@ -230,13 +184,9 @@ pub enum AppIntent {
 #[derive(Debug, Clone)]
 pub enum AppCommand {
     /// Editor-Werkzeug wechseln
-    SetEditorTool {
-        tool: EditorTool,
-    },
+    SetEditorTool { tool: EditorTool },
     /// Neuen Node an Weltposition hinzufügen
-    AddNodeAtPosition {
-        world_pos: glam::Vec2,
-    },
+    AddNodeAtPosition { world_pos: glam::Vec2 },
     /// Selektierte Nodes löschen
     DeleteSelectedNodes,
     /// Connect-Tool: Node anwählen (Source oder Target)
@@ -252,10 +202,7 @@ pub enum AppCommand {
         priority: ConnectionPriority,
     },
     /// Alle Verbindungen zwischen zwei Nodes entfernen
-    RemoveConnectionBetween {
-        node_a: u64,
-        node_b: u64,
-    },
+    RemoveConnectionBetween { node_a: u64, node_b: u64 },
     /// Richtung einer Verbindung ändern
     SetConnectionDirection {
         start_id: u64,
@@ -269,25 +216,17 @@ pub enum AppCommand {
         priority: ConnectionPriority,
     },
     /// Standard-Richtung für neue Verbindungen setzen
-    SetDefaultDirection {
-        direction: ConnectionDirection,
-    },
+    SetDefaultDirection { direction: ConnectionDirection },
     /// Standard-Priorität für neue Verbindungen setzen
-    SetDefaultPriority {
-        priority: ConnectionPriority,
-    },
+    SetDefaultPriority { priority: ConnectionPriority },
     /// Bulk: Richtung aller Verbindungen zwischen Selektion ändern
-    SetAllConnectionsDirectionBetweenSelected {
-        direction: ConnectionDirection,
-    },
+    SetAllConnectionsDirectionBetweenSelected { direction: ConnectionDirection },
     /// Bulk: Alle Verbindungen zwischen Selektion entfernen
     RemoveAllConnectionsBetweenSelected,
     /// Bulk: Richtung aller Verbindungen zwischen Selektion invertieren
     InvertAllConnectionsBetweenSelected,
     /// Bulk: Priorität aller Verbindungen zwischen Selektion ändern
-    SetAllConnectionsPriorityBetweenSelected {
-        priority: ConnectionPriority,
-    },
+    SetAllConnectionsPriorityBetweenSelected { priority: ConnectionPriority },
     /// Zwei selektierte Nodes mit Standard-Einstellungen verbinden
     ConnectSelectedNodes,
     /// Datei-Öffnen-Dialog anfordern
@@ -311,13 +250,9 @@ pub enum AppCommand {
     /// Stufenweise herauszoomen
     ZoomOut,
     /// Viewport-Größe setzen
-    SetViewportSize {
-        size: [f32; 2],
-    },
+    SetViewportSize { size: [f32; 2] },
     /// Kamera um Delta verschieben
-    PanCamera {
-        delta: glam::Vec2,
-    },
+    PanCamera { delta: glam::Vec2 },
     /// Kamera zoomen (optional auf Fokuspunkt)
     ZoomCamera {
         factor: f32,
@@ -348,34 +283,22 @@ pub enum AppCommand {
         additive: bool,
     },
     /// Selektierte Nodes um Delta verschieben
-    MoveSelectedNodes {
-        delta_world: glam::Vec2,
-    },
+    MoveSelectedNodes { delta_world: glam::Vec2 },
     /// Render-Qualität setzen
-    SetRenderQuality {
-        quality: RenderQuality,
-    },
+    SetRenderQuality { quality: RenderQuality },
     /// XML-Datei laden
-    LoadFile {
-        path: String,
-    },
+    LoadFile { path: String },
     /// Datei speichern
-    SaveFile {
-        path: String,
-    },
+    SaveFile { path: String },
     /// Heightmap setzen
-    SetHeightmap {
-        path: String,
-    },
+    SetHeightmap { path: String },
     /// Background-Map laden
     LoadBackgroundMap {
         path: String,
         crop_size: Option<u32>,
     },
     /// Background-Opacity ändern
-    UpdateBackgroundOpacity {
-        opacity: f32,
-    },
+    UpdateBackgroundOpacity { opacity: f32 },
     /// Background-Sichtbarkeit umschalten
     ToggleBackgroundVisibility,
     /// Heightmap-Warnung schließen
@@ -395,14 +318,9 @@ pub enum AppCommand {
         group: String,
     },
     /// Map-Marker entfernen
-    RemoveMarker {
-        node_id: u64,
-    },
+    RemoveMarker { node_id: u64 },
     /// Marker-Dialog öffnen (neu oder bearbeiten)
-    OpenMarkerDialog {
-        node_id: u64,
-        is_new: bool,
-    },
+    OpenMarkerDialog { node_id: u64, is_new: bool },
     /// Marker aktualisieren
     UpdateMarker {
         node_id: u64,
@@ -420,9 +338,7 @@ pub enum AppCommand {
     /// Options-Dialog schliessen
     CloseOptionsDialog,
     /// Optionen anwenden und speichern
-    ApplyOptions {
-        options: EditorOptions,
-    },
+    ApplyOptions { options: EditorOptions },
     /// Optionen auf Standardwerte zurücksetzen
     ResetOptions,
     /// Selektion aufheben
@@ -431,18 +347,13 @@ pub enum AppCommand {
     SelectAllNodes,
 
     /// Route-Tool: Viewport-Klick verarbeiten
-    RouteToolClick {
-        world_pos: glam::Vec2,
-        ctrl: bool,
-    },
+    RouteToolClick { world_pos: glam::Vec2, ctrl: bool },
     /// Route-Tool: Ergebnis anwenden
     RouteToolExecute,
     /// Route-Tool: Abbrechen
     RouteToolCancel,
     /// Route-Tool per Index aktivieren
-    SelectRouteTool {
-        index: usize,
-    },
+    SelectRouteTool { index: usize },
     /// Route-Tool: Strecke neu berechnen (Config geändert)
     RouteToolRecreate,
 }

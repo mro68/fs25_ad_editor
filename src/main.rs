@@ -5,7 +5,9 @@
 
 use eframe::egui;
 use eframe::egui_wgpu;
-use fs25_auto_drive_editor::{render, ui, AppController, AppIntent, AppState, EditorOptions, EditorTool};
+use fs25_auto_drive_editor::{
+    render, ui, AppController, AppIntent, AppState, EditorOptions, EditorTool,
+};
 
 fn main() -> Result<(), eframe::Error> {
     AppRunner::run()
@@ -179,9 +181,12 @@ impl EditorApp {
                             let vp = glam::Vec2::new(viewport_size[0], viewport_size[1]);
 
                             // Verbindungen zeichnen
-                            let preview_color = egui::Color32::from_rgba_unmultiplied(0, 200, 255, 180);
+                            let preview_color =
+                                egui::Color32::from_rgba_unmultiplied(0, 200, 255, 180);
                             for &(a, b) in &preview.connections {
-                                if let (Some(&pa), Some(&pb)) = (preview.nodes.get(a), preview.nodes.get(b)) {
+                                if let (Some(&pa), Some(&pb)) =
+                                    (preview.nodes.get(a), preview.nodes.get(b))
+                                {
                                     let sa = cam.world_to_screen(pa, vp);
                                     let sb = cam.world_to_screen(pb, vp);
                                     painter.line_segment(
@@ -199,25 +204,39 @@ impl EditorApp {
                                 let sp = cam.world_to_screen(pos, vp);
                                 let screen_pos = egui::pos2(rect.min.x + sp.x, rect.min.y + sp.y);
                                 // Steuerpunkt(e) sind Nodes ohne Verbindung → andere Farbe/Form
-                                let is_control = !preview.connections.iter().any(|(a, b)| *a == i || *b == i);
+                                let is_control =
+                                    !preview.connections.iter().any(|(a, b)| *a == i || *b == i);
                                 if is_control {
                                     // Steuerpunkt: Raute
                                     let s = 5.0;
-                                    let cp_color = egui::Color32::from_rgba_unmultiplied(255, 160, 0, 220);
+                                    let cp_color =
+                                        egui::Color32::from_rgba_unmultiplied(255, 160, 0, 220);
                                     painter.line_segment(
-                                        [egui::pos2(screen_pos.x, screen_pos.y - s), egui::pos2(screen_pos.x + s, screen_pos.y)],
+                                        [
+                                            egui::pos2(screen_pos.x, screen_pos.y - s),
+                                            egui::pos2(screen_pos.x + s, screen_pos.y),
+                                        ],
                                         egui::Stroke::new(2.0, cp_color),
                                     );
                                     painter.line_segment(
-                                        [egui::pos2(screen_pos.x + s, screen_pos.y), egui::pos2(screen_pos.x, screen_pos.y + s)],
+                                        [
+                                            egui::pos2(screen_pos.x + s, screen_pos.y),
+                                            egui::pos2(screen_pos.x, screen_pos.y + s),
+                                        ],
                                         egui::Stroke::new(2.0, cp_color),
                                     );
                                     painter.line_segment(
-                                        [egui::pos2(screen_pos.x, screen_pos.y + s), egui::pos2(screen_pos.x - s, screen_pos.y)],
+                                        [
+                                            egui::pos2(screen_pos.x, screen_pos.y + s),
+                                            egui::pos2(screen_pos.x - s, screen_pos.y),
+                                        ],
                                         egui::Stroke::new(2.0, cp_color),
                                     );
                                     painter.line_segment(
-                                        [egui::pos2(screen_pos.x - s, screen_pos.y), egui::pos2(screen_pos.x, screen_pos.y - s)],
+                                        [
+                                            egui::pos2(screen_pos.x - s, screen_pos.y),
+                                            egui::pos2(screen_pos.x, screen_pos.y - s),
+                                        ],
                                         egui::Stroke::new(2.0, cp_color),
                                     );
                                 } else {

@@ -325,9 +325,10 @@ impl AppController {
             AppCommand::ZoomOut => handlers::view::zoom_out(state),
             AppCommand::SetViewportSize { size } => handlers::view::set_viewport_size(state, size),
             AppCommand::PanCamera { delta } => handlers::view::pan(state, delta),
-            AppCommand::ZoomCamera { factor, focus_world } => {
-                handlers::view::zoom_towards(state, factor, focus_world)
-            }
+            AppCommand::ZoomCamera {
+                factor,
+                focus_world,
+            } => handlers::view::zoom_towards(state, factor, focus_world),
             AppCommand::SetRenderQuality { quality } => {
                 handlers::view::set_render_quality(state, quality)
             }
@@ -426,7 +427,9 @@ impl AppController {
                 name,
                 group,
             } => handlers::editing::create_marker(state, node_id, &name, &group),
-            AppCommand::RemoveMarker { node_id } => handlers::editing::remove_marker(state, node_id),
+            AppCommand::RemoveMarker { node_id } => {
+                handlers::editing::remove_marker(state, node_id)
+            }
             AppCommand::OpenMarkerDialog { node_id, is_new } => {
                 handlers::editing::open_marker_dialog(state, node_id, is_new)
             }
@@ -447,9 +450,7 @@ impl AppController {
 
             // === Dialoge & Anwendungssteuerung ===
             AppCommand::RequestExit => handlers::dialog::request_exit(state),
-            AppCommand::RequestHeightmapDialog => {
-                handlers::dialog::request_heightmap_dialog(state)
-            }
+            AppCommand::RequestHeightmapDialog => handlers::dialog::request_heightmap_dialog(state),
             AppCommand::RequestBackgroundMapDialog => {
                 handlers::dialog::request_background_map_dialog(state)
             }
@@ -459,13 +460,9 @@ impl AppController {
             AppCommand::CloseMarkerDialog => handlers::dialog::close_marker_dialog(state),
             AppCommand::OpenOptionsDialog => handlers::dialog::open_options_dialog(state),
             AppCommand::CloseOptionsDialog => handlers::dialog::close_options_dialog(state),
-            AppCommand::ApplyOptions { options } => {
-                handlers::dialog::apply_options(state, options)
-            }
+            AppCommand::ApplyOptions { options } => handlers::dialog::apply_options(state, options),
             AppCommand::ResetOptions => handlers::dialog::reset_options(state),
-            AppCommand::DismissDeduplicateDialog => {
-                handlers::dialog::dismiss_dedup_dialog(state)
-            }
+            AppCommand::DismissDeduplicateDialog => handlers::dialog::dismiss_dedup_dialog(state),
 
             // === History ===
             AppCommand::Undo => handlers::history::undo(state),

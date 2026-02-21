@@ -172,7 +172,11 @@ impl ToolManager {
 
     /// Gibt Name und Index aller registrierten Tools zurück.
     pub fn tool_names(&self) -> Vec<(usize, &str)> {
-        self.tools.iter().enumerate().map(|(i, t)| (i, t.name())).collect()
+        self.tools
+            .iter()
+            .enumerate()
+            .map(|(i, t)| (i, t.name()))
+            .collect()
     }
 
     /// Setzt das aktive Route-Tool per Index.

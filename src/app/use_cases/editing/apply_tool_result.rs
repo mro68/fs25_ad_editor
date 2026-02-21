@@ -55,7 +55,14 @@ pub fn apply_tool_result(state: &mut AppState, result: ToolResult) -> Vec<u64> {
         }
         let new_pos = road_map.nodes[&new_id].position;
         let existing_pos = road_map.nodes[&existing_id].position;
-        let conn = Connection::new(new_id, existing_id, direction, priority, new_pos, existing_pos);
+        let conn = Connection::new(
+            new_id,
+            existing_id,
+            direction,
+            priority,
+            new_pos,
+            existing_pos,
+        );
         road_map.add_connection(conn);
         if !affected_ids.contains(&existing_id) {
             affected_ids.push(existing_id);
@@ -113,7 +120,14 @@ pub fn apply_tool_result_no_snapshot(state: &mut AppState, result: ToolResult) -
         }
         let new_pos = road_map.nodes[&new_id].position;
         let existing_pos = road_map.nodes[&existing_id].position;
-        let conn = Connection::new(new_id, existing_id, direction, priority, new_pos, existing_pos);
+        let conn = Connection::new(
+            new_id,
+            existing_id,
+            direction,
+            priority,
+            new_pos,
+            existing_pos,
+        );
         road_map.add_connection(conn);
         if !affected_ids.contains(&existing_id) {
             affected_ids.push(existing_id);
