@@ -77,6 +77,27 @@ pub trait RouteTool {
     fn execute_from_anchors(&self, _road_map: &RoadMap) -> Option<ToolResult> {
         None
     }
+
+    /// Gibt die Weltpositionen aller verschiebbaren Punkte zurück (für Drag-Hit-Test).
+    ///
+    /// Nur nicht-leer wenn alle nötigen Punkte gesetzt sind und das Tool
+    /// im Drag-Modus bereitsteht (z.B. Phase::Control mit vollständigen CPs).
+    fn drag_targets(&self) -> Vec<Vec2> {
+        vec![]
+    }
+
+    /// Startet einen Drag auf einem Punkt nahe `pos`.
+    ///
+    /// Gibt `true` zurück wenn ein Punkt gegriffen wurde, `false` wenn nichts in Reichweite.
+    fn on_drag_start(&mut self, _pos: Vec2, _road_map: &RoadMap, _pick_radius: f32) -> bool {
+        false
+    }
+
+    /// Aktualisiert die Position des gegriffenen Punkts während eines Drags.
+    fn on_drag_update(&mut self, _pos: Vec2) {}
+
+    /// Beendet den Drag (ggf. Re-Snap auf existierenden Node).
+    fn on_drag_end(&mut self, _road_map: &RoadMap) {}
 }
 
 // ── Typen ────────────────────────────────────────────────────────

@@ -118,3 +118,34 @@ pub fn recreate(state: &mut AppState) {
         }
     }
 }
+
+/// Startet einen Drag auf einem Steuerpunkt/Anker des aktiven Route-Tools.
+pub fn drag_start(state: &mut AppState, world_pos: glam::Vec2) {
+    let pick_radius = state.view.camera.pick_radius_world_scaled(
+        state.view.viewport_size[1],
+        state.options.selection_pick_radius_px,
+    );
+    let Some(road_map) = state.road_map.as_deref() else {
+        return;
+    };
+    if let Some(tool) = state.editor.tool_manager.active_tool_mut() {
+        tool.on_drag_start(world_pos, road_map, pick_radius);
+    }
+}
+
+/// Aktualisiert die Position des gegriffenen Punkts während eines Drags.
+pub fn drag_update(state: &mut AppState, world_pos: glam::Vec2) {
+    if let Some(tool) = state.editor.tool_manager.active_tool_mut() {
+        tool.on_drag_update(world_pos);
+    }
+}
+
+/// Beendet den Drag (ggf. Re-Snap auf existierenden Node).
+pub fn drag_end(state: &mut AppState) {
+    let Some(road_map) = state.road_map.as_deref() else {
+        return;
+    };
+    if let Some(tool) = state.editor.tool_manager.active_tool_mut() {
+        tool.on_drag_end(road_map);
+    }
+}
