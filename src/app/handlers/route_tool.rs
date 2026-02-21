@@ -34,8 +34,11 @@ pub fn click(state: &mut AppState, world_pos: glam::Vec2, ctrl: bool) {
     // Phase 3: Ergebnis anwenden oder Reset
     if let Some(result) = result {
         let ids = use_cases::editing::apply_tool_result(state, result);
-        if let Some(tool) = state.editor.tool_manager.active_tool_mut() {
-            tool.set_last_created(ids);
+        if let (Some(tool), Some(rm)) = (
+            state.editor.tool_manager.active_tool_mut(),
+            state.road_map.as_deref(),
+        ) {
+            tool.set_last_created(ids, rm);
             tool.reset();
         }
     } else if let Some(tool) = state.editor.tool_manager.active_tool_mut() {
@@ -55,8 +58,11 @@ pub fn execute(state: &mut AppState) {
 
     if let Some(result) = result {
         let ids = use_cases::editing::apply_tool_result(state, result);
-        if let Some(tool) = state.editor.tool_manager.active_tool_mut() {
-            tool.set_last_created(ids);
+        if let (Some(tool), Some(rm)) = (
+            state.editor.tool_manager.active_tool_mut(),
+            state.road_map.as_deref(),
+        ) {
+            tool.set_last_created(ids, rm);
         }
     }
 
@@ -112,9 +118,12 @@ pub fn recreate(state: &mut AppState) {
 
     if let Some(result) = result {
         let new_ids = use_cases::editing::apply_tool_result_no_snapshot(state, result);
-        if let Some(tool) = state.editor.tool_manager.active_tool_mut() {
+        if let (Some(tool), Some(rm)) = (
+            state.editor.tool_manager.active_tool_mut(),
+            state.road_map.as_deref(),
+        ) {
             tool.clear_recreate_flag();
-            tool.set_last_created(new_ids);
+            tool.set_last_created(new_ids, rm);
         }
     }
 }

@@ -54,7 +54,8 @@ pub trait RouteTool {
     fn set_priority(&mut self, _prio: ConnectionPriority) {}
 
     /// Speichert die IDs der zuletzt erstellten Nodes (für nachträgliche Anpassung).
-    fn set_last_created(&mut self, _ids: Vec<u64>) {}
+    /// `road_map` erlaubt tools, Nachbar-Informationen für Feintuning zu cachen.
+    fn set_last_created(&mut self, _ids: Vec<u64>, _road_map: &RoadMap) {}
 
     /// Gibt die IDs der zuletzt erstellten Nodes zurück.
     fn last_created_ids(&self) -> &[u64] {
