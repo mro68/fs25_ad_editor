@@ -32,10 +32,12 @@ pub fn set_render_quality(state: &mut AppState, quality: RenderQuality) {
     use_cases::viewport::set_render_quality(state, quality);
 }
 
-pub fn load_background_map(state: &mut AppState, path: String, crop_size: Option<u32>) {
-    if let Err(e) = use_cases::background_map::load_background_map(state, path, crop_size) {
-        log::error!("Fehler beim Laden der Background-Map: {}", e);
-    }
+pub fn load_background_map(
+    state: &mut AppState,
+    path: String,
+    crop_size: Option<u32>,
+) -> anyhow::Result<()> {
+    use_cases::background_map::load_background_map(state, path, crop_size)
 }
 
 pub fn set_background_opacity(state: &mut AppState, opacity: f32) {
