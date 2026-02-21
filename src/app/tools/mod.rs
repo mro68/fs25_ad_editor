@@ -4,6 +4,7 @@
 //! `ToolManager` registriert. Tools erzeugen reine Daten (`ToolResult`),
 //! die Mutation erfolgt zentral in `apply_tool_result`.
 
+pub mod curve;
 pub mod straight_line;
 
 use crate::core::{ConnectionDirection, ConnectionPriority, NodeFlag, RoadMap};
@@ -26,7 +27,8 @@ pub trait RouteTool {
     fn status_text(&self) -> &str;
 
     /// Viewport-Klick verarbeiten. Gibt die nächste Aktion zurück.
-    fn on_click(&mut self, pos: Vec2, road_map: &RoadMap) -> ToolAction;
+    /// `ctrl` ist true wenn Ctrl/Cmd gedrückt war.
+    fn on_click(&mut self, pos: Vec2, road_map: &RoadMap, ctrl: bool) -> ToolAction;
 
     /// Preview-Geometrie für die aktuelle Mausposition berechnen.
     fn preview(&self, cursor_pos: Vec2, road_map: &RoadMap) -> ToolPreview;
@@ -105,6 +107,8 @@ pub enum ToolAction {
     Continue,
     /// Alle nötigen Punkte gesetzt — bereit zur Ausführung
     ReadyToExecute,
+    /// Vorschau aktualisiert — Klick ändert Parameter, Enter bestätigt
+    UpdatePreview,
 }
 
 /// Preview-Geometrie für das Rendering (halbtransparent im Viewport).
@@ -152,6 +156,7 @@ impl ToolManager {
         };
         // Standard-Tools registrieren
         manager.register(Box::new(straight_line::StraightLineTool::new()));
+        manager.register(Box::new(curve::CurveTool::new()));
         manager
     }
 

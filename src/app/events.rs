@@ -212,6 +212,7 @@ pub enum AppIntent {
     /// Route-Tool: Viewport-Klick
     RouteToolClicked {
         world_pos: glam::Vec2,
+        ctrl: bool,
     },
     /// Route-Tool: Ausführung bestätigt (Enter)
     RouteToolExecuteRequested,
@@ -432,6 +433,7 @@ pub enum AppCommand {
     /// Route-Tool: Viewport-Klick verarbeiten
     RouteToolClick {
         world_pos: glam::Vec2,
+        ctrl: bool,
     },
     /// Route-Tool: Ergebnis anwenden
     RouteToolExecute,

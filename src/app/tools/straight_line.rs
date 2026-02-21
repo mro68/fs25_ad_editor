@@ -136,7 +136,7 @@ impl RouteTool for StraightLineTool {
         }
     }
 
-    fn on_click(&mut self, pos: Vec2, road_map: &RoadMap) -> ToolAction {
+    fn on_click(&mut self, pos: Vec2, road_map: &RoadMap, _ctrl: bool) -> ToolAction {
         let anchor = snap_to_node(pos, road_map);
 
         if self.start.is_none() {
@@ -569,11 +569,11 @@ mod tests {
         let road_map = RoadMap::new(3);
 
         assert!(!tool.is_ready());
-        let action = tool.on_click(Vec2::ZERO, &road_map);
+        let action = tool.on_click(Vec2::ZERO, &road_map, false);
         assert_eq!(action, ToolAction::Continue);
         assert!(!tool.is_ready());
 
-        let action = tool.on_click(Vec2::new(12.0, 0.0), &road_map);
+        let action = tool.on_click(Vec2::new(12.0, 0.0), &road_map, false);
         assert_eq!(action, ToolAction::ReadyToExecute);
         assert!(tool.is_ready());
     }
@@ -584,8 +584,8 @@ mod tests {
         tool.max_segment_length = 6.0;
         let road_map = RoadMap::new(3);
 
-        tool.on_click(Vec2::ZERO, &road_map);
-        tool.on_click(Vec2::new(12.0, 0.0), &road_map);
+        tool.on_click(Vec2::ZERO, &road_map, false);
+        tool.on_click(Vec2::new(12.0, 0.0), &road_map, false);
 
         let result = tool.execute(&road_map).expect("Ergebnis erwartet");
         assert_eq!(result.new_nodes.len(), 3); // Start, Mitte, Ende
@@ -597,8 +597,8 @@ mod tests {
         let mut tool = StraightLineTool::new();
         let road_map = RoadMap::new(3);
 
-        tool.on_click(Vec2::ZERO, &road_map);
-        tool.on_click(Vec2::new(10.0, 0.0), &road_map);
+        tool.on_click(Vec2::ZERO, &road_map, false);
+        tool.on_click(Vec2::new(10.0, 0.0), &road_map, false);
         assert!(tool.is_ready());
 
         tool.reset();
@@ -612,15 +612,15 @@ mod tests {
         let road_map = RoadMap::new(3);
 
         // Erste Linie: (0,0) → (12,0)
-        tool.on_click(Vec2::ZERO, &road_map);
-        tool.on_click(Vec2::new(12.0, 0.0), &road_map);
+        tool.on_click(Vec2::ZERO, &road_map, false);
+        tool.on_click(Vec2::new(12.0, 0.0), &road_map, false);
 
         // set_last_created simulieren (wie Controller es tut)
         tool.set_last_created(vec![100, 101, 102]);
         tool.reset();
 
         // Zweiter Klick = Verkettung: letzter Endpunkt (12,0) als Start
-        let action = tool.on_click(Vec2::new(24.0, 0.0), &road_map);
+        let action = tool.on_click(Vec2::new(24.0, 0.0), &road_map, false);
         assert_eq!(action, ToolAction::ReadyToExecute);
         assert!(tool.is_ready());
 
@@ -636,8 +636,8 @@ mod tests {
         let mut tool = StraightLineTool::new();
         let road_map = RoadMap::new(3);
 
-        tool.on_click(Vec2::ZERO, &road_map);
-        tool.on_click(Vec2::new(10.0, 0.0), &road_map);
+        tool.on_click(Vec2::ZERO, &road_map, false);
+        tool.on_click(Vec2::new(10.0, 0.0), &road_map, false);
 
         tool.set_last_created(vec![1, 2, 3]);
         tool.reset();
@@ -653,8 +653,8 @@ mod tests {
         tool.max_segment_length = 5.0;
         let road_map = RoadMap::new(3);
 
-        tool.on_click(Vec2::ZERO, &road_map);
-        tool.on_click(Vec2::new(10.0, 0.0), &road_map);
+        tool.on_click(Vec2::ZERO, &road_map, false);
+        tool.on_click(Vec2::new(10.0, 0.0), &road_map, false);
         tool.set_last_created(vec![1, 2, 3]);
         tool.reset();
 

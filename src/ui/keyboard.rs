@@ -9,6 +9,7 @@ use std::collections::HashSet;
 pub(super) fn collect_keyboard_intents(
     ui: &egui::Ui,
     selected_node_ids: &HashSet<u64>,
+    active_tool: EditorTool,
 ) -> Vec<AppIntent> {
     let mut events = Vec::new();
 
@@ -52,10 +53,14 @@ pub(super) fn collect_keyboard_intents(
     }
 
     if key_escape_pressed {
-        events.push(AppIntent::ClearSelectionRequested);
+        if active_tool == EditorTool::Route {
+            events.push(AppIntent::RouteToolCancelled);
+        } else {
+            events.push(AppIntent::ClearSelectionRequested);
+        }
     }
 
-    // Delete, Tool-Wechsel, Connect/Disconnect
+    // Delete, Tool-Wechsel, Connect/Disconnect, Enter (Route-Tool)
     let (
         key_del_pressed,
         key_1_pressed,
@@ -63,6 +68,7 @@ pub(super) fn collect_keyboard_intents(
         key_3_pressed,
         key_c_pressed,
         key_x_pressed,
+        key_enter_pressed,
     ) = ui.input(|i| {
         (
             i.key_pressed(egui::Key::Delete) || i.key_pressed(egui::Key::Backspace),
@@ -71,11 +77,17 @@ pub(super) fn collect_keyboard_intents(
             i.key_pressed(egui::Key::Num3),
             i.key_pressed(egui::Key::C),
             i.key_pressed(egui::Key::X),
+            i.key_pressed(egui::Key::Enter),
         )
     });
 
     if key_del_pressed && !selected_node_ids.is_empty() {
         events.push(AppIntent::DeleteSelectedRequested);
+    }
+
+    // Enter = Route-Tool ausführen
+    if key_enter_pressed && active_tool == EditorTool::Route {
+        events.push(AppIntent::RouteToolExecuteRequested);
     }
 
     if key_1_pressed && !modifiers.command {
@@ -125,6 +137,14 @@ mod tests {
     use super::*;
 
     fn collect_with_key_event(event: egui::Event, selected: HashSet<u64>) -> Vec<AppIntent> {
+        collect_with_key_event_and_tool(event, selected, EditorTool::Select)
+    }
+
+    fn collect_with_key_event_and_tool(
+        event: egui::Event,
+        selected: HashSet<u64>,
+        active_tool: EditorTool,
+    ) -> Vec<AppIntent> {
         let ctx = egui::Context::default();
         let mut raw_input = egui::RawInput::default();
         raw_input.events.push(event);
@@ -132,7 +152,7 @@ mod tests {
         let mut events = Vec::new();
         let _ = ctx.run(raw_input, |ctx| {
             egui::CentralPanel::default().show(ctx, |ui| {
-                events = collect_keyboard_intents(ui, &selected);
+                events = collect_keyboard_intents(ui, &selected, active_tool);
             });
         });
 

@@ -6,7 +6,7 @@ use crate::app::use_cases;
 use crate::app::AppState;
 
 /// Verarbeitet einen Viewport-Klick im Route-Tool.
-pub fn click(state: &mut AppState, world_pos: glam::Vec2) {
+pub fn click(state: &mut AppState, world_pos: glam::Vec2, ctrl: bool) {
     // Phase 1: Klick verarbeiten
     let action = {
         let Some(road_map) = state.road_map.as_deref() else {
@@ -15,7 +15,7 @@ pub fn click(state: &mut AppState, world_pos: glam::Vec2) {
         let Some(tool) = state.editor.tool_manager.active_tool_mut() else {
             return;
         };
-        tool.on_click(world_pos, road_map)
+        tool.on_click(world_pos, road_map, ctrl)
     };
 
     if action != ToolAction::ReadyToExecute {
