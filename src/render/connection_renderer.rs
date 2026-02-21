@@ -103,8 +103,11 @@ impl ConnectionRenderer {
         }
     }
 
-    /// Rendert alle Verbindungen inkl. Pfeilspitzen.
     #[allow(clippy::too_many_arguments)]
+    /// Rendert alle sichtbaren Verbindungen inkl. Pfeilspitzen.
+    ///
+    /// Führt vor dem Draw-Call Viewport-Culling durch und aktualisiert
+    /// den Vertex-Buffer nur bei Bedarf.
     pub fn render(
         &mut self,
         device: &wgpu::Device,
@@ -259,15 +262,14 @@ impl ConnectionRenderer {
             queue.write_buffer(vertex_buffer, 0, bytemuck::cast_slice(&vertices));
         }
 
+        let Some(vertex_buffer) = self.vertex_buffer.as_ref() else {
+            log::error!("ConnectionRenderer: missing vertex buffer before draw call");
+            return;
+        };
+
         render_pass.set_pipeline(&self.pipeline);
         render_pass.set_bind_group(0, &self.bind_group, &[]);
-        render_pass.set_vertex_buffer(
-            0,
-            self.vertex_buffer
-                .as_ref()
-                .expect("connection vertex buffer")
-                .slice(..),
-        );
+        render_pass.set_vertex_buffer(0, vertex_buffer.slice(..));
         render_pass.draw(0..vertices.len() as u32, 0..1);
     }
 }

@@ -138,8 +138,10 @@ impl MarkerRenderer {
         }
     }
 
-    /// Rendert alle Map-Marker
     #[allow(clippy::too_many_arguments)]
+    /// Rendert alle sichtbaren Map-Marker per GPU-Instancing.
+    ///
+    /// Marker-Positionen werden über die referenzierte Node-ID aufgelöst.
     pub fn render(
         &mut self,
         device: &wgpu::Device,

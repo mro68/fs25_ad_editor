@@ -28,7 +28,7 @@ let scene = controller.build_render_scene(&state, [width, height]);
 
 **Features:**
 - Verarbeitet UI- und Input-Intents gegen `AppState`
-- Mappt Intents auf Commands
+- Mappt Intents auf Commands (Mapping ist in `intent_mapping.rs` ausgelagert)
 - Dispatcht Commands an Feature-Handler (`handlers/`)
 - Baut den expliziten Render-Vertrag (`RenderScene`)
 
@@ -223,7 +223,7 @@ pub enum AppIntent {
     ResetOptionsRequested,
 
     // Route-Tool
-    RouteToolClicked { world_pos: glam::Vec2 },
+    RouteToolClicked { world_pos: glam::Vec2, ctrl: bool },
     RouteToolExecuteRequested,
     RouteToolCancelled,
     SelectRouteToolRequested { index: usize },
@@ -373,7 +373,7 @@ pub enum AppCommand {
 
 ### `use_cases::background_map`
 - `request_background_map_dialog(state)` — Background-Map-Dialog öffnen
-- `load_background_map(state, path, crop_size)` — Background-Map laden (PNG/JPG/DDS)
+- `load_background_map(state, path, crop_size) -> anyhow::Result<()>` — Background-Map laden (PNG/JPG/DDS), Fehler werden an den Controller propagiert
 - `set_background_opacity(state, opacity)` — Opacity setzen (0.0–1.0)
 - `toggle_background_visibility(state)` — Sichtbarkeit umschalten
 - `clear_background_map(state)` — Background-Map entfernen
@@ -411,7 +411,7 @@ AppIntent::CameraPan { delta: Vec2::new(-dx * wpp, -dy * wpp) }
 ## Design-Prinzipien
 
 1. **Single Source of Truth:** `AppState` hält die Laufzeitdaten (kein I/O)
-2. **Intent Boundary:** UI mutiert nicht direkt, sondern emittiert `AppIntent`
+2. **Intent Boundary:** UI emittiert primär `AppIntent`; reine UI-/Tool-Konfiguration im `AppState` kann gezielt direkt aktualisiert werden
 3. **Command Execution:** `AppController` mappt Intents auf Commands und führt diese aus
 4. **Render Contract:** Ausgabe an Renderer erfolgt nur über `RenderScene`
 5. **I/O in Use-Cases:** Dateisystem-Operationen sind in `use_cases::file_io` zentralisiert
@@ -429,9 +429,10 @@ pub struct CommandLog { /* intern */ }
 
 **Methoden:**
 - `new() → Self`
-- `log(command: &AppCommand)` — Command protokollieren
-- `entries() → &[String]` — Alle Einträge abrufen
-- `clear()` — Log leeren
+- `record(command: AppCommand)` — Command protokollieren
+- `len() → usize` — Anzahl geloggter Commands
+- `is_empty() → bool` — Prüfen, ob keine Einträge vorhanden sind
+- `entries() → &[AppCommand]` — Read-only Sicht auf alle Einträge
 
 ---
 

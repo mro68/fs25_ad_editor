@@ -3,6 +3,7 @@
 use crate::app::use_cases;
 use crate::app::AppState;
 
+/// Selektiert den nächstgelegenen Node zum Klickpunkt.
 pub fn select_nearest_node(
     state: &mut AppState,
     world_pos: glam::Vec2,
@@ -19,6 +20,7 @@ pub fn select_nearest_node(
     );
 }
 
+/// Selektiert das Segment zwischen den nächsten Kreuzungen.
 pub fn select_segment(
     state: &mut AppState,
     world_pos: glam::Vec2,
@@ -33,26 +35,32 @@ pub fn select_segment(
     );
 }
 
+/// Selektiert Nodes innerhalb eines Rechtecks.
 pub fn select_in_rect(state: &mut AppState, min: glam::Vec2, max: glam::Vec2, additive: bool) {
     use_cases::selection::select_nodes_in_rect(state, min, max, additive);
 }
 
+/// Selektiert Nodes innerhalb eines Lasso-Polygons.
 pub fn select_in_lasso(state: &mut AppState, polygon: &[glam::Vec2], additive: bool) {
     use_cases::selection::select_nodes_in_lasso(state, polygon, additive);
 }
 
+/// Verschiebt alle selektierten Nodes um ein Delta.
 pub fn move_selected(state: &mut AppState, delta_world: glam::Vec2) {
     use_cases::selection::move_selected_nodes(state, delta_world);
 }
 
+/// Startet einen Move-Lifecycle (nimmt Undo-Snapshot auf).
 pub fn begin_move(state: &mut AppState) {
     state.record_undo_snapshot();
 }
 
+/// Hebt die aktuelle Selektion auf.
 pub fn clear(state: &mut AppState) {
     use_cases::selection::clear_selection(state);
 }
 
+/// Selektiert alle Nodes der geladenen RoadMap.
 pub fn select_all(state: &mut AppState) {
     if let Some(road_map) = state.road_map.as_deref() {
         state.selection.selected_node_ids = road_map.nodes.keys().copied().collect();

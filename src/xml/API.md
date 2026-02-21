@@ -55,9 +55,9 @@ std::fs::write("output.xml", xml)?;
 ```
 
 **Features:**
-- Sortierte Node-IDs (stabil)
+- Sortierte Node-IDs mit Remap auf fortlaufende IDs (`1..N`)
 - Berechnet `out`/`incoming`-Listen aus Connections
-- Schreibt MapMarkers als `<mm>`-Elemente
+- Schreibt MapMarkers als `<mmN>`-Elemente mit `<id>`, `<name>`, `<group>`
 - Float-Formatierung: 3 Dezimalstellen für Koordinaten
 - XML-Escaping für Strings
 - Exakte Replikation des Original-Formats (encoding, standalone)
@@ -77,7 +77,11 @@ std::fs::write("output.xml", xml)?;
         <flags>0,0,1</flags>
     </waypoints>
     <mapmarker>
-        <mm id="1" name="Loading Point" group="All" />
+        <mm1>
+            <id>1.000000</id>
+            <name>Loading Point</name>
+            <group>All</group>
+        </mm1>
     </mapmarker>
 </AutoDrive>
 ```

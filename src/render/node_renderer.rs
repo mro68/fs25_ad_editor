@@ -140,8 +140,11 @@ impl NodeRenderer {
         }
     }
 
-    /// Rendert alle Nodes der RoadMap
     #[allow(clippy::too_many_arguments)]
+    /// Rendert alle sichtbaren Nodes der RoadMap per GPU-Instancing.
+    ///
+    /// Führt Viewport-Culling durch und schreibt Instanzdaten in den
+    /// wiederverwendbaren Instance-Buffer.
     pub fn render(
         &mut self,
         device: &wgpu::Device,
@@ -265,16 +268,15 @@ impl NodeRenderer {
         }
 
         // Rendern
+        let Some(instance_buffer) = self.instance_buffer.as_ref() else {
+            log::error!("NodeRenderer: missing instance buffer before draw call");
+            return;
+        };
+
         render_pass.set_pipeline(&self.pipeline);
         render_pass.set_bind_group(0, &self.bind_group, &[]);
         render_pass.set_vertex_buffer(0, self.vertex_buffer.slice(..));
-        render_pass.set_vertex_buffer(
-            1,
-            self.instance_buffer
-                .as_ref()
-                .expect("instance buffer")
-                .slice(..),
-        );
+        render_pass.set_vertex_buffer(1, instance_buffer.slice(..));
         render_pass.draw(0..6, 0..instances.len() as u32);
     }
 }
