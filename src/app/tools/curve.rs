@@ -506,20 +506,15 @@ impl RouteTool for CurveTool {
     fn execute(&self, road_map: &RoadMap) -> Option<ToolResult> {
         let start = self.start.as_ref()?;
         let end = self.end.as_ref()?;
-        let cp1 = self.control_point1?;
-        let cp2 = self.control_point2;
-
-        build_tool_result(
-            start,
-            end,
-            self.degree,
-            cp1,
-            cp2,
-            self.max_segment_length,
-            self.direction,
-            self.priority,
-            road_map,
-        )
+        let params = CurveParams {
+            degree: self.degree,
+            cp1: self.control_point1?,
+            cp2: self.control_point2,
+            max_segment_length: self.max_segment_length,
+            direction: self.direction,
+            priority: self.priority,
+        };
+        build_tool_result(start, end, &params, road_map)
     }
 
     fn reset(&mut self) {
@@ -578,35 +573,43 @@ impl RouteTool for CurveTool {
     fn execute_from_anchors(&self, road_map: &RoadMap) -> Option<ToolResult> {
         let start = self.last_start_anchor.as_ref()?;
         let end = self.last_end_anchor.as_ref()?;
-        let cp1 = self.last_control_point1?;
-        let cp2 = self.last_control_point2;
-
-        build_tool_result(
-            start,
-            end,
-            self.degree,
-            cp1,
-            cp2,
-            self.max_segment_length,
-            self.direction,
-            self.priority,
-            road_map,
-        )
+        let params = CurveParams {
+            degree: self.degree,
+            cp1: self.last_control_point1?,
+            cp2: self.last_control_point2,
+            max_segment_length: self.max_segment_length,
+            direction: self.direction,
+            priority: self.priority,
+        };
+        build_tool_result(start, end, &params, road_map)
     }
 }
 
-/// Gemeinsame Logik für execute() und execute_from_anchors().
-fn build_tool_result(
-    start: &ToolAnchor,
-    end: &ToolAnchor,
+/// Parameter-Bundle für build_tool_result (Clippy: max 7 Parameter).
+struct CurveParams {
     degree: CurveDegree,
     cp1: Vec2,
     cp2: Option<Vec2>,
     max_segment_length: f32,
     direction: ConnectionDirection,
     priority: ConnectionPriority,
+}
+
+/// Gemeinsame Logik für execute() und execute_from_anchors().
+fn build_tool_result(
+    start: &ToolAnchor,
+    end: &ToolAnchor,
+    params: &CurveParams,
     road_map: &RoadMap,
 ) -> Option<ToolResult> {
+    let CurveParams {
+        degree,
+        cp1,
+        cp2,
+        max_segment_length,
+        direction,
+        priority,
+    } = *params;
     let start_pos = start.position();
     let end_pos = end.position();
 
