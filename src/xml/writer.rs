@@ -50,6 +50,13 @@ pub fn write_autodrive_config(road_map: &RoadMap, heightmap: Option<&Heightmap>)
     let mut node_ids: Vec<u64> = road_map.nodes.keys().copied().collect();
     node_ids.sort_unstable();
 
+    // Renumbering: Interne IDs → lückenlose 1-basierte IDs (AutoDrive erwartet kontiguöse IDs)
+    let id_remap: HashMap<u64, u64> = node_ids
+        .iter()
+        .enumerate()
+        .map(|(i, &old_id)| (old_id, (i + 1) as u64))
+        .collect();
+
     let mut outgoing: HashMap<u64, HashSet<u64>> = HashMap::new();
     let mut incoming: HashMap<u64, HashSet<u64>> = HashMap::new();
 
@@ -95,7 +102,8 @@ pub fn write_autodrive_config(road_map: &RoadMap, heightmap: Option<&Heightmap>)
         let node = road_map.nodes.get(id).ok_or_else(|| {
             anyhow::anyhow!("Inkonsistente RoadMap: Node {} fehlt beim XML-Export", id)
         })?;
-        ids_text.push(id.to_string());
+        let new_id = id_remap[id];
+        ids_text.push(new_id.to_string());
         xs_text.push(format_float(node.position.x));
 
         // Y-Koordinate: Aus Heightmap berechnen oder 0.0
@@ -125,14 +133,14 @@ pub fn write_autodrive_config(road_map: &RoadMap, heightmap: Option<&Heightmap>)
 
         let mut out_list: Vec<u64> = outgoing
             .get(id)
-            .map(|list| list.iter().copied().collect())
+            .map(|list| list.iter().filter_map(|old| id_remap.get(old).copied()).collect())
             .unwrap_or_default();
         out_list.sort_unstable();
         out_text.push(join_ids(&out_list));
 
         let mut incoming_list: Vec<u64> = incoming
             .get(id)
-            .map(|list| list.iter().copied().collect())
+            .map(|list| list.iter().filter_map(|old| id_remap.get(old).copied()).collect())
             .unwrap_or_default();
         incoming_list.sort_unstable();
         incoming_text.push(join_ids(&incoming_list));
@@ -157,8 +165,13 @@ pub fn write_autodrive_config(road_map: &RoadMap, heightmap: Option<&Heightmap>)
     output.push_str("    <mapmarker>\n");
     for (index, marker) in road_map.map_markers.iter().enumerate() {
         let marker_tag = format!("mm{}", index + 1);
+        // Marker-ID remappen (zeigt auf Node-ID)
+        let remapped_marker_id = id_remap.get(&marker.id).copied().unwrap_or(marker.id);
         output.push_str(&format!("        <{}>\n", marker_tag));
-        output.push_str(&format!("            <id>{:.6}</id>\n", marker.id as f64));
+        output.push_str(&format!(
+            "            <id>{:.6}</id>\n",
+            remapped_marker_id as f64
+        ));
         output.push_str(&format!(
             "            <name>{}</name>\n",
             escape_xml(&marker.name)
