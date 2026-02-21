@@ -1,11 +1,19 @@
 //! Properties-Panel (rechte Seitenleiste) für Node- und Connection-Eigenschaften.
 
 use crate::app::{
-    AppIntent, AppState, ConnectionDirection, ConnectionPriority, EditorTool, RoadMap,
+    tools::ToolManager, AppIntent, ConnectionDirection, ConnectionPriority, EditorTool, RoadMap,
 };
 
 /// Rendert das Properties-Panel und gibt erzeugte Events zurück.
-pub fn render_properties_panel(ctx: &egui::Context, state: &mut AppState) -> Vec<AppIntent> {
+pub fn render_properties_panel(
+    ctx: &egui::Context,
+    road_map: Option<&RoadMap>,
+    selected_node_ids: &[u64],
+    default_direction: ConnectionDirection,
+    default_priority: ConnectionPriority,
+    active_tool: EditorTool,
+    tool_manager: Option<&mut ToolManager>,
+) -> Vec<AppIntent> {
     let mut events = Vec::new();
 
     egui::SidePanel::right("properties_panel")
@@ -16,20 +24,27 @@ pub fn render_properties_panel(ctx: &egui::Context, state: &mut AppState) -> Vec
             ui.heading("Eigenschaften");
             ui.separator();
 
-            let selected: Vec<u64> = state.selection.selected_node_ids.iter().copied().collect();
+            let selected: Vec<u64> = selected_node_ids.to_vec();
 
             if selected.is_empty() {
                 ui.label("Keine Selektion");
-            } else if let Some(road_map) = state.road_map.as_deref() {
-                render_selection_info(ui, road_map, &selected, state, &mut events);
+            } else if let Some(road_map) = road_map {
+                render_selection_info(
+                    ui,
+                    road_map,
+                    &selected,
+                    default_direction,
+                    default_priority,
+                    &mut events,
+                );
             }
 
             ui.separator();
-            render_default_direction_selector(ui, state, &mut events);
+            render_default_direction_selector(ui, default_direction, default_priority, &mut events);
 
             // Route-Tool-Konfiguration (Distanz/Anzahl-Slider wenn Tool aktiv)
-            if state.editor.active_tool == EditorTool::Route {
-                events.extend(render_route_tool_config(ui, state));
+            if active_tool == EditorTool::Route {
+                events.extend(render_route_tool_config(ui, tool_manager));
             }
         });
 
@@ -40,7 +55,8 @@ fn render_selection_info(
     ui: &mut egui::Ui,
     road_map: &RoadMap,
     selected: &[u64],
-    state: &AppState,
+    default_direction: ConnectionDirection,
+    default_priority: ConnectionPriority,
     events: &mut Vec<AppIntent>,
 ) {
     match selected.len() {
@@ -83,8 +99,8 @@ fn render_selection_info(
                 ui.label("Keine Verbindung");
                 ui.separator();
 
-                let direction = state.editor.default_direction;
-                let priority = state.editor.default_priority;
+                let direction = default_direction;
+                let priority = default_priority;
                 let dir_label = direction_label(direction);
                 let prio_label = priority_label(priority);
                 if ui
@@ -177,18 +193,18 @@ fn render_selection_info(
     }
 }
 
-fn render_route_tool_config(ui: &mut egui::Ui, state: &mut AppState) -> Vec<AppIntent> {
+fn render_route_tool_config(ui: &mut egui::Ui, tool_manager: Option<&mut ToolManager>) -> Vec<AppIntent> {
     let mut events = Vec::new();
 
     ui.separator();
     ui.heading("Route-Tool");
 
-    if let Some(tool) = state.editor.tool_manager.active_tool() {
+    if let Some(tool) = tool_manager.as_deref().and_then(|manager| manager.active_tool()) {
         ui.label(tool.status_text());
         ui.add_space(4.0);
     }
 
-    if let Some(tool) = state.editor.tool_manager.active_tool_mut() {
+    if let Some(tool) = tool_manager.and_then(|manager| manager.active_tool_mut()) {
         let changed = tool.render_config(ui);
         if changed && tool.needs_recreate() {
             events.push(AppIntent::RouteToolConfigChanged);
@@ -200,11 +216,12 @@ fn render_route_tool_config(ui: &mut egui::Ui, state: &mut AppState) -> Vec<AppI
 
 fn render_default_direction_selector(
     ui: &mut egui::Ui,
-    state: &AppState,
+    default_direction: ConnectionDirection,
+    default_priority: ConnectionPriority,
     events: &mut Vec<AppIntent>,
 ) {
     ui.label("Standard-Richtung:");
-    let current = state.editor.default_direction;
+    let current = default_direction;
     let mut selected = current;
 
     egui::ComboBox::from_id_salt("default_direction")
@@ -235,7 +252,7 @@ fn render_default_direction_selector(
 
     ui.add_space(4.0);
     ui.label("Standard-Straßenart:");
-    let current_prio = state.editor.default_priority;
+    let current_prio = default_priority;
     let mut selected_prio = current_prio;
 
     egui::ComboBox::from_id_salt("default_priority")
