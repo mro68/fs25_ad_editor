@@ -111,7 +111,26 @@ impl EditorApp {
         ui::render_status_bar(ctx, &self.state);
         events.extend(ui::render_menu(ctx, &self.state));
         events.extend(ui::render_toolbar(ctx, &self.state));
-        events.extend(ui::render_properties_panel(ctx, &mut self.state));
+        let road_map_for_properties = self.state.road_map.clone();
+        let selected_for_properties: Vec<u64> =
+            self.state.selection.selected_node_ids.iter().copied().collect();
+        let default_direction = self.state.editor.default_direction;
+        let default_priority = self.state.editor.default_priority;
+        let active_tool = self.state.editor.active_tool;
+        let route_tool_manager = if active_tool == EditorTool::Route {
+            Some(&mut self.state.editor.tool_manager)
+        } else {
+            None
+        };
+        events.extend(ui::render_properties_panel(
+            ctx,
+            road_map_for_properties.as_deref(),
+            &selected_for_properties,
+            default_direction,
+            default_priority,
+            active_tool,
+            route_tool_manager,
+        ));
         events.extend(ui::handle_file_dialogs(&mut self.state.ui));
         events.extend(ui::show_heightmap_warning(
             ctx,

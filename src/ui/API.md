@@ -2,7 +2,7 @@
 
 ## Überblick
 
-Das `ui`-Modul enthält egui-UI-Komponenten (Menüs, Statusbar, Input-Handling, Dialoge). Interaktionen emittieren primär `AppIntent`s; reine UI-/Tool-Konfigurationswerte im `AppState` können direkt angepasst werden.
+Das `ui`-Modul enthält egui-UI-Komponenten (Menüs, Statusbar, Input-Handling, Dialoge). Interaktionen emittieren primär `AppIntent`s; mutierende Zugriffe sind auf den Route-Tool-Manager begrenzt.
 
 ## Module
 
@@ -66,7 +66,15 @@ pub fn render_toolbar(ctx: &egui::Context, state: &AppState) -> Vec<AppIntent>
 Rendert das Properties-Panel mit Detailanzeige selektierter Nodes (IDs, Positionen, Verbindungen).
 
 ```rust
-pub fn render_properties_panel(ctx: &egui::Context, state: &mut AppState) -> Vec<AppIntent>
+pub fn render_properties_panel(
+  ctx: &egui::Context,
+  road_map: Option<&RoadMap>,
+  selected_node_ids: &[u64],
+  default_direction: ConnectionDirection,
+  default_priority: ConnectionPriority,
+  active_tool: EditorTool,
+  tool_manager: Option<&mut ToolManager>,
+) -> Vec<AppIntent>
 ```
 
 ---
