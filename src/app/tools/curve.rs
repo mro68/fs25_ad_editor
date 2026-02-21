@@ -18,6 +18,15 @@ use geometry::{
 /// Snap-Distanz: Klick innerhalb dieses Radius rastet auf existierenden Node ein.
 const SNAP_RADIUS: f32 = 3.0;
 
+/// Welcher Punkt wird gerade per Drag verschoben?
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum DragTarget {
+    Start,
+    End,
+    CP1,
+    CP2,
+}
+
 /// Welcher Wert wurde zuletzt vom User geändert?
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 enum LastEdited {
@@ -52,8 +61,10 @@ pub struct CurveTool {
     end: Option<ToolAnchor>,
     /// Steuerpunkt 1 (frei positionierbar)
     control_point1: Option<Vec2>,
-    /// Steuerpunkt 2 (nur bei kubisch, Ctrl+Klick)
+    /// Steuerpunkt 2 (nur bei kubisch)
     control_point2: Option<Vec2>,
+    /// Gerade per Drag verschobener Punkt
+    dragging: Option<DragTarget>,
     /// Grad der Kurve
     pub degree: CurveDegree,
     /// Maximaler Abstand zwischen Zwischen-Nodes (Standard: 2m)
@@ -80,6 +91,7 @@ impl CurveTool {
             end: None,
             control_point1: None,
             control_point2: None,
+            dragging: None,
             degree: CurveDegree::Quadratic,
             max_segment_length: 2.0,
             node_count: 2,
@@ -170,7 +182,7 @@ impl RouteTool for CurveTool {
             Phase::Control => match self.degree {
                 CurveDegree::Quadratic => {
                     if self.control_point1.is_some() {
-                        "Steuerpunkt verschieben oder Enter zum Bestätigen"
+                        "Punkte per Drag anpassen — Enter bestätigt"
                     } else {
                         "Steuerpunkt klicken"
                     }
@@ -179,18 +191,18 @@ impl RouteTool for CurveTool {
                     let has1 = self.control_point1.is_some();
                     let has2 = self.control_point2.is_some();
                     if has1 && has2 {
-                        "Linksklick=CP1, Ctrl+Klick=CP2 verschieben — Enter bestätigt"
+                        "Punkte per Drag anpassen — Enter bestätigt"
                     } else if has1 {
-                        "Ctrl+Klick für 2. Steuerpunkt — Enter bestätigt"
+                        "2. Steuerpunkt klicken"
                     } else {
-                        "Linksklick für 1. Steuerpunkt"
+                        "1. Steuerpunkt klicken"
                     }
                 }
             },
         }
     }
 
-    fn on_click(&mut self, pos: Vec2, road_map: &RoadMap, ctrl: bool) -> ToolAction {
+    fn on_click(&mut self, pos: Vec2, road_map: &RoadMap, _ctrl: bool) -> ToolAction {
         match self.phase {
             Phase::Start => {
                 // Verkettung: letzten Endpunkt als Start verwenden
@@ -219,17 +231,21 @@ impl RouteTool for CurveTool {
             Phase::Control => {
                 match self.degree {
                     CurveDegree::Quadratic => {
-                        // Quadratisch: jeder Klick setzt/verschiebt CP1
-                        self.control_point1 = Some(pos);
-                    }
-                    CurveDegree::Cubic => {
-                        if ctrl {
-                            // Ctrl+Klick → CP2
-                            self.control_point2 = Some(pos);
-                        } else {
-                            // Normaler Klick → CP1
+                        if self.control_point1.is_none() {
+                            // Erster Klick: CP1 setzen
                             self.control_point1 = Some(pos);
                         }
+                        // Wenn CP1 bereits gesetzt → ignorieren (Drag übernimmt)
+                    }
+                    CurveDegree::Cubic => {
+                        if self.control_point1.is_none() {
+                            // Erster Klick: CP1 setzen
+                            self.control_point1 = Some(pos);
+                        } else if self.control_point2.is_none() {
+                            // Zweiter Klick: CP2 setzen
+                            self.control_point2 = Some(pos);
+                        }
+                        // Wenn beide CPs gesetzt → ignorieren (Drag übernimmt)
                     }
                 }
                 self.sync_derived();
@@ -498,6 +514,98 @@ impl RouteTool for CurveTool {
         };
         build_tool_result(start, end, &params, road_map)
     }
+
+    fn drag_targets(&self) -> Vec<Vec2> {
+        if self.phase != Phase::Control || !self.controls_complete() {
+            return vec![];
+        }
+        let mut targets = Vec::with_capacity(4);
+        if let Some(a) = &self.start {
+            targets.push(a.position());
+        }
+        if let Some(a) = &self.end {
+            targets.push(a.position());
+        }
+        if let Some(cp) = self.control_point1 {
+            targets.push(cp);
+        }
+        if self.degree == CurveDegree::Cubic {
+            if let Some(cp) = self.control_point2 {
+                targets.push(cp);
+            }
+        }
+        targets
+    }
+
+    fn on_drag_start(&mut self, pos: Vec2, _road_map: &RoadMap, pick_radius: f32) -> bool {
+        if self.phase != Phase::Control || !self.controls_complete() {
+            return false;
+        }
+
+        // Alle Kandidaten mit Abstand sammeln
+        let mut candidates: Vec<(DragTarget, f32)> = Vec::with_capacity(4);
+        if let Some(a) = &self.start {
+            candidates.push((DragTarget::Start, a.position().distance(pos)));
+        }
+        if let Some(a) = &self.end {
+            candidates.push((DragTarget::End, a.position().distance(pos)));
+        }
+        if let Some(cp) = self.control_point1 {
+            candidates.push((DragTarget::CP1, cp.distance(pos)));
+        }
+        if self.degree == CurveDegree::Cubic {
+            if let Some(cp) = self.control_point2 {
+                candidates.push((DragTarget::CP2, cp.distance(pos)));
+            }
+        }
+
+        // Nächsten Punkt innerhalb pick_radius finden
+        candidates.sort_by(|a, b| a.1.partial_cmp(&b.1).unwrap_or(std::cmp::Ordering::Equal));
+        if let Some((target, dist)) = candidates.first() {
+            if *dist <= pick_radius {
+                self.dragging = Some(*target);
+                return true;
+            }
+        }
+        false
+    }
+
+    fn on_drag_update(&mut self, pos: Vec2) {
+        match self.dragging {
+            Some(DragTarget::Start) => {
+                self.start = Some(ToolAnchor::NewPosition(pos));
+            }
+            Some(DragTarget::End) => {
+                self.end = Some(ToolAnchor::NewPosition(pos));
+            }
+            Some(DragTarget::CP1) => {
+                self.control_point1 = Some(pos);
+            }
+            Some(DragTarget::CP2) => {
+                self.control_point2 = Some(pos);
+            }
+            None => {}
+        }
+        self.sync_derived();
+    }
+
+    fn on_drag_end(&mut self, road_map: &RoadMap) {
+        // Start/Ende: Re-Snap auf existierenden Node
+        match self.dragging {
+            Some(DragTarget::Start) => {
+                if let Some(anchor) = &self.start {
+                    self.start = Some(snap_to_node(anchor.position(), road_map, SNAP_RADIUS));
+                }
+            }
+            Some(DragTarget::End) => {
+                if let Some(anchor) = &self.end {
+                    self.end = Some(snap_to_node(anchor.position(), road_map, SNAP_RADIUS));
+                }
+            }
+            _ => {}
+        }
+        self.dragging = None;
+    }
 }
 
 #[cfg(test)]
@@ -610,10 +718,11 @@ mod tests {
         assert_eq!(action, ToolAction::UpdatePreview);
         assert!(tool.is_ready());
 
-        // Repositionieren
+        // Erneuter Klick ignoriert (Drag übernimmt)
         let action = tool.on_click(Vec2::new(5.0, 12.0), &road_map, false);
         assert_eq!(action, ToolAction::UpdatePreview);
-        assert_eq!(tool.control_point1, Some(Vec2::new(5.0, 12.0)));
+        // CP1 bleibt beim ersten Wert
+        assert_eq!(tool.control_point1, Some(Vec2::new(5.0, 8.0)));
     }
 
     // ── Tool-Flow kubisch ──
@@ -633,8 +742,8 @@ mod tests {
         assert_eq!(action, ToolAction::UpdatePreview);
         assert!(!tool.is_ready()); // CP2 fehlt noch
 
-        // CP2 per Ctrl+Klick
-        let action = tool.on_click(Vec2::new(7.0, 8.0), &road_map, true);
+        // CP2 per zweitem Klick (kein Ctrl nötig)
+        let action = tool.on_click(Vec2::new(7.0, 8.0), &road_map, false);
         assert_eq!(action, ToolAction::UpdatePreview);
         assert!(tool.is_ready());
         assert_eq!(tool.control_point1, Some(Vec2::new(3.0, 8.0)));
@@ -642,7 +751,7 @@ mod tests {
     }
 
     #[test]
-    fn test_tool_cubic_repositions() {
+    fn test_tool_cubic_drag_repositions() {
         let mut tool = CurveTool::new();
         tool.degree = CurveDegree::Cubic;
         let road_map = RoadMap::new(3);
@@ -650,17 +759,26 @@ mod tests {
         tool.on_click(Vec2::ZERO, &road_map, false);
         tool.on_click(Vec2::new(10.0, 0.0), &road_map, false);
         tool.on_click(Vec2::new(3.0, 8.0), &road_map, false); // CP1
-        tool.on_click(Vec2::new(7.0, 8.0), &road_map, true); // CP2
+        tool.on_click(Vec2::new(7.0, 8.0), &road_map, false); // CP2
+        assert!(tool.is_ready());
 
-        // CP1 nochmal verschieben
-        tool.on_click(Vec2::new(2.0, 6.0), &road_map, false);
+        // Drag-Targets sind verfügbar
+        let targets = tool.drag_targets();
+        assert_eq!(targets.len(), 4); // Start, End, CP1, CP2
+
+        // CP1 per Drag verschieben
+        let grabbed = tool.on_drag_start(Vec2::new(3.0, 8.0), &road_map, 2.0);
+        assert!(grabbed);
+        tool.on_drag_update(Vec2::new(2.0, 6.0));
         assert_eq!(tool.control_point1, Some(Vec2::new(2.0, 6.0)));
-        // CP2 bleibt
-        assert_eq!(tool.control_point2, Some(Vec2::new(7.0, 8.0)));
+        tool.on_drag_end(&road_map);
 
-        // CP2 nochmal verschieben
-        tool.on_click(Vec2::new(8.0, 6.0), &road_map, true);
+        // CP2 per Drag verschieben
+        let grabbed = tool.on_drag_start(Vec2::new(7.0, 8.0), &road_map, 2.0);
+        assert!(grabbed);
+        tool.on_drag_update(Vec2::new(8.0, 6.0));
         assert_eq!(tool.control_point2, Some(Vec2::new(8.0, 6.0)));
+        tool.on_drag_end(&road_map);
     }
 
     #[test]
@@ -673,7 +791,7 @@ mod tests {
         tool.on_click(Vec2::ZERO, &road_map, false);
         tool.on_click(Vec2::new(10.0, 0.0), &road_map, false);
         tool.on_click(Vec2::new(3.0, 8.0), &road_map, false);
-        tool.on_click(Vec2::new(7.0, 8.0), &road_map, true);
+        tool.on_click(Vec2::new(7.0, 8.0), &road_map, false);
 
         let result = tool.execute(&road_map).expect("Ergebnis erwartet");
         assert!(result.new_nodes.len() >= 3);
@@ -706,7 +824,7 @@ mod tests {
         tool.on_click(Vec2::ZERO, &road_map, false);
         tool.on_click(Vec2::new(10.0, 0.0), &road_map, false);
         tool.on_click(Vec2::new(3.0, 8.0), &road_map, false);
-        tool.on_click(Vec2::new(7.0, 8.0), &road_map, true);
+        tool.on_click(Vec2::new(7.0, 8.0), &road_map, false);
         assert!(tool.is_ready());
 
         tool.reset();
@@ -775,5 +893,94 @@ mod tests {
                 pos.y
             );
         }
+    }
+
+    // ── Drag-Tests ──
+
+    #[test]
+    fn test_drag_targets_empty_before_controls_complete() {
+        let mut tool = CurveTool::new();
+        tool.degree = CurveDegree::Quadratic;
+        let road_map = RoadMap::new(3);
+
+        assert!(tool.drag_targets().is_empty());
+        tool.on_click(Vec2::ZERO, &road_map, false);
+        assert!(tool.drag_targets().is_empty());
+        tool.on_click(Vec2::new(10.0, 0.0), &road_map, false);
+        assert!(tool.drag_targets().is_empty());
+    }
+
+    #[test]
+    fn test_drag_targets_available_after_controls_complete() {
+        let mut tool = CurveTool::new();
+        tool.degree = CurveDegree::Quadratic;
+        let road_map = RoadMap::new(3);
+
+        tool.on_click(Vec2::ZERO, &road_map, false);
+        tool.on_click(Vec2::new(10.0, 0.0), &road_map, false);
+        tool.on_click(Vec2::new(5.0, 8.0), &road_map, false);
+
+        let targets = tool.drag_targets();
+        assert_eq!(targets.len(), 3); // Start, End, CP1
+    }
+
+    #[test]
+    fn test_drag_start_returns_false_outside_radius() {
+        let mut tool = CurveTool::new();
+        let road_map = RoadMap::new(3);
+
+        tool.on_click(Vec2::ZERO, &road_map, false);
+        tool.on_click(Vec2::new(10.0, 0.0), &road_map, false);
+        tool.on_click(Vec2::new(5.0, 8.0), &road_map, false);
+
+        // Weit weg von allen Punkten
+        let grabbed = tool.on_drag_start(Vec2::new(50.0, 50.0), &road_map, 2.0);
+        assert!(!grabbed);
+        assert!(tool.dragging.is_none());
+    }
+
+    #[test]
+    fn test_drag_start_end_resnap() {
+        let mut tool = CurveTool::new();
+        let road_map = RoadMap::new(3);
+
+        tool.on_click(Vec2::ZERO, &road_map, false);
+        tool.on_click(Vec2::new(10.0, 0.0), &road_map, false);
+        tool.on_click(Vec2::new(5.0, 8.0), &road_map, false);
+
+        // Start draggen
+        let grabbed = tool.on_drag_start(Vec2::new(0.0, 0.0), &road_map, 2.0);
+        assert!(grabbed);
+        tool.on_drag_update(Vec2::new(1.0, 1.0));
+        // Während Drag: NewPosition
+        match &tool.start {
+            Some(ToolAnchor::NewPosition(pos)) => {
+                assert!((pos.x - 1.0).abs() < 0.01);
+            }
+            _ => panic!("Start sollte NewPosition sein während Drag"),
+        }
+        tool.on_drag_end(&road_map);
+        // Nach Drag: Re-Snap (kein Node in der Nähe → bleibt NewPosition)
+        assert!(tool.dragging.is_none());
+    }
+
+    #[test]
+    fn test_drag_quadratic_cp1() {
+        let mut tool = CurveTool::new();
+        tool.degree = CurveDegree::Quadratic;
+        let road_map = RoadMap::new(3);
+
+        tool.on_click(Vec2::ZERO, &road_map, false);
+        tool.on_click(Vec2::new(10.0, 0.0), &road_map, false);
+        tool.on_click(Vec2::new(5.0, 8.0), &road_map, false);
+
+        // CP1 draggen
+        let grabbed = tool.on_drag_start(Vec2::new(5.0, 8.0), &road_map, 2.0);
+        assert!(grabbed);
+        tool.on_drag_update(Vec2::new(3.0, 12.0));
+        assert_eq!(tool.control_point1, Some(Vec2::new(3.0, 12.0)));
+        tool.on_drag_end(&road_map);
+        assert!(tool.dragging.is_none());
+        assert_eq!(tool.control_point1, Some(Vec2::new(3.0, 12.0)));
     }
 }
