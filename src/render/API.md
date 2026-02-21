@@ -112,11 +112,16 @@ Interner Renderer für Verbindungslinien und Richtungspfeile.
 ### GPU-Typen (`types.rs`)
 
 ```rust
-pub struct Vertex { pub position: [f32; 3], pub tex_coords: [f32; 2] }
-pub struct ConnectionVertex { pub position: [f32; 3], pub color: [f32; 4] }
-pub struct NodeInstance { pub position: [f32; 2], pub color: [f32; 4], pub size: f32 }
+pub struct Vertex { pub position: [f32; 2] }
+pub struct ConnectionVertex { pub position: [f32; 2], pub color: [f32; 4] }
+pub struct NodeInstance {
+    pub position: [f32; 2],
+    pub base_color: [f32; 4],
+    pub rim_color: [f32; 4],
+    pub size: f32,
+}
 pub struct MarkerInstance { pub position: [f32; 2], pub color: [f32; 4], pub outline_color: [f32; 4], pub size: f32 }
-pub struct Uniforms { pub view_proj: [[f32; 4]; 4], pub quality: f32, pub opacity: f32 }
+pub struct Uniforms { pub view_proj: [[f32; 4]; 4], pub aa_params: [f32; 4] }
 ```
 
 **Vertex-Buffer-Layouts:**
