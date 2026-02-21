@@ -681,14 +681,20 @@ mod tests {
 
         // Verbindungen: 1→3 und 2→3 (werden zu 1→3 gemergt)
         let c1 = Connection::new(
-            1, 3,
-            ConnectionDirection::Regular, ConnectionPriority::Regular,
-            Vec2::new(100.0, 200.0), Vec2::new(50.0, 50.0),
+            1,
+            3,
+            ConnectionDirection::Regular,
+            ConnectionPriority::Regular,
+            Vec2::new(100.0, 200.0),
+            Vec2::new(50.0, 50.0),
         );
         let c2 = Connection::new(
-            2, 3,
-            ConnectionDirection::Regular, ConnectionPriority::Regular,
-            Vec2::new(100.0, 200.0), Vec2::new(50.0, 50.0),
+            2,
+            3,
+            ConnectionDirection::Regular,
+            ConnectionPriority::Regular,
+            Vec2::new(100.0, 200.0),
+            Vec2::new(50.0, 50.0),
         );
         map.add_connection(c1);
         map.add_connection(c2);
@@ -727,14 +733,20 @@ mod tests {
 
         // Original-Netzwerk: 1→2, Duplikat-Netzwerk: 10→20
         let c1 = Connection::new(
-            1, 2,
-            ConnectionDirection::Dual, ConnectionPriority::Regular,
-            Vec2::new(0.0, 0.0), Vec2::new(10.0, 0.0),
+            1,
+            2,
+            ConnectionDirection::Dual,
+            ConnectionPriority::Regular,
+            Vec2::new(0.0, 0.0),
+            Vec2::new(10.0, 0.0),
         );
         let c2 = Connection::new(
-            10, 20,
-            ConnectionDirection::Regular, ConnectionPriority::Regular,
-            Vec2::new(0.0, 0.0), Vec2::new(10.0, 0.0),
+            10,
+            20,
+            ConnectionDirection::Regular,
+            ConnectionPriority::Regular,
+            Vec2::new(0.0, 0.0),
+            Vec2::new(10.0, 0.0),
         );
         map.add_connection(c1);
         map.add_connection(c2);
@@ -756,9 +768,12 @@ mod tests {
 
         // Verbindung 1→2 wird nach Remap zu 1→1 = Selbstreferenz
         let conn = Connection::new(
-            1, 2,
-            ConnectionDirection::Regular, ConnectionPriority::Regular,
-            Vec2::new(0.0, 0.0), Vec2::new(0.0, 0.0),
+            1,
+            2,
+            ConnectionDirection::Regular,
+            ConnectionPriority::Regular,
+            Vec2::new(0.0, 0.0),
+            Vec2::new(0.0, 0.0),
         );
         map.add_connection(conn);
 
@@ -775,7 +790,13 @@ mod tests {
         map.add_node(MapNode::new(5, Vec2::new(0.0, 0.0), NodeFlag::Regular));
 
         use crate::core::MapMarker;
-        map.map_markers.push(MapMarker::new(5, "TestMarker".to_string(), "All".to_string(), 1, false));
+        map.map_markers.push(MapMarker::new(
+            5,
+            "TestMarker".to_string(),
+            "All".to_string(),
+            1,
+            false,
+        ));
 
         let result = map.deduplicate_nodes(0.01);
         assert_eq!(result.remapped_markers, 1);
@@ -788,8 +809,16 @@ mod tests {
         let mut map = RoadMap::new(3);
         // Zwei Nodes innerhalb derselben Grid-Zelle (epsilon=0.01)
         // 100.004 und 100.004 runden beide auf Grid-Zelle 10000
-        map.add_node(MapNode::new(1, Vec2::new(100.004, 200.004), NodeFlag::Regular));
-        map.add_node(MapNode::new(2, Vec2::new(100.004, 200.004), NodeFlag::Regular));
+        map.add_node(MapNode::new(
+            1,
+            Vec2::new(100.004, 200.004),
+            NodeFlag::Regular,
+        ));
+        map.add_node(MapNode::new(
+            2,
+            Vec2::new(100.004, 200.004),
+            NodeFlag::Regular,
+        ));
 
         let result = map.deduplicate_nodes(0.01);
         assert!(result.had_duplicates());

@@ -547,7 +547,10 @@ impl AppController {
                 if let Some(road_map) = state.road_map.as_deref() {
                     state.selection.selected_node_ids = road_map.nodes.keys().copied().collect();
                     state.selection.selection_anchor_node_id = None;
-                    log::info!("Alle {} Nodes selektiert", state.selection.selected_node_ids.len());
+                    log::info!(
+                        "Alle {} Nodes selektiert",
+                        state.selection.selected_node_ids.len()
+                    );
                 }
             }
             AppCommand::DeduplicateNodes => {

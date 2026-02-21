@@ -31,7 +31,8 @@ pub fn load_selected_file(state: &mut AppState, path: String) -> anyhow::Result<
     if dup_count > 0 {
         log::warn!(
             "Duplicate nodes detected: {} duplicates in {} groups",
-            dup_count, dup_groups
+            dup_count,
+            dup_groups
         );
         state.ui.show_dedup_dialog = true;
         state.ui.dedup_duplicate_count = dup_count;
