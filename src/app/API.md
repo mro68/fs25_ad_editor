@@ -308,7 +308,7 @@ pub enum AppCommand {
     Redo,
 
     // Route-Tool
-    RouteToolClick { world_pos: glam::Vec2 },
+    RouteToolClick { world_pos: glam::Vec2, ctrl: bool },
     RouteToolExecute,
     RouteToolCancel,
     SelectRouteTool { index: usize },

@@ -203,5 +203,5 @@ pub fn show_marker_dialog(
 1. **Intent-based:** Interaktions-Funktionen liefern `Vec<AppIntent>`
 2. **Read-only:** Statusbar zeigt nur State an
 3. **State-Zugriff:** Fachzustand wird nicht direkt mutiert; Dialog-/UI-Lifecycle kann `UiState` lokal aktualisieren
-4. **Import-Regel:** UI importiert nur aus `app` (nie direkt aus `core`)
+4. **Import-Regel:** UI importiert nur aus `app` und `shared` (nie direkt aus `core`)
 5. **Sub-Modul-Delegation:** `input.rs` orchestriert, Logik steckt in `keyboard`, `drag`, `context_menu`
