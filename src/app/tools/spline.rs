@@ -7,7 +7,7 @@
 //! Mindestens 2 Punkte für eine gerade Strecke, ab 3 Punkten entsteht eine Kurve.
 
 use super::{RouteTool, ToolAction, ToolAnchor, ToolPreview, ToolResult};
-use crate::core::{ConnectionDirection, ConnectionPriority, NodeFlag, RoadMap};
+use crate::core::{ConnectedNeighbor, ConnectionDirection, ConnectionPriority, NodeFlag, RoadMap};
 use glam::Vec2;
 
 /// Snap-Distanz: Klick innerhalb dieses Radius rastet auf existierenden Node ein.
@@ -18,6 +18,15 @@ const SNAP_RADIUS: f32 = 3.0;
 enum LastEdited {
     Distance,
     NodeCount,
+}
+
+/// Quelle einer Tangente am Start- oder Endpunkt des Splines.
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub enum SplineTangentSource {
+    /// Kein Tangentenvorschlag — Phantom-Punkt wird gespiegelt (Standard)
+    None,
+    /// Tangente aus bestehender Verbindung
+    Connection { neighbor_id: u64, angle: f32 },
 }
 
 // ── Catmull-Rom-Geometrie ────────────────────────────────────────
@@ -39,9 +48,15 @@ fn catmull_rom_point(p0: Vec2, p1: Vec2, p2: Vec2, p3: Vec2, t: f32) -> Vec2 {
 ///
 /// Für Rand-Segmente werden Phantom-Punkte gespiegelt, damit die Kurve
 /// natürlich durch den ersten und letzten Punkt läuft.
+/// Wenn `start_phantom`/`end_phantom` gesetzt, werden die Phantom-Punkte überschrieben.
 ///
 /// `samples_per_segment`: Anzahl der Zwischenpunkte pro Segment (ohne Endpunkt).
-fn catmull_rom_chain(points: &[Vec2], samples_per_segment: usize) -> Vec<Vec2> {
+fn catmull_rom_chain_with_tangents(
+    points: &[Vec2],
+    samples_per_segment: usize,
+    start_phantom: Option<Vec2>,
+    end_phantom: Option<Vec2>,
+) -> Vec<Vec2> {
     if points.len() < 2 {
         return points.to_vec();
     }
@@ -59,9 +74,9 @@ fn catmull_rom_chain(points: &[Vec2], samples_per_segment: usize) -> Vec<Vec2> {
     let mut result = Vec::with_capacity((n - 1) * samples_per_segment + 1);
 
     for seg in 0..(n - 1) {
-        // Phantom-Punkte an den Rändern
+        // Phantom-Punkte an den Rändern (ggf. durch Tangente überschrieben)
         let p0 = if seg == 0 {
-            2.0 * points[0] - points[1]
+            start_phantom.unwrap_or_else(|| 2.0 * points[0] - points[1])
         } else {
             points[seg - 1]
         };
@@ -70,7 +85,7 @@ fn catmull_rom_chain(points: &[Vec2], samples_per_segment: usize) -> Vec<Vec2> {
         let p3 = if seg + 2 < n {
             points[seg + 2]
         } else {
-            2.0 * points[n - 1] - points[n - 2]
+            end_phantom.unwrap_or_else(|| 2.0 * points[n - 1] - points[n - 2])
         };
 
         let steps = if seg == n - 2 {
@@ -86,6 +101,12 @@ fn catmull_rom_chain(points: &[Vec2], samples_per_segment: usize) -> Vec<Vec2> {
     }
 
     result
+}
+
+/// Kompatibilität: Standard-Catmull-Rom-Chain ohne Tangent-Override.
+#[cfg(test)]
+fn catmull_rom_chain(points: &[Vec2], samples_per_segment: usize) -> Vec<Vec2> {
+    catmull_rom_chain_with_tangents(points, samples_per_segment, None, None)
 }
 
 /// Approximierte Länge einer Polyline.
@@ -162,6 +183,18 @@ pub struct SplineTool {
     last_end_anchor: Option<ToolAnchor>,
     /// Signalisiert, dass Config geändert wurde und Neuberechnung nötig ist
     recreate_needed: bool,
+    /// Gewählte Tangente am Startpunkt
+    tangent_start: SplineTangentSource,
+    /// Gewählte Tangente am Endpunkt
+    tangent_end: SplineTangentSource,
+    /// Verfügbare Nachbarn am Startpunkt (Cache)
+    start_neighbors: Vec<ConnectedNeighbor>,
+    /// Verfügbare Nachbarn am Endpunkt (Cache)
+    end_neighbors: Vec<ConnectedNeighbor>,
+    /// Tangente Start der letzten Erstellung (für Recreation)
+    last_tangent_start: SplineTangentSource,
+    /// Tangente Ende der letzten Erstellung (für Recreation)
+    last_tangent_end: SplineTangentSource,
 }
 
 impl SplineTool {
@@ -178,12 +211,72 @@ impl SplineTool {
             last_anchors: Vec::new(),
             last_end_anchor: None,
             recreate_needed: false,
+            tangent_start: SplineTangentSource::None,
+            tangent_end: SplineTangentSource::None,
+            start_neighbors: Vec::new(),
+            end_neighbors: Vec::new(),
+            last_tangent_start: SplineTangentSource::None,
+            last_tangent_end: SplineTangentSource::None,
         }
     }
 
     /// Sammelt die Positionen aller Anker.
     fn anchor_positions(&self) -> Vec<Vec2> {
         self.anchors.iter().map(|a| a.position()).collect()
+    }
+
+    /// Berechnet einen Phantom-Punkt aus einer Tangente.
+    ///
+    /// Der Phantom-Punkt liegt in der Verlängerung der Tangente,
+    /// im Abstand des ersten/letzten Segments (wie bei der Spiegelung).
+    fn phantom_from_tangent(anchor_pos: Vec2, tangent_angle: f32, neighbor_pos: Vec2) -> Vec2 {
+        // Phantom-Punkt in Richtung weg vom Nachbar, im gleichen Abstand
+        let dist = anchor_pos.distance(neighbor_pos).max(1.0);
+        // Tangent-Angle zeigt zum Nachbar → Phantom in Gegenrichtung
+        let dir = Vec2::from_angle(tangent_angle + std::f32::consts::PI);
+        anchor_pos + dir * dist
+    }
+
+    /// Berechnet die Phantom-Punkte für Start und Ende basierend auf Tangenten.
+    fn compute_phantoms(
+        points: &[Vec2],
+        tangent_start: SplineTangentSource,
+        tangent_end: SplineTangentSource,
+    ) -> (Option<Vec2>, Option<Vec2>) {
+        let start_phantom = if let SplineTangentSource::Connection { angle, .. } = tangent_start {
+            if points.len() >= 2 {
+                Some(Self::phantom_from_tangent(points[0], angle, points[1]))
+            } else {
+                None
+            }
+        } else {
+            None
+        };
+
+        let end_phantom = if let SplineTangentSource::Connection { angle, .. } = tangent_end {
+            if points.len() >= 2 {
+                let n = points.len();
+                Some(Self::phantom_from_tangent(
+                    points[n - 1],
+                    angle,
+                    points[n - 2],
+                ))
+            } else {
+                None
+            }
+        } else {
+            None
+        };
+
+        (start_phantom, end_phantom)
+    }
+
+    /// Befüllt die Nachbar-Liste für einen Snap-Node.
+    fn populate_neighbors(anchor: &ToolAnchor, road_map: &RoadMap) -> Vec<ConnectedNeighbor> {
+        match anchor {
+            ToolAnchor::ExistingNode(id, _) => road_map.connected_neighbors(*id),
+            ToolAnchor::NewPosition(_) => Vec::new(),
+        }
     }
 
     /// Berechnet die dichte Spline-Polyline aus den Ankern (+ optionaler Cursor-Position).
@@ -195,8 +288,9 @@ impl SplineTool {
         if pts.len() < 2 {
             return pts;
         }
-        // Sehr dichte Abtastung für gute Arc-Length-Verteilung
-        catmull_rom_chain(&pts, 32)
+        let (start_phantom, end_phantom) =
+            Self::compute_phantoms(&pts, self.tangent_start, self.tangent_end);
+        catmull_rom_chain_with_tangents(&pts, 32, start_phantom, end_phantom)
     }
 
     /// Berechnet die verteilt gesampelten Positionen (für Nodes).
@@ -229,13 +323,18 @@ impl SplineTool {
         }
     }
 
-    /// Spline-Länge aus gegebenen Ankern.
-    fn spline_length_from_anchors(anchors: &[ToolAnchor]) -> f32 {
+    /// Spline-Länge aus gegebenen Ankern (mit Tangenten).
+    fn spline_length_from_anchors(
+        anchors: &[ToolAnchor],
+        tangent_start: SplineTangentSource,
+        tangent_end: SplineTangentSource,
+    ) -> f32 {
         let pts: Vec<Vec2> = anchors.iter().map(|a| a.position()).collect();
         if pts.len() < 2 {
             return 0.0;
         }
-        let dense = catmull_rom_chain(&pts, 32);
+        let (start_phantom, end_phantom) = Self::compute_phantoms(&pts, tangent_start, tangent_end);
+        let dense = catmull_rom_chain_with_tangents(&pts, 32, start_phantom, end_phantom);
         polyline_length(&dense)
     }
 
@@ -245,6 +344,8 @@ impl SplineTool {
         max_segment_length: f32,
         direction: ConnectionDirection,
         priority: ConnectionPriority,
+        tangent_start: SplineTangentSource,
+        tangent_end: SplineTangentSource,
         road_map: &RoadMap,
     ) -> Option<ToolResult> {
         if anchors.len() < 2 {
@@ -252,7 +353,8 @@ impl SplineTool {
         }
 
         let pts: Vec<Vec2> = anchors.iter().map(|a| a.position()).collect();
-        let dense = catmull_rom_chain(&pts, 32);
+        let (start_phantom, end_phantom) = Self::compute_phantoms(&pts, tangent_start, tangent_end);
+        let dense = catmull_rom_chain_with_tangents(&pts, 32, start_phantom, end_phantom);
         let positions = resample_by_distance(&dense, max_segment_length);
 
         let first_anchor = anchors.first()?;
@@ -367,6 +469,22 @@ fn snap_to_node(pos: Vec2, road_map: &RoadMap) -> ToolAnchor {
     ToolAnchor::NewPosition(pos)
 }
 
+/// Wandelt einen Winkel (Radiant) in eine Kompass-Richtung um.
+fn angle_to_compass(angle: f32) -> &'static str {
+    let deg = angle.to_degrees().rem_euclid(360.0) as u32;
+    match deg {
+        0..=22 | 338..=360 => "O",
+        23..=67 => "SO",
+        68..=112 => "S",
+        113..=157 => "SW",
+        158..=202 => "W",
+        203..=247 => "NW",
+        248..=292 => "N",
+        293..=337 => "NO",
+        _ => "?",
+    }
+}
+
 impl RouteTool for SplineTool {
     fn name(&self) -> &str {
         "〰️ Spline"
@@ -394,12 +512,26 @@ impl RouteTool for SplineTool {
                 self.last_anchors.clear();
                 self.last_end_anchor = None;
                 self.recreate_needed = false;
+                self.start_neighbors = Self::populate_neighbors(&last_end, road_map);
+                self.tangent_start = SplineTangentSource::None;
                 self.anchors.push(last_end);
+                self.end_neighbors = Self::populate_neighbors(&anchor, road_map);
+                self.tangent_end = SplineTangentSource::None;
                 self.anchors.push(anchor);
                 self.sync_derived();
                 return ToolAction::UpdatePreview;
             }
         }
+
+        // Erster Punkt → Start-Nachbarn befüllen
+        if self.anchors.is_empty() {
+            self.start_neighbors = Self::populate_neighbors(&anchor, road_map);
+            self.tangent_start = SplineTangentSource::None;
+        }
+
+        // Immer End-Nachbarn aktualisieren (letzter Punkt ist der aktuelle Endpunkt)
+        self.end_neighbors = Self::populate_neighbors(&anchor, road_map);
+        self.tangent_end = SplineTangentSource::None;
 
         self.anchors.push(anchor);
 
@@ -445,11 +577,109 @@ impl RouteTool for SplineTool {
     fn render_config(&mut self, ui: &mut egui::Ui) -> bool {
         let mut changed = false;
 
+        // Tangenten-Auswahl (wenn Anker gesnappt und mindestens 2 Punkte)
+        let show_tangent_ui = self.anchors.len() >= 2
+            || (!self.last_created_ids.is_empty() && self.last_anchors.len() >= 2);
+
+        if show_tangent_ui {
+            // Tangente Start
+            if !self.start_neighbors.is_empty() {
+                let old_tangent = self.tangent_start;
+                let selected_text = match self.tangent_start {
+                    SplineTangentSource::None => "Standard".to_string(),
+                    SplineTangentSource::Connection { neighbor_id, angle } => {
+                        format!("→ Node #{} ({})", neighbor_id, angle_to_compass(angle))
+                    }
+                };
+                ui.label("Tangente Start:");
+                egui::ComboBox::from_id_salt("spline_tangent_start")
+                    .selected_text(selected_text)
+                    .show_ui(ui, |ui| {
+                        ui.selectable_value(
+                            &mut self.tangent_start,
+                            SplineTangentSource::None,
+                            "Standard",
+                        );
+                        for neighbor in &self.start_neighbors {
+                            let label = format!(
+                                "→ Node #{} ({})",
+                                neighbor.neighbor_id,
+                                angle_to_compass(neighbor.angle)
+                            );
+                            ui.selectable_value(
+                                &mut self.tangent_start,
+                                SplineTangentSource::Connection {
+                                    neighbor_id: neighbor.neighbor_id,
+                                    angle: neighbor.angle,
+                                },
+                                label,
+                            );
+                        }
+                    });
+                if self.tangent_start != old_tangent {
+                    if !self.last_created_ids.is_empty() {
+                        self.recreate_needed = true;
+                    }
+                    changed = true;
+                }
+            }
+
+            // Tangente Ende
+            if !self.end_neighbors.is_empty() {
+                let old_tangent = self.tangent_end;
+                let selected_text = match self.tangent_end {
+                    SplineTangentSource::None => "Standard".to_string(),
+                    SplineTangentSource::Connection { neighbor_id, angle } => {
+                        format!("→ Node #{} ({})", neighbor_id, angle_to_compass(angle))
+                    }
+                };
+                ui.label("Tangente Ende:");
+                egui::ComboBox::from_id_salt("spline_tangent_end")
+                    .selected_text(selected_text)
+                    .show_ui(ui, |ui| {
+                        ui.selectable_value(
+                            &mut self.tangent_end,
+                            SplineTangentSource::None,
+                            "Standard",
+                        );
+                        for neighbor in &self.end_neighbors {
+                            let label = format!(
+                                "→ Node #{} ({})",
+                                neighbor.neighbor_id,
+                                angle_to_compass(neighbor.angle)
+                            );
+                            ui.selectable_value(
+                                &mut self.tangent_end,
+                                SplineTangentSource::Connection {
+                                    neighbor_id: neighbor.neighbor_id,
+                                    angle: neighbor.angle,
+                                },
+                                label,
+                            );
+                        }
+                    });
+                if self.tangent_end != old_tangent {
+                    if !self.last_created_ids.is_empty() {
+                        self.recreate_needed = true;
+                    }
+                    changed = true;
+                }
+            }
+
+            if !self.start_neighbors.is_empty() || !self.end_neighbors.is_empty() {
+                ui.add_space(4.0);
+            }
+        }
+
         // Nachbearbeitungs-Modus
         let adjusting = !self.last_created_ids.is_empty() && self.last_anchors.len() >= 2;
 
         if adjusting {
-            let length = Self::spline_length_from_anchors(&self.last_anchors);
+            let length = Self::spline_length_from_anchors(
+                &self.last_anchors,
+                self.last_tangent_start,
+                self.last_tangent_end,
+            );
 
             ui.label(format!("Spline-Länge: {:.1} m", length));
             ui.add_space(4.0);
@@ -530,12 +760,18 @@ impl RouteTool for SplineTool {
             self.max_segment_length,
             self.direction,
             self.priority,
+            self.tangent_start,
+            self.tangent_end,
             road_map,
         )
     }
 
     fn reset(&mut self) {
         self.anchors.clear();
+        self.tangent_start = SplineTangentSource::None;
+        self.tangent_end = SplineTangentSource::None;
+        self.start_neighbors.clear();
+        self.end_neighbors.clear();
         // last_* bleiben für Nachbearbeitung/Verkettung erhalten
     }
 
@@ -556,6 +792,8 @@ impl RouteTool for SplineTool {
         if let Some(last) = self.anchors.last() {
             self.last_end_anchor = Some(*last);
         }
+        self.last_tangent_start = self.tangent_start;
+        self.last_tangent_end = self.tangent_end;
         self.last_created_ids = ids;
         self.recreate_needed = false;
     }
@@ -582,6 +820,8 @@ impl RouteTool for SplineTool {
             self.max_segment_length,
             self.direction,
             self.priority,
+            self.last_tangent_start,
+            self.last_tangent_end,
             road_map,
         )
     }

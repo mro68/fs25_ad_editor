@@ -8,6 +8,17 @@ use glam::Vec2;
 /// Container für das gesamte AutoDrive-Straßennetzwerk
 use std::collections::HashMap;
 
+/// Ein Nachbar-Node, der über eine Verbindung erreichbar ist.
+#[derive(Debug, Clone, Copy)]
+pub struct ConnectedNeighbor {
+    /// ID des Nachbar-Nodes
+    pub neighbor_id: u64,
+    /// Winkel der Verbindung (Radiant, atan2) — zeigt vom Quell-Node zum Nachbar
+    pub angle: f32,
+    /// true = Verbindung geht vom Quell-Node zum Nachbar (outgoing)
+    pub is_outgoing: bool,
+}
+
 mod dedup;
 pub use dedup::DeduplicationResult;
 
@@ -172,6 +183,29 @@ impl RoadMap {
     /// Iterator über alle Verbindungen (read-only).
     pub fn connections_iter(&self) -> impl Iterator<Item = &Connection> {
         self.connections.values()
+    }
+
+    /// Gibt alle Nachbar-Nodes zurück, die über Verbindungen mit `node_id` verbunden sind.
+    ///
+    /// Iteriert über alle Connections — O(n), aber nur bei Snap-Events aufgerufen.
+    pub fn connected_neighbors(&self, node_id: u64) -> Vec<ConnectedNeighbor> {
+        let mut neighbors = Vec::new();
+        for conn in self.connections.values() {
+            if conn.start_id == node_id {
+                neighbors.push(ConnectedNeighbor {
+                    neighbor_id: conn.end_id,
+                    angle: conn.angle,
+                    is_outgoing: true,
+                });
+            } else if conn.end_id == node_id {
+                neighbors.push(ConnectedNeighbor {
+                    neighbor_id: conn.start_id,
+                    angle: conn.angle + std::f32::consts::PI,
+                    is_outgoing: false,
+                });
+            }
+        }
+        neighbors
     }
 
     /// Berechnet die nächste freie Node-ID

@@ -23,5 +23,5 @@ pub use heightmap::{Heightmap, WorldBounds};
 pub use map_marker::MapMarker;
 pub use meta::AutoDriveMeta;
 pub use node::{MapNode, NodeFlag};
-pub use road_map::{DeduplicationResult, RoadMap};
+pub use road_map::{ConnectedNeighbor, DeduplicationResult, RoadMap};
 pub use spatial::{SpatialIndex, SpatialMatch};

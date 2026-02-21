@@ -10,13 +10,13 @@
 //! Grad wird über `render_config` umgeschaltet (UI-Dropdown).
 
 use super::{RouteTool, ToolAction, ToolAnchor, ToolPreview, ToolResult};
-use crate::core::{ConnectionDirection, ConnectionPriority, RoadMap};
+use crate::core::{ConnectedNeighbor, ConnectionDirection, ConnectionPriority, RoadMap};
 use glam::Vec2;
 
 mod geometry;
 use geometry::{
-    approx_length, build_tool_result, compute_curve_positions, cubic_bezier, quadratic_bezier,
-    snap_to_node, CurveParams,
+    approx_length, build_tool_result, compute_curve_positions, compute_tangent_cp, cubic_bezier,
+    quadratic_bezier, snap_to_node, CurveParams,
 };
 
 /// Snap-Distanz: Klick innerhalb dieses Radius rastet auf existierenden Node ein.
@@ -45,6 +45,15 @@ pub enum CurveDegree {
     Quadratic,
     /// Kubisch: 2 Steuerpunkte
     Cubic,
+}
+
+/// Quelle einer Tangente am Start- oder Endpunkt (nur Cubic).
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub enum TangentSource {
+    /// Kein Tangenten-Vorschlag — CP wird manuell gesetzt
+    None,
+    /// Tangente aus bestehender Verbindung
+    Connection { neighbor_id: u64, angle: f32 },
 }
 
 /// Phasen des Kurven-Tools
@@ -84,6 +93,18 @@ pub struct CurveTool {
     last_control_point1: Option<Vec2>,
     last_control_point2: Option<Vec2>,
     recreate_needed: bool,
+    /// Gewählte Tangente am Startpunkt (nur Cubic)
+    tangent_start: TangentSource,
+    /// Gewählte Tangente am Endpunkt (nur Cubic)
+    tangent_end: TangentSource,
+    /// Verfügbare Nachbarn am Startpunkt (Cache)
+    start_neighbors: Vec<ConnectedNeighbor>,
+    /// Verfügbare Nachbarn am Endpunkt (Cache)
+    end_neighbors: Vec<ConnectedNeighbor>,
+    /// Tangente Start der letzten Erstellung (für Recreation)
+    last_tangent_start: TangentSource,
+    /// Tangente Ende der letzten Erstellung (für Recreation)
+    last_tangent_end: TangentSource,
 }
 
 impl CurveTool {
@@ -108,6 +129,12 @@ impl CurveTool {
             last_control_point1: None,
             last_control_point2: None,
             recreate_needed: false,
+            tangent_start: TangentSource::None,
+            tangent_end: TangentSource::None,
+            start_neighbors: Vec::new(),
+            end_neighbors: Vec::new(),
+            last_tangent_start: TangentSource::None,
+            last_tangent_end: TangentSource::None,
         }
     }
 
@@ -162,11 +189,67 @@ impl CurveTool {
             CurveDegree::Cubic => self.control_point1.is_some() && self.control_point2.is_some(),
         }
     }
+
+    /// Wendet die gewählten Tangenten auf die Steuerpunkte an (nur Cubic).
+    ///
+    /// Setzt CP1/CP2 basierend auf der Verbindungs-Richtung, sofern eine
+    /// Tangente ausgewählt ist. Klick in Phase::Control überschreibt danach manuell.
+    fn apply_tangent_to_cp(&mut self) {
+        if self.degree != CurveDegree::Cubic {
+            return;
+        }
+        let (Some(start), Some(end)) = (self.start, self.end) else {
+            return;
+        };
+
+        if let TangentSource::Connection { angle, .. } = self.tangent_start {
+            self.control_point1 = Some(compute_tangent_cp(
+                start.position(),
+                angle,
+                end.position(),
+                true,
+            ));
+        }
+        if let TangentSource::Connection { angle, .. } = self.tangent_end {
+            self.control_point2 = Some(compute_tangent_cp(
+                end.position(),
+                angle,
+                start.position(),
+                false,
+            ));
+        }
+    }
+
+    /// Befüllt die Nachbar-Liste für einen Snap-Node.
+    fn populate_neighbors(anchor: &ToolAnchor, road_map: &RoadMap) -> Vec<ConnectedNeighbor> {
+        match anchor {
+            ToolAnchor::ExistingNode(id, _) => road_map.connected_neighbors(*id),
+            ToolAnchor::NewPosition(_) => Vec::new(),
+        }
+    }
 }
 
 impl Default for CurveTool {
     fn default() -> Self {
         Self::new()
+    }
+}
+
+/// Wandelt einen Winkel (Radiant) in eine Kompass-Richtung um.
+///
+/// FS25-Koordinatensystem: +X = Ost, +Z = Süd in der Draufsicht.
+fn angle_to_compass(angle: f32) -> &'static str {
+    let deg = angle.to_degrees().rem_euclid(360.0) as u32;
+    match deg {
+        0..=22 | 338..=360 => "O",
+        23..=67 => "SO",
+        68..=112 => "S",
+        113..=157 => "SW",
+        158..=202 => "W",
+        203..=247 => "NW",
+        248..=292 => "N",
+        293..=337 => "NO",
+        _ => "?",
     }
 }
 
@@ -218,38 +301,50 @@ impl RouteTool for CurveTool {
                     self.last_control_point2 = None;
                     self.recreate_needed = false;
                     self.start = Some(last_end);
-                    self.end = Some(snap_to_node(pos, road_map, SNAP_RADIUS));
+                    self.start_neighbors = Self::populate_neighbors(&last_end, road_map);
+                    let end_anchor = snap_to_node(pos, road_map, SNAP_RADIUS);
+                    self.end_neighbors = Self::populate_neighbors(&end_anchor, road_map);
+                    self.end = Some(end_anchor);
+                    self.tangent_start = TangentSource::None;
+                    self.tangent_end = TangentSource::None;
                     self.phase = Phase::Control;
+                    self.apply_tangent_to_cp();
                     ToolAction::Continue
                 } else {
-                    self.start = Some(snap_to_node(pos, road_map, SNAP_RADIUS));
+                    let start_anchor = snap_to_node(pos, road_map, SNAP_RADIUS);
+                    self.start_neighbors = Self::populate_neighbors(&start_anchor, road_map);
+                    self.tangent_start = TangentSource::None;
+                    self.start = Some(start_anchor);
                     self.phase = Phase::End;
                     ToolAction::Continue
                 }
             }
             Phase::End => {
-                self.end = Some(snap_to_node(pos, road_map, SNAP_RADIUS));
+                let end_anchor = snap_to_node(pos, road_map, SNAP_RADIUS);
+                self.end_neighbors = Self::populate_neighbors(&end_anchor, road_map);
+                self.tangent_end = TangentSource::None;
+                self.end = Some(end_anchor);
                 self.phase = Phase::Control;
+                self.apply_tangent_to_cp();
                 ToolAction::Continue
             }
             Phase::Control => {
                 match self.degree {
                     CurveDegree::Quadratic => {
                         if self.control_point1.is_none() {
-                            // Erster Klick: CP1 setzen
                             self.control_point1 = Some(pos);
                         }
-                        // Wenn CP1 bereits gesetzt → ignorieren (Drag übernimmt)
                     }
                     CurveDegree::Cubic => {
                         if self.control_point1.is_none() {
-                            // Erster Klick: CP1 setzen
                             self.control_point1 = Some(pos);
+                            // Tangente-Start wird durch manuellen Klick überschrieben
+                            self.tangent_start = TangentSource::None;
                         } else if self.control_point2.is_none() {
-                            // Zweiter Klick: CP2 setzen
                             self.control_point2 = Some(pos);
+                            // Tangente-Ende wird durch manuellen Klick überschrieben
+                            self.tangent_end = TangentSource::None;
                         }
-                        // Wenn beide CPs gesetzt → ignorieren (Drag übernimmt)
                     }
                 }
                 self.sync_derived();
@@ -332,11 +427,117 @@ impl RouteTool for CurveTool {
                 ui.selectable_value(&mut self.degree, CurveDegree::Cubic, "Kubisch (Grad 3)");
             });
         if self.degree != old_degree {
-            // Beim Gradwechsel CP2 zurücksetzen
+            // Beim Gradwechsel CP2 und Tangenten zurücksetzen
             self.control_point2 = None;
+            self.tangent_start = TangentSource::None;
+            self.tangent_end = TangentSource::None;
             changed = true;
         }
         ui.add_space(4.0);
+
+        // Tangenten-Auswahl (nur Cubic, wenn Start+End gesetzt)
+        if self.degree == CurveDegree::Cubic {
+            let show_tangent_ui = (self.phase == Phase::Control
+                || (!self.last_created_ids.is_empty()
+                    && self.last_start_anchor.is_some()
+                    && self.last_end_anchor.is_some()))
+                && (self.start.is_some() && self.end.is_some()
+                    || self.last_start_anchor.is_some() && self.last_end_anchor.is_some());
+
+            if show_tangent_ui {
+                // Tangente Start
+                if !self.start_neighbors.is_empty() {
+                    let old_tangent = self.tangent_start;
+                    let selected_text = match self.tangent_start {
+                        TangentSource::None => "Manuell".to_string(),
+                        TangentSource::Connection { neighbor_id, angle } => {
+                            format!("→ Node #{} ({})", neighbor_id, angle_to_compass(angle))
+                        }
+                    };
+                    ui.label("Tangente Start:");
+                    egui::ComboBox::from_id_salt("tangent_start")
+                        .selected_text(selected_text)
+                        .show_ui(ui, |ui| {
+                            ui.selectable_value(
+                                &mut self.tangent_start,
+                                TangentSource::None,
+                                "Manuell",
+                            );
+                            for neighbor in &self.start_neighbors {
+                                let label = format!(
+                                    "→ Node #{} ({})",
+                                    neighbor.neighbor_id,
+                                    angle_to_compass(neighbor.angle)
+                                );
+                                ui.selectable_value(
+                                    &mut self.tangent_start,
+                                    TangentSource::Connection {
+                                        neighbor_id: neighbor.neighbor_id,
+                                        angle: neighbor.angle,
+                                    },
+                                    label,
+                                );
+                            }
+                        });
+                    if self.tangent_start != old_tangent {
+                        self.apply_tangent_to_cp();
+                        self.sync_derived();
+                        if !self.last_created_ids.is_empty() {
+                            self.recreate_needed = true;
+                        }
+                        changed = true;
+                    }
+                }
+
+                // Tangente Ende
+                if !self.end_neighbors.is_empty() {
+                    let old_tangent = self.tangent_end;
+                    let selected_text = match self.tangent_end {
+                        TangentSource::None => "Manuell".to_string(),
+                        TangentSource::Connection { neighbor_id, angle } => {
+                            format!("→ Node #{} ({})", neighbor_id, angle_to_compass(angle))
+                        }
+                    };
+                    ui.label("Tangente Ende:");
+                    egui::ComboBox::from_id_salt("tangent_end")
+                        .selected_text(selected_text)
+                        .show_ui(ui, |ui| {
+                            ui.selectable_value(
+                                &mut self.tangent_end,
+                                TangentSource::None,
+                                "Manuell",
+                            );
+                            for neighbor in &self.end_neighbors {
+                                let label = format!(
+                                    "→ Node #{} ({})",
+                                    neighbor.neighbor_id,
+                                    angle_to_compass(neighbor.angle)
+                                );
+                                ui.selectable_value(
+                                    &mut self.tangent_end,
+                                    TangentSource::Connection {
+                                        neighbor_id: neighbor.neighbor_id,
+                                        angle: neighbor.angle,
+                                    },
+                                    label,
+                                );
+                            }
+                        });
+                    if self.tangent_end != old_tangent {
+                        self.apply_tangent_to_cp();
+                        self.sync_derived();
+                        if !self.last_created_ids.is_empty() {
+                            self.recreate_needed = true;
+                        }
+                        changed = true;
+                    }
+                }
+
+                if !self.start_neighbors.is_empty() || !self.end_neighbors.is_empty() {
+                    ui.add_space(4.0);
+                }
+            }
+        }
 
         // Nachbearbeitungs-Modus
         let adjusting = !self.last_created_ids.is_empty()
@@ -458,6 +659,10 @@ impl RouteTool for CurveTool {
         self.control_point1 = None;
         self.control_point2 = None;
         self.phase = Phase::Start;
+        self.tangent_start = TangentSource::None;
+        self.tangent_end = TangentSource::None;
+        self.start_neighbors.clear();
+        self.end_neighbors.clear();
     }
 
     fn is_ready(&self) -> bool {
@@ -485,6 +690,8 @@ impl RouteTool for CurveTool {
         if self.control_point2.is_some() {
             self.last_control_point2 = self.control_point2;
         }
+        self.last_tangent_start = self.tangent_start;
+        self.last_tangent_end = self.tangent_end;
         self.last_created_ids = ids;
         self.recreate_needed = false;
     }
