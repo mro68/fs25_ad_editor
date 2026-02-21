@@ -2,6 +2,7 @@
 
 use super::{AppCommand, AppIntent, AppState};
 
+/// Übersetzt einen `AppIntent` in eine Sequenz ausführbarer `AppCommand`s.
 pub fn map_intent_to_commands(state: &AppState, intent: AppIntent) -> Vec<AppCommand> {
     match intent {
         AppIntent::OpenFileRequested => vec![AppCommand::RequestOpenFileDialog],

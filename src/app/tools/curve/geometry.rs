@@ -80,6 +80,7 @@ pub fn cubic_bezier(p0: Vec2, p1: Vec2, p2: Vec2, p3: Vec2, t: f32) -> Vec2 {
     inv2 * inv * p0 + 3.0 * inv2 * t * p1 + 3.0 * inv * t2 * p2 + t2 * t * p3
 }
 
+/// Sucht den nächsten Node innerhalb des Snap-Radius oder erzeugt eine freie Position.
 pub fn snap_to_node(pos: Vec2, road_map: &RoadMap, snap_radius: f32) -> ToolAnchor {
     if let Some(hit) = road_map.nearest_node(pos) {
         if hit.distance <= snap_radius {

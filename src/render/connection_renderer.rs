@@ -103,8 +103,11 @@ impl ConnectionRenderer {
         }
     }
 
-    /// Rendert alle Verbindungen inkl. Pfeilspitzen.
     #[allow(clippy::too_many_arguments)]
+    /// Rendert alle sichtbaren Verbindungen inkl. Pfeilspitzen.
+    ///
+    /// Führt vor dem Draw-Call Viewport-Culling durch und aktualisiert
+    /// den Vertex-Buffer nur bei Bedarf.
     pub fn render(
         &mut self,
         device: &wgpu::Device,
