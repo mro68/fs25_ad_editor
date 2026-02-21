@@ -1,3 +1,5 @@
+//! AppIntent- und AppCommand-Enums für den Intent/Command-Datenfluss.
+
 use super::state::EditorTool;
 use crate::core::{ConnectionDirection, ConnectionPriority};
 use crate::shared::EditorOptions;

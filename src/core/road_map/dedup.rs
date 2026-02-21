@@ -1,3 +1,5 @@
+//! Duplikat-Erkennung und -Bereinigung für Nodes mit identischer Position.
+
 use super::RoadMap;
 use crate::core::{Connection, ConnectionDirection};
 use std::collections::HashMap;

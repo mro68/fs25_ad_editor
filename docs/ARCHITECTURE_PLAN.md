@@ -294,7 +294,7 @@ flowchart LR
 ```
 
 Verbindliche Regeln:
-1. UI spricht nur mit `app` (`AppIntent` + read-only State). **Kein direkter `core`-Import.**
+1. UI spricht nur mit `app` (`AppIntent` + read-only State) und `shared` (z.B. `EditorOptions`). **Kein direkter `core`-Import.**
 2. Domain (`core`) kennt keine Infrastruktur (UI/Render/XML-Details).
 3. Renderer konsumiert nur `RenderScene` und importiert `Camera2D`/`RoadMap` aus `core` (nicht aus `app`).
 4. XML bleibt technisch; fachliche Entscheidungen liegen in `core`/`app`.
