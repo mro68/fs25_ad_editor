@@ -1,17 +1,22 @@
 //! Optionen-Dialog für Farben, Größen und Breiten.
 
-use crate::app::{AppIntent, AppState};
+use crate::app::AppIntent;
+use crate::shared::EditorOptions;
 
 /// Zeigt den Options-Dialog und gibt erzeugte Events zurück.
-pub fn show_options_dialog(ctx: &egui::Context, state: &mut AppState) -> Vec<AppIntent> {
+pub fn show_options_dialog(
+    ctx: &egui::Context,
+    show: bool,
+    options: &EditorOptions,
+) -> Vec<AppIntent> {
     let mut events = Vec::new();
 
-    if !state.show_options_dialog {
+    if !show {
         return events;
     }
 
     // Arbeitskopie der Optionen für Live-Bearbeitung
-    let mut opts = state.options.clone();
+    let mut opts = options.clone();
     let mut changed = false;
 
     egui::Window::new("Optionen")
