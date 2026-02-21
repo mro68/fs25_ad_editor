@@ -11,6 +11,7 @@ Das `ui`-Modul enthält egui-UI-Komponenten (Menüs, Statusbar, Input-Handling, 
 - `toolbar.rs` — Werkzeugleiste
 - `properties.rs` — Properties-Panel (Detailanzeige selektierter Nodes)
 - `options_dialog.rs` — Optionen-Dialog für Laufzeit-Einstellungen
+- `tool_preview.rs` — Tool-Preview-Overlay (Route-Tool-Vorschau im Viewport)
 - `input.rs` — Viewport-Input-Orchestrator (delegiert an Sub-Module)
   - `keyboard.rs` — Tastatur-Shortcuts (Delete, Escape, Ctrl+A)
   - `drag.rs` — Drag-Operationen (Pan, Move, Rechteck-/Lasso-Selektion)
@@ -177,6 +178,24 @@ pub fn show_options_dialog(
   show: bool,
   options: &EditorOptions,
 ) -> Vec<AppIntent>
+```
+
+---
+
+### `render_tool_preview`
+
+Zeichnet das Tool-Preview-Overlay in den Viewport (Verbindungen als Linien, Nodes als Kreise/Rauten, halbtransparent).
+
+```rust
+pub fn render_tool_preview(
+    painter: &egui::Painter,
+    rect: egui::Rect,
+    camera: &Camera2D,
+    viewport_size: Vec2,
+    tool_manager: &ToolManager,
+    road_map: &RoadMap,
+    cursor_world: Vec2,
+)
 ```
 
 ---

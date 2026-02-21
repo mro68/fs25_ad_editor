@@ -79,6 +79,8 @@ flowchart LR
 - `status.rs` — Statusleiste
 - `toolbar.rs` — Werkzeugleiste
 - `properties.rs` — Properties-Panel
+- `options_dialog.rs` — Optionen-Dialog (Farben, Größen, Zoom)
+- `tool_preview.rs` — Tool-Preview-Overlay (Route-Tool-Vorschau im Viewport)
 - `dialogs.rs` — Datei-Dialoge und modale Fenster
 
 **Darf**
@@ -208,7 +210,12 @@ pub struct AppState {
   pub view: ViewState,
   pub ui: UiState,
   pub selection: SelectionState,
+  pub editor: EditorToolState,
   pub command_log: CommandLog,
+  pub history: EditHistory,
+  pub options: EditorOptions,
+  pub show_options_dialog: bool,
+  pub should_exit: bool,
 }
 ```
 
@@ -326,6 +333,9 @@ src/
     tools/
       mod.rs            # RouteTool-Trait + ToolManager
       straight_line.rs  # Gerade-Linie-Tool
+      curve.rs          # Kurven-Tool
+      curve/
+        geometry.rs     # Kurven-Geometrie (Interpolation)
     use_cases/
       mod.rs
       file_io.rs        # Load, Save, Heightmap-Warnung, Dateipfad-Handling
@@ -375,6 +385,8 @@ src/
     drag.rs             # Drag-Operationen
     context_menu.rs     # Rechtsklick-Kontextmenü
     dialogs.rs          # Datei-Dialoge
+    options_dialog.rs   # Optionen-Dialog
+    tool_preview.rs     # Tool-Preview-Overlay
 ```
 
 **Hinweis:** `Camera2D` lebt in `core/camera.rs` (reiner Geometrie-Typ). `app` re-exportiert ihn für Abwärtskompatibilität.

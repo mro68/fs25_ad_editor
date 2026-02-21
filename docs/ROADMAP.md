@@ -173,7 +173,15 @@
 - Phase 5: 🟡 60% (DDS-Background + Marker-Editor fertig, Kurven-Werkzeuge ausstehend)
 - Phase 6: 🟡 40% (Handler-Split, CI-Checks, unwrap-Bereinigung, API-Docs nachgeführt)
 
-**Errungenschaften seit letztem Update (Refactoring-Session):**
+**Errungenschaften seit letztem Update (Modularisierungs-Session 2026-02-21):**
+- ✅ Tool-Preview-Overlay aus `main.rs` in eigenständiges `ui/tool_preview.rs`-Modul extrahiert (65 Zeilen Inline-Code entfernt)
+- ✅ DRY-Refactor `apply_tool_result.rs`: gemeinsame Logik in `apply_result_inner()` + `create_nodes_and_connections()` extrahiert (~60 Zeilen Duplikation eliminiert)
+- ✅ DRY-Refactor `straight_line.rs`: gemeinsame `build_result()`-Funktion für `execute()` und `execute_from_anchors()` (~120 Zeilen Duplikation eliminiert)
+- ✅ Layer-Fix: `tool_preview.rs` importiert `Camera2D`/`RoadMap` über app-Re-Exports
+- ✅ Alle Markdown-Docs nachgeführt (API.md, ARCHITECTURE_PLAN.md, ROADMAP.md)
+- ✅ 134 Tests grün, Clippy sauber, Layer-Check bestanden
+
+**Errungenschaften (Vorherige Refactoring-Session):**
 - ✅ `connections` in `RoadMap`: `Vec<Connection>` → `HashMap<(u64,u64), Connection>` — alle lookup-Operationen O(1)
 - ✅ COW-Undo: `Snapshot` nutzt `Arc<RoadMap>` statt Deep-Clone — O(1) statt O(n) pro Undo-Schritt
 - ✅ Shader-Deduplication: `shaders.wgsl` wird einmal in `Renderer::new()` geladen, an alle 4 Sub-Renderer weitergegeben
