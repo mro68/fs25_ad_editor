@@ -452,7 +452,10 @@ mod tests {
             "Bidirektional soll nur 1 Connection erzeugen"
         );
 
-        let conn = road_map.connections_iter().next().expect("Connection erwartet");
+        let conn = road_map
+            .connections_iter()
+            .next()
+            .expect("Connection erwartet");
         assert_eq!(conn.direction, ConnectionDirection::Dual);
     }
 

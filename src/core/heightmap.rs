@@ -43,8 +43,6 @@ impl WorldBounds {
             max_z: half,
         }
     }
-
-
 }
 
 impl Heightmap {

@@ -16,7 +16,9 @@ pub mod properties;
 pub mod status;
 pub mod toolbar;
 
-pub use dialogs::{handle_file_dialogs, show_dedup_dialog, show_heightmap_warning, show_marker_dialog};
+pub use dialogs::{
+    handle_file_dialogs, show_dedup_dialog, show_heightmap_warning, show_marker_dialog,
+};
 pub use input::InputState;
 pub use menu::render_menu;
 pub use options_dialog::show_options_dialog;
