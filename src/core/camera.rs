@@ -62,6 +62,17 @@ impl Camera2D {
         ) + self.position
     }
 
+    /// Konvertiert Welt-Koordinaten zu Screen-Koordinaten (Inverse von screen_to_world).
+    pub fn world_to_screen(&self, world_pos: Vec2, screen_size: Vec2) -> Vec2 {
+        let aspect = screen_size.x / screen_size.y;
+        let relative = world_pos - self.position;
+        let ndc = Vec2::new(
+            relative.x * self.zoom / (Self::BASE_WORLD_EXTENT * aspect),
+            relative.y * self.zoom / Self::BASE_WORLD_EXTENT,
+        );
+        (ndc + Vec2::ONE) * 0.5 * screen_size
+    }
+
     /// Berechnet den Umrechnungsfaktor von Screen-Pixeln zu Welt-Einheiten.
     pub fn world_per_pixel(&self, viewport_height: f32) -> f32 {
         2.0 * Self::BASE_WORLD_EXTENT / (self.zoom * viewport_height)
@@ -162,5 +173,19 @@ mod tests {
         let wpp2 = camera.world_per_pixel(600.0);
         // Doppelter Zoom → halb so viele Welt-Einheiten pro Pixel
         assert_relative_eq!(wpp2, wpp1 / 2.0);
+    }
+
+    #[test]
+    fn test_world_to_screen_roundtrip() {
+        let mut camera = Camera2D::new();
+        camera.position = Vec2::new(50.0, -30.0);
+        camera.zoom = 2.5;
+        let screen_size = Vec2::new(800.0, 600.0);
+
+        let world = Vec2::new(100.0, 200.0);
+        let screen = camera.world_to_screen(world, screen_size);
+        let back = camera.screen_to_world(screen, screen_size);
+        assert_relative_eq!(back.x, world.x, epsilon = 0.01);
+        assert_relative_eq!(back.y, world.y, epsilon = 0.01);
     }
 }

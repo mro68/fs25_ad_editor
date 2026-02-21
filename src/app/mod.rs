@@ -3,12 +3,14 @@
 pub mod command_log;
 pub mod controller;
 pub mod events;
+pub mod handlers;
 pub mod history;
 pub mod render_scene;
 /// Application State und Controller
 ///
 /// Dieses Modul verwaltet den Zustand der Anwendung (geladene Daten, View, Tools).
 pub mod state;
+pub mod tools;
 pub mod use_cases;
 
 pub use crate::core::Camera2D;

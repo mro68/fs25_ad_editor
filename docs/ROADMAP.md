@@ -96,7 +96,8 @@
   - [ ] LOD-System für große Strecken
   - [ ] Memory-Profiling
   - [x] `ctx.request_repaint()` nur bei Änderungen (CPU-Idle-Verbrauch reduzieren)
-- [ ] Error-Handling & User-Feedback
+- [🟡] Error-Handling & User-Feedback
+  - [x] unwrap()-Aufrufe in Produktionscode durch graceful handling ersetzt
   - [ ] Toast-Notifications
   - [ ] Loading-Spinner
   - [ ] Error-Recovery
@@ -106,15 +107,19 @@
   - [ ] UI-Integration-Tests
   - [x] Performance-Benchmarks (Basis mit Criterion)
   - [ ] Performance-Benchmarks mit 100k+ Nodes
-- [ ] Dokumentation
+- [🟡] Dokumentation
   - [ ] User-Guide
   - [x] API-Dokumentation pro Modul (API.md inkl. shared)
   - [ ] Keyboard-Shortcuts-Übersicht
   - [x] Architektur-Analyse und API.md-Nachführung (2026-02-20)
+  - [x] Handler-Split und Architektur-Guardrails dokumentiert (2025-07-02)
 - [ ] Packaging
   - [ ] Windows Binaries (.exe)
   - [ ] Linux Binaries (AppImage)
-  - [ ] CI/CD Pipeline (GitHub Actions)
+  - [🟡] CI/CD Pipeline
+    - [x] Layer-Boundary-Check-Script (`scripts/check_layer_boundaries.sh`)
+    - [x] Makefile-Integration (`make ci-check`)
+    - [ ] GitHub Actions Workflow
 
 ## Phase 7: Optional / Future
 - [ ] Web-Version (WASM)
@@ -166,7 +171,7 @@
 - Phase 3: ✅ 98% (Theme fehlt)
 - Phase 4: ✅ 100% (alle Features implementiert, 100k-Benchmarks ausstehend)
 - Phase 5: 🟡 60% (DDS-Background + Marker-Editor fertig, Kurven-Werkzeuge ausstehend)
-- Phase 6: 🟡 25% (within_rect + Repaint optimiert, API-Docs nachgeführt, Architektur bereinigt)
+- Phase 6: 🟡 40% (Handler-Split, CI-Checks, unwrap-Bereinigung, API-Docs nachgeführt)
 
 **Errungenschaften seit letztem Update (Refactoring-Session):**
 - ✅ `connections` in `RoadMap`: `Vec<Connection>` → `HashMap<(u64,u64), Connection>` — alle lookup-Operationen O(1)
@@ -194,9 +199,17 @@
   - UI Input→Intent: Keyboard-Shortcut-Mapping (`src/ui/keyboard.rs` Unit-Tests)
   - Render Culling-Basis: Geometrie-/Schnittlogik (`src/render/connection_renderer.rs` Unit-Tests)
 
+**Errungenschaften (Architektur-Session 2025-07-02):**
+- ✅ Controller in Feature-Handler aufgeteilt (`handlers/file_io`, `view`, `selection`, `editing`, `route_tool`, `dialog`, `history`)
+- ✅ UI→Core-Layerverletzung behoben (`properties.rs` importiert `RoadMap` via `app` statt direkt aus `core`)
+- ✅ CI-Check-Script für Schichtgrenzen (`scripts/check_layer_boundaries.sh` + Makefile-Integration)
+- ✅ Alle `unwrap()`-Aufrufe in Produktionscode durch graceful error handling ersetzt
+- ✅ Alle Markdown-Dokumentationen auf aktuellen Code-Stand nachgeführt
+- ✅ Alle Tests grün nach Refactoring
+
 **Hinweis zu Doku/Automatisierung:**
 - ℹ️ Dokumentation wird aktuell manuell gepflegt (kein Auto-Sync-Mechanismus aktiv)
-- ℹ️ CI ist derzeit nicht Teil des aktiven Arbeitsumfangs
+- ✅ CI-Basis vorhanden: Layer-Boundary-Check via `make ci-check`
 
 **Nächste Aufgaben:**
 1. 🟡 100k+ Performance-Benchmarks
