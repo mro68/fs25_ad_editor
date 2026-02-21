@@ -308,20 +308,33 @@ Verbindliche Regeln:
 src/
   app/
     mod.rs              # Re-Exports (ConnectionDirection, ConnectionPriority, RoadMap, etc.)
-    controller.rs       # AppController: Intent → Command → State-Mutation
+    controller.rs       # AppController: Intent → Command Dispatch an Handler
     events.rs           # AppIntent & AppCommand Enums
     state.rs            # AppState, ViewState, SelectionState, UiState
     render_scene.rs     # RenderScene-Builder
     command_log.rs      # Command-Log für Debugging
     history.rs          # Undo/Redo-History
+    handlers/           # Feature-Handler für Command-Verarbeitung
+      mod.rs
+      file_io.rs        # Datei-Operationen (Öffnen, Speichern, Heightmap)
+      view.rs           # Kamera, Viewport, Background-Map
+      selection.rs       # Selektions-Operationen
+      editing.rs        # Node/Connection-Editing, Marker
+      route_tool.rs     # Route-Tool-Operationen
+      dialog.rs         # Dialog-State und Anwendungssteuerung
+      history.rs        # Undo/Redo
+    tools/
+      mod.rs            # RouteTool-Trait + ToolManager
+      straight_line.rs  # Gerade-Linie-Tool
     use_cases/
       mod.rs
       file_io.rs        # Load, Save, Heightmap-Warnung, Dateipfad-Handling
       heightmap.rs      # Heightmap-Laden und Konfiguration
       viewport.rs       # Viewport-Resize
       camera.rs         # Kamera-Reset, Zoom, Pan
-      selection/        # Selektions-Use-Cases (Pick, Rect, u.a.)
-      editing/          # Editing-Use-Cases (Connect, Move, Delete, u.a.)
+      background_map.rs # Background-Map laden/konfigurieren
+      selection/        # Selektions-Use-Cases (Pick, Rect, Lasso, Segment, Move)
+      editing/          # Editing-Use-Cases (Connect, Delete, Direction, Priority, Marker, Route-Tool)
   core/
     mod.rs
     camera.rs           # Camera2D + pick_radius_world()
@@ -395,6 +408,16 @@ src/
 - Undo/Redo auf Snapshot-Basis (CommandLog/History vorhanden)
 - Background-Map-Rendering (DDS/PNG/JPG) mit Use-Cases
 - Marker-Rendering + erstellen/löschen via Use-Cases
+
+### Phase 6: Handler-Split + Architektur-Guardrails ✅
+- `handle_command()` in Feature-Handler aufgeteilt (`handlers/`)
+- Controller ist jetzt schlanker Dispatcher, Logik in Handlern
+- UI→Core-Layerverletzung behoben (properties.rs)
+- CI-Check-Script für Schichtgrenzen (`scripts/check_layer_boundaries.sh`)
+- Alle unwrap()-Aufrufe in Produktionscode durch graceful handling ersetzt
+- Route-Tool-Intents: `RouteToolClicked`, `RouteToolExecuteRequested`, `RouteToolCancelled`, `SelectRouteToolRequested`, `RouteToolConfigChanged`
+- Duplikat-Erkennung: `DeduplicateConfirmed`, `DeduplicateCancelled`
+- Optionen-Dialog: `OpenOptionsDialogRequested`, `CloseOptionsDialogRequested`, `OptionsChanged`, `ResetOptionsRequested`
 
 ## Definition of Done
 

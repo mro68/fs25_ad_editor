@@ -1,7 +1,6 @@
 //! Application Controller für zentrale Event-Verarbeitung.
 
 use super::render_scene;
-use super::use_cases;
 use super::{AppCommand, AppIntent, AppState};
 use crate::shared::RenderScene;
 
@@ -300,369 +299,177 @@ impl AppController {
     }
 
     /// Führt mutierende Commands auf dem AppState aus.
+    /// Dispatcht an Feature-Handler in `handlers/`.
     pub fn handle_command(
         &mut self,
         state: &mut AppState,
         command: AppCommand,
     ) -> anyhow::Result<()> {
         let executed_command = command.clone();
+        use super::handlers;
 
         match command {
-            AppCommand::RequestOpenFileDialog => {
-                use_cases::file_io::request_open_file(state);
+            // === Datei-I/O ===
+            AppCommand::RequestOpenFileDialog => handlers::file_io::request_open(state),
+            AppCommand::RequestSaveFileDialog => handlers::file_io::request_save(state),
+            AppCommand::ConfirmAndSaveFile => handlers::file_io::confirm_and_save(state)?,
+            AppCommand::LoadFile { path } => handlers::file_io::load(state, path)?,
+            AppCommand::SaveFile { path } => handlers::file_io::save(state, path)?,
+            AppCommand::ClearHeightmap => handlers::file_io::clear_heightmap(state),
+            AppCommand::SetHeightmap { path } => handlers::file_io::set_heightmap(state, path),
+            AppCommand::DeduplicateNodes => handlers::file_io::deduplicate(state),
+
+            // === Kamera & Viewport ===
+            AppCommand::ResetCamera => handlers::view::reset_camera(state),
+            AppCommand::ZoomIn => handlers::view::zoom_in(state),
+            AppCommand::ZoomOut => handlers::view::zoom_out(state),
+            AppCommand::SetViewportSize { size } => handlers::view::set_viewport_size(state, size),
+            AppCommand::PanCamera { delta } => handlers::view::pan(state, delta),
+            AppCommand::ZoomCamera { factor, focus_world } => {
+                handlers::view::zoom_towards(state, factor, focus_world)
             }
-            AppCommand::RequestSaveFileDialog => {
-                use_cases::file_io::request_save_file(state);
+            AppCommand::SetRenderQuality { quality } => {
+                handlers::view::set_render_quality(state, quality)
             }
-            AppCommand::RequestExit => {
-                state.should_exit = true;
+            AppCommand::LoadBackgroundMap { path, crop_size } => {
+                handlers::view::load_background_map(state, path, crop_size)
             }
-            AppCommand::RequestHeightmapDialog => {
-                use_cases::heightmap::request_heightmap_dialog(state);
+            AppCommand::UpdateBackgroundOpacity { opacity } => {
+                handlers::view::set_background_opacity(state, opacity)
             }
-            AppCommand::RequestBackgroundMapDialog => {
-                use_cases::background_map::request_background_map_dialog(state);
+            AppCommand::ToggleBackgroundVisibility => {
+                handlers::view::toggle_background_visibility(state)
             }
-            AppCommand::ClearHeightmap => {
-                use_cases::heightmap::clear_heightmap(state);
-            }
-            AppCommand::SetHeightmap { path } => {
-                use_cases::heightmap::set_heightmap(state, path);
-            }
-            AppCommand::DismissHeightmapWarning => {
-                use_cases::heightmap::dismiss_heightmap_warning(state);
-            }
-            AppCommand::ConfirmAndSaveFile => {
-                use_cases::file_io::confirm_and_save(state)?;
-            }
-            AppCommand::ResetCamera => {
-                use_cases::camera::reset_camera(state);
-            }
-            AppCommand::ZoomIn => {
-                use_cases::camera::zoom_in(state);
-            }
-            AppCommand::ZoomOut => {
-                use_cases::camera::zoom_out(state);
-            }
-            AppCommand::SetViewportSize { size } => {
-                use_cases::viewport::resize(state, size);
-            }
-            AppCommand::PanCamera { delta } => {
-                use_cases::camera::pan(state, delta);
-            }
-            AppCommand::ZoomCamera {
-                factor,
-                focus_world,
-            } => {
-                use_cases::camera::zoom_towards(state, factor, focus_world);
-            }
+
+            // === Selektion ===
             AppCommand::SelectNearestNode {
                 world_pos,
                 max_distance,
                 additive,
                 extend_path,
-            } => {
-                use_cases::selection::select_nearest_node(
-                    state,
-                    world_pos,
-                    max_distance,
-                    additive,
-                    extend_path,
-                );
-            }
+            } => handlers::selection::select_nearest_node(
+                state,
+                world_pos,
+                max_distance,
+                additive,
+                extend_path,
+            ),
             AppCommand::SelectSegmentBetweenNearestIntersections {
                 world_pos,
                 max_distance,
                 additive,
-            } => {
-                use_cases::selection::select_segment_between_nearest_intersections(
-                    state,
-                    world_pos,
-                    max_distance,
-                    additive,
-                );
-            }
-            AppCommand::MoveSelectedNodes { delta_world } => {
-                use_cases::selection::move_selected_nodes(state, delta_world);
-            }
-            AppCommand::BeginMoveSelectedNodes => {
-                state.record_undo_snapshot();
-            }
-            AppCommand::EndMoveSelectedNodes => {
-                // No-op for now (move lifecycle end).
-            }
+            } => handlers::selection::select_segment(state, world_pos, max_distance, additive),
             AppCommand::SelectNodesInRect { min, max, additive } => {
-                use_cases::selection::select_nodes_in_rect(state, min, max, additive);
+                handlers::selection::select_in_rect(state, min, max, additive)
             }
             AppCommand::SelectNodesInLasso { polygon, additive } => {
-                use_cases::selection::select_nodes_in_lasso(state, &polygon, additive);
+                handlers::selection::select_in_lasso(state, &polygon, additive)
             }
-            AppCommand::SetRenderQuality { quality } => {
-                use_cases::viewport::set_render_quality(state, quality);
+            AppCommand::MoveSelectedNodes { delta_world } => {
+                handlers::selection::move_selected(state, delta_world)
             }
-            AppCommand::LoadFile { path } => {
-                use_cases::file_io::load_selected_file(state, path)?;
-            }
-            AppCommand::SaveFile { path } => {
-                use_cases::file_io::save_with_heightmap_check(state, path)?;
-            }
-            AppCommand::Undo => {
-                let current = super::history::Snapshot::from_state(state);
-                if let Some(prev) = state.history.pop_undo_with_current(current) {
-                    prev.apply_to(state);
-                    log::info!("Undo ausgeführt");
-                } else {
-                    log::debug!("Undo: nichts zu tun");
-                }
-            }
-            AppCommand::Redo => {
-                let current = super::history::Snapshot::from_state(state);
-                if let Some(next) = state.history.pop_redo_with_current(current) {
-                    next.apply_to(state);
-                    log::info!("Redo ausgeführt");
-                } else {
-                    log::debug!("Redo: nichts zu tun");
-                }
-            }
-            AppCommand::SetEditorTool { tool } => {
-                state.editor.active_tool = tool;
-                state.editor.connect_source_node = None;
-                log::info!("Editor-Werkzeug: {:?}", tool);
-            }
+            AppCommand::BeginMoveSelectedNodes => handlers::selection::begin_move(state),
+            AppCommand::EndMoveSelectedNodes => { /* No-op: Move-Lifecycle Ende */ }
+            AppCommand::ClearSelection => handlers::selection::clear(state),
+            AppCommand::SelectAllNodes => handlers::selection::select_all(state),
+
+            // === Editing ===
+            AppCommand::SetEditorTool { tool } => handlers::editing::set_editor_tool(state, tool),
             AppCommand::AddNodeAtPosition { world_pos } => {
-                use_cases::editing::add_node_at_position(state, world_pos);
+                handlers::editing::add_node(state, world_pos)
             }
-            AppCommand::DeleteSelectedNodes => {
-                use_cases::editing::delete_selected_nodes(state);
-            }
+            AppCommand::DeleteSelectedNodes => handlers::editing::delete_selected(state),
             AppCommand::ConnectToolPickNode {
                 world_pos,
                 max_distance,
-            } => {
-                use_cases::editing::connect_tool_pick_node(state, world_pos, max_distance);
-            }
+            } => handlers::editing::connect_tool_pick(state, world_pos, max_distance),
             AppCommand::AddConnection {
                 from_id,
                 to_id,
                 direction,
                 priority,
-            } => {
-                use_cases::editing::add_connection(state, from_id, to_id, direction, priority);
-            }
+            } => handlers::editing::add_connection(state, from_id, to_id, direction, priority),
             AppCommand::RemoveConnectionBetween { node_a, node_b } => {
-                use_cases::editing::remove_connection_between(state, node_a, node_b);
+                handlers::editing::remove_connection_between(state, node_a, node_b)
             }
             AppCommand::SetConnectionDirection {
                 start_id,
                 end_id,
                 direction,
-            } => {
-                use_cases::editing::set_connection_direction(state, start_id, end_id, direction);
-            }
+            } => handlers::editing::set_connection_direction(state, start_id, end_id, direction),
             AppCommand::SetConnectionPriority {
                 start_id,
                 end_id,
                 priority,
-            } => {
-                use_cases::editing::set_connection_priority(state, start_id, end_id, priority);
-            }
+            } => handlers::editing::set_connection_priority(state, start_id, end_id, priority),
             AppCommand::SetDefaultDirection { direction } => {
-                state.editor.default_direction = direction;
-                // Aktives Route-Tool synchronisieren
-                if let Some(tool) = state.editor.tool_manager.active_tool_mut() {
-                    tool.set_direction(direction);
-                }
-                log::info!("Standard-Verbindungsrichtung: {:?}", direction);
+                handlers::editing::set_default_direction(state, direction)
             }
             AppCommand::SetDefaultPriority { priority } => {
-                state.editor.default_priority = priority;
-                // Aktives Route-Tool synchronisieren
-                if let Some(tool) = state.editor.tool_manager.active_tool_mut() {
-                    tool.set_priority(priority);
-                }
-                log::info!("Standard-Straßenart: {:?}", priority);
+                handlers::editing::set_default_priority(state, priority)
             }
             AppCommand::SetAllConnectionsDirectionBetweenSelected { direction } => {
-                use_cases::editing::set_all_connections_direction_between_selected(
-                    state, direction,
-                );
+                handlers::editing::set_all_directions_between_selected(state, direction)
             }
             AppCommand::RemoveAllConnectionsBetweenSelected => {
-                use_cases::editing::remove_all_connections_between_selected(state);
+                handlers::editing::remove_all_between_selected(state)
             }
             AppCommand::InvertAllConnectionsBetweenSelected => {
-                use_cases::editing::invert_all_connections_between_selected(state);
+                handlers::editing::invert_all_between_selected(state)
             }
             AppCommand::SetAllConnectionsPriorityBetweenSelected { priority } => {
-                use_cases::editing::set_all_connections_priority_between_selected(state, priority);
+                handlers::editing::set_all_priorities_between_selected(state, priority)
             }
-            AppCommand::ConnectSelectedNodes => {
-                // Verbinde die beiden selektierten Nodes mit Standard-Richtung/Priorität
-                let ids: Vec<u64> = state.selection.selected_node_ids.iter().copied().collect();
-                if ids.len() == 2 {
-                    let direction = state.editor.default_direction;
-                    let priority = state.editor.default_priority;
-                    use_cases::editing::add_connection(state, ids[0], ids[1], direction, priority);
-                }
-            }
-            AppCommand::LoadBackgroundMap { path, crop_size } => {
-                if let Err(e) =
-                    use_cases::background_map::load_background_map(state, path, crop_size)
-                {
-                    log::error!("Fehler beim Laden der Background-Map: {}", e);
-                }
-            }
-            AppCommand::UpdateBackgroundOpacity { opacity } => {
-                use_cases::background_map::set_background_opacity(state, opacity);
-            }
-            AppCommand::ToggleBackgroundVisibility => {
-                use_cases::background_map::toggle_background_visibility(state);
-            }
+            AppCommand::ConnectSelectedNodes => handlers::editing::connect_selected(state),
             AppCommand::CreateMarker {
                 node_id,
                 name,
                 group,
-            } => {
-                use_cases::editing::create_marker(state, node_id, &name, &group);
-            }
-            AppCommand::RemoveMarker { node_id } => {
-                use_cases::editing::remove_marker(state, node_id);
-            }
+            } => handlers::editing::create_marker(state, node_id, &name, &group),
+            AppCommand::RemoveMarker { node_id } => handlers::editing::remove_marker(state, node_id),
             AppCommand::OpenMarkerDialog { node_id, is_new } => {
-                use_cases::editing::open_marker_dialog(state, node_id, is_new);
+                handlers::editing::open_marker_dialog(state, node_id, is_new)
             }
             AppCommand::UpdateMarker {
                 node_id,
                 name,
                 group,
-            } => {
-                use_cases::editing::update_marker(state, node_id, &name, &group);
-            }
-            AppCommand::CloseMarkerDialog => {
-                state.ui.show_marker_dialog = false;
-                state.ui.marker_dialog_node_id = None;
-            }
-            AppCommand::OpenOptionsDialog => {
-                state.show_options_dialog = true;
-            }
-            AppCommand::CloseOptionsDialog => {
-                state.show_options_dialog = false;
-            }
-            AppCommand::ApplyOptions { options } => {
-                state.options = options;
-                // Sofort speichern
-                let path = crate::shared::EditorOptions::config_path();
-                if let Err(e) = state.options.save_to_file(&path) {
-                    log::error!("Optionen konnten nicht gespeichert werden: {}", e);
-                }
-            }
-            AppCommand::ResetOptions => {
-                state.options = crate::shared::EditorOptions::default();
-                let path = crate::shared::EditorOptions::config_path();
-                if let Err(e) = state.options.save_to_file(&path) {
-                    log::error!("Optionen konnten nicht gespeichert werden: {}", e);
-                }
-            }
-            AppCommand::ClearSelection => {
-                use_cases::selection::clear_selection(state);
-            }
-            AppCommand::SelectAllNodes => {
-                if let Some(road_map) = state.road_map.as_deref() {
-                    state.selection.selected_node_ids = road_map.nodes.keys().copied().collect();
-                    state.selection.selection_anchor_node_id = None;
-                    log::info!("Alle {} Nodes selektiert", state.selection.selected_node_ids.len());
-                }
-            }
-            AppCommand::DeduplicateNodes => {
-                use_cases::file_io::deduplicate_loaded_roadmap(state);
-            }
-            AppCommand::DismissDeduplicateDialog => {
-                state.ui.show_dedup_dialog = false;
-                state.ui.status_message = None;
-            }
-            AppCommand::RouteToolClick { world_pos } => {
-                if let Some(road_map) = state.road_map.as_deref() {
-                    if let Some(tool) = state.editor.tool_manager.active_tool_mut() {
-                        let action = tool.on_click(world_pos, road_map);
-                        if action == crate::app::tools::ToolAction::ReadyToExecute {
-                            // Ergebnis erzeugen und anwenden
-                            if let Some(result) = state.editor.tool_manager
-                                .active_tool()
-                                .and_then(|t| t.execute(state.road_map.as_deref().unwrap())) {
-                                let ids = use_cases::editing::apply_tool_result(state, result);
-                                // IDs im Tool speichern (für Nachbearbeitung + Verkettung)
-                                if let Some(tool) = state.editor.tool_manager.active_tool_mut() {
-                                    tool.set_last_created(ids);
-                                    tool.reset();
-                                }
-                            } else if let Some(tool) = state.editor.tool_manager.active_tool_mut() {
-                                tool.reset();
-                            }
-                        }
-                    }
-                }
-            }
-            AppCommand::RouteToolExecute => {
-                if let Some(road_map) = state.road_map.as_deref() {
-                    if let Some(tool) = state.editor.tool_manager.active_tool() {
-                        if let Some(result) = tool.execute(road_map) {
-                            let ids = use_cases::editing::apply_tool_result(state, result);
-                            if let Some(tool) = state.editor.tool_manager.active_tool_mut() {
-                                tool.set_last_created(ids);
-                            }
-                        }
-                    }
-                    if let Some(tool) = state.editor.tool_manager.active_tool_mut() {
-                        tool.reset();
-                    }
-                }
-            }
-            AppCommand::RouteToolCancel => {
-                if let Some(tool) = state.editor.tool_manager.active_tool_mut() {
-                    tool.reset();
-                }
-            }
-            AppCommand::SelectRouteTool { index } => {
-                state.editor.tool_manager.set_active(index);
-                state.editor.active_tool = crate::app::state::EditorTool::Route;
-                state.editor.connect_source_node = None;
-                // Richtung/Straßenart vom Editor-Standard übernehmen
-                let dir = state.editor.default_direction;
-                let prio = state.editor.default_priority;
-                if let Some(tool) = state.editor.tool_manager.active_tool_mut() {
-                    tool.set_direction(dir);
-                    tool.set_priority(prio);
-                }
-                log::info!("Route-Tool aktiviert: Index {}", index);
-            }
-            AppCommand::RouteToolRecreate => {
-                // Alte Nodes löschen, Strecke mit neuen Parametern neu erstellen
-                if let Some(tool) = state.editor.tool_manager.active_tool() {
-                    let old_ids = tool.last_created_ids().to_vec();
-                    if !old_ids.is_empty() {
-                        // Undo-Snapshot VOR Löschung + Neuberechnung
-                        state.record_undo_snapshot();
-                        use_cases::editing::delete_nodes_by_ids(state, &old_ids);
+            } => handlers::editing::update_marker(state, node_id, &name, &group),
 
-                        // Neu erstellen aus gespeicherten Ankern
-                        if let Some(result) = state.editor.tool_manager
-                            .active_tool()
-                            .and_then(|t| t.execute_from_anchors(state.road_map.as_deref().unwrap()))
-                        {
-                            let new_ids = use_cases::editing::apply_tool_result_no_snapshot(state, result);
-                            if let Some(tool) = state.editor.tool_manager.active_tool_mut() {
-                                tool.clear_recreate_flag();
-                                // Neue IDs speichern (Anker bleiben erhalten)
-                                let last_created = tool.last_created_ids().to_vec();
-                                // Nur die IDs aktualisieren, Anker bleiben
-                                let _ = last_created; // verwerfen, da set_last_created Anker überschreiben würde
-                                // Direkt IDs setzen ohne Anker zu überschreiben
-                                tool.set_last_created(new_ids);
-                            }
-                        }
-                    }
-                }
+            // === Route-Tool ===
+            AppCommand::RouteToolClick { world_pos } => {
+                handlers::route_tool::click(state, world_pos)
             }
+            AppCommand::RouteToolExecute => handlers::route_tool::execute(state),
+            AppCommand::RouteToolCancel => handlers::route_tool::cancel(state),
+            AppCommand::SelectRouteTool { index } => handlers::route_tool::select(state, index),
+            AppCommand::RouteToolRecreate => handlers::route_tool::recreate(state),
+
+            // === Dialoge & Anwendungssteuerung ===
+            AppCommand::RequestExit => handlers::dialog::request_exit(state),
+            AppCommand::RequestHeightmapDialog => {
+                handlers::dialog::request_heightmap_dialog(state)
+            }
+            AppCommand::RequestBackgroundMapDialog => {
+                handlers::dialog::request_background_map_dialog(state)
+            }
+            AppCommand::DismissHeightmapWarning => {
+                handlers::dialog::dismiss_heightmap_warning(state)
+            }
+            AppCommand::CloseMarkerDialog => handlers::dialog::close_marker_dialog(state),
+            AppCommand::OpenOptionsDialog => handlers::dialog::open_options_dialog(state),
+            AppCommand::CloseOptionsDialog => handlers::dialog::close_options_dialog(state),
+            AppCommand::ApplyOptions { options } => {
+                handlers::dialog::apply_options(state, options)
+            }
+            AppCommand::ResetOptions => handlers::dialog::reset_options(state),
+            AppCommand::DismissDeduplicateDialog => {
+                handlers::dialog::dismiss_dedup_dialog(state)
+            }
+
+            // === History ===
+            AppCommand::Undo => handlers::history::undo(state),
+            AppCommand::Redo => handlers::history::redo(state),
         }
 
         state.command_log.record(executed_command);

@@ -8,14 +8,15 @@ Das Core-Datenmodell speichert AutoDrive-Konfigurationen als `RoadMap` mit Nodes
 
 ### RoadMap
 - **Nodes**: `HashMap<u64, MapNode>` – ID → Node
-- **Connections**: `Vec<Connection>` – Liste aller Verbindungen
+- **Connections**: `HashMap<(u64, u64), Connection>` – (start_id, end_id) → Connection
 - **MapMarkers**: `Vec<MapMarker>` – Liste der Marker
 - **Meta**: `AutoDriveMeta` – Nicht-renderrelevante XML-Felder
+- **SpatialIndex**: Persistenter KD-Tree für schnelle Node-Abfragen
 
 ### MapNode
 - **id**: u64 (eindeutig)
 - **position**: Vec2 (x,z – 2D)
-- **flag**: NodeFlag (Regular, Parking, etc.)
+- **flag**: NodeFlag (Regular, SubPrio, Warning)
 
 ### Connection
 - **start_id/end_id**: u64 (Referenzen auf Nodes)
@@ -30,16 +31,18 @@ Das Core-Datenmodell speichert AutoDrive-Konfigurationen als `RoadMap` mit Nodes
 
 ### AutoDriveMeta
 - **config_version/route_version/route_author**: Option<String>
-- **options**: HashMap<String, String> (z.B. UI-Settings)
+- **options**: Vec<(String, String)> (in Original-Reihenfolge)
 
 ```mermaid
 classDiagram
     class RoadMap {
         +HashMap<u64, MapNode> nodes
-        +Vec<Connection> connections
+        +HashMap<(u64,u64), Connection> connections
         +Vec<MapMarker> map_markers
         +AutoDriveMeta meta
+        +SpatialIndex spatial_index
         +rebuild_connection_geometry()
+        +rebuild_spatial_index()
     }
 
     class MapNode {
@@ -69,7 +72,7 @@ classDiagram
         +Option<String> config_version
         +Option<String> route_version
         +Option<String> route_author
-        +HashMap<String, String> options
+        +Vec<(String, String)> options
     }
 
     RoadMap --> MapNode

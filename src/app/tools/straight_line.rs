@@ -196,8 +196,14 @@ impl RouteTool for StraightLineTool {
             && self.last_end_anchor.is_some();
 
         if adjusting {
-            let start_pos = self.last_start_anchor.unwrap().position();
-            let end_pos = self.last_end_anchor.unwrap().position();
+            let Some(start_anchor) = self.last_start_anchor else {
+                return changed;
+            };
+            let Some(end_anchor) = self.last_end_anchor else {
+                return changed;
+            };
+            let start_pos = start_anchor.position();
+            let end_pos = end_anchor.position();
             let distance = start_pos.distance(end_pos);
 
             ui.label(format!("Streckenlänge: {:.1} m", distance));

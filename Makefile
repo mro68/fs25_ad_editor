@@ -21,7 +21,8 @@ WIN_DBG     := $(OUT_DIR)/$(BIN_NAME)_x64_windows_dbg.exe
 WIN_DBG_PDB := $(OUT_DIR)/$(BIN_NAME)_x64_windows_dbg.pdb
 
 .PHONY: all release debug linux windows \
-        linux-release linux-debug windows-release windows-debug clean
+        linux-release linux-debug windows-release windows-debug \
+        check-layers clean
 
 # Default: nur Release
 release: linux-release windows-release
@@ -72,3 +73,6 @@ windows-debug:
 clean:
 	rm -f $(OUT_DIR)/$(BIN_NAME)_x64_*
 	@echo "✓ $(OUT_DIR) aufgeräumt"
+
+check-layers:
+	@./scripts/check_layer_boundaries.sh

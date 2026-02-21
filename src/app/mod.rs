@@ -3,6 +3,7 @@
 pub mod command_log;
 pub mod controller;
 pub mod events;
+pub mod handlers;
 pub mod history;
 pub mod render_scene;
 /// Application State und Controller

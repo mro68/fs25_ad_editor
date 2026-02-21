@@ -1,7 +1,6 @@
 //! Properties-Panel (rechte Seitenleiste) für Node- und Connection-Eigenschaften.
 
-use crate::app::{AppIntent, AppState, ConnectionDirection, ConnectionPriority, EditorTool};
-use crate::core::RoadMap;
+use crate::app::{AppIntent, AppState, ConnectionDirection, ConnectionPriority, EditorTool, RoadMap};
 
 /// Rendert das Properties-Panel und gibt erzeugte Events zurück.
 pub fn render_properties_panel(ctx: &egui::Context, state: &mut AppState) -> Vec<AppIntent> {

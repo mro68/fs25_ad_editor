@@ -19,7 +19,9 @@ pub fn apply_tool_result(state: &mut AppState, result: ToolResult) -> Vec<u64> {
     // Snapshot VOR Mutation
     state.record_undo_snapshot();
 
-    let road_map_arc = state.road_map.as_mut().unwrap();
+    let Some(road_map_arc) = state.road_map.as_mut() else {
+        return Vec::new();
+    };
     let road_map = Arc::make_mut(road_map_arc);
 
     // Nodes erstellen und IDs merken
@@ -82,11 +84,9 @@ pub fn apply_tool_result(state: &mut AppState, result: ToolResult) -> Vec<u64> {
 /// Wie `apply_tool_result`, aber OHNE Undo-Snapshot.
 /// Für Neuberechnung, wenn der Caller bereits einen Snapshot erstellt hat.
 pub fn apply_tool_result_no_snapshot(state: &mut AppState, result: ToolResult) -> Vec<u64> {
-    if state.road_map.is_none() {
+    let Some(road_map_arc) = state.road_map.as_mut() else {
         return Vec::new();
-    }
-
-    let road_map_arc = state.road_map.as_mut().unwrap();
+    };
     let road_map = Arc::make_mut(road_map_arc);
 
     let mut new_ids: Vec<u64> = Vec::with_capacity(result.new_nodes.len());

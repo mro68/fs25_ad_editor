@@ -188,12 +188,14 @@ impl EditorApp {
         }
         self.state.view.background_dirty = false;
 
+        let Ok(mut renderer) = self.renderer.lock() else {
+            log::error!("Renderer-Lock fehlgeschlagen (Mutex vergiftet)");
+            return;
+        };
         if let Some(bg_map) = self.state.view.background_map.as_deref() {
-            let mut renderer = self.renderer.lock().unwrap();
             renderer.set_background(&self.device, &self.queue, bg_map);
             log::info!("Background-Map in Renderer hochgeladen");
         } else {
-            let mut renderer = self.renderer.lock().unwrap();
             renderer.clear_background();
             log::info!("Background-Map aus Renderer entfernt");
         }
