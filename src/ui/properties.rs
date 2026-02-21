@@ -193,13 +193,19 @@ fn render_selection_info(
     }
 }
 
-fn render_route_tool_config(ui: &mut egui::Ui, tool_manager: Option<&mut ToolManager>) -> Vec<AppIntent> {
+fn render_route_tool_config(
+    ui: &mut egui::Ui,
+    tool_manager: Option<&mut ToolManager>,
+) -> Vec<AppIntent> {
     let mut events = Vec::new();
 
     ui.separator();
     ui.heading("Route-Tool");
 
-    if let Some(tool) = tool_manager.as_deref().and_then(|manager| manager.active_tool()) {
+    if let Some(tool) = tool_manager
+        .as_deref()
+        .and_then(|manager| manager.active_tool())
+    {
         ui.label(tool.status_text());
         ui.add_space(4.0);
     }

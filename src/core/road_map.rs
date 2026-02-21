@@ -305,7 +305,6 @@ impl RoadMap {
     pub fn nodes_within_rect(&self, min: Vec2, max: Vec2) -> Vec<u64> {
         self.spatial_index.within_rect(min, max)
     }
-
 }
 
 impl Default for RoadMap {

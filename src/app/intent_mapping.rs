@@ -102,7 +102,9 @@ pub fn map_intent_to_commands(state: &AppState, intent: AppIntent) -> Vec<AppCom
         AppIntent::UndoRequested => vec![AppCommand::Undo],
         AppIntent::RedoRequested => vec![AppCommand::Redo],
         AppIntent::SetEditorToolRequested { tool } => vec![AppCommand::SetEditorTool { tool }],
-        AppIntent::AddNodeRequested { world_pos } => vec![AppCommand::AddNodeAtPosition { world_pos }],
+        AppIntent::AddNodeRequested { world_pos } => {
+            vec![AppCommand::AddNodeAtPosition { world_pos }]
+        }
         AppIntent::DeleteSelectedRequested => vec![AppCommand::DeleteSelectedNodes],
         AppIntent::ConnectToolNodeClicked { world_pos } => {
             let max_distance = state.view.camera.pick_radius_world_scaled(
@@ -225,7 +227,9 @@ pub fn map_intent_to_commands(state: &AppState, intent: AppIntent) -> Vec<AppCom
         }
         AppIntent::RouteToolExecuteRequested => vec![AppCommand::RouteToolExecute],
         AppIntent::RouteToolCancelled => vec![AppCommand::RouteToolCancel],
-        AppIntent::SelectRouteToolRequested { index } => vec![AppCommand::SelectRouteTool { index }],
+        AppIntent::SelectRouteToolRequested { index } => {
+            vec![AppCommand::SelectRouteTool { index }]
+        }
         AppIntent::RouteToolConfigChanged => vec![AppCommand::RouteToolRecreate],
     }
 }
