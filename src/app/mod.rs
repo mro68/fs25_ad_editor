@@ -5,6 +5,7 @@ pub mod controller;
 pub mod events;
 pub mod handlers;
 pub mod history;
+mod intent_mapping;
 pub mod render_scene;
 /// Application State und Controller
 ///

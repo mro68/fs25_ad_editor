@@ -142,7 +142,11 @@ impl EditorApp {
             self.state.road_map.as_deref(),
         ));
         events.extend(ui::show_dedup_dialog(ctx, &self.state.ui));
-        events.extend(ui::show_options_dialog(ctx, &mut self.state));
+        events.extend(ui::show_options_dialog(
+            ctx,
+            self.state.show_options_dialog,
+            &self.state.options,
+        ));
 
         egui::CentralPanel::default()
             .frame(egui::Frame::NONE)

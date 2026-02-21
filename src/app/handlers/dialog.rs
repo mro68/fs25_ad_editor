@@ -33,20 +33,16 @@ pub fn close_options_dialog(state: &mut AppState) {
     state.show_options_dialog = false;
 }
 
-pub fn apply_options(state: &mut AppState, options: EditorOptions) {
+pub fn apply_options(state: &mut AppState, options: EditorOptions) -> anyhow::Result<()> {
     state.options = options;
     let path = EditorOptions::config_path();
-    if let Err(e) = state.options.save_to_file(&path) {
-        log::error!("Optionen konnten nicht gespeichert werden: {}", e);
-    }
+    state.options.save_to_file(&path)
 }
 
-pub fn reset_options(state: &mut AppState) {
+pub fn reset_options(state: &mut AppState) -> anyhow::Result<()> {
     state.options = EditorOptions::default();
     let path = EditorOptions::config_path();
-    if let Err(e) = state.options.save_to_file(&path) {
-        log::error!("Optionen konnten nicht gespeichert werden: {}", e);
-    }
+    state.options.save_to_file(&path)
 }
 
 pub fn dismiss_dedup_dialog(state: &mut AppState) {
