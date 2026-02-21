@@ -94,6 +94,32 @@ pub fn snap_to_node(pos: Vec2, road_map: &RoadMap, snap_radius: f32) -> ToolAnch
     ToolAnchor::NewPosition(pos)
 }
 
+/// Berechnet die Position eines Kontrollpunkts basierend auf einer Tangente.
+///
+/// - `anchor_pos`: Position des Snap-Nodes (Start oder Ende der Kurve)
+/// - `tangent_angle`: Winkel der gewählten Verbindung (Radiant)
+/// - `other_anchor_pos`: Position des anderen Kurven-Endpunkts
+/// - `is_start`: true = CP1 (Startseite), false = CP2 (Endseite)
+///
+/// Der CP wird im Abstand chord_length/3 entlang der Tangente platziert.
+pub fn compute_tangent_cp(
+    anchor_pos: Vec2,
+    tangent_angle: f32,
+    other_anchor_pos: Vec2,
+    is_start: bool,
+) -> Vec2 {
+    let chord_length = anchor_pos.distance(other_anchor_pos);
+    let cp_distance = chord_length / 3.0;
+    let direction = if is_start {
+        // CP1: In Fortsetzungsrichtung der Verbindung (weg vom Nachbar, zum Kurveninneren)
+        Vec2::from_angle(tangent_angle + std::f32::consts::PI)
+    } else {
+        // CP2: In Gegenrichtung (Kurve soll tangential ankommen)
+        Vec2::from_angle(tangent_angle)
+    };
+    anchor_pos + direction * cp_distance
+}
+
 /// Evaluiert die Kurvenposition für den aktuellen Grad.
 pub fn eval_curve(
     degree: CurveDegree,
