@@ -28,7 +28,7 @@ let scene = controller.build_render_scene(&state, [width, height]);
 
 **Features:**
 - Verarbeitet UI- und Input-Intents gegen `AppState`
-- Mappt Intents auf Commands
+- Mappt Intents auf Commands (Mapping ist in `intent_mapping.rs` ausgelagert)
 - Dispatcht Commands an Feature-Handler (`handlers/`)
 - Baut den expliziten Render-Vertrag (`RenderScene`)
 
