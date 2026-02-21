@@ -754,9 +754,8 @@ impl RouteTool for SplineTool {
         self.anchors.clear();
         self.tangent_start = SplineTangentSource::None;
         self.tangent_end = SplineTangentSource::None;
-        self.start_neighbors.clear();
-        self.end_neighbors.clear();
-        // last_* bleiben für Nachbearbeitung/Verkettung erhalten
+        // start_neighbors / end_neighbors bleiben erhalten —
+        // werden in set_last_created befüllt und im Nachbearbeitungs-Modus benötigt
     }
 
     fn is_ready(&self) -> bool {
