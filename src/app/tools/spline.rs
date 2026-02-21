@@ -661,8 +661,8 @@ impl RouteTool for SplineTool {
             // Slider für Min. Abstand und Node-Anzahl im Nachbearbeitungs-Modus
             let length = Self::spline_length_from_anchors(
                 &self.last_anchors,
-                self.last_tangent_start,
-                self.last_tangent_end,
+                self.tangent_start,
+                self.tangent_end,
             );
 
             ui.label(format!("Spline-Länge: {:.1} m", length));
@@ -771,15 +771,23 @@ impl RouteTool for SplineTool {
     }
 
     fn set_last_created(&mut self, ids: Vec<u64>, road_map: &RoadMap) {
-        self.last_anchors = self.anchors.clone();
-        if let Some(last) = self.anchors.last() {
-            self.last_end_anchor = Some(*last);
+        // Nur bei Erst-Erstellung Anker übernehmen; bei Recreate bleiben last_anchors erhalten
+        if !self.anchors.is_empty() {
+            self.last_anchors = self.anchors.clone();
+            if let Some(last) = self.anchors.last() {
+                self.last_end_anchor = Some(*last);
+            }
         }
-        // Nachbarn erst jetzt befüllen — Start/Ende stehen erst nach Bestätigung fest
-        if let Some(first) = self.anchors.first() {
+        // Nachbarn aus den richtigen Ankern befüllen (anchors oder last_anchors)
+        let source = if !self.anchors.is_empty() {
+            &self.anchors
+        } else {
+            &self.last_anchors
+        };
+        if let Some(first) = source.first() {
             self.start_neighbors = Self::populate_neighbors(first, road_map);
         }
-        if let Some(last) = self.anchors.last() {
+        if let Some(last) = source.last() {
             self.end_neighbors = Self::populate_neighbors(last, road_map);
         }
         self.last_tangent_start = self.tangent_start;
@@ -805,13 +813,15 @@ impl RouteTool for SplineTool {
     }
 
     fn execute_from_anchors(&self, road_map: &RoadMap) -> Option<ToolResult> {
+        // Aktuelle Tangenten verwenden (nicht last_tangent_*),
+        // damit Änderungen im Nachbearbeitungs-Modus wirksam werden
         Self::build_result_from_anchors(
             &self.last_anchors,
             self.max_segment_length,
             self.direction,
             self.priority,
-            self.last_tangent_start,
-            self.last_tangent_end,
+            self.tangent_start,
+            self.tangent_end,
             road_map,
         )
     }
