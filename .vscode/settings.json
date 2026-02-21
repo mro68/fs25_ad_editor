@@ -13,5 +13,5 @@
   },
   "window.zoomLevel": 0.5,
   "rust-analyzer.checkOnSave": true,
-  "rust-analyzer.cargo.targetDir": ".tmp/rust-analyzer"
+  "rust-analyzer.cargo.targetDir": ".tmp/rust-analyzer",
 }

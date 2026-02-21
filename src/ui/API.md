@@ -109,11 +109,16 @@ pub struct InputState { /* intern */ }
 ```rust
 let mut input = InputState::new();
 
+// Drag-Targets vom aktiven Route-Tool berechnen
+let drag_targets = tool_manager.active_tool()
+    .map(|t| t.drag_targets())
+    .unwrap_or_default();
+
 // Sammelt Viewport-Events aus egui-Input
 let intents = input.collect_viewport_events(
     ui, &response, viewport_size,
     &camera, road_map.as_deref(), &selected_node_ids,
-    active_tool, &options,
+    active_tool, &options, &drag_targets,
 );
 ```
 
@@ -130,6 +135,7 @@ let intents = input.collect_viewport_events(
 
 - **`drag`:** Verarbeitet Drag-Operationen
   - Links-Drag → Kamera-Pan oder Selektion-Move
+  - Links-Drag nahe Route-Tool-Punkt → Steuerpunkt-Drag (`RouteToolDragStarted/Updated/Ended`)
   - Shift+Drag → Rechteck-Selektion
   - Shift+Alt+Drag → Lasso-Selektion
   - Mittel/Rechts-Drag → Kamera-Pan
@@ -139,7 +145,7 @@ let intents = input.collect_viewport_events(
 **Unterstützte Interaktionen (gesamt):**
 - **Linksklick:** Node-Pick (mit Shift: additiv + Pfad-Erweiterung)
 - **Doppelklick:** Segment-Selektion zwischen Kreuzungen
-- **Links-Drag:** Kamera-Pan oder Selektion-Move
+- **Links-Drag:** Kamera-Pan, Selektion-Move, oder Route-Tool-Steuerpunkt-Drag
 - **Shift+Drag:** Rechteck-Selektion
 - **Shift+Alt+Drag:** Lasso-Selektion
 - **Mittel/Rechts-Drag:** Kamera-Pan
