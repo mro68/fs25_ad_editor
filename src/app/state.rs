@@ -1,0 +1,240 @@
+//! Application State — zentrale Datenhaltung.
+
+use super::history::Snapshot;
+use super::CommandLog;
+use crate::core::Camera2D;
+use crate::core::{BackgroundMap, ConnectionDirection, ConnectionPriority, RoadMap};
+use crate::shared::{EditorOptions, RenderQuality};
+use std::collections::HashSet;
+use std::sync::Arc;
+
+/// Aktives Editor-Werkzeug
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub enum EditorTool {
+    /// Standard: Nodes selektieren und verschieben
+    #[default]
+    Select,
+    /// Verbindungen zwischen Nodes erstellen
+    Connect,
+    /// Neue Nodes auf der Karte platzieren
+    AddNode,
+}
+
+/// Zustand des aktuellen Editor-Werkzeugs
+#[derive(Default)]
+pub struct EditorToolState {
+    /// Aktives Werkzeug
+    pub active_tool: EditorTool,
+    /// Quell-Node für Connect-Tool (wartet auf Ziel)
+    pub connect_source_node: Option<u64>,
+    /// Standard-Richtung für neue Verbindungen
+    pub default_direction: ConnectionDirection,
+    /// Standard-Straßenart für neue Verbindungen
+    pub default_priority: ConnectionPriority,
+}
+
+impl EditorToolState {
+    /// Erstellt den Standard-Werkzeugzustand (Select-Tool aktiv).
+    pub fn new() -> Self {
+        Self {
+            active_tool: EditorTool::Select,
+            connect_source_node: None,
+            default_direction: ConnectionDirection::Regular,
+            default_priority: ConnectionPriority::Regular,
+        }
+    }
+}
+
+/// Auswahlbezogener Anwendungszustand
+#[derive(Clone, Default)]
+pub struct SelectionState {
+    /// Menge der aktuell selektierten Node-IDs
+    pub selected_node_ids: HashSet<u64>,
+    /// Letzter selektierter Node als Anker für additive Bereichsselektion
+    pub selection_anchor_node_id: Option<u64>,
+}
+
+impl SelectionState {
+    /// Erstellt einen leeren Selektionszustand.
+    pub fn new() -> Self {
+        Self {
+            selected_node_ids: HashSet::new(),
+            selection_anchor_node_id: None,
+        }
+    }
+}
+
+/// UI-bezogener Anwendungszustand
+#[derive(Default)]
+pub struct UiState {
+    /// Ob der Open-Datei-Dialog geöffnet werden soll
+    pub show_file_dialog: bool,
+    /// Ob der Save-Datei-Dialog geöffnet werden soll
+    pub show_save_file_dialog: bool,
+    /// Ob der Heightmap-Auswahl-Dialog geöffnet werden soll
+    pub show_heightmap_dialog: bool,
+    /// Ob der Background-Map-Auswahl-Dialog geöffnet werden soll
+    pub show_background_map_dialog: bool,
+    /// Ob die Heightmap-Warnung angezeigt werden soll
+    pub show_heightmap_warning: bool,
+    /// Ob die Heightmap-Warnung für diese Save-Operation bereits bestätigt wurde
+    pub heightmap_warning_confirmed: bool,
+    /// Pfad für Save-Operation nach Heightmap-Warnung
+    pub pending_save_path: Option<String>,
+    /// Pfad der aktuell geladenen Datei (für Save ohne Dialog)
+    pub current_file_path: Option<String>,
+    /// Pfad der aktuell ausgewählten Heightmap (optional)
+    pub heightmap_path: Option<String>,
+    /// Marker-Bearbeiten-Dialog anzeigen
+    pub show_marker_dialog: bool,
+    /// Node-ID des Markers im Dialog
+    pub marker_dialog_node_id: Option<u64>,
+    /// Marker-Name im Dialog
+    pub marker_dialog_name: String,
+    /// Marker-Gruppe im Dialog
+    pub marker_dialog_group: String,
+    /// Neuer Marker (true) oder bestehender editieren (false)
+    pub marker_dialog_is_new: bool,
+    /// Temporäre Statusnachricht (z.B. Duplikat-Bereinigung)
+    pub status_message: Option<String>,
+    /// Duplikat-Bestätigungsdialog anzeigen
+    pub show_dedup_dialog: bool,
+    /// Anzahl gefundener Duplikat-Nodes (für Dialog-Anzeige)
+    pub dedup_duplicate_count: u32,
+    /// Anzahl der Positions-Gruppen mit Duplikaten (für Dialog-Anzeige)
+    pub dedup_group_count: u32,
+}
+
+impl UiState {
+    /// Erstellt den Standard-UI-Zustand (alle Dialoge geschlossen).
+    pub fn new() -> Self {
+        Self {
+            show_file_dialog: false,
+            show_save_file_dialog: false,
+            show_heightmap_dialog: false,
+            show_background_map_dialog: false,
+            show_heightmap_warning: false,
+            heightmap_warning_confirmed: false,
+            pending_save_path: None,
+            current_file_path: None,
+            heightmap_path: None,
+            show_marker_dialog: false,
+            marker_dialog_node_id: None,
+            marker_dialog_name: String::new(),
+            marker_dialog_group: String::new(),
+            marker_dialog_is_new: true,
+            status_message: None,
+            show_dedup_dialog: false,
+            dedup_duplicate_count: 0,
+            dedup_group_count: 0,
+        }
+    }
+}
+
+/// View-bezogener Anwendungszustand
+#[derive(Default)]
+pub struct ViewState {
+    /// 2D-Kamera für die Ansicht
+    pub camera: Camera2D,
+    /// Aktuelle Viewport-Größe in Pixel
+    pub viewport_size: [f32; 2],
+    /// Qualitätsstufe für Kantenglättung
+    pub render_quality: RenderQuality,
+    /// Background-Map (optional)
+    pub background_map: Option<Arc<BackgroundMap>>,
+    /// Background-Opacity (0.0 = transparent, 1.0 = opak)
+    pub background_opacity: f32,
+    /// Background-Sichtbarkeit
+    pub background_visible: bool,
+    /// Signalisiert, dass die Background-Map neu in den GPU-Renderer hochgeladen werden muss
+    pub background_dirty: bool,
+}
+
+impl ViewState {
+    /// Erstellt den Standard-View-Zustand.
+    pub fn new() -> Self {
+        Self {
+            camera: Camera2D::new(),
+            viewport_size: [0.0, 0.0],
+            render_quality: RenderQuality::High,
+            background_map: None,
+            background_opacity: 1.0,
+            background_visible: true,
+            background_dirty: false,
+        }
+    }
+}
+
+/// Hauptzustand der Anwendung
+pub struct AppState {
+    /// Aktuell geladene RoadMap (None = keine Datei geladen)
+    pub road_map: Option<Arc<RoadMap>>,
+    /// View-State
+    pub view: ViewState,
+    /// UI-State
+    pub ui: UiState,
+    /// Selection-State
+    pub selection: SelectionState,
+    /// Editor-Werkzeug-State
+    pub editor: EditorToolState,
+    /// Verlauf ausgeführter Commands
+    pub command_log: CommandLog,
+    /// Undo/Redo-History (Snapshot-basiert)
+    pub history: super::history::EditHistory,
+    /// Laufzeit-Optionen (Farben, Größen, Breiten)
+    pub options: EditorOptions,
+    /// Ob der Options-Dialog angezeigt wird
+    pub show_options_dialog: bool,
+    /// Signalisiert dem Host (eframe), die Anwendung kontrolliert zu beenden
+    pub should_exit: bool,
+}
+
+impl AppState {
+    /// Erstellt einen neuen, leeren App-State
+    pub fn new() -> Self {
+        Self {
+            road_map: None,
+            view: ViewState::new(),
+            ui: UiState::new(),
+            selection: SelectionState::new(),
+            editor: EditorToolState::new(),
+            command_log: CommandLog::new(),
+            history: super::history::EditHistory::new_with_capacity(200),
+            options: EditorOptions::default(),
+            show_options_dialog: false,
+            should_exit: false,
+        }
+    }
+
+    /// Gibt die Anzahl der Nodes zurück (für UI-Anzeige)
+    pub fn node_count(&self) -> usize {
+        self.road_map.as_ref().map_or(0, |rm| rm.node_count())
+    }
+
+    /// Gibt die Anzahl der Connections zurück (für UI-Anzeige)
+    pub fn connection_count(&self) -> usize {
+        self.road_map.as_ref().map_or(0, |rm| rm.connection_count())
+    }
+
+    /// Undo/Redo helpers
+    pub fn can_undo(&self) -> bool {
+        self.history.can_undo()
+    }
+
+    pub fn can_redo(&self) -> bool {
+        self.history.can_redo()
+    }
+
+    /// Erstellt einen Undo-Snapshot des aktuellen Zustands.
+    /// Reduziert Boilerplate in mutierenden Use-Cases.
+    pub fn record_undo_snapshot(&mut self) {
+        let snap = Snapshot::from_state(self);
+        self.history.record_snapshot(snap);
+    }
+}
+
+impl Default for AppState {
+    fn default() -> Self {
+        Self::new()
+    }
+}

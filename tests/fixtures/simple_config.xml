@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<AutoDrive version="3">
+    <waypoints>
+        <id>1,2,3,4</id>
+        <x>100.5,200.3,150.7,180.2</x>
+        <y>50.0,51.2,52.1,50.5</y>
+        <z>300.1,350.8,320.5,340.9</z>
+        <out>2,3;3,4;;1</out>
+        <incoming>4;1;2;3</incoming>
+        <flags>0,0,1,0</flags>
+    </waypoints>
+    <mapmarker>
+    </mapmarker>
+</AutoDrive>
