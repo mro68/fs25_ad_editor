@@ -660,7 +660,9 @@ mod tests {
 
         // Segment-Länge ändern → Neuberechnung aus Ankern
         tool.max_segment_length = 10.0;
-        let result = tool.execute_from_anchors(&road_map).expect("Ergebnis erwartet");
+        let result = tool
+            .execute_from_anchors(&road_map)
+            .expect("Ergebnis erwartet");
         // 10m Strecke, 10m Segment → 2 Nodes (Start + End)
         assert_eq!(result.new_nodes.len(), 2);
     }

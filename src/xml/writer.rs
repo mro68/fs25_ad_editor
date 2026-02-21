@@ -133,14 +133,22 @@ pub fn write_autodrive_config(road_map: &RoadMap, heightmap: Option<&Heightmap>)
 
         let mut out_list: Vec<u64> = outgoing
             .get(id)
-            .map(|list| list.iter().filter_map(|old| id_remap.get(old).copied()).collect())
+            .map(|list| {
+                list.iter()
+                    .filter_map(|old| id_remap.get(old).copied())
+                    .collect()
+            })
             .unwrap_or_default();
         out_list.sort_unstable();
         out_text.push(join_ids(&out_list));
 
         let mut incoming_list: Vec<u64> = incoming
             .get(id)
-            .map(|list| list.iter().filter_map(|old| id_remap.get(old).copied()).collect())
+            .map(|list| {
+                list.iter()
+                    .filter_map(|old| id_remap.get(old).copied())
+                    .collect()
+            })
             .unwrap_or_default();
         incoming_list.sort_unstable();
         incoming_text.push(join_ids(&incoming_list));

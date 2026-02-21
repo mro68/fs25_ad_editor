@@ -51,7 +51,11 @@ impl InputState {
         });
 
         // Keyboard-Shortcuts (ausgelagert in keyboard.rs)
-        events.extend(keyboard::collect_keyboard_intents(ui, selected_node_ids, active_tool));
+        events.extend(keyboard::collect_keyboard_intents(
+            ui,
+            selected_node_ids,
+            active_tool,
+        ));
 
         let modifiers = ui.input(|i| i.modifiers);
 
@@ -77,8 +81,8 @@ impl InputState {
                 }
             } else {
                 // Kein Shift/Alt: Selektion + Move-Drag oder Kamera-Pan
-                let base_max_distance =
-                    camera.pick_radius_world_scaled(viewport_size[1], options.selection_pick_radius_px);
+                let base_max_distance = camera
+                    .pick_radius_world_scaled(viewport_size[1], options.selection_pick_radius_px);
                 let move_max_distance = base_max_distance * options.selection_size_factor;
 
                 // press_origin() liefert die exakte Klickposition (vor Drag-Schwelle),
