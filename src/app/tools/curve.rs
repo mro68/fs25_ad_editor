@@ -677,7 +677,7 @@ impl RouteTool for CurveTool {
         self.priority = prio;
     }
 
-    fn set_last_created(&mut self, ids: Vec<u64>) {
+    fn set_last_created(&mut self, ids: Vec<u64>, _road_map: &RoadMap) {
         if self.start.is_some() {
             self.last_start_anchor = self.start;
         }
@@ -1053,7 +1053,7 @@ mod tests {
         tool.on_click(Vec2::ZERO, &road_map, false);
         tool.on_click(Vec2::new(10.0, 0.0), &road_map, false);
         tool.on_click(Vec2::new(5.0, 8.0), &road_map, false);
-        tool.set_last_created(vec![100, 101, 102]);
+        tool.set_last_created(vec![100, 101, 102], &road_map);
         tool.reset();
 
         let action = tool.on_click(Vec2::new(20.0, 0.0), &road_map, false);
@@ -1073,7 +1073,7 @@ mod tests {
         tool.on_click(Vec2::new(10.0, 0.0), &road_map, false);
         tool.on_click(Vec2::new(5.0, 8.0), &road_map, false);
         let original = tool.execute(&road_map).unwrap();
-        tool.set_last_created(vec![1, 2, 3, 4, 5]);
+        tool.set_last_created(vec![1, 2, 3, 4, 5], &road_map);
         tool.reset();
 
         tool.max_segment_length = 5.0;

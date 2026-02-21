@@ -320,7 +320,7 @@ impl RouteTool for StraightLineTool {
         self.priority = prio;
     }
 
-    fn set_last_created(&mut self, ids: Vec<u64>) {
+    fn set_last_created(&mut self, ids: Vec<u64>, _road_map: &RoadMap) {
         // Anker nur überschreiben wenn aktuelle start/end gesetzt sind.
         // Beim Recreate sind start/end None — Anker bleiben erhalten.
         if self.start.is_some() {

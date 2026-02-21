@@ -512,26 +512,14 @@ impl RouteTool for SplineTool {
                 self.last_anchors.clear();
                 self.last_end_anchor = None;
                 self.recreate_needed = false;
-                self.start_neighbors = Self::populate_neighbors(&last_end, road_map);
                 self.tangent_start = SplineTangentSource::None;
-                self.anchors.push(last_end);
-                self.end_neighbors = Self::populate_neighbors(&anchor, road_map);
                 self.tangent_end = SplineTangentSource::None;
+                self.anchors.push(last_end);
                 self.anchors.push(anchor);
                 self.sync_derived();
                 return ToolAction::UpdatePreview;
             }
         }
-
-        // Erster Punkt → Start-Nachbarn befüllen
-        if self.anchors.is_empty() {
-            self.start_neighbors = Self::populate_neighbors(&anchor, road_map);
-            self.tangent_start = SplineTangentSource::None;
-        }
-
-        // Immer End-Nachbarn aktualisieren (letzter Punkt ist der aktuelle Endpunkt)
-        self.end_neighbors = Self::populate_neighbors(&anchor, road_map);
-        self.tangent_end = SplineTangentSource::None;
 
         self.anchors.push(anchor);
 
@@ -577,11 +565,11 @@ impl RouteTool for SplineTool {
     fn render_config(&mut self, ui: &mut egui::Ui) -> bool {
         let mut changed = false;
 
-        // Tangenten-Auswahl (wenn Anker gesnappt und mindestens 2 Punkte)
-        let show_tangent_ui = self.anchors.len() >= 2
-            || (!self.last_created_ids.is_empty() && self.last_anchors.len() >= 2);
+        // Tangenten-Auswahl nur im Nachbearbeitungs-Modus —
+        // Start/Ende stehen erst nach Enter fest
+        let adjusting = !self.last_created_ids.is_empty() && self.last_anchors.len() >= 2;
 
-        if show_tangent_ui {
+        if adjusting {
             // Tangente Start
             if !self.start_neighbors.is_empty() {
                 let old_tangent = self.tangent_start;
@@ -669,12 +657,8 @@ impl RouteTool for SplineTool {
             if !self.start_neighbors.is_empty() || !self.end_neighbors.is_empty() {
                 ui.add_space(4.0);
             }
-        }
 
-        // Nachbearbeitungs-Modus
-        let adjusting = !self.last_created_ids.is_empty() && self.last_anchors.len() >= 2;
-
-        if adjusting {
+            // Slider für Min. Abstand und Node-Anzahl im Nachbearbeitungs-Modus
             let length = Self::spline_length_from_anchors(
                 &self.last_anchors,
                 self.last_tangent_start,
@@ -787,10 +771,17 @@ impl RouteTool for SplineTool {
         self.priority = prio;
     }
 
-    fn set_last_created(&mut self, ids: Vec<u64>) {
+    fn set_last_created(&mut self, ids: Vec<u64>, road_map: &RoadMap) {
         self.last_anchors = self.anchors.clone();
         if let Some(last) = self.anchors.last() {
             self.last_end_anchor = Some(*last);
+        }
+        // Nachbarn erst jetzt befüllen — Start/Ende stehen erst nach Bestätigung fest
+        if let Some(first) = self.anchors.first() {
+            self.start_neighbors = Self::populate_neighbors(first, road_map);
+        }
+        if let Some(last) = self.anchors.last() {
+            self.end_neighbors = Self::populate_neighbors(last, road_map);
         }
         self.last_tangent_start = self.tangent_start;
         self.last_tangent_end = self.tangent_end;
@@ -987,7 +978,7 @@ mod tests {
         tool.on_click(Vec2::ZERO, &road_map, false);
         tool.on_click(Vec2::new(10.0, 0.0), &road_map, false);
         tool.on_click(Vec2::new(5.0, 8.0), &road_map, false);
-        tool.set_last_created(vec![100, 101, 102, 103]);
+        tool.set_last_created(vec![100, 101, 102, 103], &road_map);
         tool.reset();
 
         // Verkettung: nächster Klick übernimmt letzten Endpunkt
@@ -1020,7 +1011,7 @@ mod tests {
         tool.on_click(Vec2::new(10.0, 0.0), &road_map, false);
         tool.on_click(Vec2::new(5.0, 8.0), &road_map, false);
         let original = tool.execute(&road_map).unwrap();
-        tool.set_last_created(vec![1, 2, 3, 4, 5]);
+        tool.set_last_created(vec![1, 2, 3, 4, 5], &road_map);
         tool.reset();
 
         // Nachbearbeitung mit anderer Segment-Länge
