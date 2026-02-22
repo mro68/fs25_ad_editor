@@ -80,13 +80,13 @@ pub fn select_nodes_in_lasso(state: &mut AppState, polygon: &[glam::Vec2], addit
     let candidates = road_map.nodes_within_rect(min, max);
 
     if !additive {
-        state.selection.selected_node_ids.clear();
+        state.selection.ids_mut().clear();
     }
 
     for node_id in candidates {
         if let Some(node) = road_map.nodes.get(&node_id) {
             if point_in_polygon(node.position, polygon) {
-                state.selection.selected_node_ids.insert(node_id);
+                state.selection.ids_mut().insert(node_id);
             }
         }
     }

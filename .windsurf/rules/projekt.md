@@ -61,3 +61,10 @@ Neuimplementierung des AutoDrive Course Editors in Rust mit egui + wgpu. Hochper
 - **Code/Variablen/Typen:** Englisch
 - **Kommentare/Docstrings/README:** Deutsch
 - **Fehler-Messages:** Deutsch (User-facing) / Englisch (Debug-Logs)
+
+## Dokumentations-Pflicht
+Dokumentation wird **im selben Commit** wie der Code geändert — nie später:
+- **Docstrings (`///`):** Jede öffentliche Funktion/Struct/Enum braucht einen deutschen Docstring. Bei Signaturnänderungen sofort anpassen.
+- **`src/*/API.md`:** Je ein `API.md` pro Layer (`app/`, `core/`, `render/`, `shared/`, `xml/`). Änderungen an der öffentlichen API → `API.md` sofort nachführen.
+- **`docs/ROADMAP.md`:** Fertige Items als `[x]` markieren, neue Todos eintragen.
+- **`.windsurf/rules/`:** Neue Architektur-Entscheidungen, Layer-Grenzen oder Pattern-Änderungen hier dokumentieren.

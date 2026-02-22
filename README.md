@@ -82,17 +82,59 @@ Ausführliche Anleitung: [docs/How-To-Use.md](docs/How-To-Use.md)
 
 ## Architektur
 
-```
-src/
-├── app/       # Intent/Command-Flow, Controller, Use-Cases, State
-├── core/      # Datenmodelle (RoadMap, MapNode, Connection, Heightmap)
-├── xml/       # AutoDrive XML Parser/Writer
-├── render/    # wgpu Rendering-Pipeline (GPU-Instancing, Culling)
-├── shared/    # Optionen, RenderScene, geteilte Typen
-└── ui/        # egui Interface (Menüs, Toolbar, Dialoge)
+```mermaid
+graph TD
+    subgraph UI["UI-Layer  (egui)"]
+        U[Menü · Toolbar · Viewport · Dialoge]
+    end
+
+    subgraph APP["Application Layer  (app)"]
+        I([AppIntent])
+        CTRL[AppController]
+        CMD([AppCommand])
+        UC[Use-Cases]
+        S[AppState]
+    end
+
+    subgraph DOMAIN["Domain Layer  (core)"]
+        R[RoadMap]
+        H[Heightmap]
+        M[MapMarker]
+    end
+
+    subgraph PERSIST["Persistence  (xml)"]
+        P[parser · writer]
+    end
+
+    subgraph RENDER["Rendering  (wgpu)"]
+        RS[RenderScene]
+        GPU[Renderer – GPU Instancing]
+    end
+
+    U  -->|emittiert| I
+    I  --> CTRL
+    CTRL --> CMD
+    CMD --> UC
+    UC --> S
+    S  -->|liest / mutiert| R
+    S  -->|liest / mutiert| H
+    S  -->|liest / mutiert| M
+    S  -->|baut| RS
+    RS -->|draw-calls| GPU
+    UC -->|Load / Save| P
+    P  <-->|XML ↔ Domain| R
 ```
 
-**Datenfluss:** `UI-Event → AppIntent → Controller → AppCommand → Use-Case → State → RenderScene → GPU`
+| Layer | Verzeichnis | Aufgabe |
+|-------|-------------|---------|
+| UI | `src/ui/` | Darstellung + AppIntent-Erzeugung |
+| Application | `src/app/` | Controller, Use-Cases, State |
+| Domain | `src/core/` | Fachmodell: RoadMap, Node, Connection |
+| Persistence | `src/xml/` | AutoDrive XML Parser/Writer |
+| Rendering | `src/render/` | wgpu GPU-Pipeline, Culling, Instancing |
+| Shared | `src/shared/` | RenderScene, RenderQuality (cross-layer) |
+
+Detaillierte Beschreibung: [docs/ARCHITECTURE_PLAN.md](docs/ARCHITECTURE_PLAN.md)
 
 ## Entwicklung
 

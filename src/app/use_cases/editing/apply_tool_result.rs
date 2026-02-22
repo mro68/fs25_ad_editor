@@ -39,9 +39,9 @@ fn apply_result_inner(state: &mut AppState, result: ToolResult) -> Vec<u64> {
     let new_ids = create_nodes_and_connections(road_map, &result);
 
     // Selektion auf neue Nodes setzen
-    state.selection.selected_node_ids.clear();
+    state.selection.ids_mut().clear();
     for &id in &new_ids {
-        state.selection.selected_node_ids.insert(id);
+        state.selection.ids_mut().insert(id);
     }
     state.selection.selection_anchor_node_id = new_ids.last().copied();
 

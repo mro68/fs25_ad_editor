@@ -208,7 +208,7 @@ impl AppController {
             AppCommand::Redo => handlers::history::redo(state),
         }
 
-        state.command_log.record(executed_command);
+        state.command_log.record(&executed_command);
 
         Ok(())
     }

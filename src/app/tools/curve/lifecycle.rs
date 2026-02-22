@@ -51,36 +51,35 @@ impl RouteTool for CurveTool {
         match self.phase {
             Phase::Start => {
                 // Verkettung: letzten Endpunkt als Start verwenden
-                if let Some(last_end) = self.last_end_anchor {
-                    self.last_created_ids.clear();
+                if let Some(last_end) = self.lifecycle.last_end_anchor {
+                    self.lifecycle.last_created_ids.clear();
                     self.last_start_anchor = None;
-                    self.last_end_anchor = None;
+                    self.lifecycle.last_end_anchor = None;
                     self.last_control_point1 = None;
                     self.last_control_point2 = None;
-                    self.recreate_needed = false;
+                    self.lifecycle.recreate_needed = false;
                     self.start = Some(last_end);
-                    self.start_neighbors = populate_neighbors(&last_end, road_map);
-                    let end_anchor = snap_to_node(pos, road_map, self.snap_radius);
-                    self.end_neighbors = populate_neighbors(&end_anchor, road_map);
+                    self.tangents.start_neighbors = populate_neighbors(&last_end, road_map);
+                    let end_anchor = snap_to_node(pos, road_map, self.lifecycle.snap_radius);
+                    self.tangents.end_neighbors = populate_neighbors(&end_anchor, road_map);
                     self.end = Some(end_anchor);
-                    self.tangent_start = super::super::common::TangentSource::None;
-                    self.tangent_end = super::super::common::TangentSource::None;
+                    self.tangents.reset_tangents();
                     self.phase = Phase::Control;
                     self.apply_tangent_to_cp();
                     ToolAction::Continue
                 } else {
-                    let start_anchor = snap_to_node(pos, road_map, self.snap_radius);
-                    self.start_neighbors = populate_neighbors(&start_anchor, road_map);
-                    self.tangent_start = super::super::common::TangentSource::None;
+                    let start_anchor = snap_to_node(pos, road_map, self.lifecycle.snap_radius);
+                    self.tangents.start_neighbors = populate_neighbors(&start_anchor, road_map);
+                    self.tangents.tangent_start = super::super::common::TangentSource::None;
                     self.start = Some(start_anchor);
                     self.phase = Phase::End;
                     ToolAction::Continue
                 }
             }
             Phase::End => {
-                let end_anchor = snap_to_node(pos, road_map, self.snap_radius);
-                self.end_neighbors = populate_neighbors(&end_anchor, road_map);
-                self.tangent_end = super::super::common::TangentSource::None;
+                let end_anchor = snap_to_node(pos, road_map, self.lifecycle.snap_radius);
+                self.tangents.end_neighbors = populate_neighbors(&end_anchor, road_map);
+                self.tangents.tangent_end = super::super::common::TangentSource::None;
                 self.end = Some(end_anchor);
                 self.phase = Phase::Control;
                 self.apply_tangent_to_cp();
@@ -96,10 +95,10 @@ impl RouteTool for CurveTool {
                     CurveDegree::Cubic => {
                         if self.control_point1.is_none() {
                             self.control_point1 = Some(pos);
-                            self.tangent_start = super::super::common::TangentSource::None;
+                            self.tangents.tangent_start = super::super::common::TangentSource::None;
                         } else if self.control_point2.is_none() {
                             self.control_point2 = Some(pos);
-                            self.tangent_end = super::super::common::TangentSource::None;
+                            self.tangents.tangent_end = super::super::common::TangentSource::None;
                         }
                     }
                 }
@@ -117,7 +116,8 @@ impl RouteTool for CurveTool {
 
         match self.phase {
             Phase::End => {
-                let end_pos = snap_to_node(cursor_pos, road_map, self.snap_radius).position();
+                let end_pos =
+                    snap_to_node(cursor_pos, road_map, self.lifecycle.snap_radius).position();
                 ToolPreview {
                     nodes: vec![start_pos, end_pos],
                     connections: vec![(0, 1)],
@@ -187,10 +187,7 @@ impl RouteTool for CurveTool {
         self.control_point1 = None;
         self.control_point2 = None;
         self.phase = Phase::Start;
-        self.tangent_start = super::super::common::TangentSource::None;
-        self.tangent_end = super::super::common::TangentSource::None;
-        self.start_neighbors.clear();
-        self.end_neighbors.clear();
+        self.tangents.reset_all();
     }
 
     fn is_ready(&self) -> bool {
@@ -206,7 +203,7 @@ impl RouteTool for CurveTool {
     }
 
     fn set_snap_radius(&mut self, radius: f32) {
-        self.snap_radius = radius;
+        self.lifecycle.snap_radius = radius;
     }
 
     fn set_last_created(&mut self, ids: Vec<u64>, _road_map: &RoadMap) {
@@ -214,7 +211,7 @@ impl RouteTool for CurveTool {
             self.last_start_anchor = self.start;
         }
         if self.end.is_some() {
-            self.last_end_anchor = self.end;
+            self.lifecycle.last_end_anchor = self.end;
         }
         if self.control_point1.is_some() {
             self.last_control_point1 = self.control_point1;
@@ -222,31 +219,30 @@ impl RouteTool for CurveTool {
         if self.control_point2.is_some() {
             self.last_control_point2 = self.control_point2;
         }
-        self.last_tangent_start = self.tangent_start;
-        self.last_tangent_end = self.tangent_end;
-        self.last_created_ids = ids;
-        self.recreate_needed = false;
+        self.tangents.save_for_recreate();
+        self.lifecycle.last_created_ids = ids;
+        self.lifecycle.recreate_needed = false;
     }
 
     fn last_created_ids(&self) -> &[u64] {
-        &self.last_created_ids
+        &self.lifecycle.last_created_ids
     }
 
     fn last_end_anchor(&self) -> Option<ToolAnchor> {
-        self.last_end_anchor
+        self.lifecycle.last_end_anchor
     }
 
     fn needs_recreate(&self) -> bool {
-        self.recreate_needed
+        self.lifecycle.recreate_needed
     }
 
     fn clear_recreate_flag(&mut self) {
-        self.recreate_needed = false;
+        self.lifecycle.recreate_needed = false;
     }
 
     fn execute_from_anchors(&self, road_map: &RoadMap) -> Option<ToolResult> {
         let start = self.last_start_anchor.as_ref()?;
-        let end = self.last_end_anchor.as_ref()?;
+        let end = self.lifecycle.last_end_anchor.as_ref()?;
         let params = CurveParams {
             degree: self.degree,
             cp1: self.last_control_point1?,

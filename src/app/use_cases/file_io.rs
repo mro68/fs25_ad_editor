@@ -18,7 +18,7 @@ pub fn load_selected_file(state: &mut AppState, path: String) -> anyhow::Result<
 
     // Merke Pfad für späteres Save
     state.ui.current_file_path = Some(path.to_string());
-    state.selection.selected_node_ids.clear();
+    state.selection.ids_mut().clear();
 
     log::info!(
         "Loaded RoadMap: {} nodes, {} connections",
@@ -148,14 +148,14 @@ fn write_roadmap_to_file(state: &mut AppState, path: &str) -> anyhow::Result<()>
 
 /// Speichert mit Heightmap-Prüfung (zeigt Warnung wenn keine Heightmap ausgewählt).
 ///
-/// Bei leerem Pfad wird `current_file_path` bzw. `pending_save_path` herangezogen.
+/// `path = None` speichert unter `current_file_path` bzw. `pending_save_path`.
+/// `path = Some(p)` speichert explizit unter Pfad `p`.
 /// Wurde noch keine Heightmap ausgewählt und nicht bestätigt, wird stattdessen
 /// die Heightmap-Warnung angezeigt.
-pub fn save_with_heightmap_check(state: &mut AppState, path: String) -> anyhow::Result<()> {
-    let actual_path = if path.is_empty() {
-        state.ui.pending_save_path.take().unwrap_or_default()
-    } else {
-        path
+pub fn save_with_heightmap_check(state: &mut AppState, path: Option<String>) -> anyhow::Result<()> {
+    let actual_path = match path {
+        Some(p) => p,
+        None => state.ui.pending_save_path.take().unwrap_or_default(),
     };
 
     if actual_path.is_empty() {

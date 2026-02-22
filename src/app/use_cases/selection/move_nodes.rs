@@ -20,7 +20,7 @@ pub fn move_selected_nodes(state: &mut AppState, delta_world: glam::Vec2) {
     let road_map_mut = Arc::make_mut(road_map);
     let mut moved_any = false;
 
-    for node_id in &state.selection.selected_node_ids {
+    for node_id in state.selection.selected_node_ids.iter() {
         if let Some(node) = road_map_mut.nodes.get_mut(node_id) {
             node.position += delta_world;
             moved_any = true;
@@ -55,8 +55,8 @@ mod tests {
 
         let mut state = AppState::new();
         state.road_map = Some(Arc::new(map));
-        state.selection.selected_node_ids.insert(1);
-        state.selection.selected_node_ids.insert(2);
+        state.selection.ids_mut().insert(1);
+        state.selection.ids_mut().insert(2);
 
         move_selected_nodes(&mut state, glam::Vec2::new(2.0, 3.0));
 
@@ -79,7 +79,7 @@ mod tests {
 
         let mut state = AppState::new();
         state.road_map = Some(Arc::new(map));
-        state.selection.selected_node_ids.insert(1);
+        state.selection.ids_mut().insert(1);
 
         // Node von (0,0) nach (100,100) verschieben
         move_selected_nodes(&mut state, glam::Vec2::new(100.0, 100.0));

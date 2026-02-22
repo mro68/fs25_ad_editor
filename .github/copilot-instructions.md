@@ -22,6 +22,14 @@ Rust-Editor für AutoDrive-Kurse (Farming Simulator 25). Ziel: 100k+ Wegpunkte f
 4. **Performance:** GPU-Batching + Viewport-Culling für 100k Nodes
 5. **App-Flow:** UI emittiert `AppIntent`, Controller mappt auf `AppCommand`, Use-Cases mutieren State
 
+## Dokumentations-Pflicht
+Bei **jeder** Codeänderung müssen die betroffenen Dokumentationen synchron gehalten werden:
+- **Docstrings (`///`):** Öffentliche Funktionen/Structs/Enums immer dokumentieren; bei Signaturänderung sofort anpassen.
+- **`src/*/API.md`:** Ändert sich die öffentliche API eines Moduls (Typen, Funktionen, Felder), muss das jeweilige `API.md` im selben Commit aktualisiert werden.
+- **`docs/ROADMAP.md`:** Abgeschlossene Features als `[x]` markieren; neue geplante Features eintragen.
+- **`docs/ARCHITECTURE_PLAN.md` / `.windsurf/rules/`:** Architektur-Entscheidungen (neue Layer, Pattern-Änderungen) sofort nachziehen.
+- Keine Codeänderung ohne passende Doku-Aktualisierung — bei reinen Refactorings mindestens Docstrings prüfen.
+
 ## Siehe auch
 - `.windsurf/rules/` für detaillierte Architektur-Docs
 - `docs/DEVELOPMENT.md` für Analyse-Erkenntnisse

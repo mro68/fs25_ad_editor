@@ -1,9 +1,9 @@
 //! Benchmark für Render-Hotpath-Allokationen.
 //!
 //! Misst die Datenaufbereitungskosten pro Frame in den Renderern:
-//! - NodeRenderer: HashSet-Erstellung aus selected_node_ids (Slice → HashSet)
+//! - NodeRenderer: contains-Check auf HashSet (kein Re-collect mehr nötig seit A1)
 //! - MarkerRenderer: Vec-collect für MarkerInstances
-//! - RenderScene: selected_node_ids.iter().copied().collect()
+//! - RenderScene: HashSet-Clone (vorher: HashSet→Vec Konvertierung)
 
 use criterion::{criterion_group, criterion_main, BenchmarkId, Criterion};
 use fs25_auto_drive_editor::{MapMarker, MapNode, NodeFlag, RoadMap};

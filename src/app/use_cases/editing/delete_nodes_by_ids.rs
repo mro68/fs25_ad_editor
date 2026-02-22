@@ -71,7 +71,7 @@ pub fn delete_nodes_by_ids(state: &mut AppState, ids: &[u64]) {
 
     // Gelöschte Nodes aus Selektion entfernen
     for &id in ids {
-        state.selection.selected_node_ids.remove(&id);
+        state.selection.ids_mut().remove(&id);
     }
 
     log::debug!("{} Nodes gelöscht (Route-Tool-Neuberechnung)", ids.len());

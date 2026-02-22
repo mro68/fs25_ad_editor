@@ -5,7 +5,7 @@
 //! - Tangenten-ComboBoxen (nur Kubisch, wenn Start/Ende gesetzt)
 //! - Länge · Segment-Abstand · Node-Anzahl (Nachbearbeitungs- und Live-Modus)
 
-use super::super::common::{render_tangent_combo, TangentSource};
+use super::super::common::render_tangent_combo;
 use super::super::RouteTool;
 use super::geometry::{cubic_bezier, quadratic_bezier};
 use super::state::{CurveDegree, CurveTool, Phase};
@@ -36,8 +36,7 @@ impl CurveTool {
         if self.degree != old_degree {
             // Beim Gradwechsel CP2 und Tangenten zurücksetzen
             self.control_point2 = None;
-            self.tangent_start = TangentSource::None;
-            self.tangent_end = TangentSource::None;
+            self.tangents.reset_tangents();
             changed = true;
         }
         ui.add_space(4.0);
@@ -45,67 +44,70 @@ impl CurveTool {
         // Tangenten-Auswahl (nur Cubic, wenn Start+End gesetzt)
         if self.degree == CurveDegree::Cubic {
             let show_tangent_ui = (self.phase == Phase::Control
-                || (!self.last_created_ids.is_empty()
+                || (!self.lifecycle.last_created_ids.is_empty()
                     && self.last_start_anchor.is_some()
-                    && self.last_end_anchor.is_some()))
+                    && self.lifecycle.last_end_anchor.is_some()))
                 && (self.start.is_some() && self.end.is_some()
-                    || self.last_start_anchor.is_some() && self.last_end_anchor.is_some());
+                    || self.last_start_anchor.is_some()
+                        && self.lifecycle.last_end_anchor.is_some());
 
             if show_tangent_ui {
                 // Tangente Start
-                if !self.start_neighbors.is_empty()
+                if !self.tangents.start_neighbors.is_empty()
                     && render_tangent_combo(
                         ui,
                         "tangent_start",
                         "Tangente Start:",
                         "Manuell",
-                        &mut self.tangent_start,
-                        &self.start_neighbors,
+                        &mut self.tangents.tangent_start,
+                        &self.tangents.start_neighbors,
                     )
                 {
                     self.apply_tangent_to_cp();
                     self.sync_derived();
-                    if !self.last_created_ids.is_empty() {
-                        self.recreate_needed = true;
+                    if !self.lifecycle.last_created_ids.is_empty() {
+                        self.lifecycle.recreate_needed = true;
                     }
                     changed = true;
                 }
 
                 // Tangente Ende
-                if !self.end_neighbors.is_empty()
+                if !self.tangents.end_neighbors.is_empty()
                     && render_tangent_combo(
                         ui,
                         "tangent_end",
                         "Tangente Ende:",
                         "Manuell",
-                        &mut self.tangent_end,
-                        &self.end_neighbors,
+                        &mut self.tangents.tangent_end,
+                        &self.tangents.end_neighbors,
                     )
                 {
                     self.apply_tangent_to_cp();
                     self.sync_derived();
-                    if !self.last_created_ids.is_empty() {
-                        self.recreate_needed = true;
+                    if !self.lifecycle.last_created_ids.is_empty() {
+                        self.lifecycle.recreate_needed = true;
                     }
                     changed = true;
                 }
 
-                if !self.start_neighbors.is_empty() || !self.end_neighbors.is_empty() {
+                if !self.tangents.start_neighbors.is_empty()
+                    || !self.tangents.end_neighbors.is_empty()
+                {
                     ui.add_space(4.0);
                 }
             }
         }
 
         // Nachbearbeitungs-Modus
-        let adjusting = !self.last_created_ids.is_empty()
+        let adjusting = !self.lifecycle.last_created_ids.is_empty()
             && self.last_start_anchor.is_some()
-            && self.last_end_anchor.is_some()
+            && self.lifecycle.last_end_anchor.is_some()
             && self.last_control_point1.is_some();
 
         if adjusting {
             let (Some(start_anchor), Some(end_anchor), Some(cp1)) = (
                 self.last_start_anchor,
-                self.last_end_anchor,
+                self.lifecycle.last_end_anchor,
                 self.last_control_point1,
             ) else {
                 return changed;
@@ -126,7 +128,7 @@ impl CurveTool {
 
             let (seg_changed, recreate) = self.seg.render_adjusting(ui, length, "Kurvenlänge");
             if recreate {
-                self.recreate_needed = true;
+                self.lifecycle.recreate_needed = true;
             }
             changed |= seg_changed;
         } else if self.is_ready() {

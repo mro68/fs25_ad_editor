@@ -81,9 +81,9 @@ pub fn select_segment_between_nearest_intersections(
 
     if neighbors.is_empty() {
         if !additive {
-            state.selection.selected_node_ids.clear();
+            state.selection.ids_mut().clear();
         }
-        state.selection.selected_node_ids.insert(hit_id);
+        state.selection.ids_mut().insert(hit_id);
         state.selection.selection_anchor_node_id = Some(hit_id);
         return;
     }
@@ -99,12 +99,12 @@ pub fn select_segment_between_nearest_intersections(
     }
 
     if !additive {
-        state.selection.selected_node_ids.clear();
+        state.selection.ids_mut().clear();
     }
     for path in paths {
-        state.selection.selected_node_ids.extend(path);
+        state.selection.ids_mut().extend(path);
     }
-    state.selection.selected_node_ids.insert(hit_id);
+    state.selection.ids_mut().insert(hit_id);
     state.selection.selection_anchor_node_id = Some(hit_id);
 }
 
