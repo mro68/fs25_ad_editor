@@ -1,7 +1,10 @@
 //! Gerade-Strecke-Tool: Zeichnet eine Linie zwischen zwei Punkten
 //! und füllt automatisch Zwischen-Nodes ein.
 
-use super::{snap_to_node, RouteTool, ToolAction, ToolAnchor, ToolPreview, ToolResult};
+use super::{
+    common::{node_count_from_length, segment_length_from_count}, snap_to_node, RouteTool,
+    ToolAction, ToolAnchor, ToolPreview, ToolResult,
+};
 use crate::core::{ConnectionDirection, ConnectionPriority, NodeFlag, RoadMap};
 use crate::shared::SNAP_RADIUS;
 use glam::Vec2;
@@ -77,13 +80,11 @@ impl StraightLineTool {
         match self.last_edited {
             LastEdited::Distance => {
                 // Node-Anzahl aus Distanz ableiten
-                let segments = (distance / self.max_segment_length).ceil().max(1.0) as usize;
-                self.node_count = segments + 1;
+                self.node_count = node_count_from_length(distance, self.max_segment_length);
             }
             LastEdited::NodeCount => {
                 // Segment-Länge aus Node-Anzahl ableiten
-                let segments = (self.node_count.max(2) - 1) as f32;
-                self.max_segment_length = distance / segments;
+                self.max_segment_length = segment_length_from_count(distance, self.node_count);
             }
         }
     }
@@ -206,8 +207,7 @@ impl RouteTool for StraightLineTool {
             {
                 self.last_edited = LastEdited::Distance;
                 // Node-Anzahl ableiten
-                let segments = (distance / self.max_segment_length).ceil().max(1.0) as usize;
-                self.node_count = segments + 1;
+                self.node_count = node_count_from_length(distance, self.max_segment_length);
                 self.recreate_needed = true;
                 changed = true;
             }
@@ -223,8 +223,7 @@ impl RouteTool for StraightLineTool {
             {
                 self.last_edited = LastEdited::NodeCount;
                 // Segment-Länge ableiten
-                let segments = (self.node_count.max(2) - 1) as f32;
-                self.max_segment_length = distance / segments;
+                self.max_segment_length = segment_length_from_count(distance, self.node_count);
                 self.recreate_needed = true;
                 changed = true;
             }

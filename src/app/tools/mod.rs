@@ -6,6 +6,8 @@
 
 /// Bézier-Kurven-Tool (Grad 2 + 3) mit sequentieller Punkt-Platzierung.
 pub mod curve;
+/// Gemeinsame Hilfsfunktionen für Route-Tools.
+pub mod common;
 /// Catmull-Rom-Spline-Tool — interpolierende Kurve durch alle geklickten Punkte.
 pub mod spline;
 /// Gerade-Linie-Tool mit konfigurierbarem Node-Abstand.

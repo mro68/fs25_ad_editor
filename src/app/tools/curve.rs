@@ -9,7 +9,10 @@
 //!
 //! Grad wird über `render_config` umgeschaltet (UI-Dropdown).
 
-use super::{snap_to_node, RouteTool, ToolAction, ToolAnchor, ToolPreview, ToolResult};
+use super::{
+    common::{angle_to_compass, node_count_from_length, segment_length_from_count}, snap_to_node,
+    RouteTool, ToolAction, ToolAnchor, ToolPreview, ToolResult,
+};
 use crate::core::{ConnectedNeighbor, ConnectionDirection, ConnectionPriority, RoadMap};
 use crate::shared::SNAP_RADIUS;
 use glam::Vec2;
@@ -173,12 +176,10 @@ impl CurveTool {
         }
         match self.last_edited {
             LastEdited::Distance => {
-                let segments = (length / self.max_segment_length).ceil().max(1.0) as usize;
-                self.node_count = segments + 1;
+                self.node_count = node_count_from_length(length, self.max_segment_length);
             }
             LastEdited::NodeCount => {
-                let segments = (self.node_count.max(2) - 1) as f32;
-                self.max_segment_length = length / segments;
+                self.max_segment_length = segment_length_from_count(length, self.node_count);
             }
         }
     }
@@ -233,24 +234,6 @@ impl CurveTool {
 impl Default for CurveTool {
     fn default() -> Self {
         Self::new()
-    }
-}
-
-/// Wandelt einen Winkel (Radiant) in eine Kompass-Richtung um.
-///
-/// FS25-Koordinatensystem: +X = Ost, +Z = Süd in der Draufsicht.
-fn angle_to_compass(angle: f32) -> &'static str {
-    let deg = angle.to_degrees().rem_euclid(360.0) as u32;
-    match deg {
-        0..=22 | 338..=360 => "O",
-        23..=67 => "SO",
-        68..=112 => "S",
-        113..=157 => "SW",
-        158..=202 => "W",
-        203..=247 => "NW",
-        248..=292 => "N",
-        293..=337 => "NO",
-        _ => "?",
     }
 }
 
@@ -578,8 +561,7 @@ impl RouteTool for CurveTool {
                 .changed()
             {
                 self.last_edited = LastEdited::Distance;
-                let segments = (length / self.max_segment_length).ceil().max(1.0) as usize;
-                self.node_count = segments + 1;
+                self.node_count = node_count_from_length(length, self.max_segment_length);
                 self.recreate_needed = true;
                 changed = true;
             }
@@ -593,8 +575,7 @@ impl RouteTool for CurveTool {
                 .changed()
             {
                 self.last_edited = LastEdited::NodeCount;
-                let segments = (self.node_count.max(2) - 1) as f32;
-                self.max_segment_length = length / segments;
+                self.max_segment_length = segment_length_from_count(length, self.node_count);
                 self.recreate_needed = true;
                 changed = true;
             }
