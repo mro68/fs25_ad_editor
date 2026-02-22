@@ -103,5 +103,8 @@ fn create_nodes_and_connections(road_map: &mut RoadMap, result: &ToolResult) -> 
     // Flags der betroffenen Nodes neu berechnen
     road_map.recalculate_node_flags(&affected_ids);
 
+    // Spatial-Index einmalig nach allen Mutationen aktualisieren
+    road_map.ensure_spatial_index();
+
     new_ids
 }

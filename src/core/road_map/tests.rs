@@ -46,6 +46,7 @@ fn test_spatial_queries() {
     map.add_node(MapNode::new(1, Vec2::new(0.0, 0.0), NodeFlag::Regular));
     map.add_node(MapNode::new(2, Vec2::new(10.0, 0.0), NodeFlag::Regular));
     map.add_node(MapNode::new(3, Vec2::new(5.0, 5.0), NodeFlag::Regular));
+    map.ensure_spatial_index();
 
     let nearest = map
         .nearest_node(Vec2::new(5.2, 5.1))
@@ -62,6 +63,7 @@ fn test_spatial_index_consistency_on_remove_and_update() {
     let mut map = RoadMap::new(3);
     map.add_node(MapNode::new(1, Vec2::new(0.0, 0.0), NodeFlag::Regular));
     map.add_node(MapNode::new(2, Vec2::new(10.0, 0.0), NodeFlag::Regular));
+    map.ensure_spatial_index();
 
     assert_eq!(
         map.nearest_node(Vec2::new(9.8, 0.1)).map(|m| m.node_id),
@@ -69,6 +71,7 @@ fn test_spatial_index_consistency_on_remove_and_update() {
     );
 
     assert!(map.update_node_position(2, Vec2::new(2.0, 0.0)));
+    map.ensure_spatial_index();
     assert_eq!(
         map.nearest_node(Vec2::new(2.1, 0.0)).map(|m| m.node_id),
         Some(2)
@@ -76,6 +79,7 @@ fn test_spatial_index_consistency_on_remove_and_update() {
 
     let removed = map.remove_node(2);
     assert!(removed.is_some());
+    map.ensure_spatial_index();
     assert_eq!(
         map.nearest_node(Vec2::new(2.1, 0.0)).map(|m| m.node_id),
         Some(1)

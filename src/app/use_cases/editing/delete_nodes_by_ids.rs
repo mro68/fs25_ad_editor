@@ -36,6 +36,9 @@ pub fn delete_nodes_by_ids(state: &mut AppState, ids: &[u64]) {
         road_map.recalculate_node_flags(&affected_neighbors);
     }
 
+    // Spatial-Index einmalig nach allen Löschungen aktualisieren
+    road_map.ensure_spatial_index();
+
     // Gelöschte Nodes aus Selektion entfernen
     for &id in ids {
         state.selection.selected_node_ids.remove(&id);

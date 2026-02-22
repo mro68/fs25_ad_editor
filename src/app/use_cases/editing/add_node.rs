@@ -56,6 +56,9 @@ pub fn add_node_at_position(state: &mut AppState, world_pos: glam::Vec2) {
         }
     }
 
+    // Spatial-Index nach Mutation aktualisieren
+    road_map.ensure_spatial_index();
+
     // Neuen Node selektieren
     state.selection.selected_node_ids.clear();
     state.selection.selected_node_ids.insert(new_id);
