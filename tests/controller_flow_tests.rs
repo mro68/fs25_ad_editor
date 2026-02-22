@@ -1452,5 +1452,9 @@ fn test_connect_selected_nodes() {
 
     let rm = state.road_map.as_ref().unwrap();
     assert_eq!(rm.connection_count(), 1);
-    assert!(rm.find_connection(1, 2).is_some());
+    // HashSet-Iteration ist nicht-deterministisch → beide Richtungen prüfen
+    assert!(
+        !rm.find_connections_between(1, 2).is_empty(),
+        "Verbindung zwischen 1 und 2 erwartet (in beliebiger Richtung)"
+    );
 }
