@@ -9,7 +9,12 @@ use std::collections::{HashMap, HashSet};
 /// # Parameter
 /// - `road_map`: Die zu exportierende RoadMap
 /// - `heightmap`: Optionale Heightmap für Y-Koordinaten-Berechnung
-pub fn write_autodrive_config(road_map: &RoadMap, heightmap: Option<&Heightmap>) -> Result<String> {
+/// - `terrain_height_scale`: Höhenskala-Faktor (FS25-Standard: 255.0)
+pub fn write_autodrive_config(
+    road_map: &RoadMap,
+    heightmap: Option<&Heightmap>,
+    terrain_height_scale: f32,
+) -> Result<String> {
     let mut output = String::new();
     output.push_str("<?xml version=\"1.0\" encoding=\"utf-8\" standalone=\"no\"?>\n");
     output.push_str("<AutoDrive>\n");
@@ -108,8 +113,7 @@ pub fn write_autodrive_config(road_map: &RoadMap, heightmap: Option<&Heightmap>)
 
         // Y-Koordinate: Aus Heightmap berechnen oder 0.0
         let y_value = if let Some(hm) = heightmap {
-            // FS25: Y = normalized_pixel × 255.0 (Standard-Terrainhöhe)
-            let height = hm.sample_height(node.position.x, node.position.y, 255.0);
+            let height = hm.sample_height(node.position.x, node.position.y, terrain_height_scale);
 
             // Debug: Zeige erste 10 Y-Werte zur Kontrolle
             if ids_text.len() <= 10 {

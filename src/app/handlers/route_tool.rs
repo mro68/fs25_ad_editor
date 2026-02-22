@@ -85,9 +85,11 @@ pub fn select(state: &mut AppState, index: usize) {
     state.editor.connect_source_node = None;
     let dir = state.editor.default_direction;
     let prio = state.editor.default_priority;
+    let snap_r = state.options.snap_radius;
     if let Some(tool) = state.editor.tool_manager.active_tool_mut() {
         tool.set_direction(dir);
         tool.set_priority(prio);
+        tool.set_snap_radius(snap_r);
     }
     log::info!("Route-Tool aktiviert: Index {}", index);
 }

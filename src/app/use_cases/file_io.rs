@@ -137,7 +137,11 @@ fn write_roadmap_to_file(state: &mut AppState, path: &str) -> anyhow::Result<()>
         None
     };
 
-    let xml_content = crate::xml::write_autodrive_config(road_map, heightmap.as_ref())?;
+    let xml_content = crate::xml::write_autodrive_config(
+        road_map,
+        heightmap.as_ref(),
+        state.options.terrain_height_scale,
+    )?;
     std::fs::write(path, xml_content)?;
     Ok(())
 }

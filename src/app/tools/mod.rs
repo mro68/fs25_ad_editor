@@ -53,6 +53,9 @@ pub trait RouteTool {
     /// Straßenart vom Editor-Default übernehmen.
     fn set_priority(&mut self, _prio: ConnectionPriority) {}
 
+    /// Snap-Radius (Welteinheiten) vom Editor übernehmen.
+    fn set_snap_radius(&mut self, _radius: f32) {}
+
     /// Speichert die IDs der zuletzt erstellten Nodes (für nachträgliche Anpassung).
     /// `road_map` erlaubt tools, Nachbar-Informationen für Feintuning zu cachen.
     fn set_last_created(&mut self, _ids: Vec<u64>, _road_map: &RoadMap) {}
