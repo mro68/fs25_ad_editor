@@ -98,6 +98,7 @@ fn test_additive_node_pick_selects_multiple_nodes() {
         glam::Vec2::new(100.0, 0.0),
         NodeFlag::Regular,
     ));
+    map.ensure_spatial_index();
     state.road_map = Some(Arc::new(map));
     state.view.viewport_size = [1280.0, 720.0];
 
@@ -139,6 +140,7 @@ fn test_click_window_larger_for_selected_nodes() {
         glam::Vec2::new(0.0, 0.0),
         NodeFlag::Regular,
     ));
+    map.ensure_spatial_index();
     state.road_map = Some(Arc::new(map));
     state.view.viewport_size = [1280.0, 720.0];
 
@@ -341,6 +343,7 @@ fn test_shift_second_pick_selects_nodes_between_two_nodes() {
         glam::Vec2::new(20.0, 0.0),
     ));
 
+    map.ensure_spatial_index();
     state.road_map = Some(Arc::new(map));
     state.view.viewport_size = [1280.0, 720.0];
 
@@ -393,6 +396,7 @@ fn test_select_nodes_in_rect_requested_selects_nodes_in_rectangle() {
         glam::Vec2::new(30.0, 0.0),
         NodeFlag::Regular,
     ));
+    map.ensure_spatial_index();
     state.road_map = Some(Arc::new(map));
 
     controller
@@ -449,6 +453,7 @@ fn test_ctrl_additive_pick_does_not_select_intermediate_path_nodes() {
         glam::Vec2::new(20.0, 0.0),
     ));
 
+    map.ensure_spatial_index();
     state.road_map = Some(Arc::new(map));
     state.view.viewport_size = [1280.0, 720.0];
 
@@ -500,6 +505,7 @@ fn test_select_nodes_in_lasso_requested_selects_nodes_in_polygon() {
         glam::Vec2::new(30.0, 0.0),
         NodeFlag::Regular,
     ));
+    map.ensure_spatial_index();
     state.road_map = Some(Arc::new(map));
 
     controller
@@ -639,6 +645,7 @@ fn test_node_segment_between_intersections_requested_selects_corridor() {
         glam::Vec2::new(20.0, -10.0),
     ));
 
+    map.ensure_spatial_index();
     state.road_map = Some(Arc::new(map));
     state.view.viewport_size = [1280.0, 720.0];
 
@@ -690,6 +697,7 @@ fn make_test_map() -> AppState {
         glam::Vec2::new(0.0, 0.0),
         glam::Vec2::new(10.0, 0.0),
     ));
+    map.ensure_spatial_index();
     let mut state = AppState::new();
     state.road_map = Some(Arc::new(map));
     state.view.viewport_size = [1280.0, 720.0];
