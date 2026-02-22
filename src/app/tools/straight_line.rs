@@ -2,7 +2,7 @@
 //! und füllt automatisch Zwischen-Nodes ein.
 
 use super::{
-    common::{node_count_from_length, segment_length_from_count, LastEdited}, snap_to_node,
+    common::SegmentConfig, snap_to_node,
     RouteTool, ToolAction, ToolAnchor, ToolPreview, ToolResult,
 };
 use crate::core::{ConnectionDirection, ConnectionPriority, NodeFlag, RoadMap};
@@ -13,12 +13,8 @@ use glam::Vec2;
 pub struct StraightLineTool {
     start: Option<ToolAnchor>,
     end: Option<ToolAnchor>,
-    /// Maximaler Abstand zwischen Zwischen-Nodes
-    pub max_segment_length: f32,
-    /// Gewünschte Anzahl Nodes (inkl. Start+End)
-    pub node_count: usize,
-    /// Welcher Parameter zuletzt vom User geändert wurde
-    last_edited: LastEdited,
+    /// Segment-Konfiguration (Abstand / Node-Anzahl)
+    pub(crate) seg: SegmentConfig,
     /// Richtung für die erzeugten Verbindungen (aus Editor-Defaults)
     pub direction: ConnectionDirection,
     /// Priorität für die erzeugten Verbindungen (aus Editor-Defaults)
@@ -41,9 +37,7 @@ impl StraightLineTool {
         Self {
             start: None,
             end: None,
-            max_segment_length: 6.0,
-            node_count: 2,
-            last_edited: LastEdited::Distance,
+            seg: SegmentConfig::new(6.0),
             direction: ConnectionDirection::Dual,
             priority: ConnectionPriority::Regular,
             last_created_ids: Vec::new(),
@@ -64,20 +58,7 @@ impl StraightLineTool {
 
     /// Synchronisiert den jeweils abhängigen Wert.
     fn sync_derived(&mut self) {
-        let distance = self.total_distance();
-        if distance < f32::EPSILON {
-            return;
-        }
-        match self.last_edited {
-            LastEdited::Distance => {
-                // Node-Anzahl aus Distanz ableiten
-                self.node_count = node_count_from_length(distance, self.max_segment_length);
-            }
-            LastEdited::NodeCount => {
-                // Segment-Länge aus Node-Anzahl ableiten
-                self.max_segment_length = segment_length_from_count(distance, self.node_count);
-            }
-        }
+        self.seg.sync_from_length(self.total_distance());
     }
 }
 
@@ -156,7 +137,7 @@ impl RouteTool for StraightLineTool {
             }
         };
 
-        let positions = compute_line_positions(start_pos, end_pos, self.max_segment_length);
+        let positions = compute_line_positions(start_pos, end_pos, self.seg.max_segment_length);
         let connections: Vec<(usize, usize)> = (0..positions.len().saturating_sub(1))
             .map(|i| (i, i + 1))
             .collect();
@@ -168,8 +149,6 @@ impl RouteTool for StraightLineTool {
     }
 
     fn render_config(&mut self, ui: &mut egui::Ui) -> bool {
-        let mut changed = false;
-
         // Nachbearbeitungs-Modus: letzte Strecke anpassen
         let adjusting = !self.last_created_ids.is_empty()
             && self.last_start_anchor.is_some()
@@ -177,94 +156,24 @@ impl RouteTool for StraightLineTool {
 
         if adjusting {
             let Some(start_anchor) = self.last_start_anchor else {
-                return changed;
+                return false;
             };
             let Some(end_anchor) = self.last_end_anchor else {
-                return changed;
+                return false;
             };
-            let start_pos = start_anchor.position();
-            let end_pos = end_anchor.position();
-            let distance = start_pos.distance(end_pos);
-
-            ui.label(format!("Streckenlänge: {:.1} m", distance));
-            ui.add_space(4.0);
-
-            // Segment-Länge
-            ui.label("Min. Abstand:");
-            let max_seg = distance.max(1.0);
-            if ui
-                .add(egui::Slider::new(&mut self.max_segment_length, 1.0..=max_seg).suffix(" m"))
-                .changed()
-            {
-                self.last_edited = LastEdited::Distance;
-                // Node-Anzahl ableiten
-                self.node_count = node_count_from_length(distance, self.max_segment_length);
+            let distance = start_anchor.position().distance(end_anchor.position());
+            let (changed, recreate) =
+                self.seg.render_adjusting(ui, distance, "Streckenlänge");
+            if recreate {
                 self.recreate_needed = true;
-                changed = true;
             }
-
-            ui.add_space(4.0);
-
-            // Node-Anzahl
-            ui.label("Anzahl Nodes:");
-            let max_nodes = (distance / 1.0).ceil().max(2.0) as usize;
-            if ui
-                .add(egui::Slider::new(&mut self.node_count, 2..=max_nodes))
-                .changed()
-            {
-                self.last_edited = LastEdited::NodeCount;
-                // Segment-Länge ableiten
-                self.max_segment_length = segment_length_from_count(distance, self.node_count);
-                self.recreate_needed = true;
-                changed = true;
-            }
+            changed
         } else if self.is_ready() {
             let distance = self.total_distance();
-            ui.label(format!("Streckenlänge: {:.1} m", distance));
-            ui.add_space(4.0);
-
-            // Segment-Länge
-            ui.label("Min. Abstand:");
-            let old_seg = self.max_segment_length;
-            let max_seg = distance.max(1.0);
-            if ui
-                .add(egui::Slider::new(&mut self.max_segment_length, 1.0..=max_seg).suffix(" m"))
-                .changed()
-            {
-                self.last_edited = LastEdited::Distance;
-                self.sync_derived();
-                changed = true;
-            }
-            // Wenn Slider nicht angefasst wurde, sicherstellen dass der Wert geclampt ist
-            if self.max_segment_length != old_seg && self.last_edited == LastEdited::Distance {
-                self.sync_derived();
-            }
-
-            ui.add_space(4.0);
-
-            // Node-Anzahl
-            ui.label("Anzahl Nodes:");
-            let max_nodes = (distance / 1.0).ceil().max(2.0) as usize;
-            if ui
-                .add(egui::Slider::new(&mut self.node_count, 2..=max_nodes))
-                .changed()
-            {
-                self.last_edited = LastEdited::NodeCount;
-                self.sync_derived();
-                changed = true;
-            }
+            self.seg.render_live(ui, distance, "Streckenlänge")
         } else {
-            ui.label("Max. Segment-Länge:");
-            if ui
-                .add(egui::Slider::new(&mut self.max_segment_length, 1.0..=50.0).suffix(" m"))
-                .changed()
-            {
-                self.last_edited = LastEdited::Distance;
-                changed = true;
-            }
+            self.seg.render_default(ui)
         }
-
-        changed
     }
 
     fn execute(&self, road_map: &RoadMap) -> Option<ToolResult> {
@@ -273,7 +182,7 @@ impl RouteTool for StraightLineTool {
         build_result(
             start,
             end,
-            self.max_segment_length,
+            self.seg.max_segment_length,
             self.direction,
             self.priority,
             road_map,
@@ -337,7 +246,7 @@ impl RouteTool for StraightLineTool {
         build_result(
             start,
             end,
-            self.max_segment_length,
+            self.seg.max_segment_length,
             self.direction,
             self.priority,
             road_map,

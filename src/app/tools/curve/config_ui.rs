@@ -6,9 +6,8 @@
 //! - Länge · Segment-Abstand · Node-Anzahl (Nachbearbeitungs- und Live-Modus)
 
 use super::geometry::{cubic_bezier, quadratic_bezier};
-use super::super::common::{angle_to_compass, node_count_from_length, segment_length_from_count};
+use super::super::common::{angle_to_compass, TangentSource};
 use super::super::RouteTool;
-use super::super::common::{LastEdited, TangentSource};
 use super::{CurveDegree, CurveTool, Phase};
 
 impl CurveTool {
@@ -175,71 +174,17 @@ impl CurveTool {
                 }
             };
 
-            ui.label(format!("Kurvenlänge: {:.1} m", length));
-            ui.add_space(4.0);
-
-            ui.label("Min. Abstand:");
-            let max_seg = length.max(1.0);
-            if ui
-                .add(egui::Slider::new(&mut self.max_segment_length, 1.0..=max_seg).suffix(" m"))
-                .changed()
-            {
-                self.last_edited = LastEdited::Distance;
-                self.node_count = node_count_from_length(length, self.max_segment_length);
+            let (seg_changed, recreate) =
+                self.seg.render_adjusting(ui, length, "Kurvenlänge");
+            if recreate {
                 self.recreate_needed = true;
-                changed = true;
             }
-
-            ui.add_space(4.0);
-
-            ui.label("Anzahl Nodes:");
-            let max_nodes = (length / 1.0).ceil().max(2.0) as usize;
-            if ui
-                .add(egui::Slider::new(&mut self.node_count, 2..=max_nodes))
-                .changed()
-            {
-                self.last_edited = LastEdited::NodeCount;
-                self.max_segment_length = segment_length_from_count(length, self.node_count);
-                self.recreate_needed = true;
-                changed = true;
-            }
+            changed |= seg_changed;
         } else if self.is_ready() {
             let length = self.curve_length();
-            ui.label(format!("Kurvenlänge: {:.1} m", length));
-            ui.add_space(4.0);
-
-            ui.label("Min. Abstand:");
-            let max_seg = length.max(1.0);
-            if ui
-                .add(egui::Slider::new(&mut self.max_segment_length, 1.0..=max_seg).suffix(" m"))
-                .changed()
-            {
-                self.last_edited = LastEdited::Distance;
-                self.sync_derived();
-                changed = true;
-            }
-
-            ui.add_space(4.0);
-
-            ui.label("Anzahl Nodes:");
-            let max_nodes = (length / 1.0).ceil().max(2.0) as usize;
-            if ui
-                .add(egui::Slider::new(&mut self.node_count, 2..=max_nodes))
-                .changed()
-            {
-                self.last_edited = LastEdited::NodeCount;
-                self.sync_derived();
-                changed = true;
-            }
+            changed |= self.seg.render_live(ui, length, "Kurvenlänge");
         } else {
-            ui.label("Max. Segment-Länge:");
-            if ui
-                .add(egui::Slider::new(&mut self.max_segment_length, 1.0..=50.0).suffix(" m"))
-                .changed()
-            {
-                self.last_edited = LastEdited::Distance;
-                changed = true;
-            }
+            changed |= self.seg.render_default(ui);
         }
 
         changed

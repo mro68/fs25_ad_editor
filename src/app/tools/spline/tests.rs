@@ -119,7 +119,7 @@ fn test_spline_tool_click_flow() {
 #[test]
 fn test_spline_tool_execute() {
     let mut tool = SplineTool::new();
-    tool.max_segment_length = 2.0;
+    tool.seg.max_segment_length = 2.0;
     let road_map = RoadMap::new(3);
 
     tool.on_click(Vec2::ZERO, &road_map, false);
@@ -183,7 +183,7 @@ fn test_spline_tool_preview_with_cursor() {
 #[test]
 fn test_spline_execute_from_anchors() {
     let mut tool = SplineTool::new();
-    tool.max_segment_length = 2.0;
+    tool.seg.max_segment_length = 2.0;
     let road_map = RoadMap::new(3);
 
     tool.on_click(Vec2::ZERO, &road_map, false);
@@ -194,7 +194,7 @@ fn test_spline_execute_from_anchors() {
     tool.reset();
 
     // Nachbearbeitung mit anderer Segment-Länge
-    tool.max_segment_length = 5.0;
+    tool.seg.max_segment_length = 5.0;
     let result = tool
         .execute_from_anchors(&road_map)
         .expect("Ergebnis erwartet");

@@ -33,7 +33,7 @@ fn test_tool_click_flow() {
 #[test]
 fn test_tool_execute() {
     let mut tool = StraightLineTool::new();
-    tool.max_segment_length = 6.0;
+    tool.seg.max_segment_length = 6.0;
     let road_map = RoadMap::new(3);
 
     tool.on_click(Vec2::ZERO, &road_map, false);
@@ -60,7 +60,7 @@ fn test_tool_reset() {
 #[test]
 fn test_chaining_uses_last_end_as_start() {
     let mut tool = StraightLineTool::new();
-    tool.max_segment_length = 6.0;
+    tool.seg.max_segment_length = 6.0;
     let road_map = RoadMap::new(3);
 
     tool.on_click(Vec2::ZERO, &road_map, false);
@@ -97,7 +97,7 @@ fn test_last_created_ids_preserved_after_reset() {
 #[test]
 fn test_execute_from_anchors() {
     let mut tool = StraightLineTool::new();
-    tool.max_segment_length = 5.0;
+    tool.seg.max_segment_length = 5.0;
     let road_map = RoadMap::new(3);
 
     tool.on_click(Vec2::ZERO, &road_map, false);
@@ -105,7 +105,7 @@ fn test_execute_from_anchors() {
     tool.set_last_created(vec![1, 2, 3], &road_map);
     tool.reset();
 
-    tool.max_segment_length = 10.0;
+    tool.seg.max_segment_length = 10.0;
     let result = tool
         .execute_from_anchors(&road_map)
         .expect("Ergebnis erwartet");

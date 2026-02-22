@@ -12,8 +12,7 @@ mod geometry;
 use self::geometry::{catmull_rom_chain_with_tangents, polyline_length, resample_by_distance};
 use super::{
     common::{
-        node_count_from_length, populate_neighbors, segment_length_from_count, LastEdited,
-        TangentSource,
+        populate_neighbors, SegmentConfig, TangentSource,
     },
     snap_to_node, RouteTool, ToolAction, ToolAnchor, ToolPreview, ToolResult,
 };
@@ -28,11 +27,8 @@ use glam::Vec2;
 pub struct SplineTool {
     /// Alle bestätigten Kontrollpunkte (geklickt)
     anchors: Vec<ToolAnchor>,
-    /// Maximaler Abstand zwischen Zwischen-Nodes (Standard: 2m)
-    pub max_segment_length: f32,
-    /// Gewünschte Anzahl Nodes (inkl. Start+End)
-    pub node_count: usize,
-    last_edited: LastEdited,
+    /// Segment-Konfiguration (Abstand / Node-Anzahl)
+    pub(crate) seg: SegmentConfig,
     pub direction: ConnectionDirection,
     pub priority: ConnectionPriority,
     /// IDs der zuletzt erstellten Nodes (für Nachbearbeitung)
@@ -64,9 +60,7 @@ impl SplineTool {
     pub fn new() -> Self {
         Self {
             anchors: Vec::new(),
-            max_segment_length: 2.0,
-            node_count: 2,
-            last_edited: LastEdited::Distance,
+            seg: SegmentConfig::new(2.0),
             direction: ConnectionDirection::Dual,
             priority: ConnectionPriority::Regular,
             last_created_ids: Vec::new(),
@@ -151,7 +145,7 @@ impl SplineTool {
     /// Berechnet die verteilt gesampelten Positionen (für Nodes).
     fn compute_resampled(&self, extra_cursor: Option<Vec2>) -> Vec<Vec2> {
         let dense = self.compute_dense_polyline(extra_cursor);
-        resample_by_distance(&dense, self.max_segment_length)
+        resample_by_distance(&dense, self.seg.max_segment_length)
     }
 
     /// Spline-Länge über aktuelle Anker.
@@ -163,17 +157,7 @@ impl SplineTool {
     /// Synchronisiert den jeweils abhängigen Wert.
     fn sync_derived(&mut self) {
         let length = self.spline_length();
-        if length < f32::EPSILON {
-            return;
-        }
-        match self.last_edited {
-            LastEdited::Distance => {
-                self.node_count = node_count_from_length(length, self.max_segment_length);
-            }
-            LastEdited::NodeCount => {
-                self.max_segment_length = segment_length_from_count(length, self.node_count);
-            }
-        }
+        self.seg.sync_from_length(length);
     }
 
     /// Spline-Länge aus gegebenen Ankern (mit Tangenten).
@@ -394,7 +378,7 @@ impl RouteTool for SplineTool {
     fn execute(&self, road_map: &RoadMap) -> Option<ToolResult> {
         Self::build_result_from_anchors(
             &self.anchors,
-            self.max_segment_length,
+            self.seg.max_segment_length,
             self.direction,
             self.priority,
             self.tangent_start,
@@ -474,7 +458,7 @@ impl RouteTool for SplineTool {
         // damit Änderungen im Nachbearbeitungs-Modus wirksam werden
         Self::build_result_from_anchors(
             &self.last_anchors,
-            self.max_segment_length,
+            self.seg.max_segment_length,
             self.direction,
             self.priority,
             self.tangent_start,

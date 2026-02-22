@@ -173,7 +173,7 @@ fn test_tool_cubic_drag_repositions() {
 fn test_tool_cubic_execute() {
     let mut tool = CurveTool::new();
     tool.degree = CurveDegree::Cubic;
-    tool.max_segment_length = 2.0;
+    tool.seg.max_segment_length = 2.0;
     let road_map = RoadMap::new(3);
 
     tool.on_click(Vec2::ZERO, &road_map, false);
@@ -192,7 +192,7 @@ fn test_tool_cubic_execute() {
 #[test]
 fn test_tool_execute_quadratic() {
     let mut tool = CurveTool::new();
-    tool.max_segment_length = 2.0;
+    tool.seg.max_segment_length = 2.0;
     let road_map = RoadMap::new(3);
 
     tool.on_click(Vec2::ZERO, &road_map, false);
@@ -243,7 +243,7 @@ fn test_chaining_uses_last_end_as_start() {
 #[test]
 fn test_execute_from_anchors() {
     let mut tool = CurveTool::new();
-    tool.max_segment_length = 2.0;
+    tool.seg.max_segment_length = 2.0;
     let road_map = RoadMap::new(3);
 
     tool.on_click(Vec2::ZERO, &road_map, false);
@@ -253,7 +253,7 @@ fn test_execute_from_anchors() {
     tool.set_last_created(vec![1, 2, 3, 4, 5], &road_map);
     tool.reset();
 
-    tool.max_segment_length = 5.0;
+    tool.seg.max_segment_length = 5.0;
     let result = tool
         .execute_from_anchors(&road_map)
         .expect("Ergebnis erwartet");

@@ -10,10 +10,7 @@
 //! Grad wird über `render_config` umgeschaltet (UI-Dropdown).
 
 use super::{
-    common::{
-        node_count_from_length, populate_neighbors, segment_length_from_count, LastEdited,
-        TangentSource,
-    },
+    common::{populate_neighbors, SegmentConfig, TangentSource},
     snap_to_node, RouteTool, ToolAction, ToolAnchor, ToolPreview, ToolResult,
 };
 use crate::core::{ConnectedNeighbor, ConnectionDirection, ConnectionPriority, RoadMap};
@@ -69,11 +66,8 @@ pub struct CurveTool {
     dragging: Option<DragTarget>,
     /// Grad der Kurve
     pub degree: CurveDegree,
-    /// Maximaler Abstand zwischen Zwischen-Nodes (Standard: 2m)
-    pub max_segment_length: f32,
-    /// Gewünschte Anzahl Nodes (inkl. Start+End)
-    pub node_count: usize,
-    last_edited: LastEdited,
+    /// Segment-Konfiguration (Abstand / Node-Anzahl)
+    pub(crate) seg: SegmentConfig,
     pub direction: ConnectionDirection,
     pub priority: ConnectionPriority,
     last_created_ids: Vec<u64>,
@@ -109,9 +103,7 @@ impl CurveTool {
             control_point2: None,
             dragging: None,
             degree: CurveDegree::Quadratic,
-            max_segment_length: 2.0,
-            node_count: 2,
-            last_edited: LastEdited::Distance,
+            seg: SegmentConfig::new(2.0),
             direction: ConnectionDirection::Dual,
             priority: ConnectionPriority::Regular,
             last_created_ids: Vec::new(),
@@ -158,18 +150,7 @@ impl CurveTool {
     }
 
     fn sync_derived(&mut self) {
-        let length = self.curve_length();
-        if length < f32::EPSILON {
-            return;
-        }
-        match self.last_edited {
-            LastEdited::Distance => {
-                self.node_count = node_count_from_length(length, self.max_segment_length);
-            }
-            LastEdited::NodeCount => {
-                self.max_segment_length = segment_length_from_count(length, self.node_count);
-            }
-        }
+        self.seg.sync_from_length(self.curve_length());
     }
 
     /// True wenn alle Steuerpunkte für den aktuellen Grad gesetzt sind.
@@ -343,13 +324,13 @@ impl RouteTool for CurveTool {
                 let positions = match self.degree {
                     CurveDegree::Quadratic => compute_curve_positions(
                         |t| quadratic_bezier(start_pos, cp1, end_pos, t),
-                        self.max_segment_length,
+                        self.seg.max_segment_length,
                     ),
                     CurveDegree::Cubic => {
                         let cp2 = self.control_point2.unwrap_or(cursor_pos);
                         compute_curve_positions(
                             |t| cubic_bezier(start_pos, cp1, cp2, end_pos, t),
-                            self.max_segment_length,
+                            self.seg.max_segment_length,
                         )
                     }
                 };
@@ -383,7 +364,7 @@ impl RouteTool for CurveTool {
             degree: self.degree,
             cp1: self.control_point1?,
             cp2: self.control_point2,
-            max_segment_length: self.max_segment_length,
+            max_segment_length: self.seg.max_segment_length,
             direction: self.direction,
             priority: self.priority,
         };
@@ -460,7 +441,7 @@ impl RouteTool for CurveTool {
             degree: self.degree,
             cp1: self.last_control_point1?,
             cp2: self.last_control_point2,
-            max_segment_length: self.max_segment_length,
+            max_segment_length: self.seg.max_segment_length,
             direction: self.direction,
             priority: self.priority,
         };
