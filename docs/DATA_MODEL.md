@@ -150,7 +150,7 @@ pub struct WorldBounds {
 - **Methode:** Bikubische Interpolation (16 Nachbarpixel)
 - **Spline:** Catmull-Rom für glatte Kurven
 - **Mapping:** Grauwert 0 (schwarz) = min. Höhe, 255 (weiß) = max. Höhe
-- **Präzision:**Kommawerte durch Interpolation zwischen Pixeln
+- **Präzision:** Kommawerte durch Interpolation zwischen Pixeln
 - **Clipping:** Koordinaten außerhalb werden auf Heightmap-Rand geclippt
 
 ### Workflow
@@ -177,5 +177,5 @@ let bounds = WorldBounds::from_map_size(4096.0);  // -2048 bis +2048
 - Connections sind Source of Truth; Adjazenzlisten werden abgeleitet
 - Node-Positionen sind 2D (x,z); y wird beim Export aus Heightmap berechnet
 - Flag-Bereinigung (2/4 -> 0) beim XML-Import
-- Geometrie wird im Core gepflegt und bei Moves aktualisiert</content>
+- Geometrie wird im Core gepflegt und bei Moves aktualisiert
 <parameter name="filePath">/home/mro/Share/repos/fs25_auto_drive_editor/docs/DATA_MODEL.md

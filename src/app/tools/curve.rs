@@ -9,11 +9,15 @@
 //!
 //! Grad wird über `render_config` umgeschaltet (UI-Dropdown).
 
-use super::{snap_to_node, RouteTool, ToolAction, ToolAnchor, ToolPreview, ToolResult};
+use super::{
+    common::{populate_neighbors, SegmentConfig, TangentSource},
+    snap_to_node, RouteTool, ToolAction, ToolAnchor, ToolPreview, ToolResult,
+};
 use crate::core::{ConnectedNeighbor, ConnectionDirection, ConnectionPriority, RoadMap};
 use crate::shared::SNAP_RADIUS;
 use glam::Vec2;
 
+mod config_ui;
 mod geometry;
 use geometry::{
     approx_length, build_tool_result, compute_curve_positions, compute_tangent_cp, cubic_bezier,
@@ -29,13 +33,6 @@ enum DragTarget {
     CP2,
 }
 
-/// Welcher Wert wurde zuletzt vom User geändert?
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-enum LastEdited {
-    Distance,
-    NodeCount,
-}
-
 /// Grad der Bézier-Kurve
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum CurveDegree {
@@ -43,15 +40,6 @@ pub enum CurveDegree {
     Quadratic,
     /// Kubisch: 2 Steuerpunkte
     Cubic,
-}
-
-/// Quelle einer Tangente am Start- oder Endpunkt (nur Cubic).
-#[derive(Debug, Clone, Copy, PartialEq)]
-pub enum TangentSource {
-    /// Kein Tangenten-Vorschlag — CP wird manuell gesetzt
-    None,
-    /// Tangente aus bestehender Verbindung
-    Connection { neighbor_id: u64, angle: f32 },
 }
 
 /// Phasen des Kurven-Tools
@@ -78,11 +66,8 @@ pub struct CurveTool {
     dragging: Option<DragTarget>,
     /// Grad der Kurve
     pub degree: CurveDegree,
-    /// Maximaler Abstand zwischen Zwischen-Nodes (Standard: 2m)
-    pub max_segment_length: f32,
-    /// Gewünschte Anzahl Nodes (inkl. Start+End)
-    pub node_count: usize,
-    last_edited: LastEdited,
+    /// Segment-Konfiguration (Abstand / Node-Anzahl)
+    pub(crate) seg: SegmentConfig,
     pub direction: ConnectionDirection,
     pub priority: ConnectionPriority,
     last_created_ids: Vec<u64>,
@@ -118,9 +103,7 @@ impl CurveTool {
             control_point2: None,
             dragging: None,
             degree: CurveDegree::Quadratic,
-            max_segment_length: 2.0,
-            node_count: 2,
-            last_edited: LastEdited::Distance,
+            seg: SegmentConfig::new(2.0),
             direction: ConnectionDirection::Dual,
             priority: ConnectionPriority::Regular,
             last_created_ids: Vec::new(),
@@ -167,20 +150,7 @@ impl CurveTool {
     }
 
     fn sync_derived(&mut self) {
-        let length = self.curve_length();
-        if length < f32::EPSILON {
-            return;
-        }
-        match self.last_edited {
-            LastEdited::Distance => {
-                let segments = (length / self.max_segment_length).ceil().max(1.0) as usize;
-                self.node_count = segments + 1;
-            }
-            LastEdited::NodeCount => {
-                let segments = (self.node_count.max(2) - 1) as f32;
-                self.max_segment_length = length / segments;
-            }
-        }
+        self.seg.sync_from_length(self.curve_length());
     }
 
     /// True wenn alle Steuerpunkte für den aktuellen Grad gesetzt sind.
@@ -220,37 +190,11 @@ impl CurveTool {
             ));
         }
     }
-
-    /// Befüllt die Nachbar-Liste für einen Snap-Node.
-    fn populate_neighbors(anchor: &ToolAnchor, road_map: &RoadMap) -> Vec<ConnectedNeighbor> {
-        match anchor {
-            ToolAnchor::ExistingNode(id, _) => road_map.connected_neighbors(*id),
-            ToolAnchor::NewPosition(_) => Vec::new(),
-        }
-    }
 }
 
 impl Default for CurveTool {
     fn default() -> Self {
         Self::new()
-    }
-}
-
-/// Wandelt einen Winkel (Radiant) in eine Kompass-Richtung um.
-///
-/// FS25-Koordinatensystem: +X = Ost, +Z = Süd in der Draufsicht.
-fn angle_to_compass(angle: f32) -> &'static str {
-    let deg = angle.to_degrees().rem_euclid(360.0) as u32;
-    match deg {
-        0..=22 | 338..=360 => "O",
-        23..=67 => "SO",
-        68..=112 => "S",
-        113..=157 => "SW",
-        158..=202 => "W",
-        203..=247 => "NW",
-        248..=292 => "N",
-        293..=337 => "NO",
-        _ => "?",
     }
 }
 
@@ -302,9 +246,9 @@ impl RouteTool for CurveTool {
                     self.last_control_point2 = None;
                     self.recreate_needed = false;
                     self.start = Some(last_end);
-                    self.start_neighbors = Self::populate_neighbors(&last_end, road_map);
-                    let end_anchor = snap_to_node(pos, road_map, SNAP_RADIUS);
-                    self.end_neighbors = Self::populate_neighbors(&end_anchor, road_map);
+                    self.start_neighbors = populate_neighbors(&last_end, road_map);
+                    let end_anchor = snap_to_node(pos, road_map, self.snap_radius);
+                    self.end_neighbors = populate_neighbors(&end_anchor, road_map);
                     self.end = Some(end_anchor);
                     self.tangent_start = TangentSource::None;
                     self.tangent_end = TangentSource::None;
@@ -312,8 +256,8 @@ impl RouteTool for CurveTool {
                     self.apply_tangent_to_cp();
                     ToolAction::Continue
                 } else {
-                    let start_anchor = snap_to_node(pos, road_map, SNAP_RADIUS);
-                    self.start_neighbors = Self::populate_neighbors(&start_anchor, road_map);
+                    let start_anchor = snap_to_node(pos, road_map, self.snap_radius);
+                    self.start_neighbors = populate_neighbors(&start_anchor, road_map);
                     self.tangent_start = TangentSource::None;
                     self.start = Some(start_anchor);
                     self.phase = Phase::End;
@@ -321,8 +265,8 @@ impl RouteTool for CurveTool {
                 }
             }
             Phase::End => {
-                let end_anchor = snap_to_node(pos, road_map, SNAP_RADIUS);
-                self.end_neighbors = Self::populate_neighbors(&end_anchor, road_map);
+                let end_anchor = snap_to_node(pos, road_map, self.snap_radius);
+                self.end_neighbors = populate_neighbors(&end_anchor, road_map);
                 self.tangent_end = TangentSource::None;
                 self.end = Some(end_anchor);
                 self.phase = Phase::Control;
@@ -362,7 +306,7 @@ impl RouteTool for CurveTool {
 
         match self.phase {
             Phase::End => {
-                let end_pos = snap_to_node(cursor_pos, road_map, SNAP_RADIUS).position();
+                let end_pos = snap_to_node(cursor_pos, road_map, self.snap_radius).position();
                 ToolPreview {
                     nodes: vec![start_pos, end_pos],
                     connections: vec![(0, 1)],
@@ -379,13 +323,13 @@ impl RouteTool for CurveTool {
                 let positions = match self.degree {
                     CurveDegree::Quadratic => compute_curve_positions(
                         |t| quadratic_bezier(start_pos, cp1, end_pos, t),
-                        self.max_segment_length,
+                        self.seg.max_segment_length,
                     ),
                     CurveDegree::Cubic => {
                         let cp2 = self.control_point2.unwrap_or(cursor_pos);
                         compute_curve_positions(
                             |t| cubic_bezier(start_pos, cp1, cp2, end_pos, t),
-                            self.max_segment_length,
+                            self.seg.max_segment_length,
                         )
                     }
                 };
@@ -409,235 +353,7 @@ impl RouteTool for CurveTool {
     }
 
     fn render_config(&mut self, ui: &mut egui::Ui) -> bool {
-        let mut changed = false;
-
-        // Grad-Auswahl
-        ui.label("Kurven-Grad:");
-        let old_degree = self.degree;
-        egui::ComboBox::from_id_salt("curve_degree")
-            .selected_text(match self.degree {
-                CurveDegree::Quadratic => "Quadratisch (Grad 2)",
-                CurveDegree::Cubic => "Kubisch (Grad 3)",
-            })
-            .show_ui(ui, |ui| {
-                ui.selectable_value(
-                    &mut self.degree,
-                    CurveDegree::Quadratic,
-                    "Quadratisch (Grad 2)",
-                );
-                ui.selectable_value(&mut self.degree, CurveDegree::Cubic, "Kubisch (Grad 3)");
-            });
-        if self.degree != old_degree {
-            // Beim Gradwechsel CP2 und Tangenten zurücksetzen
-            self.control_point2 = None;
-            self.tangent_start = TangentSource::None;
-            self.tangent_end = TangentSource::None;
-            changed = true;
-        }
-        ui.add_space(4.0);
-
-        // Tangenten-Auswahl (nur Cubic, wenn Start+End gesetzt)
-        if self.degree == CurveDegree::Cubic {
-            let show_tangent_ui = (self.phase == Phase::Control
-                || (!self.last_created_ids.is_empty()
-                    && self.last_start_anchor.is_some()
-                    && self.last_end_anchor.is_some()))
-                && (self.start.is_some() && self.end.is_some()
-                    || self.last_start_anchor.is_some() && self.last_end_anchor.is_some());
-
-            if show_tangent_ui {
-                // Tangente Start
-                if !self.start_neighbors.is_empty() {
-                    let old_tangent = self.tangent_start;
-                    let selected_text = match self.tangent_start {
-                        TangentSource::None => "Manuell".to_string(),
-                        TangentSource::Connection { neighbor_id, angle } => {
-                            format!("→ Node #{} ({})", neighbor_id, angle_to_compass(angle))
-                        }
-                    };
-                    ui.label("Tangente Start:");
-                    egui::ComboBox::from_id_salt("tangent_start")
-                        .selected_text(selected_text)
-                        .show_ui(ui, |ui| {
-                            ui.selectable_value(
-                                &mut self.tangent_start,
-                                TangentSource::None,
-                                "Manuell",
-                            );
-                            for neighbor in &self.start_neighbors {
-                                let label = format!(
-                                    "→ Node #{} ({})",
-                                    neighbor.neighbor_id,
-                                    angle_to_compass(neighbor.angle)
-                                );
-                                ui.selectable_value(
-                                    &mut self.tangent_start,
-                                    TangentSource::Connection {
-                                        neighbor_id: neighbor.neighbor_id,
-                                        angle: neighbor.angle,
-                                    },
-                                    label,
-                                );
-                            }
-                        });
-                    if self.tangent_start != old_tangent {
-                        self.apply_tangent_to_cp();
-                        self.sync_derived();
-                        if !self.last_created_ids.is_empty() {
-                            self.recreate_needed = true;
-                        }
-                        changed = true;
-                    }
-                }
-
-                // Tangente Ende
-                if !self.end_neighbors.is_empty() {
-                    let old_tangent = self.tangent_end;
-                    let selected_text = match self.tangent_end {
-                        TangentSource::None => "Manuell".to_string(),
-                        TangentSource::Connection { neighbor_id, angle } => {
-                            format!("→ Node #{} ({})", neighbor_id, angle_to_compass(angle))
-                        }
-                    };
-                    ui.label("Tangente Ende:");
-                    egui::ComboBox::from_id_salt("tangent_end")
-                        .selected_text(selected_text)
-                        .show_ui(ui, |ui| {
-                            ui.selectable_value(
-                                &mut self.tangent_end,
-                                TangentSource::None,
-                                "Manuell",
-                            );
-                            for neighbor in &self.end_neighbors {
-                                let label = format!(
-                                    "→ Node #{} ({})",
-                                    neighbor.neighbor_id,
-                                    angle_to_compass(neighbor.angle)
-                                );
-                                ui.selectable_value(
-                                    &mut self.tangent_end,
-                                    TangentSource::Connection {
-                                        neighbor_id: neighbor.neighbor_id,
-                                        angle: neighbor.angle,
-                                    },
-                                    label,
-                                );
-                            }
-                        });
-                    if self.tangent_end != old_tangent {
-                        self.apply_tangent_to_cp();
-                        self.sync_derived();
-                        if !self.last_created_ids.is_empty() {
-                            self.recreate_needed = true;
-                        }
-                        changed = true;
-                    }
-                }
-
-                if !self.start_neighbors.is_empty() || !self.end_neighbors.is_empty() {
-                    ui.add_space(4.0);
-                }
-            }
-        }
-
-        // Nachbearbeitungs-Modus
-        let adjusting = !self.last_created_ids.is_empty()
-            && self.last_start_anchor.is_some()
-            && self.last_end_anchor.is_some()
-            && self.last_control_point1.is_some();
-
-        if adjusting {
-            let (Some(start_anchor), Some(end_anchor), Some(cp1)) = (
-                self.last_start_anchor,
-                self.last_end_anchor,
-                self.last_control_point1,
-            ) else {
-                return changed;
-            };
-
-            let start_pos = start_anchor.position();
-            let end_pos = end_anchor.position();
-            let cp2 = self.last_control_point2;
-            let length = match self.degree {
-                CurveDegree::Quadratic => {
-                    CurveTool::approx_length(|t| quadratic_bezier(start_pos, cp1, end_pos, t), 64)
-                }
-                CurveDegree::Cubic => {
-                    let cp2v = cp2.unwrap_or(cp1);
-                    CurveTool::approx_length(|t| cubic_bezier(start_pos, cp1, cp2v, end_pos, t), 64)
-                }
-            };
-
-            ui.label(format!("Kurvenlänge: {:.1} m", length));
-            ui.add_space(4.0);
-
-            ui.label("Min. Abstand:");
-            let max_seg = length.max(1.0);
-            if ui
-                .add(egui::Slider::new(&mut self.max_segment_length, 1.0..=max_seg).suffix(" m"))
-                .changed()
-            {
-                self.last_edited = LastEdited::Distance;
-                let segments = (length / self.max_segment_length).ceil().max(1.0) as usize;
-                self.node_count = segments + 1;
-                self.recreate_needed = true;
-                changed = true;
-            }
-
-            ui.add_space(4.0);
-
-            ui.label("Anzahl Nodes:");
-            let max_nodes = (length / 1.0).ceil().max(2.0) as usize;
-            if ui
-                .add(egui::Slider::new(&mut self.node_count, 2..=max_nodes))
-                .changed()
-            {
-                self.last_edited = LastEdited::NodeCount;
-                let segments = (self.node_count.max(2) - 1) as f32;
-                self.max_segment_length = length / segments;
-                self.recreate_needed = true;
-                changed = true;
-            }
-        } else if self.is_ready() {
-            let length = self.curve_length();
-            ui.label(format!("Kurvenlänge: {:.1} m", length));
-            ui.add_space(4.0);
-
-            ui.label("Min. Abstand:");
-            let max_seg = length.max(1.0);
-            if ui
-                .add(egui::Slider::new(&mut self.max_segment_length, 1.0..=max_seg).suffix(" m"))
-                .changed()
-            {
-                self.last_edited = LastEdited::Distance;
-                self.sync_derived();
-                changed = true;
-            }
-
-            ui.add_space(4.0);
-
-            ui.label("Anzahl Nodes:");
-            let max_nodes = (length / 1.0).ceil().max(2.0) as usize;
-            if ui
-                .add(egui::Slider::new(&mut self.node_count, 2..=max_nodes))
-                .changed()
-            {
-                self.last_edited = LastEdited::NodeCount;
-                self.sync_derived();
-                changed = true;
-            }
-        } else {
-            ui.label("Max. Segment-Länge:");
-            if ui
-                .add(egui::Slider::new(&mut self.max_segment_length, 1.0..=50.0).suffix(" m"))
-                .changed()
-            {
-                self.last_edited = LastEdited::Distance;
-                changed = true;
-            }
-        }
-
-        changed
+        self.render_config_view(ui)
     }
 
     fn execute(&self, road_map: &RoadMap) -> Option<ToolResult> {
@@ -647,7 +363,7 @@ impl RouteTool for CurveTool {
             degree: self.degree,
             cp1: self.control_point1?,
             cp2: self.control_point2,
-            max_segment_length: self.max_segment_length,
+            max_segment_length: self.seg.max_segment_length,
             direction: self.direction,
             priority: self.priority,
         };
@@ -724,7 +440,7 @@ impl RouteTool for CurveTool {
             degree: self.degree,
             cp1: self.last_control_point1?,
             cp2: self.last_control_point2,
-            max_segment_length: self.max_segment_length,
+            max_segment_length: self.seg.max_segment_length,
             direction: self.direction,
             priority: self.priority,
         };
@@ -810,12 +526,12 @@ impl RouteTool for CurveTool {
         match self.dragging {
             Some(DragTarget::Start) => {
                 if let Some(anchor) = &self.start {
-                    self.start = Some(snap_to_node(anchor.position(), road_map, SNAP_RADIUS));
+                    self.start = Some(snap_to_node(anchor.position(), road_map, self.snap_radius));
                 }
             }
             Some(DragTarget::End) => {
                 if let Some(anchor) = &self.end {
-                    self.end = Some(snap_to_node(anchor.position(), road_map, SNAP_RADIUS));
+                    self.end = Some(snap_to_node(anchor.position(), road_map, self.snap_radius));
                 }
             }
             _ => {}

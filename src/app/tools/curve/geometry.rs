@@ -1,8 +1,8 @@
 //! Geometrie-Berechnungen für Kurven-Tools (Arc-Length-Parametrisierung, Bézier, Catmull-Rom).
 
 use super::CurveDegree;
-use crate::app::tools::{ToolAnchor, ToolResult};
-use crate::core::{ConnectionDirection, ConnectionPriority, NodeFlag, RoadMap};
+use crate::app::tools::{common, ToolAnchor, ToolResult};
+use crate::core::{ConnectionDirection, ConnectionPriority, RoadMap};
 use glam::Vec2;
 
 /// Gleichmäßig verteilte Punkte entlang einer parametrischen Kurve (Arc-Length).
@@ -157,91 +157,7 @@ pub fn build_tool_result(
         max_segment_length,
     );
 
-    let mut new_nodes: Vec<(Vec2, NodeFlag)> = Vec::new();
-    let mut internal_connections: Vec<(usize, usize, ConnectionDirection, ConnectionPriority)> =
-        Vec::new();
-    let mut external_connections: Vec<(usize, u64, ConnectionDirection, ConnectionPriority)> =
-        Vec::new();
-
-    let mut pos_to_new_idx: Vec<Option<usize>> = Vec::with_capacity(positions.len());
-
-    for (i, &pos) in positions.iter().enumerate() {
-        let is_start = i == 0;
-        let is_end = i == positions.len() - 1;
-
-        let existing_id = if is_start {
-            match start {
-                ToolAnchor::ExistingNode(id, _) => Some(*id),
-                _ => None,
-            }
-        } else if is_end {
-            match end {
-                ToolAnchor::ExistingNode(id, _) => Some(*id),
-                _ => None,
-            }
-        } else {
-            road_map
-                .nearest_node(pos)
-                .filter(|hit| hit.distance < 0.01)
-                .map(|hit| hit.node_id)
-        };
-
-        if existing_id.is_some() {
-            pos_to_new_idx.push(None);
-        } else {
-            let idx = new_nodes.len();
-            new_nodes.push((pos, NodeFlag::Regular));
-            pos_to_new_idx.push(Some(idx));
-        }
-    }
-
-    for i in 0..positions.len().saturating_sub(1) {
-        let a_new_idx = pos_to_new_idx[i];
-        let b_new_idx = pos_to_new_idx[i + 1];
-
-        let is_start_a = i == 0;
-        let is_end_b = i + 1 == positions.len() - 1;
-
-        let a_existing = if is_start_a {
-            match start {
-                ToolAnchor::ExistingNode(id, _) => Some(*id),
-                _ => None,
-            }
-        } else {
-            None
-        };
-
-        let b_existing = if is_end_b {
-            match end {
-                ToolAnchor::ExistingNode(id, _) => Some(*id),
-                _ => None,
-            }
-        } else if pos_to_new_idx[i + 1].is_none() {
-            road_map
-                .nearest_node(positions[i + 1])
-                .filter(|hit| hit.distance < 0.01)
-                .map(|hit| hit.node_id)
-        } else {
-            None
-        };
-
-        match (a_new_idx, a_existing, b_new_idx, b_existing) {
-            (Some(a), _, Some(b), _) => {
-                internal_connections.push((a, b, direction, priority));
-            }
-            (Some(a), _, None, Some(b_id)) => {
-                external_connections.push((a, b_id, direction, priority));
-            }
-            (None, Some(a_id), Some(b), _) => {
-                external_connections.push((b, a_id, direction, priority));
-            }
-            _ => {}
-        }
-    }
-
-    Some(ToolResult {
-        new_nodes,
-        internal_connections,
-        external_connections,
-    })
+    Some(common::assemble_tool_result(
+        &positions, start, end, direction, priority, road_map,
+    ))
 }

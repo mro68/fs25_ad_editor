@@ -7,7 +7,6 @@ use crate::app::AppState;
 
 /// Verarbeitet einen Viewport-Klick im Route-Tool.
 pub fn click(state: &mut AppState, world_pos: glam::Vec2, ctrl: bool) {
-    // Phase 1: Klick verarbeiten
     let action = {
         let Some(road_map) = state.road_map.as_deref() else {
             return;
@@ -18,36 +17,18 @@ pub fn click(state: &mut AppState, world_pos: glam::Vec2, ctrl: bool) {
         tool.on_click(world_pos, road_map, ctrl)
     };
 
-    if action != ToolAction::ReadyToExecute {
-        return;
-    }
-
-    // Phase 2: Ergebnis erzeugen
-    let result = match (
-        state.editor.tool_manager.active_tool(),
-        state.road_map.as_deref(),
-    ) {
-        (Some(tool), Some(rm)) => tool.execute(rm),
-        _ => None,
-    };
-
-    // Phase 3: Ergebnis anwenden oder Reset
-    if let Some(result) = result {
-        let ids = use_cases::editing::apply_tool_result(state, result);
-        if let (Some(tool), Some(rm)) = (
-            state.editor.tool_manager.active_tool_mut(),
-            state.road_map.as_deref(),
-        ) {
-            tool.set_last_created(ids, rm);
-            tool.reset();
-        }
-    } else if let Some(tool) = state.editor.tool_manager.active_tool_mut() {
-        tool.reset();
+    if action == ToolAction::ReadyToExecute {
+        execute_and_apply(state);
     }
 }
 
 /// Führt das aktive Route-Tool aus (Enter-Bestätigung).
 pub fn execute(state: &mut AppState) {
+    execute_and_apply(state);
+}
+
+/// Gemeinsame Logik: Tool ausführen, Ergebnis anwenden, Tool zurücksetzen.
+fn execute_and_apply(state: &mut AppState) {
     let result = match (
         state.editor.tool_manager.active_tool(),
         state.road_map.as_deref(),

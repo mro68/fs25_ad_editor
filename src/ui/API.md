@@ -218,10 +218,29 @@ pub fn show_marker_dialog(
 ) -> Vec<AppIntent>
 ```
 
+---
+
+### `show_dedup_dialog`
+
+Zeigt den Duplikat-Bereinigungsdialog als modales Fenster. Erscheint nach dem Laden einer XML-Datei, wenn duplizierte Nodes erkannt wurden. Der Benutzer kann die Bereinigung bestätigen oder abbrechen.
+
+```rust
+pub fn show_dedup_dialog(ctx: &egui::Context, ui_state: &UiState) -> Vec<AppIntent>
+```
+
+**Emittierte Intents:**
+- `AppIntent::DeduplicateConfirmed` — Benutzer bestätigt Bereinigung
+- `AppIntent::DeduplicateCancelled` — Benutzer bricht ab
+
 **Layout:**
 ```
-[Nodes: 42 | Connections: 38 | Markers: 3 | Map: Example | Zoom: 1.50x | Pos: (10.0, 20.0) | Heightmap: terrain.png | Selected Node: 5    FPS: 60]
+[Titel: "Duplizierte Wegpunkte erkannt"]
+  ⚠ AutoDrive hat Teile des Netzwerks mehrfach erstellt.
+  Gefunden: N duplizierte Nodes in M Positions-Gruppen
+  [Bereinigen]  [Ignorieren]
 ```
+
+---
 
 ## Design-Prinzipien
 

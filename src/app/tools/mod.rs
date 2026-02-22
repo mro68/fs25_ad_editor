@@ -4,6 +4,8 @@
 //! `ToolManager` registriert. Tools erzeugen reine Daten (`ToolResult`),
 //! die Mutation erfolgt zentral in `apply_tool_result`.
 
+/// Gemeinsame Hilfsfunktionen für Route-Tools.
+pub mod common;
 /// Bézier-Kurven-Tool (Grad 2 + 3) mit sequentieller Punkt-Platzierung.
 pub mod curve;
 /// Catmull-Rom-Spline-Tool — interpolierende Kurve durch alle geklickten Punkte.
