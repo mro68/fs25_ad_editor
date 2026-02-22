@@ -39,18 +39,22 @@ println!("Nodes: {}", road_map.node_count());
 Schreibt eine RoadMap als AutoDrive XML-Config.
 
 ```rust
-pub fn write_autodrive_config(road_map: &RoadMap, heightmap: Option<&Heightmap>) -> Result<String>
+pub fn write_autodrive_config(
+    road_map: &RoadMap,
+    heightmap: Option<&Heightmap>,
+    terrain_height_scale: f32,
+) -> Result<String>
 ```
 
 **Beispiel:**
 ```rust
 // Ohne Heightmap (Y-Werte = 0.0)
-let xml = write_autodrive_config(&road_map, None)?;
+let xml = write_autodrive_config(&road_map, None, 255.0)?;
 std::fs::write("output.xml", xml)?;
 
 // Mit Heightmap (Y-Werte aus PNG berechnet)
 let heightmap = Heightmap::load("map_heightmap.png", WorldBounds::default_fs25())?;
-let xml = write_autodrive_config(&road_map, Some(&heightmap))?;
+let xml = write_autodrive_config(&road_map, Some(&heightmap), 255.0)?;
 std::fs::write("output.xml", xml)?;
 ```
 
@@ -59,6 +63,7 @@ std::fs::write("output.xml", xml)?;
 - Berechnet `out`/`incoming`-Listen aus Connections
 - Schreibt MapMarkers als `<mmN>`-Elemente mit `<id>`, `<name>`, `<group>`
 - Float-Formatierung: 3 Dezimalstellen für Koordinaten
+- Konfigurierbare Höhenskala über `terrain_height_scale` (FS25-Standard: `255.0`)
 - XML-Escaping für Strings
 - Exakte Replikation des Original-Formats (encoding, standalone)
 

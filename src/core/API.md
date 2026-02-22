@@ -159,11 +159,11 @@ Ergebnis einer Duplikat-Bereinigung.
 
 ```rust
 pub struct DeduplicationResult {
-    pub removed_count: u32,
-    pub merged_group_count: u32,
+    pub removed_nodes: u32,
     pub remapped_connections: u32,
+    pub removed_self_connections: u32,
     pub remapped_markers: u32,
-    pub remaining_nodes: usize,
+    pub duplicate_groups: u32,
 }
 ```
 

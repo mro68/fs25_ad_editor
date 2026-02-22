@@ -13,6 +13,8 @@ pub struct ConnectionRenderer {
     bind_group: wgpu::BindGroup,
     vertex_buffer: Option<wgpu::Buffer>,
     vertex_capacity: usize,
+    /// Wiederverwendbarer Scratch-Buffer für Vertex-Daten (vermeidet per-Frame-Allokation)
+    vertex_scratch: Vec<ConnectionVertex>,
 }
 
 impl ConnectionRenderer {
@@ -100,6 +102,7 @@ impl ConnectionRenderer {
             bind_group,
             vertex_buffer: None,
             vertex_capacity: 0,
+            vertex_scratch: Vec::new(),
         }
     }
 
@@ -152,7 +155,8 @@ impl ConnectionRenderer {
             }]),
         );
 
-        let mut vertices = Vec::new();
+        let mut vertices = std::mem::take(&mut self.vertex_scratch);
+        vertices.clear();
         for connection in road_map.connections_iter() {
             let Some(start) = road_map
                 .nodes
@@ -240,6 +244,7 @@ impl ConnectionRenderer {
         }
 
         if vertices.is_empty() {
+            self.vertex_scratch = vertices;
             return;
         }
 
@@ -262,6 +267,7 @@ impl ConnectionRenderer {
 
         let Some(vertex_buffer) = self.vertex_buffer.as_ref() else {
             log::error!("ConnectionRenderer: missing vertex buffer before draw call");
+            self.vertex_scratch = vertices;
             return;
         };
 
@@ -269,6 +275,8 @@ impl ConnectionRenderer {
         render_pass.set_bind_group(0, &self.bind_group, &[]);
         render_pass.set_vertex_buffer(0, vertex_buffer.slice(..));
         render_pass.draw(0..vertices.len() as u32, 0..1);
+
+        self.vertex_scratch = vertices;
     }
 }
 

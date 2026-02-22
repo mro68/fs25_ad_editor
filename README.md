@@ -74,7 +74,7 @@ make windows-release  # Nur Windows
 
 1. **Datei öffnen:** `Datei → Öffnen` oder `Strg+O` – eine AutoDrive XML-Config laden
 2. **Navigieren:** Mausrad zum Zoomen, Rechtsklick + Ziehen zum Verschieben
-3. **Hintergrundkarte:** `Datei → Hintergrund laden` – eine overview.dds/png/jpg laden
+3. **Hintergrundkarte:** `View → Hintergrund laden` – eine overview.dds/png/jpg laden
 4. **Bearbeiten:** Punkte auswählen, verschieben, verbinden, löschen
 5. **Speichern:** `Strg+S` – Höhen werden automatisch aus der Heightmap rekonstruiert
 

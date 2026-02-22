@@ -547,6 +547,25 @@ Schnittstelle für alle Route-Tools (Linie, Kurve, …). Tools sind zustandsbeha
 
 ---
 
+### Gemeinsame Tool-Infrastruktur (`tools/common.rs`)
+
+**`SegmentConfig`** — Gekapselte Konfiguration für Segment-Länge und Node-Anzahl, die alle Route-Tools gemeinsam nutzen:
+- `max_segment_length: f32` — Maximaler Abstand zwischen Zwischen-Nodes
+- `node_count: usize` — Gewünschte Anzahl Nodes (inkl. Start+End)
+- `last_edited: LastEdited` — Welcher Wert zuletzt geändert wurde (bestimmt Sync-Richtung)
+- `sync_from_length(length)` — Synchronisiert abhängigen Wert aus Streckenlänge
+- `render_adjusting(ui, length, label) → (changed, recreate)` — Slider im Nachbearbeitungsmodus
+- `render_live(ui, length, label) → changed` — Slider im Live-Modus
+- `render_default(ui) → changed` — Slider im Default-Modus
+
+**`TangentSource`** — Tangenten-Quelle am Start-/Endpunkt (für Curve + Spline):
+- `None` — Kein Tangenten-Vorschlag
+- `Connection { neighbor_id, angle }` — Tangente aus bestehender Verbindung
+
+**`assemble_tool_result(positions, start, end, direction, priority, road_map) → ToolResult`** — Gemeinsame Logik aller Route-Tools: Nimmt berechnete Positionen, erstellt neue Nodes (überspringt existierende) und baut interne/externe Verbindungen auf.
+
+---
+
 ### `render_scene::build()`
 
 Baut die `RenderScene` aus dem aktuellen `AppState` und der Viewport-Größe.
