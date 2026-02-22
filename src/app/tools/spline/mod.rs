@@ -11,19 +11,12 @@ mod geometry;
 
 use self::geometry::{catmull_rom_chain_with_tangents, polyline_length, resample_by_distance};
 use super::{
-    common::{node_count_from_length, populate_neighbors, segment_length_from_count},
+    common::{node_count_from_length, populate_neighbors, segment_length_from_count, LastEdited},
     snap_to_node, RouteTool, ToolAction, ToolAnchor, ToolPreview, ToolResult,
 };
 use crate::core::{ConnectedNeighbor, ConnectionDirection, ConnectionPriority, NodeFlag, RoadMap};
 use crate::shared::SNAP_RADIUS;
 use glam::Vec2;
-
-/// Welcher Wert wurde zuletzt vom User geändert?
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-enum LastEdited {
-    Distance,
-    NodeCount,
-}
 
 /// Quelle einer Tangente am Start- oder Endpunkt des Splines.
 #[derive(Debug, Clone, Copy, PartialEq)]

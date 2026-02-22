@@ -3,6 +3,19 @@
 use crate::core::{ConnectedNeighbor, RoadMap};
 use super::ToolAnchor;
 
+/// Welcher Wert wurde zuletzt vom User geändert?
+///
+/// Bestimmt die Synchronisationsrichtung zwischen Segment-Länge und Node-Anzahl:
+/// - `Distance` → Node-Anzahl wird aus Länge und Segment-Abstand berechnet
+/// - `NodeCount` → Segment-Abstand wird aus Länge und Node-Anzahl berechnet
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(crate) enum LastEdited {
+    /// User hat Segment-Länge angepasst → Node-Anzahl wird berechnet
+    Distance,
+    /// User hat Node-Anzahl angepasst → Segment-Länge wird berechnet
+    NodeCount,
+}
+
 /// Wandelt einen Winkel (Radiant) in eine Kompass-Richtung um.
 ///
 /// FS25-Koordinatensystem: +X = Ost, +Z = Süd in der Draufsicht.

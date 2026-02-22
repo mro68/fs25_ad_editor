@@ -2,21 +2,12 @@
 //! und füllt automatisch Zwischen-Nodes ein.
 
 use super::{
-    common::{node_count_from_length, segment_length_from_count}, snap_to_node, RouteTool,
-    ToolAction, ToolAnchor, ToolPreview, ToolResult,
+    common::{node_count_from_length, segment_length_from_count, LastEdited}, snap_to_node,
+    RouteTool, ToolAction, ToolAnchor, ToolPreview, ToolResult,
 };
 use crate::core::{ConnectionDirection, ConnectionPriority, NodeFlag, RoadMap};
 use crate::shared::SNAP_RADIUS;
 use glam::Vec2;
-
-/// Welcher Wert wurde zuletzt vom User geändert?
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-enum LastEdited {
-    /// User hat Segment-Länge angepasst → Node-Anzahl wird berechnet
-    Distance,
-    /// User hat Node-Anzahl angepasst → Segment-Länge wird berechnet
-    NodeCount,
-}
 
 /// Gerade-Strecke-Tool
 pub struct StraightLineTool {

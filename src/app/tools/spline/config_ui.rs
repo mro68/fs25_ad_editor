@@ -6,7 +6,8 @@
 
 use super::super::common::{angle_to_compass, node_count_from_length, segment_length_from_count};
 use super::super::RouteTool;
-use super::{LastEdited, SplineTangentSource, SplineTool};
+use super::{SplineTangentSource, SplineTool};
+use super::super::common::LastEdited;
 
 impl SplineTool {
     /// Rendert das Konfigurationspanel im Properties-Panel.

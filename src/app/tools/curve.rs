@@ -10,8 +10,8 @@
 //! Grad wird über `render_config` umgeschaltet (UI-Dropdown).
 
 use super::{
-    common::{node_count_from_length, populate_neighbors, segment_length_from_count}, snap_to_node,
-    RouteTool, ToolAction, ToolAnchor, ToolPreview, ToolResult,
+    common::{node_count_from_length, populate_neighbors, segment_length_from_count, LastEdited},
+    snap_to_node, RouteTool, ToolAction, ToolAnchor, ToolPreview, ToolResult,
 };
 use crate::core::{ConnectedNeighbor, ConnectionDirection, ConnectionPriority, RoadMap};
 use crate::shared::SNAP_RADIUS;
@@ -31,13 +31,6 @@ enum DragTarget {
     End,
     CP1,
     CP2,
-}
-
-/// Welcher Wert wurde zuletzt vom User geändert?
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-enum LastEdited {
-    Distance,
-    NodeCount,
 }
 
 /// Grad der Bézier-Kurve
