@@ -4,10 +4,12 @@
 //! - Tangenten-ComboBoxen am Start/Ende (nur Nachbearbeitungs-Modus)
 //! - Länge · Segment-Abstand · Node-Anzahl (Nachbearbeitungs- und Live-Modus)
 
-use super::super::common::{angle_to_compass, node_count_from_length, segment_length_from_count};
+use super::super::common::{
+    angle_to_compass, node_count_from_length, segment_length_from_count, LastEdited,
+    TangentSource,
+};
 use super::super::RouteTool;
-use super::{SplineTangentSource, SplineTool};
-use super::super::common::LastEdited;
+use super::SplineTool;
 
 impl SplineTool {
     /// Rendert das Konfigurationspanel im Properties-Panel.
@@ -25,8 +27,8 @@ impl SplineTool {
             if !self.start_neighbors.is_empty() {
                 let old_tangent = self.tangent_start;
                 let selected_text = match self.tangent_start {
-                    SplineTangentSource::None => "Standard".to_string(),
-                    SplineTangentSource::Connection { neighbor_id, angle } => {
+                    TangentSource::None => "Standard".to_string(),
+                    TangentSource::Connection { neighbor_id, angle } => {
                         format!("→ Node #{} ({})", neighbor_id, angle_to_compass(angle))
                     }
                 };
@@ -36,7 +38,7 @@ impl SplineTool {
                     .show_ui(ui, |ui| {
                         ui.selectable_value(
                             &mut self.tangent_start,
-                            SplineTangentSource::None,
+                            TangentSource::None,
                             "Standard",
                         );
                         for neighbor in &self.start_neighbors {
@@ -47,7 +49,7 @@ impl SplineTool {
                             );
                             ui.selectable_value(
                                 &mut self.tangent_start,
-                                SplineTangentSource::Connection {
+                                TangentSource::Connection {
                                     neighbor_id: neighbor.neighbor_id,
                                     angle: neighbor.angle,
                                 },
@@ -67,8 +69,8 @@ impl SplineTool {
             if !self.end_neighbors.is_empty() {
                 let old_tangent = self.tangent_end;
                 let selected_text = match self.tangent_end {
-                    SplineTangentSource::None => "Standard".to_string(),
-                    SplineTangentSource::Connection { neighbor_id, angle } => {
+                    TangentSource::None => "Standard".to_string(),
+                    TangentSource::Connection { neighbor_id, angle } => {
                         format!("→ Node #{} ({})", neighbor_id, angle_to_compass(angle))
                     }
                 };
@@ -78,7 +80,7 @@ impl SplineTool {
                     .show_ui(ui, |ui| {
                         ui.selectable_value(
                             &mut self.tangent_end,
-                            SplineTangentSource::None,
+                            TangentSource::None,
                             "Standard",
                         );
                         for neighbor in &self.end_neighbors {
@@ -89,7 +91,7 @@ impl SplineTool {
                             );
                             ui.selectable_value(
                                 &mut self.tangent_end,
-                                SplineTangentSource::Connection {
+                                TangentSource::Connection {
                                     neighbor_id: neighbor.neighbor_id,
                                     angle: neighbor.angle,
                                 },

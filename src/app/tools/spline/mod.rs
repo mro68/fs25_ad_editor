@@ -11,21 +11,16 @@ mod geometry;
 
 use self::geometry::{catmull_rom_chain_with_tangents, polyline_length, resample_by_distance};
 use super::{
-    common::{node_count_from_length, populate_neighbors, segment_length_from_count, LastEdited},
+    common::{
+        node_count_from_length, populate_neighbors, segment_length_from_count, LastEdited,
+        TangentSource,
+    },
     snap_to_node, RouteTool, ToolAction, ToolAnchor, ToolPreview, ToolResult,
 };
 use crate::core::{ConnectedNeighbor, ConnectionDirection, ConnectionPriority, NodeFlag, RoadMap};
 use crate::shared::SNAP_RADIUS;
 use glam::Vec2;
 
-/// Quelle einer Tangente am Start- oder Endpunkt des Splines.
-#[derive(Debug, Clone, Copy, PartialEq)]
-pub enum SplineTangentSource {
-    /// Kein Tangentenvorschlag — Phantom-Punkt wird gespiegelt (Standard)
-    None,
-    /// Tangente aus bestehender Verbindung
-    Connection { neighbor_id: u64, angle: f32 },
-}
 
 // ── Spline-Tool ──────────────────────────────────────────────────
 
@@ -49,17 +44,17 @@ pub struct SplineTool {
     /// Signalisiert, dass Config geändert wurde und Neuberechnung nötig ist
     recreate_needed: bool,
     /// Gewählte Tangente am Startpunkt
-    tangent_start: SplineTangentSource,
+    tangent_start: TangentSource,
     /// Gewählte Tangente am Endpunkt
-    tangent_end: SplineTangentSource,
+    tangent_end: TangentSource,
     /// Verfügbare Nachbarn am Startpunkt (Cache)
     start_neighbors: Vec<ConnectedNeighbor>,
     /// Verfügbare Nachbarn am Endpunkt (Cache)
     end_neighbors: Vec<ConnectedNeighbor>,
     /// Tangente Start der letzten Erstellung (für Recreation)
-    last_tangent_start: SplineTangentSource,
+    last_tangent_start: TangentSource,
     /// Tangente Ende der letzten Erstellung (für Recreation)
-    last_tangent_end: SplineTangentSource,
+    last_tangent_end: TangentSource,
     /// Snap-Radius in Welteinheiten (aus EditorOptions)
     snap_radius: f32,
 }
@@ -78,12 +73,12 @@ impl SplineTool {
             last_anchors: Vec::new(),
             last_end_anchor: None,
             recreate_needed: false,
-            tangent_start: SplineTangentSource::None,
-            tangent_end: SplineTangentSource::None,
+            tangent_start: TangentSource::None,
+            tangent_end: TangentSource::None,
             start_neighbors: Vec::new(),
             end_neighbors: Vec::new(),
-            last_tangent_start: SplineTangentSource::None,
-            last_tangent_end: SplineTangentSource::None,
+            last_tangent_start: TangentSource::None,
+            last_tangent_end: TangentSource::None,
             snap_radius: SNAP_RADIUS,
         }
     }
@@ -108,10 +103,10 @@ impl SplineTool {
     /// Berechnet die Phantom-Punkte für Start und Ende basierend auf Tangenten.
     fn compute_phantoms(
         points: &[Vec2],
-        tangent_start: SplineTangentSource,
-        tangent_end: SplineTangentSource,
+        tangent_start: TangentSource,
+        tangent_end: TangentSource,
     ) -> (Option<Vec2>, Option<Vec2>) {
-        let start_phantom = if let SplineTangentSource::Connection { angle, .. } = tangent_start {
+        let start_phantom = if let TangentSource::Connection { angle, .. } = tangent_start {
             if points.len() >= 2 {
                 Some(Self::phantom_from_tangent(points[0], angle, points[1]))
             } else {
@@ -121,7 +116,7 @@ impl SplineTool {
             None
         };
 
-        let end_phantom = if let SplineTangentSource::Connection { angle, .. } = tangent_end {
+        let end_phantom = if let TangentSource::Connection { angle, .. } = tangent_end {
             if points.len() >= 2 {
                 let n = points.len();
                 Some(Self::phantom_from_tangent(
@@ -184,8 +179,8 @@ impl SplineTool {
     /// Spline-Länge aus gegebenen Ankern (mit Tangenten).
     fn spline_length_from_anchors(
         anchors: &[ToolAnchor],
-        tangent_start: SplineTangentSource,
-        tangent_end: SplineTangentSource,
+        tangent_start: TangentSource,
+        tangent_end: TangentSource,
     ) -> f32 {
         let pts: Vec<Vec2> = anchors.iter().map(|a| a.position()).collect();
         if pts.len() < 2 {
@@ -202,8 +197,8 @@ impl SplineTool {
         max_segment_length: f32,
         direction: ConnectionDirection,
         priority: ConnectionPriority,
-        tangent_start: SplineTangentSource,
-        tangent_end: SplineTangentSource,
+        tangent_start: TangentSource,
+        tangent_end: TangentSource,
         road_map: &RoadMap,
     ) -> Option<ToolResult> {
         if anchors.len() < 2 {
@@ -342,8 +337,8 @@ impl RouteTool for SplineTool {
                 self.last_anchors.clear();
                 self.last_end_anchor = None;
                 self.recreate_needed = false;
-                self.tangent_start = SplineTangentSource::None;
-                self.tangent_end = SplineTangentSource::None;
+                self.tangent_start = TangentSource::None;
+                self.tangent_end = TangentSource::None;
                 self.anchors.push(last_end);
                 self.anchors.push(anchor);
                 self.sync_derived();
@@ -410,8 +405,8 @@ impl RouteTool for SplineTool {
 
     fn reset(&mut self) {
         self.anchors.clear();
-        self.tangent_start = SplineTangentSource::None;
-        self.tangent_end = SplineTangentSource::None;
+        self.tangent_start = TangentSource::None;
+        self.tangent_end = TangentSource::None;
         // start_neighbors / end_neighbors bleiben erhalten —
         // werden in set_last_created befüllt und im Nachbearbeitungs-Modus benötigt
     }

@@ -10,7 +10,10 @@
 //! Grad wird über `render_config` umgeschaltet (UI-Dropdown).
 
 use super::{
-    common::{node_count_from_length, populate_neighbors, segment_length_from_count, LastEdited},
+    common::{
+        node_count_from_length, populate_neighbors, segment_length_from_count, LastEdited,
+        TangentSource,
+    },
     snap_to_node, RouteTool, ToolAction, ToolAnchor, ToolPreview, ToolResult,
 };
 use crate::core::{ConnectedNeighbor, ConnectionDirection, ConnectionPriority, RoadMap};
@@ -40,15 +43,6 @@ pub enum CurveDegree {
     Quadratic,
     /// Kubisch: 2 Steuerpunkte
     Cubic,
-}
-
-/// Quelle einer Tangente am Start- oder Endpunkt (nur Cubic).
-#[derive(Debug, Clone, Copy, PartialEq)]
-pub enum TangentSource {
-    /// Kein Tangenten-Vorschlag — CP wird manuell gesetzt
-    None,
-    /// Tangente aus bestehender Verbindung
-    Connection { neighbor_id: u64, angle: f32 },
 }
 
 /// Phasen des Kurven-Tools

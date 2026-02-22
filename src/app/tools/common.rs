@@ -55,3 +55,15 @@ pub(crate) fn populate_neighbors(anchor: &ToolAnchor, road_map: &RoadMap) -> Vec
         ToolAnchor::NewPosition(_) => Vec::new(),
     }
 }
+
+/// Quelle einer Tangente am Start- oder Endpunkt eines Route-Tools.
+///
+/// Wird von Curve- und Spline-Tool verwendet, um den Kontrollpunkt
+/// bzw. Phantom-Punkt tangential an einer bestehenden Verbindung auszurichten.
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub enum TangentSource {
+    /// Kein Tangenten-Vorschlag — Punkt wird manuell gesetzt
+    None,
+    /// Tangente aus bestehender Verbindung
+    Connection { neighbor_id: u64, angle: f32 },
+}

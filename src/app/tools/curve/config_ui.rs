@@ -8,8 +8,8 @@
 use super::geometry::{cubic_bezier, quadratic_bezier};
 use super::super::common::{angle_to_compass, node_count_from_length, segment_length_from_count};
 use super::super::RouteTool;
-use super::{CurveDegree, CurveTool, Phase, TangentSource};
-use super::super::common::LastEdited;
+use super::super::common::{LastEdited, TangentSource};
+use super::{CurveDegree, CurveTool, Phase};
 
 impl CurveTool {
     /// Rendert das Konfigurationspanel im Properties-Panel.
