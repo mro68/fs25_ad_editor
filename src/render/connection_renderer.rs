@@ -220,8 +220,10 @@ impl ConnectionRenderer {
                     );
                 }
                 ConnectionDirection::Dual => {
-                    let forward_center = start + direction * (length * 0.5);
-                    let backward_center = start + direction * (length * 0.5);
+                    // Pfeile leicht versetzt, damit sie sich nicht überdecken
+                    let offset = options.arrow_length_world * 0.6;
+                    let forward_center = start + direction * (length * 0.5 + offset);
+                    let backward_center = start + direction * (length * 0.5 - offset);
                     push_arrow(
                         &mut vertices,
                         forward_center,
