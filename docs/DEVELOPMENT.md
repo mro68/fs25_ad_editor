@@ -30,7 +30,7 @@
 // Verwende HashMap für Robustheit
 struct RoadMap {
     nodes: HashMap<u64, MapNode>,
-    connections: Vec<Connection>,
+    connections: HashMap<(u64, u64), Connection>,
     version: u32,
 }
 ```
