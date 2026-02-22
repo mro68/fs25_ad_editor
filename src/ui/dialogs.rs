@@ -126,16 +126,16 @@ pub fn show_marker_dialog(
 ) -> Vec<AppIntent> {
     let mut events = Vec::new();
 
-    if !ui_state.show_marker_dialog {
+    if !ui_state.marker_dialog.visible {
         return events;
     }
 
-    let node_id = match ui_state.marker_dialog_node_id {
+    let node_id = match ui_state.marker_dialog.node_id {
         Some(id) => id,
         None => return events,
     };
 
-    let title = if ui_state.marker_dialog_is_new {
+    let title = if ui_state.marker_dialog.is_new {
         "Marker erstellen"
     } else {
         "Marker ändern"
@@ -162,7 +162,7 @@ pub fn show_marker_dialog(
             // Name
             ui.horizontal(|ui| {
                 ui.label("Name:");
-                ui.text_edit_singleline(&mut ui_state.marker_dialog_name);
+                ui.text_edit_singleline(&mut ui_state.marker_dialog.name);
             });
 
             ui.add_space(4.0);
@@ -170,7 +170,7 @@ pub fn show_marker_dialog(
             // Gruppe: TextEdit + Dropdown mit bestehenden Gruppen
             ui.horizontal(|ui| {
                 ui.label("Gruppe:");
-                ui.text_edit_singleline(&mut ui_state.marker_dialog_group);
+                ui.text_edit_singleline(&mut ui_state.marker_dialog.group);
             });
 
             if !existing_groups.is_empty() {
@@ -179,9 +179,9 @@ pub fn show_marker_dialog(
                     ui.spacing_mut().item_spacing.x = 4.0;
                     ui.label("Bestehend:");
                     for group in &existing_groups {
-                        let selected = ui_state.marker_dialog_group == *group;
+                        let selected = ui_state.marker_dialog.group == *group;
                         if ui.selectable_label(selected, group).clicked() {
-                            ui_state.marker_dialog_group = group.clone();
+                            ui_state.marker_dialog.group = group.clone();
                         }
                     }
                 });
@@ -190,8 +190,8 @@ pub fn show_marker_dialog(
             ui.add_space(10.0);
 
             ui.horizontal(|ui| {
-                let name_valid = !ui_state.marker_dialog_name.trim().is_empty();
-                let group_valid = !ui_state.marker_dialog_group.trim().is_empty();
+                let name_valid = !ui_state.marker_dialog.name.trim().is_empty();
+                let group_valid = !ui_state.marker_dialog.group.trim().is_empty();
 
                 ui.add_enabled_ui(name_valid && group_valid, |ui| {
                     if ui.button("OK").clicked() {
@@ -208,9 +208,9 @@ pub fn show_marker_dialog(
     if confirmed {
         events.push(AppIntent::MarkerDialogConfirmed {
             node_id,
-            name: ui_state.marker_dialog_name.trim().to_string(),
-            group: ui_state.marker_dialog_group.trim().to_string(),
-            is_new: ui_state.marker_dialog_is_new,
+            name: ui_state.marker_dialog.name.trim().to_string(),
+            group: ui_state.marker_dialog.group.trim().to_string(),
+            is_new: ui_state.marker_dialog.is_new,
         });
     } else if cancelled {
         events.push(AppIntent::MarkerDialogCancelled);
@@ -227,7 +227,7 @@ pub fn show_marker_dialog(
 pub fn show_dedup_dialog(ctx: &egui::Context, ui_state: &UiState) -> Vec<AppIntent> {
     let mut events = Vec::new();
 
-    if !ui_state.show_dedup_dialog {
+    if !ui_state.dedup_dialog.visible {
         return events;
     }
 
@@ -246,7 +246,7 @@ pub fn show_dedup_dialog(ctx: &egui::Context, ui_state: &UiState) -> Vec<AppInte
                 ui.add_space(6.0);
                 ui.label(format!(
                     "Gefunden: {} duplizierte Nodes in {} Positions-Gruppen",
-                    ui_state.dedup_duplicate_count, ui_state.dedup_group_count
+                    ui_state.dedup_dialog.duplicate_count, ui_state.dedup_dialog.group_count
                 ));
                 ui.add_space(4.0);
                 ui.label("Die Bereinigung entfernt Duplikate und leitet deren Verbindungen um.");

@@ -34,11 +34,11 @@ pub fn load_selected_file(state: &mut AppState, path: String) -> anyhow::Result<
             dup_count,
             dup_groups
         );
-        state.ui.show_dedup_dialog = true;
-        state.ui.dedup_duplicate_count = dup_count;
-        state.ui.dedup_group_count = dup_groups;
+        state.ui.dedup_dialog.visible = true;
+        state.ui.dedup_dialog.duplicate_count = dup_count;
+        state.ui.dedup_dialog.group_count = dup_groups;
     } else {
-        state.ui.show_dedup_dialog = false;
+        state.ui.dedup_dialog.visible = false;
         state.ui.status_message = None;
     }
 
@@ -75,7 +75,7 @@ pub fn deduplicate_loaded_roadmap(state: &mut AppState) {
     );
 
     state.road_map = Some(Arc::new(road_map));
-    state.ui.show_dedup_dialog = false;
+    state.ui.dedup_dialog.visible = false;
 }
 
 /// Öffnet den Save-Datei-Dialog über UI-State.
