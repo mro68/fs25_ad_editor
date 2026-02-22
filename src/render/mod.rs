@@ -4,8 +4,6 @@ mod background_renderer;
 mod callback;
 mod connection_renderer;
 mod marker_renderer;
-///
-/// Dieser Renderer verwaltet seinen eigenen Zustand und bietet eine saubere API.
 mod node_renderer;
 mod texture;
 mod types;
@@ -21,7 +19,10 @@ pub use types::RenderOptions;
 
 use eframe::egui_wgpu;
 
-/// Haupt-Renderer für AutoDrive-Daten
+/// Haupt-Renderer für AutoDrive-Daten.
+///
+/// Dieser Renderer verwaltet seinen eigenen Zustand (GPU-Buffer, Pipeline)
+/// und bietet eine saubere API: `new()` + `render_scene()` + `set_background()`.
 pub struct Renderer {
     background_renderer: BackgroundRenderer,
     connection_renderer: ConnectionRenderer,
