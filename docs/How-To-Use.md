@@ -68,19 +68,13 @@ Beim Speichern wird geprüft, ob eine Heightmap geladen ist. Falls nicht, ersche
 
 Das Hauptfenster besteht aus folgenden Bereichen:
 
-```
-┌────────────────────────────────────────────────────────┐
-│ Menü-Leiste (File | Edit | View | Help)                │
-├────────────────────────────────────────────────────────┤
-│ Toolbar (Werkzeug | Delete | Background)               │
-├──────────────────────────────────────┬─────────────────┤
-│                                      │                 │
-│              Viewport                │  Eigenschaften  │
-│         (Karten-Darstellung)         │    (Panel)      │
-│                                      │                 │
-├──────────────────────────────────────┴─────────────────┤
-│ Statusleiste (Nodes | Connections | Zoom …)            │
-└────────────────────────────────────────────────────────┘
+```mermaid
+block-beta
+    columns 2
+    menu["Menü-Leiste (File | Edit | View | Help)"]:2
+    toolbar["Toolbar (Werkzeug | Delete | Background)"]:2
+    viewport["Viewport\n(Karten-Darstellung)"] props["Eigenschaften\n(Panel)"]
+    status["Statusleiste (Nodes | Connections | Zoom …)"]:2
 ```
 
 ### Menü-Leiste
