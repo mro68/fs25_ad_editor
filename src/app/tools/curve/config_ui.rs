@@ -5,9 +5,9 @@
 //! - Tangenten-ComboBoxen (nur Kubisch, wenn Start/Ende gesetzt)
 //! - Länge · Segment-Abstand · Node-Anzahl (Nachbearbeitungs- und Live-Modus)
 
-use super::geometry::{cubic_bezier, quadratic_bezier};
 use super::super::common::{angle_to_compass, TangentSource};
 use super::super::RouteTool;
+use super::geometry::{cubic_bezier, quadratic_bezier};
 use super::{CurveDegree, CurveTool, Phase};
 
 impl CurveTool {
@@ -174,8 +174,7 @@ impl CurveTool {
                 }
             };
 
-            let (seg_changed, recreate) =
-                self.seg.render_adjusting(ui, length, "Kurvenlänge");
+            let (seg_changed, recreate) = self.seg.render_adjusting(ui, length, "Kurvenlänge");
             if recreate {
                 self.recreate_needed = true;
             }

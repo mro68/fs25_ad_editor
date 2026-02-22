@@ -11,15 +11,12 @@ mod geometry;
 
 use self::geometry::{catmull_rom_chain_with_tangents, polyline_length, resample_by_distance};
 use super::{
-    common::{self,
-        populate_neighbors, SegmentConfig, TangentSource,
-    },
+    common::{self, populate_neighbors, SegmentConfig, TangentSource},
     snap_to_node, RouteTool, ToolAction, ToolAnchor, ToolPreview, ToolResult,
 };
 use crate::core::{ConnectedNeighbor, ConnectionDirection, ConnectionPriority, RoadMap};
 use crate::shared::SNAP_RADIUS;
 use glam::Vec2;
-
 
 // ── Spline-Tool ──────────────────────────────────────────────────
 
@@ -198,7 +195,12 @@ impl SplineTool {
         let last_anchor = anchors.last()?;
 
         Some(common::assemble_tool_result(
-            &positions, first_anchor, last_anchor, direction, priority, road_map,
+            &positions,
+            first_anchor,
+            last_anchor,
+            direction,
+            priority,
+            road_map,
         ))
     }
 }

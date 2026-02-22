@@ -1,7 +1,7 @@
 //! Gemeinsame Hilfsfunktionen für Route-Tools.
 
-use crate::core::{ConnectedNeighbor, ConnectionDirection, ConnectionPriority, NodeFlag, RoadMap};
 use super::{ToolAnchor, ToolResult};
+use crate::core::{ConnectedNeighbor, ConnectionDirection, ConnectionPriority, NodeFlag, RoadMap};
 use glam::Vec2;
 
 /// Welcher Wert wurde zuletzt vom User geändert?
@@ -50,7 +50,10 @@ pub(crate) fn segment_length_from_count(length: f32, node_count: usize) -> f32 {
 /// Liefert alle verbundenen Nachbarn eines Snap-Ankers aus der RoadMap.
 ///
 /// Gibt einen leeren Vec zurück wenn der Anker kein existierender Node ist.
-pub(crate) fn populate_neighbors(anchor: &ToolAnchor, road_map: &RoadMap) -> Vec<ConnectedNeighbor> {
+pub(crate) fn populate_neighbors(
+    anchor: &ToolAnchor,
+    road_map: &RoadMap,
+) -> Vec<ConnectedNeighbor> {
     match anchor {
         ToolAnchor::ExistingNode(id, _) => road_map.connected_neighbors(*id),
         ToolAnchor::NewPosition(_) => Vec::new(),

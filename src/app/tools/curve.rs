@@ -190,7 +190,6 @@ impl CurveTool {
             ));
         }
     }
-
 }
 
 impl Default for CurveTool {
@@ -248,7 +247,7 @@ impl RouteTool for CurveTool {
                     self.recreate_needed = false;
                     self.start = Some(last_end);
                     self.start_neighbors = populate_neighbors(&last_end, road_map);
-                    let end_anchor = snap_to_node(pos, road_map, SNAP_RADIUS);
+                    let end_anchor = snap_to_node(pos, road_map, self.snap_radius);
                     self.end_neighbors = populate_neighbors(&end_anchor, road_map);
                     self.end = Some(end_anchor);
                     self.tangent_start = TangentSource::None;
@@ -257,7 +256,7 @@ impl RouteTool for CurveTool {
                     self.apply_tangent_to_cp();
                     ToolAction::Continue
                 } else {
-                    let start_anchor = snap_to_node(pos, road_map, SNAP_RADIUS);
+                    let start_anchor = snap_to_node(pos, road_map, self.snap_radius);
                     self.start_neighbors = populate_neighbors(&start_anchor, road_map);
                     self.tangent_start = TangentSource::None;
                     self.start = Some(start_anchor);
@@ -266,7 +265,7 @@ impl RouteTool for CurveTool {
                 }
             }
             Phase::End => {
-                let end_anchor = snap_to_node(pos, road_map, SNAP_RADIUS);
+                let end_anchor = snap_to_node(pos, road_map, self.snap_radius);
                 self.end_neighbors = populate_neighbors(&end_anchor, road_map);
                 self.tangent_end = TangentSource::None;
                 self.end = Some(end_anchor);
@@ -307,7 +306,7 @@ impl RouteTool for CurveTool {
 
         match self.phase {
             Phase::End => {
-                let end_pos = snap_to_node(cursor_pos, road_map, SNAP_RADIUS).position();
+                let end_pos = snap_to_node(cursor_pos, road_map, self.snap_radius).position();
                 ToolPreview {
                     nodes: vec![start_pos, end_pos],
                     connections: vec![(0, 1)],
@@ -527,12 +526,12 @@ impl RouteTool for CurveTool {
         match self.dragging {
             Some(DragTarget::Start) => {
                 if let Some(anchor) = &self.start {
-                    self.start = Some(snap_to_node(anchor.position(), road_map, SNAP_RADIUS));
+                    self.start = Some(snap_to_node(anchor.position(), road_map, self.snap_radius));
                 }
             }
             Some(DragTarget::End) => {
                 if let Some(anchor) = &self.end {
-                    self.end = Some(snap_to_node(anchor.position(), road_map, SNAP_RADIUS));
+                    self.end = Some(snap_to_node(anchor.position(), road_map, self.snap_radius));
                 }
             }
             _ => {}

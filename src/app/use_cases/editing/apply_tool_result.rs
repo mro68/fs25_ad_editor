@@ -3,6 +3,7 @@
 use crate::app::tools::ToolResult;
 use crate::app::AppState;
 use crate::core::{Connection, MapNode, RoadMap};
+use std::collections::HashSet;
 use std::sync::Arc;
 
 /// Wendet ein `ToolResult` auf den AppState an.
@@ -64,7 +65,7 @@ fn create_nodes_and_connections(road_map: &mut RoadMap, result: &ToolResult) -> 
     }
 
     // Interne Verbindungen (zwischen neuen Nodes)
-    let mut affected_ids: Vec<u64> = new_ids.clone();
+    let mut affected_ids: HashSet<u64> = new_ids.iter().copied().collect();
     for &(from_idx, to_idx, direction, priority) in &result.internal_connections {
         let from_id = new_ids[from_idx];
         let to_id = new_ids[to_idx];
@@ -95,13 +96,12 @@ fn create_nodes_and_connections(road_map: &mut RoadMap, result: &ToolResult) -> 
             existing_pos,
         );
         road_map.add_connection(conn);
-        if !affected_ids.contains(&existing_id) {
-            affected_ids.push(existing_id);
-        }
+        affected_ids.insert(existing_id);
     }
 
     // Flags der betroffenen Nodes neu berechnen
-    road_map.recalculate_node_flags(&affected_ids);
+    let affected_vec: Vec<u64> = affected_ids.into_iter().collect();
+    road_map.recalculate_node_flags(&affected_vec);
 
     // Spatial-Index einmalig nach allen Mutationen aktualisieren
     road_map.ensure_spatial_index();

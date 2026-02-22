@@ -2,8 +2,8 @@
 //! und füllt automatisch Zwischen-Nodes ein.
 
 use super::{
-    common::{self, SegmentConfig}, snap_to_node,
-    RouteTool, ToolAction, ToolAnchor, ToolPreview, ToolResult,
+    common::{self, SegmentConfig},
+    snap_to_node, RouteTool, ToolAction, ToolAnchor, ToolPreview, ToolResult,
 };
 use crate::core::{ConnectionDirection, ConnectionPriority, RoadMap};
 use crate::shared::SNAP_RADIUS;
@@ -162,8 +162,7 @@ impl RouteTool for StraightLineTool {
                 return false;
             };
             let distance = start_anchor.position().distance(end_anchor.position());
-            let (changed, recreate) =
-                self.seg.render_adjusting(ui, distance, "Streckenlänge");
+            let (changed, recreate) = self.seg.render_adjusting(ui, distance, "Streckenlänge");
             if recreate {
                 self.recreate_needed = true;
             }

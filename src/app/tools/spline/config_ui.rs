@@ -5,8 +5,7 @@
 //! - Länge · Segment-Abstand · Node-Anzahl (Nachbearbeitungs- und Live-Modus)
 
 use super::super::common::{
-    angle_to_compass, node_count_from_length, segment_length_from_count, LastEdited,
-    TangentSource,
+    angle_to_compass, node_count_from_length, segment_length_from_count, LastEdited, TangentSource,
 };
 use super::super::RouteTool;
 use super::SplineTool;
@@ -78,11 +77,7 @@ impl SplineTool {
                 egui::ComboBox::from_id_salt("spline_tangent_end")
                     .selected_text(selected_text)
                     .show_ui(ui, |ui| {
-                        ui.selectable_value(
-                            &mut self.tangent_end,
-                            TangentSource::None,
-                            "Standard",
-                        );
+                        ui.selectable_value(&mut self.tangent_end, TangentSource::None, "Standard");
                         for neighbor in &self.end_neighbors {
                             let label = format!(
                                 "→ Node #{} ({})",
@@ -124,7 +119,9 @@ impl SplineTool {
             ui.label("Min. Abstand:");
             let max_seg = length.max(1.0);
             if ui
-                .add(egui::Slider::new(&mut self.seg.max_segment_length, 1.0..=max_seg).suffix(" m"))
+                .add(
+                    egui::Slider::new(&mut self.seg.max_segment_length, 1.0..=max_seg).suffix(" m"),
+                )
                 .changed()
             {
                 self.seg.last_edited = LastEdited::Distance;
@@ -142,7 +139,8 @@ impl SplineTool {
                 .changed()
             {
                 self.seg.last_edited = LastEdited::NodeCount;
-                self.seg.max_segment_length = segment_length_from_count(length, self.seg.node_count);
+                self.seg.max_segment_length =
+                    segment_length_from_count(length, self.seg.node_count);
                 self.recreate_needed = true;
                 changed = true;
             }
@@ -155,7 +153,9 @@ impl SplineTool {
             ui.label("Min. Abstand:");
             let max_seg = length.max(1.0);
             if ui
-                .add(egui::Slider::new(&mut self.seg.max_segment_length, 1.0..=max_seg).suffix(" m"))
+                .add(
+                    egui::Slider::new(&mut self.seg.max_segment_length, 1.0..=max_seg).suffix(" m"),
+                )
                 .changed()
             {
                 self.seg.last_edited = LastEdited::Distance;
