@@ -1,7 +1,7 @@
 //! Lifecycle-Zustand und Segment-Konfiguration für Route-Tools.
 
-use super::geometry::{node_count_from_length, segment_length_from_count};
 use super::super::ToolAnchor;
+use super::geometry::{node_count_from_length, segment_length_from_count};
 
 /// Welcher Wert wurde zuletzt vom User geändert?
 ///

@@ -52,8 +52,8 @@ impl EditHistory {
         }
     }
 
-    /// Record a pre-built snapshot. Accepting a Snapshot avoids simultaneous
-    /// mutable/immutable borrows on the full `AppState`.
+    /// Speichert einen vorab erstellten Snapshot. Das Entgegennehmen eines Snapshots
+    /// vermeidet gleichzeitige mut/immut-Borrows auf dem gesamten `AppState`.
     pub fn record_snapshot(&mut self, snap: Snapshot) {
         if self.undo_stack.len() >= self.max_depth {
             self.undo_stack.remove(0);
@@ -72,8 +72,8 @@ impl EditHistory {
         !self.redo_stack.is_empty()
     }
 
-    /// Pop an undo entry and return the Snapshot to apply (caller applies it).
-    /// Pop undo stack and push `current` onto redo stack; returns the snapshot to apply.
+    /// Nimmt den obersten Undo-Eintrag und gibt den wiederherzustellenden Snapshot zurück.
+    /// Schiebt `current` auf den Redo-Stack.
     pub fn pop_undo_with_current(&mut self, current: Snapshot) -> Option<Snapshot> {
         if let Some(prev) = self.undo_stack.pop() {
             if self.redo_stack.len() >= self.max_depth {
@@ -86,7 +86,8 @@ impl EditHistory {
         }
     }
 
-    /// Pop redo stack and push `current` onto undo stack; returns the snapshot to apply.
+    /// Nimmt den obersten Redo-Eintrag und gibt den wiederherzustellenden Snapshot zurück.
+    /// Schiebt `current` auf den Undo-Stack.
     pub fn pop_redo_with_current(&mut self, current: Snapshot) -> Option<Snapshot> {
         if let Some(next) = self.redo_stack.pop() {
             if self.undo_stack.len() >= self.max_depth {

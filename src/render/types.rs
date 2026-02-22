@@ -210,27 +210,6 @@ pub struct Uniforms {
     pub aa_params: [f32; 4],
 }
 
-/// Rendering-Optionen
-#[derive(Debug, Clone)]
-pub struct RenderOptions {
-    /// Node-Größe in Welteinheiten
-    pub node_size: f32,
-    /// Ob Sub-Prioritäts-Nodes farblich hervorgehoben werden
-    pub highlight_subprio: bool,
-    /// Ob Warning-Nodes farblich hervorgehoben werden
-    pub highlight_warnings: bool,
-}
-
-impl Default for RenderOptions {
-    fn default() -> Self {
-        Self {
-            node_size: 5.0,
-            highlight_subprio: true,
-            highlight_warnings: true,
-        }
-    }
-}
-
 /// Berechnet die sichtbare Welt-AABB (mit Padding) für Viewport-Culling.
 ///
 /// Gibt `(min, max)` in Weltkoordinaten zurück. Das Padding entspricht 8 Pixeln

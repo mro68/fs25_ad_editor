@@ -15,7 +15,6 @@ pub(crate) use connection_renderer::ConnectionRenderer;
 pub(crate) use marker_renderer::MarkerRenderer;
 pub(crate) use node_renderer::NodeRenderer;
 use types::RenderContext;
-pub use types::RenderOptions;
 
 use eframe::egui_wgpu;
 
