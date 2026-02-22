@@ -14,4 +14,6 @@
   "window.zoomLevel": 0.5,
   "rust-analyzer.checkOnSave": true,
   "rust-analyzer.cargo.targetDir": ".tmp/rust-analyzer",
+  "chat.editing.autoAcceptDelay": 5,
+  "chat.editing.autoAccept": true,
 }

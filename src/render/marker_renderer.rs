@@ -1,7 +1,6 @@
 //! Marker-Renderer mit GPU-Instancing für Map-Marker (Pin-Symbole).
 
-use super::types::{MarkerInstance, RenderQuality, Uniforms, Vertex};
-use crate::shared::EditorOptions;
+use super::types::{MarkerInstance, RenderContext, RenderQuality, Uniforms, Vertex};
 use crate::RoadMap;
 use eframe::{egui_wgpu, wgpu};
 use wgpu::util::DeviceExt;
@@ -138,27 +137,22 @@ impl MarkerRenderer {
         }
     }
 
-    #[allow(clippy::too_many_arguments)]
     /// Rendert alle sichtbaren Map-Marker per GPU-Instancing.
     ///
     /// Marker-Positionen werden über die referenzierte Node-ID aufgelöst.
     pub fn render(
         &mut self,
-        device: &wgpu::Device,
-        queue: &wgpu::Queue,
+        ctx: &RenderContext,
         render_pass: &mut wgpu::RenderPass<'static>,
         road_map: &RoadMap,
-        camera: &crate::Camera2D,
-        viewport_size: [f32; 2],
         render_quality: RenderQuality,
-        options: &EditorOptions,
     ) {
         if road_map.map_markers.is_empty() {
             return;
         }
 
         // Uniforms erstellen (View-Projection-Matrix + AA aus View-Einstellungen)
-        let view_proj = super::types::build_view_projection(camera, viewport_size);
+        let view_proj = super::types::build_view_projection(ctx.camera, ctx.viewport_size);
         let aa_params = match render_quality {
             RenderQuality::Low => [0.0, 1.0, 0.0, 0.0],
             RenderQuality::Medium => [1.0, 0.0, 0.0, 0.0],
@@ -170,7 +164,7 @@ impl MarkerRenderer {
         };
 
         // Uniforms hochladen
-        queue.write_buffer(&self.uniform_buffer, 0, bytemuck::cast_slice(&[uniforms]));
+        ctx.queue.write_buffer(&self.uniform_buffer, 0, bytemuck::cast_slice(&[uniforms]));
 
         // Instanz-Daten vorbereiten
         let instances: Vec<MarkerInstance> = road_map
@@ -181,9 +175,9 @@ impl MarkerRenderer {
                 let node = road_map.nodes.get(&marker.id)?;
                 Some(MarkerInstance::new(
                     [node.position.x, node.position.y],
-                    options.marker_color,
-                    options.marker_outline_color,
-                    options.marker_size_world,
+                    ctx.options.marker_color,
+                    ctx.options.marker_outline_color,
+                    ctx.options.marker_size_world,
                 ))
             })
             .collect();
@@ -196,7 +190,7 @@ impl MarkerRenderer {
         let needed_capacity = instances.len();
         if self.instance_buffer.is_none() || self.instance_capacity < needed_capacity {
             let new_capacity = needed_capacity.max(64).next_power_of_two();
-            self.instance_buffer = Some(device.create_buffer(&wgpu::BufferDescriptor {
+            self.instance_buffer = Some(ctx.device.create_buffer(&wgpu::BufferDescriptor {
                 label: Some("Marker Instance Buffer"),
                 size: (new_capacity * std::mem::size_of::<MarkerInstance>()) as u64,
                 usage: wgpu::BufferUsages::VERTEX | wgpu::BufferUsages::COPY_DST,
@@ -207,7 +201,7 @@ impl MarkerRenderer {
 
         // Daten hochladen
         if let Some(buffer) = &self.instance_buffer {
-            queue.write_buffer(buffer, 0, bytemuck::cast_slice(&instances));
+            ctx.queue.write_buffer(buffer, 0, bytemuck::cast_slice(&instances));
         }
 
         // Rendern
