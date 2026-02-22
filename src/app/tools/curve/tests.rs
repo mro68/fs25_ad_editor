@@ -1,8 +1,88 @@
+use super::super::common::{angle_to_compass, TangentSource};
 use super::super::{RouteTool, ToolAction, ToolAnchor};
-use super::geometry::{compute_curve_positions, cubic_bezier, quadratic_bezier};
+use super::geometry::{compute_curve_positions, compute_tangent_cp, cubic_bezier, quadratic_bezier};
 use super::state::{CurveDegree, CurveTool, Phase};
 use crate::core::RoadMap;
 use glam::Vec2;
+
+// ── angle_to_compass ──
+
+#[test]
+fn test_angle_to_compass_cardinal() {
+    // Ost (0°)
+    assert_eq!(angle_to_compass(0.0_f32.to_radians()), "O");
+    // Süd (90° in FS25-Koordinatensystem)
+    assert_eq!(angle_to_compass(90.0_f32.to_radians()), "S");
+    // West (180°)
+    assert_eq!(angle_to_compass(180.0_f32.to_radians()), "W");
+    // Nord (270°)
+    assert_eq!(angle_to_compass(270.0_f32.to_radians()), "N");
+}
+
+#[test]
+fn test_angle_to_compass_negative_wraps() {
+    // -90° = 270° → Nord
+    assert_eq!(angle_to_compass(-90.0_f32.to_radians()), "N");
+}
+
+// ── compute_tangent_cp ──
+
+#[test]
+fn test_compute_tangent_cp_start() {
+    // Tangente zeigt nach Osten (0°), CP1 soll nach Westen (weg vom Nachbar)
+    let anchor = Vec2::new(0.0, 0.0);
+    let other = Vec2::new(10.0, 0.0);
+    let cp = compute_tangent_cp(anchor, 0.0, other, true);
+    // chord_length = 10, cp_distance = 10/3 ≈ 3.33
+    // Richtung = angle + PI = 180° → (-1, 0)
+    assert!(cp.x < 0.0, "CP1 sollte links vom Startpunkt liegen, war: {:?}", cp);
+    assert!((cp.y).abs() < 0.01, "CP1 sollte auf der x-Achse liegen");
+    assert!((cp.x + 10.0 / 3.0).abs() < 0.01);
+}
+
+#[test]
+fn test_compute_tangent_cp_end() {
+    // Tangente zeigt nach Osten (0°), CP2 soll nach Osten (Richtung Nachbar)
+    let anchor = Vec2::new(10.0, 0.0);
+    let other = Vec2::new(0.0, 0.0);
+    let cp = compute_tangent_cp(anchor, 0.0, other, false);
+    // Richtung = angle direkt = 0° → (+1, 0)
+    assert!(cp.x > 10.0, "CP2 sollte rechts vom Endpunkt liegen, war: {:?}", cp);
+    assert!((cp.y).abs() < 0.01, "CP2 sollte auf der x-Achse liegen");
+}
+
+// ── apply_tangent_to_cp ──
+
+#[test]
+fn test_apply_tangent_to_cp_cubic() {
+    let mut tool = CurveTool::new();
+    tool.degree = CurveDegree::Cubic;
+    let road_map = RoadMap::new(3);
+    tool.on_click(Vec2::ZERO, &road_map, false);
+    tool.on_click(Vec2::new(12.0, 0.0), &road_map, false);
+
+    // Tangente nach Osten (0°) am Startpunkt
+    tool.tangents.tangent_start = TangentSource::Connection {
+        neighbor_id: 99,
+        angle: 0.0,
+    };
+    // Tangente nach Westen (PI) am Endpunkt
+    tool.tangents.tangent_end = TangentSource::Connection {
+        neighbor_id: 98,
+        angle: std::f32::consts::PI,
+    };
+
+    tool.apply_tangent_to_cp();
+
+    // CP1 soll in negativer x-Richtung vom Start-Anker
+    let cp1 = tool.control_point1.expect("CP1 sollte gesetzt sein");
+    assert!(cp1.x < 0.0, "CP1 sollte links liegen, war: {:?}", cp1);
+
+    // CP2 soll in positiver x-Richtung vom End-Anker (Winkel=PI → Richtung (-1,0), also links)
+    let cp2 = tool.control_point2.expect("CP2 sollte gesetzt sein");
+    // tangent_end angle=PI → direction = Vec2::from_angle(PI) = (-1, 0) → cp2.x = 12 - 4 = 8
+    assert!(cp2.x < 12.0, "CP2 sollte links vom Endpunkt liegen, war: {:?}", cp2);
+}
 
 // ── Quadratische Bézier ──
 

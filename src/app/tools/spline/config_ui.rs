@@ -4,9 +4,7 @@
 //! - Tangenten-ComboBoxen am Start/Ende (nur Nachbearbeitungs-Modus)
 //! - Länge · Segment-Abstand · Node-Anzahl (Nachbearbeitungs- und Live-Modus)
 
-use super::super::common::{
-    node_count_from_length, render_tangent_combo, segment_length_from_count, LastEdited,
-};
+use super::super::common::render_tangent_combo;
 use super::super::RouteTool;
 use super::SplineTool;
 
@@ -68,77 +66,17 @@ impl SplineTool {
                 self.tangents.tangent_end,
             );
 
-            ui.label(format!("Spline-Länge: {:.1} m", length));
-            ui.add_space(4.0);
-
-            ui.label("Min. Abstand:");
-            let max_seg = length.max(1.0);
-            if ui
-                .add(
-                    egui::Slider::new(&mut self.seg.max_segment_length, 1.0..=max_seg).suffix(" m"),
-                )
-                .changed()
-            {
-                self.seg.last_edited = LastEdited::Distance;
-                self.seg.node_count = node_count_from_length(length, self.seg.max_segment_length);
+            let (seg_changed, recreate) = self.seg.render_adjusting(ui, length, "Spline-Länge");
+            if recreate {
                 self.lifecycle.recreate_needed = true;
-                changed = true;
             }
-
-            ui.add_space(4.0);
-
-            ui.label("Anzahl Nodes:");
-            let max_nodes = (length / 1.0).ceil().max(2.0) as usize;
-            if ui
-                .add(egui::Slider::new(&mut self.seg.node_count, 2..=max_nodes))
-                .changed()
-            {
-                self.seg.last_edited = LastEdited::NodeCount;
-                self.seg.max_segment_length =
-                    segment_length_from_count(length, self.seg.node_count);
-                self.lifecycle.recreate_needed = true;
-                changed = true;
-            }
+            changed |= seg_changed;
         } else if self.is_ready() {
             let length = self.spline_length();
-            ui.label(format!("Spline-Länge: {:.1} m", length));
             ui.label(format!("Kontrollpunkte: {}", self.anchors.len()));
-            ui.add_space(4.0);
-
-            ui.label("Min. Abstand:");
-            let max_seg = length.max(1.0);
-            if ui
-                .add(
-                    egui::Slider::new(&mut self.seg.max_segment_length, 1.0..=max_seg).suffix(" m"),
-                )
-                .changed()
-            {
-                self.seg.last_edited = LastEdited::Distance;
-                self.sync_derived();
-                changed = true;
-            }
-
-            ui.add_space(4.0);
-
-            ui.label("Anzahl Nodes:");
-            let max_nodes = (length / 1.0).ceil().max(2.0) as usize;
-            if ui
-                .add(egui::Slider::new(&mut self.seg.node_count, 2..=max_nodes))
-                .changed()
-            {
-                self.seg.last_edited = LastEdited::NodeCount;
-                self.sync_derived();
-                changed = true;
-            }
+            changed |= self.seg.render_live(ui, length, "Spline-Länge");
         } else {
-            ui.label("Max. Segment-Länge:");
-            if ui
-                .add(egui::Slider::new(&mut self.seg.max_segment_length, 1.0..=50.0).suffix(" m"))
-                .changed()
-            {
-                self.seg.last_edited = LastEdited::Distance;
-                changed = true;
-            }
+            changed |= self.seg.render_default(ui);
         }
 
         changed

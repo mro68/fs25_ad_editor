@@ -11,9 +11,7 @@ mod geometry;
 
 use self::geometry::{catmull_rom_chain_with_tangents, polyline_length, resample_by_distance};
 use super::{
-    common::{
-        self, populate_neighbors, SegmentConfig, TangentSource, TangentState, ToolLifecycleState,
-    },
+    common::{self, populate_neighbors, SegmentConfig, TangentSource, TangentState, ToolLifecycleState},
     snap_to_node, RouteTool, ToolAction, ToolAnchor, ToolPreview, ToolResult,
 };
 use crate::core::{ConnectionDirection, ConnectionPriority, RoadMap};
@@ -59,8 +57,14 @@ impl SplineTool {
 
     /// Berechnet einen Phantom-Punkt aus einer Tangente.
     ///
-    /// Der Phantom-Punkt liegt in der Verlängerung der Tangente,
-    /// im Abstand des ersten/letzten Segments (wie bei der Spiegelung).
+    /// Der Phantom-Punkt liegt in der Gegenrichtung der Verbindung zum Nachbar,
+    /// im gleichen Abstand wie `anchor_pos` → `neighbor_pos`.
+    /// Wird als virtueller p0/p3-Punkt in Catmull-Rom übergeben, um die Kurve
+    /// am Rand tangential an einer bestehenden Verbindung auszurichten.
+    ///
+    /// - `anchor_pos`: Start- oder Endpunkt des Splines
+    /// - `tangent_angle`: Winkel der Verbindung vom Anchor-Node zum Nachbar-Node (Radiant)
+    /// - `neighbor_pos`: Weltposition des nächsten Spline-Kontrollpunkts (für Abstandsschätzung)
     fn phantom_from_tangent(anchor_pos: Vec2, tangent_angle: f32, neighbor_pos: Vec2) -> Vec2 {
         // Phantom-Punkt in Richtung weg vom Nachbar, im gleichen Abstand
         let dist = anchor_pos.distance(neighbor_pos).max(1.0);
@@ -69,7 +73,11 @@ impl SplineTool {
         anchor_pos + dir * dist
     }
 
-    /// Berechnet die Phantom-Punkte für Start und Ende basierend auf Tangenten.
+    /// Berechnet optionale Phantom-Punkte für Start und Ende des Splines.
+    ///
+    /// Wenn eine Tangente gesetzt ist, wird ein Phantom-Punkt in Gegenrichtung der
+    /// Verbindung berechnet und als Override für den Catmull-Rom-Randpunkt übergeben.
+    /// Gibt `(start_phantom, end_phantom)` zurück — `None` bedeutet Standard-Spiegelung.
     fn compute_phantoms(
         points: &[Vec2],
         tangent_start: TangentSource,
@@ -150,7 +158,13 @@ impl SplineTool {
         polyline_length(&dense)
     }
 
-    /// Baut ToolResult aus gegebenen Ankern.
+    /// Baut ein `ToolResult` aus gegebenen Ankern.
+    ///
+    /// Zentrale Logik für `execute()` und `execute_from_anchors()`. Berechnet
+    /// den dichten Catmull-Rom-Spline, resampelt ihn auf `max_segment_length`
+    /// und delegiert die Node-/Verbindungs-Erstellung an `assemble_tool_result`.
+    ///
+    /// - `tangent_start`/`tangent_end`: optionale Tangenten für Start/Ende-Ausrichtung
     fn build_result_from_anchors(
         anchors: &[ToolAnchor],
         max_segment_length: f32,
@@ -240,8 +254,7 @@ impl RouteTool for SplineTool {
         }
 
         // Cursor als nächster Punkt (gesnappt)
-        let snapped_cursor =
-            snap_to_node(cursor_pos, road_map, self.lifecycle.snap_radius).position();
+        let snapped_cursor = snap_to_node(cursor_pos, road_map, self.lifecycle.snap_radius).position();
 
         let positions = if self.anchors.len() == 1 {
             // Nur Start + Cursor → gerade Linie (Preview)

@@ -1,6 +1,69 @@
 use super::geometry::*;
 use super::*;
 
+// ── phantom_from_tangent ──
+
+#[test]
+fn test_phantom_from_tangent_east() {
+    // Tangente zeigt nach Osten (0°), Phantom soll nach Westen (weg vom Nachbar)
+    let anchor = Vec2::new(0.0, 0.0);
+    let neighbor = Vec2::new(5.0, 0.0);
+    let phantom = SplineTool::phantom_from_tangent(anchor, 0.0, neighbor);
+    // dist = 5, dir = angle + PI = 180° → (-1, 0) → phantom = (-5, 0)
+    assert!(phantom.x < 0.0, "Phantom sollte westlich liegen, war: {:?}", phantom);
+    assert!((phantom.y).abs() < 0.01);
+    assert!((phantom.x + 5.0).abs() < 0.01);
+}
+
+#[test]
+fn test_phantom_from_tangent_min_distance() {
+    // Gleicher Punkt → min-Abstand von 1.0 wird erzwungen
+    let anchor = Vec2::new(3.0, 3.0);
+    let neighbor = Vec2::new(3.0, 3.0); // Abstand 0
+    let phantom = SplineTool::phantom_from_tangent(anchor, 0.0, neighbor);
+    // dist = max(0, 1.0) = 1.0
+    assert!((phantom.distance(anchor) - 1.0).abs() < 0.01);
+}
+
+// ── compute_phantoms ──
+
+#[test]
+fn test_compute_phantoms_none_when_no_tangent() {
+    let pts = vec![Vec2::ZERO, Vec2::new(5.0, 0.0), Vec2::new(10.0, 0.0)];
+    let (start, end) =
+        SplineTool::compute_phantoms(&pts, TangentSource::None, TangentSource::None);
+    assert!(start.is_none());
+    assert!(end.is_none());
+}
+
+#[test]
+fn test_compute_phantoms_start_only() {
+    let pts = vec![Vec2::ZERO, Vec2::new(5.0, 0.0), Vec2::new(10.0, 0.0)];
+    let tangent = TangentSource::Connection {
+        neighbor_id: 1,
+        angle: 0.0,
+    };
+    let (start, end) = SplineTool::compute_phantoms(&pts, tangent, TangentSource::None);
+    assert!(start.is_some());
+    assert!(end.is_none());
+    // Phantom liegt westlich vom Startpunkt
+    assert!(start.unwrap().x < 0.0);
+}
+
+#[test]
+fn test_compute_phantoms_end_only() {
+    let pts = vec![Vec2::ZERO, Vec2::new(5.0, 0.0), Vec2::new(10.0, 0.0)];
+    let tangent = TangentSource::Connection {
+        neighbor_id: 2,
+        angle: std::f32::consts::PI, // zeigt nach Westen
+    };
+    let (start, end) = SplineTool::compute_phantoms(&pts, TangentSource::None, tangent);
+    assert!(start.is_none());
+    assert!(end.is_some());
+    // angle=PI → dir = Vec2::from_angle(0) = (+1, 0) → Phantom östlich vom Ende
+    assert!(end.unwrap().x > 10.0);
+}
+
 // ── Catmull-Rom-Geometrie ──
 
 #[test]

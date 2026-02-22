@@ -59,7 +59,10 @@ impl Default for StraightLineTool {
     }
 }
 
-/// Berechnet die Zwischen-Positionen einer geraden Strecke.
+/// Berechnet die gleichmäßig verteilten Zwischen-Positionen einer geraden Strecke.
+///
+/// Gibt `segment_count + 1` Punkte zurück (inkl. Start und Ende).
+/// Bei `distance < EPSILON` wird nur `[start]` zurückgegeben.
 fn compute_line_positions(start: Vec2, end: Vec2, max_segment_length: f32) -> Vec<Vec2> {
     let distance = start.distance(end);
     if distance < f32::EPSILON {
