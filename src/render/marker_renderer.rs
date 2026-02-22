@@ -164,7 +164,8 @@ impl MarkerRenderer {
         };
 
         // Uniforms hochladen
-        ctx.queue.write_buffer(&self.uniform_buffer, 0, bytemuck::cast_slice(&[uniforms]));
+        ctx.queue
+            .write_buffer(&self.uniform_buffer, 0, bytemuck::cast_slice(&[uniforms]));
 
         // Instanz-Daten vorbereiten
         let instances: Vec<MarkerInstance> = road_map
@@ -201,7 +202,8 @@ impl MarkerRenderer {
 
         // Daten hochladen
         if let Some(buffer) = &self.instance_buffer {
-            ctx.queue.write_buffer(buffer, 0, bytemuck::cast_slice(&instances));
+            ctx.queue
+                .write_buffer(buffer, 0, bytemuck::cast_slice(&instances));
         }
 
         // Rendern

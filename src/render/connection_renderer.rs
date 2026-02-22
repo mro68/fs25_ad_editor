@@ -256,7 +256,8 @@ impl ConnectionRenderer {
         }
 
         if let Some(vertex_buffer) = &self.vertex_buffer {
-            ctx.queue.write_buffer(vertex_buffer, 0, bytemuck::cast_slice(&vertices));
+            ctx.queue
+                .write_buffer(vertex_buffer, 0, bytemuck::cast_slice(&vertices));
         }
 
         let Some(vertex_buffer) = self.vertex_buffer.as_ref() else {

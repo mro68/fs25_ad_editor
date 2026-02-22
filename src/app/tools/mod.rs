@@ -4,8 +4,11 @@
 //! `ToolManager` registriert. Tools erzeugen reine Daten (`ToolResult`),
 //! die Mutation erfolgt zentral in `apply_tool_result`.
 
+/// Bézier-Kurven-Tool (Grad 2 + 3) mit sequentieller Punkt-Platzierung.
 pub mod curve;
+/// Catmull-Rom-Spline-Tool — interpolierende Kurve durch alle geklickten Punkte.
 pub mod spline;
+/// Gerade-Linie-Tool mit konfigurierbarem Node-Abstand.
 pub mod straight_line;
 
 use crate::core::{ConnectionDirection, ConnectionPriority, NodeFlag, RoadMap};

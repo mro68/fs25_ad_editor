@@ -76,6 +76,8 @@ Zentral gesammelte Konfigurationswerte, gegliedert nach Bereich:
 | Marker | `MARKER_SIZE_WORLD` | 2.0 | Pin-Höhe in Welt-Einheiten |
 | Marker | `MARKER_COLOR` | `[0.9, 0.1, 0.1, 1.0]` | Rot |
 | Marker | `MARKER_OUTLINE_COLOR` | `[0.6, 0.0, 0.0, 1.0]` | Dunkles Rot |
+| Tools | `SNAP_RADIUS` | 3.0 | Snap-Radius für Route-Tools (Welteinheiten) |
+| Terrain | `TERRAIN_HEIGHT_SCALE` | 255.0 | Höhenskala für Heightmap-Export |
 
 ## Design-Prinzipien
 
@@ -115,6 +117,10 @@ pub struct EditorOptions {
     // Kamera
     pub camera_zoom_step: f32,
     pub camera_scroll_zoom_step: f32,
+    // Tools
+    pub snap_radius: f32,
+    // Terrain
+    pub terrain_height_scale: f32,
 }
 ```
 

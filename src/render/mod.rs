@@ -16,8 +16,8 @@ pub use callback::{WgpuRenderCallback, WgpuRenderData};
 pub(crate) use connection_renderer::ConnectionRenderer;
 pub(crate) use marker_renderer::MarkerRenderer;
 pub(crate) use node_renderer::NodeRenderer;
-pub use types::RenderOptions;
 use types::RenderContext;
+pub use types::RenderOptions;
 
 use eframe::egui_wgpu;
 
@@ -93,20 +93,12 @@ impl Renderer {
         if let Some(road_map) = scene.road_map.as_deref() {
             if !road_map.map_markers.is_empty() {
                 log::debug!("Rendering {} markers", road_map.map_markers.len());
-                self.marker_renderer.render(
-                    &ctx,
-                    render_pass,
-                    road_map,
-                    scene.render_quality,
-                );
+                self.marker_renderer
+                    .render(&ctx, render_pass, road_map, scene.render_quality);
             }
 
             // 3. Render Connections (darüber)
-            self.connection_renderer.render(
-                &ctx,
-                render_pass,
-                road_map,
-            );
+            self.connection_renderer.render(&ctx, render_pass, road_map);
 
             // 4. Render Nodes (zuoberst)
             log::debug!(

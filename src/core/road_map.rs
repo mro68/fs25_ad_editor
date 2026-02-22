@@ -5,7 +5,6 @@ use super::{
 };
 use super::{SpatialIndex, SpatialMatch};
 use glam::Vec2;
-/// Container für das gesamte AutoDrive-Straßennetzwerk
 use std::collections::HashMap;
 
 /// Ein Nachbar-Node, der über eine Verbindung erreichbar ist.
@@ -342,19 +341,28 @@ impl RoadMap {
 
     /// Findet den nächstgelegenen Node zur Weltposition.
     pub fn nearest_node(&self, query: Vec2) -> Option<SpatialMatch> {
-        debug_assert!(!self.spatial_dirty, "Spatial-Index ist veraltet — ensure_spatial_index() fehlt");
+        debug_assert!(
+            !self.spatial_dirty,
+            "Spatial-Index ist veraltet — ensure_spatial_index() fehlt"
+        );
         self.spatial_index.nearest(query)
     }
 
     /// Findet alle Nodes innerhalb eines Radius.
     pub fn nodes_within_radius(&self, query: Vec2, radius: f32) -> Vec<SpatialMatch> {
-        debug_assert!(!self.spatial_dirty, "Spatial-Index ist veraltet — ensure_spatial_index() fehlt");
+        debug_assert!(
+            !self.spatial_dirty,
+            "Spatial-Index ist veraltet — ensure_spatial_index() fehlt"
+        );
         self.spatial_index.within_radius(query, radius)
     }
 
     /// Findet alle Nodes innerhalb eines Rechtecks.
     pub fn nodes_within_rect(&self, min: Vec2, max: Vec2) -> Vec<u64> {
-        debug_assert!(!self.spatial_dirty, "Spatial-Index ist veraltet — ensure_spatial_index() fehlt");
+        debug_assert!(
+            !self.spatial_dirty,
+            "Spatial-Index ist veraltet — ensure_spatial_index() fehlt"
+        );
         self.spatial_index.within_rect(min, max)
     }
 }
