@@ -6,17 +6,17 @@ use std::sync::Arc;
 
 /// Öffnet den Marker-Dialog für einen Node (neu oder bearbeiten)
 pub fn open_marker_dialog(state: &mut AppState, node_id: u64, is_new: bool) {
-    state.ui.show_marker_dialog = true;
-    state.ui.marker_dialog_node_id = Some(node_id);
-    state.ui.marker_dialog_is_new = is_new;
+    state.ui.marker_dialog.visible = true;
+    state.ui.marker_dialog.node_id = Some(node_id);
+    state.ui.marker_dialog.is_new = is_new;
 
     if is_new {
-        state.ui.marker_dialog_name = format!("Marker {}", node_id);
-        state.ui.marker_dialog_group = "All".to_string();
+        state.ui.marker_dialog.name = format!("Marker {}", node_id);
+        state.ui.marker_dialog.group = "All".to_string();
     } else if let Some(rm) = state.road_map.as_ref() {
         if let Some(marker) = rm.find_marker_by_node_id(node_id) {
-            state.ui.marker_dialog_name = marker.name.clone();
-            state.ui.marker_dialog_group = marker.group.clone();
+            state.ui.marker_dialog.name = marker.name.clone();
+            state.ui.marker_dialog.group = marker.group.clone();
         }
     }
 }

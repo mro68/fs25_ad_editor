@@ -82,16 +82,30 @@ pub fn cubic_bezier(p0: Vec2, p1: Vec2, p2: Vec2, p3: Vec2, t: f32) -> Vec2 {
     inv2 * inv * p0 + 3.0 * inv2 * t * p1 + 3.0 * inv * t2 * p2 + t2 * t * p3
 }
 
-/// Sucht den nächsten Node innerhalb des Snap-Radius oder erzeugt eine freie Position.
-pub fn snap_to_node(pos: Vec2, road_map: &RoadMap, snap_radius: f32) -> ToolAnchor {
-    if let Some(hit) = road_map.nearest_node(pos) {
-        if hit.distance <= snap_radius {
-            if let Some(node) = road_map.nodes.get(&hit.node_id) {
-                return ToolAnchor::ExistingNode(hit.node_id, node.position);
-            }
-        }
-    }
-    ToolAnchor::NewPosition(pos)
+/// Berechnet die Position eines Kontrollpunkts basierend auf einer Tangente.
+///
+/// - `anchor_pos`: Position des Snap-Nodes (Start oder Ende der Kurve)
+/// - `tangent_angle`: Winkel der gewählten Verbindung (Radiant)
+/// - `other_anchor_pos`: Position des anderen Kurven-Endpunkts
+/// - `is_start`: true = CP1 (Startseite), false = CP2 (Endseite)
+///
+/// Der CP wird im Abstand chord_length/3 entlang der Tangente platziert.
+pub fn compute_tangent_cp(
+    anchor_pos: Vec2,
+    tangent_angle: f32,
+    other_anchor_pos: Vec2,
+    is_start: bool,
+) -> Vec2 {
+    let chord_length = anchor_pos.distance(other_anchor_pos);
+    let cp_distance = chord_length / 3.0;
+    let direction = if is_start {
+        // CP1: In Fortsetzungsrichtung der Verbindung (weg vom Nachbar, zum Kurveninneren)
+        Vec2::from_angle(tangent_angle + std::f32::consts::PI)
+    } else {
+        // CP2: In Gegenrichtung (Kurve soll tangential ankommen)
+        Vec2::from_angle(tangent_angle)
+    };
+    anchor_pos + direction * cp_distance
 }
 
 /// Evaluiert die Kurvenposition für den aktuellen Grad.

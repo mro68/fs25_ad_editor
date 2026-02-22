@@ -29,7 +29,7 @@ pub fn move_selected_nodes(state: &mut AppState, delta_world: glam::Vec2) {
 
     if moved_any {
         road_map_mut.rebuild_connection_geometry();
-        road_map_mut.rebuild_spatial_index();
+        road_map_mut.ensure_spatial_index();
     }
 }
 

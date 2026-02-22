@@ -5,8 +5,18 @@ use super::{
 };
 use super::{SpatialIndex, SpatialMatch};
 use glam::Vec2;
-/// Container für das gesamte AutoDrive-Straßennetzwerk
 use std::collections::HashMap;
+
+/// Ein Nachbar-Node, der über eine Verbindung erreichbar ist.
+#[derive(Debug, Clone, Copy)]
+pub struct ConnectedNeighbor {
+    /// ID des Nachbar-Nodes
+    pub neighbor_id: u64,
+    /// Winkel der Verbindung (Radiant, atan2) — zeigt vom Quell-Node zum Nachbar
+    pub angle: f32,
+    /// true = Verbindung geht vom Quell-Node zum Nachbar (outgoing)
+    pub is_outgoing: bool,
+}
 
 mod dedup;
 pub use dedup::DeduplicationResult;
@@ -28,6 +38,8 @@ pub struct RoadMap {
     pub map_name: Option<String>,
     /// Persistenter Spatial-Index fuer schnelle Node-Abfragen
     spatial_index: SpatialIndex,
+    /// Signalisiert, dass der Spatial-Index veraltet ist und rebuild benötigt
+    spatial_dirty: bool,
 }
 
 impl RoadMap {
@@ -41,13 +53,14 @@ impl RoadMap {
             version,
             map_name: None,
             spatial_index: SpatialIndex::empty(),
+            spatial_dirty: false,
         }
     }
 
     /// Fügt einen Node hinzu
     pub fn add_node(&mut self, node: MapNode) {
         self.nodes.insert(node.id, node);
-        self.rebuild_spatial_index();
+        self.spatial_dirty = true;
     }
 
     /// Entfernt einen Node inklusive aller betroffenen Verbindungen
@@ -56,7 +69,7 @@ impl RoadMap {
         if removed.is_some() {
             self.connections
                 .retain(|(s, e), _| *s != node_id && *e != node_id);
-            self.rebuild_spatial_index();
+            self.spatial_dirty = true;
         }
         removed
     }
@@ -73,7 +86,7 @@ impl RoadMap {
 
         node.position = new_position;
         self.rebuild_connection_geometry();
-        self.rebuild_spatial_index();
+        self.spatial_dirty = true;
         true
     }
 
@@ -172,6 +185,29 @@ impl RoadMap {
     /// Iterator über alle Verbindungen (read-only).
     pub fn connections_iter(&self) -> impl Iterator<Item = &Connection> {
         self.connections.values()
+    }
+
+    /// Gibt alle Nachbar-Nodes zurück, die über Verbindungen mit `node_id` verbunden sind.
+    ///
+    /// Iteriert über alle Connections — O(n), aber nur bei Snap-Events aufgerufen.
+    pub fn connected_neighbors(&self, node_id: u64) -> Vec<ConnectedNeighbor> {
+        let mut neighbors = Vec::new();
+        for conn in self.connections.values() {
+            if conn.start_id == node_id {
+                neighbors.push(ConnectedNeighbor {
+                    neighbor_id: conn.end_id,
+                    angle: conn.angle,
+                    is_outgoing: true,
+                });
+            } else if conn.end_id == node_id {
+                neighbors.push(ConnectedNeighbor {
+                    neighbor_id: conn.start_id,
+                    angle: conn.angle + std::f32::consts::PI,
+                    is_outgoing: false,
+                });
+            }
+        }
+        neighbors
     }
 
     /// Berechnet die nächste freie Node-ID
@@ -286,23 +322,47 @@ impl RoadMap {
         self.spatial_index.clone()
     }
 
+    /// Baut den persistenten Spatial-Index neu auf, falls er veraltet ist.
+    ///
+    /// Muss nach einer Serie von Mutationen (add_node, remove_node, etc.)
+    /// aufgerufen werden, bevor der `Arc<RoadMap>` wieder geteilt wird.
+    pub fn ensure_spatial_index(&mut self) {
+        if self.spatial_dirty {
+            self.spatial_index = SpatialIndex::from_nodes(&self.nodes);
+            self.spatial_dirty = false;
+        }
+    }
+
     /// Baut den persistenten Spatial-Index aus den aktuellen Nodes neu auf.
     pub fn rebuild_spatial_index(&mut self) {
         self.spatial_index = SpatialIndex::from_nodes(&self.nodes);
+        self.spatial_dirty = false;
     }
 
     /// Findet den nächstgelegenen Node zur Weltposition.
     pub fn nearest_node(&self, query: Vec2) -> Option<SpatialMatch> {
+        debug_assert!(
+            !self.spatial_dirty,
+            "Spatial-Index ist veraltet — ensure_spatial_index() fehlt"
+        );
         self.spatial_index.nearest(query)
     }
 
     /// Findet alle Nodes innerhalb eines Radius.
     pub fn nodes_within_radius(&self, query: Vec2, radius: f32) -> Vec<SpatialMatch> {
+        debug_assert!(
+            !self.spatial_dirty,
+            "Spatial-Index ist veraltet — ensure_spatial_index() fehlt"
+        );
         self.spatial_index.within_radius(query, radius)
     }
 
     /// Findet alle Nodes innerhalb eines Rechtecks.
     pub fn nodes_within_rect(&self, min: Vec2, max: Vec2) -> Vec<u64> {
+        debug_assert!(
+            !self.spatial_dirty,
+            "Spatial-Index ist veraltet — ensure_spatial_index() fehlt"
+        );
         self.spatial_index.within_rect(min, max)
     }
 }

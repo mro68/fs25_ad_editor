@@ -279,7 +279,7 @@ impl EditorApp {
         if has_meaningful_events
             || ctx.input(|i| i.pointer.is_moving())
             || self.state.ui.show_heightmap_warning
-            || self.state.ui.show_marker_dialog
+            || self.state.ui.marker_dialog.visible
             || self.state.show_options_dialog
         {
             ctx.request_repaint();

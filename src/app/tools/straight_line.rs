@@ -1,12 +1,10 @@
 //! Gerade-Strecke-Tool: Zeichnet eine Linie zwischen zwei Punkten
 //! und füllt automatisch Zwischen-Nodes ein.
 
-use super::{RouteTool, ToolAction, ToolAnchor, ToolPreview, ToolResult};
+use super::{snap_to_node, RouteTool, ToolAction, ToolAnchor, ToolPreview, ToolResult};
 use crate::core::{ConnectionDirection, ConnectionPriority, NodeFlag, RoadMap};
+use crate::shared::SNAP_RADIUS;
 use glam::Vec2;
-
-/// Snap-Distanz: Klick innerhalb dieses Radius rastet auf existierenden Node ein.
-const SNAP_RADIUS: f32 = 3.0;
 
 /// Welcher Wert wurde zuletzt vom User geändert?
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -39,6 +37,8 @@ pub struct StraightLineTool {
     last_end_anchor: Option<ToolAnchor>,
     /// Signalisiert, dass Config geändert wurde und Neuberechnung nötig ist
     recreate_needed: bool,
+    /// Snap-Radius in Welteinheiten (aus EditorOptions)
+    snap_radius: f32,
 }
 
 impl StraightLineTool {
@@ -56,6 +56,7 @@ impl StraightLineTool {
             last_start_anchor: None,
             last_end_anchor: None,
             recreate_needed: false,
+            snap_radius: SNAP_RADIUS,
         }
     }
 
@@ -106,19 +107,6 @@ fn compute_line_positions(start: Vec2, end: Vec2, max_segment_length: f32) -> Ve
         .collect()
 }
 
-/// Versucht, auf einen existierenden Node zu snappen.
-fn snap_to_node(pos: Vec2, road_map: &RoadMap) -> ToolAnchor {
-    if let Some(hit) = road_map.nearest_node(pos) {
-        if hit.distance <= SNAP_RADIUS {
-            // Position aus der RoadMap holen
-            if let Some(node) = road_map.nodes.get(&hit.node_id) {
-                return ToolAnchor::ExistingNode(hit.node_id, node.position);
-            }
-        }
-    }
-    ToolAnchor::NewPosition(pos)
-}
-
 impl RouteTool for StraightLineTool {
     fn name(&self) -> &str {
         "📏 Gerade Strecke"
@@ -137,7 +125,7 @@ impl RouteTool for StraightLineTool {
     }
 
     fn on_click(&mut self, pos: Vec2, road_map: &RoadMap, _ctrl: bool) -> ToolAction {
-        let anchor = snap_to_node(pos, road_map);
+        let anchor = snap_to_node(pos, road_map, self.snap_radius);
 
         if self.start.is_none() {
             // Verkettung: letzten Endpunkt als Start verwenden
@@ -171,7 +159,7 @@ impl RouteTool for StraightLineTool {
             Some(anchor) => anchor.position(),
             None => {
                 // Preview zur aktuellen Mausposition
-                let snapped = snap_to_node(cursor_pos, road_map);
+                let snapped = snap_to_node(cursor_pos, road_map, self.snap_radius);
                 snapped.position()
             }
         };
@@ -320,7 +308,11 @@ impl RouteTool for StraightLineTool {
         self.priority = prio;
     }
 
-    fn set_last_created(&mut self, ids: Vec<u64>) {
+    fn set_snap_radius(&mut self, radius: f32) {
+        self.snap_radius = radius;
+    }
+
+    fn set_last_created(&mut self, ids: Vec<u64>, _road_map: &RoadMap) {
         // Anker nur überschreiben wenn aktuelle start/end gesetzt sind.
         // Beim Recreate sind start/end None — Anker bleiben erhalten.
         if self.start.is_some() {

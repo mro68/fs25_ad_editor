@@ -41,6 +41,12 @@ let scene = controller.build_render_scene(&state, [width, height]);
 - `dialog` — Dialog-State und Anwendungssteuerung
 - `history` — Undo/Redo
 
+**Intent-Mapping** (`intent_mapping.rs`):
+```rust
+pub fn map_intent_to_commands(state: &AppState, intent: AppIntent) -> Vec<AppCommand>
+```
+Übersetzt einen `AppIntent` in eine Liste von `AppCommand`s. Reine Funktion ohne Seiteneffekte — alle Entscheidungslogik (z.B. Pick-Radius-Berechnung, aktuellen Dateipfad prüfen) ist hier lokalisiert.
+
 ---
 
 ### `AppState`
@@ -76,11 +82,23 @@ pub struct UiState {
     pub pending_save_path: Option<String>,
     pub current_file_path: Option<String>,
     pub heightmap_path: Option<String>,
-    pub show_marker_dialog: bool,
-    pub marker_dialog_node_id: Option<u64>,
-    pub marker_dialog_name: String,
-    pub marker_dialog_group: String,
-    pub marker_dialog_is_new: bool,
+    pub marker_dialog: MarkerDialogState,
+    pub status_message: Option<String>,
+    pub dedup_dialog: DedupDialogState,
+}
+
+pub struct MarkerDialogState {
+    pub visible: bool,
+    pub node_id: Option<u64>,
+    pub name: String,
+    pub group: String,
+    pub is_new: bool,
+}
+
+pub struct DedupDialogState {
+    pub visible: bool,
+    pub duplicate_count: u32,
+    pub group_count: u32,
 }
 
 pub struct ViewState {
@@ -509,7 +527,8 @@ Schnittstelle für alle Route-Tools (Linie, Kurve, …). Tools sind zustandsbeha
 
 **Optionale Methoden (Default-Implementierung):**
 - `set_direction(dir)` / `set_priority(prio)` — Editor-Defaults übernehmen
-- `set_last_created(ids)` / `last_created_ids() → &[u64]` — Erstellte Node-IDs
+- `set_snap_radius(radius)` — Snap-Radius für Node-Snapping setzen
+- `set_last_created(ids, road_map)` / `last_created_ids() → &[u64]` — Erstellte Node-IDs (für Verkettung, road_map dient zur End-Anchor-Ermittlung)
 - `last_end_anchor() → Option<ToolAnchor>` — Letzter Endpunkt für Verkettung
 - `needs_recreate() → bool` / `clear_recreate_flag()` — Neuberechnung bei Config-Änderung
 - `execute_from_anchors(road_map) → Option<ToolResult>` — ToolResult aus gespeicherten Ankern

@@ -66,7 +66,7 @@ fn test_chaining_uses_last_end_as_start() {
     tool.on_click(Vec2::ZERO, &road_map, false);
     tool.on_click(Vec2::new(12.0, 0.0), &road_map, false);
 
-    tool.set_last_created(vec![100, 101, 102]);
+    tool.set_last_created(vec![100, 101, 102], &road_map);
     tool.reset();
 
     let action = tool.on_click(Vec2::new(24.0, 0.0), &road_map, false);
@@ -87,7 +87,7 @@ fn test_last_created_ids_preserved_after_reset() {
     tool.on_click(Vec2::ZERO, &road_map, false);
     tool.on_click(Vec2::new(10.0, 0.0), &road_map, false);
 
-    tool.set_last_created(vec![1, 2, 3]);
+    tool.set_last_created(vec![1, 2, 3], &road_map);
     tool.reset();
 
     assert_eq!(tool.last_created_ids(), &[1, 2, 3]);
@@ -102,7 +102,7 @@ fn test_execute_from_anchors() {
 
     tool.on_click(Vec2::ZERO, &road_map, false);
     tool.on_click(Vec2::new(10.0, 0.0), &road_map, false);
-    tool.set_last_created(vec![1, 2, 3]);
+    tool.set_last_created(vec![1, 2, 3], &road_map);
     tool.reset();
 
     tool.max_segment_length = 10.0;
