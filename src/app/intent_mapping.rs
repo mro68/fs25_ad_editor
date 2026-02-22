@@ -7,9 +7,7 @@ pub fn map_intent_to_commands(state: &AppState, intent: AppIntent) -> Vec<AppCom
     match intent {
         AppIntent::OpenFileRequested => vec![AppCommand::RequestOpenFileDialog],
         AppIntent::SaveRequested => {
-            vec![AppCommand::SaveFile {
-                path: String::new(),
-            }]
+            vec![AppCommand::SaveFile { path: None }]
         }
         AppIntent::SaveAsRequested => vec![AppCommand::RequestSaveFileDialog],
         AppIntent::ExitRequested => vec![AppCommand::RequestExit],
@@ -98,7 +96,7 @@ pub fn map_intent_to_commands(state: &AppState, intent: AppIntent) -> Vec<AppCom
             vec![AppCommand::SetRenderQuality { quality }]
         }
         AppIntent::FileSelected { path } => vec![AppCommand::LoadFile { path }],
-        AppIntent::SaveFilePathSelected { path } => vec![AppCommand::SaveFile { path }],
+        AppIntent::SaveFilePathSelected { path } => vec![AppCommand::SaveFile { path: Some(path) }],
         AppIntent::UndoRequested => vec![AppCommand::Undo],
         AppIntent::RedoRequested => vec![AppCommand::Redo],
         AppIntent::SetEditorToolRequested { tool } => vec![AppCommand::SetEditorTool { tool }],
