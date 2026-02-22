@@ -2,10 +2,10 @@
 //! und füllt automatisch Zwischen-Nodes ein.
 
 use super::{
-    common::SegmentConfig, snap_to_node,
+    common::{self, SegmentConfig}, snap_to_node,
     RouteTool, ToolAction, ToolAnchor, ToolPreview, ToolResult,
 };
-use crate::core::{ConnectionDirection, ConnectionPriority, NodeFlag, RoadMap};
+use crate::core::{ConnectionDirection, ConnectionPriority, RoadMap};
 use crate::shared::SNAP_RADIUS;
 use glam::Vec2;
 
@@ -255,7 +255,7 @@ impl RouteTool for StraightLineTool {
 }
 
 /// Gemeinsame Logik für `execute()` und `execute_from_anchors()`:
-/// Berechnet Positionen, erstellt Nodes und Verbindungen.
+/// Berechnet Positionen und delegiert Node-/Verbindungs-Aufbau an `assemble_tool_result`.
 fn build_result(
     start: ToolAnchor,
     end: ToolAnchor,
@@ -264,99 +264,10 @@ fn build_result(
     priority: ConnectionPriority,
     road_map: &RoadMap,
 ) -> Option<ToolResult> {
-    let start_pos = start.position();
-    let end_pos = end.position();
-    let positions = compute_line_positions(start_pos, end_pos, max_segment_length);
-
-    let mut new_nodes: Vec<(Vec2, NodeFlag)> = Vec::new();
-    let mut internal_connections: Vec<(usize, usize, ConnectionDirection, ConnectionPriority)> =
-        Vec::new();
-    let mut external_connections: Vec<(usize, u64, ConnectionDirection, ConnectionPriority)> =
-        Vec::new();
-
-    // Mapping: Position-Index → new_nodes-Index (oder None wenn existierender Node)
-    let mut pos_to_new_idx: Vec<Option<usize>> = Vec::with_capacity(positions.len());
-
-    for (i, &pos) in positions.iter().enumerate() {
-        let is_start = i == 0;
-        let is_end = i == positions.len() - 1;
-
-        let existing_id = if is_start {
-            match start {
-                ToolAnchor::ExistingNode(id, _) => Some(id),
-                _ => None,
-            }
-        } else if is_end {
-            match end {
-                ToolAnchor::ExistingNode(id, _) => Some(id),
-                _ => None,
-            }
-        } else {
-            road_map
-                .nearest_node(pos)
-                .filter(|hit| hit.distance < 0.01)
-                .map(|hit| hit.node_id)
-        };
-
-        if existing_id.is_some() {
-            pos_to_new_idx.push(None);
-        } else {
-            let idx = new_nodes.len();
-            new_nodes.push((pos, NodeFlag::Regular));
-            pos_to_new_idx.push(Some(idx));
-        }
-    }
-
-    // Verbindungen aufbauen
-    for i in 0..positions.len().saturating_sub(1) {
-        let a_new_idx = pos_to_new_idx[i];
-        let b_new_idx = pos_to_new_idx[i + 1];
-
-        let is_start_a = i == 0;
-        let is_end_b = i + 1 == positions.len() - 1;
-
-        let a_existing = if is_start_a {
-            match start {
-                ToolAnchor::ExistingNode(id, _) => Some(id),
-                _ => None,
-            }
-        } else {
-            None
-        };
-
-        let b_existing = if is_end_b {
-            match end {
-                ToolAnchor::ExistingNode(id, _) => Some(id),
-                _ => None,
-            }
-        } else if pos_to_new_idx[i + 1].is_none() {
-            road_map
-                .nearest_node(positions[i + 1])
-                .filter(|hit| hit.distance < 0.01)
-                .map(|hit| hit.node_id)
-        } else {
-            None
-        };
-
-        match (a_new_idx, a_existing, b_new_idx, b_existing) {
-            (Some(a), _, Some(b), _) => {
-                internal_connections.push((a, b, direction, priority));
-            }
-            (Some(a), _, None, Some(b_id)) => {
-                external_connections.push((a, b_id, direction, priority));
-            }
-            (None, Some(a_id), Some(b), _) => {
-                external_connections.push((b, a_id, direction, priority));
-            }
-            _ => {}
-        }
-    }
-
-    Some(ToolResult {
-        new_nodes,
-        internal_connections,
-        external_connections,
-    })
+    let positions = compute_line_positions(start.position(), end.position(), max_segment_length);
+    Some(common::assemble_tool_result(
+        &positions, &start, &end, direction, priority, road_map,
+    ))
 }
 
 #[cfg(test)]
