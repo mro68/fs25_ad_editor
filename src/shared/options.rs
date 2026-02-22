@@ -18,6 +18,16 @@ pub const CAMERA_ZOOM_STEP: f32 = 1.2;
 /// Zoom-Schritt bei Mausrad-Scroll.
 pub const CAMERA_SCROLL_ZOOM_STEP: f32 = 1.1;
 
+// ── Tools ───────────────────────────────────────────────────────────
+
+/// Snap-Radius (Welteinheiten): Klick innerhalb dieses Radius rastet auf existierenden Node ein.
+pub const SNAP_RADIUS: f32 = 3.0;
+
+// ── Terrain ─────────────────────────────────────────────────────────
+
+/// Standard-Terrain-Höhenskala (FS25: normalized_pixel × Faktor = Y-Meter).
+pub const TERRAIN_HEIGHT_SCALE: f32 = 255.0;
+
 // ── Selektion ───────────────────────────────────────────────────────
 
 /// Pick-Radius in Screen-Pixeln.
@@ -117,6 +127,14 @@ pub struct EditorOptions {
     pub camera_zoom_step: f32,
     /// Zoom-Schritt bei Mausrad-Scroll
     pub camera_scroll_zoom_step: f32,
+
+    // ── Tools ────────────────────────────────────────────────────
+    /// Snap-Radius (Welteinheiten) für Route-Tools
+    pub snap_radius: f32,
+
+    // ── Terrain ──────────────────────────────────────────────────
+    /// Höhenskala für Heightmap-Export (FS25: 255.0)
+    pub terrain_height_scale: f32,
 }
 
 impl Default for EditorOptions {
@@ -145,6 +163,9 @@ impl Default for EditorOptions {
 
             camera_zoom_step: CAMERA_ZOOM_STEP,
             camera_scroll_zoom_step: CAMERA_SCROLL_ZOOM_STEP,
+
+            snap_radius: SNAP_RADIUS,
+            terrain_height_scale: TERRAIN_HEIGHT_SCALE,
         }
     }
 }

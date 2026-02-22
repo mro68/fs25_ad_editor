@@ -97,7 +97,7 @@ fn test_bidirectional_roundtrip_preserves_connections() {
         "1 Dual + 1 Regular = 2 Connections"
     );
 
-    let written = write_autodrive_config(&road_map, None).expect("Export fehlgeschlagen");
+    let written = write_autodrive_config(&road_map, None, 255.0).expect("Export fehlgeschlagen");
     let reparsed = parse_autodrive_config(&written).expect("Re-Parsing fehlgeschlagen");
     assert_eq!(reparsed.connection_count(), road_map.connection_count());
 }
