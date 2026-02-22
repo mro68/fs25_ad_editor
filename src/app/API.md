@@ -588,7 +588,13 @@ Schnittstelle für alle Route-Tools (Linie, Kurve, …). Tools sind zustandsbeha
 
 ---
 
-### Gemeinsame Tool-Infrastruktur (`tools/common.rs`)
+### Gemeinsame Tool-Infrastruktur (`tools/common/`)
+
+Aufgeteilt in vier Submodule (alle privat, Re-Exporte via `common/mod.rs`):
+- **`geometry.rs`** — `angle_to_compass`, `node_count_from_length`, `populate_neighbors`
+- **`tangent.rs`** — `TangentSource`, `TangentState`, `render_tangent_combo`
+- **`lifecycle.rs`** — `ToolLifecycleState`, `SegmentConfig`, `LastEdited`
+- **`builder.rs`** — `assemble_tool_result`
 
 **`SegmentConfig`** — Gekapselte Konfiguration für Segment-Länge und Node-Anzahl, die alle Route-Tools gemeinsam nutzen:
 - `max_segment_length: f32` — Maximaler Abstand zwischen Zwischen-Nodes

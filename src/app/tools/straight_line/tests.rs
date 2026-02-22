@@ -1,6 +1,6 @@
+use super::super::{RouteTool, ToolAction};
 use super::geometry::compute_line_positions;
 use super::state::StraightLineTool;
-use super::super::{RouteTool, ToolAction};
 use crate::core::RoadMap;
 use glam::Vec2;
 

@@ -1,6 +1,8 @@
 use super::super::common::{angle_to_compass, TangentSource};
 use super::super::{RouteTool, ToolAction, ToolAnchor};
-use super::geometry::{compute_curve_positions, compute_tangent_cp, cubic_bezier, quadratic_bezier};
+use super::geometry::{
+    compute_curve_positions, compute_tangent_cp, cubic_bezier, quadratic_bezier,
+};
 use super::state::{CurveDegree, CurveTool, Phase};
 use crate::core::RoadMap;
 use glam::Vec2;
@@ -35,7 +37,11 @@ fn test_compute_tangent_cp_start() {
     let cp = compute_tangent_cp(anchor, 0.0, other, true);
     // chord_length = 10, cp_distance = 10/3 ≈ 3.33
     // Richtung = angle + PI = 180° → (-1, 0)
-    assert!(cp.x < 0.0, "CP1 sollte links vom Startpunkt liegen, war: {:?}", cp);
+    assert!(
+        cp.x < 0.0,
+        "CP1 sollte links vom Startpunkt liegen, war: {:?}",
+        cp
+    );
     assert!((cp.y).abs() < 0.01, "CP1 sollte auf der x-Achse liegen");
     assert!((cp.x + 10.0 / 3.0).abs() < 0.01);
 }
@@ -47,7 +53,11 @@ fn test_compute_tangent_cp_end() {
     let other = Vec2::new(0.0, 0.0);
     let cp = compute_tangent_cp(anchor, 0.0, other, false);
     // Richtung = angle direkt = 0° → (+1, 0)
-    assert!(cp.x > 10.0, "CP2 sollte rechts vom Endpunkt liegen, war: {:?}", cp);
+    assert!(
+        cp.x > 10.0,
+        "CP2 sollte rechts vom Endpunkt liegen, war: {:?}",
+        cp
+    );
     assert!((cp.y).abs() < 0.01, "CP2 sollte auf der x-Achse liegen");
 }
 
@@ -81,7 +91,11 @@ fn test_apply_tangent_to_cp_cubic() {
     // CP2 soll in positiver x-Richtung vom End-Anker (Winkel=PI → Richtung (-1,0), also links)
     let cp2 = tool.control_point2.expect("CP2 sollte gesetzt sein");
     // tangent_end angle=PI → direction = Vec2::from_angle(PI) = (-1, 0) → cp2.x = 12 - 4 = 8
-    assert!(cp2.x < 12.0, "CP2 sollte links vom Endpunkt liegen, war: {:?}", cp2);
+    assert!(
+        cp2.x < 12.0,
+        "CP2 sollte links vom Endpunkt liegen, war: {:?}",
+        cp2
+    );
 }
 
 // ── Quadratische Bézier ──

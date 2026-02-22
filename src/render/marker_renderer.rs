@@ -172,8 +172,8 @@ impl MarkerRenderer {
 
         // Instanz-Daten vorbereiten (Scratch-Buffer wiederverwenden)
         self.instance_scratch.clear();
-        self.instance_scratch
-            .extend(road_map.map_markers.iter().filter_map(|marker| {
+        self.instance_scratch.extend(
+            road_map.map_markers.iter().filter_map(|marker| {
                 let node = road_map.nodes.get(&marker.id)?;
                 Some(MarkerInstance::new(
                     [node.position.x, node.position.y],
@@ -181,7 +181,8 @@ impl MarkerRenderer {
                     ctx.options.marker_outline_color,
                     ctx.options.marker_size_world,
                 ))
-            }));
+            }),
+        );
         let instances = &self.instance_scratch;
 
         if instances.is_empty() {
@@ -204,7 +205,7 @@ impl MarkerRenderer {
         // Daten hochladen
         if let Some(buffer) = &self.instance_buffer {
             ctx.queue
-                .write_buffer(buffer, 0, bytemuck::cast_slice(&instances));
+                .write_buffer(buffer, 0, bytemuck::cast_slice(instances));
         }
 
         // Rendern

@@ -83,7 +83,11 @@ impl SplineTool {
         let end_phantom = if let TangentSource::Connection { angle, .. } = tangent_end {
             if points.len() >= 2 {
                 let n = points.len();
-                Some(Self::phantom_from_tangent(points[n - 1], angle, points[n - 2]))
+                Some(Self::phantom_from_tangent(
+                    points[n - 1],
+                    angle,
+                    points[n - 2],
+                ))
             } else {
                 None
             }
@@ -136,8 +140,7 @@ impl SplineTool {
         if pts.len() < 2 {
             return 0.0;
         }
-        let (start_phantom, end_phantom) =
-            Self::compute_phantoms(&pts, tangent_start, tangent_end);
+        let (start_phantom, end_phantom) = Self::compute_phantoms(&pts, tangent_start, tangent_end);
         let dense = catmull_rom_chain_with_tangents(&pts, 32, start_phantom, end_phantom);
         polyline_length(&dense)
     }
@@ -158,8 +161,7 @@ impl SplineTool {
             return None;
         }
         let pts: Vec<Vec2> = anchors.iter().map(|a| a.position()).collect();
-        let (start_phantom, end_phantom) =
-            Self::compute_phantoms(&pts, tangent_start, tangent_end);
+        let (start_phantom, end_phantom) = Self::compute_phantoms(&pts, tangent_start, tangent_end);
         let dense = catmull_rom_chain_with_tangents(&pts, 32, start_phantom, end_phantom);
         let positions = resample_by_distance(&dense, max_segment_length);
         let first_anchor = anchors.first()?;

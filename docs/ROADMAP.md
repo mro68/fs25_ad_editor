@@ -185,6 +185,13 @@
 - ✅ Verkettung und Nachbearbeitung unterstützt
 - ✅ 11 Unit-Tests (Geometrie + Tool-Flow)
 
+**Errungenschaften (Tools-Modularisierung abgeschlossen 2026-02-22):**
+- ✅ `curve.rs` → `curve/mod.rs` (einheitliche Verzeichnisstruktur für alle drei Tools)
+- ✅ `common.rs` → `common/` aufgeteilt: `geometry.rs`, `tangent.rs`, `lifecycle.rs`, `builder.rs`
+- ✅ Alle drei Tools + common/ folgen demselben Modul-Schema — kein weiteres Wachstum der Hauptdateien
+- ✅ Clippy-Fix: `needless_borrow` in `marker_renderer.rs`
+- ✅ 134 + 35 Tests grün, cargo check + clippy clean
+
 **Errungenschaften (Modularisierungs-Session 2026-02-21):**
 - ✅ Tool-Preview-Overlay aus `main.rs` in eigenständiges `ui/tool_preview.rs`-Modul extrahiert (65 Zeilen Inline-Code entfernt)
 - ✅ DRY-Refactor `apply_tool_result.rs`: gemeinsame Logik in `apply_result_inner()` + `create_nodes_and_connections()` extrahiert (~60 Zeilen Duplikation eliminiert)

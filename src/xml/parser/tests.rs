@@ -1,6 +1,6 @@
 use super::*;
-use crate::ConnectionDirection;
 use crate::xml::parser::waypoints::{parse_list, parse_nested_list};
+use crate::ConnectionDirection;
 
 #[test]
 fn test_parse_simple_list() {

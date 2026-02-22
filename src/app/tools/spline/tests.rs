@@ -1,7 +1,7 @@
-use super::geometry::{catmull_rom_chain, resample_by_distance};
-use super::state::SplineTool;
 use super::super::common::TangentSource;
 use super::super::{RouteTool, ToolAction};
+use super::geometry::{catmull_rom_chain, resample_by_distance};
+use super::state::SplineTool;
 use crate::core::RoadMap;
 use glam::Vec2;
 
@@ -14,7 +14,11 @@ fn test_phantom_from_tangent_east() {
     let neighbor = Vec2::new(5.0, 0.0);
     let phantom = SplineTool::phantom_from_tangent(anchor, 0.0, neighbor);
     // dist = 5, dir = angle + PI = 180° → (-1, 0) → phantom = (-5, 0)
-    assert!(phantom.x < 0.0, "Phantom sollte westlich liegen, war: {:?}", phantom);
+    assert!(
+        phantom.x < 0.0,
+        "Phantom sollte westlich liegen, war: {:?}",
+        phantom
+    );
     assert!((phantom.y).abs() < 0.01);
     assert!((phantom.x + 5.0).abs() < 0.01);
 }
@@ -34,8 +38,7 @@ fn test_phantom_from_tangent_min_distance() {
 #[test]
 fn test_compute_phantoms_none_when_no_tangent() {
     let pts = vec![Vec2::ZERO, Vec2::new(5.0, 0.0), Vec2::new(10.0, 0.0)];
-    let (start, end) =
-        SplineTool::compute_phantoms(&pts, TangentSource::None, TangentSource::None);
+    let (start, end) = SplineTool::compute_phantoms(&pts, TangentSource::None, TangentSource::None);
     assert!(start.is_none());
     assert!(end.is_none());
 }
