@@ -1,6 +1,6 @@
 //! Connection-Renderer für Verbindungen und Richtungspfeile.
 
-use super::types::{ConnectionVertex, Uniforms};
+use super::types::{ConnectionVertex, RenderContext, Uniforms};
 use crate::shared::EditorOptions;
 use crate::{Camera2D, ConnectionDirection, ConnectionPriority, RoadMap};
 use eframe::{egui_wgpu, wgpu};
@@ -103,23 +103,18 @@ impl ConnectionRenderer {
         }
     }
 
-    #[allow(clippy::too_many_arguments)]
     /// Rendert alle sichtbaren Verbindungen inkl. Pfeilspitzen.
     ///
     /// Führt vor dem Draw-Call Viewport-Culling durch und aktualisiert
     /// den Vertex-Buffer nur bei Bedarf.
     pub fn render(
         &mut self,
-        device: &wgpu::Device,
-        queue: &wgpu::Queue,
+        ctx: &RenderContext,
         render_pass: &mut wgpu::RenderPass<'static>,
         road_map: &RoadMap,
-        camera: &Camera2D,
-        viewport_size: [f32; 2],
-        options: &EditorOptions,
     ) {
-        let viewport_width = viewport_size[0];
-        let viewport_height = viewport_size[1];
+        let viewport_width = ctx.viewport_size[0];
+        let viewport_height = ctx.viewport_size[1];
         if !viewport_width.is_finite()
             || !viewport_height.is_finite()
             || viewport_width <= 0.0
@@ -133,22 +128,22 @@ impl ConnectionRenderer {
         }
 
         let aspect = viewport_width / viewport_height;
-        let zoom_scale = 1.0 / camera.zoom;
+        let zoom_scale = 1.0 / ctx.camera.zoom;
         let base_extent = Camera2D::BASE_WORLD_EXTENT;
         let half_height = base_extent * zoom_scale;
         let half_width = half_height * aspect;
-        let padding = camera.world_per_pixel(viewport_height) * 8.0;
+        let padding = ctx.camera.world_per_pixel(viewport_height) * 8.0;
         let visible_min = Vec2::new(
-            camera.position.x - half_width - padding,
-            camera.position.y - half_height - padding,
+            ctx.camera.position.x - half_width - padding,
+            ctx.camera.position.y - half_height - padding,
         );
         let visible_max = Vec2::new(
-            camera.position.x + half_width + padding,
-            camera.position.y + half_height + padding,
+            ctx.camera.position.x + half_width + padding,
+            ctx.camera.position.y + half_height + padding,
         );
 
-        let view_proj = super::types::build_view_projection(camera, viewport_size);
-        queue.write_buffer(
+        let view_proj = super::types::build_view_projection(ctx.camera, ctx.viewport_size);
+        ctx.queue.write_buffer(
             &self.uniform_buffer,
             0,
             bytemuck::cast_slice(&[Uniforms {
@@ -188,10 +183,10 @@ impl ConnectionRenderer {
             }
 
             let direction = delta / length;
-            let color = connection_color(connection.direction, connection.priority, options);
+            let color = connection_color(connection.direction, connection.priority, ctx.options);
             let thickness = match connection.priority {
-                ConnectionPriority::Regular => options.connection_thickness_world,
-                ConnectionPriority::SubPriority => options.connection_thickness_subprio_world,
+                ConnectionPriority::Regular => ctx.options.connection_thickness_world,
+                ConnectionPriority::SubPriority => ctx.options.connection_thickness_subprio_world,
             };
 
             push_line_quad(&mut vertices, start, end, thickness, color);
@@ -203,8 +198,8 @@ impl ConnectionRenderer {
                         &mut vertices,
                         center,
                         direction,
-                        options.arrow_length_world,
-                        options.arrow_width_world,
+                        ctx.options.arrow_length_world,
+                        ctx.options.arrow_width_world,
                         color,
                     );
                 }
@@ -214,30 +209,30 @@ impl ConnectionRenderer {
                         &mut vertices,
                         center,
                         direction,
-                        options.arrow_length_world,
-                        options.arrow_width_world,
+                        ctx.options.arrow_length_world,
+                        ctx.options.arrow_width_world,
                         color,
                     );
                 }
                 ConnectionDirection::Dual => {
                     // Pfeile leicht versetzt, damit sie sich nicht überdecken
-                    let offset = options.arrow_length_world * 0.6;
+                    let offset = ctx.options.arrow_length_world * 0.6;
                     let forward_center = start + direction * (length * 0.5 + offset);
                     let backward_center = start + direction * (length * 0.5 - offset);
                     push_arrow(
                         &mut vertices,
                         forward_center,
                         direction,
-                        options.arrow_length_world,
-                        options.arrow_width_world,
+                        ctx.options.arrow_length_world,
+                        ctx.options.arrow_width_world,
                         color,
                     );
                     push_arrow(
                         &mut vertices,
                         backward_center,
                         -direction,
-                        options.arrow_length_world,
-                        options.arrow_width_world,
+                        ctx.options.arrow_length_world,
+                        ctx.options.arrow_width_world,
                         color,
                     );
                 }
@@ -251,7 +246,7 @@ impl ConnectionRenderer {
         if self.vertex_buffer.is_none() || vertices.len() > self.vertex_capacity {
             let vertex_size = std::mem::size_of::<ConnectionVertex>() as u64;
             let buffer_size = (vertices.len() as u64) * vertex_size;
-            self.vertex_buffer = Some(device.create_buffer(&wgpu::BufferDescriptor {
+            self.vertex_buffer = Some(ctx.device.create_buffer(&wgpu::BufferDescriptor {
                 label: Some("Connection Vertex Buffer"),
                 size: buffer_size,
                 usage: wgpu::BufferUsages::VERTEX | wgpu::BufferUsages::COPY_DST,
@@ -261,7 +256,7 @@ impl ConnectionRenderer {
         }
 
         if let Some(vertex_buffer) = &self.vertex_buffer {
-            queue.write_buffer(vertex_buffer, 0, bytemuck::cast_slice(&vertices));
+            ctx.queue.write_buffer(vertex_buffer, 0, bytemuck::cast_slice(&vertices));
         }
 
         let Some(vertex_buffer) = self.vertex_buffer.as_ref() else {
