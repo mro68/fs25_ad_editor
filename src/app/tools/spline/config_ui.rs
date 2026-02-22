@@ -19,7 +19,7 @@ impl SplineTool {
 
         // Tangenten-Auswahl nur im Nachbearbeitungs-Modus —
         // Start/Ende stehen erst nach Enter fest
-        let adjusting = !self.last_created_ids.is_empty() && self.last_anchors.len() >= 2;
+        let adjusting = !self.lifecycle.last_created_ids.is_empty() && self.last_anchors.len() >= 2;
 
         if adjusting {
             // Tangente Start
@@ -33,8 +33,8 @@ impl SplineTool {
                     &self.tangents.start_neighbors,
                 )
             {
-                if !self.last_created_ids.is_empty() {
-                    self.recreate_needed = true;
+                if !self.lifecycle.last_created_ids.is_empty() {
+                    self.lifecycle.recreate_needed = true;
                 }
                 changed = true;
             }
@@ -50,13 +50,14 @@ impl SplineTool {
                     &self.tangents.end_neighbors,
                 )
             {
-                if !self.last_created_ids.is_empty() {
-                    self.recreate_needed = true;
+                if !self.lifecycle.last_created_ids.is_empty() {
+                    self.lifecycle.recreate_needed = true;
                 }
                 changed = true;
             }
 
-            if !self.tangents.start_neighbors.is_empty() || !self.tangents.end_neighbors.is_empty() {
+            if !self.tangents.start_neighbors.is_empty() || !self.tangents.end_neighbors.is_empty()
+            {
                 ui.add_space(4.0);
             }
 
@@ -80,7 +81,7 @@ impl SplineTool {
             {
                 self.seg.last_edited = LastEdited::Distance;
                 self.seg.node_count = node_count_from_length(length, self.seg.max_segment_length);
-                self.recreate_needed = true;
+                self.lifecycle.recreate_needed = true;
                 changed = true;
             }
 
@@ -95,7 +96,7 @@ impl SplineTool {
                 self.seg.last_edited = LastEdited::NodeCount;
                 self.seg.max_segment_length =
                     segment_length_from_count(length, self.seg.node_count);
-                self.recreate_needed = true;
+                self.lifecycle.recreate_needed = true;
                 changed = true;
             }
         } else if self.is_ready() {

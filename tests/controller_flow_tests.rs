@@ -1,5 +1,5 @@
 use fs25_auto_drive_editor::EditorTool;
-use fs25_auto_drive_editor::{AppCommand, AppController, AppIntent, AppState};
+use fs25_auto_drive_editor::{AppController, AppIntent, AppState};
 use fs25_auto_drive_editor::{
     Connection, ConnectionDirection, ConnectionPriority, MapMarker, MapNode, NodeFlag, RoadMap,
 };

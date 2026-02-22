@@ -44,11 +44,12 @@ impl CurveTool {
         // Tangenten-Auswahl (nur Cubic, wenn Start+End gesetzt)
         if self.degree == CurveDegree::Cubic {
             let show_tangent_ui = (self.phase == Phase::Control
-                || (!self.last_created_ids.is_empty()
+                || (!self.lifecycle.last_created_ids.is_empty()
                     && self.last_start_anchor.is_some()
-                    && self.last_end_anchor.is_some()))
+                    && self.lifecycle.last_end_anchor.is_some()))
                 && (self.start.is_some() && self.end.is_some()
-                    || self.last_start_anchor.is_some() && self.last_end_anchor.is_some());
+                    || self.last_start_anchor.is_some()
+                        && self.lifecycle.last_end_anchor.is_some());
 
             if show_tangent_ui {
                 // Tangente Start
@@ -64,8 +65,8 @@ impl CurveTool {
                 {
                     self.apply_tangent_to_cp();
                     self.sync_derived();
-                    if !self.last_created_ids.is_empty() {
-                        self.recreate_needed = true;
+                    if !self.lifecycle.last_created_ids.is_empty() {
+                        self.lifecycle.recreate_needed = true;
                     }
                     changed = true;
                 }
@@ -83,28 +84,30 @@ impl CurveTool {
                 {
                     self.apply_tangent_to_cp();
                     self.sync_derived();
-                    if !self.last_created_ids.is_empty() {
-                        self.recreate_needed = true;
+                    if !self.lifecycle.last_created_ids.is_empty() {
+                        self.lifecycle.recreate_needed = true;
                     }
                     changed = true;
                 }
 
-                if !self.tangents.start_neighbors.is_empty() || !self.tangents.end_neighbors.is_empty() {
+                if !self.tangents.start_neighbors.is_empty()
+                    || !self.tangents.end_neighbors.is_empty()
+                {
                     ui.add_space(4.0);
                 }
             }
         }
 
         // Nachbearbeitungs-Modus
-        let adjusting = !self.last_created_ids.is_empty()
+        let adjusting = !self.lifecycle.last_created_ids.is_empty()
             && self.last_start_anchor.is_some()
-            && self.last_end_anchor.is_some()
+            && self.lifecycle.last_end_anchor.is_some()
             && self.last_control_point1.is_some();
 
         if adjusting {
             let (Some(start_anchor), Some(end_anchor), Some(cp1)) = (
                 self.last_start_anchor,
-                self.last_end_anchor,
+                self.lifecycle.last_end_anchor,
                 self.last_control_point1,
             ) else {
                 return changed;
@@ -125,7 +128,7 @@ impl CurveTool {
 
             let (seg_changed, recreate) = self.seg.render_adjusting(ui, length, "Kurvenlänge");
             if recreate {
-                self.recreate_needed = true;
+                self.lifecycle.recreate_needed = true;
             }
             changed |= seg_changed;
         } else if self.is_ready() {

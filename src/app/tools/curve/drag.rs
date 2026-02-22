@@ -90,12 +90,20 @@ pub(crate) fn on_drag_end(tool: &mut CurveTool, road_map: &RoadMap) {
     match tool.dragging {
         Some(DragTarget::Start) => {
             if let Some(anchor) = &tool.start {
-                tool.start = Some(snap_to_node(anchor.position(), road_map, tool.snap_radius));
+                tool.start = Some(snap_to_node(
+                    anchor.position(),
+                    road_map,
+                    tool.lifecycle.snap_radius,
+                ));
             }
         }
         Some(DragTarget::End) => {
             if let Some(anchor) = &tool.end {
-                tool.end = Some(snap_to_node(anchor.position(), road_map, tool.snap_radius));
+                tool.end = Some(snap_to_node(
+                    anchor.position(),
+                    road_map,
+                    tool.lifecycle.snap_radius,
+                ));
             }
         }
         _ => {}

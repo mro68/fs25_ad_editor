@@ -13,6 +13,8 @@ pub struct MarkerRenderer {
     bind_group: wgpu::BindGroup,
     instance_buffer: Option<wgpu::Buffer>,
     instance_capacity: usize,
+    /// Wiederverwendbarer Scratch-Buffer für Instanz-Daten (verhindert per-Frame-Allokation)
+    instance_scratch: Vec<MarkerInstance>,
 }
 
 impl MarkerRenderer {
@@ -134,6 +136,7 @@ impl MarkerRenderer {
             bind_group,
             instance_buffer: None,
             instance_capacity: 0,
+            instance_scratch: Vec::new(),
         }
     }
 
@@ -167,12 +170,10 @@ impl MarkerRenderer {
         ctx.queue
             .write_buffer(&self.uniform_buffer, 0, bytemuck::cast_slice(&[uniforms]));
 
-        // Instanz-Daten vorbereiten
-        let instances: Vec<MarkerInstance> = road_map
-            .map_markers
-            .iter()
-            .filter_map(|marker| {
-                // Position des Markers aus dem Node holen
+        // Instanz-Daten vorbereiten (Scratch-Buffer wiederverwenden)
+        self.instance_scratch.clear();
+        self.instance_scratch
+            .extend(road_map.map_markers.iter().filter_map(|marker| {
                 let node = road_map.nodes.get(&marker.id)?;
                 Some(MarkerInstance::new(
                     [node.position.x, node.position.y],
@@ -180,8 +181,8 @@ impl MarkerRenderer {
                     ctx.options.marker_outline_color,
                     ctx.options.marker_size_world,
                 ))
-            })
-            .collect();
+            }));
+        let instances = &self.instance_scratch;
 
         if instances.is_empty() {
             return;

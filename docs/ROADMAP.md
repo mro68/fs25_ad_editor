@@ -74,7 +74,9 @@
   - [x] Background-Quad-Renderer
   - [x] Map-Auswahl UI (Datei-Dialog + Menü)
   - [x] Opacity- und Sichtbarkeits-Steuerung
-  - [ ] Zoom-abhängige LOD
+  - [ ] Zoom-abhängige LOD (Mipmap-Generierung)
+    - [ ] Mip-Level 0..N per Render-Pass herunterskalieren (Custom-Blit-Pipeline, wgpu#661)
+    - [ ] Alternative: DDS mit vorberechneter Mip-Chain im Asset-Pipeline
 - [🟡] Kurven-Werkzeuge (Bezier, Spline)
   - [x] Bezier-Interpolation (Grad 2 + 3)
   - [x] Catmull-Rom-Spline (interpolierend, durch alle Punkte)

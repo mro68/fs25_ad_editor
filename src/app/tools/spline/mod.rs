@@ -11,7 +11,9 @@ mod geometry;
 
 use self::geometry::{catmull_rom_chain_with_tangents, polyline_length, resample_by_distance};
 use super::{
-    common::{self, populate_neighbors, SegmentConfig, TangentSource, TangentState},
+    common::{
+        self, populate_neighbors, SegmentConfig, TangentSource, TangentState, ToolLifecycleState,
+    },
     snap_to_node, RouteTool, ToolAction, ToolAnchor, ToolPreview, ToolResult,
 };
 use crate::core::{ConnectionDirection, ConnectionPriority, RoadMap};
@@ -28,18 +30,12 @@ pub struct SplineTool {
     pub(crate) seg: SegmentConfig,
     pub direction: ConnectionDirection,
     pub priority: ConnectionPriority,
-    /// IDs der zuletzt erstellten Nodes (für Nachbearbeitung)
-    last_created_ids: Vec<u64>,
+    /// Gemeinsamer Lifecycle-Zustand (IDs, Endpunkt-Anker, Recreate-Flag, Snap-Radius)
+    pub(crate) lifecycle: ToolLifecycleState,
     /// Anker der letzten Erstellung (für Nachbearbeitung)
     last_anchors: Vec<ToolAnchor>,
-    /// End-Anker der letzten Erstellung (für Verkettung)
-    last_end_anchor: Option<ToolAnchor>,
-    /// Signalisiert, dass Config geändert wurde und Neuberechnung nötig ist
-    recreate_needed: bool,
     /// Tangenten-Zustand (Start/Ende, Nachbarn-Cache, Recreation-Kopien)
     pub(crate) tangents: TangentState,
-    /// Snap-Radius in Welteinheiten (aus EditorOptions)
-    snap_radius: f32,
 }
 
 impl SplineTool {
@@ -50,12 +46,9 @@ impl SplineTool {
             seg: SegmentConfig::new(2.0),
             direction: ConnectionDirection::Dual,
             priority: ConnectionPriority::Regular,
-            last_created_ids: Vec::new(),
+            lifecycle: ToolLifecycleState::new(SNAP_RADIUS),
             last_anchors: Vec::new(),
-            last_end_anchor: None,
-            recreate_needed: false,
             tangents: TangentState::new(),
-            snap_radius: SNAP_RADIUS,
         }
     }
 
@@ -214,15 +207,15 @@ impl RouteTool for SplineTool {
     }
 
     fn on_click(&mut self, pos: Vec2, road_map: &RoadMap, _ctrl: bool) -> ToolAction {
-        let anchor = snap_to_node(pos, road_map, self.snap_radius);
+        let anchor = snap_to_node(pos, road_map, self.lifecycle.snap_radius);
 
         if self.anchors.is_empty() {
             // Verkettung: letzten Endpunkt als Start verwenden
-            if let Some(last_end) = self.last_end_anchor {
-                self.last_created_ids.clear();
+            if let Some(last_end) = self.lifecycle.last_end_anchor {
+                self.lifecycle.last_created_ids.clear();
                 self.last_anchors.clear();
-                self.last_end_anchor = None;
-                self.recreate_needed = false;
+                self.lifecycle.last_end_anchor = None;
+                self.lifecycle.recreate_needed = false;
                 self.tangents.reset_tangents();
                 self.anchors.push(last_end);
                 self.anchors.push(anchor);
@@ -247,7 +240,8 @@ impl RouteTool for SplineTool {
         }
 
         // Cursor als nächster Punkt (gesnappt)
-        let snapped_cursor = snap_to_node(cursor_pos, road_map, self.snap_radius).position();
+        let snapped_cursor =
+            snap_to_node(cursor_pos, road_map, self.lifecycle.snap_radius).position();
 
         let positions = if self.anchors.len() == 1 {
             // Nur Start + Cursor → gerade Linie (Preview)
@@ -308,7 +302,7 @@ impl RouteTool for SplineTool {
     }
 
     fn set_snap_radius(&mut self, radius: f32) {
-        self.snap_radius = radius;
+        self.lifecycle.snap_radius = radius;
     }
 
     fn set_last_created(&mut self, ids: Vec<u64>, road_map: &RoadMap) {
@@ -316,7 +310,7 @@ impl RouteTool for SplineTool {
         if !self.anchors.is_empty() {
             self.last_anchors = self.anchors.clone();
             if let Some(last) = self.anchors.last() {
-                self.last_end_anchor = Some(*last);
+                self.lifecycle.last_end_anchor = Some(*last);
             }
         }
         // Nachbarn aus den richtigen Ankern befüllen (anchors oder last_anchors)
@@ -332,24 +326,24 @@ impl RouteTool for SplineTool {
             self.tangents.end_neighbors = populate_neighbors(last, road_map);
         }
         self.tangents.save_for_recreate();
-        self.last_created_ids = ids;
-        self.recreate_needed = false;
+        self.lifecycle.last_created_ids = ids;
+        self.lifecycle.recreate_needed = false;
     }
 
     fn last_created_ids(&self) -> &[u64] {
-        &self.last_created_ids
+        &self.lifecycle.last_created_ids
     }
 
     fn last_end_anchor(&self) -> Option<ToolAnchor> {
-        self.last_end_anchor
+        self.lifecycle.last_end_anchor
     }
 
     fn needs_recreate(&self) -> bool {
-        self.recreate_needed
+        self.lifecycle.recreate_needed
     }
 
     fn clear_recreate_flag(&mut self) {
-        self.recreate_needed = false;
+        self.lifecycle.recreate_needed = false;
     }
 
     fn execute_from_anchors(&self, road_map: &RoadMap) -> Option<ToolResult> {

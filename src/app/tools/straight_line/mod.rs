@@ -2,7 +2,7 @@
 //! und füllt automatisch Zwischen-Nodes ein.
 
 use super::{
-    common::{self, SegmentConfig},
+    common::{self, SegmentConfig, ToolLifecycleState},
     snap_to_node, RouteTool, ToolAction, ToolAnchor, ToolPreview, ToolResult,
 };
 use crate::core::{ConnectionDirection, ConnectionPriority, RoadMap};
@@ -19,16 +19,10 @@ pub struct StraightLineTool {
     pub direction: ConnectionDirection,
     /// Priorität für die erzeugten Verbindungen (aus Editor-Defaults)
     pub priority: ConnectionPriority,
-    /// IDs der zuletzt erstellten Nodes (für Nachbearbeitung)
-    last_created_ids: Vec<u64>,
+    /// Gemeinsamer Lifecycle-Zustand (IDs, Endpunkt-Anker, Recreate-Flag, Snap-Radius)
+    pub(crate) lifecycle: ToolLifecycleState,
     /// Start-Anker der letzten Erstellung (für Neuberechnung)
     last_start_anchor: Option<ToolAnchor>,
-    /// End-Anker der letzten Erstellung (für Verkettung)
-    last_end_anchor: Option<ToolAnchor>,
-    /// Signalisiert, dass Config geändert wurde und Neuberechnung nötig ist
-    recreate_needed: bool,
-    /// Snap-Radius in Welteinheiten (aus EditorOptions)
-    snap_radius: f32,
 }
 
 impl StraightLineTool {
@@ -40,11 +34,8 @@ impl StraightLineTool {
             seg: SegmentConfig::new(6.0),
             direction: ConnectionDirection::Dual,
             priority: ConnectionPriority::Regular,
-            last_created_ids: Vec::new(),
+            lifecycle: ToolLifecycleState::new(SNAP_RADIUS),
             last_start_anchor: None,
-            last_end_anchor: None,
-            recreate_needed: false,
-            snap_radius: SNAP_RADIUS,
         }
     }
 
@@ -98,15 +89,15 @@ impl RouteTool for StraightLineTool {
     }
 
     fn on_click(&mut self, pos: Vec2, road_map: &RoadMap, _ctrl: bool) -> ToolAction {
-        let anchor = snap_to_node(pos, road_map, self.snap_radius);
+        let anchor = snap_to_node(pos, road_map, self.lifecycle.snap_radius);
 
         if self.start.is_none() {
             // Verkettung: letzten Endpunkt als Start verwenden
-            if let Some(last_end) = self.last_end_anchor {
-                self.last_created_ids.clear();
+            if let Some(last_end) = self.lifecycle.last_end_anchor {
+                self.lifecycle.last_created_ids.clear();
                 self.last_start_anchor = None;
-                self.last_end_anchor = None;
-                self.recreate_needed = false;
+                self.lifecycle.last_end_anchor = None;
+                self.lifecycle.recreate_needed = false;
                 self.start = Some(last_end);
                 self.end = Some(anchor);
                 self.sync_derived();
@@ -132,7 +123,7 @@ impl RouteTool for StraightLineTool {
             Some(anchor) => anchor.position(),
             None => {
                 // Preview zur aktuellen Mausposition
-                let snapped = snap_to_node(cursor_pos, road_map, self.snap_radius);
+                let snapped = snap_to_node(cursor_pos, road_map, self.lifecycle.snap_radius);
                 snapped.position()
             }
         };
@@ -150,21 +141,21 @@ impl RouteTool for StraightLineTool {
 
     fn render_config(&mut self, ui: &mut egui::Ui) -> bool {
         // Nachbearbeitungs-Modus: letzte Strecke anpassen
-        let adjusting = !self.last_created_ids.is_empty()
+        let adjusting = !self.lifecycle.last_created_ids.is_empty()
             && self.last_start_anchor.is_some()
-            && self.last_end_anchor.is_some();
+            && self.lifecycle.last_end_anchor.is_some();
 
         if adjusting {
             let Some(start_anchor) = self.last_start_anchor else {
                 return false;
             };
-            let Some(end_anchor) = self.last_end_anchor else {
+            let Some(end_anchor) = self.lifecycle.last_end_anchor else {
                 return false;
             };
             let distance = start_anchor.position().distance(end_anchor.position());
             let (changed, recreate) = self.seg.render_adjusting(ui, distance, "Streckenlänge");
             if recreate {
-                self.recreate_needed = true;
+                self.lifecycle.recreate_needed = true;
             }
             changed
         } else if self.is_ready() {
@@ -191,7 +182,7 @@ impl RouteTool for StraightLineTool {
     fn reset(&mut self) {
         self.start = None;
         self.end = None;
-        // last_created_ids, last_*_anchor bleiben erhalten für Nachbearbeitung/Verkettung
+        // lifecycle.last_created_ids, last_*_anchor bleiben erhalten für Nachbearbeitung/Verkettung
     }
 
     fn is_ready(&self) -> bool {
@@ -207,7 +198,7 @@ impl RouteTool for StraightLineTool {
     }
 
     fn set_snap_radius(&mut self, radius: f32) {
-        self.snap_radius = radius;
+        self.lifecycle.snap_radius = radius;
     }
 
     fn set_last_created(&mut self, ids: Vec<u64>, _road_map: &RoadMap) {
@@ -217,31 +208,31 @@ impl RouteTool for StraightLineTool {
             self.last_start_anchor = self.start;
         }
         if self.end.is_some() {
-            self.last_end_anchor = self.end;
+            self.lifecycle.last_end_anchor = self.end;
         }
-        self.last_created_ids = ids;
-        self.recreate_needed = false;
+        self.lifecycle.last_created_ids = ids;
+        self.lifecycle.recreate_needed = false;
     }
 
     fn last_created_ids(&self) -> &[u64] {
-        &self.last_created_ids
+        &self.lifecycle.last_created_ids
     }
 
     fn last_end_anchor(&self) -> Option<ToolAnchor> {
-        self.last_end_anchor
+        self.lifecycle.last_end_anchor
     }
 
     fn needs_recreate(&self) -> bool {
-        self.recreate_needed
+        self.lifecycle.recreate_needed
     }
 
     fn clear_recreate_flag(&mut self) {
-        self.recreate_needed = false;
+        self.lifecycle.recreate_needed = false;
     }
 
     fn execute_from_anchors(&self, road_map: &RoadMap) -> Option<ToolResult> {
         let start = self.last_start_anchor?;
-        let end = self.last_end_anchor?;
+        let end = self.lifecycle.last_end_anchor?;
         build_result(
             start,
             end,

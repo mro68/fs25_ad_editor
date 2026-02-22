@@ -1,11 +1,13 @@
 //! Node-Renderer mit GPU-Instancing.
 
-use super::types::{compute_visible_rect, NodeInstance, RenderContext, RenderQuality, Uniforms, Vertex};
+use super::types::{
+    compute_visible_rect, NodeInstance, RenderContext, RenderQuality, Uniforms, Vertex,
+};
 use crate::{NodeFlag, RoadMap};
 use eframe::{egui_wgpu, wgpu};
 use std::collections::HashSet;
 use wgpu::util::DeviceExt;
-        // HashSet-Import wird direkt in der Signatur genutzt (kein Re-collect mehr nötig)
+// HashSet-Import wird direkt in der Signatur genutzt (kein Re-collect mehr nötig)
 
 /// Renderer für Nodes (Wegpunkte)
 pub struct NodeRenderer {

@@ -174,7 +174,45 @@ impl Default for TangentState {
     }
 }
 
-// ── Segment-Konfiguration ────────────────────────────────────
+// ── Lifecycle-Zustand ─────────────────────────────────────────
+
+/// Gemeinsamer Lifecycle-Zustand aller Route-Tools.
+///
+/// Kapselt die vier Felder, die StraightLineTool, CurveTool und SplineTool
+/// identisch teilen: letzte IDs, Endpunkt-Anker, Recreate-Flag und Snap-Radius.
+#[derive(Debug, Clone)]
+pub(crate) struct ToolLifecycleState {
+    /// IDs der zuletzt erstellten Nodes (für Nachbearbeitung)
+    pub last_created_ids: Vec<u64>,
+    /// End-Anker der letzten Erstellung (für Verkettung)
+    pub last_end_anchor: Option<ToolAnchor>,
+    /// Signalisiert, dass Config geändert wurde und Neuberechnung nötig ist
+    pub recreate_needed: bool,
+    /// Snap-Radius in Welteinheiten (aus EditorOptions)
+    pub snap_radius: f32,
+}
+
+impl ToolLifecycleState {
+    /// Erstellt einen neuen Lifecycle-Zustand mit einem vorgegebenen Snap-Radius.
+    pub fn new(snap_radius: f32) -> Self {
+        Self {
+            last_created_ids: Vec::new(),
+            last_end_anchor: None,
+            recreate_needed: false,
+            snap_radius,
+        }
+    }
+
+    /// Setzt alle Lifecycle-Felder auf die Ausgangswerte zurück (für Tool-Reset).
+    #[allow(dead_code)]
+    pub fn clear(&mut self) {
+        self.last_created_ids.clear();
+        self.last_end_anchor = None;
+        self.recreate_needed = false;
+    }
+}
+
+// ── Segment-Konfiguration ─────────────────────────────────────
 
 /// Gekapselte Konfiguration für Segment-Länge und Node-Anzahl.
 ///
