@@ -135,7 +135,13 @@ pub fn write_autodrive_config(road_map: &RoadMap, heightmap: Option<&Heightmap>)
             .get(id)
             .map(|list| {
                 list.iter()
-                    .filter_map(|old| id_remap.get(old).copied())
+                    .filter_map(|old| {
+                        let mapped = id_remap.get(old).copied();
+                        if mapped.is_none() {
+                            log::warn!("XML-Writer: outgoing connection {} → {} hat kein ID-Mapping — wird übersprungen", id, old);
+                        }
+                        mapped
+                    })
                     .collect()
             })
             .unwrap_or_default();
@@ -146,7 +152,13 @@ pub fn write_autodrive_config(road_map: &RoadMap, heightmap: Option<&Heightmap>)
             .get(id)
             .map(|list| {
                 list.iter()
-                    .filter_map(|old| id_remap.get(old).copied())
+                    .filter_map(|old| {
+                        let mapped = id_remap.get(old).copied();
+                        if mapped.is_none() {
+                            log::warn!("XML-Writer: incoming connection {} ← {} hat kein ID-Mapping — wird übersprungen", id, old);
+                        }
+                        mapped
+                    })
                     .collect()
             })
             .unwrap_or_default();
@@ -174,7 +186,13 @@ pub fn write_autodrive_config(road_map: &RoadMap, heightmap: Option<&Heightmap>)
     for (index, marker) in road_map.map_markers.iter().enumerate() {
         let marker_tag = format!("mm{}", index + 1);
         // Marker-ID remappen (zeigt auf Node-ID)
-        let remapped_marker_id = id_remap.get(&marker.id).copied().unwrap_or(marker.id);
+        let remapped_marker_id = match id_remap.get(&marker.id).copied() {
+            Some(new_id) => new_id,
+            None => {
+                log::warn!("XML-Writer: Marker '{}' referenziert Node {} ohne ID-Mapping — verwende Original-ID", marker.name, marker.id);
+                marker.id
+            }
+        };
         output.push_str(&format!("        <{}>\n", marker_tag));
         output.push_str(&format!(
             "            <id>{:.6}</id>\n",
