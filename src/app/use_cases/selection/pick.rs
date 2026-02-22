@@ -68,13 +68,13 @@ pub fn select_nearest_node(
     extend_path: bool,
 ) {
     if max_distance < 0.0 {
-        state.selection.selected_node_ids.clear();
+        state.selection.ids_mut().clear();
         state.selection.selection_anchor_node_id = None;
         return;
     }
 
     let Some(road_map) = state.road_map.as_deref() else {
-        state.selection.selected_node_ids.clear();
+        state.selection.ids_mut().clear();
         state.selection.selection_anchor_node_id = None;
         return;
     };
@@ -87,7 +87,7 @@ pub fn select_nearest_node(
     if additive {
         if let Some(node_id) = hit {
             if state.selection.selected_node_ids.contains(&node_id) {
-                state.selection.selected_node_ids.remove(&node_id);
+                state.selection.ids_mut().remove(&node_id);
                 state.selection.selection_anchor_node_id =
                     state.selection.selected_node_ids.iter().copied().next();
             } else {
@@ -101,25 +101,25 @@ pub fn select_nearest_node(
                     if let Some(anchor_id) = anchor {
                         if let Some(path_nodes) = shortest_path_nodes(road_map, anchor_id, node_id)
                         {
-                            state.selection.selected_node_ids.extend(path_nodes);
+                            state.selection.ids_mut().extend(path_nodes);
                         } else {
-                            state.selection.selected_node_ids.insert(node_id);
+                            state.selection.ids_mut().insert(node_id);
                         }
                     } else {
-                        state.selection.selected_node_ids.insert(node_id);
+                        state.selection.ids_mut().insert(node_id);
                     }
                 } else {
-                    state.selection.selected_node_ids.insert(node_id);
+                    state.selection.ids_mut().insert(node_id);
                 }
 
                 state.selection.selection_anchor_node_id = Some(node_id);
             }
         }
     } else {
-        state.selection.selected_node_ids.clear();
+        state.selection.ids_mut().clear();
         state.selection.selection_anchor_node_id = None;
         if let Some(node_id) = hit {
-            state.selection.selected_node_ids.insert(node_id);
+            state.selection.ids_mut().insert(node_id);
             state.selection.selection_anchor_node_id = Some(node_id);
         }
     }
@@ -201,7 +201,7 @@ mod tests {
     #[test]
     fn clears_selection_if_no_nearby_node_exists() {
         let mut state = with_test_map();
-        state.selection.selected_node_ids.insert(2);
+        state.selection.ids_mut().insert(2);
         select_nearest_node(&mut state, glam::Vec2::new(100.0, 100.0), 3.0, false, false);
         assert!(state.selection.selected_node_ids.is_empty());
     }

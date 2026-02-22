@@ -18,7 +18,7 @@ pub fn load_selected_file(state: &mut AppState, path: String) -> anyhow::Result<
 
     // Merke Pfad für späteres Save
     state.ui.current_file_path = Some(path.to_string());
-    state.selection.selected_node_ids.clear();
+    state.selection.ids_mut().clear();
 
     log::info!(
         "Loaded RoadMap: {} nodes, {} connections",

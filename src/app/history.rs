@@ -230,7 +230,7 @@ mod tests {
 
         let mut original_state = AppState::new();
         original_state.road_map = Some(Arc::new(map));
-        original_state.selection.selected_node_ids.insert(42);
+        original_state.selection.ids_mut().insert(42);
 
         let snap = Snapshot::from_state(&original_state);
 

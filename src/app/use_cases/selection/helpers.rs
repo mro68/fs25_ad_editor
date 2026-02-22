@@ -6,7 +6,7 @@ use std::collections::HashMap;
 
 /// Löscht die aktuelle Selektion explizit.
 pub fn clear_selection(state: &mut AppState) {
-    state.selection.selected_node_ids.clear();
+    state.selection.ids_mut().clear();
     state.selection.selection_anchor_node_id = None;
 }
 
