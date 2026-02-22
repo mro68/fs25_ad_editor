@@ -188,4 +188,43 @@ mod tests {
         assert_relative_eq!(back.x, world.x, epsilon = 0.01);
         assert_relative_eq!(back.y, world.y, epsilon = 0.01);
     }
+
+    #[test]
+    fn test_zoom_by_clamp_min() {
+        let mut camera = Camera2D::new();
+        // Mehrfaches Herauszoomen soll beim Minimum clippen
+        for _ in 0..20 {
+            camera.zoom_by(0.1);
+        }
+        assert_relative_eq!(camera.zoom, Camera2D::ZOOM_MIN);
+    }
+
+    #[test]
+    fn test_zoom_by_clamp_max() {
+        let mut camera = Camera2D::new();
+        // Mehrfaches Hineinzoomen soll beim Maximum clippen
+        for _ in 0..20 {
+            camera.zoom_by(10.0);
+        }
+        assert_relative_eq!(camera.zoom, Camera2D::ZOOM_MAX);
+    }
+
+    #[test]
+    fn test_pick_radius_world_scales_with_viewport() {
+        let camera = Camera2D::new();
+        let r_small = camera.pick_radius_world(300.0, 10.0);
+        let r_large = camera.pick_radius_world(600.0, 10.0);
+        // Größerer Viewport → kleinerer Welt-Radius (gleich viele Pixel)
+        assert!(r_small > r_large);
+    }
+
+    #[test]
+    fn test_pick_radius_world_scaled_constant_at_zoom_max() {
+        let mut camera = Camera2D::new();
+        camera.zoom = Camera2D::ZOOM_MAX;
+        let r_scaled = camera.pick_radius_world_scaled(600.0, 10.0);
+        let r_plain = camera.pick_radius_world(600.0, 10.0);
+        // Bei ZOOM_MAX sollen beide Methoden den gleichen Radius liefern
+        assert_relative_eq!(r_scaled, r_plain, epsilon = 0.01);
+    }
 }

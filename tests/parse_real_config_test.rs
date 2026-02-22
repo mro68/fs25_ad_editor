@@ -3,8 +3,9 @@ use fs25_auto_drive_editor::xml::parse_autodrive_config;
 
 #[test]
 fn test_parse_autodrive_config() {
-    let xml = std::fs::read_to_string("ad_sample_data/AutoDrive_config.xml").unwrap();
-    match parse_autodrive_config(&xml) {
+    // include_str! ist CWD-unabhängig (Compile-Zeit-Einbettung)
+    let xml = include_str!("../ad_sample_data/AutoDrive_config.xml");
+    match parse_autodrive_config(xml) {
         Ok(rm) => {
             println!(
                 "OK: {} nodes, {} connections, {} markers",
@@ -20,8 +21,8 @@ fn test_parse_autodrive_config() {
 
 #[test]
 fn test_parse_autodrive_config1() {
-    let xml = std::fs::read_to_string("ad_sample_data/AutoDrive_config1.xml").unwrap();
-    match parse_autodrive_config(&xml) {
+    let xml = include_str!("../ad_sample_data/AutoDrive_config1.xml");
+    match parse_autodrive_config(xml) {
         Ok(rm) => {
             println!(
                 "OK: {} nodes, {} connections, {} markers",

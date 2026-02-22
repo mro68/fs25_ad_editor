@@ -21,7 +21,7 @@ fn test_save_requested_logs_save_command_without_panic() {
         .expect("Es sollte ein Command geloggt sein");
 
     match last {
-        AppCommand::SaveFile { path } => assert!(path.is_empty()),
+        AppCommand::SaveFile { path } => assert!(path.is_none()),
         other => panic!("Unerwarteter letzter Command: {other:?}"),
     }
 }
