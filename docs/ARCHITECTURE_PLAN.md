@@ -63,7 +63,33 @@ flowchart LR
   STATUS -. read-only .-> STATE
 ```
 
-## Zuständigkeiten pro Layer
+### Layer-Grenzen (erlaubte Import-Richtungen)
+
+```mermaid
+graph BT
+    CORE["core\n(Domain)"]
+    XML["xml\n(Persistence)"]
+    APP["app\n(Application)"]
+    UI["ui\n(Presentation)"]
+    RENDER["render\n(Rendering)"]
+    SHARED["shared\n(Cross-Layer)"]
+
+    XML  --> CORE
+    APP  --> CORE
+    APP  --> XML
+    APP  --> SHARED
+    UI   --> APP
+    RENDER --> SHARED
+
+    CORE  -.->|verboten| UI
+    CORE  -.->|verboten| RENDER
+    RENDER -.->|verboten| CORE
+    XML   -.->|verboten| APP
+```
+
+> **Regel:** Pfeile zeigen "darf importieren". Gestrichelt = explizit verboten (CI-geprüft via `scripts/check_layer_boundaries.sh`).
+
+
 
 ### UI Layer (`src/ui/*`)
 **Verantwortung**
