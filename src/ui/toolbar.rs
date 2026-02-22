@@ -41,23 +41,17 @@ pub fn render_toolbar(ctx: &egui::Context, state: &AppState) -> Vec<AppIntent> {
 
             ui.separator();
 
-            // Route-Tools (dynamisch aus ToolManager)
-            let tool_names: Vec<(usize, String)> = state
-                .editor
-                .tool_manager
-                .tool_names()
-                .into_iter()
-                .map(|(i, name)| (i, name.to_string()))
-                .collect();
+            // Route-Tools (dynamisch aus ToolManager, kein String-Clone nötig)
+            let tool_names = state.editor.tool_manager.tool_names();
             let active_route_index = if active == EditorTool::Route {
                 state.editor.tool_manager.active_index()
             } else {
                 None
             };
-            for (index, name) in &tool_names {
-                let is_active = active_route_index == Some(*index);
-                if ui.selectable_label(is_active, name.as_str()).clicked() {
-                    events.push(AppIntent::SelectRouteToolRequested { index: *index });
+            for (index, name) in tool_names {
+                let is_active = active_route_index == Some(index);
+                if ui.selectable_label(is_active, name).clicked() {
+                    events.push(AppIntent::SelectRouteToolRequested { index });
                 }
             }
 

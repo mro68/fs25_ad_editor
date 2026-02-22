@@ -297,8 +297,8 @@ pub enum AppCommand {
     SetRenderQuality { quality: RenderQuality },
     /// XML-Datei laden
     LoadFile { path: String },
-    /// Datei speichern
-    SaveFile { path: String },
+    /// Datei speichern (None = aktueller Pfad, Some(p) = neuer Pfad)
+    SaveFile { path: Option<String> },
     /// Heightmap setzen
     SetHeightmap { path: String },
     /// Background-Map laden

@@ -1,9 +1,9 @@
 //! State-Definitionen und Konstruktor für das Bézier-Kurven-Tool.
 
-use super::super::common::{SegmentConfig, TangentSource};
+use super::super::common::{SegmentConfig, TangentSource, TangentState, ToolLifecycleState};
 use super::super::ToolAnchor;
 use super::geometry::{approx_length, compute_tangent_cp, cubic_bezier, quadratic_bezier};
-use crate::core::{ConnectedNeighbor, ConnectionDirection, ConnectionPriority};
+use crate::core::{ConnectionDirection, ConnectionPriority};
 use crate::shared::SNAP_RADIUS;
 use glam::Vec2;
 
@@ -53,26 +53,13 @@ pub struct CurveTool {
     pub(crate) seg: SegmentConfig,
     pub direction: ConnectionDirection,
     pub priority: ConnectionPriority,
-    pub(crate) last_created_ids: Vec<u64>,
+    /// Gemeinsamer Lifecycle-Zustand (IDs, Endpunkt-Anker, Recreate-Flag, Snap-Radius)
+    pub(crate) lifecycle: ToolLifecycleState,
     pub(crate) last_start_anchor: Option<ToolAnchor>,
-    pub(crate) last_end_anchor: Option<ToolAnchor>,
     pub(crate) last_control_point1: Option<Vec2>,
     pub(crate) last_control_point2: Option<Vec2>,
-    pub(crate) recreate_needed: bool,
-    /// Gewählte Tangente am Startpunkt (nur Cubic)
-    pub(crate) tangent_start: TangentSource,
-    /// Gewählte Tangente am Endpunkt (nur Cubic)
-    pub(crate) tangent_end: TangentSource,
-    /// Verfügbare Nachbarn am Startpunkt (Cache)
-    pub(crate) start_neighbors: Vec<ConnectedNeighbor>,
-    /// Verfügbare Nachbarn am Endpunkt (Cache)
-    pub(crate) end_neighbors: Vec<ConnectedNeighbor>,
-    /// Tangente Start der letzten Erstellung (für Recreation)
-    pub(crate) last_tangent_start: TangentSource,
-    /// Tangente Ende der letzten Erstellung (für Recreation)
-    pub(crate) last_tangent_end: TangentSource,
-    /// Snap-Radius in Welteinheiten (aus EditorOptions)
-    pub(crate) snap_radius: f32,
+    /// Tangenten-Zustand (Start/Ende, Nachbarn-Cache, Recreation-Kopien)
+    pub(crate) tangents: TangentState,
 }
 
 impl CurveTool {
@@ -89,19 +76,11 @@ impl CurveTool {
             seg: SegmentConfig::new(2.0),
             direction: ConnectionDirection::Dual,
             priority: ConnectionPriority::Regular,
-            last_created_ids: Vec::new(),
+            lifecycle: ToolLifecycleState::new(SNAP_RADIUS),
             last_start_anchor: None,
-            last_end_anchor: None,
             last_control_point1: None,
             last_control_point2: None,
-            recreate_needed: false,
-            tangent_start: TangentSource::None,
-            tangent_end: TangentSource::None,
-            start_neighbors: Vec::new(),
-            end_neighbors: Vec::new(),
-            last_tangent_start: TangentSource::None,
-            last_tangent_end: TangentSource::None,
-            snap_radius: SNAP_RADIUS,
+            tangents: TangentState::new(),
         }
     }
 
@@ -153,7 +132,7 @@ impl CurveTool {
             return;
         };
 
-        if let TangentSource::Connection { angle, .. } = self.tangent_start {
+        if let TangentSource::Connection { angle, .. } = self.tangents.tangent_start {
             self.control_point1 = Some(compute_tangent_cp(
                 start.position(),
                 angle,
@@ -161,7 +140,7 @@ impl CurveTool {
                 true,
             ));
         }
-        if let TangentSource::Connection { angle, .. } = self.tangent_end {
+        if let TangentSource::Connection { angle, .. } = self.tangents.tangent_end {
             self.control_point2 = Some(compute_tangent_cp(
                 end.position(),
                 angle,

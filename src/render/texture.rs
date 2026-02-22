@@ -66,7 +66,16 @@ pub fn create_texture_from_image(
         },
     );
 
-    // TODO: Mipmaps generieren (für v2, erfordert Render-Pass)
+    // TODO(Mipmap-Generierung): Mip-Level 0 ist hochgeladen, die weiteren Levels sind
+    // noch leer. Für echte Mipmap-Qualität muss jedes Level 1..N per Render-Pass
+    // herunterskaliert werden:
+    //   1. Für jedes Level 1..mip_level_count - 1:
+    //      a. TextureView mit `base_mip_level = level - 1` (src) und `= level` (dst)
+    //      b. Blit via separaten Render-Pass oder Compute-Shader (wgpu unterstützt
+    //         blit_texture nicht direkt — Custom-Pipeline notwendig).
+    //   2. Alternativ: `wgpu::Features::TEXTURE_COMPRESSION_*` + mipmaps vorab im
+    //      Asset-Pipeline erzeugen (DDS mit MipChain).
+    //   Tracker: https://github.com/gfx-rs/wgpu/issues/661
     if mip_level_count > 1 {
         log::debug!(
             "Hinweis: {} Mip-Levels erstellt, aber noch nicht generiert",

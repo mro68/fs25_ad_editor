@@ -46,3 +46,16 @@ for (source_id, target_ids) in connections {
 - Unit-Tests direkt in Modulen (`#[cfg(test)]`)
 - Integration-Tests in `tests/`
 - Test-Fixtures in `tests/fixtures/`
+
+## Dokumentations-Pflicht
+Bei jeder Codeänderung müssen folgende Dokumente synchron gehalten werden:
+
+| Änderungstyp | Was aktualisieren |
+|---|---|
+| Neue/geänderte öffentliche Funktion / Struct / Enum | Docstring (`///`), zugehöriges `src/*/API.md` |
+| Neues Feature abgeschlossen | `docs/ROADMAP.md` → `[x]` setzen |
+| Neue Architektur-Entscheidung / neues Modul | `.windsurf/rules/projekt.md` oder `docs/ARCHITECTURE_PLAN.md` |
+| Breaking Change in Core/Render/App/XML | Alle betroffenen `API.md`-Dateien |
+| Refactoring ohne API-Änderung | Docstrings prüfen, ggf. anpassen |
+
+**Regel:** Kein Commit mit Codeänderungen ohne passende Doku-Aktualisierung im selben Commit.

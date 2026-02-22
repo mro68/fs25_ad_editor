@@ -74,7 +74,9 @@
   - [x] Background-Quad-Renderer
   - [x] Map-Auswahl UI (Datei-Dialog + Menü)
   - [x] Opacity- und Sichtbarkeits-Steuerung
-  - [ ] Zoom-abhängige LOD
+  - [ ] Zoom-abhängige LOD (Mipmap-Generierung)
+    - [ ] Mip-Level 0..N per Render-Pass herunterskalieren (Custom-Blit-Pipeline, wgpu#661)
+    - [ ] Alternative: DDS mit vorberechneter Mip-Chain im Asset-Pipeline
 - [🟡] Kurven-Werkzeuge (Bezier, Spline)
   - [x] Bezier-Interpolation (Grad 2 + 3)
   - [x] Catmull-Rom-Spline (interpolierend, durch alle Punkte)
@@ -182,6 +184,13 @@
 - ✅ Einstellungen: Min. Abstand / Anzahl Nodes (wie Linie/Kurve)
 - ✅ Verkettung und Nachbearbeitung unterstützt
 - ✅ 11 Unit-Tests (Geometrie + Tool-Flow)
+
+**Errungenschaften (Tools-Modularisierung abgeschlossen 2026-02-22):**
+- ✅ `curve.rs` → `curve/mod.rs` (einheitliche Verzeichnisstruktur für alle drei Tools)
+- ✅ `common.rs` → `common/` aufgeteilt: `geometry.rs`, `tangent.rs`, `lifecycle.rs`, `builder.rs`
+- ✅ Alle drei Tools + common/ folgen demselben Modul-Schema — kein weiteres Wachstum der Hauptdateien
+- ✅ Clippy-Fix: `needless_borrow` in `marker_renderer.rs`
+- ✅ 134 + 35 Tests grün, cargo check + clippy clean
 
 **Errungenschaften (Modularisierungs-Session 2026-02-21):**
 - ✅ Tool-Preview-Overlay aus `main.rs` in eigenständiges `ui/tool_preview.rs`-Modul extrahiert (65 Zeilen Inline-Code entfernt)

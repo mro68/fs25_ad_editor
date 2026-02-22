@@ -4,8 +4,6 @@ mod background_renderer;
 mod callback;
 mod connection_renderer;
 mod marker_renderer;
-///
-/// Dieser Renderer verwaltet seinen eigenen Zustand und bietet eine saubere API.
 mod node_renderer;
 mod texture;
 mod types;
@@ -17,11 +15,13 @@ pub(crate) use connection_renderer::ConnectionRenderer;
 pub(crate) use marker_renderer::MarkerRenderer;
 pub(crate) use node_renderer::NodeRenderer;
 use types::RenderContext;
-pub use types::RenderOptions;
 
 use eframe::egui_wgpu;
 
-/// Haupt-Renderer für AutoDrive-Daten
+/// Haupt-Renderer für AutoDrive-Daten.
+///
+/// Dieser Renderer verwaltet seinen eigenen Zustand (GPU-Buffer, Pipeline)
+/// und bietet eine saubere API: `new()` + `render_scene()` + `set_background()`.
 pub struct Renderer {
     background_renderer: BackgroundRenderer,
     connection_renderer: ConnectionRenderer,
@@ -110,7 +110,7 @@ impl Renderer {
                 render_pass,
                 road_map,
                 scene.render_quality,
-                &scene.selected_node_ids,
+                &scene.selected_node_ids, // jetzt &HashSet<u64>, kein Re-collect nötig
             );
         } else {
             log::debug!("No road_map to render");

@@ -24,7 +24,10 @@ pub fn load(state: &mut AppState, path: String) -> anyhow::Result<()> {
 }
 
 /// Speichert die RoadMap unter dem übergebenen Pfad (inkl. Heightmap-Check).
-pub fn save(state: &mut AppState, path: String) -> anyhow::Result<()> {
+///
+/// `None` speichert unter dem aktuell bekannten Pfad (oder öffnet den Dialog).
+/// `Some(p)` speichert explizit unter dem neuen Pfad `p`.
+pub fn save(state: &mut AppState, path: Option<String>) -> anyhow::Result<()> {
     use_cases::file_io::save_with_heightmap_check(state, path)
 }
 

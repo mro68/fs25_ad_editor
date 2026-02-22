@@ -28,7 +28,7 @@ pub fn delete_selected_nodes(state: &mut AppState) {
     delete_nodes_internal(road_map, &ids_to_delete, true);
 
     let count = ids_to_delete.len();
-    state.selection.selected_node_ids.clear();
+    state.selection.ids_mut().clear();
     state.selection.selection_anchor_node_id = None;
 
     log::info!("{} Node(s) gelöscht", count);

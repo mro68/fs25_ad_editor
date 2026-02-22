@@ -278,8 +278,36 @@ impl RoadMap {
     /// - Nur Verbindungen mit `ConnectionPriority::SubPriority` → `SubPrio`
     /// - Keine Verbindungen → `Regular` (Default)
     /// - Nodes mit Warning/Reserved-Flag werden nicht verändert.
+    ///
+    /// **Bulk-Optimierung:** Statt für jeden Node alle Verbindungen zu scannen
+    /// (O(n·m)), wird ein temporärer Adjacency-Cache aufgebaut (O(m)), der dann
+    /// in O(n) abgefragt wird. Netto O(n+m) statt O(n·m).
     pub fn recalculate_node_flags(&mut self, node_ids: &[u64]) {
         use super::NodeFlag;
+
+        if node_ids.is_empty() {
+            return;
+        }
+
+        // Adjacency-Cache aufbauen: node_id → (has_any, has_regular)
+        // Nur für die übergebenen Node-IDs relevant — alle anderen überspringen
+        let node_set: std::collections::HashSet<u64> = node_ids.iter().copied().collect();
+
+        let mut has_any: std::collections::HashMap<u64, bool> =
+            node_set.iter().map(|&id| (id, false)).collect();
+        let mut has_regular: std::collections::HashMap<u64, bool> =
+            node_set.iter().map(|&id| (id, false)).collect();
+
+        for conn in self.connections.values() {
+            for &nid in &[conn.start_id, conn.end_id] {
+                if node_set.contains(&nid) {
+                    has_any.insert(nid, true);
+                    if conn.priority == ConnectionPriority::Regular {
+                        has_regular.insert(nid, true);
+                    }
+                }
+            }
+        }
 
         for &nid in node_ids {
             let Some(node) = self.nodes.get(&nid) else {
@@ -292,20 +320,10 @@ impl RoadMap {
                 _ => {}
             }
 
-            let mut has_any_connection = false;
-            let mut has_regular_priority = false;
+            let any = has_any.get(&nid).copied().unwrap_or(false);
+            let regular = has_regular.get(&nid).copied().unwrap_or(false);
 
-            for conn in self.connections.values() {
-                if conn.start_id == nid || conn.end_id == nid {
-                    has_any_connection = true;
-                    if conn.priority == ConnectionPriority::Regular {
-                        has_regular_priority = true;
-                        break; // Ein Regular reicht
-                    }
-                }
-            }
-
-            let new_flag = if !has_any_connection || has_regular_priority {
+            let new_flag = if !any || regular {
                 NodeFlag::Regular
             } else {
                 NodeFlag::SubPrio

@@ -60,8 +60,8 @@ pub fn add_node_at_position(state: &mut AppState, world_pos: glam::Vec2) {
     road_map.ensure_spatial_index();
 
     // Neuen Node selektieren
-    state.selection.selected_node_ids.clear();
-    state.selection.selected_node_ids.insert(new_id);
+    state.selection.ids_mut().clear();
+    state.selection.ids_mut().insert(new_id);
     state.selection.selection_anchor_node_id = Some(new_id);
 
     log::info!(

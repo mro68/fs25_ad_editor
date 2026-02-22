@@ -255,11 +255,13 @@ pub struct WorldBounds { pub min_x, min_z, max_x, max_z: f32 }
 ```
 
 **Methoden:**
-- `Heightmap::load(path, bounds) -> Result<Self>`
+- `Heightmap::load(path) -> Result<Self>` — Lädt Heightmap, erkennt Bit-Tiefe und Map-Größe automatisch (FS25: pixels = map_size + 1)
+- `Heightmap::load_with_bounds(path, world_bounds) -> Result<Self>` — Lädt Heightmap mit expliziten World-Bounds
 - `sample_height(x, z, height_scale) -> f32` — Bikubische Interpolation
 - `dimensions() -> (u32, u32)`
-- `WorldBounds::default_fs25()` — Standard (-1024..+1024)
-- `WorldBounds::from_map_size(size)` — Custom Größe
+- `bit_depth() -> u8` — Erkannte Bit-Tiefe (8 oder 16)
+- `world_bounds() -> &WorldBounds` — Verwendete Weltkoordinaten-Grenzen
+- `WorldBounds::from_map_size(size)` — Bounds aus Map-Größe (zentriert bei 0,0)
 
 ---
 

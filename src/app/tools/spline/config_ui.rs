@@ -4,9 +4,7 @@
 //! - Tangenten-ComboBoxen am Start/Ende (nur Nachbearbeitungs-Modus)
 //! - Länge · Segment-Abstand · Node-Anzahl (Nachbearbeitungs- und Live-Modus)
 
-use super::super::common::{
-    node_count_from_length, render_tangent_combo, segment_length_from_count, LastEdited,
-};
+use super::super::common::render_tangent_combo;
 use super::super::RouteTool;
 use super::SplineTool;
 
@@ -19,125 +17,66 @@ impl SplineTool {
 
         // Tangenten-Auswahl nur im Nachbearbeitungs-Modus —
         // Start/Ende stehen erst nach Enter fest
-        let adjusting = !self.last_created_ids.is_empty() && self.last_anchors.len() >= 2;
+        let adjusting = !self.lifecycle.last_created_ids.is_empty() && self.last_anchors.len() >= 2;
 
         if adjusting {
             // Tangente Start
-            if !self.start_neighbors.is_empty()
+            if !self.tangents.start_neighbors.is_empty()
                 && render_tangent_combo(
                     ui,
                     "spline_tangent_start",
                     "Tangente Start:",
                     "Standard",
-                    &mut self.tangent_start,
-                    &self.start_neighbors,
+                    &mut self.tangents.tangent_start,
+                    &self.tangents.start_neighbors,
                 )
             {
-                if !self.last_created_ids.is_empty() {
-                    self.recreate_needed = true;
+                if !self.lifecycle.last_created_ids.is_empty() {
+                    self.lifecycle.recreate_needed = true;
                 }
                 changed = true;
             }
 
             // Tangente Ende
-            if !self.end_neighbors.is_empty()
+            if !self.tangents.end_neighbors.is_empty()
                 && render_tangent_combo(
                     ui,
                     "spline_tangent_end",
                     "Tangente Ende:",
                     "Standard",
-                    &mut self.tangent_end,
-                    &self.end_neighbors,
+                    &mut self.tangents.tangent_end,
+                    &self.tangents.end_neighbors,
                 )
             {
-                if !self.last_created_ids.is_empty() {
-                    self.recreate_needed = true;
+                if !self.lifecycle.last_created_ids.is_empty() {
+                    self.lifecycle.recreate_needed = true;
                 }
                 changed = true;
             }
 
-            if !self.start_neighbors.is_empty() || !self.end_neighbors.is_empty() {
+            if !self.tangents.start_neighbors.is_empty() || !self.tangents.end_neighbors.is_empty()
+            {
                 ui.add_space(4.0);
             }
 
             // Slider für Min. Abstand und Node-Anzahl im Nachbearbeitungs-Modus
             let length = Self::spline_length_from_anchors(
                 &self.last_anchors,
-                self.tangent_start,
-                self.tangent_end,
+                self.tangents.tangent_start,
+                self.tangents.tangent_end,
             );
 
-            ui.label(format!("Spline-Länge: {:.1} m", length));
-            ui.add_space(4.0);
-
-            ui.label("Min. Abstand:");
-            let max_seg = length.max(1.0);
-            if ui
-                .add(
-                    egui::Slider::new(&mut self.seg.max_segment_length, 1.0..=max_seg).suffix(" m"),
-                )
-                .changed()
-            {
-                self.seg.last_edited = LastEdited::Distance;
-                self.seg.node_count = node_count_from_length(length, self.seg.max_segment_length);
-                self.recreate_needed = true;
-                changed = true;
+            let (seg_changed, recreate) = self.seg.render_adjusting(ui, length, "Spline-Länge");
+            if recreate {
+                self.lifecycle.recreate_needed = true;
             }
-
-            ui.add_space(4.0);
-
-            ui.label("Anzahl Nodes:");
-            let max_nodes = (length / 1.0).ceil().max(2.0) as usize;
-            if ui
-                .add(egui::Slider::new(&mut self.seg.node_count, 2..=max_nodes))
-                .changed()
-            {
-                self.seg.last_edited = LastEdited::NodeCount;
-                self.seg.max_segment_length =
-                    segment_length_from_count(length, self.seg.node_count);
-                self.recreate_needed = true;
-                changed = true;
-            }
+            changed |= seg_changed;
         } else if self.is_ready() {
             let length = self.spline_length();
-            ui.label(format!("Spline-Länge: {:.1} m", length));
             ui.label(format!("Kontrollpunkte: {}", self.anchors.len()));
-            ui.add_space(4.0);
-
-            ui.label("Min. Abstand:");
-            let max_seg = length.max(1.0);
-            if ui
-                .add(
-                    egui::Slider::new(&mut self.seg.max_segment_length, 1.0..=max_seg).suffix(" m"),
-                )
-                .changed()
-            {
-                self.seg.last_edited = LastEdited::Distance;
-                self.sync_derived();
-                changed = true;
-            }
-
-            ui.add_space(4.0);
-
-            ui.label("Anzahl Nodes:");
-            let max_nodes = (length / 1.0).ceil().max(2.0) as usize;
-            if ui
-                .add(egui::Slider::new(&mut self.seg.node_count, 2..=max_nodes))
-                .changed()
-            {
-                self.seg.last_edited = LastEdited::NodeCount;
-                self.sync_derived();
-                changed = true;
-            }
+            changed |= self.seg.render_live(ui, length, "Spline-Länge");
         } else {
-            ui.label("Max. Segment-Länge:");
-            if ui
-                .add(egui::Slider::new(&mut self.seg.max_segment_length, 1.0..=50.0).suffix(" m"))
-                .changed()
-            {
-                self.seg.last_edited = LastEdited::Distance;
-                changed = true;
-            }
+            changed |= self.seg.render_default(ui);
         }
 
         changed

@@ -54,7 +54,7 @@ pub struct RenderScene {
     pub camera: Camera2D,
     pub viewport_size: [f32; 2],
     pub render_quality: RenderQuality,
-    pub selected_node_ids: Vec<u64>,
+    pub selected_node_ids: Arc<HashSet<u64>>,
     pub connect_source_node: Option<u64>,
     pub background_map: Option<Arc<BackgroundMap>>,
     pub background_opacity: f32,
@@ -177,18 +177,6 @@ pub enum RenderQuality { Low, Medium, High }
 - **High:** Breiteres AA (`fwidth * 1.8`)
 
 ---
-
-### `RenderOptions`
-
-Konfigurations-Optionen (für zukünftige Features).
-
-```rust
-pub struct RenderOptions {
-    pub node_size: f32,           // Default: 5.0
-    pub highlight_subprio: bool,  // Default: true
-    pub highlight_warnings: bool, // Default: true
-}
-```
 
 ## Rendering-Pipeline
 

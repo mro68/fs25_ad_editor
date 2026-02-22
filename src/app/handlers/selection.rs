@@ -2,6 +2,7 @@
 
 use crate::app::use_cases;
 use crate::app::AppState;
+use std::sync::Arc;
 
 /// Selektiert den nächstgelegenen Node zum Klickpunkt.
 pub fn select_nearest_node(
@@ -63,7 +64,7 @@ pub fn clear(state: &mut AppState) {
 /// Selektiert alle Nodes der geladenen RoadMap.
 pub fn select_all(state: &mut AppState) {
     if let Some(road_map) = state.road_map.as_deref() {
-        state.selection.selected_node_ids = road_map.nodes.keys().copied().collect();
+        state.selection.selected_node_ids = Arc::new(road_map.nodes.keys().copied().collect());
         state.selection.selection_anchor_node_id = None;
         log::info!(
             "Alle {} Nodes selektiert",

@@ -7,10 +7,9 @@
 mod culling;
 mod mesh;
 
-use super::types::{ConnectionVertex, RenderContext, Uniforms};
-use crate::{Camera2D, ConnectionDirection, RoadMap};
+use super::types::{compute_visible_rect, ConnectionVertex, RenderContext, Uniforms};
+use crate::{ConnectionDirection, RoadMap};
 use eframe::{egui_wgpu, wgpu};
-use glam::Vec2;
 
 use culling::{point_in_rect, segment_intersects_rect};
 use mesh::{connection_color, push_arrow, push_line_quad};
@@ -139,20 +138,7 @@ impl ConnectionRenderer {
             return;
         }
 
-        let aspect = viewport_width / viewport_height;
-        let zoom_scale = 1.0 / ctx.camera.zoom;
-        let base_extent = Camera2D::BASE_WORLD_EXTENT;
-        let half_height = base_extent * zoom_scale;
-        let half_width = half_height * aspect;
-        let padding = ctx.camera.world_per_pixel(viewport_height) * 8.0;
-        let visible_min = Vec2::new(
-            ctx.camera.position.x - half_width - padding,
-            ctx.camera.position.y - half_height - padding,
-        );
-        let visible_max = Vec2::new(
-            ctx.camera.position.x + half_width + padding,
-            ctx.camera.position.y + half_height + padding,
-        );
+        let (visible_min, visible_max) = compute_visible_rect(ctx);
 
         let view_proj = super::types::build_view_projection(ctx.camera, ctx.viewport_size);
         ctx.queue.write_buffer(

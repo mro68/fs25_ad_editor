@@ -22,10 +22,10 @@ pub fn select_nodes_in_rect(
     let hit_ids = road_map.nodes_within_rect(min, max);
 
     if !additive {
-        state.selection.selected_node_ids.clear();
+        state.selection.ids_mut().clear();
     }
 
-    state.selection.selected_node_ids.extend(hit_ids);
+    state.selection.ids_mut().extend(hit_ids);
     state.selection.selection_anchor_node_id =
         state.selection.selected_node_ids.iter().copied().next();
 }

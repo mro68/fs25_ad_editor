@@ -1,13 +1,14 @@
 //! Parser für AutoDrive XML-Konfigurationen.
 
-use crate::core::{AutoDriveMeta, Connection, ConnectionDirection, ConnectionPriority, MapMarker};
-use crate::core::{MapNode, NodeFlag, RoadMap};
-use anyhow::bail;
-use anyhow::{Context, Result};
-use glam::Vec2;
+mod markers;
+mod waypoints;
+
+use crate::core::{AutoDriveMeta, MapMarker, RoadMap};
+use anyhow::{bail, Context, Result};
+use markers::parse_marker_id;
 use quick_xml::events::Event;
 use quick_xml::Reader;
-use std::collections::HashMap;
+use waypoints::build_nodes_and_connections;
 
 /// Parsed eine AutoDrive-Config aus einem XML-String
 pub fn parse_autodrive_config(xml_content: &str) -> Result<RoadMap> {
@@ -177,18 +178,22 @@ pub fn parse_autodrive_config(xml_content: &str) -> Result<RoadMap> {
         bail!("Pflichtfelder in <waypoints> fehlen");
     }
 
-    let ids = parse_list::<u64>(&waypoint_ids, ',').context("Fehler beim Parsen der ID-Liste")?;
-    let xs = parse_list::<f32>(&waypoint_x, ',').context("Fehler beim Parsen der X-Koordinaten")?;
-    let zs = parse_list::<f32>(&waypoint_z, ',').context("Fehler beim Parsen der Z-Koordinaten")?;
-    let flags = parse_list::<u32>(&waypoint_flags, ',').context("Fehler beim Parsen der Flags")?;
-    let outgoing =
-        parse_nested_list(&waypoint_out).context("Fehler beim Parsen der Outgoing-Liste")?;
-    let incoming =
-        parse_nested_list(&waypoint_incoming).context("Fehler beim Parsen der Incoming-Liste")?;
+    let ids = waypoints::parse_list::<u64>(&waypoint_ids, ',')
+        .context("Fehler beim Parsen der ID-Liste")?;
+    let xs = waypoints::parse_list::<f32>(&waypoint_x, ',')
+        .context("Fehler beim Parsen der X-Koordinaten")?;
+    let zs = waypoints::parse_list::<f32>(&waypoint_z, ',')
+        .context("Fehler beim Parsen der Z-Koordinaten")?;
+    let flags = waypoints::parse_list::<u32>(&waypoint_flags, ',')
+        .context("Fehler beim Parsen der Flags")?;
+    let outgoing = waypoints::parse_nested_list(&waypoint_out)
+        .context("Fehler beim Parsen der Outgoing-Liste")?;
+    let incoming = waypoints::parse_nested_list(&waypoint_incoming)
+        .context("Fehler beim Parsen der Incoming-Liste")?;
 
     let mut ys: Option<Vec<f32>> = None;
     if !waypoint_y.is_empty() {
-        ys = Some(parse_list::<f32>(&waypoint_y, ',')?);
+        ys = Some(waypoints::parse_list::<f32>(&waypoint_y, ',')?);
     }
 
     let expected_len = ids.len();
@@ -207,69 +212,20 @@ pub fn parse_autodrive_config(xml_content: &str) -> Result<RoadMap> {
         }
     }
 
-    let mut nodes = HashMap::new();
-    let mut id_to_index = HashMap::new();
-
-    for (index, id) in ids.iter().enumerate() {
-        let flag = NodeFlag::from_u32(flags[index]);
-        let position = Vec2::new(xs[index], zs[index]);
-        nodes.insert(*id, MapNode::new(*id, position, flag));
-        id_to_index.insert(*id, index);
-    }
-
-    let mut connections = Vec::new();
-    // Bereits angelegte Dual-Paare verfolgen, damit A→B Dual nicht auch B→A Dual erzeugt
-    let mut dual_pairs: std::collections::HashSet<(u64, u64)> = std::collections::HashSet::new();
-
-    for (index, source_id) in ids.iter().enumerate() {
-        let targets = &outgoing[index];
-
-        for target_id in targets {
-            if target_id == source_id {
-                continue;
-            }
-
-            let target_index = match id_to_index.get(target_id) {
-                Some(idx) => *idx,
-                None => {
-                    log::warn!("Missing target node: {}", target_id);
-                    continue;
-                }
-            };
-
-            let target_out = &outgoing[target_index];
-            let target_incoming = &incoming[target_index];
-
-            let direction = if target_out.contains(source_id) {
-                ConnectionDirection::Dual
-            } else if !target_incoming.contains(source_id) {
-                ConnectionDirection::Reverse
-            } else {
-                ConnectionDirection::Regular
-            };
-
-            // Bei Dual: nur einmal pro Paar anlegen (kleinere ID → größere ID)
-            if direction == ConnectionDirection::Dual {
-                let pair = ((*source_id).min(*target_id), (*source_id).max(*target_id));
-                if dual_pairs.contains(&pair) {
-                    continue;
-                }
-                dual_pairs.insert(pair);
-            }
-
-            let priority = match nodes.get(target_id).map(|node| node.flag) {
-                Some(NodeFlag::SubPrio) => ConnectionPriority::SubPriority,
-                _ => ConnectionPriority::Regular,
-            };
-
-            let start_pos = nodes.get(source_id).context("Start-Node fehlt")?.position;
-            let end_pos = nodes.get(target_id).context("End-Node fehlt")?.position;
-
-            connections.push(Connection::new(
-                *source_id, *target_id, direction, priority, start_pos, end_pos,
-            ));
-        }
-    }
+    let y_str = if !waypoint_y.is_empty() {
+        Some(waypoint_y.as_str())
+    } else {
+        None
+    };
+    let (nodes, connections) = build_nodes_and_connections(
+        &waypoint_ids,
+        &waypoint_x,
+        y_str,
+        &waypoint_z,
+        &waypoint_flags,
+        &waypoint_out,
+        &waypoint_incoming,
+    )?;
 
     let mut road_map = RoadMap::new(version);
     road_map.map_name = map_name;
@@ -287,86 +243,6 @@ pub fn parse_autodrive_config(xml_content: &str) -> Result<RoadMap> {
     road_map.rebuild_spatial_index();
 
     Ok(road_map)
-}
-
-fn parse_marker_id(text: &str) -> Result<u64> {
-    let value = text
-        .trim()
-        .parse::<f64>()
-        .context("Marker-ID ist keine gueltige Zahl")?;
-
-    if !value.is_finite() {
-        bail!("Marker-ID muss endlich sein");
-    }
-
-    if value < 0.0 {
-        bail!("Marker-ID darf nicht negativ sein");
-    }
-
-    if value.fract() != 0.0 {
-        bail!("Marker-ID muss ganzzahlig sein");
-    }
-
-    Ok(value as u64)
-}
-
-/// Hilfsfunktion zum Parsen einer kommagetrennten Liste
-fn parse_list<T: std::str::FromStr>(text: &str, delimiter: char) -> Result<Vec<T>>
-where
-    <T as std::str::FromStr>::Err: std::error::Error + Send + Sync + 'static,
-{
-    text.split(delimiter)
-        .filter(|s| !s.is_empty())
-        .map(|s| {
-            let trimmed = s.trim();
-            trimmed.parse::<T>().with_context(|| {
-                format!(
-                    "Wert '{}' konnte nicht geparst werden",
-                    truncate_for_error(trimmed)
-                )
-            })
-        })
-        .collect::<Result<Vec<T>, _>>()
-}
-
-/// Kürzt einen String für Fehlermeldungen auf max. 40 Zeichen
-fn truncate_for_error(s: &str) -> &str {
-    if s.len() <= 40 {
-        s
-    } else {
-        &s[..40]
-    }
-}
-
-/// Hilfsfunktion zum Parsen verschachtelter Listen (für out/incoming).
-/// Werte <= 0 (z.B. -1) werden ignoriert — sie markieren Endpunkte oder
-/// rückwärts befahrene Strecken in AutoDrive.
-fn parse_nested_list(text: &str) -> Result<Vec<Vec<u64>>> {
-    text.split(';')
-        .map(|part| {
-            if part.trim().is_empty() {
-                Ok(Vec::new())
-            } else {
-                part.split(',')
-                    .filter(|s| !s.is_empty())
-                    .filter_map(|s| {
-                        let trimmed = s.trim();
-                        // -1 (und andere negative Werte) = kein Ziel / Endpunkt
-                        if trimmed.starts_with('-') {
-                            None
-                        } else {
-                            Some(trimmed.parse::<u64>().with_context(|| {
-                                format!(
-                                    "Wert '{}' konnte nicht geparst werden",
-                                    truncate_for_error(trimmed)
-                                )
-                            }))
-                        }
-                    })
-                    .collect()
-            }
-        })
-        .collect()
 }
 
 fn parse_version(version_attr: Option<String>, version_text: Option<String>) -> Result<u32> {

@@ -63,7 +63,33 @@ flowchart LR
   STATUS -. read-only .-> STATE
 ```
 
-## Zuständigkeiten pro Layer
+### Layer-Grenzen (erlaubte Import-Richtungen)
+
+```mermaid
+graph BT
+    CORE["core\n(Domain)"]
+    XML["xml\n(Persistence)"]
+    APP["app\n(Application)"]
+    UI["ui\n(Presentation)"]
+    RENDER["render\n(Rendering)"]
+    SHARED["shared\n(Cross-Layer)"]
+
+    XML  --> CORE
+    APP  --> CORE
+    APP  --> XML
+    APP  --> SHARED
+    UI   --> APP
+    RENDER --> SHARED
+
+    CORE  -.->|verboten| UI
+    CORE  -.->|verboten| RENDER
+    RENDER -.->|verboten| CORE
+    XML   -.->|verboten| APP
+```
+
+> **Regel:** Pfeile zeigen "darf importieren". Gestrichelt = explizit verboten (CI-geprüft via `scripts/check_layer_boundaries.sh`).
+
+
 
 ### UI Layer (`src/ui/*`)
 **Verantwortung**
@@ -338,17 +364,34 @@ src/
       history.rs        # Undo/Redo
     tools/
       mod.rs            # RouteTool-Trait + ToolManager + snap_to_node()
-      straight_line.rs  # Gerade-Linie-Tool
-      straight_line/
-        tests.rs        # Unit-Tests für StraightLineTool
-      curve.rs          # Bézier-Kurven-Tool (Grad 2 + 3)
+      common/           # Gemeinsame Tool-Infrastruktur (alle Submodule privat)
+        mod.rs          # Re-Exporte
+        geometry.rs     # angle_to_compass, populate_neighbors
+        tangent.rs      # TangentSource, TangentState, render_tangent_combo
+        lifecycle.rs    # ToolLifecycleState, SegmentConfig, LastEdited
+        builder.rs      # assemble_tool_result
       curve/
-        geometry.rs     # Kurven-Geometrie (Interpolation)
-        tests.rs        # Unit-Tests für CurveTool
+        mod.rs          # Bézier-Kurven-Tool (Grad 2 + 3) — Einstiegspunkt
+        state.rs        # CurveTool Struct, Enums, Konstruktor
+        lifecycle.rs    # RouteTool-Implementierung
+        drag.rs         # Drag-Logik (Steuerpunkt-Verschiebung)
+        config_ui.rs    # egui-Konfigurationspanel
+        geometry.rs     # Bézier-Mathe (Interpolation, Tangenten)
+        tests.rs        # Unit-Tests
       spline/
-        mod.rs          # Catmull-Rom-Spline-Tool (interpolierend)
+        mod.rs          # Catmull-Rom-Spline-Tool — Einstiegspunkt
+        state.rs        # SplineTool Struct, Konstruktor
+        lifecycle.rs    # RouteTool-Implementierung
+        config_ui.rs    # egui-Konfigurationspanel
         geometry.rs     # Spline-Geometrie (Arc-Length-Resampling)
-        tests.rs        # Unit-Tests für SplineTool
+        tests.rs        # Unit-Tests
+      straight_line/
+        mod.rs          # Gerade-Linie-Tool — Einstiegspunkt
+        state.rs        # StraightLineTool Struct, Konstruktor
+        lifecycle.rs    # RouteTool-Implementierung
+        config_ui.rs    # egui-Konfigurationspanel
+        geometry.rs     # Linien-Geometrie
+        tests.rs        # Unit-Tests
     use_cases/
       mod.rs
       file_io.rs        # Load, Save, Heightmap-Warnung, Dateipfad-Handling

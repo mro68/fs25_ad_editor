@@ -7,9 +7,7 @@ pub fn map_intent_to_commands(state: &AppState, intent: AppIntent) -> Vec<AppCom
     match intent {
         AppIntent::OpenFileRequested => vec![AppCommand::RequestOpenFileDialog],
         AppIntent::SaveRequested => {
-            vec![AppCommand::SaveFile {
-                path: String::new(),
-            }]
+            vec![AppCommand::SaveFile { path: None }]
         }
         AppIntent::SaveAsRequested => vec![AppCommand::RequestSaveFileDialog],
         AppIntent::ExitRequested => vec![AppCommand::RequestExit],
@@ -51,7 +49,7 @@ pub fn map_intent_to_commands(state: &AppState, intent: AppIntent) -> Vec<AppCom
 
             let mut max_distance = base_max_distance;
             if let Some(rm) = state.road_map.as_ref() {
-                for id in &state.selection.selected_node_ids {
+                for id in state.selection.selected_node_ids.iter() {
                     if let Some(node) = rm.nodes.get(id) {
                         if (node.position - world_pos).length() <= increased_max_distance {
                             max_distance = increased_max_distance;
@@ -98,7 +96,7 @@ pub fn map_intent_to_commands(state: &AppState, intent: AppIntent) -> Vec<AppCom
             vec![AppCommand::SetRenderQuality { quality }]
         }
         AppIntent::FileSelected { path } => vec![AppCommand::LoadFile { path }],
-        AppIntent::SaveFilePathSelected { path } => vec![AppCommand::SaveFile { path }],
+        AppIntent::SaveFilePathSelected { path } => vec![AppCommand::SaveFile { path: Some(path) }],
         AppIntent::UndoRequested => vec![AppCommand::Undo],
         AppIntent::RedoRequested => vec![AppCommand::Redo],
         AppIntent::SetEditorToolRequested { tool } => vec![AppCommand::SetEditorTool { tool }],

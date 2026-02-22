@@ -94,8 +94,8 @@ pub fn connect_tool_pick_node(state: &mut AppState, world_pos: glam::Vec2, max_d
         // Erster Klick: Source setzen
         state.editor.connect_source_node = Some(node_id);
         // Source-Node selektieren als visuelles Feedback
-        state.selection.selected_node_ids.clear();
-        state.selection.selected_node_ids.insert(node_id);
+        state.selection.ids_mut().clear();
+        state.selection.ids_mut().insert(node_id);
         state.selection.selection_anchor_node_id = Some(node_id);
         log::info!("Connect-Tool: Startknoten {} gewählt", node_id);
     }

@@ -16,6 +16,8 @@ pub fn compute_curve_positions(eval: impl Fn(f32) -> Vec2, max_segment_length: f
     let segment_count = (total_length / max_segment_length).ceil().max(1.0) as usize;
     let target_spacing = total_length / segment_count as f32;
 
+    // TODO(Performance): LUT bei mehreren Aufrufen mit identischer Kurve cachen
+    // (z.B. in CurveTool::preview vs execute). Derzeit ~1 KB Allokation pro Mausbewegung.
     let lut_samples = 256;
     let mut arc_lengths = Vec::with_capacity(lut_samples + 1);
     let mut prev = start;

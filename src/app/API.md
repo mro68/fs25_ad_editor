@@ -68,9 +68,20 @@ pub struct AppState {
 }
 
 pub struct SelectionState {
-    pub selected_node_ids: HashSet<u64>,
+    pub selected_node_ids: Arc<HashSet<u64>>,  // Arc für O(1)-Clone in RenderScene (CoW)
     pub selection_anchor_node_id: Option<u64>,
 }
+```
+
+**Methoden:**
+
+```rust
+// CoW-Mutation: klont HashSet nur wenn der Arc nicht alleinig gehalten wird
+sel.ids_mut().insert(42);
+```
+
+- `new() → Self`
+- `ids_mut() → &mut HashSet<u64>` — Mutable Zugriff via `Arc::make_mut` (Copy-on-Write)
 
 pub struct UiState {
     pub show_file_dialog: bool,
@@ -414,6 +425,36 @@ pub enum AppCommand {
 - `update_marker(state, node_id, &name, &group)` — Bestehenden Marker aktualisieren (mit Undo-Snapshot)
 - `remove_marker(state, node_id)` — Marker eines Nodes entfernen (mit Undo-Snapshot)
 
+## AppIntent-Flow (Übersicht)
+
+```mermaid
+flowchart TD
+    UI([UI / Input]) -->|"AppIntent"| CTRL[AppController::handle_intent]
+    CTRL -->|"map_intent_to_commands()"| MAP[intent_mapping.rs]
+    MAP -->|"Vec<AppCommand>"| CTRL
+
+    CTRL -->|dispatch| H_FILE[handlers/file_io]
+    CTRL -->|dispatch| H_VIEW[handlers/view]
+    CTRL -->|dispatch| H_SEL[handlers/selection]
+    CTRL -->|dispatch| H_EDIT[handlers/editing]
+    CTRL -->|dispatch| H_ROUTE[handlers/route_tool]
+    CTRL -->|dispatch| H_HIST[handlers/history]
+    CTRL -->|dispatch| H_DLG[handlers/dialog]
+
+    H_FILE -->|"use_cases::file_io"| STATE[AppState]
+    H_VIEW -->|"use_cases::camera / viewport"| STATE
+    H_SEL -->|"use_cases::selection"| STATE
+    H_EDIT -->|"use_cases::editing"| STATE
+    H_ROUTE -->|"RouteTool / ToolManager"| STATE
+    H_HIST -->|"EditHistory pop/push"| STATE
+    H_DLG -->|"UiState / Dialog-Flags"| STATE
+
+    CTRL -->|"build_render_scene()"| SCENE[RenderScene]
+    SCENE -->|GPU-Draw-Calls| GPU([Renderer / wgpu])
+```
+
+*Ablauf:* UI emittiert `AppIntent` → `AppController` übersetzt via `map_intent_to_commands()` in `Vec<AppCommand>` → Handler-Module mutieren `AppState` via Use-Cases → `build_render_scene()` serialisiert den State in den `RenderScene`-Vertrag → Renderer zeichnet.
+
 ## Interaktions-Pattern
 
 ### Typisches Update-Loop (Intent-basiert)
@@ -459,7 +500,7 @@ pub struct CommandLog { /* intern */ }
 
 **Methoden:**
 - `new() → Self`
-- `record(command: AppCommand)` — Command protokollieren
+- `record(&mut self, command: &AppCommand)` — Command protokollieren (speichert Debug-String)
 - `len() → usize` — Anzahl geloggter Commands
 - `is_empty() → bool` — Prüfen, ob keine Einträge vorhanden sind
 - `entries() → &[AppCommand]` — Read-only Sicht auf alle Einträge
@@ -476,14 +517,14 @@ pub struct Snapshot { /* intern */ }
 ```
 
 **EditHistory-Methoden:**
-- `new() → Self`
-- `record_snapshot(snapshot)` — Snapshot auf den Undo-Stack legen
-- `undo() → Option<Snapshot>` — Letzten Snapshot wiederherstellen
-- `redo() → Option<Snapshot>` — Redo-Snapshot wiederherstellen
+- `new_with_capacity(max_depth: usize) → Self` — Manager mit maximaler Undo/Redo-Tiefe erstellen
+- `record_snapshot(snapshot: Snapshot)` — Snapshot auf den Undo-Stack legen (löscht Redo-Stack)
+- `pop_undo_with_current(current: Snapshot) → Option<Snapshot>` — Undo: aktuellen Zustand auf Redo-Stack, vorherigen Snapshot zurückgeben
+- `pop_redo_with_current(current: Snapshot) → Option<Snapshot>` — Redo: aktuellen Zustand auf Undo-Stack, nächsten Snapshot zurückgeben
 - `can_undo() → bool` / `can_redo() → bool`
 
 **AppState Helper:**
-- `record_undo_snapshot(&mut self)` — Convenience-Methode, erstellt Snapshot und legt ihn auf den History-Stack
+- `record_undo_snapshot(&mut self)` — Convenience-Methode: erstellt Snapshot via `Snapshot::from_state(self)` und legt ihn auf den History-Stack
 
 ---
 
@@ -547,7 +588,13 @@ Schnittstelle für alle Route-Tools (Linie, Kurve, …). Tools sind zustandsbeha
 
 ---
 
-### Gemeinsame Tool-Infrastruktur (`tools/common.rs`)
+### Gemeinsame Tool-Infrastruktur (`tools/common/`)
+
+Aufgeteilt in vier Submodule (alle privat, Re-Exporte via `common/mod.rs`):
+- **`geometry.rs`** — `angle_to_compass`, `node_count_from_length`, `populate_neighbors`
+- **`tangent.rs`** — `TangentSource`, `TangentState`, `render_tangent_combo`
+- **`lifecycle.rs`** — `ToolLifecycleState`, `SegmentConfig`, `LastEdited`
+- **`builder.rs`** — `assemble_tool_result`
 
 **`SegmentConfig`** — Gekapselte Konfiguration für Segment-Länge und Node-Anzahl, die alle Route-Tools gemeinsam nutzen:
 - `max_segment_length: f32` — Maximaler Abstand zwischen Zwischen-Nodes
