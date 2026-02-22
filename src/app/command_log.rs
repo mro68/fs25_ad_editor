@@ -1,11 +1,14 @@
-//! Minimales Command-Log für spätere Undo/Redo-Erweiterung.
+//! Minimales Command-Log für Debug-Zwecke.
+//!
+//! Speichert Commands als Strings (via Debug-Format), um das Klonen
+//! großer Enum-Varianten (z.B. Lasso-Polygon) zu vermeiden.
 
 use super::AppCommand;
 
-/// Speichert ausgeführte Commands in Reihenfolge.
+/// Speichert ausgeführte Commands als Debug-Strings.
 #[derive(Default)]
 pub struct CommandLog {
-    entries: Vec<AppCommand>,
+    entries: Vec<String>,
 }
 
 impl CommandLog {
@@ -20,13 +23,13 @@ impl CommandLog {
         }
     }
 
-    /// Fügt einen ausgeführten Command hinzu.
+    /// Fügt einen ausgeführten Command als Debug-String hinzu.
     /// Begrenzt auf MAX_ENTRIES, ältere Einträge werden verworfen.
-    pub fn record(&mut self, command: AppCommand) {
+    pub fn record(&mut self, command: &AppCommand) {
         if self.entries.len() >= Self::MAX_ENTRIES {
             self.entries.drain(..Self::MAX_ENTRIES / 2);
         }
-        self.entries.push(command);
+        self.entries.push(format!("{command:?}"));
     }
 
     /// Gibt die Anzahl der geloggten Commands zurück.
@@ -40,7 +43,7 @@ impl CommandLog {
     }
 
     /// Liefert eine read-only Sicht auf alle Einträge.
-    pub fn entries(&self) -> &[AppCommand] {
+    pub fn entries(&self) -> &[String] {
         &self.entries
     }
 }
