@@ -10,7 +10,7 @@ mod geometry;
 
 use self::geometry::{catmull_rom_chain_with_tangents, polyline_length, resample_by_distance};
 use super::{
-    common::{angle_to_compass, node_count_from_length, segment_length_from_count},
+    common::{angle_to_compass, node_count_from_length, populate_neighbors, segment_length_from_count},
     snap_to_node, RouteTool, ToolAction, ToolAnchor, ToolPreview, ToolResult,
 };
 use crate::core::{ConnectedNeighbor, ConnectionDirection, ConnectionPriority, NodeFlag, RoadMap};
@@ -143,14 +143,6 @@ impl SplineTool {
         };
 
         (start_phantom, end_phantom)
-    }
-
-    /// Befüllt die Nachbar-Liste für einen Snap-Node.
-    fn populate_neighbors(anchor: &ToolAnchor, road_map: &RoadMap) -> Vec<ConnectedNeighbor> {
-        match anchor {
-            ToolAnchor::ExistingNode(id, _) => road_map.connected_neighbors(*id),
-            ToolAnchor::NewPosition(_) => Vec::new(),
-        }
     }
 
     /// Berechnet die dichte Spline-Polyline aus den Ankern (+ optionaler Cursor-Position).
@@ -631,10 +623,10 @@ impl RouteTool for SplineTool {
             &self.last_anchors
         };
         if let Some(first) = source.first() {
-            self.start_neighbors = Self::populate_neighbors(first, road_map);
+            self.start_neighbors = populate_neighbors(first, road_map);
         }
         if let Some(last) = source.last() {
-            self.end_neighbors = Self::populate_neighbors(last, road_map);
+            self.end_neighbors = populate_neighbors(last, road_map);
         }
         self.last_tangent_start = self.tangent_start;
         self.last_tangent_end = self.tangent_end;

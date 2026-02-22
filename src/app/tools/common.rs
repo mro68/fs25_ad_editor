@@ -1,5 +1,8 @@
 //! Gemeinsame Hilfsfunktionen für Route-Tools.
 
+use crate::core::{ConnectedNeighbor, RoadMap};
+use super::ToolAnchor;
+
 /// Wandelt einen Winkel (Radiant) in eine Kompass-Richtung um.
 ///
 /// FS25-Koordinatensystem: +X = Ost, +Z = Süd in der Draufsicht.
@@ -28,4 +31,14 @@ pub(crate) fn node_count_from_length(length: f32, max_segment_length: f32) -> us
 pub(crate) fn segment_length_from_count(length: f32, node_count: usize) -> f32 {
     let segments = (node_count.max(2) - 1) as f32;
     length / segments
+}
+
+/// Liefert alle verbundenen Nachbarn eines Snap-Ankers aus der RoadMap.
+///
+/// Gibt einen leeren Vec zurück wenn der Anker kein existierender Node ist.
+pub(crate) fn populate_neighbors(anchor: &ToolAnchor, road_map: &RoadMap) -> Vec<ConnectedNeighbor> {
+    match anchor {
+        ToolAnchor::ExistingNode(id, _) => road_map.connected_neighbors(*id),
+        ToolAnchor::NewPosition(_) => Vec::new(),
+    }
 }

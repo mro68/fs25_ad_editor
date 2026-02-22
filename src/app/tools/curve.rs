@@ -10,7 +10,7 @@
 //! Grad wird über `render_config` umgeschaltet (UI-Dropdown).
 
 use super::{
-    common::{angle_to_compass, node_count_from_length, segment_length_from_count}, snap_to_node,
+    common::{angle_to_compass, node_count_from_length, populate_neighbors, segment_length_from_count}, snap_to_node,
     RouteTool, ToolAction, ToolAnchor, ToolPreview, ToolResult,
 };
 use crate::core::{ConnectedNeighbor, ConnectionDirection, ConnectionPriority, RoadMap};
@@ -222,13 +222,6 @@ impl CurveTool {
         }
     }
 
-    /// Befüllt die Nachbar-Liste für einen Snap-Node.
-    fn populate_neighbors(anchor: &ToolAnchor, road_map: &RoadMap) -> Vec<ConnectedNeighbor> {
-        match anchor {
-            ToolAnchor::ExistingNode(id, _) => road_map.connected_neighbors(*id),
-            ToolAnchor::NewPosition(_) => Vec::new(),
-        }
-    }
 }
 
 impl Default for CurveTool {
@@ -285,9 +278,9 @@ impl RouteTool for CurveTool {
                     self.last_control_point2 = None;
                     self.recreate_needed = false;
                     self.start = Some(last_end);
-                    self.start_neighbors = Self::populate_neighbors(&last_end, road_map);
+                    self.start_neighbors = populate_neighbors(&last_end, road_map);
                     let end_anchor = snap_to_node(pos, road_map, SNAP_RADIUS);
-                    self.end_neighbors = Self::populate_neighbors(&end_anchor, road_map);
+                    self.end_neighbors = populate_neighbors(&end_anchor, road_map);
                     self.end = Some(end_anchor);
                     self.tangent_start = TangentSource::None;
                     self.tangent_end = TangentSource::None;
@@ -296,7 +289,7 @@ impl RouteTool for CurveTool {
                     ToolAction::Continue
                 } else {
                     let start_anchor = snap_to_node(pos, road_map, SNAP_RADIUS);
-                    self.start_neighbors = Self::populate_neighbors(&start_anchor, road_map);
+                    self.start_neighbors = populate_neighbors(&start_anchor, road_map);
                     self.tangent_start = TangentSource::None;
                     self.start = Some(start_anchor);
                     self.phase = Phase::End;
@@ -305,7 +298,7 @@ impl RouteTool for CurveTool {
             }
             Phase::End => {
                 let end_anchor = snap_to_node(pos, road_map, SNAP_RADIUS);
-                self.end_neighbors = Self::populate_neighbors(&end_anchor, road_map);
+                self.end_neighbors = populate_neighbors(&end_anchor, road_map);
                 self.tangent_end = TangentSource::None;
                 self.end = Some(end_anchor);
                 self.phase = Phase::Control;
