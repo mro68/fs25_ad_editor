@@ -14,9 +14,10 @@
 10. [Kamera und Viewport](#kamera-und-viewport)
 11. [Hintergrund-Karte](#hintergrund-karte)
 12. [Heightmap](#heightmap)
-13. [Optionen](#optionen)
-14. [Undo / Redo](#undo--redo)
-15. [Typische Workflows](#typische-workflows)
+13. [Duplikat-Bereinigung](#duplikat-bereinigung)
+14. [Optionen](#optionen)
+15. [Undo / Redo](#undo--redo)
+16. [Typische Workflows](#typische-workflows)
 
 ---
 
@@ -68,18 +69,18 @@ Beim Speichern wird geprüft, ob eine Heightmap geladen ist. Falls nicht, ersche
 Das Hauptfenster besteht aus folgenden Bereichen:
 
 ```
-┌─────────────────────────────────────────────┐
-│ Menü-Leiste (File | Edit | View | Help)     │
-├─────────────────────────────────────────────┤
-│ Toolbar (Werkzeug | Delete | Background)    │
-├─────────────────────────────────────────────┤
-│                                             │
-│                 Viewport                    │
-│            (Karten-Darstellung)             │
-│                                             │
-├─────────────────────────────────────────────┤
-│ Statusleiste (Nodes | Connections | Zoom …) │
-└─────────────────────────────────────────────┘
+┌────────────────────────────────────────────────────────┐
+│ Menü-Leiste (File | Edit | View | Help)                │
+├────────────────────────────────────────────────────────┤
+│ Toolbar (Werkzeug | Delete | Background)               │
+├──────────────────────────────────────┬─────────────────┤
+│                                      │                 │
+│              Viewport                │  Eigenschaften  │
+│         (Karten-Darstellung)         │    (Panel)      │
+│                                      │                 │
+├──────────────────────────────────────┴─────────────────┤
+│ Statusleiste (Nodes | Connections | Zoom …)            │
+└────────────────────────────────────────────────────────┘
 ```
 
 ### Menü-Leiste
@@ -88,6 +89,19 @@ Das Hauptfenster besteht aus folgenden Bereichen:
 - **Edit**: Undo, Redo, Optionen
 - **View**: Kamera-Reset, Zoom, Hintergrund-Karte, Render-Quality
 - **Help**: About (Versionsinformation)
+
+### Eigenschaften-Panel (rechte Seitenleiste)
+
+Das Eigenschaften-Panel zeigt kontextabhängig Infos zur aktuellen Selektion und enthält die Standard-Verbindungseinstellungen sowie bei aktivem Route-Tool die Route-Konfiguration.
+
+| Inhalt | Bedingung |
+|--------|-----------|
+| „Keine Selektion" | Kein Node selektiert |
+| Node-ID, Position, Flag, Marker-Controls | Genau 1 Node selektiert |
+| Verbindungs-Details, Richtungs-/Prioritäts-ComboBox, Trennen-Button | Genau 2 Nodes selektiert |
+| „N Nodes selektiert" | 3+ Nodes selektiert |
+| Standard-Richtung und Straßenart (ComboBox) | Immer sichtbar (unterer Bereich) |
+| Route-Tool-Konfiguration (Slider) | Nur wenn Route-Tool aktiv |
 
 ### Toolbar
 
@@ -467,6 +481,31 @@ Beim Speichern ohne Heightmap erscheint eine Warnung. Sie können:
 
 ---
 
+## Duplikat-Bereinigung
+
+Beim Laden einer AutoDrive-Konfiguration prüft der Editor automatisch, ob doppelte Wegpunkte vorhanden sind (Abstandstoleranz: 0,01 Welteinheiten).
+
+### Duplikat-Dialog
+
+Falls duplizierte Nodes gefunden werden, erscheint nach dem Laden automatisch ein Dialog:
+
+```
+Duplizierte Wegpunkte gefunden
+X Duplikate in Y Gruppen gefunden.
+Duplikate jetzt bereinigen?
+
+[ Bereinigen ]   [ Abbrechen ]
+```
+
+| Schaltfläche | Aktion |
+|-------------|--------|
+| **Bereinigen** | Zusammenführen: Doppelte Nodes werden entfernt, Verbindungen umgeleitet, RoadMap bereinigt |
+| **Abbrechen** | Dialog schließen, RoadMap unverändert beibehalten |
+
+> **Hinweis:** Die Bereinigung kann nicht per Undo rückgängig gemacht werden. Bei Bedarf die Original-Datei sichern, bevor Duplikate bereinigt werden.
+
+---
+
 ## Optionen
 
 Über **Edit → Optionen...** wird der Optionen-Dialog geöffnet. Alle Einstellungen werden als `fs25_auto_drive_editor.toml` neben der Binary gespeichert.
@@ -521,10 +560,11 @@ Auch über **Edit → Undo / Redo** im Menü verfügbar (mit Anzeige ob verfügb
 ### Neues Netzwerk bearbeiten
 
 1. `Ctrl+O` → XML-Datei laden
-2. Hintergrund laden (View → Hintergrund laden)
-3. Heightmap laden (File → Select Heightmap)
-4. Nodes bearbeiten (Select-Tool, Drag zum Verschieben)
-5. `Ctrl+S` → Speichern
+2. Falls Duplikate gefunden: **Bereinigen** im Dialog wählen (oder Abbrechen und Original-Datei sichern)
+3. Hintergrund laden (View → Hintergrund laden)
+4. Heightmap laden (File → Select Heightmap)
+5. Nodes bearbeiten (Select-Tool, Drag zum Verschieben)
+6. `Ctrl+S` → Speichern
 
 ### Route erstellen (mit Route-Tools)
 
