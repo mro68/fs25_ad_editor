@@ -55,7 +55,7 @@ struct RoadMap {
 - Grow-only Buffer-Reuse in Node/Connection-Renderer (keine per-frame Neuallokation)
 - CPU-Viewport-Culling vor GPU-Upload (Nodes + Connections)
 
-## Nächste Schritte
+## Nächste Schritte (Stand: 2026-02-22)
 1. ✅ Projekt-Setup
 2. ✅ Core-Datenmodelle definiert
 3. ✅ XML-Parser implementiert
@@ -63,6 +63,13 @@ struct RoadMap {
 5. ✅ `unwrap()`-Bereinigung in App-Use-Cases (Guard + frühe Returns)
 6. ✅ `main.rs` in Runner/Adapter-orientierte Update-Schritte zerlegt
 7. ✅ Gezielte UI-/Render-Tests ergänzt (Input→Intent, Culling-Geometrie)
+8. ✅ Catmull-Rom-Spline-Tool implementiert (arc-length resampling, fortlaufende Vorschau)
+9. ✅ Strukturaudit durchgeführt (2026-02-22):
+   - DRY-Refaktor: `populate_neighbors()` aus CurveTool/SplineTool → `common.rs`
+   - `curve.rs` aufgeteilt: `render_config` → `curve/config_ui.rs` (809 → 577 Zeilen)
+   - `spline/mod.rs` aufgeteilt: `render_config` → `spline/config_ui.rs` (677 → 500 Zeilen)
+   - `show_dedup_dialog` in `ui/API.md` nachgetragen
+   - 45 Struct-Level-Docstrings auf öffentlichen Typen ergänzt
 
 ## Architektur-Verbesserungen (2025-07-02)
 - ✅ Controller-Split: `handle_command()` in Feature-Handler aufgeteilt (`handlers/`)
