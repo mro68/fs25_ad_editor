@@ -181,6 +181,7 @@ mod tests {
         map.add_connection(conn(14, 21, 20.0, 0.0, 20.0, 10.0));
         map.add_connection(conn(10, 22, -20.0, 0.0, -20.0, -10.0));
         map.add_connection(conn(14, 23, 20.0, 0.0, 20.0, -10.0));
+        map.ensure_spatial_index();
 
         let mut state = AppState::new();
         state.road_map = Some(Arc::new(map));
@@ -277,6 +278,7 @@ mod tests {
         map.add_connection(conn(10, 22, -20.0, 0.0, -20.0, -10.0));
         map.add_connection(conn(14, 21, 20.0, 0.0, 20.0, 10.0));
         map.add_connection(conn(14, 23, 20.0, 0.0, 20.0, -10.0));
+        map.ensure_spatial_index();
 
         let mut state = AppState::new();
         state.road_map = Some(Arc::new(map));
