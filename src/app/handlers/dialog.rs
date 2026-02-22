@@ -26,8 +26,8 @@ pub fn dismiss_heightmap_warning(state: &mut AppState) {
 
 /// Schließt den Marker-Dialog und räumt dessen Auswahlzustand auf.
 pub fn close_marker_dialog(state: &mut AppState) {
-    state.ui.show_marker_dialog = false;
-    state.ui.marker_dialog_node_id = None;
+    state.ui.marker_dialog.visible = false;
+    state.ui.marker_dialog.node_id = None;
 }
 
 /// Öffnet den Optionen-Dialog.
@@ -56,6 +56,6 @@ pub fn reset_options(state: &mut AppState) -> anyhow::Result<()> {
 
 /// Schließt den Duplikat-Dialog und entfernt die Statusmeldung.
 pub fn dismiss_dedup_dialog(state: &mut AppState) {
-    state.ui.show_dedup_dialog = false;
+    state.ui.dedup_dialog.visible = false;
     state.ui.status_message = None;
 }

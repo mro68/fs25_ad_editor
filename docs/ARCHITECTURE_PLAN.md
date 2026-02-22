@@ -247,6 +247,11 @@ pub struct RenderScene {
   pub viewport_size: [f32; 2],
   pub render_quality: RenderQuality,
   pub selected_node_ids: Vec<u64>,
+  pub connect_source_node: Option<u64>,
+  pub background_map: Option<Arc<BackgroundMap>>,
+  pub background_opacity: f32,
+  pub background_visible: bool,
+  pub options: EditorOptions,
 }
 
 impl Renderer {
@@ -317,10 +322,11 @@ src/
     mod.rs              # Re-Exports (ConnectionDirection, ConnectionPriority, RoadMap, etc.)
     controller.rs       # AppController: Intent → Command Dispatch an Handler
     events.rs           # AppIntent & AppCommand Enums
-    state.rs            # AppState, ViewState, SelectionState, UiState
+    state.rs            # AppState, ViewState, SelectionState, UiState, MarkerDialogState, DedupDialogState
     render_scene.rs     # RenderScene-Builder
     command_log.rs      # Command-Log für Debugging
     history.rs          # Undo/Redo-History
+    intent_mapping.rs   # Intent → Command Mapping (reine Funktion)
     handlers/           # Feature-Handler für Command-Verarbeitung
       mod.rs
       file_io.rs        # Datei-Operationen (Öffnen, Speichern, Heightmap)
@@ -331,12 +337,18 @@ src/
       dialog.rs         # Dialog-State und Anwendungssteuerung
       history.rs        # Undo/Redo
     tools/
-      mod.rs            # RouteTool-Trait + ToolManager
+      mod.rs            # RouteTool-Trait + ToolManager + snap_to_node()
       straight_line.rs  # Gerade-Linie-Tool
+      straight_line/
+        tests.rs        # Unit-Tests für StraightLineTool
       curve.rs          # Bézier-Kurven-Tool (Grad 2 + 3)
-      spline.rs         # Catmull-Rom-Spline-Tool (interpolierend)
       curve/
         geometry.rs     # Kurven-Geometrie (Interpolation)
+        tests.rs        # Unit-Tests für CurveTool
+      spline/
+        mod.rs          # Catmull-Rom-Spline-Tool (interpolierend)
+        geometry.rs     # Spline-Geometrie (Arc-Length-Resampling)
+        tests.rs        # Unit-Tests für SplineTool
     use_cases/
       mod.rs
       file_io.rs        # Load, Save, Heightmap-Warnung, Dateipfad-Handling
@@ -351,7 +363,10 @@ src/
     camera.rs           # Camera2D + pick_radius_world()
     node.rs             # MapNode, NodeFlag
     connection.rs       # Connection, ConnectionDirection, ConnectionPriority
-    road_map.rs         # RoadMap (HashMap-basiert, persistenter KD-Tree)
+    road_map.rs         # RoadMap (HashMap-basiert, lazy Spatial-Index-Rebuild)
+    road_map/
+      dedup.rs          # Duplikat-Erkennung und -Bereinigung
+      tests.rs          # Unit-Tests für RoadMap
     spatial.rs          # SpatialIndex (kiddo KD-Tree)
     heightmap.rs        # Heightmap + bikubische Interpolation
     map_marker.rs       # MapMarker
@@ -359,6 +374,8 @@ src/
   xml/
     mod.rs
     parser.rs           # parse_autodrive_config()
+    parser/
+      tests.rs          # Unit-Tests für Parser
     writer.rs           # write_autodrive_config()
   render/
     mod.rs
@@ -368,13 +385,13 @@ src/
     marker_renderer.rs  # GPU-Instanced Map-Marker (Pin-Symbole)
     texture.rs          # Texture-Erstellung aus DynamicImage
     callback.rs         # wgpu Render-Callback für egui
-    types.rs            # GPU-Typen, Konstanten
+    types.rs            # GPU-Typen, RenderContext, Konstanten
     shaders.wgsl        # WGSL Shader (Node, Connection, Background, Marker)
   shared/
     mod.rs
     render_scene.rs     # RenderScene (Übergabevertrag App → Render)
     render_quality.rs   # RenderQuality Enum
-    options.rs          # Zentrale Konfigurationskonstanten
+    options.rs          # Zentrale Konfigurationskonstanten + EditorOptions
   ui/
     mod.rs
     menu.rs             # Top-Menü

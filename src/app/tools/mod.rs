@@ -4,12 +4,32 @@
 //! `ToolManager` registriert. Tools erzeugen reine Daten (`ToolResult`),
 //! die Mutation erfolgt zentral in `apply_tool_result`.
 
+/// Bézier-Kurven-Tool (Grad 2 + 3) mit sequentieller Punkt-Platzierung.
 pub mod curve;
+/// Catmull-Rom-Spline-Tool — interpolierende Kurve durch alle geklickten Punkte.
 pub mod spline;
+/// Gerade-Linie-Tool mit konfigurierbarem Node-Abstand.
 pub mod straight_line;
 
 use crate::core::{ConnectionDirection, ConnectionPriority, NodeFlag, RoadMap};
 use glam::Vec2;
+
+// ── Gemeinsame Utilities ─────────────────────────────────────
+
+/// Versucht, auf einen existierenden Node innerhalb des Snap-Radius zu snappen.
+///
+/// Gibt `ToolAnchor::ExistingNode` zurück wenn ein Node in Reichweite ist,
+/// sonst `ToolAnchor::NewPosition` mit der Original-Position.
+pub fn snap_to_node(pos: Vec2, road_map: &RoadMap, snap_radius: f32) -> ToolAnchor {
+    if let Some(hit) = road_map.nearest_node(pos) {
+        if hit.distance <= snap_radius {
+            if let Some(node) = road_map.nodes.get(&hit.node_id) {
+                return ToolAnchor::ExistingNode(hit.node_id, node.position);
+            }
+        }
+    }
+    ToolAnchor::NewPosition(pos)
+}
 
 // ── Trait ────────────────────────────────────────────────────────
 
@@ -53,8 +73,12 @@ pub trait RouteTool {
     /// Straßenart vom Editor-Default übernehmen.
     fn set_priority(&mut self, _prio: ConnectionPriority) {}
 
+    /// Snap-Radius (Welteinheiten) vom Editor übernehmen.
+    fn set_snap_radius(&mut self, _radius: f32) {}
+
     /// Speichert die IDs der zuletzt erstellten Nodes (für nachträgliche Anpassung).
-    fn set_last_created(&mut self, _ids: Vec<u64>) {}
+    /// `road_map` erlaubt tools, Nachbar-Informationen für Feintuning zu cachen.
+    fn set_last_created(&mut self, _ids: Vec<u64>, _road_map: &RoadMap) {}
 
     /// Gibt die IDs der zuletzt erstellten Nodes zurück.
     fn last_created_ids(&self) -> &[u64] {

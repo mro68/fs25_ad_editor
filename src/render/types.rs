@@ -1,10 +1,28 @@
 //! Rendering-Typen und Konfiguration.
 
+use crate::shared::EditorOptions;
 use crate::Camera2D;
 use bytemuck::{Pod, Zeroable};
 use glam::Mat4;
 
 pub use crate::shared::RenderQuality;
+
+/// Gemeinsamer Kontext für alle Sub-Renderer.
+///
+/// Bündelt die GPU-Ressourcen und View-Parameter, die jeder
+/// Sub-Renderer bei jedem Frame benötigt.
+pub(crate) struct RenderContext<'a> {
+    /// wgpu Device für Buffer-Allokation
+    pub device: &'a eframe::wgpu::Device,
+    /// wgpu Queue für Buffer-Uploads
+    pub queue: &'a eframe::wgpu::Queue,
+    /// Kamera (Position + Zoom)
+    pub camera: &'a Camera2D,
+    /// Viewport-Größe in Pixeln [width, height]
+    pub viewport_size: [f32; 2],
+    /// Editor-Optionen (Farben, Größen, etc.)
+    pub options: &'a EditorOptions,
+}
 
 /// Vertex für ein Quad (2D-Rechteck)
 #[repr(C)]

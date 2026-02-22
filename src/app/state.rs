@@ -75,6 +75,56 @@ impl SelectionState {
     }
 }
 
+/// Zustand des Marker-Bearbeiten-Dialogs
+#[derive(Default)]
+pub struct MarkerDialogState {
+    /// Ob der Dialog sichtbar ist
+    pub visible: bool,
+    /// Node-ID des Markers im Dialog
+    pub node_id: Option<u64>,
+    /// Marker-Name im Dialog
+    pub name: String,
+    /// Marker-Gruppe im Dialog
+    pub group: String,
+    /// Neuer Marker (true) oder bestehender editieren (false)
+    pub is_new: bool,
+}
+
+impl MarkerDialogState {
+    /// Erstellt einen geschlossenen Marker-Dialog-Zustand.
+    pub fn new() -> Self {
+        Self {
+            visible: false,
+            node_id: None,
+            name: String::new(),
+            group: String::new(),
+            is_new: true,
+        }
+    }
+}
+
+/// Zustand des Duplikat-Bestätigungsdialogs
+#[derive(Default)]
+pub struct DedupDialogState {
+    /// Ob der Dialog sichtbar ist
+    pub visible: bool,
+    /// Anzahl gefundener Duplikat-Nodes
+    pub duplicate_count: u32,
+    /// Anzahl der Positions-Gruppen mit Duplikaten
+    pub group_count: u32,
+}
+
+impl DedupDialogState {
+    /// Erstellt einen geschlossenen Dedup-Dialog-Zustand.
+    pub fn new() -> Self {
+        Self {
+            visible: false,
+            duplicate_count: 0,
+            group_count: 0,
+        }
+    }
+}
+
 /// UI-bezogener Anwendungszustand
 #[derive(Default)]
 pub struct UiState {
@@ -96,24 +146,12 @@ pub struct UiState {
     pub current_file_path: Option<String>,
     /// Pfad der aktuell ausgewählten Heightmap (optional)
     pub heightmap_path: Option<String>,
-    /// Marker-Bearbeiten-Dialog anzeigen
-    pub show_marker_dialog: bool,
-    /// Node-ID des Markers im Dialog
-    pub marker_dialog_node_id: Option<u64>,
-    /// Marker-Name im Dialog
-    pub marker_dialog_name: String,
-    /// Marker-Gruppe im Dialog
-    pub marker_dialog_group: String,
-    /// Neuer Marker (true) oder bestehender editieren (false)
-    pub marker_dialog_is_new: bool,
+    /// Marker-Bearbeiten-Dialog
+    pub marker_dialog: MarkerDialogState,
     /// Temporäre Statusnachricht (z.B. Duplikat-Bereinigung)
     pub status_message: Option<String>,
-    /// Duplikat-Bestätigungsdialog anzeigen
-    pub show_dedup_dialog: bool,
-    /// Anzahl gefundener Duplikat-Nodes (für Dialog-Anzeige)
-    pub dedup_duplicate_count: u32,
-    /// Anzahl der Positions-Gruppen mit Duplikaten (für Dialog-Anzeige)
-    pub dedup_group_count: u32,
+    /// Duplikat-Bestätigungsdialog
+    pub dedup_dialog: DedupDialogState,
 }
 
 impl UiState {
@@ -129,15 +167,9 @@ impl UiState {
             pending_save_path: None,
             current_file_path: None,
             heightmap_path: None,
-            show_marker_dialog: false,
-            marker_dialog_node_id: None,
-            marker_dialog_name: String::new(),
-            marker_dialog_group: String::new(),
-            marker_dialog_is_new: true,
+            marker_dialog: MarkerDialogState::new(),
             status_message: None,
-            show_dedup_dialog: false,
-            dedup_duplicate_count: 0,
-            dedup_group_count: 0,
+            dedup_dialog: DedupDialogState::new(),
         }
     }
 }

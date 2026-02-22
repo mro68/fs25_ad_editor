@@ -1,7 +1,6 @@
 //! Node-Renderer mit GPU-Instancing.
 
-use super::types::{NodeInstance, RenderQuality, Uniforms, Vertex};
-use crate::shared::EditorOptions;
+use super::types::{NodeInstance, RenderContext, RenderQuality, Uniforms, Vertex};
 use crate::{Camera2D, NodeFlag, RoadMap};
 use eframe::{egui_wgpu, wgpu};
 use glam::Vec2;
@@ -140,27 +139,22 @@ impl NodeRenderer {
         }
     }
 
-    #[allow(clippy::too_many_arguments)]
     /// Rendert alle sichtbaren Nodes der RoadMap per GPU-Instancing.
     ///
     /// Führt Viewport-Culling durch und schreibt Instanzdaten in den
     /// wiederverwendbaren Instance-Buffer.
     pub fn render(
         &mut self,
-        device: &wgpu::Device,
-        queue: &wgpu::Queue,
+        ctx: &RenderContext,
         render_pass: &mut wgpu::RenderPass<'static>,
         road_map: &RoadMap,
-        camera: &Camera2D,
-        viewport_size: [f32; 2],
         render_quality: RenderQuality,
         selected_node_ids: &[u64],
-        options: &EditorOptions,
     ) {
         log::debug!("NodeRenderer.render() called");
         let selected_set: HashSet<u64> = selected_node_ids.iter().copied().collect();
-        let viewport_width = viewport_size[0];
-        let viewport_height = viewport_size[1];
+        let viewport_width = ctx.viewport_size[0];
+        let viewport_height = ctx.viewport_size[1];
         if !viewport_width.is_finite()
             || !viewport_height.is_finite()
             || viewport_width <= 0.0
@@ -170,18 +164,18 @@ impl NodeRenderer {
         }
 
         let aspect = viewport_width / viewport_height;
-        let zoom_scale = 1.0 / camera.zoom;
+        let zoom_scale = 1.0 / ctx.camera.zoom;
         let base_extent = Camera2D::BASE_WORLD_EXTENT;
         let half_height = base_extent * zoom_scale;
         let half_width = half_height * aspect;
-        let padding = camera.world_per_pixel(viewport_height) * 8.0;
+        let padding = ctx.camera.world_per_pixel(viewport_height) * 8.0;
         let min = Vec2::new(
-            camera.position.x - half_width - padding,
-            camera.position.y - half_height - padding,
+            ctx.camera.position.x - half_width - padding,
+            ctx.camera.position.y - half_height - padding,
         );
         let max = Vec2::new(
-            camera.position.x + half_width + padding,
-            camera.position.y + half_height + padding,
+            ctx.camera.position.x + half_width + padding,
+            ctx.camera.position.y + half_height + padding,
         );
 
         // Instanzen aus RoadMap sammeln
@@ -195,21 +189,21 @@ impl NodeRenderer {
             let is_selected = selected_set.contains(&node.id);
             // Basisfarbe entspricht dem Node-Flag (bleibt mittig sichtbar)
             let base_color = match node.flag {
-                NodeFlag::SubPrio => options.node_color_subprio,
-                NodeFlag::Warning => options.node_color_warning,
-                _ => options.node_color_default,
+                NodeFlag::SubPrio => ctx.options.node_color_subprio,
+                NodeFlag::Warning => ctx.options.node_color_warning,
+                _ => ctx.options.node_color_default,
             };
             // Rim/Markierungsfarbe außen — nur bei selektierten Nodes anders
             let rim_color = if is_selected {
-                options.node_color_selected
+                ctx.options.node_color_selected
             } else {
                 base_color
             };
 
             let size = if is_selected {
-                options.node_size_world * options.selection_size_factor
+                ctx.options.node_size_world * ctx.options.selection_size_factor
             } else {
-                options.node_size_world
+                ctx.options.node_size_world
             };
 
             instances.push(NodeInstance::new(
@@ -228,13 +222,13 @@ impl NodeRenderer {
         log::debug!(
             "Rendering {} instances, camera: ({:.1}, {:.1}), zoom: {:.2}",
             instances.len(),
-            camera.position.x,
-            camera.position.y,
-            camera.zoom
+            ctx.camera.position.x,
+            ctx.camera.position.y,
+            ctx.camera.zoom
         );
 
         // View-Projektion-Matrix berechnen (gemeinsame Funktion)
-        let view_proj = super::types::build_view_projection(camera, viewport_size);
+        let view_proj = super::types::build_view_projection(ctx.camera, ctx.viewport_size);
         let view_proj_array = view_proj.to_cols_array_2d();
 
         // Uniform-Buffer aktualisieren
@@ -248,13 +242,14 @@ impl NodeRenderer {
             view_proj: view_proj_array,
             aa_params,
         };
-        queue.write_buffer(&self.uniform_buffer, 0, bytemuck::cast_slice(&[uniforms]));
+        ctx.queue
+            .write_buffer(&self.uniform_buffer, 0, bytemuck::cast_slice(&[uniforms]));
 
         // Instance-Buffer erstellen/aktualisieren (Reuse)
         if self.instance_buffer.is_none() || instances.len() > self.instance_capacity {
             let instance_size = std::mem::size_of::<NodeInstance>() as u64;
             let buffer_size = (instances.len() as u64) * instance_size;
-            self.instance_buffer = Some(device.create_buffer(&wgpu::BufferDescriptor {
+            self.instance_buffer = Some(ctx.device.create_buffer(&wgpu::BufferDescriptor {
                 label: Some("Instance Buffer"),
                 size: buffer_size,
                 usage: wgpu::BufferUsages::VERTEX | wgpu::BufferUsages::COPY_DST,
@@ -264,7 +259,8 @@ impl NodeRenderer {
         }
 
         if let Some(instance_buffer) = &self.instance_buffer {
-            queue.write_buffer(instance_buffer, 0, bytemuck::cast_slice(&instances));
+            ctx.queue
+                .write_buffer(instance_buffer, 0, bytemuck::cast_slice(&instances));
         }
 
         // Rendern

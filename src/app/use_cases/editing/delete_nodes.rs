@@ -57,6 +57,9 @@ pub fn delete_selected_nodes(state: &mut AppState) {
         road_map.recalculate_node_flags(&affected_neighbors);
     }
 
+    // Spatial-Index einmalig nach allen Löschungen aktualisieren
+    road_map.ensure_spatial_index();
+
     let count = ids_to_delete.len();
     state.selection.selected_node_ids.clear();
     state.selection.selection_anchor_node_id = None;

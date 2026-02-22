@@ -143,6 +143,7 @@ mod tests {
             glam::Vec2::new(10.0, 0.0),
             NodeFlag::Regular,
         ));
+        map.ensure_spatial_index();
 
         let mut state = AppState::new();
         state.road_map = Some(Arc::new(map));
@@ -182,6 +183,7 @@ mod tests {
             glam::Vec2::new(10.0, 0.0),
             glam::Vec2::new(20.0, 0.0),
         ));
+        map.ensure_spatial_index();
 
         let mut state = AppState::new();
         state.road_map = Some(Arc::new(map));

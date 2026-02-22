@@ -16,6 +16,7 @@ pub use callback::{WgpuRenderCallback, WgpuRenderData};
 pub(crate) use connection_renderer::ConnectionRenderer;
 pub(crate) use marker_renderer::MarkerRenderer;
 pub(crate) use node_renderer::NodeRenderer;
+use types::RenderContext;
 pub use types::RenderOptions;
 
 use eframe::egui_wgpu;
@@ -67,6 +68,15 @@ impl Renderer {
             scene.has_map()
         );
 
+        // Gemeinsamer Kontext für alle Sub-Renderer
+        let ctx = RenderContext {
+            device,
+            queue,
+            camera: &scene.camera,
+            viewport_size: scene.viewport_size,
+            options: &scene.options,
+        };
+
         // 1. Render Background zuerst (falls vorhanden)
         if scene.background_map.is_some() {
             self.background_renderer.render(
@@ -83,28 +93,12 @@ impl Renderer {
         if let Some(road_map) = scene.road_map.as_deref() {
             if !road_map.map_markers.is_empty() {
                 log::debug!("Rendering {} markers", road_map.map_markers.len());
-                self.marker_renderer.render(
-                    device,
-                    queue,
-                    render_pass,
-                    road_map,
-                    &scene.camera,
-                    scene.viewport_size,
-                    scene.render_quality,
-                    &scene.options,
-                );
+                self.marker_renderer
+                    .render(&ctx, render_pass, road_map, scene.render_quality);
             }
 
             // 3. Render Connections (darüber)
-            self.connection_renderer.render(
-                device,
-                queue,
-                render_pass,
-                road_map,
-                &scene.camera,
-                scene.viewport_size,
-                &scene.options,
-            );
+            self.connection_renderer.render(&ctx, render_pass, road_map);
 
             // 4. Render Nodes (zuoberst)
             log::debug!(
@@ -112,15 +106,11 @@ impl Renderer {
                 road_map.nodes.len()
             );
             self.node_renderer.render(
-                device,
-                queue,
+                &ctx,
                 render_pass,
                 road_map,
-                &scene.camera,
-                scene.viewport_size,
                 scene.render_quality,
                 &scene.selected_node_ids,
-                &scene.options,
             );
         } else {
             log::debug!("No road_map to render");

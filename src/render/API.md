@@ -132,6 +132,22 @@ pub struct Uniforms { pub view_proj: [[f32; 4]; 4], pub aa_params: [f32; 4] }
 
 ---
 
+### `RenderContext` (crate-intern)
+
+Bündelt die gemeinsamen Render-Parameter für alle Sub-Renderer. Vermeidet wiederholte Parameter-Listen.
+
+```rust
+pub(crate) struct RenderContext<'a> {
+    pub device: &'a wgpu::Device,
+    pub queue: &'a wgpu::Queue,
+    pub camera: &'a Camera2D,
+    pub viewport_size: [f32; 2],
+    pub options: &'a EditorOptions,
+}
+```
+
+---
+
 ### `WgpuRenderCallback` / `WgpuRenderData`
 
 Egui-Integration für wgpu-Rendering.

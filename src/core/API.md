@@ -51,6 +51,9 @@ let wpp = camera.world_per_pixel(viewport_height);
 
 // Pick-Radius in Welt-Einheiten (für Node-Selektion)
 let pick_radius = camera.pick_radius_world(viewport_height, pick_radius_px);
+
+// Pick-Radius skaliert mit Node-Größe (für exakten Treffer auf vergrößerte Nodes)
+let scaled = camera.pick_radius_world_scaled(viewport_height, pick_radius_px, selection_size_factor);
 ```
 
 **View-Matrix:** Enthält nur Translation (`-position`). Zoom wird ausschließlich über die orthographische Projektion im Renderer gesteuert.
@@ -61,6 +64,8 @@ world = NDC * BASE_WORLD_EXTENT * aspect / zoom + position
 ```
 
 **Pick-Radius:** Konvertiert den übergebenen Pixel-Radius in Welt-Koordinaten basierend auf Zoom und Viewport-Höhe. Der Pixel-Wert (`SELECTION_PICK_RADIUS_PX`) lebt in `shared::options`, damit `core` keine Abhängigkeit auf `shared` hat.
+
+**Pick-Radius (skaliert):** `pick_radius_world_scaled()` berücksichtigt zusätzlich den `selection_size_factor` — damit werden vergrößerte (selektierte) Nodes exakt getroffen.
 
 ---
 
@@ -99,9 +104,9 @@ pub struct RoadMap {
 
 **Methoden:**
 - `new(version: u32) -> Self` — Erstellt leere RoadMap
-- `add_node(&mut self, node: MapNode)` — Fügt Node hinzu (baut Spatial-Index neu)
+- `add_node(&mut self, node: MapNode)` — Fügt Node hinzu (markiert Spatial-Index als dirty)
 - `remove_node(&mut self, node_id: u64) -> Option<MapNode>` — Entfernt Node + betroffene Verbindungen
-- `update_node_position(&mut self, node_id: u64, new_position: Vec2) -> bool` — Position aktualisieren (baut Geometrie + Index neu)
+- `update_node_position(&mut self, node_id: u64, new_position: Vec2) -> bool` — Position aktualisieren (baut Geometrie neu, markiert Spatial als dirty)
 - `add_connection(&mut self, connection: Connection)` — Fügt Verbindung hinzu
 - `has_connection(&self, start_id: u64, end_id: u64) -> bool` — Prüft ob Verbindung existiert
 - `find_connection(&self, start_id: u64, end_id: u64) -> Option<&Connection>` — Findet exakte Verbindung
@@ -112,6 +117,7 @@ pub struct RoadMap {
 - `set_connection_direction(&mut self, start_id: u64, end_id: u64, direction) -> bool` — Richtung ändern
 - `set_connection_priority(&mut self, start_id: u64, end_id: u64, priority) -> bool` — Priorität ändern
 - `connections_iter(&self) -> impl Iterator<Item = &Connection>` — Iterator über alle Verbindungen
+- `connected_neighbors(&self, node_id: u64) -> Vec<ConnectedNeighbor>` — Alle Nachbarn eines Nodes mit Richtung und Winkel
 - `next_node_id(&self) -> u64` — Nächste freie Node-ID
 - `add_map_marker(&mut self, marker: MapMarker)` — Fügt Marker hinzu
 - `has_marker(&self, node_id: u64) -> bool` — Prüft ob Node einen Marker hat
@@ -119,14 +125,50 @@ pub struct RoadMap {
 - `remove_marker(&mut self, node_id: u64) -> bool` — Marker eines Nodes entfernen
 - `rebuild_connection_geometry(&mut self)` — Aktualisiert Connection-Geometrie
 - `recalculate_node_flags(&mut self, node_ids: &[u64])` — NodeFlags basierend auf Verbindungsprioriäten neu berechnen
+- `ensure_spatial_index(&mut self)` — Baut Spatial-Index nur auf, wenn dirty-Flag gesetzt ist (lazy rebuild)
 - `build_spatial_index(&self) -> SpatialIndex` — Erstellt neuen Spatial-Index aus aktuellen Nodes
-- `rebuild_spatial_index(&mut self)` — Baut den internen Spatial-Index neu auf
+- `rebuild_spatial_index(&mut self)` — Baut den internen Spatial-Index sofort neu auf
 - `node_count() -> usize` / `connection_count() -> usize` / `marker_count() -> usize`
+- `count_duplicates(&self, epsilon: f32) -> (u32, u32)` — Zählt Duplikat-Nodes und -Gruppen
+- `deduplicate_nodes(&mut self, epsilon: f32) -> DeduplicationResult` — Entfernt Duplikat-Nodes und verbindet Referenzen um
 
-**Spatial Queries (persistenter KD-Tree):**
+**Spatial Queries (persistenter KD-Tree, lazy rebuild via `ensure_spatial_index`):**
 - `nearest_node(&self, query: Vec2) -> Option<SpatialMatch>` — Nächster Node
 - `nodes_within_radius(&self, center: Vec2, radius: f32) -> Vec<SpatialMatch>` — Nodes im Umkreis
 - `nodes_within_rect(&self, min: Vec2, max: Vec2) -> Vec<u64>` — Nodes im Rechteck
+
+---
+
+### `ConnectedNeighbor`
+
+Beschreibt einen über eine Verbindung erreichbaren Nachbar-Node.
+
+```rust
+pub struct ConnectedNeighbor {
+    pub neighbor_id: u64,
+    pub angle: f32,       // Winkel der Verbindung (Radiant, atan2)
+    pub is_outgoing: bool, // true = Verbindung geht vom Quell-Node zum Nachbar
+}
+```
+
+---
+
+### `DeduplicationResult`
+
+Ergebnis einer Duplikat-Bereinigung.
+
+```rust
+pub struct DeduplicationResult {
+    pub removed_count: u32,
+    pub merged_group_count: u32,
+    pub remapped_connections: u32,
+    pub remapped_markers: u32,
+    pub remaining_nodes: usize,
+}
+```
+
+**Methoden:**
+- `had_duplicates() -> bool` — Gibt `true` zurück wenn Duplikate gefunden und entfernt wurden
 
 ---
 
@@ -249,7 +291,7 @@ pub struct AutoDriveMeta {
 1. **HashMap statt Array:** Nodes AND Connections sind über ID(-Paar) indexiert → O(1)-Zugriff
 2. **2D-Koordinaten:** Nur x/z gespeichert (y kommt aus Heightmap beim Export)
 3. **Geometrie-Caching:** Midpoint/Angle werden vorberechnet für Rendering
-4. **Persistenter Spatial-Index:** Wird bei Node-Änderungen automatisch neu aufgebaut
+4. **Lazy Spatial-Index:** Node-Mutationen setzen ein `spatial_dirty`-Flag; `ensure_spatial_index()` baut den Index erst bei der nächsten Abfrage neu auf
 5. **Flag-Neuberechnung:** `recalculate_node_flags()` setzt Flags basierend auf Verbindungsprioriäten
 6. **Keine UI/Render-Abhängigkeiten:** Reines Datenmodell + Geometrie
 7. **Privates `connections`-Feld:** Kapselung gewährleistet Invarianten; Iterator-Zugriff via `connections_iter()`
