@@ -1,10 +1,19 @@
 //! Connection-Renderer für Verbindungen und Richtungspfeile.
+//!
+//! Aufgeteilt in:
+//! - `culling` — Viewport-Culling-Geometrie
+//! - `mesh` — Vertex-Generierung (Linien, Pfeile)
+
+mod culling;
+mod mesh;
 
 use super::types::{ConnectionVertex, RenderContext, Uniforms};
-use crate::shared::EditorOptions;
-use crate::{Camera2D, ConnectionDirection, ConnectionPriority, RoadMap};
+use crate::{Camera2D, ConnectionDirection, RoadMap};
 use eframe::{egui_wgpu, wgpu};
 use glam::Vec2;
+
+use culling::{point_in_rect, segment_intersects_rect};
+use mesh::{connection_color, push_arrow, push_line_quad};
 
 /// Renderer für Connection-Linien inkl. Pfeilspitzen.
 pub struct ConnectionRenderer {
@@ -189,8 +198,10 @@ impl ConnectionRenderer {
             let direction = delta / length;
             let color = connection_color(connection.direction, connection.priority, ctx.options);
             let thickness = match connection.priority {
-                ConnectionPriority::Regular => ctx.options.connection_thickness_world,
-                ConnectionPriority::SubPriority => ctx.options.connection_thickness_subprio_world,
+                crate::ConnectionPriority::Regular => ctx.options.connection_thickness_world,
+                crate::ConnectionPriority::SubPriority => {
+                    ctx.options.connection_thickness_subprio_world
+                }
             };
 
             push_line_quad(&mut vertices, start, end, thickness, color);
@@ -219,7 +230,6 @@ impl ConnectionRenderer {
                     );
                 }
                 ConnectionDirection::Dual => {
-                    // Pfeile leicht versetzt, damit sie sich nicht überdecken
                     let offset = ctx.options.arrow_length_world * 0.6;
                     let forward_center = start + direction * (length * 0.5 + offset);
                     let backward_center = start + direction * (length * 0.5 - offset);
@@ -277,157 +287,5 @@ impl ConnectionRenderer {
         render_pass.draw(0..vertices.len() as u32, 0..1);
 
         self.vertex_scratch = vertices;
-    }
-}
-
-fn point_in_rect(point: Vec2, min: Vec2, max: Vec2) -> bool {
-    point.x >= min.x && point.x <= max.x && point.y >= min.y && point.y <= max.y
-}
-
-fn segment_intersects_rect(start: Vec2, end: Vec2, min: Vec2, max: Vec2) -> bool {
-    if point_in_rect(start, min, max) || point_in_rect(end, min, max) {
-        return true;
-    }
-
-    let bottom_left = Vec2::new(min.x, min.y);
-    let bottom_right = Vec2::new(max.x, min.y);
-    let top_right = Vec2::new(max.x, max.y);
-    let top_left = Vec2::new(min.x, max.y);
-
-    segments_intersect(start, end, bottom_left, bottom_right)
-        || segments_intersect(start, end, bottom_right, top_right)
-        || segments_intersect(start, end, top_right, top_left)
-        || segments_intersect(start, end, top_left, bottom_left)
-}
-
-fn segments_intersect(a1: Vec2, a2: Vec2, b1: Vec2, b2: Vec2) -> bool {
-    let o1 = orientation(a1, a2, b1);
-    let o2 = orientation(a1, a2, b2);
-    let o3 = orientation(b1, b2, a1);
-    let o4 = orientation(b1, b2, a2);
-
-    if o1 * o2 < 0.0 && o3 * o4 < 0.0 {
-        return true;
-    }
-
-    const EPS: f32 = 1e-6;
-    (o1.abs() <= EPS && point_on_segment(b1, a1, a2))
-        || (o2.abs() <= EPS && point_on_segment(b2, a1, a2))
-        || (o3.abs() <= EPS && point_on_segment(a1, b1, b2))
-        || (o4.abs() <= EPS && point_on_segment(a2, b1, b2))
-}
-
-fn orientation(a: Vec2, b: Vec2, c: Vec2) -> f32 {
-    (b.x - a.x) * (c.y - a.y) - (b.y - a.y) * (c.x - a.x)
-}
-
-fn point_on_segment(point: Vec2, seg_start: Vec2, seg_end: Vec2) -> bool {
-    const EPS: f32 = 1e-6;
-    point.x >= seg_start.x.min(seg_end.x) - EPS
-        && point.x <= seg_start.x.max(seg_end.x) + EPS
-        && point.y >= seg_start.y.min(seg_end.y) - EPS
-        && point.y <= seg_start.y.max(seg_end.y) + EPS
-}
-
-fn connection_color(
-    direction: ConnectionDirection,
-    priority: ConnectionPriority,
-    options: &EditorOptions,
-) -> [f32; 4] {
-    let base = match direction {
-        ConnectionDirection::Regular => options.connection_color_regular,
-        ConnectionDirection::Dual => options.connection_color_dual,
-        ConnectionDirection::Reverse => options.connection_color_reverse,
-    };
-
-    match priority {
-        ConnectionPriority::Regular => base,
-        ConnectionPriority::SubPriority => [
-            (base[0] + 1.0) * 0.5,
-            (base[1] + 1.0) * 0.5,
-            (base[2] + 1.0) * 0.5,
-            base[3],
-        ],
-    }
-}
-
-fn push_line_quad(
-    vertices: &mut Vec<ConnectionVertex>,
-    start: Vec2,
-    end: Vec2,
-    thickness: f32,
-    color: [f32; 4],
-) {
-    let dir = (end - start).normalize();
-    let perp = Vec2::new(-dir.y, dir.x) * (thickness * 0.5);
-
-    let v0 = start + perp;
-    let v1 = start - perp;
-    let v2 = end + perp;
-    let v3 = end - perp;
-
-    vertices.push(ConnectionVertex::new([v0.x, v0.y], color));
-    vertices.push(ConnectionVertex::new([v1.x, v1.y], color));
-    vertices.push(ConnectionVertex::new([v2.x, v2.y], color));
-
-    vertices.push(ConnectionVertex::new([v2.x, v2.y], color));
-    vertices.push(ConnectionVertex::new([v1.x, v1.y], color));
-    vertices.push(ConnectionVertex::new([v3.x, v3.y], color));
-}
-
-fn push_arrow(
-    vertices: &mut Vec<ConnectionVertex>,
-    center: Vec2,
-    direction: Vec2,
-    length: f32,
-    width: f32,
-    color: [f32; 4],
-) {
-    let dir = direction.normalize();
-    let perp = Vec2::new(-dir.y, dir.x);
-
-    let tip = center + dir * (length * 0.5);
-    let base = center - dir * (length * 0.5);
-    let left = base + perp * (width * 0.5);
-    let right = base - perp * (width * 0.5);
-
-    vertices.push(ConnectionVertex::new([tip.x, tip.y], color));
-    vertices.push(ConnectionVertex::new([left.x, left.y], color));
-    vertices.push(ConnectionVertex::new([right.x, right.y], color));
-}
-
-#[cfg(test)]
-mod tests {
-    use super::{point_in_rect, segment_intersects_rect};
-    use glam::Vec2;
-
-    #[test]
-    fn test_point_in_rect_inclusive_edges() {
-        let min = Vec2::new(-1.0, -1.0);
-        let max = Vec2::new(1.0, 1.0);
-
-        assert!(point_in_rect(Vec2::new(0.0, 0.0), min, max));
-        assert!(point_in_rect(Vec2::new(1.0, 1.0), min, max));
-        assert!(!point_in_rect(Vec2::new(1.1, 1.0), min, max));
-    }
-
-    #[test]
-    fn test_segment_intersects_rect_when_crossing_view() {
-        let min = Vec2::new(-1.0, -1.0);
-        let max = Vec2::new(1.0, 1.0);
-
-        let start = Vec2::new(-2.0, 0.0);
-        let end = Vec2::new(2.0, 0.0);
-        assert!(segment_intersects_rect(start, end, min, max));
-    }
-
-    #[test]
-    fn test_segment_does_not_intersect_rect_when_fully_outside() {
-        let min = Vec2::new(-1.0, -1.0);
-        let max = Vec2::new(1.0, 1.0);
-
-        let start = Vec2::new(2.0, 2.0);
-        let end = Vec2::new(3.0, 3.0);
-        assert!(!segment_intersects_rect(start, end, min, max));
     }
 }

@@ -5,7 +5,7 @@
 //! - Länge · Segment-Abstand · Node-Anzahl (Nachbearbeitungs- und Live-Modus)
 
 use super::super::common::{
-    angle_to_compass, node_count_from_length, segment_length_from_count, LastEdited, TangentSource,
+    node_count_from_length, render_tangent_combo, segment_length_from_count, LastEdited,
 };
 use super::super::RouteTool;
 use super::SplineTool;
@@ -23,83 +23,37 @@ impl SplineTool {
 
         if adjusting {
             // Tangente Start
-            if !self.start_neighbors.is_empty() {
-                let old_tangent = self.tangent_start;
-                let selected_text = match self.tangent_start {
-                    TangentSource::None => "Standard".to_string(),
-                    TangentSource::Connection { neighbor_id, angle } => {
-                        format!("→ Node #{} ({})", neighbor_id, angle_to_compass(angle))
-                    }
-                };
-                ui.label("Tangente Start:");
-                egui::ComboBox::from_id_salt("spline_tangent_start")
-                    .selected_text(selected_text)
-                    .show_ui(ui, |ui| {
-                        ui.selectable_value(
-                            &mut self.tangent_start,
-                            TangentSource::None,
-                            "Standard",
-                        );
-                        for neighbor in &self.start_neighbors {
-                            let label = format!(
-                                "→ Node #{} ({})",
-                                neighbor.neighbor_id,
-                                angle_to_compass(neighbor.angle)
-                            );
-                            ui.selectable_value(
-                                &mut self.tangent_start,
-                                TangentSource::Connection {
-                                    neighbor_id: neighbor.neighbor_id,
-                                    angle: neighbor.angle,
-                                },
-                                label,
-                            );
-                        }
-                    });
-                if self.tangent_start != old_tangent {
-                    if !self.last_created_ids.is_empty() {
-                        self.recreate_needed = true;
-                    }
-                    changed = true;
+            if !self.start_neighbors.is_empty()
+                && render_tangent_combo(
+                    ui,
+                    "spline_tangent_start",
+                    "Tangente Start:",
+                    "Standard",
+                    &mut self.tangent_start,
+                    &self.start_neighbors,
+                )
+            {
+                if !self.last_created_ids.is_empty() {
+                    self.recreate_needed = true;
                 }
+                changed = true;
             }
 
             // Tangente Ende
-            if !self.end_neighbors.is_empty() {
-                let old_tangent = self.tangent_end;
-                let selected_text = match self.tangent_end {
-                    TangentSource::None => "Standard".to_string(),
-                    TangentSource::Connection { neighbor_id, angle } => {
-                        format!("→ Node #{} ({})", neighbor_id, angle_to_compass(angle))
-                    }
-                };
-                ui.label("Tangente Ende:");
-                egui::ComboBox::from_id_salt("spline_tangent_end")
-                    .selected_text(selected_text)
-                    .show_ui(ui, |ui| {
-                        ui.selectable_value(&mut self.tangent_end, TangentSource::None, "Standard");
-                        for neighbor in &self.end_neighbors {
-                            let label = format!(
-                                "→ Node #{} ({})",
-                                neighbor.neighbor_id,
-                                angle_to_compass(neighbor.angle)
-                            );
-                            ui.selectable_value(
-                                &mut self.tangent_end,
-                                TangentSource::Connection {
-                                    neighbor_id: neighbor.neighbor_id,
-                                    angle: neighbor.angle,
-                                },
-                                label,
-                            );
-                        }
-                    });
-                if self.tangent_end != old_tangent {
-                    if !self.last_created_ids.is_empty() {
-                        self.recreate_needed = true;
-                    }
-                    changed = true;
+            if !self.end_neighbors.is_empty()
+                && render_tangent_combo(
+                    ui,
+                    "spline_tangent_end",
+                    "Tangente Ende:",
+                    "Standard",
+                    &mut self.tangent_end,
+                    &self.end_neighbors,
+                )
+            {
+                if !self.last_created_ids.is_empty() {
+                    self.recreate_needed = true;
                 }
+                changed = true;
             }
 
             if !self.start_neighbors.is_empty() || !self.end_neighbors.is_empty() {

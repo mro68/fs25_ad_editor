@@ -542,7 +542,7 @@ Schnittstelle für alle Route-Tools (Linie, Kurve, …). Tools sind zustandsbeha
 ### Registrierte Tools
 
 - **`StraightLineTool`** — Gerade Strecke zwischen zwei Punkten mit konfigurierbarem Nodeabstand
-- **`CurveTool`** — Bézier-Kurve (Grad 2 oder 3) mit sequentieller Punkt-Platzierung und Drag-basierter Anpassung
+- **`CurveTool`** — Bézier-Kurve (Grad 2 oder 3) mit sequentieller Punkt-Platzierung und Drag-basierter Anpassung. Modulstruktur: `state.rs` (Enums, Struct, Ctor), `lifecycle.rs` (RouteTool-Impl), `drag.rs` (Drag-Logik), `config_ui.rs` (egui-Panel), `geometry.rs` (Bézier-Mathe), `tests.rs`
 - **`SplineTool`** — Catmull-Rom-Spline: interpolierende Kurve durch alle geklickten Punkte. Beliebig viele Kontrollpunkte, fortlaufende Vorschau (Cursor als nächster Punkt), Enter bestätigt. Nachbearbeitung (Segment-Länge/Node-Anzahl) und Verkettung unterstützt.
 
 ---
@@ -561,6 +561,8 @@ Schnittstelle für alle Route-Tools (Linie, Kurve, …). Tools sind zustandsbeha
 **`TangentSource`** — Tangenten-Quelle am Start-/Endpunkt (für Curve + Spline):
 - `None` — Kein Tangenten-Vorschlag
 - `Connection { neighbor_id, angle }` — Tangente aus bestehender Verbindung
+
+**`render_tangent_combo(ui, id_salt, label, none_label, current, neighbors) → bool`** — Gemeinsamer UI-Baustein für Tangenten-ComboBoxen (verwendet von Curve + Spline config_ui).
 
 **`assemble_tool_result(positions, start, end, direction, priority, road_map) → ToolResult`** — Gemeinsame Logik aller Route-Tools: Nimmt berechnete Positionen, erstellt neue Nodes (überspringt existierende) und baut interne/externe Verbindungen auf.
 

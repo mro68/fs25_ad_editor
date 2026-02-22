@@ -72,6 +72,48 @@ pub enum TangentSource {
     Connection { neighbor_id: u64, angle: f32 },
 }
 
+/// Rendert eine Tangenten-ComboBox und gibt `true` zurück wenn die Auswahl geändert wurde.
+///
+/// Gemeinsamer UI-Baustein für Curve- und Spline-Tool.
+pub(crate) fn render_tangent_combo(
+    ui: &mut egui::Ui,
+    id_salt: &str,
+    label: &str,
+    none_label: &str,
+    current: &mut TangentSource,
+    neighbors: &[ConnectedNeighbor],
+) -> bool {
+    let old = *current;
+    let selected_text = match *current {
+        TangentSource::None => none_label.to_string(),
+        TangentSource::Connection { neighbor_id, angle } => {
+            format!("→ Node #{} ({})", neighbor_id, angle_to_compass(angle))
+        }
+    };
+    ui.label(label);
+    egui::ComboBox::from_id_salt(id_salt)
+        .selected_text(selected_text)
+        .show_ui(ui, |ui| {
+            ui.selectable_value(current, TangentSource::None, none_label);
+            for neighbor in neighbors {
+                let text = format!(
+                    "→ Node #{} ({})",
+                    neighbor.neighbor_id,
+                    angle_to_compass(neighbor.angle)
+                );
+                ui.selectable_value(
+                    current,
+                    TangentSource::Connection {
+                        neighbor_id: neighbor.neighbor_id,
+                        angle: neighbor.angle,
+                    },
+                    text,
+                );
+            }
+        });
+    *current != old
+}
+
 // ── Segment-Konfiguration ────────────────────────────────────
 
 /// Gekapselte Konfiguration für Segment-Länge und Node-Anzahl.

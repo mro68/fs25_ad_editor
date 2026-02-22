@@ -2,7 +2,7 @@
 
 /// Modus der Drag-Selektion
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub(super) enum DragSelectionMode {
+pub(crate) enum DragSelectionMode {
     /// Rechteck-Selektion
     Rect,
     /// Freihand-Lasso-Selektion
@@ -11,7 +11,7 @@ pub(super) enum DragSelectionMode {
 
 /// Zustand einer aktiven Drag-Selektion
 #[derive(Debug, Clone)]
-pub(super) struct DragSelection {
+pub(crate) struct DragSelection {
     /// Aktiver Selektions-Modus (Rect oder Lasso)
     pub mode: DragSelectionMode,
     /// Additive Selektion (Shift gedrückt) – erweitert statt zu ersetzen
