@@ -231,6 +231,31 @@ impl Default for RenderOptions {
     }
 }
 
+/// Berechnet die sichtbare Welt-AABB (mit Padding) für Viewport-Culling.
+///
+/// Gibt `(min, max)` in Weltkoordinaten zurück. Das Padding entspricht 8 Pixeln
+/// in Welteinheiten und verhindert Flackern an den Viewport-Rändern.
+pub(crate) fn compute_visible_rect(ctx: &RenderContext) -> (glam::Vec2, glam::Vec2) {
+    use crate::Camera2D;
+    let viewport_width = ctx.viewport_size[0];
+    let viewport_height = ctx.viewport_size[1];
+    let aspect = viewport_width / viewport_height;
+    let zoom_scale = 1.0 / ctx.camera.zoom;
+    let base_extent = Camera2D::BASE_WORLD_EXTENT;
+    let half_height = base_extent * zoom_scale;
+    let half_width = half_height * aspect;
+    let padding = ctx.camera.world_per_pixel(viewport_height) * 8.0;
+    let min = glam::Vec2::new(
+        ctx.camera.position.x - half_width - padding,
+        ctx.camera.position.y - half_height - padding,
+    );
+    let max = glam::Vec2::new(
+        ctx.camera.position.x + half_width + padding,
+        ctx.camera.position.y + half_height + padding,
+    );
+    (min, max)
+}
+
 /// Berechnet die View-Projection-Matrix für den 2D-Viewport.
 pub(crate) fn build_view_projection(camera: &Camera2D, viewport_size: [f32; 2]) -> Mat4 {
     let view_matrix = camera.view_matrix();

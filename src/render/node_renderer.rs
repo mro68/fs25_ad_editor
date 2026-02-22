@@ -1,13 +1,11 @@
 //! Node-Renderer mit GPU-Instancing.
 
-use super::types::{NodeInstance, RenderContext, RenderQuality, Uniforms, Vertex};
-use crate::{Camera2D, NodeFlag, RoadMap};
+use super::types::{compute_visible_rect, NodeInstance, RenderContext, RenderQuality, Uniforms, Vertex};
+use crate::{NodeFlag, RoadMap};
 use eframe::{egui_wgpu, wgpu};
-use glam::Vec2;
 use std::collections::HashSet;
 use wgpu::util::DeviceExt;
-
-// HashSet-Import wird direkt in der Signatur genutzt (kein Re-collect mehr nötig)
+        // HashSet-Import wird direkt in der Signatur genutzt (kein Re-collect mehr nötig)
 
 /// Renderer für Nodes (Wegpunkte)
 pub struct NodeRenderer {
@@ -168,20 +166,7 @@ impl NodeRenderer {
             return;
         }
 
-        let aspect = viewport_width / viewport_height;
-        let zoom_scale = 1.0 / ctx.camera.zoom;
-        let base_extent = Camera2D::BASE_WORLD_EXTENT;
-        let half_height = base_extent * zoom_scale;
-        let half_width = half_height * aspect;
-        let padding = ctx.camera.world_per_pixel(viewport_height) * 8.0;
-        let min = Vec2::new(
-            ctx.camera.position.x - half_width - padding,
-            ctx.camera.position.y - half_height - padding,
-        );
-        let max = Vec2::new(
-            ctx.camera.position.x + half_width + padding,
-            ctx.camera.position.y + half_height + padding,
-        );
+        let (min, max) = compute_visible_rect(ctx);
 
         // Instanzen aus RoadMap sammeln
         let mut instances = std::mem::take(&mut self.instance_scratch);
