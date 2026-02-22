@@ -7,6 +7,8 @@ use glam::Vec2;
 use std::collections::HashSet;
 use wgpu::util::DeviceExt;
 
+// HashSet-Import wird direkt in der Signatur genutzt (kein Re-collect mehr nötig)
+
 /// Renderer für Nodes (Wegpunkte)
 pub struct NodeRenderer {
     pipeline: wgpu::RenderPipeline,
@@ -15,6 +17,8 @@ pub struct NodeRenderer {
     bind_group: wgpu::BindGroup,
     instance_buffer: Option<wgpu::Buffer>,
     instance_capacity: usize,
+    /// Wiederverwendbarer Scratch-Buffer für Instanzdaten (vermeidet per-Frame-Allokation)
+    instance_scratch: Vec<NodeInstance>,
 }
 
 impl NodeRenderer {
@@ -136,6 +140,7 @@ impl NodeRenderer {
             bind_group,
             instance_buffer: None,
             instance_capacity: 0,
+            instance_scratch: Vec::new(),
         }
     }
 
@@ -149,10 +154,10 @@ impl NodeRenderer {
         render_pass: &mut wgpu::RenderPass<'static>,
         road_map: &RoadMap,
         render_quality: RenderQuality,
-        selected_node_ids: &[u64],
+        selected_node_ids: &HashSet<u64>,
     ) {
         log::debug!("NodeRenderer.render() called");
-        let selected_set: HashSet<u64> = selected_node_ids.iter().copied().collect();
+        let selected_set = selected_node_ids;
         let viewport_width = ctx.viewport_size[0];
         let viewport_height = ctx.viewport_size[1];
         if !viewport_width.is_finite()
@@ -179,7 +184,8 @@ impl NodeRenderer {
         );
 
         // Instanzen aus RoadMap sammeln
-        let mut instances = Vec::new();
+        let mut instances = std::mem::take(&mut self.instance_scratch);
+        instances.clear();
 
         for node_id in road_map.nodes_within_rect(min, max) {
             let Some(node) = road_map.nodes.get(&node_id) else {
@@ -216,6 +222,7 @@ impl NodeRenderer {
 
         if instances.is_empty() {
             log::warn!("No instances to render");
+            self.instance_scratch = instances;
             return;
         }
 
@@ -266,6 +273,7 @@ impl NodeRenderer {
         // Rendern
         let Some(instance_buffer) = self.instance_buffer.as_ref() else {
             log::error!("NodeRenderer: missing instance buffer before draw call");
+            self.instance_scratch = instances;
             return;
         };
 
@@ -274,5 +282,6 @@ impl NodeRenderer {
         render_pass.set_vertex_buffer(0, self.vertex_buffer.slice(..));
         render_pass.set_vertex_buffer(1, instance_buffer.slice(..));
         render_pass.draw(0..6, 0..instances.len() as u32);
+        self.instance_scratch = instances;
     }
 }

@@ -5,6 +5,7 @@
 use super::options::EditorOptions;
 use super::RenderQuality;
 use crate::core::{BackgroundMap, Camera2D, RoadMap};
+use std::collections::HashSet;
 use std::sync::Arc;
 
 /// Read-only Daten für einen Render-Frame.
@@ -18,8 +19,8 @@ pub struct RenderScene {
     pub viewport_size: [f32; 2],
     /// Render-Qualitätsstufe (Anti-Aliasing)
     pub render_quality: RenderQuality,
-    /// Sortierte IDs der aktuell selektierten Nodes
-    pub selected_node_ids: Vec<u64>,
+    /// IDs der aktuell selektierten Nodes
+    pub selected_node_ids: HashSet<u64>,
     /// Node-ID des Connect-Tool-Source (für spezielle Hervorhebung)
     pub connect_source_node: Option<u64>,
     /// Background-Map (optional)

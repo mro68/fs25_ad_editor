@@ -110,7 +110,7 @@ impl Renderer {
                 render_pass,
                 road_map,
                 scene.render_quality,
-                &scene.selected_node_ids,
+                &scene.selected_node_ids, // jetzt &HashSet<u64>, kein Re-collect nötig
             );
         } else {
             log::debug!("No road_map to render");
