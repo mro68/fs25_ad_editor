@@ -1,7 +1,7 @@
 //! Gerade-Strecke-Tool: Zeichnet eine Linie zwischen zwei Punkten
 //! und füllt automatisch Zwischen-Nodes ein.
 
-use super::{RouteTool, ToolAction, ToolAnchor, ToolPreview, ToolResult};
+use super::{snap_to_node, RouteTool, ToolAction, ToolAnchor, ToolPreview, ToolResult};
 use crate::core::{ConnectionDirection, ConnectionPriority, NodeFlag, RoadMap};
 use crate::shared::SNAP_RADIUS;
 use glam::Vec2;
@@ -105,19 +105,6 @@ fn compute_line_positions(start: Vec2, end: Vec2, max_segment_length: f32) -> Ve
     (0..=segment_count)
         .map(|i| start.lerp(end, i as f32 / segment_count as f32))
         .collect()
-}
-
-/// Versucht, auf einen existierenden Node zu snappen.
-fn snap_to_node(pos: Vec2, road_map: &RoadMap, snap_radius: f32) -> ToolAnchor {
-    if let Some(hit) = road_map.nearest_node(pos) {
-        if hit.distance <= snap_radius {
-            // Position aus der RoadMap holen
-            if let Some(node) = road_map.nodes.get(&hit.node_id) {
-                return ToolAnchor::ExistingNode(hit.node_id, node.position);
-            }
-        }
-    }
-    ToolAnchor::NewPosition(pos)
 }
 
 impl RouteTool for StraightLineTool {
