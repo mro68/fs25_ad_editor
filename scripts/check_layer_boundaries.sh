@@ -62,6 +62,14 @@ if [ -n "$UI_STATE_ASSIGN_VIOLATIONS" ]; then
     VIOLATIONS=$((VIOLATIONS + 1))
 fi
 
+# Regel 7: XML darf nicht auf App/UI/Render zugreifen
+XML_UPPER_VIOLATIONS=$(grep -rn 'crate::app\|crate::ui\|crate::render' src/xml/ --include='*.rs' 2>/dev/null || true)
+if [ -n "$XML_UPPER_VIOLATIONS" ]; then
+    echo "FEHLER: XML importiert aus App/UI/Render (Schichtenverletzung nach oben):"
+    echo "$XML_UPPER_VIOLATIONS"
+    VIOLATIONS=$((VIOLATIONS + 1))
+fi
+
 if [ "$VIOLATIONS" -eq 0 ]; then
     echo "✓ Alle Layer-Grenzen eingehalten."
     exit 0
