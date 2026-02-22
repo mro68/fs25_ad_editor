@@ -12,10 +12,14 @@ Das `ui`-Modul enthält egui-UI-Komponenten (Menüs, Statusbar, Input-Handling, 
 - `properties.rs` — Properties-Panel (Detailanzeige selektierter Nodes)
 - `options_dialog.rs` — Optionen-Dialog für Laufzeit-Einstellungen
 - `tool_preview.rs` — Tool-Preview-Overlay (Route-Tool-Vorschau im Viewport)
-- `input.rs` — Viewport-Input-Orchestrator (delegiert an Sub-Module)
-  - `keyboard.rs` — Tastatur-Shortcuts (Delete, Escape, Ctrl+A)
-  - `drag.rs` — Drag-Operationen (Pan, Move, Rechteck-/Lasso-Selektion)
-  - `context_menu.rs` — Rechtsklick-Kontextmenü
+- `input/` — Viewport-Input-Orchestrator (phasenbasierte Submodule)
+  - `clicks.rs` — Klick-Events (Einfach-/Doppel-Klick, Tool-Routing)
+  - `drag_primary.rs` — Drag-Start/-Ende (Selektion-Move, Kamera-Pan, Route-Tool-Drag)
+  - `pointer_delta.rs` — Pan/Move-Deltas während aktiver Drags
+  - `zoom.rs` — Scroll-Zoom auf Mausposition
+  - `keyboard.rs` — Tastatur-Shortcuts (Delete, Escape, Ctrl+A) [Peer-Modul]
+  - `drag.rs` — Drag-Selektion-Overlay und DragSelection-Typen [Peer-Modul]
+  - `context_menu.rs` — Rechtsklick-Kontextmenü [Peer-Modul]
 - `dialogs.rs` — Datei-Dialoge und modale Fenster
 
 ## Funktionen

@@ -1,6 +1,6 @@
 //! Geometrie-Berechnungen für Kurven-Tools (Arc-Length-Parametrisierung, Bézier, Catmull-Rom).
 
-use super::CurveDegree;
+use super::state::CurveDegree;
 use crate::app::tools::{common, ToolAnchor, ToolResult};
 use crate::core::{ConnectionDirection, ConnectionPriority, RoadMap};
 use glam::Vec2;

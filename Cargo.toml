@@ -19,6 +19,10 @@ path = "src/main.rs"
 name = "core_bench"
 harness = false
 
+[[bench]]
+name = "render_hotpath_bench"
+harness = false
+
 [dependencies]
 # UI Framework
 egui = "0.33.3"

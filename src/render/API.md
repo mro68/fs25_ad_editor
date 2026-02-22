@@ -7,7 +7,7 @@ Das `render`-Modul implementiert GPU-beschleunigtes Rendering mit wgpu. Importie
 ## Module
 
 - `node_renderer.rs` — GPU-Instanced Nodes (Wegpunkte)
-- `connection_renderer.rs` — Verbindungslinien + Richtungspfeile
+- `connection_renderer/` — Verbindungslinien + Richtungspfeile (Submodule: `culling.rs` Viewport-Culling-Geometrie, `mesh.rs` Vertex-Generierung)
 - `background_renderer.rs` — Background-Map-Quad mit Texture-Sampling
 - `marker_renderer.rs` — GPU-Instanced Map-Marker (Pin-Symbole)
 - `texture.rs` — Texture-Erstellung aus DynamicImage (PNG/JPG/DDS)
