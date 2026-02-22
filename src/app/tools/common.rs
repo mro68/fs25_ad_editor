@@ -114,6 +114,66 @@ pub(crate) fn render_tangent_combo(
     *current != old
 }
 
+/// Gemeinsamer Tangenten-Zustand für Curve- und Spline-Tool.
+///
+/// Kapselt die 6 Tangenten-Felder, die beide Tools identisch teilen,
+/// und bietet Hilfsmethoden für häufige Operationen.
+#[derive(Debug, Clone)]
+pub(crate) struct TangentState {
+    /// Gewählte Tangente am Startpunkt
+    pub tangent_start: TangentSource,
+    /// Gewählte Tangente am Endpunkt
+    pub tangent_end: TangentSource,
+    /// Verfügbare Nachbarn am Startpunkt (Cache, wird beim Snap befüllt)
+    pub start_neighbors: Vec<ConnectedNeighbor>,
+    /// Verfügbare Nachbarn am Endpunkt (Cache, wird beim Snap befüllt)
+    pub end_neighbors: Vec<ConnectedNeighbor>,
+    /// Tangente Start der letzten Erstellung (für Recreation)
+    pub last_tangent_start: TangentSource,
+    /// Tangente Ende der letzten Erstellung (für Recreation)
+    pub last_tangent_end: TangentSource,
+}
+
+impl TangentState {
+    /// Erstellt einen neuen TangentState mit Standardwerten (alle `None`).
+    pub fn new() -> Self {
+        Self {
+            tangent_start: TangentSource::None,
+            tangent_end: TangentSource::None,
+            start_neighbors: Vec::new(),
+            end_neighbors: Vec::new(),
+            last_tangent_start: TangentSource::None,
+            last_tangent_end: TangentSource::None,
+        }
+    }
+
+    /// Setzt Tangenten auf `None` zurück; Nachbarn-Cache bleibt erhalten.
+    pub fn reset_tangents(&mut self) {
+        self.tangent_start = TangentSource::None;
+        self.tangent_end = TangentSource::None;
+    }
+
+    /// Setzt Tangenten und Nachbarn-Cache vollständig zurück.
+    pub fn reset_all(&mut self) {
+        self.tangent_start = TangentSource::None;
+        self.tangent_end = TangentSource::None;
+        self.start_neighbors.clear();
+        self.end_neighbors.clear();
+    }
+
+    /// Speichert die aktuellen Tangenten in den `last_*`-Feldern (für Recreation).
+    pub fn save_for_recreate(&mut self) {
+        self.last_tangent_start = self.tangent_start;
+        self.last_tangent_end = self.tangent_end;
+    }
+}
+
+impl Default for TangentState {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 // ── Segment-Konfiguration ────────────────────────────────────
 
 /// Gekapselte Konfiguration für Segment-Länge und Node-Anzahl.

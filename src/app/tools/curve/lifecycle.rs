@@ -59,19 +59,18 @@ impl RouteTool for CurveTool {
                     self.last_control_point2 = None;
                     self.recreate_needed = false;
                     self.start = Some(last_end);
-                    self.start_neighbors = populate_neighbors(&last_end, road_map);
+                    self.tangents.start_neighbors = populate_neighbors(&last_end, road_map);
                     let end_anchor = snap_to_node(pos, road_map, self.snap_radius);
-                    self.end_neighbors = populate_neighbors(&end_anchor, road_map);
+                    self.tangents.end_neighbors = populate_neighbors(&end_anchor, road_map);
                     self.end = Some(end_anchor);
-                    self.tangent_start = super::super::common::TangentSource::None;
-                    self.tangent_end = super::super::common::TangentSource::None;
+                    self.tangents.reset_tangents();
                     self.phase = Phase::Control;
                     self.apply_tangent_to_cp();
                     ToolAction::Continue
                 } else {
                     let start_anchor = snap_to_node(pos, road_map, self.snap_radius);
-                    self.start_neighbors = populate_neighbors(&start_anchor, road_map);
-                    self.tangent_start = super::super::common::TangentSource::None;
+                    self.tangents.start_neighbors = populate_neighbors(&start_anchor, road_map);
+                    self.tangents.tangent_start = super::super::common::TangentSource::None;
                     self.start = Some(start_anchor);
                     self.phase = Phase::End;
                     ToolAction::Continue
@@ -79,8 +78,8 @@ impl RouteTool for CurveTool {
             }
             Phase::End => {
                 let end_anchor = snap_to_node(pos, road_map, self.snap_radius);
-                self.end_neighbors = populate_neighbors(&end_anchor, road_map);
-                self.tangent_end = super::super::common::TangentSource::None;
+                self.tangents.end_neighbors = populate_neighbors(&end_anchor, road_map);
+                self.tangents.tangent_end = super::super::common::TangentSource::None;
                 self.end = Some(end_anchor);
                 self.phase = Phase::Control;
                 self.apply_tangent_to_cp();
@@ -96,10 +95,10 @@ impl RouteTool for CurveTool {
                     CurveDegree::Cubic => {
                         if self.control_point1.is_none() {
                             self.control_point1 = Some(pos);
-                            self.tangent_start = super::super::common::TangentSource::None;
-                        } else if self.control_point2.is_none() {
-                            self.control_point2 = Some(pos);
-                            self.tangent_end = super::super::common::TangentSource::None;
+                                self.tangents.tangent_start = super::super::common::TangentSource::None;
+                            } else if self.control_point2.is_none() {
+                                self.control_point2 = Some(pos);
+                                self.tangents.tangent_end = super::super::common::TangentSource::None;
                         }
                     }
                 }
@@ -187,10 +186,7 @@ impl RouteTool for CurveTool {
         self.control_point1 = None;
         self.control_point2 = None;
         self.phase = Phase::Start;
-        self.tangent_start = super::super::common::TangentSource::None;
-        self.tangent_end = super::super::common::TangentSource::None;
-        self.start_neighbors.clear();
-        self.end_neighbors.clear();
+        self.tangents.reset_all();
     }
 
     fn is_ready(&self) -> bool {
@@ -222,8 +218,7 @@ impl RouteTool for CurveTool {
         if self.control_point2.is_some() {
             self.last_control_point2 = self.control_point2;
         }
-        self.last_tangent_start = self.tangent_start;
-        self.last_tangent_end = self.tangent_end;
+        self.tangents.save_for_recreate();
         self.last_created_ids = ids;
         self.recreate_needed = false;
     }

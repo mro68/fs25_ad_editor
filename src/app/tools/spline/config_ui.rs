@@ -23,14 +23,14 @@ impl SplineTool {
 
         if adjusting {
             // Tangente Start
-            if !self.start_neighbors.is_empty()
+            if !self.tangents.start_neighbors.is_empty()
                 && render_tangent_combo(
                     ui,
                     "spline_tangent_start",
                     "Tangente Start:",
                     "Standard",
-                    &mut self.tangent_start,
-                    &self.start_neighbors,
+                    &mut self.tangents.tangent_start,
+                    &self.tangents.start_neighbors,
                 )
             {
                 if !self.last_created_ids.is_empty() {
@@ -40,14 +40,14 @@ impl SplineTool {
             }
 
             // Tangente Ende
-            if !self.end_neighbors.is_empty()
+            if !self.tangents.end_neighbors.is_empty()
                 && render_tangent_combo(
                     ui,
                     "spline_tangent_end",
                     "Tangente Ende:",
                     "Standard",
-                    &mut self.tangent_end,
-                    &self.end_neighbors,
+                    &mut self.tangents.tangent_end,
+                    &self.tangents.end_neighbors,
                 )
             {
                 if !self.last_created_ids.is_empty() {
@@ -56,15 +56,15 @@ impl SplineTool {
                 changed = true;
             }
 
-            if !self.start_neighbors.is_empty() || !self.end_neighbors.is_empty() {
+            if !self.tangents.start_neighbors.is_empty() || !self.tangents.end_neighbors.is_empty() {
                 ui.add_space(4.0);
             }
 
             // Slider für Min. Abstand und Node-Anzahl im Nachbearbeitungs-Modus
             let length = Self::spline_length_from_anchors(
                 &self.last_anchors,
-                self.tangent_start,
-                self.tangent_end,
+                self.tangents.tangent_start,
+                self.tangents.tangent_end,
             );
 
             ui.label(format!("Spline-Länge: {:.1} m", length));

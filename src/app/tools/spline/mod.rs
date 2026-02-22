@@ -11,10 +11,10 @@ mod geometry;
 
 use self::geometry::{catmull_rom_chain_with_tangents, polyline_length, resample_by_distance};
 use super::{
-    common::{self, populate_neighbors, SegmentConfig, TangentSource},
+    common::{self, populate_neighbors, SegmentConfig, TangentSource, TangentState},
     snap_to_node, RouteTool, ToolAction, ToolAnchor, ToolPreview, ToolResult,
 };
-use crate::core::{ConnectedNeighbor, ConnectionDirection, ConnectionPriority, RoadMap};
+use crate::core::{ConnectionDirection, ConnectionPriority, RoadMap};
 use crate::shared::SNAP_RADIUS;
 use glam::Vec2;
 
@@ -36,18 +36,8 @@ pub struct SplineTool {
     last_end_anchor: Option<ToolAnchor>,
     /// Signalisiert, dass Config geändert wurde und Neuberechnung nötig ist
     recreate_needed: bool,
-    /// Gewählte Tangente am Startpunkt
-    tangent_start: TangentSource,
-    /// Gewählte Tangente am Endpunkt
-    tangent_end: TangentSource,
-    /// Verfügbare Nachbarn am Startpunkt (Cache)
-    start_neighbors: Vec<ConnectedNeighbor>,
-    /// Verfügbare Nachbarn am Endpunkt (Cache)
-    end_neighbors: Vec<ConnectedNeighbor>,
-    /// Tangente Start der letzten Erstellung (für Recreation)
-    last_tangent_start: TangentSource,
-    /// Tangente Ende der letzten Erstellung (für Recreation)
-    last_tangent_end: TangentSource,
+    /// Tangenten-Zustand (Start/Ende, Nachbarn-Cache, Recreation-Kopien)
+    pub(crate) tangents: TangentState,
     /// Snap-Radius in Welteinheiten (aus EditorOptions)
     snap_radius: f32,
 }
@@ -64,12 +54,7 @@ impl SplineTool {
             last_anchors: Vec::new(),
             last_end_anchor: None,
             recreate_needed: false,
-            tangent_start: TangentSource::None,
-            tangent_end: TangentSource::None,
-            start_neighbors: Vec::new(),
-            end_neighbors: Vec::new(),
-            last_tangent_start: TangentSource::None,
-            last_tangent_end: TangentSource::None,
+            tangents: TangentState::new(),
             snap_radius: SNAP_RADIUS,
         }
     }
@@ -135,7 +120,7 @@ impl SplineTool {
             return pts;
         }
         let (start_phantom, end_phantom) =
-            Self::compute_phantoms(&pts, self.tangent_start, self.tangent_end);
+            Self::compute_phantoms(&pts, self.tangents.tangent_start, self.tangents.tangent_end);
         catmull_rom_chain_with_tangents(&pts, 32, start_phantom, end_phantom)
     }
 
@@ -238,8 +223,7 @@ impl RouteTool for SplineTool {
                 self.last_anchors.clear();
                 self.last_end_anchor = None;
                 self.recreate_needed = false;
-                self.tangent_start = TangentSource::None;
-                self.tangent_end = TangentSource::None;
+                self.tangents.reset_tangents();
                 self.anchors.push(last_end);
                 self.anchors.push(anchor);
                 self.sync_derived();
@@ -298,16 +282,15 @@ impl RouteTool for SplineTool {
             self.seg.max_segment_length,
             self.direction,
             self.priority,
-            self.tangent_start,
-            self.tangent_end,
+            self.tangents.tangent_start,
+            self.tangents.tangent_end,
             road_map,
         )
     }
 
     fn reset(&mut self) {
         self.anchors.clear();
-        self.tangent_start = TangentSource::None;
-        self.tangent_end = TangentSource::None;
+        self.tangents.reset_tangents();
         // start_neighbors / end_neighbors bleiben erhalten —
         // werden in set_last_created befüllt und im Nachbearbeitungs-Modus benötigt
     }
@@ -343,13 +326,12 @@ impl RouteTool for SplineTool {
             &self.last_anchors
         };
         if let Some(first) = source.first() {
-            self.start_neighbors = populate_neighbors(first, road_map);
+            self.tangents.start_neighbors = populate_neighbors(first, road_map);
         }
         if let Some(last) = source.last() {
-            self.end_neighbors = populate_neighbors(last, road_map);
+            self.tangents.end_neighbors = populate_neighbors(last, road_map);
         }
-        self.last_tangent_start = self.tangent_start;
-        self.last_tangent_end = self.tangent_end;
+        self.tangents.save_for_recreate();
         self.last_created_ids = ids;
         self.recreate_needed = false;
     }
@@ -378,8 +360,8 @@ impl RouteTool for SplineTool {
             self.seg.max_segment_length,
             self.direction,
             self.priority,
-            self.tangent_start,
-            self.tangent_end,
+            self.tangents.tangent_start,
+            self.tangents.tangent_end,
             road_map,
         )
     }
