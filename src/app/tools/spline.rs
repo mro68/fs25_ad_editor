@@ -6,7 +6,7 @@
 //! Einstellungsmöglichkeiten: Max. Segment-Länge / Node-Anzahl, Richtung, Priorität.
 //! Mindestens 2 Punkte für eine gerade Strecke, ab 3 Punkten entsteht eine Kurve.
 
-use super::{RouteTool, ToolAction, ToolAnchor, ToolPreview, ToolResult};
+use super::{snap_to_node, RouteTool, ToolAction, ToolAnchor, ToolPreview, ToolResult};
 use crate::core::{ConnectedNeighbor, ConnectionDirection, ConnectionPriority, NodeFlag, RoadMap};
 use crate::shared::SNAP_RADIUS;
 use glam::Vec2;
@@ -456,18 +456,6 @@ impl Default for SplineTool {
     fn default() -> Self {
         Self::new()
     }
-}
-
-/// Versucht, auf einen existierenden Node zu snappen.
-fn snap_to_node(pos: Vec2, road_map: &RoadMap, snap_radius: f32) -> ToolAnchor {
-    if let Some(hit) = road_map.nearest_node(pos) {
-        if hit.distance <= snap_radius {
-            if let Some(node) = road_map.nodes.get(&hit.node_id) {
-                return ToolAnchor::ExistingNode(hit.node_id, node.position);
-            }
-        }
-    }
-    ToolAnchor::NewPosition(pos)
 }
 
 /// Wandelt einen Winkel (Radiant) in eine Kompass-Richtung um.

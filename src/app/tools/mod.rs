@@ -11,6 +11,23 @@ pub mod straight_line;
 use crate::core::{ConnectionDirection, ConnectionPriority, NodeFlag, RoadMap};
 use glam::Vec2;
 
+// ── Gemeinsame Utilities ─────────────────────────────────────
+
+/// Versucht, auf einen existierenden Node innerhalb des Snap-Radius zu snappen.
+///
+/// Gibt `ToolAnchor::ExistingNode` zurück wenn ein Node in Reichweite ist,
+/// sonst `ToolAnchor::NewPosition` mit der Original-Position.
+pub fn snap_to_node(pos: Vec2, road_map: &RoadMap, snap_radius: f32) -> ToolAnchor {
+    if let Some(hit) = road_map.nearest_node(pos) {
+        if hit.distance <= snap_radius {
+            if let Some(node) = road_map.nodes.get(&hit.node_id) {
+                return ToolAnchor::ExistingNode(hit.node_id, node.position);
+            }
+        }
+    }
+    ToolAnchor::NewPosition(pos)
+}
+
 // ── Trait ────────────────────────────────────────────────────────
 
 /// Schnittstelle für alle Route-Tools (Linie, Parkplatz, Kurve, …).
