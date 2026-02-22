@@ -29,7 +29,7 @@ pub fn move_selected_nodes(state: &mut AppState, delta_world: glam::Vec2) {
 
     if moved_any {
         road_map_mut.rebuild_connection_geometry();
-        road_map_mut.ensure_spatial_index();
+        road_map_mut.rebuild_spatial_index();
     }
 }
 
@@ -65,5 +65,46 @@ mod tests {
         let node2 = road_map.nodes.get(&2).expect("node 2 vorhanden");
         assert_eq!(node1.position, glam::Vec2::new(2.0, 3.0));
         assert_eq!(node2.position, glam::Vec2::new(12.0, 3.0));
+    }
+
+    #[test]
+    fn move_selected_nodes_updates_spatial_index() {
+        let mut map = RoadMap::new(3);
+        map.add_node(MapNode::new(
+            1,
+            glam::Vec2::new(0.0, 0.0),
+            NodeFlag::Regular,
+        ));
+        map.ensure_spatial_index();
+
+        let mut state = AppState::new();
+        state.road_map = Some(Arc::new(map));
+        state.selection.selected_node_ids.insert(1);
+
+        // Node von (0,0) nach (100,100) verschieben
+        move_selected_nodes(&mut state, glam::Vec2::new(100.0, 100.0));
+
+        let road_map = state.road_map.as_ref().unwrap();
+        // Spatial-Index muss die neue Position finden
+        let hit = road_map.nearest_node(glam::Vec2::new(100.0, 100.0));
+        assert!(
+            hit.is_some(),
+            "Spatial-Index muss Node an neuer Position finden"
+        );
+        let hit = hit.unwrap();
+        assert_eq!(hit.node_id, 1);
+        assert!(
+            hit.distance < 1.0,
+            "Node muss nahe (100,100) sein, war {}",
+            hit.distance
+        );
+
+        // An der alten Position darf der Node nicht mehr nahe sein
+        let old_hit = road_map.nearest_node(glam::Vec2::new(0.0, 0.0));
+        assert!(old_hit.is_some());
+        assert!(
+            old_hit.unwrap().distance > 50.0,
+            "Spatial-Index darf Node nicht mehr an alter Position (0,0) finden"
+        );
     }
 }
