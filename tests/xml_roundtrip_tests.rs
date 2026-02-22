@@ -5,7 +5,8 @@ fn test_xml_roundtrip_preserves_core_counts_and_ids() {
     let xml_content = include_str!("fixtures/simple_config.xml");
 
     let parsed = parse_autodrive_config(xml_content).expect("Initiales Parsing fehlgeschlagen");
-    let written_xml = write_autodrive_config(&parsed, None, 255.0).expect("XML-Export fehlgeschlagen");
+    let written_xml =
+        write_autodrive_config(&parsed, None, 255.0).expect("XML-Export fehlgeschlagen");
     let reparsed = parse_autodrive_config(&written_xml).expect("Re-Parsing fehlgeschlagen");
 
     assert_eq!(parsed.version, reparsed.version);

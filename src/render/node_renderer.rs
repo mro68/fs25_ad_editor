@@ -242,7 +242,8 @@ impl NodeRenderer {
             view_proj: view_proj_array,
             aa_params,
         };
-        ctx.queue.write_buffer(&self.uniform_buffer, 0, bytemuck::cast_slice(&[uniforms]));
+        ctx.queue
+            .write_buffer(&self.uniform_buffer, 0, bytemuck::cast_slice(&[uniforms]));
 
         // Instance-Buffer erstellen/aktualisieren (Reuse)
         if self.instance_buffer.is_none() || instances.len() > self.instance_capacity {
@@ -258,7 +259,8 @@ impl NodeRenderer {
         }
 
         if let Some(instance_buffer) = &self.instance_buffer {
-            ctx.queue.write_buffer(instance_buffer, 0, bytemuck::cast_slice(&instances));
+            ctx.queue
+                .write_buffer(instance_buffer, 0, bytemuck::cast_slice(&instances));
         }
 
         // Rendern

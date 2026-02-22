@@ -8,9 +8,7 @@
 
 mod geometry;
 
-use self::geometry::{
-    catmull_rom_chain_with_tangents, polyline_length, resample_by_distance,
-};
+use self::geometry::{catmull_rom_chain_with_tangents, polyline_length, resample_by_distance};
 use super::{snap_to_node, RouteTool, ToolAction, ToolAnchor, ToolPreview, ToolResult};
 use crate::core::{ConnectedNeighbor, ConnectionDirection, ConnectionPriority, NodeFlag, RoadMap};
 use crate::shared::SNAP_RADIUS;
