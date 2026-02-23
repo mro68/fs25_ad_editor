@@ -66,14 +66,20 @@ pub fn handle_file_dialogs(ui_state: &mut UiState) -> Vec<AppIntent> {
         ui_state.show_background_map_dialog = false;
 
         if let Some(path) = rfd::FileDialog::new()
-            .add_filter("Map Background", &["png", "jpg", "jpeg", "dds"])
+            .add_filter("Map Background", &["png", "jpg", "jpeg", "dds", "zip"])
             .pick_file()
         {
-            // Für MVP: keine Crop-Size-Auswahl, User bekommt Original
-            events.push(AppIntent::BackgroundMapSelected {
-                path: path_to_ui_string(&path),
-                crop_size: None,
-            });
+            let path_str = path_to_ui_string(&path);
+            if path_str.to_lowercase().ends_with(".zip") {
+                // ZIP-Datei: Browser-Dialog öffnen
+                events.push(AppIntent::ZipBackgroundBrowseRequested { path: path_str });
+            } else {
+                // Direktes Bild: wie bisher laden
+                events.push(AppIntent::BackgroundMapSelected {
+                    path: path_str,
+                    crop_size: None,
+                });
+            }
         }
     }
 
@@ -263,6 +269,76 @@ pub fn show_dedup_dialog(ctx: &egui::Context, ui_state: &UiState) -> Vec<AppInte
                 });
             });
         });
+
+    events
+}
+
+/// Zeigt den ZIP-Browser-Dialog zur Auswahl einer Bilddatei aus einem ZIP-Archiv.
+pub fn show_zip_browser(ctx: &egui::Context, ui_state: &mut UiState) -> Vec<AppIntent> {
+    let mut events = Vec::new();
+
+    let Some(browser) = &mut ui_state.zip_browser else {
+        return events;
+    };
+
+    let mut open = true;
+    egui::Window::new("Bild aus ZIP wählen")
+        .collapsible(false)
+        .resizable(true)
+        .open(&mut open)
+        .default_width(400.0)
+        .anchor(egui::Align2::CENTER_CENTER, [0.0, 0.0])
+        .show(ctx, |ui| {
+            ui.label(
+                egui::RichText::new(format!("{} Bilddateien gefunden:", browser.entries.len()))
+                    .strong(),
+            );
+            ui.add_space(4.0);
+
+            egui::ScrollArea::vertical()
+                .max_height(300.0)
+                .show(ui, |ui| {
+                    for (i, entry) in browser.entries.iter().enumerate() {
+                        let selected = browser.selected == Some(i);
+                        let response = ui.selectable_label(selected, entry);
+                        if response.clicked() {
+                            browser.selected = Some(i);
+                        }
+                        if response.double_clicked() {
+                            events.push(AppIntent::ZipBackgroundFileSelected {
+                                zip_path: browser.zip_path.clone(),
+                                entry_name: entry.clone(),
+                            });
+                        }
+                    }
+                });
+
+            ui.add_space(8.0);
+            ui.horizontal(|ui| {
+                let can_confirm = browser.selected.is_some();
+                if ui
+                    .add_enabled(can_confirm, egui::Button::new("Übernehmen"))
+                    .clicked()
+                {
+                    if let Some(idx) = browser.selected {
+                        if let Some(entry) = browser.entries.get(idx) {
+                            events.push(AppIntent::ZipBackgroundFileSelected {
+                                zip_path: browser.zip_path.clone(),
+                                entry_name: entry.clone(),
+                            });
+                        }
+                    }
+                }
+                if ui.button("Abbrechen").clicked() {
+                    events.push(AppIntent::ZipBrowserCancelled);
+                }
+            });
+        });
+
+    // X-Button zum Schließen
+    if !open {
+        events.push(AppIntent::ZipBrowserCancelled);
+    }
 
     events
 }

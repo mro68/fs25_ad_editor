@@ -154,6 +154,7 @@ impl EditorApp {
             self.state.road_map.as_deref(),
         ));
         events.extend(ui::show_dedup_dialog(ctx, &self.state.ui));
+        events.extend(ui::show_zip_browser(ctx, &mut self.state.ui));
         events.extend(ui::show_options_dialog(
             ctx,
             self.state.show_options_dialog,
