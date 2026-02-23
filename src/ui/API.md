@@ -26,6 +26,7 @@ Das `ui`-Modul enthält egui-UI-Komponenten (Menüs, Statusbar, Input-Handling, 
   - `marker_dialog.rs` — Marker erstellen/bearbeiten
   - `dedup_dialog.rs` — Duplikat-Bestätigungsdialog
   - `zip_browser.rs` — ZIP-Browser für Background-Map-Auswahl
+  - `post_load_dialog.rs` — Post-Load-Dialog (Auto-Erkennung von Heightmap/ZIP)
 
 ## Funktionen
 
@@ -275,6 +276,33 @@ pub fn show_zip_browser(ctx: &egui::Context, ui_state: &mut UiState) -> Vec<AppI
   └─────────────────────────┘
   [Übernehmen]  [Abbrechen]
 ```
+
+---
+
+### `show_post_load_dialog`
+
+Zeigt den Post-Load-Dialog nach dem Laden einer XML-Datei. Informiert über automatisch erkannte Heightmap und bietet die Möglichkeit, eine Übersichtskarte aus einem passenden Map-Mod-ZIP zu generieren.
+
+```rust
+pub fn show_post_load_dialog(ctx: &egui::Context, ui_state: &mut UiState) -> Vec<AppIntent>
+```
+
+**Emittierte Intents:**
+- `AppIntent::PostLoadGenerateOverview { zip_path }` — Benutzer will Übersichtskarte generieren
+- `AppIntent::PostLoadDialogDismissed` — Benutzer schließt den Dialog
+
+**Layout:**
+```
+[Titel: "Nach dem Laden erkannt"]
+  ✓ Heightmap automatisch geladen
+     terrain.heightmap.png
+  Karte: "Höflingen"
+  Passender Map-Mod gefunden:
+     📦 FS25_Hoeflingen.zip
+  [Übersichtskarte generieren]  [Schließen]
+```
+
+Bei mehreren ZIPs werden RadioButtons zur Auswahl angezeigt.
 
 ---
 

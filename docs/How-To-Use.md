@@ -14,11 +14,12 @@
 10. [Kamera und Viewport](#kamera-und-viewport)
 11. [Hintergrund-Karte](#hintergrund-karte)
 12. [Übersichtskarten-Generierung](#übersichtskarten-generierung)
-13. [Heightmap](#heightmap)
-14. [Duplikat-Bereinigung](#duplikat-bereinigung)
-15. [Optionen](#optionen)
-16. [Undo / Redo](#undo--redo)
-17. [Typische Workflows](#typische-workflows)
+13. [Automatische Erkennung (Post-Load)](#automatische-erkennung-post-load)
+14. [Heightmap](#heightmap)
+15. [Duplikat-Bereinigung](#duplikat-bereinigung)
+16. [Optionen](#optionen)
+17. [Undo / Redo](#undo--redo)
+18. [Typische Workflows](#typische-workflows)
 
 ---
 
@@ -47,6 +48,12 @@ Der FS25 AutoDrive Editor dient zum Erstellen und Bearbeiten von AutoDrive-Kurse
 | Shortcut | `Ctrl+O` |
 
 Öffnet einen Datei-Dialog zur Auswahl einer AutoDrive-XML-Konfigurationsdatei. Nach dem Laden wird die Kamera automatisch auf die Bounding-Box des Netzwerks zentriert.
+
+**Automatische Erkennung:** Nach dem Laden prüft der Editor automatisch:
+- Ob eine `terrain.heightmap.png` im selben Verzeichnis liegt → wird direkt als Heightmap gesetzt
+- Ob im Mods-Verzeichnis (`../../mods/` relativ zum Savegame) ein passender Map-Mod-ZIP zum Kartennamen existiert → Dialog bietet Übersichtskarten-Generierung an
+
+Das Matching berücksichtigt Umlaute (ä↔ae, ö↔oe, ü↔ue, ß↔ss), ist case-insensitive und behandelt Leerzeichen/Unterstriche als Wildcard.
 
 ### Datei speichern
 
@@ -496,6 +503,72 @@ Die Standard-Layer können auch über **Edit → Optionen... → Übersichtskart
 
 ---
 
+## Automatische Erkennung (Post-Load)
+
+Nach dem Laden einer AutoDrive-XML-Datei prüft der Editor automatisch, ob zugehörige Dateien im selben Verzeichnis oder im Mods-Ordner vorhanden sind.
+
+### Erkannte Dateien
+
+| Datei | Pfad | Aktion |
+|-------|------|--------|
+| **Heightmap** | `terrain.heightmap.png` im XML-Verzeichnis | Wird automatisch als Heightmap gesetzt |
+| **Map-Mod-ZIP** | `../../mods/FS25_*.zip` (Mods-Verzeichnis) | Dialog bietet Übersichtskarten-Generierung an |
+
+### Matching-Logik für ZIP-Dateien
+
+Der Kartenname aus der XML-Datei (z.B. `<MapName>Höflingen Valley</MapName>`) wird gegen die ZIP-Dateinamen im Mods-Verzeichnis abgeglichen:
+
+- **Case-insensitive:** „Höflingen" matcht „hoeflingen", „HÖFLINGEN", usw.
+- **Umlaut-tolerant:** ä↔ae, ö↔oe, ü↔ue, ß↔ss (bidirektional)
+- **Trennzeichen-flexibel:** Leerzeichen und Underscores werden als Wildcard behandelt
+
+**Beispiel:** Kartenname `Höflingen Valley` findet:
+- `FS25_Hoeflingen.zip` ✓
+- `FS25_Höflingen_V2.zip` ✓
+- `FS25_Hoeflingen_Valley.zip` ✓
+
+### Post-Load-Dialog
+
+Falls Dateien erkannt werden, erscheint automatisch ein Dialog:
+
+```
+Nach dem Laden erkannt
+
+✓ Heightmap automatisch geladen
+   terrain.heightmap.png
+
+Karte: "Höflingen"
+Passender Map-Mod gefunden:
+   📦 FS25_Hoeflingen.zip
+
+[Übersichtskarte generieren]  [Schließen]
+```
+
+| Schaltfläche | Aktion |
+|-------------|--------|
+| **Übersichtskarte generieren** | Öffnet den Layer-Options-Dialog zur Übersichtskarten-Generierung |
+| **Schließen** | Dialog schließen, keine weitere Aktion |
+
+Bei mehreren passenden ZIPs kann der gewünschte Mod per RadioButton ausgewählt werden.
+
+### Verzeichnisstruktur
+
+Die Auto-Detection erwartet folgende Savegame-Struktur:
+
+```
+FarmingSimulator2025/
+├── mods/
+│   ├── FS25_Hoeflingen.zip
+│   └── FS25_AnotherMap.zip
+├── savegame1/
+│   ├── AutoDrive_config.xml    ← diese Datei laden
+│   └── terrain.heightmap.png   ← wird automatisch erkannt
+└── savegame2/
+    └── ...
+```
+
+---
+
 ## Heightmap
 
 Die Heightmap wird für die korrekte Y-Koordinaten-Berechnung beim XML-Export benötigt.
@@ -602,18 +675,16 @@ Auch über **Edit → Undo / Redo** im Menü verfügbar (mit Anzeige ob verfügb
 ```mermaid
 flowchart LR
     A["Ctrl+O\nDatei laden"] --> B["Duplikate\nbereinigen?"]
-    B --> C["Hintergrund\nladen"]
-    C --> D["Heightmap\nladen"]
-    D --> E["Nodes\nbearbeiten"]
-    E --> F["Ctrl+S\nSpeichern"]
+    B --> C["Auto-Detection\nHeightmap + ZIP"]
+    C --> D["Nodes\nbearbeiten"]
+    D --> E["Ctrl+S\nSpeichern"]
 ```
 
-1. `Ctrl+O` → XML-Datei laden
-2. Falls Duplikate gefunden: **Bereinigen** im Dialog wählen (oder Abbrechen und Original-Datei sichern)
-3. Hintergrund laden (View → Hintergrund laden)
-4. Heightmap laden (File → Select Heightmap)
-5. Nodes bearbeiten (Select-Tool, Drag zum Verschieben)
-6. `Ctrl+S` → Speichern
+1. `Ctrl+O` → XML-Datei aus Savegame laden
+2. Falls Duplikate gefunden: **Bereinigen** im Dialog wählen
+3. Falls Heightmap/Map-Mod erkannt: Post-Load-Dialog nutzen (Heightmap wird automatisch gesetzt, optional Übersichtskarte generieren)
+4. Nodes bearbeiten (Select-Tool, Drag zum Verschieben)
+5. `Ctrl+S` → Speichern
 
 ### Route erstellen (mit Route-Tools)
 

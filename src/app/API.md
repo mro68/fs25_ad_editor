@@ -100,6 +100,7 @@ pub struct UiState {
     pub dedup_dialog: DedupDialogState,
     pub zip_browser: Option<ZipBrowserState>,
     pub overview_options_dialog: OverviewOptionsDialogState,
+    pub post_load_dialog: PostLoadDialogState,
 }
 
 pub struct ZipBrowserState {
@@ -127,6 +128,15 @@ pub struct OverviewOptionsDialogState {
     pub visible: bool,
     pub zip_path: String,
     pub layers: OverviewLayerOptions,
+}
+
+pub struct PostLoadDialogState {
+    pub visible: bool,
+    pub heightmap_set: bool,
+    pub heightmap_path: Option<String>,
+    pub matching_zips: Vec<PathBuf>,
+    pub selected_zip_index: usize,
+    pub map_name: String,
 }
 
 pub struct ViewState {
@@ -258,6 +268,10 @@ pub enum AppIntent {
     OverviewOptionsConfirmed,
     OverviewOptionsCancelled,
 
+    // Post-Load-Dialog (Auto-Detection)
+    PostLoadGenerateOverview { zip_path: String },
+    PostLoadDialogDismissed,
+
     // Map-Marker
     CreateMarkerRequested { node_id: u64 },
     RemoveMarkerRequested { node_id: u64 },
@@ -361,6 +375,9 @@ pub enum AppCommand {
     GenerateOverviewWithOptions,
     CloseOverviewOptionsDialog,
 
+    // Post-Load-Dialog
+    DismissPostLoadDialog,
+
     // Marker
     CreateMarker { node_id: u64, name: String, group: String },
     RemoveMarker { node_id: u64 },
@@ -416,7 +433,7 @@ pub enum AppCommand {
 
 ### `use_cases::file_io`
 - `request_open_file(state)` — Open-Dialog triggern
-- `load_selected_file(state, path)` — XML laden, Kamera zentrieren
+- `load_selected_file(state, path)` — XML laden, Kamera zentrieren; anschließend wird automatisch die Post-Load-Detection ausgeführt (Heightmap + ZIP-Suche)
 - `request_save_file(state)` — Save-Dialog triggern
 - `save_current_file(state)` — Unter aktuellem Pfad speichern
 - `save_file_as(state, path)` — Unter neuem Pfad speichern
@@ -436,6 +453,9 @@ pub enum AppCommand {
 - `select_nodes_in_lasso(state, polygon, additive)` — Lasso-Selektion (Alt + Drag)
 - `move_selected_nodes(state, delta_world)` — Alle selektierten Nodes gemeinsam verschieben
 - `clear_selection(state)` — Selektion explizit löschen
+
+### `use_cases::auto_detect`
+- `detect_post_load(xml_path, map_name) -> PostLoadDetectionResult` — Sucht nach `terrain.heightmap.png` im XML-Verzeichnis und passenden Map-Mod-ZIPs im Mods-Verzeichnis (`../../mods/` relativ zum Savegame). Matching: case-insensitive, Underscores/Spaces als Wildcard, bidirektionale Umlaut-Expansion (ä↔ae, ö↔oe, ü↔ue, ß↔ss).
 
 ### `use_cases::editing`
 - `add_node_at_position(state, world_pos)` — Neuen Node einfügen
