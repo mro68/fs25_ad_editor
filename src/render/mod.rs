@@ -123,9 +123,10 @@ impl Renderer {
         device: &eframe::wgpu::Device,
         queue: &eframe::wgpu::Queue,
         bg_map: &crate::BackgroundMap,
+        scale: f32,
     ) {
         self.background_renderer
-            .set_background(device, queue, bg_map);
+            .set_background(device, queue, bg_map, scale);
     }
 
     /// Entfernt die Background-Map

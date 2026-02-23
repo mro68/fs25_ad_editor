@@ -194,6 +194,7 @@ impl BackgroundRenderer {
         device: &wgpu::Device,
         queue: &wgpu::Queue,
         bg_map: &BackgroundMap,
+        scale: f32,
     ) {
         log::info!("BackgroundRenderer: Lade Background-Texture...");
 
@@ -230,26 +231,34 @@ impl BackgroundRenderer {
 
         // Update Vertex-Buffer mit korrekten Quad-Koordinaten (Weltkoordinaten)
         let bounds = bg_map.world_bounds();
+        let half_w = (bounds.max_x - bounds.min_x) * 0.5;
+        let half_h = (bounds.max_z - bounds.min_z) * 0.5;
+        let cx = (bounds.min_x + bounds.max_x) * 0.5;
+        let cz = (bounds.min_z + bounds.max_z) * 0.5;
+        let min_x = cx - half_w * scale;
+        let max_x = cx + half_w * scale;
+        let min_z = cz - half_h * scale;
+        let max_z = cz + half_h * scale;
         let vertices = [
             // Dreieck 1
             BackgroundVertex {
-                position: [bounds.min_x, bounds.min_z],
+                position: [min_x, min_z],
             },
             BackgroundVertex {
-                position: [bounds.max_x, bounds.min_z],
+                position: [max_x, min_z],
             },
             BackgroundVertex {
-                position: [bounds.max_x, bounds.max_z],
+                position: [max_x, max_z],
             },
             // Dreieck 2
             BackgroundVertex {
-                position: [bounds.min_x, bounds.min_z],
+                position: [min_x, min_z],
             },
             BackgroundVertex {
-                position: [bounds.max_x, bounds.max_z],
+                position: [max_x, max_z],
             },
             BackgroundVertex {
-                position: [bounds.min_x, bounds.max_z],
+                position: [min_x, max_z],
             },
         ];
 

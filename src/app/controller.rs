@@ -71,6 +71,9 @@ impl AppController {
             AppCommand::ToggleBackgroundVisibility => {
                 handlers::view::toggle_background_visibility(state)
             }
+            AppCommand::ScaleBackground { factor } => {
+                handlers::view::scale_background(state, factor)
+            }
 
             // === Selektion ===
             AppCommand::SelectNearestNode {

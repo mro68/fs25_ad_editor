@@ -32,7 +32,7 @@ let renderer = Renderer::new(render_state);
 
 renderer.render_scene(device, queue, render_pass, &scene);
 
-renderer.set_background(device, queue, &bg_map);  // Background-Map setzen
+renderer.set_background(device, queue, &bg_map, scale);  // Background-Map setzen (scale: f32)
 renderer.clear_background();                       // Background-Map entfernen
 ```
 

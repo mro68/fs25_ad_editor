@@ -89,6 +89,8 @@ pub enum AppIntent {
     SetBackgroundOpacity { opacity: f32 },
     /// Background-Sichtbarkeit umschalten
     ToggleBackgroundVisibility,
+    /// Background-Ausdehnung skalieren (Faktor relativ, z.B. 2.0 = verdoppeln)
+    ScaleBackground { factor: f32 },
     /// Undo: Letzte Aktion rückgängig machen
     UndoRequested,
     /// Redo: Rückgängig gemachte Aktion wiederherstellen
@@ -321,6 +323,8 @@ pub enum AppCommand {
     UpdateBackgroundOpacity { opacity: f32 },
     /// Background-Sichtbarkeit umschalten
     ToggleBackgroundVisibility,
+    /// Background-Ausdehnung skalieren (Faktor relativ)
+    ScaleBackground { factor: f32 },
     /// Heightmap-Warnung schließen
     DismissHeightmapWarning,
     /// Move-Lifecycle: Verschieben starten (Undo-Snapshot)
