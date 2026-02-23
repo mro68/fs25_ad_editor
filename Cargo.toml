@@ -49,6 +49,9 @@ kiddo = "5.2.4"
 # Image Processing
 image = { version = "0.25", features = ["dds", "png", "jpeg"] }
 
+# ZIP-Archiv-Support
+zip = { version = "2", default-features = false, features = ["deflate"] }
+
 # Serialization
 serde = { version = "1", features = ["derive"] }
 toml = "0.9.8"

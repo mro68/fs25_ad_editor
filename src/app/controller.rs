@@ -71,6 +71,9 @@ impl AppController {
             AppCommand::ToggleBackgroundVisibility => {
                 handlers::view::toggle_background_visibility(state)
             }
+            AppCommand::ScaleBackground { factor } => {
+                handlers::view::scale_background(state, factor)
+            }
 
             // === Selektion ===
             AppCommand::SelectNearestNode {
@@ -209,6 +212,17 @@ impl AppController {
             // === History ===
             AppCommand::Undo => handlers::history::undo(state),
             AppCommand::Redo => handlers::history::redo(state),
+
+            // === ZIP-Background ===
+            AppCommand::BrowseZipBackground { path } => {
+                handlers::view::browse_zip_background(state, path)?
+            }
+            AppCommand::LoadBackgroundFromZip {
+                zip_path,
+                entry_name,
+                crop_size,
+            } => handlers::view::load_background_from_zip(state, zip_path, entry_name, crop_size)?,
+            AppCommand::CloseZipBrowser => handlers::dialog::close_zip_browser(state),
         }
 
         state.command_log.record(&executed_command);

@@ -2,9 +2,21 @@
 
 use anyhow::{Context, Result};
 use image::{DynamicImage, GenericImageView, ImageReader};
-use std::io::BufReader;
+use std::io::{BufReader, Cursor, Read};
 
 use super::WorldBounds;
+
+/// Bekannte Bild-Endungen für ZIP-Filterung
+const IMAGE_EXTENSIONS: &[&str] = &["png", "jpg", "jpeg", "dds"];
+
+/// Eintrag einer Bilddatei in einem ZIP-Archiv.
+#[derive(Debug, Clone)]
+pub struct ZipImageEntry {
+    /// Dateiname im Archiv (inkl. Pfad)
+    pub name: String,
+    /// Unkomprimierte Dateigröße in Bytes
+    pub size: u64,
+}
 
 /// Background-Map für Map-Hintergrund-Rendering
 pub struct BackgroundMap {
@@ -28,7 +40,7 @@ impl BackgroundMap {
         // Zuerst versuchen wir die Erkennung anhand der Dateiendung.
         // Falls das fehlschlägt (z.B. .dds-Datei die eigentlich PNG ist),
         // erkennen wir das Format anhand der Magic Bytes im Dateiinhalt.
-        let mut image = match image::open(path) {
+        let image = match image::open(path) {
             Ok(img) => img,
             Err(ext_err) => {
                 log::warn!(
@@ -49,45 +61,7 @@ impl BackgroundMap {
             }
         };
 
-        let (orig_width, orig_height) = image.dimensions();
-        log::info!(
-            "Background-Map geladen: {}x{} Pixel von '{}'",
-            orig_width,
-            orig_height,
-            path
-        );
-
-        // Center-Crop durchführen, falls gewünscht
-        if let Some(target_size) = crop_size {
-            if orig_width != target_size || orig_height != target_size {
-                image = Self::center_crop(image, target_size)?;
-                log::info!(
-                    "Center-Crop auf {}x{} durchgeführt",
-                    target_size,
-                    target_size
-                );
-            }
-        }
-
-        let (final_width, final_height) = image.dimensions();
-
-        // Berechne Weltkoordinaten-Bereich (zentriert, nimmt kleinere Dimension)
-        let map_size = final_width.min(final_height) as f32;
-        let world_bounds = WorldBounds::from_map_size(map_size);
-
-        log::info!(
-            "Background-Map Weltkoordinaten: ({:.1}, {:.1}) bis ({:.1}, {:.1})",
-            world_bounds.min_x,
-            world_bounds.min_z,
-            world_bounds.max_x,
-            world_bounds.max_z
-        );
-
-        Ok(Self {
-            image_data: image,
-            world_bounds,
-            opacity: 1.0, // Default: voll opak
-        })
+        Self::from_image(image, path, crop_size)
     }
 
     /// Führt Center-Crop auf ein Bild durch
@@ -152,6 +126,136 @@ impl BackgroundMap {
     pub fn dimensions(&self) -> (u32, u32) {
         self.image_data.dimensions()
     }
+
+    /// Erstellt eine BackgroundMap aus einem bereits dekodierten Bild.
+    ///
+    /// Gemeinsame Logik für `load_from_file()` und `load_from_zip()`:
+    /// optionaler Center-Crop, WorldBounds-Berechnung, Logging.
+    fn from_image(image: DynamicImage, source_label: &str, crop_size: Option<u32>) -> Result<Self> {
+        let (orig_width, orig_height) = image.dimensions();
+        log::info!(
+            "Background-Map geladen: {}x{} Pixel von '{}'",
+            orig_width,
+            orig_height,
+            source_label
+        );
+
+        // Center-Crop durchführen, falls gewünscht
+        let image = if let Some(target_size) = crop_size {
+            if orig_width != target_size || orig_height != target_size {
+                let cropped = Self::center_crop(image, target_size)?;
+                log::info!(
+                    "Center-Crop auf {}x{} durchgeführt",
+                    target_size,
+                    target_size
+                );
+                cropped
+            } else {
+                image
+            }
+        } else {
+            image
+        };
+
+        let (final_width, final_height) = image.dimensions();
+        let map_size = final_width.min(final_height) as f32;
+        let world_bounds = WorldBounds::from_map_size(map_size);
+
+        log::info!(
+            "Background-Map Weltkoordinaten: ({:.1}, {:.1}) bis ({:.1}, {:.1})",
+            world_bounds.min_x,
+            world_bounds.min_z,
+            world_bounds.max_x,
+            world_bounds.max_z
+        );
+
+        Ok(Self {
+            image_data: image,
+            world_bounds,
+            opacity: 1.0,
+        })
+    }
+}
+
+/// Listet alle Bilddateien in einem ZIP-Archiv auf.
+///
+/// Gibt Einträge mit Name und unkomprimierter Größe zurück,
+/// standardmäßig absteigend nach Größe sortiert.
+pub fn list_images_in_zip(zip_path: &str) -> Result<Vec<ZipImageEntry>> {
+    let file = std::fs::File::open(zip_path)
+        .with_context(|| format!("ZIP-Datei nicht gefunden: {}", zip_path))?;
+    let mut archive = zip::ZipArchive::new(BufReader::new(file))
+        .with_context(|| format!("Ungültiges ZIP-Archiv: {}", zip_path))?;
+
+    let mut image_entries = Vec::new();
+    for i in 0..archive.len() {
+        let entry = archive.by_index(i)?;
+        let name = entry.name().to_string();
+        if entry.is_file() && is_image_filename(&name) {
+            image_entries.push(ZipImageEntry {
+                name,
+                size: entry.size(),
+            });
+        }
+    }
+
+    // Größste Dateien zuerst (typisch: overview.dds ist die größte)
+    image_entries.sort_by(|a, b| b.size.cmp(&a.size));
+    log::info!(
+        "ZIP '{}': {} Bilddateien gefunden",
+        zip_path,
+        image_entries.len()
+    );
+    Ok(image_entries)
+}
+
+/// Lädt eine Bilddatei aus einem ZIP-Archiv als BackgroundMap.
+///
+/// Die Datei wird komplett in-memory extrahiert und dann dekodiert.
+pub fn load_from_zip(
+    zip_path: &str,
+    entry_name: &str,
+    crop_size: Option<u32>,
+) -> Result<BackgroundMap> {
+    let file = std::fs::File::open(zip_path)
+        .with_context(|| format!("ZIP-Datei nicht gefunden: {}", zip_path))?;
+    let mut archive = zip::ZipArchive::new(BufReader::new(file))
+        .with_context(|| format!("Ungültiges ZIP-Archiv: {}", zip_path))?;
+
+    let mut zip_entry = archive
+        .by_name(entry_name)
+        .with_context(|| format!("Eintrag '{}' nicht im ZIP gefunden", entry_name))?;
+
+    // Komplett in Speicher lesen (nötig für Seek-Support bei DDS)
+    let mut buffer = Vec::with_capacity(zip_entry.size() as usize);
+    zip_entry
+        .read_to_end(&mut buffer)
+        .with_context(|| format!("Fehler beim Entpacken von '{}'", entry_name))?;
+
+    log::info!(
+        "ZIP-Eintrag '{}' entpackt: {:.1} MB",
+        entry_name,
+        buffer.len() as f64 / (1024.0 * 1024.0)
+    );
+
+    // Bild dekodieren (mit Format-Erkennung via Magic Bytes)
+    let reader = ImageReader::new(Cursor::new(buffer))
+        .with_guessed_format()
+        .with_context(|| format!("Format-Erkennung fehlgeschlagen für: {}", entry_name))?;
+    let image = reader
+        .decode()
+        .with_context(|| format!("Fehler beim Dekodieren von '{}' aus ZIP", entry_name))?;
+
+    let source_label = format!("{}:{}", zip_path, entry_name);
+    BackgroundMap::from_image(image, &source_label, crop_size)
+}
+
+/// Prüft ob ein Dateiname eine bekannte Bild-Endung hat.
+fn is_image_filename(name: &str) -> bool {
+    let lower = name.to_lowercase();
+    IMAGE_EXTENSIONS
+        .iter()
+        .any(|ext| lower.ends_with(&format!(".{}", ext)))
 }
 
 #[cfg(test)]
