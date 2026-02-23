@@ -239,5 +239,17 @@ pub fn map_intent_to_commands(state: &AppState, intent: AppIntent) -> Vec<AppCom
         AppIntent::EditSegmentRequested { record_id } => {
             vec![AppCommand::EditSegment { record_id }]
         }
+        AppIntent::ZipBackgroundBrowseRequested { path } => {
+            vec![AppCommand::BrowseZipBackground { path }]
+        }
+        AppIntent::ZipBackgroundFileSelected {
+            zip_path,
+            entry_name,
+        } => vec![AppCommand::LoadBackgroundFromZip {
+            zip_path,
+            entry_name,
+            crop_size: None,
+        }],
+        AppIntent::ZipBrowserCancelled => vec![AppCommand::CloseZipBrowser],
     }
 }

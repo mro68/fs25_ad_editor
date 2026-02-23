@@ -162,6 +162,19 @@ pub struct UiState {
     pub status_message: Option<String>,
     /// Duplikat-Bestätigungsdialog
     pub dedup_dialog: DedupDialogState,
+    /// ZIP-Browser-Dialog für Background-Map-Auswahl
+    pub zip_browser: Option<ZipBrowserState>,
+}
+
+/// Zustand des ZIP-Browser-Dialogs.
+#[derive(Debug, Clone)]
+pub struct ZipBrowserState {
+    /// Pfad zur ZIP-Datei
+    pub zip_path: String,
+    /// Bilddateien im Archiv
+    pub entries: Vec<String>,
+    /// Index des aktuell selektierten Eintrags
+    pub selected: Option<usize>,
 }
 
 impl UiState {
@@ -180,6 +193,7 @@ impl UiState {
             marker_dialog: MarkerDialogState::new(),
             status_message: None,
             dedup_dialog: DedupDialogState::new(),
+            zip_browser: None,
         }
     }
 }

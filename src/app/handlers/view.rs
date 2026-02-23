@@ -57,3 +57,18 @@ pub fn set_background_opacity(state: &mut AppState, opacity: f32) {
 pub fn toggle_background_visibility(state: &mut AppState) {
     use_cases::background_map::toggle_background_visibility(state);
 }
+
+/// Öffnet den ZIP-Browser-Dialog für die gewählte ZIP-Datei.
+pub fn browse_zip_background(state: &mut AppState, path: String) -> anyhow::Result<()> {
+    use_cases::background_map::browse_zip_background(state, path)
+}
+
+/// Lädt eine Bilddatei aus einem ZIP-Archiv als Background-Map.
+pub fn load_background_from_zip(
+    state: &mut AppState,
+    zip_path: String,
+    entry_name: String,
+    crop_size: Option<u32>,
+) -> anyhow::Result<()> {
+    use_cases::background_map::load_background_from_zip(state, zip_path, entry_name, crop_size)
+}
