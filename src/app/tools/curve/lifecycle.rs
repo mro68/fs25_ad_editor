@@ -13,11 +13,21 @@ use glam::Vec2;
 
 impl RouteTool for CurveTool {
     fn name(&self) -> &str {
-        "🔀 Kurve"
+        self.tool_name
+    }
+
+    fn icon(&self) -> &str {
+        match self.degree {
+            CurveDegree::Quadratic => "⌒",
+            CurveDegree::Cubic => "〜",
+        }
     }
 
     fn description(&self) -> &str {
-        "Zeichnet eine Bézier-Kurve (Grad 2 oder 3) mit Steuerpunkten"
+        match self.degree {
+            CurveDegree::Quadratic => "Zeichnet eine quadratische Bézier-Kurve (1 Steuerpunkt)",
+            CurveDegree::Cubic => "Zeichnet eine kubische Bézier-Kurve (2 Steuerpunkte)",
+        }
     }
 
     fn status_text(&self) -> &str {

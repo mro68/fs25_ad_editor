@@ -41,19 +41,37 @@ pub fn render_toolbar(ctx: &egui::Context, state: &AppState) -> Vec<AppIntent> {
 
             ui.separator();
 
-            // Route-Tools (dynamisch aus ToolManager, kein String-Clone nötig)
-            let tool_names = state.editor.tool_manager.tool_names();
+            // Linien-Tools als Dropdown-Menü
             let active_route_index = if active == EditorTool::Route {
                 state.editor.tool_manager.active_index()
             } else {
                 None
             };
-            for (index, name) in tool_names {
-                let is_active = active_route_index == Some(index);
-                if ui.selectable_label(is_active, name).clicked() {
-                    events.push(AppIntent::SelectRouteToolRequested { index });
-                }
-            }
+            let tool_entries = state.editor.tool_manager.tool_entries();
+            let selected_label = active_route_index
+                .and_then(|idx| tool_entries.iter().find(|(i, _, _)| *i == idx))
+                .map(|(_, name, icon)| format!("{name}  {icon}"))
+                .unwrap_or_else(|| "Linie wählen…".to_string());
+
+            // Popup-ID vorberechnen, damit der Eintrag das Dropdown schließen kann
+            let popup_id = ui.make_persistent_id("line_tools_dropdown").with("popup");
+
+            egui::ComboBox::from_id_salt("line_tools_dropdown")
+                .selected_text(&selected_label)
+                .width(185.0)
+                .show_ui(ui, |ui| {
+                    for &(idx, name, icon) in &tool_entries {
+                        render_line_tool_item(
+                            ui,
+                            idx,
+                            name,
+                            icon,
+                            active_route_index,
+                            popup_id,
+                            &mut events,
+                        );
+                    }
+                });
 
             ui.separator();
 
@@ -113,4 +131,61 @@ pub fn render_toolbar(ctx: &egui::Context, state: &AppState) -> Vec<AppIntent> {
     });
 
     events
+}
+
+/// Rendert einen Dropdown-Eintrag für ein Linien-Tool mit Text links und Icon rechts.
+fn render_line_tool_item(
+    ui: &mut egui::Ui,
+    idx: usize,
+    name: &str,
+    icon: &str,
+    active_route_index: Option<usize>,
+    popup_id: egui::Id,
+    events: &mut Vec<AppIntent>,
+) {
+    let is_sel = active_route_index == Some(idx);
+    let row_size = egui::vec2(ui.available_width(), ui.spacing().interact_size.y);
+    let (rect, resp) = ui.allocate_exact_size(row_size, egui::Sense::click());
+
+    // Hintergrund
+    let bg = if is_sel {
+        Some(ui.visuals().selection.bg_fill)
+    } else if resp.hovered() {
+        Some(ui.visuals().widgets.hovered.bg_fill)
+    } else {
+        None
+    };
+    if let Some(bg) = bg {
+        ui.painter()
+            .rect_filled(rect, egui::CornerRadius::same(2), bg);
+    }
+
+    let text_color = if is_sel {
+        ui.visuals().strong_text_color()
+    } else {
+        ui.visuals().text_color()
+    };
+    let font_id = egui::TextStyle::Button.resolve(ui.style());
+
+    // Text links
+    ui.painter().text(
+        rect.left_center() + egui::vec2(6.0, 0.0),
+        egui::Align2::LEFT_CENTER,
+        name,
+        font_id.clone(),
+        text_color,
+    );
+    // Icon rechts
+    ui.painter().text(
+        rect.right_center() - egui::vec2(6.0, 0.0),
+        egui::Align2::RIGHT_CENTER,
+        icon,
+        font_id,
+        text_color,
+    );
+
+    if resp.clicked() {
+        events.push(AppIntent::SelectRouteToolRequested { index: idx });
+        egui::Popup::close_id(ui.ctx(), popup_id);
+    }
 }

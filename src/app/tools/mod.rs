@@ -43,6 +43,11 @@ pub trait RouteTool {
     /// Anzeigename für Toolbar
     fn name(&self) -> &str;
 
+    /// Icon-Zeichen für das Dropdown (rechts vom Label)
+    fn icon(&self) -> &str {
+        ""
+    }
+
     /// Kurzbeschreibung / Tooltip
     fn description(&self) -> &str;
 
@@ -205,6 +210,7 @@ impl ToolManager {
         // Standard-Tools registrieren
         manager.register(Box::new(straight_line::StraightLineTool::new()));
         manager.register(Box::new(curve::CurveTool::new()));
+        manager.register(Box::new(curve::CurveTool::new_cubic()));
         manager.register(Box::new(spline::SplineTool::new()));
         manager
     }
@@ -225,6 +231,15 @@ impl ToolManager {
             .iter()
             .enumerate()
             .map(|(i, t)| (i, t.name()))
+            .collect()
+    }
+
+    /// Gibt Index, Name und Icon aller registrierten Tools zurück.
+    pub fn tool_entries(&self) -> Vec<(usize, &str, &str)> {
+        self.tools
+            .iter()
+            .enumerate()
+            .map(|(i, t)| (i, t.name(), t.icon()))
             .collect()
     }
 

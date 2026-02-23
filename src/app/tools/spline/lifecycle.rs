@@ -10,7 +10,11 @@ use glam::Vec2;
 
 impl RouteTool for SplineTool {
     fn name(&self) -> &str {
-        "〰️ Spline"
+        "Spline"
+    }
+
+    fn icon(&self) -> &str {
+        "〰"
     }
 
     fn description(&self) -> &str {
