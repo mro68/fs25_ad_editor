@@ -159,11 +159,9 @@ impl CurveTool {
         if chord_len < f32::EPSILON {
             return;
         }
-        if let Some(t) = Self::auto_suggest_tangent(
-            &self.tangents.start_neighbors,
-            chord / chord_len,
-            true,
-        ) {
+        if let Some(t) =
+            Self::auto_suggest_tangent(&self.tangents.start_neighbors, chord / chord_len, true)
+        {
             self.tangents.tangent_start = t;
         }
     }
@@ -185,11 +183,9 @@ impl CurveTool {
         if chord_len < f32::EPSILON {
             return;
         }
-        if let Some(t) = Self::auto_suggest_tangent(
-            &self.tangents.end_neighbors,
-            chord / chord_len,
-            false,
-        ) {
+        if let Some(t) =
+            Self::auto_suggest_tangent(&self.tangents.end_neighbors, chord / chord_len, false)
+        {
             self.tangents.tangent_end = t;
         }
     }

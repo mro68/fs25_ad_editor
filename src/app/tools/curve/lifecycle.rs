@@ -1,8 +1,7 @@
 //! Lifecycle-Methoden des CurveTool (on_click, preview, execute, reset, etc.).
 
 use super::super::{
-    common::populate_neighbors, snap_to_node, RouteTool, ToolAction, ToolPreview,
-    ToolResult,
+    common::populate_neighbors, snap_to_node, RouteTool, ToolAction, ToolPreview, ToolResult,
 };
 use super::geometry::{
     build_tool_result, compute_curve_positions, cubic_bezier, quadratic_bezier, CurveParams,

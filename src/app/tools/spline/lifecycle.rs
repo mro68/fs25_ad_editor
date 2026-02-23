@@ -1,8 +1,7 @@
 //! Lifecycle-Methoden des SplineTool (RouteTool-Implementierung).
 
 use super::super::{
-    common::populate_neighbors, snap_to_node, RouteTool, ToolAction, ToolPreview,
-    ToolResult,
+    common::populate_neighbors, snap_to_node, RouteTool, ToolAction, ToolPreview, ToolResult,
 };
 use super::state::SplineTool;
 use crate::app::segment_registry::{SegmentKind, SegmentRecord};
