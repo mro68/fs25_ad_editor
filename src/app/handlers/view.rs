@@ -77,3 +77,8 @@ pub fn load_background_from_zip(
 ) -> anyhow::Result<()> {
     use_cases::background_map::load_background_from_zip(state, zip_path, entry_name, crop_size)
 }
+
+/// Generiert eine Übersichtskarte mit den Optionen aus dem Dialog.
+pub fn generate_overview_with_options(state: &mut AppState) -> anyhow::Result<()> {
+    use_cases::background_map::generate_overview_with_options(state)
+}

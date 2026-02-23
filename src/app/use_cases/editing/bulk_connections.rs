@@ -5,6 +5,18 @@ use crate::core::{ConnectionDirection, ConnectionPriority, RoadMap};
 use std::collections::HashSet;
 use std::sync::Arc;
 
+/// Sammelt alle Connection-Keys, deren Start- und End-Node in der Selektion liegen.
+fn collect_selected_connection_keys(
+    road_map: &RoadMap,
+    selected: &HashSet<u64>,
+) -> Vec<(u64, u64)> {
+    road_map
+        .connections_iter()
+        .filter(|c| selected.contains(&c.start_id) && selected.contains(&c.end_id))
+        .map(|c| (c.start_id, c.end_id))
+        .collect()
+}
+
 /// Gemeinsame Logik für Bulk-Operationen auf Verbindungen zwischen selektierten Nodes.
 ///
 /// Validiert die Selektion, erstellt einen Undo-Snapshot, führt die Operation aus
@@ -95,11 +107,7 @@ pub fn set_all_connections_direction_between_selected(
                 }
             }
 
-            let keys: Vec<(u64, u64)> = road_map
-                .connections_iter()
-                .filter(|c| selected.contains(&c.start_id) && selected.contains(&c.end_id))
-                .map(|c| (c.start_id, c.end_id))
-                .collect();
+            let keys = collect_selected_connection_keys(road_map, selected);
             let count = keys.len() as u32;
             for (s, e) in keys {
                 road_map.set_connection_direction(s, e, direction);
@@ -122,11 +130,7 @@ pub fn set_all_connections_direction_between_selected(
 /// in der Selektion enthalten sind.
 pub fn remove_all_connections_between_selected(state: &mut AppState) {
     let count = mutate_connections_between_selected(state, "remove", |road_map, selected| {
-        let keys: Vec<(u64, u64)> = road_map
-            .connections_iter()
-            .filter(|c| selected.contains(&c.start_id) && selected.contains(&c.end_id))
-            .map(|c| (c.start_id, c.end_id))
-            .collect();
+        let keys = collect_selected_connection_keys(road_map, selected);
         let count = keys.len() as u32;
         for (s, e) in keys {
             road_map.remove_connection(s, e);
@@ -148,11 +152,7 @@ pub fn remove_all_connections_between_selected(state: &mut AppState) {
 /// aktualisiert die Geometrie (Mittelpunkt/Winkel).
 pub fn invert_all_connections_between_selected(state: &mut AppState) {
     let count = mutate_connections_between_selected(state, "invert", |road_map, selected| {
-        let keys: Vec<(u64, u64)> = road_map
-            .connections_iter()
-            .filter(|c| selected.contains(&c.start_id) && selected.contains(&c.end_id))
-            .map(|c| (c.start_id, c.end_id))
-            .collect();
+        let keys = collect_selected_connection_keys(road_map, selected);
         let count = keys.len() as u32;
         for (s, e) in keys {
             road_map.invert_connection(s, e);
@@ -174,11 +174,7 @@ pub fn set_all_connections_priority_between_selected(
     priority: ConnectionPriority,
 ) {
     let count = mutate_connections_between_selected(state, "set_priority", |road_map, selected| {
-        let keys: Vec<(u64, u64)> = road_map
-            .connections_iter()
-            .filter(|c| selected.contains(&c.start_id) && selected.contains(&c.end_id))
-            .map(|c| (c.start_id, c.end_id))
-            .collect();
+        let keys = collect_selected_connection_keys(road_map, selected);
         let count = keys.len() as u32;
         for (s, e) in keys {
             road_map.set_connection_priority(s, e, priority);
@@ -192,5 +188,45 @@ pub fn set_all_connections_priority_between_selected(
             count,
             priority
         );
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::collect_selected_connection_keys;
+    use crate::core::{
+        Connection, ConnectionDirection, ConnectionPriority, MapNode, NodeFlag, RoadMap,
+    };
+    use glam::Vec2;
+    use std::collections::HashSet;
+
+    #[test]
+    fn collects_only_connections_with_both_ends_selected() {
+        let mut road_map = RoadMap::new(3);
+        road_map.add_node(MapNode::new(1, Vec2::new(0.0, 0.0), NodeFlag::Regular));
+        road_map.add_node(MapNode::new(2, Vec2::new(1.0, 0.0), NodeFlag::Regular));
+        road_map.add_node(MapNode::new(3, Vec2::new(2.0, 0.0), NodeFlag::Regular));
+
+        road_map.add_connection(Connection::new(
+            1,
+            2,
+            ConnectionDirection::Regular,
+            ConnectionPriority::Regular,
+            Vec2::new(0.0, 0.0),
+            Vec2::new(1.0, 0.0),
+        ));
+        road_map.add_connection(Connection::new(
+            2,
+            3,
+            ConnectionDirection::Regular,
+            ConnectionPriority::Regular,
+            Vec2::new(1.0, 0.0),
+            Vec2::new(2.0, 0.0),
+        ));
+
+        let selected = HashSet::from([1_u64, 2_u64]);
+        let keys = collect_selected_connection_keys(&road_map, &selected);
+
+        assert_eq!(keys, vec![(1, 2)]);
     }
 }

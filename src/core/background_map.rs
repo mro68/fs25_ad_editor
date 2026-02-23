@@ -129,9 +129,14 @@ impl BackgroundMap {
 
     /// Erstellt eine BackgroundMap aus einem bereits dekodierten Bild.
     ///
-    /// Gemeinsame Logik für `load_from_file()` und `load_from_zip()`:
-    /// optionaler Center-Crop, WorldBounds-Berechnung, Logging.
-    fn from_image(image: DynamicImage, source_label: &str, crop_size: Option<u32>) -> Result<Self> {
+    /// Gemeinsame Logik für `load_from_file()`, `load_from_zip()` und
+    /// `generate_overview_from_zip()`. Führt optionalen Center-Crop durch,
+    /// berechnet WorldBounds und loggt Dimensionen.
+    pub(crate) fn from_image(
+        image: DynamicImage,
+        source_label: &str,
+        crop_size: Option<u32>,
+    ) -> Result<Self> {
         let (orig_width, orig_height) = image.dimensions();
         log::info!(
             "Background-Map geladen: {}x{} Pixel von '{}'",

@@ -1,5 +1,6 @@
 //! Lifecycle-Methoden des StraightLineTool (RouteTool-Implementierung).
 
+use super::super::common::linear_connections;
 use super::super::{snap_to_node, RouteTool, ToolAction, ToolPreview, ToolResult};
 use super::geometry::{build_result, compute_line_positions};
 use super::state::StraightLineTool;
@@ -67,9 +68,7 @@ impl RouteTool for StraightLineTool {
         };
 
         let positions = compute_line_positions(start_pos, end_pos, self.seg.max_segment_length);
-        let connections: Vec<(usize, usize)> = (0..positions.len().saturating_sub(1))
-            .map(|i| (i, i + 1))
-            .collect();
+        let connections = linear_connections(positions.len());
 
         ToolPreview {
             nodes: positions,
@@ -110,7 +109,7 @@ impl RouteTool for StraightLineTool {
 
     crate::impl_lifecycle_delegation!();
 
-    fn set_last_created(&mut self, ids: Vec<u64>, _road_map: &RoadMap) {
+    fn set_last_created(&mut self, ids: &[u64], _road_map: &RoadMap) {
         // Anker nur überschreiben wenn aktuelle start/end gesetzt sind.
         // Beim Recreate sind start/end None — Anker bleiben erhalten.
         if self.start.is_some() {
@@ -119,8 +118,7 @@ impl RouteTool for StraightLineTool {
         if self.end.is_some() {
             self.lifecycle.last_end_anchor = self.end;
         }
-        self.lifecycle.last_created_ids = ids;
-        self.lifecycle.recreate_needed = false;
+        self.lifecycle.save_created_ids(ids);
     }
 
     fn execute_from_anchors(&self, road_map: &RoadMap) -> Option<ToolResult> {
@@ -136,12 +134,12 @@ impl RouteTool for StraightLineTool {
         )
     }
 
-    fn make_segment_record(&self, id: u64, node_ids: Vec<u64>) -> Option<SegmentRecord> {
+    fn make_segment_record(&self, id: u64, node_ids: &[u64]) -> Option<SegmentRecord> {
         let start = self.last_start_anchor?;
         let end = self.lifecycle.last_end_anchor?;
         Some(SegmentRecord {
             id,
-            node_ids,
+            node_ids: node_ids.to_vec(),
             start_anchor: start,
             end_anchor: end,
             kind: SegmentKind::Straight {

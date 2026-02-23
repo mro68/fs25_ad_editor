@@ -10,10 +10,18 @@ use quick_xml::events::Event;
 use quick_xml::Reader;
 use waypoints::build_nodes_and_connections;
 
+/// Hängt Text an eine `Option<String>` an (oder initialisiert sie).
+fn append_or_set(target: &mut Option<String>, text: &str) {
+    match target {
+        Some(ref mut s) => s.push_str(text),
+        None => *target = Some(text.to_string()),
+    }
+}
+
 /// Parsed eine AutoDrive-Config aus einem XML-String
 pub fn parse_autodrive_config(xml_content: &str) -> Result<RoadMap> {
     let mut reader = Reader::from_str(xml_content);
-    reader.config_mut().trim_text(true);
+    reader.config_mut().trim_text(false);
 
     let mut buffer = Vec::new();
 
@@ -99,7 +107,7 @@ pub fn parse_autodrive_config(xml_content: &str) -> Result<RoadMap> {
                         _ => {}
                     }
                 } else if in_marker_element {
-                    // Text innerhalb eines Marker-Elements
+                    // Text innerhalb eines Marker-Elements (kann bei Entities gesplittet werden)
                     match current_tag.as_deref() {
                         Some("id") => {
                             let marker_tag = current_marker_tag.as_deref().unwrap_or("<unknown>");
@@ -108,8 +116,8 @@ pub fn parse_autodrive_config(xml_content: &str) -> Result<RoadMap> {
                             })?;
                             current_marker_id = Some(id);
                         }
-                        Some("name") => current_marker_name = Some(text),
-                        Some("group") => current_marker_group = Some(text),
+                        Some("name") => append_or_set(&mut current_marker_name, &text),
+                        Some("group") => append_or_set(&mut current_marker_group, &text),
                         _ => {}
                     }
                 } else {
@@ -125,6 +133,24 @@ pub fn parse_autodrive_config(xml_content: &str) -> Result<RoadMap> {
                             options.push((tag_name.to_string(), text));
                         }
                         None => {}
+                    }
+                }
+            }
+            // Entity-Referenzen (&amp; &lt; etc.) als aufgelöstes Zeichen anhängen
+            Ok(Event::GeneralRef(e)) => {
+                let resolved = match &*e {
+                    b"amp" => "&",
+                    b"lt" => "<",
+                    b"gt" => ">",
+                    b"quot" => "\"",
+                    b"apos" => "'",
+                    _ => continue,
+                };
+                if in_marker_element {
+                    match current_tag.as_deref() {
+                        Some("name") => append_or_set(&mut current_marker_name, resolved),
+                        Some("group") => append_or_set(&mut current_marker_group, resolved),
+                        _ => {}
                     }
                 }
             }

@@ -1,6 +1,6 @@
 # Architektur-Plan (Soll-Zustand)
 
-Stand: 2025-07-02  
+Stand: 2026-02-23  
 Status: Umgesetzt — Architektur-Grenzen und API-Verträge aktiv durchgesetzt
 
 ## Zielbild
@@ -253,13 +253,14 @@ pub struct ViewState {
   pub background_map: Option<Arc<BackgroundMap>>,
   pub background_opacity: f32,
   pub background_visible: bool,
+  pub background_scale: f32,
   pub background_dirty: bool,  // Signalisiert GPU-Upload erforderlich
 }
 ```
 
 ```text
 pub struct SelectionState {
-  pub selected_node_ids: HashSet<u64>,
+  pub selected_node_ids: Arc<HashSet<u64>>,
   pub selection_anchor_node_id: Option<u64>,
 }
 ```
@@ -272,7 +273,7 @@ pub struct RenderScene {
   pub camera: Camera2D,
   pub viewport_size: [f32; 2],
   pub render_quality: RenderQuality,
-  pub selected_node_ids: Vec<u64>,
+  pub selected_node_ids: Arc<HashSet<u64>>,
   pub connect_source_node: Option<u64>,
   pub background_map: Option<Arc<BackgroundMap>>,
   pub background_opacity: f32,
@@ -322,11 +323,14 @@ flowchart LR
   UI --> APP
   APP --> CORE
   APP --> XML
-  APP --> RENDER
+  APP --> SHARED
+  RENDER --> SHARED
   XML --> CORE
 
   CORE -.x.-> UI
   CORE -.x.-> RENDER
+  RENDER -.x.-> CORE
+  XML -.x.-> APP
   RENDER -.x.-> UI
   UI -.x.-> XML
 ```

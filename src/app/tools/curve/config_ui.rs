@@ -4,9 +4,9 @@
 //! - `render_config_view` — Grad-Auswahl + Segment-Konfiguration im Properties-Panel
 //! - `render_tangent_context_menu` — Tangenten-Auswahl per Rechtsklick-Kontextmenü
 
-use super::super::common::{angle_to_compass, render_segment_config_3modes, TangentSource};
+use super::super::common::{render_segment_config_3modes, tangent_options};
 use super::super::RouteTool;
-use super::geometry::{cubic_bezier, quadratic_bezier};
+use super::geometry::{approx_length, cubic_bezier, quadratic_bezier};
 use super::state::{CurveDegree, CurveTool, Phase};
 
 impl CurveTool {
@@ -53,11 +53,11 @@ impl CurveTool {
             let cp2 = self.last_control_point2;
             match self.degree {
                 CurveDegree::Quadratic => {
-                    Self::approx_length(|t| quadratic_bezier(start_pos, cp1, end_pos, t), 64)
+                    approx_length(|t| quadratic_bezier(start_pos, cp1, end_pos, t), 64)
                 }
                 CurveDegree::Cubic => {
                     let cp2v = cp2.unwrap_or(cp1);
-                    Self::approx_length(|t| cubic_bezier(start_pos, cp1, cp2v, end_pos, t), 64)
+                    approx_length(|t| cubic_bezier(start_pos, cp1, cp2v, end_pos, t), 64)
                 }
             }
         } else {
@@ -93,7 +93,7 @@ impl CurveTool {
         }
 
         let in_control = self.phase == Phase::Control;
-        let adjusting = !self.lifecycle.last_created_ids.is_empty()
+        let adjusting = self.lifecycle.has_last_created()
             && self.last_start_anchor.is_some()
             && self.lifecycle.last_end_anchor.is_some();
         if !in_control && !adjusting {
@@ -106,9 +106,9 @@ impl CurveTool {
             return false;
         }
 
-        // Daten klonen um Borrow-Konflikte in der Closure zu vermeiden
-        let start_neighbors = self.tangents.start_neighbors.clone();
-        let end_neighbors = self.tangents.end_neighbors.clone();
+        // Optionen über gemeinsame Hilfsfunktion aufbereiten
+        let start_opts = tangent_options(&self.tangents.start_neighbors);
+        let end_opts = tangent_options(&self.tangents.end_neighbors);
         let mut new_start = self.tangents.tangent_start;
         let mut new_end = self.tangents.tangent_end;
         let mut changed = false;
@@ -116,23 +116,10 @@ impl CurveTool {
         response.context_menu(|ui| {
             if has_start {
                 ui.label("Tangente Start:");
-                if ui
-                    .selectable_label(new_start == TangentSource::None, "Manuell")
-                    .clicked()
-                {
-                    new_start = TangentSource::None;
-                    changed = true;
-                    ui.close();
-                }
-                for n in &start_neighbors {
-                    let text = format!("→ Node #{} ({})", n.neighbor_id, angle_to_compass(n.angle));
-                    let is_sel = matches!(new_start,
-                        TangentSource::Connection { neighbor_id, .. } if neighbor_id == n.neighbor_id);
-                    if ui.selectable_label(is_sel, text).clicked() {
-                        new_start = TangentSource::Connection {
-                            neighbor_id: n.neighbor_id,
-                            angle: n.angle,
-                        };
+                for (source, label) in &start_opts {
+                    let is_sel = *source == new_start;
+                    if ui.selectable_label(is_sel, label).clicked() {
+                        new_start = *source;
                         changed = true;
                         ui.close();
                     }
@@ -145,23 +132,10 @@ impl CurveTool {
 
             if has_end {
                 ui.label("Tangente Ende:");
-                if ui
-                    .selectable_label(new_end == TangentSource::None, "Manuell")
-                    .clicked()
-                {
-                    new_end = TangentSource::None;
-                    changed = true;
-                    ui.close();
-                }
-                for n in &end_neighbors {
-                    let text = format!("→ Node #{} ({})", n.neighbor_id, angle_to_compass(n.angle));
-                    let is_sel = matches!(new_end,
-                        TangentSource::Connection { neighbor_id, .. } if neighbor_id == n.neighbor_id);
-                    if ui.selectable_label(is_sel, text).clicked() {
-                        new_end = TangentSource::Connection {
-                            neighbor_id: n.neighbor_id,
-                            angle: n.angle,
-                        };
+                for (source, label) in &end_opts {
+                    let is_sel = *source == new_end;
+                    if ui.selectable_label(is_sel, label).clicked() {
+                        new_end = *source;
                         changed = true;
                         ui.close();
                     }
@@ -175,7 +149,7 @@ impl CurveTool {
             self.apply_tangent_to_cp();
             self.sync_derived();
             self.init_apex();
-            if !self.lifecycle.last_created_ids.is_empty() {
+            if self.lifecycle.has_last_created() {
                 self.lifecycle.recreate_needed = true;
             }
         }

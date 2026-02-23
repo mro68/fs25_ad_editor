@@ -16,6 +16,7 @@ pub mod tools;
 pub mod use_cases;
 
 pub use crate::core::Camera2D;
+pub use crate::core::ZipImageEntry;
 pub use crate::core::{ConnectionDirection, ConnectionPriority, RoadMap};
 pub use crate::shared::RenderQuality;
 pub use command_log::CommandLog;
@@ -23,4 +24,6 @@ pub use controller::AppController;
 pub use events::{AppCommand, AppIntent};
 pub use render_scene::build as build_render_scene;
 pub use segment_registry::{SegmentKind, SegmentRecord, SegmentRegistry};
-pub use state::{AppState, EditorTool, EditorToolState, SelectionState, UiState, ViewState};
+pub use state::{
+    AppState, EditorTool, EditorToolState, PostLoadDialogState, SelectionState, UiState, ViewState,
+};

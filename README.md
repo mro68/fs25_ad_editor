@@ -16,6 +16,8 @@ Der Original-[AutoDrive Course Editor](https://github.com/Jesper-Hustad/AutoDriv
 - **GPU-Rendering** via wgpu mit Instancing – 100k+ Nodes flüssig
 - **Spatial Index** (KD-Tree) für schnelle Punkt-Abfragen
 - **Map-Hintergrund** – DDS/PNG/JPG als Übersichtskarte
+- **Übersichtskarten-Generierung** – Erzeugt vollständige Map-Übersichten direkt aus Map-Mod-ZIPs (Terrain, Farmlands, POIs), Layer einzeln konfigurierbar
+- **Auto-Detection** – Erkennt nach dem Laden automatisch Heightmap und passende Map-Mod-ZIPs im Mods-Verzeichnis (Umlaut-tolerantes Fuzzy-Matching)
 - **Heightmap-Support** – 8/16-Bit PNG, automatische Höhenrekonstruktion beim Speichern
 - **Duplikat-Erkennung** – Findet und bereinigt doppelte Wegpunkte
 - **Cross-Platform** – Native Binaries für Linux und Windows
@@ -111,7 +113,15 @@ cargo bench           # Benchmarks
 | XML | [quick-xml](https://github.com/tafia/quick-xml) |
 | Spatial Index | [kiddo](https://github.com/sdd/kiddo) (KD-Tree) |
 | Bildverarbeitung | [image](https://github.com/image-rs/image) |
+| Map-Übersicht | `fs25_map_overview` (integriertes Crate) |
 | Mathe | [glam](https://github.com/bitshifter/glam-rs) |
+| Pattern-Matching | [regex](https://github.com/rust-lang/regex) |
+
+## Danksagungen / Attributionen
+
+- **[AutoDrive](https://github.com/Stephan-S/FS25_AutoDrive)** von Stephan S. – Die Grundlage für das XML-Format und die Wegpunkt-Logik
+- **GRLE/GDM-Parsing** basiert auf Erkenntnissen aus dem [FS Map Viewer](https://github.com/example/fs-map-viewer) und der FS-Modding-Community
+- Die Übersichtskarten-Generierung (`fs25_map_overview` Crate) dekodiert GIANTS-eigene GDM/GRLE-Formate für Farmland-Grenzen und Terrain-Daten
 
 ## Lizenz
 

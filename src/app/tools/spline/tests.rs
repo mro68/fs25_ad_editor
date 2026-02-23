@@ -227,7 +227,7 @@ fn test_spline_tool_chaining() {
     tool.on_click(Vec2::ZERO, &road_map, false);
     tool.on_click(Vec2::new(10.0, 0.0), &road_map, false);
     tool.on_click(Vec2::new(5.0, 8.0), &road_map, false);
-    tool.set_last_created(vec![100, 101, 102, 103], &road_map);
+    tool.set_last_created(&[100, 101, 102, 103], &road_map);
     tool.reset();
 
     // Verkettung: nächster Klick übernimmt letzten Endpunkt
@@ -260,7 +260,7 @@ fn test_spline_execute_from_anchors() {
     tool.on_click(Vec2::new(10.0, 0.0), &road_map, false);
     tool.on_click(Vec2::new(5.0, 8.0), &road_map, false);
     let original = tool.execute(&road_map).unwrap();
-    tool.set_last_created(vec![1, 2, 3, 4, 5], &road_map);
+    tool.set_last_created(&[1, 2, 3, 4, 5], &road_map);
     tool.reset();
 
     // Nachbearbeitung mit anderer Segment-Länge

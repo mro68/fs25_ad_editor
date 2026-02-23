@@ -41,6 +41,16 @@ fn paint_preview(
 ) {
     let preview_color = egui::Color32::from_rgba_unmultiplied(0, 200, 255, 180);
     let cp_color = egui::Color32::from_rgba_unmultiplied(255, 160, 0, 220);
+    let mut has_connection = vec![false; preview.nodes.len()];
+
+    for &(a, b) in &preview.connections {
+        if let Some(flag) = has_connection.get_mut(a) {
+            *flag = true;
+        }
+        if let Some(flag) = has_connection.get_mut(b) {
+            *flag = true;
+        }
+    }
 
     // Verbindungen zeichnen
     for &(a, b) in &preview.connections {
@@ -63,7 +73,7 @@ fn paint_preview(
         let screen_pos = egui::pos2(rect.min.x + sp.x, rect.min.y + sp.y);
 
         // Steuerpunkte (ohne Verbindung) als Raute, Rest als Kreis
-        let is_control = !preview.connections.iter().any(|(a, b)| *a == i || *b == i);
+        let is_control = !has_connection[i];
         if is_control {
             paint_diamond(painter, screen_pos, 5.0, cp_color);
         } else {

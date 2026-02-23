@@ -77,6 +77,20 @@ impl ToolLifecycleState {
         self.last_end_anchor = None;
         self.recreate_needed = false;
     }
+
+    /// Speichert die zuletzt erstellten Node-IDs und setzt das Recreate-Flag zurück.
+    ///
+    /// Gemeinsamer Tail-Block aller `set_last_created()`-Implementierungen.
+    pub fn save_created_ids(&mut self, ids: &[u64]) {
+        self.last_created_ids.clear();
+        self.last_created_ids.extend_from_slice(ids);
+        self.recreate_needed = false;
+    }
+
+    /// Prüft ob eine vorherige Erzeugung existiert (für Adjusting-Modus).
+    pub fn has_last_created(&self) -> bool {
+        !self.last_created_ids.is_empty()
+    }
 }
 
 /// Macro für die 7 identischen Lifecycle-Delegationsmethoden aller Route-Tools.

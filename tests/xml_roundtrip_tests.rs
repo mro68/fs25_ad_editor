@@ -55,3 +55,162 @@ fn test_xml_roundtrip_renumbers_gapped_ids() {
     assert!(reparsed.has_connection(2, 3), "Verbindung 2→3 fehlt");
     assert_eq!(reparsed.connection_count(), parsed.connection_count());
 }
+
+#[test]
+fn test_xml_roundtrip_dual_connections() {
+    // Dual-Verbindung: 1↔2 (bidirektional, beide in out+incoming)
+    let xml = r#"<?xml version="1.0" encoding="UTF-8"?>
+<AutoDrive version="3">
+    <waypoints>
+        <id>1,2</id>
+        <x>0.0,100.0</x>
+        <y>0.0,0.0</y>
+        <z>0.0,0.0</z>
+        <out>2;1</out>
+        <incoming>2;1</incoming>
+        <flags>0,0</flags>
+    </waypoints>
+    <mapmarker>
+    </mapmarker>
+</AutoDrive>"#;
+
+    let parsed = parse_autodrive_config(xml).expect("Parsing fehlgeschlagen");
+    // AutoDrive XML: beide Richtungen in out/incoming → Parser erzeugt Dual-Connection
+    assert!(parsed.has_connection(1, 2), "Verbindung 1→2 fehlt");
+
+    let written = write_autodrive_config(&parsed, None, 255.0).expect("Export fehlgeschlagen");
+    let reparsed = parse_autodrive_config(&written).expect("Re-Parsing fehlgeschlagen");
+
+    // Nach Roundtrip: Counts müssen stimmen
+    assert_eq!(reparsed.node_count(), 2);
+    assert_eq!(reparsed.connection_count(), parsed.connection_count());
+    assert!(
+        reparsed.has_connection(1, 2),
+        "Verbindung 1→2 fehlt nach Roundtrip"
+    );
+}
+
+#[test]
+fn test_xml_roundtrip_marker_remapping() {
+    // Marker auf Node 5, das zu ID 2 remappt wird
+    let xml = r#"<?xml version="1.0" encoding="UTF-8"?>
+<AutoDrive version="3">
+    <waypoints>
+        <id>3,5</id>
+        <x>10.0,20.0</x>
+        <y>0.0,0.0</y>
+        <z>30.0,40.0</z>
+        <out>5;</out>
+        <incoming>;3</incoming>
+        <flags>0,0</flags>
+    </waypoints>
+    <mapmarker>
+        <mm1>
+            <id>5.000000</id>
+            <name>Hof</name>
+            <group>default</group>
+        </mm1>
+    </mapmarker>
+</AutoDrive>"#;
+
+    let parsed = parse_autodrive_config(xml).expect("Parsing fehlgeschlagen");
+    assert_eq!(parsed.marker_count(), 1);
+
+    let written = write_autodrive_config(&parsed, None, 255.0).expect("Export fehlgeschlagen");
+    let reparsed = parse_autodrive_config(&written).expect("Re-Parsing fehlgeschlagen");
+
+    // Marker muss auf die neue ID 2 zeigen (5 → 2)
+    assert_eq!(reparsed.marker_count(), 1);
+    let marker = &reparsed.map_markers[0];
+    assert_eq!(marker.id, 2, "Marker-ID sollte nach Remapping 2 sein");
+    assert_eq!(marker.name, "Hof");
+    assert_eq!(marker.group, "default");
+}
+
+#[test]
+fn test_xml_roundtrip_meta_data() {
+    let xml = r#"<?xml version="1.0" encoding="UTF-8"?>
+<AutoDrive>
+    <version>42</version>
+    <MapName>TestMap</MapName>
+    <ADRouteVersion>1.5</ADRouteVersion>
+    <ADRouteAuthor>Tester</ADRouteAuthor>
+    <waypoints>
+        <id>1,2</id>
+        <x>0.0,10.0</x>
+        <y>0.0,0.0</y>
+        <z>0.0,10.0</z>
+        <out>2;</out>
+        <incoming>;1</incoming>
+        <flags>0,0</flags>
+    </waypoints>
+    <mapmarker>
+    </mapmarker>
+</AutoDrive>"#;
+
+    let parsed = parse_autodrive_config(xml).expect("Parsing fehlgeschlagen");
+    let written = write_autodrive_config(&parsed, None, 255.0).expect("Export fehlgeschlagen");
+    let reparsed = parse_autodrive_config(&written).expect("Re-Parsing fehlgeschlagen");
+
+    assert_eq!(
+        reparsed.meta.config_version.as_deref(),
+        Some("42"),
+        "Config-Version fehlt nach Roundtrip"
+    );
+    assert_eq!(
+        reparsed.map_name.as_deref(),
+        Some("TestMap"),
+        "MapName fehlt nach Roundtrip"
+    );
+    assert_eq!(
+        reparsed.meta.route_version.as_deref(),
+        Some("1.5"),
+        "RouteVersion fehlt nach Roundtrip"
+    );
+    assert_eq!(
+        reparsed.meta.route_author.as_deref(),
+        Some("Tester"),
+        "RouteAuthor fehlt nach Roundtrip"
+    );
+}
+
+#[test]
+fn test_xml_roundtrip_special_characters_in_marker() {
+    let xml = r#"<?xml version="1.0" encoding="UTF-8"?>
+<AutoDrive version="3">
+    <waypoints>
+        <id>1,2</id>
+        <x>0.0,10.0</x>
+        <y>0.0,0.0</y>
+        <z>0.0,10.0</z>
+        <out>2;</out>
+        <incoming>;1</incoming>
+        <flags>0,0</flags>
+    </waypoints>
+    <mapmarker>
+        <mm1>
+            <id>1.000000</id>
+            <name>Bauer &amp; Sohn</name>
+            <group>Höfe</group>
+        </mm1>
+    </mapmarker>
+</AutoDrive>"#;
+
+    let parsed = parse_autodrive_config(xml).expect("Parsing fehlgeschlagen");
+    assert_eq!(parsed.map_markers[0].name, "Bauer & Sohn");
+
+    let written = write_autodrive_config(&parsed, None, 255.0).expect("Export fehlgeschlagen");
+
+    // Die geschriebene XML muss & korrekt escapen
+    assert!(
+        written.contains("Bauer &amp; Sohn"),
+        "Ampersand muss escaped werden: {}",
+        written
+    );
+
+    let reparsed = parse_autodrive_config(&written).expect("Re-Parsing fehlgeschlagen");
+    assert_eq!(
+        reparsed.map_markers[0].name, "Bauer & Sohn",
+        "Sonderzeichen müssen nach Roundtrip erhalten bleiben"
+    );
+}

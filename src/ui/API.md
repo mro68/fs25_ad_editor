@@ -20,7 +20,13 @@ Das `ui`-Modul enthält egui-UI-Komponenten (Menüs, Statusbar, Input-Handling, 
   - `keyboard.rs` — Tastatur-Shortcuts (Delete, Escape, Ctrl+A) [Peer-Modul]
   - `drag.rs` — Drag-Selektion-Overlay und DragSelection-Typen [Peer-Modul]
   - `context_menu.rs` — Rechtsklick-Kontextmenü [Peer-Modul]
-- `dialogs.rs` — Datei-Dialoge und modale Fenster
+- `dialogs/` — Datei-Dialoge und modale Fenster
+  - `file_dialogs.rs` — Open/Save-Dateidialoge
+  - `heightmap_warning.rs` — Heightmap-Warnung vor dem Speichern
+  - `marker_dialog.rs` — Marker erstellen/bearbeiten
+  - `dedup_dialog.rs` — Duplikat-Bestätigungsdialog
+  - `zip_browser.rs` — ZIP-Browser für Background-Map-Auswahl
+  - `post_load_dialog.rs` — Post-Load-Dialog (Auto-Erkennung von Heightmap/ZIP)
 
 ## Funktionen
 
@@ -39,6 +45,7 @@ pub fn render_menu(ctx: &egui::Context, state: &AppState) -> Vec<AppIntent>
   - Save As... (nur wenn Datei geladen) → `AppIntent::SaveAsRequested`
   - Select/Change Heightmap... → `AppIntent::HeightmapSelectionRequested`
   - Clear Heightmap (nur wenn gesetzt) → `AppIntent::HeightmapCleared`
+  - Übersichtskarte generieren... → `AppIntent::GenerateOverviewRequested`
   - Exit → `AppIntent::ExitRequested`
 
 - **View**
@@ -77,6 +84,7 @@ pub fn render_properties_panel(
   default_priority: ConnectionPriority,
   active_tool: EditorTool,
   tool_manager: Option<&mut ToolManager>,
+  segment_registry: Option<&SegmentRegistry>,
 ) -> Vec<AppIntent>
 ```
 
@@ -268,6 +276,33 @@ pub fn show_zip_browser(ctx: &egui::Context, ui_state: &mut UiState) -> Vec<AppI
   └─────────────────────────┘
   [Übernehmen]  [Abbrechen]
 ```
+
+---
+
+### `show_post_load_dialog`
+
+Zeigt den Post-Load-Dialog nach dem Laden einer XML-Datei. Informiert über automatisch erkannte Heightmap und bietet die Möglichkeit, eine Übersichtskarte aus einem passenden Map-Mod-ZIP zu generieren.
+
+```rust
+pub fn show_post_load_dialog(ctx: &egui::Context, ui_state: &mut UiState) -> Vec<AppIntent>
+```
+
+**Emittierte Intents:**
+- `AppIntent::PostLoadGenerateOverview { zip_path }` — Benutzer will Übersichtskarte generieren
+- `AppIntent::PostLoadDialogDismissed` — Benutzer schließt den Dialog
+
+**Layout:**
+```
+[Titel: "Nach dem Laden erkannt"]
+  ✓ Heightmap automatisch geladen
+     terrain.heightmap.png
+  Karte: "Höflingen"
+  Passender Map-Mod gefunden:
+     📦 FS25_Hoeflingen.zip
+  [Übersichtskarte generieren]  [Schließen]
+```
+
+Bei mehreren ZIPs werden RadioButtons zur Auswahl angezeigt.
 
 ---
 

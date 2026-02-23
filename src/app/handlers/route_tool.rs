@@ -45,13 +45,13 @@ fn execute_and_apply(state: &mut AppState) {
             state.editor.tool_manager.active_tool_mut(),
             state.road_map.as_deref(),
         ) {
-            tool.set_last_created(ids.clone(), rm);
+            tool.set_last_created(&ids, rm);
         }
 
         // Segment in Registry speichern (für nachträgliche Bearbeitung)
         let record_id = state.segment_registry.next_id();
         if let Some(tool) = state.editor.tool_manager.active_tool() {
-            if let Some(record) = tool.make_segment_record(record_id, ids) {
+            if let Some(record) = tool.make_segment_record(record_id, &ids) {
                 state.segment_registry.register(record);
             }
         }
@@ -88,13 +88,15 @@ pub fn select(state: &mut AppState, index: usize) {
 /// Löscht die letzte Strecke und erstellt sie mit neuen Parametern neu.
 pub fn recreate(state: &mut AppState) {
     let old_ids = match state.editor.tool_manager.active_tool() {
-        Some(tool) => tool.last_created_ids().to_vec(),
+        Some(tool) => {
+            let ids = tool.last_created_ids();
+            if ids.is_empty() {
+                return;
+            }
+            ids.to_vec()
+        }
         None => return,
     };
-
-    if old_ids.is_empty() {
-        return;
-    }
 
     // Undo-Snapshot VOR Löschung + Neuberechnung
     state.record_undo_snapshot();
@@ -116,7 +118,7 @@ pub fn recreate(state: &mut AppState) {
             state.road_map.as_deref(),
         ) {
             tool.clear_recreate_flag();
-            tool.set_last_created(new_ids, rm);
+            tool.set_last_created(&new_ids, rm);
         }
     }
 }

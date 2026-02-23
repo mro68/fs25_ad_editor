@@ -170,6 +170,25 @@ pub fn show_options_dialog(
                                 .changed();
                         });
                     });
+
+                    // ── Übersichtskarte ─────────────────────────────
+                    ui.collapsing("Übersichtskarte (Standard-Layer)", |ui| {
+                        changed |= ui
+                            .checkbox(&mut opts.overview_layers.hillshade, "Hillshade")
+                            .changed();
+                        changed |= ui
+                            .checkbox(&mut opts.overview_layers.farmlands, "Farmland-Grenzen")
+                            .changed();
+                        changed |= ui
+                            .checkbox(&mut opts.overview_layers.farmland_ids, "Farmland-IDs")
+                            .changed();
+                        changed |= ui
+                            .checkbox(&mut opts.overview_layers.pois, "POI-Marker")
+                            .changed();
+                        changed |= ui
+                            .checkbox(&mut opts.overview_layers.legend, "Legende")
+                            .changed();
+                    });
                 });
 
             ui.separator();

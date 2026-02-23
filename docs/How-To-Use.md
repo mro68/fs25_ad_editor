@@ -13,11 +13,13 @@
 9. [Map-Marker](#map-marker)
 10. [Kamera und Viewport](#kamera-und-viewport)
 11. [Hintergrund-Karte](#hintergrund-karte)
-12. [Heightmap](#heightmap)
-13. [Duplikat-Bereinigung](#duplikat-bereinigung)
-14. [Optionen](#optionen)
-15. [Undo / Redo](#undo--redo)
-16. [Typische Workflows](#typische-workflows)
+12. [Übersichtskarten-Generierung](#übersichtskarten-generierung)
+13. [Automatische Erkennung (Post-Load)](#automatische-erkennung-post-load)
+14. [Heightmap](#heightmap)
+15. [Duplikat-Bereinigung](#duplikat-bereinigung)
+16. [Optionen](#optionen)
+17. [Undo / Redo](#undo--redo)
+18. [Typische Workflows](#typische-workflows)
 
 ---
 
@@ -46,6 +48,12 @@ Der FS25 AutoDrive Editor dient zum Erstellen und Bearbeiten von AutoDrive-Kurse
 | Shortcut | `Ctrl+O` |
 
 Öffnet einen Datei-Dialog zur Auswahl einer AutoDrive-XML-Konfigurationsdatei. Nach dem Laden wird die Kamera automatisch auf die Bounding-Box des Netzwerks zentriert.
+
+**Automatische Erkennung:** Nach dem Laden prüft der Editor automatisch:
+- Ob eine `terrain.heightmap.png` im selben Verzeichnis liegt → wird direkt als Heightmap gesetzt
+- Ob im Mods-Verzeichnis (`../../mods/` relativ zum Savegame) ein passender Map-Mod-ZIP zum Kartennamen existiert → Dialog bietet Übersichtskarten-Generierung an
+
+Das Matching berücksichtigt Umlaute (ä↔ae, ö↔oe, ü↔ue, ß↔ss), ist case-insensitive und behandelt Leerzeichen/Unterstriche als Wildcard.
 
 ### Datei speichern
 
@@ -455,6 +463,112 @@ Wenn ein Hintergrund geladen ist, erscheinen rechts in der Toolbar:
 
 ---
 
+## Übersichtskarten-Generierung
+
+Anstatt eine fertige Übersichtskarte manuell zu laden, kann der Editor sie direkt aus einer Map-Mod-ZIP-Datei generieren.
+
+### Workflow
+
+```mermaid
+flowchart TD
+    A["View → Übersichtskarte generieren..."] --> B["ZIP-Datei wählen (Map-Mod)"]
+    B --> C["Layer-Options-Dialog"]
+    C --> D{"Generieren?"}
+    D -- Ja --> E["Karte wird erzeugt\n(Terrain + Overlays)"]
+    E --> F["Als Hintergrund geladen"]
+    D -- Nein --> G["Abbrechen"]
+```
+
+### Übersichtskarte generieren
+
+1. **View → Übersichtskarte generieren...** — öffnet den ZIP-Auswahl-Dialog
+2. Eine Map-Mod-ZIP-Datei auswählen (enthält Terrain-Daten, GRLE-Farmlands, POIs)
+3. Im **Layer-Options-Dialog** die gewünschten Layer ein-/ausschalten:
+
+| Layer | Standard | Beschreibung |
+|-------|----------|-------------|
+| **Hillshade** | ✅ | Geländeschattierung für räumlichen Eindruck |
+| **Farmland-Grenzen** | ✅ | Weiße Grenzlinien zwischen Farmland-Parzellen |
+| **Farmland-IDs** | ✅ | Nummerierung der Farmland-Parzellen |
+| **POI-Marker** | ✅ | Verkaufsstellen, Silos, Tankstellen etc. |
+| **Legende** | ❌ | Farbcodierung der Bodentypen |
+
+4. **Generieren** klicken — die Karte wird berechnet und als Hintergrund geladen
+
+### Layer-Standardeinstellungen
+
+Die Layer-Auswahl wird persistent in der Konfigurationsdatei (`fs25_auto_drive_editor.toml`) gespeichert. Beim nächsten Mal werden die zuletzt verwendeten Einstellungen vorausgewählt.
+
+Die Standard-Layer können auch über **Edit → Optionen... → Übersichtskarte (Standard-Layer)** dauerhaft angepasst werden.
+
+---
+
+## Automatische Erkennung (Post-Load)
+
+Nach dem Laden einer AutoDrive-XML-Datei prüft der Editor automatisch, ob zugehörige Dateien im selben Verzeichnis oder im Mods-Ordner vorhanden sind.
+
+### Erkannte Dateien
+
+| Datei | Pfad | Aktion |
+|-------|------|--------|
+| **Heightmap** | `terrain.heightmap.png` im XML-Verzeichnis | Wird automatisch als Heightmap gesetzt |
+| **Map-Mod-ZIP** | `../../mods/FS25_*.zip` (Mods-Verzeichnis) | Dialog bietet Übersichtskarten-Generierung an |
+
+### Matching-Logik für ZIP-Dateien
+
+Der Kartenname aus der XML-Datei (z.B. `<MapName>Höflingen Valley</MapName>`) wird gegen die ZIP-Dateinamen im Mods-Verzeichnis abgeglichen:
+
+- **Case-insensitive:** „Höflingen" matcht „hoeflingen", „HÖFLINGEN", usw.
+- **Umlaut-tolerant:** ä↔ae, ö↔oe, ü↔ue, ß↔ss (bidirektional)
+- **Trennzeichen-flexibel:** Leerzeichen und Underscores werden als Wildcard behandelt
+
+**Beispiel:** Kartenname `Höflingen Valley` findet:
+- `FS25_Hoeflingen.zip` ✓
+- `FS25_Höflingen_V2.zip` ✓
+- `FS25_Hoeflingen_Valley.zip` ✓
+
+### Post-Load-Dialog
+
+Falls Dateien erkannt werden, erscheint automatisch ein Dialog:
+
+```
+Nach dem Laden erkannt
+
+✓ Heightmap automatisch geladen
+   terrain.heightmap.png
+
+Karte: "Höflingen"
+Passender Map-Mod gefunden:
+   📦 FS25_Hoeflingen.zip
+
+[Übersichtskarte generieren]  [Schließen]
+```
+
+| Schaltfläche | Aktion |
+|-------------|--------|
+| **Übersichtskarte generieren** | Öffnet den Layer-Options-Dialog zur Übersichtskarten-Generierung |
+| **Schließen** | Dialog schließen, keine weitere Aktion |
+
+Bei mehreren passenden ZIPs kann der gewünschte Mod per RadioButton ausgewählt werden.
+
+### Verzeichnisstruktur
+
+Die Auto-Detection erwartet folgende Savegame-Struktur:
+
+```
+FarmingSimulator2025/
+├── mods/
+│   ├── FS25_Hoeflingen.zip
+│   └── FS25_AnotherMap.zip
+├── savegame1/
+│   ├── AutoDrive_config.xml    ← diese Datei laden
+│   └── terrain.heightmap.png   ← wird automatisch erkannt
+└── savegame2/
+    └── ...
+```
+
+---
+
 ## Heightmap
 
 Die Heightmap wird für die korrekte Y-Koordinaten-Berechnung beim XML-Export benötigt.
@@ -526,6 +640,11 @@ Duplikate jetzt bereinigen?
 | | Outline-Farbe | Dunkelrot |
 | **Kamera** | Zoom-Schritt (Menü) | 1.2 |
 | | Zoom-Schritt (Mausrad) | 1.1 |
+| **Übersichtskarte** | Hillshade | ✅ |
+| | Farmland-Grenzen | ✅ |
+| | Farmland-IDs | ✅ |
+| | POI-Marker | ✅ |
+| | Legende | ❌ |
 
 ---
 
@@ -553,14 +672,30 @@ Auch über **Edit → Undo / Redo** im Menü verfügbar (mit Anzeige ob verfügb
 
 ### Neues Netzwerk bearbeiten
 
-1. `Ctrl+O` → XML-Datei laden
-2. Falls Duplikate gefunden: **Bereinigen** im Dialog wählen (oder Abbrechen und Original-Datei sichern)
-3. Hintergrund laden (View → Hintergrund laden)
-4. Heightmap laden (File → Select Heightmap)
-5. Nodes bearbeiten (Select-Tool, Drag zum Verschieben)
-6. `Ctrl+S` → Speichern
+```mermaid
+flowchart LR
+    A["Ctrl+O\nDatei laden"] --> B["Duplikate\nbereinigen?"]
+    B --> C["Auto-Detection\nHeightmap + ZIP"]
+    C --> D["Nodes\nbearbeiten"]
+    D --> E["Ctrl+S\nSpeichern"]
+```
+
+1. `Ctrl+O` → XML-Datei aus Savegame laden
+2. Falls Duplikate gefunden: **Bereinigen** im Dialog wählen
+3. Falls Heightmap/Map-Mod erkannt: Post-Load-Dialog nutzen (Heightmap wird automatisch gesetzt, optional Übersichtskarte generieren)
+4. Nodes bearbeiten (Select-Tool, Drag zum Verschieben)
+5. `Ctrl+S` → Speichern
 
 ### Route erstellen (mit Route-Tools)
+
+```mermaid
+flowchart LR
+    A["Route-Tool\naktivieren (4)"] --> B["Sub-Tool\nwählen"]
+    B --> C["Punkte\nklicken"]
+    C --> D["Slider\nanpassen"]
+    D --> E["Enter\n→ erstellen"]
+    E -->|Verkettung| C
+```
 
 1. **Route-Tool (4)** aktivieren
 2. Sub-Tool wählen: Gerade Strecke, Kurve oder Spline
@@ -588,6 +723,21 @@ Auch über **Edit → Undo / Redo** im Menü verfügbar (mit Anzeige ob verfügb
 1. **Shift+Drag** (Rechteck) oder **Alt+Drag** (Lasso) um viele Nodes zu selektieren
 2. Alternativ: `Ctrl+A` für alle Nodes
 3. Rechtsklick → Bulk-Operationen auf allen Verbindungen zwischen selektierten Nodes
+
+### Übersichtskarte generieren
+
+```mermaid
+flowchart LR
+    A["View → Übersichtskarte\ngenerieren..."] --> B["ZIP wählen\n(Map-Mod)"]
+    B --> C["Layer\nkonfigurieren"]
+    C --> D["Generieren"]
+    D --> E["Karte als\nHintergrund geladen"]
+```
+
+1. **View → Übersichtskarte generieren...** → ZIP-Datei der Map wählen
+2. Im Layer-Dialog die gewünschten Layer aktivieren (Hillshade, Farmlands, POIs, …)
+3. **Generieren** klicken
+4. Die erzeugte Übersichtskarte wird automatisch als Hintergrund geladen
 
 ### Marker setzen
 

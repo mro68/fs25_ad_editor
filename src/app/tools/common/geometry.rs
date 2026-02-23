@@ -43,3 +43,27 @@ pub fn populate_neighbors(anchor: &ToolAnchor, road_map: &RoadMap) -> Vec<Connec
         ToolAnchor::NewPosition(_) => Vec::new(),
     }
 }
+
+/// Erzeugt lineare Connections `[(0,1), (1,2), ...]` für eine Polyline.
+///
+/// Gemeinsames Pattern aller Route-Tool-Previews.
+pub fn linear_connections(count: usize) -> Vec<(usize, usize)> {
+    (0..count.saturating_sub(1)).map(|i| (i, i + 1)).collect()
+}
+
+/// Formatiert Tangenten-Optionen aus Nachbar-Liste als `(TangentSource, Label)`-Paare.
+///
+/// Gemeinsame Daten-Aufbereitung für ComboBox und Kontextmenü.
+pub fn tangent_options(neighbors: &[ConnectedNeighbor]) -> Vec<(super::TangentSource, String)> {
+    let mut opts = vec![(super::TangentSource::None, "Manuell".to_string())];
+    for n in neighbors {
+        opts.push((
+            super::TangentSource::Connection {
+                neighbor_id: n.neighbor_id,
+                angle: n.angle,
+            },
+            format!("→ Node #{} ({})", n.neighbor_id, angle_to_compass(n.angle)),
+        ));
+    }
+    opts
+}
