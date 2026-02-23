@@ -21,6 +21,7 @@ dependencies = [
  "kiddo",
  "log",
  "quick-xml 0.39.2",
+ "regex",
  "rfd",
  "serde",
  "toml",

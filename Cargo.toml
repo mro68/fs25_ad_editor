@@ -62,6 +62,9 @@ fs25_map_overview = { path = "crates/fs25_map_overview" }
 serde = { version = "1", features = ["derive"] }
 toml = "0.9.8"
 
+# Regex für Fuzzy-Matching (z.B. ZIP-Suche nach Map-Name)
+regex = "1"
+
 # Utility
 anyhow = "1.0.102"
 log = "0.4"
