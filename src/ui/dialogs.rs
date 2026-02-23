@@ -7,6 +7,22 @@ fn path_to_ui_string(path: &std::path::Path) -> String {
     path.to_string_lossy().into_owned()
 }
 
+/// Formatiert eine Dateigröße menschenlesbar (KB, MB, GB).
+fn format_file_size(bytes: u64) -> String {
+    const KB: u64 = 1024;
+    const MB: u64 = 1024 * 1024;
+    const GB: u64 = 1024 * 1024 * 1024;
+    if bytes >= GB {
+        format!("{:.1} GB", bytes as f64 / GB as f64)
+    } else if bytes >= MB {
+        format!("{:.1} MB", bytes as f64 / MB as f64)
+    } else if bytes >= KB {
+        format!("{:.0} KB", bytes as f64 / KB as f64)
+    } else {
+        format!("{} B", bytes)
+    }
+}
+
 /// Verarbeitet ausstehende Datei-Dialoge und gibt AppIntents zurück.
 pub fn handle_file_dialogs(ui_state: &mut UiState) -> Vec<AppIntent> {
     let mut events = Vec::new();
@@ -300,14 +316,15 @@ pub fn show_zip_browser(ctx: &egui::Context, ui_state: &mut UiState) -> Vec<AppI
                 .show(ui, |ui| {
                     for (i, entry) in browser.entries.iter().enumerate() {
                         let selected = browser.selected == Some(i);
-                        let response = ui.selectable_label(selected, entry);
+                        let label = format!("{} ({})", entry.name, format_file_size(entry.size));
+                        let response = ui.selectable_label(selected, &label);
                         if response.clicked() {
                             browser.selected = Some(i);
                         }
                         if response.double_clicked() {
                             events.push(AppIntent::ZipBackgroundFileSelected {
                                 zip_path: browser.zip_path.clone(),
-                                entry_name: entry.clone(),
+                                entry_name: entry.name.clone(),
                             });
                         }
                     }
@@ -324,7 +341,7 @@ pub fn show_zip_browser(ctx: &egui::Context, ui_state: &mut UiState) -> Vec<AppI
                         if let Some(entry) = browser.entries.get(idx) {
                             events.push(AppIntent::ZipBackgroundFileSelected {
                                 zip_path: browser.zip_path.clone(),
-                                entry_name: entry.clone(),
+                                entry_name: entry.name.clone(),
                             });
                         }
                     }

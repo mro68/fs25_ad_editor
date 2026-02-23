@@ -171,8 +171,8 @@ pub struct UiState {
 pub struct ZipBrowserState {
     /// Pfad zur ZIP-Datei
     pub zip_path: String,
-    /// Bilddateien im Archiv
-    pub entries: Vec<String>,
+    /// Bilddateien im Archiv (mit Dateigröße)
+    pub entries: Vec<crate::core::ZipImageEntry>,
     /// Index des aktuell selektierten Eintrags
     pub selected: Option<usize>,
 }

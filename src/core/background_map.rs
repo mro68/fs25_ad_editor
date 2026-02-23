@@ -9,6 +9,15 @@ use super::WorldBounds;
 /// Bekannte Bild-Endungen für ZIP-Filterung
 const IMAGE_EXTENSIONS: &[&str] = &["png", "jpg", "jpeg", "dds"];
 
+/// Eintrag einer Bilddatei in einem ZIP-Archiv.
+#[derive(Debug, Clone)]
+pub struct ZipImageEntry {
+    /// Dateiname im Archiv (inkl. Pfad)
+    pub name: String,
+    /// Unkomprimierte Dateigröße in Bytes
+    pub size: u64,
+}
+
 /// Background-Map für Map-Hintergrund-Rendering
 pub struct BackgroundMap {
     /// Bilddaten (nach Center-Crop)
@@ -170,9 +179,9 @@ impl BackgroundMap {
 
 /// Listet alle Bilddateien in einem ZIP-Archiv auf.
 ///
-/// Gibt die Dateinamen aller Einträge zurück, deren Endung einem
-/// bekannten Bildformat entspricht (png, jpg, jpeg, dds).
-pub fn list_images_in_zip(zip_path: &str) -> Result<Vec<String>> {
+/// Gibt Einträge mit Name und unkomprimierter Größe zurück,
+/// standardmäßig absteigend nach Größe sortiert.
+pub fn list_images_in_zip(zip_path: &str) -> Result<Vec<ZipImageEntry>> {
     let file = std::fs::File::open(zip_path)
         .with_context(|| format!("ZIP-Datei nicht gefunden: {}", zip_path))?;
     let mut archive = zip::ZipArchive::new(BufReader::new(file))
@@ -183,11 +192,15 @@ pub fn list_images_in_zip(zip_path: &str) -> Result<Vec<String>> {
         let entry = archive.by_index(i)?;
         let name = entry.name().to_string();
         if entry.is_file() && is_image_filename(&name) {
-            image_entries.push(name);
+            image_entries.push(ZipImageEntry {
+                name,
+                size: entry.size(),
+            });
         }
     }
 
-    image_entries.sort();
+    // Größste Dateien zuerst (typisch: overview.dds ist die größte)
+    image_entries.sort_by(|a, b| b.size.cmp(&a.size));
     log::info!(
         "ZIP '{}': {} Bilddateien gefunden",
         zip_path,
