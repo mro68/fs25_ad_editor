@@ -24,8 +24,14 @@ impl StraightLineTool {
         };
 
         let ready = self.start.is_some() && self.end.is_some();
-        let (changed, recreate) =
-            render_segment_config_3modes(&mut self.seg, ui, adjusting, ready, length, "Streckenlänge");
+        let (changed, recreate) = render_segment_config_3modes(
+            &mut self.seg,
+            ui,
+            adjusting,
+            ready,
+            length,
+            "Streckenlänge",
+        );
         if recreate {
             self.lifecycle.recreate_needed = true;
         }

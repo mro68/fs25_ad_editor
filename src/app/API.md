@@ -578,7 +578,7 @@ pub struct CommandLog { /* intern */ }
 - `record(&mut self, command: &AppCommand)` — Command protokollieren (speichert Debug-String)
 - `len() → usize` — Anzahl geloggter Commands
 - `is_empty() → bool` — Prüfen, ob keine Einträge vorhanden sind
-- `entries() → &[AppCommand]` — Read-only Sicht auf alle Einträge
+- `entries() → &[String]` — Read-only Sicht auf alle Einträge (Debug-Strings)
 
 ---
 

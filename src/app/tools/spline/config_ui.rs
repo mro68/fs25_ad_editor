@@ -75,8 +75,14 @@ impl SplineTool {
         } else if self.is_ready() {
             let length = self.spline_length();
             ui.label(format!("Kontrollpunkte: {}", self.anchors.len()));
-            let (seg_changed, _) =
-                render_segment_config_3modes(&mut self.seg, ui, false, true, length, "Spline-Länge");
+            let (seg_changed, _) = render_segment_config_3modes(
+                &mut self.seg,
+                ui,
+                false,
+                true,
+                length,
+                "Spline-Länge",
+            );
             changed |= seg_changed;
         } else {
             let (seg_changed, _) =

@@ -162,12 +162,7 @@ impl SegmentConfig {
     /// Rendert die Segment-Slider im Nachbearbeitungs-Modus (mit recreate-Flag).
     ///
     /// Gibt `(changed, recreate_needed)` zurück.
-    fn render_adjusting(
-        &mut self,
-        ui: &mut egui::Ui,
-        length: f32,
-        label: &str,
-    ) -> (bool, bool) {
+    fn render_adjusting(&mut self, ui: &mut egui::Ui, length: f32, label: &str) -> (bool, bool) {
         let mut changed = false;
         let mut recreate = false;
 

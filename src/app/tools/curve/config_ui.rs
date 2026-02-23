@@ -65,8 +65,14 @@ impl CurveTool {
         };
 
         let ready = self.is_ready();
-        let (seg_changed, recreate) =
-            render_segment_config_3modes(&mut self.seg, ui, adjusting, ready, length, "Kurvenlänge");
+        let (seg_changed, recreate) = render_segment_config_3modes(
+            &mut self.seg,
+            ui,
+            adjusting,
+            ready,
+            length,
+            "Kurvenlänge",
+        );
         if recreate {
             self.lifecycle.recreate_needed = true;
         }
