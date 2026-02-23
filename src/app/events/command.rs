@@ -202,6 +202,10 @@ pub enum AppCommand {
     CloseZipBrowser,
     /// Übersichtskarten-ZIP-Dialog anfordern
     RequestOverviewDialog,
-    /// Übersichtskarte aus Map-Mod-ZIP generieren und als Background laden
-    GenerateOverviewFromZip { path: String },
+    /// Übersichtskarten-Options-Dialog mit ZIP-Pfad öffnen
+    OpenOverviewOptionsDialog { path: String },
+    /// Übersichtskarte generieren (mit Layer-Optionen aus Dialog)
+    GenerateOverviewWithOptions,
+    /// Übersichtskarten-Options-Dialog schließen
+    CloseOverviewOptionsDialog,
 }

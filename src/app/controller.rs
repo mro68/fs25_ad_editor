@@ -228,8 +228,14 @@ impl AppController {
             AppCommand::RequestOverviewDialog => {
                 handlers::dialog::request_overview_dialog(state)
             }
-            AppCommand::GenerateOverviewFromZip { path } => {
-                handlers::view::generate_overview(state, path)?
+            AppCommand::OpenOverviewOptionsDialog { path } => {
+                handlers::dialog::open_overview_options_dialog(state, path)
+            }
+            AppCommand::GenerateOverviewWithOptions => {
+                handlers::view::generate_overview_with_options(state)?
+            }
+            AppCommand::CloseOverviewOptionsDialog => {
+                handlers::dialog::close_overview_options_dialog(state)
             }
         }
 

@@ -1,7 +1,7 @@
 //! Lifecycle-Methoden des StraightLineTool (RouteTool-Implementierung).
 
-use super::super::{snap_to_node, RouteTool, ToolAction, ToolPreview, ToolResult};
 use super::super::common::linear_connections;
+use super::super::{snap_to_node, RouteTool, ToolAction, ToolPreview, ToolResult};
 use super::geometry::{build_result, compute_line_positions};
 use super::state::StraightLineTool;
 use crate::app::segment_registry::{SegmentKind, SegmentRecord};

@@ -254,7 +254,9 @@ pub fn map_intent_to_commands(state: &AppState, intent: AppIntent) -> Vec<AppCom
         AppIntent::ZipBrowserCancelled => vec![AppCommand::CloseZipBrowser],
         AppIntent::GenerateOverviewRequested => vec![AppCommand::RequestOverviewDialog],
         AppIntent::GenerateOverviewFromZip { path } => {
-            vec![AppCommand::GenerateOverviewFromZip { path }]
+            vec![AppCommand::OpenOverviewOptionsDialog { path }]
         }
+        AppIntent::OverviewOptionsConfirmed => vec![AppCommand::GenerateOverviewWithOptions],
+        AppIntent::OverviewOptionsCancelled => vec![AppCommand::CloseOverviewOptionsDialog],
     }
 }

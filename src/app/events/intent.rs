@@ -200,6 +200,10 @@ pub enum AppIntent {
     ZipBrowserCancelled,
     /// Übersichtskarte aus Map-Mod-ZIP generieren (öffnet Dateidialog)
     GenerateOverviewRequested,
-    /// Übersichtskarte aus gewähltem ZIP generieren
+    /// ZIP für Übersichtskarte gewählt → Options-Dialog anzeigen
     GenerateOverviewFromZip { path: String },
+    /// Übersichtskarten-Options-Dialog bestätigt (generieren)
+    OverviewOptionsConfirmed,
+    /// Übersichtskarten-Options-Dialog abgebrochen
+    OverviewOptionsCancelled,
 }

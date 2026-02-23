@@ -148,19 +148,28 @@ pub fn load_background_from_zip(
     Ok(())
 }
 
-/// Generiert eine Übersichtskarte aus einem Map-Mod-ZIP und lädt sie als Background.
+/// Generiert eine Übersichtskarte mit den Optionen aus dem Dialog und lädt sie als Background.
 ///
-/// Nutzt `fs25_map_overview` um aus den Terrain-Daten, Farmlands und POIs
-/// ein Composite-Bild zu erzeugen. Das Bild wird als `BackgroundMap` geladen.
-pub fn generate_overview(state: &mut AppState, zip_path: String) -> Result<()> {
+/// Liest ZIP-Pfad und Layer-Optionen aus dem `OverviewOptionsDialogState`,
+/// persistiert die Layer-Einstellungen in den `EditorOptions` und generiert
+/// die Karte mit `fs25_map_overview`.
+pub fn generate_overview_with_options(state: &mut AppState) -> Result<()> {
+    let zip_path = state.ui.overview_options_dialog.zip_path.clone();
+    let layers = state.ui.overview_options_dialog.layers.clone();
+
     log::info!("Generiere Übersichtskarte aus: {}", zip_path);
 
+    // Layer-Optionen persistent speichern
+    state.options.overview_layers = layers.clone();
+    let config_path = crate::shared::EditorOptions::config_path();
+    let _ = state.options.save_to_file(&config_path);
+
     let options = fs25_map_overview::OverviewOptions {
-        hillshade: true,
-        farmlands: true,
-        farmland_ids: true,
-        pois: true,
-        legend: false,
+        hillshade: layers.hillshade,
+        farmlands: layers.farmlands,
+        farmland_ids: layers.farmland_ids,
+        pois: layers.pois,
+        legend: layers.legend,
     };
 
     let rgb_image = fs25_map_overview::generate_overview_from_zip(&zip_path, &options)?;
@@ -174,6 +183,9 @@ pub fn generate_overview(state: &mut AppState, zip_path: String) -> Result<()> {
     state.view.background_map = Some(Arc::new(bg_map));
     state.view.background_scale = 1.0;
     state.view.background_dirty = true;
+
+    // Dialog schließen
+    state.ui.overview_options_dialog.visible = false;
 
     Ok(())
 }

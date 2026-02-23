@@ -54,9 +54,7 @@ pub fn linear_connections(count: usize) -> Vec<(usize, usize)> {
 /// Formatiert Tangenten-Optionen aus Nachbar-Liste als `(TangentSource, Label)`-Paare.
 ///
 /// Gemeinsame Daten-Aufbereitung für ComboBox und Kontextmenü.
-pub fn tangent_options(
-    neighbors: &[ConnectedNeighbor],
-) -> Vec<(super::TangentSource, String)> {
+pub fn tangent_options(neighbors: &[ConnectedNeighbor]) -> Vec<(super::TangentSource, String)> {
     let mut opts = vec![(super::TangentSource::None, "Manuell".to_string())];
     for n in neighbors {
         opts.push((

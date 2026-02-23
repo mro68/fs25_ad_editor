@@ -84,7 +84,10 @@ fn test_xml_roundtrip_dual_connections() {
     // Nach Roundtrip: Counts müssen stimmen
     assert_eq!(reparsed.node_count(), 2);
     assert_eq!(reparsed.connection_count(), parsed.connection_count());
-    assert!(reparsed.has_connection(1, 2), "Verbindung 1→2 fehlt nach Roundtrip");
+    assert!(
+        reparsed.has_connection(1, 2),
+        "Verbindung 1→2 fehlt nach Roundtrip"
+    );
 }
 
 #[test]

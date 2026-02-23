@@ -74,6 +74,36 @@ pub const MARKER_COLOR: [f32; 4] = [0.9, 0.1, 0.1, 1.0];
 /// Outline-Farbe der Map-Marker (RGBA: Dunkelrot).
 pub const MARKER_OUTLINE_COLOR: [f32; 4] = [0.6, 0.0, 0.0, 1.0];
 
+// ── Übersichtskarten-Layer ──────────────────────────────────────────
+
+/// Konfigurierbare Layer-Optionen für die Übersichtskarten-Generierung.
+/// Wird als Teil der `EditorOptions` persistent gespeichert.
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub struct OverviewLayerOptions {
+    /// Hillshade-Schattierung anwenden
+    pub hillshade: bool,
+    /// Farmland-Grenzen einzeichnen
+    pub farmlands: bool,
+    /// Farmland-ID-Nummern einzeichnen
+    pub farmland_ids: bool,
+    /// POI-Marker einzeichnen
+    pub pois: bool,
+    /// Legende einzeichnen
+    pub legend: bool,
+}
+
+impl Default for OverviewLayerOptions {
+    fn default() -> Self {
+        Self {
+            hillshade: true,
+            farmlands: true,
+            farmland_ids: true,
+            pois: true,
+            legend: false,
+        }
+    }
+}
+
 // ── Laufzeit-Optionen (serialisierbar) ─────────────────────────────
 
 /// Alle zur Laufzeit änderbaren Editor-Optionen.
@@ -135,6 +165,11 @@ pub struct EditorOptions {
     // ── Terrain ──────────────────────────────────────────────────
     /// Höhenskala für Heightmap-Export (FS25: 255.0)
     pub terrain_height_scale: f32,
+
+    // ── Übersichtskarte ─────────────────────────────────────────
+    /// Layer-Optionen für Übersichtskarten-Generierung
+    #[serde(default)]
+    pub overview_layers: OverviewLayerOptions,
 }
 
 impl Default for EditorOptions {
@@ -166,6 +201,7 @@ impl Default for EditorOptions {
 
             snap_radius: SNAP_RADIUS,
             terrain_height_scale: TERRAIN_HEIGHT_SCALE,
+            overview_layers: OverviewLayerOptions::default(),
         }
     }
 }

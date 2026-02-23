@@ -33,6 +33,7 @@ pub struct FarmlandData {
 }
 
 /// Optionen für die Overview-Generierung.
+#[derive(Debug, Clone, PartialEq)]
 pub struct OverviewOptions {
     /// Hillshade anwenden
     pub hillshade: bool,

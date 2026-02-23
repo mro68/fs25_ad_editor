@@ -6,7 +6,7 @@ use super::tools::ToolManager;
 use super::CommandLog;
 use crate::core::Camera2D;
 use crate::core::{BackgroundMap, ConnectionDirection, ConnectionPriority, RoadMap};
-use crate::shared::{EditorOptions, RenderQuality};
+use crate::shared::{EditorOptions, OverviewLayerOptions, RenderQuality};
 use std::collections::HashSet;
 use std::sync::Arc;
 
@@ -135,6 +135,28 @@ impl DedupDialogState {
     }
 }
 
+/// Zustand des Übersichtskarten-Options-Dialogs
+#[derive(Default)]
+pub struct OverviewOptionsDialogState {
+    /// Ob der Dialog sichtbar ist
+    pub visible: bool,
+    /// ZIP-Pfad der gewählten Map-Mod-Datei
+    pub zip_path: String,
+    /// Layer-Optionen (Arbeitskopie für den Dialog)
+    pub layers: OverviewLayerOptions,
+}
+
+impl OverviewOptionsDialogState {
+    /// Erstellt einen geschlossenen Dialog-Zustand.
+    pub fn new() -> Self {
+        Self {
+            visible: false,
+            zip_path: String::new(),
+            layers: OverviewLayerOptions::default(),
+        }
+    }
+}
+
 /// UI-bezogener Anwendungszustand
 #[derive(Default)]
 pub struct UiState {
@@ -166,6 +188,8 @@ pub struct UiState {
     pub dedup_dialog: DedupDialogState,
     /// ZIP-Browser-Dialog für Background-Map-Auswahl
     pub zip_browser: Option<ZipBrowserState>,
+    /// Übersichtskarten-Optionen-Dialog
+    pub overview_options_dialog: OverviewOptionsDialogState,
 }
 
 /// Zustand des ZIP-Browser-Dialogs.
@@ -199,6 +223,7 @@ impl UiState {
             status_message: None,
             dedup_dialog: DedupDialogState::new(),
             zip_browser: None,
+            overview_options_dialog: OverviewOptionsDialogState::new(),
         }
     }
 }

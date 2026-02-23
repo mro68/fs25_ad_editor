@@ -155,6 +155,10 @@ impl EditorApp {
         ));
         events.extend(ui::show_dedup_dialog(ctx, &self.state.ui));
         events.extend(ui::show_zip_browser(ctx, &mut self.state.ui));
+        events.extend(ui::show_overview_options_dialog(
+            ctx,
+            &mut self.state.ui.overview_options_dialog,
+        ));
         events.extend(ui::show_options_dialog(
             ctx,
             self.state.show_options_dialog,
