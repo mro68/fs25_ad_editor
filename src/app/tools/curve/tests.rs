@@ -5,7 +5,7 @@ use super::geometry::{
     quadratic_bezier, solve_cps_from_apex_both_tangents,
 };
 use super::state::{CurveDegree, CurveTool, Phase};
-use crate::core::RoadMap;
+use crate::core::{ConnectedNeighbor, RoadMap};
 use glam::Vec2;
 
 // ── angle_to_compass ──
@@ -594,5 +594,112 @@ fn test_solve_cps_asymmetric_apex() {
         "B(0.5)={:?}, erwartet {:?}",
         b_half,
         apex
+    );
+}
+
+// ── auto_suggest_start_tangent / auto_suggest_end_tangent ──
+
+#[test]
+fn test_auto_suggest_start_tangent_picks_best_incoming() {
+    let mut tool = CurveTool::new_cubic();
+
+    tool.start = Some(ToolAnchor::NewPosition(Vec2::ZERO));
+    tool.end = Some(ToolAnchor::NewPosition(Vec2::new(10.0, 0.0)));
+
+    // Eingehende Verbindung von Westen (angle=PI zeigt nach links, Fortsetzung=Ost → passt)
+    tool.tangents.start_neighbors = vec![ConnectedNeighbor {
+        neighbor_id: 42,
+        angle: std::f32::consts::PI,
+        is_outgoing: false,
+    }];
+
+    tool.auto_suggest_start_tangent();
+
+    assert!(
+        matches!(tool.tangents.tangent_start, TangentSource::Connection { neighbor_id: 42, .. }),
+        "Start-Tangente sollte auf Nachbar 42 gesetzt sein, war: {:?}",
+        tool.tangents.tangent_start,
+    );
+}
+
+#[test]
+fn test_auto_suggest_end_tangent_picks_best_outgoing() {
+    let mut tool = CurveTool::new_cubic();
+
+    tool.start = Some(ToolAnchor::NewPosition(Vec2::ZERO));
+    tool.end = Some(ToolAnchor::NewPosition(Vec2::new(10.0, 0.0)));
+
+    // Ausgehende Verbindung nach Osten (angle=0 → Richtung away_dir stimmt überein)
+    tool.tangents.end_neighbors = vec![ConnectedNeighbor {
+        neighbor_id: 77,
+        angle: 0.0,
+        is_outgoing: true,
+    }];
+
+    tool.auto_suggest_end_tangent();
+
+    assert!(
+        matches!(tool.tangents.tangent_end, TangentSource::Connection { neighbor_id: 77, .. }),
+        "End-Tangente sollte auf Nachbar 77 gesetzt sein, war: {:?}",
+        tool.tangents.tangent_end,
+    );
+}
+
+#[test]
+fn test_auto_suggest_end_tangent_rejects_bad_direction() {
+    let mut tool = CurveTool::new_cubic();
+
+    tool.start = Some(ToolAnchor::NewPosition(Vec2::ZERO));
+    tool.end = Some(ToolAnchor::NewPosition(Vec2::new(10.0, 0.0)));
+
+    // Verbindung zeigt zurück zum Startpunkt (angle=PI → Richtung entgegen away_dir)
+    tool.tangents.end_neighbors = vec![ConnectedNeighbor {
+        neighbor_id: 88,
+        angle: std::f32::consts::PI,
+        is_outgoing: true,
+    }];
+
+    tool.auto_suggest_end_tangent();
+
+    assert!(
+        matches!(tool.tangents.tangent_end, TangentSource::None),
+        "End-Tangente sollte None bleiben bei schlechter Richtung, war: {:?}",
+        tool.tangents.tangent_end,
+    );
+}
+
+#[test]
+fn test_both_tangents_auto_suggested_on_cubic_end_click() {
+    let mut tool = CurveTool::new_cubic();
+    let road_map = RoadMap::new(3);
+
+    // Manuell Setup: Start hat eingehende, Ende hat ausgehende Verbindung
+    tool.on_click(Vec2::ZERO, &road_map, false); // Phase → End
+    // Nachbarn manuell setzen (normalerweise via populate_neighbors)
+    tool.tangents.start_neighbors = vec![ConnectedNeighbor {
+        neighbor_id: 10,
+        angle: std::f32::consts::PI, // von Westen → Fortsetzung Ost
+        is_outgoing: false,
+    }];
+
+    tool.on_click(Vec2::new(10.0, 0.0), &road_map, false); // Phase → Control
+    // end_neighbors direkt setzen und auto_suggest erneut aufrufen
+    tool.tangents.end_neighbors = vec![ConnectedNeighbor {
+        neighbor_id: 20,
+        angle: 0.0, // nach Osten
+        is_outgoing: true,
+    }];
+    tool.auto_suggest_start_tangent();
+    tool.auto_suggest_end_tangent();
+
+    assert!(
+        matches!(tool.tangents.tangent_start, TangentSource::Connection { neighbor_id: 10, .. }),
+        "Start-Tangente erwartet: {:?}",
+        tool.tangents.tangent_start,
+    );
+    assert!(
+        matches!(tool.tangents.tangent_end, TangentSource::Connection { neighbor_id: 20, .. }),
+        "End-Tangente erwartet: {:?}",
+        tool.tangents.tangent_end,
     );
 }
