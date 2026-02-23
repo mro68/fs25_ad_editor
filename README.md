@@ -82,49 +82,6 @@ Ausführliche Anleitung: [docs/How-To-Use.md](docs/How-To-Use.md)
 
 ## Architektur
 
-```mermaid
-graph TD
-    subgraph UI["UI-Layer  (egui)"]
-        U[Menü · Toolbar · Viewport · Dialoge]
-    end
-
-    subgraph APP["Application Layer  (app)"]
-        I([AppIntent])
-        CTRL[AppController]
-        CMD([AppCommand])
-        UC[Use-Cases]
-        S[AppState]
-    end
-
-    subgraph DOMAIN["Domain Layer  (core)"]
-        R[RoadMap]
-        H[Heightmap]
-        M[MapMarker]
-    end
-
-    subgraph PERSIST["Persistence  (xml)"]
-        P[parser · writer]
-    end
-
-    subgraph RENDER["Rendering  (wgpu)"]
-        RS[RenderScene]
-        GPU[Renderer – GPU Instancing]
-    end
-
-    U  -->|emittiert| I
-    I  --> CTRL
-    CTRL --> CMD
-    CMD --> UC
-    UC --> S
-    S  -->|liest / mutiert| R
-    S  -->|liest / mutiert| H
-    S  -->|liest / mutiert| M
-    S  -->|baut| RS
-    RS -->|draw-calls| GPU
-    UC -->|Load / Save| P
-    P  <-->|XML ↔ Domain| R
-```
-
 | Layer | Verzeichnis | Aufgabe |
 |-------|-------------|---------|
 | UI | `src/ui/` | Darstellung + AppIntent-Erzeugung |
