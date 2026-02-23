@@ -116,7 +116,7 @@ fn name_to_pattern(variant: &str) -> String {
 ///
 /// Beispiel: `"Sickinger_Hoehe_Rheinland_Pfalz"` → `"Sickinger_Hoehe"`
 fn truncate_to_two_words(name: &str) -> String {
-    let parts: Vec<&str> = name.split(|c| c == '_' || c == ' ').collect();
+    let parts: Vec<&str> = name.split(['_', ' ']).collect();
     let count = parts.len().min(2);
     parts[..count].join("_")
 }
