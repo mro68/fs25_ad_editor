@@ -146,6 +146,8 @@ pub struct UiState {
     pub show_heightmap_dialog: bool,
     /// Ob der Background-Map-Auswahl-Dialog geöffnet werden soll
     pub show_background_map_dialog: bool,
+    /// Ob der Übersichtskarten-ZIP-Auswahl-Dialog geöffnet werden soll
+    pub show_overview_dialog: bool,
     /// Ob die Heightmap-Warnung angezeigt werden soll
     pub show_heightmap_warning: bool,
     /// Ob die Heightmap-Warnung für diese Save-Operation bereits bestätigt wurde
@@ -187,6 +189,7 @@ impl UiState {
             show_save_file_dialog: false,
             show_heightmap_dialog: false,
             show_background_map_dialog: false,
+            show_overview_dialog: false,
             show_heightmap_warning: false,
             heightmap_warning_confirmed: false,
             pending_save_path: None,

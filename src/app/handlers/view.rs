@@ -77,3 +77,8 @@ pub fn load_background_from_zip(
 ) -> anyhow::Result<()> {
     use_cases::background_map::load_background_from_zip(state, zip_path, entry_name, crop_size)
 }
+
+/// Generiert eine Übersichtskarte aus einem Map-Mod-ZIP und lädt sie als Background.
+pub fn generate_overview(state: &mut AppState, zip_path: String) -> anyhow::Result<()> {
+    use_cases::background_map::generate_overview(state, zip_path)
+}

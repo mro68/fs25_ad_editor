@@ -64,3 +64,8 @@ pub fn dismiss_dedup_dialog(state: &mut AppState) {
 pub fn close_zip_browser(state: &mut AppState) {
     state.ui.zip_browser = None;
 }
+
+/// Öffnet den Übersichtskarten-ZIP-Auswahl-Dialog.
+pub fn request_overview_dialog(state: &mut AppState) {
+    state.ui.show_overview_dialog = true;
+}

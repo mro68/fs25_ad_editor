@@ -147,3 +147,33 @@ pub fn load_background_from_zip(
 
     Ok(())
 }
+
+/// Generiert eine Übersichtskarte aus einem Map-Mod-ZIP und lädt sie als Background.
+///
+/// Nutzt `fs25_map_overview` um aus den Terrain-Daten, Farmlands und POIs
+/// ein Composite-Bild zu erzeugen. Das Bild wird als `BackgroundMap` geladen.
+pub fn generate_overview(state: &mut AppState, zip_path: String) -> Result<()> {
+    log::info!("Generiere Übersichtskarte aus: {}", zip_path);
+
+    let options = fs25_map_overview::OverviewOptions {
+        hillshade: true,
+        farmlands: true,
+        farmland_ids: true,
+        pois: true,
+        legend: false,
+    };
+
+    let rgb_image = fs25_map_overview::generate_overview_from_zip(&zip_path, &options)?;
+
+    let (width, height) = (rgb_image.width(), rgb_image.height());
+    log::info!("Übersichtskarte generiert: {}x{} Pixel", width, height);
+
+    let dynamic_image = image::DynamicImage::ImageRgb8(rgb_image);
+    let bg_map = BackgroundMap::from_image(dynamic_image, &zip_path, None)?;
+
+    state.view.background_map = Some(Arc::new(bg_map));
+    state.view.background_scale = 1.0;
+    state.view.background_dirty = true;
+
+    Ok(())
+}

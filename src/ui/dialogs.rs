@@ -99,6 +99,20 @@ pub fn handle_file_dialogs(ui_state: &mut UiState) -> Vec<AppIntent> {
         }
     }
 
+    // Übersichtskarten-ZIP-Dialog
+    if ui_state.show_overview_dialog {
+        ui_state.show_overview_dialog = false;
+
+        if let Some(path) = rfd::FileDialog::new()
+            .add_filter("FS25 Map-Mod ZIP", &["zip"])
+            .pick_file()
+        {
+            events.push(AppIntent::GenerateOverviewFromZip {
+                path: path_to_ui_string(&path),
+            });
+        }
+    }
+
     events
 }
 
