@@ -1,0 +1,23 @@
+[package]
+name = "fs25_map_overview"
+version = "0.1.0"
+edition = "2021"
+authors = ["MRO"]
+description = "Generiert Overview-Maps aus FS25 Map-Mod-ZIPs (Terrain, Hillshade, Farmlands, POIs)"
+license = "GPL-3.0"
+
+[dependencies]
+# Bildverarbeitung
+image = { version = "0.25", features = ["png", "jpeg"] }
+
+# ZIP-Archiv-Support
+zip = { version = "2", default-features = false, features = ["deflate"] }
+
+# XML-Parsing (modDesc.xml, placeables.xml)
+quick-xml = "0.39.2"
+
+# Error Handling
+anyhow = "1.0"
+
+# Logging
+log = "0.4"
