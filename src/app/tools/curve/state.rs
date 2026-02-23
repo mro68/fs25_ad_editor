@@ -14,6 +14,8 @@ pub(crate) enum DragTarget {
     End,
     CP1,
     CP2,
+    /// Virtueller Scheitelpunkt B(0.5) — nur bei Cubic
+    Apex,
 }
 
 /// Grad der Bézier-Kurve
@@ -62,6 +64,8 @@ pub struct CurveTool {
     pub(crate) last_control_point2: Option<Vec2>,
     /// Tangenten-Zustand (Start/Ende, Nachbarn-Cache, Recreation-Kopien)
     pub(crate) tangents: TangentState,
+    /// Virtueller Scheitelpunkt: B(0.5) der kubischen Kurve — draggbares Handle
+    pub(crate) virtual_apex: Option<Vec2>,
 }
 
 impl CurveTool {
@@ -84,6 +88,7 @@ impl CurveTool {
             last_control_point1: None,
             last_control_point2: None,
             tangents: TangentState::new(),
+            virtual_apex: None,
         }
     }
 
@@ -99,6 +104,93 @@ impl CurveTool {
     /// Approximierte Kurvenlänge über Polylinien-Segmente.
     pub(crate) fn approx_length(positions_fn: impl Fn(f32) -> Vec2, samples: usize) -> f32 {
         approx_length(positions_fn, samples)
+    }
+
+    /// Berechnet und speichert den virtuellen Scheitelpunkt B(0.5).
+    ///
+    /// Fehlende Steuerpunkte werden mit Sehnen-Dritteln als Fallback gesetzt.
+    pub(crate) fn init_apex(&mut self) {
+        if self.degree != CurveDegree::Cubic {
+            return;
+        }
+        let (Some(start), Some(end)) = (self.start, self.end) else {
+            return;
+        };
+        let p0 = start.position();
+        let p3 = end.position();
+        let chord = p3 - p0;
+        let cp1 = self.control_point1.unwrap_or(p0 + chord / 3.0);
+        let cp2 = self.control_point2.unwrap_or(p0 + chord * 2.0 / 3.0);
+        self.virtual_apex = Some(cubic_bezier(p0, cp1, cp2, p3, 0.5));
+    }
+
+    /// Setzt CP2 auf den Standard-Wert (Sehnen-Drittel von P3),
+    /// wenn CP1 bereits gesetzt ist aber CP2 noch fehlt.
+    pub(crate) fn set_default_cp2_if_missing(&mut self) {
+        if self.degree != CurveDegree::Cubic || self.control_point2.is_some() {
+            return;
+        }
+        let (Some(start), Some(end)) = (self.start, self.end) else {
+            return;
+        };
+        let chord = end.position() - start.position();
+        let chord_len = chord.length();
+        if chord_len < f32::EPSILON {
+            return;
+        }
+        let chord_dir = chord / chord_len;
+        self.control_point2 = Some(end.position() - chord_dir * (chord_len / 3.0));
+    }
+
+    /// Wählt automatisch die beste Start-Tangente aus `start_neighbors`.
+    ///
+    /// Bevorzugt eingehende Verbindungen (`is_outgoing = false`). Wählt den
+    /// Nachbarn, dessen Fortsetzungsrichtung am stärksten in Richtung Endpunkt zeigt.
+    /// Nichts wird gesetzt wenn kein Nachbar einen positiven Dot-Produktwert hat.
+    pub(crate) fn auto_suggest_start_tangent(&mut self) {
+        use std::f32::consts::PI;
+        if self.degree != CurveDegree::Cubic || self.tangents.start_neighbors.is_empty() {
+            return;
+        }
+        let (Some(start), Some(end)) = (self.start, self.end) else {
+            return;
+        };
+        let chord = end.position() - start.position();
+        let chord_len = chord.length();
+        if chord_len < f32::EPSILON {
+            return;
+        }
+        let chord_dir = chord / chord_len;
+
+        // Eingehende Verbindungen bevorzugen; Fallback: alle
+        let candidates: Vec<_> = {
+            let incoming: Vec<_> = self
+                .tangents
+                .start_neighbors
+                .iter()
+                .filter(|n| !n.is_outgoing)
+                .collect();
+            if incoming.is_empty() {
+                self.tangents.start_neighbors.iter().collect()
+            } else {
+                incoming
+            }
+        };
+
+        let best = candidates.iter().max_by(|a, b| {
+            let da = Vec2::from_angle(a.angle + PI).dot(chord_dir);
+            let db = Vec2::from_angle(b.angle + PI).dot(chord_dir);
+            da.partial_cmp(&db).unwrap_or(std::cmp::Ordering::Equal)
+        });
+        if let Some(n) = best {
+            let dot = Vec2::from_angle(n.angle + PI).dot(chord_dir);
+            if dot > 0.0 {
+                self.tangents.tangent_start = TangentSource::Connection {
+                    neighbor_id: n.neighbor_id,
+                    angle: n.angle,
+                };
+            }
+        }
     }
 
     /// Kurvenlänge je nach Grad.

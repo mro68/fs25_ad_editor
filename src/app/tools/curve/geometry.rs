@@ -163,3 +163,39 @@ pub fn build_tool_result(
         &positions, start, end, direction, priority, road_map,
     ))
 }
+
+/// Berechnet CP1 und CP2 symmetrisch aus einem gewünschten Scheitelpunkt.
+///
+/// Der Apex entspricht B(0.5) der resultierenden Kurve.
+/// Beide CPs erhalten die gleiche laterale Abweichung von der Sehne.
+pub fn cps_from_apex_symmetric(p0: Vec2, p3: Vec2, apex: Vec2) -> (Vec2, Vec2) {
+    let chord = p3 - p0;
+    let chord_len = chord.length();
+    if chord_len < f32::EPSILON {
+        return (p0, p3);
+    }
+    let chord_dir = chord / chord_len;
+    let perp = Vec2::new(-chord_dir.y, chord_dir.x);
+    // Lateraler Anteil des Apex: dot(apex - midpoint, perp)
+    let midpoint = (p0 + p3) * 0.5;
+    let lateral = (apex - midpoint).dot(perp) * (4.0 / 3.0);
+    let cp1 = p0 + chord_dir * (chord_len / 3.0) + perp * lateral;
+    let cp2 = p3 - chord_dir * (chord_len / 3.0) + perp * lateral;
+    (cp1, cp2)
+}
+
+/// Berechnet CP2 so, dass B(0.5) = `apex`, bei fixiertem CP1.
+///
+/// Aus der Formel B(0.5) = (P0 + 3·CP1 + 3·CP2 + P3) / 8 gelöst nach CP2:
+/// `CP2 = (8·apex − P0 − 3·CP1 − P3) / 3`
+pub fn cp2_from_apex(p0: Vec2, cp1: Vec2, apex: Vec2, p3: Vec2) -> Vec2 {
+    (8.0 * apex - p0 - 3.0 * cp1 - p3) / 3.0
+}
+
+/// Berechnet CP1 so, dass B(0.5) = `apex`, bei fixiertem CP2.
+///
+/// Aus der Formel B(0.5) = (P0 + 3·CP1 + 3·CP2 + P3) / 8 gelöst nach CP1:
+/// `CP1 = (8·apex − P0 − 3·CP2 − P3) / 3`
+pub fn cp1_from_apex(p0: Vec2, apex: Vec2, cp2: Vec2, p3: Vec2) -> Vec2 {
+    (8.0 * apex - p0 - 3.0 * cp2 - p3) / 3.0
+}
