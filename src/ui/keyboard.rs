@@ -55,8 +55,12 @@ pub(super) fn collect_keyboard_intents(
     if key_escape_pressed {
         if active_tool == EditorTool::Route {
             events.push(AppIntent::RouteToolCancelled);
-        } else {
+        } else if !selected_node_ids.is_empty() {
             events.push(AppIntent::ClearSelectionRequested);
+        } else if active_tool != EditorTool::Select {
+            events.push(AppIntent::SetEditorToolRequested {
+                tool: EditorTool::Select,
+            });
         }
     }
 
@@ -199,5 +203,64 @@ mod tests {
         assert!(events
             .iter()
             .any(|event| matches!(event, AppIntent::DeleteSelectedRequested)));
+    }
+
+    #[test]
+    fn test_escape_with_selection_clears_selection() {
+        let mut selected = HashSet::new();
+        selected.insert(5);
+
+        let events = collect_with_key_event(
+            egui::Event::Key {
+                key: egui::Key::Escape,
+                physical_key: None,
+                pressed: true,
+                repeat: false,
+                modifiers: egui::Modifiers::default(),
+            },
+            selected,
+        );
+
+        assert!(events
+            .iter()
+            .any(|event| matches!(event, AppIntent::ClearSelectionRequested)));
+    }
+
+    #[test]
+    fn test_escape_without_selection_switches_to_select_tool() {
+        let events = collect_with_key_event_and_tool(
+            egui::Event::Key {
+                key: egui::Key::Escape,
+                physical_key: None,
+                pressed: true,
+                repeat: false,
+                modifiers: egui::Modifiers::default(),
+            },
+            HashSet::new(),
+            EditorTool::Connect,
+        );
+
+        assert!(events.iter().any(|event| matches!(
+            event,
+            AppIntent::SetEditorToolRequested {
+                tool: EditorTool::Select
+            }
+        )));
+    }
+
+    #[test]
+    fn test_escape_in_select_tool_without_selection_does_nothing() {
+        let events = collect_with_key_event(
+            egui::Event::Key {
+                key: egui::Key::Escape,
+                physical_key: None,
+                pressed: true,
+                repeat: false,
+                modifiers: egui::Modifiers::default(),
+            },
+            HashSet::new(),
+        );
+
+        assert!(events.is_empty());
     }
 }
