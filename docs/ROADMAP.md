@@ -91,6 +91,10 @@
   - [ ] Marker-Groups
 - [ ] Grid-Overlay & Snap-to-Grid
 - [ ] Minimap-Ansicht
+- [x] Übersichtskarte aus Map-Mod-ZIP generieren (Terrain, Farmlands, POIs, Hillshade)
+  - [x] Crate `fs25_map_overview` mit GRLE/GDM-Decoder (vendor grleconvert)
+  - [x] Weight-Map-Compositing, Hillshade, Farmland-Grenzen/-IDs, POI-Labels
+  - [x] Editor-Integration: Menüeintrag → ZIP-Dialog → Background-Map
 
 ## Phase 6: Performance & Qualität
 - [ ] Performance-Optimierung
@@ -174,7 +178,7 @@
 - Phase 2: ✅ 100%
 - Phase 3: ✅ 98% (Theme fehlt)
 - Phase 4: ✅ 100% (alle Features implementiert, 100k-Benchmarks ausstehend)
-- Phase 5: 🟡 85% (DDS-Background + Marker-Editor + Bézier-Kurven + Catmull-Rom-Spline fertig)
+- Phase 5: 🟡 90% (DDS-Background + Marker-Editor + Bézier-Kurven + Catmull-Rom-Spline + Übersichtskarte fertig)
 - Phase 6: 🟡 40% (Handler-Split, CI-Checks, unwrap-Bereinigung, API-Docs nachgeführt)
 
 **Errungenschaften seit letztem Update (Spline-Tool 2026-02-21):**

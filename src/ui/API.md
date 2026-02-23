@@ -39,6 +39,7 @@ pub fn render_menu(ctx: &egui::Context, state: &AppState) -> Vec<AppIntent>
   - Save As... (nur wenn Datei geladen) → `AppIntent::SaveAsRequested`
   - Select/Change Heightmap... → `AppIntent::HeightmapSelectionRequested`
   - Clear Heightmap (nur wenn gesetzt) → `AppIntent::HeightmapCleared`
+  - Übersichtskarte generieren... → `AppIntent::GenerateOverviewRequested`
   - Exit → `AppIntent::ExitRequested`
 
 - **View**

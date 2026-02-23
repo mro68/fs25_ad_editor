@@ -80,6 +80,7 @@ pub struct BackgroundMap { /* intern */ }
 
 **Methoden:**
 - `BackgroundMap::load_from_file(path, crop_size) -> Result<Self>` — Bild laden, optional Center-Crop
+- `BackgroundMap::from_image(image, source_label, crop_size) -> Result<Self>` — `pub(crate)`: BackgroundMap aus bereits dekodiertem `DynamicImage` erstellen (für Overview-Generator u.a.)
 - `image_data() -> &DynamicImage` — Bilddaten
 - `world_bounds() -> &WorldBounds` — Weltkoordinaten-Bereich
 - `opacity() -> f32` — Aktuelle Opacity

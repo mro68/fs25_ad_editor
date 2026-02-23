@@ -89,6 +89,7 @@ pub struct UiState {
     pub show_save_file_dialog: bool,
     pub show_heightmap_dialog: bool,
     pub show_background_map_dialog: bool,
+    pub show_overview_dialog: bool,
     pub show_heightmap_warning: bool,
     pub heightmap_warning_confirmed: bool,
     pub pending_save_path: Option<String>,
@@ -236,6 +237,10 @@ pub enum AppIntent {
     ZipBackgroundFileSelected { zip_path: String, entry_name: String },
     ZipBrowserCancelled,
 
+    // Übersichtskarte
+    GenerateOverviewRequested,
+    GenerateOverviewFromZip { path: String },
+
     // Map-Marker
     CreateMarkerRequested { node_id: u64 },
     RemoveMarkerRequested { node_id: u64 },
@@ -332,6 +337,10 @@ pub enum AppCommand {
     BrowseZipBackground { path: String },
     LoadBackgroundFromZip { zip_path: String, entry_name: String, crop_size: Option<u32> },
     CloseZipBrowser,
+
+    // Übersichtskarte
+    RequestOverviewDialog,
+    GenerateOverviewFromZip { path: String },
 
     // Marker
     CreateMarker { node_id: u64, name: String, group: String },
@@ -435,6 +444,7 @@ pub enum AppCommand {
 - `set_background_opacity(state, opacity)` — Opacity setzen (0.0–1.0)
 - `toggle_background_visibility(state)` — Sichtbarkeit umschalten
 - `clear_background_map(state)` — Background-Map entfernen
+- `generate_overview(state, zip_path) -> anyhow::Result<()>` — Übersichtskarte aus Map-Mod-ZIP generieren (via `fs25_map_overview`) und als Background-Map laden
 
 ### `use_cases::editing::markers`
 - `open_marker_dialog(state, node_id, is_new)` — Marker-Dialog öffnen (neu oder bearbeiten)
