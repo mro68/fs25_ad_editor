@@ -106,6 +106,10 @@ impl RouteTool for StraightLineTool {
         self.start.is_some() && self.end.is_some()
     }
 
+    fn has_pending_input(&self) -> bool {
+        self.start.is_some()
+    }
+
     fn set_direction(&mut self, dir: ConnectionDirection) {
         self.direction = dir;
     }

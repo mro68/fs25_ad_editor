@@ -226,6 +226,10 @@ impl RouteTool for CurveTool {
         self.start.is_some() && self.end.is_some() && self.controls_complete()
     }
 
+    fn has_pending_input(&self) -> bool {
+        self.phase != Phase::Start
+    }
+
     fn set_direction(&mut self, dir: ConnectionDirection) {
         self.direction = dir;
     }
