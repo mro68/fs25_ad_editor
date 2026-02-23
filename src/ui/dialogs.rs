@@ -305,8 +305,40 @@ pub fn show_zip_browser(ctx: &egui::Context, ui_state: &mut UiState) -> Vec<AppI
         .default_width(400.0)
         .anchor(egui::Align2::CENTER_CENTER, [0.0, 0.0])
         .show(ctx, |ui| {
+            // Overview-Filter Checkbox
+            let overview_count = browser
+                .entries
+                .iter()
+                .filter(|e| e.name.to_lowercase().contains("overview"))
+                .count();
+            let old_filter = browser.filter_overview;
+            ui.horizontal(|ui| {
+                ui.checkbox(&mut browser.filter_overview, "Nur Overview-Dateien");
+                if browser.filter_overview {
+                    ui.label(
+                        egui::RichText::new(format!("({overview_count} Treffer)"))
+                            .weak(),
+                    );
+                }
+            });
+            // Selektion zurücksetzen wenn Filter geändert
+            if browser.filter_overview != old_filter {
+                browser.selected = None;
+            }
+            ui.add_space(2.0);
+
+            // Gefilterte Einträge sammeln
+            let filtered: Vec<(usize, &crate::core::ZipImageEntry)> = browser
+                .entries
+                .iter()
+                .enumerate()
+                .filter(|(_, e)| {
+                    !browser.filter_overview || e.name.to_lowercase().contains("overview")
+                })
+                .collect();
+
             ui.label(
-                egui::RichText::new(format!("{} Bilddateien gefunden:", browser.entries.len()))
+                egui::RichText::new(format!("{} Bilddateien:", filtered.len()))
                     .strong(),
             );
             ui.add_space(4.0);
@@ -314,7 +346,7 @@ pub fn show_zip_browser(ctx: &egui::Context, ui_state: &mut UiState) -> Vec<AppI
             egui::ScrollArea::vertical()
                 .max_height(300.0)
                 .show(ui, |ui| {
-                    for (i, entry) in browser.entries.iter().enumerate() {
+                    for &(i, entry) in &filtered {
                         let selected = browser.selected == Some(i);
                         let label = format!("{} ({})", entry.name, format_file_size(entry.size));
                         let response = ui.selectable_label(selected, &label);

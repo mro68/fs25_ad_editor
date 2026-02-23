@@ -175,6 +175,8 @@ pub struct ZipBrowserState {
     pub entries: Vec<crate::core::ZipImageEntry>,
     /// Index des aktuell selektierten Eintrags
     pub selected: Option<usize>,
+    /// Nur *overview*-Dateien anzeigen
+    pub filter_overview: bool,
 }
 
 impl UiState {
