@@ -1,11 +1,10 @@
-//! UI-Konfigurationspanel für das Bézier-Kurven-Tool.
+//! UI-Konfigurationspanel und Kontextmenü für das Bézier-Kurven-Tool.
 //!
-//! Die `render_config_view`-Methode enthält die gesamte egui-Logik für:
-//! - Grad-Auswahl (Quadratisch / Kubisch)
-//! - Tangenten-ComboBoxen (nur Kubisch, wenn Start/Ende gesetzt)
-//! - Länge · Segment-Abstand · Node-Anzahl (Nachbearbeitungs- und Live-Modus)
+//! Enthält:
+//! - `render_config_view` — Grad-Auswahl + Segment-Konfiguration im Properties-Panel
+//! - `render_tangent_context_menu` — Tangenten-Auswahl per Rechtsklick-Kontextmenü
 
-use super::super::common::render_tangent_combo;
+use super::super::common::{angle_to_compass, TangentSource};
 use super::super::RouteTool;
 use super::geometry::{cubic_bezier, quadratic_bezier};
 use super::state::{CurveDegree, CurveTool, Phase};
@@ -40,63 +39,6 @@ impl CurveTool {
             changed = true;
         }
         ui.add_space(4.0);
-
-        // Tangenten-Auswahl (nur Cubic, wenn Start+End gesetzt)
-        if self.degree == CurveDegree::Cubic {
-            let show_tangent_ui = (self.phase == Phase::Control
-                || (!self.lifecycle.last_created_ids.is_empty()
-                    && self.last_start_anchor.is_some()
-                    && self.lifecycle.last_end_anchor.is_some()))
-                && (self.start.is_some() && self.end.is_some()
-                    || self.last_start_anchor.is_some()
-                        && self.lifecycle.last_end_anchor.is_some());
-
-            if show_tangent_ui {
-                // Tangente Start
-                if !self.tangents.start_neighbors.is_empty()
-                    && render_tangent_combo(
-                        ui,
-                        "tangent_start",
-                        "Tangente Start:",
-                        "Manuell",
-                        &mut self.tangents.tangent_start,
-                        &self.tangents.start_neighbors,
-                    )
-                {
-                    self.apply_tangent_to_cp();
-                    self.sync_derived();
-                    if !self.lifecycle.last_created_ids.is_empty() {
-                        self.lifecycle.recreate_needed = true;
-                    }
-                    changed = true;
-                }
-
-                // Tangente Ende
-                if !self.tangents.end_neighbors.is_empty()
-                    && render_tangent_combo(
-                        ui,
-                        "tangent_end",
-                        "Tangente Ende:",
-                        "Manuell",
-                        &mut self.tangents.tangent_end,
-                        &self.tangents.end_neighbors,
-                    )
-                {
-                    self.apply_tangent_to_cp();
-                    self.sync_derived();
-                    if !self.lifecycle.last_created_ids.is_empty() {
-                        self.lifecycle.recreate_needed = true;
-                    }
-                    changed = true;
-                }
-
-                if !self.tangents.start_neighbors.is_empty()
-                    || !self.tangents.end_neighbors.is_empty()
-                {
-                    ui.add_space(4.0);
-                }
-            }
-        }
 
         // Nachbearbeitungs-Modus
         let adjusting = !self.lifecycle.last_created_ids.is_empty()
@@ -136,6 +78,108 @@ impl CurveTool {
             changed |= self.seg.render_live(ui, length, "Kurvenlänge");
         } else {
             changed |= self.seg.render_default(ui);
+        }
+
+        changed
+    }
+
+    /// Rendert das Tangenten-Kontextmenü bei Rechtsklick im Viewport.
+    ///
+    /// Nur aktiv für kubische Kurven in `Phase::Control` oder im Adjusting-Modus,
+    /// wenn Nachbarn an Start- oder Endpunkt vorhanden sind.
+    ///
+    /// Gibt `true` zurück wenn eine Tangente geändert wurde (inkl. Recreate-Flag-Setzen).
+    pub(super) fn render_tangent_context_menu(&mut self, response: &egui::Response) -> bool {
+        if self.degree != CurveDegree::Cubic {
+            return false;
+        }
+
+        let in_control = self.phase == Phase::Control;
+        let adjusting = !self.lifecycle.last_created_ids.is_empty()
+            && self.last_start_anchor.is_some()
+            && self.lifecycle.last_end_anchor.is_some();
+        if !in_control && !adjusting {
+            return false;
+        }
+
+        let has_start = !self.tangents.start_neighbors.is_empty();
+        let has_end = !self.tangents.end_neighbors.is_empty();
+        if !has_start && !has_end {
+            return false;
+        }
+
+        // Daten klonen um Borrow-Konflikte in der Closure zu vermeiden
+        let start_neighbors = self.tangents.start_neighbors.clone();
+        let end_neighbors = self.tangents.end_neighbors.clone();
+        let mut new_start = self.tangents.tangent_start;
+        let mut new_end = self.tangents.tangent_end;
+        let mut changed = false;
+
+        response.context_menu(|ui| {
+            if has_start {
+                ui.label("Tangente Start:");
+                if ui
+                    .selectable_label(new_start == TangentSource::None, "Manuell")
+                    .clicked()
+                {
+                    new_start = TangentSource::None;
+                    changed = true;
+                    ui.close();
+                }
+                for n in &start_neighbors {
+                    let text = format!("→ Node #{} ({})", n.neighbor_id, angle_to_compass(n.angle));
+                    let is_sel = matches!(new_start,
+                        TangentSource::Connection { neighbor_id, .. } if neighbor_id == n.neighbor_id);
+                    if ui.selectable_label(is_sel, text).clicked() {
+                        new_start = TangentSource::Connection {
+                            neighbor_id: n.neighbor_id,
+                            angle: n.angle,
+                        };
+                        changed = true;
+                        ui.close();
+                    }
+                }
+            }
+
+            if has_start && has_end {
+                ui.separator();
+            }
+
+            if has_end {
+                ui.label("Tangente Ende:");
+                if ui
+                    .selectable_label(new_end == TangentSource::None, "Manuell")
+                    .clicked()
+                {
+                    new_end = TangentSource::None;
+                    changed = true;
+                    ui.close();
+                }
+                for n in &end_neighbors {
+                    let text = format!("→ Node #{} ({})", n.neighbor_id, angle_to_compass(n.angle));
+                    let is_sel = matches!(new_end,
+                        TangentSource::Connection { neighbor_id, .. } if neighbor_id == n.neighbor_id);
+                    if ui.selectable_label(is_sel, text).clicked() {
+                        new_end = TangentSource::Connection {
+                            neighbor_id: n.neighbor_id,
+                            angle: n.angle,
+                        };
+                        changed = true;
+                        ui.close();
+                    }
+                }
+            }
+        });
+
+        if changed {
+            self.tangents.tangent_start = new_start;
+            self.tangents.tangent_end = new_end;
+            self.apply_tangent_to_cp();
+            self.sync_derived();
+            self.init_apex();
+            if !self.lifecycle.last_created_ids.is_empty() {
+                self.lifecycle.recreate_needed = true;
+            }
         }
 
         changed
