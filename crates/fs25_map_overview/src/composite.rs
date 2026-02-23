@@ -319,7 +319,7 @@ pub fn draw_farmland_ids(image: &mut RgbImage, farmlands: &FarmlandData) {
     }
 
     // Font-Scale basierend auf Bildgröße
-    let scale = (image.width() / 1200).max(1).min(4);
+    let scale = (image.width() / 1200).clamp(1, 4);
 
     let label_color = Rgb([255, 255, 200]);
 
@@ -349,7 +349,7 @@ pub fn draw_pois_with_labels(image: &mut RgbImage, pois: &[Poi]) {
     let outline_color = Rgb([255, 255, 255]);
     let label_color = Rgb([255, 255, 255]);
     let radius = (image.width() / 600).max(6) as i32;
-    let scale = (image.width() / 1200).max(1).min(4);
+    let scale = (image.width() / 1200).clamp(1, 4);
     let min_dist = (image.width() / 22) as i32;
 
     // Labels mit Überlappungsprüfung platzieren
@@ -398,7 +398,7 @@ const LEGEND_ITEMS: &[([u8; 3], &str)] = &[
 /// Die Legende wird unten links als halbtransparente Box dargestellt.
 /// Enthält Terrain-Farben, POI-Markierung und Farmland-Grenzfarbe.
 pub fn draw_legend(image: &mut RgbImage, options: &OverviewOptions) {
-    let scale = (image.width() / 1200).max(1).min(4);
+    let scale = (image.width() / 1200).clamp(1, 4);
     let padding = 15i32 * scale as i32 / 2;
     let row_h = 20i32 * scale as i32 / 2 + padding;
     let swatch_size = 14u32 * scale / 2;
@@ -413,7 +413,7 @@ pub fn draw_legend(image: &mut RgbImage, options: &OverviewOptions) {
     }
     rows += 1; // Überschrift "Legende"
 
-    let legend_w = (200 * scale / 2).max(180) as u32;
+    let legend_w = (200 * scale / 2).max(180);
     let legend_h = (rows as i32 * row_h + padding * 2) as u32;
 
     let lx = 20i32;
@@ -450,7 +450,7 @@ pub fn draw_legend(image: &mut RgbImage, options: &OverviewOptions) {
             yo + 2,
             label,
             Rgb([255, 255, 255]),
-            scale.max(1) - scale.min(1).min(0), // mind. 1
+            scale.max(1), // mind. 1
         );
         yo += row_h;
     }
@@ -499,7 +499,7 @@ pub fn draw_legend(image: &mut RgbImage, options: &OverviewOptions) {
 ///
 /// Halbtransparenter Hintergrund mit dem Kartennamen.
 pub fn draw_title_bar(image: &mut RgbImage, title: &str) {
-    let scale = (image.width() / 800).max(2).min(6);
+    let scale = (image.width() / 800).clamp(2, 6);
     let bar_h = text::text_height(scale) + scale * 6;
     let bar_w = image.width();
 

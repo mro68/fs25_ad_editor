@@ -96,11 +96,7 @@ pub fn decode_gdm(data: &[u8]) -> Result<GdmImage> {
 
     let chunks_per_dim = dimension / chunk_size;
     let total_chunks = chunks_per_dim * chunks_per_dim;
-    let compression_boundaries_size = if num_compression_ranges > 1 {
-        num_compression_ranges - 1
-    } else {
-        0
-    };
+    let compression_boundaries_size = num_compression_ranges.saturating_sub(1);
     let data_start = header_size + compression_boundaries_size;
 
     let use_rgb = num_channels > 8;
@@ -117,7 +113,7 @@ pub fn decode_gdm(data: &[u8]) -> Result<GdmImage> {
                 chunk_idx,
                 total_chunks
             );
-            let (pixels, block_size) = decode_block(&data, pos, chunk_size);
+            let (pixels, block_size) = decode_block(data, pos, chunk_size);
             range_values.push(pixels);
             pos += block_size;
         }
