@@ -158,7 +158,10 @@ pub struct WgpuRenderData {
 }
 
 pub struct WgpuRenderCallback {
-    pub data: Arc<WgpuRenderData>,
+    pub renderer: Arc<Mutex<Renderer>>,
+    pub render_data: WgpuRenderData,
+    pub device: wgpu::Device,
+    pub queue: wgpu::Queue,
 }
 ```
 

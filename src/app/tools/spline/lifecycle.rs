@@ -1,12 +1,11 @@
 //! Lifecycle-Methoden des SplineTool (RouteTool-Implementierung).
 
 use super::super::{
-    common::populate_neighbors, snap_to_node, RouteTool, ToolAction, ToolAnchor, ToolPreview,
-    ToolResult,
+    common::populate_neighbors, snap_to_node, RouteTool, ToolAction, ToolPreview, ToolResult,
 };
 use super::state::SplineTool;
 use crate::app::segment_registry::{SegmentKind, SegmentRecord};
-use crate::core::{ConnectionDirection, ConnectionPriority, RoadMap};
+use crate::core::RoadMap;
 use glam::Vec2;
 
 impl RouteTool for SplineTool {
@@ -36,10 +35,8 @@ impl RouteTool for SplineTool {
         if self.anchors.is_empty() {
             // Verkettung: letzten Endpunkt als Start verwenden
             if let Some(last_end) = self.lifecycle.chaining_start_anchor() {
-                self.lifecycle.last_created_ids.clear();
+                self.lifecycle.prepare_for_chaining();
                 self.last_anchors.clear();
-                self.lifecycle.last_end_anchor = None;
-                self.lifecycle.recreate_needed = false;
                 self.tangents.reset_tangents();
                 self.anchors.push(last_end);
                 self.anchors.push(anchor);
@@ -120,17 +117,7 @@ impl RouteTool for SplineTool {
         !self.anchors.is_empty()
     }
 
-    fn set_direction(&mut self, dir: ConnectionDirection) {
-        self.direction = dir;
-    }
-
-    fn set_priority(&mut self, prio: ConnectionPriority) {
-        self.priority = prio;
-    }
-
-    fn set_snap_radius(&mut self, radius: f32) {
-        self.lifecycle.snap_radius = radius;
-    }
+    crate::impl_lifecycle_delegation!();
 
     fn set_last_created(&mut self, ids: Vec<u64>, road_map: &RoadMap) {
         // Nur bei Erst-Erstellung Anker übernehmen; bei Recreate bleiben last_anchors erhalten
@@ -154,22 +141,6 @@ impl RouteTool for SplineTool {
         }
         self.tangents.save_for_recreate();
         self.lifecycle.last_created_ids = ids;
-        self.lifecycle.recreate_needed = false;
-    }
-
-    fn last_created_ids(&self) -> &[u64] {
-        &self.lifecycle.last_created_ids
-    }
-
-    fn last_end_anchor(&self) -> Option<ToolAnchor> {
-        self.lifecycle.last_end_anchor
-    }
-
-    fn needs_recreate(&self) -> bool {
-        self.lifecycle.recreate_needed
-    }
-
-    fn clear_recreate_flag(&mut self) {
         self.lifecycle.recreate_needed = false;
     }
 

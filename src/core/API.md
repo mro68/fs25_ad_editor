@@ -52,8 +52,8 @@ let wpp = camera.world_per_pixel(viewport_height);
 // Pick-Radius in Welt-Einheiten (für Node-Selektion)
 let pick_radius = camera.pick_radius_world(viewport_height, pick_radius_px);
 
-// Pick-Radius skaliert mit Node-Größe (für exakten Treffer auf vergrößerte Nodes)
-let scaled = camera.pick_radius_world_scaled(viewport_height, pick_radius_px, selection_size_factor);
+// Pick-Radius skaliert (fester Wert bei ZOOM_MAX, unabhängig vom aktuellen Zoom)
+let scaled = camera.pick_radius_world_scaled(viewport_height, pick_radius_px);
 ```
 
 **View-Matrix:** Enthält nur Translation (`-position`). Zoom wird ausschließlich über die orthographische Projektion im Renderer gesteuert.
@@ -65,7 +65,7 @@ world = NDC * BASE_WORLD_EXTENT * aspect / zoom + position
 
 **Pick-Radius:** Konvertiert den übergebenen Pixel-Radius in Welt-Koordinaten basierend auf Zoom und Viewport-Höhe. Der Pixel-Wert (`SELECTION_PICK_RADIUS_PX`) lebt in `shared::options`, damit `core` keine Abhängigkeit auf `shared` hat.
 
-**Pick-Radius (skaliert):** `pick_radius_world_scaled()` berücksichtigt zusätzlich den `selection_size_factor` — damit werden vergrößerte (selektierte) Nodes exakt getroffen.
+**Pick-Radius (skaliert):** `pick_radius_world_scaled()` gibt einen fixen Weltradius zurück, berechnet bei `ZOOM_MAX` — damit bleibt der Pick-Bereich unabhängig vom aktuellen Zoom konsistent.
 
 ---
 

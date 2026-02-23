@@ -3,6 +3,7 @@
 //! Die `render_config_view`-Methode enthält die egui-Logik für:
 //! - Länge · Segment-Abstand · Node-Anzahl (Nachbearbeitungs- und Live-Modus)
 
+use super::super::common::render_segment_config_3modes;
 use super::state::StraightLineTool;
 
 impl StraightLineTool {
@@ -14,24 +15,26 @@ impl StraightLineTool {
             && self.last_start_anchor.is_some()
             && self.lifecycle.last_end_anchor.is_some();
 
-        if adjusting {
-            let Some(start_anchor) = self.last_start_anchor else {
-                return false;
-            };
-            let Some(end_anchor) = self.lifecycle.last_end_anchor else {
-                return false;
-            };
-            let distance = start_anchor.position().distance(end_anchor.position());
-            let (changed, recreate) = self.seg.render_adjusting(ui, distance, "Streckenlänge");
-            if recreate {
-                self.lifecycle.recreate_needed = true;
-            }
-            changed
-        } else if self.start.is_some() && self.end.is_some() {
-            let distance = self.total_distance();
-            self.seg.render_live(ui, distance, "Streckenlänge")
+        let length = if adjusting {
+            let start = self.last_start_anchor.unwrap().position();
+            let end = self.lifecycle.last_end_anchor.unwrap().position();
+            start.distance(end)
         } else {
-            self.seg.render_default(ui)
+            self.total_distance()
+        };
+
+        let ready = self.start.is_some() && self.end.is_some();
+        let (changed, recreate) = render_segment_config_3modes(
+            &mut self.seg,
+            ui,
+            adjusting,
+            ready,
+            length,
+            "Streckenlänge",
+        );
+        if recreate {
+            self.lifecycle.recreate_needed = true;
         }
+        changed
     }
 }

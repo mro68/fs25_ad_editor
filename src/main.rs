@@ -40,6 +40,9 @@ impl AppRunner {
             "FS25 AutoDrive Editor",
             options,
             Box::new(|cc| {
+                // SVG/Bild-Loader für egui installieren (benötigt für Toolbar-Icons)
+                egui_extras::install_image_loaders(&cc.egui_ctx);
+
                 let render_state = cc.wgpu_render_state.as_ref().ok_or_else(|| {
                     anyhow::anyhow!(
                         "wgpu nicht verfügbar: Renderer konnte nicht initialisiert werden"

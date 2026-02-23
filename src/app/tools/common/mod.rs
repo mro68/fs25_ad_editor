@@ -16,6 +16,6 @@ pub(crate) use builder::assemble_tool_result;
 #[allow(unused_imports)]
 pub(crate) use geometry::angle_to_compass;
 pub(crate) use geometry::populate_neighbors;
-pub(crate) use lifecycle::{SegmentConfig, ToolLifecycleState};
+pub(crate) use lifecycle::{render_segment_config_3modes, SegmentConfig, ToolLifecycleState};
 pub use tangent::TangentSource;
 pub(crate) use tangent::{render_tangent_combo, TangentState};
