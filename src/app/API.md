@@ -685,6 +685,7 @@ Aufgeteilt in vier Submodule (alle privat, Re-Exporte via `common/mod.rs`):
 - **`geometry.rs`** — `angle_to_compass`, `node_count_from_length`, `populate_neighbors`
 - **`tangent.rs`** — `TangentSource`, `TangentState`, `render_tangent_combo`
 - **`lifecycle.rs`** — `ToolLifecycleState`, `SegmentConfig`, `LastEdited`
+  - `chaining_start_anchor() → Option<ToolAnchor>` — Gibt den End-Anker für die Verkettung zurück, wobei `NewPosition` zu `ExistingNode` hochgestuft wird (verhindert doppelte Nodes am Verkettungspunkt)
 - **`builder.rs`** — `assemble_tool_result`
 
 **`SegmentConfig`** — Gekapselte Konfiguration für Segment-Länge und Node-Anzahl, die alle Route-Tools gemeinsam nutzen:
