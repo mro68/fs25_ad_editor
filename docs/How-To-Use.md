@@ -13,11 +13,12 @@
 9. [Map-Marker](#map-marker)
 10. [Kamera und Viewport](#kamera-und-viewport)
 11. [Hintergrund-Karte](#hintergrund-karte)
-12. [Heightmap](#heightmap)
-13. [Duplikat-Bereinigung](#duplikat-bereinigung)
-14. [Optionen](#optionen)
-15. [Undo / Redo](#undo--redo)
-16. [Typische Workflows](#typische-workflows)
+12. [Übersichtskarten-Generierung](#übersichtskarten-generierung)
+13. [Heightmap](#heightmap)
+14. [Duplikat-Bereinigung](#duplikat-bereinigung)
+15. [Optionen](#optionen)
+16. [Undo / Redo](#undo--redo)
+17. [Typische Workflows](#typische-workflows)
 
 ---
 
@@ -455,6 +456,46 @@ Wenn ein Hintergrund geladen ist, erscheinen rechts in der Toolbar:
 
 ---
 
+## Übersichtskarten-Generierung
+
+Anstatt eine fertige Übersichtskarte manuell zu laden, kann der Editor sie direkt aus einer Map-Mod-ZIP-Datei generieren.
+
+### Workflow
+
+```mermaid
+flowchart TD
+    A["View → Übersichtskarte generieren..."] --> B["ZIP-Datei wählen (Map-Mod)"]
+    B --> C["Layer-Options-Dialog"]
+    C --> D{"Generieren?"}
+    D -- Ja --> E["Karte wird erzeugt\n(Terrain + Overlays)"]
+    E --> F["Als Hintergrund geladen"]
+    D -- Nein --> G["Abbrechen"]
+```
+
+### Übersichtskarte generieren
+
+1. **View → Übersichtskarte generieren...** — öffnet den ZIP-Auswahl-Dialog
+2. Eine Map-Mod-ZIP-Datei auswählen (enthält Terrain-Daten, GRLE-Farmlands, POIs)
+3. Im **Layer-Options-Dialog** die gewünschten Layer ein-/ausschalten:
+
+| Layer | Standard | Beschreibung |
+|-------|----------|-------------|
+| **Hillshade** | ✅ | Geländeschattierung für räumlichen Eindruck |
+| **Farmland-Grenzen** | ✅ | Weiße Grenzlinien zwischen Farmland-Parzellen |
+| **Farmland-IDs** | ✅ | Nummerierung der Farmland-Parzellen |
+| **POI-Marker** | ✅ | Verkaufsstellen, Silos, Tankstellen etc. |
+| **Legende** | ❌ | Farbcodierung der Bodentypen |
+
+4. **Generieren** klicken — die Karte wird berechnet und als Hintergrund geladen
+
+### Layer-Standardeinstellungen
+
+Die Layer-Auswahl wird persistent in der Konfigurationsdatei (`fs25_auto_drive_editor.toml`) gespeichert. Beim nächsten Mal werden die zuletzt verwendeten Einstellungen vorausgewählt.
+
+Die Standard-Layer können auch über **Edit → Optionen... → Übersichtskarte (Standard-Layer)** dauerhaft angepasst werden.
+
+---
+
 ## Heightmap
 
 Die Heightmap wird für die korrekte Y-Koordinaten-Berechnung beim XML-Export benötigt.
@@ -526,6 +567,11 @@ Duplikate jetzt bereinigen?
 | | Outline-Farbe | Dunkelrot |
 | **Kamera** | Zoom-Schritt (Menü) | 1.2 |
 | | Zoom-Schritt (Mausrad) | 1.1 |
+| **Übersichtskarte** | Hillshade | ✅ |
+| | Farmland-Grenzen | ✅ |
+| | Farmland-IDs | ✅ |
+| | POI-Marker | ✅ |
+| | Legende | ❌ |
 
 ---
 
@@ -553,6 +599,15 @@ Auch über **Edit → Undo / Redo** im Menü verfügbar (mit Anzeige ob verfügb
 
 ### Neues Netzwerk bearbeiten
 
+```mermaid
+flowchart LR
+    A["Ctrl+O\nDatei laden"] --> B["Duplikate\nbereinigen?"]
+    B --> C["Hintergrund\nladen"]
+    C --> D["Heightmap\nladen"]
+    D --> E["Nodes\nbearbeiten"]
+    E --> F["Ctrl+S\nSpeichern"]
+```
+
 1. `Ctrl+O` → XML-Datei laden
 2. Falls Duplikate gefunden: **Bereinigen** im Dialog wählen (oder Abbrechen und Original-Datei sichern)
 3. Hintergrund laden (View → Hintergrund laden)
@@ -561,6 +616,15 @@ Auch über **Edit → Undo / Redo** im Menü verfügbar (mit Anzeige ob verfügb
 6. `Ctrl+S` → Speichern
 
 ### Route erstellen (mit Route-Tools)
+
+```mermaid
+flowchart LR
+    A["Route-Tool\naktivieren (4)"] --> B["Sub-Tool\nwählen"]
+    B --> C["Punkte\nklicken"]
+    C --> D["Slider\nanpassen"]
+    D --> E["Enter\n→ erstellen"]
+    E -->|Verkettung| C
+```
 
 1. **Route-Tool (4)** aktivieren
 2. Sub-Tool wählen: Gerade Strecke, Kurve oder Spline
@@ -588,6 +652,21 @@ Auch über **Edit → Undo / Redo** im Menü verfügbar (mit Anzeige ob verfügb
 1. **Shift+Drag** (Rechteck) oder **Alt+Drag** (Lasso) um viele Nodes zu selektieren
 2. Alternativ: `Ctrl+A` für alle Nodes
 3. Rechtsklick → Bulk-Operationen auf allen Verbindungen zwischen selektierten Nodes
+
+### Übersichtskarte generieren
+
+```mermaid
+flowchart LR
+    A["View → Übersichtskarte\ngenerieren..."] --> B["ZIP wählen\n(Map-Mod)"]
+    B --> C["Layer\nkonfigurieren"]
+    C --> D["Generieren"]
+    D --> E["Karte als\nHintergrund geladen"]
+```
+
+1. **View → Übersichtskarte generieren...** → ZIP-Datei der Map wählen
+2. Im Layer-Dialog die gewünschten Layer aktivieren (Hillshade, Farmlands, POIs, …)
+3. **Generieren** klicken
+4. Die erzeugte Übersichtskarte wird automatisch als Hintergrund geladen
 
 ### Marker setzen
 

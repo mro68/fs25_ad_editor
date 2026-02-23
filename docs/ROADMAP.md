@@ -95,6 +95,8 @@
   - [x] Crate `fs25_map_overview` mit GRLE/GDM-Decoder (vendor grleconvert)
   - [x] Weight-Map-Compositing, Hillshade, Farmland-Grenzen/-IDs, POI-Labels
   - [x] Editor-Integration: Menüeintrag → ZIP-Dialog → Background-Map
+  - [x] Konfigurierbare Layer-Optionen (Hillshade, Farmlands, IDs, POIs, Legende)
+  - [x] Persistent gespeicherte Standard-Layer in EditorOptions
 
 ## Phase 6: Performance & Qualität
 - [ ] Performance-Optimierung
