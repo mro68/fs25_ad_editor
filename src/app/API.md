@@ -98,6 +98,14 @@ pub struct UiState {
     pub marker_dialog: MarkerDialogState,
     pub status_message: Option<String>,
     pub dedup_dialog: DedupDialogState,
+    pub zip_browser: Option<ZipBrowserState>,
+}
+
+pub struct ZipBrowserState {
+    pub zip_path: String,
+    pub entries: Vec<ZipImageEntry>,
+    pub selected: Option<usize>,
+    pub filter_overview: bool,
 }
 
 pub struct MarkerDialogState {
@@ -663,6 +671,7 @@ Schnittstelle für alle Route-Tools (Linie, Kurve, …). Tools sind zustandsbeha
 - `is_ready() → bool` — Bereit zur Ausführung?
 
 **Optionale Methoden (Default-Implementierung):**
+- `has_pending_input() → bool` — Hat das Tool angefangene Eingaben? (für stufenweise Escape-Logik)
 - `set_direction(dir)` / `set_priority(prio)` — Editor-Defaults übernehmen
 - `set_snap_radius(radius)` — Snap-Radius für Node-Snapping setzen
 - `set_last_created(ids, road_map)` / `last_created_ids() → &[u64]` — Erstellte Node-IDs (für Verkettung, road_map dient zur End-Anchor-Ermittlung)
@@ -673,6 +682,7 @@ Schnittstelle für alle Route-Tools (Linie, Kurve, …). Tools sind zustandsbeha
 - `on_drag_start(pos, road_map, pick_radius) → bool` — Drag auf einen Punkt starten
 - `on_drag_update(pos)` — Position des gegriffenen Punkts aktualisieren
 - `on_drag_end(road_map)` — Drag beenden (Re-Snap bei Start/Ende)
+- `render_context_menu(response) → bool` — Kontextmenü im Viewport rendern (z.B. Tangenten-Auswahl)
 
 ---
 
@@ -701,9 +711,11 @@ Schnittstelle für alle Route-Tools (Linie, Kurve, …). Tools sind zustandsbeha
 ### Gemeinsame Tool-Infrastruktur (`tools/common/`)
 
 Aufgeteilt in vier Submodule (alle privat, Re-Exporte via `common/mod.rs`):
-- **`geometry.rs`** — `angle_to_compass`, `node_count_from_length`, `populate_neighbors`
+- **`geometry.rs`** — `angle_to_compass`, `node_count_from_length`, `populate_neighbors`, `linear_connections`, `tangent_options`
 - **`tangent.rs`** — `TangentSource`, `TangentState`, `render_tangent_combo`
 - **`lifecycle.rs`** — `ToolLifecycleState`, `SegmentConfig`, `LastEdited`, `render_segment_config_3modes`, `impl_lifecycle_delegation!`
+  - `save_created_ids(&mut self, ids: &[u64], road_map: &RoadMap)` — Speichert erstellte Node-IDs und ermittelt End-Anker aus der RoadMap
+  - `has_last_created() → bool` — Prüft ob letzte erstellte IDs vorhanden sind
   - `chaining_start_anchor() → Option<ToolAnchor>` — Gibt den End-Anker für die Verkettung zurück, wobei `NewPosition` zu `ExistingNode` hochgestuft wird (verhindert doppelte Nodes am Verkettungspunkt)
   - `prepare_for_chaining(&mut lifecycle, &mut seg, &last_anchors)` — Setzt den Lifecycle-State und die SegmentConfig für die nächste Verkettung zurück (DRY-Hilfsmethode, gemeinsam von allen RouteTools genutzt)
 - **`builder.rs`** — `assemble_tool_result`

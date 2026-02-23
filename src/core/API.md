@@ -88,8 +88,19 @@ pub struct BackgroundMap { /* intern */ }
 - `dimensions() -> (u32, u32)` — Bildgröße in Pixeln
 
 **Freie Funktionen (ZIP-Support):**
-- `list_images_in_zip(zip_path) -> Result<Vec<String>>` — Bilddateien (png/jpg/jpeg/dds) im ZIP auflisten
+- `list_images_in_zip(zip_path) -> Result<Vec<ZipImageEntry>>` — Bilddateien (png/jpg/jpeg/dds) im ZIP auflisten
 - `load_from_zip(zip_path, entry_name, crop_size) -> Result<BackgroundMap>` — Bild aus ZIP in-memory extrahieren und als BackgroundMap laden
+
+### `ZipImageEntry`
+
+Beschreibt eine Bilddatei innerhalb eines ZIP-Archivs.
+
+```rust
+pub struct ZipImageEntry {
+    pub name: String,  // Dateiname im Archiv (inkl. Pfad)
+    pub size: u64,     // Unkomprimierte Dateigröße in Bytes
+}
+```
 
 ---
 

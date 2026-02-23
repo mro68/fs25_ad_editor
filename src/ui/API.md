@@ -20,7 +20,12 @@ Das `ui`-Modul enthält egui-UI-Komponenten (Menüs, Statusbar, Input-Handling, 
   - `keyboard.rs` — Tastatur-Shortcuts (Delete, Escape, Ctrl+A) [Peer-Modul]
   - `drag.rs` — Drag-Selektion-Overlay und DragSelection-Typen [Peer-Modul]
   - `context_menu.rs` — Rechtsklick-Kontextmenü [Peer-Modul]
-- `dialogs.rs` — Datei-Dialoge und modale Fenster
+- `dialogs/` — Datei-Dialoge und modale Fenster
+  - `file_dialogs.rs` — Open/Save-Dateidialoge
+  - `heightmap_warning.rs` — Heightmap-Warnung vor dem Speichern
+  - `marker_dialog.rs` — Marker erstellen/bearbeiten
+  - `dedup_dialog.rs` — Duplikat-Bestätigungsdialog
+  - `zip_browser.rs` — ZIP-Browser für Background-Map-Auswahl
 
 ## Funktionen
 

@@ -122,6 +122,7 @@
   - [ ] Keyboard-Shortcuts-Übersicht
   - [x] Architektur-Analyse und API.md-Nachführung (2026-02-20)
   - [x] Handler-Split und Architektur-Guardrails dokumentiert (2025-07-02)
+  - [x] DRY-Refactoring und RouteTool-Trait-Extraktion (2025-07-11)
 - [ ] Packaging
   - [ ] Windows Binaries (.exe)
   - [ ] Linux Binaries (AppImage)
