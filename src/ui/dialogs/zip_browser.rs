@@ -53,7 +53,9 @@ pub fn show_zip_browser(ctx: &egui::Context, ui_state: &mut UiState) -> Vec<AppI
                 .entries
                 .iter()
                 .enumerate()
-                .filter(|(_, e)| !browser.filter_overview || e.name.to_lowercase().contains("overview"))
+                .filter(|(_, e)| {
+                    !browser.filter_overview || e.name.to_lowercase().contains("overview")
+                })
                 .collect();
 
             ui.label(egui::RichText::new(format!("{} Bilddateien:", filtered.len())).strong());

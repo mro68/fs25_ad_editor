@@ -43,18 +43,17 @@ pub fn composite_terrain(layers: &[WeightLayer], target_size: u32) -> Result<Rgb
         let color_b = color[2] as f64;
 
         // Weight-Map auf Zielgröße skalieren falls nötig
-        let weights = if layer.weights.width() != target_size
-            || layer.weights.height() != target_size
-        {
-            image::imageops::resize(
-                &layer.weights,
-                target_size,
-                target_size,
-                image::imageops::FilterType::Lanczos3,
-            )
-        } else {
-            layer.weights.clone()
-        };
+        let weights =
+            if layer.weights.width() != target_size || layer.weights.height() != target_size {
+                image::imageops::resize(
+                    &layer.weights,
+                    target_size,
+                    target_size,
+                    image::imageops::FilterType::Lanczos3,
+                )
+            } else {
+                layer.weights.clone()
+            };
 
         for (i, &w_byte) in weights.as_raw().iter().enumerate() {
             let w = w_byte as f64 / 255.0;
@@ -75,7 +74,11 @@ pub fn composite_terrain(layers: &[WeightLayer], target_size: u32) -> Result<Rgb
                 result_b[i] / total_weight[i],
             )
         } else {
-            (BACKGROUND_COLOR[0], BACKGROUND_COLOR[1], BACKGROUND_COLOR[2])
+            (
+                BACKGROUND_COLOR[0],
+                BACKGROUND_COLOR[1],
+                BACKGROUND_COLOR[2],
+            )
         };
         rgb_data[i * 3] = r.clamp(0.0, 255.0) as u8;
         rgb_data[i * 3 + 1] = g.clamp(0.0, 255.0) as u8;
