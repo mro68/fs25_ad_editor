@@ -82,3 +82,8 @@ pub fn open_overview_options_dialog(state: &mut AppState, zip_path: String) {
 pub fn close_overview_options_dialog(state: &mut AppState) {
     state.ui.overview_options_dialog.visible = false;
 }
+
+/// Schließt den Post-Load-Dialog (Heightmap/ZIP-Erkennung).
+pub fn dismiss_post_load_dialog(state: &mut AppState) {
+    state.ui.post_load_dialog = Default::default();
+}

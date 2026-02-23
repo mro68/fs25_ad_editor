@@ -206,4 +206,8 @@ pub enum AppIntent {
     OverviewOptionsConfirmed,
     /// Übersichtskarten-Options-Dialog abgebrochen
     OverviewOptionsCancelled,
+    /// Post-Load-Dialog: Übersichtskarte generieren (ZIP-Pfad ausgewählt)
+    PostLoadGenerateOverview { zip_path: String },
+    /// Post-Load-Dialog: geschlossen ohne Aktion
+    PostLoadDialogDismissed,
 }

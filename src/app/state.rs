@@ -8,6 +8,7 @@ use crate::core::Camera2D;
 use crate::core::{BackgroundMap, ConnectionDirection, ConnectionPriority, RoadMap};
 use crate::shared::{EditorOptions, OverviewLayerOptions, RenderQuality};
 use std::collections::HashSet;
+use std::path::PathBuf;
 use std::sync::Arc;
 
 /// Aktives Editor-Werkzeug
@@ -157,6 +158,37 @@ impl OverviewOptionsDialogState {
     }
 }
 
+/// Zustand des Post-Load-Dialogs (automatische Erkennung nach XML-Laden).
+#[derive(Default)]
+pub struct PostLoadDialogState {
+    /// Ob der Dialog sichtbar ist
+    pub visible: bool,
+    /// Heightmap wurde automatisch gesetzt
+    pub heightmap_set: bool,
+    /// Pfad zur automatisch gesetzten Heightmap
+    pub heightmap_path: Option<String>,
+    /// Gefundene passende ZIP-Dateien im Mods-Verzeichnis
+    pub matching_zips: Vec<PathBuf>,
+    /// Index des vom User ausgewählten ZIPs (Default: 0)
+    pub selected_zip_index: usize,
+    /// Map-Name zur Anzeige im Dialog
+    pub map_name: String,
+}
+
+impl PostLoadDialogState {
+    /// Erstellt einen geschlossenen Post-Load-Dialog-Zustand.
+    pub fn new() -> Self {
+        Self {
+            visible: false,
+            heightmap_set: false,
+            heightmap_path: None,
+            matching_zips: Vec::new(),
+            selected_zip_index: 0,
+            map_name: String::new(),
+        }
+    }
+}
+
 /// UI-bezogener Anwendungszustand
 #[derive(Default)]
 pub struct UiState {
@@ -190,6 +222,8 @@ pub struct UiState {
     pub zip_browser: Option<ZipBrowserState>,
     /// Übersichtskarten-Optionen-Dialog
     pub overview_options_dialog: OverviewOptionsDialogState,
+    /// Post-Load-Dialog (Heightmap/ZIP-Erkennung)
+    pub post_load_dialog: PostLoadDialogState,
 }
 
 /// Zustand des ZIP-Browser-Dialogs.
@@ -224,6 +258,7 @@ impl UiState {
             dedup_dialog: DedupDialogState::new(),
             zip_browser: None,
             overview_options_dialog: OverviewOptionsDialogState::new(),
+            post_load_dialog: PostLoadDialogState::new(),
         }
     }
 }

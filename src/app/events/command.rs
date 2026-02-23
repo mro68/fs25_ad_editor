@@ -208,4 +208,6 @@ pub enum AppCommand {
     GenerateOverviewWithOptions,
     /// Übersichtskarten-Options-Dialog schließen
     CloseOverviewOptionsDialog,
+    /// Post-Load-Dialog schließen
+    DismissPostLoadDialog,
 }

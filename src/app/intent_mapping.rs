@@ -258,5 +258,12 @@ pub fn map_intent_to_commands(state: &AppState, intent: AppIntent) -> Vec<AppCom
         }
         AppIntent::OverviewOptionsConfirmed => vec![AppCommand::GenerateOverviewWithOptions],
         AppIntent::OverviewOptionsCancelled => vec![AppCommand::CloseOverviewOptionsDialog],
+        AppIntent::PostLoadGenerateOverview { zip_path } => {
+            vec![
+                AppCommand::DismissPostLoadDialog,
+                AppCommand::OpenOverviewOptionsDialog { path: zip_path },
+            ]
+        }
+        AppIntent::PostLoadDialogDismissed => vec![AppCommand::DismissPostLoadDialog],
     }
 }

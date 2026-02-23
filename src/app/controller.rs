@@ -225,9 +225,7 @@ impl AppController {
             AppCommand::CloseZipBrowser => handlers::dialog::close_zip_browser(state),
 
             // === Overview-Map ===
-            AppCommand::RequestOverviewDialog => {
-                handlers::dialog::request_overview_dialog(state)
-            }
+            AppCommand::RequestOverviewDialog => handlers::dialog::request_overview_dialog(state),
             AppCommand::OpenOverviewOptionsDialog { path } => {
                 handlers::dialog::open_overview_options_dialog(state, path)
             }
@@ -237,6 +235,9 @@ impl AppController {
             AppCommand::CloseOverviewOptionsDialog => {
                 handlers::dialog::close_overview_options_dialog(state)
             }
+
+            // === Post-Load-Dialog ===
+            AppCommand::DismissPostLoadDialog => handlers::dialog::dismiss_post_load_dialog(state),
         }
 
         state.command_log.record(&executed_command);

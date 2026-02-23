@@ -159,6 +159,7 @@ impl EditorApp {
             ctx,
             &mut self.state.ui.overview_options_dialog,
         ));
+        events.extend(ui::show_post_load_dialog(ctx, &mut self.state.ui));
         events.extend(ui::show_options_dialog(
             ctx,
             self.state.show_options_dialog,
