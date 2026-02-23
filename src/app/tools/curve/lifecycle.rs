@@ -46,7 +46,7 @@ impl RouteTool for CurveTool {
                     let has1 = self.control_point1.is_some();
                     let has2 = self.control_point2.is_some();
                     if has1 && has2 {
-                        "Punkte per Drag anpassen — Enter bestätigt"
+                        "Scheitelpunkt (Mitte) per Drag anpassen — Enter bestätigt"
                     } else if has1 {
                         "2. Steuerpunkt klicken"
                     } else {
@@ -75,7 +75,13 @@ impl RouteTool for CurveTool {
                     self.end = Some(end_anchor);
                     self.tangents.reset_tangents();
                     self.phase = Phase::Control;
+                    // Auto-Tangente + beide CPs + Apex initialisieren
+                    if self.degree == CurveDegree::Cubic {
+                        self.auto_suggest_start_tangent();
+                    }
                     self.apply_tangent_to_cp();
+                    self.set_default_cp2_if_missing();
+                    self.init_apex();
                     ToolAction::Continue
                 } else {
                     let start_anchor = snap_to_node(pos, road_map, self.lifecycle.snap_radius);
@@ -92,7 +98,13 @@ impl RouteTool for CurveTool {
                 self.tangents.tangent_end = super::super::common::TangentSource::None;
                 self.end = Some(end_anchor);
                 self.phase = Phase::Control;
+                // Auto-Tangente + beide CPs + Apex initialisieren
+                if self.degree == CurveDegree::Cubic {
+                    self.auto_suggest_start_tangent();
+                }
                 self.apply_tangent_to_cp();
+                self.set_default_cp2_if_missing();
+                self.init_apex();
                 ToolAction::Continue
             }
             Phase::Control => {
@@ -113,6 +125,7 @@ impl RouteTool for CurveTool {
                     }
                 }
                 self.sync_derived();
+                self.init_apex();
                 ToolAction::UpdatePreview
             }
         }
@@ -165,6 +178,11 @@ impl RouteTool for CurveTool {
                 if self.degree == CurveDegree::Cubic {
                     let cp2 = self.control_point2.unwrap_or(cursor_pos);
                     nodes.push(cp2);
+                    // Virtueller Scheitelpunkt B(0.5) als draggbares Handle
+                    let apex = self
+                        .virtual_apex
+                        .unwrap_or_else(|| cubic_bezier(start_pos, cp1, cp2, end_pos, 0.5));
+                    nodes.push(apex);
                 }
 
                 ToolPreview { nodes, connections }
@@ -196,6 +214,7 @@ impl RouteTool for CurveTool {
         self.end = None;
         self.control_point1 = None;
         self.control_point2 = None;
+        self.virtual_apex = None;
         self.phase = Phase::Start;
         self.tangents.reset_all();
     }

@@ -1,7 +1,9 @@
 //! Drag-Logik für das Bézier-Kurven-Tool.
 
 use super::super::{snap_to_node, ToolAnchor};
+use super::geometry::{cp1_from_apex, cp2_from_apex, cps_from_apex_symmetric};
 use super::state::{CurveDegree, CurveTool, DragTarget, Phase};
+use crate::app::tools::common::TangentSource;
 use crate::core::RoadMap;
 use glam::Vec2;
 
@@ -10,7 +12,7 @@ pub(crate) fn drag_targets(tool: &CurveTool) -> Vec<Vec2> {
     if tool.phase != Phase::Control || !tool.controls_complete() {
         return vec![];
     }
-    let mut targets = Vec::with_capacity(4);
+    let mut targets = Vec::with_capacity(5);
     if let Some(a) = &tool.start {
         targets.push(a.position());
     }
@@ -23,6 +25,10 @@ pub(crate) fn drag_targets(tool: &CurveTool) -> Vec<Vec2> {
     if tool.degree == CurveDegree::Cubic {
         if let Some(cp) = tool.control_point2 {
             targets.push(cp);
+        }
+        // Virtueller Scheitelpunkt B(0.5) als zusätzliches Handle
+        if let Some(apex) = tool.virtual_apex {
+            targets.push(apex);
         }
     }
     targets
@@ -56,6 +62,12 @@ pub(crate) fn on_drag_start(
     }
 
     candidates.sort_by(|a, b| a.1.partial_cmp(&b.1).unwrap_or(std::cmp::Ordering::Equal));
+    if tool.degree == CurveDegree::Cubic {
+        if let Some(apex) = tool.virtual_apex {
+            candidates.push((DragTarget::Apex, apex.distance(pos)));
+        }
+    }
+    candidates.sort_by(|a, b| a.1.partial_cmp(&b.1).unwrap_or(std::cmp::Ordering::Equal));
     if let Some((target, dist)) = candidates.first() {
         if *dist <= pick_radius {
             tool.dragging = Some(*target);
@@ -79,6 +91,36 @@ pub(crate) fn on_drag_update(tool: &mut CurveTool, pos: Vec2) {
         }
         Some(DragTarget::CP2) => {
             tool.control_point2 = Some(pos);
+        }
+        Some(DragTarget::Apex) => {
+            // Steuerpunkte so anpassen, dass B(0.5) dem Apex folgt.
+            // Hat Start-Tangente: CP1 ist fixiert → nur CP2 anpassen.
+            // Hat End-Tangente: CP2 ist fixiert → nur CP1 anpassen.
+            // Sonst: beide CPs symmetrisch aus Apex berechnen.
+            if let (Some(start), Some(end)) = (tool.start, tool.end) {
+                let p0 = start.position();
+                let p3 = end.position();
+                let has_start_t = matches!(
+                    tool.tangents.tangent_start,
+                    TangentSource::Connection { .. }
+                );
+                let has_end_t =
+                    matches!(tool.tangents.tangent_end, TangentSource::Connection { .. });
+                if has_start_t {
+                    if let Some(cp1) = tool.control_point1 {
+                        tool.control_point2 = Some(cp2_from_apex(p0, cp1, pos, p3));
+                    }
+                } else if has_end_t {
+                    if let Some(cp2) = tool.control_point2 {
+                        tool.control_point1 = Some(cp1_from_apex(p0, pos, cp2, p3));
+                    }
+                } else {
+                    let (c1, c2) = cps_from_apex_symmetric(p0, p3, pos);
+                    tool.control_point1 = Some(c1);
+                    tool.control_point2 = Some(c2);
+                }
+                tool.virtual_apex = Some(pos);
+            }
         }
         None => {}
     }
@@ -106,7 +148,8 @@ pub(crate) fn on_drag_end(tool: &mut CurveTool, road_map: &RoadMap) {
                 ));
             }
         }
-        _ => {}
+        // Apex und CPs benötigen keinen Re-Snap
+        Some(DragTarget::CP1) | Some(DragTarget::CP2) | Some(DragTarget::Apex) | None => {}
     }
     tool.dragging = None;
 }
