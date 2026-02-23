@@ -101,7 +101,9 @@ pub fn browse_zip_background(state: &mut AppState, path: String) -> Result<()> {
     }
 
     // Mehrere Bilder: Browser-Dialog öffnen
-    let has_overview = entries.iter().any(|e| e.name.to_lowercase().contains("overview"));
+    let has_overview = entries
+        .iter()
+        .any(|e| e.name.to_lowercase().contains("overview"));
     state.ui.zip_browser = Some(ZipBrowserState {
         zip_path: path,
         entries,

@@ -315,10 +315,7 @@ pub fn show_zip_browser(ctx: &egui::Context, ui_state: &mut UiState) -> Vec<AppI
             ui.horizontal(|ui| {
                 ui.checkbox(&mut browser.filter_overview, "Nur Overview-Dateien");
                 if browser.filter_overview {
-                    ui.label(
-                        egui::RichText::new(format!("({overview_count} Treffer)"))
-                            .weak(),
-                    );
+                    ui.label(egui::RichText::new(format!("({overview_count} Treffer)")).weak());
                 }
             });
             // Selektion zurücksetzen wenn Filter geändert
@@ -337,10 +334,7 @@ pub fn show_zip_browser(ctx: &egui::Context, ui_state: &mut UiState) -> Vec<AppI
                 })
                 .collect();
 
-            ui.label(
-                egui::RichText::new(format!("{} Bilddateien:", filtered.len()))
-                    .strong(),
-            );
+            ui.label(egui::RichText::new(format!("{} Bilddateien:", filtered.len())).strong());
             ui.add_space(4.0);
 
             egui::ScrollArea::vertical()
