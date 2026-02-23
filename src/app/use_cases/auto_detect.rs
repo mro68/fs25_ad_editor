@@ -112,12 +112,23 @@ fn name_to_pattern(variant: &str) -> String {
     pattern
 }
 
+/// Kürzt den Map-Namen auf die ersten zwei Wörter (getrennt durch `_` oder Leerzeichen).
+///
+/// Beispiel: `"Sickinger_Hoehe_Rheinland_Pfalz"` → `"Sickinger_Hoehe"`
+fn truncate_to_two_words(name: &str) -> String {
+    let parts: Vec<&str> = name.split(|c| c == '_' || c == ' ').collect();
+    let count = parts.len().min(2);
+    parts[..count].join("_")
+}
+
 /// Sucht im Mods-Verzeichnis nach ZIP-Dateien, die zum Map-Namen passen.
 ///
+/// Verwendet nur die ersten zwei Wörter des Map-Namens für die Suche.
 /// Matching: case-insensitive, Spaces/Underscores als Wildcard,
 /// bidirektionale Umlaut-Expansion (ä↔ae, ö↔oe, ü↔ue, ß↔ss).
 fn find_matching_zips(mods_dir: &Path, map_name: &str) -> Vec<PathBuf> {
-    let variants = expand_umlaut_variants(map_name);
+    let short_name = truncate_to_two_words(map_name);
+    let variants = expand_umlaut_variants(&short_name);
     let patterns: Vec<String> = variants.iter().map(|v| name_to_pattern(v)).collect();
 
     // Regex-Patterns kompilieren (case-insensitive)
@@ -195,6 +206,17 @@ mod tests {
     }
 
     #[test]
+    fn test_truncate_to_two_words() {
+        assert_eq!(
+            truncate_to_two_words("Sickinger_Hoehe_Rheinland_Pfalz"),
+            "Sickinger_Hoehe"
+        );
+        assert_eq!(truncate_to_two_words("Big Farm West"), "Big_Farm");
+        assert_eq!(truncate_to_two_words("SingleWord"), "SingleWord");
+        assert_eq!(truncate_to_two_words("Two_Words"), "Two_Words");
+    }
+
+    #[test]
     fn test_find_matching_zips() {
         let tmp = std::env::temp_dir().join("test_auto_detect_zips");
         let _ = fs::remove_dir_all(&tmp);
@@ -206,6 +228,7 @@ mod tests {
         fs::write(tmp.join("FS25_Big_Farm.zip"), b"").unwrap();
         fs::write(tmp.join("FS25_Unrelated.zip"), b"").unwrap();
         fs::write(tmp.join("readme.txt"), b"").unwrap();
+        fs::write(tmp.join("FS25_Sickinger_Hoehe_v3.zip"), b"").unwrap();
 
         // Test: "Höflingen" soll beide Höflingen-ZIPs finden
         let results = find_matching_zips(&tmp, "Höflingen");
@@ -238,6 +261,16 @@ mod tests {
                 .any(|p| p.file_name().unwrap().to_str().unwrap() == "FS25_Big_Farm.zip"),
             "Soll FS25_Big_Farm.zip finden, got: {:?}",
             results2
+        );
+
+        // Test: Langer Name → nur erste 2 Wörter für Suche
+        let results3 = find_matching_zips(&tmp, "Sickinger_Hoehe_Rheinland_Pfalz");
+        assert!(
+            results3
+                .iter()
+                .any(|p| p.file_name().unwrap().to_str().unwrap() == "FS25_Sickinger_Hoehe_v3.zip"),
+            "Soll FS25_Sickinger_Hoehe_v3.zip finden, got: {:?}",
+            results3
         );
 
         let _ = fs::remove_dir_all(&tmp);

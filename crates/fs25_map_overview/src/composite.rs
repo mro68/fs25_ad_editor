@@ -381,7 +381,7 @@ pub fn draw_pois_with_labels(image: &mut RgbImage, pois: &[Poi]) {
 
 /// Legende-Einträge: (Farbe, Beschreibung).
 const LEGEND_ITEMS: &[([u8; 3], &str)] = &[
-    ([100, 100, 105], "Asphalt / Strasse"),
+    ([100, 100, 105], "Asphalt / Straße"),
     ([165, 165, 160], "Beton / Zement"),
     ([90, 150, 60], "Grasland"),
     ([50, 110, 45], "Wald"),
@@ -465,7 +465,7 @@ pub fn draw_legend(image: &mut RgbImage, options: &OverviewOptions) {
             image,
             lx + padding + swatch_size as i32 + 8,
             yo + 2,
-            "Gebaeude / POI",
+            "Gebäude / POI",
             Rgb([255, 255, 255]),
             scale,
         );

@@ -19,5 +19,8 @@ quick-xml = "0.39.2"
 # Error Handling
 anyhow = "1.0"
 
+# TTF-Font-Rendering
+ab_glyph = "0.2"
+
 # Logging
 log = "0.4"
