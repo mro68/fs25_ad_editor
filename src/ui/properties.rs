@@ -6,6 +6,7 @@ use crate::app::{
 };
 
 /// Rendert das Properties-Panel und gibt erzeugte Events zurück.
+#[allow(clippy::too_many_arguments)]
 pub fn render_properties_panel(
     ctx: &egui::Context,
     road_map: Option<&RoadMap>,
