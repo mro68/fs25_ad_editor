@@ -257,3 +257,27 @@ impl SegmentConfig {
         changed
     }
 }
+
+/// Rendert die 3-Modus-Segment-Konfiguration (adjusting / live / default).
+///
+/// Gemeinsames Pattern aller Route-Tools. Gibt `(changed, recreate_needed)` zurück.
+/// - `adjusting`: Nachbearbeitungs-Modus (Segment wurde bereits platziert)
+/// - `ready`: Tool ist bereit zur Ausführung
+/// - `length`: Aktuelle Streckenlänge (irrelevant für Default-Modus)
+/// - `label`: Anzeige-Label für die Länge (z.B. "Kurvenlänge", "Spline-Länge")
+pub fn render_segment_config_3modes(
+    seg: &mut SegmentConfig,
+    ui: &mut egui::Ui,
+    adjusting: bool,
+    ready: bool,
+    length: f32,
+    label: &str,
+) -> (bool, bool) {
+    if adjusting {
+        seg.render_adjusting(ui, length, label)
+    } else if ready {
+        (seg.render_live(ui, length, label), false)
+    } else {
+        (seg.render_default(ui), false)
+    }
+}
