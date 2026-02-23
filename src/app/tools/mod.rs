@@ -94,7 +94,7 @@ pub trait RouteTool {
 
     /// Speichert die IDs der zuletzt erstellten Nodes (für nachträgliche Anpassung).
     /// `road_map` erlaubt tools, Nachbar-Informationen für Feintuning zu cachen.
-    fn set_last_created(&mut self, _ids: Vec<u64>, _road_map: &RoadMap) {}
+    fn set_last_created(&mut self, _ids: &[u64], _road_map: &RoadMap) {}
 
     /// Gibt die IDs der zuletzt erstellten Nodes zurück.
     fn last_created_ids(&self) -> &[u64] {
@@ -154,7 +154,7 @@ pub trait RouteTool {
     ///
     /// Wird nach `execute()` aufgerufen um das Segment in der Registry zu speichern.
     /// Gibt `None` zurück wenn das Tool keine Registry-Einträge unterstützt.
-    fn make_segment_record(&self, _id: u64, _node_ids: Vec<u64>) -> Option<SegmentRecord> {
+    fn make_segment_record(&self, _id: u64, _node_ids: &[u64]) -> Option<SegmentRecord> {
         None
     }
 

@@ -76,7 +76,7 @@ fn test_chaining_uses_last_end_as_start() {
     road_map.add_node(MapNode::new(102, Vec2::new(12.0, 0.0), NodeFlag::Regular));
     road_map.ensure_spatial_index();
 
-    tool.set_last_created(vec![100, 101, 102], &road_map);
+    tool.set_last_created(&[100, 101, 102], &road_map);
     tool.reset();
 
     let action = tool.on_click(Vec2::new(24.0, 0.0), &road_map, false);
@@ -104,7 +104,7 @@ fn test_chaining_no_duplicate_node_at_junction() {
     road_map.add_node(MapNode::new(1, Vec2::ZERO, NodeFlag::Regular));
     road_map.add_node(MapNode::new(2, Vec2::new(10.0, 0.0), NodeFlag::Regular));
     road_map.ensure_spatial_index();
-    tool.set_last_created(vec![1, 2], &road_map);
+    tool.set_last_created(&[1, 2], &road_map);
     tool.reset();
 
     // Linie 2 verkettet: Start = Node 2, Ende = (20, 0)
@@ -133,7 +133,7 @@ fn test_last_created_ids_preserved_after_reset() {
     tool.on_click(Vec2::ZERO, &road_map, false);
     tool.on_click(Vec2::new(10.0, 0.0), &road_map, false);
 
-    tool.set_last_created(vec![1, 2, 3], &road_map);
+    tool.set_last_created(&[1, 2, 3], &road_map);
     tool.reset();
 
     assert_eq!(tool.last_created_ids(), &[1, 2, 3]);
@@ -148,7 +148,7 @@ fn test_execute_from_anchors() {
 
     tool.on_click(Vec2::ZERO, &road_map, false);
     tool.on_click(Vec2::new(10.0, 0.0), &road_map, false);
-    tool.set_last_created(vec![1, 2, 3], &road_map);
+    tool.set_last_created(&[1, 2, 3], &road_map);
     tool.reset();
 
     tool.seg.max_segment_length = 10.0;

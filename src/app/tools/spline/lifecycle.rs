@@ -119,7 +119,7 @@ impl RouteTool for SplineTool {
 
     crate::impl_lifecycle_delegation!();
 
-    fn set_last_created(&mut self, ids: Vec<u64>, road_map: &RoadMap) {
+    fn set_last_created(&mut self, ids: &[u64], road_map: &RoadMap) {
         // Nur bei Erst-Erstellung Anker übernehmen; bei Recreate bleiben last_anchors erhalten
         if !self.anchors.is_empty() {
             self.last_anchors = self.anchors.clone();
@@ -140,7 +140,8 @@ impl RouteTool for SplineTool {
             self.tangents.end_neighbors = populate_neighbors(last, road_map);
         }
         self.tangents.save_for_recreate();
-        self.lifecycle.last_created_ids = ids;
+        self.lifecycle.last_created_ids.clear();
+        self.lifecycle.last_created_ids.extend_from_slice(ids);
         self.lifecycle.recreate_needed = false;
     }
 
@@ -158,7 +159,7 @@ impl RouteTool for SplineTool {
         )
     }
 
-    fn make_segment_record(&self, id: u64, node_ids: Vec<u64>) -> Option<SegmentRecord> {
+    fn make_segment_record(&self, id: u64, node_ids: &[u64]) -> Option<SegmentRecord> {
         if self.last_anchors.len() < 2 {
             return None;
         }
@@ -166,7 +167,7 @@ impl RouteTool for SplineTool {
         let end = *self.last_anchors.last()?;
         Some(SegmentRecord {
             id,
-            node_ids,
+            node_ids: node_ids.to_vec(),
             start_anchor: start,
             end_anchor: end,
             kind: SegmentKind::Spline {

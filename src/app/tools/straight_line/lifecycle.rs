@@ -110,7 +110,7 @@ impl RouteTool for StraightLineTool {
 
     crate::impl_lifecycle_delegation!();
 
-    fn set_last_created(&mut self, ids: Vec<u64>, _road_map: &RoadMap) {
+    fn set_last_created(&mut self, ids: &[u64], _road_map: &RoadMap) {
         // Anker nur überschreiben wenn aktuelle start/end gesetzt sind.
         // Beim Recreate sind start/end None — Anker bleiben erhalten.
         if self.start.is_some() {
@@ -119,7 +119,8 @@ impl RouteTool for StraightLineTool {
         if self.end.is_some() {
             self.lifecycle.last_end_anchor = self.end;
         }
-        self.lifecycle.last_created_ids = ids;
+        self.lifecycle.last_created_ids.clear();
+        self.lifecycle.last_created_ids.extend_from_slice(ids);
         self.lifecycle.recreate_needed = false;
     }
 
@@ -136,12 +137,12 @@ impl RouteTool for StraightLineTool {
         )
     }
 
-    fn make_segment_record(&self, id: u64, node_ids: Vec<u64>) -> Option<SegmentRecord> {
+    fn make_segment_record(&self, id: u64, node_ids: &[u64]) -> Option<SegmentRecord> {
         let start = self.last_start_anchor?;
         let end = self.lifecycle.last_end_anchor?;
         Some(SegmentRecord {
             id,
-            node_ids,
+            node_ids: node_ids.to_vec(),
             start_anchor: start,
             end_anchor: end,
             kind: SegmentKind::Straight {

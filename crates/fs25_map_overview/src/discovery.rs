@@ -225,19 +225,28 @@ fn find_data_dir(files: &HashMap<String, Vec<u8>>, config_dir: &str, mod_root: &
 }
 
 /// Findet eine Datei im ZIP (case-insensitive für den Basename).
+///
+/// Bei mehreren Treffern wird der kürzeste Pfad bevorzugt (nächste an Root-Ebene),
+/// da z.B. `placeables/productions/modDesc.xml` nicht die Haupt-modDesc.xml ist.
 fn find_file<'a>(
     files: &'a HashMap<String, Vec<u8>>,
     target_basename: &str,
 ) -> Option<(String, &'a [u8])> {
     let target_lower = target_basename.to_ascii_lowercase();
+    let mut best: Option<(String, &'a [u8])> = None;
     for (path, content) in files {
         if let Some(name) = Path::new(path).file_name() {
             if name.to_string_lossy().to_ascii_lowercase() == target_lower {
-                return Some((path.clone(), content.as_slice()));
+                let dominated = best
+                    .as_ref()
+                    .is_some_and(|(prev, _)| path.len() < prev.len());
+                if best.is_none() || dominated {
+                    best = Some((path.clone(), content.as_slice()));
+                }
             }
         }
     }
-    None
+    best
 }
 
 /// Überprüft ob Dateien mit einem bestimmten Verzeichnis-Prefix existieren.

@@ -509,7 +509,7 @@ Properties-Panel (Button "Bearbeiten")
 
 ```rust
 // Wird nach execute() + apply_tool_result() aufgerufen:
-fn make_segment_record(&self, id: u64, node_ids: Vec<u64>) -> Option<SegmentRecord>;
+fn make_segment_record(&self, id: u64, node_ids: &[u64]) -> Option<SegmentRecord>;
 
 // Wird in edit_segment() aufgerufen um das Tool wiederherzustellen:
 fn load_for_edit(&mut self, record: &SegmentRecord, kind: &SegmentKind);

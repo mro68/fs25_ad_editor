@@ -229,7 +229,7 @@ impl RouteTool for CurveTool {
 
     crate::impl_lifecycle_delegation!();
 
-    fn set_last_created(&mut self, ids: Vec<u64>, _road_map: &RoadMap) {
+    fn set_last_created(&mut self, ids: &[u64], _road_map: &RoadMap) {
         if self.start.is_some() {
             self.last_start_anchor = self.start;
         }
@@ -243,7 +243,8 @@ impl RouteTool for CurveTool {
             self.last_control_point2 = self.control_point2;
         }
         self.tangents.save_for_recreate();
-        self.lifecycle.last_created_ids = ids;
+        self.lifecycle.last_created_ids.clear();
+        self.lifecycle.last_created_ids.extend_from_slice(ids);
         self.lifecycle.recreate_needed = false;
     }
 
@@ -281,7 +282,7 @@ impl RouteTool for CurveTool {
         self.render_tangent_context_menu(response)
     }
 
-    fn make_segment_record(&self, id: u64, node_ids: Vec<u64>) -> Option<SegmentRecord> {
+    fn make_segment_record(&self, id: u64, node_ids: &[u64]) -> Option<SegmentRecord> {
         let start = self.last_start_anchor?;
         let end = self.lifecycle.last_end_anchor?;
         let cp1 = self.last_control_point1?;
@@ -307,7 +308,7 @@ impl RouteTool for CurveTool {
         };
         Some(SegmentRecord {
             id,
-            node_ids,
+            node_ids: node_ids.to_vec(),
             start_anchor: start,
             end_anchor: end,
             kind,
