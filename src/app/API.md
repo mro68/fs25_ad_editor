@@ -684,8 +684,9 @@ Schnittstelle für alle Route-Tools (Linie, Kurve, …). Tools sind zustandsbeha
 Aufgeteilt in vier Submodule (alle privat, Re-Exporte via `common/mod.rs`):
 - **`geometry.rs`** — `angle_to_compass`, `node_count_from_length`, `populate_neighbors`
 - **`tangent.rs`** — `TangentSource`, `TangentState`, `render_tangent_combo`
-- **`lifecycle.rs`** — `ToolLifecycleState`, `SegmentConfig`, `LastEdited`
+- **`lifecycle.rs`** — `ToolLifecycleState`, `SegmentConfig`, `LastEdited`, `render_segment_config_3modes`, `impl_lifecycle_delegation!`
   - `chaining_start_anchor() → Option<ToolAnchor>` — Gibt den End-Anker für die Verkettung zurück, wobei `NewPosition` zu `ExistingNode` hochgestuft wird (verhindert doppelte Nodes am Verkettungspunkt)
+  - `prepare_for_chaining(&mut lifecycle, &mut seg, &last_anchors)` — Setzt den Lifecycle-State und die SegmentConfig für die nächste Verkettung zurück (DRY-Hilfsmethode, gemeinsam von allen RouteTools genutzt)
 - **`builder.rs`** — `assemble_tool_result`
 
 **`SegmentConfig`** — Gekapselte Konfiguration für Segment-Länge und Node-Anzahl, die alle Route-Tools gemeinsam nutzen:
@@ -693,9 +694,10 @@ Aufgeteilt in vier Submodule (alle privat, Re-Exporte via `common/mod.rs`):
 - `node_count: usize` — Gewünschte Anzahl Nodes (inkl. Start+End)
 - `last_edited: LastEdited` — Welcher Wert zuletzt geändert wurde (bestimmt Sync-Richtung)
 - `sync_from_length(length)` — Synchronisiert abhängigen Wert aus Streckenlänge
-- `render_adjusting(ui, length, label) → (changed, recreate)` — Slider im Nachbearbeitungsmodus
-- `render_live(ui, length, label) → changed` — Slider im Live-Modus
-- `render_default(ui) → changed` — Slider im Default-Modus
+
+**`render_segment_config_3modes(seg, ui, adjusting, ready, length, label) → (changed, recreate)`** — Gemeinsame Hilfsfunktion für die 3 SegmentConfig-Darstellungsmodi (Adjusting/Live/Default). Wird von allen Route-Tools in `render_config()` genutzt statt direkter Aufrufe auf `SegmentConfig`.
+
+**`impl_lifecycle_delegation!`** — Makro zur Delegation der Standard-RouteTool-Lifecycle-Methoden (`on_deactivate`, `chaining_start_anchor`, `is_adjusting`, `segment_config_mut`) an die gemeinsamen `ToolLifecycleState`/`SegmentConfig`-Felder. Eliminiert ~20 Zeilen Boilerplate pro Tool.
 
 **`TangentSource`** — Tangenten-Quelle am Start-/Endpunkt (für Curve + Spline):
 - `None` — Kein Tangenten-Vorschlag

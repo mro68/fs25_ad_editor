@@ -162,7 +162,7 @@ impl SegmentConfig {
     /// Rendert die Segment-Slider im Nachbearbeitungs-Modus (mit recreate-Flag).
     ///
     /// Gibt `(changed, recreate_needed)` zurück.
-    pub fn render_adjusting(
+    fn render_adjusting(
         &mut self,
         ui: &mut egui::Ui,
         length: f32,
@@ -206,7 +206,7 @@ impl SegmentConfig {
     /// Rendert die Segment-Slider im Live-Modus (Tool ist bereit, aber noch nicht ausgeführt).
     ///
     /// Gibt `true` zurück wenn sich etwas geändert hat.
-    pub fn render_live(&mut self, ui: &mut egui::Ui, length: f32, label: &str) -> bool {
+    fn render_live(&mut self, ui: &mut egui::Ui, length: f32, label: &str) -> bool {
         let mut changed = false;
 
         ui.label(format!("{}: {:.1} m", label, length));
@@ -242,7 +242,7 @@ impl SegmentConfig {
     /// Rendert den Segment-Slider im Default-Modus (Tool noch nicht bereit).
     ///
     /// Gibt `true` zurück wenn sich etwas geändert hat.
-    pub fn render_default(&mut self, ui: &mut egui::Ui) -> bool {
+    fn render_default(&mut self, ui: &mut egui::Ui) -> bool {
         let mut changed = false;
 
         ui.label("Max. Segment-Länge:");
