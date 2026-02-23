@@ -101,6 +101,7 @@
   - [x] `within_rect` auf KD-Tree Range-Query umstellen (aktuell O(n) Brute-Force)
   - [x] **Connection-Lookup O(1):** `connections: Vec<Connection>` → `HashMap<(u64,u64), Connection>`
   - [x] **COW-Undo via `Arc<RoadMap>`:** Snapshot ist O(1) statt O(n) Deep-Clone (Copy-on-Write)
+  - [x] Tool-Preview: Steuerpunkt-Erkennung von O(n·m) auf O(n+m) umgestellt (precomputed Node-Connectivity)
   - [ ] LOD-System für große Strecken
   - [ ] Memory-Profiling
   - [x] `ctx.request_repaint()` nur bei Änderungen (CPU-Idle-Verbrauch reduzieren)

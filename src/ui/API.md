@@ -78,6 +78,7 @@ pub fn render_properties_panel(
   default_priority: ConnectionPriority,
   active_tool: EditorTool,
   tool_manager: Option<&mut ToolManager>,
+  segment_registry: Option<&SegmentRegistry>,
 ) -> Vec<AppIntent>
 ```
 
