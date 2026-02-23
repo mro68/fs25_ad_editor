@@ -616,7 +616,13 @@ fn test_auto_suggest_start_tangent_picks_best_incoming() {
     tool.auto_suggest_start_tangent();
 
     assert!(
-        matches!(tool.tangents.tangent_start, TangentSource::Connection { neighbor_id: 42, .. }),
+        matches!(
+            tool.tangents.tangent_start,
+            TangentSource::Connection {
+                neighbor_id: 42,
+                ..
+            }
+        ),
         "Start-Tangente sollte auf Nachbar 42 gesetzt sein, war: {:?}",
         tool.tangents.tangent_start,
     );
@@ -639,7 +645,13 @@ fn test_auto_suggest_end_tangent_picks_best_outgoing() {
     tool.auto_suggest_end_tangent();
 
     assert!(
-        matches!(tool.tangents.tangent_end, TangentSource::Connection { neighbor_id: 77, .. }),
+        matches!(
+            tool.tangents.tangent_end,
+            TangentSource::Connection {
+                neighbor_id: 77,
+                ..
+            }
+        ),
         "End-Tangente sollte auf Nachbar 77 gesetzt sein, war: {:?}",
         tool.tangents.tangent_end,
     );
@@ -675,7 +687,7 @@ fn test_both_tangents_auto_suggested_on_cubic_end_click() {
 
     // Manuell Setup: Start hat eingehende, Ende hat ausgehende Verbindung
     tool.on_click(Vec2::ZERO, &road_map, false); // Phase → End
-    // Nachbarn manuell setzen (normalerweise via populate_neighbors)
+                                                 // Nachbarn manuell setzen (normalerweise via populate_neighbors)
     tool.tangents.start_neighbors = vec![ConnectedNeighbor {
         neighbor_id: 10,
         angle: std::f32::consts::PI, // von Westen → Fortsetzung Ost
@@ -683,7 +695,7 @@ fn test_both_tangents_auto_suggested_on_cubic_end_click() {
     }];
 
     tool.on_click(Vec2::new(10.0, 0.0), &road_map, false); // Phase → Control
-    // end_neighbors direkt setzen und auto_suggest erneut aufrufen
+                                                           // end_neighbors direkt setzen und auto_suggest erneut aufrufen
     tool.tangents.end_neighbors = vec![ConnectedNeighbor {
         neighbor_id: 20,
         angle: 0.0, // nach Osten
@@ -693,12 +705,24 @@ fn test_both_tangents_auto_suggested_on_cubic_end_click() {
     tool.auto_suggest_end_tangent();
 
     assert!(
-        matches!(tool.tangents.tangent_start, TangentSource::Connection { neighbor_id: 10, .. }),
+        matches!(
+            tool.tangents.tangent_start,
+            TangentSource::Connection {
+                neighbor_id: 10,
+                ..
+            }
+        ),
         "Start-Tangente erwartet: {:?}",
         tool.tangents.tangent_start,
     );
     assert!(
-        matches!(tool.tangents.tangent_end, TangentSource::Connection { neighbor_id: 20, .. }),
+        matches!(
+            tool.tangents.tangent_end,
+            TangentSource::Connection {
+                neighbor_id: 20,
+                ..
+            }
+        ),
         "End-Tangente erwartet: {:?}",
         tool.tangents.tangent_end,
     );
