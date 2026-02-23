@@ -189,6 +189,15 @@ pub enum AppIntent {
     RouteToolDragEnded,
     /// Segment nachträglich bearbeiten (Nodes löschen + Tool laden)
     EditSegmentRequested { record_id: u64 },
+    /// ZIP-Datei wurde als Background-Map gewählt → Browser öffnen
+    ZipBackgroundBrowseRequested { path: String },
+    /// Bilddatei aus ZIP-Browser gewählt
+    ZipBackgroundFileSelected {
+        zip_path: String,
+        entry_name: String,
+    },
+    /// ZIP-Browser geschlossen (ohne Auswahl)
+    ZipBrowserCancelled,
 }
 
 /// Commands sind mutierende Schritte, die zentral ausgeführt werden.
@@ -376,4 +385,14 @@ pub enum AppCommand {
     RouteToolDragEnd,
     /// Segment nachträglich bearbeiten
     EditSegment { record_id: u64 },
+    /// ZIP-Archiv öffnen und Bilddateien im Browser anzeigen
+    BrowseZipBackground { path: String },
+    /// Bilddatei aus ZIP als Background-Map laden
+    LoadBackgroundFromZip {
+        zip_path: String,
+        entry_name: String,
+        crop_size: Option<u32>,
+    },
+    /// ZIP-Browser-Dialog schließen
+    CloseZipBrowser,
 }

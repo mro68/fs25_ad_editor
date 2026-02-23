@@ -59,3 +59,8 @@ pub fn dismiss_dedup_dialog(state: &mut AppState) {
     state.ui.dedup_dialog.visible = false;
     state.ui.status_message = None;
 }
+
+/// Schließt den ZIP-Browser-Dialog.
+pub fn close_zip_browser(state: &mut AppState) {
+    state.ui.zip_browser = None;
+}
