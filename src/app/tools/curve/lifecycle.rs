@@ -79,6 +79,7 @@ impl RouteTool for CurveTool {
                     // Auto-Tangente + beide CPs + Apex initialisieren
                     if self.degree == CurveDegree::Cubic {
                         self.auto_suggest_start_tangent();
+                        self.auto_suggest_end_tangent();
                     }
                     self.apply_tangent_to_cp();
                     self.set_default_cp2_if_missing();
@@ -102,6 +103,7 @@ impl RouteTool for CurveTool {
                 // Auto-Tangente + beide CPs + Apex initialisieren
                 if self.degree == CurveDegree::Cubic {
                     self.auto_suggest_start_tangent();
+                    self.auto_suggest_end_tangent();
                 }
                 self.apply_tangent_to_cp();
                 self.set_default_cp2_if_missing();
