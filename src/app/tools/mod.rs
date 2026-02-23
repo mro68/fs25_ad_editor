@@ -130,6 +130,16 @@ pub trait RouteTool {
 
     /// Beendet den Drag (ggf. Re-Snap auf existierenden Node).
     fn on_drag_end(&mut self, _road_map: &RoadMap) {}
+
+    /// Rendert ein Kontextmenü (Rechtsklick im Viewport) für das Tool.
+    ///
+    /// Wird im Viewport aufgerufen solange das Tool aktiv ist.
+    /// Das CurveTool nutzt dies für die Tangenten-Auswahl (Rechtsklick → NW/SO-Einträge).
+    ///
+    /// Gibt `true` zurück wenn sich der Tool-Zustand geändert hat (ggf. Recreate nötig).
+    fn render_context_menu(&mut self, _response: &egui::Response) -> bool {
+        false
+    }
 }
 
 // ── Typen ────────────────────────────────────────────────────────

@@ -298,4 +298,8 @@ impl RouteTool for CurveTool {
     fn on_drag_end(&mut self, road_map: &RoadMap) {
         super::drag::on_drag_end(self, road_map);
     }
+
+    fn render_context_menu(&mut self, response: &egui::Response) -> bool {
+        self.render_tangent_context_menu(response)
+    }
 }
