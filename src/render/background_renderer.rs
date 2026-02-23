@@ -264,11 +264,16 @@ impl BackgroundRenderer {
 
         queue.write_buffer(&self.vertex_buffer, 0, bytemuck::cast_slice(&vertices));
 
-        // Speichere Ressourcen
+        // Speichere skalierte Bounds (für konsistentes UV-Mapping im Shader)
         self.texture = Some(texture);
         self.sampler = Some(sampler);
         self.bind_group = Some(bind_group);
-        self.current_bounds = Some(*bounds);
+        self.current_bounds = Some(WorldBounds {
+            min_x,
+            max_x,
+            min_z,
+            max_z,
+        });
 
         log::info!(
             "BackgroundRenderer: Texture geladen ({}x{})",
