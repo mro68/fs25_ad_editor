@@ -339,7 +339,7 @@ pub fn show_zip_browser(ctx: &egui::Context, ui_state: &mut UiState) -> Vec<AppI
             ui.add_space(2.0);
 
             // Gefilterte Einträge sammeln
-            let filtered: Vec<(usize, &crate::core::ZipImageEntry)> = browser
+            let filtered: Vec<(usize, &crate::app::ZipImageEntry)> = browser
                 .entries
                 .iter()
                 .enumerate()
