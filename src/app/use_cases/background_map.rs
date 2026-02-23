@@ -84,7 +84,7 @@ pub fn browse_zip_background(state: &mut AppState, path: String) -> Result<()> {
 
     // Bei genau einem Bild: direkt laden, ohne Browser-Dialog
     if entries.len() == 1 {
-        let entry_name = entries.into_iter().next().unwrap();
+        let entry_name = entries.into_iter().next().unwrap().name;
         log::info!("ZIP enthält nur ein Bild — lade direkt: {}", entry_name);
         return load_background_from_zip(state, path, entry_name, None);
     }

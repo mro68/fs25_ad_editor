@@ -17,7 +17,7 @@ pub mod road_map;
 pub mod spatial;
 
 pub use background_map::BackgroundMap;
-pub use background_map::{list_images_in_zip, load_from_zip};
+pub use background_map::{list_images_in_zip, load_from_zip, ZipImageEntry};
 pub use camera::Camera2D;
 pub use connection::{Connection, ConnectionDirection, ConnectionPriority};
 pub use heightmap::{Heightmap, WorldBounds};
