@@ -174,6 +174,14 @@ impl EditorApp {
                     .map(|t| t.drag_targets())
                     .unwrap_or_default();
 
+                let route_tool_is_drawing = self
+                    .state
+                    .editor
+                    .tool_manager
+                    .active_tool()
+                    .map(|t| t.has_pending_input())
+                    .unwrap_or(false);
+
                 events.extend(self.input.collect_viewport_events(
                     ui,
                     &response,
@@ -182,6 +190,7 @@ impl EditorApp {
                     self.state.road_map.as_deref(),
                     &self.state.selection.selected_node_ids,
                     self.state.editor.active_tool,
+                    route_tool_is_drawing,
                     &self.state.options,
                     &drag_targets,
                 ));

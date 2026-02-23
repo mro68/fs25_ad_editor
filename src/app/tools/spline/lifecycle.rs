@@ -35,7 +35,7 @@ impl RouteTool for SplineTool {
 
         if self.anchors.is_empty() {
             // Verkettung: letzten Endpunkt als Start verwenden
-            if let Some(last_end) = self.lifecycle.last_end_anchor {
+            if let Some(last_end) = self.lifecycle.chaining_start_anchor() {
                 self.lifecycle.last_created_ids.clear();
                 self.last_anchors.clear();
                 self.lifecycle.last_end_anchor = None;
@@ -114,6 +114,10 @@ impl RouteTool for SplineTool {
 
     fn is_ready(&self) -> bool {
         self.anchors.len() >= 2
+    }
+
+    fn has_pending_input(&self) -> bool {
+        !self.anchors.is_empty()
     }
 
     fn set_direction(&mut self, dir: ConnectionDirection) {

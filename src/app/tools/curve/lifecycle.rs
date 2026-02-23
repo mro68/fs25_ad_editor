@@ -62,7 +62,7 @@ impl RouteTool for CurveTool {
         match self.phase {
             Phase::Start => {
                 // Verkettung: letzten Endpunkt als Start verwenden
-                if let Some(last_end) = self.lifecycle.last_end_anchor {
+                if let Some(last_end) = self.lifecycle.chaining_start_anchor() {
                     self.lifecycle.last_created_ids.clear();
                     self.last_start_anchor = None;
                     self.lifecycle.last_end_anchor = None;
@@ -79,6 +79,7 @@ impl RouteTool for CurveTool {
                     // Auto-Tangente + beide CPs + Apex initialisieren
                     if self.degree == CurveDegree::Cubic {
                         self.auto_suggest_start_tangent();
+                        self.auto_suggest_end_tangent();
                     }
                     self.apply_tangent_to_cp();
                     self.set_default_cp2_if_missing();
@@ -102,6 +103,7 @@ impl RouteTool for CurveTool {
                 // Auto-Tangente + beide CPs + Apex initialisieren
                 if self.degree == CurveDegree::Cubic {
                     self.auto_suggest_start_tangent();
+                    self.auto_suggest_end_tangent();
                 }
                 self.apply_tangent_to_cp();
                 self.set_default_cp2_if_missing();
@@ -222,6 +224,10 @@ impl RouteTool for CurveTool {
 
     fn is_ready(&self) -> bool {
         self.start.is_some() && self.end.is_some() && self.controls_complete()
+    }
+
+    fn has_pending_input(&self) -> bool {
+        self.phase != Phase::Start
     }
 
     fn set_direction(&mut self, dir: ConnectionDirection) {

@@ -193,6 +193,57 @@ impl CurveTool {
         }
     }
 
+    /// Wählt automatisch die beste End-Tangente aus `end_neighbors`.
+    ///
+    /// Bevorzugt ausgehende Verbindungen (`is_outgoing = true`). Wählt den
+    /// Nachbarn, dessen Richtung am stärksten vom Startpunkt weg zeigt
+    /// (spiegelverkehrt zu `auto_suggest_start_tangent`).
+    pub(crate) fn auto_suggest_end_tangent(&mut self) {
+        if self.degree != CurveDegree::Cubic || self.tangents.end_neighbors.is_empty() {
+            return;
+        }
+        let (Some(start), Some(end)) = (self.start, self.end) else {
+            return;
+        };
+        let chord = end.position() - start.position();
+        let chord_len = chord.length();
+        if chord_len < f32::EPSILON {
+            return;
+        }
+        // Richtung vom Endpunkt weg (= Sehnenrichtung, da Kurve von Start→Ende geht)
+        let away_dir = chord / chord_len;
+
+        // Ausgehende Verbindungen bevorzugen; Fallback: alle
+        let candidates: Vec<_> = {
+            let outgoing: Vec<_> = self
+                .tangents
+                .end_neighbors
+                .iter()
+                .filter(|n| n.is_outgoing)
+                .collect();
+            if outgoing.is_empty() {
+                self.tangents.end_neighbors.iter().collect()
+            } else {
+                outgoing
+            }
+        };
+
+        let best = candidates.iter().max_by(|a, b| {
+            let da = Vec2::from_angle(a.angle).dot(away_dir);
+            let db = Vec2::from_angle(b.angle).dot(away_dir);
+            da.partial_cmp(&db).unwrap_or(std::cmp::Ordering::Equal)
+        });
+        if let Some(n) = best {
+            let dot = Vec2::from_angle(n.angle).dot(away_dir);
+            if dot > 0.0 {
+                self.tangents.tangent_end = TangentSource::Connection {
+                    neighbor_id: n.neighbor_id,
+                    angle: n.angle,
+                };
+            }
+        }
+    }
+
     /// Kurvenlänge je nach Grad.
     pub(crate) fn curve_length(&self) -> f32 {
         let s = self.start.as_ref().map(|a| a.position());

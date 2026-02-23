@@ -33,7 +33,7 @@ impl RouteTool for StraightLineTool {
 
         if self.start.is_none() {
             // Verkettung: letzten Endpunkt als Start verwenden
-            if let Some(last_end) = self.lifecycle.last_end_anchor {
+            if let Some(last_end) = self.lifecycle.chaining_start_anchor() {
                 self.lifecycle.last_created_ids.clear();
                 self.last_start_anchor = None;
                 self.lifecycle.last_end_anchor = None;
@@ -104,6 +104,10 @@ impl RouteTool for StraightLineTool {
 
     fn is_ready(&self) -> bool {
         self.start.is_some() && self.end.is_some()
+    }
+
+    fn has_pending_input(&self) -> bool {
+        self.start.is_some()
     }
 
     fn set_direction(&mut self, dir: ConnectionDirection) {

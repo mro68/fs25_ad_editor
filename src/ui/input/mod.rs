@@ -75,6 +75,7 @@ impl InputState {
         road_map: Option<&RoadMap>,
         selected_node_ids: &HashSet<u64>,
         active_tool: EditorTool,
+        route_tool_is_drawing: bool,
         options: &EditorOptions,
         drag_targets: &[glam::Vec2],
     ) -> Vec<AppIntent> {
@@ -101,6 +102,7 @@ impl InputState {
             ui,
             selected_node_ids,
             active_tool,
+            route_tool_is_drawing,
         ));
 
         let modifiers = ui.input(|i| i.modifiers);
