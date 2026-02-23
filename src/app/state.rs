@@ -213,6 +213,8 @@ pub struct ViewState {
     pub background_opacity: f32,
     /// Background-Sichtbarkeit
     pub background_visible: bool,
+    /// Skalierungsfaktor für Background-Map-Ausdehnung (1.0 = Original)
+    pub background_scale: f32,
     /// Signalisiert, dass die Background-Map neu in den GPU-Renderer hochgeladen werden muss
     pub background_dirty: bool,
 }
@@ -227,6 +229,7 @@ impl ViewState {
             background_map: None,
             background_opacity: 1.0,
             background_visible: true,
+            background_scale: 1.0,
             background_dirty: false,
         }
     }

@@ -172,6 +172,7 @@ pub fn map_intent_to_commands(state: &AppState, intent: AppIntent) -> Vec<AppCom
             vec![AppCommand::UpdateBackgroundOpacity { opacity }]
         }
         AppIntent::ToggleBackgroundVisibility => vec![AppCommand::ToggleBackgroundVisibility],
+        AppIntent::ScaleBackground { factor } => vec![AppCommand::ScaleBackground { factor }],
         AppIntent::CreateMarkerRequested { node_id } => {
             vec![AppCommand::OpenMarkerDialog {
                 node_id,

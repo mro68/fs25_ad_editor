@@ -290,7 +290,12 @@ impl EditorApp {
             return;
         };
         if let Some(bg_map) = self.state.view.background_map.as_deref() {
-            renderer.set_background(&self.device, &self.queue, bg_map);
+            renderer.set_background(
+                &self.device,
+                &self.queue,
+                bg_map,
+                self.state.view.background_scale,
+            );
             log::info!("Background-Map in Renderer hochgeladen");
         } else {
             renderer.clear_background();

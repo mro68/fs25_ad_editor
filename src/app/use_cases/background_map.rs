@@ -38,6 +38,7 @@ pub fn load_background_map(
 
     // Speichere in State
     state.view.background_map = Some(Arc::new(bg_map));
+    state.view.background_scale = 1.0;
     state.view.background_dirty = true;
 
     Ok(())
@@ -63,6 +64,16 @@ pub fn toggle_background_visibility(state: &mut AppState) {
             "aus"
         }
     );
+}
+
+/// Skaliert die Ausdehnung der Background-Map (relativ).
+///
+/// Multipliziert den aktuellen Skalierungsfaktor mit `factor`.
+/// Begrenzt auf den Bereich 0.125 bis 8.0.
+pub fn scale_background(state: &mut AppState, factor: f32) {
+    state.view.background_scale = (state.view.background_scale * factor).clamp(0.125, 8.0);
+    state.view.background_dirty = true;
+    log::info!("Background-Scale: {:.3}", state.view.background_scale);
 }
 
 /// Entfernt die Background-Map.
@@ -124,6 +135,7 @@ pub fn load_background_from_zip(
     );
 
     state.view.background_map = Some(Arc::new(bg_map));
+    state.view.background_scale = 1.0;
     state.view.background_dirty = true;
 
     // ZIP-Browser schließen (falls offen)

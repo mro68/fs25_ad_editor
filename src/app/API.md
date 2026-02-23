@@ -120,6 +120,7 @@ pub struct ViewState {
     pub background_map: Option<Arc<BackgroundMap>>,
     pub background_opacity: f32,
     pub background_visible: bool,
+    pub background_scale: f32,      // Skalierungsfaktor (1.0 = Original)
     pub background_dirty: bool,  // GPU-Upload-Signal
 }
 
@@ -230,6 +231,7 @@ pub enum AppIntent {
     BackgroundMapSelected { path: String, crop_size: Option<u32> },
     SetBackgroundOpacity { opacity: f32 },
     ToggleBackgroundVisibility,
+    ScaleBackground { factor: f32 },
     ZipBackgroundBrowseRequested { path: String },
     ZipBackgroundFileSelected { zip_path: String, entry_name: String },
     ZipBrowserCancelled,
@@ -326,6 +328,7 @@ pub enum AppCommand {
     LoadBackgroundMap { path: String, crop_size: Option<u32> },
     UpdateBackgroundOpacity { opacity: f32 },
     ToggleBackgroundVisibility,
+    ScaleBackground { factor: f32 },
     BrowseZipBackground { path: String },
     LoadBackgroundFromZip { zip_path: String, entry_name: String, crop_size: Option<u32> },
     CloseZipBrowser,
