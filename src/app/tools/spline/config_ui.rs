@@ -4,7 +4,7 @@
 //! - Tangenten-ComboBoxen am Start/Ende (nur Nachbearbeitungs-Modus)
 //! - Länge · Segment-Abstand · Node-Anzahl (Nachbearbeitungs- und Live-Modus)
 
-use super::super::common::render_tangent_combo;
+use super::super::common::{render_segment_config_3modes, render_tangent_combo};
 use super::super::RouteTool;
 use super::SplineTool;
 
@@ -66,7 +66,8 @@ impl SplineTool {
                 self.tangents.tangent_end,
             );
 
-            let (seg_changed, recreate) = self.seg.render_adjusting(ui, length, "Spline-Länge");
+            let (seg_changed, recreate) =
+                render_segment_config_3modes(&mut self.seg, ui, true, true, length, "Spline-Länge");
             if recreate {
                 self.lifecycle.recreate_needed = true;
             }
@@ -74,9 +75,13 @@ impl SplineTool {
         } else if self.is_ready() {
             let length = self.spline_length();
             ui.label(format!("Kontrollpunkte: {}", self.anchors.len()));
-            changed |= self.seg.render_live(ui, length, "Spline-Länge");
+            let (seg_changed, _) =
+                render_segment_config_3modes(&mut self.seg, ui, false, true, length, "Spline-Länge");
+            changed |= seg_changed;
         } else {
-            changed |= self.seg.render_default(ui);
+            let (seg_changed, _) =
+                render_segment_config_3modes(&mut self.seg, ui, false, false, 0.0, "Spline-Länge");
+            changed |= seg_changed;
         }
 
         changed
