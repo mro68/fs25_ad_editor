@@ -116,6 +116,10 @@ impl RouteTool for SplineTool {
         self.anchors.len() >= 2
     }
 
+    fn has_pending_input(&self) -> bool {
+        !self.anchors.is_empty()
+    }
+
     fn set_direction(&mut self, dir: ConnectionDirection) {
         self.direction = dir;
     }

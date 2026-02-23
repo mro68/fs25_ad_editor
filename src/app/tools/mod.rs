@@ -75,6 +75,14 @@ pub trait RouteTool {
     /// Ist das Tool bereit zur Ausführung?
     fn is_ready(&self) -> bool;
 
+    /// Hat das Tool angefangene Eingaben (Punkte gesetzt, aber noch nicht ausgeführt)?
+    ///
+    /// Wird für die stufenweise Escape-Logik benötigt:
+    /// Tool zeichnet → Cancel, Tool idle → Selektion/Tool-Wechsel.
+    fn has_pending_input(&self) -> bool {
+        false
+    }
+
     /// Verbindungsrichtung vom Editor-Default übernehmen.
     fn set_direction(&mut self, _dir: ConnectionDirection) {}
 
