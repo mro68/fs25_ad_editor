@@ -55,6 +55,13 @@ pub fn render_menu(ctx: &egui::Context, state: &AppState) -> Vec<AppIntent> {
 
                 ui.separator();
 
+                if ui.button("Übersichtskarte generieren...").clicked() {
+                    events.push(AppIntent::GenerateOverviewRequested);
+                    ui.close();
+                }
+
+                ui.separator();
+
                 if ui.button("Exit").clicked() {
                     events.push(AppIntent::ExitRequested);
                     ui.close();

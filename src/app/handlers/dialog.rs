@@ -64,3 +64,26 @@ pub fn dismiss_dedup_dialog(state: &mut AppState) {
 pub fn close_zip_browser(state: &mut AppState) {
     state.ui.zip_browser = None;
 }
+
+/// Öffnet den Übersichtskarten-ZIP-Auswahl-Dialog.
+pub fn request_overview_dialog(state: &mut AppState) {
+    state.ui.show_overview_dialog = true;
+}
+
+/// Öffnet den Übersichtskarten-Options-Dialog mit dem gewählten ZIP-Pfad.
+pub fn open_overview_options_dialog(state: &mut AppState, zip_path: String) {
+    state.ui.show_overview_dialog = false;
+    state.ui.overview_options_dialog.visible = true;
+    state.ui.overview_options_dialog.zip_path = zip_path;
+    state.ui.overview_options_dialog.layers = state.options.overview_layers.clone();
+}
+
+/// Schließt den Übersichtskarten-Options-Dialog.
+pub fn close_overview_options_dialog(state: &mut AppState) {
+    state.ui.overview_options_dialog.visible = false;
+}
+
+/// Schließt den Post-Load-Dialog (Heightmap/ZIP-Erkennung).
+pub fn dismiss_post_load_dialog(state: &mut AppState) {
+    state.ui.post_load_dialog = Default::default();
+}

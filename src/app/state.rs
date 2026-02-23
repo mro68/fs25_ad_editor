@@ -6,8 +6,9 @@ use super::tools::ToolManager;
 use super::CommandLog;
 use crate::core::Camera2D;
 use crate::core::{BackgroundMap, ConnectionDirection, ConnectionPriority, RoadMap};
-use crate::shared::{EditorOptions, RenderQuality};
+use crate::shared::{EditorOptions, OverviewLayerOptions, RenderQuality};
 use std::collections::HashSet;
+use std::path::PathBuf;
 use std::sync::Arc;
 
 /// Aktives Editor-Werkzeug
@@ -135,6 +136,59 @@ impl DedupDialogState {
     }
 }
 
+/// Zustand des Übersichtskarten-Options-Dialogs
+#[derive(Default)]
+pub struct OverviewOptionsDialogState {
+    /// Ob der Dialog sichtbar ist
+    pub visible: bool,
+    /// ZIP-Pfad der gewählten Map-Mod-Datei
+    pub zip_path: String,
+    /// Layer-Optionen (Arbeitskopie für den Dialog)
+    pub layers: OverviewLayerOptions,
+}
+
+impl OverviewOptionsDialogState {
+    /// Erstellt einen geschlossenen Dialog-Zustand.
+    pub fn new() -> Self {
+        Self {
+            visible: false,
+            zip_path: String::new(),
+            layers: OverviewLayerOptions::default(),
+        }
+    }
+}
+
+/// Zustand des Post-Load-Dialogs (automatische Erkennung nach XML-Laden).
+#[derive(Default)]
+pub struct PostLoadDialogState {
+    /// Ob der Dialog sichtbar ist
+    pub visible: bool,
+    /// Heightmap wurde automatisch gesetzt
+    pub heightmap_set: bool,
+    /// Pfad zur automatisch gesetzten Heightmap
+    pub heightmap_path: Option<String>,
+    /// Gefundene passende ZIP-Dateien im Mods-Verzeichnis
+    pub matching_zips: Vec<PathBuf>,
+    /// Index des vom User ausgewählten ZIPs (Default: 0)
+    pub selected_zip_index: usize,
+    /// Map-Name zur Anzeige im Dialog
+    pub map_name: String,
+}
+
+impl PostLoadDialogState {
+    /// Erstellt einen geschlossenen Post-Load-Dialog-Zustand.
+    pub fn new() -> Self {
+        Self {
+            visible: false,
+            heightmap_set: false,
+            heightmap_path: None,
+            matching_zips: Vec::new(),
+            selected_zip_index: 0,
+            map_name: String::new(),
+        }
+    }
+}
+
 /// UI-bezogener Anwendungszustand
 #[derive(Default)]
 pub struct UiState {
@@ -146,6 +200,8 @@ pub struct UiState {
     pub show_heightmap_dialog: bool,
     /// Ob der Background-Map-Auswahl-Dialog geöffnet werden soll
     pub show_background_map_dialog: bool,
+    /// Ob der Übersichtskarten-ZIP-Auswahl-Dialog geöffnet werden soll
+    pub show_overview_dialog: bool,
     /// Ob die Heightmap-Warnung angezeigt werden soll
     pub show_heightmap_warning: bool,
     /// Ob die Heightmap-Warnung für diese Save-Operation bereits bestätigt wurde
@@ -164,6 +220,10 @@ pub struct UiState {
     pub dedup_dialog: DedupDialogState,
     /// ZIP-Browser-Dialog für Background-Map-Auswahl
     pub zip_browser: Option<ZipBrowserState>,
+    /// Übersichtskarten-Optionen-Dialog
+    pub overview_options_dialog: OverviewOptionsDialogState,
+    /// Post-Load-Dialog (Heightmap/ZIP-Erkennung)
+    pub post_load_dialog: PostLoadDialogState,
 }
 
 /// Zustand des ZIP-Browser-Dialogs.
@@ -187,6 +247,7 @@ impl UiState {
             show_save_file_dialog: false,
             show_heightmap_dialog: false,
             show_background_map_dialog: false,
+            show_overview_dialog: false,
             show_heightmap_warning: false,
             heightmap_warning_confirmed: false,
             pending_save_path: None,
@@ -196,6 +257,8 @@ impl UiState {
             status_message: None,
             dedup_dialog: DedupDialogState::new(),
             zip_browser: None,
+            overview_options_dialog: OverviewOptionsDialogState::new(),
+            post_load_dialog: PostLoadDialogState::new(),
         }
     }
 }

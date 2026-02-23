@@ -91,12 +91,20 @@
   - [ ] Marker-Groups
 - [ ] Grid-Overlay & Snap-to-Grid
 - [ ] Minimap-Ansicht
+- [x] Übersichtskarte aus Map-Mod-ZIP generieren (Terrain, Farmlands, POIs, Hillshade)
+  - [x] Crate `fs25_map_overview` mit GRLE/GDM-Decoder (vendor grleconvert)
+  - [x] Weight-Map-Compositing, Hillshade, Farmland-Grenzen/-IDs, POI-Labels
+  - [x] Editor-Integration: Menüeintrag → ZIP-Dialog → Background-Map
+  - [x] Konfigurierbare Layer-Optionen (Hillshade, Farmlands, IDs, POIs, Legende)
+  - [x] Persistent gespeicherte Standard-Layer in EditorOptions
+  - [x] Auto-Detection: Heightmap und Map-Mod-ZIP nach XML-Laden (Umlaut-tolerantes Fuzzy-Matching)
 
 ## Phase 6: Performance & Qualität
 - [ ] Performance-Optimierung
   - [x] `within_rect` auf KD-Tree Range-Query umstellen (aktuell O(n) Brute-Force)
   - [x] **Connection-Lookup O(1):** `connections: Vec<Connection>` → `HashMap<(u64,u64), Connection>`
   - [x] **COW-Undo via `Arc<RoadMap>`:** Snapshot ist O(1) statt O(n) Deep-Clone (Copy-on-Write)
+  - [x] Tool-Preview: Steuerpunkt-Erkennung von O(n·m) auf O(n+m) umgestellt (precomputed Node-Connectivity)
   - [ ] LOD-System für große Strecken
   - [ ] Memory-Profiling
   - [x] `ctx.request_repaint()` nur bei Änderungen (CPU-Idle-Verbrauch reduzieren)
@@ -117,6 +125,7 @@
   - [ ] Keyboard-Shortcuts-Übersicht
   - [x] Architektur-Analyse und API.md-Nachführung (2026-02-20)
   - [x] Handler-Split und Architektur-Guardrails dokumentiert (2025-07-02)
+  - [x] DRY-Refactoring und RouteTool-Trait-Extraktion (2025-07-11)
 - [ ] Packaging
   - [ ] Windows Binaries (.exe)
   - [ ] Linux Binaries (AppImage)
@@ -174,7 +183,7 @@
 - Phase 2: ✅ 100%
 - Phase 3: ✅ 98% (Theme fehlt)
 - Phase 4: ✅ 100% (alle Features implementiert, 100k-Benchmarks ausstehend)
-- Phase 5: 🟡 85% (DDS-Background + Marker-Editor + Bézier-Kurven + Catmull-Rom-Spline fertig)
+- Phase 5: 🟡 90% (DDS-Background + Marker-Editor + Bézier-Kurven + Catmull-Rom-Spline + Übersichtskarte fertig)
 - Phase 6: 🟡 40% (Handler-Split, CI-Checks, unwrap-Bereinigung, API-Docs nachgeführt)
 
 **Errungenschaften seit letztem Update (Spline-Tool 2026-02-21):**

@@ -1,6 +1,9 @@
+[workspace]
+members = [".", "crates/fs25_map_overview"]
+
 [package]
 name = "FS25-AutoDrive-Editor"
-version = "0.6.2"
+version = "0.7.0"
 edition = "2021"
 authors = ["MRO"]
 description = "GPU-beschleunigter Editor für AutoDrive-Kurse in Farming Simulator 25"
@@ -52,9 +55,15 @@ image = { version = "0.25", features = ["dds", "png", "jpeg"] }
 # ZIP-Archiv-Support
 zip = { version = "2", default-features = false, features = ["deflate"] }
 
+# Overview-Map-Generator (Terrain, Hillshade, Farmlands, POIs)
+fs25_map_overview = { path = "crates/fs25_map_overview" }
+
 # Serialization
 serde = { version = "1", features = ["derive"] }
 toml = "0.9.8"
+
+# Regex für Fuzzy-Matching (z.B. ZIP-Suche nach Map-Name)
+regex = "1"
 
 # Utility
 anyhow = "1.0.102"

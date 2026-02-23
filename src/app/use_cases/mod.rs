@@ -1,5 +1,6 @@
 //! Use-Cases der Application-Layer-Orchestrierung.
 
+pub mod auto_detect;
 pub mod background_map;
 pub mod camera;
 pub mod editing;

@@ -89,6 +89,7 @@ pub struct UiState {
     pub show_save_file_dialog: bool,
     pub show_heightmap_dialog: bool,
     pub show_background_map_dialog: bool,
+    pub show_overview_dialog: bool,
     pub show_heightmap_warning: bool,
     pub heightmap_warning_confirmed: bool,
     pub pending_save_path: Option<String>,
@@ -97,6 +98,16 @@ pub struct UiState {
     pub marker_dialog: MarkerDialogState,
     pub status_message: Option<String>,
     pub dedup_dialog: DedupDialogState,
+    pub zip_browser: Option<ZipBrowserState>,
+    pub overview_options_dialog: OverviewOptionsDialogState,
+    pub post_load_dialog: PostLoadDialogState,
+}
+
+pub struct ZipBrowserState {
+    pub zip_path: String,
+    pub entries: Vec<ZipImageEntry>,
+    pub selected: Option<usize>,
+    pub filter_overview: bool,
 }
 
 pub struct MarkerDialogState {
@@ -111,6 +122,21 @@ pub struct DedupDialogState {
     pub visible: bool,
     pub duplicate_count: u32,
     pub group_count: u32,
+}
+
+pub struct OverviewOptionsDialogState {
+    pub visible: bool,
+    pub zip_path: String,
+    pub layers: OverviewLayerOptions,
+}
+
+pub struct PostLoadDialogState {
+    pub visible: bool,
+    pub heightmap_set: bool,
+    pub heightmap_path: Option<String>,
+    pub matching_zips: Vec<PathBuf>,
+    pub selected_zip_index: usize,
+    pub map_name: String,
 }
 
 pub struct ViewState {
@@ -236,6 +262,16 @@ pub enum AppIntent {
     ZipBackgroundFileSelected { zip_path: String, entry_name: String },
     ZipBrowserCancelled,
 
+    // Übersichtskarte
+    GenerateOverviewRequested,
+    GenerateOverviewFromZip { path: String },
+    OverviewOptionsConfirmed,
+    OverviewOptionsCancelled,
+
+    // Post-Load-Dialog (Auto-Detection)
+    PostLoadGenerateOverview { zip_path: String },
+    PostLoadDialogDismissed,
+
     // Map-Marker
     CreateMarkerRequested { node_id: u64 },
     RemoveMarkerRequested { node_id: u64 },
@@ -333,6 +369,15 @@ pub enum AppCommand {
     LoadBackgroundFromZip { zip_path: String, entry_name: String, crop_size: Option<u32> },
     CloseZipBrowser,
 
+    // Übersichtskarte
+    RequestOverviewDialog,
+    OpenOverviewOptionsDialog { path: String },
+    GenerateOverviewWithOptions,
+    CloseOverviewOptionsDialog,
+
+    // Post-Load-Dialog
+    DismissPostLoadDialog,
+
     // Marker
     CreateMarker { node_id: u64, name: String, group: String },
     RemoveMarker { node_id: u64 },
@@ -388,7 +433,7 @@ pub enum AppCommand {
 
 ### `use_cases::file_io`
 - `request_open_file(state)` — Open-Dialog triggern
-- `load_selected_file(state, path)` — XML laden, Kamera zentrieren
+- `load_selected_file(state, path)` — XML laden, Kamera zentrieren; anschließend wird automatisch die Post-Load-Detection ausgeführt (Heightmap + ZIP-Suche)
 - `request_save_file(state)` — Save-Dialog triggern
 - `save_current_file(state)` — Unter aktuellem Pfad speichern
 - `save_file_as(state, path)` — Unter neuem Pfad speichern
@@ -408,6 +453,9 @@ pub enum AppCommand {
 - `select_nodes_in_lasso(state, polygon, additive)` — Lasso-Selektion (Alt + Drag)
 - `move_selected_nodes(state, delta_world)` — Alle selektierten Nodes gemeinsam verschieben
 - `clear_selection(state)` — Selektion explizit löschen
+
+### `use_cases::auto_detect`
+- `detect_post_load(xml_path, map_name) -> PostLoadDetectionResult` — Sucht nach `terrain.heightmap.png` im XML-Verzeichnis und passenden Map-Mod-ZIPs im Mods-Verzeichnis (`../../mods/` relativ zum Savegame). Matching: case-insensitive, Underscores/Spaces als Wildcard, bidirektionale Umlaut-Expansion (ä↔ae, ö↔oe, ü↔ue, ß↔ss).
 
 ### `use_cases::editing`
 - `add_node_at_position(state, world_pos)` — Neuen Node einfügen
@@ -435,6 +483,7 @@ pub enum AppCommand {
 - `set_background_opacity(state, opacity)` — Opacity setzen (0.0–1.0)
 - `toggle_background_visibility(state)` — Sichtbarkeit umschalten
 - `clear_background_map(state)` — Background-Map entfernen
+- `generate_overview_with_options(state) -> anyhow::Result<()>` — Übersichtskarte aus Map-Mod-ZIP generieren (Layer-Optionen aus Dialog-State), Einstellungen persistent speichern
 
 ### `use_cases::editing::markers`
 - `open_marker_dialog(state, node_id, is_new)` — Marker-Dialog öffnen (neu oder bearbeiten)
@@ -499,7 +548,7 @@ Properties-Panel (Button "Bearbeiten")
 
 ```rust
 // Wird nach execute() + apply_tool_result() aufgerufen:
-fn make_segment_record(&self, id: u64, node_ids: Vec<u64>) -> Option<SegmentRecord>;
+fn make_segment_record(&self, id: u64, node_ids: &[u64]) -> Option<SegmentRecord>;
 
 // Wird in edit_segment() aufgerufen um das Tool wiederherzustellen:
 fn load_for_edit(&mut self, record: &SegmentRecord, kind: &SegmentKind);
@@ -653,6 +702,7 @@ Schnittstelle für alle Route-Tools (Linie, Kurve, …). Tools sind zustandsbeha
 - `is_ready() → bool` — Bereit zur Ausführung?
 
 **Optionale Methoden (Default-Implementierung):**
+- `has_pending_input() → bool` — Hat das Tool angefangene Eingaben? (für stufenweise Escape-Logik)
 - `set_direction(dir)` / `set_priority(prio)` — Editor-Defaults übernehmen
 - `set_snap_radius(radius)` — Snap-Radius für Node-Snapping setzen
 - `set_last_created(ids, road_map)` / `last_created_ids() → &[u64]` — Erstellte Node-IDs (für Verkettung, road_map dient zur End-Anchor-Ermittlung)
@@ -663,6 +713,7 @@ Schnittstelle für alle Route-Tools (Linie, Kurve, …). Tools sind zustandsbeha
 - `on_drag_start(pos, road_map, pick_radius) → bool` — Drag auf einen Punkt starten
 - `on_drag_update(pos)` — Position des gegriffenen Punkts aktualisieren
 - `on_drag_end(road_map)` — Drag beenden (Re-Snap bei Start/Ende)
+- `render_context_menu(response) → bool` — Kontextmenü im Viewport rendern (z.B. Tangenten-Auswahl)
 
 ---
 
@@ -691,9 +742,11 @@ Schnittstelle für alle Route-Tools (Linie, Kurve, …). Tools sind zustandsbeha
 ### Gemeinsame Tool-Infrastruktur (`tools/common/`)
 
 Aufgeteilt in vier Submodule (alle privat, Re-Exporte via `common/mod.rs`):
-- **`geometry.rs`** — `angle_to_compass`, `node_count_from_length`, `populate_neighbors`
+- **`geometry.rs`** — `angle_to_compass`, `node_count_from_length`, `populate_neighbors`, `linear_connections`, `tangent_options`
 - **`tangent.rs`** — `TangentSource`, `TangentState`, `render_tangent_combo`
 - **`lifecycle.rs`** — `ToolLifecycleState`, `SegmentConfig`, `LastEdited`, `render_segment_config_3modes`, `impl_lifecycle_delegation!`
+  - `save_created_ids(&mut self, ids: &[u64], road_map: &RoadMap)` — Speichert erstellte Node-IDs und ermittelt End-Anker aus der RoadMap
+  - `has_last_created() → bool` — Prüft ob letzte erstellte IDs vorhanden sind
   - `chaining_start_anchor() → Option<ToolAnchor>` — Gibt den End-Anker für die Verkettung zurück, wobei `NewPosition` zu `ExistingNode` hochgestuft wird (verhindert doppelte Nodes am Verkettungspunkt)
   - `prepare_for_chaining(&mut lifecycle, &mut seg, &last_anchors)` — Setzt den Lifecycle-State und die SegmentConfig für die nächste Verkettung zurück (DRY-Hilfsmethode, gemeinsam von allen RouteTools genutzt)
 - **`builder.rs`** — `assemble_tool_result`
