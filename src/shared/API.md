@@ -79,6 +79,23 @@ Zentral gesammelte Konfigurationswerte, gegliedert nach Bereich:
 | Tools | `SNAP_RADIUS` | 3.0 | Snap-Radius für Route-Tools (Welteinheiten) |
 | Terrain | `TERRAIN_HEIGHT_SCALE` | 255.0 | Höhenskala für Heightmap-Export |
 
+### `OverviewLayerOptions`
+
+Konfigurierbare Layer-Optionen für die Übersichtskarten-Generierung.
+Wird als Teil der `EditorOptions` persistent in TOML gespeichert.
+
+```rust
+pub struct OverviewLayerOptions {
+    pub hillshade: bool,
+    pub farmlands: bool,
+    pub farmland_ids: bool,
+    pub pois: bool,
+    pub legend: bool,
+}
+```
+
+Der Default setzt alle Layer außer `legend` auf `true`.
+
 ## Design-Prinzipien
 
 1. **Entkopplung:** `shared` verhindert direkte Abhängigkeiten zwischen `app` und `render`

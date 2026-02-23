@@ -99,6 +99,7 @@ pub struct UiState {
     pub status_message: Option<String>,
     pub dedup_dialog: DedupDialogState,
     pub zip_browser: Option<ZipBrowserState>,
+    pub overview_options_dialog: OverviewOptionsDialogState,
 }
 
 pub struct ZipBrowserState {
@@ -120,6 +121,12 @@ pub struct DedupDialogState {
     pub visible: bool,
     pub duplicate_count: u32,
     pub group_count: u32,
+}
+
+pub struct OverviewOptionsDialogState {
+    pub visible: bool,
+    pub zip_path: String,
+    pub layers: OverviewLayerOptions,
 }
 
 pub struct ViewState {
@@ -248,6 +255,8 @@ pub enum AppIntent {
     // Übersichtskarte
     GenerateOverviewRequested,
     GenerateOverviewFromZip { path: String },
+    OverviewOptionsConfirmed,
+    OverviewOptionsCancelled,
 
     // Map-Marker
     CreateMarkerRequested { node_id: u64 },
@@ -348,7 +357,9 @@ pub enum AppCommand {
 
     // Übersichtskarte
     RequestOverviewDialog,
-    GenerateOverviewFromZip { path: String },
+    OpenOverviewOptionsDialog { path: String },
+    GenerateOverviewWithOptions,
+    CloseOverviewOptionsDialog,
 
     // Marker
     CreateMarker { node_id: u64, name: String, group: String },
@@ -452,7 +463,7 @@ pub enum AppCommand {
 - `set_background_opacity(state, opacity)` — Opacity setzen (0.0–1.0)
 - `toggle_background_visibility(state)` — Sichtbarkeit umschalten
 - `clear_background_map(state)` — Background-Map entfernen
-- `generate_overview(state, zip_path) -> anyhow::Result<()>` — Übersichtskarte aus Map-Mod-ZIP generieren (via `fs25_map_overview`) und als Background-Map laden
+- `generate_overview_with_options(state) -> anyhow::Result<()>` — Übersichtskarte aus Map-Mod-ZIP generieren (Layer-Optionen aus Dialog-State), Einstellungen persistent speichern
 
 ### `use_cases::editing::markers`
 - `open_marker_dialog(state, node_id, is_new)` — Marker-Dialog öffnen (neu oder bearbeiten)
