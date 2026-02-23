@@ -199,7 +199,7 @@ impl CurveTool {
     /// - `neighbors`: Verfügbare Nachbarn am betreffenden Endpunkt
     /// - `chord_dir`: Normalisierte Sehnenrichtung Start→Ende (immer gleich für beide)
     /// - `is_start`: true = Start-Tangente (bevorzugt incoming, vergleicht angle+PI),
-    ///               false = End-Tangente (bevorzugt outgoing, vergleicht angle direkt)
+    ///   false = End-Tangente (bevorzugt outgoing, vergleicht angle direkt)
     fn auto_suggest_tangent(
         neighbors: &[crate::core::ConnectedNeighbor],
         chord_dir: Vec2,
