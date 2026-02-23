@@ -1,3 +1,6 @@
+[workspace]
+members = [".", "crates/fs25_map_overview"]
+
 [package]
 name = "FS25-AutoDrive-Editor"
 version = "0.6.2"
@@ -51,6 +54,9 @@ image = { version = "0.25", features = ["dds", "png", "jpeg"] }
 
 # ZIP-Archiv-Support
 zip = { version = "2", default-features = false, features = ["deflate"] }
+
+# Overview-Map-Generator (Terrain, Hillshade, Farmlands, POIs)
+fs25_map_overview = { path = "crates/fs25_map_overview" }
 
 # Serialization
 serde = { version = "1", features = ["derive"] }
