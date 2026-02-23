@@ -101,11 +101,6 @@ impl CurveTool {
         }
     }
 
-    /// Approximierte Kurvenlänge über Polylinien-Segmente.
-    pub(crate) fn approx_length(positions_fn: impl Fn(f32) -> Vec2, samples: usize) -> f32 {
-        approx_length(positions_fn, samples)
-    }
-
     /// Berechnet und speichert den virtuellen Scheitelpunkt B(0.5).
     ///
     /// Fehlende Steuerpunkte werden mit Sehnen-Dritteln als Fallback gesetzt.
@@ -247,7 +242,7 @@ impl CurveTool {
                 let (Some(start), Some(end), Some(cp)) = (s, e, self.control_point1) else {
                     return 0.0;
                 };
-                Self::approx_length(|t| quadratic_bezier(start, cp, end, t), 64)
+                approx_length(|t| quadratic_bezier(start, cp, end, t), 64)
             }
             CurveDegree::Cubic => {
                 let (Some(start), Some(end), Some(cp1), Some(cp2)) =
@@ -255,7 +250,7 @@ impl CurveTool {
                 else {
                     return 0.0;
                 };
-                Self::approx_length(|t| cubic_bezier(start, cp1, cp2, end, t), 64)
+                approx_length(|t| cubic_bezier(start, cp1, cp2, end, t), 64)
             }
         }
     }

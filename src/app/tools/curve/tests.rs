@@ -1,8 +1,8 @@
 use super::super::common::{angle_to_compass, TangentSource};
 use super::super::{RouteTool, ToolAction, ToolAnchor};
 use super::geometry::{
-    compute_curve_positions, compute_tangent_cp, cubic_bezier, project_onto_tangent_line,
-    quadratic_bezier, solve_cps_from_apex_both_tangents,
+    approx_length, compute_curve_positions, compute_tangent_cp, cubic_bezier,
+    project_onto_tangent_line, quadratic_bezier, solve_cps_from_apex_both_tangents,
 };
 use super::state::{CurveDegree, CurveTool, Phase};
 use crate::core::{ConnectedNeighbor, RoadMap};
@@ -375,7 +375,7 @@ fn test_execute_from_anchors() {
 
 #[test]
 fn test_approx_length_straight_line() {
-    let length = CurveTool::approx_length(|t| Vec2::new(t * 10.0, 0.0), 128);
+    let length = approx_length(|t| Vec2::new(t * 10.0, 0.0), 128);
     assert!((length - 10.0).abs() < 0.1);
 }
 

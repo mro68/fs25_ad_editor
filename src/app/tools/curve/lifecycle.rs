@@ -1,7 +1,8 @@
 //! Lifecycle-Methoden des CurveTool (on_click, preview, execute, reset, etc.).
 
 use super::super::{
-    common::populate_neighbors, snap_to_node, RouteTool, ToolAction, ToolPreview, ToolResult,
+    common::{linear_connections, populate_neighbors},
+    snap_to_node, RouteTool, ToolAction, ToolPreview, ToolResult,
 };
 use super::geometry::{
     build_tool_result, compute_curve_positions, cubic_bezier, quadratic_bezier, CurveParams,
@@ -168,9 +169,7 @@ impl RouteTool for CurveTool {
                     }
                 };
 
-                let connections: Vec<(usize, usize)> = (0..positions.len().saturating_sub(1))
-                    .map(|i| (i, i + 1))
-                    .collect();
+                let connections = linear_connections(positions.len());
 
                 // Steuerpunkte als zusätzliche Vorschau-Nodes
                 let mut nodes = positions;
@@ -243,9 +242,7 @@ impl RouteTool for CurveTool {
             self.last_control_point2 = self.control_point2;
         }
         self.tangents.save_for_recreate();
-        self.lifecycle.last_created_ids.clear();
-        self.lifecycle.last_created_ids.extend_from_slice(ids);
-        self.lifecycle.recreate_needed = false;
+        self.lifecycle.save_created_ids(ids);
     }
 
     fn execute_from_anchors(&self, road_map: &RoadMap) -> Option<ToolResult> {

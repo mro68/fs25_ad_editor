@@ -15,7 +15,7 @@ pub(crate) use builder::assemble_tool_result;
 // angle_to_compass wird in #[cfg(test)]-Modulen verwendet
 #[allow(unused_imports)]
 pub(crate) use geometry::angle_to_compass;
-pub(crate) use geometry::populate_neighbors;
+pub(crate) use geometry::{linear_connections, populate_neighbors, tangent_options};
 pub(crate) use lifecycle::{render_segment_config_3modes, SegmentConfig, ToolLifecycleState};
 pub use tangent::TangentSource;
 pub(crate) use tangent::{render_tangent_combo, TangentState};

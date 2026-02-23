@@ -1,6 +1,7 @@
 //! Lifecycle-Methoden des StraightLineTool (RouteTool-Implementierung).
 
 use super::super::{snap_to_node, RouteTool, ToolAction, ToolPreview, ToolResult};
+use super::super::common::linear_connections;
 use super::geometry::{build_result, compute_line_positions};
 use super::state::StraightLineTool;
 use crate::app::segment_registry::{SegmentKind, SegmentRecord};
@@ -67,9 +68,7 @@ impl RouteTool for StraightLineTool {
         };
 
         let positions = compute_line_positions(start_pos, end_pos, self.seg.max_segment_length);
-        let connections: Vec<(usize, usize)> = (0..positions.len().saturating_sub(1))
-            .map(|i| (i, i + 1))
-            .collect();
+        let connections = linear_connections(positions.len());
 
         ToolPreview {
             nodes: positions,
@@ -119,9 +118,7 @@ impl RouteTool for StraightLineTool {
         if self.end.is_some() {
             self.lifecycle.last_end_anchor = self.end;
         }
-        self.lifecycle.last_created_ids.clear();
-        self.lifecycle.last_created_ids.extend_from_slice(ids);
-        self.lifecycle.recreate_needed = false;
+        self.lifecycle.save_created_ids(ids);
     }
 
     fn execute_from_anchors(&self, road_map: &RoadMap) -> Option<ToolResult> {
