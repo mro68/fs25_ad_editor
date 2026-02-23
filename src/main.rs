@@ -185,6 +185,15 @@ impl EditorApp {
                     &drag_targets,
                 ));
 
+                // Tool-Kontextmenü (z.B. Tangenten-Auswahl für Cubic-Kurve)
+                if self.state.editor.active_tool == EditorTool::Route {
+                    if let Some(tool) = self.state.editor.tool_manager.active_tool_mut() {
+                        if tool.render_context_menu(&response) && tool.needs_recreate() {
+                            events.push(AppIntent::RouteToolConfigChanged);
+                        }
+                    }
+                }
+
                 let render_data = render::WgpuRenderData {
                     scene: self
                         .controller

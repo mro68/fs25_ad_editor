@@ -1,7 +1,8 @@
 use super::super::common::{angle_to_compass, TangentSource};
 use super::super::{RouteTool, ToolAction, ToolAnchor};
 use super::geometry::{
-    compute_curve_positions, compute_tangent_cp, cubic_bezier, quadratic_bezier,
+    compute_curve_positions, compute_tangent_cp, cubic_bezier, project_onto_tangent_line,
+    quadratic_bezier, solve_cps_from_apex_both_tangents,
 };
 use super::state::{CurveDegree, CurveTool, Phase};
 use crate::core::RoadMap;
@@ -219,21 +220,29 @@ fn test_tool_cubic_click_flow() {
     tool.degree = CurveDegree::Cubic;
     let road_map = RoadMap::new(3);
 
-    // Start
-    tool.on_click(Vec2::ZERO, &road_map, false);
-    // End
-    tool.on_click(Vec2::new(10.0, 0.0), &road_map, false);
-    // CP1 per normalem Klick
+    assert!(!tool.is_ready());
+    assert_eq!(tool.status_text(), "Startpunkt klicken");
+
+    let action = tool.on_click(Vec2::ZERO, &road_map, false);
+    assert_eq!(action, ToolAction::Continue);
+
+    // Nach End-Klick: CP2 wird automatisch initialisiert (set_default_cp2_if_missing)
+    let action = tool.on_click(Vec2::new(10.0, 0.0), &road_map, false);
+    assert_eq!(action, ToolAction::Continue);
+    assert!(
+        tool.control_point2.is_some(),
+        "CP2 sollte nach End-Klick auto-gesetzt sein"
+    );
+    assert!(!tool.is_ready(), "is_ready() ohne CP1 noch false");
+
+    // CP1 per Klick setzen → jetzt sind beide CPs gesetzt
     let action = tool.on_click(Vec2::new(3.0, 8.0), &road_map, false);
     assert_eq!(action, ToolAction::UpdatePreview);
-    assert!(!tool.is_ready()); // CP2 fehlt noch
-
-    // CP2 per zweitem Klick (kein Ctrl nötig)
-    let action = tool.on_click(Vec2::new(7.0, 8.0), &road_map, false);
-    assert_eq!(action, ToolAction::UpdatePreview);
-    assert!(tool.is_ready());
+    assert!(
+        tool.is_ready(),
+        "Nach CP1-Klick und Auto-CP2 soll is_ready() true sein"
+    );
     assert_eq!(tool.control_point1, Some(Vec2::new(3.0, 8.0)));
-    assert_eq!(tool.control_point2, Some(Vec2::new(7.0, 8.0)));
 }
 
 #[test]
@@ -245,12 +254,16 @@ fn test_tool_cubic_drag_repositions() {
     tool.on_click(Vec2::ZERO, &road_map, false);
     tool.on_click(Vec2::new(10.0, 0.0), &road_map, false);
     tool.on_click(Vec2::new(3.0, 8.0), &road_map, false); // CP1
-    tool.on_click(Vec2::new(7.0, 8.0), &road_map, false); // CP2
+                                                          // CP2 wurde bereits beim End-Klick auto-gesetzt
     assert!(tool.is_ready());
 
-    // Drag-Targets sind verfügbar
+    // Drag-Targets: Start, End, CP1, CP2, Apex (Cubic) = 5
     let targets = tool.drag_targets();
-    assert_eq!(targets.len(), 4); // Start, End, CP1, CP2
+    assert_eq!(
+        targets.len(),
+        5,
+        "Cubic: Start, End, CP1, CP2, Apex = 5 Targets"
+    );
 
     // CP1 per Drag verschieben
     let grabbed = tool.on_drag_start(Vec2::new(3.0, 8.0), &road_map, 2.0);
@@ -259,12 +272,14 @@ fn test_tool_cubic_drag_repositions() {
     assert_eq!(tool.control_point1, Some(Vec2::new(2.0, 6.0)));
     tool.on_drag_end(&road_map);
 
-    // CP2 per Drag verschieben
-    let grabbed = tool.on_drag_start(Vec2::new(7.0, 8.0), &road_map, 2.0);
-    assert!(grabbed);
-    tool.on_drag_update(Vec2::new(8.0, 6.0));
-    assert_eq!(tool.control_point2, Some(Vec2::new(8.0, 6.0)));
+    // CP2 per Drag verschieben (auto-Position abfragen)
+    let cp2_pos = tool.control_point2.expect("CP2 sollte gesetzt sein");
+    let grabbed = tool.on_drag_start(cp2_pos, &road_map, 1.0);
+    assert!(grabbed, "CP2 sollte greifbar sein an {:?}", cp2_pos);
+    let new_cp2 = cp2_pos + Vec2::new(1.0, -2.0);
+    tool.on_drag_update(new_cp2);
     tool.on_drag_end(&road_map);
+    assert!(tool.dragging.is_none());
 }
 
 #[test]
@@ -468,4 +483,116 @@ fn test_drag_quadratic_cp1() {
     tool.on_drag_end(&road_map);
     assert!(tool.dragging.is_none());
     assert_eq!(tool.control_point1, Some(Vec2::new(3.0, 12.0)));
+}
+
+// ── project_onto_tangent_line ──
+
+#[test]
+fn test_project_onto_tangent_line_start_along_axis() {
+    // Tangente zeigt nach Ost (0°), is_start=true → Projektion entlang Westrichtung
+    let anchor = Vec2::new(0.0, 0.0);
+    let angle = 0.0_f32; // Ost
+                         // Cursor liegt irgendwo oben rechts
+    let cursor = Vec2::new(5.0, 3.0);
+    let result = project_onto_tangent_line(anchor, angle, cursor, true);
+    // dir = Vec2::from_angle(PI) = (-1, 0), t = dot((5,3), (-1,0)) = -5
+    // Projizierter Punkt: (0,0) + (-5)*(-1,0) = (5, 0) — nicht negativ, weil t negativ × neg dir
+    // result.y soll ~ 0 sein (auf Tangenten-Linie)
+    assert!(
+        result.y.abs() < 1e-5,
+        "Projektion sollte auf y=0 liegen, war {:?}",
+        result
+    );
+}
+
+#[test]
+fn test_project_onto_tangent_line_end_perpendicular_is_zero() {
+    // Tangente zeigt nach Ost (0°), is_start=false → dir = (1,0)
+    // Cursor lotrecht zur Linie → Projektion ist der Fußpunkt
+    let anchor = Vec2::new(5.0, 0.0);
+    let cursor = Vec2::new(5.0, 10.0); // direkt lotrecht
+    let result = project_onto_tangent_line(anchor, 0.0_f32, cursor, false);
+    // dir = (1,0), t = dot((0,10), (1,0)) = 0 → result = anchor
+    assert!((result - anchor).length() < 1e-5);
+}
+
+// ── solve_cps_from_apex_both_tangents ──
+
+#[test]
+fn test_solve_cps_symmetric_horizontal() {
+    // P0=(0,0), P3=(10,0), dir1=(0,1) [Nord], dir2=(-1,0) [West]
+    // dir1 und dir2 sind linear unabhängig (Kreuzprodukt ≠ 0)
+    let p0 = Vec2::new(0.0, 0.0);
+    let p3 = Vec2::new(10.0, 0.0);
+    let dir1 = Vec2::new(0.0, 1.0); // Nord
+    let dir2 = Vec2::new(-1.0, 0.0); // West
+    let apex = Vec2::new(5.0, 5.0);
+
+    let result = solve_cps_from_apex_both_tangents(p0, p3, dir1, dir2, apex);
+    assert!(
+        result.is_some(),
+        "Sollte lösbar sein (nicht-parallele Tangenten)"
+    );
+    let (cp1, cp2) = result.unwrap();
+
+    // CP1 liegt auf der Linie p0 + t*dir1 (Nord) → cp1.x ≈ 0
+    assert!(cp1.x.abs() < 1e-3, "CP1.x sollte 0 sein, war {:?}", cp1);
+
+    // B(0.5) soll ≈ apex sein
+    let b_half = (p0 + 3.0 * cp1 + 3.0 * cp2 + p3) / 8.0;
+    assert!(
+        (b_half - apex).length() < 1e-3,
+        "B(0.5)={:?}, erwartet {:?}",
+        b_half,
+        apex
+    );
+}
+
+#[test]
+fn test_solve_cps_parallel_tangents_returns_none() {
+    // Parallele Tangenten → keine eindeutige Lösung
+    let p0 = Vec2::new(0.0, 0.0);
+    let p3 = Vec2::new(10.0, 0.0);
+    let dir1 = Vec2::new(1.0, 0.0); // Ost
+    let dir2 = Vec2::new(1.0, 0.0); // Ost (parallel zu dir1)
+    let apex = Vec2::new(5.0, 5.0);
+
+    let result = solve_cps_from_apex_both_tangents(p0, p3, dir1, dir2, apex);
+    assert!(result.is_none(), "Parallele Tangenten sollten None ergeben");
+}
+
+#[test]
+fn test_solve_cps_asymmetric_apex() {
+    // Asymmetrische Kurve: dir1 zeigt nach Oben, dir2 nach Links
+    let p0 = Vec2::new(0.0, 0.0);
+    let p3 = Vec2::new(10.0, 10.0);
+    let dir1 = Vec2::new(0.0, 1.0); // Nord
+    let dir2 = Vec2::new(-1.0, 0.0); // West
+    let apex = Vec2::new(2.0, 8.0);
+
+    let result = solve_cps_from_apex_both_tangents(p0, p3, dir1, dir2, apex);
+    assert!(result.is_some());
+    let (cp1, cp2) = result.unwrap();
+
+    // CP1 muss auf der Linie p0 + t*dir1 liegen → cp1.x ≈ 0
+    assert!(
+        cp1.x.abs() < 1e-3,
+        "CP1.x sollte 0 sein (dir1 = Nord), war {:?}",
+        cp1
+    );
+    // CP2 muss auf der Linie p3 + t*dir2 liegen → cp2.y ≈ 10
+    assert!(
+        (cp2.y - 10.0).abs() < 1e-3,
+        "CP2.y sollte 10 sein (dir2 = West), war {:?}",
+        cp2
+    );
+
+    // Prüfen ob B(0.5) ≈ apex
+    let b_half = (p0 + 3.0 * cp1 + 3.0 * cp2 + p3) / 8.0;
+    assert!(
+        (b_half - apex).length() < 1e-3,
+        "B(0.5)={:?}, erwartet {:?}",
+        b_half,
+        apex
+    );
 }
