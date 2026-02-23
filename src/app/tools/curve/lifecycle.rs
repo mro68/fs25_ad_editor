@@ -1,7 +1,7 @@
 //! Lifecycle-Methoden des CurveTool (on_click, preview, execute, reset, etc.).
 
 use super::super::{
-    common::populate_neighbors, snap_to_node, RouteTool, ToolAction, ToolAnchor, ToolPreview,
+    common::populate_neighbors, snap_to_node, RouteTool, ToolAction, ToolPreview,
     ToolResult,
 };
 use super::geometry::{
@@ -9,7 +9,7 @@ use super::geometry::{
 };
 use super::state::{CurveDegree, CurveTool, Phase};
 use crate::app::segment_registry::{SegmentKind, SegmentRecord};
-use crate::core::{ConnectionDirection, ConnectionPriority, RoadMap};
+use crate::core::RoadMap;
 use glam::Vec2;
 
 impl RouteTool for CurveTool {
@@ -63,12 +63,10 @@ impl RouteTool for CurveTool {
             Phase::Start => {
                 // Verkettung: letzten Endpunkt als Start verwenden
                 if let Some(last_end) = self.lifecycle.chaining_start_anchor() {
-                    self.lifecycle.last_created_ids.clear();
+                    self.lifecycle.prepare_for_chaining();
                     self.last_start_anchor = None;
-                    self.lifecycle.last_end_anchor = None;
                     self.last_control_point1 = None;
                     self.last_control_point2 = None;
-                    self.lifecycle.recreate_needed = false;
                     self.start = Some(last_end);
                     self.tangents.start_neighbors = populate_neighbors(&last_end, road_map);
                     let end_anchor = snap_to_node(pos, road_map, self.lifecycle.snap_radius);
@@ -230,17 +228,7 @@ impl RouteTool for CurveTool {
         self.phase != Phase::Start
     }
 
-    fn set_direction(&mut self, dir: ConnectionDirection) {
-        self.direction = dir;
-    }
-
-    fn set_priority(&mut self, prio: ConnectionPriority) {
-        self.priority = prio;
-    }
-
-    fn set_snap_radius(&mut self, radius: f32) {
-        self.lifecycle.snap_radius = radius;
-    }
+    crate::impl_lifecycle_delegation!();
 
     fn set_last_created(&mut self, ids: Vec<u64>, _road_map: &RoadMap) {
         if self.start.is_some() {
@@ -257,22 +245,6 @@ impl RouteTool for CurveTool {
         }
         self.tangents.save_for_recreate();
         self.lifecycle.last_created_ids = ids;
-        self.lifecycle.recreate_needed = false;
-    }
-
-    fn last_created_ids(&self) -> &[u64] {
-        &self.lifecycle.last_created_ids
-    }
-
-    fn last_end_anchor(&self) -> Option<ToolAnchor> {
-        self.lifecycle.last_end_anchor
-    }
-
-    fn needs_recreate(&self) -> bool {
-        self.lifecycle.recreate_needed
-    }
-
-    fn clear_recreate_flag(&mut self) {
         self.lifecycle.recreate_needed = false;
     }
 

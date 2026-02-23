@@ -67,6 +67,56 @@ impl ToolLifecycleState {
         self.last_end_anchor = None;
         self.recreate_needed = false;
     }
+
+    /// Bereitet den Lifecycle-Zustand für Verkettung vor (Reset der gemeinsamen Felder).
+    ///
+    /// Wird in `on_click()` aller Tools aufgerufen, wenn der letzte Endpunkt
+    /// als neuer Startpunkt übernommen wird.
+    pub fn prepare_for_chaining(&mut self) {
+        self.last_created_ids.clear();
+        self.last_end_anchor = None;
+        self.recreate_needed = false;
+    }
+}
+
+/// Macro für die 7 identischen Lifecycle-Delegationsmethoden aller Route-Tools.
+///
+/// Vermeidet ~35 Zeilen Boilerplate pro Tool-Implementierung.
+/// Erwartet, dass der Typ `self.lifecycle` (ToolLifecycleState),
+/// `self.direction` (ConnectionDirection) und `self.priority` (ConnectionPriority) hat.
+///
+/// Wird innerhalb eines `impl RouteTool for X { ... }`-Blocks aufgerufen.
+#[macro_export]
+macro_rules! impl_lifecycle_delegation {
+    () => {
+        fn set_direction(&mut self, dir: $crate::core::ConnectionDirection) {
+            self.direction = dir;
+        }
+
+        fn set_priority(&mut self, prio: $crate::core::ConnectionPriority) {
+            self.priority = prio;
+        }
+
+        fn set_snap_radius(&mut self, radius: f32) {
+            self.lifecycle.snap_radius = radius;
+        }
+
+        fn last_created_ids(&self) -> &[u64] {
+            &self.lifecycle.last_created_ids
+        }
+
+        fn last_end_anchor(&self) -> Option<$crate::app::tools::ToolAnchor> {
+            self.lifecycle.last_end_anchor
+        }
+
+        fn needs_recreate(&self) -> bool {
+            self.lifecycle.recreate_needed
+        }
+
+        fn clear_recreate_flag(&mut self) {
+            self.lifecycle.recreate_needed = false;
+        }
+    };
 }
 
 /// Gekapselte Konfiguration für Segment-Länge und Node-Anzahl.
