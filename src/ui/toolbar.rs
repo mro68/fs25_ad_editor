@@ -149,6 +149,32 @@ pub fn render_toolbar(ctx: &egui::Context, state: &AppState) -> Vec<AppIntent> {
                     if ui.button(toggle_text).clicked() {
                         events.push(AppIntent::ToggleBackgroundVisibility);
                     }
+
+                    // Scale-Controls
+                    let scale = state.view.background_scale;
+                    ui.label(format!("×{scale:.2}"));
+                    if ui
+                        .button("−")
+                        .on_hover_text("Ausdehnung halbieren")
+                        .clicked()
+                    {
+                        events.push(AppIntent::ScaleBackground { factor: 0.5 });
+                    }
+                    if ui
+                        .button("+")
+                        .on_hover_text("Ausdehnung verdoppeln")
+                        .clicked()
+                    {
+                        events.push(AppIntent::ScaleBackground { factor: 2.0 });
+                    }
+                    if (scale - 1.0).abs() > f32::EPSILON
+                        && ui.button("1:1").on_hover_text("Originalgröße").clicked()
+                    {
+                        // Setze Scale zurück auf 1.0 durch Faktor = 1/aktuell
+                        events.push(AppIntent::ScaleBackground {
+                            factor: 1.0 / scale,
+                        });
+                    }
                 });
             }
         });

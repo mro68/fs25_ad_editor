@@ -89,6 +89,8 @@ pub enum AppIntent {
     SetBackgroundOpacity { opacity: f32 },
     /// Background-Sichtbarkeit umschalten
     ToggleBackgroundVisibility,
+    /// Background-Ausdehnung skalieren (Faktor relativ, z.B. 2.0 = verdoppeln)
+    ScaleBackground { factor: f32 },
     /// Undo: Letzte Aktion rückgängig machen
     UndoRequested,
     /// Redo: Rückgängig gemachte Aktion wiederherstellen
@@ -189,6 +191,15 @@ pub enum AppIntent {
     RouteToolDragEnded,
     /// Segment nachträglich bearbeiten (Nodes löschen + Tool laden)
     EditSegmentRequested { record_id: u64 },
+    /// ZIP-Datei wurde als Background-Map gewählt → Browser öffnen
+    ZipBackgroundBrowseRequested { path: String },
+    /// Bilddatei aus ZIP-Browser gewählt
+    ZipBackgroundFileSelected {
+        zip_path: String,
+        entry_name: String,
+    },
+    /// ZIP-Browser geschlossen (ohne Auswahl)
+    ZipBrowserCancelled,
 }
 
 /// Commands sind mutierende Schritte, die zentral ausgeführt werden.
@@ -312,6 +323,8 @@ pub enum AppCommand {
     UpdateBackgroundOpacity { opacity: f32 },
     /// Background-Sichtbarkeit umschalten
     ToggleBackgroundVisibility,
+    /// Background-Ausdehnung skalieren (Faktor relativ)
+    ScaleBackground { factor: f32 },
     /// Heightmap-Warnung schließen
     DismissHeightmapWarning,
     /// Move-Lifecycle: Verschieben starten (Undo-Snapshot)
@@ -376,4 +389,14 @@ pub enum AppCommand {
     RouteToolDragEnd,
     /// Segment nachträglich bearbeiten
     EditSegment { record_id: u64 },
+    /// ZIP-Archiv öffnen und Bilddateien im Browser anzeigen
+    BrowseZipBackground { path: String },
+    /// Bilddatei aus ZIP als Background-Map laden
+    LoadBackgroundFromZip {
+        zip_path: String,
+        entry_name: String,
+        crop_size: Option<u32>,
+    },
+    /// ZIP-Browser-Dialog schließen
+    CloseZipBrowser,
 }
