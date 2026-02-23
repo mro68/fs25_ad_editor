@@ -200,6 +200,10 @@ pub enum AppIntent {
     },
     /// ZIP-Browser geschlossen (ohne Auswahl)
     ZipBrowserCancelled,
+    /// Übersichtskarte aus Map-Mod-ZIP generieren (öffnet Dateidialog)
+    GenerateOverviewRequested,
+    /// Übersichtskarte aus gewähltem ZIP generieren
+    GenerateOverviewFromZip { path: String },
 }
 
 /// Commands sind mutierende Schritte, die zentral ausgeführt werden.
@@ -399,4 +403,8 @@ pub enum AppCommand {
     },
     /// ZIP-Browser-Dialog schließen
     CloseZipBrowser,
+    /// Übersichtskarten-ZIP-Dialog anfordern
+    RequestOverviewDialog,
+    /// Übersichtskarte aus Map-Mod-ZIP generieren und als Background laden
+    GenerateOverviewFromZip { path: String },
 }

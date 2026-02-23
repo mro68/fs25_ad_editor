@@ -223,6 +223,14 @@ impl AppController {
                 crop_size,
             } => handlers::view::load_background_from_zip(state, zip_path, entry_name, crop_size)?,
             AppCommand::CloseZipBrowser => handlers::dialog::close_zip_browser(state),
+
+            // === Overview-Map ===
+            AppCommand::RequestOverviewDialog => {
+                handlers::dialog::request_overview_dialog(state)
+            }
+            AppCommand::GenerateOverviewFromZip { path } => {
+                handlers::view::generate_overview(state, path)?
+            }
         }
 
         state.command_log.record(&executed_command);

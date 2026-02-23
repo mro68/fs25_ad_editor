@@ -252,5 +252,9 @@ pub fn map_intent_to_commands(state: &AppState, intent: AppIntent) -> Vec<AppCom
             crop_size: None,
         }],
         AppIntent::ZipBrowserCancelled => vec![AppCommand::CloseZipBrowser],
+        AppIntent::GenerateOverviewRequested => vec![AppCommand::RequestOverviewDialog],
+        AppIntent::GenerateOverviewFromZip { path } => {
+            vec![AppCommand::GenerateOverviewFromZip { path }]
+        }
     }
 }
