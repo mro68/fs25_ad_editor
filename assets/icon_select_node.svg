@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="64" height="64" viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">
+  <!-- Gerade Strecke -->
+  <line x1="12" y1="52" x2="32" y2="32" stroke="#222" stroke-width="3"/>
+  <line x1="32" y1="32" x2="52" y2="12" stroke="#222" stroke-width="3"/>
+  <!-- Nodes -->
+  <circle cx="12" cy="52" r="3.5" fill="#fff" stroke="#888" stroke-width="2"/>
+  <circle cx="32" cy="32" r="3.5" fill="#fff" stroke="#888" stroke-width="2"/>
+  <circle cx="52" cy="12" r="3.5" fill="#fff" stroke="#888" stroke-width="2"/>
+  <!-- Auswahl-Ring um mittleren Node -->
+  <circle cx="32" cy="32" r="7" fill="none" stroke="#1976d2" stroke-width="2.2"/>
+  <!-- Mauszeiger (Pfeil) -->
+  <polygon points="40,44 36,36 44,40 41,41 44,44" fill="#1976d2" stroke="#1976d2" stroke-width="1"/>
+</svg>

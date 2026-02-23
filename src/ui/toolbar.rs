@@ -2,6 +2,16 @@
 
 use crate::app::{AppIntent, AppState, EditorTool};
 
+// ── SVG-Icon-Konstanten (compile-time eingebettet) ──────────────
+
+const ICON_SIZE: egui::Vec2 = egui::Vec2::new(20.0, 20.0);
+const ICON_SIZE_DROPDOWN: egui::Vec2 = egui::Vec2::new(18.0, 18.0);
+
+/// Erstellt ein `egui::Image` aus einer `ImageSource` in der gewünschten Größe.
+fn svg_icon(source: egui::ImageSource<'_>, size: egui::Vec2) -> egui::Image<'_> {
+    egui::Image::new(source).fit_to_exact_size(size)
+}
+
 /// Rendert die Toolbar und gibt erzeugte Events zurück.
 pub fn render_toolbar(ctx: &egui::Context, state: &AppState) -> Vec<AppIntent> {
     let mut events = Vec::new();
@@ -12,8 +22,14 @@ pub fn render_toolbar(ctx: &egui::Context, state: &AppState) -> Vec<AppIntent> {
             ui.label("Werkzeug:");
             ui.separator();
 
+            // ── Select-Button mit SVG-Icon ──
+            let select_icon = svg_icon(
+                egui::include_image!("../../assets/icon_select_node.svg"),
+                ICON_SIZE,
+            );
+            let select_btn = egui::Button::image_and_text(select_icon, "Select (1)");
             if ui
-                .selectable_label(active == EditorTool::Select, "⊹ Select (1)")
+                .add(select_btn.selected(active == EditorTool::Select))
                 .clicked()
             {
                 events.push(AppIntent::SetEditorToolRequested {
@@ -21,8 +37,14 @@ pub fn render_toolbar(ctx: &egui::Context, state: &AppState) -> Vec<AppIntent> {
                 });
             }
 
+            // ── Connect-Button mit SVG-Icon ──
+            let connect_icon = svg_icon(
+                egui::include_image!("../../assets/icon_connect.svg"),
+                ICON_SIZE,
+            );
+            let connect_btn = egui::Button::image_and_text(connect_icon, "Connect (2)");
             if ui
-                .selectable_label(active == EditorTool::Connect, "⟷ Connect (2)")
+                .add(connect_btn.selected(active == EditorTool::Connect))
                 .clicked()
             {
                 events.push(AppIntent::SetEditorToolRequested {
@@ -30,8 +52,14 @@ pub fn render_toolbar(ctx: &egui::Context, state: &AppState) -> Vec<AppIntent> {
                 });
             }
 
+            // ── AddNode-Button mit SVG-Icon ──
+            let add_icon = svg_icon(
+                egui::include_image!("../../assets/icon_add_node.svg"),
+                ICON_SIZE,
+            );
+            let add_btn = egui::Button::image_and_text(add_icon, "Add Node (3)");
             if ui
-                .selectable_label(active == EditorTool::AddNode, "＋ Add Node (3)")
+                .add(add_btn.selected(active == EditorTool::AddNode))
                 .clicked()
             {
                 events.push(AppIntent::SetEditorToolRequested {
@@ -41,7 +69,7 @@ pub fn render_toolbar(ctx: &egui::Context, state: &AppState) -> Vec<AppIntent> {
 
             ui.separator();
 
-            // Linien-Tools als Dropdown-Menü
+            // ── Linien-Tools als Dropdown-Menü mit SVG-Icons ──
             let active_route_index = if active == EditorTool::Route {
                 state.editor.tool_manager.active_index()
             } else {
@@ -50,22 +78,20 @@ pub fn render_toolbar(ctx: &egui::Context, state: &AppState) -> Vec<AppIntent> {
             let tool_entries = state.editor.tool_manager.tool_entries();
             let selected_label = active_route_index
                 .and_then(|idx| tool_entries.iter().find(|(i, _, _)| *i == idx))
-                .map(|(_, name, icon)| format!("{name}  {icon}"))
+                .map(|(_, name, _icon)| name.to_string())
                 .unwrap_or_else(|| "Linie wählen…".to_string());
 
-            // Popup-ID vorberechnen, damit der Eintrag das Dropdown schließen kann
             let popup_id = ui.make_persistent_id("line_tools_dropdown").with("popup");
 
             egui::ComboBox::from_id_salt("line_tools_dropdown")
                 .selected_text(&selected_label)
                 .width(185.0)
                 .show_ui(ui, |ui| {
-                    for &(idx, name, icon) in &tool_entries {
+                    for &(idx, name, _icon) in &tool_entries {
                         render_line_tool_item(
                             ui,
                             idx,
                             name,
-                            icon,
                             active_route_index,
                             popup_id,
                             &mut events,
@@ -105,7 +131,6 @@ pub fn render_toolbar(ctx: &egui::Context, state: &AppState) -> Vec<AppIntent> {
             // Background-Map-Controls (rechts ausgerichtet)
             if state.view.background_map.is_some() {
                 ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
-                    // Opacity-Slider
                     let mut opacity = state.view.background_opacity;
                     ui.label("Hintergrund:");
                     if ui
@@ -115,7 +140,6 @@ pub fn render_toolbar(ctx: &egui::Context, state: &AppState) -> Vec<AppIntent> {
                         events.push(AppIntent::SetBackgroundOpacity { opacity });
                     }
 
-                    // Toggle-Button
                     let visible = state.view.background_visible;
                     let toggle_text = if visible {
                         "👁 Sichtbar"
@@ -133,18 +157,29 @@ pub fn render_toolbar(ctx: &egui::Context, state: &AppState) -> Vec<AppIntent> {
     events
 }
 
-/// Rendert einen Dropdown-Eintrag für ein Linien-Tool mit Text links und Icon rechts.
+/// Gibt die `ImageSource` für das SVG-Icon eines Route-Tools anhand des Index zurück.
+fn route_tool_icon(idx: usize) -> egui::ImageSource<'static> {
+    match idx {
+        0 => egui::include_image!("../../assets/icon_straight_road.svg"),
+        1 => egui::include_image!("../../assets/icon_bezier_quadratic.svg"),
+        2 => egui::include_image!("../../assets/icon_bezier_cubic.svg"),
+        3 => egui::include_image!("../../assets/icon_spline.svg"),
+        _ => egui::include_image!("../../assets/icon_straight_road.svg"),
+    }
+}
+
+/// Rendert einen Dropdown-Eintrag für ein Linien-Tool mit SVG-Icon und Text.
 fn render_line_tool_item(
     ui: &mut egui::Ui,
     idx: usize,
     name: &str,
-    icon: &str,
     active_route_index: Option<usize>,
     popup_id: egui::Id,
     events: &mut Vec<AppIntent>,
 ) {
     let is_sel = active_route_index == Some(idx);
-    let row_size = egui::vec2(ui.available_width(), ui.spacing().interact_size.y);
+    let row_height = ui.spacing().interact_size.y.max(22.0);
+    let row_size = egui::vec2(ui.available_width(), row_height);
     let (rect, resp) = ui.allocate_exact_size(row_size, egui::Sense::click());
 
     // Hintergrund
@@ -160,26 +195,25 @@ fn render_line_tool_item(
             .rect_filled(rect, egui::CornerRadius::same(2), bg);
     }
 
+    // SVG-Icon links
+    let icon_rect = egui::Rect::from_min_size(
+        rect.left_center() - egui::vec2(0.0, ICON_SIZE_DROPDOWN.y / 2.0) + egui::vec2(4.0, 0.0),
+        ICON_SIZE_DROPDOWN,
+    );
+    let icon_image = svg_icon(route_tool_icon(idx), ICON_SIZE_DROPDOWN);
+    icon_image.paint_at(ui, icon_rect);
+
+    // Text rechts neben dem Icon
     let text_color = if is_sel {
         ui.visuals().strong_text_color()
     } else {
         ui.visuals().text_color()
     };
     let font_id = egui::TextStyle::Button.resolve(ui.style());
-
-    // Text links
     ui.painter().text(
-        rect.left_center() + egui::vec2(6.0, 0.0),
+        icon_rect.right_center() + egui::vec2(6.0, 0.0),
         egui::Align2::LEFT_CENTER,
         name,
-        font_id.clone(),
-        text_color,
-    );
-    // Icon rechts
-    ui.painter().text(
-        rect.right_center() - egui::vec2(6.0, 0.0),
-        egui::Align2::RIGHT_CENTER,
-        icon,
         font_id,
         text_color,
     );

@@ -4,7 +4,7 @@
 //! - `render_config_view` — Grad-Auswahl + Segment-Konfiguration im Properties-Panel
 //! - `render_tangent_context_menu` — Tangenten-Auswahl per Rechtsklick-Kontextmenü
 
-use super::super::common::{angle_to_compass, TangentSource};
+use super::super::common::{angle_to_compass, render_segment_config_3modes, TangentSource};
 use super::super::RouteTool;
 use super::geometry::{cubic_bezier, quadratic_bezier};
 use super::state::{CurveDegree, CurveTool, Phase};
@@ -46,19 +46,12 @@ impl CurveTool {
             && self.lifecycle.last_end_anchor.is_some()
             && self.last_control_point1.is_some();
 
-        if adjusting {
-            let (Some(start_anchor), Some(end_anchor), Some(cp1)) = (
-                self.last_start_anchor,
-                self.lifecycle.last_end_anchor,
-                self.last_control_point1,
-            ) else {
-                return changed;
-            };
-
-            let start_pos = start_anchor.position();
-            let end_pos = end_anchor.position();
+        let length = if adjusting {
+            let start_pos = self.last_start_anchor.unwrap().position();
+            let end_pos = self.lifecycle.last_end_anchor.unwrap().position();
+            let cp1 = self.last_control_point1.unwrap();
             let cp2 = self.last_control_point2;
-            let length = match self.degree {
+            match self.degree {
                 CurveDegree::Quadratic => {
                     Self::approx_length(|t| quadratic_bezier(start_pos, cp1, end_pos, t), 64)
                 }
@@ -66,19 +59,24 @@ impl CurveTool {
                     let cp2v = cp2.unwrap_or(cp1);
                     Self::approx_length(|t| cubic_bezier(start_pos, cp1, cp2v, end_pos, t), 64)
                 }
-            };
-
-            let (seg_changed, recreate) = self.seg.render_adjusting(ui, length, "Kurvenlänge");
-            if recreate {
-                self.lifecycle.recreate_needed = true;
             }
-            changed |= seg_changed;
-        } else if self.is_ready() {
-            let length = self.curve_length();
-            changed |= self.seg.render_live(ui, length, "Kurvenlänge");
         } else {
-            changed |= self.seg.render_default(ui);
+            self.curve_length()
+        };
+
+        let ready = self.is_ready();
+        let (seg_changed, recreate) = render_segment_config_3modes(
+            &mut self.seg,
+            ui,
+            adjusting,
+            ready,
+            length,
+            "Kurvenlänge",
+        );
+        if recreate {
+            self.lifecycle.recreate_needed = true;
         }
+        changed |= seg_changed;
 
         changed
     }

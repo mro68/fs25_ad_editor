@@ -148,8 +148,7 @@ impl CurveTool {
     /// Nachbarn, dessen Fortsetzungsrichtung am stärksten in Richtung Endpunkt zeigt.
     /// Nichts wird gesetzt wenn kein Nachbar einen positiven Dot-Produktwert hat.
     pub(crate) fn auto_suggest_start_tangent(&mut self) {
-        use std::f32::consts::PI;
-        if self.degree != CurveDegree::Cubic || self.tangents.start_neighbors.is_empty() {
+        if self.degree != CurveDegree::Cubic {
             return;
         }
         let (Some(start), Some(end)) = (self.start, self.end) else {
@@ -160,36 +159,10 @@ impl CurveTool {
         if chord_len < f32::EPSILON {
             return;
         }
-        let chord_dir = chord / chord_len;
-
-        // Eingehende Verbindungen bevorzugen; Fallback: alle
-        let candidates: Vec<_> = {
-            let incoming: Vec<_> = self
-                .tangents
-                .start_neighbors
-                .iter()
-                .filter(|n| !n.is_outgoing)
-                .collect();
-            if incoming.is_empty() {
-                self.tangents.start_neighbors.iter().collect()
-            } else {
-                incoming
-            }
-        };
-
-        let best = candidates.iter().max_by(|a, b| {
-            let da = Vec2::from_angle(a.angle + PI).dot(chord_dir);
-            let db = Vec2::from_angle(b.angle + PI).dot(chord_dir);
-            da.partial_cmp(&db).unwrap_or(std::cmp::Ordering::Equal)
-        });
-        if let Some(n) = best {
-            let dot = Vec2::from_angle(n.angle + PI).dot(chord_dir);
-            if dot > 0.0 {
-                self.tangents.tangent_start = TangentSource::Connection {
-                    neighbor_id: n.neighbor_id,
-                    angle: n.angle,
-                };
-            }
+        if let Some(t) =
+            Self::auto_suggest_tangent(&self.tangents.start_neighbors, chord / chord_len, true)
+        {
+            self.tangents.tangent_start = t;
         }
     }
 
@@ -199,7 +172,7 @@ impl CurveTool {
     /// Nachbarn, dessen Richtung am stärksten vom Startpunkt weg zeigt
     /// (spiegelverkehrt zu `auto_suggest_start_tangent`).
     pub(crate) fn auto_suggest_end_tangent(&mut self) {
-        if self.degree != CurveDegree::Cubic || self.tangents.end_neighbors.is_empty() {
+        if self.degree != CurveDegree::Cubic {
             return;
         }
         let (Some(start), Some(end)) = (self.start, self.end) else {
@@ -210,37 +183,58 @@ impl CurveTool {
         if chord_len < f32::EPSILON {
             return;
         }
-        // Richtung vom Endpunkt weg (= Sehnenrichtung, da Kurve von Start→Ende geht)
-        let away_dir = chord / chord_len;
+        if let Some(t) =
+            Self::auto_suggest_tangent(&self.tangents.end_neighbors, chord / chord_len, false)
+        {
+            self.tangents.tangent_end = t;
+        }
+    }
 
-        // Ausgehende Verbindungen bevorzugen; Fallback: alle
-        let candidates: Vec<_> = {
-            let outgoing: Vec<_> = self
-                .tangents
-                .end_neighbors
-                .iter()
-                .filter(|n| n.is_outgoing)
-                .collect();
-            if outgoing.is_empty() {
-                self.tangents.end_neighbors.iter().collect()
-            } else {
-                outgoing
-            }
+    /// Parametrisierte Auto-Tangenten-Auswahl (gemeinsam für Start und Ende).
+    ///
+    /// - `neighbors`: Verfügbare Nachbarn am betreffenden Endpunkt
+    /// - `chord_dir`: Normalisierte Sehnenrichtung Start→Ende (immer gleich für beide)
+    /// - `is_start`: true = Start-Tangente (bevorzugt incoming, vergleicht angle+PI),
+    ///   false = End-Tangente (bevorzugt outgoing, vergleicht angle direkt)
+    fn auto_suggest_tangent(
+        neighbors: &[crate::core::ConnectedNeighbor],
+        chord_dir: Vec2,
+        is_start: bool,
+    ) -> Option<TangentSource> {
+        use std::f32::consts::PI;
+        if neighbors.is_empty() {
+            return None;
+        }
+
+        // Start: eingehende bevorzugen; Ende: ausgehende bevorzugen
+        let prefer_outgoing = !is_start;
+        let preferred: Vec<_> = neighbors
+            .iter()
+            .filter(|n| n.is_outgoing == prefer_outgoing)
+            .collect();
+        let candidates = if preferred.is_empty() {
+            neighbors.iter().collect::<Vec<_>>()
+        } else {
+            preferred
         };
 
+        // Start: Fortsetzungsrichtung (angle + PI) mit Sehnenrichtung vergleichen
+        // Ende: Richtung direkt (angle) mit Sehnenrichtung vergleichen
+        let angle_offset = if is_start { PI } else { 0.0 };
+
         let best = candidates.iter().max_by(|a, b| {
-            let da = Vec2::from_angle(a.angle).dot(away_dir);
-            let db = Vec2::from_angle(b.angle).dot(away_dir);
+            let da = Vec2::from_angle(a.angle + angle_offset).dot(chord_dir);
+            let db = Vec2::from_angle(b.angle + angle_offset).dot(chord_dir);
             da.partial_cmp(&db).unwrap_or(std::cmp::Ordering::Equal)
-        });
-        if let Some(n) = best {
-            let dot = Vec2::from_angle(n.angle).dot(away_dir);
-            if dot > 0.0 {
-                self.tangents.tangent_end = TangentSource::Connection {
-                    neighbor_id: n.neighbor_id,
-                    angle: n.angle,
-                };
-            }
+        })?;
+        let dot = Vec2::from_angle(best.angle + angle_offset).dot(chord_dir);
+        if dot > 0.0 {
+            Some(TangentSource::Connection {
+                neighbor_id: best.neighbor_id,
+                angle: best.angle,
+            })
+        } else {
+            None
         }
     }
 

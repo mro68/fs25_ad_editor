@@ -67,6 +67,56 @@ impl ToolLifecycleState {
         self.last_end_anchor = None;
         self.recreate_needed = false;
     }
+
+    /// Bereitet den Lifecycle-Zustand für Verkettung vor (Reset der gemeinsamen Felder).
+    ///
+    /// Wird in `on_click()` aller Tools aufgerufen, wenn der letzte Endpunkt
+    /// als neuer Startpunkt übernommen wird.
+    pub fn prepare_for_chaining(&mut self) {
+        self.last_created_ids.clear();
+        self.last_end_anchor = None;
+        self.recreate_needed = false;
+    }
+}
+
+/// Macro für die 7 identischen Lifecycle-Delegationsmethoden aller Route-Tools.
+///
+/// Vermeidet ~35 Zeilen Boilerplate pro Tool-Implementierung.
+/// Erwartet, dass der Typ `self.lifecycle` (ToolLifecycleState),
+/// `self.direction` (ConnectionDirection) und `self.priority` (ConnectionPriority) hat.
+///
+/// Wird innerhalb eines `impl RouteTool for X { ... }`-Blocks aufgerufen.
+#[macro_export]
+macro_rules! impl_lifecycle_delegation {
+    () => {
+        fn set_direction(&mut self, dir: $crate::core::ConnectionDirection) {
+            self.direction = dir;
+        }
+
+        fn set_priority(&mut self, prio: $crate::core::ConnectionPriority) {
+            self.priority = prio;
+        }
+
+        fn set_snap_radius(&mut self, radius: f32) {
+            self.lifecycle.snap_radius = radius;
+        }
+
+        fn last_created_ids(&self) -> &[u64] {
+            &self.lifecycle.last_created_ids
+        }
+
+        fn last_end_anchor(&self) -> Option<$crate::app::tools::ToolAnchor> {
+            self.lifecycle.last_end_anchor
+        }
+
+        fn needs_recreate(&self) -> bool {
+            self.lifecycle.recreate_needed
+        }
+
+        fn clear_recreate_flag(&mut self) {
+            self.lifecycle.recreate_needed = false;
+        }
+    };
 }
 
 /// Gekapselte Konfiguration für Segment-Länge und Node-Anzahl.
@@ -112,12 +162,7 @@ impl SegmentConfig {
     /// Rendert die Segment-Slider im Nachbearbeitungs-Modus (mit recreate-Flag).
     ///
     /// Gibt `(changed, recreate_needed)` zurück.
-    pub fn render_adjusting(
-        &mut self,
-        ui: &mut egui::Ui,
-        length: f32,
-        label: &str,
-    ) -> (bool, bool) {
+    fn render_adjusting(&mut self, ui: &mut egui::Ui, length: f32, label: &str) -> (bool, bool) {
         let mut changed = false;
         let mut recreate = false;
 
@@ -156,7 +201,7 @@ impl SegmentConfig {
     /// Rendert die Segment-Slider im Live-Modus (Tool ist bereit, aber noch nicht ausgeführt).
     ///
     /// Gibt `true` zurück wenn sich etwas geändert hat.
-    pub fn render_live(&mut self, ui: &mut egui::Ui, length: f32, label: &str) -> bool {
+    fn render_live(&mut self, ui: &mut egui::Ui, length: f32, label: &str) -> bool {
         let mut changed = false;
 
         ui.label(format!("{}: {:.1} m", label, length));
@@ -192,7 +237,7 @@ impl SegmentConfig {
     /// Rendert den Segment-Slider im Default-Modus (Tool noch nicht bereit).
     ///
     /// Gibt `true` zurück wenn sich etwas geändert hat.
-    pub fn render_default(&mut self, ui: &mut egui::Ui) -> bool {
+    fn render_default(&mut self, ui: &mut egui::Ui) -> bool {
         let mut changed = false;
 
         ui.label("Max. Segment-Länge:");
@@ -205,5 +250,29 @@ impl SegmentConfig {
         }
 
         changed
+    }
+}
+
+/// Rendert die 3-Modus-Segment-Konfiguration (adjusting / live / default).
+///
+/// Gemeinsames Pattern aller Route-Tools. Gibt `(changed, recreate_needed)` zurück.
+/// - `adjusting`: Nachbearbeitungs-Modus (Segment wurde bereits platziert)
+/// - `ready`: Tool ist bereit zur Ausführung
+/// - `length`: Aktuelle Streckenlänge (irrelevant für Default-Modus)
+/// - `label`: Anzeige-Label für die Länge (z.B. "Kurvenlänge", "Spline-Länge")
+pub fn render_segment_config_3modes(
+    seg: &mut SegmentConfig,
+    ui: &mut egui::Ui,
+    adjusting: bool,
+    ready: bool,
+    length: f32,
+    label: &str,
+) -> (bool, bool) {
+    if adjusting {
+        seg.render_adjusting(ui, length, label)
+    } else if ready {
+        (seg.render_live(ui, length, label), false)
+    } else {
+        (seg.render_default(ui), false)
     }
 }
