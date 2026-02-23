@@ -5,6 +5,7 @@ use super::super::{
     ToolResult,
 };
 use super::state::SplineTool;
+use crate::app::segment_registry::{SegmentKind, SegmentRecord};
 use crate::core::{ConnectionDirection, ConnectionPriority, RoadMap};
 use glam::Vec2;
 
@@ -180,5 +181,51 @@ impl RouteTool for SplineTool {
             self.tangents.tangent_end,
             road_map,
         )
+    }
+
+    fn make_segment_record(&self, id: u64, node_ids: Vec<u64>) -> Option<SegmentRecord> {
+        if self.last_anchors.len() < 2 {
+            return None;
+        }
+        let start = *self.last_anchors.first()?;
+        let end = *self.last_anchors.last()?;
+        Some(SegmentRecord {
+            id,
+            node_ids,
+            start_anchor: start,
+            end_anchor: end,
+            kind: SegmentKind::Spline {
+                anchors: self.last_anchors.clone(),
+                tangent_start: self.tangents.last_tangent_start,
+                tangent_end: self.tangents.last_tangent_end,
+                direction: self.direction,
+                priority: self.priority,
+                max_segment_length: self.seg.max_segment_length,
+            },
+        })
+    }
+
+    fn load_for_edit(&mut self, _record: &SegmentRecord, kind: &SegmentKind) {
+        let SegmentKind::Spline {
+            anchors,
+            tangent_start,
+            tangent_end,
+            direction,
+            priority,
+            max_segment_length,
+        } = kind
+        else {
+            return;
+        };
+        self.anchors = anchors.clone();
+        self.last_anchors = anchors.clone();
+        self.tangents.tangent_start = *tangent_start;
+        self.tangents.tangent_end = *tangent_end;
+        self.tangents.last_tangent_start = *tangent_start;
+        self.tangents.last_tangent_end = *tangent_end;
+        self.direction = *direction;
+        self.priority = *priority;
+        self.seg.max_segment_length = *max_segment_length;
+        self.sync_derived();
     }
 }

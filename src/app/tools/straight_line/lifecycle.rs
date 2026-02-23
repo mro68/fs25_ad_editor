@@ -3,6 +3,7 @@
 use super::super::{snap_to_node, RouteTool, ToolAction, ToolAnchor, ToolPreview, ToolResult};
 use super::geometry::{build_result, compute_line_positions};
 use super::state::StraightLineTool;
+use crate::app::segment_registry::{SegmentKind, SegmentRecord};
 use crate::core::{ConnectionDirection, ConnectionPriority, RoadMap};
 use glam::Vec2;
 
@@ -157,5 +158,38 @@ impl RouteTool for StraightLineTool {
             self.priority,
             road_map,
         )
+    }
+
+    fn make_segment_record(&self, id: u64, node_ids: Vec<u64>) -> Option<SegmentRecord> {
+        let start = self.last_start_anchor?;
+        let end = self.lifecycle.last_end_anchor?;
+        Some(SegmentRecord {
+            id,
+            node_ids,
+            start_anchor: start,
+            end_anchor: end,
+            kind: SegmentKind::Straight {
+                direction: self.direction,
+                priority: self.priority,
+                max_segment_length: self.seg.max_segment_length,
+            },
+        })
+    }
+
+    fn load_for_edit(&mut self, record: &SegmentRecord, kind: &SegmentKind) {
+        let SegmentKind::Straight {
+            direction,
+            priority,
+            max_segment_length,
+        } = kind
+        else {
+            return;
+        };
+        self.start = Some(record.start_anchor);
+        self.end = Some(record.end_anchor);
+        self.direction = *direction;
+        self.priority = *priority;
+        self.seg.max_segment_length = *max_segment_length;
+        self.sync_derived();
     }
 }

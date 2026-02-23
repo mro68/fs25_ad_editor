@@ -74,5 +74,8 @@ pub fn delete_nodes_by_ids(state: &mut AppState, ids: &[u64]) {
         state.selection.ids_mut().remove(&id);
     }
 
+    // Segment-Registry: Records mit diesen Nodes invalidieren
+    state.segment_registry.invalidate_by_node_ids(ids);
+
     log::debug!("{} Nodes gelöscht (Route-Tool-Neuberechnung)", ids.len());
 }

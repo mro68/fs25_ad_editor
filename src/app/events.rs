@@ -187,6 +187,8 @@ pub enum AppIntent {
     RouteToolDragUpdated { world_pos: glam::Vec2 },
     /// Route-Tool: Drag beendet (Punkt loslassen)
     RouteToolDragEnded,
+    /// Segment nachträglich bearbeiten (Nodes löschen + Tool laden)
+    EditSegmentRequested { record_id: u64 },
 }
 
 /// Commands sind mutierende Schritte, die zentral ausgeführt werden.
@@ -372,4 +374,6 @@ pub enum AppCommand {
     RouteToolDragUpdate { world_pos: glam::Vec2 },
     /// Route-Tool: Drag beenden
     RouteToolDragEnd,
+    /// Segment nachträglich bearbeiten
+    EditSegment { record_id: u64 },
 }

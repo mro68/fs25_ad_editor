@@ -180,7 +180,7 @@ impl SegmentConfig {
 
         ui.label("Max. Segment-Länge:");
         if ui
-            .add(egui::Slider::new(&mut self.max_segment_length, 1.0..=50.0).suffix(" m"))
+            .add(egui::Slider::new(&mut self.max_segment_length, 1.0..=20.0).suffix(" m"))
             .changed()
         {
             self.last_edited = LastEdited::Distance;
