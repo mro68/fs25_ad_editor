@@ -1,6 +1,7 @@
 //! Application State — zentrale Datenhaltung.
 
 use super::history::Snapshot;
+use super::segment_registry::SegmentRegistry;
 use super::tools::ToolManager;
 use super::CommandLog;
 use crate::core::Camera2D;
@@ -237,6 +238,8 @@ pub struct AppState {
     pub options: EditorOptions,
     /// Ob der Options-Dialog angezeigt wird
     pub show_options_dialog: bool,
+    /// In-Session-Registry aller erstellten Segmente (für nachträgliche Bearbeitung)
+    pub segment_registry: SegmentRegistry,
     /// Signalisiert dem Host (eframe), die Anwendung kontrolliert zu beenden
     pub should_exit: bool,
 }
@@ -254,6 +257,7 @@ impl AppState {
             history: super::history::EditHistory::new_with_capacity(200),
             options: EditorOptions::default(),
             show_options_dialog: false,
+            segment_registry: SegmentRegistry::new(),
             should_exit: false,
         }
     }

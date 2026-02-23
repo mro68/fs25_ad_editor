@@ -129,3 +129,47 @@ pub fn open_marker_dialog(state: &mut AppState, node_id: u64, is_new: bool) {
 pub fn update_marker(state: &mut AppState, node_id: u64, name: &str, group: &str) {
     use_cases::editing::update_marker(state, node_id, name, group);
 }
+
+/// Lädt ein gespeichertes Segment zur nachträglichen Bearbeitung.
+///
+/// Löscht die zugehörigen Nodes aus der RoadMap, aktiviert das passende
+/// Route-Tool und befüllt es mit den gespeicherten Parametern.
+pub fn edit_segment(state: &mut AppState, record_id: u64) {
+    use crate::app::state::EditorTool;
+
+    // Record aus Registry holen (Klon, da wir state danach mutieren)
+    let record = match state.segment_registry.get(record_id) {
+        Some(r) => r.clone(),
+        None => {
+            log::warn!("Segment-Record {} nicht gefunden", record_id);
+            return;
+        }
+    };
+
+    let tool_index = record.kind.tool_index();
+
+    // Undo-Snapshot vor Löschung
+    state.record_undo_snapshot();
+
+    // Segment-Nodes löschen
+    use_cases::editing::delete_nodes_by_ids(state, &record.node_ids.clone());
+
+    // Record aus Registry entfernen (wird beim erneuten execute() neu angelegt)
+    state.segment_registry.remove(record_id);
+
+    // Passendes Route-Tool aktivieren
+    super::route_tool::select(state, tool_index);
+    state.editor.active_tool = EditorTool::Route;
+
+    // Tool mit gespeicherten Parametern laden
+    if let Some(tool) = state.editor.tool_manager.active_tool_mut() {
+        let kind = record.kind.clone();
+        tool.load_for_edit(&record, &kind);
+    }
+
+    log::info!(
+        "Segment {} geladen für Bearbeitung (Tool-Index {})",
+        record_id,
+        tool_index
+    );
+}

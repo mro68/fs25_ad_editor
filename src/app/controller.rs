@@ -184,6 +184,9 @@ impl AppController {
                 handlers::route_tool::drag_update(state, world_pos)
             }
             AppCommand::RouteToolDragEnd => handlers::route_tool::drag_end(state),
+            AppCommand::EditSegment { record_id } => {
+                handlers::editing::edit_segment(state, record_id)
+            }
 
             // === Dialoge & Anwendungssteuerung ===
             AppCommand::RequestExit => handlers::dialog::request_exit(state),
