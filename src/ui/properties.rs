@@ -206,9 +206,7 @@ fn render_selection_info(
                     crate::app::segment_registry::SegmentKind::Straight { .. } => {
                         "✏ Gerade Strecke"
                     }
-                    crate::app::segment_registry::SegmentKind::CurveQuad { .. } => {
-                        "✏ Kurve Grad 2"
-                    }
+                    crate::app::segment_registry::SegmentKind::CurveQuad { .. } => "✏ Kurve Grad 2",
                     crate::app::segment_registry::SegmentKind::CurveCubic { .. } => {
                         "✏ Kurve Grad 3"
                     }

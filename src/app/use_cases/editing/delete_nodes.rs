@@ -30,7 +30,9 @@ pub fn delete_selected_nodes(state: &mut AppState) {
     let count = ids_to_delete.len();
 
     // Segment-Registry: Records mit diesen Nodes invalidieren
-    state.segment_registry.invalidate_by_node_ids(&ids_to_delete);
+    state
+        .segment_registry
+        .invalidate_by_node_ids(&ids_to_delete);
 
     state.selection.ids_mut().clear();
     state.selection.selection_anchor_node_id = None;

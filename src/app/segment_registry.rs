@@ -143,8 +143,7 @@ impl SegmentRegistry {
 
     /// Gibt alle Records zurück, die mindestens einen der angegebenen Node-IDs enthalten.
     pub fn find_by_node_ids(&self, node_ids: &[u64]) -> Vec<&SegmentRecord> {
-        let id_set: std::collections::HashSet<u64> =
-            node_ids.iter().copied().collect();
+        let id_set: std::collections::HashSet<u64> = node_ids.iter().copied().collect();
         self.records
             .iter()
             .filter(|r| r.node_ids.iter().any(|nid| id_set.contains(nid)))
@@ -155,8 +154,7 @@ impl SegmentRegistry {
     ///
     /// Wird aufgerufen wenn Nodes manuell gelöscht werden (z.B. Delete-Taste).
     pub fn invalidate_by_node_ids(&mut self, node_ids: &[u64]) {
-        let id_set: std::collections::HashSet<u64> =
-            node_ids.iter().copied().collect();
+        let id_set: std::collections::HashSet<u64> = node_ids.iter().copied().collect();
         self.records
             .retain(|r| !r.node_ids.iter().any(|nid| id_set.contains(nid)));
     }
