@@ -8,7 +8,11 @@ use glam::Vec2;
 
 impl RouteTool for StraightLineTool {
     fn name(&self) -> &str {
-        "📏 Gerade Strecke"
+        "Gerade Strecke"
+    }
+
+    fn icon(&self) -> &str {
+        "━"
     }
 
     fn description(&self) -> &str {

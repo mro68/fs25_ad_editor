@@ -216,25 +216,8 @@ impl ConnectionRenderer {
                     );
                 }
                 ConnectionDirection::Dual => {
-                    let offset = ctx.options.arrow_length_world * 0.6;
-                    let forward_center = start + direction * (length * 0.5 + offset);
-                    let backward_center = start + direction * (length * 0.5 - offset);
-                    push_arrow(
-                        &mut vertices,
-                        forward_center,
-                        direction,
-                        ctx.options.arrow_length_world,
-                        ctx.options.arrow_width_world,
-                        color,
-                    );
-                    push_arrow(
-                        &mut vertices,
-                        backward_center,
-                        -direction,
-                        ctx.options.arrow_length_world,
-                        ctx.options.arrow_width_world,
-                        color,
-                    );
+                    // Bidirektionale Verbindungen brauchen keine Pfeile —
+                    // die Richtung ist implizit, die Farbe unterscheidet sie bereits.
                 }
             }
         }
