@@ -72,6 +72,7 @@ world = NDC * BASE_WORLD_EXTENT * aspect / zoom + position
 ### `BackgroundMap`
 
 Lädt Bilder (PNG, JPG, DDS) als Map-Hintergrund und stellt sie für GPU-Rendering bereit.
+Unterstützt auch das Laden aus ZIP-Archiven.
 
 ```rust
 pub struct BackgroundMap { /* intern */ }
@@ -84,6 +85,10 @@ pub struct BackgroundMap { /* intern */ }
 - `opacity() -> f32` — Aktuelle Opacity
 - `set_opacity(opacity)` — Opacity setzen (clamped 0.0–1.0)
 - `dimensions() -> (u32, u32)` — Bildgröße in Pixeln
+
+**Freie Funktionen (ZIP-Support):**
+- `list_images_in_zip(zip_path) -> Result<Vec<String>>` — Bilddateien (png/jpg/jpeg/dds) im ZIP auflisten
+- `load_from_zip(zip_path, entry_name, crop_size) -> Result<BackgroundMap>` — Bild aus ZIP in-memory extrahieren und als BackgroundMap laden
 
 ---
 
