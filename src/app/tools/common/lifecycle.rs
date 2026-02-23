@@ -43,6 +43,23 @@ impl ToolLifecycleState {
         }
     }
 
+    /// Gibt den End-Anker für die Verkettung zurück, wobei `NewPosition`
+    /// zu `ExistingNode` hochgestuft wird, da der Node inzwischen erstellt wurde.
+    /// Der gespeicherte `last_end_anchor` bleibt unverändert (wichtig für Recreate).
+    pub fn chaining_start_anchor(&self) -> Option<ToolAnchor> {
+        let anchor = self.last_end_anchor?;
+        Some(match anchor {
+            ToolAnchor::NewPosition(pos) => {
+                if let Some(&last_id) = self.last_created_ids.last() {
+                    ToolAnchor::ExistingNode(last_id, pos)
+                } else {
+                    anchor
+                }
+            }
+            existing => existing,
+        })
+    }
+
     /// Setzt alle Lifecycle-Felder auf die Ausgangswerte zurück (für Tool-Reset).
     #[allow(dead_code)]
     pub fn clear(&mut self) {
