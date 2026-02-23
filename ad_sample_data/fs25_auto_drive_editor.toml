@@ -62,3 +62,5 @@ marker_outline_color = [
 ]
 camera_zoom_step = 1.2000000476837158
 camera_scroll_zoom_step = 1.100000023841858
+snap_radius = 3.0
+terrain_height_scale = 255.0

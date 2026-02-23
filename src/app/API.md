@@ -539,10 +539,11 @@ pub struct ToolManager { /* intern */ }
 ```
 
 **Methoden:**
-- `new() → Self` — Erstellt ToolManager mit vorregistrierten Standard-Tools (StraightLine, Curve, Spline)
+- `new() → Self` — Erstellt ToolManager mit vorregistrierten Standard-Tools (StraightLine, Bézier Grad 2, Bézier Grad 3, Spline)
 - `register(tool)` — Neues Route-Tool registrieren
 - `tool_count() → usize` — Anzahl registrierter Tools
 - `tool_names() → Vec<(usize, &str)>` — Name + Index aller Tools
+- `tool_entries() → Vec<(usize, &str, &str)>` — Index, Name und Icon aller Tools (für Dropdown-Rendering)
 - `set_active(index)` — Aktives Tool setzen (Reset des vorherigen)
 - `active_index() → Option<usize>` — Index des aktiven Tools
 - `active_tool() → Option<&dyn RouteTool>` — Referenz auf aktives Tool
@@ -557,6 +558,7 @@ Schnittstelle für alle Route-Tools (Linie, Kurve, …). Tools sind zustandsbeha
 
 **Pflicht-Methoden:**
 - `name() → &str` — Anzeigename
+- `icon() → &str` — Icon-Zeichen für das Dropdown (rechts vom Label); Default: `""`
 - `description() → &str` — Tooltip-Text
 - `status_text() → &str` — Statustext für Properties-Panel
 - `on_click(pos, road_map, ctrl) → ToolAction` — Viewport-Klick verarbeiten
@@ -582,8 +584,15 @@ Schnittstelle für alle Route-Tools (Linie, Kurve, …). Tools sind zustandsbeha
 
 ### Registrierte Tools
 
+| Idx | Tool | Icon | Konstruktor |
+|-----|------|------|-------------|
+| 0 | `StraightLineTool` | `━` | `StraightLineTool::new()` |
+| 1 | `CurveTool` (Grad 2) | `⌒` | `CurveTool::new()` |
+| 2 | `CurveTool` (Grad 3) | `〜` | `CurveTool::new_cubic()` |
+| 3 | `SplineTool` | `〰` | `SplineTool::new()` |
+
 - **`StraightLineTool`** — Gerade Strecke zwischen zwei Punkten mit konfigurierbarem Nodeabstand
-- **`CurveTool`** — Bézier-Kurve (Grad 2 oder 3) mit sequentieller Punkt-Platzierung und Drag-basierter Anpassung. Modulstruktur: `state.rs` (Enums, Struct, Ctor), `lifecycle.rs` (RouteTool-Impl), `drag.rs` (Drag-Logik), `config_ui.rs` (egui-Panel), `geometry.rs` (Bézier-Mathe), `tests.rs`
+- **`CurveTool`** — Bézier-Kurve wahlweise Grad 2 (quadratisch, 1 Steuerpunkt) oder Grad 3 (kubisch, 2 Steuerpunkte). `name()` und `description()` sind grad-spezifisch. Konstruktoren: `CurveTool::new()` (Grad 2), `CurveTool::new_cubic()` (Grad 3). Modulstruktur: `state.rs` (Enums, Struct, Ctors), `lifecycle.rs` (RouteTool-Impl), `drag.rs` (Drag-Logik), `config_ui.rs` (egui-Panel), `geometry.rs` (Bézier-Mathe), `tests.rs`
 - **`SplineTool`** — Catmull-Rom-Spline: interpolierende Kurve durch alle geklickten Punkte. Beliebig viele Kontrollpunkte, fortlaufende Vorschau (Cursor als nächster Punkt), Enter bestätigt. Nachbearbeitung (Segment-Länge/Node-Anzahl) und Verkettung unterstützt.
 
 ---
