@@ -13,6 +13,7 @@ pub mod spline;
 /// Gerade-Linie-Tool mit konfigurierbarem Node-Abstand.
 pub mod straight_line;
 
+use crate::app::segment_registry::{SegmentKind, SegmentRecord};
 use crate::core::{ConnectionDirection, ConnectionPriority, NodeFlag, RoadMap};
 use glam::Vec2;
 
@@ -140,6 +141,21 @@ pub trait RouteTool {
     fn render_context_menu(&mut self, _response: &egui::Response) -> bool {
         false
     }
+
+    /// Erstellt einen `SegmentRecord` für die Registry aus dem aktuellen Tool-Zustand.
+    ///
+    /// Wird nach `execute()` aufgerufen um das Segment in der Registry zu speichern.
+    /// Gibt `None` zurück wenn das Tool keine Registry-Einträge unterstützt.
+    fn make_segment_record(&self, _id: u64, _node_ids: Vec<u64>) -> Option<SegmentRecord> {
+        None
+    }
+
+    /// Lädt einen gespeicherten `SegmentRecord` zur nachträglichen Bearbeitung.
+    ///
+    /// Stellt Start/End-Anker und alle tool-spezifischen Parameter (CP1, CP2,
+    /// Tangenten, Anker-Liste) aus dem Record wieder her. Das Tool befindet
+    /// sich anschließend in der Control-Phase (bereit für Drag/Anpassung).
+    fn load_for_edit(&mut self, _record: &SegmentRecord, _kind: &SegmentKind) {}
 }
 
 // ── Typen ────────────────────────────────────────────────────────

@@ -1,10 +1,12 @@
 //! Properties-Panel (rechte Seitenleiste) für Node- und Connection-Eigenschaften.
 
 use crate::app::{
-    tools::ToolManager, AppIntent, ConnectionDirection, ConnectionPriority, EditorTool, RoadMap,
+    segment_registry::SegmentRegistry, tools::ToolManager, AppIntent, ConnectionDirection,
+    ConnectionPriority, EditorTool, RoadMap,
 };
 
 /// Rendert das Properties-Panel und gibt erzeugte Events zurück.
+#[allow(clippy::too_many_arguments)]
 pub fn render_properties_panel(
     ctx: &egui::Context,
     road_map: Option<&RoadMap>,
@@ -13,6 +15,7 @@ pub fn render_properties_panel(
     default_priority: ConnectionPriority,
     active_tool: EditorTool,
     tool_manager: Option<&mut ToolManager>,
+    segment_registry: Option<&SegmentRegistry>,
 ) -> Vec<AppIntent> {
     let mut events = Vec::new();
 
@@ -35,6 +38,7 @@ pub fn render_properties_panel(
                     &selected,
                     default_direction,
                     default_priority,
+                    segment_registry,
                     &mut events,
                 );
             }
@@ -57,6 +61,7 @@ fn render_selection_info(
     selected: &[u64],
     default_direction: ConnectionDirection,
     default_priority: ConnectionPriority,
+    segment_registry: Option<&SegmentRegistry>,
     events: &mut Vec<AppIntent>,
 ) {
     match selected.len() {
@@ -69,7 +74,6 @@ fn render_selection_info(
                     node.position.x, node.position.y
                 ));
                 ui.label(format!("Flag: {:?}", node.flag));
-
                 // Map-Marker Info
                 ui.separator();
                 if let Some(marker) = road_map.find_marker_by_node_id(node_id) {
@@ -189,6 +193,32 @@ fn render_selection_info(
         }
         n => {
             ui.label(format!("{} Nodes selektiert", n));
+        }
+    }
+
+    // Segment-Bearbeitung für alle Selektionsgrößen anbieten
+    if let Some(registry) = segment_registry {
+        let matching = registry.find_by_node_ids(selected);
+        if !matching.is_empty() {
+            ui.separator();
+            ui.label("Segment bearbeiten:");
+            for record in matching {
+                let label = match &record.kind {
+                    crate::app::segment_registry::SegmentKind::Straight { .. } => {
+                        "✏ Gerade Strecke"
+                    }
+                    crate::app::segment_registry::SegmentKind::CurveQuad { .. } => "✏ Kurve Grad 2",
+                    crate::app::segment_registry::SegmentKind::CurveCubic { .. } => {
+                        "✏ Kurve Grad 3"
+                    }
+                    crate::app::segment_registry::SegmentKind::Spline { .. } => "✏ Spline",
+                };
+                if ui.button(label).clicked() {
+                    events.push(AppIntent::EditSegmentRequested {
+                        record_id: record.id,
+                    });
+                }
+            }
         }
     }
 }

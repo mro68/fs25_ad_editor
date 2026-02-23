@@ -8,6 +8,7 @@ use super::geometry::{
     build_tool_result, compute_curve_positions, cubic_bezier, quadratic_bezier, CurveParams,
 };
 use super::state::{CurveDegree, CurveTool, Phase};
+use crate::app::segment_registry::{SegmentKind, SegmentRecord};
 use crate::core::{ConnectionDirection, ConnectionPriority, RoadMap};
 use glam::Vec2;
 
@@ -301,5 +302,77 @@ impl RouteTool for CurveTool {
 
     fn render_context_menu(&mut self, response: &egui::Response) -> bool {
         self.render_tangent_context_menu(response)
+    }
+
+    fn make_segment_record(&self, id: u64, node_ids: Vec<u64>) -> Option<SegmentRecord> {
+        let start = self.last_start_anchor?;
+        let end = self.lifecycle.last_end_anchor?;
+        let cp1 = self.last_control_point1?;
+        let kind = match self.degree {
+            CurveDegree::Quadratic => SegmentKind::CurveQuad {
+                cp1,
+                direction: self.direction,
+                priority: self.priority,
+                max_segment_length: self.seg.max_segment_length,
+            },
+            CurveDegree::Cubic => {
+                let cp2 = self.last_control_point2.unwrap_or(cp1);
+                SegmentKind::CurveCubic {
+                    cp1,
+                    cp2,
+                    tangent_start: self.tangents.last_tangent_start,
+                    tangent_end: self.tangents.last_tangent_end,
+                    direction: self.direction,
+                    priority: self.priority,
+                    max_segment_length: self.seg.max_segment_length,
+                }
+            }
+        };
+        Some(SegmentRecord {
+            id,
+            node_ids,
+            start_anchor: start,
+            end_anchor: end,
+            kind,
+        })
+    }
+
+    fn load_for_edit(&mut self, record: &SegmentRecord, kind: &SegmentKind) {
+        self.start = Some(record.start_anchor);
+        self.end = Some(record.end_anchor);
+        match kind {
+            SegmentKind::CurveQuad {
+                cp1,
+                direction,
+                priority,
+                max_segment_length,
+            } => {
+                self.control_point1 = Some(*cp1);
+                self.control_point2 = None;
+                self.direction = *direction;
+                self.priority = *priority;
+                self.seg.max_segment_length = *max_segment_length;
+            }
+            SegmentKind::CurveCubic {
+                cp1,
+                cp2,
+                tangent_start,
+                tangent_end,
+                direction,
+                priority,
+                max_segment_length,
+            } => {
+                self.control_point1 = Some(*cp1);
+                self.control_point2 = Some(*cp2);
+                self.tangents.tangent_start = *tangent_start;
+                self.tangents.tangent_end = *tangent_end;
+                self.direction = *direction;
+                self.priority = *priority;
+                self.seg.max_segment_length = *max_segment_length;
+            }
+            _ => return,
+        }
+        self.phase = Phase::Control;
+        self.init_apex();
     }
 }

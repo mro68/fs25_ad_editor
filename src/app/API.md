@@ -64,6 +64,7 @@ pub struct AppState {
     pub history: EditHistory,
     pub options: EditorOptions,
     pub show_options_dialog: bool,
+    pub segment_registry: SegmentRegistry,  // In-Session-Registry für nachträgliche Bearbeitung
     pub should_exit: bool,
 }
 
@@ -262,6 +263,9 @@ pub enum AppIntent {
     RouteToolDragStarted { world_pos: glam::Vec2 },
     RouteToolDragUpdated { world_pos: glam::Vec2 },
     RouteToolDragEnded,
+
+    // Segment-Bearbeitung (nachträgliche Bearbeitung erstellter Linien)
+    EditSegmentRequested { record_id: u64 },
 }
 
 pub enum AppCommand {
@@ -352,6 +356,9 @@ pub enum AppCommand {
     RouteToolDragStart { world_pos: glam::Vec2 },
     RouteToolDragUpdate { world_pos: glam::Vec2 },
     RouteToolDragEnd,
+
+    // Segment-Bearbeitung
+    EditSegment { record_id: u64 },
 }
 ```
 
@@ -405,8 +412,9 @@ pub enum AppCommand {
 - `remove_all_connections_between_selected(state)` — Bulk: Alle Verbindungen zwischen Selektion trennen
 - `invert_all_connections_between_selected(state)` — Bulk: Richtung invertieren (start↔end)
 - `set_all_connections_priority_between_selected(state, priority)` — Bulk: Priorität ändern
-- `apply_tool_result(state, result) -> Vec<u64>` — Wendet ein `ToolResult` auf den AppState an (mit Undo-Snapshot): erstellt Nodes + Connections, setzt Selektion
+- `apply_tool_result(state, result) -> Vec<u64>` — Wendet ein `ToolResult` auf den AppState an (mit Undo-Snapshot): erstellt Nodes + Connections, setzt Selektion; ruft danach `make_segment_record()` auf dem aktiven Tool auf und speichert den Record in `state.segment_registry`
 - `apply_tool_result_no_snapshot(state, result) -> Vec<u64>` — Wie `apply_tool_result`, aber ohne Undo-Snapshot (für Neuberechnung)
+- `delete_nodes_by_ids(state, ids)` — Löscht Nodes mit den angegebenen IDs + zugehörige Connections; invalidiert betroffene Einträge in `state.segment_registry`
 
 ### `use_cases::viewport`
 - `resize(state, size)` — Viewport-Größe setzen
@@ -424,6 +432,73 @@ pub enum AppCommand {
 - `create_marker(state, node_id, &name, &group)` — Marker erstellen (mit Undo-Snapshot)
 - `update_marker(state, node_id, &name, &group)` — Bestehenden Marker aktualisieren (mit Undo-Snapshot)
 - `remove_marker(state, node_id)` — Marker eines Nodes entfernen (mit Undo-Snapshot)
+
+---
+
+## `SegmentRegistry`
+
+In-Session-Registry aller erstellten Segmente (für nachträgliche Bearbeitung).
+
+- **Transient:** Wird **nicht** in Undo/Redo-Snapshots aufgenommen; leer nach Datei-Reload.
+- **Gespeichert:** Alle Tool-Parameter (CPs, Tangenten, Anker, Richtung, Priorität, max_segment_length).
+- **Invalidierung:** Beim manuellen Löschen von Nodes werden betroffene Records automatisch entfernt.
+
+```rust
+pub enum SegmentKind {
+    Straight     { direction, priority, max_segment_length },
+    CurveQuad    { cp1, direction, priority, max_segment_length },
+    CurveCubic   { cp1, cp2, tangent_start, tangent_end, direction, priority, max_segment_length },
+    Spline       { anchors, tangent_start, tangent_end, direction, priority, max_segment_length },
+}
+
+pub struct SegmentRecord {
+    pub id: u64,
+    pub node_ids: Vec<u64>,
+    pub start_anchor: ToolAnchor,
+    pub end_anchor: ToolAnchor,
+    pub kind: SegmentKind,
+}
+```
+
+**Methoden:**
+
+```rust
+registry.register(record) -> u64
+registry.get(record_id) -> Option<&SegmentRecord>
+registry.remove(record_id)
+registry.find_by_node_ids(node_ids) -> Vec<&SegmentRecord>
+registry.invalidate_by_node_ids(node_ids)  // bei manuellem Node-Löschen
+registry.len() / is_empty()
+```
+
+### Bearbeitungs-Flow (`EditSegmentRequested`)
+
+```
+Properties-Panel (Button "Bearbeiten")
+  → AppIntent::EditSegmentRequested { record_id }
+  → AppCommand::EditSegment { record_id }
+  → handlers::editing::edit_segment(state, record_id)
+      1. Record aus Registry holen (Clone)
+      2. Undo-Snapshot erstellen
+      3. delete_nodes_by_ids() — Segment-Nodes aus RoadMap entfernen
+      4. Registry-Record entfernen
+      5. route_tool::select() — passendes Tool aktivieren
+      6. tool.load_for_edit() — Tool mit gespeicherten Parametern befüllen
+```
+
+### `RouteTool`-Trait Erweiterungen (für Registry)
+
+```rust
+// Wird nach execute() + apply_tool_result() aufgerufen:
+fn make_segment_record(&self, id: u64, node_ids: Vec<u64>) -> Option<SegmentRecord>;
+
+// Wird in edit_segment() aufgerufen um das Tool wiederherzustellen:
+fn load_for_edit(&mut self, record: &SegmentRecord, kind: &SegmentKind);
+```
+
+Implementierungen: `StraightLineTool`, `CurveTool` (Quad + Cubic), `SplineTool`.
+
+---
 
 ## AppIntent-Flow (Übersicht)
 

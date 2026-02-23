@@ -39,6 +39,15 @@ fn execute_and_apply(state: &mut AppState) {
 
     if let Some(result) = result {
         let ids = use_cases::editing::apply_tool_result(state, result);
+
+        // Segment in Registry speichern (für nachträgliche Bearbeitung)
+        let record_id = state.segment_registry.next_id();
+        if let Some(tool) = state.editor.tool_manager.active_tool() {
+            if let Some(record) = tool.make_segment_record(record_id, ids.clone()) {
+                state.segment_registry.register(record);
+            }
+        }
+
         if let (Some(tool), Some(rm)) = (
             state.editor.tool_manager.active_tool_mut(),
             state.road_map.as_deref(),
