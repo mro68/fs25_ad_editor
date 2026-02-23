@@ -230,6 +230,9 @@ pub enum AppIntent {
     BackgroundMapSelected { path: String, crop_size: Option<u32> },
     SetBackgroundOpacity { opacity: f32 },
     ToggleBackgroundVisibility,
+    ZipBackgroundBrowseRequested { path: String },
+    ZipBackgroundFileSelected { zip_path: String, entry_name: String },
+    ZipBrowserCancelled,
 
     // Map-Marker
     CreateMarkerRequested { node_id: u64 },
@@ -323,6 +326,9 @@ pub enum AppCommand {
     LoadBackgroundMap { path: String, crop_size: Option<u32> },
     UpdateBackgroundOpacity { opacity: f32 },
     ToggleBackgroundVisibility,
+    BrowseZipBackground { path: String },
+    LoadBackgroundFromZip { zip_path: String, entry_name: String, crop_size: Option<u32> },
+    CloseZipBrowser,
 
     // Marker
     CreateMarker { node_id: u64, name: String, group: String },

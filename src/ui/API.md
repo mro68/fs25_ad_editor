@@ -246,6 +246,31 @@ pub fn show_dedup_dialog(ctx: &egui::Context, ui_state: &UiState) -> Vec<AppInte
 
 ---
 
+### `show_zip_browser`
+
+Zeigt den ZIP-Browser-Dialog zur Auswahl einer Bilddatei aus einem ZIP-Archiv. Erscheint wenn eine `.zip`-Datei als Background-Map gewählt wurde und mehrere Bilddateien enthält. Bei genau einem Bild im ZIP wird automatisch geladen (kein Dialog).
+
+```rust
+pub fn show_zip_browser(ctx: &egui::Context, ui_state: &mut UiState) -> Vec<AppIntent>
+```
+
+**Emittierte Intents:**
+- `AppIntent::ZipBackgroundFileSelected { zip_path, entry_name }` — Bild aus ZIP gewählt (Doppelklick oder Übernehmen-Button)
+- `AppIntent::ZipBrowserCancelled` — Abbrechen oder X-Button
+
+**Layout:**
+```
+[Titel: "Bild aus ZIP wählen"]
+  N Bilddateien gefunden:
+  ┌─────────────────────────┐
+  │  maps/overview.dds      │  ← scrollbar, selectable
+  │  maps/detail.png        │
+  └─────────────────────────┘
+  [Übernehmen]  [Abbrechen]
+```
+
+---
+
 ## Design-Prinzipien
 
 1. **Intent-based:** Interaktions-Funktionen liefern `Vec<AppIntent>`
