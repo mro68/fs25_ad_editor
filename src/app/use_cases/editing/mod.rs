@@ -1,14 +1,15 @@
 //! Use-Case-Funktionen für Node/Connection-Editing.
 //!
 //! Aufgeteilt nach Operation:
-//! - `add_node` — Neuen Node hinzufügen
-//! - `delete_nodes` — Selektierte Nodes löschen
+//! - `add_node` — Neuen Node hinzufügen (inkl. optionalem Connection-Split)
+//! - `delete_nodes` — Selektierte Nodes löschen (inkl. optionalem Reconnect)
 //! - `connect` — Verbindungen erstellen
 //! - `disconnect` — Verbindungen entfernen
 //! - `direction` — Verbindungsrichtung ändern
 //! - `priority` — Verbindungspriorität ändern
 //! - `bulk_connections` — Bulk-Änderungen an Verbindungen
 //! - `markers` — Map-Marker-Operationen
+//! - `resample_path` — Nodes-Kette per Catmull-Rom-Spline neu verteilen (Distanzen)
 
 ///
 /// Aufgeteilt nach Operation:
@@ -27,6 +28,7 @@ mod direction;
 mod disconnect;
 mod markers;
 mod priority;
+mod resample_path;
 
 pub use add_node::add_node_at_position;
 pub use apply_tool_result::apply_tool_result;
@@ -42,3 +44,4 @@ pub use direction::set_connection_direction;
 pub use disconnect::remove_connection_between;
 pub use markers::{create_marker, open_marker_dialog, remove_marker, update_marker};
 pub use priority::set_connection_priority;
+pub use resample_path::resample_selected_path;

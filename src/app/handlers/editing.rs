@@ -25,7 +25,6 @@ pub fn delete_selected(state: &mut AppState) {
 pub fn connect_tool_pick(state: &mut AppState, world_pos: glam::Vec2, max_distance: f32) {
     use_cases::editing::connect_tool_pick_node(state, world_pos, max_distance);
 }
-
 /// Erstellt eine Verbindung zwischen zwei Nodes.
 pub fn add_connection(
     state: &mut AppState,
@@ -172,4 +171,9 @@ pub fn edit_segment(state: &mut AppState, record_id: u64) {
         record_id,
         tool_index
     );
+}
+
+/// Verteilt die selektierten Nodes gleichmäßig entlang eines Catmull-Rom-Splines.
+pub fn resample_path(state: &mut AppState) {
+    use_cases::editing::resample_selected_path(state);
 }

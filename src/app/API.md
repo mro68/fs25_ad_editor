@@ -307,6 +307,8 @@ pub enum AppIntent {
 
     // Segment-Bearbeitung (nachträgliche Bearbeitung erstellter Linien)
     EditSegmentRequested { record_id: u64 },
+    // Distanzen: Selektierte Nodes-Kette gleichmäßig neu verteilen
+    ResamplePathRequested,
 }
 
 pub enum AppCommand {
@@ -413,6 +415,8 @@ pub enum AppCommand {
 
     // Segment-Bearbeitung
     EditSegment { record_id: u64 },
+    // Distanzen: Selektierte Nodes-Kette per Catmull-Rom-Spline neu verteilen
+    ResamplePath,
 }
 ```
 

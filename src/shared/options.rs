@@ -161,7 +161,13 @@ pub struct EditorOptions {
     // ── Tools ────────────────────────────────────────────────────
     /// Snap-Radius (Welteinheiten) für Route-Tools
     pub snap_radius: f32,
-
+    // ── AddNode-Verhalten ─────────────────────────────────────────────
+    /// Angrenzende Nodes automatisch verbinden wenn ein Node gelöscht wird
+    #[serde(default)]
+    pub reconnect_on_delete: bool,
+    /// Verbindung trennen und durch neuen Node führen wenn er auf einer Verbindung platziert wird
+    #[serde(default)]
+    pub split_connection_on_place: bool,
     // ── Terrain ──────────────────────────────────────────────────
     /// Höhenskala für Heightmap-Export (FS25: 255.0)
     pub terrain_height_scale: f32,
@@ -200,6 +206,8 @@ impl Default for EditorOptions {
             camera_scroll_zoom_step: CAMERA_SCROLL_ZOOM_STEP,
 
             snap_radius: SNAP_RADIUS,
+            reconnect_on_delete: false,
+            split_connection_on_place: false,
             terrain_height_scale: TERRAIN_HEIGHT_SCALE,
             overview_layers: OverviewLayerOptions::default(),
         }

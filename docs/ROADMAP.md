@@ -67,6 +67,10 @@
   - [x] CommandLog für Debug-Zwecke
 - [x] Properties-Panel (Node-IDs, Positionen, Verbindungen anzeigen/editieren)
 - [x] Context-Menu (Rechtsklick → Verbindungsaktionen)
+- [x] **AddNode-Verhalten konfigurierbar** (2026-02-24)
+  - [x] Checkbox „Nach Löschen verbinden": Vorgänger/Nachfolger eines gelöschten Nodes direkt verbinden
+  - [x] Checkbox „Verbindung beim Platzieren teilen": neuer Node splittet nächste Verbindung
+  - [x] **Distanzen**: selektierte Nodes-Kette per Catmull-Rom-Spline gleichmäßig neu verteilen (Nach Abstand / Nach Anzahl)
 
 ## Phase 5: Advanced Features
 - [x] DDS-Import für Map-Hintergründe

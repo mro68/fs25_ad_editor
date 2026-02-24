@@ -6,6 +6,7 @@ use crate::app::{
     segment_registry::SegmentRegistry, tools::ToolManager, AppIntent, ConnectionDirection,
     ConnectionPriority, EditorTool, RoadMap,
 };
+use crate::shared::EditorOptions;
 
 /// Rendert das Properties-Panel und gibt erzeugte Events zurück.
 #[allow(clippy::too_many_arguments)]
@@ -18,6 +19,8 @@ pub fn render_properties_panel(
     active_tool: EditorTool,
     tool_manager: Option<&mut ToolManager>,
     segment_registry: Option<&SegmentRegistry>,
+    options: &EditorOptions,
+    distanzen: &mut crate::app::state::DistanzenState,
 ) -> Vec<AppIntent> {
     let mut events = Vec::new();
 
@@ -41,6 +44,11 @@ pub fn render_properties_panel(
                     segment_registry,
                     &mut events,
                 );
+            }
+
+            // AddNode-spezifische Einstellungen (nur sichtbar wenn Node-Hinzufügen-Tool aktiv)
+            if active_tool == EditorTool::AddNode {
+                render_add_node_settings(ui, options, distanzen, selected_node_ids, &mut events);
             }
 
             ui.separator();
@@ -327,5 +335,92 @@ fn priority_label(prio: ConnectionPriority) -> &'static str {
     match prio {
         ConnectionPriority::Regular => "Hauptstraße",
         ConnectionPriority::SubPriority => "Nebenstraße",
+    }
+}
+
+/// Rendert AddNode-spezifische Einstellungen:
+/// - Checkbox: Verbundene Nodes nach Löschen automatisch verbinden
+/// - Checkbox: Verbindung beim Platzieren aufteilen
+/// - Distanzen-Panel: Selektierte Nodes-Kette gleichmäßig neu verteilen
+fn render_add_node_settings(
+    ui: &mut egui::Ui,
+    options: &EditorOptions,
+    distanzen: &mut crate::app::state::DistanzenState,
+    selected_node_ids: &HashSet<u64>,
+    events: &mut Vec<AppIntent>,
+) {
+    ui.separator();
+    ui.heading("Node-Verhalten");
+
+    // Checkbox A: Reconnect beim Löschen
+    let mut reconnect = options.reconnect_on_delete;
+    if ui
+        .checkbox(&mut reconnect, "Nach Löschen verbinden")
+        .on_hover_text(
+            "Wenn aktiviert: Wird ein Node mit jeweils genau einem Vorgänger und Nachfolger \
+             gelöscht, werden Vorgänger und Nachfolger direkt miteinander verbunden.",
+        )
+        .changed()
+    {
+        let mut new_options = options.clone();
+        new_options.reconnect_on_delete = reconnect;
+        events.push(AppIntent::OptionsChanged {
+            options: new_options,
+        });
+    }
+
+    // Checkbox B: Connection beim Platzieren aufteilen
+    let mut split = options.split_connection_on_place;
+    if ui
+        .checkbox(&mut split, "Verbindung beim Platzieren teilen")
+        .on_hover_text(
+            "Wenn aktiviert: Wird ein neuer Node nahe einer bestehenden Verbindung \
+             platziert, wird diese Verbindung durch den neuen Node aufgeteilt.",
+        )
+        .changed()
+    {
+        let mut new_options = options.clone();
+        new_options.split_connection_on_place = split;
+        events.push(AppIntent::OptionsChanged {
+            options: new_options,
+        });
+    }
+
+    // Distanzen-Panel: nur wenn 2+ Nodes selektiert
+    if selected_node_ids.len() >= 2 {
+        ui.add_space(4.0);
+        ui.separator();
+        ui.heading("Distanzen");
+
+        ui.radio_value(&mut distanzen.by_count, false, "Nach Abstand (m)");
+        if !distanzen.by_count {
+            ui.add(
+                egui::DragValue::new(&mut distanzen.distance)
+                    .speed(0.5)
+                    .range(0.5..=500.0)
+                    .suffix(" m"),
+            );
+        }
+
+        ui.radio_value(&mut distanzen.by_count, true, "Nach Anzahl");
+        if distanzen.by_count {
+            ui.add(
+                egui::DragValue::new(&mut distanzen.count)
+                    .speed(1.0)
+                    .range(2..=10000),
+            );
+        }
+
+        ui.add_space(4.0);
+        if ui
+            .button("Neu verteilen")
+            .on_hover_text(
+                "Verteilt die selektierten Nodes gleichmäßig entlang einem \
+                 Catmull-Rom-Spline durch die bestehenden Positionen.",
+            )
+            .clicked()
+        {
+            events.push(AppIntent::ResamplePathRequested);
+        }
     }
 }
