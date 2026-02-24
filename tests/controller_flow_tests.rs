@@ -144,11 +144,7 @@ fn test_click_window_larger_for_selected_nodes() {
     state.road_map = Some(Arc::new(map));
     state.view.viewport_size = [1280.0, 720.0];
 
-    let viewport_height = state.view.viewport_size[1].max(1.0);
-    let base_max_distance = (fs25_auto_drive_editor::shared::options::SELECTION_PICK_RADIUS_PX
-        * 2.0
-        * fs25_auto_drive_editor::Camera2D::BASE_WORLD_EXTENT)
-        / (fs25_auto_drive_editor::Camera2D::ZOOM_MAX * viewport_height);
+    let base_max_distance = state.options.hitbox_radius();
     let increased_max_distance =
         base_max_distance * fs25_auto_drive_editor::shared::options::SELECTION_SIZE_FACTOR;
 

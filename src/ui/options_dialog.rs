@@ -44,6 +44,17 @@ pub fn show_options_dialog(
                         changed |= color_edit(ui, "SubPrio-Farbe:", &mut opts.node_color_subprio);
                         changed |= color_edit(ui, "Selektiert:", &mut opts.node_color_selected);
                         changed |= color_edit(ui, "Warnung:", &mut opts.node_color_warning);
+                        ui.horizontal(|ui| {
+                            ui.label("Hitbox (% der Größe):");
+                            changed |= ui
+                                .add(
+                                    egui::DragValue::new(&mut opts.hitbox_scale_percent)
+                                        .range(50.0..=500.0)
+                                        .speed(5.0)
+                                        .suffix(" %"),
+                                )
+                                .changed();
+                        });
                     });
 
                     // ── Selektion ───────────────────────────────────
