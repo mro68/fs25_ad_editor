@@ -21,25 +21,28 @@ Neuimplementierung des AutoDrive Course Editors in Rust mit egui + wgpu. Hochper
 - **Rendering:** wgpu (GPU-basiert, WebGL/Vulkan/Metal)
 - **Spatial Index:** kiddo (KD-Tree für Nearest-Neighbor)
 - **XML:** quick-xml
-- **DDS:** dds-rs oder image crate
+- **DDS:** image crate (mit DDS-Feature)
 - **Assets:** egui_extras (SVG-Support)
 
 ## Datenmodell
 ### MapNode
-- ID als Key (HashMap<u64, MapNode>)
-- Position (x, y, z)
-- Flags (Regular, Parking, Warning, etc.)
-- Connections (Vec<ConnectionId>)
+- ID als Key (`HashMap<u64, MapNode>`)
+- `position: Vec2` (x, z — nur 2D, y wird nur beim XML-Export geschrieben)
+- `flag: NodeFlag` (Regular, SubPrio, Warning, etc.)
+- **Keine** Connections-Liste auf dem Node — Connections leben in `RoadMap.connections`
 
 ### Connection
-- Source/Target Node IDs
-- Type (Regular, Dual, Reverse)
-- Flags
+- `start_id: u64` / `end_id: u64`
+- `direction: ConnectionDirection` (Regular, Dual, Reverse)
+- `priority: ConnectionPriority` (Regular, SubPriority)
+- `midpoint: Vec2` / `angle: f32` (berechnete Geometrie)
 
 ### RoadMap
-- Nodes: HashMap<u64, MapNode>
-- Connections: Vec<Connection>
-- Metadata (Version, Map Name)
+- `nodes: HashMap<u64, MapNode>`
+- `connections: HashMap<(u64, u64), Connection>` — Key ist `(start_id, end_id)`
+- `markers: Vec<MapMarker>`
+- `meta: AutoDriveMeta` (Version, Map-Name)
+- `spatial: SpatialIndex` (KD-Tree für schnelle 2D-Abfragen)
 
 ## XML-Format (AutoDrive Config)
 **Structure of Arrays:** Parallele CSV-Listen in XML-Tags

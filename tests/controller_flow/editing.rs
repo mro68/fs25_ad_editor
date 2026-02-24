@@ -557,4 +557,3 @@ fn test_full_editing_workflow() {
 // ═══════════════════════════════════════════════════════════════════
 // DRY-Extraktion Tests: Marker-Kaskade & Bulk-Connection-Operationen
 // ═══════════════════════════════════════════════════════════════════
-

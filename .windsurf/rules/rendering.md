@@ -12,29 +12,36 @@ Flüssiges Rendering von 100k+ Punkten und Verbindungen auf der GPU.
 
 ### Vertex-Buffer-Layout
 ```rust
-// Node Instance Data
+// Node-Instanz-Daten (GPU-Instancing pro sichtbarem Node)
 struct NodeInstance {
-    position: [f32; 3],      // Welt-Position
-    color: [f32; 4],         // RGBA
-    node_type: u32,          // Regular, Parking, Warning, etc.
-    selected: u32,           // 0 oder 1
+    position: [f32; 2],      // 2D Welt-Position (x, z)
+    base_color: [f32; 4],    // RGBA Mitte des Nodes
+    rim_color: [f32; 4],     // RGBA Außenring (Selection/Flag)
+    size: f32,               // Größe in Welteinheiten
+    _padding: [f32; 1],
 }
 
-// Connection Instance Data
-struct ConnectionInstance {
-    start: [f32; 3],
-    end: [f32; 3],
+// Connection-Vertex (Linien + Pfeile, pre-transformiert auf CPU)
+struct ConnectionVertex {
+    position: [f32; 2],      // 2D Position
+    color: [f32; 4],         // RGBA der Verbindung
+}
+
+// Marker-Instanz (Pin-Symbol für Destinations)
+struct MarkerInstance {
+    position: [f32; 2],
     color: [f32; 4],
-    connection_type: u32,    // Regular, Dual, Reverse
+    outline_color: [f32; 4],
+    size: f32,
+    _padding: [f32; 1],
 }
 ```
 
 ### Uniform-Buffer
 ```rust
-struct CameraUniforms {
-    view_proj: Mat4,         // View-Projection Matrix
-    viewport_size: [f32; 2], // Für Pixel-genaue Berechnungen
-    zoom_level: f32,         // Für LOD-Entscheidungen
+struct Uniforms {
+    view_proj: [[f32; 4]; 4], // View-Projection Matrix
+    aa_params: [f32; 4],      // Anti-Aliasing-Parameter
 }
 ```
 
@@ -62,17 +69,26 @@ struct CameraUniforms {
 - Erzeugt Pfeilspitzen für Richtung
 
 ## Culling-Strategie
+
+**Nodes:** KD-Tree-basiert via `SpatialIndex::within_rect()` — nur Viewport-sichtbare Nodes.
+
+**Connections:** Aktuell lineare Iteration über alle Connections mit Segment-Rect-Intersection-Test.
+Verbesserungspotential: Spatial-Vorfilter (z.B. Midpoint-KD-Tree) für O(k) statt O(n).
+
+### Scratch-Buffer-Pattern (alle Renderer)
 ```rust
-// Berechne sichtbaren Bereich in Welt-Koordinaten
-let viewport_bounds = camera.viewport_bounds();
+// Vermeidet Heap-Allokation pro Frame
+let mut scratch = std::mem::take(&mut self.instance_scratch);
+scratch.clear();
+// ... befülle scratch ...
+self.instance_scratch = scratch; // Kapazität bleibt erhalten
+```
 
-// Filtere Nodes
-let visible_nodes: Vec<&MapNode> = road_map.nodes
-    .values()
-    .filter(|node| viewport_bounds.contains(node.position))
-    .collect();
-
-// Update Instance-Buffer nur mit visible_nodes
+### Viewport-Berechnung
+```rust
+// compute_visible_rect() in render/types.rs
+let (min, max) = compute_visible_rect(&render_context);
+// Gibt AABB mit 8px Padding in Weltkoordinaten zurück
 ```
 
 ## Performance-Budget
