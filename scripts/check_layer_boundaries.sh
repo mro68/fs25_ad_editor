@@ -70,6 +70,17 @@ if [ -n "$XML_UPPER_VIOLATIONS" ]; then
     VIOLATIONS=$((VIOLATIONS + 1))
 fi
 
+# Regel 8: use_cases dürfen nicht aus tool-internen Submodulen importieren
+# (Ausnahme: crate::app::tools direkt für ToolResult/öffentliche Typen ist OK;
+#  verboten ist der Import tool-interner Geometrie/Logic wie tools::spline::geometry)
+USE_CASES_TOOLS_VIOLATIONS=$(grep -rn 'crate::app::tools::' src/app/use_cases/ --include='*.rs' 2>/dev/null \
+    | grep -v 'crate::app::tools::ToolResult\|apply_tool_result' || true)
+if [ -n "$USE_CASES_TOOLS_VIOLATIONS" ]; then
+    echo "FEHLER: use_cases importiert aus tools-internen Submodulen (gemeinsame Logik muss in shared liegen):"
+    echo "$USE_CASES_TOOLS_VIOLATIONS"
+    VIOLATIONS=$((VIOLATIONS + 1))
+fi
+
 if [ "$VIOLATIONS" -eq 0 ]; then
     echo "✓ Alle Layer-Grenzen eingehalten."
     exit 0

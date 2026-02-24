@@ -9,6 +9,7 @@ Das `shared`-Modul enthält Layer-übergreifende Typen, die zwischen `app` (Prod
 - `render_scene.rs` — `RenderScene` Übergabevertrag App → Render
 - `render_quality.rs` — `RenderQuality` Enum (Low/Medium/High)
 - `options.rs` — Zentrale Konfigurationskonstanten + `EditorOptions` (Laufzeit-Optionen)
+- `spline_geometry.rs` — Layer-neutrale Catmull-Rom-Geometrie-Funktionen (kein import aus `tools` nötig)
 
 ## Haupttypen
 
@@ -136,6 +137,10 @@ pub struct EditorOptions {
     pub camera_scroll_zoom_step: f32,
     // Tools
     pub snap_radius: f32,
+    /// true = Mittelpunkt zwischen Vorgänger und Nachfolger beim Löschen verbinden
+    pub reconnect_on_delete: bool,
+    /// true = bestehende Verbindung beim Platzieren splitten
+    pub split_connection_on_place: bool,
     // Terrain
     pub terrain_height_scale: f32,
 }

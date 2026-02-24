@@ -16,16 +16,17 @@ use std::sync::Arc;
 /// 4. Flags der verbleibenden Nachbarn neu berechnen
 /// 5. Spatial-Index aktualisieren
 pub(crate) fn delete_nodes_internal(road_map: &mut RoadMap, ids: &[u64], remove_markers: bool) {
+    // HashSet für O(1)-Lookup statt O(n) Vec::contains
+    let id_set: std::collections::HashSet<u64> = ids.iter().copied().collect();
+
     // Nachbar-Nodes sammeln, deren Flags sich ändern könnten
     let mut affected_neighbors: Vec<u64> = Vec::new();
-    for &del_id in ids {
-        for conn in road_map.connections_iter() {
-            if conn.start_id == del_id && !ids.contains(&conn.end_id) {
-                affected_neighbors.push(conn.end_id);
-            }
-            if conn.end_id == del_id && !ids.contains(&conn.start_id) {
-                affected_neighbors.push(conn.start_id);
-            }
+    for conn in road_map.connections_iter() {
+        if id_set.contains(&conn.start_id) && !id_set.contains(&conn.end_id) {
+            affected_neighbors.push(conn.end_id);
+        }
+        if id_set.contains(&conn.end_id) && !id_set.contains(&conn.start_id) {
+            affected_neighbors.push(conn.start_id);
         }
     }
 
