@@ -101,6 +101,17 @@ pub struct UiState {
     pub zip_browser: Option<ZipBrowserState>,
     pub overview_options_dialog: OverviewOptionsDialogState,
     pub post_load_dialog: PostLoadDialogState,
+    /// Konfiguration für das Distanzen-Neuverteilen-Feature
+    pub distanzen: DistanzenState,
+}
+
+pub struct DistanzenState {
+    /// true = nach Anzahl, false = nach Abstand
+    pub by_count: bool,
+    /// Gewünschte Anzahl an Waypoints (bei `by_count = true`)
+    pub count: u32,
+    /// Maximaler Abstand zwischen Waypoints in Welteinheiten (bei `by_count = false`)
+    pub distance: f32,
 }
 
 pub struct ZipBrowserState {
