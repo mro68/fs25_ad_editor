@@ -203,6 +203,17 @@
 - ✅ Verkettung und Nachbearbeitung unterstützt
 - ✅ 11 Unit-Tests (Geometrie + Tool-Flow)
 
+**Errungenschaften (Struktur- und Hotpath-Run 2026-02-24):**
+- ✅ API-Doku-Sync: `RenderScene.hidden_node_ids` in `shared/API.md` und `render/API.md`
+- ✅ `ui/API.md` an aktuelles Properties-Panel-Verhalten angepasst
+- ✅ Distanzen-Preview-Hotpath: per-frame `clone/collect` im Overlay entfernt (`paint_preview_polyline`)
+- ✅ Controller-Logging ohne unnötiges `AppCommand`-Clone
+- ✅ `tests/controller_flow_tests.rs` in thematische Module gesplittet (`tests/controller_flow/*`)
+- ✅ `src/ui/properties.rs` modularisiert (Submodule `properties/distances.rs`, `properties/selectors.rs`)
+- ✅ `src/app/state.rs` in Teilmodule aufgespalten (`state/{app_state,dialogs,editor,selection,view}.rs`)
+- ✅ `crates/fs25_map_overview/src/composite.rs` per Submodul-Split gestartet (`composite/legend.rs`)
+- ✅ Konsistenztests für `intent_mapping` ergänzt
+
 **Errungenschaften (Tools-Modularisierung abgeschlossen 2026-02-22):**
 - ✅ `curve.rs` → `curve/mod.rs` (einheitliche Verzeichnisstruktur für alle drei Tools)
 - ✅ `common.rs` → `common/` aufgeteilt: `geometry.rs`, `tangent.rs`, `lifecycle.rs`, `builder.rs`

@@ -35,7 +35,7 @@ impl AppController {
         state: &mut AppState,
         command: AppCommand,
     ) -> anyhow::Result<()> {
-        let executed_command = command.clone();
+        state.command_log.record(&command);
         use super::handlers;
 
         match command {
@@ -242,8 +242,6 @@ impl AppController {
             // === Distanzen ===
             AppCommand::ResamplePath => handlers::editing::resample_path(state),
         }
-
-        state.command_log.record(&executed_command);
 
         Ok(())
     }

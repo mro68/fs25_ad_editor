@@ -29,8 +29,12 @@ pub struct RenderScene {
     pub background_opacity: f32,
     pub background_visible: bool,
     pub options: EditorOptions,
+    pub hidden_node_ids: Arc<HashSet<u64>>,
 }
 ```
+
+`hidden_node_ids` wird genutzt, um Nodes im aktuellen Frame temporär auszublenden
+(z. B. bei Vorschau-Overlays im Properties-Panel), ohne die Domain-Daten zu mutieren.
 
 **Methoden:**
 - `has_map() -> bool` — Prüft ob eine RoadMap vorhanden ist
