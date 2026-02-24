@@ -153,6 +153,12 @@ impl ConnectionRenderer {
         let mut vertices = std::mem::take(&mut self.vertex_scratch);
         vertices.clear();
         for connection in road_map.connections_iter() {
+            // Verbindungen zu ausgeblendeten Nodes überspringen
+            if ctx.hidden_node_ids.contains(&connection.start_id)
+                || ctx.hidden_node_ids.contains(&connection.end_id)
+            {
+                continue;
+            }
             let Some(start) = road_map
                 .nodes
                 .get(&connection.start_id)

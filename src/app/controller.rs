@@ -35,7 +35,7 @@ impl AppController {
         state: &mut AppState,
         command: AppCommand,
     ) -> anyhow::Result<()> {
-        let executed_command = command.clone();
+        state.command_log.record(&command);
         use super::handlers;
 
         match command {
@@ -238,9 +238,10 @@ impl AppController {
 
             // === Post-Load-Dialog ===
             AppCommand::DismissPostLoadDialog => handlers::dialog::dismiss_post_load_dialog(state),
-        }
 
-        state.command_log.record(&executed_command);
+            // === Distanzen ===
+            AppCommand::ResamplePath => handlers::editing::resample_path(state),
+        }
 
         Ok(())
     }

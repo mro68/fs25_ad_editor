@@ -32,7 +32,7 @@ pub fn render_tool_preview(
 }
 
 /// Zeichnet eine `ToolPreview`-Geometrie (Verbindungen + Nodes).
-fn paint_preview(
+pub fn paint_preview(
     painter: &egui::Painter,
     rect: egui::Rect,
     camera: &Camera2D,
@@ -79,6 +79,45 @@ fn paint_preview(
         } else {
             painter.circle_filled(screen_pos, 3.5, preview_color);
         }
+    }
+}
+
+/// Zeichnet eine einfache Polyline-Vorschau ohne temporäre `ToolPreview`-Allokationen.
+///
+/// Verbindungen werden implizit als aufeinanderfolgende Punkte (`i -> i+1`) gezeichnet.
+pub fn paint_preview_polyline(
+    painter: &egui::Painter,
+    rect: egui::Rect,
+    camera: &Camera2D,
+    viewport_size: Vec2,
+    positions: &[Vec2],
+) {
+    if positions.is_empty() {
+        return;
+    }
+
+    let preview_color = egui::Color32::from_rgba_unmultiplied(0, 200, 255, 180);
+
+    if positions.len() >= 2 {
+        for window in positions.windows(2) {
+            let pa = window[0];
+            let pb = window[1];
+            let sa = camera.world_to_screen(pa, viewport_size);
+            let sb = camera.world_to_screen(pb, viewport_size);
+            painter.line_segment(
+                [
+                    egui::pos2(rect.min.x + sa.x, rect.min.y + sa.y),
+                    egui::pos2(rect.min.x + sb.x, rect.min.y + sb.y),
+                ],
+                egui::Stroke::new(2.0, preview_color),
+            );
+        }
+    }
+
+    for &pos in positions {
+        let sp = camera.world_to_screen(pos, viewport_size);
+        let screen_pos = egui::pos2(rect.min.x + sp.x, rect.min.y + sp.y);
+        painter.circle_filled(screen_pos, 3.5, preview_color);
     }
 }
 

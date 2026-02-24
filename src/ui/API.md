@@ -75,6 +75,14 @@ pub fn render_toolbar(ctx: &egui::Context, state: &AppState) -> Vec<AppIntent>
 
 Rendert das Properties-Panel mit Detailanzeige selektierter Nodes (IDs, Positionen, Verbindungen).
 
+Zeigt Node-Verhalten-Einstellungen **immer** im Side-Panel:
+- Checkbox „Nach Löschen verbinden" (→ `OptionsChanged`)
+- Checkbox „Verbindung beim Platzieren teilen" (→ `OptionsChanged`)
+
+Zusätzlich (tool-/selektionsabhängig):
+- Distanzen-Panel (wenn ≥ 2 Nodes selektiert): Catmull-Rom-Resample (→ `ResamplePathRequested`)
+- Route-Tool-Konfiguration (wenn `active_tool == EditorTool::Route`)
+
 ```rust
 pub fn render_properties_panel(
   ctx: &egui::Context,
@@ -85,6 +93,8 @@ pub fn render_properties_panel(
   active_tool: EditorTool,
   tool_manager: Option<&mut ToolManager>,
   segment_registry: Option<&SegmentRegistry>,
+  options: &EditorOptions,
+  distance_state: &mut DistanzenState,
 ) -> Vec<AppIntent>
 ```
 
@@ -130,7 +140,8 @@ let drag_targets = tool_manager.active_tool()
 let intents = input.collect_viewport_events(
     ui, &response, viewport_size,
     &camera, road_map.as_deref(), &selected_node_ids,
-    active_tool, &options, &drag_targets,
+    active_tool, route_tool_is_drawing,
+    &options, &drag_targets, distanzen_active,
 );
 ```
 

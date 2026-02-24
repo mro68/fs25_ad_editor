@@ -49,6 +49,12 @@ let world_pos = camera.screen_to_world(
 // Pixel-zu-Welt-Umrechnungsfaktor
 let wpp = camera.world_per_pixel(viewport_height);
 
+// Welt zu Screen-Koordinaten (Inverse von screen_to_world)
+let screen_pos = camera.world_to_screen(
+    Vec2::new(world_x, world_y),
+    Vec2::new(screen_w, screen_h)
+);
+
 // Pick-Radius in Welt-Einheiten (für Node-Selektion)
 let pick_radius = camera.pick_radius_world(viewport_height, pick_radius_px);
 
@@ -151,7 +157,7 @@ pub struct RoadMap {
 
 **Spatial Queries (persistenter KD-Tree, lazy rebuild via `ensure_spatial_index`):**
 - `nearest_node(&self, query: Vec2) -> Option<SpatialMatch>` — Nächster Node
-- `nodes_within_radius(&self, center: Vec2, radius: f32) -> Vec<SpatialMatch>` — Nodes im Umkreis
+- `nodes_within_radius(&self, query: Vec2, radius: f32) -> Vec<SpatialMatch>` — Nodes im Umkreis
 - `nodes_within_rect(&self, min: Vec2, max: Vec2) -> Vec<u64>` — Nodes im Rechteck
 
 ---
@@ -255,7 +261,7 @@ pub struct SpatialMatch {
 - `SpatialIndex::from_nodes(nodes: &HashMap<u64, MapNode>) -> Self`
 - `SpatialIndex::empty() -> Self`
 - `nearest(&self, query: Vec2) -> Option<SpatialMatch>`
-- `within_radius(&self, center: Vec2, radius: f32) -> Vec<SpatialMatch>`
+- `within_radius(&self, query: Vec2, radius: f32) -> Vec<SpatialMatch>`
 - `within_rect(&self, min: Vec2, max: Vec2) -> Vec<u64>`
 - `len() -> usize` — Anzahl indexierter Nodes
 - `is_empty() -> bool` — Prüft ob Index leer ist

@@ -31,6 +31,8 @@ pub struct RenderScene {
     pub background_visible: bool,
     /// Laufzeit-Optionen für Farben, Größen, Breiten
     pub options: EditorOptions,
+    /// Node-IDs, die im aktuellen Frame ausgeblendet werden sollen (z.B. Distanzen-Vorschau)
+    pub hidden_node_ids: Arc<HashSet<u64>>,
 }
 
 impl RenderScene {

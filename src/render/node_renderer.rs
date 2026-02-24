@@ -175,6 +175,9 @@ impl NodeRenderer {
         instances.clear();
 
         for node_id in road_map.nodes_within_rect(min, max) {
+            if ctx.hidden_node_ids.contains(&node_id) {
+                continue;
+            }
             let Some(node) = road_map.nodes.get(&node_id) else {
                 continue;
             };

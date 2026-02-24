@@ -5,6 +5,7 @@
 pub mod options;
 mod render_quality;
 mod render_scene;
+pub mod spline_geometry;
 
 pub use options::EditorOptions;
 pub use options::OverviewLayerOptions;

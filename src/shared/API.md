@@ -9,6 +9,7 @@ Das `shared`-Modul enthält Layer-übergreifende Typen, die zwischen `app` (Prod
 - `render_scene.rs` — `RenderScene` Übergabevertrag App → Render
 - `render_quality.rs` — `RenderQuality` Enum (Low/Medium/High)
 - `options.rs` — Zentrale Konfigurationskonstanten + `EditorOptions` (Laufzeit-Optionen)
+- `spline_geometry.rs` — Layer-neutrale Catmull-Rom-Geometrie-Funktionen (kein import aus `tools` nötig)
 
 ## Haupttypen
 
@@ -28,8 +29,12 @@ pub struct RenderScene {
     pub background_opacity: f32,
     pub background_visible: bool,
     pub options: EditorOptions,
+    pub hidden_node_ids: Arc<HashSet<u64>>,
 }
 ```
+
+`hidden_node_ids` wird genutzt, um Nodes im aktuellen Frame temporär auszublenden
+(z. B. bei Vorschau-Overlays im Properties-Panel), ohne die Domain-Daten zu mutieren.
 
 **Methoden:**
 - `has_map() -> bool` — Prüft ob eine RoadMap vorhanden ist
@@ -77,6 +82,7 @@ Zentral gesammelte Konfigurationswerte, gegliedert nach Bereich:
 | Marker | `MARKER_COLOR` | `[0.9, 0.1, 0.1, 1.0]` | Rot |
 | Marker | `MARKER_OUTLINE_COLOR` | `[0.6, 0.0, 0.0, 1.0]` | Dunkles Rot |
 | Tools | `SNAP_RADIUS` | 3.0 | Snap-Radius für Route-Tools (Welteinheiten) |
+| Tools | `HITBOX_SCALE_PERCENT` | 100.0 | Standard-Hitbox-Skalierung in % der Node-Größe |
 | Terrain | `TERRAIN_HEIGHT_SCALE` | 255.0 | Höhenskala für Heightmap-Export |
 
 ### `OverviewLayerOptions`
@@ -136,8 +142,17 @@ pub struct EditorOptions {
     pub camera_scroll_zoom_step: f32,
     // Tools
     pub snap_radius: f32,
+    /// Hitbox-Skalierung in Prozent der Node-Größe (100 = exakte Node-Größe)
+    pub hitbox_scale_percent: f32,
+    /// true = Mittelpunkt zwischen Vorgänger und Nachfolger beim Löschen verbinden
+    pub reconnect_on_delete: bool,
+    /// true = bestehende Verbindung beim Platzieren splitten
+    pub split_connection_on_place: bool,
     // Terrain
     pub terrain_height_scale: f32,
+    // Übersichtskarte
+    /// Layer-Optionen für Übersichtskarten-Generierung
+    pub overview_layers: OverviewLayerOptions,
 }
 ```
 
@@ -145,3 +160,4 @@ pub struct EditorOptions {
 - `EditorOptions::load_from_file(path) -> Self` — TOML-Datei laden (bei Fehler: Defaults)
 - `EditorOptions::save_to_file(&self, path) -> Result<()>` — Als TOML speichern
 - `EditorOptions::config_path() -> PathBuf` — Pfad zur Optionen-Datei neben der Binary
+- `hitbox_radius(&self) -> f32` — Berechnet den Hitbox-Radius in Welteinheiten (`node_size_world * hitbox_scale_percent / 100`)
