@@ -491,6 +491,7 @@ fn render_distanzen_panel(
     }
 
     ui.add_space(4.0);
+    ui.checkbox(&mut distanzen.hide_original, "Originale ausblenden");
     ui.label(format!(
         "Vorschau: {} Nodes",
         distanzen.preview_positions.len()
