@@ -60,8 +60,12 @@ pub struct RenderScene {
     pub background_opacity: f32,
     pub background_visible: bool,
     pub options: EditorOptions,
+    pub hidden_node_ids: Arc<HashSet<u64>>,
 }
 ```
+
+`hidden_node_ids` erlaubt dem App-Layer, Nodes pro Frame selektiv auszublenden
+(z. B. Original-Node-Pfad während einer Distanzen-Vorschau), ohne Änderungen an `RoadMap`.
 
 **Methoden:**
 - `has_map() -> bool` — Prüft ob eine RoadMap vorhanden ist
@@ -128,7 +132,7 @@ pub struct Uniforms { pub view_proj: [[f32; 4]; 4], pub aa_params: [f32; 4] }
 - `Vertex::desc()` / `ConnectionVertex::desc()` / `NodeInstance::desc()` / `MarkerInstance::desc()`
 
 **Hilfsfunktion:**
-- `build_view_projection(camera: &Camera2D, viewport_size: [f32; 2]) -> Mat4`
+- `build_view_projection(camera: &Camera2D, viewport_size: [f32; 2]) -> Mat4` (`pub(crate)`)
 
 ---
 
@@ -143,6 +147,7 @@ pub(crate) struct RenderContext<'a> {
     pub camera: &'a Camera2D,
     pub viewport_size: [f32; 2],
     pub options: &'a EditorOptions,
+    pub hidden_node_ids: &'a HashSet<u64>,
 }
 ```
 

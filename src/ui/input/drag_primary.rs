@@ -38,9 +38,7 @@ impl InputState {
         }
 
         // Kein Shift/Alt: Selektion + Move-Drag oder Kamera-Pan
-        let base_max_distance = ctx
-            .camera
-            .pick_radius_world_scaled(ctx.viewport_size[1], ctx.options.selection_pick_radius_px);
+        let base_max_distance = ctx.options.hitbox_radius();
         let move_max_distance = base_max_distance * ctx.options.selection_size_factor;
 
         // Route-Tool Drag-Target Hit-Test (hat Vorrang vor Node-Move)
