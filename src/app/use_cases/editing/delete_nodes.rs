@@ -2,39 +2,79 @@
 
 use super::delete_nodes_by_ids::delete_nodes_internal;
 use crate::app::AppState;
-use crate::core::{Connection, RoadMap};
+use crate::core::{Connection, ConnectionDirection, ConnectionPriority, RoadMap};
 use std::sync::Arc;
+
+/// Ergebnis einer Reconnect-Analyse: Vorgänger, Nachfolger und die abgeleitete
+/// Richtung/Priorität aus den beiden bestehenden Verbindungen.
+struct ReconnectOp {
+    pred: u64,
+    succ: u64,
+    direction: ConnectionDirection,
+    priority: ConnectionPriority,
+}
 
 /// Sammelt Reconnect-Operationen für einen Node: wenn genau 1 Vorgänger und 1 Nachfolger
 /// vorhanden sind (und die beiden nicht identisch), wird eine neue direkte Verbindung
 /// zwischen ihnen vorgeschlagen.
+///
+/// Richtung: Dual wenn eine der Verbindungen Dual ist oder die Richtungen sich widersprechen.
+/// Priorität: Hauptstraße (Regular) schlägt Nebenstraße (SubPriority).
 fn collect_reconnect(
     road_map: &RoadMap,
     del_id: u64,
     id_set: &std::collections::HashSet<u64>,
-) -> Option<(u64, u64)> {
-    // Vorgänger: Nodes mit ausgehender Verbindung zu del_id (die nicht auch gelöscht werden)
-    let predecessors: Vec<u64> = road_map
+) -> Option<ReconnectOp> {
+    // Vorgänger: Connections mit end_id == del_id (Verbindung zum gelöschten Node)
+    let pred_conns: Vec<&Connection> = road_map
         .connections_iter()
         .filter(|c| c.end_id == del_id && !id_set.contains(&c.start_id))
-        .map(|c| c.start_id)
         .collect();
 
-    // Nachfolger: Nodes mit eingehender Verbindung von del_id (die nicht auch gelöscht werden)
-    let successors: Vec<u64> = road_map
+    // Nachfolger: Connections mit start_id == del_id (Verbindung vom gelöschten Node)
+    let succ_conns: Vec<&Connection> = road_map
         .connections_iter()
         .filter(|c| c.start_id == del_id && !id_set.contains(&c.end_id))
-        .map(|c| c.end_id)
         .collect();
 
-    if predecessors.len() == 1 && successors.len() == 1 {
-        let pred = predecessors[0];
-        let succ = successors[0];
+    if pred_conns.len() == 1 && succ_conns.len() == 1 {
+        let pred_conn = pred_conns[0];
+        let succ_conn = succ_conns[0];
+        let pred = pred_conn.start_id;
+        let succ = succ_conn.end_id;
         if pred != succ && !road_map.has_connection(pred, succ) {
-            return Some((pred, succ));
+            let direction = merge_directions(pred_conn.direction, succ_conn.direction);
+            let priority = merge_priorities(pred_conn.priority, succ_conn.priority);
+            return Some(ReconnectOp {
+                pred,
+                succ,
+                direction,
+                priority,
+            });
         }
     }
     None
+}
+
+/// Höherwertige Richtung: Dual > Regular/Reverse; bei Widerspruch → Dual.
+fn merge_directions(a: ConnectionDirection, b: ConnectionDirection) -> ConnectionDirection {
+    match (a, b) {
+        (ConnectionDirection::Dual, _) | (_, ConnectionDirection::Dual) => {
+            ConnectionDirection::Dual
+        }
+        (x, y) if x == y => x,
+        _ => ConnectionDirection::Dual,
+    }
+}
+
+/// Höherwertige Priorität: Hauptstraße (Regular) schlägt Nebenstraße (SubPriority).
+fn merge_priorities(a: ConnectionPriority, b: ConnectionPriority) -> ConnectionPriority {
+    match (a, b) {
+        (ConnectionPriority::SubPriority, ConnectionPriority::SubPriority) => {
+            ConnectionPriority::SubPriority
+        }
+        _ => ConnectionPriority::Regular,
+    }
 }
 
 /// Löscht alle selektierten Nodes und deren Connections.
@@ -59,7 +99,7 @@ pub fn delete_selected_nodes(state: &mut AppState) {
     let id_set: std::collections::HashSet<u64> = ids_to_delete.iter().copied().collect();
 
     // Reconnect-Operationen vorbereiten (falls Option aktiv)
-    let reconnect_ops: Vec<(u64, u64)> = if state.options.reconnect_on_delete {
+    let reconnect_ops: Vec<ReconnectOp> = if state.options.reconnect_on_delete {
         let road_map = state.road_map.as_ref().unwrap();
         ids_to_delete
             .iter()
@@ -79,24 +119,21 @@ pub fn delete_selected_nodes(state: &mut AppState) {
 
     // Reconnect: neue Verbindungen zwischen Vorgänger und Nachfolger erstellen
     if !reconnect_ops.is_empty() {
-        for (pred, succ) in &reconnect_ops {
+        for op in &reconnect_ops {
             if let (Some(p_node), Some(s_node)) =
-                (road_map.nodes.get(pred), road_map.nodes.get(succ))
+                (road_map.nodes.get(&op.pred), road_map.nodes.get(&op.succ))
             {
                 let p_pos = p_node.position;
                 let s_pos = s_node.position;
-                let conn = Connection::new(
-                    *pred,
-                    *succ,
-                    state.editor.default_direction,
-                    state.editor.default_priority,
-                    p_pos,
-                    s_pos,
-                );
+                let conn =
+                    Connection::new(op.pred, op.succ, op.direction, op.priority, p_pos, s_pos);
                 road_map.add_connection(conn);
             }
         }
-        let reconnect_ids: Vec<u64> = reconnect_ops.iter().flat_map(|(a, b)| [*a, *b]).collect();
+        let reconnect_ids: Vec<u64> = reconnect_ops
+            .iter()
+            .flat_map(|op| [op.pred, op.succ])
+            .collect();
         road_map.recalculate_node_flags(&reconnect_ids);
         road_map.ensure_spatial_index();
         log::info!("{} Reconnect-Verbindung(en) erstellt", reconnect_ops.len());
