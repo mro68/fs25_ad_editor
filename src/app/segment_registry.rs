@@ -70,18 +70,60 @@ pub enum SegmentKind {
     },
 }
 
+/// Tool-Index für `StraightLineTool` im `ToolManager` (Registrierungs-Slot 0).
+///
+/// Muss mit der Reihenfolge in `ToolManager::new()` übereinstimmen.
+pub const TOOL_INDEX_STRAIGHT: usize = 0;
+/// Tool-Index für `CurveTool(Grad 2)` im `ToolManager` (Registrierungs-Slot 1).
+pub const TOOL_INDEX_CURVE_QUAD: usize = 1;
+/// Tool-Index für `CurveTool(Grad 3)` im `ToolManager` (Registrierungs-Slot 2).
+pub const TOOL_INDEX_CURVE_CUBIC: usize = 2;
+/// Tool-Index für `SplineTool` im `ToolManager` (Registrierungs-Slot 3).
+pub const TOOL_INDEX_SPLINE: usize = 3;
+
 impl SegmentKind {
     /// Gibt den Tool-Index im ToolManager für dieses Segment zurück.
     ///
-    /// Muss mit der Registrierungsreihenfolge in `ToolManager::new()` übereinstimmen:
-    /// 0 = StraightLineTool, 1 = CurveTool(Quadratic), 2 = CurveTool(Cubic), 3 = SplineTool
+    /// Muss mit der Registrierungsreihenfolge in `ToolManager::new()` übereinstimmen —
+    /// abgesichert durch den Unit-Test `tool_index_stimmt_mit_tool_manager_reihenfolge_ueberein`.
     pub fn tool_index(&self) -> usize {
         match self {
-            SegmentKind::Straight { .. } => 0,
-            SegmentKind::CurveQuad { .. } => 1,
-            SegmentKind::CurveCubic { .. } => 2,
-            SegmentKind::Spline { .. } => 3,
+            SegmentKind::Straight { .. } => TOOL_INDEX_STRAIGHT,
+            SegmentKind::CurveQuad { .. } => TOOL_INDEX_CURVE_QUAD,
+            SegmentKind::CurveCubic { .. } => TOOL_INDEX_CURVE_CUBIC,
+            SegmentKind::Spline { .. } => TOOL_INDEX_SPLINE,
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::app::tools::ToolManager;
+
+    /// Stellt sicher, dass `tool_index()` mit der Registrierungsreihenfolge
+    /// in `ToolManager::new()` übereinstimmt. Bricht sofort beim Umbenennen
+    /// oder Umsortieren der Tools.
+    #[test]
+    fn tool_index_stimmt_mit_tool_manager_reihenfolge_ueberein() {
+        let manager = ToolManager::new();
+        let names: Vec<&str> = manager.tool_names().into_iter().map(|(_, n)| n).collect();
+        assert_eq!(
+            names[TOOL_INDEX_STRAIGHT], "Gerade Strecke",
+            "TOOL_INDEX_STRAIGHT zeigt nicht auf StraightLineTool"
+        );
+        assert_eq!(
+            names[TOOL_INDEX_CURVE_QUAD], "Bézier Grad 2",
+            "TOOL_INDEX_CURVE_QUAD zeigt nicht auf CurveTool(Grad 2)"
+        );
+        assert_eq!(
+            names[TOOL_INDEX_CURVE_CUBIC], "Bézier Grad 3",
+            "TOOL_INDEX_CURVE_CUBIC zeigt nicht auf CurveTool(Grad 3)"
+        );
+        assert_eq!(
+            names[TOOL_INDEX_SPLINE], "Spline",
+            "TOOL_INDEX_SPLINE zeigt nicht auf SplineTool"
+        );
     }
 }
 
@@ -142,11 +184,13 @@ impl SegmentRegistry {
     }
 
     /// Gibt alle Records zurück, die mindestens einen der angegebenen Node-IDs enthalten.
-    pub fn find_by_node_ids(&self, node_ids: &[u64]) -> Vec<&SegmentRecord> {
-        let id_set: std::collections::HashSet<u64> = node_ids.iter().copied().collect();
+    pub fn find_by_node_ids(
+        &self,
+        node_ids: &std::collections::HashSet<u64>,
+    ) -> Vec<&SegmentRecord> {
         self.records
             .iter()
-            .filter(|r| r.node_ids.iter().any(|nid| id_set.contains(nid)))
+            .filter(|r| r.node_ids.iter().any(|nid| node_ids.contains(nid)))
             .collect()
     }
 

@@ -2,6 +2,7 @@
 
 use super::SelectionState;
 use crate::core::RoadMap;
+use std::collections::VecDeque;
 use std::sync::Arc;
 
 /// Snapshot reduziert auf die für Undo/Redo relevanten Teile.
@@ -35,10 +36,13 @@ impl Snapshot {
 }
 
 /// Einfacher Undo/Redo-Manager mit Snapshotting.
+///
+/// Verwendet `VecDeque` für beide Stacks — `pop_front()` (beim Überlauf)
+/// ist damit O(1) statt O(n) wie `Vec::remove(0)`.
 #[derive(Default)]
 pub struct EditHistory {
-    undo_stack: Vec<Snapshot>,
-    redo_stack: Vec<Snapshot>,
+    undo_stack: VecDeque<Snapshot>,
+    redo_stack: VecDeque<Snapshot>,
     max_depth: usize,
 }
 
@@ -46,8 +50,8 @@ impl EditHistory {
     /// Erstellt einen neuen History-Manager mit maximaler Tiefe.
     pub fn new_with_capacity(max_depth: usize) -> Self {
         Self {
-            undo_stack: Vec::with_capacity(max_depth),
-            redo_stack: Vec::with_capacity(max_depth),
+            undo_stack: VecDeque::with_capacity(max_depth),
+            redo_stack: VecDeque::with_capacity(max_depth),
             max_depth,
         }
     }
@@ -56,9 +60,9 @@ impl EditHistory {
     /// vermeidet gleichzeitige mut/immut-Borrows auf dem gesamten `AppState`.
     pub fn record_snapshot(&mut self, snap: Snapshot) {
         if self.undo_stack.len() >= self.max_depth {
-            self.undo_stack.remove(0);
+            self.undo_stack.pop_front();
         }
-        self.undo_stack.push(snap);
+        self.undo_stack.push_back(snap);
         self.redo_stack.clear();
     }
 
@@ -75,11 +79,11 @@ impl EditHistory {
     /// Nimmt den obersten Undo-Eintrag und gibt den wiederherzustellenden Snapshot zurück.
     /// Schiebt `current` auf den Redo-Stack.
     pub fn pop_undo_with_current(&mut self, current: Snapshot) -> Option<Snapshot> {
-        if let Some(prev) = self.undo_stack.pop() {
+        if let Some(prev) = self.undo_stack.pop_back() {
             if self.redo_stack.len() >= self.max_depth {
-                self.redo_stack.remove(0);
+                self.redo_stack.pop_front();
             }
-            self.redo_stack.push(current);
+            self.redo_stack.push_back(current);
             Some(prev)
         } else {
             None
@@ -89,11 +93,11 @@ impl EditHistory {
     /// Nimmt den obersten Redo-Eintrag und gibt den wiederherzustellenden Snapshot zurück.
     /// Schiebt `current` auf den Undo-Stack.
     pub fn pop_redo_with_current(&mut self, current: Snapshot) -> Option<Snapshot> {
-        if let Some(next) = self.redo_stack.pop() {
+        if let Some(next) = self.redo_stack.pop_back() {
             if self.undo_stack.len() >= self.max_depth {
-                self.undo_stack.remove(0);
+                self.undo_stack.pop_front();
             }
-            self.undo_stack.push(current);
+            self.undo_stack.push_back(current);
             Some(next)
         } else {
             None

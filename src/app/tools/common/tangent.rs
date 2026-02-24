@@ -90,13 +90,21 @@ impl TangentState {
         }
     }
 
-    /// Setzt Tangenten auf `None` zurück; Nachbarn-Cache bleibt erhalten.
+    /// Setzt nur die gewählten Tangenten auf `None` zurück; der Nachbarn-Cache bleibt erhalten.
+    ///
+    /// **Wann benutzen:** Bei Verkettung (Chaining) — die Nachbarn des neuen Startpunkts
+    /// werden erst nach dem nächsten Snap befüllt, daher den Cache nicht unnötig löschen.
+    /// Wird in `on_click()` aufgerufen, bevor der neue Start-Snap ausgewertet wird.
     pub fn reset_tangents(&mut self) {
         self.tangent_start = TangentSource::None;
         self.tangent_end = TangentSource::None;
     }
 
-    /// Setzt Tangenten und Nachbarn-Cache vollständig zurück.
+    /// Setzt Tangenten **und** Nachbarn-Cache vollständig zurück.
+    ///
+    /// **Wann benutzen:** Beim vollständigen Tool-Reset (Escape, neues Werkzeug wählen
+    /// oder `execute()` ohne Verkettung) — nach dem Reset ist der Cache ungültig,
+    /// da der nächste Snap an einem anderen Node landen kann.
     pub fn reset_all(&mut self) {
         self.tangent_start = TangentSource::None;
         self.tangent_end = TangentSource::None;

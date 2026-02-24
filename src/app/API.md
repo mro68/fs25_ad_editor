@@ -509,6 +509,13 @@ pub enum SegmentKind {
     Spline       { anchors, tangent_start, tangent_end, direction, priority, max_segment_length },
 }
 
+// Tool-Index-Konstanten (stimmen mit ToolManager::new()-Reihenfolge überein,
+// abgesichert durch Unit-Test `tool_index_stimmt_mit_tool_manager_reihenfolge_ueberein`):
+pub const TOOL_INDEX_STRAIGHT: usize = 0;
+pub const TOOL_INDEX_CURVE_QUAD: usize = 1;
+pub const TOOL_INDEX_CURVE_CUBIC: usize = 2;
+pub const TOOL_INDEX_SPLINE: usize = 3;
+
 pub struct SegmentRecord {
     pub id: u64,
     pub node_ids: Vec<u64>,
@@ -524,7 +531,7 @@ pub struct SegmentRecord {
 registry.register(record) -> u64
 registry.get(record_id) -> Option<&SegmentRecord>
 registry.remove(record_id)
-registry.find_by_node_ids(node_ids) -> Vec<&SegmentRecord>
+registry.find_by_node_ids(node_ids: &HashSet<u64>) -> Vec<&SegmentRecord>
 registry.invalidate_by_node_ids(node_ids)  // bei manuellem Node-Löschen
 registry.len() / is_empty()
 ```

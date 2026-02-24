@@ -105,6 +105,9 @@
   - [x] **Connection-Lookup O(1):** `connections: Vec<Connection>` → `HashMap<(u64,u64), Connection>`
   - [x] **COW-Undo via `Arc<RoadMap>`:** Snapshot ist O(1) statt O(n) Deep-Clone (Copy-on-Write)
   - [x] Tool-Preview: Steuerpunkt-Erkennung von O(n·m) auf O(n+m) umgestellt (precomputed Node-Connectivity)
+  - [x] **EditHistory: VecDeque statt Vec** — `pop_front()` O(1) statt O(n) `remove(0)` (2026-02-24)
+  - [x] **Properties-Panel:** `selected_node_ids: &HashSet<u64>` direkt übergeben — eliminiert doppeltes `.collect()` (2026-02-24)
+  - [x] **Spline-Preview:** `samples_per_segment` 32→16 via Konstante `SPLINE_SAMPLES_PER_SEGMENT` (2026-02-24)
   - [ ] LOD-System für große Strecken
   - [ ] Memory-Profiling
   - [x] `ctx.request_repaint()` nur bei Änderungen (CPU-Idle-Verbrauch reduzieren)
@@ -119,6 +122,7 @@
   - [ ] UI-Integration-Tests
   - [x] Performance-Benchmarks (Basis mit Criterion)
   - [ ] Performance-Benchmarks mit 100k+ Nodes
+  - [x] `SegmentKind::tool_index()` durch Konstanten und Unit-Test abgesichert (2026-02-24)
 - [🟡] Dokumentation
   - [ ] User-Guide
   - [x] API-Dokumentation pro Modul (API.md inkl. shared)
@@ -126,6 +130,7 @@
   - [x] Architektur-Analyse und API.md-Nachführung (2026-02-20)
   - [x] Handler-Split und Architektur-Guardrails dokumentiert (2025-07-02)
   - [x] DRY-Refactoring und RouteTool-Trait-Extraktion (2025-07-11)
+  - [x] Audit-Fixups: VecDeque-Undo, HashSet-Properties, Spline-Samples, Doku-Cleanup (2026-02-24)
 - [ ] Packaging
   - [ ] Windows Binaries (.exe)
   - [ ] Linux Binaries (AppImage)

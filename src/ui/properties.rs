@@ -1,5 +1,7 @@
 //! Properties-Panel (rechte Seitenleiste) für Node- und Connection-Eigenschaften.
 
+use std::collections::HashSet;
+
 use crate::app::{
     segment_registry::SegmentRegistry, tools::ToolManager, AppIntent, ConnectionDirection,
     ConnectionPriority, EditorTool, RoadMap,
@@ -10,7 +12,7 @@ use crate::app::{
 pub fn render_properties_panel(
     ctx: &egui::Context,
     road_map: Option<&RoadMap>,
-    selected_node_ids: &[u64],
+    selected_node_ids: &HashSet<u64>,
     default_direction: ConnectionDirection,
     default_priority: ConnectionPriority,
     active_tool: EditorTool,
@@ -27,15 +29,13 @@ pub fn render_properties_panel(
             ui.heading("Eigenschaften");
             ui.separator();
 
-            let selected: Vec<u64> = selected_node_ids.to_vec();
-
-            if selected.is_empty() {
+            if selected_node_ids.is_empty() {
                 ui.label("Keine Selektion");
             } else if let Some(road_map) = road_map {
                 render_selection_info(
                     ui,
                     road_map,
-                    &selected,
+                    selected_node_ids,
                     default_direction,
                     default_priority,
                     segment_registry,
@@ -58,7 +58,7 @@ pub fn render_properties_panel(
 fn render_selection_info(
     ui: &mut egui::Ui,
     road_map: &RoadMap,
-    selected: &[u64],
+    selected: &HashSet<u64>,
     default_direction: ConnectionDirection,
     default_priority: ConnectionPriority,
     segment_registry: Option<&SegmentRegistry>,
@@ -66,7 +66,7 @@ fn render_selection_info(
 ) {
     match selected.len() {
         1 => {
-            let node_id = selected[0];
+            let node_id = *selected.iter().next().unwrap();
             if let Some(node) = road_map.nodes.get(&node_id) {
                 ui.label(format!("Node ID: {}", node.id));
                 ui.label(format!(
@@ -93,7 +93,9 @@ fn render_selection_info(
             }
         }
         2 => {
-            let (a, b) = (selected[0], selected[1]);
+            let mut iter = selected.iter().copied();
+            let a = iter.next().unwrap();
+            let b = iter.next().unwrap();
             ui.label(format!("Nodes: {}, {}", a, b));
             ui.separator();
 

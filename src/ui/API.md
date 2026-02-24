@@ -79,7 +79,7 @@ Rendert das Properties-Panel mit Detailanzeige selektierter Nodes (IDs, Position
 pub fn render_properties_panel(
   ctx: &egui::Context,
   road_map: Option<&RoadMap>,
-  selected_node_ids: &[u64],
+  selected_node_ids: &HashSet<u64>,
   default_direction: ConnectionDirection,
   default_priority: ConnectionPriority,
   active_tool: EditorTool,
