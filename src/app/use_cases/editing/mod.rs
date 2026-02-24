@@ -31,6 +31,7 @@ mod priority;
 mod resample_path;
 
 pub use add_node::add_node_at_position;
+pub use add_node::AddNodeResult;
 pub use apply_tool_result::apply_tool_result;
 pub use apply_tool_result::apply_tool_result_no_snapshot;
 pub use bulk_connections::{

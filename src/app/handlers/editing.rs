@@ -12,8 +12,9 @@ pub fn set_editor_tool(state: &mut AppState, tool: crate::app::state::EditorTool
 }
 
 /// Fügt einen neuen Node an der übergebenen Weltposition hinzu.
+/// Trifft der Klick einen existierenden Node, wird dieser nur selektiert.
 pub fn add_node(state: &mut AppState, world_pos: glam::Vec2) {
-    use_cases::editing::add_node_at_position(state, world_pos);
+    let _ = use_cases::editing::add_node_at_position(state, world_pos);
 }
 
 /// Löscht alle aktuell selektierten Nodes.

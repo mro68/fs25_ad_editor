@@ -5,6 +5,17 @@ use crate::core::{Connection, ConnectionDirection, ConnectionPriority, MapNode, 
 use glam::Vec2;
 use std::sync::Arc;
 
+/// Ergebnis von `add_node_at_position`.
+#[derive(Debug)]
+pub enum AddNodeResult {
+    /// Keine RoadMap geladen
+    NoMap,
+    /// Existierender Node wurde selektiert (kein neuer Node erstellt)
+    SelectedExisting(u64),
+    /// Neuer Node wurde erstellt
+    Created(u64),
+}
+
 /// Berechnet den minimalen Abstand von Punkt `pt` zum Liniensegment `a→b`.
 fn point_to_segment_dist(pt: Vec2, a: Vec2, b: Vec2) -> f32 {
     let ab = b - a;
@@ -51,11 +62,25 @@ fn find_nearest_connection(
 /// Wenn `options.split_connection_on_place` aktiviert ist und die Klickposition
 /// nahe einer bestehenden Verbindung liegt, wird diese Verbindung gesplittet
 /// und der neue Node dazwischen eingefügt (anstelle des normalen Auto-Connects).
-pub fn add_node_at_position(state: &mut AppState, world_pos: Vec2) {
-    let Some(_road_map) = state.road_map.as_ref() else {
+///
+/// Trifft der Klick einen existierenden Node (innerhalb snap_radius),
+/// wird dieser stattdessen nur selektiert (keine Neuerstellung).
+pub fn add_node_at_position(state: &mut AppState, world_pos: Vec2) -> AddNodeResult {
+    let Some(road_map_ref) = state.road_map.as_ref() else {
         log::warn!("Kein Node hinzufügbar: keine RoadMap geladen");
-        return;
+        return AddNodeResult::NoMap;
     };
+
+    // Prüfe ob ein existierender Node getroffen wurde → nur selektieren
+    if let Some(hit) = road_map_ref.nearest_node(world_pos) {
+        if hit.distance <= state.options.snap_radius {
+            state.selection.ids_mut().clear();
+            state.selection.ids_mut().insert(hit.node_id);
+            state.selection.selection_anchor_node_id = Some(hit.node_id);
+            log::info!("AddNode: Existierender Node {} selektiert (Snap)", hit.node_id);
+            return AddNodeResult::SelectedExisting(hit.node_id);
+        }
+    }
 
     // Merke aktuell selektierten Node für Auto-Connect
     let connect_from = if state.selection.selected_node_ids.len() == 1 {
@@ -81,7 +106,7 @@ pub fn add_node_at_position(state: &mut AppState, world_pos: Vec2) {
 
     let Some(road_map_arc) = state.road_map.as_mut() else {
         log::warn!("Kein Node hinzufügbar: keine RoadMap geladen");
-        return;
+        return AddNodeResult::NoMap;
     };
     let road_map = Arc::make_mut(road_map_arc);
     let new_id = road_map.next_node_id();
@@ -146,4 +171,6 @@ pub fn add_node_at_position(state: &mut AppState, world_pos: Vec2) {
         world_pos.x,
         world_pos.y
     );
+
+    AddNodeResult::Created(new_id)
 }

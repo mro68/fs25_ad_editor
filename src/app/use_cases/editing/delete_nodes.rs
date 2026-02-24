@@ -8,18 +8,22 @@ use std::sync::Arc;
 /// Sammelt Reconnect-Operationen für einen Node: wenn genau 1 Vorgänger und 1 Nachfolger
 /// vorhanden sind (und die beiden nicht identisch), wird eine neue direkte Verbindung
 /// zwischen ihnen vorgeschlagen.
-fn collect_reconnect(road_map: &RoadMap, del_id: u64, ids_to_delete: &[u64]) -> Option<(u64, u64)> {
+fn collect_reconnect(
+    road_map: &RoadMap,
+    del_id: u64,
+    id_set: &std::collections::HashSet<u64>,
+) -> Option<(u64, u64)> {
     // Vorgänger: Nodes mit ausgehender Verbindung zu del_id (die nicht auch gelöscht werden)
     let predecessors: Vec<u64> = road_map
         .connections_iter()
-        .filter(|c| c.end_id == del_id && !ids_to_delete.contains(&c.start_id))
+        .filter(|c| c.end_id == del_id && !id_set.contains(&c.start_id))
         .map(|c| c.start_id)
         .collect();
 
     // Nachfolger: Nodes mit eingehender Verbindung von del_id (die nicht auch gelöscht werden)
     let successors: Vec<u64> = road_map
         .connections_iter()
-        .filter(|c| c.start_id == del_id && !ids_to_delete.contains(&c.end_id))
+        .filter(|c| c.start_id == del_id && !id_set.contains(&c.end_id))
         .map(|c| c.end_id)
         .collect();
 
@@ -52,13 +56,14 @@ pub fn delete_selected_nodes(state: &mut AppState) {
     state.record_undo_snapshot();
 
     let ids_to_delete: Vec<u64> = state.selection.selected_node_ids.iter().copied().collect();
+    let id_set: std::collections::HashSet<u64> = ids_to_delete.iter().copied().collect();
 
     // Reconnect-Operationen vorbereiten (falls Option aktiv)
     let reconnect_ops: Vec<(u64, u64)> = if state.options.reconnect_on_delete {
         let road_map = state.road_map.as_ref().unwrap();
         ids_to_delete
             .iter()
-            .filter_map(|&del_id| collect_reconnect(road_map, del_id, &ids_to_delete))
+            .filter_map(|&del_id| collect_reconnect(road_map, del_id, &id_set))
             .collect()
     } else {
         Vec::new()

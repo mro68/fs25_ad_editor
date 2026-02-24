@@ -7,6 +7,7 @@ use crate::app::{
     ConnectionPriority, EditorTool, RoadMap,
 };
 use crate::shared::EditorOptions;
+use glam;
 
 /// Rendert das Properties-Panel und gibt erzeugte Events zurück.
 #[allow(clippy::too_many_arguments)]
@@ -46,10 +47,16 @@ pub fn render_properties_panel(
                 );
             }
 
-            // AddNode-spezifische Einstellungen (nur sichtbar wenn Node-Hinzufügen-Tool aktiv)
-            if active_tool == EditorTool::AddNode {
-                render_add_node_settings(ui, options, distanzen, selected_node_ids, &mut events);
+            // Distanzen-Panel: nur im Select-Modus mit 2+ Nodes
+            if active_tool == EditorTool::Select && selected_node_ids.len() >= 2 {
+                if let Some(rm) = road_map {
+                    render_distanzen_panel(ui, rm, selected_node_ids, distanzen, &mut events);
+                }
             }
+
+            ui.separator();
+            // Node-Verhalten: immer sichtbar
+            render_node_behavior_options(ui, options, &mut events);
 
             ui.separator();
             render_default_direction_selector(ui, default_direction, default_priority, &mut events);
@@ -338,18 +345,12 @@ fn priority_label(prio: ConnectionPriority) -> &'static str {
     }
 }
 
-/// Rendert AddNode-spezifische Einstellungen:
-/// - Checkbox: Verbundene Nodes nach Löschen automatisch verbinden
-/// - Checkbox: Verbindung beim Platzieren aufteilen
-/// - Distanzen-Panel: Selektierte Nodes-Kette gleichmäßig neu verteilen
-fn render_add_node_settings(
+/// Rendert die Node-Verhalten-Checkboxen (immer sichtbar im Side-Panel).
+fn render_node_behavior_options(
     ui: &mut egui::Ui,
     options: &EditorOptions,
-    distanzen: &mut crate::app::state::DistanzenState,
-    selected_node_ids: &HashSet<u64>,
     events: &mut Vec<AppIntent>,
 ) {
-    ui.separator();
     ui.heading("Node-Verhalten");
 
     // Checkbox A: Reconnect beim Löschen
@@ -385,42 +386,137 @@ fn render_add_node_settings(
             options: new_options,
         });
     }
+}
 
-    // Distanzen-Panel: nur wenn 2+ Nodes selektiert
-    if selected_node_ids.len() >= 2 {
-        ui.add_space(4.0);
+/// Rendert das Distanzen-Panel (nur im Select-Modus mit 2+ Nodes):
+/// Berechnet Streckenlänge, zeigt Node-Anzahl und Abstand wechselseitig gekoppelt an.
+fn render_distanzen_panel(
+    ui: &mut egui::Ui,
+    road_map: &RoadMap,
+    selected_node_ids: &HashSet<u64>,
+    distanzen: &mut crate::app::state::DistanzenState,
+    events: &mut Vec<AppIntent>,
+) {
+    use crate::shared::spline_geometry::{catmull_rom_chain_with_tangents, polyline_length};
+
+    // Kette ordnen und Streckenlänge berechnen
+    let chain = order_chain_for_distanzen(selected_node_ids, road_map);
+    let Some(ordered) = chain else {
         ui.separator();
-        ui.heading("Distanzen");
+        ui.label("⚠ Selektierte Nodes bilden keine zusammenhängende Kette.");
+        return;
+    };
 
-        ui.radio_value(&mut distanzen.by_count, false, "Nach Abstand (m)");
-        if !distanzen.by_count {
-            ui.add(
-                egui::DragValue::new(&mut distanzen.distance)
-                    .speed(0.5)
-                    .range(0.5..=500.0)
-                    .suffix(" m"),
-            );
-        }
+    let positions: Vec<glam::Vec2> = ordered
+        .iter()
+        .filter_map(|id| road_map.nodes.get(id).map(|n| n.position))
+        .collect();
 
-        ui.radio_value(&mut distanzen.by_count, true, "Nach Anzahl");
-        if distanzen.by_count {
-            ui.add(
-                egui::DragValue::new(&mut distanzen.count)
-                    .speed(1.0)
-                    .range(2..=10000),
-            );
-        }
+    if positions.len() < 2 {
+        return;
+    }
 
-        ui.add_space(4.0);
-        if ui
-            .button("Neu verteilen")
-            .on_hover_text(
-                "Verteilt die selektierten Nodes gleichmäßig entlang einem \
-                 Catmull-Rom-Spline durch die bestehenden Positionen.",
-            )
-            .clicked()
-        {
-            events.push(AppIntent::ResamplePathRequested);
+    let dense = catmull_rom_chain_with_tangents(&positions, 16, None, None);
+    let path_len = polyline_length(&dense);
+    distanzen.path_length = path_len;
+
+    // Minimum-Distanz 6m erzwingen
+    distanzen.distance = distanzen.distance.max(6.0);
+
+    // Initiale Synchronisation wenn noch nicht gesetzt
+    if distanzen.count < 2 {
+        distanzen.sync_from_distance();
+    }
+
+    ui.separator();
+    ui.heading("Strecke aufteilen");
+    ui.label(format!("Streckenlänge: {:.1} m", path_len));
+
+    // Abstand (m)
+    let prev_distance = distanzen.distance;
+    ui.horizontal(|ui| {
+        ui.label("Abstand:");
+        ui.add(
+            egui::DragValue::new(&mut distanzen.distance)
+                .speed(0.5)
+                .range(6.0..=500.0)
+                .suffix(" m"),
+        );
+    });
+    if (distanzen.distance - prev_distance).abs() > f32::EPSILON {
+        distanzen.by_count = false;
+        distanzen.sync_from_distance();
+    }
+
+    // Anzahl Nodes
+    let prev_count = distanzen.count;
+    ui.horizontal(|ui| {
+        ui.label("Nodes:");
+        ui.add(
+            egui::DragValue::new(&mut distanzen.count)
+                .speed(1.0)
+                .range(2..=10000),
+        );
+    });
+    if distanzen.count != prev_count {
+        distanzen.by_count = true;
+        distanzen.sync_from_count();
+        // Minimum-Distanz 6m erzwingen
+        if distanzen.distance < 6.0 {
+            distanzen.distance = 6.0;
+            distanzen.sync_from_distance();
         }
+    }
+
+    ui.add_space(4.0);
+    ui.label("⏎ Enter zum Übernehmen");
+
+    // Enter-Taste abfragen
+    if ui.input(|i| i.key_pressed(egui::Key::Enter)) {
+        events.push(AppIntent::ResamplePathRequested);
+    }
+}
+
+/// Ordnet selektierte Nodes zu einer linearen Kette (für Distanzen-Vorschau).
+fn order_chain_for_distanzen(node_ids: &HashSet<u64>, road_map: &RoadMap) -> Option<Vec<u64>> {
+    let start = node_ids
+        .iter()
+        .find(|&&id| {
+            road_map
+                .connections_iter()
+                .filter(|c| c.end_id == id && node_ids.contains(&c.start_id))
+                .count()
+                == 0
+        })
+        .copied()
+        .or_else(|| node_ids.iter().next().copied())?;
+
+    let mut path = Vec::with_capacity(node_ids.len());
+    let mut visited = HashSet::new();
+    let mut current = start;
+
+    loop {
+        path.push(current);
+        visited.insert(current);
+
+        let next = road_map
+            .connections_iter()
+            .find(|c| {
+                c.start_id == current
+                    && node_ids.contains(&c.end_id)
+                    && !visited.contains(&c.end_id)
+            })
+            .map(|c| c.end_id);
+
+        match next {
+            Some(n) => current = n,
+            None => break,
+        }
+    }
+
+    if path.len() == node_ids.len() {
+        Some(path)
+    } else {
+        None
     }
 }
