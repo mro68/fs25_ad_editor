@@ -71,9 +71,11 @@ pub fn add_node_at_position(state: &mut AppState, world_pos: Vec2) -> AddNodeRes
         return AddNodeResult::NoMap;
     };
 
-    // Prüfe ob ein existierender Node getroffen wurde → nur selektieren
+    // Prüfe ob ein existierender Node direkt getroffen wurde → nur selektieren
+    // Hitbox ist auf die visuelle Node-Größe begrenzt (nicht snap_radius),
+    // damit zwischen eng platzierten Nodes noch neue Nodes gesetzt werden können.
     if let Some(hit) = road_map_ref.nearest_node(world_pos) {
-        if hit.distance <= state.options.snap_radius {
+        if hit.distance <= state.options.node_size_world {
             state.selection.ids_mut().clear();
             state.selection.ids_mut().insert(hit.node_id);
             state.selection.selection_anchor_node_id = Some(hit.node_id);
