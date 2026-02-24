@@ -88,7 +88,14 @@ fn render_selection_info(
 ) {
     match selected.len() {
         1 => render_single_node_info(ui, road_map, selected, events),
-        2 => render_two_nodes_info(ui, road_map, selected, default_direction, default_priority, events),
+        2 => render_two_nodes_info(
+            ui,
+            road_map,
+            selected,
+            default_direction,
+            default_priority,
+            events,
+        ),
         n => {
             ui.label(format!("{} Nodes selektiert", n));
         }
@@ -269,13 +276,9 @@ fn render_segment_edit_buttons(
     ui.label("Segment bearbeiten:");
     for record in matching {
         let label = match &record.kind {
-            crate::app::segment_registry::SegmentKind::Straight { .. } => {
-                "✏ Gerade Strecke"
-            }
+            crate::app::segment_registry::SegmentKind::Straight { .. } => "✏ Gerade Strecke",
             crate::app::segment_registry::SegmentKind::CurveQuad { .. } => "✏ Kurve Grad 2",
-            crate::app::segment_registry::SegmentKind::CurveCubic { .. } => {
-                "✏ Kurve Grad 3"
-            }
+            crate::app::segment_registry::SegmentKind::CurveCubic { .. } => "✏ Kurve Grad 3",
             crate::app::segment_registry::SegmentKind::Spline { .. } => "✏ Spline",
         };
         if ui.button(label).clicked() {

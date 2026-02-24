@@ -249,12 +249,7 @@ impl EditorApp {
     }
 
     /// Zeichnet die wgpu-Render-Szene in den Viewport.
-    fn render_viewport(
-        &mut self,
-        ui: &egui::Ui,
-        rect: egui::Rect,
-        viewport_size: [f32; 2],
-    ) {
+    fn render_viewport(&mut self, ui: &egui::Ui, rect: egui::Rect, viewport_size: [f32; 2]) {
         let render_data = render::WgpuRenderData {
             scene: self
                 .controller
@@ -312,9 +307,7 @@ impl EditorApp {
         }
 
         // ── Distanzen-Vorschau-Overlay ──────────
-        if self.state.ui.distanzen.active
-            && !self.state.ui.distanzen.preview_positions.is_empty()
-        {
+        if self.state.ui.distanzen.active && !self.state.ui.distanzen.preview_positions.is_empty() {
             let vp = glam::Vec2::new(viewport_size[0], viewport_size[1]);
             ui::paint_preview_polyline(
                 &ui.painter_at(rect),
