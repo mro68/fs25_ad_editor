@@ -135,6 +135,8 @@ impl EditorApp {
             active_tool,
             route_tool_manager,
             Some(&self.state.segment_registry),
+            &self.state.options,
+            &mut self.state.ui.distanzen,
         ));
         events.extend(ui::handle_file_dialogs(&mut self.state.ui));
         events.extend(ui::show_heightmap_warning(

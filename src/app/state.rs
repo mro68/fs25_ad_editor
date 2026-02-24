@@ -189,6 +189,27 @@ impl PostLoadDialogState {
     }
 }
 
+/// Konfiguration für das Distanzen-Neuverteilen-Feature im Eigenschaften-Bereich.
+#[derive(Debug, Clone)]
+pub struct DistanzenState {
+    /// true = nach Anzahl, false = nach Abstand
+    pub by_count: bool,
+    /// Gewünschte Anzahl an Waypoints (bei `by_count = true`)
+    pub count: u32,
+    /// Maximaler Abstand zwischen Waypoints in Welteinheiten (bei `by_count = false`)
+    pub distance: f32,
+}
+
+impl Default for DistanzenState {
+    fn default() -> Self {
+        Self {
+            by_count: false,
+            count: 10,
+            distance: 5.0,
+        }
+    }
+}
+
 /// UI-bezogener Anwendungszustand
 #[derive(Default)]
 pub struct UiState {
@@ -224,6 +245,8 @@ pub struct UiState {
     pub overview_options_dialog: OverviewOptionsDialogState,
     /// Post-Load-Dialog (Heightmap/ZIP-Erkennung)
     pub post_load_dialog: PostLoadDialogState,
+    /// Distanzen-Neuverteilen-Konfiguration (Eigenschaften-Panel)
+    pub distanzen: DistanzenState,
 }
 
 /// Zustand des ZIP-Browser-Dialogs.
@@ -259,6 +282,7 @@ impl UiState {
             zip_browser: None,
             overview_options_dialog: OverviewOptionsDialogState::new(),
             post_load_dialog: PostLoadDialogState::new(),
+            distanzen: DistanzenState::default(),
         }
     }
 }

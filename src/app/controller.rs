@@ -238,6 +238,9 @@ impl AppController {
 
             // === Post-Load-Dialog ===
             AppCommand::DismissPostLoadDialog => handlers::dialog::dismiss_post_load_dialog(state),
+
+            // === Distanzen ===
+            AppCommand::ResamplePath => handlers::editing::resample_path(state),
         }
 
         state.command_log.record(&executed_command);
