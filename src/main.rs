@@ -197,6 +197,7 @@ impl EditorApp {
                     route_tool_is_drawing,
                     &self.state.options,
                     &drag_targets,
+                    self.state.ui.distanzen.active,
                 ));
 
                 // Tool-Kontextmenü (z.B. Tangenten-Auswahl für Cubic-Kurve)
@@ -255,6 +256,29 @@ impl EditorApp {
                             );
                         }
                     }
+                }
+
+                // ── Distanzen-Vorschau-Overlay ──────────
+                if self.state.ui.distanzen.active
+                    && !self.state.ui.distanzen.preview_positions.is_empty()
+                {
+                    let vp = glam::Vec2::new(viewport_size[0], viewport_size[1]);
+                    let positions = &self.state.ui.distanzen.preview_positions;
+                    let connections: Vec<(usize, usize)> =
+                        (0..positions.len().saturating_sub(1))
+                            .map(|i| (i, i + 1))
+                            .collect();
+                    let preview = fs25_auto_drive_editor::app::tools::ToolPreview {
+                        nodes: positions.clone(),
+                        connections,
+                    };
+                    ui::paint_preview(
+                        &ui.painter_at(rect),
+                        rect,
+                        &self.state.view.camera,
+                        vp,
+                        &preview,
+                    );
                 }
 
                 if self.state.road_map.is_none() {

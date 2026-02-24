@@ -32,7 +32,7 @@ pub fn render_tool_preview(
 }
 
 /// Zeichnet eine `ToolPreview`-Geometrie (Verbindungen + Nodes).
-fn paint_preview(
+pub fn paint_preview(
     painter: &egui::Painter,
     rect: egui::Rect,
     camera: &Camera2D,

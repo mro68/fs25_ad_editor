@@ -200,6 +200,10 @@ pub struct DistanzenState {
     pub distance: f32,
     /// Berechnete Streckenlänge der aktuellen Selektion (für wechselseitige Berechnung)
     pub path_length: f32,
+    /// Vorschau-Modus aktiv (Spline-Preview wird im Viewport gezeichnet)
+    pub active: bool,
+    /// Vorschau-Positionen (berechnete Resample-Punkte für Overlay)
+    pub preview_positions: Vec<glam::Vec2>,
 }
 
 impl Default for DistanzenState {
@@ -209,6 +213,8 @@ impl Default for DistanzenState {
             count: 10,
             distance: 6.0,
             path_length: 0.0,
+            active: false,
+            preview_positions: Vec::new(),
         }
     }
 }
@@ -226,6 +232,12 @@ impl DistanzenState {
         if self.path_length > 0.0 && self.count >= 2 {
             self.distance = (self.path_length / (self.count - 1) as f32).max(0.5);
         }
+    }
+
+    /// Deaktiviert den Vorschau-Modus und löscht die Vorschau-Daten.
+    pub fn deactivate(&mut self) {
+        self.active = false;
+        self.preview_positions.clear();
     }
 }
 

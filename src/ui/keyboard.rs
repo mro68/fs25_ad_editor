@@ -11,6 +11,7 @@ pub(super) fn collect_keyboard_intents(
     selected_node_ids: &HashSet<u64>,
     active_tool: EditorTool,
     route_tool_is_drawing: bool,
+    distanzen_active: bool,
 ) -> Vec<AppIntent> {
     let mut events = Vec::new();
 
@@ -54,7 +55,9 @@ pub(super) fn collect_keyboard_intents(
     }
 
     if key_escape_pressed {
-        if active_tool == EditorTool::Route && route_tool_is_drawing {
+        if distanzen_active {
+            // Distanzen-Vorschau aktiv → Esc wird im Properties-Panel behandelt
+        } else if active_tool == EditorTool::Route && route_tool_is_drawing {
             // Tool zeichnet gerade → Eingabe abbrechen
             events.push(AppIntent::RouteToolCancelled);
         } else if !selected_node_ids.is_empty() {
@@ -170,7 +173,7 @@ mod tests {
         let _ = ctx.run(raw_input, |ctx| {
             egui::CentralPanel::default().show(ctx, |ui| {
                 events =
-                    collect_keyboard_intents(ui, &selected, active_tool, route_tool_is_drawing);
+                    collect_keyboard_intents(ui, &selected, active_tool, route_tool_is_drawing, false);
             });
         });
 
