@@ -94,7 +94,7 @@ pub fn render_properties_panel(
   tool_manager: Option<&mut ToolManager>,
   segment_registry: Option<&SegmentRegistry>,
   options: &EditorOptions,
-  distanzen: &mut DistanzenState,
+  distance_state: &mut DistanzenState,
 ) -> Vec<AppIntent>
 ```
 
@@ -140,7 +140,8 @@ let drag_targets = tool_manager.active_tool()
 let intents = input.collect_viewport_events(
     ui, &response, viewport_size,
     &camera, road_map.as_deref(), &selected_node_ids,
-    active_tool, &options, &drag_targets,
+    active_tool, route_tool_is_drawing,
+    &options, &drag_targets, distanzen_active,
 );
 ```
 

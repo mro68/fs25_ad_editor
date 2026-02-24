@@ -110,15 +110,23 @@ pub struct DistanzenState {
     pub by_count: bool,
     /// Gewünschte Anzahl an Waypoints (bei `by_count = true`)
     pub count: u32,
-    /// Maximaler Abstand zwischen Waypoints in Welteinheiten (bei `by_count = false`), min 6.0
+    /// Maximaler Abstand zwischen Waypoints in Welteinheiten (bei `by_count = false`)
     pub distance: f32,
     /// Berechnete Streckenlänge der aktuellen Selektion (für wechselseitige Berechnung)
     pub path_length: f32,
+    /// Vorschau-Modus aktiv (Spline-Preview wird im Viewport gezeichnet)
+    pub active: bool,
+    /// Originale Strecke während der Vorschau ausblenden
+    pub hide_original: bool,
+    /// Vorschau-Positionen (berechnete Resample-Punkte für Overlay)
+    pub preview_positions: Vec<Vec2>,
 }
 
 **Methoden:**
 - `sync_from_distance()` — Berechnet `count` aus `distance` und `path_length`
 - `sync_from_count()` — Berechnet `distance` aus `count` und `path_length`
+- `deactivate()` — Deaktiviert den Vorschau-Modus und löscht die Vorschau-Daten
+- `should_hide_original() -> bool` — Gibt `true` zurück wenn Original-Strecke ausgeblendet werden soll
 
 pub struct ZipBrowserState {
     pub zip_path: String,
@@ -331,7 +339,7 @@ pub enum AppIntent {
 pub enum AppCommand {
     // Datei-Operationen
     LoadFile { path: String },
-    SaveFile { path: String },
+    SaveFile { path: Option<String> },
     RequestOpenFileDialog,
     RequestSaveFileDialog,
     RequestExit,

@@ -132,7 +132,7 @@ pub struct Uniforms { pub view_proj: [[f32; 4]; 4], pub aa_params: [f32; 4] }
 - `Vertex::desc()` / `ConnectionVertex::desc()` / `NodeInstance::desc()` / `MarkerInstance::desc()`
 
 **Hilfsfunktion:**
-- `build_view_projection(camera: &Camera2D, viewport_size: [f32; 2]) -> Mat4`
+- `build_view_projection(camera: &Camera2D, viewport_size: [f32; 2]) -> Mat4` (`pub(crate)`)
 
 ---
 
@@ -147,6 +147,7 @@ pub(crate) struct RenderContext<'a> {
     pub camera: &'a Camera2D,
     pub viewport_size: [f32; 2],
     pub options: &'a EditorOptions,
+    pub hidden_node_ids: &'a HashSet<u64>,
 }
 ```
 
