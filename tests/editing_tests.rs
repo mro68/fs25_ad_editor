@@ -247,3 +247,63 @@ fn test_resample_path_nach_distanz_erzeugt_neue_nodes() {
         rm.nodes.len()
     );
 }
+
+// ─── AddNode auf existierenden Node → Selektion ──────────────────────────────
+
+#[test]
+fn test_add_node_auf_existierenden_node_selektiert_statt_erstellt() {
+    let mut controller = AppController::new();
+    let mut state = AppState::new();
+    state.options.snap_radius = 20.0;
+
+    let mut map = RoadMap::new(1);
+    map.add_node(MapNode::new(1, Vec2::new(50.0, 50.0), NodeFlag::Regular));
+    map.ensure_spatial_index();
+    state.road_map = Some(Arc::new(map));
+    state.view.viewport_size = [1280.0, 720.0];
+
+    // Klick auf Position nahe Node 1
+    controller
+        .handle_intent(
+            &mut state,
+            AppIntent::AddNodeRequested {
+                world_pos: Vec2::new(50.0, 50.0),
+            },
+        )
+        .expect("AddNodeRequested darf nicht paniken");
+
+    let rm = state.road_map.as_ref().unwrap();
+    // Kein neuer Node erstellt
+    assert_eq!(rm.nodes.len(), 1, "Es darf kein neuer Node erstellt werden");
+    // Node 1 ist selektiert
+    assert!(
+        state.selection.selected_node_ids.contains(&1),
+        "Node 1 muss selektiert sein"
+    );
+}
+
+#[test]
+fn test_add_node_auf_leerer_flaeche_erstellt_neuen_node() {
+    let mut controller = AppController::new();
+    let mut state = AppState::new();
+    state.options.snap_radius = 20.0;
+
+    let mut map = RoadMap::new(1);
+    map.add_node(MapNode::new(1, Vec2::new(50.0, 50.0), NodeFlag::Regular));
+    map.ensure_spatial_index();
+    state.road_map = Some(Arc::new(map));
+    state.view.viewport_size = [1280.0, 720.0];
+
+    // Klick weit weg von Node 1
+    controller
+        .handle_intent(
+            &mut state,
+            AppIntent::AddNodeRequested {
+                world_pos: Vec2::new(500.0, 500.0),
+            },
+        )
+        .expect("AddNodeRequested darf nicht paniken");
+
+    let rm = state.road_map.as_ref().unwrap();
+    assert_eq!(rm.nodes.len(), 2, "Ein neuer Node muss erstellt werden");
+}

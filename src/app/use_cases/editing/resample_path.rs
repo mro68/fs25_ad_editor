@@ -1,11 +1,11 @@
 //! Use-Case: Selektierte Nodes-Kette per Catmull-Rom-Spline neu verteilen (Distanzen-Feature).
 
 use super::delete_nodes_by_ids::delete_nodes_internal;
+use crate::app::AppState;
+use crate::core::{Connection, MapNode, NodeFlag};
 use crate::shared::spline_geometry::{
     catmull_rom_chain_with_tangents, polyline_length, resample_by_distance,
 };
-use crate::app::AppState;
-use crate::core::{Connection, MapNode, NodeFlag};
 use glam::Vec2;
 use std::collections::HashSet;
 use std::sync::Arc;

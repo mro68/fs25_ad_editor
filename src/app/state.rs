@@ -198,6 +198,8 @@ pub struct DistanzenState {
     pub count: u32,
     /// Maximaler Abstand zwischen Waypoints in Welteinheiten (bei `by_count = false`)
     pub distance: f32,
+    /// Berechnete Streckenlänge der aktuellen Selektion (für wechselseitige Berechnung)
+    pub path_length: f32,
 }
 
 impl Default for DistanzenState {
@@ -205,7 +207,24 @@ impl Default for DistanzenState {
         Self {
             by_count: false,
             count: 10,
-            distance: 5.0,
+            distance: 6.0,
+            path_length: 0.0,
+        }
+    }
+}
+
+impl DistanzenState {
+    /// Aktualisiert count aus distance (und umgekehrt) basierend auf der Streckenlänge.
+    pub fn sync_from_distance(&mut self) {
+        if self.path_length > 0.0 && self.distance > 0.0 {
+            self.count = ((self.path_length / self.distance).round() as u32 + 1).max(2);
+        }
+    }
+
+    /// Aktualisiert distance aus count basierend auf der Streckenlänge.
+    pub fn sync_from_count(&mut self) {
+        if self.path_length > 0.0 && self.count >= 2 {
+            self.distance = (self.path_length / (self.count - 1) as f32).max(0.5);
         }
     }
 }

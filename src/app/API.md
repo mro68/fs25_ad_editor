@@ -110,9 +110,15 @@ pub struct DistanzenState {
     pub by_count: bool,
     /// Gewünschte Anzahl an Waypoints (bei `by_count = true`)
     pub count: u32,
-    /// Maximaler Abstand zwischen Waypoints in Welteinheiten (bei `by_count = false`)
+    /// Maximaler Abstand zwischen Waypoints in Welteinheiten (bei `by_count = false`), min 6.0
     pub distance: f32,
+    /// Berechnete Streckenlänge der aktuellen Selektion (für wechselseitige Berechnung)
+    pub path_length: f32,
 }
+
+**Methoden:**
+- `sync_from_distance()` — Berechnet `count` aus `distance` und `path_length`
+- `sync_from_count()` — Berechnet `distance` aus `count` und `path_length`
 
 pub struct ZipBrowserState {
     pub zip_path: String,
@@ -473,7 +479,15 @@ pub enum AppCommand {
 - `detect_post_load(xml_path, map_name) -> PostLoadDetectionResult` — Sucht nach `terrain.heightmap.png` im XML-Verzeichnis und passenden Map-Mod-ZIPs im Mods-Verzeichnis (`../../mods/` relativ zum Savegame). Matching: case-insensitive, Underscores/Spaces als Wildcard, bidirektionale Umlaut-Expansion (ä↔ae, ö↔oe, ü↔ue, ß↔ss).
 
 ### `use_cases::editing`
-- `add_node_at_position(state, world_pos)` — Neuen Node einfügen
+- `add_node_at_position(state, world_pos) -> AddNodeResult` — Neuen Node einfügen oder existierenden selektieren
+
+```rust
+pub enum AddNodeResult {
+    NoMap,
+    SelectedExisting(u64), // Snap auf existierenden Node
+    Created(u64),          // Neuer Node erstellt
+}
+```
 - `delete_selected_nodes(state)` — Selektierte Nodes + betroffene Connections löschen
 - `connect_tool_pick_node(state, world_pos, max_distance)` — Connect-Tool: Source/Target-Node auswählen
 - `add_connection(state, from_id, to_id, direction, priority)` — Verbindung erstellen
