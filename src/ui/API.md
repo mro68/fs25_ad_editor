@@ -75,10 +75,13 @@ pub fn render_toolbar(ctx: &egui::Context, state: &AppState) -> Vec<AppIntent>
 
 Rendert das Properties-Panel mit Detailanzeige selektierter Nodes (IDs, Positionen, Verbindungen).
 
-Zeigt AddNode-spezifische Einstellungen **nur wenn `active_tool == EditorTool::AddNode`**:
+Zeigt Node-Verhalten-Einstellungen **immer** im Side-Panel:
 - Checkbox „Nach Löschen verbinden" (→ `OptionsChanged`)
 - Checkbox „Verbindung beim Platzieren teilen" (→ `OptionsChanged`)
+
+Zusätzlich (tool-/selektionsabhängig):
 - Distanzen-Panel (wenn ≥ 2 Nodes selektiert): Catmull-Rom-Resample (→ `ResamplePathRequested`)
+- Route-Tool-Konfiguration (wenn `active_tool == EditorTool::Route`)
 
 ```rust
 pub fn render_properties_panel(

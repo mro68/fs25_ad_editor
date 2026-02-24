@@ -60,8 +60,12 @@ pub struct RenderScene {
     pub background_opacity: f32,
     pub background_visible: bool,
     pub options: EditorOptions,
+    pub hidden_node_ids: Arc<HashSet<u64>>,
 }
 ```
+
+`hidden_node_ids` erlaubt dem App-Layer, Nodes pro Frame selektiv auszublenden
+(z. B. Original-Node-Pfad während einer Distanzen-Vorschau), ohne Änderungen an `RoadMap`.
 
 **Methoden:**
 - `has_map() -> bool` — Prüft ob eine RoadMap vorhanden ist

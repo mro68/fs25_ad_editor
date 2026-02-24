@@ -105,6 +105,7 @@ graph BT
 - `status.rs` — Statusleiste
 - `toolbar.rs` — Werkzeugleiste
 - `properties.rs` — Properties-Panel
+  - intern modularisiert über `properties/`-Submodule (u. a. Selektoren und Distanzen-Panel)
 - `options_dialog.rs` — Optionen-Dialog (Farben, Größen, Zoom)
 - `tool_preview.rs` — Tool-Preview-Overlay (Route-Tool-Vorschau im Viewport)
 - `dialogs.rs` — Datei-Dialoge und modale Fenster
@@ -134,6 +135,14 @@ graph BT
 - `use_cases/heightmap.rs` — Heightmap-Laden und Konfiguration
 - `use_cases/selection/` — Selektions-Use-Cases
 - `use_cases/editing/` — Editing-Use-Cases
+- `state.rs` — Fassade; Typen in `state/{app_state,dialogs,editor,selection,view}.rs`
+
+### Overview-Crate (`crates/fs25_map_overview/src/*`)
+**Verantwortung**
+- Generierung der Übersichtsmap (Terrain-Komposition + optionale Overlays)
+
+**Modulnotiz**
+- `composite.rs` wird schrittweise in `composite/`-Submodule zerlegt (Start mit `legend.rs`).
 
 **Darf**
 - Domain-API aufrufen

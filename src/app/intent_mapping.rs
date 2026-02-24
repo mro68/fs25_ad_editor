@@ -259,3 +259,6 @@ pub fn map_intent_to_commands(state: &AppState, intent: AppIntent) -> Vec<AppCom
         AppIntent::ResamplePathRequested => vec![AppCommand::ResamplePath],
     }
 }
+
+#[cfg(test)]
+mod tests;
