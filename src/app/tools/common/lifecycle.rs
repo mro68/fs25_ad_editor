@@ -60,14 +60,6 @@ impl ToolLifecycleState {
         })
     }
 
-    /// Setzt alle Lifecycle-Felder auf die Ausgangswerte zurück (für Tool-Reset).
-    #[allow(dead_code)]
-    pub fn clear(&mut self) {
-        self.last_created_ids.clear();
-        self.last_end_anchor = None;
-        self.recreate_needed = false;
-    }
-
     /// Bereitet den Lifecycle-Zustand für Verkettung vor (Reset der gemeinsamen Felder).
     ///
     /// Wird in `on_click()` aller Tools aufgerufen, wenn der letzte Endpunkt
