@@ -78,6 +78,7 @@ impl InputState {
         route_tool_is_drawing: bool,
         options: &EditorOptions,
         drag_targets: &[glam::Vec2],
+        distanzen_active: bool,
     ) -> Vec<AppIntent> {
         let ctx = ViewportContext {
             ui,
@@ -103,6 +104,7 @@ impl InputState {
             selected_node_ids,
             active_tool,
             route_tool_is_drawing,
+            distanzen_active,
         ));
 
         let modifiers = ui.input(|i| i.modifiers);

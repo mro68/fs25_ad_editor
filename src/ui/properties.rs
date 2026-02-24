@@ -47,11 +47,14 @@ pub fn render_properties_panel(
                 );
             }
 
-            // Distanzen-Panel: nur im Select-Modus mit 2+ Nodes
-            if active_tool == EditorTool::Select && selected_node_ids.len() >= 2 {
+            // Distanzen-Panel: immer sichtbar wenn 2+ Nodes selektiert
+            if selected_node_ids.len() >= 2 {
                 if let Some(rm) = road_map {
                     render_distanzen_panel(ui, rm, selected_node_ids, distanzen, &mut events);
                 }
+            } else if distanzen.active {
+                // Selektion verloren → Vorschau deaktivieren
+                distanzen.deactivate();
             }
 
             ui.separator();
@@ -388,8 +391,9 @@ fn render_node_behavior_options(
     }
 }
 
-/// Rendert das Distanzen-Panel (nur im Select-Modus mit 2+ Nodes):
-/// Berechnet Streckenlänge, zeigt Node-Anzahl und Abstand wechselseitig gekoppelt an.
+/// Rendert das Distanzen-Panel: Aktivierung, Spline-Vorschau und Resample-Steuerung.
+///
+/// Ablauf: Button aktiviert Vorschau → Werte live anpassen → Enter übernimmt, Esc verwirft.
 fn render_distanzen_panel(
     ui: &mut egui::Ui,
     road_map: &RoadMap,
@@ -402,6 +406,9 @@ fn render_distanzen_panel(
     // Kette ordnen und Streckenlänge berechnen
     let chain = order_chain_for_distanzen(selected_node_ids, road_map);
     let Some(ordered) = chain else {
+        if distanzen.active {
+            distanzen.deactivate();
+        }
         ui.separator();
         ui.label("⚠ Selektierte Nodes bilden keine zusammenhängende Kette.");
         return;
@@ -413,6 +420,9 @@ fn render_distanzen_panel(
         .collect();
 
     if positions.len() < 2 {
+        if distanzen.active {
+            distanzen.deactivate();
+        }
         return;
     }
 
@@ -420,19 +430,26 @@ fn render_distanzen_panel(
     let path_len = polyline_length(&dense);
     distanzen.path_length = path_len;
 
-    // Minimum-Distanz 6m erzwingen
-    distanzen.distance = distanzen.distance.max(6.0);
-
-    // Initiale Synchronisation wenn noch nicht gesetzt
-    if distanzen.count < 2 {
-        distanzen.sync_from_distance();
-    }
-
     ui.separator();
     ui.heading("Strecke aufteilen");
     ui.label(format!("Streckenlänge: {:.1} m", path_len));
 
-    // Abstand (m)
+    if !distanzen.active {
+        // Inaktiv: Button zum Aktivieren
+        if ui.button("▶ Vorschau starten").clicked() {
+            distanzen.active = true;
+            distanzen.distance = distanzen.distance.max(6.0);
+            if distanzen.count < 2 {
+                distanzen.sync_from_distance();
+            }
+            distanzen.preview_positions = compute_resample_preview(&dense, distanzen);
+        }
+        return;
+    }
+
+    // — Aktiv: Steuerung + Vorschau-Update —
+    distanzen.distance = distanzen.distance.max(6.0);
+
     let prev_distance = distanzen.distance;
     ui.horizontal(|ui| {
         ui.label("Abstand:");
@@ -448,7 +465,6 @@ fn render_distanzen_panel(
         distanzen.sync_from_distance();
     }
 
-    // Anzahl Nodes
     let prev_count = distanzen.count;
     ui.horizontal(|ui| {
         ui.label("Nodes:");
@@ -461,19 +477,52 @@ fn render_distanzen_panel(
     if distanzen.count != prev_count {
         distanzen.by_count = true;
         distanzen.sync_from_count();
-        // Minimum-Distanz 6m erzwingen
         if distanzen.distance < 6.0 {
             distanzen.distance = 6.0;
             distanzen.sync_from_distance();
         }
     }
 
-    ui.add_space(4.0);
-    ui.label("⏎ Enter zum Übernehmen");
+    // Vorschau bei Parameteränderung aktualisieren
+    let changed =
+        (distanzen.distance - prev_distance).abs() > f32::EPSILON || distanzen.count != prev_count;
+    if changed || distanzen.preview_positions.is_empty() {
+        distanzen.preview_positions = compute_resample_preview(&dense, distanzen);
+    }
 
-    // Enter-Taste abfragen
+    ui.add_space(4.0);
+    ui.label(format!(
+        "Vorschau: {} Nodes",
+        distanzen.preview_positions.len()
+    ));
+    ui.label("⏎ Enter → übernehmen  |  Esc → verwerfen");
+
+    // Enter → Resample ausführen + deaktivieren
     if ui.input(|i| i.key_pressed(egui::Key::Enter)) {
         events.push(AppIntent::ResamplePathRequested);
+        distanzen.deactivate();
+    }
+
+    // Esc → Vorschau verwerfen
+    if ui.input(|i| i.key_pressed(egui::Key::Escape)) {
+        distanzen.deactivate();
+    }
+}
+
+/// Berechnet die Vorschau-Positionen für das Resample.
+fn compute_resample_preview(
+    dense: &[glam::Vec2],
+    distanzen: &crate::app::state::DistanzenState,
+) -> Vec<glam::Vec2> {
+    use crate::shared::spline_geometry::{polyline_length, resample_by_distance};
+    if distanzen.by_count {
+        let n = distanzen.count.max(2) as usize;
+        let total = polyline_length(dense);
+        let step = total / (n - 1) as f32;
+        resample_by_distance(dense, step)
+    } else {
+        let d = distanzen.distance.max(0.1);
+        resample_by_distance(dense, d)
     }
 }
 
