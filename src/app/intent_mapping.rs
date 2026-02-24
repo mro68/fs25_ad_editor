@@ -40,10 +40,7 @@ pub fn map_intent_to_commands(state: &AppState, intent: AppIntent) -> Vec<AppCom
             additive,
             extend_path,
         } => {
-            let base_max_distance = state.view.camera.pick_radius_world_scaled(
-                state.view.viewport_size[1],
-                state.options.selection_pick_radius_px,
-            );
+            let base_max_distance = state.options.hitbox_radius();
 
             let increased_max_distance = base_max_distance * state.options.selection_size_factor;
 
@@ -70,10 +67,7 @@ pub fn map_intent_to_commands(state: &AppState, intent: AppIntent) -> Vec<AppCom
             world_pos,
             additive,
         } => {
-            let max_distance = state.view.camera.pick_radius_world_scaled(
-                state.view.viewport_size[1],
-                state.options.selection_pick_radius_px,
-            );
+            let max_distance = state.options.hitbox_radius();
 
             vec![AppCommand::SelectSegmentBetweenNearestIntersections {
                 world_pos,
@@ -105,10 +99,7 @@ pub fn map_intent_to_commands(state: &AppState, intent: AppIntent) -> Vec<AppCom
         }
         AppIntent::DeleteSelectedRequested => vec![AppCommand::DeleteSelectedNodes],
         AppIntent::ConnectToolNodeClicked { world_pos } => {
-            let max_distance = state.view.camera.pick_radius_world_scaled(
-                state.view.viewport_size[1],
-                state.options.selection_pick_radius_px,
-            );
+            let max_distance = state.options.hitbox_radius();
             vec![AppCommand::ConnectToolPickNode {
                 world_pos,
                 max_distance,

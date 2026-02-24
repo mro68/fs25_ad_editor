@@ -76,7 +76,7 @@ pub fn select(state: &mut AppState, index: usize) {
     state.editor.connect_source_node = None;
     let dir = state.editor.default_direction;
     let prio = state.editor.default_priority;
-    let snap_r = state.options.snap_radius;
+    let snap_r = state.options.hitbox_radius();
     if let Some(tool) = state.editor.tool_manager.active_tool_mut() {
         tool.set_direction(dir);
         tool.set_priority(prio);
@@ -125,10 +125,7 @@ pub fn recreate(state: &mut AppState) {
 
 /// Startet einen Drag auf einem Steuerpunkt/Anker des aktiven Route-Tools.
 pub fn drag_start(state: &mut AppState, world_pos: glam::Vec2) {
-    let pick_radius = state.view.camera.pick_radius_world_scaled(
-        state.view.viewport_size[1],
-        state.options.selection_pick_radius_px,
-    );
+    let pick_radius = state.options.hitbox_radius();
     let Some(road_map) = state.road_map.as_deref() else {
         return;
     };

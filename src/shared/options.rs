@@ -22,6 +22,8 @@ pub const CAMERA_SCROLL_ZOOM_STEP: f32 = 1.1;
 
 /// Snap-Radius (Welteinheiten): Klick innerhalb dieses Radius rastet auf existierenden Node ein.
 pub const SNAP_RADIUS: f32 = 3.0;
+/// Standard-Hitbox-Skalierung in Prozent der Node-Größe.
+pub const HITBOX_SCALE_PERCENT: f32 = 100.0;
 
 // ── Terrain ─────────────────────────────────────────────────────────
 
@@ -161,6 +163,9 @@ pub struct EditorOptions {
     // ── Tools ────────────────────────────────────────────────────
     /// Snap-Radius (Welteinheiten) für Route-Tools
     pub snap_radius: f32,
+    /// Hitbox-Skalierung in Prozent der Node-Größe (100 = exakte Node-Größe)
+    #[serde(default = "default_hitbox_scale_percent")]
+    pub hitbox_scale_percent: f32,
     // ── AddNode-Verhalten ─────────────────────────────────────────────
     /// Angrenzende Nodes automatisch verbinden wenn ein Node gelöscht wird
     #[serde(default)]
@@ -206,12 +211,18 @@ impl Default for EditorOptions {
             camera_scroll_zoom_step: CAMERA_SCROLL_ZOOM_STEP,
 
             snap_radius: SNAP_RADIUS,
+            hitbox_scale_percent: HITBOX_SCALE_PERCENT,
             reconnect_on_delete: false,
             split_connection_on_place: false,
             terrain_height_scale: TERRAIN_HEIGHT_SCALE,
             overview_layers: OverviewLayerOptions::default(),
         }
     }
+}
+
+/// Serde-Default für `hitbox_scale_percent` (Abwärtskompatibilität bestehender TOML-Dateien).
+fn default_hitbox_scale_percent() -> f32 {
+    HITBOX_SCALE_PERCENT
 }
 
 impl EditorOptions {
@@ -250,5 +261,12 @@ impl EditorOptions {
             .parent()
             .unwrap_or_else(|| std::path::Path::new("."))
             .join("fs25_auto_drive_editor.toml")
+    }
+
+    /// Berechnet den Hitbox-Radius in Welteinheiten.
+    ///
+    /// `node_size_world * hitbox_scale_percent / 100`
+    pub fn hitbox_radius(&self) -> f32 {
+        self.node_size_world * self.hitbox_scale_percent / 100.0
     }
 }

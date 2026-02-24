@@ -4,7 +4,7 @@ use super::super::common::{SegmentConfig, TangentSource, TangentState, ToolLifec
 use super::super::ToolAnchor;
 use super::geometry::{approx_length, compute_tangent_cp, cubic_bezier, quadratic_bezier};
 use crate::core::{ConnectionDirection, ConnectionPriority};
-use crate::shared::SNAP_RADIUS;
+use crate::shared::options::{HITBOX_SCALE_PERCENT, NODE_SIZE_WORLD};
 use glam::Vec2;
 
 /// Welcher Punkt wird gerade per Drag verschoben?
@@ -83,7 +83,7 @@ impl CurveTool {
             seg: SegmentConfig::new(2.0),
             direction: ConnectionDirection::Dual,
             priority: ConnectionPriority::Regular,
-            lifecycle: ToolLifecycleState::new(SNAP_RADIUS),
+            lifecycle: ToolLifecycleState::new(NODE_SIZE_WORLD * HITBOX_SCALE_PERCENT / 100.0),
             last_start_anchor: None,
             last_control_point1: None,
             last_control_point2: None,
