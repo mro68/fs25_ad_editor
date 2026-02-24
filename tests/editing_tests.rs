@@ -109,6 +109,118 @@ fn test_delete_endnode_mit_reconnect_keine_neue_verbindung() {
     assert!(rm.nodes.contains_key(&2), "Node 2 muss erhalten bleiben");
 }
 
+// ─── reconnect: Richtungs-/Prioritäts-Vererbung ─────────────────────────────
+
+/// Helper: 3 Nodes (1,2,3) mit angegebener Richtung/Priorität verbinden.
+fn map_chain(
+    dir_ab: ConnectionDirection,
+    prio_ab: ConnectionPriority,
+    dir_bc: ConnectionDirection,
+    prio_bc: ConnectionPriority,
+) -> RoadMap {
+    let mut map = RoadMap::new(3);
+    map.add_node(MapNode::new(1, Vec2::new(0.0, 0.0), NodeFlag::Regular));
+    map.add_node(MapNode::new(2, Vec2::new(100.0, 0.0), NodeFlag::Regular));
+    map.add_node(MapNode::new(3, Vec2::new(200.0, 0.0), NodeFlag::Regular));
+    map.add_connection(Connection::new(
+        1,
+        2,
+        dir_ab,
+        prio_ab,
+        Vec2::new(0.0, 0.0),
+        Vec2::new(100.0, 0.0),
+    ));
+    map.add_connection(Connection::new(
+        2,
+        3,
+        dir_bc,
+        prio_bc,
+        Vec2::new(100.0, 0.0),
+        Vec2::new(200.0, 0.0),
+    ));
+    map.ensure_spatial_index();
+    map
+}
+
+fn delete_node2_with_reconnect(map: RoadMap) -> RoadMap {
+    let mut controller = AppController::new();
+    let mut state = AppState::new();
+    state.options.reconnect_on_delete = true;
+    state.road_map = Some(Arc::new(map));
+    state.view.viewport_size = [1280.0, 720.0];
+    state.selection.ids_mut().insert(2);
+    controller
+        .handle_intent(&mut state, AppIntent::DeleteSelectedRequested)
+        .unwrap();
+    Arc::try_unwrap(state.road_map.unwrap()).unwrap()
+}
+
+#[test]
+fn test_reconnect_regular_regular_bleibt_regular() {
+    // P1 -> P2 -> P3 minus P2 = P1 -> P3
+    let rm = delete_node2_with_reconnect(map_chain(
+        ConnectionDirection::Regular,
+        ConnectionPriority::Regular,
+        ConnectionDirection::Regular,
+        ConnectionPriority::Regular,
+    ));
+    let conn = rm.find_connection(1, 3).expect("P1→P3 muss existieren");
+    assert_eq!(conn.direction, ConnectionDirection::Regular);
+    assert_eq!(conn.priority, ConnectionPriority::Regular);
+}
+
+#[test]
+fn test_reconnect_dual_dual_bleibt_dual() {
+    // P1 -- P2 -- P3 minus P2 = P1 -- P3
+    let rm = delete_node2_with_reconnect(map_chain(
+        ConnectionDirection::Dual,
+        ConnectionPriority::Regular,
+        ConnectionDirection::Dual,
+        ConnectionPriority::Regular,
+    ));
+    let conn = rm.find_connection(1, 3).expect("P1↔P3 muss existieren");
+    assert_eq!(conn.direction, ConnectionDirection::Dual);
+}
+
+#[test]
+fn test_reconnect_reverse_regular_wird_dual() {
+    // P1 <- P2 -> P3 minus P2 = P1 -- P3
+    let rm = delete_node2_with_reconnect(map_chain(
+        ConnectionDirection::Reverse,
+        ConnectionPriority::Regular,
+        ConnectionDirection::Regular,
+        ConnectionPriority::Regular,
+    ));
+    let conn = rm.find_connection(1, 3).expect("P1↔P3 muss existieren");
+    assert_eq!(conn.direction, ConnectionDirection::Dual);
+}
+
+#[test]
+fn test_reconnect_hauptstrasse_schlaegt_nebenstrasse() {
+    // Hauptstraße + Nebenstraße → Hauptstraße
+    let rm = delete_node2_with_reconnect(map_chain(
+        ConnectionDirection::Regular,
+        ConnectionPriority::Regular,
+        ConnectionDirection::Regular,
+        ConnectionPriority::SubPriority,
+    ));
+    let conn = rm.find_connection(1, 3).expect("P1→P3 muss existieren");
+    assert_eq!(conn.priority, ConnectionPriority::Regular);
+}
+
+#[test]
+fn test_reconnect_nebenstrasse_nebenstrasse_bleibt_nebenstrasse() {
+    // Nebenstraße + Nebenstraße → Nebenstraße
+    let rm = delete_node2_with_reconnect(map_chain(
+        ConnectionDirection::Regular,
+        ConnectionPriority::SubPriority,
+        ConnectionDirection::Regular,
+        ConnectionPriority::SubPriority,
+    ));
+    let conn = rm.find_connection(1, 3).expect("P1→P3 muss existieren");
+    assert_eq!(conn.priority, ConnectionPriority::SubPriority);
+}
+
 // ─── split_connection_on_place ────────────────────────────────────────────────
 
 #[test]
