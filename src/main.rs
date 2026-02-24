@@ -264,10 +264,9 @@ impl EditorApp {
                 {
                     let vp = glam::Vec2::new(viewport_size[0], viewport_size[1]);
                     let positions = &self.state.ui.distanzen.preview_positions;
-                    let connections: Vec<(usize, usize)> =
-                        (0..positions.len().saturating_sub(1))
-                            .map(|i| (i, i + 1))
-                            .collect();
+                    let connections: Vec<(usize, usize)> = (0..positions.len().saturating_sub(1))
+                        .map(|i| (i, i + 1))
+                        .collect();
                     let preview = fs25_auto_drive_editor::app::tools::ToolPreview {
                         nodes: positions.clone(),
                         connections,

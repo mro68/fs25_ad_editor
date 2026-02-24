@@ -202,6 +202,8 @@ pub struct DistanzenState {
     pub path_length: f32,
     /// Vorschau-Modus aktiv (Spline-Preview wird im Viewport gezeichnet)
     pub active: bool,
+    /// Originale Strecke während der Vorschau ausblenden
+    pub hide_original: bool,
     /// Vorschau-Positionen (berechnete Resample-Punkte für Overlay)
     pub preview_positions: Vec<glam::Vec2>,
 }
@@ -214,6 +216,7 @@ impl Default for DistanzenState {
             distance: 6.0,
             path_length: 0.0,
             active: false,
+            hide_original: true,
             preview_positions: Vec::new(),
         }
     }
@@ -238,6 +241,11 @@ impl DistanzenState {
     pub fn deactivate(&mut self) {
         self.active = false;
         self.preview_positions.clear();
+    }
+
+    /// Gibt `true` zurück wenn die Originalstrecke aktuell ausgeblendet werden soll.
+    pub fn should_hide_original(&self) -> bool {
+        self.active && self.hide_original
     }
 }
 
