@@ -115,7 +115,12 @@ impl SplineTool {
         }
         let (start_phantom, end_phantom) =
             Self::compute_phantoms(&pts, self.tangents.tangent_start, self.tangents.tangent_end);
-        catmull_rom_chain_with_tangents(&pts, SPLINE_SAMPLES_PER_SEGMENT, start_phantom, end_phantom)
+        catmull_rom_chain_with_tangents(
+            &pts,
+            SPLINE_SAMPLES_PER_SEGMENT,
+            start_phantom,
+            end_phantom,
+        )
     }
 
     /// Berechnet die verteilt gesampelten Positionen (für Nodes).
@@ -147,7 +152,12 @@ impl SplineTool {
             return 0.0;
         }
         let (start_phantom, end_phantom) = Self::compute_phantoms(&pts, tangent_start, tangent_end);
-        let dense = catmull_rom_chain_with_tangents(&pts, SPLINE_SAMPLES_PER_SEGMENT, start_phantom, end_phantom);
+        let dense = catmull_rom_chain_with_tangents(
+            &pts,
+            SPLINE_SAMPLES_PER_SEGMENT,
+            start_phantom,
+            end_phantom,
+        );
         polyline_length(&dense)
     }
 
@@ -168,7 +178,12 @@ impl SplineTool {
         }
         let pts: Vec<Vec2> = anchors.iter().map(|a| a.position()).collect();
         let (start_phantom, end_phantom) = Self::compute_phantoms(&pts, tangent_start, tangent_end);
-        let dense = catmull_rom_chain_with_tangents(&pts, SPLINE_SAMPLES_PER_SEGMENT, start_phantom, end_phantom);
+        let dense = catmull_rom_chain_with_tangents(
+            &pts,
+            SPLINE_SAMPLES_PER_SEGMENT,
+            start_phantom,
+            end_phantom,
+        );
         let positions = resample_by_distance(&dense, max_segment_length);
         let first_anchor = anchors.first()?;
         let last_anchor = anchors.last()?;
