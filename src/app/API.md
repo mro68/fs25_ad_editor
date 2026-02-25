@@ -521,11 +521,10 @@ pub enum AddNodeResult {
 ### `use_cases::background_map`
 - `request_background_map_dialog(state)` — Background-Map-Dialog öffnen
 - `load_background_map(state, path, crop_size) -> anyhow::Result<()>` — Background-Map laden (PNG/JPG/DDS), Fehler werden an den Controller propagiert
-- `calculate_background_opacity_for_zoom(opacity_normal, opacity_min_zoom, current_zoom, zoom_min, fade_start_zoom) -> f32` — Berechnet zoom-abhängige Hintergrund-Opacity (aufgerufen pro Frame in render_scene::build)
 - `toggle_background_visibility(state)` — Sichtbarkeit umschalten
 - `clear_background_map(state)` — Background-Map entfernen
 - `generate_overview_with_options(state) -> anyhow::Result<()>` — Übersichtskarte aus Map-Mod-ZIP generieren (Layer-Optionen aus Dialog-State), Einstellungen persistent speichern
-- `save_background_as_overview(state, path) -> anyhow::Result<()>` — Aktuelle Background-Map als overview.jpg speichern (JPEG Qualität 100)
+- `save_background_as_overview(state, path) -> anyhow::Result<()>` — Aktuelle Background-Map als overview.jpg speichern (JPEG Qualität 90)
 
 ### `use_cases::editing::markers`
 - `open_marker_dialog(state, node_id, is_new)` — Marker-Dialog öffnen (neu oder bearbeiten)

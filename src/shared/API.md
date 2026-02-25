@@ -26,7 +26,6 @@ pub struct RenderScene {
     pub selected_node_ids: Arc<HashSet<u64>>,
     pub connect_source_node: Option<u64>,
     pub background_map: Option<Arc<BackgroundMap>>,
-    pub background_opacity: f32,
     pub background_visible: bool,
     pub options: EditorOptions,
     pub hidden_node_ids: Arc<HashSet<u64>>,
@@ -153,13 +152,6 @@ pub struct EditorOptions {
     pub camera_zoom_min: f32,
     /// Maximaler Zoom-Faktor (konfig, überschreibt Camera2D::ZOOM_MAX)
     pub camera_zoom_max: f32,
-    // Background-Map
-    /// Normale Sichtbarkeit (0.0–1.0, Standard: 1.0)
-    pub background_opacity_normal: f32,
-    /// Sichtbarkeit bei min. Zoom (0.0–1.0, Standard: 0.2)
-    pub background_opacity_min_zoom: f32,
-    /// Zoom-Stufe, ab der Fade-Out beginnt (Standard: 3.0)
-    pub background_fade_start_zoom: f32,
     // Terrain
     pub terrain_height_scale: f32,
     // Übersichtskarte

@@ -45,35 +45,6 @@ pub fn load_background_map(
     Ok(())
 }
 
-/// Berechnet die Hintergrund-Opacity für den aktuellen Zoom-Level.
-///
-/// - Bei `zoom >= fade_start_zoom`: volle `opacity_normal`
-/// - Bei `zoom <= zoom_min`: `opacity_min_zoom`
-/// - Dazwischen: lineare Interpolation zwischen beiden Werten
-///
-/// Wird pro Frame in `render_scene::build()` aufgerufen (kein State-Mutation nötig).
-pub fn calculate_background_opacity_for_zoom(
-    opacity_normal: f32,
-    opacity_min_zoom: f32,
-    current_zoom: f32,
-    zoom_min: f32,
-    fade_start_zoom: f32,
-) -> f32 {
-    // Oberhalb der Fade-Schwelle: volle Sichtbarkeit
-    if current_zoom >= fade_start_zoom {
-        return opacity_normal.clamp(0.0, 1.0);
-    }
-    // Kein Fade-Bereich oder identische Opacity → direkt zurückgeben
-    if fade_start_zoom <= zoom_min || (opacity_normal - opacity_min_zoom).abs() < 0.001 {
-        return opacity_normal.clamp(0.0, 1.0);
-    }
-    // Linearer Interpolationsfaktor: zoom_min → 0.0, fade_start_zoom → 1.0
-    let clamped_zoom = current_zoom.clamp(zoom_min, fade_start_zoom);
-    let t = (clamped_zoom - zoom_min) / (fade_start_zoom - zoom_min);
-    let opacity = opacity_min_zoom + (opacity_normal - opacity_min_zoom) * t;
-    opacity.clamp(0.0, 1.0)
-}
-
 /// Schaltet die Sichtbarkeit der Background-Map um.
 pub fn toggle_background_visibility(state: &mut AppState) {
     state.view.background_visible = !state.view.background_visible;
@@ -219,7 +190,8 @@ pub fn generate_overview_with_options(state: &mut AppState) -> Result<()> {
 
 /// Prüft ob dem User das Speichern als overview.jpg angeboten werden soll.
 ///
-/// Bedingungen: XML-Datei geladen UND overview.jpg existiert noch nicht.
+/// Zeigt Dialog immer an. Falls overview.jpg bereits existiert, wird der User
+/// gefragt ob er die bestehende Datei überschreiben möchte.
 fn prompt_save_as_overview(state: &mut AppState) {
     let Some(ref xml_path) = state.ui.current_file_path else {
         return;
@@ -228,15 +200,14 @@ fn prompt_save_as_overview(state: &mut AppState) {
         return;
     };
     let target = dir.join("overview.jpg");
-    if target.exists() {
-        log::debug!("overview.jpg existiert bereits — kein Speicher-Dialog");
-        return;
-    }
+    let is_overwrite = target.exists();
     state.ui.save_overview_dialog.visible = true;
     state.ui.save_overview_dialog.target_path = target.to_string_lossy().into_owned();
+    state.ui.save_overview_dialog.is_overwrite = is_overwrite;
     log::info!(
-        "Angebot: Hintergrund als overview.jpg speichern in {}",
-        dir.display()
+        "Angebot: Hintergrund als overview.jpg speichern in {} (überschreiben: {})",
+        dir.display(),
+        is_overwrite,
     );
 }
 
@@ -250,7 +221,7 @@ pub fn save_background_as_overview(state: &mut AppState, path: String) -> Result
 
     let rgb_image = bg_map.image_data().to_rgb8();
     let file = std::fs::File::create(&path)?;
-    let encoder = image::codecs::jpeg::JpegEncoder::new_with_quality(file, 100);
+    let encoder = image::codecs::jpeg::JpegEncoder::new_with_quality(file, 90);
     use image::ImageEncoder;
     encoder.write_image(
         rgb_image.as_raw(),

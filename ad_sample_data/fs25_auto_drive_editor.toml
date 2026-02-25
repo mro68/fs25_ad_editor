@@ -24,9 +24,6 @@ camera_zoom_step = 1.2000000476837158
 camera_scroll_zoom_step = 1.100000023841858
 camera_zoom_min = 0.10000000149011612
 camera_zoom_max = 100.0
-background_opacity_normal = 1.0
-background_opacity_min_zoom = 0.2
-background_fade_start_zoom = 3.0
 snap_radius = 3.0
 terrain_height_scale = 255.0
 

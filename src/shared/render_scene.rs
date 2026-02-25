@@ -25,8 +25,6 @@ pub struct RenderScene {
     pub connect_source_node: Option<u64>,
     /// Background-Map (optional)
     pub background_map: Option<Arc<BackgroundMap>>,
-    /// Background-Opacity (0.0 = transparent, 1.0 = opak)
-    pub background_opacity: f32,
     /// Background-Sichtbarkeit
     pub background_visible: bool,
     /// Laufzeit-Optionen für Farben, Größen, Breiten

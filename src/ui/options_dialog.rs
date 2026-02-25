@@ -205,38 +205,32 @@ pub fn show_options_dialog(
                     // ── Hintergrund ─────────────────────────────────
                     ui.collapsing("Hintergrund", |ui| {
                         ui.horizontal(|ui| {
-                            ui.label("Sichtbarkeit normal:");
+                            ui.label("Standard-Deckung:");
                             changed |= ui
                                 .add(
-                                    egui::Slider::new(
-                                        &mut opts.background_opacity_normal,
-                                        0.0..=1.0,
-                                    )
-                                    .step_by(0.05),
+                                    egui::Slider::new(&mut opts.bg_opacity, 0.0..=1.0)
+                                        .step_by(0.05)
+                                        .fixed_decimals(2),
                                 )
                                 .changed();
                         });
                         ui.horizontal(|ui| {
-                            ui.label("Sichtbarkeit bei Min-Zoom:");
+                            ui.label("Deckung bei Min-Zoom:");
                             changed |= ui
                                 .add(
-                                    egui::Slider::new(
-                                        &mut opts.background_opacity_min_zoom,
-                                        0.0..=1.0,
-                                    )
-                                    .step_by(0.05),
+                                    egui::Slider::new(&mut opts.bg_opacity_at_min_zoom, 0.0..=1.0)
+                                        .step_by(0.05)
+                                        .fixed_decimals(2),
                                 )
                                 .changed();
                         });
                         ui.horizontal(|ui| {
-                            ui.label("Fade-Out ab Zoom-Stufe:");
+                            ui.label("Fade-out ab Zoom:");
                             changed |= ui
                                 .add(
-                                    egui::Slider::new(
-                                        &mut opts.background_fade_start_zoom,
-                                        opts.camera_zoom_min..=opts.camera_zoom_max,
-                                    )
-                                    .step_by(0.5),
+                                    egui::DragValue::new(&mut opts.bg_fade_start_zoom)
+                                        .range(0.1..=50.0)
+                                        .speed(0.1),
                                 )
                                 .changed();
                         });

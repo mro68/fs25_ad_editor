@@ -114,6 +114,8 @@ pub struct SaveOverviewDialogState {
     pub visible: bool,
     /// Ziel-Pfad: overview.jpg im XML-Verzeichnis
     pub target_path: String,
+    /// true wenn eine bestehende overview.jpg überschrieben würde
+    pub is_overwrite: bool,
 }
 
 /// Konfiguration für das Distanzen-Neuverteilen-Feature im Eigenschaften-Bereich.

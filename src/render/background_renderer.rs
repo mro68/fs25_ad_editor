@@ -298,11 +298,11 @@ impl BackgroundRenderer {
         render_pass: &mut wgpu::RenderPass<'static>,
         camera: &Camera2D,
         viewport_size: [f32; 2],
-        opacity: f32,
         visible: bool,
+        opacity: f32,
     ) {
         // Nichts zu rendern, wenn kein Background oder nicht visible
-        if !visible {
+        if !visible || opacity <= 0.0 {
             return;
         }
         let Some(bind_group) = self.bind_group.as_ref() else {
@@ -316,7 +316,7 @@ impl BackgroundRenderer {
         let view_proj = super::types::build_view_projection(camera, viewport_size);
         let uniforms = BackgroundUniforms {
             view_proj: view_proj.to_cols_array_2d(),
-            opacity,
+            opacity: opacity.clamp(0.0, 1.0),
             _padding1: 0.0,
             _padding2: 0.0,
             _padding3: 0.0,
@@ -331,6 +331,6 @@ impl BackgroundRenderer {
         render_pass.set_vertex_buffer(0, self.vertex_buffer.slice(..));
         render_pass.draw(0..6, 0..1);
 
-        log::trace!("BackgroundRenderer: Gerendert mit opacity={}", opacity);
+        log::trace!("BackgroundRenderer: Gerendert");
     }
 }
