@@ -257,6 +257,31 @@ impl AppController {
                     }
                 }
             }
+
+            // === View ===
+            AppCommand::ZoomToFit => {
+                // TODO: Implementierung siehe RoadMap::calculate_bounds + Camera2D::fit_bounds
+                log::info!("ZoomToFit - Implementierung pending");
+            }
+
+            // === Selection ===
+            AppCommand::InvertSelection => {
+                if let Some(rm) = &state.road_map {
+                    let all_nodes: std::collections::HashSet<_> =
+                        rm.nodes.keys().copied().collect();
+                    let inverted: std::collections::HashSet<_> = all_nodes
+                        .symmetric_difference(&state.selection.selected_node_ids)
+                        .copied()
+                        .collect();
+                    state.selection.selected_node_ids = std::sync::Arc::new(inverted);
+                }
+            }
+
+            // === Editing ===
+            AppCommand::DuplicateSelectedNodes => {
+                // TODO: Implementierung siehe handlers::editing::duplicate_selected
+                log::info!("DuplicateSelectedNodes - Implementierung pending");
+            }
         }
 
         Ok(())

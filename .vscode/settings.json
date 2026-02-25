@@ -17,4 +17,8 @@
   "rust-analyzer.checkOnSave": true,
   "rust-analyzer.cargo.targetDir": ".tmp/rust-analyzer",
   "chat.editing.autoAcceptDelay": 5,
+  "chat.tools.terminal.autoApprove": {
+    "git add": true,
+    "git commit": true
+  },
 }
