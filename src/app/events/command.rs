@@ -216,4 +216,10 @@ pub enum AppCommand {
     ResamplePath,
     /// Streckenteilung-Panel aktivieren
     StreckenteilungAktivieren,
+    /// Alles in den Viewport einpassen (Zoom-to-fit)
+    ZoomToFit,
+    /// Selektierte Nodes duplizieren (mit Versatz)
+    DuplicateSelectedNodes,
+    /// Auswahl invertieren
+    InvertSelection,
 }

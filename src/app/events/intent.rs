@@ -216,4 +216,12 @@ pub enum AppIntent {
     ResamplePathRequested,
     /// Streckenteilung-Panel aktivieren (z.B. per Kontextmenü)
     StreckenteilungAktivieren,
+    /// Alles in den Viewport einpassen (Zoom-to-fit)
+    ZoomToFitRequested,
+    /// Selektierte Nodes duplizieren (mit Versatz)
+    DuplicateSelectedNodesRequested,
+    /// Auswahl invertieren (selektierte abwählen, nicht-selektierte wählen)
+    InvertSelectionRequested,
+    /// Route-Tool: Strecke neu berechnen mit aktuellem Config (nach Parameter-Änderung)
+    RouteToolRecreateRequested,
 }

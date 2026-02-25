@@ -118,24 +118,24 @@ impl InputState {
         // Drag-Selektion Overlay (ausgelagert in drag.rs)
         draw_drag_selection_overlay(self.drag_selection.as_ref(), ui, response);
 
-        // Kontextmenüs (ausgelagert in context_menu.rs)
-        context_menu::show_connection_context_menu(
+        // Neues Context-Menu-System: Alle 5 Varianten über einheitlichen Router
+        let pointer_pos_world = response.hover_pos().map(|screen_pos| {
+            let local = screen_pos - response.rect.min;
+            camera.screen_to_world(
+                glam::Vec2::new(local.x, local.y),
+                glam::Vec2::new(viewport_size[0], viewport_size[1]),
+            )
+        });
+
+        context_menu::show_viewport_context_menu(
             response,
             road_map,
             selected_node_ids,
             distanzen_state,
+            pointer_pos_world,
+            route_tool_is_drawing && active_tool == EditorTool::Route,
             &mut events,
         );
-        if selected_node_ids.len() == 1 {
-            if let Some(&node_id) = selected_node_ids.iter().next() {
-                context_menu::show_node_marker_context_menu(
-                    response,
-                    road_map,
-                    node_id,
-                    &mut events,
-                );
-            }
-        }
 
         self.handle_scroll_zoom(&ctx, &mut events);
 
