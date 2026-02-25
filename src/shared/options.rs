@@ -155,10 +155,19 @@ pub struct EditorOptions {
     pub marker_outline_color: [f32; 4],
 
     // ── Kamera ──────────────────────────────────────────────────
+    /// Minimaler Zoom-Faktor (konfigurierbar)
+    pub camera_zoom_min: f32,
+    /// Maximaler Zoom-Faktor (konfigurierbar)
+    pub camera_zoom_max: f32,
     /// Zoom-Schritt bei Menü-Buttons / Shortcuts
     pub camera_zoom_step: f32,
     /// Zoom-Schritt bei Mausrad-Scroll
     pub camera_scroll_zoom_step: f32,
+    /// Standard-Deckungs-Niveau des Hintergrundbilds
+    pub background_opacity_default: f32,
+    /// Minimales Deckungs-Niveau des Hintergrundbilds bei Minimal-Zoom
+    #[serde(default = "default_background_opacity_at_min_zoom")]
+    pub background_opacity_at_min_zoom: f32,
 
     // ── Tools ────────────────────────────────────────────────────
     /// Snap-Radius (Welteinheiten) für Route-Tools
@@ -207,8 +216,12 @@ impl Default for EditorOptions {
             marker_color: MARKER_COLOR,
             marker_outline_color: MARKER_OUTLINE_COLOR,
 
+            camera_zoom_min: CAMERA_ZOOM_MIN,
+            camera_zoom_max: CAMERA_ZOOM_MAX,
             camera_zoom_step: CAMERA_ZOOM_STEP,
             camera_scroll_zoom_step: CAMERA_SCROLL_ZOOM_STEP,
+            background_opacity_default: 1.0,
+            background_opacity_at_min_zoom: 0.3,
 
             snap_radius: SNAP_RADIUS,
             hitbox_scale_percent: HITBOX_SCALE_PERCENT,
@@ -223,6 +236,11 @@ impl Default for EditorOptions {
 /// Serde-Default für `hitbox_scale_percent` (Abwärtskompatibilität bestehender TOML-Dateien).
 fn default_hitbox_scale_percent() -> f32 {
     HITBOX_SCALE_PERCENT
+}
+
+/// Serde-Default für `background_opacity_at_min_zoom` (Abwärtskompatibilität).
+fn default_background_opacity_at_min_zoom() -> f32 {
+    0.3
 }
 
 impl EditorOptions {

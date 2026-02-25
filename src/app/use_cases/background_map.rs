@@ -53,6 +53,51 @@ pub fn set_background_opacity(state: &mut AppState, opacity: f32) {
     );
 }
 
+/// Passt die Opacity der Background-Map basierend auf den aktuellen Zoom an.
+///
+/// Interpoliert zwischen `background_opacity_at_min_zoom` und `background_opacity_default`
+/// basierend auf Position des aktuellen Zooms zwischen Min und Max (oder bei Zoom >= 1.0).
+pub fn adjust_background_opacity_for_zoom(state: &mut AppState) {
+    let zoom = state.view.camera.zoom;
+    let zoom_min = state.options.camera_zoom_min;
+    let opacity_default = state.options.background_opacity_default;
+    let opacity_min = state.options.background_opacity_at_min_zoom;
+
+    // Interpolation: bei zoom_min → opacity_min, bei zoom >= 1.0 → opacity_default
+    let opacity = if zoom < 1.0 {
+        let normalized = (zoom - zoom_min) / (1.0 - zoom_min);
+        opacity_min + (opacity_default - opacity_min) * normalized.clamp(0.0, 1.0)
+    } else {
+        opacity_default
+    };
+
+    state.view.background_opacity = opacity.clamp(0.0, 1.0);
+}
+
+/// Berechnet die angepasste Background-Opacity basierend auf Zoom.
+///
+/// Interpoliert zwischen `opacity_at_min_zoom` (bei zoom_min) und `baseline_opacity` (bei zoom >= 1.0).
+/// Diese Funktion ist rein und wird für die Render-Scene-Berechnung benötigt.
+pub fn calculate_adjusted_opacity_for_zoom(
+    baseline_opacity: f32,
+    current_zoom: f32,
+    zoom_min: f32,
+    opacity_at_min_zoom: f32,
+) -> f32 {
+    let opacity_default = baseline_opacity;
+    let opacity_min = opacity_at_min_zoom;
+
+    // Interpolation: bei zoom_min → opacity_min, bei zoom >= 1.0 → opacity_default
+    let opacity = if current_zoom < 1.0 {
+        let normalized = (current_zoom - zoom_min) / (1.0 - zoom_min).max(0.001); // Guard gegen Division
+        opacity_min + (opacity_default - opacity_min) * normalized.clamp(0.0, 1.0)
+    } else {
+        opacity_default
+    };
+
+    opacity.clamp(0.0, 1.0)
+}
+
 /// Schaltet die Sichtbarkeit der Background-Map um.
 pub fn toggle_background_visibility(state: &mut AppState) {
     state.view.background_visible = !state.view.background_visible;

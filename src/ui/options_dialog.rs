@@ -161,6 +161,26 @@ pub fn show_options_dialog(
                     // ── Kamera ──────────────────────────────────────
                     ui.collapsing("Kamera", |ui| {
                         ui.horizontal(|ui| {
+                            ui.label("Min Zoom:");
+                            changed |= ui
+                                .add(
+                                    egui::DragValue::new(&mut opts.camera_zoom_min)
+                                        .range(0.01..=10.0)
+                                        .speed(0.01),
+                                )
+                                .changed();
+                        });
+                        ui.horizontal(|ui| {
+                            ui.label("Max Zoom:");
+                            changed |= ui
+                                .add(
+                                    egui::DragValue::new(&mut opts.camera_zoom_max)
+                                        .range(1.0..=1000.0)
+                                        .speed(1.0),
+                                )
+                                .changed();
+                        });
+                        ui.horizontal(|ui| {
                             ui.label("Zoom-Schritt (Menü):");
                             changed |= ui
                                 .add(
@@ -177,6 +197,34 @@ pub fn show_options_dialog(
                                     egui::DragValue::new(&mut opts.camera_scroll_zoom_step)
                                         .range(1.01..=2.0)
                                         .speed(0.01),
+                                )
+                                .changed();
+                        });
+                    });
+
+                    // ── Hintergrund ─────────────────────────────────
+                    ui.collapsing("Hintergrund", |ui| {
+                        ui.horizontal(|ui| {
+                            ui.label("Standard-Deckungs-Niveau:");
+                            changed |= ui
+                                .add(
+                                    egui::Slider::new(
+                                        &mut opts.background_opacity_default,
+                                        0.0..=1.0,
+                                    )
+                                    .step_by(0.05),
+                                )
+                                .changed();
+                        });
+                        ui.horizontal(|ui| {
+                            ui.label("Deckungs-Niveau bei Min-Zoom:");
+                            changed |= ui
+                                .add(
+                                    egui::Slider::new(
+                                        &mut opts.background_opacity_at_min_zoom,
+                                        0.0..=1.0,
+                                    )
+                                    .step_by(0.05),
                                 )
                                 .changed();
                         });
