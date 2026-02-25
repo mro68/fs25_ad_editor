@@ -12,6 +12,8 @@ use std::path::{Path, PathBuf};
 pub struct PostLoadDetectionResult {
     /// Pfad zur gefundenen Heightmap (falls vorhanden)
     pub heightmap_path: Option<PathBuf>,
+    /// Pfad zu einer gefundenen overview.png im XML-Verzeichnis
+    pub overview_path: Option<PathBuf>,
     /// Passende ZIP-Dateien im Mods-Verzeichnis
     pub matching_zips: Vec<PathBuf>,
 }
@@ -22,14 +24,29 @@ pub struct PostLoadDetectionResult {
 /// Map-Mod-ZIPs im Mods-Verzeichnis (basierend auf `map_name`).
 pub fn detect_post_load(xml_path: &Path, map_name: Option<&str>) -> PostLoadDetectionResult {
     let heightmap_path = find_heightmap_next_to(xml_path);
+    let overview_path = find_overview_next_to(xml_path);
     let matching_zips = match (map_name, resolve_mods_dir(xml_path)) {
         (Some(name), Some(mods_dir)) if !name.is_empty() => find_matching_zips(&mods_dir, name),
         _ => Vec::new(),
     };
     PostLoadDetectionResult {
         heightmap_path,
+        overview_path,
         matching_zips,
     }
+}
+
+/// Prüft ob `overview.jpg` (oder `overview.png`) im selben Verzeichnis wie die XML liegt.
+fn find_overview_next_to(xml_path: &Path) -> Option<PathBuf> {
+    let dir = xml_path.parent()?;
+    // Bevorzugt .jpg, Fallback auf .png
+    for name in &["overview.jpg", "overview.png"] {
+        let candidate = dir.join(name);
+        if candidate.is_file() {
+            return Some(candidate);
+        }
+    }
+    None
 }
 
 /// Prüft ob `terrain.heightmap.png` im selben Verzeichnis wie die XML liegt.

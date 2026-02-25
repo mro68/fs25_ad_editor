@@ -87,3 +87,8 @@ pub fn close_overview_options_dialog(state: &mut AppState) {
 pub fn dismiss_post_load_dialog(state: &mut AppState) {
     state.ui.post_load_dialog = Default::default();
 }
+
+/// Schließt den "Als overview.png speichern"-Dialog.
+pub fn dismiss_save_overview_dialog(state: &mut AppState) {
+    state.ui.save_overview_dialog = Default::default();
+}

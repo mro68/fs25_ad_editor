@@ -253,6 +253,16 @@ pub fn map_intent_to_commands(state: &AppState, intent: AppIntent) -> Vec<AppCom
             ]
         }
         AppIntent::PostLoadDialogDismissed => vec![AppCommand::DismissPostLoadDialog],
+        AppIntent::SaveBackgroundAsOverviewConfirmed => {
+            let path = state.ui.save_overview_dialog.target_path.clone();
+            vec![
+                AppCommand::SaveBackgroundAsOverview { path },
+                AppCommand::DismissSaveOverviewDialog,
+            ]
+        }
+        AppIntent::SaveBackgroundAsOverviewDismissed => {
+            vec![AppCommand::DismissSaveOverviewDialog]
+        }
         AppIntent::ResamplePathRequested => vec![AppCommand::ResamplePath],
     }
 }

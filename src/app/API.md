@@ -101,6 +101,7 @@ pub struct UiState {
     pub zip_browser: Option<ZipBrowserState>,
     pub overview_options_dialog: OverviewOptionsDialogState,
     pub post_load_dialog: PostLoadDialogState,
+    pub save_overview_dialog: SaveOverviewDialogState,
     /// Konfiguration für das Distanzen-Neuverteilen-Feature
     pub distanzen: DistanzenState,
 }
@@ -159,9 +160,15 @@ pub struct PostLoadDialogState {
     pub visible: bool,
     pub heightmap_set: bool,
     pub heightmap_path: Option<String>,
+    pub overview_loaded: bool,
     pub matching_zips: Vec<PathBuf>,
     pub selected_zip_index: usize,
     pub map_name: String,
+}
+
+pub struct SaveOverviewDialogState {
+    pub visible: bool,
+    pub target_path: String,
 }
 
 pub struct ViewState {
@@ -518,6 +525,7 @@ pub enum AddNodeResult {
 - `toggle_background_visibility(state)` — Sichtbarkeit umschalten
 - `clear_background_map(state)` — Background-Map entfernen
 - `generate_overview_with_options(state) -> anyhow::Result<()>` — Übersichtskarte aus Map-Mod-ZIP generieren (Layer-Optionen aus Dialog-State), Einstellungen persistent speichern
+- `save_background_as_overview(state, path) -> anyhow::Result<()>` — Aktuelle Background-Map als overview.jpg speichern (JPEG Qualität 100)
 
 ### `use_cases::editing::markers`
 - `open_marker_dialog(state, node_id, is_new)` — Marker-Dialog öffnen (neu oder bearbeiten)

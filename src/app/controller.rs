@@ -236,6 +236,14 @@ impl AppController {
             // === Post-Load-Dialog ===
             AppCommand::DismissPostLoadDialog => handlers::dialog::dismiss_post_load_dialog(state),
 
+            // === overview.jpg speichern ===
+            AppCommand::SaveBackgroundAsOverview { path } => {
+                handlers::view::save_background_as_overview(state, path)?
+            }
+            AppCommand::DismissSaveOverviewDialog => {
+                handlers::dialog::dismiss_save_overview_dialog(state)
+            }
+
             // === Distanzen ===
             AppCommand::ResamplePath => handlers::editing::resample_path(state),
         }

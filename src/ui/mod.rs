@@ -19,7 +19,8 @@ pub mod toolbar;
 
 pub use dialogs::{
     handle_file_dialogs, show_dedup_dialog, show_heightmap_warning, show_marker_dialog,
-    show_overview_options_dialog, show_post_load_dialog, show_zip_browser,
+    show_overview_options_dialog, show_post_load_dialog, show_save_overview_dialog,
+    show_zip_browser,
 };
 pub use input::InputState;
 pub use menu::render_menu;

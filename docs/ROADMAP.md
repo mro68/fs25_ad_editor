@@ -107,6 +107,7 @@
   - [x] Konfigurierbare Layer-Optionen (Hillshade, Farmlands, IDs, POIs, Legende)
   - [x] Persistent gespeicherte Standard-Layer in EditorOptions
   - [x] Auto-Detection: Heightmap und Map-Mod-ZIP nach XML-Laden (Umlaut-tolerantes Fuzzy-Matching)
+  - [x] overview.jpg: Auto-Load beim XML-Öffnen, Speichern-Dialog nach ZIP-Extraktion/Generierung
 
 ## Phase 6: Performance & Qualität
 - [ ] Performance-Optimierung

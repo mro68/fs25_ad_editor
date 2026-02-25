@@ -4,6 +4,7 @@ use crate::app::state::ZipBrowserState;
 use crate::app::AppState;
 use crate::core::{self, BackgroundMap};
 use anyhow::Result;
+use std::path::Path;
 use std::sync::Arc;
 
 /// Öffnet den Background-Map-Auswahl-Dialog.
@@ -165,6 +166,9 @@ pub fn load_background_from_zip(
     // ZIP-Browser schließen (falls offen)
     state.ui.zip_browser = None;
 
+    // Speichern als overview.jpg anbieten (falls XML geladen)
+    prompt_save_as_overview(state);
+
     Ok(())
 }
 
@@ -207,5 +211,54 @@ pub fn generate_overview_with_options(state: &mut AppState) -> Result<()> {
     // Dialog schließen
     state.ui.overview_options_dialog.visible = false;
 
+    // Speichern als overview.jpg anbieten (falls XML geladen)
+    prompt_save_as_overview(state);
+
+    Ok(())
+}
+
+/// Prüft ob dem User das Speichern als overview.jpg angeboten werden soll.
+///
+/// Bedingungen: XML-Datei geladen UND overview.jpg existiert noch nicht.
+fn prompt_save_as_overview(state: &mut AppState) {
+    let Some(ref xml_path) = state.ui.current_file_path else {
+        return;
+    };
+    let Some(dir) = Path::new(xml_path).parent() else {
+        return;
+    };
+    let target = dir.join("overview.jpg");
+    if target.exists() {
+        log::debug!("overview.jpg existiert bereits — kein Speicher-Dialog");
+        return;
+    }
+    state.ui.save_overview_dialog.visible = true;
+    state.ui.save_overview_dialog.target_path = target.to_string_lossy().into_owned();
+    log::info!(
+        "Angebot: Hintergrund als overview.jpg speichern in {}",
+        dir.display()
+    );
+}
+
+/// Speichert die aktuelle Background-Map als overview.jpg (maximale Qualität).
+pub fn save_background_as_overview(state: &mut AppState, path: String) -> Result<()> {
+    let bg_map = state
+        .view
+        .background_map
+        .as_ref()
+        .ok_or_else(|| anyhow::anyhow!("Keine Background-Map geladen"))?;
+
+    let rgb_image = bg_map.image_data().to_rgb8();
+    let file = std::fs::File::create(&path)?;
+    let encoder = image::codecs::jpeg::JpegEncoder::new_with_quality(file, 100);
+    use image::ImageEncoder;
+    encoder.write_image(
+        rgb_image.as_raw(),
+        rgb_image.width(),
+        rgb_image.height(),
+        image::ExtendedColorType::Rgb8,
+    )?;
+
+    log::info!("Background-Map als overview.jpg gespeichert: {}", path);
     Ok(())
 }
