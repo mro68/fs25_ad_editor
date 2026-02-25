@@ -42,6 +42,17 @@ pub fn show_post_load_dialog(ctx: &egui::Context, ui_state: &mut UiState) -> Vec
                     ui.add_space(8.0);
                 }
 
+                // overview.png-Info
+                if ui_state.post_load_dialog.overview_loaded {
+                    ui.horizontal(|ui| {
+                        ui.label(
+                            egui::RichText::new("✓ Hintergrundbild automatisch geladen")
+                                .color(egui::Color32::from_rgb(100, 200, 100)),
+                        );
+                    });
+                    ui.add_space(8.0);
+                }
+
                 // ZIP-Auswahl
                 if !ui_state.post_load_dialog.matching_zips.is_empty() {
                     if !ui_state.post_load_dialog.map_name.is_empty() {

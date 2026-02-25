@@ -10,15 +10,20 @@ pub fn reset_camera(state: &mut AppState) {
 
 /// Zoomt die Kamera stufenweise hinein.
 pub fn zoom_in(state: &mut AppState) {
-    state.view.camera.zoom_by(state.options.camera_zoom_step);
+    state.view.camera.zoom_by_clamped(
+        state.options.camera_zoom_step,
+        state.options.camera_zoom_min,
+        state.options.camera_zoom_max,
+    );
 }
 
 /// Zoomt die Kamera stufenweise heraus.
 pub fn zoom_out(state: &mut AppState) {
-    state
-        .view
-        .camera
-        .zoom_by(1.0 / state.options.camera_zoom_step);
+    state.view.camera.zoom_by_clamped(
+        1.0 / state.options.camera_zoom_step,
+        state.options.camera_zoom_min,
+        state.options.camera_zoom_max,
+    );
 }
 
 /// Verschiebt die Kamera basierend auf einem Delta.
@@ -33,13 +38,21 @@ pub fn pan(state: &mut AppState, delta: glam::Vec2) {
 pub fn zoom_towards(state: &mut AppState, factor: f32, focus_world: Option<glam::Vec2>) {
     if let Some(focus) = focus_world {
         let old_zoom = state.view.camera.zoom;
-        state.view.camera.zoom_by(factor);
+        state.view.camera.zoom_by_clamped(
+            factor,
+            state.options.camera_zoom_min,
+            state.options.camera_zoom_max,
+        );
         let new_zoom = state.view.camera.zoom;
         // Kamera-Position korrigieren, damit focus_world an gleicher Stelle bleibt
         let scale = old_zoom / new_zoom;
         state.view.camera.position = focus + (state.view.camera.position - focus) * scale;
     } else {
-        state.view.camera.zoom_by(factor);
+        state.view.camera.zoom_by_clamped(
+            factor,
+            state.options.camera_zoom_min,
+            state.options.camera_zoom_max,
+        );
     }
 }
 
@@ -76,7 +89,7 @@ pub fn center_on_road_map(state: &mut AppState, road_map: &RoadMap) {
     let max_extent = width.max(height);
     use crate::core::Camera2D;
     state.view.camera.zoom = (Camera2D::BASE_WORLD_EXTENT / (max_extent / 2.0))
-        .clamp(Camera2D::ZOOM_MIN, Camera2D::ZOOM_MAX);
+        .clamp(state.options.camera_zoom_min, state.options.camera_zoom_max);
 
     log::info!(
         "Map bounds: ({:.1}, {:.1}) to ({:.1}, {:.1}), center: ({:.1}, {:.1}), zoom: {:.2}",

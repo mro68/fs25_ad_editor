@@ -48,11 +48,6 @@ pub fn load_background_map(
     use_cases::background_map::load_background_map(state, path, crop_size)
 }
 
-/// Setzt die Transparenz der Background-Map.
-pub fn set_background_opacity(state: &mut AppState, opacity: f32) {
-    use_cases::background_map::set_background_opacity(state, opacity);
-}
-
 /// Schaltet die Sichtbarkeit der Background-Map um.
 pub fn toggle_background_visibility(state: &mut AppState) {
     use_cases::background_map::toggle_background_visibility(state);
@@ -81,4 +76,9 @@ pub fn load_background_from_zip(
 /// Generiert eine Übersichtskarte mit den Optionen aus dem Dialog.
 pub fn generate_overview_with_options(state: &mut AppState) -> anyhow::Result<()> {
     use_cases::background_map::generate_overview_with_options(state)
+}
+
+/// Speichert die aktuelle Background-Map als overview.jpg.
+pub fn save_background_as_overview(state: &mut AppState, path: String) -> anyhow::Result<()> {
+    use_cases::background_map::save_background_as_overview(state, path)
 }

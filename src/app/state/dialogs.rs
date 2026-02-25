@@ -82,6 +82,8 @@ pub struct PostLoadDialogState {
     pub heightmap_set: bool,
     /// Pfad zur automatisch gesetzten Heightmap
     pub heightmap_path: Option<String>,
+    /// overview.png wurde automatisch als Hintergrund geladen
+    pub overview_loaded: bool,
     /// Gefundene passende ZIP-Dateien im Mods-Verzeichnis
     pub matching_zips: Vec<PathBuf>,
     /// Index des vom User ausgewählten ZIPs (Default: 0)
@@ -97,11 +99,23 @@ impl PostLoadDialogState {
             visible: false,
             heightmap_set: false,
             heightmap_path: None,
+            overview_loaded: false,
             matching_zips: Vec::new(),
             selected_zip_index: 0,
             map_name: String::new(),
         }
     }
+}
+
+/// Dialog-State für "Als overview.jpg speichern"-Abfrage nach ZIP-Extraktion.
+#[derive(Default)]
+pub struct SaveOverviewDialogState {
+    /// Ob der Dialog sichtbar ist
+    pub visible: bool,
+    /// Ziel-Pfad: overview.jpg im XML-Verzeichnis
+    pub target_path: String,
+    /// true wenn eine bestehende overview.jpg überschrieben würde
+    pub is_overwrite: bool,
 }
 
 /// Konfiguration für das Distanzen-Neuverteilen-Feature im Eigenschaften-Bereich.
@@ -212,6 +226,8 @@ pub struct UiState {
     pub overview_options_dialog: OverviewOptionsDialogState,
     /// Post-Load-Dialog (Heightmap/ZIP-Erkennung)
     pub post_load_dialog: PostLoadDialogState,
+    /// Dialog für "Als overview.png speichern"-Abfrage
+    pub save_overview_dialog: SaveOverviewDialogState,
     /// Distanzen-Neuverteilen-Konfiguration (Eigenschaften-Panel)
     pub distanzen: DistanzenState,
 }
@@ -236,6 +252,7 @@ impl UiState {
             zip_browser: None,
             overview_options_dialog: OverviewOptionsDialogState::new(),
             post_load_dialog: PostLoadDialogState::new(),
+            save_overview_dialog: SaveOverviewDialogState::default(),
             distanzen: DistanzenState::default(),
         }
     }

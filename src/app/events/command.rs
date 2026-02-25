@@ -120,8 +120,6 @@ pub enum AppCommand {
         path: String,
         crop_size: Option<u32>,
     },
-    /// Background-Opacity ändern
-    UpdateBackgroundOpacity { opacity: f32 },
     /// Background-Sichtbarkeit umschalten
     ToggleBackgroundVisibility,
     /// Background-Ausdehnung skalieren (Faktor relativ)
@@ -210,6 +208,10 @@ pub enum AppCommand {
     CloseOverviewOptionsDialog,
     /// Post-Load-Dialog schließen
     DismissPostLoadDialog,
+    /// Background-Map als overview.jpg im XML-Verzeichnis speichern
+    SaveBackgroundAsOverview { path: String },
+    /// overview.jpg-Speichern-Dialog schließen
+    DismissSaveOverviewDialog,
     /// Selektierte Nodes-Kette als gleichmäßig verteilte Wegpunkte neu berechnen (Distanzen)
     ResamplePath,
 }

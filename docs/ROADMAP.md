@@ -78,6 +78,11 @@
   - [x] Background-Quad-Renderer
   - [x] Map-Auswahl UI (Datei-Dialog + Menü)
   - [x] Opacity- und Sichtbarkeits-Steuerung
+  - [x] Konfigurierbare Zoom-Grenzen (camera_zoom_min, camera_zoom_max)
+  - [x] Zoom-abhängiges Background-Fade-Out
+    - [x] Sichtbarkeit normal + bei Min-Zoom + Fade-Start-Zoom einstellbar (EditorOptions)
+    - [x] Lineare Interpolation: ab fade_start_zoom → bei min_zoom auf min_zoom-Opacity
+    - [x] Konfiguration im Options-Dialog (3 Slider)
   - [ ] Zoom-abhängige LOD (Mipmap-Generierung)
     - [ ] Mip-Level 0..N per Render-Pass herunterskalieren (Custom-Blit-Pipeline, wgpu#661)
     - [ ] Alternative: DDS mit vorberechneter Mip-Chain im Asset-Pipeline
@@ -102,6 +107,7 @@
   - [x] Konfigurierbare Layer-Optionen (Hillshade, Farmlands, IDs, POIs, Legende)
   - [x] Persistent gespeicherte Standard-Layer in EditorOptions
   - [x] Auto-Detection: Heightmap und Map-Mod-ZIP nach XML-Laden (Umlaut-tolerantes Fuzzy-Matching)
+  - [x] overview.jpg: Auto-Load beim XML-Öffnen, Speichern-Dialog nach ZIP-Extraktion/Generierung
 
 ## Phase 6: Performance & Qualität
 - [ ] Performance-Optimierung

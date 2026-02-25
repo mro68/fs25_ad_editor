@@ -26,7 +26,8 @@ Das `ui`-Modul enthält egui-UI-Komponenten (Menüs, Statusbar, Input-Handling, 
   - `marker_dialog.rs` — Marker erstellen/bearbeiten
   - `dedup_dialog.rs` — Duplikat-Bestätigungsdialog
   - `zip_browser.rs` — ZIP-Browser für Background-Map-Auswahl
-  - `post_load_dialog.rs` — Post-Load-Dialog (Auto-Erkennung von Heightmap/ZIP)
+  - `post_load_dialog.rs` — Post-Load-Dialog (Auto-Erkennung von Heightmap/ZIP/Overview)
+  - `save_overview_dialog.rs` — Dialog: Hintergrundbild als overview.jpg speichern
 
 ## Funktionen
 
@@ -314,6 +315,30 @@ pub fn show_post_load_dialog(ctx: &egui::Context, ui_state: &mut UiState) -> Vec
 ```
 
 Bei mehreren ZIPs werden RadioButtons zur Auswahl angezeigt.
+
+---
+
+### `show_save_overview_dialog`
+
+Zeigt den Dialog "Hintergrundbild als overview.jpg speichern?" nach dem Laden eines Hintergrundbildes aus einem ZIP-Archiv oder nach Generierung einer Übersichtskarte. Erscheint nur wenn eine XML-Datei geladen ist und noch keine overview.jpg im selben Verzeichnis existiert.
+
+```rust
+pub fn show_save_overview_dialog(ctx: &egui::Context, ui_state: &mut UiState) -> Vec<AppIntent>
+```
+
+**Emittierte Intents:**
+- `AppIntent::SaveBackgroundAsOverviewConfirmed` — Benutzer bestätigt Speichern
+- `AppIntent::SaveBackgroundAsOverviewDismissed` — Benutzer lehnt ab
+
+**Layout:**
+```
+[Titel: "Hintergrundbild speichern?"]
+  Soll das Hintergrundbild als overview.jpg
+  im Savegame-Verzeichnis gespeichert werden?
+  /pfad/zur/overview.jpg
+  Beim nächsten Laden wird es automatisch als Hintergrund verwendet.
+  [Ja, speichern]  [Nein]
+```
 
 ---
 

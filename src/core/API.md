@@ -37,6 +37,12 @@ camera.pan(Vec2::new(10.0, 5.0));
 camera.zoom_by(1.5);  // vergrößern
 camera.zoom_by(0.5);  // verkleinern
 
+// Zoom mit benutzerdefinierten Grenzen clamped
+camera.zoom_by_clamped(1.5, 0.2, 50.0);  // custom min/max
+
+// Zoom auf gegebene Grenzen clampen
+camera.clamp_zoom(0.2, 50.0);
+
 // View-Matrix für Shader (nur Translation, kein Scale)
 let mat = camera.view_matrix(); // Mat3
 

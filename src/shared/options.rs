@@ -155,6 +155,12 @@ pub struct EditorOptions {
     pub marker_outline_color: [f32; 4],
 
     // ── Kamera ──────────────────────────────────────────────────
+    /// Minimaler Zoom-Faktor (konfigurierbar)
+    #[serde(default = "default_camera_zoom_min")]
+    pub camera_zoom_min: f32,
+    /// Maximaler Zoom-Faktor (konfigurierbar)
+    #[serde(default = "default_camera_zoom_max")]
+    pub camera_zoom_max: f32,
     /// Zoom-Schritt bei Menü-Buttons / Shortcuts
     pub camera_zoom_step: f32,
     /// Zoom-Schritt bei Mausrad-Scroll
@@ -176,6 +182,17 @@ pub struct EditorOptions {
     // ── Terrain ──────────────────────────────────────────────────
     /// Höhenskala für Heightmap-Export (FS25: 255.0)
     pub terrain_height_scale: f32,
+
+    // ── Hintergrund ─────────────────────────────────────────────
+    /// Standard-Deckung des Hintergrundbilds (0.0 = unsichtbar, 1.0 = voll)
+    #[serde(default = "default_bg_opacity")]
+    pub bg_opacity: f32,
+    /// Deckung bei Minimal-Zoom (0.0 = unsichtbar, 1.0 = voll)
+    #[serde(default = "default_bg_opacity_at_min_zoom")]
+    pub bg_opacity_at_min_zoom: f32,
+    /// Zoom-Level ab dem der Fade-out zum Minimal-Zoom-Wert beginnt
+    #[serde(default = "default_bg_fade_start_zoom")]
+    pub bg_fade_start_zoom: f32,
 
     // ── Übersichtskarte ─────────────────────────────────────────
     /// Layer-Optionen für Übersichtskarten-Generierung
@@ -207,6 +224,8 @@ impl Default for EditorOptions {
             marker_color: MARKER_COLOR,
             marker_outline_color: MARKER_OUTLINE_COLOR,
 
+            camera_zoom_min: CAMERA_ZOOM_MIN,
+            camera_zoom_max: CAMERA_ZOOM_MAX,
             camera_zoom_step: CAMERA_ZOOM_STEP,
             camera_scroll_zoom_step: CAMERA_SCROLL_ZOOM_STEP,
 
@@ -215,6 +234,9 @@ impl Default for EditorOptions {
             reconnect_on_delete: false,
             split_connection_on_place: false,
             terrain_height_scale: TERRAIN_HEIGHT_SCALE,
+            bg_opacity: 1.0,
+            bg_opacity_at_min_zoom: 0.0,
+            bg_fade_start_zoom: 3.5,
             overview_layers: OverviewLayerOptions::default(),
         }
     }
@@ -223,6 +245,31 @@ impl Default for EditorOptions {
 /// Serde-Default für `hitbox_scale_percent` (Abwärtskompatibilität bestehender TOML-Dateien).
 fn default_hitbox_scale_percent() -> f32 {
     HITBOX_SCALE_PERCENT
+}
+
+/// Serde-Default für `camera_zoom_min` (Abwärtskompatibilität älterer TOML-Dateien).
+fn default_camera_zoom_min() -> f32 {
+    CAMERA_ZOOM_MIN
+}
+
+/// Serde-Default für `camera_zoom_max` (Abwärtskompatibilität älterer TOML-Dateien).
+fn default_camera_zoom_max() -> f32 {
+    CAMERA_ZOOM_MAX
+}
+
+/// Serde-Default für `bg_opacity`.
+fn default_bg_opacity() -> f32 {
+    1.0
+}
+
+/// Serde-Default für `bg_opacity_at_min_zoom`.
+fn default_bg_opacity_at_min_zoom() -> f32 {
+    0.0
+}
+
+/// Serde-Default für `bg_fade_start_zoom`.
+fn default_bg_fade_start_zoom() -> f32 {
+    3.5
 }
 
 impl EditorOptions {

@@ -57,7 +57,6 @@ pub struct RenderScene {
     pub selected_node_ids: Arc<HashSet<u64>>,
     pub connect_source_node: Option<u64>,
     pub background_map: Option<Arc<BackgroundMap>>,
-    pub background_opacity: f32,
     pub background_visible: bool,
     pub options: EditorOptions,
     pub hidden_node_ids: Arc<HashSet<u64>>,

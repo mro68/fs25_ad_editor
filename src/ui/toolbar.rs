@@ -131,14 +131,7 @@ pub fn render_toolbar(ctx: &egui::Context, state: &AppState) -> Vec<AppIntent> {
             // Background-Map-Controls (rechts ausgerichtet)
             if state.view.background_map.is_some() {
                 ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
-                    let mut opacity = state.view.background_opacity;
                     ui.label("Hintergrund:");
-                    if ui
-                        .add(egui::Slider::new(&mut opacity, 0.0..=1.0).text("Opacity"))
-                        .changed()
-                    {
-                        events.push(AppIntent::SetBackgroundOpacity { opacity });
-                    }
 
                     let visible = state.view.background_visible;
                     let toggle_text = if visible {

@@ -9,7 +9,7 @@ mod view;
 pub use app_state::AppState;
 pub use dialogs::{
     DedupDialogState, DistanzenState, MarkerDialogState, OverviewOptionsDialogState,
-    PostLoadDialogState, UiState, ZipBrowserState,
+    PostLoadDialogState, SaveOverviewDialogState, UiState, ZipBrowserState,
 };
 pub use editor::{EditorTool, EditorToolState};
 pub use selection::SelectionState;
