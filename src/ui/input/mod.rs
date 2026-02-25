@@ -47,6 +47,8 @@ pub(crate) struct ViewportContext<'a> {
 pub struct InputState {
     pub(crate) primary_drag_mode: PrimaryDragMode,
     pub(crate) drag_selection: Option<DragSelection>,
+    /// Speichert Mausposition beim Öffnen eines Context-Menüs, um Hover-Detektion stabil zu halten
+    context_menu_position: Option<glam::Vec2>,
 }
 
 impl InputState {
@@ -55,7 +57,22 @@ impl InputState {
         Self {
             primary_drag_mode: PrimaryDragMode::None,
             drag_selection: None,
+            context_menu_position: None,
         }
+    }
+
+    /// Prüft ob gerade ein Context-Menu offen ist (vereinfachte Heuristik: Position gecacht).
+    fn is_context_menu_open(&self, response: &egui::Response) -> bool {
+        // Menu ist wahrscheinlich offen, wenn:
+        // 1. Position gecacht ist
+        // 2. AND Response noch interaktiv ist (nicht außerhalb des Viewports)
+        self.context_menu_position.is_some() && response.hovered()
+    }
+
+    /// Cleared den Context-Menu-Cache (z.B. nach Klick auf ein Item).
+    #[allow(dead_code)]
+    fn reset_context_menu(&mut self) {
+        self.context_menu_position = None;
     }
 
     #[allow(clippy::too_many_arguments)]
@@ -118,14 +135,26 @@ impl InputState {
         // Drag-Selektion Overlay (ausgelagert in drag.rs)
         draw_drag_selection_overlay(self.drag_selection.as_ref(), ui, response);
 
-        // Neues Context-Menu-System: Alle 5 Varianten über einheitlichen Router
-        let pointer_pos_world = response.hover_pos().map(|screen_pos| {
-            let local = screen_pos - response.rect.min;
-            camera.screen_to_world(
-                glam::Vec2::new(local.x, local.y),
-                glam::Vec2::new(viewport_size[0], viewport_size[1]),
-            )
-        });
+        // Neues Context-Menu-System: Alle 4 Varianten über einheitlichen Router
+        // WICHTIG: Position "einfrieren" während Menu offen, um Flackern bei Maustbewegung zu verhindern
+        let pointer_pos_world = if self.is_context_menu_open(response) {
+            // Menu ist offen → gecachte Position verwenden
+            self.context_menu_position
+        } else {
+            // Menu nicht offen → aktuelle Position berechnen und cachen falls Menu gleich geöffnet wird
+            response.hover_pos().map(|screen_pos| {
+                let local = screen_pos - response.rect.min;
+                camera.screen_to_world(
+                    glam::Vec2::new(local.x, local.y),
+                    glam::Vec2::new(viewport_size[0], viewport_size[1]),
+                )
+            })
+        };
+
+        // Cache Position wenn ein Menu-Event initialisiert wird
+        if response.secondary_clicked() {
+            self.context_menu_position = pointer_pos_world;
+        }
 
         context_menu::show_viewport_context_menu(
             response,
