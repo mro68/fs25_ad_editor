@@ -121,6 +121,7 @@ pub fn show_viewport_context_menu(
 
 /// Legacy-Wrapper für bestehende `show_connection_context_menu` und `show_node_marker_context_menu`
 /// zur Rückwärts-Kompatibilität beim Übergang zum neuen System.
+#[allow(dead_code)]
 pub(super) fn show_connection_context_menu(
     response: &egui::Response,
     road_map: Option<&RoadMap>,
@@ -159,6 +160,7 @@ pub(super) fn show_connection_context_menu(
     );
 }
 
+#[allow(dead_code)]
 pub(super) fn show_node_marker_context_menu(
     response: &egui::Response,
     road_map: Option<&RoadMap>,
