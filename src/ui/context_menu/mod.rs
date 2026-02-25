@@ -2,14 +2,17 @@
 //!
 //! Struktur:
 //! - `mod.rs`: Router + MenuVariant enum + Helper
+//! - `empty_area.rs`: Leerer Bereich (Tool-Auswahl)
 //! - `single_node.rs`: Einzelner Node (selektiert/nicht)
 //! - `multiple_nodes.rs`: Mehrere Nodes (≥2)
 //! - `route_tool.rs`: Route-Tool aktiv
 
+mod empty_area;
 mod multiple_nodes;
 mod route_tool;
 mod single_node;
 
+pub use empty_area::render_empty_area_menu;
 pub use multiple_nodes::render_multiple_nodes_menu;
 pub use route_tool::render_route_tool_menu;
 pub use single_node::{render_single_node_selected_menu, render_single_node_unselected_menu};
@@ -20,6 +23,8 @@ use std::collections::HashSet;
 /// Kontextabhängige Menü-Variante basierend auf Selection und Position.
 #[derive(Debug, Clone, Copy)]
 pub enum MenuVariant {
+    /// Rechtsklick auf leeren Bereich (kein Node gehovered)
+    EmptyArea,
     /// Rechtsklick auf einzelnen Node, der noch nicht selektiert ist
     SingleNodeUnselected { node_id: u64 },
     /// Rechtsklick auf einzelnen Node, der bereits selektiert ist
@@ -91,16 +96,17 @@ pub fn show_viewport_context_menu(
         route_tool_has_input,
     ) {
         (0, None, true) => MenuVariant::RouteToolActive,
-        (0, None, _) => return, // Kein Menu auf leerem Bereich
+        (0, None, _) => MenuVariant::EmptyArea, // Tool-Auswahl auf leerem Bereich
         (0, Some(id), _) => MenuVariant::SingleNodeUnselected { node_id: id },
         (1, Some(id), _) if selected_node_ids.contains(&id) => {
             MenuVariant::SingleNodeSelected { node_id: id }
         }
         (n, _, _) if n >= 2 => MenuVariant::MultipleNodesSelected,
-        _ => return, // Ungültiger Context
+        _ => MenuVariant::EmptyArea, // Default: Tool-Auswahl
     };
 
     response.context_menu(|ui| match variant {
+        MenuVariant::EmptyArea => render_empty_area_menu(ui, distanzen_state, events),
         MenuVariant::SingleNodeUnselected { node_id } => {
             render_single_node_unselected_menu(ui, node_id, rm, events)
         }
