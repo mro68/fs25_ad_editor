@@ -1,7 +1,7 @@
 //! Builder für Render-Szenen aus dem AppState.
 
-use crate::app::AppState;
 use crate::app::use_cases::background_map::calculate_adjusted_opacity_for_zoom;
+use crate::app::AppState;
 use crate::shared::RenderScene;
 use std::collections::HashSet;
 use std::sync::Arc;
@@ -15,11 +15,12 @@ pub fn build(state: &AppState, viewport_size: [f32; 2]) -> RenderScene {
         Arc::new(HashSet::new())
     };
 
-    // Berechne die Opacity mit Zoom-basierter Anpassung
+    // Berechne die Opacity mit Zoom-basierter Anpassung (log-skaliert \u00fcber gesamten Zoom-Bereich)
     let adjusted_opacity = calculate_adjusted_opacity_for_zoom(
         state.view.background_opacity,
         state.view.camera.zoom,
         state.options.camera_zoom_min,
+        state.options.camera_zoom_max,
         state.options.background_opacity_at_min_zoom,
     );
 

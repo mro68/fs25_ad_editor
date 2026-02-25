@@ -53,48 +53,48 @@ pub fn set_background_opacity(state: &mut AppState, opacity: f32) {
     );
 }
 
-/// Passt die Opacity der Background-Map basierend auf den aktuellen Zoom an.
+/// Passt die Opacity der Background-Map im State basierend auf dem aktuellen Zoom an.
 ///
-/// Interpoliert zwischen `background_opacity_at_min_zoom` und `background_opacity_default`
-/// basierend auf Position des aktuellen Zooms zwischen Min und Max (oder bei Zoom >= 1.0).
+/// Delegiert an `calculate_adjusted_opacity_for_zoom` für konsistente Log-Interpolation.
 pub fn adjust_background_opacity_for_zoom(state: &mut AppState) {
     let zoom = state.view.camera.zoom;
     let zoom_min = state.options.camera_zoom_min;
+    let zoom_max = state.options.camera_zoom_max;
     let opacity_default = state.options.background_opacity_default;
     let opacity_min = state.options.background_opacity_at_min_zoom;
 
-    // Interpolation: bei zoom_min → opacity_min, bei zoom >= 1.0 → opacity_default
-    let opacity = if zoom < 1.0 {
-        let normalized = (zoom - zoom_min) / (1.0 - zoom_min);
-        opacity_min + (opacity_default - opacity_min) * normalized.clamp(0.0, 1.0)
-    } else {
-        opacity_default
-    };
-
-    state.view.background_opacity = opacity.clamp(0.0, 1.0);
+    state.view.background_opacity =
+        calculate_adjusted_opacity_for_zoom(opacity_default, zoom, zoom_min, zoom_max, opacity_min);
 }
 
 /// Berechnet die angepasste Background-Opacity basierend auf Zoom.
 ///
-/// Interpoliert zwischen `opacity_at_min_zoom` (bei zoom_min) und `baseline_opacity` (bei zoom >= 1.0).
-/// Diese Funktion ist rein und wird für die Render-Scene-Berechnung benötigt.
+/// Interpoliert logarithmisch über den gesamten konfigurierten Zoom-Bereich:
+/// - bei `zoom_min` → `opacity_at_min_zoom`
+/// - bei `zoom_max` → `baseline_opacity`
+///
+/// Logarithmische Skala sorgt dafür, dass der Hintergrund über den größten Teil
+/// des Zoom-Bereichs bei voller `baseline_opacity` bleibt und nur nahe dem Minimum ausgeblendet wird.
+/// Mit `opacity_at_min_zoom = baseline_opacity` findet kein Dimming statt (Standard).
 pub fn calculate_adjusted_opacity_for_zoom(
     baseline_opacity: f32,
     current_zoom: f32,
     zoom_min: f32,
+    zoom_max: f32,
     opacity_at_min_zoom: f32,
 ) -> f32 {
-    let opacity_default = baseline_opacity;
-    let opacity_min = opacity_at_min_zoom;
-
-    // Interpolation: bei zoom_min → opacity_min, bei zoom >= 1.0 → opacity_default
-    let opacity = if current_zoom < 1.0 {
-        let normalized = (current_zoom - zoom_min) / (1.0 - zoom_min).max(0.001); // Guard gegen Division
-        opacity_min + (opacity_default - opacity_min) * normalized.clamp(0.0, 1.0)
-    } else {
-        opacity_default
-    };
-
+    // Kein Dimming nötig wenn beide Werte gleich oder Bereich ungültig
+    if (baseline_opacity - opacity_at_min_zoom).abs() < 0.001 || zoom_max <= zoom_min {
+        return baseline_opacity.clamp(0.0, 1.0);
+    }
+    // Logarithmische Normalisierung: zoom_min → 0.0, zoom_max → 1.0
+    // Logarithmische Skala entspricht der menschlichen Wahrnehmung von Zoom-Schritten
+    let log_min = zoom_min.max(0.001_f32).ln();
+    let log_max = zoom_max.ln();
+    let log_curr = current_zoom.clamp(zoom_min, zoom_max).ln();
+    let t = ((log_curr - log_min) / (log_max - log_min)).clamp(0.0, 1.0);
+    // t=0 (zoom_min) → opacity_at_min_zoom; t=1 (zoom_max) → baseline_opacity
+    let opacity = opacity_at_min_zoom + (baseline_opacity - opacity_at_min_zoom) * t;
     opacity.clamp(0.0, 1.0)
 }
 
