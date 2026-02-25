@@ -7,7 +7,12 @@ pub fn render_route_tool_menu(ui: &mut egui::Ui, events: &mut Vec<AppIntent>) {
     ui.label("➤ Route-Tool aktiv");
     ui.separator();
 
-    button_intent(ui, "✓ Ausführen", AppIntent::RouteToolExecuteRequested, events);
+    button_intent(
+        ui,
+        "✓ Ausführen",
+        AppIntent::RouteToolExecuteRequested,
+        events,
+    );
     button_intent(
         ui,
         "🔄 Neu berechnen",

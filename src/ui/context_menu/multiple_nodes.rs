@@ -1,7 +1,9 @@
 //! Multiple Nodes Menu: Rechtsklick bei ≥2 selektierten Nodes.
 
 use super::button_intent;
-use crate::app::{state::DistanzenState, AppIntent, ConnectionDirection, ConnectionPriority, RoadMap};
+use crate::app::{
+    state::DistanzenState, AppIntent, ConnectionDirection, ConnectionPriority, RoadMap,
+};
 use std::collections::HashSet;
 
 pub fn render_multiple_nodes_menu(
