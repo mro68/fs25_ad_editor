@@ -78,6 +78,11 @@
   - [x] Background-Quad-Renderer
   - [x] Map-Auswahl UI (Datei-Dialog + Menü)
   - [x] Opacity- und Sichtbarkeits-Steuerung
+  - [x] Konfigurierbare Zoom-Grenzen (camera_zoom_min, camera_zoom_max)
+  - [x] Dynamische Background-Opacity basierend auf Zoom
+    - [x] Default- und Min-Zoom-Deckung einstellbar (EditorOptions)
+    - [x] Smooth Interpolation: bei min-Zoom → low opacity, bei 1.0+ → default opacity
+    - [x] UI-Slider im Options-Dialog für beide Werte
   - [ ] Zoom-abhängige LOD (Mipmap-Generierung)
     - [ ] Mip-Level 0..N per Render-Pass herunterskalieren (Custom-Blit-Pipeline, wgpu#661)
     - [ ] Alternative: DDS mit vorberechneter Mip-Chain im Asset-Pipeline

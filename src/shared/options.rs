@@ -156,16 +156,20 @@ pub struct EditorOptions {
 
     // ── Kamera ──────────────────────────────────────────────────
     /// Minimaler Zoom-Faktor (konfigurierbar)
+    #[serde(default = "default_camera_zoom_min")]
     pub camera_zoom_min: f32,
     /// Maximaler Zoom-Faktor (konfigurierbar)
+    #[serde(default = "default_camera_zoom_max")]
     pub camera_zoom_max: f32,
     /// Zoom-Schritt bei Menü-Buttons / Shortcuts
     pub camera_zoom_step: f32,
     /// Zoom-Schritt bei Mausrad-Scroll
     pub camera_scroll_zoom_step: f32,
-    /// Standard-Deckungs-Niveau des Hintergrundbilds
+    /// Standard-Deckungs-Niveau des Hintergrundbilds (0.0–1.0)
+    #[serde(default = "default_background_opacity_default")]
     pub background_opacity_default: f32,
-    /// Minimales Deckungs-Niveau des Hintergrundbilds bei Minimal-Zoom
+    /// Deckungs-Niveau des Hintergrundbilds bei Minimal-Zoom (0.0–1.0).
+    /// 1.0 = keine Abschwächung beim Herauszoomen (Standard: kein Dimming).
     #[serde(default = "default_background_opacity_at_min_zoom")]
     pub background_opacity_at_min_zoom: f32,
 
@@ -221,7 +225,7 @@ impl Default for EditorOptions {
             camera_zoom_step: CAMERA_ZOOM_STEP,
             camera_scroll_zoom_step: CAMERA_SCROLL_ZOOM_STEP,
             background_opacity_default: 1.0,
-            background_opacity_at_min_zoom: 0.3,
+            background_opacity_at_min_zoom: 1.0,
 
             snap_radius: SNAP_RADIUS,
             hitbox_scale_percent: HITBOX_SCALE_PERCENT,
@@ -238,9 +242,25 @@ fn default_hitbox_scale_percent() -> f32 {
     HITBOX_SCALE_PERCENT
 }
 
+/// Serde-Default für `camera_zoom_min` (Abwärtskompatibilität älterer TOML-Dateien).
+fn default_camera_zoom_min() -> f32 {
+    CAMERA_ZOOM_MIN
+}
+
+/// Serde-Default für `camera_zoom_max` (Abwärtskompatibilität älterer TOML-Dateien).
+fn default_camera_zoom_max() -> f32 {
+    CAMERA_ZOOM_MAX
+}
+
+/// Serde-Default für `background_opacity_default` (Abwärtskompatibilität älterer TOML-Dateien).
+fn default_background_opacity_default() -> f32 {
+    1.0
+}
+
 /// Serde-Default für `background_opacity_at_min_zoom` (Abwärtskompatibilität).
+/// 1.0 = kein Dimming bei Minimalzoom (rückwärtskompatibel mit älterer Verhalten).
 fn default_background_opacity_at_min_zoom() -> f32 {
-    0.3
+    1.0
 }
 
 impl EditorOptions {
