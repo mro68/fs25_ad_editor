@@ -13,8 +13,6 @@ pub struct ViewState {
     pub render_quality: RenderQuality,
     /// Background-Map (optional)
     pub background_map: Option<Arc<BackgroundMap>>,
-    /// Background-Opacity (0.0 = transparent, 1.0 = opak)
-    pub background_opacity: f32,
     /// Background-Sichtbarkeit
     pub background_visible: bool,
     /// Skalierungsfaktor für Background-Map-Ausdehnung (1.0 = Original)
@@ -31,7 +29,6 @@ impl ViewState {
             viewport_size: [0.0, 0.0],
             render_quality: RenderQuality::High,
             background_map: None,
-            background_opacity: 1.0,
             background_visible: true,
             background_scale: 1.0,
             background_dirty: false,

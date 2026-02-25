@@ -83,8 +83,6 @@ pub enum AppIntent {
         path: String,
         crop_size: Option<u32>,
     },
-    /// Background-Opacity ändern
-    SetBackgroundOpacity { opacity: f32 },
     /// Background-Sichtbarkeit umschalten
     ToggleBackgroundVisibility,
     /// Background-Ausdehnung skalieren (Faktor relativ, z.B. 2.0 = verdoppeln)

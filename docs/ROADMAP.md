@@ -79,10 +79,10 @@
   - [x] Map-Auswahl UI (Datei-Dialog + Menü)
   - [x] Opacity- und Sichtbarkeits-Steuerung
   - [x] Konfigurierbare Zoom-Grenzen (camera_zoom_min, camera_zoom_max)
-  - [x] Dynamische Background-Opacity basierend auf Zoom
-    - [x] Default- und Min-Zoom-Deckung einstellbar (EditorOptions)
-    - [x] Smooth Interpolation: bei min-Zoom → low opacity, bei 1.0+ → default opacity
-    - [x] UI-Slider im Options-Dialog für beide Werte
+  - [x] Zoom-abhängiges Background-Fade-Out
+    - [x] Sichtbarkeit normal + bei Min-Zoom + Fade-Start-Zoom einstellbar (EditorOptions)
+    - [x] Lineare Interpolation: ab fade_start_zoom → bei min_zoom auf min_zoom-Opacity
+    - [x] Konfiguration im Options-Dialog (3 Slider)
   - [ ] Zoom-abhängige LOD (Mipmap-Generierung)
     - [ ] Mip-Level 0..N per Render-Pass herunterskalieren (Custom-Blit-Pipeline, wgpu#661)
     - [ ] Alternative: DDS mit vorberechneter Mip-Chain im Asset-Pipeline

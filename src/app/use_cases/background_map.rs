@@ -44,57 +44,32 @@ pub fn load_background_map(
     Ok(())
 }
 
-/// Setzt die Opacity der Background-Map.
-pub fn set_background_opacity(state: &mut AppState, opacity: f32) {
-    state.view.background_opacity = opacity.clamp(0.0, 1.0);
-    log::debug!(
-        "Background-Opacity gesetzt: {:.2}",
-        state.view.background_opacity
-    );
-}
-
-/// Passt die Opacity der Background-Map im State basierend auf dem aktuellen Zoom an.
+/// Berechnet die Hintergrund-Opacity für den aktuellen Zoom-Level.
 ///
-/// Delegiert an `calculate_adjusted_opacity_for_zoom` für konsistente Log-Interpolation.
-pub fn adjust_background_opacity_for_zoom(state: &mut AppState) {
-    let zoom = state.view.camera.zoom;
-    let zoom_min = state.options.camera_zoom_min;
-    let zoom_max = state.options.camera_zoom_max;
-    let opacity_default = state.options.background_opacity_default;
-    let opacity_min = state.options.background_opacity_at_min_zoom;
-
-    state.view.background_opacity =
-        calculate_adjusted_opacity_for_zoom(opacity_default, zoom, zoom_min, zoom_max, opacity_min);
-}
-
-/// Berechnet die angepasste Background-Opacity basierend auf Zoom.
+/// - Bei `zoom >= fade_start_zoom`: volle `opacity_normal`
+/// - Bei `zoom <= zoom_min`: `opacity_min_zoom`
+/// - Dazwischen: lineare Interpolation zwischen beiden Werten
 ///
-/// Interpoliert logarithmisch über den gesamten konfigurierten Zoom-Bereich:
-/// - bei `zoom_min` → `opacity_at_min_zoom`
-/// - bei `zoom_max` → `baseline_opacity`
-///
-/// Logarithmische Skala sorgt dafür, dass der Hintergrund über den größten Teil
-/// des Zoom-Bereichs bei voller `baseline_opacity` bleibt und nur nahe dem Minimum ausgeblendet wird.
-/// Mit `opacity_at_min_zoom = baseline_opacity` findet kein Dimming statt (Standard).
-pub fn calculate_adjusted_opacity_for_zoom(
-    baseline_opacity: f32,
+/// Wird pro Frame in `render_scene::build()` aufgerufen (kein State-Mutation nötig).
+pub fn calculate_background_opacity_for_zoom(
+    opacity_normal: f32,
+    opacity_min_zoom: f32,
     current_zoom: f32,
     zoom_min: f32,
-    zoom_max: f32,
-    opacity_at_min_zoom: f32,
+    fade_start_zoom: f32,
 ) -> f32 {
-    // Kein Dimming nötig wenn beide Werte gleich oder Bereich ungültig
-    if (baseline_opacity - opacity_at_min_zoom).abs() < 0.001 || zoom_max <= zoom_min {
-        return baseline_opacity.clamp(0.0, 1.0);
+    // Oberhalb der Fade-Schwelle: volle Sichtbarkeit
+    if current_zoom >= fade_start_zoom {
+        return opacity_normal.clamp(0.0, 1.0);
     }
-    // Logarithmische Normalisierung: zoom_min → 0.0, zoom_max → 1.0
-    // Logarithmische Skala entspricht der menschlichen Wahrnehmung von Zoom-Schritten
-    let log_min = zoom_min.max(0.001_f32).ln();
-    let log_max = zoom_max.ln();
-    let log_curr = current_zoom.clamp(zoom_min, zoom_max).ln();
-    let t = ((log_curr - log_min) / (log_max - log_min)).clamp(0.0, 1.0);
-    // t=0 (zoom_min) → opacity_at_min_zoom; t=1 (zoom_max) → baseline_opacity
-    let opacity = opacity_at_min_zoom + (baseline_opacity - opacity_at_min_zoom) * t;
+    // Kein Fade-Bereich oder identische Opacity → direkt zurückgeben
+    if fade_start_zoom <= zoom_min || (opacity_normal - opacity_min_zoom).abs() < 0.001 {
+        return opacity_normal.clamp(0.0, 1.0);
+    }
+    // Linearer Interpolationsfaktor: zoom_min → 0.0, fade_start_zoom → 1.0
+    let clamped_zoom = current_zoom.clamp(zoom_min, fade_start_zoom);
+    let t = (clamped_zoom - zoom_min) / (fade_start_zoom - zoom_min);
+    let opacity = opacity_min_zoom + (opacity_normal - opacity_min_zoom) * t;
     opacity.clamp(0.0, 1.0)
 }
 

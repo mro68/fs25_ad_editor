@@ -159,9 +159,6 @@ pub fn map_intent_to_commands(state: &AppState, intent: AppIntent) -> Vec<AppCom
         AppIntent::BackgroundMapSelected { path, crop_size } => {
             vec![AppCommand::LoadBackgroundMap { path, crop_size }]
         }
-        AppIntent::SetBackgroundOpacity { opacity } => {
-            vec![AppCommand::UpdateBackgroundOpacity { opacity }]
-        }
         AppIntent::ToggleBackgroundVisibility => vec![AppCommand::ToggleBackgroundVisibility],
         AppIntent::ScaleBackground { factor } => vec![AppCommand::ScaleBackground { factor }],
         AppIntent::CreateMarkerRequested { node_id } => {

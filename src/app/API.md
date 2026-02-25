@@ -169,7 +169,6 @@ pub struct ViewState {
     pub viewport_size: [f32; 2],
     pub render_quality: RenderQuality,
     pub background_map: Option<Arc<BackgroundMap>>,
-    pub background_opacity: f32,
     pub background_visible: bool,
     pub background_scale: f32,      // Skalierungsfaktor (1.0 = Original)
     pub background_dirty: bool,  // GPU-Upload-Signal
@@ -280,7 +279,6 @@ pub enum AppIntent {
     // Background-Map
     BackgroundMapSelectionRequested,
     BackgroundMapSelected { path: String, crop_size: Option<u32> },
-    SetBackgroundOpacity { opacity: f32 },
     ToggleBackgroundVisibility,
     ScaleBackground { factor: f32 },
     ZipBackgroundBrowseRequested { path: String },
@@ -389,7 +387,6 @@ pub enum AppCommand {
     SetHeightmap { path: String },
     DismissHeightmapWarning,
     LoadBackgroundMap { path: String, crop_size: Option<u32> },
-    UpdateBackgroundOpacity { opacity: f32 },
     ToggleBackgroundVisibility,
     ScaleBackground { factor: f32 },
     BrowseZipBackground { path: String },
@@ -517,7 +514,7 @@ pub enum AddNodeResult {
 ### `use_cases::background_map`
 - `request_background_map_dialog(state)` — Background-Map-Dialog öffnen
 - `load_background_map(state, path, crop_size) -> anyhow::Result<()>` — Background-Map laden (PNG/JPG/DDS), Fehler werden an den Controller propagiert
-- `set_background_opacity(state, opacity)` — Opacity setzen (0.0–1.0)
+- `calculate_background_opacity_for_zoom(opacity_normal, opacity_min_zoom, current_zoom, zoom_min, fade_start_zoom) -> f32` — Berechnet zoom-abhängige Hintergrund-Opacity (aufgerufen pro Frame in render_scene::build)
 - `toggle_background_visibility(state)` — Sichtbarkeit umschalten
 - `clear_background_map(state)` — Background-Map entfernen
 - `generate_overview_with_options(state) -> anyhow::Result<()>` — Übersichtskarte aus Map-Mod-ZIP generieren (Layer-Optionen aus Dialog-State), Einstellungen persistent speichern

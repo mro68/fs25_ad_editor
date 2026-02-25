@@ -205,11 +205,11 @@ pub fn show_options_dialog(
                     // ── Hintergrund ─────────────────────────────────
                     ui.collapsing("Hintergrund", |ui| {
                         ui.horizontal(|ui| {
-                            ui.label("Standard-Deckungs-Niveau:");
+                            ui.label("Sichtbarkeit normal:");
                             changed |= ui
                                 .add(
                                     egui::Slider::new(
-                                        &mut opts.background_opacity_default,
+                                        &mut opts.background_opacity_normal,
                                         0.0..=1.0,
                                     )
                                     .step_by(0.05),
@@ -217,14 +217,26 @@ pub fn show_options_dialog(
                                 .changed();
                         });
                         ui.horizontal(|ui| {
-                            ui.label("Deckungs-Niveau bei Min-Zoom:");
+                            ui.label("Sichtbarkeit bei Min-Zoom:");
                             changed |= ui
                                 .add(
                                     egui::Slider::new(
-                                        &mut opts.background_opacity_at_min_zoom,
+                                        &mut opts.background_opacity_min_zoom,
                                         0.0..=1.0,
                                     )
                                     .step_by(0.05),
+                                )
+                                .changed();
+                        });
+                        ui.horizontal(|ui| {
+                            ui.label("Fade-Out ab Zoom-Stufe:");
+                            changed |= ui
+                                .add(
+                                    egui::Slider::new(
+                                        &mut opts.background_fade_start_zoom,
+                                        opts.camera_zoom_min..=opts.camera_zoom_max,
+                                    )
+                                    .step_by(0.5),
                                 )
                                 .changed();
                         });

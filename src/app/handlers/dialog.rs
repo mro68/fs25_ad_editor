@@ -41,11 +41,7 @@ pub fn close_options_dialog(state: &mut AppState) {
 }
 
 /// Übernimmt neue Optionen und persistiert sie in der Konfigurationsdatei.
-///
-/// Synchronisiert außerdem `view.background_opacity` mit dem neuen `background_opacity_default`,
-/// damit die "Standard-Deckungs-Niveau"-Einstellung sofort auf das Rendering wirkt.
 pub fn apply_options(state: &mut AppState, options: EditorOptions) -> anyhow::Result<()> {
-    state.view.background_opacity = options.background_opacity_default;
     state.options = options;
     let path = EditorOptions::config_path();
     state.options.save_to_file(&path)

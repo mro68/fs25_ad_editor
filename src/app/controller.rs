@@ -65,9 +65,6 @@ impl AppController {
             AppCommand::LoadBackgroundMap { path, crop_size } => {
                 handlers::view::load_background_map(state, path, crop_size)?
             }
-            AppCommand::UpdateBackgroundOpacity { opacity } => {
-                handlers::view::set_background_opacity(state, opacity)
-            }
             AppCommand::ToggleBackgroundVisibility => {
                 handlers::view::toggle_background_visibility(state)
             }

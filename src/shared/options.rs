@@ -165,13 +165,21 @@ pub struct EditorOptions {
     pub camera_zoom_step: f32,
     /// Zoom-Schritt bei Mausrad-Scroll
     pub camera_scroll_zoom_step: f32,
-    /// Standard-Deckungs-Niveau des Hintergrundbilds (0.0–1.0)
-    #[serde(default = "default_background_opacity_default")]
-    pub background_opacity_default: f32,
-    /// Deckungs-Niveau des Hintergrundbilds bei Minimal-Zoom (0.0–1.0).
-    /// 1.0 = keine Abschwächung beim Herauszoomen (Standard: kein Dimming).
-    #[serde(default = "default_background_opacity_at_min_zoom")]
-    pub background_opacity_at_min_zoom: f32,
+    /// Normale Sichtbarkeit des Hintergrundbilds (0.0–1.0, Standard: 1.0)
+    #[serde(
+        default = "default_background_opacity_normal",
+        alias = "background_opacity_default"
+    )]
+    pub background_opacity_normal: f32,
+    /// Sichtbarkeit des Hintergrundbilds bei Minimal-Zoom (0.0–1.0, Standard: 0.2)
+    #[serde(
+        default = "default_background_opacity_min_zoom",
+        alias = "background_opacity_at_min_zoom"
+    )]
+    pub background_opacity_min_zoom: f32,
+    /// Zoom-Stufe, ab der das Fade-Out zum Min-Zoom-Niveau beginnt (Standard: 3.0)
+    #[serde(default = "default_background_fade_start_zoom")]
+    pub background_fade_start_zoom: f32,
 
     // ── Tools ────────────────────────────────────────────────────
     /// Snap-Radius (Welteinheiten) für Route-Tools
@@ -224,8 +232,9 @@ impl Default for EditorOptions {
             camera_zoom_max: CAMERA_ZOOM_MAX,
             camera_zoom_step: CAMERA_ZOOM_STEP,
             camera_scroll_zoom_step: CAMERA_SCROLL_ZOOM_STEP,
-            background_opacity_default: 1.0,
-            background_opacity_at_min_zoom: 1.0,
+            background_opacity_normal: 1.0,
+            background_opacity_min_zoom: 0.2,
+            background_fade_start_zoom: 3.0,
 
             snap_radius: SNAP_RADIUS,
             hitbox_scale_percent: HITBOX_SCALE_PERCENT,
@@ -252,15 +261,19 @@ fn default_camera_zoom_max() -> f32 {
     CAMERA_ZOOM_MAX
 }
 
-/// Serde-Default für `background_opacity_default` (Abwärtskompatibilität älterer TOML-Dateien).
-fn default_background_opacity_default() -> f32 {
+/// Serde-Default für `background_opacity_normal` (Abwärtskompatibilität älterer TOML-Dateien).
+fn default_background_opacity_normal() -> f32 {
     1.0
 }
 
-/// Serde-Default für `background_opacity_at_min_zoom` (Abwärtskompatibilität).
-/// 1.0 = kein Dimming bei Minimalzoom (rückwärtskompatibel mit älterer Verhalten).
-fn default_background_opacity_at_min_zoom() -> f32 {
-    1.0
+/// Serde-Default für `background_opacity_min_zoom`.
+fn default_background_opacity_min_zoom() -> f32 {
+    0.2
+}
+
+/// Serde-Default für `background_fade_start_zoom`.
+fn default_background_fade_start_zoom() -> f32 {
+    3.0
 }
 
 impl EditorOptions {

@@ -120,8 +120,6 @@ pub enum AppCommand {
         path: String,
         crop_size: Option<u32>,
     },
-    /// Background-Opacity ändern
-    UpdateBackgroundOpacity { opacity: f32 },
     /// Background-Sichtbarkeit umschalten
     ToggleBackgroundVisibility,
     /// Background-Ausdehnung skalieren (Faktor relativ)

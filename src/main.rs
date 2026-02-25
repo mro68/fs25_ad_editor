@@ -73,7 +73,6 @@ impl EditorApp {
         let editor_options = EditorOptions::load_from_file(&config_path);
 
         let mut state = AppState::new();
-        state.view.background_opacity = editor_options.background_opacity_default;
         state.options = editor_options;
 
         Self {
