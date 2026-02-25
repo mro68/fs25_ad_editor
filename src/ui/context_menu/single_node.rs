@@ -11,7 +11,10 @@ pub fn render_single_node_unselected_menu(
 ) {
     if let Some(node) = road_map.nodes.get(&node_id) {
         ui.label(format!("📍 Node {}", node_id));
-        ui.label(format!("Pos: ({:.1}, {:.1})", node.position.x, node.position.y));
+        ui.label(format!(
+            "Pos: ({:.1}, {:.1})",
+            node.position.x, node.position.y
+        ));
         let in_count = road_map
             .connections_iter()
             .filter(|c| c.end_id == node_id)
@@ -66,7 +69,10 @@ pub fn render_single_node_selected_menu(
 ) {
     if let Some(node) = road_map.nodes.get(&node_id) {
         ui.label(format!("📍 Node {} ✓", node_id));
-        ui.label(format!("Pos: ({:.1}, {:.1})", node.position.x, node.position.y));
+        ui.label(format!(
+            "Pos: ({:.1}, {:.1})",
+            node.position.x, node.position.y
+        ));
         ui.separator();
 
         button_intent(
