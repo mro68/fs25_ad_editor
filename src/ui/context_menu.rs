@@ -1,6 +1,8 @@
 //! Kontextmenü für Bulk-Verbindungsoperationen im Viewport.
 
-use crate::app::{AppIntent, ConnectionDirection, ConnectionPriority, RoadMap};
+use crate::app::{
+    state::DistanzenState, AppIntent, ConnectionDirection, ConnectionPriority, RoadMap,
+};
 use std::collections::HashSet;
 
 /// Helper-Funktion: Erstellt einen Button, der bei Klick einen Intent emittiert und das Menü schließt.
@@ -16,6 +18,7 @@ pub(super) fn show_connection_context_menu(
     response: &egui::Response,
     road_map: Option<&RoadMap>,
     selected_node_ids: &HashSet<u64>,
+    distanzen_state: &mut DistanzenState,
     events: &mut Vec<AppIntent>,
 ) {
     if selected_node_ids.len() < 2 {
@@ -115,6 +118,63 @@ pub(super) fn show_connection_context_menu(
                 AppIntent::RemoveAllConnectionsBetweenSelectedRequested,
                 events,
             );
+
+            ui.separator();
+            if distanzen_state.active {
+                // Steuerung direkt im Menü wenn Panel bereits aktiv
+                ui.label("Streckenteilung:");
+
+                let prev_distance = distanzen_state.distance;
+                ui.horizontal(|ui| {
+                    ui.label("Abstand:");
+                    ui.add(
+                        egui::DragValue::new(&mut distanzen_state.distance)
+                            .speed(0.5)
+                            .range(1.0..=25.0)
+                            .suffix(" m"),
+                    );
+                });
+                if (distanzen_state.distance - prev_distance).abs() > f32::EPSILON {
+                    distanzen_state.by_count = false;
+                    distanzen_state.sync_from_distance();
+                }
+
+                let prev_count = distanzen_state.count;
+                ui.horizontal(|ui| {
+                    ui.label("Nodes:");
+                    ui.add(
+                        egui::DragValue::new(&mut distanzen_state.count)
+                            .speed(1.0)
+                            .range(2..=10000),
+                    );
+                });
+                if distanzen_state.count != prev_count {
+                    distanzen_state.by_count = true;
+                    distanzen_state.sync_from_count();
+                    if distanzen_state.distance < 1.0 {
+                        distanzen_state.distance = 1.0;
+                        distanzen_state.sync_from_distance();
+                    }
+                }
+
+                ui.add_space(4.0);
+                if ui.button("✓ Übernehmen").clicked() {
+                    events.push(AppIntent::ResamplePathRequested);
+                    distanzen_state.deactivate();
+                    ui.close();
+                }
+                if ui.button("✕ Verwerfen").clicked() {
+                    distanzen_state.deactivate();
+                    ui.close();
+                }
+            } else {
+                button_intent(
+                    ui,
+                    "✂ Streckenteilung",
+                    AppIntent::StreckenteilungAktivieren,
+                    events,
+                );
+            }
         }
     });
 }

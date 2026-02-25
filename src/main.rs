@@ -234,7 +234,7 @@ impl EditorApp {
             route_tool_is_drawing,
             &self.state.options,
             &drag_targets,
-            self.state.ui.distanzen.active,
+            &mut self.state.ui.distanzen,
         ));
 
         // Tool-Kontextmenü (z.B. Tangenten-Auswahl für Cubic-Kurve)

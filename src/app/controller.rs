@@ -246,6 +246,17 @@ impl AppController {
 
             // === Distanzen ===
             AppCommand::ResamplePath => handlers::editing::resample_path(state),
+            AppCommand::StreckenteilungAktivieren => {
+                if state.selection.selected_node_ids.len() >= 2 {
+                    state.ui.distanzen.active = true;
+                    if state.ui.distanzen.distance < 1.0 {
+                        state.ui.distanzen.distance = 1.0;
+                    }
+                    if state.ui.distanzen.count < 2 {
+                        state.ui.distanzen.sync_from_distance();
+                    }
+                }
+            }
         }
 
         Ok(())

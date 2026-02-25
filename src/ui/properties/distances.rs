@@ -42,13 +42,13 @@ pub fn render_distance_panel(
     distance_state.path_length = path_len;
 
     ui.separator();
-    ui.heading("Strecke aufteilen");
+    ui.heading("Streckenteilung");
     ui.label(format!("Streckenlänge: {:.1} m", path_len));
 
     if !distance_state.active {
-        if ui.button("▶ Vorschau starten").clicked() {
+        if ui.button("▶ Einteilung ändern").clicked() {
             distance_state.active = true;
-            distance_state.distance = distance_state.distance.max(6.0);
+            distance_state.distance = distance_state.distance.max(1.0);
             if distance_state.count < 2 {
                 distance_state.sync_from_distance();
             }
@@ -57,7 +57,7 @@ pub fn render_distance_panel(
         return;
     }
 
-    distance_state.distance = distance_state.distance.max(6.0);
+    distance_state.distance = distance_state.distance.max(1.0);
 
     let prev_distance = distance_state.distance;
     ui.horizontal(|ui| {
@@ -65,7 +65,7 @@ pub fn render_distance_panel(
         ui.add(
             egui::DragValue::new(&mut distance_state.distance)
                 .speed(0.5)
-                .range(6.0..=500.0)
+                .range(1.0..=25.0)
                 .suffix(" m"),
         );
     });
@@ -86,8 +86,8 @@ pub fn render_distance_panel(
     if distance_state.count != prev_count {
         distance_state.by_count = true;
         distance_state.sync_from_count();
-        if distance_state.distance < 6.0 {
-            distance_state.distance = 6.0;
+        if distance_state.distance < 1.0 {
+            distance_state.distance = 1.0;
             distance_state.sync_from_distance();
         }
     }

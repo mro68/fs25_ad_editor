@@ -214,4 +214,6 @@ pub enum AppIntent {
     SaveBackgroundAsOverviewDismissed,
     /// Selektierte Nodes-Kette als gleichmäßig verteilte Wegpunkte neu berechnen (Distanzen)
     ResamplePathRequested,
+    /// Streckenteilung-Panel aktivieren (z.B. per Kontextmenü)
+    StreckenteilungAktivieren,
 }

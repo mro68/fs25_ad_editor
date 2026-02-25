@@ -162,7 +162,7 @@ impl DistanzenState {
     /// Aktualisiert distance aus count basierend auf der Streckenlänge.
     pub fn sync_from_count(&mut self) {
         if self.path_length > 0.0 && self.count >= 2 {
-            self.distance = (self.path_length / (self.count - 1) as f32).max(0.5);
+            self.distance = (self.path_length / (self.count - 1) as f32).max(1.0);
         }
     }
 

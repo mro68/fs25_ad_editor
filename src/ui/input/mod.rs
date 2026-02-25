@@ -78,7 +78,7 @@ impl InputState {
         route_tool_is_drawing: bool,
         options: &EditorOptions,
         drag_targets: &[glam::Vec2],
-        distanzen_active: bool,
+        distanzen_state: &mut crate::app::state::DistanzenState,
     ) -> Vec<AppIntent> {
         let ctx = ViewportContext {
             ui,
@@ -104,7 +104,7 @@ impl InputState {
             selected_node_ids,
             active_tool,
             route_tool_is_drawing,
-            distanzen_active,
+            distanzen_state.active,
         ));
 
         let modifiers = ui.input(|i| i.modifiers);
@@ -123,6 +123,7 @@ impl InputState {
             response,
             road_map,
             selected_node_ids,
+            distanzen_state,
             &mut events,
         );
         if selected_node_ids.len() == 1 {
