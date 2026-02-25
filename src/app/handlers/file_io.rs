@@ -29,15 +29,12 @@ pub fn load(state: &mut AppState, path: String) -> anyhow::Result<()> {
     Ok(())
 }
 
-/// Führt die automatische Erkennung von Heightmap und Map-Mod-ZIP durch.
+/// Führt die automatische Erkennung von Heightmap, overview.jpg und Map-Mod-ZIP durch.
 fn run_post_load_detection(state: &mut AppState, xml_path: &str) {
     let xml_path = Path::new(xml_path);
-    let map_name = state
-        .road_map
-        .as_ref()
-        .and_then(|rm| rm.map_name.as_deref());
+    let map_name = state.road_map.as_ref().and_then(|rm| rm.map_name.clone());
 
-    let result = use_cases::auto_detect::detect_post_load(xml_path, map_name);
+    let result = use_cases::auto_detect::detect_post_load(xml_path, map_name.as_deref());
 
     let heightmap_set = result.heightmap_path.is_some();
     let heightmap_display = result
@@ -54,15 +51,36 @@ fn run_post_load_detection(state: &mut AppState, xml_path: &str) {
         }
     }
 
+    // Hintergrundbild automatisch laden (overview.jpg oder overview.png)
+    let overview_loaded = if let Some(ref ov_path) = result.overview_path {
+        if let Some(ov_str) = ov_path.to_str() {
+            match use_cases::background_map::load_background_map(state, ov_str.to_string(), None) {
+                Ok(()) => {
+                    log::info!("Overview auto-loaded: {}", ov_str);
+                    true
+                }
+                Err(e) => {
+                    log::warn!("Overview konnte nicht geladen werden: {}", e);
+                    false
+                }
+            }
+        } else {
+            false
+        }
+    } else {
+        false
+    };
+
     // Dialog nur anzeigen wenn etwas erkannt wurde
     let has_zips = !result.matching_zips.is_empty();
-    if heightmap_set || has_zips {
+    if heightmap_set || has_zips || overview_loaded {
         state.ui.post_load_dialog.visible = true;
         state.ui.post_load_dialog.heightmap_set = heightmap_set;
         state.ui.post_load_dialog.heightmap_path = heightmap_display;
+        state.ui.post_load_dialog.overview_loaded = overview_loaded;
         state.ui.post_load_dialog.matching_zips = result.matching_zips;
         state.ui.post_load_dialog.selected_zip_index = 0;
-        state.ui.post_load_dialog.map_name = map_name.unwrap_or("").to_string();
+        state.ui.post_load_dialog.map_name = map_name.unwrap_or_default();
     }
 }
 

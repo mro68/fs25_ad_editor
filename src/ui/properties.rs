@@ -6,8 +6,8 @@ mod selectors;
 use std::collections::HashSet;
 
 use crate::app::{
-    segment_registry::SegmentRegistry, tools::ToolManager, AppIntent, ConnectionDirection,
-    ConnectionPriority, EditorTool, RoadMap,
+    segment_registry::SegmentRegistry, tools::ToolManager, AppIntent, Connection,
+    ConnectionDirection, ConnectionPriority, EditorTool, RoadMap,
 };
 use crate::shared::EditorOptions;
 use distances::render_distance_panel;
@@ -182,11 +182,7 @@ fn render_two_nodes_info(
 }
 
 /// Zeigt Editor-Controls für eine einzelne Verbindung (Richtung, Priorität, Trennen).
-fn render_connection_editor(
-    ui: &mut egui::Ui,
-    conn: &crate::core::Connection,
-    events: &mut Vec<AppIntent>,
-) {
+fn render_connection_editor(ui: &mut egui::Ui, conn: &Connection, events: &mut Vec<AppIntent>) {
     ui.group(|ui| {
         ui.label(format!("{}→{}", conn.start_id, conn.end_id));
 

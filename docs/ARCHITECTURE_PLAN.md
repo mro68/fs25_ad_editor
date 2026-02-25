@@ -260,7 +260,6 @@ pub struct ViewState {
   pub viewport_size: [f32; 2],
   pub render_quality: RenderQuality,
   pub background_map: Option<Arc<BackgroundMap>>,
-  pub background_opacity: f32,
   pub background_visible: bool,
   pub background_scale: f32,
   pub background_dirty: bool,  // Signalisiert GPU-Upload erforderlich
@@ -285,7 +284,6 @@ pub struct RenderScene {
   pub selected_node_ids: Arc<HashSet<u64>>,
   pub connect_source_node: Option<u64>,
   pub background_map: Option<Arc<BackgroundMap>>,
-  pub background_opacity: f32,
   pub background_visible: bool,
   pub options: EditorOptions,
 }

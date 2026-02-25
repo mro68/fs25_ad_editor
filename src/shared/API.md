@@ -26,7 +26,6 @@ pub struct RenderScene {
     pub selected_node_ids: Arc<HashSet<u64>>,
     pub connect_source_node: Option<u64>,
     pub background_map: Option<Arc<BackgroundMap>>,
-    pub background_opacity: f32,
     pub background_visible: bool,
     pub options: EditorOptions,
     pub hidden_node_ids: Arc<HashSet<u64>>,
@@ -148,6 +147,11 @@ pub struct EditorOptions {
     pub reconnect_on_delete: bool,
     /// true = bestehende Verbindung beim Platzieren splitten
     pub split_connection_on_place: bool,
+    // Kamera (erweitert)
+    /// Minimaler Zoom-Faktor (konfig, überschreibt Camera2D::ZOOM_MIN)
+    pub camera_zoom_min: f32,
+    /// Maximaler Zoom-Faktor (konfig, überschreibt Camera2D::ZOOM_MAX)
+    pub camera_zoom_max: f32,
     // Terrain
     pub terrain_height_scale: f32,
     // Übersichtskarte

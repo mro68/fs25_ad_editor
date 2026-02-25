@@ -16,7 +16,28 @@ pub(crate) use marker_renderer::MarkerRenderer;
 pub(crate) use node_renderer::NodeRenderer;
 use types::RenderContext;
 
+use crate::shared::EditorOptions;
 use eframe::egui_wgpu;
+
+/// Berechnet die Hintergrund-Opacity basierend auf Zoom-Level und Optionen.
+///
+/// Oberhalb von `fade_start_zoom`: Standard-Deckung.
+/// Zwischen `fade_start_zoom` und Kamera-Minimum: linear interpoliert.
+/// Bei/unter Kamera-Minimum: `opacity_at_min_zoom`.
+fn compute_background_opacity(zoom: f32, opts: &EditorOptions) -> f32 {
+    let fade_start = opts.bg_fade_start_zoom;
+    let min_zoom = opts.camera_zoom_min;
+
+    if zoom >= fade_start {
+        opts.bg_opacity
+    } else if fade_start <= min_zoom {
+        // Kein Fade-Bereich — direkt Min-Zoom-Deckung
+        opts.bg_opacity_at_min_zoom
+    } else {
+        let t = ((zoom - min_zoom) / (fade_start - min_zoom)).clamp(0.0, 1.0);
+        opts.bg_opacity_at_min_zoom + t * (opts.bg_opacity - opts.bg_opacity_at_min_zoom)
+    }
+}
 
 /// Haupt-Renderer für AutoDrive-Daten.
 ///
@@ -80,13 +101,14 @@ impl Renderer {
 
         // 1. Render Background zuerst (falls vorhanden)
         if scene.background_map.is_some() {
+            let opacity = compute_background_opacity(scene.camera.zoom, &scene.options);
             self.background_renderer.render(
                 queue,
                 render_pass,
                 &scene.camera,
                 scene.viewport_size,
-                scene.background_opacity,
                 scene.background_visible,
+                opacity,
             );
         }
 

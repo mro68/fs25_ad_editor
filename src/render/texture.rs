@@ -29,8 +29,9 @@ pub fn create_texture_from_image(
         rgba_image.len()
     );
 
-    // Berechne Mip-Level-Count für bessere Performance
-    let mip_level_count = calculate_mip_levels(width.max(height));
+    // Mip-Level-Count: 1 (keine Mipmaps), da Mip-Generierung noch nicht implementiert ist.
+    // Leere Mip-Levels verursachen Fading/Verschwinden bei niedrigem Zoom.
+    let mip_level_count = 1;
 
     // Erstelle Texture
     let texture = device.create_texture(&wgpu::TextureDescriptor {
@@ -66,24 +67,7 @@ pub fn create_texture_from_image(
         },
     );
 
-    // TODO(Mipmap-Generierung): Mip-Level 0 ist hochgeladen, die weiteren Levels sind
-    // noch leer. Für echte Mipmap-Qualität muss jedes Level 1..N per Render-Pass
-    // herunterskaliert werden:
-    //   1. Für jedes Level 1..mip_level_count - 1:
-    //      a. TextureView mit `base_mip_level = level - 1` (src) und `= level` (dst)
-    //      b. Blit via separaten Render-Pass oder Compute-Shader (wgpu unterstützt
-    //         blit_texture nicht direkt — Custom-Pipeline notwendig).
-    //   2. Alternativ: `wgpu::Features::TEXTURE_COMPRESSION_*` + mipmaps vorab im
-    //      Asset-Pipeline erzeugen (DDS mit MipChain).
-    //   Tracker: https://github.com/gfx-rs/wgpu/issues/661
-    if mip_level_count > 1 {
-        log::debug!(
-            "Hinweis: {} Mip-Levels erstellt, aber noch nicht generiert",
-            mip_level_count
-        );
-    }
-
-    // Erstelle Sampler
+    // Erstelle Sampler (kein Mipmap-Filter, da nur 1 Mip-Level vorhanden)
     let sampler = device.create_sampler(&wgpu::SamplerDescriptor {
         label: Some(&format!("{}_sampler", label)),
         address_mode_u: wgpu::AddressMode::ClampToEdge,
@@ -91,17 +75,17 @@ pub fn create_texture_from_image(
         address_mode_w: wgpu::AddressMode::ClampToEdge,
         mag_filter: wgpu::FilterMode::Linear,
         min_filter: wgpu::FilterMode::Linear,
-        mipmap_filter: wgpu::FilterMode::Linear,
+        mipmap_filter: wgpu::FilterMode::Nearest,
         ..Default::default()
     });
 
     (texture, sampler)
 }
 
-/// Berechnet die Anzahl der Mip-Levels für eine gegebene Texture-Größe
-///
-/// Mip-Levels verbessern die Performance beim Rendering von verkleinerten Textures.
-/// Die Formel ist: floor(log2(max(width, height))) + 1
+// TODO(Mipmap): Bei Bedarf Mipmap-Generierung implementieren (Compute-Pass oder CPU-seitig).\n// Tracker: https://github.com/gfx-rs/wgpu/issues/661
+
+#[cfg(test)]
+/// Berechnet die Anzahl der Mip-Levels für eine gegebene Texture-Größe (aktuell nur in Tests)
 fn calculate_mip_levels(size: u32) -> u32 {
     // Für sehr kleine Textures (< 256) lohnen sich Mipmaps nicht
     if size <= 256 {

@@ -83,8 +83,6 @@ pub enum AppIntent {
         path: String,
         crop_size: Option<u32>,
     },
-    /// Background-Opacity ändern
-    SetBackgroundOpacity { opacity: f32 },
     /// Background-Sichtbarkeit umschalten
     ToggleBackgroundVisibility,
     /// Background-Ausdehnung skalieren (Faktor relativ, z.B. 2.0 = verdoppeln)
@@ -210,6 +208,10 @@ pub enum AppIntent {
     PostLoadGenerateOverview { zip_path: String },
     /// Post-Load-Dialog: geschlossen ohne Aktion
     PostLoadDialogDismissed,
+    /// Benutzer hat bestätigt: Background als overview.jpg speichern
+    SaveBackgroundAsOverviewConfirmed,
+    /// Benutzer hat abgelehnt: overview.jpg nicht speichern
+    SaveBackgroundAsOverviewDismissed,
     /// Selektierte Nodes-Kette als gleichmäßig verteilte Wegpunkte neu berechnen (Distanzen)
     ResamplePathRequested,
 }

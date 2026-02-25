@@ -22,7 +22,6 @@ pub fn build(state: &AppState, viewport_size: [f32; 2]) -> RenderScene {
         selected_node_ids: state.selection.selected_node_ids.clone(),
         connect_source_node: state.editor.connect_source_node,
         background_map: state.view.background_map.clone(),
-        background_opacity: state.view.background_opacity,
         background_visible: state.view.background_visible,
         options: state.options.clone(),
         hidden_node_ids,

@@ -17,7 +17,7 @@ pub mod use_cases;
 
 pub use crate::core::Camera2D;
 pub use crate::core::ZipImageEntry;
-pub use crate::core::{ConnectionDirection, ConnectionPriority, RoadMap};
+pub use crate::core::{Connection, ConnectionDirection, ConnectionPriority, RoadMap};
 pub use crate::shared::RenderQuality;
 pub use command_log::CommandLog;
 pub use controller::AppController;

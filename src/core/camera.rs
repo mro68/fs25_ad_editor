@@ -37,9 +37,19 @@ impl Camera2D {
         self.position += delta;
     }
 
-    /// Ändert den Zoom-Level
+    /// Ändert den Zoom-Level (mit Default-Limits clamped: 0.1 - 100.0)
     pub fn zoom_by(&mut self, factor: f32) {
-        self.zoom = (self.zoom * factor).clamp(Self::ZOOM_MIN, Self::ZOOM_MAX);
+        self.zoom_by_clamped(factor, Self::ZOOM_MIN, Self::ZOOM_MAX);
+    }
+
+    /// Ändert den Zoom-Level mit benutzerdefinierten Grenzen
+    pub fn zoom_by_clamped(&mut self, factor: f32, min: f32, max: f32) {
+        self.zoom = (self.zoom * factor).clamp(min, max);
+    }
+
+    /// Clamped den Zoom auf die gegebenen Grenzen
+    pub fn clamp_zoom(&mut self, min: f32, max: f32) {
+        self.zoom = self.zoom.clamp(min, max);
     }
 
     /// Gibt die View-Matrix zurück (für Shader)
