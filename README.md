@@ -8,12 +8,12 @@ Hochperformanter Editor für [AutoDrive](https://github.com/Stephan-S/FS25_AutoD
 
 ## Warum?
 
-Der Original-[AutoDrive Course Editor](https://github.com/Jesper-Hustad/AutoDrive_Course_Editor) (JavaScript/Electron) wird bei großen Karten mit 100.000+ Wegpunkten langsam. Dieser Editor nutzt GPU-Rendering für flüssiges Arbeiten auch bei sehr großen Kursnetzwerken.
+Der Original-[AutoDrive Course Editor](https://github.com/Jesper-Hustad/AutoDrive_Course_Editor) (JavaScript/Electron) wird bei großen Karten mit 10'000+ Wegpunkten bei mir langsam. Dieser Editor nutzt GPU-Rendering für flüssiges Arbeiten auch bei sehr großen Kursnetzwerken.
 
 ## Features
 
 - **Laden & Speichern** von AutoDrive-Configs (FS25 XML-Format)
-- **GPU-Rendering** via wgpu mit Instancing – 100k+ Nodes flüssig
+- **GPU-Rendering** via wgpu mit Instancing – 35k+ Nodes flüssig
 - **Spatial Index** (KD-Tree) für schnelle Punkt-Abfragen
 - **Map-Hintergrund** – DDS/PNG/JPG als Übersichtskarte
 - **Übersichtskarten-Generierung** – Erzeugt vollständige Map-Übersichten direkt aus Map-Mod-ZIPs (Terrain, Farmlands, POIs), Layer einzeln konfigurierbar
