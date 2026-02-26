@@ -40,11 +40,10 @@ fn point_in_polygon(point: glam::Vec2, polygon: &[glam::Vec2]) -> bool {
             return true;
         }
 
+        let denom = previous.y - current.y;
         let intersect = ((current.y > point.y) != (previous.y > point.y))
-            && (point.x
-                < (previous.x - current.x) * (point.y - current.y)
-                    / ((previous.y - current.y).max(f32::EPSILON))
-                    + current.x);
+            && denom.abs() > f32::EPSILON
+            && (point.x < (previous.x - current.x) * (point.y - current.y) / denom + current.x);
 
         if intersect {
             inside = !inside;
