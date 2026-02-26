@@ -1,6 +1,7 @@
 //! Handler für Route-Tool-Operationen (Linie, Parkplatz, Kurve, …).
 
 use crate::app::state::EditorTool;
+use crate::app::tools::common::TangentSource;
 use crate::app::tools::ToolAction;
 use crate::app::use_cases;
 use crate::app::AppState;
@@ -76,13 +77,83 @@ pub fn select(state: &mut AppState, index: usize) {
     state.editor.connect_source_node = None;
     let dir = state.editor.default_direction;
     let prio = state.editor.default_priority;
-    let snap_r = state.options.hitbox_radius();
+    let snap_r = state.options.snap_radius();
     if let Some(tool) = state.editor.tool_manager.active_tool_mut() {
         tool.set_direction(dir);
         tool.set_priority(prio);
         tool.set_snap_radius(snap_r);
     }
     log::info!("Route-Tool aktiviert: Index {}", index);
+}
+
+/// Aktiviert ein Route-Tool und setzt Start/End-Anker aus zwei selektierten Nodes.
+///
+/// Simuliert die beiden on_click()-Aufrufe mit den Node-Positionen.
+/// Bei StraightLine → ReadyToExecute → sofortige Ausführung.
+/// Bei Curves → Phase::Control → User platziert Kontrollpunkte.
+pub fn select_with_anchors(
+    state: &mut AppState,
+    index: usize,
+    start_node_id: u64,
+    end_node_id: u64,
+) {
+    // Tool aktivieren (inkl. Direction/Priority/SnapRadius)
+    select(state, index);
+
+    // Node-Positionen holen
+    let (start_pos, end_pos) = {
+        let Some(road_map) = state.road_map.as_deref() else {
+            return;
+        };
+        let start = road_map.nodes.get(&start_node_id);
+        let end = road_map.nodes.get(&end_node_id);
+        match (start, end) {
+            (Some(s), Some(e)) => (s.position, e.position),
+            _ => {
+                log::warn!(
+                    "Route-Tool mit Ankern: Nodes {}/{} nicht gefunden",
+                    start_node_id,
+                    end_node_id
+                );
+                return;
+            }
+        }
+    };
+
+    // Selektion aufheben (User ist jetzt im Route-Tool)
+    state.selection.ids_mut().clear();
+
+    // Ersten Klick simulieren (Start-Anker)
+    let action1 = {
+        let Some(road_map) = state.road_map.as_deref() else {
+            return;
+        };
+        let Some(tool) = state.editor.tool_manager.active_tool_mut() else {
+            return;
+        };
+        tool.on_click(start_pos, road_map, false)
+    };
+
+    if action1 == ToolAction::ReadyToExecute {
+        execute_and_apply(state);
+        return;
+    }
+
+    // Zweiten Klick simulieren (End-Anker)
+    let action2 = {
+        let Some(road_map) = state.road_map.as_deref() else {
+            return;
+        };
+        let Some(tool) = state.editor.tool_manager.active_tool_mut() else {
+            return;
+        };
+        tool.on_click(end_pos, road_map, false)
+    };
+
+    if action2 == ToolAction::ReadyToExecute {
+        execute_and_apply(state);
+    }
+    // Sonst: Curve-Tool in Phase::Control → User platziert Kontrollpunkte
 }
 
 /// Löscht die letzte Strecke und erstellt sie mit neuen Parametern neu.
@@ -123,6 +194,20 @@ pub fn recreate(state: &mut AppState) {
     }
 }
 
+/// Wendet die vom User gewählten Tangenten an und triggert ggf. eine Neuberechnung.
+pub fn apply_tangent(state: &mut AppState, start: TangentSource, end: TangentSource) {
+    let needs_recreate = if let Some(tool) = state.editor.tool_manager.active_tool_mut() {
+        tool.apply_tangent_selection(start, end);
+        tool.needs_recreate()
+    } else {
+        false
+    };
+
+    if needs_recreate {
+        recreate(state);
+    }
+}
+
 /// Startet einen Drag auf einem Steuerpunkt/Anker des aktiven Route-Tools.
 pub fn drag_start(state: &mut AppState, world_pos: glam::Vec2) {
     let pick_radius = state.options.hitbox_radius();
@@ -148,5 +233,78 @@ pub fn drag_end(state: &mut AppState) {
     };
     if let Some(tool) = state.editor.tool_manager.active_tool_mut() {
         tool.on_drag_end(road_map);
+    }
+}
+
+/// Erhöht die Anzahl der Nodes im aktiven Route-Tool um 1.
+pub fn increase_node_count(state: &mut AppState) {
+    if let Some(tool) = state.editor.tool_manager.active_tool_mut() {
+        tool.increase_node_count();
+    }
+
+    // Wenn das Tool sagt dass Recreate nötig ist → Segment neu erstellen
+    let needs_recreate = state
+        .editor
+        .tool_manager
+        .active_tool()
+        .map(|t| t.needs_recreate())
+        .unwrap_or(false);
+
+    if needs_recreate {
+        recreate(state);
+    }
+}
+
+/// Verringert die Anzahl der Nodes im aktiven Route-Tool um 1 (min. 2).
+pub fn decrease_node_count(state: &mut AppState) {
+    if let Some(tool) = state.editor.tool_manager.active_tool_mut() {
+        tool.decrease_node_count();
+    }
+
+    let needs_recreate = state
+        .editor
+        .tool_manager
+        .active_tool()
+        .map(|t| t.needs_recreate())
+        .unwrap_or(false);
+
+    if needs_recreate {
+        recreate(state);
+    }
+}
+
+/// Erhöht den minimalen Segment-Abstand im aktiven Route-Tool um 0.25m.
+pub fn increase_segment_length(state: &mut AppState) {
+    if let Some(tool) = state.editor.tool_manager.active_tool_mut() {
+        tool.increase_segment_length();
+    }
+
+    let needs_recreate = state
+        .editor
+        .tool_manager
+        .active_tool()
+        .map(|t| t.needs_recreate())
+        .unwrap_or(false);
+
+    if needs_recreate {
+        recreate(state);
+    }
+}
+
+/// Verringert den minimalen Segment-Abstand im aktiven Route-Tool um 0.25m (min. 0.1m).
+pub fn decrease_segment_length(state: &mut AppState) {
+    if let Some(tool) = state.editor.tool_manager.active_tool_mut() {
+        tool.decrease_segment_length();
+    }
+
+    let needs_recreate = state
+        .editor
+        .tool_manager
+        .active_tool()
+        .map(|t| t.needs_recreate())
+        .unwrap_or(false);
+
+    if needs_recreate {
+        recreate(state);
     }
 }

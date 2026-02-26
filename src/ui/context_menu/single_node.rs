@@ -38,7 +38,7 @@ pub fn render_single_node_unselected_menu(
         );
         button_intent(
             ui,
-            "⬚ Hinzufügen",
+            "⬚ Zur Selektion hinzufügen",
             AppIntent::NodePickRequested {
                 world_pos: node.position,
                 additive: true,
@@ -49,15 +49,28 @@ pub fn render_single_node_unselected_menu(
 
         ui.separator();
         ui.label("🗺 Marker");
-        button_intent(
-            ui,
-            "🗺 Erstellen...",
-            AppIntent::CreateMarkerRequested { node_id },
-            events,
-        );
-
-        ui.separator();
-        button_intent(ui, "✂ Löschen", AppIntent::DeleteSelectedRequested, events);
+        let has_marker = road_map.has_marker(node_id);
+        if has_marker {
+            button_intent(
+                ui,
+                "✏ Bearbeiten...",
+                AppIntent::EditMarkerRequested { node_id },
+                events,
+            );
+            button_intent(
+                ui,
+                "✕ Marker löschen",
+                AppIntent::RemoveMarkerRequested { node_id },
+                events,
+            );
+        } else {
+            button_intent(
+                ui,
+                "🗺 Erstellen...",
+                AppIntent::CreateMarkerRequested { node_id },
+                events,
+            );
+        }
     }
 }
 

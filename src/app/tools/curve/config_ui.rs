@@ -2,9 +2,10 @@
 //!
 //! Enthält:
 //! - `render_config_view` — Grad-Auswahl + Segment-Konfiguration im Properties-Panel
-//! - `render_tangent_context_menu` — Tangenten-Auswahl per Rechtsklick-Kontextmenü
+//! - `build_tangent_menu_data` — Datenaufbereitung für Tangenten-Kontextmenü
+//! - `apply_tangent_from_menu` — Anwendung der Tangenten-Auswahl aus dem Kontextmenü
 
-use super::super::common::{render_segment_config_3modes, tangent_options};
+use super::super::common::{render_segment_config_3modes, tangent_options, TangentMenuData};
 use super::super::RouteTool;
 use super::geometry::{approx_length, cubic_bezier, quadratic_bezier};
 use super::state::{CurveDegree, CurveTool, Phase};
@@ -81,15 +82,13 @@ impl CurveTool {
         changed
     }
 
-    /// Rendert das Tangenten-Kontextmenü bei Rechtsklick im Viewport.
+    /// Liefert Tangenten-Menüdaten für das zentrale Kontextmenü (nur Daten, kein UI).
     ///
     /// Nur aktiv für kubische Kurven in `Phase::Control` oder im Adjusting-Modus,
     /// wenn Nachbarn an Start- oder Endpunkt vorhanden sind.
-    ///
-    /// Gibt `true` zurück wenn eine Tangente geändert wurde (inkl. Recreate-Flag-Setzen).
-    pub(super) fn render_tangent_context_menu(&mut self, response: &egui::Response) -> bool {
+    pub(super) fn build_tangent_menu_data(&self) -> Option<TangentMenuData> {
         if self.degree != CurveDegree::Cubic {
-            return false;
+            return None;
         }
 
         let in_control = self.phase == Phase::Control;
@@ -97,63 +96,38 @@ impl CurveTool {
             && self.last_start_anchor.is_some()
             && self.lifecycle.last_end_anchor.is_some();
         if !in_control && !adjusting {
-            return false;
+            return None;
         }
 
         let has_start = !self.tangents.start_neighbors.is_empty();
         let has_end = !self.tangents.end_neighbors.is_empty();
         if !has_start && !has_end {
-            return false;
+            return None;
         }
 
-        // Optionen über gemeinsame Hilfsfunktion aufbereiten
-        let start_opts = tangent_options(&self.tangents.start_neighbors);
-        let end_opts = tangent_options(&self.tangents.end_neighbors);
-        let mut new_start = self.tangents.tangent_start;
-        let mut new_end = self.tangents.tangent_end;
-        let mut changed = false;
+        Some(TangentMenuData {
+            start_options: tangent_options(&self.tangents.start_neighbors),
+            end_options: tangent_options(&self.tangents.end_neighbors),
+            current_start: self.tangents.tangent_start,
+            current_end: self.tangents.tangent_end,
+        })
+    }
 
-        response.context_menu(|ui| {
-            if has_start {
-                ui.label("Tangente Start:");
-                for (source, label) in &start_opts {
-                    let is_sel = *source == new_start;
-                    if ui.selectable_label(is_sel, label).clicked() {
-                        new_start = *source;
-                        changed = true;
-                        ui.close();
-                    }
-                }
-            }
-
-            if has_start && has_end {
-                ui.separator();
-            }
-
-            if has_end {
-                ui.label("Tangente Ende:");
-                for (source, label) in &end_opts {
-                    let is_sel = *source == new_end;
-                    if ui.selectable_label(is_sel, label).clicked() {
-                        new_end = *source;
-                        changed = true;
-                        ui.close();
-                    }
-                }
-            }
-        });
-
-        if changed {
-            self.tangents.tangent_start = new_start;
-            self.tangents.tangent_end = new_end;
-            self.apply_tangent_to_cp();
-            self.sync_derived();
-            self.init_apex();
-            if self.lifecycle.has_last_created() {
-                self.lifecycle.recreate_needed = true;
-            }
+    /// Wendet die vom User gewählten Tangenten aus dem Kontextmenü an.
+    ///
+    /// Aktualisiert Kontrollpunkte, derived state und setzt ggf. das Recreate-Flag.
+    pub(super) fn apply_tangent_from_menu(
+        &mut self,
+        start: super::super::common::TangentSource,
+        end: super::super::common::TangentSource,
+    ) {
+        self.tangents.tangent_start = start;
+        self.tangents.tangent_end = end;
+        self.apply_tangent_to_cp();
+        self.sync_derived();
+        self.init_apex();
+        if self.lifecycle.has_last_created() {
+            self.lifecycle.recreate_needed = true;
         }
-
-        changed
     }
 }

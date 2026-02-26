@@ -176,7 +176,17 @@ impl AppController {
             AppCommand::RouteToolExecute => handlers::route_tool::execute(state),
             AppCommand::RouteToolCancel => handlers::route_tool::cancel(state),
             AppCommand::SelectRouteTool { index } => handlers::route_tool::select(state, index),
+            AppCommand::RouteToolWithAnchors {
+                index,
+                start_node_id,
+                end_node_id,
+            } => {
+                handlers::route_tool::select_with_anchors(state, index, start_node_id, end_node_id)
+            }
             AppCommand::RouteToolRecreate => handlers::route_tool::recreate(state),
+            AppCommand::RouteToolApplyTangent { start, end } => {
+                handlers::route_tool::apply_tangent(state, start, end)
+            }
             AppCommand::RouteToolDragStart { world_pos } => {
                 handlers::route_tool::drag_start(state, world_pos)
             }
@@ -184,6 +194,18 @@ impl AppController {
                 handlers::route_tool::drag_update(state, world_pos)
             }
             AppCommand::RouteToolDragEnd => handlers::route_tool::drag_end(state),
+            AppCommand::IncreaseRouteToolNodeCount => {
+                handlers::route_tool::increase_node_count(state)
+            }
+            AppCommand::DecreaseRouteToolNodeCount => {
+                handlers::route_tool::decrease_node_count(state)
+            }
+            AppCommand::IncreaseRouteToolSegmentLength => {
+                handlers::route_tool::increase_segment_length(state)
+            }
+            AppCommand::DecreaseRouteToolSegmentLength => {
+                handlers::route_tool::decrease_segment_length(state)
+            }
             AppCommand::EditSegment { record_id } => {
                 handlers::editing::edit_segment(state, record_id)
             }

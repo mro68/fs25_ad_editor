@@ -160,7 +160,6 @@ impl EditorApp {
             active_tool,
             route_tool_manager,
             Some(&self.state.segment_registry),
-            &self.state.options,
             &mut self.state.ui.distanzen,
         ));
 
@@ -223,6 +222,17 @@ impl EditorApp {
             .map(|t| t.has_pending_input())
             .unwrap_or(false);
 
+        // Tangenten-Daten vom aktiven Route-Tool abfragen (nur Daten, kein UI)
+        let tangent_data = if self.state.editor.active_tool == EditorTool::Route {
+            self.state
+                .editor
+                .tool_manager
+                .active_tool()
+                .and_then(|t| t.tangent_menu_data())
+        } else {
+            None
+        };
+
         events.extend(self.input.collect_viewport_events(
             ui,
             response,
@@ -235,16 +245,8 @@ impl EditorApp {
             &self.state.options,
             &drag_targets,
             &mut self.state.ui.distanzen,
+            tangent_data,
         ));
-
-        // Tool-Kontextmenü (z.B. Tangenten-Auswahl für Cubic-Kurve)
-        if self.state.editor.active_tool == EditorTool::Route {
-            if let Some(tool) = self.state.editor.tool_manager.active_tool_mut() {
-                if tool.render_context_menu(response) && tool.needs_recreate() {
-                    events.push(AppIntent::RouteToolConfigChanged);
-                }
-            }
-        }
 
         events
     }

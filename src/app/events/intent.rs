@@ -1,4 +1,5 @@
 use super::super::state::EditorTool;
+use crate::app::tools::common::TangentSource;
 use crate::core::{ConnectionDirection, ConnectionPriority};
 use crate::shared::EditorOptions;
 use crate::shared::RenderQuality;
@@ -176,8 +177,19 @@ pub enum AppIntent {
     RouteToolCancelled,
     /// Route-Tool auswählen (per Index im ToolManager)
     SelectRouteToolRequested { index: usize },
+    /// Route-Tool mit vordefinierten Start/End-Nodes aktivieren (Kontextmenü bei 2 selektierten Nodes)
+    RouteToolWithAnchorsRequested {
+        index: usize,
+        start_node_id: u64,
+        end_node_id: u64,
+    },
     /// Route-Tool: Konfiguration geändert (Distanz/Anzahl) → Strecke neu berechnen
     RouteToolConfigChanged,
+    /// Route-Tool: Tangenten-Auswahl aus dem Kontextmenü ändern
+    RouteToolTangentSelected {
+        start: TangentSource,
+        end: TangentSource,
+    },
 
     /// Route-Tool: Drag auf Steuerpunkt/Anker gestartet
     RouteToolDragStarted { world_pos: glam::Vec2 },
@@ -224,4 +236,12 @@ pub enum AppIntent {
     InvertSelectionRequested,
     /// Route-Tool: Strecke neu berechnen mit aktuellem Config (nach Parameter-Änderung)
     RouteToolRecreateRequested,
+    /// Route-Tool: Node-Anzahl erhöhen (Pfeiltaste oben)
+    IncreaseRouteToolNodeCount,
+    /// Route-Tool: Node-Anzahl verringern (Pfeiltaste unten)
+    DecreaseRouteToolNodeCount,
+    /// Route-Tool: Minimalabstand um 0.25m erhöhen (Pfeiltaste rechts)
+    IncreaseRouteToolSegmentLength,
+    /// Route-Tool: Minimalabstand um 0.25m verringern (Pfeiltaste links)
+    DecreaseRouteToolSegmentLength,
 }

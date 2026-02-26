@@ -57,6 +57,21 @@ pub fn show_options_dialog(
                         });
                     });
 
+                    // ── Tools ───────────────────────────────────────
+                    ui.collapsing("Tools", |ui| {
+                        ui.horizontal(|ui| {
+                            ui.label("Snap-Radius:");
+                            changed |= ui
+                                .add(
+                                    egui::DragValue::new(&mut opts.snap_scale_percent)
+                                        .range(50.0..=2000.0)
+                                        .speed(10.0)
+                                        .suffix(" %"),
+                                )
+                                .changed();
+                        });
+                    });
+
                     // ── Selektion ───────────────────────────────────
                     ui.collapsing("Selektion", |ui| {
                         ui.horizontal(|ui| {
@@ -66,16 +81,6 @@ pub fn show_options_dialog(
                                     egui::DragValue::new(&mut opts.selection_size_factor)
                                         .range(1.0..=5.0)
                                         .speed(0.05),
-                                )
-                                .changed();
-                        });
-                        ui.horizontal(|ui| {
-                            ui.label("Pick-Radius (px):");
-                            changed |= ui
-                                .add(
-                                    egui::DragValue::new(&mut opts.selection_pick_radius_px)
-                                        .range(4.0..=50.0)
-                                        .speed(0.5),
                                 )
                                 .changed();
                         });
@@ -253,6 +258,30 @@ pub fn show_options_dialog(
                         changed |= ui
                             .checkbox(&mut opts.overview_layers.legend, "Legende")
                             .changed();
+                    });
+
+                    // ── Node-Verhalten ──────────────────────────────
+                    ui.collapsing("Node-Verhalten", |ui| {
+                        if ui
+                            .checkbox(&mut opts.reconnect_on_delete, "Nach Löschen verbinden")
+                            .on_hover_text(
+                                "Wenn aktiviert: Wird ein Node mit jeweils genau einem Vorgänger und Nachfolger \
+                                 gelöscht, werden Vorgänger und Nachfolger direkt miteinander verbunden.",
+                            )
+                            .changed()
+                        {
+                            changed = true;
+                        }
+                        if ui
+                            .checkbox(&mut opts.split_connection_on_place, "Verbindung beim Platzieren teilen")
+                            .on_hover_text(
+                                "Wenn aktiviert: Wird ein neuer Node nahe einer bestehenden Verbindung \
+                                 platziert, wird diese Verbindung durch den neuen Node aufgeteilt.",
+                            )
+                            .changed()
+                        {
+                            changed = true;
+                        }
                     });
                 });
 

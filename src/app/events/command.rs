@@ -1,4 +1,5 @@
 use super::super::state::EditorTool;
+use crate::app::tools::common::TangentSource;
 use crate::core::{ConnectionDirection, ConnectionPriority};
 use crate::shared::EditorOptions;
 use crate::shared::RenderQuality;
@@ -177,8 +178,27 @@ pub enum AppCommand {
     RouteToolCancel,
     /// Route-Tool per Index aktivieren
     SelectRouteTool { index: usize },
+    /// Route-Tool mit vordefinierten Start/End-Nodes aktivieren und Klicks simulieren
+    RouteToolWithAnchors {
+        index: usize,
+        start_node_id: u64,
+        end_node_id: u64,
+    },
     /// Route-Tool: Strecke neu berechnen (Config geändert)
     RouteToolRecreate,
+    /// Route-Tool: Node-Anzahl erhöhen
+    IncreaseRouteToolNodeCount,
+    /// Route-Tool: Node-Anzahl verringern
+    DecreaseRouteToolNodeCount,
+    /// Route-Tool: Minimalabstand um 0.25m erhöhen
+    IncreaseRouteToolSegmentLength,
+    /// Route-Tool: Minimalabstand um 0.25m verringern
+    DecreaseRouteToolSegmentLength,
+    /// Route-Tool: Tangenten-Auswahl anwenden und ggf. Recreate triggern
+    RouteToolApplyTangent {
+        start: TangentSource,
+        end: TangentSource,
+    },
 
     /// Route-Tool: Drag auf Steuerpunkt/Anker starten
     RouteToolDragStart { world_pos: glam::Vec2 },
