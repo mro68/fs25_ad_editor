@@ -149,7 +149,12 @@ pub(super) fn collect_keyboard_intents(
     }
 
     // Arrow Keys für Route-Tool-Konfiguration (nur wenn Route-Tool aktiv und zeichnet)
-    if active_tool == EditorTool::Route && route_tool_is_drawing && !modifiers.command && !modifiers.shift && !modifiers.alt {
+    if active_tool == EditorTool::Route
+        && route_tool_is_drawing
+        && !modifiers.command
+        && !modifiers.shift
+        && !modifiers.alt
+    {
         if key_up_pressed {
             events.push(AppIntent::IncreaseRouteToolNodeCount);
         }
