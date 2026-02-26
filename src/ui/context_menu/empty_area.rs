@@ -2,7 +2,7 @@
 //!
 //! Zeigt Tool-Auswahl und ggf. Streckenteilung-Controls, wenn diese aktiviert ist.
 
-use super::button_intent;
+use super::{button_intent, render_streckenteilung};
 use crate::app::{state::DistanzenState, AppIntent, EditorTool};
 
 pub fn render_empty_area_menu(
@@ -40,50 +40,6 @@ pub fn render_empty_area_menu(
     // Streckenteilung-Controls, falls aktiv
     if distanzen_state.active {
         ui.separator();
-        ui.label("Streckenteilung:");
-
-        let prev_distance = distanzen_state.distance;
-        ui.horizontal(|ui| {
-            ui.label("Abstand:");
-            ui.add(
-                egui::DragValue::new(&mut distanzen_state.distance)
-                    .speed(0.5)
-                    .range(1.0..=25.0)
-                    .suffix(" m"),
-            );
-        });
-        if (distanzen_state.distance - prev_distance).abs() > f32::EPSILON {
-            distanzen_state.by_count = false;
-            distanzen_state.sync_from_distance();
-        }
-
-        let prev_count = distanzen_state.count;
-        ui.horizontal(|ui| {
-            ui.label("Nodes:");
-            ui.add(
-                egui::DragValue::new(&mut distanzen_state.count)
-                    .speed(1.0)
-                    .range(2..=10000),
-            );
-        });
-        if distanzen_state.count != prev_count {
-            distanzen_state.by_count = true;
-            distanzen_state.sync_from_count();
-            if distanzen_state.distance < 1.0 {
-                distanzen_state.distance = 1.0;
-                distanzen_state.sync_from_distance();
-            }
-        }
-
-        ui.add_space(4.0);
-        if ui.button("✓ Übernehmen").clicked() {
-            events.push(AppIntent::ResamplePathRequested);
-            distanzen_state.deactivate();
-            ui.close();
-        }
-        if ui.button("✕ Verwerfen").clicked() {
-            distanzen_state.deactivate();
-            ui.close();
-        }
+        render_streckenteilung(ui, distanzen_state, events);
     }
 }

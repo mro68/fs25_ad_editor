@@ -20,7 +20,4 @@ pub fn render_route_tool_menu(ui: &mut egui::Ui, events: &mut Vec<AppIntent>) {
         events,
     );
     button_intent(ui, "✕ Abbrechen", AppIntent::RouteToolCancelled, events);
-
-    ui.separator();
-    button_intent(ui, "↶ Rückgängig", AppIntent::UndoRequested, events);
 }

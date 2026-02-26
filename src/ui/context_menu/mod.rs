@@ -1,11 +1,11 @@
 //! Kontextmenü-System: echte Kontext-Befehle (Nodes, Connections, Route-Tool).
 //!
 //! Struktur:
-//! - `mod.rs`: Router + MenuVariant enum + Helper
-//! - `empty_area.rs`: Leerer Bereich (Tool-Auswahl)
-//! - `single_node.rs`: Einzelner Node (selektiert/nicht)
-//! - `multiple_nodes.rs`: Mehrere Nodes (≥2)
-//! - `route_tool.rs`: Route-Tool aktiv
+//! - `mod.rs`: Router + MenuVariant enum + Helpers (button_intent, render_streckenteilung)
+//! - `empty_area.rs`: Leerer Bereich (Tool-Auswahl, Streckenteilung wenn aktiv)
+//! - `single_node.rs`: Einzelner Node (selektiert/nicht) — Info, Selektion, Marker
+//! - `multiple_nodes.rs`: Mehrere Nodes (≥2) — Connections, Streckenteilung, Bulk-Aktionen
+//! - `route_tool.rs`: Route-Tool aktiv — Ausführen/Abbrechen
 
 mod empty_area;
 mod multiple_nodes;
@@ -45,6 +45,70 @@ pub fn button_intent(
     if ui.button(label).clicked() {
         events.push(intent);
         ui.close();
+    }
+}
+
+/// Gemeinsame Streckenteilung-Controls (Abstand + Nodes + Übernehmen/Verwerfen).
+///
+/// Zeigt die Controls wenn `distanzen_state.active`, sonst den Aktivierungs-Button.
+pub fn render_streckenteilung(
+    ui: &mut egui::Ui,
+    distanzen_state: &mut DistanzenState,
+    events: &mut Vec<AppIntent>,
+) {
+    if distanzen_state.active {
+        ui.label("Streckenteilung:");
+
+        let prev_distance = distanzen_state.distance;
+        ui.horizontal(|ui| {
+            ui.label("Abstand:");
+            ui.add(
+                egui::DragValue::new(&mut distanzen_state.distance)
+                    .speed(0.5)
+                    .range(1.0..=25.0)
+                    .suffix(" m"),
+            );
+        });
+        if (distanzen_state.distance - prev_distance).abs() > f32::EPSILON {
+            distanzen_state.by_count = false;
+            distanzen_state.sync_from_distance();
+        }
+
+        let prev_count = distanzen_state.count;
+        ui.horizontal(|ui| {
+            ui.label("Nodes:");
+            ui.add(
+                egui::DragValue::new(&mut distanzen_state.count)
+                    .speed(1.0)
+                    .range(2..=10000),
+            );
+        });
+        if distanzen_state.count != prev_count {
+            distanzen_state.by_count = true;
+            distanzen_state.sync_from_count();
+            if distanzen_state.distance < 1.0 {
+                distanzen_state.distance = 1.0;
+                distanzen_state.sync_from_distance();
+            }
+        }
+
+        ui.add_space(4.0);
+        if ui.button("✓ Übernehmen").clicked() {
+            events.push(AppIntent::ResamplePathRequested);
+            distanzen_state.deactivate();
+            ui.close();
+        }
+        if ui.button("✕ Verwerfen").clicked() {
+            distanzen_state.deactivate();
+            ui.close();
+        }
+    } else {
+        button_intent(
+            ui,
+            "✂ Streckenteilung",
+            AppIntent::StreckenteilungAktivieren,
+            events,
+        );
     }
 }
 
@@ -95,14 +159,27 @@ pub fn show_viewport_context_menu(
         hovered_node_id,
         route_tool_has_input,
     ) {
-        (0, None, true) => MenuVariant::RouteToolActive,
-        (0, None, _) => MenuVariant::EmptyArea, // Tool-Auswahl auf leerem Bereich
-        (0, Some(id), _) => MenuVariant::SingleNodeUnselected { node_id: id },
-        (1, Some(id), _) if selected_node_ids.contains(&id) => {
+        // Route-Tool aktiv: eigenes Menü (nur wenn kein Node gehovered)
+        (_, None, true) => MenuVariant::RouteToolActive,
+        // Kein Node gehovered, keine Selektion → Tool-Auswahl
+        (0, None, _) => MenuVariant::EmptyArea,
+        // Kein Node gehovered, aber Nodes selektiert → Selektion-Menü
+        (1, None, _) => {
+            // Einzigen selektierten Node als Kontext verwenden
+            let &id = selected_node_ids.iter().next().unwrap();
             MenuVariant::SingleNodeSelected { node_id: id }
         }
-        (n, _, _) if n >= 2 => MenuVariant::MultipleNodesSelected,
-        _ => MenuVariant::EmptyArea, // Default: Tool-Auswahl
+        (n, None, _) if n >= 2 => MenuVariant::MultipleNodesSelected,
+        // Node gehovered, der noch nicht selektiert ist
+        (_, Some(id), _) if !selected_node_ids.contains(&id) => {
+            MenuVariant::SingleNodeUnselected { node_id: id }
+        }
+        // Node gehovered, der selektiert ist (bei Einzel-Selektion)
+        (1, Some(id), _) => MenuVariant::SingleNodeSelected { node_id: id },
+        // Node gehovered + Multi-Selektion → Multi-Menü
+        (n, Some(_), _) if n >= 2 => MenuVariant::MultipleNodesSelected,
+        // Fallback
+        _ => MenuVariant::EmptyArea,
     };
 
     response.context_menu(|ui| match variant {
@@ -117,66 +194,5 @@ pub fn show_viewport_context_menu(
             render_multiple_nodes_menu(ui, selected_node_ids, rm, distanzen_state, events)
         }
         MenuVariant::RouteToolActive => render_route_tool_menu(ui, events),
-    });
-}
-
-/// Legacy-Wrapper für bestehende `show_connection_context_menu` und `show_node_marker_context_menu`
-/// zur Rückwärts-Kompatibilität beim Übergang zum neuen System.
-#[allow(dead_code)]
-pub(super) fn show_connection_context_menu(
-    response: &egui::Response,
-    road_map: Option<&RoadMap>,
-    selected_node_ids: &HashSet<u64>,
-    distanzen_state: &mut DistanzenState,
-    events: &mut Vec<AppIntent>,
-) {
-    if selected_node_ids.len() < 2 {
-        return;
-    }
-
-    let Some(rm) = road_map else {
-        return;
-    };
-
-    let connection_count = rm
-        .connections_iter()
-        .filter(|c| {
-            selected_node_ids.contains(&c.start_id) && selected_node_ids.contains(&c.end_id)
-        })
-        .count();
-
-    if connection_count == 0 && selected_node_ids.len() != 2 {
-        return;
-    }
-
-    // Delegiere an neue Struktur
-    show_viewport_context_menu(
-        response,
-        Some(rm),
-        selected_node_ids,
-        distanzen_state,
-        None, // Keine Welt-Position für Legacy-Pfad
-        false,
-        events,
-    );
-}
-
-#[allow(dead_code)]
-pub(super) fn show_node_marker_context_menu(
-    response: &egui::Response,
-    road_map: Option<&RoadMap>,
-    node_id: u64,
-    events: &mut Vec<AppIntent>,
-) {
-    let Some(rm) = road_map else {
-        return;
-    };
-
-    if !rm.nodes.contains_key(&node_id) {
-        return;
-    }
-
-    response.context_menu(|ui| {
-        render_single_node_selected_menu(ui, node_id, rm, events);
     });
 }
