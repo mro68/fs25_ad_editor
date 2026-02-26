@@ -238,7 +238,11 @@ impl EditorApp {
         ));
 
         // Tool-Kontextmenü (z.B. Tangenten-Auswahl für Cubic-Kurve)
-        if self.state.editor.active_tool == EditorTool::Route {
+        // NUR rendern wenn das Viewport-Kontextmenü NICHT aktiv ist,
+        // da egui nur einen context_menu()-Aufruf pro Response erlaubt.
+        if self.state.editor.active_tool == EditorTool::Route
+            && !self.input.viewport_context_menu_active
+        {
             if let Some(tool) = self.state.editor.tool_manager.active_tool_mut() {
                 if tool.render_context_menu(response) && tool.needs_recreate() {
                     events.push(AppIntent::RouteToolConfigChanged);

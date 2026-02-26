@@ -52,6 +52,8 @@ pub struct InputState {
     /// Eingefrorene MenuVariant + Selektion-Snapshot während das Menü offen ist
     cached_menu_variant: Option<context_menu::MenuVariant>,
     cached_menu_selection: Option<HashSet<u64>>,
+    /// True wenn das Viewport-Kontextmenü gerade aktiv ist (verhindert doppelten `context_menu()`-Aufruf)
+    pub viewport_context_menu_active: bool,
 }
 
 impl InputState {
@@ -63,6 +65,7 @@ impl InputState {
             context_menu_position: None,
             cached_menu_variant: None,
             cached_menu_selection: None,
+            viewport_context_menu_active: false,
         }
     }
 
@@ -192,6 +195,11 @@ impl InputState {
             variant,
             &mut events,
         );
+
+        // Flag setzen: Viewport-Kontextmenü ist aktiv wenn die Variante NICHT
+        // das Route-Tool ist (denn das Route-Tool hat ein eigenes Tangenten-Menü).
+        // Bzw. generell: wenn ein Rechtsklick stattfand, ist unser Menü zuständig.
+        self.viewport_context_menu_active = self.is_context_menu_open(response);
 
         self.handle_scroll_zoom(&ctx, &mut events);
 
