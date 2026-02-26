@@ -14,6 +14,7 @@ mod zoom;
 use super::context_menu;
 use super::drag::{draw_drag_selection_overlay, DragSelection};
 use super::keyboard;
+use crate::app::tools::common::TangentMenuData;
 use crate::app::{AppIntent, Camera2D, EditorTool, RoadMap};
 use crate::shared::EditorOptions;
 use std::collections::HashSet;
@@ -47,13 +48,10 @@ pub(crate) struct ViewportContext<'a> {
 pub struct InputState {
     pub(crate) primary_drag_mode: PrimaryDragMode,
     pub(crate) drag_selection: Option<DragSelection>,
-    /// Speichert Mausposition beim Öffnen eines Context-Menüs, um Hover-Detektion stabil zu halten
-    context_menu_position: Option<glam::Vec2>,
-    /// Eingefrorene MenuVariant + Selektion-Snapshot während das Menü offen ist
+    /// Eingefrorene MenuVariant + Selektion-Snapshot während das Menü offen ist.
+    /// Wird beim Rechtsklick gesetzt und erst geleert, wenn egui das Popup schließt.
     cached_menu_variant: Option<context_menu::MenuVariant>,
     cached_menu_selection: Option<HashSet<u64>>,
-    /// True wenn das Viewport-Kontextmenü gerade aktiv ist (verhindert doppelten `context_menu()`-Aufruf)
-    pub viewport_context_menu_active: bool,
 }
 
 impl InputState {
@@ -62,25 +60,9 @@ impl InputState {
         Self {
             primary_drag_mode: PrimaryDragMode::None,
             drag_selection: None,
-            context_menu_position: None,
             cached_menu_variant: None,
             cached_menu_selection: None,
-            viewport_context_menu_active: false,
         }
-    }
-
-    /// Prüft ob gerade ein Context-Menu offen ist (vereinfachte Heuristik: Position gecacht).
-    fn is_context_menu_open(&self, response: &egui::Response) -> bool {
-        // Menu ist wahrscheinlich offen, wenn:
-        // 1. Position gecacht ist
-        // 2. AND Response noch interaktiv ist (nicht außerhalb des Viewports)
-        self.context_menu_position.is_some() && response.hovered()
-    }
-
-    /// Cleared den Context-Menu-Cache (z.B. nach Klick auf ein Item).
-    #[allow(dead_code)]
-    fn reset_context_menu(&mut self) {
-        self.context_menu_position = None;
     }
 
     #[allow(clippy::too_many_arguments)]
@@ -91,6 +73,9 @@ impl InputState {
     ///
     /// `drag_targets` enthält die Weltpositionen verschiebbarer Punkte
     /// des aktiven Route-Tools (leer wenn kein Tool aktiv oder keine Targets).
+    ///
+    /// `tangent_data` enthält optionale Tangenten-Menüdaten vom aktiven Route-Tool
+    /// (nur bei kubischer Kurve in Control-Phase mit Nachbarn).
     pub fn collect_viewport_events(
         &mut self,
         ui: &egui::Ui,
@@ -104,6 +89,7 @@ impl InputState {
         options: &EditorOptions,
         drag_targets: &[glam::Vec2],
         distanzen_state: &mut crate::app::state::DistanzenState,
+        tangent_data: Option<TangentMenuData>,
     ) -> Vec<AppIntent> {
         let ctx = ViewportContext {
             ui,
@@ -143,45 +129,47 @@ impl InputState {
         // Drag-Selektion Overlay (ausgelagert in drag.rs)
         draw_drag_selection_overlay(self.drag_selection.as_ref(), ui, response);
 
-        // Neues Context-Menu-System: Alle 4 Varianten über einheitlichen Router
-        // WICHTIG: Position + MenuVariant beim Rechtsklick einfrieren,
-        // damit Zustandsänderungen (Esc, Deselection) kein Flackern verursachen.
-        let pointer_pos_world = if self.is_context_menu_open(response) {
-            self.context_menu_position
-        } else {
-            // Cache leeren wenn Menu geschlossen wurde
+        // ── Einheitliches Context-Menu-System ───────────────────────────
+        // Genau EIN `response.context_menu()`-Aufruf pro Frame.
+        //
+        // Open-Detection über egui's interne Popup-ID (deterministisch),
+        // statt heuristischer Position+Hover-Prüfung.
+        let popup_id = response.id.with("context_menu");
+        let is_popup_open = egui::Popup::is_id_open(ui.ctx(), popup_id);
+
+        // Cache leeren wenn Popup geschlossen wurde
+        if !is_popup_open {
             self.cached_menu_variant = None;
             self.cached_menu_selection = None;
-            response.hover_pos().map(|screen_pos| {
+        }
+
+        // Beim Rechtsklick: Variant + Selektion einfrieren
+        if response.secondary_clicked() {
+            let pointer_pos_world = response.hover_pos().map(|screen_pos| {
                 let local = screen_pos - response.rect.min;
                 camera.screen_to_world(
                     glam::Vec2::new(local.x, local.y),
                     glam::Vec2::new(viewport_size[0], viewport_size[1]),
                 )
-            })
-        };
+            });
 
-        // Beim Rechtsklick: Position + Variant + Selektion einfrieren
-        if response.secondary_clicked() {
-            self.context_menu_position = pointer_pos_world;
             self.cached_menu_variant = Some(context_menu::determine_menu_variant(
                 road_map,
                 selected_node_ids,
                 pointer_pos_world,
                 route_tool_is_drawing && active_tool == EditorTool::Route,
+                tangent_data,
             ));
             self.cached_menu_selection = Some(selected_node_ids.clone());
         }
 
-        // Eingefrorene Variant verwenden falls vorhanden, sonst frisch berechnen
-        let variant = self.cached_menu_variant.unwrap_or_else(|| {
-            context_menu::determine_menu_variant(
-                road_map,
-                selected_node_ids,
-                pointer_pos_world,
-                route_tool_is_drawing && active_tool == EditorTool::Route,
-            )
-        });
+        // Eingefrorene Variant verwenden falls vorhanden, sonst EmptyArea als Fallback.
+        // Die Variante wird NICHT jedes Frame neu berechnet — nur beim Rechtsklick.
+        let variant = self
+            .cached_menu_variant
+            .as_ref()
+            .cloned()
+            .unwrap_or(context_menu::MenuVariant::EmptyArea);
         let menu_selection = self
             .cached_menu_selection
             .as_ref()
@@ -192,14 +180,9 @@ impl InputState {
             road_map,
             menu_selection,
             distanzen_state,
-            variant,
+            &variant,
             &mut events,
         );
-
-        // Flag setzen: Viewport-Kontextmenü ist aktiv wenn die Variante NICHT
-        // das Route-Tool ist (denn das Route-Tool hat ein eigenes Tangenten-Menü).
-        // Bzw. generell: wenn ein Rechtsklick stattfand, ist unser Menü zuständig.
-        self.viewport_context_menu_active = self.is_context_menu_open(response);
 
         self.handle_scroll_zoom(&ctx, &mut events);
 

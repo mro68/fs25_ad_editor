@@ -18,4 +18,4 @@ pub(crate) use geometry::angle_to_compass;
 pub(crate) use geometry::{linear_connections, populate_neighbors, tangent_options};
 pub(crate) use lifecycle::{render_segment_config_3modes, SegmentConfig, ToolLifecycleState};
 pub use tangent::TangentSource;
-pub(crate) use tangent::{render_tangent_combo, TangentState};
+pub(crate) use tangent::{render_tangent_combo, TangentMenuData, TangentState};

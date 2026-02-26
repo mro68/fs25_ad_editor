@@ -1,6 +1,7 @@
 //! Handler für Route-Tool-Operationen (Linie, Parkplatz, Kurve, …).
 
 use crate::app::state::EditorTool;
+use crate::app::tools::common::TangentSource;
 use crate::app::tools::ToolAction;
 use crate::app::use_cases;
 use crate::app::AppState;
@@ -90,7 +91,12 @@ pub fn select(state: &mut AppState, index: usize) {
 /// Simuliert die beiden on_click()-Aufrufe mit den Node-Positionen.
 /// Bei StraightLine → ReadyToExecute → sofortige Ausführung.
 /// Bei Curves → Phase::Control → User platziert Kontrollpunkte.
-pub fn select_with_anchors(state: &mut AppState, index: usize, start_node_id: u64, end_node_id: u64) {
+pub fn select_with_anchors(
+    state: &mut AppState,
+    index: usize,
+    start_node_id: u64,
+    end_node_id: u64,
+) {
     // Tool aktivieren (inkl. Direction/Priority/SnapRadius)
     select(state, index);
 
@@ -104,7 +110,11 @@ pub fn select_with_anchors(state: &mut AppState, index: usize, start_node_id: u6
         match (start, end) {
             (Some(s), Some(e)) => (s.position, e.position),
             _ => {
-                log::warn!("Route-Tool mit Ankern: Nodes {}/{} nicht gefunden", start_node_id, end_node_id);
+                log::warn!(
+                    "Route-Tool mit Ankern: Nodes {}/{} nicht gefunden",
+                    start_node_id,
+                    end_node_id
+                );
                 return;
             }
         }
@@ -181,6 +191,20 @@ pub fn recreate(state: &mut AppState) {
             tool.clear_recreate_flag();
             tool.set_last_created(&new_ids, rm);
         }
+    }
+}
+
+/// Wendet die vom User gewählten Tangenten an und triggert ggf. eine Neuberechnung.
+pub fn apply_tangent(state: &mut AppState, start: TangentSource, end: TangentSource) {
+    let needs_recreate = if let Some(tool) = state.editor.tool_manager.active_tool_mut() {
+        tool.apply_tangent_selection(start, end);
+        tool.needs_recreate()
+    } else {
+        false
+    };
+
+    if needs_recreate {
+        recreate(state);
     }
 }
 

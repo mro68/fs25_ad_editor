@@ -57,6 +57,23 @@ pub fn render_tangent_combo(
     *current != old
 }
 
+/// Reine Daten für das Tangenten-Kontextmenü (kein UI).
+///
+/// Wird vom RouteTool-Trait via `tangent_menu_data()` geliefert,
+/// damit der zentrale Context-Menu-Router die Tangenten-Auswahl
+/// in einem einzigen `response.context_menu()`-Aufruf rendern kann.
+#[derive(Debug, Clone)]
+pub struct TangentMenuData {
+    /// Aufbereitete Optionen für Start-Tangente: (TangentSource, Label)
+    pub start_options: Vec<(TangentSource, String)>,
+    /// Aufbereitete Optionen für End-Tangente: (TangentSource, Label)
+    pub end_options: Vec<(TangentSource, String)>,
+    /// Aktuell gewählte Start-Tangente
+    pub current_start: TangentSource,
+    /// Aktuell gewählte End-Tangente
+    pub current_end: TangentSource,
+}
+
 /// Gemeinsamer Tangenten-Zustand für Curve- und Spline-Tool.
 ///
 /// Kapselt die 6 Tangenten-Felder, die beide Tools identisch teilen,

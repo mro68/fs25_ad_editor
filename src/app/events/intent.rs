@@ -1,4 +1,5 @@
 use super::super::state::EditorTool;
+use crate::app::tools::common::TangentSource;
 use crate::core::{ConnectionDirection, ConnectionPriority};
 use crate::shared::EditorOptions;
 use crate::shared::RenderQuality;
@@ -184,6 +185,11 @@ pub enum AppIntent {
     },
     /// Route-Tool: Konfiguration geändert (Distanz/Anzahl) → Strecke neu berechnen
     RouteToolConfigChanged,
+    /// Route-Tool: Tangenten-Auswahl aus dem Kontextmenü ändern
+    RouteToolTangentSelected {
+        start: TangentSource,
+        end: TangentSource,
+    },
 
     /// Route-Tool: Drag auf Steuerpunkt/Anker gestartet
     RouteToolDragStarted { world_pos: glam::Vec2 },

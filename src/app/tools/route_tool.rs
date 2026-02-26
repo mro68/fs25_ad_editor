@@ -4,6 +4,7 @@ use crate::app::segment_registry::{SegmentKind, SegmentRecord};
 use crate::core::{ConnectionDirection, ConnectionPriority, RoadMap};
 use glam::Vec2;
 
+use super::common::TangentMenuData;
 use super::{ToolAction, ToolAnchor, ToolPreview, ToolResult};
 
 /// Schnittstelle für alle Route-Tools (Linie, Parkplatz, Kurve, …).
@@ -110,14 +111,25 @@ pub trait RouteTool {
     /// Beendet den Drag (ggf. Re-Snap auf existierenden Node).
     fn on_drag_end(&mut self, _road_map: &RoadMap) {}
 
-    /// Rendert ein Kontextmenü (Rechtsklick im Viewport) für das Tool.
+    /// Liefert Tangenten-Menüdaten für das Kontextmenü (nur Daten, kein UI).
     ///
-    /// Wird im Viewport aufgerufen solange das Tool aktiv ist.
-    /// Das CurveTool nutzt dies für die Tangenten-Auswahl (Rechtsklick → NW/SO-Einträge).
+    /// Gibt `Some(TangentMenuData)` zurück wenn das Tool Tangenten-Optionen
+    /// anbieten kann (z.B. kubische Kurve in Control-Phase mit Nachbarn).
+    /// Gibt `None` zurück wenn keine Tangenten-Auswahl verfügbar ist.
+    fn tangent_menu_data(&self) -> Option<TangentMenuData> {
+        None
+    }
+
+    /// Wendet die vom User gewählten Tangenten an.
     ///
-    /// Gibt `true` zurück wenn sich der Tool-Zustand geändert hat (ggf. Recreate nötig).
-    fn render_context_menu(&mut self, _response: &egui::Response) -> bool {
-        false
+    /// Wird vom Context-Menu-Router aufgerufen nachdem der User eine
+    /// Tangente im Menü ausgewählt hat. Das Tool aktualisiert seine
+    /// Kontrollpunkte und setzt ggf. das Recreate-Flag.
+    fn apply_tangent_selection(
+        &mut self,
+        _start: super::common::TangentSource,
+        _end: super::common::TangentSource,
+    ) {
     }
 
     /// Erstellt einen `SegmentRecord` für die Registry aus dem aktuellen Tool-Zustand.
