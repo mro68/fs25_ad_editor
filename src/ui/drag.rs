@@ -47,8 +47,21 @@ pub(super) fn draw_drag_selection_overlay(
         return;
     };
 
-    let stroke = egui::Stroke::new(1.5, ui.visuals().selection.stroke.color);
-    let fill = ui.visuals().selection.bg_fill.gamma_multiply(0.15);
+    let mut stroke_color = ui.visuals().selection.stroke.color;
+    if stroke_color.a() == 0 {
+        // Fallback, falls Theme die Selection-Stroke transparent setzt.
+        stroke_color = egui::Color32::from_rgb(80, 200, 255);
+    }
+    let stroke = egui::Stroke::new(1.5, stroke_color);
+
+    let mut fill_color = ui.visuals().selection.bg_fill;
+    if fill_color.a() == 0 {
+        // Fallback, falls Theme die Selection-Fill transparent setzt.
+        fill_color = egui::Color32::from_rgba_unmultiplied(80, 200, 255, 40);
+    } else {
+        fill_color = fill_color.gamma_multiply(0.15);
+    }
+    let fill = fill_color;
     let painter = ui.painter();
 
     match selection.mode {
