@@ -137,24 +137,22 @@ pub fn find_nearest_node_at(world_pos: glam::Vec2, road_map: &RoadMap) -> Option
 // NEUE GENERALISIERTE CONTEXT-MENU-STRUKTUR
 // =============================================================================
 
-/// Neue Haupt-Entry-Point: Viewport-Context-Menu-Router für echte Kontext-Befehle.
-///
 /// Bestimmt die MenuVariant basierend auf Kontext (Node-Hoverung, Selection, Route-Tool).
-/// Zeigt nur context-spezifische Menüs an — keine globalen Befehle (Datei, Bearbeiten, Ansicht).
-pub fn show_viewport_context_menu(
-    response: &egui::Response,
+///
+/// Wird einmal beim Rechtsklick aufgerufen und das Ergebnis eingefroren, bis das Menü
+/// geschlossen wird — so verursachen Zustandsänderungen (Esc, Deselection) kein Flackern.
+pub fn determine_menu_variant(
     road_map: Option<&RoadMap>,
     selected_node_ids: &HashSet<u64>,
-    distanzen_state: &mut DistanzenState,
     pointer_pos_world: Option<glam::Vec2>,
     route_tool_has_input: bool,
-    events: &mut Vec<AppIntent>,
-) {
-    // Bestimme MenuVariant
-    let Some(rm) = road_map else { return };
+) -> MenuVariant {
+    let Some(rm) = road_map else {
+        return MenuVariant::EmptyArea;
+    };
     let hovered_node_id = pointer_pos_world.and_then(|pos| find_nearest_node_at(pos, rm));
 
-    let variant = match (
+    match (
         selected_node_ids.len(),
         hovered_node_id,
         route_tool_has_input,
@@ -165,7 +163,6 @@ pub fn show_viewport_context_menu(
         (0, None, _) => MenuVariant::EmptyArea,
         // Kein Node gehovered, aber Nodes selektiert → Selektion-Menü
         (1, None, _) => {
-            // Einzigen selektierten Node als Kontext verwenden
             let &id = selected_node_ids.iter().next().unwrap();
             MenuVariant::SingleNodeSelected { node_id: id }
         }
@@ -180,7 +177,19 @@ pub fn show_viewport_context_menu(
         (n, Some(_), _) if n >= 2 => MenuVariant::MultipleNodesSelected,
         // Fallback
         _ => MenuVariant::EmptyArea,
-    };
+    }
+}
+
+/// Rendert das Kontextmenü basierend auf der eingefrorenen MenuVariant.
+pub fn render_context_menu(
+    response: &egui::Response,
+    road_map: Option<&RoadMap>,
+    selected_node_ids: &HashSet<u64>,
+    distanzen_state: &mut DistanzenState,
+    variant: MenuVariant,
+    events: &mut Vec<AppIntent>,
+) {
+    let Some(rm) = road_map else { return };
 
     response.context_menu(|ui| match variant {
         MenuVariant::EmptyArea => render_empty_area_menu(ui, distanzen_state, events),
