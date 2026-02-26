@@ -80,6 +80,10 @@ pub(super) fn collect_keyboard_intents(
         key_c_pressed,
         key_x_pressed,
         key_enter_pressed,
+        key_up_pressed,
+        key_down_pressed,
+        key_left_pressed,
+        key_right_pressed,
     ) = ui.input(|i| {
         (
             i.key_pressed(egui::Key::Delete) || i.key_pressed(egui::Key::Backspace),
@@ -89,6 +93,10 @@ pub(super) fn collect_keyboard_intents(
             i.key_pressed(egui::Key::C),
             i.key_pressed(egui::Key::X),
             i.key_pressed(egui::Key::Enter),
+            i.key_pressed(egui::Key::ArrowUp),
+            i.key_pressed(egui::Key::ArrowDown),
+            i.key_pressed(egui::Key::ArrowLeft),
+            i.key_pressed(egui::Key::ArrowRight),
         )
     });
 
@@ -138,6 +146,22 @@ pub(super) fn collect_keyboard_intents(
             node_a: ids[0],
             node_b: ids[1],
         });
+    }
+
+    // Arrow Keys für Route-Tool-Konfiguration (nur wenn Route-Tool aktiv und zeichnet)
+    if active_tool == EditorTool::Route && route_tool_is_drawing && !modifiers.command && !modifiers.shift && !modifiers.alt {
+        if key_up_pressed {
+            events.push(AppIntent::IncreaseRouteToolNodeCount);
+        }
+        if key_down_pressed {
+            events.push(AppIntent::DecreaseRouteToolNodeCount);
+        }
+        if key_right_pressed {
+            events.push(AppIntent::IncreaseRouteToolSegmentLength);
+        }
+        if key_left_pressed {
+            events.push(AppIntent::DecreaseRouteToolSegmentLength);
+        }
     }
 
     events

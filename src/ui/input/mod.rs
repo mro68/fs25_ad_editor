@@ -43,15 +43,32 @@ pub(crate) struct ViewportContext<'a> {
     pub drag_targets: &'a [glam::Vec2],
 }
 
+/// Immutable Snapshot des Kontextmenü-States beim Rechtsklick.
+///
+/// Dieser Snapshot gefriert den kompletten Zustand ein, der zum Zeitpunkt
+/// des Rechtsklicks galt — damit Menüinhalt stabil bleibt, solange das
+/// Popup offen ist. Zustandsänderungen (Escape, Deselection etc.) beeinflussen
+/// nicht das bereits offene Menü.
+#[derive(Debug, Clone)]
+struct ContextMenuSnapshot {
+    /// Eingefrorene Menu-Variante
+    variant: context_menu::MenuVariant,
+    /// Eingefrorene Selection-Menge
+    selection: HashSet<u64>,
+    /// Pointer-Position in Weltkoordinaten beim Rechtsklick
+    /// (für zukünftige kontextabhängige Menu-Rendering-Features)
+    #[allow(dead_code)]
+    pointer_pos_world: Option<glam::Vec2>,
+}
+
 /// Verwaltet den Input-Zustand für das Viewport (Drag, Selektion, Scroll)
 #[derive(Default)]
 pub struct InputState {
     pub(crate) primary_drag_mode: PrimaryDragMode,
     pub(crate) drag_selection: Option<DragSelection>,
-    /// Eingefrorene MenuVariant + Selektion-Snapshot während das Menü offen ist.
+    /// Snapshot des Menü-Zustands, gültig solange das Popup offen ist.
     /// Wird beim Rechtsklick gesetzt und erst geleert, wenn egui das Popup schließt.
-    cached_menu_variant: Option<context_menu::MenuVariant>,
-    cached_menu_selection: Option<HashSet<u64>>,
+    context_menu_snapshot: Option<ContextMenuSnapshot>,
 }
 
 impl InputState {
@@ -60,8 +77,7 @@ impl InputState {
         Self {
             primary_drag_mode: PrimaryDragMode::None,
             drag_selection: None,
-            cached_menu_variant: None,
-            cached_menu_selection: None,
+            context_menu_snapshot: None,
         }
     }
 
@@ -131,51 +147,48 @@ impl InputState {
 
         // ── Einheitliches Context-Menu-System ───────────────────────────
         // Genau EIN `response.context_menu()`-Aufruf pro Frame.
-        //
-        // Open-Detection über egui's interne Popup-ID (deterministisch),
-        // statt heuristischer Position+Hover-Prüfung.
-        let popup_id = response.id.with("context_menu");
-        let is_popup_open = egui::Popup::is_id_open(ui.ctx(), popup_id);
 
-        // Cache leeren wenn Popup geschlossen wurde
-        if !is_popup_open {
-            self.cached_menu_variant = None;
-            self.cached_menu_selection = None;
+        let pointer_pos_world = response.hover_pos().map(|screen_pos| {
+            let local = screen_pos - response.rect.min;
+            camera.screen_to_world(
+                glam::Vec2::new(local.x, local.y),
+                glam::Vec2::new(viewport_size[0], viewport_size[1]),
+            )
+        });
+
+        // Beim Rechtsklick: Snapshot erstellen und einfrieren
+        if response.secondary_clicked() {
+            let variant = context_menu::determine_menu_variant(
+                road_map,
+                selected_node_ids,
+                pointer_pos_world,
+                route_tool_is_drawing && active_tool == EditorTool::Route,
+                tangent_data.clone(),
+                options.snap_radius(),
+            );
+            self.context_menu_snapshot = Some(ContextMenuSnapshot {
+                variant,
+                selection: selected_node_ids.clone(),
+                pointer_pos_world,
+            });
         }
 
-        // Beim Rechtsklick: Variant + Selektion einfrieren
-        if response.secondary_clicked() {
-            let pointer_pos_world = response.hover_pos().map(|screen_pos| {
-                let local = screen_pos - response.rect.min;
-                camera.screen_to_world(
-                    glam::Vec2::new(local.x, local.y),
-                    glam::Vec2::new(viewport_size[0], viewport_size[1]),
-                )
-            });
-
-            self.cached_menu_variant = Some(context_menu::determine_menu_variant(
+        // Eingefrorener Snapshot verwenden, falls vorhanden, sonst live berechnen.
+        let (variant, menu_selection) = if let Some(snapshot) = &self.context_menu_snapshot {
+            (snapshot.variant.clone(), &snapshot.selection)
+        } else {
+            let v = context_menu::determine_menu_variant(
                 road_map,
                 selected_node_ids,
                 pointer_pos_world,
                 route_tool_is_drawing && active_tool == EditorTool::Route,
                 tangent_data,
-            ));
-            self.cached_menu_selection = Some(selected_node_ids.clone());
-        }
+                options.snap_radius(),
+            );
+            (v, selected_node_ids)
+        };
 
-        // Eingefrorene Variant verwenden falls vorhanden, sonst EmptyArea als Fallback.
-        // Die Variante wird NICHT jedes Frame neu berechnet — nur beim Rechtsklick.
-        let variant = self
-            .cached_menu_variant
-            .as_ref()
-            .cloned()
-            .unwrap_or(context_menu::MenuVariant::EmptyArea);
-        let menu_selection = self
-            .cached_menu_selection
-            .as_ref()
-            .unwrap_or(selected_node_ids);
-
-        context_menu::render_context_menu(
+        let menu_is_open = context_menu::render_context_menu(
             response,
             road_map,
             menu_selection,
@@ -183,6 +196,11 @@ impl InputState {
             &variant,
             &mut events,
         );
+
+        // Cache leeren sobald das Popup geschlossen ist.
+        if !menu_is_open {
+            self.context_menu_snapshot = None;
+        }
 
         self.handle_scroll_zoom(&ctx, &mut events);
 

@@ -64,7 +64,6 @@ Zentral gesammelte Konfigurationswerte, gegliedert nach Bereich:
 | Kamera | `CAMERA_ZOOM_MIN` / `MAX` | 0.1 / 100.0 | Zoom-Grenzen (Referenz-Duplikat) |
 | Kamera | `CAMERA_ZOOM_STEP` | 1.2 | Zoom-Schritt bei Menü-Buttons / Shortcuts |
 | Kamera | `CAMERA_SCROLL_ZOOM_STEP` | 1.1 | Zoom-Schritt bei Mausrad-Scroll |
-| Selektion | `SELECTION_PICK_RADIUS_PX` | 12.0 | Maus-Fangradius in Pixeln |
 | Selektion | `SELECTION_SIZE_FACTOR` | 1.8 | Vergrößerung selektierter Nodes |
 | Nodes | `NODE_SIZE_WORLD` | 0.5 | Feste Node-Größe in Welt-Einheiten |
 | Nodes | `NODE_COLOR_DEFAULT` | `[0.0, 0.8, 1.0, 1.0]` | Cyan (Regular) |
@@ -123,7 +122,6 @@ pub struct EditorOptions {
     pub node_color_warning: [f32; 4],
     // Selektion
     pub selection_size_factor: f32,
-    pub selection_pick_radius_px: f32,
     // Connections
     pub connection_thickness_world: f32,
     pub connection_thickness_subprio_world: f32,

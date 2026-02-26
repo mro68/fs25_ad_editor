@@ -120,13 +120,16 @@ pub fn render_streckenteilung(
 }
 
 /// Hilfsfunktion: Nächsten Node bei einer Weltposition finden (Snap-Range).
-pub fn find_nearest_node_at(world_pos: glam::Vec2, road_map: &RoadMap) -> Option<u64> {
-    const SNAP_RADIUS: f32 = 15.0; // Pixel in Welteinheiten (etwa)
+pub fn find_nearest_node_at(
+    world_pos: glam::Vec2,
+    road_map: &RoadMap,
+    snap_radius: f32,
+) -> Option<u64> {
     let mut nearest: Option<(u64, f32)> = None;
 
     for (id, node) in &road_map.nodes {
         let dist = node.position.distance(world_pos);
-        if dist <= SNAP_RADIUS {
+        if dist <= snap_radius {
             if let Some((_, best_dist)) = nearest {
                 if dist < best_dist {
                     nearest = Some((*id, dist));
@@ -157,11 +160,13 @@ pub fn determine_menu_variant(
     pointer_pos_world: Option<glam::Vec2>,
     route_tool_has_input: bool,
     tangent_data: Option<TangentMenuData>,
+    snap_radius: f32,
 ) -> MenuVariant {
     let Some(rm) = road_map else {
         return MenuVariant::EmptyArea;
     };
-    let hovered_node_id = pointer_pos_world.and_then(|pos| find_nearest_node_at(pos, rm));
+    let hovered_node_id =
+        pointer_pos_world.and_then(|pos| find_nearest_node_at(pos, rm, snap_radius));
 
     match (
         selected_node_ids.len(),
@@ -170,14 +175,9 @@ pub fn determine_menu_variant(
     ) {
         // Route-Tool aktiv: eigenes Menü mit optionalen Tangenten (nur wenn kein Node gehovered)
         (_, None, true) => MenuVariant::RouteToolActive { tangent_data },
-        // Kein Node gehovered, keine Selektion → Tool-Auswahl
-        (0, None, _) => MenuVariant::EmptyArea,
-        // Kein Node gehovered, aber Nodes selektiert → Selektion-Menü
-        (1, None, _) => {
-            let &id = selected_node_ids.iter().next().unwrap();
-            MenuVariant::SingleNodeSelected { node_id: id }
-        }
-        (n, None, _) if n >= 2 => MenuVariant::MultipleNodesSelected,
+        // Rechtsklick auf leeren Bereich (kein Node gehovered) → immer EmptyArea
+        // (unabhängig von vorheriger Selektion)
+        (_, None, _) => MenuVariant::EmptyArea,
         // Node gehovered, der noch nicht selektiert ist
         (_, Some(id), _) if !selected_node_ids.contains(&id) => {
             MenuVariant::SingleNodeUnselected { node_id: id }
@@ -199,22 +199,24 @@ pub fn render_context_menu(
     distanzen_state: &mut DistanzenState,
     variant: &MenuVariant,
     events: &mut Vec<AppIntent>,
-) {
-    let Some(rm) = road_map else { return };
+) -> bool {
+    let Some(rm) = road_map else { return false };
 
-    response.context_menu(|ui| match variant {
-        MenuVariant::EmptyArea => render_empty_area_menu(ui, distanzen_state, events),
-        MenuVariant::SingleNodeUnselected { node_id } => {
-            render_single_node_unselected_menu(ui, *node_id, rm, events)
-        }
-        MenuVariant::SingleNodeSelected { node_id } => {
-            render_single_node_selected_menu(ui, *node_id, rm, events)
-        }
-        MenuVariant::MultipleNodesSelected => {
-            render_multiple_nodes_menu(ui, selected_node_ids, rm, distanzen_state, events)
-        }
-        MenuVariant::RouteToolActive { tangent_data } => {
-            render_route_tool_menu(ui, tangent_data.as_ref(), events)
-        }
-    });
+    response
+        .context_menu(|ui| match variant {
+            MenuVariant::EmptyArea => render_empty_area_menu(ui, distanzen_state, events),
+            MenuVariant::SingleNodeUnselected { node_id } => {
+                render_single_node_unselected_menu(ui, *node_id, rm, events)
+            }
+            MenuVariant::SingleNodeSelected { node_id } => {
+                render_single_node_selected_menu(ui, *node_id, rm, events)
+            }
+            MenuVariant::MultipleNodesSelected => {
+                render_multiple_nodes_menu(ui, selected_node_ids, rm, distanzen_state, events)
+            }
+            MenuVariant::RouteToolActive { tangent_data } => {
+                render_route_tool_menu(ui, tangent_data.as_ref(), events)
+            }
+        })
+        .is_some()
 }

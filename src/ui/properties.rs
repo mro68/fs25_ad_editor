@@ -9,7 +9,6 @@ use crate::app::{
     segment_registry::SegmentRegistry, tools::ToolManager, AppIntent, Connection,
     ConnectionDirection, ConnectionPriority, EditorTool, RoadMap,
 };
-use crate::shared::EditorOptions;
 use distances::render_distance_panel;
 use selectors::{direction_label, priority_label, render_default_direction_selector};
 
@@ -24,7 +23,6 @@ pub fn render_properties_panel(
     active_tool: EditorTool,
     tool_manager: Option<&mut ToolManager>,
     segment_registry: Option<&SegmentRegistry>,
-    options: &EditorOptions,
     distance_state: &mut crate::app::state::DistanzenState,
 ) -> Vec<AppIntent> {
     let mut events = Vec::new();
@@ -60,10 +58,6 @@ pub fn render_properties_panel(
                 // Selektion verloren → Vorschau deaktivieren
                 distance_state.deactivate();
             }
-
-            ui.separator();
-            // Node-Verhalten: immer sichtbar
-            render_node_behavior_options(ui, options, &mut events);
 
             ui.separator();
             render_default_direction_selector(ui, default_direction, default_priority, &mut events);
@@ -310,47 +304,4 @@ fn render_route_tool_config(
     }
 
     events
-}
-
-/// Rendert die Node-Verhalten-Checkboxen (immer sichtbar im Side-Panel).
-fn render_node_behavior_options(
-    ui: &mut egui::Ui,
-    options: &EditorOptions,
-    events: &mut Vec<AppIntent>,
-) {
-    ui.heading("Node-Verhalten");
-
-    // Checkbox A: Reconnect beim Löschen
-    let mut reconnect = options.reconnect_on_delete;
-    if ui
-        .checkbox(&mut reconnect, "Nach Löschen verbinden")
-        .on_hover_text(
-            "Wenn aktiviert: Wird ein Node mit jeweils genau einem Vorgänger und Nachfolger \
-             gelöscht, werden Vorgänger und Nachfolger direkt miteinander verbunden.",
-        )
-        .changed()
-    {
-        let mut new_options = options.clone();
-        new_options.reconnect_on_delete = reconnect;
-        events.push(AppIntent::OptionsChanged {
-            options: new_options,
-        });
-    }
-
-    // Checkbox B: Connection beim Platzieren aufteilen
-    let mut split = options.split_connection_on_place;
-    if ui
-        .checkbox(&mut split, "Verbindung beim Platzieren teilen")
-        .on_hover_text(
-            "Wenn aktiviert: Wird ein neuer Node nahe einer bestehenden Verbindung \
-             platziert, wird diese Verbindung durch den neuen Node aufgeteilt.",
-        )
-        .changed()
-    {
-        let mut new_options = options.clone();
-        new_options.split_connection_on_place = split;
-        events.push(AppIntent::OptionsChanged {
-            options: new_options,
-        });
-    }
 }

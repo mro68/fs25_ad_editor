@@ -77,7 +77,7 @@ pub fn select(state: &mut AppState, index: usize) {
     state.editor.connect_source_node = None;
     let dir = state.editor.default_direction;
     let prio = state.editor.default_priority;
-    let snap_r = state.options.hitbox_radius();
+    let snap_r = state.options.snap_radius();
     if let Some(tool) = state.editor.tool_manager.active_tool_mut() {
         tool.set_direction(dir);
         tool.set_priority(prio);
@@ -233,5 +233,78 @@ pub fn drag_end(state: &mut AppState) {
     };
     if let Some(tool) = state.editor.tool_manager.active_tool_mut() {
         tool.on_drag_end(road_map);
+    }
+}
+
+/// Erhöht die Anzahl der Nodes im aktiven Route-Tool um 1.
+pub fn increase_node_count(state: &mut AppState) {
+    if let Some(tool) = state.editor.tool_manager.active_tool_mut() {
+        tool.increase_node_count();
+    }
+
+    // Wenn das Tool sagt dass Recreate nötig ist → Segment neu erstellen
+    let needs_recreate = state
+        .editor
+        .tool_manager
+        .active_tool()
+        .map(|t| t.needs_recreate())
+        .unwrap_or(false);
+
+    if needs_recreate {
+        recreate(state);
+    }
+}
+
+/// Verringert die Anzahl der Nodes im aktiven Route-Tool um 1 (min. 2).
+pub fn decrease_node_count(state: &mut AppState) {
+    if let Some(tool) = state.editor.tool_manager.active_tool_mut() {
+        tool.decrease_node_count();
+    }
+
+    let needs_recreate = state
+        .editor
+        .tool_manager
+        .active_tool()
+        .map(|t| t.needs_recreate())
+        .unwrap_or(false);
+
+    if needs_recreate {
+        recreate(state);
+    }
+}
+
+/// Erhöht den minimalen Segment-Abstand im aktiven Route-Tool um 0.25m.
+pub fn increase_segment_length(state: &mut AppState) {
+    if let Some(tool) = state.editor.tool_manager.active_tool_mut() {
+        tool.increase_segment_length();
+    }
+
+    let needs_recreate = state
+        .editor
+        .tool_manager
+        .active_tool()
+        .map(|t| t.needs_recreate())
+        .unwrap_or(false);
+
+    if needs_recreate {
+        recreate(state);
+    }
+}
+
+/// Verringert den minimalen Segment-Abstand im aktiven Route-Tool um 0.25m (min. 0.1m).
+pub fn decrease_segment_length(state: &mut AppState) {
+    if let Some(tool) = state.editor.tool_manager.active_tool_mut() {
+        tool.decrease_segment_length();
+    }
+
+    let needs_recreate = state
+        .editor
+        .tool_manager
+        .active_tool()
+        .map(|t| t.needs_recreate())
+        .unwrap_or(false);
+
+    if needs_recreate {
+        recreate(state);
     }
 }

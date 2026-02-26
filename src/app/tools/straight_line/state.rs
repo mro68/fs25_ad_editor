@@ -3,7 +3,6 @@
 use super::super::common::{SegmentConfig, ToolLifecycleState};
 use super::super::ToolAnchor;
 use crate::core::{ConnectionDirection, ConnectionPriority};
-use crate::shared::SNAP_RADIUS;
 
 /// Gerade-Strecke-Tool
 pub struct StraightLineTool {
@@ -30,7 +29,7 @@ impl StraightLineTool {
             seg: SegmentConfig::new(6.0),
             direction: ConnectionDirection::Dual,
             priority: ConnectionPriority::Regular,
-            lifecycle: ToolLifecycleState::new(SNAP_RADIUS),
+            lifecycle: ToolLifecycleState::new(3.0), // Default, wird vom Handler überschrieben
             last_start_anchor: None,
         }
     }
@@ -46,6 +45,30 @@ impl StraightLineTool {
     /// Synchronisiert den jeweils abhängigen Wert.
     pub(crate) fn sync_derived(&mut self) {
         self.seg.sync_from_length(self.total_distance());
+    }
+
+    /// Erhöht die Anzahl der Nodes um 1.
+    pub(crate) fn increase_node_count(&mut self) {
+        self.seg.increase_node_count();
+        self.lifecycle.recreate_needed = true;
+    }
+
+    /// Verringert die Anzahl der Nodes um 1 (min. 2).
+    pub(crate) fn decrease_node_count(&mut self) {
+        self.seg.decrease_node_count();
+        self.lifecycle.recreate_needed = true;
+    }
+
+    /// Erhöht den minimalen Abstand zwischen Nodes um 0.25.
+    pub(crate) fn increase_segment_length(&mut self) {
+        self.seg.increase_segment_length();
+        self.lifecycle.recreate_needed = true;
+    }
+
+    /// Verringert den minimalen Abstand zwischen Nodes um 0.25 (min. 0.1).
+    pub(crate) fn decrease_segment_length(&mut self) {
+        self.seg.decrease_segment_length();
+        self.lifecycle.recreate_needed = true;
     }
 }
 

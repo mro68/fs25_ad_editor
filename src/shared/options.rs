@@ -20,8 +20,8 @@ pub const CAMERA_SCROLL_ZOOM_STEP: f32 = 1.1;
 
 // ── Tools ───────────────────────────────────────────────────────────
 
-/// Snap-Radius (Welteinheiten): Klick innerhalb dieses Radius rastet auf existierenden Node ein.
-pub const SNAP_RADIUS: f32 = 3.0;
+/// Standard-Snap-Radius-Skalierung in Prozent der Node-Größe.
+pub const SNAP_SCALE_PERCENT: f32 = 600.0;
 /// Standard-Hitbox-Skalierung in Prozent der Node-Größe.
 pub const HITBOX_SCALE_PERCENT: f32 = 100.0;
 
@@ -32,8 +32,6 @@ pub const TERRAIN_HEIGHT_SCALE: f32 = 255.0;
 
 // ── Selektion ───────────────────────────────────────────────────────
 
-/// Pick-Radius in Screen-Pixeln.
-pub const SELECTION_PICK_RADIUS_PX: f32 = 12.0;
 /// Größenfaktor für selektierte Nodes.
 pub const SELECTION_SIZE_FACTOR: f32 = 1.8;
 
@@ -127,8 +125,6 @@ pub struct EditorOptions {
     // ── Selektion ───────────────────────────────────────────────
     /// Vergrößerungsfaktor für selektierte Nodes (Hitbox und Darstellung)
     pub selection_size_factor: f32,
-    /// Pick-Radius für Klick-Selektion in Screen-Pixeln
-    pub selection_pick_radius_px: f32,
 
     // ── Connections ─────────────────────────────────────────────
     /// Linienstärke normaler Verbindungen in Welteinheiten
@@ -167,8 +163,9 @@ pub struct EditorOptions {
     pub camera_scroll_zoom_step: f32,
 
     // ── Tools ────────────────────────────────────────────────────
-    /// Snap-Radius (Welteinheiten) für Route-Tools
-    pub snap_radius: f32,
+    /// Snap-Radius-Skalierung in Prozent der Node-Größe (600 = 6× Node-Größe)
+    #[serde(default = "default_snap_scale_percent")]
+    pub snap_scale_percent: f32,
     /// Hitbox-Skalierung in Prozent der Node-Größe (100 = exakte Node-Größe)
     #[serde(default = "default_hitbox_scale_percent")]
     pub hitbox_scale_percent: f32,
@@ -210,7 +207,6 @@ impl Default for EditorOptions {
             node_color_warning: NODE_COLOR_WARNING,
 
             selection_size_factor: SELECTION_SIZE_FACTOR,
-            selection_pick_radius_px: SELECTION_PICK_RADIUS_PX,
 
             connection_thickness_world: CONNECTION_THICKNESS_WORLD,
             connection_thickness_subprio_world: CONNECTION_THICKNESS_SUBPRIO_WORLD,
@@ -229,7 +225,7 @@ impl Default for EditorOptions {
             camera_zoom_step: CAMERA_ZOOM_STEP,
             camera_scroll_zoom_step: CAMERA_SCROLL_ZOOM_STEP,
 
-            snap_radius: SNAP_RADIUS,
+            snap_scale_percent: SNAP_SCALE_PERCENT,
             hitbox_scale_percent: HITBOX_SCALE_PERCENT,
             reconnect_on_delete: false,
             split_connection_on_place: false,
@@ -240,6 +236,11 @@ impl Default for EditorOptions {
             overview_layers: OverviewLayerOptions::default(),
         }
     }
+}
+
+/// Serde-Default für `snap_scale_percent` (Abwärtskompatibilität bestehender TOML-Dateien).
+fn default_snap_scale_percent() -> f32 {
+    SNAP_SCALE_PERCENT
 }
 
 /// Serde-Default für `hitbox_scale_percent` (Abwärtskompatibilität bestehender TOML-Dateien).
@@ -276,8 +277,16 @@ impl EditorOptions {
     /// Lädt Optionen aus einer TOML-Datei. Bei Fehler: Standardwerte.
     pub fn load_from_file(path: &std::path::Path) -> Self {
         match std::fs::read_to_string(path) {
-            Ok(content) => match toml::from_str(&content) {
+            Ok(content) => match toml::from_str::<EditorOptions>(&content) {
                 Ok(opts) => {
+                    // Validiere Optionen
+                    if let Err(e) = opts.validate() {
+                        log::warn!(
+                            "Optionen-Validierung fehlgeschlagen, verwende Standardwerte: {}",
+                            e
+                        );
+                        return Self::default();
+                    }
                     log::info!("Optionen geladen aus: {}", path.display());
                     opts
                 }
@@ -295,9 +304,52 @@ impl EditorOptions {
 
     /// Speichert Optionen als TOML-Datei.
     pub fn save_to_file(&self, path: &std::path::Path) -> anyhow::Result<()> {
+        // Validiere vor dem Speichern
+        self.validate()?;
+
         let content = toml::to_string_pretty(self)?;
         std::fs::write(path, content)?;
         log::info!("Optionen gespeichert nach: {}", path.display());
+        Ok(())
+    }
+
+    /// Validiert EditorOptions auf Konsistenz.
+    ///
+    /// Prüft Bedingungen wie:
+    /// - camera_zoom_min < camera_zoom_max
+    /// - node_size_world > 0
+    /// - hitbox_scale_percent im gültigen Bereich
+    pub fn validate(&self) -> anyhow::Result<()> {
+        if self.camera_zoom_min >= self.camera_zoom_max {
+            return Err(anyhow::anyhow!(
+                "camera_zoom_min ({}) muss < camera_zoom_max ({}) sein",
+                self.camera_zoom_min,
+                self.camera_zoom_max
+            ));
+        }
+
+        if self.node_size_world <= 0.0 {
+            return Err(anyhow::anyhow!("node_size_world muss > 0 sein"));
+        }
+
+        if self.hitbox_scale_percent < 25.0 || self.hitbox_scale_percent > 500.0 {
+            return Err(anyhow::anyhow!(
+                "hitbox_scale_percent ({}) muss zwischen 25 und 500 liegen",
+                self.hitbox_scale_percent
+            ));
+        }
+
+        if self.selection_size_factor < 1.0 {
+            return Err(anyhow::anyhow!("selection_size_factor muss >= 1.0 sein"));
+        }
+
+        if self.snap_scale_percent < 25.0 || self.snap_scale_percent > 2000.0 {
+            return Err(anyhow::anyhow!(
+                "snap_scale_percent ({}) muss zwischen 25 und 2000 liegen",
+                self.snap_scale_percent
+            ));
+        }
+
         Ok(())
     }
 
@@ -315,5 +367,12 @@ impl EditorOptions {
     /// `node_size_world * hitbox_scale_percent / 100`
     pub fn hitbox_radius(&self) -> f32 {
         self.node_size_world * self.hitbox_scale_percent / 100.0
+    }
+
+    /// Berechnet den Snap-Radius in Welteinheiten.
+    ///
+    /// `node_size_world * snap_scale_percent / 100`
+    pub fn snap_radius(&self) -> f32 {
+        self.node_size_world * self.snap_scale_percent / 100.0
     }
 }

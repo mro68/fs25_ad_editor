@@ -186,6 +186,14 @@ pub enum AppCommand {
     },
     /// Route-Tool: Strecke neu berechnen (Config geändert)
     RouteToolRecreate,
+    /// Route-Tool: Node-Anzahl erhöhen
+    IncreaseRouteToolNodeCount,
+    /// Route-Tool: Node-Anzahl verringern
+    DecreaseRouteToolNodeCount,
+    /// Route-Tool: Minimalabstand um 0.25m erhöhen
+    IncreaseRouteToolSegmentLength,
+    /// Route-Tool: Minimalabstand um 0.25m verringern
+    DecreaseRouteToolSegmentLength,
     /// Route-Tool: Tangenten-Auswahl anwenden und ggf. Recreate triggern
     RouteToolApplyTangent {
         start: TangentSource,
