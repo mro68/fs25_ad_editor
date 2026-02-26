@@ -62,7 +62,10 @@ pub(super) fn draw_drag_selection_overlay(
         fill_color = fill_color.gamma_multiply(0.15);
     }
     let fill = fill_color;
-    let painter = ui.painter();
+    let painter = ui
+        .ctx()
+        .layer_painter(egui::LayerId::new(egui::Order::Foreground, response.id))
+        .with_clip_rect(response.rect);
 
     match selection.mode {
         DragSelectionMode::Rect => {
