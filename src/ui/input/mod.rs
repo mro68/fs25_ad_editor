@@ -49,6 +49,9 @@ pub struct InputState {
     pub(crate) drag_selection: Option<DragSelection>,
     /// Speichert Mausposition beim Öffnen eines Context-Menüs, um Hover-Detektion stabil zu halten
     context_menu_position: Option<glam::Vec2>,
+    /// Eingefrorene MenuVariant + Selektion-Snapshot während das Menü offen ist
+    cached_menu_variant: Option<context_menu::MenuVariant>,
+    cached_menu_selection: Option<HashSet<u64>>,
 }
 
 impl InputState {
@@ -58,6 +61,8 @@ impl InputState {
             primary_drag_mode: PrimaryDragMode::None,
             drag_selection: None,
             context_menu_position: None,
+            cached_menu_variant: None,
+            cached_menu_selection: None,
         }
     }
 
@@ -136,12 +141,14 @@ impl InputState {
         draw_drag_selection_overlay(self.drag_selection.as_ref(), ui, response);
 
         // Neues Context-Menu-System: Alle 4 Varianten über einheitlichen Router
-        // WICHTIG: Position "einfrieren" während Menu offen, um Flackern bei Maustbewegung zu verhindern
+        // WICHTIG: Position + MenuVariant beim Rechtsklick einfrieren,
+        // damit Zustandsänderungen (Esc, Deselection) kein Flackern verursachen.
         let pointer_pos_world = if self.is_context_menu_open(response) {
-            // Menu ist offen → gecachte Position verwenden
             self.context_menu_position
         } else {
-            // Menu nicht offen → aktuelle Position berechnen und cachen falls Menu gleich geöffnet wird
+            // Cache leeren wenn Menu geschlossen wurde
+            self.cached_menu_variant = None;
+            self.cached_menu_selection = None;
             response.hover_pos().map(|screen_pos| {
                 let local = screen_pos - response.rect.min;
                 camera.screen_to_world(
@@ -151,18 +158,38 @@ impl InputState {
             })
         };
 
-        // Cache Position wenn ein Menu-Event initialisiert wird
+        // Beim Rechtsklick: Position + Variant + Selektion einfrieren
         if response.secondary_clicked() {
             self.context_menu_position = pointer_pos_world;
+            self.cached_menu_variant = Some(context_menu::determine_menu_variant(
+                road_map,
+                selected_node_ids,
+                pointer_pos_world,
+                route_tool_is_drawing && active_tool == EditorTool::Route,
+            ));
+            self.cached_menu_selection = Some(selected_node_ids.clone());
         }
 
-        context_menu::show_viewport_context_menu(
+        // Eingefrorene Variant verwenden falls vorhanden, sonst frisch berechnen
+        let variant = self.cached_menu_variant.unwrap_or_else(|| {
+            context_menu::determine_menu_variant(
+                road_map,
+                selected_node_ids,
+                pointer_pos_world,
+                route_tool_is_drawing && active_tool == EditorTool::Route,
+            )
+        });
+        let menu_selection = self
+            .cached_menu_selection
+            .as_ref()
+            .unwrap_or(selected_node_ids);
+
+        context_menu::render_context_menu(
             response,
             road_map,
-            selected_node_ids,
+            menu_selection,
             distanzen_state,
-            pointer_pos_world,
-            route_tool_is_drawing && active_tool == EditorTool::Route,
+            variant,
             &mut events,
         );
 
