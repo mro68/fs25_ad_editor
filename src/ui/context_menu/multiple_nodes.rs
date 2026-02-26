@@ -2,7 +2,9 @@
 
 use super::{button_intent, render_streckenteilung};
 use crate::app::{
-    state::DistanzenState, AppIntent, ConnectionDirection, ConnectionPriority, RoadMap,
+    segment_registry::{TOOL_INDEX_CURVE_CUBIC, TOOL_INDEX_CURVE_QUAD, TOOL_INDEX_STRAIGHT},
+    state::DistanzenState,
+    AppIntent, ConnectionDirection, ConnectionPriority, RoadMap,
 };
 use std::collections::HashSet;
 
@@ -29,6 +31,52 @@ pub fn render_multiple_nodes_menu(
             ui,
             "🔗 Nodes verbinden",
             AppIntent::ConnectSelectedNodesRequested,
+            events,
+        );
+    }
+
+    // Linien-Tools: bei genau 2 Nodes → Tool aktivieren + Start/End-Anker direkt setzen
+    if selected_node_ids.len() == 2 {
+        let mut ids_iter = selected_node_ids.iter();
+        let &id_a = ids_iter.next().unwrap();
+        let &id_b = ids_iter.next().unwrap();
+        // Kleinere ID als Start für konsistente Reihenfolge
+        let (start_id, end_id) = if id_a < id_b {
+            (id_a, id_b)
+        } else {
+            (id_b, id_a)
+        };
+
+        ui.separator();
+        ui.label("📐 Strecke erzeugen");
+        button_intent(
+            ui,
+            "━ Gerade Strecke",
+            AppIntent::RouteToolWithAnchorsRequested {
+                index: TOOL_INDEX_STRAIGHT,
+                start_node_id: start_id,
+                end_node_id: end_id,
+            },
+            events,
+        );
+        button_intent(
+            ui,
+            "⌒ Bézier Grad 2",
+            AppIntent::RouteToolWithAnchorsRequested {
+                index: TOOL_INDEX_CURVE_QUAD,
+                start_node_id: start_id,
+                end_node_id: end_id,
+            },
+            events,
+        );
+        button_intent(
+            ui,
+            "〜 Bézier Grad 3",
+            AppIntent::RouteToolWithAnchorsRequested {
+                index: TOOL_INDEX_CURVE_CUBIC,
+                start_node_id: start_id,
+                end_node_id: end_id,
+            },
             events,
         );
     }
