@@ -17,11 +17,15 @@ pub use multiple_nodes::render_multiple_nodes_menu;
 pub use route_tool::render_route_tool_menu;
 pub use single_node::{render_single_node_selected_menu, render_single_node_unselected_menu};
 
+use crate::app::tools::common::TangentMenuData;
 use crate::app::{state::DistanzenState, AppIntent, RoadMap};
 use std::collections::HashSet;
 
 /// Kontextabhängige Menü-Variante basierend auf Selection und Position.
-#[derive(Debug, Clone, Copy)]
+///
+/// Wird beim Rechtsklick einmalig bestimmt und eingefroren, bis das Menü
+/// geschlossen wird. Enthält alle Daten die zum Rendern nötig sind.
+#[derive(Debug, Clone)]
 pub enum MenuVariant {
     /// Rechtsklick auf leeren Bereich (kein Node gehovered)
     EmptyArea,
@@ -31,8 +35,11 @@ pub enum MenuVariant {
     SingleNodeSelected { node_id: u64 },
     /// Mehrere Nodes selektiert (≥2)
     MultipleNodesSelected,
-    /// Route-Tool aktiv mit pending input
-    RouteToolActive,
+    /// Route-Tool aktiv mit pending input, optional mit Tangenten-Auswahl
+    RouteToolActive {
+        /// Tangenten-Menüdaten (nur bei kubischer Kurve mit Nachbarn)
+        tangent_data: Option<TangentMenuData>,
+    },
 }
 
 /// Helper-Funktion: Erstellt einen Button, der bei Klick einen Intent emittiert und das Menü schließt.
@@ -141,11 +148,15 @@ pub fn find_nearest_node_at(world_pos: glam::Vec2, road_map: &RoadMap) -> Option
 ///
 /// Wird einmal beim Rechtsklick aufgerufen und das Ergebnis eingefroren, bis das Menü
 /// geschlossen wird — so verursachen Zustandsänderungen (Esc, Deselection) kein Flackern.
+///
+/// `tangent_data` wird vom Aufrufer aus dem aktiven Route-Tool abgefragt
+/// und hier eingebettet, wenn die Variante `RouteToolActive` ist.
 pub fn determine_menu_variant(
     road_map: Option<&RoadMap>,
     selected_node_ids: &HashSet<u64>,
     pointer_pos_world: Option<glam::Vec2>,
     route_tool_has_input: bool,
+    tangent_data: Option<TangentMenuData>,
 ) -> MenuVariant {
     let Some(rm) = road_map else {
         return MenuVariant::EmptyArea;
@@ -157,8 +168,8 @@ pub fn determine_menu_variant(
         hovered_node_id,
         route_tool_has_input,
     ) {
-        // Route-Tool aktiv: eigenes Menü (nur wenn kein Node gehovered)
-        (_, None, true) => MenuVariant::RouteToolActive,
+        // Route-Tool aktiv: eigenes Menü mit optionalen Tangenten (nur wenn kein Node gehovered)
+        (_, None, true) => MenuVariant::RouteToolActive { tangent_data },
         // Kein Node gehovered, keine Selektion → Tool-Auswahl
         (0, None, _) => MenuVariant::EmptyArea,
         // Kein Node gehovered, aber Nodes selektiert → Selektion-Menü
@@ -186,7 +197,7 @@ pub fn render_context_menu(
     road_map: Option<&RoadMap>,
     selected_node_ids: &HashSet<u64>,
     distanzen_state: &mut DistanzenState,
-    variant: MenuVariant,
+    variant: &MenuVariant,
     events: &mut Vec<AppIntent>,
 ) {
     let Some(rm) = road_map else { return };
@@ -194,14 +205,16 @@ pub fn render_context_menu(
     response.context_menu(|ui| match variant {
         MenuVariant::EmptyArea => render_empty_area_menu(ui, distanzen_state, events),
         MenuVariant::SingleNodeUnselected { node_id } => {
-            render_single_node_unselected_menu(ui, node_id, rm, events)
+            render_single_node_unselected_menu(ui, *node_id, rm, events)
         }
         MenuVariant::SingleNodeSelected { node_id } => {
-            render_single_node_selected_menu(ui, node_id, rm, events)
+            render_single_node_selected_menu(ui, *node_id, rm, events)
         }
         MenuVariant::MultipleNodesSelected => {
             render_multiple_nodes_menu(ui, selected_node_ids, rm, distanzen_state, events)
         }
-        MenuVariant::RouteToolActive => render_route_tool_menu(ui, events),
+        MenuVariant::RouteToolActive { tangent_data } => {
+            render_route_tool_menu(ui, tangent_data.as_ref(), events)
+        }
     });
 }
