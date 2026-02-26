@@ -176,6 +176,13 @@ impl AppController {
             AppCommand::RouteToolExecute => handlers::route_tool::execute(state),
             AppCommand::RouteToolCancel => handlers::route_tool::cancel(state),
             AppCommand::SelectRouteTool { index } => handlers::route_tool::select(state, index),
+            AppCommand::RouteToolWithAnchors {
+                index,
+                start_node_id,
+                end_node_id,
+            } => {
+                handlers::route_tool::select_with_anchors(state, index, start_node_id, end_node_id)
+            }
             AppCommand::RouteToolRecreate => handlers::route_tool::recreate(state),
             AppCommand::RouteToolDragStart { world_pos } => {
                 handlers::route_tool::drag_start(state, world_pos)

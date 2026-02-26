@@ -177,6 +177,12 @@ pub enum AppCommand {
     RouteToolCancel,
     /// Route-Tool per Index aktivieren
     SelectRouteTool { index: usize },
+    /// Route-Tool mit vordefinierten Start/End-Nodes aktivieren und Klicks simulieren
+    RouteToolWithAnchors {
+        index: usize,
+        start_node_id: u64,
+        end_node_id: u64,
+    },
     /// Route-Tool: Strecke neu berechnen (Config geändert)
     RouteToolRecreate,
 

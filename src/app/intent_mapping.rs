@@ -217,6 +217,15 @@ pub fn map_intent_to_commands(state: &AppState, intent: AppIntent) -> Vec<AppCom
         AppIntent::SelectRouteToolRequested { index } => {
             vec![AppCommand::SelectRouteTool { index }]
         }
+        AppIntent::RouteToolWithAnchorsRequested {
+            index,
+            start_node_id,
+            end_node_id,
+        } => vec![AppCommand::RouteToolWithAnchors {
+            index,
+            start_node_id,
+            end_node_id,
+        }],
         AppIntent::RouteToolConfigChanged => vec![AppCommand::RouteToolRecreate],
         AppIntent::RouteToolDragStarted { world_pos } => {
             vec![AppCommand::RouteToolDragStart { world_pos }]

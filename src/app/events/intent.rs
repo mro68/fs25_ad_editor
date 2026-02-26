@@ -176,6 +176,12 @@ pub enum AppIntent {
     RouteToolCancelled,
     /// Route-Tool auswählen (per Index im ToolManager)
     SelectRouteToolRequested { index: usize },
+    /// Route-Tool mit vordefinierten Start/End-Nodes aktivieren (Kontextmenü bei 2 selektierten Nodes)
+    RouteToolWithAnchorsRequested {
+        index: usize,
+        start_node_id: u64,
+        end_node_id: u64,
+    },
     /// Route-Tool: Konfiguration geändert (Distanz/Anzahl) → Strecke neu berechnen
     RouteToolConfigChanged,
 
