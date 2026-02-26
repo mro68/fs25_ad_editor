@@ -21,7 +21,7 @@ pub const CAMERA_SCROLL_ZOOM_STEP: f32 = 1.1;
 // ── Tools ───────────────────────────────────────────────────────────
 
 /// Standard-Snap-Radius-Skalierung in Prozent der Node-Größe.
-pub const SNAP_SCALE_PERCENT: f32 = 600.0;
+pub const SNAP_SCALE_PERCENT: f32 = 100.0;
 /// Standard-Hitbox-Skalierung in Prozent der Node-Größe.
 pub const HITBOX_SCALE_PERCENT: f32 = 100.0;
 

@@ -79,7 +79,7 @@ Zentral gesammelte Konfigurationswerte, gegliedert nach Bereich:
 | Marker | `MARKER_SIZE_WORLD` | 2.0 | Pin-Höhe in Welt-Einheiten |
 | Marker | `MARKER_COLOR` | `[0.9, 0.1, 0.1, 1.0]` | Rot |
 | Marker | `MARKER_OUTLINE_COLOR` | `[0.6, 0.0, 0.0, 1.0]` | Dunkles Rot |
-| Tools | `SNAP_RADIUS` | 3.0 | Snap-Radius für Route-Tools (Welteinheiten) |
+| Tools | `SNAP_SCALE_PERCENT` | 100.0 | Snap-Radius in % der Node-Größe |
 | Tools | `HITBOX_SCALE_PERCENT` | 100.0 | Standard-Hitbox-Skalierung in % der Node-Größe |
 | Terrain | `TERRAIN_HEIGHT_SCALE` | 255.0 | Höhenskala für Heightmap-Export |
 
@@ -138,7 +138,7 @@ pub struct EditorOptions {
     pub camera_zoom_step: f32,
     pub camera_scroll_zoom_step: f32,
     // Tools
-    pub snap_radius: f32,
+    pub snap_scale_percent: f32,
     /// Hitbox-Skalierung in Prozent der Node-Größe (100 = exakte Node-Größe)
     pub hitbox_scale_percent: f32,
     /// true = Mittelpunkt zwischen Vorgänger und Nachfolger beim Löschen verbinden

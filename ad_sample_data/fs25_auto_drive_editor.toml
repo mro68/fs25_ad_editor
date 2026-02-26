@@ -24,7 +24,7 @@ camera_zoom_step = 1.2000000476837158
 camera_scroll_zoom_step = 1.100000023841858
 camera_zoom_min = 0.10000000149011612
 camera_zoom_max = 100.0
-snap_scale_percent = 600.0
+snap_scale_percent = 100.0
 terrain_height_scale = 255.0
 
 [overview_layers]
