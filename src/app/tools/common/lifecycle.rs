@@ -257,6 +257,30 @@ impl SegmentConfig {
 
         changed
     }
+
+    /// Erhöht die Anzahl der Nodes um 1.
+    pub fn increase_node_count(&mut self) {
+        self.node_count = self.node_count.saturating_add(1);
+        self.last_edited = LastEdited::NodeCount;
+    }
+
+    /// Verringert die Anzahl der Nodes um 1 (min. 2).
+    pub fn decrease_node_count(&mut self) {
+        self.node_count = self.node_count.saturating_sub(1).max(2);
+        self.last_edited = LastEdited::NodeCount;
+    }
+
+    /// Erhöht den minimalen Abstand zwischen Nodes um 0.25.
+    pub fn increase_segment_length(&mut self) {
+        self.max_segment_length = (self.max_segment_length + 0.25).min(20.0);
+        self.last_edited = LastEdited::Distance;
+    }
+
+    /// Verringert den minimalen Abstand zwischen Nodes um 0.25 (min. 0.1).
+    pub fn decrease_segment_length(&mut self) {
+        self.max_segment_length = (self.max_segment_length - 0.25).max(0.1);
+        self.last_edited = LastEdited::Distance;
+    }
 }
 
 /// Rendert die 3-Modus-Segment-Konfiguration (adjusting / live / default).

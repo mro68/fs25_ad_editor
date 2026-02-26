@@ -194,6 +194,18 @@ impl AppController {
                 handlers::route_tool::drag_update(state, world_pos)
             }
             AppCommand::RouteToolDragEnd => handlers::route_tool::drag_end(state),
+            AppCommand::IncreaseRouteToolNodeCount => {
+                handlers::route_tool::increase_node_count(state)
+            }
+            AppCommand::DecreaseRouteToolNodeCount => {
+                handlers::route_tool::decrease_node_count(state)
+            }
+            AppCommand::IncreaseRouteToolSegmentLength => {
+                handlers::route_tool::increase_segment_length(state)
+            }
+            AppCommand::DecreaseRouteToolSegmentLength => {
+                handlers::route_tool::decrease_segment_length(state)
+            }
             AppCommand::EditSegment { record_id } => {
                 handlers::editing::edit_segment(state, record_id)
             }

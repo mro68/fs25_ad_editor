@@ -160,7 +160,6 @@ impl EditorApp {
             active_tool,
             route_tool_manager,
             Some(&self.state.segment_registry),
-            &self.state.options,
             &mut self.state.ui.distanzen,
         ));
 

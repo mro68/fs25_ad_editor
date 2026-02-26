@@ -146,4 +146,16 @@ pub trait RouteTool {
     /// Tangenten, Anker-Liste) aus dem Record wieder her. Das Tool befindet
     /// sich anschließend in der Control-Phase (bereit für Drag/Anpassung).
     fn load_for_edit(&mut self, _record: &SegmentRecord, _kind: &SegmentKind) {}
+
+    /// Erhöht die Anzahl der Nodes um 1.
+    fn increase_node_count(&mut self) {}
+
+    /// Verringert die Anzahl der Nodes um 1 (min. 2).
+    fn decrease_node_count(&mut self) {}
+
+    /// Erhöht den minimalen Segment-Abstand um 0.25m.
+    fn increase_segment_length(&mut self) {}
+
+    /// Verringert den minimalen Segment-Abstand um 0.25m (min. 0.1m).
+    fn decrease_segment_length(&mut self) {}
 }

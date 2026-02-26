@@ -236,4 +236,12 @@ pub enum AppIntent {
     InvertSelectionRequested,
     /// Route-Tool: Strecke neu berechnen mit aktuellem Config (nach Parameter-Änderung)
     RouteToolRecreateRequested,
+    /// Route-Tool: Node-Anzahl erhöhen (Pfeiltaste oben)
+    IncreaseRouteToolNodeCount,
+    /// Route-Tool: Node-Anzahl verringern (Pfeiltaste unten)
+    DecreaseRouteToolNodeCount,
+    /// Route-Tool: Minimalabstand um 0.25m erhöhen (Pfeiltaste rechts)
+    IncreaseRouteToolSegmentLength,
+    /// Route-Tool: Minimalabstand um 0.25m verringern (Pfeiltaste links)
+    DecreaseRouteToolSegmentLength,
 }

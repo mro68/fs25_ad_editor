@@ -95,7 +95,7 @@ pub fn add_node_at_position(state: &mut AppState, world_pos: Vec2) -> AddNodeRes
     };
 
     // Verbindung zum Splitten suchen (nur wenn Option aktiv)
-    let snap_threshold = state.options.snap_radius * 1.5;
+    let snap_threshold = state.options.snap_radius() * 1.5;
     let split_target: Option<(u64, u64, ConnectionDirection, ConnectionPriority)> =
         if state.options.split_connection_on_place {
             find_nearest_connection(state.road_map.as_ref().unwrap(), world_pos, snap_threshold)
