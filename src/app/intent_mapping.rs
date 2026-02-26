@@ -217,7 +217,19 @@ pub fn map_intent_to_commands(state: &AppState, intent: AppIntent) -> Vec<AppCom
         AppIntent::SelectRouteToolRequested { index } => {
             vec![AppCommand::SelectRouteTool { index }]
         }
+        AppIntent::RouteToolWithAnchorsRequested {
+            index,
+            start_node_id,
+            end_node_id,
+        } => vec![AppCommand::RouteToolWithAnchors {
+            index,
+            start_node_id,
+            end_node_id,
+        }],
         AppIntent::RouteToolConfigChanged => vec![AppCommand::RouteToolRecreate],
+        AppIntent::RouteToolTangentSelected { start, end } => {
+            vec![AppCommand::RouteToolApplyTangent { start, end }]
+        }
         AppIntent::RouteToolDragStarted { world_pos } => {
             vec![AppCommand::RouteToolDragStart { world_pos }]
         }
@@ -269,6 +281,14 @@ pub fn map_intent_to_commands(state: &AppState, intent: AppIntent) -> Vec<AppCom
         AppIntent::DuplicateSelectedNodesRequested => vec![AppCommand::DuplicateSelectedNodes],
         AppIntent::InvertSelectionRequested => vec![AppCommand::InvertSelection],
         AppIntent::RouteToolRecreateRequested => vec![AppCommand::RouteToolRecreate],
+        AppIntent::IncreaseRouteToolNodeCount => vec![AppCommand::IncreaseRouteToolNodeCount],
+        AppIntent::DecreaseRouteToolNodeCount => vec![AppCommand::DecreaseRouteToolNodeCount],
+        AppIntent::IncreaseRouteToolSegmentLength => {
+            vec![AppCommand::IncreaseRouteToolSegmentLength]
+        }
+        AppIntent::DecreaseRouteToolSegmentLength => {
+            vec![AppCommand::DecreaseRouteToolSegmentLength]
+        }
     }
 }
 

@@ -228,7 +228,7 @@ fn test_add_node_ohne_split_erstellt_keinen_split() {
     let mut controller = AppController::new();
     let mut state = AppState::new();
     state.options.split_connection_on_place = false;
-    state.options.snap_radius = 20.0;
+    state.options.snap_scale_percent = 4000.0; // 20.0 = 0.5 * 4000 / 100
 
     let mut map = RoadMap::new(2);
     map.add_node(MapNode::new(1, Vec2::new(0.0, 0.0), NodeFlag::Regular));
@@ -268,7 +268,7 @@ fn test_add_node_mit_split_teilt_verbindung() {
     let mut controller = AppController::new();
     let mut state = AppState::new();
     state.options.split_connection_on_place = true;
-    state.options.snap_radius = 20.0;
+    state.options.snap_scale_percent = 4000.0; // 20.0 = 0.5 * 4000 / 100
 
     let mut map = RoadMap::new(2);
     map.add_node(MapNode::new(1, Vec2::new(0.0, 0.0), NodeFlag::Regular));
@@ -366,7 +366,7 @@ fn test_resample_path_nach_distanz_erzeugt_neue_nodes() {
 fn test_add_node_auf_existierenden_node_selektiert_statt_erstellt() {
     let mut controller = AppController::new();
     let mut state = AppState::new();
-    state.options.snap_radius = 20.0;
+    state.options.snap_scale_percent = 4000.0; // 20.0 = 0.5 * 4000 / 100
 
     let mut map = RoadMap::new(1);
     map.add_node(MapNode::new(1, Vec2::new(50.0, 50.0), NodeFlag::Regular));
@@ -398,7 +398,7 @@ fn test_add_node_auf_existierenden_node_selektiert_statt_erstellt() {
 fn test_add_node_auf_leerer_flaeche_erstellt_neuen_node() {
     let mut controller = AppController::new();
     let mut state = AppState::new();
-    state.options.snap_radius = 20.0;
+    state.options.snap_scale_percent = 4000.0; // 20.0 = 0.5 * 4000 / 100
 
     let mut map = RoadMap::new(1);
     map.add_node(MapNode::new(1, Vec2::new(50.0, 50.0), NodeFlag::Regular));

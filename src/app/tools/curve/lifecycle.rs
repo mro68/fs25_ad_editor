@@ -1,7 +1,7 @@
 //! Lifecycle-Methoden des CurveTool (on_click, preview, execute, reset, etc.).
 
 use super::super::{
-    common::{linear_connections, populate_neighbors},
+    common::{linear_connections, populate_neighbors, TangentMenuData},
     snap_to_node, RouteTool, ToolAction, ToolPreview, ToolResult,
 };
 use super::geometry::{
@@ -275,8 +275,16 @@ impl RouteTool for CurveTool {
         super::drag::on_drag_end(self, road_map);
     }
 
-    fn render_context_menu(&mut self, response: &egui::Response) -> bool {
-        self.render_tangent_context_menu(response)
+    fn tangent_menu_data(&self) -> Option<TangentMenuData> {
+        self.build_tangent_menu_data()
+    }
+
+    fn apply_tangent_selection(
+        &mut self,
+        start: super::super::common::TangentSource,
+        end: super::super::common::TangentSource,
+    ) {
+        self.apply_tangent_from_menu(start, end);
     }
 
     fn make_segment_record(&self, id: u64, node_ids: &[u64]) -> Option<SegmentRecord> {
@@ -349,5 +357,21 @@ impl RouteTool for CurveTool {
         }
         self.phase = Phase::Control;
         self.init_apex();
+    }
+
+    fn increase_node_count(&mut self) {
+        self.increase_node_count();
+    }
+
+    fn decrease_node_count(&mut self) {
+        self.decrease_node_count();
+    }
+
+    fn increase_segment_length(&mut self) {
+        self.increase_segment_length();
+    }
+
+    fn decrease_segment_length(&mut self) {
+        self.decrease_segment_length();
     }
 }

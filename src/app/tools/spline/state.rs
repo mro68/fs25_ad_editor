@@ -4,7 +4,6 @@ use super::super::common::{self, SegmentConfig, TangentSource, TangentState, Too
 use super::super::{ToolAnchor, ToolResult};
 use super::geometry::{catmull_rom_chain_with_tangents, polyline_length, resample_by_distance};
 use crate::core::{ConnectionDirection, ConnectionPriority, RoadMap};
-use crate::shared::SNAP_RADIUS;
 use glam::Vec2;
 
 /// Zwischenpunkte pro Catmull-Rom-Segment beim Dicht-Sampling.
@@ -37,7 +36,7 @@ impl SplineTool {
             seg: SegmentConfig::new(2.0),
             direction: ConnectionDirection::Dual,
             priority: ConnectionPriority::Regular,
-            lifecycle: ToolLifecycleState::new(SNAP_RADIUS),
+            lifecycle: ToolLifecycleState::new(3.0), // Default, wird vom Handler überschrieben
             last_anchors: Vec::new(),
             tangents: TangentState::new(),
         }
@@ -195,6 +194,30 @@ impl SplineTool {
             priority,
             road_map,
         ))
+    }
+
+    /// Erhöht die Anzahl der Nodes um 1.
+    pub(crate) fn increase_node_count(&mut self) {
+        self.seg.increase_node_count();
+        self.lifecycle.recreate_needed = true;
+    }
+
+    /// Verringert die Anzahl der Nodes um 1 (min. 2).
+    pub(crate) fn decrease_node_count(&mut self) {
+        self.seg.decrease_node_count();
+        self.lifecycle.recreate_needed = true;
+    }
+
+    /// Erhöht den minimalen Abstand zwischen Nodes um 0.25.
+    pub(crate) fn increase_segment_length(&mut self) {
+        self.seg.increase_segment_length();
+        self.lifecycle.recreate_needed = true;
+    }
+
+    /// Verringert den minimalen Abstand zwischen Nodes um 0.25 (min. 0.1).
+    pub(crate) fn decrease_segment_length(&mut self) {
+        self.seg.decrease_segment_length();
+        self.lifecycle.recreate_needed = true;
     }
 }
 

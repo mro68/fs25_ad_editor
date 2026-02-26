@@ -1,8 +1,10 @@
 //! Multiple Nodes Menu: Rechtsklick bei ≥2 selektierten Nodes.
 
-use super::button_intent;
+use super::{button_intent, render_streckenteilung};
 use crate::app::{
-    state::DistanzenState, AppIntent, ConnectionDirection, ConnectionPriority, RoadMap,
+    segment_registry::{TOOL_INDEX_CURVE_CUBIC, TOOL_INDEX_CURVE_QUAD, TOOL_INDEX_STRAIGHT},
+    state::DistanzenState,
+    AppIntent, ConnectionDirection, ConnectionPriority, RoadMap,
 };
 use std::collections::HashSet;
 
@@ -29,6 +31,52 @@ pub fn render_multiple_nodes_menu(
             ui,
             "🔗 Nodes verbinden",
             AppIntent::ConnectSelectedNodesRequested,
+            events,
+        );
+    }
+
+    // Linien-Tools: bei genau 2 Nodes → Tool aktivieren + Start/End-Anker direkt setzen
+    if selected_node_ids.len() == 2 {
+        let mut ids_iter = selected_node_ids.iter();
+        let &id_a = ids_iter.next().unwrap();
+        let &id_b = ids_iter.next().unwrap();
+        // Kleinere ID als Start für konsistente Reihenfolge
+        let (start_id, end_id) = if id_a < id_b {
+            (id_a, id_b)
+        } else {
+            (id_b, id_a)
+        };
+
+        ui.separator();
+        ui.label("📐 Strecke erzeugen");
+        button_intent(
+            ui,
+            "━ Gerade Strecke",
+            AppIntent::RouteToolWithAnchorsRequested {
+                index: TOOL_INDEX_STRAIGHT,
+                start_node_id: start_id,
+                end_node_id: end_id,
+            },
+            events,
+        );
+        button_intent(
+            ui,
+            "⌒ Bézier Grad 2",
+            AppIntent::RouteToolWithAnchorsRequested {
+                index: TOOL_INDEX_CURVE_QUAD,
+                start_node_id: start_id,
+                end_node_id: end_id,
+            },
+            events,
+        );
+        button_intent(
+            ui,
+            "〜 Bézier Grad 3",
+            AppIntent::RouteToolWithAnchorsRequested {
+                index: TOOL_INDEX_CURVE_CUBIC,
+                start_node_id: start_id,
+                end_node_id: end_id,
+            },
             events,
         );
     }
@@ -96,63 +144,11 @@ pub fn render_multiple_nodes_menu(
             AppIntent::RemoveAllConnectionsBetweenSelectedRequested,
             events,
         );
-
-        ui.separator();
-        if distanzen_state.active {
-            ui.label("Streckenteilung:");
-
-            let prev_distance = distanzen_state.distance;
-            ui.horizontal(|ui| {
-                ui.label("Abstand:");
-                ui.add(
-                    egui::DragValue::new(&mut distanzen_state.distance)
-                        .speed(0.5)
-                        .range(1.0..=25.0)
-                        .suffix(" m"),
-                );
-            });
-            if (distanzen_state.distance - prev_distance).abs() > f32::EPSILON {
-                distanzen_state.by_count = false;
-                distanzen_state.sync_from_distance();
-            }
-
-            let prev_count = distanzen_state.count;
-            ui.horizontal(|ui| {
-                ui.label("Nodes:");
-                ui.add(
-                    egui::DragValue::new(&mut distanzen_state.count)
-                        .speed(1.0)
-                        .range(2..=10000),
-                );
-            });
-            if distanzen_state.count != prev_count {
-                distanzen_state.by_count = true;
-                distanzen_state.sync_from_count();
-                if distanzen_state.distance < 1.0 {
-                    distanzen_state.distance = 1.0;
-                    distanzen_state.sync_from_distance();
-                }
-            }
-
-            ui.add_space(4.0);
-            if ui.button("✓ Übernehmen").clicked() {
-                events.push(AppIntent::ResamplePathRequested);
-                distanzen_state.deactivate();
-                ui.close();
-            }
-            if ui.button("✕ Verwerfen").clicked() {
-                distanzen_state.deactivate();
-                ui.close();
-            }
-        } else {
-            button_intent(
-                ui,
-                "✂ Streckenteilung",
-                AppIntent::StreckenteilungAktivieren,
-                events,
-            );
-        }
     }
+
+    // Streckenteilung: immer verfügbar bei ≥2 Nodes (unabhängig von Connections)
+    ui.separator();
+    render_streckenteilung(ui, distanzen_state, events);
 
     ui.separator();
     ui.label("📐 Selektion");

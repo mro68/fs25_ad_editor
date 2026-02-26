@@ -14,6 +14,7 @@ mod zoom;
 use super::context_menu;
 use super::drag::{draw_drag_selection_overlay, DragSelection};
 use super::keyboard;
+use crate::app::tools::common::TangentMenuData;
 use crate::app::{AppIntent, Camera2D, EditorTool, RoadMap};
 use crate::shared::EditorOptions;
 use std::collections::HashSet;
@@ -42,11 +43,32 @@ pub(crate) struct ViewportContext<'a> {
     pub drag_targets: &'a [glam::Vec2],
 }
 
+/// Immutable Snapshot des Kontextmenü-States beim Rechtsklick.
+///
+/// Dieser Snapshot gefriert den kompletten Zustand ein, der zum Zeitpunkt
+/// des Rechtsklicks galt — damit Menüinhalt stabil bleibt, solange das
+/// Popup offen ist. Zustandsänderungen (Escape, Deselection etc.) beeinflussen
+/// nicht das bereits offene Menü.
+#[derive(Debug, Clone)]
+struct ContextMenuSnapshot {
+    /// Eingefrorene Menu-Variante
+    variant: context_menu::MenuVariant,
+    /// Eingefrorene Selection-Menge
+    selection: HashSet<u64>,
+    /// Pointer-Position in Weltkoordinaten beim Rechtsklick
+    /// (für zukünftige kontextabhängige Menu-Rendering-Features)
+    #[allow(dead_code)]
+    pointer_pos_world: Option<glam::Vec2>,
+}
+
 /// Verwaltet den Input-Zustand für das Viewport (Drag, Selektion, Scroll)
 #[derive(Default)]
 pub struct InputState {
     pub(crate) primary_drag_mode: PrimaryDragMode,
     pub(crate) drag_selection: Option<DragSelection>,
+    /// Snapshot des Menü-Zustands, gültig solange das Popup offen ist.
+    /// Wird beim Rechtsklick gesetzt und erst geleert, wenn egui das Popup schließt.
+    context_menu_snapshot: Option<ContextMenuSnapshot>,
 }
 
 impl InputState {
@@ -55,6 +77,7 @@ impl InputState {
         Self {
             primary_drag_mode: PrimaryDragMode::None,
             drag_selection: None,
+            context_menu_snapshot: None,
         }
     }
 
@@ -66,6 +89,9 @@ impl InputState {
     ///
     /// `drag_targets` enthält die Weltpositionen verschiebbarer Punkte
     /// des aktiven Route-Tools (leer wenn kein Tool aktiv oder keine Targets).
+    ///
+    /// `tangent_data` enthält optionale Tangenten-Menüdaten vom aktiven Route-Tool
+    /// (nur bei kubischer Kurve in Control-Phase mit Nachbarn).
     pub fn collect_viewport_events(
         &mut self,
         ui: &egui::Ui,
@@ -79,6 +105,7 @@ impl InputState {
         options: &EditorOptions,
         drag_targets: &[glam::Vec2],
         distanzen_state: &mut crate::app::state::DistanzenState,
+        tangent_data: Option<TangentMenuData>,
     ) -> Vec<AppIntent> {
         let ctx = ViewportContext {
             ui,
@@ -118,7 +145,9 @@ impl InputState {
         // Drag-Selektion Overlay (ausgelagert in drag.rs)
         draw_drag_selection_overlay(self.drag_selection.as_ref(), ui, response);
 
-        // Neues Context-Menu-System: Alle 5 Varianten über einheitlichen Router
+        // ── Einheitliches Context-Menu-System ───────────────────────────
+        // Genau EIN `response.context_menu()`-Aufruf pro Frame.
+
         let pointer_pos_world = response.hover_pos().map(|screen_pos| {
             let local = screen_pos - response.rect.min;
             camera.screen_to_world(
@@ -127,15 +156,51 @@ impl InputState {
             )
         });
 
-        context_menu::show_viewport_context_menu(
+        // Beim Rechtsklick: Snapshot erstellen und einfrieren
+        if response.secondary_clicked() {
+            let variant = context_menu::determine_menu_variant(
+                road_map,
+                selected_node_ids,
+                pointer_pos_world,
+                route_tool_is_drawing && active_tool == EditorTool::Route,
+                tangent_data.clone(),
+                options.snap_radius(),
+            );
+            self.context_menu_snapshot = Some(ContextMenuSnapshot {
+                variant,
+                selection: selected_node_ids.clone(),
+                pointer_pos_world,
+            });
+        }
+
+        // Eingefrorener Snapshot verwenden, falls vorhanden, sonst live berechnen.
+        let (variant, menu_selection) = if let Some(snapshot) = &self.context_menu_snapshot {
+            (snapshot.variant.clone(), &snapshot.selection)
+        } else {
+            let v = context_menu::determine_menu_variant(
+                road_map,
+                selected_node_ids,
+                pointer_pos_world,
+                route_tool_is_drawing && active_tool == EditorTool::Route,
+                tangent_data,
+                options.snap_radius(),
+            );
+            (v, selected_node_ids)
+        };
+
+        let menu_is_open = context_menu::render_context_menu(
             response,
             road_map,
-            selected_node_ids,
+            menu_selection,
             distanzen_state,
-            pointer_pos_world,
-            route_tool_is_drawing && active_tool == EditorTool::Route,
+            &variant,
             &mut events,
         );
+
+        // Cache leeren sobald das Popup geschlossen ist.
+        if !menu_is_open {
+            self.context_menu_snapshot = None;
+        }
 
         self.handle_scroll_zoom(&ctx, &mut events);
 

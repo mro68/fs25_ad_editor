@@ -64,7 +64,6 @@ Zentral gesammelte Konfigurationswerte, gegliedert nach Bereich:
 | Kamera | `CAMERA_ZOOM_MIN` / `MAX` | 0.1 / 100.0 | Zoom-Grenzen (Referenz-Duplikat) |
 | Kamera | `CAMERA_ZOOM_STEP` | 1.2 | Zoom-Schritt bei Menü-Buttons / Shortcuts |
 | Kamera | `CAMERA_SCROLL_ZOOM_STEP` | 1.1 | Zoom-Schritt bei Mausrad-Scroll |
-| Selektion | `SELECTION_PICK_RADIUS_PX` | 12.0 | Maus-Fangradius in Pixeln |
 | Selektion | `SELECTION_SIZE_FACTOR` | 1.8 | Vergrößerung selektierter Nodes |
 | Nodes | `NODE_SIZE_WORLD` | 0.5 | Feste Node-Größe in Welt-Einheiten |
 | Nodes | `NODE_COLOR_DEFAULT` | `[0.0, 0.8, 1.0, 1.0]` | Cyan (Regular) |
@@ -80,7 +79,7 @@ Zentral gesammelte Konfigurationswerte, gegliedert nach Bereich:
 | Marker | `MARKER_SIZE_WORLD` | 2.0 | Pin-Höhe in Welt-Einheiten |
 | Marker | `MARKER_COLOR` | `[0.9, 0.1, 0.1, 1.0]` | Rot |
 | Marker | `MARKER_OUTLINE_COLOR` | `[0.6, 0.0, 0.0, 1.0]` | Dunkles Rot |
-| Tools | `SNAP_RADIUS` | 3.0 | Snap-Radius für Route-Tools (Welteinheiten) |
+| Tools | `SNAP_SCALE_PERCENT` | 100.0 | Snap-Radius in % der Node-Größe |
 | Tools | `HITBOX_SCALE_PERCENT` | 100.0 | Standard-Hitbox-Skalierung in % der Node-Größe |
 | Terrain | `TERRAIN_HEIGHT_SCALE` | 255.0 | Höhenskala für Heightmap-Export |
 
@@ -123,7 +122,6 @@ pub struct EditorOptions {
     pub node_color_warning: [f32; 4],
     // Selektion
     pub selection_size_factor: f32,
-    pub selection_pick_radius_px: f32,
     // Connections
     pub connection_thickness_world: f32,
     pub connection_thickness_subprio_world: f32,
@@ -140,7 +138,7 @@ pub struct EditorOptions {
     pub camera_zoom_step: f32,
     pub camera_scroll_zoom_step: f32,
     // Tools
-    pub snap_radius: f32,
+    pub snap_scale_percent: f32,
     /// Hitbox-Skalierung in Prozent der Node-Größe (100 = exakte Node-Größe)
     pub hitbox_scale_percent: f32,
     /// true = Mittelpunkt zwischen Vorgänger und Nachfolger beim Löschen verbinden
