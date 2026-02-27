@@ -251,7 +251,7 @@ fn render_validated_entries(
             }
             ValidatedEntry::Command { label, intent, .. } => {
                 if ui.button(label).clicked() {
-                    events.push(intent.clone());
+                    events.push(*intent.clone());
                     ui.close();
                 }
             }
@@ -354,8 +354,8 @@ fn render_tangent_selection(
             let is_sel = *source == data.current_start;
             if ui.selectable_label(is_sel, label).clicked() {
                 events.push(AppIntent::RouteToolTangentSelected {
-                    start: source.clone(),
-                    end: data.current_end.clone(),
+                    start: *source,
+                    end: data.current_end,
                 });
                 ui.close();
             }
@@ -372,8 +372,8 @@ fn render_tangent_selection(
             let is_sel = *source == data.current_end;
             if ui.selectable_label(is_sel, label).clicked() {
                 events.push(AppIntent::RouteToolTangentSelected {
-                    start: data.current_start.clone(),
-                    end: source.clone(),
+                    start: data.current_start,
+                    end: *source,
                 });
                 ui.close();
             }

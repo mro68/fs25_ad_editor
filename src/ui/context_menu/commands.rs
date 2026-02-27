@@ -605,7 +605,7 @@ pub enum ValidatedEntry {
         #[allow(dead_code)]
         id: CommandId,
         label: String,
-        intent: AppIntent,
+        intent: Box<AppIntent>,
     },
 }
 
@@ -637,7 +637,7 @@ pub fn validate_entries(
                     raw.push(ValidatedEntry::Command {
                         id: *id,
                         label: label.clone(),
-                        intent: id.to_intent(intent_ctx),
+                        intent: Box::new(id.to_intent(intent_ctx)),
                     });
                 }
             }
@@ -1200,7 +1200,7 @@ mod tests {
             ValidatedEntry::Command {
                 id: CommandId::DeleteSelected,
                 label: "Löschen".into(),
-                intent: AppIntent::DeleteSelectedRequested,
+                intent: Box::new(AppIntent::DeleteSelectedRequested),
             },
         ];
 
@@ -1221,7 +1221,7 @@ mod tests {
             ValidatedEntry::Command {
                 id: CommandId::CreateMarker,
                 label: "Erstellen".into(),
-                intent: AppIntent::CreateMarkerRequested { node_id: 1 },
+                intent: Box::new(AppIntent::CreateMarkerRequested { node_id: 1 }),
             },
         ];
 
@@ -1239,14 +1239,14 @@ mod tests {
             ValidatedEntry::Command {
                 id: CommandId::SelectNode,
                 label: "Sel".into(),
-                intent: AppIntent::SelectAllRequested,
+                intent: Box::new(AppIntent::SelectAllRequested),
             },
             ValidatedEntry::Separator,
             ValidatedEntry::Separator,
             ValidatedEntry::Command {
                 id: CommandId::DeleteSelected,
                 label: "Del".into(),
-                intent: AppIntent::DeleteSelectedRequested,
+                intent: Box::new(AppIntent::DeleteSelectedRequested),
             },
         ];
 
