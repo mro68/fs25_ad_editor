@@ -1,6 +1,6 @@
 //! UI-Komponenten: Menü, Toolbar, Properties, Input-Handling, Dialoge.
 
-mod context_menu;
+pub mod context_menu;
 pub mod dialogs;
 mod drag;
 pub mod input;
