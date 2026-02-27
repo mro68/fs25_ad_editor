@@ -1,6 +1,7 @@
 use super::*;
-use crate::core::{
-    Connection, ConnectionDirection, ConnectionPriority, MapMarker, MapNode, NodeFlag,
+use super::validation::cleanup_separators;
+use crate::app::{
+    Connection, ConnectionDirection, ConnectionPriority, MapMarker, MapNode, NodeFlag, RoadMap,
 };
 use glam::Vec2;
 use std::collections::HashSet;

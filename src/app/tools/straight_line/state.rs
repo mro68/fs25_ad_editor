@@ -47,29 +47,6 @@ impl StraightLineTool {
         self.seg.sync_from_length(self.total_distance());
     }
 
-    /// Erhöht die Anzahl der Nodes um 1.
-    pub(crate) fn increase_node_count(&mut self) {
-        self.seg.increase_node_count();
-        self.lifecycle.recreate_needed = true;
-    }
-
-    /// Verringert die Anzahl der Nodes um 1 (min. 2).
-    pub(crate) fn decrease_node_count(&mut self) {
-        self.seg.decrease_node_count();
-        self.lifecycle.recreate_needed = true;
-    }
-
-    /// Erhöht den minimalen Abstand zwischen Nodes um 0.25.
-    pub(crate) fn increase_segment_length(&mut self) {
-        self.seg.increase_segment_length();
-        self.lifecycle.recreate_needed = true;
-    }
-
-    /// Verringert den minimalen Abstand zwischen Nodes um 0.25 (min. 0.1).
-    pub(crate) fn decrease_segment_length(&mut self) {
-        self.seg.decrease_segment_length();
-        self.lifecycle.recreate_needed = true;
-    }
 }
 
 impl Default for StraightLineTool {

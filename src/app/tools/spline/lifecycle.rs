@@ -202,19 +202,4 @@ impl RouteTool for SplineTool {
         self.sync_derived();
     }
 
-    fn increase_node_count(&mut self) {
-        self.increase_node_count();
-    }
-
-    fn decrease_node_count(&mut self) {
-        self.decrease_node_count();
-    }
-
-    fn increase_segment_length(&mut self) {
-        self.increase_segment_length();
-    }
-
-    fn decrease_segment_length(&mut self) {
-        self.decrease_segment_length();
-    }
 }
