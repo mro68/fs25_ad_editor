@@ -149,9 +149,11 @@ impl Precondition {
                 !ctx.road_map.has_connection(a, b) && !ctx.road_map.has_connection(b, a)
             }
 
-            Self::HasConnectionsBetweenSelected => {
-                ctx.road_map.connections_between_ids(ctx.selected_node_ids).next().is_some()
-            },
+            Self::HasConnectionsBetweenSelected => ctx
+                .road_map
+                .connections_between_ids(ctx.selected_node_ids)
+                .next()
+                .is_some(),
 
             Self::StreckenteilungActive(expected) => ctx.distanzen_active == *expected,
         }
@@ -588,7 +590,10 @@ impl MenuCatalog {
 // =============================================================================
 
 /// Prüft ob alle Preconditions eines Menu-Eintrags erfüllt sind.
-pub(crate) fn all_preconditions_valid(preconditions: &[Precondition], ctx: &PreconditionContext) -> bool {
+pub(crate) fn all_preconditions_valid(
+    preconditions: &[Precondition],
+    ctx: &PreconditionContext,
+) -> bool {
     preconditions.iter().all(|p| p.is_valid(ctx))
 }
 

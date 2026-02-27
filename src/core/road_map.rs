@@ -218,8 +218,11 @@ impl RoadMap {
         &'a self,
         ids: &'a std::collections::HashSet<u64>,
     ) -> Box<dyn Iterator<Item = &'a Connection> + 'a> {
-        Box::new(self.connections.values()
-            .filter(move |c| ids.contains(&c.start_id) && ids.contains(&c.end_id)))
+        Box::new(
+            self.connections
+                .values()
+                .filter(move |c| ids.contains(&c.start_id) && ids.contains(&c.end_id)),
+        )
     }
 
     /// Berechnet die nächste freie Node-ID
