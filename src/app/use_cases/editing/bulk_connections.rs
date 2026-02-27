@@ -89,17 +89,15 @@ pub fn set_all_connections_direction_between_selected(
             if direction != ConnectionDirection::Dual {
                 let mut seen_pairs = HashSet::new();
                 let mut to_remove = Vec::new();
-                for conn in road_map.connections_iter() {
-                    if selected.contains(&conn.start_id) && selected.contains(&conn.end_id) {
-                        let pair = (
-                            conn.start_id.min(conn.end_id),
-                            conn.start_id.max(conn.end_id),
-                        );
-                        if seen_pairs.contains(&pair) {
-                            to_remove.push((conn.start_id, conn.end_id));
-                        } else {
-                            seen_pairs.insert(pair);
-                        }
+                for conn in road_map.connections_between_ids(selected) {
+                    let pair = (
+                        conn.start_id.min(conn.end_id),
+                        conn.start_id.max(conn.end_id),
+                    );
+                    if seen_pairs.contains(&pair) {
+                        to_remove.push((conn.start_id, conn.end_id));
+                    } else {
+                        seen_pairs.insert(pair);
                     }
                 }
                 for (s, e) in to_remove {
