@@ -269,15 +269,7 @@ impl AppController {
             // === Distanzen ===
             AppCommand::ResamplePath => handlers::editing::resample_path(state),
             AppCommand::StreckenteilungAktivieren => {
-                if state.selection.selected_node_ids.len() >= 2 {
-                    state.ui.distanzen.active = true;
-                    if state.ui.distanzen.distance < 1.0 {
-                        state.ui.distanzen.distance = 1.0;
-                    }
-                    if state.ui.distanzen.count < 2 {
-                        state.ui.distanzen.sync_from_distance();
-                    }
-                }
+                handlers::editing::streckenteilung_aktivieren(state)
             }
 
             // === View ===
@@ -287,17 +279,7 @@ impl AppController {
             }
 
             // === Selection ===
-            AppCommand::InvertSelection => {
-                if let Some(rm) = &state.road_map {
-                    let all_nodes: std::collections::HashSet<_> =
-                        rm.nodes.keys().copied().collect();
-                    let inverted: std::collections::HashSet<_> = all_nodes
-                        .symmetric_difference(&state.selection.selected_node_ids)
-                        .copied()
-                        .collect();
-                    state.selection.selected_node_ids = std::sync::Arc::new(inverted);
-                }
-            }
+            AppCommand::InvertSelection => handlers::selection::invert(state),
 
             // === Editing ===
             AppCommand::DuplicateSelectedNodes => {

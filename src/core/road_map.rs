@@ -210,6 +210,21 @@ impl RoadMap {
         neighbors
     }
 
+    /// Gibt alle Connections zurück, deren Start- und End-Ids in der gegebenen Menge liegen.
+    ///
+    /// Verwendet zum Filtern von Connections zwischen selektierten Nodes.
+    /// O(n) über alle Connections, aber nur bei Use-Cases aufgerufen (nicht per-Frame).
+    pub fn connections_between_ids<'a>(
+        &'a self,
+        ids: &'a std::collections::HashSet<u64>,
+    ) -> Box<dyn Iterator<Item = &'a Connection> + 'a> {
+        Box::new(
+            self.connections
+                .values()
+                .filter(move |c| ids.contains(&c.start_id) && ids.contains(&c.end_id)),
+        )
+    }
+
     /// Berechnet die nächste freie Node-ID
     pub fn next_node_id(&self) -> u64 {
         self.nodes.keys().max().copied().unwrap_or(0) + 1

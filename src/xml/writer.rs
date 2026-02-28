@@ -220,10 +220,15 @@ pub fn write_autodrive_config(
 }
 
 fn join_ids(ids: &[u64]) -> String {
-    ids.iter()
-        .map(|id| id.to_string())
-        .collect::<Vec<String>>()
-        .join(",")
+    use std::fmt::Write;
+    let mut result = String::new();
+    for (i, id) in ids.iter().enumerate() {
+        if i > 0 {
+            result.push(',');
+        }
+        let _ = write!(result, "{}", id);
+    }
+    result
 }
 
 fn format_float(value: f32) -> String {
