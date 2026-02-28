@@ -197,13 +197,16 @@ fn catalog_empty_area_shows_tools() {
     assert!(has_command(&entries, CommandId::SetToolSelect));
     assert!(has_command(&entries, CommandId::SetToolConnect));
     assert!(has_command(&entries, CommandId::SetToolAddNode));
-    assert_eq!(count_commands(&entries), 3);
+    assert!(has_command(&entries, CommandId::SetToolRouteStraight));
+    assert!(has_command(&entries, CommandId::SetToolRouteQuadratic));
+    assert!(has_command(&entries, CommandId::SetToolRouteCubic));
+    assert_eq!(count_commands(&entries), 6);
 }
 
 #[test]
-fn catalog_single_node_unselected_shows_marker_create() {
+fn catalog_node_focused_shows_marker_create() {
     let map = make_road_map(&[(42, 5.0, 5.0)]);
-    let selected = HashSet::new();
+    let selected: HashSet<u64> = [42].into();
     let ctx = PreconditionContext {
         road_map: &map,
         selected_node_ids: &selected,
@@ -215,18 +218,16 @@ fn catalog_single_node_unselected_shows_marker_create() {
         two_node_ids: None,
     };
 
-    let catalog = MenuCatalog::for_single_node_unselected(42);
+    let catalog = MenuCatalog::for_node_focused(42, false);
     let entries = validate_entries(&catalog, &ctx, &intent_ctx);
 
-    assert!(has_command(&entries, CommandId::SelectNode));
-    assert!(has_command(&entries, CommandId::AddToSelection));
     assert!(has_command(&entries, CommandId::CreateMarker));
     assert!(!has_command(&entries, CommandId::EditMarker));
     assert!(!has_command(&entries, CommandId::RemoveMarker));
 }
 
 #[test]
-fn catalog_single_node_unselected_shows_marker_edit_when_marker_exists() {
+fn catalog_node_focused_shows_marker_edit_when_marker_exists() {
     let mut map = make_road_map(&[(42, 5.0, 5.0)]);
     map.add_map_marker(MapMarker::new(
         42,
@@ -235,7 +236,7 @@ fn catalog_single_node_unselected_shows_marker_edit_when_marker_exists() {
         1,
         false,
     ));
-    let selected = HashSet::new();
+    let selected: HashSet<u64> = [42].into();
     let ctx = PreconditionContext {
         road_map: &map,
         selected_node_ids: &selected,
@@ -247,7 +248,7 @@ fn catalog_single_node_unselected_shows_marker_edit_when_marker_exists() {
         two_node_ids: None,
     };
 
-    let catalog = MenuCatalog::for_single_node_unselected(42);
+    let catalog = MenuCatalog::for_node_focused(42, false);
     let entries = validate_entries(&catalog, &ctx, &intent_ctx);
 
     assert!(has_command(&entries, CommandId::EditMarker));
@@ -256,7 +257,7 @@ fn catalog_single_node_unselected_shows_marker_edit_when_marker_exists() {
 }
 
 #[test]
-fn catalog_single_node_selected_shows_delete_and_duplicate() {
+fn catalog_node_focused_shows_delete_and_duplicate() {
     let map = make_road_map(&[(10, 1.0, 1.0)]);
     let selected: HashSet<u64> = [10].into();
     let ctx = PreconditionContext {
@@ -270,10 +271,9 @@ fn catalog_single_node_selected_shows_delete_and_duplicate() {
         two_node_ids: None,
     };
 
-    let catalog = MenuCatalog::for_single_node_selected(10);
+    let catalog = MenuCatalog::for_node_focused(10, false);
     let entries = validate_entries(&catalog, &ctx, &intent_ctx);
 
-    assert!(has_command(&entries, CommandId::DeselectNode));
     assert!(has_command(&entries, CommandId::DeleteSingleNode));
     assert!(has_command(&entries, CommandId::DuplicateSingleNode));
 }
@@ -293,7 +293,7 @@ fn catalog_multi_nodes_connect_only_when_two_unconnected() {
         two_node_ids: Some((1, 2)),
     };
 
-    let catalog = MenuCatalog::for_multiple_nodes_selected();
+    let catalog = MenuCatalog::for_selection_only();
     let entries = validate_entries(&catalog, &ctx, &intent_ctx);
     assert!(has_command(&entries, CommandId::ConnectTwoNodes));
 
@@ -322,7 +322,7 @@ fn catalog_multi_nodes_direction_only_when_connected() {
         two_node_ids: Some((1, 2)),
     };
 
-    let catalog = MenuCatalog::for_multiple_nodes_selected();
+    let catalog = MenuCatalog::for_selection_only();
     let entries = validate_entries(&catalog, &ctx, &intent_ctx);
 
     assert!(!has_command(&entries, CommandId::DirectionRegular));
@@ -355,7 +355,7 @@ fn catalog_multi_nodes_route_tools_only_when_two_selected() {
         two_node_ids: None,
     };
 
-    let catalog = MenuCatalog::for_multiple_nodes_selected();
+    let catalog = MenuCatalog::for_selection_only();
     let entries = validate_entries(&catalog, &ctx, &intent_ctx);
 
     assert!(!has_command(&entries, CommandId::RouteStraight));
@@ -378,7 +378,7 @@ fn catalog_multi_nodes_selection_commands_always_visible() {
         two_node_ids: Some((1, 2)),
     };
 
-    let catalog = MenuCatalog::for_multiple_nodes_selected();
+    let catalog = MenuCatalog::for_selection_only();
     let entries = validate_entries(&catalog, &ctx, &intent_ctx);
 
     assert!(has_command(&entries, CommandId::DeleteSelected));
@@ -410,20 +410,14 @@ fn catalog_route_tool_basic_commands() {
 }
 
 #[test]
-fn intent_mapping_select_node() {
+fn intent_mapping_delete_single_node() {
     let ctx = IntentContext {
         node_id: Some(42),
         node_position: Some(Vec2::new(5.0, 5.0)),
         two_node_ids: None,
     };
-    let intent = CommandId::SelectNode.to_intent(&ctx);
-    assert!(matches!(
-        intent,
-        AppIntent::NodePickRequested {
-            additive: false,
-            ..
-        }
-    ));
+    let intent = CommandId::DeleteSingleNode.to_intent(&ctx);
+    assert!(matches!(intent, AppIntent::DeleteSelectedRequested));
 }
 
 #[test]
@@ -480,7 +474,7 @@ fn cleanup_keeps_labels_with_commands() {
 fn cleanup_no_double_separators() {
     let entries = vec![
         ValidatedEntry::Command {
-            id: CommandId::SelectNode,
+            id: CommandId::SelectAll,
             label: "Sel".into(),
             intent: Box::new(AppIntent::SelectAllRequested),
         },
@@ -516,8 +510,10 @@ fn deleted_node_hides_all_commands() {
         two_node_ids: None,
     };
 
-    let catalog = MenuCatalog::for_single_node_unselected(99);
+    let catalog = MenuCatalog::for_node_focused(99, false);
     let entries = validate_entries(&catalog, &ctx, &intent_ctx);
 
-    assert_eq!(count_commands(&entries), 0);
+    // Gelöschter Node: NodeExists-Precondition schlägt fehl → keine node-spezifischen Commands
+    assert!(!has_command(&entries, CommandId::CreateMarker));
+    assert!(!has_command(&entries, CommandId::DeleteSingleNode));
 }

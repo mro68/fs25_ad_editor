@@ -14,20 +14,21 @@ use crate::app::{state::DistanzenState, AppIntent, RoadMap};
 use commands::{validate_entries, IntentContext, MenuCatalog, PreconditionContext, ValidatedEntry};
 use std::collections::HashSet;
 
-/// Kontextabhängige Menü-Variante basierend auf Selection und Position.
+/// Kontextabhängige Menü-Variante basierend auf Selection und Fokus-Node.
 ///
 /// Wird beim Rechtsklick einmalig bestimmt und eingefroren, bis das Menü
 /// geschlossen wird. Enthält alle Daten die zum Rendern nötig sind.
 #[derive(Debug, Clone)]
 pub enum MenuVariant {
-    /// Rechtsklick auf leeren Bereich (kein Node gehovered)
+    /// Rechtsklick auf leeren Bereich ohne Selektion → Tool-Auswahl
     EmptyArea,
-    /// Rechtsklick auf einzelnen Node, der noch nicht selektiert ist
-    SingleNodeUnselected { node_id: u64 },
-    /// Rechtsklick auf einzelnen Node, der bereits selektiert ist
-    SingleNodeSelected { node_id: u64 },
-    /// Mehrere Nodes selektiert (≥2)
-    MultipleNodesSelected,
+    /// Nodes selektiert, Rechtsklick auf leeren Bereich → Befehle für Selektion
+    SelectionOnly,
+    /// Rechtsklick auf spezifischen Node → Einzelnode-Befehle oben + Selektions-Befehle unten
+    NodeFocused {
+        /// Der fokussierte Node (unter Mausposition)
+        focused_node_id: u64,
+    },
     /// Route-Tool aktiv mit pending input, optional mit Tangenten-Auswahl
     RouteToolActive {
         /// Tangenten-Menüdaten (nur bei kubischer Kurve mit Nachbarn)
@@ -63,48 +64,35 @@ pub fn find_nearest_node_at(
 // NEUE GENERALISIERTE CONTEXT-MENU-STRUKTUR
 // =============================================================================
 
-/// Bestimmt die MenuVariant basierend auf Kontext (Node-Hoverung, Selection, Route-Tool).
+/// Bestimmt die MenuVariant basierend auf Fokus-Node, Selektion und Route-Tool-Status.
 ///
 /// Wird einmal beim Rechtsklick aufgerufen und das Ergebnis eingefroren, bis das Menü
 /// geschlossen wird — so verursachen Zustandsänderungen (Esc, Deselection) kein Flackern.
-///
-/// `tangent_data` wird vom Aufrufer aus dem aktiven Route-Tool abgefragt
-/// und hier eingebettet, wenn die Variante `RouteToolActive` ist.
 pub fn determine_menu_variant(
-    road_map: Option<&RoadMap>,
     selected_node_ids: &HashSet<u64>,
-    pointer_pos_world: Option<glam::Vec2>,
+    focused_node_id: Option<u64>,
     route_tool_has_input: bool,
     tangent_data: Option<TangentMenuData>,
-    snap_radius: f32,
 ) -> MenuVariant {
-    let Some(rm) = road_map else {
-        return MenuVariant::EmptyArea;
-    };
-    let hovered_node_id =
-        pointer_pos_world.and_then(|pos| find_nearest_node_at(pos, rm, snap_radius));
-
-    match (
-        selected_node_ids.len(),
-        hovered_node_id,
-        route_tool_has_input,
-    ) {
-        // Route-Tool aktiv: eigenes Menü mit optionalen Tangenten (nur wenn kein Node gehovered)
-        (_, None, true) => MenuVariant::RouteToolActive { tangent_data },
-        // Rechtsklick auf leeren Bereich (kein Node gehovered) → immer EmptyArea
-        // (unabhängig von vorheriger Selektion)
-        (_, None, _) => MenuVariant::EmptyArea,
-        // Node gehovered, der noch nicht selektiert ist
-        (_, Some(id), _) if !selected_node_ids.contains(&id) => {
-            MenuVariant::SingleNodeUnselected { node_id: id }
-        }
-        // Node gehovered, der selektiert ist (bei Einzel-Selektion)
-        (1, Some(id), _) => MenuVariant::SingleNodeSelected { node_id: id },
-        // Node gehovered + Multi-Selektion → Multi-Menü
-        (n, Some(_), _) if n >= 2 => MenuVariant::MultipleNodesSelected,
-        // Fallback
-        _ => MenuVariant::EmptyArea,
+    // Route-Tool hat Priorität (nur wenn kein Node fokussiert)
+    if route_tool_has_input && focused_node_id.is_none() {
+        return MenuVariant::RouteToolActive { tangent_data };
     }
+
+    // Fokussierter Node → NodeFocused (Einzelnode + Selektions-Befehle)
+    if let Some(nid) = focused_node_id {
+        return MenuVariant::NodeFocused {
+            focused_node_id: nid,
+        };
+    }
+
+    // Selektion vorhanden → SelectionOnly
+    if !selected_node_ids.is_empty() {
+        return MenuVariant::SelectionOnly;
+    }
+
+    // Nichts fokussiert, nichts selektiert → EmptyArea
+    MenuVariant::EmptyArea
 }
 
 /// Rendert das Kontextmenü basierend auf der eingefrorenen MenuVariant.
@@ -149,43 +137,7 @@ pub fn render_context_menu(
                     }
                 }
 
-                MenuVariant::SingleNodeUnselected { node_id } => {
-                    // Info-Header
-                    render_node_info_header(ui, *node_id, rm);
-
-                    let node_pos = rm.nodes.get(node_id).map(|n| n.position);
-                    let catalog = MenuCatalog::for_single_node_unselected(*node_id);
-                    let intent_ctx = IntentContext {
-                        node_id: Some(*node_id),
-                        node_position: node_pos,
-                        two_node_ids: None,
-                    };
-                    let entries = validate_entries(&catalog, &precondition_ctx, &intent_ctx);
-                    render_validated_entries(ui, &entries, events);
-                }
-
-                MenuVariant::SingleNodeSelected { node_id } => {
-                    // Info-Header
-                    if let Some(node) = rm.nodes.get(node_id) {
-                        ui.label(format!("📍 Node {} ✓", node_id));
-                        ui.label(format!(
-                            "Pos: ({:.1}, {:.1})",
-                            node.position.x, node.position.y
-                        ));
-                    }
-
-                    let node_pos = rm.nodes.get(node_id).map(|n| n.position);
-                    let catalog = MenuCatalog::for_single_node_selected(*node_id);
-                    let intent_ctx = IntentContext {
-                        node_id: Some(*node_id),
-                        node_position: node_pos,
-                        two_node_ids: None,
-                    };
-                    let entries = validate_entries(&catalog, &precondition_ctx, &intent_ctx);
-                    render_validated_entries(ui, &entries, events);
-                }
-
-                MenuVariant::MultipleNodesSelected => {
+                MenuVariant::SelectionOnly => {
                     // Info-Header
                     ui.label(format!("📍 {} Nodes selektiert", selected_node_ids.len()));
 
@@ -198,7 +150,7 @@ pub fn render_context_menu(
                         None
                     };
 
-                    let catalog = MenuCatalog::for_multiple_nodes_selected();
+                    let catalog = MenuCatalog::for_selection_only();
                     let intent_ctx = IntentContext {
                         node_id: None,
                         node_position: None,
@@ -207,8 +159,39 @@ pub fn render_context_menu(
                     let entries = validate_entries(&catalog, &precondition_ctx, &intent_ctx);
                     render_validated_entries(ui, &entries, events);
 
-                    // Streckenteilung als interaktives Widget ersetzen
-                    // (der Command wird zum Separator — Widget wird direkt gerendert)
+                    // Streckenteilung-Widget
+                    if distanzen_state.active {
+                        ui.separator();
+                        render_streckenteilung_widget(ui, distanzen_state, events);
+                    }
+                }
+
+                MenuVariant::NodeFocused { focused_node_id } => {
+                    // Info-Header für fokussierten Node
+                    render_node_info_header(ui, *focused_node_id, rm);
+
+                    let node_pos = rm.nodes.get(focused_node_id).map(|n| n.position);
+
+                    // Sortierte 2-Node-IDs für Route-Tool-Shortcuts
+                    let two_ids = if selected_node_ids.len() == 2 {
+                        let mut ids: Vec<u64> = selected_node_ids.iter().copied().collect();
+                        ids.sort();
+                        Some((ids[0], ids[1]))
+                    } else {
+                        None
+                    };
+
+                    let catalog =
+                        MenuCatalog::for_node_focused(*focused_node_id, distanzen_state.active);
+                    let intent_ctx = IntentContext {
+                        node_id: Some(*focused_node_id),
+                        node_position: node_pos,
+                        two_node_ids: two_ids,
+                    };
+                    let entries = validate_entries(&catalog, &precondition_ctx, &intent_ctx);
+                    render_validated_entries(ui, &entries, events);
+
+                    // Streckenteilung-Widget
                     if distanzen_state.active {
                         ui.separator();
                         render_streckenteilung_widget(ui, distanzen_state, events);

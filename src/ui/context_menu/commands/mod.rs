@@ -35,30 +35,28 @@ pub enum CommandId {
     SetToolConnect,
     /// Node-Hinzufügen-Werkzeug aktivieren
     SetToolAddNode,
+    /// Route-Tool: Gerade Strecke aktivieren
+    SetToolRouteStraight,
+    /// Route-Tool: Bézier Grad 2 aktivieren
+    SetToolRouteQuadratic,
+    /// Route-Tool: Bézier Grad 3 aktivieren
+    SetToolRouteCubic,
     /// Streckenteilung (in EmptyArea nur wenn aktiv)
     StreckenteilungEmptyArea,
 
-    // ── SingleNode (unselected) ─────────────────────────────────────
-    /// Node selektieren (exklusiv)
-    SelectNode,
-    /// Node zur Selektion hinzufügen
-    AddToSelection,
+    // ── NodeFocused (Einzelnode-Befehle) ─────────────────────────────
     /// Marker erstellen
     CreateMarker,
     /// Marker bearbeiten
     EditMarker,
     /// Marker löschen
     RemoveMarker,
-
-    // ── SingleNode (selected) ───────────────────────────────────────
-    /// Node aus Selektion entfernen
-    DeselectNode,
-    /// Node löschen (bei Einzel-Selektion)
+    /// Node löschen (Einzelnode)
     DeleteSingleNode,
-    /// Node duplizieren (bei Einzel-Selektion)
+    /// Node duplizieren (Einzelnode)
     DuplicateSingleNode,
 
-    // ── MultipleNodes ───────────────────────────────────────────────
+    // ── Selection-Befehle (SelectionOnly + NodeFocused) ─────────────
     /// Zwei Nodes verbinden (nur bei genau 2 unverbundenen)
     ConnectTwoNodes,
     /// Gerade Strecke erzeugen (2 Nodes)
@@ -81,7 +79,7 @@ pub enum CommandId {
     PrioritySub,
     /// Alle Verbindungen trennen
     RemoveAllConnections,
-    /// Streckenteilung (bei MultipleNodes)
+    /// Streckenteilung (bei selektierten Nodes)
     StreckenteilungMulti,
     /// Selektion invertieren
     InvertSelection,
@@ -156,21 +154,20 @@ impl CommandId {
             Self::SetToolAddNode => AppIntent::SetEditorToolRequested {
                 tool: EditorTool::AddNode,
             },
+            Self::SetToolRouteStraight => AppIntent::SelectRouteToolRequested {
+                index: TOOL_INDEX_STRAIGHT,
+            },
+            Self::SetToolRouteQuadratic => AppIntent::SelectRouteToolRequested {
+                index: TOOL_INDEX_CURVE_QUAD,
+            },
+            Self::SetToolRouteCubic => AppIntent::SelectRouteToolRequested {
+                index: TOOL_INDEX_CURVE_CUBIC,
+            },
             Self::StreckenteilungEmptyArea | Self::StreckenteilungMulti => {
                 AppIntent::StreckenteilungAktivieren
             }
 
-            // ── SingleNode (unselected) ──────────────────────────────
-            Self::SelectNode => AppIntent::NodePickRequested {
-                world_pos: ctx.node_position.unwrap_or_default(),
-                additive: false,
-                extend_path: false,
-            },
-            Self::AddToSelection => AppIntent::NodePickRequested {
-                world_pos: ctx.node_position.unwrap_or_default(),
-                additive: true,
-                extend_path: false,
-            },
+            // ── NodeFocused (Einzelnode-Befehle) ─────────────────────
             Self::CreateMarker => AppIntent::CreateMarkerRequested {
                 node_id: ctx.node_id.unwrap_or(0),
             },
@@ -180,19 +177,12 @@ impl CommandId {
             Self::RemoveMarker => AppIntent::RemoveMarkerRequested {
                 node_id: ctx.node_id.unwrap_or(0),
             },
-
-            // ── SingleNode (selected) ────────────────────────────────
-            Self::DeselectNode => AppIntent::NodePickRequested {
-                world_pos: ctx.node_position.unwrap_or_default(),
-                additive: true,
-                extend_path: false,
-            },
             Self::DeleteSingleNode | Self::DeleteSelected => AppIntent::DeleteSelectedRequested,
             Self::DuplicateSingleNode | Self::DuplicateSelected => {
                 AppIntent::DuplicateSelectedNodesRequested
             }
 
-            // ── MultipleNodes ────────────────────────────────────────
+            // ── Selection-Befehle ────────────────────────────────────
             Self::ConnectTwoNodes => AppIntent::ConnectSelectedNodesRequested,
             Self::RouteStraight => {
                 let (s, e) = ctx.two_node_ids.unwrap_or((0, 0));
