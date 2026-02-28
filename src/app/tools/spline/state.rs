@@ -195,7 +195,6 @@ impl SplineTool {
             road_map,
         ))
     }
-
 }
 
 impl Default for SplineTool {

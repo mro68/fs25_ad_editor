@@ -25,13 +25,8 @@ fn collect_with_key_event_full(
     let mut events = Vec::new();
     let _ = ctx.run(raw_input, |ctx| {
         egui::CentralPanel::default().show(ctx, |ui| {
-            events = collect_keyboard_intents(
-                ui,
-                &selected,
-                active_tool,
-                route_tool_is_drawing,
-                false,
-            );
+            events =
+                collect_keyboard_intents(ui, &selected, active_tool, route_tool_is_drawing, false);
         });
     });
 

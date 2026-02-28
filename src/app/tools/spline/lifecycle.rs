@@ -201,5 +201,4 @@ impl RouteTool for SplineTool {
         self.seg.max_segment_length = *max_segment_length;
         self.sync_derived();
     }
-
 }

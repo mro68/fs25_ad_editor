@@ -1,5 +1,5 @@
-use super::*;
 use super::validation::cleanup_separators;
+use super::*;
 use crate::app::{
     Connection, ConnectionDirection, ConnectionPriority, MapMarker, MapNode, NodeFlag, RoadMap,
 };

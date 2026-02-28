@@ -358,5 +358,4 @@ impl RouteTool for CurveTool {
         self.phase = Phase::Control;
         self.init_apex();
     }
-
 }

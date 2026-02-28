@@ -46,7 +46,6 @@ impl StraightLineTool {
     pub(crate) fn sync_derived(&mut self) {
         self.seg.sync_from_length(self.total_distance());
     }
-
 }
 
 impl Default for StraightLineTool {

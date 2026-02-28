@@ -166,5 +166,4 @@ impl RouteTool for StraightLineTool {
         self.seg.max_segment_length = *max_segment_length;
         self.sync_derived();
     }
-
 }

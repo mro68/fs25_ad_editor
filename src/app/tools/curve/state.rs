@@ -293,7 +293,6 @@ impl CurveTool {
             ));
         }
     }
-
 }
 
 impl Default for CurveTool {
