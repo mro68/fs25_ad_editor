@@ -20,8 +20,12 @@ Das `ui`-Modul enthält egui-UI-Komponenten (Menüs, Statusbar, Input-Handling, 
   - `keyboard.rs` — Tastatur-Shortcuts (Delete, Escape, Ctrl+A) [Peer-Modul]
   - `drag.rs` — Drag-Selektion-Overlay und DragSelection-Typen [Peer-Modul]
   - `context_menu/` — Rechtsklick-Kontextmenü mit validiertem Command-System
-    - `commands.rs` — CommandId, Precondition, MenuCatalog, validate_entries()
-    - `mod.rs` — MenuVariant, determine_menu_variant(), render_context_menu()
+    - `commands/mod.rs` — CommandId, Precondition, MenuCatalog, validate_entries()
+    - `commands/catalogs.rs` — Katalog-Konstruktoren: `for_empty_area()`, `for_node_focused()`, `for_selection_only()`, `for_route_tool()`
+    - `commands/validation.rs` — Precondition-Auswertung und Separator-Cleanup
+    - `commands/preconditions.rs` — Precondition-Enum und is_valid()-Logik
+    - `commands/tests.rs` — Unit-Tests für Kataloge, Preconditions und Intent-Mapping
+    - `mod.rs` — MenuVariant (`EmptyArea`, `NodeFocused`, `SelectionOnly`, `RouteTool`), `determine_menu_variant()`, `render_context_menu()`
 - `dialogs/` — Datei-Dialoge und modale Fenster
   - `file_dialogs.rs` — Open/Save-Dateidialoge
   - `heightmap_warning.rs` — Heightmap-Warnung vor dem Speichern
