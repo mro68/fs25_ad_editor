@@ -178,4 +178,67 @@ let bounds = WorldBounds::from_map_size(4096.0);  // -2048 bis +2048
 - Node-Positionen sind 2D (x,z); y wird beim Export aus Heightmap berechnet
 - Flag-Bereinigung (2/4 -> 0) beim XML-Import
 - Geometrie wird im Core gepflegt und bei Moves aktualisiert
+
+---
+
+## Application-State-Strukturen
+
+### SelectionState
+```rust
+pub struct SelectionState {
+    pub selected_node_ids: Arc<HashSet<u64>>,  // Arc für O(1)-Clone (Copy-on-Write)
+    pub selection_anchor_node_id: Option<u64>,  // Anker für Pfad-Selektion
+}
+```
+- **CoW-Pattern:** `Arc::make_mut` bei Mutation → klont HashSet nur wenn mehrere Referenzen existieren
+- Wird als `Arc` in `RenderScene` geteilt (kein Deep-Clone pro Frame)
+
+### SegmentRegistry
+```rust
+pub struct SegmentRecord {
+    pub id: u64,
+    pub tool_index: usize,
+    pub anchors: Vec<ToolAnchor>,
+    pub created_ids: Vec<u64>,
+    pub direction: ConnectionDirection,
+    pub priority: ConnectionPriority,
+    pub tangent_start: TangentSource,
+    pub tangent_end: TangentSource,
+}
+
+pub struct SegmentRegistry {
+    records: Vec<SegmentRecord>,
+    next_id: u64,
+}
+```
+- In-Session-Registry für nachträgliche Bearbeitung erstellter Route-Segmente
+- Erlaubt Segment-Länge/Node-Anzahl nach Erstellung per Slider zu ändern
+
+### DistanzenState
+```rust
+pub struct DistanzenState {
+    pub by_count: bool,
+    pub count: u32,
+    pub distance: f32,
+    pub path_length: f32,
+    pub active: bool,
+    pub hide_original: bool,
+    pub preview_positions: Vec<Vec2>,
+}
+```
+- Steuert das Distanzen-Neuverteilen-Feature (Catmull-Rom-Resampling)
+- Wechselseitige Berechnung: Anzahl ↔ Abstand über `path_length`
+
+### EditorToolState
+```rust
+pub struct EditorToolState {
+    pub active_tool: EditorTool,
+    pub connect_source_node: Option<u64>,
+    pub default_direction: ConnectionDirection,
+    pub default_priority: ConnectionPriority,
+    pub tool_manager: ToolManager,
+}
+```
+- `ToolManager` verwaltet die drei Route-Tools (StraightLine, Curve, Spline)
+- `active_tool` bestimmt welches Editor-Werkzeug gerade aktiv ist
 <parameter name="filePath">/home/mro/Share/repos/fs25_auto_drive_editor/docs/DATA_MODEL.md

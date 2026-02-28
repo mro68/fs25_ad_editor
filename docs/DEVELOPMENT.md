@@ -55,7 +55,9 @@ struct RoadMap {
 - Grow-only Buffer-Reuse in Node/Connection-Renderer (keine per-frame Neuallokation)
 - CPU-Viewport-Culling vor GPU-Upload (Nodes + Connections)
 
-## Nächste Schritte (Stand: 2026-02-22)
+## Nächste Schritte (Stand: 2026-02-28)
+
+### Erledigte Schritte
 1. ✅ Projekt-Setup
 2. ✅ Core-Datenmodelle definiert
 3. ✅ XML-Parser implementiert
@@ -70,6 +72,22 @@ struct RoadMap {
    - `spline/mod.rs` aufgeteilt: `render_config` → `spline/config_ui.rs` (677 → 500 Zeilen)
    - `show_dedup_dialog` in `ui/API.md` nachgetragen
    - 45 Struct-Level-Docstrings auf öffentlichen Typen ergänzt
+10. ✅ Strukturelles Audit (2026-02-28):
+    - Docstrings für `AppCommand`, `AppIntent`, `Snapshot`, `EditHistory`, `CommandLog`, `SegmentRecord`, `SegmentRegistry`
+    - `reset()` Docstrings für alle RouteTool-Implementierungen
+    - SplineTool: `tangent_menu_data()` + `apply_tangent_selection()` implementiert
+    - `app/API.md` um fehlende Varianten vervollständigt
+    - ROADMAP.md Feature-Status korrigiert
+    - DATA_MODEL.md um State-Strukturen erweitert
+    - How-To-Use.md: Tangent-Ausrichtung, CP-Drag, Verkettung dokumentiert
+    - ARCHITECTURE_PLAN.md: RENDER→UI Ausnahme dokumentiert
+
+### Offene Aufgaben
+- [ ] Macro-Extraktion `impl_lifecycle_delegation!` in `common/macros.rs`
+- [ ] Drag-Handler-Split in `handlers/route_tool_drag.rs`
+- [ ] RoadMap-Query-Extraktion in `road_map/queries.rs`
+- [ ] Performance-Benchmarks mit 100k+ Nodes ausführen und dokumentieren
+- [ ] StraightLine/Spline Drag-Support evaluieren
 
 ## Architektur-Verbesserungen (2025-07-02)
 - ✅ Controller-Split: `handle_command()` in Feature-Handler aufgeteilt (`handlers/`)
