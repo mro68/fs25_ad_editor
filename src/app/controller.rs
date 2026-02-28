@@ -280,6 +280,9 @@ impl AppController {
 
             // === Selection ===
             AppCommand::InvertSelection => handlers::selection::invert(state),
+            AppCommand::ContextMenuSelect { node_id, toggle } => {
+                super::use_cases::selection::context_menu_select(state, node_id, toggle);
+            }
 
             // === Editing ===
             AppCommand::DuplicateSelectedNodes => {

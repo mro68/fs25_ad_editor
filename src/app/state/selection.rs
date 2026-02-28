@@ -8,6 +8,8 @@ pub struct SelectionState {
     pub selected_node_ids: Arc<HashSet<u64>>,
     /// Letzter selektierter Node als Anker für additive Bereichsselektion
     pub selection_anchor_node_id: Option<u64>,
+    /// Fokussierter Node für Kontextmenü-Einzelbefehle (RMT auf spezifischen Node)
+    pub focused_node_id: Option<u64>,
 }
 
 impl SelectionState {
@@ -16,6 +18,7 @@ impl SelectionState {
         Self {
             selected_node_ids: Arc::new(HashSet::new()),
             selection_anchor_node_id: None,
+            focused_node_id: None,
         }
     }
 

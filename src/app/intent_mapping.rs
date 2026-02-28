@@ -289,6 +289,9 @@ pub fn map_intent_to_commands(state: &AppState, intent: AppIntent) -> Vec<AppCom
         AppIntent::DecreaseRouteToolSegmentLength => {
             vec![AppCommand::DecreaseRouteToolSegmentLength]
         }
+        AppIntent::ContextMenuPick {
+            node_id, toggle, ..
+        } => vec![AppCommand::ContextMenuSelect { node_id, toggle }],
     }
 }
 
