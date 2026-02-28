@@ -93,10 +93,13 @@ impl RouteTool for StraightLineTool {
         )
     }
 
+    /// Setzt das Tool auf den Anfangszustand zurück.
+    ///
+    /// Löscht nur Start/End. `lifecycle.last_created_ids` und `last_*_anchor`
+    /// bleiben erhalten für Verkettung und Nachbearbeitung.
     fn reset(&mut self) {
         self.start = None;
         self.end = None;
-        // lifecycle.last_created_ids, last_*_anchor bleiben erhalten für Nachbearbeitung/Verkettung
     }
 
     fn is_ready(&self) -> bool {

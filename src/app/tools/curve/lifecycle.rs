@@ -208,6 +208,11 @@ impl RouteTool for CurveTool {
         build_tool_result(start, end, &params, road_map)
     }
 
+    /// Setzt das Tool vollständig zurück (inkl. Tangenten und Phase).
+    ///
+    /// Im Gegensatz zu StraightLine/Spline werden hier auch Tangenten
+    /// komplett zurückgesetzt, da Control Points die primäre Steuerung sind.
+    /// `lifecycle.last_created_ids` und `last_*_anchor` bleiben erhalten.
     fn reset(&mut self) {
         self.start = None;
         self.end = None;
