@@ -300,9 +300,33 @@ Zeichnet einen interpolierenden Spline, der durch **alle geklickten Punkte** fü
 
 - **Enter** bestätigt und erstellt die Route
 - **Escape** bricht ab und setzt das Tool zurück
-- **Verkettung:** Nach Erstellung wird der letzte Endpunkt als neuer Startpunkt übernommen
-- **Nachbearbeitung:** Segment-Länge/Node-Anzahl können nach Erstellung per Slider angepasst werden
+- **Verkettung:** Nach Erstellung wird der letzte Endpunkt als neuer Startpunkt übernommen. Das Tool bleibt aktiv — der nächste Klick setzt den neuen Endpunkt. So können zusammenhängende Strecken nahtlos hintereinander erstellt werden.
+- **Nachbearbeitung:** Segment-Länge/Node-Anzahl können nach Erstellung per Slider angepasst werden. Die zuletzt erstellte Strecke wird automatisch gelöscht und mit den neuen Parametern neu berechnet.
 - **Snap:** Start- und Endpunkte rasten auf existierende Nodes ein (Snap-Radius: 3m)
+
+#### Tangent-Ausrichtung (Kurve und Spline)
+
+Wenn Start- oder Endpunkt einer **kubischen Bézier-Kurve** oder eines **Splines** auf einen existierenden Node snapt, kann die lokale Tangente an einer vorhandenen Verbindung ausgerichtet werden:
+
+1. Route-Tool (Kurve oder Spline) aktivieren
+2. Start- oder Endpunkt auf einen existierenden Node klicken (Snap)
+3. Im **Eigenschaften-Panel** erscheint eine Tangent-Auswahl (ComboBox):
+   - **Manuell** — keine automatische Tangente
+   - **→ Node #42 (NO)** — Tangente entlang der Verbindung zum Nachbar-Node (mit Kompassrichtung)
+4. Bei Auswahl einer Tangente wird der zugehörige Kontrollpunkt automatisch entlang der Verbindungsrichtung platziert
+5. Der Tangent-Vorschlag kann durch manuelles Klicken/Drag überschrieben werden
+
+> **Hinweis:** Tangent-Ausrichtung ist nur bei kubischen Kurven und Splines verfügbar, da diese separate Kontrollpunkte für Start und Ende haben.
+
+#### Control-Point-Drag (nur Kurve)
+
+Bei der **Bézier-Kurve** können die Steuerpunkte nach dem Setzen per Drag verschoben werden:
+
+1. In der Kontrollpunkt-Phase auf einen Steuerpunkt klicken und ziehen
+2. Die Kurve wird in Echtzeit aktualisiert
+3. Loslassen fixiert die neue Position
+
+Erkannte Drag-Ziele sind der/die Kontrollpunkt(e) sowie Start- und Endpunkt.
 
 ---
 
