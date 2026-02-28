@@ -72,3 +72,15 @@ pub fn select_all(state: &mut AppState) {
         );
     }
 }
+
+/// Invertiert die aktuelle Selektion (alle unselektierten werden selektiert und umgekehrt).
+pub fn invert(state: &mut AppState) {
+    if let Some(rm) = &state.road_map {
+        let all_nodes: std::collections::HashSet<_> = rm.nodes.keys().copied().collect();
+        let inverted: std::collections::HashSet<_> = all_nodes
+            .symmetric_difference(&state.selection.selected_node_ids)
+            .copied()
+            .collect();
+        state.selection.selected_node_ids = Arc::new(inverted);
+    }
+}

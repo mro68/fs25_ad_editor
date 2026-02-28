@@ -178,3 +178,16 @@ pub fn edit_segment(state: &mut AppState, record_id: u64) {
 pub fn resample_path(state: &mut AppState) {
     use_cases::editing::resample_selected_path(state);
 }
+
+/// Aktiviert die Streckenteilung wenn mindestens 2 Nodes selektiert sind.
+pub fn streckenteilung_aktivieren(state: &mut AppState) {
+    if state.selection.selected_node_ids.len() >= 2 {
+        state.ui.distanzen.active = true;
+        if state.ui.distanzen.distance < 1.0 {
+            state.ui.distanzen.distance = 1.0;
+        }
+        if state.ui.distanzen.count < 2 {
+            state.ui.distanzen.sync_from_distance();
+        }
+    }
+}

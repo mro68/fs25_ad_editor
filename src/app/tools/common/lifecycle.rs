@@ -122,6 +122,26 @@ macro_rules! impl_lifecycle_delegation {
         fn clear_recreate_flag(&mut self) {
             self.lifecycle.recreate_needed = false;
         }
+
+        fn increase_node_count(&mut self) {
+            self.seg.increase_node_count();
+            self.lifecycle.recreate_needed = true;
+        }
+
+        fn decrease_node_count(&mut self) {
+            self.seg.decrease_node_count();
+            self.lifecycle.recreate_needed = true;
+        }
+
+        fn increase_segment_length(&mut self) {
+            self.seg.increase_segment_length();
+            self.lifecycle.recreate_needed = true;
+        }
+
+        fn decrease_segment_length(&mut self) {
+            self.seg.decrease_segment_length();
+            self.lifecycle.recreate_needed = true;
+        }
     };
 }
 

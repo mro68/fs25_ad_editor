@@ -22,3 +22,4 @@ ad_sample_data/*.dds
 scripts/fs25_overview_map.py
 scripts/README.md
 **/*AUDIT*.*
+**/*_PLAN.*

@@ -19,7 +19,9 @@ Das `ui`-Modul enthält egui-UI-Komponenten (Menüs, Statusbar, Input-Handling, 
   - `zoom.rs` — Scroll-Zoom auf Mausposition
   - `keyboard.rs` — Tastatur-Shortcuts (Delete, Escape, Ctrl+A) [Peer-Modul]
   - `drag.rs` — Drag-Selektion-Overlay und DragSelection-Typen [Peer-Modul]
-  - `context_menu.rs` — Rechtsklick-Kontextmenü [Peer-Modul]
+  - `context_menu/` — Rechtsklick-Kontextmenü mit validiertem Command-System
+    - `commands.rs` — CommandId, Precondition, MenuCatalog, validate_entries()
+    - `mod.rs` — MenuVariant, determine_menu_variant(), render_context_menu()
 - `dialogs/` — Datei-Dialoge und modale Fenster
   - `file_dialogs.rs` — Open/Save-Dateidialoge
   - `heightmap_warning.rs` — Heightmap-Warnung vor dem Speichern
@@ -162,7 +164,7 @@ let intents = input.collect_viewport_events(
   - Shift+Alt+Drag → Lasso-Selektion
   - Mittel/Rechts-Drag → Kamera-Pan
 
-- **`context_menu`:** Rechtsklick-Kontextmenü auf Nodes/Connections
+- **`context_menu`:** Rechtsklick-Kontextmenü mit validiertem Command-System (CommandId + Preconditions → nur gültige Einträge)
 
 **Unterstützte Interaktionen (gesamt):**
 - **Linksklick:** Node-Pick (mit Shift: additiv + Pfad-Erweiterung)

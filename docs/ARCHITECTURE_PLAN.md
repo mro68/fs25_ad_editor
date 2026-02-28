@@ -516,3 +516,69 @@ src/
 - Kein vollständiger Renderer-Rewrite in einem Schritt
 - Kein Big-Bang-Umbau aller Tools
 - Kein Wechsel des Dateiformats
+
+---
+
+## Detaillierte Diagramme
+
+### Tool-Lifecycle (RouteTool-Pattern)
+
+```mermaid
+stateDiagram-v2
+  [*] --> Inactive
+  Inactive --> Start: on_click(pos)
+  Start --> End: on_click(pos)
+  End --> Control: on_click(pos)
+  Control --> Control: preview(cursor_pos)\nrender_config(ui)
+  Control --> Executing: Enter/execute()
+  Executing --> [*]: Done
+  Control --> [*]: Escape/reset()
+```
+
+### Command-Intent-Flow
+
+```mermaid
+sequenceDiagram
+participant UI as UI Layer<br/>(context_menu.rs)
+participant CTRL as Controller<br/>(execute_intent)
+participant HAND as Handler<br/>(apply)
+participant STATE as AppState<br/>(Mutation)
+participant SCENE as RenderScene<br/>(Build)
+
+UI->>CTRL: AppIntent::SelectNodeRequested
+activate CTRL
+CTRL->>HAND: AppCommand::SelectNode(id)
+activate HAND
+HAND->>STATE: state.selection.ids_mut().insert(id)
+deactivate HAND
+CTRL->>SCENE: build_render_scene()
+CTRL->>UI: Observer notified
+deactivate CTRL
+```
+
+### Layer-Isolation (Compile-Time Guardrails)
+
+```mermaid
+graph TB
+    UI["🎨 UI Layer<br/>context_menu, keyboard, dialogs<br/>→ emits AppIntent"]
+    APP["⚙️ App Layer<br/>controller, handlers, use_cases<br/>→ mutates AppState"]
+    CORE["💾 Core Layer<br/>road_map, node, connection<br/>→ pure data structures"]
+    SHARED["🔗 Shared<br/>RenderScene, EditorOptions<br/>→ Schnittstelle"]
+    RENDER["🖥️ Render Layer<br/>Vertex/Fragment Shader, GPU Batching<br/>→ consumes RenderScene"]
+    XML["📄 XML<br/>parser, writer<br/>→ I/O, unabhängig"]
+    
+    UI -->|uses| APP
+    APP -->|uses| CORE
+    APP -->|writes to| SHARED
+    RENDER -->|reads from| SHARED
+    APP -->|uses| XML
+    CORE -->|never| RENDER
+    CORE -->|never| UI
+    UI -->|never| CORE
+    
+    style UI fill:#FFC
+    style APP fill:#FCF
+    style CORE fill:#CFF
+    style SHARED fill:#FEE
+    style RENDER fill:#FCC
+    style XML fill:#EEE
