@@ -31,7 +31,7 @@
 - [x] File-Dialogs (Open)
 - [x] File-Dialogs (Save mit Heightmap-Warnung)
 - [x] File-Dialogs (Save As)
-- [ ] Basic Theme/Icons
+- [🟡] Basic Theme/Icons (egui_extras image_loaders vorhanden, volles Theme ausstehend)
 - [x] Keyboard-Shortcuts (Ctrl+O, Ctrl+S, Ctrl+Z, Ctrl+Y, Delete, Escape, etc.)
 - [x] Options-Dialog (Farben, Größen, Breiten – Live-Preview)
 - [x] TOML-Persistierung (fs25_auto_drive_editor.toml neben Binary)
@@ -41,7 +41,7 @@
   - [x] Spatial Index in RoadMap integrieren
   - [x] Query-API: `nearest_node()`, `nodes_within_radius()`, `nodes_within_rect()`
   - [x] Auto-Update bei Node-Mutationen
-  - [ ] Performance-Tests (100k+ Nodes)
+  - [🟡] Performance-Tests (100k+ Nodes, Criterion-Benchmarks vorhanden, Ergebnis-Dokumentation ausstehend)
 - [x] **Select Tool (Click)**
   - [x] World-Koordinaten-Transformation (Screen → World)
   - [x] Node-Picking via KD-Tree
@@ -123,7 +123,7 @@
   - [x] `ctx.request_repaint()` nur bei Änderungen (CPU-Idle-Verbrauch reduzieren)
 - [🟡] Error-Handling & User-Feedback
   - [x] unwrap()-Aufrufe in Produktionscode durch graceful handling ersetzt
-  - [ ] Toast-Notifications
+  - [🟡] Toast-Notifications (via StatusBar `status_message` gelöst, dedizierte Toast-UI ausstehend)
   - [ ] Loading-Spinner
   - [ ] Error-Recovery
   - [ ] Input-Validierung
@@ -136,7 +136,7 @@
 - [🟡] Dokumentation
   - [ ] User-Guide
   - [x] API-Dokumentation pro Modul (API.md inkl. shared)
-  - [ ] Keyboard-Shortcuts-Übersicht
+  - [x] Keyboard-Shortcuts-Übersicht (in How-To-Use.md vollständig dokumentiert)
   - [x] Architektur-Analyse und API.md-Nachführung (2026-02-20)
   - [x] Handler-Split und Architektur-Guardrails dokumentiert (2025-07-02)
   - [x] DRY-Refactoring und RouteTool-Trait-Extraktion (2025-07-11)
@@ -191,7 +191,7 @@
 
 ---
 
-## 📊 Aktueller Status (Stand: 2026-02-20)
+## 📊 Aktueller Status (Stand: 2026-02-28)
 
 **Fertigstellung:**
 - Phase 1: ✅ 100%
@@ -199,9 +199,17 @@
 - Phase 3: ✅ 98% (Theme fehlt)
 - Phase 4: ✅ 100% (alle Features implementiert, 100k-Benchmarks ausstehend)
 - Phase 5: 🟡 90% (DDS-Background + Marker-Editor + Bézier-Kurven + Catmull-Rom-Spline + Übersichtskarte fertig)
-- Phase 6: 🟡 40% (Handler-Split, CI-Checks, unwrap-Bereinigung, API-Docs nachgeführt)
+- Phase 6: 🟡 50% (Handler-Split, CI-Checks, unwrap-Bereinigung, API-Docs, Docstrings, Audit-Fixes durchgeführt)
 
-**Errungenschaften seit letztem Update (Spline-Tool 2026-02-21):**
+**Errungenschaften seit letztem Update (Strukturelles Audit 2026-02-28):**
+- ✅ Docstrings für `AppCommand`, `AppIntent` (alle Varianten dokumentiert)
+- ✅ Docstrings für `Snapshot`, `EditHistory`, `CommandLog`, `SegmentRecord`, `SegmentRegistry`
+- ✅ Docstrings für `reset()` in allen RouteTool-Implementierungen
+- ✅ SplineTool: `tangent_menu_data()` + `apply_tangent_selection()` implementiert
+- ✅ UI-Funktions-Docstrings (`render_toolbar`, `render_menu`, `render_status_bar`, `render_properties`)
+- ✅ ROADMAP.md Feature-Status korrigiert (Keyboard-Shortcuts, Benchmarks, Toast, Theme)
+
+**Errungenschaften (Spline-Tool 2026-02-21):**
 - ✅ Neues Route-Tool: Catmull-Rom-Spline (interpolierend, Kurs führt durch alle geklickten Punkte)
 - ✅ Arc-Length-Resampling für gleichmäßige Node-Verteilung
 - ✅ Fortlaufende Vorschau (Cursor als nächster Punkt)

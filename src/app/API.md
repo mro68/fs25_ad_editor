@@ -329,16 +329,37 @@ pub enum AppIntent {
     RouteToolCancelled,
     SelectRouteToolRequested { index: usize },
     RouteToolConfigChanged,
+    RouteToolWithAnchorsRequested { anchors: Vec<glam::Vec2>, direction: ConnectionDirection, priority: ConnectionPriority },
+    RouteToolTangentSelected { is_start: bool, neighbor_id: Option<u64> },
+    RouteToolRecreateRequested,
 
     // Route-Tool Drag (Steuerpunkt-Verschiebung)
     RouteToolDragStarted { world_pos: glam::Vec2 },
     RouteToolDragUpdated { world_pos: glam::Vec2 },
     RouteToolDragEnded,
 
+    // Route-Tool Schnellsteuerung (Keyboard-Shortcuts)
+    IncreaseRouteToolNodeCount,
+    DecreaseRouteToolNodeCount,
+    IncreaseRouteToolSegmentLength,
+    DecreaseRouteToolSegmentLength,
+
     // Segment-Bearbeitung (nachträgliche Bearbeitung erstellter Linien)
     EditSegmentRequested { record_id: u64 },
     // Distanzen: Selektierte Nodes-Kette gleichmäßig neu verteilen
     ResamplePathRequested,
+    StreckenteilungAktivieren,
+
+    // Hintergrund als Übersichtskarte speichern
+    SaveBackgroundAsOverviewConfirmed,
+    SaveBackgroundAsOverviewDismissed,
+
+    // Viewport
+    ZoomToFitRequested,
+
+    // Selektion (erweitert)
+    DuplicateSelectedNodesRequested,
+    InvertSelectionRequested,
 }
 
 pub enum AppCommand {
@@ -436,6 +457,14 @@ pub enum AppCommand {
     RouteToolCancel,
     SelectRouteTool { index: usize },
     RouteToolRecreate,
+    RouteToolWithAnchors { anchors: Vec<glam::Vec2>, direction: ConnectionDirection, priority: ConnectionPriority },
+    RouteToolApplyTangent { is_start: bool, neighbor_id: Option<u64> },
+
+    // Route-Tool Schnellsteuerung
+    IncreaseRouteToolNodeCount,
+    DecreaseRouteToolNodeCount,
+    IncreaseRouteToolSegmentLength,
+    DecreaseRouteToolSegmentLength,
 
     // Route-Tool Drag (Steuerpunkt-Verschiebung)
     RouteToolDragStart { world_pos: glam::Vec2 },
@@ -446,6 +475,18 @@ pub enum AppCommand {
     EditSegment { record_id: u64 },
     // Distanzen: Selektierte Nodes-Kette per Catmull-Rom-Spline neu verteilen
     ResamplePath,
+    StreckenteilungAktivieren,
+
+    // Hintergrund als Übersichtskarte speichern
+    SaveBackgroundAsOverview { path: String },
+    DismissSaveOverviewDialog,
+
+    // Viewport
+    ZoomToFit,
+
+    // Selektion (erweitert)
+    DuplicateSelectedNodes,
+    InvertSelection,
 }
 ```
 

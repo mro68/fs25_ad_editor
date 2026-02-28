@@ -1,7 +1,9 @@
 //! Lifecycle-Methoden des SplineTool (RouteTool-Implementierung).
 
 use super::super::{
-    common::{linear_connections, populate_neighbors},
+    common::{
+        linear_connections, populate_neighbors, tangent_options, TangentMenuData, TangentSource,
+    },
     snap_to_node, RouteTool, ToolAction, ToolPreview, ToolResult,
 };
 use super::state::SplineTool;
@@ -101,11 +103,14 @@ impl RouteTool for SplineTool {
         )
     }
 
+    /// Setzt das Tool auf den Anfangszustand zurück.
+    ///
+    /// Löscht Anker und Tangenten-Auswahl. `last_anchors`, `start_neighbors`,
+    /// `end_neighbors` und `lifecycle.last_*` bleiben erhalten für
+    /// Nachbearbeitung und Verkettung.
     fn reset(&mut self) {
         self.anchors.clear();
         self.tangents.reset_tangents();
-        // start_neighbors / end_neighbors bleiben erhalten —
-        // werden in set_last_created befüllt und im Nachbearbeitungs-Modus benötigt
     }
 
     fn is_ready(&self) -> bool {
@@ -154,6 +159,35 @@ impl RouteTool for SplineTool {
             self.tangents.tangent_end,
             road_map,
         )
+    }
+
+    fn tangent_menu_data(&self) -> Option<TangentMenuData> {
+        let adjusting = !self.lifecycle.last_created_ids.is_empty() && self.last_anchors.len() >= 2;
+        if !adjusting {
+            return None;
+        }
+
+        let has_start = !self.tangents.start_neighbors.is_empty();
+        let has_end = !self.tangents.end_neighbors.is_empty();
+        if !has_start && !has_end {
+            return None;
+        }
+
+        Some(TangentMenuData {
+            start_options: tangent_options(&self.tangents.start_neighbors),
+            end_options: tangent_options(&self.tangents.end_neighbors),
+            current_start: self.tangents.tangent_start,
+            current_end: self.tangents.tangent_end,
+        })
+    }
+
+    fn apply_tangent_selection(&mut self, start: TangentSource, end: TangentSource) {
+        self.tangents.tangent_start = start;
+        self.tangents.tangent_end = end;
+        self.sync_derived();
+        if self.lifecycle.has_last_created() {
+            self.lifecycle.recreate_needed = true;
+        }
     }
 
     fn make_segment_record(&self, id: u64, node_ids: &[u64]) -> Option<SegmentRecord> {
