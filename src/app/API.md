@@ -358,7 +358,6 @@ pub enum AppIntent {
     ZoomToFitRequested,
 
     // Selektion (erweitert)
-    DuplicateSelectedNodesRequested,
     InvertSelectionRequested,
 }
 
@@ -485,7 +484,6 @@ pub enum AppCommand {
     ZoomToFit,
 
     // Selektion (erweitert)
-    DuplicateSelectedNodes,
     InvertSelection,
 }
 ```

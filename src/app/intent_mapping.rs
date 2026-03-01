@@ -278,7 +278,6 @@ pub fn map_intent_to_commands(state: &AppState, intent: AppIntent) -> Vec<AppCom
         AppIntent::ResamplePathRequested => vec![AppCommand::ResamplePath],
         AppIntent::StreckenteilungAktivieren => vec![AppCommand::StreckenteilungAktivieren],
         AppIntent::ZoomToFitRequested => vec![AppCommand::ZoomToFit],
-        AppIntent::DuplicateSelectedNodesRequested => vec![AppCommand::DuplicateSelectedNodes],
         AppIntent::InvertSelectionRequested => vec![AppCommand::InvertSelection],
         AppIntent::RouteToolRecreateRequested => vec![AppCommand::RouteToolRecreate],
         AppIntent::IncreaseRouteToolNodeCount => vec![AppCommand::IncreaseRouteToolNodeCount],
