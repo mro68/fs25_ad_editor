@@ -55,10 +55,6 @@ struct ContextMenuSnapshot {
     variant: context_menu::MenuVariant,
     /// Eingefrorene Selection-Menge
     selection: HashSet<u64>,
-    /// Pointer-Position in Weltkoordinaten beim Rechtsklick
-    /// (für zukünftige kontextabhängige Menu-Rendering-Features)
-    #[allow(dead_code)]
-    pointer_pos_world: Option<glam::Vec2>,
 }
 
 /// Verwaltet den Input-Zustand für das Viewport (Drag, Selektion, Scroll)
@@ -69,45 +65,6 @@ pub struct InputState {
     /// Snapshot des Menü-Zustands, gültig solange das Popup offen ist.
     /// Wird beim Rechtsklick gesetzt und erst geleert, wenn egui das Popup schließt.
     context_menu_snapshot: Option<ContextMenuSnapshot>,
-}
-
-/// Berechnet den vorhergesagten Selektions-State nach einem RMT-Klick.
-///
-/// Reine Berechnung im UI-Layer (keine State-Mutation), damit der Snapshot
-/// sofort mit dem korrekten Menü erstellt werden kann. Die tatsächliche
-/// State-Mutation erfolgt asynchron über `ContextMenuPick` → Controller.
-fn predict_selection_after_rmt(
-    current: &HashSet<u64>,
-    clicked_node: Option<u64>,
-    toggle: bool,
-) -> (HashSet<u64>, Option<u64>) {
-    let Some(nid) = clicked_node else {
-        // Klick ins Leere: Selektion beibehalten, kein Fokus
-        return (current.clone(), None);
-    };
-
-    if toggle {
-        // Ctrl+RMT: Toggle
-        if current.contains(&nid) {
-            let mut predicted = current.clone();
-            predicted.remove(&nid);
-            (predicted, None)
-        } else {
-            let mut predicted = current.clone();
-            predicted.insert(nid);
-            (predicted, Some(nid))
-        }
-    } else if current.is_empty() {
-        // Leere Selektion → exklusiv selektieren
-        let mut predicted = HashSet::new();
-        predicted.insert(nid);
-        (predicted, Some(nid))
-    } else {
-        // Bestehende Selektion → Node hinzufügen
-        let mut predicted = current.clone();
-        predicted.insert(nid);
-        (predicted, Some(nid))
-    }
 }
 
 impl InputState {
@@ -198,43 +155,27 @@ impl InputState {
         // Beim Rechtsklick: Snapshot erstellen und einfrieren
         // Guard: Kein Kontextmenü während Rect/Lasso-Drag
         if response.secondary_clicked() && self.drag_selection.is_none() {
-            // Node unter Mausposition finden
+            // Node unter Mausposition finden (für NodeFocused-Menü)
             let clicked_node_id = pointer_pos_world.and_then(|pos| {
                 road_map.and_then(|rm| {
                     context_menu::find_nearest_node_at(pos, rm, options.snap_radius())
                 })
             });
 
-            let toggle = modifiers.command; // Ctrl (Linux/Win) / Cmd (macOS)
-
-            // Optimistischen Selection-State berechnen (was nach Intent-Verarbeitung gelten wird)
-            let (predicted_selection, predicted_focus) =
-                predict_selection_after_rmt(selected_node_ids, clicked_node_id, toggle);
-
-            // Intent emittieren — State wird vom Controller nachgezogen
-            if let Some(world_pos) = pointer_pos_world {
-                events.push(AppIntent::ContextMenuPick {
-                    node_id: clicked_node_id,
-                    world_pos,
-                    toggle,
-                });
-            }
-
             // Route-Tool-Priorität prüfen
             let route_tool_active_for_menu =
                 route_tool_is_drawing && active_tool == EditorTool::Route;
 
             let variant = context_menu::determine_menu_variant(
-                &predicted_selection,
-                predicted_focus,
+                selected_node_ids,
+                clicked_node_id,
                 route_tool_active_for_menu,
                 tangent_data.clone(),
             );
 
             self.context_menu_snapshot = Some(ContextMenuSnapshot {
                 variant,
-                selection: predicted_selection,
-                pointer_pos_world,
+                selection: selected_node_ids.clone(),
             });
         }
 

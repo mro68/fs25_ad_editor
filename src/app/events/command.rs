@@ -242,11 +242,4 @@ pub enum AppCommand {
     DuplicateSelectedNodes,
     /// Auswahl invertieren
     InvertSelection,
-    /// Kontextmenü: Node selektieren/togglen und als Fokus setzen
-    ContextMenuSelect {
-        /// Node-ID unter Mausposition (None = Klick ins Leere)
-        node_id: Option<u64>,
-        /// Ctrl gehalten → Toggle-Modus
-        toggle: bool,
-    },
 }

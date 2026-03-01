@@ -118,51 +118,10 @@ pub fn select_nearest_node(
     } else {
         state.selection.ids_mut().clear();
         state.selection.selection_anchor_node_id = None;
-        state.selection.focused_node_id = None;
         if let Some(node_id) = hit {
             state.selection.ids_mut().insert(node_id);
             state.selection.selection_anchor_node_id = Some(node_id);
         }
-    }
-}
-
-/// Kontextmenü-Selektion: Node auswählen/togglen und als Fokus setzen.
-///
-/// - `node_id == None`: Klick ins Leere, Fokus löschen
-/// - `toggle == true`: Ctrl+RMT, Node aus Selektion entfernen/hinzufügen
-/// - `toggle == false`: Node zur Selektion hinzufügen (oder exklusiv wählen bei leerer Selektion)
-pub fn context_menu_select(state: &mut AppState, node_id: Option<u64>, toggle: bool) {
-    let Some(nid) = node_id else {
-        // Klick ins Leere: Fokus löschen, Selektion beibehalten
-        state.selection.focused_node_id = None;
-        return;
-    };
-
-    if toggle {
-        // Ctrl+RMT: Toggle-Verhalten
-        if state.selection.selected_node_ids.contains(&nid) {
-            // Node bereits selektiert → entfernen
-            state.selection.ids_mut().remove(&nid);
-            state.selection.focused_node_id = None;
-            // Anker auf verbleibenden Node setzen
-            state.selection.selection_anchor_node_id =
-                state.selection.selected_node_ids.iter().copied().next();
-        } else {
-            // Node nicht selektiert → hinzufügen
-            state.selection.ids_mut().insert(nid);
-            state.selection.focused_node_id = Some(nid);
-            state.selection.selection_anchor_node_id = Some(nid);
-        }
-    } else if state.selection.selected_node_ids.is_empty() {
-        // Leere Selektion → exklusiv selektieren
-        state.selection.ids_mut().insert(nid);
-        state.selection.focused_node_id = Some(nid);
-        state.selection.selection_anchor_node_id = Some(nid);
-    } else {
-        // Bestehende Selektion → Node hinzufügen (nicht löschen)
-        state.selection.ids_mut().insert(nid);
-        state.selection.focused_node_id = Some(nid);
-        state.selection.selection_anchor_node_id = Some(nid);
     }
 }
 

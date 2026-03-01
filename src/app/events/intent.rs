@@ -244,13 +244,4 @@ pub enum AppIntent {
     IncreaseRouteToolSegmentLength,
     /// Route-Tool: Minimalabstand um 0.25m verringern (Pfeiltaste links)
     DecreaseRouteToolSegmentLength,
-    /// Kontextmenü-Klick: Node selektieren und Menü öffnen
-    ContextMenuPick {
-        /// Node-ID unter Mausposition (None = Klick ins Leere)
-        node_id: Option<u64>,
-        /// Welt-Position des Klicks
-        world_pos: glam::Vec2,
-        /// Ctrl gehalten → Toggle-Modus
-        toggle: bool,
-    },
 }

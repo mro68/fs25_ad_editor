@@ -71,7 +71,6 @@ pub struct AppState {
 pub struct SelectionState {
     pub selected_node_ids: Arc<HashSet<u64>>,  // Arc für O(1)-Clone in RenderScene (CoW)
     pub selection_anchor_node_id: Option<u64>,
-    pub focused_node_id: Option<u64>,          // Kontextmenü-Fokus (RMT-angeklickter Node)
 }
 ```
 
@@ -345,9 +344,6 @@ pub enum AppIntent {
     IncreaseRouteToolSegmentLength,
     DecreaseRouteToolSegmentLength,
 
-    // Kontextmenü-Selektion (RMT-Klick auf Node/ins Leere)
-    ContextMenuPick { node_id: Option<u64>, world_pos: glam::Vec2, toggle: bool },
-
     // Segment-Bearbeitung (nachträgliche Bearbeitung erstellter Linien)
     EditSegmentRequested { record_id: u64 },
     // Distanzen: Selektierte Nodes-Kette gleichmäßig neu verteilen
@@ -491,9 +487,6 @@ pub enum AppCommand {
     // Selektion (erweitert)
     DuplicateSelectedNodes,
     InvertSelection,
-
-    // Kontextmenü-Selektion (RMT → Node fokussieren/togglen)
-    ContextMenuSelect { node_id: Option<u64>, toggle: bool },
 }
 ```
 
