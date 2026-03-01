@@ -114,7 +114,7 @@ pub enum CommandId {
 /// Ein einzelner Eintrag im Menü-Katalog.
 #[derive(Debug, Clone)]
 pub enum MenuEntry {
-    /// Überschrift / Label
+    /// Überschrift / Label (wird nur angezeigt wenn kein Submenu)
     Label(String),
     /// Trennlinie
     Separator,
@@ -123,6 +123,11 @@ pub enum MenuEntry {
         id: CommandId,
         label: String,
         preconditions: Vec<Precondition>,
+    },
+    /// Einklappbares Untermenü mit eigenem Label und Kind-Einträgen
+    Submenu {
+        label: String,
+        entries: Vec<MenuEntry>,
     },
 }
 

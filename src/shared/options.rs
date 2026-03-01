@@ -227,8 +227,8 @@ impl Default for EditorOptions {
 
             snap_scale_percent: SNAP_SCALE_PERCENT,
             hitbox_scale_percent: HITBOX_SCALE_PERCENT,
-            reconnect_on_delete: false,
-            split_connection_on_place: false,
+            reconnect_on_delete: true,
+            split_connection_on_place: true,
             terrain_height_scale: TERRAIN_HEIGHT_SCALE,
             bg_opacity: 1.0,
             bg_opacity_at_min_zoom: 0.0,

@@ -31,19 +31,25 @@ fn make_connected_map(id_a: u64, id_b: u64) -> RoadMap {
     map
 }
 
-/// Zählt Commands in der validierten Entry-Liste.
+/// Zählt Commands in der validierten Entry-Liste (rekursiv, inkl. Submenüs).
 fn count_commands(entries: &[ValidatedEntry]) -> usize {
     entries
         .iter()
-        .filter(|e| matches!(e, ValidatedEntry::Command { .. }))
-        .count()
+        .map(|e| match e {
+            ValidatedEntry::Command { .. } => 1,
+            ValidatedEntry::Submenu { entries, .. } => count_commands(entries),
+            _ => 0,
+        })
+        .sum()
 }
 
-/// Prüft ob ein bestimmter CommandId in den Entries enthalten ist.
+/// Prüft ob ein bestimmter CommandId in den Entries enthalten ist (rekursiv, inkl. Submenüs).
 fn has_command(entries: &[ValidatedEntry], target: CommandId) -> bool {
-    entries
-        .iter()
-        .any(|e| matches!(e, ValidatedEntry::Command { id, .. } if *id == target))
+    entries.iter().any(|e| match e {
+        ValidatedEntry::Command { id, .. } => *id == target,
+        ValidatedEntry::Submenu { entries, .. } => has_command(entries, target),
+        _ => false,
+    })
 }
 
 // ═══════════════════════════════════════════════════════════════════

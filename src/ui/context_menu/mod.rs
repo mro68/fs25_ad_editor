@@ -11,8 +11,41 @@ pub mod commands;
 
 use crate::app::tools::common::TangentMenuData;
 use crate::app::{AppIntent, RoadMap};
-use commands::{validate_entries, IntentContext, MenuCatalog, PreconditionContext, ValidatedEntry};
+use commands::{
+    validate_entries, CommandId, IntentContext, MenuCatalog, PreconditionContext, ValidatedEntry,
+};
 use std::collections::HashSet;
+
+/// Icon-Größe für SVG-Icons im Kontextmenü.
+const CM_ICON_SIZE: egui::Vec2 = egui::Vec2::new(16.0, 16.0);
+
+/// Gibt das SVG-Icon für einen Command zurück (dieselben wie in der Toolbar).
+fn command_icon(id: CommandId) -> Option<egui::Image<'static>> {
+    let source: egui::ImageSource<'static> = match id {
+        CommandId::SetToolSelect => {
+            egui::include_image!("../../../assets/icon_select_node.svg")
+        }
+        CommandId::SetToolConnect => {
+            egui::include_image!("../../../assets/icon_connect.svg")
+        }
+        CommandId::SetToolAddNode => {
+            egui::include_image!("../../../assets/icon_add_node.svg")
+        }
+        CommandId::SetToolRouteStraight | CommandId::RouteStraight | CommandId::ChainRouteStraight => {
+            egui::include_image!("../../../assets/icon_straight_road.svg")
+        }
+        CommandId::SetToolRouteQuadratic
+        | CommandId::RouteQuadratic
+        | CommandId::ChainRouteQuadratic => {
+            egui::include_image!("../../../assets/icon_bezier_quadratic.svg")
+        }
+        CommandId::SetToolRouteCubic | CommandId::RouteCubic | CommandId::ChainRouteCubic => {
+            egui::include_image!("../../../assets/icon_bezier_cubic.svg")
+        }
+        _ => return None,
+    };
+    Some(egui::Image::new(source).fit_to_exact_size(CM_ICON_SIZE))
+}
 
 /// Kontextabhängige Menü-Variante basierend auf Selection und Fokus-Node.
 ///
@@ -210,6 +243,9 @@ pub fn render_context_menu(
 }
 
 /// Rendert die validierten Einträge als egui-Elemente.
+///
+/// Submenüs werden als einklappbare `menu_button` gerendert,
+/// die erst bei Hover aufklappen (natives egui-Submenu-Verhalten).
 fn render_validated_entries(
     ui: &mut egui::Ui,
     entries: &[ValidatedEntry],
@@ -223,11 +259,27 @@ fn render_validated_entries(
             ValidatedEntry::Separator => {
                 ui.separator();
             }
-            ValidatedEntry::Command { label, intent, .. } => {
-                if ui.button(label).clicked() {
+            ValidatedEntry::Command {
+                id, label, intent, ..
+            } => {
+                let clicked = if let Some(icon) = command_icon(*id) {
+                    ui.add(egui::Button::image_and_text(icon, label))
+                        .clicked()
+                } else {
+                    ui.button(label).clicked()
+                };
+                if clicked {
                     events.push(*intent.clone());
                     ui.close();
                 }
+            }
+            ValidatedEntry::Submenu {
+                label,
+                entries: children,
+            } => {
+                ui.menu_button(label, |ui| {
+                    render_validated_entries(ui, children, events);
+                });
             }
         }
     }
