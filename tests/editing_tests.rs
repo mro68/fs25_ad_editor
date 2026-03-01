@@ -419,3 +419,119 @@ fn test_add_node_auf_leerer_flaeche_erstellt_neuen_node() {
     let rm = state.road_map.as_ref().unwrap();
     assert_eq!(rm.nodes.len(), 2, "Ein neuer Node muss erstellt werden");
 }
+
+// ─── ResamplePath: Externe Verbindungen erhalten ─────────────────────────────
+
+#[test]
+fn test_resample_path_erhalt_externe_verbindungen() {
+    // Kette: X(10) → A(1) → B(2) → C(3) → D(20)
+    // Resample auf A,B,C → externe Verbindungen X→A und C→D müssen erhalten bleiben
+    let mut controller = AppController::new();
+    let mut state = AppState::new();
+
+    let mut map = RoadMap::new(20);
+    map.add_node(MapNode::new(10, Vec2::new(-100.0, 0.0), NodeFlag::Regular));
+    map.add_node(MapNode::new(1, Vec2::new(0.0, 0.0), NodeFlag::Regular));
+    map.add_node(MapNode::new(2, Vec2::new(100.0, 0.0), NodeFlag::Regular));
+    map.add_node(MapNode::new(3, Vec2::new(200.0, 0.0), NodeFlag::Regular));
+    map.add_node(MapNode::new(20, Vec2::new(300.0, 0.0), NodeFlag::Regular));
+
+    // X → A
+    map.add_connection(Connection::new(
+        10,
+        1,
+        ConnectionDirection::default(),
+        ConnectionPriority::default(),
+        Vec2::new(-100.0, 0.0),
+        Vec2::new(0.0, 0.0),
+    ));
+    // A → B
+    map.add_connection(Connection::new(
+        1,
+        2,
+        ConnectionDirection::default(),
+        ConnectionPriority::default(),
+        Vec2::new(0.0, 0.0),
+        Vec2::new(100.0, 0.0),
+    ));
+    // B → C
+    map.add_connection(Connection::new(
+        2,
+        3,
+        ConnectionDirection::default(),
+        ConnectionPriority::default(),
+        Vec2::new(100.0, 0.0),
+        Vec2::new(200.0, 0.0),
+    ));
+    // C → D
+    map.add_connection(Connection::new(
+        3,
+        20,
+        ConnectionDirection::default(),
+        ConnectionPriority::default(),
+        Vec2::new(200.0, 0.0),
+        Vec2::new(300.0, 0.0),
+    ));
+
+    map.ensure_spatial_index();
+    state.road_map = Some(Arc::new(map));
+    state.view.viewport_size = [1280.0, 720.0];
+
+    // Nur A, B, C selektieren (Kette zum Resample)
+    state.selection.ids_mut().extend([1, 2, 3]);
+
+    state.ui.distanzen.by_count = false;
+    state.ui.distanzen.distance = 50.0;
+
+    controller
+        .handle_intent(&mut state, AppIntent::ResamplePathRequested)
+        .expect("ResamplePathRequested darf nicht paniken");
+
+    let rm = state.road_map.as_ref().unwrap();
+
+    // X(10) und D(20) müssen weiterhin existieren
+    assert!(
+        rm.nodes.contains_key(&10),
+        "Externer Node X(10) muss noch existieren"
+    );
+    assert!(
+        rm.nodes.contains_key(&20),
+        "Externer Node D(20) muss noch existieren"
+    );
+
+    // A, B, C (alte IDs 1, 2, 3) sind gelöscht
+    assert!(
+        !rm.nodes.contains_key(&1),
+        "Alter Node A(1) muss gelöscht sein"
+    );
+    assert!(
+        !rm.nodes.contains_key(&2),
+        "Alter Node B(2) muss gelöscht sein"
+    );
+    assert!(
+        !rm.nodes.contains_key(&3),
+        "Alter Node C(3) muss gelöscht sein"
+    );
+
+    // X(10) muss eine ausgehende Verbindung zu einem neuen Node haben
+    let x_outgoing: Vec<u64> = rm
+        .connections_iter()
+        .filter(|c| c.start_id == 10)
+        .map(|c| c.end_id)
+        .collect();
+    assert!(
+        !x_outgoing.is_empty(),
+        "X(10) muss weiterhin eine ausgehende Verbindung haben (war: X→A)"
+    );
+
+    // D(20) muss eine eingehende Verbindung von einem neuen Node haben
+    let d_incoming: Vec<u64> = rm
+        .connections_iter()
+        .filter(|c| c.end_id == 20)
+        .map(|c| c.start_id)
+        .collect();
+    assert!(
+        !d_incoming.is_empty(),
+        "D(20) muss weiterhin eine eingehende Verbindung haben (war: C→D)"
+    );
+}

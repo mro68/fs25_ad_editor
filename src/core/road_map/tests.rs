@@ -1,3 +1,5 @@
+use std::collections::HashSet;
+
 use super::*;
 use crate::core::{ConnectionDirection, ConnectionPriority, NodeFlag};
 use glam::Vec2;
@@ -339,4 +341,116 @@ fn test_deduplicate_outside_epsilon_no_merge() {
     let result = map.deduplicate_nodes(0.01);
     assert!(!result.had_duplicates());
     assert_eq!(map.node_count(), 2);
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// is_resampleable_chain Tests
+// ═══════════════════════════════════════════════════════════════════
+
+/// Hilfsfunktion: RoadMap mit Nodes und gerichteten Verbindungen aufbauen.
+fn make_chain_map(nodes: &[(u64, f32, f32)], edges: &[(u64, u64)]) -> RoadMap {
+    let mut map = RoadMap::new(3);
+    for &(id, x, y) in nodes {
+        map.add_node(MapNode::new(id, Vec2::new(x, y), NodeFlag::Regular));
+    }
+    for &(a, b) in edges {
+        let pa = map.nodes[&a].position;
+        let pb = map.nodes[&b].position;
+        map.add_connection(Connection::new(
+            a,
+            b,
+            ConnectionDirection::Regular,
+            ConnectionPriority::Regular,
+            pa,
+            pb,
+        ));
+    }
+    map
+}
+
+#[test]
+fn resampleable_chain_simple_path() {
+    // 1 → 2 → 3 → 4: einfache Kette
+    let map = make_chain_map(
+        &[
+            (1, 0.0, 0.0),
+            (2, 10.0, 0.0),
+            (3, 20.0, 0.0),
+            (4, 30.0, 0.0),
+        ],
+        &[(1, 2), (2, 3), (3, 4)],
+    );
+    let sel: HashSet<u64> = [1, 2, 3, 4].into();
+    assert!(map.is_resampleable_chain(&sel));
+}
+
+#[test]
+fn resampleable_chain_too_few_nodes() {
+    let map = make_chain_map(&[(1, 0.0, 0.0)], &[]);
+    let sel: HashSet<u64> = [1].into();
+    assert!(!map.is_resampleable_chain(&sel));
+}
+
+#[test]
+fn resampleable_chain_disconnected() {
+    // 1 → 2, 3 → 4 (zwei getrennte Paare)
+    let map = make_chain_map(
+        &[
+            (1, 0.0, 0.0),
+            (2, 10.0, 0.0),
+            (3, 20.0, 0.0),
+            (4, 30.0, 0.0),
+        ],
+        &[(1, 2), (3, 4)],
+    );
+    let sel: HashSet<u64> = [1, 2, 3, 4].into();
+    assert!(!map.is_resampleable_chain(&sel));
+}
+
+#[test]
+fn resampleable_chain_intersection_at_endpoint_ok() {
+    // Kreuzung an Node 1 (Grad 3), aber Node 1 ist Endpunkt → erlaubt
+    // 5 → 1 (nicht selektiert), 1 → 2 → 3
+    let map = make_chain_map(
+        &[
+            (1, 0.0, 0.0),
+            (2, 10.0, 0.0),
+            (3, 20.0, 0.0),
+            (5, -10.0, 0.0),
+        ],
+        &[(5, 1), (1, 2), (2, 3)],
+    );
+    let sel: HashSet<u64> = [1, 2, 3].into();
+    assert!(map.is_resampleable_chain(&sel));
+}
+
+#[test]
+fn resampleable_chain_intersection_in_middle_rejected() {
+    // Kreuzung an Node 2 (innerhalb der Selektion, Grad 3)
+    // 1 → 2 → 3, 2 → 4 (alle 4 selektiert → Baum, keine Kette)
+    let map = make_chain_map(
+        &[
+            (1, 0.0, 0.0),
+            (2, 10.0, 0.0),
+            (3, 20.0, 0.0),
+            (4, 10.0, 10.0),
+        ],
+        &[(1, 2), (2, 3), (2, 4)],
+    );
+    let sel: HashSet<u64> = [1, 2, 3, 4].into();
+    assert!(!map.is_resampleable_chain(&sel));
+}
+
+#[test]
+fn resampleable_chain_two_connected_nodes() {
+    let map = make_chain_map(&[(1, 0.0, 0.0), (2, 10.0, 0.0)], &[(1, 2)]);
+    let sel: HashSet<u64> = [1, 2].into();
+    assert!(map.is_resampleable_chain(&sel));
+}
+
+#[test]
+fn resampleable_chain_two_unconnected_nodes() {
+    let map = make_chain_map(&[(1, 0.0, 0.0), (2, 10.0, 0.0)], &[]);
+    let sel: HashSet<u64> = [1, 2].into();
+    assert!(!map.is_resampleable_chain(&sel));
 }

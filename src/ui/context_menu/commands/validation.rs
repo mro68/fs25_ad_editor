@@ -28,20 +28,36 @@ pub enum ValidatedEntry {
         label: String,
         intent: Box<AppIntent>,
     },
+    /// Einklappbares Untermenü (nur sichtbar wenn ≥1 Command enthalten)
+    Submenu {
+        label: String,
+        entries: Vec<ValidatedEntry>,
+    },
 }
 
 /// Validiert einen MenuCatalog und gibt nur die sichtbaren Einträge zurück.
 ///
 /// Separatoren werden intelligent gefiltert: Doppelte Separatoren und
 /// Separatoren am Anfang/Ende werden entfernt.
+/// Submenüs ohne sichtbare Commands werden komplett ausgeblendet.
 pub fn validate_entries(
     catalog: &MenuCatalog,
     precondition_ctx: &PreconditionContext,
     intent_ctx: &IntentContext,
 ) -> Vec<ValidatedEntry> {
+    let raw = validate_entries_recursive(&catalog.entries, precondition_ctx, intent_ctx);
+    cleanup_separators(raw)
+}
+
+/// Rekursive Validierung für verschachtelte Menü-Einträge.
+fn validate_entries_recursive(
+    entries: &[MenuEntry],
+    precondition_ctx: &PreconditionContext,
+    intent_ctx: &IntentContext,
+) -> Vec<ValidatedEntry> {
     let mut raw: Vec<ValidatedEntry> = Vec::new();
 
-    for entry in &catalog.entries {
+    for entry in entries {
         match entry {
             MenuEntry::Label(text) => {
                 raw.push(ValidatedEntry::Label(text.clone()));
@@ -62,12 +78,27 @@ pub fn validate_entries(
                     });
                 }
             }
+            MenuEntry::Submenu {
+                label,
+                entries: sub_entries,
+            } => {
+                let validated_children =
+                    validate_entries_recursive(sub_entries, precondition_ctx, intent_ctx);
+                // Submenu nur anzeigen wenn mindestens ein Command darin sichtbar ist
+                let has_commands = validated_children
+                    .iter()
+                    .any(|e| matches!(e, ValidatedEntry::Command { .. }));
+                if has_commands {
+                    raw.push(ValidatedEntry::Submenu {
+                        label: label.clone(),
+                        entries: cleanup_separators(validated_children),
+                    });
+                }
+            }
         }
     }
 
-    // Separatoren bereinigen: keine doppelten, keine am Anfang/Ende,
-    // keine direkt nach Label ohne folgendem Command
-    cleanup_separators(raw)
+    raw
 }
 
 /// Entfernt überflüssige Separatoren und Labels ohne folgende Commands.

@@ -3,6 +3,7 @@
 pub mod context_menu;
 pub mod dialogs;
 mod drag;
+pub mod edit_panel;
 pub mod input;
 mod keyboard;
 /// UI-Layer mit egui
@@ -22,6 +23,7 @@ pub use dialogs::{
     show_overview_options_dialog, show_post_load_dialog, show_save_overview_dialog,
     show_zip_browser,
 };
+pub use edit_panel::render_edit_panel;
 pub use input::InputState;
 pub use menu::render_menu;
 pub use options_dialog::show_options_dialog;
