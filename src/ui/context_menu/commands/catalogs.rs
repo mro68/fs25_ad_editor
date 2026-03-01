@@ -79,7 +79,7 @@ impl MenuCatalog {
             },
             // ── Verbindungs-Management ────────────────────────────
             MenuEntry::Separator,
-            MenuEntry::Label("Richtung:".into()),
+            MenuEntry::Label("↔ Richtung:".into()),
             MenuEntry::Command {
                 id: CommandId::DirectionRegular,
                 label: "↦ Regular (Einbahn)".into(),
@@ -101,7 +101,7 @@ impl MenuCatalog {
                 preconditions: vec![Precondition::HasConnectionsBetweenSelected],
             },
             MenuEntry::Separator,
-            MenuEntry::Label("Straßenart:".into()),
+            MenuEntry::Label("🚧 Straßenart:".into()),
             MenuEntry::Command {
                 id: CommandId::PriorityRegular,
                 label: "🛣 Hauptstraße".into(),
@@ -128,7 +128,7 @@ impl MenuCatalog {
             },
             MenuEntry::Command {
                 id: CommandId::SelectAll,
-                label: "Alles auswählen".into(),
+                label: "☑ Alles auswählen".into(),
                 preconditions: vec![],
             },
             MenuEntry::Command {

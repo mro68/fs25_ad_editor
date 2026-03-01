@@ -268,6 +268,19 @@ impl EditorApp {
             tangent_data,
         ));
 
+        // Mauszeiger im Viewport je nach aktivem Werkzeug anpassen
+        if response.hovered() {
+            match self.state.editor.active_tool {
+                EditorTool::AddNode => {
+                    ui.ctx().set_cursor_icon(egui::CursorIcon::Crosshair);
+                }
+                EditorTool::Connect => {
+                    ui.ctx().set_cursor_icon(egui::CursorIcon::PointingHand);
+                }
+                _ => {}
+            }
+        }
+
         events
     }
 
