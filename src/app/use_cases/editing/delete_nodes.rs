@@ -14,17 +14,17 @@ struct ReconnectOp {
     priority: ConnectionPriority,
 }
 
-/// Sammelt Reconnect-Operationen für einen Node: wenn genau 1 Vorgänger und 1 Nachfolger
-/// vorhanden sind (und die beiden nicht identisch), wird eine neue direkte Verbindung
-/// zwischen ihnen vorgeschlagen.
+/// Sammelt Reconnect-Operationen für einen Node: Jeder Vorgänger wird mit jedem
+/// Nachfolger verbunden, sofern beide nicht selbst gelöscht werden und die
+/// Verbindung noch nicht existiert.
 ///
-/// Richtung: Dual wenn eine der Verbindungen Dual ist oder die Richtungen sich widersprechen.
-/// Priorität: Hauptstraße (Regular) schlägt Nebenstraße (SubPriority).
+/// Richtung: Dual wenn eine der beteiligten Verbindungen Dual ist oder die Richtungen
+/// sich widersprechen. Priorität: Hauptstraße (Regular) schlägt Nebenstraße (SubPriority).
 fn collect_reconnect(
     road_map: &RoadMap,
     del_id: u64,
     id_set: &std::collections::HashSet<u64>,
-) -> Option<ReconnectOp> {
+) -> Vec<ReconnectOp> {
     // Vorgänger: Connections mit end_id == del_id (Verbindung zum gelöschten Node)
     let pred_conns: Vec<&Connection> = road_map
         .connections_iter()
@@ -37,23 +37,25 @@ fn collect_reconnect(
         .filter(|c| c.start_id == del_id && !id_set.contains(&c.end_id))
         .collect();
 
-    if pred_conns.len() == 1 && succ_conns.len() == 1 {
-        let pred_conn = pred_conns[0];
-        let succ_conn = succ_conns[0];
-        let pred = pred_conn.start_id;
-        let succ = succ_conn.end_id;
-        if pred != succ && !road_map.has_connection(pred, succ) {
-            let direction = merge_directions(pred_conn.direction, succ_conn.direction);
-            let priority = merge_priorities(pred_conn.priority, succ_conn.priority);
-            return Some(ReconnectOp {
-                pred,
-                succ,
-                direction,
-                priority,
-            });
+    let mut ops = Vec::new();
+    for pred_conn in &pred_conns {
+        for succ_conn in &succ_conns {
+            let pred = pred_conn.start_id;
+            let succ = succ_conn.end_id;
+            // Keine Selbstverbindung und keine bereits vorhandene Verbindung
+            if pred != succ && !road_map.has_connection(pred, succ) {
+                let direction = merge_directions(pred_conn.direction, succ_conn.direction);
+                let priority = merge_priorities(pred_conn.priority, succ_conn.priority);
+                ops.push(ReconnectOp {
+                    pred,
+                    succ,
+                    direction,
+                    priority,
+                });
+            }
         }
     }
-    None
+    ops
 }
 
 /// Höherwertige Richtung: Dual > Regular/Reverse; bei Widerspruch → Dual.
@@ -103,7 +105,7 @@ pub fn delete_selected_nodes(state: &mut AppState) {
         let road_map = state.road_map.as_ref().unwrap();
         ids_to_delete
             .iter()
-            .filter_map(|&del_id| collect_reconnect(road_map, del_id, &id_set))
+            .flat_map(|&del_id| collect_reconnect(road_map, del_id, &id_set))
             .collect()
     } else {
         Vec::new()

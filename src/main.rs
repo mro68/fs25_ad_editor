@@ -163,6 +163,26 @@ impl EditorApp {
             &mut self.state.ui.distanzen,
         ));
 
+        // Floating Edit-Panel (Streckenteilung / Route-Tool)
+        let panel_pos = self
+            .input
+            .edit_panel_pos
+            .map(|p| egui::Pos2::new(p[0], p[1]));
+        let edit_tool_manager = if active_tool == EditorTool::Route {
+            Some(&mut self.state.editor.tool_manager)
+        } else {
+            None
+        };
+        events.extend(ui::render_edit_panel(
+            ctx,
+            self.state.road_map.as_deref(),
+            &self.state.selection.selected_node_ids,
+            &mut self.state.ui.distanzen,
+            active_tool,
+            edit_tool_manager,
+            panel_pos,
+        ));
+
         events
     }
 
@@ -247,6 +267,19 @@ impl EditorApp {
             &mut self.state.ui.distanzen,
             tangent_data,
         ));
+
+        // Mauszeiger im Viewport je nach aktivem Werkzeug anpassen
+        if response.hovered() {
+            match self.state.editor.active_tool {
+                EditorTool::AddNode => {
+                    ui.ctx().set_cursor_icon(egui::CursorIcon::Crosshair);
+                }
+                EditorTool::Connect => {
+                    ui.ctx().set_cursor_icon(egui::CursorIcon::PointingHand);
+                }
+                _ => {}
+            }
+        }
 
         events
     }

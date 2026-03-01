@@ -35,30 +35,28 @@ pub enum CommandId {
     SetToolConnect,
     /// Node-Hinzufügen-Werkzeug aktivieren
     SetToolAddNode,
+    /// Route-Tool: Gerade Strecke aktivieren
+    SetToolRouteStraight,
+    /// Route-Tool: Bézier Grad 2 aktivieren
+    SetToolRouteQuadratic,
+    /// Route-Tool: Bézier Grad 3 aktivieren
+    SetToolRouteCubic,
     /// Streckenteilung (in EmptyArea nur wenn aktiv)
     StreckenteilungEmptyArea,
 
-    // ── SingleNode (unselected) ─────────────────────────────────────
-    /// Node selektieren (exklusiv)
-    SelectNode,
-    /// Node zur Selektion hinzufügen
-    AddToSelection,
+    // ── NodeFocused (Einzelnode-Befehle) ─────────────────────────────
     /// Marker erstellen
     CreateMarker,
     /// Marker bearbeiten
     EditMarker,
     /// Marker löschen
     RemoveMarker,
-
-    // ── SingleNode (selected) ───────────────────────────────────────
-    /// Node aus Selektion entfernen
-    DeselectNode,
-    /// Node löschen (bei Einzel-Selektion)
+    /// Node löschen (Einzelnode)
     DeleteSingleNode,
-    /// Node duplizieren (bei Einzel-Selektion)
+    /// Node duplizieren (Einzelnode)
     DuplicateSingleNode,
 
-    // ── MultipleNodes ───────────────────────────────────────────────
+    // ── Selection-Befehle (SelectionOnly + NodeFocused) ─────────────
     /// Zwei Nodes verbinden (nur bei genau 2 unverbundenen)
     ConnectTwoNodes,
     /// Gerade Strecke erzeugen (2 Nodes)
@@ -81,7 +79,7 @@ pub enum CommandId {
     PrioritySub,
     /// Alle Verbindungen trennen
     RemoveAllConnections,
-    /// Streckenteilung (bei MultipleNodes)
+    /// Streckenteilung (bei selektierten Nodes)
     StreckenteilungMulti,
     /// Selektion invertieren
     InvertSelection,
@@ -93,7 +91,13 @@ pub enum CommandId {
     DeleteSelected,
     /// Selektierte Nodes duplizieren
     DuplicateSelected,
-
+    // ── Ketten-basierte Route-Tools (IsResampleableChain) ──────────
+    /// Gerade Strecke aus Kette erzeugen
+    ChainRouteStraight,
+    /// Bézier Grad 2 aus Kette erzeugen
+    ChainRouteQuadratic,
+    /// Bézier Grad 3 aus Kette erzeugen
+    ChainRouteCubic,
     // ── RouteTool ────────────────────────────────────────────────────
     /// Route ausführen
     RouteExecute,
@@ -110,7 +114,7 @@ pub enum CommandId {
 /// Ein einzelner Eintrag im Menü-Katalog.
 #[derive(Debug, Clone)]
 pub enum MenuEntry {
-    /// Überschrift / Label
+    /// Überschrift / Label (wird nur angezeigt wenn kein Submenu)
     Label(String),
     /// Trennlinie
     Separator,
@@ -119,6 +123,11 @@ pub enum MenuEntry {
         id: CommandId,
         label: String,
         preconditions: Vec<Precondition>,
+    },
+    /// Einklappbares Untermenü mit eigenem Label und Kind-Einträgen
+    Submenu {
+        label: String,
+        entries: Vec<MenuEntry>,
     },
 }
 
@@ -140,6 +149,8 @@ pub struct IntentContext {
     pub node_position: Option<glam::Vec2>,
     /// Sortierte Zwei-Node-IDs (für RouteToolWithAnchorsRequested)
     pub two_node_ids: Option<(u64, u64)>,
+    /// Endpunkte einer zusammenhängenden Kette (erstes + letztes Node)
+    pub chain_endpoints: Option<(u64, u64)>,
 }
 
 impl CommandId {
@@ -156,21 +167,20 @@ impl CommandId {
             Self::SetToolAddNode => AppIntent::SetEditorToolRequested {
                 tool: EditorTool::AddNode,
             },
+            Self::SetToolRouteStraight => AppIntent::SelectRouteToolRequested {
+                index: TOOL_INDEX_STRAIGHT,
+            },
+            Self::SetToolRouteQuadratic => AppIntent::SelectRouteToolRequested {
+                index: TOOL_INDEX_CURVE_QUAD,
+            },
+            Self::SetToolRouteCubic => AppIntent::SelectRouteToolRequested {
+                index: TOOL_INDEX_CURVE_CUBIC,
+            },
             Self::StreckenteilungEmptyArea | Self::StreckenteilungMulti => {
                 AppIntent::StreckenteilungAktivieren
             }
 
-            // ── SingleNode (unselected) ──────────────────────────────
-            Self::SelectNode => AppIntent::NodePickRequested {
-                world_pos: ctx.node_position.unwrap_or_default(),
-                additive: false,
-                extend_path: false,
-            },
-            Self::AddToSelection => AppIntent::NodePickRequested {
-                world_pos: ctx.node_position.unwrap_or_default(),
-                additive: true,
-                extend_path: false,
-            },
+            // ── NodeFocused (Einzelnode-Befehle) ─────────────────────
             Self::CreateMarker => AppIntent::CreateMarkerRequested {
                 node_id: ctx.node_id.unwrap_or(0),
             },
@@ -180,19 +190,12 @@ impl CommandId {
             Self::RemoveMarker => AppIntent::RemoveMarkerRequested {
                 node_id: ctx.node_id.unwrap_or(0),
             },
-
-            // ── SingleNode (selected) ────────────────────────────────
-            Self::DeselectNode => AppIntent::NodePickRequested {
-                world_pos: ctx.node_position.unwrap_or_default(),
-                additive: true,
-                extend_path: false,
-            },
             Self::DeleteSingleNode | Self::DeleteSelected => AppIntent::DeleteSelectedRequested,
             Self::DuplicateSingleNode | Self::DuplicateSelected => {
                 AppIntent::DuplicateSelectedNodesRequested
             }
 
-            // ── MultipleNodes ────────────────────────────────────────
+            // ── Selection-Befehle ────────────────────────────────────
             Self::ConnectTwoNodes => AppIntent::ConnectSelectedNodesRequested,
             Self::RouteStraight => {
                 let (s, e) = ctx.two_node_ids.unwrap_or((0, 0));
@@ -242,6 +245,32 @@ impl CommandId {
             Self::InvertSelection => AppIntent::InvertSelectionRequested,
             Self::SelectAll => AppIntent::SelectAllRequested,
             Self::ClearSelection => AppIntent::ClearSelectionRequested,
+
+            // ── Ketten-basierte Route-Tools ─────────────────────────
+            Self::ChainRouteStraight => {
+                let (s, e) = ctx.chain_endpoints.unwrap_or((0, 0));
+                AppIntent::RouteToolWithAnchorsRequested {
+                    index: TOOL_INDEX_STRAIGHT,
+                    start_node_id: s,
+                    end_node_id: e,
+                }
+            }
+            Self::ChainRouteQuadratic => {
+                let (s, e) = ctx.chain_endpoints.unwrap_or((0, 0));
+                AppIntent::RouteToolWithAnchorsRequested {
+                    index: TOOL_INDEX_CURVE_QUAD,
+                    start_node_id: s,
+                    end_node_id: e,
+                }
+            }
+            Self::ChainRouteCubic => {
+                let (s, e) = ctx.chain_endpoints.unwrap_or((0, 0));
+                AppIntent::RouteToolWithAnchorsRequested {
+                    index: TOOL_INDEX_CURVE_CUBIC,
+                    start_node_id: s,
+                    end_node_id: e,
+                }
+            }
 
             // ── RouteTool ────────────────────────────────────────────
             Self::RouteExecute => AppIntent::RouteToolExecuteRequested,
