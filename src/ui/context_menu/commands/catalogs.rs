@@ -6,29 +6,35 @@ use super::preconditions::Precondition;
 use super::{CommandId, MenuCatalog, MenuEntry};
 
 impl MenuCatalog {
+    /// Werkzeug-Submenu: Auswahl/Verbinden/Hinzufügen — wird in allen Varianten
+    /// außer RouteToolActive verwendet.
+    fn tool_submenu() -> MenuEntry {
+        MenuEntry::Submenu {
+            label: "🛠 Werkzeug".into(),
+            entries: vec![
+                MenuEntry::Command {
+                    id: CommandId::SetToolSelect,
+                    label: "Auswahl (1)".into(),
+                    preconditions: vec![],
+                },
+                MenuEntry::Command {
+                    id: CommandId::SetToolConnect,
+                    label: "Verbinden (2)".into(),
+                    preconditions: vec![],
+                },
+                MenuEntry::Command {
+                    id: CommandId::SetToolAddNode,
+                    label: "Node hinzufügen (3)".into(),
+                    preconditions: vec![],
+                },
+            ],
+        }
+    }
+
     /// EmptyArea: Tool-Auswahl inkl. Route-Tools, optional Streckenteilung.
     pub fn for_empty_area() -> Self {
         let entries = vec![
-            MenuEntry::Submenu {
-                label: "🛠 Werkzeug".into(),
-                entries: vec![
-                    MenuEntry::Command {
-                        id: CommandId::SetToolSelect,
-                        label: "Auswahl (1)".into(),
-                        preconditions: vec![],
-                    },
-                    MenuEntry::Command {
-                        id: CommandId::SetToolConnect,
-                        label: "Verbinden (2)".into(),
-                        preconditions: vec![],
-                    },
-                    MenuEntry::Command {
-                        id: CommandId::SetToolAddNode,
-                        label: "Node hinzufügen (3)".into(),
-                        preconditions: vec![],
-                    },
-                ],
-            },
+            Self::tool_submenu(),
             MenuEntry::Submenu {
                 label: "📐 Strecke".into(),
                 entries: vec![
@@ -164,61 +170,28 @@ impl MenuCatalog {
                     Precondition::StreckenteilungActive(false),
                 ],
             },
-            // ── Route-Tools aus Kette ────────────────────────────
-            MenuEntry::Submenu {
-                label: "📐 Strecke ersetzen".into(),
-                entries: vec![
-                    MenuEntry::Command {
-                        id: CommandId::ChainRouteStraight,
-                        label: "Gerade Strecke".into(),
-                        preconditions: vec![
-                            Precondition::IsResampleableChain,
-                            Precondition::StreckenteilungActive(false),
-                        ],
-                    },
-                    MenuEntry::Command {
-                        id: CommandId::ChainRouteQuadratic,
-                        label: "Bézier Grad 2".into(),
-                        preconditions: vec![
-                            Precondition::IsResampleableChain,
-                            Precondition::StreckenteilungActive(false),
-                        ],
-                    },
-                    MenuEntry::Command {
-                        id: CommandId::ChainRouteCubic,
-                        label: "Bézier Grad 3".into(),
-                        preconditions: vec![
-                            Precondition::IsResampleableChain,
-                            Precondition::StreckenteilungActive(false),
-                        ],
-                    },
-                ],
-            },
-            // ── Aktionen ─────────────────────────────────────────
-            MenuEntry::Separator,
-            MenuEntry::Command {
-                id: CommandId::DeleteSelected,
-                label: "🗑 Löschen".into(),
-                preconditions: vec![],
-            },
-            MenuEntry::Command {
-                id: CommandId::DuplicateSelected,
-                label: "⧉ Duplizieren".into(),
-                preconditions: vec![],
-            },
         ]
     }
 
     /// SelectionOnly: Befehle für selektierte Nodes (Rechtsklick ins Leere).
     pub fn for_selection_only() -> Self {
-        MenuCatalog {
-            entries: Self::selection_entries(),
-        }
+        let mut entries = vec![Self::tool_submenu(), MenuEntry::Separator];
+        entries.extend(Self::selection_entries());
+        // ── Aktionen ─────────────────────────────────────────
+        entries.push(MenuEntry::Separator);
+        entries.push(MenuEntry::Command {
+            id: CommandId::DeleteSelected,
+            label: "🗑 Löschen".into(),
+            preconditions: vec![],
+        });
+        MenuCatalog { entries }
     }
 
-    /// NodeFocused: Einzelnode-Befehle oben + Selektions-Befehle unten.
+    /// NodeFocused: Werkzeug + Einzelnode-Befehle + Selektions-Befehle + Info.
     pub fn for_node_focused(node_id: u64) -> Self {
         let mut entries = vec![
+            Self::tool_submenu(),
+            MenuEntry::Separator,
             // ── Einzelnode-Befehle (oberer Bereich) ──────────────
             MenuEntry::Submenu {
                 label: "🗺 Marker".into(),
@@ -250,14 +223,9 @@ impl MenuCatalog {
                 ],
             },
             MenuEntry::Command {
-                id: CommandId::DeleteSingleNode,
-                label: "🗑 Node löschen".into(),
-                preconditions: vec![Precondition::NodeExists(node_id)],
-            },
-            MenuEntry::Command {
-                id: CommandId::DuplicateSingleNode,
-                label: "⧉ Node duplizieren".into(),
-                preconditions: vec![Precondition::NodeExists(node_id)],
+                id: CommandId::DeleteSelected,
+                label: "🗑 Löschen".into(),
+                preconditions: vec![],
             },
         ];
 
