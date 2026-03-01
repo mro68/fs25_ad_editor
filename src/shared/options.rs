@@ -10,11 +10,11 @@ use serde::{Deserialize, Serialize};
 /// Sichtbare Welt-Halbbreite bei Zoom 1.0 (Einheiten = AutoDrive-Meter).
 pub const CAMERA_BASE_WORLD_EXTENT: f32 = 2048.0;
 /// Minimaler Zoom-Faktor.
-pub const CAMERA_ZOOM_MIN: f32 = 0.1;
+pub const CAMERA_ZOOM_MIN: f32 = 0.5;
 /// Maximaler Zoom-Faktor.
-pub const CAMERA_ZOOM_MAX: f32 = 100.0;
+pub const CAMERA_ZOOM_MAX: f32 = 200.0;
 /// Zoom-Schritt bei stufenweisem Zoom (Menü-Buttons / Shortcuts).
-pub const CAMERA_ZOOM_STEP: f32 = 1.2;
+pub const CAMERA_ZOOM_STEP: f32 = 1.1;
 /// Zoom-Schritt bei Mausrad-Scroll.
 pub const CAMERA_SCROLL_ZOOM_STEP: f32 = 1.1;
 
@@ -33,35 +33,35 @@ pub const TERRAIN_HEIGHT_SCALE: f32 = 255.0;
 // ── Selektion ───────────────────────────────────────────────────────
 
 /// Größenfaktor für selektierte Nodes.
-pub const SELECTION_SIZE_FACTOR: f32 = 1.8;
+pub const SELECTION_SIZE_FACTOR: f32 = 1.3;
 
 // ── Node-Rendering ─────────────────────────────────────────────────
 
 /// Standard-Node-Größe in Welteinheiten.
 pub const NODE_SIZE_WORLD: f32 = 0.5;
-/// Standard-Farbe normaler Nodes (RGBA: Cyan).
-pub const NODE_COLOR_DEFAULT: [f32; 4] = [0.0, 0.8, 1.0, 1.0];
-/// Farbe für Sub-Prioritäts-Nodes (RGBA: Gelb).
-pub const NODE_COLOR_SUBPRIO: [f32; 4] = [1.0, 1.0, 0.0, 1.0];
-/// Farbe für selektierte Nodes (RGBA: Magenta).
-pub const NODE_COLOR_SELECTED: [f32; 4] = [1.0, 0.0, 1.0, 1.0];
+/// Standard-Farbe normaler Nodes (RGBA: Gelbgrün).
+pub const NODE_COLOR_DEFAULT: [f32; 4] = [0.6784314, 1.0, 0.0, 1.0];
+/// Farbe für Sub-Prioritäts-Nodes (RGBA: Orange).
+pub const NODE_COLOR_SUBPRIO: [f32; 4] = [1.0, 0.61960787, 0.0, 1.0];
+/// Farbe für selektierte Nodes (RGBA: Gelbgrün hell).
+pub const NODE_COLOR_SELECTED: [f32; 4] = [0.9137255, 1.0, 0.0, 1.0];
 /// Farbe für Nodes mit Warnungen (RGBA: Rot).
 pub const NODE_COLOR_WARNING: [f32; 4] = [1.0, 0.0, 0.0, 1.0];
 
 // ── Connection-Rendering ───────────────────────────────────────────
 
 /// Linienstärke normaler Verbindungen in Welteinheiten.
-pub const CONNECTION_THICKNESS_WORLD: f32 = 0.2;
+pub const CONNECTION_THICKNESS_WORLD: f32 = 0.25;
 /// Linienstärke für Sub-Prioritäts-Verbindungen.
-pub const CONNECTION_THICKNESS_SUBPRIO_WORLD: f32 = 0.1;
+pub const CONNECTION_THICKNESS_SUBPRIO_WORLD: f32 = 0.15;
 /// Pfeil-Länge in Welteinheiten.
-pub const ARROW_LENGTH_WORLD: f32 = 1.0;
+pub const ARROW_LENGTH_WORLD: f32 = 1.5;
 /// Pfeil-Breite in Welteinheiten.
-pub const ARROW_WIDTH_WORLD: f32 = 0.6;
-/// Farbe für reguläre (Einrichtungs-)Verbindungen (RGBA: Grün).
-pub const CONNECTION_COLOR_REGULAR: [f32; 4] = [0.2, 0.9, 0.2, 1.0];
-/// Farbe für bidirektionale (Dual-)Verbindungen (RGBA: Blau).
-pub const CONNECTION_COLOR_DUAL: [f32; 4] = [0.2, 0.7, 1.0, 1.0];
+pub const ARROW_WIDTH_WORLD: f32 = 0.75;
+/// Farbe für reguläre (Einrichtungs-)Verbindungen (RGBA: Blau).
+pub const CONNECTION_COLOR_REGULAR: [f32; 4] = [0.0, 0.69411767, 1.0, 1.0];
+/// Farbe für bidirektionale (Dual-)Verbindungen (RGBA: Goldgelb).
+pub const CONNECTION_COLOR_DUAL: [f32; 4] = [1.0, 0.8039216, 0.2, 1.0];
 /// Farbe für Rückwärts-Verbindungen (RGBA: Orange).
 pub const CONNECTION_COLOR_REVERSE: [f32; 4] = [1.0, 0.5, 0.1, 1.0];
 
@@ -69,10 +69,10 @@ pub const CONNECTION_COLOR_REVERSE: [f32; 4] = [1.0, 0.5, 0.1, 1.0];
 
 /// Marker-Größe in Welteinheiten.
 pub const MARKER_SIZE_WORLD: f32 = 2.0;
-/// Füllfarbe der Map-Marker (RGBA: Rot).
-pub const MARKER_COLOR: [f32; 4] = [0.9, 0.1, 0.1, 1.0];
-/// Outline-Farbe der Map-Marker (RGBA: Dunkelrot).
-pub const MARKER_OUTLINE_COLOR: [f32; 4] = [0.6, 0.0, 0.0, 1.0];
+/// Füllfarbe der Map-Marker (RGBA: Gelbgrün).
+pub const MARKER_COLOR: [f32; 4] = [0.60784316, 1.0, 0.0, 1.0];
+/// Outline-Farbe der Map-Marker (RGBA: Orange).
+pub const MARKER_OUTLINE_COLOR: [f32; 4] = [1.0, 0.72156864, 0.0, 1.0];
 
 // ── Übersichtskarten-Layer ──────────────────────────────────────────
 
@@ -97,8 +97,8 @@ impl Default for OverviewLayerOptions {
         Self {
             hillshade: true,
             farmlands: true,
-            farmland_ids: true,
-            pois: true,
+            farmland_ids: false,
+            pois: false,
             legend: false,
         }
     }

@@ -3,7 +3,7 @@ members = [".", "crates/fs25_map_overview"]
 
 [package]
 name = "FS25-AutoDrive-Editor"
-version = "0.8.2"
+version = "0.9.0"
 edition = "2021"
 authors = ["MRO"]
 description = "GPU-beschleunigter Editor für AutoDrive-Kurse in Farming Simulator 25"
