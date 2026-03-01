@@ -31,7 +31,9 @@ fn command_icon(id: CommandId) -> Option<egui::Image<'static>> {
         CommandId::SetToolAddNode => {
             egui::include_image!("../../../assets/icon_add_node.svg")
         }
-        CommandId::SetToolRouteStraight | CommandId::RouteStraight | CommandId::ChainRouteStraight => {
+        CommandId::SetToolRouteStraight
+        | CommandId::RouteStraight
+        | CommandId::ChainRouteStraight => {
             egui::include_image!("../../../assets/icon_straight_road.svg")
         }
         CommandId::SetToolRouteQuadratic
@@ -263,8 +265,7 @@ fn render_validated_entries(
                 id, label, intent, ..
             } => {
                 let clicked = if let Some(icon) = command_icon(*id) {
-                    ui.add(egui::Button::image_and_text(icon, label))
-                        .clicked()
+                    ui.add(egui::Button::image_and_text(icon, label)).clicked()
                 } else {
                     ui.button(label).clicked()
                 };

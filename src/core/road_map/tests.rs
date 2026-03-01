@@ -372,7 +372,12 @@ fn make_chain_map(nodes: &[(u64, f32, f32)], edges: &[(u64, u64)]) -> RoadMap {
 fn resampleable_chain_simple_path() {
     // 1 → 2 → 3 → 4: einfache Kette
     let map = make_chain_map(
-        &[(1, 0.0, 0.0), (2, 10.0, 0.0), (3, 20.0, 0.0), (4, 30.0, 0.0)],
+        &[
+            (1, 0.0, 0.0),
+            (2, 10.0, 0.0),
+            (3, 20.0, 0.0),
+            (4, 30.0, 0.0),
+        ],
         &[(1, 2), (2, 3), (3, 4)],
     );
     let sel: HashSet<u64> = [1, 2, 3, 4].into();
@@ -390,7 +395,12 @@ fn resampleable_chain_too_few_nodes() {
 fn resampleable_chain_disconnected() {
     // 1 → 2, 3 → 4 (zwei getrennte Paare)
     let map = make_chain_map(
-        &[(1, 0.0, 0.0), (2, 10.0, 0.0), (3, 20.0, 0.0), (4, 30.0, 0.0)],
+        &[
+            (1, 0.0, 0.0),
+            (2, 10.0, 0.0),
+            (3, 20.0, 0.0),
+            (4, 30.0, 0.0),
+        ],
         &[(1, 2), (3, 4)],
     );
     let sel: HashSet<u64> = [1, 2, 3, 4].into();
@@ -402,7 +412,12 @@ fn resampleable_chain_intersection_at_endpoint_ok() {
     // Kreuzung an Node 1 (Grad 3), aber Node 1 ist Endpunkt → erlaubt
     // 5 → 1 (nicht selektiert), 1 → 2 → 3
     let map = make_chain_map(
-        &[(1, 0.0, 0.0), (2, 10.0, 0.0), (3, 20.0, 0.0), (5, -10.0, 0.0)],
+        &[
+            (1, 0.0, 0.0),
+            (2, 10.0, 0.0),
+            (3, 20.0, 0.0),
+            (5, -10.0, 0.0),
+        ],
         &[(5, 1), (1, 2), (2, 3)],
     );
     let sel: HashSet<u64> = [1, 2, 3].into();
@@ -414,7 +429,12 @@ fn resampleable_chain_intersection_in_middle_rejected() {
     // Kreuzung an Node 2 (innerhalb der Selektion, Grad 3)
     // 1 → 2 → 3, 2 → 4 (alle 4 selektiert → Baum, keine Kette)
     let map = make_chain_map(
-        &[(1, 0.0, 0.0), (2, 10.0, 0.0), (3, 20.0, 0.0), (4, 10.0, 10.0)],
+        &[
+            (1, 0.0, 0.0),
+            (2, 10.0, 0.0),
+            (3, 20.0, 0.0),
+            (4, 10.0, 10.0),
+        ],
         &[(1, 2), (2, 3), (2, 4)],
     );
     let sel: HashSet<u64> = [1, 2, 3, 4].into();
