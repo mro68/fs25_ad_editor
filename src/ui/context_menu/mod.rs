@@ -10,7 +10,7 @@
 pub mod commands;
 
 use crate::app::tools::common::TangentMenuData;
-use crate::app::{state::DistanzenState, AppIntent, RoadMap};
+use crate::app::{AppIntent, RoadMap};
 use commands::{validate_entries, IntentContext, MenuCatalog, PreconditionContext, ValidatedEntry};
 use std::collections::HashSet;
 
@@ -98,13 +98,13 @@ pub fn determine_menu_variant(
 /// Rendert das Kontextmenü basierend auf der eingefrorenen MenuVariant.
 ///
 /// Verwendet das validierte Command-System: Nur Commands mit erfüllten
-/// Preconditions werden gerendert. Streckenteilung und Tangenten werden
-/// als interaktive Widgets separat gehandhabt, da sie DragValues/ComboBoxes haben.
+/// Preconditions werden gerendert. Tangenten werden
+/// als interaktive Widgets separat gehandhabt, da sie ComboBoxes haben.
 pub fn render_context_menu(
     response: &egui::Response,
     road_map: Option<&RoadMap>,
     selected_node_ids: &HashSet<u64>,
-    distanzen_state: &mut DistanzenState,
+    distanzen_active: bool,
     variant: &MenuVariant,
     events: &mut Vec<AppIntent>,
 ) -> bool {
@@ -116,7 +116,7 @@ pub fn render_context_menu(
             let precondition_ctx = PreconditionContext {
                 road_map: rm,
                 selected_node_ids,
-                distanzen_active: distanzen_state.active,
+                distanzen_active,
             };
 
             match variant {
@@ -126,6 +126,7 @@ pub fn render_context_menu(
                         node_id: None,
                         node_position: None,
                         two_node_ids: None,
+                        chain_endpoints: None,
                     };
                     let entries = validate_entries(&catalog, &precondition_ctx, &intent_ctx);
                     render_validated_entries(ui, &entries, events);
@@ -144,20 +145,18 @@ pub fn render_context_menu(
                         None
                     };
 
+                    // Ketten-Endpunkte für Chain-Route-Tools
+                    let chain_ep = chain_endpoints(selected_node_ids, rm);
+
                     let catalog = MenuCatalog::for_selection_only();
                     let intent_ctx = IntentContext {
                         node_id: None,
                         node_position: None,
                         two_node_ids: two_ids,
+                        chain_endpoints: chain_ep,
                     };
                     let entries = validate_entries(&catalog, &precondition_ctx, &intent_ctx);
                     render_validated_entries(ui, &entries, events);
-
-                    // Streckenteilung nur wenn Selektion eine gültige Kette bildet
-                    if rm.is_resampleable_chain(selected_node_ids) {
-                        ui.separator();
-                        render_streckenteilung_widget(ui, distanzen_state, events);
-                    }
                 }
 
                 MenuVariant::NodeFocused { focused_node_id } => {
@@ -175,20 +174,18 @@ pub fn render_context_menu(
                         None
                     };
 
+                    // Ketten-Endpunkte für Chain-Route-Tools
+                    let chain_ep = chain_endpoints(selected_node_ids, rm);
+
                     let catalog = MenuCatalog::for_node_focused(*focused_node_id);
                     let intent_ctx = IntentContext {
                         node_id: Some(*focused_node_id),
                         node_position: node_pos,
                         two_node_ids: two_ids,
+                        chain_endpoints: chain_ep,
                     };
                     let entries = validate_entries(&catalog, &precondition_ctx, &intent_ctx);
                     render_validated_entries(ui, &entries, events);
-
-                    // Streckenteilung nur wenn Selektion eine gültige Kette bildet
-                    if rm.is_resampleable_chain(selected_node_ids) {
-                        ui.separator();
-                        render_streckenteilung_widget(ui, distanzen_state, events);
-                    }
                 }
 
                 MenuVariant::RouteToolActive { tangent_data } => {
@@ -197,6 +194,7 @@ pub fn render_context_menu(
                         node_id: None,
                         node_position: None,
                         two_node_ids: None,
+                        chain_endpoints: None,
                     };
                     let entries = validate_entries(&catalog, &precondition_ctx, &intent_ctx);
                     render_validated_entries(ui, &entries, events);
@@ -255,57 +253,45 @@ fn render_node_info_header(ui: &mut egui::Ui, node_id: u64, road_map: &RoadMap) 
     }
 }
 
-/// Streckenteilung als interaktives Widget (DragValues, nicht als einfacher Button).
-fn render_streckenteilung_widget(
-    ui: &mut egui::Ui,
-    distanzen_state: &mut DistanzenState,
-    events: &mut Vec<AppIntent>,
-) {
-    ui.label("Streckenteilung:");
-
-    let prev_distance = distanzen_state.distance;
-    ui.horizontal(|ui| {
-        ui.label("Abstand:");
-        ui.add(
-            egui::DragValue::new(&mut distanzen_state.distance)
-                .speed(0.5)
-                .range(1.0..=25.0)
-                .suffix(" m"),
-        );
-    });
-    if (distanzen_state.distance - prev_distance).abs() > f32::EPSILON {
-        distanzen_state.by_count = false;
-        distanzen_state.sync_from_distance();
+/// Ermittelt die Endpunkte einer zusammenhängenden Kette.
+///
+/// Gibt `Some((start, end))` zurück wenn die Selektion eine gültige
+/// resampleable Chain bildet, sonst `None`.
+fn chain_endpoints(selected: &HashSet<u64>, rm: &RoadMap) -> Option<(u64, u64)> {
+    if !rm.is_resampleable_chain(selected) {
+        return None;
     }
 
-    let prev_count = distanzen_state.count;
-    ui.horizontal(|ui| {
-        ui.label("Nodes:");
-        ui.add(
-            egui::DragValue::new(&mut distanzen_state.count)
-                .speed(1.0)
-                .range(2..=10000),
-        );
-    });
-    if distanzen_state.count != prev_count {
-        distanzen_state.by_count = true;
-        distanzen_state.sync_from_count();
-        if distanzen_state.distance < 1.0 {
-            distanzen_state.distance = 1.0;
-            distanzen_state.sync_from_distance();
+    // Startpunkt: Node ohne eingehende Verbindung innerhalb der Selektion
+    let start = selected
+        .iter()
+        .find(|&&id| {
+            !rm.connections_iter()
+                .any(|c| c.end_id == id && selected.contains(&c.start_id))
+        })
+        .copied()
+        .or_else(|| selected.iter().next().copied())?;
+
+    // Kette traversieren um den letzten Node zu finden
+    let mut visited = HashSet::new();
+    let mut current = start;
+    loop {
+        visited.insert(current);
+        let next = rm
+            .connections_iter()
+            .find(|c| {
+                c.start_id == current
+                    && selected.contains(&c.end_id)
+                    && !visited.contains(&c.end_id)
+            })
+            .map(|c| c.end_id);
+        match next {
+            Some(n) => current = n,
+            None => break,
         }
     }
 
-    ui.add_space(4.0);
-    if ui.button("✓ Übernehmen").clicked() {
-        events.push(AppIntent::ResamplePathRequested);
-        distanzen_state.deactivate();
-        ui.close();
-    }
-    if ui.button("✕ Verwerfen").clicked() {
-        distanzen_state.deactivate();
-        ui.close();
-    }
+    Some((start, current))
 }
 
 /// Tangenten-Auswahl für Route-Tool (ComboBox, nicht als Command).

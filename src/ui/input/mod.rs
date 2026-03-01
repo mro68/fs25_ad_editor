@@ -55,6 +55,8 @@ struct ContextMenuSnapshot {
     variant: context_menu::MenuVariant,
     /// Eingefrorene Selection-Menge
     selection: HashSet<u64>,
+    /// Bildschirmposition des Rechtsklicks (für Panel-Positionierung)
+    screen_pos: Option<egui::Pos2>,
 }
 
 /// Verwaltet den Input-Zustand für das Viewport (Drag, Selektion, Scroll)
@@ -65,6 +67,8 @@ pub struct InputState {
     /// Snapshot des Menü-Zustands, gültig solange das Popup offen ist.
     /// Wird beim Rechtsklick gesetzt und erst geleert, wenn egui das Popup schließt.
     context_menu_snapshot: Option<ContextMenuSnapshot>,
+    /// Bildschirmposition des letzten CM-Klicks für Edit-Panel-Positionierung.
+    pub edit_panel_pos: Option<[f32; 2]>,
 }
 
 impl InputState {
@@ -74,6 +78,7 @@ impl InputState {
             primary_drag_mode: PrimaryDragMode::None,
             drag_selection: None,
             context_menu_snapshot: None,
+            edit_panel_pos: None,
         }
     }
 
@@ -176,6 +181,7 @@ impl InputState {
             self.context_menu_snapshot = Some(ContextMenuSnapshot {
                 variant,
                 selection: selected_node_ids.clone(),
+                screen_pos: response.hover_pos(),
             });
         }
 
@@ -192,14 +198,31 @@ impl InputState {
             (v, selected_node_ids)
         };
 
+        let events_before = events.len();
         let menu_is_open = context_menu::render_context_menu(
             response,
             road_map,
             menu_selection,
-            distanzen_state,
+            distanzen_state.active,
             &variant,
             &mut events,
         );
+
+        // CM hat neuen edit-mode-Intent emittiert → Panel-Position speichern
+        if events.len() > events_before {
+            let has_edit_intent = events[events_before..].iter().any(|e| {
+                matches!(
+                    e,
+                    AppIntent::StreckenteilungAktivieren
+                        | AppIntent::RouteToolWithAnchorsRequested { .. }
+                )
+            });
+            if has_edit_intent {
+                if let Some(snapshot) = &self.context_menu_snapshot {
+                    self.edit_panel_pos = snapshot.screen_pos.map(|p| [p.x, p.y]);
+                }
+            }
+        }
 
         // Cache leeren sobald das Popup geschlossen ist.
         if !menu_is_open {

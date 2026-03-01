@@ -22,6 +22,8 @@ pub enum Precondition {
     HasConnectionsBetweenSelected,
     /// Streckenteilung ist aktiv
     StreckenteilungActive(bool),
+    /// Selektion bildet eine zusammenhängende Kette (für Streckenteilung)
+    IsResampleableChain,
 }
 
 /// Kontext für die Precondition-Auswertung — alle nötigen Daten aus dem aktuellen State.
@@ -61,6 +63,8 @@ impl Precondition {
                 .is_some(),
 
             Self::StreckenteilungActive(expected) => ctx.distanzen_active == *expected,
+
+            Self::IsResampleableChain => ctx.road_map.is_resampleable_chain(ctx.selected_node_ids),
         }
     }
 }

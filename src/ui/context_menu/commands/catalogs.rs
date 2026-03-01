@@ -136,6 +136,42 @@ impl MenuCatalog {
                 label: "✕ Auswahl löschen".into(),
                 preconditions: vec![],
             },
+            // ── Streckenteilung ────────────────────────────────────
+            MenuEntry::Separator,
+            MenuEntry::Command {
+                id: CommandId::StreckenteilungMulti,
+                label: "📏 Streckenteilung".into(),
+                preconditions: vec![
+                    Precondition::IsResampleableChain,
+                    Precondition::StreckenteilungActive(false),
+                ],
+            },
+            // ── Route-Tools aus Kette ────────────────────────────
+            MenuEntry::Label("📐 Strecke ersetzen".into()),
+            MenuEntry::Command {
+                id: CommandId::ChainRouteStraight,
+                label: "━ Gerade Strecke".into(),
+                preconditions: vec![
+                    Precondition::IsResampleableChain,
+                    Precondition::StreckenteilungActive(false),
+                ],
+            },
+            MenuEntry::Command {
+                id: CommandId::ChainRouteQuadratic,
+                label: "⌒ Bézier Grad 2".into(),
+                preconditions: vec![
+                    Precondition::IsResampleableChain,
+                    Precondition::StreckenteilungActive(false),
+                ],
+            },
+            MenuEntry::Command {
+                id: CommandId::ChainRouteCubic,
+                label: "〜 Bézier Grad 3".into(),
+                preconditions: vec![
+                    Precondition::IsResampleableChain,
+                    Precondition::StreckenteilungActive(false),
+                ],
+            },
             // ── Aktionen ─────────────────────────────────────────
             MenuEntry::Separator,
             MenuEntry::Command {

@@ -189,6 +189,7 @@ fn catalog_empty_area_shows_tools() {
         node_id: None,
         node_position: None,
         two_node_ids: None,
+        chain_endpoints: None,
     };
 
     let catalog = MenuCatalog::for_empty_area();
@@ -216,6 +217,7 @@ fn catalog_node_focused_shows_marker_create() {
         node_id: Some(42),
         node_position: Some(Vec2::new(5.0, 5.0)),
         two_node_ids: None,
+        chain_endpoints: None,
     };
 
     let catalog = MenuCatalog::for_node_focused(42);
@@ -246,6 +248,7 @@ fn catalog_node_focused_shows_marker_edit_when_marker_exists() {
         node_id: Some(42),
         node_position: Some(Vec2::new(5.0, 5.0)),
         two_node_ids: None,
+        chain_endpoints: None,
     };
 
     let catalog = MenuCatalog::for_node_focused(42);
@@ -269,6 +272,7 @@ fn catalog_node_focused_shows_delete_and_duplicate() {
         node_id: Some(10),
         node_position: Some(Vec2::new(1.0, 1.0)),
         two_node_ids: None,
+        chain_endpoints: None,
     };
 
     let catalog = MenuCatalog::for_node_focused(10);
@@ -291,6 +295,7 @@ fn catalog_multi_nodes_connect_only_when_two_unconnected() {
         node_id: None,
         node_position: None,
         two_node_ids: Some((1, 2)),
+        chain_endpoints: None,
     };
 
     let catalog = MenuCatalog::for_selection_only();
@@ -320,6 +325,7 @@ fn catalog_multi_nodes_direction_only_when_connected() {
         node_id: None,
         node_position: None,
         two_node_ids: Some((1, 2)),
+        chain_endpoints: None,
     };
 
     let catalog = MenuCatalog::for_selection_only();
@@ -353,6 +359,7 @@ fn catalog_multi_nodes_route_tools_only_when_two_selected() {
         node_id: None,
         node_position: None,
         two_node_ids: None,
+        chain_endpoints: None,
     };
 
     let catalog = MenuCatalog::for_selection_only();
@@ -376,6 +383,7 @@ fn catalog_multi_nodes_selection_commands_always_visible() {
         node_id: None,
         node_position: None,
         two_node_ids: Some((1, 2)),
+        chain_endpoints: None,
     };
 
     let catalog = MenuCatalog::for_selection_only();
@@ -398,6 +406,7 @@ fn catalog_route_tool_basic_commands() {
         node_id: None,
         node_position: None,
         two_node_ids: None,
+        chain_endpoints: None,
     };
 
     let catalog = MenuCatalog::for_route_tool();
@@ -415,6 +424,7 @@ fn intent_mapping_delete_single_node() {
         node_id: Some(42),
         node_position: Some(Vec2::new(5.0, 5.0)),
         two_node_ids: None,
+        chain_endpoints: None,
     };
     let intent = CommandId::DeleteSingleNode.to_intent(&ctx);
     assert!(matches!(intent, AppIntent::DeleteSelectedRequested));
@@ -426,6 +436,7 @@ fn intent_mapping_connect_two_nodes() {
         node_id: None,
         node_position: None,
         two_node_ids: Some((1, 2)),
+        chain_endpoints: None,
     };
     let intent = CommandId::ConnectTwoNodes.to_intent(&ctx);
     assert!(matches!(intent, AppIntent::ConnectSelectedNodesRequested));
@@ -508,6 +519,7 @@ fn deleted_node_hides_all_commands() {
         node_id: Some(99),
         node_position: None,
         two_node_ids: None,
+        chain_endpoints: None,
     };
 
     let catalog = MenuCatalog::for_node_focused(99);
