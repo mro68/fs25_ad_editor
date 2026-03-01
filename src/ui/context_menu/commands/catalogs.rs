@@ -7,8 +7,8 @@ use super::{CommandId, MenuCatalog, MenuEntry};
 
 impl MenuCatalog {
     /// EmptyArea: Tool-Auswahl inkl. Route-Tools, optional Streckenteilung.
-    pub fn for_empty_area(distanzen_active: bool) -> Self {
-        let mut entries = vec![
+    pub fn for_empty_area() -> Self {
+        let entries = vec![
             MenuEntry::Label("🛠 Werkzeug".into()),
             MenuEntry::Separator,
             MenuEntry::Command {
@@ -44,16 +44,6 @@ impl MenuCatalog {
                 preconditions: vec![],
             },
         ];
-
-        // Streckenteilung nur anzeigen, wenn sie gerade aktiv ist
-        if distanzen_active {
-            entries.push(MenuEntry::Separator);
-            entries.push(MenuEntry::Command {
-                id: CommandId::StreckenteilungEmptyArea,
-                label: "✂ Streckenteilung".into(),
-                preconditions: vec![Precondition::StreckenteilungActive(true)],
-            });
-        }
 
         MenuCatalog { entries }
     }
@@ -128,13 +118,6 @@ impl MenuCatalog {
                 label: "✕ Alle trennen".into(),
                 preconditions: vec![Precondition::HasConnectionsBetweenSelected],
             },
-            // ── Streckenteilung ──────────────────────────────────
-            MenuEntry::Separator,
-            MenuEntry::Command {
-                id: CommandId::StreckenteilungMulti,
-                label: "✂ Streckenteilung".into(),
-                preconditions: vec![],
-            },
             // ── Selektion ────────────────────────────────────────
             MenuEntry::Separator,
             MenuEntry::Label("📐 Selektion".into()),
@@ -176,7 +159,7 @@ impl MenuCatalog {
     }
 
     /// NodeFocused: Einzelnode-Befehle oben + Selektions-Befehle unten.
-    pub fn for_node_focused(node_id: u64, distanzen_active: bool) -> Self {
+    pub fn for_node_focused(node_id: u64) -> Self {
         let mut entries = vec![
             // ── Einzelnode-Befehle (oberer Bereich) ──────────────
             MenuEntry::Separator,
@@ -224,16 +207,6 @@ impl MenuCatalog {
 
         // ── Selektions-Befehle (unterer Bereich) ─────────────────
         entries.extend(Self::selection_entries());
-
-        // Streckenteilung im EmptyArea-Abschnitt, falls aktiv
-        if distanzen_active {
-            entries.push(MenuEntry::Separator);
-            entries.push(MenuEntry::Command {
-                id: CommandId::StreckenteilungEmptyArea,
-                label: "✂ Streckenteilung".into(),
-                preconditions: vec![Precondition::StreckenteilungActive(true)],
-            });
-        }
 
         MenuCatalog { entries }
     }

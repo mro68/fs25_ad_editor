@@ -121,7 +121,7 @@ pub fn render_context_menu(
 
             match variant {
                 MenuVariant::EmptyArea => {
-                    let catalog = MenuCatalog::for_empty_area(distanzen_state.active);
+                    let catalog = MenuCatalog::for_empty_area();
                     let intent_ctx = IntentContext {
                         node_id: None,
                         node_position: None,
@@ -129,12 +129,6 @@ pub fn render_context_menu(
                     };
                     let entries = validate_entries(&catalog, &precondition_ctx, &intent_ctx);
                     render_validated_entries(ui, &entries, events);
-
-                    // Streckenteilung-Widget (interaktive Controls, nicht als Command)
-                    if distanzen_state.active {
-                        ui.separator();
-                        render_streckenteilung_widget(ui, distanzen_state, events);
-                    }
                 }
 
                 MenuVariant::SelectionOnly => {
@@ -159,8 +153,8 @@ pub fn render_context_menu(
                     let entries = validate_entries(&catalog, &precondition_ctx, &intent_ctx);
                     render_validated_entries(ui, &entries, events);
 
-                    // Streckenteilung-Widget
-                    if distanzen_state.active {
+                    // Streckenteilung nur wenn Selektion eine gültige Kette bildet
+                    if rm.is_resampleable_chain(selected_node_ids) {
                         ui.separator();
                         render_streckenteilung_widget(ui, distanzen_state, events);
                     }
@@ -181,8 +175,7 @@ pub fn render_context_menu(
                         None
                     };
 
-                    let catalog =
-                        MenuCatalog::for_node_focused(*focused_node_id, distanzen_state.active);
+                    let catalog = MenuCatalog::for_node_focused(*focused_node_id);
                     let intent_ctx = IntentContext {
                         node_id: Some(*focused_node_id),
                         node_position: node_pos,
@@ -191,8 +184,8 @@ pub fn render_context_menu(
                     let entries = validate_entries(&catalog, &precondition_ctx, &intent_ctx);
                     render_validated_entries(ui, &entries, events);
 
-                    // Streckenteilung-Widget
-                    if distanzen_state.active {
+                    // Streckenteilung nur wenn Selektion eine gültige Kette bildet
+                    if rm.is_resampleable_chain(selected_node_ids) {
                         ui.separator();
                         render_streckenteilung_widget(ui, distanzen_state, events);
                     }

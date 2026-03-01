@@ -147,6 +147,7 @@ pub struct RoadMap {
 - `set_connection_priority(&mut self, start_id: u64, end_id: u64, priority) -> bool` — Priorität ändern
 - `connections_iter(&self) -> impl Iterator<Item = &Connection>` — Iterator über alle Verbindungen
 - `connected_neighbors(&self, node_id: u64) -> Vec<ConnectedNeighbor>` — Alle Nachbarn eines Nodes mit Richtung und Winkel
+- `is_resampleable_chain(&self, node_ids: &HashSet<u64>) -> bool` — Prüft ob die selektierten Nodes eine zusammenhängende Kette bilden (Kreuzungen nur an Endpunkten erlaubt)
 - `next_node_id(&self) -> u64` — Nächste freie Node-ID
 - `add_map_marker(&mut self, marker: MapMarker)` — Fügt Marker hinzu
 - `has_marker(&self, node_id: u64) -> bool` — Prüft ob Node einen Marker hat

@@ -168,7 +168,7 @@ let intents = input.collect_viewport_events(
   - Shift+Alt+Drag → Lasso-Selektion
   - Mittel/Rechts-Drag → Kamera-Pan
 
-- **`context_menu`:** Rechtsklick-Kontextmenü mit validiertem Command-System (CommandId + Preconditions → nur gültige Einträge)
+- **`context_menu`:** Rechtsklick-Kontextmenü mit validiertem Command-System (CommandId + Preconditions → nur gültige Einträge). Streckenteilung-Widget wird nur angezeigt wenn `RoadMap::is_resampleable_chain()` für die aktuelle Selektion `true` liefert (zusammenhängende Kette, Kreuzungen nur an Endpunkten).
 
 **Unterstützte Interaktionen (gesamt):**
 - **Linksklick:** Node-Pick (mit Shift: additiv + Pfad-Erweiterung)

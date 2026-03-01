@@ -191,7 +191,7 @@ fn catalog_empty_area_shows_tools() {
         two_node_ids: None,
     };
 
-    let catalog = MenuCatalog::for_empty_area(false);
+    let catalog = MenuCatalog::for_empty_area();
     let entries = validate_entries(&catalog, &ctx, &intent_ctx);
 
     assert!(has_command(&entries, CommandId::SetToolSelect));
@@ -218,7 +218,7 @@ fn catalog_node_focused_shows_marker_create() {
         two_node_ids: None,
     };
 
-    let catalog = MenuCatalog::for_node_focused(42, false);
+    let catalog = MenuCatalog::for_node_focused(42);
     let entries = validate_entries(&catalog, &ctx, &intent_ctx);
 
     assert!(has_command(&entries, CommandId::CreateMarker));
@@ -248,7 +248,7 @@ fn catalog_node_focused_shows_marker_edit_when_marker_exists() {
         two_node_ids: None,
     };
 
-    let catalog = MenuCatalog::for_node_focused(42, false);
+    let catalog = MenuCatalog::for_node_focused(42);
     let entries = validate_entries(&catalog, &ctx, &intent_ctx);
 
     assert!(has_command(&entries, CommandId::EditMarker));
@@ -271,7 +271,7 @@ fn catalog_node_focused_shows_delete_and_duplicate() {
         two_node_ids: None,
     };
 
-    let catalog = MenuCatalog::for_node_focused(10, false);
+    let catalog = MenuCatalog::for_node_focused(10);
     let entries = validate_entries(&catalog, &ctx, &intent_ctx);
 
     assert!(has_command(&entries, CommandId::DeleteSingleNode));
@@ -510,7 +510,7 @@ fn deleted_node_hides_all_commands() {
         two_node_ids: None,
     };
 
-    let catalog = MenuCatalog::for_node_focused(99, false);
+    let catalog = MenuCatalog::for_node_focused(99);
     let entries = validate_entries(&catalog, &ctx, &intent_ctx);
 
     // Gelöschter Node: NodeExists-Precondition schlägt fehl → keine node-spezifischen Commands
