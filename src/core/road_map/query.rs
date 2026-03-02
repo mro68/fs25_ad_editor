@@ -1,7 +1,7 @@
 //! Query-Helfer auf `RoadMap` fuer Connection- und Spatial-Abfragen.
 
-use super::RoadMap;
 use super::Connection;
+use super::RoadMap;
 use crate::core::SpatialMatch;
 use glam::Vec2;
 use std::collections::HashSet;
