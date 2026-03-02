@@ -170,9 +170,8 @@ impl NodeRenderer {
 
         let (min, max) = compute_visible_rect(ctx);
 
-        // Instanzen aus RoadMap sammeln
-        let mut instances = std::mem::take(&mut self.instance_scratch);
-        instances.clear();
+        // Instanzen aus RoadMap sammeln (Scratch-Buffer wiederverwenden)
+        self.instance_scratch.clear();
 
         for node_id in road_map.nodes_within_rect(min, max) {
             if ctx.hidden_node_ids.contains(&node_id) {
@@ -202,7 +201,7 @@ impl NodeRenderer {
                 ctx.options.node_size_world
             };
 
-            instances.push(NodeInstance::new(
+            self.instance_scratch.push(NodeInstance::new(
                 [node.position.x, node.position.y],
                 base_color,
                 rim_color,
@@ -210,15 +209,14 @@ impl NodeRenderer {
             ));
         }
 
-        if instances.is_empty() {
+        if self.instance_scratch.is_empty() {
             log::warn!("No instances to render");
-            self.instance_scratch = instances;
             return;
         }
 
         log::debug!(
             "Rendering {} instances, camera: ({:.1}, {:.1}), zoom: {:.2}",
-            instances.len(),
+            self.instance_scratch.len(),
             ctx.camera.position.x,
             ctx.camera.position.y,
             ctx.camera.zoom
@@ -243,27 +241,31 @@ impl NodeRenderer {
             .write_buffer(&self.uniform_buffer, 0, bytemuck::cast_slice(&[uniforms]));
 
         // Instance-Buffer erstellen/aktualisieren (Reuse)
-        if self.instance_buffer.is_none() || instances.len() > self.instance_capacity {
+        if self.instance_buffer.is_none()
+            || self.instance_scratch.len() > self.instance_capacity
+        {
             let instance_size = std::mem::size_of::<NodeInstance>() as u64;
-            let buffer_size = (instances.len() as u64) * instance_size;
+            let buffer_size = (self.instance_scratch.len() as u64) * instance_size;
             self.instance_buffer = Some(ctx.device.create_buffer(&wgpu::BufferDescriptor {
                 label: Some("Instance Buffer"),
                 size: buffer_size,
                 usage: wgpu::BufferUsages::VERTEX | wgpu::BufferUsages::COPY_DST,
                 mapped_at_creation: false,
             }));
-            self.instance_capacity = instances.len();
+            self.instance_capacity = self.instance_scratch.len();
         }
 
         if let Some(instance_buffer) = &self.instance_buffer {
-            ctx.queue
-                .write_buffer(instance_buffer, 0, bytemuck::cast_slice(&instances));
+            ctx.queue.write_buffer(
+                instance_buffer,
+                0,
+                bytemuck::cast_slice(&self.instance_scratch),
+            );
         }
 
         // Rendern
         let Some(instance_buffer) = self.instance_buffer.as_ref() else {
             log::error!("NodeRenderer: missing instance buffer before draw call");
-            self.instance_scratch = instances;
             return;
         };
 
@@ -271,7 +273,6 @@ impl NodeRenderer {
         render_pass.set_bind_group(0, &self.bind_group, &[]);
         render_pass.set_vertex_buffer(0, self.vertex_buffer.slice(..));
         render_pass.set_vertex_buffer(1, instance_buffer.slice(..));
-        render_pass.draw(0..6, 0..instances.len() as u32);
-        self.instance_scratch = instances;
+        render_pass.draw(0..6, 0..self.instance_scratch.len() as u32);
     }
 }
