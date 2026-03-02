@@ -1,3 +1,5 @@
+//! UI/System-Intents als nicht-mutierende Eingabeebene.
+
 use super::super::state::EditorTool;
 use crate::app::tools::common::TangentSource;
 use crate::core::{ConnectionDirection, ConnectionPriority};
