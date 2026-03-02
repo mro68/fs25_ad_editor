@@ -1,8 +1,8 @@
-//! Repräsentiert eine Verbindung zwischen zwei Wegpunkten.
+//! Domaenentypen fuer Verbindungen zwischen Wegpunkten.
 
 use glam::Vec2;
 
-/// Richtung der Verbindung
+/// Richtung einer Verbindung zwischen zwei Nodes.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub enum ConnectionDirection {
     /// Einfache Einbahnstraße
@@ -14,7 +14,7 @@ pub enum ConnectionDirection {
     Reverse,
 }
 
-/// Priorität der Verbindung
+/// Prioritaet einer Verbindung.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub enum ConnectionPriority {
     /// Normale Verbindung
@@ -24,7 +24,7 @@ pub enum ConnectionPriority {
     SubPriority,
 }
 
-/// Eine Verbindung zwischen zwei Wegpunkten
+/// Eine gerichtete Verbindung zwischen zwei Wegpunkten.
 #[derive(Debug, Clone)]
 pub struct Connection {
     /// Start-Node-ID
