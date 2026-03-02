@@ -1,3 +1,5 @@
+use fs25_auto_drive_editor::app::handlers;
+use fs25_auto_drive_editor::app::tools::common::TangentSource;
 use fs25_auto_drive_editor::EditorTool;
 use fs25_auto_drive_editor::{AppController, AppIntent, AppState};
 use fs25_auto_drive_editor::{
@@ -35,6 +37,100 @@ fn make_test_map() -> AppState {
     state.road_map = Some(Arc::new(map));
     state.view.viewport_size = [1280.0, 720.0];
     state
+}
+
+fn make_curve_anchor_map() -> AppState {
+    let mut map = RoadMap::new(3);
+
+    // Start/End-Anker
+    map.add_node(MapNode::new(
+        1,
+        glam::Vec2::new(0.0, 0.0),
+        NodeFlag::Regular,
+    ));
+    map.add_node(MapNode::new(
+        2,
+        glam::Vec2::new(10.0, 0.0),
+        NodeFlag::Regular,
+    ));
+
+    // Nachbar fuer Start (incoming in Richtung Start)
+    map.add_node(MapNode::new(
+        10,
+        glam::Vec2::new(-10.0, 0.0),
+        NodeFlag::Regular,
+    ));
+    map.add_connection(Connection::new(
+        10,
+        1,
+        ConnectionDirection::Regular,
+        ConnectionPriority::Regular,
+        glam::Vec2::new(-10.0, 0.0),
+        glam::Vec2::new(0.0, 0.0),
+    ));
+
+    // Nachbar fuer Ende (outgoing in Richtung weg vom Start)
+    map.add_node(MapNode::new(
+        20,
+        glam::Vec2::new(20.0, 0.0),
+        NodeFlag::Regular,
+    ));
+    map.add_connection(Connection::new(
+        2,
+        20,
+        ConnectionDirection::Regular,
+        ConnectionPriority::Regular,
+        glam::Vec2::new(10.0, 0.0),
+        glam::Vec2::new(20.0, 0.0),
+    ));
+
+    map.ensure_spatial_index();
+
+    let mut state = AppState::new();
+    state.road_map = Some(Arc::new(map));
+    state.view.viewport_size = [1280.0, 720.0];
+    state
+}
+
+fn current_cubic_tangents(state: &AppState) -> (TangentSource, TangentSource) {
+    let tool = state
+        .editor
+        .tool_manager
+        .active_tool()
+        .expect("Route-Tool muss aktiv sein");
+    let menu = tool
+        .tangent_menu_data()
+        .expect("Tangenten-Menue muss in Control-Phase verfuegbar sein");
+    (menu.current_start, menu.current_end)
+}
+
+#[test]
+fn test_cubic_with_anchors_matches_manual_tangent_defaults() {
+    // Flow A: via RouteToolWithAnchors (2 selektierte Nodes)
+    let mut state_with_anchors = make_curve_anchor_map();
+    handlers::route_tool::select_with_anchors(&mut state_with_anchors, 2, 1, 2);
+    let tangents_with_anchors = current_cubic_tangents(&state_with_anchors);
+
+    // Flow B: manuell (Tool waehlen -> Start klicken -> Ende klicken)
+    let mut state_manual = make_curve_anchor_map();
+    handlers::route_tool::select(&mut state_manual, 2);
+    handlers::route_tool::click(&mut state_manual, glam::Vec2::new(0.0, 0.0), false);
+    handlers::route_tool::click(&mut state_manual, glam::Vec2::new(10.0, 0.0), false);
+    let tangents_manual = current_cubic_tangents(&state_manual);
+
+    assert_eq!(
+        tangents_with_anchors, tangents_manual,
+        "Cubic-Tangenten sollten im Anchor-Flow und manuellen Flow identisch vorbelegt werden"
+    );
+
+    assert!(
+        matches!(tangents_with_anchors.0, TangentSource::Connection { .. }),
+        "Start-Tangente sollte als Verbindungs-Tangente vorbelegt sein"
+    );
+    assert!(
+        matches!(tangents_with_anchors.1, TangentSource::Connection { .. }),
+        "End-Tangente sollte als Verbindungs-Tangente vorbelegt sein"
+    );
 }
 
 #[test]
