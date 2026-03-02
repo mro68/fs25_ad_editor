@@ -1,35 +1,36 @@
 node_size_world = 0.5
-node_color_default = [0.3607843220233917, 1.0, 0.0, 1.0]
-node_color_subprio = [0.9725490212440491, 1.0, 0.0, 1.0]
-node_color_selected = [1.0, 0.0, 1.0, 1.0]
+node_color_default = [0.0, 0.29803923, 1.0, 1.0]
+node_color_subprio = [1.0, 0.73333335, 0.0, 1.0]
+node_color_selected = [0.84313726, 0.0, 1.0, 1.0]
 node_color_warning = [1.0, 0.0, 0.0, 1.0]
-selection_size_factor = 1.2000000476837158
-selection_pick_radius_px = 12.0
-connection_thickness_world = 0.20000000298023224
-connection_thickness_subprio_world = 0.07999999821186066
-arrow_length_world = 1.2000000476837158
-arrow_width_world = 0.6000000238418579
-connection_color_regular = [0.0, 0.5921568870544434, 1.0, 1.0]
-connection_color_dual = [
-    0.6470588445663452,
-    0.46666666865348816,
-    0.9803921580314636,
-    1.0,
-]
-connection_color_reverse = [1.0, 0.5, 0.10000000149011612, 1.0]
-marker_size_world = 2.799999952316284
-marker_color = [1.0, 0.5411764979362488, 0.0, 1.0]
-marker_outline_color = [0.3764705955982208, 1.0, 0.0, 1.0]
-camera_zoom_step = 1.2000000476837158
-camera_scroll_zoom_step = 1.100000023841858
-camera_zoom_min = 0.10000000149011612
-camera_zoom_max = 100.0
+selection_size_factor = 125.0
+selection_style = "Ring"
+connection_thickness_world = 0.1
+connection_thickness_subprio_world = 0.05
+arrow_length_world = 1.0
+arrow_width_world = 0.5
+connection_color_regular = [0.0, 0.69411767, 1.0, 1.0]
+connection_color_dual = [0.8901961, 1.0, 0.39607844, 1.0]
+connection_color_reverse = [1.0, 0.5, 0.1, 1.0]
+marker_size_world = 2.6
+marker_color = [0.0, 0.46666667, 0.101960786, 1.0]
+marker_outline_color = [1.0, 0.6431373, 0.0, 1.0]
+camera_zoom_min = 0.75
+camera_zoom_max = 200.0
+camera_zoom_step = 1.1
+camera_scroll_zoom_step = 1.025
 snap_scale_percent = 100.0
+hitbox_scale_percent = 100.0
+reconnect_on_delete = true
+split_connection_on_place = true
 terrain_height_scale = 255.0
+bg_opacity = 1.0
+bg_opacity_at_min_zoom = 0.0
+bg_fade_start_zoom = 3.5
 
 [overview_layers]
 hillshade = true
 farmlands = true
 farmland_ids = false
-pois = true
+pois = false
 legend = false

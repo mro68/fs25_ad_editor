@@ -10,13 +10,13 @@ use serde::{Deserialize, Serialize};
 /// Sichtbare Welt-Halbbreite bei Zoom 1.0 (Einheiten = AutoDrive-Meter).
 pub const CAMERA_BASE_WORLD_EXTENT: f32 = 2048.0;
 /// Minimaler Zoom-Faktor.
-pub const CAMERA_ZOOM_MIN: f32 = 0.5;
+pub const CAMERA_ZOOM_MIN: f32 = 0.75;
 /// Maximaler Zoom-Faktor.
 pub const CAMERA_ZOOM_MAX: f32 = 200.0;
 /// Zoom-Schritt bei stufenweisem Zoom (Menü-Buttons / Shortcuts).
 pub const CAMERA_ZOOM_STEP: f32 = 1.1;
 /// Zoom-Schritt bei Mausrad-Scroll.
-pub const CAMERA_SCROLL_ZOOM_STEP: f32 = 1.1;
+pub const CAMERA_SCROLL_ZOOM_STEP: f32 = 1.025;
 
 // ── Tools ───────────────────────────────────────────────────────────
 
@@ -33,46 +33,46 @@ pub const TERRAIN_HEIGHT_SCALE: f32 = 255.0;
 // ── Selektion ───────────────────────────────────────────────────────
 
 /// Größenfaktor für selektierte Nodes in Prozent.
-pub const SELECTION_SIZE_FACTOR: f32 = 130.0;
+pub const SELECTION_SIZE_FACTOR: f32 = 125.0;
 
 // ── Node-Rendering ─────────────────────────────────────────────────
 
 /// Standard-Node-Größe in Welteinheiten.
 pub const NODE_SIZE_WORLD: f32 = 0.5;
-/// Standard-Farbe normaler Nodes (RGBA: Gelbgrün).
-pub const NODE_COLOR_DEFAULT: [f32; 4] = [0.6784314, 1.0, 0.0, 1.0];
-/// Farbe für Sub-Prioritäts-Nodes (RGBA: Orange).
-pub const NODE_COLOR_SUBPRIO: [f32; 4] = [1.0, 0.61960787, 0.0, 1.0];
-/// Farbe für selektierte Nodes (RGBA: Gelbgrün hell).
-pub const NODE_COLOR_SELECTED: [f32; 4] = [0.9137255, 1.0, 0.0, 1.0];
+/// Standard-Farbe normaler Nodes (RGBA: Blau).
+pub const NODE_COLOR_DEFAULT: [f32; 4] = [0.0, 0.29803923, 1.0, 1.0];
+/// Farbe für Sub-Prioritäts-Nodes (RGBA: Gelborange).
+pub const NODE_COLOR_SUBPRIO: [f32; 4] = [1.0, 0.73333335, 0.0, 1.0];
+/// Farbe für selektierte Nodes (RGBA: Violett).
+pub const NODE_COLOR_SELECTED: [f32; 4] = [0.84313726, 0.0, 1.0, 1.0];
 /// Farbe für Nodes mit Warnungen (RGBA: Rot).
 pub const NODE_COLOR_WARNING: [f32; 4] = [1.0, 0.0, 0.0, 1.0];
 
 // ── Connection-Rendering ───────────────────────────────────────────
 
 /// Linienstärke normaler Verbindungen in Welteinheiten.
-pub const CONNECTION_THICKNESS_WORLD: f32 = 0.25;
+pub const CONNECTION_THICKNESS_WORLD: f32 = 0.1;
 /// Linienstärke für Sub-Prioritäts-Verbindungen.
-pub const CONNECTION_THICKNESS_SUBPRIO_WORLD: f32 = 0.15;
+pub const CONNECTION_THICKNESS_SUBPRIO_WORLD: f32 = 0.05;
 /// Pfeil-Länge in Welteinheiten.
-pub const ARROW_LENGTH_WORLD: f32 = 1.5;
+pub const ARROW_LENGTH_WORLD: f32 = 1.0;
 /// Pfeil-Breite in Welteinheiten.
-pub const ARROW_WIDTH_WORLD: f32 = 0.75;
+pub const ARROW_WIDTH_WORLD: f32 = 0.5;
 /// Farbe für reguläre (Einrichtungs-)Verbindungen (RGBA: Blau).
 pub const CONNECTION_COLOR_REGULAR: [f32; 4] = [0.0, 0.69411767, 1.0, 1.0];
-/// Farbe für bidirektionale (Dual-)Verbindungen (RGBA: Goldgelb).
-pub const CONNECTION_COLOR_DUAL: [f32; 4] = [1.0, 0.8039216, 0.2, 1.0];
+/// Farbe für bidirektionale (Dual-)Verbindungen (RGBA: Hellgrün).
+pub const CONNECTION_COLOR_DUAL: [f32; 4] = [0.8901961, 1.0, 0.39607844, 1.0];
 /// Farbe für Rückwärts-Verbindungen (RGBA: Orange).
 pub const CONNECTION_COLOR_REVERSE: [f32; 4] = [1.0, 0.5, 0.1, 1.0];
 
 // ── Map-Marker-Rendering ───────────────────────────────────────────
 
 /// Marker-Größe in Welteinheiten.
-pub const MARKER_SIZE_WORLD: f32 = 2.0;
-/// Füllfarbe der Map-Marker (RGBA: Gelbgrün).
-pub const MARKER_COLOR: [f32; 4] = [0.60784316, 1.0, 0.0, 1.0];
-/// Outline-Farbe der Map-Marker (RGBA: Orange).
-pub const MARKER_OUTLINE_COLOR: [f32; 4] = [1.0, 0.72156864, 0.0, 1.0];
+pub const MARKER_SIZE_WORLD: f32 = 2.6;
+/// Füllfarbe der Map-Marker (RGBA: Dunkelgrün).
+pub const MARKER_COLOR: [f32; 4] = [0.0, 0.46666667, 0.101960786, 1.0];
+/// Outline-Farbe der Map-Marker (RGBA: Goldgelb).
+pub const MARKER_OUTLINE_COLOR: [f32; 4] = [1.0, 0.6431373, 0.0, 1.0];
 
 // ── Selektions-Darstellung ───────────────────────────────────────────
 
