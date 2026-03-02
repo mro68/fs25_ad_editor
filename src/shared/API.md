@@ -100,6 +100,19 @@ pub struct OverviewLayerOptions {
 
 Der Default setzt alle Layer außer `legend` auf `true`.
 
+### `SelectionStyle`
+
+Darstellungsmodus für selektierte Nodes.
+
+```rust
+pub enum SelectionStyle {
+    Ring,     // Farbiger Ring am Rand (Standard)
+    Gradient, // Farbverlauf von Mitte nach Rand
+    Raised,   // Erhöht — heller in der Mitte, dunkler am Rand
+    Sunken,   // Vertieft — dunkler in der Mitte, heller am Rand
+}
+```
+
 ## Design-Prinzipien
 
 1. **Entkopplung:** `shared` verhindert direkte Abhängigkeiten zwischen `app` und `render`
@@ -122,6 +135,7 @@ pub struct EditorOptions {
     pub node_color_warning: [f32; 4],
     // Selektion
     pub selection_size_factor: f32,
+    pub selection_style: SelectionStyle,
     // Connections
     pub connection_thickness_world: f32,
     pub connection_thickness_subprio_world: f32,

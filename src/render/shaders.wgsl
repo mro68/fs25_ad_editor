@@ -64,10 +64,50 @@ fn fs_main(in: VertexOutput) -> @location(0) vec4<f32> {
     let center = vec2<f32>(0.5, 0.5);
     let dist = distance(in.uv, center);
 
-    // Mix: mittig = base_color, außen = rim_color
     let radius = 0.48;
-    let mix_t = clamp(dist / radius, 0.0, 1.0);
-    let rgb = mix(in.color.rgb, in.rim_color.rgb, mix_t);
+    let norm_dist = dist / radius;
+
+    // Selektion-Darstellung: aa_params.z → 0=Gradient, 1=Ring, 2=Erhöht, 3=Vertieft
+    // rim_color.a kodiert Verhältnis Normalgröße/Selektionsgröße (1.0 = nicht selektiert)
+    let style = uniforms.aa_params.z;
+    let edge_ratio = in.rim_color.a;
+    var rgb: vec3<f32>;
+    var style_alpha = 1.0;
+
+    if (style > 2.5) {
+        // Vertieft: Schwarz am Nodedurchmesser, gegen innen durchsichtig
+        // inner_bound = Nodedurchmesser / Max-Grössenfaktor (in normalisierten Koordinaten)
+        let inner_bound = edge_ratio * edge_ratio;
+        if (norm_dist > edge_ratio) {
+            // Außerhalb des normalen Node-Rands: unsichtbar
+            rgb = in.color.rgb;
+            style_alpha = 0.0;
+        } else if (norm_dist > inner_bound) {
+            // Gradient: Nodefarbe (innen) → Schwarz (am Rand)
+            let t = (norm_dist - inner_bound) / max(edge_ratio - inner_bound, 0.001);
+            rgb = mix(in.color.rgb, vec3<f32>(0.0, 0.0, 0.0), t);
+        } else {
+            // Innerer Kern: Nodefarbe
+            rgb = in.color.rgb;
+        }
+    } else if (style > 1.5) {
+        // Erhöht: Innenfläche = Nodefarbe, äußerer Ring = Schwarz mit abnehmender Deckung
+        if (norm_dist <= edge_ratio) {
+            rgb = in.color.rgb;
+        } else {
+            let t = (norm_dist - edge_ratio) / max(1.0 - edge_ratio, 0.001);
+            rgb = vec3<f32>(0.0, 0.0, 0.0);
+            style_alpha = 1.0 - t;
+        }
+    } else if (style > 0.5) {
+        // Ring: Basis-Farbe bis 65 % Radius, dann scharfer Übergang zur Rim-Farbe
+        let mix_t = smoothstep(0.55, 0.75, norm_dist);
+        rgb = mix(in.color.rgb, in.rim_color.rgb, mix_t);
+    } else {
+        // Gradient: linearer Farbverlauf von Mitte nach außen (bisheriges Verhalten)
+        let mix_t = clamp(norm_dist, 0.0, 1.0);
+        rgb = mix(in.color.rgb, in.rim_color.rgb, mix_t);
+    }
 
     // Screen-space adaptives Anti-Aliasing am Rand (unverändert)
     let hard_edges = uniforms.aa_params.y > 0.5;
@@ -79,7 +119,7 @@ fn fs_main(in: VertexOutput) -> @location(0) vec4<f32> {
         alpha = 1.0 - smoothstep(radius - edge, radius + edge, dist);
     }
     
-    return vec4<f32>(rgb, in.color.a * alpha);
+    return vec4<f32>(rgb, in.color.a * alpha * style_alpha);
 }
 
 @vertex

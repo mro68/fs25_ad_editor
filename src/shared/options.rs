@@ -74,6 +74,22 @@ pub const MARKER_COLOR: [f32; 4] = [0.60784316, 1.0, 0.0, 1.0];
 /// Outline-Farbe der Map-Marker (RGBA: Orange).
 pub const MARKER_OUTLINE_COLOR: [f32; 4] = [1.0, 0.72156864, 0.0, 1.0];
 
+// ── Selektions-Darstellung ───────────────────────────────────────────
+
+/// Darstellungsmodus für selektierte Nodes.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Default)]
+pub enum SelectionStyle {
+    /// Selektierte Nodes erhalten einen farbigen Ring am Rand.
+    #[default]
+    Ring,
+    /// Selektierte Nodes werden als Farbverlauf (Mitte → Rand) dargestellt.
+    Gradient,
+    /// Selektierte Nodes wirken erhöht (heller in der Mitte, dunkler am Rand).
+    Raised,
+    /// Selektierte Nodes wirken vertieft (dunkler in der Mitte, heller am Rand).
+    Sunken,
+}
+
 // ── Übersichtskarten-Layer ──────────────────────────────────────────
 
 /// Konfigurierbare Layer-Optionen für die Übersichtskarten-Generierung.
@@ -125,6 +141,9 @@ pub struct EditorOptions {
     // ── Selektion ───────────────────────────────────────────────
     /// Vergrößerungsfaktor für selektierte Nodes (Hitbox und Darstellung)
     pub selection_size_factor: f32,
+    /// Darstellungsmodus für die Selektion (Ring oder Farbverlauf)
+    #[serde(default)]
+    pub selection_style: SelectionStyle,
 
     // ── Connections ─────────────────────────────────────────────
     /// Linienstärke normaler Verbindungen in Welteinheiten
@@ -207,6 +226,7 @@ impl Default for EditorOptions {
             node_color_warning: NODE_COLOR_WARNING,
 
             selection_size_factor: SELECTION_SIZE_FACTOR,
+            selection_style: SelectionStyle::default(),
 
             connection_thickness_world: CONNECTION_THICKNESS_WORLD,
             connection_thickness_subprio_world: CONNECTION_THICKNESS_SUBPRIO_WORLD,
@@ -339,8 +359,8 @@ impl EditorOptions {
             ));
         }
 
-        if self.selection_size_factor < 1.0 {
-            return Err(anyhow::anyhow!("selection_size_factor muss >= 1.0 sein"));
+        if self.selection_size_factor < 1.01 {
+            return Err(anyhow::anyhow!("selection_size_factor muss >= 1.01 sein"));
         }
 
         if self.snap_scale_percent < 25.0 || self.snap_scale_percent > 2000.0 {

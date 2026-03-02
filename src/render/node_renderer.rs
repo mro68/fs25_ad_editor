@@ -3,6 +3,7 @@
 use super::types::{
     compute_visible_rect, NodeInstance, RenderContext, RenderQuality, Uniforms, Vertex,
 };
+use crate::shared::SelectionStyle;
 use crate::{NodeFlag, RoadMap};
 use eframe::{egui_wgpu, wgpu};
 use std::collections::HashSet;
@@ -189,8 +190,11 @@ impl NodeRenderer {
                 _ => ctx.options.node_color_default,
             };
             // Rim/Markierungsfarbe außen — nur bei selektierten Nodes anders
+            // rim_color.a kodiert Verhältnis Normalgröße/Selektionsgröße für Erhöht/Vertieft-Shader
             let rim_color = if is_selected {
-                ctx.options.node_color_selected
+                let mut c = ctx.options.node_color_selected;
+                c[3] = 1.0 / ctx.options.selection_size_factor;
+                c
             } else {
                 base_color
             };
@@ -227,10 +231,16 @@ impl NodeRenderer {
         let view_proj_array = view_proj.to_cols_array_2d();
 
         // Uniform-Buffer aktualisieren
+        let selection_style_flag = match ctx.options.selection_style {
+            SelectionStyle::Gradient => 0.0,
+            SelectionStyle::Ring => 1.0,
+            SelectionStyle::Raised => 2.0,
+            SelectionStyle::Sunken => 3.0,
+        };
         let aa_params = match render_quality {
-            RenderQuality::Low => [0.0, 1.0, 0.0, 0.0],
-            RenderQuality::Medium => [1.0, 0.0, 0.0, 0.0],
-            RenderQuality::High => [1.8, 0.0, 0.0, 0.0],
+            RenderQuality::Low => [0.0, 1.0, selection_style_flag, 0.0],
+            RenderQuality::Medium => [1.0, 0.0, selection_style_flag, 0.0],
+            RenderQuality::High => [1.8, 0.0, selection_style_flag, 0.0],
         };
 
         let uniforms = Uniforms {
