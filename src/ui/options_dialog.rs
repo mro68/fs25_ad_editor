@@ -89,8 +89,6 @@ pub fn show_options_dialog(
                             let current_label = match opts.selection_style {
                                 SelectionStyle::Ring => "Ring",
                                 SelectionStyle::Gradient => "Farbverlauf",
-                                SelectionStyle::Raised => "Erhöht",
-                                SelectionStyle::Sunken => "Vertieft",
                             };
                             egui::ComboBox::from_id_salt("selection_style")
                                 .selected_text(current_label)
@@ -98,8 +96,6 @@ pub fn show_options_dialog(
                                     for (style, label) in [
                                         (SelectionStyle::Ring, "Ring"),
                                         (SelectionStyle::Gradient, "Farbverlauf"),
-                                        (SelectionStyle::Raised, "Erhöht"),
-                                        (SelectionStyle::Sunken, "Vertieft"),
                                     ] {
                                         if ui
                                             .selectable_value(

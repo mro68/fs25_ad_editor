@@ -1,0 +1,5 @@
+#!/usr/bin/env bash
+# Pre-Push Hook: fmt + clippy lokal prüfen bevor gepusht wird.
+set -e
+
+cargo fmt --all

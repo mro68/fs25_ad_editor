@@ -31,12 +31,10 @@ fn command_icon(id: CommandId) -> Option<egui::Image<'static>> {
         CommandId::SetToolAddNode => {
             egui::include_image!("../../../assets/icon_add_node.svg")
         }
-        CommandId::SetToolRouteStraight
-        | CommandId::RouteStraight => {
+        CommandId::SetToolRouteStraight | CommandId::RouteStraight => {
             egui::include_image!("../../../assets/icon_straight_road.svg")
         }
-        CommandId::SetToolRouteQuadratic
-        | CommandId::RouteQuadratic => {
+        CommandId::SetToolRouteQuadratic | CommandId::RouteQuadratic => {
             egui::include_image!("../../../assets/icon_bezier_quadratic.svg")
         }
         CommandId::SetToolRouteCubic | CommandId::RouteCubic => {
