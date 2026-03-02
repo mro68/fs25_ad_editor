@@ -1,6 +1,11 @@
 # FS25 AutoDrive Editor – Bedienungsanleitung
 
-## Inhaltsverzeichnis
+> **Hinweis:** Diese Datei wurde in mehrere thematische Unterseiten aufgeteilt.
+> Die aktuelle Anleitung befindet sich unter **[docs/howto/index.md](howto/index.md)**.
+
+---
+
+## Inhaltsverzeichnis (veraltet – bitte howto/ verwenden)
 
 1. [Überblick](#überblick)
 2. [Programmstart und Dateiverwaltung](#programmstart-und-dateiverwaltung)
@@ -700,8 +705,8 @@ Duplikate jetzt bereinigen?
 | | Farbe Selektiert | Magenta |
 | | Farbe Warnung | Rot |
 | **Selektion** | Pick-Radius | 12 Pixel |
-| | Größenfaktor Selektiert | 1.8× |
-| | Markierungsstil | Ring (alternativ: Farbverlauf, Erhöht, Vertieft) |
+| | Größenfaktor Selektiert | 130% (Bereich 100-200%) |
+| | Markierungsstil | Ring (alternativ: Farbverlauf) |
 | **Connections** | Linienstärke Normal | 0.2 |
 | | Linienstärke SubPrio | 0.1 |
 | | Pfeil-Länge / Breite | 1.0 / 0.6 |
