@@ -5,7 +5,7 @@
 use super::options::EditorOptions;
 use super::RenderQuality;
 use crate::core::{BackgroundMap, Camera2D, RoadMap};
-use std::collections::HashSet;
+use indexmap::IndexSet;
 use std::sync::Arc;
 
 /// Read-only Daten für einen Render-Frame.
@@ -19,8 +19,8 @@ pub struct RenderScene {
     pub viewport_size: [f32; 2],
     /// Render-Qualitätsstufe (Anti-Aliasing)
     pub render_quality: RenderQuality,
-    /// IDs der aktuell selektierten Nodes (Arc für O(1)-Clone pro Frame)
-    pub selected_node_ids: Arc<HashSet<u64>>,
+    /// IDs der aktuell selektierten Nodes in Klick-Reihenfolge (Arc für O(1)-Clone pro Frame)
+    pub selected_node_ids: Arc<IndexSet<u64>>,
     /// Node-ID des Connect-Tool-Source (für spezielle Hervorhebung)
     pub connect_source_node: Option<u64>,
     /// Background-Map (optional)
@@ -30,7 +30,7 @@ pub struct RenderScene {
     /// Laufzeit-Optionen für Farben, Größen, Breiten
     pub options: EditorOptions,
     /// Node-IDs, die im aktuellen Frame ausgeblendet werden sollen (z.B. Distanzen-Vorschau)
-    pub hidden_node_ids: Arc<HashSet<u64>>,
+    pub hidden_node_ids: Arc<IndexSet<u64>>,
 }
 
 impl RenderScene {
