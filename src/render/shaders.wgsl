@@ -68,16 +68,25 @@ fn fs_main(in: VertexOutput) -> @location(0) vec4<f32> {
     let norm_dist = dist / radius;
 
     // Selektion-Darstellung: aa_params.z → 0=Gradient, 1=Ring
+    // rim_color.a kodiert Innendurchmesser/Außendurchmesser (ID/AD).
     let style = uniforms.aa_params.z;
+    let inner_ratio = clamp(in.rim_color.a, 0.0, 1.0);
+    let gradient_hold_ratio = clamp(0.5 * inner_ratio * inner_ratio, 0.0, 1.0);
     var rgb: vec3<f32>;
 
     if (style > 0.5) {
-        // Ring: Basis-Farbe bis 65 % Radius, dann scharfer Übergang zur Rim-Farbe
-        let mix_t = smoothstep(0.55, 0.75, norm_dist);
-        rgb = mix(in.color.rgb, in.rim_color.rgb, mix_t);
+        // Ring:
+        // AD = Größenfaktor/100 * Nodedurchmesser
+        // ID = Nodedurchmesser
+        // -> bis ID bleibt die Nodefarbe, zwischen ID und AD erscheint die Ringfarbe.
+        let ring_t = smoothstep(inner_ratio - 0.02, inner_ratio + 0.02, norm_dist);
+        rgb = mix(in.color.rgb, in.rim_color.rgb, ring_t);
     } else {
-        // Gradient: linearer Farbverlauf von Mitte nach außen (bisheriges Verhalten)
-        let mix_t = clamp(norm_dist, 0.0, 1.0);
+        // Farbverlauf:
+        // - Zentrum = Nodefarbe
+        // - bei (50/Größenfaktor) * Nodedurchmesser = weiterhin Nodefarbe
+        // - bei AD = Selektionsfarbe
+        let mix_t = smoothstep(gradient_hold_ratio, 1.0, norm_dist);
         rgb = mix(in.color.rgb, in.rim_color.rgb, mix_t);
     }
 

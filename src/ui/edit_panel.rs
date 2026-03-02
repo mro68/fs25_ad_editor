@@ -184,6 +184,9 @@ fn render_route_tool_panel(
     let mut window = egui::Window::new("📐 Route-Tool")
         .collapsible(false)
         .resizable(false)
+        .default_width(360.0)
+        .min_width(320.0)
+        .max_width(420.0)
         .auto_sized();
 
     if let Some(pos) = panel_pos {
@@ -191,6 +194,10 @@ fn render_route_tool_panel(
     }
 
     window.show(ctx, |ui| {
+        // Breite stabil halten, damit lange Einträge das Fenster nicht überdehnen.
+        ui.set_min_width(320.0);
+        ui.set_max_width(420.0);
+
         if let Some(tool) = tool_manager.active_tool() {
             ui.label(tool.status_text());
         }

@@ -1,11 +1,13 @@
 //! UI-Konfigurationspanel und Kontextmenü für das Bézier-Kurven-Tool.
 //!
 //! Enthält:
-//! - `render_config_view` — Grad-Auswahl + Segment-Konfiguration im Properties-Panel
+//! - `render_config_view` — Grad-Auswahl + Tangenten + Segment-Konfiguration im Properties-Panel
 //! - `build_tangent_menu_data` — Datenaufbereitung für Tangenten-Kontextmenü
 //! - `apply_tangent_from_menu` — Anwendung der Tangenten-Auswahl aus dem Kontextmenü
 
-use super::super::common::{render_segment_config_3modes, tangent_options, TangentMenuData};
+use super::super::common::{
+    render_segment_config_3modes, render_tangent_combo, tangent_options, TangentMenuData,
+};
 use super::super::RouteTool;
 use super::geometry::{approx_length, cubic_bezier, quadratic_bezier};
 use super::state::{CurveDegree, CurveTool, Phase};
@@ -46,6 +48,62 @@ impl CurveTool {
             && self.last_start_anchor.is_some()
             && self.lifecycle.last_end_anchor.is_some()
             && self.last_control_point1.is_some();
+
+        // Tangenten-Konfiguration für kubische Kurven direkt im Panel sichtbar.
+        if self.degree == CurveDegree::Cubic {
+            ui.separator();
+            ui.label("Tangenten (Grad 3):");
+
+            let in_control = self.phase == Phase::Control;
+            let can_edit_tangents = in_control || adjusting;
+
+            if !can_edit_tangents {
+                ui.small("Start- und Endpunkt setzen, um Tangenten auszuwählen.");
+            }
+
+            let mut tangent_changed = false;
+            let start_none_label = if self.tangents.start_neighbors.is_empty() {
+                "Keine Start-Verbindung"
+            } else {
+                "Keine Start-Tangente"
+            };
+            let end_none_label = if self.tangents.end_neighbors.is_empty() {
+                "Keine End-Verbindung"
+            } else {
+                "Keine End-Tangente"
+            };
+
+            ui.add_enabled_ui(can_edit_tangents, |ui| {
+                tangent_changed |= render_tangent_combo(
+                    ui,
+                    "curve_tangent_start_panel",
+                    "Start-Tangente",
+                    start_none_label,
+                    &mut self.tangents.tangent_start,
+                    &self.tangents.start_neighbors,
+                );
+                tangent_changed |= render_tangent_combo(
+                    ui,
+                    "curve_tangent_end_panel",
+                    "End-Tangente",
+                    end_none_label,
+                    &mut self.tangents.tangent_end,
+                    &self.tangents.end_neighbors,
+                );
+            });
+
+            if tangent_changed {
+                self.apply_tangent_to_cp();
+                self.sync_derived();
+                self.init_apex();
+                if self.lifecycle.has_last_created() {
+                    self.lifecycle.recreate_needed = true;
+                }
+                changed = true;
+            }
+
+            ui.add_space(4.0);
+        }
 
         let length = if adjusting {
             let start_pos = self.last_start_anchor.unwrap().position();
