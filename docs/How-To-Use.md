@@ -16,10 +16,11 @@
 12. [Übersichtskarten-Generierung](#übersichtskarten-generierung)
 13. [Automatische Erkennung (Post-Load)](#automatische-erkennung-post-load)
 14. [Heightmap](#heightmap)
-15. [Duplikat-Bereinigung](#duplikat-bereinigung)
-16. [Optionen](#optionen)
-17. [Undo / Redo](#undo--redo)
-18. [Typische Workflows](#typische-workflows)
+15. [Streckenteilung (Distanzen-Neuverteilung)](#streckenteilung-distanzen-neuverteilung)
+16. [Duplikat-Bereinigung](#duplikat-bereinigung)
+17. [Optionen](#optionen)
+18. [Undo / Redo](#undo--redo)
+19. [Typische Workflows](#typische-workflows)
 
 ---
 
@@ -613,6 +614,53 @@ Beim Speichern ohne Heightmap erscheint eine Warnung. Sie können:
 
 ---
 
+## Streckenteilung (Distanzen-Neuverteilung)
+
+Die Streckenteilung ermöglicht es, Nodes entlang einer selektierten Kette gleichmäßig neu zu verteilen. Die Funktion steht im **Eigenschaften-Panel** zur Verfügung, wenn eine zusammenhängende Kette von Nodes selektiert ist.
+
+### Voraussetzung
+
+- Mindestens 2 Nodes müssen selektiert sein
+- Die selektierten Nodes müssen eine **zusammenhängende Kette** bilden (durch Verbindungen verbunden, keine Verzweigungen)
+- Bilden die Nodes keine gültige Kette, erscheint die Meldung: *„⚠ Selektierte Nodes bilden keine zusammenhängende Kette."*
+
+### Workflow
+
+```mermaid
+flowchart LR
+    A["Kette\nselektieren"] --> B["▶ Einteilung\nändern"]
+    B --> C["Abstand / Nodes\nanpassen"]
+    C --> D["Vorschau\nprüfen"]
+    D --> E["Enter\n→ übernehmen"]
+    D --> F["Esc\n→ verwerfen"]
+```
+
+1. Eine zusammenhängende Kette von Nodes selektieren (z. B. per **Doppelklick** auf ein Segment oder **Shift+Klick** für Pfad-Selektion)
+2. Im Eigenschaften-Panel erscheint **Streckenteilung** mit der berechneten Streckenlänge
+3. **▶ Einteilung ändern** klicken → Vorschau wird aktiviert
+4. Parameter anpassen:
+   - **Abstand** (DragValue, 1–25 m): Gewünschter Abstand zwischen Nodes
+   - **Nodes** (DragValue, 2–10000): Gewünschte Anzahl Nodes auf der Strecke
+5. Die Vorschau zeigt die neuberechneten Node-Positionen in Echtzeit
+6. Optional: **Originale ausblenden** aktivieren, um nur die Vorschau zu sehen
+7. **Enter** → Die bestehenden Nodes werden durch die neu verteilten Nodes ersetzt
+8. **Escape** → Vorschau wird verworfen, keine Änderung
+
+### Einstellungs-Modi
+
+| Modus | Beschreibung |
+|-------|-------------|
+| **Nach Abstand** | Abstand-DragValue ändern → Node-Anzahl wird automatisch berechnet |
+| **Nach Anzahl** | Nodes-DragValue ändern → Abstand wird automatisch berechnet |
+
+> **Hinweis:** Der Mindestabstand beträgt 1 m. Wird durch die gewählte Node-Anzahl ein Abstand < 1 m berechnet, wird automatisch auf 1 m korrigiert.
+
+### Berechnung
+
+Die Neuverteilung nutzt **Catmull-Rom-Spline-Interpolation** entlang der originalen Strecke. Dadurch werden die neuen Nodes gleichmäßig auf der tatsächlichen Kurvengeometrie verteilt — nicht nur auf der Luftlinie zwischen den Endpunkten.
+
+---
+
 ## Duplikat-Bereinigung
 
 Beim Laden einer AutoDrive-Konfiguration prüft der Editor automatisch, ob doppelte Wegpunkte vorhanden sind (Abstandstoleranz: 0,01 Welteinheiten).
@@ -770,6 +818,14 @@ flowchart LR
 3. Name eingeben (z. B. "Hof", "Feld 1")
 4. Gruppe eingeben (z. B. "default")
 5. Bestätigen
+
+### Strecke neu aufteilen (Streckenteilung)
+
+1. Zusammenhängende Kette selektieren (z. B. Doppelklick auf Segment)
+2. Im Eigenschaften-Panel: **▶ Einteilung ändern**
+3. Abstand oder Node-Anzahl wie gewünscht einstellen
+4. Vorschau prüfen (optional: „Originale ausblenden")
+5. **Enter** → Nodes werden gleichmäßig neu verteilt
 
 ---
 
