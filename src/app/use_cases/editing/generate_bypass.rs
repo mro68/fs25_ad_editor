@@ -6,16 +6,22 @@
 //! # Geometrie
 //!
 //! ```text
-//!  chain[0] ──S-Entry──▶ b0 ──── Hauptstrecke (Offset) ────▶ bn ──S-Exit──▶ chain[n-1]
+//!  chain[0] ──S-Entry──▶ b0 ──── Hauptstrecke (verkürzt) ────▶ bn ──S-Exit──▶ chain[n-1]
 //! ```
 //!
+//! Die Hauptstrecke beginnt und endet nicht bei `chain[0]`/`chain[n-1]`, sondern
+//! jeweils `d_blend = |offset| × 1.5` entlang der Kette versetzt. Dadurch haben die
+//! S-Kurven ausreichend Längsraum für tangentiale An-/Abfahrten.
+//!
 //! - **S-Kurven**: Kubische Bézier-Kurven, halber Knotenabstand (`base_spacing * 0.5`)
-//! - **Hauptstrecke**: Parallel-Offset der Catmull-Rom-Spline, voller Knotenabstand
+//! - **Hauptstrecke**: Parallel-Offset des mittleren Kettenabschnitts, voller Knotenabstand
 //! - **Verbindungsrichtung**: Von selektiertem Start zu selektiertem Ende
 
 use crate::app::AppState;
 use crate::core::{Connection, MapNode, NodeFlag};
-use crate::shared::spline_geometry::{catmull_rom_chain_with_tangents, resample_by_distance};
+use crate::shared::spline_geometry::{
+    catmull_rom_chain_with_tangents, polyline_length, resample_by_distance,
+};
 use glam::Vec2;
 use std::sync::Arc;
 
@@ -75,47 +81,94 @@ pub fn generate_bypass(state: &mut AppState) {
             state.editor.default_priority,
         ));
 
-    // ── Catmull-Rom-Dichte-Spline für glatten Offset ─────────────────────────
+    // ── Catmull-Rom-Dichte-Spline ─────────────────────────────────────────────
     const SAMPLES: usize = 20;
     let dense = catmull_rom_chain_with_tangents(&positions, SAMPLES, None, None);
+    let total_len = polyline_length(&dense);
 
-    // ── Parallel-Offset der Dichte-Spline ─────────────────────────────────────
-    let offset_dense = parallel_offset(&dense, offset);
+    if total_len < f32::EPSILON {
+        return;
+    }
 
-    // b0 = Startpunkt der Hauptstrecke, bn = Endpunkt
-    let b0 = *offset_dense.first().unwrap();
-    let bn = *offset_dense.last().unwrap();
-    let t_start = (positions[1] - positions[0]).normalize_or_zero();
-    let t_end =
-        (positions[positions.len() - 1] - positions[positions.len() - 2]).normalize_or_zero();
+    // ── Übergangslänge entlang der Kette ─────────────────────────────────────
+    // d_blend: wie weit die S-Kurve entlang der Originalkette läuft, bevor sie
+    // auf den Offset-Punkt trifft. Mindestens |offset|, maximal 35 % der Länge.
+    let d_blend = (offset.abs() * 1.5).clamp(offset.abs().max(0.1), total_len * 0.35);
 
-    // ── Bézier-Punkte für S-Kurven ────────────────────────────────────────────
-    let entry_pts = {
-        let horizontal_len = (b0 - positions[0]).length().max(offset.abs());
-        let cp1 = positions[0] + t_start * horizontal_len * 0.45;
-        let cp2 = b0 - t_start * horizontal_len * 0.45;
-        sample_bezier(positions[0], cp1, cp2, b0, half_spacing)
+    // ── Exakte Blend-Punkte auf der Dichte-Spline ─────────────────────────────
+    // (b0_chain = Punkt auf Originalkette bei d_blend, bn_chain = bei total_len − d_blend)
+    let Some((i0, t0)) = arc_split(&dense, d_blend) else {
+        log::warn!("Ausweichstrecke: d_blend übersteigt Kettenläng (Entry)");
+        return;
     };
-    let exit_pts = {
-        let horizontal_len = (positions[positions.len() - 1] - bn)
-            .length()
-            .max(offset.abs());
-        let cp1 = bn + t_end * horizontal_len * 0.45;
-        let cp2 = positions[positions.len() - 1] - t_end * horizontal_len * 0.45;
-        sample_bezier(bn, cp1, cp2, positions[positions.len() - 1], half_spacing)
+    let Some((i_n, t_n)) = arc_split(&dense, total_len - d_blend) else {
+        log::warn!("Ausweichstrecke: d_blend übersteigt Kettenlänge (Exit)");
+        return;
     };
-    let main_pts = resample_by_distance(&offset_dense, base_spacing);
+
+    // Exakte Positionen und lokale Tangenten am Blend-Punkt
+    let b0_chain = dense[i0].lerp(dense[i0 + 1], t0);
+    let t_at_b0 = (dense[i0 + 1] - dense[i0]).normalize_or_zero();
+    let perp_at_b0 = Vec2::new(-t_at_b0.y, t_at_b0.x);
+    let b0 = b0_chain + perp_at_b0 * offset;
+
+    let bn_chain = dense[i_n].lerp(dense[i_n + 1], t_n);
+    let t_at_bn = (dense[i_n + 1] - dense[i_n]).normalize_or_zero();
+    let perp_at_bn = Vec2::new(-t_at_bn.y, t_at_bn.x);
+    let bn = bn_chain + perp_at_bn * offset;
+
+    // ── Mittleres Teilstück der Dichte-Spline für die Hauptstrecke ───────────
+    // Wir nutzen nur die Punkte zwischen i0 und i_n (plus exakte Endpunkte).
+    let mut main_chain: Vec<Vec2> = Vec::with_capacity(i_n - i0 + 3);
+    main_chain.push(b0_chain);
+    for j in (i0 + 1)..=i_n {
+        main_chain.push(dense[j]);
+    }
+    main_chain.push(bn_chain);
+
+    // Parallel-Offset der Hauptstrecke (erste/letzte Punkte entsprechen b0/bn exakt)
+    let main_offset = parallel_offset(&main_chain, offset);
+    let main_pts = resample_by_distance(&main_offset, base_spacing);
+
+    // ── S-Kurven: Bézier mit tangentialen Kontrollpunkten ────────────────────
+    // Kettenanfangs- und -endtangente
+    let t_chain_start = (dense[1] - dense[0]).normalize_or_zero();
+    let t_chain_end = (*dense.last().unwrap() - dense[dense.len() - 2]).normalize_or_zero();
+
+    // Kontrollpunkt-Abstand = d_blend × 0.45 (empfohlener Faktor für kubische Bézier)
+    const CP: f32 = 0.45;
+    let cp_dist = d_blend * CP;
+
+    // S-Entry: chain[0] → b0
+    // CP1 zeigt vorwärts entlang der Kette, CP2 zeigt rückwärts entlang Kette bei b0
+    let entry_pts = sample_bezier(
+        positions[0],
+        positions[0] + t_chain_start * cp_dist,
+        b0 - t_at_b0 * cp_dist,
+        b0,
+        half_spacing,
+    );
+
+    // S-Exit: bn → chain[n-1]
+    // CP1 zeigt vorwärts ab bn (entlang Kettentangente), CP2 zeigt rückwärts am Kettenende
+    let exit_pts = sample_bezier(
+        bn,
+        bn + t_at_bn * cp_dist,
+        *positions.last().unwrap() - t_chain_end * cp_dist,
+        *positions.last().unwrap(),
+        half_spacing,
+    );
 
     // ── Neue Knoten-Positionen zusammenstellen ─────────────────────────────────
-    // entry_pts : [chain[0], ..., b0] → wir überspringen chain[0]
-    // main_pts  : [b0,  ...,  bn]    → wir überspringen b0
-    // exit_pts  : [bn,  ..., chain[n-1]] → wir überspringen bn UND chain[n-1]
+    // entry_pts : [chain[0], ..., b0] → chain[0] überspringen (existiert bereits)
+    // main_pts  : [b0, ..., bn]       → b0 überspringen (bereits in entry_pts)
+    // exit_pts  : [bn, ..., chain[n-1]] → bn überspringen, chain[n-1] überspringen
     let entry_new: Vec<Vec2> = entry_pts.iter().skip(1).copied().collect();
     let main_new: Vec<Vec2> = main_pts.iter().skip(1).copied().collect();
     let exit_new: Vec<Vec2> = exit_pts
         .iter()
-        .skip(1) // bn schon in main_new
-        .take(exit_pts.len().saturating_sub(2)) // chain[n-1] wird nicht erstellt
+        .skip(1) // bn bereits in main_new
+        .take(exit_pts.len().saturating_sub(2)) // chain[n-1] existiert bereits
         .copied()
         .collect();
 
@@ -148,11 +201,7 @@ pub fn generate_bypass(state: &mut AppState) {
     // 1. chain_start → first new node
     {
         let from_pos = road_map.nodes.get(&chain_start_id).unwrap().position;
-        let to_pos = new_ids
-            .first()
-            .and_then(|id| road_map.nodes.get(id))
-            .unwrap()
-            .position;
+        let to_pos = road_map.nodes.get(&new_ids[0]).unwrap().position;
         road_map.add_connection(Connection::new(
             chain_start_id,
             new_ids[0],
@@ -204,14 +253,36 @@ pub fn generate_bypass(state: &mut AppState) {
     state.selection.selection_anchor_node_id = new_ids.first().copied();
 
     log::info!(
-        "Ausweichstrecke erzeugt: {} neue Nodes (Offset {:.1}, Abstand {:.1})",
+        "Ausweichstrecke erzeugt: {} neue Nodes (Offset {:.1}, d_blend {:.1}, Abstand {:.1})",
         new_ids.len(),
         offset,
+        d_blend,
         base_spacing,
     );
 }
 
 // ─── private Hilfsfunktionen ──────────────────────────────────────────────────
+
+/// Findet den Schnittpunkt einer Polyline mit einer gegebenen Arc-Distanz.
+///
+/// Gibt `(index, t)` zurück, sodass `poly[index].lerp(poly[index+1], t)` der exakte
+/// Punkt bei Arc-Distanz `target` ist. `None` wenn `target` die Gesamtlänge übersteigt.
+fn arc_split(poly: &[Vec2], target: f32) -> Option<(usize, f32)> {
+    let mut acc = 0.0_f32;
+    for i in 0..poly.len().saturating_sub(1) {
+        let seg = poly[i].distance(poly[i + 1]);
+        if acc + seg >= target {
+            let t = if seg > f32::EPSILON {
+                (target - acc) / seg
+            } else {
+                0.0
+            };
+            return Some((i, t.clamp(0.0, 1.0)));
+        }
+        acc += seg;
+    }
+    None
+}
 
 /// Gibt einen Punkt auf einer kubischen Bézier-Kurve bei Parameter t ∈ [0, 1] zurück.
 fn cubic_bezier(p0: Vec2, p1: Vec2, p2: Vec2, p3: Vec2, t: f32) -> Vec2 {
