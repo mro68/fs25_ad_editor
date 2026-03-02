@@ -100,6 +100,13 @@ pub fn select_with_anchors(
     // Tool aktivieren (inkl. Direction/Priority/SnapRadius)
     select(state, index);
 
+    // Immer mit frischem Zustand starten, auch wenn dasselbe Tool bereits aktiv war.
+    // So ist das Verhalten identisch zum manuellen Flow
+    // (Tool wählen -> Start klicken -> Ende klicken).
+    if let Some(tool) = state.editor.tool_manager.active_tool_mut() {
+        tool.reset();
+    }
+
     // Node-Positionen holen
     let (start_pos, end_pos) = {
         let Some(road_map) = state.road_map.as_deref() else {

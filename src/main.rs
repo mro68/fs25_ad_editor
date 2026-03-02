@@ -275,7 +275,7 @@ impl EditorApp {
                     ui.ctx().set_cursor_icon(egui::CursorIcon::Crosshair);
                 }
                 EditorTool::Connect => {
-                    ui.ctx().set_cursor_icon(egui::CursorIcon::PointingHand);
+                    ui.ctx().set_cursor_icon(egui::CursorIcon::ResizeNwSe);
                 }
                 _ => {}
             }

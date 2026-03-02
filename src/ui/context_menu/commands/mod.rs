@@ -51,11 +51,6 @@ pub enum CommandId {
     EditMarker,
     /// Marker löschen
     RemoveMarker,
-    /// Node löschen (Einzelnode)
-    DeleteSingleNode,
-    /// Node duplizieren (Einzelnode)
-    DuplicateSingleNode,
-
     // ── Selection-Befehle (SelectionOnly + NodeFocused) ─────────────
     /// Zwei Nodes verbinden (nur bei genau 2 unverbundenen)
     ConnectTwoNodes,
@@ -89,15 +84,6 @@ pub enum CommandId {
     ClearSelection,
     /// Selektierte Nodes löschen
     DeleteSelected,
-    /// Selektierte Nodes duplizieren
-    DuplicateSelected,
-    // ── Ketten-basierte Route-Tools (IsResampleableChain) ──────────
-    /// Gerade Strecke aus Kette erzeugen
-    ChainRouteStraight,
-    /// Bézier Grad 2 aus Kette erzeugen
-    ChainRouteQuadratic,
-    /// Bézier Grad 3 aus Kette erzeugen
-    ChainRouteCubic,
     // ── RouteTool ────────────────────────────────────────────────────
     /// Route ausführen
     RouteExecute,
@@ -149,8 +135,6 @@ pub struct IntentContext {
     pub node_position: Option<glam::Vec2>,
     /// Sortierte Zwei-Node-IDs (für RouteToolWithAnchorsRequested)
     pub two_node_ids: Option<(u64, u64)>,
-    /// Endpunkte einer zusammenhängenden Kette (erstes + letztes Node)
-    pub chain_endpoints: Option<(u64, u64)>,
 }
 
 impl CommandId {
@@ -190,10 +174,7 @@ impl CommandId {
             Self::RemoveMarker => AppIntent::RemoveMarkerRequested {
                 node_id: ctx.node_id.unwrap_or(0),
             },
-            Self::DeleteSingleNode | Self::DeleteSelected => AppIntent::DeleteSelectedRequested,
-            Self::DuplicateSingleNode | Self::DuplicateSelected => {
-                AppIntent::DuplicateSelectedNodesRequested
-            }
+            Self::DeleteSelected => AppIntent::DeleteSelectedRequested,
 
             // ── Selection-Befehle ────────────────────────────────────
             Self::ConnectTwoNodes => AppIntent::ConnectSelectedNodesRequested,
@@ -245,32 +226,6 @@ impl CommandId {
             Self::InvertSelection => AppIntent::InvertSelectionRequested,
             Self::SelectAll => AppIntent::SelectAllRequested,
             Self::ClearSelection => AppIntent::ClearSelectionRequested,
-
-            // ── Ketten-basierte Route-Tools ─────────────────────────
-            Self::ChainRouteStraight => {
-                let (s, e) = ctx.chain_endpoints.unwrap_or((0, 0));
-                AppIntent::RouteToolWithAnchorsRequested {
-                    index: TOOL_INDEX_STRAIGHT,
-                    start_node_id: s,
-                    end_node_id: e,
-                }
-            }
-            Self::ChainRouteQuadratic => {
-                let (s, e) = ctx.chain_endpoints.unwrap_or((0, 0));
-                AppIntent::RouteToolWithAnchorsRequested {
-                    index: TOOL_INDEX_CURVE_QUAD,
-                    start_node_id: s,
-                    end_node_id: e,
-                }
-            }
-            Self::ChainRouteCubic => {
-                let (s, e) = ctx.chain_endpoints.unwrap_or((0, 0));
-                AppIntent::RouteToolWithAnchorsRequested {
-                    index: TOOL_INDEX_CURVE_CUBIC,
-                    start_node_id: s,
-                    end_node_id: e,
-                }
-            }
 
             // ── RouteTool ────────────────────────────────────────────
             Self::RouteExecute => AppIntent::RouteToolExecuteRequested,

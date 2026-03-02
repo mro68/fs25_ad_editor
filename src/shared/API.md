@@ -64,7 +64,7 @@ Zentral gesammelte Konfigurationswerte, gegliedert nach Bereich:
 | Kamera | `CAMERA_ZOOM_MIN` / `MAX` | 0.1 / 100.0 | Zoom-Grenzen (Referenz-Duplikat) |
 | Kamera | `CAMERA_ZOOM_STEP` | 1.2 | Zoom-Schritt bei Menü-Buttons / Shortcuts |
 | Kamera | `CAMERA_SCROLL_ZOOM_STEP` | 1.1 | Zoom-Schritt bei Mausrad-Scroll |
-| Selektion | `SELECTION_SIZE_FACTOR` | 1.8 | Vergrößerung selektierter Nodes |
+| Selektion | `SELECTION_SIZE_FACTOR` | 130.0 | Vergrößerung selektierter Nodes in % (100..=200) |
 | Nodes | `NODE_SIZE_WORLD` | 0.5 | Feste Node-Größe in Welt-Einheiten |
 | Nodes | `NODE_COLOR_DEFAULT` | `[0.0, 0.8, 1.0, 1.0]` | Cyan (Regular) |
 | Nodes | `NODE_COLOR_SUBPRIO` | `[1.0, 1.0, 0.0, 1.0]` | Gelb (SubPrio) |
@@ -100,6 +100,17 @@ pub struct OverviewLayerOptions {
 
 Der Default setzt alle Layer außer `legend` auf `true`.
 
+### `SelectionStyle`
+
+Darstellungsmodus für selektierte Nodes.
+
+```rust
+pub enum SelectionStyle {
+    Ring,     // Farbiger Ring am Rand (Standard)
+    Gradient, // Farbverlauf von Mitte nach Rand
+}
+```
+
 ## Design-Prinzipien
 
 1. **Entkopplung:** `shared` verhindert direkte Abhängigkeiten zwischen `app` und `render`
@@ -121,7 +132,8 @@ pub struct EditorOptions {
     pub node_color_selected: [f32; 4],
     pub node_color_warning: [f32; 4],
     // Selektion
-    pub selection_size_factor: f32,
+    pub selection_size_factor: f32, // Prozentwert 100..=200
+    pub selection_style: SelectionStyle,
     // Connections
     pub connection_thickness_world: f32,
     pub connection_thickness_subprio_world: f32,

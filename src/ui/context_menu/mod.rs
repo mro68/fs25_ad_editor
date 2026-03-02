@@ -31,17 +31,13 @@ fn command_icon(id: CommandId) -> Option<egui::Image<'static>> {
         CommandId::SetToolAddNode => {
             egui::include_image!("../../../assets/icon_add_node.svg")
         }
-        CommandId::SetToolRouteStraight
-        | CommandId::RouteStraight
-        | CommandId::ChainRouteStraight => {
+        CommandId::SetToolRouteStraight | CommandId::RouteStraight => {
             egui::include_image!("../../../assets/icon_straight_road.svg")
         }
-        CommandId::SetToolRouteQuadratic
-        | CommandId::RouteQuadratic
-        | CommandId::ChainRouteQuadratic => {
+        CommandId::SetToolRouteQuadratic | CommandId::RouteQuadratic => {
             egui::include_image!("../../../assets/icon_bezier_quadratic.svg")
         }
-        CommandId::SetToolRouteCubic | CommandId::RouteCubic | CommandId::ChainRouteCubic => {
+        CommandId::SetToolRouteCubic | CommandId::RouteCubic => {
             egui::include_image!("../../../assets/icon_bezier_cubic.svg")
         }
         _ => return None,
@@ -161,16 +157,12 @@ pub fn render_context_menu(
                         node_id: None,
                         node_position: None,
                         two_node_ids: None,
-                        chain_endpoints: None,
                     };
                     let entries = validate_entries(&catalog, &precondition_ctx, &intent_ctx);
                     render_validated_entries(ui, &entries, events);
                 }
 
                 MenuVariant::SelectionOnly => {
-                    // Info-Header
-                    ui.label(format!("📍 {} Nodes selektiert", selected_node_ids.len()));
-
                     // Sortierte 2-Node-IDs für Route-Tool-Shortcuts
                     let two_ids = if selected_node_ids.len() == 2 {
                         let mut ids: Vec<u64> = selected_node_ids.iter().copied().collect();
@@ -180,24 +172,17 @@ pub fn render_context_menu(
                         None
                     };
 
-                    // Ketten-Endpunkte für Chain-Route-Tools
-                    let chain_ep = chain_endpoints(selected_node_ids, rm);
-
                     let catalog = MenuCatalog::for_selection_only();
                     let intent_ctx = IntentContext {
                         node_id: None,
                         node_position: None,
                         two_node_ids: two_ids,
-                        chain_endpoints: chain_ep,
                     };
                     let entries = validate_entries(&catalog, &precondition_ctx, &intent_ctx);
                     render_validated_entries(ui, &entries, events);
                 }
 
                 MenuVariant::NodeFocused { focused_node_id } => {
-                    // Info-Header für fokussierten Node
-                    render_node_info_header(ui, *focused_node_id, rm);
-
                     let node_pos = rm.nodes.get(focused_node_id).map(|n| n.position);
 
                     // Sortierte 2-Node-IDs für Route-Tool-Shortcuts
@@ -209,18 +194,18 @@ pub fn render_context_menu(
                         None
                     };
 
-                    // Ketten-Endpunkte für Chain-Route-Tools
-                    let chain_ep = chain_endpoints(selected_node_ids, rm);
-
                     let catalog = MenuCatalog::for_node_focused(*focused_node_id);
                     let intent_ctx = IntentContext {
                         node_id: Some(*focused_node_id),
                         node_position: node_pos,
                         two_node_ids: two_ids,
-                        chain_endpoints: chain_ep,
                     };
                     let entries = validate_entries(&catalog, &precondition_ctx, &intent_ctx);
                     render_validated_entries(ui, &entries, events);
+
+                    // ── Info-Submenu (ganz unten, öffnet bei Hover) ───
+                    ui.separator();
+                    render_node_info_submenu(ui, *focused_node_id, rm);
                 }
 
                 MenuVariant::RouteToolActive { tangent_data } => {
@@ -229,7 +214,6 @@ pub fn render_context_menu(
                         node_id: None,
                         node_position: None,
                         two_node_ids: None,
-                        chain_endpoints: None,
                     };
                     let entries = validate_entries(&catalog, &precondition_ctx, &intent_ctx);
                     render_validated_entries(ui, &entries, events);
@@ -286,65 +270,36 @@ fn render_validated_entries(
     }
 }
 
-/// Info-Header für einen einzelnen Node (Position, Verbindungszähler).
-fn render_node_info_header(ui: &mut egui::Ui, node_id: u64, road_map: &RoadMap) {
-    if let Some(node) = road_map.nodes.get(&node_id) {
-        ui.label(format!("📍 Node {}", node_id));
-        ui.label(format!(
-            "Pos: ({:.1}, {:.1})",
-            node.position.x, node.position.y
-        ));
-        let in_count = road_map
-            .connections_iter()
-            .filter(|c| c.end_id == node_id)
-            .count();
-        let out_count = road_map
-            .connections_iter()
-            .filter(|c| c.start_id == node_id)
-            .count();
-        ui.label(format!("Verb.: {} ↦ {} ↤", out_count, in_count));
-    }
-}
-
-/// Ermittelt die Endpunkte einer zusammenhängenden Kette.
-///
-/// Gibt `Some((start, end))` zurück wenn die Selektion eine gültige
-/// resampleable Chain bildet, sonst `None`.
-fn chain_endpoints(selected: &HashSet<u64>, rm: &RoadMap) -> Option<(u64, u64)> {
-    if !rm.is_resampleable_chain(selected) {
-        return None;
-    }
-
-    // Startpunkt: Node ohne eingehende Verbindung innerhalb der Selektion
-    let start = selected
-        .iter()
-        .find(|&&id| {
-            !rm.connections_iter()
-                .any(|c| c.end_id == id && selected.contains(&c.start_id))
-        })
-        .copied()
-        .or_else(|| selected.iter().next().copied())?;
-
-    // Kette traversieren um den letzten Node zu finden
-    let mut visited = HashSet::new();
-    let mut current = start;
-    loop {
-        visited.insert(current);
-        let next = rm
-            .connections_iter()
-            .find(|c| {
-                c.start_id == current
-                    && selected.contains(&c.end_id)
-                    && !visited.contains(&c.end_id)
-            })
-            .map(|c| c.end_id);
-        match next {
-            Some(n) => current = n,
-            None => break,
+/// Info-Submenu für einen Node (öffnet bei Hover, zeigt Details).
+fn render_node_info_submenu(ui: &mut egui::Ui, node_id: u64, road_map: &RoadMap) {
+    ui.menu_button("ℹ Info", |ui| {
+        if let Some(node) = road_map.nodes.get(&node_id) {
+            ui.label(format!("📍 Node {}", node_id));
+            ui.label(format!(
+                "Position: ({:.1}, {:.1})",
+                node.position.x, node.position.y
+            ));
+            ui.label(format!("Flag: {:?}", node.flag));
+            ui.separator();
+            let out_count = road_map
+                .connections_iter()
+                .filter(|c| c.start_id == node_id)
+                .count();
+            let in_count = road_map
+                .connections_iter()
+                .filter(|c| c.end_id == node_id)
+                .count();
+            ui.label(format!("Ausgehend: {}", out_count));
+            ui.label(format!("Eingehend: {}", in_count));
+            if let Some(marker) = road_map.find_marker_by_node_id(node_id) {
+                ui.separator();
+                ui.label(format!("🗺 Marker: {}", marker.name));
+                ui.label(format!("Gruppe: {}", marker.group));
+            }
+        } else {
+            ui.label("Node nicht gefunden");
         }
-    }
-
-    Some((start, current))
+    });
 }
 
 /// Tangenten-Auswahl für Route-Tool (ComboBox, nicht als Command).

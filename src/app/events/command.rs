@@ -238,8 +238,6 @@ pub enum AppCommand {
     StreckenteilungAktivieren,
     /// Alles in den Viewport einpassen (Zoom-to-fit)
     ZoomToFit,
-    /// Selektierte Nodes duplizieren (mit Versatz)
-    DuplicateSelectedNodes,
     /// Auswahl invertieren
     InvertSelection,
 }
