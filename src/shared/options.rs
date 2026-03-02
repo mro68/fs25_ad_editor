@@ -84,10 +84,6 @@ pub enum SelectionStyle {
     Ring,
     /// Selektierte Nodes werden als Farbverlauf (Mitte → Rand) dargestellt.
     Gradient,
-    /// Selektierte Nodes wirken erhöht (heller in der Mitte, dunkler am Rand).
-    Raised,
-    /// Selektierte Nodes wirken vertieft (dunkler in der Mitte, heller am Rand).
-    Sunken,
 }
 
 // ── Übersichtskarten-Layer ──────────────────────────────────────────

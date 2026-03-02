@@ -190,11 +190,8 @@ impl NodeRenderer {
                 _ => ctx.options.node_color_default,
             };
             // Rim/Markierungsfarbe außen — nur bei selektierten Nodes anders
-            // rim_color.a kodiert Verhältnis Normalgröße/Selektionsgröße für Erhöht/Vertieft-Shader
             let rim_color = if is_selected {
-                let mut c = ctx.options.node_color_selected;
-                c[3] = 1.0 / ctx.options.selection_size_factor;
-                c
+                ctx.options.node_color_selected
             } else {
                 base_color
             };
@@ -234,8 +231,6 @@ impl NodeRenderer {
         let selection_style_flag = match ctx.options.selection_style {
             SelectionStyle::Gradient => 0.0,
             SelectionStyle::Ring => 1.0,
-            SelectionStyle::Raised => 2.0,
-            SelectionStyle::Sunken => 3.0,
         };
         let aa_params = match render_quality {
             RenderQuality::Low => [0.0, 1.0, selection_style_flag, 0.0],
