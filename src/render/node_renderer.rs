@@ -241,9 +241,7 @@ impl NodeRenderer {
             .write_buffer(&self.uniform_buffer, 0, bytemuck::cast_slice(&[uniforms]));
 
         // Instance-Buffer erstellen/aktualisieren (Reuse)
-        if self.instance_buffer.is_none()
-            || self.instance_scratch.len() > self.instance_capacity
-        {
+        if self.instance_buffer.is_none() || self.instance_scratch.len() > self.instance_capacity {
             let instance_size = std::mem::size_of::<NodeInstance>() as u64;
             let buffer_size = (self.instance_scratch.len() as u64) * instance_size;
             self.instance_buffer = Some(ctx.device.create_buffer(&wgpu::BufferDescriptor {
