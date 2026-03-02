@@ -54,6 +54,11 @@ pub(super) fn push_line_quad(
 }
 
 /// Erzeugt ein Dreieck als Richtungspfeil an der gegebenen Position.
+///
+/// Der geometrische Schwerpunkt (Zentroid) des Dreiecks liegt exakt bei `center`.
+/// Für ein Dreieck gilt: Schwerpunkt = (Spitze + links + rechts) / 3.
+/// Mit tip = center + dir * 2l/3 und base = center - dir * l/3
+/// ergibt sich: (center + 2l/3 + center - l/3 + center - l/3) / 3 = center ✓
 pub(super) fn push_arrow(
     vertices: &mut Vec<ConnectionVertex>,
     center: Vec2,
@@ -65,8 +70,9 @@ pub(super) fn push_arrow(
     let dir = direction.normalize();
     let perp = Vec2::new(-dir.y, dir.x);
 
-    let tip = center + dir * (length * 0.5);
-    let base = center - dir * (length * 0.5);
+    // Schwerpunkt-zentriert: Spitze 2/3 vor center, Basis 1/3 hinter center
+    let tip = center + dir * (length * 2.0 / 3.0);
+    let base = center - dir * (length / 3.0);
     let left = base + perp * (width * 0.5);
     let right = base - perp * (width * 0.5);
 
