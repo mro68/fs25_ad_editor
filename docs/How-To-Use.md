@@ -1,6 +1,11 @@
 # FS25 AutoDrive Editor – Bedienungsanleitung
 
-## Inhaltsverzeichnis
+> **Hinweis:** Diese Datei wurde in mehrere thematische Unterseiten aufgeteilt.
+> Die aktuelle Anleitung befindet sich unter **[docs/howto/index.md](howto/index.md)**.
+
+---
+
+## Inhaltsverzeichnis (veraltet – bitte howto/ verwenden)
 
 1. [Überblick](#überblick)
 2. [Programmstart und Dateiverwaltung](#programmstart-und-dateiverwaltung)
