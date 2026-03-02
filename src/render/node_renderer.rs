@@ -189,15 +189,20 @@ impl NodeRenderer {
                 NodeFlag::Warning => ctx.options.node_color_warning,
                 _ => ctx.options.node_color_default,
             };
-            // Rim/Markierungsfarbe außen — nur bei selektierten Nodes anders
+            // Rim/Markierungsfarbe außen — nur bei selektierten Nodes anders.
+            // rim_color.a kodiert das Verhältnis Innendurchmesser/Außendurchmesser für den Shader.
             let rim_color = if is_selected {
-                ctx.options.node_color_selected
+                let mut c = ctx.options.node_color_selected;
+                c[3] = 1.0 / ctx.options.selection_size_multiplier();
+                c
             } else {
-                base_color
+                let mut c = base_color;
+                c[3] = 1.0;
+                c
             };
 
             let size = if is_selected {
-                ctx.options.node_size_world * ctx.options.selection_size_factor
+                ctx.options.node_size_world * ctx.options.selection_size_multiplier()
             } else {
                 ctx.options.node_size_world
             };

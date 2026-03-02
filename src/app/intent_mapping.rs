@@ -42,7 +42,8 @@ pub fn map_intent_to_commands(state: &AppState, intent: AppIntent) -> Vec<AppCom
         } => {
             let base_max_distance = state.options.hitbox_radius();
 
-            let increased_max_distance = base_max_distance * state.options.selection_size_factor;
+            let increased_max_distance =
+                base_max_distance * state.options.selection_size_multiplier();
 
             let mut max_distance = base_max_distance;
             if let Some(rm) = state.road_map.as_ref() {

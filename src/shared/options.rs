@@ -32,8 +32,8 @@ pub const TERRAIN_HEIGHT_SCALE: f32 = 255.0;
 
 // ── Selektion ───────────────────────────────────────────────────────
 
-/// Größenfaktor für selektierte Nodes.
-pub const SELECTION_SIZE_FACTOR: f32 = 1.3;
+/// Größenfaktor für selektierte Nodes in Prozent.
+pub const SELECTION_SIZE_FACTOR: f32 = 130.0;
 
 // ── Node-Rendering ─────────────────────────────────────────────────
 
@@ -135,7 +135,7 @@ pub struct EditorOptions {
     pub node_color_warning: [f32; 4],
 
     // ── Selektion ───────────────────────────────────────────────
-    /// Vergrößerungsfaktor für selektierte Nodes (Hitbox und Darstellung)
+    /// Vergrößerungsfaktor für selektierte Nodes in Prozent (100..=200)
     pub selection_size_factor: f32,
     /// Darstellungsmodus für die Selektion (Ring oder Farbverlauf)
     #[serde(default)]
@@ -294,7 +294,12 @@ impl EditorOptions {
     pub fn load_from_file(path: &std::path::Path) -> Self {
         match std::fs::read_to_string(path) {
             Ok(content) => match toml::from_str::<EditorOptions>(&content) {
-                Ok(opts) => {
+                Ok(mut opts) => {
+                    // Abwärtskompatibilität: alte Konfigurationen nutzten einen Multiplikator (z.B. 1.3).
+                    if opts.selection_size_factor > 0.0 && opts.selection_size_factor <= 5.0 {
+                        opts.selection_size_factor *= 100.0;
+                    }
+
                     // Validiere Optionen
                     if let Err(e) = opts.validate() {
                         log::warn!(
@@ -355,8 +360,11 @@ impl EditorOptions {
             ));
         }
 
-        if self.selection_size_factor < 1.01 {
-            return Err(anyhow::anyhow!("selection_size_factor muss >= 1.01 sein"));
+        if self.selection_size_factor < 100.0 || self.selection_size_factor > 200.0 {
+            return Err(anyhow::anyhow!(
+                "selection_size_factor ({}) muss zwischen 100 und 200 liegen",
+                self.selection_size_factor
+            ));
         }
 
         if self.snap_scale_percent < 25.0 || self.snap_scale_percent > 2000.0 {
@@ -390,5 +398,10 @@ impl EditorOptions {
     /// `node_size_world * snap_scale_percent / 100`
     pub fn snap_radius(&self) -> f32 {
         self.node_size_world * self.snap_scale_percent / 100.0
+    }
+
+    /// Berechnet den Selektions-Multiplikator aus `selection_size_factor` in Prozent.
+    pub fn selection_size_multiplier(&self) -> f32 {
+        self.selection_size_factor / 100.0
     }
 }

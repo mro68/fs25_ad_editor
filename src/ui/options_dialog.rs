@@ -75,12 +75,12 @@ pub fn show_options_dialog(
                     // ── Selektion ───────────────────────────────────
                     ui.collapsing("Selektion", |ui| {
                         ui.horizontal(|ui| {
-                            ui.label("Größenfaktor:");
+                            ui.label("Größenfaktor (%):");
                             changed |= ui
                                 .add(
                                     egui::DragValue::new(&mut opts.selection_size_factor)
-                                        .range(1.01..=5.0)
-                                        .speed(0.05),
+                                        .range(100.0..=200.0)
+                                        .speed(1.0),
                                 )
                                 .changed();
                         });

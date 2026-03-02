@@ -35,6 +35,7 @@ pub fn render_tangent_combo(
     };
     ui.label(label);
     egui::ComboBox::from_id_salt(id_salt)
+        .width(240.0)
         .selected_text(selected_text)
         .show_ui(ui, |ui| {
             ui.selectable_value(current, TangentSource::None, none_label);
