@@ -1,7 +1,7 @@
 //! Optionen-Dialog für Farben, Größen und Breiten.
 
 use crate::app::AppIntent;
-use crate::shared::EditorOptions;
+use crate::shared::{EditorOptions, SelectionStyle};
 
 /// Zeigt den Options-Dialog und gibt erzeugte Events zurück.
 pub fn show_options_dialog(
@@ -79,10 +79,40 @@ pub fn show_options_dialog(
                             changed |= ui
                                 .add(
                                     egui::DragValue::new(&mut opts.selection_size_factor)
-                                        .range(1.0..=5.0)
+                                        .range(1.01..=5.0)
                                         .speed(0.05),
                                 )
                                 .changed();
+                        });
+                        ui.horizontal(|ui| {
+                            ui.label("Markierungsstil:");
+                            let current_label = match opts.selection_style {
+                                SelectionStyle::Ring => "Ring",
+                                SelectionStyle::Gradient => "Farbverlauf",
+                                SelectionStyle::Raised => "Erhöht",
+                                SelectionStyle::Sunken => "Vertieft",
+                            };
+                            egui::ComboBox::from_id_salt("selection_style")
+                                .selected_text(current_label)
+                                .show_ui(ui, |ui| {
+                                    for (style, label) in [
+                                        (SelectionStyle::Ring, "Ring"),
+                                        (SelectionStyle::Gradient, "Farbverlauf"),
+                                        (SelectionStyle::Raised, "Erhöht"),
+                                        (SelectionStyle::Sunken, "Vertieft"),
+                                    ] {
+                                        if ui
+                                            .selectable_value(
+                                                &mut opts.selection_style,
+                                                style,
+                                                label,
+                                            )
+                                            .changed()
+                                        {
+                                            changed = true;
+                                        }
+                                    }
+                                });
                         });
                     });
 

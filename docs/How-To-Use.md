@@ -701,6 +701,7 @@ Duplikate jetzt bereinigen?
 | | Farbe Warnung | Rot |
 | **Selektion** | Pick-Radius | 12 Pixel |
 | | Größenfaktor Selektiert | 1.8× |
+| | Markierungsstil | Ring (alternativ: Farbverlauf, Erhöht, Vertieft) |
 | **Connections** | Linienstärke Normal | 0.2 |
 | | Linienstärke SubPrio | 0.1 |
 | | Pfeil-Länge / Breite | 1.0 / 0.6 |
