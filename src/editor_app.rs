@@ -117,7 +117,10 @@ impl EditorApp {
         ));
 
         // Floating Edit-Panel (Streckenteilung / Route-Tool)
-        let panel_pos = self.input.edit_panel_pos.map(|p| egui::Pos2::new(p[0], p[1]));
+        let panel_pos = self
+            .input
+            .edit_panel_pos
+            .map(|p| egui::Pos2::new(p[0], p[1]));
         let edit_tool_manager = if active_tool == EditorTool::Route {
             Some(&mut self.state.editor.tool_manager)
         } else {
@@ -237,7 +240,9 @@ impl EditorApp {
     /// Zeichnet die wgpu-Render-Szene in den Viewport.
     fn render_viewport(&mut self, ui: &egui::Ui, rect: egui::Rect, viewport_size: [f32; 2]) {
         let render_data = render::WgpuRenderData {
-            scene: self.controller.build_render_scene(&self.state, viewport_size),
+            scene: self
+                .controller
+                .build_render_scene(&self.state, viewport_size),
         };
 
         let callback = egui_wgpu::Callback::new_paint_callback(
@@ -315,7 +320,10 @@ impl EditorApp {
 
     fn process_events(&mut self, events: &[AppIntent]) {
         for event in events {
-            if let Err(e) = self.controller.handle_intent(&mut self.state, event.clone()) {
+            if let Err(e) = self
+                .controller
+                .handle_intent(&mut self.state, event.clone())
+            {
                 log::error!("Event handling failed: {:#}", e);
             }
         }

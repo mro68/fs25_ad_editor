@@ -1,9 +1,9 @@
 //! Die zentrale RoadMap-Datenstruktur mit Nodes, Connections und Spatial-Index.
 
+use super::SpatialIndex;
 use super::{
     AutoDriveMeta, Connection, ConnectionDirection, ConnectionPriority, MapMarker, MapNode,
 };
-use super::SpatialIndex;
 use glam::Vec2;
 use std::collections::HashMap;
 
@@ -18,8 +18,8 @@ pub struct ConnectedNeighbor {
     pub is_outgoing: bool,
 }
 
-mod dedup;
 mod chain;
+mod dedup;
 mod neighbors;
 mod query;
 pub use dedup::DeduplicationResult;
@@ -190,7 +190,6 @@ impl RoadMap {
         self.connections.values()
     }
 
-
     /// Berechnet die nächste freie Node-ID
     pub fn next_node_id(&self) -> u64 {
         self.nodes.keys().max().copied().unwrap_or(0) + 1
@@ -337,7 +336,6 @@ impl RoadMap {
         self.spatial_index = SpatialIndex::from_nodes(&self.nodes);
         self.spatial_dirty = false;
     }
-
 }
 
 impl Default for RoadMap {
