@@ -1,6 +1,6 @@
 # Architektur-Plan (Soll-Zustand)
 
-Stand: 2026-02-23  
+Stand: 2026-03-02  
 Status: Umgesetzt — Architektur-Grenzen und API-Verträge aktiv durchgesetzt
 
 ## Zielbild
@@ -286,6 +286,7 @@ pub struct RenderScene {
   pub background_map: Option<Arc<BackgroundMap>>,
   pub background_visible: bool,
   pub options: EditorOptions,
+  pub hidden_node_ids: Arc<HashSet<u64>>,
 }
 
 impl Renderer {
