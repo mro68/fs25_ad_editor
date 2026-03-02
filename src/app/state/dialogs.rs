@@ -118,6 +118,25 @@ pub struct SaveOverviewDialogState {
     pub is_overwrite: bool,
 }
 
+/// Konfiguration für das Ausweichstrecke-Generierungs-Feature im Eigenschaften-Bereich.
+#[derive(Debug, Clone)]
+pub struct BypassState {
+    /// Seitlicher Versatz zur Originalstrecke in Welteinheiten (positiv = links, negativ = rechts)
+    pub offset: f32,
+    /// Basis-Abstand zwischen Nodes auf der Hauptstrecke der Ausweiche (1×).
+    /// S-Kurven-Nodes erhalten halben Abstand (0.5×).
+    pub base_spacing: f32,
+}
+
+impl Default for BypassState {
+    fn default() -> Self {
+        Self {
+            offset: 8.0,
+            base_spacing: 6.0,
+        }
+    }
+}
+
 /// Konfiguration für das Distanzen-Neuverteilen-Feature im Eigenschaften-Bereich.
 #[derive(Debug, Clone)]
 pub struct DistanzenState {
@@ -230,6 +249,8 @@ pub struct UiState {
     pub save_overview_dialog: SaveOverviewDialogState,
     /// Distanzen-Neuverteilen-Konfiguration (Eigenschaften-Panel)
     pub distanzen: DistanzenState,
+    /// Ausweichstrecke-Konfiguration (Eigenschaften-Panel)
+    pub bypass: BypassState,
 }
 
 impl UiState {
@@ -254,6 +275,7 @@ impl UiState {
             post_load_dialog: PostLoadDialogState::new(),
             save_overview_dialog: SaveOverviewDialogState::default(),
             distanzen: DistanzenState::default(),
+            bypass: BypassState::default(),
         }
     }
 }

@@ -236,6 +236,8 @@ pub enum AppCommand {
     DismissSaveOverviewDialog,
     /// Selektierte Nodes-Kette als gleichmäßig verteilte Wegpunkte neu berechnen (Distanzen)
     ResamplePath,
+    /// Ausweichstrecke parallel zur selektierten Kette generieren
+    GenerateBypass,
     /// Streckenteilung-Panel aktivieren
     StreckenteilungAktivieren,
     /// Alles in den Viewport einpassen (Zoom-to-fit)

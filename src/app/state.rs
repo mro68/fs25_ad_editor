@@ -8,7 +8,7 @@ mod view;
 
 pub use app_state::AppState;
 pub use dialogs::{
-    DedupDialogState, DistanzenState, MarkerDialogState, OverviewOptionsDialogState,
+    BypassState, DedupDialogState, DistanzenState, MarkerDialogState, OverviewOptionsDialogState,
     PostLoadDialogState, SaveOverviewDialogState, UiState, ZipBrowserState,
 };
 pub use editor::{EditorTool, EditorToolState};
