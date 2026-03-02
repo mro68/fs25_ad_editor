@@ -15,7 +15,7 @@ pub(crate) fn all_preconditions_valid(
 }
 
 /// Ergebnis der Validierung: Sichtbare Einträge mit ihrem Intent.
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub enum ValidatedEntry {
     /// Label (immer sichtbar)
     Label(String),
@@ -46,7 +46,7 @@ pub fn validate_entries(
     intent_ctx: &IntentContext,
 ) -> Vec<ValidatedEntry> {
     let raw = validate_entries_recursive(&catalog.entries, precondition_ctx, intent_ctx);
-    cleanup_separators(raw)
+    cleanup_separators(&raw)
 }
 
 /// Rekursive Validierung für verschachtelte Menü-Einträge.
@@ -91,7 +91,7 @@ fn validate_entries_recursive(
                 if has_commands {
                     raw.push(ValidatedEntry::Submenu {
                         label: label.clone(),
-                        entries: cleanup_separators(validated_children),
+                        entries: cleanup_separators(&validated_children),
                     });
                 }
             }
@@ -102,19 +102,19 @@ fn validate_entries_recursive(
 }
 
 /// Entfernt überflüssige Separatoren und Labels ohne folgende Commands.
-pub(crate) fn cleanup_separators(entries: Vec<ValidatedEntry>) -> Vec<ValidatedEntry> {
+pub(crate) fn cleanup_separators(entries: &[ValidatedEntry]) -> Vec<ValidatedEntry> {
     let mut result: Vec<ValidatedEntry> = Vec::new();
 
     for entry in entries {
-        match &entry {
+        match entry {
             ValidatedEntry::Separator => {
                 // Separator nur wenn vorheriger Eintrag kein Separator ist und es vorherige Einträge gibt
                 if !result.is_empty() && !matches!(result.last(), Some(ValidatedEntry::Separator)) {
-                    result.push(entry);
+                    result.push(entry.clone());
                 }
             }
             _ => {
-                result.push(entry);
+                result.push(entry.clone());
             }
         }
     }
@@ -125,12 +125,12 @@ pub(crate) fn cleanup_separators(entries: Vec<ValidatedEntry>) -> Vec<ValidatedE
     }
 
     // Labels ohne nachfolgende Commands entfernen (Sektion ohne Einträge)
-    remove_orphaned_labels(result)
+    remove_orphaned_labels(&result)
 }
 
 /// Entfernt Labels die nicht von mindestens einem Command gefolgt werden
 /// (bevor der nächste Separator oder das Ende kommt).
-pub(crate) fn remove_orphaned_labels(entries: Vec<ValidatedEntry>) -> Vec<ValidatedEntry> {
+pub(crate) fn remove_orphaned_labels(entries: &[ValidatedEntry]) -> Vec<ValidatedEntry> {
     let len = entries.len();
     // Markiere welche Indizes behalten werden
     let mut keep = vec![true; len];
@@ -150,7 +150,8 @@ pub(crate) fn remove_orphaned_labels(entries: Vec<ValidatedEntry>) -> Vec<Valida
     }
 
     entries
-        .into_iter()
+        .iter()
+        .cloned()
         .enumerate()
         .filter(|(i, _)| keep[*i])
         .map(|(_, e)| e)

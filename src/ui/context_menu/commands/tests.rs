@@ -447,7 +447,7 @@ fn cleanup_removes_orphaned_labels() {
         },
     ];
 
-    let cleaned = cleanup_separators(entries);
+    let cleaned = cleanup_separators(&entries);
 
     assert!(!cleaned
         .iter()
@@ -466,7 +466,7 @@ fn cleanup_keeps_labels_with_commands() {
         },
     ];
 
-    let cleaned = cleanup_separators(entries);
+    let cleaned = cleanup_separators(&entries);
 
     assert!(cleaned
         .iter()
@@ -491,7 +491,7 @@ fn cleanup_no_double_separators() {
         },
     ];
 
-    let cleaned = cleanup_separators(entries);
+    let cleaned = cleanup_separators(&entries);
     let sep_count = cleaned
         .iter()
         .filter(|e| matches!(e, ValidatedEntry::Separator))

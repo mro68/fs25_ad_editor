@@ -1,9 +1,9 @@
 //! Die zentrale RoadMap-Datenstruktur mit Nodes, Connections und Spatial-Index.
 
+use super::SpatialIndex;
 use super::{
     AutoDriveMeta, Connection, ConnectionDirection, ConnectionPriority, MapMarker, MapNode,
 };
-use super::{SpatialIndex, SpatialMatch};
 use glam::Vec2;
 use std::collections::HashMap;
 
@@ -18,7 +18,10 @@ pub struct ConnectedNeighbor {
     pub is_outgoing: bool,
 }
 
+mod chain;
 mod dedup;
+mod neighbors;
+mod query;
 pub use dedup::DeduplicationResult;
 
 /// Vollständige AutoDrive-Konfiguration
@@ -187,114 +190,6 @@ impl RoadMap {
         self.connections.values()
     }
 
-    /// Gibt alle Nachbar-Nodes zurück, die über Verbindungen mit `node_id` verbunden sind.
-    ///
-    /// Iteriert über alle Connections — O(n), aber nur bei Snap-Events aufgerufen.
-    pub fn connected_neighbors(&self, node_id: u64) -> Vec<ConnectedNeighbor> {
-        let mut neighbors = Vec::new();
-        for conn in self.connections.values() {
-            if conn.start_id == node_id {
-                neighbors.push(ConnectedNeighbor {
-                    neighbor_id: conn.end_id,
-                    angle: conn.angle,
-                    is_outgoing: true,
-                });
-            } else if conn.end_id == node_id {
-                neighbors.push(ConnectedNeighbor {
-                    neighbor_id: conn.start_id,
-                    angle: conn.angle + std::f32::consts::PI,
-                    is_outgoing: false,
-                });
-            }
-        }
-        neighbors
-    }
-
-    /// Prüft ob die selektierten Nodes eine zusammenhängende Kette bilden,
-    /// bei der Kreuzungen (Grad ≥ 3 innerhalb der Selektion) nur an den
-    /// Endpunkten vorkommen. Mindestens 2 Nodes erforderlich.
-    pub fn is_resampleable_chain(&self, node_ids: &std::collections::HashSet<u64>) -> bool {
-        if node_ids.len() < 2 {
-            return false;
-        }
-
-        // Startpunkt: Node ohne eingehende Verbindungen von selektierten Nodes
-        let start = node_ids
-            .iter()
-            .find(|&&id| {
-                !self
-                    .connections
-                    .values()
-                    .any(|c| c.end_id == id && node_ids.contains(&c.start_id))
-            })
-            .copied()
-            .or_else(|| node_ids.iter().next().copied());
-
-        let Some(start) = start else { return false };
-
-        // Kette aufbauen
-        let mut path = Vec::with_capacity(node_ids.len());
-        let mut visited = std::collections::HashSet::new();
-        let mut current = start;
-
-        loop {
-            path.push(current);
-            visited.insert(current);
-
-            let next = self
-                .connections
-                .values()
-                .find(|c| {
-                    c.start_id == current
-                        && node_ids.contains(&c.end_id)
-                        && !visited.contains(&c.end_id)
-                })
-                .map(|c| c.end_id);
-
-            match next {
-                Some(n) => current = n,
-                None => break,
-            }
-        }
-
-        // Alle Nodes müssen in der Kette sein
-        if path.len() != node_ids.len() {
-            return false;
-        }
-
-        // Innere Nodes dürfen keine Kreuzungen sein (Grad innerhalb Selektion ≤ 2)
-        for &nid in &path[1..path.len() - 1] {
-            let degree: usize = self
-                .connections
-                .values()
-                .filter(|c| {
-                    (c.start_id == nid && node_ids.contains(&c.end_id))
-                        || (c.end_id == nid && node_ids.contains(&c.start_id))
-                })
-                .count();
-            if degree > 2 {
-                return false;
-            }
-        }
-
-        true
-    }
-
-    /// Gibt alle Connections zurück, deren Start- und End-Ids in der gegebenen Menge liegen.
-    ///
-    /// Verwendet zum Filtern von Connections zwischen selektierten Nodes.
-    /// O(n) über alle Connections, aber nur bei Use-Cases aufgerufen (nicht per-Frame).
-    pub fn connections_between_ids<'a>(
-        &'a self,
-        ids: &'a std::collections::HashSet<u64>,
-    ) -> Box<dyn Iterator<Item = &'a Connection> + 'a> {
-        Box::new(
-            self.connections
-                .values()
-                .filter(move |c| ids.contains(&c.start_id) && ids.contains(&c.end_id)),
-        )
-    }
-
     /// Berechnet die nächste freie Node-ID
     pub fn next_node_id(&self) -> u64 {
         self.nodes.keys().max().copied().unwrap_or(0) + 1
@@ -440,33 +335,6 @@ impl RoadMap {
     pub fn rebuild_spatial_index(&mut self) {
         self.spatial_index = SpatialIndex::from_nodes(&self.nodes);
         self.spatial_dirty = false;
-    }
-
-    /// Findet den nächstgelegenen Node zur Weltposition.
-    pub fn nearest_node(&self, query: Vec2) -> Option<SpatialMatch> {
-        debug_assert!(
-            !self.spatial_dirty,
-            "Spatial-Index ist veraltet — ensure_spatial_index() fehlt"
-        );
-        self.spatial_index.nearest(query)
-    }
-
-    /// Findet alle Nodes innerhalb eines Radius.
-    pub fn nodes_within_radius(&self, query: Vec2, radius: f32) -> Vec<SpatialMatch> {
-        debug_assert!(
-            !self.spatial_dirty,
-            "Spatial-Index ist veraltet — ensure_spatial_index() fehlt"
-        );
-        self.spatial_index.within_radius(query, radius)
-    }
-
-    /// Findet alle Nodes innerhalb eines Rechtecks.
-    pub fn nodes_within_rect(&self, min: Vec2, max: Vec2) -> Vec<u64> {
-        debug_assert!(
-            !self.spatial_dirty,
-            "Spatial-Index ist veraltet — ensure_spatial_index() fehlt"
-        );
-        self.spatial_index.within_rect(min, max)
     }
 }
 

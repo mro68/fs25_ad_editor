@@ -1,8 +1,8 @@
-//! Repräsentiert einen einzelnen Wegpunkt im AutoDrive-Netzwerk.
+//! Domaenentypen fuer Wegpunkte im AutoDrive-Netzwerk.
 
 use glam::Vec2;
 
-/// Typ des Wegpunkts (Flags aus AutoDrive-Mod: FLAG_REGULAR, FLAG_SUBPRIO, etc.)
+/// Typ des Wegpunkts (Flags aus AutoDrive-Mod: `FLAG_*`).
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum NodeFlag {
     /// Normaler Wegpunkt – mindestens ein Hauptstraßenanschluss
@@ -45,7 +45,7 @@ impl NodeFlag {
     }
 }
 
-/// Ein Wegpunkt im AutoDrive-Netzwerk
+/// Ein Wegpunkt im AutoDrive-Netzwerk.
 #[derive(Debug, Clone)]
 pub struct MapNode {
     /// Eindeutige ID (vom User/AutoDrive vergeben)

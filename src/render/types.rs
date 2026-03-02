@@ -98,6 +98,7 @@ pub struct NodeInstance {
     pub rim_color: [f32; 4],
     /// Größe des Nodes in Welteinheiten
     pub size: f32,
+    /// Padding fuer 16-Byte-Ausrichtung im GPU-Bufferlayout.
     _padding: [f32; 1],
 }
 
@@ -156,6 +157,7 @@ pub struct MarkerInstance {
     pub outline_color: [f32; 4],
     /// Größe des Markers in Welteinheiten
     pub size: f32,
+    /// Padding fuer 16-Byte-Ausrichtung im GPU-Bufferlayout.
     _padding: [f32; 1],
 }
 

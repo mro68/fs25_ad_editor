@@ -82,7 +82,7 @@ make windows-release  # Nur Windows
 4. **Bearbeiten:** Punkte auswählen, verschieben, verbinden, löschen
 5. **Speichern:** `Strg+S` – Höhen werden automatisch aus der Heightmap rekonstruiert
 
-Ausführliche Anleitung: [docs/How-To-Use.md](docs/How-To-Use.md)
+Ausführliche Anleitung: [docs/howto/index.md](docs/howto/index.md)
 
 ## Architektur
 
