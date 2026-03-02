@@ -1,5 +1,5 @@
-use indexmap::IndexSet;
 use super::*;
+use indexmap::IndexSet;
 
 fn collect_with_key_event(event: egui::Event, selected: IndexSet<u64>) -> Vec<AppIntent> {
     collect_with_key_event_full(event, selected, EditorTool::Select, false)
