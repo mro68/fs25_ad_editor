@@ -150,8 +150,7 @@ impl ConnectionRenderer {
             }]),
         );
 
-        let mut vertices = std::mem::take(&mut self.vertex_scratch);
-        vertices.clear();
+        self.vertex_scratch.clear();
         for connection in road_map.connections_iter() {
             // Verbindungen zu ausgeblendeten Nodes überspringen
             if ctx.hidden_node_ids.contains(&connection.start_id)
@@ -196,13 +195,13 @@ impl ConnectionRenderer {
                 }
             };
 
-            push_line_quad(&mut vertices, start, end, thickness, color);
+            push_line_quad(&mut self.vertex_scratch, start, end, thickness, color);
 
             match connection.direction {
                 ConnectionDirection::Regular => {
                     let center = start + direction * (length * 0.5);
                     push_arrow(
-                        &mut vertices,
+                        &mut self.vertex_scratch,
                         center,
                         direction,
                         ctx.options.arrow_length_world,
@@ -213,7 +212,7 @@ impl ConnectionRenderer {
                 ConnectionDirection::Reverse => {
                     let center = start + direction * (length * 0.5);
                     push_arrow(
-                        &mut vertices,
+                        &mut self.vertex_scratch,
                         center,
                         direction,
                         ctx.options.arrow_length_world,
@@ -228,39 +227,38 @@ impl ConnectionRenderer {
             }
         }
 
-        if vertices.is_empty() {
-            self.vertex_scratch = vertices;
+        if self.vertex_scratch.is_empty() {
             return;
         }
 
-        if self.vertex_buffer.is_none() || vertices.len() > self.vertex_capacity {
+        if self.vertex_buffer.is_none() || self.vertex_scratch.len() > self.vertex_capacity {
             let vertex_size = std::mem::size_of::<ConnectionVertex>() as u64;
-            let buffer_size = (vertices.len() as u64) * vertex_size;
+            let buffer_size = (self.vertex_scratch.len() as u64) * vertex_size;
             self.vertex_buffer = Some(ctx.device.create_buffer(&wgpu::BufferDescriptor {
                 label: Some("Connection Vertex Buffer"),
                 size: buffer_size,
                 usage: wgpu::BufferUsages::VERTEX | wgpu::BufferUsages::COPY_DST,
                 mapped_at_creation: false,
             }));
-            self.vertex_capacity = vertices.len();
+            self.vertex_capacity = self.vertex_scratch.len();
         }
 
         if let Some(vertex_buffer) = &self.vertex_buffer {
-            ctx.queue
-                .write_buffer(vertex_buffer, 0, bytemuck::cast_slice(&vertices));
+            ctx.queue.write_buffer(
+                vertex_buffer,
+                0,
+                bytemuck::cast_slice(&self.vertex_scratch),
+            );
         }
 
         let Some(vertex_buffer) = self.vertex_buffer.as_ref() else {
             log::error!("ConnectionRenderer: missing vertex buffer before draw call");
-            self.vertex_scratch = vertices;
             return;
         };
 
         render_pass.set_pipeline(&self.pipeline);
         render_pass.set_bind_group(0, &self.bind_group, &[]);
         render_pass.set_vertex_buffer(0, vertex_buffer.slice(..));
-        render_pass.draw(0..vertices.len() as u32, 0..1);
-
-        self.vertex_scratch = vertices;
+        render_pass.draw(0..self.vertex_scratch.len() as u32, 0..1);
     }
 }
