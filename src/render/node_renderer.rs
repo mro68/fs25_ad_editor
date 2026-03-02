@@ -6,7 +6,7 @@ use super::types::{
 use crate::shared::SelectionStyle;
 use crate::{NodeFlag, RoadMap};
 use eframe::{egui_wgpu, wgpu};
-use std::collections::HashSet;
+use indexmap::IndexSet;
 use wgpu::util::DeviceExt;
 // HashSet-Import wird direkt in der Signatur genutzt (kein Re-collect mehr nötig)
 
@@ -155,7 +155,7 @@ impl NodeRenderer {
         render_pass: &mut wgpu::RenderPass<'static>,
         road_map: &RoadMap,
         render_quality: RenderQuality,
-        selected_node_ids: &HashSet<u64>,
+        selected_node_ids: &IndexSet<u64>,
     ) {
         log::debug!("NodeRenderer.render() called");
         let selected_set = selected_node_ids;

@@ -96,7 +96,7 @@ impl Renderer {
             camera: &scene.camera,
             viewport_size: scene.viewport_size,
             options: &scene.options,
-            hidden_node_ids: &scene.hidden_node_ids,
+            hidden_node_ids: scene.hidden_node_ids.as_ref(),
         };
 
         // 1. Render Background zuerst (falls vorhanden)

@@ -7,6 +7,7 @@ use crate::shared::spline_geometry::{
     catmull_rom_chain_with_tangents, polyline_length, resample_by_distance,
 };
 use glam::Vec2;
+use indexmap::IndexSet;
 use std::collections::HashSet;
 use std::sync::Arc;
 
@@ -32,7 +33,7 @@ struct ExternalConnection {
 /// Sucht einen Startpunkt (keine eingehenden Verbindungen von selektierten Nodes)
 /// und folgt dann den Verbindungen. Gibt `None` zurück wenn die Nodes keine
 /// vollständige lineare Kette bilden.
-fn order_chain(node_ids: &HashSet<u64>, road_map: &crate::core::RoadMap) -> Option<Vec<u64>> {
+fn order_chain(node_ids: &IndexSet<u64>, road_map: &crate::core::RoadMap) -> Option<Vec<u64>> {
     // Startpunkt: Node ohne eingehende Verbindungen von selektierten Nodes
     let start = node_ids
         .iter()

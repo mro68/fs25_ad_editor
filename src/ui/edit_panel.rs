@@ -7,6 +7,7 @@
 use crate::app::state::DistanzenState;
 use crate::app::tools::ToolManager;
 use crate::app::{AppIntent, EditorTool, RoadMap};
+use indexmap::IndexSet;
 use std::collections::HashSet;
 
 /// Rendert das Floating-Edit-Panel und gibt erzeugte Events zurück.
@@ -16,7 +17,7 @@ use std::collections::HashSet;
 pub fn render_edit_panel(
     ctx: &egui::Context,
     road_map: Option<&RoadMap>,
-    selected_node_ids: &HashSet<u64>,
+    selected_node_ids: &IndexSet<u64>,
     distanzen_state: &mut DistanzenState,
     active_tool: EditorTool,
     tool_manager: Option<&mut ToolManager>,
@@ -57,7 +58,7 @@ pub fn render_edit_panel(
 fn render_streckenteilung_panel(
     ctx: &egui::Context,
     road_map: Option<&RoadMap>,
-    selected_node_ids: &HashSet<u64>,
+    selected_node_ids: &IndexSet<u64>,
     distanzen_state: &mut DistanzenState,
     panel_pos: Option<egui::Pos2>,
     events: &mut Vec<AppIntent>,
@@ -222,7 +223,7 @@ fn render_route_tool_panel(
 }
 
 /// Ordnet selektierte Node-IDs als zusammenhängende Kette.
-fn order_chain(node_ids: &HashSet<u64>, road_map: &RoadMap) -> Option<Vec<u64>> {
+fn order_chain(node_ids: &IndexSet<u64>, road_map: &RoadMap) -> Option<Vec<u64>> {
     let start = node_ids
         .iter()
         .find(|&&id| {

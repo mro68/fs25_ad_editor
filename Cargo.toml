@@ -62,6 +62,9 @@ fs25_map_overview = { path = "crates/fs25_map_overview" }
 serde = { version = "1", features = ["derive"] }
 toml = "0.9.8"
 
+# Geordnete HashSet für deterministische Selektionsreihenfolge
+indexmap = "2"
+
 # Regex für Fuzzy-Matching (z.B. ZIP-Suche nach Map-Name)
 regex = "1"
 

@@ -1,13 +1,14 @@
 //! Ketten- und Resample-bezogene Abfragen auf `RoadMap`.
 
 use super::RoadMap;
+use indexmap::IndexSet;
 use std::collections::HashSet;
 
 impl RoadMap {
     /// Prüft ob die selektierten Nodes eine zusammenhängende Kette bilden,
     /// bei der Kreuzungen (Grad ≥ 3 innerhalb der Selektion) nur an den
     /// Endpunkten vorkommen. Mindestens 2 Nodes erforderlich.
-    pub fn is_resampleable_chain(&self, node_ids: &HashSet<u64>) -> bool {
+    pub fn is_resampleable_chain(&self, node_ids: &IndexSet<u64>) -> bool {
         if node_ids.len() < 2 {
             return false;
         }

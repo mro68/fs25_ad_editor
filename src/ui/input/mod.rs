@@ -17,7 +17,7 @@ use super::keyboard;
 use crate::app::tools::common::TangentMenuData;
 use crate::app::{AppIntent, Camera2D, EditorTool, RoadMap};
 use crate::shared::EditorOptions;
-use std::collections::HashSet;
+use indexmap::IndexSet;
 
 /// Modus des primären (Links-)Drags im Viewport.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
@@ -37,7 +37,7 @@ pub(crate) struct ViewportContext<'a> {
     pub viewport_size: [f32; 2],
     pub camera: &'a Camera2D,
     pub road_map: Option<&'a RoadMap>,
-    pub selected_node_ids: &'a HashSet<u64>,
+    pub selected_node_ids: &'a IndexSet<u64>,
     pub active_tool: EditorTool,
     pub options: &'a EditorOptions,
     pub drag_targets: &'a [glam::Vec2],
@@ -53,8 +53,8 @@ pub(crate) struct ViewportContext<'a> {
 struct ContextMenuSnapshot {
     /// Eingefrorene Menu-Variante
     variant: context_menu::MenuVariant,
-    /// Eingefrorene Selection-Menge
-    selection: HashSet<u64>,
+    /// Eingefrorene Selection-Menge (geklonter Arc = O(1))
+    selection: indexmap::IndexSet<u64>,
     /// Bildschirmposition des Rechtsklicks (für Panel-Positionierung)
     screen_pos: Option<egui::Pos2>,
 }
@@ -100,7 +100,7 @@ impl InputState {
         viewport_size: [f32; 2],
         camera: &Camera2D,
         road_map: Option<&RoadMap>,
-        selected_node_ids: &HashSet<u64>,
+        selected_node_ids: &IndexSet<u64>,
         active_tool: EditorTool,
         route_tool_is_drawing: bool,
         options: &EditorOptions,

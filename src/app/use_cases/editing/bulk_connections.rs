@@ -2,13 +2,14 @@
 
 use crate::app::AppState;
 use crate::core::{ConnectionDirection, ConnectionPriority, RoadMap};
+use indexmap::IndexSet;
 use std::collections::HashSet;
 use std::sync::Arc;
 
 /// Sammelt alle Connection-Keys, deren Start- und End-Node in der Selektion liegen.
 fn collect_selected_connection_keys(
     road_map: &RoadMap,
-    selected: &HashSet<u64>,
+    selected: &IndexSet<u64>,
 ) -> Vec<(u64, u64)> {
     road_map
         .connections_iter()
@@ -27,7 +28,7 @@ fn mutate_connections_between_selected<F>(
     mut mutator: F,
 ) -> u32
 where
-    F: FnMut(&mut RoadMap, &HashSet<u64>) -> u32,
+    F: FnMut(&mut RoadMap, &IndexSet<u64>) -> u32,
 {
     // Validierung in eigenem Scope, damit Borrows vor dem Snapshot enden
     {
@@ -196,7 +197,7 @@ mod tests {
         Connection, ConnectionDirection, ConnectionPriority, MapNode, NodeFlag, RoadMap,
     };
     use glam::Vec2;
-    use std::collections::HashSet;
+    use indexmap::IndexSet;
 
     #[test]
     fn collects_only_connections_with_both_ends_selected() {
@@ -222,7 +223,7 @@ mod tests {
             Vec2::new(2.0, 0.0),
         ));
 
-        let selected = HashSet::from([1_u64, 2_u64]);
+        let selected: IndexSet<u64> = [1_u64, 2_u64].into_iter().collect();
         let keys = collect_selected_connection_keys(&road_map, &selected);
 
         assert_eq!(keys, vec![(1, 2)]);

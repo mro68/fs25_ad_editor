@@ -1,3 +1,4 @@
+use indexmap::IndexSet;
 use std::collections::HashSet;
 
 use crate::app::state::DistanzenState;
@@ -9,7 +10,7 @@ use crate::app::{AppIntent, RoadMap};
 pub fn render_distance_panel(
     ui: &mut egui::Ui,
     road_map: &RoadMap,
-    selected_node_ids: &HashSet<u64>,
+    selected_node_ids: &IndexSet<u64>,
     distance_state: &mut DistanzenState,
     events: &mut Vec<AppIntent>,
 ) {
@@ -132,7 +133,7 @@ fn compute_resample_preview(
     }
 }
 
-fn order_chain_for_distance(node_ids: &HashSet<u64>, road_map: &RoadMap) -> Option<Vec<u64>> {
+fn order_chain_for_distance(node_ids: &IndexSet<u64>, road_map: &RoadMap) -> Option<Vec<u64>> {
     let start = node_ids
         .iter()
         .find(|&&id| {
