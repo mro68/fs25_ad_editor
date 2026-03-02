@@ -280,12 +280,6 @@ impl AppController {
 
             // === Selection ===
             AppCommand::InvertSelection => handlers::selection::invert(state),
-
-            // === Editing ===
-            AppCommand::DuplicateSelectedNodes => {
-                // TODO: Implementierung siehe handlers::editing::duplicate_selected
-                log::info!("DuplicateSelectedNodes - Implementierung pending");
-            }
         }
 
         Ok(())

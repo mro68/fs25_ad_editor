@@ -141,7 +141,8 @@ impl CurveTool {
     ///
     /// Bevorzugt eingehende Verbindungen (`is_outgoing = false`). Wählt den
     /// Nachbarn, dessen Fortsetzungsrichtung am stärksten in Richtung Endpunkt zeigt.
-    /// Nichts wird gesetzt wenn kein Nachbar einen positiven Dot-Produktwert hat.
+    /// Anders als am Ende wird am Start immer ein Fallback gesetzt, sobald
+    /// mindestens ein Nachbar existiert (auch wenn der Dot-Wert <= 0 ist).
     pub(crate) fn auto_suggest_start_tangent(&mut self) {
         if self.degree != CurveDegree::Cubic {
             return;
@@ -154,9 +155,12 @@ impl CurveTool {
         if chord_len < f32::EPSILON {
             return;
         }
-        if let Some(t) =
-            Self::auto_suggest_tangent(&self.tangents.start_neighbors, chord / chord_len, true)
-        {
+        if let Some(t) = Self::auto_suggest_tangent(
+            &self.tangents.start_neighbors,
+            chord / chord_len,
+            true,
+            false,
+        ) {
             self.tangents.tangent_start = t;
         }
     }
@@ -179,7 +183,7 @@ impl CurveTool {
             return;
         }
         if let Some(t) =
-            Self::auto_suggest_tangent(&self.tangents.end_neighbors, chord / chord_len, false)
+            Self::auto_suggest_tangent(&self.tangents.end_neighbors, chord / chord_len, false, true)
         {
             self.tangents.tangent_end = t;
         }
@@ -191,10 +195,13 @@ impl CurveTool {
     /// - `chord_dir`: Normalisierte Sehnenrichtung Start→Ende (immer gleich für beide)
     /// - `is_start`: true = Start-Tangente (bevorzugt incoming, vergleicht angle+PI),
     ///   false = End-Tangente (bevorzugt outgoing, vergleicht angle direkt)
+    /// - `require_forward_dot`: true => nur Kandidaten mit `dot > 0`,
+    ///   false => bester Kandidat auch bei `dot <= 0` erlaubt
     fn auto_suggest_tangent(
         neighbors: &[crate::core::ConnectedNeighbor],
         chord_dir: Vec2,
         is_start: bool,
+        require_forward_dot: bool,
     ) -> Option<TangentSource> {
         use std::f32::consts::PI;
         if neighbors.is_empty() {
@@ -223,7 +230,7 @@ impl CurveTool {
             da.partial_cmp(&db).unwrap_or(std::cmp::Ordering::Equal)
         })?;
         let dot = Vec2::from_angle(best.angle + angle_offset).dot(chord_dir);
-        if dot > 0.0 {
+        if !require_forward_dot || dot > 0.0 {
             Some(TangentSource::Connection {
                 neighbor_id: best.neighbor_id,
                 angle: best.angle,
@@ -268,6 +275,9 @@ impl CurveTool {
     }
 
     /// Wendet die gewählten Tangenten auf die Steuerpunkte an (nur Cubic).
+    ///
+    /// Wenn Start- und End-Tangente als Verbindung gesetzt sind, werden beide
+    /// Kontrollpunkte deckungsgleich gesetzt.
     pub(crate) fn apply_tangent_to_cp(&mut self) {
         if self.degree != CurveDegree::Cubic {
             return;
@@ -275,6 +285,36 @@ impl CurveTool {
         let (Some(start), Some(end)) = (self.start, self.end) else {
             return;
         };
+
+        // Beide Tangenten gesetzt: deckungsgleiche Steuerpunkte erzwingen.
+        if let (
+            TangentSource::Connection {
+                angle: start_angle, ..
+            },
+            TangentSource::Connection {
+                angle: end_angle, ..
+            },
+        ) = (self.tangents.tangent_start, self.tangents.tangent_end)
+        {
+            let start_pos = start.position();
+            let end_pos = end.position();
+
+            if let Some(cp) =
+                Self::intersect_tangent_control_lines(start_pos, start_angle, end_pos, end_angle)
+            {
+                self.control_point1 = Some(cp);
+                self.control_point2 = Some(cp);
+                return;
+            }
+
+            // Paralleler Sonderfall: Mittelwert beider unabhängigen Tangenten-CPs.
+            let cp1 = compute_tangent_cp(start_pos, start_angle, end_pos, true);
+            let cp2 = compute_tangent_cp(end_pos, end_angle, start_pos, false);
+            let merged = (cp1 + cp2) * 0.5;
+            self.control_point1 = Some(merged);
+            self.control_point2 = Some(merged);
+            return;
+        }
 
         if let TangentSource::Connection { angle, .. } = self.tangents.tangent_start {
             self.control_point1 = Some(compute_tangent_cp(
@@ -292,6 +332,32 @@ impl CurveTool {
                 false,
             ));
         }
+    }
+
+    /// Schnittpunkt der beiden Tangenten-Geraden für CP1/CP2.
+    ///
+    /// - Start-Linie: `start_pos + t * dir_start`, `dir_start = angle_start + PI`
+    /// - End-Linie: `end_pos + u * dir_end`, `dir_end = angle_end`
+    ///
+    /// Gibt `None` zurück, wenn die Geraden (nahezu) parallel sind.
+    fn intersect_tangent_control_lines(
+        start_pos: Vec2,
+        start_angle: f32,
+        end_pos: Vec2,
+        end_angle: f32,
+    ) -> Option<Vec2> {
+        use std::f32::consts::PI;
+
+        let dir_start = Vec2::from_angle(start_angle + PI);
+        let dir_end = Vec2::from_angle(end_angle);
+        let denom = dir_start.x * dir_end.y - dir_start.y * dir_end.x;
+        if denom.abs() < 1e-6 {
+            return None;
+        }
+
+        let delta = end_pos - start_pos;
+        let t = (delta.x * dir_end.y - delta.y * dir_end.x) / denom;
+        Some(start_pos + dir_start * t)
     }
 }
 

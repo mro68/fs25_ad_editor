@@ -3,6 +3,7 @@
 use super::types::{
     compute_visible_rect, NodeInstance, RenderContext, RenderQuality, Uniforms, Vertex,
 };
+use crate::shared::SelectionStyle;
 use crate::{NodeFlag, RoadMap};
 use eframe::{egui_wgpu, wgpu};
 use std::collections::HashSet;
@@ -170,9 +171,8 @@ impl NodeRenderer {
 
         let (min, max) = compute_visible_rect(ctx);
 
-        // Instanzen aus RoadMap sammeln
-        let mut instances = std::mem::take(&mut self.instance_scratch);
-        instances.clear();
+        // Instanzen aus RoadMap sammeln (Scratch-Buffer wiederverwenden)
+        self.instance_scratch.clear();
 
         for node_id in road_map.nodes_within_rect(min, max) {
             if ctx.hidden_node_ids.contains(&node_id) {
@@ -189,20 +189,25 @@ impl NodeRenderer {
                 NodeFlag::Warning => ctx.options.node_color_warning,
                 _ => ctx.options.node_color_default,
             };
-            // Rim/Markierungsfarbe außen — nur bei selektierten Nodes anders
+            // Rim/Markierungsfarbe außen — nur bei selektierten Nodes anders.
+            // rim_color.a kodiert das Verhältnis Innendurchmesser/Außendurchmesser für den Shader.
             let rim_color = if is_selected {
-                ctx.options.node_color_selected
+                let mut c = ctx.options.node_color_selected;
+                c[3] = 1.0 / ctx.options.selection_size_multiplier();
+                c
             } else {
-                base_color
+                let mut c = base_color;
+                c[3] = 1.0;
+                c
             };
 
             let size = if is_selected {
-                ctx.options.node_size_world * ctx.options.selection_size_factor
+                ctx.options.node_size_world * ctx.options.selection_size_multiplier()
             } else {
                 ctx.options.node_size_world
             };
 
-            instances.push(NodeInstance::new(
+            self.instance_scratch.push(NodeInstance::new(
                 [node.position.x, node.position.y],
                 base_color,
                 rim_color,
@@ -210,15 +215,14 @@ impl NodeRenderer {
             ));
         }
 
-        if instances.is_empty() {
+        if self.instance_scratch.is_empty() {
             log::warn!("No instances to render");
-            self.instance_scratch = instances;
             return;
         }
 
         log::debug!(
             "Rendering {} instances, camera: ({:.1}, {:.1}), zoom: {:.2}",
-            instances.len(),
+            self.instance_scratch.len(),
             ctx.camera.position.x,
             ctx.camera.position.y,
             ctx.camera.zoom
@@ -229,10 +233,14 @@ impl NodeRenderer {
         let view_proj_array = view_proj.to_cols_array_2d();
 
         // Uniform-Buffer aktualisieren
+        let selection_style_flag = match ctx.options.selection_style {
+            SelectionStyle::Gradient => 0.0,
+            SelectionStyle::Ring => 1.0,
+        };
         let aa_params = match render_quality {
-            RenderQuality::Low => [0.0, 1.0, 0.0, 0.0],
-            RenderQuality::Medium => [1.0, 0.0, 0.0, 0.0],
-            RenderQuality::High => [1.8, 0.0, 0.0, 0.0],
+            RenderQuality::Low => [0.0, 1.0, selection_style_flag, 0.0],
+            RenderQuality::Medium => [1.0, 0.0, selection_style_flag, 0.0],
+            RenderQuality::High => [1.8, 0.0, selection_style_flag, 0.0],
         };
 
         let uniforms = Uniforms {
@@ -243,27 +251,29 @@ impl NodeRenderer {
             .write_buffer(&self.uniform_buffer, 0, bytemuck::cast_slice(&[uniforms]));
 
         // Instance-Buffer erstellen/aktualisieren (Reuse)
-        if self.instance_buffer.is_none() || instances.len() > self.instance_capacity {
+        if self.instance_buffer.is_none() || self.instance_scratch.len() > self.instance_capacity {
             let instance_size = std::mem::size_of::<NodeInstance>() as u64;
-            let buffer_size = (instances.len() as u64) * instance_size;
+            let buffer_size = (self.instance_scratch.len() as u64) * instance_size;
             self.instance_buffer = Some(ctx.device.create_buffer(&wgpu::BufferDescriptor {
                 label: Some("Instance Buffer"),
                 size: buffer_size,
                 usage: wgpu::BufferUsages::VERTEX | wgpu::BufferUsages::COPY_DST,
                 mapped_at_creation: false,
             }));
-            self.instance_capacity = instances.len();
+            self.instance_capacity = self.instance_scratch.len();
         }
 
         if let Some(instance_buffer) = &self.instance_buffer {
-            ctx.queue
-                .write_buffer(instance_buffer, 0, bytemuck::cast_slice(&instances));
+            ctx.queue.write_buffer(
+                instance_buffer,
+                0,
+                bytemuck::cast_slice(&self.instance_scratch),
+            );
         }
 
         // Rendern
         let Some(instance_buffer) = self.instance_buffer.as_ref() else {
             log::error!("NodeRenderer: missing instance buffer before draw call");
-            self.instance_scratch = instances;
             return;
         };
 
@@ -271,7 +281,6 @@ impl NodeRenderer {
         render_pass.set_bind_group(0, &self.bind_group, &[]);
         render_pass.set_vertex_buffer(0, self.vertex_buffer.slice(..));
         render_pass.set_vertex_buffer(1, instance_buffer.slice(..));
-        render_pass.draw(0..6, 0..instances.len() as u32);
-        self.instance_scratch = instances;
+        render_pass.draw(0..6, 0..self.instance_scratch.len() as u32);
     }
 }

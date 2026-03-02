@@ -39,7 +39,7 @@ impl InputState {
 
         // Kein Shift/Alt: Selektion + Move-Drag oder Kamera-Pan
         let base_max_distance = ctx.options.hitbox_radius();
-        let move_max_distance = base_max_distance * ctx.options.selection_size_factor;
+        let move_max_distance = base_max_distance * ctx.options.selection_size_multiplier();
 
         // Route-Tool Drag-Target Hit-Test (hat Vorrang vor Node-Move)
         let press_pos = ctx.ui.input(|i| i.pointer.press_origin());

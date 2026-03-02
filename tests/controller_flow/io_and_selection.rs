@@ -145,7 +145,7 @@ fn test_click_window_larger_for_selected_nodes() {
 
     let base_max_distance = state.options.hitbox_radius();
     let increased_max_distance =
-        base_max_distance * fs25_auto_drive_editor::shared::options::SELECTION_SIZE_FACTOR;
+        base_max_distance * fs25_auto_drive_editor::shared::options::SELECTION_SIZE_FACTOR / 100.0;
 
     // Wähle einen Punkt *zwischen* Basis- und erweitertem Radius.
     let between = (base_max_distance + increased_max_distance) / 2.0;

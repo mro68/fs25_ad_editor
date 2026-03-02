@@ -146,6 +146,7 @@ pub struct RoadMap {
 - `set_connection_direction(&mut self, start_id: u64, end_id: u64, direction) -> bool` — Richtung ändern
 - `set_connection_priority(&mut self, start_id: u64, end_id: u64, priority) -> bool` — Priorität ändern
 - `connections_iter(&self) -> impl Iterator<Item = &Connection>` — Iterator über alle Verbindungen
+- `connections_between_ids(&self, ids: &HashSet<u64>) -> Box<dyn Iterator<Item = &Connection>>` — Connections zwischen Nodes aus der gegebenen ID-Menge (O(n), für Bulk-Operationen)
 - `connected_neighbors(&self, node_id: u64) -> Vec<ConnectedNeighbor>` — Alle Nachbarn eines Nodes mit Richtung und Winkel
 - `is_resampleable_chain(&self, node_ids: &HashSet<u64>) -> bool` — Prüft ob die selektierten Nodes eine zusammenhängende Kette bilden (Kreuzungen nur an Endpunkten erlaubt)
 - `next_node_id(&self) -> u64` — Nächste freie Node-ID

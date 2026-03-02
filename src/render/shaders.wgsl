@@ -64,10 +64,31 @@ fn fs_main(in: VertexOutput) -> @location(0) vec4<f32> {
     let center = vec2<f32>(0.5, 0.5);
     let dist = distance(in.uv, center);
 
-    // Mix: mittig = base_color, außen = rim_color
     let radius = 0.48;
-    let mix_t = clamp(dist / radius, 0.0, 1.0);
-    let rgb = mix(in.color.rgb, in.rim_color.rgb, mix_t);
+    let norm_dist = dist / radius;
+
+    // Selektion-Darstellung: aa_params.z → 0=Gradient, 1=Ring
+    // rim_color.a kodiert Innendurchmesser/Außendurchmesser (ID/AD).
+    let style = uniforms.aa_params.z;
+    let inner_ratio = clamp(in.rim_color.a, 0.0, 1.0);
+    let gradient_hold_ratio = clamp(0.5 * inner_ratio * inner_ratio, 0.0, 1.0);
+    var rgb: vec3<f32>;
+
+    if (style > 0.5) {
+        // Ring:
+        // AD = Größenfaktor/100 * Nodedurchmesser
+        // ID = Nodedurchmesser
+        // -> bis ID bleibt die Nodefarbe, zwischen ID und AD erscheint die Ringfarbe.
+        let ring_t = smoothstep(inner_ratio - 0.02, inner_ratio + 0.02, norm_dist);
+        rgb = mix(in.color.rgb, in.rim_color.rgb, ring_t);
+    } else {
+        // Farbverlauf:
+        // - Zentrum = Nodefarbe
+        // - bei (50/Größenfaktor) * Nodedurchmesser = weiterhin Nodefarbe
+        // - bei AD = Selektionsfarbe
+        let mix_t = smoothstep(gradient_hold_ratio, 1.0, norm_dist);
+        rgb = mix(in.color.rgb, in.rim_color.rgb, mix_t);
+    }
 
     // Screen-space adaptives Anti-Aliasing am Rand (unverändert)
     let hard_edges = uniforms.aa_params.y > 0.5;
@@ -78,6 +99,7 @@ fn fs_main(in: VertexOutput) -> @location(0) vec4<f32> {
         let edge = max(fwidth(dist) * uniforms.aa_params.x, 0.0005);
         alpha = 1.0 - smoothstep(radius - edge, radius + edge, dist);
     }
+
     
     return vec4<f32>(rgb, in.color.a * alpha);
 }
