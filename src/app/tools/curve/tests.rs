@@ -85,16 +85,13 @@ fn test_apply_tangent_to_cp_cubic() {
 
     tool.apply_tangent_to_cp();
 
-    // CP1 soll in negativer x-Richtung vom Start-Anker
+    // Bei zwei Tangentenverbindungen müssen CP1 und CP2 deckungsgleich sein.
     let cp1 = tool.control_point1.expect("CP1 sollte gesetzt sein");
-    assert!(cp1.x < 0.0, "CP1 sollte links liegen, war: {:?}", cp1);
-
-    // CP2 soll in positiver x-Richtung vom End-Anker (Winkel=PI → Richtung (-1,0), also links)
     let cp2 = tool.control_point2.expect("CP2 sollte gesetzt sein");
-    // tangent_end angle=PI → direction = Vec2::from_angle(PI) = (-1, 0) → cp2.x = 12 - 4 = 8
     assert!(
-        cp2.x < 12.0,
-        "CP2 sollte links vom Endpunkt liegen, war: {:?}",
+        (cp1 - cp2).length() < 1e-5,
+        "CP1/CP2 sollten deckungsgleich sein, waren {:?} und {:?}",
+        cp1,
         cp2
     );
 }
@@ -677,6 +674,37 @@ fn test_auto_suggest_end_tangent_rejects_bad_direction() {
         matches!(tool.tangents.tangent_end, TangentSource::None),
         "End-Tangente sollte None bleiben bei schlechter Richtung, war: {:?}",
         tool.tangents.tangent_end,
+    );
+}
+
+#[test]
+fn test_auto_suggest_start_tangent_fallback_on_bad_direction() {
+    let mut tool = CurveTool::new_cubic();
+
+    tool.start = Some(ToolAnchor::NewPosition(Vec2::ZERO));
+    tool.end = Some(ToolAnchor::NewPosition(Vec2::new(10.0, 0.0)));
+
+    // Ausgehende Verbindung nach Osten am Startpunkt.
+    // Für Start-Fortsetzungsrichtung (angle + PI) ist der Dot negativ,
+    // dennoch soll jetzt ein Fallback gesetzt werden.
+    tool.tangents.start_neighbors = vec![ConnectedNeighbor {
+        neighbor_id: 123,
+        angle: 0.0,
+        is_outgoing: true,
+    }];
+
+    tool.auto_suggest_start_tangent();
+
+    assert!(
+        matches!(
+            tool.tangents.tangent_start,
+            TangentSource::Connection {
+                neighbor_id: 123,
+                ..
+            }
+        ),
+        "Start-Tangente sollte per Fallback gesetzt sein, war: {:?}",
+        tool.tangents.tangent_start,
     );
 }
 
