@@ -87,7 +87,7 @@ pub fn select_nearest_node(
     if additive {
         if let Some(node_id) = hit {
             if state.selection.selected_node_ids.contains(&node_id) {
-                state.selection.ids_mut().remove(&node_id);
+                state.selection.ids_mut().shift_remove(&node_id);
                 state.selection.selection_anchor_node_id =
                     state.selection.selected_node_ids.iter().copied().next();
             } else {

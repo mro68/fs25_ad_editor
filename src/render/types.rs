@@ -23,7 +23,7 @@ pub(crate) struct RenderContext<'a> {
     /// Editor-Optionen (Farben, Größen, etc.)
     pub options: &'a EditorOptions,
     /// Node-IDs, die in diesem Frame ausgeblendet werden sollen
-    pub hidden_node_ids: &'a std::collections::HashSet<u64>,
+    pub hidden_node_ids: &'a indexmap::IndexSet<u64>,
 }
 
 /// Vertex für ein Quad (2D-Rechteck)

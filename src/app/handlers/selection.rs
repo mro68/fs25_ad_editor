@@ -101,10 +101,12 @@ pub fn select_all(state: &mut AppState) {
 pub fn invert(state: &mut AppState) {
     if let Some(rm) = &state.road_map {
         let old = state.selection.clone();
-        let all_nodes: std::collections::HashSet<_> = rm.nodes.keys().copied().collect();
-        let inverted: std::collections::HashSet<_> = all_nodes
-            .symmetric_difference(&state.selection.selected_node_ids)
+        let current = &state.selection.selected_node_ids;
+        let inverted: indexmap::IndexSet<u64> = rm
+            .nodes
+            .keys()
             .copied()
+            .filter(|id| !current.contains(id))
             .collect();
         state.selection.selected_node_ids = Arc::new(inverted);
         record_if_selection_changed(state, old);

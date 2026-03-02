@@ -4,7 +4,7 @@ use crate::app::{
     Connection, ConnectionDirection, ConnectionPriority, MapMarker, MapNode, NodeFlag, RoadMap,
 };
 use glam::Vec2;
-use std::collections::HashSet;
+use indexmap::IndexSet;
 
 /// Erstellt eine RoadMap mit gegebenen Nodes (IDs und Positionen).
 fn make_road_map(nodes: &[(u64, f32, f32)]) -> RoadMap {
@@ -59,7 +59,7 @@ fn has_command(entries: &[ValidatedEntry], target: CommandId) -> bool {
 #[test]
 fn precondition_node_exists() {
     let map = make_road_map(&[(1, 0.0, 0.0)]);
-    let selected = HashSet::new();
+    let selected = IndexSet::new();
     let ctx = PreconditionContext {
         road_map: &map,
         selected_node_ids: &selected,
@@ -74,7 +74,7 @@ fn precondition_node_exists() {
 fn precondition_has_marker() {
     let mut map = make_road_map(&[(1, 0.0, 0.0), (2, 10.0, 0.0)]);
     map.add_map_marker(MapMarker::new(1, "Test".into(), "Default".into(), 1, false));
-    let selected = HashSet::new();
+    let selected = IndexSet::new();
     let ctx = PreconditionContext {
         road_map: &map,
         selected_node_ids: &selected,
@@ -90,9 +90,9 @@ fn precondition_has_marker() {
 #[test]
 fn precondition_exactly_two_selected() {
     let map = make_road_map(&[(1, 0.0, 0.0), (2, 10.0, 0.0), (3, 20.0, 0.0)]);
-    let two: HashSet<u64> = [1, 2].into();
-    let three: HashSet<u64> = [1, 2, 3].into();
-    let one: HashSet<u64> = [1].into();
+    let two: IndexSet<u64> = [1, 2].into();
+    let three: IndexSet<u64> = [1, 2, 3].into();
+    let one: IndexSet<u64> = [1].into();
 
     let ctx2 = PreconditionContext {
         road_map: &map,
@@ -119,7 +119,7 @@ fn precondition_exactly_two_selected() {
 fn precondition_two_selected_unconnected() {
     let map_unconnected = make_road_map(&[(1, 0.0, 0.0), (2, 10.0, 0.0)]);
     let map_connected = make_connected_map(1, 2);
-    let selected: HashSet<u64> = [1, 2].into();
+    let selected: IndexSet<u64> = [1, 2].into();
 
     let ctx_unconnected = PreconditionContext {
         road_map: &map_unconnected,
@@ -140,7 +140,7 @@ fn precondition_two_selected_unconnected() {
 fn precondition_has_connections_between_selected() {
     let map_connected = make_connected_map(1, 2);
     let map_unconnected = make_road_map(&[(1, 0.0, 0.0), (2, 10.0, 0.0)]);
-    let selected: HashSet<u64> = [1, 2].into();
+    let selected: IndexSet<u64> = [1, 2].into();
 
     let ctx_yes = PreconditionContext {
         road_map: &map_connected,
@@ -160,7 +160,7 @@ fn precondition_has_connections_between_selected() {
 #[test]
 fn precondition_streckenteilung_active() {
     let map = make_road_map(&[]);
-    let selected = HashSet::new();
+    let selected = IndexSet::new();
 
     let ctx_active = PreconditionContext {
         road_map: &map,
@@ -185,7 +185,7 @@ fn precondition_streckenteilung_active() {
 #[test]
 fn catalog_empty_area_shows_tools() {
     let map = make_road_map(&[]);
-    let selected = HashSet::new();
+    let selected = IndexSet::new();
     let ctx = PreconditionContext {
         road_map: &map,
         selected_node_ids: &selected,
@@ -212,7 +212,7 @@ fn catalog_empty_area_shows_tools() {
 #[test]
 fn catalog_node_focused_shows_marker_create() {
     let map = make_road_map(&[(42, 5.0, 5.0)]);
-    let selected: HashSet<u64> = [42].into();
+    let selected: IndexSet<u64> = [42].into();
     let ctx = PreconditionContext {
         road_map: &map,
         selected_node_ids: &selected,
@@ -242,7 +242,7 @@ fn catalog_node_focused_shows_marker_edit_when_marker_exists() {
         1,
         false,
     ));
-    let selected: HashSet<u64> = [42].into();
+    let selected: IndexSet<u64> = [42].into();
     let ctx = PreconditionContext {
         road_map: &map,
         selected_node_ids: &selected,
@@ -265,7 +265,7 @@ fn catalog_node_focused_shows_marker_edit_when_marker_exists() {
 #[test]
 fn catalog_node_focused_shows_delete_and_duplicate() {
     let map = make_road_map(&[(10, 1.0, 1.0)]);
-    let selected: HashSet<u64> = [10].into();
+    let selected: IndexSet<u64> = [10].into();
     let ctx = PreconditionContext {
         road_map: &map,
         selected_node_ids: &selected,
@@ -286,7 +286,7 @@ fn catalog_node_focused_shows_delete_and_duplicate() {
 #[test]
 fn catalog_multi_nodes_connect_only_when_two_unconnected() {
     let map_unconnected = make_road_map(&[(1, 0.0, 0.0), (2, 10.0, 0.0)]);
-    let selected: HashSet<u64> = [1, 2].into();
+    let selected: IndexSet<u64> = [1, 2].into();
     let ctx = PreconditionContext {
         road_map: &map_unconnected,
         selected_node_ids: &selected,
@@ -315,7 +315,7 @@ fn catalog_multi_nodes_connect_only_when_two_unconnected() {
 #[test]
 fn catalog_multi_nodes_direction_only_when_connected() {
     let map = make_road_map(&[(1, 0.0, 0.0), (2, 10.0, 0.0)]);
-    let selected: HashSet<u64> = [1, 2].into();
+    let selected: IndexSet<u64> = [1, 2].into();
     let ctx = PreconditionContext {
         road_map: &map,
         selected_node_ids: &selected,
@@ -348,7 +348,7 @@ fn catalog_multi_nodes_direction_only_when_connected() {
 #[test]
 fn catalog_multi_nodes_route_tools_only_when_two_selected() {
     let map = make_road_map(&[(1, 0.0, 0.0), (2, 10.0, 0.0), (3, 20.0, 0.0)]);
-    let selected: HashSet<u64> = [1, 2, 3].into();
+    let selected: IndexSet<u64> = [1, 2, 3].into();
     let ctx = PreconditionContext {
         road_map: &map,
         selected_node_ids: &selected,
@@ -371,7 +371,7 @@ fn catalog_multi_nodes_route_tools_only_when_two_selected() {
 #[test]
 fn catalog_multi_nodes_selection_commands_always_visible() {
     let map = make_road_map(&[(1, 0.0, 0.0), (2, 10.0, 0.0)]);
-    let selected: HashSet<u64> = [1, 2].into();
+    let selected: IndexSet<u64> = [1, 2].into();
     let ctx = PreconditionContext {
         road_map: &map,
         selected_node_ids: &selected,
@@ -392,7 +392,7 @@ fn catalog_multi_nodes_selection_commands_always_visible() {
 #[test]
 fn catalog_route_tool_basic_commands() {
     let map = make_road_map(&[]);
-    let selected = HashSet::new();
+    let selected = IndexSet::new();
     let ctx = PreconditionContext {
         road_map: &map,
         selected_node_ids: &selected,
@@ -502,7 +502,7 @@ fn cleanup_no_double_separators() {
 #[test]
 fn deleted_node_hides_all_commands() {
     let map = make_road_map(&[(1, 0.0, 0.0)]);
-    let selected = HashSet::new();
+    let selected = IndexSet::new();
     let ctx = PreconditionContext {
         road_map: &map,
         selected_node_ids: &selected,

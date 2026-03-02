@@ -14,7 +14,7 @@ use crate::app::{AppIntent, RoadMap};
 use commands::{
     validate_entries, CommandId, IntentContext, MenuCatalog, PreconditionContext, ValidatedEntry,
 };
-use std::collections::HashSet;
+use indexmap::IndexSet;
 
 /// Icon-Größe für SVG-Icons im Kontextmenü.
 const CM_ICON_SIZE: egui::Vec2 = egui::Vec2::new(16.0, 16.0);
@@ -100,7 +100,7 @@ pub fn find_nearest_node_at(
 /// Wird einmal beim Rechtsklick aufgerufen und das Ergebnis eingefroren, bis das Menü
 /// geschlossen wird — so verursachen Zustandsänderungen (Esc, Deselection) kein Flackern.
 pub fn determine_menu_variant(
-    selected_node_ids: &HashSet<u64>,
+    selected_node_ids: &IndexSet<u64>,
     focused_node_id: Option<u64>,
     route_tool_has_input: bool,
     tangent_data: Option<TangentMenuData>,
@@ -134,7 +134,7 @@ pub fn determine_menu_variant(
 pub fn render_context_menu(
     response: &egui::Response,
     road_map: Option<&RoadMap>,
-    selected_node_ids: &HashSet<u64>,
+    selected_node_ids: &IndexSet<u64>,
     distanzen_active: bool,
     variant: &MenuVariant,
     events: &mut Vec<AppIntent>,
@@ -163,10 +163,9 @@ pub fn render_context_menu(
                 }
 
                 MenuVariant::SelectionOnly => {
-                    // Sortierte 2-Node-IDs für Route-Tool-Shortcuts
+                    // 2-Node-IDs in Selektionsreihenfolge (erster Klick = from, zweiter = to)
                     let two_ids = if selected_node_ids.len() == 2 {
-                        let mut ids: Vec<u64> = selected_node_ids.iter().copied().collect();
-                        ids.sort();
+                        let ids: Vec<u64> = selected_node_ids.iter().copied().collect();
                         Some((ids[0], ids[1]))
                     } else {
                         None
@@ -185,10 +184,9 @@ pub fn render_context_menu(
                 MenuVariant::NodeFocused { focused_node_id } => {
                     let node_pos = rm.nodes.get(focused_node_id).map(|n| n.position);
 
-                    // Sortierte 2-Node-IDs für Route-Tool-Shortcuts
+                    // 2-Node-IDs in Selektionsreihenfolge (erster Klick = from, zweiter = to)
                     let two_ids = if selected_node_ids.len() == 2 {
-                        let mut ids: Vec<u64> = selected_node_ids.iter().copied().collect();
-                        ids.sort();
+                        let ids: Vec<u64> = selected_node_ids.iter().copied().collect();
                         Some((ids[0], ids[1]))
                     } else {
                         None
