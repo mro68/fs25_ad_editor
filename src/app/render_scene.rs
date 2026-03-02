@@ -2,7 +2,7 @@
 
 use crate::app::AppState;
 use crate::shared::RenderScene;
-use std::collections::HashSet;
+use indexmap::IndexSet;
 use std::sync::Arc;
 
 /// Baut eine RenderScene aus dem aktuellen AppState.
@@ -11,7 +11,7 @@ pub fn build(state: &AppState, viewport_size: [f32; 2]) -> RenderScene {
     let hidden_node_ids = if state.ui.distanzen.should_hide_original() {
         state.selection.selected_node_ids.clone()
     } else {
-        Arc::new(HashSet::new())
+        Arc::new(IndexSet::new())
     };
 
     RenderScene {

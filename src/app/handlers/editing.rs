@@ -101,6 +101,7 @@ pub fn set_all_priorities_between_selected(state: &mut AppState, priority: Conne
 }
 
 /// Verbindet genau zwei selektierte Nodes mit den aktuellen Standardwerten.
+/// Die Reihenfolge (from → to) entspricht der Klick-Reihenfolge in der IndexSet.
 pub fn connect_selected(state: &mut AppState) {
     let ids: Vec<u64> = state.selection.selected_node_ids.iter().copied().collect();
     if ids.len() == 2 {

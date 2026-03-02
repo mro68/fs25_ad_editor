@@ -1,4 +1,4 @@
-use std::collections::HashSet;
+use indexmap::IndexSet;
 
 use super::*;
 use crate::core::{ConnectionDirection, ConnectionPriority, NodeFlag};
@@ -380,14 +380,14 @@ fn resampleable_chain_simple_path() {
         ],
         &[(1, 2), (2, 3), (3, 4)],
     );
-    let sel: HashSet<u64> = [1, 2, 3, 4].into();
+    let sel: IndexSet<u64> = [1, 2, 3, 4].into();
     assert!(map.is_resampleable_chain(&sel));
 }
 
 #[test]
 fn resampleable_chain_too_few_nodes() {
     let map = make_chain_map(&[(1, 0.0, 0.0)], &[]);
-    let sel: HashSet<u64> = [1].into();
+    let sel: IndexSet<u64> = [1].into();
     assert!(!map.is_resampleable_chain(&sel));
 }
 
@@ -403,7 +403,7 @@ fn resampleable_chain_disconnected() {
         ],
         &[(1, 2), (3, 4)],
     );
-    let sel: HashSet<u64> = [1, 2, 3, 4].into();
+    let sel: IndexSet<u64> = [1, 2, 3, 4].into();
     assert!(!map.is_resampleable_chain(&sel));
 }
 
@@ -420,7 +420,7 @@ fn resampleable_chain_intersection_at_endpoint_ok() {
         ],
         &[(5, 1), (1, 2), (2, 3)],
     );
-    let sel: HashSet<u64> = [1, 2, 3].into();
+    let sel: IndexSet<u64> = [1, 2, 3].into();
     assert!(map.is_resampleable_chain(&sel));
 }
 
@@ -437,20 +437,20 @@ fn resampleable_chain_intersection_in_middle_rejected() {
         ],
         &[(1, 2), (2, 3), (2, 4)],
     );
-    let sel: HashSet<u64> = [1, 2, 3, 4].into();
+    let sel: IndexSet<u64> = [1, 2, 3, 4].into();
     assert!(!map.is_resampleable_chain(&sel));
 }
 
 #[test]
 fn resampleable_chain_two_connected_nodes() {
     let map = make_chain_map(&[(1, 0.0, 0.0), (2, 10.0, 0.0)], &[(1, 2)]);
-    let sel: HashSet<u64> = [1, 2].into();
+    let sel: IndexSet<u64> = [1, 2].into();
     assert!(map.is_resampleable_chain(&sel));
 }
 
 #[test]
 fn resampleable_chain_two_unconnected_nodes() {
     let map = make_chain_map(&[(1, 0.0, 0.0), (2, 10.0, 0.0)], &[]);
-    let sel: HashSet<u64> = [1, 2].into();
+    let sel: IndexSet<u64> = [1, 2].into();
     assert!(!map.is_resampleable_chain(&sel));
 }

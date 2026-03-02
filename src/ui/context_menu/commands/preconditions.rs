@@ -3,7 +3,7 @@
 //! Prüfbare Vorbedingungen als Enum (kein dyn Trait, performant).
 
 use crate::app::RoadMap;
-use std::collections::HashSet;
+use indexmap::IndexSet;
 
 /// Prüfbare Vorbedingung für einen Context-Menu-Befehl.
 #[derive(Debug, Clone, Copy)]
@@ -29,7 +29,7 @@ pub enum Precondition {
 /// Kontext für die Precondition-Auswertung — alle nötigen Daten aus dem aktuellen State.
 pub struct PreconditionContext<'a> {
     pub road_map: &'a RoadMap,
-    pub selected_node_ids: &'a HashSet<u64>,
+    pub selected_node_ids: &'a IndexSet<u64>,
     /// Ob die Streckenteilung gerade aktiv ist
     pub distanzen_active: bool,
 }

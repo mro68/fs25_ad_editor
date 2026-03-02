@@ -3,7 +3,7 @@
 mod distances;
 mod selectors;
 
-use std::collections::HashSet;
+use indexmap::IndexSet;
 
 use crate::app::{
     segment_registry::SegmentRegistry, tools::ToolManager, AppIntent, Connection,
@@ -17,7 +17,7 @@ use selectors::{direction_label, priority_label, render_default_direction_select
 pub fn render_properties_panel(
     ctx: &egui::Context,
     road_map: Option<&RoadMap>,
-    selected_node_ids: &HashSet<u64>,
+    selected_node_ids: &IndexSet<u64>,
     default_direction: ConnectionDirection,
     default_priority: ConnectionPriority,
     active_tool: EditorTool,
@@ -74,7 +74,7 @@ pub fn render_properties_panel(
 fn render_selection_info(
     ui: &mut egui::Ui,
     road_map: &RoadMap,
-    selected: &HashSet<u64>,
+    selected: &IndexSet<u64>,
     default_direction: ConnectionDirection,
     default_priority: ConnectionPriority,
     segment_registry: Option<&SegmentRegistry>,
@@ -102,7 +102,7 @@ fn render_selection_info(
 fn render_single_node_info(
     ui: &mut egui::Ui,
     road_map: &RoadMap,
-    selected: &HashSet<u64>,
+    selected: &IndexSet<u64>,
     events: &mut Vec<AppIntent>,
 ) {
     let node_id = *selected.iter().next().unwrap();
@@ -138,7 +138,7 @@ fn render_single_node_info(
 fn render_two_nodes_info(
     ui: &mut egui::Ui,
     road_map: &RoadMap,
-    selected: &HashSet<u64>,
+    selected: &IndexSet<u64>,
     default_direction: ConnectionDirection,
     default_priority: ConnectionPriority,
     events: &mut Vec<AppIntent>,
@@ -250,7 +250,7 @@ fn render_connection_editor(ui: &mut egui::Ui, conn: &Connection, events: &mut V
 /// Zeigt Segment-Bearbeiten-Buttons wenn passende Segmente im Registry existieren.
 fn render_segment_edit_buttons(
     ui: &mut egui::Ui,
-    selected: &HashSet<u64>,
+    selected: &IndexSet<u64>,
     segment_registry: Option<&SegmentRegistry>,
     events: &mut Vec<AppIntent>,
 ) {

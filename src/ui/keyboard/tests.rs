@@ -1,12 +1,13 @@
+use indexmap::IndexSet;
 use super::*;
 
-fn collect_with_key_event(event: egui::Event, selected: HashSet<u64>) -> Vec<AppIntent> {
+fn collect_with_key_event(event: egui::Event, selected: IndexSet<u64>) -> Vec<AppIntent> {
     collect_with_key_event_full(event, selected, EditorTool::Select, false)
 }
 
 fn collect_with_key_event_and_tool(
     event: egui::Event,
-    selected: HashSet<u64>,
+    selected: IndexSet<u64>,
     active_tool: EditorTool,
 ) -> Vec<AppIntent> {
     collect_with_key_event_full(event, selected, active_tool, false)
@@ -14,7 +15,7 @@ fn collect_with_key_event_and_tool(
 
 fn collect_with_key_event_full(
     event: egui::Event,
-    selected: HashSet<u64>,
+    selected: IndexSet<u64>,
     active_tool: EditorTool,
     route_tool_is_drawing: bool,
 ) -> Vec<AppIntent> {
@@ -43,7 +44,7 @@ fn test_num2_emits_connect_tool_intent() {
             repeat: false,
             modifiers: egui::Modifiers::default(),
         },
-        HashSet::new(),
+        IndexSet::new(),
     );
 
     assert!(events.iter().any(|event| matches!(
@@ -56,7 +57,7 @@ fn test_num2_emits_connect_tool_intent() {
 
 #[test]
 fn test_delete_with_selection_emits_delete_intent() {
-    let mut selected = HashSet::new();
+    let mut selected = IndexSet::new();
     selected.insert(10);
 
     let events = collect_with_key_event(
@@ -77,7 +78,7 @@ fn test_delete_with_selection_emits_delete_intent() {
 
 #[test]
 fn test_escape_with_selection_clears_selection() {
-    let mut selected = HashSet::new();
+    let mut selected = IndexSet::new();
     selected.insert(5);
 
     let events = collect_with_key_event(
@@ -106,7 +107,7 @@ fn test_escape_without_selection_switches_to_select_tool() {
             repeat: false,
             modifiers: egui::Modifiers::default(),
         },
-        HashSet::new(),
+        IndexSet::new(),
         EditorTool::Connect,
     );
 
@@ -128,7 +129,7 @@ fn test_escape_in_select_tool_without_selection_does_nothing() {
             repeat: false,
             modifiers: egui::Modifiers::default(),
         },
-        HashSet::new(),
+        IndexSet::new(),
     );
 
     assert!(events.is_empty());
@@ -144,7 +145,7 @@ fn test_escape_route_tool_drawing_cancels() {
             repeat: false,
             modifiers: egui::Modifiers::default(),
         },
-        HashSet::new(),
+        IndexSet::new(),
         EditorTool::Route,
         true, // is_drawing = true
     );
@@ -156,7 +157,7 @@ fn test_escape_route_tool_drawing_cancels() {
 
 #[test]
 fn test_escape_route_tool_idle_with_selection_clears() {
-    let mut selected = HashSet::new();
+    let mut selected = IndexSet::new();
     selected.insert(42);
 
     let events = collect_with_key_event_full(
@@ -190,7 +191,7 @@ fn test_escape_route_tool_idle_no_selection_switches_to_select() {
             repeat: false,
             modifiers: egui::Modifiers::default(),
         },
-        HashSet::new(),
+        IndexSet::new(),
         EditorTool::Route,
         false,
     );

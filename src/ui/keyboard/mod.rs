@@ -3,12 +3,12 @@
 //! Verarbeitet globale Tastenkombinationen und mappt sie auf `AppIntent`s.
 
 use crate::app::{AppIntent, ConnectionDirection, ConnectionPriority, EditorTool};
-use std::collections::HashSet;
+use indexmap::IndexSet;
 
 /// Verarbeitet Keyboard-Shortcuts und gibt AppIntents zurück.
 pub(super) fn collect_keyboard_intents(
     ui: &egui::Ui,
-    selected_node_ids: &HashSet<u64>,
+    selected_node_ids: &IndexSet<u64>,
     active_tool: EditorTool,
     route_tool_is_drawing: bool,
     distanzen_active: bool,
@@ -126,10 +126,9 @@ pub(super) fn collect_keyboard_intents(
     }
 
     // C = Verbinden (bei genau 2 selektierten Nodes)
-    // IDs sortiert für deterministische Reihenfolge (HashSet-Iteration ist nicht-deterministisch)
+    // Reihenfolge aus IndexSet: erster selektierter Node = from, zweiter = to
     if key_c_pressed && !modifiers.command && selected_node_ids.len() == 2 {
-        let mut ids: Vec<u64> = selected_node_ids.iter().copied().collect();
-        ids.sort_unstable();
+        let ids: Vec<u64> = selected_node_ids.iter().copied().collect();
         events.push(AppIntent::AddConnectionRequested {
             from_id: ids[0],
             to_id: ids[1],
@@ -140,8 +139,7 @@ pub(super) fn collect_keyboard_intents(
 
     // X = Trennen (bei genau 2 selektierten Nodes)
     if key_x_pressed && !modifiers.command && selected_node_ids.len() == 2 {
-        let mut ids: Vec<u64> = selected_node_ids.iter().copied().collect();
-        ids.sort_unstable();
+        let ids: Vec<u64> = selected_node_ids.iter().copied().collect();
         events.push(AppIntent::RemoveConnectionBetweenRequested {
             node_a: ids[0],
             node_b: ids[1],

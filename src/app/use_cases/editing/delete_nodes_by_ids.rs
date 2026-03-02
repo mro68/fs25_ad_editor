@@ -72,7 +72,7 @@ pub fn delete_nodes_by_ids(state: &mut AppState, ids: &[u64]) {
 
     // Gelöschte Nodes aus Selektion entfernen
     for &id in ids {
-        state.selection.ids_mut().remove(&id);
+        state.selection.ids_mut().shift_remove(&id);
     }
 
     // Segment-Registry: Records mit diesen Nodes invalidieren

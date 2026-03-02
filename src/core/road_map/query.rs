@@ -4,7 +4,7 @@ use super::Connection;
 use super::RoadMap;
 use crate::core::SpatialMatch;
 use glam::Vec2;
-use std::collections::HashSet;
+use indexmap::IndexSet;
 
 impl RoadMap {
     /// Gibt alle Connections zurück, deren Start- und End-Ids in der gegebenen Menge liegen.
@@ -13,7 +13,7 @@ impl RoadMap {
     /// O(n) über alle Connections, aber nur bei Use-Cases aufgerufen (nicht per-Frame).
     pub fn connections_between_ids<'a>(
         &'a self,
-        ids: &'a HashSet<u64>,
+        ids: &'a IndexSet<u64>,
     ) -> Box<dyn Iterator<Item = &'a Connection> + 'a> {
         Box::new(
             self.connections
