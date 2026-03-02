@@ -184,10 +184,7 @@ impl SegmentRegistry {
     }
 
     /// Gibt alle Records zurück, die mindestens einen der angegebenen Node-IDs enthalten.
-    pub fn find_by_node_ids(
-        &self,
-        node_ids: &indexmap::IndexSet<u64>,
-    ) -> Vec<&SegmentRecord> {
+    pub fn find_by_node_ids(&self, node_ids: &indexmap::IndexSet<u64>) -> Vec<&SegmentRecord> {
         self.records
             .iter()
             .filter(|r| r.node_ids.iter().any(|nid| node_ids.contains(nid)))
