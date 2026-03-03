@@ -8,6 +8,8 @@
 pub mod bypass;
 /// Gemeinsame Hilfsfunktionen für Route-Tools.
 pub mod common;
+/// Constraint-Route-Tool — winkelgeglättete Route mit automatischen Tangenten-Übergängen.
+pub mod constraint_route;
 /// Bézier-Kurven-Tool (Grad 2 + 3) mit sequentieller Punkt-Platzierung.
 pub mod curve;
 /// RouteTool-Trait — Schnittstelle für alle Route-Tools.
@@ -120,6 +122,7 @@ impl ToolManager {
         manager.register(Box::new(curve::CurveTool::new_cubic()));
         manager.register(Box::new(spline::SplineTool::new()));
         manager.register(Box::new(bypass::BypassTool::new()));
+        manager.register(Box::new(constraint_route::ConstraintRouteTool::new()));
         manager
     }
 

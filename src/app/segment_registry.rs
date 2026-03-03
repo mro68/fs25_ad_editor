@@ -68,6 +68,19 @@ pub enum SegmentKind {
         /// Maximaler Abstand zwischen Zwischen-Nodes
         max_segment_length: f32,
     },
+    /// Constraint-Route (winkelgeglättet mit automatischen Tangenten)
+    ConstraintRoute {
+        /// Zwischen-Kontrollpunkte
+        control_nodes: Vec<Vec2>,
+        /// Maximale Richtungsänderung pro Segment (Grad)
+        max_angle_deg: f32,
+        /// Verbindungsrichtung
+        direction: ConnectionDirection,
+        /// Straßenart
+        priority: ConnectionPriority,
+        /// Maximaler Abstand zwischen Zwischen-Nodes
+        max_segment_length: f32,
+    },
 }
 
 /// Tool-Index für `StraightLineTool` im `ToolManager` (Registrierungs-Slot 0).
@@ -80,6 +93,10 @@ pub const TOOL_INDEX_CURVE_QUAD: usize = 1;
 pub const TOOL_INDEX_CURVE_CUBIC: usize = 2;
 /// Tool-Index für `SplineTool` im `ToolManager` (Registrierungs-Slot 3).
 pub const TOOL_INDEX_SPLINE: usize = 3;
+/// Tool-Index für `BypassTool` im `ToolManager` (Registrierungs-Slot 4).
+pub const TOOL_INDEX_BYPASS: usize = 4;
+/// Tool-Index für `ConstraintRouteTool` im `ToolManager` (Registrierungs-Slot 5).
+pub const TOOL_INDEX_CONSTRAINT_ROUTE: usize = 5;
 
 impl SegmentKind {
     /// Gibt den Tool-Index im ToolManager für dieses Segment zurück.
@@ -92,6 +109,7 @@ impl SegmentKind {
             SegmentKind::CurveQuad { .. } => TOOL_INDEX_CURVE_QUAD,
             SegmentKind::CurveCubic { .. } => TOOL_INDEX_CURVE_CUBIC,
             SegmentKind::Spline { .. } => TOOL_INDEX_SPLINE,
+            SegmentKind::ConstraintRoute { .. } => TOOL_INDEX_CONSTRAINT_ROUTE,
         }
     }
 }
@@ -123,6 +141,10 @@ mod tests {
         assert_eq!(
             names[TOOL_INDEX_SPLINE], "Spline",
             "TOOL_INDEX_SPLINE zeigt nicht auf SplineTool"
+        );
+        assert_eq!(
+            names[TOOL_INDEX_CONSTRAINT_ROUTE], "Constraint Route",
+            "TOOL_INDEX_CONSTRAINT_ROUTE zeigt nicht auf ConstraintRouteTool"
         );
     }
 }
