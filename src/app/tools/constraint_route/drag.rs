@@ -10,16 +10,24 @@ use glam::Vec2;
 
 impl ConstraintRouteTool {
     /// Gibt die Weltpositionen aller verschiebbaren Punkte zurück.
+    ///
+    /// Reihenfolge: Start, End, Approach-Steuerpunkt, Departure-Steuerpunkt, Kontrollpunkte.
     pub(crate) fn get_drag_targets(&self) -> Vec<Vec2> {
         if self.phase != Phase::ControlNodes || !self.is_ready_internal() {
             return vec![];
         }
-        let mut targets = Vec::with_capacity(2 + self.control_nodes.len());
+        let mut targets = Vec::with_capacity(4 + self.control_nodes.len());
         if let Some(a) = &self.start {
             targets.push(a.position());
         }
         if let Some(a) = &self.end {
             targets.push(a.position());
+        }
+        if let Some(ap) = self.approach_steerer {
+            targets.push(ap);
+        }
+        if let Some(dp) = self.departure_steerer {
+            targets.push(dp);
         }
         for &cp in &self.control_nodes {
             targets.push(cp);
@@ -45,6 +53,12 @@ impl ConstraintRouteTool {
         }
         if let Some(a) = &self.end {
             candidates.push((DragTarget::End, a.position().distance(pos)));
+        }
+        if let Some(ap) = self.approach_steerer {
+            candidates.push((DragTarget::ApproachSteerer, ap.distance(pos)));
+        }
+        if let Some(dp) = self.departure_steerer {
+            candidates.push((DragTarget::DepartureSteerer, dp.distance(pos)));
         }
         for (i, &cp) in self.control_nodes.iter().enumerate() {
             candidates.push((DragTarget::Control(i), cp.distance(pos)));
@@ -72,6 +86,16 @@ impl ConstraintRouteTool {
                 self.end = Some(ToolAnchor::NewPosition(pos));
                 self.update_preview();
             }
+            Some(DragTarget::ApproachSteerer) => {
+                self.approach_steerer = Some(pos);
+                self.approach_manual = true;
+                self.update_preview();
+            }
+            Some(DragTarget::DepartureSteerer) => {
+                self.departure_steerer = Some(pos);
+                self.departure_manual = true;
+                self.update_preview();
+            }
             Some(DragTarget::Control(i)) => {
                 if i < self.control_nodes.len() {
                     self.control_nodes[i] = pos;
@@ -92,6 +116,8 @@ impl ConstraintRouteTool {
                     self.start = Some(re_snapped);
                     self.start_neighbor_dirs =
                         ConstraintRouteTool::collect_neighbor_dirs(&re_snapped, road_map);
+                    // Bei neuem Start Auto-Steuerpunkte zurücksetzen
+                    self.approach_manual = false;
                 }
             }
             Some(DragTarget::End) => {
@@ -101,7 +127,15 @@ impl ConstraintRouteTool {
                     self.end = Some(re_snapped);
                     self.end_neighbor_dirs =
                         ConstraintRouteTool::collect_neighbor_dirs(&re_snapped, road_map);
+                    // Bei neuem Ende Auto-Steuerpunkte zurücksetzen
+                    self.departure_manual = false;
                 }
+            }
+            Some(DragTarget::ApproachSteerer) => {
+                // Manuell positioniert — bleibt als manuell markiert
+            }
+            Some(DragTarget::DepartureSteerer) => {
+                // Manuell positioniert — bleibt als manuell markiert
             }
             Some(DragTarget::Control(_)) => {
                 // Kontrollpunkte werden nicht gesnappt

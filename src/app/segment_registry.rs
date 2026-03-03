@@ -80,6 +80,8 @@ pub enum SegmentKind {
         priority: ConnectionPriority,
         /// Maximaler Abstand zwischen Zwischen-Nodes
         max_segment_length: f32,
+        /// Minimaldistanz-Filter (Meter)
+        min_distance: f32,
     },
 }
 
