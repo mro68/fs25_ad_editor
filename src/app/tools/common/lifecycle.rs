@@ -161,12 +161,20 @@ pub struct SegmentConfig {
 }
 
 impl SegmentConfig {
+    /// Unterdrückt Rauschen/Restwerte, die ohne echtes Scrollen auftreten können.
+    const WHEEL_DELTA_THRESHOLD: f32 = 0.5;
+
     /// Ermittelt die Scroll-Richtung für ein gehovertes Widget.
     fn wheel_dir(ui: &egui::Ui, response: &egui::Response) -> f32 {
         if !response.hovered() {
             return 0.0;
         }
-        ui.input(|i| i.raw_scroll_delta.y).signum()
+        let delta = ui.input(|i| i.raw_scroll_delta.y);
+        if delta.abs() < Self::WHEEL_DELTA_THRESHOLD {
+            0.0
+        } else {
+            delta.signum()
+        }
     }
 
     /// Erstellt eine neue Segment-Konfiguration mit gegebenem Standard-Abstand.
@@ -215,7 +223,7 @@ impl SegmentConfig {
             ui.add(egui::Slider::new(&mut self.max_segment_length, 1.0..=max_seg).suffix(" m"));
         let mut distance_changed = distance_response.changed();
         let distance_wheel_dir = Self::wheel_dir(ui, &distance_response);
-        if distance_wheel_dir != 0.0 {
+        if distance_wheel_step_m > 0.0 && distance_wheel_dir != 0.0 {
             self.max_segment_length = (self.max_segment_length
                 + distance_wheel_dir * distance_wheel_step_m)
                 .clamp(1.0, max_seg);
@@ -235,7 +243,7 @@ impl SegmentConfig {
         let node_response = ui.add(egui::Slider::new(&mut self.node_count, 2..=max_nodes));
         let mut node_changed = node_response.changed();
         let node_wheel_dir = Self::wheel_dir(ui, &node_response);
-        if node_wheel_dir != 0.0 {
+        if distance_wheel_step_m > 0.0 && node_wheel_dir != 0.0 {
             if node_wheel_dir > 0.0 {
                 self.node_count = self.node_count.saturating_add(1).min(max_nodes);
             } else {
@@ -274,7 +282,7 @@ impl SegmentConfig {
             ui.add(egui::Slider::new(&mut self.max_segment_length, 1.0..=max_seg).suffix(" m"));
         let mut distance_changed = distance_response.changed();
         let distance_wheel_dir = Self::wheel_dir(ui, &distance_response);
-        if distance_wheel_dir != 0.0 {
+        if distance_wheel_step_m > 0.0 && distance_wheel_dir != 0.0 {
             self.max_segment_length = (self.max_segment_length
                 + distance_wheel_dir * distance_wheel_step_m)
                 .clamp(1.0, max_seg);
@@ -293,7 +301,7 @@ impl SegmentConfig {
         let node_response = ui.add(egui::Slider::new(&mut self.node_count, 2..=max_nodes));
         let mut node_changed = node_response.changed();
         let node_wheel_dir = Self::wheel_dir(ui, &node_response);
-        if node_wheel_dir != 0.0 {
+        if distance_wheel_step_m > 0.0 && node_wheel_dir != 0.0 {
             if node_wheel_dir > 0.0 {
                 self.node_count = self.node_count.saturating_add(1).min(max_nodes);
             } else {
@@ -321,7 +329,7 @@ impl SegmentConfig {
             ui.add(egui::Slider::new(&mut self.max_segment_length, 1.0..=20.0).suffix(" m"));
         let mut distance_changed = response.changed();
         let wheel_dir = Self::wheel_dir(ui, &response);
-        if wheel_dir != 0.0 {
+        if distance_wheel_step_m > 0.0 && wheel_dir != 0.0 {
             self.max_segment_length =
                 (self.max_segment_length + wheel_dir * distance_wheel_step_m).clamp(1.0, 20.0);
             distance_changed = true;

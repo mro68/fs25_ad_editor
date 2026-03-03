@@ -16,5 +16,5 @@ pub use core::{
     NodeFlag, RoadMap,
 };
 pub use core::{BackgroundMap, Camera2D, SpatialIndex, SpatialMatch, WorldBounds};
-pub use shared::{EditorOptions, RenderQuality, RenderScene};
+pub use shared::{EditorOptions, RenderQuality, RenderScene, ValueAdjustInputMode};
 pub use xml::{parse_autodrive_config, write_autodrive_config};

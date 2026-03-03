@@ -42,6 +42,8 @@ pub fn close_options_dialog(state: &mut AppState) {
 
 /// Übernimmt neue Optionen und persistiert sie in der Konfigurationsdatei.
 pub fn apply_options(state: &mut AppState, options: EditorOptions) -> anyhow::Result<()> {
+    // Erst validieren, damit keine inkonsistenten Werte temporär in den State gelangen.
+    options.validate()?;
     state.options = options;
     let path = EditorOptions::config_path();
     state.options.save_to_file(&path)

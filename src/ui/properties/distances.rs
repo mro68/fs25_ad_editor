@@ -4,6 +4,21 @@ use std::collections::HashSet;
 use crate::app::state::DistanzenState;
 use crate::app::{AppIntent, RoadMap};
 
+/// Unterdrückt Rauschen/Restwerte, die ohne echtes Scrollen auftreten können.
+const WHEEL_DELTA_THRESHOLD: f32 = 0.5;
+
+fn wheel_dir_for_hovered(ui: &egui::Ui, response: &egui::Response) -> f32 {
+    if !response.hovered() {
+        return 0.0;
+    }
+    let delta = ui.input(|i| i.raw_scroll_delta.y);
+    if delta.abs() < WHEEL_DELTA_THRESHOLD {
+        0.0
+    } else {
+        delta.signum()
+    }
+}
+
 /// Rendert das Distanzen-Panel: Aktivierung, Spline-Vorschau und Resample-Steuerung.
 ///
 /// Ablauf: Button aktiviert Vorschau → Werte live anpassen → Enter übernimmt, Esc verwirft.
@@ -70,12 +85,10 @@ pub fn render_distance_panel(
                 .range(1.0..=25.0)
                 .suffix(" m"),
         );
-        if response.hovered() {
-            let wheel_dir = ui.input(|i| i.raw_scroll_delta.y).signum();
-            if wheel_dir != 0.0 {
-                distance_state.distance =
-                    (distance_state.distance + wheel_dir * distance_wheel_step_m).clamp(1.0, 25.0);
-            }
+        let wheel_dir = wheel_dir_for_hovered(ui, &response);
+        if distance_wheel_step_m > 0.0 && wheel_dir != 0.0 {
+            distance_state.distance =
+                (distance_state.distance + wheel_dir * distance_wheel_step_m).clamp(1.0, 25.0);
         }
     });
     if (distance_state.distance - prev_distance).abs() > f32::EPSILON {
@@ -91,13 +104,11 @@ pub fn render_distance_panel(
                 .speed(1.0)
                 .range(2..=10000),
         );
-        if response.hovered() {
-            let wheel_dir = ui.input(|i| i.raw_scroll_delta.y).signum();
-            if wheel_dir > 0.0 {
-                distance_state.count = distance_state.count.saturating_add(1).min(10_000);
-            } else if wheel_dir < 0.0 {
-                distance_state.count = distance_state.count.saturating_sub(1).max(2);
-            }
+        let wheel_dir = wheel_dir_for_hovered(ui, &response);
+        if distance_wheel_step_m > 0.0 && wheel_dir > 0.0 {
+            distance_state.count = distance_state.count.saturating_add(1).min(10_000);
+        } else if distance_wheel_step_m > 0.0 && wheel_dir < 0.0 {
+            distance_state.count = distance_state.count.saturating_sub(1).max(2);
         }
     });
     if distance_state.count != prev_count {

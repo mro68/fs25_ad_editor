@@ -1,7 +1,7 @@
 //! Optionen-Dialog für Farben, Größen und Breiten.
 
 use crate::app::AppIntent;
-use crate::shared::{EditorOptions, SelectionStyle};
+use crate::shared::{EditorOptions, SelectionStyle, ValueAdjustInputMode};
 
 /// Zeigt den Options-Dialog und gibt erzeugte Events zurück.
 pub fn show_options_dialog(
@@ -59,6 +59,37 @@ pub fn show_options_dialog(
 
                     // ── Tools ───────────────────────────────────────
                     ui.collapsing("Tools", |ui| {
+                        ui.horizontal(|ui| {
+                            ui.label("Wertänderung:");
+                            let current_label = match opts.value_adjust_input_mode {
+                                ValueAdjustInputMode::DragHorizontal => "LMT li/re",
+                                ValueAdjustInputMode::MouseWheel => "Mausrad hoch/runter",
+                            };
+                            egui::ComboBox::from_id_salt("value_adjust_input_mode")
+                                .selected_text(current_label)
+                                .show_ui(ui, |ui| {
+                                    if ui
+                                        .selectable_value(
+                                            &mut opts.value_adjust_input_mode,
+                                            ValueAdjustInputMode::DragHorizontal,
+                                            "LMT li/re",
+                                        )
+                                        .changed()
+                                    {
+                                        changed = true;
+                                    }
+                                    if ui
+                                        .selectable_value(
+                                            &mut opts.value_adjust_input_mode,
+                                            ValueAdjustInputMode::MouseWheel,
+                                            "Mausrad hoch/runter",
+                                        )
+                                        .changed()
+                                    {
+                                        changed = true;
+                                    }
+                                });
+                        });
                         ui.horizontal(|ui| {
                             ui.label("Snap-Radius:");
                             changed |= ui
