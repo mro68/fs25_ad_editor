@@ -4,6 +4,8 @@
 //! `ToolManager` registriert. Tools erzeugen reine Daten (`ToolResult`),
 //! die Mutation erfolgt zentral in `apply_tool_result`.
 
+/// Ausweichstrecken-Tool — generiert eine parallele Strecke zur selektierten Kette.
+pub mod bypass;
 /// Gemeinsame Hilfsfunktionen für Route-Tools.
 pub mod common;
 /// Bézier-Kurven-Tool (Grad 2 + 3) mit sequentieller Punkt-Platzierung.
@@ -117,6 +119,7 @@ impl ToolManager {
         manager.register(Box::new(curve::CurveTool::new()));
         manager.register(Box::new(curve::CurveTool::new_cubic()));
         manager.register(Box::new(spline::SplineTool::new()));
+        manager.register(Box::new(bypass::BypassTool::new()));
         manager
     }
 

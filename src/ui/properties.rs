@@ -1,6 +1,5 @@
 //! Properties-Panel (rechte Seitenleiste) für Node- und Connection-Eigenschaften.
 
-mod bypass;
 mod distances;
 mod selectors;
 
@@ -10,7 +9,6 @@ use crate::app::{
     segment_registry::SegmentRegistry, tools::ToolManager, AppIntent, Connection,
     ConnectionDirection, ConnectionPriority, EditorTool, RoadMap,
 };
-use bypass::render_bypass_panel;
 use distances::render_distance_panel;
 use selectors::{direction_label, priority_label, render_default_direction_selector};
 
@@ -26,7 +24,6 @@ pub fn render_properties_panel(
     tool_manager: Option<&mut ToolManager>,
     segment_registry: Option<&SegmentRegistry>,
     distance_state: &mut crate::app::state::DistanzenState,
-    bypass_state: &mut crate::app::state::BypassState,
 ) -> Vec<AppIntent> {
     let mut events = Vec::new();
 
@@ -56,7 +53,6 @@ pub fn render_properties_panel(
             if selected_node_ids.len() >= 2 {
                 if let Some(rm) = road_map {
                     render_distance_panel(ui, rm, selected_node_ids, distance_state, &mut events);
-                    render_bypass_panel(ui, rm, selected_node_ids, bypass_state, &mut events);
                 }
             } else if distance_state.active {
                 // Selektion verloren → Vorschau deaktivieren

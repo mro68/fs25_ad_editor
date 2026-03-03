@@ -268,7 +268,6 @@ impl AppController {
 
             // === Distanzen / Ausweichstrecke ===
             AppCommand::ResamplePath => handlers::editing::resample_path(state),
-            AppCommand::GenerateBypass => handlers::editing::generate_bypass(state),
             AppCommand::StreckenteilungAktivieren => {
                 handlers::editing::streckenteilung_aktivieren(state)
             }
