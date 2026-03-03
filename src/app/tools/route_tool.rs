@@ -158,4 +158,19 @@ pub trait RouteTool {
 
     /// Verringert den minimalen Segment-Abstand um 0.25m (min. 0.1m).
     fn decrease_segment_length(&mut self) {}
+
+    /// Gibt `true` zurück wenn dieses Tool eine geordnete Kette als Eingabe benötigt.
+    ///
+    /// Solche Tools (z.B. `BypassTool`) erhalten ihre Eingabe nicht durch Klicks,
+    /// sondern durch `load_chain()`, das vom Handler bei Tool-Aktivierung aufgerufen wird.
+    fn needs_chain_input(&self) -> bool {
+        false
+    }
+
+    /// Lädt eine geordnete Kette von Positionen als Tool-Eingabe.
+    ///
+    /// Wird vom Route-Tool-Handler aufgerufen wenn `needs_chain_input() == true` und
+    /// die aktuelle Selektion eine gültige Kette bildet.
+    /// Standard-Implementierung: no-op.
+    fn load_chain(&mut self, _positions: Vec<Vec2>, _start_id: u64, _end_id: u64) {}
 }
