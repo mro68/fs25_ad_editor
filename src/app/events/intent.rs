@@ -228,8 +228,6 @@ pub enum AppIntent {
     SaveBackgroundAsOverviewDismissed,
     /// Selektierte Nodes-Kette als gleichmäßig verteilte Wegpunkte neu berechnen (Distanzen)
     ResamplePathRequested,
-    /// Ausweichstrecke parallel zur selektierten Kette generieren
-    GenerateBypassRequested,
     /// Streckenteilung-Panel aktivieren (z.B. per Kontextmenü)
     StreckenteilungAktivieren,
     /// Alles in den Viewport einpassen (Zoom-to-fit)

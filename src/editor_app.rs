@@ -114,7 +114,6 @@ impl EditorApp {
             route_tool_manager,
             Some(&self.state.segment_registry),
             &mut self.state.ui.distanzen,
-            &mut self.state.ui.bypass,
         ));
 
         // Floating Edit-Panel (Streckenteilung / Route-Tool)

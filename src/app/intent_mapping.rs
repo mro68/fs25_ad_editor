@@ -277,7 +277,6 @@ pub fn map_intent_to_commands(state: &AppState, intent: AppIntent) -> Vec<AppCom
             vec![AppCommand::DismissSaveOverviewDialog]
         }
         AppIntent::ResamplePathRequested => vec![AppCommand::ResamplePath],
-        AppIntent::GenerateBypassRequested => vec![AppCommand::GenerateBypass],
         AppIntent::StreckenteilungAktivieren => vec![AppCommand::StreckenteilungAktivieren],
         AppIntent::ZoomToFitRequested => vec![AppCommand::ZoomToFit],
         AppIntent::InvertSelectionRequested => vec![AppCommand::InvertSelection],
