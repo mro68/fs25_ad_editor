@@ -10,15 +10,32 @@ use crate::app::{AppIntent, EditorTool, RoadMap};
 use indexmap::IndexSet;
 use std::collections::HashSet;
 
+/// Unterdrückt Rauschen/Restwerte, die ohne echtes Scrollen auftreten können.
+const WHEEL_DELTA_THRESHOLD: f32 = 0.5;
+
+fn wheel_dir_for_hovered(ui: &egui::Ui, response: &egui::Response) -> f32 {
+    if !response.hovered() {
+        return 0.0;
+    }
+    let delta = ui.input(|i| i.raw_scroll_delta.y);
+    if delta.abs() < WHEEL_DELTA_THRESHOLD {
+        0.0
+    } else {
+        delta.signum()
+    }
+}
+
 /// Rendert das Floating-Edit-Panel und gibt erzeugte Events zurück.
 ///
 /// Das Panel erscheint an `panel_pos` (Bildschirmkoordinaten) und zeigt
 /// nur die Steuerung für den gerade aktiven Edit-Modus.
+#[allow(clippy::too_many_arguments)]
 pub fn render_edit_panel(
     ctx: &egui::Context,
     road_map: Option<&RoadMap>,
     selected_node_ids: &IndexSet<u64>,
     distanzen_state: &mut DistanzenState,
+    distance_wheel_step_m: f32,
     active_tool: EditorTool,
     tool_manager: Option<&mut ToolManager>,
     panel_pos: Option<egui::Pos2>,
@@ -32,6 +49,7 @@ pub fn render_edit_panel(
             road_map,
             selected_node_ids,
             distanzen_state,
+            distance_wheel_step_m,
             panel_pos,
             &mut events,
         );
@@ -46,7 +64,13 @@ pub fn render_edit_panel(
                 .map(|t| t.has_pending_input())
                 .unwrap_or(false);
             if has_input {
-                render_route_tool_panel(ctx, manager, panel_pos, &mut events);
+                render_route_tool_panel(
+                    ctx,
+                    manager,
+                    distance_wheel_step_m,
+                    panel_pos,
+                    &mut events,
+                );
             }
         }
     }
@@ -60,6 +84,7 @@ fn render_streckenteilung_panel(
     road_map: Option<&RoadMap>,
     selected_node_ids: &IndexSet<u64>,
     distanzen_state: &mut DistanzenState,
+    distance_wheel_step_m: f32,
     panel_pos: Option<egui::Pos2>,
     events: &mut Vec<AppIntent>,
 ) {
@@ -106,7 +131,7 @@ fn render_streckenteilung_panel(
         ));
         ui.add_space(4.0);
 
-        render_streckenteilung_controls(ui, distanzen_state);
+        render_streckenteilung_controls(ui, distanzen_state, distance_wheel_step_m);
 
         ui.add_space(4.0);
         ui.checkbox(&mut distanzen_state.hide_original, "Originale ausblenden");
@@ -140,16 +165,25 @@ fn render_streckenteilung_panel(
 /// Gemeinsame Steuerelemente für Streckenteilung (Abstand + Nodes DragValues).
 ///
 /// Wird sowohl vom Floating-Panel als auch vom Properties-Panel verwendet.
-pub fn render_streckenteilung_controls(ui: &mut egui::Ui, distanzen_state: &mut DistanzenState) {
+pub fn render_streckenteilung_controls(
+    ui: &mut egui::Ui,
+    distanzen_state: &mut DistanzenState,
+    distance_wheel_step_m: f32,
+) {
     let prev_distance = distanzen_state.distance;
     ui.horizontal(|ui| {
         ui.label("Abstand:");
-        ui.add(
+        let response = ui.add(
             egui::DragValue::new(&mut distanzen_state.distance)
                 .speed(0.5)
                 .range(1.0..=25.0)
                 .suffix(" m"),
         );
+        let wheel_dir = wheel_dir_for_hovered(ui, &response);
+        if distance_wheel_step_m > 0.0 && wheel_dir != 0.0 {
+            distanzen_state.distance =
+                (distanzen_state.distance + wheel_dir * distance_wheel_step_m).clamp(1.0, 25.0);
+        }
     });
     if (distanzen_state.distance - prev_distance).abs() > f32::EPSILON {
         distanzen_state.by_count = false;
@@ -159,11 +193,17 @@ pub fn render_streckenteilung_controls(ui: &mut egui::Ui, distanzen_state: &mut 
     let prev_count = distanzen_state.count;
     ui.horizontal(|ui| {
         ui.label("Nodes:");
-        ui.add(
+        let response = ui.add(
             egui::DragValue::new(&mut distanzen_state.count)
                 .speed(1.0)
                 .range(2..=10000),
         );
+        let wheel_dir = wheel_dir_for_hovered(ui, &response);
+        if distance_wheel_step_m > 0.0 && wheel_dir > 0.0 {
+            distanzen_state.count = distanzen_state.count.saturating_add(1).min(10_000);
+        } else if distance_wheel_step_m > 0.0 && wheel_dir < 0.0 {
+            distanzen_state.count = distanzen_state.count.saturating_sub(1).max(2);
+        }
     });
     if distanzen_state.count != prev_count {
         distanzen_state.by_count = true;
@@ -179,6 +219,7 @@ pub fn render_streckenteilung_controls(ui: &mut egui::Ui, distanzen_state: &mut 
 fn render_route_tool_panel(
     ctx: &egui::Context,
     tool_manager: &mut ToolManager,
+    distance_wheel_step_m: f32,
     panel_pos: Option<egui::Pos2>,
     events: &mut Vec<AppIntent>,
 ) {
@@ -204,7 +245,7 @@ fn render_route_tool_panel(
         }
 
         if let Some(tool) = tool_manager.active_tool_mut() {
-            let changed = tool.render_config(ui);
+            let changed = tool.render_config(ui, distance_wheel_step_m);
             if changed && tool.needs_recreate() {
                 events.push(AppIntent::RouteToolConfigChanged);
             }

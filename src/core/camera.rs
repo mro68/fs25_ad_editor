@@ -12,6 +12,18 @@ pub struct Camera2D {
 }
 
 impl Camera2D {
+    /// Normalisiert Zoom-Grenzen, sodass `min <= max` und beide Werte endlich sind.
+    fn normalized_zoom_bounds(min: f32, max: f32) -> (f32, f32) {
+        if !min.is_finite() || !max.is_finite() {
+            return (Self::ZOOM_MIN, Self::ZOOM_MAX);
+        }
+        if min <= max {
+            (min, max)
+        } else {
+            (max, min)
+        }
+    }
+
     /// Sichtbare Welt-Halbbreite bei Zoom 1.0.
     pub const BASE_WORLD_EXTENT: f32 = 2048.0;
     /// Minimaler Zoom-Faktor.
@@ -44,11 +56,13 @@ impl Camera2D {
 
     /// Ändert den Zoom-Level mit benutzerdefinierten Grenzen
     pub fn zoom_by_clamped(&mut self, factor: f32, min: f32, max: f32) {
+        let (min, max) = Self::normalized_zoom_bounds(min, max);
         self.zoom = (self.zoom * factor).clamp(min, max);
     }
 
     /// Clamped den Zoom auf die gegebenen Grenzen
     pub fn clamp_zoom(&mut self, min: f32, max: f32) {
+        let (min, max) = Self::normalized_zoom_bounds(min, max);
         self.zoom = self.zoom.clamp(min, max);
     }
 

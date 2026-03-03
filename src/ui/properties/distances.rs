@@ -4,6 +4,21 @@ use std::collections::HashSet;
 use crate::app::state::DistanzenState;
 use crate::app::{AppIntent, RoadMap};
 
+/// Unterdrückt Rauschen/Restwerte, die ohne echtes Scrollen auftreten können.
+const WHEEL_DELTA_THRESHOLD: f32 = 0.5;
+
+fn wheel_dir_for_hovered(ui: &egui::Ui, response: &egui::Response) -> f32 {
+    if !response.hovered() {
+        return 0.0;
+    }
+    let delta = ui.input(|i| i.raw_scroll_delta.y);
+    if delta.abs() < WHEEL_DELTA_THRESHOLD {
+        0.0
+    } else {
+        delta.signum()
+    }
+}
+
 /// Rendert das Distanzen-Panel: Aktivierung, Spline-Vorschau und Resample-Steuerung.
 ///
 /// Ablauf: Button aktiviert Vorschau → Werte live anpassen → Enter übernimmt, Esc verwirft.
@@ -12,6 +27,7 @@ pub fn render_distance_panel(
     road_map: &RoadMap,
     selected_node_ids: &IndexSet<u64>,
     distance_state: &mut DistanzenState,
+    distance_wheel_step_m: f32,
     events: &mut Vec<AppIntent>,
 ) {
     use crate::shared::spline_geometry::{catmull_rom_chain_with_tangents, polyline_length};
@@ -63,12 +79,17 @@ pub fn render_distance_panel(
     let prev_distance = distance_state.distance;
     ui.horizontal(|ui| {
         ui.label("Abstand:");
-        ui.add(
+        let response = ui.add(
             egui::DragValue::new(&mut distance_state.distance)
                 .speed(0.5)
                 .range(1.0..=25.0)
                 .suffix(" m"),
         );
+        let wheel_dir = wheel_dir_for_hovered(ui, &response);
+        if distance_wheel_step_m > 0.0 && wheel_dir != 0.0 {
+            distance_state.distance =
+                (distance_state.distance + wheel_dir * distance_wheel_step_m).clamp(1.0, 25.0);
+        }
     });
     if (distance_state.distance - prev_distance).abs() > f32::EPSILON {
         distance_state.by_count = false;
@@ -78,11 +99,17 @@ pub fn render_distance_panel(
     let prev_count = distance_state.count;
     ui.horizontal(|ui| {
         ui.label("Nodes:");
-        ui.add(
+        let response = ui.add(
             egui::DragValue::new(&mut distance_state.count)
                 .speed(1.0)
                 .range(2..=10000),
         );
+        let wheel_dir = wheel_dir_for_hovered(ui, &response);
+        if distance_wheel_step_m > 0.0 && wheel_dir > 0.0 {
+            distance_state.count = distance_state.count.saturating_add(1).min(10_000);
+        } else if distance_wheel_step_m > 0.0 && wheel_dir < 0.0 {
+            distance_state.count = distance_state.count.saturating_sub(1).max(2);
+        }
     });
     if distance_state.count != prev_count {
         distance_state.by_count = true;

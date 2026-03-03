@@ -10,7 +10,11 @@ impl StraightLineTool {
     /// Rendert das Konfigurationspanel im Properties-Panel.
     ///
     /// Gibt `true` zurück wenn sich eine Einstellung geändert hat.
-    pub(super) fn render_config_view(&mut self, ui: &mut egui::Ui) -> bool {
+    pub(super) fn render_config_view(
+        &mut self,
+        ui: &mut egui::Ui,
+        distance_wheel_step_m: f32,
+    ) -> bool {
         let adjusting = !self.lifecycle.last_created_ids.is_empty()
             && self.last_start_anchor.is_some()
             && self.lifecycle.last_end_anchor.is_some();
@@ -31,6 +35,7 @@ impl StraightLineTool {
             ready,
             length,
             "Streckenlänge",
+            distance_wheel_step_m,
         );
         if recreate {
             self.lifecycle.recreate_needed = true;

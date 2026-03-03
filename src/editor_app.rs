@@ -3,7 +3,7 @@
 use eframe::egui;
 use eframe::egui_wgpu;
 use fs25_auto_drive_editor::{
-    render, ui, AppController, AppIntent, AppState, EditorOptions, EditorTool,
+    render, ui, AppController, AppIntent, AppState, EditorOptions, EditorTool, ValueAdjustInputMode,
 };
 
 /// Haupt-Anwendungsstruktur.
@@ -99,6 +99,10 @@ impl EditorApp {
         let default_direction = self.state.editor.default_direction;
         let default_priority = self.state.editor.default_priority;
         let active_tool = self.state.editor.active_tool;
+        let distance_wheel_step_m = match self.state.options.value_adjust_input_mode {
+            ValueAdjustInputMode::DragHorizontal => 0.0,
+            ValueAdjustInputMode::MouseWheel => self.state.options.mouse_wheel_distance_step_m,
+        };
         let route_tool_manager = if active_tool == EditorTool::Route {
             Some(&mut self.state.editor.tool_manager)
         } else {
@@ -110,6 +114,7 @@ impl EditorApp {
             &self.state.selection.selected_node_ids,
             default_direction,
             default_priority,
+            distance_wheel_step_m,
             active_tool,
             route_tool_manager,
             Some(&self.state.segment_registry),
@@ -131,6 +136,7 @@ impl EditorApp {
             self.state.road_map.as_deref(),
             &self.state.selection.selected_node_ids,
             &mut self.state.ui.distanzen,
+            distance_wheel_step_m,
             active_tool,
             edit_tool_manager,
             panel_pos,
