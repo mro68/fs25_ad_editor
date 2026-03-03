@@ -27,6 +27,16 @@ pub const HITBOX_SCALE_PERCENT: f32 = 100.0;
 /// Schrittweite für Distanz-Felder bei Mausrad-Anpassung in Metern.
 pub const MOUSE_WHEEL_DISTANCE_STEP_M: f32 = 0.1;
 
+/// Eingabemodus für numerische Feldänderungen im UI.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Default)]
+pub enum ValueAdjustInputMode {
+    /// Standard-egui-DragValue-Verhalten: LMT nach links/rechts.
+    DragHorizontal,
+    /// Mausrad über dem Feld: hoch = erhöhen, runter = verringern.
+    #[default]
+    MouseWheel,
+}
+
 // ── Terrain ─────────────────────────────────────────────────────────
 
 /// Standard-Terrain-Höhenskala (FS25: normalized_pixel × Faktor = Y-Meter).
@@ -189,6 +199,9 @@ pub struct EditorOptions {
     /// Schrittweite in Metern für Distanz-Felder bei Mausrad (hoch/runter)
     #[serde(default = "default_mouse_wheel_distance_step_m")]
     pub mouse_wheel_distance_step_m: f32,
+    /// Eingabemodus für numerische Feldänderungen im UI.
+    #[serde(default)]
+    pub value_adjust_input_mode: ValueAdjustInputMode,
     // ── AddNode-Verhalten ─────────────────────────────────────────────
     /// Angrenzende Nodes automatisch verbinden wenn ein Node gelöscht wird
     #[serde(default)]
@@ -249,6 +262,7 @@ impl Default for EditorOptions {
             snap_scale_percent: SNAP_SCALE_PERCENT,
             hitbox_scale_percent: HITBOX_SCALE_PERCENT,
             mouse_wheel_distance_step_m: MOUSE_WHEEL_DISTANCE_STEP_M,
+            value_adjust_input_mode: ValueAdjustInputMode::default(),
             reconnect_on_delete: true,
             split_connection_on_place: true,
             terrain_height_scale: TERRAIN_HEIGHT_SCALE,

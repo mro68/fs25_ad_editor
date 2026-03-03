@@ -6,6 +6,10 @@ use crate::app::AppIntent;
 impl InputState {
     /// Verarbeitet Scroll-Zoom auf die aktuelle Mausposition.
     pub(crate) fn handle_scroll_zoom(&self, ctx: &ViewportContext, events: &mut Vec<AppIntent>) {
+        if !ctx.response.hovered() {
+            return;
+        }
+
         let scroll = ctx.ui.input(|i| i.smooth_scroll_delta.y);
         if scroll == 0.0 {
             return;

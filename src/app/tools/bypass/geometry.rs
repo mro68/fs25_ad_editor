@@ -50,7 +50,17 @@ pub fn compute_bypass_positions(
     }
 
     // ── Übergangslänge ────────────────────────────────────────────────────────
-    let d_blend = (offset.abs() * 1.5).clamp(offset.abs().max(0.1), total_len * 0.35);
+    // Grenzen robust normalisieren, damit `min <= max` auch bei sehr kurzem Pfad gilt.
+    let target_blend = offset.abs() * 1.5;
+    let min_blend = offset.abs().max(0.1);
+    let max_blend = total_len * 0.35;
+    let d_blend = if min_blend <= max_blend {
+        target_blend.clamp(min_blend, max_blend)
+    } else {
+        // Fallback für Grenzfall: kurzer Pfad + großer Offset.
+        // Der Mindestwert ist geometrisch nicht erfüllbar, daher maximal erlaubte Übergangslänge.
+        max_blend
+    };
 
     if d_blend * 2.0 >= total_len {
         return None;

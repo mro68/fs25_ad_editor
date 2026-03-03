@@ -82,6 +82,17 @@ Zentral gesammelte Konfigurationswerte, gegliedert nach Bereich:
 | Tools | `SNAP_SCALE_PERCENT` | 100.0 | Snap-Radius in % der Node-Größe |
 | Tools | `HITBOX_SCALE_PERCENT` | 100.0 | Standard-Hitbox-Skalierung in % der Node-Größe |
 | Tools | `MOUSE_WHEEL_DISTANCE_STEP_M` | 0.1 | Schrittweite (m) für Distanz-Felder bei Mausrad |
+
+### `ValueAdjustInputMode`
+
+Steuert, wie numerische Felder im UI verändert werden.
+
+```rust
+pub enum ValueAdjustInputMode {
+    DragHorizontal, // LMT nach links/rechts
+    MouseWheel,     // Mausrad hoch/runter
+}
+```
 | Terrain | `TERRAIN_HEIGHT_SCALE` | 255.0 | Höhenskala für Heightmap-Export |
 
 ### `OverviewLayerOptions`
@@ -156,6 +167,8 @@ pub struct EditorOptions {
     pub hitbox_scale_percent: f32,
     /// Schrittweite in Metern für Distanz-Felder bei Mausrad
     pub mouse_wheel_distance_step_m: f32,
+    /// Eingabemodus für numerische Feldänderungen
+    pub value_adjust_input_mode: ValueAdjustInputMode,
     /// true = Mittelpunkt zwischen Vorgänger und Nachfolger beim Löschen verbinden
     pub reconnect_on_delete: bool,
     /// true = bestehende Verbindung beim Platzieren splitten
