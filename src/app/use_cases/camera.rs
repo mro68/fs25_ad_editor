@@ -88,8 +88,11 @@ pub fn center_on_road_map(state: &mut AppState, road_map: &RoadMap) {
     let height = max_y - min_y;
     let max_extent = width.max(height);
     use crate::core::Camera2D;
-    state.view.camera.zoom = (Camera2D::BASE_WORLD_EXTENT / (max_extent / 2.0))
-        .clamp(state.options.camera_zoom_min, state.options.camera_zoom_max);
+    state.view.camera.zoom = Camera2D::BASE_WORLD_EXTENT / (max_extent / 2.0);
+    state
+        .view
+        .camera
+        .clamp_zoom(state.options.camera_zoom_min, state.options.camera_zoom_max);
 
     log::info!(
         "Map bounds: ({:.1}, {:.1}) to ({:.1}, {:.1}), center: ({:.1}, {:.1}), zoom: {:.2}",

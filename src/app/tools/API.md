@@ -39,7 +39,7 @@ Schnittstelle für alle Route-Tools (Linie, Kurve, …). Tools sind zustandsbeha
 - `status_text() → &str` — Statustext für Properties-Panel
 - `on_click(pos, road_map, ctrl) → ToolAction` — Viewport-Klick verarbeiten
 - `preview(cursor_pos, road_map) → ToolPreview` — Preview-Geometrie berechnen
-- `render_config(ui) → bool` — Tool-Konfiguration im Properties-Panel
+- `render_config(ui, distance_wheel_step_m) → bool` — Tool-Konfiguration im Properties-Panel (inkl. Mausrad-Schrittweite für Distanz-Felder)
 - `execute(road_map) → Option<ToolResult>` — Ergebnis erzeugen
 - `reset()` — Tool-Zustand zurücksetzen
 - `is_ready() → bool` — Bereit zur Ausführung?
@@ -135,7 +135,7 @@ Hilfsfunktionen: `angle_to_compass`, `node_count_from_length`, `populate_neighbo
 - `chaining_start_anchor() → Option<ToolAnchor>` — Gibt den End-Anker für die Verkettung zurück, wobei `NewPosition` zu `ExistingNode` hochgestuft wird (verhindert doppelte Nodes am Verkettungspunkt)
 - `prepare_for_chaining(&mut lifecycle, &mut seg, &last_anchors)` — Setzt Lifecycle-State und SegmentConfig für die nächste Verkettung zurück (DRY-Hilfsmethode)
 
-**`render_segment_config_3modes(seg, ui, adjusting, ready, length, label) → (changed, recreate)`** — Gemeinsame Hilfsfunktion für die 3 SegmentConfig-Darstellungsmodi (Adjusting/Live/Default). Wird von allen Route-Tools in `render_config()` genutzt.
+**`render_segment_config_3modes(seg, ui, adjusting, ready, length, label, distance_wheel_step_m) → (changed, recreate)`** — Gemeinsame Hilfsfunktion für die 3 SegmentConfig-Darstellungsmodi (Adjusting/Live/Default) inkl. Mausrad-Änderungen für Distanz/Node-Anzahl.
 
 **`impl_lifecycle_delegation!`** — Makro zur Delegation der Standard-RouteTool-Lifecycle-Methoden (`on_deactivate`, `chaining_start_anchor`, `is_adjusting`, `segment_config_mut`) an die gemeinsamen Felder. Eliminiert ~20 Zeilen Boilerplate pro Tool.
 

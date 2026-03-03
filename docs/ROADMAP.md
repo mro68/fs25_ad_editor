@@ -66,6 +66,7 @@
   - [x] UI-Buttons + Shortcuts (Ctrl+Z / Ctrl+Y)
   - [x] CommandLog für Debug-Zwecke
 - [x] Properties-Panel (Node-IDs, Positionen, Verbindungen anzeigen/editieren)
+- [x] Mausrad-Steuerung für Distanz/Node-Felder (Scroll hoch = erhöhen, runter = verringern)
 - [x] Context-Menu (Rechtsklick → Verbindungsaktionen)
 - [x] **AddNode-Verhalten konfigurierbar** (2026-02-24)
   - [x] Checkbox „Nach Löschen verbinden": Vorgänger/Nachfolger eines gelöschten Nodes direkt verbinden
