@@ -97,7 +97,7 @@ pub fn init_chain_if_needed(state: &mut AppState) {
         .editor
         .tool_manager
         .active_tool()
-        .map_or(false, |t| t.needs_chain_input());
+        .is_some_and(|t| t.needs_chain_input());
     if !needs_chain {
         return;
     }
@@ -106,8 +106,7 @@ pub fn init_chain_if_needed(state: &mut AppState) {
         return;
     };
 
-    let Some(ordered_ids) = road_map.ordered_chain_nodes(&state.selection.selected_node_ids)
-    else {
+    let Some(ordered_ids) = road_map.ordered_chain_nodes(&state.selection.selected_node_ids) else {
         log::debug!("Bypass-Tool: Selektion bildet keine lineare Kette");
         return;
     };
