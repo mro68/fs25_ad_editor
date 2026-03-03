@@ -165,7 +165,7 @@ impl SegmentConfig {
     const WHEEL_DELTA_THRESHOLD: f32 = 0.5;
 
     /// Ermittelt die Scroll-Richtung für ein gehovertes Widget.
-    fn wheel_dir(ui: &egui::Ui, response: &egui::Response) -> f32 {
+    pub(crate) fn wheel_dir(ui: &egui::Ui, response: &egui::Response) -> f32 {
         if !response.hovered() {
             return 0.0;
         }

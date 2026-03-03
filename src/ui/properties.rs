@@ -282,6 +282,9 @@ fn render_segment_edit_buttons(
             crate::app::segment_registry::SegmentKind::CurveQuad { .. } => "✏ Kurve Grad 2",
             crate::app::segment_registry::SegmentKind::CurveCubic { .. } => "✏ Kurve Grad 3",
             crate::app::segment_registry::SegmentKind::Spline { .. } => "✏ Spline",
+            crate::app::segment_registry::SegmentKind::ConstraintRoute { .. } => {
+                "✏ Constraint Route"
+            }
         };
         if ui.button(label).clicked() {
             events.push(AppIntent::EditSegmentRequested {

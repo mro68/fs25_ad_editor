@@ -15,7 +15,7 @@ pub struct ToolManager { /* intern */ }
 ```
 
 **Methoden:**
-- `new() → Self` — Erstellt ToolManager mit vorregistrierten Standard-Tools (StraightLine, Bézier Grad 2, Bézier Grad 3, Spline)
+- `new() → Self` — Erstellt ToolManager mit vorregistrierten Standard-Tools (StraightLine, Bézier Grad 2, Bézier Grad 3, Spline, Bypass, ConstraintRoute)
 - `register(tool)` — Neues Route-Tool registrieren
 - `tool_count() → usize` — Anzahl registrierter Tools
 - `tool_names() → Vec<(usize, &str)>` — Name + Index aller Tools
@@ -77,6 +77,8 @@ fn load_for_edit(&mut self, record: &SegmentRecord, kind: &SegmentKind);
 | 1 | `CurveTool` (Grad 2) | `⌒` | `CurveTool::new()` |
 | 2 | `CurveTool` (Grad 3) | `〜` | `CurveTool::new_cubic()` |
 | 3 | `SplineTool` | `〰` | `SplineTool::new()` |
+| 4 | `BypassTool` | `⇉` | `BypassTool::new()` |
+| 5 | `ConstraintRouteTool` | `⊿` | `ConstraintRouteTool::new()` |
 
 ### `StraightLineTool`
 
@@ -100,6 +102,37 @@ Modulstruktur: `state.rs` (Enums, Struct, Ctors), `lifecycle.rs` (RouteTool-Impl
 ### `SplineTool`
 
 Catmull-Rom-Spline: interpolierende Kurve durch alle geklickten Punkte. Beliebig viele Kontrollpunkte, fortlaufende Vorschau (Cursor als nächster Punkt), Enter bestätigt. Nachbearbeitung (Segment-Länge/Node-Anzahl) und Verkettung unterstützt.
+
+### `ConstraintRouteTool`
+
+Winkelgeglättete Route mit automatischen Tangenten-Übergängen. Solver-Pipeline:
+1. **Approach-Steerer:** Auto-Steuerpunkt am Start (Dot-Product-basierte Nachbar-Auswahl, dynamischer Abstand)
+2. **User-Kontrollpunkte:** Beliebig viele Zwischen-Kontrollpunkte (Phase::ControlNodes)
+3. **Departure-Steerer:** Analog am Ende
+4. **Subdivide:** Gleichmäßige Unterteilung aller Segmente auf `max_segment_length`
+5. **Chaikin-Corner-Cutting:** Iteratives Glätten der schärfsten Ecke (mit Re-Subdivision nach jedem Cut)
+6. **Resampling:** Finale Punkte auf gleichmäßige Abstände
+
+**Steuerpunkte (Steerer):**
+- Automatisch berechnet aus Nachbar-Richtungen (`connected_neighbors`)
+- Im UI als Steuerpunkte angezeigt (Config-Panel + Viewport)
+- Per Drag im Viewport verschiebbar (wird dann als manuell markiert)
+- Reset-Button (↺) im Config-Panel setzt auf Auto-Berechnung zurück
+- Manuell verschobene Steuerpunkte werden als Kontrollpunkte an den Solver übergeben
+
+**Solver-Typen:**
+- `SolverResult` — Positionen + optionale Approach/Departure-Steuerpunkte
+- `ConstraintRouteInput` — Eingabeparameter für den Solver
+
+**Solver-Parameter:**
+- `max_angle_deg: f32` (5°..135°) — Maximale Richtungsänderung pro Segment
+- `max_segment_length: f32` — via `SegmentConfig`
+
+**Drag-Targets:** Start, End, ApproachSteerer, DepartureSteerer, Control(i)
+
+**Phasen:** `Start` → `End` → `ControlNodes` (Enter bestätigt)
+
+Modulstruktur: `state.rs`, `lifecycle.rs`, `geometry.rs`, `drag.rs`, `config_ui.rs`, `tests.rs`
 
 ---
 
