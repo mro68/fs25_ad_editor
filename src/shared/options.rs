@@ -24,6 +24,8 @@ pub const CAMERA_SCROLL_ZOOM_STEP: f32 = 1.025;
 pub const SNAP_SCALE_PERCENT: f32 = 100.0;
 /// Standard-Hitbox-Skalierung in Prozent der Node-Größe.
 pub const HITBOX_SCALE_PERCENT: f32 = 100.0;
+/// Schrittweite für Distanz-Felder bei Mausrad-Anpassung in Metern.
+pub const MOUSE_WHEEL_DISTANCE_STEP_M: f32 = 0.1;
 
 // ── Terrain ─────────────────────────────────────────────────────────
 
@@ -184,6 +186,9 @@ pub struct EditorOptions {
     /// Hitbox-Skalierung in Prozent der Node-Größe (100 = exakte Node-Größe)
     #[serde(default = "default_hitbox_scale_percent")]
     pub hitbox_scale_percent: f32,
+    /// Schrittweite in Metern für Distanz-Felder bei Mausrad (hoch/runter)
+    #[serde(default = "default_mouse_wheel_distance_step_m")]
+    pub mouse_wheel_distance_step_m: f32,
     // ── AddNode-Verhalten ─────────────────────────────────────────────
     /// Angrenzende Nodes automatisch verbinden wenn ein Node gelöscht wird
     #[serde(default)]
@@ -243,6 +248,7 @@ impl Default for EditorOptions {
 
             snap_scale_percent: SNAP_SCALE_PERCENT,
             hitbox_scale_percent: HITBOX_SCALE_PERCENT,
+            mouse_wheel_distance_step_m: MOUSE_WHEEL_DISTANCE_STEP_M,
             reconnect_on_delete: true,
             split_connection_on_place: true,
             terrain_height_scale: TERRAIN_HEIGHT_SCALE,
@@ -262,6 +268,11 @@ fn default_snap_scale_percent() -> f32 {
 /// Serde-Default für `hitbox_scale_percent` (Abwärtskompatibilität bestehender TOML-Dateien).
 fn default_hitbox_scale_percent() -> f32 {
     HITBOX_SCALE_PERCENT
+}
+
+/// Serde-Default für `mouse_wheel_distance_step_m`.
+fn default_mouse_wheel_distance_step_m() -> f32 {
+    MOUSE_WHEEL_DISTANCE_STEP_M
 }
 
 /// Serde-Default für `camera_zoom_min` (Abwärtskompatibilität älterer TOML-Dateien).
@@ -371,6 +382,13 @@ impl EditorOptions {
             return Err(anyhow::anyhow!(
                 "snap_scale_percent ({}) muss zwischen 25 und 2000 liegen",
                 self.snap_scale_percent
+            ));
+        }
+
+        if self.mouse_wheel_distance_step_m <= 0.0 || self.mouse_wheel_distance_step_m > 10.0 {
+            return Err(anyhow::anyhow!(
+                "mouse_wheel_distance_step_m ({}) muss > 0 und <= 10 sein",
+                self.mouse_wheel_distance_step_m
             ));
         }
 

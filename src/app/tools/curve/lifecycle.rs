@@ -190,8 +190,8 @@ impl RouteTool for CurveTool {
         }
     }
 
-    fn render_config(&mut self, ui: &mut egui::Ui) -> bool {
-        self.render_config_view(ui)
+    fn render_config(&mut self, ui: &mut egui::Ui, distance_wheel_step_m: f32) -> bool {
+        self.render_config_view(ui, distance_wheel_step_m)
     }
 
     fn execute(&self, road_map: &RoadMap) -> Option<ToolResult> {

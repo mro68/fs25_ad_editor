@@ -96,6 +96,7 @@ pub fn render_properties_panel(
   selected_node_ids: &HashSet<u64>,
   default_direction: ConnectionDirection,
   default_priority: ConnectionPriority,
+  distance_wheel_step_m: f32,
   active_tool: EditorTool,
   tool_manager: Option<&mut ToolManager>,
   segment_registry: Option<&SegmentRegistry>,

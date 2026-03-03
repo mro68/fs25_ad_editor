@@ -12,6 +12,7 @@ pub fn render_distance_panel(
     road_map: &RoadMap,
     selected_node_ids: &IndexSet<u64>,
     distance_state: &mut DistanzenState,
+    distance_wheel_step_m: f32,
     events: &mut Vec<AppIntent>,
 ) {
     use crate::shared::spline_geometry::{catmull_rom_chain_with_tangents, polyline_length};
@@ -63,12 +64,19 @@ pub fn render_distance_panel(
     let prev_distance = distance_state.distance;
     ui.horizontal(|ui| {
         ui.label("Abstand:");
-        ui.add(
+        let response = ui.add(
             egui::DragValue::new(&mut distance_state.distance)
                 .speed(0.5)
                 .range(1.0..=25.0)
                 .suffix(" m"),
         );
+        if response.hovered() {
+            let wheel_dir = ui.input(|i| i.raw_scroll_delta.y).signum();
+            if wheel_dir != 0.0 {
+                distance_state.distance =
+                    (distance_state.distance + wheel_dir * distance_wheel_step_m).clamp(1.0, 25.0);
+            }
+        }
     });
     if (distance_state.distance - prev_distance).abs() > f32::EPSILON {
         distance_state.by_count = false;
@@ -78,11 +86,19 @@ pub fn render_distance_panel(
     let prev_count = distance_state.count;
     ui.horizontal(|ui| {
         ui.label("Nodes:");
-        ui.add(
+        let response = ui.add(
             egui::DragValue::new(&mut distance_state.count)
                 .speed(1.0)
                 .range(2..=10000),
         );
+        if response.hovered() {
+            let wheel_dir = ui.input(|i| i.raw_scroll_delta.y).signum();
+            if wheel_dir > 0.0 {
+                distance_state.count = distance_state.count.saturating_add(1).min(10_000);
+            } else if wheel_dir < 0.0 {
+                distance_state.count = distance_state.count.saturating_sub(1).max(2);
+            }
+        }
     });
     if distance_state.count != prev_count {
         distance_state.by_count = true;

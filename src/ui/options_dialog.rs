@@ -70,6 +70,17 @@ pub fn show_options_dialog(
                                 )
                                 .changed();
                         });
+                        ui.horizontal(|ui| {
+                            ui.label("Mausrad-Schritt Distanz:");
+                            changed |= ui
+                                .add(
+                                    egui::DragValue::new(&mut opts.mouse_wheel_distance_step_m)
+                                        .range(0.01..=5.0)
+                                        .speed(0.01)
+                                        .suffix(" m"),
+                                )
+                                .changed();
+                        });
                     });
 
                     // ── Selektion ───────────────────────────────────

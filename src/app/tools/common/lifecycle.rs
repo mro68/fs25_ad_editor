@@ -161,6 +161,14 @@ pub struct SegmentConfig {
 }
 
 impl SegmentConfig {
+    /// Ermittelt die Scroll-Richtung für ein gehovertes Widget.
+    fn wheel_dir(ui: &egui::Ui, response: &egui::Response) -> f32 {
+        if !response.hovered() {
+            return 0.0;
+        }
+        ui.input(|i| i.raw_scroll_delta.y).signum()
+    }
+
     /// Erstellt eine neue Segment-Konfiguration mit gegebenem Standard-Abstand.
     pub fn new(default_segment_length: f32) -> Self {
         Self {
@@ -188,7 +196,13 @@ impl SegmentConfig {
     /// Rendert die Segment-Slider im Nachbearbeitungs-Modus (mit recreate-Flag).
     ///
     /// Gibt `(changed, recreate_needed)` zurück.
-    fn render_adjusting(&mut self, ui: &mut egui::Ui, length: f32, label: &str) -> (bool, bool) {
+    fn render_adjusting(
+        &mut self,
+        ui: &mut egui::Ui,
+        length: f32,
+        label: &str,
+        distance_wheel_step_m: f32,
+    ) -> (bool, bool) {
         let mut changed = false;
         let mut recreate = false;
 
@@ -197,10 +211,17 @@ impl SegmentConfig {
 
         ui.label("Min. Abstand:");
         let max_seg = length.max(1.0);
-        if ui
-            .add(egui::Slider::new(&mut self.max_segment_length, 1.0..=max_seg).suffix(" m"))
-            .changed()
-        {
+        let distance_response =
+            ui.add(egui::Slider::new(&mut self.max_segment_length, 1.0..=max_seg).suffix(" m"));
+        let mut distance_changed = distance_response.changed();
+        let distance_wheel_dir = Self::wheel_dir(ui, &distance_response);
+        if distance_wheel_dir != 0.0 {
+            self.max_segment_length = (self.max_segment_length
+                + distance_wheel_dir * distance_wheel_step_m)
+                .clamp(1.0, max_seg);
+            distance_changed = true;
+        }
+        if distance_changed {
             self.last_edited = LastEdited::Distance;
             self.node_count = node_count_from_length(length, self.max_segment_length);
             recreate = true;
@@ -211,10 +232,18 @@ impl SegmentConfig {
 
         ui.label("Anzahl Nodes:");
         let max_nodes = (length / 1.0).ceil().max(2.0) as usize;
-        if ui
-            .add(egui::Slider::new(&mut self.node_count, 2..=max_nodes))
-            .changed()
-        {
+        let node_response = ui.add(egui::Slider::new(&mut self.node_count, 2..=max_nodes));
+        let mut node_changed = node_response.changed();
+        let node_wheel_dir = Self::wheel_dir(ui, &node_response);
+        if node_wheel_dir != 0.0 {
+            if node_wheel_dir > 0.0 {
+                self.node_count = self.node_count.saturating_add(1).min(max_nodes);
+            } else {
+                self.node_count = self.node_count.saturating_sub(1).max(2);
+            }
+            node_changed = true;
+        }
+        if node_changed {
             self.last_edited = LastEdited::NodeCount;
             self.max_segment_length = segment_length_from_count(length, self.node_count);
             recreate = true;
@@ -227,7 +256,13 @@ impl SegmentConfig {
     /// Rendert die Segment-Slider im Live-Modus (Tool ist bereit, aber noch nicht ausgeführt).
     ///
     /// Gibt `true` zurück wenn sich etwas geändert hat.
-    fn render_live(&mut self, ui: &mut egui::Ui, length: f32, label: &str) -> bool {
+    fn render_live(
+        &mut self,
+        ui: &mut egui::Ui,
+        length: f32,
+        label: &str,
+        distance_wheel_step_m: f32,
+    ) -> bool {
         let mut changed = false;
 
         ui.label(format!("{}: {:.1} m", label, length));
@@ -235,10 +270,17 @@ impl SegmentConfig {
 
         ui.label("Min. Abstand:");
         let max_seg = length.max(1.0);
-        if ui
-            .add(egui::Slider::new(&mut self.max_segment_length, 1.0..=max_seg).suffix(" m"))
-            .changed()
-        {
+        let distance_response =
+            ui.add(egui::Slider::new(&mut self.max_segment_length, 1.0..=max_seg).suffix(" m"));
+        let mut distance_changed = distance_response.changed();
+        let distance_wheel_dir = Self::wheel_dir(ui, &distance_response);
+        if distance_wheel_dir != 0.0 {
+            self.max_segment_length = (self.max_segment_length
+                + distance_wheel_dir * distance_wheel_step_m)
+                .clamp(1.0, max_seg);
+            distance_changed = true;
+        }
+        if distance_changed {
             self.last_edited = LastEdited::Distance;
             self.sync_from_length(length);
             changed = true;
@@ -248,10 +290,18 @@ impl SegmentConfig {
 
         ui.label("Anzahl Nodes:");
         let max_nodes = (length / 1.0).ceil().max(2.0) as usize;
-        if ui
-            .add(egui::Slider::new(&mut self.node_count, 2..=max_nodes))
-            .changed()
-        {
+        let node_response = ui.add(egui::Slider::new(&mut self.node_count, 2..=max_nodes));
+        let mut node_changed = node_response.changed();
+        let node_wheel_dir = Self::wheel_dir(ui, &node_response);
+        if node_wheel_dir != 0.0 {
+            if node_wheel_dir > 0.0 {
+                self.node_count = self.node_count.saturating_add(1).min(max_nodes);
+            } else {
+                self.node_count = self.node_count.saturating_sub(1).max(2);
+            }
+            node_changed = true;
+        }
+        if node_changed {
             self.last_edited = LastEdited::NodeCount;
             self.sync_from_length(length);
             changed = true;
@@ -263,14 +313,20 @@ impl SegmentConfig {
     /// Rendert den Segment-Slider im Default-Modus (Tool noch nicht bereit).
     ///
     /// Gibt `true` zurück wenn sich etwas geändert hat.
-    fn render_default(&mut self, ui: &mut egui::Ui) -> bool {
+    fn render_default(&mut self, ui: &mut egui::Ui, distance_wheel_step_m: f32) -> bool {
         let mut changed = false;
 
         ui.label("Max. Segment-Länge:");
-        if ui
-            .add(egui::Slider::new(&mut self.max_segment_length, 1.0..=20.0).suffix(" m"))
-            .changed()
-        {
+        let response =
+            ui.add(egui::Slider::new(&mut self.max_segment_length, 1.0..=20.0).suffix(" m"));
+        let mut distance_changed = response.changed();
+        let wheel_dir = Self::wheel_dir(ui, &response);
+        if wheel_dir != 0.0 {
+            self.max_segment_length =
+                (self.max_segment_length + wheel_dir * distance_wheel_step_m).clamp(1.0, 20.0);
+            distance_changed = true;
+        }
+        if distance_changed {
             self.last_edited = LastEdited::Distance;
             changed = true;
         }
@@ -317,12 +373,16 @@ pub fn render_segment_config_3modes(
     ready: bool,
     length: f32,
     label: &str,
+    distance_wheel_step_m: f32,
 ) -> (bool, bool) {
     if adjusting {
-        seg.render_adjusting(ui, length, label)
+        seg.render_adjusting(ui, length, label, distance_wheel_step_m)
     } else if ready {
-        (seg.render_live(ui, length, label), false)
+        (
+            seg.render_live(ui, length, label, distance_wheel_step_m),
+            false,
+        )
     } else {
-        (seg.render_default(ui), false)
+        (seg.render_default(ui, distance_wheel_step_m), false)
     }
 }

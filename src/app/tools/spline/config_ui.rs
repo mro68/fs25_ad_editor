@@ -12,7 +12,11 @@ impl SplineTool {
     /// Rendert das Konfigurationspanel im Properties-Panel.
     ///
     /// Gibt `true` zurück wenn sich eine Einstellung geändert hat.
-    pub(super) fn render_config_view(&mut self, ui: &mut egui::Ui) -> bool {
+    pub(super) fn render_config_view(
+        &mut self,
+        ui: &mut egui::Ui,
+        distance_wheel_step_m: f32,
+    ) -> bool {
         let mut changed = false;
 
         // Tangenten-Auswahl nur im Nachbearbeitungs-Modus —
@@ -66,8 +70,15 @@ impl SplineTool {
                 self.tangents.tangent_end,
             );
 
-            let (seg_changed, recreate) =
-                render_segment_config_3modes(&mut self.seg, ui, true, true, length, "Spline-Länge");
+            let (seg_changed, recreate) = render_segment_config_3modes(
+                &mut self.seg,
+                ui,
+                true,
+                true,
+                length,
+                "Spline-Länge",
+                distance_wheel_step_m,
+            );
             if recreate {
                 self.lifecycle.recreate_needed = true;
             }
@@ -82,11 +93,19 @@ impl SplineTool {
                 true,
                 length,
                 "Spline-Länge",
+                distance_wheel_step_m,
             );
             changed |= seg_changed;
         } else {
-            let (seg_changed, _) =
-                render_segment_config_3modes(&mut self.seg, ui, false, false, 0.0, "Spline-Länge");
+            let (seg_changed, _) = render_segment_config_3modes(
+                &mut self.seg,
+                ui,
+                false,
+                false,
+                0.0,
+                "Spline-Länge",
+                distance_wheel_step_m,
+            );
             changed |= seg_changed;
         }
 
