@@ -73,8 +73,8 @@ pub fn compute_bypass_positions(
     // ── Hauptstrecke (mittleres Teilstück, parallel verschoben) ──────────────
     let mut main_chain: Vec<Vec2> = Vec::with_capacity(i_n - i0 + 3);
     main_chain.push(b0_chain);
-    for j in (i0 + 1)..=i_n {
-        main_chain.push(dense[j]);
+    for point in dense.iter().take(i_n + 1).skip(i0 + 1) {
+        main_chain.push(*point);
     }
     main_chain.push(bn_chain);
 
@@ -83,8 +83,7 @@ pub fn compute_bypass_positions(
 
     // ── S-Kurven (kubische Bézier) ────────────────────────────────────────────
     let t_chain_start = (dense[1] - dense[0]).normalize_or_zero();
-    let t_chain_end =
-        (*dense.last().unwrap() - dense[dense.len() - 2]).normalize_or_zero();
+    let t_chain_end = (*dense.last().unwrap() - dense[dense.len() - 2]).normalize_or_zero();
 
     const CP: f32 = 0.45;
     let cp_dist = d_blend * CP;
