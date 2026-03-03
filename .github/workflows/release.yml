@@ -1,108 +1,115 @@
 name: Release
 
 on:
-    push:
-        tags:
-            - "v*"
+  push:
+    tags:
+      - "v*"
 
 permissions:
-    contents: write
+  contents: write
 
 env:
-    CARGO_TERM_COLOR: always
-    CARGO_TARGET_DIR: target
-    BIN_NAME: FS25-AutoDrive-Editor
+  CARGO_TERM_COLOR: always
+  CARGO_TARGET_DIR: target
+  BIN_NAME: FS25-AutoDrive-Editor
 
 jobs:
-    build-linux:
-        name: Build Linux x64
-        runs-on: ubuntu-latest
-        steps:
-            - uses: actions/checkout@v4
+  build-linux:
+    name: Build Linux x64
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
 
-            - name: Install Rust toolchain
-              uses: dtolnay/rust-toolchain@stable
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
 
-            - name: Cache cargo
-              uses: actions/cache@v4
-              with:
-                  path: |
-                      ~/.cargo/registry
-                      ~/.cargo/git
-                      target
-                  key: linux-release-${{ hashFiles('**/Cargo.lock') }}
-                  restore-keys: linux-release-
+      - name: Cache cargo
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target
+          key: linux-release-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: linux-release-
 
-            - name: Install system dependencies
-              run: |
-                  sudo apt-get update
-                  sudo apt-get install -y libxcb-render0-dev libxcb-shape0-dev libxcb-xfixes0-dev \
-                    libxkbcommon-dev libssl-dev libgtk-3-dev
+      - name: Install system dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libxcb-render0-dev libxcb-shape0-dev libxcb-xfixes0-dev \
+            libxkbcommon-dev libssl-dev libgtk-3-dev
 
-            - name: Build
-              run: cargo build --release
+      - name: Build
+        run: cargo build --release
 
-            - name: Strip binary
-              run: strip target/release/${{ env.BIN_NAME }}
+      - name: Strip binary
+        run: strip target/release/${{ env.BIN_NAME }}
 
-            - name: Upload artifact
-              uses: actions/upload-artifact@v4
-              with:
-                  name: linux-binary
-                  path: target/release/${{ env.BIN_NAME }}
+      - name: Rename binary
+        run: mv target/release/${{ env.BIN_NAME }} target/release/${{ env.BIN_NAME }}_linux_x64
 
-    build-windows:
-        name: Build Windows x64
-        runs-on: windows-latest
-        steps:
-            - uses: actions/checkout@v4
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: linux-binary
+          path: target/release/${{ env.BIN_NAME }}_linux_x64
 
-            - name: Install Rust toolchain
-              uses: dtolnay/rust-toolchain@stable
+  build-windows:
+    name: Build Windows x64
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
 
-            - name: Cache cargo
-              uses: actions/cache@v4
-              with:
-                  path: |
-                      ~/.cargo/registry
-                      ~/.cargo/git
-                      target
-                  key: windows-release-${{ hashFiles('**/Cargo.lock') }}
-                  restore-keys: windows-release-
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
 
-            - name: Build
-              run: cargo build --release
+      - name: Cache cargo
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target
+          key: windows-release-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: windows-release-
 
-            - name: Upload artifact
-              uses: actions/upload-artifact@v4
-              with:
-                  name: windows-binary
-                  path: target/release/${{ env.BIN_NAME }}.exe
+      - name: Build
+        run: cargo build --release
 
-    release:
-        name: Create GitHub Release
-        needs: [build-linux, build-windows]
-        runs-on: ubuntu-latest
-        steps:
-            - uses: actions/checkout@v4
+      - name: Rename binary
+        shell: pwsh
+        run: Move-Item "target/release/${{ env.BIN_NAME }}.exe" "target/release/${{ env.BIN_NAME }}_windows_x64.exe"
 
-            - name: Download Linux binary
-              uses: actions/download-artifact@v4
-              with:
-                  name: linux-binary
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: windows-binary
+          path: target/release/${{ env.BIN_NAME }}_windows_x64.exe
 
-            - name: Download Windows binary
-              uses: actions/download-artifact@v4
-              with:
-                  name: windows-binary
+  release:
+    name: Create GitHub Release
+    needs: [build-linux, build-windows]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
 
-            - name: Make Linux binary executable
-              run: chmod +x ${{ env.BIN_NAME }}
+      - name: Download Linux binary
+        uses: actions/download-artifact@v4
+        with:
+          name: linux-binary
 
-            - name: Create Release
-              uses: softprops/action-gh-release@v2
-              with:
-                  generate_release_notes: true
-                  files: |
-                      ${{ env.BIN_NAME }}
-                      ${{ env.BIN_NAME }}.exe
+      - name: Download Windows binary
+        uses: actions/download-artifact@v4
+        with:
+          name: windows-binary
+
+      - name: Make Linux binary executable
+        run: chmod +x ${{ env.BIN_NAME }}_linux_x64
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v2
+        with:
+          generate_release_notes: true
+          files: |
+            ${{ env.BIN_NAME }}_linux_x64
+            ${{ env.BIN_NAME }}_windows_x64.exe
