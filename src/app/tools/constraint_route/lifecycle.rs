@@ -2,7 +2,7 @@
 
 use super::super::common::linear_connections;
 use super::super::{snap_to_node, RouteTool, ToolAction, ToolPreview, ToolResult};
-use super::geometry::build_result;
+use super::geometry::{build_result, BuildResultParams};
 use super::state::{ConstraintRouteTool, Phase};
 use crate::app::segment_registry::{SegmentKind, SegmentRecord};
 use crate::core::RoadMap;
@@ -100,10 +100,21 @@ impl RouteTool for ConstraintRouteTool {
                     return ToolPreview::default();
                 }
                 let connections = linear_connections(self.preview_positions.len());
-                ToolPreview {
-                    nodes: self.preview_positions.clone(),
-                    connections,
+                let mut nodes = self.preview_positions.clone();
+
+                // Steuerpunkte als unverbundene Nodes hinzufügen (werden als Rauten gerendert)
+                if let Some(ap) = self.approach_steerer {
+                    nodes.push(ap);
                 }
+                if let Some(dp) = self.departure_steerer {
+                    nodes.push(dp);
+                }
+                // Kontrollpunkte als unverbundene Nodes hinzufügen
+                for &cp in &self.control_nodes {
+                    nodes.push(cp);
+                }
+
+                ToolPreview { nodes, connections }
             }
         }
     }
@@ -115,16 +126,42 @@ impl RouteTool for ConstraintRouteTool {
     fn execute(&self, road_map: &RoadMap) -> Option<ToolResult> {
         let start = *self.start.as_ref()?;
         let end = *self.end.as_ref()?;
+
+        // Kontrollpunkte inkl. manuell verschobener Steuerpunkte zusammenbauen
+        let mut solver_control = Vec::new();
+        if self.approach_manual {
+            if let Some(ap) = self.approach_steerer {
+                solver_control.push(ap);
+            }
+        }
+        solver_control.extend_from_slice(&self.control_nodes);
+        if self.departure_manual {
+            if let Some(dp) = self.departure_steerer {
+                solver_control.push(dp);
+            }
+        }
+
         build_result(
-            start,
-            end,
-            &self.control_nodes,
-            self.seg.max_segment_length,
-            self.max_angle_deg,
-            &self.start_neighbor_dirs,
-            &self.end_neighbor_dirs,
-            self.direction,
-            self.priority,
+            &BuildResultParams {
+                start,
+                end,
+                control_nodes: &solver_control,
+                max_segment_length: self.seg.max_segment_length,
+                max_angle_deg: self.max_angle_deg,
+                start_neighbor_dirs: if self.approach_manual {
+                    &[]
+                } else {
+                    &self.start_neighbor_dirs
+                },
+                end_neighbor_dirs: if self.departure_manual {
+                    &[]
+                } else {
+                    &self.end_neighbor_dirs
+                },
+                min_distance: self.min_distance,
+                direction: self.direction,
+                priority: self.priority,
+            },
             road_map,
         )
     }
@@ -142,6 +179,10 @@ impl RouteTool for ConstraintRouteTool {
         self.preview_positions.clear();
         self.start_neighbor_dirs.clear();
         self.end_neighbor_dirs.clear();
+        self.approach_steerer = None;
+        self.departure_steerer = None;
+        self.approach_manual = false;
+        self.departure_manual = false;
     }
 
     fn is_ready(&self) -> bool {
@@ -171,15 +212,18 @@ impl RouteTool for ConstraintRouteTool {
         let start = self.last_start_anchor?;
         let end = self.last_end_anchor.or(self.lifecycle.last_end_anchor)?;
         build_result(
-            start,
-            end,
-            &self.last_control_nodes,
-            self.seg.max_segment_length,
-            self.max_angle_deg,
-            &self.start_neighbor_dirs,
-            &self.end_neighbor_dirs,
-            self.direction,
-            self.priority,
+            &BuildResultParams {
+                start,
+                end,
+                control_nodes: &self.last_control_nodes,
+                max_segment_length: self.seg.max_segment_length,
+                max_angle_deg: self.max_angle_deg,
+                start_neighbor_dirs: &self.start_neighbor_dirs,
+                end_neighbor_dirs: &self.end_neighbor_dirs,
+                min_distance: self.min_distance,
+                direction: self.direction,
+                priority: self.priority,
+            },
             road_map,
         )
     }
@@ -198,6 +242,7 @@ impl RouteTool for ConstraintRouteTool {
                 direction: self.direction,
                 priority: self.priority,
                 max_segment_length: self.seg.max_segment_length,
+                min_distance: self.min_distance,
             },
         })
     }
@@ -209,6 +254,7 @@ impl RouteTool for ConstraintRouteTool {
             direction,
             priority,
             max_segment_length,
+            min_distance,
         } = kind
         else {
             return;
@@ -220,6 +266,7 @@ impl RouteTool for ConstraintRouteTool {
         self.direction = *direction;
         self.priority = *priority;
         self.seg.max_segment_length = *max_segment_length;
+        self.min_distance = *min_distance;
         self.phase = Phase::ControlNodes;
         self.sync_derived();
         self.update_preview();

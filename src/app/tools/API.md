@@ -106,16 +106,29 @@ Catmull-Rom-Spline: interpolierende Kurve durch alle geklickten Punkte. Beliebig
 ### `ConstraintRouteTool`
 
 Winkelgeglättete Route mit automatischen Tangenten-Übergängen. Solver-Pipeline:
-1. **Approach-Steerer:** Auto-Kontrollpunkt am Start, wenn bestehende Verbindungen einen scharfen Winkel zur Route bilden
+1. **Approach-Steerer:** Auto-Steuerpunkt am Start (Dot-Product-basierte Nachbar-Auswahl, dynamischer Abstand)
 2. **User-Kontrollpunkte:** Beliebig viele Zwischen-Kontrollpunkte (Phase::ControlNodes)
 3. **Departure-Steerer:** Analog am Ende
 4. **Subdivide:** Gleichmäßige Unterteilung aller Segmente auf `max_segment_length`
-5. **Winkelglättung:** Iteratives Laplacian-Smoothing bei Winkelverletzungen
+5. **Chaikin-Corner-Cutting:** Iteratives Glätten der schärfsten Ecke (mit Re-Subdivision nach jedem Cut)
 6. **Resampling:** Finale Punkte auf gleichmäßige Abstände
+
+**Steuerpunkte (Steerer):**
+- Automatisch berechnet aus Nachbar-Richtungen (`connected_neighbors`)
+- Im UI als Steuerpunkte angezeigt (Config-Panel + Viewport)
+- Per Drag im Viewport verschiebbar (wird dann als manuell markiert)
+- Reset-Button (↺) im Config-Panel setzt auf Auto-Berechnung zurück
+- Manuell verschobene Steuerpunkte werden als Kontrollpunkte an den Solver übergeben
+
+**Solver-Typen:**
+- `SolverResult` — Positionen + optionale Approach/Departure-Steuerpunkte
+- `ConstraintRouteInput` — Eingabeparameter für den Solver
 
 **Solver-Parameter:**
 - `max_angle_deg: f32` (5°..135°) — Maximale Richtungsänderung pro Segment
 - `max_segment_length: f32` — via `SegmentConfig`
+
+**Drag-Targets:** Start, End, ApproachSteerer, DepartureSteerer, Control(i)
 
 **Phasen:** `Start` → `End` → `ControlNodes` (Enter bestätigt)
 
