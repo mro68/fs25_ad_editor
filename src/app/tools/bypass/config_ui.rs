@@ -6,10 +6,22 @@ use super::geometry::compute_bypass_positions;
 use super::state::BypassTool;
 
 impl BypassTool {
+    /// Liest die Scroll-Richtung für ein gehovertes Widget.
+    fn wheel_dir(ui: &egui::Ui, response: &egui::Response) -> f32 {
+        if !response.hovered() {
+            return 0.0;
+        }
+        ui.input(|i| i.raw_scroll_delta.y).signum()
+    }
+
     /// Rendert das Konfigurationspanel im Properties-Panel.
     ///
     /// Gibt `true` zurück wenn sich eine Einstellung geändert hat.
-    pub(super) fn render_config_view(&mut self, ui: &mut egui::Ui) -> bool {
+    pub(super) fn render_config_view(
+        &mut self,
+        ui: &mut egui::Ui,
+        distance_wheel_step_m: f32,
+    ) -> bool {
         let mut changed = false;
 
         if !self.has_chain() {
@@ -26,7 +38,14 @@ impl BypassTool {
                     .range(-200.0..=200.0)
                     .suffix(" m"),
             );
-            if r.changed() {
+            let mut local_changed = r.changed();
+            let wheel_dir = Self::wheel_dir(ui, &r);
+            if wheel_dir != 0.0 {
+                self.offset =
+                    (self.offset + wheel_dir * distance_wheel_step_m).clamp(-200.0, 200.0);
+                local_changed = true;
+            }
+            if local_changed {
                 changed = true;
             }
         });
@@ -45,7 +64,14 @@ impl BypassTool {
                     .range(1.0..=50.0)
                     .suffix(" m"),
             );
-            if r.changed() {
+            let mut local_changed = r.changed();
+            let wheel_dir = Self::wheel_dir(ui, &r);
+            if wheel_dir != 0.0 {
+                self.base_spacing =
+                    (self.base_spacing + wheel_dir * distance_wheel_step_m).clamp(1.0, 50.0);
+                local_changed = true;
+            }
+            if local_changed {
                 changed = true;
             }
         });

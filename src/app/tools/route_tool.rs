@@ -34,8 +34,11 @@ pub trait RouteTool {
     fn preview(&self, cursor_pos: Vec2, road_map: &RoadMap) -> ToolPreview;
 
     /// Tool-spezifische Konfiguration im Properties-Panel rendern.
+    ///
+    /// `distance_wheel_step_m` steuert die Schrittweite für Mausrad-Änderungen
+    /// an Distanz-Feldern (z.B. Min.-Abstand).
     /// Gibt `true` zurück wenn sich Einstellungen geändert haben.
-    fn render_config(&mut self, ui: &mut egui::Ui) -> bool;
+    fn render_config(&mut self, ui: &mut egui::Ui, distance_wheel_step_m: f32) -> bool;
 
     /// Ergebnis erzeugen (Nodes + Connections als reine Daten).
     fn execute(&self, road_map: &RoadMap) -> Option<ToolResult>;

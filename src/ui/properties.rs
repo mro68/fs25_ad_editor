@@ -20,6 +20,7 @@ pub fn render_properties_panel(
     selected_node_ids: &IndexSet<u64>,
     default_direction: ConnectionDirection,
     default_priority: ConnectionPriority,
+    distance_wheel_step_m: f32,
     active_tool: EditorTool,
     tool_manager: Option<&mut ToolManager>,
     segment_registry: Option<&SegmentRegistry>,
@@ -52,7 +53,14 @@ pub fn render_properties_panel(
             // Distanzen-Panel: immer sichtbar wenn 2+ Nodes selektiert
             if selected_node_ids.len() >= 2 {
                 if let Some(rm) = road_map {
-                    render_distance_panel(ui, rm, selected_node_ids, distance_state, &mut events);
+                    render_distance_panel(
+                        ui,
+                        rm,
+                        selected_node_ids,
+                        distance_state,
+                        distance_wheel_step_m,
+                        &mut events,
+                    );
                 }
             } else if distance_state.active {
                 // Selektion verloren → Vorschau deaktivieren
@@ -64,7 +72,11 @@ pub fn render_properties_panel(
 
             // Route-Tool-Konfiguration (Distanz/Anzahl-Slider wenn Tool aktiv)
             if active_tool == EditorTool::Route {
-                events.extend(render_route_tool_config(ui, tool_manager));
+                events.extend(render_route_tool_config(
+                    ui,
+                    tool_manager,
+                    distance_wheel_step_m,
+                ));
             }
         });
 
@@ -282,6 +294,7 @@ fn render_segment_edit_buttons(
 fn render_route_tool_config(
     ui: &mut egui::Ui,
     tool_manager: Option<&mut ToolManager>,
+    distance_wheel_step_m: f32,
 ) -> Vec<AppIntent> {
     let mut events = Vec::new();
 
@@ -297,7 +310,7 @@ fn render_route_tool_config(
     }
 
     if let Some(tool) = tool_manager.and_then(|manager| manager.active_tool_mut()) {
-        let changed = tool.render_config(ui);
+        let changed = tool.render_config(ui, distance_wheel_step_m);
         if changed && tool.needs_recreate() {
             events.push(AppIntent::RouteToolConfigChanged);
         }
