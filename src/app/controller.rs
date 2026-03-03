@@ -266,7 +266,7 @@ impl AppController {
                 handlers::dialog::dismiss_save_overview_dialog(state)
             }
 
-            // === Distanzen ===
+            // === Distanzen / Ausweichstrecke ===
             AppCommand::ResamplePath => handlers::editing::resample_path(state),
             AppCommand::StreckenteilungAktivieren => {
                 handlers::editing::streckenteilung_aktivieren(state)

@@ -83,7 +83,55 @@ pub fn select(state: &mut AppState, index: usize) {
         tool.set_priority(prio);
         tool.set_snap_radius(snap_r);
     }
+
+    // Kette in chain-basierte Tools laden (z.B. BypassTool)
+    init_chain_if_needed(state);
+
     log::info!("Route-Tool aktiviert: Index {}", index);
+}
+
+/// Lädt die aktuelle Selektion als geordnete Kette in das aktive Tool,
+/// falls dieses `needs_chain_input()` zurückgibt.
+pub fn init_chain_if_needed(state: &mut AppState) {
+    let needs_chain = state
+        .editor
+        .tool_manager
+        .active_tool()
+        .is_some_and(|t| t.needs_chain_input());
+    if !needs_chain {
+        return;
+    }
+
+    let Some(road_map) = state.road_map.as_deref() else {
+        return;
+    };
+
+    let Some(ordered_ids) = road_map.ordered_chain_nodes(&state.selection.selected_node_ids) else {
+        log::debug!("Bypass-Tool: Selektion bildet keine lineare Kette");
+        return;
+    };
+
+    let positions: Vec<glam::Vec2> = ordered_ids
+        .iter()
+        .filter_map(|id| road_map.nodes.get(id).map(|n| n.position))
+        .collect();
+
+    if positions.len() < 2 {
+        return;
+    }
+
+    let start_id = *ordered_ids.first().unwrap();
+    let end_id = *ordered_ids.last().unwrap();
+
+    if let Some(tool) = state.editor.tool_manager.active_tool_mut() {
+        tool.load_chain(positions, start_id, end_id);
+        log::info!(
+            "Route-Tool Kette geladen: {} Nodes ({} → {})",
+            ordered_ids.len(),
+            start_id,
+            end_id
+        );
+    }
 }
 
 /// Aktiviert ein Route-Tool und setzt Start/End-Anker aus zwei selektierten Nodes.
