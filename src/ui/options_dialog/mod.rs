@@ -8,57 +8,60 @@ use crate::shared::EditorOptions;
 /// Navigationsbereiche im Optionen-Dialog.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 enum OptionsSection {
+    General,
     Nodes,
     Tools,
-    Selection,
     Connections,
-    Markers,
-    Camera,
-    Background,
-    OverviewLayers,
-    NodeBehavior,
+    Behavior,
 }
 
 impl OptionsSection {
-    const ALL: [Self; 9] = [
+    const ALL: [Self; 5] = [
+        Self::General,
         Self::Nodes,
         Self::Tools,
-        Self::Selection,
         Self::Connections,
-        Self::Markers,
-        Self::Camera,
-        Self::Background,
-        Self::OverviewLayers,
-        Self::NodeBehavior,
+        Self::Behavior,
     ];
 
     fn title(self) -> &'static str {
         match self {
+            Self::General => "Allgemein",
             Self::Nodes => "Nodes",
             Self::Tools => "Tools",
-            Self::Selection => "Selektion",
             Self::Connections => "Verbindungen",
-            Self::Markers => "Marker",
-            Self::Camera => "Kamera",
-            Self::Background => "Hintergrund",
-            Self::OverviewLayers => "Übersichtskarte",
-            Self::NodeBehavior => "Node-Verhalten",
+            Self::Behavior => "Verhalten",
         }
     }
 
     fn subtitle(self) -> &'static str {
         match self {
+            Self::General => "Globale Anzeige- und Karten-Einstellungen.",
             Self::Nodes => "Farben, Größe und Hitbox-Einstellungen für Nodes.",
             Self::Tools => "Snap-Radius und Eingabeverhalten für Tool-Parameter.",
-            Self::Selection => "Darstellung und Stil der aktiven Selektion.",
             Self::Connections => "Linienbreiten, Pfeile und Verbindungsfarben.",
-            Self::Markers => "Pin-Größe und Marker-Farben.",
-            Self::Camera => "Zoom-Grenzen und Zoom-Schrittweiten.",
-            Self::Background => "Deckkraft und Zoom-basiertes Hintergrund-Fading.",
-            Self::OverviewLayers => "Standard-Layer für die Übersichtskarten-Generierung.",
-            Self::NodeBehavior => "Verhalten beim Löschen und Platzieren von Nodes.",
+            Self::Behavior => "Verhalten beim Löschen und Platzieren von Nodes.",
         }
     }
+}
+
+fn render_subsection(
+    ui: &mut egui::Ui,
+    title: &str,
+    description: Option<&str>,
+    render: impl FnOnce(&mut egui::Ui) -> bool,
+) -> bool {
+    let mut changed = false;
+    ui.label(egui::RichText::new(title).strong());
+    if let Some(text) = description {
+        ui.label(text);
+    }
+    ui.add_space(4.0);
+    changed |= render(ui);
+    ui.add_space(8.0);
+    ui.separator();
+    ui.add_space(8.0);
+    changed
 }
 
 fn render_selected_section(
@@ -66,17 +69,39 @@ fn render_selected_section(
     opts: &mut EditorOptions,
     section: OptionsSection,
 ) -> bool {
+    let mut changed = false;
+
     match section {
-        OptionsSection::Nodes => sections::render_nodes(ui, opts),
-        OptionsSection::Tools => sections::render_tools(ui, opts),
-        OptionsSection::Selection => sections::render_selection(ui, opts),
-        OptionsSection::Connections => sections::render_connections(ui, opts),
-        OptionsSection::Markers => sections::render_markers(ui, opts),
-        OptionsSection::Camera => sections::render_camera(ui, opts),
-        OptionsSection::Background => sections::render_background(ui, opts),
-        OptionsSection::OverviewLayers => sections::render_overview_layers(ui, opts),
-        OptionsSection::NodeBehavior => sections::render_node_behavior(ui, opts),
+        OptionsSection::General => {
+            changed |= render_subsection(ui, "Selektion", None, |ui| {
+                sections::render_selection(ui, opts)
+            });
+            changed |=
+                render_subsection(ui, "Marker", None, |ui| sections::render_markers(ui, opts));
+            changed |=
+                render_subsection(ui, "Kamera", None, |ui| sections::render_camera(ui, opts));
+            changed |= render_subsection(ui, "Hintergrund", None, |ui| {
+                sections::render_background(ui, opts)
+            });
+            changed |= render_subsection(ui, "Übersichtskarte (Standard-Layer)", None, |ui| {
+                sections::render_overview_layers(ui, opts)
+            });
+        }
+        OptionsSection::Nodes => {
+            changed |= sections::render_nodes(ui, opts);
+        }
+        OptionsSection::Tools => {
+            changed |= sections::render_tools(ui, opts);
+        }
+        OptionsSection::Connections => {
+            changed |= sections::render_connections(ui, opts);
+        }
+        OptionsSection::Behavior => {
+            changed |= sections::render_node_behavior(ui, opts);
+        }
     }
+
+    changed
 }
 
 /// Zeigt den Options-Dialog und gibt erzeugte Events zurück.
@@ -97,7 +122,7 @@ pub fn show_options_dialog(
     let selected_section_id = egui::Id::new("options_dialog_selected_section");
     let mut selected_section = ctx.data_mut(|data| {
         data.get_temp::<OptionsSection>(selected_section_id)
-            .unwrap_or(OptionsSection::Nodes)
+            .unwrap_or(OptionsSection::General)
     });
 
     egui::Window::new("Optionen")
