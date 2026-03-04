@@ -1,18 +1,18 @@
-//! Lifecycle-Zustand und Segment-Konfiguration für Route-Tools.
+//! Lifecycle-Zustand und Segment-Konfiguration fuer Route-Tools.
 
 use super::super::ToolAnchor;
 use super::geometry::{node_count_from_length, segment_length_from_count};
 
-/// Welcher Wert wurde zuletzt vom User geändert?
+/// Welcher Wert wurde zuletzt vom User geaendert?
 ///
-/// Bestimmt die Synchronisationsrichtung zwischen Segment-Länge und Node-Anzahl:
-/// - `Distance` → Node-Anzahl wird aus Länge und Segment-Abstand berechnet
-/// - `NodeCount` → Segment-Abstand wird aus Länge und Node-Anzahl berechnet
+/// Bestimmt die Synchronisationsrichtung zwischen Segment-Laenge und Node-Anzahl:
+/// - `Distance` → Node-Anzahl wird aus Laenge und Segment-Abstand berechnet
+/// - `NodeCount` → Segment-Abstand wird aus Laenge und Node-Anzahl berechnet
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum LastEdited {
-    /// User hat Segment-Länge angepasst → Node-Anzahl wird berechnet
+    /// User hat Segment-Laenge angepasst → Node-Anzahl wird berechnet
     Distance,
-    /// User hat Node-Anzahl angepasst → Segment-Länge wird berechnet
+    /// User hat Node-Anzahl angepasst → Segment-Laenge wird berechnet
     NodeCount,
 }
 
@@ -22,11 +22,11 @@ pub enum LastEdited {
 /// identisch teilen: letzte IDs, Endpunkt-Anker, Recreate-Flag und Snap-Radius.
 #[derive(Debug, Clone)]
 pub struct ToolLifecycleState {
-    /// IDs der zuletzt erstellten Nodes (für Nachbearbeitung)
+    /// IDs der zuletzt erstellten Nodes (fuer Nachbearbeitung)
     pub last_created_ids: Vec<u64>,
-    /// End-Anker der letzten Erstellung (für Verkettung)
+    /// End-Anker der letzten Erstellung (fuer Verkettung)
     pub last_end_anchor: Option<ToolAnchor>,
-    /// Signalisiert, dass Config geändert wurde und Neuberechnung nötig ist
+    /// Signalisiert, dass Config geaendert wurde und Neuberechnung noetig ist
     pub recreate_needed: bool,
     /// Snap-Radius in Welteinheiten (aus EditorOptions)
     pub snap_radius: f32,
@@ -43,9 +43,9 @@ impl ToolLifecycleState {
         }
     }
 
-    /// Gibt den End-Anker für die Verkettung zurück, wobei `NewPosition`
+    /// Gibt den End-Anker fuer die Verkettung zurueck, wobei `NewPosition`
     /// zu `ExistingNode` hochgestuft wird, da der Node inzwischen erstellt wurde.
-    /// Der gespeicherte `last_end_anchor` bleibt unverändert (wichtig für Recreate).
+    /// Der gespeicherte `last_end_anchor` bleibt unveraendert (wichtig fuer Recreate).
     pub fn chaining_start_anchor(&self) -> Option<ToolAnchor> {
         let anchor = self.last_end_anchor?;
         Some(match anchor {
@@ -60,17 +60,17 @@ impl ToolLifecycleState {
         })
     }
 
-    /// Bereitet den Lifecycle-Zustand für Verkettung vor (Reset der gemeinsamen Felder).
+    /// Bereitet den Lifecycle-Zustand fuer Verkettung vor (Reset der gemeinsamen Felder).
     ///
     /// Wird in `on_click()` aller Tools aufgerufen, wenn der letzte Endpunkt
-    /// als neuer Startpunkt übernommen wird.
+    /// als neuer Startpunkt uebernommen wird.
     pub fn prepare_for_chaining(&mut self) {
         self.last_created_ids.clear();
         self.last_end_anchor = None;
         self.recreate_needed = false;
     }
 
-    /// Speichert die zuletzt erstellten Node-IDs und setzt das Recreate-Flag zurück.
+    /// Speichert die zuletzt erstellten Node-IDs und setzt das Recreate-Flag zurueck.
     ///
     /// Gemeinsamer Tail-Block aller `set_last_created()`-Implementierungen.
     pub fn save_created_ids(&mut self, ids: &[u64]) {
@@ -79,13 +79,13 @@ impl ToolLifecycleState {
         self.recreate_needed = false;
     }
 
-    /// Prüft ob eine vorherige Erzeugung existiert (für Adjusting-Modus).
+    /// Prueft ob eine vorherige Erzeugung existiert (fuer Adjusting-Modus).
     pub fn has_last_created(&self) -> bool {
         !self.last_created_ids.is_empty()
     }
 }
 
-/// Macro für die 7 identischen Lifecycle-Delegationsmethoden aller Route-Tools.
+/// Macro fuer die 7 identischen Lifecycle-Delegationsmethoden aller Route-Tools.
 ///
 /// Vermeidet ~35 Zeilen Boilerplate pro Tool-Implementierung.
 /// Erwartet, dass der Typ `self.lifecycle` (ToolLifecycleState),
@@ -151,26 +151,26 @@ macro_rules! impl_lifecycle_delegation {
     };
 }
 
-/// Gekapselte Konfiguration für Segment-Länge und Node-Anzahl.
+/// Gekapselte Konfiguration fuer Segment-Laenge und Node-Anzahl.
 ///
-/// Alle Route-Tools nutzen das gleiche Muster: ein Slider für den minimalen
-/// Abstand und einer für die Node-Anzahl, die sich gegenseitig ableiten.
+/// Alle Route-Tools nutzen das gleiche Muster: ein Slider fuer den minimalen
+/// Abstand und einer fuer die Node-Anzahl, die sich gegenseitig ableiten.
 /// `SegmentConfig` kapselt diese Logik inkl. der egui-Slider.
 #[derive(Debug, Clone)]
 pub struct SegmentConfig {
     /// Maximaler Abstand zwischen Zwischen-Nodes
     pub max_segment_length: f32,
-    /// Gewünschte Anzahl Nodes (inkl. Start+End)
+    /// Gewuenschte Anzahl Nodes (inkl. Start+End)
     pub node_count: usize,
-    /// Welcher Parameter zuletzt vom User geändert wurde
+    /// Welcher Parameter zuletzt vom User geaendert wurde
     pub last_edited: LastEdited,
 }
 
 impl SegmentConfig {
-    /// Unterdrückt Rauschen/Restwerte, die ohne echtes Scrollen auftreten können.
+    /// Unterdrueckt Rauschen/Restwerte, die ohne echtes Scrollen auftreten koennen.
     const WHEEL_DELTA_THRESHOLD: f32 = 0.5;
 
-    /// Ermittelt die Scroll-Richtung für ein gehovertes Widget.
+    /// Ermittelt die Scroll-Richtung fuer ein gehovertes Widget.
     pub(crate) fn wheel_dir(ui: &egui::Ui, response: &egui::Response) -> f32 {
         if !response.hovered() {
             return 0.0;
@@ -192,7 +192,7 @@ impl SegmentConfig {
         }
     }
 
-    /// Synchronisiert den abhängigen Wert anhand der aktuellen Streckenlänge.
+    /// Synchronisiert den abhaengigen Wert anhand der aktuellen Streckenlaenge.
     pub fn sync_from_length(&mut self, length: f32) {
         if length < f32::EPSILON {
             return;
@@ -209,7 +209,7 @@ impl SegmentConfig {
 
     /// Rendert die Segment-Slider im Nachbearbeitungs-Modus (mit recreate-Flag).
     ///
-    /// Gibt `(changed, recreate_needed)` zurück.
+    /// Gibt `(changed, recreate_needed)` zurueck.
     fn render_adjusting(
         &mut self,
         ui: &mut egui::Ui,
@@ -267,9 +267,9 @@ impl SegmentConfig {
         (changed, recreate)
     }
 
-    /// Rendert die Segment-Slider im Live-Modus (Tool ist bereit, aber noch nicht ausgeführt).
+    /// Rendert die Segment-Slider im Live-Modus (Tool ist bereit, aber noch nicht ausgefuehrt).
     ///
-    /// Gibt `true` zurück wenn sich etwas geändert hat.
+    /// Gibt `true` zurueck wenn sich etwas geaendert hat.
     fn render_live(
         &mut self,
         ui: &mut egui::Ui,
@@ -326,11 +326,11 @@ impl SegmentConfig {
 
     /// Rendert den Segment-Slider im Default-Modus (Tool noch nicht bereit).
     ///
-    /// Gibt `true` zurück wenn sich etwas geändert hat.
+    /// Gibt `true` zurueck wenn sich etwas geaendert hat.
     fn render_default(&mut self, ui: &mut egui::Ui, distance_wheel_step_m: f32) -> bool {
         let mut changed = false;
 
-        ui.label("Max. Segment-Länge:");
+        ui.label("Max. Segment-Laenge:");
         let response =
             ui.add(egui::Slider::new(&mut self.max_segment_length, 1.0..=20.0).suffix(" m"));
         let mut distance_changed = response.changed();
@@ -348,7 +348,7 @@ impl SegmentConfig {
         changed
     }
 
-    /// Erhöht die Anzahl der Nodes um 1.
+    /// Erhoeht die Anzahl der Nodes um 1.
     pub fn increase_node_count(&mut self) {
         self.node_count = self.node_count.saturating_add(1);
         self.last_edited = LastEdited::NodeCount;
@@ -360,7 +360,7 @@ impl SegmentConfig {
         self.last_edited = LastEdited::NodeCount;
     }
 
-    /// Erhöht den minimalen Abstand zwischen Nodes um 0.25.
+    /// Erhoeht den minimalen Abstand zwischen Nodes um 0.25.
     pub fn increase_segment_length(&mut self) {
         self.max_segment_length = (self.max_segment_length + 0.25).min(20.0);
         self.last_edited = LastEdited::Distance;
@@ -375,11 +375,11 @@ impl SegmentConfig {
 
 /// Rendert die 3-Modus-Segment-Konfiguration (adjusting / live / default).
 ///
-/// Gemeinsames Pattern aller Route-Tools. Gibt `(changed, recreate_needed)` zurück.
+/// Gemeinsames Pattern aller Route-Tools. Gibt `(changed, recreate_needed)` zurueck.
 /// - `adjusting`: Nachbearbeitungs-Modus (Segment wurde bereits platziert)
-/// - `ready`: Tool ist bereit zur Ausführung
-/// - `length`: Aktuelle Streckenlänge (irrelevant für Default-Modus)
-/// - `label`: Anzeige-Label für die Länge (z.B. "Kurvenlänge", "Spline-Länge")
+/// - `ready`: Tool ist bereit zur Ausfuehrung
+/// - `length`: Aktuelle Streckenlaenge (irrelevant fuer Default-Modus)
+/// - `label`: Anzeige-Label fuer die Laenge (z.B. "Kurvenlaenge", "Spline-Laenge")
 pub fn render_segment_config_3modes(
     seg: &mut SegmentConfig,
     ui: &mut egui::Ui,

@@ -1,6 +1,6 @@
 # Bearbeitung: Selektion, Verbindungen, Marker, Undo
 
-← [Werkzeuge](03-werkzeuge.md) | [Zurück zur Übersicht](index.md)
+← [Werkzeuge](03-werkzeuge.md) | [Zurueck zur Uebersicht](index.md)
 
 ## Selektion
 
@@ -9,9 +9,9 @@
 | Modus | Aktivierung | Beschreibung |
 |-------|-------------|--------------|
 | **Einzelselektion** | Linksklick | Ersetzt die aktuelle Selektion durch den angeklickten Node |
-| **Additive Selektion** | Ctrl+Linksklick | Fügt den Node zur bestehenden Selektion hinzu |
-| **Pfad-Selektion** | Shift+Linksklick | Selektiert alle Nodes auf dem kürzesten Pfad zwischen dem zuletzt selektierten Node (Anker) und dem angeklickten Node |
-| **Segment-Selektion** | Doppelklick | Selektiert alle Nodes eines Segments (bis zur nächsten Kreuzung oder Sackgasse) |
+| **Additive Selektion** | Ctrl+Linksklick | Fuegt den Node zur bestehenden Selektion hinzu |
+| **Pfad-Selektion** | Shift+Linksklick | Selektiert alle Nodes auf dem kuerzesten Pfad zwischen dem zuletzt selektierten Node (Anker) und dem angeklickten Node |
+| **Segment-Selektion** | Doppelklick | Selektiert alle Nodes eines Segments (bis zur naechsten Kreuzung oder Sackgasse) |
 | **Rechteck-Selektion** | Shift+Drag | Alle Nodes innerhalb des aufgezogenen Rechtecks |
 | **Lasso-Selektion** | Alt+Drag | Alle Nodes innerhalb des freihand gezeichneten Polygons |
 | **Alles selektieren** | Ctrl+A | Alle Nodes im Netzwerk selektieren |
@@ -19,11 +19,11 @@
 
 ### Additive Modi
 
-Alle Selektionsmodi können mit **Ctrl** kombiniert werden, um die bestehende Selektion zu erweitern anstatt sie zu ersetzen:
+Alle Selektionsmodi koennen mit **Ctrl** kombiniert werden, um die bestehende Selektion zu erweitern anstatt sie zu ersetzen:
 
 - `Ctrl+Shift+Drag` → Rechteck-Selektion additiv
 - `Ctrl+Alt+Drag` → Lasso-Selektion additiv
-- `Ctrl+Doppelklick` → Segment additiv hinzufügen
+- `Ctrl+Doppelklick` → Segment additiv hinzufuegen
 
 ### Selektion verschieben
 
@@ -39,40 +39,40 @@ Bei Drag auf einem bereits selektierten Node werden **alle selektierten Nodes ge
 |---------|--------------|
 | **Connect-Tool (2)** | Zwei Nodes nacheinander anklicken |
 | **Shortcut `C`** | Bei genau 2 selektierten Nodes → Regular-Verbindung erstellen |
-| **Kontextmenü** | Rechtsklick bei genau 2 Nodes → "Nodes verbinden" |
+| **Kontextmenue** | Rechtsklick bei genau 2 Nodes → "Nodes verbinden" |
 
 ### Verbindung entfernen
 
 | Methode | Beschreibung |
 |---------|--------------|
 | **Shortcut `X`** | Bei genau 2 selektierten Nodes → Verbindung(en) trennen |
-| **Kontextmenü** | Bei 2+ selektierten Nodes → "Alle trennen" |
+| **Kontextmenue** | Bei 2+ selektierten Nodes → "Alle trennen" |
 
-### Richtung ändern
+### Richtung aendern
 
-Über das **Kontextmenü** (Rechtsklick bei 2+ selektierten Nodes):
+Ueber das **Kontextmenue** (Rechtsklick bei 2+ selektierten Nodes):
 
 | Richtung | Symbol | Beschreibung |
 |----------|--------|-------------|
-| **Regular** | ↦ | Einbahnstraße (Start → Ende) |
+| **Regular** | ↦ | Einbahnstrasse (Start → Ende) |
 | **Dual** | ⇆ | Bidirektional (beide Richtungen) |
 | **Reverse** | ↤ | Umgekehrt (Ende → Start) |
 | **Invertieren** | ⇄ | Start und Ende tauschen |
 
-### Priorität ändern
+### Prioritaet aendern
 
-Über das **Kontextmenü**:
+Ueber das **Kontextmenue**:
 
-| Priorität | Symbol | Beschreibung |
+| Prioritaet | Symbol | Beschreibung |
 |-----------|--------|-------------|
-| **Regular** | 🛣 | Hauptstraße |
-| **SubPriority** | 🛤 | Nebenstraße (dünner dargestellt, Gelb-Markierung) |
+| **Regular** | 🛣 | Hauptstrasse |
+| **SubPriority** | 🛤 | Nebenstrasse (duenner dargestellt, Gelb-Markierung) |
 
 ### Farbcodierung
 
 | Farbe | Bedeutung |
 |-------|-----------|
-| **Grün** | Regular-Verbindung (Einrichtung) |
+| **Gruen** | Regular-Verbindung (Einrichtung) |
 | **Blau** | Dual-Verbindung (bidirektional) |
 | **Orange** | Reverse-Verbindung |
 
@@ -87,26 +87,26 @@ Map-Marker sind benannte Ziele auf der Karte (z. B. „Hof", „Feld 1", „Silo
 1. Einen einzelnen Node selektieren
 2. Rechtsklick → **"🗺 Marker erstellen"**
 3. Im Dialog Name und Gruppe eingeben
-4. Bestätigen
+4. Bestaetigen
 
 ### Marker bearbeiten
 
 1. Den Node mit bestehendem Marker selektieren
-2. Rechtsklick → **"✏ Marker ändern"**
+2. Rechtsklick → **"✏ Marker aendern"**
 3. Name/Gruppe anpassen
-4. Bestätigen
+4. Bestaetigen
 
-### Marker löschen
+### Marker loeschen
 
 1. Den Node mit Marker selektieren
-2. Rechtsklick → **"✕ Marker löschen"**
+2. Rechtsklick → **"✕ Marker loeschen"**
 
 ### Darstellung
 
 Marker werden als **rote Pin-Symbole** dargestellt:
 - Pin-Spitze sitzt exakt auf dem Node-Zentrum
-- Rote Füllung mit dunkelrotem Rand
-- Größe: 2.0 Welteinheiten
+- Rote Fuellung mit dunkelrotem Rand
+- Groesse: 2.0 Welteinheiten
 
 ---
 
@@ -116,18 +116,18 @@ Alle destruktiven Operationen erzeugen automatisch einen Undo-Snapshot:
 
 | Shortcut | Aktion |
 |----------|--------|
-| `Ctrl+Z` | Rückgängig (Undo) |
+| `Ctrl+Z` | Rueckgaengig (Undo) |
 | `Ctrl+Y` oder `Shift+Ctrl+Z` | Wiederherstellen (Redo) |
 
-Auch über **Edit → Undo / Redo** im Menü verfügbar (mit Anzeige ob verfügbar).
+Auch ueber **Edit → Undo / Redo** im Menue verfuegbar (mit Anzeige ob verfuegbar).
 
 **Operationen mit Undo-Support:**
-- Nodes hinzufügen / löschen
+- Nodes hinzufuegen / loeschen
 - Nodes verschieben
-- Verbindungen erstellen / entfernen / ändern
-- Marker erstellen / bearbeiten / löschen
-- Bulk-Operationen (Richtung, Priorität, Invertierung, Trennen)
+- Verbindungen erstellen / entfernen / aendern
+- Marker erstellen / bearbeiten / loeschen
+- Bulk-Operationen (Richtung, Prioritaet, Invertierung, Trennen)
 
 ---
 
-← [Werkzeuge](03-werkzeuge.md) | [Zurück zur Übersicht](index.md) | → [Karte & Hintergrund](05-karte.md)
+← [Werkzeuge](03-werkzeuge.md) | [Zurueck zur Uebersicht](index.md) | → [Karte & Hintergrund](05-karte.md)

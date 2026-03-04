@@ -1,11 +1,11 @@
-//! Precondition-System für Context-Menu-Befehle.
+//! Precondition-System fuer Context-Menu-Befehle.
 //!
-//! Prüfbare Vorbedingungen als Enum (kein dyn Trait, performant).
+//! Pruefbare Vorbedingungen als Enum (kein dyn Trait, performant).
 
 use crate::app::RoadMap;
 use indexmap::IndexSet;
 
-/// Prüfbare Vorbedingung für einen Context-Menu-Befehl.
+/// Pruefbare Vorbedingung fuer einen Context-Menu-Befehl.
 #[derive(Debug, Clone, Copy)]
 pub enum Precondition {
     /// Node existiert noch in der RoadMap
@@ -22,11 +22,11 @@ pub enum Precondition {
     HasConnectionsBetweenSelected,
     /// Streckenteilung ist aktiv
     StreckenteilungActive(bool),
-    /// Selektion bildet eine zusammenhängende Kette (für Streckenteilung)
+    /// Selektion bildet eine zusammenhaengende Kette (fuer Streckenteilung)
     IsResampleableChain,
 }
 
-/// Kontext für die Precondition-Auswertung — alle nötigen Daten aus dem aktuellen State.
+/// Kontext fuer die Precondition-Auswertung — alle noetigen Daten aus dem aktuellen State.
 pub struct PreconditionContext<'a> {
     pub road_map: &'a RoadMap,
     pub selected_node_ids: &'a IndexSet<u64>,
@@ -35,7 +35,7 @@ pub struct PreconditionContext<'a> {
 }
 
 impl Precondition {
-    /// Prüft ob die Vorbedingung im gegebenen Kontext erfüllt ist.
+    /// Prueft ob die Vorbedingung im gegebenen Kontext erfuellt ist.
     pub fn is_valid(&self, ctx: &PreconditionContext) -> bool {
         match self {
             Self::NodeExists(id) => ctx.road_map.nodes.contains_key(id),

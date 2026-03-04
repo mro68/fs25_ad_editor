@@ -10,7 +10,7 @@ use anyhow::{ensure, Result};
 /// GRLE Magic Bytes
 const GRLE_MAGIC: &[u8; 4] = b"GRLE";
 
-/// Header-Größe in Bytes
+/// Header-Groesse in Bytes
 const GRLE_HEADER_SIZE: usize = 20;
 
 /// Ergebnis einer GRLE-Dekodierung.
@@ -18,7 +18,7 @@ const GRLE_HEADER_SIZE: usize = 20;
 pub struct GrleImage {
     /// Breite in Pixeln
     pub width: usize,
-    /// Höhe in Pixeln
+    /// Hoehe in Pixeln
     pub height: usize,
     /// Grayscale-Pixeldaten (1 Byte pro Pixel)
     pub pixels: Vec<u8>,
@@ -27,7 +27,7 @@ pub struct GrleImage {
 /// Dekodiert GRLE-Daten aus einem Byte-Buffer.
 ///
 /// # Fehler
-/// - Datei zu klein oder ungültige Magic Bytes
+/// - Datei zu klein oder ungueltige Magic Bytes
 pub fn decode_grle(data: &[u8]) -> Result<GrleImage> {
     ensure!(
         data.len() >= GRLE_HEADER_SIZE,
@@ -37,7 +37,7 @@ pub fn decode_grle(data: &[u8]) -> Result<GrleImage> {
     );
     ensure!(
         &data[0..4] == GRLE_MAGIC,
-        "Ungültige GRLE Magic Bytes: {:?}",
+        "Ungueltige GRLE Magic Bytes: {:?}",
         &data[0..4]
     );
 
@@ -58,15 +58,15 @@ pub fn decode_grle(data: &[u8]) -> Result<GrleImage> {
     })
 }
 
-/// RLE-Dekompression für GRLE-Daten.
+/// RLE-Dekompression fuer GRLE-Daten.
 ///
 /// Algorithmus (aus grleconvert):
 /// - Erstes Byte ist 0x00-Padding
-/// - Liest Paare (a, b): wenn a == b → Run (Zähler folgt), sonst Transition
-/// - Zähler: 0xFF-Bytes addieren je 255, letztes Byte ist Rest, Gesamtpixel = count + 2
+/// - Liest Paare (a, b): wenn a == b → Run (Zaehler folgt), sonst Transition
+/// - Zaehler: 0xFF-Bytes addieren je 255, letztes Byte ist Rest, Gesamtpixel = count + 2
 fn decode_rle(data: &[u8], expected_size: usize) -> Vec<u8> {
     let mut output = Vec::with_capacity(expected_size);
-    let mut i = 1; // Erstes Byte überspringen (0x00 Padding)
+    let mut i = 1; // Erstes Byte ueberspringen (0x00 Padding)
 
     while i + 1 < data.len() && output.len() < expected_size {
         let prev = data[i];
@@ -74,7 +74,7 @@ fn decode_rle(data: &[u8], expected_size: usize) -> Vec<u8> {
         i += 2;
 
         if prev == new_val {
-            // Gleicher Wert: Run mit erweitertem Zähler
+            // Gleicher Wert: Run mit erweitertem Zaehler
             let mut count = 0usize;
             while i < data.len() && data[i] == 0xff {
                 count += 255;
@@ -84,12 +84,12 @@ fn decode_rle(data: &[u8], expected_size: usize) -> Vec<u8> {
                 count += data[i] as usize;
                 i += 1;
             }
-            count += 2; // Zähler sind um 2 versetzt
+            count += 2; // Zaehler sind um 2 versetzt
 
             let to_emit = count.min(expected_size - output.len());
             output.extend(std::iter::repeat_n(prev, to_emit));
         } else {
-            // Verschiedene Werte: Transition — erstes Pixel ausgeben, ein Byte zurückgehen
+            // Verschiedene Werte: Transition — erstes Pixel ausgeben, ein Byte zurueckgehen
             output.push(prev);
             i -= 1;
         }

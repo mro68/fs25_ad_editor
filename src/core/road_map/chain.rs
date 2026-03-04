@@ -5,7 +5,7 @@ use indexmap::IndexSet;
 use std::collections::HashSet;
 
 impl RoadMap {
-    /// Prüft ob die selektierten Nodes eine zusammenhängende Kette bilden,
+    /// Prueft ob die selektierten Nodes eine zusammenhaengende Kette bilden,
     /// bei der Kreuzungen (Grad ≥ 3 innerhalb der Selektion) nur an den
     /// Endpunkten vorkommen. Mindestens 2 Nodes erforderlich.
     pub fn is_resampleable_chain(&self, node_ids: &IndexSet<u64>) -> bool {
@@ -52,12 +52,12 @@ impl RoadMap {
             }
         }
 
-        // Alle Nodes müssen in der Kette sein
+        // Alle Nodes muessen in der Kette sein
         if path.len() != node_ids.len() {
             return false;
         }
 
-        // Innere Nodes dürfen keine Kreuzungen sein (Grad innerhalb Selektion ≤ 2)
+        // Innere Nodes duerfen keine Kreuzungen sein (Grad innerhalb Selektion ≤ 2)
         for &nid in &path[1..path.len() - 1] {
             let degree: usize = self
                 .connections
@@ -75,10 +75,10 @@ impl RoadMap {
         true
     }
 
-    /// Gibt die Nodes in Ketten-Reihenfolge zurück (folgt Verbindungen).
+    /// Gibt die Nodes in Ketten-Reihenfolge zurueck (folgt Verbindungen).
     ///
     /// Voraussetzung: `is_resampleable_chain` ergibt `true`.
-    /// Gibt `None` zurück wenn die Nodes keine vollständige lineare Kette bilden.
+    /// Gibt `None` zurueck wenn die Nodes keine vollstaendige lineare Kette bilden.
     pub fn ordered_chain_nodes(&self, node_ids: &IndexSet<u64>) -> Option<Vec<u64>> {
         if node_ids.len() < 2 {
             return None;

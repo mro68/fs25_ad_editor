@@ -1,11 +1,11 @@
-//! Geometrie-Berechnungen für Kurven-Tools (Arc-Length-Parametrisierung, Bézier, Catmull-Rom).
+//! Geometrie-Berechnungen fuer Kurven-Tools (Arc-Length-Parametrisierung, Bézier, Catmull-Rom).
 
 use super::state::CurveDegree;
 use crate::app::tools::{common, ToolAnchor, ToolResult};
 use crate::core::{ConnectionDirection, ConnectionPriority, RoadMap};
 use glam::Vec2;
 
-/// Gleichmäßig verteilte Punkte entlang einer parametrischen Kurve (Arc-Length).
+/// Gleichmaessig verteilte Punkte entlang einer parametrischen Kurve (Arc-Length).
 pub fn compute_curve_positions(eval: impl Fn(f32) -> Vec2, max_segment_length: f32) -> Vec<Vec2> {
     let start = eval(0.0);
     let total_length = approx_length(&eval, 128);
@@ -57,7 +57,7 @@ pub fn compute_curve_positions(eval: impl Fn(f32) -> Vec2, max_segment_length: f
     positions
 }
 
-/// Approximierte Kurvenlänge über Polylinien-Segmente.
+/// Approximierte Kurvenlaenge ueber Polylinien-Segmente.
 pub fn approx_length(positions_fn: impl Fn(f32) -> Vec2, samples: usize) -> f32 {
     let mut length = 0.0;
     let mut prev = positions_fn(0.0);
@@ -87,7 +87,7 @@ pub fn cubic_bezier(p0: Vec2, p1: Vec2, p2: Vec2, p3: Vec2, t: f32) -> Vec2 {
 /// Berechnet die Position eines Kontrollpunkts basierend auf einer Tangente.
 ///
 /// - `anchor_pos`: Position des Snap-Nodes (Start oder Ende der Kurve)
-/// - `tangent_angle`: Winkel der gewählten Verbindung (Radiant)
+/// - `tangent_angle`: Winkel der gewaehlten Verbindung (Radiant)
 /// - `other_anchor_pos`: Position des anderen Kurven-Endpunkts
 /// - `is_start`: true = CP1 (Startseite), false = CP2 (Endseite)
 ///
@@ -110,7 +110,7 @@ pub fn compute_tangent_cp(
     anchor_pos + direction * cp_distance
 }
 
-/// Evaluiert die Kurvenposition für den aktuellen Grad.
+/// Evaluiert die Kurvenposition fuer den aktuellen Grad.
 pub fn eval_curve(
     degree: CurveDegree,
     start: Vec2,
@@ -125,7 +125,7 @@ pub fn eval_curve(
     }
 }
 
-/// Parameter-Bundle für build_tool_result (Clippy: max 7 Parameter).
+/// Parameter-Bundle fuer build_tool_result (Clippy: max 7 Parameter).
 #[derive(Clone, Copy)]
 pub struct CurveParams {
     pub degree: CurveDegree,
@@ -136,7 +136,7 @@ pub struct CurveParams {
     pub priority: ConnectionPriority,
 }
 
-/// Gemeinsame Logik für execute() und execute_from_anchors().
+/// Gemeinsame Logik fuer execute() und execute_from_anchors().
 pub fn build_tool_result(
     start: &ToolAnchor,
     end: &ToolAnchor,
@@ -164,7 +164,7 @@ pub fn build_tool_result(
     ))
 }
 
-/// Berechnet CP1 und CP2 symmetrisch aus einem gewünschten Scheitelpunkt.
+/// Berechnet CP1 und CP2 symmetrisch aus einem gewuenschten Scheitelpunkt.
 ///
 /// Der Apex entspricht B(0.5) der resultierenden Kurve.
 /// Beide CPs erhalten die gleiche laterale Abweichung von der Sehne.
@@ -186,7 +186,7 @@ pub fn cps_from_apex_symmetric(p0: Vec2, p3: Vec2, apex: Vec2) -> (Vec2, Vec2) {
 
 /// Berechnet CP2 so, dass B(0.5) = `apex`, bei fixiertem CP1.
 ///
-/// Aus der Formel B(0.5) = (P0 + 3·CP1 + 3·CP2 + P3) / 8 gelöst nach CP2:
+/// Aus der Formel B(0.5) = (P0 + 3·CP1 + 3·CP2 + P3) / 8 geloest nach CP2:
 /// `CP2 = (8·apex − P0 − 3·CP1 − P3) / 3`
 pub fn cp2_from_apex(p0: Vec2, cp1: Vec2, apex: Vec2, p3: Vec2) -> Vec2 {
     (8.0 * apex - p0 - 3.0 * cp1 - p3) / 3.0
@@ -194,7 +194,7 @@ pub fn cp2_from_apex(p0: Vec2, cp1: Vec2, apex: Vec2, p3: Vec2) -> Vec2 {
 
 /// Berechnet CP1 so, dass B(0.5) = `apex`, bei fixiertem CP2.
 ///
-/// Aus der Formel B(0.5) = (P0 + 3·CP1 + 3·CP2 + P3) / 8 gelöst nach CP1:
+/// Aus der Formel B(0.5) = (P0 + 3·CP1 + 3·CP2 + P3) / 8 geloest nach CP1:
 /// `CP1 = (8·apex − P0 − 3·CP2 − P3) / 3`
 pub fn cp1_from_apex(p0: Vec2, apex: Vec2, cp2: Vec2, p3: Vec2) -> Vec2 {
     (8.0 * apex - p0 - 3.0 * cp2 - p3) / 3.0
@@ -202,9 +202,9 @@ pub fn cp1_from_apex(p0: Vec2, apex: Vec2, cp2: Vec2, p3: Vec2) -> Vec2 {
 
 /// Projiziert `cursor` auf die Tangenten-Linie durch `anchor`.
 ///
-/// Der erlaubte Freiheitsgrad für CP1 (is_start=true) bzw. CP2 (is_start=false)
-/// ist die Gerade in tangentialer Richtung. Negative Parameterwerte sind zulässig
-/// (ermöglicht S-Kurven hinter dem Anker).
+/// Der erlaubte Freiheitsgrad fuer CP1 (is_start=true) bzw. CP2 (is_start=false)
+/// ist die Gerade in tangentialer Richtung. Negative Parameterwerte sind zulaessig
+/// (ermoeglicht S-Kurven hinter dem Anker).
 ///
 /// Die Richtungskonvention ist identisch mit `compute_tangent_cp`:
 /// - `is_start = true` (CP1): Richtung `angle + π` (weg vom Nachbar)
@@ -219,10 +219,10 @@ pub fn project_onto_tangent_line(anchor: Vec2, angle: f32, cursor: Vec2, is_star
     anchor + dir * t
 }
 
-/// Löst das 2×2-System für beide Tangenten-Abstände bei gegebenem Apex B(0.5).
+/// Loest das 2×2-System fuer beide Tangenten-Abstaende bei gegebenem Apex B(0.5).
 ///
 /// Gegeben CP1 = p0 + t1·dir1 und CP2 = p3 + t2·dir2 sowie B(0.5) = apex,
-/// wird aus der kubischen Bézier-Formel das lineare System gelöst:
+/// wird aus der kubischen Bézier-Formel das lineare System geloest:
 ///
 /// ```text
 /// t1·dir1 + t2·dir2 = (8·apex − 4·(p0 + p3)) / 3

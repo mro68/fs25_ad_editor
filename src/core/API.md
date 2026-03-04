@@ -1,14 +1,14 @@
 # Core API Documentation
 
-## Überblick
+## Ueberblick
 
-Das `core`-Modul enthält die zentralen Datenstrukturen für AutoDrive-Konfigurationen und Geometrie-Typen. Keine Abhängigkeiten zu UI, Render oder App.
+Das `core`-Modul enthaelt die zentralen Datenstrukturen fuer AutoDrive-Konfigurationen und Geometrie-Typen. Keine Abhaengigkeiten zu UI, Render oder App.
 
 ## Haupttypen
 
 ### `Camera2D`
 
-2D-Kamera mit Pan und Zoom. Reiner Geometrie-Typ ohne I/O-Abhängigkeiten.
+2D-Kamera mit Pan und Zoom. Reiner Geometrie-Typ ohne I/O-Abhaengigkeiten.
 
 ```rust
 pub struct Camera2D {
@@ -18,7 +18,7 @@ pub struct Camera2D {
 ```
 
 **Konstanten:**
-- `BASE_WORLD_EXTENT: f32 = 2048.0` — Basis-Weltgröße für Projektion
+- `BASE_WORLD_EXTENT: f32 = 2048.0` — Basis-Weltgroesse fuer Projektion
 - `ZOOM_MIN: f32 = 0.1` — Minimaler Zoom
 - `ZOOM_MAX: f32 = 100.0` — Maximaler Zoom
 
@@ -34,7 +34,7 @@ camera.look_at(Vec2::new(100.0, 200.0));
 camera.pan(Vec2::new(10.0, 5.0));
 
 // Zoom (clamped: 0.1 bis 100.0)
-camera.zoom_by(1.5);  // vergrößern
+camera.zoom_by(1.5);  // vergroessern
 camera.zoom_by(0.5);  // verkleinern
 
 // Zoom mit benutzerdefinierten Grenzen clamped
@@ -43,10 +43,10 @@ camera.zoom_by_clamped(1.5, 0.2, 50.0);  // custom min/max
 // Zoom auf gegebene Grenzen clampen
 camera.clamp_zoom(0.2, 50.0);
 
-// View-Matrix für Shader (nur Translation, kein Scale)
+// View-Matrix fuer Shader (nur Translation, kein Scale)
 let mat = camera.view_matrix(); // Mat3
 
-// Screen zu Welt-Koordinaten (berücksichtigt BASE_WORLD_EXTENT + Zoom)
+// Screen zu Welt-Koordinaten (beruecksichtigt BASE_WORLD_EXTENT + Zoom)
 let world_pos = camera.screen_to_world(
     Vec2::new(mouse_x, mouse_y),
     Vec2::new(screen_w, screen_h)
@@ -61,30 +61,30 @@ let screen_pos = camera.world_to_screen(
     Vec2::new(screen_w, screen_h)
 );
 
-// Pick-Radius in Welt-Einheiten (für Node-Selektion)
+// Pick-Radius in Welt-Einheiten (fuer Node-Selektion)
 let pick_radius = camera.pick_radius_world(viewport_height, pick_radius_px);
 
-// Pick-Radius skaliert (fester Wert bei ZOOM_MAX, unabhängig vom aktuellen Zoom)
+// Pick-Radius skaliert (fester Wert bei ZOOM_MAX, unabhaengig vom aktuellen Zoom)
 let scaled = camera.pick_radius_world_scaled(viewport_height, pick_radius_px);
 ```
 
-**View-Matrix:** Enthält nur Translation (`-position`). Zoom wird ausschließlich über die orthographische Projektion im Renderer gesteuert.
+**View-Matrix:** Enthaelt nur Translation (`-position`). Zoom wird ausschliesslich ueber die orthographische Projektion im Renderer gesteuert.
 
-**Screen-to-World:** Berücksichtigt `BASE_WORLD_EXTENT`, Zoom und Aspekt-Ratio:
+**Screen-to-World:** Beruecksichtigt `BASE_WORLD_EXTENT`, Zoom und Aspekt-Ratio:
 ```
 world = NDC * BASE_WORLD_EXTENT * aspect / zoom + position
 ```
 
-**Pick-Radius:** Konvertiert den übergebenen Pixel-Radius in Welt-Koordinaten basierend auf Zoom und Viewport-Höhe. Der Pixel-Wert (`SELECTION_PICK_RADIUS_PX`) lebt in `shared::options`, damit `core` keine Abhängigkeit auf `shared` hat.
+**Pick-Radius:** Konvertiert den uebergebenen Pixel-Radius in Welt-Koordinaten basierend auf Zoom und Viewport-Hoehe. Der Pixel-Wert (`SELECTION_PICK_RADIUS_PX`) lebt in `shared::options`, damit `core` keine Abhaengigkeit auf `shared` hat.
 
-**Pick-Radius (skaliert):** `pick_radius_world_scaled()` gibt einen fixen Weltradius zurück, berechnet bei `ZOOM_MAX` — damit bleibt der Pick-Bereich unabhängig vom aktuellen Zoom konsistent.
+**Pick-Radius (skaliert):** `pick_radius_world_scaled()` gibt einen fixen Weltradius zurueck, berechnet bei `ZOOM_MAX` — damit bleibt der Pick-Bereich unabhaengig vom aktuellen Zoom konsistent.
 
 ---
 
 ### `BackgroundMap`
 
-Lädt Bilder (PNG, JPG, DDS) als Map-Hintergrund und stellt sie für GPU-Rendering bereit.
-Unterstützt auch das Laden aus ZIP-Archiven.
+Laedt Bilder (PNG, JPG, DDS) als Map-Hintergrund und stellt sie fuer GPU-Rendering bereit.
+Unterstuetzt auch das Laden aus ZIP-Archiven.
 
 ```rust
 pub struct BackgroundMap { /* intern */ }
@@ -92,12 +92,12 @@ pub struct BackgroundMap { /* intern */ }
 
 **Methoden:**
 - `BackgroundMap::load_from_file(path, crop_size) -> Result<Self>` — Bild laden, optional Center-Crop
-- `BackgroundMap::from_image(image, source_label, crop_size) -> Result<Self>` — `pub(crate)`: BackgroundMap aus bereits dekodiertem `DynamicImage` erstellen (für Overview-Generator u.a.)
+- `BackgroundMap::from_image(image, source_label, crop_size) -> Result<Self>` — `pub(crate)`: BackgroundMap aus bereits dekodiertem `DynamicImage` erstellen (fuer Overview-Generator u.a.)
 - `image_data() -> &DynamicImage` — Bilddaten
 - `world_bounds() -> &WorldBounds` — Weltkoordinaten-Bereich
 - `opacity() -> f32` — Aktuelle Opacity
 - `set_opacity(opacity)` — Opacity setzen (clamped 0.0–1.0)
-- `dimensions() -> (u32, u32)` — Bildgröße in Pixeln
+- `dimensions() -> (u32, u32)` — Bildgroesse in Pixeln
 
 **Freie Funktionen (ZIP-Support):**
 - `list_images_in_zip(zip_path) -> Result<Vec<ZipImageEntry>>` — Bilddateien (png/jpg/jpeg/dds) im ZIP auflisten
@@ -110,7 +110,7 @@ Beschreibt eine Bilddatei innerhalb eines ZIP-Archivs.
 ```rust
 pub struct ZipImageEntry {
     pub name: String,  // Dateiname im Archiv (inkl. Pfad)
-    pub size: u64,     // Unkomprimierte Dateigröße in Bytes
+    pub size: u64,     // Unkomprimierte Dateigroesse in Bytes
 }
 ```
 
@@ -118,12 +118,12 @@ pub struct ZipImageEntry {
 
 ### `RoadMap`
 
-Container für das gesamte AutoDrive-Straßennetzwerk.
+Container fuer das gesamte AutoDrive-Strassennetzwerk.
 
 ```rust
 pub struct RoadMap {
     pub nodes: HashMap<u64, MapNode>,
-    connections: HashMap<(u64, u64), Connection>,  // Privat, Zugriff über connections_iter()
+    connections: HashMap<(u64, u64), Connection>,  // Privat, Zugriff ueber connections_iter()
     pub map_markers: Vec<MapMarker>,
     pub meta: AutoDriveMeta,
     pub version: u32,
@@ -133,38 +133,38 @@ pub struct RoadMap {
 
 **Methoden:**
 - `new(version: u32) -> Self` — Erstellt leere RoadMap
-- `add_node(&mut self, node: MapNode)` — Fügt Node hinzu (markiert Spatial-Index als dirty)
+- `add_node(&mut self, node: MapNode)` — Fuegt Node hinzu (markiert Spatial-Index als dirty)
 - `remove_node(&mut self, node_id: u64) -> Option<MapNode>` — Entfernt Node + betroffene Verbindungen
 - `update_node_position(&mut self, node_id: u64, new_position: Vec2) -> bool` — Position aktualisieren (baut Geometrie neu, markiert Spatial als dirty)
-- `add_connection(&mut self, connection: Connection)` — Fügt Verbindung hinzu
-- `has_connection(&self, start_id: u64, end_id: u64) -> bool` — Prüft ob Verbindung existiert
+- `add_connection(&mut self, connection: Connection)` — Fuegt Verbindung hinzu
+- `has_connection(&self, start_id: u64, end_id: u64) -> bool` — Prueft ob Verbindung existiert
 - `find_connection(&self, start_id: u64, end_id: u64) -> Option<&Connection>` — Findet exakte Verbindung
 - `find_connections_between(&self, node_a: u64, node_b: u64) -> Vec<&Connection>` — Alle Verbindungen zwischen zwei Nodes (beide Richtungen)
 - `remove_connection(&mut self, start_id: u64, end_id: u64) -> bool` — Entfernt exakte Verbindung
 - `remove_connections_between(&mut self, node_a: u64, node_b: u64) -> usize` — Entfernt alle Verbindungen zwischen zwei Nodes
 - `invert_connection(&mut self, start_id: u64, end_id: u64) -> bool` — Invertiert Start/End einer Verbindung
-- `set_connection_direction(&mut self, start_id: u64, end_id: u64, direction) -> bool` — Richtung ändern
-- `set_connection_priority(&mut self, start_id: u64, end_id: u64, priority) -> bool` — Priorität ändern
-- `connections_iter(&self) -> impl Iterator<Item = &Connection>` — Iterator über alle Verbindungen
-- `connections_between_ids(&self, ids: &IndexSet<u64>) -> Box<dyn Iterator<Item = &Connection>>` — Connections zwischen Nodes aus der gegebenen ID-Menge (O(n), für Bulk-Operationen)
+- `set_connection_direction(&mut self, start_id: u64, end_id: u64, direction) -> bool` — Richtung aendern
+- `set_connection_priority(&mut self, start_id: u64, end_id: u64, priority) -> bool` — Prioritaet aendern
+- `connections_iter(&self) -> impl Iterator<Item = &Connection>` — Iterator ueber alle Verbindungen
+- `connections_between_ids(&self, ids: &IndexSet<u64>) -> Box<dyn Iterator<Item = &Connection>>` — Connections zwischen Nodes aus der gegebenen ID-Menge (O(n), fuer Bulk-Operationen)
 - `connected_neighbors(&self, node_id: u64) -> Vec<ConnectedNeighbor>` — Alle Nachbarn eines Nodes mit Richtung und Winkel
-- `is_resampleable_chain(&self, node_ids: &IndexSet<u64>) -> bool` — Prüft ob die selektierten Nodes eine zusammenhängende Kette bilden (Kreuzungen nur an Endpunkten erlaubt)
-- `next_node_id(&self) -> u64` — Nächste freie Node-ID
-- `add_map_marker(&mut self, marker: MapMarker)` — Fügt Marker hinzu
-- `has_marker(&self, node_id: u64) -> bool` — Prüft ob Node einen Marker hat
+- `is_resampleable_chain(&self, node_ids: &IndexSet<u64>) -> bool` — Prueft ob die selektierten Nodes eine zusammenhaengende Kette bilden (Kreuzungen nur an Endpunkten erlaubt)
+- `next_node_id(&self) -> u64` — Naechste freie Node-ID
+- `add_map_marker(&mut self, marker: MapMarker)` — Fuegt Marker hinzu
+- `has_marker(&self, node_id: u64) -> bool` — Prueft ob Node einen Marker hat
 - `find_marker_by_node_id(&self, node_id: u64) -> Option<&MapMarker>` — Marker eines Nodes finden
 - `remove_marker(&mut self, node_id: u64) -> bool` — Marker eines Nodes entfernen
 - `rebuild_connection_geometry(&mut self)` — Aktualisiert Connection-Geometrie
-- `recalculate_node_flags(&mut self, node_ids: &[u64])` — NodeFlags basierend auf Verbindungsprioriäten neu berechnen
+- `recalculate_node_flags(&mut self, node_ids: &[u64])` — NodeFlags basierend auf Verbindungsprioriaeten neu berechnen
 - `ensure_spatial_index(&mut self)` — Baut Spatial-Index nur auf, wenn dirty-Flag gesetzt ist (lazy rebuild)
 - `build_spatial_index(&self) -> SpatialIndex` — Erstellt neuen Spatial-Index aus aktuellen Nodes
 - `rebuild_spatial_index(&mut self)` — Baut den internen Spatial-Index sofort neu auf
 - `node_count() -> usize` / `connection_count() -> usize` / `marker_count() -> usize`
-- `count_duplicates(&self, epsilon: f32) -> (u32, u32)` — Zählt Duplikat-Nodes und -Gruppen
+- `count_duplicates(&self, epsilon: f32) -> (u32, u32)` — Zaehlt Duplikat-Nodes und -Gruppen
 - `deduplicate_nodes(&mut self, epsilon: f32) -> DeduplicationResult` — Entfernt Duplikat-Nodes und verbindet Referenzen um
 
 **Spatial Queries (persistenter KD-Tree, lazy rebuild via `ensure_spatial_index`):**
-- `nearest_node(&self, query: Vec2) -> Option<SpatialMatch>` — Nächster Node
+- `nearest_node(&self, query: Vec2) -> Option<SpatialMatch>` — Naechster Node
 - `nodes_within_radius(&self, query: Vec2, radius: f32) -> Vec<SpatialMatch>` — Nodes im Umkreis
 - `nodes_within_rect(&self, min: Vec2, max: Vec2) -> Vec<u64>` — Nodes im Rechteck
 - `nodes_within_rect_into(&self, min: Vec2, max: Vec2, out: &mut Vec<u64>)` — Rechteck-Query in einen bereitgestellten Scratch-Buffer (keine Extra-Allocation im Hotpath)
@@ -173,7 +173,7 @@ pub struct RoadMap {
 
 ### `ConnectedNeighbor`
 
-Beschreibt einen über eine Verbindung erreichbaren Nachbar-Node.
+Beschreibt einen ueber eine Verbindung erreichbaren Nachbar-Node.
 
 ```rust
 pub struct ConnectedNeighbor {
@@ -200,7 +200,7 @@ pub struct DeduplicationResult {
 ```
 
 **Methoden:**
-- `had_duplicates() -> bool` — Gibt `true` zurück wenn Duplikate gefunden und entfernt wurden
+- `had_duplicates() -> bool` — Gibt `true` zurueck wenn Duplikate gefunden und entfernt wurden
 
 ---
 
@@ -220,8 +220,8 @@ pub struct MapNode {
 - `MapNode::new(id, position, flag) -> Self` — Erstellt neuen Node
 
 **NodeFlag-Varianten:**
-- `Regular` (0) — Normaler Wegpunkt (Hauptstraße)
-- `SubPrio` (1) — Nebenstraße (nur SubPriority-Verbindungen)
+- `Regular` (0) — Normaler Wegpunkt (Hauptstrasse)
+- `SubPrio` (1) — Nebenstrasse (nur SubPriority-Verbindungen)
 - `AutoGenerated` (2) — Wird beim Import zu Regular konvertiert
 - `Reserved` (3) — Reserviert
 - `SplineGenerated` (4) — Wird beim Import zu Regular konvertiert
@@ -273,13 +273,13 @@ pub struct SpatialMatch {
 - `within_radius(&self, query: Vec2, radius: f32) -> Vec<SpatialMatch>`
 - `within_rect(&self, min: Vec2, max: Vec2) -> Vec<u64>`
 - `len() -> usize` — Anzahl indexierter Nodes
-- `is_empty() -> bool` — Prüft ob Index leer ist
+- `is_empty() -> bool` — Prueft ob Index leer ist
 
 ---
 
 ### `Heightmap`
 
-Lädt PNG-Heightmaps und berechnet Y-Koordinaten via bikubische Interpolation.
+Laedt PNG-Heightmaps und berechnet Y-Koordinaten via bikubische Interpolation.
 
 ```rust
 pub struct Heightmap { /* intern */ }
@@ -287,13 +287,13 @@ pub struct WorldBounds { pub min_x, min_z, max_x, max_z: f32 }
 ```
 
 **Methoden:**
-- `Heightmap::load(path) -> Result<Self>` — Lädt Heightmap, erkennt Bit-Tiefe und Map-Größe automatisch (FS25: pixels = map_size + 1)
-- `Heightmap::load_with_bounds(path, world_bounds) -> Result<Self>` — Lädt Heightmap mit expliziten World-Bounds
+- `Heightmap::load(path) -> Result<Self>` — Laedt Heightmap, erkennt Bit-Tiefe und Map-Groesse automatisch (FS25: pixels = map_size + 1)
+- `Heightmap::load_with_bounds(path, world_bounds) -> Result<Self>` — Laedt Heightmap mit expliziten World-Bounds
 - `sample_height(x, z, height_scale) -> f32` — Bikubische Interpolation
 - `dimensions() -> (u32, u32)`
 - `bit_depth() -> u8` — Erkannte Bit-Tiefe (8 oder 16)
 - `world_bounds() -> &WorldBounds` — Verwendete Weltkoordinaten-Grenzen
-- `WorldBounds::from_map_size(size)` — Bounds aus Map-Größe (zentriert bei 0,0)
+- `WorldBounds::from_map_size(size)` — Bounds aus Map-Groesse (zentriert bei 0,0)
 
 ---
 
@@ -322,10 +322,10 @@ pub struct AutoDriveMeta {
 
 ## Design-Prinzipien
 
-1. **HashMap statt Array:** Nodes AND Connections sind über ID(-Paar) indexiert → O(1)-Zugriff
+1. **HashMap statt Array:** Nodes AND Connections sind ueber ID(-Paar) indexiert → O(1)-Zugriff
 2. **2D-Koordinaten:** Nur x/z gespeichert (y kommt aus Heightmap beim Export)
-3. **Geometrie-Caching:** Midpoint/Angle werden vorberechnet für Rendering
-4. **Lazy Spatial-Index:** Node-Mutationen setzen ein `spatial_dirty`-Flag; `ensure_spatial_index()` baut den Index erst bei der nächsten Abfrage neu auf
-5. **Flag-Neuberechnung:** `recalculate_node_flags()` setzt Flags basierend auf Verbindungsprioriäten
-6. **Keine UI/Render-Abhängigkeiten:** Reines Datenmodell + Geometrie
-7. **Privates `connections`-Feld:** Kapselung gewährleistet Invarianten; Iterator-Zugriff via `connections_iter()`
+3. **Geometrie-Caching:** Midpoint/Angle werden vorberechnet fuer Rendering
+4. **Lazy Spatial-Index:** Node-Mutationen setzen ein `spatial_dirty`-Flag; `ensure_spatial_index()` baut den Index erst bei der naechsten Abfrage neu auf
+5. **Flag-Neuberechnung:** `recalculate_node_flags()` setzt Flags basierend auf Verbindungsprioriaeten
+6. **Keine UI/Render-Abhaengigkeiten:** Reines Datenmodell + Geometrie
+7. **Privates `connections`-Feld:** Kapselung gewaehrleistet Invarianten; Iterator-Zugriff via `connections_iter()`

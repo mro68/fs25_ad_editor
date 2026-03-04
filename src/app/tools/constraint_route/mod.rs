@@ -1,12 +1,12 @@
-//! Constraint-Route-Tool: Erzeugt Routen mit automatischer Winkelglättung
-//! und tangentialen Übergängen zu bestehenden Verbindungen.
+//! Constraint-Route-Tool: Erzeugt Routen mit automatischer Winkelglaettung
+//! und tangentialen Uebergaengen zu bestehenden Verbindungen.
 //!
 //! Aufgeteilt in:
 //! - `state`     — Struct, Phase-Enum, Konstruktor, Hilfsmethoden
 //! - `lifecycle` — RouteTool-Implementierung (Klick-Phasen, Preview, Execute)
-//! - `geometry`  — Solver-Logik (Steerer, Subdivision, Winkelglättung, Resampling)
-//! - `config_ui` — UI-Konfigurationspanel (Max-Winkel, Segment-Länge, Kontrollpunkte)
-//! - `drag`      — Drag-Logik für Kontrollpunkte und Endpunkte
+//! - `geometry`  — Solver-Logik (Steerer, Subdivision, Winkelglaettung, Resampling)
+//! - `config_ui` — UI-Konfigurationspanel (Max-Winkel, Segment-Laenge, Kontrollpunkte)
+//! - `drag`      — Drag-Logik fuer Kontrollpunkte und Endpunkte
 
 mod config_ui;
 mod drag;

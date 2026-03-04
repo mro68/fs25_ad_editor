@@ -1,25 +1,25 @@
-//! Use-Case-Funktionen für Heightmap-Verwaltung.
+//! Use-Case-Funktionen fuer Heightmap-Verwaltung.
 
 use crate::app::AppState;
 
-/// Öffnet den Heightmap-Auswahl-Dialog.
+/// Oeffnet den Heightmap-Auswahl-Dialog.
 pub fn request_heightmap_dialog(state: &mut AppState) {
     state.ui.show_heightmap_dialog = true;
 }
 
-/// Entfernt die ausgewählte Heightmap.
+/// Entfernt die ausgewaehlte Heightmap.
 pub fn clear_heightmap(state: &mut AppState) {
     state.ui.heightmap_path = None;
-    log::info!("Heightmap gelöscht");
+    log::info!("Heightmap geloescht");
 }
 
 /// Setzt die Heightmap auf den angegebenen Pfad.
 pub fn set_heightmap(state: &mut AppState, path: String) {
     state.ui.heightmap_path = Some(path.clone());
-    log::info!("Heightmap ausgewählt: {}", path);
+    log::info!("Heightmap ausgewaehlt: {}", path);
 }
 
-/// Blendet die Heightmap-Warnung aus und setzt den ausstehenden Speicherpfad zurück.
+/// Blendet die Heightmap-Warnung aus und setzt den ausstehenden Speicherpfad zurueck.
 pub fn dismiss_heightmap_warning(state: &mut AppState) {
     state.ui.show_heightmap_warning = false;
     state.ui.pending_save_path = None;

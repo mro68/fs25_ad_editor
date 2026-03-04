@@ -6,11 +6,11 @@
 use anyhow::Result;
 use image::GrayImage;
 
-/// Parameter für die Hillshade-Berechnung.
+/// Parameter fuer die Hillshade-Berechnung.
 pub struct HillshadeParams {
     /// Azimut der Lichtquelle in Grad (Standard: 315° = Nordwest)
     pub azimuth_deg: f32,
-    /// Höhenwinkel der Lichtquelle in Grad (Standard: 45°)
+    /// Hoehenwinkel der Lichtquelle in Grad (Standard: 45°)
     pub altitude_deg: f32,
     /// Mischfaktor: 0.0 = kein Hillshade, 1.0 = voller Effekt
     pub blend_factor: f32,
@@ -28,7 +28,7 @@ impl Default for HillshadeParams {
 
 /// Berechnet eine Hillshade-Map aus einem DEM-Grayscale-Bild.
 ///
-/// Gibt ein f32-Array zurück mit Werten zwischen 0.0 und 1.0
+/// Gibt ein f32-Array zurueck mit Werten zwischen 0.0 und 1.0
 /// (0.0 = voller Schatten, 1.0 = voll beleuchtet).
 ///
 /// # Parameter
@@ -47,7 +47,7 @@ pub fn compute_hillshade(dem: &GrayImage, params: &HillshadeParams) -> Result<Ve
     let pixels = dem.as_raw();
     let mut hillshade = vec![0.5f32; width * height];
 
-    // Gradient (Sobel-artiger Ansatz mit numpy-ähnlichem gradient())
+    // Gradient (Sobel-artiger Ansatz mit numpy-aehnlichem gradient())
     for y in 0..height {
         for x in 0..width {
             // dz/dx

@@ -1,4 +1,4 @@
-//! Konfigurationspanel für das Ausweichstrecken-Tool.
+//! Konfigurationspanel fuer das Ausweichstrecken-Tool.
 //!
 //! Zeigt Versatz- und Abstandseinstellungen sowie eine Kurz-Info zur geladenen Kette.
 
@@ -6,10 +6,10 @@ use super::geometry::compute_bypass_positions;
 use super::state::BypassTool;
 
 impl BypassTool {
-    /// Unterdrückt Rauschen/Restwerte, die ohne echtes Scrollen auftreten können.
+    /// Unterdrueckt Rauschen/Restwerte, die ohne echtes Scrollen auftreten koennen.
     const WHEEL_DELTA_THRESHOLD: f32 = 0.5;
 
-    /// Liest die Scroll-Richtung für ein gehovertes Widget.
+    /// Liest die Scroll-Richtung fuer ein gehovertes Widget.
     fn wheel_dir(ui: &egui::Ui, response: &egui::Response) -> f32 {
         if !response.hovered() {
             return 0.0;
@@ -24,7 +24,7 @@ impl BypassTool {
 
     /// Rendert das Konfigurationspanel im Properties-Panel.
     ///
-    /// Gibt `true` zurück wenn sich eine Einstellung geändert hat.
+    /// Gibt `true` zurueck wenn sich eine Einstellung geaendert hat.
     pub(super) fn render_config_view(
         &mut self,
         ui: &mut egui::Ui,
@@ -91,7 +91,7 @@ impl BypassTool {
             self.cached_connections = None;
         }
 
-        // Positions-Cache befüllen (damit preview() ihn nutzen kann)
+        // Positions-Cache befuellen (damit preview() ihn nutzen kann)
         if self.cached_positions.is_none() {
             if let Some((positions, d_blend)) =
                 compute_bypass_positions(&self.chain_positions, self.offset, self.base_spacing)
@@ -115,7 +115,7 @@ impl BypassTool {
         }
         ui.label(format!("Kette: {} Nodes", self.chain_positions.len()));
         if self.d_blend > 0.0 {
-            ui.label(format!("Übergangslänge: {:.1} m", self.d_blend));
+            ui.label(format!("Uebergangslaenge: {:.1} m", self.d_blend));
         }
 
         changed

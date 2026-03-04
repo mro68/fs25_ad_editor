@@ -4,7 +4,7 @@ use std::collections::HashSet;
 use crate::app::state::DistanzenState;
 use crate::app::{AppIntent, RoadMap};
 
-/// Unterdrückt Rauschen/Restwerte, die ohne echtes Scrollen auftreten können.
+/// Unterdrueckt Rauschen/Restwerte, die ohne echtes Scrollen auftreten koennen.
 const WHEEL_DELTA_THRESHOLD: f32 = 0.5;
 
 fn wheel_dir_for_hovered(ui: &egui::Ui, response: &egui::Response) -> f32 {
@@ -21,7 +21,7 @@ fn wheel_dir_for_hovered(ui: &egui::Ui, response: &egui::Response) -> f32 {
 
 /// Rendert das Distanzen-Panel: Aktivierung, Spline-Vorschau und Resample-Steuerung.
 ///
-/// Ablauf: Button aktiviert Vorschau → Werte live anpassen → Enter übernimmt, Esc verwirft.
+/// Ablauf: Button aktiviert Vorschau → Werte live anpassen → Enter uebernimmt, Esc verwirft.
 pub fn render_distance_panel(
     ui: &mut egui::Ui,
     road_map: &RoadMap,
@@ -38,7 +38,7 @@ pub fn render_distance_panel(
             distance_state.deactivate();
         }
         ui.separator();
-        ui.label("⚠ Selektierte Nodes bilden keine zusammenhängende Kette.");
+        ui.label("⚠ Selektierte Nodes bilden keine zusammenhaengende Kette.");
         return;
     };
 
@@ -60,10 +60,10 @@ pub fn render_distance_panel(
 
     ui.separator();
     ui.heading("Streckenteilung");
-    ui.label(format!("Streckenlänge: {:.1} m", path_len));
+    ui.label(format!("Streckenlaenge: {:.1} m", path_len));
 
     if !distance_state.active {
-        if ui.button("▶ Einteilung ändern").clicked() {
+        if ui.button("▶ Einteilung aendern").clicked() {
             distance_state.active = true;
             distance_state.distance = distance_state.distance.max(1.0);
             if distance_state.count < 2 {
@@ -132,7 +132,7 @@ pub fn render_distance_panel(
         "Vorschau: {} Nodes",
         distance_state.preview_positions.len()
     ));
-    ui.label("⏎ Enter → übernehmen  |  Esc → verwerfen");
+    ui.label("⏎ Enter → uebernehmen  |  Esc → verwerfen");
 
     if ui.input(|i| i.key_pressed(egui::Key::Enter)) {
         events.push(AppIntent::ResamplePathRequested);

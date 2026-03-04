@@ -21,7 +21,7 @@ pub fn show_marker_dialog(
     let title = if ui_state.marker_dialog.is_new {
         "Marker erstellen"
     } else {
-        "Marker ändern"
+        "Marker aendern"
     };
 
     let existing_groups: BTreeSet<String> = road_map

@@ -3,9 +3,9 @@
 use super::{ConnectedNeighbor, RoadMap};
 
 impl RoadMap {
-    /// Gibt alle Nachbar-Nodes zurück, die über Verbindungen mit `node_id` verbunden sind.
+    /// Gibt alle Nachbar-Nodes zurueck, die ueber Verbindungen mit `node_id` verbunden sind.
     ///
-    /// Iteriert über alle Connections — O(n), aber nur bei Snap-Events aufgerufen.
+    /// Iteriert ueber alle Connections — O(n), aber nur bei Snap-Events aufgerufen.
     pub fn connected_neighbors(&self, node_id: u64) -> Vec<ConnectedNeighbor> {
         let mut neighbors = Vec::new();
         for conn in self.connections.values() {

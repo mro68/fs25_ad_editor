@@ -1,7 +1,7 @@
 # Projekt: FS25 AutoDrive Editor (RADE)
 
-## Überblick
-Neuimplementierung des AutoDrive Course Editors in Rust mit egui + wgpu. Hochperformantes Tool für 100k+ Wegpunkte mit Cross-Platform-Fähigkeit.
+## Ueberblick
+Neuimplementierung des AutoDrive Course Editors in Rust mit egui + wgpu. Hochperformantes Tool fuer 100k+ Wegpunkte mit Cross-Platform-Faehigkeit.
 
 ## Architektur
 - **Core:** Datenmodelle (RoadMap, MapNode), XML-IO, Algorithmen
@@ -12,14 +12,14 @@ Neuimplementierung des AutoDrive Course Editors in Rust mit egui + wgpu. Hochper
 ## Event- und Mutationsfluss
 - UI erzeugt `AppIntent`
 - `AppController` mappt auf `AppCommand`
-- Commands werden über Use-Cases ausgeführt
+- Commands werden ueber Use-Cases ausgefuehrt
 - Mutationen laufen zentral gegen `AppState`
-- Renderer bekommt ausschließlich `RenderScene`
+- Renderer bekommt ausschliesslich `RenderScene`
 
 ## Technologie-Stack
 - **UI Framework:** egui
 - **Rendering:** wgpu (GPU-basiert, WebGL/Vulkan/Metal)
-- **Spatial Index:** kiddo (KD-Tree für Nearest-Neighbor)
+- **Spatial Index:** kiddo (KD-Tree fuer Nearest-Neighbor)
 - **XML:** quick-xml
 - **DDS:** image crate (mit DDS-Feature)
 - **Assets:** egui_extras (SVG-Support)
@@ -42,7 +42,7 @@ Neuimplementierung des AutoDrive Course Editors in Rust mit egui + wgpu. Hochper
 - `connections: HashMap<(u64, u64), Connection>` — Key ist `(start_id, end_id)`
 - `markers: Vec<MapMarker>`
 - `meta: AutoDriveMeta` (Version, Map-Name)
-- `spatial: SpatialIndex` (KD-Tree für schnelle 2D-Abfragen)
+- `spatial: SpatialIndex` (KD-Tree fuer schnelle 2D-Abfragen)
 
 ## XML-Format (AutoDrive Config)
 **Structure of Arrays:** Parallele CSV-Listen in XML-Tags
@@ -54,10 +54,10 @@ Neuimplementierung des AutoDrive Course Editors in Rust mit egui + wgpu. Hochper
 **Versions-Logik:** FS22/FS25 Configs bereinigen Flags 2/4 → 0 beim Laden
 
 ## Performance-Ziele
-- 100k+ Nodes/Connections flüssig (>60 FPS)
-- GPU-Instancing für Batch-Rendering
+- 100k+ Nodes/Connections fluessig (>60 FPS)
+- GPU-Instancing fuer Batch-Rendering
 - Viewport-Culling (nur sichtbare Elemente rendern)
-- KD-Tree für schnelle räumliche Abfragen (<1ms bei Mausklicks)
+- KD-Tree fuer schnelle raeumliche Abfragen (<1ms bei Mausklicks)
 
 ## Code-Konventionen
 - **Kommunikation:** Deutsch
@@ -66,8 +66,8 @@ Neuimplementierung des AutoDrive Course Editors in Rust mit egui + wgpu. Hochper
 - **Fehler-Messages:** Deutsch (User-facing) / Englisch (Debug-Logs)
 
 ## Dokumentations-Pflicht
-Dokumentation wird **im selben Commit** wie der Code geändert — nie später:
-- **Docstrings (`///`):** Jede öffentliche Funktion/Struct/Enum braucht einen deutschen Docstring. Bei Signaturnänderungen sofort anpassen.
-- **`src/*/API.md`:** Je ein `API.md` pro Layer (`app/`, `core/`, `render/`, `shared/`, `xml/`). Änderungen an der öffentlichen API → `API.md` sofort nachführen.
+Dokumentation wird **im selben Commit** wie der Code geaendert — nie spaeter:
+- **Docstrings (`///`):** Jede oeffentliche Funktion/Struct/Enum braucht einen deutschen Docstring. Bei Signaturnaenderungen sofort anpassen.
+- **`src/*/API.md`:** Je ein `API.md` pro Layer (`app/`, `core/`, `render/`, `shared/`, `xml/`). Aenderungen an der oeffentlichen API → `API.md` sofort nachfuehren.
 - **`docs/ROADMAP.md`:** Fertige Items als `[x]` markieren, neue Todos eintragen.
-- **`.windsurf/rules/`:** Neue Architektur-Entscheidungen, Layer-Grenzen oder Pattern-Änderungen hier dokumentieren.
+- **`.windsurf/rules/`:** Neue Architektur-Entscheidungen, Layer-Grenzen oder Pattern-Aenderungen hier dokumentieren.

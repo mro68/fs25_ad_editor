@@ -3,9 +3,9 @@ use image::{Rgb, RgbImage};
 use super::OverviewOptions;
 use crate::text;
 
-/// Legende-Einträge: (Farbe, Beschreibung).
+/// Legende-Eintraege: (Farbe, Beschreibung).
 const LEGEND_ITEMS: &[([u8; 3], &str)] = &[
-    ([100, 100, 105], "Asphalt / Straße"),
+    ([100, 100, 105], "Asphalt / Strasse"),
     ([165, 165, 160], "Beton / Zement"),
     ([90, 150, 60], "Grasland"),
     ([50, 110, 45], "Wald"),
@@ -17,10 +17,10 @@ const LEGEND_ITEMS: &[([u8; 3], &str)] = &[
     ([150, 145, 140], "Gehweg / Pflaster"),
 ];
 
-/// Zeichnet die Farbschlüssel-Legende auf das Bild.
+/// Zeichnet die Farbschluessel-Legende auf das Bild.
 ///
 /// Die Legende wird unten links als halbtransparente Box dargestellt.
-/// Enthält Terrain-Farben, POI-Markierung und Farmland-Grenzfarbe.
+/// Enthaelt Terrain-Farben, POI-Markierung und Farmland-Grenzfarbe.
 pub fn draw_legend(image: &mut RgbImage, options: &OverviewOptions) {
     let scale = (image.width() / 1200).clamp(1, 4);
     let padding = 15i32 * scale as i32 / 2;
@@ -84,7 +84,7 @@ pub fn draw_legend(image: &mut RgbImage, options: &OverviewOptions) {
             image,
             lx + padding + swatch_size as i32 + 8,
             yo + 2,
-            "Gebäude / POI",
+            "Gebaeude / POI",
             Rgb([255, 255, 255]),
             scale,
         );

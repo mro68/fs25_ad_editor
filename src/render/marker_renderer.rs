@@ -1,11 +1,11 @@
-//! Marker-Renderer mit GPU-Instancing für Map-Marker (Pin-Symbole).
+//! Marker-Renderer mit GPU-Instancing fuer Map-Marker (Pin-Symbole).
 
 use super::types::{MarkerInstance, RenderContext, RenderQuality, Uniforms, Vertex};
 use crate::RoadMap;
 use eframe::{egui_wgpu, wgpu};
 use wgpu::util::DeviceExt;
 
-/// Renderer für Map-Marker (Pin-Symbole)
+/// Renderer fuer Map-Marker (Pin-Symbole)
 pub struct MarkerRenderer {
     pipeline: wgpu::RenderPipeline,
     vertex_buffer: wgpu::Buffer,
@@ -13,7 +13,7 @@ pub struct MarkerRenderer {
     bind_group: wgpu::BindGroup,
     instance_buffer: Option<wgpu::Buffer>,
     instance_capacity: usize,
-    /// Wiederverwendbarer Scratch-Buffer für Instanz-Daten (verhindert per-Frame-Allokation)
+    /// Wiederverwendbarer Scratch-Buffer fuer Instanz-Daten (verhindert per-Frame-Allokation)
     instance_scratch: Vec<MarkerInstance>,
 }
 
@@ -101,7 +101,7 @@ impl MarkerRenderer {
             cache: None,
         });
 
-        // Vertex-Buffer für Quad (-1..1)
+        // Vertex-Buffer fuer Quad (-1..1)
         let vertices = [
             Vertex {
                 position: [-1.0, -1.0],
@@ -142,7 +142,7 @@ impl MarkerRenderer {
 
     /// Rendert alle sichtbaren Map-Marker per GPU-Instancing.
     ///
-    /// Marker-Positionen werden über die referenzierte Node-ID aufgelöst.
+    /// Marker-Positionen werden ueber die referenzierte Node-ID aufgeloest.
     pub fn render(
         &mut self,
         ctx: &RenderContext,

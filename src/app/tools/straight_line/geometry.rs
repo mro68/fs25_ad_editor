@@ -1,13 +1,13 @@
-//! Geometrie-Berechnungen für das Gerade-Strecke-Tool.
+//! Geometrie-Berechnungen fuer das Gerade-Strecke-Tool.
 
 use super::super::{common, ToolAnchor, ToolResult};
 use crate::core::{ConnectionDirection, ConnectionPriority, RoadMap};
 use glam::Vec2;
 
-/// Berechnet die gleichmäßig verteilten Zwischen-Positionen einer geraden Strecke.
+/// Berechnet die gleichmaessig verteilten Zwischen-Positionen einer geraden Strecke.
 ///
-/// Gibt `segment_count + 1` Punkte zurück (inkl. Start und Ende).
-/// Bei `distance < EPSILON` wird nur `[start]` zurückgegeben.
+/// Gibt `segment_count + 1` Punkte zurueck (inkl. Start und Ende).
+/// Bei `distance < EPSILON` wird nur `[start]` zurueckgegeben.
 pub fn compute_line_positions(start: Vec2, end: Vec2, max_segment_length: f32) -> Vec<Vec2> {
     let distance = start.distance(end);
     if distance < f32::EPSILON {
@@ -19,7 +19,7 @@ pub fn compute_line_positions(start: Vec2, end: Vec2, max_segment_length: f32) -
         .collect()
 }
 
-/// Gemeinsame Logik für `execute()` und `execute_from_anchors()`.
+/// Gemeinsame Logik fuer `execute()` und `execute_from_anchors()`.
 ///
 /// Berechnet Positionen und delegiert Node-/Verbindungs-Aufbau an `assemble_tool_result`.
 pub(crate) fn build_result(

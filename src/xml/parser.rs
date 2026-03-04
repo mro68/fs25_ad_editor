@@ -1,4 +1,4 @@
-//! Parser für AutoDrive XML-Konfigurationen.
+//! Parser fuer AutoDrive XML-Konfigurationen.
 
 mod markers;
 mod waypoints;
@@ -10,7 +10,7 @@ use quick_xml::events::Event;
 use quick_xml::Reader;
 use waypoints::build_nodes_and_connections;
 
-/// Hängt Text an eine `Option<String>` an (oder initialisiert sie).
+/// Haengt Text an eine `Option<String>` an (oder initialisiert sie).
 fn append_or_set(target: &mut Option<String>, text: &str) {
     match target {
         Some(ref mut s) => s.push_str(text),
@@ -136,7 +136,7 @@ pub fn parse_autodrive_config(xml_content: &str) -> Result<RoadMap> {
                     }
                 }
             }
-            // Entity-Referenzen (&amp; &lt; etc.) als aufgelöstes Zeichen anhängen
+            // Entity-Referenzen (&amp; &lt; etc.) als aufgeloestes Zeichen anhaengen
             Ok(Event::GeneralRef(e)) => {
                 let resolved = match &*e {
                     b"amp" => "&",
@@ -162,7 +162,7 @@ pub fn parse_autodrive_config(xml_content: &str) -> Result<RoadMap> {
                 } else if tag == "mapmarker" {
                     in_mapmarker = false;
                 } else if in_marker_element && tag.starts_with("mm") {
-                    // Marker-Element endet - füge Marker hinzu
+                    // Marker-Element endet - fuege Marker hinzu
                     in_marker_element = false;
                     current_marker_tag = None;
                     if let Some(id) = current_marker_id {
@@ -189,7 +189,7 @@ pub fn parse_autodrive_config(xml_content: &str) -> Result<RoadMap> {
 
     let version = parse_version(version_attr.clone(), version_text)?;
 
-    // config_version für den Writer sicherstellen (Roundtrip-Fähigkeit)
+    // config_version fuer den Writer sicherstellen (Roundtrip-Faehigkeit)
     if config_version.is_none() {
         config_version = version_attr;
     }

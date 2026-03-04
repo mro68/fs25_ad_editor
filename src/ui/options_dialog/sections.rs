@@ -24,7 +24,7 @@ fn color_edit(ui: &mut egui::Ui, label: &str, color: &mut [f32; 4]) -> bool {
 pub(super) fn render_nodes(ui: &mut egui::Ui, opts: &mut EditorOptions) -> bool {
     let mut changed = false;
     ui.horizontal(|ui| {
-        ui.label("Größe (Welt):");
+        ui.label("Groesse (Welt):");
         changed |= ui
             .add(
                 egui::DragValue::new(&mut opts.node_size_world)
@@ -38,7 +38,7 @@ pub(super) fn render_nodes(ui: &mut egui::Ui, opts: &mut EditorOptions) -> bool 
     changed |= color_edit(ui, "Selektiert:", &mut opts.node_color_selected);
     changed |= color_edit(ui, "Warnung:", &mut opts.node_color_warning);
     ui.horizontal(|ui| {
-        ui.label("Hitbox (% der Größe):");
+        ui.label("Hitbox (% der Groesse):");
         changed |= ui
             .add(
                 egui::DragValue::new(&mut opts.hitbox_scale_percent)
@@ -54,7 +54,7 @@ pub(super) fn render_nodes(ui: &mut egui::Ui, opts: &mut EditorOptions) -> bool 
 pub(super) fn render_tools(ui: &mut egui::Ui, opts: &mut EditorOptions) -> bool {
     let mut changed = false;
     ui.horizontal(|ui| {
-        ui.label("Wertänderung:");
+        ui.label("Wertaenderung:");
         let current_label = match opts.value_adjust_input_mode {
             ValueAdjustInputMode::DragHorizontal => "LMT li/re",
             ValueAdjustInputMode::MouseWheel => "Mausrad hoch/runter",
@@ -112,7 +112,7 @@ pub(super) fn render_tools(ui: &mut egui::Ui, opts: &mut EditorOptions) -> bool 
 pub(super) fn render_selection(ui: &mut egui::Ui, opts: &mut EditorOptions) -> bool {
     let mut changed = false;
     ui.horizontal(|ui| {
-        ui.label("Größenfaktor (%):");
+        ui.label("Groessenfaktor (%):");
         changed |= ui
             .add(
                 egui::DragValue::new(&mut opts.selection_size_factor)
@@ -149,7 +149,7 @@ pub(super) fn render_selection(ui: &mut egui::Ui, opts: &mut EditorOptions) -> b
 pub(super) fn render_connections(ui: &mut egui::Ui, opts: &mut EditorOptions) -> bool {
     let mut changed = false;
     ui.horizontal(|ui| {
-        ui.label("Breite Hauptstraße:");
+        ui.label("Breite Hauptstrasse:");
         changed |= ui
             .add(
                 egui::DragValue::new(&mut opts.connection_thickness_world)
@@ -159,7 +159,7 @@ pub(super) fn render_connections(ui: &mut egui::Ui, opts: &mut EditorOptions) ->
             .changed();
     });
     ui.horizontal(|ui| {
-        ui.label("Breite Nebenstraße:");
+        ui.label("Breite Nebenstrasse:");
         changed |= ui
             .add(
                 egui::DragValue::new(&mut opts.connection_thickness_subprio_world)
@@ -169,7 +169,7 @@ pub(super) fn render_connections(ui: &mut egui::Ui, opts: &mut EditorOptions) ->
             .changed();
     });
     ui.horizontal(|ui| {
-        ui.label("Pfeillänge:");
+        ui.label("Pfeillaenge:");
         changed |= ui
             .add(
                 egui::DragValue::new(&mut opts.arrow_length_world)
@@ -188,11 +188,11 @@ pub(super) fn render_connections(ui: &mut egui::Ui, opts: &mut EditorOptions) ->
             )
             .changed();
     });
-    changed |= color_edit(ui, "Regular (Einbahn):", &mut opts.connection_color_regular);
-    changed |= color_edit(ui, "Dual (Bidirektional):", &mut opts.connection_color_dual);
+    changed |= color_edit(ui, "Einbahn vorwaerts:", &mut opts.connection_color_regular);
+    changed |= color_edit(ui, "Zweirichtungsverkehr:", &mut opts.connection_color_dual);
     changed |= color_edit(
         ui,
-        "Reverse (Rückwärts):",
+        "Einbahn rueckwaerts:",
         &mut opts.connection_color_reverse,
     );
     changed
@@ -201,7 +201,7 @@ pub(super) fn render_connections(ui: &mut egui::Ui, opts: &mut EditorOptions) ->
 pub(super) fn render_markers(ui: &mut egui::Ui, opts: &mut EditorOptions) -> bool {
     let mut changed = false;
     ui.horizontal(|ui| {
-        ui.label("Pin-Größe:");
+        ui.label("Pin-Groesse:");
         changed |= ui
             .add(
                 egui::DragValue::new(&mut opts.marker_size_world)
@@ -238,7 +238,7 @@ pub(super) fn render_camera(ui: &mut egui::Ui, opts: &mut EditorOptions) -> bool
             .changed();
     });
     ui.horizontal(|ui| {
-        ui.label("Zoom-Schritt (Menü):");
+        ui.label("Zoom-Schritt (Menue):");
         changed |= ui
             .add(
                 egui::DragValue::new(&mut opts.camera_zoom_step)
@@ -318,10 +318,10 @@ pub(super) fn render_overview_layers(ui: &mut egui::Ui, opts: &mut EditorOptions
 pub(super) fn render_node_behavior(ui: &mut egui::Ui, opts: &mut EditorOptions) -> bool {
     let mut changed = false;
     if ui
-        .checkbox(&mut opts.reconnect_on_delete, "Nach Löschen verbinden")
+        .checkbox(&mut opts.reconnect_on_delete, "Nach Loeschen verbinden")
         .on_hover_text(
-            "Wenn aktiviert: Wird ein Node mit jeweils genau einem Vorgänger und Nachfolger \
-             gelöscht, werden Vorgänger und Nachfolger direkt miteinander verbunden.",
+            "Wenn aktiviert: Wird ein Node mit jeweils genau einem Vorgaenger und Nachfolger \
+             geloescht, werden Vorgaenger und Nachfolger direkt miteinander verbunden.",
         )
         .changed()
     {

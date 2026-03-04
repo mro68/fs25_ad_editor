@@ -14,7 +14,7 @@ pub(crate) enum DragSelectionMode {
 pub(crate) struct DragSelection {
     /// Aktiver Selektions-Modus (Rect oder Lasso)
     pub mode: DragSelectionMode,
-    /// Additive Selektion (Shift gedrückt) – erweitert statt zu ersetzen
+    /// Additive Selektion (Shift gedrueckt) – erweitert statt zu ersetzen
     pub additive: bool,
     /// Startposition der Drag-Aktion in Screen-Koordinaten
     pub start_screen: egui::Pos2,
@@ -23,7 +23,7 @@ pub(crate) struct DragSelection {
 }
 
 impl DragSelection {
-    /// Fügt einen Lasso-Punkt hinzu, wenn der Mindestabstand erreicht ist.
+    /// Fuegt einen Lasso-Punkt hinzu, wenn der Mindestabstand erreicht ist.
     pub fn push_lasso_point(&mut self, pointer_pos: egui::Pos2) {
         let min_distance_sq = 3.0 * 3.0;
         let should_push = self

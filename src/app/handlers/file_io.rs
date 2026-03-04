@@ -1,27 +1,27 @@
-//! Handler für Datei-Operationen (Öffnen, Speichern, Heightmap).
+//! Handler fuer Datei-Operationen (Oeffnen, Speichern, Heightmap).
 
 use crate::app::use_cases;
 use crate::app::AppState;
 use std::path::Path;
 
-/// Öffnet den Datei-Öffnen-Dialog.
+/// Oeffnet den Datei-Oeffnen-Dialog.
 pub fn request_open(state: &mut AppState) {
     use_cases::file_io::request_open_file(state);
 }
 
-/// Öffnet den Datei-Speichern-Dialog.
+/// Oeffnet den Datei-Speichern-Dialog.
 pub fn request_save(state: &mut AppState) {
     use_cases::file_io::request_save_file(state);
 }
 
-/// Bestätigt Heightmap-Warnung und führt Speichern aus.
+/// Bestaetigt Heightmap-Warnung und fuehrt Speichern aus.
 pub fn confirm_and_save(state: &mut AppState) -> anyhow::Result<()> {
     use_cases::file_io::confirm_and_save(state)
 }
 
-/// Lädt eine RoadMap aus dem übergebenen Pfad.
+/// Laedt eine RoadMap aus dem uebergebenen Pfad.
 ///
-/// Nach dem Laden wird automatisch geprüft, ob eine Heightmap und/oder
+/// Nach dem Laden wird automatisch geprueft, ob eine Heightmap und/oder
 /// ein passender Map-Mod-ZIP im Mods-Verzeichnis vorhanden sind.
 pub fn load(state: &mut AppState, path: String) -> anyhow::Result<()> {
     use_cases::file_io::load_selected_file(state, path.clone())?;
@@ -29,7 +29,7 @@ pub fn load(state: &mut AppState, path: String) -> anyhow::Result<()> {
     Ok(())
 }
 
-/// Führt die automatische Erkennung von Heightmap, overview.jpg und Map-Mod-ZIP durch.
+/// Fuehrt die automatische Erkennung von Heightmap, overview.jpg und Map-Mod-ZIP durch.
 fn run_post_load_detection(state: &mut AppState, xml_path: &str) {
     let xml_path = Path::new(xml_path);
     let map_name = state.road_map.as_ref().and_then(|rm| rm.map_name.clone());
@@ -84,9 +84,9 @@ fn run_post_load_detection(state: &mut AppState, xml_path: &str) {
     }
 }
 
-/// Speichert die RoadMap unter dem übergebenen Pfad (inkl. Heightmap-Check).
+/// Speichert die RoadMap unter dem uebergebenen Pfad (inkl. Heightmap-Check).
 ///
-/// `None` speichert unter dem aktuell bekannten Pfad (oder öffnet den Dialog).
+/// `None` speichert unter dem aktuell bekannten Pfad (oder oeffnet den Dialog).
 /// `Some(p)` speichert explizit unter dem neuen Pfad `p`.
 pub fn save(state: &mut AppState, path: Option<String>) -> anyhow::Result<()> {
     use_cases::file_io::save_with_heightmap_check(state, path)
@@ -102,7 +102,7 @@ pub fn set_heightmap(state: &mut AppState, path: String) {
     use_cases::heightmap::set_heightmap(state, path);
 }
 
-/// Führt die Duplikat-Bereinigung auf der geladenen RoadMap aus.
+/// Fuehrt die Duplikat-Bereinigung auf der geladenen RoadMap aus.
 pub fn deduplicate(state: &mut AppState) {
     use_cases::file_io::deduplicate_loaded_roadmap(state);
 }

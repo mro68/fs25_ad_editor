@@ -1,4 +1,4 @@
-//! State-Definitionen und Konstruktor für das Bézier-Kurven-Tool.
+//! State-Definitionen und Konstruktor fuer das Bézier-Kurven-Tool.
 
 use super::super::common::{SegmentConfig, TangentSource, TangentState, ToolLifecycleState};
 use super::super::ToolAnchor;
@@ -10,7 +10,7 @@ use crate::shared::options::{HITBOX_SCALE_PERCENT, NODE_SIZE_WORLD};
 use glam::Vec2;
 use std::cell::RefCell;
 
-/// Schlüssel für gecachte Kurven-Preview-Positionen.
+/// Schluessel fuer gecachte Kurven-Preview-Positionen.
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub(crate) struct CurvePreviewCacheKey {
     pub degree: CurveDegree,
@@ -21,7 +21,7 @@ pub(crate) struct CurvePreviewCacheKey {
     pub max_segment_length: f32,
 }
 
-/// Zwischenspeicher für die zuletzt berechnete Kurven-Preview.
+/// Zwischenspeicher fuer die zuletzt berechnete Kurven-Preview.
 #[derive(Debug, Clone)]
 pub(crate) struct CurvePreviewCache {
     pub key: CurvePreviewCacheKey,
@@ -51,11 +51,11 @@ pub enum CurveDegree {
 /// Phasen des Kurven-Tools
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub(crate) enum Phase {
-    /// Startpunkt wählen
+    /// Startpunkt waehlen
     Start,
-    /// Endpunkt wählen
+    /// Endpunkt waehlen
     End,
-    /// Steuerpunkt(e) wählen / verschieben (Klick aktualisiert, Enter bestätigt)
+    /// Steuerpunkt(e) waehlen / verschieben (Klick aktualisiert, Enter bestaetigt)
     Control,
 }
 
@@ -87,7 +87,7 @@ pub struct CurveTool {
     pub(crate) tangents: TangentState,
     /// Virtueller Scheitelpunkt: B(0.5) der kubischen Kurve — draggbares Handle
     pub(crate) virtual_apex: Option<Vec2>,
-    /// Cache für dichte Kurvenpositionen im Preview-Hotpath.
+    /// Cache fuer dichte Kurvenpositionen im Preview-Hotpath.
     pub(crate) preview_cache: RefCell<Option<CurvePreviewCache>>,
 }
 
@@ -161,10 +161,10 @@ impl CurveTool {
         self.control_point2 = Some(end.position() - chord_dir * (chord_len / 3.0));
     }
 
-    /// Wählt automatisch die beste Start-Tangente aus `start_neighbors`.
+    /// Waehlt automatisch die beste Start-Tangente aus `start_neighbors`.
     ///
-    /// Bevorzugt eingehende Verbindungen (`is_outgoing = false`). Wählt den
-    /// Nachbarn, dessen Fortsetzungsrichtung am stärksten in Richtung Endpunkt zeigt.
+    /// Bevorzugt eingehende Verbindungen (`is_outgoing = false`). Waehlt den
+    /// Nachbarn, dessen Fortsetzungsrichtung am staerksten in Richtung Endpunkt zeigt.
     /// Anders als am Ende wird am Start immer ein Fallback gesetzt, sobald
     /// mindestens ein Nachbar existiert (auch wenn der Dot-Wert <= 0 ist).
     pub(crate) fn auto_suggest_start_tangent(&mut self) {
@@ -189,10 +189,10 @@ impl CurveTool {
         }
     }
 
-    /// Wählt automatisch die beste End-Tangente aus `end_neighbors`.
+    /// Waehlt automatisch die beste End-Tangente aus `end_neighbors`.
     ///
-    /// Bevorzugt ausgehende Verbindungen (`is_outgoing = true`). Wählt den
-    /// Nachbarn, dessen Richtung am stärksten vom Startpunkt weg zeigt
+    /// Bevorzugt ausgehende Verbindungen (`is_outgoing = true`). Waehlt den
+    /// Nachbarn, dessen Richtung am staerksten vom Startpunkt weg zeigt
     /// (spiegelverkehrt zu `auto_suggest_start_tangent`).
     pub(crate) fn auto_suggest_end_tangent(&mut self) {
         if self.degree != CurveDegree::Cubic {
@@ -213,10 +213,10 @@ impl CurveTool {
         }
     }
 
-    /// Parametrisierte Auto-Tangenten-Auswahl (gemeinsam für Start und Ende).
+    /// Parametrisierte Auto-Tangenten-Auswahl (gemeinsam fuer Start und Ende).
     ///
-    /// - `neighbors`: Verfügbare Nachbarn am betreffenden Endpunkt
-    /// - `chord_dir`: Normalisierte Sehnenrichtung Start→Ende (immer gleich für beide)
+    /// - `neighbors`: Verfuegbare Nachbarn am betreffenden Endpunkt
+    /// - `chord_dir`: Normalisierte Sehnenrichtung Start→Ende (immer gleich fuer beide)
     /// - `is_start`: true = Start-Tangente (bevorzugt incoming, vergleicht angle+PI),
     ///   false = End-Tangente (bevorzugt outgoing, vergleicht angle direkt)
     /// - `require_forward_dot`: true => nur Kandidaten mit `dot > 0`,
@@ -264,7 +264,7 @@ impl CurveTool {
         }
     }
 
-    /// Kurvenlänge je nach Grad.
+    /// Kurvenlaenge je nach Grad.
     pub(crate) fn curve_length(&self) -> f32 {
         let s = self.start.as_ref().map(|a| a.position());
         let e = self.end.as_ref().map(|a| a.position());
@@ -290,7 +290,7 @@ impl CurveTool {
         self.seg.sync_from_length(self.curve_length());
     }
 
-    /// True wenn alle Steuerpunkte für den aktuellen Grad gesetzt sind.
+    /// True wenn alle Steuerpunkte fuer den aktuellen Grad gesetzt sind.
     pub(crate) fn controls_complete(&self) -> bool {
         match self.degree {
             CurveDegree::Quadratic => self.control_point1.is_some(),
@@ -298,7 +298,7 @@ impl CurveTool {
         }
     }
 
-    /// Wendet die gewählten Tangenten auf die Steuerpunkte an (nur Cubic).
+    /// Wendet die gewaehlten Tangenten auf die Steuerpunkte an (nur Cubic).
     ///
     /// Wenn Start- und End-Tangente als Verbindung gesetzt sind, werden beide
     /// Kontrollpunkte deckungsgleich gesetzt.
@@ -331,7 +331,7 @@ impl CurveTool {
                 return;
             }
 
-            // Paralleler Sonderfall: Mittelwert beider unabhängigen Tangenten-CPs.
+            // Paralleler Sonderfall: Mittelwert beider unabhaengigen Tangenten-CPs.
             let cp1 = compute_tangent_cp(start_pos, start_angle, end_pos, true);
             let cp2 = compute_tangent_cp(end_pos, end_angle, start_pos, false);
             let merged = (cp1 + cp2) * 0.5;
@@ -358,12 +358,12 @@ impl CurveTool {
         }
     }
 
-    /// Schnittpunkt der beiden Tangenten-Geraden für CP1/CP2.
+    /// Schnittpunkt der beiden Tangenten-Geraden fuer CP1/CP2.
     ///
     /// - Start-Linie: `start_pos + t * dir_start`, `dir_start = angle_start + PI`
     /// - End-Linie: `end_pos + u * dir_end`, `dir_end = angle_end`
     ///
-    /// Gibt `None` zurück, wenn die Geraden (nahezu) parallel sind.
+    /// Gibt `None` zurueck, wenn die Geraden (nahezu) parallel sind.
     fn intersect_tangent_control_lines(
         start_pos: Vec2,
         start_angle: f32,
@@ -384,7 +384,7 @@ impl CurveTool {
         Some(start_pos + dir_start * t)
     }
 
-    /// Löscht den Preview-Cache nach Zustandsänderungen.
+    /// Loescht den Preview-Cache nach Zustandsaenderungen.
     pub(crate) fn invalidate_preview_cache(&self) {
         *self.preview_cache.borrow_mut() = None;
     }

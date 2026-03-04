@@ -36,7 +36,7 @@ impl RouteTool for CurveTool {
             Phase::Control => match self.degree {
                 CurveDegree::Quadratic => {
                     if self.control_point1.is_some() {
-                        "Punkte per Drag anpassen — Enter bestätigt"
+                        "Punkte per Drag anpassen — Enter bestaetigt"
                     } else {
                         "Steuerpunkt klicken"
                     }
@@ -45,7 +45,7 @@ impl RouteTool for CurveTool {
                     let has1 = self.control_point1.is_some();
                     let has2 = self.control_point2.is_some();
                     if has1 && has2 {
-                        "Scheitelpunkt (Mitte) per Drag anpassen — Enter bestätigt"
+                        "Scheitelpunkt (Mitte) per Drag anpassen — Enter bestaetigt"
                     } else if has1 {
                         "2. Steuerpunkt klicken"
                     } else {
@@ -172,7 +172,7 @@ impl RouteTool for CurveTool {
 
                 let connections = linear_connections(positions.len());
 
-                // Steuerpunkte als zusätzliche Vorschau-Nodes
+                // Steuerpunkte als zusaetzliche Vorschau-Nodes
                 let mut nodes = positions;
                 nodes.push(cp1);
                 if self.degree == CurveDegree::Cubic {
@@ -209,10 +209,10 @@ impl RouteTool for CurveTool {
         build_tool_result(start, end, &params, road_map)
     }
 
-    /// Setzt das Tool vollständig zurück (inkl. Tangenten und Phase).
+    /// Setzt das Tool vollstaendig zurueck (inkl. Tangenten und Phase).
     ///
     /// Im Gegensatz zu StraightLine/Spline werden hier auch Tangenten
-    /// komplett zurückgesetzt, da Control Points die primäre Steuerung sind.
+    /// komplett zurueckgesetzt, da Control Points die primaere Steuerung sind.
     /// `lifecycle.last_created_ids` und `last_*_anchor` bleiben erhalten.
     fn reset(&mut self) {
         self.invalidate_preview_cache();

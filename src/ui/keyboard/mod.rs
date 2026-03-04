@@ -1,11 +1,11 @@
-//! Keyboard-Shortcuts für den Viewport.
+//! Keyboard-Shortcuts fuer den Viewport.
 //!
 //! Verarbeitet globale Tastenkombinationen und mappt sie auf `AppIntent`s.
 
 use crate::app::{AppIntent, ConnectionDirection, ConnectionPriority, EditorTool};
 use indexmap::IndexSet;
 
-/// Verarbeitet Keyboard-Shortcuts und gibt AppIntents zurück.
+/// Verarbeitet Keyboard-Shortcuts und gibt AppIntents zurueck.
 pub(super) fn collect_keyboard_intents(
     ui: &egui::Ui,
     selected_node_ids: &IndexSet<u64>,
@@ -32,7 +32,7 @@ pub(super) fn collect_keyboard_intents(
         events.push(AppIntent::RedoRequested);
     }
 
-    // Ctrl+O (Öffnen), Ctrl+S (Speichern), Ctrl+A (Alle selektieren), Escape (Selektion aufheben)
+    // Ctrl+O (Oeffnen), Ctrl+S (Speichern), Ctrl+A (Alle selektieren), Escape (Selektion aufheben)
     let (key_o_pressed, key_s_pressed, key_a_pressed, key_escape_pressed) = ui.input(|i| {
         (
             i.key_pressed(egui::Key::O),
@@ -61,10 +61,10 @@ pub(super) fn collect_keyboard_intents(
             // Tool zeichnet gerade → Eingabe abbrechen
             events.push(AppIntent::RouteToolCancelled);
         } else if !selected_node_ids.is_empty() {
-            // Selektion aufheben (gilt für alle Tools inkl. Route im Leerlauf)
+            // Selektion aufheben (gilt fuer alle Tools inkl. Route im Leerlauf)
             events.push(AppIntent::ClearSelectionRequested);
         } else if active_tool != EditorTool::Select {
-            // Zurück zum Select-Tool
+            // Zurueck zum Select-Tool
             events.push(AppIntent::SetEditorToolRequested {
                 tool: EditorTool::Select,
             });
@@ -104,7 +104,7 @@ pub(super) fn collect_keyboard_intents(
         events.push(AppIntent::DeleteSelectedRequested);
     }
 
-    // Enter = Route-Tool ausführen
+    // Enter = Route-Tool ausfuehren
     if key_enter_pressed && active_tool == EditorTool::Route {
         events.push(AppIntent::RouteToolExecuteRequested);
     }
@@ -146,7 +146,7 @@ pub(super) fn collect_keyboard_intents(
         });
     }
 
-    // Arrow Keys für Route-Tool-Konfiguration (nur wenn Route-Tool aktiv und zeichnet)
+    // Arrow Keys fuer Route-Tool-Konfiguration (nur wenn Route-Tool aktiv und zeichnet)
     if active_tool == EditorTool::Route
         && route_tool_is_drawing
         && !modifiers.command

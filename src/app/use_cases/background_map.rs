@@ -1,4 +1,4 @@
-//! Use-Case-Funktionen für Background-Map-Verwaltung.
+//! Use-Case-Funktionen fuer Background-Map-Verwaltung.
 
 use crate::app::state::ZipBrowserState;
 use crate::app::AppState;
@@ -7,17 +7,17 @@ use anyhow::Result;
 use std::path::Path;
 use std::sync::Arc;
 
-/// Öffnet den Background-Map-Auswahl-Dialog.
+/// Oeffnet den Background-Map-Auswahl-Dialog.
 pub fn request_background_map_dialog(state: &mut AppState) {
     state.ui.show_background_map_dialog = true;
 }
 
-/// Lädt eine Background-Map von einem Dateipfad.
+/// Laedt eine Background-Map von einem Dateipfad.
 ///
 /// # Parameter
 /// - `state`: Application State
 /// - `path`: Pfad zur Bilddatei (PNG, JPG, JPEG, DDS)
-/// - `crop_size`: Optionale Crop-Größe (quadratisch, in Pixeln)
+/// - `crop_size`: Optionale Crop-Groesse (quadratisch, in Pixeln)
 pub fn load_background_map(
     state: &mut AppState,
     path: String,
@@ -75,7 +75,7 @@ pub fn clear_background_map(state: &mut AppState) {
     log::info!("Background-Map entfernt");
 }
 
-/// Öffnet den ZIP-Browser-Dialog: listet Bilddateien im Archiv auf.
+/// Oeffnet den ZIP-Browser-Dialog: listet Bilddateien im Archiv auf.
 ///
 /// Bei genau einem Treffer wird die Datei direkt geladen (kein Dialog).
 pub fn browse_zip_background(state: &mut AppState, path: String) -> Result<()> {
@@ -88,11 +88,11 @@ pub fn browse_zip_background(state: &mut AppState, path: String) -> Result<()> {
     // Bei genau einem Bild: direkt laden, ohne Browser-Dialog
     if entries.len() == 1 {
         let entry_name = entries.into_iter().next().unwrap().name;
-        log::info!("ZIP enthält nur ein Bild — lade direkt: {}", entry_name);
+        log::info!("ZIP enthaelt nur ein Bild — lade direkt: {}", entry_name);
         return load_background_from_zip(state, path, entry_name, None);
     }
 
-    // Mehrere Bilder: Browser-Dialog öffnen
+    // Mehrere Bilder: Browser-Dialog oeffnen
     let has_overview = entries
         .iter()
         .any(|e| e.name.to_lowercase().contains("overview"));
@@ -106,7 +106,7 @@ pub fn browse_zip_background(state: &mut AppState, path: String) -> Result<()> {
     Ok(())
 }
 
-/// Lädt eine Bilddatei aus einem ZIP-Archiv als Background-Map.
+/// Laedt eine Bilddatei aus einem ZIP-Archiv als Background-Map.
 pub fn load_background_from_zip(
     state: &mut AppState,
     zip_path: String,
@@ -134,7 +134,7 @@ pub fn load_background_from_zip(
     state.view.background_scale = 1.0;
     state.view.background_dirty = true;
 
-    // ZIP-Browser schließen (falls offen)
+    // ZIP-Browser schliessen (falls offen)
     state.ui.zip_browser = None;
 
     // Speichern als overview.jpg anbieten (falls XML geladen)
@@ -143,7 +143,7 @@ pub fn load_background_from_zip(
     Ok(())
 }
 
-/// Generiert eine Übersichtskarte mit den Optionen aus dem Dialog und lädt sie als Background.
+/// Generiert eine Uebersichtskarte mit den Optionen aus dem Dialog und laedt sie als Background.
 ///
 /// Liest ZIP-Pfad und Layer-Optionen aus dem `OverviewOptionsDialogState`,
 /// persistiert die Layer-Einstellungen in den `EditorOptions` und generiert
@@ -152,7 +152,7 @@ pub fn generate_overview_with_options(state: &mut AppState) -> Result<()> {
     let zip_path = state.ui.overview_options_dialog.zip_path.clone();
     let layers = state.ui.overview_options_dialog.layers.clone();
 
-    log::info!("Generiere Übersichtskarte aus: {}", zip_path);
+    log::info!("Generiere Uebersichtskarte aus: {}", zip_path);
 
     // Layer-Optionen persistent speichern
     state.options.overview_layers = layers.clone();
@@ -171,7 +171,7 @@ pub fn generate_overview_with_options(state: &mut AppState) -> Result<()> {
     let rgb_image = fs25_map_overview::generate_overview_from_zip(&zip_path, &options)?;
 
     let (width, height) = (rgb_image.width(), rgb_image.height());
-    log::info!("Übersichtskarte generiert: {}x{} Pixel", width, height);
+    log::info!("Uebersichtskarte generiert: {}x{} Pixel", width, height);
 
     let dynamic_image = image::DynamicImage::ImageRgb8(rgb_image);
     let bg_map = BackgroundMap::from_image(dynamic_image, &zip_path, None)?;
@@ -180,7 +180,7 @@ pub fn generate_overview_with_options(state: &mut AppState) -> Result<()> {
     state.view.background_scale = 1.0;
     state.view.background_dirty = true;
 
-    // Dialog schließen
+    // Dialog schliessen
     state.ui.overview_options_dialog.visible = false;
 
     // Speichern als overview.jpg anbieten (falls XML geladen)
@@ -189,10 +189,10 @@ pub fn generate_overview_with_options(state: &mut AppState) -> Result<()> {
     Ok(())
 }
 
-/// Prüft ob dem User das Speichern als overview.jpg angeboten werden soll.
+/// Prueft ob dem User das Speichern als overview.jpg angeboten werden soll.
 ///
 /// Zeigt Dialog immer an. Falls overview.jpg bereits existiert, wird der User
-/// gefragt ob er die bestehende Datei überschreiben möchte.
+/// gefragt ob er die bestehende Datei ueberschreiben moechte.
 fn prompt_save_as_overview(state: &mut AppState) {
     let Some(ref xml_path) = state.ui.current_file_path else {
         return;
@@ -206,13 +206,13 @@ fn prompt_save_as_overview(state: &mut AppState) {
     state.ui.save_overview_dialog.target_path = target.to_string_lossy().into_owned();
     state.ui.save_overview_dialog.is_overwrite = is_overwrite;
     log::info!(
-        "Angebot: Hintergrund als overview.jpg speichern in {} (überschreiben: {})",
+        "Angebot: Hintergrund als overview.jpg speichern in {} (ueberschreiben: {})",
         dir.display(),
         is_overwrite,
     );
 }
 
-/// Speichert die aktuelle Background-Map als overview.jpg (maximale Qualität).
+/// Speichert die aktuelle Background-Map als overview.jpg (maximale Qualitaet).
 pub fn save_background_as_overview(state: &mut AppState, path: String) -> Result<()> {
     let bg_map = state
         .view

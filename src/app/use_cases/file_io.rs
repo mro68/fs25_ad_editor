@@ -1,22 +1,22 @@
-//! Use-Case-Funktionen für Dateiaktionen.
+//! Use-Case-Funktionen fuer Dateiaktionen.
 //! Alle Dateisystem-Operationen (I/O) sind hier zentralisiert.
 
 use crate::app::AppState;
 use std::sync::Arc;
 
-/// Öffnet den Open-Datei-Dialog über UI-State.
+/// Oeffnet den Open-Datei-Dialog ueber UI-State.
 pub fn request_open_file(state: &mut AppState) {
     state.ui.show_file_dialog = true;
 }
 
-/// Lädt die ausgewählte Datei in den AppState.
+/// Laedt die ausgewaehlte Datei in den AppState.
 ///
-/// Erkennt duplizierte Nodes und zeigt ggf. einen Bestätigungsdialog.
+/// Erkennt duplizierte Nodes und zeigt ggf. einen Bestaetigungsdialog.
 pub fn load_selected_file(state: &mut AppState, path: String) -> anyhow::Result<()> {
     let xml_content = std::fs::read_to_string(&path)?;
     let road_map = crate::xml::parse_autodrive_config(&xml_content)?;
 
-    // Merke Pfad für späteres Save
+    // Merke Pfad fuer spaeteres Save
     state.ui.current_file_path = Some(path.to_string());
     state.selection.ids_mut().clear();
 
@@ -26,7 +26,7 @@ pub fn load_selected_file(state: &mut AppState, path: String) -> anyhow::Result<
         road_map.connection_count()
     );
 
-    // Duplikate nur zählen, noch nicht bereinigen
+    // Duplikate nur zaehlen, noch nicht bereinigen
     let (dup_count, dup_groups) = road_map.count_duplicates(0.01);
     if dup_count > 0 {
         log::warn!(
@@ -49,7 +49,7 @@ pub fn load_selected_file(state: &mut AppState, path: String) -> anyhow::Result<
     Ok(())
 }
 
-/// Führt die Duplikat-Bereinigung auf der geladenen RoadMap durch.
+/// Fuehrt die Duplikat-Bereinigung auf der geladenen RoadMap durch.
 pub fn deduplicate_loaded_roadmap(state: &mut AppState) {
     let Some(road_map_arc) = state.road_map.take() else {
         return;
@@ -78,19 +78,19 @@ pub fn deduplicate_loaded_roadmap(state: &mut AppState) {
     state.ui.dedup_dialog.visible = false;
 }
 
-/// Öffnet den Save-Datei-Dialog über UI-State.
+/// Oeffnet den Save-Datei-Dialog ueber UI-State.
 pub fn request_save_file(state: &mut AppState) {
     state.ui.show_save_file_dialog = true;
 }
 
-/// Speichert die aktuelle Datei (wenn Pfad bekannt) oder öffnet Dialog.
+/// Speichert die aktuelle Datei (wenn Pfad bekannt) oder oeffnet Dialog.
 pub fn save_current_file(state: &mut AppState) -> anyhow::Result<()> {
     if let Some(path) = state.ui.current_file_path.clone() {
         write_roadmap_to_file(state, &path)?;
         log::info!("File saved successfully");
         Ok(())
     } else {
-        // Kein Pfad bekannt → Save As Dialog öffnen
+        // Kein Pfad bekannt → Save As Dialog oeffnen
         request_save_file(state);
         Ok(())
     }
@@ -111,7 +111,7 @@ fn write_roadmap_to_file(state: &mut AppState, path: &str) -> anyhow::Result<()>
         .as_ref()
         .ok_or_else(|| anyhow::anyhow!("Keine Datei geladen"))?;
 
-    // Lade Heightmap falls ausgewählt (Bit-Tiefe & Map-Größe werden automatisch erkannt)
+    // Lade Heightmap falls ausgewaehlt (Bit-Tiefe & Map-Groesse werden automatisch erkannt)
     let heightmap = if let Some(ref hm_path) = state.ui.heightmap_path {
         match crate::core::Heightmap::load(hm_path) {
             Ok(hm) => {
@@ -133,7 +133,7 @@ fn write_roadmap_to_file(state: &mut AppState, path: &str) -> anyhow::Result<()>
             }
         }
     } else {
-        log::info!("Keine Heightmap ausgewählt, Y-Werte werden auf 0 gesetzt");
+        log::info!("Keine Heightmap ausgewaehlt, Y-Werte werden auf 0 gesetzt");
         None
     };
 
@@ -146,11 +146,11 @@ fn write_roadmap_to_file(state: &mut AppState, path: &str) -> anyhow::Result<()>
     Ok(())
 }
 
-/// Speichert mit Heightmap-Prüfung (zeigt Warnung wenn keine Heightmap ausgewählt).
+/// Speichert mit Heightmap-Pruefung (zeigt Warnung wenn keine Heightmap ausgewaehlt).
 ///
 /// `path = None` speichert unter `current_file_path` bzw. `pending_save_path`.
 /// `path = Some(p)` speichert explizit unter Pfad `p`.
-/// Wurde noch keine Heightmap ausgewählt und nicht bestätigt, wird stattdessen
+/// Wurde noch keine Heightmap ausgewaehlt und nicht bestaetigt, wird stattdessen
 /// die Heightmap-Warnung angezeigt.
 pub fn save_with_heightmap_check(state: &mut AppState, path: Option<String>) -> anyhow::Result<()> {
     let actual_path = match path {
@@ -183,7 +183,7 @@ pub fn save_with_heightmap_check(state: &mut AppState, path: Option<String>) -> 
     Ok(())
 }
 
-/// Führt nach Bestätigung der Heightmap-Warnung den Speichervorgang aus.
+/// Fuehrt nach Bestaetigung der Heightmap-Warnung den Speichervorgang aus.
 pub fn confirm_and_save(state: &mut AppState) -> anyhow::Result<()> {
     state.ui.heightmap_warning_confirmed = true;
     let path = state.ui.pending_save_path.take().unwrap_or_default();

@@ -1,8 +1,8 @@
-//! UI-Konfigurationspanel für das Constraint-Route-Tool.
+//! UI-Konfigurationspanel fuer das Constraint-Route-Tool.
 //!
-//! Enthält:
+//! Enthaelt:
 //! - Max-Winkel-Slider (Solver-Parameter)
-//! - Segment-Länge (Max. Abstand zwischen Nodes)
+//! - Segment-Laenge (Max. Abstand zwischen Nodes)
 //! - Minimaldistanz (filtert zu nahe beieinanderliegende Nodes)
 //! - Steuerpunkte (automatisch berechnete Approach/Departure-Punkte)
 //! - Kontrollpunkt-Liste mit Entfernen-Button
@@ -14,9 +14,9 @@ use super::state::ConstraintRouteTool;
 impl ConstraintRouteTool {
     /// Rendert nur den Max-Abstand-Slider (ohne Node-Anzahl).
     ///
-    /// Für das Constraint-Route-Tool ist die Node-Anzahl vom Solver bestimmt
-    /// (krümmungsadaptive Verteilung), daher wird nur der Abstand-Slider angezeigt.
-    /// Gibt `(changed, recreate_needed)` zurück.
+    /// Fuer das Constraint-Route-Tool ist die Node-Anzahl vom Solver bestimmt
+    /// (kruemmungsadaptive Verteilung), daher wird nur der Abstand-Slider angezeigt.
+    /// Gibt `(changed, recreate_needed)` zurueck.
     fn render_segment_distance_only(
         seg: &mut SegmentConfig,
         ui: &mut egui::Ui,
@@ -60,7 +60,7 @@ impl ConstraintRouteTool {
     }
     /// Rendert das Konfigurationspanel im Properties-Panel.
     ///
-    /// Gibt `true` zurück wenn sich eine Einstellung geändert hat.
+    /// Gibt `true` zurueck wenn sich eine Einstellung geaendert hat.
     pub(super) fn render_config_view(
         &mut self,
         ui: &mut egui::Ui,
@@ -69,7 +69,7 @@ impl ConstraintRouteTool {
         let mut changed = false;
 
         // Max-Winkel-Slider
-        ui.label("Max. Richtungsänderung:");
+        ui.label("Max. Richtungsaenderung:");
         let angle_response = ui.add(
             egui::Slider::new(&mut self.max_angle_deg, 5.0..=135.0)
                 .suffix("°")
@@ -92,7 +92,7 @@ impl ConstraintRouteTool {
         ui.add_space(6.0);
 
         // Segment-Konfiguration — nur Max-Abstand-Slider (keine Node-Anzahl,
-        // da der Solver die Verteilung krümmungsadaptiv bestimmt)
+        // da der Solver die Verteilung kruemmungsadaptiv bestimmt)
         let adjusting = !self.lifecycle.last_created_ids.is_empty()
             && self.last_start_anchor.is_some()
             && (self.last_end_anchor.is_some() || self.lifecycle.last_end_anchor.is_some());
@@ -116,7 +116,7 @@ impl ConstraintRouteTool {
             adjusting,
             ready,
             length,
-            "Routenlänge",
+            "Routenlaenge",
             distance_wheel_step_m,
         );
         if seg_changed {
@@ -172,7 +172,7 @@ impl ConstraintRouteTool {
                     if self.approach_manual
                         && ui
                             .small_button("↺")
-                            .on_hover_text("Zurücksetzen auf Auto")
+                            .on_hover_text("Zuruecksetzen auf Auto")
                             .clicked()
                     {
                         self.approach_manual = false;
@@ -196,7 +196,7 @@ impl ConstraintRouteTool {
                     if self.departure_manual
                         && ui
                             .small_button("↺")
-                            .on_hover_text("Zurücksetzen auf Auto")
+                            .on_hover_text("Zuruecksetzen auf Auto")
                             .clicked()
                     {
                         self.departure_manual = false;

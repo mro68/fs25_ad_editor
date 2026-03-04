@@ -1,4 +1,4 @@
-/// Integration-Tests für XML-Parsing
+/// Integration-Tests fuer XML-Parsing
 use fs25_auto_drive_editor::xml::parse_autodrive_config;
 
 #[test]

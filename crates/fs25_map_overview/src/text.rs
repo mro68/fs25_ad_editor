@@ -1,7 +1,7 @@
 //! TTF-basiertes Text-Rendering mit eingebetteter DejaVu-Sans-Schrift.
 //!
-//! Unterstützt vollständiges Latin (inkl. Umlaute ä, ö, ü, ß etc.).
-//! Font wird per `include_bytes!` eingebettet — keine externen Dateien nötig.
+//! Unterstuetzt vollstaendiges Latin (inkl. Umlaute ae, oe, ue, ss etc.).
+//! Font wird per `include_bytes!` eingebettet — keine externen Dateien noetig.
 //!
 //! Lizenz DejaVu Sans: Bitstream Vera License (siehe `assets/LICENSE-DejaVuSans.txt`)
 
@@ -12,10 +12,10 @@ use image::{Rgb, RgbImage};
 static FONT_DATA: &[u8] = include_bytes!("../assets/DejaVuSans.ttf");
 
 fn font() -> FontRef<'static> {
-    FontRef::try_from_slice(FONT_DATA).expect("Eingebettete Schrift ungültig")
+    FontRef::try_from_slice(FONT_DATA).expect("Eingebettete Schrift ungueltig")
 }
 
-/// Rechnet den `scale`-Faktor in eine Pixel-Größe um.
+/// Rechnet den `scale`-Faktor in eine Pixel-Groesse um.
 ///
 /// Kompatibel zum alten Bitmap-Font: scale=1 ≈ 8px, scale=2 ≈ 16px, etc.
 fn px_scale(scale: u32) -> PxScale {
@@ -25,7 +25,7 @@ fn px_scale(scale: u32) -> PxScale {
 /// Zeichnet einen Text-String auf ein RGB-Bild.
 ///
 /// Verwendet die eingebettete DejaVu-Sans-Schrift mit Anti-Aliasing.
-/// Unterstützt alle Latin-Zeichen inkl. Umlaute (ä, ö, ü, ß etc.).
+/// Unterstuetzt alle Latin-Zeichen inkl. Umlaute (ae, oe, ue, ss etc.).
 ///
 /// # Parameter
 /// - `image`: Zielbild
@@ -39,7 +39,7 @@ pub fn draw_text(image: &mut RgbImage, x: i32, y: i32, text: &str, color: Rgb<u8
 
 /// Zeichnet Text mit schwarzem Outline (Schatteneffekt).
 ///
-/// Für bessere Lesbarkeit auf variablem Hintergrund.
+/// Fuer bessere Lesbarkeit auf variablem Hintergrund.
 pub fn draw_text_outlined(
     image: &mut RgbImage,
     x: i32,
@@ -50,7 +50,7 @@ pub fn draw_text_outlined(
 ) {
     let outline = Rgb([0, 0, 0]);
     let offset = (scale as i32).max(1);
-    // 8 Richtungen für Outline (solid, ohne Blending)
+    // 8 Richtungen fuer Outline (solid, ohne Blending)
     for &(dx, dy) in &[
         (-offset, -offset),
         (0, -offset),
@@ -84,7 +84,7 @@ pub fn text_width(text: &str, scale: u32) -> u32 {
     width.ceil() as u32
 }
 
-/// Berechnet die Pixelhöhe eines Texts.
+/// Berechnet die Pixelhoehe eines Texts.
 pub fn text_height(scale: u32) -> u32 {
     let font = font();
     let scaled = font.as_scaled(px_scale(scale));
@@ -93,7 +93,7 @@ pub fn text_height(scale: u32) -> u32 {
 
 /// Interne Zeichen-Funktion.
 ///
-/// `blend`: true = Anti-Aliased Blending, false = Solid (für Outline)
+/// `blend`: true = Anti-Aliased Blending, false = Solid (fuer Outline)
 fn draw_text_internal(
     image: &mut RgbImage,
     x: i32,
@@ -158,7 +158,7 @@ fn draw_text_internal(
     }
 }
 
-/// Zeichnet ein gefülltes Rechteck.
+/// Zeichnet ein gefuelltes Rechteck.
 pub fn draw_rect_filled(image: &mut RgbImage, x: i32, y: i32, w: u32, h: u32, color: Rgb<u8>) {
     let img_w = image.width() as i32;
     let img_h = image.height() as i32;
@@ -174,7 +174,7 @@ pub fn draw_rect_filled(image: &mut RgbImage, x: i32, y: i32, w: u32, h: u32, co
     }
 }
 
-/// Zeichnet ein gefülltes Rechteck mit Alpha-Blending.
+/// Zeichnet ein gefuelltes Rechteck mit Alpha-Blending.
 pub fn draw_rect_blended(
     image: &mut RgbImage,
     x: i32,
@@ -232,7 +232,7 @@ mod tests {
         let h1 = text_height(1);
         let h2 = text_height(2);
         assert!(h1 > 0);
-        assert!(h2 > h1, "Scale 2 muss höher sein als Scale 1");
+        assert!(h2 > h1, "Scale 2 muss hoeher sein als Scale 1");
     }
 
     #[test]
@@ -243,12 +243,12 @@ mod tests {
 
     #[test]
     fn test_draw_text_umlauts() {
-        // Umlaute dürfen nicht paniken und sollen sichtbare Pixel erzeugen
+        // Umlaute duerfen nicht paniken und sollen sichtbare Pixel erzeugen
         let mut img = RgbImage::new(200, 30);
-        draw_text(&mut img, 0, 0, "Höflingen Straße", Rgb([255, 255, 255]), 1);
-        // Prüfe dass mindestens ein Pixel gesetzt wurde
+        draw_text(&mut img, 0, 0, "Hoeflingen Strasse", Rgb([255, 255, 255]), 1);
+        // Pruefe dass mindestens ein Pixel gesetzt wurde
         let has_white = img.pixels().any(|p| p[0] > 200);
-        assert!(has_white, "Umlaute müssen sichtbare Pixel erzeugen");
+        assert!(has_white, "Umlaute muessen sichtbare Pixel erzeugen");
     }
 
     #[test]
@@ -260,6 +260,6 @@ mod tests {
     #[test]
     fn test_draw_text_outlined_no_panic() {
         let mut img = RgbImage::new(200, 30);
-        draw_text_outlined(&mut img, 5, 5, "Ölfeld", Rgb([255, 255, 200]), 2);
+        draw_text_outlined(&mut img, 5, 5, "Oelfeld", Rgb([255, 255, 200]), 2);
     }
 }

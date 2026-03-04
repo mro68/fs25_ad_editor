@@ -29,7 +29,7 @@ impl MarkerDialogState {
     }
 }
 
-/// Zustand des Duplikat-Bestätigungsdialogs
+/// Zustand des Duplikat-Bestaetigungsdialogs
 #[derive(Default)]
 pub struct DedupDialogState {
     /// Ob der Dialog sichtbar ist
@@ -51,14 +51,14 @@ impl DedupDialogState {
     }
 }
 
-/// Zustand des Übersichtskarten-Options-Dialogs
+/// Zustand des Uebersichtskarten-Options-Dialogs
 #[derive(Default)]
 pub struct OverviewOptionsDialogState {
     /// Ob der Dialog sichtbar ist
     pub visible: bool,
-    /// ZIP-Pfad der gewählten Map-Mod-Datei
+    /// ZIP-Pfad der gewaehlten Map-Mod-Datei
     pub zip_path: String,
-    /// Layer-Optionen (Arbeitskopie für den Dialog)
+    /// Layer-Optionen (Arbeitskopie fuer den Dialog)
     pub layers: OverviewLayerOptions,
 }
 
@@ -86,7 +86,7 @@ pub struct PostLoadDialogState {
     pub overview_loaded: bool,
     /// Gefundene passende ZIP-Dateien im Mods-Verzeichnis
     pub matching_zips: Vec<PathBuf>,
-    /// Index des vom User ausgewählten ZIPs (Default: 0)
+    /// Index des vom User ausgewaehlten ZIPs (Default: 0)
     pub selected_zip_index: usize,
     /// Map-Name zur Anzeige im Dialog
     pub map_name: String,
@@ -107,35 +107,35 @@ impl PostLoadDialogState {
     }
 }
 
-/// Dialog-State für "Als overview.jpg speichern"-Abfrage nach ZIP-Extraktion.
+/// Dialog-State fuer "Als overview.jpg speichern"-Abfrage nach ZIP-Extraktion.
 #[derive(Default)]
 pub struct SaveOverviewDialogState {
     /// Ob der Dialog sichtbar ist
     pub visible: bool,
     /// Ziel-Pfad: overview.jpg im XML-Verzeichnis
     pub target_path: String,
-    /// true wenn eine bestehende overview.jpg überschrieben würde
+    /// true wenn eine bestehende overview.jpg ueberschrieben wuerde
     pub is_overwrite: bool,
 }
 
-/// Konfiguration für das Distanzen-Neuverteilen-Feature im Eigenschaften-Bereich.
+/// Konfiguration fuer das Distanzen-Neuverteilen-Feature im Eigenschaften-Bereich.
 #[derive(Debug, Clone)]
 pub struct DistanzenState {
     /// true = nach Anzahl, false = nach Abstand
     pub by_count: bool,
-    /// Gewünschte Anzahl an Waypoints (bei `by_count = true`)
+    /// Gewuenschte Anzahl an Waypoints (bei `by_count = true`)
     pub count: u32,
     /// Maximaler Abstand zwischen Waypoints in Welteinheiten (bei `by_count = false`)
     pub distance: f32,
-    /// Berechnete Streckenlänge der aktuellen Selektion (für wechselseitige Berechnung)
+    /// Berechnete Streckenlaenge der aktuellen Selektion (fuer wechselseitige Berechnung)
     pub path_length: f32,
     /// Vorschau-Modus aktiv (Spline-Preview wird im Viewport gezeichnet)
     pub active: bool,
-    /// Originale Strecke während der Vorschau ausblenden
+    /// Originale Strecke waehrend der Vorschau ausblenden
     pub hide_original: bool,
-    /// Vorschau-Positionen (berechnete Resample-Punkte für Overlay)
+    /// Vorschau-Positionen (berechnete Resample-Punkte fuer Overlay)
     pub preview_positions: Vec<glam::Vec2>,
-    /// Signatur der letzten Eingaben für Preview-Recompute (0 = ungültig).
+    /// Signatur der letzten Eingaben fuer Preview-Recompute (0 = ungueltig).
     pub preview_cache_signature: u64,
 }
 
@@ -155,28 +155,28 @@ impl Default for DistanzenState {
 }
 
 impl DistanzenState {
-    /// Aktualisiert count aus distance (und umgekehrt) basierend auf der Streckenlänge.
+    /// Aktualisiert count aus distance (und umgekehrt) basierend auf der Streckenlaenge.
     pub fn sync_from_distance(&mut self) {
         if self.path_length > 0.0 && self.distance > 0.0 {
             self.count = ((self.path_length / self.distance).round() as u32 + 1).max(2);
         }
     }
 
-    /// Aktualisiert distance aus count basierend auf der Streckenlänge.
+    /// Aktualisiert distance aus count basierend auf der Streckenlaenge.
     pub fn sync_from_count(&mut self) {
         if self.path_length > 0.0 && self.count >= 2 {
             self.distance = (self.path_length / (self.count - 1) as f32).max(1.0);
         }
     }
 
-    /// Deaktiviert den Vorschau-Modus und löscht die Vorschau-Daten.
+    /// Deaktiviert den Vorschau-Modus und loescht die Vorschau-Daten.
     pub fn deactivate(&mut self) {
         self.active = false;
         self.preview_positions.clear();
         self.preview_cache_signature = 0;
     }
 
-    /// Gibt `true` zurück wenn die Originalstrecke aktuell ausgeblendet werden soll.
+    /// Gibt `true` zurueck wenn die Originalstrecke aktuell ausgeblendet werden soll.
     pub fn should_hide_original(&self) -> bool {
         self.active && self.hide_original
     }
@@ -187,7 +187,7 @@ impl DistanzenState {
 pub struct ZipBrowserState {
     /// Pfad zur ZIP-Datei
     pub zip_path: String,
-    /// Bilddateien im Archiv (mit Dateigröße)
+    /// Bilddateien im Archiv (mit Dateigroesse)
     pub entries: Vec<crate::core::ZipImageEntry>,
     /// Index des aktuell selektierten Eintrags
     pub selected: Option<usize>,
@@ -198,39 +198,39 @@ pub struct ZipBrowserState {
 /// UI-bezogener Anwendungszustand
 #[derive(Default)]
 pub struct UiState {
-    /// Ob der Open-Datei-Dialog geöffnet werden soll
+    /// Ob der Open-Datei-Dialog geoeffnet werden soll
     pub show_file_dialog: bool,
-    /// Ob der Save-Datei-Dialog geöffnet werden soll
+    /// Ob der Save-Datei-Dialog geoeffnet werden soll
     pub show_save_file_dialog: bool,
-    /// Ob der Heightmap-Auswahl-Dialog geöffnet werden soll
+    /// Ob der Heightmap-Auswahl-Dialog geoeffnet werden soll
     pub show_heightmap_dialog: bool,
-    /// Ob der Background-Map-Auswahl-Dialog geöffnet werden soll
+    /// Ob der Background-Map-Auswahl-Dialog geoeffnet werden soll
     pub show_background_map_dialog: bool,
-    /// Ob der Übersichtskarten-ZIP-Auswahl-Dialog geöffnet werden soll
+    /// Ob der Uebersichtskarten-ZIP-Auswahl-Dialog geoeffnet werden soll
     pub show_overview_dialog: bool,
     /// Ob die Heightmap-Warnung angezeigt werden soll
     pub show_heightmap_warning: bool,
-    /// Ob die Heightmap-Warnung für diese Save-Operation bereits bestätigt wurde
+    /// Ob die Heightmap-Warnung fuer diese Save-Operation bereits bestaetigt wurde
     pub heightmap_warning_confirmed: bool,
-    /// Pfad für Save-Operation nach Heightmap-Warnung
+    /// Pfad fuer Save-Operation nach Heightmap-Warnung
     pub pending_save_path: Option<String>,
-    /// Pfad der aktuell geladenen Datei (für Save ohne Dialog)
+    /// Pfad der aktuell geladenen Datei (fuer Save ohne Dialog)
     pub current_file_path: Option<String>,
-    /// Pfad der aktuell ausgewählten Heightmap (optional)
+    /// Pfad der aktuell ausgewaehlten Heightmap (optional)
     pub heightmap_path: Option<String>,
     /// Marker-Bearbeiten-Dialog
     pub marker_dialog: MarkerDialogState,
-    /// Temporäre Statusnachricht (z.B. Duplikat-Bereinigung)
+    /// Temporaere Statusnachricht (z.B. Duplikat-Bereinigung)
     pub status_message: Option<String>,
-    /// Duplikat-Bestätigungsdialog
+    /// Duplikat-Bestaetigungsdialog
     pub dedup_dialog: DedupDialogState,
-    /// ZIP-Browser-Dialog für Background-Map-Auswahl
+    /// ZIP-Browser-Dialog fuer Background-Map-Auswahl
     pub zip_browser: Option<ZipBrowserState>,
-    /// Übersichtskarten-Optionen-Dialog
+    /// Uebersichtskarten-Optionen-Dialog
     pub overview_options_dialog: OverviewOptionsDialogState,
     /// Post-Load-Dialog (Heightmap/ZIP-Erkennung)
     pub post_load_dialog: PostLoadDialogState,
-    /// Dialog für "Als overview.png speichern"-Abfrage
+    /// Dialog fuer "Als overview.png speichern"-Abfrage
     pub save_overview_dialog: SaveOverviewDialogState,
     /// Distanzen-Neuverteilen-Konfiguration (Eigenschaften-Panel)
     pub distanzen: DistanzenState,

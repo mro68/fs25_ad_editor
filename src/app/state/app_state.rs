@@ -19,17 +19,17 @@ pub struct AppState {
     pub selection: SelectionState,
     /// Editor-Werkzeug-State
     pub editor: EditorToolState,
-    /// Verlauf ausgeführter Commands
+    /// Verlauf ausgefuehrter Commands
     pub command_log: CommandLog,
     /// Undo/Redo-History (Snapshot-basiert)
     pub history: crate::app::history::EditHistory,
-    /// Laufzeit-Optionen (Farben, Größen, Breiten)
+    /// Laufzeit-Optionen (Farben, Groessen, Breiten)
     pub options: EditorOptions,
-    /// Geteilte Arc-Variante der Optionen für RenderScene-Build (O(1) Clone pro Frame)
+    /// Geteilte Arc-Variante der Optionen fuer RenderScene-Build (O(1) Clone pro Frame)
     options_arc: Arc<EditorOptions>,
     /// Ob der Options-Dialog angezeigt wird
     pub show_options_dialog: bool,
-    /// In-Session-Registry aller erstellten Segmente (für nachträgliche Bearbeitung)
+    /// In-Session-Registry aller erstellten Segmente (fuer nachtraegliche Bearbeitung)
     pub segment_registry: SegmentRegistry,
     /// Signalisiert dem Host (eframe), die Anwendung kontrolliert zu beenden
     pub should_exit: bool,
@@ -57,12 +57,12 @@ impl AppState {
         }
     }
 
-    /// Gibt die Anzahl der Nodes zurück (für UI-Anzeige)
+    /// Gibt die Anzahl der Nodes zurueck (fuer UI-Anzeige)
     pub fn node_count(&self) -> usize {
         self.road_map.as_ref().map_or(0, |rm| rm.node_count())
     }
 
-    /// Gibt die Anzahl der Connections zurück (für UI-Anzeige)
+    /// Gibt die Anzahl der Connections zurueck (fuer UI-Anzeige)
     pub fn connection_count(&self) -> usize {
         self.road_map.as_ref().map_or(0, |rm| rm.connection_count())
     }
@@ -72,7 +72,7 @@ impl AppState {
         self.history.can_undo()
     }
 
-    /// Gibt zurück, ob ein Redo-Schritt verfügbar ist.
+    /// Gibt zurueck, ob ein Redo-Schritt verfuegbar ist.
     pub fn can_redo(&self) -> bool {
         self.history.can_redo()
     }
@@ -84,7 +84,7 @@ impl AppState {
         self.history.record_snapshot(snap);
     }
 
-    /// Liefert die Arc-Variante der Optionen (für RenderScene-Build, zero-copy pro Frame).
+    /// Liefert die Arc-Variante der Optionen (fuer RenderScene-Build, zero-copy pro Frame).
     pub fn options_arc(&self) -> Arc<EditorOptions> {
         self.options_arc.clone()
     }

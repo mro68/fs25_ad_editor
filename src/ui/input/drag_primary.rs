@@ -18,7 +18,7 @@ impl InputState {
 
         if modifiers.shift || modifiers.alt {
             // Shift = Rect-Selektion, Alt = Lasso-Selektion
-            // Ctrl zusätzlich = additiv (zur bestehenden Selektion hinzufügen)
+            // Ctrl zusaetzlich = additiv (zur bestehenden Selektion hinzufuegen)
             if let Some(pointer_pos) = ctx.response.interact_pointer_pos() {
                 let mode = if modifiers.alt {
                     DragSelectionMode::Lasso
@@ -68,7 +68,7 @@ impl InputState {
         } else {
             // press_origin() liefert die exakte Klickposition (vor Drag-Schwelle),
             // interact_pointer_pos() hingegen die Position *nach* Drag-Erkennung
-            // (offset um ~6px), was zu asymmetrischen Hitboxen führen kann.
+            // (offset um ~6px), was zu asymmetrischen Hitboxen fuehren kann.
             let hit_info = press_pos.and_then(|pointer_pos| {
                 let world_pos =
                     screen_pos_to_world(pointer_pos, ctx.response, ctx.viewport_size, ctx.camera);
@@ -99,7 +99,7 @@ impl InputState {
         }
     }
 
-    /// Aktualisiert die Drag-Selektion (Rect/Lasso) während des Ziehens.
+    /// Aktualisiert die Drag-Selektion (Rect/Lasso) waehrend des Ziehens.
     pub(crate) fn handle_drag_update(&mut self, ctx: &ViewportContext) {
         let Some(selection) = self.drag_selection.as_mut() else {
             return;

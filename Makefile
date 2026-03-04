@@ -6,7 +6,7 @@
 #   make linux-release    – Nur Linux Release
 #   make windows-debug    – Nur Windows Debug
 #   make all              – Alles (Release + Debug, Linux + Windows)
-#   make clean            – Binaries-Ordner aufräumen
+#   make clean            – Binaries-Ordner aufraeumen
 
 BIN_NAME    := FS25-AutoDrive-Editor
 TARGET_DIR  := /tmp/fs25_ad_editor_target
@@ -72,7 +72,7 @@ windows-debug:
 
 clean:
 	rm -f $(OUT_DIR)/$(BIN_NAME)_x64_*
-	@echo "✓ $(OUT_DIR) aufgeräumt"
+	@echo "✓ $(OUT_DIR) aufgeraeumt"
 
 check-layers:
 	@./scripts/check_layer_boundaries.sh

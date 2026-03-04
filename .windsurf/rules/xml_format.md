@@ -25,8 +25,8 @@ Das AutoDrive Config-Format nutzt **Structure of Arrays** (SoA): Parallele Liste
 ```
 
 ## Delimiter-Regeln
-- **Comma (`,`):** Für einfache Listen (id, x, y, z, flags)
-- **Semicolon (`;`):** Für verschachtelte Listen (out, incoming) - äußere Ebene
+- **Comma (`,`):** Fuer einfache Listen (id, x, y, z, flags)
+- **Semicolon (`;`):** Fuer verschachtelte Listen (out, incoming) - aeussere Ebene
 - **Comma (`,`):** Innerhalb der verschachtelten Listen
 
 ### Beispiel `out`-Feld
@@ -43,10 +43,10 @@ Bedeutet:
 
 ### FS22/FS25 Flag-Bereinigung
 Beim **Laden** von Configs mit `version >= 2`:
-- Prüfe alle `flags` Werte
+- Pruefe alle `flags` Werte
 - Wenn Flag == 2 oder Flag == 4:
   - Diese wurden automatisch von AutoDrive generiert (Spline-Import)
-  - Setze sie auf 0 (Regular) zurück
+  - Setze sie auf 0 (Regular) zurueck
   - Grund: Editierte Nodes sollen nicht mehr als "Auto-Generated" markiert sein
 
 ```rust
@@ -76,7 +76,7 @@ pub enum NodeFlag {
 ## Parsing-Strategie
 1. Lese alle parallelen Listen in separate `Vec<String>`
 2. Parse jede Liste in ihren Zieltyp (`Vec<f32>`, `Vec<u64>`, etc.)
-3. Validiere, dass alle Listen gleiche Länge haben
+3. Validiere, dass alle Listen gleiche Laenge haben
 4. Konstruiere Nodes aus parallelen Indizes:
    ```rust
    for i in 0..ids.len() {
@@ -92,6 +92,6 @@ pub enum NodeFlag {
 
 ## Error-Handling
 - Fehlende Tags → Leere Listen (oder Fehler, je nach Kontext)
-- Ungültige Zahlenformate → Parsing-Fehler
-- Längen-Mismatch → Kritischer Fehler
+- Ungueltige Zahlenformate → Parsing-Fehler
+- Laengen-Mismatch → Kritischer Fehler
 - Unbekannte Version → Warning, aber weitermachen

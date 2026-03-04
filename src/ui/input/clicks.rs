@@ -16,7 +16,7 @@ impl InputState {
                 let world_pos =
                     screen_pos_to_world(pointer_pos, ctx.response, ctx.viewport_size, ctx.camera);
 
-                // Ctrl + Doppelklick = Segment additiv hinzufügen
+                // Ctrl + Doppelklick = Segment additiv hinzufuegen
                 events.push(AppIntent::NodeSegmentBetweenIntersectionsRequested {
                     world_pos,
                     additive: modifiers.command,

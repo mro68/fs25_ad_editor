@@ -1,6 +1,6 @@
 //! Toolbar für Editor-Werkzeugauswahl.
 
-use crate::app::{AppIntent, AppState, EditorTool};
+use crate::app::{AppIntent, AppState, ConnectionDirection, ConnectionPriority, EditorTool};
 
 // ── SVG-Icon-Konstanten (compile-time eingebettet) ──────────────
 
@@ -12,10 +12,36 @@ fn svg_icon(source: egui::ImageSource<'_>, size: egui::Vec2) -> egui::Image<'_> 
     egui::Image::new(source).fit_to_exact_size(size)
 }
 
+fn color32_from_rgba(color: [f32; 4]) -> egui::Color32 {
+    egui::Color32::from_rgba_unmultiplied(
+        (color[0].clamp(0.0, 1.0) * 255.0) as u8,
+        (color[1].clamp(0.0, 1.0) * 255.0) as u8,
+        (color[2].clamp(0.0, 1.0) * 255.0) as u8,
+        (color[3].clamp(0.0, 1.0) * 255.0) as u8,
+    )
+}
+
+fn function_icon_color(state: &AppState) -> egui::Color32 {
+    match state.editor.default_priority {
+        ConnectionPriority::Regular => color32_from_rgba(state.options.connection_color_regular),
+        ConnectionPriority::SubPriority => color32_from_rgba(state.options.node_color_subprio),
+    }
+}
+
+fn accent_icon_color(state: &AppState) -> egui::Color32 {
+    match state.editor.default_direction {
+        ConnectionDirection::Regular => color32_from_rgba(state.options.connection_color_regular),
+        ConnectionDirection::Dual => color32_from_rgba(state.options.connection_color_dual),
+        ConnectionDirection::Reverse => color32_from_rgba(state.options.connection_color_reverse),
+    }
+}
+
 /// Rendert die Toolbar und gibt erzeugte Events zurück.
 pub fn render_toolbar(ctx: &egui::Context, state: &AppState) -> Vec<AppIntent> {
     let mut events = Vec::new();
     let active = state.editor.active_tool;
+    let icon_color = function_icon_color(state);
+    let active_icon_color = accent_icon_color(state);
 
     egui::TopBottomPanel::top("toolbar").show(ctx, |ui| {
         ui.horizontal(|ui| {
@@ -26,7 +52,12 @@ pub fn render_toolbar(ctx: &egui::Context, state: &AppState) -> Vec<AppIntent> {
             let select_icon = svg_icon(
                 egui::include_image!("../../assets/icon_select_node.svg"),
                 ICON_SIZE,
-            );
+            )
+            .tint(if active == EditorTool::Select {
+                active_icon_color
+            } else {
+                icon_color
+            });
             let select_btn = egui::Button::image_and_text(select_icon, "Select (1)");
             if ui
                 .add(select_btn.selected(active == EditorTool::Select))
@@ -41,7 +72,12 @@ pub fn render_toolbar(ctx: &egui::Context, state: &AppState) -> Vec<AppIntent> {
             let connect_icon = svg_icon(
                 egui::include_image!("../../assets/icon_connect.svg"),
                 ICON_SIZE,
-            );
+            )
+            .tint(if active == EditorTool::Connect {
+                active_icon_color
+            } else {
+                icon_color
+            });
             let connect_btn = egui::Button::image_and_text(connect_icon, "Connect (2)");
             if ui
                 .add(connect_btn.selected(active == EditorTool::Connect))
@@ -56,7 +92,12 @@ pub fn render_toolbar(ctx: &egui::Context, state: &AppState) -> Vec<AppIntent> {
             let add_icon = svg_icon(
                 egui::include_image!("../../assets/icon_add_node.svg"),
                 ICON_SIZE,
-            );
+            )
+            .tint(if active == EditorTool::AddNode {
+                active_icon_color
+            } else {
+                icon_color
+            });
             let add_btn = egui::Button::image_and_text(add_icon, "Add Node (3)");
             if ui
                 .add(add_btn.selected(active == EditorTool::AddNode))
@@ -93,6 +134,8 @@ pub fn render_toolbar(ctx: &egui::Context, state: &AppState) -> Vec<AppIntent> {
                             idx,
                             name,
                             active_route_index,
+                            icon_color,
+                            active_icon_color,
                             popup_id,
                             &mut events,
                         );
@@ -183,16 +226,21 @@ fn route_tool_icon(idx: usize) -> egui::ImageSource<'static> {
         1 => egui::include_image!("../../assets/icon_bezier_quadratic.svg"),
         2 => egui::include_image!("../../assets/icon_bezier_cubic.svg"),
         3 => egui::include_image!("../../assets/icon_spline.svg"),
+        4 => egui::include_image!("../../assets/icon_bypass.svg"),
+        5 => egui::include_image!("../../assets/icon_constraint_route.svg"),
         _ => egui::include_image!("../../assets/icon_straight_road.svg"),
     }
 }
 
 /// Rendert einen Dropdown-Eintrag für ein Linien-Tool mit SVG-Icon und Text.
+#[allow(clippy::too_many_arguments)]
 fn render_line_tool_item(
     ui: &mut egui::Ui,
     idx: usize,
     name: &str,
     active_route_index: Option<usize>,
+    icon_color: egui::Color32,
+    active_icon_color: egui::Color32,
     popup_id: egui::Id,
     events: &mut Vec<AppIntent>,
 ) {
@@ -219,7 +267,11 @@ fn render_line_tool_item(
         rect.left_center() - egui::vec2(0.0, ICON_SIZE_DROPDOWN.y / 2.0) + egui::vec2(4.0, 0.0),
         ICON_SIZE_DROPDOWN,
     );
-    let icon_image = svg_icon(route_tool_icon(idx), ICON_SIZE_DROPDOWN);
+    let icon_image = svg_icon(route_tool_icon(idx), ICON_SIZE_DROPDOWN).tint(if is_sel {
+        active_icon_color
+    } else {
+        icon_color
+    });
     icon_image.paint_at(ui, icon_rect);
 
     // Text rechts neben dem Icon

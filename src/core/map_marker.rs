@@ -1,4 +1,4 @@
-//! Map-Marker-Typ für benannte Wegpunkte in der AutoDrive-Konfiguration.
+//! Map-Marker-Typ fuer benannte Wegpunkte in der AutoDrive-Konfiguration.
 
 /// Map-Marker: verweist auf einen Node und wird im Editor als Label angezeigt.
 #[derive(Debug, Clone)]

@@ -1,11 +1,14 @@
-<?xml version="1.0" encoding="UTF-8"?>
-<svg width="64" height="64" viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">
-  <!-- Hilfslinien -->
-  <polyline points="8,56 20,12 32,32 44,12 56,56" fill="none" stroke="#bbb" stroke-width="1" stroke-dasharray="2,2"/>
-  <!-- Spline-Kurve -->
-  <path d="M8 56 Q20 12 32 32 Q44 12 56 56" stroke="#388e3c" stroke-width="3" fill="none"/>
-  <!-- Nodes -->
-  <circle cx="8" cy="56" r="3.5" fill="#fff" stroke="#888" stroke-width="2"/>
-  <circle cx="32" cy="32" r="3.5" fill="#fff" stroke="#888" stroke-width="2"/>
-  <circle cx="56" cy="56" r="3.5" fill="#fff" stroke="#888" stroke-width="2"/>
+<svg width="64" height="64" viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg"><defs>
+    <radialGradient id="ringGlow" cx="50%" cy="50%" r="50%" fx="50%" fy="50%">
+      <stop offset="0%" stop-color="#ffffff" stop-opacity="1" />
+      <stop offset="50%" stop-color="#ffffff" stop-opacity="0" />
+      <stop offset="100%" stop-color="#ffffff" stop-opacity="1" />
+    </radialGradient>
+  </defs>
+  <!-- Spline route (wave) -->
+  <path d="M6 32 C18 10, 30 10, 32 32 C34 54, 46 54, 58 32" fill="none" stroke="#ffffff" stroke-width="1.5" stroke-linecap="round"/>
+  <!-- Nodes on the spline -->
+  <circle  cx="6" cy="32" r="4.5" fill="url(#ringGlow)" stroke="none" />
+  <circle  cx="32" cy="32" r="4.5" fill="url(#ringGlow)" stroke="none" />
+  <circle  cx="58" cy="32" r="4.5" fill="url(#ringGlow)" stroke="none" />
 </svg>

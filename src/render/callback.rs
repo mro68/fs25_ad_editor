@@ -1,24 +1,24 @@
-//! wgpu Custom Render Callback für egui-Integration.
+//! wgpu Custom Render Callback fuer egui-Integration.
 
 use super::Renderer;
 use crate::shared::RenderScene;
 use std::sync::{Arc, Mutex};
 
-/// Render-Daten für den wgpu Callback
+/// Render-Daten fuer den wgpu Callback
 pub struct WgpuRenderData {
-    /// Die Render-Szene für diesen Frame
+    /// Die Render-Szene fuer diesen Frame
     pub scene: RenderScene,
 }
 
-/// Custom wgpu Render Callback – kapselt die Renderer-Interaktion für egui
+/// Custom wgpu Render Callback – kapselt die Renderer-Interaktion fuer egui
 pub struct WgpuRenderCallback {
     /// Geteilter Renderer-Zustand (thread-safe)
     pub renderer: Arc<Mutex<Renderer>>,
-    /// Render-Daten für diesen Frame
+    /// Render-Daten fuer diesen Frame
     pub render_data: WgpuRenderData,
-    /// wgpu Device für GPU-Ressourcen
+    /// wgpu Device fuer GPU-Ressourcen
     pub device: eframe::wgpu::Device,
-    /// wgpu Queue für GPU-Befehle
+    /// wgpu Queue fuer GPU-Befehle
     pub queue: eframe::wgpu::Queue,
 }
 

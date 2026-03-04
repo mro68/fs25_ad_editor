@@ -4,8 +4,8 @@ use crate::app::{AppIntent, UiState};
 
 /// Zeigt den Post-Load-Dialog nach dem Laden einer XML-Datei.
 ///
-/// Informiert den Benutzer über automatisch erkannte Heightmap und bietet
-/// die Möglichkeit, eine Übersichtskarte aus einem passenden Map-Mod-ZIP
+/// Informiert den Benutzer ueber automatisch erkannte Heightmap und bietet
+/// die Moeglichkeit, eine Uebersichtskarte aus einem passenden Map-Mod-ZIP
 /// zu generieren.
 pub fn show_post_load_dialog(ctx: &egui::Context, ui_state: &mut UiState) -> Vec<AppIntent> {
     let mut events = Vec::new();
@@ -94,7 +94,7 @@ pub fn show_post_load_dialog(ctx: &egui::Context, ui_state: &mut UiState) -> Vec
                             ui_state.post_load_dialog.matching_zips.get(selected_idx)
                         {
                             if let Some(zip_str) = zip_path.to_str() {
-                                if ui.button("Übersichtskarte generieren").clicked() {
+                                if ui.button("Uebersichtskarte generieren").clicked() {
                                     events.push(AppIntent::PostLoadGenerateOverview {
                                         zip_path: zip_str.to_string(),
                                     });
@@ -102,7 +102,7 @@ pub fn show_post_load_dialog(ctx: &egui::Context, ui_state: &mut UiState) -> Vec
                             }
                         }
                     }
-                    if ui.button("Schließen").clicked() {
+                    if ui.button("Schliessen").clicked() {
                         events.push(AppIntent::PostLoadDialogDismissed);
                     }
                 });

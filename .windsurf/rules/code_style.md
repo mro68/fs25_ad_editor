@@ -9,24 +9,24 @@
 ## Rust Conventions
 - Standard Rust formatting (`cargo fmt`)
 - Clippy lints aktiviert (`cargo clippy`)
-- Dokumentationskommentare für public API
+- Dokumentationskommentare fuer public API
 
 ## Beispiele
 
 ```rust
-/// Lädt eine AutoDrive-Konfiguration aus einer XML-Datei.
+/// Laedt eine AutoDrive-Konfiguration aus einer XML-Datei.
 /// 
 /// # Argumente
 /// * `path` - Pfad zur XML-Datei
 /// 
 /// # Fehler
-/// Gibt einen Fehler zurück, wenn die Datei nicht gelesen werden kann
-/// oder das XML-Format ungültig ist.
+/// Gibt einen Fehler zurueck, wenn die Datei nicht gelesen werden kann
+/// oder das XML-Format ungueltig ist.
 pub fn load_config(path: &Path) -> Result<RoadMap, LoadError> {
     // Implementierung hier
 }
 
-// Temporäre Variable für Node-ID-Mapping
+// Temporaere Variable fuer Node-ID-Mapping
 let mut node_id_map = HashMap::new();
 
 // Verbindungen zwischen Nodes aufbauen
@@ -48,14 +48,14 @@ for (source_id, target_ids) in connections {
 - Test-Fixtures in `tests/fixtures/`
 
 ## Dokumentations-Pflicht
-Bei jeder Codeänderung müssen folgende Dokumente synchron gehalten werden:
+Bei jeder Codeaenderung muessen folgende Dokumente synchron gehalten werden:
 
-| Änderungstyp | Was aktualisieren |
+| Aenderungstyp | Was aktualisieren |
 |---|---|
-| Neue/geänderte öffentliche Funktion / Struct / Enum | Docstring (`///`), zugehöriges `src/*/API.md` |
+| Neue/geaenderte oeffentliche Funktion / Struct / Enum | Docstring (`///`), zugehoeriges `src/*/API.md` |
 | Neues Feature abgeschlossen | `docs/ROADMAP.md` → `[x]` setzen |
 | Neue Architektur-Entscheidung / neues Modul | `.windsurf/rules/projekt.md` oder `docs/ARCHITECTURE_PLAN.md` |
 | Breaking Change in Core/Render/App/XML | Alle betroffenen `API.md`-Dateien |
-| Refactoring ohne API-Änderung | Docstrings prüfen, ggf. anpassen |
+| Refactoring ohne API-Aenderung | Docstrings pruefen, ggf. anpassen |
 
-**Regel:** Kein Commit mit Codeänderungen ohne passende Doku-Aktualisierung im selben Commit.
+**Regel:** Kein Commit mit Codeaenderungen ohne passende Doku-Aktualisierung im selben Commit.

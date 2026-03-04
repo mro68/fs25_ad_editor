@@ -1,4 +1,4 @@
-//! Use-Case: Neuen Node an einer Weltposition hinzufügen.
+//! Use-Case: Neuen Node an einer Weltposition hinzufuegen.
 
 use crate::app::AppState;
 use crate::core::{Connection, ConnectionDirection, ConnectionPriority, MapNode, NodeFlag};
@@ -27,8 +27,8 @@ fn point_to_segment_dist(pt: Vec2, a: Vec2, b: Vec2) -> f32 {
     pt.distance(a + t * ab)
 }
 
-/// Sucht die Verbindung, die der Klickposition am nächsten liegt (innerhalb `threshold`).
-/// Gibt `(start_id, end_id, direction, priority)` zurück.
+/// Sucht die Verbindung, die der Klickposition am naechsten liegt (innerhalb `threshold`).
+/// Gibt `(start_id, end_id, direction, priority)` zurueck.
 fn find_nearest_connection(
     road_map: &crate::core::RoadMap,
     pt: Vec2,
@@ -53,27 +53,27 @@ fn find_nearest_connection(
     best
 }
 
-/// Fügt einen neuen Node an der gegebenen Weltposition hinzu.
+/// Fuegt einen neuen Node an der gegebenen Weltposition hinzu.
 ///
 /// Wenn genau ein Node selektiert ist, wird der neue Node automatisch
-/// mit der voreingestellten Richtung und Straßenart verbunden.
-/// Der neue Node wird anschließend als einziger selektiert.
+/// mit der voreingestellten Richtung und Strassenart verbunden.
+/// Der neue Node wird anschliessend als einziger selektiert.
 ///
 /// Wenn `options.split_connection_on_place` aktiviert ist und die Klickposition
 /// nahe einer bestehenden Verbindung liegt, wird diese Verbindung gesplittet
-/// und der neue Node dazwischen eingefügt (anstelle des normalen Auto-Connects).
+/// und der neue Node dazwischen eingefuegt (anstelle des normalen Auto-Connects).
 ///
 /// Trifft der Klick einen existierenden Node (innerhalb snap_radius),
 /// wird dieser stattdessen nur selektiert (keine Neuerstellung).
 pub fn add_node_at_position(state: &mut AppState, world_pos: Vec2) -> AddNodeResult {
     let Some(road_map_ref) = state.road_map.as_ref() else {
-        log::warn!("Kein Node hinzufügbar: keine RoadMap geladen");
+        log::warn!("Kein Node hinzufuegbar: keine RoadMap geladen");
         return AddNodeResult::NoMap;
     };
 
-    // Prüfe ob ein existierender Node direkt getroffen wurde → nur selektieren
-    // Hitbox ist auf die visuelle Node-Größe begrenzt (nicht snap_radius),
-    // damit zwischen eng platzierten Nodes noch neue Nodes gesetzt werden können.
+    // Pruefe ob ein existierender Node direkt getroffen wurde → nur selektieren
+    // Hitbox ist auf die visuelle Node-Groesse begrenzt (nicht snap_radius),
+    // damit zwischen eng platzierten Nodes noch neue Nodes gesetzt werden koennen.
     if let Some(hit) = road_map_ref.nearest_node(world_pos) {
         if hit.distance <= state.options.hitbox_radius() {
             state.selection.ids_mut().clear();
@@ -87,7 +87,7 @@ pub fn add_node_at_position(state: &mut AppState, world_pos: Vec2) -> AddNodeRes
         }
     }
 
-    // Merke aktuell selektierten Node für Auto-Connect
+    // Merke aktuell selektierten Node fuer Auto-Connect
     let connect_from = if state.selection.selected_node_ids.len() == 1 {
         state.selection.selected_node_ids.iter().next().copied()
     } else {
@@ -110,7 +110,7 @@ pub fn add_node_at_position(state: &mut AppState, world_pos: Vec2) -> AddNodeRes
     let priority = state.editor.default_priority;
 
     let Some(road_map_arc) = state.road_map.as_mut() else {
-        log::warn!("Kein Node hinzufügbar: keine RoadMap geladen");
+        log::warn!("Kein Node hinzufuegbar: keine RoadMap geladen");
         return AddNodeResult::NoMap;
     };
     let road_map = Arc::make_mut(road_map_arc);
@@ -119,7 +119,7 @@ pub fn add_node_at_position(state: &mut AppState, world_pos: Vec2) -> AddNodeRes
     road_map.add_node(node);
 
     if let Some((split_start, split_end, split_dir, split_prio)) = split_target {
-        // Split-Modus: alte Verbindung entfernen, zwei neue einfügen
+        // Split-Modus: alte Verbindung entfernen, zwei neue einfuegen
         road_map.remove_connection(split_start, split_end);
 
         if let Some(s_node) = road_map.nodes.get(&split_start) {
@@ -171,7 +171,7 @@ pub fn add_node_at_position(state: &mut AppState, world_pos: Vec2) -> AddNodeRes
     state.selection.selection_anchor_node_id = Some(new_id);
 
     log::info!(
-        "Node {} an Position ({:.1}, {:.1}) hinzugefügt",
+        "Node {} an Position ({:.1}, {:.1}) hinzugefuegt",
         new_id,
         world_pos.x,
         world_pos.y

@@ -28,8 +28,8 @@ impl RouteTool for SplineTool {
     fn status_text(&self) -> &str {
         match self.anchors.len() {
             0 => "Startpunkt klicken",
-            1 => "Nächsten Punkt klicken (mind. 2 Punkte)",
-            _ => "Weitere Punkte klicken — Enter bestätigt, Escape abbrechen",
+            1 => "Naechsten Punkt klicken (mind. 2 Punkte)",
+            _ => "Weitere Punkte klicken — Enter bestaetigt, Escape abbrechen",
         }
     }
 
@@ -78,7 +78,7 @@ impl RouteTool for SplineTool {
 
         let connections = linear_connections(positions.len());
 
-        // Kontrollpunkte (Anker) als zusätzliche Preview-Nodes (für visuelle Markierung)
+        // Kontrollpunkte (Anker) als zusaetzliche Preview-Nodes (fuer visuelle Markierung)
         let mut nodes = positions;
         for anchor in &self.anchors {
             nodes.push(anchor.position());
@@ -104,10 +104,10 @@ impl RouteTool for SplineTool {
         )
     }
 
-    /// Setzt das Tool auf den Anfangszustand zurück.
+    /// Setzt das Tool auf den Anfangszustand zurueck.
     ///
-    /// Löscht Anker und Tangenten-Auswahl. `last_anchors`, `start_neighbors`,
-    /// `end_neighbors` und `lifecycle.last_*` bleiben erhalten für
+    /// Loescht Anker und Tangenten-Auswahl. `last_anchors`, `start_neighbors`,
+    /// `end_neighbors` und `lifecycle.last_*` bleiben erhalten fuer
     /// Nachbearbeitung und Verkettung.
     fn reset(&mut self) {
         self.anchors.clear();
@@ -133,11 +133,11 @@ impl RouteTool for SplineTool {
     }
 
     fn save_anchors_for_recreate(&mut self, road_map: &RoadMap) {
-        // Nur bei Erst-Erstellung Anker übernehmen; bei Recreate bleiben last_anchors erhalten
+        // Nur bei Erst-Erstellung Anker uebernehmen; bei Recreate bleiben last_anchors erhalten
         if !self.anchors.is_empty() {
             self.last_anchors = self.anchors.clone();
         }
-        // Nachbarn aus den richtigen Ankern befüllen (anchors oder last_anchors)
+        // Nachbarn aus den richtigen Ankern befuellen (anchors oder last_anchors)
         let source = if !self.anchors.is_empty() {
             &self.anchors
         } else {
@@ -154,7 +154,7 @@ impl RouteTool for SplineTool {
 
     fn execute_from_anchors(&self, road_map: &RoadMap) -> Option<ToolResult> {
         // Aktuelle Tangenten verwenden (nicht last_tangent_*),
-        // damit Änderungen im Nachbearbeitungs-Modus wirksam werden
+        // damit Aenderungen im Nachbearbeitungs-Modus wirksam werden
         Self::build_result_from_anchors(
             &self.last_anchors,
             self.seg.max_segment_length,

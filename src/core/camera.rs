@@ -1,4 +1,4 @@
-//! 2D-Kamera für Pan und Zoom.
+//! 2D-Kamera fuer Pan und Zoom.
 
 use glam::{Mat3, Vec2};
 
@@ -7,7 +7,7 @@ use glam::{Mat3, Vec2};
 pub struct Camera2D {
     /// Position der Kamera in Welt-Koordinaten
     pub position: Vec2,
-    /// Zoom-Level (1.0 = normal, 2.0 = doppelt so groß)
+    /// Zoom-Level (1.0 = normal, 2.0 = doppelt so gross)
     pub zoom: f32,
 }
 
@@ -49,12 +49,12 @@ impl Camera2D {
         self.position += delta;
     }
 
-    /// Ändert den Zoom-Level (mit Default-Limits clamped: 0.1 - 100.0)
+    /// Aendert den Zoom-Level (mit Default-Limits clamped: 0.1 - 100.0)
     pub fn zoom_by(&mut self, factor: f32) {
         self.zoom_by_clamped(factor, Self::ZOOM_MIN, Self::ZOOM_MAX);
     }
 
-    /// Ändert den Zoom-Level mit benutzerdefinierten Grenzen
+    /// Aendert den Zoom-Level mit benutzerdefinierten Grenzen
     pub fn zoom_by_clamped(&mut self, factor: f32, min: f32, max: f32) {
         let (min, max) = Self::normalized_zoom_bounds(min, max);
         self.zoom = (self.zoom * factor).clamp(min, max);
@@ -66,14 +66,14 @@ impl Camera2D {
         self.zoom = self.zoom.clamp(min, max);
     }
 
-    /// Gibt die View-Matrix zurück (für Shader)
-    /// Enthält nur die Translation. Zoom wird ausschließlich über die Projektion gesteuert.
+    /// Gibt die View-Matrix zurueck (fuer Shader)
+    /// Enthaelt nur die Translation. Zoom wird ausschliesslich ueber die Projektion gesteuert.
     pub fn view_matrix(&self) -> Mat3 {
         Mat3::from_translation(-self.position)
     }
 
     /// Konvertiert Screen-Koordinaten zu Welt-Koordinaten.
-    /// Berücksichtigt BASE_WORLD_EXTENT, Zoom und Aspekt-Ratio.
+    /// Beruecksichtigt BASE_WORLD_EXTENT, Zoom und Aspekt-Ratio.
     pub fn screen_to_world(&self, screen_pos: Vec2, screen_size: Vec2) -> Vec2 {
         // Screen-Koordinaten zentrieren (-1 bis 1)
         let ndc = (screen_pos / screen_size) * 2.0 - Vec2::ONE;
@@ -102,10 +102,10 @@ impl Camera2D {
         2.0 * Self::BASE_WORLD_EXTENT / (self.zoom * viewport_height)
     }
 
-    /// Berechnet den Pick-Radius in Welt-Einheiten für Node-Selektion.
+    /// Berechnet den Pick-Radius in Welt-Einheiten fuer Node-Selektion.
     ///
     /// Konvertiert den Pixel-Radius in Welt-Koordinaten
-    /// basierend auf aktuellem Zoom und Viewport-Höhe.
+    /// basierend auf aktuellem Zoom und Viewport-Hoehe.
     pub fn pick_radius_world(&self, viewport_height: f32, pick_radius_px: f32) -> f32 {
         let vh = viewport_height.max(1.0);
         (pick_radius_px * 2.0 * Self::BASE_WORLD_EXTENT) / (self.zoom * vh)
@@ -158,7 +158,7 @@ mod tests {
         camera.position = Vec2::new(100.0, 50.0);
         camera.zoom = 3.0;
         let mat = camera.view_matrix();
-        // Spalten dürfen nur Translation enthalten, kein Zoom-Scale
+        // Spalten duerfen nur Translation enthalten, kein Zoom-Scale
         assert_relative_eq!(mat.x_axis.x, 1.0);
         assert_relative_eq!(mat.y_axis.y, 1.0);
         assert_relative_eq!(mat.z_axis.x, -100.0);
@@ -184,7 +184,7 @@ mod tests {
         let corner = Vec2::new(800.0, 600.0);
         let w1 = cam1.screen_to_world(corner, screen_size);
         let w2 = cam2.screen_to_world(corner, screen_size);
-        // Bei doppeltem Zoom soll der sichtbare Bereich halb so groß sein
+        // Bei doppeltem Zoom soll der sichtbare Bereich halb so gross sein
         assert_relative_eq!(w2.x, w1.x / 2.0, epsilon = 1.0);
         assert_relative_eq!(w2.y, w1.y / 2.0, epsilon = 1.0);
     }
@@ -238,7 +238,7 @@ mod tests {
         let camera = Camera2D::new();
         let r_small = camera.pick_radius_world(300.0, 10.0);
         let r_large = camera.pick_radius_world(600.0, 10.0);
-        // Größerer Viewport → kleinerer Welt-Radius (gleich viele Pixel)
+        // Groesserer Viewport → kleinerer Welt-Radius (gleich viele Pixel)
         assert!(r_small > r_large);
     }
 

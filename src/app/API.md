@@ -1,8 +1,8 @@
 # App API Documentation
 
-## Überblick
+## Ueberblick
 
-Das `app`-Modul verwaltet den globalen State, verarbeitet `AppIntent`s zentral über den `AppController`, mappt diese auf `AppCommand`s und baut die `RenderScene` für das Rendering.
+Das `app`-Modul verwaltet den globalen State, verarbeitet `AppIntent`s zentral ueber den `AppController`, mappt diese auf `AppCommand`s und baut die `RenderScene` fuer das Rendering.
 
 **Hinweis:** `Camera2D` lebt im `core`-Modul (reiner Geometrie-Typ). `app` re-exportiert `Camera2D`, `ConnectionDirection`, `ConnectionPriority` und `RoadMap` aus `core`.
 
@@ -37,7 +37,7 @@ let scene = controller.build_render_scene(&state, [width, height]);
 - Baut den expliziten Render-Vertrag (`RenderScene`)
 
 **Handler-Module** (`app/handlers/`):
-- `file_io` — Datei-Operationen (Öffnen, Speichern, Heightmap)
+- `file_io` — Datei-Operationen (Oeffnen, Speichern, Heightmap)
 - `view` — Kamera, Viewport, Background-Map
 - `selection` — Selektions-Operationen
 - `editing` — Node/Connection-Editing, Marker
@@ -49,13 +49,13 @@ let scene = controller.build_render_scene(&state, [width, height]);
 ```rust
 pub fn map_intent_to_commands(state: &AppState, intent: AppIntent) -> Vec<AppCommand>
 ```
-Übersetzt einen `AppIntent` in eine Liste von `AppCommand`s. Reine Funktion ohne Seiteneffekte — alle Entscheidungslogik (z.B. Pick-Radius-Berechnung, aktuellen Dateipfad prüfen) ist hier lokalisiert.
+Uebersetzt einen `AppIntent` in eine Liste von `AppCommand`s. Reine Funktion ohne Seiteneffekte — alle Entscheidungslogik (z.B. Pick-Radius-Berechnung, aktuellen Dateipfad pruefen) ist hier lokalisiert.
 
 ---
 
 ### `AppState`
 
-Zentraler Anwendungszustand. Enthält keine I/O-Logik — alle Dateisystem-Operationen sind in `use_cases::file_io` zentralisiert.
+Zentraler Anwendungszustand. Enthaelt keine I/O-Logik — alle Dateisystem-Operationen sind in `use_cases::file_io` zentralisiert.
 
 ```rust
 pub struct AppState {
@@ -68,12 +68,12 @@ pub struct AppState {
     pub history: EditHistory,
     pub options: EditorOptions,
     pub show_options_dialog: bool,
-    pub segment_registry: SegmentRegistry,  // In-Session-Registry für nachträgliche Bearbeitung
+    pub segment_registry: SegmentRegistry,  // In-Session-Registry fuer nachtraegliche Bearbeitung
     pub should_exit: bool,
 }
 
 pub struct SelectionState {
-    pub selected_node_ids: Arc<IndexSet<u64>>,  // Arc für O(1)-Clone in RenderScene (CoW)
+    pub selected_node_ids: Arc<IndexSet<u64>>,  // Arc fuer O(1)-Clone in RenderScene (CoW)
     pub selection_anchor_node_id: Option<u64>,
 }
 ```
@@ -106,32 +106,32 @@ pub struct UiState {
     pub overview_options_dialog: OverviewOptionsDialogState,
     pub post_load_dialog: PostLoadDialogState,
     pub save_overview_dialog: SaveOverviewDialogState,
-    /// Konfiguration für das Distanzen-Neuverteilen-Feature
+    /// Konfiguration fuer das Distanzen-Neuverteilen-Feature
     pub distanzen: DistanzenState,
 }
 
 pub struct DistanzenState {
     /// true = nach Anzahl, false = nach Abstand
     pub by_count: bool,
-    /// Gewünschte Anzahl an Waypoints (bei `by_count = true`)
+    /// Gewuenschte Anzahl an Waypoints (bei `by_count = true`)
     pub count: u32,
     /// Maximaler Abstand zwischen Waypoints in Welteinheiten (bei `by_count = false`)
     pub distance: f32,
-    /// Berechnete Streckenlänge der aktuellen Selektion (für wechselseitige Berechnung)
+    /// Berechnete Streckenlaenge der aktuellen Selektion (fuer wechselseitige Berechnung)
     pub path_length: f32,
     /// Vorschau-Modus aktiv (Spline-Preview wird im Viewport gezeichnet)
     pub active: bool,
-    /// Originale Strecke während der Vorschau ausblenden
+    /// Originale Strecke waehrend der Vorschau ausblenden
     pub hide_original: bool,
-    /// Vorschau-Positionen (berechnete Resample-Punkte für Overlay)
+    /// Vorschau-Positionen (berechnete Resample-Punkte fuer Overlay)
     pub preview_positions: Vec<Vec2>,
 }
 
 **Methoden:**
 - `sync_from_distance()` — Berechnet `count` aus `distance` und `path_length`
 - `sync_from_count()` — Berechnet `distance` aus `count` und `path_length`
-- `deactivate()` — Deaktiviert den Vorschau-Modus und löscht die Vorschau-Daten
-- `should_hide_original() -> bool` — Gibt `true` zurück wenn Original-Strecke ausgeblendet werden soll
+- `deactivate()` — Deaktiviert den Vorschau-Modus und loescht die Vorschau-Daten
+- `should_hide_original() -> bool` — Gibt `true` zurueck wenn Original-Strecke ausgeblendet werden soll
 
 pub struct ZipBrowserState {
     pub zip_path: String,
@@ -229,7 +229,7 @@ Kanonische Definitionen liegen in:
 - `src/app/events/intent.rs`
 - `src/app/events/command.rs`
 
-Die folgenden Blöcke spiegeln die aktuell verwendeten Varianten (gekürzt um Feldkommentare).
+Die folgenden Bloecke spiegeln die aktuell verwendeten Varianten (gekuerzt um Feldkommentare).
 
 ```rust
 pub enum AppIntent {
@@ -302,7 +302,7 @@ pub enum AppIntent {
     ZipBackgroundFileSelected { zip_path: String, entry_name: String },
     ZipBrowserCancelled,
 
-    // Übersichtskarte
+    // Uebersichtskarte
     GenerateOverviewRequested,
     GenerateOverviewFromZip { path: String },
     OverviewOptionsConfirmed,
@@ -354,13 +354,13 @@ pub enum AppIntent {
     IncreaseRouteToolSegmentLength,
     DecreaseRouteToolSegmentLength,
 
-    // Segment-Bearbeitung (nachträgliche Bearbeitung erstellter Linien)
+    // Segment-Bearbeitung (nachtraegliche Bearbeitung erstellter Linien)
     EditSegmentRequested { record_id: u64 },
-    // Distanzen: Selektierte Nodes-Kette gleichmäßig neu verteilen
+    // Distanzen: Selektierte Nodes-Kette gleichmaessig neu verteilen
     ResamplePathRequested,
     StreckenteilungAktivieren,
 
-    // Hintergrund als Übersichtskarte speichern
+    // Hintergrund als Uebersichtskarte speichern
     SaveBackgroundAsOverviewConfirmed,
     SaveBackgroundAsOverviewDismissed,
 
@@ -430,7 +430,7 @@ pub enum AppCommand {
     LoadBackgroundFromZip { zip_path: String, entry_name: String, crop_size: Option<u32> },
     CloseZipBrowser,
 
-    // Übersichtskarte
+    // Uebersichtskarte
     RequestOverviewDialog,
     OpenOverviewOptionsDialog { path: String },
     GenerateOverviewWithOptions,
@@ -486,7 +486,7 @@ pub enum AppCommand {
     ResamplePath,
     StreckenteilungAktivieren,
 
-    // Hintergrund als Übersichtskarte speichern
+    // Hintergrund als Uebersichtskarte speichern
     SaveBackgroundAsOverview { path: String },
     DismissSaveOverviewDialog,
 
@@ -502,7 +502,7 @@ pub enum AppCommand {
 
 ### `Camera2D` (re-exportiert aus `core`)
 
-2D-Kamera mit Pan und Zoom. Siehe `core/API.md` für Details.
+2D-Kamera mit Pan und Zoom. Siehe `core/API.md` fuer Details.
 
 ## Use-Cases
 
@@ -512,7 +512,7 @@ Module: `camera` · `file_io` · `heightmap` · `selection` · `auto_detect` · 
 
 ---
 
-## AppIntent-Flow (Übersicht)
+## AppIntent-Flow (Uebersicht)
 
 ```mermaid
 flowchart TD
@@ -540,7 +540,7 @@ flowchart TD
     SCENE -->|GPU-Draw-Calls| GPU([Renderer / wgpu])
 ```
 
-*Ablauf:* UI emittiert `AppIntent` → `AppController` übersetzt via `map_intent_to_commands()` in `Vec<AppCommand>` → Handler-Module mutieren `AppState` via Use-Cases → `build_render_scene()` serialisiert den State in den `RenderScene`-Vertrag → Renderer zeichnet.
+*Ablauf:* UI emittiert `AppIntent` → `AppController` uebersetzt via `map_intent_to_commands()` in `Vec<AppCommand>` → Handler-Module mutieren `AppState` via Use-Cases → `build_render_scene()` serialisiert den State in den `RenderScene`-Vertrag → Renderer zeichnet.
 
 ## Interaktions-Pattern
 
@@ -568,10 +568,10 @@ AppIntent::CameraPan { delta: Vec2::new(-dx * wpp, -dy * wpp) }
 
 ## Design-Prinzipien
 
-1. **Single Source of Truth:** `AppState` hält die Laufzeitdaten (kein I/O)
-2. **Intent Boundary:** UI emittiert primär `AppIntent`; reine UI-/Tool-Konfiguration im `AppState` kann gezielt direkt aktualisiert werden
-3. **Command Execution:** `AppController` mappt Intents auf Commands und führt diese aus
-4. **Render Contract:** Ausgabe an Renderer erfolgt nur über `RenderScene`
+1. **Single Source of Truth:** `AppState` haelt die Laufzeitdaten (kein I/O)
+2. **Intent Boundary:** UI emittiert primaer `AppIntent`; reine UI-/Tool-Konfiguration im `AppState` kann gezielt direkt aktualisiert werden
+3. **Command Execution:** `AppController` mappt Intents auf Commands und fuehrt diese aus
+4. **Render Contract:** Ausgabe an Renderer erfolgt nur ueber `RenderScene`
 5. **I/O in Use-Cases:** Dateisystem-Operationen sind in `use_cases::file_io` zentralisiert
 6. **Re-Exports:** `app` re-exportiert `Camera2D`, `ConnectionDirection`, `ConnectionPriority`, `RoadMap` aus `core`, damit UI nicht direkt auf `core` zugreift
 
@@ -579,7 +579,7 @@ AppIntent::CameraPan { delta: Vec2::new(-dx * wpp, -dy * wpp) }
 
 ### `CommandLog`
 
-Protokoliert ausgeführte AppCommands für Debugging.
+Protokoliert ausgefuehrte AppCommands fuer Debugging.
 
 ```rust
 pub struct CommandLog { /* intern */ }
@@ -589,8 +589,8 @@ pub struct CommandLog { /* intern */ }
 - `new() → Self`
 - `record(&mut self, command: &AppCommand)` — Command protokollieren (speichert Debug-String)
 - `len() → usize` — Anzahl geloggter Commands
-- `is_empty() → bool` — Prüfen, ob keine Einträge vorhanden sind
-- `entries() → &[String]` — Read-only Sicht auf alle Einträge (Debug-Strings)
+- `is_empty() → bool` — Pruefen, ob keine Eintraege vorhanden sind
+- `entries() → &[String]` — Read-only Sicht auf alle Eintraege (Debug-Strings)
 
 ---
 
@@ -605,9 +605,9 @@ pub struct Snapshot { /* intern */ }
 
 **EditHistory-Methoden:**
 - `new_with_capacity(max_depth: usize) → Self` — Manager mit maximaler Undo/Redo-Tiefe erstellen
-- `record_snapshot(snapshot: Snapshot)` — Snapshot auf den Undo-Stack legen (löscht Redo-Stack)
-- `pop_undo_with_current(current: Snapshot) → Option<Snapshot>` — Undo: aktuellen Zustand auf Redo-Stack, vorherigen Snapshot zurückgeben
-- `pop_redo_with_current(current: Snapshot) → Option<Snapshot>` — Redo: aktuellen Zustand auf Undo-Stack, nächsten Snapshot zurückgeben
+- `record_snapshot(snapshot: Snapshot)` — Snapshot auf den Undo-Stack legen (loescht Redo-Stack)
+- `pop_undo_with_current(current: Snapshot) → Option<Snapshot>` — Undo: aktuellen Zustand auf Redo-Stack, vorherigen Snapshot zurueckgeben
+- `pop_redo_with_current(current: Snapshot) → Option<Snapshot>` — Redo: aktuellen Zustand auf Undo-Stack, naechsten Snapshot zurueckgeben
 - `can_undo() → bool` / `can_redo() → bool`
 
 **AppState Helper:**
@@ -623,7 +623,7 @@ Alle Tool-Typen, Traits und gemeinsame Infrastruktur sind in [`tools/API.md`](to
 
 ### `render_scene::build()`
 
-Baut die `RenderScene` aus dem aktuellen `AppState` und der Viewport-Größe.
+Baut die `RenderScene` aus dem aktuellen `AppState` und der Viewport-Groesse.
 
 ```rust
 pub fn build(state: &AppState, viewport_size: [f32; 2]) -> RenderScene

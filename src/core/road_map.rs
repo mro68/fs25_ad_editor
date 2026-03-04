@@ -7,7 +7,7 @@ use super::{
 use glam::Vec2;
 use std::collections::HashMap;
 
-/// Ein Nachbar-Node, der über eine Verbindung erreichbar ist.
+/// Ein Nachbar-Node, der ueber eine Verbindung erreichbar ist.
 #[derive(Debug, Clone, Copy)]
 pub struct ConnectedNeighbor {
     /// ID des Nachbar-Nodes
@@ -24,12 +24,12 @@ mod neighbors;
 mod query;
 pub use dedup::DeduplicationResult;
 
-/// Vollständige AutoDrive-Konfiguration
+/// Vollstaendige AutoDrive-Konfiguration
 #[derive(Debug, Clone)]
 pub struct RoadMap {
     /// Alle Wegpunkte, indexiert nach ihrer ID
     pub nodes: HashMap<u64, MapNode>,
-    /// Alle Verbindungen, indexiert nach (start_id, end_id) für O(1)-Zugriff
+    /// Alle Verbindungen, indexiert nach (start_id, end_id) fuer O(1)-Zugriff
     connections: HashMap<(u64, u64), Connection>,
     /// Alle Map-Marker
     pub map_markers: Vec<MapMarker>,
@@ -41,7 +41,7 @@ pub struct RoadMap {
     pub map_name: Option<String>,
     /// Persistenter Spatial-Index fuer schnelle Node-Abfragen
     spatial_index: SpatialIndex,
-    /// Signalisiert, dass der Spatial-Index veraltet ist und rebuild benötigt
+    /// Signalisiert, dass der Spatial-Index veraltet ist und rebuild benoetigt
     spatial_dirty: bool,
 }
 
@@ -60,7 +60,7 @@ impl RoadMap {
         }
     }
 
-    /// Fügt einen Node hinzu
+    /// Fuegt einen Node hinzu
     pub fn add_node(&mut self, node: MapNode) {
         self.nodes.insert(node.id, node);
         self.spatial_dirty = true;
@@ -93,13 +93,13 @@ impl RoadMap {
         true
     }
 
-    /// Fügt eine Verbindung hinzu
+    /// Fuegt eine Verbindung hinzu
     pub fn add_connection(&mut self, connection: Connection) {
         self.connections
             .insert((connection.start_id, connection.end_id), connection);
     }
 
-    /// Prüft ob eine Verbindung existiert (exaktes Match auf start_id + end_id) — O(1)
+    /// Prueft ob eine Verbindung existiert (exaktes Match auf start_id + end_id) — O(1)
     pub fn has_connection(&self, start_id: u64, end_id: u64) -> bool {
         self.connections.contains_key(&(start_id, end_id))
     }
@@ -138,7 +138,7 @@ impl RoadMap {
         removed
     }
 
-    /// Ändert die Richtung einer bestehenden Verbindung — O(1)
+    /// Aendert die Richtung einer bestehenden Verbindung — O(1)
     pub fn set_connection_direction(
         &mut self,
         start_id: u64,
@@ -153,7 +153,7 @@ impl RoadMap {
         }
     }
 
-    /// Ändert die Priorität einer bestehenden Verbindung — O(1)
+    /// Aendert die Prioritaet einer bestehenden Verbindung — O(1)
     pub fn set_connection_priority(
         &mut self,
         start_id: u64,
@@ -185,32 +185,32 @@ impl RoadMap {
         }
     }
 
-    /// Iterator über alle Verbindungen (read-only).
+    /// Iterator ueber alle Verbindungen (read-only).
     pub fn connections_iter(&self) -> impl Iterator<Item = &Connection> {
         self.connections.values()
     }
 
-    /// Berechnet die nächste freie Node-ID
+    /// Berechnet die naechste freie Node-ID
     pub fn next_node_id(&self) -> u64 {
         self.nodes.keys().max().copied().unwrap_or(0) + 1
     }
 
-    /// Fügt einen Map-Marker hinzu
+    /// Fuegt einen Map-Marker hinzu
     pub fn add_map_marker(&mut self, marker: MapMarker) {
         self.map_markers.push(marker);
     }
 
-    /// Prüft ob ein Node einen Marker hat
+    /// Prueft ob ein Node einen Marker hat
     pub fn has_marker(&self, node_id: u64) -> bool {
         self.map_markers.iter().any(|m| m.id == node_id)
     }
 
-    /// Findet Marker für einen Node
+    /// Findet Marker fuer einen Node
     pub fn find_marker_by_node_id(&self, node_id: u64) -> Option<&MapMarker> {
         self.map_markers.iter().find(|m| m.id == node_id)
     }
 
-    /// Entfernt Marker für einen Node (gibt true zurück falls gefunden)
+    /// Entfernt Marker fuer einen Node (gibt true zurueck falls gefunden)
     pub fn remove_marker(&mut self, node_id: u64) -> bool {
         let before = self.map_markers.len();
         self.map_markers.retain(|m| m.id != node_id);
@@ -236,31 +236,31 @@ impl RoadMap {
         }
     }
 
-    /// Gibt die Anzahl der Nodes zurück
+    /// Gibt die Anzahl der Nodes zurueck
     pub fn node_count(&self) -> usize {
         self.nodes.len()
     }
 
-    /// Gibt die Anzahl der Verbindungen zurück
+    /// Gibt die Anzahl der Verbindungen zurueck
     pub fn connection_count(&self) -> usize {
         self.connections.len()
     }
 
-    /// Gibt die Anzahl der Map-Marker zurück
+    /// Gibt die Anzahl der Map-Marker zurueck
     pub fn marker_count(&self) -> usize {
         self.map_markers.len()
     }
 
-    /// Berechnet die NodeFlags (Regular/SubPrio) für die angegebenen Nodes neu.
+    /// Berechnet die NodeFlags (Regular/SubPrio) fuer die angegebenen Nodes neu.
     ///
     /// Logik (entspricht AutoDrive FLAG_REGULAR / FLAG_SUBPRIO):
     /// - Mindestens eine Verbindung mit `ConnectionPriority::Regular` → `Regular`
     /// - Nur Verbindungen mit `ConnectionPriority::SubPriority` → `SubPrio`
     /// - Keine Verbindungen → `Regular` (Default)
-    /// - Nodes mit Warning/Reserved-Flag werden nicht verändert.
+    /// - Nodes mit Warning/Reserved-Flag werden nicht veraendert.
     ///
-    /// **Bulk-Optimierung:** Statt für jeden Node alle Verbindungen zu scannen
-    /// (O(n·m)), wird ein temporärer Adjacency-Cache aufgebaut (O(m)), der dann
+    /// **Bulk-Optimierung:** Statt fuer jeden Node alle Verbindungen zu scannen
+    /// (O(n·m)), wird ein temporaerer Adjacency-Cache aufgebaut (O(m)), der dann
     /// in O(n) abgefragt wird. Netto O(n+m) statt O(n·m).
     pub fn recalculate_node_flags(&mut self, node_ids: &[u64]) {
         use super::NodeFlag;
@@ -270,7 +270,7 @@ impl RoadMap {
         }
 
         // Adjacency-Cache aufbauen: node_id → (has_any, has_regular)
-        // Nur für die übergebenen Node-IDs relevant — alle anderen überspringen
+        // Nur fuer die uebergebenen Node-IDs relevant — alle anderen ueberspringen
         let node_set: std::collections::HashSet<u64> = node_ids.iter().copied().collect();
 
         let mut has_any: std::collections::HashMap<u64, bool> =

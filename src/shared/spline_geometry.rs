@@ -1,14 +1,14 @@
-//! Reine Geometrie-Funktionen für Catmull-Rom-Splines.
+//! Reine Geometrie-Funktionen fuer Catmull-Rom-Splines.
 //!
-//! Layer-neutral: kann von `tools`, `use_cases` und anderen Layer-übergreifenden
-//! Modulen importiert werden ohne Zirkel-Abhängigkeiten zu erzeugen.
+//! Layer-neutral: kann von `tools`, `use_cases` und anderen Layer-uebergreifenden
+//! Modulen importiert werden ohne Zirkel-Abhaengigkeiten zu erzeugen.
 
 use glam::Vec2;
 
 /// Berechnet einen Punkt auf einem Catmull-Rom-Segment (t ∈ [0, 1]).
 ///
 /// p0, p1, p2, p3: vier aufeinanderfolgende Kontrollpunkte.
-/// Die Kurve verläuft von p1 nach p2.
+/// Die Kurve verlaeuft von p1 nach p2.
 pub fn catmull_rom_point(p0: Vec2, p1: Vec2, p2: Vec2, p3: Vec2, t: f32) -> Vec2 {
     let t2 = t * t;
     let t3 = t2 * t;
@@ -20,9 +20,9 @@ pub fn catmull_rom_point(p0: Vec2, p1: Vec2, p2: Vec2, p3: Vec2, t: f32) -> Vec2
 
 /// Berechnet eine dichte Punktliste entlang einer Catmull-Rom-Spline durch `points`.
 ///
-/// Für Rand-Segmente werden Phantom-Punkte gespiegelt, damit die Kurve
-/// natürlich durch den ersten und letzten Punkt läuft.
-/// Wenn `start_phantom`/`end_phantom` gesetzt, werden die Phantom-Punkte überschrieben.
+/// Fuer Rand-Segmente werden Phantom-Punkte gespiegelt, damit die Kurve
+/// natuerlich durch den ersten und letzten Punkt laeuft.
+/// Wenn `start_phantom`/`end_phantom` gesetzt, werden die Phantom-Punkte ueberschrieben.
 ///
 /// `samples_per_segment`: Anzahl der Zwischenpunkte pro Segment (ohne Endpunkt).
 pub fn catmull_rom_chain_with_tangents(
@@ -35,7 +35,7 @@ pub fn catmull_rom_chain_with_tangents(
         return points.to_vec();
     }
     if points.len() == 2 {
-        // Gerade Linie — kein Spline nötig
+        // Gerade Linie — kein Spline noetig
         let mut result = Vec::with_capacity(samples_per_segment + 1);
         for i in 0..=samples_per_segment {
             let t = i as f32 / samples_per_segment as f32;
@@ -48,7 +48,7 @@ pub fn catmull_rom_chain_with_tangents(
     let mut result = Vec::with_capacity((n - 1) * samples_per_segment + 1);
 
     for seg in 0..(n - 1) {
-        // Phantom-Punkte an den Rändern (ggf. durch Tangente überschrieben)
+        // Phantom-Punkte an den Raendern (ggf. durch Tangente ueberschrieben)
         let p0 = if seg == 0 {
             start_phantom.unwrap_or_else(|| 2.0 * points[0] - points[1])
         } else {
@@ -63,7 +63,7 @@ pub fn catmull_rom_chain_with_tangents(
         };
 
         let steps = if seg == n - 2 {
-            samples_per_segment + 1 // letztes Segment: Endpunkt einschließen
+            samples_per_segment + 1 // letztes Segment: Endpunkt einschliessen
         } else {
             samples_per_segment
         };
@@ -77,12 +77,12 @@ pub fn catmull_rom_chain_with_tangents(
     result
 }
 
-/// Approximierte Länge einer Polyline.
+/// Approximierte Laenge einer Polyline.
 pub fn polyline_length(points: &[Vec2]) -> f32 {
     points.windows(2).map(|w| w[0].distance(w[1])).sum()
 }
 
-/// Verteilt Punkte gleichmäßig (Arc-Length) entlang einer Polyline.
+/// Verteilt Punkte gleichmaessig (Arc-Length) entlang einer Polyline.
 pub fn resample_by_distance(polyline: &[Vec2], max_segment_length: f32) -> Vec<Vec2> {
     if polyline.len() < 2 {
         return polyline.to_vec();
@@ -125,7 +125,7 @@ pub fn resample_by_distance(polyline: &[Vec2], max_segment_length: f32) -> Vec<V
         }
     }
 
-    // Endpunkt immer exakt übernehmen
+    // Endpunkt immer exakt uebernehmen
     result.push(*polyline.last().unwrap());
     result
 }

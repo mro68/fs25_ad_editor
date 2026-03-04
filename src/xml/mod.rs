@@ -1,4 +1,4 @@
-//! XML Import/Export für AutoDrive-Konfigurationen.
+//! XML Import/Export fuer AutoDrive-Konfigurationen.
 //!
 //! Dieses Modul implementiert das Parsen und Schreiben von AutoDrive XML-Configs.
 //! Das Format nutzt "Structure of Arrays" (parallele Listen in XML-Tags).

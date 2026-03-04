@@ -1,5 +1,5 @@
 //! Gerade-Strecke-Tool: Zeichnet eine Linie zwischen zwei Punkten
-//! und füllt automatisch Zwischen-Nodes ein.
+//! und fuellt automatisch Zwischen-Nodes ein.
 //!
 //! Aufgeteilt in:
 //! - `state`     — Struct, Konstruktor, Hilfsmethoden

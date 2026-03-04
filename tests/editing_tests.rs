@@ -1,4 +1,4 @@
-//! Integrationstests für die Editing-Use-Cases:
+//! Integrationstests fuer die Editing-Use-Cases:
 //! - AddNode mit split_connection_on_place
 //! - DeleteSelected mit reconnect_on_delete
 //! - ResamplePath (Distanzen-Feature)
@@ -49,7 +49,7 @@ fn test_delete_middle_node_ohne_reconnect_hinterlaesst_keine_verbindung() {
     state.road_map = Some(Arc::new(map_a_b_c()));
     state.view.viewport_size = [1280.0, 720.0];
 
-    // Node 2 selektieren und löschen
+    // Node 2 selektieren und loeschen
     state.selection.ids_mut().insert(2);
 
     controller
@@ -57,7 +57,7 @@ fn test_delete_middle_node_ohne_reconnect_hinterlaesst_keine_verbindung() {
         .expect("DeleteSelectedRequested darf nicht paniken");
 
     let rm = state.road_map.as_ref().unwrap();
-    assert!(!rm.nodes.contains_key(&2), "Node 2 muss gelöscht sein");
+    assert!(!rm.nodes.contains_key(&2), "Node 2 muss geloescht sein");
     // Ohne Reconnect: keine direkte Verbindung A→C
     assert!(
         !rm.has_connection(1, 3),
@@ -73,7 +73,7 @@ fn test_delete_middle_node_mit_reconnect_verbindet_a_und_c() {
     state.road_map = Some(Arc::new(map_a_b_c()));
     state.view.viewport_size = [1280.0, 720.0];
 
-    // Node 2 selektieren und löschen
+    // Node 2 selektieren und loeschen
     state.selection.ids_mut().insert(2);
 
     controller
@@ -81,7 +81,7 @@ fn test_delete_middle_node_mit_reconnect_verbindet_a_und_c() {
         .expect("DeleteSelectedRequested darf nicht paniken");
 
     let rm = state.road_map.as_ref().unwrap();
-    assert!(!rm.nodes.contains_key(&2), "Node 2 muss gelöscht sein");
+    assert!(!rm.nodes.contains_key(&2), "Node 2 muss geloescht sein");
     assert!(
         rm.has_connection(1, 3),
         "Mit reconnect_on_delete muss A→C verbunden sein"
@@ -90,28 +90,28 @@ fn test_delete_middle_node_mit_reconnect_verbindet_a_und_c() {
 
 #[test]
 fn test_delete_endnode_mit_reconnect_keine_neue_verbindung() {
-    // A hat keinen Vorgänger → Reconnect nicht möglich
+    // A hat keinen Vorgaenger → Reconnect nicht moeglich
     let mut controller = AppController::new();
     let mut state = AppState::new();
     state.options.reconnect_on_delete = true;
     state.road_map = Some(Arc::new(map_a_b_c()));
     state.view.viewport_size = [1280.0, 720.0];
 
-    state.selection.ids_mut().insert(1); // A löschen
+    state.selection.ids_mut().insert(1); // A loeschen
 
     controller
         .handle_intent(&mut state, AppIntent::DeleteSelectedRequested)
         .expect("DeleteSelectedRequested darf nicht paniken");
 
     let rm = state.road_map.as_ref().unwrap();
-    assert!(!rm.nodes.contains_key(&1), "Node 1 (A) muss gelöscht sein");
-    // Node 2 und 3 bleiben, aber keine neue Verbindung (B hat keinen neuen Vorgänger)
+    assert!(!rm.nodes.contains_key(&1), "Node 1 (A) muss geloescht sein");
+    // Node 2 und 3 bleiben, aber keine neue Verbindung (B hat keinen neuen Vorgaenger)
     assert!(rm.nodes.contains_key(&2), "Node 2 muss erhalten bleiben");
 }
 
-// ─── reconnect: Richtungs-/Prioritäts-Vererbung ─────────────────────────────
+// ─── reconnect: Richtungs-/Prioritaets-Vererbung ─────────────────────────────
 
-/// Helper: 3 Nodes (1,2,3) mit angegebener Richtung/Priorität verbinden.
+/// Helper: 3 Nodes (1,2,3) mit angegebener Richtung/Prioritaet verbinden.
 fn map_chain(
     dir_ab: ConnectionDirection,
     prio_ab: ConnectionPriority,
@@ -197,7 +197,7 @@ fn test_reconnect_reverse_regular_wird_dual() {
 
 #[test]
 fn test_reconnect_hauptstrasse_schlaegt_nebenstrasse() {
-    // Hauptstraße + Nebenstraße → Hauptstraße
+    // Hauptstrasse + Nebenstrasse → Hauptstrasse
     let rm = delete_node2_with_reconnect(map_chain(
         ConnectionDirection::Regular,
         ConnectionPriority::Regular,
@@ -210,7 +210,7 @@ fn test_reconnect_hauptstrasse_schlaegt_nebenstrasse() {
 
 #[test]
 fn test_reconnect_nebenstrasse_nebenstrasse_bleibt_nebenstrasse() {
-    // Nebenstraße + Nebenstraße → Nebenstraße
+    // Nebenstrasse + Nebenstrasse → Nebenstrasse
     let rm = delete_node2_with_reconnect(map_chain(
         ConnectionDirection::Regular,
         ConnectionPriority::SubPriority,
@@ -300,7 +300,7 @@ fn test_add_node_mit_split_teilt_verbindung() {
     assert_eq!(
         rm.nodes.len(),
         3,
-        "Nach Split müssen 3 Nodes existieren (war: 2)"
+        "Nach Split muessen 3 Nodes existieren (war: 2)"
     );
     // Die alte Verbindung 1→2 darf nicht mehr existieren
     assert!(
@@ -328,7 +328,7 @@ fn test_resample_path_ohne_selektion_keine_aenderung() {
     let node_count_nachher = state.road_map.as_ref().unwrap().nodes.len();
     assert_eq!(
         node_count_vorher, node_count_nachher,
-        "Ohne Selektion darf ResamplePath die Map nicht verändern"
+        "Ohne Selektion darf ResamplePath die Map nicht veraendern"
     );
 }
 
@@ -343,7 +343,7 @@ fn test_resample_path_nach_distanz_erzeugt_neue_nodes() {
     // Alle 3 Nodes selektieren
     state.selection.ids_mut().extend([1, 2, 3]);
 
-    // Distanz = 50.0 → bei Gesamtlänge 200.0 sollten ~4-5 Nodes entstehen
+    // Distanz = 50.0 → bei Gesamtlaenge 200.0 sollten ~4-5 Nodes entstehen
     state.ui.distanzen.by_count = false;
     state.ui.distanzen.distance = 50.0;
 
@@ -355,7 +355,7 @@ fn test_resample_path_nach_distanz_erzeugt_neue_nodes() {
     // Mindestens 3 Nodes (keine Regression), aber mehr als vorher
     assert!(
         rm.nodes.len() >= 3,
-        "Nach Resample müssen mindestens 3 Nodes vorhanden sein, haben: {}",
+        "Nach Resample muessen mindestens 3 Nodes vorhanden sein, haben: {}",
         rm.nodes.len()
     );
 }
@@ -425,7 +425,7 @@ fn test_add_node_auf_leerer_flaeche_erstellt_neuen_node() {
 #[test]
 fn test_resample_path_erhalt_externe_verbindungen() {
     // Kette: X(10) → A(1) → B(2) → C(3) → D(20)
-    // Resample auf A,B,C → externe Verbindungen X→A und C→D müssen erhalten bleiben
+    // Resample auf A,B,C → externe Verbindungen X→A und C→D muessen erhalten bleiben
     let mut controller = AppController::new();
     let mut state = AppState::new();
 
@@ -489,7 +489,7 @@ fn test_resample_path_erhalt_externe_verbindungen() {
 
     let rm = state.road_map.as_ref().unwrap();
 
-    // X(10) und D(20) müssen weiterhin existieren
+    // X(10) und D(20) muessen weiterhin existieren
     assert!(
         rm.nodes.contains_key(&10),
         "Externer Node X(10) muss noch existieren"
@@ -499,18 +499,18 @@ fn test_resample_path_erhalt_externe_verbindungen() {
         "Externer Node D(20) muss noch existieren"
     );
 
-    // A, B, C (alte IDs 1, 2, 3) sind gelöscht
+    // A, B, C (alte IDs 1, 2, 3) sind geloescht
     assert!(
         !rm.nodes.contains_key(&1),
-        "Alter Node A(1) muss gelöscht sein"
+        "Alter Node A(1) muss geloescht sein"
     );
     assert!(
         !rm.nodes.contains_key(&2),
-        "Alter Node B(2) muss gelöscht sein"
+        "Alter Node B(2) muss geloescht sein"
     );
     assert!(
         !rm.nodes.contains_key(&3),
-        "Alter Node C(3) muss gelöscht sein"
+        "Alter Node C(3) muss geloescht sein"
     );
 
     // X(10) muss eine ausgehende Verbindung zu einem neuen Node haben

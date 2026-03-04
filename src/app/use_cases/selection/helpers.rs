@@ -1,10 +1,10 @@
-//! Gemeinsame Hilfsfunktionen für Selektionslogik.
+//! Gemeinsame Hilfsfunktionen fuer Selektionslogik.
 
 use crate::core::RoadMap;
 use crate::AppState;
 use std::collections::HashMap;
 
-/// Löscht die aktuelle Selektion explizit.
+/// Loescht die aktuelle Selektion explizit.
 pub fn clear_selection(state: &mut AppState) {
     state.selection.ids_mut().clear();
     state.selection.selection_anchor_node_id = None;
@@ -21,7 +21,7 @@ pub(super) fn rect_min_max(a: glam::Vec2, b: glam::Vec2) -> (glam::Vec2, glam::V
 /// Baut eine ungerichtete Adjazenzliste aus den Connections der RoadMap.
 ///
 /// Duplikate werden entfernt, damit bidirektionale Verbindungen (A→B + B→A)
-/// den Grad eines Nodes nicht künstlich verdoppeln.
+/// den Grad eines Nodes nicht kuenstlich verdoppeln.
 pub(super) fn build_undirected_adjacency(road_map: &RoadMap) -> HashMap<u64, Vec<u64>> {
     use std::collections::HashSet;
     let mut adjacency_set: HashMap<u64, HashSet<u64>> = HashMap::new();

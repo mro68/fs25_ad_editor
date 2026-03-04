@@ -1,7 +1,7 @@
-//! UI-Konfigurationspanel für das Gerade-Strecke-Tool.
+//! UI-Konfigurationspanel fuer das Gerade-Strecke-Tool.
 //!
-//! Die `render_config_view`-Methode enthält die egui-Logik für:
-//! - Länge · Segment-Abstand · Node-Anzahl (Nachbearbeitungs- und Live-Modus)
+//! Die `render_config_view`-Methode enthaelt die egui-Logik fuer:
+//! - Laenge · Segment-Abstand · Node-Anzahl (Nachbearbeitungs- und Live-Modus)
 
 use super::super::common::render_segment_config_3modes;
 use super::state::StraightLineTool;
@@ -9,7 +9,7 @@ use super::state::StraightLineTool;
 impl StraightLineTool {
     /// Rendert das Konfigurationspanel im Properties-Panel.
     ///
-    /// Gibt `true` zurück wenn sich eine Einstellung geändert hat.
+    /// Gibt `true` zurueck wenn sich eine Einstellung geaendert hat.
     pub(super) fn render_config_view(
         &mut self,
         ui: &mut egui::Ui,
@@ -34,7 +34,7 @@ impl StraightLineTool {
             adjusting,
             ready,
             length,
-            "Streckenlänge",
+            "Streckenlaenge",
             distance_wheel_step_m,
         );
         if recreate {

@@ -1,9 +1,9 @@
 use crate::app::{AppIntent, UiState};
 
-/// Zeigt den Duplikat-Bestätigungsdialog.
+/// Zeigt den Duplikat-Bestaetigungsdialog.
 ///
 /// Wird nach dem Laden einer XML-Datei angezeigt, wenn duplizierte Nodes
-/// erkannt wurden. Der Benutzer kann wählen, ob die Bereinigung durchgeführt
+/// erkannt wurden. Der Benutzer kann waehlen, ob die Bereinigung durchgefuehrt
 /// werden soll.
 pub fn show_dedup_dialog(ctx: &egui::Context, ui_state: &UiState) -> Vec<AppIntent> {
     let mut events = Vec::new();
@@ -31,7 +31,7 @@ pub fn show_dedup_dialog(ctx: &egui::Context, ui_state: &UiState) -> Vec<AppInte
                 ));
                 ui.add_space(4.0);
                 ui.label("Die Bereinigung entfernt Duplikate und leitet deren Verbindungen um.");
-                ui.label("Das Original-Netzwerk bleibt vollständig erhalten.");
+                ui.label("Das Original-Netzwerk bleibt vollstaendig erhalten.");
                 ui.add_space(12.0);
 
                 ui.horizontal(|ui| {

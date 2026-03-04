@@ -1,4 +1,4 @@
-//! Builder für Render-Szenen aus dem AppState.
+//! Builder fuer Render-Szenen aus dem AppState.
 
 use crate::app::AppState;
 use crate::shared::RenderScene;

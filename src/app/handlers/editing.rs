@@ -1,28 +1,28 @@
-//! Handler für Node/Connection-Editing, Marker und Editor-Werkzeug.
+//! Handler fuer Node/Connection-Editing, Marker und Editor-Werkzeug.
 
 use crate::app::use_cases;
 use crate::app::AppState;
 use crate::core::{ConnectionDirection, ConnectionPriority};
 
-/// Aktiviert ein Editor-Werkzeug und setzt tool-spezifische Zwischenselektion zurück.
+/// Aktiviert ein Editor-Werkzeug und setzt tool-spezifische Zwischenselektion zurueck.
 pub fn set_editor_tool(state: &mut AppState, tool: crate::app::state::EditorTool) {
     state.editor.active_tool = tool;
     state.editor.connect_source_node = None;
     log::info!("Editor-Werkzeug: {:?}", tool);
 }
 
-/// Fügt einen neuen Node an der übergebenen Weltposition hinzu.
+/// Fuegt einen neuen Node an der uebergebenen Weltposition hinzu.
 /// Trifft der Klick einen existierenden Node, wird dieser nur selektiert.
 pub fn add_node(state: &mut AppState, world_pos: glam::Vec2) {
     let _ = use_cases::editing::add_node_at_position(state, world_pos);
 }
 
-/// Löscht alle aktuell selektierten Nodes.
+/// Loescht alle aktuell selektierten Nodes.
 pub fn delete_selected(state: &mut AppState) {
     use_cases::editing::delete_selected_nodes(state);
 }
 
-/// Verarbeitet einen Pick für das Connect-Tool.
+/// Verarbeitet einen Pick fuer das Connect-Tool.
 pub fn connect_tool_pick(state: &mut AppState, world_pos: glam::Vec2, max_distance: f32) {
     use_cases::editing::connect_tool_pick_node(state, world_pos, max_distance);
 }
@@ -52,7 +52,7 @@ pub fn set_connection_direction(
     use_cases::editing::set_connection_direction(state, start_id, end_id, direction);
 }
 
-/// Setzt die Priorität einer bestehenden Verbindung.
+/// Setzt die Prioritaet einer bestehenden Verbindung.
 pub fn set_connection_priority(
     state: &mut AppState,
     start_id: u64,
@@ -62,7 +62,7 @@ pub fn set_connection_priority(
     use_cases::editing::set_connection_priority(state, start_id, end_id, priority);
 }
 
-/// Aktualisiert die Standard-Richtung für neue Verbindungen.
+/// Aktualisiert die Standard-Richtung fuer neue Verbindungen.
 pub fn set_default_direction(state: &mut AppState, direction: ConnectionDirection) {
     state.editor.default_direction = direction;
     if let Some(tool) = state.editor.tool_manager.active_tool_mut() {
@@ -71,13 +71,13 @@ pub fn set_default_direction(state: &mut AppState, direction: ConnectionDirectio
     log::info!("Standard-Verbindungsrichtung: {:?}", direction);
 }
 
-/// Aktualisiert die Standard-Priorität für neue Verbindungen.
+/// Aktualisiert die Standard-Prioritaet fuer neue Verbindungen.
 pub fn set_default_priority(state: &mut AppState, priority: ConnectionPriority) {
     state.editor.default_priority = priority;
     if let Some(tool) = state.editor.tool_manager.active_tool_mut() {
         tool.set_priority(priority);
     }
-    log::info!("Standard-Straßenart: {:?}", priority);
+    log::info!("Standard-Strassenart: {:?}", priority);
 }
 
 /// Setzt die Richtung aller Verbindungen zwischen selektierten Nodes.
@@ -95,7 +95,7 @@ pub fn invert_all_between_selected(state: &mut AppState) {
     use_cases::editing::invert_all_connections_between_selected(state);
 }
 
-/// Setzt die Priorität aller Verbindungen zwischen selektierten Nodes.
+/// Setzt die Prioritaet aller Verbindungen zwischen selektierten Nodes.
 pub fn set_all_priorities_between_selected(state: &mut AppState, priority: ConnectionPriority) {
     use_cases::editing::set_all_connections_priority_between_selected(state, priority);
 }
@@ -111,7 +111,7 @@ pub fn connect_selected(state: &mut AppState) {
     }
 }
 
-/// Erstellt einen Map-Marker für einen Node.
+/// Erstellt einen Map-Marker fuer einen Node.
 pub fn create_marker(state: &mut AppState, node_id: u64, name: &str, group: &str) {
     use_cases::editing::create_marker(state, node_id, name, group);
 }
@@ -121,7 +121,7 @@ pub fn remove_marker(state: &mut AppState, node_id: u64) {
     use_cases::editing::remove_marker(state, node_id);
 }
 
-/// Öffnet den Marker-Dialog zum Erstellen oder Bearbeiten.
+/// Oeffnet den Marker-Dialog zum Erstellen oder Bearbeiten.
 pub fn open_marker_dialog(state: &mut AppState, node_id: u64, is_new: bool) {
     use_cases::editing::open_marker_dialog(state, node_id, is_new);
 }
@@ -131,10 +131,10 @@ pub fn update_marker(state: &mut AppState, node_id: u64, name: &str, group: &str
     use_cases::editing::update_marker(state, node_id, name, group);
 }
 
-/// Lädt ein gespeichertes Segment zur nachträglichen Bearbeitung.
+/// Laedt ein gespeichertes Segment zur nachtraeglichen Bearbeitung.
 ///
-/// Löscht die zugehörigen Nodes aus der RoadMap, aktiviert das passende
-/// Route-Tool und befüllt es mit den gespeicherten Parametern.
+/// Loescht die zugehoerigen Nodes aus der RoadMap, aktiviert das passende
+/// Route-Tool und befuellt es mit den gespeicherten Parametern.
 pub fn edit_segment(state: &mut AppState, record_id: u64) {
     use crate::app::state::EditorTool;
 
@@ -149,10 +149,10 @@ pub fn edit_segment(state: &mut AppState, record_id: u64) {
 
     let tool_index = record.kind.tool_index();
 
-    // Undo-Snapshot vor Löschung
+    // Undo-Snapshot vor Loeschung
     state.record_undo_snapshot();
 
-    // Segment-Nodes löschen
+    // Segment-Nodes loeschen
     use_cases::editing::delete_nodes_by_ids(state, &record.node_ids.clone());
 
     // Record aus Registry entfernen (wird beim erneuten execute() neu angelegt)
@@ -169,13 +169,13 @@ pub fn edit_segment(state: &mut AppState, record_id: u64) {
     }
 
     log::info!(
-        "Segment {} geladen für Bearbeitung (Tool-Index {})",
+        "Segment {} geladen fuer Bearbeitung (Tool-Index {})",
         record_id,
         tool_index
     );
 }
 
-/// Verteilt die selektierten Nodes gleichmäßig entlang eines Catmull-Rom-Splines.
+/// Verteilt die selektierten Nodes gleichmaessig entlang eines Catmull-Rom-Splines.
 pub fn resample_path(state: &mut AppState) {
     use_cases::editing::resample_selected_path(state);
 }

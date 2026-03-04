@@ -1,4 +1,4 @@
-//! Spatial-Index (KD-Tree) für schnelle Node-Abfragen.
+//! Spatial-Index (KD-Tree) fuer schnelle Node-Abfragen.
 
 use std::collections::HashMap;
 
@@ -16,7 +16,7 @@ pub struct SpatialMatch {
     pub distance: f32,
 }
 
-/// Read-only Spatial-Index über allen Nodes einer RoadMap.
+/// Read-only Spatial-Index ueber allen Nodes einer RoadMap.
 #[derive(Debug, Clone)]
 pub struct SpatialIndex {
     tree: KdTree<f64, 2>,
@@ -34,7 +34,7 @@ impl SpatialIndex {
         }
     }
 
-    /// Baut einen neuen Index aus den übergebenen Nodes.
+    /// Baut einen neuen Index aus den uebergebenen Nodes.
     pub fn from_nodes(nodes: &HashMap<u64, MapNode>) -> Self {
         let mut node_ids: Vec<u64> = nodes.keys().copied().collect();
         node_ids.sort_unstable();
@@ -62,17 +62,17 @@ impl SpatialIndex {
         }
     }
 
-    /// Gibt die Anzahl indexierter Nodes zurück.
+    /// Gibt die Anzahl indexierter Nodes zurueck.
     pub fn len(&self) -> usize {
         self.node_ids.len()
     }
 
-    /// Gibt `true` zurück, wenn keine Nodes im Index liegen.
+    /// Gibt `true` zurueck, wenn keine Nodes im Index liegen.
     pub fn is_empty(&self) -> bool {
         self.node_ids.is_empty()
     }
 
-    /// Findet den nächsten Node zur gegebenen Weltposition.
+    /// Findet den naechsten Node zur gegebenen Weltposition.
     pub fn nearest(&self, query: Vec2) -> Option<SpatialMatch> {
         if self.is_empty() {
             return None;
@@ -114,8 +114,8 @@ impl SpatialIndex {
 
     /// Findet alle Nodes innerhalb eines axis-aligned Rechtecks.
     ///
-    /// Nutzt den KD-Tree mit einer umschließenden Kreisabfrage + Nachfilterung,
-    /// statt O(n) über alle Positionen zu iterieren.
+    /// Nutzt den KD-Tree mit einer umschliessenden Kreisabfrage + Nachfilterung,
+    /// statt O(n) ueber alle Positionen zu iterieren.
     pub fn within_rect(&self, min: Vec2, max: Vec2) -> Vec<u64> {
         let mut out = Vec::new();
         self.within_rect_into(min, max, &mut out);
@@ -133,7 +133,7 @@ impl SpatialIndex {
         let center_y = (min.y + max.y) as f64 * 0.5;
         let half_w = (max.x - min.x) as f64 * 0.5;
         let half_h = (max.y - min.y) as f64 * 0.5;
-        // Radius des umschließenden Kreises (Diagonale / 2)
+        // Radius des umschliessenden Kreises (Diagonale / 2)
         let radius_sq = half_w * half_w + half_h * half_h;
 
         for entry in self

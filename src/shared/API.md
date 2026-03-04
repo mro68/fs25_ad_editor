@@ -1,21 +1,21 @@
 # Shared API Documentation
 
-## Überblick
+## Ueberblick
 
-Das `shared`-Modul enthält Layer-übergreifende Typen, die zwischen `app` (Produzent) und `render` (Konsument) geteilt werden, um direkte Abhängigkeiten zwischen diesen Schichten zu vermeiden.
+Das `shared`-Modul enthaelt Layer-uebergreifende Typen, die zwischen `app` (Produzent) und `render` (Konsument) geteilt werden, um direkte Abhaengigkeiten zwischen diesen Schichten zu vermeiden.
 
 ## Module
 
-- `render_scene.rs` — `RenderScene` Übergabevertrag App → Render
+- `render_scene.rs` — `RenderScene` Uebergabevertrag App → Render
 - `render_quality.rs` — `RenderQuality` Enum (Low/Medium/High)
 - `options/` — Zentrale Konfigurationskonstanten + `EditorOptions` (Laufzeit-Optionen), aufgeteilt in `camera.rs`, `render.rs`, `tools.rs`, `editor.rs`
-- `spline_geometry.rs` — Layer-neutrale Catmull-Rom-Geometrie-Funktionen (kein import aus `tools` nötig)
+- `spline_geometry.rs` — Layer-neutrale Catmull-Rom-Geometrie-Funktionen (kein import aus `tools` noetig)
 
 ## Haupttypen
 
 ### `RenderScene`
 
-Expliziter, read-only Übergabevertrag zwischen App-Layer und Renderer.
+Expliziter, read-only Uebergabevertrag zwischen App-Layer und Renderer.
 
 ```rust
 pub struct RenderScene {
@@ -32,17 +32,17 @@ pub struct RenderScene {
 }
 ```
 
-`hidden_node_ids` wird genutzt, um Nodes im aktuellen Frame temporär auszublenden
+`hidden_node_ids` wird genutzt, um Nodes im aktuellen Frame temporaer auszublenden
 (z. B. bei Vorschau-Overlays im Properties-Panel), ohne die Domain-Daten zu mutieren.
 
 **Methoden:**
-- `has_map() -> bool` — Prüft ob eine RoadMap vorhanden ist
+- `has_map() -> bool` — Prueft ob eine RoadMap vorhanden ist
 
 ---
 
 ### `RenderQuality`
 
-Qualitätsstufe für Anti-Aliasing.
+Qualitaetsstufe fuer Anti-Aliasing.
 
 ```rust
 pub enum RenderQuality { Low, Medium, High }
@@ -62,30 +62,30 @@ Zentral gesammelte Konfigurationswerte, gegliedert nach Bereich:
 |---------|-----------|------|-------------|
 | Kamera | `CAMERA_BASE_WORLD_EXTENT` | 2048.0 | Sichtbare Welt-Halbbreite bei Zoom 1.0 (Referenz-Duplikat, kanonisch in `Camera2D`) |
 | Kamera | `CAMERA_ZOOM_MIN` / `MAX` | 0.1 / 100.0 | Zoom-Grenzen (Referenz-Duplikat) |
-| Kamera | `CAMERA_ZOOM_STEP` | 1.2 | Zoom-Schritt bei Menü-Buttons / Shortcuts |
+| Kamera | `CAMERA_ZOOM_STEP` | 1.2 | Zoom-Schritt bei Menue-Buttons / Shortcuts |
 | Kamera | `CAMERA_SCROLL_ZOOM_STEP` | 1.1 | Zoom-Schritt bei Mausrad-Scroll |
-| Selektion | `SELECTION_SIZE_FACTOR` | 130.0 | Vergrößerung selektierter Nodes in % (100..=200) |
-| Nodes | `NODE_SIZE_WORLD` | 0.5 | Feste Node-Größe in Welt-Einheiten |
+| Selektion | `SELECTION_SIZE_FACTOR` | 130.0 | Vergroesserung selektierter Nodes in % (100..=200) |
+| Nodes | `NODE_SIZE_WORLD` | 0.5 | Feste Node-Groesse in Welt-Einheiten |
 | Nodes | `NODE_COLOR_DEFAULT` | `[0.0, 0.8, 1.0, 1.0]` | Cyan (Regular) |
 | Nodes | `NODE_COLOR_SUBPRIO` | `[1.0, 1.0, 0.0, 1.0]` | Gelb (SubPrio) |
 | Nodes | `NODE_COLOR_SELECTED` | `[1.0, 0.0, 1.0, 1.0]` | Magenta (Selektiert) |
 | Nodes | `NODE_COLOR_WARNING` | `[1.0, 0.0, 0.0, 1.0]` | Rot (Warning) |
-| Connections | `CONNECTION_THICKNESS_WORLD` | 0.2 | Hauptstraßen-Linienbreite |
-| Connections | `CONNECTION_THICKNESS_SUBPRIO_WORLD` | 0.1 | Nebenstraßen-Linienbreite |
+| Connections | `CONNECTION_THICKNESS_WORLD` | 0.2 | Hauptstrassen-Linienbreite |
+| Connections | `CONNECTION_THICKNESS_SUBPRIO_WORLD` | 0.1 | Nebenstrassen-Linienbreite |
 | Connections | `ARROW_LENGTH_WORLD` / `WIDTH` | 1.0 / 0.6 | Pfeilgeometrie |
-| Connections | `CONNECTION_COLOR_REGULAR` | `[0.2, 0.9, 0.2, 1.0]` | Grün |
+| Connections | `CONNECTION_COLOR_REGULAR` | `[0.2, 0.9, 0.2, 1.0]` | Gruen |
 | Connections | `CONNECTION_COLOR_DUAL` | `[0.2, 0.7, 1.0, 1.0]` | Blau |
 | Connections | `CONNECTION_COLOR_REVERSE` | `[1.0, 0.5, 0.1, 1.0]` | Orange |
-| Marker | `MARKER_SIZE_WORLD` | 2.0 | Pin-Höhe in Welt-Einheiten |
+| Marker | `MARKER_SIZE_WORLD` | 2.0 | Pin-Hoehe in Welt-Einheiten |
 | Marker | `MARKER_COLOR` | `[0.9, 0.1, 0.1, 1.0]` | Rot |
 | Marker | `MARKER_OUTLINE_COLOR` | `[0.6, 0.0, 0.0, 1.0]` | Dunkles Rot |
-| Tools | `SNAP_SCALE_PERCENT` | 100.0 | Snap-Radius in % der Node-Größe |
-| Tools | `HITBOX_SCALE_PERCENT` | 100.0 | Standard-Hitbox-Skalierung in % der Node-Größe |
-| Tools | `MOUSE_WHEEL_DISTANCE_STEP_M` | 0.1 | Schrittweite (m) für Distanz-Felder bei Mausrad |
+| Tools | `SNAP_SCALE_PERCENT` | 100.0 | Snap-Radius in % der Node-Groesse |
+| Tools | `HITBOX_SCALE_PERCENT` | 100.0 | Standard-Hitbox-Skalierung in % der Node-Groesse |
+| Tools | `MOUSE_WHEEL_DISTANCE_STEP_M` | 0.1 | Schrittweite (m) fuer Distanz-Felder bei Mausrad |
 
 ### `ValueAdjustInputMode`
 
-Steuert, wie numerische Felder im UI verändert werden.
+Steuert, wie numerische Felder im UI veraendert werden.
 
 ```rust
 pub enum ValueAdjustInputMode {
@@ -93,11 +93,11 @@ pub enum ValueAdjustInputMode {
     MouseWheel,     // Mausrad hoch/runter
 }
 ```
-| Terrain | `TERRAIN_HEIGHT_SCALE` | 255.0 | Höhenskala für Heightmap-Export |
+| Terrain | `TERRAIN_HEIGHT_SCALE` | 255.0 | Hoehenskala fuer Heightmap-Export |
 
 ### `OverviewLayerOptions`
 
-Konfigurierbare Layer-Optionen für die Übersichtskarten-Generierung.
+Konfigurierbare Layer-Optionen fuer die Uebersichtskarten-Generierung.
 Wird als Teil der `EditorOptions` persistent in TOML gespeichert.
 
 ```rust
@@ -110,11 +110,11 @@ pub struct OverviewLayerOptions {
 }
 ```
 
-Der Default setzt alle Layer außer `legend` auf `true`.
+Der Default setzt alle Layer ausser `legend` auf `true`.
 
 ### `SelectionStyle`
 
-Darstellungsmodus für selektierte Nodes.
+Darstellungsmodus fuer selektierte Nodes.
 
 ```rust
 pub enum SelectionStyle {
@@ -125,7 +125,7 @@ pub enum SelectionStyle {
 
 ## Design-Prinzipien
 
-1. **Entkopplung:** `shared` verhindert direkte Abhängigkeiten zwischen `app` und `render`
+1. **Entkopplung:** `shared` verhindert direkte Abhaengigkeiten zwischen `app` und `render`
 2. **Single Source of Truth:** Alle Rendering-Konstanten in `options.rs` zentralisiert
 3. **Immutable Contract:** `RenderScene` ist read-only (Clone, keine Mutation)
 
@@ -133,7 +133,7 @@ pub enum SelectionStyle {
 
 ### `EditorOptions` (Laufzeit-Optionen)
 
-Alle zur Laufzeit änderbaren Editor-Optionen. Wird als `fs25_auto_drive_editor.toml` neben der Binary gespeichert.
+Alle zur Laufzeit aenderbaren Editor-Optionen. Wird als `fs25_auto_drive_editor.toml` neben der Binary gespeichert.
 
 ```rust
 pub struct EditorOptions {
@@ -163,25 +163,25 @@ pub struct EditorOptions {
     pub camera_scroll_zoom_step: f32,
     // Tools
     pub snap_scale_percent: f32,
-    /// Hitbox-Skalierung in Prozent der Node-Größe (100 = exakte Node-Größe)
+    /// Hitbox-Skalierung in Prozent der Node-Groesse (100 = exakte Node-Groesse)
     pub hitbox_scale_percent: f32,
-    /// Schrittweite in Metern für Distanz-Felder bei Mausrad
+    /// Schrittweite in Metern fuer Distanz-Felder bei Mausrad
     pub mouse_wheel_distance_step_m: f32,
-    /// Eingabemodus für numerische Feldänderungen
+    /// Eingabemodus fuer numerische Feldaenderungen
     pub value_adjust_input_mode: ValueAdjustInputMode,
-    /// true = Mittelpunkt zwischen Vorgänger und Nachfolger beim Löschen verbinden
+    /// true = Mittelpunkt zwischen Vorgaenger und Nachfolger beim Loeschen verbinden
     pub reconnect_on_delete: bool,
     /// true = bestehende Verbindung beim Platzieren splitten
     pub split_connection_on_place: bool,
     // Kamera (erweitert)
-    /// Minimaler Zoom-Faktor (konfig, überschreibt Camera2D::ZOOM_MIN)
+    /// Minimaler Zoom-Faktor (konfig, ueberschreibt Camera2D::ZOOM_MIN)
     pub camera_zoom_min: f32,
-    /// Maximaler Zoom-Faktor (konfig, überschreibt Camera2D::ZOOM_MAX)
+    /// Maximaler Zoom-Faktor (konfig, ueberschreibt Camera2D::ZOOM_MAX)
     pub camera_zoom_max: f32,
     // Terrain
     pub terrain_height_scale: f32,
-    // Übersichtskarte
-    /// Layer-Optionen für Übersichtskarten-Generierung
+    // Uebersichtskarte
+    /// Layer-Optionen fuer Uebersichtskarten-Generierung
     pub overview_layers: OverviewLayerOptions,
 }
 ```

@@ -1,4 +1,4 @@
-//! Use-Case-Funktionen für Node-Selektion.
+//! Use-Case-Funktionen fuer Node-Selektion.
 //!
 //! Aufgeteilt nach Selektionsmodus:
 //! - `pick` — Einzelklick-Selektion (Nearest-Node)
