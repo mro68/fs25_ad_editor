@@ -92,8 +92,11 @@ pub struct ToolResult {
     /// Indizes beziehen sich auf `new_nodes`.
     pub internal_connections: Vec<(usize, usize, ConnectionDirection, ConnectionPriority)>,
     /// Verbindungen von neuen Nodes zu existierenden Nodes:
-    /// (new_node_idx, existing_node_id, Richtung, Priorität)
-    pub external_connections: Vec<(usize, u64, ConnectionDirection, ConnectionPriority)>,
+    /// (new_node_idx, existing_node_id, existing_to_new, Richtung, Priorität)
+    ///
+    /// - `existing_to_new = true`: Verbindung wird als `existing -> new` erstellt
+    /// - `existing_to_new = false`: Verbindung wird als `new -> existing` erstellt
+    pub external_connections: Vec<(usize, u64, bool, ConnectionDirection, ConnectionPriority)>,
 }
 
 // ── ToolManager ──────────────────────────────────────────────────
