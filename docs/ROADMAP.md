@@ -215,6 +215,14 @@
 - ✅ UI-Funktions-Docstrings (`render_toolbar`, `render_menu`, `render_status_bar`, `render_properties`)
 - ✅ ROADMAP.md Feature-Status korrigiert (Keyboard-Shortcuts, Benchmarks, Toast, Theme)
 
+**Errungenschaften (Audit-Follow-up 2026-03-04):**
+- ✅ CurveTool-Preview-Hotpath: Positions-LUT per Key-Cache wiederverwendet (`CurvePreviewCacheKey`, `preview_positions_for`)
+- ✅ DRY-Refactor Route-Tool-Lifecycle: gemeinsamer `set_last_created`-Flow via Macro-Hooks (`current_end_anchor`, `save_anchors_for_recreate`)
+- ✅ DRY-Helfer `snap_with_neighbors()` für Snap + Nachbar-Ermittlung in Route-Tools eingeführt
+- ✅ Spline-State: `anchor_positions()` auf Iterator umgestellt (reduzierte Zwischenallokationen)
+- ✅ Streckenteilung-Preview: Recompute nur bei geänderter Eingabe-Signatur (`preview_cache_signature`)
+- ✅ API-Doku-Sync: `app/API.md` (Route-Tool-Events), `ui/API.md` (Overview-/Preview-Funktionen), `docs/DATA_MODEL.md` (AppState/SelectionState/SegmentRegistry)
+
 **Errungenschaften (Spline-Tool 2026-02-21):**
 - ✅ Neues Route-Tool: Catmull-Rom-Spline (interpolierend, Kurs führt durch alle geklickten Punkte)
 - ✅ Arc-Length-Resampling für gleichmäßige Node-Verteilung

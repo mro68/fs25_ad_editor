@@ -225,6 +225,12 @@ pub enum EditorTool {
 
 `AppIntent` beschreibt Eingaben aus UI/System. `AppCommand` beschreibt mutierende Schritte am State.
 
+Kanonische Definitionen liegen in:
+- `src/app/events/intent.rs`
+- `src/app/events/command.rs`
+
+Die folgenden Blöcke spiegeln die aktuell verwendeten Varianten (gekürzt um Feldkommentare).
+
 ```rust
 pub enum AppIntent {
     // Datei-Operationen
@@ -333,8 +339,8 @@ pub enum AppIntent {
     RouteToolCancelled,
     SelectRouteToolRequested { index: usize },
     RouteToolConfigChanged,
-    RouteToolWithAnchorsRequested { anchors: Vec<glam::Vec2>, direction: ConnectionDirection, priority: ConnectionPriority },
-    RouteToolTangentSelected { is_start: bool, neighbor_id: Option<u64> },
+    RouteToolWithAnchorsRequested { index: usize, start_node_id: u64, end_node_id: u64 },
+    RouteToolTangentSelected { start: TangentSource, end: TangentSource },
     RouteToolRecreateRequested,
 
     // Route-Tool Drag (Steuerpunkt-Verschiebung)
@@ -460,8 +466,8 @@ pub enum AppCommand {
     RouteToolCancel,
     SelectRouteTool { index: usize },
     RouteToolRecreate,
-    RouteToolWithAnchors { anchors: Vec<glam::Vec2>, direction: ConnectionDirection, priority: ConnectionPriority },
-    RouteToolApplyTangent { is_start: bool, neighbor_id: Option<u64> },
+    RouteToolWithAnchors { index: usize, start_node_id: u64, end_node_id: u64 },
+    RouteToolApplyTangent { start: TangentSource, end: TangentSource },
 
     // Route-Tool Schnellsteuerung
     IncreaseRouteToolNodeCount,

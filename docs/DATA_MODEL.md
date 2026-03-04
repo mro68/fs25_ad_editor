@@ -183,27 +183,55 @@ let bounds = WorldBounds::from_map_size(4096.0);  // -2048 bis +2048
 
 ## Application-State-Strukturen
 
+### AppState
+```rust
+pub struct AppState {
+    pub road_map: Option<Arc<RoadMap>>,
+    pub view: ViewState,
+    pub ui: UiState,
+    pub selection: SelectionState,
+    pub editor: EditorToolState,
+    pub command_log: CommandLog,
+    pub history: EditHistory,
+    pub options: EditorOptions,
+    pub show_options_dialog: bool,
+    pub segment_registry: SegmentRegistry,
+    pub should_exit: bool,
+}
+```
+- Zentraler Laufzeitzustand für Controller/Handler/UI
+- `road_map` und `selection.selected_node_ids` sind `Arc`-basiert für günstige Frame-Übergaben
+
 ### SelectionState
 ```rust
 pub struct SelectionState {
-    pub selected_node_ids: Arc<HashSet<u64>>,  // Arc für O(1)-Clone (Copy-on-Write)
+    pub selected_node_ids: Arc<IndexSet<u64>>,  // Arc für O(1)-Clone (Copy-on-Write)
     pub selection_anchor_node_id: Option<u64>,  // Anker für Pfad-Selektion
 }
 ```
-- **CoW-Pattern:** `Arc::make_mut` bei Mutation → klont HashSet nur wenn mehrere Referenzen existieren
+- **CoW-Pattern:** `Arc::make_mut` bei Mutation → klont IndexSet nur wenn mehrere Referenzen existieren
 - Wird als `Arc` in `RenderScene` geteilt (kein Deep-Clone pro Frame)
+
+### EditHistory / Snapshot
+```rust
+pub struct EditHistory { /* undo/redo stacks */ }
+pub struct Snapshot {
+    pub road_map: Option<Arc<RoadMap>>,
+    pub selection: Arc<IndexSet<u64>>,
+    // weitere UI-/Tool-Felder
+}
+```
+- Snapshot-basiertes Undo/Redo
+- `Arc<RoadMap>` ermöglicht O(1)-Snapshots (Copy-on-Write)
 
 ### SegmentRegistry
 ```rust
 pub struct SegmentRecord {
     pub id: u64,
-    pub tool_index: usize,
-    pub anchors: Vec<ToolAnchor>,
-    pub created_ids: Vec<u64>,
-    pub direction: ConnectionDirection,
-    pub priority: ConnectionPriority,
-    pub tangent_start: TangentSource,
-    pub tangent_end: TangentSource,
+    pub node_ids: Vec<u64>,
+    pub start_anchor: ToolAnchor,
+    pub end_anchor: ToolAnchor,
+    pub kind: SegmentKind,
 }
 
 pub struct SegmentRegistry {
@@ -239,6 +267,5 @@ pub struct EditorToolState {
     pub tool_manager: ToolManager,
 }
 ```
-- `ToolManager` verwaltet die drei Route-Tools (StraightLine, Curve, Spline)
+- `ToolManager` verwaltet alle registrierten Route-Tools (Straight, Curve2/3, Spline, Bypass, Constraint)
 - `active_tool` bestimmt welches Editor-Werkzeug gerade aktiv ist
-<parameter name="filePath">/home/mro/Share/repos/fs25_auto_drive_editor/docs/DATA_MODEL.md
