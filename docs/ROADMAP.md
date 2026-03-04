@@ -225,6 +225,10 @@
 - ✅ API-Doku-Sync: `app/API.md` (Route-Tool-Events), `ui/API.md` (Overview-/Preview-Funktionen), `docs/DATA_MODEL.md` (AppState/SelectionState/SegmentRegistry)
 - ✅ `ui/options_dialog.rs` in `ui/options_dialog/{mod,sections}.rs` aufgeteilt (bessere Wartbarkeit ohne API-Änderung)
 - ✅ Render-Hotpath optimiert: `RenderScene.options` nutzt `Arc<EditorOptions>`; API-Verträge in `shared/API.md` und `render/API.md` synchronisiert
+- ✅ Fix Route-Tool-Richtungsabbildung: Externe Startkanten spiegeln jetzt `ConnectionDirection` korrekt (Regressionstest in `tools/common/builder.rs`)
+- ✅ UI/CM-Update Constraint-Route: Name auf `Constraint-Route` vereinheitlicht und Context-Menu-Befehle (Tool aktivieren + 2-Node-Erzeugung) als erste Route-Option ergänzt
+- ✅ Optionen-Dialog neu strukturiert: links Bereichsnavigation, rechts kontextabhängige Einstellungen des gewählten Bereichs
+- ✅ Optionen-Dialog verfeinert: reduzierte Hauptkategorien (`Allgemein`, `Nodes`, `Tools`, `Verbindungen`, `Verhalten`) und feste Untersektionen ohne aufklappbare Menüs
 
 **Errungenschaften (Spline-Tool 2026-02-21):**
 - ✅ Neues Route-Tool: Catmull-Rom-Spline (interpolierend, Kurs führt durch alle geklickten Punkte)
