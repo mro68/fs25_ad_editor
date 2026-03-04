@@ -77,6 +77,10 @@ pub struct EditorOptions {
     #[serde(default = "default_bg_fade_start_zoom")]
     pub bg_fade_start_zoom: f32,
 
+    // Copy/Paste
+    #[serde(default = "default_copy_preview_opacity")]
+    pub copy_preview_opacity: f32,
+
     // Uebersichtskarte
     #[serde(default)]
     pub overview_layers: OverviewLayerOptions,

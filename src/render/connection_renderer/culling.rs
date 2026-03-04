@@ -7,16 +7,22 @@ pub(super) fn point_in_rect(point: Vec2, min: Vec2, max: Vec2) -> bool {
     point.x >= min.x && point.x <= max.x && point.y >= min.y && point.y <= max.y
 }
 
-/// Prueft ob ein Liniensegment ein AABB-Rechteck schneidet oder darin liegt.
-pub(super) fn segment_intersects_rect(start: Vec2, end: Vec2, min: Vec2, max: Vec2) -> bool {
-    if point_in_rect(start, min, max) || point_in_rect(end, min, max) {
+// Die non-cached Variante wurde entfernt zugunsten der `_cached`-Version,
+// die bereits berechnete Rechtecks-Ecken erwartet und im Hot-Path verwendet wird.
+
+/// Variante der Funktion, die bereits berechnete Rechteck-Ecken erwartet.
+/// Dadurch vermeiden wir pro-Connection Allocs/Vec2-Konstruktionen in Hot-Path.
+pub(super) fn segment_intersects_rect_cached(
+    start: Vec2,
+    end: Vec2,
+    bottom_left: Vec2,
+    bottom_right: Vec2,
+    top_right: Vec2,
+    top_left: Vec2,
+) -> bool {
+    if point_in_rect(start, bottom_left, top_right) || point_in_rect(end, bottom_left, top_right) {
         return true;
     }
-
-    let bottom_left = Vec2::new(min.x, min.y);
-    let bottom_right = Vec2::new(max.x, min.y);
-    let top_right = Vec2::new(max.x, max.y);
-    let top_left = Vec2::new(min.x, max.y);
 
     segments_intersect(start, end, bottom_left, bottom_right)
         || segments_intersect(start, end, bottom_right, top_right)
@@ -55,7 +61,7 @@ fn point_on_segment(point: Vec2, seg_start: Vec2, seg_end: Vec2) -> bool {
 
 #[cfg(test)]
 mod tests {
-    use super::{point_in_rect, segment_intersects_rect};
+    use super::{point_in_rect, segment_intersects_rect_cached};
     use glam::Vec2;
 
     #[test]
@@ -73,9 +79,21 @@ mod tests {
         let min = Vec2::new(-1.0, -1.0);
         let max = Vec2::new(1.0, 1.0);
 
+        let bottom_left = Vec2::new(min.x, min.y);
+        let bottom_right = Vec2::new(max.x, min.y);
+        let top_right = Vec2::new(max.x, max.y);
+        let top_left = Vec2::new(min.x, max.y);
+
         let start = Vec2::new(-2.0, 0.0);
         let end = Vec2::new(2.0, 0.0);
-        assert!(segment_intersects_rect(start, end, min, max));
+        assert!(segment_intersects_rect_cached(
+            start,
+            end,
+            bottom_left,
+            bottom_right,
+            top_right,
+            top_left
+        ));
     }
 
     #[test]
@@ -83,8 +101,20 @@ mod tests {
         let min = Vec2::new(-1.0, -1.0);
         let max = Vec2::new(1.0, 1.0);
 
+        let bottom_left = Vec2::new(min.x, min.y);
+        let bottom_right = Vec2::new(max.x, min.y);
+        let top_right = Vec2::new(max.x, max.y);
+        let top_left = Vec2::new(min.x, max.y);
+
         let start = Vec2::new(2.0, 2.0);
         let end = Vec2::new(3.0, 3.0);
-        assert!(!segment_intersects_rect(start, end, min, max));
+        assert!(!segment_intersects_rect_cached(
+            start,
+            end,
+            bottom_left,
+            bottom_right,
+            top_right,
+            top_left
+        ));
     }
 }

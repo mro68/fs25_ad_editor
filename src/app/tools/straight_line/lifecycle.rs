@@ -69,10 +69,12 @@ impl RouteTool for StraightLineTool {
 
         let positions = compute_line_positions(start_pos, end_pos, self.seg.max_segment_length);
         let connections = linear_connections(positions.len());
+        let styles = vec![(self.direction, self.priority); connections.len()];
 
         ToolPreview {
             nodes: positions,
             connections,
+            connection_styles: styles,
         }
     }
 

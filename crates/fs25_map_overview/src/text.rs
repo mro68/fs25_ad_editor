@@ -245,7 +245,14 @@ mod tests {
     fn test_draw_text_umlauts() {
         // Umlaute duerfen nicht paniken und sollen sichtbare Pixel erzeugen
         let mut img = RgbImage::new(200, 30);
-        draw_text(&mut img, 0, 0, "Hoeflingen Strasse", Rgb([255, 255, 255]), 1);
+        draw_text(
+            &mut img,
+            0,
+            0,
+            "Hoeflingen Strasse",
+            Rgb([255, 255, 255]),
+            1,
+        );
         // Pruefe dass mindestens ein Pixel gesetzt wurde
         let has_white = img.pixels().any(|p| p[0] > 200);
         assert!(has_white, "Umlaute muessen sichtbare Pixel erzeugen");

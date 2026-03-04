@@ -1,4 +1,8 @@
 //! Builder fuer Render-Szenen aus dem AppState.
+//!
+//! Dieses Modul ist verantwortlich fuer die Transformation des internen AppState
+//! in den expliziten Render-Vertrag `RenderScene`. Die gebaute Szene enthaelt alle
+//! Informationen, die der Render-Layer benoetigt, ohne den State direkt zu koppeln.
 
 use crate::app::AppState;
 use crate::shared::RenderScene;
@@ -6,6 +10,30 @@ use indexmap::IndexSet;
 use std::sync::Arc;
 
 /// Baut eine RenderScene aus dem aktuellen AppState.
+///
+/// Diese Funktion extrahiert die notwendigen Daten aus dem `AppState` und
+/// montiert sie in das explizite `RenderScene`-Datenmodell. Die Szene ist
+/// der Render-Layer-Vertrag und deckt folgende Bereiche ab:
+///
+/// - **Geometrie**: `road_map`, `selected_node_ids`, Verbindungen fuer Preview
+/// - **Sichtbarkeit**: `background_map`, `background_visible`, `hidden_node_ids`
+/// - **Viewport**: Kamera, Groesse der Anzeige, Render-Qualitaet
+/// - **Interaktion**: Connection-Tool State (`connect_source_node`)
+/// - **Konfiguration**: `options_arc` (EditorOptions als shared Arc)
+///
+/// # Besonderheiten
+///
+/// - `hidden_node_ids` wird automatisch mit selektierten Nodes gefuellt,
+///   wenn die Distanzen-Vorschau aktiv ist und "Original ausblenden" aktiviert wurde.
+/// - `options_arc` ist ein Arc-Clone von `state.options_arc()` — das ermoeglicht
+///   CoW-Updates ohne per-Frame Allokationen.
+///
+/// # Parameter
+/// - `state` – Referenz zum aktuellen AppState
+/// - `viewport_size` – Fenstergroesse in Pixeln als `[width, height]`
+///
+/// # Rueckgabe
+/// Eine vollstaendige `RenderScene`, bereit zum Rendering.
 pub fn build(state: &AppState, viewport_size: [f32; 2]) -> RenderScene {
     // Wenn Distanzen-Vorschau aktiv + hide_original → selektierte Nodes ausblenden
     let hidden_node_ids = if state.ui.distanzen.should_hide_original() {

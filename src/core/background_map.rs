@@ -53,7 +53,11 @@ impl BackgroundMap {
                     .with_guessed_format()
                     .with_context(|| format!("Format-Erkennung fehlgeschlagen fuer: {}", path))?;
                 if let Some(fmt) = reader.format() {
-                    log::info!("Tatsaechliches Bildformat erkannt: {:?} fuer '{}'", fmt, path);
+                    log::info!(
+                        "Tatsaechliches Bildformat erkannt: {:?} fuer '{}'",
+                        fmt,
+                        path
+                    );
                 }
                 reader.decode().with_context(|| {
                     format!("Fehler beim Dekodieren der Background-Map: {}", path)

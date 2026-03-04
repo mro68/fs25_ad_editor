@@ -96,6 +96,11 @@ impl EditorApp {
         ui::render_status_bar(ctx, &self.state);
         events.extend(ui::render_menu(ctx, &self.state));
         events.extend(ui::render_toolbar(ctx, &self.state));
+        events.extend(ui::render_route_defaults_panel(
+            ctx,
+            self.state.editor.default_direction,
+            self.state.editor.default_priority,
+        ));
 
         let road_map_for_properties = self.state.road_map.clone();
         let default_direction = self.state.editor.default_direction;
@@ -296,15 +301,19 @@ impl EditorApp {
 
             if let Some(cursor_world) = self.last_cursor_world {
                 if let Some(rm) = self.state.road_map.as_deref() {
-                    ui::render_tool_preview(
-                        &ui.painter_at(rect),
+                    let painter = ui.painter_at(rect);
+                    let ctx = ui::tool_preview::ToolPreviewContext {
+                        painter: &painter,
                         rect,
-                        &self.state.view.camera,
-                        vp,
-                        &self.state.editor.tool_manager,
-                        rm,
+                        camera: &self.state.view.camera,
+                        viewport_size: vp,
+                        tool_manager: &self.state.editor.tool_manager,
+                        road_map: rm,
                         cursor_world,
-                    );
+                        options: &self.state.options,
+                    };
+
+                    ui::render_tool_preview(&ctx);
                 }
             }
         }

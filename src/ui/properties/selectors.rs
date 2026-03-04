@@ -1,4 +1,4 @@
-use crate::app::{AppIntent, ConnectionDirection, ConnectionPriority};
+use crate::app::{ConnectionDirection, ConnectionPriority};
 
 const OPTION_ICON_SIZE: egui::Vec2 = egui::Vec2::new(32.0, 32.0);
 
@@ -48,13 +48,14 @@ fn selectable_icon(
     ui.add(button).on_hover_text(tooltip)
 }
 
-pub fn render_direction_icon_selector(
+fn render_direction_icon_selector_inner(
     ui: &mut egui::Ui,
     selected: &mut ConnectionDirection,
+    layout_vertical: bool,
     id_suffix: &str,
 ) {
     ui.push_id(format!("dir_icon_selector_{id_suffix}"), |ui| {
-        ui.horizontal(|ui| {
+        let render = |ui: &mut egui::Ui| {
             for (value, tooltip) in [
                 (ConnectionDirection::Regular, "Einbahn vorwaerts"),
                 (ConnectionDirection::Dual, "Zweirichtungsverkehr"),
@@ -65,17 +66,24 @@ pub fn render_direction_icon_selector(
                     *selected = value;
                 }
             }
-        });
+        };
+
+        if layout_vertical {
+            ui.vertical(render);
+        } else {
+            ui.horizontal(render);
+        }
     });
 }
 
-pub fn render_priority_icon_selector(
+fn render_priority_icon_selector_inner(
     ui: &mut egui::Ui,
     selected: &mut ConnectionPriority,
+    layout_vertical: bool,
     id_suffix: &str,
 ) {
     ui.push_id(format!("prio_icon_selector_{id_suffix}"), |ui| {
-        ui.horizontal(|ui| {
+        let render = |ui: &mut egui::Ui| {
             for (value, tooltip) in [
                 (ConnectionPriority::Regular, "Hauptstrasse"),
                 (ConnectionPriority::SubPriority, "Nebenstrasse"),
@@ -85,35 +93,44 @@ pub fn render_priority_icon_selector(
                     *selected = value;
                 }
             }
-        });
+        };
+
+        if layout_vertical {
+            ui.vertical(render);
+        } else {
+            ui.horizontal(render);
+        }
     });
 }
 
-/// Rendert die Auswahl fuer Standard-Richtung und Standard-Prioritaet.
-pub fn render_default_direction_selector(
+pub fn render_direction_icon_selector(
     ui: &mut egui::Ui,
-    default_direction: ConnectionDirection,
-    default_priority: ConnectionPriority,
-    events: &mut Vec<AppIntent>,
+    selected: &mut ConnectionDirection,
+    id_suffix: &str,
 ) {
-    let current = default_direction;
-    let mut selected = current;
-    render_direction_icon_selector(ui, &mut selected, "default");
+    render_direction_icon_selector_inner(ui, selected, false, id_suffix);
+}
 
-    if selected != current {
-        events.push(AppIntent::SetDefaultDirectionRequested {
-            direction: selected,
-        });
-    }
+pub fn render_direction_icon_selector_vertical(
+    ui: &mut egui::Ui,
+    selected: &mut ConnectionDirection,
+    id_suffix: &str,
+) {
+    render_direction_icon_selector_inner(ui, selected, true, id_suffix);
+}
 
-    ui.add_space(4.0);
-    let current_prio = default_priority;
-    let mut selected_prio = current_prio;
-    render_priority_icon_selector(ui, &mut selected_prio, "default");
+pub fn render_priority_icon_selector(
+    ui: &mut egui::Ui,
+    selected: &mut ConnectionPriority,
+    id_suffix: &str,
+) {
+    render_priority_icon_selector_inner(ui, selected, false, id_suffix);
+}
 
-    if selected_prio != current_prio {
-        events.push(AppIntent::SetDefaultPriorityRequested {
-            priority: selected_prio,
-        });
-    }
+pub fn render_priority_icon_selector_vertical(
+    ui: &mut egui::Ui,
+    selected: &mut ConnectionPriority,
+    id_suffix: &str,
+) {
+    render_priority_icon_selector_inner(ui, selected, true, id_suffix);
 }

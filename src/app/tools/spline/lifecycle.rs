@@ -77,6 +77,7 @@ impl RouteTool for SplineTool {
         };
 
         let connections = linear_connections(positions.len());
+        let styles = vec![(self.direction, self.priority); connections.len()];
 
         // Kontrollpunkte (Anker) als zusaetzliche Preview-Nodes (fuer visuelle Markierung)
         let mut nodes = positions;
@@ -85,7 +86,11 @@ impl RouteTool for SplineTool {
         }
         nodes.push(snapped_cursor);
 
-        ToolPreview { nodes, connections }
+        ToolPreview {
+            nodes,
+            connections,
+            connection_styles: styles,
+        }
     }
 
     fn render_config(&mut self, ui: &mut egui::Ui, distance_wheel_step_m: f32) -> bool {
