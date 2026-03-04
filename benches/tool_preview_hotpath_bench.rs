@@ -26,12 +26,16 @@ fn bench_bypass_preview(c: &mut Criterion) {
     for &count in &[10usize, 50, 200] {
         let chain = make_chain(count, 6.0);
 
-        group.bench_with_input(BenchmarkId::new("compute_positions", count), &chain, |b, pts| {
-            b.iter(|| {
-                let result = compute_bypass_positions(black_box(pts), 8.0, 6.0);
-                black_box(result)
-            })
-        });
+        group.bench_with_input(
+            BenchmarkId::new("compute_positions", count),
+            &chain,
+            |b, pts| {
+                b.iter(|| {
+                    let result = compute_bypass_positions(black_box(pts), 8.0, 6.0);
+                    black_box(result)
+                })
+            },
+        );
     }
 
     group.finish();
@@ -73,5 +77,9 @@ fn bench_constraint_preview(c: &mut Criterion) {
     group.finish();
 }
 
-criterion_group!(tool_preview_hotpath_benches, bench_bypass_preview, bench_constraint_preview);
+criterion_group!(
+    tool_preview_hotpath_benches,
+    bench_bypass_preview,
+    bench_constraint_preview
+);
 criterion_main!(tool_preview_hotpath_benches);
