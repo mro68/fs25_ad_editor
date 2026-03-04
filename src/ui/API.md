@@ -10,7 +10,7 @@ Das `ui`-Modul enthält egui-UI-Komponenten (Menüs, Statusbar, Input-Handling, 
 - `status.rs` — Statusleiste
 - `toolbar.rs` — Werkzeugleiste
 - `properties.rs` — Properties-Panel (Detailanzeige selektierter Nodes)
-- `options_dialog.rs` — Optionen-Dialog für Laufzeit-Einstellungen
+- `options_dialog/` — Optionen-Dialog für Laufzeit-Einstellungen (`mod.rs`, `sections.rs`)
 - `tool_preview.rs` — Tool-Preview-Overlay (Route-Tool-Vorschau im Viewport)
 - `input/` — Viewport-Input-Orchestrator (phasenbasierte Submodule)
   - `clicks.rs` — Klick-Events (Einfach-/Doppel-Klick, Tool-Routing)

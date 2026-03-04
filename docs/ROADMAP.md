@@ -222,6 +222,7 @@
 - ✅ Spline-State: `anchor_positions()` auf Iterator umgestellt (reduzierte Zwischenallokationen)
 - ✅ Streckenteilung-Preview: Recompute nur bei geänderter Eingabe-Signatur (`preview_cache_signature`)
 - ✅ API-Doku-Sync: `app/API.md` (Route-Tool-Events), `ui/API.md` (Overview-/Preview-Funktionen), `docs/DATA_MODEL.md` (AppState/SelectionState/SegmentRegistry)
+- ✅ `ui/options_dialog.rs` in `ui/options_dialog/{mod,sections}.rs` aufgeteilt (bessere Wartbarkeit ohne API-Änderung)
 
 **Errungenschaften (Spline-Tool 2026-02-21):**
 - ✅ Neues Route-Tool: Catmull-Rom-Spline (interpolierend, Kurs führt durch alle geklickten Punkte)
