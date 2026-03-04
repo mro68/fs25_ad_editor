@@ -178,11 +178,11 @@ impl NodeRenderer {
 
         road_map.nodes_within_rect_into(min, max, &mut self.node_id_scratch);
 
-        for node_id in self.node_id_scratch.iter().copied() {
-            if ctx.hidden_node_ids.contains(&node_id) {
+        for node_id in self.node_id_scratch.iter() {
+            if ctx.hidden_node_ids.contains(node_id) {
                 continue;
             }
-            let Some(node) = road_map.nodes.get(&node_id) else {
+            let Some(node) = road_map.nodes.get(node_id) else {
                 continue;
             };
 
