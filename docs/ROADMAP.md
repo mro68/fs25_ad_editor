@@ -207,6 +207,7 @@
 - ✅ RouteTool-Capabilities eingeführt (`RouteToolDrag`, `RouteToolTangent`, `RouteToolRegistry`, `RouteToolChainInput`) bei kompatiblem `RouteTool`-Obervertrag
 - ✅ Preview-Hotpath optimiert: Connection-Indizes in `BypassTool` und `ConstraintRouteTool` gecacht
 - ✅ Neuer Benchmark `tool_preview_hotpath_bench` für `compute_bypass_positions` und `solve_route`
+- ✅ CI-Guardrail ergänzt: `scripts/check_api_docs_sync.sh` + `make check-doc-contracts` + CI-Step
 - ✅ Docstrings für `AppCommand`, `AppIntent` (alle Varianten dokumentiert)
 - ✅ Docstrings für `Snapshot`, `EditHistory`, `CommandLog`, `SegmentRecord`, `SegmentRegistry`
 - ✅ Docstrings für `reset()` in allen RouteTool-Implementierungen

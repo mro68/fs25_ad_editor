@@ -76,7 +76,9 @@ impl<T: ?Sized> RouteToolChainInput for T {}
 ///
 /// Tools sind zustandsbehaftet (Klick-Phasen) und erzeugen Preview-Geometrie
 /// sowie ein `ToolResult` mit neuen Nodes/Connections.
-pub trait RouteTool: RouteToolDrag + RouteToolTangent + RouteToolRegistry + RouteToolChainInput {
+pub trait RouteTool:
+    RouteToolDrag + RouteToolTangent + RouteToolRegistry + RouteToolChainInput
+{
     /// Anzeigename für Toolbar
     fn name(&self) -> &str;
 
