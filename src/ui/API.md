@@ -124,6 +124,28 @@ pub fn render_status_bar(ctx: &egui::Context, state: &AppState)
 
 ---
 
+### `render_edit_panel`
+
+Rendert das schwebende Edit-Panel für aktive Modi (Streckenteilung, Route-Tool)
+und gibt erzeugte Intents zurück.
+
+```rust
+pub fn render_edit_panel(
+  ctx: &egui::Context,
+  road_map: Option<&RoadMap>,
+  selected_node_ids: &IndexSet<u64>,
+  distanzen_state: &mut DistanzenState,
+  default_direction: ConnectionDirection,
+  default_priority: ConnectionPriority,
+  distance_wheel_step_m: f32,
+  active_tool: EditorTool,
+  tool_manager: Option<&mut ToolManager>,
+  panel_pos: Option<egui::Pos2>,
+) -> Vec<AppIntent>
+```
+
+---
+
 ### `InputState`
 
 Orchestrator für Viewport-Input. Delegiert die eigentliche Logik an Sub-Module (`keyboard`, `drag`, `context_menu`).
