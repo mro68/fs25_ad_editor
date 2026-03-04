@@ -49,6 +49,8 @@ Schnittstelle für alle Route-Tools (Linie, Kurve, …). Tools sind zustandsbeha
 - `set_direction(dir)` / `set_priority(prio)` — Editor-Defaults übernehmen
 - `set_snap_radius(radius)` — Snap-Radius für Node-Snapping setzen
 - `set_last_created(ids, road_map)` / `last_created_ids() → &[u64]` — Erstellte Node-IDs (für Verkettung und Nachbearbeitung)
+- `current_end_anchor() → Option<ToolAnchor>` — Liefert den End-Anker für den gemeinsamen `set_last_created`-Flow
+- `save_anchors_for_recreate(road_map)` — Speichert tool-spezifische Recreate-Daten
 - `last_end_anchor() → Option<ToolAnchor>` — Letzter Endpunkt für Verkettung
 - `needs_recreate() → bool` / `clear_recreate_flag()` — Neuberechnung bei Config-Änderung
 - `execute_from_anchors(road_map) → Option<ToolResult>` — ToolResult aus gespeicherten Ankern
@@ -153,7 +155,7 @@ Aufgeteilt in vier Submodule (alle privat, Re-Exporte via `common/mod.rs`):
 
 ### `geometry.rs`
 
-Hilfsfunktionen: `angle_to_compass`, `node_count_from_length`, `populate_neighbors`, `linear_connections`, `tangent_options`
+Hilfsfunktionen: `angle_to_compass`, `node_count_from_length`, `populate_neighbors`, `snap_with_neighbors`, `linear_connections`, `tangent_options`
 
 ### `tangent.rs`
 
@@ -182,6 +184,11 @@ Hilfsfunktionen: `angle_to_compass`, `node_count_from_length`, `populate_neighbo
 **`render_segment_config_3modes(seg, ui, adjusting, ready, length, label, distance_wheel_step_m) → (changed, recreate)`** — Gemeinsame Hilfsfunktion für die 3 SegmentConfig-Darstellungsmodi (Adjusting/Live/Default) inkl. Mausrad-Änderungen für Distanz/Node-Anzahl.
 
 **`impl_lifecycle_delegation!`** — Makro zur Delegation der Standard-RouteTool-Lifecycle-Methoden (`set_direction`, `set_priority`, `set_snap_radius`, `last_created_ids`, `last_end_anchor`, `needs_recreate`, `clear_recreate_flag`, Inkrement/Decrement-Helfer) an die gemeinsamen Felder. Eliminiert Boilerplate pro Tool.
+
+Der Makro-Flow für `set_last_created` ist vereinheitlicht:
+1. `current_end_anchor()` übernehmen
+2. `save_anchors_for_recreate(road_map)` aufrufen
+3. `lifecycle.save_created_ids(ids)` ausführen
 
 ### `bypass::geometry` Export
 

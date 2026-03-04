@@ -235,6 +235,30 @@ pub fn render_tool_preview(
 
 ---
 
+### `paint_preview` und `paint_preview_polyline`
+
+Zeichnen ein Preview als Overlay im Viewport.
+
+```rust
+pub fn paint_preview(
+  painter: &egui::Painter,
+  rect: egui::Rect,
+  camera: &Camera2D,
+  viewport_size: Vec2,
+  preview: &ToolPreview,
+)
+
+pub fn paint_preview_polyline(
+  painter: &egui::Painter,
+  rect: egui::Rect,
+  camera: &Camera2D,
+  viewport_size: Vec2,
+  positions: &[Vec2],
+)
+```
+
+---
+
 ### `show_marker_dialog`
 
 Zeigt den Marker-Bearbeiten-Dialog als modales Fenster (Name, Gruppe, bestehende Gruppen).
@@ -320,6 +344,23 @@ pub fn show_post_load_dialog(ctx: &egui::Context, ui_state: &mut UiState) -> Vec
 ```
 
 Bei mehreren ZIPs werden RadioButtons zur Auswahl angezeigt.
+
+---
+
+### `show_overview_options_dialog`
+
+Zeigt den Layer-Dialog für die Übersichtskarten-Generierung (Hillshade/Farmlands/IDs/POIs/Legende).
+
+```rust
+pub fn show_overview_options_dialog(
+  ctx: &egui::Context,
+  state: &mut OverviewOptionsDialogState,
+) -> Vec<AppIntent>
+```
+
+**Emittierte Intents:**
+- `AppIntent::OverviewOptionsConfirmed`
+- `AppIntent::OverviewOptionsCancelled`
 
 ---
 
