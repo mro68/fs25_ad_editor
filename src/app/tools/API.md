@@ -197,3 +197,8 @@ Der Makro-Flow für `set_last_created` ist vereinheitlicht:
 ### `builder.rs`
 
 **`assemble_tool_result(positions, start, end, direction, priority, road_map) → ToolResult`** — Gemeinsame Logik aller Route-Tools: Nimmt berechnete Positionen, erstellt neue Nodes (überspringt existierende) und baut interne/externe Verbindungen auf.
+
+`ToolResult.external_connections` kodiert externe Kanten als
+`(new_node_idx, existing_node_id, existing_to_new, direction, priority)`.
+Damit bleibt die Richtung (`Regular`/`Dual`/`Reverse`) an Start- und Endrand konsistent,
+ohne implizite Richtungs-Spiegelung.
