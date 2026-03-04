@@ -1,6 +1,6 @@
-//! Kontextmenue-System mit validierter Command-Architektur.
+//! Kontextmenü-System mit validierter Command-Architektur.
 //!
-//! Garantie: Nur Commands mit erfuellten Preconditions werden gerendert.
+//! Garantie: Nur Commands mit erfüllten Preconditions werden gerendert.
 //!
 //! Struktur:
 //! - `commands.rs`: CommandId, Precondition, MenuCatalog, validate_entries()
@@ -17,7 +17,7 @@ use commands::{
 };
 use indexmap::IndexSet;
 
-/// Icon-Groesse fuer SVG-Icons im Kontextmenue.
+/// Icon-Größe für SVG-Icons im Kontextmenü.
 const CM_ICON_SIZE: egui::Vec2 = egui::Vec2::new(16.0, 16.0);
 const CM_CHOICE_ICON_SIZE: egui::Vec2 = egui::Vec2::new(32.0, 32.0);
 
@@ -67,7 +67,7 @@ fn direction_icon_color(options: &EditorOptions, direction: ConnectionDirection)
     }
 }
 
-/// Gibt das SVG-Icon fuer einen Command zurueck (dieselben wie in der Toolbar).
+/// Gibt das SVG-Icon für einen Command zurück (dieselben wie in der Toolbar).
 fn command_icon(
     id: CommandId,
     options: &EditorOptions,
@@ -133,15 +133,15 @@ fn command_icon(
     )
 }
 
-/// Kontextabhaengige Menue-Variante basierend auf Selection und Fokus-Node.
+/// Kontextabhängige Menü-Variante basierend auf Selection und Fokus-Node.
 ///
-/// Wird beim Rechtsklick einmalig bestimmt und eingefroren, bis das Menue
-/// geschlossen wird. Enthaelt alle Daten die zum Rendern noetig sind.
+/// Wird beim Rechtsklick einmalig bestimmt und eingefroren, bis das Menü
+/// geschlossen wird. Enthält alle Daten die zum Rendern nötig sind.
 #[derive(Debug, Clone)]
 pub enum MenuVariant {
     /// Rechtsklick auf leeren Bereich ohne Selektion → Tool-Auswahl
     EmptyArea,
-    /// Nodes selektiert, Rechtsklick auf leeren Bereich → Befehle fuer Selektion
+    /// Nodes selektiert, Rechtsklick auf leeren Bereich → Befehle für Selektion
     SelectionOnly,
     /// Rechtsklick auf spezifischen Node → Einzelnode-Befehle oben + Selektions-Befehle unten
     NodeFocused {
@@ -150,12 +150,12 @@ pub enum MenuVariant {
     },
     /// Route-Tool aktiv mit pending input, optional mit Tangenten-Auswahl
     RouteToolActive {
-        /// Tangenten-Menuedaten (nur bei kubischer Kurve mit Nachbarn)
+        /// Tangenten-Menüdaten (nur bei kubischer Kurve mit Nachbarn)
         tangent_data: Option<TangentMenuData>,
     },
 }
 
-/// Hilfsfunktion: Naechsten Node bei einer Weltposition finden (Snap-Range).
+/// Hilfsfunktion: Nächsten Node bei einer Weltposition finden (Snap-Range).
 pub fn find_nearest_node_at(
     world_pos: glam::Vec2,
     road_map: &RoadMap,
@@ -185,15 +185,15 @@ pub fn find_nearest_node_at(
 
 /// Bestimmt die MenuVariant basierend auf Fokus-Node, Selektion und Route-Tool-Status.
 ///
-/// Wird einmal beim Rechtsklick aufgerufen und das Ergebnis eingefroren, bis das Menue
-/// geschlossen wird — so verursachen Zustandsaenderungen (Esc, Deselection) kein Flackern.
+/// Wird einmal beim Rechtsklick aufgerufen und das Ergebnis eingefroren, bis das Menü
+/// geschlossen wird — so verursachen Zustandsänderungen (Esc, Deselection) kein Flackern.
 pub fn determine_menu_variant(
     selected_node_ids: &IndexSet<u64>,
     focused_node_id: Option<u64>,
     route_tool_has_input: bool,
     tangent_data: Option<TangentMenuData>,
 ) -> MenuVariant {
-    // Route-Tool hat Prioritaet (nur wenn kein Node fokussiert)
+    // Route-Tool hat Priorität (nur wenn kein Node fokussiert)
     if route_tool_has_input && focused_node_id.is_none() {
         return MenuVariant::RouteToolActive { tangent_data };
     }
@@ -214,11 +214,12 @@ pub fn determine_menu_variant(
     MenuVariant::EmptyArea
 }
 
-/// Rendert das Kontextmenue basierend auf der eingefrorenen MenuVariant.
+/// Rendert das Kontextmenü basierend auf der eingefrorenen MenuVariant.
 ///
-/// Verwendet das validierte Command-System: Nur Commands mit erfuellten
+/// Verwendet das validierte Command-System: Nur Commands mit erfüllten
 /// Preconditions werden gerendert. Tangenten werden
 /// als interaktive Widgets separat gehandhabt, da sie ComboBoxes haben.
+#[allow(clippy::too_many_arguments)]
 pub fn render_context_menu(
     response: &egui::Response,
     road_map: Option<&RoadMap>,
@@ -313,7 +314,7 @@ pub fn render_context_menu(
                         events,
                     );
 
-                    // ── Info-Submenu (ganz unten, oeffnet bei Hover) ───
+                    // ── Info-Submenu (ganz unten, öffnet bei Hover) ───
                     ui.separator();
                     render_node_info_submenu(ui, *focused_node_id, rm);
                 }
@@ -345,9 +346,9 @@ pub fn render_context_menu(
         .is_some()
 }
 
-/// Rendert die validierten Eintraege als egui-Elemente.
+/// Rendert die validierten Einträge als egui-Elemente.
 ///
-/// Submenues werden als einklappbare `menu_button` gerendert,
+/// Submenüs werden als einklappbare `menu_button` gerendert,
 /// die erst bei Hover aufklappen (natives egui-Submenu-Verhalten).
 fn render_validated_entries(
     ui: &mut egui::Ui,
@@ -407,7 +408,7 @@ fn render_validated_entries(
     }
 }
 
-/// Info-Submenu fuer einen Node (oeffnet bei Hover, zeigt Details).
+/// Info-Submenu für einen Node (öffnet bei Hover, zeigt Details).
 fn render_node_info_submenu(ui: &mut egui::Ui, node_id: u64, road_map: &RoadMap) {
     ui.menu_button("ℹ Info", |ui| {
         if let Some(node) = road_map.nodes.get(&node_id) {
@@ -439,7 +440,7 @@ fn render_node_info_submenu(ui: &mut egui::Ui, node_id: u64, road_map: &RoadMap)
     });
 }
 
-/// Tangenten-Auswahl fuer Route-Tool (ComboBox, nicht als Command).
+/// Tangenten-Auswahl für Route-Tool (ComboBox, nicht als Command).
 fn render_tangent_selection(
     ui: &mut egui::Ui,
     data: &TangentMenuData,
