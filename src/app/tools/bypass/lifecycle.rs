@@ -59,9 +59,13 @@ impl RouteTool for BypassTool {
         nodes.extend_from_slice(&positions);
         nodes.push(chain_end);
 
-        let connections: Vec<(usize, usize)> = (0..nodes.len().saturating_sub(1))
-            .map(|i| (i, i + 1))
-            .collect();
+        let connections = if let Some(cached) = &self.cached_connections {
+            cached.clone()
+        } else {
+            (0..nodes.len().saturating_sub(1))
+                .map(|i| (i, i + 1))
+                .collect()
+        };
 
         ToolPreview { nodes, connections }
     }
@@ -101,6 +105,7 @@ impl RouteTool for BypassTool {
     fn reset(&mut self) {
         self.chain_positions.clear();
         self.cached_positions = None;
+        self.cached_connections = None;
         self.d_blend = 0.0;
     }
 
@@ -124,6 +129,7 @@ impl RouteTool for BypassTool {
         self.chain_start_id = start_id;
         self.chain_end_id = end_id;
         self.cached_positions = None;
+        self.cached_connections = None;
         self.d_blend = 0.0;
     }
 

@@ -133,6 +133,7 @@ Winkelgeglättete Route mit automatischen Tangenten-Übergängen. Solver-Pipelin
 **Solver-Typen:**
 - `SolverResult` — Positionen + optionale Approach/Departure-Steuerpunkte
 - `ConstraintRouteInput` — Eingabeparameter für den Solver
+- Öffentliche Helper-Exporte: `constraint_route::solve_route`, `constraint_route::ConstraintRouteInput` (u.a. für Benchmarks)
 
 **Solver-Parameter:**
 - `max_angle_deg: f32` (5°..135°) — Maximale Richtungsänderung pro Segment
@@ -181,6 +182,10 @@ Hilfsfunktionen: `angle_to_compass`, `node_count_from_length`, `populate_neighbo
 **`render_segment_config_3modes(seg, ui, adjusting, ready, length, label, distance_wheel_step_m) → (changed, recreate)`** — Gemeinsame Hilfsfunktion für die 3 SegmentConfig-Darstellungsmodi (Adjusting/Live/Default) inkl. Mausrad-Änderungen für Distanz/Node-Anzahl.
 
 **`impl_lifecycle_delegation!`** — Makro zur Delegation der Standard-RouteTool-Lifecycle-Methoden (`set_direction`, `set_priority`, `set_snap_radius`, `last_created_ids`, `last_end_anchor`, `needs_recreate`, `clear_recreate_flag`, Inkrement/Decrement-Helfer) an die gemeinsamen Felder. Eliminiert Boilerplate pro Tool.
+
+### `bypass::geometry` Export
+
+- Öffentlicher Helper-Export: `bypass::compute_bypass_positions` (u.a. für Preview-Benchmarks)
 
 ### `builder.rs`
 
