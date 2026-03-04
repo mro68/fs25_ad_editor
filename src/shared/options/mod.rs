@@ -1,0 +1,25 @@
+//! Zentrale Konfiguration fuer den FS25 AutoDrive Editor.
+//!
+//! In Submodule aufgeteilt, um die API besser wartbar zu halten.
+
+mod camera;
+mod editor;
+mod render;
+mod tools;
+
+pub use camera::{
+    CAMERA_BASE_WORLD_EXTENT, CAMERA_SCROLL_ZOOM_STEP, CAMERA_ZOOM_MAX, CAMERA_ZOOM_MIN,
+    CAMERA_ZOOM_STEP,
+};
+pub use editor::EditorOptions;
+pub use render::{
+    OverviewLayerOptions, SelectionStyle, ARROW_LENGTH_WORLD, ARROW_WIDTH_WORLD,
+    CONNECTION_COLOR_DUAL, CONNECTION_COLOR_REGULAR, CONNECTION_COLOR_REVERSE,
+    CONNECTION_THICKNESS_SUBPRIO_WORLD, CONNECTION_THICKNESS_WORLD, MARKER_COLOR,
+    MARKER_OUTLINE_COLOR, MARKER_SIZE_WORLD, NODE_COLOR_DEFAULT, NODE_COLOR_SELECTED,
+    NODE_COLOR_SUBPRIO, NODE_COLOR_WARNING, NODE_SIZE_WORLD, SELECTION_SIZE_FACTOR,
+    TERRAIN_HEIGHT_SCALE,
+};
+pub use tools::{
+    ValueAdjustInputMode, HITBOX_SCALE_PERCENT, MOUSE_WHEEL_DISTANCE_STEP_M, SNAP_SCALE_PERCENT,
+};
