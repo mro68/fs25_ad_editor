@@ -25,6 +25,8 @@ pub struct AppState {
     pub history: crate::app::history::EditHistory,
     /// Laufzeit-Optionen (Farben, Größen, Breiten)
     pub options: EditorOptions,
+    /// Geteilte Arc-Variante der Optionen für RenderScene-Build (O(1) Clone pro Frame)
+    options_arc: Arc<EditorOptions>,
     /// Ob der Options-Dialog angezeigt wird
     pub show_options_dialog: bool,
     /// In-Session-Registry aller erstellten Segmente (für nachträgliche Bearbeitung)
@@ -36,6 +38,9 @@ pub struct AppState {
 impl AppState {
     /// Erstellt einen neuen, leeren App-State
     pub fn new() -> Self {
+        let options = EditorOptions::default();
+        let options_arc = Arc::new(options.clone());
+
         Self {
             road_map: None,
             view: ViewState::new(),
@@ -44,7 +49,8 @@ impl AppState {
             editor: EditorToolState::new(),
             command_log: CommandLog::new(),
             history: crate::app::history::EditHistory::new_with_capacity(200),
-            options: EditorOptions::default(),
+            options,
+            options_arc,
             show_options_dialog: false,
             segment_registry: SegmentRegistry::new(),
             should_exit: false,
@@ -76,6 +82,22 @@ impl AppState {
     pub fn record_undo_snapshot(&mut self) {
         let snap = Snapshot::from_state(self);
         self.history.record_snapshot(snap);
+    }
+
+    /// Liefert die Arc-Variante der Optionen (für RenderScene-Build, zero-copy pro Frame).
+    pub fn options_arc(&self) -> Arc<EditorOptions> {
+        self.options_arc.clone()
+    }
+
+    /// Setzt neue Optionen und aktualisiert den geteilten Arc.
+    pub fn set_options(&mut self, options: EditorOptions) {
+        self.options = options;
+        self.options_arc = Arc::new(self.options.clone());
+    }
+
+    /// Aktualisiert den geteilten Arc nach in-place Mutationen der Optionen.
+    pub fn refresh_options_arc(&mut self) {
+        self.options_arc = Arc::new(self.options.clone());
     }
 }
 

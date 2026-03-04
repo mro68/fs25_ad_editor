@@ -20,6 +20,8 @@ pub struct NodeRenderer {
     instance_capacity: usize,
     /// Wiederverwendbarer Scratch-Buffer für Instanzdaten (vermeidet per-Frame-Allokation)
     instance_scratch: Vec<NodeInstance>,
+    /// Wiederverwendbarer Scratch-Buffer für sichtbare Node-IDs (KD-Query ohne pro-Frame-Vec)
+    node_id_scratch: Vec<u64>,
 }
 
 impl NodeRenderer {
@@ -142,6 +144,7 @@ impl NodeRenderer {
             instance_buffer: None,
             instance_capacity: 0,
             instance_scratch: Vec::new(),
+            node_id_scratch: Vec::new(),
         }
     }
 
@@ -157,7 +160,6 @@ impl NodeRenderer {
         render_quality: RenderQuality,
         selected_node_ids: &IndexSet<u64>,
     ) {
-        log::debug!("NodeRenderer.render() called");
         let selected_set = selected_node_ids;
         let viewport_width = ctx.viewport_size[0];
         let viewport_height = ctx.viewport_size[1];
@@ -174,11 +176,13 @@ impl NodeRenderer {
         // Instanzen aus RoadMap sammeln (Scratch-Buffer wiederverwenden)
         self.instance_scratch.clear();
 
-        for node_id in road_map.nodes_within_rect(min, max) {
-            if ctx.hidden_node_ids.contains(&node_id) {
+        road_map.nodes_within_rect_into(min, max, &mut self.node_id_scratch);
+
+        for node_id in self.node_id_scratch.iter() {
+            if ctx.hidden_node_ids.contains(node_id) {
                 continue;
             }
-            let Some(node) = road_map.nodes.get(&node_id) else {
+            let Some(node) = road_map.nodes.get(node_id) else {
                 continue;
             };
 
@@ -216,17 +220,8 @@ impl NodeRenderer {
         }
 
         if self.instance_scratch.is_empty() {
-            log::warn!("No instances to render");
             return;
         }
-
-        log::debug!(
-            "Rendering {} instances, camera: ({:.1}, {:.1}), zoom: {:.2}",
-            self.instance_scratch.len(),
-            ctx.camera.position.x,
-            ctx.camera.position.y,
-            ctx.camera.zoom
-        );
 
         // View-Projektion-Matrix berechnen (gemeinsame Funktion)
         let view_proj = super::types::build_view_projection(ctx.camera, ctx.viewport_size);
