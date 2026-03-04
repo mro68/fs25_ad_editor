@@ -20,6 +20,7 @@ pub mod spline;
 pub mod straight_line;
 
 pub use route_tool::RouteTool;
+pub use route_tool::{RouteToolChainInput, RouteToolDrag, RouteToolRegistry, RouteToolTangent};
 
 use crate::core::{ConnectionDirection, ConnectionPriority, NodeFlag, RoadMap};
 use glam::Vec2;
