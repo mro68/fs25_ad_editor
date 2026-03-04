@@ -8,7 +8,7 @@ Das `shared`-Modul enthält Layer-übergreifende Typen, die zwischen `app` (Prod
 
 - `render_scene.rs` — `RenderScene` Übergabevertrag App → Render
 - `render_quality.rs` — `RenderQuality` Enum (Low/Medium/High)
-- `options.rs` — Zentrale Konfigurationskonstanten + `EditorOptions` (Laufzeit-Optionen)
+- `options/` — Zentrale Konfigurationskonstanten + `EditorOptions` (Laufzeit-Optionen), aufgeteilt in `camera.rs`, `render.rs`, `tools.rs`, `editor.rs`
 - `spline_geometry.rs` — Layer-neutrale Catmull-Rom-Geometrie-Funktionen (kein import aus `tools` nötig)
 
 ## Haupttypen
