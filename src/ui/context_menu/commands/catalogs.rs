@@ -39,18 +39,23 @@ impl MenuCatalog {
                 label: "📐 Strecke".into(),
                 entries: vec![
                     MenuEntry::Command {
+                        id: CommandId::SetToolRouteConstraint,
+                        label: "Constraint-Route (4)".into(),
+                        preconditions: vec![],
+                    },
+                    MenuEntry::Command {
                         id: CommandId::SetToolRouteStraight,
-                        label: "Gerade Strecke (4)".into(),
+                        label: "Gerade Strecke (5)".into(),
                         preconditions: vec![],
                     },
                     MenuEntry::Command {
                         id: CommandId::SetToolRouteQuadratic,
-                        label: "Bézier Grad 2 (5)".into(),
+                        label: "Bézier Grad 2 (6)".into(),
                         preconditions: vec![],
                     },
                     MenuEntry::Command {
                         id: CommandId::SetToolRouteCubic,
-                        label: "Bézier Grad 3 (6)".into(),
+                        label: "Bézier Grad 3 (7)".into(),
                         preconditions: vec![],
                     },
                 ],
@@ -75,6 +80,11 @@ impl MenuCatalog {
             MenuEntry::Submenu {
                 label: "📐 Strecke erzeugen".into(),
                 entries: vec![
+                    MenuEntry::Command {
+                        id: CommandId::RouteConstraint,
+                        label: "Constraint-Route".into(),
+                        preconditions: vec![Precondition::ExactlyTwoSelected],
+                    },
                     MenuEntry::Command {
                         id: CommandId::RouteStraight,
                         label: "Gerade Strecke".into(),
