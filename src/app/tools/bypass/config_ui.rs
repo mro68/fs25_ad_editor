@@ -88,6 +88,7 @@ impl BypassTool {
         // ── Cache invalidieren und Infos anzeigen ────────────────────────────
         if changed {
             self.cached_positions = None;
+            self.cached_connections = None;
         }
 
         // Positions-Cache befüllen (damit preview() ihn nutzen kann)
@@ -96,6 +97,12 @@ impl BypassTool {
                 compute_bypass_positions(&self.chain_positions, self.offset, self.base_spacing)
             {
                 self.d_blend = d_blend;
+                let total_nodes = positions.len() + 2; // chain_start + bypass + chain_end
+                self.cached_connections = Some(
+                    (0..total_nodes.saturating_sub(1))
+                        .map(|i| (i, i + 1))
+                        .collect(),
+                );
                 self.cached_positions = Some(positions);
             }
         }

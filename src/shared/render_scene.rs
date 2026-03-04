@@ -27,8 +27,8 @@ pub struct RenderScene {
     pub background_map: Option<Arc<BackgroundMap>>,
     /// Background-Sichtbarkeit
     pub background_visible: bool,
-    /// Laufzeit-Optionen für Farben, Größen, Breiten
-    pub options: EditorOptions,
+    /// Laufzeit-Optionen für Farben, Größen, Breiten (Arc für O(1)-Clone pro Frame)
+    pub options: Arc<EditorOptions>,
     /// Node-IDs, die im aktuellen Frame ausgeblendet werden sollen (z.B. Distanzen-Vorschau)
     pub hidden_node_ids: Arc<IndexSet<u64>>,
 }

@@ -123,6 +123,12 @@ macro_rules! impl_lifecycle_delegation {
             self.lifecycle.recreate_needed = false;
         }
 
+        fn set_last_created(&mut self, ids: &[u64], road_map: &$crate::core::RoadMap) {
+            self.lifecycle.last_end_anchor = self.current_end_anchor();
+            self.save_anchors_for_recreate(road_map);
+            self.lifecycle.save_created_ids(ids);
+        }
+
         fn increase_node_count(&mut self) {
             self.seg.increase_node_count();
             self.lifecycle.recreate_needed = true;

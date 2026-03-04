@@ -10,7 +10,7 @@ Das `ui`-Modul enthält egui-UI-Komponenten (Menüs, Statusbar, Input-Handling, 
 - `status.rs` — Statusleiste
 - `toolbar.rs` — Werkzeugleiste
 - `properties.rs` — Properties-Panel (Detailanzeige selektierter Nodes)
-- `options_dialog.rs` — Optionen-Dialog für Laufzeit-Einstellungen
+- `options_dialog/` — Optionen-Dialog für Laufzeit-Einstellungen (`mod.rs`, `sections.rs`)
 - `tool_preview.rs` — Tool-Preview-Overlay (Route-Tool-Vorschau im Viewport)
 - `input/` — Viewport-Input-Orchestrator (phasenbasierte Submodule)
   - `clicks.rs` — Klick-Events (Einfach-/Doppel-Klick, Tool-Routing)
@@ -93,7 +93,7 @@ Zeigt tool- und selektionsabhängig:
 pub fn render_properties_panel(
   ctx: &egui::Context,
   road_map: Option<&RoadMap>,
-  selected_node_ids: &HashSet<u64>,
+  selected_node_ids: &IndexSet<u64>,
   default_direction: ConnectionDirection,
   default_priority: ConnectionPriority,
   distance_wheel_step_m: f32,
@@ -235,6 +235,30 @@ pub fn render_tool_preview(
 
 ---
 
+### `paint_preview` und `paint_preview_polyline`
+
+Zeichnen ein Preview als Overlay im Viewport.
+
+```rust
+pub fn paint_preview(
+  painter: &egui::Painter,
+  rect: egui::Rect,
+  camera: &Camera2D,
+  viewport_size: Vec2,
+  preview: &ToolPreview,
+)
+
+pub fn paint_preview_polyline(
+  painter: &egui::Painter,
+  rect: egui::Rect,
+  camera: &Camera2D,
+  viewport_size: Vec2,
+  positions: &[Vec2],
+)
+```
+
+---
+
 ### `show_marker_dialog`
 
 Zeigt den Marker-Bearbeiten-Dialog als modales Fenster (Name, Gruppe, bestehende Gruppen).
@@ -320,6 +344,23 @@ pub fn show_post_load_dialog(ctx: &egui::Context, ui_state: &mut UiState) -> Vec
 ```
 
 Bei mehreren ZIPs werden RadioButtons zur Auswahl angezeigt.
+
+---
+
+### `show_overview_options_dialog`
+
+Zeigt den Layer-Dialog für die Übersichtskarten-Generierung (Hillshade/Farmlands/IDs/POIs/Legende).
+
+```rust
+pub fn show_overview_options_dialog(
+  ctx: &egui::Context,
+  state: &mut OverviewOptionsDialogState,
+) -> Vec<AppIntent>
+```
+
+**Emittierte Intents:**
+- `AppIntent::OverviewOptionsConfirmed`
+- `AppIntent::OverviewOptionsCancelled`
 
 ---
 

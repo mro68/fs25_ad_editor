@@ -2,10 +2,31 @@
 
 use super::super::common::{SegmentConfig, TangentSource, TangentState, ToolLifecycleState};
 use super::super::ToolAnchor;
-use super::geometry::{approx_length, compute_tangent_cp, cubic_bezier, quadratic_bezier};
+use super::geometry::{
+    approx_length, compute_curve_positions, compute_tangent_cp, cubic_bezier, quadratic_bezier,
+};
 use crate::core::{ConnectionDirection, ConnectionPriority};
 use crate::shared::options::{HITBOX_SCALE_PERCENT, NODE_SIZE_WORLD};
 use glam::Vec2;
+use std::cell::RefCell;
+
+/// Schlüssel für gecachte Kurven-Preview-Positionen.
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub(crate) struct CurvePreviewCacheKey {
+    pub degree: CurveDegree,
+    pub start: Vec2,
+    pub end: Vec2,
+    pub cp1: Vec2,
+    pub cp2: Option<Vec2>,
+    pub max_segment_length: f32,
+}
+
+/// Zwischenspeicher für die zuletzt berechnete Kurven-Preview.
+#[derive(Debug, Clone)]
+pub(crate) struct CurvePreviewCache {
+    pub key: CurvePreviewCacheKey,
+    pub positions: Vec<Vec2>,
+}
 
 /// Welcher Punkt wird gerade per Drag verschoben?
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -66,6 +87,8 @@ pub struct CurveTool {
     pub(crate) tangents: TangentState,
     /// Virtueller Scheitelpunkt: B(0.5) der kubischen Kurve — draggbares Handle
     pub(crate) virtual_apex: Option<Vec2>,
+    /// Cache für dichte Kurvenpositionen im Preview-Hotpath.
+    pub(crate) preview_cache: RefCell<Option<CurvePreviewCache>>,
 }
 
 impl CurveTool {
@@ -89,6 +112,7 @@ impl CurveTool {
             last_control_point2: None,
             tangents: TangentState::new(),
             virtual_apex: None,
+            preview_cache: RefCell::new(None),
         }
     }
 
@@ -358,6 +382,41 @@ impl CurveTool {
         let delta = end_pos - start_pos;
         let t = (delta.x * dir_end.y - delta.y * dir_end.x) / denom;
         Some(start_pos + dir_start * t)
+    }
+
+    /// Löscht den Preview-Cache nach Zustandsänderungen.
+    pub(crate) fn invalidate_preview_cache(&self) {
+        *self.preview_cache.borrow_mut() = None;
+    }
+
+    /// Liefert gecachte Kurvenpositionen oder berechnet sie neu.
+    pub(crate) fn preview_positions_for(&self, key: CurvePreviewCacheKey) -> Vec<Vec2> {
+        if let Some(cache) = self.preview_cache.borrow().as_ref() {
+            if cache.key == key {
+                return cache.positions.clone();
+            }
+        }
+
+        let positions = match key.degree {
+            CurveDegree::Quadratic => compute_curve_positions(
+                |t| quadratic_bezier(key.start, key.cp1, key.end, t),
+                key.max_segment_length,
+            ),
+            CurveDegree::Cubic => {
+                let cp2 = key.cp2.unwrap_or(key.cp1);
+                compute_curve_positions(
+                    |t| cubic_bezier(key.start, key.cp1, cp2, key.end, t),
+                    key.max_segment_length,
+                )
+            }
+        };
+
+        *self.preview_cache.borrow_mut() = Some(CurvePreviewCache {
+            key,
+            positions: positions.clone(),
+        });
+
+        positions
     }
 }
 

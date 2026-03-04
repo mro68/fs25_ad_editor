@@ -73,7 +73,7 @@ pub struct AppState {
 }
 
 pub struct SelectionState {
-    pub selected_node_ids: Arc<HashSet<u64>>,  // Arc für O(1)-Clone in RenderScene (CoW)
+    pub selected_node_ids: Arc<IndexSet<u64>>,  // Arc für O(1)-Clone in RenderScene (CoW)
     pub selection_anchor_node_id: Option<u64>,
 }
 ```
@@ -81,12 +81,12 @@ pub struct SelectionState {
 **Methoden:**
 
 ```rust
-// CoW-Mutation: klont HashSet nur wenn der Arc nicht alleinig gehalten wird
+// CoW-Mutation: klont IndexSet nur wenn der Arc nicht alleinig gehalten wird
 sel.ids_mut().insert(42);
 ```
 
 - `new() → Self`
-- `ids_mut() → &mut HashSet<u64>` — Mutable Zugriff via `Arc::make_mut` (Copy-on-Write)
+- `ids_mut() → &mut IndexSet<u64>` — Mutable Zugriff via `Arc::make_mut` (Copy-on-Write)
 
 pub struct UiState {
     pub show_file_dialog: bool,
@@ -225,6 +225,12 @@ pub enum EditorTool {
 
 `AppIntent` beschreibt Eingaben aus UI/System. `AppCommand` beschreibt mutierende Schritte am State.
 
+Kanonische Definitionen liegen in:
+- `src/app/events/intent.rs`
+- `src/app/events/command.rs`
+
+Die folgenden Blöcke spiegeln die aktuell verwendeten Varianten (gekürzt um Feldkommentare).
+
 ```rust
 pub enum AppIntent {
     // Datei-Operationen
@@ -333,8 +339,8 @@ pub enum AppIntent {
     RouteToolCancelled,
     SelectRouteToolRequested { index: usize },
     RouteToolConfigChanged,
-    RouteToolWithAnchorsRequested { anchors: Vec<glam::Vec2>, direction: ConnectionDirection, priority: ConnectionPriority },
-    RouteToolTangentSelected { is_start: bool, neighbor_id: Option<u64> },
+    RouteToolWithAnchorsRequested { index: usize, start_node_id: u64, end_node_id: u64 },
+    RouteToolTangentSelected { start: TangentSource, end: TangentSource },
     RouteToolRecreateRequested,
 
     // Route-Tool Drag (Steuerpunkt-Verschiebung)
@@ -460,8 +466,8 @@ pub enum AppCommand {
     RouteToolCancel,
     SelectRouteTool { index: usize },
     RouteToolRecreate,
-    RouteToolWithAnchors { anchors: Vec<glam::Vec2>, direction: ConnectionDirection, priority: ConnectionPriority },
-    RouteToolApplyTangent { is_start: bool, neighbor_id: Option<u64> },
+    RouteToolWithAnchors { index: usize, start_node_id: u64, end_node_id: u64 },
+    RouteToolApplyTangent { start: TangentSource, end: TangentSource },
 
     // Route-Tool Schnellsteuerung
     IncreaseRouteToolNodeCount,

@@ -8,7 +8,7 @@ Das `shared`-Modul enthält Layer-übergreifende Typen, die zwischen `app` (Prod
 
 - `render_scene.rs` — `RenderScene` Übergabevertrag App → Render
 - `render_quality.rs` — `RenderQuality` Enum (Low/Medium/High)
-- `options.rs` — Zentrale Konfigurationskonstanten + `EditorOptions` (Laufzeit-Optionen)
+- `options/` — Zentrale Konfigurationskonstanten + `EditorOptions` (Laufzeit-Optionen), aufgeteilt in `camera.rs`, `render.rs`, `tools.rs`, `editor.rs`
 - `spline_geometry.rs` — Layer-neutrale Catmull-Rom-Geometrie-Funktionen (kein import aus `tools` nötig)
 
 ## Haupttypen
@@ -23,12 +23,12 @@ pub struct RenderScene {
     pub camera: Camera2D,
     pub viewport_size: [f32; 2],
     pub render_quality: RenderQuality,
-    pub selected_node_ids: Arc<HashSet<u64>>,
+    pub selected_node_ids: Arc<IndexSet<u64>>,
     pub connect_source_node: Option<u64>,
     pub background_map: Option<Arc<BackgroundMap>>,
     pub background_visible: bool,
-    pub options: EditorOptions,
-    pub hidden_node_ids: Arc<HashSet<u64>>,
+    pub options: Arc<EditorOptions>,
+    pub hidden_node_ids: Arc<IndexSet<u64>>,
 }
 ```
 

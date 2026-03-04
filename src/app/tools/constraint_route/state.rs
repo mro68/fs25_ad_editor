@@ -56,6 +56,8 @@ pub struct ConstraintRouteTool {
     pub(crate) last_control_nodes: Vec<Vec2>,
     /// Gecachte Solver-Ausgabe für Preview-Rendering
     pub(crate) preview_positions: Vec<Vec2>,
+    /// Gecachte lineare Connection-Indizes fuer `preview_positions`
+    pub(crate) preview_connections: Vec<(usize, usize)>,
     /// Gecachte Nachbar-Richtungsvektoren am Startpunkt
     pub(crate) start_neighbor_dirs: Vec<Vec2>,
     /// Gecachte Nachbar-Richtungsvektoren am Endpunkt
@@ -105,6 +107,7 @@ impl ConstraintRouteTool {
             last_end_anchor: None,
             last_control_nodes: Vec::new(),
             preview_positions: Vec::new(),
+            preview_connections: Vec::new(),
             start_neighbor_dirs: Vec::new(),
             end_neighbor_dirs: Vec::new(),
             approach_steerer: None,
@@ -139,6 +142,7 @@ impl ConstraintRouteTool {
     pub(crate) fn update_preview(&mut self) {
         let (Some(start), Some(end)) = (&self.start, &self.end) else {
             self.preview_positions.clear();
+            self.preview_connections.clear();
             return;
         };
 
@@ -178,6 +182,9 @@ impl ConstraintRouteTool {
         };
         let result = super::geometry::solve_route(&input);
         self.preview_positions = result.positions;
+        self.preview_connections = (0..self.preview_positions.len().saturating_sub(1))
+            .map(|i| (i, i + 1))
+            .collect();
 
         // Auto-Steuerpunkte übernehmen (sofern nicht manuell überschrieben)
         if !self.approach_manual {

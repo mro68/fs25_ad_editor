@@ -80,7 +80,6 @@ pub enum AddNodeResult {
 - `apply_tool_result_no_snapshot(state, result) -> Vec<u64>` — Wie `apply_tool_result`, aber ohne Undo-Snapshot (für Neuberechnung)
 - `delete_nodes_by_ids(state, ids)` — Löscht Nodes mit den angegebenen IDs + zugehörige Connections; invalidiert betroffene Einträge in `state.segment_registry`
 - `resample_selected_path(state)` — Selektierte Nodes-Kette per Catmull-Rom-Spline gleichmäßig neu verteilen; Konfiguration aus `state.ui.distanzen`
-- `generate_bypass(state)` — Ausweichstrecke parallel zur selektierten Kette generieren; Konfiguration aus `state.ui.bypass` (Versatz + Knotenabstand); S-förmige An-/Abfahrt mit kubischen Bézier-Kurven; Hauptstrecke um `d_blend = |offset| × 1.5` verkürzt
 
 ### `use_cases::editing::markers`
 
@@ -147,7 +146,7 @@ pub struct SegmentRecord {
 registry.register(record) -> u64
 registry.get(record_id) -> Option<&SegmentRecord>
 registry.remove(record_id)
-registry.find_by_node_ids(node_ids: &HashSet<u64>) -> Vec<&SegmentRecord>
+registry.find_by_node_ids(node_ids: &IndexSet<u64>) -> Vec<&SegmentRecord>
 registry.invalidate_by_node_ids(node_ids)  // bei manuellem Node-Löschen
 registry.len() / is_empty()
 ```

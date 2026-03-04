@@ -2,7 +2,7 @@
 
 use crate::core::{ConnectedNeighbor, RoadMap};
 
-use super::super::ToolAnchor;
+use super::super::{snap_to_node, ToolAnchor};
 
 /// Wandelt einen Winkel (Radiant) in eine Kompass-Richtung um.
 ///
@@ -42,6 +42,17 @@ pub fn populate_neighbors(anchor: &ToolAnchor, road_map: &RoadMap) -> Vec<Connec
         ToolAnchor::ExistingNode(id, _) => road_map.connected_neighbors(*id),
         ToolAnchor::NewPosition(_) => Vec::new(),
     }
+}
+
+/// Snappt auf einen Node und liefert direkt die passenden Nachbarn.
+pub fn snap_with_neighbors(
+    pos: glam::Vec2,
+    road_map: &RoadMap,
+    snap_radius: f32,
+) -> (ToolAnchor, Vec<ConnectedNeighbor>) {
+    let anchor = snap_to_node(pos, road_map, snap_radius);
+    let neighbors = populate_neighbors(&anchor, road_map);
+    (anchor, neighbors)
 }
 
 /// Erzeugt lineare Connections `[(0,1), (1,2), ...]` für eine Polyline.

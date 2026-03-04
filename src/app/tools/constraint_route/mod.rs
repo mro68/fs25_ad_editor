@@ -14,6 +14,7 @@ pub(crate) mod geometry;
 mod lifecycle;
 mod state;
 
+pub use geometry::{solve_route, ConstraintRouteInput};
 pub use state::ConstraintRouteTool;
 
 #[cfg(test)]
