@@ -1,6 +1,6 @@
 # Karte, Hintergrund & Heightmap
 
-← [Bearbeitung](04-bearbeitung.md) | [Zurück zur Übersicht](index.md)
+← [Bearbeitung](04-bearbeitung.md) | [Zurueck zur Uebersicht](index.md)
 
 ## Kamera und Viewport
 
@@ -18,7 +18,7 @@
 
 - Zoom via Scrollrad
 - Zoom-Level wird in der Statusleiste angezeigt
-- Viewport-Culling: Nodes und Verbindungen außerhalb des sichtbaren Bereichs werden nicht gerendert (Performance)
+- Viewport-Culling: Nodes und Verbindungen ausserhalb des sichtbaren Bereichs werden nicht gerendert (Performance)
 
 ---
 
@@ -26,14 +26,14 @@
 
 ### Laden
 
-1. **Datei → Hintergrundkarte öffnen** oder **Ctrl+Shift+O**
-2. Unterstützte Formate: PNG, JPEG, DDS
+1. **Datei → Hintergrundkarte oeffnen** oder **Ctrl+Shift+O**
+2. Unterstuetzte Formate: PNG, JPEG, DDS
 
 ### Automatische Erkennung
 
 Wenn eine AutoDrive-XML geladen wird und `AutoDrive_config.xml` im selben Verzeichnis eine FS25-Map-Struktur erkennt, versucht der Editor automatisch:
 
-1. eine `fs25_overview_map_*.png` zu finden (generierte Übersichtskarte)
+1. eine `fs25_overview_map_*.png` zu finden (generierte Uebersichtskarte)
 2. eine `satellite_XXXXXX.dds` oder `terrain_XXXXXX.dds` zu laden
 
 Der Status wird in der Statusleiste angezeigt.
@@ -44,49 +44,49 @@ Die Hintergrundkarte wird automatisch mit den Weltkoordinaten der XML-Datei ausg
 
 ### Anzeige ein-/ausblenden
 
-**Ansicht → Hintergrundkarte** oder Schaltfläche in der Toolbar.
+**Ansicht → Hintergrundkarte** oder Schaltflaeche in der Toolbar.
 
-### DDS-Unterstützung
+### DDS-Unterstuetzung
 
 DDS (DXT1, DXT5, BC7) werden nativ geladen und intern in RGBA8 konvertiert. Keine externen Tools notwendig.
 
 ---
 
-## Übersichtskarten-Generierung
+## Uebersichtskarten-Generierung
 
-Der Editor enthält ein Hilfswerkzeug zum Generieren hochwertiger Übersichtskarten aus FS25-Maps.
+Der Editor enthaelt ein Hilfswerkzeug zum Generieren hochwertiger Uebersichtskarten aus FS25-Maps.
 
 ### Voraussetzung
 
 Eine installierte FS25-Map-Entpackstruktur mit:
-- `map/` Verzeichnis (enthält GRLE/GDM-Dateien)
-- Standardmäßiger FS25-Map-Struktur
+- `map/` Verzeichnis (enthaelt GRLE/GDM-Dateien)
+- Standardmaessiger FS25-Map-Struktur
 
 ### Starten
 
-**Datei → Übersichtskarte generieren** (oder Ctrl+Shift+G)
+**Datei → Uebersichtskarte generieren** (oder Ctrl+Shift+G)
 
 ### Verarbeitungsschritte
 
 1. **GRLE lesen** — Fieldinfo- und Density-Layer
 2. **GDM lesen** — Heightmap-Daten
-3. **Hillshading** — Berechnung für topographisches Relief
-4. **Komposit** — Felder, Hügel, Straßen, Wasser werden zusammengeführt
+3. **Hillshading** — Berechnung fuer topographisches Relief
+4. **Komposit** — Felder, Huegel, Strassen, Wasser werden zusammengefuehrt
 5. **Export** als `fs25_overview_map_TIMESTAMP.png`
 
 ### Ausgabe
 
-Die generierte Karte landet im selben Verzeichnis wie die Map-Dateien und wird bei der nächsten XML-Ladeoperation automatisch als Hintergrund erkannt.
+Die generierte Karte landet im selben Verzeichnis wie die Map-Dateien und wird bei der naechsten XML-Ladeoperation automatisch als Hintergrund erkannt.
 
 ---
 
 ## Automatische Erkennung (Post-Load)
 
-Nach dem Laden einer AutoDrive-XML prüft der Editor automatisch:
+Nach dem Laden einer AutoDrive-XML prueft der Editor automatisch:
 
-1. **Flag-Bereinigung** — Flags 2 und 4 (FS22-Artefakte) werden auf 0 zurückgesetzt
-2. **Verbindungsgeometrie** — Winkel und Längen werden neu berechnet
-3. **Spatial-Index** — KD-Baum wird aufgebaut (für Snap, Selection, Nearest-Node)
+1. **Flag-Bereinigung** — Flags 2 und 4 (FS22-Artefakte) werden auf 0 zurueckgesetzt
+2. **Verbindungsgeometrie** — Winkel und Laengen werden neu berechnet
+3. **Spatial-Index** — KD-Baum wird aufgebaut (fuer Snap, Selection, Nearest-Node)
 4. **Hintergrundkarte** — Wenn im Map-Verzeichnis eine passende Karte gefunden wird, wird sie automatisch geladen
 
 **Status-Ausgaben:**
@@ -96,22 +96,22 @@ Nach dem Laden einer AutoDrive-XML prüft der Editor automatisch:
 
 ## Heightmap
 
-Die Heightmap speichert Höhendaten pro Weltposition (FS25-Format).
+Die Heightmap speichert Hoehendaten pro Weltposition (FS25-Format).
 
 ### Laden
 
-**Datei → Heightmap laden** — Wählt eine `terrain.png` oder kompatible Heightmap.
+**Datei → Heightmap laden** — Waehlt eine `terrain.png` oder kompatible Heightmap.
 
 ### Verwendung
 
-- Beim Erstellen neuer Nodes wird die Höhe (Y-Koordinate) automatisch aus der Heightmap abgefragt
-- Im Properties-Panel wird die interpolierte Höhe des selektierten Node angezeigt
-- Die Höhenabfrage geschieht via Bilinear-Interpolation auf der Heightmap-Textur
+- Beim Erstellen neuer Nodes wird die Hoehe (Y-Koordinate) automatisch aus der Heightmap abgefragt
+- Im Properties-Panel wird die interpolierte Hoehe des selektierten Node angezeigt
+- Die Hoehenabfrage geschieht via Bilinear-Interpolation auf der Heightmap-Textur
 
-### Kein Laden nötig
+### Kein Laden noetig
 
-Wenn die Heightmap automatisch erkannt wird (gleicher Pfad wie die XML), wird sie beim Öffnen der Datei automatisch geladen.
+Wenn die Heightmap automatisch erkannt wird (gleicher Pfad wie die XML), wird sie beim Oeffnen der Datei automatisch geladen.
 
 ---
 
-← [Bearbeitung](04-bearbeitung.md) | [Zurück zur Übersicht](index.md) | → [Extras & Optionen](06-extras.md)
+← [Bearbeitung](04-bearbeitung.md) | [Zurueck zur Uebersicht](index.md) | → [Extras & Optionen](06-extras.md)

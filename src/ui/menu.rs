@@ -1,8 +1,8 @@
-//! Top-Menü (File, Edit, View, etc.).
+//! Top-Menue (File, Edit, View, etc.).
 
 use crate::app::{AppIntent, AppState, RenderQuality};
 
-/// Rendert die Menü-Leiste
+/// Rendert die Menue-Leiste
 pub fn render_menu(ctx: &egui::Context, state: &AppState) -> Vec<AppIntent> {
     let mut events = Vec::new();
 
@@ -55,7 +55,7 @@ pub fn render_menu(ctx: &egui::Context, state: &AppState) -> Vec<AppIntent> {
 
                 ui.separator();
 
-                if ui.button("Übersichtskarte generieren...").clicked() {
+                if ui.button("Uebersichtskarte generieren...").clicked() {
                     events.push(AppIntent::GenerateOverviewRequested);
                     ui.close();
                 }
@@ -117,7 +117,7 @@ pub fn render_menu(ctx: &egui::Context, state: &AppState) -> Vec<AppIntent> {
 
                 // Background-Map-Option
                 let background_label = if state.view.background_map.is_some() {
-                    "Hintergrund ändern..."
+                    "Hintergrund aendern..."
                 } else {
                     "Hintergrund laden..."
                 };

@@ -1,4 +1,4 @@
-//! Gemeinsame Hilfsfunktionen für Route-Tools.
+//! Gemeinsame Hilfsfunktionen fuer Route-Tools.
 //!
 //! Aufgeteilt in:
 //! - `geometry`  — rein-mathematische Funktionen ohne egui

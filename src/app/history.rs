@@ -5,15 +5,15 @@ use crate::core::RoadMap;
 use std::collections::VecDeque;
 use std::sync::Arc;
 
-/// Snapshot reduziert auf die für Undo/Redo relevanten Teile.
+/// Snapshot reduziert auf die fuer Undo/Redo relevanten Teile.
 ///
 /// Nutzt Arc-Clone (Copy-on-Write): Das Erstellen eines Snapshots ist O(1) —
-/// der teure RoadMap-Klon findet erst beim nächsten `Arc::make_mut()` in einem
+/// der teure RoadMap-Klon findet erst beim naechsten `Arc::make_mut()` in einem
 /// Use-Case statt (COW-Semantik). Bei 100k+ Nodes macht das einen erheblichen
-/// Unterschied gegenüber einem vollständigen Deep-Clone pro mutierender Operation.
+/// Unterschied gegenueber einem vollstaendigen Deep-Clone pro mutierender Operation.
 #[derive(Clone)]
 pub struct Snapshot {
-    /// Optionale RoadMap (Arc-Klon für O(1)-Snapshot)
+    /// Optionale RoadMap (Arc-Klon fuer O(1)-Snapshot)
     pub road_map: Option<Arc<RoadMap>>,
     /// Selektionszustand zum Zeitpunkt des Snapshots
     pub selection: SelectionState,
@@ -23,7 +23,7 @@ impl Snapshot {
     /// Erstellt einen O(1)-Snapshot durch Arc-Clone statt Deep-Clone.
     pub fn from_state(state: &crate::app::AppState) -> Self {
         Self {
-            road_map: state.road_map.clone(), // O(1): nur Arc-Ref-Count erhöhen
+            road_map: state.road_map.clone(), // O(1): nur Arc-Ref-Count erhoehen
             selection: state.selection.clone(),
         }
     }
@@ -37,7 +37,7 @@ impl Snapshot {
 
 /// Einfacher Undo/Redo-Manager mit Snapshotting.
 ///
-/// Verwendet `VecDeque` für beide Stacks — `pop_front()` (beim Überlauf)
+/// Verwendet `VecDeque` fuer beide Stacks — `pop_front()` (beim Ueberlauf)
 /// ist damit O(1) statt O(n) wie `Vec::remove(0)`.
 #[derive(Default)]
 pub struct EditHistory {
@@ -66,17 +66,17 @@ impl EditHistory {
         self.redo_stack.clear();
     }
 
-    /// Prüft ob Undo möglich ist.
+    /// Prueft ob Undo moeglich ist.
     pub fn can_undo(&self) -> bool {
         !self.undo_stack.is_empty()
     }
 
-    /// Prüft ob Redo möglich ist.
+    /// Prueft ob Redo moeglich ist.
     pub fn can_redo(&self) -> bool {
         !self.redo_stack.is_empty()
     }
 
-    /// Nimmt den obersten Undo-Eintrag und gibt den wiederherzustellenden Snapshot zurück.
+    /// Nimmt den obersten Undo-Eintrag und gibt den wiederherzustellenden Snapshot zurueck.
     /// Schiebt `current` auf den Redo-Stack.
     pub fn pop_undo_with_current(&mut self, current: Snapshot) -> Option<Snapshot> {
         if let Some(prev) = self.undo_stack.pop_back() {
@@ -90,7 +90,7 @@ impl EditHistory {
         }
     }
 
-    /// Nimmt den obersten Redo-Eintrag und gibt den wiederherzustellenden Snapshot zurück.
+    /// Nimmt den obersten Redo-Eintrag und gibt den wiederherzustellenden Snapshot zurueck.
     /// Schiebt `current` auf den Undo-Stack.
     pub fn pop_redo_with_current(&mut self, current: Snapshot) -> Option<Snapshot> {
         if let Some(next) = self.redo_stack.pop_back() {
@@ -200,7 +200,7 @@ mod tests {
             history.record_snapshot(make_snapshot_with_node_count(i));
         }
 
-        // Nur 3 Undo-Schritte sollten möglich sein
+        // Nur 3 Undo-Schritte sollten moeglich sein
         let mut undo_count = 0;
         while history.can_undo() {
             let current = make_snapshot_with_node_count(99);

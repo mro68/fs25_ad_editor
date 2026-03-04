@@ -1,8 +1,8 @@
-//! UI-Konfigurationspanel für das Catmull-Rom-Spline-Tool.
+//! UI-Konfigurationspanel fuer das Catmull-Rom-Spline-Tool.
 //!
-//! Die `render_config_view`-Methode enthält die gesamte egui-Logik für:
+//! Die `render_config_view`-Methode enthaelt die gesamte egui-Logik fuer:
 //! - Tangenten-ComboBoxen am Start/Ende (nur Nachbearbeitungs-Modus)
-//! - Länge · Segment-Abstand · Node-Anzahl (Nachbearbeitungs- und Live-Modus)
+//! - Laenge · Segment-Abstand · Node-Anzahl (Nachbearbeitungs- und Live-Modus)
 
 use super::super::common::{render_segment_config_3modes, render_tangent_combo};
 use super::super::RouteTool;
@@ -11,7 +11,7 @@ use super::SplineTool;
 impl SplineTool {
     /// Rendert das Konfigurationspanel im Properties-Panel.
     ///
-    /// Gibt `true` zurück wenn sich eine Einstellung geändert hat.
+    /// Gibt `true` zurueck wenn sich eine Einstellung geaendert hat.
     pub(super) fn render_config_view(
         &mut self,
         ui: &mut egui::Ui,
@@ -63,7 +63,7 @@ impl SplineTool {
                 ui.add_space(4.0);
             }
 
-            // Slider für Min. Abstand und Node-Anzahl im Nachbearbeitungs-Modus
+            // Slider fuer Min. Abstand und Node-Anzahl im Nachbearbeitungs-Modus
             let length = Self::spline_length_from_anchors(
                 &self.last_anchors,
                 self.tangents.tangent_start,
@@ -76,7 +76,7 @@ impl SplineTool {
                 true,
                 true,
                 length,
-                "Spline-Länge",
+                "Spline-Laenge",
                 distance_wheel_step_m,
             );
             if recreate {
@@ -92,7 +92,7 @@ impl SplineTool {
                 false,
                 true,
                 length,
-                "Spline-Länge",
+                "Spline-Laenge",
                 distance_wheel_step_m,
             );
             changed |= seg_changed;
@@ -103,7 +103,7 @@ impl SplineTool {
                 false,
                 false,
                 0.0,
-                "Spline-Länge",
+                "Spline-Laenge",
                 distance_wheel_step_m,
             );
             changed |= seg_changed;

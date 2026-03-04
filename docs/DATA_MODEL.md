@@ -1,8 +1,8 @@
 # Datenmodell und -fluss
 
-## Überblick
+## Ueberblick
 
-Das Core-Datenmodell speichert AutoDrive-Konfigurationen als `RoadMap` mit Nodes, Connections, Map-Markern und Metadaten. Nodes sind 2D (x,z), Connections enthalten Richtung/Priorität plus Geometrie (Midpoint/Angle) für Rendering. Alles ist in Rust-Structs abgebildet und wird über XML (SoA-Format) persistiert.
+Das Core-Datenmodell speichert AutoDrive-Konfigurationen als `RoadMap` mit Nodes, Connections, Map-Markern und Metadaten. Nodes sind 2D (x,z), Connections enthalten Richtung/Prioritaet plus Geometrie (Midpoint/Angle) fuer Rendering. Alles ist in Rust-Structs abgebildet und wird ueber XML (SoA-Format) persistiert.
 
 ## Datenabbildung
 
@@ -11,7 +11,7 @@ Das Core-Datenmodell speichert AutoDrive-Konfigurationen als `RoadMap` mit Nodes
 - **Connections**: `HashMap<(u64, u64), Connection>` – (start_id, end_id) → Connection
 - **MapMarkers**: `Vec<MapMarker>` – Liste der Marker
 - **Meta**: `AutoDriveMeta` – Nicht-renderrelevante XML-Felder
-- **SpatialIndex**: Persistenter KD-Tree für schnelle Node-Abfragen
+- **SpatialIndex**: Persistenter KD-Tree fuer schnelle Node-Abfragen
 
 ### MapNode
 - **id**: u64 (eindeutig)
@@ -22,7 +22,7 @@ Das Core-Datenmodell speichert AutoDrive-Konfigurationen als `RoadMap` mit Nodes
 - **start_id/end_id**: u64 (Referenzen auf Nodes)
 - **direction**: ConnectionDirection (Regular, Dual, Reverse)
 - **priority**: ConnectionPriority (Regular, SubPriority)
-- **midpoint/angle**: Vec2/f32 (Geometrie für Rendering)
+- **midpoint/angle**: Vec2/f32 (Geometrie fuer Rendering)
 
 ### MapMarker
 - **id**: u64 (Node-ID)
@@ -89,7 +89,7 @@ Daten werden als XML gespeichert (SoA-Format):
 - **MapMarkers**: `<mapmarker>`-Block mit Attributen
 - **Meta**: Header-Felder wie `<version>`, `<MapName>`, `<ADRouteAuthor>`, plus Optionen
 
-Delimiter: Komma für Listen, Semikolon für verschachtelte Listen.
+Delimiter: Komma fuer Listen, Semikolon fuer verschachtelte Listen.
 
 ```mermaid
 flowchart TD
@@ -103,8 +103,8 @@ flowchart TD
 
 ## Abfragen
 
-Queries laufen im Core über `kiddo` (Spatial Index):
-- **Nearest**: `nearest_node(query) -> Option<SpatialMatch>` – Nächster Node inkl. Distanz
+Queries laufen im Core ueber `kiddo` (Spatial Index):
+- **Nearest**: `nearest_node(query) -> Option<SpatialMatch>` – Naechster Node inkl. Distanz
 - **Radius**: `nodes_within_radius(query, radius) -> Vec<SpatialMatch>` – Nodes im Radius
 - **Range**: `nodes_within_rect(min, max) -> Vec<NodeId>` – Nodes im Rechteck
 - **Geometry**: `rebuild_connection_geometry()` – Aktualisiert Midpoint/Angle nach Node-Moves
@@ -127,7 +127,7 @@ sequenceDiagram
 
 ## Heightmap-System
 
-Y-Koordinaten (Höhenwerte) werden beim XML-Export aus PNG-Heightmaps berechnet.
+Y-Koordinaten (Hoehenwerte) werden beim XML-Export aus PNG-Heightmaps berechnet.
 
 ### HeightmapData
 ```rust
@@ -148,23 +148,23 @@ pub struct WorldBounds {
 
 ### Interpolation
 - **Methode:** Bikubische Interpolation (16 Nachbarpixel)
-- **Spline:** Catmull-Rom für glatte Kurven
-- **Mapping:** Grauwert 0 (schwarz) = min. Höhe, 255 (weiß) = max. Höhe
-- **Präzision:** Kommawerte durch Interpolation zwischen Pixeln
-- **Clipping:** Koordinaten außerhalb werden auf Heightmap-Rand geclippt
+- **Spline:** Catmull-Rom fuer glatte Kurven
+- **Mapping:** Grauwert 0 (schwarz) = min. Hoehe, 255 (weiss) = max. Hoehe
+- **Praezision:** Kommawerte durch Interpolation zwischen Pixeln
+- **Clipping:** Koordinaten ausserhalb werden auf Heightmap-Rand geclippt
 
 ### Workflow
-1. User wählt Heightmap-PNG beim Speichern (optional)
-2. Für jeden Node: `y = heightmap.sample_height(x, z, height_scale)`
+1. User waehlt Heightmap-PNG beim Speichern (optional)
+2. Fuer jeden Node: `y = heightmap.sample_height(x, z, height_scale)`
 3. Fallback ohne Heightmap: `y = 0.0`
-4. Warnung wenn keine Heightmap ausgewählt
+4. Warnung wenn keine Heightmap ausgewaehlt
 
 ### WorldBounds-Konfiguration
 ```rust
 // Standard FS25-Map (2048×2048m, zentriert bei 0,0)
 let bounds = WorldBounds::default_fs25();  // -1024 bis +1024
 
-// Custom Map-Größe
+// Custom Map-Groesse
 let bounds = WorldBounds::from_map_size(4096.0);  // -2048 bis +2048
 ```
 
@@ -199,14 +199,14 @@ pub struct AppState {
     pub should_exit: bool,
 }
 ```
-- Zentraler Laufzeitzustand für Controller/Handler/UI
-- `road_map` und `selection.selected_node_ids` sind `Arc`-basiert für günstige Frame-Übergaben
+- Zentraler Laufzeitzustand fuer Controller/Handler/UI
+- `road_map` und `selection.selected_node_ids` sind `Arc`-basiert fuer guenstige Frame-Uebergaben
 
 ### SelectionState
 ```rust
 pub struct SelectionState {
-    pub selected_node_ids: Arc<IndexSet<u64>>,  // Arc für O(1)-Clone (Copy-on-Write)
-    pub selection_anchor_node_id: Option<u64>,  // Anker für Pfad-Selektion
+    pub selected_node_ids: Arc<IndexSet<u64>>,  // Arc fuer O(1)-Clone (Copy-on-Write)
+    pub selection_anchor_node_id: Option<u64>,  // Anker fuer Pfad-Selektion
 }
 ```
 - **CoW-Pattern:** `Arc::make_mut` bei Mutation → klont IndexSet nur wenn mehrere Referenzen existieren
@@ -222,7 +222,7 @@ pub struct Snapshot {
 }
 ```
 - Snapshot-basiertes Undo/Redo
-- `Arc<RoadMap>` ermöglicht O(1)-Snapshots (Copy-on-Write)
+- `Arc<RoadMap>` ermoeglicht O(1)-Snapshots (Copy-on-Write)
 
 ### SegmentRegistry
 ```rust
@@ -239,8 +239,8 @@ pub struct SegmentRegistry {
     next_id: u64,
 }
 ```
-- In-Session-Registry für nachträgliche Bearbeitung erstellter Route-Segmente
-- Erlaubt Segment-Länge/Node-Anzahl nach Erstellung per Slider zu ändern
+- In-Session-Registry fuer nachtraegliche Bearbeitung erstellter Route-Segmente
+- Erlaubt Segment-Laenge/Node-Anzahl nach Erstellung per Slider zu aendern
 
 ### DistanzenState
 ```rust
@@ -255,7 +255,7 @@ pub struct DistanzenState {
 }
 ```
 - Steuert das Distanzen-Neuverteilen-Feature (Catmull-Rom-Resampling)
-- Wechselseitige Berechnung: Anzahl ↔ Abstand über `path_length`
+- Wechselseitige Berechnung: Anzahl ↔ Abstand ueber `path_length`
 
 ### EditorToolState
 ```rust

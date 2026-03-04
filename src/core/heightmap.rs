@@ -1,13 +1,13 @@
 //! Heightmap-Loader und Y-Koordinaten-Sampling.
 //!
 //! Erkennt automatisch die Bit-Tiefe (8-Bit oder 16-Bit) und normalisiert
-//! die Pixelwerte entsprechend. Die Map-Größe wird aus den Pixel-Dimensionen
+//! die Pixelwerte entsprechend. Die Map-Groesse wird aus den Pixel-Dimensionen
 //! abgeleitet (FS25-Konvention: pixels = map_size + 1).
 
 use anyhow::{Context, Result};
 use image::{DynamicImage, GenericImageView};
 
-/// Heightmap für Y-Koordinaten-Berechnung
+/// Heightmap fuer Y-Koordinaten-Berechnung
 pub struct Heightmap {
     /// Normalisierte Grauwerte [0.0, 1.0], zeilenweise gespeichert
     pixels: Vec<f32>,
@@ -33,7 +33,7 @@ pub struct WorldBounds {
 }
 
 impl WorldBounds {
-    /// Erstellt Bounds aus Map-Größe (zentriert bei 0,0)
+    /// Erstellt Bounds aus Map-Groesse (zentriert bei 0,0)
     pub fn from_map_size(size: f32) -> Self {
         let half = size / 2.0;
         Self {
@@ -46,11 +46,11 @@ impl WorldBounds {
 }
 
 impl Heightmap {
-    /// Lädt eine Heightmap und erkennt Bit-Tiefe und Map-Größe automatisch.
+    /// Laedt eine Heightmap und erkennt Bit-Tiefe und Map-Groesse automatisch.
     ///
-    /// Die Map-Größe wird aus den Pixel-Dimensionen abgeleitet:
+    /// Die Map-Groesse wird aus den Pixel-Dimensionen abgeleitet:
     /// FS25-Konvention: `map_size = max(width, height) - 1`
-    /// (z.B. 4097×4097 Pixel → 4096m Map-Größe)
+    /// (z.B. 4097×4097 Pixel → 4096m Map-Groesse)
     pub fn load(path: &str) -> Result<Self> {
         let image = image::open(path)
             .with_context(|| format!("Fehler beim Laden der Heightmap: {}", path))?;
@@ -62,7 +62,7 @@ impl Heightmap {
         Self::from_image(image, world_bounds)
     }
 
-    /// Lädt eine Heightmap mit expliziten World-Bounds.
+    /// Laedt eine Heightmap mit expliziten World-Bounds.
     pub fn load_with_bounds(path: &str, world_bounds: WorldBounds) -> Result<Self> {
         let image = image::open(path)
             .with_context(|| format!("Fehler beim Laden der Heightmap: {}", path))?;
@@ -114,13 +114,13 @@ impl Heightmap {
         })
     }
 
-    /// Berechnet Y-Koordinate (Höhe) für eine gegebene X/Z-Position.
+    /// Berechnet Y-Koordinate (Hoehe) fuer eine gegebene X/Z-Position.
     ///
-    /// Verwendet bikubische Interpolation (4×4 Nachbarpixel) für präzise, glatte Höhenwerte.
+    /// Verwendet bikubische Interpolation (4×4 Nachbarpixel) fuer praezise, glatte Hoehenwerte.
     /// Die Formel ist: `Y_meter = normalized_pixel × height_scale`
     ///
-    /// Für Standard-FS25-Maps gilt `height_scale = 255.0` (maximale Terrainhöhe).
-    /// Bei 16-Bit-Heightmaps ergibt das eine Auflösung von ~0.004m pro Stufe.
+    /// Fuer Standard-FS25-Maps gilt `height_scale = 255.0` (maximale Terrainhoehe).
+    /// Bei 16-Bit-Heightmaps ergibt das eine Aufloesung von ~0.004m pro Stufe.
     pub fn sample_height(&self, x: f32, z: f32, height_scale: f32) -> f32 {
         // Normalisiere Weltkoordinaten auf [0, 1]
         let nx =
@@ -128,7 +128,7 @@ impl Heightmap {
         let nz =
             (z - self.world_bounds.min_z) / (self.world_bounds.max_z - self.world_bounds.min_z);
 
-        // Clampe auf gültigen Bereich
+        // Clampe auf gueltigen Bereich
         let nx = nx.clamp(0.0, 1.0);
         let nz = nz.clamp(0.0, 1.0);
 
@@ -136,7 +136,7 @@ impl Heightmap {
         let px = nx * (self.width - 1) as f32;
         let pz = nz * (self.height - 1) as f32;
 
-        // Debug-Logging für Diagnose
+        // Debug-Logging fuer Diagnose
         log::trace!(
             "Sample at world ({:.3}, {:.3}) -> normalized ({:.6}, {:.6}) -> pixel ({:.3}, {:.3})",
             x,
@@ -147,7 +147,7 @@ impl Heightmap {
             pz
         );
 
-        // Bikubische Interpolation (nutzt 16 Nachbarpixel für beste Qualität)
+        // Bikubische Interpolation (nutzt 16 Nachbarpixel fuer beste Qualitaet)
         let height = self.sample_bicubic(px, pz);
 
         // Debug: Zeige Interpolationsergebnis
@@ -157,11 +157,11 @@ impl Heightmap {
             height * height_scale
         );
 
-        // Skaliere auf Höhenwert
+        // Skaliere auf Hoehenwert
         height * height_scale
     }
 
-    /// Bikubische Interpolation für glatte Höhenwerte
+    /// Bikubische Interpolation fuer glatte Hoehenwerte
     /// Nutzt 4x4 Grid von Pixeln um den Sample-Punkt
     fn sample_bicubic(&self, px: f32, pz: f32) -> f32 {
         let x = px.floor() as i32;
@@ -214,7 +214,7 @@ impl Heightmap {
     }
 
     /// Kubische Interpolation zwischen 4 Werten
-    /// Nutzt Catmull-Rom Spline für glatte Kurven
+    /// Nutzt Catmull-Rom Spline fuer glatte Kurven
     fn cubic_interpolate(p0: f32, p1: f32, p2: f32, p3: f32, t: f32) -> f32 {
         let t2 = t * t;
         let t3 = t2 * t;
@@ -228,23 +228,23 @@ impl Heightmap {
         a * t3 + b * t2 + c * t + d
     }
 
-    /// Holt normalisierten Grauwert eines Pixels (0.0 = schwarz, 1.0 = weiß).
-    /// Liest aus dem vorberechneten f32-Array (bereits korrekt normalisiert für 8/16-Bit).
+    /// Holt normalisierten Grauwert eines Pixels (0.0 = schwarz, 1.0 = weiss).
+    /// Liest aus dem vorberechneten f32-Array (bereits korrekt normalisiert fuer 8/16-Bit).
     fn get_grayscale(&self, x: u32, y: u32) -> f32 {
         self.pixels[(y * self.width + x) as usize]
     }
 
-    /// Gibt die Dimensionen der Heightmap zurück
+    /// Gibt die Dimensionen der Heightmap zurueck
     pub fn dimensions(&self) -> (u32, u32) {
         (self.width, self.height)
     }
 
-    /// Gibt die erkannte Bit-Tiefe zurück (8 oder 16)
+    /// Gibt die erkannte Bit-Tiefe zurueck (8 oder 16)
     pub fn bit_depth(&self) -> u8 {
         self.bit_depth
     }
 
-    /// Gibt die verwendeten World-Bounds zurück
+    /// Gibt die verwendeten World-Bounds zurueck
     pub fn world_bounds(&self) -> &WorldBounds {
         &self.world_bounds
     }
@@ -270,23 +270,23 @@ mod tests {
     #[test]
     fn test_cubic_interpolation() {
         // Test Catmull-Rom Interpolation
-        // Bei t=0 sollte p1 zurückgegeben werden
+        // Bei t=0 sollte p1 zurueckgegeben werden
         let result = Heightmap::cubic_interpolate(0.0, 0.5, 1.0, 1.5, 0.0);
         assert!((result - 0.5).abs() < 0.001);
 
-        // Bei t=1 sollte p2 zurückgegeben werden
+        // Bei t=1 sollte p2 zurueckgegeben werden
         let result = Heightmap::cubic_interpolate(0.0, 0.5, 1.0, 1.5, 1.0);
         assert!((result - 1.0).abs() < 0.001);
 
-        // Bei t=0.5 sollte ein Wert zwischen p1 und p2 zurückgegeben werden
+        // Bei t=0.5 sollte ein Wert zwischen p1 und p2 zurueckgegeben werden
         let result = Heightmap::cubic_interpolate(0.0, 0.5, 1.0, 1.5, 0.5);
         assert!(result > 0.5 && result < 1.0);
     }
 
     #[test]
     fn test_cubic_interpolation_non_integer() {
-        // Test mit Werten wie sie von Heightmap-Pixeln kommen würden
-        // Simuliere Höhen 35m, 36m, 37m, 38m als normalisierte Werte
+        // Test mit Werten wie sie von Heightmap-Pixeln kommen wuerden
+        // Simuliere Hoehen 35m, 36m, 37m, 38m als normalisierte Werte
         let p0 = 35.0 / 255.0; // 0.137254...
         let p1 = 36.0 / 255.0; // 0.141176...
         let p2 = 37.0 / 255.0; // 0.145098...

@@ -1,12 +1,12 @@
 # Rendering-Architektur
 
 ## Ziel
-Flüssiges Rendering von 100k+ Punkten und Verbindungen auf der GPU.
+Fluessiges Rendering von 100k+ Punkten und Verbindungen auf der GPU.
 
 ## Strategie
-1. **GPU-Instancing:** Ein Draw-Call für alle Nodes, ein Draw-Call für alle Connections
+1. **GPU-Instancing:** Ein Draw-Call fuer alle Nodes, ein Draw-Call fuer alle Connections
 2. **Viewport-Culling:** Nur Elemente im sichtbaren Bereich rendern
-3. **LOD (Level of Detail):** Zoom-abhängige Darstellung (Icons vs. einfache Kreise)
+3. **LOD (Level of Detail):** Zoom-abhaengige Darstellung (Icons vs. einfache Kreise)
 
 ## wgpu Pipeline
 
@@ -16,8 +16,8 @@ Flüssiges Rendering von 100k+ Punkten und Verbindungen auf der GPU.
 struct NodeInstance {
     position: [f32; 2],      // 2D Welt-Position (x, z)
     base_color: [f32; 4],    // RGBA Mitte des Nodes
-    rim_color: [f32; 4],     // RGBA Außenring (Selection/Flag)
-    size: f32,               // Größe in Welteinheiten
+    rim_color: [f32; 4],     // RGBA Aussenring (Selection/Flag)
+    size: f32,               // Groesse in Welteinheiten
     _padding: [f32; 1],
 }
 
@@ -27,7 +27,7 @@ struct ConnectionVertex {
     color: [f32; 4],         // RGBA der Verbindung
 }
 
-// Marker-Instanz (Pin-Symbol für Destinations)
+// Marker-Instanz (Pin-Symbol fuer Destinations)
 struct MarkerInstance {
     position: [f32; 2],
     color: [f32; 4],
@@ -46,7 +46,7 @@ struct Uniforms {
 ```
 
 ## Integration in egui
-- Verwende `egui::PaintCallback` für Custom-Rendering
+- Verwende `egui::PaintCallback` fuer Custom-Rendering
 - Render-Zyklus:
   1. egui zeichnet UI-Elemente
   2. PaintCallback ruft wgpu-Renderer auf
@@ -57,38 +57,38 @@ struct Uniforms {
 ### Node Vertex Shader
 - Nimmt instanzierte Quad-Vertices
 - Transformiert mit Camera-Matrix
-- Leitet Node-Typ weiter für Fragment Shader
+- Leitet Node-Typ weiter fuer Fragment Shader
 
 ### Node Fragment Shader
-- SDF (Signed Distance Field) für Kreise
-- Färbung basierend auf Node-Typ und Selection
-- Optional: Texture-Lookup für Icons
+- SDF (Signed Distance Field) fuer Kreise
+- Faerbung basierend auf Node-Typ und Selection
+- Optional: Texture-Lookup fuer Icons
 
 ### Connection Vertex Shader
-- Generiert Linie mit Thickness (über Geometry Expansion)
-- Erzeugt Pfeilspitzen für Richtung
+- Generiert Linie mit Thickness (ueber Geometry Expansion)
+- Erzeugt Pfeilspitzen fuer Richtung
 
 ## Culling-Strategie
 
 **Nodes:** KD-Tree-basiert via `SpatialIndex::within_rect()` — nur Viewport-sichtbare Nodes.
 
-**Connections:** Aktuell lineare Iteration über alle Connections mit Segment-Rect-Intersection-Test.
-Verbesserungspotential: Spatial-Vorfilter (z.B. Midpoint-KD-Tree) für O(k) statt O(n).
+**Connections:** Aktuell lineare Iteration ueber alle Connections mit Segment-Rect-Intersection-Test.
+Verbesserungspotential: Spatial-Vorfilter (z.B. Midpoint-KD-Tree) fuer O(k) statt O(n).
 
 ### Scratch-Buffer-Pattern (alle Renderer)
 ```rust
 // Vermeidet Heap-Allokation pro Frame
 let mut scratch = std::mem::take(&mut self.instance_scratch);
 scratch.clear();
-// ... befülle scratch ...
-self.instance_scratch = scratch; // Kapazität bleibt erhalten
+// ... befuelle scratch ...
+self.instance_scratch = scratch; // Kapazitaet bleibt erhalten
 ```
 
 ### Viewport-Berechnung
 ```rust
 // compute_visible_rect() in render/types.rs
 let (min, max) = compute_visible_rect(&render_context);
-// Gibt AABB mit 8px Padding in Weltkoordinaten zurück
+// Gibt AABB mit 8px Padding in Weltkoordinaten zurueck
 ```
 
 ## Performance-Budget

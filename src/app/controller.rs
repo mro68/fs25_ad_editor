@@ -1,4 +1,4 @@
-//! Application Controller für zentrale Event-Verarbeitung.
+//! Application Controller fuer zentrale Event-Verarbeitung.
 
 use super::render_scene;
 use super::{AppCommand, AppIntent, AppState};
@@ -14,7 +14,7 @@ impl AppController {
         Self
     }
 
-    /// Verarbeitet einen Intent über Intent->Command Mapping.
+    /// Verarbeitet einen Intent ueber Intent->Command Mapping.
     pub fn handle_intent(&mut self, state: &mut AppState, intent: AppIntent) -> anyhow::Result<()> {
         let commands = self.map_intent_to_commands(state, intent);
         for command in commands {
@@ -28,7 +28,7 @@ impl AppController {
         super::intent_mapping::map_intent_to_commands(state, intent)
     }
 
-    /// Führt mutierende Commands auf dem AppState aus.
+    /// Fuehrt mutierende Commands auf dem AppState aus.
     /// Dispatcht an Feature-Handler in `handlers/`.
     pub fn handle_command(
         &mut self,

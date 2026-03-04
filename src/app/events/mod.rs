@@ -1,4 +1,4 @@
-//! AppIntent- und AppCommand-Enums für den Intent/Command-Datenfluss.
+//! AppIntent- und AppCommand-Enums fuer den Intent/Command-Datenfluss.
 
 mod command;
 mod intent;

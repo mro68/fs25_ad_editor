@@ -1,4 +1,4 @@
-//! Core-Domänentypen: Nodes, Connections, RoadMap, Kamera, Spatial-Index.
+//! Core-Domaenentypen: Nodes, Connections, RoadMap, Kamera, Spatial-Index.
 
 pub mod background_map;
 pub mod camera;
@@ -6,10 +6,10 @@ pub mod connection;
 pub mod heightmap;
 pub mod map_marker;
 pub mod meta;
-/// Core-Datenmodelle für AutoDrive-Konfigurationen
+/// Core-Datenmodelle fuer AutoDrive-Konfigurationen
 ///
 /// Dieses Modul definiert die Haupt-Datenstrukturen:
-/// - RoadMap: Container für alle Nodes und Connections
+/// - RoadMap: Container fuer alle Nodes und Connections
 /// - MapNode: Einzelner Wegpunkt mit Position und Eigenschaften
 /// - Connection: Verbindung zwischen zwei Nodes
 pub mod node;

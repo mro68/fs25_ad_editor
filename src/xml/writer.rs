@@ -1,4 +1,4 @@
-//! Writer für AutoDrive XML-Konfigurationen.
+//! Writer fuer AutoDrive XML-Konfigurationen.
 
 use crate::core::{ConnectionDirection, Heightmap, RoadMap};
 use anyhow::Result;
@@ -8,8 +8,8 @@ use std::collections::{HashMap, HashSet};
 ///
 /// # Parameter
 /// - `road_map`: Die zu exportierende RoadMap
-/// - `heightmap`: Optionale Heightmap für Y-Koordinaten-Berechnung
-/// - `terrain_height_scale`: Höhenskala-Faktor (FS25-Standard: 255.0)
+/// - `heightmap`: Optionale Heightmap fuer Y-Koordinaten-Berechnung
+/// - `terrain_height_scale`: Hoehenskala-Faktor (FS25-Standard: 255.0)
 pub fn write_autodrive_config(
     road_map: &RoadMap,
     heightmap: Option<&Heightmap>,
@@ -55,7 +55,7 @@ pub fn write_autodrive_config(
     let mut node_ids: Vec<u64> = road_map.nodes.keys().copied().collect();
     node_ids.sort_unstable();
 
-    // Renumbering: Interne IDs → lückenlose 1-basierte IDs (AutoDrive erwartet kontiguöse IDs)
+    // Renumbering: Interne IDs → lueckenlose 1-basierte IDs (AutoDrive erwartet kontiguoese IDs)
     let id_remap: HashMap<u64, u64> = node_ids
         .iter()
         .enumerate()
@@ -142,7 +142,7 @@ pub fn write_autodrive_config(
                     .filter_map(|old| {
                         let mapped = id_remap.get(old).copied();
                         if mapped.is_none() {
-                            log::warn!("XML-Writer: outgoing connection {} → {} hat kein ID-Mapping — wird übersprungen", id, old);
+                            log::warn!("XML-Writer: outgoing connection {} → {} hat kein ID-Mapping — wird uebersprungen", id, old);
                         }
                         mapped
                     })
@@ -159,7 +159,7 @@ pub fn write_autodrive_config(
                     .filter_map(|old| {
                         let mapped = id_remap.get(old).copied();
                         if mapped.is_none() {
-                            log::warn!("XML-Writer: incoming connection {} ← {} hat kein ID-Mapping — wird übersprungen", id, old);
+                            log::warn!("XML-Writer: incoming connection {} ← {} hat kein ID-Mapping — wird uebersprungen", id, old);
                         }
                         mapped
                     })

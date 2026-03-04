@@ -1,4 +1,4 @@
-//! State-Definitionen, Phase-Enum und Konstruktor für das Constraint-Route-Tool.
+//! State-Definitionen, Phase-Enum und Konstruktor fuer das Constraint-Route-Tool.
 
 use super::super::common::{SegmentConfig, ToolLifecycleState};
 use super::super::ToolAnchor;
@@ -10,22 +10,22 @@ use glam::Vec2;
 /// Steuert die Klick-Abfolge:
 /// 1. `Start` — Startpunkt setzen
 /// 2. `End` — Endpunkt setzen
-/// 3. `ControlNodes` — optionale Zwischen-Kontrollpunkte hinzufügen (Enter bestätigt)
+/// 3. `ControlNodes` — optionale Zwischen-Kontrollpunkte hinzufuegen (Enter bestaetigt)
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub(crate) enum Phase {
     /// Warten auf Startpunkt-Klick
     Start,
     /// Warten auf Endpunkt-Klick
     End,
-    /// Kontrollpunkte platzieren (Enter bestätigt, Escape bricht ab)
+    /// Kontrollpunkte platzieren (Enter bestaetigt, Escape bricht ab)
     ControlNodes,
 }
 
-/// Constraint-Route-Tool: Erzeugt Routen mit automatischer Winkelglättung.
+/// Constraint-Route-Tool: Erzeugt Routen mit automatischer Winkelglaettung.
 ///
-/// Nach Start/End-Platzierung können beliebig viele Zwischen-Kontrollpunkte
-/// gesetzt werden. Der Solver erzeugt eine geglättete Route die
-/// Winkel-Constraints einhält und glatt in bestehende Verbindungen übergeht.
+/// Nach Start/End-Platzierung koennen beliebig viele Zwischen-Kontrollpunkte
+/// gesetzt werden. Der Solver erzeugt eine geglaettete Route die
+/// Winkel-Constraints einhaelt und glatt in bestehende Verbindungen uebergeht.
 /// Automatische Steuerpunkte (Approach/Departure) sind sichtbar und verschiebbar.
 pub struct ConstraintRouteTool {
     /// Startpunkt der Route
@@ -40,21 +40,21 @@ pub struct ConstraintRouteTool {
     pub(crate) dragging: Option<DragTarget>,
     /// Segment-Konfiguration (Abstand / Node-Anzahl)
     pub(crate) seg: SegmentConfig,
-    /// Maximale Richtungsänderung pro Segment (Grad)
+    /// Maximale Richtungsaenderung pro Segment (Grad)
     pub(crate) max_angle_deg: f32,
-    /// Richtung für die erzeugten Verbindungen
+    /// Richtung fuer die erzeugten Verbindungen
     pub direction: ConnectionDirection,
-    /// Priorität für die erzeugten Verbindungen
+    /// Prioritaet fuer die erzeugten Verbindungen
     pub priority: ConnectionPriority,
     /// Gemeinsamer Lifecycle-Zustand (IDs, Endpunkt-Anker, Recreate-Flag, Snap-Radius)
     pub(crate) lifecycle: ToolLifecycleState,
-    /// Start-Anker der letzten Erstellung (für Neuberechnung)
+    /// Start-Anker der letzten Erstellung (fuer Neuberechnung)
     pub(crate) last_start_anchor: Option<ToolAnchor>,
-    /// End-Anker der letzten Erstellung (für Neuberechnung)
+    /// End-Anker der letzten Erstellung (fuer Neuberechnung)
     pub(crate) last_end_anchor: Option<ToolAnchor>,
-    /// Kontrollpunkte der letzten Erstellung (für Neuberechnung)
+    /// Kontrollpunkte der letzten Erstellung (fuer Neuberechnung)
     pub(crate) last_control_nodes: Vec<Vec2>,
-    /// Gecachte Solver-Ausgabe für Preview-Rendering
+    /// Gecachte Solver-Ausgabe fuer Preview-Rendering
     pub(crate) preview_positions: Vec<Vec2>,
     /// Gecachte lineare Connection-Indizes fuer `preview_positions`
     pub(crate) preview_connections: Vec<(usize, usize)>,
@@ -62,15 +62,15 @@ pub struct ConstraintRouteTool {
     pub(crate) start_neighbor_dirs: Vec<Vec2>,
     /// Gecachte Nachbar-Richtungsvektoren am Endpunkt
     pub(crate) end_neighbor_dirs: Vec<Vec2>,
-    /// Vom Solver berechneter Approach-Steuerpunkt (manuell überschreibbar)
+    /// Vom Solver berechneter Approach-Steuerpunkt (manuell ueberschreibbar)
     pub(crate) approach_steerer: Option<Vec2>,
-    /// Vom Solver berechneter Departure-Steuerpunkt (manuell überschreibbar)
+    /// Vom Solver berechneter Departure-Steuerpunkt (manuell ueberschreibbar)
     pub(crate) departure_steerer: Option<Vec2>,
     /// Ob der Approach-Steuerpunkt manuell verschoben wurde
     pub(crate) approach_manual: bool,
     /// Ob der Departure-Steuerpunkt manuell verschoben wurde
     pub(crate) departure_manual: bool,
-    /// Minimaldistanz: Nodes die näher beieinander liegen werden gefiltert (Meter)
+    /// Minimaldistanz: Nodes die naeher beieinander liegen werden gefiltert (Meter)
     pub(crate) min_distance: f32,
 }
 
@@ -118,7 +118,7 @@ impl ConstraintRouteTool {
         }
     }
 
-    /// Berechnet die Gesamtlänge der Polyline (Start → Control-Nodes → End).
+    /// Berechnet die Gesamtlaenge der Polyline (Start → Control-Nodes → End).
     pub(crate) fn total_distance(&self) -> f32 {
         let (Some(s), Some(e)) = (&self.start, &self.end) else {
             return 0.0;
@@ -129,16 +129,16 @@ impl ConstraintRouteTool {
         polyline_length(&points)
     }
 
-    /// Synchronisiert den jeweils abhängigen Wert (Node-Anzahl ↔ Segment-Länge).
+    /// Synchronisiert den jeweils abhaengigen Wert (Node-Anzahl ↔ Segment-Laenge).
     pub(crate) fn sync_derived(&mut self) {
         self.seg.sync_from_length(self.total_distance());
     }
 
     /// Berechnet die Solver-Vorschau und cacht sie in `preview_positions`.
     ///
-    /// Manuell verschobene Steuerpunkte werden als zusätzliche Kontrollpunkte
-    /// an den Solver übergeben. Automatisch berechnete Steuerpunkte werden
-    /// aus dem Solver-Ergebnis übernommen (sofern nicht manuell überschrieben).
+    /// Manuell verschobene Steuerpunkte werden als zusaetzliche Kontrollpunkte
+    /// an den Solver uebergeben. Automatisch berechnete Steuerpunkte werden
+    /// aus dem Solver-Ergebnis uebernommen (sofern nicht manuell ueberschrieben).
     pub(crate) fn update_preview(&mut self) {
         let (Some(start), Some(end)) = (&self.start, &self.end) else {
             self.preview_positions.clear();
@@ -146,8 +146,8 @@ impl ConstraintRouteTool {
             return;
         };
 
-        // Kontrollpunkte für den Solver zusammenbauen:
-        // Manuell verschobene Steuerpunkte werden als reguläre Kontrollpunkte eingefügt.
+        // Kontrollpunkte fuer den Solver zusammenbauen:
+        // Manuell verschobene Steuerpunkte werden als regulaere Kontrollpunkte eingefuegt.
         let mut solver_control = Vec::new();
         if self.approach_manual {
             if let Some(ap) = self.approach_steerer {
@@ -186,7 +186,7 @@ impl ConstraintRouteTool {
             .map(|i| (i, i + 1))
             .collect();
 
-        // Auto-Steuerpunkte übernehmen (sofern nicht manuell überschrieben)
+        // Auto-Steuerpunkte uebernehmen (sofern nicht manuell ueberschrieben)
         if !self.approach_manual {
             self.approach_steerer = result.approach_steerer;
         }
@@ -195,7 +195,7 @@ impl ConstraintRouteTool {
         }
     }
 
-    /// Sammelt die Nachbar-Richtungsvektoren für einen Anker aus der RoadMap.
+    /// Sammelt die Nachbar-Richtungsvektoren fuer einen Anker aus der RoadMap.
     pub(crate) fn collect_neighbor_dirs(
         anchor: &ToolAnchor,
         road_map: &crate::core::RoadMap,
@@ -228,7 +228,7 @@ impl Default for ConstraintRouteTool {
     }
 }
 
-/// Berechnet die Gesamtlänge einer Polyline.
+/// Berechnet die Gesamtlaenge einer Polyline.
 fn polyline_length(points: &[Vec2]) -> f32 {
     points.windows(2).map(|w| w[0].distance(w[1])).sum()
 }

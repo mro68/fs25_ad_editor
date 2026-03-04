@@ -4,7 +4,7 @@ use crate::AppState;
 
 use super::helpers::clear_selection;
 
-/// Prüft ob ein Punkt auf einem Liniensegment liegt.
+/// Prueft ob ein Punkt auf einem Liniensegment liegt.
 fn point_on_segment(point: glam::Vec2, a: glam::Vec2, b: glam::Vec2) -> bool {
     let ab = b - a;
     let ap = point - a;
@@ -26,7 +26,7 @@ fn point_on_segment(point: glam::Vec2, a: glam::Vec2, b: glam::Vec2) -> bool {
     true
 }
 
-/// Prüft ob ein Punkt innerhalb eines Polygons liegt (Ray-Casting).
+/// Prueft ob ein Punkt innerhalb eines Polygons liegt (Ray-Casting).
 fn point_in_polygon(point: glam::Vec2, polygon: &[glam::Vec2]) -> bool {
     if polygon.len() < 3 {
         return false;

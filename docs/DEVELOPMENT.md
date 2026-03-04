@@ -9,10 +9,10 @@
 - ✅ Robusteres ID-Mapping via `HashMap` statt Array-Index
 
 ### Java-Projekt (AutoDrive_Course_Editor)
-- ✅ Reference-Implementierung für Flag-Bereinigung
+- ✅ Reference-Implementierung fuer Flag-Bereinigung
 - ✅ Flag 2/4 → 0 Bereinigung beim Laden
 - ⚠️ Erzwingt strikt fortlaufende IDs (weniger robust)
-- ✅ Multi-threaded Rendering (für Rust nicht nötig)
+- ✅ Multi-threaded Rendering (fuer Rust nicht noetig)
 
 ### Flutter-DDS-Package
 - ℹ️ Manuelle DXT1/3/5 Dekodierung vorhanden
@@ -20,14 +20,14 @@
 
 ### fs25_tools (Spatial Index)
 - ✅ Grid + KD-Tree Hybrid als Konzept interessant
-- 🚫 Dart-spezifische Memory-Hacks nicht nötig in Rust
+- 🚫 Dart-spezifische Memory-Hacks nicht noetig in Rust
 - ✅ Verwende stattdessen `kiddo` Crate (optimierter KD-Tree)
 
-## Entscheidungen für Rust-Port
+## Entscheidungen fuer Rust-Port
 
 ### Datenmodell
 ```rust
-// Verwende HashMap für Robustheit
+// Verwende HashMap fuer Robustheit
 struct RoadMap {
     nodes: HashMap<u64, MapNode>,
     connections: HashMap<(u64, u64), Connection>,
@@ -42,41 +42,41 @@ struct RoadMap {
 
 ### Heightmap-Integration
 - PNG-Heightmaps via `image` crate
-- Bikubische Interpolation (16 Nachbarpixel) für präzise Y-Werte
-- Catmull-Rom Spline für glatte Höhenübergänge
+- Bikubische Interpolation (16 Nachbarpixel) fuer praezise Y-Werte
+- Catmull-Rom Spline fuer glatte Hoehenuebergaenge
 - Y-Berechnung nur beim Export (Editor bleibt 2D)
 - Warnung beim Speichern ohne Heightmap
 - Optionale Heightmap (Y=0 als Fallback)
 
 ### Rendering
-- 2D-Ansicht (keine 3D-Transformation nötig)
+- 2D-Ansicht (keine 3D-Transformation noetig)
 - Single-Thread ausreichend (wgpu ist async)
-- GPU-Instancing für Performance
+- GPU-Instancing fuer Performance
 - Grow-only Buffer-Reuse in Node/Connection-Renderer (keine per-frame Neuallokation)
 - CPU-Viewport-Culling vor GPU-Upload (Nodes + Connections)
 
-## Nächste Schritte (Stand: 2026-02-28)
+## Naechste Schritte (Stand: 2026-02-28)
 
 ### Erledigte Schritte
 1. ✅ Projekt-Setup
 2. ✅ Core-Datenmodelle definiert
 3. ✅ XML-Parser implementiert
 4. ✅ Tests mit echten AutoDrive-Configs
-5. ✅ `unwrap()`-Bereinigung in App-Use-Cases (Guard + frühe Returns)
+5. ✅ `unwrap()`-Bereinigung in App-Use-Cases (Guard + fruehe Returns)
 6. ✅ `main.rs` in Runner/Adapter-orientierte Update-Schritte zerlegt
-7. ✅ Gezielte UI-/Render-Tests ergänzt (Input→Intent, Culling-Geometrie)
+7. ✅ Gezielte UI-/Render-Tests ergaenzt (Input→Intent, Culling-Geometrie)
 8. ✅ Catmull-Rom-Spline-Tool implementiert (arc-length resampling, fortlaufende Vorschau)
-9. ✅ Strukturaudit durchgeführt (2026-02-22):
+9. ✅ Strukturaudit durchgefuehrt (2026-02-22):
    - DRY-Refaktor: `populate_neighbors()` aus CurveTool/SplineTool → `common.rs`
    - `curve.rs` aufgeteilt: `render_config` → `curve/config_ui.rs` (809 → 577 Zeilen)
    - `spline/mod.rs` aufgeteilt: `render_config` → `spline/config_ui.rs` (677 → 500 Zeilen)
    - `show_dedup_dialog` in `ui/API.md` nachgetragen
-   - 45 Struct-Level-Docstrings auf öffentlichen Typen ergänzt
+   - 45 Struct-Level-Docstrings auf oeffentlichen Typen ergaenzt
 10. ✅ Strukturelles Audit (2026-02-28):
-    - Docstrings für `AppCommand`, `AppIntent`, `Snapshot`, `EditHistory`, `CommandLog`, `SegmentRecord`, `SegmentRegistry`
-    - `reset()` Docstrings für alle RouteTool-Implementierungen
+    - Docstrings fuer `AppCommand`, `AppIntent`, `Snapshot`, `EditHistory`, `CommandLog`, `SegmentRecord`, `SegmentRegistry`
+    - `reset()` Docstrings fuer alle RouteTool-Implementierungen
     - SplineTool: `tangent_menu_data()` + `apply_tangent_selection()` implementiert
-    - `app/API.md` um fehlende Varianten vervollständigt
+    - `app/API.md` um fehlende Varianten vervollstaendigt
     - ROADMAP.md Feature-Status korrigiert
     - DATA_MODEL.md um State-Strukturen erweitert
     - How-To-Use.md: Tangent-Ausrichtung, CP-Drag, Verkettung dokumentiert
@@ -86,16 +86,16 @@ struct RoadMap {
 - [ ] Macro-Extraktion `impl_lifecycle_delegation!` in `common/macros.rs`
 - [ ] Drag-Handler-Split in `handlers/route_tool_drag.rs`
 - [ ] RoadMap-Query-Extraktion in `road_map/queries.rs`
-- [ ] Performance-Benchmarks mit 100k+ Nodes ausführen und dokumentieren
+- [ ] Performance-Benchmarks mit 100k+ Nodes ausfuehren und dokumentieren
 - [ ] StraightLine/Spline Drag-Support evaluieren
 
 ## Architektur-Verbesserungen (2025-07-02)
 - ✅ Controller-Split: `handle_command()` in Feature-Handler aufgeteilt (`handlers/`)
 - ✅ UI→Core-Layerverletzung behoben: `properties.rs` importiert `RoadMap` via `app` Re-Export
-- ✅ CI-Check für Schichtgrenzen: `scripts/check_layer_boundaries.sh` + `make ci-check`
+- ✅ CI-Check fuer Schichtgrenzen: `scripts/check_layer_boundaries.sh` + `make ci-check`
 - ✅ Alle `unwrap()` in Produktionscode durch graceful error handling ersetzt
-- ✅ Alle Markdown-Dokumentationen nachgeführt (API.md, ARCHITECTURE_PLAN.md, DATA_MODEL.md, ROADMAP.md)
+- ✅ Alle Markdown-Dokumentationen nachgefuehrt (API.md, ARCHITECTURE_PLAN.md, DATA_MODEL.md, ROADMAP.md)
 
 ## Aktuelle Arbeitsweise
 - Dokumentation wird derzeit manuell aktualisiert (kein automatischer Doku-Sync aktiv).
-- CI-Basis vorhanden: Layer-Boundary-Check via `make ci-check` (prüft dass `ui/` nicht direkt aus `core` importiert).
+- CI-Basis vorhanden: Layer-Boundary-Check via `make ci-check` (prueft dass `ui/` nicht direkt aus `core` importiert).

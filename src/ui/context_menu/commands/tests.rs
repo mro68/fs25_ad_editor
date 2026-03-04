@@ -31,7 +31,7 @@ fn make_connected_map(id_a: u64, id_b: u64) -> RoadMap {
     map
 }
 
-/// Zählt Commands in der validierten Entry-Liste (rekursiv, inkl. Submenüs).
+/// Zaehlt Commands in der validierten Entry-Liste (rekursiv, inkl. Submenues).
 fn count_commands(entries: &[ValidatedEntry]) -> usize {
     entries
         .iter()
@@ -43,7 +43,7 @@ fn count_commands(entries: &[ValidatedEntry]) -> usize {
         .sum()
 }
 
-/// Prüft ob ein bestimmter CommandId in den Entries enthalten ist (rekursiv, inkl. Submenüs).
+/// Prueft ob ein bestimmter CommandId in den Entries enthalten ist (rekursiv, inkl. Submenues).
 fn has_command(entries: &[ValidatedEntry], target: CommandId) -> bool {
     entries.iter().any(|e| match e {
         ValidatedEntry::Command { id, .. } => *id == target,
@@ -220,7 +220,7 @@ fn catalog_empty_area_constraint_route_is_first_route_entry() {
             MenuEntry::Submenu { label, entries } if label == "📐 Strecke" => Some(entries),
             _ => None,
         })
-        .expect("Strecke-Untermenü erwartet");
+        .expect("Strecke-Untermenue erwartet");
 
     let first_route_id = route_submenu.iter().find_map(|entry| match entry {
         MenuEntry::Command { id, .. } => Some(*id),
@@ -401,7 +401,7 @@ fn catalog_selection_constraint_route_is_first_generate_entry() {
             }
             _ => None,
         })
-        .expect("Strecke-erzeugen-Untermenü erwartet");
+        .expect("Strecke-erzeugen-Untermenue erwartet");
 
     let first_route_id = generate_submenu.iter().find_map(|entry| match entry {
         MenuEntry::Command { id, .. } => Some(*id),
@@ -485,7 +485,7 @@ fn cleanup_removes_orphaned_labels() {
         ValidatedEntry::Separator,
         ValidatedEntry::Command {
             id: CommandId::DeleteSelected,
-            label: "Löschen".into(),
+            label: "Loeschen".into(),
             intent: Box::new(AppIntent::DeleteSelectedRequested),
         },
     ];
@@ -560,7 +560,7 @@ fn deleted_node_hides_all_commands() {
     let catalog = MenuCatalog::for_node_focused(99);
     let entries = validate_entries(&catalog, &ctx, &intent_ctx);
 
-    // Gelöschter Node: NodeExists-Precondition schlägt fehl → keine node-spezifischen Commands
+    // Geloeschter Node: NodeExists-Precondition schlaegt fehl → keine node-spezifischen Commands
     assert!(!has_command(&entries, CommandId::CreateMarker));
     assert!(!has_command(&entries, CommandId::CreateMarker));
 }

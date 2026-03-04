@@ -3,7 +3,7 @@ use fs25_auto_drive_editor::xml::parse_autodrive_config;
 
 #[test]
 fn test_parse_autodrive_config() {
-    // include_str! ist CWD-unabhängig (Compile-Zeit-Einbettung)
+    // include_str! ist CWD-unabhaengig (Compile-Zeit-Einbettung)
     let xml = include_str!("../ad_sample_data/AutoDrive_config.xml");
     match parse_autodrive_config(xml) {
         Ok(rm) => {

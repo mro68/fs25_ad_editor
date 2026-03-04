@@ -1,4 +1,4 @@
-//! Handler für Route-Tool-Operationen (Linie, Parkplatz, Kurve, …).
+//! Handler fuer Route-Tool-Operationen (Linie, Parkplatz, Kurve, …).
 
 use crate::app::state::EditorTool;
 use crate::app::tools::common::TangentSource;
@@ -23,12 +23,12 @@ pub fn click(state: &mut AppState, world_pos: glam::Vec2, ctrl: bool) {
     }
 }
 
-/// Führt das aktive Route-Tool aus (Enter-Bestätigung).
+/// Fuehrt das aktive Route-Tool aus (Enter-Bestaetigung).
 pub fn execute(state: &mut AppState) {
     execute_and_apply(state);
 }
 
-/// Gemeinsame Logik: Tool ausführen, Ergebnis anwenden, Tool zurücksetzen.
+/// Gemeinsame Logik: Tool ausfuehren, Ergebnis anwenden, Tool zuruecksetzen.
 fn execute_and_apply(state: &mut AppState) {
     let result = match (
         state.editor.tool_manager.active_tool(),
@@ -41,7 +41,7 @@ fn execute_and_apply(state: &mut AppState) {
     if let Some(result) = result {
         let ids = use_cases::editing::apply_tool_result(state, result);
 
-        // Zuerst last_*-Felder setzen (für make_segment_record)
+        // Zuerst last_*-Felder setzen (fuer make_segment_record)
         if let (Some(tool), Some(rm)) = (
             state.editor.tool_manager.active_tool_mut(),
             state.road_map.as_deref(),
@@ -49,7 +49,7 @@ fn execute_and_apply(state: &mut AppState) {
             tool.set_last_created(&ids, rm);
         }
 
-        // Segment in Registry speichern (für nachträgliche Bearbeitung)
+        // Segment in Registry speichern (fuer nachtraegliche Bearbeitung)
         let record_id = state.segment_registry.next_id();
         if let Some(tool) = state.editor.tool_manager.active_tool() {
             if let Some(record) = tool.make_segment_record(record_id, &ids) {
@@ -90,8 +90,8 @@ pub fn select(state: &mut AppState, index: usize) {
     log::info!("Route-Tool aktiviert: Index {}", index);
 }
 
-/// Lädt die aktuelle Selektion als geordnete Kette in das aktive Tool,
-/// falls dieses `needs_chain_input()` zurückgibt.
+/// Laedt die aktuelle Selektion als geordnete Kette in das aktive Tool,
+/// falls dieses `needs_chain_input()` zurueckgibt.
 pub fn init_chain_if_needed(state: &mut AppState) {
     let needs_chain = state
         .editor
@@ -137,7 +137,7 @@ pub fn init_chain_if_needed(state: &mut AppState) {
 /// Aktiviert ein Route-Tool und setzt Start/End-Anker aus zwei selektierten Nodes.
 ///
 /// Simuliert die beiden on_click()-Aufrufe mit den Node-Positionen.
-/// Bei StraightLine → ReadyToExecute → sofortige Ausführung.
+/// Bei StraightLine → ReadyToExecute → sofortige Ausfuehrung.
 /// Bei Curves → Phase::Control → User platziert Kontrollpunkte.
 pub fn select_with_anchors(
     state: &mut AppState,
@@ -150,7 +150,7 @@ pub fn select_with_anchors(
 
     // Immer mit frischem Zustand starten, auch wenn dasselbe Tool bereits aktiv war.
     // So ist das Verhalten identisch zum manuellen Flow
-    // (Tool wählen -> Start klicken -> Ende klicken).
+    // (Tool waehlen -> Start klicken -> Ende klicken).
     if let Some(tool) = state.editor.tool_manager.active_tool_mut() {
         tool.reset();
     }
@@ -211,7 +211,7 @@ pub fn select_with_anchors(
     // Sonst: Curve-Tool in Phase::Control → User platziert Kontrollpunkte
 }
 
-/// Löscht die letzte Strecke und erstellt sie mit neuen Parametern neu.
+/// Loescht die letzte Strecke und erstellt sie mit neuen Parametern neu.
 pub fn recreate(state: &mut AppState) {
     let old_ids = match state.editor.tool_manager.active_tool() {
         Some(tool) => {
@@ -224,7 +224,7 @@ pub fn recreate(state: &mut AppState) {
         None => return,
     };
 
-    // Undo-Snapshot VOR Löschung + Neuberechnung
+    // Undo-Snapshot VOR Loeschung + Neuberechnung
     state.record_undo_snapshot();
     use_cases::editing::delete_nodes_by_ids(state, &old_ids);
 
@@ -249,7 +249,7 @@ pub fn recreate(state: &mut AppState) {
     }
 }
 
-/// Wendet die vom User gewählten Tangenten an und triggert ggf. eine Neuberechnung.
+/// Wendet die vom User gewaehlten Tangenten an und triggert ggf. eine Neuberechnung.
 pub fn apply_tangent(state: &mut AppState, start: TangentSource, end: TangentSource) {
     let needs_recreate = if let Some(tool) = state.editor.tool_manager.active_tool_mut() {
         tool.apply_tangent_selection(start, end);
@@ -274,7 +274,7 @@ pub fn drag_start(state: &mut AppState, world_pos: glam::Vec2) {
     }
 }
 
-/// Aktualisiert die Position des gegriffenen Punkts während eines Drags.
+/// Aktualisiert die Position des gegriffenen Punkts waehrend eines Drags.
 pub fn drag_update(state: &mut AppState, world_pos: glam::Vec2) {
     if let Some(tool) = state.editor.tool_manager.active_tool_mut() {
         tool.on_drag_update(world_pos);
@@ -291,13 +291,13 @@ pub fn drag_end(state: &mut AppState) {
     }
 }
 
-/// Erhöht die Anzahl der Nodes im aktiven Route-Tool um 1.
+/// Erhoeht die Anzahl der Nodes im aktiven Route-Tool um 1.
 pub fn increase_node_count(state: &mut AppState) {
     if let Some(tool) = state.editor.tool_manager.active_tool_mut() {
         tool.increase_node_count();
     }
 
-    // Wenn das Tool sagt dass Recreate nötig ist → Segment neu erstellen
+    // Wenn das Tool sagt dass Recreate noetig ist → Segment neu erstellen
     let needs_recreate = state
         .editor
         .tool_manager
@@ -328,7 +328,7 @@ pub fn decrease_node_count(state: &mut AppState) {
     }
 }
 
-/// Erhöht den minimalen Segment-Abstand im aktiven Route-Tool um 0.25m.
+/// Erhoeht den minimalen Segment-Abstand im aktiven Route-Tool um 0.25m.
 pub fn increase_segment_length(state: &mut AppState) {
     if let Some(tool) = state.editor.tool_manager.active_tool_mut() {
         tool.increase_segment_length();

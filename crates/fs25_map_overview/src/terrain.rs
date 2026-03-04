@@ -8,12 +8,12 @@ use image::{DynamicImage, GrayImage, RgbImage};
 
 use crate::palette;
 
-/// Hintergrundfarbe für Pixel ohne Weight-Map-Abdeckung.
+/// Hintergrundfarbe fuer Pixel ohne Weight-Map-Abdeckung.
 const BACKGROUND_COLOR: [f64; 3] = [80.0, 100.0, 60.0];
 
-/// Ein einzelnes Weight-Map-Layer mit zugehöriger Farbe.
+/// Ein einzelnes Weight-Map-Layer mit zugehoeriger Farbe.
 pub struct WeightLayer {
-    /// Name der Weight-Map (für Farbzuordnung)
+    /// Name der Weight-Map (fuer Farbzuordnung)
     pub name: String,
     /// Grayscale-Gewichtsbild (0–255)
     pub weights: GrayImage,
@@ -26,7 +26,7 @@ pub struct WeightLayer {
 ///
 /// # Parameter
 /// - `layers`: Weight-Map-Layer mit Name und Gewichtsbild
-/// - `target_size`: Zielgröße (quadratisch), alle Layer werden darauf skaliert
+/// - `target_size`: Zielgroesse (quadratisch), alle Layer werden darauf skaliert
 pub fn composite_terrain(layers: &[WeightLayer], target_size: u32) -> Result<RgbImage> {
     let size = target_size as usize;
     let mut result_r = vec![0.0f64; size * size];
@@ -42,7 +42,7 @@ pub fn composite_terrain(layers: &[WeightLayer], target_size: u32) -> Result<Rgb
         let color_g = color[1] as f64;
         let color_b = color[2] as f64;
 
-        // Weight-Map auf Zielgröße skalieren falls nötig
+        // Weight-Map auf Zielgroesse skalieren falls noetig
         let weights =
             if layer.weights.width() != target_size || layer.weights.height() != target_size {
                 image::imageops::resize(
@@ -64,7 +64,7 @@ pub fn composite_terrain(layers: &[WeightLayer], target_size: u32) -> Result<Rgb
         }
     }
 
-    // Normalisieren + Hintergrundfarbe für unbedeckte Pixel
+    // Normalisieren + Hintergrundfarbe fuer unbedeckte Pixel
     let mut rgb_data = vec![0u8; size * size * 3];
     for i in 0..(size * size) {
         let (r, g, b) = if total_weight[i] > 0.0 {

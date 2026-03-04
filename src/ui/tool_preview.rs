@@ -82,7 +82,7 @@ pub fn paint_preview(
     }
 }
 
-/// Zeichnet eine einfache Polyline-Vorschau ohne temporäre `ToolPreview`-Allokationen.
+/// Zeichnet eine einfache Polyline-Vorschau ohne temporaere `ToolPreview`-Allokationen.
 ///
 /// Verbindungen werden implizit als aufeinanderfolgende Punkte (`i -> i+1`) gezeichnet.
 pub fn paint_preview_polyline(

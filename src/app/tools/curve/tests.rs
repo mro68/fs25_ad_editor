@@ -14,7 +14,7 @@ use glam::Vec2;
 fn test_angle_to_compass_cardinal() {
     // Ost (0°)
     assert_eq!(angle_to_compass(0.0_f32.to_radians()), "O");
-    // Süd (90° in FS25-Koordinatensystem)
+    // Sued (90° in FS25-Koordinatensystem)
     assert_eq!(angle_to_compass(90.0_f32.to_radians()), "S");
     // West (180°)
     assert_eq!(angle_to_compass(180.0_f32.to_radians()), "W");
@@ -85,7 +85,7 @@ fn test_apply_tangent_to_cp_cubic() {
 
     tool.apply_tangent_to_cp();
 
-    // Bei zwei Tangentenverbindungen müssen CP1 und CP2 deckungsgleich sein.
+    // Bei zwei Tangentenverbindungen muessen CP1 und CP2 deckungsgleich sein.
     let cp1 = tool.control_point1.expect("CP1 sollte gesetzt sein");
     let cp2 = tool.control_point2.expect("CP2 sollte gesetzt sein");
     assert!(
@@ -202,7 +202,7 @@ fn test_tool_quadratic_click_flow() {
     assert_eq!(action, ToolAction::UpdatePreview);
     assert!(tool.is_ready());
 
-    // Erneuter Klick ignoriert (Drag übernimmt)
+    // Erneuter Klick ignoriert (Drag uebernimmt)
     let action = tool.on_click(Vec2::new(5.0, 12.0), &road_map, false);
     assert_eq!(action, ToolAction::UpdatePreview);
     // CP1 bleibt beim ersten Wert
@@ -450,15 +450,15 @@ fn test_drag_start_end_resnap() {
     let grabbed = tool.on_drag_start(Vec2::new(0.0, 0.0), &road_map, 2.0);
     assert!(grabbed);
     tool.on_drag_update(Vec2::new(1.0, 1.0));
-    // Während Drag: NewPosition
+    // Waehrend Drag: NewPosition
     match &tool.start {
         Some(ToolAnchor::NewPosition(pos)) => {
             assert!((pos.x - 1.0).abs() < 0.01);
         }
-        _ => panic!("Start sollte NewPosition sein während Drag"),
+        _ => panic!("Start sollte NewPosition sein waehrend Drag"),
     }
     tool.on_drag_end(&road_map);
-    // Nach Drag: Re-Snap (kein Node in der Nähe → bleibt NewPosition)
+    // Nach Drag: Re-Snap (kein Node in der Naehe → bleibt NewPosition)
     assert!(tool.dragging.is_none());
 }
 
@@ -505,7 +505,7 @@ fn test_project_onto_tangent_line_start_along_axis() {
 #[test]
 fn test_project_onto_tangent_line_end_perpendicular_is_zero() {
     // Tangente zeigt nach Ost (0°), is_start=false → dir = (1,0)
-    // Cursor lotrecht zur Linie → Projektion ist der Fußpunkt
+    // Cursor lotrecht zur Linie → Projektion ist der Fusspunkt
     let anchor = Vec2::new(5.0, 0.0);
     let cursor = Vec2::new(5.0, 10.0); // direkt lotrecht
     let result = project_onto_tangent_line(anchor, 0.0_f32, cursor, false);
@@ -518,7 +518,7 @@ fn test_project_onto_tangent_line_end_perpendicular_is_zero() {
 #[test]
 fn test_solve_cps_symmetric_horizontal() {
     // P0=(0,0), P3=(10,0), dir1=(0,1) [Nord], dir2=(-1,0) [West]
-    // dir1 und dir2 sind linear unabhängig (Kreuzprodukt ≠ 0)
+    // dir1 und dir2 sind linear unabhaengig (Kreuzprodukt ≠ 0)
     let p0 = Vec2::new(0.0, 0.0);
     let p3 = Vec2::new(10.0, 0.0);
     let dir1 = Vec2::new(0.0, 1.0); // Nord
@@ -528,7 +528,7 @@ fn test_solve_cps_symmetric_horizontal() {
     let result = solve_cps_from_apex_both_tangents(p0, p3, dir1, dir2, apex);
     assert!(
         result.is_some(),
-        "Sollte lösbar sein (nicht-parallele Tangenten)"
+        "Sollte loesbar sein (nicht-parallele Tangenten)"
     );
     let (cp1, cp2) = result.unwrap();
 
@@ -547,7 +547,7 @@ fn test_solve_cps_symmetric_horizontal() {
 
 #[test]
 fn test_solve_cps_parallel_tangents_returns_none() {
-    // Parallele Tangenten → keine eindeutige Lösung
+    // Parallele Tangenten → keine eindeutige Loesung
     let p0 = Vec2::new(0.0, 0.0);
     let p3 = Vec2::new(10.0, 0.0);
     let dir1 = Vec2::new(1.0, 0.0); // Ost
@@ -584,7 +584,7 @@ fn test_solve_cps_asymmetric_apex() {
         cp2
     );
 
-    // Prüfen ob B(0.5) ≈ apex
+    // Pruefen ob B(0.5) ≈ apex
     let b_half = (p0 + 3.0 * cp1 + 3.0 * cp2 + p3) / 8.0;
     assert!(
         (b_half - apex).length() < 1e-3,
@@ -632,7 +632,7 @@ fn test_auto_suggest_end_tangent_picks_best_outgoing() {
     tool.start = Some(ToolAnchor::NewPosition(Vec2::ZERO));
     tool.end = Some(ToolAnchor::NewPosition(Vec2::new(10.0, 0.0)));
 
-    // Ausgehende Verbindung nach Osten (angle=0 → Richtung away_dir stimmt überein)
+    // Ausgehende Verbindung nach Osten (angle=0 → Richtung away_dir stimmt ueberein)
     tool.tangents.end_neighbors = vec![ConnectedNeighbor {
         neighbor_id: 77,
         angle: 0.0,
@@ -661,7 +661,7 @@ fn test_auto_suggest_end_tangent_rejects_bad_direction() {
     tool.start = Some(ToolAnchor::NewPosition(Vec2::ZERO));
     tool.end = Some(ToolAnchor::NewPosition(Vec2::new(10.0, 0.0)));
 
-    // Verbindung zeigt zurück zum Startpunkt (angle=PI → Richtung entgegen away_dir)
+    // Verbindung zeigt zurueck zum Startpunkt (angle=PI → Richtung entgegen away_dir)
     tool.tangents.end_neighbors = vec![ConnectedNeighbor {
         neighbor_id: 88,
         angle: std::f32::consts::PI,
@@ -685,7 +685,7 @@ fn test_auto_suggest_start_tangent_fallback_on_bad_direction() {
     tool.end = Some(ToolAnchor::NewPosition(Vec2::new(10.0, 0.0)));
 
     // Ausgehende Verbindung nach Osten am Startpunkt.
-    // Für Start-Fortsetzungsrichtung (angle + PI) ist der Dot negativ,
+    // Fuer Start-Fortsetzungsrichtung (angle + PI) ist der Dot negativ,
     // dennoch soll jetzt ein Fallback gesetzt werden.
     tool.tangents.start_neighbors = vec![ConnectedNeighbor {
         neighbor_id: 123,

@@ -1,37 +1,37 @@
 # UI API Documentation
 
-## Überblick
+## Ueberblick
 
-Das `ui`-Modul enthält egui-UI-Komponenten (Menüs, Statusbar, Input-Handling, Dialoge). Interaktionen emittieren primär `AppIntent`s; direkte Mutation von Fachzustand wird vermieden.
+Das `ui`-Modul enthaelt egui-UI-Komponenten (Menues, Statusbar, Input-Handling, Dialoge). Interaktionen emittieren primaer `AppIntent`s; direkte Mutation von Fachzustand wird vermieden.
 
 ## Module
 
-- `menu.rs` — Top-Menü-Leiste
+- `menu.rs` — Top-Menue-Leiste
 - `status.rs` — Statusleiste
 - `toolbar.rs` — Werkzeugleiste
 - `properties.rs` — Properties-Panel (Detailanzeige selektierter Nodes)
-- `options_dialog/` — Optionen-Dialog für Laufzeit-Einstellungen (`mod.rs`, `sections.rs`)
+- `options_dialog/` — Optionen-Dialog fuer Laufzeit-Einstellungen (`mod.rs`, `sections.rs`)
 - `tool_preview.rs` — Tool-Preview-Overlay (Route-Tool-Vorschau im Viewport)
 - `input/` — Viewport-Input-Orchestrator (phasenbasierte Submodule)
   - `clicks.rs` — Klick-Events (Einfach-/Doppel-Klick, Tool-Routing)
   - `drag_primary.rs` — Drag-Start/-Ende (Selektion-Move, Kamera-Pan, Route-Tool-Drag)
-  - `pointer_delta.rs` — Pan/Move-Deltas während aktiver Drags
+  - `pointer_delta.rs` — Pan/Move-Deltas waehrend aktiver Drags
   - `zoom.rs` — Scroll-Zoom auf Mausposition
   - `keyboard.rs` — Tastatur-Shortcuts (Delete, Escape, Ctrl+A) [Peer-Modul]
   - `drag.rs` — Drag-Selektion-Overlay und DragSelection-Typen [Peer-Modul]
-  - `context_menu/` — Rechtsklick-Kontextmenü mit validiertem Command-System
+  - `context_menu/` — Rechtsklick-Kontextmenue mit validiertem Command-System
     - `commands/mod.rs` — CommandId, Precondition, MenuCatalog, validate_entries()
     - `commands/catalogs.rs` — Katalog-Konstruktoren: `for_empty_area()`, `for_node_focused()`, `for_selection_only()`, `for_route_tool()`
     - `commands/validation.rs` — Precondition-Auswertung und Separator-Cleanup
     - `commands/preconditions.rs` — Precondition-Enum und is_valid()-Logik
-    - `commands/tests.rs` — Unit-Tests für Kataloge, Preconditions und Intent-Mapping
+    - `commands/tests.rs` — Unit-Tests fuer Kataloge, Preconditions und Intent-Mapping
     - `mod.rs` — MenuVariant (`EmptyArea`, `NodeFocused`, `SelectionOnly`, `RouteTool`), `determine_menu_variant()`, `render_context_menu()`
 - `dialogs/` — Datei-Dialoge und modale Fenster
   - `file_dialogs.rs` — Open/Save-Dateidialoge
   - `heightmap_warning.rs` — Heightmap-Warnung vor dem Speichern
   - `marker_dialog.rs` — Marker erstellen/bearbeiten
-  - `dedup_dialog.rs` — Duplikat-Bestätigungsdialog
-  - `zip_browser.rs` — ZIP-Browser für Background-Map-Auswahl
+  - `dedup_dialog.rs` — Duplikat-Bestaetigungsdialog
+  - `zip_browser.rs` — ZIP-Browser fuer Background-Map-Auswahl
   - `post_load_dialog.rs` — Post-Load-Dialog (Auto-Erkennung von Heightmap/ZIP/Overview)
   - `save_overview_dialog.rs` — Dialog: Hintergrundbild als overview.jpg speichern
 
@@ -39,27 +39,27 @@ Das `ui`-Modul enthält egui-UI-Komponenten (Menüs, Statusbar, Input-Handling, 
 
 ### `render_menu`
 
-Rendert die Top-Menü-Leiste und gibt gesammelte Intents zurück.
+Rendert die Top-Menue-Leiste und gibt gesammelte Intents zurueck.
 
 ```rust
 pub fn render_menu(ctx: &egui::Context, state: &AppState) -> Vec<AppIntent>
 ```
 
-**Menü-Struktur:**
+**Menue-Struktur:**
 - **File**
   - Open... → `AppIntent::OpenFileRequested`
   - Save (nur wenn Datei geladen) → `AppIntent::SaveRequested`
   - Save As... (nur wenn Datei geladen) → `AppIntent::SaveAsRequested`
   - Select/Change Heightmap... → `AppIntent::HeightmapSelectionRequested`
   - Clear Heightmap (nur wenn gesetzt) → `AppIntent::HeightmapCleared`
-  - Übersichtskarte generieren... → `AppIntent::GenerateOverviewRequested`
+  - Uebersichtskarte generieren... → `AppIntent::GenerateOverviewRequested`
   - Exit → `AppIntent::ExitRequested`
 
 - **View**
   - Reset Camera → `AppIntent::ResetCameraRequested`
   - Zoom In → `AppIntent::ZoomInRequested`
   - Zoom Out → `AppIntent::ZoomOutRequested`
-  - Hintergrund laden/ändern → `AppIntent::BackgroundMapSelectionRequested`
+  - Hintergrund laden/aendern → `AppIntent::BackgroundMapSelectionRequested`
   - Render Quality → Submenu (Low/Medium/High) → `AppIntent::RenderQualityChanged`
   - Options... → `AppIntent::OpenOptionsDialogRequested`
 
@@ -70,7 +70,7 @@ pub fn render_menu(ctx: &egui::Context, state: &AppState) -> Vec<AppIntent>
 
 ### `render_toolbar`
 
-Rendert die Werkzeugleiste (Select, Connect, AddNode) und gibt gesammelte Intents zurück.
+Rendert die Werkzeugleiste (Select, Connect, AddNode) und gibt gesammelte Intents zurueck.
 
 ```rust
 pub fn render_toolbar(ctx: &egui::Context, state: &AppState) -> Vec<AppIntent>
@@ -82,10 +82,10 @@ pub fn render_toolbar(ctx: &egui::Context, state: &AppState) -> Vec<AppIntent>
 
 Rendert das Properties-Panel mit Detailanzeige selektierter Nodes (IDs, Positionen, Verbindungen).
 
-Zeigt tool- und selektionsabhängig:
+Zeigt tool- und selektionsabhaengig:
 - Distanzen-Panel (wenn ≥ 2 Nodes selektiert): Catmull-Rom-Resample (→ `ResamplePathRequested`)
 - Route-Tool-Konfiguration (wenn `active_tool == EditorTool::Route`)
-- Standard-Richtung und Straßenart-Selector
+- Standard-Richtung und Strassenart-Selector
 
 **Hinweis:** Node-Verhalten-Einstellungen (reconnect_on_delete, split_connection_on_place) sind jetzt in `render_options_dialog()` integriert.
 
@@ -126,8 +126,8 @@ pub fn render_status_bar(ctx: &egui::Context, state: &AppState)
 
 ### `render_edit_panel`
 
-Rendert das schwebende Edit-Panel für aktive Modi (Streckenteilung, Route-Tool)
-und gibt erzeugte Intents zurück.
+Rendert das schwebende Edit-Panel fuer aktive Modi (Streckenteilung, Route-Tool)
+und gibt erzeugte Intents zurueck.
 
 ```rust
 pub fn render_edit_panel(
@@ -148,7 +148,7 @@ pub fn render_edit_panel(
 
 ### `InputState`
 
-Orchestrator für Viewport-Input. Delegiert die eigentliche Logik an Sub-Module (`keyboard`, `drag`, `context_menu`).
+Orchestrator fuer Viewport-Input. Delegiert die eigentliche Logik an Sub-Module (`keyboard`, `drag`, `context_menu`).
 
 ```rust
 pub struct InputState { /* intern */ }
@@ -169,17 +169,18 @@ let intents = input.collect_viewport_events(
     ui, &response, viewport_size,
     &camera, road_map.as_deref(), &selected_node_ids,
     active_tool, route_tool_is_drawing,
-    &options, &drag_targets, distanzen_active,
+  &options, default_direction, default_priority,
+  &drag_targets, &mut distanzen_state, tangent_data,
 );
 ```
 
 **Sub-Module:**
 
 - **`keyboard`:** Verarbeitet Tastatur-Shortcuts
-  - `Delete` → Node(s) löschen
+  - `Delete` → Node(s) loeschen
   - `Escape` → Selektion aufheben
   - `Ctrl+A` → Alle selektieren
-  - `Ctrl+O` → Datei öffnen
+  - `Ctrl+O` → Datei oeffnen
   - `Ctrl+S` → Datei speichern
   - `Ctrl+Z` → Undo
   - `Ctrl+Y` → Redo
@@ -191,9 +192,9 @@ let intents = input.collect_viewport_events(
   - Shift+Alt+Drag → Lasso-Selektion
   - Mittel/Rechts-Drag → Kamera-Pan
 
-- **`context_menu`:** Rechtsklick-Kontextmenü mit validiertem Command-System (CommandId + Preconditions → nur gültige Einträge). Streckenteilung-Widget wird nur angezeigt wenn `RoadMap::is_resampleable_chain()` für die aktuelle Selektion `true` liefert (zusammenhängende Kette, Kreuzungen nur an Endpunkten).
+- **`context_menu`:** Rechtsklick-Kontextmenue mit validiertem Command-System (CommandId + Preconditions → nur gueltige Eintraege). SVG-Icons werden aus `assets/` gerendert und ueber `EditorOptions` sowie die aktuell gewaehlte Standard-Richtung/-Prioritaet eingefaerbt. Streckenteilung-Widget wird nur angezeigt wenn `RoadMap::is_resampleable_chain()` fuer die aktuelle Selektion `true` liefert (zusammenhaengende Kette, Kreuzungen nur an Endpunkten).
 
-**Unterstützte Interaktionen (gesamt):**
+**Unterstuetzte Interaktionen (gesamt):**
 - **Linksklick:** Node-Pick (mit Shift: additiv + Pfad-Erweiterung)
 - **Doppelklick:** Segment-Selektion zwischen Kreuzungen
 - **Links-Drag:** Kamera-Pan, Selektion-Move, oder Route-Tool-Steuerpunkt-Drag
@@ -201,7 +202,7 @@ let intents = input.collect_viewport_events(
 - **Shift+Alt+Drag:** Lasso-Selektion
 - **Mittel/Rechts-Drag:** Kamera-Pan
 - **Scroll:** Zoom
-- **Rechtsklick:** Kontextmenü
+- **Rechtsklick:** Kontextmenue
 
 ---
 
@@ -227,7 +228,7 @@ pub fn show_heightmap_warning(ctx: &egui::Context, show: bool) -> Vec<AppIntent>
 
 ### `show_options_dialog`
 
-Zeigt den Optionen-Dialog als modales Fenster (Farben, Größen, Zoom-Schritte).
+Zeigt den Optionen-Dialog als modales Fenster (Farben, Groessen, Zoom-Schritte).
 
 ```rust
 pub fn show_options_dialog(
@@ -297,14 +298,14 @@ pub fn show_marker_dialog(
 
 ### `show_dedup_dialog`
 
-Zeigt den Duplikat-Bereinigungsdialog als modales Fenster. Erscheint nach dem Laden einer XML-Datei, wenn duplizierte Nodes erkannt wurden. Der Benutzer kann die Bereinigung bestätigen oder abbrechen.
+Zeigt den Duplikat-Bereinigungsdialog als modales Fenster. Erscheint nach dem Laden einer XML-Datei, wenn duplizierte Nodes erkannt wurden. Der Benutzer kann die Bereinigung bestaetigen oder abbrechen.
 
 ```rust
 pub fn show_dedup_dialog(ctx: &egui::Context, ui_state: &UiState) -> Vec<AppIntent>
 ```
 
 **Emittierte Intents:**
-- `AppIntent::DeduplicateConfirmed` — Benutzer bestätigt Bereinigung
+- `AppIntent::DeduplicateConfirmed` — Benutzer bestaetigt Bereinigung
 - `AppIntent::DeduplicateCancelled` — Benutzer bricht ab
 
 **Layout:**
@@ -319,50 +320,50 @@ pub fn show_dedup_dialog(ctx: &egui::Context, ui_state: &UiState) -> Vec<AppInte
 
 ### `show_zip_browser`
 
-Zeigt den ZIP-Browser-Dialog zur Auswahl einer Bilddatei aus einem ZIP-Archiv. Erscheint wenn eine `.zip`-Datei als Background-Map gewählt wurde und mehrere Bilddateien enthält. Bei genau einem Bild im ZIP wird automatisch geladen (kein Dialog).
+Zeigt den ZIP-Browser-Dialog zur Auswahl einer Bilddatei aus einem ZIP-Archiv. Erscheint wenn eine `.zip`-Datei als Background-Map gewaehlt wurde und mehrere Bilddateien enthaelt. Bei genau einem Bild im ZIP wird automatisch geladen (kein Dialog).
 
 ```rust
 pub fn show_zip_browser(ctx: &egui::Context, ui_state: &mut UiState) -> Vec<AppIntent>
 ```
 
 **Emittierte Intents:**
-- `AppIntent::ZipBackgroundFileSelected { zip_path, entry_name }` — Bild aus ZIP gewählt (Doppelklick oder Übernehmen-Button)
+- `AppIntent::ZipBackgroundFileSelected { zip_path, entry_name }` — Bild aus ZIP gewaehlt (Doppelklick oder Uebernehmen-Button)
 - `AppIntent::ZipBrowserCancelled` — Abbrechen oder X-Button
 
 **Layout:**
 ```
-[Titel: "Bild aus ZIP wählen"]
+[Titel: "Bild aus ZIP waehlen"]
   N Bilddateien gefunden:
   ┌─────────────────────────┐
   │  maps/overview.dds      │  ← scrollbar, selectable
   │  maps/detail.png        │
   └─────────────────────────┘
-  [Übernehmen]  [Abbrechen]
+  [Uebernehmen]  [Abbrechen]
 ```
 
 ---
 
 ### `show_post_load_dialog`
 
-Zeigt den Post-Load-Dialog nach dem Laden einer XML-Datei. Informiert über automatisch erkannte Heightmap und bietet die Möglichkeit, eine Übersichtskarte aus einem passenden Map-Mod-ZIP zu generieren.
+Zeigt den Post-Load-Dialog nach dem Laden einer XML-Datei. Informiert ueber automatisch erkannte Heightmap und bietet die Moeglichkeit, eine Uebersichtskarte aus einem passenden Map-Mod-ZIP zu generieren.
 
 ```rust
 pub fn show_post_load_dialog(ctx: &egui::Context, ui_state: &mut UiState) -> Vec<AppIntent>
 ```
 
 **Emittierte Intents:**
-- `AppIntent::PostLoadGenerateOverview { zip_path }` — Benutzer will Übersichtskarte generieren
-- `AppIntent::PostLoadDialogDismissed` — Benutzer schließt den Dialog
+- `AppIntent::PostLoadGenerateOverview { zip_path }` — Benutzer will Uebersichtskarte generieren
+- `AppIntent::PostLoadDialogDismissed` — Benutzer schliesst den Dialog
 
 **Layout:**
 ```
 [Titel: "Nach dem Laden erkannt"]
   ✓ Heightmap automatisch geladen
      terrain.heightmap.png
-  Karte: "Höflingen"
+  Karte: "Hoeflingen"
   Passender Map-Mod gefunden:
      📦 FS25_Hoeflingen.zip
-  [Übersichtskarte generieren]  [Schließen]
+  [Uebersichtskarte generieren]  [Schliessen]
 ```
 
 Bei mehreren ZIPs werden RadioButtons zur Auswahl angezeigt.
@@ -371,7 +372,7 @@ Bei mehreren ZIPs werden RadioButtons zur Auswahl angezeigt.
 
 ### `show_overview_options_dialog`
 
-Zeigt den Layer-Dialog für die Übersichtskarten-Generierung (Hillshade/Farmlands/IDs/POIs/Legende).
+Zeigt den Layer-Dialog fuer die Uebersichtskarten-Generierung (Hillshade/Farmlands/IDs/POIs/Legende).
 
 ```rust
 pub fn show_overview_options_dialog(
@@ -388,14 +389,14 @@ pub fn show_overview_options_dialog(
 
 ### `show_save_overview_dialog`
 
-Zeigt den Dialog "Hintergrundbild als overview.jpg speichern?" nach dem Laden eines Hintergrundbildes aus einem ZIP-Archiv oder nach Generierung einer Übersichtskarte. Erscheint nur wenn eine XML-Datei geladen ist und noch keine overview.jpg im selben Verzeichnis existiert.
+Zeigt den Dialog "Hintergrundbild als overview.jpg speichern?" nach dem Laden eines Hintergrundbildes aus einem ZIP-Archiv oder nach Generierung einer Uebersichtskarte. Erscheint nur wenn eine XML-Datei geladen ist und noch keine overview.jpg im selben Verzeichnis existiert.
 
 ```rust
 pub fn show_save_overview_dialog(ctx: &egui::Context, ui_state: &mut UiState) -> Vec<AppIntent>
 ```
 
 **Emittierte Intents:**
-- `AppIntent::SaveBackgroundAsOverviewConfirmed` — Benutzer bestätigt Speichern
+- `AppIntent::SaveBackgroundAsOverviewConfirmed` — Benutzer bestaetigt Speichern
 - `AppIntent::SaveBackgroundAsOverviewDismissed` — Benutzer lehnt ab
 
 **Layout:**
@@ -404,7 +405,7 @@ pub fn show_save_overview_dialog(ctx: &egui::Context, ui_state: &mut UiState) ->
   Soll das Hintergrundbild als overview.jpg
   im Savegame-Verzeichnis gespeichert werden?
   /pfad/zur/overview.jpg
-  Beim nächsten Laden wird es automatisch als Hintergrund verwendet.
+  Beim naechsten Laden wird es automatisch als Hintergrund verwendet.
   [Ja, speichern]  [Nein]
 ```
 

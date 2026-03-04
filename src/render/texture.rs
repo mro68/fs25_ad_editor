@@ -1,14 +1,14 @@
-//! Texture-Utilities für wgpu.
+//! Texture-Utilities fuer wgpu.
 
 use image::DynamicImage;
 
 /// Erstellt eine wgpu-Texture aus einem DynamicImage
 ///
 /// # Parameter
-/// - `device`: wgpu-Device für Texture-Erstellung
-/// - `queue`: wgpu-Queue für Daten-Upload
+/// - `device`: wgpu-Device fuer Texture-Erstellung
+/// - `queue`: wgpu-Queue fuer Daten-Upload
 /// - `image`: Bilddaten (wird zu RGBA8 konvertiert)
-/// - `label`: Debug-Label für die Texture
+/// - `label`: Debug-Label fuer die Texture
 ///
 /// # Returns
 /// Die erstellte Texture mit Sampler
@@ -85,9 +85,9 @@ pub fn create_texture_from_image(
 // TODO(Mipmap): Bei Bedarf Mipmap-Generierung implementieren (Compute-Pass oder CPU-seitig).\n// Tracker: https://github.com/gfx-rs/wgpu/issues/661
 
 #[cfg(test)]
-/// Berechnet die Anzahl der Mip-Levels für eine gegebene Texture-Größe (aktuell nur in Tests)
+/// Berechnet die Anzahl der Mip-Levels fuer eine gegebene Texture-Groesse (aktuell nur in Tests)
 fn calculate_mip_levels(size: u32) -> u32 {
-    // Für sehr kleine Textures (< 256) lohnen sich Mipmaps nicht
+    // Fuer sehr kleine Textures (< 256) lohnen sich Mipmaps nicht
     if size <= 256 {
         return 1;
     }
@@ -116,7 +116,7 @@ mod tests {
         assert_eq!(calculate_mip_levels(2048), 4); // log2(2048) = 11
         assert_eq!(calculate_mip_levels(4096), 5); // log2(4096) = 12
 
-        // Große Textures: limitiert auf 8
+        // Grosse Textures: limitiert auf 8
         assert_eq!(calculate_mip_levels(8192), 6); // log2(8192) = 13
         assert_eq!(calculate_mip_levels(16384), 7); // log2(16384) = 14
         assert_eq!(calculate_mip_levels(32768), 8); // limitiert
@@ -126,6 +126,6 @@ mod tests {
     fn test_mip_levels_edge_cases() {
         assert_eq!(calculate_mip_levels(1), 1);
         assert_eq!(calculate_mip_levels(2), 1);
-        assert_eq!(calculate_mip_levels(65536), 8); // sehr groß -> limitiert
+        assert_eq!(calculate_mip_levels(65536), 8); // sehr gross -> limitiert
     }
 }

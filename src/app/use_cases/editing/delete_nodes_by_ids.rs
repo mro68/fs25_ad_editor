@@ -1,25 +1,25 @@
-//! Use-Case: Bestimmte Nodes per ID löschen (für Route-Tool-Neuberechnung).
+//! Use-Case: Bestimmte Nodes per ID loeschen (fuer Route-Tool-Neuberechnung).
 //!
-//! Enthält auch die gemeinsame interne Löschlogik `delete_nodes_internal`,
+//! Enthaelt auch die gemeinsame interne Loeschlogik `delete_nodes_internal`,
 //! die sowohl von `delete_selected_nodes` als auch von `delete_nodes_by_ids` genutzt wird.
 
 use crate::app::AppState;
 use crate::core::RoadMap;
 use std::sync::Arc;
 
-/// Gemeinsame interne Löschlogik für Nodes.
+/// Gemeinsame interne Loeschlogik fuer Nodes.
 ///
-/// Führt die Kern-Schritte aus:
-/// 1. Nachbar-Nodes sammeln, deren Flags sich ändern könnten
-/// 2. Optional: Marker der zu löschenden Nodes entfernen (Cascade Delete)
+/// Fuehrt die Kern-Schritte aus:
+/// 1. Nachbar-Nodes sammeln, deren Flags sich aendern koennten
+/// 2. Optional: Marker der zu loeschenden Nodes entfernen (Cascade Delete)
 /// 3. Nodes entfernen
 /// 4. Flags der verbleibenden Nachbarn neu berechnen
 /// 5. Spatial-Index aktualisieren
 pub(crate) fn delete_nodes_internal(road_map: &mut RoadMap, ids: &[u64], remove_markers: bool) {
-    // HashSet für O(1)-Lookup statt O(n) Vec::contains
+    // HashSet fuer O(1)-Lookup statt O(n) Vec::contains
     let id_set: std::collections::HashSet<u64> = ids.iter().copied().collect();
 
-    // Nachbar-Nodes sammeln, deren Flags sich ändern könnten
+    // Nachbar-Nodes sammeln, deren Flags sich aendern koennten
     let mut affected_neighbors: Vec<u64> = Vec::new();
     for conn in road_map.connections_iter() {
         if id_set.contains(&conn.start_id) && !id_set.contains(&conn.end_id) {
@@ -30,7 +30,7 @@ pub(crate) fn delete_nodes_internal(road_map: &mut RoadMap, ids: &[u64], remove_
         }
     }
 
-    // Marker der zu löschenden Nodes entfernen (Cascade Delete)
+    // Marker der zu loeschenden Nodes entfernen (Cascade Delete)
     if remove_markers {
         let mut markers_removed = 0;
         for &id in ids {
@@ -52,11 +52,11 @@ pub(crate) fn delete_nodes_internal(road_map: &mut RoadMap, ids: &[u64], remove_
         road_map.recalculate_node_flags(&affected_neighbors);
     }
 
-    // Spatial-Index einmalig nach allen Löschungen aktualisieren
+    // Spatial-Index einmalig nach allen Loeschungen aktualisieren
     road_map.ensure_spatial_index();
 }
 
-/// Löscht die angegebenen Nodes und deren Connections.
+/// Loescht die angegebenen Nodes und deren Connections.
 /// Erstellt KEINEN Undo-Snapshot (Caller verantwortlich).
 pub fn delete_nodes_by_ids(state: &mut AppState, ids: &[u64]) {
     if ids.is_empty() {
@@ -70,7 +70,7 @@ pub fn delete_nodes_by_ids(state: &mut AppState, ids: &[u64]) {
 
     delete_nodes_internal(road_map, ids, false);
 
-    // Gelöschte Nodes aus Selektion entfernen
+    // Geloeschte Nodes aus Selektion entfernen
     for &id in ids {
         state.selection.ids_mut().shift_remove(&id);
     }
@@ -78,5 +78,5 @@ pub fn delete_nodes_by_ids(state: &mut AppState, ids: &[u64]) {
     // Segment-Registry: Records mit diesen Nodes invalidieren
     state.segment_registry.invalidate_by_node_ids(ids);
 
-    log::debug!("{} Nodes gelöscht (Route-Tool-Neuberechnung)", ids.len());
+    log::debug!("{} Nodes geloescht (Route-Tool-Neuberechnung)", ids.len());
 }

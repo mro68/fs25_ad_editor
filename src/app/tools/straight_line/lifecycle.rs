@@ -25,7 +25,7 @@ impl RouteTool for StraightLineTool {
         match (&self.start, &self.end) {
             (None, _) => "Startpunkt klicken",
             (Some(_), None) => "Endpunkt klicken",
-            (Some(_), Some(_)) => "Bereit — Enter zum Ausführen, Escape zum Abbrechen",
+            (Some(_), Some(_)) => "Bereit — Enter zum Ausfuehren, Escape zum Abbrechen",
         }
     }
 
@@ -93,10 +93,10 @@ impl RouteTool for StraightLineTool {
         )
     }
 
-    /// Setzt das Tool auf den Anfangszustand zurück.
+    /// Setzt das Tool auf den Anfangszustand zurueck.
     ///
-    /// Löscht nur Start/End. `lifecycle.last_created_ids` und `last_*_anchor`
-    /// bleiben erhalten für Verkettung und Nachbearbeitung.
+    /// Loescht nur Start/End. `lifecycle.last_created_ids` und `last_*_anchor`
+    /// bleiben erhalten fuer Verkettung und Nachbearbeitung.
     fn reset(&mut self) {
         self.start = None;
         self.end = None;
@@ -117,7 +117,7 @@ impl RouteTool for StraightLineTool {
     }
 
     fn save_anchors_for_recreate(&mut self, _road_map: &RoadMap) {
-        // Anker nur überschreiben wenn aktuelle start/end gesetzt sind.
+        // Anker nur ueberschreiben wenn aktuelle start/end gesetzt sind.
         // Beim Recreate sind start/end None — Anker bleiben erhalten.
         if self.start.is_some() {
             self.last_start_anchor = self.start;

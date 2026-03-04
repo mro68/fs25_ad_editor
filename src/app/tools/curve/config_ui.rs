@@ -1,9 +1,9 @@
-//! UI-Konfigurationspanel und Kontextmenü für das Bézier-Kurven-Tool.
+//! UI-Konfigurationspanel und Kontextmenue fuer das Bézier-Kurven-Tool.
 //!
-//! Enthält:
+//! Enthaelt:
 //! - `render_config_view` — Grad-Auswahl + Tangenten + Segment-Konfiguration im Properties-Panel
-//! - `build_tangent_menu_data` — Datenaufbereitung für Tangenten-Kontextmenü
-//! - `apply_tangent_from_menu` — Anwendung der Tangenten-Auswahl aus dem Kontextmenü
+//! - `build_tangent_menu_data` — Datenaufbereitung fuer Tangenten-Kontextmenue
+//! - `apply_tangent_from_menu` — Anwendung der Tangenten-Auswahl aus dem Kontextmenue
 
 use super::super::common::{
     render_segment_config_3modes, render_tangent_combo, tangent_options, TangentMenuData,
@@ -15,7 +15,7 @@ use super::state::{CurveDegree, CurveTool, Phase};
 impl CurveTool {
     /// Rendert das Konfigurationspanel im Properties-Panel.
     ///
-    /// Gibt `true` zurück wenn sich eine Einstellung geändert hat.
+    /// Gibt `true` zurueck wenn sich eine Einstellung geaendert hat.
     pub(super) fn render_config_view(
         &mut self,
         ui: &mut egui::Ui,
@@ -40,7 +40,7 @@ impl CurveTool {
                 ui.selectable_value(&mut self.degree, CurveDegree::Cubic, "Kubisch (Grad 3)");
             });
         if self.degree != old_degree {
-            // Beim Gradwechsel CP2 und Tangenten zurücksetzen
+            // Beim Gradwechsel CP2 und Tangenten zuruecksetzen
             self.control_point2 = None;
             self.tangents.reset_tangents();
             changed = true;
@@ -53,7 +53,7 @@ impl CurveTool {
             && self.lifecycle.last_end_anchor.is_some()
             && self.last_control_point1.is_some();
 
-        // Tangenten-Konfiguration für kubische Kurven direkt im Panel sichtbar.
+        // Tangenten-Konfiguration fuer kubische Kurven direkt im Panel sichtbar.
         if self.degree == CurveDegree::Cubic {
             ui.separator();
             ui.label("Tangenten (Grad 3):");
@@ -62,7 +62,7 @@ impl CurveTool {
             let can_edit_tangents = in_control || adjusting;
 
             if !can_edit_tangents {
-                ui.small("Start- und Endpunkt setzen, um Tangenten auszuwählen.");
+                ui.small("Start- und Endpunkt setzen, um Tangenten auszuwaehlen.");
             }
 
             let mut tangent_changed = false;
@@ -134,7 +134,7 @@ impl CurveTool {
             adjusting,
             ready,
             length,
-            "Kurvenlänge",
+            "Kurvenlaenge",
             distance_wheel_step_m,
         );
         if recreate {
@@ -145,9 +145,9 @@ impl CurveTool {
         changed
     }
 
-    /// Liefert Tangenten-Menüdaten für das zentrale Kontextmenü (nur Daten, kein UI).
+    /// Liefert Tangenten-Menuedaten fuer das zentrale Kontextmenue (nur Daten, kein UI).
     ///
-    /// Nur aktiv für kubische Kurven in `Phase::Control` oder im Adjusting-Modus,
+    /// Nur aktiv fuer kubische Kurven in `Phase::Control` oder im Adjusting-Modus,
     /// wenn Nachbarn an Start- oder Endpunkt vorhanden sind.
     pub(super) fn build_tangent_menu_data(&self) -> Option<TangentMenuData> {
         if self.degree != CurveDegree::Cubic {
@@ -176,7 +176,7 @@ impl CurveTool {
         })
     }
 
-    /// Wendet die vom User gewählten Tangenten aus dem Kontextmenü an.
+    /// Wendet die vom User gewaehlten Tangenten aus dem Kontextmenue an.
     ///
     /// Aktualisiert Kontrollpunkte, derived state und setzt ggf. das Recreate-Flag.
     pub(super) fn apply_tangent_from_menu(

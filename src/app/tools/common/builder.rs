@@ -7,11 +7,11 @@ use super::super::{ToolAnchor, ToolResult};
 
 /// Baut ein `ToolResult` aus einer Positions-Sequenz und Start-/End-Ankern.
 ///
-/// Diese Funktion enthält die gemeinsame Logik aller Route-Tools:
-/// 1. Neue Nodes für Positionen erzeugen (existierende Nodes überspringen)
+/// Diese Funktion enthaelt die gemeinsame Logik aller Route-Tools:
+/// 1. Neue Nodes fuer Positionen erzeugen (existierende Nodes ueberspringen)
 /// 2. Interne und externe Verbindungen zwischen aufeinanderfolgenden Positionen aufbauen
 ///
-/// Die Geometrie (Positionen) wird vorher tool-spezifisch berechnet und übergeben.
+/// Die Geometrie (Positionen) wird vorher tool-spezifisch berechnet und uebergeben.
 pub fn assemble_tool_result(
     positions: &[Vec2],
     start: &ToolAnchor,
@@ -95,11 +95,11 @@ pub fn assemble_tool_result(
                 internal_connections.push((a, b, direction, priority));
             }
             (Some(a), _, None, Some(b_id)) => {
-                // Ende am existierenden Node: Kante läuft new -> existing.
+                // Ende am existierenden Node: Kante laeuft new -> existing.
                 external_connections.push((a, b_id, false, direction, priority));
             }
             (None, Some(a_id), Some(b), _) => {
-                // Start am existierenden Node: Kante läuft existing -> new.
+                // Start am existierenden Node: Kante laeuft existing -> new.
                 external_connections.push((b, a_id, true, direction, priority));
             }
             _ => {}

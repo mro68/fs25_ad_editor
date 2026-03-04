@@ -1,4 +1,4 @@
-//! Background-Map-Loader für Map-Hintergrund-Rendering.
+//! Background-Map-Loader fuer Map-Hintergrund-Rendering.
 
 use anyhow::{Context, Result};
 use image::{DynamicImage, GenericImageView, ImageReader};
@@ -6,7 +6,7 @@ use std::io::{BufReader, Cursor, Read};
 
 use super::WorldBounds;
 
-/// Bekannte Bild-Endungen für ZIP-Filterung
+/// Bekannte Bild-Endungen fuer ZIP-Filterung
 const IMAGE_EXTENSIONS: &[&str] = &["png", "jpg", "jpeg", "dds"];
 
 /// Eintrag einer Bilddatei in einem ZIP-Archiv.
@@ -14,11 +14,11 @@ const IMAGE_EXTENSIONS: &[&str] = &["png", "jpg", "jpeg", "dds"];
 pub struct ZipImageEntry {
     /// Dateiname im Archiv (inkl. Pfad)
     pub name: String,
-    /// Unkomprimierte Dateigröße in Bytes
+    /// Unkomprimierte Dateigroesse in Bytes
     pub size: u64,
 }
 
-/// Background-Map für Map-Hintergrund-Rendering
+/// Background-Map fuer Map-Hintergrund-Rendering
 pub struct BackgroundMap {
     /// Bilddaten (nach Center-Crop)
     image_data: DynamicImage,
@@ -29,31 +29,31 @@ pub struct BackgroundMap {
 }
 
 impl BackgroundMap {
-    /// Lädt eine Background-Map aus einer Datei
+    /// Laedt eine Background-Map aus einer Datei
     ///
-    /// Unterstützte Formate: PNG, JPG, JPEG, DDS
+    /// Unterstuetzte Formate: PNG, JPG, JPEG, DDS
     ///
     /// # Parameter
     /// - `path`: Pfad zur Bilddatei
-    /// - `crop_size`: Optionale Crop-Größe (quadratisch). Falls angegeben, wird ein Center-Crop durchgeführt.
+    /// - `crop_size`: Optionale Crop-Groesse (quadratisch). Falls angegeben, wird ein Center-Crop durchgefuehrt.
     pub fn load_from_file(path: &str, crop_size: Option<u32>) -> Result<Self> {
         // Zuerst versuchen wir die Erkennung anhand der Dateiendung.
-        // Falls das fehlschlägt (z.B. .dds-Datei die eigentlich PNG ist),
+        // Falls das fehlschlaegt (z.B. .dds-Datei die eigentlich PNG ist),
         // erkennen wir das Format anhand der Magic Bytes im Dateiinhalt.
         let image = match image::open(path) {
             Ok(img) => img,
             Err(ext_err) => {
                 log::warn!(
-                    "Format-Erkennung via Dateiendung fehlgeschlagen für '{}': {}. Versuche Erkennung via Dateiinhalt...",
+                    "Format-Erkennung via Dateiendung fehlgeschlagen fuer '{}': {}. Versuche Erkennung via Dateiinhalt...",
                     path, ext_err
                 );
                 let file = std::fs::File::open(path)
                     .with_context(|| format!("Datei nicht gefunden: {}", path))?;
                 let reader = ImageReader::new(BufReader::new(file))
                     .with_guessed_format()
-                    .with_context(|| format!("Format-Erkennung fehlgeschlagen für: {}", path))?;
+                    .with_context(|| format!("Format-Erkennung fehlgeschlagen fuer: {}", path))?;
                 if let Some(fmt) = reader.format() {
-                    log::info!("Tatsächliches Bildformat erkannt: {:?} für '{}'", fmt, path);
+                    log::info!("Tatsaechliches Bildformat erkannt: {:?} fuer '{}'", fmt, path);
                 }
                 reader.decode().with_context(|| {
                     format!("Fehler beim Dekodieren der Background-Map: {}", path)
@@ -64,17 +64,17 @@ impl BackgroundMap {
         Self::from_image(image, path, crop_size)
     }
 
-    /// Führt Center-Crop auf ein Bild durch
+    /// Fuehrt Center-Crop auf ein Bild durch
     ///
-    /// Schneidet das Bild auf die angegebene Zielgröße zu, zentriert.
-    /// Falls das Bild kleiner als die Zielgröße ist, wird es ohne Crop zurückgegeben.
+    /// Schneidet das Bild auf die angegebene Zielgroesse zu, zentriert.
+    /// Falls das Bild kleiner als die Zielgroesse ist, wird es ohne Crop zurueckgegeben.
     fn center_crop(image: DynamicImage, target_size: u32) -> Result<DynamicImage> {
         let (width, height) = image.dimensions();
 
-        // Keine Crop nötig, wenn Bild kleiner als Ziel
+        // Keine Crop noetig, wenn Bild kleiner als Ziel
         if width <= target_size && height <= target_size {
             log::warn!(
-                "Bild ({}x{}) ist kleiner als Crop-Größe ({}x{}), kein Crop durchgeführt",
+                "Bild ({}x{}) ist kleiner als Crop-Groesse ({}x{}), kein Crop durchgefuehrt",
                 width,
                 height,
                 target_size,
@@ -102,17 +102,17 @@ impl BackgroundMap {
         Ok(image.crop_imm(x, y, crop_width, crop_height))
     }
 
-    /// Gibt die Bilddaten zurück
+    /// Gibt die Bilddaten zurueck
     pub fn image_data(&self) -> &DynamicImage {
         &self.image_data
     }
 
-    /// Gibt die Weltkoordinaten-Begrenzungen zurück
+    /// Gibt die Weltkoordinaten-Begrenzungen zurueck
     pub fn world_bounds(&self) -> &WorldBounds {
         &self.world_bounds
     }
 
-    /// Gibt die aktuelle Opacity zurück
+    /// Gibt die aktuelle Opacity zurueck
     pub fn opacity(&self) -> f32 {
         self.opacity
     }
@@ -122,15 +122,15 @@ impl BackgroundMap {
         self.opacity = opacity.clamp(0.0, 1.0);
     }
 
-    /// Gibt die Dimensionen des Bildes zurück
+    /// Gibt die Dimensionen des Bildes zurueck
     pub fn dimensions(&self) -> (u32, u32) {
         self.image_data.dimensions()
     }
 
     /// Erstellt eine BackgroundMap aus einem bereits dekodierten Bild.
     ///
-    /// Gemeinsame Logik für `load_from_file()`, `load_from_zip()` und
-    /// `generate_overview_from_zip()`. Führt optionalen Center-Crop durch,
+    /// Gemeinsame Logik fuer `load_from_file()`, `load_from_zip()` und
+    /// `generate_overview_from_zip()`. Fuehrt optionalen Center-Crop durch,
     /// berechnet WorldBounds und loggt Dimensionen.
     pub(crate) fn from_image(
         image: DynamicImage,
@@ -145,12 +145,12 @@ impl BackgroundMap {
             source_label
         );
 
-        // Center-Crop durchführen, falls gewünscht
+        // Center-Crop durchfuehren, falls gewuenscht
         let image = if let Some(target_size) = crop_size {
             if orig_width != target_size || orig_height != target_size {
                 let cropped = Self::center_crop(image, target_size)?;
                 log::info!(
-                    "Center-Crop auf {}x{} durchgeführt",
+                    "Center-Crop auf {}x{} durchgefuehrt",
                     target_size,
                     target_size
                 );
@@ -184,13 +184,13 @@ impl BackgroundMap {
 
 /// Listet alle Bilddateien in einem ZIP-Archiv auf.
 ///
-/// Gibt Einträge mit Name und unkomprimierter Größe zurück,
-/// standardmäßig absteigend nach Größe sortiert.
+/// Gibt Eintraege mit Name und unkomprimierter Groesse zurueck,
+/// standardmaessig absteigend nach Groesse sortiert.
 pub fn list_images_in_zip(zip_path: &str) -> Result<Vec<ZipImageEntry>> {
     let file = std::fs::File::open(zip_path)
         .with_context(|| format!("ZIP-Datei nicht gefunden: {}", zip_path))?;
     let mut archive = zip::ZipArchive::new(BufReader::new(file))
-        .with_context(|| format!("Ungültiges ZIP-Archiv: {}", zip_path))?;
+        .with_context(|| format!("Ungueltiges ZIP-Archiv: {}", zip_path))?;
 
     let mut image_entries = Vec::new();
     for i in 0..archive.len() {
@@ -204,7 +204,7 @@ pub fn list_images_in_zip(zip_path: &str) -> Result<Vec<ZipImageEntry>> {
         }
     }
 
-    // Größste Dateien zuerst (typisch: overview.dds ist die größte)
+    // Groessste Dateien zuerst (typisch: overview.dds ist die groesste)
     image_entries.sort_by(|a, b| b.size.cmp(&a.size));
     log::info!(
         "ZIP '{}': {} Bilddateien gefunden",
@@ -214,7 +214,7 @@ pub fn list_images_in_zip(zip_path: &str) -> Result<Vec<ZipImageEntry>> {
     Ok(image_entries)
 }
 
-/// Lädt eine Bilddatei aus einem ZIP-Archiv als BackgroundMap.
+/// Laedt eine Bilddatei aus einem ZIP-Archiv als BackgroundMap.
 ///
 /// Die Datei wird komplett in-memory extrahiert und dann dekodiert.
 pub fn load_from_zip(
@@ -225,13 +225,13 @@ pub fn load_from_zip(
     let file = std::fs::File::open(zip_path)
         .with_context(|| format!("ZIP-Datei nicht gefunden: {}", zip_path))?;
     let mut archive = zip::ZipArchive::new(BufReader::new(file))
-        .with_context(|| format!("Ungültiges ZIP-Archiv: {}", zip_path))?;
+        .with_context(|| format!("Ungueltiges ZIP-Archiv: {}", zip_path))?;
 
     let mut zip_entry = archive
         .by_name(entry_name)
         .with_context(|| format!("Eintrag '{}' nicht im ZIP gefunden", entry_name))?;
 
-    // Komplett in Speicher lesen (nötig für Seek-Support bei DDS)
+    // Komplett in Speicher lesen (noetig fuer Seek-Support bei DDS)
     let mut buffer = Vec::with_capacity(zip_entry.size() as usize);
     zip_entry
         .read_to_end(&mut buffer)
@@ -246,7 +246,7 @@ pub fn load_from_zip(
     // Bild dekodieren (mit Format-Erkennung via Magic Bytes)
     let reader = ImageReader::new(Cursor::new(buffer))
         .with_guessed_format()
-        .with_context(|| format!("Format-Erkennung fehlgeschlagen für: {}", entry_name))?;
+        .with_context(|| format!("Format-Erkennung fehlgeschlagen fuer: {}", entry_name))?;
     let image = reader
         .decode()
         .with_context(|| format!("Fehler beim Dekodieren von '{}' aus ZIP", entry_name))?;
@@ -255,7 +255,7 @@ pub fn load_from_zip(
     BackgroundMap::from_image(image, &source_label, crop_size)
 }
 
-/// Prüft ob ein Dateiname eine bekannte Bild-Endung hat.
+/// Prueft ob ein Dateiname eine bekannte Bild-Endung hat.
 fn is_image_filename(name: &str) -> bool {
     let lower = name.to_lowercase();
     IMAGE_EXTENSIONS

@@ -1,6 +1,6 @@
 # XML API Documentation
 
-## Überblick
+## Ueberblick
 
 Das `xml`-Modul implementiert Import/Export von AutoDrive XML-Konfigurationen im Structure of Arrays (SoA) Format.
 
@@ -24,9 +24,9 @@ println!("Nodes: {}", road_map.node_count());
 
 **Features:**
 - Parst SoA-Format (parallele Listen: `<id>`, `<x>`, `<z>`, etc.)
-- Delimiter: Komma (`,`) für Listen, Semikolon (`;`) für verschachtelt
+- Delimiter: Komma (`,`) fuer Listen, Semikolon (`;`) fuer verschachtelt
 - **Flag-Bereinigung:** Flags 2 und 4 werden automatisch zu 0 konvertiert
-- Robustes ID-Mapping über HashMap
+- Robustes ID-Mapping ueber HashMap
 - Rekonstruiert Connections aus `out`/`incoming`-Listen
 
 **Fehler:**
@@ -62,9 +62,9 @@ std::fs::write("output.xml", xml)?;
 - Sortierte Node-IDs mit Remap auf fortlaufende IDs (`1..N`)
 - Berechnet `out`/`incoming`-Listen aus Connections
 - Schreibt MapMarkers als `<mmN>`-Elemente mit `<id>`, `<name>`, `<group>`
-- Float-Formatierung: 3 Dezimalstellen für Koordinaten
-- Konfigurierbare Höhenskala über `terrain_height_scale` (FS25-Standard: `255.0`)
-- XML-Escaping für Strings
+- Float-Formatierung: 3 Dezimalstellen fuer Koordinaten
+- Konfigurierbare Hoehenskala ueber `terrain_height_scale` (FS25-Standard: `255.0`)
+- XML-Escaping fuer Strings
 - Exakte Replikation des Original-Formats (encoding, standalone)
 
 **Output-Format:**
@@ -104,7 +104,7 @@ Daten werden als parallele Listen gespeichert:
 
 ```rust
 // out: "2,3" -> Node 1 verbindet zu 2 und 3
-// incoming: "1" -> Node 2 empfängt von 1
+// incoming: "1" -> Node 2 empfaengt von 1
 
 // Direction bestimmen:
 // - Dual: Wenn A->B UND B->A
@@ -114,9 +114,9 @@ Daten werden als parallele Listen gespeichert:
 
 ### Version-Support
 
-- **Version 3:** FS25 (primär)
+- **Version 3:** FS25 (primaer)
 - **Legacy:** Flags 2/4 werden beim Import bereinigt
 
 ## Roundtrip-Garantie
 
-Import → Export → Import sollte identische Daten liefern (außer Whitespace).
+Import → Export → Import sollte identische Daten liefern (ausser Whitespace).

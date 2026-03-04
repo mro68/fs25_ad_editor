@@ -1,16 +1,16 @@
-//! Solver-Logik für das Constraint-Route-Tool.
+//! Solver-Logik fuer das Constraint-Route-Tool.
 //!
 //! Pipeline: Waypoint-Kette → Approach/Departure-Steerer → Subdivide → Chaikin-Corner-Cutting
-//! → Positionen an `common::assemble_tool_result()` übergeben.
+//! → Positionen an `common::assemble_tool_result()` uebergeben.
 //!
-//! Kein finales Resampling — die krümmungsadaptive Verteilung des Corner-Cuttings
+//! Kein finales Resampling — die kruemmungsadaptive Verteilung des Corner-Cuttings
 //! wird beibehalten (mehr Nodes in Kurven, weniger auf Geraden).
 
 use super::super::{common, ToolAnchor, ToolResult};
 use crate::core::{ConnectionDirection, ConnectionPriority, RoadMap};
 use glam::Vec2;
 
-/// Eingabe-Parameter für den Constraint-Route-Solver.
+/// Eingabe-Parameter fuer den Constraint-Route-Solver.
 #[derive(Debug, Clone)]
 pub struct ConstraintRouteInput {
     /// Startposition der Route
@@ -21,13 +21,13 @@ pub struct ConstraintRouteInput {
     pub control_nodes: Vec<Vec2>,
     /// Maximaler Abstand zwischen aufeinanderfolgenden Nodes (Meter)
     pub max_segment_length_m: f32,
-    /// Maximale Richtungsänderung pro Segment (Grad)
+    /// Maximale Richtungsaenderung pro Segment (Grad)
     pub max_direction_change_deg: f32,
     /// Richtungsvektoren bestehender Verbindungen am Startpunkt
     pub start_neighbor_directions: Vec<Vec2>,
     /// Richtungsvektoren bestehender Verbindungen am Endpunkt
     pub end_neighbor_directions: Vec<Vec2>,
-    /// Minimaldistanz: Nodes die näher beieinander liegen werden gefiltert (Meter)
+    /// Minimaldistanz: Nodes die naeher beieinander liegen werden gefiltert (Meter)
     pub min_distance: f32,
 }
 
@@ -44,11 +44,11 @@ pub struct SolverResult {
 
 /// Hauptfunktion des Constraint-Route-Solvers.
 ///
-/// Erzeugt eine geglättete Waypoint-Kette die:
-/// 1. Durch Start, Kontrollpunkte und End verläuft
-/// 2. Winkel-Constraints einhält (Chaikin-Corner-Cutting)
-/// 3. Glatte Übergänge zu bestehenden Verbindungen sicherstellt (Steerer-Nodes)
-/// 4. Gleichmäßig abgetastete Punkte mit ≤ max_segment_length Abstand liefert
+/// Erzeugt eine geglaettete Waypoint-Kette die:
+/// 1. Durch Start, Kontrollpunkte und End verlaeuft
+/// 2. Winkel-Constraints einhaelt (Chaikin-Corner-Cutting)
+/// 3. Glatte Uebergaenge zu bestehenden Verbindungen sicherstellt (Steerer-Nodes)
+/// 4. Gleichmaessig abgetastete Punkte mit ≤ max_segment_length Abstand liefert
 pub fn solve_route(input: &ConstraintRouteInput) -> SolverResult {
     let max_angle_rad = input.max_direction_change_deg.to_radians();
     let total_dist = input.start.distance(input.end);
@@ -93,9 +93,9 @@ pub fn solve_route(input: &ConstraintRouteInput) -> SolverResult {
     // Schritt 3: Subdivide
     let mut positions = subdivide_polyline(&waypoints, input.max_segment_length_m);
 
-    // Schritt 4: Chaikin-Corner-Cutting (iterativ scharfe Ecken glätten)
+    // Schritt 4: Chaikin-Corner-Cutting (iterativ scharfe Ecken glaetten)
     // Kein finales Resampling — die Punkte bleiben dort, wo das Corner-Cutting
-    // sie natürlich platziert. Das ergibt eine krümmungsadaptive Verteilung:
+    // sie natuerlich platziert. Das ergibt eine kruemmungsadaptive Verteilung:
     // mehr Nodes in Kurven, weniger auf geraden Strecken.
     for _ in 0..128 {
         if max_turn_angle(&positions) <= max_angle_rad {
@@ -141,7 +141,7 @@ fn max_turn_angle(points: &[Vec2]) -> f32 {
 
 /// Chaikin-Corner-Cutting: Ersetzt die erste zu scharfe Ecke durch zwei Punkte.
 ///
-/// Gibt `true` zurück wenn eine Ecke geglättet wurde.
+/// Gibt `true` zurueck wenn eine Ecke geglaettet wurde.
 fn smooth_first_sharp_corner(points: &mut Vec<Vec2>, max_turn_rad: f32) -> bool {
     if points.len() < 3 {
         return false;
@@ -178,8 +178,8 @@ fn smooth_first_sharp_corner(points: &mut Vec<Vec2>, max_turn_rad: f32) -> bool 
 
 /// Berechnet einen Approach-Steerer-Node am Startpunkt.
 ///
-/// Sucht die Nachbar-Richtung die am stärksten gegen `forward` zeigt
-/// (= Ankunftsrichtung). Wenn der Winkel das Limit überschreitet,
+/// Sucht die Nachbar-Richtung die am staerksten gegen `forward` zeigt
+/// (= Ankunftsrichtung). Wenn der Winkel das Limit ueberschreitet,
 /// wird ein Steuerpunkt in Anfahrtsrichtung platziert.
 ///
 /// Reine Geometrie — kein RoadMap- oder AppState-Zugriff.
@@ -220,7 +220,7 @@ pub fn compute_approach_steerer(
 
 /// Berechnet einen Departure-Steerer-Node am Endpunkt.
 ///
-/// Sucht die Nachbar-Richtung die am stärksten in `forward`-Richtung zeigt.
+/// Sucht die Nachbar-Richtung die am staerksten in `forward`-Richtung zeigt.
 /// Die Route soll tangential am End-Node ankommen.
 ///
 /// Reine Geometrie — kein RoadMap- oder AppState-Zugriff.
@@ -258,7 +258,7 @@ pub fn compute_departure_steerer(
     Some(node_pos - depart_dir * step)
 }
 
-/// Filtert Nodes die näher als `min_dist` beieinanderliegen.
+/// Filtert Nodes die naeher als `min_dist` beieinanderliegen.
 ///
 /// Start- und Endpunkt werden immer beibehalten.
 fn filter_min_distance(points: &[Vec2], min_dist: f32) -> Vec<Vec2> {
@@ -282,7 +282,7 @@ fn filter_min_distance(points: &[Vec2], min_dist: f32) -> Vec<Vec2> {
     result
 }
 
-/// Unterteilt eine Polyline so, dass kein Segment länger als `max_length` ist.
+/// Unterteilt eine Polyline so, dass kein Segment laenger als `max_length` ist.
 fn subdivide_polyline(points: &[Vec2], max_length: f32) -> Vec<Vec2> {
     if points.is_empty() {
         return Vec::new();
@@ -308,7 +308,7 @@ fn subdivide_polyline(points: &[Vec2], max_length: f32) -> Vec<Vec2> {
     result
 }
 
-/// Parameter für `build_result` — vermeidet zu viele Funktionsargumente.
+/// Parameter fuer `build_result` — vermeidet zu viele Funktionsargumente.
 pub(crate) struct BuildResultParams<'a> {
     pub start: ToolAnchor,
     pub end: ToolAnchor,
@@ -322,7 +322,7 @@ pub(crate) struct BuildResultParams<'a> {
     pub priority: ConnectionPriority,
 }
 
-/// Gemeinsame build_result-Logik für `execute()` und `execute_from_anchors()`.
+/// Gemeinsame build_result-Logik fuer `execute()` und `execute_from_anchors()`.
 ///
 /// Berechnet Solver-Positionen und delegiert Node-/Verbindungs-Aufbau an `assemble_tool_result`.
 pub(crate) fn build_result(p: &BuildResultParams, road_map: &RoadMap) -> Option<ToolResult> {

@@ -1,6 +1,6 @@
-//! Feature-Handler für AppCommand-Verarbeitung.
+//! Feature-Handler fuer AppCommand-Verarbeitung.
 //!
-//! Jeder Handler gruppiert die Command-Ausführung eines Feature-Bereichs.
+//! Jeder Handler gruppiert die Command-Ausfuehrung eines Feature-Bereichs.
 //! Der Controller dispatcht an die passende Handler-Funktion.
 
 pub mod dialog;

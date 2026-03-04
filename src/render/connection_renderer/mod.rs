@@ -1,4 +1,4 @@
-//! Connection-Renderer für Verbindungen und Richtungspfeile.
+//! Connection-Renderer fuer Verbindungen und Richtungspfeile.
 //!
 //! Aufgeteilt in:
 //! - `culling` — Viewport-Culling-Geometrie
@@ -14,14 +14,14 @@ use eframe::{egui_wgpu, wgpu};
 use culling::{point_in_rect, segment_intersects_rect};
 use mesh::{connection_color, push_arrow, push_line_quad};
 
-/// Renderer für Connection-Linien inkl. Pfeilspitzen.
+/// Renderer fuer Connection-Linien inkl. Pfeilspitzen.
 pub struct ConnectionRenderer {
     pipeline: wgpu::RenderPipeline,
     uniform_buffer: wgpu::Buffer,
     bind_group: wgpu::BindGroup,
     vertex_buffer: Option<wgpu::Buffer>,
     vertex_capacity: usize,
-    /// Wiederverwendbarer Scratch-Buffer für Vertex-Daten (vermeidet per-Frame-Allokation)
+    /// Wiederverwendbarer Scratch-Buffer fuer Vertex-Daten (vermeidet per-Frame-Allokation)
     vertex_scratch: Vec<ConnectionVertex>,
 }
 
@@ -116,7 +116,7 @@ impl ConnectionRenderer {
 
     /// Rendert alle sichtbaren Verbindungen inkl. Pfeilspitzen.
     ///
-    /// Führt vor dem Draw-Call Viewport-Culling durch und aktualisiert
+    /// Fuehrt vor dem Draw-Call Viewport-Culling durch und aktualisiert
     /// den Vertex-Buffer nur bei Bedarf.
     pub fn render(
         &mut self,
@@ -152,7 +152,7 @@ impl ConnectionRenderer {
 
         self.vertex_scratch.clear();
         for connection in road_map.connections_iter() {
-            // Verbindungen zu ausgeblendeten Nodes überspringen
+            // Verbindungen zu ausgeblendeten Nodes ueberspringen
             if ctx.hidden_node_ids.contains(&connection.start_id)
                 || ctx.hidden_node_ids.contains(&connection.end_id)
             {
