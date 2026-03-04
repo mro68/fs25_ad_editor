@@ -6,7 +6,7 @@
 
 use crate::app::state::DistanzenState;
 use crate::app::tools::ToolManager;
-use crate::app::{AppIntent, EditorTool, RoadMap};
+use crate::app::{AppIntent, ConnectionDirection, ConnectionPriority, EditorTool, RoadMap};
 use indexmap::IndexSet;
 use std::collections::HashSet;
 use std::hash::{Hash, Hasher};
@@ -36,6 +36,8 @@ pub fn render_edit_panel(
     road_map: Option<&RoadMap>,
     selected_node_ids: &IndexSet<u64>,
     distanzen_state: &mut DistanzenState,
+    default_direction: ConnectionDirection,
+    default_priority: ConnectionPriority,
     distance_wheel_step_m: f32,
     active_tool: EditorTool,
     tool_manager: Option<&mut ToolManager>,
@@ -68,6 +70,8 @@ pub fn render_edit_panel(
                 render_route_tool_panel(
                     ctx,
                     manager,
+                    default_direction,
+                    default_priority,
                     distance_wheel_step_m,
                     panel_pos,
                     &mut events,
@@ -232,6 +236,8 @@ pub fn render_streckenteilung_controls(
 fn render_route_tool_panel(
     ctx: &egui::Context,
     tool_manager: &mut ToolManager,
+    default_direction: ConnectionDirection,
+    default_priority: ConnectionPriority,
     distance_wheel_step_m: f32,
     panel_pos: Option<egui::Pos2>,
     events: &mut Vec<AppIntent>,
@@ -257,6 +263,59 @@ fn render_route_tool_panel(
             ui.label(tool.status_text());
         }
 
+        ui.add_space(6.0);
+        ui.label("Richtung für neue Strecke:");
+        let mut selected_dir = default_direction;
+        egui::ComboBox::from_id_salt("route_tool_default_direction_floating")
+            .selected_text(direction_label(selected_dir))
+            .show_ui(ui, |ui| {
+                ui.selectable_value(
+                    &mut selected_dir,
+                    ConnectionDirection::Regular,
+                    "Regular (Einbahn)",
+                );
+                ui.selectable_value(
+                    &mut selected_dir,
+                    ConnectionDirection::Dual,
+                    "Dual (Bidirektional)",
+                );
+                ui.selectable_value(
+                    &mut selected_dir,
+                    ConnectionDirection::Reverse,
+                    "Reverse (Rückwärts)",
+                );
+            });
+        if selected_dir != default_direction {
+            events.push(AppIntent::SetDefaultDirectionRequested {
+                direction: selected_dir,
+            });
+        }
+
+        ui.add_space(4.0);
+        ui.label("Straßenart für neue Strecke:");
+        let mut selected_prio = default_priority;
+        egui::ComboBox::from_id_salt("route_tool_default_priority_floating")
+            .selected_text(priority_label(selected_prio))
+            .show_ui(ui, |ui| {
+                ui.selectable_value(
+                    &mut selected_prio,
+                    ConnectionPriority::Regular,
+                    "Hauptstraße",
+                );
+                ui.selectable_value(
+                    &mut selected_prio,
+                    ConnectionPriority::SubPriority,
+                    "Nebenstraße",
+                );
+            });
+        if selected_prio != default_priority {
+            events.push(AppIntent::SetDefaultPriorityRequested {
+                priority: selected_prio,
+            });
+        }
+
+        ui.add_space(6.0);
+
         if let Some(tool) = tool_manager.active_tool_mut() {
             let changed = tool.render_config(ui, distance_wheel_step_m);
             if changed && tool.needs_recreate() {
@@ -274,6 +333,21 @@ fn render_route_tool_panel(
             }
         });
     });
+}
+
+fn direction_label(dir: ConnectionDirection) -> &'static str {
+    match dir {
+        ConnectionDirection::Regular => "Regular",
+        ConnectionDirection::Dual => "Dual",
+        ConnectionDirection::Reverse => "Reverse",
+    }
+}
+
+fn priority_label(prio: ConnectionPriority) -> &'static str {
+    match prio {
+        ConnectionPriority::Regular => "Hauptstraße",
+        ConnectionPriority::SubPriority => "Nebenstraße",
+    }
 }
 
 /// Ordnet selektierte Node-IDs als zusammenhängende Kette.
