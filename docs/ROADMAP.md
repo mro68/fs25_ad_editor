@@ -227,6 +227,7 @@
 - ✅ Render-Hotpath optimiert: `RenderScene.options` nutzt `Arc<EditorOptions>`; API-Verträge in `shared/API.md` und `render/API.md` synchronisiert
 - ✅ Fix Route-Tool-Richtungsabbildung: Externe Startkanten spiegeln jetzt `ConnectionDirection` korrekt (Regressionstest in `tools/common/builder.rs`)
 - ✅ UI/CM-Update Constraint-Route: Name auf `Constraint-Route` vereinheitlicht und Context-Menu-Befehle (Tool aktivieren + 2-Node-Erzeugung) als erste Route-Option ergänzt
+- ✅ Optionen-Dialog neu strukturiert: links Bereichsnavigation, rechts kontextabhängige Einstellungen des gewählten Bereichs
 
 **Errungenschaften (Spline-Tool 2026-02-21):**
 - ✅ Neues Route-Tool: Catmull-Rom-Spline (interpolierend, Kurs führt durch alle geklickten Punkte)
