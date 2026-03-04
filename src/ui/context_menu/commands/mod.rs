@@ -17,7 +17,7 @@ pub use preconditions::{Precondition, PreconditionContext};
 pub use validation::{validate_entries, ValidatedEntry};
 
 use crate::app::segment_registry::{
-    TOOL_INDEX_CURVE_CUBIC, TOOL_INDEX_CURVE_QUAD, TOOL_INDEX_STRAIGHT,
+    TOOL_INDEX_CONSTRAINT_ROUTE, TOOL_INDEX_CURVE_CUBIC, TOOL_INDEX_CURVE_QUAD, TOOL_INDEX_STRAIGHT,
 };
 use crate::app::{AppIntent, ConnectionDirection, ConnectionPriority, EditorTool};
 
@@ -37,6 +37,8 @@ pub enum CommandId {
     SetToolAddNode,
     /// Route-Tool: Gerade Strecke aktivieren
     SetToolRouteStraight,
+    /// Route-Tool: Constraint-Route aktivieren
+    SetToolRouteConstraint,
     /// Route-Tool: Bézier Grad 2 aktivieren
     SetToolRouteQuadratic,
     /// Route-Tool: Bézier Grad 3 aktivieren
@@ -56,6 +58,8 @@ pub enum CommandId {
     ConnectTwoNodes,
     /// Gerade Strecke erzeugen (2 Nodes)
     RouteStraight,
+    /// Constraint-Route erzeugen (2 Nodes)
+    RouteConstraint,
     /// Bézier Grad 2 erzeugen (2 Nodes)
     RouteQuadratic,
     /// Bézier Grad 3 erzeugen (2 Nodes)
@@ -154,6 +158,9 @@ impl CommandId {
             Self::SetToolRouteStraight => AppIntent::SelectRouteToolRequested {
                 index: TOOL_INDEX_STRAIGHT,
             },
+            Self::SetToolRouteConstraint => AppIntent::SelectRouteToolRequested {
+                index: TOOL_INDEX_CONSTRAINT_ROUTE,
+            },
             Self::SetToolRouteQuadratic => AppIntent::SelectRouteToolRequested {
                 index: TOOL_INDEX_CURVE_QUAD,
             },
@@ -182,6 +189,14 @@ impl CommandId {
                 let (s, e) = ctx.two_node_ids.unwrap_or((0, 0));
                 AppIntent::RouteToolWithAnchorsRequested {
                     index: TOOL_INDEX_STRAIGHT,
+                    start_node_id: s,
+                    end_node_id: e,
+                }
+            }
+            Self::RouteConstraint => {
+                let (s, e) = ctx.two_node_ids.unwrap_or((0, 0));
+                AppIntent::RouteToolWithAnchorsRequested {
+                    index: TOOL_INDEX_CONSTRAINT_ROUTE,
                     start_node_id: s,
                     end_node_id: e,
                 }

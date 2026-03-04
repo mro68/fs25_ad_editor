@@ -34,6 +34,9 @@ fn command_icon(id: CommandId) -> Option<egui::Image<'static>> {
         CommandId::SetToolRouteStraight | CommandId::RouteStraight => {
             egui::include_image!("../../../assets/icon_straight_road.svg")
         }
+        CommandId::SetToolRouteConstraint | CommandId::RouteConstraint => {
+            egui::include_image!("../../../assets/icon_straight_road.svg")
+        }
         CommandId::SetToolRouteQuadratic | CommandId::RouteQuadratic => {
             egui::include_image!("../../../assets/icon_bezier_quadratic.svg")
         }

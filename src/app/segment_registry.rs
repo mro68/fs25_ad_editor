@@ -145,7 +145,7 @@ mod tests {
             "TOOL_INDEX_SPLINE zeigt nicht auf SplineTool"
         );
         assert_eq!(
-            names[TOOL_INDEX_CONSTRAINT_ROUTE], "Constraint Route",
+            names[TOOL_INDEX_CONSTRAINT_ROUTE], "Constraint-Route",
             "TOOL_INDEX_CONSTRAINT_ROUTE zeigt nicht auf ConstraintRouteTool"
         );
     }
