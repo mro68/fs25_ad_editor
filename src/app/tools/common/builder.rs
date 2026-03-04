@@ -5,15 +5,6 @@ use glam::Vec2;
 
 use super::super::{ToolAnchor, ToolResult};
 
-/// Spiegelt die Verbindungsrichtung, wenn Start/Ende einer Kante vertauscht werden.
-fn invert_direction(direction: ConnectionDirection) -> ConnectionDirection {
-    match direction {
-        ConnectionDirection::Regular => ConnectionDirection::Reverse,
-        ConnectionDirection::Reverse => ConnectionDirection::Regular,
-        ConnectionDirection::Dual => ConnectionDirection::Dual,
-    }
-}
-
 /// Baut ein `ToolResult` aus einer Positions-Sequenz und Start-/End-Ankern.
 ///
 /// Diese Funktion enthält die gemeinsame Logik aller Route-Tools:
@@ -32,7 +23,7 @@ pub fn assemble_tool_result(
     let mut new_nodes: Vec<(Vec2, NodeFlag)> = Vec::new();
     let mut internal_connections: Vec<(usize, usize, ConnectionDirection, ConnectionPriority)> =
         Vec::new();
-    let mut external_connections: Vec<(usize, u64, ConnectionDirection, ConnectionPriority)> =
+    let mut external_connections: Vec<(usize, u64, bool, ConnectionDirection, ConnectionPriority)> =
         Vec::new();
 
     // Phase 1: Positions → neue Nodes oder existierende Nodes zuordnen
@@ -104,13 +95,12 @@ pub fn assemble_tool_result(
                 internal_connections.push((a, b, direction, priority));
             }
             (Some(a), _, None, Some(b_id)) => {
-                external_connections.push((a, b_id, direction, priority));
+                // Ende am existierenden Node: Kante läuft new -> existing.
+                external_connections.push((a, b_id, false, direction, priority));
             }
             (None, Some(a_id), Some(b), _) => {
-                // Externe Kanten speichern immer (new_idx, existing_id).
-                // Für den Start-Anker sind die Endpunkte daher gegenüber der
-                // Positions-Reihenfolge vertauscht und die Richtung muss gespiegelt werden.
-                external_connections.push((b, a_id, invert_direction(direction), priority));
+                // Start am existierenden Node: Kante läuft existing -> new.
+                external_connections.push((b, a_id, true, direction, priority));
             }
             _ => {}
         }
@@ -129,7 +119,7 @@ mod tests {
     use crate::core::{MapNode, NodeFlag};
 
     #[test]
-    fn start_anchor_external_connection_inverts_direction() {
+    fn start_anchor_external_connection_is_existing_to_new_and_keeps_direction() {
         let mut road_map = RoadMap::new(2);
         road_map.add_node(MapNode::new(1, Vec2::ZERO, NodeFlag::Regular));
         road_map.ensure_spatial_index();
@@ -146,10 +136,11 @@ mod tests {
 
         assert_eq!(result.new_nodes.len(), 1);
         assert_eq!(result.external_connections.len(), 1);
-        let (new_idx, existing_id, direction, _) = result.external_connections[0];
+        let (new_idx, existing_id, existing_to_new, direction, _) = result.external_connections[0];
         assert_eq!(new_idx, 0);
         assert_eq!(existing_id, 1);
-        assert_eq!(direction, ConnectionDirection::Reverse);
+        assert!(existing_to_new);
+        assert_eq!(direction, ConnectionDirection::Regular);
     }
 
     #[test]
@@ -170,9 +161,10 @@ mod tests {
 
         assert_eq!(result.new_nodes.len(), 1);
         assert_eq!(result.external_connections.len(), 1);
-        let (new_idx, existing_id, direction, _) = result.external_connections[0];
+        let (new_idx, existing_id, existing_to_new, direction, _) = result.external_connections[0];
         assert_eq!(new_idx, 0);
         assert_eq!(existing_id, 2);
+        assert!(!existing_to_new);
         assert_eq!(direction, ConnectionDirection::Regular);
     }
 }

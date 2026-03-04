@@ -75,8 +75,10 @@ fn create_nodes_and_connections(road_map: &mut RoadMap, result: &ToolResult) -> 
         road_map.add_connection(conn);
     }
 
-    // Externe Verbindungen (neue Nodes → existierende Nodes)
-    for &(new_idx, existing_id, direction, priority) in &result.external_connections {
+    // Externe Verbindungen (Richtung über `existing_to_new` explizit vorgegeben)
+    for &(new_idx, existing_id, existing_to_new, direction, priority) in
+        &result.external_connections
+    {
         let new_id = new_ids[new_idx];
         if !road_map.nodes.contains_key(&existing_id) {
             log::warn!(
@@ -85,16 +87,14 @@ fn create_nodes_and_connections(road_map: &mut RoadMap, result: &ToolResult) -> 
             );
             continue;
         }
-        let new_pos = road_map.nodes[&new_id].position;
-        let existing_pos = road_map.nodes[&existing_id].position;
-        let conn = Connection::new(
-            new_id,
-            existing_id,
-            direction,
-            priority,
-            new_pos,
-            existing_pos,
-        );
+        let (from_id, to_id) = if existing_to_new {
+            (existing_id, new_id)
+        } else {
+            (new_id, existing_id)
+        };
+        let from_pos = road_map.nodes[&from_id].position;
+        let to_pos = road_map.nodes[&to_id].position;
+        let conn = Connection::new(from_id, to_id, direction, priority, from_pos, to_pos);
         road_map.add_connection(conn);
         affected_ids.insert(existing_id);
     }
