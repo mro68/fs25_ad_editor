@@ -93,7 +93,7 @@ Zeigt tool- und selektionsabhängig:
 pub fn render_properties_panel(
   ctx: &egui::Context,
   road_map: Option<&RoadMap>,
-  selected_node_ids: &HashSet<u64>,
+  selected_node_ids: &IndexSet<u64>,
   default_direction: ConnectionDirection,
   default_priority: ConnectionPriority,
   distance_wheel_step_m: f32,
