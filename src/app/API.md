@@ -73,7 +73,7 @@ pub struct AppState {
 }
 
 pub struct SelectionState {
-    pub selected_node_ids: Arc<HashSet<u64>>,  // Arc für O(1)-Clone in RenderScene (CoW)
+    pub selected_node_ids: Arc<IndexSet<u64>>,  // Arc für O(1)-Clone in RenderScene (CoW)
     pub selection_anchor_node_id: Option<u64>,
 }
 ```
@@ -81,12 +81,12 @@ pub struct SelectionState {
 **Methoden:**
 
 ```rust
-// CoW-Mutation: klont HashSet nur wenn der Arc nicht alleinig gehalten wird
+// CoW-Mutation: klont IndexSet nur wenn der Arc nicht alleinig gehalten wird
 sel.ids_mut().insert(42);
 ```
 
 - `new() → Self`
-- `ids_mut() → &mut HashSet<u64>` — Mutable Zugriff via `Arc::make_mut` (Copy-on-Write)
+- `ids_mut() → &mut IndexSet<u64>` — Mutable Zugriff via `Arc::make_mut` (Copy-on-Write)
 
 pub struct UiState {
     pub show_file_dialog: bool,

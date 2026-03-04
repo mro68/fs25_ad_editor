@@ -54,12 +54,12 @@ pub struct RenderScene {
     pub camera: Camera2D,
     pub viewport_size: [f32; 2],
     pub render_quality: RenderQuality,
-    pub selected_node_ids: Arc<HashSet<u64>>,
+    pub selected_node_ids: Arc<IndexSet<u64>>,
     pub connect_source_node: Option<u64>,
     pub background_map: Option<Arc<BackgroundMap>>,
     pub background_visible: bool,
     pub options: EditorOptions,
-    pub hidden_node_ids: Arc<HashSet<u64>>,
+    pub hidden_node_ids: Arc<IndexSet<u64>>,
 }
 ```
 
@@ -146,7 +146,7 @@ pub(crate) struct RenderContext<'a> {
     pub camera: &'a Camera2D,
     pub viewport_size: [f32; 2],
     pub options: &'a EditorOptions,
-    pub hidden_node_ids: &'a HashSet<u64>,
+    pub hidden_node_ids: &'a IndexSet<u64>,
 }
 ```
 

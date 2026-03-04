@@ -48,7 +48,7 @@ Schnittstelle für alle Route-Tools (Linie, Kurve, …). Tools sind zustandsbeha
 - `has_pending_input() → bool` — Hat das Tool angefangene Eingaben? (für stufenweise Escape-Logik)
 - `set_direction(dir)` / `set_priority(prio)` — Editor-Defaults übernehmen
 - `set_snap_radius(radius)` — Snap-Radius für Node-Snapping setzen
-- `set_last_created(ids, road_map)` / `last_created_ids() → &[u64]` — Erstellte Node-IDs (für Verkettung, road_map dient zur End-Anchor-Ermittlung)
+- `set_last_created(ids, road_map)` / `last_created_ids() → &[u64]` — Erstellte Node-IDs (für Verkettung und Nachbearbeitung)
 - `last_end_anchor() → Option<ToolAnchor>` — Letzter Endpunkt für Verkettung
 - `needs_recreate() → bool` / `clear_recreate_flag()` — Neuberechnung bei Config-Änderung
 - `execute_from_anchors(road_map) → Option<ToolResult>` — ToolResult aus gespeicherten Ankern
@@ -56,7 +56,8 @@ Schnittstelle für alle Route-Tools (Linie, Kurve, …). Tools sind zustandsbeha
 - `on_drag_start(pos, road_map, pick_radius) → bool` — Drag auf einen Punkt starten
 - `on_drag_update(pos)` — Position des gegriffenen Punkts aktualisieren
 - `on_drag_end(road_map)` — Drag beenden (Re-Snap bei Start/Ende)
-- `render_context_menu(response) → bool` — Kontextmenü im Viewport rendern (z.B. Tangenten-Auswahl)
+- `tangent_menu_data() → Option<TangentMenuData>` — liefert Tangenten-Menüdaten für das Kontextmenü
+- `apply_tangent_selection(start, end)` — wendet die im Kontextmenü gewählten Tangenten an
 
 **Registry-Erweiterungen** (für `SegmentRegistry`, siehe [`../use_cases/API.md`](../use_cases/API.md)):
 ```rust
@@ -77,7 +78,7 @@ fn load_for_edit(&mut self, record: &SegmentRecord, kind: &SegmentKind);
 | 1 | `CurveTool` (Grad 2) | `⌒` | `CurveTool::new()` |
 | 2 | `CurveTool` (Grad 3) | `〜` | `CurveTool::new_cubic()` |
 | 3 | `SplineTool` | `〰` | `SplineTool::new()` |
-| 4 | `BypassTool` | `⇉` | `BypassTool::new()` |
+| 4 | `BypassTool` | `⤴` | `BypassTool::new()` |
 | 5 | `ConstraintRouteTool` | `⊿` | `ConstraintRouteTool::new()` |
 
 ### `StraightLineTool`
@@ -163,14 +164,14 @@ Hilfsfunktionen: `angle_to_compass`, `node_count_from_length`, `populate_neighbo
 - `sync_from_length(length)` — Synchronisiert abhängigen Wert aus Streckenlänge
 
 **`ToolLifecycleState`-Methoden:**
-- `save_created_ids(&mut self, ids: &[u64], road_map: &RoadMap)` — Speichert erstellte Node-IDs und ermittelt End-Anker aus der RoadMap
+- `save_created_ids(&mut self, ids: &[u64])` — Speichert erstellte Node-IDs und setzt das Recreate-Flag zurück
 - `has_last_created() → bool` — Prüft ob letzte erstellte IDs vorhanden sind
 - `chaining_start_anchor() → Option<ToolAnchor>` — Gibt den End-Anker für die Verkettung zurück, wobei `NewPosition` zu `ExistingNode` hochgestuft wird (verhindert doppelte Nodes am Verkettungspunkt)
-- `prepare_for_chaining(&mut lifecycle, &mut seg, &last_anchors)` — Setzt Lifecycle-State und SegmentConfig für die nächste Verkettung zurück (DRY-Hilfsmethode)
+- `prepare_for_chaining()` — Setzt den Lifecycle-State für die nächste Verkettung zurück (DRY-Hilfsmethode)
 
 **`render_segment_config_3modes(seg, ui, adjusting, ready, length, label, distance_wheel_step_m) → (changed, recreate)`** — Gemeinsame Hilfsfunktion für die 3 SegmentConfig-Darstellungsmodi (Adjusting/Live/Default) inkl. Mausrad-Änderungen für Distanz/Node-Anzahl.
 
-**`impl_lifecycle_delegation!`** — Makro zur Delegation der Standard-RouteTool-Lifecycle-Methoden (`on_deactivate`, `chaining_start_anchor`, `is_adjusting`, `segment_config_mut`) an die gemeinsamen Felder. Eliminiert ~20 Zeilen Boilerplate pro Tool.
+**`impl_lifecycle_delegation!`** — Makro zur Delegation der Standard-RouteTool-Lifecycle-Methoden (`set_direction`, `set_priority`, `set_snap_radius`, `last_created_ids`, `last_end_anchor`, `needs_recreate`, `clear_recreate_flag`, Inkrement/Decrement-Helfer) an die gemeinsamen Felder. Eliminiert Boilerplate pro Tool.
 
 ### `builder.rs`
 
