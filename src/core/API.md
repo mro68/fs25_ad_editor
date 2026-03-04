@@ -167,6 +167,7 @@ pub struct RoadMap {
 - `nearest_node(&self, query: Vec2) -> Option<SpatialMatch>` — Nächster Node
 - `nodes_within_radius(&self, query: Vec2, radius: f32) -> Vec<SpatialMatch>` — Nodes im Umkreis
 - `nodes_within_rect(&self, min: Vec2, max: Vec2) -> Vec<u64>` — Nodes im Rechteck
+- `nodes_within_rect_into(&self, min: Vec2, max: Vec2, out: &mut Vec<u64>)` — Rechteck-Query in einen bereitgestellten Scratch-Buffer (keine Extra-Allocation im Hotpath)
 
 ---
 

@@ -48,4 +48,13 @@ impl RoadMap {
         );
         self.spatial_index.within_rect(min, max)
     }
+
+    /// Findet alle Nodes innerhalb eines Rechtecks und schreibt sie in einen vorhandenen Buffer.
+    pub fn nodes_within_rect_into(&self, min: Vec2, max: Vec2, out: &mut Vec<u64>) {
+        debug_assert!(
+            !self.spatial_dirty,
+            "Spatial-Index ist veraltet — ensure_spatial_index() fehlt"
+        );
+        self.spatial_index.within_rect_into(min, max, out)
+    }
 }

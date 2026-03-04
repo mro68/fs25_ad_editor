@@ -44,14 +44,14 @@ pub fn close_options_dialog(state: &mut AppState) {
 pub fn apply_options(state: &mut AppState, options: EditorOptions) -> anyhow::Result<()> {
     // Erst validieren, damit keine inkonsistenten Werte temporär in den State gelangen.
     options.validate()?;
-    state.options = options;
+    state.set_options(options);
     let path = EditorOptions::config_path();
     state.options.save_to_file(&path)
 }
 
 /// Setzt Optionen auf Standardwerte zurück und persistiert sie.
 pub fn reset_options(state: &mut AppState) -> anyhow::Result<()> {
-    state.options = EditorOptions::default();
+    state.set_options(EditorOptions::default());
     let path = EditorOptions::config_path();
     state.options.save_to_file(&path)
 }
