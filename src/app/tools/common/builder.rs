@@ -5,6 +5,15 @@ use glam::Vec2;
 
 use super::super::{ToolAnchor, ToolResult};
 
+/// Spiegelt die Verbindungsrichtung, wenn Start/Ende einer Kante vertauscht werden.
+fn invert_direction(direction: ConnectionDirection) -> ConnectionDirection {
+    match direction {
+        ConnectionDirection::Regular => ConnectionDirection::Reverse,
+        ConnectionDirection::Reverse => ConnectionDirection::Regular,
+        ConnectionDirection::Dual => ConnectionDirection::Dual,
+    }
+}
+
 /// Baut ein `ToolResult` aus einer Positions-Sequenz und Start-/End-Ankern.
 ///
 /// Diese Funktion enthält die gemeinsame Logik aller Route-Tools:
@@ -98,7 +107,10 @@ pub fn assemble_tool_result(
                 external_connections.push((a, b_id, direction, priority));
             }
             (None, Some(a_id), Some(b), _) => {
-                external_connections.push((b, a_id, direction, priority));
+                // Externe Kanten speichern immer (new_idx, existing_id).
+                // Für den Start-Anker sind die Endpunkte daher gegenüber der
+                // Positions-Reihenfolge vertauscht und die Richtung muss gespiegelt werden.
+                external_connections.push((b, a_id, invert_direction(direction), priority));
             }
             _ => {}
         }
@@ -108,5 +120,59 @@ pub fn assemble_tool_result(
         new_nodes,
         internal_connections,
         external_connections,
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::core::{MapNode, NodeFlag};
+
+    #[test]
+    fn start_anchor_external_connection_inverts_direction() {
+        let mut road_map = RoadMap::new(2);
+        road_map.add_node(MapNode::new(1, Vec2::ZERO, NodeFlag::Regular));
+        road_map.ensure_spatial_index();
+
+        let positions = [Vec2::ZERO, Vec2::new(10.0, 0.0)];
+        let result = assemble_tool_result(
+            &positions,
+            &ToolAnchor::ExistingNode(1, Vec2::ZERO),
+            &ToolAnchor::NewPosition(Vec2::new(10.0, 0.0)),
+            ConnectionDirection::Regular,
+            ConnectionPriority::Regular,
+            &road_map,
+        );
+
+        assert_eq!(result.new_nodes.len(), 1);
+        assert_eq!(result.external_connections.len(), 1);
+        let (new_idx, existing_id, direction, _) = result.external_connections[0];
+        assert_eq!(new_idx, 0);
+        assert_eq!(existing_id, 1);
+        assert_eq!(direction, ConnectionDirection::Reverse);
+    }
+
+    #[test]
+    fn end_anchor_external_connection_keeps_direction() {
+        let mut road_map = RoadMap::new(2);
+        road_map.add_node(MapNode::new(2, Vec2::new(10.0, 0.0), NodeFlag::Regular));
+        road_map.ensure_spatial_index();
+
+        let positions = [Vec2::ZERO, Vec2::new(10.0, 0.0)];
+        let result = assemble_tool_result(
+            &positions,
+            &ToolAnchor::NewPosition(Vec2::ZERO),
+            &ToolAnchor::ExistingNode(2, Vec2::new(10.0, 0.0)),
+            ConnectionDirection::Regular,
+            ConnectionPriority::Regular,
+            &road_map,
+        );
+
+        assert_eq!(result.new_nodes.len(), 1);
+        assert_eq!(result.external_connections.len(), 1);
+        let (new_idx, existing_id, direction, _) = result.external_connections[0];
+        assert_eq!(new_idx, 0);
+        assert_eq!(existing_id, 2);
+        assert_eq!(direction, ConnectionDirection::Regular);
     }
 }
