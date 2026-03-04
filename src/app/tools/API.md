@@ -59,6 +59,15 @@ Schnittstelle für alle Route-Tools (Linie, Kurve, …). Tools sind zustandsbeha
 - `tangent_menu_data() → Option<TangentMenuData>` — liefert Tangenten-Menüdaten für das Kontextmenü
 - `apply_tangent_selection(start, end)` — wendet die im Kontextmenü gewählten Tangenten an
 
+### Capability-Traits
+
+Der optionale Teil wurde zusätzlich in Capability-Traits gekapselt. `RouteTool` bleibt als kompatibler Obervertrag bestehen und delegiert seine Default-Implementierungen an diese Traits:
+
+- `RouteToolDrag` — `drag_targets`, `on_drag_start`, `on_drag_update`, `on_drag_end`
+- `RouteToolTangent` — `tangent_menu_data`, `apply_tangent_selection`
+- `RouteToolRegistry` — `make_segment_record`, `load_for_edit`
+- `RouteToolChainInput` — `needs_chain_input`, `load_chain`
+
 **Registry-Erweiterungen** (für `SegmentRegistry`, siehe [`../use_cases/API.md`](../use_cases/API.md)):
 ```rust
 // Wird nach execute() + apply_tool_result() aufgerufen:

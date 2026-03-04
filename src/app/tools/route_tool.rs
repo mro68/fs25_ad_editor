@@ -7,11 +7,76 @@ use glam::Vec2;
 use super::common::TangentMenuData;
 use super::{ToolAction, ToolAnchor, ToolPreview, ToolResult};
 
+/// Drag-Capability fuer Route-Tools.
+pub trait RouteToolDrag {
+    /// Gibt die Weltpositionen aller verschiebbaren Punkte zurück (für Drag-Hit-Test).
+    fn drag_targets_cap(&self) -> Vec<Vec2> {
+        vec![]
+    }
+
+    /// Startet einen Drag auf einem Punkt nahe `pos`.
+    fn on_drag_start_cap(&mut self, _pos: Vec2, _road_map: &RoadMap, _pick_radius: f32) -> bool {
+        false
+    }
+
+    /// Aktualisiert die Position des gegriffenen Punkts während eines Drags.
+    fn on_drag_update_cap(&mut self, _pos: Vec2) {}
+
+    /// Beendet den Drag (ggf. Re-Snap auf existierenden Node).
+    fn on_drag_end_cap(&mut self, _road_map: &RoadMap) {}
+}
+
+impl<T: ?Sized> RouteToolDrag for T {}
+
+/// Tangenten-Capability fuer Route-Tools.
+pub trait RouteToolTangent {
+    /// Liefert Tangenten-Menüdaten für das Kontextmenü (nur Daten, kein UI).
+    fn tangent_menu_data_cap(&self) -> Option<TangentMenuData> {
+        None
+    }
+
+    /// Wendet die vom User gewählten Tangenten an.
+    fn apply_tangent_selection_cap(
+        &mut self,
+        _start: super::common::TangentSource,
+        _end: super::common::TangentSource,
+    ) {
+    }
+}
+
+impl<T: ?Sized> RouteToolTangent for T {}
+
+/// Registry-Capability fuer Route-Tools (SegmentRegistry).
+pub trait RouteToolRegistry {
+    /// Erstellt einen `SegmentRecord` für die Registry aus dem aktuellen Tool-Zustand.
+    fn make_segment_record_cap(&self, _id: u64, _node_ids: &[u64]) -> Option<SegmentRecord> {
+        None
+    }
+
+    /// Lädt einen gespeicherten `SegmentRecord` zur nachträglichen Bearbeitung.
+    fn load_for_edit_cap(&mut self, _record: &SegmentRecord, _kind: &SegmentKind) {}
+}
+
+impl<T: ?Sized> RouteToolRegistry for T {}
+
+/// Chain-Input-Capability fuer Route-Tools.
+pub trait RouteToolChainInput {
+    /// Gibt `true` zurück wenn dieses Tool eine geordnete Kette als Eingabe benötigt.
+    fn needs_chain_input_cap(&self) -> bool {
+        false
+    }
+
+    /// Lädt eine geordnete Kette von Positionen als Tool-Eingabe.
+    fn load_chain_cap(&mut self, _positions: Vec<Vec2>, _start_id: u64, _end_id: u64) {}
+}
+
+impl<T: ?Sized> RouteToolChainInput for T {}
+
 /// Schnittstelle für alle Route-Tools (Linie, Parkplatz, Kurve, …).
 ///
 /// Tools sind zustandsbehaftet (Klick-Phasen) und erzeugen Preview-Geometrie
 /// sowie ein `ToolResult` mit neuen Nodes/Connections.
-pub trait RouteTool {
+pub trait RouteTool: RouteToolDrag + RouteToolTangent + RouteToolRegistry + RouteToolChainInput {
     /// Anzeigename für Toolbar
     fn name(&self) -> &str;
 
@@ -98,21 +163,25 @@ pub trait RouteTool {
     /// Nur nicht-leer wenn alle nötigen Punkte gesetzt sind und das Tool
     /// im Drag-Modus bereitsteht (z.B. Phase::Control mit vollständigen CPs).
     fn drag_targets(&self) -> Vec<Vec2> {
-        vec![]
+        <Self as RouteToolDrag>::drag_targets_cap(self)
     }
 
     /// Startet einen Drag auf einem Punkt nahe `pos`.
     ///
     /// Gibt `true` zurück wenn ein Punkt gegriffen wurde, `false` wenn nichts in Reichweite.
     fn on_drag_start(&mut self, _pos: Vec2, _road_map: &RoadMap, _pick_radius: f32) -> bool {
-        false
+        <Self as RouteToolDrag>::on_drag_start_cap(self, _pos, _road_map, _pick_radius)
     }
 
     /// Aktualisiert die Position des gegriffenen Punkts während eines Drags.
-    fn on_drag_update(&mut self, _pos: Vec2) {}
+    fn on_drag_update(&mut self, _pos: Vec2) {
+        <Self as RouteToolDrag>::on_drag_update_cap(self, _pos)
+    }
 
     /// Beendet den Drag (ggf. Re-Snap auf existierenden Node).
-    fn on_drag_end(&mut self, _road_map: &RoadMap) {}
+    fn on_drag_end(&mut self, _road_map: &RoadMap) {
+        <Self as RouteToolDrag>::on_drag_end_cap(self, _road_map)
+    }
 
     /// Liefert Tangenten-Menüdaten für das Kontextmenü (nur Daten, kein UI).
     ///
@@ -120,7 +189,7 @@ pub trait RouteTool {
     /// anbieten kann (z.B. kubische Kurve in Control-Phase mit Nachbarn).
     /// Gibt `None` zurück wenn keine Tangenten-Auswahl verfügbar ist.
     fn tangent_menu_data(&self) -> Option<TangentMenuData> {
-        None
+        <Self as RouteToolTangent>::tangent_menu_data_cap(self)
     }
 
     /// Wendet die vom User gewählten Tangenten an.
@@ -133,6 +202,7 @@ pub trait RouteTool {
         _start: super::common::TangentSource,
         _end: super::common::TangentSource,
     ) {
+        <Self as RouteToolTangent>::apply_tangent_selection_cap(self, _start, _end)
     }
 
     /// Erstellt einen `SegmentRecord` für die Registry aus dem aktuellen Tool-Zustand.
@@ -140,7 +210,7 @@ pub trait RouteTool {
     /// Wird nach `execute()` aufgerufen um das Segment in der Registry zu speichern.
     /// Gibt `None` zurück wenn das Tool keine Registry-Einträge unterstützt.
     fn make_segment_record(&self, _id: u64, _node_ids: &[u64]) -> Option<SegmentRecord> {
-        None
+        <Self as RouteToolRegistry>::make_segment_record_cap(self, _id, _node_ids)
     }
 
     /// Lädt einen gespeicherten `SegmentRecord` zur nachträglichen Bearbeitung.
@@ -148,7 +218,9 @@ pub trait RouteTool {
     /// Stellt Start/End-Anker und alle tool-spezifischen Parameter (CP1, CP2,
     /// Tangenten, Anker-Liste) aus dem Record wieder her. Das Tool befindet
     /// sich anschließend in der Control-Phase (bereit für Drag/Anpassung).
-    fn load_for_edit(&mut self, _record: &SegmentRecord, _kind: &SegmentKind) {}
+    fn load_for_edit(&mut self, _record: &SegmentRecord, _kind: &SegmentKind) {
+        <Self as RouteToolRegistry>::load_for_edit_cap(self, _record, _kind)
+    }
 
     /// Erhöht die Anzahl der Nodes um 1.
     fn increase_node_count(&mut self) {}
@@ -167,7 +239,7 @@ pub trait RouteTool {
     /// Solche Tools (z.B. `BypassTool`) erhalten ihre Eingabe nicht durch Klicks,
     /// sondern durch `load_chain()`, das vom Handler bei Tool-Aktivierung aufgerufen wird.
     fn needs_chain_input(&self) -> bool {
-        false
+        <Self as RouteToolChainInput>::needs_chain_input_cap(self)
     }
 
     /// Lädt eine geordnete Kette von Positionen als Tool-Eingabe.
@@ -175,5 +247,7 @@ pub trait RouteTool {
     /// Wird vom Route-Tool-Handler aufgerufen wenn `needs_chain_input() == true` und
     /// die aktuelle Selektion eine gültige Kette bildet.
     /// Standard-Implementierung: no-op.
-    fn load_chain(&mut self, _positions: Vec<Vec2>, _start_id: u64, _end_id: u64) {}
+    fn load_chain(&mut self, _positions: Vec<Vec2>, _start_id: u64, _end_id: u64) {
+        <Self as RouteToolChainInput>::load_chain_cap(self, _positions, _start_id, _end_id)
+    }
 }

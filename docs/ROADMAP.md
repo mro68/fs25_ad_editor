@@ -204,6 +204,7 @@
 
 **Errungenschaften seit letztem Update (Strukturelles Audit 2026-02-28):**
 - ✅ `src/shared/options.rs` in modulare Struktur `src/shared/options/{camera,render,tools,editor}.rs` aufgeteilt (Wartbarkeit verbessert, API stabil)
+- ✅ RouteTool-Capabilities eingeführt (`RouteToolDrag`, `RouteToolTangent`, `RouteToolRegistry`, `RouteToolChainInput`) bei kompatiblem `RouteTool`-Obervertrag
 - ✅ Docstrings für `AppCommand`, `AppIntent` (alle Varianten dokumentiert)
 - ✅ Docstrings für `Snapshot`, `EditHistory`, `CommandLog`, `SegmentRecord`, `SegmentRegistry`
 - ✅ Docstrings für `reset()` in allen RouteTool-Implementierungen
