@@ -1,15 +1,15 @@
 # Werkzeuge (Tools)
 
-← [Benutzeroberfläche](02-oberflaeche.md) | [Zurück zur Übersicht](index.md)
+← [Benutzeroberflaeche](02-oberflaeche.md) | [Zurueck zur Uebersicht](index.md)
 
 ## Select-Tool (1)
 
-Das Standard-Werkzeug für Auswahl und Verschiebung von Nodes.
+Das Standard-Werkzeug fuer Auswahl und Verschiebung von Nodes.
 
 **Funktionen:**
 - Einzelklick: Node selektieren (Pick-Radius: 12px)
 - Ctrl+Klick: Additiv selektieren
-- Shift+Klick: Pfad-Selektion (kürzester Pfad von Anker zu Ziel)
+- Shift+Klick: Pfad-Selektion (kuerzester Pfad von Anker zu Ziel)
 - Doppelklick: Segment zwischen Kreuzungen selektieren
 - Drag auf selektiertem Node: Alle selektierten Nodes verschieben
 - Drag auf leerem Bereich: Kamera schwenken
@@ -21,13 +21,13 @@ Das Standard-Werkzeug für Auswahl und Verschiebung von Nodes.
 Erstellt Verbindungen zwischen zwei Nodes.
 
 **Workflow:**
-1. Ersten Node anklicken → in Toolbar erscheint "Startknoten: [ID] → Wähle Zielknoten"
+1. Ersten Node anklicken → in Toolbar erscheint "Startknoten: [ID] → Waehle Zielknoten"
 2. Zweiten Node anklicken → Verbindung wird erstellt
-3. Werkzeug bleibt aktiv für weitere Verbindungen
+3. Werkzeug bleibt aktiv fuer weitere Verbindungen
 
 **Standard-Einstellungen:**
 - Richtung: Regular (Einbahn vom Start zum Ziel)
-- Priorität: Regular (Hauptstraße)
+- Prioritaet: Regular (Hauptstrasse)
 
 ---
 
@@ -36,14 +36,14 @@ Erstellt Verbindungen zwischen zwei Nodes.
 Platziert neue Wegpunkte auf der Karte.
 
 **Workflow:**
-- Klick auf eine beliebige Stelle → neuer Node wird an der Welt-Position eingefügt
-- Der neue Node erhält automatisch die nächste freie ID
+- Klick auf eine beliebige Stelle → neuer Node wird an der Welt-Position eingefuegt
+- Der neue Node erhaelt automatisch die naechste freie ID
 
 ---
 
 ## Route-Tools (4)
 
-Erstellt Strecken und Kurse über vordefinierte Geometrien. Im Route-Modus stehen drei Sub-Tools zur Verfügung:
+Erstellt Strecken und Kurse ueber vordefinierte Geometrien. Im Route-Modus stehen drei Sub-Tools zur Verfuegung:
 
 ### 📏 Gerade Strecke
 
@@ -54,7 +54,7 @@ Zeichnet eine gerade Linie zwischen zwei Punkten mit automatischen Zwischen-Node
 2. Endpunkt klicken → Vorschau erscheint
 3. Enter → Strecke wird erstellt
 
-**Einstellungen:** Min. Abstand (Segment-Länge) und Anzahl Nodes.
+**Einstellungen:** Min. Abstand (Segment-Laenge) und Anzahl Nodes.
 
 ---
 
@@ -75,29 +75,29 @@ Zeichnet eine Bézier-Kurve (Grad 2 oder 3) mit Steuerpunkten.
 
 ### 〰️ Spline (Catmull-Rom)
 
-Zeichnet einen interpolierenden Spline, der durch **alle geklickten Punkte** führt. Im Gegensatz zur Bézier-Kurve (die Steuerpunkte nur annähert) verläuft der Spline exakt durch jeden gesetzten Punkt.
+Zeichnet einen interpolierenden Spline, der durch **alle geklickten Punkte** fuehrt. Im Gegensatz zur Bézier-Kurve (die Steuerpunkte nur annaehert) verlaeuft der Spline exakt durch jeden gesetzten Punkt.
 
 **Workflow:**
 1. Beliebig viele Punkte nacheinander klicken (mindestens 2)
-2. Vorschau wird fortlaufend aktualisiert (Cursor = nächster Punkt)
+2. Vorschau wird fortlaufend aktualisiert (Cursor = naechster Punkt)
 3. Enter → Spline wird erstellt
 
-**Einstellungen:** Min. Abstand (Segment-Länge) und Anzahl Nodes.
+**Einstellungen:** Min. Abstand (Segment-Laenge) und Anzahl Nodes.
 
 **Besonderheiten:**
 - Ab 3 Punkten entsteht eine glatte Kurve (Catmull-Rom-Interpolation)
 - Mit 2 Punkten wird eine gerade Strecke erzeugt
-- Verkettung: Nach Enter wird der letzte Endpunkt automatisch als neuer Startpunkt übernommen
-- Nachbearbeitung: Segment-Länge / Node-Anzahl können nach Erstellung geändert werden
+- Verkettung: Nach Enter wird der letzte Endpunkt automatisch als neuer Startpunkt uebernommen
+- Nachbearbeitung: Segment-Laenge / Node-Anzahl koennen nach Erstellung geaendert werden
 
 ---
 
 ## Gemeinsame Eigenschaften aller Route-Tools
 
-- **Enter** bestätigt und erstellt die Route
-- **Escape** bricht ab und setzt das Tool zurück
-- **Verkettung:** Nach Erstellung wird der letzte Endpunkt als neuer Startpunkt übernommen. Das Tool bleibt aktiv — der nächste Klick setzt den neuen Endpunkt. So können zusammenhängende Strecken nahtlos hintereinander erstellt werden.
-- **Nachbearbeitung:** Segment-Länge/Node-Anzahl können nach Erstellung per Slider angepasst werden. Die zuletzt erstellte Strecke wird automatisch gelöscht und mit den neuen Parametern neu berechnet.
+- **Enter** bestaetigt und erstellt die Route
+- **Escape** bricht ab und setzt das Tool zurueck
+- **Verkettung:** Nach Erstellung wird der letzte Endpunkt als neuer Startpunkt uebernommen. Das Tool bleibt aktiv — der naechste Klick setzt den neuen Endpunkt. So koennen zusammenhaengende Strecken nahtlos hintereinander erstellt werden.
+- **Nachbearbeitung:** Segment-Laenge/Node-Anzahl koennen nach Erstellung per Slider angepasst werden. Die zuletzt erstellte Strecke wird automatisch geloescht und mit den neuen Parametern neu berechnet.
 - **Snap:** Start- und Endpunkte rasten auf existierende Nodes ein (Snap-Radius: 3m)
 
 ---
@@ -111,16 +111,16 @@ Wenn Start- oder Endpunkt einer **kubischen Bézier-Kurve** oder eines **Splines
 3. Im **Eigenschaften-Panel** erscheint eine Tangent-Auswahl (ComboBox):
    - **Manuell** — keine automatische Tangente
    - **→ Node #42 (NO)** — Tangente entlang der Verbindung zum Nachbar-Node (mit Kompassrichtung)
-4. Bei Auswahl einer Tangente wird der zugehörige Kontrollpunkt automatisch entlang der Verbindungsrichtung platziert
-5. Der Tangent-Vorschlag kann durch manuelles Klicken/Drag überschrieben werden
+4. Bei Auswahl einer Tangente wird der zugehoerige Kontrollpunkt automatisch entlang der Verbindungsrichtung platziert
+5. Der Tangent-Vorschlag kann durch manuelles Klicken/Drag ueberschrieben werden
 
-> **Hinweis:** Tangent-Ausrichtung ist nur bei kubischen Kurven und Splines verfügbar, da diese separate Kontrollpunkte für Start und Ende haben.
+> **Hinweis:** Tangent-Ausrichtung ist nur bei kubischen Kurven und Splines verfuegbar, da diese separate Kontrollpunkte fuer Start und Ende haben.
 
 ---
 
 ## Control-Point-Drag (nur Kurve)
 
-Bei der **Bézier-Kurve** können die Steuerpunkte nach dem Setzen per Drag verschoben werden:
+Bei der **Bézier-Kurve** koennen die Steuerpunkte nach dem Setzen per Drag verschoben werden:
 
 1. In der Kontrollpunkt-Phase auf einen Steuerpunkt klicken und ziehen
 2. Die Kurve wird in Echtzeit aktualisiert
@@ -130,4 +130,4 @@ Erkannte Drag-Ziele sind der/die Kontrollpunkt(e) sowie Start- und Endpunkt.
 
 ---
 
-← [Benutzeroberfläche](02-oberflaeche.md) | [Zurück zur Übersicht](index.md) | → [Bearbeitung](04-bearbeitung.md)
+← [Benutzeroberflaeche](02-oberflaeche.md) | [Zurueck zur Uebersicht](index.md) | → [Bearbeitung](04-bearbeitung.md)

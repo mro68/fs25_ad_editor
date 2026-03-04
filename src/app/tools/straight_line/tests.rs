@@ -84,7 +84,7 @@ fn test_chaining_uses_last_end_as_start() {
     assert!(tool.is_ready());
 
     let result = tool.execute(&road_map).expect("Ergebnis erwartet");
-    // Start ist ExistingNode(102) → kein neuer Node dafür
+    // Start ist ExistingNode(102) → kein neuer Node dafuer
     assert_eq!(result.new_nodes.len(), 2);
     assert!((result.new_nodes[1].0 - Vec2::new(24.0, 0.0)).length() < 0.01);
     // Externe Verbindung zum existierenden Startknoten

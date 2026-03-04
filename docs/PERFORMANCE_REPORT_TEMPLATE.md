@@ -14,13 +14,13 @@
 - GPU + Treiber:
 - Rust-Version:
 
-## Ausgeführte Kommandos
+## Ausgefuehrte Kommandos
 - `cargo bench`
 - `cargo bench --bench core_bench -- spatial_queries/nearest_batch/100000`
 - `cargo bench --bench core_bench -- spatial_queries/rect_query/100000`
 
 ## Ergebnisse (Criterion)
-| Benchmark | Datensatzgröße | Mittelwert | p95 | Throughput/ops | Kommentar |
+| Benchmark | Datensatzgroesse | Mittelwert | p95 | Throughput/ops | Kommentar |
 |---|---:|---:|---:|---:|---|
 | `xml_parse_simple_config` | n/a |  |  |  |  |
 | `spatial_queries/nearest_batch/10000` | 10k |  |  |  |  |
@@ -30,15 +30,15 @@
 
 ## Beobachtungen
 - Hotspots:
-- Auffällige Regressionen:
+- Auffaellige Regressionen:
 - Erwartung vs. Ergebnis:
 
 ## Akzeptanzkriterien (Vorschlag)
-- `nearest_batch/100000` bleibt stabil über 3 Läufe (Abweichung < 10%).
-- Kein signifikanter Regressionssprung (> 15%) gegenüber letzter Baseline.
-- `cargo check` und `cargo test` bleiben grün.
+- `nearest_batch/100000` bleibt stabil ueber 3 Laeufe (Abweichung < 10%).
+- Kein signifikanter Regressionssprung (> 15%) gegenueber letzter Baseline.
+- `cargo check` und `cargo test` bleiben gruen.
 
-## Nächste Maßnahmen
+## Naechste Massnahmen
 1. 
 2. 
 3. 
@@ -56,13 +56,13 @@
 	- XML: `tests/fixtures/simple_config.xml`
 	- Spatial: synthetisch, 10k und 100k Nodes
 
-## Ausgeführte Kommandos
+## Ausgefuehrte Kommandos
 - `cargo check`
 - `cargo test`
 - `cargo bench --bench core_bench -- --noplot`
 
 ## Ergebnisse (Baseline)
-| Benchmark | Datensatzgröße | Mittelwert | p95 | Throughput/ops | Kommentar |
+| Benchmark | Datensatzgroesse | Mittelwert | p95 | Throughput/ops | Kommentar |
 |---|---:|---:|---:|---:|---|
 | `xml_parse_simple_config` | n/a | 3.7438 µs | 3.7806 µs | n/a | stabil |
 | `spatial_queries/nearest_batch/10000` | 10k | 6.1266 ms | 6.1827 ms | n/a | stabil |
@@ -77,19 +77,19 @@
 4. `cargo bench --bench core_bench -- spatial_queries/nearest_batch/100000 --noplot`
 5. `cargo bench --bench core_bench -- spatial_queries/rect_query/100000 --noplot`
 
-Kurzregel für Bewertung:
-- Regressionsverdacht bei > 15% langsamer gegenüber Baseline.
-- Bei Ausreißern Bench 3x wiederholen und Median vergleichen.
+Kurzregel fuer Bewertung:
+- Regressionsverdacht bei > 15% langsamer gegenueber Baseline.
+- Bei Ausreissern Bench 3x wiederholen und Median vergleichen.
 
 ---
 
 ## Baseline 2026-02-17 (3x Wiederholung + Median)
 
-## Ausgeführte Kommandos
-- `cargo bench --bench core_bench -- --noplot` (zweimal wiederholt; zusammen mit der initialen Baseline = 3 Läufe)
+## Ausgefuehrte Kommandos
+- `cargo bench --bench core_bench -- --noplot` (zweimal wiederholt; zusammen mit der initialen Baseline = 3 Laeufe)
 
-## 3-Lauf-Werte (Punkt-Schätzung)
-| Benchmark | Lauf A (initial) | Lauf B | Lauf C | Median (3 Läufe) |
+## 3-Lauf-Werte (Punkt-Schaetzung)
+| Benchmark | Lauf A (initial) | Lauf B | Lauf C | Median (3 Laeufe) |
 |---|---:|---:|---:|---:|
 | `xml_parse_simple_config` | 3.7438 µs | 3.9584 µs | 3.9313 µs | 3.9313 µs |
 | `spatial_queries/nearest_batch/10000` | 6.1266 ms | 6.0737 ms | 6.4868 ms | 6.1266 ms |
@@ -98,7 +98,7 @@ Kurzregel für Bewertung:
 | `spatial_queries/rect_query/100000` | 702.39 µs | 693.36 µs | 727.49 µs | 702.39 µs |
 
 ## Medianvergleich zur ersten Baseline
-| Benchmark | Erste Baseline | Median (3 Läufe) | Delta |
+| Benchmark | Erste Baseline | Median (3 Laeufe) | Delta |
 |---|---:|---:|---:|
 | `xml_parse_simple_config` | 3.7438 µs | 3.9313 µs | +5.01% |
 | `spatial_queries/nearest_batch/10000` | 6.1266 ms | 6.1266 ms | +0.00% |
@@ -107,6 +107,6 @@ Kurzregel für Bewertung:
 | `spatial_queries/rect_query/100000` | 702.39 µs | 702.39 µs | +0.00% |
 
 ## Kurzfazit
-- Keine >15%-Regression gegenüber der ersten Baseline.
+- Keine >15%-Regression gegenueber der ersten Baseline.
 - `xml_parse_simple_config` schwankt sichtbar, bleibt aber deutlich unter kritischer Regressionsschwelle.
-- Für `nearest_batch/100000` weiterhin längere Benchmark-Zeit einplanen (Criterion-Hinweis auf Sample-Zeit).
+- Fuer `nearest_batch/100000` weiterhin laengere Benchmark-Zeit einplanen (Criterion-Hinweis auf Sample-Zeit).

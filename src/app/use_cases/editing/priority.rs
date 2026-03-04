@@ -1,10 +1,10 @@
-//! Use-Case: Priorität einer bestehenden Verbindung ändern.
+//! Use-Case: Prioritaet einer bestehenden Verbindung aendern.
 
 use crate::app::AppState;
 use crate::core::ConnectionPriority;
 use std::sync::Arc;
 
-/// Ändert die Priorität einer bestehenden Verbindung.
+/// Aendert die Prioritaet einer bestehenden Verbindung.
 pub fn set_connection_priority(
     state: &mut AppState,
     start_id: u64,
@@ -15,7 +15,7 @@ pub fn set_connection_priority(
         return;
     };
 
-    // Prüfe ob Verbindung existiert
+    // Pruefe ob Verbindung existiert
     if road_map_arc.find_connection(start_id, end_id).is_none() {
         log::warn!("Verbindung {}→{} nicht gefunden", start_id, end_id);
         return;
@@ -25,7 +25,7 @@ pub fn set_connection_priority(
     state.record_undo_snapshot();
 
     let Some(road_map_arc) = state.road_map.as_mut() else {
-        log::warn!("Priorität nicht änderbar: keine RoadMap geladen");
+        log::warn!("Prioritaet nicht aenderbar: keine RoadMap geladen");
         return;
     };
     let road_map = Arc::make_mut(road_map_arc);
@@ -34,7 +34,7 @@ pub fn set_connection_priority(
     road_map.recalculate_node_flags(&[start_id, end_id]);
 
     log::info!(
-        "Verbindung {}→{} Priorität auf {:?} geändert",
+        "Verbindung {}→{} Prioritaet auf {:?} geaendert",
         start_id,
         end_id,
         priority

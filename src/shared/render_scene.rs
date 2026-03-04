@@ -1,4 +1,4 @@
-//! Render-Szene als expliziter Übergabevertrag zwischen App und Renderer.
+//! Render-Szene als expliziter Uebergabevertrag zwischen App und Renderer.
 //!
 //! Lebt im shared-Modul, da `app` sie baut und `render` sie konsumiert.
 
@@ -8,33 +8,33 @@ use crate::core::{BackgroundMap, Camera2D, RoadMap};
 use indexmap::IndexSet;
 use std::sync::Arc;
 
-/// Read-only Daten für einen Render-Frame.
+/// Read-only Daten fuer einen Render-Frame.
 #[derive(Clone)]
 pub struct RenderScene {
     /// Die aktuelle RoadMap (Nodes + Connections)
     pub road_map: Option<Arc<RoadMap>>,
-    /// Kamera-Zustand für diesen Frame
+    /// Kamera-Zustand fuer diesen Frame
     pub camera: Camera2D,
-    /// Viewport-Größe in Pixeln [Breite, Höhe]
+    /// Viewport-Groesse in Pixeln [Breite, Hoehe]
     pub viewport_size: [f32; 2],
-    /// Render-Qualitätsstufe (Anti-Aliasing)
+    /// Render-Qualitaetsstufe (Anti-Aliasing)
     pub render_quality: RenderQuality,
-    /// IDs der aktuell selektierten Nodes in Klick-Reihenfolge (Arc für O(1)-Clone pro Frame)
+    /// IDs der aktuell selektierten Nodes in Klick-Reihenfolge (Arc fuer O(1)-Clone pro Frame)
     pub selected_node_ids: Arc<IndexSet<u64>>,
-    /// Node-ID des Connect-Tool-Source (für spezielle Hervorhebung)
+    /// Node-ID des Connect-Tool-Source (fuer spezielle Hervorhebung)
     pub connect_source_node: Option<u64>,
     /// Background-Map (optional)
     pub background_map: Option<Arc<BackgroundMap>>,
     /// Background-Sichtbarkeit
     pub background_visible: bool,
-    /// Laufzeit-Optionen für Farben, Größen, Breiten (Arc für O(1)-Clone pro Frame)
+    /// Laufzeit-Optionen fuer Farben, Groessen, Breiten (Arc fuer O(1)-Clone pro Frame)
     pub options: Arc<EditorOptions>,
     /// Node-IDs, die im aktuellen Frame ausgeblendet werden sollen (z.B. Distanzen-Vorschau)
     pub hidden_node_ids: Arc<IndexSet<u64>>,
 }
 
 impl RenderScene {
-    /// Gibt zurück, ob eine Karte für Rendering vorhanden ist.
+    /// Gibt zurueck, ob eine Karte fuer Rendering vorhanden ist.
     pub fn has_map(&self) -> bool {
         self.road_map.is_some()
     }

@@ -1,11 +1,11 @@
-//! Handler für Selektions-Operationen.
+//! Handler fuer Selektions-Operationen.
 
 use crate::app::history::Snapshot;
 use crate::app::use_cases;
 use crate::app::{AppState, SelectionState};
 use std::sync::Arc;
 
-/// Zeichnet einen Undo-Snapshot auf, wenn sich die Selektion geändert hat.
+/// Zeichnet einen Undo-Snapshot auf, wenn sich die Selektion geaendert hat.
 fn record_if_selection_changed(state: &mut AppState, old_selection: SelectionState) {
     if old_selection.selected_node_ids != state.selection.selected_node_ids {
         let snap = Snapshot {
@@ -16,7 +16,7 @@ fn record_if_selection_changed(state: &mut AppState, old_selection: SelectionSta
     }
 }
 
-/// Selektiert den nächstgelegenen Node zum Klickpunkt.
+/// Selektiert den naechstgelegenen Node zum Klickpunkt.
 pub fn select_nearest_node(
     state: &mut AppState,
     world_pos: glam::Vec2,
@@ -35,7 +35,7 @@ pub fn select_nearest_node(
     record_if_selection_changed(state, old);
 }
 
-/// Selektiert das Segment zwischen den nächsten Kreuzungen.
+/// Selektiert das Segment zwischen den naechsten Kreuzungen.
 pub fn select_segment(
     state: &mut AppState,
     world_pos: glam::Vec2,

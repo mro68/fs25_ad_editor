@@ -20,7 +20,7 @@ pub fn show_save_overview_dialog(ctx: &egui::Context, ui_state: &mut UiState) ->
                 ui.add_space(8.0);
                 if ui_state.save_overview_dialog.is_overwrite {
                     ui.label("Es existiert bereits eine overview.jpg.");
-                    ui.label("Soll sie mit dem extrahierten Bild überschrieben werden?");
+                    ui.label("Soll sie mit dem extrahierten Bild ueberschrieben werden?");
                 } else {
                     ui.label("Soll das Hintergrundbild als overview.jpg");
                     ui.label("im Savegame-Verzeichnis gespeichert werden?");
@@ -34,14 +34,14 @@ pub fn show_save_overview_dialog(ctx: &egui::Context, ui_state: &mut UiState) ->
                 ui.add_space(4.0);
                 ui.label(
                     egui::RichText::new(
-                        "Beim nächsten Laden wird es automatisch als Hintergrund verwendet.",
+                        "Beim naechsten Laden wird es automatisch als Hintergrund verwendet.",
                     )
                     .weak(),
                 );
                 ui.add_space(12.0);
                 ui.horizontal(|ui| {
                     let btn_text = if ui_state.save_overview_dialog.is_overwrite {
-                        "Ja, überschreiben"
+                        "Ja, ueberschreiben"
                     } else {
                         "Ja, speichern"
                     };

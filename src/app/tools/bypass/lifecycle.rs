@@ -1,4 +1,4 @@
-//! `RouteTool`-Implementierung für das Ausweichstrecken-Tool.
+//! `RouteTool`-Implementierung fuer das Ausweichstrecken-Tool.
 
 use super::geometry::compute_bypass_positions;
 use super::state::BypassTool;
@@ -17,12 +17,12 @@ impl RouteTool for BypassTool {
     }
 
     fn description(&self) -> &str {
-        "Generiert eine parallele Ausweichstrecke zur selektierten Kette mit S-förmigen Übergängen"
+        "Generiert eine parallele Ausweichstrecke zur selektierten Kette mit S-foermigen Uebergaengen"
     }
 
     fn status_text(&self) -> &str {
         if self.has_chain() {
-            "Bereit — Enter zum Ausführen, Escape zum Abbrechen"
+            "Bereit — Enter zum Ausfuehren, Escape zum Abbrechen"
         } else {
             "Kette selektieren, dann Route-Tool neu aktivieren"
         }
@@ -50,7 +50,7 @@ impl RouteTool for BypassTool {
             new_pts
         };
 
-        // Vollständige Preview-Sequenz: chain_start + bypass_nodes + chain_end
+        // Vollstaendige Preview-Sequenz: chain_start + bypass_nodes + chain_end
         let chain_start = *self.chain_positions.first().unwrap();
         let chain_end = *self.chain_positions.last().unwrap();
 
@@ -85,7 +85,7 @@ impl RouteTool for BypassTool {
         let chain_start_pos = *self.chain_positions.first().unwrap();
         let chain_end_pos = *self.chain_positions.last().unwrap();
 
-        // Vollständige Positions-Sequenz: start + neue Nodes + end
+        // Vollstaendige Positions-Sequenz: start + neue Nodes + end
         let mut all_positions = Vec::with_capacity(new_positions.len() + 2);
         all_positions.push(chain_start_pos);
         all_positions.extend_from_slice(&new_positions);
@@ -101,7 +101,7 @@ impl RouteTool for BypassTool {
         ))
     }
 
-    /// Löscht die geladene Kette und den Cache.
+    /// Loescht die geladene Kette und den Cache.
     fn reset(&mut self) {
         self.chain_positions.clear();
         self.cached_positions = None;
@@ -123,7 +123,7 @@ impl RouteTool for BypassTool {
         true
     }
 
-    /// Lädt die geordnete Kette aus der Selektion.
+    /// Laedt die geordnete Kette aus der Selektion.
     fn load_chain(&mut self, positions: Vec<Vec2>, start_id: u64, end_id: u64) {
         self.chain_positions = positions;
         self.chain_start_id = start_id;

@@ -1,11 +1,11 @@
-//! In-Session-Registry aller erstellten Segmente (zum nachträglichen Bearbeiten).
+//! In-Session-Registry aller erstellten Segmente (zum nachtraeglichen Bearbeiten).
 //!
 //! Wird **nicht** in den Undo/Redo-Snapshot aufgenommen — die Registry ist
-//! transient und gilt nur für die aktuelle Session. Beim Laden einer Datei
+//! transient und gilt nur fuer die aktuelle Session. Beim Laden einer Datei
 //! ist sie leer.
 //!
-//! Beim Bearbeiten eines Segments werden die zugehörigen Nodes aus der
-//! RoadMap gelöscht und das passende Tool mit den gespeicherten Parametern
+//! Beim Bearbeiten eines Segments werden die zugehoerigen Nodes aus der
+//! RoadMap geloescht und das passende Tool mit den gespeicherten Parametern
 //! neu geladen.
 
 use crate::app::tools::common::TangentSource;
@@ -13,14 +13,14 @@ use crate::app::tools::ToolAnchor;
 use crate::core::{ConnectionDirection, ConnectionPriority};
 use glam::Vec2;
 
-/// Art des Segments — enthält alle tool-spezifischen Parameter.
+/// Art des Segments — enthaelt alle tool-spezifischen Parameter.
 #[derive(Debug, Clone)]
 pub enum SegmentKind {
     /// Gerade Strecke
     Straight {
         /// Verbindungsrichtung
         direction: ConnectionDirection,
-        /// Straßenart
+        /// Strassenart
         priority: ConnectionPriority,
         /// Maximaler Abstand zwischen Zwischen-Nodes
         max_segment_length: f32,
@@ -37,7 +37,7 @@ pub enum SegmentKind {
         tangent_end: TangentSource,
         /// Verbindungsrichtung
         direction: ConnectionDirection,
-        /// Straßenart
+        /// Strassenart
         priority: ConnectionPriority,
         /// Maximaler Abstand zwischen Zwischen-Nodes
         max_segment_length: f32,
@@ -48,7 +48,7 @@ pub enum SegmentKind {
         cp1: Vec2,
         /// Verbindungsrichtung
         direction: ConnectionDirection,
-        /// Straßenart
+        /// Strassenart
         priority: ConnectionPriority,
         /// Maximaler Abstand zwischen Zwischen-Nodes
         max_segment_length: f32,
@@ -63,20 +63,20 @@ pub enum SegmentKind {
         tangent_end: TangentSource,
         /// Verbindungsrichtung
         direction: ConnectionDirection,
-        /// Straßenart
+        /// Strassenart
         priority: ConnectionPriority,
         /// Maximaler Abstand zwischen Zwischen-Nodes
         max_segment_length: f32,
     },
-    /// Constraint-Route (winkelgeglättet mit automatischen Tangenten)
+    /// Constraint-Route (winkelgeglaettet mit automatischen Tangenten)
     ConstraintRoute {
         /// Zwischen-Kontrollpunkte
         control_nodes: Vec<Vec2>,
-        /// Maximale Richtungsänderung pro Segment (Grad)
+        /// Maximale Richtungsaenderung pro Segment (Grad)
         max_angle_deg: f32,
         /// Verbindungsrichtung
         direction: ConnectionDirection,
-        /// Straßenart
+        /// Strassenart
         priority: ConnectionPriority,
         /// Maximaler Abstand zwischen Zwischen-Nodes
         max_segment_length: f32,
@@ -85,25 +85,25 @@ pub enum SegmentKind {
     },
 }
 
-/// Tool-Index für `StraightLineTool` im `ToolManager` (Registrierungs-Slot 0).
+/// Tool-Index fuer `StraightLineTool` im `ToolManager` (Registrierungs-Slot 0).
 ///
-/// Muss mit der Reihenfolge in `ToolManager::new()` übereinstimmen.
+/// Muss mit der Reihenfolge in `ToolManager::new()` uebereinstimmen.
 pub const TOOL_INDEX_STRAIGHT: usize = 0;
-/// Tool-Index für `CurveTool(Grad 2)` im `ToolManager` (Registrierungs-Slot 1).
+/// Tool-Index fuer `CurveTool(Grad 2)` im `ToolManager` (Registrierungs-Slot 1).
 pub const TOOL_INDEX_CURVE_QUAD: usize = 1;
-/// Tool-Index für `CurveTool(Grad 3)` im `ToolManager` (Registrierungs-Slot 2).
+/// Tool-Index fuer `CurveTool(Grad 3)` im `ToolManager` (Registrierungs-Slot 2).
 pub const TOOL_INDEX_CURVE_CUBIC: usize = 2;
-/// Tool-Index für `SplineTool` im `ToolManager` (Registrierungs-Slot 3).
+/// Tool-Index fuer `SplineTool` im `ToolManager` (Registrierungs-Slot 3).
 pub const TOOL_INDEX_SPLINE: usize = 3;
-/// Tool-Index für `BypassTool` im `ToolManager` (Registrierungs-Slot 4).
+/// Tool-Index fuer `BypassTool` im `ToolManager` (Registrierungs-Slot 4).
 pub const TOOL_INDEX_BYPASS: usize = 4;
-/// Tool-Index für `ConstraintRouteTool` im `ToolManager` (Registrierungs-Slot 5).
+/// Tool-Index fuer `ConstraintRouteTool` im `ToolManager` (Registrierungs-Slot 5).
 pub const TOOL_INDEX_CONSTRAINT_ROUTE: usize = 5;
 
 impl SegmentKind {
-    /// Gibt den Tool-Index im ToolManager für dieses Segment zurück.
+    /// Gibt den Tool-Index im ToolManager fuer dieses Segment zurueck.
     ///
-    /// Muss mit der Registrierungsreihenfolge in `ToolManager::new()` übereinstimmen —
+    /// Muss mit der Registrierungsreihenfolge in `ToolManager::new()` uebereinstimmen —
     /// abgesichert durch den Unit-Test `tool_index_stimmt_mit_tool_manager_reihenfolge_ueberein`.
     pub fn tool_index(&self) -> usize {
         match self {
@@ -122,7 +122,7 @@ mod tests {
     use crate::app::tools::ToolManager;
 
     /// Stellt sicher, dass `tool_index()` mit der Registrierungsreihenfolge
-    /// in `ToolManager::new()` übereinstimmt. Bricht sofort beim Umbenennen
+    /// in `ToolManager::new()` uebereinstimmt. Bricht sofort beim Umbenennen
     /// oder Umsortieren der Tools.
     #[test]
     fn tool_index_stimmt_mit_tool_manager_reihenfolge_ueberein() {
@@ -168,7 +168,7 @@ pub struct SegmentRecord {
 
 /// In-Session-Registry aller erstellten Segmente.
 ///
-/// Ermöglicht das nachträgliche Bearbeiten von Segmenten, indem die
+/// Ermoeglicht das nachtraegliche Bearbeiten von Segmenten, indem die
 /// Tool-Parameter beim Erstellen gespeichert und beim Bearbeiten
 /// wiederhergestellt werden.
 #[derive(Debug, Clone, Default)]
@@ -183,7 +183,7 @@ impl SegmentRegistry {
         Self::default()
     }
 
-    /// Registriert ein neues Segment und gibt die vergebene ID zurück.
+    /// Registriert ein neues Segment und gibt die vergebene ID zurueck.
     pub fn register(&mut self, record: SegmentRecord) -> u64 {
         let id = record.id;
         self.records.push(record);
@@ -197,7 +197,7 @@ impl SegmentRegistry {
         id
     }
 
-    /// Gibt den Record mit der angegebenen ID zurück (falls vorhanden).
+    /// Gibt den Record mit der angegebenen ID zurueck (falls vorhanden).
     pub fn get(&self, record_id: u64) -> Option<&SegmentRecord> {
         self.records.iter().find(|r| r.id == record_id)
     }
@@ -207,7 +207,7 @@ impl SegmentRegistry {
         self.records.retain(|r| r.id != record_id);
     }
 
-    /// Gibt alle Records zurück, die mindestens einen der angegebenen Node-IDs enthalten.
+    /// Gibt alle Records zurueck, die mindestens einen der angegebenen Node-IDs enthalten.
     pub fn find_by_node_ids(&self, node_ids: &indexmap::IndexSet<u64>) -> Vec<&SegmentRecord> {
         self.records
             .iter()
@@ -217,19 +217,19 @@ impl SegmentRegistry {
 
     /// Entfernt alle Records, die mindestens einen der angegebenen Node-IDs enthalten.
     ///
-    /// Wird aufgerufen wenn Nodes manuell gelöscht werden (z.B. Delete-Taste).
+    /// Wird aufgerufen wenn Nodes manuell geloescht werden (z.B. Delete-Taste).
     pub fn invalidate_by_node_ids(&mut self, node_ids: &[u64]) {
         let id_set: std::collections::HashSet<u64> = node_ids.iter().copied().collect();
         self.records
             .retain(|r| !r.node_ids.iter().any(|nid| id_set.contains(nid)));
     }
 
-    /// Gibt die Anzahl der gespeicherten Records zurück.
+    /// Gibt die Anzahl der gespeicherten Records zurueck.
     pub fn len(&self) -> usize {
         self.records.len()
     }
 
-    /// Gibt zurück ob die Registry leer ist.
+    /// Gibt zurueck ob die Registry leer ist.
     pub fn is_empty(&self) -> bool {
         self.records.is_empty()
     }

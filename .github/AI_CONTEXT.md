@@ -1,6 +1,6 @@
-# Kontext für AI-Tools
+# Kontext fuer AI-Tools
 
-Dieses Projekt nutzt mehrere Dokumentations-Ebenen für AI-Assistenten:
+Dieses Projekt nutzt mehrere Dokumentations-Ebenen fuer AI-Assistenten:
 
 1. **`.github/copilot-instructions.md`** → GitHub Copilot in VS Code
 2. **`.windsurf/rules/*.md`** → Windsurf/Codeium und andere Tools
@@ -15,5 +15,5 @@ Alle enthalten konsistente Informationen zu:
 
 ## Source of Truth (Architektur)
 
-- Primär: `docs/ARCHITECTURE_PLAN.md`
-- Ergänzend: `src/app/API.md`, `src/ui/API.md`, `src/render/API.md`
+- Primaer: `docs/ARCHITECTURE_PLAN.md`
+- Ergaenzend: `src/app/API.md`, `src/ui/API.md`, `src/render/API.md`

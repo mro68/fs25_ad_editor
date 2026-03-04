@@ -67,7 +67,7 @@ fn test_compute_phantoms_end_only() {
     let (start, end) = SplineTool::compute_phantoms(&pts, TangentSource::None, tangent);
     assert!(start.is_none());
     assert!(end.is_some());
-    // angle=PI → dir = Vec2::from_angle(0) = (+1, 0) → Phantom östlich vom Ende
+    // angle=PI → dir = Vec2::from_angle(0) = (+1, 0) → Phantom oestlich vom Ende
     assert!(end.unwrap().x > 10.0);
 }
 
@@ -230,7 +230,7 @@ fn test_spline_tool_chaining() {
     tool.set_last_created(&[100, 101, 102, 103], &road_map);
     tool.reset();
 
-    // Verkettung: nächster Klick übernimmt letzten Endpunkt
+    // Verkettung: naechster Klick uebernimmt letzten Endpunkt
     let action = tool.on_click(Vec2::new(20.0, 0.0), &road_map, false);
     assert_eq!(action, ToolAction::UpdatePreview);
     assert_eq!(tool.anchors.len(), 2);
@@ -263,7 +263,7 @@ fn test_spline_execute_from_anchors() {
     tool.set_last_created(&[1, 2, 3, 4, 5], &road_map);
     tool.reset();
 
-    // Nachbearbeitung mit anderer Segment-Länge
+    // Nachbearbeitung mit anderer Segment-Laenge
     tool.seg.max_segment_length = 5.0;
     let result = tool
         .execute_from_anchors(&road_map)

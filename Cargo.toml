@@ -6,7 +6,7 @@ name = "FS25-AutoDrive-Editor"
 version = "1.0.0"
 edition = "2021"
 authors = ["MRO"]
-description = "GPU-beschleunigter Editor für AutoDrive-Kurse in Farming Simulator 25"
+description = "GPU-beschleunigter Editor fuer AutoDrive-Kurse in Farming Simulator 25"
 repository = "https://github.com/mro68/fs25_ad_editor"
 license = "GPL-3.0"
 
@@ -66,10 +66,10 @@ fs25_map_overview = { path = "crates/fs25_map_overview" }
 serde = { version = "1", features = ["derive"] }
 toml = "0.9.8"
 
-# Geordnete HashSet für deterministische Selektionsreihenfolge
+# Geordnete HashSet fuer deterministische Selektionsreihenfolge
 indexmap = "2"
 
-# Regex für Fuzzy-Matching (z.B. ZIP-Suche nach Map-Name)
+# Regex fuer Fuzzy-Matching (z.B. ZIP-Suche nach Map-Name)
 regex = "1"
 
 # Utility

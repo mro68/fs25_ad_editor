@@ -5,7 +5,7 @@ use std::collections::HashMap;
 
 use super::helpers::{build_undirected_adjacency, clear_selection};
 
-/// Läuft entlang einer Kette von Grad-2-Nodes bis zur nächsten Segmentgrenze.
+/// Laeuft entlang einer Kette von Grad-2-Nodes bis zur naechsten Segmentgrenze.
 fn walk_to_segment_boundary(
     start: u64,
     first_neighbor: u64,
@@ -41,10 +41,10 @@ fn walk_to_segment_boundary(
     path
 }
 
-/// Selektiert den Korridor um den getroffenen Node bis zu den nächsten Segmentgrenzen.
+/// Selektiert den Korridor um den getroffenen Node bis zu den naechsten Segmentgrenzen.
 ///
 /// Segmentgrenzen sind Nodes mit Grad != 2, also Verzweigungen oder Sackgassen.
-/// Bei `additive = true` wird das Segment zur bestehenden Selektion hinzugefügt.
+/// Bei `additive = true` wird das Segment zur bestehenden Selektion hinzugefuegt.
 pub fn select_segment_between_nearest_intersections(
     state: &mut AppState,
     world_pos: glam::Vec2,
@@ -205,7 +205,7 @@ mod tests {
 
     #[test]
     fn select_segment_works_for_bidirectional_connections() {
-        // Bidirektionale Straße: 10 ↔ 11 ↔ 12 ↔ 13 ↔ 14
+        // Bidirektionale Strasse: 10 ↔ 11 ↔ 12 ↔ 13 ↔ 14
         // Kreuzung an 10 (Grad 3: 11, 20, 22) und 14 (Grad 3: 13, 21, 23)
         let mut map = RoadMap::new(3);
         map.add_node(MapNode::new(
@@ -264,7 +264,7 @@ mod tests {
                 glam::Vec2::new(ex, ey),
             )
         };
-        // Bidirektionale Hauptstraße (Hin- UND Rückrichtung)
+        // Bidirektionale Hauptstrasse (Hin- UND Rueckrichtung)
         map.add_connection(conn(10, 11, -20.0, 0.0, -10.0, 0.0));
         map.add_connection(conn(11, 10, -10.0, 0.0, -20.0, 0.0));
         map.add_connection(conn(11, 12, -10.0, 0.0, 0.0, 0.0));
@@ -295,7 +295,7 @@ mod tests {
         for node_id in [10_u64, 11, 12, 13, 14] {
             assert!(
                 state.selection.selected_node_ids.contains(&node_id),
-                "Node {} sollte selektiert sein (bidirektionale Straße)",
+                "Node {} sollte selektiert sein (bidirektionale Strasse)",
                 node_id
             );
         }

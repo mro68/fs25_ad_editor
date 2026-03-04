@@ -23,7 +23,7 @@ pub struct Poi {
     pub label: String,
 }
 
-/// Farmland-Daten für Overlay.
+/// Farmland-Daten fuer Overlay.
 pub struct FarmlandData {
     /// Grenzen-Maske (true = Grenzpixel)
     pub boundaries: Vec<bool>,
@@ -34,7 +34,7 @@ pub struct FarmlandData {
     pub height: u32,
 }
 
-/// Optionen für die Overview-Generierung.
+/// Optionen fuer die Overview-Generierung.
 #[derive(Debug, Clone, PartialEq)]
 pub struct OverviewOptions {
     /// Hillshade anwenden
@@ -70,7 +70,7 @@ pub fn extract_farmland_boundaries(grle_data: &[u8], target_size: u32) -> Result
     let ids = GrayImage::from_raw(decoded.width as u32, decoded.height as u32, decoded.pixels)
         .ok_or_else(|| anyhow::anyhow!("Fehler beim Erstellen des Farmland-Bildes"))?;
 
-    // Auf Zielgröße skalieren (Nearest-Neighbor für IDs)
+    // Auf Zielgroesse skalieren (Nearest-Neighbor fuer IDs)
     let ids = if ids.width() != target_size || ids.height() != target_size {
         image::imageops::resize(
             &ids,
@@ -147,15 +147,15 @@ pub fn draw_farmland_boundaries(image: &mut RgbImage, farmlands: &FarmlandData) 
 const POI_RULES: &[(&str, &str)] = &[
     ("gasStation", "Tankstelle"),
     ("livestockMarket", "Viehmarkt"),
-    ("bakery", "Bäckerei"),
+    ("bakery", "Baeckerei"),
     ("farmersMarket", "Bauernmarkt"),
     ("groceryStore", "Lebensmittelladen"),
-    ("grainMill", "Getreidemühle"),
-    ("grainmill", "Getreidemühle"),
+    ("grainMill", "Getreidemuehle"),
+    ("grainmill", "Getreidemuehle"),
     ("grainBarge", "Getreideterminal"),
     ("grainElevator", "Getreidesilo"),
     ("getreidesilo", "Getreidesilo"),
-    ("sawmill", "Sägewerk"),
+    ("sawmill", "Saegewerk"),
     ("dairy", "Molkerei"),
     ("canned", "Konservenfabrik"),
     ("konservenfabrik", "Konservenfabrik"),
@@ -163,9 +163,9 @@ const POI_RULES: &[(&str, &str)] = &[
     ("brewery", "Brauerei"),
     ("cottonMill", "Baumwollspinnerei"),
     ("distillery", "Destillerie"),
-    ("buyingStationManure", "Dunghändler"),
-    ("buyingStationLiquidManure", "Güllehändler"),
-    ("buyingStationSeeds", "Saathändler"),
+    ("buyingStationManure", "Dunghaendler"),
+    ("buyingStationLiquidManure", "Guellehaendler"),
+    ("buyingStationSeeds", "Saathaendler"),
     ("buyingStation", "Ankaufstation"),
     ("sellingStation", "Verkaufsstelle"),
     ("weighingStation", "Waage"),
@@ -173,8 +173,8 @@ const POI_RULES: &[(&str, &str)] = &[
     ("carpenterShop", "Schreinerei"),
     ("bga", "BGA"),
     ("spinnery", "Spinnerei"),
-    ("oilMill", "Ölmühle"),
-    ("flourMill", "Mehlmühle"),
+    ("oilMill", "Oelmuehle"),
+    ("flourMill", "Mehlmuehle"),
 ];
 
 /// Extrahiert POIs aus einer placeables.xml.
@@ -225,7 +225,7 @@ pub fn extract_pois(xml_data: &[u8], map_size: u32) -> Vec<Poi> {
     pois
 }
 
-/// Parst eine einzelne Placeable-Position und prüft POI-Regeln.
+/// Parst eine einzelne Placeable-Position und prueft POI-Regeln.
 fn parse_poi(position: &str, filename: &str, map_size: u32) -> Option<Poi> {
     let parts: Vec<&str> = position.split_whitespace().collect();
     if parts.len() < 3 {
@@ -265,13 +265,13 @@ pub fn draw_pois(image: &mut RgbImage, pois: &[Poi]) {
         let cx = poi.x as i32;
         let cy = poi.y as i32;
 
-        // Kreis zeichnen (gefüllt + Outline)
+        // Kreis zeichnen (gefuellt + Outline)
         draw_filled_circle(image, cx, cy, radius + 1, outline_color);
         draw_filled_circle(image, cx, cy, radius, marker_color);
     }
 }
 
-/// Zeichnet einen gefüllten Kreis auf ein RGB-Bild.
+/// Zeichnet einen gefuellten Kreis auf ein RGB-Bild.
 fn draw_filled_circle(image: &mut RgbImage, cx: i32, cy: i32, radius: i32, color: Rgb<u8>) {
     let w = image.width() as i32;
     let h = image.height() as i32;
@@ -289,7 +289,7 @@ fn draw_filled_circle(image: &mut RgbImage, cx: i32, cy: i32, radius: i32, color
     }
 }
 
-/// Blendet zwei Farbkanäle zusammen.
+/// Blendet zwei Farbkanaele zusammen.
 fn blend_channel(base: u8, overlay: u8, alpha: f32) -> u8 {
     let result = base as f32 * (1.0 - alpha) + overlay as f32 * alpha;
     result.clamp(0.0, 255.0) as u8
@@ -301,7 +301,7 @@ fn blend_channel(base: u8, overlay: u8, alpha: f32) -> u8 {
 ///
 /// Berechnet den Schwerpunkt aller Pixel pro Farmland-ID
 /// und zeichnet die ID-Nummer dort hin.
-/// Kleine Farmlands (< 50 Pixel) werden übersprungen.
+/// Kleine Farmlands (< 50 Pixel) werden uebersprungen.
 pub fn draw_farmland_ids(image: &mut RgbImage, farmlands: &FarmlandData) {
     let w = farmlands.width as usize;
     let raw = farmlands.ids.as_raw();
@@ -320,14 +320,14 @@ pub fn draw_farmland_ids(image: &mut RgbImage, farmlands: &FarmlandData) {
         entry.2 += 1;
     }
 
-    // Font-Scale basierend auf Bildgröße
+    // Font-Scale basierend auf Bildgroesse
     let scale = (image.width() / 1200).clamp(1, 4);
 
     let label_color = Rgb([255, 255, 200]);
 
     for (id, (sum_x, sum_y, count)) in &centroids {
         if *count < 50 {
-            continue; // Zu klein für ein Label
+            continue; // Zu klein fuer ein Label
         }
         let cx = (*sum_x / *count) as i32;
         let cy = (*sum_y / *count) as i32;
@@ -345,7 +345,7 @@ pub fn draw_farmland_ids(image: &mut RgbImage, farmlands: &FarmlandData) {
 /// Zeichnet POI-Marker MIT Text-Labels auf ein RGB-Bild.
 ///
 /// Labels werden rechts neben dem Marker platziert.
-/// Überlappende Labels werden übersprungen (Mindestabstand).
+/// Ueberlappende Labels werden uebersprungen (Mindestabstand).
 pub fn draw_pois_with_labels(image: &mut RgbImage, pois: &[Poi]) {
     let marker_color = Rgb([220, 50, 50]);
     let outline_color = Rgb([255, 255, 255]);
@@ -354,7 +354,7 @@ pub fn draw_pois_with_labels(image: &mut RgbImage, pois: &[Poi]) {
     let scale = (image.width() / 1200).clamp(1, 4);
     let min_dist = (image.width() / 22) as i32;
 
-    // Labels mit Überlappungsprüfung platzieren
+    // Labels mit Ueberlappungspruefung platzieren
     let mut placed_labels: Vec<(i32, i32)> = Vec::new();
 
     for poi in pois {
@@ -379,10 +379,10 @@ pub fn draw_pois_with_labels(image: &mut RgbImage, pois: &[Poi]) {
     }
 }
 
-/// Zeichnet die Farbschlüssel-Legende auf das Bild.
+/// Zeichnet die Farbschluessel-Legende auf das Bild.
 ///
 /// Die Legende wird unten links als halbtransparente Box dargestellt.
-/// Enthält Terrain-Farben, POI-Markierung und Farmland-Grenzfarbe.
+/// Enthaelt Terrain-Farben, POI-Markierung und Farmland-Grenzfarbe.
 pub fn draw_legend(image: &mut RgbImage, options: &OverviewOptions) {
     legend::draw_legend(image, options)
 }

@@ -5,17 +5,17 @@ use std::sync::Arc;
 /// View-bezogener Anwendungszustand
 #[derive(Default)]
 pub struct ViewState {
-    /// 2D-Kamera für die Ansicht
+    /// 2D-Kamera fuer die Ansicht
     pub camera: Camera2D,
-    /// Aktuelle Viewport-Größe in Pixel
+    /// Aktuelle Viewport-Groesse in Pixel
     pub viewport_size: [f32; 2],
-    /// Qualitätsstufe für Kantenglättung
+    /// Qualitaetsstufe fuer Kantenglaettung
     pub render_quality: RenderQuality,
     /// Background-Map (optional)
     pub background_map: Option<Arc<BackgroundMap>>,
     /// Background-Sichtbarkeit
     pub background_visible: bool,
-    /// Skalierungsfaktor für Background-Map-Ausdehnung (1.0 = Original)
+    /// Skalierungsfaktor fuer Background-Map-Ausdehnung (1.0 = Original)
     pub background_scale: f32,
     /// Signalisiert, dass die Background-Map neu in den GPU-Renderer hochgeladen werden muss
     pub background_dirty: bool,

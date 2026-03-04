@@ -1,18 +1,18 @@
 //! Validiertes Context-Menu-System: Command-Definitionen, Preconditions und Kataloge.
 //!
 //! Architektur:
-//! - `CommandId`: Eindeutige Identifikation jedes Menü-Eintrags (mod.rs)
+//! - `CommandId`: Eindeutige Identifikation jedes Menue-Eintrags (mod.rs)
 //! - `Precondition`: Enum mit Vorbedingungen (preconditions.rs)
 //! - `MenuCatalog`: Statischer Katalog pro `MenuVariant` (catalogs.rs)
-//! - `validate_entries()`: Filtert nur gültige Commands (validation.rs)
+//! - `validate_entries()`: Filtert nur gueltige Commands (validation.rs)
 //!
-//! Garantie: Nur Commands mit erfüllten Preconditions werden gerendert.
+//! Garantie: Nur Commands mit erfuellten Preconditions werden gerendert.
 
 mod catalogs;
 pub mod preconditions;
 mod validation;
 
-// Re-Exports für Konsumenten
+// Re-Exports fuer Konsumenten
 pub use preconditions::{Precondition, PreconditionContext};
 pub use validation::{validate_entries, ValidatedEntry};
 
@@ -22,10 +22,10 @@ use crate::app::segment_registry::{
 use crate::app::{AppIntent, ConnectionDirection, ConnectionPriority, EditorTool};
 
 // =============================================================================
-// CommandId — Eindeutige Identifikation jedes Menü-Befehls
+// CommandId — Eindeutige Identifikation jedes Menue-Befehls
 // =============================================================================
 
-/// Eindeutige ID für jeden Context-Menu-Befehl.
+/// Eindeutige ID fuer jeden Context-Menu-Befehl.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum CommandId {
     // ── EmptyArea ────────────────────────────────────────────────────
@@ -33,7 +33,7 @@ pub enum CommandId {
     SetToolSelect,
     /// Verbinden-Werkzeug aktivieren
     SetToolConnect,
-    /// Node-Hinzufügen-Werkzeug aktivieren
+    /// Node-Hinzufuegen-Werkzeug aktivieren
     SetToolAddNode,
     /// Route-Tool: Gerade Strecke aktivieren
     SetToolRouteStraight,
@@ -51,7 +51,7 @@ pub enum CommandId {
     CreateMarker,
     /// Marker bearbeiten
     EditMarker,
-    /// Marker löschen
+    /// Marker loeschen
     RemoveMarker,
     // ── Selection-Befehle (SelectionOnly + NodeFocused) ─────────────
     /// Zwei Nodes verbinden (nur bei genau 2 unverbundenen)
@@ -72,9 +72,9 @@ pub enum CommandId {
     DirectionReverse,
     /// Richtung: Invertieren
     DirectionInvert,
-    /// Priorität: Hauptstraße
+    /// Prioritaet: Hauptstrasse
     PriorityRegular,
-    /// Priorität: Nebenstraße
+    /// Prioritaet: Nebenstrasse
     PrioritySub,
     /// Alle Verbindungen trennen
     RemoveAllConnections,
@@ -82,14 +82,14 @@ pub enum CommandId {
     StreckenteilungMulti,
     /// Selektion invertieren
     InvertSelection,
-    /// Alle Nodes auswählen
+    /// Alle Nodes auswaehlen
     SelectAll,
     /// Selektion aufheben
     ClearSelection,
-    /// Selektierte Nodes löschen
+    /// Selektierte Nodes loeschen
     DeleteSelected,
     // ── RouteTool ────────────────────────────────────────────────────
-    /// Route ausführen
+    /// Route ausfuehren
     RouteExecute,
     /// Route neu berechnen
     RouteRecreate,
@@ -98,13 +98,13 @@ pub enum CommandId {
 }
 
 // =============================================================================
-// MenuEntry + MenuCatalog — Statische Beschreibung der Menü-Struktur
+// MenuEntry + MenuCatalog — Statische Beschreibung der Menue-Struktur
 // =============================================================================
 
-/// Ein einzelner Eintrag im Menü-Katalog.
+/// Ein einzelner Eintrag im Menue-Katalog.
 #[derive(Debug, Clone)]
 pub enum MenuEntry {
-    /// Überschrift / Label (wird nur angezeigt wenn kein Submenu)
+    /// Ueberschrift / Label (wird nur angezeigt wenn kein Submenu)
     Label(String),
     /// Trennlinie
     Separator,
@@ -114,14 +114,14 @@ pub enum MenuEntry {
         label: String,
         preconditions: Vec<Precondition>,
     },
-    /// Einklappbares Untermenü mit eigenem Label und Kind-Einträgen
+    /// Einklappbares Untermenue mit eigenem Label und Kind-Eintraegen
     Submenu {
         label: String,
         entries: Vec<MenuEntry>,
     },
 }
 
-/// Katalog für eine bestimmte `MenuVariant` — definiert Reihenfolge und Preconditions.
+/// Katalog fuer eine bestimmte `MenuVariant` — definiert Reihenfolge und Preconditions.
 #[derive(Debug, Clone)]
 pub struct MenuCatalog {
     pub entries: Vec<MenuEntry>,
@@ -131,18 +131,18 @@ pub struct MenuCatalog {
 // Intent-Erzeugung — Wie wird aus einem CommandId ein AppIntent?
 // =============================================================================
 
-/// Kontext für die Intent-Erzeugung — enthält Node-IDs und Tool-Daten.
+/// Kontext fuer die Intent-Erzeugung — enthaelt Node-IDs und Tool-Daten.
 pub struct IntentContext {
-    /// Node-ID (für SingleNode-Varianten)
+    /// Node-ID (fuer SingleNode-Varianten)
     pub node_id: Option<u64>,
-    /// Node-Position (für NodePick)
+    /// Node-Position (fuer NodePick)
     pub node_position: Option<glam::Vec2>,
-    /// Sortierte Zwei-Node-IDs (für RouteToolWithAnchorsRequested)
+    /// Sortierte Zwei-Node-IDs (fuer RouteToolWithAnchorsRequested)
     pub two_node_ids: Option<(u64, u64)>,
 }
 
 impl CommandId {
-    /// Erzeugt den passenden `AppIntent` für diesen Command.
+    /// Erzeugt den passenden `AppIntent` fuer diesen Command.
     pub fn to_intent(&self, ctx: &IntentContext) -> AppIntent {
         match self {
             // ── EmptyArea ────────────────────────────────────────────

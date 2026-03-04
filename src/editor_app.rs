@@ -204,6 +204,8 @@ impl EditorApp {
             .active_tool()
             .map(|t| t.has_pending_input())
             .unwrap_or(false);
+        let default_direction = self.state.editor.default_direction;
+        let default_priority = self.state.editor.default_priority;
 
         // Tangenten-Daten vom aktiven Route-Tool abfragen (nur Daten, kein UI)
         let tangent_data = if self.state.editor.active_tool == EditorTool::Route {
@@ -226,6 +228,8 @@ impl EditorApp {
             self.state.editor.active_tool,
             route_tool_is_drawing,
             &self.state.options,
+            default_direction,
+            default_priority,
             &drag_targets,
             &mut self.state.ui.distanzen,
             tangent_data,

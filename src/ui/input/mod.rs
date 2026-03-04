@@ -3,7 +3,7 @@
 //! Aufgeteilt in phasenbasierte Submodule:
 //! - `clicks` — Klick-Events (Einfach-/Doppel-Klick, Tool-Routing)
 //! - `drag_primary` — Drag-Start/-Ende (Selektion-Move, Kamera-Pan, Route-Tool-Drag)
-//! - `pointer_delta` — Pan/Move-Deltas während aktiver Drags
+//! - `pointer_delta` — Pan/Move-Deltas waehrend aktiver Drags
 //! - `zoom` — Scroll-Zoom auf Mausposition
 
 mod clicks;
@@ -15,11 +15,13 @@ use super::context_menu;
 use super::drag::{draw_drag_selection_overlay, DragSelection};
 use super::keyboard;
 use crate::app::tools::common::TangentMenuData;
-use crate::app::{AppIntent, Camera2D, EditorTool, RoadMap};
+use crate::app::{
+    AppIntent, Camera2D, ConnectionDirection, ConnectionPriority, EditorTool, RoadMap,
+};
 use crate::shared::EditorOptions;
 use indexmap::IndexSet;
 
-/// Modus des primären (Links-)Drags im Viewport.
+/// Modus des primaeren (Links-)Drags im Viewport.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub(crate) enum PrimaryDragMode {
     #[default]
@@ -30,7 +32,7 @@ pub(crate) enum PrimaryDragMode {
     RouteToolPointDrag,
 }
 
-/// Bündelt die gemeinsamen Parameter für Viewport-Event-Verarbeitung.
+/// Buendelt die gemeinsamen Parameter fuer Viewport-Event-Verarbeitung.
 pub(crate) struct ViewportContext<'a> {
     pub ui: &'a egui::Ui,
     pub response: &'a egui::Response,
@@ -43,31 +45,31 @@ pub(crate) struct ViewportContext<'a> {
     pub drag_targets: &'a [glam::Vec2],
 }
 
-/// Immutable Snapshot des Kontextmenü-States beim Rechtsklick.
+/// Immutable Snapshot des Kontextmenue-States beim Rechtsklick.
 ///
 /// Dieser Snapshot gefriert den kompletten Zustand ein, der zum Zeitpunkt
-/// des Rechtsklicks galt — damit Menüinhalt stabil bleibt, solange das
-/// Popup offen ist. Zustandsänderungen (Escape, Deselection etc.) beeinflussen
-/// nicht das bereits offene Menü.
+/// des Rechtsklicks galt — damit Menueinhalt stabil bleibt, solange das
+/// Popup offen ist. Zustandsaenderungen (Escape, Deselection etc.) beeinflussen
+/// nicht das bereits offene Menue.
 #[derive(Debug, Clone)]
 struct ContextMenuSnapshot {
     /// Eingefrorene Menu-Variante
     variant: context_menu::MenuVariant,
     /// Eingefrorene Selection-Menge (geklonter Arc = O(1))
     selection: indexmap::IndexSet<u64>,
-    /// Bildschirmposition des Rechtsklicks (für Panel-Positionierung)
+    /// Bildschirmposition des Rechtsklicks (fuer Panel-Positionierung)
     screen_pos: Option<egui::Pos2>,
 }
 
-/// Verwaltet den Input-Zustand für das Viewport (Drag, Selektion, Scroll)
+/// Verwaltet den Input-Zustand fuer das Viewport (Drag, Selektion, Scroll)
 #[derive(Default)]
 pub struct InputState {
     pub(crate) primary_drag_mode: PrimaryDragMode,
     pub(crate) drag_selection: Option<DragSelection>,
-    /// Snapshot des Menü-Zustands, gültig solange das Popup offen ist.
-    /// Wird beim Rechtsklick gesetzt und erst geleert, wenn egui das Popup schließt.
+    /// Snapshot des Menue-Zustands, gueltig solange das Popup offen ist.
+    /// Wird beim Rechtsklick gesetzt und erst geleert, wenn egui das Popup schliesst.
     context_menu_snapshot: Option<ContextMenuSnapshot>,
-    /// Bildschirmposition des letzten CM-Klicks für Edit-Panel-Positionierung.
+    /// Bildschirmposition des letzten CM-Klicks fuer Edit-Panel-Positionierung.
     pub edit_panel_pos: Option<[f32; 2]>,
 }
 
@@ -83,15 +85,15 @@ impl InputState {
     }
 
     #[allow(clippy::too_many_arguments)]
-    /// Sammelt Viewport-Events aus egui-Input und gibt AppIntents zurück.
+    /// Sammelt Viewport-Events aus egui-Input und gibt AppIntents zurueck.
     ///
-    /// Diese Methode ist der zentrale UI→Intent-Einstieg für Maus-, Scroll-
+    /// Diese Methode ist der zentrale UI→Intent-Einstieg fuer Maus-, Scroll-
     /// und Drag-Interaktionen im Viewport.
     ///
-    /// `drag_targets` enthält die Weltpositionen verschiebbarer Punkte
+    /// `drag_targets` enthaelt die Weltpositionen verschiebbarer Punkte
     /// des aktiven Route-Tools (leer wenn kein Tool aktiv oder keine Targets).
     ///
-    /// `tangent_data` enthält optionale Tangenten-Menüdaten vom aktiven Route-Tool
+    /// `tangent_data` enthaelt optionale Tangenten-Menuedaten vom aktiven Route-Tool
     /// (nur bei kubischer Kurve in Control-Phase mit Nachbarn).
     pub fn collect_viewport_events(
         &mut self,
@@ -104,6 +106,8 @@ impl InputState {
         active_tool: EditorTool,
         route_tool_is_drawing: bool,
         options: &EditorOptions,
+        default_direction: ConnectionDirection,
+        default_priority: ConnectionPriority,
         drag_targets: &[glam::Vec2],
         distanzen_state: &mut crate::app::state::DistanzenState,
         tangent_data: Option<TangentMenuData>,
@@ -158,16 +162,16 @@ impl InputState {
         });
 
         // Beim Rechtsklick: Snapshot erstellen und einfrieren
-        // Guard: Kein Kontextmenü während Rect/Lasso-Drag
+        // Guard: Kein Kontextmenue waehrend Rect/Lasso-Drag
         if response.secondary_clicked() && self.drag_selection.is_none() {
-            // Node unter Mausposition finden (für NodeFocused-Menü)
+            // Node unter Mausposition finden (fuer NodeFocused-Menue)
             let clicked_node_id = pointer_pos_world.and_then(|pos| {
                 road_map.and_then(|rm| {
                     context_menu::find_nearest_node_at(pos, rm, options.snap_radius())
                 })
             });
 
-            // Route-Tool-Priorität prüfen
+            // Route-Tool-Prioritaet pruefen
             let route_tool_active_for_menu =
                 route_tool_is_drawing && active_tool == EditorTool::Route;
 
@@ -191,7 +195,7 @@ impl InputState {
         } else {
             let v = context_menu::determine_menu_variant(
                 selected_node_ids,
-                None, // Kein fokussierter Node außerhalb von RMT-Snapshot
+                None, // Kein fokussierter Node ausserhalb von RMT-Snapshot
                 route_tool_is_drawing && active_tool == EditorTool::Route,
                 tangent_data,
             );
@@ -204,6 +208,9 @@ impl InputState {
             road_map,
             menu_selection,
             distanzen_state.active,
+            options,
+            default_direction,
+            default_priority,
             &variant,
             &mut events,
         );

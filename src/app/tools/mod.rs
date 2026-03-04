@@ -1,4 +1,4 @@
-//! Trait-basiertes Route-Tool-System für erweiterbare Strecken-Werkzeuge.
+//! Trait-basiertes Route-Tool-System fuer erweiterbare Strecken-Werkzeuge.
 //!
 //! Jedes Route-Tool implementiert den `RouteTool`-Trait und wird beim
 //! `ToolManager` registriert. Tools erzeugen reine Daten (`ToolResult`),
@@ -6,13 +6,13 @@
 
 /// Ausweichstrecken-Tool — generiert eine parallele Strecke zur selektierten Kette.
 pub mod bypass;
-/// Gemeinsame Hilfsfunktionen für Route-Tools.
+/// Gemeinsame Hilfsfunktionen fuer Route-Tools.
 pub mod common;
-/// Constraint-Route-Tool — winkelgeglättete Route mit automatischen Tangenten-Übergängen.
+/// Constraint-Route-Tool — winkelgeglaettete Route mit automatischen Tangenten-Uebergaengen.
 pub mod constraint_route;
 /// Bézier-Kurven-Tool (Grad 2 + 3) mit sequentieller Punkt-Platzierung.
 pub mod curve;
-/// RouteTool-Trait — Schnittstelle für alle Route-Tools.
+/// RouteTool-Trait — Schnittstelle fuer alle Route-Tools.
 mod route_tool;
 /// Catmull-Rom-Spline-Tool — interpolierende Kurve durch alle geklickten Punkte.
 pub mod spline;
@@ -29,7 +29,7 @@ use glam::Vec2;
 
 /// Versucht, auf einen existierenden Node innerhalb des Snap-Radius zu snappen.
 ///
-/// Gibt `ToolAnchor::ExistingNode` zurück wenn ein Node in Reichweite ist,
+/// Gibt `ToolAnchor::ExistingNode` zurueck wenn ein Node in Reichweite ist,
 /// sonst `ToolAnchor::NewPosition` mit der Original-Position.
 pub fn snap_to_node(pos: Vec2, road_map: &RoadMap, snap_radius: f32) -> ToolAnchor {
     if let Some(hit) = road_map.nearest_node(pos) {
@@ -54,7 +54,7 @@ pub enum ToolAnchor {
 }
 
 impl ToolAnchor {
-    /// Gibt die Welt-Position des Ankers zurück.
+    /// Gibt die Welt-Position des Ankers zurueck.
     pub fn position(&self) -> Vec2 {
         match self {
             ToolAnchor::ExistingNode(_, pos) => *pos,
@@ -63,18 +63,18 @@ impl ToolAnchor {
     }
 }
 
-/// Rückgabe von `on_click` — steuert den Tool-Flow.
+/// Rueckgabe von `on_click` — steuert den Tool-Flow.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum ToolAction {
-    /// Punkt registriert, weitere Eingabe nötig
+    /// Punkt registriert, weitere Eingabe noetig
     Continue,
-    /// Alle nötigen Punkte gesetzt — bereit zur Ausführung
+    /// Alle noetigen Punkte gesetzt — bereit zur Ausfuehrung
     ReadyToExecute,
-    /// Vorschau aktualisiert — Klick ändert Parameter, Enter bestätigt
+    /// Vorschau aktualisiert — Klick aendert Parameter, Enter bestaetigt
     UpdatePreview,
 }
 
-/// Preview-Geometrie für das Rendering (halbtransparent im Viewport).
+/// Preview-Geometrie fuer das Rendering (halbtransparent im Viewport).
 #[derive(Debug, Clone, Default)]
 pub struct ToolPreview {
     /// Vorschau-Node-Positionen
@@ -88,11 +88,11 @@ pub struct ToolPreview {
 pub struct ToolResult {
     /// Neue Nodes: (Position, Flag)
     pub new_nodes: Vec<(Vec2, NodeFlag)>,
-    /// Verbindungen zwischen neuen Nodes: (from_idx, to_idx, Richtung, Priorität)
+    /// Verbindungen zwischen neuen Nodes: (from_idx, to_idx, Richtung, Prioritaet)
     /// Indizes beziehen sich auf `new_nodes`.
     pub internal_connections: Vec<(usize, usize, ConnectionDirection, ConnectionPriority)>,
     /// Verbindungen von neuen Nodes zu existierenden Nodes:
-    /// (new_node_idx, existing_node_id, existing_to_new, Richtung, Priorität)
+    /// (new_node_idx, existing_node_id, existing_to_new, Richtung, Prioritaet)
     ///
     /// - `existing_to_new = true`: Verbindung wird als `existing -> new` erstellt
     /// - `existing_to_new = false`: Verbindung wird als `new -> existing` erstellt
@@ -135,12 +135,12 @@ impl ToolManager {
         self.tools.push(tool);
     }
 
-    /// Gibt die Anzahl registrierter Tools zurück.
+    /// Gibt die Anzahl registrierter Tools zurueck.
     pub fn tool_count(&self) -> usize {
         self.tools.len()
     }
 
-    /// Gibt Name und Index aller registrierten Tools zurück.
+    /// Gibt Name und Index aller registrierten Tools zurueck.
     pub fn tool_names(&self) -> Vec<(usize, &str)> {
         self.tools
             .iter()
@@ -149,7 +149,7 @@ impl ToolManager {
             .collect()
     }
 
-    /// Gibt Index, Name und Icon aller registrierten Tools zurück.
+    /// Gibt Index, Name und Icon aller registrierten Tools zurueck.
     pub fn tool_entries(&self) -> Vec<(usize, &str, &str)> {
         self.tools
             .iter()
@@ -161,7 +161,7 @@ impl ToolManager {
     /// Setzt das aktive Route-Tool per Index.
     pub fn set_active(&mut self, index: usize) {
         if index < self.tools.len() {
-            // Altes Tool zurücksetzen
+            // Altes Tool zuruecksetzen
             if let Some(old) = self.active_index {
                 if old != index {
                     self.tools[old].reset();
@@ -171,23 +171,23 @@ impl ToolManager {
         }
     }
 
-    /// Gibt den Index des aktiven Tools zurück.
+    /// Gibt den Index des aktiven Tools zurueck.
     pub fn active_index(&self) -> Option<usize> {
         self.active_index
     }
 
-    /// Gibt eine Referenz auf das aktive Tool zurück.
+    /// Gibt eine Referenz auf das aktive Tool zurueck.
     pub fn active_tool(&self) -> Option<&dyn RouteTool> {
         self.active_index.map(|i| self.tools[i].as_ref())
     }
 
-    /// Gibt eine mutable Referenz auf das aktive Tool zurück.
+    /// Gibt eine mutable Referenz auf das aktive Tool zurueck.
     pub fn active_tool_mut(&mut self) -> Option<&mut dyn RouteTool> {
         let i = self.active_index?;
         Some(self.tools[i].as_mut())
     }
 
-    /// Setzt alle Tools zurück und deaktiviert das aktive Tool.
+    /// Setzt alle Tools zurueck und deaktiviert das aktive Tool.
     pub fn reset(&mut self) {
         if let Some(i) = self.active_index {
             self.tools[i].reset();

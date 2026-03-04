@@ -10,7 +10,7 @@ use std::sync::Arc;
 ///
 /// Erstellt alle neuen Nodes und Verbindungen in einem Undo-Schritt.
 /// Selektion wird auf die neuen Nodes gesetzt.
-/// Gibt die IDs der erstellten Nodes zurück.
+/// Gibt die IDs der erstellten Nodes zurueck.
 pub fn apply_tool_result(state: &mut AppState, result: ToolResult) -> Vec<u64> {
     if state.road_map.is_none() {
         log::warn!("Route-Tool-Ergebnis kann nicht angewendet werden: keine RoadMap geladen");
@@ -24,7 +24,7 @@ pub fn apply_tool_result(state: &mut AppState, result: ToolResult) -> Vec<u64> {
 }
 
 /// Wie `apply_tool_result`, aber OHNE Undo-Snapshot.
-/// Für Neuberechnung, wenn der Caller bereits einen Snapshot erstellt hat.
+/// Fuer Neuberechnung, wenn der Caller bereits einen Snapshot erstellt hat.
 pub fn apply_tool_result_no_snapshot(state: &mut AppState, result: ToolResult) -> Vec<u64> {
     apply_result_inner(state, result)
 }
@@ -75,14 +75,14 @@ fn create_nodes_and_connections(road_map: &mut RoadMap, result: &ToolResult) -> 
         road_map.add_connection(conn);
     }
 
-    // Externe Verbindungen (Richtung über `existing_to_new` explizit vorgegeben)
+    // Externe Verbindungen (Richtung ueber `existing_to_new` explizit vorgegeben)
     for &(new_idx, existing_id, existing_to_new, direction, priority) in
         &result.external_connections
     {
         let new_id = new_ids[new_idx];
         if !road_map.nodes.contains_key(&existing_id) {
             log::warn!(
-                "Externer Node {} existiert nicht — Verbindung übersprungen",
+                "Externer Node {} existiert nicht — Verbindung uebersprungen",
                 existing_id
             );
             continue;

@@ -1,4 +1,4 @@
-//! Unit-Tests für den Constraint-Route-Solver.
+//! Unit-Tests fuer den Constraint-Route-Solver.
 
 use crate::app::tools::constraint_route::geometry::*;
 use glam::Vec2;
@@ -180,7 +180,7 @@ fn departure_steerer_bei_scharfem_winkel() {
     // forward=(1,0), best_dir=(1,0), depart_dir=(1,0), angle = acos(1)=0 → kein Steerer
     assert!(
         result.is_none(),
-        "Nachbar in Fahrtrichtung → kein Steerer nötig"
+        "Nachbar in Fahrtrichtung → kein Steerer noetig"
     );
 }
 

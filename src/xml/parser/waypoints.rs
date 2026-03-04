@@ -139,10 +139,10 @@ where
         .collect::<Result<Vec<T>, _>>()
 }
 
-/// Parst verschachtelte Listen (für out/incoming).
+/// Parst verschachtelte Listen (fuer out/incoming).
 ///
 /// Werte ≤ 0 (z.B. -1) werden ignoriert — sie markieren Endpunkte oder
-/// rückwärts befahrene Strecken in AutoDrive.
+/// rueckwaerts befahrene Strecken in AutoDrive.
 pub(super) fn parse_nested_list(text: &str) -> Result<Vec<Vec<u64>>> {
     text.split(';')
         .map(|part| {
@@ -170,7 +170,7 @@ pub(super) fn parse_nested_list(text: &str) -> Result<Vec<Vec<u64>>> {
         .collect()
 }
 
-/// Kürzt einen String für Fehlermeldungen auf max. 40 Zeichen.
+/// Kuerzt einen String fuer Fehlermeldungen auf max. 40 Zeichen.
 fn truncate_for_error(s: &str) -> &str {
     if s.len() <= 40 {
         s

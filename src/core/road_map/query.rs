@@ -7,10 +7,10 @@ use glam::Vec2;
 use indexmap::IndexSet;
 
 impl RoadMap {
-    /// Gibt alle Connections zurück, deren Start- und End-Ids in der gegebenen Menge liegen.
+    /// Gibt alle Connections zurueck, deren Start- und End-Ids in der gegebenen Menge liegen.
     ///
     /// Verwendet zum Filtern von Connections zwischen selektierten Nodes.
-    /// O(n) über alle Connections, aber nur bei Use-Cases aufgerufen (nicht per-Frame).
+    /// O(n) ueber alle Connections, aber nur bei Use-Cases aufgerufen (nicht per-Frame).
     pub fn connections_between_ids<'a>(
         &'a self,
         ids: &'a IndexSet<u64>,
@@ -22,7 +22,7 @@ impl RoadMap {
         )
     }
 
-    /// Findet den nächstgelegenen Node zur Weltposition.
+    /// Findet den naechstgelegenen Node zur Weltposition.
     pub fn nearest_node(&self, query: Vec2) -> Option<SpatialMatch> {
         debug_assert!(
             !self.spatial_dirty,

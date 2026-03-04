@@ -1,4 +1,4 @@
-//! Optionen-Dialog für Farben, Größen und Breiten.
+//! Optionen-Dialog fuer Farben, Groessen und Breiten.
 
 mod sections;
 
@@ -37,10 +37,10 @@ impl OptionsSection {
     fn subtitle(self) -> &'static str {
         match self {
             Self::General => "Globale Anzeige- und Karten-Einstellungen.",
-            Self::Nodes => "Farben, Größe und Hitbox-Einstellungen für Nodes.",
-            Self::Tools => "Snap-Radius und Eingabeverhalten für Tool-Parameter.",
+            Self::Nodes => "Farben, Groesse und Hitbox-Einstellungen fuer Nodes.",
+            Self::Tools => "Snap-Radius und Eingabeverhalten fuer Tool-Parameter.",
             Self::Connections => "Linienbreiten, Pfeile und Verbindungsfarben.",
-            Self::Behavior => "Verhalten beim Löschen und Platzieren von Nodes.",
+            Self::Behavior => "Verhalten beim Loeschen und Platzieren von Nodes.",
         }
     }
 }
@@ -83,7 +83,7 @@ fn render_selected_section(
             changed |= render_subsection(ui, "Hintergrund", None, |ui| {
                 sections::render_background(ui, opts)
             });
-            changed |= render_subsection(ui, "Übersichtskarte (Standard-Layer)", None, |ui| {
+            changed |= render_subsection(ui, "Uebersichtskarte (Standard-Layer)", None, |ui| {
                 sections::render_overview_layers(ui, opts)
             });
         }
@@ -104,7 +104,7 @@ fn render_selected_section(
     changed
 }
 
-/// Zeigt den Options-Dialog und gibt erzeugte Events zurück.
+/// Zeigt den Options-Dialog und gibt erzeugte Events zurueck.
 pub fn show_options_dialog(
     ctx: &egui::Context,
     show: bool,
@@ -116,7 +116,7 @@ pub fn show_options_dialog(
         return events;
     }
 
-    // Arbeitskopie der Optionen für Live-Bearbeitung
+    // Arbeitskopie der Optionen fuer Live-Bearbeitung
     let mut opts = options.clone();
     let mut changed = false;
     let selected_section_id = egui::Id::new("options_dialog_selected_section");
@@ -176,7 +176,7 @@ pub fn show_options_dialog(
                 if ui.button("Standardwerte").clicked() {
                     events.push(AppIntent::ResetOptionsRequested);
                 }
-                if ui.button("Schließen").clicked() {
+                if ui.button("Schliessen").clicked() {
                     events.push(AppIntent::CloseOptionsDialogRequested);
                 }
             });
@@ -186,7 +186,7 @@ pub fn show_options_dialog(
         data.insert_temp(selected_section_id, selected_section);
     });
 
-    // Änderungen sofort anwenden (Live-Preview)
+    // Aenderungen sofort anwenden (Live-Preview)
     if changed {
         events.push(AppIntent::OptionsChanged { options: opts });
     }

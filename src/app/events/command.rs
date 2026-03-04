@@ -6,16 +6,16 @@ use crate::core::{ConnectionDirection, ConnectionPriority};
 use crate::shared::EditorOptions;
 use crate::shared::RenderQuality;
 
-/// Commands sind mutierende Schritte, die zentral ausgeführt werden.
+/// Commands sind mutierende Schritte, die zentral ausgefuehrt werden.
 #[derive(Debug, Clone)]
 pub enum AppCommand {
     /// Editor-Werkzeug wechseln
     SetEditorTool { tool: EditorTool },
-    /// Neuen Node an Weltposition hinzufügen
+    /// Neuen Node an Weltposition hinzufuegen
     AddNodeAtPosition { world_pos: glam::Vec2 },
-    /// Selektierte Nodes löschen
+    /// Selektierte Nodes loeschen
     DeleteSelectedNodes,
-    /// Connect-Tool: Node anwählen (Source oder Target)
+    /// Connect-Tool: Node anwaehlen (Source oder Target)
     ConnectToolPickNode {
         world_pos: glam::Vec2,
         max_distance: f32,
@@ -29,33 +29,33 @@ pub enum AppCommand {
     },
     /// Alle Verbindungen zwischen zwei Nodes entfernen
     RemoveConnectionBetween { node_a: u64, node_b: u64 },
-    /// Richtung einer Verbindung ändern
+    /// Richtung einer Verbindung aendern
     SetConnectionDirection {
         start_id: u64,
         end_id: u64,
         direction: ConnectionDirection,
     },
-    /// Priorität einer Verbindung ändern
+    /// Prioritaet einer Verbindung aendern
     SetConnectionPriority {
         start_id: u64,
         end_id: u64,
         priority: ConnectionPriority,
     },
-    /// Standard-Richtung für neue Verbindungen setzen
+    /// Standard-Richtung fuer neue Verbindungen setzen
     SetDefaultDirection { direction: ConnectionDirection },
-    /// Standard-Priorität für neue Verbindungen setzen
+    /// Standard-Prioritaet fuer neue Verbindungen setzen
     SetDefaultPriority { priority: ConnectionPriority },
-    /// Bulk: Richtung aller Verbindungen zwischen Selektion ändern
+    /// Bulk: Richtung aller Verbindungen zwischen Selektion aendern
     SetAllConnectionsDirectionBetweenSelected { direction: ConnectionDirection },
     /// Bulk: Alle Verbindungen zwischen Selektion entfernen
     RemoveAllConnectionsBetweenSelected,
     /// Bulk: Richtung aller Verbindungen zwischen Selektion invertieren
     InvertAllConnectionsBetweenSelected,
-    /// Bulk: Priorität aller Verbindungen zwischen Selektion ändern
+    /// Bulk: Prioritaet aller Verbindungen zwischen Selektion aendern
     SetAllConnectionsPriorityBetweenSelected { priority: ConnectionPriority },
     /// Zwei selektierte Nodes mit Standard-Einstellungen verbinden
     ConnectSelectedNodes,
-    /// Datei-Öffnen-Dialog anfordern
+    /// Datei-Oeffnen-Dialog anfordern
     RequestOpenFileDialog,
     /// Datei-Speichern-Dialog anfordern
     RequestSaveFileDialog,
@@ -67,15 +67,15 @@ pub enum AppCommand {
     RequestBackgroundMapDialog,
     /// Heightmap entfernen
     ClearHeightmap,
-    /// Speichern nach Heightmap-Warnung bestätigen
+    /// Speichern nach Heightmap-Warnung bestaetigen
     ConfirmAndSaveFile,
-    /// Kamera auf Standard zurücksetzen
+    /// Kamera auf Standard zuruecksetzen
     ResetCamera,
     /// Stufenweise hineinzoomen
     ZoomIn,
     /// Stufenweise herauszoomen
     ZoomOut,
-    /// Viewport-Größe setzen
+    /// Viewport-Groesse setzen
     SetViewportSize { size: [f32; 2] },
     /// Kamera um Delta verschieben
     PanCamera { delta: glam::Vec2 },
@@ -84,7 +84,7 @@ pub enum AppCommand {
         factor: f32,
         focus_world: Option<glam::Vec2>,
     },
-    /// Nächsten Node zur Position selektieren
+    /// Naechsten Node zur Position selektieren
     SelectNearestNode {
         world_pos: glam::Vec2,
         max_distance: f32,
@@ -110,7 +110,7 @@ pub enum AppCommand {
     },
     /// Selektierte Nodes um Delta verschieben
     MoveSelectedNodes { delta_world: glam::Vec2 },
-    /// Render-Qualität setzen
+    /// Render-Qualitaet setzen
     SetRenderQuality { quality: RenderQuality },
     /// XML-Datei laden
     LoadFile { path: String },
@@ -127,15 +127,15 @@ pub enum AppCommand {
     ToggleBackgroundVisibility,
     /// Background-Ausdehnung skalieren (Faktor relativ)
     ScaleBackground { factor: f32 },
-    /// Heightmap-Warnung schließen
+    /// Heightmap-Warnung schliessen
     DismissHeightmapWarning,
     /// Move-Lifecycle: Verschieben starten (Undo-Snapshot)
     BeginMoveSelectedNodes,
     /// Move-Lifecycle: Verschieben beenden
     EndMoveSelectedNodes,
-    /// Undo: Letzte Aktion rückgängig machen
+    /// Undo: Letzte Aktion rueckgaengig machen
     Undo,
-    /// Redo: Rückgängig gemachte Aktion wiederherstellen
+    /// Redo: Rueckgaengig gemachte Aktion wiederherstellen
     Redo,
     /// Map-Marker erstellen
     CreateMarker {
@@ -145,7 +145,7 @@ pub enum AppCommand {
     },
     /// Map-Marker entfernen
     RemoveMarker { node_id: u64 },
-    /// Marker-Dialog öffnen (neu oder bearbeiten)
+    /// Marker-Dialog oeffnen (neu oder bearbeiten)
     OpenMarkerDialog { node_id: u64, is_new: bool },
     /// Marker aktualisieren
     UpdateMarker {
@@ -155,17 +155,17 @@ pub enum AppCommand {
     },
     /// Marker-Dialog schliessen
     CloseMarkerDialog,
-    /// Duplikat-Bereinigung durchführen
+    /// Duplikat-Bereinigung durchfuehren
     DeduplicateNodes,
-    /// Duplikat-Dialog schließen (ohne Bereinigung)
+    /// Duplikat-Dialog schliessen (ohne Bereinigung)
     DismissDeduplicateDialog,
-    /// Options-Dialog öffnen
+    /// Options-Dialog oeffnen
     OpenOptionsDialog,
     /// Options-Dialog schliessen
     CloseOptionsDialog,
     /// Optionen anwenden und speichern
     ApplyOptions { options: EditorOptions },
-    /// Optionen auf Standardwerte zurücksetzen
+    /// Optionen auf Standardwerte zuruecksetzen
     ResetOptions,
     /// Selektion aufheben
     ClearSelection,
@@ -186,13 +186,13 @@ pub enum AppCommand {
         start_node_id: u64,
         end_node_id: u64,
     },
-    /// Route-Tool: Strecke neu berechnen (Config geändert)
+    /// Route-Tool: Strecke neu berechnen (Config geaendert)
     RouteToolRecreate,
-    /// Route-Tool: Node-Anzahl erhöhen
+    /// Route-Tool: Node-Anzahl erhoehen
     IncreaseRouteToolNodeCount,
     /// Route-Tool: Node-Anzahl verringern
     DecreaseRouteToolNodeCount,
-    /// Route-Tool: Minimalabstand um 0.25m erhöhen
+    /// Route-Tool: Minimalabstand um 0.25m erhoehen
     IncreaseRouteToolSegmentLength,
     /// Route-Tool: Minimalabstand um 0.25m verringern
     DecreaseRouteToolSegmentLength,
@@ -208,9 +208,9 @@ pub enum AppCommand {
     RouteToolDragUpdate { world_pos: glam::Vec2 },
     /// Route-Tool: Drag beenden
     RouteToolDragEnd,
-    /// Segment nachträglich bearbeiten
+    /// Segment nachtraeglich bearbeiten
     EditSegment { record_id: u64 },
-    /// ZIP-Archiv öffnen und Bilddateien im Browser anzeigen
+    /// ZIP-Archiv oeffnen und Bilddateien im Browser anzeigen
     BrowseZipBackground { path: String },
     /// Bilddatei aus ZIP als Background-Map laden
     LoadBackgroundFromZip {
@@ -218,23 +218,23 @@ pub enum AppCommand {
         entry_name: String,
         crop_size: Option<u32>,
     },
-    /// ZIP-Browser-Dialog schließen
+    /// ZIP-Browser-Dialog schliessen
     CloseZipBrowser,
-    /// Übersichtskarten-ZIP-Dialog anfordern
+    /// Uebersichtskarten-ZIP-Dialog anfordern
     RequestOverviewDialog,
-    /// Übersichtskarten-Options-Dialog mit ZIP-Pfad öffnen
+    /// Uebersichtskarten-Options-Dialog mit ZIP-Pfad oeffnen
     OpenOverviewOptionsDialog { path: String },
-    /// Übersichtskarte generieren (mit Layer-Optionen aus Dialog)
+    /// Uebersichtskarte generieren (mit Layer-Optionen aus Dialog)
     GenerateOverviewWithOptions,
-    /// Übersichtskarten-Options-Dialog schließen
+    /// Uebersichtskarten-Options-Dialog schliessen
     CloseOverviewOptionsDialog,
-    /// Post-Load-Dialog schließen
+    /// Post-Load-Dialog schliessen
     DismissPostLoadDialog,
     /// Background-Map als overview.jpg im XML-Verzeichnis speichern
     SaveBackgroundAsOverview { path: String },
-    /// overview.jpg-Speichern-Dialog schließen
+    /// overview.jpg-Speichern-Dialog schliessen
     DismissSaveOverviewDialog,
-    /// Selektierte Nodes-Kette als gleichmäßig verteilte Wegpunkte neu berechnen (Distanzen)
+    /// Selektierte Nodes-Kette als gleichmaessig verteilte Wegpunkte neu berechnen (Distanzen)
     ResamplePath,
     /// Streckenteilung-Panel aktivieren
     StreckenteilungAktivieren,

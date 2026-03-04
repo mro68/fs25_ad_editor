@@ -9,7 +9,7 @@ pub fn remove_connection_between(state: &mut AppState, node_a: u64, node_b: u64)
         return;
     };
 
-    // Prüfe ob überhaupt Verbindungen existieren
+    // Pruefe ob ueberhaupt Verbindungen existieren
     if road_map_arc
         .find_connections_between(node_a, node_b)
         .is_empty()

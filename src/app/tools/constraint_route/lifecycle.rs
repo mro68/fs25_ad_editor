@@ -18,7 +18,7 @@ impl RouteTool for ConstraintRouteTool {
     }
 
     fn description(&self) -> &str {
-        "Erzeugt eine winkelgeglättete Route mit automatischen Tangenten-Übergängen"
+        "Erzeugt eine winkelgeglaettete Route mit automatischen Tangenten-Uebergaengen"
     }
 
     fn status_text(&self) -> &str {
@@ -26,7 +26,7 @@ impl RouteTool for ConstraintRouteTool {
             Phase::Start => "Startpunkt klicken",
             Phase::End => "Endpunkt klicken",
             Phase::ControlNodes => {
-                "Kontrollpunkte klicken (Enter bestätigt, Rechtsklick entfernt letzten)"
+                "Kontrollpunkte klicken (Enter bestaetigt, Rechtsklick entfernt letzten)"
             }
         }
     }
@@ -70,7 +70,7 @@ impl RouteTool for ConstraintRouteTool {
                 ToolAction::UpdatePreview
             }
             Phase::ControlNodes => {
-                // Neuen Kontrollpunkt hinzufügen
+                // Neuen Kontrollpunkt hinzufuegen
                 self.control_nodes.push(pos);
                 self.sync_derived();
                 self.update_preview();
@@ -106,14 +106,14 @@ impl RouteTool for ConstraintRouteTool {
                 };
                 let mut nodes = self.preview_positions.clone();
 
-                // Steuerpunkte als unverbundene Nodes hinzufügen (werden als Rauten gerendert)
+                // Steuerpunkte als unverbundene Nodes hinzufuegen (werden als Rauten gerendert)
                 if let Some(ap) = self.approach_steerer {
                     nodes.push(ap);
                 }
                 if let Some(dp) = self.departure_steerer {
                     nodes.push(dp);
                 }
-                // Kontrollpunkte als unverbundene Nodes hinzufügen
+                // Kontrollpunkte als unverbundene Nodes hinzufuegen
                 for &cp in &self.control_nodes {
                     nodes.push(cp);
                 }
@@ -170,10 +170,10 @@ impl RouteTool for ConstraintRouteTool {
         )
     }
 
-    /// Setzt das Tool auf den Anfangszustand zurück.
+    /// Setzt das Tool auf den Anfangszustand zurueck.
     ///
-    /// Löscht Start/End/Kontrollpunkte. `lifecycle.last_created_ids` und `last_*_anchor`
-    /// bleiben erhalten für Verkettung und Nachbearbeitung.
+    /// Loescht Start/End/Kontrollpunkte. `lifecycle.last_created_ids` und `last_*_anchor`
+    /// bleiben erhalten fuer Verkettung und Nachbearbeitung.
     fn reset(&mut self) {
         self.start = None;
         self.end = None;

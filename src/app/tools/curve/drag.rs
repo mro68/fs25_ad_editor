@@ -1,4 +1,4 @@
-//! Drag-Logik für das Bézier-Kurven-Tool.
+//! Drag-Logik fuer das Bézier-Kurven-Tool.
 
 use super::super::{snap_to_node, ToolAnchor};
 use super::geometry::{
@@ -10,7 +10,7 @@ use crate::app::tools::common::TangentSource;
 use crate::core::RoadMap;
 use glam::Vec2;
 
-/// Gibt die Weltpositionen aller verschiebbaren Punkte zurück.
+/// Gibt die Weltpositionen aller verschiebbaren Punkte zurueck.
 pub(crate) fn drag_targets(tool: &CurveTool) -> Vec<Vec2> {
     if tool.phase != Phase::Control || !tool.controls_complete() {
         return vec![];
@@ -29,7 +29,7 @@ pub(crate) fn drag_targets(tool: &CurveTool) -> Vec<Vec2> {
         if let Some(cp) = tool.control_point2 {
             targets.push(cp);
         }
-        // Virtueller Scheitelpunkt B(0.5) als zusätzliches Handle
+        // Virtueller Scheitelpunkt B(0.5) als zusaetzliches Handle
         if let Some(apex) = tool.virtual_apex {
             targets.push(apex);
         }
@@ -80,7 +80,7 @@ pub(crate) fn on_drag_start(
     false
 }
 
-/// Aktualisiert die Position des gegriffenen Punkts während eines Drags.
+/// Aktualisiert die Position des gegriffenen Punkts waehrend eines Drags.
 pub(crate) fn on_drag_update(tool: &mut CurveTool, pos: Vec2) {
     match tool.dragging {
         Some(DragTarget::Start) => {
@@ -99,7 +99,7 @@ pub(crate) fn on_drag_update(tool: &mut CurveTool, pos: Vec2) {
             } else {
                 tool.control_point1 = Some(pos);
             }
-            // Apex nach CP-Änderung synchronisieren
+            // Apex nach CP-Aenderung synchronisieren
             tool.init_apex();
         }
         Some(DragTarget::CP2) => {
@@ -112,7 +112,7 @@ pub(crate) fn on_drag_update(tool: &mut CurveTool, pos: Vec2) {
             } else {
                 tool.control_point2 = Some(pos);
             }
-            // Apex nach CP-Änderung synchronisieren
+            // Apex nach CP-Aenderung synchronisieren
             tool.init_apex();
         }
         Some(DragTarget::Apex) => {
@@ -132,7 +132,7 @@ pub(crate) fn on_drag_update(tool: &mut CurveTool, pos: Vec2) {
                     matches!(tool.tangents.tangent_end, TangentSource::Connection { .. });
 
                 if has_start_t && has_end_t {
-                    // Beide Tangenten fixiert: Löse 2×2-System
+                    // Beide Tangenten fixiert: Loese 2×2-System
                     if let (
                         TangentSource::Connection { angle: a1, .. },
                         TangentSource::Connection { angle: a2, .. },
@@ -194,7 +194,7 @@ pub(crate) fn on_drag_end(tool: &mut CurveTool, road_map: &RoadMap) {
                 ));
             }
         }
-        // Apex und CPs benötigen keinen Re-Snap
+        // Apex und CPs benoetigen keinen Re-Snap
         Some(DragTarget::CP1) | Some(DragTarget::CP2) | Some(DragTarget::Apex) | None => {}
     }
     tool.dragging = None;

@@ -1,11 +1,11 @@
-//! Minimales Command-Log für Debug-Zwecke.
+//! Minimales Command-Log fuer Debug-Zwecke.
 //!
 //! Speichert Commands als Strings (via Debug-Format), um das Klonen
-//! großer Enum-Varianten (z.B. Lasso-Polygon) zu vermeiden.
+//! grosser Enum-Varianten (z.B. Lasso-Polygon) zu vermeiden.
 
 use super::AppCommand;
 
-/// Speichert ausgeführte Commands als Debug-Strings.
+/// Speichert ausgefuehrte Commands als Debug-Strings.
 #[derive(Default)]
 pub struct CommandLog {
     entries: Vec<String>,
@@ -23,8 +23,8 @@ impl CommandLog {
         }
     }
 
-    /// Fügt einen ausgeführten Command als Debug-String hinzu.
-    /// Begrenzt auf MAX_ENTRIES, ältere Einträge werden verworfen.
+    /// Fuegt einen ausgefuehrten Command als Debug-String hinzu.
+    /// Begrenzt auf MAX_ENTRIES, aeltere Eintraege werden verworfen.
     pub fn record(&mut self, command: &AppCommand) {
         if self.entries.len() >= Self::MAX_ENTRIES {
             self.entries.drain(..Self::MAX_ENTRIES / 2);
@@ -32,17 +32,17 @@ impl CommandLog {
         self.entries.push(format!("{command:?}"));
     }
 
-    /// Gibt die Anzahl der geloggten Commands zurück.
+    /// Gibt die Anzahl der geloggten Commands zurueck.
     pub fn len(&self) -> usize {
         self.entries.len()
     }
 
-    /// Gibt `true` zurück, wenn keine Commands vorhanden sind.
+    /// Gibt `true` zurueck, wenn keine Commands vorhanden sind.
     pub fn is_empty(&self) -> bool {
         self.entries.is_empty()
     }
 
-    /// Liefert eine read-only Sicht auf alle Einträge.
+    /// Liefert eine read-only Sicht auf alle Eintraege.
     pub fn entries(&self) -> &[String] {
         &self.entries
     }
@@ -72,11 +72,11 @@ mod tests {
     fn log_begrenzt_auf_max_entries() {
         let mut log = CommandLog::new();
         let cmd = AppCommand::ResetCamera;
-        // MAX_ENTRIES + 1 Einträge → Hälfte soll verworfen werden
+        // MAX_ENTRIES + 1 Eintraege → Haelfte soll verworfen werden
         for _ in 0..=CommandLog::MAX_ENTRIES {
             log.record(&cmd);
         }
-        // Nach dem Trim: MAX_ENTRIES/2 Einträge + 1 neuer = 501
+        // Nach dem Trim: MAX_ENTRIES/2 Eintraege + 1 neuer = 501
         assert!(log.len() <= CommandLog::MAX_ENTRIES);
     }
 

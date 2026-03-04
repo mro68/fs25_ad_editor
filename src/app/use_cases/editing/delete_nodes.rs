@@ -1,12 +1,12 @@
-//! Use-Case: Selektierte Nodes löschen (inkl. aller betroffenen Connections).
+//! Use-Case: Selektierte Nodes loeschen (inkl. aller betroffenen Connections).
 
 use super::delete_nodes_by_ids::delete_nodes_internal;
 use crate::app::AppState;
 use crate::core::{Connection, ConnectionDirection, ConnectionPriority, RoadMap};
 use std::sync::Arc;
 
-/// Ergebnis einer Reconnect-Analyse: Vorgänger, Nachfolger und die abgeleitete
-/// Richtung/Priorität aus den beiden bestehenden Verbindungen.
+/// Ergebnis einer Reconnect-Analyse: Vorgaenger, Nachfolger und die abgeleitete
+/// Richtung/Prioritaet aus den beiden bestehenden Verbindungen.
 struct ReconnectOp {
     pred: u64,
     succ: u64,
@@ -14,24 +14,24 @@ struct ReconnectOp {
     priority: ConnectionPriority,
 }
 
-/// Sammelt Reconnect-Operationen für einen Node: Jeder Vorgänger wird mit jedem
-/// Nachfolger verbunden, sofern beide nicht selbst gelöscht werden und die
+/// Sammelt Reconnect-Operationen fuer einen Node: Jeder Vorgaenger wird mit jedem
+/// Nachfolger verbunden, sofern beide nicht selbst geloescht werden und die
 /// Verbindung noch nicht existiert.
 ///
 /// Richtung: Dual wenn eine der beteiligten Verbindungen Dual ist oder die Richtungen
-/// sich widersprechen. Priorität: Hauptstraße (Regular) schlägt Nebenstraße (SubPriority).
+/// sich widersprechen. Prioritaet: Hauptstrasse (Regular) schlaegt Nebenstrasse (SubPriority).
 fn collect_reconnect(
     road_map: &RoadMap,
     del_id: u64,
     id_set: &std::collections::HashSet<u64>,
 ) -> Vec<ReconnectOp> {
-    // Vorgänger: Connections mit end_id == del_id (Verbindung zum gelöschten Node)
+    // Vorgaenger: Connections mit end_id == del_id (Verbindung zum geloeschten Node)
     let pred_conns: Vec<&Connection> = road_map
         .connections_iter()
         .filter(|c| c.end_id == del_id && !id_set.contains(&c.start_id))
         .collect();
 
-    // Nachfolger: Connections mit start_id == del_id (Verbindung vom gelöschten Node)
+    // Nachfolger: Connections mit start_id == del_id (Verbindung vom geloeschten Node)
     let succ_conns: Vec<&Connection> = road_map
         .connections_iter()
         .filter(|c| c.start_id == del_id && !id_set.contains(&c.end_id))
@@ -58,7 +58,7 @@ fn collect_reconnect(
     ops
 }
 
-/// Höherwertige Richtung: Dual > Regular/Reverse; bei Widerspruch → Dual.
+/// Hoeherwertige Richtung: Dual > Regular/Reverse; bei Widerspruch → Dual.
 fn merge_directions(a: ConnectionDirection, b: ConnectionDirection) -> ConnectionDirection {
     match (a, b) {
         (ConnectionDirection::Dual, _) | (_, ConnectionDirection::Dual) => {
@@ -69,7 +69,7 @@ fn merge_directions(a: ConnectionDirection, b: ConnectionDirection) -> Connectio
     }
 }
 
-/// Höherwertige Priorität: Hauptstraße (Regular) schlägt Nebenstraße (SubPriority).
+/// Hoeherwertige Prioritaet: Hauptstrasse (Regular) schlaegt Nebenstrasse (SubPriority).
 fn merge_priorities(a: ConnectionPriority, b: ConnectionPriority) -> ConnectionPriority {
     match (a, b) {
         (ConnectionPriority::SubPriority, ConnectionPriority::SubPriority) => {
@@ -79,14 +79,14 @@ fn merge_priorities(a: ConnectionPriority, b: ConnectionPriority) -> ConnectionP
     }
 }
 
-/// Löscht alle selektierten Nodes und deren Connections.
+/// Loescht alle selektierten Nodes und deren Connections.
 ///
 /// Wenn `options.reconnect_on_delete` aktiviert ist, werden Nodes mit genau einem
-/// Vorgänger und einem Nachfolger so gelöscht, dass Vorgänger und Nachfolger
-/// direkt miteinander verbunden werden (Richtung/Priorität der Ausgangsverbindung).
+/// Vorgaenger und einem Nachfolger so geloescht, dass Vorgaenger und Nachfolger
+/// direkt miteinander verbunden werden (Richtung/Prioritaet der Ausgangsverbindung).
 pub fn delete_selected_nodes(state: &mut AppState) {
     if state.selection.selected_node_ids.is_empty() {
-        log::debug!("Nichts zum Löschen selektiert");
+        log::debug!("Nichts zum Loeschen selektiert");
         return;
     }
 
@@ -112,14 +112,14 @@ pub fn delete_selected_nodes(state: &mut AppState) {
     };
 
     let Some(road_map_arc) = state.road_map.as_mut() else {
-        log::warn!("Löschen abgebrochen: keine RoadMap geladen");
+        log::warn!("Loeschen abgebrochen: keine RoadMap geladen");
         return;
     };
     let road_map = Arc::make_mut(road_map_arc);
 
     delete_nodes_internal(road_map, &ids_to_delete, true);
 
-    // Reconnect: neue Verbindungen zwischen Vorgänger und Nachfolger erstellen
+    // Reconnect: neue Verbindungen zwischen Vorgaenger und Nachfolger erstellen
     if !reconnect_ops.is_empty() {
         for op in &reconnect_ops {
             if let (Some(p_node), Some(s_node)) =
@@ -151,5 +151,5 @@ pub fn delete_selected_nodes(state: &mut AppState) {
     state.selection.ids_mut().clear();
     state.selection.selection_anchor_node_id = None;
 
-    log::info!("{} Node(s) gelöscht", count);
+    log::info!("{} Node(s) geloescht", count);
 }

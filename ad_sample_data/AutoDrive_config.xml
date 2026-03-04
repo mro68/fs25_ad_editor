@@ -64,7 +64,7 @@
     <mapmarker>
         <mm1>
             <id>194.000000</id>
-            <name>Fahrzeughändler - Abholung</name>
+            <name>Fahrzeughaendler - Abholung</name>
             <group>Handel - Einkauf</group>
         </mm1>
         <mm2>
@@ -104,7 +104,7 @@
         </mm8>
         <mm9>
             <id>12969.000000</id>
-            <name>Hafen - Flüssigkeiten Anl.</name>
+            <name>Hafen - Fluessigkeiten Anl.</name>
             <group>Handel - Verkauf</group>
         </mm9>
         <mm10>
@@ -119,7 +119,7 @@
         </mm11>
         <mm12>
             <id>16468.000000</id>
-            <name>Sägewerk - Anlieferung</name>
+            <name>Saegewerk - Anlieferung</name>
             <group>Handel - Verkauf</group>
         </mm12>
         <mm13>
@@ -169,47 +169,47 @@
         </mm21>
         <mm22>
             <id>19111.000000</id>
-            <name>Tierbedarfshandel - Gülle</name>
+            <name>Tierbedarfshandel - Guelle</name>
             <group>Handel - Einkauf</group>
         </mm22>
         <mm23>
             <id>19151.000000</id>
-            <name>Tierhändler</name>
+            <name>Tierhaendler</name>
             <group>Handel - Verkauf</group>
         </mm23>
         <mm24>
             <id>20363.000000</id>
-            <name>BGA Süd Schüttgut Anl.</name>
+            <name>BGA Sued Schuettgut Anl.</name>
             <group>BGA</group>
         </mm24>
         <mm25>
             <id>20364.000000</id>
-            <name>BGA Süd Gärreste 2</name>
+            <name>BGA Sued Gaerreste 2</name>
             <group>BGA</group>
         </mm25>
         <mm26>
             <id>20365.000000</id>
-            <name>BGA Süd Gülle</name>
+            <name>BGA Sued Guelle</name>
             <group>BGA</group>
         </mm26>
         <mm27>
             <id>20366.000000</id>
-            <name>BGA Süd Gärreste 1</name>
+            <name>BGA Sued Gaerreste 1</name>
             <group>BGA</group>
         </mm27>
         <mm28>
             <id>20367.000000</id>
-            <name>BGA Nord Gärreste</name>
+            <name>BGA Nord Gaerreste</name>
             <group>BGA</group>
         </mm28>
         <mm29>
             <id>20368.000000</id>
-            <name>BGA Nord Gülle</name>
+            <name>BGA Nord Guelle</name>
             <group>BGA</group>
         </mm29>
         <mm30>
             <id>20369.000000</id>
-            <name>BGA Nord Schüttgut Anl.</name>
+            <name>BGA Nord Schuettgut Anl.</name>
             <group>BGA</group>
         </mm30>
         <mm31>
@@ -224,7 +224,7 @@
         </mm32>
         <mm33>
             <id>20373.000000</id>
-            <name>Holztransport Land 124 Süd</name>
+            <name>Holztransport Land 124 Sued</name>
             <group>Missionen</group>
         </mm33>
         <mm34>
@@ -264,12 +264,12 @@
         </mm40>
         <mm41>
             <id>20381.000000</id>
-            <name>Steine Gärtnerei</name>
+            <name>Steine Gaertnerei</name>
             <group>Missionen</group>
         </mm41>
         <mm42>
             <id>20382.000000</id>
-            <name>Steine Fahrzeughändler</name>
+            <name>Steine Fahrzeughaendler</name>
             <group>Missionen</group>
         </mm42>
         <mm43>
@@ -289,12 +289,12 @@
         </mm45>
         <mm46>
             <id>20386.000000</id>
-            <name>Totholz Land 127 Südwest</name>
+            <name>Totholz Land 127 Suedwest</name>
             <group>Missionen</group>
         </mm46>
         <mm47>
             <id>20387.000000</id>
-            <name>Totholz Land 127 Südost</name>
+            <name>Totholz Land 127 Suedost</name>
             <group>Missionen</group>
         </mm47>
         <mm48>
@@ -314,7 +314,7 @@
         </mm50>
         <mm51>
             <id>20495.000000</id>
-            <name>Totholz Land 129 Süd</name>
+            <name>Totholz Land 129 Sued</name>
             <group>Missionen</group>
         </mm51>
         <mm52>
@@ -379,7 +379,7 @@
         </mm63>
         <mm64>
             <id>24380.000000</id>
-            <name>Tankstelle - Süd</name>
+            <name>Tankstelle - Sued</name>
             <group>Tankstellen</group>
         </mm64>
         <mm65>
@@ -574,7 +574,7 @@
         </mm102>
         <mm103>
             <id>30137.000000</id>
-            <name>Fahrzeughändler - Verkauf</name>
+            <name>Fahrzeughaendler - Verkauf</name>
             <group>Handel - Verkauf</group>
         </mm103>
         <mm104>
@@ -869,7 +869,7 @@
         </mm161>
         <mm162>
             <id>34271.000000</id>
-            <name>Große Halle parken</name>
+            <name>Grosse Halle parken</name>
             <group>_ Hof - Parkplatz</group>
         </mm162>
         <mm163>

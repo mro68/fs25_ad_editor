@@ -9,7 +9,7 @@ binaries/
 .DS_Store
 Thumbs.db
 
-# Testdaten (zu groß für GitHub)
+# Testdaten (zu gross fuer GitHub)
 ad_sample_data/*.dds
 
 # IDE
@@ -23,3 +23,4 @@ scripts/fs25_overview_map.py
 scripts/README.md
 **/*AUDIT*.*
 **/*_PLAN.*
+assets/**/

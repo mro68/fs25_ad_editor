@@ -1,7 +1,7 @@
 //! GDM-Decoder (GIANTS Density Map).
 //!
 //! Dekodiert `.gdm`-Dateien (DetailLayer, FoliageMultiLayer) zu Pixeldaten.
-//! Unterstützt 1–8 Kanäle (Grayscale) und 9+ Kanäle (RGB-Encoding).
+//! Unterstuetzt 1–8 Kanaele (Grayscale) und 9+ Kanaele (RGB-Encoding).
 //! Format-Dokumentation: <https://github.com/Paint-a-Farm/grleconvert>
 //!
 //! Basiert auf grleconvert von Kim Brandwijk (MIT-Lizenz).
@@ -19,19 +19,19 @@ const GDM_MAGIC_V1: &[u8; 4] = b"!MDF";
 pub struct GdmImage {
     /// Dimension (quadratisch: dimension × dimension)
     pub dimension: usize,
-    /// Anzahl der Kanäle
+    /// Anzahl der Kanaele
     pub num_channels: usize,
-    /// Pixeldaten als Grayscale-Bytes (1 Byte/Pixel bei ≤8 Kanälen)
-    /// oder RGB-Bytes (3 Bytes/Pixel bei >8 Kanälen)
+    /// Pixeldaten als Grayscale-Bytes (1 Byte/Pixel bei ≤8 Kanaelen)
+    /// oder RGB-Bytes (3 Bytes/Pixel bei >8 Kanaelen)
     pub pixels: Vec<u8>,
-    /// True wenn RGB-Encoding (>8 Kanäle)
+    /// True wenn RGB-Encoding (>8 Kanaele)
     pub is_rgb: bool,
 }
 
 /// Dekodiert GDM-Daten aus einem Byte-Buffer.
 ///
 /// # Fehler
-/// - Datei zu klein, ungültige Magic Bytes oder unerwartetes Datenende
+/// - Datei zu klein, ungueltige Magic Bytes oder unerwartetes Datenende
 pub fn decode_gdm(data: &[u8]) -> Result<GdmImage> {
     ensure!(data.len() >= 16, "GDM-Datei zu klein: {} Bytes", data.len());
 
@@ -39,7 +39,7 @@ pub fn decode_gdm(data: &[u8]) -> Result<GdmImage> {
     let (dimension, num_channels, chunk_size, num_compression_ranges, header_size) =
         if magic == GDM_MAGIC_V2 {
             let version = u32::from_le_bytes([data[4], data[5], data[6], data[7]]);
-            ensure!(version == 0, "Nicht unterstützte GDM-Version: {}", version);
+            ensure!(version == 0, "Nicht unterstuetzte GDM-Version: {}", version);
 
             let dim_log2 = data[8] as usize;
             let chunk_log2 = data[9] as usize;
@@ -69,11 +69,11 @@ pub fn decode_gdm(data: &[u8]) -> Result<GdmImage> {
                 9usize,
             )
         } else {
-            bail!("Ungültige GDM Magic Bytes: {:?}", magic);
+            bail!("Ungueltige GDM Magic Bytes: {:?}", magic);
         };
 
     log::debug!(
-        "GDM: {}x{}, {} Kanäle, {} Kompressionsranges",
+        "GDM: {}x{}, {} Kanaele, {} Kompressionsranges",
         dimension,
         dimension,
         num_channels,
@@ -123,7 +123,7 @@ pub fn decode_gdm(data: &[u8]) -> Result<GdmImage> {
         let base_y = chunk_row * chunk_size;
         let base_x = chunk_col * chunk_size;
 
-        // Ranges zusammenführen (Bit-Shifting)
+        // Ranges zusammenfuehren (Bit-Shifting)
         let total_pixels = chunk_size * chunk_size;
         for pixel_idx in 0..total_pixels {
             let mut combined: u32 = 0;
@@ -166,7 +166,7 @@ pub fn decode_gdm(data: &[u8]) -> Result<GdmImage> {
 ///
 /// Jeder Block hat:
 /// - 1 Byte Bit-Tiefe
-/// - 1 Byte Paletten-Einträge
+/// - 1 Byte Paletten-Eintraege
 /// - Palette (2 Bytes pro Eintrag)
 /// - Bitmap (bit_depth * 128 Bytes)
 fn decode_block(data: &[u8], pos: usize, chunk_size: usize) -> (Vec<u16>, usize) {
@@ -188,7 +188,7 @@ fn decode_block(data: &[u8], pos: usize, chunk_size: usize) -> (Vec<u16>, usize)
     let mut pixels = Vec::with_capacity(total_pixels);
 
     if bit_depth == 0 {
-        // Konstanter Wert für alle Pixel
+        // Konstanter Wert fuer alle Pixel
         let value = *palette.first().unwrap_or(&0);
         pixels.resize(total_pixels, value);
     } else {

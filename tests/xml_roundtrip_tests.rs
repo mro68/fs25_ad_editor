@@ -14,7 +14,7 @@ fn test_xml_roundtrip_preserves_core_counts_and_ids() {
     assert_eq!(parsed.connection_count(), reparsed.connection_count());
     assert_eq!(parsed.marker_count(), reparsed.marker_count());
 
-    // IDs sind nach Export lückenlos 1..N
+    // IDs sind nach Export lueckenlos 1..N
     let mut reparsed_ids: Vec<u64> = reparsed.nodes.keys().copied().collect();
     reparsed_ids.sort_unstable();
     let expected_ids: Vec<u64> = (1..=parsed.node_count() as u64).collect();
@@ -23,7 +23,7 @@ fn test_xml_roundtrip_preserves_core_counts_and_ids() {
 
 #[test]
 fn test_xml_roundtrip_renumbers_gapped_ids() {
-    // IDs mit Lücken: 2, 5, 10
+    // IDs mit Luecken: 2, 5, 10
     let xml_gapped = r#"<?xml version="1.0" encoding="UTF-8"?>
 <AutoDrive version="3">
     <waypoints>
@@ -50,7 +50,7 @@ fn test_xml_roundtrip_renumbers_gapped_ids() {
     ids.sort_unstable();
     assert_eq!(ids, vec![1, 2, 3]);
 
-    // Verbindungen müssen korrekt umgemappt sein: 2→5 wird 1→2, 5→10 wird 2→3
+    // Verbindungen muessen korrekt umgemappt sein: 2→5 wird 1→2, 5→10 wird 2→3
     assert!(reparsed.has_connection(1, 2), "Verbindung 1→2 fehlt");
     assert!(reparsed.has_connection(2, 3), "Verbindung 2→3 fehlt");
     assert_eq!(reparsed.connection_count(), parsed.connection_count());
@@ -81,7 +81,7 @@ fn test_xml_roundtrip_dual_connections() {
     let written = write_autodrive_config(&parsed, None, 255.0).expect("Export fehlgeschlagen");
     let reparsed = parse_autodrive_config(&written).expect("Re-Parsing fehlgeschlagen");
 
-    // Nach Roundtrip: Counts müssen stimmen
+    // Nach Roundtrip: Counts muessen stimmen
     assert_eq!(reparsed.node_count(), 2);
     assert_eq!(reparsed.connection_count(), parsed.connection_count());
     assert!(
@@ -191,7 +191,7 @@ fn test_xml_roundtrip_special_characters_in_marker() {
         <mm1>
             <id>1.000000</id>
             <name>Bauer &amp; Sohn</name>
-            <group>Höfe</group>
+            <group>Hoefe</group>
         </mm1>
     </mapmarker>
 </AutoDrive>"#;
@@ -211,6 +211,6 @@ fn test_xml_roundtrip_special_characters_in_marker() {
     let reparsed = parse_autodrive_config(&written).expect("Re-Parsing fehlgeschlagen");
     assert_eq!(
         reparsed.map_markers[0].name, "Bauer & Sohn",
-        "Sonderzeichen müssen nach Roundtrip erhalten bleiben"
+        "Sonderzeichen muessen nach Roundtrip erhalten bleiben"
     );
 }

@@ -1,10 +1,10 @@
-//! Handler für Kamera, Viewport und Background-Map.
+//! Handler fuer Kamera, Viewport und Background-Map.
 
 use crate::app::use_cases;
 use crate::app::AppState;
 use crate::shared::RenderQuality;
 
-/// Setzt die Kamera auf den Standardzustand zurück.
+/// Setzt die Kamera auf den Standardzustand zurueck.
 pub fn reset_camera(state: &mut AppState) {
     use_cases::camera::reset_camera(state);
 }
@@ -19,7 +19,7 @@ pub fn zoom_out(state: &mut AppState) {
     use_cases::camera::zoom_out(state);
 }
 
-/// Aktualisiert die Viewport-Größe im State.
+/// Aktualisiert die Viewport-Groesse im State.
 pub fn set_viewport_size(state: &mut AppState, size: [f32; 2]) {
     use_cases::viewport::resize(state, size);
 }
@@ -34,12 +34,12 @@ pub fn zoom_towards(state: &mut AppState, factor: f32, focus_world: Option<glam:
     use_cases::camera::zoom_towards(state, factor, focus_world);
 }
 
-/// Setzt die Render-Qualitätsstufe.
+/// Setzt die Render-Qualitaetsstufe.
 pub fn set_render_quality(state: &mut AppState, quality: RenderQuality) {
     use_cases::viewport::set_render_quality(state, quality);
 }
 
-/// Lädt eine Background-Map und propagiert Fehler an den Aufrufer.
+/// Laedt eine Background-Map und propagiert Fehler an den Aufrufer.
 pub fn load_background_map(
     state: &mut AppState,
     path: String,
@@ -58,12 +58,12 @@ pub fn scale_background(state: &mut AppState, factor: f32) {
     use_cases::background_map::scale_background(state, factor);
 }
 
-/// Öffnet den ZIP-Browser-Dialog für die gewählte ZIP-Datei.
+/// Oeffnet den ZIP-Browser-Dialog fuer die gewaehlte ZIP-Datei.
 pub fn browse_zip_background(state: &mut AppState, path: String) -> anyhow::Result<()> {
     use_cases::background_map::browse_zip_background(state, path)
 }
 
-/// Lädt eine Bilddatei aus einem ZIP-Archiv als Background-Map.
+/// Laedt eine Bilddatei aus einem ZIP-Archiv als Background-Map.
 pub fn load_background_from_zip(
     state: &mut AppState,
     zip_path: String,
@@ -73,7 +73,7 @@ pub fn load_background_from_zip(
     use_cases::background_map::load_background_from_zip(state, zip_path, entry_name, crop_size)
 }
 
-/// Generiert eine Übersichtskarte mit den Optionen aus dem Dialog.
+/// Generiert eine Uebersichtskarte mit den Optionen aus dem Dialog.
 pub fn generate_overview_with_options(state: &mut AppState) -> anyhow::Result<()> {
     use_cases::background_map::generate_overview_with_options(state)
 }

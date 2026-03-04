@@ -1,9 +1,9 @@
-//! Übersichtskarten-Options-Dialog: Layer-Auswahl vor der Generierung.
+//! Uebersichtskarten-Options-Dialog: Layer-Auswahl vor der Generierung.
 
 use crate::app::state::OverviewOptionsDialogState;
 use crate::app::AppIntent;
 
-/// Zeigt den Übersichtskarten-Options-Dialog und gibt erzeugte Events zurück.
+/// Zeigt den Uebersichtskarten-Options-Dialog und gibt erzeugte Events zurueck.
 pub fn show_overview_options_dialog(
     ctx: &egui::Context,
     dialog_state: &mut OverviewOptionsDialogState,
@@ -15,7 +15,7 @@ pub fn show_overview_options_dialog(
     }
 
     let mut open = true;
-    egui::Window::new("Übersichtskarte – Layer-Optionen")
+    egui::Window::new("Uebersichtskarte – Layer-Optionen")
         .open(&mut open)
         .collapsible(false)
         .resizable(false)
@@ -30,7 +30,7 @@ pub fn show_overview_options_dialog(
 
             ui.checkbox(
                 &mut dialog_state.layers.hillshade,
-                "Hillshade (Geländeschattierung)",
+                "Hillshade (Gelaendeschattierung)",
             );
             ui.checkbox(&mut dialog_state.layers.farmlands, "Farmland-Grenzen");
             ui.checkbox(&mut dialog_state.layers.farmland_ids, "Farmland-ID-Nummern");
@@ -52,7 +52,7 @@ pub fn show_overview_options_dialog(
             });
         });
 
-    // Fenster über X geschlossen
+    // Fenster ueber X geschlossen
     if !open {
         events.push(AppIntent::OverviewOptionsCancelled);
     }

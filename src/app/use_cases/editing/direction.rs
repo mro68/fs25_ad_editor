@@ -1,10 +1,10 @@
-//! Use-Case: Richtung einer bestehenden Verbindung ändern.
+//! Use-Case: Richtung einer bestehenden Verbindung aendern.
 
 use crate::app::AppState;
 use crate::core::ConnectionDirection;
 use std::sync::Arc;
 
-/// Ändert die Richtung einer bestehenden Verbindung.
+/// Aendert die Richtung einer bestehenden Verbindung.
 ///
 /// Bei Wechsel von Dual auf Regular/Reverse wird eine eventuell vorhandene
 /// Gegen-Connection (end→start mit Dual) entfernt, damit keine Geister-Pfeile bleiben.
@@ -18,7 +18,7 @@ pub fn set_connection_direction(
         return;
     };
 
-    // Prüfe ob Verbindung existiert
+    // Pruefe ob Verbindung existiert
     let old_direction = match road_map_arc.find_connection(start_id, end_id) {
         Some(conn) => conn.direction,
         None => {
@@ -32,7 +32,7 @@ pub fn set_connection_direction(
 
     let Some(road_map_arc) = state.road_map.as_mut() else {
         log::warn!(
-            "Verbindung {}→{} nicht änderbar: keine RoadMap geladen",
+            "Verbindung {}→{} nicht aenderbar: keine RoadMap geladen",
             start_id,
             end_id
         );
@@ -57,7 +57,7 @@ pub fn set_connection_direction(
     road_map.recalculate_node_flags(&[start_id, end_id]);
 
     log::info!(
-        "Verbindung {}→{} auf {:?} geändert",
+        "Verbindung {}→{} auf {:?} geaendert",
         start_id,
         end_id,
         direction

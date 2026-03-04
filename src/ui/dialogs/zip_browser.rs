@@ -1,6 +1,6 @@
 use crate::app::{AppIntent, UiState, ZipImageEntry};
 
-/// Formatiert eine Dateigröße menschenlesbar (KB, MB, GB).
+/// Formatiert eine Dateigroesse menschenlesbar (KB, MB, GB).
 fn format_file_size(bytes: u64) -> String {
     const KB: u64 = 1024;
     const MB: u64 = 1024 * 1024;
@@ -25,7 +25,7 @@ pub fn show_zip_browser(ctx: &egui::Context, ui_state: &mut UiState) -> Vec<AppI
     };
 
     let mut open = true;
-    egui::Window::new("Bild aus ZIP wählen")
+    egui::Window::new("Bild aus ZIP waehlen")
         .collapsible(false)
         .resizable(true)
         .open(&mut open)
@@ -84,7 +84,7 @@ pub fn show_zip_browser(ctx: &egui::Context, ui_state: &mut UiState) -> Vec<AppI
             ui.horizontal(|ui| {
                 let can_confirm = browser.selected.is_some();
                 if ui
-                    .add_enabled(can_confirm, egui::Button::new("Übernehmen"))
+                    .add_enabled(can_confirm, egui::Button::new("Uebernehmen"))
                     .clicked()
                 {
                     if let Some(idx) = browser.selected {

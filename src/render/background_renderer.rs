@@ -1,10 +1,10 @@
-//! Background-Renderer für Map-Hintergrund.
+//! Background-Renderer fuer Map-Hintergrund.
 
 use crate::{BackgroundMap, Camera2D, WorldBounds};
 use eframe::{egui_wgpu, wgpu};
 use wgpu::util::DeviceExt;
 
-/// Uniforms für Background-Rendering
+/// Uniforms fuer Background-Rendering
 #[repr(C)]
 #[derive(Copy, Clone, Debug, bytemuck::Pod, bytemuck::Zeroable)]
 struct BackgroundUniforms {
@@ -16,7 +16,7 @@ struct BackgroundUniforms {
     texture_bounds: [f32; 4], // min_x, max_x, min_z, max_z
 }
 
-/// Vertex für Background-Quad
+/// Vertex fuer Background-Quad
 #[repr(C)]
 #[derive(Copy, Clone, Debug, bytemuck::Pod, bytemuck::Zeroable)]
 struct BackgroundVertex {
@@ -37,7 +37,7 @@ impl BackgroundVertex {
     }
 }
 
-/// Renderer für Background-Map
+/// Renderer fuer Background-Map
 pub struct BackgroundRenderer {
     pipeline: wgpu::RenderPipeline,
     bind_group_layout: wgpu::BindGroupLayoutDescriptor<'static>,
@@ -64,7 +64,7 @@ impl BackgroundRenderer {
             mapped_at_creation: false,
         });
 
-        // Bind-Group-Layout für Background (group(1))
+        // Bind-Group-Layout fuer Background (group(1))
         let bind_group_layout_desc = wgpu::BindGroupLayoutDescriptor {
             label: Some("Background Bind Group Layout"),
             entries: &[
@@ -140,7 +140,7 @@ impl BackgroundRenderer {
             },
             depth_stencil: None,
             multisample: wgpu::MultisampleState {
-                count: 4, // Muss mit Node-Renderer übereinstimmen
+                count: 4, // Muss mit Node-Renderer uebereinstimmen
                 mask: !0,
                 alpha_to_coverage_enabled: false,
             },
@@ -148,7 +148,7 @@ impl BackgroundRenderer {
             cache: None,
         });
 
-        // Vertex-Buffer für ein Dummy-Quad (wird später bei set_background() aktualisiert)
+        // Vertex-Buffer fuer ein Dummy-Quad (wird spaeter bei set_background() aktualisiert)
         let vertices = [
             BackgroundVertex {
                 position: [0.0, 0.0],
@@ -188,7 +188,7 @@ impl BackgroundRenderer {
         }
     }
 
-    /// Setzt die Background-Map und lädt die Texture hoch
+    /// Setzt die Background-Map und laedt die Texture hoch
     pub fn set_background(
         &mut self,
         device: &wgpu::Device,
@@ -264,7 +264,7 @@ impl BackgroundRenderer {
 
         queue.write_buffer(&self.vertex_buffer, 0, bytemuck::cast_slice(&vertices));
 
-        // Speichere skalierte Bounds (für konsistentes UV-Mapping im Shader)
+        // Speichere skalierte Bounds (fuer konsistentes UV-Mapping im Shader)
         self.texture = Some(texture);
         self.sampler = Some(sampler);
         self.bind_group = Some(bind_group);

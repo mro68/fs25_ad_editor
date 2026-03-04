@@ -1,6 +1,6 @@
 //! Map-Discovery: Erkennung der Kartenstruktur in FS25-Map-Mod-ZIPs.
 //!
-//! Parst `modDesc.xml` und die Map-Config-XML um Kartengröße,
+//! Parst `modDesc.xml` und die Map-Config-XML um Kartengroesse,
 //! Datenverzeichnisse und relevante Dateipfade zu ermitteln.
 
 use anyhow::{bail, Context, Result};
@@ -14,7 +14,7 @@ use std::path::{Path, PathBuf};
 pub struct MapInfo {
     /// Kartentitel (aus modDesc.xml)
     pub title: String,
-    /// Kartengröße in Pixeln (quadratisch)
+    /// Kartengroesse in Pixeln (quadratisch)
     pub map_size: u32,
     /// Pfad zur Map-Config-XML relativ zum Mod-Root
     pub config_path: String,
@@ -34,7 +34,7 @@ pub struct MapInfo {
 /// # Ablauf
 /// 1. `modDesc.xml` finden und parsen
 /// 2. Map-Config-XML lokalisieren
-/// 3. Kartengröße aus Config-XML lesen
+/// 3. Kartengroesse aus Config-XML lesen
 /// 4. `data/`- und `config/`-Verzeichnisse bestimmen
 pub fn discover_map(files: &HashMap<String, Vec<u8>>) -> Result<MapInfo> {
     // modDesc.xml finden (kann in Root oder einem Unterverzeichnis liegen)
@@ -158,7 +158,7 @@ fn parse_mod_desc(content: &[u8]) -> Result<(String, String, Option<String>)> {
     Ok((title, config_filename, placeables_filename))
 }
 
-/// Parst die Map-Config-XML für width/height.
+/// Parst die Map-Config-XML fuer width/height.
 fn parse_map_config(content: &[u8]) -> Result<u32> {
     let mut reader = Reader::from_reader(content);
     reader.config_mut().trim_text(true);
@@ -190,7 +190,7 @@ fn parse_map_config(content: &[u8]) -> Result<u32> {
         buf.clear();
     }
 
-    // Fallback: Standardgröße
+    // Fallback: Standardgroesse
     log::warn!("Keine width/height in Map-Config gefunden, verwende Standard 2048");
     Ok(2048)
 }
@@ -224,9 +224,9 @@ fn find_data_dir(files: &HashMap<String, Vec<u8>>, config_dir: &str, mod_root: &
     format!("{}/data", mod_root.trim_end_matches('/'))
 }
 
-/// Findet eine Datei im ZIP (case-insensitive für den Basename).
+/// Findet eine Datei im ZIP (case-insensitive fuer den Basename).
 ///
-/// Bei mehreren Treffern wird der kürzeste Pfad bevorzugt (nächste an Root-Ebene),
+/// Bei mehreren Treffern wird der kuerzeste Pfad bevorzugt (naechste an Root-Ebene),
 /// da z.B. `placeables/productions/modDesc.xml` nicht die Haupt-modDesc.xml ist.
 fn find_file<'a>(
     files: &'a HashMap<String, Vec<u8>>,
@@ -249,7 +249,7 @@ fn find_file<'a>(
     best
 }
 
-/// Überprüft ob Dateien mit einem bestimmten Verzeichnis-Prefix existieren.
+/// Ueberprueft ob Dateien mit einem bestimmten Verzeichnis-Prefix existieren.
 fn has_dir_prefix(files: &HashMap<String, Vec<u8>>, prefix: &str) -> bool {
     let prefix_with_slash = if prefix.ends_with('/') {
         prefix.to_string()
@@ -259,7 +259,7 @@ fn has_dir_prefix(files: &HashMap<String, Vec<u8>>, prefix: &str) -> bool {
     files.keys().any(|k| k.starts_with(&prefix_with_slash))
 }
 
-/// Gibt das übergeordnete Verzeichnis zurück.
+/// Gibt das uebergeordnete Verzeichnis zurueck.
 fn parent_dir(path: &str) -> String {
     Path::new(path)
         .parent()

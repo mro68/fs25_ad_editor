@@ -6,7 +6,7 @@ use std::collections::{HashMap, HashSet, VecDeque};
 
 use super::helpers::build_undirected_adjacency;
 
-/// Berechnet den kürzesten Pfad (BFS) zwischen zwei Nodes.
+/// Berechnet den kuerzesten Pfad (BFS) zwischen zwei Nodes.
 fn shortest_path_nodes(road_map: &RoadMap, start: u64, goal: u64) -> Option<Vec<u64>> {
     if start == goal {
         return Some(vec![start]);
@@ -57,9 +57,9 @@ fn shortest_path_nodes(road_map: &RoadMap, start: u64, goal: u64) -> Option<Vec<
     Some(path)
 }
 
-/// Selektiert den nächsten Node zur gegebenen Weltposition.
+/// Selektiert den naechsten Node zur gegebenen Weltposition.
 ///
-/// Falls kein Node innerhalb von `max_distance` gefunden wird, wird die Selektion gelöscht.
+/// Falls kein Node innerhalb von `max_distance` gefunden wird, wird die Selektion geloescht.
 pub fn select_nearest_node(
     state: &mut AppState,
     world_pos: glam::Vec2,

@@ -84,22 +84,22 @@
         </mm4>
         <mm5>
             <id>10251.000000</id>
-            <name>Fähre Nord Nordufer</name>
+            <name>Faehre Nord Nordufer</name>
             <group>All</group>
         </mm5>
         <mm6>
             <id>10350.000000</id>
-            <name>Fähre Nord Südufer</name>
+            <name>Faehre Nord Suedufer</name>
             <group>All</group>
         </mm6>
         <mm7>
             <id>6458.000000</id>
-            <name>Fähre West Nordufer</name>
+            <name>Faehre West Nordufer</name>
             <group>All</group>
         </mm7>
         <mm8>
             <id>11215.000000</id>
-            <name>Fähre West Südufer</name>
+            <name>Faehre West Suedufer</name>
             <group>All</group>
         </mm8>
         <mm9>
@@ -929,7 +929,7 @@
         </mm173>
         <mm174>
             <id>22422.000000</id>
-            <name>Viehhändler Ballenverkauf</name>
+            <name>Viehhaendler Ballenverkauf</name>
             <group>All</group>
         </mm174>
         <mm175>
@@ -979,7 +979,7 @@
         </mm183>
         <mm184>
             <id>22765.000000</id>
-            <name>Viehhändler Tiere</name>
+            <name>Viehhaendler Tiere</name>
             <group>All</group>
         </mm184>
         <mm185>
@@ -1009,7 +1009,7 @@
         </mm189>
         <mm190>
             <id>6398.000000</id>
-            <name>Gülle</name>
+            <name>Guelle</name>
             <group>BGA</group>
         </mm190>
         <mm191>
@@ -1029,12 +1029,12 @@
         </mm193>
         <mm194>
             <id>23029.000000</id>
-            <name>BGA Gärreste EN</name>
+            <name>BGA Gaerreste EN</name>
             <group>BGA</group>
         </mm194>
         <mm195>
             <id>23050.000000</id>
-            <name>BGA Gülle AN</name>
+            <name>BGA Guelle AN</name>
             <group>BGA</group>
         </mm195>
         <mm196>
@@ -1089,12 +1089,12 @@
         </mm205>
         <mm206>
             <id>23249.000000</id>
-            <name>Bäckerei AN</name>
+            <name>Baeckerei AN</name>
             <group>Produktionen</group>
         </mm206>
         <mm207>
             <id>23277.000000</id>
-            <name>Bäckerei Paletten EN</name>
+            <name>Baeckerei Paletten EN</name>
             <group>Produktionen</group>
         </mm207>
         <mm208>
@@ -1124,32 +1124,32 @@
         </mm212>
         <mm213>
             <id>23442.000000</id>
-            <name>Böttcherei Paletten EN</name>
+            <name>Boettcherei Paletten EN</name>
             <group>Produktionen</group>
         </mm213>
         <mm214>
             <id>23479.000000</id>
-            <name>Böttcherei AN</name>
+            <name>Boettcherei AN</name>
             <group>Produktionen</group>
         </mm214>
         <mm215>
             <id>9395.000000</id>
-            <name>Ölmühle AN</name>
+            <name>Oelmuehle AN</name>
             <group>Produktionen</group>
         </mm215>
         <mm216>
             <id>23493.000000</id>
-            <name>Ölmühle Paletten EN</name>
+            <name>Oelmuehle Paletten EN</name>
             <group>Produktionen</group>
         </mm216>
         <mm217>
             <id>23565.000000</id>
-            <name>Getreidemühle Paletten EN</name>
+            <name>Getreidemuehle Paletten EN</name>
             <group>Produktionen</group>
         </mm217>
         <mm218>
             <id>23586.000000</id>
-            <name>Getreidemühle AN</name>
+            <name>Getreidemuehle AN</name>
             <group>Produktionen</group>
         </mm218>
         <mm219>
@@ -1174,12 +1174,12 @@
         </mm222>
         <mm223>
             <id>23667.000000</id>
-            <name>Sägemühle Paletten EN</name>
+            <name>Saegemuehle Paletten EN</name>
             <group>Produktionen</group>
         </mm223>
         <mm224>
             <id>23713.000000</id>
-            <name>Sägemühle AN</name>
+            <name>Saegemuehle AN</name>
             <group>Produktionen</group>
         </mm224>
         <mm225>

@@ -1,4 +1,4 @@
-//! Statische Menü-Kataloge pro MenuVariant.
+//! Statische Menue-Kataloge pro MenuVariant.
 //!
 //! Definiert welche Commands in welchem Kontext erscheinen.
 
@@ -6,8 +6,8 @@ use super::preconditions::Precondition;
 use super::{CommandId, MenuCatalog, MenuEntry};
 
 impl MenuCatalog {
-    /// Werkzeug-Submenu: Auswahl/Verbinden/Hinzufügen — wird in allen Varianten
-    /// außer RouteToolActive verwendet.
+    /// Werkzeug-Submenu: Auswahl/Verbinden/Hinzufuegen — wird in allen Varianten
+    /// ausser RouteToolActive verwendet.
     fn tool_submenu() -> MenuEntry {
         MenuEntry::Submenu {
             label: "🛠 Werkzeug".into(),
@@ -24,7 +24,7 @@ impl MenuCatalog {
                 },
                 MenuEntry::Command {
                     id: CommandId::SetToolAddNode,
-                    label: "Node hinzufügen (3)".into(),
+                    label: "Node hinzufuegen (3)".into(),
                     preconditions: vec![],
                 },
             ],
@@ -108,17 +108,17 @@ impl MenuCatalog {
                 entries: vec![
                     MenuEntry::Command {
                         id: CommandId::DirectionRegular,
-                        label: "↦ Regular (Einbahn)".into(),
+                        label: "↦ Einbahn vorwaerts".into(),
                         preconditions: vec![Precondition::HasConnectionsBetweenSelected],
                     },
                     MenuEntry::Command {
                         id: CommandId::DirectionDual,
-                        label: "⇆ Dual (beidseitig)".into(),
+                        label: "⇆ Zweirichtungsverkehr".into(),
                         preconditions: vec![Precondition::HasConnectionsBetweenSelected],
                     },
                     MenuEntry::Command {
                         id: CommandId::DirectionReverse,
-                        label: "↤ Reverse (rückwärts)".into(),
+                        label: "↤ Einbahn rueckwaerts".into(),
                         preconditions: vec![Precondition::HasConnectionsBetweenSelected],
                     },
                     MenuEntry::Command {
@@ -129,16 +129,16 @@ impl MenuCatalog {
                 ],
             },
             MenuEntry::Submenu {
-                label: "🚧 Straßenart".into(),
+                label: "🚧 Strassenart".into(),
                 entries: vec![
                     MenuEntry::Command {
                         id: CommandId::PriorityRegular,
-                        label: "🛣 Hauptstraße".into(),
+                        label: "🛣 Hauptstrasse".into(),
                         preconditions: vec![Precondition::HasConnectionsBetweenSelected],
                     },
                     MenuEntry::Command {
                         id: CommandId::PrioritySub,
-                        label: "🛤 Nebenstraße".into(),
+                        label: "🛤 Nebenstrasse".into(),
                         preconditions: vec![Precondition::HasConnectionsBetweenSelected],
                     },
                 ],
@@ -160,12 +160,12 @@ impl MenuCatalog {
                     },
                     MenuEntry::Command {
                         id: CommandId::SelectAll,
-                        label: "☑ Alles auswählen".into(),
+                        label: "☑ Alles auswaehlen".into(),
                         preconditions: vec![],
                     },
                     MenuEntry::Command {
                         id: CommandId::ClearSelection,
-                        label: "✕ Auswahl löschen".into(),
+                        label: "✕ Auswahl loeschen".into(),
                         preconditions: vec![],
                     },
                 ],
@@ -183,7 +183,7 @@ impl MenuCatalog {
         ]
     }
 
-    /// SelectionOnly: Befehle für selektierte Nodes (Rechtsklick ins Leere).
+    /// SelectionOnly: Befehle fuer selektierte Nodes (Rechtsklick ins Leere).
     pub fn for_selection_only() -> Self {
         let mut entries = vec![Self::tool_submenu(), MenuEntry::Separator];
         entries.extend(Self::selection_entries());
@@ -191,7 +191,7 @@ impl MenuCatalog {
         entries.push(MenuEntry::Separator);
         entries.push(MenuEntry::Command {
             id: CommandId::DeleteSelected,
-            label: "🗑 Löschen".into(),
+            label: "🗑 Loeschen".into(),
             preconditions: vec![],
         });
         MenuCatalog { entries }
@@ -216,7 +216,7 @@ impl MenuCatalog {
                     },
                     MenuEntry::Command {
                         id: CommandId::RemoveMarker,
-                        label: "✕ Marker löschen".into(),
+                        label: "✕ Marker loeschen".into(),
                         preconditions: vec![
                             Precondition::NodeExists(node_id),
                             Precondition::HasMarker(node_id),
@@ -234,7 +234,7 @@ impl MenuCatalog {
             },
             MenuEntry::Command {
                 id: CommandId::DeleteSelected,
-                label: "🗑 Löschen".into(),
+                label: "🗑 Loeschen".into(),
                 preconditions: vec![],
             },
         ];
@@ -256,7 +256,7 @@ impl MenuCatalog {
                 MenuEntry::Separator,
                 MenuEntry::Command {
                     id: CommandId::RouteExecute,
-                    label: "✓ Ausführen".into(),
+                    label: "✓ Ausfuehren".into(),
                     preconditions: vec![],
                 },
                 MenuEntry::Command {

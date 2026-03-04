@@ -1,13 +1,13 @@
-//! Duplikat-Erkennung und -Bereinigung für Nodes mit identischer Position.
+//! Duplikat-Erkennung und -Bereinigung fuer Nodes mit identischer Position.
 
 use super::RoadMap;
 use crate::core::{Connection, ConnectionDirection};
 use std::collections::HashMap;
 
 impl RoadMap {
-    /// Zählt duplizierte Nodes (gleiche Position innerhalb `epsilon`) ohne sie zu entfernen.
+    /// Zaehlt duplizierte Nodes (gleiche Position innerhalb `epsilon`) ohne sie zu entfernen.
     ///
-    /// Gibt die Anzahl der Duplikat-Nodes und der betroffenen Positionen zurück.
+    /// Gibt die Anzahl der Duplikat-Nodes und der betroffenen Positionen zurueck.
     pub fn count_duplicates(&self, epsilon: f32) -> (u32, u32) {
         let inv_epsilon = if epsilon > 0.0 { 1.0 / epsilon } else { 1000.0 };
         let mut grid: HashMap<(i64, i64), u32> = HashMap::new();
@@ -144,7 +144,7 @@ pub struct DeduplicationResult {
 }
 
 impl DeduplicationResult {
-    /// Prüft ob Duplikate gefunden und bereinigt wurden.
+    /// Prueft ob Duplikate gefunden und bereinigt wurden.
     pub fn had_duplicates(&self) -> bool {
         self.removed_nodes > 0
     }

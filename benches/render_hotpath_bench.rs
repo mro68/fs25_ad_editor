@@ -1,8 +1,8 @@
-//! Benchmark für Render-Hotpath-Allokationen.
+//! Benchmark fuer Render-Hotpath-Allokationen.
 //!
 //! Misst die Datenaufbereitungskosten pro Frame in den Renderern:
-//! - NodeRenderer: contains-Check auf HashSet (kein Re-collect mehr nötig seit A1)
-//! - MarkerRenderer: Vec-collect für MarkerInstances
+//! - NodeRenderer: contains-Check auf HashSet (kein Re-collect mehr noetig seit A1)
+//! - MarkerRenderer: Vec-collect fuer MarkerInstances
 //! - RenderScene: HashSet-Clone (vorher: HashSet→Vec Konvertierung)
 
 use criterion::{criterion_group, criterion_main, BenchmarkId, Criterion};
