@@ -26,6 +26,10 @@ harness = false
 name = "render_hotpath_bench"
 harness = false
 
+[[bench]]
+name = "tool_preview_hotpath_bench"
+harness = false
+
 [dependencies]
 # UI Framework
 egui = "0.33.3"

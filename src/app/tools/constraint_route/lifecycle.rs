@@ -99,7 +99,11 @@ impl RouteTool for ConstraintRouteTool {
                 if self.preview_positions.is_empty() {
                     return ToolPreview::default();
                 }
-                let connections = linear_connections(self.preview_positions.len());
+                let connections = if self.preview_connections.is_empty() {
+                    linear_connections(self.preview_positions.len())
+                } else {
+                    self.preview_connections.clone()
+                };
                 let mut nodes = self.preview_positions.clone();
 
                 // Steuerpunkte als unverbundene Nodes hinzufügen (werden als Rauten gerendert)
@@ -177,6 +181,7 @@ impl RouteTool for ConstraintRouteTool {
         self.phase = Phase::Start;
         self.dragging = None;
         self.preview_positions.clear();
+        self.preview_connections.clear();
         self.start_neighbor_dirs.clear();
         self.end_neighbor_dirs.clear();
         self.approach_steerer = None;

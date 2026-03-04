@@ -8,4 +8,5 @@ mod geometry;
 mod lifecycle;
 mod state;
 
+pub use geometry::compute_bypass_positions;
 pub use state::BypassTool;
