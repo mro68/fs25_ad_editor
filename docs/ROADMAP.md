@@ -231,6 +231,7 @@
 - ✅ Optionen-Dialog verfeinert: reduzierte Hauptkategorien (`Allgemein`, `Nodes`, `Tools`, `Verbindungen`, `Verhalten`) und feste Untersektionen ohne aufklappbare Menüs
 - ✅ Route-Tool-Randkanten fix (alle Tools): externe Start-/Endverbindungen tragen jetzt explizite Orientierung (`existing_to_new`) statt impliziter Richtungs-Spiegelung; `Regular` bleibt am Start korrekt vorwärts
 - ✅ Constraint-Route-Defaults angepasst: Max-Winkel `10°`, Max-Abstand `10m`, Minimaldistanz `2m`
+- ✅ Constraint-Route-Config: Mausrad-Unterstützung für Max-Winkel- und Minimaldistanz-Slider ergänzt (neben LMT li/re)
 
 **Errungenschaften (Spline-Tool 2026-02-21):**
 - ✅ Neues Route-Tool: Catmull-Rom-Spline (interpolierend, Kurs führt durch alle geklickten Punkte)
