@@ -137,6 +137,18 @@ pub trait RouteTool:
     /// `road_map` erlaubt tools, Nachbar-Informationen für Feintuning zu cachen.
     fn set_last_created(&mut self, _ids: &[u64], _road_map: &RoadMap) {}
 
+    /// Gibt den aktuellen End-Anker für Verkettung/Recreate zurück.
+    ///
+    /// Standardmäßig `None`; tools mit End-Anker überschreiben diese Methode.
+    fn current_end_anchor(&self) -> Option<ToolAnchor> {
+        None
+    }
+
+    /// Speichert tool-spezifische Anker-/Kontrollpunktdaten für Recreate.
+    ///
+    /// Wird vom gemeinsamen `set_last_created`-Flow aufgerufen.
+    fn save_anchors_for_recreate(&mut self, _road_map: &RoadMap) {}
+
     /// Gibt die IDs der zuletzt erstellten Nodes zurück.
     fn last_created_ids(&self) -> &[u64] {
         &[]

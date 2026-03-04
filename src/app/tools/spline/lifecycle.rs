@@ -2,7 +2,8 @@
 
 use super::super::{
     common::{
-        linear_connections, populate_neighbors, tangent_options, TangentMenuData, TangentSource,
+        linear_connections, populate_neighbors, snap_with_neighbors, tangent_options,
+        TangentMenuData, TangentSource,
     },
     snap_to_node, RouteTool, ToolAction, ToolPreview, ToolResult,
 };
@@ -33,7 +34,7 @@ impl RouteTool for SplineTool {
     }
 
     fn on_click(&mut self, pos: Vec2, road_map: &RoadMap, _ctrl: bool) -> ToolAction {
-        let anchor = snap_to_node(pos, road_map, self.lifecycle.snap_radius);
+        let (anchor, _neighbors) = snap_with_neighbors(pos, road_map, self.lifecycle.snap_radius);
 
         if self.anchors.is_empty() {
             // Verkettung: letzten Endpunkt als Start verwenden
@@ -123,13 +124,18 @@ impl RouteTool for SplineTool {
 
     crate::impl_lifecycle_delegation!();
 
-    fn set_last_created(&mut self, ids: &[u64], road_map: &RoadMap) {
+    fn current_end_anchor(&self) -> Option<super::super::ToolAnchor> {
+        self.anchors
+            .last()
+            .copied()
+            .or_else(|| self.last_anchors.last().copied())
+            .or(self.lifecycle.last_end_anchor)
+    }
+
+    fn save_anchors_for_recreate(&mut self, road_map: &RoadMap) {
         // Nur bei Erst-Erstellung Anker übernehmen; bei Recreate bleiben last_anchors erhalten
         if !self.anchors.is_empty() {
             self.last_anchors = self.anchors.clone();
-            if let Some(last) = self.anchors.last() {
-                self.lifecycle.last_end_anchor = Some(*last);
-            }
         }
         // Nachbarn aus den richtigen Ankern befüllen (anchors oder last_anchors)
         let source = if !self.anchors.is_empty() {
@@ -144,7 +150,6 @@ impl RouteTool for SplineTool {
             self.tangents.end_neighbors = populate_neighbors(last, road_map);
         }
         self.tangents.save_for_recreate();
-        self.lifecycle.save_created_ids(ids);
     }
 
     fn execute_from_anchors(&self, road_map: &RoadMap) -> Option<ToolResult> {

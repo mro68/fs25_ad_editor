@@ -112,16 +112,16 @@ impl RouteTool for StraightLineTool {
 
     crate::impl_lifecycle_delegation!();
 
-    fn set_last_created(&mut self, ids: &[u64], _road_map: &RoadMap) {
+    fn current_end_anchor(&self) -> Option<super::super::ToolAnchor> {
+        self.end.or(self.lifecycle.last_end_anchor)
+    }
+
+    fn save_anchors_for_recreate(&mut self, _road_map: &RoadMap) {
         // Anker nur überschreiben wenn aktuelle start/end gesetzt sind.
         // Beim Recreate sind start/end None — Anker bleiben erhalten.
         if self.start.is_some() {
             self.last_start_anchor = self.start;
         }
-        if self.end.is_some() {
-            self.lifecycle.last_end_anchor = self.end;
-        }
-        self.lifecycle.save_created_ids(ids);
     }
 
     fn execute_from_anchors(&self, road_map: &RoadMap) -> Option<ToolResult> {
