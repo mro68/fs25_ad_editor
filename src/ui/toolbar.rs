@@ -1,4 +1,4 @@
-//! Toolbar fuer Editor-Werkzeugauswahl.
+//! Toolbar für Editor-Werkzeugauswahl.
 
 use crate::app::{AppIntent, AppState, ConnectionDirection, ConnectionPriority, EditorTool};
 
@@ -7,7 +7,7 @@ use crate::app::{AppIntent, AppState, ConnectionDirection, ConnectionPriority, E
 const ICON_SIZE: egui::Vec2 = egui::Vec2::new(20.0, 20.0);
 const ICON_SIZE_DROPDOWN: egui::Vec2 = egui::Vec2::new(18.0, 18.0);
 
-/// Erstellt ein `egui::Image` aus einer `ImageSource` in der gewuenschten Groesse.
+/// Erstellt ein `egui::Image` aus einer `ImageSource` in der gewünschten Größe.
 fn svg_icon(source: egui::ImageSource<'_>, size: egui::Vec2) -> egui::Image<'_> {
     egui::Image::new(source).fit_to_exact_size(size)
 }
@@ -36,7 +36,7 @@ fn accent_icon_color(state: &AppState) -> egui::Color32 {
     }
 }
 
-/// Rendert die Toolbar und gibt erzeugte Events zurueck.
+/// Rendert die Toolbar und gibt erzeugte Events zurück.
 pub fn render_toolbar(ctx: &egui::Context, state: &AppState) -> Vec<AppIntent> {
     let mut events = Vec::new();
     let active = state.editor.active_tool;
@@ -110,7 +110,7 @@ pub fn render_toolbar(ctx: &egui::Context, state: &AppState) -> Vec<AppIntent> {
 
             ui.separator();
 
-            // ── Linien-Tools als Dropdown-Menue mit SVG-Icons ──
+            // ── Linien-Tools als Dropdown-Menü mit SVG-Icons ──
             let active_route_index = if active == EditorTool::Route {
                 state.editor.tool_manager.active_index()
             } else {
@@ -120,7 +120,7 @@ pub fn render_toolbar(ctx: &egui::Context, state: &AppState) -> Vec<AppIntent> {
             let selected_label = active_route_index
                 .and_then(|idx| tool_entries.iter().find(|(i, _, _)| *i == idx))
                 .map(|(_, name, _icon)| name.to_string())
-                .unwrap_or_else(|| "Linie waehlen…".to_string());
+                .unwrap_or_else(|| "Linie wählen…".to_string());
 
             let popup_id = ui.make_persistent_id("line_tools_dropdown").with("popup");
 
@@ -157,9 +157,9 @@ pub fn render_toolbar(ctx: &egui::Context, state: &AppState) -> Vec<AppIntent> {
             if active == EditorTool::Connect {
                 ui.separator();
                 if let Some(source_id) = state.editor.connect_source_node {
-                    ui.label(format!("Startknoten: {} → Waehle Zielknoten", source_id));
+                    ui.label(format!("Startknoten: {} → Wähle Zielknoten", source_id));
                 } else {
-                    ui.label("Waehle Startknoten");
+                    ui.label("Wähle Startknoten");
                 }
             }
 
@@ -204,9 +204,9 @@ pub fn render_toolbar(ctx: &egui::Context, state: &AppState) -> Vec<AppIntent> {
                         events.push(AppIntent::ScaleBackground { factor: 2.0 });
                     }
                     if (scale - 1.0).abs() > f32::EPSILON
-                        && ui.button("1:1").on_hover_text("Originalgroesse").clicked()
+                        && ui.button("1:1").on_hover_text("Originalgröße").clicked()
                     {
-                        // Setze Scale zurueck auf 1.0 durch Faktor = 1/aktuell
+                        // Setze Scale zurück auf 1.0 durch Faktor = 1/aktuell
                         events.push(AppIntent::ScaleBackground {
                             factor: 1.0 / scale,
                         });
@@ -219,7 +219,7 @@ pub fn render_toolbar(ctx: &egui::Context, state: &AppState) -> Vec<AppIntent> {
     events
 }
 
-/// Gibt die `ImageSource` fuer das SVG-Icon eines Route-Tools anhand des Index zurueck.
+/// Gibt die `ImageSource` für das SVG-Icon eines Route-Tools anhand des Index zurück.
 fn route_tool_icon(idx: usize) -> egui::ImageSource<'static> {
     match idx {
         0 => egui::include_image!("../../assets/icon_straight_road.svg"),
@@ -232,7 +232,8 @@ fn route_tool_icon(idx: usize) -> egui::ImageSource<'static> {
     }
 }
 
-/// Rendert einen Dropdown-Eintrag fuer ein Linien-Tool mit SVG-Icon und Text.
+/// Rendert einen Dropdown-Eintrag für ein Linien-Tool mit SVG-Icon und Text.
+#[allow(clippy::too_many_arguments)]
 fn render_line_tool_item(
     ui: &mut egui::Ui,
     idx: usize,
