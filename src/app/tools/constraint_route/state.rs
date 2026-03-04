@@ -98,8 +98,8 @@ impl ConstraintRouteTool {
             control_nodes: Vec::new(),
             phase: Phase::Start,
             dragging: None,
-            seg: SegmentConfig::new(6.0),
-            max_angle_deg: 45.0,
+            seg: SegmentConfig::new(10.0),
+            max_angle_deg: 10.0,
             direction: ConnectionDirection::Dual,
             priority: ConnectionPriority::Regular,
             lifecycle: ToolLifecycleState::new(3.0),
@@ -114,7 +114,7 @@ impl ConstraintRouteTool {
             departure_steerer: None,
             approach_manual: false,
             departure_manual: false,
-            min_distance: 1.0,
+            min_distance: 2.0,
         }
     }
 
@@ -231,4 +231,17 @@ impl Default for ConstraintRouteTool {
 /// Berechnet die Gesamtlänge einer Polyline.
 fn polyline_length(points: &[Vec2]) -> f32 {
     points.windows(2).map(|w| w[0].distance(w[1])).sum()
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn constraint_route_defaults_match_requested_values() {
+        let tool = ConstraintRouteTool::new();
+        assert_eq!(tool.max_angle_deg, 10.0);
+        assert_eq!(tool.seg.max_segment_length, 10.0);
+        assert_eq!(tool.min_distance, 2.0);
+    }
 }
