@@ -75,7 +75,13 @@ impl ConstraintRouteTool {
                 .suffix("°")
                 .fixed_decimals(0),
         );
-        if angle_response.changed() {
+        let mut angle_changed = angle_response.changed();
+        let angle_wheel_dir = SegmentConfig::wheel_dir(ui, &angle_response);
+        if angle_wheel_dir != 0.0 {
+            self.max_angle_deg = (self.max_angle_deg + angle_wheel_dir).clamp(5.0, 135.0);
+            angle_changed = true;
+        }
+        if angle_changed {
             changed = true;
             self.update_preview();
             if !self.lifecycle.last_created_ids.is_empty() {
@@ -129,7 +135,14 @@ impl ConstraintRouteTool {
                 .suffix(" m")
                 .fixed_decimals(1),
         );
-        if min_dist_response.changed() {
+        let mut min_dist_changed = min_dist_response.changed();
+        let min_dist_wheel_dir = SegmentConfig::wheel_dir(ui, &min_dist_response);
+        if distance_wheel_step_m > 0.0 && min_dist_wheel_dir != 0.0 {
+            self.min_distance =
+                (self.min_distance + min_dist_wheel_dir * distance_wheel_step_m).clamp(0.5, 20.0);
+            min_dist_changed = true;
+        }
+        if min_dist_changed {
             changed = true;
             self.update_preview();
             if !self.lifecycle.last_created_ids.is_empty() {
