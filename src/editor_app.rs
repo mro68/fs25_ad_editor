@@ -138,6 +138,8 @@ impl EditorApp {
             self.state.road_map.as_deref(),
             &self.state.selection.selected_node_ids,
             &mut self.state.ui.distanzen,
+            default_direction,
+            default_priority,
             distance_wheel_step_m,
             active_tool,
             edit_tool_manager,
