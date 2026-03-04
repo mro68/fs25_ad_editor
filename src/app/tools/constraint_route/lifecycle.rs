@@ -10,7 +10,7 @@ use glam::Vec2;
 
 impl RouteTool for ConstraintRouteTool {
     fn name(&self) -> &str {
-        "Constraint Route"
+        "Constraint-Route"
     }
 
     fn icon(&self) -> &str {

@@ -203,10 +203,31 @@ fn catalog_empty_area_shows_tools() {
     assert!(has_command(&entries, CommandId::SetToolSelect));
     assert!(has_command(&entries, CommandId::SetToolConnect));
     assert!(has_command(&entries, CommandId::SetToolAddNode));
+    assert!(has_command(&entries, CommandId::SetToolRouteConstraint));
     assert!(has_command(&entries, CommandId::SetToolRouteStraight));
     assert!(has_command(&entries, CommandId::SetToolRouteQuadratic));
     assert!(has_command(&entries, CommandId::SetToolRouteCubic));
-    assert_eq!(count_commands(&entries), 6);
+    assert_eq!(count_commands(&entries), 7);
+}
+
+#[test]
+fn catalog_empty_area_constraint_route_is_first_route_entry() {
+    let catalog = MenuCatalog::for_empty_area();
+    let route_submenu = catalog
+        .entries
+        .iter()
+        .find_map(|entry| match entry {
+            MenuEntry::Submenu { label, entries } if label == "📐 Strecke" => Some(entries),
+            _ => None,
+        })
+        .expect("Strecke-Untermenü erwartet");
+
+    let first_route_id = route_submenu.iter().find_map(|entry| match entry {
+        MenuEntry::Command { id, .. } => Some(*id),
+        _ => None,
+    });
+
+    assert_eq!(first_route_id, Some(CommandId::SetToolRouteConstraint));
 }
 
 #[test]
@@ -364,8 +385,30 @@ fn catalog_multi_nodes_route_tools_only_when_two_selected() {
     let entries = validate_entries(&catalog, &ctx, &intent_ctx);
 
     assert!(!has_command(&entries, CommandId::RouteStraight));
+    assert!(!has_command(&entries, CommandId::RouteConstraint));
     assert!(!has_command(&entries, CommandId::RouteQuadratic));
     assert!(!has_command(&entries, CommandId::RouteCubic));
+}
+
+#[test]
+fn catalog_selection_constraint_route_is_first_generate_entry() {
+    let entries = MenuCatalog::for_selection_only().entries;
+    let generate_submenu = entries
+        .iter()
+        .find_map(|entry| match entry {
+            MenuEntry::Submenu { label, entries } if label == "📐 Strecke erzeugen" => {
+                Some(entries)
+            }
+            _ => None,
+        })
+        .expect("Strecke-erzeugen-Untermenü erwartet");
+
+    let first_route_id = generate_submenu.iter().find_map(|entry| match entry {
+        MenuEntry::Command { id, .. } => Some(*id),
+        _ => None,
+    });
+
+    assert_eq!(first_route_id, Some(CommandId::RouteConstraint));
 }
 
 #[test]
