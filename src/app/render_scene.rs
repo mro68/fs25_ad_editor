@@ -23,7 +23,7 @@ pub fn build(state: &AppState, viewport_size: [f32; 2]) -> RenderScene {
         connect_source_node: state.editor.connect_source_node,
         background_map: state.view.background_map.clone(),
         background_visible: state.view.background_visible,
-        options: state.options.clone(),
+        options: Arc::new(state.options.clone()),
         hidden_node_ids,
     }
 }
