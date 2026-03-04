@@ -122,6 +122,7 @@
   - [ ] LOD-System für große Strecken
   - [ ] Memory-Profiling
   - [x] `ctx.request_repaint()` nur bei Änderungen (CPU-Idle-Verbrauch reduzieren)
+  - [x] **RenderScene-Hotpath:** `RenderScene.options` auf `Arc<EditorOptions>` umgestellt (O(1)-Clone statt Deep-Clone pro Frame, 2026-03-04)
 - [🟡] Error-Handling & User-Feedback
   - [x] unwrap()-Aufrufe in Produktionscode durch graceful handling ersetzt
   - [🟡] Toast-Notifications (via StatusBar `status_message` gelöst, dedizierte Toast-UI ausstehend)
@@ -223,6 +224,7 @@
 - ✅ Streckenteilung-Preview: Recompute nur bei geänderter Eingabe-Signatur (`preview_cache_signature`)
 - ✅ API-Doku-Sync: `app/API.md` (Route-Tool-Events), `ui/API.md` (Overview-/Preview-Funktionen), `docs/DATA_MODEL.md` (AppState/SelectionState/SegmentRegistry)
 - ✅ `ui/options_dialog.rs` in `ui/options_dialog/{mod,sections}.rs` aufgeteilt (bessere Wartbarkeit ohne API-Änderung)
+- ✅ Render-Hotpath optimiert: `RenderScene.options` nutzt `Arc<EditorOptions>`; API-Verträge in `shared/API.md` und `render/API.md` synchronisiert
 
 **Errungenschaften (Spline-Tool 2026-02-21):**
 - ✅ Neues Route-Tool: Catmull-Rom-Spline (interpolierend, Kurs führt durch alle geklickten Punkte)
