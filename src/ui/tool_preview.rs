@@ -5,30 +5,46 @@ use glam::Vec2;
 
 use crate::app::tools::{ToolManager, ToolPreview};
 use crate::app::{Camera2D, RoadMap};
+use crate::shared::EditorOptions;
+use crate::{ConnectionDirection, ConnectionPriority};
+
+/// Kontext-Bündel für `render_tool_preview`.
+///
+/// Kapselt mehrere Parameter (Painter, Viewport, Camera, RoadMap, etc.),
+/// damit die Funktion unter dem Clippy-Limit für Argumentanzahl bleibt.
+pub struct ToolPreviewContext<'a> {
+    pub painter: &'a egui::Painter,
+    pub rect: egui::Rect,
+    pub camera: &'a Camera2D,
+    pub viewport_size: Vec2,
+    pub tool_manager: &'a ToolManager,
+    pub road_map: &'a RoadMap,
+    pub cursor_world: Vec2,
+    pub options: &'a EditorOptions,
+}
 
 /// Zeichnet das Tool-Preview-Overlay in den Viewport.
 ///
 /// Liest die Preview-Daten vom aktiven Route-Tool und rendert
 /// Verbindungen (Linien) und Nodes (Kreise/Rauten) halbtransparent.
-pub fn render_tool_preview(
-    painter: &egui::Painter,
-    rect: egui::Rect,
-    camera: &Camera2D,
-    viewport_size: Vec2,
-    tool_manager: &ToolManager,
-    road_map: &RoadMap,
-    cursor_world: Vec2,
-) {
-    let Some(tool) = tool_manager.active_tool() else {
+pub fn render_tool_preview(ctx: &ToolPreviewContext<'_>) {
+    let Some(tool) = ctx.tool_manager.active_tool() else {
         return;
     };
 
-    let preview = tool.preview(cursor_world, road_map);
+    let preview = tool.preview(ctx.cursor_world, ctx.road_map);
     if preview.nodes.is_empty() {
         return;
     }
 
-    paint_preview(painter, rect, camera, viewport_size, &preview);
+    paint_preview(
+        ctx.painter,
+        ctx.rect,
+        ctx.camera,
+        ctx.viewport_size,
+        &preview,
+        ctx.options,
+    );
 }
 
 /// Zeichnet eine `ToolPreview`-Geometrie (Verbindungen + Nodes).
@@ -38,8 +54,13 @@ pub fn paint_preview(
     camera: &Camera2D,
     viewport_size: Vec2,
     preview: &ToolPreview,
+    options: &EditorOptions,
 ) {
-    let preview_color = egui::Color32::from_rgba_unmultiplied(0, 200, 255, 180);
+    let world_per_pixel = camera.world_per_pixel(viewport_size.y);
+    if world_per_pixel <= 0.0 {
+        return;
+    }
+
     let cp_color = egui::Color32::from_rgba_unmultiplied(255, 160, 0, 220);
     let mut has_connection = vec![false; preview.nodes.len()];
 
@@ -52,18 +73,34 @@ pub fn paint_preview(
         }
     }
 
+    let thickness_main_px = (options.connection_thickness_world / world_per_pixel).max(1.0);
+    let thickness_sub_px = (options.connection_thickness_subprio_world / world_per_pixel).max(1.0);
+    let arrow_len_px = (options.arrow_length_world / world_per_pixel).max(0.5);
+    let arrow_width_px = (options.arrow_width_world / world_per_pixel).max(0.5);
+
     // Verbindungen zeichnen
-    for &(a, b) in &preview.connections {
+    for (idx, &(a, b)) in preview.connections.iter().enumerate() {
+        let style = preview
+            .connection_styles
+            .get(idx)
+            .copied()
+            .unwrap_or((ConnectionDirection::Regular, ConnectionPriority::Regular));
+        let color = preview_connection_color(style.0, style.1, options);
+        let thickness_px = match style.1 {
+            ConnectionPriority::Regular => thickness_main_px,
+            ConnectionPriority::SubPriority => thickness_sub_px,
+        };
+
         if let (Some(&pa), Some(&pb)) = (preview.nodes.get(a), preview.nodes.get(b)) {
             let sa = camera.world_to_screen(pa, viewport_size);
             let sb = camera.world_to_screen(pb, viewport_size);
-            painter.line_segment(
-                [
-                    egui::pos2(rect.min.x + sa.x, rect.min.y + sa.y),
-                    egui::pos2(rect.min.x + sb.x, rect.min.y + sb.y),
-                ],
-                egui::Stroke::new(2.0, preview_color),
-            );
+            let from = egui::pos2(rect.min.x + sa.x, rect.min.y + sa.y);
+            let to = egui::pos2(rect.min.x + sb.x, rect.min.y + sb.y);
+            painter.line_segment([from, to], egui::Stroke::new(thickness_px, color));
+
+            if style.0 != ConnectionDirection::Dual {
+                paint_arrow(painter, from, to, color, arrow_len_px, arrow_width_px);
+            }
         }
     }
 
@@ -72,12 +109,11 @@ pub fn paint_preview(
         let sp = camera.world_to_screen(pos, viewport_size);
         let screen_pos = egui::pos2(rect.min.x + sp.x, rect.min.y + sp.y);
 
-        // Steuerpunkte (ohne Verbindung) als Raute, Rest als Kreis
         let is_control = !has_connection[i];
         if is_control {
             paint_diamond(painter, screen_pos, 5.0, cp_color);
         } else {
-            painter.circle_filled(screen_pos, 3.5, preview_color);
+            painter.circle_filled(screen_pos, 3.5, preview_node_color(options));
         }
     }
 }
@@ -133,4 +169,69 @@ fn paint_diamond(painter: &egui::Painter, center: egui::Pos2, size: f32, color: 
     painter.line_segment([right, bottom], stroke);
     painter.line_segment([bottom, left], stroke);
     painter.line_segment([left, top], stroke);
+}
+
+fn paint_arrow(
+    painter: &egui::Painter,
+    from: egui::Pos2,
+    to: egui::Pos2,
+    color: egui::Color32,
+    length_px: f32,
+    width_px: f32,
+) {
+    let dir = to - from;
+    let len = dir.length();
+    if len <= f32::EPSILON {
+        return;
+    }
+    let dir_norm = dir / len;
+    let center = from + dir_norm * (len * 0.5);
+    let tip = center + dir_norm * (length_px * 2.0 / 3.0);
+    let base = center - dir_norm * (length_px / 3.0);
+    let perp = egui::Vec2::new(-dir_norm.y, dir_norm.x);
+    let left = base + perp * (width_px * 0.5);
+    let right = base - perp * (width_px * 0.5);
+
+    painter.add(egui::epaint::Shape::convex_polygon(
+        vec![tip, left, right],
+        color,
+        egui::Stroke::NONE,
+    ));
+}
+
+fn preview_node_color(options: &EditorOptions) -> egui::Color32 {
+    color32_from_rgba(options.connection_color_regular)
+}
+
+fn preview_connection_color(
+    direction: ConnectionDirection,
+    priority: ConnectionPriority,
+    options: &EditorOptions,
+) -> egui::Color32 {
+    let base = match direction {
+        ConnectionDirection::Regular => options.connection_color_regular,
+        ConnectionDirection::Dual => options.connection_color_dual,
+        ConnectionDirection::Reverse => options.connection_color_reverse,
+    };
+
+    let color = match priority {
+        ConnectionPriority::Regular => base,
+        ConnectionPriority::SubPriority => [
+            (base[0] + 1.0) * 0.5,
+            (base[1] + 1.0) * 0.5,
+            (base[2] + 1.0) * 0.5,
+            base[3],
+        ],
+    };
+
+    color32_from_rgba(color)
+}
+
+fn color32_from_rgba(color: [f32; 4]) -> egui::Color32 {
+    egui::Color32::from_rgba_unmultiplied(
+        (color[0].clamp(0.0, 1.0) * 255.0) as u8,
+        (color[1].clamp(0.0, 1.0) * 255.0) as u8,
+        (color[2].clamp(0.0, 1.0) * 255.0) as u8,
+        (color[3].clamp(0.0, 1.0) * 255.0) as u8,
+    )
 }

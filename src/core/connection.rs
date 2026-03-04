@@ -1,9 +1,10 @@
 //! Domaenentypen fuer Verbindungen zwischen Wegpunkten.
 
 use glam::Vec2;
+use serde::{Deserialize, Serialize};
 
 /// Richtung einer Verbindung zwischen zwei Nodes.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Serialize, Deserialize)]
 pub enum ConnectionDirection {
     /// Einfache Einbahnstrasse
     #[default]
@@ -15,7 +16,7 @@ pub enum ConnectionDirection {
 }
 
 /// Prioritaet einer Verbindung.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Serialize, Deserialize)]
 pub enum ConnectionPriority {
     /// Normale Verbindung
     #[default]
@@ -25,7 +26,7 @@ pub enum ConnectionPriority {
 }
 
 /// Eine gerichtete Verbindung zwischen zwei Wegpunkten.
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Connection {
     /// Start-Node-ID
     pub start_id: u64,

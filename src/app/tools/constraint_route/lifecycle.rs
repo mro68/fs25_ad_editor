@@ -92,7 +92,12 @@ impl RouteTool for ConstraintRouteTool {
                 let end_pos = snapped.position();
                 let nodes = vec![start_pos, end_pos];
                 let connections = linear_connections(nodes.len());
-                ToolPreview { nodes, connections }
+                let styles = vec![(self.direction, self.priority); connections.len()];
+                ToolPreview {
+                    nodes,
+                    connections,
+                    connection_styles: styles,
+                }
             }
             Phase::ControlNodes => {
                 // Gecachte Solver-Ausgabe verwenden
@@ -104,6 +109,7 @@ impl RouteTool for ConstraintRouteTool {
                 } else {
                     self.preview_connections.clone()
                 };
+                let styles = vec![(self.direction, self.priority); connections.len()];
                 let mut nodes = self.preview_positions.clone();
 
                 // Steuerpunkte als unverbundene Nodes hinzufuegen (werden als Rauten gerendert)
@@ -118,7 +124,11 @@ impl RouteTool for ConstraintRouteTool {
                     nodes.push(cp);
                 }
 
-                ToolPreview { nodes, connections }
+                ToolPreview {
+                    nodes,
+                    connections,
+                    connection_styles: styles,
+                }
             }
         }
     }

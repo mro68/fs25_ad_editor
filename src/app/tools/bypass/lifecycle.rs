@@ -66,8 +66,13 @@ impl RouteTool for BypassTool {
                 .map(|i| (i, i + 1))
                 .collect()
         };
+        let styles = vec![(self.direction, self.priority); connections.len()];
 
-        ToolPreview { nodes, connections }
+        ToolPreview {
+            nodes,
+            connections,
+            connection_styles: styles,
+        }
     }
 
     fn render_config(&mut self, ui: &mut egui::Ui, distance_wheel_step_m: f32) -> bool {

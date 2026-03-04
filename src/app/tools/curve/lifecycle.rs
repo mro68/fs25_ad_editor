@@ -144,9 +144,12 @@ impl RouteTool for CurveTool {
             Phase::End => {
                 let end_pos =
                     snap_to_node(cursor_pos, road_map, self.lifecycle.snap_radius).position();
+                let connections = vec![(0, 1)];
+                let styles = vec![(self.direction, self.priority)];
                 ToolPreview {
                     nodes: vec![start_pos, end_pos],
-                    connections: vec![(0, 1)],
+                    connections,
+                    connection_styles: styles,
                 }
             }
             Phase::Control => {
@@ -171,6 +174,7 @@ impl RouteTool for CurveTool {
                 });
 
                 let connections = linear_connections(positions.len());
+                let styles = vec![(self.direction, self.priority); connections.len()];
 
                 // Steuerpunkte als zusaetzliche Vorschau-Nodes
                 let mut nodes = positions;
@@ -185,7 +189,11 @@ impl RouteTool for CurveTool {
                     nodes.push(apex);
                 }
 
-                ToolPreview { nodes, connections }
+                ToolPreview {
+                    nodes,
+                    connections,
+                    connection_styles: styles,
+                }
             }
             _ => ToolPreview::default(),
         }

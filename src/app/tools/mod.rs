@@ -81,21 +81,52 @@ pub struct ToolPreview {
     pub nodes: Vec<Vec2>,
     /// Vorschau-Verbindungen als Index-Paare in `nodes`
     pub connections: Vec<(usize, usize)>,
+    /// Stil pro Verbindung (Index passt zu `connections`)
+    pub connection_styles: Vec<(ConnectionDirection, ConnectionPriority)>,
 }
 
 /// Ergebnis eines Route-Tools — reine Daten, keine Mutation.
+///
+/// Dieses Struct enthaelt alle geometrischen Daten, die von einem Tool erzeugt werden:
+/// neue Nodes mit ihren Positionen und Flags, sowie Verbindungen zwischen
+/// diesen Nodes sowie zu bestehenden Nodes in der Road Map.
+///
+/// Die Ausfuehrung erfolgt zentral in `apply_tool_result()` — das Tool
+/// selbst verursacht keine direkten State-Mutationen.
+///
+/// # Beispiel
+///
+/// ```rust,ignore
+/// let result = ToolResult {
+///     new_nodes: vec![(Vec2::new(0.0, 0.0), NodeFlag::Road)],
+///     internal_connections: vec![],
+///     external_connections: vec![(0, 42, true, ConnectionDirection::Both, Regular)],
+/// };
+/// ```
+///
+/// Dies würde einen neuen Node erstellen und ihn bidirektional mit existiertem Node #42 verbinden.
 #[derive(Debug, Clone)]
 pub struct ToolResult {
-    /// Neue Nodes: (Position, Flag)
-    pub new_nodes: Vec<(Vec2, NodeFlag)>,
-    /// Verbindungen zwischen neuen Nodes: (from_idx, to_idx, Richtung, Prioritaet)
-    /// Indizes beziehen sich auf `new_nodes`.
-    pub internal_connections: Vec<(usize, usize, ConnectionDirection, ConnectionPriority)>,
-    /// Verbindungen von neuen Nodes zu existierenden Nodes:
-    /// (new_node_idx, existing_node_id, existing_to_new, Richtung, Prioritaet)
+    /// Neue Nodes als Vektor von (Position, NodeFlag).
     ///
-    /// - `existing_to_new = true`: Verbindung wird als `existing -> new` erstellt
-    /// - `existing_to_new = false`: Verbindung wird als `new -> existing` erstellt
+    /// **NodeFlag** beschreibt den Typ des Nodes (z.B. `Road`, `Intersection`, `Turn-Restriction`).
+    /// Indizes in diesem Vektor (0, 1, 2, ...) werden in `internal_connections`
+    /// und `external_connections` verwendet.
+    pub new_nodes: Vec<(Vec2, NodeFlag)>,
+    /// Verbindungen innerhalb der neuen Nodes.
+    ///
+    /// Jeder Eintrag ist `(from_idx, to_idx, direction, priority)`, wobei die Indizes
+    /// sich auf `new_nodes` beziehen. Die Verbindungen werden in der angegebenen
+    /// Richtung etabliert.
+    pub internal_connections: Vec<(usize, usize, ConnectionDirection, ConnectionPriority)>,
+    /// Verbindungen von neuen Nodes zu existierenden Nodes in der Road Map.
+    ///
+    /// Jeder Eintrag ist `(new_node_idx, existing_node_id, existing_to_new, direction, priority)`:
+    /// - `new_node_idx` — Index in `new_nodes`
+    /// - `existing_node_id` — ID eines existierenden Nodes in der Road Map
+    /// - `existing_to_new` — `true`: Verbindung von existierend zu neu; `false`: von neu zu existierend
+    /// - `direction` — Richtung der Verbindung
+    /// - `priority` — Strassenkategorisierung (Regular, Preferred, etc.)
     pub external_connections: Vec<(usize, u64, bool, ConnectionDirection, ConnectionPriority)>,
 }
 

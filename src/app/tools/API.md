@@ -61,6 +61,11 @@ Schnittstelle fuer alle Route-Tools (Linie, Kurve, …). Tools sind zustandsbeha
 - `tangent_menu_data() → Option<TangentMenuData>` — liefert Tangenten-Menuedaten fuer das Kontextmenue
 - `apply_tangent_selection(start, end)` — wendet die im Kontextmenue gewaehlten Tangenten an
 
+**`ToolPreview` Felder**
+- `nodes: Vec<Vec2>` — Vorschau-Node-Positionen
+- `connections: Vec<(usize, usize)>` — Index-Paare in `nodes`
+- `connection_styles: Vec<(ConnectionDirection, ConnectionPriority)>` — Stil pro Verbindung (gleiche Laenge wie `connections`)
+
 ### Capability-Traits
 
 Der optionale Teil wurde zusaetzlich in Capability-Traits gekapselt. `RouteTool` bleibt als kompatibler Obervertrag bestehen und delegiert seine Default-Implementierungen an diese Traits:

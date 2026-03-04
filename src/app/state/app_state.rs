@@ -1,11 +1,23 @@
 use crate::app::history::Snapshot;
 use crate::app::segment_registry::SegmentRegistry;
 use crate::app::CommandLog;
-use crate::core::RoadMap;
+use crate::core::{Connection, MapNode, RoadMap};
 use crate::shared::EditorOptions;
+use glam::Vec2;
 use std::sync::Arc;
 
 use super::{EditorToolState, SelectionState, UiState, ViewState};
+
+/// Zwischenablage fuer Nodes und Verbindungen
+#[derive(Debug, Clone, Default)]
+pub struct Clipboard {
+    /// Kopierte Nodes
+    pub nodes: Vec<MapNode>,
+    /// Kopierte Verbindungen
+    pub connections: Vec<Connection>,
+    /// Geometrisches Zentrum der Kopie (fuer relativen Offset beim Paste)
+    pub center: Vec2,
+}
 
 /// Hauptzustand der Anwendung
 pub struct AppState {
@@ -19,6 +31,10 @@ pub struct AppState {
     pub selection: SelectionState,
     /// Editor-Werkzeug-State
     pub editor: EditorToolState,
+    /// Zwischenablage
+    pub clipboard: Clipboard,
+    /// Aktuelle Vorschau-Position beim Einfuegen
+    pub paste_preview_pos: Option<Vec2>,
     /// Verlauf ausgefuehrter Commands
     pub command_log: CommandLog,
     /// Undo/Redo-History (Snapshot-basiert)
@@ -47,6 +63,8 @@ impl AppState {
             ui: UiState::new(),
             selection: SelectionState::new(),
             editor: EditorToolState::new(),
+            clipboard: Clipboard::default(),
+            paste_preview_pos: None,
             command_log: CommandLog::new(),
             history: crate::app::history::EditHistory::new_with_capacity(200),
             options,
