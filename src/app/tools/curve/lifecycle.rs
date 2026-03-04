@@ -1,13 +1,11 @@
 //! Lifecycle-Methoden des CurveTool (on_click, preview, execute, reset, etc.).
 
 use super::super::{
-    common::{linear_connections, populate_neighbors, TangentMenuData},
+    common::{linear_connections, populate_neighbors, snap_with_neighbors, TangentMenuData},
     snap_to_node, RouteTool, ToolAction, ToolPreview, ToolResult,
 };
-use super::geometry::{
-    build_tool_result, compute_curve_positions, cubic_bezier, quadratic_bezier, CurveParams,
-};
-use super::state::{CurveDegree, CurveTool, Phase};
+use super::geometry::{build_tool_result, cubic_bezier, CurveParams};
+use super::state::{CurveDegree, CurvePreviewCacheKey, CurveTool, Phase};
 use crate::app::segment_registry::{SegmentKind, SegmentRecord};
 use crate::core::RoadMap;
 use glam::Vec2;
@@ -59,6 +57,7 @@ impl RouteTool for CurveTool {
     }
 
     fn on_click(&mut self, pos: Vec2, road_map: &RoadMap, _ctrl: bool) -> ToolAction {
+        self.invalidate_preview_cache();
         match self.phase {
             Phase::Start => {
                 // Verkettung: letzten Endpunkt als Start verwenden
@@ -69,8 +68,9 @@ impl RouteTool for CurveTool {
                     self.last_control_point2 = None;
                     self.start = Some(last_end);
                     self.tangents.start_neighbors = populate_neighbors(&last_end, road_map);
-                    let end_anchor = snap_to_node(pos, road_map, self.lifecycle.snap_radius);
-                    self.tangents.end_neighbors = populate_neighbors(&end_anchor, road_map);
+                    let (end_anchor, end_neighbors) =
+                        snap_with_neighbors(pos, road_map, self.lifecycle.snap_radius);
+                    self.tangents.end_neighbors = end_neighbors;
                     self.end = Some(end_anchor);
                     self.tangents.reset_tangents();
                     self.phase = Phase::Control;
@@ -84,8 +84,9 @@ impl RouteTool for CurveTool {
                     self.init_apex();
                     ToolAction::Continue
                 } else {
-                    let start_anchor = snap_to_node(pos, road_map, self.lifecycle.snap_radius);
-                    self.tangents.start_neighbors = populate_neighbors(&start_anchor, road_map);
+                    let (start_anchor, start_neighbors) =
+                        snap_with_neighbors(pos, road_map, self.lifecycle.snap_radius);
+                    self.tangents.start_neighbors = start_neighbors;
                     self.tangents.tangent_start = super::super::common::TangentSource::None;
                     self.start = Some(start_anchor);
                     self.phase = Phase::End;
@@ -93,8 +94,9 @@ impl RouteTool for CurveTool {
                 }
             }
             Phase::End => {
-                let end_anchor = snap_to_node(pos, road_map, self.lifecycle.snap_radius);
-                self.tangents.end_neighbors = populate_neighbors(&end_anchor, road_map);
+                let (end_anchor, end_neighbors) =
+                    snap_with_neighbors(pos, road_map, self.lifecycle.snap_radius);
+                self.tangents.end_neighbors = end_neighbors;
                 self.tangents.tangent_end = super::super::common::TangentSource::None;
                 self.end = Some(end_anchor);
                 self.phase = Phase::Control;
@@ -154,20 +156,19 @@ impl RouteTool for CurveTool {
                 };
 
                 let cp1 = self.control_point1.unwrap_or(cursor_pos);
-
-                let positions = match self.degree {
-                    CurveDegree::Quadratic => compute_curve_positions(
-                        |t| quadratic_bezier(start_pos, cp1, end_pos, t),
-                        self.seg.max_segment_length,
-                    ),
-                    CurveDegree::Cubic => {
-                        let cp2 = self.control_point2.unwrap_or(cursor_pos);
-                        compute_curve_positions(
-                            |t| cubic_bezier(start_pos, cp1, cp2, end_pos, t),
-                            self.seg.max_segment_length,
-                        )
-                    }
+                let cp2 = if self.degree == CurveDegree::Cubic {
+                    Some(self.control_point2.unwrap_or(cursor_pos))
+                } else {
+                    None
                 };
+                let positions = self.preview_positions_for(CurvePreviewCacheKey {
+                    degree: self.degree,
+                    start: start_pos,
+                    end: end_pos,
+                    cp1,
+                    cp2,
+                    max_segment_length: self.seg.max_segment_length,
+                });
 
                 let connections = linear_connections(positions.len());
 
@@ -175,7 +176,7 @@ impl RouteTool for CurveTool {
                 let mut nodes = positions;
                 nodes.push(cp1);
                 if self.degree == CurveDegree::Cubic {
-                    let cp2 = self.control_point2.unwrap_or(cursor_pos);
+                    let cp2 = cp2.unwrap_or_else(|| self.control_point2.unwrap_or(cursor_pos));
                     nodes.push(cp2);
                     // Virtueller Scheitelpunkt B(0.5) als draggbares Handle
                     let apex = self
@@ -214,6 +215,7 @@ impl RouteTool for CurveTool {
     /// komplett zurückgesetzt, da Control Points die primäre Steuerung sind.
     /// `lifecycle.last_created_ids` und `last_*_anchor` bleiben erhalten.
     fn reset(&mut self) {
+        self.invalidate_preview_cache();
         self.start = None;
         self.end = None;
         self.control_point1 = None;
@@ -233,12 +235,13 @@ impl RouteTool for CurveTool {
 
     crate::impl_lifecycle_delegation!();
 
-    fn set_last_created(&mut self, ids: &[u64], _road_map: &RoadMap) {
+    fn current_end_anchor(&self) -> Option<super::super::ToolAnchor> {
+        self.end.or(self.lifecycle.last_end_anchor)
+    }
+
+    fn save_anchors_for_recreate(&mut self, _road_map: &RoadMap) {
         if self.start.is_some() {
             self.last_start_anchor = self.start;
-        }
-        if self.end.is_some() {
-            self.lifecycle.last_end_anchor = self.end;
         }
         if self.control_point1.is_some() {
             self.last_control_point1 = self.control_point1;
@@ -247,7 +250,6 @@ impl RouteTool for CurveTool {
             self.last_control_point2 = self.control_point2;
         }
         self.tangents.save_for_recreate();
-        self.lifecycle.save_created_ids(ids);
     }
 
     fn execute_from_anchors(&self, road_map: &RoadMap) -> Option<ToolResult> {

@@ -1,6 +1,6 @@
 //! Lifecycle-Methoden des ConstraintRouteTool (RouteTool-Implementierung).
 
-use super::super::common::linear_connections;
+use super::super::common::{linear_connections, snap_with_neighbors};
 use super::super::{snap_to_node, RouteTool, ToolAction, ToolPreview, ToolResult};
 use super::geometry::{build_result, BuildResultParams};
 use super::state::{ConstraintRouteTool, Phase};
@@ -32,7 +32,7 @@ impl RouteTool for ConstraintRouteTool {
     }
 
     fn on_click(&mut self, pos: Vec2, road_map: &RoadMap, _ctrl: bool) -> ToolAction {
-        let anchor = snap_to_node(pos, road_map, self.lifecycle.snap_radius);
+        let (anchor, _neighbors) = snap_with_neighbors(pos, road_map, self.lifecycle.snap_radius);
 
         match self.phase {
             Phase::Start => {
@@ -200,7 +200,13 @@ impl RouteTool for ConstraintRouteTool {
 
     crate::impl_lifecycle_delegation!();
 
-    fn set_last_created(&mut self, ids: &[u64], _road_map: &RoadMap) {
+    fn current_end_anchor(&self) -> Option<super::super::ToolAnchor> {
+        self.end
+            .or(self.last_end_anchor)
+            .or(self.lifecycle.last_end_anchor)
+    }
+
+    fn save_anchors_for_recreate(&mut self, _road_map: &RoadMap) {
         if self.start.is_some() {
             self.last_start_anchor = self.start;
         }
@@ -210,7 +216,6 @@ impl RouteTool for ConstraintRouteTool {
         if !self.control_nodes.is_empty() {
             self.last_control_nodes = self.control_nodes.clone();
         }
-        self.lifecycle.save_created_ids(ids);
     }
 
     fn execute_from_anchors(&self, road_map: &RoadMap) -> Option<ToolResult> {

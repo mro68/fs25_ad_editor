@@ -42,9 +42,9 @@ impl SplineTool {
         }
     }
 
-    /// Sammelt die Positionen aller Anker.
-    pub(crate) fn anchor_positions(&self) -> Vec<Vec2> {
-        self.anchors.iter().map(|a| a.position()).collect()
+    /// Iteriert über die Positionen aller Anker.
+    pub(crate) fn anchor_positions(&self) -> impl Iterator<Item = Vec2> + '_ {
+        self.anchors.iter().map(|a| a.position())
     }
 
     /// Berechnet einen Phantom-Punkt aus einer Tangente.
@@ -105,7 +105,7 @@ impl SplineTool {
 
     /// Berechnet die dichte Spline-Polyline aus den Ankern (+ optionaler Cursor-Position).
     pub(crate) fn compute_dense_polyline(&self, extra_cursor: Option<Vec2>) -> Vec<Vec2> {
-        let mut pts = self.anchor_positions();
+        let mut pts: Vec<Vec2> = self.anchor_positions().collect();
         if let Some(c) = extra_cursor {
             pts.push(c);
         }
