@@ -40,10 +40,7 @@ impl eframe::egui_wgpu::CallbackTrait for WgpuRenderCallback {
         render_pass: &mut eframe::wgpu::RenderPass<'static>,
         _callback_resources: &'b eframe::egui_wgpu::CallbackResources,
     ) {
-        log::debug!("paint() called");
         if let Ok(mut renderer) = self.renderer.lock() {
-            let has_map = self.render_data.scene.has_map();
-            log::debug!("Calling renderer.render_scene(), has_map: {}", has_map);
             renderer.render_scene(
                 &self.device,
                 &self.queue,

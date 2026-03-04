@@ -117,8 +117,16 @@ impl SpatialIndex {
     /// Nutzt den KD-Tree mit einer umschließenden Kreisabfrage + Nachfilterung,
     /// statt O(n) über alle Positionen zu iterieren.
     pub fn within_rect(&self, min: Vec2, max: Vec2) -> Vec<u64> {
+        let mut out = Vec::new();
+        self.within_rect_into(min, max, &mut out);
+        out
+    }
+
+    /// Findet alle Nodes innerhalb eines axis-aligned Rechtecks und schreibt in einen Scratch-Buffer.
+    pub fn within_rect_into(&self, min: Vec2, max: Vec2, out: &mut Vec<u64>) {
+        out.clear();
         if self.is_empty() {
-            return Vec::new();
+            return;
         }
 
         let center_x = (min.x + max.x) as f64 * 0.5;
@@ -128,20 +136,18 @@ impl SpatialIndex {
         // Radius des umschließenden Kreises (Diagonale / 2)
         let radius_sq = half_w * half_w + half_h * half_h;
 
-        self.tree
+        for entry in self
+            .tree
             .within::<SquaredEuclidean>(&[center_x, center_y], radius_sq)
-            .into_iter()
-            .filter_map(|entry| {
-                let node_id = *self.node_ids.get(entry.item as usize)?;
-                let pos = self.positions.get(&node_id)?;
-                // Exakte Rechteck-Prüfung nach dem KD-Tree-Vorfilter
-                if pos.x >= min.x && pos.x <= max.x && pos.y >= min.y && pos.y <= max.y {
-                    Some(node_id)
-                } else {
-                    None
+        {
+            if let Some(&node_id) = self.node_ids.get(entry.item as usize) {
+                if let Some(pos) = self.positions.get(&node_id) {
+                    if pos.x >= min.x && pos.x <= max.x && pos.y >= min.y && pos.y <= max.y {
+                        out.push(node_id);
+                    }
                 }
-            })
-            .collect()
+            }
+        }
     }
 }
 
