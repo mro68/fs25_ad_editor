@@ -1,4 +1,4 @@
-// Shader für Node-Rendering (2D)
+// Shader fuer Node-Rendering (2D)
 
 struct VertexInput {
     @location(0) position: vec2<f32>,
@@ -15,7 +15,7 @@ struct VertexOutput {
     @builtin(position) clip_position: vec4<f32>,
     @location(0) color: vec4<f32>,         // base (mittig)
     @location(1) uv: vec2<f32>,
-    @location(2) rim_color: vec4<f32>,     // außen / Markierung
+    @location(2) rim_color: vec4<f32>,     // aussen / Markierung
 }
 
 struct ConnectionVertexInput {
@@ -43,7 +43,7 @@ fn vs_main(
 ) -> VertexOutput {
     var out: VertexOutput;
     
-    // Skaliere das Quad mit der Instanz-Größe
+    // Skaliere das Quad mit der Instanz-Groesse
     let scaled_pos = vertex.position * instance.instance_size;
     
     // Verschiebe zur Instanz-Position
@@ -60,7 +60,7 @@ fn vs_main(
 
 @fragment
 fn fs_main(in: VertexOutput) -> @location(0) vec4<f32> {
-    // Kreisförmige Form via Distance Field
+    // Kreisfoermige Form via Distance Field
     let center = vec2<f32>(0.5, 0.5);
     let dist = distance(in.uv, center);
 
@@ -68,7 +68,7 @@ fn fs_main(in: VertexOutput) -> @location(0) vec4<f32> {
     let norm_dist = dist / radius;
 
     // Selektion-Darstellung: aa_params.z → 0=Gradient, 1=Ring
-    // rim_color.a kodiert Innendurchmesser/Außendurchmesser (ID/AD).
+    // rim_color.a kodiert Innendurchmesser/Aussendurchmesser (ID/AD).
     let style = uniforms.aa_params.z;
     let inner_ratio = clamp(in.rim_color.a, 0.0, 1.0);
     let gradient_hold_ratio = clamp(0.5 * inner_ratio * inner_ratio, 0.0, 1.0);
@@ -76,7 +76,7 @@ fn fs_main(in: VertexOutput) -> @location(0) vec4<f32> {
 
     if (style > 0.5) {
         // Ring:
-        // AD = Größenfaktor/100 * Nodedurchmesser
+        // AD = Groessenfaktor/100 * Nodedurchmesser
         // ID = Nodedurchmesser
         // -> bis ID bleibt die Nodefarbe, zwischen ID und AD erscheint die Ringfarbe.
         let ring_t = smoothstep(inner_ratio - 0.02, inner_ratio + 0.02, norm_dist);
@@ -84,13 +84,13 @@ fn fs_main(in: VertexOutput) -> @location(0) vec4<f32> {
     } else {
         // Farbverlauf:
         // - Zentrum = Nodefarbe
-        // - bei (50/Größenfaktor) * Nodedurchmesser = weiterhin Nodefarbe
+        // - bei (50/Groessenfaktor) * Nodedurchmesser = weiterhin Nodefarbe
         // - bei AD = Selektionsfarbe
         let mix_t = smoothstep(gradient_hold_ratio, 1.0, norm_dist);
         rgb = mix(in.color.rgb, in.rim_color.rgb, mix_t);
     }
 
-    // Screen-space adaptives Anti-Aliasing am Rand (unverändert)
+    // Screen-space adaptives Anti-Aliasing am Rand (unveraendert)
     let hard_edges = uniforms.aa_params.y > 0.5;
     var alpha: f32;
     if (hard_edges) {
@@ -150,7 +150,7 @@ var background_sampler: sampler;
 fn vs_background(in: BackgroundVertexInput) -> BackgroundVertexOutput {
     var out: BackgroundVertexOutput;
     
-    // in.position ist in Weltkoordinaten (z.B. -1024..1024 für 2048x2048 Map)
+    // in.position ist in Weltkoordinaten (z.B. -1024..1024 fuer 2048x2048 Map)
     out.clip_position = background_uniforms.view_proj * vec4<f32>(in.position, 0.0, 1.0);
     
     // UV-Koordinaten berechnen aus Weltkoordinaten
@@ -172,7 +172,7 @@ fn fs_background(in: BackgroundVertexOutput) -> @location(0) vec4<f32> {
     // Sample Texture
     let texture_color = textureSample(background_texture, background_sampler, in.uv);
     
-    // Verwende Texture-Alpha * Opacity für finales Alpha
+    // Verwende Texture-Alpha * Opacity fuer finales Alpha
     let final_alpha = texture_color.a * background_uniforms.opacity;
     
     return vec4<f32>(texture_color.rgb, final_alpha);
@@ -201,7 +201,7 @@ fn vs_marker(
 ) -> MarkerVertexOutput {
     var out: MarkerVertexOutput;
     
-    // Skaliere das Quad mit der Instanz-Größe
+    // Skaliere das Quad mit der Instanz-Groesse
     let scaled_pos = vertex.position * instance.instance_size;
     
     // Verschiebe Pin nach oben (negatives Y = Bildschirm oben), damit die Spitze auf dem Node liegt
@@ -224,7 +224,7 @@ fn vs_marker(
 
 @fragment
 fn fs_marker(in: MarkerVertexOutput) -> @location(0) vec4<f32> {
-    // Pin-Form: Kreis oben (y > 0) + Träne unten (y <= 0)
+    // Pin-Form: Kreis oben (y > 0) + Traene unten (y <= 0)
     let x = in.uv.x;
     let y = in.uv.y;
     
@@ -236,10 +236,10 @@ fn fs_marker(in: MarkerVertexOutput) -> @location(0) vec4<f32> {
     let tip_y = -0.8;
     let hard_edges = uniforms.aa_params.y > 0.5;
     
-    // Kombiniere Kreis und Tränenform mit AA aus View-Einstellungen
+    // Kombiniere Kreis und Traenenform mit AA aus View-Einstellungen
     var alpha: f32;
     if (y > 0.0) {
-        // Oberer Bereich: Kreisförmig
+        // Oberer Bereich: Kreisfoermig
         if (hard_edges) {
             alpha = select(0.0, 1.0, dist_to_circle <= circle_radius);
         } else {
@@ -247,7 +247,7 @@ fn fs_marker(in: MarkerVertexOutput) -> @location(0) vec4<f32> {
             alpha = 1.0 - smoothstep(circle_radius - edge, circle_radius + edge, dist_to_circle);
         }
     } else {
-        // Unterer Bereich: Tränenform — Breite nimmt nach unten ab
+        // Unterer Bereich: Traenenform — Breite nimmt nach unten ab
         let width_at_y = circle_radius * (1.0 - (abs(y) * 1.2));
         if (hard_edges) {
             let is_inside = abs(x) <= width_at_y && y >= tip_y;
@@ -261,7 +261,7 @@ fn fs_marker(in: MarkerVertexOutput) -> @location(0) vec4<f32> {
         }
     }
     
-    // Outline: dünner Rand
+    // Outline: duenner Rand
     let outline_thickness = 0.08;
     let is_outline: bool = 
         (y > 0.0 && abs(dist_to_circle - circle_radius) < outline_thickness) ||

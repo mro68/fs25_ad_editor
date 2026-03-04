@@ -34,11 +34,11 @@ fn test_delete_node_with_marker_cascades_marker_removal() {
     assert!(state.road_map.as_ref().unwrap().has_marker(1));
     assert_eq!(state.road_map.as_ref().unwrap().marker_count(), 1);
 
-    // Node 1 löschen → Marker muss mit entfernt werden
+    // Node 1 loeschen → Marker muss mit entfernt werden
     state.selection.ids_mut().insert(1);
     controller
         .handle_intent(&mut state, AppIntent::DeleteSelectedRequested)
-        .expect("Löschen mit Marker sollte funktionieren");
+        .expect("Loeschen mit Marker sollte funktionieren");
 
     assert!(!state.road_map.as_ref().unwrap().nodes.contains_key(&1));
     assert_eq!(state.road_map.as_ref().unwrap().marker_count(), 0);
@@ -140,7 +140,7 @@ fn test_set_all_connections_direction_between_selected() {
                 direction: ConnectionDirection::Dual,
             },
         )
-        .expect("Bulk-Richtungsänderung sollte funktionieren");
+        .expect("Bulk-Richtungsaenderung sollte funktionieren");
 
     let rm = state.road_map.as_ref().unwrap();
     assert_eq!(
@@ -231,7 +231,7 @@ fn test_connect_selected_nodes() {
 
     let rm = state.road_map.as_ref().unwrap();
     assert_eq!(rm.connection_count(), 1);
-    // HashSet-Iteration ist nicht-deterministisch → beide Richtungen prüfen
+    // HashSet-Iteration ist nicht-deterministisch → beide Richtungen pruefen
     assert!(
         !rm.find_connections_between(1, 2).is_empty(),
         "Verbindung zwischen 1 und 2 erwartet (in beliebiger Richtung)"

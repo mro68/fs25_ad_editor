@@ -1,17 +1,20 @@
-//! Schwebendes Bearbeitungspanel für aktive Edit-Modi.
+//! Schwebendes Bearbeitungspanel fuer aktive Edit-Modi.
 //!
-//! Wird über dem Viewport angezeigt, wenn ein Edit-Modus aktiv ist
+//! Wird ueber dem Viewport angezeigt, wenn ein Edit-Modus aktiv ist
 //! (Streckenteilung, Route-Tool). Zeigt nur die modi-spezifischen
-//! Einstellungen mit Übernehmen/Abbrechen-Buttons.
+//! Einstellungen mit Uebernehmen/Abbrechen-Buttons.
 
 use crate::app::state::DistanzenState;
 use crate::app::tools::ToolManager;
 use crate::app::{AppIntent, ConnectionDirection, ConnectionPriority, EditorTool, RoadMap};
+use crate::ui::properties::selectors::{
+    render_direction_icon_selector, render_priority_icon_selector,
+};
 use indexmap::IndexSet;
 use std::collections::HashSet;
 use std::hash::{Hash, Hasher};
 
-/// Unterdrückt Rauschen/Restwerte, die ohne echtes Scrollen auftreten können.
+/// Unterdrueckt Rauschen/Restwerte, die ohne echtes Scrollen auftreten koennen.
 const WHEEL_DELTA_THRESHOLD: f32 = 0.5;
 
 fn wheel_dir_for_hovered(ui: &egui::Ui, response: &egui::Response) -> f32 {
@@ -26,10 +29,10 @@ fn wheel_dir_for_hovered(ui: &egui::Ui, response: &egui::Response) -> f32 {
     }
 }
 
-/// Rendert das Floating-Edit-Panel und gibt erzeugte Events zurück.
+/// Rendert das Floating-Edit-Panel und gibt erzeugte Events zurueck.
 ///
 /// Das Panel erscheint an `panel_pos` (Bildschirmkoordinaten) und zeigt
-/// nur die Steuerung für den gerade aktiven Edit-Modus.
+/// nur die Steuerung fuer den gerade aktiven Edit-Modus.
 #[allow(clippy::too_many_arguments)]
 pub fn render_edit_panel(
     ctx: &egui::Context,
@@ -83,7 +86,7 @@ pub fn render_edit_panel(
     events
 }
 
-/// Streckenteilung-Panel: Abstand/Nodes + Vorschau + Übernehmen/Verwerfen.
+/// Streckenteilung-Panel: Abstand/Nodes + Vorschau + Uebernehmen/Verwerfen.
 fn render_streckenteilung_panel(
     ctx: &egui::Context,
     road_map: Option<&RoadMap>,
@@ -95,7 +98,7 @@ fn render_streckenteilung_panel(
 ) {
     use crate::shared::spline_geometry::{catmull_rom_chain_with_tangents, polyline_length};
 
-    // Ketten-basierte Spline-Berechnung für Vorschau
+    // Ketten-basierte Spline-Berechnung fuer Vorschau
     if let Some(rm) = road_map {
         let mut hasher = std::collections::hash_map::DefaultHasher::new();
         selected_node_ids.iter().for_each(|id| id.hash(&mut hasher));
@@ -126,7 +129,7 @@ fn render_streckenteilung_panel(
                 }
             }
         } else {
-            // Kette aufgelöst → deaktivieren
+            // Kette aufgeloest → deaktivieren
             distanzen_state.deactivate();
             return;
         }
@@ -143,7 +146,7 @@ fn render_streckenteilung_panel(
 
     window.show(ctx, |ui| {
         ui.label(format!(
-            "Streckenlänge: {:.1} m",
+            "Streckenlaenge: {:.1} m",
             distanzen_state.path_length
         ));
         ui.add_space(4.0);
@@ -159,7 +162,7 @@ fn render_streckenteilung_panel(
 
         ui.add_space(8.0);
         ui.horizontal(|ui| {
-            if ui.button("✓ Übernehmen").clicked() {
+            if ui.button("✓ Uebernehmen").clicked() {
                 events.push(AppIntent::ResamplePathRequested);
                 distanzen_state.deactivate();
             }
@@ -179,7 +182,7 @@ fn render_streckenteilung_panel(
     });
 }
 
-/// Gemeinsame Steuerelemente für Streckenteilung (Abstand + Nodes DragValues).
+/// Gemeinsame Steuerelemente fuer Streckenteilung (Abstand + Nodes DragValues).
 ///
 /// Wird sowohl vom Floating-Panel als auch vom Properties-Panel verwendet.
 pub fn render_streckenteilung_controls(
@@ -232,7 +235,7 @@ pub fn render_streckenteilung_controls(
     }
 }
 
-/// Route-Tool-Panel: Tool-Config + Ausführen/Abbrechen.
+/// Route-Tool-Panel: Tool-Config + Ausfuehren/Abbrechen.
 fn render_route_tool_panel(
     ctx: &egui::Context,
     tool_manager: &mut ToolManager,
@@ -255,7 +258,7 @@ fn render_route_tool_panel(
     }
 
     window.show(ctx, |ui| {
-        // Breite stabil halten, damit lange Einträge das Fenster nicht überdehnen.
+        // Breite stabil halten, damit lange Eintraege das Fenster nicht ueberdehnen.
         ui.set_min_width(320.0);
         ui.set_max_width(420.0);
 
@@ -264,27 +267,8 @@ fn render_route_tool_panel(
         }
 
         ui.add_space(6.0);
-        ui.label("Richtung für neue Strecke:");
         let mut selected_dir = default_direction;
-        egui::ComboBox::from_id_salt("route_tool_default_direction_floating")
-            .selected_text(direction_label(selected_dir))
-            .show_ui(ui, |ui| {
-                ui.selectable_value(
-                    &mut selected_dir,
-                    ConnectionDirection::Regular,
-                    "Regular (Einbahn)",
-                );
-                ui.selectable_value(
-                    &mut selected_dir,
-                    ConnectionDirection::Dual,
-                    "Dual (Bidirektional)",
-                );
-                ui.selectable_value(
-                    &mut selected_dir,
-                    ConnectionDirection::Reverse,
-                    "Reverse (Rückwärts)",
-                );
-            });
+        render_direction_icon_selector(ui, &mut selected_dir, "route_tool_floating");
         if selected_dir != default_direction {
             events.push(AppIntent::SetDefaultDirectionRequested {
                 direction: selected_dir,
@@ -292,22 +276,8 @@ fn render_route_tool_panel(
         }
 
         ui.add_space(4.0);
-        ui.label("Straßenart für neue Strecke:");
         let mut selected_prio = default_priority;
-        egui::ComboBox::from_id_salt("route_tool_default_priority_floating")
-            .selected_text(priority_label(selected_prio))
-            .show_ui(ui, |ui| {
-                ui.selectable_value(
-                    &mut selected_prio,
-                    ConnectionPriority::Regular,
-                    "Hauptstraße",
-                );
-                ui.selectable_value(
-                    &mut selected_prio,
-                    ConnectionPriority::SubPriority,
-                    "Nebenstraße",
-                );
-            });
+        render_priority_icon_selector(ui, &mut selected_prio, "route_tool_floating");
         if selected_prio != default_priority {
             events.push(AppIntent::SetDefaultPriorityRequested {
                 priority: selected_prio,
@@ -325,7 +295,7 @@ fn render_route_tool_panel(
 
         ui.add_space(8.0);
         ui.horizontal(|ui| {
-            if ui.button("✓ Ausführen").clicked() {
+            if ui.button("✓ Ausfuehren").clicked() {
                 events.push(AppIntent::RouteToolExecuteRequested);
             }
             if ui.button("✕ Abbrechen").clicked() {
@@ -335,22 +305,7 @@ fn render_route_tool_panel(
     });
 }
 
-fn direction_label(dir: ConnectionDirection) -> &'static str {
-    match dir {
-        ConnectionDirection::Regular => "Regular",
-        ConnectionDirection::Dual => "Dual",
-        ConnectionDirection::Reverse => "Reverse",
-    }
-}
-
-fn priority_label(prio: ConnectionPriority) -> &'static str {
-    match prio {
-        ConnectionPriority::Regular => "Hauptstraße",
-        ConnectionPriority::SubPriority => "Nebenstraße",
-    }
-}
-
-/// Ordnet selektierte Node-IDs als zusammenhängende Kette.
+/// Ordnet selektierte Node-IDs als zusammenhaengende Kette.
 fn order_chain(node_ids: &IndexSet<u64>, road_map: &RoadMap) -> Option<Vec<u64>> {
     let start = node_ids
         .iter()
@@ -394,7 +349,7 @@ fn order_chain(node_ids: &IndexSet<u64>, road_map: &RoadMap) -> Option<Vec<u64>>
     }
 }
 
-/// Berechnet die Vorschau-Positionen für die Streckenteilung.
+/// Berechnet die Vorschau-Positionen fuer die Streckenteilung.
 fn compute_resample_preview(
     dense: &[glam::Vec2],
     distance_state: &DistanzenState,

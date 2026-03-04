@@ -3,8 +3,8 @@ use std::fs;
 
 #[test]
 fn test_expand_umlaut_variants_with_umlauts() {
-    let variants = expand_umlaut_variants("Höflingen");
-    assert!(variants.contains(&"höflingen".to_string()));
+    let variants = expand_umlaut_variants("Hoeflingen");
+    assert!(variants.contains(&"hoeflingen".to_string()));
     assert!(variants.contains(&"hoeflingen".to_string()));
 }
 
@@ -12,7 +12,7 @@ fn test_expand_umlaut_variants_with_umlauts() {
 fn test_expand_umlaut_variants_with_ascii() {
     let variants = expand_umlaut_variants("Hoeflingen");
     assert!(variants.contains(&"hoeflingen".to_string()));
-    assert!(variants.contains(&"höflingen".to_string()));
+    assert!(variants.contains(&"hoeflingen".to_string()));
 }
 
 #[test]
@@ -53,14 +53,14 @@ fn test_find_matching_zips() {
 
     // Testdateien anlegen
     fs::write(tmp.join("FS25_Hoeflingen.zip"), b"").unwrap();
-    fs::write(tmp.join("FS25_Höflingen_V2.zip"), b"").unwrap();
+    fs::write(tmp.join("FS25_Hoeflingen_V2.zip"), b"").unwrap();
     fs::write(tmp.join("FS25_Big_Farm.zip"), b"").unwrap();
     fs::write(tmp.join("FS25_Unrelated.zip"), b"").unwrap();
     fs::write(tmp.join("readme.txt"), b"").unwrap();
     fs::write(tmp.join("FS25_Sickinger_Hoehe_v3.zip"), b"").unwrap();
 
-    // Test: "Höflingen" soll beide Höflingen-ZIPs finden
-    let results = find_matching_zips(&tmp, "Höflingen");
+    // Test: "Hoeflingen" soll beide Hoeflingen-ZIPs finden
+    let results = find_matching_zips(&tmp, "Hoeflingen");
     assert!(
         results
             .iter()
@@ -71,8 +71,8 @@ fn test_find_matching_zips() {
     assert!(
         results
             .iter()
-            .any(|p| p.file_name().unwrap().to_str().unwrap() == "FS25_Höflingen_V2.zip"),
-        "Soll FS25_Höflingen_V2.zip finden, got: {:?}",
+            .any(|p| p.file_name().unwrap().to_str().unwrap() == "FS25_Hoeflingen_V2.zip"),
+        "Soll FS25_Hoeflingen_V2.zip finden, got: {:?}",
         results
     );
     assert!(
@@ -92,7 +92,7 @@ fn test_find_matching_zips() {
         results2
     );
 
-    // Test: Langer Name → nur erste 2 Wörter für Suche
+    // Test: Langer Name → nur erste 2 Woerter fuer Suche
     let results3 = find_matching_zips(&tmp, "Sickinger_Hoehe_Rheinland_Pfalz");
     assert!(
         results3

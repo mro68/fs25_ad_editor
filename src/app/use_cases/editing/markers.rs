@@ -1,10 +1,10 @@
-//! Use-Cases für Map-Marker-Operationen.
+//! Use-Cases fuer Map-Marker-Operationen.
 
 use crate::app::AppState;
 use crate::core::MapMarker;
 use std::sync::Arc;
 
-/// Öffnet den Marker-Dialog für einen Node (neu oder bearbeiten)
+/// Oeffnet den Marker-Dialog fuer einen Node (neu oder bearbeiten)
 pub fn open_marker_dialog(state: &mut AppState, node_id: u64, is_new: bool) {
     state.ui.marker_dialog.visible = true;
     state.ui.marker_dialog.node_id = Some(node_id);
@@ -21,7 +21,7 @@ pub fn open_marker_dialog(state: &mut AppState, node_id: u64, is_new: bool) {
     }
 }
 
-/// Erstellt einen Map-Marker für einen Node mit den angegebenen Werten
+/// Erstellt einen Map-Marker fuer einen Node mit den angegebenen Werten
 pub fn create_marker(state: &mut AppState, node_id: u64, name: &str, group: &str) {
     let Some(road_map_arc) = state.road_map.as_ref() else {
         log::warn!("Kein RoadMap geladen");
@@ -57,7 +57,7 @@ pub fn create_marker(state: &mut AppState, node_id: u64, name: &str, group: &str
 
     road_map.add_map_marker(marker);
     log::info!(
-        "Marker für Node {} erstellt (Name: {}, Gruppe: {})",
+        "Marker fuer Node {} erstellt (Name: {}, Gruppe: {})",
         node_id,
         name,
         group

@@ -1,15 +1,15 @@
-//! Terrain-Farbpalette für FS25 Weight-Maps.
+//! Terrain-Farbpalette fuer FS25 Weight-Maps.
 //!
 //! Ordnet Weight-Map-Dateinamen RGB-Farben zu.
-//! Basierend auf tatsächlichen FS25-Terrain-Texturen.
+//! Basierend auf tatsaechlichen FS25-Terrain-Texturen.
 
 /// RGB-Farbwert
 pub type Rgb = [u8; 3];
 
-/// Gibt die Terrain-Farbe für einen Weight-Map-Dateinamen zurück.
+/// Gibt die Terrain-Farbe fuer einen Weight-Map-Dateinamen zurueck.
 ///
 /// Sucht zuerst exakt, dann Prefix-Match, dann Keyword-Fallback.
-/// Gibt bei keinem Match ein neutrales Grau zurück.
+/// Gibt bei keinem Match ein neutrales Grau zurueck.
 pub fn terrain_color(weight_map_name: &str) -> Rgb {
     let stem = weight_map_name
         .strip_suffix("_weight.png")
@@ -22,7 +22,7 @@ pub fn terrain_color(weight_map_name: &str) -> Rgb {
         return color;
     }
 
-    // 2. Längster Prefix-Match
+    // 2. Laengster Prefix-Match
     if let Some(color) = prefix_match(stem) {
         return color;
     }
@@ -37,9 +37,9 @@ pub fn terrain_color(weight_map_name: &str) -> Rgb {
 }
 
 fn exact_match(stem: &str) -> Option<Rgb> {
-    // Sortiert nach Häufigkeit / Wichtigkeit
+    // Sortiert nach Haeufigkeit / Wichtigkeit
     Some(match stem {
-        // Straßen
+        // Strassen
         "asphalt" => [100, 100, 105],
         "asphaltCracks" => [95, 95, 100],
         "asphaltCracksDusty" => [105, 100, 95],
@@ -122,7 +122,7 @@ fn exact_match(stem: &str) -> Option<Rgb> {
 }
 
 fn prefix_match(stem: &str) -> Option<Rgb> {
-    // Längste Prefixes zuerst prüfen
+    // Laengste Prefixes zuerst pruefen
     static PREFIXES: &[(&str, Rgb)] = &[
         ("forestMossGroundLeaves", [42, 95, 38]),
         ("forestMossGround", [40, 100, 40]),

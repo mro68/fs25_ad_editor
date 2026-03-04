@@ -1,23 +1,23 @@
-//! Use-Case-Funktionen für Node/Connection-Editing.
+//! Use-Case-Funktionen fuer Node/Connection-Editing.
 //!
 //! Aufgeteilt nach Operation:
-//! - `add_node` — Neuen Node hinzufügen (inkl. optionalem Connection-Split)
-//! - `delete_nodes` — Selektierte Nodes löschen (inkl. optionalem Reconnect)
+//! - `add_node` — Neuen Node hinzufuegen (inkl. optionalem Connection-Split)
+//! - `delete_nodes` — Selektierte Nodes loeschen (inkl. optionalem Reconnect)
 //! - `connect` — Verbindungen erstellen
 //! - `disconnect` — Verbindungen entfernen
-//! - `direction` — Verbindungsrichtung ändern
-//! - `priority` — Verbindungspriorität ändern
-//! - `bulk_connections` — Bulk-Änderungen an Verbindungen
+//! - `direction` — Verbindungsrichtung aendern
+//! - `priority` — Verbindungsprioritaet aendern
+//! - `bulk_connections` — Bulk-Aenderungen an Verbindungen
 //! - `markers` — Map-Marker-Operationen
 //! - `resample_path` — Nodes-Kette per Catmull-Rom-Spline neu verteilen (Distanzen)
 
 ///
 /// Aufgeteilt nach Operation:
-/// - `add_node` — Neuen Node hinzufügen
-/// - `delete_nodes` — Selektierte Nodes löschen
+/// - `add_node` — Neuen Node hinzufuegen
+/// - `delete_nodes` — Selektierte Nodes loeschen
 /// - `connect` — Verbindungen erstellen (inkl. Connect-Tool-Flow)
 /// - `disconnect` — Verbindungen entfernen
-/// - `direction` — Verbindungsrichtung ändern
+/// - `direction` — Verbindungsrichtung aendern
 mod add_node;
 mod apply_tool_result;
 mod bulk_connections;

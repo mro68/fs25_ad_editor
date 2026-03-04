@@ -1,4 +1,4 @@
-//! Geometrie-Berechnungen für das Ausweichstrecken-Tool.
+//! Geometrie-Berechnungen fuer das Ausweichstrecken-Tool.
 //!
 //! Alle Funktionen sind pur (keine State-Mutation) und arbeiten nur mit `Vec2`-Koordinaten.
 //!
@@ -9,7 +9,7 @@
 //! ```
 //!
 //! Die Hauptstrecke beginnt/endet jeweils `d_blend = |offset| × 1.5` entlang der Kette
-//! versetzt, damit die S-Kurven ausreichend Längsraum für tangentiale Übergänge haben.
+//! versetzt, damit die S-Kurven ausreichend Laengsraum fuer tangentiale Uebergaenge haben.
 
 use crate::shared::spline_geometry::{
     catmull_rom_chain_with_tangents, polyline_length, resample_by_distance,
@@ -23,7 +23,7 @@ use glam::Vec2;
 /// - `offset` — seitlicher Versatz (positiv = links in Fahrtrichtung)
 /// - `base_spacing` — maximaler Abstand zwischen Nodes auf der Hauptstrecke
 ///
-/// # Rückgabe
+/// # Rueckgabe
 /// `Some((positions, d_blend))` — neue Knoten-Positionen **ohne** die Endpunkte der
 /// Originalkette (diese existieren bereits in der RoadMap) sowie den verwendeten
 /// d_blend-Wert.
@@ -49,7 +49,7 @@ pub fn compute_bypass_positions(
         return None;
     }
 
-    // ── Übergangslänge ────────────────────────────────────────────────────────
+    // ── Uebergangslaenge ────────────────────────────────────────────────────────
     // Grenzen robust normalisieren, damit `min <= max` auch bei sehr kurzem Pfad gilt.
     let target_blend = offset.abs() * 1.5;
     let min_blend = offset.abs().max(0.1);
@@ -57,8 +57,8 @@ pub fn compute_bypass_positions(
     let d_blend = if min_blend <= max_blend {
         target_blend.clamp(min_blend, max_blend)
     } else {
-        // Fallback für Grenzfall: kurzer Pfad + großer Offset.
-        // Der Mindestwert ist geometrisch nicht erfüllbar, daher maximal erlaubte Übergangslänge.
+        // Fallback fuer Grenzfall: kurzer Pfad + grosser Offset.
+        // Der Mindestwert ist geometrisch nicht erfuellbar, daher maximal erlaubte Uebergangslaenge.
         max_blend
     };
 
@@ -80,7 +80,7 @@ pub fn compute_bypass_positions(
     let perp_at_bn = Vec2::new(-t_at_bn.y, t_at_bn.x);
     let bn = bn_chain + perp_at_bn * offset;
 
-    // ── Hauptstrecke (mittleres Teilstück, parallel verschoben) ──────────────
+    // ── Hauptstrecke (mittleres Teilstueck, parallel verschoben) ──────────────
     let mut main_chain: Vec<Vec2> = Vec::with_capacity(i_n - i0 + 3);
     main_chain.push(b0_chain);
     for point in dense.iter().take(i_n + 1).skip(i0 + 1) {
@@ -117,10 +117,10 @@ pub fn compute_bypass_positions(
     );
 
     // ── Ergebnis zusammenstellen ──────────────────────────────────────────────
-    // entry_pts[0] = chain[0] → überspringen (existiert)
-    // main_pts[0]  = b0       → überspringen (bereits in entry_pts)
-    // exit_pts[0]  = bn       → überspringen (bereits in main_pts)
-    // exit_pts[last] = chain[n-1] → überspringen (existiert)
+    // entry_pts[0] = chain[0] → ueberspringen (existiert)
+    // main_pts[0]  = b0       → ueberspringen (bereits in entry_pts)
+    // exit_pts[0]  = bn       → ueberspringen (bereits in main_pts)
+    // exit_pts[last] = chain[n-1] → ueberspringen (existiert)
     let entry_new: Vec<Vec2> = entry_pts.iter().skip(1).copied().collect();
     let main_new: Vec<Vec2> = main_pts.iter().skip(1).copied().collect();
     let exit_new: Vec<Vec2> = exit_pts
@@ -147,7 +147,7 @@ pub fn compute_bypass_positions(
 // ─── private Hilfsfunktionen ──────────────────────────────────────────────────
 
 /// Findet `(index, t)` sodass `poly[index].lerp(poly[index+1], t)` bei Arc-Distanz
-/// `target` liegt. `None` wenn `target` die Gesamtlänge übersteigt.
+/// `target` liegt. `None` wenn `target` die Gesamtlaenge uebersteigt.
 fn arc_split(poly: &[Vec2], target: f32) -> Option<(usize, f32)> {
     let mut acc = 0.0_f32;
     for i in 0..poly.len().saturating_sub(1) {
@@ -165,7 +165,7 @@ fn arc_split(poly: &[Vec2], target: f32) -> Option<(usize, f32)> {
     None
 }
 
-/// Gibt einen Punkt auf einer kubischen Bézier-Kurve bei Parameter `t ∈ [0,1]` zurück.
+/// Gibt einen Punkt auf einer kubischen Bézier-Kurve bei Parameter `t ∈ [0,1]` zurueck.
 fn cubic_bezier(p0: Vec2, p1: Vec2, p2: Vec2, p3: Vec2, t: f32) -> Vec2 {
     let u = 1.0 - t;
     u * u * u * p0 + 3.0 * u * u * t * p1 + 3.0 * u * t * t * p2 + t * t * t * p3

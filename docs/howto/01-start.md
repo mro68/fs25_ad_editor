@@ -1,36 +1,36 @@
 # Start & Dateiverwaltung
 
-← [Zurück zur Übersicht](index.md)
+← [Zurueck zur Uebersicht](index.md)
 
-## Überblick
+## Ueberblick
 
-Der FS25 AutoDrive Editor dient zum Erstellen und Bearbeiten von AutoDrive-Kursen für den Farming Simulator 25. Er lädt XML-Konfigurationsdateien (`AutoDrive_config*.xml`), stellt das Straßennetzwerk grafisch dar und ermöglicht das Bearbeiten von Wegpunkten (Nodes), Verbindungen (Connections) und Map-Markern.
+Der FS25 AutoDrive Editor dient zum Erstellen und Bearbeiten von AutoDrive-Kursen fuer den Farming Simulator 25. Er laedt XML-Konfigurationsdateien (`AutoDrive_config*.xml`), stellt das Strassennetzwerk grafisch dar und ermoeglicht das Bearbeiten von Wegpunkten (Nodes), Verbindungen (Connections) und Map-Markern.
 
 **Kernfeatures:**
-- GPU-beschleunigtes Rendering für 100.000+ Wegpunkte
+- GPU-beschleunigtes Rendering fuer 100.000+ Wegpunkte
 - Rect- und Lasso-Selektion
-- Verbindungs-Bearbeitung (Richtung, Priorität, Invertierung)
+- Verbindungs-Bearbeitung (Richtung, Prioritaet, Invertierung)
 - Map-Marker erstellen und verwalten
-- Heightmap-Support für Y-Koordinaten beim Export
+- Heightmap-Support fuer Y-Koordinaten beim Export
 - Hintergrund-Karte (PNG/JPG/DDS) als Orientierungshilfe
-- Vollständiges Undo/Redo-System
+- Vollstaendiges Undo/Redo-System
 
 ---
 
-## Datei öffnen
+## Datei oeffnen
 
 | Aktion | Weg |
 |--------|-----|
-| Menü | **File → Open...** |
+| Menue | **File → Open...** |
 | Shortcut | `Ctrl+O` |
 
-Öffnet einen Datei-Dialog zur Auswahl einer AutoDrive-XML-Konfigurationsdatei. Nach dem Laden wird die Kamera automatisch auf die Bounding-Box des Netzwerks zentriert.
+Oeffnet einen Datei-Dialog zur Auswahl einer AutoDrive-XML-Konfigurationsdatei. Nach dem Laden wird die Kamera automatisch auf die Bounding-Box des Netzwerks zentriert.
 
-**Automatische Erkennung:** Nach dem Laden prüft der Editor automatisch:
+**Automatische Erkennung:** Nach dem Laden prueft der Editor automatisch:
 - Ob eine `terrain.heightmap.png` im selben Verzeichnis liegt → wird direkt als Heightmap gesetzt
-- Ob im Mods-Verzeichnis (`../../mods/` relativ zum Savegame) ein passender Map-Mod-ZIP zum Kartennamen existiert → Dialog bietet Übersichtskarten-Generierung an
+- Ob im Mods-Verzeichnis (`../../mods/` relativ zum Savegame) ein passender Map-Mod-ZIP zum Kartennamen existiert → Dialog bietet Uebersichtskarten-Generierung an
 
-Das Matching berücksichtigt Umlaute (ä↔ae, ö↔oe, ü↔ue, ß↔ss), ist case-insensitive und behandelt Leerzeichen/Unterstriche als Wildcard.
+Das Matching beruecksichtigt Umlaute (ae↔ae, oe↔oe, ue↔ue, ss↔ss), ist case-insensitive und behandelt Leerzeichen/Unterstriche als Wildcard.
 
 Mehr zur Auto-Detection: [Karte & Hintergrund → Automatische Erkennung](05-karte.md#automatische-erkennung-post-load)
 
@@ -43,7 +43,7 @@ Mehr zur Auto-Detection: [Karte & Hintergrund → Automatische Erkennung](05-kar
 | Speichern | **File → Save** oder `Ctrl+S` |
 | Speichern unter | **File → Save As...** |
 
-Beim Speichern wird geprüft, ob eine Heightmap geladen ist. Falls nicht, erscheint eine Warnung, dass Y-Koordinaten nicht korrekt geschrieben werden können.
+Beim Speichern wird geprueft, ob eine Heightmap geladen ist. Falls nicht, erscheint eine Warnung, dass Y-Koordinaten nicht korrekt geschrieben werden koennen.
 
 ---
 
@@ -51,8 +51,8 @@ Beim Speichern wird geprüft, ob eine Heightmap geladen ist. Falls nicht, ersche
 
 | Aktion | Weg |
 |--------|-----|
-| Menü | **File → Exit** |
+| Menue | **File → Exit** |
 
 ---
 
-← [Zurück zur Übersicht](index.md) | → [Benutzeroberfläche](02-oberflaeche.md)
+← [Zurueck zur Uebersicht](index.md) | → [Benutzeroberflaeche](02-oberflaeche.md)

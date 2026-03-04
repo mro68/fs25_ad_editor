@@ -1,10 +1,10 @@
-//! State-Definitionen und Konstruktor für das Ausweichstrecken-Tool.
+//! State-Definitionen und Konstruktor fuer das Ausweichstrecken-Tool.
 
 use crate::core::{ConnectionDirection, ConnectionPriority};
 use glam::Vec2;
 
 /// Ausweichstrecken-Tool — generiert eine parallele Ausweichstrecke
-/// zur selektierten Kette mit S-förmigen An-/Abfahrten.
+/// zur selektierten Kette mit S-foermigen An-/Abfahrten.
 pub struct BypassTool {
     /// Geordnete Positionen der Quell-Kette (aus Selektion gesetzt)
     pub(crate) chain_positions: Vec<Vec2>,
@@ -16,15 +16,15 @@ pub struct BypassTool {
     pub offset: f32,
     /// Abstand zwischen Nodes auf der Hauptstrecke
     pub base_spacing: f32,
-    /// Verbindungsrichtung für die erzeugten Verbindungen
+    /// Verbindungsrichtung fuer die erzeugten Verbindungen
     pub direction: ConnectionDirection,
-    /// Priorität für die erzeugten Verbindungen
+    /// Prioritaet fuer die erzeugten Verbindungen
     pub priority: ConnectionPriority,
-    /// Gecachte Bypass-Positionen (None = Cache ungültig)
+    /// Gecachte Bypass-Positionen (None = Cache ungueltig)
     pub(crate) cached_positions: Option<Vec<Vec2>>,
     /// Gecachte Preview-Connections fuer `cached_positions` inkl. Start/End-Anker
     pub(crate) cached_connections: Option<Vec<(usize, usize)>>,
-    /// Letzter verwendeter d_blend-Wert (für Info-Anzeige)
+    /// Letzter verwendeter d_blend-Wert (fuer Info-Anzeige)
     pub(crate) d_blend: f32,
 }
 
@@ -45,7 +45,7 @@ impl BypassTool {
         }
     }
 
-    /// Gibt `true` zurück wenn eine gültige Kette geladen ist (mind. 2 Punkte).
+    /// Gibt `true` zurueck wenn eine gueltige Kette geladen ist (mind. 2 Punkte).
     pub fn has_chain(&self) -> bool {
         self.chain_positions.len() >= 2
     }

@@ -1,8 +1,8 @@
 # Render API Documentation
 
-## Überblick
+## Ueberblick
 
-Das `render`-Modul implementiert GPU-beschleunigtes Rendering mit wgpu. Importiert `Camera2D` und `RoadMap` aus `core` (keine Abhängigkeit auf `app`).
+Das `render`-Modul implementiert GPU-beschleunigtes Rendering mit wgpu. Importiert `Camera2D` und `RoadMap` aus `core` (keine Abhaengigkeit auf `app`).
 
 ## Module
 
@@ -11,7 +11,7 @@ Das `render`-Modul implementiert GPU-beschleunigtes Rendering mit wgpu. Importie
 - `background_renderer.rs` — Background-Map-Quad mit Texture-Sampling
 - `marker_renderer.rs` — GPU-Instanced Map-Marker (Pin-Symbole)
 - `texture.rs` — Texture-Erstellung aus DynamicImage (PNG/JPG/DDS)
-- `callback.rs` — wgpu Render Callback für egui-Integration (`WgpuRenderCallback`, `WgpuRenderData`)
+- `callback.rs` — wgpu Render Callback fuer egui-Integration (`WgpuRenderCallback`, `WgpuRenderData`)
 - `types.rs` — GPU-Typen (`Vertex`, `ConnectionVertex`, `NodeInstance`, `MarkerInstance`, `Uniforms`), View-Projection
 - `shaders.wgsl` — WGSL Shader (Node, Connection, Background, Marker)
 
@@ -46,7 +46,7 @@ renderer.clear_background();                       // Background-Map entfernen
 
 ### `RenderScene`
 
-Expliziter Übergabevertrag zwischen App-Layer und Renderer. Definiert im `shared`-Modul (`shared::render_scene`).
+Expliziter Uebergabevertrag zwischen App-Layer und Renderer. Definiert im `shared`-Modul (`shared::render_scene`).
 
 ```rust
 pub struct RenderScene {
@@ -64,22 +64,22 @@ pub struct RenderScene {
 ```
 
 `hidden_node_ids` erlaubt dem App-Layer, Nodes pro Frame selektiv auszublenden
-(z. B. Original-Node-Pfad während einer Distanzen-Vorschau), ohne Änderungen an `RoadMap`.
+(z. B. Original-Node-Pfad waehrend einer Distanzen-Vorschau), ohne Aenderungen an `RoadMap`.
 
 **Methoden:**
-- `has_map() -> bool` — Prüft ob eine RoadMap vorhanden ist
+- `has_map() -> bool` — Prueft ob eine RoadMap vorhanden ist
 
 ---
 
 ### `NodeRenderer`
 
-Interner Renderer für Nodes (Wegpunkte) mit GPU-Instancing.
+Interner Renderer fuer Nodes (Wegpunkte) mit GPU-Instancing.
 
 **Features:**
-- GPU-Instancing für 100k+ Nodes
-- Shader-basierte kreisförmige Darstellung via Distance Field
+- GPU-Instancing fuer 100k+ Nodes
+- Shader-basierte kreisfoermige Darstellung via Distance Field
 - Adaptives Anti-Aliasing (Low/Medium/High via `RenderQuality`)
-- Selektierte Nodes werden 1.8× größer dargestellt
+- Selektierte Nodes werden 1.8× groesser dargestellt
 - Farb-Coding nach NodeFlag:
   - Cyan `[0.0, 0.8, 1.0]`: Regular
   - Gelb `[1.0, 1.0, 0.0]`: SubPrio
@@ -87,26 +87,26 @@ Interner Renderer für Nodes (Wegpunkte) mit GPU-Instancing.
   - Rot `[1.0, 0.0, 0.0]`: Warning
 
 **Konstanten:**
-- `NODE_SIZE_WORLD: 0.5` — Feste Node-Größe in Welt-Einheiten
+- `NODE_SIZE_WORLD: 0.5` — Feste Node-Groesse in Welt-Einheiten
 
 ---
 
 ### `ConnectionRenderer`
 
-Interner Renderer für Verbindungslinien und Richtungspfeile.
+Interner Renderer fuer Verbindungslinien und Richtungspfeile.
 
 **Features:**
 - Linien als Quad-Geometrie mit konfigurierbarer Breite
 - Richtungspfeile an Verbindungs-Mittelpunkten
 - Farb-Coding nach Richtung:
-  - Grün `[0.2, 0.9, 0.2]`: Regular
+  - Gruen `[0.2, 0.9, 0.2]`: Regular
   - Blau `[0.2, 0.7, 1.0]`: Dual
   - Orange `[1.0, 0.5, 0.1]`: Reverse
 - SubPriority-Verbindungen werden heller dargestellt
 
 **Konstanten:**
-- `CONNECTION_THICKNESS_WORLD: 0.2` (Hauptstraße)
-- `CONNECTION_THICKNESS_SUBPRIO_WORLD: 0.1` (Nebenstraße)
+- `CONNECTION_THICKNESS_WORLD: 0.2` (Hauptstrasse)
+- `CONNECTION_THICKNESS_SUBPRIO_WORLD: 0.1` (Nebenstrasse)
 - `ARROW_LENGTH_WORLD: 1.0`
 - `ARROW_WIDTH_WORLD: 0.6`
 
@@ -137,7 +137,7 @@ pub struct Uniforms { pub view_proj: [[f32; 4]; 4], pub aa_params: [f32; 4] }
 
 ### `RenderContext` (crate-intern)
 
-Bündelt die gemeinsamen Render-Parameter für alle Sub-Renderer. Vermeidet wiederholte Parameter-Listen.
+Buendelt die gemeinsamen Render-Parameter fuer alle Sub-Renderer. Vermeidet wiederholte Parameter-Listen.
 
 ```rust
 pub(crate) struct RenderContext<'a> {
@@ -154,7 +154,7 @@ pub(crate) struct RenderContext<'a> {
 
 ### `WgpuRenderCallback` / `WgpuRenderData`
 
-Egui-Integration für wgpu-Rendering.
+Egui-Integration fuer wgpu-Rendering.
 
 ```rust
 pub struct WgpuRenderData {
@@ -173,7 +173,7 @@ pub struct WgpuRenderCallback {
 
 ### `RenderQuality`
 
-Qualitätsstufe für Anti-Aliasing.
+Qualitaetsstufe fuer Anti-Aliasing.
 
 ```rust
 pub enum RenderQuality { Low, Medium, High }
@@ -193,7 +193,7 @@ pub enum RenderQuality { Low, Medium, High }
 // View-Matrix: nur Translation (Camera2D.view_matrix())
 let view = Mat3::from_translation(-camera.position);
 
-// Orthographische Projektion: Zoom über Extent-Skalierung
+// Orthographische Projektion: Zoom ueber Extent-Skalierung
 let zoom_scale = 1.0 / camera.zoom;
 let projection = Mat4::orthographic_rh(
     -BASE_WORLD_EXTENT * aspect * zoom_scale,
@@ -206,37 +206,37 @@ let projection = Mat4::orthographic_rh(
 let view_proj = projection * view_as_mat4;
 ```
 
-**Wichtig:** Zoom wird ausschließlich über die Projektion gesteuert, nicht über die View-Matrix.
+**Wichtig:** Zoom wird ausschliesslich ueber die Projektion gesteuert, nicht ueber die View-Matrix.
 
 ### Draw-Calls
 
-- **Nodes:** 1 instanced Draw-Call für alle Nodes (6 Vertices × N Instanzen)
+- **Nodes:** 1 instanced Draw-Call fuer alle Nodes (6 Vertices × N Instanzen)
 - **Connections:** 1 Draw-Call mit vorgenerierter Triangle-Geometrie
 
 ### `BackgroundRenderer`
 
-Interner Renderer für Map-Hintergrund.
+Interner Renderer fuer Map-Hintergrund.
 
 **Features:**
 - Textured Quad in Weltkoordinaten
 - Opacity-Steuerung (0.0–1.0)
 - Sichtbarkeits-Toggle
-- Unterstützt PNG, JPG, DDS via `image` Crate
+- Unterstuetzt PNG, JPG, DDS via `image` Crate
 
 ---
 
 ### `MarkerRenderer`
 
-Interner Renderer für Map-Marker (Pin-Symbole) mit GPU-Instancing.
+Interner Renderer fuer Map-Marker (Pin-Symbole) mit GPU-Instancing.
 
 **Features:**
-- GPU-Instancing für beliebig viele Marker
-- Pin-Form via SDF (Kreis + Träne) im Fragment-Shader
+- GPU-Instancing fuer beliebig viele Marker
+- Pin-Form via SDF (Kreis + Traene) im Fragment-Shader
 - Pin-Spitze steht exakt auf dem Node-Zentrum
-- Outline-Farbe für bessere Sichtbarkeit
+- Outline-Farbe fuer bessere Sichtbarkeit
 
 **Konstanten:**
-- `MARKER_SIZE_WORLD: 2.0` — Pin-Höhe in Welt-Einheiten
+- `MARKER_SIZE_WORLD: 2.0` — Pin-Hoehe in Welt-Einheiten
 - `MARKER_COLOR: [0.9, 0.1, 0.1]` — Rot
 - `MARKER_OUTLINE_COLOR: [0.6, 0.0, 0.0]` — Dunkles Rot
 

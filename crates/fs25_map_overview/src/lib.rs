@@ -1,6 +1,6 @@
-//! `fs25_map_overview` — Overview-Map-Generator für FS25 Map-Mods.
+//! `fs25_map_overview` — Overview-Map-Generator fuer FS25 Map-Mods.
 //!
-//! Generiert aus einem FS25 Map-Mod-ZIP eine detaillierte Übersichtskarte:
+//! Generiert aus einem FS25 Map-Mod-ZIP eine detaillierte Uebersichtskarte:
 //! - Terrain-Compositing aus Weight-Maps
 //! - Hillshade aus DEM (Digital Elevation Model)
 //! - Farmland-Grenzen und ID-Labels
@@ -43,7 +43,7 @@ pub use discovery::MapInfo;
 /// - `zip_path`: Pfad zum ZIP-Archiv
 /// - `options`: Steuerung welche Layer gezeichnet werden
 ///
-/// # Rückgabe
+/// # Rueckgabe
 /// RGB-Bild als `image::RgbImage`
 pub fn generate_overview_from_zip(zip_path: &str, options: &OverviewOptions) -> Result<RgbImage> {
     log::info!("Lade Map-Mod-ZIP: {}", zip_path);
@@ -65,7 +65,7 @@ pub fn generate_overview_from_zip(zip_path: &str, options: &OverviewOptions) -> 
 
 /// Generiert eine Overview-Map aus bereits extrahierten Dateien.
 ///
-/// Nützlich wenn das ZIP bereits entpackt vorliegt oder
+/// Nuetzlich wenn das ZIP bereits entpackt vorliegt oder
 /// die MapInfo anderweitig ermittelt wurde.
 pub fn generate_overview(
     files: &HashMap<String, Vec<u8>>,
@@ -88,7 +88,7 @@ pub fn generate_overview(
     log::info!("{} Weight-Maps geladen", weight_images.len());
 
     let mut image = if weight_images.is_empty() {
-        // Fallback: einheitliches Grün
+        // Fallback: einheitliches Gruen
         RgbImage::from_pixel(map_size, map_size, image::Rgb([80, 100, 60]))
     } else {
         terrain::composite_terrain_from_images(&weight_images, map_size)?
@@ -123,7 +123,7 @@ pub fn generate_overview(
                 Err(e) => log::warn!("DEM konnte nicht geladen werden: {}", e),
             }
         } else {
-            log::info!("Kein DEM gefunden – Hillshade übersprungen");
+            log::info!("Kein DEM gefunden – Hillshade uebersprungen");
         }
     }
 
@@ -186,7 +186,7 @@ fn extract_zip(zip_path: &str) -> Result<HashMap<String, Vec<u8>>> {
     let file = std::fs::File::open(zip_path)
         .with_context(|| format!("ZIP-Datei nicht gefunden: {}", zip_path))?;
     let mut archive = zip::ZipArchive::new(BufReader::new(file))
-        .with_context(|| format!("Ungültiges ZIP-Archiv: {}", zip_path))?;
+        .with_context(|| format!("Ungueltiges ZIP-Archiv: {}", zip_path))?;
 
     let mut files = HashMap::new();
     for i in 0..archive.len() {

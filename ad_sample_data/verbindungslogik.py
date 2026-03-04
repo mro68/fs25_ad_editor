@@ -23,7 +23,7 @@ incomings = [[int(i) for i in entry.split(',')] for entry in incoming_str.split(
 # --- Koordinaten-Dictionary ---
 coords = {ids[i]: (x_vals[i], z_vals[i]) for i in range(len(ids))}
 
-# Wir interessieren uns nur für Punkte 23–36
+# Wir interessieren uns nur fuer Punkte 23–36
 selected = set(range(23, 37))
 
 # --- Kanten extrahieren ---
@@ -45,16 +45,16 @@ bidirectional = {
     if (e[1], e[0]) in edge_set
 }
 
-# 2) Rückwärtsfahrend:
+# 2) Rueckwaertsfahrend:
 #    Wenn p1.out = p2, aber p1 NICHT in den originalen <incoming> von p2 steht,
-#    dann darf man nur im Rückwärtsgang von p1 nach p2 fahren.
+#    dann darf man nur im Rueckwaertsgang von p1 nach p2 fahren.
 backwards = [
     (src, tgt)
     for (src, tgt) in directed
     if src not in incomings[ids.index(tgt)]
 ]
 
-# 3) Einbahnstraße (ohne Bidirektion & ohne Rückwärtsfahrend):
+# 3) Einbahnstrasse (ohne Bidirektion & ohne Rueckwaertsfahrend):
 #    Restliche gerichtete Verbindungen.
 one_way = (
     edge_set
@@ -67,7 +67,7 @@ one_way = (
 )
 
 # 4) Priorisierung:
-#    Die Einbahnstraßen werden nach dem Flag des ZIELpunkts (tgt) eingeteilt:
+#    Die Einbahnstrassen werden nach dem Flag des ZIELpunkts (tgt) eingeteilt:
 #    - Flag tgt = 0 → Prio (rot)
 #    - Flag tgt = 1 → Subprio (orange)
 prio    = [e for e in one_way if flags[e[1]-1] == 0]
@@ -82,7 +82,7 @@ for pt in selected:
     plt.scatter(px, pz, color='black')
     plt.text(px + 0.3, pz + 0.3, str(pt), fontsize=8)
 
-# Bidirektionale Verbindungen (grün)
+# Bidirektionale Verbindungen (gruen)
 for a, b in bidirectional:
     x1, z1 = coords[a]; x2, z2 = coords[b]
     plt.plot([x1, x2], [z1, z2], color='green', linewidth=2)
@@ -97,7 +97,7 @@ for a, b in subprio:
     x1, z1 = coords[a]; x2, z2 = coords[b]
     plt.plot([x1, x2], [z1, z2], linestyle='--', color='orange')
 
-# Rückwärtsfahrend (blau gepunktet mit Pfeil)
+# Rueckwaertsfahrend (blau gepunktet mit Pfeil)
 for src, tgt in backwards:
     x1, z1 = coords[src]; x2, z2 = coords[tgt]
     arrow = FancyArrowPatch(
@@ -112,12 +112,12 @@ legend_elems = [
     Line2D([0], [0], color='green', lw=2, label='Bidirektional'),
     Line2D([0], [0], color='red', label='Prio (Flag tgt=0)'),
     Line2D([0], [0], linestyle='--', color='orange', label='Subprio (Flag tgt=1)'),
-    Line2D([0], [0], linestyle=':', color='blue', label='Rückwärtsfahrend'),
+    Line2D([0], [0], linestyle=':', color='blue', label='Rueckwaertsfahrend'),
 ]
 plt.legend(handles=legend_elems, loc='best')
 
 plt.axis('equal')
 plt.xlabel('X-Koordinate')
 plt.ylabel('Z-Koordinate')
-plt.title('Wegpunkte 23–36 mit Rückwärtsprinzip und Priorisierung')
+plt.title('Wegpunkte 23–36 mit Rueckwaertsprinzip und Priorisierung')
 plt.show()

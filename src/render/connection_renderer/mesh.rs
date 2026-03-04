@@ -1,11 +1,11 @@
-//! Vertex-Generierung für Connection-Linien und Pfeilspitzen.
+//! Vertex-Generierung fuer Connection-Linien und Pfeilspitzen.
 
 use super::super::types::ConnectionVertex;
 use crate::shared::EditorOptions;
 use crate::{ConnectionDirection, ConnectionPriority};
 use glam::Vec2;
 
-/// Bestimmt die Farbe einer Verbindung anhand von Richtung und Priorität.
+/// Bestimmt die Farbe einer Verbindung anhand von Richtung und Prioritaet.
 pub(super) fn connection_color(
     direction: ConnectionDirection,
     priority: ConnectionPriority,
@@ -28,7 +28,7 @@ pub(super) fn connection_color(
     }
 }
 
-/// Erzeugt ein Quad (2 Dreiecke) für ein Liniensegment mit gegebener Breite.
+/// Erzeugt ein Quad (2 Dreiecke) fuer ein Liniensegment mit gegebener Breite.
 pub(super) fn push_line_quad(
     vertices: &mut Vec<ConnectionVertex>,
     start: Vec2,
@@ -56,7 +56,7 @@ pub(super) fn push_line_quad(
 /// Erzeugt ein Dreieck als Richtungspfeil an der gegebenen Position.
 ///
 /// Der geometrische Schwerpunkt (Zentroid) des Dreiecks liegt exakt bei `center`.
-/// Für ein Dreieck gilt: Schwerpunkt = (Spitze + links + rechts) / 3.
+/// Fuer ein Dreieck gilt: Schwerpunkt = (Spitze + links + rechts) / 3.
 /// Mit tip = center + dir * 2l/3 und base = center - dir * l/3
 /// ergibt sich: (center + 2l/3 + center - l/3 + center - l/3) / 3 = center ✓
 pub(super) fn push_arrow(

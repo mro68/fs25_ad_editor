@@ -15,12 +15,12 @@ pub fn show_heightmap_warning(ctx: &egui::Context, show: bool) -> Vec<AppIntent>
         .show(ctx, |ui| {
             ui.vertical_centered(|ui| {
                 ui.add_space(10.0);
-                ui.label("Es wurde keine Heightmap ausgewählt.");
+                ui.label("Es wurde keine Heightmap ausgewaehlt.");
                 ui.label("Alle Y-Koordinaten werden auf 0 gesetzt (flache Map).");
                 ui.add_space(10.0);
 
                 ui.horizontal(|ui| {
-                    if ui.button("Heightmap auswählen").clicked() {
+                    if ui.button("Heightmap auswaehlen").clicked() {
                         events.push(AppIntent::HeightmapSelectionRequested);
                     }
 

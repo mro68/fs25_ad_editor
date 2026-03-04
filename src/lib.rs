@@ -1,5 +1,5 @@
 //! FS25 AutoDrive Editor Library.
-//! Core-Funktionalität als Library exportiert für Tests und Wiederverwendung.
+//! Core-Funktionalitaet als Library exportiert fuer Tests und Wiederverwendung.
 
 pub mod app;
 pub mod core;

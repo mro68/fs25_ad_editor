@@ -1,10 +1,10 @@
 #!/usr/bin/env bash
-# Pre-Push Hook: fmt + clippy lokal prüfen bevor gepusht wird.
+# Pre-Push Hook: fmt + clippy lokal pruefen bevor gepusht wird.
 set -e
 
 echo "=== Pre-Push: cargo fmt --check ==="
 cargo fmt --all -- --check || {
-    echo "❌ Formatierung fehlerhaft. Bitte 'cargo fmt' ausführen."
+    echo "❌ Formatierung fehlerhaft. Bitte 'cargo fmt' ausfuehren."
     exit 1
 }
 

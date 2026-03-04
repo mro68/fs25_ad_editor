@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
-# CI-Check: Architektur-Guardrails für Schichtentrennung.
+# CI-Check: Architektur-Guardrails fuer Schichtentrennung.
 #
 # Regel: src/ui/ darf NICHT direkt aus crate::core importieren.
-# UI-Code muss Core-Typen über die Re-Exports in crate::app beziehen.
+# UI-Code muss Core-Typen ueber die Re-Exports in crate::app beziehen.
 #
 # Verwendung:
 #   ./scripts/check_layer_boundaries.sh
@@ -17,7 +17,7 @@ echo "=== Architektur-Check: Layer-Grenzen ==="
 # Regel 1: UI darf nicht direkt auf Core zugreifen
 UI_CORE_VIOLATIONS=$(grep -rn 'crate::core' src/ui/ --include='*.rs' 2>/dev/null || true)
 if [ -n "$UI_CORE_VIOLATIONS" ]; then
-    echo "FEHLER: UI importiert direkt aus core (muss über app re-exports gehen):"
+    echo "FEHLER: UI importiert direkt aus core (muss ueber app re-exports gehen):"
     echo "$UI_CORE_VIOLATIONS"
     VIOLATIONS=$((VIOLATIONS + 1))
 fi
@@ -46,7 +46,7 @@ if [ -n "$UI_OTHER_VIOLATIONS" ]; then
     VIOLATIONS=$((VIOLATIONS + 1))
 fi
 
-# Regel 5: UI darf keine vollständige mutable AppState-Referenz annehmen
+# Regel 5: UI darf keine vollstaendige mutable AppState-Referenz annehmen
 UI_MUT_APPSTATE_VIOLATIONS=$(grep -rn '&mut[[:space:]]\+AppState' src/ui/ --include='*.rs' 2>/dev/null || true)
 if [ -n "$UI_MUT_APPSTATE_VIOLATIONS" ]; then
     echo "FEHLER: UI nutzt &mut AppState (Intent/Command-Boundary verletzt):"
@@ -54,10 +54,10 @@ if [ -n "$UI_MUT_APPSTATE_VIOLATIONS" ]; then
     VIOLATIONS=$((VIOLATIONS + 1))
 fi
 
-# Regel 6: UI darf keine direkten state.* Feldzuweisungen durchführen
+# Regel 6: UI darf keine direkten state.* Feldzuweisungen durchfuehren
 UI_STATE_ASSIGN_VIOLATIONS=$(grep -rn '\bstate\.[A-Za-z0-9_\.]*[[:space:]]*=' src/ui/ --include='*.rs' 2>/dev/null || true)
 if [ -n "$UI_STATE_ASSIGN_VIOLATIONS" ]; then
-    echo "FEHLER: UI enthält direkte state.* Zuweisungen (statt Intent/Command):"
+    echo "FEHLER: UI enthaelt direkte state.* Zuweisungen (statt Intent/Command):"
     echo "$UI_STATE_ASSIGN_VIOLATIONS"
     VIOLATIONS=$((VIOLATIONS + 1))
 fi
@@ -70,8 +70,8 @@ if [ -n "$XML_UPPER_VIOLATIONS" ]; then
     VIOLATIONS=$((VIOLATIONS + 1))
 fi
 
-# Regel 8: use_cases dürfen nicht aus tool-internen Submodulen importieren
-# (Ausnahme: crate::app::tools direkt für ToolResult/öffentliche Typen ist OK;
+# Regel 8: use_cases duerfen nicht aus tool-internen Submodulen importieren
+# (Ausnahme: crate::app::tools direkt fuer ToolResult/oeffentliche Typen ist OK;
 #  verboten ist der Import tool-interner Geometrie/Logic wie tools::spline::geometry)
 USE_CASES_TOOLS_VIOLATIONS=$(grep -rn 'crate::app::tools::' src/app/use_cases/ --include='*.rs' 2>/dev/null \
     | grep -v 'crate::app::tools::ToolResult\|apply_tool_result' || true)

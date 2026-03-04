@@ -1,4 +1,4 @@
-//! Use-Case: Bulk-Änderungen an Verbindungen zwischen selektierten Nodes.
+//! Use-Case: Bulk-Aenderungen an Verbindungen zwischen selektierten Nodes.
 
 use crate::app::AppState;
 use crate::core::{ConnectionDirection, ConnectionPriority, RoadMap};
@@ -18,10 +18,10 @@ fn collect_selected_connection_keys(
         .collect()
 }
 
-/// Gemeinsame Logik für Bulk-Operationen auf Verbindungen zwischen selektierten Nodes.
+/// Gemeinsame Logik fuer Bulk-Operationen auf Verbindungen zwischen selektierten Nodes.
 ///
-/// Validiert die Selektion, erstellt einen Undo-Snapshot, führt die Operation aus
-/// und aktualisiert die Node-Flags. Gibt die Anzahl betroffener Verbindungen zurück.
+/// Validiert die Selektion, erstellt einen Undo-Snapshot, fuehrt die Operation aus
+/// und aktualisiert die Node-Flags. Gibt die Anzahl betroffener Verbindungen zurueck.
 fn mutate_connections_between_selected<F>(
     state: &mut AppState,
     operation_name: &str,
@@ -47,7 +47,7 @@ where
 
         if !has_affected {
             log::debug!(
-                "Keine Verbindungen zwischen selektierten Nodes für Operation '{}'",
+                "Keine Verbindungen zwischen selektierten Nodes fuer Operation '{}'",
                 operation_name
             );
             return 0;
@@ -75,7 +75,7 @@ where
     count
 }
 
-/// Ändert die Richtung aller Verbindungen zwischen den selektierten Nodes.
+/// Aendert die Richtung aller Verbindungen zwischen den selektierten Nodes.
 ///
 /// Findet alle Connections, bei denen sowohl start_id als auch end_id
 /// in der Selektion enthalten sind, und setzt sie auf die angegebene Richtung.
@@ -116,7 +116,7 @@ pub fn set_all_connections_direction_between_selected(
 
     if count > 0 {
         log::info!(
-            "{} Verbindung(en) zwischen selektierten Nodes auf {:?} geändert",
+            "{} Verbindung(en) zwischen selektierten Nodes auf {:?} geaendert",
             count,
             direction
         );
@@ -167,7 +167,7 @@ pub fn invert_all_connections_between_selected(state: &mut AppState) {
     }
 }
 
-/// Ändert die Priorität aller Verbindungen zwischen den selektierten Nodes.
+/// Aendert die Prioritaet aller Verbindungen zwischen den selektierten Nodes.
 pub fn set_all_connections_priority_between_selected(
     state: &mut AppState,
     priority: ConnectionPriority,
@@ -183,7 +183,7 @@ pub fn set_all_connections_priority_between_selected(
 
     if count > 0 {
         log::info!(
-            "{} Verbindung(en) zwischen selektierten Nodes auf {:?} geändert",
+            "{} Verbindung(en) zwischen selektierten Nodes auf {:?} geaendert",
             count,
             priority
         );

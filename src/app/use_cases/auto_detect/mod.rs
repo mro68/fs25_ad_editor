@@ -1,6 +1,6 @@
 //! Auto-Detection von Heightmap und Map-Mod-ZIP nach dem Laden einer XML-Datei.
 //!
-//! Prüft nach dem Laden einer AutoDrive-Config, ob:
+//! Prueft nach dem Laden einer AutoDrive-Config, ob:
 //! 1. Eine `terrain.heightmap.png` im selben Verzeichnis liegt → direkt als Heightmap setzen
 //! 2. Im Mods-Verzeichnis ein passendes ZIP zum `map_name` existiert → Dialog anzeigen
 
@@ -18,7 +18,7 @@ pub struct PostLoadDetectionResult {
     pub matching_zips: Vec<PathBuf>,
 }
 
-/// Führt die komplette Auto-Detection durch.
+/// Fuehrt die komplette Auto-Detection durch.
 ///
 /// Sucht nach `terrain.heightmap.png` im XML-Verzeichnis und nach passenden
 /// Map-Mod-ZIPs im Mods-Verzeichnis (basierend auf `map_name`).
@@ -36,7 +36,7 @@ pub fn detect_post_load(xml_path: &Path, map_name: Option<&str>) -> PostLoadDete
     }
 }
 
-/// Prüft ob `overview.jpg` (oder `overview.png`) im selben Verzeichnis wie die XML liegt.
+/// Prueft ob `overview.jpg` (oder `overview.png`) im selben Verzeichnis wie die XML liegt.
 fn find_overview_next_to(xml_path: &Path) -> Option<PathBuf> {
     let dir = xml_path.parent()?;
     // Bevorzugt .jpg, Fallback auf .png
@@ -49,7 +49,7 @@ fn find_overview_next_to(xml_path: &Path) -> Option<PathBuf> {
     None
 }
 
-/// Prüft ob `terrain.heightmap.png` im selben Verzeichnis wie die XML liegt.
+/// Prueft ob `terrain.heightmap.png` im selben Verzeichnis wie die XML liegt.
 fn find_heightmap_next_to(xml_path: &Path) -> Option<PathBuf> {
     let dir = xml_path.parent()?;
     let heightmap = dir.join("terrain.heightmap.png");
@@ -80,24 +80,24 @@ fn resolve_mods_dir(xml_path: &Path) -> Option<PathBuf> {
 
 /// Erzeugt Umlaut-Varianten eines Namens (bidirektional).
 ///
-/// Ersetzt ä↔ae, ö↔oe, ü↔ue, ß↔ss in beide Richtungen.
-/// Gibt alle eindeutigen Varianten zurück (inkl. Original).
+/// Ersetzt (a-umlaut)<->ae, (o-umlaut)<->oe, (u-umlaut)<->ue, (eszett)<->ss in beide Richtungen.
+/// Gibt alle eindeutigen Varianten zurueck (inkl. Original).
 fn expand_umlaut_variants(name: &str) -> Vec<String> {
     let lower = name.to_lowercase();
 
     // Richtung 1: Umlaute → ASCII-Digraphen
     let ascii = lower
-        .replace('ä', "ae")
-        .replace('ö', "oe")
-        .replace('ü', "ue")
-        .replace('ß', "ss");
+        .replace('\u{00E4}', "ae")
+        .replace('\u{00F6}', "oe")
+        .replace('\u{00FC}', "ue")
+        .replace('\u{00DF}', "ss");
 
     // Richtung 2: ASCII-Digraphen → Umlaute
     let umlaut = lower
-        .replace("ae", "ä")
-        .replace("oe", "ö")
-        .replace("ue", "ü")
-        .replace("ss", "ß");
+        .replace("ae", "\u{00E4}")
+        .replace("oe", "\u{00F6}")
+        .replace("ue", "\u{00FC}")
+        .replace("ss", "\u{00DF}");
 
     let mut variants = vec![lower];
     if !variants.contains(&ascii) {
@@ -114,7 +114,7 @@ fn expand_umlaut_variants(name: &str) -> Vec<String> {
 /// Spaces und Underscores werden als Wildcard-Trennzeichen behandelt,
 /// sodass z.B. "Big Farm" sowohl "Big_Farm" als auch "BigFarm" matcht.
 fn name_to_pattern(variant: &str) -> String {
-    // Regex-Metazeichen escapen (außer Spaces/Underscores)
+    // Regex-Metazeichen escapen (ausser Spaces/Underscores)
     let mut pattern = String::new();
     for ch in variant.chars() {
         if ch == ' ' || ch == '_' {
@@ -129,7 +129,7 @@ fn name_to_pattern(variant: &str) -> String {
     pattern
 }
 
-/// Kürzt den Map-Namen auf die ersten zwei Wörter (getrennt durch `_` oder Leerzeichen).
+/// Kuerzt den Map-Namen auf die ersten zwei Woerter (getrennt durch `_` oder Leerzeichen).
 ///
 /// Beispiel: `"Sickinger_Hoehe_Rheinland_Pfalz"` → `"Sickinger_Hoehe"`
 fn truncate_to_two_words(name: &str) -> String {
@@ -140,9 +140,9 @@ fn truncate_to_two_words(name: &str) -> String {
 
 /// Sucht im Mods-Verzeichnis nach ZIP-Dateien, die zum Map-Namen passen.
 ///
-/// Verwendet nur die ersten zwei Wörter des Map-Namens für die Suche.
+/// Verwendet nur die ersten zwei Woerter des Map-Namens fuer die Suche.
 /// Matching: case-insensitive, Spaces/Underscores als Wildcard,
-/// bidirektionale Umlaut-Expansion (ä↔ae, ö↔oe, ü↔ue, ß↔ss).
+/// bidirektionale Umlaut-Expansion (ae↔ae, oe↔oe, ue↔ue, ss↔ss).
 fn find_matching_zips(mods_dir: &Path, map_name: &str) -> Vec<PathBuf> {
     let short_name = truncate_to_two_words(map_name);
     let variants = expand_umlaut_variants(&short_name);

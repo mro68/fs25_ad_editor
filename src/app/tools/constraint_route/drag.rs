@@ -1,6 +1,6 @@
-//! Drag-Logik für das Constraint-Route-Tool.
+//! Drag-Logik fuer das Constraint-Route-Tool.
 //!
-//! Ermöglicht das Verschieben von Start, End und Kontrollpunkten per Drag.
+//! Ermoeglicht das Verschieben von Start, End und Kontrollpunkten per Drag.
 
 use super::super::snap_to_node;
 use super::super::ToolAnchor;
@@ -9,7 +9,7 @@ use crate::core::RoadMap;
 use glam::Vec2;
 
 impl ConstraintRouteTool {
-    /// Gibt die Weltpositionen aller verschiebbaren Punkte zurück.
+    /// Gibt die Weltpositionen aller verschiebbaren Punkte zurueck.
     ///
     /// Reihenfolge: Start, End, Approach-Steuerpunkt, Departure-Steuerpunkt, Kontrollpunkte.
     pub(crate) fn get_drag_targets(&self) -> Vec<Vec2> {
@@ -75,7 +75,7 @@ impl ConstraintRouteTool {
         false
     }
 
-    /// Aktualisiert die Position des gegriffenen Punkts während eines Drags.
+    /// Aktualisiert die Position des gegriffenen Punkts waehrend eines Drags.
     pub(crate) fn handle_drag_update(&mut self, pos: Vec2) {
         match self.dragging {
             Some(DragTarget::Start) => {
@@ -116,7 +116,7 @@ impl ConstraintRouteTool {
                     self.start = Some(re_snapped);
                     self.start_neighbor_dirs =
                         ConstraintRouteTool::collect_neighbor_dirs(&re_snapped, road_map);
-                    // Bei neuem Start Auto-Steuerpunkte zurücksetzen
+                    // Bei neuem Start Auto-Steuerpunkte zuruecksetzen
                     self.approach_manual = false;
                 }
             }
@@ -127,7 +127,7 @@ impl ConstraintRouteTool {
                     self.end = Some(re_snapped);
                     self.end_neighbor_dirs =
                         ConstraintRouteTool::collect_neighbor_dirs(&re_snapped, road_map);
-                    // Bei neuem Ende Auto-Steuerpunkte zurücksetzen
+                    // Bei neuem Ende Auto-Steuerpunkte zuruecksetzen
                     self.departure_manual = false;
                 }
             }

@@ -1,4 +1,4 @@
-//! UI-Komponenten: Menü, Toolbar, Properties, Input-Handling, Dialoge.
+//! UI-Komponenten: Menue, Toolbar, Properties, Input-Handling, Dialoge.
 
 pub mod context_menu;
 pub mod dialogs;
@@ -8,8 +8,8 @@ pub mod input;
 mod keyboard;
 /// UI-Layer mit egui
 ///
-/// Dieses Modul implementiert alle UI-Komponenten (Menüs, Panels, Dialogs).
-/// Modulare Aufteilung: Keyboard-Shortcuts, Drag-Logik und Kontextmenüs
+/// Dieses Modul implementiert alle UI-Komponenten (Menues, Panels, Dialogs).
+/// Modulare Aufteilung: Keyboard-Shortcuts, Drag-Logik und Kontextmenues
 /// sind in eigene Dateien extrahiert.
 pub mod menu;
 pub mod options_dialog;

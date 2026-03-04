@@ -5,12 +5,12 @@ use glam::Vec2;
 /// Richtung einer Verbindung zwischen zwei Nodes.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub enum ConnectionDirection {
-    /// Einfache Einbahnstraße
+    /// Einfache Einbahnstrasse
     #[default]
     Regular,
     /// Zweispurige Verbindung (beide Richtungen)
     Dual,
-    /// Rückwärts-Verbindung
+    /// Rueckwaerts-Verbindung
     Reverse,
 }
 
@@ -33,7 +33,7 @@ pub struct Connection {
     pub end_id: u64,
     /// Richtung der Verbindung
     pub direction: ConnectionDirection,
-    /// Priorität der Verbindung
+    /// Prioritaet der Verbindung
     pub priority: ConnectionPriority,
     /// Mittelpunkt der Verbindung (2D)
     pub midpoint: Vec2,

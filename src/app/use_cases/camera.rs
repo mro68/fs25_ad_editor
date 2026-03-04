@@ -1,9 +1,9 @@
-//! Use-Case-Funktionen für Kamera-Steuerung.
+//! Use-Case-Funktionen fuer Kamera-Steuerung.
 
 use crate::app::AppState;
 use crate::core::RoadMap;
 
-/// Setzt die Kamera auf Default zurück.
+/// Setzt die Kamera auf Default zurueck.
 pub fn reset_camera(state: &mut AppState) {
     state.view.camera = Default::default();
 }
@@ -58,7 +58,7 @@ pub fn zoom_towards(state: &mut AppState, factor: f32, focus_world: Option<glam:
 
 /// Zentriert die Kamera auf die Bounding Box der RoadMap.
 ///
-/// Berechnet Mittelpunkt und wählt einen passenden Zoom-Level.
+/// Berechnet Mittelpunkt und waehlt einen passenden Zoom-Level.
 /// Keine Operation wenn die RoadMap leer ist.
 pub fn center_on_road_map(state: &mut AppState, road_map: &RoadMap) {
     if road_map.nodes.is_empty() {

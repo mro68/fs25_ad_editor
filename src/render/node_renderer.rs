@@ -8,9 +8,9 @@ use crate::{NodeFlag, RoadMap};
 use eframe::{egui_wgpu, wgpu};
 use indexmap::IndexSet;
 use wgpu::util::DeviceExt;
-// HashSet-Import wird direkt in der Signatur genutzt (kein Re-collect mehr nötig)
+// HashSet-Import wird direkt in der Signatur genutzt (kein Re-collect mehr noetig)
 
-/// Renderer für Nodes (Wegpunkte)
+/// Renderer fuer Nodes (Wegpunkte)
 pub struct NodeRenderer {
     pipeline: wgpu::RenderPipeline,
     vertex_buffer: wgpu::Buffer,
@@ -18,9 +18,9 @@ pub struct NodeRenderer {
     bind_group: wgpu::BindGroup,
     instance_buffer: Option<wgpu::Buffer>,
     instance_capacity: usize,
-    /// Wiederverwendbarer Scratch-Buffer für Instanzdaten (vermeidet per-Frame-Allokation)
+    /// Wiederverwendbarer Scratch-Buffer fuer Instanzdaten (vermeidet per-Frame-Allokation)
     instance_scratch: Vec<NodeInstance>,
-    /// Wiederverwendbarer Scratch-Buffer für sichtbare Node-IDs (KD-Query ohne pro-Frame-Vec)
+    /// Wiederverwendbarer Scratch-Buffer fuer sichtbare Node-IDs (KD-Query ohne pro-Frame-Vec)
     node_id_scratch: Vec<u64>,
 }
 
@@ -108,7 +108,7 @@ impl NodeRenderer {
             cache: None,
         });
 
-        // Vertex-Buffer für Quad (2 Dreiecke)
+        // Vertex-Buffer fuer Quad (2 Dreiecke)
         let vertices = [
             Vertex {
                 position: [-1.0, -1.0],
@@ -150,7 +150,7 @@ impl NodeRenderer {
 
     /// Rendert alle sichtbaren Nodes der RoadMap per GPU-Instancing.
     ///
-    /// Führt Viewport-Culling durch und schreibt Instanzdaten in den
+    /// Fuehrt Viewport-Culling durch und schreibt Instanzdaten in den
     /// wiederverwendbaren Instance-Buffer.
     pub fn render(
         &mut self,
@@ -193,8 +193,8 @@ impl NodeRenderer {
                 NodeFlag::Warning => ctx.options.node_color_warning,
                 _ => ctx.options.node_color_default,
             };
-            // Rim/Markierungsfarbe außen — nur bei selektierten Nodes anders.
-            // rim_color.a kodiert das Verhältnis Innendurchmesser/Außendurchmesser für den Shader.
+            // Rim/Markierungsfarbe aussen — nur bei selektierten Nodes anders.
+            // rim_color.a kodiert das Verhaeltnis Innendurchmesser/Aussendurchmesser fuer den Shader.
             let rim_color = if is_selected {
                 let mut c = ctx.options.node_color_selected;
                 c[3] = 1.0 / ctx.options.selection_size_multiplier();

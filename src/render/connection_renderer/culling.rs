@@ -1,13 +1,13 @@
-//! Viewport-Culling für Connection-Segmente.
+//! Viewport-Culling fuer Connection-Segmente.
 
 use glam::Vec2;
 
-/// Prüft ob ein Punkt innerhalb eines AABB-Rechtecks liegt (inklusiv).
+/// Prueft ob ein Punkt innerhalb eines AABB-Rechtecks liegt (inklusiv).
 pub(super) fn point_in_rect(point: Vec2, min: Vec2, max: Vec2) -> bool {
     point.x >= min.x && point.x <= max.x && point.y >= min.y && point.y <= max.y
 }
 
-/// Prüft ob ein Liniensegment ein AABB-Rechteck schneidet oder darin liegt.
+/// Prueft ob ein Liniensegment ein AABB-Rechteck schneidet oder darin liegt.
 pub(super) fn segment_intersects_rect(start: Vec2, end: Vec2, min: Vec2, max: Vec2) -> bool {
     if point_in_rect(start, min, max) || point_in_rect(end, min, max) {
         return true;

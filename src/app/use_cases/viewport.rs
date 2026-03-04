@@ -1,14 +1,14 @@
-//! Use-Case-Funktionen für Viewport-Zustand.
+//! Use-Case-Funktionen fuer Viewport-Zustand.
 
 use crate::app::AppState;
 use crate::shared::RenderQuality;
 
-/// Aktualisiert die gespeicherte Viewport-Größe.
+/// Aktualisiert die gespeicherte Viewport-Groesse.
 pub fn resize(state: &mut AppState, size: [f32; 2]) {
     state.view.viewport_size = size;
 }
 
-/// Aktualisiert die Render-Qualitätsstufe.
+/// Aktualisiert die Render-Qualitaetsstufe.
 pub fn set_render_quality(state: &mut AppState, quality: RenderQuality) {
     state.view.render_quality = quality;
 }

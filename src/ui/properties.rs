@@ -1,7 +1,7 @@
-//! Properties-Panel (rechte Seitenleiste) für Node- und Connection-Eigenschaften.
+//! Properties-Panel (rechte Seitenleiste) fuer Node- und Connection-Eigenschaften.
 
 mod distances;
-mod selectors;
+pub(crate) mod selectors;
 
 use indexmap::IndexSet;
 
@@ -10,9 +10,12 @@ use crate::app::{
     ConnectionDirection, ConnectionPriority, EditorTool, RoadMap,
 };
 use distances::render_distance_panel;
-use selectors::{direction_label, priority_label, render_default_direction_selector};
+use selectors::{
+    render_default_direction_selector, render_direction_icon_selector,
+    render_priority_icon_selector,
+};
 
-/// Rendert das Properties-Panel und gibt erzeugte Events zurück.
+/// Rendert das Properties-Panel und gibt erzeugte Events zurueck.
 #[allow(clippy::too_many_arguments)]
 pub fn render_properties_panel(
     ctx: &egui::Context,
@@ -135,10 +138,10 @@ fn render_single_node_info(
         ui.label(format!("Name: {}", marker.name));
         ui.label(format!("Gruppe: {}", marker.group));
 
-        if ui.small_button("✏ Marker ändern").clicked() {
+        if ui.small_button("✏ Marker aendern").clicked() {
             events.push(AppIntent::EditMarkerRequested { node_id });
         }
-        if ui.small_button("✕ Marker löschen").clicked() {
+        if ui.small_button("✕ Marker loeschen").clicked() {
             events.push(AppIntent::RemoveMarkerRequested { node_id });
         }
     } else if ui.button("🗺 Marker erstellen").clicked() {
@@ -146,7 +149,7 @@ fn render_single_node_info(
     }
 }
 
-/// Zeigt Zwei-Node-Info: Verbindungen, Richtungs-/Prioritätsauswahl, Verbinden/Trennen.
+/// Zeigt Zwei-Node-Info: Verbindungen, Richtungs-/Prioritaetsauswahl, Verbinden/Trennen.
 fn render_two_nodes_info(
     ui: &mut egui::Ui,
     road_map: &RoadMap,
@@ -167,12 +170,7 @@ fn render_two_nodes_info(
         ui.label("Keine Verbindung");
         ui.separator();
 
-        let dir_label = direction_label(default_direction);
-        let prio_label = priority_label(default_priority);
-        if ui
-            .button(format!("Verbinden ({}, {})", dir_label, prio_label))
-            .clicked()
-        {
+        if ui.button("Verbinden").clicked() {
             events.push(AppIntent::AddConnectionRequested {
                 from_id: a,
                 to_id: b,
@@ -187,7 +185,7 @@ fn render_two_nodes_info(
     }
 }
 
-/// Zeigt Editor-Controls für eine einzelne Verbindung (Richtung, Priorität, Trennen).
+/// Zeigt Editor-Controls fuer eine einzelne Verbindung (Richtung, Prioritaet, Trennen).
 fn render_connection_editor(ui: &mut egui::Ui, conn: &Connection, events: &mut Vec<AppIntent>) {
     ui.group(|ui| {
         ui.label(format!("{}→{}", conn.start_id, conn.end_id));
@@ -197,25 +195,7 @@ fn render_connection_editor(ui: &mut egui::Ui, conn: &Connection, events: &mut V
         let end_id = conn.end_id;
 
         let mut selected_dir = current_dir;
-        egui::ComboBox::from_id_salt(format!("dir_{}_{}", start_id, end_id))
-            .selected_text(direction_label(selected_dir))
-            .show_ui(ui, |ui| {
-                ui.selectable_value(
-                    &mut selected_dir,
-                    ConnectionDirection::Regular,
-                    "Regular (Einbahn)",
-                );
-                ui.selectable_value(
-                    &mut selected_dir,
-                    ConnectionDirection::Dual,
-                    "Dual (Bidirektional)",
-                );
-                ui.selectable_value(
-                    &mut selected_dir,
-                    ConnectionDirection::Reverse,
-                    "Reverse (Rückwärts)",
-                );
-            });
+        render_direction_icon_selector(ui, &mut selected_dir, &format!("{}_{}", start_id, end_id));
 
         if selected_dir != current_dir {
             events.push(AppIntent::SetConnectionDirectionRequested {
@@ -227,20 +207,7 @@ fn render_connection_editor(ui: &mut egui::Ui, conn: &Connection, events: &mut V
 
         let current_prio = conn.priority;
         let mut selected_prio = current_prio;
-        egui::ComboBox::from_id_salt(format!("prio_{}_{}", start_id, end_id))
-            .selected_text(priority_label(selected_prio))
-            .show_ui(ui, |ui| {
-                ui.selectable_value(
-                    &mut selected_prio,
-                    ConnectionPriority::Regular,
-                    "Hauptstraße",
-                );
-                ui.selectable_value(
-                    &mut selected_prio,
-                    ConnectionPriority::SubPriority,
-                    "Nebenstraße",
-                );
-            });
+        render_priority_icon_selector(ui, &mut selected_prio, &format!("{}_{}", start_id, end_id));
 
         if selected_prio != current_prio {
             events.push(AppIntent::SetConnectionPriorityRequested {

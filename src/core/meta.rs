@@ -1,6 +1,6 @@
 //! Nicht-renderrelevante Metadaten aus der AutoDrive-XML-Konfiguration.
 
-/// Container für zusätzliche AutoDrive-Metadaten (Versions-Strings, Optionen).
+/// Container fuer zusaetzliche AutoDrive-Metadaten (Versions-Strings, Optionen).
 #[derive(Debug, Clone, Default)]
 pub struct AutoDriveMeta {
     /// Exakte Versionszeichenkette aus der XML (z.B. 3.0.0.4)

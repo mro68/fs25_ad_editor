@@ -147,10 +147,10 @@ fn test_click_window_larger_for_selected_nodes() {
     let increased_max_distance =
         base_max_distance * fs25_auto_drive_editor::shared::options::SELECTION_SIZE_FACTOR / 100.0;
 
-    // Wähle einen Punkt *zwischen* Basis- und erweitertem Radius.
+    // Waehle einen Punkt *zwischen* Basis- und erweitertem Radius.
     let between = (base_max_distance + increased_max_distance) / 2.0;
 
-    // Ohne bestehende Selektion: Klick außerhalb Basis-Radius wählt nicht.
+    // Ohne bestehende Selektion: Klick ausserhalb Basis-Radius waehlt nicht.
     controller
         .handle_intent(
             &mut state,
@@ -164,7 +164,7 @@ fn test_click_window_larger_for_selected_nodes() {
 
     assert!(state.selection.selected_node_ids.is_empty());
 
-    // Wenn Node bereits selektiert ist, ist das Click-Fenster größer — Click trifft.
+    // Wenn Node bereits selektiert ist, ist das Click-Fenster groesser — Click trifft.
     state.selection.ids_mut().insert(1);
 
     controller

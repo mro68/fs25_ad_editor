@@ -1,7 +1,7 @@
-//! Geteilte Typen für layer-übergreifende Verträge.
+//! Geteilte Typen fuer layer-uebergreifende Vertraege.
 //!
-//! Enthält Typen, die zwischen `app` und `render` geteilt werden,
-//! um direkte Abhängigkeiten zu vermeiden.
+//! Enthaelt Typen, die zwischen `app` und `render` geteilt werden,
+//! um direkte Abhaengigkeiten zu vermeiden.
 pub mod options;
 mod render_quality;
 mod render_scene;

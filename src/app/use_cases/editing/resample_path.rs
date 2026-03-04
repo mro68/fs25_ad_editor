@@ -14,25 +14,25 @@ use std::sync::Arc;
 /// Dichte der Catmull-Rom-Interpolation (Punkte je Segment).
 const SAMPLES_PER_SEGMENT: usize = 16;
 
-/// Externe Verbindung eines Ketten-Endpunkts (zu einem Node außerhalb der Kette).
+/// Externe Verbindung eines Ketten-Endpunkts (zu einem Node ausserhalb der Kette).
 struct ExternalConnection {
-    /// Node-ID außerhalb der Kette
+    /// Node-ID ausserhalb der Kette
     external_id: u64,
-    /// Richtung der ursprünglichen Verbindung
+    /// Richtung der urspruenglichen Verbindung
     direction: crate::core::ConnectionDirection,
-    /// Priorität der ursprünglichen Verbindung
+    /// Prioritaet der urspruenglichen Verbindung
     priority: crate::core::ConnectionPriority,
     /// true = Endpunkt war start_id, false = Endpunkt war end_id
     endpoint_is_start: bool,
-    /// true = gehört zum ersten Ketten-Endpunkt, false = zum letzten
+    /// true = gehoert zum ersten Ketten-Endpunkt, false = zum letzten
     is_first_endpoint: bool,
 }
 
 /// Ordnet die selektierten Nodes zu einer linearen Kette anhand der Verbindungen.
 ///
 /// Sucht einen Startpunkt (keine eingehenden Verbindungen von selektierten Nodes)
-/// und folgt dann den Verbindungen. Gibt `None` zurück wenn die Nodes keine
-/// vollständige lineare Kette bilden.
+/// und folgt dann den Verbindungen. Gibt `None` zurueck wenn die Nodes keine
+/// vollstaendige lineare Kette bilden.
 fn order_chain(node_ids: &IndexSet<u64>, road_map: &crate::core::RoadMap) -> Option<Vec<u64>> {
     // Startpunkt: Node ohne eingehende Verbindungen von selektierten Nodes
     let start = node_ids
@@ -55,7 +55,7 @@ fn order_chain(node_ids: &IndexSet<u64>, road_map: &crate::core::RoadMap) -> Opt
         path.push(current);
         visited.insert(current);
 
-        // Nächster Node: ausgehende Verbindung zu einem unbesuchten selektierten Node
+        // Naechster Node: ausgehende Verbindung zu einem unbesuchten selektierten Node
         let next = road_map
             .connections_iter()
             .find(|c| {
@@ -78,10 +78,10 @@ fn order_chain(node_ids: &IndexSet<u64>, road_map: &crate::core::RoadMap) -> Opt
     }
 }
 
-/// Verteilt die selektierten Nodes gleichmäßig entlang eines Catmull-Rom-Splines.
+/// Verteilt die selektierten Nodes gleichmaessig entlang eines Catmull-Rom-Splines.
 ///
 /// Liest die Konfiguration aus `state.ui.distanzen`:
-/// - `by_count = true`: exakt `count` Waypoints (gleichmäßig verteilt)
+/// - `by_count = true`: exakt `count` Waypoints (gleichmaessig verteilt)
 /// - `by_count = false`: Waypoints mit maximalem Abstand `distance` Welteinheiten
 ///
 /// Gibt eine Warnung aus (und bricht ab) wenn die selektierten Nodes keine
@@ -101,7 +101,7 @@ pub fn resample_selected_path(state: &mut AppState) {
     // Kette ordnen
     let selected = state.selection.selected_node_ids.clone();
     let Some(ordered) = order_chain(&selected, road_map_ref) else {
-        log::warn!("Distanzen: selektierte Nodes bilden keine vollständige lineare Kette");
+        log::warn!("Distanzen: selektierte Nodes bilden keine vollstaendige lineare Kette");
         return;
     };
 
@@ -142,7 +142,7 @@ pub fn resample_selected_path(state: &mut AppState) {
     };
 
     if new_positions.len() < 2 {
-        log::warn!("Distanzen: Resample-Ergebnis enthält zu wenige Punkte");
+        log::warn!("Distanzen: Resample-Ergebnis enthaelt zu wenige Punkte");
         return;
     }
 
@@ -153,7 +153,7 @@ pub fn resample_selected_path(state: &mut AppState) {
     let last_id = *ordered.last().unwrap();
     let chain_set: HashSet<u64> = ordered.iter().copied().collect();
 
-    // Externe Verbindungen der Endpunkte sichern (Verbindungen zu Nodes außerhalb der Kette)
+    // Externe Verbindungen der Endpunkte sichern (Verbindungen zu Nodes ausserhalb der Kette)
     let external_conns: Vec<ExternalConnection> = {
         let rm = state.road_map.as_ref().unwrap();
         let mut ext = Vec::new();

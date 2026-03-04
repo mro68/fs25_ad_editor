@@ -4,7 +4,7 @@ fn path_to_ui_string(path: &std::path::Path) -> String {
     path.to_string_lossy().into_owned()
 }
 
-/// Verarbeitet ausstehende Datei-Dialoge und gibt AppIntents zurück.
+/// Verarbeitet ausstehende Datei-Dialoge und gibt AppIntents zurueck.
 pub fn handle_file_dialogs(ui_state: &mut UiState) -> Vec<AppIntent> {
     let mut events = Vec::new();
 
@@ -68,7 +68,7 @@ pub fn handle_file_dialogs(ui_state: &mut UiState) -> Vec<AppIntent> {
         {
             let path_str = path_to_ui_string(&path);
             if path_str.to_lowercase().ends_with(".zip") {
-                // ZIP-Datei: Browser-Dialog öffnen
+                // ZIP-Datei: Browser-Dialog oeffnen
                 events.push(AppIntent::ZipBackgroundBrowseRequested { path: path_str });
             } else {
                 // Direktes Bild: wie bisher laden
@@ -80,7 +80,7 @@ pub fn handle_file_dialogs(ui_state: &mut UiState) -> Vec<AppIntent> {
         }
     }
 
-    // Übersichtskarten-ZIP-Dialog
+    // Uebersichtskarten-ZIP-Dialog
     if ui_state.show_overview_dialog {
         ui_state.show_overview_dialog = false;
 

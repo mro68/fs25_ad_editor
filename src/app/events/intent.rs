@@ -10,7 +10,7 @@ use crate::shared::RenderQuality;
 /// Intents sind Eingaben aus UI/System ohne direkte Mutationslogik.
 #[derive(Debug, Clone)]
 pub enum AppIntent {
-    /// Datei öffnen (zeigt Dateidialog)
+    /// Datei oeffnen (zeigt Dateidialog)
     OpenFileRequested,
     /// Datei speichern (unter aktuellem Pfad oder mit Dialog)
     SaveRequested,
@@ -18,23 +18,23 @@ pub enum AppIntent {
     SaveAsRequested,
     /// Anwendung beenden
     ExitRequested,
-    /// Heightmap-Auswahldialog öffnen
+    /// Heightmap-Auswahldialog oeffnen
     HeightmapSelectionRequested,
-    /// Background-Map-Auswahldialog öffnen
+    /// Background-Map-Auswahldialog oeffnen
     BackgroundMapSelectionRequested,
     /// Heightmap entfernen
     HeightmapCleared,
-    /// Heightmap-Warnung bestätigt (Speichern fortsetzen)
+    /// Heightmap-Warnung bestaetigt (Speichern fortsetzen)
     HeightmapWarningConfirmed,
     /// Heightmap-Warnung abgebrochen
     HeightmapWarningCancelled,
-    /// Kamera auf Standard zurücksetzen
+    /// Kamera auf Standard zuruecksetzen
     ResetCameraRequested,
     /// Stufenweise hineinzoomen
     ZoomInRequested,
     /// Stufenweise herauszoomen
     ZoomOutRequested,
-    /// Viewport-Größe hat sich geändert
+    /// Viewport-Groesse hat sich geaendert
     ViewportResized { size: [f32; 2] },
     /// Kamera um Delta verschieben (Welt-Einheiten)
     CameraPan { delta: glam::Vec2 },
@@ -73,15 +73,15 @@ pub enum AppIntent {
     /// Move-Lifecycle Ende: Drag-Verschieben abgeschlossen
     EndMoveSelectedNodesRequested,
 
-    /// Render-Qualitätsstufe ändern
+    /// Render-Qualitaetsstufe aendern
     RenderQualityChanged { quality: RenderQuality },
-    /// Datei wurde im Dialog ausgewählt (Laden)
+    /// Datei wurde im Dialog ausgewaehlt (Laden)
     FileSelected { path: String },
-    /// Speicherpfad wurde im Dialog ausgewählt
+    /// Speicherpfad wurde im Dialog ausgewaehlt
     SaveFilePathSelected { path: String },
-    /// Heightmap-Datei wurde im Dialog ausgewählt
+    /// Heightmap-Datei wurde im Dialog ausgewaehlt
     HeightmapSelected { path: String },
-    /// Background-Map auswählen
+    /// Background-Map auswaehlen
     BackgroundMapSelected {
         path: String,
         crop_size: Option<u32>,
@@ -90,16 +90,16 @@ pub enum AppIntent {
     ToggleBackgroundVisibility,
     /// Background-Ausdehnung skalieren (Faktor relativ, z.B. 2.0 = verdoppeln)
     ScaleBackground { factor: f32 },
-    /// Undo: Letzte Aktion rückgängig machen
+    /// Undo: Letzte Aktion rueckgaengig machen
     UndoRequested,
-    /// Redo: Rückgängig gemachte Aktion wiederherstellen
+    /// Redo: Rueckgaengig gemachte Aktion wiederherstellen
     RedoRequested,
 
     /// Editor-Werkzeug wechseln
     SetEditorToolRequested { tool: EditorTool },
-    /// Neuen Node an Weltposition hinzufügen
+    /// Neuen Node an Weltposition hinzufuegen
     AddNodeRequested { world_pos: glam::Vec2 },
-    /// Selektierte Nodes löschen
+    /// Selektierte Nodes loeschen
     DeleteSelectedRequested,
     /// Connect-Tool: Node angeklickt (Source oder Target)
     ConnectToolNodeClicked { world_pos: glam::Vec2 },
@@ -112,39 +112,39 @@ pub enum AppIntent {
     },
     /// Alle Verbindungen zwischen zwei Nodes entfernen
     RemoveConnectionBetweenRequested { node_a: u64, node_b: u64 },
-    /// Richtung einer Verbindung ändern
+    /// Richtung einer Verbindung aendern
     SetConnectionDirectionRequested {
         start_id: u64,
         end_id: u64,
         direction: ConnectionDirection,
     },
-    /// Priorität einer Verbindung ändern
+    /// Prioritaet einer Verbindung aendern
     SetConnectionPriorityRequested {
         start_id: u64,
         end_id: u64,
         priority: ConnectionPriority,
     },
-    /// Standard-Richtung für neue Verbindungen ändern
+    /// Standard-Richtung fuer neue Verbindungen aendern
     SetDefaultDirectionRequested { direction: ConnectionDirection },
-    /// Standard-Straßenart für neue Verbindungen ändern
+    /// Standard-Strassenart fuer neue Verbindungen aendern
     SetDefaultPriorityRequested { priority: ConnectionPriority },
-    /// Richtung aller Verbindungen zwischen selektierten Nodes ändern
+    /// Richtung aller Verbindungen zwischen selektierten Nodes aendern
     SetAllConnectionsDirectionBetweenSelectedRequested { direction: ConnectionDirection },
     /// Alle Verbindungen zwischen selektierten Nodes trennen
     RemoveAllConnectionsBetweenSelectedRequested,
     /// Richtung aller Verbindungen zwischen selektierten Nodes invertieren (start↔end tauschen)
     InvertAllConnectionsBetweenSelectedRequested,
-    /// Priorität aller Verbindungen zwischen selektierten Nodes ändern
+    /// Prioritaet aller Verbindungen zwischen selektierten Nodes aendern
     SetAllConnectionsPriorityBetweenSelectedRequested { priority: ConnectionPriority },
-    /// Zwei selektierte Nodes verbinden (mit Standard-Richtung/Priorität)
+    /// Zwei selektierte Nodes verbinden (mit Standard-Richtung/Prioritaet)
     ConnectSelectedNodesRequested,
-    /// Map-Marker für einen Node erstellen
+    /// Map-Marker fuer einen Node erstellen
     CreateMarkerRequested { node_id: u64 },
-    /// Map-Marker für einen Node entfernen
+    /// Map-Marker fuer einen Node entfernen
     RemoveMarkerRequested { node_id: u64 },
-    /// Map-Marker bearbeiten (Dialog öffnen)
+    /// Map-Marker bearbeiten (Dialog oeffnen)
     EditMarkerRequested { node_id: u64 },
-    /// Marker-Dialog bestätigt (erstellen oder aktualisieren)
+    /// Marker-Dialog bestaetigt (erstellen oder aktualisieren)
     MarkerDialogConfirmed {
         node_id: u64,
         name: String,
@@ -158,36 +158,36 @@ pub enum AppIntent {
     ClearSelectionRequested,
     /// Alle Nodes selektieren
     SelectAllRequested,
-    /// Duplikat-Bereinigung bestätigt
+    /// Duplikat-Bereinigung bestaetigt
     DeduplicateConfirmed,
     /// Duplikat-Bereinigung abgelehnt
     DeduplicateCancelled,
-    /// Options-Dialog öffnen
+    /// Options-Dialog oeffnen
     OpenOptionsDialogRequested,
-    /// Options-Dialog schließen
+    /// Options-Dialog schliessen
     CloseOptionsDialogRequested,
-    /// Optionen wurden geändert (sofortige Anwendung)
+    /// Optionen wurden geaendert (sofortige Anwendung)
     OptionsChanged { options: EditorOptions },
-    /// Optionen auf Standardwerte zurücksetzen
+    /// Optionen auf Standardwerte zuruecksetzen
     ResetOptionsRequested,
 
     /// Route-Tool: Viewport-Klick
     RouteToolClicked { world_pos: glam::Vec2, ctrl: bool },
-    /// Route-Tool: Ausführung bestätigt (Enter)
+    /// Route-Tool: Ausfuehrung bestaetigt (Enter)
     RouteToolExecuteRequested,
     /// Route-Tool: Abbrechen (Escape)
     RouteToolCancelled,
-    /// Route-Tool auswählen (per Index im ToolManager)
+    /// Route-Tool auswaehlen (per Index im ToolManager)
     SelectRouteToolRequested { index: usize },
-    /// Route-Tool mit vordefinierten Start/End-Nodes aktivieren (Kontextmenü bei 2 selektierten Nodes)
+    /// Route-Tool mit vordefinierten Start/End-Nodes aktivieren (Kontextmenue bei 2 selektierten Nodes)
     RouteToolWithAnchorsRequested {
         index: usize,
         start_node_id: u64,
         end_node_id: u64,
     },
-    /// Route-Tool: Konfiguration geändert (Distanz/Anzahl) → Strecke neu berechnen
+    /// Route-Tool: Konfiguration geaendert (Distanz/Anzahl) → Strecke neu berechnen
     RouteToolConfigChanged,
-    /// Route-Tool: Tangenten-Auswahl aus dem Kontextmenü ändern
+    /// Route-Tool: Tangenten-Auswahl aus dem Kontextmenue aendern
     RouteToolTangentSelected {
         start: TangentSource,
         end: TangentSource,
@@ -199,48 +199,48 @@ pub enum AppIntent {
     RouteToolDragUpdated { world_pos: glam::Vec2 },
     /// Route-Tool: Drag beendet (Punkt loslassen)
     RouteToolDragEnded,
-    /// Segment nachträglich bearbeiten (Nodes löschen + Tool laden)
+    /// Segment nachtraeglich bearbeiten (Nodes loeschen + Tool laden)
     EditSegmentRequested { record_id: u64 },
-    /// ZIP-Datei wurde als Background-Map gewählt → Browser öffnen
+    /// ZIP-Datei wurde als Background-Map gewaehlt → Browser oeffnen
     ZipBackgroundBrowseRequested { path: String },
-    /// Bilddatei aus ZIP-Browser gewählt
+    /// Bilddatei aus ZIP-Browser gewaehlt
     ZipBackgroundFileSelected {
         zip_path: String,
         entry_name: String,
     },
     /// ZIP-Browser geschlossen (ohne Auswahl)
     ZipBrowserCancelled,
-    /// Übersichtskarte aus Map-Mod-ZIP generieren (öffnet Dateidialog)
+    /// Uebersichtskarte aus Map-Mod-ZIP generieren (oeffnet Dateidialog)
     GenerateOverviewRequested,
-    /// ZIP für Übersichtskarte gewählt → Options-Dialog anzeigen
+    /// ZIP fuer Uebersichtskarte gewaehlt → Options-Dialog anzeigen
     GenerateOverviewFromZip { path: String },
-    /// Übersichtskarten-Options-Dialog bestätigt (generieren)
+    /// Uebersichtskarten-Options-Dialog bestaetigt (generieren)
     OverviewOptionsConfirmed,
-    /// Übersichtskarten-Options-Dialog abgebrochen
+    /// Uebersichtskarten-Options-Dialog abgebrochen
     OverviewOptionsCancelled,
-    /// Post-Load-Dialog: Übersichtskarte generieren (ZIP-Pfad ausgewählt)
+    /// Post-Load-Dialog: Uebersichtskarte generieren (ZIP-Pfad ausgewaehlt)
     PostLoadGenerateOverview { zip_path: String },
     /// Post-Load-Dialog: geschlossen ohne Aktion
     PostLoadDialogDismissed,
-    /// Benutzer hat bestätigt: Background als overview.jpg speichern
+    /// Benutzer hat bestaetigt: Background als overview.jpg speichern
     SaveBackgroundAsOverviewConfirmed,
     /// Benutzer hat abgelehnt: overview.jpg nicht speichern
     SaveBackgroundAsOverviewDismissed,
-    /// Selektierte Nodes-Kette als gleichmäßig verteilte Wegpunkte neu berechnen (Distanzen)
+    /// Selektierte Nodes-Kette als gleichmaessig verteilte Wegpunkte neu berechnen (Distanzen)
     ResamplePathRequested,
-    /// Streckenteilung-Panel aktivieren (z.B. per Kontextmenü)
+    /// Streckenteilung-Panel aktivieren (z.B. per Kontextmenue)
     StreckenteilungAktivieren,
     /// Alles in den Viewport einpassen (Zoom-to-fit)
     ZoomToFitRequested,
-    /// Auswahl invertieren (selektierte abwählen, nicht-selektierte wählen)
+    /// Auswahl invertieren (selektierte abwaehlen, nicht-selektierte waehlen)
     InvertSelectionRequested,
-    /// Route-Tool: Strecke neu berechnen mit aktuellem Config (nach Parameter-Änderung)
+    /// Route-Tool: Strecke neu berechnen mit aktuellem Config (nach Parameter-Aenderung)
     RouteToolRecreateRequested,
-    /// Route-Tool: Node-Anzahl erhöhen (Pfeiltaste oben)
+    /// Route-Tool: Node-Anzahl erhoehen (Pfeiltaste oben)
     IncreaseRouteToolNodeCount,
     /// Route-Tool: Node-Anzahl verringern (Pfeiltaste unten)
     DecreaseRouteToolNodeCount,
-    /// Route-Tool: Minimalabstand um 0.25m erhöhen (Pfeiltaste rechts)
+    /// Route-Tool: Minimalabstand um 0.25m erhoehen (Pfeiltaste rechts)
     IncreaseRouteToolSegmentLength,
     /// Route-Tool: Minimalabstand um 0.25m verringern (Pfeiltaste links)
     DecreaseRouteToolSegmentLength,

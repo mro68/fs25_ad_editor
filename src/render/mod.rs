@@ -39,7 +39,7 @@ fn compute_background_opacity(zoom: f32, opts: &EditorOptions) -> f32 {
     }
 }
 
-/// Haupt-Renderer für AutoDrive-Daten.
+/// Haupt-Renderer fuer AutoDrive-Daten.
 ///
 /// Dieser Renderer verwaltet seinen eigenen Zustand (GPU-Buffer, Pipeline)
 /// und bietet eine saubere API: `new()` + `render_scene()` + `set_background()`.
@@ -89,7 +89,7 @@ impl Renderer {
             scene.has_map()
         );
 
-        // Gemeinsamer Kontext für alle Sub-Renderer
+        // Gemeinsamer Kontext fuer alle Sub-Renderer
         let ctx = RenderContext {
             device,
             queue,
@@ -120,7 +120,7 @@ impl Renderer {
                     .render(&ctx, render_pass, road_map, scene.render_quality);
             }
 
-            // 3. Render Connections (darüber)
+            // 3. Render Connections (darueber)
             self.connection_renderer.render(&ctx, render_pass, road_map);
 
             // 4. Render Nodes (zuoberst)
@@ -133,7 +133,7 @@ impl Renderer {
                 render_pass,
                 road_map,
                 scene.render_quality,
-                &scene.selected_node_ids, // jetzt &HashSet<u64>, kein Re-collect nötig
+                &scene.selected_node_ids, // jetzt &HashSet<u64>, kein Re-collect noetig
             );
         } else {
             log::debug!("No road_map to render");

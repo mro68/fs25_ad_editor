@@ -312,7 +312,7 @@ fn test_add_connection_rejects_duplicate() {
         )
         .unwrap();
 
-    // Keine neue Connection hinzugefügt
+    // Keine neue Connection hinzugefuegt
     assert_eq!(
         state.road_map.as_ref().unwrap().connection_count(),
         before_conns
@@ -544,7 +544,7 @@ fn test_connect_tool_flow() {
         .unwrap()
         .find_connection(2, 3)
         .is_some());
-    // Source zurückgesetzt
+    // Source zurueckgesetzt
     assert_eq!(state.editor.connect_source_node, None);
 }
 
@@ -555,7 +555,7 @@ fn test_full_editing_workflow() {
     state.road_map = Some(Arc::new(RoadMap::new(3)));
     state.view.viewport_size = [1280.0, 720.0];
 
-    // Node A hinzufügen
+    // Node A hinzufuegen
     controller
         .handle_intent(
             &mut state,
@@ -566,7 +566,7 @@ fn test_full_editing_workflow() {
         .unwrap();
     let id_a = *state.selection.selected_node_ids.iter().next().unwrap();
 
-    // Node B hinzufügen
+    // Node B hinzufuegen
     controller
         .handle_intent(
             &mut state,
@@ -594,7 +594,7 @@ fn test_full_editing_workflow() {
 
     assert_eq!(state.road_map.as_ref().unwrap().connection_count(), 1);
 
-    // Richtung ändern auf Reverse
+    // Richtung aendern auf Reverse
     controller
         .handle_intent(
             &mut state,
@@ -630,7 +630,7 @@ fn test_full_editing_workflow() {
 
     assert_eq!(state.road_map.as_ref().unwrap().connection_count(), 0);
 
-    // Node B löschen
+    // Node B loeschen
     state.selection.ids_mut().clear();
     state.selection.ids_mut().insert(id_b);
     controller

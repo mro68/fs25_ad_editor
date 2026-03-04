@@ -1,4 +1,4 @@
-//! Use-Case: Verbindungen erstellen (direkt und über Connect-Tool).
+//! Use-Case: Verbindungen erstellen (direkt und ueber Connect-Tool).
 
 use crate::app::AppState;
 use crate::core::{Connection, ConnectionDirection, ConnectionPriority};
@@ -23,10 +23,10 @@ pub fn add_connection(
         return;
     };
 
-    // Prüfe ob beide Nodes existieren
+    // Pruefe ob beide Nodes existieren
     if !road_map_arc.nodes.contains_key(&from_id) || !road_map_arc.nodes.contains_key(&to_id) {
         log::warn!(
-            "Verbindung nicht möglich: Node {} oder {} existiert nicht",
+            "Verbindung nicht moeglich: Node {} oder {} existiert nicht",
             from_id,
             to_id
         );
@@ -43,7 +43,7 @@ pub fn add_connection(
     state.record_undo_snapshot();
 
     let Some(road_map_arc) = state.road_map.as_mut() else {
-        log::warn!("Verbindung nicht möglich: keine RoadMap geladen");
+        log::warn!("Verbindung nicht moeglich: keine RoadMap geladen");
         return;
     };
     let road_map = Arc::make_mut(road_map_arc);
@@ -64,10 +64,10 @@ pub fn add_connection(
     );
 }
 
-/// Connect-Tool: Nächsten Node an Weltposition picken.
+/// Connect-Tool: Naechsten Node an Weltposition picken.
 ///
 /// Beim ersten Klick wird der Source-Node gesetzt.
-/// Beim zweiten Klick wird die Verbindung erstellt und der Source zurückgesetzt.
+/// Beim zweiten Klick wird die Verbindung erstellt und der Source zurueckgesetzt.
 pub fn connect_tool_pick_node(state: &mut AppState, world_pos: glam::Vec2, max_distance: f32) {
     let Some(road_map) = state.road_map.as_deref() else {
         return;
@@ -79,9 +79,9 @@ pub fn connect_tool_pick_node(state: &mut AppState, world_pos: glam::Vec2, max_d
         .map(|hit| hit.node_id);
 
     let Some(node_id) = hit else {
-        // Kein Node getroffen — Source zurücksetzen
+        // Kein Node getroffen — Source zuruecksetzen
         state.editor.connect_source_node = None;
-        log::debug!("Connect-Tool: kein Node gefunden, Source zurückgesetzt");
+        log::debug!("Connect-Tool: kein Node gefunden, Source zurueckgesetzt");
         return;
     };
 
@@ -97,6 +97,6 @@ pub fn connect_tool_pick_node(state: &mut AppState, world_pos: glam::Vec2, max_d
         state.selection.ids_mut().clear();
         state.selection.ids_mut().insert(node_id);
         state.selection.selection_anchor_node_id = Some(node_id);
-        log::info!("Connect-Tool: Startknoten {} gewählt", node_id);
+        log::info!("Connect-Tool: Startknoten {} gewaehlt", node_id);
     }
 }

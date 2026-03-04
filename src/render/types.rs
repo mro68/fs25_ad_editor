@@ -7,26 +7,26 @@ use glam::Mat4;
 
 pub use crate::shared::RenderQuality;
 
-/// Gemeinsamer Kontext für alle Sub-Renderer.
+/// Gemeinsamer Kontext fuer alle Sub-Renderer.
 ///
-/// Bündelt die GPU-Ressourcen und View-Parameter, die jeder
-/// Sub-Renderer bei jedem Frame benötigt.
+/// Buendelt die GPU-Ressourcen und View-Parameter, die jeder
+/// Sub-Renderer bei jedem Frame benoetigt.
 pub(crate) struct RenderContext<'a> {
-    /// wgpu Device für Buffer-Allokation
+    /// wgpu Device fuer Buffer-Allokation
     pub device: &'a eframe::wgpu::Device,
-    /// wgpu Queue für Buffer-Uploads
+    /// wgpu Queue fuer Buffer-Uploads
     pub queue: &'a eframe::wgpu::Queue,
     /// Kamera (Position + Zoom)
     pub camera: &'a Camera2D,
-    /// Viewport-Größe in Pixeln [width, height]
+    /// Viewport-Groesse in Pixeln [width, height]
     pub viewport_size: [f32; 2],
-    /// Editor-Optionen (Farben, Größen, etc.)
+    /// Editor-Optionen (Farben, Groessen, etc.)
     pub options: &'a EditorOptions,
     /// Node-IDs, die in diesem Frame ausgeblendet werden sollen
     pub hidden_node_ids: &'a indexmap::IndexSet<u64>,
 }
 
-/// Vertex für ein Quad (2D-Rechteck)
+/// Vertex fuer ein Quad (2D-Rechteck)
 #[repr(C)]
 #[derive(Copy, Clone, Debug, Pod, Zeroable)]
 pub struct Vertex {
@@ -35,7 +35,7 @@ pub struct Vertex {
 }
 
 impl Vertex {
-    /// Beschreibt das Vertex-Layout für wgpu.
+    /// Beschreibt das Vertex-Layout fuer wgpu.
     pub const fn desc() -> eframe::wgpu::VertexBufferLayout<'static> {
         eframe::wgpu::VertexBufferLayout {
             array_stride: std::mem::size_of::<Vertex>() as eframe::wgpu::BufferAddress,
@@ -49,7 +49,7 @@ impl Vertex {
     }
 }
 
-/// Vertex für Connection-Geometrie (Linien + Pfeile).
+/// Vertex fuer Connection-Geometrie (Linien + Pfeile).
 #[repr(C)]
 #[derive(Copy, Clone, Debug, Pod, Zeroable)]
 pub struct ConnectionVertex {
@@ -65,7 +65,7 @@ impl ConnectionVertex {
         Self { position, color }
     }
 
-    /// Beschreibt das Vertex-Layout für wgpu.
+    /// Beschreibt das Vertex-Layout fuer wgpu.
     pub const fn desc() -> eframe::wgpu::VertexBufferLayout<'static> {
         eframe::wgpu::VertexBufferLayout {
             array_stride: std::mem::size_of::<ConnectionVertex>() as eframe::wgpu::BufferAddress,
@@ -86,7 +86,7 @@ impl ConnectionVertex {
     }
 }
 
-/// Instanz-Daten für einen Node
+/// Instanz-Daten fuer einen Node
 #[repr(C)]
 #[derive(Copy, Clone, Debug, Pod, Zeroable)]
 pub struct NodeInstance {
@@ -94,9 +94,9 @@ pub struct NodeInstance {
     pub position: [f32; 2],
     /// Basis-Farbe (Mitte des Nodes)
     pub base_color: [f32; 4],
-    /// Rand-Farbe (Außenring / Markierung)
+    /// Rand-Farbe (Aussenring / Markierung)
     pub rim_color: [f32; 4],
-    /// Größe des Nodes in Welteinheiten
+    /// Groesse des Nodes in Welteinheiten
     pub size: f32,
     /// Padding fuer 16-Byte-Ausrichtung im GPU-Bufferlayout.
     _padding: [f32; 1],
@@ -114,7 +114,7 @@ impl NodeInstance {
         }
     }
 
-    /// Beschreibt das Instanz-Layout für wgpu (NodeInstance).
+    /// Beschreibt das Instanz-Layout fuer wgpu (NodeInstance).
     pub const fn desc() -> eframe::wgpu::VertexBufferLayout<'static> {
         eframe::wgpu::VertexBufferLayout {
             array_stride: std::mem::size_of::<NodeInstance>() as eframe::wgpu::BufferAddress,
@@ -145,17 +145,17 @@ impl NodeInstance {
     }
 }
 
-/// Instanz-Daten für einen Map-Marker (Pin-Symbol)
+/// Instanz-Daten fuer einen Map-Marker (Pin-Symbol)
 #[repr(C)]
 #[derive(Copy, Clone, Debug, Pod, Zeroable)]
 pub struct MarkerInstance {
     /// Position im 2D-Raum (Weltkoordinaten)
     pub position: [f32; 2],
-    /// Füllfarbe des Markers
+    /// Fuellfarbe des Markers
     pub color: [f32; 4],
     /// Outline-Farbe des Markers
     pub outline_color: [f32; 4],
-    /// Größe des Markers in Welteinheiten
+    /// Groesse des Markers in Welteinheiten
     pub size: f32,
     /// Padding fuer 16-Byte-Ausrichtung im GPU-Bufferlayout.
     _padding: [f32; 1],
@@ -204,7 +204,7 @@ impl MarkerInstance {
     }
 }
 
-/// Uniform-Buffer für View-Projektion
+/// Uniform-Buffer fuer View-Projektion
 #[repr(C)]
 #[derive(Copy, Clone, Debug, Pod, Zeroable)]
 pub struct Uniforms {
@@ -214,10 +214,10 @@ pub struct Uniforms {
     pub aa_params: [f32; 4],
 }
 
-/// Berechnet die sichtbare Welt-AABB (mit Padding) für Viewport-Culling.
+/// Berechnet die sichtbare Welt-AABB (mit Padding) fuer Viewport-Culling.
 ///
-/// Gibt `(min, max)` in Weltkoordinaten zurück. Das Padding entspricht 8 Pixeln
-/// in Welteinheiten und verhindert Flackern an den Viewport-Rändern.
+/// Gibt `(min, max)` in Weltkoordinaten zurueck. Das Padding entspricht 8 Pixeln
+/// in Welteinheiten und verhindert Flackern an den Viewport-Raendern.
 pub(crate) fn compute_visible_rect(ctx: &RenderContext) -> (glam::Vec2, glam::Vec2) {
     use crate::Camera2D;
     let viewport_width = ctx.viewport_size[0];
@@ -239,7 +239,7 @@ pub(crate) fn compute_visible_rect(ctx: &RenderContext) -> (glam::Vec2, glam::Ve
     (min, max)
 }
 
-/// Berechnet die View-Projection-Matrix für den 2D-Viewport.
+/// Berechnet die View-Projection-Matrix fuer den 2D-Viewport.
 pub(crate) fn build_view_projection(camera: &Camera2D, viewport_size: [f32; 2]) -> Mat4 {
     let view_matrix = camera.view_matrix();
     let aspect = viewport_size[0] / viewport_size[1];

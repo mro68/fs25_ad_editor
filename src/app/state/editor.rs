@@ -19,11 +19,11 @@ pub enum EditorTool {
 pub struct EditorToolState {
     /// Aktives Werkzeug
     pub active_tool: EditorTool,
-    /// Quell-Node für Connect-Tool (wartet auf Ziel)
+    /// Quell-Node fuer Connect-Tool (wartet auf Ziel)
     pub connect_source_node: Option<u64>,
-    /// Standard-Richtung für neue Verbindungen
+    /// Standard-Richtung fuer neue Verbindungen
     pub default_direction: ConnectionDirection,
-    /// Standard-Straßenart für neue Verbindungen
+    /// Standard-Strassenart fuer neue Verbindungen
     pub default_priority: ConnectionPriority,
     /// Route-Tool-Manager (Linie, Parkplatz, Kurve, …)
     pub tool_manager: ToolManager,

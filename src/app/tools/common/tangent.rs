@@ -1,4 +1,4 @@
-//! Tangenten-Zustand und UI-Baustein für Curve- und Spline-Tool.
+//! Tangenten-Zustand und UI-Baustein fuer Curve- und Spline-Tool.
 
 use super::geometry::angle_to_compass;
 use crate::core::ConnectedNeighbor;
@@ -15,9 +15,9 @@ pub enum TangentSource {
     Connection { neighbor_id: u64, angle: f32 },
 }
 
-/// Rendert eine Tangenten-ComboBox und gibt `true` zurück wenn die Auswahl geändert wurde.
+/// Rendert eine Tangenten-ComboBox und gibt `true` zurueck wenn die Auswahl geaendert wurde.
 ///
-/// Gemeinsamer UI-Baustein für Curve- und Spline-Tool.
+/// Gemeinsamer UI-Baustein fuer Curve- und Spline-Tool.
 pub fn render_tangent_combo(
     ui: &mut egui::Ui,
     id_salt: &str,
@@ -58,40 +58,40 @@ pub fn render_tangent_combo(
     *current != old
 }
 
-/// Reine Daten für das Tangenten-Kontextmenü (kein UI).
+/// Reine Daten fuer das Tangenten-Kontextmenue (kein UI).
 ///
 /// Wird vom RouteTool-Trait via `tangent_menu_data()` geliefert,
 /// damit der zentrale Context-Menu-Router die Tangenten-Auswahl
 /// in einem einzigen `response.context_menu()`-Aufruf rendern kann.
 #[derive(Debug, Clone)]
 pub struct TangentMenuData {
-    /// Aufbereitete Optionen für Start-Tangente: (TangentSource, Label)
+    /// Aufbereitete Optionen fuer Start-Tangente: (TangentSource, Label)
     pub start_options: Vec<(TangentSource, String)>,
-    /// Aufbereitete Optionen für End-Tangente: (TangentSource, Label)
+    /// Aufbereitete Optionen fuer End-Tangente: (TangentSource, Label)
     pub end_options: Vec<(TangentSource, String)>,
-    /// Aktuell gewählte Start-Tangente
+    /// Aktuell gewaehlte Start-Tangente
     pub current_start: TangentSource,
-    /// Aktuell gewählte End-Tangente
+    /// Aktuell gewaehlte End-Tangente
     pub current_end: TangentSource,
 }
 
-/// Gemeinsamer Tangenten-Zustand für Curve- und Spline-Tool.
+/// Gemeinsamer Tangenten-Zustand fuer Curve- und Spline-Tool.
 ///
 /// Kapselt die 6 Tangenten-Felder, die beide Tools identisch teilen,
-/// und bietet Hilfsmethoden für häufige Operationen.
+/// und bietet Hilfsmethoden fuer haeufige Operationen.
 #[derive(Debug, Clone)]
 pub struct TangentState {
-    /// Gewählte Tangente am Startpunkt
+    /// Gewaehlte Tangente am Startpunkt
     pub tangent_start: TangentSource,
-    /// Gewählte Tangente am Endpunkt
+    /// Gewaehlte Tangente am Endpunkt
     pub tangent_end: TangentSource,
-    /// Verfügbare Nachbarn am Startpunkt (Cache, wird beim Snap befüllt)
+    /// Verfuegbare Nachbarn am Startpunkt (Cache, wird beim Snap befuellt)
     pub start_neighbors: Vec<ConnectedNeighbor>,
-    /// Verfügbare Nachbarn am Endpunkt (Cache, wird beim Snap befüllt)
+    /// Verfuegbare Nachbarn am Endpunkt (Cache, wird beim Snap befuellt)
     pub end_neighbors: Vec<ConnectedNeighbor>,
-    /// Tangente Start der letzten Erstellung (für Recreation)
+    /// Tangente Start der letzten Erstellung (fuer Recreation)
     pub last_tangent_start: TangentSource,
-    /// Tangente Ende der letzten Erstellung (für Recreation)
+    /// Tangente Ende der letzten Erstellung (fuer Recreation)
     pub last_tangent_end: TangentSource,
 }
 
@@ -108,21 +108,21 @@ impl TangentState {
         }
     }
 
-    /// Setzt nur die gewählten Tangenten auf `None` zurück; der Nachbarn-Cache bleibt erhalten.
+    /// Setzt nur die gewaehlten Tangenten auf `None` zurueck; der Nachbarn-Cache bleibt erhalten.
     ///
     /// **Wann benutzen:** Bei Verkettung (Chaining) — die Nachbarn des neuen Startpunkts
-    /// werden erst nach dem nächsten Snap befüllt, daher den Cache nicht unnötig löschen.
+    /// werden erst nach dem naechsten Snap befuellt, daher den Cache nicht unnoetig loeschen.
     /// Wird in `on_click()` aufgerufen, bevor der neue Start-Snap ausgewertet wird.
     pub fn reset_tangents(&mut self) {
         self.tangent_start = TangentSource::None;
         self.tangent_end = TangentSource::None;
     }
 
-    /// Setzt Tangenten **und** Nachbarn-Cache vollständig zurück.
+    /// Setzt Tangenten **und** Nachbarn-Cache vollstaendig zurueck.
     ///
-    /// **Wann benutzen:** Beim vollständigen Tool-Reset (Escape, neues Werkzeug wählen
-    /// oder `execute()` ohne Verkettung) — nach dem Reset ist der Cache ungültig,
-    /// da der nächste Snap an einem anderen Node landen kann.
+    /// **Wann benutzen:** Beim vollstaendigen Tool-Reset (Escape, neues Werkzeug waehlen
+    /// oder `execute()` ohne Verkettung) — nach dem Reset ist der Cache ungueltig,
+    /// da der naechste Snap an einem anderen Node landen kann.
     pub fn reset_all(&mut self) {
         self.tangent_start = TangentSource::None;
         self.tangent_end = TangentSource::None;
@@ -130,7 +130,7 @@ impl TangentState {
         self.end_neighbors.clear();
     }
 
-    /// Speichert die aktuellen Tangenten in den `last_*`-Feldern (für Recreation).
+    /// Speichert die aktuellen Tangenten in den `last_*`-Feldern (fuer Recreation).
     pub fn save_for_recreate(&mut self) {
         self.last_tangent_start = self.tangent_start;
         self.last_tangent_end = self.tangent_end;

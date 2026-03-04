@@ -4,7 +4,7 @@ use super::{screen_pos_to_world, InputState, PrimaryDragMode, ViewportContext};
 use crate::app::AppIntent;
 
 impl InputState {
-    /// Verarbeitet Maus-Bewegungs-Deltas für Kamera-Pan und Selektion-Move.
+    /// Verarbeitet Maus-Bewegungs-Deltas fuer Kamera-Pan und Selektion-Move.
     pub(crate) fn handle_pointer_delta(
         &mut self,
         ctx: &ViewportContext,
@@ -18,7 +18,7 @@ impl InputState {
         let wpp = ctx.camera.world_per_pixel(ctx.viewport_size[1]);
 
         if self.drag_selection.is_some() {
-            // Während Drag-Selektion keine Pan/Move-Events senden.
+            // Waehrend Drag-Selektion keine Pan/Move-Events senden.
         } else if ctx.response.dragged_by(egui::PointerButton::Primary) {
             match self.primary_drag_mode {
                 PrimaryDragMode::SelectionMove if !ctx.selected_node_ids.is_empty() => {

@@ -1,4 +1,4 @@
-//! State-Definitionen und Hilfsmethoden für das Catmull-Rom-Spline-Tool.
+//! State-Definitionen und Hilfsmethoden fuer das Catmull-Rom-Spline-Tool.
 
 use super::super::common::{self, SegmentConfig, TangentSource, TangentState, ToolLifecycleState};
 use super::super::{ToolAnchor, ToolResult};
@@ -8,13 +8,13 @@ use glam::Vec2;
 
 /// Zwischenpunkte pro Catmull-Rom-Segment beim Dicht-Sampling.
 ///
-/// 16 reicht für eine flüssige Preview und genaue Längenberechnung;
-/// doppelt so viele (32) liefern keinen sichtbaren Qualitätsunterschied.
+/// 16 reicht fuer eine fluessige Preview und genaue Laengenberechnung;
+/// doppelt so viele (32) liefern keinen sichtbaren Qualitaetsunterschied.
 const SPLINE_SAMPLES_PER_SEGMENT: usize = 16;
 
 /// Spline-Tool: Interpolierender Catmull-Rom-Spline durch geklickte Punkte.
 pub struct SplineTool {
-    /// Alle bestätigten Kontrollpunkte (geklickt)
+    /// Alle bestaetigten Kontrollpunkte (geklickt)
     pub(crate) anchors: Vec<ToolAnchor>,
     /// Segment-Konfiguration (Abstand / Node-Anzahl)
     pub(crate) seg: SegmentConfig,
@@ -22,7 +22,7 @@ pub struct SplineTool {
     pub priority: ConnectionPriority,
     /// Gemeinsamer Lifecycle-Zustand (IDs, Endpunkt-Anker, Recreate-Flag, Snap-Radius)
     pub(crate) lifecycle: ToolLifecycleState,
-    /// Anker der letzten Erstellung (für Nachbearbeitung)
+    /// Anker der letzten Erstellung (fuer Nachbearbeitung)
     pub(crate) last_anchors: Vec<ToolAnchor>,
     /// Tangenten-Zustand (Start/Ende, Nachbarn-Cache, Recreation-Kopien)
     pub(crate) tangents: TangentState,
@@ -36,13 +36,13 @@ impl SplineTool {
             seg: SegmentConfig::new(2.0),
             direction: ConnectionDirection::Dual,
             priority: ConnectionPriority::Regular,
-            lifecycle: ToolLifecycleState::new(3.0), // Default, wird vom Handler überschrieben
+            lifecycle: ToolLifecycleState::new(3.0), // Default, wird vom Handler ueberschrieben
             last_anchors: Vec::new(),
             tangents: TangentState::new(),
         }
     }
 
-    /// Iteriert über die Positionen aller Anker.
+    /// Iteriert ueber die Positionen aller Anker.
     pub(crate) fn anchor_positions(&self) -> impl Iterator<Item = Vec2> + '_ {
         self.anchors.iter().map(|a| a.position())
     }
@@ -51,12 +51,12 @@ impl SplineTool {
     ///
     /// Der Phantom-Punkt liegt in der Gegenrichtung der Verbindung zum Nachbar,
     /// im gleichen Abstand wie `anchor_pos` → `neighbor_pos`.
-    /// Wird als virtueller p0/p3-Punkt in Catmull-Rom übergeben, um die Kurve
+    /// Wird als virtueller p0/p3-Punkt in Catmull-Rom uebergeben, um die Kurve
     /// am Rand tangential an einer bestehenden Verbindung auszurichten.
     ///
     /// - `anchor_pos`: Start- oder Endpunkt des Splines
     /// - `tangent_angle`: Winkel der Verbindung vom Anchor-Node zum Nachbar-Node (Radiant)
-    /// - `neighbor_pos`: Weltposition des nächsten Spline-Kontrollpunkts (für Abstandsschätzung)
+    /// - `neighbor_pos`: Weltposition des naechsten Spline-Kontrollpunkts (fuer Abstandsschaetzung)
     pub(crate) fn phantom_from_tangent(
         anchor_pos: Vec2,
         tangent_angle: f32,
@@ -67,9 +67,9 @@ impl SplineTool {
         anchor_pos + dir * dist
     }
 
-    /// Berechnet optionale Phantom-Punkte für Start und Ende des Splines.
+    /// Berechnet optionale Phantom-Punkte fuer Start und Ende des Splines.
     ///
-    /// Gibt `(start_phantom, end_phantom)` zurück — `None` bedeutet Standard-Spiegelung.
+    /// Gibt `(start_phantom, end_phantom)` zurueck — `None` bedeutet Standard-Spiegelung.
     pub(crate) fn compute_phantoms(
         points: &[Vec2],
         tangent_start: TangentSource,
@@ -122,25 +122,25 @@ impl SplineTool {
         )
     }
 
-    /// Berechnet die verteilt gesampelten Positionen (für Nodes).
+    /// Berechnet die verteilt gesampelten Positionen (fuer Nodes).
     pub(crate) fn compute_resampled(&self, extra_cursor: Option<Vec2>) -> Vec<Vec2> {
         let dense = self.compute_dense_polyline(extra_cursor);
         resample_by_distance(&dense, self.seg.max_segment_length)
     }
 
-    /// Spline-Länge über aktuelle Anker.
+    /// Spline-Laenge ueber aktuelle Anker.
     pub(crate) fn spline_length(&self) -> f32 {
         let dense = self.compute_dense_polyline(None);
         polyline_length(&dense)
     }
 
-    /// Synchronisiert den jeweils abhängigen Wert.
+    /// Synchronisiert den jeweils abhaengigen Wert.
     pub(crate) fn sync_derived(&mut self) {
         let length = self.spline_length();
         self.seg.sync_from_length(length);
     }
 
-    /// Spline-Länge aus gegebenen Ankern (mit Tangenten).
+    /// Spline-Laenge aus gegebenen Ankern (mit Tangenten).
     pub(crate) fn spline_length_from_anchors(
         anchors: &[ToolAnchor],
         tangent_start: TangentSource,
@@ -162,7 +162,7 @@ impl SplineTool {
 
     /// Baut ein `ToolResult` aus gegebenen Ankern.
     ///
-    /// Zentrale Logik für `execute()` und `execute_from_anchors()`.
+    /// Zentrale Logik fuer `execute()` und `execute_from_anchors()`.
     pub(crate) fn build_result_from_anchors(
         anchors: &[ToolAnchor],
         max_segment_length: f32,
