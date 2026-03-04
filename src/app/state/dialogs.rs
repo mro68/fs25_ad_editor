@@ -135,6 +135,8 @@ pub struct DistanzenState {
     pub hide_original: bool,
     /// Vorschau-Positionen (berechnete Resample-Punkte für Overlay)
     pub preview_positions: Vec<glam::Vec2>,
+    /// Signatur der letzten Eingaben für Preview-Recompute (0 = ungültig).
+    pub preview_cache_signature: u64,
 }
 
 impl Default for DistanzenState {
@@ -147,6 +149,7 @@ impl Default for DistanzenState {
             active: false,
             hide_original: true,
             preview_positions: Vec::new(),
+            preview_cache_signature: 0,
         }
     }
 }
@@ -170,6 +173,7 @@ impl DistanzenState {
     pub fn deactivate(&mut self) {
         self.active = false;
         self.preview_positions.clear();
+        self.preview_cache_signature = 0;
     }
 
     /// Gibt `true` zurück wenn die Originalstrecke aktuell ausgeblendet werden soll.

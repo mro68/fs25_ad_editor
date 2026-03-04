@@ -95,13 +95,13 @@ impl Renderer {
             queue,
             camera: &scene.camera,
             viewport_size: scene.viewport_size,
-            options: &scene.options,
+            options: scene.options.as_ref(),
             hidden_node_ids: scene.hidden_node_ids.as_ref(),
         };
 
         // 1. Render Background zuerst (falls vorhanden)
         if scene.background_map.is_some() {
-            let opacity = compute_background_opacity(scene.camera.zoom, &scene.options);
+            let opacity = compute_background_opacity(scene.camera.zoom, scene.options.as_ref());
             self.background_renderer.render(
                 queue,
                 render_pass,

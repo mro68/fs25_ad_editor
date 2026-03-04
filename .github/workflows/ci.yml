@@ -41,6 +41,9 @@ jobs:
       - name: Check layer boundaries
         run: make check-layers
 
+      - name: Check API docs sync
+        run: make check-doc-contracts
+
       - name: Check formatting
         run: cargo fmt --all -- --check
 

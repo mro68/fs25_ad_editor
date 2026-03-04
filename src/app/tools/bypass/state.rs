@@ -22,6 +22,8 @@ pub struct BypassTool {
     pub priority: ConnectionPriority,
     /// Gecachte Bypass-Positionen (None = Cache ungültig)
     pub(crate) cached_positions: Option<Vec<Vec2>>,
+    /// Gecachte Preview-Connections fuer `cached_positions` inkl. Start/End-Anker
+    pub(crate) cached_connections: Option<Vec<(usize, usize)>>,
     /// Letzter verwendeter d_blend-Wert (für Info-Anzeige)
     pub(crate) d_blend: f32,
 }
@@ -38,6 +40,7 @@ impl BypassTool {
             direction: ConnectionDirection::Dual,
             priority: ConnectionPriority::Regular,
             cached_positions: None,
+            cached_connections: None,
             d_blend: 0.0,
         }
     }

@@ -9,6 +9,7 @@ use crate::app::tools::ToolManager;
 use crate::app::{AppIntent, EditorTool, RoadMap};
 use indexmap::IndexSet;
 use std::collections::HashSet;
+use std::hash::{Hash, Hasher};
 
 /// Unterdrückt Rauschen/Restwerte, die ohne echtes Scrollen auftreten können.
 const WHEEL_DELTA_THRESHOLD: f32 = 0.5;
@@ -92,21 +93,33 @@ fn render_streckenteilung_panel(
 
     // Ketten-basierte Spline-Berechnung für Vorschau
     if let Some(rm) = road_map {
+        let mut hasher = std::collections::hash_map::DefaultHasher::new();
+        selected_node_ids.iter().for_each(|id| id.hash(&mut hasher));
+        distanzen_state.by_count.hash(&mut hasher);
+        distanzen_state.count.hash(&mut hasher);
+        distanzen_state.distance.to_bits().hash(&mut hasher);
+        let signature = hasher.finish();
+
         let chain = order_chain(selected_node_ids, rm);
         if let Some(ordered) = chain {
-            let positions: Vec<glam::Vec2> = ordered
-                .iter()
-                .filter_map(|id| rm.nodes.get(id).map(|n| n.position))
-                .collect();
+            if signature != distanzen_state.preview_cache_signature
+                || distanzen_state.preview_positions.is_empty()
+            {
+                let positions: Vec<glam::Vec2> = ordered
+                    .iter()
+                    .filter_map(|id| rm.nodes.get(id).map(|n| n.position))
+                    .collect();
 
-            if positions.len() >= 2 {
-                let dense = catmull_rom_chain_with_tangents(&positions, 16, None, None);
-                let path_len = polyline_length(&dense);
-                distanzen_state.path_length = path_len;
+                if positions.len() >= 2 {
+                    let dense = catmull_rom_chain_with_tangents(&positions, 16, None, None);
+                    let path_len = polyline_length(&dense);
+                    distanzen_state.path_length = path_len;
 
-                // Vorschau aktualisieren
-                distanzen_state.preview_positions =
-                    compute_resample_preview(&dense, distanzen_state);
+                    // Vorschau aktualisieren
+                    distanzen_state.preview_positions =
+                        compute_resample_preview(&dense, distanzen_state);
+                    distanzen_state.preview_cache_signature = signature;
+                }
             }
         } else {
             // Kette aufgelöst → deaktivieren

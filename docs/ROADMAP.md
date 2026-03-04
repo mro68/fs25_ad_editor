@@ -122,6 +122,7 @@
   - [ ] LOD-System für große Strecken
   - [ ] Memory-Profiling
   - [x] `ctx.request_repaint()` nur bei Änderungen (CPU-Idle-Verbrauch reduzieren)
+  - [x] **RenderScene-Hotpath:** `RenderScene.options` auf `Arc<EditorOptions>` umgestellt (O(1)-Clone statt Deep-Clone pro Frame, 2026-03-04)
 - [🟡] Error-Handling & User-Feedback
   - [x] unwrap()-Aufrufe in Produktionscode durch graceful handling ersetzt
   - [🟡] Toast-Notifications (via StatusBar `status_message` gelöst, dedizierte Toast-UI ausstehend)
@@ -203,12 +204,27 @@
 - Phase 6: 🟡 50% (Handler-Split, CI-Checks, unwrap-Bereinigung, API-Docs, Docstrings, Audit-Fixes durchgeführt)
 
 **Errungenschaften seit letztem Update (Strukturelles Audit 2026-02-28):**
+- ✅ `src/shared/options.rs` in modulare Struktur `src/shared/options/{camera,render,tools,editor}.rs` aufgeteilt (Wartbarkeit verbessert, API stabil)
+- ✅ RouteTool-Capabilities eingeführt (`RouteToolDrag`, `RouteToolTangent`, `RouteToolRegistry`, `RouteToolChainInput`) bei kompatiblem `RouteTool`-Obervertrag
+- ✅ Preview-Hotpath optimiert: Connection-Indizes in `BypassTool` und `ConstraintRouteTool` gecacht
+- ✅ Neuer Benchmark `tool_preview_hotpath_bench` für `compute_bypass_positions` und `solve_route`
+- ✅ CI-Guardrail ergänzt: `scripts/check_api_docs_sync.sh` + `make check-doc-contracts` + CI-Step
 - ✅ Docstrings für `AppCommand`, `AppIntent` (alle Varianten dokumentiert)
 - ✅ Docstrings für `Snapshot`, `EditHistory`, `CommandLog`, `SegmentRecord`, `SegmentRegistry`
 - ✅ Docstrings für `reset()` in allen RouteTool-Implementierungen
 - ✅ SplineTool: `tangent_menu_data()` + `apply_tangent_selection()` implementiert
 - ✅ UI-Funktions-Docstrings (`render_toolbar`, `render_menu`, `render_status_bar`, `render_properties`)
 - ✅ ROADMAP.md Feature-Status korrigiert (Keyboard-Shortcuts, Benchmarks, Toast, Theme)
+
+**Errungenschaften (Audit-Follow-up 2026-03-04):**
+- ✅ CurveTool-Preview-Hotpath: Positions-LUT per Key-Cache wiederverwendet (`CurvePreviewCacheKey`, `preview_positions_for`)
+- ✅ DRY-Refactor Route-Tool-Lifecycle: gemeinsamer `set_last_created`-Flow via Macro-Hooks (`current_end_anchor`, `save_anchors_for_recreate`)
+- ✅ DRY-Helfer `snap_with_neighbors()` für Snap + Nachbar-Ermittlung in Route-Tools eingeführt
+- ✅ Spline-State: `anchor_positions()` auf Iterator umgestellt (reduzierte Zwischenallokationen)
+- ✅ Streckenteilung-Preview: Recompute nur bei geänderter Eingabe-Signatur (`preview_cache_signature`)
+- ✅ API-Doku-Sync: `app/API.md` (Route-Tool-Events), `ui/API.md` (Overview-/Preview-Funktionen), `docs/DATA_MODEL.md` (AppState/SelectionState/SegmentRegistry)
+- ✅ `ui/options_dialog.rs` in `ui/options_dialog/{mod,sections}.rs` aufgeteilt (bessere Wartbarkeit ohne API-Änderung)
+- ✅ Render-Hotpath optimiert: `RenderScene.options` nutzt `Arc<EditorOptions>`; API-Verträge in `shared/API.md` und `render/API.md` synchronisiert
 
 **Errungenschaften (Spline-Tool 2026-02-21):**
 - ✅ Neues Route-Tool: Catmull-Rom-Spline (interpolierend, Kurs führt durch alle geklickten Punkte)

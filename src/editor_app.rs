@@ -20,6 +20,7 @@ pub(crate) struct EditorApp {
 }
 
 impl EditorApp {
+    /// Erstellt die Editor-App mit geladenen Optionen und initialisiertem Renderer.
     pub(crate) fn new(render_state: &egui_wgpu::RenderState) -> Self {
         // Optionen aus TOML laden (oder Standardwerte)
         let config_path = EditorOptions::config_path();
@@ -64,6 +65,7 @@ impl eframe::App for EditorApp {
 }
 
 impl EditorApp {
+    /// Sammelt alle UI- und Viewport-Events des aktuellen Frames.
     fn collect_ui_events(&mut self, ctx: &egui::Context) -> Vec<AppIntent> {
         let mut events = Vec::new();
 
