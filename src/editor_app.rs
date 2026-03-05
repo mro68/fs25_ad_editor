@@ -274,6 +274,7 @@ impl EditorApp {
             &mut self.state.ui.distanzen,
             tangent_data,
             !self.state.clipboard.nodes.is_empty(),
+            Some(&self.state.segment_registry),
         ));
 
         // Mauszeiger im Viewport je nach aktivem Werkzeug anpassen
