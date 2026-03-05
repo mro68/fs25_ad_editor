@@ -2,7 +2,10 @@
 //!
 //! Dieses Modul implementiert das Parsen und Schreiben von AutoDrive XML-Configs.
 //! Das Format nutzt "Structure of Arrays" (parallele Listen in XML-Tags).
+
+/// XML-Parser fuer AutoDrive-Konfigurationen (quick-xml, Structure of Arrays).
 pub mod parser;
+/// XML-Writer fuer AutoDrive-Konfigurationen mit lueckenloser ID-Neunummerierung.
 pub mod writer;
 
 pub use parser::parse_autodrive_config;

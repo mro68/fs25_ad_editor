@@ -1,22 +1,28 @@
 //! UI-Komponenten: Menue, Toolbar, Properties, Input-Handling, Dialoge.
 
+/// Kontext-Menue fuer Rechtsklick-Aktionen im Viewport.
 pub mod context_menu;
+/// Panel fuer Default-Werte neuer Verbindungen (Richtung, Prioritaet).
 pub mod defaults_panel;
+/// Alle Dialoge (Datei-IO, Dedup, Marker, Heightmap, Uebersichtskarte).
 pub mod dialogs;
 mod drag;
+/// Editor-Panel fuer die Bearbeitung selektierter Knoten und Verbindungen.
 pub mod edit_panel;
+/// Viewport-Input-Verarbeitung (Drag, Scroll, Mausklick, Selektion).
 pub mod input;
 mod keyboard;
-/// UI-Layer mit egui
-///
-/// Dieses Modul implementiert alle UI-Komponenten (Menues, Panels, Dialogs).
-/// Modulare Aufteilung: Keyboard-Shortcuts, Drag-Logik und Kontextmenues
-/// sind in eigene Dateien extrahiert.
+/// Menue-Leiste mit Datei-, Bearbeitungs- und Ansicht-Aktionen.
 pub mod menu;
+/// Optionen-Dialog fuer Editor-Einstellungen.
 pub mod options_dialog;
+/// Properties-Panel fuer selektierte Nodes und Verbindungen.
 pub mod properties;
+/// Statusleiste mit Anzeige des aktuellen Editor-Zustands.
 pub mod status;
+/// Live-Vorschau aktiver Werkzeuge im Viewport (Overlay-Rendering).
 pub mod tool_preview;
+/// Werkzeug-Toolbar fuer Werkzeugauswahl und -konfiguration.
 pub mod toolbar;
 
 pub use defaults_panel::render_route_defaults_panel;
