@@ -50,8 +50,6 @@ pub struct ConstraintRouteTool {
     pub(crate) lifecycle: ToolLifecycleState,
     /// Start-Anker der letzten Erstellung (fuer Neuberechnung)
     pub(crate) last_start_anchor: Option<ToolAnchor>,
-    /// End-Anker der letzten Erstellung (fuer Neuberechnung)
-    pub(crate) last_end_anchor: Option<ToolAnchor>,
     /// Kontrollpunkte der letzten Erstellung (fuer Neuberechnung)
     pub(crate) last_control_nodes: Vec<Vec2>,
     /// Gecachte Solver-Ausgabe fuer Preview-Rendering
@@ -104,7 +102,6 @@ impl ConstraintRouteTool {
             priority: ConnectionPriority::Regular,
             lifecycle: ToolLifecycleState::new(3.0),
             last_start_anchor: None,
-            last_end_anchor: None,
             last_control_nodes: Vec::new(),
             preview_positions: Vec::new(),
             preview_connections: Vec::new(),

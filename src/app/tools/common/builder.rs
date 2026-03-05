@@ -110,6 +110,7 @@ pub fn assemble_tool_result(
         new_nodes,
         internal_connections,
         external_connections,
+        markers: vec![],
     }
 }
 
