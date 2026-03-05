@@ -80,6 +80,14 @@
     - [x] Keyboard-Shortcuts (Ctrl+C / Ctrl+V)
     - [x] Clipboard bleibt nach Paste erhalten (Mehrfach-Paste moeglich)
 
+- [x] **ParkingTool Interaktionsflow ueberarbeitet** (2026-03-05)
+  - [x] Phase-basierter State: Idle → Placing → Configuring ↔ Adjusting
+  - [x] Alt+Scroll-basierte Rotation via `on_scroll_rotate()` Trait-Methode
+  - [x] Phase-Guard in `execute()` — nur in Configuring-Phase
+  - [x] 3 neue Unit-Tests: `parking_neuer_interaktionsflow`, `parking_scroll_rotation`, `parking_execute_nur_in_configuring`
+  - [x] Intent/Command-Kette: `RouteToolScrollRotated { delta }` → `RouteToolRotate { delta }` → `handlers::route_tool::rotate()`
+  - [x] Dokumentation synchronisiert: Intents, Commands, Tools-API, Handler-API
+
 ## Phase 5: Advanced Features
 - [x] DDS-Import fuer Map-Hintergruende
   - [x] Texture-Loader implementieren (PNG, JPG, DDS)
@@ -268,6 +276,49 @@
 - ✅ Route-Tool-Randkanten fix (alle Tools): externe Start-/Endverbindungen tragen jetzt explizite Orientierung (`existing_to_new`) statt impliziter Richtungs-Spiegelung; `Regular` bleibt am Start korrekt vorwaerts
 - ✅ Constraint-Route-Defaults angepasst: Max-Winkel `10°`, Max-Abstand `10m`, Minimaldistanz `2m`
 - ✅ Constraint-Route-Config: Mausrad-Unterstuetzung fuer Max-Winkel- und Minimaldistanz-Slider ergaenzt (neben LMT li/re)
+
+**Errungenschaften (Segment-Selektion und Bearbeitung 2026-03-05):**
+- ✅ `SegmentRecord.original_positions` — speichert Node-Positionen zum Erstellen-Zeitpunkt
+- ✅ `SegmentRegistry.find_first_by_node_id()` — findet das erste Segment mit dieser Node
+- ✅ `SegmentRegistry.is_segment_valid()` — prueft ob Nodes existieren und Positionen gleich sind
+- ✅ `expand_segment_selection()` — Klick auf Segment-Node selektiert alle Segment-Nodes (falls gueltig)
+- ✅ `CommandId::EditSegment` im Context-Menu mit `Precondition::SelectionIsValidSegment`
+- ✅ `render_context_menu()` + `collect_viewport_events()` um `segment_registry`-Parameter erweitert
+- ✅ Dokumentation synchronisiert: `src/app/API.md`, `src/ui/API.md`, `src/app/handlers/API.md`, `src/app/use_cases/API.md`, `docs/DATA_MODEL.md`
+
+**Errungenschaften (Segment-Support für alle Tools 2026-03-05):**
+- ✅ `SegmentRecord.marker_node_ids` — Tracker fuer Marker-Cleanup bei Segment-Edit
+- ✅ `BypassTool::make_segment_record()` + `load_for_edit()` implementiert (RouteToolRegistry Trait)
+- ✅ `ParkingTool::make_segment_record()` + `load_for_edit()` implementiert (RouteToolRegistry Trait)
+- ✅ `handlers::editing::edit_segment()` mit Marker-Cleanup vor Node-Loeschung
+- ✅ `handlers::route_tool` extrahiert `marker_indices` vor `apply_tool_result()` und befuellt `record.marker_node_ids`
+- ✅ Alle 7 Route-Tools unterstuetzen jetzt Segment-Bearbeitung ueber Registry
+- ✅ 4 neue Roundtrip-Tests fuer Bypass/Parking Segment-Records (persistierung + reload)
+- ✅ Dokumentation synchronisiert: `src/app/API.md` (SegmentKind erweitert), `src/app/handlers/API.md` (edit_segment dokumentiert), `src/app/tools/API.md` (ParkingTool + Registry-Traits)
+
+**Errungenschaften (ParkingTool Interaktionsflow ueberarbeitet 2026-03-05):**
+- ✅ Phase-basierter State: Idle → Placing → Configuring ↔ Adjusting
+  - Neue `ParkingPhase` Enum-Varianten: `Placing`, `Configuring`, `Adjusting`
+  - `Phase::Placing`: Klick setzt Origin und fixiert Winkel
+  - `Phase::Configuring`: Layout-Parameter editierbar, Config-Panel aktiv
+  - `Phase::Adjusting`: Viewport-Klick repositioniert Origin, dann zurueck zu Configuring
+- ✅ Alt+Scroll-basierte Rotation
+  - Neue RouteTool-Trait-Methode: `on_scroll_rotate(&mut self, delta: f32)` mit Default-Implementierung
+  - ParkingTool implementiert: aendert `self.angle` kontinuierlich, Preview aktualisiert automatisch
+  - Input-Pipeline: `RouteToolScrollRotated { delta }` Intent → `RouteToolRotate { delta }` Command → `handlers::route_tool::rotate()` Handler
+- ✅ Phase-Guard in `execute()`
+  - Nur in `Phase::Configuring` ausfuehrbar; wirft Fehler in anderen Phasen
+  - Prevent versehentliche Ausfuehrung aus falscher Phase
+- ✅ Neue Unit-Tests (3 Tests in `src/app/tools/parking/tests.rs`):
+  - `parking_neuer_interaktionsflow` — Phasen-Uebergaenge (`Placing` → `Configuring`)
+  - `parking_scroll_rotation` — Alt+Scroll aendert Winkel korrekt
+  - `parking_execute_nur_in_configuring` — Execute nur in Phase::Configuring ausfuehrbar
+- ✅ `frozen_angle` entfernt — `self.angle` ist einziger Rotationswert, wird von on_scroll_rotate/Mausrad angepasst
+- ✅ Dokumentation synchronisiert:
+  - `src/app/API.md`: neuer Intent `RouteToolScrollRotated { delta }`, neuer Command `RouteToolRotate { delta }`
+  - `src/app/tools/API.md`: neue Trait-Methode `on_scroll_rotate()`, ParkingTool-Interaktionsflow aktualisiert, Phase-Description
+  - `src/app/handlers/API.md`: neuer Handler `route_tool::rotate()`
+  - `docs/ROADMAP.md`: Feature in Errungenschaften markiert
 
 **Errungenschaften (Spline-Tool 2026-02-21):**
 - ✅ Neues Route-Tool: Catmull-Rom-Spline (interpolierend, Kurs fuehrt durch alle geklickten Punkte)

@@ -48,6 +48,49 @@ pub fn dismiss_save_overview_dialog(state: &mut AppState)
 ```
 Schliesst verschiedene Dialog-Boxen und räumt deren State auf.
 
+---
+
+### `route_tool` — Route-Tool-Operationen (Linie, Kurve, Spline)
+
+Handelt Viewport-Interaktionen und Ausfuehrung von Route-Tools.
+
+**Funktionen:**
+
+```rust
+pub fn click(state: &mut AppState, world_pos: glam::Vec2, ctrl: bool)
+```
+Verarbeitet einen Viewport-Klick im aktiven Route-Tool. Wenn das Tool `ToolAction::ReadyToExecute` zurueckgibt, wird sofort `execute_and_apply()` aufgerufen.
+
+```rust
+pub fn rotate(state: &mut AppState, delta: f32)
+```
+Uebertraegt Scroll-basierte Rotation auf das aktive Route-Tool via `on_scroll_rotate()` callback. Wird typischerweise nur von ParkingTool verwendet (Alt+Scroll).
+
+```rust
+pub fn execute(state: &mut AppState)
+```
+Fuehrt das aktive Route-Tool aus (Enter-Bestaetigung). Erstellt Nodes + Connections, speichert Undo-Snapshot und registriert Segment-Record fuer nachtraegliche Bearbeitung.
+
+**Segment-Registry-Integration:**
+- Nach Tool-Ausfuehrung werden die `original_positions` aus der RoadMap gesammelt
+- Segment-Record wird mit allen Tool-Parametern registriert
+- Ermoeglicht spaeteres Editieren: `EditSegment { record_id }` laedt das Tool mit gespeicherten Parametern neu
+
+```rust
+pub fn cancel(state: &mut AppState)
+```
+Bricht das aktive Route-Tool ab (Escape).
+
+```rust
+pub fn select(state: &mut AppState, index: usize)
+```
+Aktiviert ein Route-Tool per Index. Initialisiert Tool-Parameter (Richtung, Prioritaet, Snap-Radius) aus EditorToolState und laedt optional eine vorhandene Selektion als Kette (fuer Chain-basierte Tools wie BypassTool).
+
+```rust
+pub fn select_with_anchors(state: &mut AppState, tool_index: usize, node_id_1: u64, node_id_2: u64)
+```
+Aktiviert Tool und setzt Start/End-Anker aus zwei selektierten Nodes. Simuliert zwei `on_click()`-Aufrufe; bei StraightLine => sofortige Ausfuehrung, bei Curves => Phase::Control fuer Steuerpunkt-Platzierung.
+
 ```rust
 pub fn open_options_dialog(state: &mut AppState)
 pub fn close_options_dialog(state: &mut AppState)
@@ -100,6 +143,74 @@ Lädt oder entfernt eine Heightmap.
 pub fn deduplicate(state: &mut AppState)
 ```
 Führt die Duplikat-Bereinigung auf der geladenen Road Map aus.
+
+---
+
+### `editing` — Node- und Connection-Bearbeitung
+
+Handhabt Bearbeitung von Nodes, Verbindungen und Marker. Integriert Segment-Cleanup bei Edits.
+
+**Funktionen:**
+
+```rust
+pub fn edit_segment(
+    state: &mut AppState,
+    record_id: u64,
+    kind: SegmentKind,
+    node_ids_to_delete: &[u64],
+) -> anyhow::Result<()>
+```
+Bearbeitet ein zuvor erstelltes Segment. Fuehrt folgende Schritte aus:
+1. **Marker-Cleanup:** Entfernt `MapMarker` von den zu loeschenden Nodes (aus `record.marker_node_ids`)
+2. **Node-Loeschung:** Loescht die alten Segment-Nodes aus der RoadMap
+3. **Tool-Reload:** Laedt das passende Route-Tool mit den gespeicherten Parametern (via `load_for_edit()`)
+4. **Neu-Ausfuehrung:** Tool wird neu mit den User-Aenderungen ausfuehrt (neue Node-IDs generiert)
+
+**Segment-Registry-Integration:**
+- Nutzt `SegmentRecord` (fuer Marker-Cleanup und Tool-Parameter)
+- Lokalisiert via `segment_registry.get_record(record_id)`
+- Marker-Cleanup ist **kritisch:** Unvollstaendiges Cleanup verwaist BrainCells im SegmentRecord
+
+```rust
+pub fn delete_nodes_by_ids(state: &mut AppState, node_ids: &[u64])
+```
+Loescht Nodes aus der Road Map. Aktualisiert alle Verbindungen automatisch.
+
+```rust
+pub fn add_node(state: &mut AppState, pos: glam::Vec2, after_node: Option<u64>) -> u64
+```
+Fuegt einen neuen Node hinzu. Optional splittet neuer Node eine Verbindung `after_node → next`.
+
+```rust
+pub fn set_node_position(state: &mut AppState, node_id: u64, new_pos: glam::Vec2)
+```
+Verschiebt einen Node (mit Spatial-Index-Update).
+
+```rust
+pub fn create_connection(
+    state: &mut AppState,
+    start_id: u64,
+    end_id: u64,
+    direction: ConnectionDirection,
+    priority: ConnectionPriority,
+)
+```
+Erzeugt eine neue Verbindung zwischen zwei Nodes.
+
+```rust
+pub fn delete_connection(state: &mut AppState, start_id: u64, end_id: u64)
+```
+Loescht eine Verbindung.
+
+```rust
+pub fn set_node_marker(state: &mut AppState, node_id: u64, name: String, group: String)
+```
+Setzt/Aktualisiert einen Marker auf einem Node.
+
+```rust
+pub fn clear_node_marker(state: &mut AppState, node_id: u64)
+```
+Entfernt einen Marker vom Node.
 
 ---
 

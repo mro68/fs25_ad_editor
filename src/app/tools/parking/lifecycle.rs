@@ -1,5 +1,6 @@
 //! RouteTool-Implementierung fuer das ParkingTool.
 
+use crate::app::segment_registry::{SegmentBase, SegmentKind, SegmentRecord};
 use crate::app::tools::{ToolAction, ToolAnchor, ToolPreview, ToolResult};
 use crate::core::{ConnectionDirection, ConnectionPriority, RoadMap};
 use glam::Vec2;
@@ -22,8 +23,9 @@ impl crate::app::tools::RouteTool for ParkingTool {
 
     fn status_text(&self) -> &str {
         match self.phase {
-            ParkingPhase::Idle => "Ursprung klicken (Mitte der Buchten-Enden)",
-            ParkingPhase::Placed => "Maus bewegen zum Drehen — Klick zum Bestaetigen",
+            ParkingPhase::Idle => "Klicken zum Platzieren — Alt+Mausrad zum Drehen",
+            ParkingPhase::Configuring => "Layout konfigurieren — Bestätigen oder Abbrechen",
+            ParkingPhase::Adjusting => "Klicken zum Fixieren — Alt+Mausrad zum Drehen",
         }
     }
 
@@ -31,38 +33,43 @@ impl crate::app::tools::RouteTool for ParkingTool {
         match self.phase {
             ParkingPhase::Idle => {
                 self.origin = Some(pos);
-                self.angle = 0.0;
-                self.phase = ParkingPhase::Placed;
+                self.phase = ParkingPhase::Configuring;
                 ToolAction::Continue
             }
-            ParkingPhase::Placed => {
-                // Winkel aus letzter Mausposition einfrieren
-                if let Some(origin) = self.origin {
-                    let delta = pos - origin;
-                    if delta.length() > 0.5 {
-                        self.frozen_angle = Some(delta.y.atan2(delta.x));
-                    } else {
-                        self.frozen_angle = Some(self.angle);
-                    }
-                }
-                ToolAction::ReadyToExecute
+            ParkingPhase::Configuring => {
+                // Viewport-Klick waehrend Config → Repositionierung starten
+                self.phase = ParkingPhase::Adjusting;
+                ToolAction::Continue
+            }
+            ParkingPhase::Adjusting => {
+                // Erneuter Klick → Position fixieren, zurueck zu Configuring
+                self.origin = Some(pos);
+                self.phase = ParkingPhase::Configuring;
+                ToolAction::Continue
+            }
+        }
+    }
+
+    fn on_scroll_rotate(&mut self, delta: f32) {
+        // Nur in Idle oder Adjusting rotierbar (in Configuring ist alles fixiert)
+        if matches!(self.phase, ParkingPhase::Idle | ParkingPhase::Adjusting) {
+            let step = std::f32::consts::PI / 36.0; // 5° pro Scroll-Schritt
+            if delta > 0.0 {
+                self.angle += step;
+            } else {
+                self.angle -= step;
             }
         }
     }
 
     fn preview(&self, cursor_pos: Vec2, _road_map: &RoadMap) -> ToolPreview {
         let (origin, angle) = match self.phase {
-            ParkingPhase::Idle => (cursor_pos, 0.0),
-            ParkingPhase::Placed => {
+            ParkingPhase::Idle => (cursor_pos, self.angle),
+            ParkingPhase::Configuring => {
                 let origin = self.origin.unwrap_or(cursor_pos);
-                let delta = cursor_pos - origin;
-                let a = if delta.length() > 0.5 {
-                    delta.y.atan2(delta.x)
-                } else {
-                    self.angle
-                };
-                (origin, a)
+                (origin, self.angle)
             }
+            ParkingPhase::Adjusting => (cursor_pos, self.angle),
         };
 
         let layout = geometry::generate_parking_layout(
@@ -80,11 +87,14 @@ impl crate::app::tools::RouteTool for ParkingTool {
     }
 
     fn execute(&self, _road_map: &RoadMap) -> Option<ToolResult> {
+        // Nur in Configuring-Phase ausfuehrbar (verhindert Execute mit veralteter Position)
+        if self.phase != ParkingPhase::Configuring {
+            return None;
+        }
         let origin = self.origin?;
-        let angle = self.frozen_angle.unwrap_or(self.angle);
         let layout = geometry::generate_parking_layout(
             origin,
-            angle,
+            self.angle,
             &self.config,
             self.direction,
             self.priority,
@@ -96,15 +106,17 @@ impl crate::app::tools::RouteTool for ParkingTool {
         self.phase = ParkingPhase::Idle;
         self.origin = None;
         self.angle = 0.0;
-        self.frozen_angle = None;
     }
 
     fn is_ready(&self) -> bool {
-        self.phase == ParkingPhase::Placed && self.frozen_angle.is_some()
+        self.phase == ParkingPhase::Configuring && self.origin.is_some()
     }
 
     fn has_pending_input(&self) -> bool {
-        self.phase == ParkingPhase::Placed
+        matches!(
+            self.phase,
+            ParkingPhase::Configuring | ParkingPhase::Adjusting
+        )
     }
 
     // ── Lifecycle-Delegation (manuell, da kein SegmentConfig) ────
@@ -139,5 +151,48 @@ impl crate::app::tools::RouteTool for ParkingTool {
 
     fn set_last_created(&mut self, ids: &[u64], _road_map: &RoadMap) {
         self.lifecycle.save_created_ids(ids);
+    }
+
+    /// Erstellt einen `SegmentRecord` fuer die Registry aus dem aktuellen Tool-Zustand.
+    fn make_segment_record(&self, id: u64, node_ids: &[u64]) -> Option<SegmentRecord> {
+        let origin = self.origin?;
+        let angle = self.angle;
+        Some(SegmentRecord {
+            id,
+            node_ids: node_ids.to_vec(),
+            start_anchor: ToolAnchor::NewPosition(origin),
+            end_anchor: ToolAnchor::NewPosition(origin),
+            original_positions: Vec::new(), // wird im Handler befuellt
+            marker_node_ids: Vec::new(),    // wird im Handler befuellt
+            kind: SegmentKind::Parking {
+                origin,
+                angle,
+                config: self.config.clone(),
+                base: SegmentBase {
+                    direction: self.direction,
+                    priority: self.priority,
+                    max_segment_length: 0.0,
+                },
+            },
+        })
+    }
+
+    /// Laedt einen gespeicherten `SegmentRecord` zur nachtraeglichen Bearbeitung.
+    fn load_for_edit(&mut self, _record: &SegmentRecord, kind: &SegmentKind) {
+        let SegmentKind::Parking {
+            origin,
+            angle,
+            config,
+            base,
+        } = kind
+        else {
+            return;
+        };
+        self.origin = Some(*origin);
+        self.angle = *angle;
+        self.phase = ParkingPhase::Configuring;
+        self.config = config.clone();
+        self.direction = base.direction;
+        self.priority = base.priority;
     }
 }

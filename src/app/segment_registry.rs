@@ -9,8 +9,9 @@
 //! neu geladen.
 
 use crate::app::tools::common::TangentSource;
+use crate::app::tools::parking::ParkingConfig;
 use crate::app::tools::ToolAnchor;
-use crate::core::{ConnectionDirection, ConnectionPriority};
+use crate::core::{ConnectionDirection, ConnectionPriority, RoadMap};
 use glam::Vec2;
 
 /// Gemeinsame Segment-Parameter aller Route-Tools.
@@ -74,6 +75,32 @@ pub enum SegmentKind {
         /// Gemeinsame Basis-Parameter
         base: SegmentBase,
     },
+    /// Ausweichstrecke zur selektierten Kette
+    Bypass {
+        /// Geordnete Positionen der Quell-Kette
+        chain_positions: Vec<Vec2>,
+        /// ID des ersten Ketten-Nodes
+        chain_start_id: u64,
+        /// ID des letzten Ketten-Nodes
+        chain_end_id: u64,
+        /// Seitlicher Versatz
+        offset: f32,
+        /// Node-Abstand auf der Bypass-Strecke
+        base_spacing: f32,
+        /// Gemeinsame Basis-Parameter
+        base: SegmentBase,
+    },
+    /// Parkplatz-Layout (Wendekreis + Parkreihen)
+    Parking {
+        /// Ursprungspunkt des Layouts
+        origin: Vec2,
+        /// Rotationswinkel (Radiant)
+        angle: f32,
+        /// Parkplatz-Konfiguration
+        config: ParkingConfig,
+        /// Gemeinsame Basis-Parameter
+        base: SegmentBase,
+    },
 }
 
 /// Tool-Index fuer `StraightLineTool` im `ToolManager` (Registrierungs-Slot 0).
@@ -90,6 +117,8 @@ pub const TOOL_INDEX_SPLINE: usize = 3;
 pub const TOOL_INDEX_BYPASS: usize = 4;
 /// Tool-Index fuer `ConstraintRouteTool` im `ToolManager` (Registrierungs-Slot 5).
 pub const TOOL_INDEX_CONSTRAINT_ROUTE: usize = 5;
+/// Tool-Index fuer `ParkingTool` im `ToolManager` (Registrierungs-Slot 6).
+pub const TOOL_INDEX_PARKING: usize = 6;
 
 impl SegmentKind {
     /// Gibt den Tool-Index im ToolManager fuer dieses Segment zurueck.
@@ -103,6 +132,8 @@ impl SegmentKind {
             SegmentKind::CurveCubic { .. } => TOOL_INDEX_CURVE_CUBIC,
             SegmentKind::Spline { .. } => TOOL_INDEX_SPLINE,
             SegmentKind::ConstraintRoute { .. } => TOOL_INDEX_CONSTRAINT_ROUTE,
+            SegmentKind::Bypass { .. } => TOOL_INDEX_BYPASS,
+            SegmentKind::Parking { .. } => TOOL_INDEX_PARKING,
         }
     }
 }
@@ -139,6 +170,14 @@ mod tests {
             names[TOOL_INDEX_CONSTRAINT_ROUTE], "Constraint-Route",
             "TOOL_INDEX_CONSTRAINT_ROUTE zeigt nicht auf ConstraintRouteTool"
         );
+        assert_eq!(
+            names[TOOL_INDEX_BYPASS], "Ausweichstrecke",
+            "TOOL_INDEX_BYPASS zeigt nicht auf BypassTool"
+        );
+        assert_eq!(
+            names[TOOL_INDEX_PARKING], "Parkplatz",
+            "TOOL_INDEX_PARKING zeigt nicht auf ParkingTool"
+        );
     }
 }
 
@@ -155,6 +194,12 @@ pub struct SegmentRecord {
     pub end_anchor: ToolAnchor,
     /// Tool-spezifische Parameter
     pub kind: SegmentKind,
+    /// Original-Positionen der Nodes zum Zeitpunkt der Erstellung.
+    /// Index-Reihenfolge entspricht `node_ids`; wird fuer Validitaetsprüfung genutzt.
+    pub original_positions: Vec<Vec2>,
+    /// IDs der Nodes mit Map-Markern (fuer Cleanup bei Edit).
+    /// Leer bei Tools ohne Marker.
+    pub marker_node_ids: Vec<u64>,
 }
 
 /// In-Session-Registry aller erstellten Segmente.
@@ -213,6 +258,29 @@ impl SegmentRegistry {
         let id_set: std::collections::HashSet<u64> = node_ids.iter().copied().collect();
         self.records
             .retain(|r| !r.node_ids.iter().any(|nid| id_set.contains(nid)));
+    }
+
+    /// Findet den ersten Record, der den angegebenen Node enthaelt.
+    pub fn find_first_by_node_id(&self, node_id: u64) -> Option<&SegmentRecord> {
+        self.records.iter().find(|r| r.node_ids.contains(&node_id))
+    }
+
+    /// Prueft ob ein Segment noch gueltig ist (Nodes existieren und Positionen unveraendert).
+    pub fn is_segment_valid(&self, record: &SegmentRecord, road_map: &RoadMap) -> bool {
+        if record.original_positions.len() != record.node_ids.len() {
+            return false;
+        }
+        record
+            .node_ids
+            .iter()
+            .zip(record.original_positions.iter())
+            .all(|(id, orig_pos)| {
+                road_map
+                    .nodes
+                    .get(id)
+                    .map(|node| node.position.distance(*orig_pos) < 0.01)
+                    .unwrap_or(false)
+            })
     }
 
     /// Gibt die Anzahl der gespeicherten Records zurueck.

@@ -1,7 +1,9 @@
 //! Integrations-Tests fuer das Parkplatz-Layout-Tool.
 
 use super::geometry::{build_parking_result, build_preview, generate_parking_layout};
-use super::state::{ParkingConfig, RampSide};
+use super::state::{ParkingConfig, ParkingPhase, ParkingTool, RampSide};
+use crate::app::segment_registry::SegmentKind;
+use crate::app::tools::RouteTool;
 use crate::core::{ConnectionDirection, ConnectionPriority};
 use glam::Vec2;
 
@@ -639,4 +641,162 @@ fn test_build_parking_result_sets_regular_flags_and_empty_external_connections()
             .all(|(_, flag)| *flag == crate::core::NodeFlag::Regular),
         "Alle erzeugten Nodes muessen NodeFlag::Regular tragen"
     );
+}
+
+// ─── SegmentRecord-Tests ──────────────────────────────────────────────────────
+
+/// Roundtrip: make_segment_record erstellt den korrekten Record,
+/// load_for_edit stellt alle Felder exakt wieder her.
+#[test]
+fn parking_segment_record_roundtrip() {
+    let mut tool = ParkingTool::new();
+    tool.origin = Some(Vec2::new(100.0, 200.0));
+    tool.angle = 1.5;
+    tool.phase = ParkingPhase::Configuring;
+    tool.config.num_rows = 3;
+    tool.config.row_spacing = 8.0;
+    tool.direction = ConnectionDirection::Regular;
+    tool.priority = ConnectionPriority::SubPriority;
+
+    let record = tool.make_segment_record(99, &[200, 201, 202]);
+    assert!(record.is_some(), "Record muss vorhanden sein");
+    let record = record.unwrap();
+
+    let SegmentKind::Parking {
+        origin,
+        angle,
+        ref config,
+        ref base,
+    } = record.kind
+    else {
+        panic!("Erwartetes SegmentKind::Parking, bekam etwas anderes");
+    };
+    assert_eq!(
+        origin,
+        Vec2::new(100.0, 200.0),
+        "origin muss uebereinstimmen"
+    );
+    assert_eq!(angle, 1.5, "angle muss uebereinstimmen");
+    assert_eq!(config.num_rows, 3, "num_rows muss uebereinstimmen");
+    assert_eq!(config.row_spacing, 8.0, "row_spacing muss uebereinstimmen");
+    assert_eq!(
+        base.direction,
+        ConnectionDirection::Regular,
+        "direction im base"
+    );
+    assert_eq!(
+        base.priority,
+        ConnectionPriority::SubPriority,
+        "priority im base"
+    );
+
+    // Roundtrip: neues Tool, load_for_edit
+    let mut tool2 = ParkingTool::new();
+    tool2.load_for_edit(&record, &record.kind);
+
+    assert_eq!(
+        tool2.origin,
+        Some(Vec2::new(100.0, 200.0)),
+        "origin nach load_for_edit"
+    );
+    assert_eq!(tool2.angle, 1.5, "angle nach load_for_edit");
+    assert_eq!(
+        tool2.phase,
+        ParkingPhase::Configuring,
+        "phase muss Configuring sein nach load_for_edit"
+    );
+    assert_eq!(tool2.config.num_rows, 3, "num_rows nach load_for_edit");
+    assert_eq!(
+        tool2.config.row_spacing, 8.0,
+        "row_spacing nach load_for_edit"
+    );
+    assert_eq!(
+        tool2.direction,
+        ConnectionDirection::Regular,
+        "direction nach load_for_edit"
+    );
+    assert_eq!(
+        tool2.priority,
+        ConnectionPriority::SubPriority,
+        "priority nach load_for_edit"
+    );
+}
+
+/// Ohne gesetzten Origin muss make_segment_record None liefern.
+#[test]
+fn parking_segment_record_none_ohne_origin() {
+    let tool = ParkingTool::new();
+    let record = tool.make_segment_record(0, &[]);
+    assert!(
+        record.is_none(),
+        "Ohne origin muss make_segment_record None liefern"
+    );
+}
+
+// ─── Neue Interaktionsflow-Tests ──────────────────────────────────────────────
+
+#[test]
+fn parking_neuer_interaktionsflow() {
+    use crate::core::RoadMap;
+    let mut tool = ParkingTool::new();
+    let rm = RoadMap::new(0);
+
+    // Idle → Klick → Configuring
+    let action = tool.on_click(Vec2::new(10.0, 20.0), &rm, false);
+    assert_eq!(action, crate::app::tools::ToolAction::Continue);
+    assert_eq!(tool.phase, ParkingPhase::Configuring);
+    assert!(tool.is_ready());
+
+    // Configuring → Viewport-Klick → Adjusting
+    let action = tool.on_click(Vec2::new(30.0, 40.0), &rm, false);
+    assert_eq!(action, crate::app::tools::ToolAction::Continue);
+    assert_eq!(tool.phase, ParkingPhase::Adjusting);
+    assert!(!tool.is_ready());
+
+    // Adjusting → Klick → zurueck zu Configuring mit neuer Position
+    let action = tool.on_click(Vec2::new(50.0, 60.0), &rm, false);
+    assert_eq!(action, crate::app::tools::ToolAction::Continue);
+    assert_eq!(tool.phase, ParkingPhase::Configuring);
+    assert_eq!(tool.origin, Some(Vec2::new(50.0, 60.0)));
+    assert!(tool.is_ready());
+}
+
+#[test]
+fn parking_scroll_rotation() {
+    let mut tool = ParkingTool::new();
+    assert_eq!(tool.angle, 0.0);
+
+    // Idle → rotierbar
+    tool.on_scroll_rotate(15.0);
+    assert!(tool.angle > 0.0);
+
+    // Configuring → NICHT rotierbar
+    let angle_before = tool.angle;
+    tool.phase = ParkingPhase::Configuring;
+    tool.on_scroll_rotate(15.0);
+    assert_eq!(tool.angle, angle_before);
+
+    // Adjusting → wieder rotierbar
+    tool.phase = ParkingPhase::Adjusting;
+    tool.on_scroll_rotate(15.0);
+    assert!(tool.angle > angle_before);
+}
+
+#[test]
+fn parking_execute_nur_in_configuring() {
+    use crate::core::RoadMap;
+    let mut tool = ParkingTool::new();
+    let rm = RoadMap::new(0);
+
+    // Idle → kein Execute
+    assert!(tool.execute(&rm).is_none());
+
+    // Configuring → Execute moeglich
+    tool.on_click(Vec2::new(10.0, 20.0), &rm, false);
+    assert!(tool.execute(&rm).is_some());
+
+    // Adjusting → kein Execute
+    tool.on_click(Vec2::new(30.0, 40.0), &rm, false);
+    assert_eq!(tool.phase, ParkingPhase::Adjusting);
+    assert!(tool.execute(&rm).is_none());
 }

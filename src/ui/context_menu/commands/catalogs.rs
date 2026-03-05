@@ -70,6 +70,13 @@ impl MenuCatalog {
     /// Wird auch als unterer Teil von `for_node_focused()` verwendet.
     fn selection_entries() -> Vec<MenuEntry> {
         vec![
+            // ── Segment bearbeiten ────────────────────────────────
+            MenuEntry::Command {
+                id: CommandId::EditSegment,
+                label: "✏ Tool bearbeiten".into(),
+                preconditions: vec![Precondition::SelectionIsValidSegment],
+            },
+            MenuEntry::Separator,
             // ── Verbinden ────────────────────────────────────────
             MenuEntry::Command {
                 id: CommandId::ConnectTwoNodes,

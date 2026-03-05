@@ -2,8 +2,9 @@
 
 use super::compute_bypass_positions;
 use super::BypassTool;
+use crate::app::segment_registry::SegmentKind;
 use crate::app::tools::RouteTool;
-use crate::core::RoadMap;
+use crate::core::{ConnectionDirection, ConnectionPriority, RoadMap};
 use glam::Vec2;
 
 // ─── Geometrie-Tests ─────────────────────────────────────────────────────────
@@ -206,4 +207,94 @@ fn test_set_last_created_speichert_ids() {
 
     tool.set_last_created(&[10, 20, 30], &road_map);
     assert_eq!(tool.last_created_ids(), &[10, 20, 30]);
+}
+
+// ─── SegmentRecord-Tests ─────────────────────────────────────────────────────
+
+/// Roundtrip: make_segment_record erstellt den korrekten Record,
+/// load_for_edit stellt alle Felder exakt wieder her.
+#[test]
+fn bypass_segment_record_roundtrip() {
+    let mut tool = BypassTool::new();
+    let chain = vec![
+        Vec2::new(0.0, 0.0),
+        Vec2::new(10.0, 0.0),
+        Vec2::new(20.0, 5.0),
+    ];
+    tool.load_chain(chain.clone(), 100, 102);
+    tool.offset = 6.0;
+    tool.base_spacing = 5.0;
+    tool.direction = ConnectionDirection::Regular;
+    tool.priority = ConnectionPriority::SubPriority;
+
+    let record = tool.make_segment_record(42, &[100, 101, 102]);
+    assert!(record.is_some(), "Record muss vorhanden sein");
+    let record = record.unwrap();
+
+    let SegmentKind::Bypass {
+        ref chain_positions,
+        chain_start_id,
+        chain_end_id,
+        offset,
+        base_spacing,
+        ref base,
+    } = record.kind
+    else {
+        panic!("Erwartetes SegmentKind::Bypass, bekam etwas anderes");
+    };
+    assert_eq!(
+        chain_positions, &chain,
+        "chain_positions muss uebereinstimmen"
+    );
+    assert_eq!(chain_start_id, 100, "chain_start_id muss uebereinstimmen");
+    assert_eq!(chain_end_id, 102, "chain_end_id muss uebereinstimmen");
+    assert_eq!(offset, 6.0, "Offset muss uebereinstimmen");
+    assert_eq!(base_spacing, 5.0, "base_spacing muss uebereinstimmen");
+    assert_eq!(
+        base.direction,
+        ConnectionDirection::Regular,
+        "direction im base"
+    );
+    assert_eq!(
+        base.priority,
+        ConnectionPriority::SubPriority,
+        "priority im base"
+    );
+
+    // Roundtrip: neues Tool, load_for_edit
+    let mut tool2 = BypassTool::new();
+    tool2.load_for_edit(&record, &record.kind);
+
+    assert_eq!(
+        tool2.chain_positions, chain,
+        "chain_positions nach load_for_edit"
+    );
+    assert_eq!(
+        tool2.chain_start_id, 100,
+        "chain_start_id nach load_for_edit"
+    );
+    assert_eq!(tool2.chain_end_id, 102, "chain_end_id nach load_for_edit");
+    assert_eq!(tool2.offset, 6.0, "Offset nach load_for_edit");
+    assert_eq!(tool2.base_spacing, 5.0, "base_spacing nach load_for_edit");
+    assert_eq!(
+        tool2.direction,
+        ConnectionDirection::Regular,
+        "direction nach load_for_edit"
+    );
+    assert_eq!(
+        tool2.priority,
+        ConnectionPriority::SubPriority,
+        "priority nach load_for_edit"
+    );
+}
+
+/// Ohne geladene Kette muss make_segment_record None liefern.
+#[test]
+fn bypass_segment_record_none_ohne_chain() {
+    let tool = BypassTool::new();
+    let record = tool.make_segment_record(0, &[]);
+    assert!(
+        record.is_none(),
+        "Ohne Kette muss make_segment_record None liefern"
+    );
 }

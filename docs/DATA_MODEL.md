@@ -232,6 +232,8 @@ pub struct SegmentRecord {
     pub start_anchor: ToolAnchor,
     pub end_anchor: ToolAnchor,
     pub kind: SegmentKind,
+    pub original_positions: Vec<Vec2>,  // Fuer Validitaetspruefung
+}
 }
 
 pub struct SegmentRegistry {

@@ -4,7 +4,7 @@
 
 Das `app`-Modul verwaltet den globalen State, verarbeitet `AppIntent`s zentral ueber den `AppController`, mappt diese auf `AppCommand`s und baut die `RenderScene` fuer das Rendering.
 
-**Hinweis:** `Camera2D` lebt im `core`-Modul (reiner Geometrie-Typ). `app` re-exportiert `Camera2D`, `ConnectionDirection`, `ConnectionPriority` und `RoadMap` aus `core`.
+**Hinweis:** `Camera2D` lebt im `core`-Modul (reiner Geometrie-Typ). `app` re-exportiert `Camera2D`, `ConnectionDirection`, `ConnectionPriority`, `RoadMap`, `ParkingConfig` und andere zentrale Typen aus `core` und `tools`.
 
 **Weitere API-Dokumentationen:**
 - [`handlers/API.md`](handlers/API.md) — alle Handler-Funktionen mit detaillierter Dokumentation
@@ -231,7 +231,7 @@ pub enum EditorTool {
 
 ---
 
-### `SegmentBase`
+### `SegmentBase` und `SegmentKind`
 
 Gemeinsame Basis-Parameter fuer alle Route-Tools. Wird von `SegmentKind` verwendet.
 
@@ -244,7 +244,64 @@ pub struct SegmentBase {
     /// Maximaler Abstand zwischen Zwischen-Nodes
     pub max_segment_length: f32,
 }
+
+pub enum SegmentKind {
+    Straight { base: SegmentBase },
+    CurveCubic {
+        cp1: Vec2,
+        cp2: Vec2,
+        tangent_start: TangentSource,
+        tangent_end: TangentSource,
+        base: SegmentBase,
+    },
+    CurveQuad {
+        cp1: Vec2,
+        base: SegmentBase,
+    },
+    Spline {
+        anchors: Vec<ToolAnchor>,
+        tangent_start: TangentSource,
+        tangent_end: TangentSource,
+        base: SegmentBase,
+    },
+    ConstraintRoute {
+        control_nodes: Vec<Vec2>,
+        max_angle_deg: f32,
+        min_distance: f32,
+        base: SegmentBase,
+    },
+    Bypass {
+        chain_positions: Vec<Vec2>,
+        chain_start_id: u64,
+        chain_end_id: u64,
+        offset: f32,
+        base_spacing: f32,
+        base: SegmentBase,
+    },
+    Parking {
+        origin: Vec2,
+        angle: f32,
+        config: ParkingConfig,
+        base: SegmentBase,
+    },
+}
+
+/// Tool-Indizes im ToolManager
+pub const TOOL_INDEX_STRAIGHT: usize = 0;
+pub const TOOL_INDEX_CURVE_QUAD: usize = 1;
+pub const TOOL_INDEX_CURVE_CUBIC: usize = 2;
+pub const TOOL_INDEX_SPLINE: usize = 3;
+pub const TOOL_INDEX_BYPASS: usize = 4;
+pub const TOOL_INDEX_CONSTRAINT_ROUTE: usize = 5;
+pub const TOOL_INDEX_PARKING: usize = 6;
 ```
+
+**Methoden:**
+
+```rust
+pub fn tool_index(&self) -> usize
+```
+Gibt den Tool-Index im ToolManager fuer diese SegmentKind-Variante zurueck (z.B. `SegmentKind::Bypass { .. }.tool_index()` → `TOOL_INDEX_BYPASS`).
 
 ---
 
@@ -286,6 +343,64 @@ pub enum SegmentKind {
 - `tool_index() → usize` — Index des zugehoerigen Tools im `ToolManager` (fuer Segment-Editing)
 
 **Hinweis:** Alle Varianten enthalten `base: SegmentBase` mit gemeinsamen Parametern. Diesen Struct nutzte der `segment_registry` um Segment-Meta-Daten fuer die spätere Bearbeitung zu speichern.
+
+---
+
+### `SegmentRecord`
+
+Gespeicherte Segment-Parametrisierung fuer nachtraegliche Bearbeitung.
+
+```rust
+pub struct SegmentRecord {
+    /// Eindeutige Registry-ID
+    pub id: u64,
+    /// IDs aller neu erstellten Nodes
+    pub node_ids: Vec<u64>,
+    /// Start-Anker (ExistingNode oder NewPosition)
+    pub start_anchor: ToolAnchor,
+    /// End-Anker (ExistingNode oder NewPosition)
+    pub end_anchor: ToolAnchor,
+    /// Tool-spezifische Parameter
+    pub kind: SegmentKind,
+    /// Original-Positionen der Nodes zum Zeitpunkt der Erstellung
+    pub original_positions: Vec<Vec2>,
+}
+```
+
+---
+
+### `SegmentRegistry`
+
+In-Session-Registry aller erstellten Segmente — ermoeglicht nachtraegliches Editieren von Segmenten durch Speicherung der Tool-Parameter und Validitaetspruefung.
+
+**Merkmale:**
+- Nicht persistent: Wird beim Laden einer Datei geleert
+- Segment-Validierung: Prueft ob alle Nodes noch existieren und Positionen unveraendert sind
+- Segment-Selektion: Erlaubt Klick auf Segment-Node → Selektion aller Segment-Nodes
+
+**Methoden:**
+
+```rust
+pub fn register(&mut self, record: SegmentRecord) -> u64 // Registriert neu erstelltes Segment
+pub fn get(&self, record_id: u64) -> Option<&SegmentRecord> // Findet Record nach ID
+pub fn remove(&mut self, record_id: u64) // Loescht Record
+pub fn find_by_node_ids(&self, node_ids: &IndexSet<u64>) -> Vec<&SegmentRecord> // Alle Records mit mind. einer Node-ID
+pub fn find_first_by_node_id(&self, node_id: u64) -> Option<&SegmentRecord> // Erstes Record mit dieser Node
+pub fn is_segment_valid(&self, record: &SegmentRecord, road_map: &RoadMap) -> bool // Validitaetsprüfung
+```
+
+**Beispiel:**
+
+```rust
+// Klick auf Segment-Node → Auto-Selektion aller Nodes
+if let Some(record) = segment_registry.find_first_by_node_id(clicked_node_id) {
+    if segment_registry.is_segment_valid(record, &road_map) {
+        for id in &record.node_ids {
+            selection.insert(*id);
+        }
+    }
+}
+```
 
 ---
 
@@ -415,6 +530,9 @@ pub enum AppIntent {
     RouteToolDragStarted { world_pos: glam::Vec2 },
     RouteToolDragUpdated { world_pos: glam::Vec2 },
     RouteToolDragEnded,
+
+    // Route-Tool Scroll-Rotation (Alt+Scroll fuer ParkingTool-Winkel-Steuerung)
+    RouteToolScrollRotated { delta: f32 },
 
     // Route-Tool Schnellsteuerung (Keyboard-Shortcuts)
     IncreaseRouteToolNodeCount,
@@ -555,6 +673,9 @@ pub enum AppCommand {
     RouteToolDragUpdate { world_pos: glam::Vec2 },
     RouteToolDragEnd,
 
+    // Route-Tool Rotation (Scroll-basierte Winkel-Anpassung)
+    RouteToolRotate { delta: f32 },
+
     // Segment-Bearbeitung
     EditSegment { record_id: u64 },
     // Distanzen: Selektierte Nodes-Kette per Catmull-Rom-Spline neu verteilen
@@ -590,7 +711,7 @@ pub enum AppCommand {
 
 Alle Use-Case-Funktionen sind in [`use_cases/API.md`](use_cases/API.md) dokumentiert.
 
-Module: `camera` · `file_io` · `heightmap` · `selection` · `auto_detect` · `editing` (inkl. `markers`, `resample_path`, `generate_bypass`, `copy_paste`) · `viewport` · `background_map` · `SegmentRegistry`
+Module: `camera` · `file_io` · `heightmap` · `selection` · `auto_detect` · `editing` (inkl. `markers`, `resample_path`, `generate_bypass`, `copy_paste`) · `viewport` · `background_map`
 
 ---
 

@@ -97,6 +97,10 @@ pub trait RouteTool:
     /// `ctrl` ist true wenn Ctrl/Cmd gedrueckt war.
     fn on_click(&mut self, pos: Vec2, road_map: &RoadMap, ctrl: bool) -> ToolAction;
 
+    /// Scroll-Rotation verarbeiten (z.B. Alt+Mausrad).
+    /// `delta` ist positiv fuer Aufwaertsscroll, negativ fuer Abwaerts.
+    fn on_scroll_rotate(&mut self, _delta: f32) {}
+
     /// Preview-Geometrie fuer die aktuelle Mausposition berechnen.
     fn preview(&self, cursor_pos: Vec2, road_map: &RoadMap) -> ToolPreview;
 

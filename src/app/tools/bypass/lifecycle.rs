@@ -4,6 +4,7 @@ use std::borrow::Cow;
 
 use super::geometry::compute_bypass_positions;
 use super::state::BypassTool;
+use crate::app::segment_registry::{SegmentBase, SegmentKind, SegmentRecord};
 use crate::app::tools::common::assemble_tool_result;
 use crate::app::tools::{RouteTool, ToolAction, ToolAnchor, ToolPreview, ToolResult};
 use crate::core::{ConnectionDirection, ConnectionPriority, RoadMap};
@@ -177,5 +178,54 @@ impl RouteTool for BypassTool {
 
     fn set_last_created(&mut self, ids: &[u64], _road_map: &RoadMap) {
         self.lifecycle.save_created_ids(ids);
+    }
+
+    /// Erstellt einen `SegmentRecord` fuer die Registry aus dem aktuellen Tool-Zustand.
+    fn make_segment_record(&self, id: u64, node_ids: &[u64]) -> Option<SegmentRecord> {
+        if !self.has_chain() {
+            return None;
+        }
+        let start_pos = *self.chain_positions.first()?;
+        let end_pos = *self.chain_positions.last()?;
+        Some(SegmentRecord {
+            id,
+            node_ids: node_ids.to_vec(),
+            start_anchor: ToolAnchor::ExistingNode(self.chain_start_id, start_pos),
+            end_anchor: ToolAnchor::ExistingNode(self.chain_end_id, end_pos),
+            original_positions: Vec::new(), // wird im Handler befuellt
+            marker_node_ids: Vec::new(),
+            kind: SegmentKind::Bypass {
+                chain_positions: self.chain_positions.clone(),
+                chain_start_id: self.chain_start_id,
+                chain_end_id: self.chain_end_id,
+                offset: self.offset,
+                base_spacing: self.base_spacing,
+                base: SegmentBase {
+                    direction: self.direction,
+                    priority: self.priority,
+                    max_segment_length: self.base_spacing,
+                },
+            },
+        })
+    }
+
+    /// Laedt einen gespeicherten `SegmentRecord` zur nachtraeglichen Bearbeitung.
+    fn load_for_edit(&mut self, _record: &SegmentRecord, kind: &SegmentKind) {
+        let SegmentKind::Bypass {
+            chain_positions,
+            chain_start_id,
+            chain_end_id,
+            offset,
+            base_spacing,
+            base,
+        } = kind
+        else {
+            return;
+        };
+        self.load_chain(chain_positions.clone(), *chain_start_id, *chain_end_id);
+        self.offset = *offset;
+        self.base_spacing = *base_spacing;
+        self.direction = base.direction;
+        self.priority = base.priority;
     }
 }

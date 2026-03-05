@@ -1,6 +1,7 @@
 //! Scroll-Zoom auf Mausposition.
 
 use super::{screen_pos_to_world, InputState, ViewportContext};
+use crate::app::state::EditorTool;
 use crate::app::AppIntent;
 
 impl InputState {
@@ -12,6 +13,13 @@ impl InputState {
 
         let scroll = ctx.ui.input(|i| i.smooth_scroll_delta.y);
         if scroll == 0.0 {
+            return;
+        }
+
+        // Alt+Scroll → Route-Tool-Rotation statt Zoom
+        let modifiers = ctx.ui.input(|i| i.modifiers);
+        if modifiers.alt && ctx.active_tool == EditorTool::Route {
+            events.push(AppIntent::RouteToolScrollRotated { delta: scroll });
             return;
         }
 
