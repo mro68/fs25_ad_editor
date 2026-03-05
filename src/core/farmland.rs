@@ -15,6 +15,7 @@ use glam::Vec2;
 /// Die Vertices stammen aus dem GRLE-Farmland-Raster und wurden
 /// per `world = pixel * (map_size / grle_width) - map_size / 2`
 /// in Weltkoordinaten umgerechnet.
+#[derive(Clone)]
 pub struct FieldPolygon {
     /// Farmland-ID (1–255, 0 = kein Feld)
     pub id: u32,
@@ -50,7 +51,9 @@ pub fn point_in_polygon(point: Vec2, polygon: &[Vec2]) -> bool {
 ///
 /// Gibt `None` zurueck wenn kein Polygon den Punkt enthaelt.
 pub fn find_polygon_at<'a>(point: Vec2, polygons: &'a [FieldPolygon]) -> Option<&'a FieldPolygon> {
-    polygons.iter().find(|fp| point_in_polygon(point, &fp.vertices))
+    polygons
+        .iter()
+        .find(|fp| point_in_polygon(point, &fp.vertices))
 }
 
 // ---------------------------------------------------------------------------
@@ -86,13 +89,16 @@ fn dp_open(points: &[Vec2], tolerance: f32) -> Vec<Vec2> {
         .iter()
         .enumerate()
         .map(|(i, &p)| (i + 1, perpendicular_distance(p, first, last)))
-        .fold((0, 0.0_f32), |(mi, md), (i, d)| {
-            if d > md {
-                (i, d)
-            } else {
-                (mi, md)
-            }
-        });
+        .fold(
+            (0, 0.0_f32),
+            |(mi, md), (i, d)| {
+                if d > md {
+                    (i, d)
+                } else {
+                    (mi, md)
+                }
+            },
+        );
 
     if max_dist > tolerance {
         // Teile am Maximum und vereinfache rekursiv
@@ -200,7 +206,11 @@ pub fn offset_polygon(vertices: &[Vec2], offset: f32) -> Vec<Vec2> {
     // CCW (positive Flaeche): rechte Kantennormale = Aussenormale → Vec2(edge.y, -edge.x)
     // CW (negative Flaeche): linke Kantennormale = Aussenormale → Vec2(-edge.y, edge.x)
     // Vereinheitlicht: Vorzeichen der Flaeche bestimmt die Richtung
-    let orientation_sign = if signed_area >= 0.0 { 1.0_f32 } else { -1.0_f32 };
+    let orientation_sign = if signed_area >= 0.0 {
+        1.0_f32
+    } else {
+        -1.0_f32
+    };
 
     // Normierte Aussenormale fuer jede Kante
     let edge_normals: Vec<Vec2> = (0..n)
@@ -233,10 +243,10 @@ pub fn offset_polygon(vertices: &[Vec2], offset: f32) -> Vec<Vec2> {
     let result_area_signed = polygon_area_signed(&result);
     let orig_area = signed_area.abs();
     let res_area = result_area_signed.abs();
-    let orientation_flipped = result_area_signed == 0.0
-        || result_area_signed.signum() != signed_area.signum();
-    let overshoot = (offset < 0.0 && res_area > orig_area)
-        || (offset > 0.0 && res_area < orig_area);
+    let orientation_flipped =
+        result_area_signed == 0.0 || result_area_signed.signum() != signed_area.signum();
+    let overshoot =
+        (offset < 0.0 && res_area > orig_area) || (offset > 0.0 && res_area < orig_area);
     if orientation_flipped || overshoot {
         return vertices.to_vec();
     }

@@ -137,6 +137,16 @@ pub trait RouteTool:
     /// Snap-Radius (Welteinheiten) vom Editor uebernehmen.
     fn set_snap_radius(&mut self, _radius: f32) {}
 
+    /// Farmland-Polygone fuer Tools setzen, die auf Feldgrenzen reagieren.
+    ///
+    /// Standard-Implementierung ist ein No-Op. Nur `FieldBoundaryTool`
+    /// ueberschreibt diese Methode.
+    fn set_farmland_data(
+        &mut self,
+        _data: Option<std::sync::Arc<Vec<crate::core::FieldPolygon>>>,
+    ) {
+    }
+
     /// Speichert die IDs der zuletzt erstellten Nodes (fuer nachtraegliche Anpassung).
     /// `road_map` erlaubt tools, Nachbar-Informationen fuer Feintuning zu cachen.
     fn set_last_created(&mut self, _ids: &[u64], _road_map: &RoadMap) {}
