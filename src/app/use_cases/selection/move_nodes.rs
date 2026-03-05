@@ -27,11 +27,7 @@ pub fn move_selected_nodes(state: &mut AppState, delta_world: glam::Vec2) {
     let selected: Vec<u64> = state.selection.selected_node_ids.iter().copied().collect();
     let extra = state.segment_registry.expand_locked_selection(&selected);
 
-    let move_ids: HashSet<u64> = selected
-        .iter()
-        .copied()
-        .chain(extra)
-        .collect();
+    let move_ids: HashSet<u64> = selected.iter().copied().chain(extra).collect();
 
     let road_map_mut = Arc::make_mut(road_map);
     let mut moved_any = false;
@@ -74,7 +70,12 @@ mod tests {
     use glam::Vec2;
     use std::sync::Arc;
 
-    fn make_seg_record(id: u64, node_ids: Vec<u64>, positions: Vec<Vec2>, locked: bool) -> SegmentRecord {
+    fn make_seg_record(
+        id: u64,
+        node_ids: Vec<u64>,
+        positions: Vec<Vec2>,
+        locked: bool,
+    ) -> SegmentRecord {
         SegmentRecord {
             id,
             node_ids,
@@ -185,8 +186,16 @@ mod tests {
         move_selected_nodes(&mut state, Vec2::new(5.0, 0.0));
 
         let rm = state.road_map.as_ref().unwrap();
-        assert_eq!(rm.nodes[&1].position, Vec2::new(5.0, 0.0), "Node 1 muss verschoben sein");
-        assert_eq!(rm.nodes[&2].position, Vec2::new(15.0, 0.0), "Node 2 muss mitbewegt werden");
+        assert_eq!(
+            rm.nodes[&1].position,
+            Vec2::new(5.0, 0.0),
+            "Node 1 muss verschoben sein"
+        );
+        assert_eq!(
+            rm.nodes[&2].position,
+            Vec2::new(15.0, 0.0),
+            "Node 2 muss mitbewegt werden"
+        );
     }
 
     #[test]
@@ -213,7 +222,11 @@ mod tests {
 
         let rm = state.road_map.as_ref().unwrap();
         assert_eq!(rm.nodes[&1].position, Vec2::new(5.0, 0.0));
-        assert_eq!(rm.nodes[&2].position, Vec2::new(10.0, 0.0), "Node 2 darf nicht bewegt werden");
+        assert_eq!(
+            rm.nodes[&2].position,
+            Vec2::new(10.0, 0.0),
+            "Node 2 darf nicht bewegt werden"
+        );
     }
 
     #[test]
