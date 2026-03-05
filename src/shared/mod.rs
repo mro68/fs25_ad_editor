@@ -2,9 +2,12 @@
 //!
 //! Enthaelt Typen, die zwischen `app` und `render` geteilt werden,
 //! um direkte Abhaengigkeiten zu vermeiden.
+
+/// Konfigurationsoptionen (EditorOptions, RenderQuality, Farben, Kamera-Parameter).
 pub mod options;
 mod render_quality;
 mod render_scene;
+/// Spline-Geometrie-Hilfsfunktionen (Catmull-Rom, Arc-Length-Resampling).
 pub mod spline_geometry;
 
 pub use options::EditorOptions;
