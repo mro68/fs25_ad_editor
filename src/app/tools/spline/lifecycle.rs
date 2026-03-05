@@ -2,10 +2,9 @@
 
 use super::super::{
     common::{
-        linear_connections, populate_neighbors, snap_with_neighbors, tangent_options,
-        TangentMenuData, TangentSource,
+        linear_connections, populate_neighbors, tangent_options, TangentMenuData, TangentSource,
     },
-    snap_to_node, RouteTool, ToolAction, ToolPreview, ToolResult,
+    RouteTool, ToolAction, ToolPreview, ToolResult,
 };
 use super::state::SplineTool;
 use crate::app::segment_registry::{SegmentKind, SegmentRecord};
@@ -34,7 +33,7 @@ impl RouteTool for SplineTool {
     }
 
     fn on_click(&mut self, pos: Vec2, road_map: &RoadMap, _ctrl: bool) -> ToolAction {
-        let (anchor, _neighbors) = snap_with_neighbors(pos, road_map, self.lifecycle.snap_radius);
+        let (anchor, _neighbors) = self.lifecycle.snap_with_neighbors(pos, road_map);
 
         if self.anchors.is_empty() {
             // Verkettung: letzten Endpunkt als Start verwenden
@@ -65,7 +64,7 @@ impl RouteTool for SplineTool {
         }
 
         let snapped_cursor =
-            snap_to_node(cursor_pos, road_map, self.lifecycle.snap_radius).position();
+            self.lifecycle.snap_at(cursor_pos, road_map).position();
 
         let positions = if self.anchors.len() == 1 {
             // Nur Start + Cursor → gerade Linie (Preview)

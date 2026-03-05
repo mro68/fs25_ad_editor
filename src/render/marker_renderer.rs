@@ -136,7 +136,7 @@ impl MarkerRenderer {
             bind_group,
             instance_buffer: None,
             instance_capacity: 0,
-            instance_scratch: Vec::new(),
+            instance_scratch: Vec::with_capacity(256),
         }
     }
 

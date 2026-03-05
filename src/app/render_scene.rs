@@ -35,9 +35,13 @@ use std::sync::Arc;
 /// # Rueckgabe
 /// Eine vollstaendige `RenderScene`, bereit zum Rendering.
 pub fn build(state: &AppState, viewport_size: [f32; 2]) -> RenderScene {
-    // Wenn Distanzen-Vorschau aktiv + hide_original → selektierte Nodes ausblenden
+    // Arc einmal klonen — wiederverwendet fuer selected_node_ids UND hidden_node_ids
+    let selected_arc = state.selection.selected_node_ids.clone();
+
+    // Wenn Distanzen-Vorschau aktiv + hide_original → selektierte Nodes ausblenden.
+    // Statt nochmals zu klonen verwenden wir den gleichen Arc (billiger O(1)-Clone).
     let hidden_node_ids = if state.ui.distanzen.should_hide_original() {
-        state.selection.selected_node_ids.clone()
+        Arc::clone(&selected_arc)
     } else {
         Arc::new(IndexSet::new())
     };
@@ -47,7 +51,7 @@ pub fn build(state: &AppState, viewport_size: [f32; 2]) -> RenderScene {
         camera: state.view.camera.clone(),
         viewport_size,
         render_quality: state.view.render_quality,
-        selected_node_ids: state.selection.selected_node_ids.clone(),
+        selected_node_ids: selected_arc,
         connect_source_node: state.editor.connect_source_node,
         background_map: state.view.background_map.clone(),
         background_visible: state.view.background_visible,

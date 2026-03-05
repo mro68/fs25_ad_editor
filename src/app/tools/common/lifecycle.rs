@@ -1,7 +1,11 @@
 //! Lifecycle-Zustand und Segment-Konfiguration fuer Route-Tools.
 
 use super::super::ToolAnchor;
-use super::geometry::{node_count_from_length, segment_length_from_count};
+use super::geometry::{
+    node_count_from_length, segment_length_from_count, snap_with_neighbors as geom_snap_with_neighbors,
+};
+use crate::core::{ConnectedNeighbor, RoadMap};
+use crate::app::tools::snap_to_node;
 
 /// Welcher Wert wurde zuletzt vom User geaendert?
 ///
@@ -82,6 +86,25 @@ impl ToolLifecycleState {
     /// Prueft ob eine vorherige Erzeugung existiert (fuer Adjusting-Modus).
     pub fn has_last_created(&self) -> bool {
         !self.last_created_ids.is_empty()
+    }
+
+    /// Snappt auf den naechsten Node am Cursor-Punkt.
+    ///
+    /// Kuerzel fuer `snap_to_node(pos, road_map, self.snap_radius)`.
+    /// Vermeidet das explizite Weitergeben des Snap-Radius an jeder Aufrufstelle.
+    pub fn snap_at(&self, pos: glam::Vec2, road_map: &RoadMap) -> ToolAnchor {
+        snap_to_node(pos, road_map, self.snap_radius)
+    }
+
+    /// Snappt auf den naechsten Node und liefert dessen verbundene Nachbarn.
+    ///
+    /// Kuerzel fuer `snap_with_neighbors(pos, road_map, self.snap_radius)`.
+    pub fn snap_with_neighbors(
+        &self,
+        pos: glam::Vec2,
+        road_map: &RoadMap,
+    ) -> (ToolAnchor, Vec<ConnectedNeighbor>) {
+        geom_snap_with_neighbors(pos, road_map, self.snap_radius)
     }
 }
 

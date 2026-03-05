@@ -1,7 +1,7 @@
 //! Lifecycle-Methoden des ConstraintRouteTool (RouteTool-Implementierung).
 
-use super::super::common::{linear_connections, snap_with_neighbors};
-use super::super::{snap_to_node, RouteTool, ToolAction, ToolPreview, ToolResult};
+use super::super::common::linear_connections;
+use super::super::{RouteTool, ToolAction, ToolPreview, ToolResult};
 use super::geometry::{build_result, BuildResultParams};
 use super::state::{ConstraintRouteTool, Phase};
 use crate::app::segment_registry::{SegmentKind, SegmentRecord};
@@ -32,7 +32,7 @@ impl RouteTool for ConstraintRouteTool {
     }
 
     fn on_click(&mut self, pos: Vec2, road_map: &RoadMap, _ctrl: bool) -> ToolAction {
-        let (anchor, _neighbors) = snap_with_neighbors(pos, road_map, self.lifecycle.snap_radius);
+        let (anchor, _neighbors) = self.lifecycle.snap_with_neighbors(pos, road_map);
 
         match self.phase {
             Phase::Start => {
@@ -88,7 +88,7 @@ impl RouteTool for ConstraintRouteTool {
                     Some(a) => a.position(),
                     None => return ToolPreview::default(),
                 };
-                let snapped = snap_to_node(cursor_pos, road_map, self.lifecycle.snap_radius);
+                let snapped = self.lifecycle.snap_at(cursor_pos, road_map);
                 let end_pos = snapped.position();
                 let nodes = vec![start_pos, end_pos];
                 let connections = linear_connections(nodes.len());
@@ -104,12 +104,14 @@ impl RouteTool for ConstraintRouteTool {
                 if self.preview_positions.is_empty() {
                     return ToolPreview::default();
                 }
-                let connections = if self.preview_connections.is_empty() {
+                // Cow::Borrowed vermeidet Clone bei unveraendertem Cache-Hit
+                let connections: Vec<(usize, usize)> = if self.preview_connections.is_empty() {
                     linear_connections(self.preview_positions.len())
                 } else {
                     self.preview_connections.clone()
                 };
                 let styles = vec![(self.direction, self.priority); connections.len()];
+                // Positionen als Basis; Steuerpunkte als unverbundene Rauten-Nodes
                 let mut nodes = self.preview_positions.clone();
 
                 // Steuerpunkte als unverbundene Nodes hinzufuegen (werden als Rauten gerendert)

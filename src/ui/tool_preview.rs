@@ -262,19 +262,15 @@ pub fn paint_clipboard_preview(
 
     let offset = paste_pos - clipboard.center;
 
-    // Positions-Lookup fuer Verbindungen
-    let node_positions: std::collections::HashMap<u64, Vec2> = clipboard
-        .nodes
-        .iter()
-        .map(|n| (n.id, n.position + offset))
-        .collect();
-
-    // Verbindungen zeichnen
+    // Positions-Lookup fuer Verbindungen — linearer Scan statt HashMap-Allokation,
+    // da Clipboard-Inhalte typischerweise klein sind (< 1000 Nodes).
     for conn in &clipboard.connections {
-        let Some(&start_pos) = node_positions.get(&conn.start_id) else {
+        let find_pos =
+            |id: u64| clipboard.nodes.iter().find(|n| n.id == id).map(|n| n.position + offset);
+        let Some(start_pos) = find_pos(conn.start_id) else {
             continue;
         };
-        let Some(&end_pos) = node_positions.get(&conn.end_id) else {
+        let Some(end_pos) = find_pos(conn.end_id) else {
             continue;
         };
         let sa = camera.world_to_screen(start_pos, viewport_size);
@@ -284,16 +280,12 @@ pub fn paint_clipboard_preview(
         painter.line_segment([from, to], egui::Stroke::new(2.0, conn_color));
     }
 
-    // Marker-Node-IDs fuer schnelle Suche
-    let marker_ids: std::collections::HashSet<u64> =
-        clipboard.markers.iter().map(|m| m.id).collect();
-
-    // Nodes zeichnen
+    // Nodes zeichnen — Marker-Check per .any() ohne HashSet-Allokation
     for node in &clipboard.nodes {
         let world_pos = node.position + offset;
         let sp = camera.world_to_screen(world_pos, viewport_size);
         let screen_pos = egui::pos2(rect.min.x + sp.x, rect.min.y + sp.y);
-        let color = if marker_ids.contains(&node.id) {
+        let color = if clipboard.markers.iter().any(|m| m.id == node.id) {
             marker_color
         } else {
             node_color
