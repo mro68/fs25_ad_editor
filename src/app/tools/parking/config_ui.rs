@@ -1,6 +1,6 @@
 //! UI-Panel fuer die ParkingTool-Konfiguration.
 
-use super::state::{ParkingPhase, ParkingTool};
+use super::state::{ParkingPhase, ParkingTool, RampSide};
 
 impl ParkingTool {
     /// Rendert die Parkplatz-Konfiguration im Properties-Panel.
@@ -79,6 +79,59 @@ impl ParkingTool {
                 )
                 .changed()
             {
+                changed = true;
+            }
+        });
+
+        // Rampenlaenge
+        ui.horizontal(|ui| {
+            ui.label("Rampenlaenge:");
+            if ui
+                .add(
+                    egui::Slider::new(&mut self.config.ramp_length, 2.0..=20.0)
+                        .suffix(" m")
+                        .fixed_decimals(1),
+                )
+                .changed()
+            {
+                changed = true;
+            }
+        });
+
+        // Einfahrt-Seite
+        ui.horizontal(|ui| {
+            ui.label("Einfahrt-Seite:");
+            let mut side = self.config.entry_side;
+            egui::ComboBox::from_id_salt("parking_entry_side")
+                .selected_text(match side {
+                    RampSide::Left => "Links (Marker-Sicht)",
+                    RampSide::Right => "Rechts (Marker-Sicht)",
+                })
+                .show_ui(ui, |ui| {
+                    ui.selectable_value(&mut side, RampSide::Left, "Links (Marker-Sicht)");
+                    ui.selectable_value(&mut side, RampSide::Right, "Rechts (Marker-Sicht)");
+                });
+            if side != self.config.entry_side {
+                self.config.entry_side = side;
+                changed = true;
+            }
+        });
+
+        // Ausfahrt-Seite
+        ui.horizontal(|ui| {
+            ui.label("Ausfahrt-Seite:");
+            let mut side = self.config.exit_side;
+            egui::ComboBox::from_id_salt("parking_exit_side")
+                .selected_text(match side {
+                    RampSide::Left => "Links (Marker-Sicht)",
+                    RampSide::Right => "Rechts (Marker-Sicht)",
+                })
+                .show_ui(ui, |ui| {
+                    ui.selectable_value(&mut side, RampSide::Left, "Links (Marker-Sicht)");
+                    ui.selectable_value(&mut side, RampSide::Right, "Rechts (Marker-Sicht)");
+                });
+            if side != self.config.exit_side {
+                self.config.exit_side = side;
                 changed = true;
             }
         });

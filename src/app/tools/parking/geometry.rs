@@ -7,7 +7,25 @@ use crate::app::tools::ToolResult;
 use crate::core::{ConnectionDirection, ConnectionPriority, NodeFlag};
 use glam::Vec2;
 
-use super::state::ParkingConfig;
+use super::state::{ParkingConfig, RampSide};
+
+fn row_index_for_side(side: RampSide, row_count: usize) -> usize {
+    if row_count <= 1 {
+        0
+    } else {
+        match side {
+            RampSide::Right => 0,
+            RampSide::Left => row_count - 1,
+        }
+    }
+}
+
+fn side_sign_y(side: RampSide) -> f32 {
+    match side {
+        RampSide::Right => -1.0,
+        RampSide::Left => 1.0,
+    }
+}
 
 /// Internes Ergebnis des Generators vor ToolResult-Konvertierung.
 pub(super) struct ParkingLayout {
@@ -32,6 +50,10 @@ pub fn generate_parking_layout(
     _lane_direction: ConnectionDirection,
     priority: ConnectionPriority,
 ) -> ParkingLayout {
+    if config.num_rows > 0 {
+        return generate_blueprint_series_layout(origin, angle, config, priority);
+    }
+
     let n = config.num_rows;
     let spacing = config.row_spacing;
     let length = config.bay_length;
@@ -156,13 +178,25 @@ pub fn generate_parking_layout(
         ));
     }
 
+    // Rueckwaerts-Manoever (entscheidender Parking-Trick):
+    // Vorwaerts in die Tasche (t0 -> t1 -> t2), dann nur rueckwaerts zurueck (t2 -> t0).
+    // Damit kann der Pfadfinder ein realistisches Rangier-Manoever wie in Parking.xml abbilden.
+    if tropfen_indices.len() >= 3 {
+        connections.push((
+            tropfen_indices[2],
+            tropfen_indices[0],
+            ConnectionDirection::Reverse,
+            priority,
+        ));
+    }
+
     // ════════════════════════════════════════════════════════════
     // SCHRITT C: Einfahrt-Node (45°-Rampe)
     // ════════════════════════════════════════════════════════════
     // Rampen verlaufen immer in +X-Richtung (weg vom Marker am oestlichen Ende).
     let entry_target_seg =
         ((config.entry_t * num_segments as f32).round() as usize).min(num_segments);
-    let entry_row_idx = 0; // suedlichste Reihe
+    let entry_row_idx = row_index_for_side(config.entry_side, n);
     let entry_target_idx = row_nodes[entry_row_idx][entry_target_seg];
     let entry_target_lx = entry_target_seg as f32 * seg_len;
     let entry_target_ly = if n == 1 {
@@ -170,9 +204,9 @@ pub fn generate_parking_layout(
     } else {
         (entry_row_idx as f32 - (n - 1) as f32 / 2.0) * spacing
     };
-    let ramp_offset = 5.0;
+    let ramp_offset = config.ramp_length.max(0.5);
     let entry_lx = entry_target_lx - ramp_offset;
-    let entry_ly = entry_target_ly - ramp_offset;
+    let entry_ly = entry_target_ly + side_sign_y(config.entry_side) * ramp_offset;
     let entry_idx = nodes.len();
     nodes.push(to_world(entry_lx, entry_ly));
 
@@ -189,7 +223,7 @@ pub fn generate_parking_layout(
     // ════════════════════════════════════════════════════════════
     let exit_target_seg =
         ((config.exit_t * num_segments as f32).round() as usize).min(num_segments);
-    let exit_row_idx = n - 1; // noerdlichste Reihe
+    let exit_row_idx = row_index_for_side(config.exit_side, n);
     let exit_target_idx = row_nodes[exit_row_idx][exit_target_seg];
     let exit_target_lx = exit_target_seg as f32 * seg_len;
     let exit_target_ly = if n == 1 {
@@ -198,7 +232,7 @@ pub fn generate_parking_layout(
         (exit_row_idx as f32 - (n - 1) as f32 / 2.0) * spacing
     };
     let exit_lx = exit_target_lx + ramp_offset;
-    let exit_ly = exit_target_ly + ramp_offset;
+    let exit_ly = exit_target_ly + side_sign_y(config.exit_side) * ramp_offset;
     let exit_idx = nodes.len();
     nodes.push(to_world(exit_lx, exit_ly));
 
@@ -209,6 +243,129 @@ pub fn generate_parking_layout(
         ConnectionDirection::Regular,
         priority,
     ));
+
+    ParkingLayout {
+        nodes,
+        connections,
+        markers,
+    }
+}
+
+fn generate_blueprint_series_layout(
+    origin: Vec2,
+    angle: f32,
+    config: &ParkingConfig,
+    priority: ConnectionPriority,
+) -> ParkingLayout {
+    let (sin_a, cos_a) = angle.sin_cos();
+    let to_world = |lx: f32, ly: f32| -> Vec2 {
+        Vec2::new(
+            origin.x + cos_a * lx - sin_a * ly,
+            origin.y + sin_a * lx + cos_a * ly,
+        )
+    };
+
+    // Referenz-Blueprint in relativen Koordinaten bezogen auf Gesamtlänge L = 80m.
+    // n1 Marker/Parkplatz, n4-n6 Wendegruppe, n7 Einfahrt, n8 Ausfahrt.
+    let base_nodes = [
+        Vec2::new(0.0, 0.0),
+        Vec2::new(20.0, 0.0),
+        Vec2::new(40.0, 0.0),
+        Vec2::new(75.0, 0.0),
+        Vec2::new(77.5, -0.5),
+        Vec2::new(80.0, 0.0),
+    ];
+    let base_connections = [
+        (0usize, 1usize, ConnectionDirection::Dual),
+        (1, 2, ConnectionDirection::Dual),
+        (2, 3, ConnectionDirection::Dual),
+        (3, 4, ConnectionDirection::Regular),
+        (4, 5, ConnectionDirection::Regular),
+        (5, 3, ConnectionDirection::Reverse),
+        (6, 1, ConnectionDirection::Regular),
+        (2, 7, ConnectionDirection::Regular),
+    ];
+
+    let count = config.num_rows.max(1);
+    let scale = (config.bay_length / 80.0).max(0.1);
+    let spacing = config.row_spacing;
+
+    let mut nodes: Vec<Vec2> = Vec::with_capacity(count * base_nodes.len());
+    let mut connections: Vec<(usize, usize, ConnectionDirection, ConnectionPriority)> =
+        Vec::with_capacity(count * (base_connections.len() + 2));
+    let mut markers: Vec<(usize, String, String)> = Vec::with_capacity(count);
+
+    for i in 0..count {
+        let base_idx = nodes.len();
+        let y_offset = i as f32 * spacing;
+
+        for p in base_nodes {
+            let lp = Vec2::new(p.x * scale, p.y * scale + y_offset);
+            nodes.push(to_world(lp.x, lp.y));
+        }
+
+        // n7/n8 reagieren auf alle einstellbaren Parameter:
+        // - ramp_length: Distanz
+        // - entry_side/exit_side: Nord/Sued aus Marker-Sicht
+        // - entry_t/exit_t: X-Bias entlang der Hauptachse
+        let n2 = Vec2::new(20.0 * scale, y_offset);
+        let n3 = Vec2::new(40.0 * scale, y_offset);
+        let entry_bias_x = (config.entry_t - 0.5) * 10.0 * scale;
+        let exit_bias_x = (config.exit_t - 0.5) * 10.0 * scale;
+        let n7 = Vec2::new(
+            n2.x - config.ramp_length + entry_bias_x,
+            n2.y + side_sign_y(config.entry_side) * config.ramp_length,
+        );
+        let n8 = Vec2::new(
+            n3.x + config.ramp_length + exit_bias_x,
+            n3.y + side_sign_y(config.exit_side) * config.ramp_length,
+        );
+        nodes.push(to_world(n7.x, n7.y));
+        nodes.push(to_world(n8.x, n8.y));
+
+        for (from, to, dir) in base_connections {
+            connections.push((base_idx + from, base_idx + to, dir, priority));
+        }
+
+        markers.push((
+            base_idx,
+            format!("{} - {:02}", config.marker_group, i + 1),
+            config.marker_group.clone(),
+        ));
+    }
+
+    // Mehrere Parkplaetze: Einfahrt-Kette (n7) + Ausfahrt-Kette (n8), jeweils Einbahn.
+    //
+    // Richtungslogik: Der Winkel an jedem Kettenpunkt darf max. ~45° betragen.
+    //
+    // Right-Seite (suedlich): n7/n8 liegen bei y = y_offset - ramp (suedlich der Bucht).
+    //   Fahrzeuge naehern sich von Sueden → Einfahrkette nordwaerts (curr→next).
+    //   Ausfahrt zeigt SE (+x, -y) → Ausfahrtkette muss suedwaerts laufen (next→curr),
+    //   damit der Winkel (SE→S) = 45° bleibt statt 135°.
+    //
+    // Left-Seite (noerdlich): Fahrtrichtungen gespiegelt.
+    //   Einfahrkette suedwaerts (next→curr), Ausfahrtkette nordwaerts (curr→next).
+    if count > 1 {
+        let block = base_nodes.len() + 2;
+        for i in 0..(count - 1) {
+            let curr = i * block;
+            let next = (i + 1) * block;
+
+            // Einfahrt-Kette: Richtung folgt dem Anfahrts-Traffic-Flow.
+            let (ef, et) = match config.entry_side {
+                RampSide::Right => (curr + 6, next + 6), // suedlich → nordwaerts
+                RampSide::Left => (next + 6, curr + 6),  // noerdlich → suedwaerts
+            };
+            connections.push((ef, et, ConnectionDirection::Regular, priority));
+
+            // Ausfahrt-Kette: Richtung entgegengesetzt zur Einfahrt (gleicher Ansatz).
+            let (xf, xt) = match config.exit_side {
+                RampSide::Right => (next + 7, curr + 7), // suedlich → suedwaerts raus
+                RampSide::Left => (curr + 7, next + 7),  // noerdlich → nordwaerts raus
+            };
+            connections.push((xf, xt, ConnectionDirection::Regular, priority));
+        }
+    }
 
     ParkingLayout {
         nodes,
@@ -260,6 +417,9 @@ mod tests {
             bay_length: 18.0,
             entry_t: 0.3,
             exit_t: 0.7,
+            ramp_length: 5.0,
+            entry_side: RampSide::Right,
+            exit_side: RampSide::Right,
             marker_group: "Test".to_string(),
         };
         let layout = generate_parking_layout(
@@ -309,6 +469,9 @@ mod tests {
             bay_length: 20.0,
             entry_t: 0.5,
             exit_t: 0.5,
+            ramp_length: 5.0,
+            entry_side: RampSide::Right,
+            exit_side: RampSide::Right,
             marker_group: "Rot".to_string(),
         };
         let layout_0 = generate_parking_layout(
@@ -365,14 +528,17 @@ mod tests {
     }
 
     #[test]
-    fn test_entry_and_exit_are_on_opposite_sides() {
+    fn test_marker_names_are_numbered_in_series() {
         let config = ParkingConfig {
-            num_rows: 2,
+            num_rows: 3,
             row_spacing: 8.0,
-            bay_length: 24.0,
+            bay_length: 80.0,
             entry_t: 0.4,
             exit_t: 0.7,
-            marker_group: "Test".to_string(),
+            ramp_length: 5.0,
+            entry_side: RampSide::Right,
+            exit_side: RampSide::Left,
+            marker_group: "Marker_Name".to_string(),
         };
         let layout = generate_parking_layout(
             Vec2::ZERO,
@@ -382,11 +548,10 @@ mod tests {
             ConnectionPriority::Regular,
         );
 
-        // Die letzten zwei Nodes sind Entry und Exit.
-        let entry = layout.nodes[layout.nodes.len() - 2];
-        let exit = layout.nodes[layout.nodes.len() - 1];
-        assert!(entry.y < 0.0, "Entry sollte suedlich liegen, y={}", entry.y);
-        assert!(exit.y > 0.0, "Exit sollte noerdlich liegen, y={}", exit.y);
+        assert_eq!(layout.markers.len(), 3);
+        assert_eq!(layout.markers[0].1, "Marker_Name - 01");
+        assert_eq!(layout.markers[1].1, "Marker_Name - 02");
+        assert_eq!(layout.markers[2].1, "Marker_Name - 03");
     }
 
     #[test]
@@ -395,8 +560,11 @@ mod tests {
             num_rows: 2,
             row_spacing: 8.0,
             bay_length: 24.0,
-            entry_t: 0.4,
-            exit_t: 0.7,
+            entry_t: 0.5,
+            exit_t: 0.5,
+            ramp_length: 5.0,
+            entry_side: RampSide::Right,
+            exit_side: RampSide::Right,
             marker_group: "Test".to_string(),
         };
         let layout = generate_parking_layout(
@@ -448,5 +616,189 @@ mod tests {
             exit_dx,
             exit_dy
         );
+    }
+
+    #[test]
+    fn test_multi_parking_connects_entries_and_exits_one_way() {
+        let config = ParkingConfig {
+            num_rows: 3,
+            row_spacing: 10.0,
+            bay_length: 80.0,
+            entry_t: 0.4,
+            exit_t: 0.7,
+            ramp_length: 6.0,
+            entry_side: RampSide::Left,
+            exit_side: RampSide::Right,
+            marker_group: "Serie".to_string(),
+        };
+        let layout = generate_parking_layout(
+            Vec2::ZERO,
+            0.0,
+            &config,
+            ConnectionDirection::Dual,
+            ConnectionPriority::Regular,
+        );
+
+        let has = |from: usize, to: usize| {
+            layout
+                .connections
+                .iter()
+                .any(|&(a, b, d, _)| a == from && b == to && d == ConnectionDirection::Regular)
+        };
+
+        // Blockgroesse = 8 Nodes (n1..n8)
+        // entry_side=Left → Einfahrtkette laeuft SUEDWAERTS (von hohem Index→niedrig)
+        // n7_3 -> n7_2 -> n7_1
+        assert!(has(22, 14));
+        assert!(has(14, 6));
+        // exit_side=Right → Ausfahrtkette laeuft SUEDWAERTS (von hohem Index→niedrig)
+        // n8_3 -> n8_2 -> n8_1
+        assert!(has(23, 15));
+        assert!(has(15, 7));
+    }
+
+    #[test]
+    fn test_reverse_maneuver_edge_exists_in_teardrop() {
+        let config = ParkingConfig {
+            num_rows: 2,
+            row_spacing: 7.0,
+            bay_length: 24.0,
+            entry_t: 0.4,
+            exit_t: 0.7,
+            ramp_length: 5.0,
+            entry_side: RampSide::Right,
+            exit_side: RampSide::Right,
+            marker_group: "Test".to_string(),
+        };
+        let layout = generate_parking_layout(
+            Vec2::ZERO,
+            0.0,
+            &config,
+            ConnectionDirection::Dual,
+            ConnectionPriority::Regular,
+        );
+
+        let has_reverse_edge = layout
+            .connections
+            .iter()
+            .any(|&(from, to, dir, _)| from == 5 && to == 3 && dir == ConnectionDirection::Reverse);
+        assert!(
+            has_reverse_edge,
+            "Rueckwaerts-Kante fuer Rangiermanoever (n6->n4) fehlt"
+        );
+    }
+
+    #[test]
+    fn test_single_parking_matches_requested_blueprint() {
+        let config = ParkingConfig {
+            num_rows: 1,
+            row_spacing: 7.0,
+            bay_length: 80.0,
+            entry_t: 0.5,
+            exit_t: 0.5,
+            ramp_length: 5.0,
+            entry_side: RampSide::Left,
+            exit_side: RampSide::Right,
+            marker_group: "Blueprint".to_string(),
+        };
+        let layout = generate_parking_layout(
+            Vec2::ZERO,
+            0.0,
+            &config,
+            ConnectionDirection::Dual,
+            ConnectionPriority::Regular,
+        );
+
+        assert_eq!(layout.nodes.len(), 8, "Blueprint muss genau 8 Nodes haben");
+        assert_eq!(
+            layout.markers.len(),
+            1,
+            "Blueprint muss genau 1 Marker haben"
+        );
+
+        // Koordinatenpruefung
+        let expected = [
+            Vec2::new(0.0, 0.0),
+            Vec2::new(20.0, 0.0),
+            Vec2::new(40.0, 0.0),
+            Vec2::new(75.0, 0.0),
+            Vec2::new(77.5, -0.5),
+            Vec2::new(80.0, 0.0),
+            Vec2::new(15.0, 5.0),
+            Vec2::new(45.0, -5.0),
+        ];
+        for (idx, exp) in expected.iter().enumerate() {
+            let got = layout.nodes[idx];
+            assert!(
+                (got.x - exp.x).abs() < 0.01,
+                "Node {} x stimmt nicht",
+                idx + 1
+            );
+            assert!(
+                (got.y - exp.y).abs() < 0.01,
+                "Node {} y stimmt nicht",
+                idx + 1
+            );
+        }
+
+        // Topologiepruefung
+        let has = |from: usize, to: usize, dir: ConnectionDirection| {
+            layout
+                .connections
+                .iter()
+                .any(|&(a, b, d, _)| a == from && b == to && d == dir)
+        };
+
+        assert!(has(0, 1, ConnectionDirection::Dual));
+        assert!(has(1, 2, ConnectionDirection::Dual));
+        assert!(has(2, 3, ConnectionDirection::Dual));
+        assert!(has(3, 4, ConnectionDirection::Regular));
+        assert!(has(4, 5, ConnectionDirection::Regular));
+        assert!(has(5, 3, ConnectionDirection::Reverse));
+        assert!(has(6, 1, ConnectionDirection::Regular));
+        assert!(has(2, 7, ConnectionDirection::Regular));
+    }
+
+    #[test]
+    fn test_preview_params_move_entry_and_exit_nodes() {
+        let mut config = ParkingConfig {
+            num_rows: 1,
+            row_spacing: 7.0,
+            bay_length: 80.0,
+            entry_t: 0.5,
+            exit_t: 0.5,
+            ramp_length: 5.0,
+            entry_side: RampSide::Right,
+            exit_side: RampSide::Right,
+            marker_group: "Cfg".to_string(),
+        };
+        let a = generate_parking_layout(
+            Vec2::ZERO,
+            0.0,
+            &config,
+            ConnectionDirection::Dual,
+            ConnectionPriority::Regular,
+        );
+
+        config.entry_t = 0.9;
+        config.exit_t = 0.1;
+        config.ramp_length = 8.0;
+        config.entry_side = RampSide::Left;
+        config.exit_side = RampSide::Left;
+        let b = generate_parking_layout(
+            Vec2::ZERO,
+            0.0,
+            &config,
+            ConnectionDirection::Dual,
+            ConnectionPriority::Regular,
+        );
+
+        // n7 und n8 muessen sich durch Konfig-Parameter sichtbar veraendern.
+        let a_n7 = a.nodes[6];
+        let a_n8 = a.nodes[7];
+        let b_n7 = b.nodes[6];
+        let b_n8 = b.nodes[7];
+        assert!((a_n7 - b_n7).length() > 0.1, "n7 reagiert nicht auf Config");
+        assert!((a_n8 - b_n8).length() > 0.1, "n8 reagiert nicht auf Config");
     }
 }
