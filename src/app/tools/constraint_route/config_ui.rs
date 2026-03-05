@@ -8,7 +8,7 @@
 //! - Kontrollpunkt-Liste mit Entfernen-Button
 //! - Generierte Wegpunkt-Anzahl (Info)
 
-use super::super::common::SegmentConfig;
+use super::super::common::{wheel_dir, SegmentConfig};
 use super::state::ConstraintRouteTool;
 
 impl ConstraintRouteTool {
@@ -43,7 +43,7 @@ impl ConstraintRouteTool {
         let response =
             ui.add(egui::Slider::new(&mut seg.max_segment_length, 1.0..=max_seg).suffix(" m"));
         let mut distance_changed = response.changed();
-        let wheel_dir = SegmentConfig::wheel_dir(ui, &response);
+        let wheel_dir = wheel_dir(ui, &response);
         if distance_wheel_step_m > 0.0 && wheel_dir != 0.0 {
             seg.max_segment_length =
                 (seg.max_segment_length + wheel_dir * distance_wheel_step_m).clamp(1.0, max_seg);
@@ -76,7 +76,7 @@ impl ConstraintRouteTool {
                 .fixed_decimals(0),
         );
         let mut angle_changed = angle_response.changed();
-        let angle_wheel_dir = SegmentConfig::wheel_dir(ui, &angle_response);
+        let angle_wheel_dir = wheel_dir(ui, &angle_response);
         if angle_wheel_dir != 0.0 {
             self.max_angle_deg = (self.max_angle_deg + angle_wheel_dir).clamp(5.0, 135.0);
             angle_changed = true;
@@ -132,7 +132,7 @@ impl ConstraintRouteTool {
                 .fixed_decimals(1),
         );
         let mut min_dist_changed = min_dist_response.changed();
-        let min_dist_wheel_dir = SegmentConfig::wheel_dir(ui, &min_dist_response);
+        let min_dist_wheel_dir = wheel_dir(ui, &min_dist_response);
         if distance_wheel_step_m > 0.0 && min_dist_wheel_dir != 0.0 {
             self.min_distance =
                 (self.min_distance + min_dist_wheel_dir * distance_wheel_step_m).clamp(0.5, 20.0);
