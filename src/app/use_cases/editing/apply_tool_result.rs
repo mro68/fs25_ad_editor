@@ -2,7 +2,7 @@
 
 use crate::app::tools::ToolResult;
 use crate::app::AppState;
-use crate::core::{Connection, MapNode, RoadMap};
+use crate::core::{Connection, MapMarker, MapNode, RoadMap};
 use std::collections::HashSet;
 use std::sync::Arc;
 
@@ -102,6 +102,15 @@ fn create_nodes_and_connections(road_map: &mut RoadMap, result: &ToolResult) -> 
     // Flags der betroffenen Nodes neu berechnen
     let affected_vec: Vec<u64> = affected_ids.into_iter().collect();
     road_map.recalculate_node_flags(&affected_vec);
+
+    // Map-Marker erzeugen (z.B. ParkingTool)
+    for (new_idx, name, group) in &result.markers {
+        if let Some(&node_id) = new_ids.get(*new_idx) {
+            let marker_index = road_map.map_markers.len() as u32 + 1;
+            let marker = MapMarker::new(node_id, name.clone(), group.clone(), marker_index, false);
+            road_map.add_map_marker(marker);
+        }
+    }
 
     // Spatial-Index einmalig nach allen Mutationen aktualisieren
     road_map.ensure_spatial_index();
