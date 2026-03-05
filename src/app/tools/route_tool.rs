@@ -141,10 +141,7 @@ pub trait RouteTool:
     ///
     /// Standard-Implementierung ist ein No-Op. Nur `FieldBoundaryTool`
     /// ueberschreibt diese Methode.
-    fn set_farmland_data(
-        &mut self,
-        _data: Option<std::sync::Arc<Vec<crate::core::FieldPolygon>>>,
-    ) {
+    fn set_farmland_data(&mut self, _data: Option<std::sync::Arc<Vec<crate::core::FieldPolygon>>>) {
     }
 
     /// Speichert die IDs der zuletzt erstellten Nodes (fuer nachtraegliche Anpassung).

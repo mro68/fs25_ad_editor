@@ -232,7 +232,10 @@ pub fn generate_overview_result_from_zip(
     zip_path: &str,
     options: &OverviewOptions,
 ) -> Result<OverviewResult> {
-    log::info!("Generiere Overview + Farmland-Polygone aus ZIP: {}", zip_path);
+    log::info!(
+        "Generiere Overview + Farmland-Polygone aus ZIP: {}",
+        zip_path
+    );
 
     let files = extract_zip(zip_path)?;
     let map_info = discovery::discover_map(&files)?;

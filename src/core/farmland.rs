@@ -50,7 +50,7 @@ pub fn point_in_polygon(point: Vec2, polygon: &[Vec2]) -> bool {
 /// Findet das erste `FieldPolygon`, das den gegebenen Weltkoordinaten-Punkt enthaelt.
 ///
 /// Gibt `None` zurueck wenn kein Polygon den Punkt enthaelt.
-pub fn find_polygon_at<'a>(point: Vec2, polygons: &'a [FieldPolygon]) -> Option<&'a FieldPolygon> {
+pub fn find_polygon_at(point: Vec2, polygons: &[FieldPolygon]) -> Option<&FieldPolygon> {
     polygons
         .iter()
         .find(|fp| point_in_polygon(point, &fp.vertices))

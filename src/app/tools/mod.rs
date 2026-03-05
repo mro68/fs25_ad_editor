@@ -12,6 +12,8 @@ pub mod common;
 pub mod constraint_route;
 /// Bézier-Kurven-Tool (Grad 2 + 3) mit sequentieller Punkt-Platzierung.
 pub mod curve;
+/// Feldgrenz-Erkennungs-Tool: erzeugt eine Route entlang eines erkannten Feldumrisses.
+pub mod field_boundary;
 /// Parkplatz-Layout-Tool mit Wendekreis und konfigurierbaren Parkreihen.
 pub mod parking;
 /// RouteTool-Trait — Schnittstelle fuer alle Route-Tools.
@@ -20,8 +22,6 @@ mod route_tool;
 pub mod spline;
 /// Gerade-Linie-Tool mit konfigurierbarem Node-Abstand.
 pub mod straight_line;
-/// Feldgrenz-Erkennungs-Tool: erzeugt eine Route entlang eines erkannten Feldumrisses.
-pub mod field_boundary;
 
 pub use route_tool::RouteTool;
 pub use route_tool::{RouteToolChainInput, RouteToolDrag, RouteToolRegistry, RouteToolTangent};
