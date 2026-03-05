@@ -57,6 +57,35 @@ fn shortest_path_nodes(road_map: &RoadMap, start: u64, goal: u64) -> Option<Vec<
     Some(path)
 }
 
+/// Erweitert die Selektion um alle Nodes eines validen Segments.
+///
+/// Wenn der geklickte Node zu einem registrierten Segment gehoert und
+/// alle Original-Positionen noch stimmen, werden alle Segment-Nodes
+/// zur Selektion hinzugefuegt.
+fn expand_segment_selection(state: &mut AppState, clicked_node_id: u64) {
+    // Immutable Borrows zuerst — Daten klonen bevor mutable Borrow auf selection
+    let road_map = match state.road_map.as_deref() {
+        Some(rm) => rm,
+        None => return,
+    };
+
+    let record = match state.segment_registry.find_first_by_node_id(clicked_node_id) {
+        Some(r) => r,
+        None => return,
+    };
+
+    if !state.segment_registry.is_segment_valid(record, road_map) {
+        return;
+    }
+
+    let segment_node_ids: Vec<u64> = record.node_ids.iter().copied().collect();
+
+    let sel = state.selection.ids_mut();
+    for id in segment_node_ids {
+        sel.insert(id);
+    }
+}
+
 /// Selektiert den naechsten Node zur gegebenen Weltposition.
 ///
 /// Falls kein Node innerhalb von `max_distance` gefunden wird, wird die Selektion geloescht.
@@ -110,6 +139,7 @@ pub fn select_nearest_node(
                     }
                 } else {
                     state.selection.ids_mut().insert(node_id);
+                    expand_segment_selection(state, node_id);
                 }
 
                 state.selection.selection_anchor_node_id = Some(node_id);
@@ -121,6 +151,7 @@ pub fn select_nearest_node(
         if let Some(node_id) = hit {
             state.selection.ids_mut().insert(node_id);
             state.selection.selection_anchor_node_id = Some(node_id);
+            expand_segment_selection(state, node_id);
         }
     }
 }
