@@ -1,5 +1,7 @@
 //! `RouteTool`-Implementierung fuer das Ausweichstrecken-Tool.
 
+use std::borrow::Cow;
+
 use super::geometry::compute_bypass_positions;
 use super::state::BypassTool;
 use crate::app::tools::common::assemble_tool_result;
@@ -38,16 +40,17 @@ impl RouteTool for BypassTool {
             return ToolPreview::default();
         }
 
-        // Cache nutzen falls vorhanden
-        let positions = if let Some(cached) = &self.cached_positions {
-            cached.clone()
+        // Cache-Hit: Referenz ausleihen (kein Clone) — Cow::Borrowed vermeidet
+        // die per-Frame Vec-Allokation bei unveraendertem Cache.
+        let positions: Cow<'_, [Vec2]> = if let Some(cached) = &self.cached_positions {
+            Cow::Borrowed(cached.as_slice())
         } else {
             let Some((new_pts, _d_blend)) =
                 compute_bypass_positions(&self.chain_positions, self.offset, self.base_spacing)
             else {
                 return ToolPreview::default();
             };
-            new_pts
+            Cow::Owned(new_pts)
         };
 
         // Vollstaendige Preview-Sequenz: chain_start + bypass_nodes + chain_end
@@ -59,7 +62,7 @@ impl RouteTool for BypassTool {
         nodes.extend_from_slice(&positions);
         nodes.push(chain_end);
 
-        let connections = if let Some(cached) = &self.cached_connections {
+        let connections: Vec<(usize, usize)> = if let Some(cached) = &self.cached_connections {
             cached.clone()
         } else {
             (0..nodes.len().saturating_sub(1))

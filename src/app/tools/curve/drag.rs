@@ -1,6 +1,6 @@
 //! Drag-Logik fuer das Bézier-Kurven-Tool.
 
-use super::super::{snap_to_node, ToolAnchor};
+use super::super::ToolAnchor;
 use super::geometry::{
     cp1_from_apex, cp2_from_apex, cps_from_apex_symmetric, project_onto_tangent_line,
     solve_cps_from_apex_both_tangents,
@@ -178,19 +178,17 @@ pub(crate) fn on_drag_end(tool: &mut CurveTool, road_map: &RoadMap) {
     match tool.dragging {
         Some(DragTarget::Start) => {
             if let Some(anchor) = &tool.start {
-                tool.start = Some(snap_to_node(
+                tool.start = Some(tool.lifecycle.snap_at(
                     anchor.position(),
                     road_map,
-                    tool.lifecycle.snap_radius,
                 ));
             }
         }
         Some(DragTarget::End) => {
             if let Some(anchor) = &tool.end {
-                tool.end = Some(snap_to_node(
+                tool.end = Some(tool.lifecycle.snap_at(
                     anchor.position(),
                     road_map,
-                    tool.lifecycle.snap_radius,
                 ));
             }
         }
