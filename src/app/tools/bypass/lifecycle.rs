@@ -109,12 +109,14 @@ impl RouteTool for BypassTool {
         ))
     }
 
-    /// Loescht die geladene Kette und den Cache.
+    /// Loescht die geladene Kette, den Cache und den Lifecycle-Zustand.
     fn reset(&mut self) {
         self.chain_positions.clear();
         self.cached_positions = None;
         self.cached_connections = None;
         self.d_blend = 0.0;
+        let snap_radius = self.lifecycle.snap_radius;
+        self.lifecycle = crate::app::tools::common::ToolLifecycleState::new(snap_radius);
     }
 
     fn is_ready(&self) -> bool {
@@ -149,5 +151,31 @@ impl RouteTool for BypassTool {
 
     fn set_priority(&mut self, prio: ConnectionPriority) {
         self.priority = prio;
+    }
+
+    // ── Lifecycle-Delegation (manuell, da kein SegmentConfig) ────
+
+    fn set_snap_radius(&mut self, radius: f32) {
+        self.lifecycle.snap_radius = radius;
+    }
+
+    fn last_created_ids(&self) -> &[u64] {
+        &self.lifecycle.last_created_ids
+    }
+
+    fn last_end_anchor(&self) -> Option<crate::app::tools::ToolAnchor> {
+        self.lifecycle.last_end_anchor
+    }
+
+    fn needs_recreate(&self) -> bool {
+        self.lifecycle.recreate_needed
+    }
+
+    fn clear_recreate_flag(&mut self) {
+        self.lifecycle.recreate_needed = false;
+    }
+
+    fn set_last_created(&mut self, ids: &[u64], _road_map: &RoadMap) {
+        self.lifecycle.save_created_ids(ids);
     }
 }
