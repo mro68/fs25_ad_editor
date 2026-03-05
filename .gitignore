@@ -28,3 +28,4 @@ assets/**/
 .zram.sh
 memories
 .vscode/tasks.json
+scripts/agents
