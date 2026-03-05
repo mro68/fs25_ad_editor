@@ -1,5 +1,6 @@
 //! UI-Panel fuer die ParkingTool-Konfiguration.
 
+use super::super::common::wheel_dir;
 use super::state::{ParkingPhase, ParkingTool, RampSide};
 
 impl ParkingTool {
@@ -8,7 +9,7 @@ impl ParkingTool {
     pub(super) fn render_config_view(
         &mut self,
         ui: &mut egui::Ui,
-        _distance_wheel_step_m: f32,
+        distance_wheel_step_m: f32,
     ) -> bool {
         let mut changed = false;
 
@@ -19,7 +20,14 @@ impl ParkingTool {
         ui.horizontal(|ui| {
             ui.label("Reihen:");
             let mut rows = self.config.num_rows as u32;
-            if ui.add(egui::Slider::new(&mut rows, 1..=10)).changed() {
+            let response = ui.add(egui::Slider::new(&mut rows, 1..=10));
+            let mut local_changed = response.changed();
+            let wd = wheel_dir(ui, &response);
+            if wd != 0.0 {
+                rows = (rows as i32 + wd as i32).clamp(1, 10) as u32;
+                local_changed = true;
+            }
+            if local_changed {
                 self.config.num_rows = rows as usize;
                 changed = true;
             }
@@ -28,14 +36,19 @@ impl ParkingTool {
         // Reihenabstand
         ui.horizontal(|ui| {
             ui.label("Abstand:");
-            if ui
-                .add(
-                    egui::Slider::new(&mut self.config.row_spacing, 4.0..=20.0)
-                        .suffix(" m")
-                        .fixed_decimals(1),
-                )
-                .changed()
-            {
+            let response = ui.add(
+                egui::Slider::new(&mut self.config.row_spacing, 4.0..=20.0)
+                    .suffix(" m")
+                    .fixed_decimals(1),
+            );
+            let mut local_changed = response.changed();
+            let wd = wheel_dir(ui, &response);
+            if distance_wheel_step_m > 0.0 && wd != 0.0 {
+                self.config.row_spacing =
+                    (self.config.row_spacing + wd * distance_wheel_step_m).clamp(4.0, 20.0);
+                local_changed = true;
+            }
+            if local_changed {
                 changed = true;
             }
         });
@@ -43,14 +56,19 @@ impl ParkingTool {
         // Bucht-Laenge
         ui.horizontal(|ui| {
             ui.label("Laenge:");
-            if ui
-                .add(
-                    egui::Slider::new(&mut self.config.bay_length, 10.0..=50.0)
-                        .suffix(" m")
-                        .fixed_decimals(1),
-                )
-                .changed()
-            {
+            let response = ui.add(
+                egui::Slider::new(&mut self.config.bay_length, 10.0..=50.0)
+                    .suffix(" m")
+                    .fixed_decimals(1),
+            );
+            let mut local_changed = response.changed();
+            let wd = wheel_dir(ui, &response);
+            if distance_wheel_step_m > 0.0 && wd != 0.0 {
+                self.config.bay_length =
+                    (self.config.bay_length + wd * distance_wheel_step_m).clamp(10.0, 50.0);
+                local_changed = true;
+            }
+            if local_changed {
                 changed = true;
             }
         });
@@ -60,14 +78,18 @@ impl ParkingTool {
         // Einfahrt-Position
         ui.horizontal(|ui| {
             ui.label("Einfahrt:");
-            if ui
-                .add(
-                    egui::Slider::new(&mut self.config.entry_t, 0.0..=1.0)
-                        .fixed_decimals(2)
-                        .text("Ost ← → West"),
-                )
-                .changed()
-            {
+            let response = ui.add(
+                egui::Slider::new(&mut self.config.entry_t, 0.0..=1.0)
+                    .fixed_decimals(2)
+                    .text("Ost \u{2190} \u{2192} West"),
+            );
+            let mut local_changed = response.changed();
+            let wd = wheel_dir(ui, &response);
+            if wd != 0.0 {
+                self.config.entry_t = (self.config.entry_t + wd * 0.01).clamp(0.0, 1.0);
+                local_changed = true;
+            }
+            if local_changed {
                 changed = true;
             }
         });
@@ -75,14 +97,18 @@ impl ParkingTool {
         // Ausfahrt-Position
         ui.horizontal(|ui| {
             ui.label("Ausfahrt:");
-            if ui
-                .add(
-                    egui::Slider::new(&mut self.config.exit_t, 0.0..=1.0)
-                        .fixed_decimals(2)
-                        .text("Ost ← → West"),
-                )
-                .changed()
-            {
+            let response = ui.add(
+                egui::Slider::new(&mut self.config.exit_t, 0.0..=1.0)
+                    .fixed_decimals(2)
+                    .text("Ost \u{2190} \u{2192} West"),
+            );
+            let mut local_changed = response.changed();
+            let wd = wheel_dir(ui, &response);
+            if wd != 0.0 {
+                self.config.exit_t = (self.config.exit_t + wd * 0.01).clamp(0.0, 1.0);
+                local_changed = true;
+            }
+            if local_changed {
                 changed = true;
             }
         });
@@ -90,14 +116,19 @@ impl ParkingTool {
         // Rampenlaenge
         ui.horizontal(|ui| {
             ui.label("Rampenlaenge:");
-            if ui
-                .add(
-                    egui::Slider::new(&mut self.config.ramp_length, 2.0..=20.0)
-                        .suffix(" m")
-                        .fixed_decimals(1),
-                )
-                .changed()
-            {
+            let response = ui.add(
+                egui::Slider::new(&mut self.config.ramp_length, 2.0..=20.0)
+                    .suffix(" m")
+                    .fixed_decimals(1),
+            );
+            let mut local_changed = response.changed();
+            let wd = wheel_dir(ui, &response);
+            if distance_wheel_step_m > 0.0 && wd != 0.0 {
+                self.config.ramp_length =
+                    (self.config.ramp_length + wd * distance_wheel_step_m).clamp(2.0, 20.0);
+                local_changed = true;
+            }
+            if local_changed {
                 changed = true;
             }
         });
@@ -153,10 +184,34 @@ impl ParkingTool {
             }
         });
 
-        // Rotation-Anzeige
+        // Rotation-Anzeige und Drehschritt
         if self.origin.is_some() {
             ui.separator();
             ui.label(format!("Rotation: {:.1}°", self.angle.to_degrees()));
+        }
+
+        // Drehschritt-Konfiguration (immer sichtbar)
+        ui.horizontal(|ui| {
+            ui.label("Drehschritt (°):");
+            let response = ui.add(
+                egui::DragValue::new(&mut self.rotation_step_deg)
+                    .range(0.5..=45.0)
+                    .speed(0.5)
+                    .suffix("°")
+                    .fixed_decimals(1),
+            );
+            let wd = wheel_dir(ui, &response);
+            if wd != 0.0 {
+                self.rotation_step_deg =
+                    (self.rotation_step_deg + wd * 1.0).clamp(0.5, 45.0);
+                changed = true;
+            }
+            if response.changed() {
+                changed = true;
+            }
+        });
+
+        if self.origin.is_some() {
             match self.phase {
                 ParkingPhase::Idle => {
                     ui.small("Alt+Mausrad zum Drehen");
