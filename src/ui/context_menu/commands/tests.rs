@@ -66,6 +66,7 @@ fn precondition_node_exists() {
         distanzen_active: false,
         clipboard_has_data: false,
         segment_record_id: None,
+        farmland_polygons_loaded: false,
     };
 
     assert!(Precondition::NodeExists(1).is_valid(&ctx));
@@ -83,6 +84,7 @@ fn precondition_has_marker() {
         distanzen_active: false,
         clipboard_has_data: false,
         segment_record_id: None,
+        farmland_polygons_loaded: false,
     };
 
     assert!(Precondition::HasMarker(1).is_valid(&ctx));
@@ -104,6 +106,7 @@ fn precondition_exactly_two_selected() {
         distanzen_active: false,
         clipboard_has_data: false,
         segment_record_id: None,
+        farmland_polygons_loaded: false,
     };
     let ctx3 = PreconditionContext {
         road_map: &map,
@@ -111,6 +114,7 @@ fn precondition_exactly_two_selected() {
         distanzen_active: false,
         clipboard_has_data: false,
         segment_record_id: None,
+        farmland_polygons_loaded: false,
     };
     let ctx1 = PreconditionContext {
         road_map: &map,
@@ -118,6 +122,7 @@ fn precondition_exactly_two_selected() {
         distanzen_active: false,
         clipboard_has_data: false,
         segment_record_id: None,
+        farmland_polygons_loaded: false,
     };
 
     assert!(Precondition::ExactlyTwoSelected.is_valid(&ctx2));
@@ -137,6 +142,7 @@ fn precondition_two_selected_unconnected() {
         distanzen_active: false,
         clipboard_has_data: false,
         segment_record_id: None,
+        farmland_polygons_loaded: false,
     };
     let ctx_connected = PreconditionContext {
         road_map: &map_connected,
@@ -144,6 +150,7 @@ fn precondition_two_selected_unconnected() {
         distanzen_active: false,
         clipboard_has_data: false,
         segment_record_id: None,
+        farmland_polygons_loaded: false,
     };
 
     assert!(Precondition::TwoSelectedUnconnected.is_valid(&ctx_unconnected));
@@ -162,6 +169,7 @@ fn precondition_has_connections_between_selected() {
         distanzen_active: false,
         clipboard_has_data: false,
         segment_record_id: None,
+        farmland_polygons_loaded: false,
     };
     let ctx_no = PreconditionContext {
         road_map: &map_unconnected,
@@ -169,6 +177,7 @@ fn precondition_has_connections_between_selected() {
         distanzen_active: false,
         clipboard_has_data: false,
         segment_record_id: None,
+        farmland_polygons_loaded: false,
     };
 
     assert!(Precondition::HasConnectionsBetweenSelected.is_valid(&ctx_yes));
@@ -186,6 +195,7 @@ fn precondition_streckenteilung_active() {
         distanzen_active: true,
         clipboard_has_data: false,
         segment_record_id: None,
+        farmland_polygons_loaded: false,
     };
     let ctx_inactive = PreconditionContext {
         road_map: &map,
@@ -193,6 +203,7 @@ fn precondition_streckenteilung_active() {
         distanzen_active: false,
         clipboard_has_data: false,
         segment_record_id: None,
+        farmland_polygons_loaded: false,
     };
 
     assert!(Precondition::StreckenteilungActive(true).is_valid(&ctx_active));
@@ -214,6 +225,7 @@ fn catalog_empty_area_shows_tools() {
         distanzen_active: false,
         clipboard_has_data: false,
         segment_record_id: None,
+        farmland_polygons_loaded: false,
     };
     let intent_ctx = IntentContext {
         node_id: None,
@@ -265,6 +277,7 @@ fn catalog_node_focused_shows_marker_create() {
         distanzen_active: false,
         clipboard_has_data: false,
         segment_record_id: None,
+        farmland_polygons_loaded: false,
     };
     let intent_ctx = IntentContext {
         node_id: Some(42),
@@ -298,6 +311,7 @@ fn catalog_node_focused_shows_marker_edit_when_marker_exists() {
         distanzen_active: false,
         clipboard_has_data: false,
         segment_record_id: None,
+        farmland_polygons_loaded: false,
     };
     let intent_ctx = IntentContext {
         node_id: Some(42),
@@ -324,6 +338,7 @@ fn catalog_node_focused_shows_delete_and_duplicate() {
         distanzen_active: false,
         clipboard_has_data: false,
         segment_record_id: None,
+        farmland_polygons_loaded: false,
     };
     let intent_ctx = IntentContext {
         node_id: Some(10),
@@ -348,6 +363,7 @@ fn catalog_multi_nodes_connect_only_when_two_unconnected() {
         distanzen_active: false,
         clipboard_has_data: false,
         segment_record_id: None,
+        farmland_polygons_loaded: false,
     };
     let intent_ctx = IntentContext {
         node_id: None,
@@ -367,6 +383,7 @@ fn catalog_multi_nodes_connect_only_when_two_unconnected() {
         distanzen_active: false,
         clipboard_has_data: false,
         segment_record_id: None,
+        farmland_polygons_loaded: false,
     };
     let entries_connected = validate_entries(&catalog, &ctx_connected, &intent_ctx);
     assert!(!has_command(&entries_connected, CommandId::ConnectTwoNodes));
@@ -382,6 +399,7 @@ fn catalog_multi_nodes_direction_only_when_connected() {
         distanzen_active: false,
         clipboard_has_data: false,
         segment_record_id: None,
+        farmland_polygons_loaded: false,
     };
     let intent_ctx = IntentContext {
         node_id: None,
@@ -403,6 +421,7 @@ fn catalog_multi_nodes_direction_only_when_connected() {
         distanzen_active: false,
         clipboard_has_data: false,
         segment_record_id: None,
+        farmland_polygons_loaded: false,
     };
     let entries_connected = validate_entries(&catalog, &ctx_connected, &intent_ctx);
 
@@ -420,6 +439,7 @@ fn catalog_multi_nodes_route_tools_only_when_two_selected() {
         distanzen_active: false,
         clipboard_has_data: false,
         segment_record_id: None,
+        farmland_polygons_loaded: false,
     };
     let intent_ctx = IntentContext {
         node_id: None,
@@ -468,6 +488,7 @@ fn catalog_multi_nodes_selection_commands_always_visible() {
         distanzen_active: false,
         clipboard_has_data: false,
         segment_record_id: None,
+        farmland_polygons_loaded: false,
     };
     let intent_ctx = IntentContext {
         node_id: None,
@@ -492,6 +513,7 @@ fn catalog_route_tool_basic_commands() {
         distanzen_active: false,
         clipboard_has_data: false,
         segment_record_id: None,
+        farmland_polygons_loaded: false,
     };
     let intent_ctx = IntentContext {
         node_id: None,
@@ -607,6 +629,7 @@ fn deleted_node_hides_all_commands() {
         distanzen_active: false,
         clipboard_has_data: false,
         segment_record_id: None,
+        farmland_polygons_loaded: false,
     };
     let intent_ctx = IntentContext {
         node_id: Some(99),
