@@ -2,26 +2,11 @@
 //!
 //! Zeigt Versatz- und Abstandseinstellungen sowie eine Kurz-Info zur geladenen Kette.
 
+use super::super::common::wheel_dir;
 use super::geometry::compute_bypass_positions;
 use super::state::BypassTool;
 
 impl BypassTool {
-    /// Unterdrueckt Rauschen/Restwerte, die ohne echtes Scrollen auftreten koennen.
-    const WHEEL_DELTA_THRESHOLD: f32 = 0.5;
-
-    /// Liest die Scroll-Richtung fuer ein gehovertes Widget.
-    fn wheel_dir(ui: &egui::Ui, response: &egui::Response) -> f32 {
-        if !response.hovered() {
-            return 0.0;
-        }
-        let delta = ui.input(|i| i.raw_scroll_delta.y);
-        if delta.abs() < Self::WHEEL_DELTA_THRESHOLD {
-            0.0
-        } else {
-            delta.signum()
-        }
-    }
-
     /// Rendert das Konfigurationspanel im Properties-Panel.
     ///
     /// Gibt `true` zurueck wenn sich eine Einstellung geaendert hat.
@@ -47,7 +32,7 @@ impl BypassTool {
                     .suffix(" m"),
             );
             let mut local_changed = r.changed();
-            let wheel_dir = Self::wheel_dir(ui, &r);
+            let wheel_dir = wheel_dir(ui, &r);
             if distance_wheel_step_m > 0.0 && wheel_dir != 0.0 {
                 self.offset =
                     (self.offset + wheel_dir * distance_wheel_step_m).clamp(-200.0, 200.0);
@@ -73,7 +58,7 @@ impl BypassTool {
                     .suffix(" m"),
             );
             let mut local_changed = r.changed();
-            let wheel_dir = Self::wheel_dir(ui, &r);
+            let wheel_dir = wheel_dir(ui, &r);
             if distance_wheel_step_m > 0.0 && wheel_dir != 0.0 {
                 self.base_spacing =
                     (self.base_spacing + wheel_dir * distance_wheel_step_m).clamp(1.0, 50.0);

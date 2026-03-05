@@ -5,6 +5,7 @@
 //! Einstellungen mit Uebernehmen/Abbrechen-Buttons.
 
 use crate::app::state::DistanzenState;
+use crate::app::tools::common::wheel_dir;
 use crate::app::tools::ToolManager;
 use crate::app::{AppIntent, ConnectionDirection, ConnectionPriority, EditorTool, RoadMap};
 use crate::ui::properties::selectors::{
@@ -13,21 +14,6 @@ use crate::ui::properties::selectors::{
 use indexmap::IndexSet;
 use std::collections::HashSet;
 use std::hash::{Hash, Hasher};
-
-/// Unterdrueckt Rauschen/Restwerte, die ohne echtes Scrollen auftreten koennen.
-const WHEEL_DELTA_THRESHOLD: f32 = 0.5;
-
-fn wheel_dir_for_hovered(ui: &egui::Ui, response: &egui::Response) -> f32 {
-    if !response.hovered() {
-        return 0.0;
-    }
-    let delta = ui.input(|i| i.raw_scroll_delta.y);
-    if delta.abs() < WHEEL_DELTA_THRESHOLD {
-        0.0
-    } else {
-        delta.signum()
-    }
-}
 
 /// Rendert das Floating-Edit-Panel und gibt erzeugte Events zurueck.
 ///
@@ -199,7 +185,7 @@ pub fn render_streckenteilung_controls(
                 .range(1.0..=25.0)
                 .suffix(" m"),
         );
-        let wheel_dir = wheel_dir_for_hovered(ui, &response);
+        let wheel_dir = wheel_dir(ui, &response);
         if distance_wheel_step_m > 0.0 && wheel_dir != 0.0 {
             distanzen_state.distance =
                 (distanzen_state.distance + wheel_dir * distance_wheel_step_m).clamp(1.0, 25.0);
@@ -218,7 +204,7 @@ pub fn render_streckenteilung_controls(
                 .speed(1.0)
                 .range(2..=10000),
         );
-        let wheel_dir = wheel_dir_for_hovered(ui, &response);
+        let wheel_dir = wheel_dir(ui, &response);
         if distance_wheel_step_m > 0.0 && wheel_dir > 0.0 {
             distanzen_state.count = distanzen_state.count.saturating_add(1).min(10_000);
         } else if distance_wheel_step_m > 0.0 && wheel_dir < 0.0 {

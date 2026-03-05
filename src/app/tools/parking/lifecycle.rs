@@ -53,7 +53,7 @@ impl crate::app::tools::RouteTool for ParkingTool {
     fn on_scroll_rotate(&mut self, delta: f32) {
         // Nur in Idle oder Adjusting rotierbar (in Configuring ist alles fixiert)
         if matches!(self.phase, ParkingPhase::Idle | ParkingPhase::Adjusting) {
-            let step = std::f32::consts::PI / 36.0; // 5° pro Scroll-Schritt
+            let step = self.rotation_step_deg.to_radians();
             if delta > 0.0 {
                 self.angle += step;
             } else {
@@ -82,8 +82,8 @@ impl crate::app::tools::RouteTool for ParkingTool {
         geometry::build_preview(&layout)
     }
 
-    fn render_config(&mut self, ui: &mut egui::Ui, _distance_wheel_step_m: f32) -> bool {
-        self.render_config_view(ui, _distance_wheel_step_m)
+    fn render_config(&mut self, ui: &mut egui::Ui, distance_wheel_step_m: f32) -> bool {
+        self.render_config_view(ui, distance_wheel_step_m)
     }
 
     fn execute(&self, _road_map: &RoadMap) -> Option<ToolResult> {
