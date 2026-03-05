@@ -40,7 +40,6 @@ impl RouteTool for ConstraintRouteTool {
                 if let Some(last_end) = self.lifecycle.chaining_start_anchor() {
                     self.lifecycle.prepare_for_chaining();
                     self.last_start_anchor = None;
-                    self.last_end_anchor = None;
                     self.last_control_nodes.clear();
                     self.start = Some(last_end);
                     self.start_neighbor_dirs =
@@ -213,17 +212,12 @@ impl RouteTool for ConstraintRouteTool {
     crate::impl_lifecycle_delegation!();
 
     fn current_end_anchor(&self) -> Option<super::super::ToolAnchor> {
-        self.end
-            .or(self.last_end_anchor)
-            .or(self.lifecycle.last_end_anchor)
+        self.end.or(self.lifecycle.last_end_anchor)
     }
 
     fn save_anchors_for_recreate(&mut self, _road_map: &RoadMap) {
         if self.start.is_some() {
             self.last_start_anchor = self.start;
-        }
-        if self.end.is_some() {
-            self.last_end_anchor = self.end;
         }
         if !self.control_nodes.is_empty() {
             self.last_control_nodes = self.control_nodes.clone();
@@ -232,7 +226,7 @@ impl RouteTool for ConstraintRouteTool {
 
     fn execute_from_anchors(&self, road_map: &RoadMap) -> Option<ToolResult> {
         let start = self.last_start_anchor?;
-        let end = self.last_end_anchor.or(self.lifecycle.last_end_anchor)?;
+        let end = self.lifecycle.last_end_anchor?;
         build_result(
             &BuildResultParams {
                 start,
@@ -252,7 +246,7 @@ impl RouteTool for ConstraintRouteTool {
 
     fn make_segment_record(&self, id: u64, node_ids: &[u64]) -> Option<SegmentRecord> {
         let start = self.last_start_anchor?;
-        let end = self.last_end_anchor.or(self.lifecycle.last_end_anchor)?;
+        let end = self.lifecycle.last_end_anchor?;
         Some(SegmentRecord {
             id,
             node_ids: node_ids.to_vec(),
