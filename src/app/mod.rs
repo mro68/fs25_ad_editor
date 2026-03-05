@@ -27,5 +27,6 @@ pub use events::{AppCommand, AppIntent};
 pub use render_scene::build as build_render_scene;
 pub use segment_registry::{SegmentKind, SegmentRecord, SegmentRegistry};
 pub use state::{
-    AppState, EditorTool, EditorToolState, PostLoadDialogState, SelectionState, UiState, ViewState,
+    AppState, Clipboard, EditorTool, EditorToolState, PostLoadDialogState, SelectionState, UiState,
+    ViewState,
 };

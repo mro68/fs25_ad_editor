@@ -95,6 +95,12 @@ pub enum CommandId {
     RouteRecreate,
     /// Route abbrechen
     RouteCancel,
+
+    // ── Copy/Paste ─────────────────────────────────────────────────
+    /// Selektion in die Zwischenablage kopieren
+    CopySelection,
+    /// Einfuegen-Vorschau starten
+    PasteHere,
 }
 
 // =============================================================================
@@ -246,6 +252,9 @@ impl CommandId {
             Self::RouteExecute => AppIntent::RouteToolExecuteRequested,
             Self::RouteRecreate => AppIntent::RouteToolRecreateRequested,
             Self::RouteCancel => AppIntent::RouteToolCancelled,
+            // ── Copy/Paste ────────────────────────────────────────────────
+            Self::CopySelection => AppIntent::CopySelectionRequested,
+            Self::PasteHere => AppIntent::PasteStartRequested,
         }
     }
 }

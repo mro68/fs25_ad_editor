@@ -95,6 +95,8 @@ impl InputState {
     ///
     /// `tangent_data` enthaelt optionale Tangenten-Menuedaten vom aktiven Route-Tool
     /// (nur bei kubischer Kurve in Control-Phase mit Nachbarn).
+    ///
+    /// `clipboard_has_data` zeigt an, ob die Zwischenablage Nodes enthaelt (fuer Paste-Precondition).
     pub fn collect_viewport_events(
         &mut self,
         ui: &egui::Ui,
@@ -111,6 +113,7 @@ impl InputState {
         drag_targets: &[glam::Vec2],
         distanzen_state: &mut crate::app::state::DistanzenState,
         tangent_data: Option<TangentMenuData>,
+        clipboard_has_data: bool,
     ) -> Vec<AppIntent> {
         let ctx = ViewportContext {
             ui,
@@ -137,6 +140,7 @@ impl InputState {
             active_tool,
             route_tool_is_drawing,
             distanzen_state.active,
+            clipboard_has_data,
         ));
 
         let modifiers = ui.input(|i| i.modifiers);
@@ -208,6 +212,7 @@ impl InputState {
             road_map,
             menu_selection,
             distanzen_state.active,
+            clipboard_has_data,
             options,
             default_direction,
             default_priority,

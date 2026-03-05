@@ -65,6 +65,8 @@ pub struct AppState {
     pub ui: UiState,
     pub selection: SelectionState,
     pub editor: EditorToolState,
+    pub clipboard: Clipboard,           // Zwischenablage fuer Copy/Paste
+    pub paste_preview_pos: Option<Vec2>, // Aktuelle Paste-Vorschau-Position (None = kein aktiver Paste)
     pub command_log: CommandLog,
     pub history: EditHistory,
     pub options: EditorOptions,
@@ -76,6 +78,13 @@ pub struct AppState {
 pub struct SelectionState {
     pub selected_node_ids: Arc<IndexSet<u64>>,  // Arc fuer O(1)-Clone in RenderScene (CoW)
     pub selection_anchor_node_id: Option<u64>,
+}
+
+pub struct Clipboard {
+    pub nodes: Vec<MapNode>,        // Kopierte Nodes
+    pub connections: Vec<Connection>, // Interne Verbindungen (beide Endpunkte im Clipboard)
+    pub markers: Vec<MapMarker>,    // Kopierte Marker der selektierten Nodes
+    pub center: Vec2,               // Geometrisches Zentrum (Offset-Basis beim Paste)
 }
 ```
 
@@ -370,6 +379,13 @@ pub enum AppIntent {
 
     // Selektion (erweitert)
     InvertSelectionRequested,
+
+    // Copy/Paste-Lifecycle
+    CopySelectionRequested,
+    PasteStartRequested,
+    PastePreviewMoved { world_pos: glam::Vec2 },
+    PasteConfirmRequested,
+    PasteCancelled,
 }
 
 pub enum AppCommand {
@@ -496,6 +512,13 @@ pub enum AppCommand {
 
     // Selektion (erweitert)
     InvertSelection,
+
+    // Copy/Paste
+    CopySelectionToClipboard,
+    StartPastePreview,
+    UpdatePastePreview { world_pos: glam::Vec2 },
+    ConfirmPaste,
+    CancelPastePreview,
 }
 ```
 
@@ -509,7 +532,7 @@ pub enum AppCommand {
 
 Alle Use-Case-Funktionen sind in [`use_cases/API.md`](use_cases/API.md) dokumentiert.
 
-Module: `camera` · `file_io` · `heightmap` · `selection` · `auto_detect` · `editing` (inkl. `markers`, `resample_path`, `generate_bypass`) · `viewport` · `background_map` · `SegmentRegistry`
+Module: `camera` · `file_io` · `heightmap` · `selection` · `auto_detect` · `editing` (inkl. `markers`, `resample_path`, `generate_bypass`, `copy_paste`) · `viewport` · `background_map` · `SegmentRegistry`
 
 ---
 

@@ -63,6 +63,11 @@ pub fn render_menu(ctx: &egui::Context, state: &AppState) -> Vec<AppIntent>
   - Render Quality → Submenu (Low/Medium/High) → `AppIntent::RenderQualityChanged`
   - Options... → `AppIntent::OpenOptionsDialogRequested`
 
+- **Edit**
+  - Undo/Redo
+  - Kopieren (`Ctrl+C`) → `AppIntent::CopySelectionRequested`
+  - Einfuegen (`Ctrl+V`) → `AppIntent::PasteStartRequested`
+
 - **Help**
   - About → Loggt Version
 
@@ -180,6 +185,8 @@ let intents = input.collect_viewport_events(
   - `Delete` → Node(s) löschen
   - `Escape` → Selektion aufheben
   - `Ctrl+A` → Alle selektieren
+  - `Ctrl+C` → Selektion kopieren
+  - `Ctrl+V` → Paste-Vorschau starten
   - `Ctrl+O` → Datei öffnen
   - `Ctrl+S` → Datei speichern
   - `Ctrl+Z` → Undo
@@ -247,6 +254,23 @@ Zeichnet das Tool-Preview-Overlay in den Viewport (Verbindungen als Linien, Node
 ```rust
 pub fn render_tool_preview(
     ctx: &ToolPreviewContext<'_>
+)
+```
+
+### `paint_clipboard_preview`
+
+Zeichnet die Copy/Paste-Vorschau (kopierte Nodes + interne Verbindungen)
+halbtransparent an der aktuellen Paste-Position.
+
+```rust
+pub fn paint_clipboard_preview(
+  painter: &egui::Painter,
+  rect: egui::Rect,
+  camera: &Camera2D,
+  viewport_size: Vec2,
+  clipboard: &Clipboard,
+  paste_pos: Vec2,
+  opacity: f32,
 )
 ```
 

@@ -31,5 +31,7 @@ pub use menu::render_menu;
 pub use options_dialog::show_options_dialog;
 pub use properties::render_properties_panel;
 pub use status::render_status_bar;
-pub use tool_preview::{paint_preview, paint_preview_polyline, render_tool_preview};
+pub use tool_preview::{
+    paint_clipboard_preview, paint_preview, paint_preview_polyline, render_tool_preview,
+};
 pub use toolbar::render_toolbar;

@@ -6,7 +6,7 @@ mod editor;
 mod selection;
 mod view;
 
-pub use app_state::AppState;
+pub use app_state::{AppState, Clipboard};
 pub use dialogs::{
     DedupDialogState, DistanzenState, MarkerDialogState, OverviewOptionsDialogState,
     PostLoadDialogState, SaveOverviewDialogState, UiState, ZipBrowserState,

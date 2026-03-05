@@ -342,3 +342,21 @@ pub(super) fn render_node_behavior(ui: &mut egui::Ui, opts: &mut EditorOptions) 
     }
     changed
 }
+
+/// Rendert die Copy/Paste-Einstellungen (Vorschau-Deckung).
+pub(super) fn render_copy_paste(ui: &mut egui::Ui, opts: &mut EditorOptions) -> bool {
+    let mut changed = false;
+    ui.horizontal(|ui| {
+        ui.label("Vorschau-Deckung:").on_hover_text(
+            "Transparenz der Paste-Vorschau im Viewport (0 = unsichtbar, 1 = volle Deckkraft).",
+        );
+        changed |= ui
+            .add(
+                egui::Slider::new(&mut opts.copy_preview_opacity, 0.0..=1.0)
+                    .step_by(0.05)
+                    .fixed_decimals(2),
+            )
+            .changed();
+    });
+    changed
+}

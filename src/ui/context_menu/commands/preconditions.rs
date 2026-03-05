@@ -24,6 +24,10 @@ pub enum Precondition {
     StreckenteilungActive(bool),
     /// Selektion bildet eine zusammenhaengende Kette (fuer Streckenteilung)
     IsResampleableChain,
+    /// Mindestens 1 Node selektiert (fuer Copy)
+    HasSelection,
+    /// Clipboard enthaelt Nodes (fuer Paste)
+    ClipboardHasData,
 }
 
 /// Kontext fuer die Precondition-Auswertung — alle noetigen Daten aus dem aktuellen State.
@@ -32,6 +36,8 @@ pub struct PreconditionContext<'a> {
     pub selected_node_ids: &'a IndexSet<u64>,
     /// Ob die Streckenteilung gerade aktiv ist
     pub distanzen_active: bool,
+    /// Ob die Zwischenablage Daten enthaelt
+    pub clipboard_has_data: bool,
 }
 
 impl Precondition {
@@ -65,6 +71,10 @@ impl Precondition {
             Self::StreckenteilungActive(expected) => ctx.distanzen_active == *expected,
 
             Self::IsResampleableChain => ctx.road_map.is_resampleable_chain(ctx.selected_node_ids),
+
+            Self::HasSelection => !ctx.selected_node_ids.is_empty(),
+
+            Self::ClipboardHasData => ctx.clipboard_has_data,
         }
     }
 }

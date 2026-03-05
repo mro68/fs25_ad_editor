@@ -194,6 +194,41 @@ impl EditorApp {
     ) -> Vec<AppIntent> {
         let mut events = Vec::new();
 
+        // ── Paste-Vorschau hat Prioritaet: normale Klicks unterdruecken ──────
+        if self.state.paste_preview_pos.is_some() {
+            events.push(AppIntent::ViewportResized {
+                size: viewport_size,
+            });
+
+            // Mauszeiger-Position → Vorschau aktualisieren
+            if let Some(hover_screen) = response.hover_pos() {
+                let local = hover_screen - response.rect.min;
+                let vp = glam::Vec2::new(viewport_size[0], viewport_size[1]);
+                let world_pos = self
+                    .state
+                    .view
+                    .camera
+                    .screen_to_world(glam::Vec2::new(local.x, local.y), vp);
+                events.push(AppIntent::PastePreviewMoved { world_pos });
+            }
+
+            // Linksklick → Einfuegen bestaetigen
+            if response.clicked() {
+                events.push(AppIntent::PasteConfirmRequested);
+            }
+
+            // Esc → Vorschau abbrechen
+            if ui.input(|i| i.key_pressed(egui::Key::Escape)) {
+                events.push(AppIntent::PasteCancelled);
+            }
+
+            // Cursor als Fadenkreuz anzeigen
+            ui.ctx().set_cursor_icon(egui::CursorIcon::Crosshair);
+
+            return events;
+        }
+        // ─────────────────────────────────────────────────────────────────────
+
         let drag_targets = self
             .state
             .editor
@@ -238,6 +273,7 @@ impl EditorApp {
             &drag_targets,
             &mut self.state.ui.distanzen,
             tangent_data,
+            !self.state.clipboard.nodes.is_empty(),
         ));
 
         // Mauszeiger im Viewport je nach aktivem Werkzeug anpassen
@@ -316,6 +352,20 @@ impl EditorApp {
                     ui::render_tool_preview(&ctx);
                 }
             }
+        }
+
+        // ── Paste-Vorschau-Overlay ──────────────
+        if let Some(paste_pos) = self.state.paste_preview_pos {
+            let vp = glam::Vec2::new(viewport_size[0], viewport_size[1]);
+            ui::paint_clipboard_preview(
+                &ui.painter_at(rect),
+                rect,
+                &self.state.view.camera,
+                vp,
+                &self.state.clipboard,
+                paste_pos,
+                self.state.options.copy_preview_opacity,
+            );
         }
 
         // ── Distanzen-Vorschau-Overlay ──────────
