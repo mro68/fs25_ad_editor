@@ -194,6 +194,7 @@ impl RouteTool for BypassTool {
             end_anchor: ToolAnchor::ExistingNode(self.chain_end_id, end_pos),
             original_positions: Vec::new(), // wird im Handler befuellt
             marker_node_ids: Vec::new(),
+            locked: true,
             kind: SegmentKind::Bypass {
                 chain_positions: self.chain_positions.clone(),
                 chain_start_id: self.chain_start_id,

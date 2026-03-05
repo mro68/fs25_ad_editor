@@ -335,6 +335,7 @@ impl RouteTool for CurveTool {
             end_anchor: end,
             original_positions: Vec::new(), // wird im Handler befüllt
             marker_node_ids: Vec::new(),
+            locked: true,
             kind,
         })
     }
