@@ -76,7 +76,7 @@ impl crate::app::tools::RouteTool for ParkingTool {
     }
 
     fn render_config(&mut self, ui: &mut egui::Ui, _distance_wheel_step_m: f32) -> bool {
-        self.render_config_view(ui)
+        self.render_config_view(ui, _distance_wheel_step_m)
     }
 
     fn execute(&self, _road_map: &RoadMap) -> Option<ToolResult> {
