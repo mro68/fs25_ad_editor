@@ -6,6 +6,8 @@ pub mod background_map;
 pub mod camera;
 /// Verbindungen zwischen Wegpunkten (Richtung, Prioritaet, Geometrie).
 pub mod connection;
+/// Feldgrenz-Polygone in Weltkoordinaten (aus GRLE-Farmland-Daten).
+pub mod farmland;
 /// Heightmap-Loader und Y-Koordinaten-Sampling.
 pub mod heightmap;
 /// Benannte Wegpunkt-Marker aus der AutoDrive-Konfiguration.
@@ -23,6 +25,7 @@ pub use background_map::BackgroundMap;
 pub use background_map::{list_images_in_zip, load_from_zip, ZipImageEntry};
 pub use camera::Camera2D;
 pub use connection::{Connection, ConnectionDirection, ConnectionPriority};
+pub use farmland::FieldPolygon;
 pub use heightmap::{Heightmap, WorldBounds};
 pub use map_marker::MapMarker;
 pub use meta::AutoDriveMeta;
