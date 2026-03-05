@@ -10,6 +10,7 @@
 //! - `bulk_connections` — Bulk-Aenderungen an Verbindungen
 //! - `markers` — Map-Marker-Operationen
 //! - `resample_path` — Nodes-Kette per Catmull-Rom-Spline neu verteilen (Distanzen)
+//! - `copy_paste` — Kopieren/Einfuegen von Nodes, Verbindungen und Markern
 
 ///
 /// Aufgeteilt nach Operation:
@@ -22,6 +23,7 @@ mod add_node;
 mod apply_tool_result;
 mod bulk_connections;
 mod connect;
+mod copy_paste;
 mod delete_nodes;
 mod delete_nodes_by_ids;
 mod direction;
@@ -39,6 +41,10 @@ pub use bulk_connections::{
     set_all_connections_direction_between_selected, set_all_connections_priority_between_selected,
 };
 pub use connect::{add_connection, connect_tool_pick_node};
+pub use copy_paste::{
+    cancel_paste_preview, confirm_paste, copy_selected_to_clipboard, start_paste_preview,
+    update_paste_preview,
+};
 pub use delete_nodes::delete_selected_nodes;
 pub use delete_nodes_by_ids::delete_nodes_by_ids;
 pub use direction::set_connection_direction;

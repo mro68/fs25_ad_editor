@@ -1,20 +1,22 @@
 use crate::app::history::Snapshot;
 use crate::app::segment_registry::SegmentRegistry;
 use crate::app::CommandLog;
-use crate::core::{Connection, MapNode, RoadMap};
+use crate::core::{Connection, MapMarker, MapNode, RoadMap};
 use crate::shared::EditorOptions;
 use glam::Vec2;
 use std::sync::Arc;
 
 use super::{EditorToolState, SelectionState, UiState, ViewState};
 
-/// Zwischenablage fuer Nodes und Verbindungen
+/// Zwischenablage fuer Nodes, Verbindungen und Marker
 #[derive(Debug, Clone, Default)]
 pub struct Clipboard {
     /// Kopierte Nodes
     pub nodes: Vec<MapNode>,
-    /// Kopierte Verbindungen
+    /// Kopierte Verbindungen (nur intern: beide Endpunkte in der Selektion)
     pub connections: Vec<Connection>,
+    /// Kopierte Marker (nur fuer selektierte Nodes)
+    pub markers: Vec<MapMarker>,
     /// Geometrisches Zentrum der Kopie (fuer relativen Offset beim Paste)
     pub center: Vec2,
 }

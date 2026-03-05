@@ -120,9 +120,14 @@ impl Default for EditorOptions {
             bg_opacity: 1.0,
             bg_opacity_at_min_zoom: 0.0,
             bg_fade_start_zoom: 3.5,
+            copy_preview_opacity: default_copy_preview_opacity(),
             overview_layers: OverviewLayerOptions::default(),
         }
     }
+}
+
+fn default_copy_preview_opacity() -> f32 {
+    0.5
 }
 
 fn default_snap_scale_percent() -> f32 {
@@ -237,6 +242,13 @@ impl EditorOptions {
             return Err(anyhow::anyhow!(
                 "mouse_wheel_distance_step_m ({}) muss > 0 und <= 10 sein",
                 self.mouse_wheel_distance_step_m
+            ));
+        }
+
+        if self.copy_preview_opacity < 0.0 || self.copy_preview_opacity > 1.0 {
+            return Err(anyhow::anyhow!(
+                "copy_preview_opacity ({}) muss zwischen 0 und 1 liegen",
+                self.copy_preview_opacity
             ));
         }
 

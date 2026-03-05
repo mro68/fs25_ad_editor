@@ -242,4 +242,16 @@ pub enum AppCommand {
     ZoomToFit,
     /// Auswahl invertieren
     InvertSelection,
+
+    // ── Copy/Paste ────────────────────────────────────────────────────
+    /// Selektion in die Zwischenablage kopieren
+    CopySelection,
+    /// Einfuegen-Vorschau starten
+    StartPastePreview,
+    /// Einfuegen-Vorschau: Position aktualisieren
+    UpdatePastePreview { world_pos: glam::Vec2 },
+    /// Einfuegen an aktueller Vorschauposition bestaetigen
+    ConfirmPaste,
+    /// Einfuegen-Vorschau abbrechen
+    CancelPastePreview,
 }

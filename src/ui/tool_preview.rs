@@ -3,6 +3,7 @@
 use eframe::egui;
 use glam::Vec2;
 
+use crate::app::state::Clipboard;
 use crate::app::tools::{ToolManager, ToolPreview};
 use crate::app::{Camera2D, RoadMap};
 use crate::shared::EditorOptions;
@@ -234,4 +235,69 @@ fn color32_from_rgba(color: [f32; 4]) -> egui::Color32 {
         (color[2].clamp(0.0, 1.0) * 255.0) as u8,
         (color[3].clamp(0.0, 1.0) * 255.0) as u8,
     )
+}
+
+/// Zeichnet die Clipboard-Vorschau (Paste-Preview) im Viewport.
+///
+/// Rendert alle kopierten Nodes und internen Verbindungen an der aktuellen
+/// Vorschauposition (`paste_pos`) mit einstellbarer Deckkraft (`opacity`).
+pub fn paint_clipboard_preview(
+    painter: &egui::Painter,
+    rect: egui::Rect,
+    camera: &Camera2D,
+    viewport_size: Vec2,
+    clipboard: &Clipboard,
+    paste_pos: Vec2,
+    opacity: f32,
+) {
+    if clipboard.nodes.is_empty() {
+        return;
+    }
+
+    let alpha = (opacity.clamp(0.0, 1.0) * 255.0) as u8;
+    let node_color = egui::Color32::from_rgba_unmultiplied(100, 200, 255, alpha);
+    let conn_color =
+        egui::Color32::from_rgba_unmultiplied(100, 200, 255, (alpha as u16 * 3 / 4) as u8);
+    let marker_color = egui::Color32::from_rgba_unmultiplied(255, 200, 50, alpha);
+
+    let offset = paste_pos - clipboard.center;
+
+    // Positions-Lookup fuer Verbindungen
+    let node_positions: std::collections::HashMap<u64, Vec2> = clipboard
+        .nodes
+        .iter()
+        .map(|n| (n.id, n.position + offset))
+        .collect();
+
+    // Verbindungen zeichnen
+    for conn in &clipboard.connections {
+        let Some(&start_pos) = node_positions.get(&conn.start_id) else {
+            continue;
+        };
+        let Some(&end_pos) = node_positions.get(&conn.end_id) else {
+            continue;
+        };
+        let sa = camera.world_to_screen(start_pos, viewport_size);
+        let sb = camera.world_to_screen(end_pos, viewport_size);
+        let from = egui::pos2(rect.min.x + sa.x, rect.min.y + sa.y);
+        let to = egui::pos2(rect.min.x + sb.x, rect.min.y + sb.y);
+        painter.line_segment([from, to], egui::Stroke::new(2.0, conn_color));
+    }
+
+    // Marker-Node-IDs fuer schnelle Suche
+    let marker_ids: std::collections::HashSet<u64> =
+        clipboard.markers.iter().map(|m| m.id).collect();
+
+    // Nodes zeichnen
+    for node in &clipboard.nodes {
+        let world_pos = node.position + offset;
+        let sp = camera.world_to_screen(world_pos, viewport_size);
+        let screen_pos = egui::pos2(rect.min.x + sp.x, rect.min.y + sp.y);
+        let color = if marker_ids.contains(&node.id) {
+            marker_color
+        } else {
+            node_color
+        };
+        painter.circle_filled(screen_pos, 4.0, color);
+    }
 }

@@ -244,4 +244,16 @@ pub enum AppIntent {
     IncreaseRouteToolSegmentLength,
     /// Route-Tool: Minimalabstand um 0.25m verringern (Pfeiltaste links)
     DecreaseRouteToolSegmentLength,
+
+    // ── Copy/Paste ────────────────────────────────────────────────────
+    /// Selektion in die Zwischenablage kopieren
+    CopySelectionRequested,
+    /// Einfuegen-Vorschau starten (Clipboard → Vorschau auf Karte)
+    PasteStartRequested,
+    /// Einfuegen-Vorschau: Mauszeiger hat sich bewegt → Vorschau aktualisieren
+    PastePreviewMoved { world_pos: glam::Vec2 },
+    /// Einfuegen an aktueller Vorschauposition bestaetigen
+    PasteConfirmRequested,
+    /// Einfuegen-Vorschau abbrechen (Escape)
+    PasteCancelled,
 }
