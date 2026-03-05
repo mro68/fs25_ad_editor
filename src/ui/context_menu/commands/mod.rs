@@ -101,6 +101,10 @@ pub enum CommandId {
     CopySelection,
     /// Einfuegen-Vorschau starten
     PasteHere,
+
+    // ── Segment ──────────────────────────────────────────────────────
+    /// Selektiertes Segment nachtraeglich bearbeiten
+    EditSegment,
 }
 
 // =============================================================================
@@ -145,6 +149,8 @@ pub struct IntentContext {
     pub node_position: Option<glam::Vec2>,
     /// Sortierte Zwei-Node-IDs (fuer RouteToolWithAnchorsRequested)
     pub two_node_ids: Option<(u64, u64)>,
+    /// Record-ID eines validen Segments (fuer EditSegment-Command)
+    pub segment_record_id: Option<u64>,
 }
 
 impl CommandId {
@@ -255,6 +261,11 @@ impl CommandId {
             // ── Copy/Paste ────────────────────────────────────────────────
             Self::CopySelection => AppIntent::CopySelectionRequested,
             Self::PasteHere => AppIntent::PasteStartRequested,
+
+            // ── Segment ──────────────────────────────────────────────────────
+            Self::EditSegment => AppIntent::EditSegmentRequested {
+                record_id: ctx.segment_record_id.unwrap_or(0),
+            },
         }
     }
 }
