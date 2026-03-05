@@ -3,9 +3,9 @@ members = [".", "crates/fs25_map_overview"]
 
 [package]
 name = "FS25-AutoDrive-Editor"
-version = "1.0.1"
+version = "1.1.0"
 edition = "2021"
-authors = ["MRO"]
+authors = ["mro68"]
 description = "GPU-beschleunigter Editor fuer AutoDrive-Kurse in Farming Simulator 25"
 repository = "https://github.com/mro68/fs25_ad_editor"
 license = "GPL-3.0"
