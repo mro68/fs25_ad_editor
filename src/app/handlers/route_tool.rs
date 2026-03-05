@@ -39,6 +39,9 @@ fn execute_and_apply(state: &mut AppState) {
     };
 
     if let Some(result) = result {
+        // Marker-Indizes vor Consume von result sichern (fuer marker_node_ids im Record)
+        let marker_indices: Vec<usize> = result.markers.iter().map(|(idx, _, _)| *idx).collect();
+
         let ids = use_cases::editing::apply_tool_result(state, result);
 
         // Zuerst last_*-Felder setzen (fuer make_segment_record)
@@ -52,7 +55,18 @@ fn execute_and_apply(state: &mut AppState) {
         // Segment in Registry speichern (fuer nachtraegliche Bearbeitung)
         let record_id = state.segment_registry.next_id();
         if let Some(tool) = state.editor.tool_manager.active_tool() {
-            if let Some(record) = tool.make_segment_record(record_id, &ids) {
+            if let Some(mut record) = tool.make_segment_record(record_id, &ids) {
+                // Positionen aus RoadMap sammeln
+                record.original_positions = record
+                    .node_ids
+                    .iter()
+                    .filter_map(|id| state.road_map.as_ref()?.nodes.get(id).map(|n| n.position))
+                    .collect();
+                // Marker-Node-IDs fuer spaeteres Cleanup beim Edit
+                record.marker_node_ids = marker_indices
+                    .iter()
+                    .filter_map(|idx| ids.get(*idx).copied())
+                    .collect();
                 state.segment_registry.register(record);
             }
         }
@@ -291,6 +305,13 @@ pub fn drag_end(state: &mut AppState) {
     };
     if let Some(tool) = state.editor.tool_manager.active_tool_mut() {
         tool.on_drag_end(road_map);
+    }
+}
+
+/// Verarbeitet Alt+Scroll-Rotation fuer das aktive Route-Tool.
+pub fn rotate(state: &mut AppState, delta: f32) {
+    if let Some(tool) = state.editor.tool_manager.active_tool_mut() {
+        tool.on_scroll_rotate(delta);
     }
 }
 

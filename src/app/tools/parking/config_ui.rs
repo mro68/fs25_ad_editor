@@ -154,10 +154,20 @@ impl ParkingTool {
         });
 
         // Rotation-Anzeige
-        if self.phase == ParkingPhase::Placed {
+        if self.origin.is_some() {
             ui.separator();
             ui.label(format!("Rotation: {:.1}°", self.angle.to_degrees()));
-            ui.small("Maus bewegen zum Drehen — Klick zum Bestaetigen");
+            match self.phase {
+                ParkingPhase::Idle => {
+                    ui.small("Alt+Mausrad zum Drehen");
+                }
+                ParkingPhase::Configuring => {
+                    ui.small("Position fixiert — Viewport-Klick zum Verschieben");
+                }
+                ParkingPhase::Adjusting => {
+                    ui.small("Klicken zum Fixieren — Alt+Mausrad zum Drehen");
+                }
+            };
         }
 
         changed

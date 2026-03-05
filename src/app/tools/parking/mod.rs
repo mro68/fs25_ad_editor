@@ -6,6 +6,7 @@ mod geometry;
 mod lifecycle;
 mod state;
 
+pub use state::ParkingConfig;
 pub use state::ParkingTool;
 
 #[cfg(test)]

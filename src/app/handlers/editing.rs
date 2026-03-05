@@ -152,6 +152,17 @@ pub fn edit_segment(state: &mut AppState, record_id: u64) {
     // Undo-Snapshot vor Loeschung
     state.record_undo_snapshot();
 
+    // Marker der Segment-Nodes loeschen (z.B. ParkingTool erzeugt Marker an Nodes)
+    if !record.marker_node_ids.is_empty() {
+        use std::sync::Arc;
+        if let Some(road_map_arc) = state.road_map.as_mut() {
+            let road_map = Arc::make_mut(road_map_arc);
+            for &node_id in &record.marker_node_ids {
+                road_map.remove_marker(node_id);
+            }
+        }
+    }
+
     // Segment-Nodes loeschen
     use_cases::editing::delete_nodes_by_ids(state, &record.node_ids.clone());
 

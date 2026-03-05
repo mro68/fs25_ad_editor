@@ -39,12 +39,15 @@ Alle Use-Case-Funktionen des `app::use_cases`-Moduls. Use-Cases mutieren `AppSta
 
 ## `use_cases::selection`
 
-- `select_nearest_node(state, world_pos, max_distance, additive, extend_path)` — Node per Klick selektieren; `additive` fuer Ctrl/Shift-Add, `extend_path` nur fuer Shift-Pfadselektion zwischen Anker und Ziel
+- `select_nearest_node(state, world_pos, max_distance, additive, extend_path)` — Node per Klick selektieren; `additive` fuer Ctrl/Shift-Add, `extend_path` nur fuer Shift-Pfadselektion zwischen Anker und Ziel. Ruft automatisch `expand_segment_selection()` auf wenn kein Path-Extend aktiv ist – selektiert dann alle Nodes des zugehoerigen Segments falls noch gueltig.
 - `select_segment_between_nearest_intersections(state, world_pos, max_distance, additive)` — Doppelklick selektiert den Korridor bis zu den naechsten Segmentgrenzen (Kreuzung oder Sackgassen-Endpunkt)
 - `select_nodes_in_rect(state, corner_a, corner_b, additive)` — Rechteckselektion (Shift + Drag)
 - `select_nodes_in_lasso(state, polygon, additive)` — Lasso-Selektion (Alt + Drag)
 - `move_selected_nodes(state, delta_world)` — Alle selektierten Nodes gemeinsam verschieben
 - `clear_selection(state)` — Selektion explizit loeschen
+
+**Interner Helfer:**
+- `expand_segment_selection(state, node_id)` — Wenn der geklickte Node zu einem registrierten Segment gehoert und das Segment gueltig ist (alle Nodes existieren und Originalpositionen unveraendert), werden alle Segment-Nodes zur Selektion hinzugefuegt. Beseitigt manuelle Multi-Select-redundanz bei erstellten Segmenten.
 
 ---
 

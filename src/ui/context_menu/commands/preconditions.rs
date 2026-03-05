@@ -28,6 +28,8 @@ pub enum Precondition {
     HasSelection,
     /// Clipboard enthaelt Nodes (fuer Paste)
     ClipboardHasData,
+    /// Alle selektierten Nodes gehoeren zu einem validen Segment
+    SelectionIsValidSegment,
 }
 
 /// Kontext fuer die Precondition-Auswertung — alle noetigen Daten aus dem aktuellen State.
@@ -38,6 +40,8 @@ pub struct PreconditionContext<'a> {
     pub distanzen_active: bool,
     /// Ob die Zwischenablage Daten enthaelt
     pub clipboard_has_data: bool,
+    /// Record-ID eines validen Segments (berechnet vor Validierung)
+    pub segment_record_id: Option<u64>,
 }
 
 impl Precondition {
@@ -75,6 +79,8 @@ impl Precondition {
             Self::HasSelection => !ctx.selected_node_ids.is_empty(),
 
             Self::ClipboardHasData => ctx.clipboard_has_data,
+
+            Self::SelectionIsValidSegment => ctx.segment_record_id.is_some(),
         }
     }
 }

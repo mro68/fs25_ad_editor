@@ -17,6 +17,7 @@ use super::keyboard;
 use crate::app::tools::common::TangentMenuData;
 use crate::app::{
     AppIntent, Camera2D, ConnectionDirection, ConnectionPriority, EditorTool, RoadMap,
+    SegmentRegistry,
 };
 use crate::shared::EditorOptions;
 use indexmap::IndexSet;
@@ -114,6 +115,7 @@ impl InputState {
         distanzen_state: &mut crate::app::state::DistanzenState,
         tangent_data: Option<TangentMenuData>,
         clipboard_has_data: bool,
+        segment_registry: Option<&SegmentRegistry>,
     ) -> Vec<AppIntent> {
         let ctx = ViewportContext {
             ui,
@@ -217,6 +219,7 @@ impl InputState {
             default_direction,
             default_priority,
             &variant,
+            segment_registry,
             &mut events,
         );
 

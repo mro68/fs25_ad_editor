@@ -194,6 +194,7 @@ impl AppController {
                 handlers::route_tool::drag_update(state, world_pos)
             }
             AppCommand::RouteToolDragEnd => handlers::route_tool::drag_end(state),
+            AppCommand::RouteToolRotate { delta } => handlers::route_tool::rotate(state, delta),
             AppCommand::IncreaseRouteToolNodeCount => {
                 handlers::route_tool::increase_node_count(state)
             }
