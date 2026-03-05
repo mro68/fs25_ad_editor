@@ -7,3 +7,6 @@ mod lifecycle;
 mod state;
 
 pub use state::ParkingTool;
+
+#[cfg(test)]
+mod tests;
