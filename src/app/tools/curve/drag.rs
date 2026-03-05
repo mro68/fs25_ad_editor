@@ -178,18 +178,12 @@ pub(crate) fn on_drag_end(tool: &mut CurveTool, road_map: &RoadMap) {
     match tool.dragging {
         Some(DragTarget::Start) => {
             if let Some(anchor) = &tool.start {
-                tool.start = Some(tool.lifecycle.snap_at(
-                    anchor.position(),
-                    road_map,
-                ));
+                tool.start = Some(tool.lifecycle.snap_at(anchor.position(), road_map));
             }
         }
         Some(DragTarget::End) => {
             if let Some(anchor) = &tool.end {
-                tool.end = Some(tool.lifecycle.snap_at(
-                    anchor.position(),
-                    road_map,
-                ));
+                tool.end = Some(tool.lifecycle.snap_at(anchor.position(), road_map));
             }
         }
         // Apex und CPs benoetigen keinen Re-Snap

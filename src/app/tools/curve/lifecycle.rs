@@ -94,8 +94,7 @@ impl RouteTool for CurveTool {
                 }
             }
             Phase::End => {
-                let (end_anchor, end_neighbors) =
-                    self.lifecycle.snap_with_neighbors(pos, road_map);
+                let (end_anchor, end_neighbors) = self.lifecycle.snap_with_neighbors(pos, road_map);
                 self.tangents.end_neighbors = end_neighbors;
                 self.tangents.tangent_end = super::super::common::TangentSource::None;
                 self.end = Some(end_anchor);
@@ -142,8 +141,7 @@ impl RouteTool for CurveTool {
 
         match self.phase {
             Phase::End => {
-                let end_pos =
-                    self.lifecycle.snap_at(cursor_pos, road_map).position();
+                let end_pos = self.lifecycle.snap_at(cursor_pos, road_map).position();
                 let connections = vec![(0, 1)];
                 let styles = vec![(self.direction, self.priority)];
                 ToolPreview {

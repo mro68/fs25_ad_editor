@@ -2,7 +2,6 @@
 //!
 //! Ermoeglicht das Verschieben von Start, End und Kontrollpunkten per Drag.
 
-
 use super::super::ToolAnchor;
 use super::state::{ConstraintRouteTool, DragTarget, Phase};
 use crate::core::RoadMap;
@@ -111,8 +110,7 @@ impl ConstraintRouteTool {
         match self.dragging {
             Some(DragTarget::Start) => {
                 if let Some(anchor) = &self.start {
-                    let re_snapped =
-                        self.lifecycle.snap_at(anchor.position(), road_map);
+                    let re_snapped = self.lifecycle.snap_at(anchor.position(), road_map);
                     self.start = Some(re_snapped);
                     self.start_neighbor_dirs =
                         ConstraintRouteTool::collect_neighbor_dirs(&re_snapped, road_map);
@@ -122,8 +120,7 @@ impl ConstraintRouteTool {
             }
             Some(DragTarget::End) => {
                 if let Some(anchor) = &self.end {
-                    let re_snapped =
-                        self.lifecycle.snap_at(anchor.position(), road_map);
+                    let re_snapped = self.lifecycle.snap_at(anchor.position(), road_map);
                     self.end = Some(re_snapped);
                     self.end_neighbor_dirs =
                         ConstraintRouteTool::collect_neighbor_dirs(&re_snapped, road_map);

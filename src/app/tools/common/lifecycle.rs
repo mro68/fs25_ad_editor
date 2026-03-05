@@ -2,10 +2,11 @@
 
 use super::super::ToolAnchor;
 use super::geometry::{
-    node_count_from_length, segment_length_from_count, snap_with_neighbors as geom_snap_with_neighbors,
+    node_count_from_length, segment_length_from_count,
+    snap_with_neighbors as geom_snap_with_neighbors,
 };
-use crate::core::{ConnectedNeighbor, RoadMap};
 use crate::app::tools::snap_to_node;
+use crate::core::{ConnectedNeighbor, RoadMap};
 
 /// Welcher Wert wurde zuletzt vom User geaendert?
 ///

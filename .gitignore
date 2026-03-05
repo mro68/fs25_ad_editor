@@ -25,3 +25,4 @@ scripts/README.md
 **/*AUDIT*.*
 **/*_PLAN.*
 assets/**/
+.zram.sh
