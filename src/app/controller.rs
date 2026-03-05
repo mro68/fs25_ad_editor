@@ -282,6 +282,11 @@ impl AppController {
             // === Selection ===
             AppCommand::InvertSelection => handlers::selection::invert(state),
 
+            // === Segment ===
+            AppCommand::ToggleSegmentLock { segment_id } => {
+                handlers::segment::toggle_lock(state, segment_id)
+            }
+
             // === Copy/Paste ===
             AppCommand::CopySelection => handlers::editing::copy_selection(state),
             AppCommand::StartPastePreview => handlers::editing::start_paste_preview(state),

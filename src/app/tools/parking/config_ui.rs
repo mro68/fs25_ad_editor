@@ -202,8 +202,7 @@ impl ParkingTool {
             );
             let wd = wheel_dir(ui, &response);
             if wd != 0.0 {
-                self.rotation_step_deg =
-                    (self.rotation_step_deg + wd * 1.0).clamp(0.5, 45.0);
+                self.rotation_step_deg = (self.rotation_step_deg + wd * 1.0).clamp(0.5, 45.0);
                 changed = true;
             }
             if response.changed() {

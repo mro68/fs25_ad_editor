@@ -37,6 +37,7 @@ Das `ui`-Modul enthält egui-UI-Komponenten (Menüs, Statusbar, Input-Handling, 
   - `zip_browser.rs` — ZIP-Browser für Background-Map-Auswahl
   - `post_load_dialog.rs` — Post-Load-Dialog (Auto-Erkennung von Heightmap/ZIP/Overview)
   - `save_overview_dialog.rs` — Dialog: Hintergrundbild als overview.jpg speichern
+- `segment_overlay.rs` — Segment-Rahmen und Lock-Icons als egui-Overlay (`SegmentOverlayEvent`, `render_segment_overlays()`)
 
 ## Funktionen
 
@@ -473,6 +474,53 @@ pub fn show_save_overview_dialog(ctx: &egui::Context, ui_state: &mut UiState) ->
   Beim nächsten Laden wird es automatisch als Hintergrund verwendet.
   [Ja, speichern]  [Nein]
 ```
+
+---
+
+---
+
+### `SegmentOverlayEvent`
+
+Event, den das Segment-Overlay beim Klick auf ein Lock-Icon ausloest.
+
+```rust
+pub enum SegmentOverlayEvent {
+    /// Der Lock-Zustand des Segments soll umgeschaltet werden.
+    LockToggled { segment_id: u64 },
+}
+```
+
+Wird von `render_segment_overlays()` zurueckgegeben und in den Intent-Flow als
+`AppIntent::ToggleSegmentLockRequested { segment_id }` uebersetzt.
+
+---
+
+### `render_segment_overlays`
+
+Zeichnet Segment-Rahmen (AABB) und Lock-Icons als egui-Overlay ueber den Viewport.
+
+```rust
+pub fn render_segment_overlays(
+    painter: &egui::Painter,
+    rect: egui::Rect,
+    camera: &Camera2D,
+    viewport_size: Vec2,
+    registry: &SegmentRegistry,
+    road_map: &RoadMap,
+    clicked_pos: Option<egui::Pos2>,
+) -> Vec<SegmentOverlayEvent>
+```
+
+**Verhalten:**
+- Iteriert ueber alle gueltigen Segmente in der Registry
+- Zeichnet eine halbtransparente Fuellung (nur bei gesperrten Segmenten)
+- Zeichnet einen Rahmen (gelb = gesperrt, grau = entsperrt)
+- Platziert Lock-Icons an den 4 Seitenmittelpunkten (N/O/S/W) der Bounding-Box
+- Gibt `SegmentOverlayEvent::LockToggled` zurueck wenn ein Icon angeklickt wurde
+
+**Lock-Zustand:**
+- Entsperrt (`locked = false`): grauer Rahmen, offenes Schloss-Icon
+- Gesperrt (`locked = true`): gelber Rahmen, 15%-schwarze Fuellung, geschlossenes Schloss-Icon
 
 ---
 
