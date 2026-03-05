@@ -88,6 +88,17 @@
   - [x] Intent/Command-Kette: `RouteToolScrollRotated { delta }` → `RouteToolRotate { delta }` → `handlers::route_tool::rotate()`
   - [x] Dokumentation synchronisiert: Intents, Commands, Tools-API, Handler-API
 
+- [x] **Segment-Lock** (2026-03-05)
+  - [x] `SegmentRecord.locked: bool` — gesperrte Segmente bewegen alle Nodes gemeinsam beim Drag
+  - [x] `SegmentRegistry::toggle_lock()` / `is_locked()` — Lock-Zustand abfragen und umschalten
+  - [x] `SegmentRegistry::expand_locked_selection()` — Selektion automatisch um alle Nodes gesperrter Segmente erweitern
+  - [x] `SegmentRegistry::update_original_positions()` — Positionen nach Lock-Move aktualisieren
+  - [x] `SegmentRegistry::segment_bounding_box()` / `segments_for_node()` / `records()` / `records_mut()` — neue Abfrage-API
+  - [x] `move_selected_nodes()` Lock-Aware: gesperrte Segment-Nodes werden mitbewegt
+  - [x] `AppIntent::ToggleSegmentLockRequested` / `AppCommand::ToggleSegmentLock`
+  - [x] `handlers::segment::toggle_lock()` — neuer Handler
+  - [x] `ui::segment_overlay`: `render_segment_overlays()` / `SegmentOverlayEvent::LockToggled` — Viewport-Overlay mit Rahmen und klickbaren Lock-Icons
+
 ## Phase 5: Advanced Features
 - [x] DDS-Import fuer Map-Hintergruende
   - [x] Texture-Loader implementieren (PNG, JPG, DDS)
@@ -163,6 +174,10 @@
   - [x] **Strukturelles Audit Docstring-Ergaenzungen (2026-03-05)**
     - [x] 84 fehlende `///`-Docstrings fuer alle `pub`-Items ergaenzt (`core`, `app`, `render`, `shared`, `ui`)
     - [x] API.md alle 6 Layer synchronisiert (SegmentKind+Bypass/Parking, SegmentRecord+marker_node_ids, EditorOptions+bg/copy-Felder, compute_visible_rect)
+  - [x] **Doku-Sync Segment-Lock Feature (2026-03-05)**
+    - [x] `app/API.md`: SegmentRecord.locked, neue SegmentRegistry-Methoden, AppIntent/AppCommand-Varianten, Handler segment.rs
+    - [x] `ui/API.md`: Modul segment_overlay, SegmentOverlayEvent, render_segment_overlays()
+    - [x] ROADMAP.md: Segment-Lock als abgeschlossen markiert
 - [ ] Packaging
   - [ ] Windows Binaries (.exe)
   - [ ] Linux Binaries (AppImage)
