@@ -25,7 +25,7 @@ pub use background_map::BackgroundMap;
 pub use background_map::{list_images_in_zip, load_from_zip, ZipImageEntry};
 pub use camera::Camera2D;
 pub use connection::{Connection, ConnectionDirection, ConnectionPriority};
-pub use farmland::FieldPolygon;
+pub use farmland::{find_polygon_at, offset_polygon, point_in_polygon, simplify_polygon, FieldPolygon};
 pub use heightmap::{Heightmap, WorldBounds};
 pub use map_marker::MapMarker;
 pub use meta::AutoDriveMeta;
