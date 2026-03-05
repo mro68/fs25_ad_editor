@@ -30,6 +30,8 @@ pub enum Precondition {
     ClipboardHasData,
     /// Alle selektierten Nodes gehoeren zu einem validen Segment
     SelectionIsValidSegment,
+    /// Farmland-Polygone sind geladen (fuer FieldBoundaryTool)
+    FarmlandPolygonsLoaded,
 }
 
 /// Kontext fuer die Precondition-Auswertung — alle noetigen Daten aus dem aktuellen State.
@@ -42,6 +44,8 @@ pub struct PreconditionContext<'a> {
     pub clipboard_has_data: bool,
     /// Record-ID eines validen Segments (berechnet vor Validierung)
     pub segment_record_id: Option<u64>,
+    /// Ob Farmland-Polygone geladen sind (fuer FieldBoundaryTool-Precondition)
+    pub farmland_polygons_loaded: bool,
 }
 
 impl Precondition {
@@ -81,6 +85,8 @@ impl Precondition {
             Self::ClipboardHasData => ctx.clipboard_has_data,
 
             Self::SelectionIsValidSegment => ctx.segment_record_id.is_some(),
+
+            Self::FarmlandPolygonsLoaded => ctx.farmland_polygons_loaded,
         }
     }
 }
