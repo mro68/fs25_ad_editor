@@ -4,7 +4,7 @@ use super::super::common::linear_connections;
 use super::super::{RouteTool, ToolAction, ToolPreview, ToolResult};
 use super::geometry::{build_result, BuildResultParams};
 use super::state::{ConstraintRouteTool, Phase};
-use crate::app::segment_registry::{SegmentKind, SegmentRecord};
+use crate::app::segment_registry::{SegmentBase, SegmentKind, SegmentRecord};
 use crate::core::RoadMap;
 use glam::Vec2;
 
@@ -261,10 +261,12 @@ impl RouteTool for ConstraintRouteTool {
             kind: SegmentKind::ConstraintRoute {
                 control_nodes: self.last_control_nodes.clone(),
                 max_angle_deg: self.max_angle_deg,
-                direction: self.direction,
-                priority: self.priority,
-                max_segment_length: self.seg.max_segment_length,
                 min_distance: self.min_distance,
+                base: SegmentBase {
+                    direction: self.direction,
+                    priority: self.priority,
+                    max_segment_length: self.seg.max_segment_length,
+                },
             },
         })
     }
@@ -273,10 +275,8 @@ impl RouteTool for ConstraintRouteTool {
         let SegmentKind::ConstraintRoute {
             control_nodes,
             max_angle_deg,
-            direction,
-            priority,
-            max_segment_length,
             min_distance,
+            base,
         } = kind
         else {
             return;
@@ -285,9 +285,9 @@ impl RouteTool for ConstraintRouteTool {
         self.end = Some(record.end_anchor);
         self.control_nodes = control_nodes.clone();
         self.max_angle_deg = *max_angle_deg;
-        self.direction = *direction;
-        self.priority = *priority;
-        self.seg.max_segment_length = *max_segment_length;
+        self.direction = base.direction;
+        self.priority = base.priority;
+        self.seg.max_segment_length = base.max_segment_length;
         self.min_distance = *min_distance;
         self.phase = Phase::ControlNodes;
         self.sync_derived();

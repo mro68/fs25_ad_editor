@@ -86,6 +86,12 @@ fn load_for_edit(&mut self, record: &SegmentRecord, kind: &SegmentKind);
 
 ---
 
+## `SegmentBase` und `SegmentKind` (Segment-Registry)
+
+Documentation moved to [`../API.md#segmentbase--segmentkind`](../API.md#segmentbase--segmentkind). Kurz: Alle Segmente speichern ihre grundlegenden Parameter (Richtung, Priorität, Max-Abstand) in `SegmentBase` ab, was Tool-typ and Editing-Flow vereinheitlicht.
+
+---
+
 ## Registrierte Tools
 
 | Idx | Tool | Icon | Konstruktor |

@@ -1,6 +1,6 @@
 //! Integrations-Tests fuer das Parkplatz-Layout-Tool.
 
-use super::geometry::generate_parking_layout;
+use super::geometry::{build_parking_result, build_preview, generate_parking_layout};
 use super::state::{ParkingConfig, RampSide};
 use crate::core::{ConnectionDirection, ConnectionPriority};
 use glam::Vec2;
@@ -396,4 +396,247 @@ fn test_preview_params_move_entry_and_exit_nodes() {
     let b_n8 = b.nodes[7];
     assert!((a_n7 - b_n7).length() > 0.1, "n7 reagiert nicht auf Config");
     assert!((a_n8 - b_n8).length() > 0.1, "n8 reagiert nicht auf Config");
+}
+
+/// Prueft exakte Groessen des Blueprint-Layouts fuer mehrere Reihen.
+#[test]
+fn test_blueprint_series_has_expected_node_and_connection_counts() {
+    let config = ParkingConfig {
+        num_rows: 2,
+        row_spacing: 9.0,
+        bay_length: 80.0,
+        entry_t: 0.4,
+        exit_t: 0.6,
+        ramp_length: 5.0,
+        entry_side: RampSide::Right,
+        exit_side: RampSide::Right,
+        marker_group: "Serie2".to_string(),
+    };
+
+    let layout = generate_parking_layout(
+        Vec2::ZERO,
+        0.0,
+        &config,
+        ConnectionDirection::Dual,
+        ConnectionPriority::Regular,
+    );
+
+    // Pro Reihe entstehen 8 Nodes (6 Blueprint + n7 + n8).
+    assert_eq!(layout.nodes.len(), 16, "Falsche Anzahl Nodes fuer 2 Reihen");
+    assert_eq!(layout.markers.len(), 2, "Es muessen 2 Marker entstehen");
+
+    // 8 Basisverbindungen pro Reihe + 2 Serienverbindungen fuer count=2.
+    assert_eq!(
+        layout.connections.len(),
+        18,
+        "Falsche Anzahl Verbindungen fuer 2 Reihen"
+    );
+}
+
+/// Prueft Marker-Positionen bei 0° fuer definierte Reihenabstaende.
+#[test]
+fn test_marker_positions_follow_origin_and_row_spacing_without_rotation() {
+    let config = ParkingConfig {
+        num_rows: 2,
+        row_spacing: 11.0,
+        bay_length: 80.0,
+        entry_t: 0.5,
+        exit_t: 0.5,
+        ramp_length: 5.0,
+        entry_side: RampSide::Right,
+        exit_side: RampSide::Right,
+        marker_group: "Pos".to_string(),
+    };
+
+    let origin = Vec2::new(10.0, 20.0);
+    let layout = generate_parking_layout(
+        origin,
+        0.0,
+        &config,
+        ConnectionDirection::Dual,
+        ConnectionPriority::Regular,
+    );
+
+    let marker_1 = layout.nodes[layout.markers[0].0];
+    let marker_2 = layout.nodes[layout.markers[1].0];
+
+    assert!((marker_1 - Vec2::new(10.0, 20.0)).length() < 0.001);
+    assert!((marker_2 - Vec2::new(10.0, 31.0)).length() < 0.001);
+}
+
+/// Prueft den 90°-Spezialfall: Reihenabstand wird auf X-Achse rotiert.
+#[test]
+fn test_marker_positions_rotate_correctly_at_ninety_degrees() {
+    let config = ParkingConfig {
+        num_rows: 2,
+        row_spacing: 12.0,
+        bay_length: 80.0,
+        entry_t: 0.5,
+        exit_t: 0.5,
+        ramp_length: 5.0,
+        entry_side: RampSide::Right,
+        exit_side: RampSide::Right,
+        marker_group: "Rot90".to_string(),
+    };
+
+    let layout = generate_parking_layout(
+        Vec2::ZERO,
+        std::f32::consts::FRAC_PI_2,
+        &config,
+        ConnectionDirection::Dual,
+        ConnectionPriority::Regular,
+    );
+
+    let marker_1 = layout.nodes[layout.markers[0].0];
+    let marker_2 = layout.nodes[layout.markers[1].0];
+
+    assert!((marker_1 - Vec2::new(0.0, 0.0)).length() < 0.001);
+    assert!((marker_2 - Vec2::new(-12.0, 0.0)).length() < 0.001);
+}
+
+/// Prueft Richtungslogik der Serien-Ketten fuer rechte Seite.
+#[test]
+fn test_blueprint_series_chain_direction_for_right_side() {
+    let config = ParkingConfig {
+        num_rows: 3,
+        row_spacing: 10.0,
+        bay_length: 80.0,
+        entry_t: 0.4,
+        exit_t: 0.7,
+        ramp_length: 6.0,
+        entry_side: RampSide::Right,
+        exit_side: RampSide::Right,
+        marker_group: "Rechts".to_string(),
+    };
+
+    let layout = generate_parking_layout(
+        Vec2::ZERO,
+        0.0,
+        &config,
+        ConnectionDirection::Dual,
+        ConnectionPriority::Regular,
+    );
+
+    let has_regular = |from: usize, to: usize| {
+        layout
+            .connections
+            .iter()
+            .any(|&(a, b, d, _)| a == from && b == to && d == ConnectionDirection::Regular)
+    };
+
+    // Entry-Kette rechts: 6 -> 14 -> 22.
+    assert!(has_regular(6, 14));
+    assert!(has_regular(14, 22));
+    // Exit-Kette rechts: 23 -> 15 -> 7.
+    assert!(has_regular(23, 15));
+    assert!(has_regular(15, 7));
+}
+
+/// Prueft robuste Skalierung bei sehr kleiner Laenge und sehr grossem Abstand.
+#[test]
+fn test_blueprint_extreme_scale_and_spacing_remain_finite() {
+    let config = ParkingConfig {
+        num_rows: 2,
+        row_spacing: 500.0,
+        bay_length: 0.5,
+        entry_t: 0.0,
+        exit_t: 1.0,
+        ramp_length: 0.2,
+        entry_side: RampSide::Left,
+        exit_side: RampSide::Right,
+        marker_group: "Extreme".to_string(),
+    };
+
+    let layout = generate_parking_layout(
+        Vec2::new(1000.0, -2000.0),
+        0.0,
+        &config,
+        ConnectionDirection::Dual,
+        ConnectionPriority::Regular,
+    );
+
+    assert_eq!(layout.nodes.len(), 16);
+    assert!(
+        layout
+            .nodes
+            .iter()
+            .all(|p| p.x.is_finite() && p.y.is_finite()),
+        "Alle Punkte muessen endlich sein"
+    );
+}
+
+/// Prueft, dass Preview-Konvertierung Topologie und Stil konsistent uebernimmt.
+#[test]
+fn test_build_preview_preserves_connection_order_and_styles() {
+    let config = ParkingConfig {
+        num_rows: 1,
+        row_spacing: 7.0,
+        bay_length: 80.0,
+        entry_t: 0.5,
+        exit_t: 0.5,
+        ramp_length: 5.0,
+        entry_side: RampSide::Right,
+        exit_side: RampSide::Left,
+        marker_group: "Preview".to_string(),
+    };
+    let layout = generate_parking_layout(
+        Vec2::ZERO,
+        0.0,
+        &config,
+        ConnectionDirection::Dual,
+        ConnectionPriority::SubPriority,
+    );
+
+    let preview = build_preview(&layout);
+
+    assert_eq!(preview.nodes.len(), layout.nodes.len());
+    assert_eq!(preview.connections.len(), layout.connections.len());
+    assert_eq!(preview.connection_styles.len(), layout.connections.len());
+
+    for (i, &(from, to, dir, prio)) in layout.connections.iter().enumerate() {
+        assert_eq!(preview.connections[i], (from, to));
+        assert_eq!(preview.connection_styles[i], (dir, prio));
+    }
+}
+
+/// Prueft, dass Result-Konvertierung NodeFlags und Marker unveraendert abbildet.
+#[test]
+fn test_build_parking_result_sets_regular_flags_and_empty_external_connections() {
+    let config = ParkingConfig {
+        num_rows: 1,
+        row_spacing: 7.0,
+        bay_length: 80.0,
+        entry_t: 0.5,
+        exit_t: 0.5,
+        ramp_length: 5.0,
+        entry_side: RampSide::Right,
+        exit_side: RampSide::Right,
+        marker_group: "Result".to_string(),
+    };
+    let layout = generate_parking_layout(
+        Vec2::new(5.0, 6.0),
+        0.0,
+        &config,
+        ConnectionDirection::Dual,
+        ConnectionPriority::Regular,
+    );
+
+    let expected_node_count = layout.nodes.len();
+    let expected_conn_count = layout.connections.len();
+    let expected_markers = layout.markers.clone();
+
+    let result = build_parking_result(layout);
+
+    assert_eq!(result.new_nodes.len(), expected_node_count);
+    assert_eq!(result.internal_connections.len(), expected_conn_count);
+    assert_eq!(result.external_connections.len(), 0);
+    assert_eq!(result.markers, expected_markers);
+
+    assert!(
+        result
+            .new_nodes
+            .iter()
+            .all(|(_, flag)| *flag == crate::core::NodeFlag::Regular),
+        "Alle erzeugten Nodes muessen NodeFlag::Regular tragen"
+    );
 }

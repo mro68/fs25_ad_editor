@@ -6,7 +6,7 @@ use super::super::{
 };
 use super::geometry::{build_tool_result, cubic_bezier, CurveParams};
 use super::state::{CurveDegree, CurvePreviewCacheKey, CurveTool, Phase};
-use crate::app::segment_registry::{SegmentKind, SegmentRecord};
+use crate::app::segment_registry::{SegmentBase, SegmentKind, SegmentRecord};
 use crate::core::RoadMap;
 use glam::Vec2;
 
@@ -307,9 +307,11 @@ impl RouteTool for CurveTool {
         let kind = match self.degree {
             CurveDegree::Quadratic => SegmentKind::CurveQuad {
                 cp1,
-                direction: self.direction,
-                priority: self.priority,
-                max_segment_length: self.seg.max_segment_length,
+                base: SegmentBase {
+                    direction: self.direction,
+                    priority: self.priority,
+                    max_segment_length: self.seg.max_segment_length,
+                },
             },
             CurveDegree::Cubic => {
                 let cp2 = self.last_control_point2.unwrap_or(cp1);
@@ -318,9 +320,11 @@ impl RouteTool for CurveTool {
                     cp2,
                     tangent_start: self.tangents.last_tangent_start,
                     tangent_end: self.tangents.last_tangent_end,
-                    direction: self.direction,
-                    priority: self.priority,
-                    max_segment_length: self.seg.max_segment_length,
+                    base: SegmentBase {
+                        direction: self.direction,
+                        priority: self.priority,
+                        max_segment_length: self.seg.max_segment_length,
+                    },
                 }
             }
         };
@@ -337,34 +341,27 @@ impl RouteTool for CurveTool {
         self.start = Some(record.start_anchor);
         self.end = Some(record.end_anchor);
         match kind {
-            SegmentKind::CurveQuad {
-                cp1,
-                direction,
-                priority,
-                max_segment_length,
-            } => {
+            SegmentKind::CurveQuad { cp1, base } => {
                 self.control_point1 = Some(*cp1);
                 self.control_point2 = None;
-                self.direction = *direction;
-                self.priority = *priority;
-                self.seg.max_segment_length = *max_segment_length;
+                self.direction = base.direction;
+                self.priority = base.priority;
+                self.seg.max_segment_length = base.max_segment_length;
             }
             SegmentKind::CurveCubic {
                 cp1,
                 cp2,
                 tangent_start,
                 tangent_end,
-                direction,
-                priority,
-                max_segment_length,
+                base,
             } => {
                 self.control_point1 = Some(*cp1);
                 self.control_point2 = Some(*cp2);
                 self.tangents.tangent_start = *tangent_start;
                 self.tangents.tangent_end = *tangent_end;
-                self.direction = *direction;
-                self.priority = *priority;
-                self.seg.max_segment_length = *max_segment_length;
+                self.direction = base.direction;
+                self.priority = base.priority;
+                self.seg.max_segment_length = base.max_segment_length;
             }
             _ => return,
         }

@@ -7,7 +7,7 @@ use super::super::{
     RouteTool, ToolAction, ToolPreview, ToolResult,
 };
 use super::state::SplineTool;
-use crate::app::segment_registry::{SegmentKind, SegmentRecord};
+use crate::app::segment_registry::{SegmentBase, SegmentKind, SegmentRecord};
 use crate::core::RoadMap;
 use glam::Vec2;
 
@@ -213,9 +213,11 @@ impl RouteTool for SplineTool {
                 anchors: self.last_anchors.clone(),
                 tangent_start: self.tangents.last_tangent_start,
                 tangent_end: self.tangents.last_tangent_end,
-                direction: self.direction,
-                priority: self.priority,
-                max_segment_length: self.seg.max_segment_length,
+                base: SegmentBase {
+                    direction: self.direction,
+                    priority: self.priority,
+                    max_segment_length: self.seg.max_segment_length,
+                },
             },
         })
     }
@@ -225,9 +227,7 @@ impl RouteTool for SplineTool {
             anchors,
             tangent_start,
             tangent_end,
-            direction,
-            priority,
-            max_segment_length,
+            base,
         } = kind
         else {
             return;
@@ -238,9 +238,9 @@ impl RouteTool for SplineTool {
         self.tangents.tangent_end = *tangent_end;
         self.tangents.last_tangent_start = *tangent_start;
         self.tangents.last_tangent_end = *tangent_end;
-        self.direction = *direction;
-        self.priority = *priority;
-        self.seg.max_segment_length = *max_segment_length;
+        self.direction = base.direction;
+        self.priority = base.priority;
+        self.seg.max_segment_length = base.max_segment_length;
         self.sync_derived();
     }
 }
