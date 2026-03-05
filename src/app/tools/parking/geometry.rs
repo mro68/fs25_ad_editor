@@ -157,41 +157,58 @@ pub fn generate_parking_layout(
     }
 
     // ════════════════════════════════════════════════════════════
-    // SCHRITT C: Einfahrt-Node
+    // SCHRITT C: Einfahrt-Node (45°-Rampe)
     // ════════════════════════════════════════════════════════════
-    let entry_lx = length * config.entry_t;
-    let entry_ly = -(total_span / 2.0 + 5.0); // 5m suedlich der untersten Reihe
+    // Rampen verlaufen immer in +X-Richtung (weg vom Marker am oestlichen Ende).
+    let entry_target_seg =
+        ((config.entry_t * num_segments as f32).round() as usize).min(num_segments);
+    let entry_row_idx = 0; // suedlichste Reihe
+    let entry_target_idx = row_nodes[entry_row_idx][entry_target_seg];
+    let entry_target_lx = entry_target_seg as f32 * seg_len;
+    let entry_target_ly = if n == 1 {
+        0.0
+    } else {
+        (entry_row_idx as f32 - (n - 1) as f32 / 2.0) * spacing
+    };
+    let ramp_offset = 5.0;
+    let entry_lx = entry_target_lx - ramp_offset;
+    let entry_ly = entry_target_ly - ramp_offset;
     let entry_idx = nodes.len();
     nodes.push(to_world(entry_lx, entry_ly));
 
-    // Verbindung Einfahrt → naechster Reihen-Node (unidirektional)
-    // Finde fuer jede Reihe den naechsten Node entlang X
-    for row_entry in &row_nodes {
-        let target_seg =
-            ((config.entry_t * num_segments as f32).round() as usize).min(num_segments);
-        let target_idx = row_entry[target_seg];
-        connections.push((
-            entry_idx,
-            target_idx,
-            ConnectionDirection::Regular,
-            priority,
-        ));
-    }
+    // Unidirektional: Einfahrt → Reihe, Richtung +X und 45° zur Reihe.
+    connections.push((
+        entry_idx,
+        entry_target_idx,
+        ConnectionDirection::Regular,
+        priority,
+    ));
 
     // ════════════════════════════════════════════════════════════
-    // SCHRITT D: Ausfahrt-Node
+    // SCHRITT D: Ausfahrt-Node (45°-Rampe)
     // ════════════════════════════════════════════════════════════
-    let exit_lx = length * config.exit_t;
-    let exit_ly = -(total_span / 2.0 + 5.0); // 5m suedlich der untersten Reihe
+    let exit_target_seg =
+        ((config.exit_t * num_segments as f32).round() as usize).min(num_segments);
+    let exit_row_idx = n - 1; // noerdlichste Reihe
+    let exit_target_idx = row_nodes[exit_row_idx][exit_target_seg];
+    let exit_target_lx = exit_target_seg as f32 * seg_len;
+    let exit_target_ly = if n == 1 {
+        0.0
+    } else {
+        (exit_row_idx as f32 - (n - 1) as f32 / 2.0) * spacing
+    };
+    let exit_lx = exit_target_lx + ramp_offset;
+    let exit_ly = exit_target_ly + ramp_offset;
     let exit_idx = nodes.len();
     nodes.push(to_world(exit_lx, exit_ly));
 
-    // Verbindung Reihen-Node → Ausfahrt (unidirektional)
-    for row_entry in &row_nodes {
-        let target_seg = ((config.exit_t * num_segments as f32).round() as usize).min(num_segments);
-        let target_idx = row_entry[target_seg];
-        connections.push((target_idx, exit_idx, ConnectionDirection::Regular, priority));
-    }
+    // Unidirektional: Reihe → Ausfahrt, ebenfalls Richtung +X (weg vom Marker).
+    connections.push((
+        exit_target_idx,
+        exit_idx,
+        ConnectionDirection::Regular,
+        priority,
+    ));
 
     ParkingLayout {
         nodes,
@@ -344,6 +361,92 @@ mod tests {
         assert!(
             fwd_count > 0,
             "Es muessen unidirektionale Verbindungen existieren (Tropfen, Ein-/Ausfahrt)"
+        );
+    }
+
+    #[test]
+    fn test_entry_and_exit_are_on_opposite_sides() {
+        let config = ParkingConfig {
+            num_rows: 2,
+            row_spacing: 8.0,
+            bay_length: 24.0,
+            entry_t: 0.4,
+            exit_t: 0.7,
+            marker_group: "Test".to_string(),
+        };
+        let layout = generate_parking_layout(
+            Vec2::ZERO,
+            0.0,
+            &config,
+            ConnectionDirection::Dual,
+            ConnectionPriority::Regular,
+        );
+
+        // Die letzten zwei Nodes sind Entry und Exit.
+        let entry = layout.nodes[layout.nodes.len() - 2];
+        let exit = layout.nodes[layout.nodes.len() - 1];
+        assert!(entry.y < 0.0, "Entry sollte suedlich liegen, y={}", entry.y);
+        assert!(exit.y > 0.0, "Exit sollte noerdlich liegen, y={}", exit.y);
+    }
+
+    #[test]
+    fn test_entry_and_exit_ramps_are_45_deg_and_away_from_marker() {
+        let config = ParkingConfig {
+            num_rows: 2,
+            row_spacing: 8.0,
+            bay_length: 24.0,
+            entry_t: 0.4,
+            exit_t: 0.7,
+            marker_group: "Test".to_string(),
+        };
+        let layout = generate_parking_layout(
+            Vec2::ZERO,
+            0.0,
+            &config,
+            ConnectionDirection::Dual,
+            ConnectionPriority::Regular,
+        );
+
+        let entry_idx = layout.nodes.len() - 2;
+        let exit_idx = layout.nodes.len() - 1;
+
+        let entry_conn = layout
+            .connections
+            .iter()
+            .find(|(from, _, dir, _)| *from == entry_idx && *dir == ConnectionDirection::Regular)
+            .expect("Entry-Connection fehlt");
+        let exit_conn = layout
+            .connections
+            .iter()
+            .find(|(_, to, dir, _)| *to == exit_idx && *dir == ConnectionDirection::Regular)
+            .expect("Exit-Connection fehlt");
+
+        let entry_from = layout.nodes[entry_conn.0];
+        let entry_to = layout.nodes[entry_conn.1];
+        let exit_from = layout.nodes[exit_conn.0];
+        let exit_to = layout.nodes[exit_conn.1];
+
+        let entry_dx = entry_to.x - entry_from.x;
+        let entry_dy = entry_to.y - entry_from.y;
+        let exit_dx = exit_to.x - exit_from.x;
+        let exit_dy = exit_to.y - exit_from.y;
+
+        // Richtung immer weg vom Marker = +X in lokalem KS (hier Winkel 0).
+        assert!(entry_dx > 0.0, "Entry muss in +X zeigen, dx={}", entry_dx);
+        assert!(exit_dx > 0.0, "Exit muss in +X zeigen, dx={}", exit_dx);
+
+        // 45°-Rampen: |dx| == |dy| (mit kleiner Toleranz).
+        assert!(
+            (entry_dx.abs() - entry_dy.abs()).abs() < 0.01,
+            "Entry-Rampe ist nicht 45°, dx={}, dy={}",
+            entry_dx,
+            entry_dy
+        );
+        assert!(
+            (exit_dx.abs() - exit_dy.abs()).abs() < 0.01,
+            "Exit-Rampe ist nicht 45°, dx={}, dy={}",
+            exit_dx,
+            exit_dy
         );
     }
 }
