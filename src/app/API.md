@@ -336,13 +336,29 @@ pub enum SegmentKind {
         min_distance: f32,
         base: SegmentBase,
     },
+    /// Ausweichstrecke zur selektierten Kette
+    Bypass {
+        chain_positions: Vec<Vec2>,
+        chain_start_id: u64,
+        chain_end_id: u64,
+        offset: f32,
+        base_spacing: f32,
+        base: SegmentBase,
+    },
+    /// Parkplatz-Layout (Wendekreis + Parkreihen)
+    Parking {
+        origin: Vec2,
+        angle: f32,
+        config: ParkingConfig,
+        base: SegmentBase,
+    },
 }
 ```
 
 **Methoden:**
 - `tool_index() → usize` — Index des zugehoerigen Tools im `ToolManager` (fuer Segment-Editing)
 
-**Hinweis:** Alle Varianten enthalten `base: SegmentBase` mit gemeinsamen Parametern. Diesen Struct nutzte der `segment_registry` um Segment-Meta-Daten fuer die spätere Bearbeitung zu speichern.
+**Hinweis:** Alle Varianten enthalten `base: SegmentBase` mit gemeinsamen Parametern. Die `segment_registry` speichert diese Metadaten fuer nachtraegliche Bearbeitung.
 
 ---
 
@@ -364,6 +380,8 @@ pub struct SegmentRecord {
     pub kind: SegmentKind,
     /// Original-Positionen der Nodes zum Zeitpunkt der Erstellung
     pub original_positions: Vec<Vec2>,
+    /// IDs der Nodes mit Map-Markern (fuer Cleanup bei Segment-Edit; leer wenn keine Marker)
+    pub marker_node_ids: Vec<u64>,
 }
 ```
 
@@ -382,11 +400,12 @@ In-Session-Registry aller erstellten Segmente — ermoeglicht nachtraegliches Ed
 
 ```rust
 pub fn register(&mut self, record: SegmentRecord) -> u64 // Registriert neu erstelltes Segment
+pub fn next_id(&mut self) -> u64 // Erzeugt naechste auto-increment ID (vor Konstruktion eines Records)
 pub fn get(&self, record_id: u64) -> Option<&SegmentRecord> // Findet Record nach ID
 pub fn remove(&mut self, record_id: u64) // Loescht Record
 pub fn find_by_node_ids(&self, node_ids: &IndexSet<u64>) -> Vec<&SegmentRecord> // Alle Records mit mind. einer Node-ID
 pub fn find_first_by_node_id(&self, node_id: u64) -> Option<&SegmentRecord> // Erstes Record mit dieser Node
-pub fn is_segment_valid(&self, record: &SegmentRecord, road_map: &RoadMap) -> bool // Validitaetsprüfung
+pub fn is_segment_valid(&self, record: &SegmentRecord, road_map: &RoadMap) -> bool // Validitaetspruefung
 ```
 
 **Beispiel:**

@@ -23,7 +23,6 @@ pub enum ValidatedEntry {
     Separator,
     /// Gueltiger Befehl mit fertigem Intent
     Command {
-        #[allow(dead_code)]
         id: CommandId,
         label: String,
         intent: Box<AppIntent>,
