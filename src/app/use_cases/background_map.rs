@@ -2,8 +2,10 @@
 
 use crate::app::state::ZipBrowserState;
 use crate::app::AppState;
-use crate::core::{self, BackgroundMap};
+use crate::core::{self, BackgroundMap, FieldPolygon};
 use anyhow::Result;
+use glam::Vec2;
+use image::GenericImageView;
 use std::path::Path;
 use std::sync::Arc;
 
@@ -168,13 +170,41 @@ pub fn generate_overview_with_options(state: &mut AppState) -> Result<()> {
         legend: layers.legend,
     };
 
-    let rgb_image = fs25_map_overview::generate_overview_from_zip(&zip_path, &options)?;
+    let overview = fs25_map_overview::generate_overview_result_from_zip(&zip_path, &options)?;
 
-    let (width, height) = (rgb_image.width(), rgb_image.height());
+    let (width, height) = overview.image.dimensions();
     log::info!("Uebersichtskarte generiert: {}x{} Pixel", width, height);
 
-    let dynamic_image = image::DynamicImage::ImageRgb8(rgb_image);
-    let bg_map = BackgroundMap::from_image(dynamic_image, &zip_path, None)?;
+    // Farmland-Polygone von Pixel- in Weltkoordinaten umrechnen
+    // world = pixel * (map_size / grle_width) - map_size / 2
+    if !overview.farmland_polygons.is_empty() {
+        let scale_x = overview.map_size / overview.grle_width.max(1) as f32;
+        let scale_y = overview.map_size / overview.grle_height.max(1) as f32;
+        let half = overview.map_size / 2.0;
+
+        let field_polygons: Vec<FieldPolygon> = overview
+            .farmland_polygons
+            .into_iter()
+            .map(|fp| FieldPolygon {
+                id: fp.id,
+                vertices: fp
+                    .vertices
+                    .into_iter()
+                    .map(|(px, py)| Vec2::new(px * scale_x - half, py * scale_y - half))
+                    .collect(),
+            })
+            .collect();
+
+        log::info!(
+            "Farmland-Polygone in Weltkoordinaten umgerechnet: {} Felder",
+            field_polygons.len()
+        );
+        state.farmland_polygons = Some(Arc::new(field_polygons));
+    } else {
+        state.farmland_polygons = None;
+    }
+
+    let bg_map = BackgroundMap::from_image(overview.image, &zip_path, None)?;
 
     state.view.background_map = Some(Arc::new(bg_map));
     state.view.background_scale = 1.0;
