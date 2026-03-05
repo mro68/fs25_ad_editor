@@ -12,6 +12,8 @@ pub mod common;
 pub mod constraint_route;
 /// Bézier-Kurven-Tool (Grad 2 + 3) mit sequentieller Punkt-Platzierung.
 pub mod curve;
+/// Parkplatz-Layout-Tool mit Wendekreis und konfigurierbaren Parkreihen.
+pub mod parking;
 /// RouteTool-Trait — Schnittstelle fuer alle Route-Tools.
 mod route_tool;
 /// Catmull-Rom-Spline-Tool — interpolierende Kurve durch alle geklickten Punkte.
@@ -128,6 +130,11 @@ pub struct ToolResult {
     /// - `direction` — Richtung der Verbindung
     /// - `priority` — Strassenkategorisierung (Regular, Preferred, etc.)
     pub external_connections: Vec<(usize, u64, bool, ConnectionDirection, ConnectionPriority)>,
+    /// Optionale Map-Marker: (new_node_idx, name, group).
+    ///
+    /// Jeder Eintrag erzeugt einen Map-Marker am Node mit dem angegebenen Index
+    /// in `new_nodes`. Wird z.B. vom ParkingTool genutzt.
+    pub markers: Vec<(usize, String, String)>,
 }
 
 // ── ToolManager ──────────────────────────────────────────────────
@@ -158,6 +165,7 @@ impl ToolManager {
         manager.register(Box::new(spline::SplineTool::new()));
         manager.register(Box::new(bypass::BypassTool::new()));
         manager.register(Box::new(constraint_route::ConstraintRouteTool::new()));
+        manager.register(Box::new(parking::ParkingTool::new()));
         manager
     }
 

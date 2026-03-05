@@ -231,6 +231,64 @@ pub enum EditorTool {
 
 ---
 
+### `SegmentBase`
+
+Gemeinsame Basis-Parameter fuer alle Route-Tools. Wird von `SegmentKind` verwendet.
+
+```rust
+pub struct SegmentBase {
+    /// Verbindungsrichtung
+    pub direction: ConnectionDirection,
+    /// Strassenart (Regular oder SubPriority)
+    pub priority: ConnectionPriority,
+    /// Maximaler Abstand zwischen Zwischen-Nodes
+    pub max_segment_length: f32,
+}
+```
+
+---
+
+### `SegmentKind`
+
+Segment-Art mit tool-spezifischen Parametern. Re-exportiert aus `app` (definiert in `segment_registry.rs`).
+
+```rust
+pub enum SegmentKind {
+    /// Gerade Strecke
+    Straight { base: SegmentBase },
+    /// Kubische Bézier-Kurve (Grad 3)
+    CurveCubic {
+        cp1: Vec2, cp2: Vec2,
+        tangent_start: TangentSource,
+        tangent_end: TangentSource,
+        base: SegmentBase,
+    },
+    /// Quadratische Bézier-Kurve (Grad 2)
+    CurveQuad { cp1: Vec2, base: SegmentBase },
+    /// Catmull-Rom-Spline
+    Spline {
+        anchors: Vec<ToolAnchor>,
+        tangent_start: TangentSource,
+        tangent_end: TangentSource,
+        base: SegmentBase,
+    },
+    /// Constraint-Route (winkelgeglaettet mit automatischen Tangenten)
+    ConstraintRoute {
+        control_nodes: Vec<Vec2>,
+        max_angle_deg: f32,
+        min_distance: f32,
+        base: SegmentBase,
+    },
+}
+```
+
+**Methoden:**
+- `tool_index() → usize` — Index des zugehoerigen Tools im `ToolManager` (fuer Segment-Editing)
+
+**Hinweis:** Alle Varianten enthalten `base: SegmentBase` mit gemeinsamen Parametern. Diesen Struct nutzte der `segment_registry` um Segment-Meta-Daten fuer die spätere Bearbeitung zu speichern.
+
+---
+
 ### `AppIntent` und `AppCommand`
 
 `AppIntent` beschreibt Eingaben aus UI/System. `AppCommand` beschreibt mutierende Schritte am State.

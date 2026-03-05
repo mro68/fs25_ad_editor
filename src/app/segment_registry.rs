@@ -13,17 +13,24 @@ use crate::app::tools::ToolAnchor;
 use crate::core::{ConnectionDirection, ConnectionPriority};
 use glam::Vec2;
 
+/// Gemeinsame Segment-Parameter aller Route-Tools.
+#[derive(Debug, Clone)]
+pub struct SegmentBase {
+    /// Verbindungsrichtung
+    pub direction: ConnectionDirection,
+    /// Strassenart
+    pub priority: ConnectionPriority,
+    /// Maximaler Abstand zwischen Zwischen-Nodes
+    pub max_segment_length: f32,
+}
+
 /// Art des Segments — enthaelt alle tool-spezifischen Parameter.
 #[derive(Debug, Clone)]
 pub enum SegmentKind {
     /// Gerade Strecke
     Straight {
-        /// Verbindungsrichtung
-        direction: ConnectionDirection,
-        /// Strassenart
-        priority: ConnectionPriority,
-        /// Maximaler Abstand zwischen Zwischen-Nodes
-        max_segment_length: f32,
+        /// Gemeinsame Basis-Parameter
+        base: SegmentBase,
     },
     /// Kubische Bézier-Kurve (Grad 3)
     CurveCubic {
@@ -35,23 +42,15 @@ pub enum SegmentKind {
         tangent_start: TangentSource,
         /// Quell-Tangente am Endpunkt
         tangent_end: TangentSource,
-        /// Verbindungsrichtung
-        direction: ConnectionDirection,
-        /// Strassenart
-        priority: ConnectionPriority,
-        /// Maximaler Abstand zwischen Zwischen-Nodes
-        max_segment_length: f32,
+        /// Gemeinsame Basis-Parameter
+        base: SegmentBase,
     },
     /// Quadratische Bézier-Kurve (Grad 2)
     CurveQuad {
         /// Steuerpunkt
         cp1: Vec2,
-        /// Verbindungsrichtung
-        direction: ConnectionDirection,
-        /// Strassenart
-        priority: ConnectionPriority,
-        /// Maximaler Abstand zwischen Zwischen-Nodes
-        max_segment_length: f32,
+        /// Gemeinsame Basis-Parameter
+        base: SegmentBase,
     },
     /// Catmull-Rom-Spline
     Spline {
@@ -61,12 +60,8 @@ pub enum SegmentKind {
         tangent_start: TangentSource,
         /// Quell-Tangente am Endpunkt
         tangent_end: TangentSource,
-        /// Verbindungsrichtung
-        direction: ConnectionDirection,
-        /// Strassenart
-        priority: ConnectionPriority,
-        /// Maximaler Abstand zwischen Zwischen-Nodes
-        max_segment_length: f32,
+        /// Gemeinsame Basis-Parameter
+        base: SegmentBase,
     },
     /// Constraint-Route (winkelgeglaettet mit automatischen Tangenten)
     ConstraintRoute {
@@ -74,14 +69,10 @@ pub enum SegmentKind {
         control_nodes: Vec<Vec2>,
         /// Maximale Richtungsaenderung pro Segment (Grad)
         max_angle_deg: f32,
-        /// Verbindungsrichtung
-        direction: ConnectionDirection,
-        /// Strassenart
-        priority: ConnectionPriority,
-        /// Maximaler Abstand zwischen Zwischen-Nodes
-        max_segment_length: f32,
         /// Minimaldistanz-Filter (Meter)
         min_distance: f32,
+        /// Gemeinsame Basis-Parameter
+        base: SegmentBase,
     },
 }
 

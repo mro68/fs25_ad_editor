@@ -243,23 +243,18 @@ impl ConnectionRenderer {
                 push_line_quad(vertex_scratch, start, end, thickness, color);
 
                 match connection.direction {
-                    ConnectionDirection::Regular => {
+                    ConnectionDirection::Regular | ConnectionDirection::Reverse => {
+                        // Bei Reverse zeigt der Pfeil in die entgegengesetzte Richtung (start→end negiert).
+                        let arrow_dir = if connection.direction == ConnectionDirection::Reverse {
+                            -direction
+                        } else {
+                            direction
+                        };
                         let center = start + direction * (length * 0.5);
                         push_arrow(
                             vertex_scratch,
                             center,
-                            direction,
-                            ctx.options.arrow_length_world,
-                            ctx.options.arrow_width_world,
-                            color,
-                        );
-                    }
-                    ConnectionDirection::Reverse => {
-                        let center = start + direction * (length * 0.5);
-                        push_arrow(
-                            vertex_scratch,
-                            center,
-                            direction,
+                            arrow_dir,
                             ctx.options.arrow_length_world,
                             ctx.options.arrow_width_world,
                             color,

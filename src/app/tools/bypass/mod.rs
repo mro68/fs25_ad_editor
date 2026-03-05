@@ -7,6 +7,8 @@ mod config_ui;
 mod geometry;
 mod lifecycle;
 mod state;
+#[cfg(test)]
+mod tests;
 
 pub use geometry::compute_bypass_positions;
 pub use state::BypassTool;

@@ -7,7 +7,16 @@
 use crate::app::AppState;
 use crate::shared::RenderScene;
 use indexmap::IndexSet;
-use std::sync::Arc;
+use std::sync::{Arc, OnceLock};
+
+/// Gibt einen Arc auf eine leere, statisch initialisierte `IndexSet<u64>` zurueck.
+///
+/// Verhindert eine Heap-Allokation pro Frame, wenn kein Node ausgeblendet werden soll.
+/// Die Instanz wird beim ersten Aufruf lazy erstellt und danach wiederverwendet.
+fn empty_hidden_ids() -> Arc<IndexSet<u64>> {
+    static EMPTY: OnceLock<Arc<IndexSet<u64>>> = OnceLock::new();
+    Arc::clone(EMPTY.get_or_init(|| Arc::new(IndexSet::new())))
+}
 
 /// Baut eine RenderScene aus dem aktuellen AppState.
 ///
@@ -43,7 +52,7 @@ pub fn build(state: &AppState, viewport_size: [f32; 2]) -> RenderScene {
     let hidden_node_ids = if state.ui.distanzen.should_hide_original() {
         Arc::clone(&selected_arc)
     } else {
-        Arc::new(IndexSet::new())
+        empty_hidden_ids()
     };
 
     RenderScene {

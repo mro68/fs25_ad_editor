@@ -210,6 +210,35 @@
 - Phase 5: 🟡 90% (DDS-Background + Marker-Editor + Bézier-Kurven + Catmull-Rom-Spline + Uebersichtskarte fertig)
 - Phase 6: 🟡 50% (Handler-Split, CI-Checks, unwrap-Bereinigung, API-Docs, Docstrings, Audit-Fixes durchgefuehrt)
 
+**Errungenschaften seit letztem Update (Tool-Konsistenz-Refactoring 2026-03-05):**
+- ✅ BypassTool Lifecycle-Nachrüstung: neues `lifecycle: ToolLifecycleState` Feld
+  - ✅ 6 neue Lifecycle-Delegation-Methoden: `set_snap_radius`, `last_created_ids`, `last_end_anchor`, `needs_recreate`, `clear_recreate_flag`, `set_last_created`
+  - ✅ 15 Unit-Tests hinzugefügt (Geometrie, Lifecycle, ToolLifecycleState)
+  - ✅ API.md erweitert mit umfassender BypassTool-Dokumentation
+- ✅ ParkingTool `render_config_view` Signatur-Angleichung
+  - ✅ `_distance_wheel_step_m: f32` Parameter hinzugefügt für Konsistenz mit anderen Tools
+  - ✅ Parameter-Durchreichung über Lifecycle implementiert
+- ✅ ConstraintRouteTool Lifecycle-Vereinfachung
+  - ✅ Redundantes `last_end_anchor`-Feld auf Tool-Struct entfernt
+  - ✅ `current_end_anchor()` 3-stufiger Fallback → 2-stufig vereinfacht
+  - ✅ Nutzt nur noch `lifecycle.last_end_anchor` (gemeinsamer State)
+- ✅ BypassTool Tests: 6 Geometrie-Tests, 6 Lifecycle-Tests, 3 ToolLifecycleState-Tests
+
+**Errungenschaften seit letztem Update (Strukturelles Audit 2026-03-05):**
+- ✅ Parking-Geometrie modulbereichert: `parking/geometry.rs` → `parking/geometry/{mod,layout,blueprint,conversion}.rs`
+  - ✅ Öffentliche API unverändert (`generate_parking_layout`, `build_parking_result`, `build_preview`)
+  - ✅ Neuer öffentlicher Struct `ParkingLayout` als Zwischenformat
+  - ✅ Bessere Separation of Concerns zwischen Layout-Generierung und Konvertierung
+- ✅ Context-Menu aufgesplittet: `context_menu/mod.rs` + Funktionsdelegation an `icons.rs`, `render.rs`, `tangent_ui.rs` (pub(super))
+  - ✅ Öffentliche API (MenuVariant, determine_menu_variant, render_context_menu) unverändert
+  - ✅ Modularisierung ohne Breaking Changes
+- ✅ `SegmentBase`-Struct in `segment_registry.rs` eingeführt
+  - ✅ Alle 5 `SegmentKind`-Varianten verwenden jetzt `base: SegmentBase` mit gemeinsamen Parametern
+  - ✅ Re-Export in `src/app/mod.rs`
+  - ✅ Docstrings vollständig, API.md aktualisiert
+- ✅ Tests: 7 neue Parking-Geometrie-Tests hinzugefügt (`src/app/tools/parking/tests.rs`)
+- ✅ Dokumentation synchronisiert: `src/app/API.md#segmentbase--segmentkind`, `src/ui/API.md` (context_menu), `src/app/tools/API.md`
+
 **Errungenschaften seit letztem Update (Strukturelles Audit 2026-02-28):**
 - ✅ `src/shared/options.rs` in modulare Struktur `src/shared/options/{camera,render,tools,editor}.rs` aufgeteilt (Wartbarkeit verbessert, API stabil)
 - ✅ RouteTool-Capabilities eingefuehrt (`RouteToolDrag`, `RouteToolTangent`, `RouteToolRegistry`, `RouteToolChainInput`) bei kompatiblem `RouteTool`-Obervertrag

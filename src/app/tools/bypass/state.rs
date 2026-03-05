@@ -1,5 +1,6 @@
 //! State-Definitionen und Konstruktor fuer das Ausweichstrecken-Tool.
 
+use crate::app::tools::common::ToolLifecycleState;
 use crate::core::{ConnectionDirection, ConnectionPriority};
 use glam::Vec2;
 
@@ -26,6 +27,8 @@ pub struct BypassTool {
     pub(crate) cached_connections: Option<Vec<(usize, usize)>>,
     /// Letzter verwendeter d_blend-Wert (fuer Info-Anzeige)
     pub(crate) d_blend: f32,
+    /// Gemeinsamer Lifecycle-Zustand (Snap-Radius, letzte IDs, Recreate-Flag)
+    pub(crate) lifecycle: ToolLifecycleState,
 }
 
 impl BypassTool {
@@ -42,6 +45,7 @@ impl BypassTool {
             cached_positions: None,
             cached_connections: None,
             d_blend: 0.0,
+            lifecycle: ToolLifecycleState::new(3.0),
         }
     }
 
