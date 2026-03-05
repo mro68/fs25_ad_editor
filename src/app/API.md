@@ -43,6 +43,7 @@ let scene = controller.build_render_scene(&state, [width, height]);
 - `selection` — Selektions-Operationen
 - `editing` — Node/Connection-Editing, Marker
 - `route_tool` — Route-Tool-Operationen
+- `segment` — Segment-Lock-Toggle
 - `dialog` — Dialog-State und Anwendungssteuerung
 - `history` — Undo/Redo
 
@@ -382,6 +383,8 @@ pub struct SegmentRecord {
     pub original_positions: Vec<Vec2>,
     /// IDs der Nodes mit Map-Markern (fuer Cleanup bei Segment-Edit; leer wenn keine Marker)
     pub marker_node_ids: Vec<u64>,
+    /// Ob das Segment gesperrt ist (true = alle Nodes bewegen sich gemeinsam beim Drag)
+    pub locked: bool,
 }
 ```
 
@@ -406,6 +409,14 @@ pub fn remove(&mut self, record_id: u64) // Loescht Record
 pub fn find_by_node_ids(&self, node_ids: &IndexSet<u64>) -> Vec<&SegmentRecord> // Alle Records mit mind. einer Node-ID
 pub fn find_first_by_node_id(&self, node_id: u64) -> Option<&SegmentRecord> // Erstes Record mit dieser Node
 pub fn is_segment_valid(&self, record: &SegmentRecord, road_map: &RoadMap) -> bool // Validitaetspruefung
+pub fn records(&self) -> &[SegmentRecord] // Alle Records als unveraenderlicher Slice
+pub fn records_mut(&mut self) -> &mut [SegmentRecord] // Alle Records als veraenderlicher Slice
+pub fn segments_for_node(&self, node_id: u64) -> Vec<u64> // Alle Segment-IDs die diesen Node enthalten
+pub fn toggle_lock(&mut self, segment_id: u64) // Lock-Zustand des Segments umschalten
+pub fn is_locked(&self, segment_id: u64) -> bool // Lock-Zustand abfragen (false wenn nicht gefunden)
+pub fn segment_bounding_box(&self, segment_id: u64, road_map: &RoadMap) -> Option<(Vec2, Vec2)> // AABB des Segments (min, max)
+pub fn expand_locked_selection(&self, selected_nodes: &[u64]) -> Vec<u64> // Selektion um Nodes aller betroffenen locked Segments erweitern
+pub fn update_original_positions(&mut self, segment_id: u64, road_map: &RoadMap) // original_positions nach Lock-Move aktualisieren
 ```
 
 **Beispiel:**
@@ -561,6 +572,7 @@ pub enum AppIntent {
 
     // Segment-Bearbeitung (nachtraegliche Bearbeitung erstellter Linien)
     EditSegmentRequested { record_id: u64 },
+    ToggleSegmentLockRequested { segment_id: u64 },
     // Distanzen: Selektierte Nodes-Kette gleichmaessig neu verteilen
     ResamplePathRequested,
     StreckenteilungAktivieren,
@@ -697,6 +709,7 @@ pub enum AppCommand {
 
     // Segment-Bearbeitung
     EditSegment { record_id: u64 },
+    ToggleSegmentLock { segment_id: u64 },
     // Distanzen: Selektierte Nodes-Kette per Catmull-Rom-Spline neu verteilen
     ResamplePath,
     StreckenteilungAktivieren,
@@ -747,14 +760,16 @@ flowchart TD
     CTRL -->|dispatch| H_SEL[handlers/selection]
     CTRL -->|dispatch| H_EDIT[handlers/editing]
     CTRL -->|dispatch| H_ROUTE[handlers/route_tool]
+    CTRL -->|dispatch| H_SEG[handlers/segment]
     CTRL -->|dispatch| H_HIST[handlers/history]
     CTRL -->|dispatch| H_DLG[handlers/dialog]
 
-    H_FILE -->|"use_cases::file_io"| STATE[AppState]
+    H_FILE -->|"use_cases::file_io"| STATE
     H_VIEW -->|"use_cases::camera / viewport"| STATE
     H_SEL -->|"use_cases::selection"| STATE
     H_EDIT -->|"use_cases::editing"| STATE
     H_ROUTE -->|"RouteTool / ToolManager"| STATE
+    H_SEG -->|"SegmentRegistry::toggle_lock"| STATE
     H_HIST -->|"EditHistory pop/push"| STATE
     H_DLG -->|"UiState / Dialog-Flags"| STATE
 
