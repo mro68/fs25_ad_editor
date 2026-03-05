@@ -5,7 +5,6 @@
 use super::preconditions::Precondition;
 use super::{CommandId, MenuCatalog, MenuEntry};
 
-
 impl MenuCatalog {
     /// Werkzeug-Submenu: Auswahl/Verbinden/Hinzufuegen — wird in allen Varianten
     /// ausser RouteToolActive verwendet.

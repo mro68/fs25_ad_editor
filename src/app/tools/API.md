@@ -104,6 +104,7 @@ Documentation moved to [`../API.md#segmentbase--segmentkind`](../API.md#segmentb
 | 4 | `BypassTool` | `⤴` | `BypassTool::new()` |
 | 5 | `ConstraintRouteTool` | `⊿` | `ConstraintRouteTool::new()` |
 | 6 | `ParkingTool` | `🅿` | `ParkingTool::new()` |
+| 7 | `FieldBoundaryTool` | `🌾` | `FieldBoundaryTool::new()` |
 
 ### `StraightLineTool`
 
@@ -204,6 +205,54 @@ Parkplatz-Layout-Generator: Erstellt einen Wendekreis mit Parkreihen in einem ko
 - `build_preview(layout, origin, angle, ...) → (Vec<Vec2>, Vec<(usize, usize)>)` — Vorschau-Geometrie
 
 Modulstruktur: `state.rs` (Struct + Config), `lifecycle.rs` (RouteTool-Impl + Lifecycle-Delegation), `config_ui.rs` (egui-Panel), `geometry/{mod,layout,blueprint,conversion}.rs` (Layout-Mathe), `tests.rs` (7 Unit-Tests)
+
+### `FieldBoundaryTool`
+
+Felderkennung: Erkennt das GRLE-Farmland-Polygon an der Klickposition und erzeugt einen geschlossenen Waypoint-Ring entlang des Feldumrisses.
+
+**Voraussetzung:** `farmland_polygons` muss im `AppState` geladen sein (wird bei Overview-Generierung aus dem Map-ZIP befuellt). Der Toolbar-Button und der Kontextmenue-Eintrag sind deaktiviert wenn keine Farmland-Daten vorliegen.
+
+**Phasen:**
+- **`FieldBoundaryPhase::Idle`** — Wartet auf Klick in ein Feld
+- **`FieldBoundaryPhase::Configuring`** — Feldgrenze erkannt, Vorschau aktiv
+
+**Interaktionsflow:**
+1. Klick im Idle-Zustand → `find_polygon_at()` → selektiertes Feld gespeichert → Phase::Configuring
+2. Config-Panel: Node-Abstand, Versatz, Begradigen (Douglas-Peucker), Richtung, Prioritaet
+3. Erneuter Klick im Configuring-Zustand → Phase::Idle (Auswahl zuruecksetzen)
+4. Confirm-Button → `execute()` → geschlossener Ring mit N Nodes und N Verbindungen (0→1, 1→2, …, N−1→0)
+
+**Konfiguration:**
+- `node_spacing: f32` — Abstand zwischen Nodes (1–50 m; Standard 10 m)
+- `offset: f32` — Versatz nach innen (<0) oder aussen (>0) in Metern (−20..+20)
+- `straighten_tolerance: f32` — Douglas-Peucker-Toleranz (0..10 m; 0 = keine Vereinfachung)
+- `direction: ConnectionDirection` — Verbindungsrichtung (Standard: Dual)
+- `priority: ConnectionPriority` — Verbindungsprioriaet (Standard: Regular)
+
+**Felder:**
+```rust
+pub struct FieldBoundaryTool {
+    pub(crate) phase: FieldBoundaryPhase,
+    pub(crate) selected_polygon: Option<FieldPolygon>,
+    pub(crate) farmland_data: Option<Arc<Vec<FieldPolygon>>>,
+    pub(crate) node_spacing: f32,
+    pub(crate) offset: f32,
+    pub(crate) straighten_tolerance: f32,
+    pub direction: ConnectionDirection,
+    pub priority: ConnectionPriority,
+    pub(crate) lifecycle: ToolLifecycleState,
+}
+```
+
+**Interne Ring-Berechnung:**
+1. `offset_polygon()` — Polygon nach innen/aussen verschieben
+2. `simplify_polygon()` — Douglas-Peucker vereinfachen
+3. `resample_by_distance()` — Gleichmaessiges Resampling mit `node_spacing`
+4. Geschlossener Ring: letzte Verbindung (N−1 → 0) schliesst den Ring
+
+**Segment-Record:** `SegmentKind::FieldBoundary { field_id, node_spacing, offset, straighten_tolerance, base }` (Slot 7 im ToolManager)
+
+Modulstruktur: `mod.rs` (Re-Exporte), `state.rs` (Struct, Phasen-Enum, Default), `lifecycle.rs` (RouteTool-Impl, Ring-Berechnung), `config_ui.rs` (egui-Panel)
 
 ### `BypassTool`
 

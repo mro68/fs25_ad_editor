@@ -82,8 +82,7 @@ impl FieldBoundaryTool {
             let mut local_changed = response.changed();
             let wd = wheel_dir(ui, &response);
             if wd != 0.0 {
-                self.straighten_tolerance =
-                    (self.straighten_tolerance + wd * 0.1).clamp(0.0, 10.0);
+                self.straighten_tolerance = (self.straighten_tolerance + wd * 0.1).clamp(0.0, 10.0);
                 local_changed = true;
             }
             if local_changed {
@@ -104,11 +103,7 @@ impl FieldBoundaryTool {
                     ConnectionDirection::Reverse => "R\u{fc}ckw\u{e4}rts",
                 })
                 .show_ui(ui, |ui| {
-                    ui.selectable_value(
-                        &mut dir,
-                        ConnectionDirection::Regular,
-                        "Einbahnstrasse",
-                    );
+                    ui.selectable_value(&mut dir, ConnectionDirection::Regular, "Einbahnstrasse");
                     ui.selectable_value(&mut dir, ConnectionDirection::Dual, "Beidseitig");
                     ui.selectable_value(
                         &mut dir,
@@ -133,11 +128,7 @@ impl FieldBoundaryTool {
                 })
                 .show_ui(ui, |ui| {
                     ui.selectable_value(&mut prio, ConnectionPriority::Regular, "Normal");
-                    ui.selectable_value(
-                        &mut prio,
-                        ConnectionPriority::SubPriority,
-                        "Nebenstrecke",
-                    );
+                    ui.selectable_value(&mut prio, ConnectionPriority::SubPriority, "Nebenstrecke");
                 });
             if prio != self.priority {
                 self.priority = prio;
