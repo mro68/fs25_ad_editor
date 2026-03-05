@@ -138,6 +138,8 @@
   - [ ] Memory-Profiling
   - [x] `ctx.request_repaint()` nur bei Aenderungen (CPU-Idle-Verbrauch reduzieren)
   - [x] **RenderScene-Hotpath:** `RenderScene.options` auf `Arc<EditorOptions>` umgestellt (O(1)-Clone statt Deep-Clone pro Frame, 2026-03-04)
+  - [ ] **Preview-Clone Hot-Path optimieren** (empfohlen vom Tester, 2026-03-05)
+    - [ ] `constraint_route/lifecycle.rs`: `preview_connections.clone()` und `preview_positions.clone()` im `preview()`-Aufruf durch `Arc`/`Cow` ersetzen (aktuell pro Frame, kleine Vecs — LOW-Severity)
 - [🟡] Error-Handling & User-Feedback
   - [x] unwrap()-Aufrufe in Produktionscode durch graceful handling ersetzt
   - [🟡] Toast-Notifications (via StatusBar `status_message` geloest, dedizierte Toast-UI ausstehend)
@@ -158,6 +160,9 @@
   - [x] Handler-Split und Architektur-Guardrails dokumentiert (2025-07-02)
   - [x] DRY-Refactoring und RouteTool-Trait-Extraktion (2025-07-11)
   - [x] Audit-Fixups: VecDeque-Undo, HashSet-Properties, Spline-Samples, Doku-Cleanup (2026-02-24)
+  - [x] **Strukturelles Audit Docstring-Ergaenzungen (2026-03-05)**
+    - [x] 84 fehlende `///`-Docstrings fuer alle `pub`-Items ergaenzt (`core`, `app`, `render`, `shared`, `ui`)
+    - [x] API.md alle 6 Layer synchronisiert (SegmentKind+Bypass/Parking, SegmentRecord+marker_node_ids, EditorOptions+bg/copy-Felder, compute_visible_rect)
 - [ ] Packaging
   - [ ] Windows Binaries (.exe)
   - [ ] Linux Binaries (AppImage)

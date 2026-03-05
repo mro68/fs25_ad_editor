@@ -130,8 +130,9 @@ pub struct Uniforms { pub view_proj: [[f32; 4]; 4], pub aa_params: [f32; 4] }
 **Vertex-Buffer-Layouts:**
 - `Vertex::desc()` / `ConnectionVertex::desc()` / `NodeInstance::desc()` / `MarkerInstance::desc()`
 
-**Hilfsfunktion:**
-- `build_view_projection(camera: &Camera2D, viewport_size: [f32; 2]) -> Mat4` (`pub(crate)`)
+**Hilfsfunktionen (`pub(crate)`):**
+- `build_view_projection(camera: &Camera2D, viewport_size: [f32; 2]) -> Mat4` — Orthographische View-Projection-Matrix (Zoom ausschliesslich ueber Extent-Skalierung, nicht View-Matrix)
+- `compute_visible_rect(ctx: &RenderContext) -> (Vec2, Vec2)` — Berechnet die sichtbare Welt-AABB mit 8-Pixel-Padding fuer Viewport-Culling. Gibt `(min, max)` in Weltkoordinaten zurueck.
 
 ---
 
