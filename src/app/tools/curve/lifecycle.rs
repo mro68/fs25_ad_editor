@@ -333,6 +333,7 @@ impl RouteTool for CurveTool {
             node_ids: node_ids.to_vec(),
             start_anchor: start,
             end_anchor: end,
+            original_positions: Vec::new(), // wird im Handler befüllt
             kind,
         })
     }

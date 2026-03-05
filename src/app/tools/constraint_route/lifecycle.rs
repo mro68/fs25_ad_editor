@@ -252,6 +252,7 @@ impl RouteTool for ConstraintRouteTool {
             node_ids: node_ids.to_vec(),
             start_anchor: start,
             end_anchor: end,
+            original_positions: Vec::new(), // wird im Handler befüllt
             kind: SegmentKind::ConstraintRoute {
                 control_nodes: self.last_control_nodes.clone(),
                 max_angle_deg: self.max_angle_deg,
