@@ -200,6 +200,8 @@ pub struct SegmentRecord {
     /// IDs der Nodes mit Map-Markern (fuer Cleanup bei Edit).
     /// Leer bei Tools ohne Marker.
     pub marker_node_ids: Vec<u64>,
+    /// Ob das Segment gesperrt ist (true = alle Nodes bewegen sich gemeinsam)
+    pub locked: bool,
 }
 
 /// In-Session-Registry aller erstellten Segmente.
@@ -281,6 +283,57 @@ impl SegmentRegistry {
                     .map(|node| node.position.distance(*orig_pos) < 0.01)
                     .unwrap_or(false)
             })
+    }
+
+    /// Gibt alle Records als Slice zurueck.
+    pub fn records(&self) -> &[SegmentRecord] {
+        &self.records
+    }
+
+    /// Wechselt den Lock-Zustand des Segments mit der angegebenen ID.
+    ///
+    /// Tut nichts, wenn kein Segment mit dieser ID existiert.
+    pub fn toggle_lock(&mut self, segment_id: u64) {
+        if let Some(record) = self.records.iter_mut().find(|r| r.id == segment_id) {
+            record.locked = !record.locked;
+        }
+    }
+
+    /// Gibt den Lock-Zustand des Segments zurueck.
+    ///
+    /// Gibt `false` zurueck wenn das Segment nicht existiert.
+    pub fn is_locked(&self, segment_id: u64) -> bool {
+        self.records
+            .iter()
+            .find(|r| r.id == segment_id)
+            .map(|r| r.locked)
+            .unwrap_or(false)
+    }
+
+    /// Berechnet die Achsen-ausgerichtete Bounding-Box (AABB) des Segments.
+    ///
+    /// Gibt `(min, max)` in Weltkoordinaten zurueck, oder `None` wenn das
+    /// Segment nicht existiert oder keine Nodes hat.
+    pub fn segment_bounding_box(
+        &self,
+        segment_id: u64,
+        road_map: &RoadMap,
+    ) -> Option<(Vec2, Vec2)> {
+        let record = self.records.iter().find(|r| r.id == segment_id)?;
+        if record.node_ids.is_empty() {
+            return None;
+        }
+        let mut min = Vec2::splat(f32::MAX);
+        let mut max = Vec2::splat(f32::MIN);
+        let mut found = false;
+        for &node_id in &record.node_ids {
+            if let Some(node) = road_map.nodes.get(&node_id) {
+                min = min.min(node.position);
+                max = max.max(node.position);
+                found = true;
+            }
+        }
+        if found { Some((min, max)) } else { None }
     }
 
     /// Gibt die Anzahl der gespeicherten Records zurueck.
