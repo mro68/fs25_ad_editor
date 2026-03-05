@@ -20,6 +20,8 @@ mod route_tool;
 pub mod spline;
 /// Gerade-Linie-Tool mit konfigurierbarem Node-Abstand.
 pub mod straight_line;
+/// Feldgrenz-Erkennungs-Tool: erzeugt eine Route entlang eines erkannten Feldumrisses.
+pub mod field_boundary;
 
 pub use route_tool::RouteTool;
 pub use route_tool::{RouteToolChainInput, RouteToolDrag, RouteToolRegistry, RouteToolTangent};
@@ -166,6 +168,7 @@ impl ToolManager {
         manager.register(Box::new(bypass::BypassTool::new()));
         manager.register(Box::new(constraint_route::ConstraintRouteTool::new()));
         manager.register(Box::new(parking::ParkingTool::new()));
+        manager.register(Box::new(field_boundary::FieldBoundaryTool::new()));
         manager
     }
 
