@@ -19,3 +19,5 @@ pub mod route_tool;
 pub mod selection;
 /// Handler fuer Kamera, Viewport und Background-Map.
 pub mod view;
+/// Handler fuer Segment-Operationen (Lock-Toggle).
+pub mod segment;

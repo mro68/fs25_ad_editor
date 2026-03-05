@@ -256,4 +256,8 @@ pub enum AppCommand {
     ConfirmPaste,
     /// Einfuegen-Vorschau abbrechen
     CancelPastePreview,
+
+    // ── Segment-Lock ──────────────────────────────────────────────────
+    /// Segment-Lock umschalten (gesperrt ↔ entsperrt)
+    ToggleSegmentLock { segment_id: u64 },
 }
