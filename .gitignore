@@ -1,6 +1,6 @@
 # Build-Artefakte
 /target
-.tmp/
+**/.tmp/
 
 # Kompilierte Binaries
 binaries/
