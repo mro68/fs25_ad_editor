@@ -70,6 +70,8 @@ pub struct ParkingTool {
     pub(crate) origin: Option<Vec2>,
     /// Rotationswinkel (Radiant), gesteuert durch Alt+Scroll.
     pub(crate) angle: f32,
+    /// Drehungs-Schrittweite in Grad (einstellbar im Config-Panel).
+    pub(crate) rotation_step_deg: f32,
     pub(crate) config: ParkingConfig,
     pub direction: ConnectionDirection,
     pub priority: ConnectionPriority,
@@ -89,6 +91,7 @@ impl ParkingTool {
             phase: ParkingPhase::Idle,
             origin: None,
             angle: 0.0,
+            rotation_step_deg: 5.0,
             config: ParkingConfig::default(),
             direction: ConnectionDirection::Dual,
             priority: ConnectionPriority::Regular,

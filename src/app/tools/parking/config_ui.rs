@@ -184,10 +184,34 @@ impl ParkingTool {
             }
         });
 
-        // Rotation-Anzeige
+        // Rotation-Anzeige und Drehschritt
         if self.origin.is_some() {
             ui.separator();
             ui.label(format!("Rotation: {:.1}°", self.angle.to_degrees()));
+        }
+
+        // Drehschritt-Konfiguration (immer sichtbar)
+        ui.horizontal(|ui| {
+            ui.label("Drehschritt (°):");
+            let response = ui.add(
+                egui::DragValue::new(&mut self.rotation_step_deg)
+                    .range(0.5..=45.0)
+                    .speed(0.5)
+                    .suffix("°")
+                    .fixed_decimals(1),
+            );
+            let wd = wheel_dir(ui, &response);
+            if wd != 0.0 {
+                self.rotation_step_deg =
+                    (self.rotation_step_deg + wd * 1.0).clamp(0.5, 45.0);
+                changed = true;
+            }
+            if response.changed() {
+                changed = true;
+            }
+        });
+
+        if self.origin.is_some() {
             match self.phase {
                 ParkingPhase::Idle => {
                     ui.small("Alt+Mausrad zum Drehen");
