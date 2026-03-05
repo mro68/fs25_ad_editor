@@ -81,7 +81,7 @@ fn expand_segment_selection(state: &mut AppState, clicked_node_id: u64) {
         return;
     }
 
-    let segment_node_ids: Vec<u64> = record.node_ids.iter().copied().collect();
+    let segment_node_ids: Vec<u64> = record.node_ids.to_vec();
 
     let sel = state.selection.ids_mut();
     for id in segment_node_ids {
