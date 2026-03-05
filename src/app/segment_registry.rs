@@ -10,7 +10,7 @@
 
 use crate::app::tools::common::TangentSource;
 use crate::app::tools::ToolAnchor;
-use crate::core::{ConnectionDirection, ConnectionPriority};
+use crate::core::{ConnectionDirection, ConnectionPriority, RoadMap};
 use glam::Vec2;
 
 /// Gemeinsame Segment-Parameter aller Route-Tools.
@@ -155,6 +155,9 @@ pub struct SegmentRecord {
     pub end_anchor: ToolAnchor,
     /// Tool-spezifische Parameter
     pub kind: SegmentKind,
+    /// Original-Positionen der Nodes zum Zeitpunkt der Erstellung.
+    /// Index-Reihenfolge entspricht `node_ids`.
+    pub original_positions: Vec<Vec2>,
 }
 
 /// In-Session-Registry aller erstellten Segmente.
@@ -213,6 +216,29 @@ impl SegmentRegistry {
         let id_set: std::collections::HashSet<u64> = node_ids.iter().copied().collect();
         self.records
             .retain(|r| !r.node_ids.iter().any(|nid| id_set.contains(nid)));
+    }
+
+    /// Findet den ersten Record, der den angegebenen Node enthaelt.
+    pub fn find_first_by_node_id(&self, node_id: u64) -> Option<&SegmentRecord> {
+        self.records.iter().find(|r| r.node_ids.contains(&node_id))
+    }
+
+    /// Prueft ob ein Segment noch gueltig ist (Nodes existieren und Positionen unveraendert).
+    pub fn is_segment_valid(&self, record: &SegmentRecord, road_map: &RoadMap) -> bool {
+        if record.original_positions.len() != record.node_ids.len() {
+            return false;
+        }
+        record
+            .node_ids
+            .iter()
+            .zip(record.original_positions.iter())
+            .all(|(id, orig_pos)| {
+                road_map
+                    .nodes
+                    .get(id)
+                    .map(|node| node.position.distance(*orig_pos) < 0.01)
+                    .unwrap_or(false)
+            })
     }
 
     /// Gibt die Anzahl der gespeicherten Records zurueck.
