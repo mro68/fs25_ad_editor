@@ -62,6 +62,11 @@ pub fn click(state: &mut AppState, world_pos: glam::Vec2, ctrl: bool)
 Verarbeitet einen Viewport-Klick im aktiven Route-Tool. Wenn das Tool `ToolAction::ReadyToExecute` zurueckgibt, wird sofort `execute_and_apply()` aufgerufen.
 
 ```rust
+pub fn rotate(state: &mut AppState, delta: f32)
+```
+Uebertraegt Scroll-basierte Rotation auf das aktive Route-Tool via `on_scroll_rotate()` callback. Wird typischerweise nur von ParkingTool verwendet (Alt+Scroll).
+
+```rust
 pub fn execute(state: &mut AppState)
 ```
 Fuehrt das aktive Route-Tool aus (Enter-Bestaetigung). Erstellt Nodes + Connections, speichert Undo-Snapshot und registriert Segment-Record fuer nachtraegliche Bearbeitung.
@@ -138,6 +143,74 @@ Lädt oder entfernt eine Heightmap.
 pub fn deduplicate(state: &mut AppState)
 ```
 Führt die Duplikat-Bereinigung auf der geladenen Road Map aus.
+
+---
+
+### `editing` — Node- und Connection-Bearbeitung
+
+Handhabt Bearbeitung von Nodes, Verbindungen und Marker. Integriert Segment-Cleanup bei Edits.
+
+**Funktionen:**
+
+```rust
+pub fn edit_segment(
+    state: &mut AppState,
+    record_id: u64,
+    kind: SegmentKind,
+    node_ids_to_delete: &[u64],
+) -> anyhow::Result<()>
+```
+Bearbeitet ein zuvor erstelltes Segment. Fuehrt folgende Schritte aus:
+1. **Marker-Cleanup:** Entfernt `MapMarker` von den zu loeschenden Nodes (aus `record.marker_node_ids`)
+2. **Node-Loeschung:** Loescht die alten Segment-Nodes aus der RoadMap
+3. **Tool-Reload:** Laedt das passende Route-Tool mit den gespeicherten Parametern (via `load_for_edit()`)
+4. **Neu-Ausfuehrung:** Tool wird neu mit den User-Aenderungen ausfuehrt (neue Node-IDs generiert)
+
+**Segment-Registry-Integration:**
+- Nutzt `SegmentRecord` (fuer Marker-Cleanup und Tool-Parameter)
+- Lokalisiert via `segment_registry.get_record(record_id)`
+- Marker-Cleanup ist **kritisch:** Unvollstaendiges Cleanup verwaist BrainCells im SegmentRecord
+
+```rust
+pub fn delete_nodes_by_ids(state: &mut AppState, node_ids: &[u64])
+```
+Loescht Nodes aus der Road Map. Aktualisiert alle Verbindungen automatisch.
+
+```rust
+pub fn add_node(state: &mut AppState, pos: glam::Vec2, after_node: Option<u64>) -> u64
+```
+Fuegt einen neuen Node hinzu. Optional splittet neuer Node eine Verbindung `after_node → next`.
+
+```rust
+pub fn set_node_position(state: &mut AppState, node_id: u64, new_pos: glam::Vec2)
+```
+Verschiebt einen Node (mit Spatial-Index-Update).
+
+```rust
+pub fn create_connection(
+    state: &mut AppState,
+    start_id: u64,
+    end_id: u64,
+    direction: ConnectionDirection,
+    priority: ConnectionPriority,
+)
+```
+Erzeugt eine neue Verbindung zwischen zwei Nodes.
+
+```rust
+pub fn delete_connection(state: &mut AppState, start_id: u64, end_id: u64)
+```
+Loescht eine Verbindung.
+
+```rust
+pub fn set_node_marker(state: &mut AppState, node_id: u64, name: String, group: String)
+```
+Setzt/Aktualisiert einen Marker auf einem Node.
+
+```rust
+pub fn clear_node_marker(state: &mut AppState, node_id: u64)
+```
+Entfernt einen Marker vom Node.
 
 ---
 

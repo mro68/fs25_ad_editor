@@ -46,6 +46,7 @@ Schnittstelle fuer alle Route-Tools (Linie, Kurve, …). Tools sind zustandsbeha
 
 **Optionale Methoden (Default-Implementierung):**
 - `has_pending_input() → bool` — Hat das Tool angefangene Eingaben? (fuer stufenweise Escape-Logik)
+- `on_scroll_rotate(&mut self, delta: f32)` — Scroll-basierte Rotation verarbeiten (z.B. ParkingTool-Winkel-Steuerung)
 - `set_direction(dir)` / `set_priority(prio)` — Editor-Defaults uebernehmen
 - `set_snap_radius(radius)` — Snap-Radius fuer Node-Snapping setzen
 - `set_last_created(ids, road_map)` / `last_created_ids() → &[u64]` — Erstellte Node-IDs (fuer Verkettung und Nachbearbeitung)
@@ -102,6 +103,7 @@ Documentation moved to [`../API.md#segmentbase--segmentkind`](../API.md#segmentb
 | 3 | `SplineTool` | `〰` | `SplineTool::new()` |
 | 4 | `BypassTool` | `⤴` | `BypassTool::new()` |
 | 5 | `ConstraintRouteTool` | `⊿` | `ConstraintRouteTool::new()` |
+| 6 | `ParkingTool` | `🅿` | `ParkingTool::new()` |
 
 ### `StraightLineTool`
 
@@ -159,6 +161,49 @@ Winkelgeglaettete Route mit automatischen Tangenten-Uebergaengen. Solver-Pipelin
 **Lifecycle-Verbesserung (2026-03-05):** Vereinfachte `current_end_anchor()` Logik nach Lifecycle-State-Refactoring — `last_end_anchor` wird nur noch aus dem gemeinsamen `ToolLifecycleState` bezogen (nicht mehr redundant auf dem Tool-Struct).
 
 Modulstruktur: `state.rs`, `lifecycle.rs`, `geometry.rs`, `drag.rs`, `config_ui.rs`, `tests.rs`
+
+### `ParkingTool`
+
+Parkplatz-Layout-Generator: Erstellt einen Wendekreis mit Parkreihen in einem konfigurierbaren Raster-Layout.
+
+**Neuer Interaktionsflow (2026-03-05):**
+- **Phase::Idle** — Wartet auf Eingabe
+- **Rotation (Alt+Scroll):** `on_scroll_rotate()` callback — aendert `self.angle` kontinuierlich (Viewport-Steuerung)
+- **Phase::Placing (Klick):** Setzt Origin + fixiert Winkel → wandelt zu `Phase::Configuring` um
+- **Phase::Configuring:** Config-Panel aktiv; Buttons zum Anpassen der Layout-Parameter (Reihen, Abstände, etc.)
+- **Phase::Adjusting (Viewport-Klick):** Repositionierung des Origins — Klick setzt neue Position, zurueck zu `Phase::Configuring`
+- **Execute (Confirm-Button):** Nur in `Phase::Configuring` ausfuehrbar → erstellt Nodes + Connections
+
+**Phasen-Enum:** `ParkingPhase { Idle, Placing, Configuring, Adjusting }`
+
+**Felder:**
+- `phase: ParkingPhase` — Aktueller Interaktions-Status
+- `origin: Option<Vec2>` — Position des Parkplatz-Zentrums (gesetzt in Phase::Placing)
+- `angle: f32` — Rotationswinkel (Radiant; wird via `on_scroll_rotate()` angepasst)
+- `config: ParkingConfig` — Parkplatz-Konfiguration (Reihen, Abstände, Wendkreis-Radius)
+  - `entrance_side: EntranceSide` — Einfahrts-Seite (Left/Right)
+  - `row_count: usize` — Anzahl Parkreihen
+  - `spacing_length: f32` — Laengsabstand zwischen Parktaschen
+  - `spacing_width: f32` — Querabstand zwischen Reihen
+  - `turnaround_radius: f32` — Wendekreis-Radius
+  - `connection_spacing: f32` — Verbindungs-Node-Abstände
+- `direction: ConnectionDirection` — Richtung fuer die erzeugten Verbindungen
+- `priority: ConnectionPriority` — Prioritaet fuer die erzeugten Verbindungen
+
+**Lifecycle-Integration:**
+- Enthaelt gemeinsamen `ToolLifecycleState` fuer Snap-Radius, letzte erstellte Node-IDs, Recreate-Flag
+- Methoden: `set_snap_radius()`, `last_created_ids()`, `last_end_anchor()`, `needs_recreate()`, `clear_recreate_flag()`, `set_last_created()`
+
+**Segment-Registry:**
+- Implementiert `RouteToolRegistry` Trait (`make_segment_record()`, `load_for_edit()`)
+- Speichert Layout-Parameter fuer nachtraegliche Bearbeitung
+
+**Public Exports:**
+- `generate_parking_layout(config) → ParkingLayout` — Generiert das Layout (fuer Tests)
+- `build_parking_result(layout, origin, angle, ...) → Vec<Vec2>` — Konvertiert zu Positionen
+- `build_preview(layout, origin, angle, ...) → (Vec<Vec2>, Vec<(usize, usize)>)` — Vorschau-Geometrie
+
+Modulstruktur: `state.rs` (Struct + Config), `lifecycle.rs` (RouteTool-Impl + Lifecycle-Delegation), `config_ui.rs` (egui-Panel), `geometry/{mod,layout,blueprint,conversion}.rs` (Layout-Mathe), `tests.rs` (7 Unit-Tests)
 
 ### `BypassTool`
 

@@ -4,7 +4,7 @@
 
 Das `app`-Modul verwaltet den globalen State, verarbeitet `AppIntent`s zentral ueber den `AppController`, mappt diese auf `AppCommand`s und baut die `RenderScene` fuer das Rendering.
 
-**Hinweis:** `Camera2D` lebt im `core`-Modul (reiner Geometrie-Typ). `app` re-exportiert `Camera2D`, `ConnectionDirection`, `ConnectionPriority` und `RoadMap` aus `core`.
+**Hinweis:** `Camera2D` lebt im `core`-Modul (reiner Geometrie-Typ). `app` re-exportiert `Camera2D`, `ConnectionDirection`, `ConnectionPriority`, `RoadMap`, `ParkingConfig` und andere zentrale Typen aus `core` und `tools`.
 
 **Weitere API-Dokumentationen:**
 - [`handlers/API.md`](handlers/API.md) — alle Handler-Funktionen mit detaillierter Dokumentation
@@ -231,7 +231,7 @@ pub enum EditorTool {
 
 ---
 
-### `SegmentBase`
+### `SegmentBase` und `SegmentKind`
 
 Gemeinsame Basis-Parameter fuer alle Route-Tools. Wird von `SegmentKind` verwendet.
 
@@ -244,7 +244,64 @@ pub struct SegmentBase {
     /// Maximaler Abstand zwischen Zwischen-Nodes
     pub max_segment_length: f32,
 }
+
+pub enum SegmentKind {
+    Straight { base: SegmentBase },
+    CurveCubic {
+        cp1: Vec2,
+        cp2: Vec2,
+        tangent_start: TangentSource,
+        tangent_end: TangentSource,
+        base: SegmentBase,
+    },
+    CurveQuad {
+        cp1: Vec2,
+        base: SegmentBase,
+    },
+    Spline {
+        anchors: Vec<ToolAnchor>,
+        tangent_start: TangentSource,
+        tangent_end: TangentSource,
+        base: SegmentBase,
+    },
+    ConstraintRoute {
+        control_nodes: Vec<Vec2>,
+        max_angle_deg: f32,
+        min_distance: f32,
+        base: SegmentBase,
+    },
+    Bypass {
+        chain_positions: Vec<Vec2>,
+        chain_start_id: u64,
+        chain_end_id: u64,
+        offset: f32,
+        base_spacing: f32,
+        base: SegmentBase,
+    },
+    Parking {
+        origin: Vec2,
+        angle: f32,
+        config: ParkingConfig,
+        base: SegmentBase,
+    },
+}
+
+/// Tool-Indizes im ToolManager
+pub const TOOL_INDEX_STRAIGHT: usize = 0;
+pub const TOOL_INDEX_CURVE_QUAD: usize = 1;
+pub const TOOL_INDEX_CURVE_CUBIC: usize = 2;
+pub const TOOL_INDEX_SPLINE: usize = 3;
+pub const TOOL_INDEX_BYPASS: usize = 4;
+pub const TOOL_INDEX_CONSTRAINT_ROUTE: usize = 5;
+pub const TOOL_INDEX_PARKING: usize = 6;
 ```
+
+**Methoden:**
+
+```rust
+pub fn tool_index(&self) -> usize
+```
+Gibt den Tool-Index im ToolManager fuer diese SegmentKind-Variante zurueck (z.B. `SegmentKind::Bypass { .. }.tool_index()` → `TOOL_INDEX_BYPASS`).
 
 ---
 
@@ -474,6 +531,9 @@ pub enum AppIntent {
     RouteToolDragUpdated { world_pos: glam::Vec2 },
     RouteToolDragEnded,
 
+    // Route-Tool Scroll-Rotation (Alt+Scroll fuer ParkingTool-Winkel-Steuerung)
+    RouteToolScrollRotated { delta: f32 },
+
     // Route-Tool Schnellsteuerung (Keyboard-Shortcuts)
     IncreaseRouteToolNodeCount,
     DecreaseRouteToolNodeCount,
@@ -612,6 +672,9 @@ pub enum AppCommand {
     RouteToolDragStart { world_pos: glam::Vec2 },
     RouteToolDragUpdate { world_pos: glam::Vec2 },
     RouteToolDragEnd,
+
+    // Route-Tool Rotation (Scroll-basierte Winkel-Anpassung)
+    RouteToolRotate { delta: f32 },
 
     // Segment-Bearbeitung
     EditSegment { record_id: u64 },
