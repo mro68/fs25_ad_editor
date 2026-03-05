@@ -291,18 +291,18 @@ impl RouteTool for ConstraintRouteTool {
     }
 
     fn drag_targets(&self) -> Vec<Vec2> {
-        self.get_drag_targets()
+        super::drag::drag_targets(self)
     }
 
     fn on_drag_start(&mut self, pos: Vec2, road_map: &RoadMap, pick_radius: f32) -> bool {
-        self.handle_drag_start(pos, road_map, pick_radius)
+        super::drag::on_drag_start(self, pos, road_map, pick_radius)
     }
 
     fn on_drag_update(&mut self, pos: Vec2) {
-        self.handle_drag_update(pos);
+        super::drag::on_drag_update(self, pos);
     }
 
     fn on_drag_end(&mut self, road_map: &RoadMap) {
-        self.handle_drag_end(road_map);
+        super::drag::on_drag_end(self, road_map);
     }
 }

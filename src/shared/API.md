@@ -180,6 +180,13 @@ pub struct EditorOptions {
     pub camera_zoom_max: f32,
     // Terrain
     pub terrain_height_scale: f32,
+    // Hintergrund (Fade-Out bei kleinem Zoom)
+    pub bg_opacity: f32,
+    pub bg_opacity_at_min_zoom: f32,
+    pub bg_fade_start_zoom: f32,
+    // Copy/Paste
+    /// Deckkraft der Paste-Vorschau (0.0 transparent … 1.0 opak)
+    pub copy_preview_opacity: f32,
     // Uebersichtskarte
     /// Layer-Optionen fuer Uebersichtskarten-Generierung
     pub overview_layers: OverviewLayerOptions,
