@@ -69,7 +69,10 @@ fn expand_segment_selection(state: &mut AppState, clicked_node_id: u64) {
         None => return,
     };
 
-    let record = match state.segment_registry.find_first_by_node_id(clicked_node_id) {
+    let record = match state
+        .segment_registry
+        .find_first_by_node_id(clicked_node_id)
+    {
         Some(r) => r,
         None => return,
     };

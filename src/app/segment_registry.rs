@@ -156,7 +156,7 @@ pub struct SegmentRecord {
     /// Tool-spezifische Parameter
     pub kind: SegmentKind,
     /// Original-Positionen der Nodes zum Zeitpunkt der Erstellung.
-    /// Index-Reihenfolge entspricht `node_ids`.
+    /// Index-Reihenfolge entspricht `node_ids`; wird fuer Validitaetsprüfung genutzt.
     pub original_positions: Vec<Vec2>,
 }
 

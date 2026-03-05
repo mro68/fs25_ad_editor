@@ -269,6 +269,15 @@
 - ✅ Constraint-Route-Defaults angepasst: Max-Winkel `10°`, Max-Abstand `10m`, Minimaldistanz `2m`
 - ✅ Constraint-Route-Config: Mausrad-Unterstuetzung fuer Max-Winkel- und Minimaldistanz-Slider ergaenzt (neben LMT li/re)
 
+**Errungenschaften (Segment-Selektion und Bearbeitung 2026-03-05):**
+- ✅ `SegmentRecord.original_positions` — speichert Node-Positionen zum Erstellen-Zeitpunkt
+- ✅ `SegmentRegistry.find_first_by_node_id()` — findet das erste Segment mit dieser Node
+- ✅ `SegmentRegistry.is_segment_valid()` — prueft ob Nodes existieren und Positionen gleich sind
+- ✅ `expand_segment_selection()` — Klick auf Segment-Node selektiert alle Segment-Nodes (falls gueltig)
+- ✅ `CommandId::EditSegment` im Context-Menu mit `Precondition::SelectionIsValidSegment`
+- ✅ `render_context_menu()` + `collect_viewport_events()` um `segment_registry`-Parameter erweitert
+- ✅ Dokumentation synchronisiert: `src/app/API.md`, `src/ui/API.md`, `src/app/handlers/API.md`, `src/app/use_cases/API.md`, `docs/DATA_MODEL.md`
+
 **Errungenschaften (Spline-Tool 2026-02-21):**
 - ✅ Neues Route-Tool: Catmull-Rom-Spline (interpolierend, Kurs fuehrt durch alle geklickten Punkte)
 - ✅ Arc-Length-Resampling fuer gleichmaessige Node-Verteilung
