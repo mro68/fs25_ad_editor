@@ -56,14 +56,8 @@ pub fn render_segment_overlays(
         // Welt-AABB → Screen-AABB
         let s_a = camera.world_to_screen(world_min, viewport_size);
         let s_b = camera.world_to_screen(world_max, viewport_size);
-        let screen_min = egui::pos2(
-            rect.min.x + s_a.x.min(s_b.x),
-            rect.min.y + s_a.y.min(s_b.y),
-        );
-        let screen_max = egui::pos2(
-            rect.min.x + s_a.x.max(s_b.x),
-            rect.min.y + s_a.y.max(s_b.y),
-        );
+        let screen_min = egui::pos2(rect.min.x + s_a.x.min(s_b.x), rect.min.y + s_a.y.min(s_b.y));
+        let screen_max = egui::pos2(rect.min.x + s_a.x.max(s_b.x), rect.min.y + s_a.y.max(s_b.y));
         let screen_rect = egui::Rect::from_min_max(screen_min, screen_max);
 
         // Fuellung nur wenn locked (15% Schwarz = 38 von 255)
@@ -98,14 +92,17 @@ pub fn render_segment_overlays(
             egui::pos2(screen_min.x, cy), // W (links)
         ];
 
-        let icon_text = if record.locked { "\u{1F512}" } else { "\u{1F513}" };
+        let icon_text = if record.locked {
+            "\u{1F512}"
+        } else {
+            "\u{1F513}"
+        };
         let font_id = egui::FontId::proportional(14.0);
         let hit_half = 12.0_f32;
 
         for &icon_pos in &icon_positions {
             // Hintergrund-Box fuer bessere Lesbarkeit
-            let bg_rect =
-                egui::Rect::from_center_size(icon_pos, egui::vec2(20.0, 20.0));
+            let bg_rect = egui::Rect::from_center_size(icon_pos, egui::vec2(20.0, 20.0));
             painter.rect_filled(
                 bg_rect,
                 3.0,
