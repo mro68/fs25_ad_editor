@@ -258,4 +258,8 @@ pub enum AppIntent {
     PasteConfirmRequested,
     /// Einfuegen-Vorschau abbrechen (Escape)
     PasteCancelled,
+
+    // ── Segment-Lock ──────────────────────────────────────────────────
+    /// Segment-Lock umschalten (gesperrt ↔ entsperrt)
+    ToggleSegmentLockRequested { segment_id: u64 },
 }
