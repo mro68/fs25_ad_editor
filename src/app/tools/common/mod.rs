@@ -8,10 +8,12 @@
 
 mod builder;
 mod geometry;
+mod input_helpers;
 mod lifecycle;
 mod tangent;
 
 pub(crate) use builder::assemble_tool_result;
+pub(crate) use input_helpers::wheel_dir;
 // angle_to_compass wird in #[cfg(test)]-Modulen verwendet
 #[allow(unused_imports)]
 pub(crate) use geometry::angle_to_compass;
