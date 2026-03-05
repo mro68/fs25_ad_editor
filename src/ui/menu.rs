@@ -91,6 +91,28 @@ pub fn render_menu(ctx: &egui::Context, state: &AppState) -> Vec<AppIntent> {
 
                 ui.separator();
 
+                // Copy / Paste
+                let has_selection = !state.selection.selected_node_ids.is_empty();
+                let has_clipboard = !state.clipboard.nodes.is_empty();
+
+                if ui
+                    .add_enabled(has_selection, egui::Button::new("Kopieren (Ctrl+C)"))
+                    .clicked()
+                {
+                    events.push(AppIntent::CopySelectionRequested);
+                    ui.close();
+                }
+
+                if ui
+                    .add_enabled(has_clipboard, egui::Button::new("Einfuegen (Ctrl+V)"))
+                    .clicked()
+                {
+                    events.push(AppIntent::PasteStartRequested);
+                    ui.close();
+                }
+
+                ui.separator();
+
                 if ui.button("Optionen...").clicked() {
                     events.push(AppIntent::OpenOptionsDialogRequested);
                     ui.close();

@@ -3,7 +3,7 @@ members = [".", "crates/fs25_map_overview"]
 
 [package]
 name = "FS25-AutoDrive-Editor"
-version = "1.0.0"
+version = "1.0.1"
 edition = "2021"
 authors = ["MRO"]
 description = "GPU-beschleunigter Editor fuer AutoDrive-Kurse in Farming Simulator 25"
@@ -45,7 +45,7 @@ egui-wgpu = "0.33.3"
 # Rendering
 wgpu = "27.0.1"                                        # Muss mit eframe/egui-wgpu kompatibel sein
 bytemuck = { version = "1.14", features = ["derive"] }
-glam = "0.32.0"
+glam = { version = "0.32.0", features = ["serde"] }
 
 # XML Processing
 quick-xml = "0.39.2"

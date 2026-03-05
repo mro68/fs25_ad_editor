@@ -96,6 +96,11 @@ impl EditorApp {
         ui::render_status_bar(ctx, &self.state);
         events.extend(ui::render_menu(ctx, &self.state));
         events.extend(ui::render_toolbar(ctx, &self.state));
+        events.extend(ui::render_route_defaults_panel(
+            ctx,
+            self.state.editor.default_direction,
+            self.state.editor.default_priority,
+        ));
 
         let road_map_for_properties = self.state.road_map.clone();
         let default_direction = self.state.editor.default_direction;
@@ -189,6 +194,41 @@ impl EditorApp {
     ) -> Vec<AppIntent> {
         let mut events = Vec::new();
 
+        // ── Paste-Vorschau hat Prioritaet: normale Klicks unterdruecken ──────
+        if self.state.paste_preview_pos.is_some() {
+            events.push(AppIntent::ViewportResized {
+                size: viewport_size,
+            });
+
+            // Mauszeiger-Position → Vorschau aktualisieren
+            if let Some(hover_screen) = response.hover_pos() {
+                let local = hover_screen - response.rect.min;
+                let vp = glam::Vec2::new(viewport_size[0], viewport_size[1]);
+                let world_pos = self
+                    .state
+                    .view
+                    .camera
+                    .screen_to_world(glam::Vec2::new(local.x, local.y), vp);
+                events.push(AppIntent::PastePreviewMoved { world_pos });
+            }
+
+            // Linksklick → Einfuegen bestaetigen
+            if response.clicked() {
+                events.push(AppIntent::PasteConfirmRequested);
+            }
+
+            // Esc → Vorschau abbrechen
+            if ui.input(|i| i.key_pressed(egui::Key::Escape)) {
+                events.push(AppIntent::PasteCancelled);
+            }
+
+            // Cursor als Fadenkreuz anzeigen
+            ui.ctx().set_cursor_icon(egui::CursorIcon::Crosshair);
+
+            return events;
+        }
+        // ─────────────────────────────────────────────────────────────────────
+
         let drag_targets = self
             .state
             .editor
@@ -233,6 +273,7 @@ impl EditorApp {
             &drag_targets,
             &mut self.state.ui.distanzen,
             tangent_data,
+            !self.state.clipboard.nodes.is_empty(),
         ));
 
         // Mauszeiger im Viewport je nach aktivem Werkzeug anpassen
@@ -296,17 +337,35 @@ impl EditorApp {
 
             if let Some(cursor_world) = self.last_cursor_world {
                 if let Some(rm) = self.state.road_map.as_deref() {
-                    ui::render_tool_preview(
-                        &ui.painter_at(rect),
+                    let painter = ui.painter_at(rect);
+                    let ctx = ui::tool_preview::ToolPreviewContext {
+                        painter: &painter,
                         rect,
-                        &self.state.view.camera,
-                        vp,
-                        &self.state.editor.tool_manager,
-                        rm,
+                        camera: &self.state.view.camera,
+                        viewport_size: vp,
+                        tool_manager: &self.state.editor.tool_manager,
+                        road_map: rm,
                         cursor_world,
-                    );
+                        options: &self.state.options,
+                    };
+
+                    ui::render_tool_preview(&ctx);
                 }
             }
+        }
+
+        // ── Paste-Vorschau-Overlay ──────────────
+        if let Some(paste_pos) = self.state.paste_preview_pos {
+            let vp = glam::Vec2::new(viewport_size[0], viewport_size[1]);
+            ui::paint_clipboard_preview(
+                &ui.painter_at(rect),
+                rect,
+                &self.state.view.camera,
+                vp,
+                &self.state.clipboard,
+                paste_pos,
+                self.state.options.copy_preview_opacity,
+            );
         }
 
         // ── Distanzen-Vorschau-Overlay ──────────

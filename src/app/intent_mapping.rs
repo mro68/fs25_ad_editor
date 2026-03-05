@@ -289,6 +289,15 @@ pub fn map_intent_to_commands(state: &AppState, intent: AppIntent) -> Vec<AppCom
         AppIntent::DecreaseRouteToolSegmentLength => {
             vec![AppCommand::DecreaseRouteToolSegmentLength]
         }
+
+        // ── Copy/Paste ────────────────────────────────────────────────────
+        AppIntent::CopySelectionRequested => vec![AppCommand::CopySelection],
+        AppIntent::PasteStartRequested => vec![AppCommand::StartPastePreview],
+        AppIntent::PastePreviewMoved { world_pos } => {
+            vec![AppCommand::UpdatePastePreview { world_pos }]
+        }
+        AppIntent::PasteConfirmRequested => vec![AppCommand::ConfirmPaste],
+        AppIntent::PasteCancelled => vec![AppCommand::CancelPastePreview],
     }
 }
 

@@ -83,6 +83,9 @@ fn render_selected_section(
             changed |= render_subsection(ui, "Hintergrund", None, |ui| {
                 sections::render_background(ui, opts)
             });
+            changed |= render_subsection(ui, "Copy/Paste-Vorschau", None, |ui| {
+                sections::render_copy_paste(ui, opts)
+            });
             changed |= render_subsection(ui, "Uebersichtskarte (Standard-Layer)", None, |ui| {
                 sections::render_overview_layers(ui, opts)
             });

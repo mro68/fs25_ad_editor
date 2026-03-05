@@ -1,7 +1,9 @@
 //! Map-Marker-Typ fuer benannte Wegpunkte in der AutoDrive-Konfiguration.
 
+use serde::{Deserialize, Serialize};
+
 /// Map-Marker: verweist auf einen Node und wird im Editor als Label angezeigt.
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct MapMarker {
     /// Node-ID des Markers
     pub id: u64,

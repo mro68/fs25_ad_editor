@@ -176,7 +176,10 @@ pub fn select_with_anchors(
     };
 
     // Selektion aufheben (User ist jetzt im Route-Tool)
+    let (old_selected, old_anchor) =
+        crate::app::handlers::helpers::capture_selection_snapshot(state);
     state.selection.ids_mut().clear();
+    crate::app::handlers::helpers::record_selection_if_changed(state, old_selected, old_anchor);
 
     // Ersten Klick simulieren (Start-Anker)
     let action1 = {

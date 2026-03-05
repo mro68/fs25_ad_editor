@@ -1,6 +1,7 @@
 //! UI-Komponenten: Menue, Toolbar, Properties, Input-Handling, Dialoge.
 
 pub mod context_menu;
+pub mod defaults_panel;
 pub mod dialogs;
 mod drag;
 pub mod edit_panel;
@@ -18,6 +19,7 @@ pub mod status;
 pub mod tool_preview;
 pub mod toolbar;
 
+pub use defaults_panel::render_route_defaults_panel;
 pub use dialogs::{
     handle_file_dialogs, show_dedup_dialog, show_heightmap_warning, show_marker_dialog,
     show_overview_options_dialog, show_post_load_dialog, show_save_overview_dialog,
@@ -29,5 +31,7 @@ pub use menu::render_menu;
 pub use options_dialog::show_options_dialog;
 pub use properties::render_properties_panel;
 pub use status::render_status_bar;
-pub use tool_preview::{paint_preview, paint_preview_polyline, render_tool_preview};
+pub use tool_preview::{
+    paint_clipboard_preview, paint_preview, paint_preview_polyline, render_tool_preview,
+};
 pub use toolbar::render_toolbar;

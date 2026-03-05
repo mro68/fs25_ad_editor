@@ -280,6 +280,15 @@ impl AppController {
 
             // === Selection ===
             AppCommand::InvertSelection => handlers::selection::invert(state),
+
+            // === Copy/Paste ===
+            AppCommand::CopySelection => handlers::editing::copy_selection(state),
+            AppCommand::StartPastePreview => handlers::editing::start_paste_preview(state),
+            AppCommand::UpdatePastePreview { world_pos } => {
+                handlers::editing::update_paste_preview(state, world_pos)
+            }
+            AppCommand::ConfirmPaste => handlers::editing::confirm_paste(state),
+            AppCommand::CancelPastePreview => handlers::editing::cancel_paste_preview(state),
         }
 
         Ok(())

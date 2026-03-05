@@ -42,6 +42,33 @@ fn test_rebuild_connection_geometry() {
     assert_eq!(connection.angle, 0.0);
 }
 
+/// Verifiziert, dass die Geometrie auch nach Positionsänderungen neu berechnet wird.
+#[test]
+fn test_rebuild_connection_geometry_updates_after_node_move() {
+    let mut map = RoadMap::new(3);
+
+    map.add_node(MapNode::new(1, Vec2::new(0.0, 0.0), NodeFlag::Regular));
+    map.add_node(MapNode::new(2, Vec2::new(1.0, 1.0), NodeFlag::Regular));
+
+    let connection = Connection::new(
+        1,
+        2,
+        ConnectionDirection::Regular,
+        ConnectionPriority::Regular,
+        Vec2::new(0.0, 0.0),
+        Vec2::new(1.0, 1.0),
+    );
+    map.add_connection(connection);
+
+    map.nodes.get_mut(&2).unwrap().position = Vec2::new(3.0, 4.0);
+    map.rebuild_connection_geometry();
+
+    let connection = map.connections_iter().next().expect("Verbindung erwartet");
+    assert_eq!(connection.midpoint, Vec2::new(1.5, 2.0));
+    let expected_angle = 4.0f32.atan2(3.0f32);
+    assert!((connection.angle - expected_angle).abs() < 1e-6);
+}
+
 #[test]
 fn test_spatial_queries() {
     let mut map = RoadMap::new(3);
@@ -163,6 +190,28 @@ fn test_recalculate_node_flags_preserves_warning() {
     map.recalculate_node_flags(&[1, 2]);
 
     assert_eq!(map.nodes[&1].flag, NodeFlag::Warning);
+    assert_eq!(map.nodes[&2].flag, NodeFlag::SubPrio);
+}
+
+/// Stellt sicher, dass Reserved-Nodes beim Flag-Update unberührt bleiben.
+#[test]
+fn test_recalculate_node_flags_preserves_reserved() {
+    let mut map = RoadMap::new(3);
+    map.add_node(MapNode::new(1, Vec2::ZERO, NodeFlag::Reserved));
+    map.add_node(MapNode::new(2, Vec2::new(10.0, 0.0), NodeFlag::Regular));
+
+    let conn = Connection::new(
+        1,
+        2,
+        ConnectionDirection::Regular,
+        ConnectionPriority::SubPriority,
+        Vec2::ZERO,
+        Vec2::new(10.0, 0.0),
+    );
+    map.add_connection(conn);
+    map.recalculate_node_flags(&[1, 2]);
+
+    assert_eq!(map.nodes[&1].flag, NodeFlag::Reserved);
     assert_eq!(map.nodes[&2].flag, NodeFlag::SubPrio);
 }
 

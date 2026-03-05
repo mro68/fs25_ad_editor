@@ -11,8 +11,9 @@ use super::types::{compute_visible_rect, ConnectionVertex, RenderContext, Unifor
 use crate::{ConnectionDirection, RoadMap};
 use eframe::{egui_wgpu, wgpu};
 
-use culling::{point_in_rect, segment_intersects_rect};
+use culling::{point_in_rect, segment_intersects_rect_cached};
 use mesh::{connection_color, push_arrow, push_line_quad};
+use std::collections::HashMap;
 
 /// Renderer fuer Connection-Linien inkl. Pfeilspitzen.
 pub struct ConnectionRenderer {
@@ -23,6 +24,9 @@ pub struct ConnectionRenderer {
     vertex_capacity: usize,
     /// Wiederverwendbarer Scratch-Buffer fuer Vertex-Daten (vermeidet per-Frame-Allokation)
     vertex_scratch: Vec<ConnectionVertex>,
+    /// Persistenter Positions-Cache: Node-ID → Weltposition, wird pro Frame per clear() geleert.
+    /// Vermeidet wiederholte road_map-Lookups fuer denselben Node innerhalb eines Frames.
+    pos_cache: HashMap<u64, glam::Vec2>,
 }
 
 impl ConnectionRenderer {
@@ -110,7 +114,8 @@ impl ConnectionRenderer {
             bind_group,
             vertex_buffer: None,
             vertex_capacity: 0,
-            vertex_scratch: Vec::new(),
+            vertex_scratch: Vec::with_capacity(1024),
+            pos_cache: HashMap::with_capacity(256),
         }
     }
 
@@ -150,82 +155,123 @@ impl ConnectionRenderer {
             }]),
         );
 
+        // Reuse the scratch buffer and ensure an initial reserve to avoid
+        // repeated reallocations for large maps.
         self.vertex_scratch.clear();
-        for connection in road_map.connections_iter() {
-            // Verbindungen zu ausgeblendeten Nodes ueberspringen
-            if ctx.hidden_node_ids.contains(&connection.start_id)
-                || ctx.hidden_node_ids.contains(&connection.end_id)
-            {
-                continue;
-            }
-            let Some(start) = road_map
-                .nodes
-                .get(&connection.start_id)
-                .map(|node| node.position)
-            else {
-                continue;
-            };
-            let Some(end) = road_map
-                .nodes
-                .get(&connection.end_id)
-                .map(|node| node.position)
-            else {
-                continue;
-            };
 
-            if !point_in_rect(start, visible_min, visible_max)
-                && !point_in_rect(end, visible_min, visible_max)
-                && !segment_intersects_rect(start, end, visible_min, visible_max)
-            {
-                continue;
-            }
+        // Persistenten Positions-Cache leeren — Eintraege bleiben allokiert,
+        // dadurch entfaellt die per-Frame HashMap-Allokation.
+        self.pos_cache.clear();
 
-            let delta = end - start;
-            let length = delta.length();
-            if length < f32::EPSILON {
-                continue;
-            }
+        // Precompute viewport corners once for the culling calls.
+        let bottom_left = glam::Vec2::new(visible_min.x, visible_min.y);
+        let bottom_right = glam::Vec2::new(visible_max.x, visible_min.y);
+        let top_right = glam::Vec2::new(visible_max.x, visible_max.y);
+        let top_left = glam::Vec2::new(visible_min.x, visible_max.y);
 
-            let direction = delta / length;
-            let color = connection_color(connection.direction, connection.priority, ctx.options);
-            let thickness = match connection.priority {
-                crate::ConnectionPriority::Regular => ctx.options.connection_thickness_world,
-                crate::ConnectionPriority::SubPriority => {
-                    ctx.options.connection_thickness_subprio_world
+        // Separate &mut-Borrows auf Struct-Felder vor dem Loop, damit der
+        // Borrow-Checker gleichzeitigen Zugriff auf pos_cache und vertex_scratch
+        // akzeptiert (kein simultanes &mut self noetig).
+        // Der Block begrenzt die Borrow-Lebensdauer, damit self.vertex_scratch
+        // nach dem Loop wieder direkt zugaenglich ist.
+        {
+            let pos_cache = &mut self.pos_cache;
+            let vertex_scratch = &mut self.vertex_scratch;
+
+            for connection in road_map.connections_iter() {
+                // Verbindungen zu ausgeblendeten Nodes ueberspringen
+                if ctx.hidden_node_ids.contains(&connection.start_id)
+                    || ctx.hidden_node_ids.contains(&connection.end_id)
+                {
+                    continue;
                 }
-            };
+                // Lazy cache lookup/insert — reduziert road_map.nodes HashMap-Lookups
+                let start = match pos_cache.get(&connection.start_id) {
+                    Some(p) => *p,
+                    None => match road_map.nodes.get(&connection.start_id) {
+                        Some(n) => {
+                            let p = n.position;
+                            pos_cache.insert(connection.start_id, p);
+                            p
+                        }
+                        None => continue,
+                    },
+                };
 
-            push_line_quad(&mut self.vertex_scratch, start, end, thickness, color);
+                let end = match pos_cache.get(&connection.end_id) {
+                    Some(p) => *p,
+                    None => match road_map.nodes.get(&connection.end_id) {
+                        Some(n) => {
+                            let p = n.position;
+                            pos_cache.insert(connection.end_id, p);
+                            p
+                        }
+                        None => continue,
+                    },
+                };
 
-            match connection.direction {
-                ConnectionDirection::Regular => {
-                    let center = start + direction * (length * 0.5);
-                    push_arrow(
-                        &mut self.vertex_scratch,
-                        center,
-                        direction,
-                        ctx.options.arrow_length_world,
-                        ctx.options.arrow_width_world,
-                        color,
-                    );
+                if !point_in_rect(start, visible_min, visible_max)
+                    && !point_in_rect(end, visible_min, visible_max)
+                    && !segment_intersects_rect_cached(
+                        start,
+                        end,
+                        bottom_left,
+                        bottom_right,
+                        top_right,
+                        top_left,
+                    )
+                {
+                    continue;
                 }
-                ConnectionDirection::Reverse => {
-                    let center = start + direction * (length * 0.5);
-                    push_arrow(
-                        &mut self.vertex_scratch,
-                        center,
-                        direction,
-                        ctx.options.arrow_length_world,
-                        ctx.options.arrow_width_world,
-                        color,
-                    );
+
+                let delta = end - start;
+                let length = delta.length();
+                if length < f32::EPSILON {
+                    continue;
                 }
-                ConnectionDirection::Dual => {
-                    // Bidirektionale Verbindungen brauchen keine Pfeile —
-                    // die Richtung ist implizit, die Farbe unterscheidet sie bereits.
+
+                let direction = delta / length;
+                let color =
+                    connection_color(connection.direction, connection.priority, ctx.options);
+                let thickness = match connection.priority {
+                    crate::ConnectionPriority::Regular => ctx.options.connection_thickness_world,
+                    crate::ConnectionPriority::SubPriority => {
+                        ctx.options.connection_thickness_subprio_world
+                    }
+                };
+
+                push_line_quad(vertex_scratch, start, end, thickness, color);
+
+                match connection.direction {
+                    ConnectionDirection::Regular => {
+                        let center = start + direction * (length * 0.5);
+                        push_arrow(
+                            vertex_scratch,
+                            center,
+                            direction,
+                            ctx.options.arrow_length_world,
+                            ctx.options.arrow_width_world,
+                            color,
+                        );
+                    }
+                    ConnectionDirection::Reverse => {
+                        let center = start + direction * (length * 0.5);
+                        push_arrow(
+                            vertex_scratch,
+                            center,
+                            direction,
+                            ctx.options.arrow_length_world,
+                            ctx.options.arrow_width_world,
+                            color,
+                        );
+                    }
+                    ConnectionDirection::Dual => {
+                        // Bidirektionale Verbindungen brauchen keine Pfeile —
+                        // die Richtung ist implizit, die Farbe unterscheidet sie bereits.
+                    }
                 }
             }
-        }
+        } // pos_cache und vertex_scratch borrows enden hier
 
         if self.vertex_scratch.is_empty() {
             return;
@@ -233,14 +279,20 @@ impl ConnectionRenderer {
 
         if self.vertex_buffer.is_none() || self.vertex_scratch.len() > self.vertex_capacity {
             let vertex_size = std::mem::size_of::<ConnectionVertex>() as u64;
-            let buffer_size = (self.vertex_scratch.len() as u64) * vertex_size;
+            // Use next_power_of_two capacity to reduce future reallocations.
+            let new_capacity = self
+                .vertex_scratch
+                .len()
+                .checked_next_power_of_two()
+                .unwrap_or(self.vertex_scratch.len());
+            let buffer_size = (new_capacity as u64) * vertex_size;
             self.vertex_buffer = Some(ctx.device.create_buffer(&wgpu::BufferDescriptor {
                 label: Some("Connection Vertex Buffer"),
                 size: buffer_size,
                 usage: wgpu::BufferUsages::VERTEX | wgpu::BufferUsages::COPY_DST,
                 mapped_at_creation: false,
             }));
-            self.vertex_capacity = self.vertex_scratch.len();
+            self.vertex_capacity = new_capacity;
         }
 
         if let Some(vertex_buffer) = &self.vertex_buffer {

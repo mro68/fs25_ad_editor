@@ -1,7 +1,7 @@
 //! Lifecycle-Methoden des StraightLineTool (RouteTool-Implementierung).
 
 use super::super::common::linear_connections;
-use super::super::{snap_to_node, RouteTool, ToolAction, ToolPreview, ToolResult};
+use super::super::{RouteTool, ToolAction, ToolPreview, ToolResult};
 use super::geometry::{build_result, compute_line_positions};
 use super::state::StraightLineTool;
 use crate::app::segment_registry::{SegmentKind, SegmentRecord};
@@ -30,7 +30,7 @@ impl RouteTool for StraightLineTool {
     }
 
     fn on_click(&mut self, pos: Vec2, road_map: &RoadMap, _ctrl: bool) -> ToolAction {
-        let anchor = snap_to_node(pos, road_map, self.lifecycle.snap_radius);
+        let anchor = self.lifecycle.snap_at(pos, road_map);
 
         if self.start.is_none() {
             // Verkettung: letzten Endpunkt als Start verwenden
@@ -62,17 +62,19 @@ impl RouteTool for StraightLineTool {
             Some(anchor) => anchor.position(),
             None => {
                 // Preview zur aktuellen Mausposition
-                let snapped = snap_to_node(cursor_pos, road_map, self.lifecycle.snap_radius);
+                let snapped = self.lifecycle.snap_at(cursor_pos, road_map);
                 snapped.position()
             }
         };
 
         let positions = compute_line_positions(start_pos, end_pos, self.seg.max_segment_length);
         let connections = linear_connections(positions.len());
+        let styles = vec![(self.direction, self.priority); connections.len()];
 
         ToolPreview {
             nodes: positions,
             connections,
+            connection_styles: styles,
         }
     }
 
