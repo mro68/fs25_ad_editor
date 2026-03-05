@@ -156,7 +156,37 @@ Winkelgeglaettete Route mit automatischen Tangenten-Uebergaengen. Solver-Pipelin
 
 **Phasen:** `Start` → `End` → `ControlNodes` (Enter bestaetigt)
 
+**Lifecycle-Verbesserung (2026-03-05):** Vereinfachte `current_end_anchor()` Logik nach Lifecycle-State-Refactoring — `last_end_anchor` wird nur noch aus dem gemeinsamen `ToolLifecycleState` bezogen (nicht mehr redundant auf dem Tool-Struct).
+
 Modulstruktur: `state.rs`, `lifecycle.rs`, `geometry.rs`, `drag.rs`, `config_ui.rs`, `tests.rs`
+
+### `BypassTool`
+
+Parallele Ausweichstrecke einer selektierten Kette mit S-förmigen An-/Abfahrten. Das Tool benötigt eine Eingabe-Kette (via `load_chain()`), generiert dann automatisch die Bypass-Positionen und erstellt neue Nodes mit entsprechenden Verbindungen.
+
+**Input-Modus:** Chain-basiert (nutzt `RouteToolChainInput` Trait).
+- `needs_chain_input() → true`
+- `load_chain(positions, start_id, end_id)` — Laedt die Kette aus der User-Selektion
+
+**Konfiguration:**
+- `offset: f32` — Seitlicher Versatz in Welteinheiten (positiv = links, negativ = rechts)
+- `base_spacing: f32` — Abstand zwischen Nodes auf der Hauptstrecke
+- `direction: ConnectionDirection` — Richtung fuer die erzeugten Verbindungen
+- `priority: ConnectionPriority` — Prioritaet fuer die erzeugten Verbindungen
+
+**Caching:**
+- `cached_positions` — Gecachte Bypass-Positionen (wird invalidiert bei Config-Aenderung)
+- `cached_connections` — Gecachte Preview-Connections inkl. Start/End-Anker
+
+**Lifecycle-Integration:**
+- Enthaelt gemeinsamen `ToolLifecycleState` fuer Snap-Radius, letzte erstellte Node-IDs, Recreate-Flag
+- Methoden: `set_snap_radius()`, `last_created_ids()`, `last_end_anchor()`, `needs_recreate()`, `clear_recreate_flag()`, `set_last_created()`
+- Nutzt `lifecycle.save_created_ids()` zur Verwaltung erstellter IDs
+
+**Public Exports:**
+- `compute_bypass_positions(chain, offset, base_spacing) → Option<(Vec<Vec2>, f32)>` — Berechnet Bypass-Positionen und Uebergangslaenge (fuer Benchmarks + Tests)
+
+Modulstruktur: `state.rs` (Struct + Config), `lifecycle.rs` (RouteTool-Impl + Lifecycle-Delegation), `config_ui.rs` (egui-Panel), `geometry.rs` (Bypass-Mathe), `tests.rs` (15 Unit-Tests)
 
 ---
 

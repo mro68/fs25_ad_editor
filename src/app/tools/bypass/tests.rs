@@ -55,8 +55,8 @@ fn test_compute_bypass_offset_null() {
 fn test_compute_bypass_node_count_skaliert_mit_spacing() {
     let chain: Vec<Vec2> = (0..10).map(|i| Vec2::new(i as f32 * 10.0, 0.0)).collect();
 
-    let (pos_fine, _) = compute_bypass_positions(&chain, 5.0, 3.0)
-        .expect("Feines Spacing sollte Ergebnis liefern");
+    let (pos_fine, _) =
+        compute_bypass_positions(&chain, 5.0, 3.0).expect("Feines Spacing sollte Ergebnis liefern");
     let (pos_coarse, _) = compute_bypass_positions(&chain, 5.0, 10.0)
         .expect("Grobes Spacing sollte Ergebnis liefern");
 
@@ -135,9 +135,15 @@ fn test_reset_leert_alle_felder() {
 
     assert!(!tool.has_pending_input(), "Kein Input nach reset()");
     assert!(!tool.is_ready(), "Nicht bereit nach reset()");
-    assert!(tool.chain_positions.is_empty(), "chain_positions muss leer sein");
+    assert!(
+        tool.chain_positions.is_empty(),
+        "chain_positions muss leer sein"
+    );
     assert!(tool.cached_positions.is_none(), "Cache muss ungueltig sein");
-    assert!(tool.cached_connections.is_none(), "Connection-Cache muss ungueltig sein");
+    assert!(
+        tool.cached_connections.is_none(),
+        "Connection-Cache muss ungueltig sein"
+    );
     assert_eq!(tool.d_blend, 0.0, "d_blend muss 0 sein");
 }
 
@@ -151,8 +157,14 @@ fn test_load_chain_invalidiert_cache() {
 
     tool.load_chain(vec![Vec2::ZERO, Vec2::new(15.0, 0.0)], 1, 2);
 
-    assert!(tool.cached_positions.is_none(), "Cache nach load_chain ungueltig");
-    assert!(tool.cached_connections.is_none(), "Connection-Cache nach load_chain ungueltig");
+    assert!(
+        tool.cached_positions.is_none(),
+        "Cache nach load_chain ungueltig"
+    );
+    assert!(
+        tool.cached_connections.is_none(),
+        "Connection-Cache nach load_chain ungueltig"
+    );
 }
 
 /// execute() ohne geladene Kette liefert None.
@@ -180,7 +192,10 @@ fn test_snap_radius_bleibt_nach_reset() {
     tool.set_snap_radius(5.0);
     tool.load_chain(vec![Vec2::ZERO, Vec2::new(10.0, 0.0)], 1, 2);
     tool.reset();
-    assert_eq!(tool.lifecycle.snap_radius, 5.0, "Snap-Radius muss reset() ueberleben");
+    assert_eq!(
+        tool.lifecycle.snap_radius, 5.0,
+        "Snap-Radius muss reset() ueberleben"
+    );
 }
 
 /// set_last_created() speichert Node-IDs.

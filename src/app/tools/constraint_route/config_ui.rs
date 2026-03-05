@@ -99,11 +99,7 @@ impl ConstraintRouteTool {
 
         let length = if adjusting {
             let start = self.last_start_anchor.unwrap().position();
-            let end = self
-                .lifecycle
-                .last_end_anchor
-                .unwrap()
-                .position();
+            let end = self.lifecycle.last_end_anchor.unwrap().position();
             start.distance(end)
         } else {
             self.total_distance()

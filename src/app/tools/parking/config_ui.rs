@@ -5,7 +5,11 @@ use super::state::{ParkingPhase, ParkingTool, RampSide};
 impl ParkingTool {
     /// Rendert die Parkplatz-Konfiguration im Properties-Panel.
     /// Gibt `true` zurueck wenn sich ein Wert geaendert hat.
-    pub(super) fn render_config_view(&mut self, ui: &mut egui::Ui, _distance_wheel_step_m: f32) -> bool {
+    pub(super) fn render_config_view(
+        &mut self,
+        ui: &mut egui::Ui,
+        _distance_wheel_step_m: f32,
+    ) -> bool {
         let mut changed = false;
 
         ui.label("Parkplatz-Konfiguration");
