@@ -18,6 +18,8 @@ pub mod menu;
 pub mod options_dialog;
 /// Properties-Panel fuer selektierte Nodes und Verbindungen.
 pub mod properties;
+/// Segment-Overlay: Rahmen und Lock-Icons fuer registrierte Segmente.
+pub mod segment_overlay;
 /// Statusleiste mit Anzeige des aktuellen Editor-Zustands.
 pub mod status;
 /// Live-Vorschau aktiver Werkzeuge im Viewport (Overlay-Rendering).
@@ -36,6 +38,7 @@ pub use input::InputState;
 pub use menu::render_menu;
 pub use options_dialog::show_options_dialog;
 pub use properties::render_properties_panel;
+pub use segment_overlay::{render_segment_overlays, SegmentOverlayEvent};
 pub use status::render_status_bar;
 pub use tool_preview::{
     paint_clipboard_preview, paint_preview, paint_preview_polyline, render_tool_preview,

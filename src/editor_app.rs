@@ -381,6 +381,41 @@ impl EditorApp {
             );
         }
 
+        // ── Segment-Overlay ──────────────────
+        if let Some(rm) = self.state.road_map.as_deref() {
+            if !self.state.segment_registry.is_empty() {
+                let vp = glam::Vec2::new(viewport_size[0], viewport_size[1]);
+                // Klick nur weiterreichen wenn der Response einen Klick registriert hat
+                let clicked_pos = if response.clicked() {
+                    ui.ctx().input(|i| i.pointer.interact_pos())
+                } else {
+                    None
+                };
+                let painter = ui.painter_at(rect);
+                let overlay_events = ui::render_segment_overlays(
+                    &painter,
+                    rect,
+                    &self.state.view.camera,
+                    vp,
+                    &self.state.segment_registry,
+                    rm,
+                    clicked_pos,
+                );
+                for ev in overlay_events {
+                    match ev {
+                        ui::SegmentOverlayEvent::LockToggled { segment_id } => {
+                            self.controller
+                                .handle_intent(
+                                    &mut self.state,
+                                    AppIntent::ToggleSegmentLockRequested { segment_id },
+                                )
+                                .ok();
+                        }
+                    }
+                }
+            }
+        }
+
         if self.state.road_map.is_none() {
             ui.painter().text(
                 rect.center(),

@@ -301,6 +301,11 @@ pub fn map_intent_to_commands(state: &AppState, intent: AppIntent) -> Vec<AppCom
         }
         AppIntent::PasteConfirmRequested => vec![AppCommand::ConfirmPaste],
         AppIntent::PasteCancelled => vec![AppCommand::CancelPastePreview],
+
+        // ── Segment-Lock ──────────────────────────────────────────────────
+        AppIntent::ToggleSegmentLockRequested { segment_id } => {
+            vec![AppCommand::ToggleSegmentLock { segment_id }]
+        }
     }
 }
 
