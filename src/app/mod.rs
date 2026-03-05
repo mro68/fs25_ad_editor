@@ -25,7 +25,7 @@ pub use command_log::CommandLog;
 pub use controller::AppController;
 pub use events::{AppCommand, AppIntent};
 pub use render_scene::build as build_render_scene;
-pub use segment_registry::{SegmentKind, SegmentRecord, SegmentRegistry};
+pub use segment_registry::{SegmentBase, SegmentKind, SegmentRecord, SegmentRegistry};
 pub use state::{
     AppState, Clipboard, EditorTool, EditorToolState, PostLoadDialogState, SelectionState, UiState,
     ViewState,

@@ -26,6 +26,9 @@ Das `ui`-Modul enthält egui-UI-Komponenten (Menüs, Statusbar, Input-Handling, 
     - `commands/preconditions.rs` — Precondition-Enum und is_valid()-Logik
     - `commands/tests.rs` — Unit-Tests für Kataloge, Preconditions und Intent-Mapping
     - `mod.rs` — MenuVariant (`EmptyArea`, `NodeFocused`, `SelectionOnly`, `RouteTool`), `determine_menu_variant()`, `render_context_menu()`
+    - `icons.rs` — `command_icon()`, Farbhilfs-Funktionen (pub(super))
+    - `render.rs` — `render_validated_entries()` und weitere Rendern-Helfer (pub(super))
+    - `tangent_ui.rs` — `render_tangent_selection()`, `render_node_info_submenu()` (pub(super))
 - `dialogs/` — Datei-Dialoge und modale Fenster
   - `file_dialogs.rs` — Open/Save-Dateidialoge
   - `heightmap_warning.rs` — Heightmap-Warnung vor dem Speichern
