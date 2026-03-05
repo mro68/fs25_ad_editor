@@ -57,9 +57,7 @@ fn execute_and_apply(state: &mut AppState) {
                 record.original_positions = record
                     .node_ids
                     .iter()
-                    .filter_map(|id| {
-                        state.road_map.as_ref()?.nodes.get(id).map(|n| n.position)
-                    })
+                    .filter_map(|id| state.road_map.as_ref()?.nodes.get(id).map(|n| n.position))
                     .collect();
                 state.segment_registry.register(record);
             }

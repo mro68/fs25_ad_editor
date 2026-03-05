@@ -203,6 +203,37 @@ let intents = input.collect_viewport_events(
   - Mittel/Rechts-Drag → Kamera-Pan
 
 - **`context_menu`:** Rechtsklick-Kontextmenü mit validiertem Command-System (CommandId + Preconditions → nur gültige Einträge). SVG-Icons werden aus `assets/` gerendert und über `EditorOptions` sowie die aktuell gewählte Standard-Richtung/-Priorität eingefärbt. Streckenteilung-Widget wird nur angezeigt wenn `RoadMap::is_resampleable_chain()` für die aktuelle Selektion `true` liefert (zusammenhängende Kette, Kreuzungen nur an Endpunkten).
+  - **Segment-Integration:** `segment_registry` wird zur Validierung herangezogen. Wenn alle selektierten Nodes zu einem einzigen validen Segment gehören → `EditSegment` Command verfügbar.
+
+---
+
+### `render_context_menu`
+
+Rendert das Kontextmenü für einen Viewport-Rechtsklick. Enthaelt validierte Command-Kataloge und Intent-Generierung.
+
+```rust
+pub fn render_context_menu(
+    response: &egui::Response,
+    road_map: Option<&RoadMap>,
+    selected_node_ids: &IndexSet<u64>,
+    distanzen_active: bool,
+    clipboard_has_data: bool,
+    options: &EditorOptions,
+    default_direction: ConnectionDirection,
+    default_priority: ConnectionPriority,
+    variant: &MenuVariant,
+    segment_registry: Option<&SegmentRegistry>,
+    events: &mut Vec<AppIntent>,
+) -> bool
+```
+
+Alle Commands werden durch ein Precondition-System gefiltert: Nur Commands deren Bedingungen erfuellt sind werden angezeigt.
+
+**Segment-Integration:**
+- `segment_registry` wird zur Validierung herangezogen
+- Prueft ob alle selektierten Nodes zu einem einzigen validen Segment gehoeren
+- Wenn ja → `EditSegment` Command verfuegbar im Katalog
+- Segment-Validierung: Nodes existieren und Originalpositionen unveraendert
 
 **Unterstützte Interaktionen (gesamt):**
 - **Linksklick:** Node-Pick (mit Shift: additiv + Pfad-Erweiterung)

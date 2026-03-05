@@ -289,6 +289,64 @@ pub enum SegmentKind {
 
 ---
 
+### `SegmentRecord`
+
+Gespeicherte Segment-Parametrisierung fuer nachtraegliche Bearbeitung.
+
+```rust
+pub struct SegmentRecord {
+    /// Eindeutige Registry-ID
+    pub id: u64,
+    /// IDs aller neu erstellten Nodes
+    pub node_ids: Vec<u64>,
+    /// Start-Anker (ExistingNode oder NewPosition)
+    pub start_anchor: ToolAnchor,
+    /// End-Anker (ExistingNode oder NewPosition)
+    pub end_anchor: ToolAnchor,
+    /// Tool-spezifische Parameter
+    pub kind: SegmentKind,
+    /// Original-Positionen der Nodes zum Zeitpunkt der Erstellung
+    pub original_positions: Vec<Vec2>,
+}
+```
+
+---
+
+### `SegmentRegistry`
+
+In-Session-Registry aller erstellten Segmente — ermoeglicht nachtraegliches Editieren von Segmenten durch Speicherung der Tool-Parameter und Validitaetspruefung.
+
+**Merkmale:**
+- Nicht persistent: Wird beim Laden einer Datei geleert
+- Segment-Validierung: Prueft ob alle Nodes noch existieren und Positionen unveraendert sind
+- Segment-Selektion: Erlaubt Klick auf Segment-Node → Selektion aller Segment-Nodes
+
+**Methoden:**
+
+```rust
+pub fn register(&mut self, record: SegmentRecord) -> u64 // Registriert neu erstelltes Segment
+pub fn get(&self, record_id: u64) -> Option<&SegmentRecord> // Findet Record nach ID
+pub fn remove(&mut self, record_id: u64) // Loescht Record
+pub fn find_by_node_ids(&self, node_ids: &IndexSet<u64>) -> Vec<&SegmentRecord> // Alle Records mit mind. einer Node-ID
+pub fn find_first_by_node_id(&self, node_id: u64) -> Option<&SegmentRecord> // Erstes Record mit dieser Node
+pub fn is_segment_valid(&self, record: &SegmentRecord, road_map: &RoadMap) -> bool // Validitaetsprüfung
+```
+
+**Beispiel:**
+
+```rust
+// Klick auf Segment-Node → Auto-Selektion aller Nodes
+if let Some(record) = segment_registry.find_first_by_node_id(clicked_node_id) {
+    if segment_registry.is_segment_valid(record, &road_map) {
+        for id in &record.node_ids {
+            selection.insert(*id);
+        }
+    }
+}
+```
+
+---
+
 ### `AppIntent` und `AppCommand`
 
 `AppIntent` beschreibt Eingaben aus UI/System. `AppCommand` beschreibt mutierende Schritte am State.
@@ -590,7 +648,7 @@ pub enum AppCommand {
 
 Alle Use-Case-Funktionen sind in [`use_cases/API.md`](use_cases/API.md) dokumentiert.
 
-Module: `camera` · `file_io` · `heightmap` · `selection` · `auto_detect` · `editing` (inkl. `markers`, `resample_path`, `generate_bypass`, `copy_paste`) · `viewport` · `background_map` · `SegmentRegistry`
+Module: `camera` · `file_io` · `heightmap` · `selection` · `auto_detect` · `editing` (inkl. `markers`, `resample_path`, `generate_bypass`, `copy_paste`) · `viewport` · `background_map`
 
 ---
 

@@ -48,6 +48,44 @@ pub fn dismiss_save_overview_dialog(state: &mut AppState)
 ```
 Schliesst verschiedene Dialog-Boxen und räumt deren State auf.
 
+---
+
+### `route_tool` — Route-Tool-Operationen (Linie, Kurve, Spline)
+
+Handelt Viewport-Interaktionen und Ausfuehrung von Route-Tools.
+
+**Funktionen:**
+
+```rust
+pub fn click(state: &mut AppState, world_pos: glam::Vec2, ctrl: bool)
+```
+Verarbeitet einen Viewport-Klick im aktiven Route-Tool. Wenn das Tool `ToolAction::ReadyToExecute` zurueckgibt, wird sofort `execute_and_apply()` aufgerufen.
+
+```rust
+pub fn execute(state: &mut AppState)
+```
+Fuehrt das aktive Route-Tool aus (Enter-Bestaetigung). Erstellt Nodes + Connections, speichert Undo-Snapshot und registriert Segment-Record fuer nachtraegliche Bearbeitung.
+
+**Segment-Registry-Integration:**
+- Nach Tool-Ausfuehrung werden die `original_positions` aus der RoadMap gesammelt
+- Segment-Record wird mit allen Tool-Parametern registriert
+- Ermoeglicht spaeteres Editieren: `EditSegment { record_id }` laedt das Tool mit gespeicherten Parametern neu
+
+```rust
+pub fn cancel(state: &mut AppState)
+```
+Bricht das aktive Route-Tool ab (Escape).
+
+```rust
+pub fn select(state: &mut AppState, index: usize)
+```
+Aktiviert ein Route-Tool per Index. Initialisiert Tool-Parameter (Richtung, Prioritaet, Snap-Radius) aus EditorToolState und laedt optional eine vorhandene Selektion als Kette (fuer Chain-basierte Tools wie BypassTool).
+
+```rust
+pub fn select_with_anchors(state: &mut AppState, tool_index: usize, node_id_1: u64, node_id_2: u64)
+```
+Aktiviert Tool und setzt Start/End-Anker aus zwei selektierten Nodes. Simuliert zwei `on_click()`-Aufrufe; bei StraightLine => sofortige Ausfuehrung, bei Curves => Phase::Control fuer Steuerpunkt-Platzierung.
+
 ```rust
 pub fn open_options_dialog(state: &mut AppState)
 pub fn close_options_dialog(state: &mut AppState)
