@@ -6,12 +6,15 @@ use crate::app::{AppIntent, ConnectionDirection, ConnectionPriority, EditorTool}
 use indexmap::IndexSet;
 
 /// Verarbeitet Keyboard-Shortcuts und gibt AppIntents zurueck.
+///
+/// `clipboard_has_data`: true wenn die Zwischenablage Nodes enthaelt (fuer Ctrl+V).
 pub(super) fn collect_keyboard_intents(
     ui: &egui::Ui,
     selected_node_ids: &IndexSet<u64>,
     active_tool: EditorTool,
     route_tool_is_drawing: bool,
     distanzen_active: bool,
+    clipboard_has_data: bool,
 ) -> Vec<AppIntent> {
     let mut events = Vec::new();
 
@@ -78,6 +81,7 @@ pub(super) fn collect_keyboard_intents(
         key_2_pressed,
         key_3_pressed,
         key_c_pressed,
+        key_v_pressed,
         key_x_pressed,
         key_enter_pressed,
         key_up_pressed,
@@ -91,6 +95,7 @@ pub(super) fn collect_keyboard_intents(
             i.key_pressed(egui::Key::Num2),
             i.key_pressed(egui::Key::Num3),
             i.key_pressed(egui::Key::C),
+            i.key_pressed(egui::Key::V),
             i.key_pressed(egui::Key::X),
             i.key_pressed(egui::Key::Enter),
             i.key_pressed(egui::Key::ArrowUp),
@@ -135,6 +140,16 @@ pub(super) fn collect_keyboard_intents(
             direction: ConnectionDirection::Regular,
             priority: ConnectionPriority::Regular,
         });
+    }
+
+    // Ctrl+C: Selektion kopieren
+    if modifiers.command && key_c_pressed && !selected_node_ids.is_empty() {
+        events.push(AppIntent::CopySelectionRequested);
+    }
+
+    // Ctrl+V: Paste-Vorschau starten
+    if modifiers.command && key_v_pressed && clipboard_has_data {
+        events.push(AppIntent::PasteStartRequested);
     }
 
     // X = Trennen (bei genau 2 selektierten Nodes)

@@ -225,6 +225,7 @@ pub fn render_context_menu(
     road_map: Option<&RoadMap>,
     selected_node_ids: &IndexSet<u64>,
     distanzen_active: bool,
+    clipboard_has_data: bool,
     options: &EditorOptions,
     default_direction: ConnectionDirection,
     default_priority: ConnectionPriority,
@@ -240,6 +241,7 @@ pub fn render_context_menu(
                 road_map: rm,
                 selected_node_ids,
                 distanzen_active,
+                clipboard_has_data,
             };
 
             match variant {

@@ -6,6 +6,7 @@
 pub mod dialog;
 pub mod editing;
 pub mod file_io;
+pub mod helpers;
 pub mod history;
 pub mod route_tool;
 pub mod selection;

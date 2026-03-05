@@ -72,6 +72,13 @@
   - [x] Checkbox „Nach Loeschen verbinden": Vorgaenger/Nachfolger eines geloeschten Nodes direkt verbinden
   - [x] Checkbox „Verbindung beim Platzieren teilen": neuer Node splittet naechste Verbindung
   - [x] **Distanzen**: selektierte Nodes-Kette per Catmull-Rom-Spline gleichmaessig neu verteilen (Nach Abstand / Nach Anzahl)
+  - [x] **Copy/Paste:** Selektierte Nodes + Verbindungen in Zwischenablage kopieren und mit Paste-Vorschau (einstellbare Opacity) einfuegen
+    - [x] Vollstaendiger Intent-Flow: `CopySelectionRequested` → `PasteStartRequested` → `PastePreviewMoved` → `PasteConfirmRequested` / `PasteCancelled`
+    - [x] Paste-Vorschau-Overlay im Viewport (semi-transparente Preview-Nodes)
+    - [x] Konfigurierbares Opacity-Slider im Options-Dialog (`copy_preview_opacity`)
+    - [x] Integration in Hauptmenue (Edit → Kopieren/Einfuegen) und Kontextmenue
+    - [x] Keyboard-Shortcuts (Ctrl+C / Ctrl+V)
+    - [x] Clipboard bleibt nach Paste erhalten (Mehrfach-Paste moeglich)
 
 ## Phase 5: Advanced Features
 - [x] DDS-Import fuer Map-Hintergruende

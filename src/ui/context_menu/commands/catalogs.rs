@@ -194,6 +194,18 @@ impl MenuCatalog {
             label: "🗑 Loeschen".into(),
             preconditions: vec![],
         });
+        // ── Copy/Paste ────────────────────────────────────────
+        entries.push(MenuEntry::Separator);
+        entries.push(MenuEntry::Command {
+            id: CommandId::CopySelection,
+            label: "📋 Kopieren".into(),
+            preconditions: vec![Precondition::HasSelection],
+        });
+        entries.push(MenuEntry::Command {
+            id: CommandId::PasteHere,
+            label: "📋 Einfuegen".into(),
+            preconditions: vec![Precondition::ClipboardHasData],
+        });
         MenuCatalog { entries }
     }
 
@@ -244,6 +256,19 @@ impl MenuCatalog {
 
         // ── Selektions-Befehle (unterer Bereich) ─────────────────
         entries.extend(Self::selection_entries());
+
+        // ── Copy/Paste ────────────────────────────────────────────
+        entries.push(MenuEntry::Separator);
+        entries.push(MenuEntry::Command {
+            id: CommandId::CopySelection,
+            label: "📋 Kopieren".into(),
+            preconditions: vec![Precondition::HasSelection],
+        });
+        entries.push(MenuEntry::Command {
+            id: CommandId::PasteHere,
+            label: "📋 Einfuegen".into(),
+            preconditions: vec![Precondition::ClipboardHasData],
+        });
 
         MenuCatalog { entries }
     }

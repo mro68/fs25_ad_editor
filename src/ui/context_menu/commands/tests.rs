@@ -64,6 +64,7 @@ fn precondition_node_exists() {
         road_map: &map,
         selected_node_ids: &selected,
         distanzen_active: false,
+        clipboard_has_data: false,
     };
 
     assert!(Precondition::NodeExists(1).is_valid(&ctx));
@@ -79,6 +80,7 @@ fn precondition_has_marker() {
         road_map: &map,
         selected_node_ids: &selected,
         distanzen_active: false,
+        clipboard_has_data: false,
     };
 
     assert!(Precondition::HasMarker(1).is_valid(&ctx));
@@ -98,16 +100,19 @@ fn precondition_exactly_two_selected() {
         road_map: &map,
         selected_node_ids: &two,
         distanzen_active: false,
+        clipboard_has_data: false,
     };
     let ctx3 = PreconditionContext {
         road_map: &map,
         selected_node_ids: &three,
         distanzen_active: false,
+        clipboard_has_data: false,
     };
     let ctx1 = PreconditionContext {
         road_map: &map,
         selected_node_ids: &one,
         distanzen_active: false,
+        clipboard_has_data: false,
     };
 
     assert!(Precondition::ExactlyTwoSelected.is_valid(&ctx2));
@@ -125,11 +130,13 @@ fn precondition_two_selected_unconnected() {
         road_map: &map_unconnected,
         selected_node_ids: &selected,
         distanzen_active: false,
+        clipboard_has_data: false,
     };
     let ctx_connected = PreconditionContext {
         road_map: &map_connected,
         selected_node_ids: &selected,
         distanzen_active: false,
+        clipboard_has_data: false,
     };
 
     assert!(Precondition::TwoSelectedUnconnected.is_valid(&ctx_unconnected));
@@ -146,11 +153,13 @@ fn precondition_has_connections_between_selected() {
         road_map: &map_connected,
         selected_node_ids: &selected,
         distanzen_active: false,
+        clipboard_has_data: false,
     };
     let ctx_no = PreconditionContext {
         road_map: &map_unconnected,
         selected_node_ids: &selected,
         distanzen_active: false,
+        clipboard_has_data: false,
     };
 
     assert!(Precondition::HasConnectionsBetweenSelected.is_valid(&ctx_yes));
@@ -166,11 +175,13 @@ fn precondition_streckenteilung_active() {
         road_map: &map,
         selected_node_ids: &selected,
         distanzen_active: true,
+        clipboard_has_data: false,
     };
     let ctx_inactive = PreconditionContext {
         road_map: &map,
         selected_node_ids: &selected,
         distanzen_active: false,
+        clipboard_has_data: false,
     };
 
     assert!(Precondition::StreckenteilungActive(true).is_valid(&ctx_active));
@@ -190,6 +201,7 @@ fn catalog_empty_area_shows_tools() {
         road_map: &map,
         selected_node_ids: &selected,
         distanzen_active: false,
+        clipboard_has_data: false,
     };
     let intent_ctx = IntentContext {
         node_id: None,
@@ -238,6 +250,7 @@ fn catalog_node_focused_shows_marker_create() {
         road_map: &map,
         selected_node_ids: &selected,
         distanzen_active: false,
+        clipboard_has_data: false,
     };
     let intent_ctx = IntentContext {
         node_id: Some(42),
@@ -268,6 +281,7 @@ fn catalog_node_focused_shows_marker_edit_when_marker_exists() {
         road_map: &map,
         selected_node_ids: &selected,
         distanzen_active: false,
+        clipboard_has_data: false,
     };
     let intent_ctx = IntentContext {
         node_id: Some(42),
@@ -291,6 +305,7 @@ fn catalog_node_focused_shows_delete_and_duplicate() {
         road_map: &map,
         selected_node_ids: &selected,
         distanzen_active: false,
+        clipboard_has_data: false,
     };
     let intent_ctx = IntentContext {
         node_id: Some(10),
@@ -312,6 +327,7 @@ fn catalog_multi_nodes_connect_only_when_two_unconnected() {
         road_map: &map_unconnected,
         selected_node_ids: &selected,
         distanzen_active: false,
+        clipboard_has_data: false,
     };
     let intent_ctx = IntentContext {
         node_id: None,
@@ -328,6 +344,7 @@ fn catalog_multi_nodes_connect_only_when_two_unconnected() {
         road_map: &map_connected,
         selected_node_ids: &selected,
         distanzen_active: false,
+        clipboard_has_data: false,
     };
     let entries_connected = validate_entries(&catalog, &ctx_connected, &intent_ctx);
     assert!(!has_command(&entries_connected, CommandId::ConnectTwoNodes));
@@ -341,6 +358,7 @@ fn catalog_multi_nodes_direction_only_when_connected() {
         road_map: &map,
         selected_node_ids: &selected,
         distanzen_active: false,
+        clipboard_has_data: false,
     };
     let intent_ctx = IntentContext {
         node_id: None,
@@ -359,6 +377,7 @@ fn catalog_multi_nodes_direction_only_when_connected() {
         road_map: &map_connected,
         selected_node_ids: &selected,
         distanzen_active: false,
+        clipboard_has_data: false,
     };
     let entries_connected = validate_entries(&catalog, &ctx_connected, &intent_ctx);
 
@@ -374,6 +393,7 @@ fn catalog_multi_nodes_route_tools_only_when_two_selected() {
         road_map: &map,
         selected_node_ids: &selected,
         distanzen_active: false,
+        clipboard_has_data: false,
     };
     let intent_ctx = IntentContext {
         node_id: None,
@@ -419,6 +439,7 @@ fn catalog_multi_nodes_selection_commands_always_visible() {
         road_map: &map,
         selected_node_ids: &selected,
         distanzen_active: false,
+        clipboard_has_data: false,
     };
     let intent_ctx = IntentContext {
         node_id: None,
@@ -440,6 +461,7 @@ fn catalog_route_tool_basic_commands() {
         road_map: &map,
         selected_node_ids: &selected,
         distanzen_active: false,
+        clipboard_has_data: false,
     };
     let intent_ctx = IntentContext {
         node_id: None,
@@ -550,6 +572,7 @@ fn deleted_node_hides_all_commands() {
         road_map: &map,
         selected_node_ids: &selected,
         distanzen_active: false,
+        clipboard_has_data: false,
     };
     let intent_ctx = IntentContext {
         node_id: Some(99),

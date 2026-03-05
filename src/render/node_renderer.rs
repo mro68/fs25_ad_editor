@@ -143,8 +143,9 @@ impl NodeRenderer {
             bind_group,
             instance_buffer: None,
             instance_capacity: 0,
-            instance_scratch: Vec::new(),
-            node_id_scratch: Vec::new(),
+            // Reserve initial capacity to avoid tiny growths on first frames.
+            instance_scratch: Vec::with_capacity(1024),
+            node_id_scratch: Vec::with_capacity(1024),
         }
     }
 
@@ -175,8 +176,18 @@ impl NodeRenderer {
 
         // Instanzen aus RoadMap sammeln (Scratch-Buffer wiederverwenden)
         self.instance_scratch.clear();
+        // node_id_scratch wird vom Spatial-Query befuellt; vorher leeren.
+        self.node_id_scratch.clear();
 
         road_map.nodes_within_rect_into(min, max, &mut self.node_id_scratch);
+
+        // Reserve Platz fuer Instanzen entsprechend der Anzahl gefundener IDs,
+        // um mehrfache Reallocs beim Push zu vermeiden.
+        self.instance_scratch.reserve(
+            self.node_id_scratch
+                .len()
+                .saturating_sub(self.instance_scratch.len()),
+        );
 
         for node_id in self.node_id_scratch.iter() {
             if ctx.hidden_node_ids.contains(node_id) {
@@ -248,14 +259,19 @@ impl NodeRenderer {
         // Instance-Buffer erstellen/aktualisieren (Reuse)
         if self.instance_buffer.is_none() || self.instance_scratch.len() > self.instance_capacity {
             let instance_size = std::mem::size_of::<NodeInstance>() as u64;
-            let buffer_size = (self.instance_scratch.len() as u64) * instance_size;
+            let new_capacity = self
+                .instance_scratch
+                .len()
+                .checked_next_power_of_two()
+                .unwrap_or(self.instance_scratch.len());
+            let buffer_size = (new_capacity as u64) * instance_size;
             self.instance_buffer = Some(ctx.device.create_buffer(&wgpu::BufferDescriptor {
                 label: Some("Instance Buffer"),
                 size: buffer_size,
                 usage: wgpu::BufferUsages::VERTEX | wgpu::BufferUsages::COPY_DST,
                 mapped_at_creation: false,
             }));
-            self.instance_capacity = self.instance_scratch.len();
+            self.instance_capacity = new_capacity;
         }
 
         if let Some(instance_buffer) = &self.instance_buffer {

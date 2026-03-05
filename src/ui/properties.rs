@@ -1,4 +1,4 @@
-//! Properties-Panel (rechte Seitenleiste) fuer Node- und Connection-Eigenschaften.
+//! Properties-Panel (rechte Seitenleiste) für Node- und Connection-Eigenschaften.
 
 mod distances;
 pub(crate) mod selectors;
@@ -10,12 +10,9 @@ use crate::app::{
     ConnectionDirection, ConnectionPriority, EditorTool, RoadMap,
 };
 use distances::render_distance_panel;
-use selectors::{
-    render_default_direction_selector, render_direction_icon_selector,
-    render_priority_icon_selector,
-};
+use selectors::{render_direction_icon_selector, render_priority_icon_selector};
 
-/// Rendert das Properties-Panel und gibt erzeugte Events zurueck.
+/// Rendert das Properties-Panel und gibt erzeugte Events zurück.
 #[allow(clippy::too_many_arguments)]
 pub fn render_properties_panel(
     ctx: &egui::Context,
@@ -69,9 +66,6 @@ pub fn render_properties_panel(
                 // Selektion verloren → Vorschau deaktivieren
                 distance_state.deactivate();
             }
-
-            ui.separator();
-            render_default_direction_selector(ui, default_direction, default_priority, &mut events);
 
             // Route-Tool-Konfiguration (Distanz/Anzahl-Slider wenn Tool aktiv)
             if active_tool == EditorTool::Route {
@@ -138,10 +132,10 @@ fn render_single_node_info(
         ui.label(format!("Name: {}", marker.name));
         ui.label(format!("Gruppe: {}", marker.group));
 
-        if ui.small_button("✏ Marker aendern").clicked() {
+        if ui.small_button("✏ Marker ändern").clicked() {
             events.push(AppIntent::EditMarkerRequested { node_id });
         }
-        if ui.small_button("✕ Marker loeschen").clicked() {
+        if ui.small_button("✕ Marker löschen").clicked() {
             events.push(AppIntent::RemoveMarkerRequested { node_id });
         }
     } else if ui.button("🗺 Marker erstellen").clicked() {
@@ -149,7 +143,7 @@ fn render_single_node_info(
     }
 }
 
-/// Zeigt Zwei-Node-Info: Verbindungen, Richtungs-/Prioritaetsauswahl, Verbinden/Trennen.
+/// Zeigt Zwei-Node-Info: Verbindungen, Richtungs-/Prioritätsauswahl, Verbinden/Trennen.
 fn render_two_nodes_info(
     ui: &mut egui::Ui,
     road_map: &RoadMap,
@@ -185,7 +179,7 @@ fn render_two_nodes_info(
     }
 }
 
-/// Zeigt Editor-Controls fuer eine einzelne Verbindung (Richtung, Prioritaet, Trennen).
+/// Zeigt Editor-Controls für eine einzelne Verbindung (Richtung, Priorität, Trennen).
 fn render_connection_editor(ui: &mut egui::Ui, conn: &Connection, events: &mut Vec<AppIntent>) {
     ui.group(|ui| {
         ui.label(format!("{}→{}", conn.start_id, conn.end_id));
