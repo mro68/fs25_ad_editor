@@ -95,13 +95,13 @@ impl ConstraintRouteTool {
         // da der Solver die Verteilung kruemmungsadaptiv bestimmt)
         let adjusting = !self.lifecycle.last_created_ids.is_empty()
             && self.last_start_anchor.is_some()
-            && (self.last_end_anchor.is_some() || self.lifecycle.last_end_anchor.is_some());
+            && self.lifecycle.last_end_anchor.is_some();
 
         let length = if adjusting {
             let start = self.last_start_anchor.unwrap().position();
             let end = self
+                .lifecycle
                 .last_end_anchor
-                .or(self.lifecycle.last_end_anchor)
                 .unwrap()
                 .position();
             start.distance(end)
