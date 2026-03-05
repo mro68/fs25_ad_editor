@@ -63,8 +63,7 @@ impl RouteTool for SplineTool {
             return ToolPreview::default();
         }
 
-        let snapped_cursor =
-            self.lifecycle.snap_at(cursor_pos, road_map).position();
+        let snapped_cursor = self.lifecycle.snap_at(cursor_pos, road_map).position();
 
         let positions = if self.anchors.len() == 1 {
             // Nur Start + Cursor → gerade Linie (Preview)

@@ -265,8 +265,13 @@ pub fn paint_clipboard_preview(
     // Positions-Lookup fuer Verbindungen — linearer Scan statt HashMap-Allokation,
     // da Clipboard-Inhalte typischerweise klein sind (< 1000 Nodes).
     for conn in &clipboard.connections {
-        let find_pos =
-            |id: u64| clipboard.nodes.iter().find(|n| n.id == id).map(|n| n.position + offset);
+        let find_pos = |id: u64| {
+            clipboard
+                .nodes
+                .iter()
+                .find(|n| n.id == id)
+                .map(|n| n.position + offset)
+        };
         let Some(start_pos) = find_pos(conn.start_id) else {
             continue;
         };
