@@ -246,6 +246,8 @@ fn render_segment_edit_buttons(
             crate::app::segment_registry::SegmentKind::ConstraintRoute { .. } => {
                 "✏ Constraint-Route"
             }
+            crate::app::segment_registry::SegmentKind::Bypass { .. } => "✏ Ausweichstrecke",
+            crate::app::segment_registry::SegmentKind::Parking { .. } => "✏ Parkplatz",
         };
         if ui.button(label).clicked() {
             events.push(AppIntent::EditSegmentRequested {

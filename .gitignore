@@ -26,3 +26,5 @@ scripts/README.md
 **/*_PLAN.*
 assets/**/
 .zram.sh
+memories
+.vscode/tasks.json

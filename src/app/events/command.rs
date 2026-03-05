@@ -208,6 +208,8 @@ pub enum AppCommand {
     RouteToolDragUpdate { world_pos: glam::Vec2 },
     /// Route-Tool: Drag beenden
     RouteToolDragEnd,
+    /// Route-Tool: Scroll-Rotation anwenden
+    RouteToolRotate { delta: f32 },
     /// Segment nachtraeglich bearbeiten
     EditSegment { record_id: u64 },
     /// ZIP-Archiv oeffnen und Bilddateien im Browser anzeigen

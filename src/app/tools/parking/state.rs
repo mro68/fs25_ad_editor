@@ -16,10 +16,12 @@ pub enum RampSide {
 /// Interaktionsphasen des ParkingTool.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum ParkingPhase {
-    /// Ursprung noch nicht gesetzt — Cursor bestimmt Vorschauposition.
+    /// Vorschau folgt dem Cursor; Alt+Scroll dreht; Klick → Configuring.
     Idle,
-    /// Ursprung gesetzt — Cursor-Winkel bestimmt Rotation.
-    Placed,
+    /// Position+Rotation fixiert; Config-Panel aktiv; Bestätigen/Abbrechen.
+    Configuring,
+    /// Repositionierung: Vorschau folgt Cursor wieder; Klick → zurück zu Configuring.
+    Adjusting,
 }
 
 /// Konfiguration fuer ein Parkplatz-Layout.
@@ -64,12 +66,10 @@ impl Default for ParkingConfig {
 /// Parkplatz-Layout-Tool.
 pub struct ParkingTool {
     pub(crate) phase: ParkingPhase,
-    /// Gesetzter Ursprungspunkt (Mitte der oestlichen Enden).
+    /// Gesetzter Ursprungspunkt (Mitte der östlichen Enden).
     pub(crate) origin: Option<Vec2>,
-    /// Aktueller Rotationswinkel (Radiant, lebt im Preview-Flow).
+    /// Rotationswinkel (Radiant), gesteuert durch Alt+Scroll.
     pub(crate) angle: f32,
-    /// Eingefrorener Winkel nach Klick 2 (fuer execute).
-    pub(crate) frozen_angle: Option<f32>,
     pub(crate) config: ParkingConfig,
     pub direction: ConnectionDirection,
     pub priority: ConnectionPriority,
@@ -89,7 +89,6 @@ impl ParkingTool {
             phase: ParkingPhase::Idle,
             origin: None,
             angle: 0.0,
-            frozen_angle: None,
             config: ParkingConfig::default(),
             direction: ConnectionDirection::Dual,
             priority: ConnectionPriority::Regular,

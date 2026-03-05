@@ -148,6 +148,7 @@ impl RouteTool for StraightLineTool {
             start_anchor: start,
             end_anchor: end,
             original_positions: Vec::new(), // wird im Handler befüllt
+            marker_node_ids: Vec::new(),
             kind: SegmentKind::Straight {
                 base: SegmentBase {
                     direction: self.direction,

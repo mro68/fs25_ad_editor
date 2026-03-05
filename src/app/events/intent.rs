@@ -199,6 +199,8 @@ pub enum AppIntent {
     RouteToolDragUpdated { world_pos: glam::Vec2 },
     /// Route-Tool: Drag beendet (Punkt loslassen)
     RouteToolDragEnded,
+    /// Route-Tool: Alt+Scroll-Rotation
+    RouteToolScrollRotated { delta: f32 },
     /// Segment nachtraeglich bearbeiten (Nodes loeschen + Tool laden)
     EditSegmentRequested { record_id: u64 },
     /// ZIP-Datei wurde als Background-Map gewaehlt → Browser oeffnen

@@ -238,6 +238,9 @@ pub fn map_intent_to_commands(state: &AppState, intent: AppIntent) -> Vec<AppCom
             vec![AppCommand::RouteToolDragUpdate { world_pos }]
         }
         AppIntent::RouteToolDragEnded => vec![AppCommand::RouteToolDragEnd],
+        AppIntent::RouteToolScrollRotated { delta } => {
+            vec![AppCommand::RouteToolRotate { delta }]
+        }
         AppIntent::EditSegmentRequested { record_id } => {
             vec![AppCommand::EditSegment { record_id }]
         }
