@@ -78,3 +78,7 @@ anyhow = "1.0.102"
 log = "0.4"
 env_logger = "0.11.9"
 rfd = "0.17.2"
+
+[dev-dependencies]
+approx = "0.5"
+criterion = { version = "0.5", features = ["html_reports"] }
