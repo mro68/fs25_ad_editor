@@ -3,7 +3,7 @@
 use std::collections::HashMap;
 
 use glam::Vec2;
-use kiddo::{KdTree, SquaredEuclidean};
+use kiddo::{ImmutableKdTree, SquaredEuclidean};
 
 use crate::core::MapNode;
 
@@ -19,7 +19,7 @@ pub struct SpatialMatch {
 /// Read-only Spatial-Index ueber allen Nodes einer RoadMap.
 #[derive(Debug, Clone)]
 pub struct SpatialIndex {
-    tree: KdTree<f64, 2>,
+    tree: ImmutableKdTree<f64, 2>,
     node_ids: Vec<u64>,
     positions: HashMap<u64, Vec2>,
 }
@@ -28,7 +28,7 @@ impl SpatialIndex {
     /// Erstellt einen leeren Spatial-Index.
     pub fn empty() -> Self {
         Self {
-            tree: (&Vec::<[f64; 2]>::new()).into(),
+            tree: ImmutableKdTree::new_from_slice(&[]),
             node_ids: Vec::new(),
             positions: HashMap::new(),
         }
@@ -48,7 +48,7 @@ impl SpatialIndex {
             })
             .collect();
 
-        let tree: KdTree<f64, 2> = (&entries).into();
+        let tree: ImmutableKdTree<f64, 2> = entries.as_slice().into();
 
         let positions = nodes
             .iter()
