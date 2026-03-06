@@ -79,8 +79,7 @@ Interner Renderer fuer Nodes (Wegpunkte) mit GPU-Instancing.
 - GPU-Instancing fuer 100k+ Nodes
 - Shader-basierte kreisfoermige Darstellung via Distance Field
 - Adaptives Anti-Aliasing (Low/Medium/High via `RenderQuality`)
-- Selektierte Nodes werden 1.8× groesser dargestellt
-- Farb-Coding nach NodeFlag:
+- Selektierte Nodes werden 1.8× groesser dargestellt- **Zoom-Kompensation:** Node-Größe wird via `EditorOptions::zoom_compensation(zoom)` skaliert — verhindert, dass Nodes beim Herauszoomen unsichtbar werden- Farb-Coding nach NodeFlag:
   - Cyan `[0.0, 0.8, 1.0]`: Regular
   - Gelb `[1.0, 1.0, 0.0]`: SubPrio
   - Magenta `[1.0, 0.0, 1.0]`: Selected
@@ -98,6 +97,7 @@ Interner Renderer fuer Verbindungslinien und Richtungspfeile.
 **Features:**
 - Linien als Quad-Geometrie mit konfigurierbarer Breite
 - Richtungspfeile an Verbindungs-Mittelpunkten
+- **Zoom-Kompensation:** Linienbreite und Pfeilgrößen werden via `EditorOptions::zoom_compensation(zoom)` skaliert — konsistent mit Node-Skalierung
 - Farb-Coding nach Richtung:
   - Gruen `[0.2, 0.9, 0.2]`: Regular
   - Blau `[0.2, 0.7, 1.0]`: Dual
