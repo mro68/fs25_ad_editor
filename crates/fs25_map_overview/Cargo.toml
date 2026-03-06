@@ -1,8 +1,8 @@
 [package]
 name = "fs25_map_overview"
-version = "0.1.0"
+version = "0.2.0"
 edition = "2021"
-authors = ["MRO"]
+authors = ["mro68"]
 description = "Generiert Overview-Maps aus FS25 Map-Mod-ZIPs (Terrain, Hillshade, Farmlands, POIs)"
 license = "GPL-3.0"
 
