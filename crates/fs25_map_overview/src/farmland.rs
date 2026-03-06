@@ -48,12 +48,13 @@ pub fn extract_farmland_polygons(grle_data: &[u8]) -> Result<(Vec<FarmlandPolygo
     let height = decoded.height;
     let pixels = &decoded.pixels;
 
-    // Ersten Vorkommen jeder ID in Scan-Reihenfolge (top-left) sammeln
+    // Ersten Vorkommen jeder ID in Scan-Reihenfolge (top-left) sammeln.
+    // ID 0 = kein Feld, ID 255 = Hintergrund/Restflaeche (FS25 GRLE Default-Wert).
     let mut start_pixels: HashMap<u8, (i32, i32)> = HashMap::new();
     for y in 0..height {
         for x in 0..width {
             let id = pixels[y * width + x];
-            if id != 0 {
+            if id != 0 && id != 255 {
                 start_pixels.entry(id).or_insert((x as i32, y as i32));
             }
         }

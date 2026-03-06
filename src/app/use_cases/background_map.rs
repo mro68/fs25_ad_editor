@@ -14,9 +14,7 @@ use std::sync::Arc;
 /// Ersetzt die Dateiendung durch `.json` (z.B. `overview.jpg` → `overview.json`).
 fn json_path_for(image_path: &str) -> String {
     let p = Path::new(image_path);
-    p.with_extension("json")
-        .to_string_lossy()
-        .into_owned()
+    p.with_extension("json").to_string_lossy().into_owned()
 }
 
 /// Oeffnet den Background-Map-Auswahl-Dialog.
