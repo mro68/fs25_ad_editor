@@ -201,6 +201,11 @@
     - [x] `load_farmland_json()` / `save_farmland_json()`: Farmland-Polygone werden als `.json` neben `overview.jpg` persistiert und beim Auto-Load wiederhergestellt
     - [x] `FieldBoundaryTool.on_click`: Log-Meldungen bei fehlendem Feld und fehlenden Farmland-Daten ergaenzt
     - [x] Doku-Sync: `use_cases/API.md` um `scale_background`, `browse_zip_background`, `load_background_from_zip` ergaenzt
+  - [x] **Bugfix: Moore-Tracer Jacob's Stopping Criterion (2026-03-06)**
+    - [x] `trace_moore_contour()`: Doppel-Umlauf-Bug behoben — Abbruch erfolgt jetzt beim ersten `b == initial_b` (genau 1 Umlauf statt 2)
+    - [x] Fallback fuer schmale 1px-Streifen (`b_at_first_return`) bleibt als Sicherheitsnetz erhalten
+    - [x] `point_in_polygon` liefert fuer alle 254 Felder korrekte Ergebnisse (doppelte Vertices entfernt)
+    - [x] Docstring `trace_moore_contour()` erklaert Stopping-Criterion und den korrigierten Bug
 - [ ] Packaging
   - [ ] Windows Binaries (.exe)
   - [ ] Linux Binaries (AppImage)
