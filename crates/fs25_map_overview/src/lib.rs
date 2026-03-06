@@ -37,7 +37,9 @@ use std::path::Path;
 
 pub use composite::{OverviewOptions, Poi};
 pub use discovery::MapInfo;
-pub use farmland::{extract_farmland_polygons, FarmlandPolygon};
+pub use farmland::{
+    extract_farmland_polygons, extract_farmland_polygons_from_ids, FarmlandPolygon,
+};
 
 /// Ergebnis der Overview-Generierung mit optionalen Farmland-Polygonen.
 pub struct OverviewResult {
@@ -266,27 +268,48 @@ fn try_extract_polygons_from_files(
         return (Vec::new(), map_info.map_size, map_info.map_size);
     };
 
-    if !path.ends_with(".grle") {
+    if path.ends_with(".grle") {
+        match farmland::extract_farmland_polygons(data) {
+            Ok((polygons, w, h)) => {
+                log::info!(
+                    "Farmland-Polygone extrahiert: {} Felder aus {}x{} Raster",
+                    polygons.len(),
+                    w,
+                    h
+                );
+                (polygons, w, h)
+            }
+            Err(e) => {
+                log::warn!("Farmland-Polygon-Extraktion fehlgeschlagen: {}", e);
+                (Vec::new(), map_info.map_size, map_info.map_size)
+            }
+        }
+    } else if path.ends_with(".png") {
+        // PNG-Farmland: Bild zu Graustufen decodieren, Pixelwerte als Farmland-IDs nutzen
+        match image::load_from_memory(data) {
+            Ok(img) => {
+                let luma = img.to_luma8();
+                let w = luma.width() as usize;
+                let h = luma.height() as usize;
+                let polygons = farmland::extract_farmland_polygons_from_ids(luma.as_raw(), w, h);
+                log::info!(
+                    "Farmland-Polygone aus PNG extrahiert: {} Felder aus {}x{} Raster",
+                    polygons.len(),
+                    w,
+                    h
+                );
+                (polygons, w as u32, h as u32)
+            }
+            Err(e) => {
+                log::warn!("PNG-Farmland konnte nicht dekodiert werden: {}", e);
+                (Vec::new(), map_info.map_size, map_info.map_size)
+            }
+        }
+    } else {
         log::info!(
-            "Farmland-Datei ist kein GRLE ({}), Polygon-Extraktion uebersprungen",
+            "Farmland-Datei in unbekanntem Format ({}), Polygon-Extraktion uebersprungen",
             path
         );
-        return (Vec::new(), map_info.map_size, map_info.map_size);
-    }
-
-    match farmland::extract_farmland_polygons(data) {
-        Ok((polygons, w, h)) => {
-            log::info!(
-                "Farmland-Polygone extrahiert: {} Felder aus {}x{} Raster",
-                polygons.len(),
-                w,
-                h
-            );
-            (polygons, w, h)
-        }
-        Err(e) => {
-            log::warn!("Farmland-Polygon-Extraktion fehlgeschlagen: {}", e);
-            (Vec::new(), map_info.map_size, map_info.map_size)
-        }
+        (Vec::new(), map_info.map_size, map_info.map_size)
     }
 }
