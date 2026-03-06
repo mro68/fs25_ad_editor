@@ -195,6 +195,12 @@
     - [x] `app/tools/API.md`: FieldBoundaryTool vollstaendig dokumentiert (Phasen, Felder, Ring-Berechnung)
     - [x] `ui/API.md`: Toolbar-Button, Context-Menu Extras-Submenu, Precondition::FarmlandPolygonsLoaded
     - [x] ROADMAP.md: Felderkennung als abgeschlossen markiert
+  - [x] **Bugfix: PNG-Farmland-Erkennung (2026-03-06, Branch `fix/farmland-json-persistence`)**
+    - [x] `extract_farmland_polygons_from_ids()` als formatunabhaengige pub-Funktion extrahiert (GRLE+PNG)
+    - [x] `try_extract_polygons_from_files()`: PNG-Branch (`infoLayer_farmlands.png`) unterstuetzt Polygon-Extraktion via Luma-Dekodierung
+    - [x] `load_farmland_json()` / `save_farmland_json()`: Farmland-Polygone werden als `.json` neben `overview.jpg` persistiert und beim Auto-Load wiederhergestellt
+    - [x] `FieldBoundaryTool.on_click`: Log-Meldungen bei fehlendem Feld und fehlenden Farmland-Daten ergaenzt
+    - [x] Doku-Sync: `use_cases/API.md` um `scale_background`, `browse_zip_background`, `load_background_from_zip` ergaenzt
 - [ ] Packaging
   - [ ] Windows Binaries (.exe)
   - [ ] Linux Binaries (AppImage)

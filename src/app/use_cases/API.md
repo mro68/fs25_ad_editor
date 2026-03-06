@@ -105,10 +105,13 @@ pub enum AddNodeResult {
 - `request_background_map_dialog(state)` — Background-Map-Dialog oeffnen
 - `load_background_map(state, path, crop_size) -> anyhow::Result<()>` — Background-Map laden (PNG/JPG/DDS), Fehler werden an den Controller propagiert
 - `toggle_background_visibility(state)` — Sichtbarkeit umschalten
+- `scale_background(state, factor)` — Skalierungsfaktor relativ anpassen (Multiplikation; Bereich 0.125–8.0)
 - `clear_background_map(state)` — Background-Map entfernen
+- `browse_zip_background(state, path) -> anyhow::Result<()>` — ZIP-Archiv nach Bilddateien durchsuchen; bei einem Treffer wird direkt geladen
+- `load_background_from_zip(state, zip_path, entry_name, crop_size) -> anyhow::Result<()>` — Einzelne Bilddatei aus ZIP als Background laden
 - `generate_overview_with_options(state) -> anyhow::Result<()>` — Uebersichtskarte aus Map-Mod-ZIP generieren (Layer-Optionen aus Dialog-State), Einstellungen persistent speichern
 - `save_background_as_overview(state, path) -> anyhow::Result<()>` — Aktuelle Background-Map als overview.jpg speichern (JPEG Qualitaet 90), Farmland-Polygone als `.json` daneben
-- `load_farmland_json(state, image_path)` — Laedt Farmland-Polygone aus einer `.json`-Datei neben der Bilddatei (z.B. `overview.json` neben `overview.jpg`). Wird beim Auto-Load aufgerufen.
+- `load_farmland_json(state, image_path)` — Laedt Farmland-Polygone aus einer `.json`-Datei neben der Bilddatei (z.B. `overview.json` neben `overview.jpg`); lautlos keine-Op wenn Datei fehlt
 
 ---
 

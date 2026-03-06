@@ -35,19 +35,16 @@ pub struct FarmlandPolygon {
     pub vertices: Vec<(f32, f32)>,
 }
 
-/// Extrahiert Farmland-Polygone aus GRLE-Rohdaten per Moore-Neighbor-Boundary-Tracing.
+/// Extrahiert Farmland-Polygone aus bereits decodierten Pixel-Daten.
 ///
-/// Gibt alle gefundenen Polygone sowie die Raster-Dimensionen (width, height)
-/// zurueck. Die Koordinaten der Polygone liegen im GRLE-Pixel-Raum.
-///
-/// # Fehler
-/// Schlaegt fehl wenn die GRLE-Daten ungueltiges Format haben.
-pub fn extract_farmland_polygons(grle_data: &[u8]) -> Result<(Vec<FarmlandPolygon>, u32, u32)> {
-    let decoded = grle::decode_grle(grle_data)?;
-    let width = decoded.width;
-    let height = decoded.height;
-    let pixels = &decoded.pixels;
-
+/// Jeder Bytewert ist eine Farmland-ID (0 = kein Feld, 255 = Hintergrund/Restflaeche).
+/// Diese Funktion ist formatunabhaengig und wird sowohl fuer GRLE- als auch PNG-Daten
+/// verwendet.
+pub fn extract_farmland_polygons_from_ids(
+    pixels: &[u8],
+    width: usize,
+    height: usize,
+) -> Vec<FarmlandPolygon> {
     // Ersten Vorkommen jeder ID in Scan-Reihenfolge (top-left) sammeln.
     // ID 0 = kein Feld, ID 255 = Hintergrund/Restflaeche (FS25 GRLE Default-Wert).
     let mut start_pixels: HashMap<u8, (i32, i32)> = HashMap::new();
@@ -83,6 +80,21 @@ pub fn extract_farmland_polygons(grle_data: &[u8]) -> Result<(Vec<FarmlandPolygo
         height
     );
 
+    polygons
+}
+
+/// Extrahiert Farmland-Polygone aus GRLE-Rohdaten per Moore-Neighbor-Boundary-Tracing.
+///
+/// Gibt alle gefundenen Polygone sowie die Raster-Dimensionen (width, height)
+/// zurueck. Die Koordinaten der Polygone liegen im GRLE-Pixel-Raum.
+///
+/// # Fehler
+/// Schlaegt fehl wenn die GRLE-Daten ungueltiges Format haben.
+pub fn extract_farmland_polygons(grle_data: &[u8]) -> Result<(Vec<FarmlandPolygon>, u32, u32)> {
+    let decoded = grle::decode_grle(grle_data)?;
+    let width = decoded.width;
+    let height = decoded.height;
+    let polygons = extract_farmland_polygons_from_ids(&decoded.pixels, width, height);
     Ok((polygons, width as u32, height as u32))
 }
 
