@@ -186,6 +186,20 @@ pub fn render_menu(ctx: &egui::Context, state: &AppState) -> Vec<AppIntent> {
                 });
             });
 
+            ui.menu_button("Extras", |ui| {
+                let has_farmland = state.farmland_polygons.is_some();
+                if ui
+                    .add_enabled(has_farmland, egui::Button::new("\u{1F33E} Feld erkennen"))
+                    .on_disabled_hover_text("Hintergrund mit Feldgrenzen zuerst laden")
+                    .clicked()
+                {
+                    events.push(AppIntent::SelectRouteToolRequested {
+                        index: crate::app::segment_registry::TOOL_INDEX_FIELD_BOUNDARY,
+                    });
+                    ui.close();
+                }
+            });
+
             ui.menu_button("Help", |ui| {
                 if ui.button("About").clicked() {
                     log::info!("FS25 AutoDrive Editor v{}", env!("CARGO_PKG_VERSION"));
