@@ -101,6 +101,19 @@ pub enum SegmentKind {
         /// Gemeinsame Basis-Parameter
         base: SegmentBase,
     },
+    /// Feldgrenz-Route (geschlossener Ring entlang eines Feldes)
+    FieldBoundary {
+        /// Farmland-ID des verwendeten Feldes
+        field_id: u32,
+        /// Node-Abstand (Meter)
+        node_spacing: f32,
+        /// Versatz nach innen (negativ) oder aussen (positiv) in Metern
+        offset: f32,
+        /// Vereinfachungs-Toleranz Douglas-Peucker (Meter)
+        straighten_tolerance: f32,
+        /// Gemeinsame Basis-Parameter
+        base: SegmentBase,
+    },
 }
 
 /// Tool-Index fuer `StraightLineTool` im `ToolManager` (Registrierungs-Slot 0).
@@ -119,6 +132,8 @@ pub const TOOL_INDEX_BYPASS: usize = 4;
 pub const TOOL_INDEX_CONSTRAINT_ROUTE: usize = 5;
 /// Tool-Index fuer `ParkingTool` im `ToolManager` (Registrierungs-Slot 6).
 pub const TOOL_INDEX_PARKING: usize = 6;
+/// Tool-Index fuer `FieldBoundaryTool` im `ToolManager` (Registrierungs-Slot 7).
+pub const TOOL_INDEX_FIELD_BOUNDARY: usize = 7;
 
 impl SegmentKind {
     /// Gibt den Tool-Index im ToolManager fuer dieses Segment zurueck.
@@ -134,6 +149,7 @@ impl SegmentKind {
             SegmentKind::ConstraintRoute { .. } => TOOL_INDEX_CONSTRAINT_ROUTE,
             SegmentKind::Bypass { .. } => TOOL_INDEX_BYPASS,
             SegmentKind::Parking { .. } => TOOL_INDEX_PARKING,
+            SegmentKind::FieldBoundary { .. } => TOOL_INDEX_FIELD_BOUNDARY,
         }
     }
 }
@@ -177,6 +193,10 @@ mod tests {
         assert_eq!(
             names[TOOL_INDEX_PARKING], "Parkplatz",
             "TOOL_INDEX_PARKING zeigt nicht auf ParkingTool"
+        );
+        assert_eq!(
+            names[TOOL_INDEX_FIELD_BOUNDARY], "Feld erkennen",
+            "TOOL_INDEX_FIELD_BOUNDARY zeigt nicht auf FieldBoundaryTool"
         );
     }
 }

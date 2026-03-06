@@ -115,6 +115,7 @@ pub fn render_context_menu(
     selected_node_ids: &IndexSet<u64>,
     distanzen_active: bool,
     clipboard_has_data: bool,
+    farmland_polygons_loaded: bool,
     options: &EditorOptions,
     default_direction: ConnectionDirection,
     default_priority: ConnectionPriority,
@@ -148,6 +149,7 @@ pub fn render_context_menu(
                 distanzen_active,
                 clipboard_has_data,
                 segment_record_id,
+                farmland_polygons_loaded,
             };
 
             match variant {

@@ -248,6 +248,7 @@ fn render_segment_edit_buttons(
             }
             crate::app::segment_registry::SegmentKind::Bypass { .. } => "✏ Ausweichstrecke",
             crate::app::segment_registry::SegmentKind::Parking { .. } => "✏ Parkplatz",
+            crate::app::segment_registry::SegmentKind::FieldBoundary { .. } => "✏ Feld erkennen",
         };
         if ui.button(label).clicked() {
             events.push(AppIntent::EditSegmentRequested {

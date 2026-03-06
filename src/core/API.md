@@ -320,6 +320,57 @@ pub struct AutoDriveMeta {
 }
 ```
 
+---
+
+### `FieldPolygon` und Feldgrenz-Geometrie
+
+In `core::farmland` (re-exportiert aus `core`).
+
+```rust
+/// Geordnetes Feldgrenz-Polygon in Weltkoordinaten (x/z-Ebene).
+/// Vertices stammen aus dem GRLE-Farmland-Raster.
+pub struct FieldPolygon {
+    pub id: u32,           // Farmland-ID (1–255)
+    pub vertices: Vec<Vec2>, // Geordnete Rand-Vertices in Weltkoordinaten
+}
+```
+
+**Freie Funktionen:**
+
+```rust
+// Prueft ob ein Punkt innerhalb eines Polygons liegt (Ray-Casting).
+pub fn point_in_polygon(point: Vec2, polygon: &[Vec2]) -> bool
+
+// Findet das erste FieldPolygon, das den gegebenen Weltpunkt enthaelt.
+pub fn find_polygon_at<'a>(point: Vec2, polygons: &'a [FieldPolygon]) -> Option<&'a FieldPolygon>
+
+// Douglas-Peucker-Vereinfachung fuer geschlossene Polygone.
+// tolerance = 0.0 → kein Effekt; Mindestens 3 Punkte werden immer behalten.
+pub fn simplify_polygon(vertices: &[Vec2], tolerance: f32) -> Vec<Vec2>
+
+// Normalenbasiertes Polygon-Offset (negativ = nach innen, positiv = nach aussen).
+// Fallback auf Original bei Degeneration (Orientierungswechsel, Miter-Overshoot).
+pub fn offset_polygon(vertices: &[Vec2], offset: f32) -> Vec<Vec2>
+```
+
+**Koordinaten-Konvention:** Vertices in der x/z-Ebene, umgerechnet per
+`world = pixel * (map_size / grle_width) - map_size / 2`.
+
+**Beispiel:**
+
+```rust
+use fs25_ad_editor::core::{find_polygon_at, simplify_polygon, offset_polygon};
+
+// Feld an Klickposition finden
+if let Some(polygon) = find_polygon_at(click_pos, &farmland_polygons) {
+    // Mit 5 m Toleranz vereinfachen + 3 m nach innen versetzen
+    let simplified = simplify_polygon(&polygon.vertices, 5.0);
+    let inset = offset_polygon(&simplified, -3.0);
+}
+```
+
+---
+
 ## Design-Prinzipien
 
 1. **HashMap statt Array:** Nodes AND Connections sind ueber ID(-Paar) indexiert → O(1)-Zugriff
