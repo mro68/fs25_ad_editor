@@ -191,6 +191,11 @@ pub fn resample_path(state: &mut AppState) {
     use_cases::editing::resample_selected_path(state);
 }
 
+/// Zeichnet alle erkannten Farmland-Polygone als Wegpunkt-Ring nach (Batch-Operation).
+pub fn trace_all_fields(state: &mut AppState) {
+    use_cases::editing::trace_all_fields(state);
+}
+
 /// Aktiviert die Streckenteilung wenn mindestens 2 Nodes selektiert sind.
 pub fn streckenteilung_aktivieren(state: &mut AppState) {
     if state.selection.selected_node_ids.len() >= 2 {

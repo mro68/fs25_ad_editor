@@ -36,6 +36,12 @@ pub const CONNECTION_COLOR_REVERSE: [f32; 4] = [1.0, 0.5, 0.1, 1.0];
 
 /// Marker-Groesse in Welteinheiten.
 pub const MARKER_SIZE_WORLD: f32 = 2.6;
+
+/// Standard-Maximum fuer den Zoom-Kompensationsfaktor.
+///
+/// Bei `1.0` ist die Kompensation deaktiviert (keine Vergroesserung beim Herauszoomen).
+pub const DEFAULT_ZOOM_COMPENSATION_MAX: f32 = 4.0;
+
 /// Fuellfarbe der Map-Marker (RGBA: Dunkelgruen).
 pub const MARKER_COLOR: [f32; 4] = [0.0, 0.46666667, 0.101960786, 1.0];
 /// Outline-Farbe der Map-Marker (RGBA: Goldgelb).

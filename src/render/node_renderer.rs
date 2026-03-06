@@ -181,6 +181,9 @@ impl NodeRenderer {
 
         road_map.nodes_within_rect_into(min, max, &mut self.node_id_scratch);
 
+        // Zoom-Kompensationsfaktor einmalig pro Frame berechnen (nicht pro Node).
+        let compensation = ctx.options.zoom_compensation(ctx.camera.zoom);
+
         // Reserve Platz fuer Instanzen entsprechend der Anzahl gefundener IDs,
         // um mehrfache Reallocs beim Push zu vermeiden.
         self.instance_scratch.reserve(
@@ -220,7 +223,7 @@ impl NodeRenderer {
                 ctx.options.node_size_world * ctx.options.selection_size_multiplier()
             } else {
                 ctx.options.node_size_world
-            };
+            } * compensation;
 
             self.instance_scratch.push(NodeInstance::new(
                 [node.position.x, node.position.y],

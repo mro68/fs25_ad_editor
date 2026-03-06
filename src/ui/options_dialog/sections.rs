@@ -257,6 +257,19 @@ pub(super) fn render_camera(ui: &mut egui::Ui, opts: &mut EditorOptions) -> bool
             )
             .changed();
     });
+    ui.horizontal(|ui| {
+        ui.label("Zoom-Kompensation Max:");
+        changed |= ui
+            .add(
+                egui::Slider::new(&mut opts.zoom_compensation_max, 1.0..=8.0)
+                    .step_by(0.1)
+                    .fixed_decimals(1),
+            )
+            .on_hover_text(
+                "Wie stark Nodes und Verbindungen beim Herauszoomen vergroessert werden (1.0 = deaktiviert, 4.0 = Standard)"
+            )
+            .changed();
+    });
     changed
 }
 

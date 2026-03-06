@@ -4,8 +4,8 @@ use super::camera::{CAMERA_SCROLL_ZOOM_STEP, CAMERA_ZOOM_MAX, CAMERA_ZOOM_MIN, C
 use super::render::{
     OverviewLayerOptions, SelectionStyle, ARROW_LENGTH_WORLD, ARROW_WIDTH_WORLD,
     CONNECTION_COLOR_DUAL, CONNECTION_COLOR_REGULAR, CONNECTION_COLOR_REVERSE,
-    CONNECTION_THICKNESS_SUBPRIO_WORLD, CONNECTION_THICKNESS_WORLD, MARKER_COLOR,
-    MARKER_OUTLINE_COLOR, MARKER_SIZE_WORLD, NODE_COLOR_DEFAULT, NODE_COLOR_SELECTED,
+    CONNECTION_THICKNESS_SUBPRIO_WORLD, CONNECTION_THICKNESS_WORLD, DEFAULT_ZOOM_COMPENSATION_MAX,
+    MARKER_COLOR, MARKER_OUTLINE_COLOR, MARKER_SIZE_WORLD, NODE_COLOR_DEFAULT, NODE_COLOR_SELECTED,
     NODE_COLOR_SUBPRIO, NODE_COLOR_WARNING, NODE_SIZE_WORLD, SELECTION_SIZE_FACTOR,
     TERRAIN_HEIGHT_SCALE,
 };
@@ -84,6 +84,12 @@ pub struct EditorOptions {
     // Uebersichtskarte
     #[serde(default)]
     pub overview_layers: OverviewLayerOptions,
+
+    // Zoom-Kompensation
+    /// Maximaler Zoom-Kompensationsfaktor (1.0 = deaktiviert, 4.0 = Standard).
+    /// Verhindert, dass Nodes und Verbindungen beim Herauszoomen unsichtbar werden.
+    #[serde(default = "default_zoom_compensation_max")]
+    pub zoom_compensation_max: f32,
 }
 
 impl Default for EditorOptions {
@@ -122,6 +128,7 @@ impl Default for EditorOptions {
             bg_fade_start_zoom: 3.5,
             copy_preview_opacity: default_copy_preview_opacity(),
             overview_layers: OverviewLayerOptions::default(),
+            zoom_compensation_max: DEFAULT_ZOOM_COMPENSATION_MAX,
         }
     }
 }
@@ -160,6 +167,10 @@ fn default_bg_opacity_at_min_zoom() -> f32 {
 
 fn default_bg_fade_start_zoom() -> f32 {
     3.5
+}
+
+fn default_zoom_compensation_max() -> f32 {
+    DEFAULT_ZOOM_COMPENSATION_MAX
 }
 
 impl EditorOptions {
@@ -277,5 +288,19 @@ impl EditorOptions {
     /// Berechnet den Selektions-Multiplikator aus `selection_size_factor` in Prozent.
     pub fn selection_size_multiplier(&self) -> f32 {
         self.selection_size_factor / 100.0
+    }
+
+    /// Berechnet den Zoom-Kompensationsfaktor fuer eine gegebene Zoom-Stufe.
+    ///
+    /// Formel: `(1/zoom)^0.5`, geclampt auf `[1.0, zoom_compensation_max]`.
+    /// Bei `zoom >= 1.0` ist der Faktor `1.0` (keine zusaetzliche Vergroesserung).
+    /// Bei `zoom_compensation_max <= 1.0` ist die Kompensation deaktiviert.
+    pub fn zoom_compensation(&self, zoom: f32) -> f32 {
+        if self.zoom_compensation_max <= 1.0 {
+            return 1.0;
+        }
+        (1.0 / zoom.max(f32::EPSILON))
+            .powf(0.5)
+            .clamp(1.0, self.zoom_compensation_max)
     }
 }
