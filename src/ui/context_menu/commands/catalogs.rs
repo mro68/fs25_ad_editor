@@ -33,7 +33,7 @@ impl MenuCatalog {
 
     /// EmptyArea: Tool-Auswahl inkl. Route-Tools, optional Streckenteilung.
     pub fn for_empty_area() -> Self {
-        let entries = vec![
+        let mut entries = vec![
             Self::tool_submenu(),
             MenuEntry::Submenu {
                 label: "📐 Strecke".into(),
@@ -61,6 +61,15 @@ impl MenuCatalog {
                 ],
             },
         ];
+
+        entries.push(MenuEntry::Submenu {
+            label: "\u{2699} Extras".into(),
+            entries: vec![MenuEntry::Command {
+                id: CommandId::SetToolFieldBoundary,
+                label: "\u{1F33E} Feld erkennen".into(),
+                preconditions: vec![Precondition::FarmlandPolygonsLoaded],
+            }],
+        });
 
         MenuCatalog { entries }
     }

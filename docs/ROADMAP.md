@@ -99,6 +99,17 @@
   - [x] `handlers::segment::toggle_lock()` — neuer Handler
   - [x] `ui::segment_overlay`: `render_segment_overlays()` / `SegmentOverlayEvent::LockToggled` — Viewport-Overlay mit Rahmen und klickbaren Lock-Icons
 
+- [x] **Felderkennung (FieldBoundaryTool)** (2026-03-05, Branch `feat/field-boundary-detection`)
+  - [x] `crates/fs25_map_overview`: Moore-Neighbor-Boundary-Tracing → `FarmlandPolygon` (Pixel-Koordinaten)
+  - [x] `core::farmland`: `FieldPolygon` (Weltkoordinaten), `point_in_polygon()`, `simplify_polygon()`, `offset_polygon()`, `find_polygon_at()`
+  - [x] `OverviewResult.farmland_polygons` in `fs25_map_overview::lib` — Ergebnis-Struct erweitert
+  - [x] `AppState.farmland_polygons: Option<Arc<Vec<FieldPolygon>>>` — State-Feld fuer geladene Polygone
+  - [x] `FieldBoundaryTool` (Slot 7 im ToolManager): Phasen Idle/Configuring, Config-Panel (Node-Abstand, Versatz, Begradigen), geschlossener Ring-Erzeuger
+  - [x] `SegmentKind::FieldBoundary { field_id, node_spacing, offset, straighten_tolerance, base }` — Segment-Record fuer nachtraegliche Bearbeitung
+  - [x] Toolbar-Button `🌾 Feld erkennen` — deaktiviert wenn keine Farmland-Daten geladen
+  - [x] Context-Menu `⚙ Extras → 🌾 Feld erkennen` — Precondition `FarmlandPolygonsLoaded`
+  - [x] `handlers::route_tool`: `FarmlandData-Injection` via `set_farmland_data()` beim Tool-Wechsel
+
 ## Phase 5: Advanced Features
 - [x] DDS-Import fuer Map-Hintergruende
   - [x] Texture-Loader implementieren (PNG, JPG, DDS)
@@ -178,6 +189,12 @@
     - [x] `app/API.md`: SegmentRecord.locked, neue SegmentRegistry-Methoden, AppIntent/AppCommand-Varianten, Handler segment.rs
     - [x] `ui/API.md`: Modul segment_overlay, SegmentOverlayEvent, render_segment_overlays()
     - [x] ROADMAP.md: Segment-Lock als abgeschlossen markiert
+  - [x] **Doku-Sync Felderkennung-Feature (2026-03-05)**
+    - [x] `core/API.md`: FieldPolygon, point_in_polygon(), find_polygon_at(), simplify_polygon(), offset_polygon()
+    - [x] `app/API.md`: farmland_polygons in AppState, SegmentKind::FieldBoundary, TOOL_INDEX_FIELD_BOUNDARY
+    - [x] `app/tools/API.md`: FieldBoundaryTool vollstaendig dokumentiert (Phasen, Felder, Ring-Berechnung)
+    - [x] `ui/API.md`: Toolbar-Button, Context-Menu Extras-Submenu, Precondition::FarmlandPolygonsLoaded
+    - [x] ROADMAP.md: Felderkennung als abgeschlossen markiert
 - [ ] Packaging
   - [ ] Windows Binaries (.exe)
   - [ ] Linux Binaries (AppImage)

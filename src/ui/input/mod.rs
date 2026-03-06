@@ -115,6 +115,7 @@ impl InputState {
         distanzen_state: &mut crate::app::state::DistanzenState,
         tangent_data: Option<TangentMenuData>,
         clipboard_has_data: bool,
+        farmland_polygons_loaded: bool,
         segment_registry: Option<&SegmentRegistry>,
     ) -> Vec<AppIntent> {
         let ctx = ViewportContext {
@@ -215,6 +216,7 @@ impl InputState {
             menu_selection,
             distanzen_state.active,
             clipboard_has_data,
+            farmland_polygons_loaded,
             options,
             default_direction,
             default_priority,

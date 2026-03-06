@@ -1,7 +1,7 @@
 use crate::app::history::Snapshot;
 use crate::app::segment_registry::SegmentRegistry;
 use crate::app::CommandLog;
-use crate::core::{Connection, MapMarker, MapNode, RoadMap};
+use crate::core::{Connection, FieldPolygon, MapMarker, MapNode, RoadMap};
 use crate::shared::EditorOptions;
 use glam::Vec2;
 use std::sync::Arc;
@@ -51,6 +51,11 @@ pub struct AppState {
     pub segment_registry: SegmentRegistry,
     /// Signalisiert dem Host (eframe), die Anwendung kontrolliert zu beenden
     pub should_exit: bool,
+    /// Beim letzten Overview-Laden extrahierte Farmland-Feldgrenz-Polygone
+    ///
+    /// Enthält geordnete Umriss-Vertices pro Feld in Weltkoordinaten.
+    /// `None` solange noch keine Overview mit Farmland-Daten geladen wurde.
+    pub farmland_polygons: Option<Arc<Vec<FieldPolygon>>>,
 }
 
 impl AppState {
@@ -74,6 +79,7 @@ impl AppState {
             show_options_dialog: false,
             segment_registry: SegmentRegistry::new(),
             should_exit: false,
+            farmland_polygons: None,
         }
     }
 

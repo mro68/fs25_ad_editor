@@ -74,6 +74,9 @@ pub struct AppState {
     pub show_options_dialog: bool,
     pub segment_registry: SegmentRegistry,  // In-Session-Registry fuer nachtraegliche Bearbeitung
     pub should_exit: bool,
+    /// Geladene Farmland-Polygone fuer das FieldBoundaryTool.
+    /// Wird beim Laden einer Uebersichtskarte befuellt; `None` solange keine Map geladen ist.
+    pub farmland_polygons: Option<Arc<Vec<FieldPolygon>>>,
 }
 
 pub struct SelectionState {
@@ -285,6 +288,14 @@ pub enum SegmentKind {
         config: ParkingConfig,
         base: SegmentBase,
     },
+    /// Feldgrenz-Route (geschlossener Ring entlang eines Feldes)
+    FieldBoundary {
+        field_id: u32,          // Farmland-ID des verwendeten Feldes
+        node_spacing: f32,      // Abstand zwischen Nodes in Metern
+        offset: f32,            // Versatz nach innen (<0) oder aussen (>0) in Metern
+        straighten_tolerance: f32, // Douglas-Peucker-Toleranz in Metern (0 = keine)
+        base: SegmentBase,
+    },
 }
 
 /// Tool-Indizes im ToolManager
@@ -295,6 +306,7 @@ pub const TOOL_INDEX_SPLINE: usize = 3;
 pub const TOOL_INDEX_BYPASS: usize = 4;
 pub const TOOL_INDEX_CONSTRAINT_ROUTE: usize = 5;
 pub const TOOL_INDEX_PARKING: usize = 6;
+pub const TOOL_INDEX_FIELD_BOUNDARY: usize = 7;
 ```
 
 **Methoden:**
@@ -351,6 +363,14 @@ pub enum SegmentKind {
         origin: Vec2,
         angle: f32,
         config: ParkingConfig,
+        base: SegmentBase,
+    },
+    /// Feldgrenz-Route (geschlossener Ring entlang eines Feldes)
+    FieldBoundary {
+        field_id: u32,             // Farmland-ID
+        node_spacing: f32,         // Node-Abstand in Metern
+        offset: f32,               // Innen-/Aussenversatz in Metern
+        straighten_tolerance: f32, // Douglas-Peucker-Toleranz in Metern
         base: SegmentBase,
     },
 }

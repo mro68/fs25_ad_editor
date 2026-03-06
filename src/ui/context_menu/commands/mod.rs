@@ -17,7 +17,8 @@ pub use preconditions::{Precondition, PreconditionContext};
 pub use validation::{validate_entries, ValidatedEntry};
 
 use crate::app::segment_registry::{
-    TOOL_INDEX_CONSTRAINT_ROUTE, TOOL_INDEX_CURVE_CUBIC, TOOL_INDEX_CURVE_QUAD, TOOL_INDEX_STRAIGHT,
+    TOOL_INDEX_CONSTRAINT_ROUTE, TOOL_INDEX_CURVE_CUBIC, TOOL_INDEX_CURVE_QUAD,
+    TOOL_INDEX_FIELD_BOUNDARY, TOOL_INDEX_STRAIGHT,
 };
 use crate::app::{AppIntent, ConnectionDirection, ConnectionPriority, EditorTool};
 
@@ -105,6 +106,10 @@ pub enum CommandId {
     // ── Segment ──────────────────────────────────────────────────────
     /// Selektiertes Segment nachtraeglich bearbeiten
     EditSegment,
+
+    // ── Extras ───────────────────────────────────────────────────────
+    /// FieldBoundaryTool aktivieren
+    SetToolFieldBoundary,
 }
 
 // =============================================================================
@@ -265,6 +270,11 @@ impl CommandId {
             // ── Segment ──────────────────────────────────────────────────────
             Self::EditSegment => AppIntent::EditSegmentRequested {
                 record_id: ctx.segment_record_id.unwrap_or(0),
+            },
+
+            // ── Extras ───────────────────────────────────────────────────────
+            Self::SetToolFieldBoundary => AppIntent::SelectRouteToolRequested {
+                index: TOOL_INDEX_FIELD_BOUNDARY,
             },
         }
     }

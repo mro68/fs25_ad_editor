@@ -92,10 +92,12 @@ pub fn select(state: &mut AppState, index: usize) {
     let dir = state.editor.default_direction;
     let prio = state.editor.default_priority;
     let snap_r = state.options.snap_radius();
+    let farmland = state.farmland_polygons.clone();
     if let Some(tool) = state.editor.tool_manager.active_tool_mut() {
         tool.set_direction(dir);
         tool.set_priority(prio);
         tool.set_snap_radius(snap_r);
+        tool.set_farmland_data(farmland);
     }
 
     // Kette in chain-basierte Tools laden (z.B. BypassTool)

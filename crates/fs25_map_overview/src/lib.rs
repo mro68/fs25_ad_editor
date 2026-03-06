@@ -21,6 +21,7 @@
 
 pub mod composite;
 pub mod discovery;
+pub mod farmland;
 pub mod gdm;
 pub mod grle;
 pub mod hillshade;
@@ -36,6 +37,21 @@ use std::path::Path;
 
 pub use composite::{OverviewOptions, Poi};
 pub use discovery::MapInfo;
+pub use farmland::{extract_farmland_polygons, FarmlandPolygon};
+
+/// Ergebnis der Overview-Generierung mit optionalen Farmland-Polygonen.
+pub struct OverviewResult {
+    /// Generiertes Uebersichtsbild als dynamisches Bild
+    pub image: DynamicImage,
+    /// Extrahierte Farmland-Polygone im Pixel-Koordinatenraum des GRLE-Rasters
+    pub farmland_polygons: Vec<FarmlandPolygon>,
+    /// Kartengroesse des GRLE-Rasters in Pixeln (= Weltgroesse in Metern)
+    pub grle_width: u32,
+    /// GRLE-Rasterhoehe in Pixeln (= Weltgroesse in Metern)
+    pub grle_height: u32,
+    /// Weltgroesse in Metern (aus MapInfo)
+    pub map_size: f32,
+}
 
 /// Generiert eine Overview-Map aus einem FS25 Map-Mod-ZIP.
 ///
@@ -201,4 +217,76 @@ fn extract_zip(zip_path: &str) -> Result<HashMap<String, Vec<u8>>> {
 
     log::info!("ZIP entpackt: {} Dateien", files.len());
     Ok(files)
+}
+
+/// Generiert eine Overview-Map und extrahiert gleichzeitig Farmland-Polygone.
+///
+/// Gibt ein [`OverviewResult`] zurueck, das das Bild sowie die Roh-Polygone
+/// aus dem GRLE-Farmland-Layer enthaelt. Die Polygon-Koordinaten liegen
+/// im Pixel-Raum des GRLE-Rasters; der Aufrufer muss sie in Weltkoordinaten
+/// umrechnen (`world = pixel * (map_size / grle_width)`).
+///
+/// Die bestehenden Optionen steuern weiterhin den Bild-Inhalt (Hillshade,
+/// Farmland-Grenzen usw.). Die Polygon-Extraktion findet unabhaengig statt.
+pub fn generate_overview_result_from_zip(
+    zip_path: &str,
+    options: &OverviewOptions,
+) -> Result<OverviewResult> {
+    log::info!(
+        "Generiere Overview + Farmland-Polygone aus ZIP: {}",
+        zip_path
+    );
+
+    let files = extract_zip(zip_path)?;
+    let map_info = discovery::discover_map(&files)?;
+
+    let rgb_image = generate_overview(&files, &map_info, options)?;
+
+    let (farmland_polygons, grle_width, grle_height) =
+        try_extract_polygons_from_files(&files, &map_info);
+
+    Ok(OverviewResult {
+        image: DynamicImage::ImageRgb8(rgb_image),
+        farmland_polygons,
+        grle_width,
+        grle_height,
+        map_size: map_info.map_size as f32,
+    })
+}
+
+/// Versucht Farmland-Polygone aus den ZIP-Dateien zu extrahieren.
+///
+/// Schlaegt bei fehlenden oder fehlerhaften Daten still fehl (leere Liste).
+fn try_extract_polygons_from_files(
+    files: &HashMap<String, Vec<u8>>,
+    map_info: &discovery::MapInfo,
+) -> (Vec<FarmlandPolygon>, u32, u32) {
+    let Some((path, data)) = discovery::find_farmlands(files, &map_info.data_dir) else {
+        log::info!("Keine Farmland-Daten gefunden – Polygone werden nicht extrahiert");
+        return (Vec::new(), map_info.map_size, map_info.map_size);
+    };
+
+    if !path.ends_with(".grle") {
+        log::info!(
+            "Farmland-Datei ist kein GRLE ({}), Polygon-Extraktion uebersprungen",
+            path
+        );
+        return (Vec::new(), map_info.map_size, map_info.map_size);
+    }
+
+    match farmland::extract_farmland_polygons(data) {
+        Ok((polygons, w, h)) => {
+            log::info!(
+                "Farmland-Polygone extrahiert: {} Felder aus {}x{} Raster",
+                polygons.len(),
+                w,
+                h
+            );
+            (polygons, w, h)
+        }
+        Err(e) => {
+            log::warn!("Farmland-Polygon-Extraktion fehlgeschlagen: {}", e);
+            (Vec::new(), map_info.map_size, map_info.map_size)
+        }
+    }
 }
