@@ -161,6 +161,10 @@ impl ConnectionRenderer {
 
         // Zoom-Kompensationsfaktor einmalig pro Frame berechnen (nicht pro Verbindung).
         let compensation = ctx.options.zoom_compensation(ctx.camera.zoom);
+        // Pixel -> Welteinheiten-Faktor fuer Mindestgroessen.
+        let wpp = ctx.camera.world_per_pixel(ctx.viewport_size[1]);
+        let min_thickness = ctx.options.min_connection_width_px * wpp;
+        let min_arrow = ctx.options.min_arrow_size_px * wpp;
 
         // Persistenten Positions-Cache leeren — Eintraege bleiben allokiert,
         // dadurch entfaellt die per-Frame HashMap-Allokation.
@@ -236,12 +240,13 @@ impl ConnectionRenderer {
                 let direction = delta / length;
                 let color =
                     connection_color(connection.direction, connection.priority, ctx.options);
-                let thickness = match connection.priority {
+                let thickness = (match connection.priority {
                     crate::ConnectionPriority::Regular => ctx.options.connection_thickness_world,
                     crate::ConnectionPriority::SubPriority => {
                         ctx.options.connection_thickness_subprio_world
                     }
-                } * compensation;
+                } * compensation)
+                    .max(min_thickness);
 
                 push_line_quad(vertex_scratch, start, end, thickness, color);
 
@@ -258,8 +263,8 @@ impl ConnectionRenderer {
                             vertex_scratch,
                             center,
                             arrow_dir,
-                            ctx.options.arrow_length_world * compensation,
-                            ctx.options.arrow_width_world * compensation,
+                            (ctx.options.arrow_length_world * compensation).max(min_arrow),
+                            (ctx.options.arrow_width_world * compensation).max(min_arrow),
                             color,
                         );
                     }
