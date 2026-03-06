@@ -3,7 +3,7 @@ members = [".", "crates/fs25_map_overview"]
 
 [package]
 name = "FS25-AutoDrive-Editor"
-version = "1.1.0"
+version = "1.2.0"
 edition = "2021"
 authors = ["mro68"]
 description = "GPU-beschleunigter Editor fuer AutoDrive-Kurse in Farming Simulator 25"
@@ -64,6 +64,7 @@ fs25_map_overview = { path = "crates/fs25_map_overview" }
 
 # Serialization
 serde = { version = "1", features = ["derive"] }
+serde_json = "1"
 toml = "0.9.8"
 
 # Geordnete HashSet fuer deterministische Selektionsreihenfolge
