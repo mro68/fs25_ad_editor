@@ -130,6 +130,10 @@ pub fn render_toolbar(ctx: &egui::Context, state: &AppState) -> Vec<AppIntent> {
                 .width(185.0)
                 .show_ui(ui, |ui| {
                     for &(idx, name, _icon) in &tool_entries {
+                        // FieldBoundary-Tool nicht im Dropdown anzeigen
+                        if idx == TOOL_INDEX_FIELD_BOUNDARY {
+                            continue;
+                        }
                         render_line_tool_item(
                             ui,
                             idx,
@@ -142,25 +146,6 @@ pub fn render_toolbar(ctx: &egui::Context, state: &AppState) -> Vec<AppIntent> {
                         );
                     }
                 });
-
-            ui.separator();
-
-            // ── FieldBoundary-Button (nur wenn Farmland-Daten geladen) ──
-            let has_farmland = state.farmland_polygons.is_some();
-            let field_boundary_active = active == EditorTool::Route
-                && state.editor.tool_manager.active_index() == Some(TOOL_INDEX_FIELD_BOUNDARY);
-            let field_resp = ui
-                .add_enabled(
-                    has_farmland,
-                    egui::Button::new("\u{1F33E} Feld erkennen").selected(field_boundary_active),
-                )
-                .on_disabled_hover_text("Hintergrund mit Feldgrenzen zuerst laden")
-                .on_hover_text("Feld erkennen");
-            if field_resp.clicked() {
-                events.push(AppIntent::SelectRouteToolRequested {
-                    index: TOOL_INDEX_FIELD_BOUNDARY,
-                });
-            }
 
             ui.separator();
 

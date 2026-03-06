@@ -43,7 +43,15 @@ impl crate::app::tools::RouteTool for FieldBoundaryTool {
                     if let Some(polygon) = find_polygon_at(pos, data) {
                         self.selected_polygon = Some(polygon.clone());
                         self.phase = FieldBoundaryPhase::Configuring;
+                    } else {
+                        log::info!(
+                            "Kein Feld an Position ({:.1}, {:.1}) gefunden",
+                            pos.x,
+                            pos.y
+                        );
                     }
+                } else {
+                    log::warn!("Keine Farmland-Daten geladen – Feld-Erkennung nicht moeglich");
                 }
                 ToolAction::Continue
             }

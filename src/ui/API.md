@@ -75,6 +75,9 @@ pub fn render_menu(ctx: &egui::Context, state: &AppState) -> Vec<AppIntent>
 - **Help**
   - About → Loggt Version
 
+- **Extras**
+  - 🌾 Feld erkennen (nur aktivierbar wenn `state.farmland_polygons.is_some()`) → `AppIntent::SelectRouteToolRequested { index: TOOL_INDEX_FIELD_BOUNDARY }`
+
 ---
 
 ### `render_toolbar`
@@ -87,7 +90,7 @@ pub fn render_toolbar(ctx: &egui::Context, state: &AppState) -> Vec<AppIntent>
 
 **Enthaltene Buttons:**
 - Select / Connect / AddNode / Route (immer sichtbar)
-- `🌾 Feld erkennen` — nur aktivierbar wenn `state.farmland_polygons.is_some()` (deaktiviert mit Tooltip wenn keine Farmland-Daten geladen); emittiert `AppIntent::SelectRouteToolRequested { index: TOOL_INDEX_FIELD_BOUNDARY }`
+- Linien-Tool-Dropdown: Zeigt alle Route-Tools ausser FieldBoundaryTool
 
 
 ### `render_properties_panel`
@@ -207,8 +210,7 @@ let intents = input.collect_viewport_events(
   - Mittel/Rechts-Drag → Kamera-Pan
 
 - **`context_menu`:** Rechtsklick-Kontextmenü mit validiertem Command-System (CommandId + Preconditions → nur gültige Einträge). SVG-Icons werden aus `assets/` gerendert und über `EditorOptions` sowie die aktuell gewählte Standard-Richtung/-Priorität eingefärbt. Streckenteilung-Widget wird nur angezeigt wenn `RoadMap::is_resampleable_chain()` für die aktuelle Selektion `true` liefert (zusammenhängende Kette, Kreuzungen nur an Endpunkten).
-  - **Segment-Integration:** `segment_registry` wird zur Validierung herangezogen. Wenn alle selektierten Nodes zu einem einzigen validen Segment gehören → `EditSegment` Command verfügbar.
-  - **⚙ Extras-Submenu:** Enthält `🌾 Feld erkennen` (CommandId `SetToolFieldBoundary`), geschützt durch `Precondition::FarmlandPolygonsLoaded`. Nur sichtbar wenn Farmland-Polygone geladen sind.
+  - **Segment-Integration:** `segment_registry` wird zur Validierung herangezogen. Wenn alle selektierten Nodes zu einem einzigen validen Segment gehoeren → `EditSegment` Command verfuegbar.
 
 ### `render_context_menu`
 

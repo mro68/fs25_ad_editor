@@ -9,6 +9,14 @@ use image::GenericImageView;
 use std::path::Path;
 use std::sync::Arc;
 
+/// Berechnet den JSON-Pfad fuer Farmland-Polygone parallel zur Bilddatei.
+///
+/// Ersetzt die Dateiendung durch `.json` (z.B. `overview.jpg` → `overview.json`).
+fn json_path_for(image_path: &str) -> String {
+    let p = Path::new(image_path);
+    p.with_extension("json").to_string_lossy().into_owned()
+}
+
 /// Oeffnet den Background-Map-Auswahl-Dialog.
 pub fn request_background_map_dialog(state: &mut AppState) {
     state.ui.show_background_map_dialog = true;
@@ -43,6 +51,9 @@ pub fn load_background_map(
     state.view.background_map = Some(Arc::new(bg_map));
     state.view.background_scale = 1.0;
     state.view.background_dirty = true;
+
+    // Farmland-Polygone aus begleitender JSON-Datei laden (falls vorhanden)
+    load_farmland_json(state, &path);
 
     Ok(())
 }
@@ -138,6 +149,9 @@ pub fn load_background_from_zip(
 
     // ZIP-Browser schliessen (falls offen)
     state.ui.zip_browser = None;
+
+    // Farmland-Polygone aus begleitender JSON-Datei neben dem ZIP laden (falls vorhanden)
+    load_farmland_json(state, &zip_path);
 
     // Speichern als overview.jpg anbieten (falls XML geladen)
     prompt_save_as_overview(state);
@@ -262,5 +276,57 @@ pub fn save_background_as_overview(state: &mut AppState, path: String) -> Result
     )?;
 
     log::info!("Background-Map als overview.jpg gespeichert: {}", path);
+
+    // Farmland-Polygone als JSON parallel zur Bilddatei speichern
+    save_farmland_json(state, &path);
+
     Ok(())
+}
+
+/// Speichert Farmland-Polygone als JSON-Datei neben der Bilddatei.
+///
+/// Pfad wird aus dem Bildpfad abgeleitet (z.B. `overview.jpg` → `overview.json`).
+/// Falls keine Polygone vorhanden sind, wird nichts geschrieben.
+fn save_farmland_json(state: &AppState, image_path: &str) {
+    let Some(ref polygons) = state.farmland_polygons else {
+        return;
+    };
+    let json_path = json_path_for(image_path);
+    match serde_json::to_string(polygons.as_ref()) {
+        Ok(json) => match std::fs::write(&json_path, json) {
+            Ok(()) => log::info!(
+                "Farmland-Polygone gespeichert: {} ({} Felder)",
+                json_path,
+                polygons.len()
+            ),
+            Err(e) => log::warn!("Farmland-JSON konnte nicht geschrieben werden: {}", e),
+        },
+        Err(e) => log::warn!("Farmland-Polygone konnten nicht serialisiert werden: {}", e),
+    }
+}
+
+/// Laedt Farmland-Polygone aus einer JSON-Datei neben der Bilddatei.
+///
+/// Prueft ob eine `.json`-Datei neben dem Bildpfad existiert und liest
+/// die Polygon-Daten ein. Wird beim Auto-Load der overview.jpg aufgerufen.
+pub fn load_farmland_json(state: &mut AppState, image_path: &str) {
+    let json_path = json_path_for(image_path);
+    let path = Path::new(&json_path);
+    if !path.is_file() {
+        return;
+    }
+    match std::fs::read_to_string(path) {
+        Ok(content) => match serde_json::from_str::<Vec<FieldPolygon>>(&content) {
+            Ok(polygons) => {
+                log::info!(
+                    "Farmland-Polygone geladen: {} ({} Felder)",
+                    json_path,
+                    polygons.len()
+                );
+                state.farmland_polygons = Some(Arc::new(polygons));
+            }
+            Err(e) => log::warn!("Farmland-JSON konnte nicht deserialisiert werden: {}", e),
+        },
+        Err(e) => log::warn!("Farmland-JSON konnte nicht gelesen werden: {}", e),
+    }
 }

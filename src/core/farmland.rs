@@ -9,13 +9,14 @@
 //! - Normalen-basiertes Polygon-Offset
 
 use glam::Vec2;
+use serde::{Deserialize, Serialize};
 
 /// Ein geordnetes Feldgrenz-Polygon in Weltkoordinaten (x/z-Ebene).
 ///
 /// Die Vertices stammen aus dem GRLE-Farmland-Raster und wurden
 /// per `world = pixel * (map_size / grle_width) - map_size / 2`
 /// in Weltkoordinaten umgerechnet.
-#[derive(Clone)]
+#[derive(Clone, Serialize, Deserialize)]
 pub struct FieldPolygon {
     /// Farmland-ID (1–255, 0 = kein Feld)
     pub id: u32,
