@@ -329,6 +329,8 @@ In `core::farmland` (re-exportiert aus `core`).
 ```rust
 /// Geordnetes Feldgrenz-Polygon in Weltkoordinaten (x/z-Ebene).
 /// Vertices stammen aus dem GRLE-Farmland-Raster.
+/// Serialisierbar als JSON fuer Persistierung neben overview.jpg.
+#[derive(Clone, Serialize, Deserialize)]
 pub struct FieldPolygon {
     pub id: u32,           // Farmland-ID (1–255)
     pub vertices: Vec<Vec2>, // Geordnete Rand-Vertices in Weltkoordinaten

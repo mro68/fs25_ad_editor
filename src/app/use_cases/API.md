@@ -107,7 +107,8 @@ pub enum AddNodeResult {
 - `toggle_background_visibility(state)` — Sichtbarkeit umschalten
 - `clear_background_map(state)` — Background-Map entfernen
 - `generate_overview_with_options(state) -> anyhow::Result<()>` — Uebersichtskarte aus Map-Mod-ZIP generieren (Layer-Optionen aus Dialog-State), Einstellungen persistent speichern
-- `save_background_as_overview(state, path) -> anyhow::Result<()>` — Aktuelle Background-Map als overview.jpg speichern (JPEG Qualitaet 90)
+- `save_background_as_overview(state, path) -> anyhow::Result<()>` — Aktuelle Background-Map als overview.jpg speichern (JPEG Qualitaet 90), Farmland-Polygone als `.json` daneben
+- `load_farmland_json(state, image_path)` — Laedt Farmland-Polygone aus einer `.json`-Datei neben der Bilddatei (z.B. `overview.json` neben `overview.jpg`). Wird beim Auto-Load aufgerufen.
 
 ---
 

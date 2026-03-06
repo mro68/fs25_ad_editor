@@ -57,6 +57,8 @@ fn run_post_load_detection(state: &mut AppState, xml_path: &str) {
             match use_cases::background_map::load_background_map(state, ov_str.to_string(), None) {
                 Ok(()) => {
                     log::info!("Overview auto-loaded: {}", ov_str);
+                    // Farmland-Polygone aus JSON laden (falls vorhanden)
+                    use_cases::background_map::load_farmland_json(state, ov_str);
                     true
                 }
                 Err(e) => {
