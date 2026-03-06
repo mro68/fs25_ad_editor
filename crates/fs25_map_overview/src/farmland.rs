@@ -308,10 +308,7 @@ mod tests {
 
         // Muss weit unter dem max_steps-Limit liegen (w*h*4 = 60).
         // Mit dem Fallback-Stopp nach 2 Umlaeufen: maximal ~2 * 3 Pixel = ~6 Vertices.
-        assert!(
-            !contour.is_empty(),
-            "Contour darf nicht leer sein"
-        );
+        assert!(!contour.is_empty(), "Contour darf nicht leer sein");
         assert!(
             contour.len() <= 10,
             "Streifen-Contour zu lang ({} Vertices) – Fallback-Stopp hat nicht gegriffen",
