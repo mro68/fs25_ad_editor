@@ -94,6 +94,7 @@ pub enum ValueAdjustInputMode {
 }
 ```
 | Terrain | `TERRAIN_HEIGHT_SCALE` | 255.0 | Hoehenskala fuer Heightmap-Export |
+| Zoom-Kompensation | `DEFAULT_ZOOM_COMPENSATION_MAX` | 4.0 | Standard-Maximum fuer den Zoom-Kompensationsfaktor (1.0 = deaktiviert) |
 
 ### `OverviewLayerOptions`
 
@@ -190,6 +191,10 @@ pub struct EditorOptions {
     // Uebersichtskarte
     /// Layer-Optionen fuer Uebersichtskarten-Generierung
     pub overview_layers: OverviewLayerOptions,
+    // Zoom-Kompensation
+    /// Maximaler Zoom-Kompensationsfaktor (1.0 = deaktiviert, 4.0 = Standard).
+    /// Verhindert, dass Nodes und Verbindungen beim Herauszoomen unsichtbar werden.
+    pub zoom_compensation_max: f32,
 }
 ```
 
@@ -198,3 +203,6 @@ pub struct EditorOptions {
 - `EditorOptions::save_to_file(&self, path) -> Result<()>` — Als TOML speichern
 - `EditorOptions::config_path() -> PathBuf` — Pfad zur Optionen-Datei neben der Binary
 - `hitbox_radius(&self) -> f32` — Berechnet den Hitbox-Radius in Welteinheiten (`node_size_world * hitbox_scale_percent / 100`)
+- `snap_radius(&self) -> f32` — Berechnet den Snap-Radius in Welteinheiten
+- `selection_size_multiplier(&self) -> f32` — Selektions-Multiplikator aus `selection_size_factor` in Prozent
+- `zoom_compensation(&self, zoom: f32) -> f32` — Berechnet den Zoom-Kompensationsfaktor fuer eine gegebene Zoom-Stufe. Formel: `(1/zoom)^0.5`, geclampt auf `[1.0, zoom_compensation_max]`. Bei `zoom >= 1.0` ist der Faktor `1.0`; bei `zoom_compensation_max <= 1.0` ist die Kompensation deaktiviert.
