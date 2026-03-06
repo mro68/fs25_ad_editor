@@ -274,7 +274,7 @@ impl EditorApp {
             &mut self.state.ui.distanzen,
             tangent_data,
             !self.state.clipboard.nodes.is_empty(),
-            self.state.farmland_polygons.is_some(),
+            self.state.farmland_polygons.as_ref().is_some_and(|p| !p.is_empty()),
             Some(&self.state.segment_registry),
         ));
 

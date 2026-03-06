@@ -52,6 +52,9 @@ pub fn load_background_map(
     state.view.background_scale = 1.0;
     state.view.background_dirty = true;
 
+    // Farmland-Polygone aus begleitender JSON-Datei laden (falls vorhanden)
+    load_farmland_json(state, &path);
+
     Ok(())
 }
 
@@ -146,6 +149,9 @@ pub fn load_background_from_zip(
 
     // ZIP-Browser schliessen (falls offen)
     state.ui.zip_browser = None;
+
+    // Farmland-Polygone aus begleitender JSON-Datei neben dem ZIP laden (falls vorhanden)
+    load_farmland_json(state, &zip_path);
 
     // Speichern als overview.jpg anbieten (falls XML geladen)
     prompt_save_as_overview(state);

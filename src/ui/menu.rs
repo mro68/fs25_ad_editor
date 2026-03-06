@@ -187,7 +187,7 @@ pub fn render_menu(ctx: &egui::Context, state: &AppState) -> Vec<AppIntent> {
             });
 
             ui.menu_button("Extras", |ui| {
-                let has_farmland = state.farmland_polygons.is_some();
+                let has_farmland = state.farmland_polygons.as_ref().is_some_and(|p| !p.is_empty());
                 if ui
                     .add_enabled(has_farmland, egui::Button::new("\u{1F33E} Feld erkennen"))
                     .on_disabled_hover_text("Hintergrund mit Feldgrenzen zuerst laden")
