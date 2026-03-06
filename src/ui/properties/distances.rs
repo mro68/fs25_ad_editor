@@ -1,7 +1,11 @@
 use indexmap::IndexSet;
-use std::collections::HashSet;
+use std::collections::{HashMap, HashSet};
 
 use crate::app::state::DistanzenState;
+
+/// Maximale Anzahl selektierter Nodes fuer die Ketten-Analyse.
+/// Oberhalb dieses Limits wird die O(N·C)-Berechnung uebersprungen.
+const MAX_CHAIN_NODES: usize = 500;
 use crate::app::tools::common::wheel_dir;
 use crate::app::{AppIntent, RoadMap};
 
@@ -17,6 +21,19 @@ pub fn render_distance_panel(
     events: &mut Vec<AppIntent>,
 ) {
     use crate::shared::spline_geometry::{catmull_rom_chain_with_tangents, polyline_length};
+
+    // Sicherheits-Limit: Ketten-Analyse ist O(N·C) und wird bei grosser Selektion uebersprungen
+    if selected_node_ids.len() > MAX_CHAIN_NODES {
+        if distance_state.active {
+            distance_state.deactivate();
+        }
+        ui.separator();
+        ui.label(format!(
+            "⚠ Ketten-Analyse: zu viele Nodes ({} > {MAX_CHAIN_NODES}).",
+            selected_node_ids.len()
+        ));
+        return;
+    }
 
     let chain = order_chain_for_distance(selected_node_ids, road_map);
     let Some(ordered) = chain else {
@@ -146,16 +163,24 @@ fn compute_resample_preview(
     }
 }
 
+/// Baut eine geordnete Kette aus selektierten Nodes anhand der Verbindungsrichtung.
+///
+/// Algorithmus: Adjacency-Map O(C) einmalig aufbauen, danach Chain-Building O(N).
+/// Vorbedingung: `node_ids.len() <= MAX_CHAIN_NODES` (Aufrufer prueft dies).
 fn order_chain_for_distance(node_ids: &IndexSet<u64>, road_map: &RoadMap) -> Option<Vec<u64>> {
+    // Adjacency-Map: start_id → end_id, gefiltert auf selektierte Nodes (O(C) einmalig)
+    let node_set: HashSet<u64> = node_ids.iter().copied().collect();
+    let forward: HashMap<u64, u64> = road_map
+        .connections_iter()
+        .filter(|c| node_set.contains(&c.start_id) && node_set.contains(&c.end_id))
+        .map(|c| (c.start_id, c.end_id))
+        .collect();
+
+    // Start-Node: kein eingehender Pfeil im selektierten Subgraph
+    let has_incoming: HashSet<u64> = forward.values().copied().collect();
     let start = node_ids
         .iter()
-        .find(|&&id| {
-            road_map
-                .connections_iter()
-                .filter(|c| c.end_id == id && node_ids.contains(&c.start_id))
-                .count()
-                == 0
-        })
+        .find(|&&id| !has_incoming.contains(&id))
         .copied()
         .or_else(|| node_ids.iter().next().copied())?;
 
@@ -163,22 +188,14 @@ fn order_chain_for_distance(node_ids: &IndexSet<u64>, road_map: &RoadMap) -> Opt
     let mut visited = HashSet::new();
     let mut current = start;
 
+    // Chain-Building via Adjacency-Map: O(N) statt O(N·C)
     loop {
         path.push(current);
         visited.insert(current);
 
-        let next = road_map
-            .connections_iter()
-            .find(|c| {
-                c.start_id == current
-                    && node_ids.contains(&c.end_id)
-                    && !visited.contains(&c.end_id)
-            })
-            .map(|c| c.end_id);
-
-        match next {
-            Some(n) => current = n,
-            None => break,
+        match forward.get(&current).copied() {
+            Some(next) if !visited.contains(&next) => current = next,
+            _ => break,
         }
     }
 
