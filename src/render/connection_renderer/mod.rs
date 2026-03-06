@@ -159,6 +159,9 @@ impl ConnectionRenderer {
         // repeated reallocations for large maps.
         self.vertex_scratch.clear();
 
+        // Zoom-Kompensationsfaktor einmalig pro Frame berechnen (nicht pro Verbindung).
+        let compensation = ctx.options.zoom_compensation(ctx.camera.zoom);
+
         // Persistenten Positions-Cache leeren — Eintraege bleiben allokiert,
         // dadurch entfaellt die per-Frame HashMap-Allokation.
         self.pos_cache.clear();
@@ -238,7 +241,7 @@ impl ConnectionRenderer {
                     crate::ConnectionPriority::SubPriority => {
                         ctx.options.connection_thickness_subprio_world
                     }
-                };
+                } * compensation;
 
                 push_line_quad(vertex_scratch, start, end, thickness, color);
 
@@ -255,8 +258,8 @@ impl ConnectionRenderer {
                             vertex_scratch,
                             center,
                             arrow_dir,
-                            ctx.options.arrow_length_world,
-                            ctx.options.arrow_width_world,
+                            ctx.options.arrow_length_world * compensation,
+                            ctx.options.arrow_width_world * compensation,
                             color,
                         );
                     }
