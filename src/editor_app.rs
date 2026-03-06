@@ -258,25 +258,30 @@ impl EditorApp {
             None
         };
 
-        events.extend(self.input.collect_viewport_events(
-            ui,
-            response,
-            viewport_size,
-            &self.state.view.camera,
-            self.state.road_map.as_deref(),
-            &self.state.selection.selected_node_ids,
-            self.state.editor.active_tool,
-            route_tool_is_drawing,
-            &self.state.options,
-            default_direction,
-            default_priority,
-            &drag_targets,
-            &mut self.state.ui.distanzen,
-            tangent_data,
-            !self.state.clipboard.nodes.is_empty(),
-            self.state.farmland_polygons.as_ref().is_some_and(|p| !p.is_empty()),
-            Some(&self.state.segment_registry),
-        ));
+        events.extend(
+            self.input.collect_viewport_events(
+                ui,
+                response,
+                viewport_size,
+                &self.state.view.camera,
+                self.state.road_map.as_deref(),
+                &self.state.selection.selected_node_ids,
+                self.state.editor.active_tool,
+                route_tool_is_drawing,
+                &self.state.options,
+                default_direction,
+                default_priority,
+                &drag_targets,
+                &mut self.state.ui.distanzen,
+                tangent_data,
+                !self.state.clipboard.nodes.is_empty(),
+                self.state
+                    .farmland_polygons
+                    .as_ref()
+                    .is_some_and(|p| !p.is_empty()),
+                Some(&self.state.segment_registry),
+            ),
+        );
 
         // Mauszeiger im Viewport je nach aktivem Werkzeug anpassen
         if response.hovered() {
