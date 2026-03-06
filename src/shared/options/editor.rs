@@ -5,9 +5,10 @@ use super::render::{
     OverviewLayerOptions, SelectionStyle, ARROW_LENGTH_WORLD, ARROW_WIDTH_WORLD,
     CONNECTION_COLOR_DUAL, CONNECTION_COLOR_REGULAR, CONNECTION_COLOR_REVERSE,
     CONNECTION_THICKNESS_SUBPRIO_WORLD, CONNECTION_THICKNESS_WORLD, DEFAULT_ZOOM_COMPENSATION_MAX,
-    MARKER_COLOR, MARKER_OUTLINE_COLOR, MARKER_SIZE_WORLD, NODE_COLOR_DEFAULT, NODE_COLOR_SELECTED,
-    NODE_COLOR_SUBPRIO, NODE_COLOR_WARNING, NODE_SIZE_WORLD, SELECTION_SIZE_FACTOR,
-    TERRAIN_HEIGHT_SCALE,
+    MARKER_COLOR, MARKER_OUTLINE_COLOR, MARKER_SIZE_WORLD, MIN_ARROW_SIZE_PX,
+    MIN_CONNECTION_WIDTH_PX, MIN_MARKER_SIZE_PX, MIN_NODE_SIZE_PX, NODE_COLOR_DEFAULT,
+    NODE_COLOR_SELECTED, NODE_COLOR_SUBPRIO, NODE_COLOR_WARNING, NODE_DECIMATION_SPACING_PX,
+    NODE_SIZE_WORLD, SELECTION_SIZE_FACTOR, TERRAIN_HEIGHT_SCALE,
 };
 use super::tools::{
     ValueAdjustInputMode, HITBOX_SCALE_PERCENT, MOUSE_WHEEL_DISTANCE_STEP_M, SNAP_SCALE_PERCENT,
@@ -90,6 +91,23 @@ pub struct EditorOptions {
     /// Verhindert, dass Nodes und Verbindungen beim Herauszoomen unsichtbar werden.
     #[serde(default = "default_zoom_compensation_max")]
     pub zoom_compensation_max: f32,
+
+    // LOD / Mindestgroessen
+    /// Mindestgroesse fuer Nodes in Pixeln beim Zoomout (0.0 = deaktiviert).
+    #[serde(default = "default_min_node_size_px")]
+    pub min_node_size_px: f32,
+    /// Mindestbreite fuer Verbindungslinien in Pixeln beim Zoomout (0.0 = deaktiviert).
+    #[serde(default = "default_min_connection_width_px")]
+    pub min_connection_width_px: f32,
+    /// Mindestgroesse fuer Richtungspfeile in Pixeln beim Zoomout (0.0 = deaktiviert).
+    #[serde(default = "default_min_arrow_size_px")]
+    pub min_arrow_size_px: f32,
+    /// Mindestgroesse fuer Marker-Pins in Pixeln beim Zoomout (0.0 = deaktiviert).
+    #[serde(default = "default_min_marker_size_px")]
+    pub min_marker_size_px: f32,
+    /// Mindestabstand zwischen Nodes in Pixeln fuer Grid-Decimation (0.0 = deaktiviert).
+    #[serde(default = "default_node_decimation_spacing_px")]
+    pub node_decimation_spacing_px: f32,
 }
 
 impl Default for EditorOptions {
@@ -129,6 +147,11 @@ impl Default for EditorOptions {
             copy_preview_opacity: default_copy_preview_opacity(),
             overview_layers: OverviewLayerOptions::default(),
             zoom_compensation_max: DEFAULT_ZOOM_COMPENSATION_MAX,
+            min_node_size_px: MIN_NODE_SIZE_PX,
+            min_connection_width_px: MIN_CONNECTION_WIDTH_PX,
+            min_arrow_size_px: MIN_ARROW_SIZE_PX,
+            min_marker_size_px: MIN_MARKER_SIZE_PX,
+            node_decimation_spacing_px: NODE_DECIMATION_SPACING_PX,
         }
     }
 }
@@ -171,6 +194,26 @@ fn default_bg_fade_start_zoom() -> f32 {
 
 fn default_zoom_compensation_max() -> f32 {
     DEFAULT_ZOOM_COMPENSATION_MAX
+}
+
+fn default_min_node_size_px() -> f32 {
+    MIN_NODE_SIZE_PX
+}
+
+fn default_min_connection_width_px() -> f32 {
+    MIN_CONNECTION_WIDTH_PX
+}
+
+fn default_min_arrow_size_px() -> f32 {
+    MIN_ARROW_SIZE_PX
+}
+
+fn default_min_marker_size_px() -> f32 {
+    MIN_MARKER_SIZE_PX
+}
+
+fn default_node_decimation_spacing_px() -> f32 {
+    NODE_DECIMATION_SPACING_PX
 }
 
 impl EditorOptions {
@@ -263,6 +306,29 @@ impl EditorOptions {
             ));
         }
 
+        // LOD-Mindestgroessen duerfen nicht negativ sein
+        if self.min_node_size_px < 0.0 {
+            return Err(anyhow::anyhow!("min_node_size_px darf nicht negativ sein"));
+        }
+        if self.min_connection_width_px < 0.0 {
+            return Err(anyhow::anyhow!(
+                "min_connection_width_px darf nicht negativ sein"
+            ));
+        }
+        if self.min_arrow_size_px < 0.0 {
+            return Err(anyhow::anyhow!("min_arrow_size_px darf nicht negativ sein"));
+        }
+        if self.min_marker_size_px < 0.0 {
+            return Err(anyhow::anyhow!(
+                "min_marker_size_px darf nicht negativ sein"
+            ));
+        }
+        if self.node_decimation_spacing_px < 0.0 {
+            return Err(anyhow::anyhow!(
+                "node_decimation_spacing_px darf nicht negativ sein"
+            ));
+        }
+
         Ok(())
     }
 
@@ -302,5 +368,16 @@ impl EditorOptions {
         (1.0 / zoom.max(f32::EPSILON))
             .powf(0.5)
             .clamp(1.0, self.zoom_compensation_max)
+    }
+
+    /// Berechnet die Grid-Zellgroesse fuer die Node-Decimation in Welteinheiten.
+    ///
+    /// Gibt `0.0` zurueck, wenn die Decimation deaktiviert ist (`node_decimation_spacing_px == 0`).
+    /// Die Zellgroesse skaliert automatisch mit dem Zoom-Level.
+    pub fn decimation_cell_size(&self, world_per_pixel: f32) -> f32 {
+        if self.node_decimation_spacing_px <= 0.0 {
+            return 0.0;
+        }
+        self.node_decimation_spacing_px * world_per_pixel
     }
 }

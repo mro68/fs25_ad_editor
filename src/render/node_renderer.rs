@@ -7,8 +7,8 @@ use crate::shared::SelectionStyle;
 use crate::{NodeFlag, RoadMap};
 use eframe::{egui_wgpu, wgpu};
 use indexmap::IndexSet;
+use std::collections::HashMap;
 use wgpu::util::DeviceExt;
-// HashSet-Import wird direkt in der Signatur genutzt (kein Re-collect mehr noetig)
 
 /// Renderer fuer Nodes (Wegpunkte)
 pub struct NodeRenderer {
@@ -22,6 +22,8 @@ pub struct NodeRenderer {
     instance_scratch: Vec<NodeInstance>,
     /// Wiederverwendbarer Scratch-Buffer fuer sichtbare Node-IDs (KD-Query ohne pro-Frame-Vec)
     node_id_scratch: Vec<u64>,
+    /// Wiederverwendbare Grid-Map fuer Node-Decimation (wird pro Frame per clear() geleert)
+    decimation_grid: HashMap<(i32, i32), ()>,
 }
 
 impl NodeRenderer {
@@ -146,6 +148,7 @@ impl NodeRenderer {
             // Reserve initial capacity to avoid tiny growths on first frames.
             instance_scratch: Vec::with_capacity(1024),
             node_id_scratch: Vec::with_capacity(1024),
+            decimation_grid: HashMap::with_capacity(1024),
         }
     }
 
@@ -183,6 +186,41 @@ impl NodeRenderer {
 
         // Zoom-Kompensationsfaktor einmalig pro Frame berechnen (nicht pro Node).
         let compensation = ctx.options.zoom_compensation(ctx.camera.zoom);
+        // Pixel -> Welteinheiten-Faktor fuer Mindestgroessen-Berechnung.
+        let wpp = ctx.camera.world_per_pixel(viewport_height);
+        let min_node_world = ctx.options.min_node_size_px * wpp;
+
+        // --- Grid-Decimation: bei Zoomout einen Node pro Grid-Zelle behalten ---
+        let cell_size = ctx.options.decimation_cell_size(wpp);
+        if cell_size > 0.0 {
+            self.decimation_grid.clear();
+            let inv_cell = 1.0 / cell_size;
+            // Separate Borrows auf zwei Felder, damit der Borrow-Checker den
+            // gleichzeitigen &mut-Zugriff innerhalb der retain-Closure akzeptiert.
+            let node_id_scratch = &mut self.node_id_scratch;
+            let decimation_grid = &mut self.decimation_grid;
+            node_id_scratch.retain(|&node_id| {
+                // Selektierte Nodes immer sichtbar lassen
+                if selected_set.contains(&node_id) {
+                    return true;
+                }
+                let Some(node) = road_map.nodes.get(&node_id) else {
+                    return false;
+                };
+                let cell = (
+                    (node.position.x * inv_cell).floor() as i32,
+                    (node.position.y * inv_cell).floor() as i32,
+                );
+                // Nur einfuegen wenn Zelle noch leer — erster Node pro Zelle gewinnt
+                match decimation_grid.entry(cell) {
+                    std::collections::hash_map::Entry::Vacant(e) => {
+                        e.insert(());
+                        true
+                    }
+                    std::collections::hash_map::Entry::Occupied(_) => false,
+                }
+            });
+        }
 
         // Reserve Platz fuer Instanzen entsprechend der Anzahl gefundener IDs,
         // um mehrfache Reallocs beim Push zu vermeiden.
@@ -219,11 +257,12 @@ impl NodeRenderer {
                 c
             };
 
-            let size = if is_selected {
+            let size = (if is_selected {
                 ctx.options.node_size_world * ctx.options.selection_size_multiplier()
             } else {
                 ctx.options.node_size_world
-            } * compensation;
+            } * compensation)
+                .max(min_node_world);
 
             self.instance_scratch.push(NodeInstance::new(
                 [node.position.x, node.position.y],

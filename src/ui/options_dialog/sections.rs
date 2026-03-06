@@ -273,6 +273,80 @@ pub(super) fn render_camera(ui: &mut egui::Ui, opts: &mut EditorOptions) -> bool
     changed
 }
 
+/// Rendert die LOD/Mindestgroessen-Einstellungen (Pixel-Untergrenzen + Node-Decimation).
+pub(super) fn render_lod(ui: &mut egui::Ui, opts: &mut EditorOptions) -> bool {
+    let mut changed = false;
+    ui.label("Mindestgroessen (Pixel, 0 = deaktiviert):");
+    ui.horizontal(|ui| {
+        ui.label("Nodes:");
+        changed |= ui
+            .add(
+                egui::Slider::new(&mut opts.min_node_size_px, 0.0..=20.0)
+                    .step_by(0.5)
+                    .fixed_decimals(1),
+            )
+            .on_hover_text(
+                "Mindestgroesse fuer Nodes in Pixeln beim Herauszoomen (0 = deaktiviert)",
+            )
+            .changed();
+    });
+    ui.horizontal(|ui| {
+        ui.label("Verbindungen:");
+        changed |= ui
+            .add(
+                egui::Slider::new(&mut opts.min_connection_width_px, 0.0..=10.0)
+                    .step_by(0.5)
+                    .fixed_decimals(1),
+            )
+            .on_hover_text(
+                "Mindestbreite fuer Verbindungslinien in Pixeln beim Herauszoomen (0 = deaktiviert)",
+            )
+            .changed();
+    });
+    ui.horizontal(|ui| {
+        ui.label("Pfeile:");
+        changed |= ui
+            .add(
+                egui::Slider::new(&mut opts.min_arrow_size_px, 0.0..=20.0)
+                    .step_by(0.5)
+                    .fixed_decimals(1),
+            )
+            .on_hover_text(
+                "Mindestgroesse fuer Richtungspfeile in Pixeln beim Herauszoomen (0 = deaktiviert)",
+            )
+            .changed();
+    });
+    ui.horizontal(|ui| {
+        ui.label("Marker:");
+        changed |= ui
+            .add(
+                egui::Slider::new(&mut opts.min_marker_size_px, 0.0..=30.0)
+                    .step_by(1.0)
+                    .fixed_decimals(0),
+            )
+            .on_hover_text(
+                "Mindestgroesse fuer Marker-Pins in Pixeln beim Herauszoomen (0 = deaktiviert)",
+            )
+            .changed();
+    });
+    ui.separator();
+    ui.label("Node-Ausdünnung:");
+    ui.horizontal(|ui| {
+        ui.label("Mindestabstand (px):");
+        changed |= ui
+            .add(
+                egui::Slider::new(&mut opts.node_decimation_spacing_px, 0.0..=50.0)
+                    .step_by(1.0)
+                    .fixed_decimals(0),
+            )
+            .on_hover_text(
+                "Mindestabstand zwischen Nodes in Pixeln beim Herauszoomen. 0 = alle Nodes zeigen.",
+            )
+            .changed();
+    });
+    changed
+}
+
 pub(super) fn render_background(ui: &mut egui::Ui, opts: &mut EditorOptions) -> bool {
     let mut changed = false;
     ui.horizontal(|ui| {
