@@ -84,6 +84,9 @@ pub(super) fn command_icon(
         CommandId::SetToolRouteCubic | CommandId::RouteCubic => {
             egui::include_image!("../../../assets/icon_bezier_cubic.svg")
         }
+        CommandId::SetToolFieldBoundary => {
+            egui::include_image!("../../../assets/icon_field_boundary.svg")
+        }
         CommandId::DirectionRegular => {
             egui::include_image!("../../../assets/icon_direction_regular.svg")
         }
