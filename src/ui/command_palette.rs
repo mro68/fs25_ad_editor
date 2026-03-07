@@ -148,8 +148,7 @@ pub fn render_command_palette(
         .open(&mut window_open)
         .show(ctx, |ui| {
             let search_response = ui.add(
-                egui::TextEdit::singleline(&mut state.search_text)
-                    .hint_text("Befehl eingeben..."),
+                egui::TextEdit::singleline(&mut state.search_text).hint_text("Befehl eingeben..."),
             );
             if !state.focus_requested {
                 search_response.request_focus();
@@ -213,8 +212,8 @@ pub fn render_command_palette(
         window_rect = Some(output.response.rect);
     }
 
-    let (arrow_up, arrow_down, enter_pressed, escape_pressed, ctrl_k_pressed, pointer_click) =
-        ctx.input(|i| {
+    let (arrow_up, arrow_down, enter_pressed, escape_pressed, ctrl_k_pressed, pointer_click) = ctx
+        .input(|i| {
             let ctrl_k_pressed = i.events.iter().any(|event| {
                 matches!(
                     event,
@@ -233,7 +232,10 @@ pub fn render_command_palette(
                 i.key_pressed(egui::Key::Enter),
                 i.key_pressed(egui::Key::Escape),
                 ctrl_k_pressed,
-                i.pointer.primary_clicked().then(|| i.pointer.interact_pos()).flatten(),
+                i.pointer
+                    .primary_clicked()
+                    .then(|| i.pointer.interact_pos())
+                    .flatten(),
             )
         });
 
