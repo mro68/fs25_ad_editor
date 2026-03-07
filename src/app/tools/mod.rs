@@ -16,6 +16,8 @@ pub mod curve;
 pub mod field_boundary;
 /// Parkplatz-Layout-Tool mit Wendekreis und konfigurierbaren Parkreihen.
 pub mod parking;
+/// Strecken-Versatz-Tool — generiert parallele Versatz-Kette(n) zur selektierten Kette.
+pub mod route_offset;
 /// RouteTool-Trait — Schnittstelle fuer alle Route-Tools.
 mod route_tool;
 /// Catmull-Rom-Spline-Tool — interpolierende Kurve durch alle geklickten Punkte.
@@ -137,6 +139,13 @@ pub struct ToolResult {
     /// Jeder Eintrag erzeugt einen Map-Marker am Node mit dem angegebenen Index
     /// in `new_nodes`. Wird z.B. vom ParkingTool genutzt.
     pub markers: Vec<(usize, String, String)>,
+    /// IDs von Nodes, die beim Anwenden des Results entfernt werden sollen.
+    ///
+    /// Wird vom `RouteOffsetTool` befuellt wenn "Original entfernen" aktiv ist.
+    /// `apply_tool_result` loescht diese Nodes (inkl. aller zugehoerigen Connections)
+    /// im selben Undo-Snapshot wie die Erstellung der neuen Nodes.
+    /// Fuer alle anderen Tools ist dieser Vec leer.
+    pub nodes_to_remove: Vec<u64>,
 }
 
 // ── ToolManager ──────────────────────────────────────────────────
@@ -169,6 +178,7 @@ impl ToolManager {
         manager.register(Box::new(constraint_route::ConstraintRouteTool::new()));
         manager.register(Box::new(parking::ParkingTool::new()));
         manager.register(Box::new(field_boundary::FieldBoundaryTool::new()));
+        manager.register(Box::new(route_offset::RouteOffsetTool::new()));
         manager
     }
 

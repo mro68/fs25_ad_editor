@@ -111,6 +111,7 @@ pub fn assemble_tool_result(
         internal_connections,
         external_connections,
         markers: vec![],
+        nodes_to_remove: Vec::new(),
     }
 }
 
