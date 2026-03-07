@@ -56,6 +56,11 @@ pub fn reset_options(state: &mut AppState) -> anyhow::Result<()> {
     state.options.save_to_file(&path)
 }
 
+/// Schaltet die Sichtbarkeit der Command-Palette um.
+pub fn toggle_command_palette(state: &mut AppState) {
+    state.ui.show_command_palette = !state.ui.show_command_palette;
+}
+
 /// Schliesst den Duplikat-Dialog und entfernt die Statusmeldung.
 pub fn dismiss_dedup_dialog(state: &mut AppState) {
     state.ui.dedup_dialog.visible = false;

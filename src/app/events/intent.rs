@@ -172,6 +172,8 @@ pub enum AppIntent {
     OptionsChanged { options: Box<EditorOptions> },
     /// Optionen auf Standardwerte zuruecksetzen
     ResetOptionsRequested,
+    /// Command-Palette oeffnen/schliessen
+    CommandPaletteToggled,
 
     /// Route-Tool: Viewport-Klick
     RouteToolClicked { world_pos: glam::Vec2, ctrl: bool },

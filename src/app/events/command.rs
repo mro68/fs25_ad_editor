@@ -169,6 +169,8 @@ pub enum AppCommand {
     ApplyOptions { options: Box<EditorOptions> },
     /// Optionen auf Standardwerte zuruecksetzen
     ResetOptions,
+    /// Command-Palette ein-/ausblenden
+    ToggleCommandPalette,
     /// Selektion aufheben
     ClearSelection,
     /// Alle Nodes selektieren
