@@ -82,6 +82,11 @@ pub struct EditorOptions {
     #[serde(default = "default_copy_preview_opacity")]
     pub copy_preview_opacity: f32,
 
+    // Segment-Overlay
+    /// Schriftgroesse des Lock-Icons im Segment-Overlay in Pixeln.
+    #[serde(default = "default_segment_lock_icon_size_px")]
+    pub segment_lock_icon_size_px: f32,
+
     // Uebersichtskarte
     #[serde(default)]
     pub overview_layers: OverviewLayerOptions,
@@ -145,6 +150,7 @@ impl Default for EditorOptions {
             bg_opacity_at_min_zoom: 0.0,
             bg_fade_start_zoom: 3.5,
             copy_preview_opacity: default_copy_preview_opacity(),
+            segment_lock_icon_size_px: default_segment_lock_icon_size_px(),
             overview_layers: OverviewLayerOptions::default(),
             zoom_compensation_max: DEFAULT_ZOOM_COMPENSATION_MAX,
             min_node_size_px: MIN_NODE_SIZE_PX,
@@ -158,6 +164,10 @@ impl Default for EditorOptions {
 
 fn default_copy_preview_opacity() -> f32 {
     0.5
+}
+
+fn default_segment_lock_icon_size_px() -> f32 {
+    16.0
 }
 
 fn default_snap_scale_percent() -> f32 {
@@ -303,6 +313,13 @@ impl EditorOptions {
             return Err(anyhow::anyhow!(
                 "copy_preview_opacity ({}) muss zwischen 0 und 1 liegen",
                 self.copy_preview_opacity
+            ));
+        }
+
+        if self.segment_lock_icon_size_px <= 0.0 {
+            return Err(anyhow::anyhow!(
+                "segment_lock_icon_size_px ({}) muss > 0 sein",
+                self.segment_lock_icon_size_px
             ));
         }
 

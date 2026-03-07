@@ -98,6 +98,7 @@
   - [x] `AppIntent::ToggleSegmentLockRequested` / `AppCommand::ToggleSegmentLock`
   - [x] `handlers::segment::toggle_lock()` — neuer Handler
   - [x] `ui::segment_overlay`: `render_segment_overlays()` / `SegmentOverlayEvent::LockToggled` — Viewport-Overlay mit Rahmen und klickbaren Lock-Icons
+  - [x] `EditorOptions::segment_lock_icon_size_px` — Lock-Icon-Größe im Overlay konfigurierbar
 
 - [x] **Segment-Fixes (2026-03-07)**
   - [x] **Bug A: Multi-Selection Dimming** (`render_scene.rs::compute_dimmed_ids`) — Korrekter Dimm-Pass über alle Records: Nodes werden nur gedimmt wenn ihr Segment mind. einen selektierten Node hat und der Node selbst NICHT selektiert ist

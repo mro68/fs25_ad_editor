@@ -409,6 +409,7 @@ impl EditorApp {
                     self.state.selection.selected_node_ids.as_ref(),
                     clicked_pos,
                     ctrl_held,
+                    self.state.options.segment_lock_icon_size_px,
                 );
                 for ev in overlay_events {
                     match ev {
