@@ -104,10 +104,11 @@ Rendert das Properties-Panel mit Detailanzeige selektierter Nodes (IDs, Position
 Zeigt tool- und selektionsabhängig:
 
 - Distanzen-Panel (wenn ≥ 2 Nodes selektiert): Catmull-Rom-Resample (→ `ResamplePathRequested`)
-- Route-Tool-Konfiguration (wenn `active_tool == EditorTool::Route`)
 - Standard-Richtung und Straßenart-Selector
+- **Flag-Editor** (Einzelnode-Selektion): ComboBox für `Regular` / `SubPrio` (→ `NodeFlagChangeRequested`)
+- **Connection-Listing** (Einzelnode-Selektion): eingehende und ausgehende Verbindungen mit Richtungsanzeige
 
-**Hinweis:** Node-Verhalten-Einstellungen (reconnect_on_delete, split_connection_on_place) sind jetzt in `render_options_dialog()` integriert.
+**Hinweis:** Node-Verhalten-Einstellungen (reconnect_on_delete, split_connection_on_place) sind in `render_options_dialog()` integriert. Route-Tool-Konfiguration wird separat vom `render_edit_panel()` gerendert (DRY-Bereinigung).
 
 ```rust
 pub fn render_properties_panel(

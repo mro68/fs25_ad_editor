@@ -108,10 +108,15 @@ pub fn open_options_dialog(state: &mut AppState)
 pub fn close_options_dialog(state: &mut AppState)
 pub fn apply_options(state: &mut AppState, options: EditorOptions) -> anyhow::Result<()>
 pub fn reset_options(state: &mut AppState) -> anyhow::Result<()>
-pub fn toggle_command_palette(state: &mut AppState)
 ```
 
 Verwaltet den Options-Dialog. `apply_options()` validiert die neuen Optionen, persistiert sie in die Konfigurationsdatei und aktualisiert den State.
+
+```rust
+pub fn toggle_command_palette(state: &mut AppState)
+```
+
+Schaltet die Sichtbarkeit der Command Palette um (`state.ui.show_command_palette`). Wird durch `AppCommand::ToggleCommandPalette` (Ctrl+K) ausgeloest.
 
 ```rust
 pub fn open_overview_options_dialog(state: &mut AppState, zip_path: String)

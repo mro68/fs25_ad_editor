@@ -31,9 +31,10 @@
 - [x] File-Dialogs (Open)
 - [x] File-Dialogs (Save mit Heightmap-Warnung)
 - [x] File-Dialogs (Save As)
-- [🟡] Basic Theme/Icons (egui_extras image_loaders vorhanden, volles Theme ausstehend)
+- [x] Basic Theme/Icons (Lucide-SVG-Icons integriert: 14 bestehende Icons ersetzt + 6 neue Icons hinzugefuegt)
 - [x] Keyboard-Shortcuts (Ctrl+O, Ctrl+S, Ctrl+Z, Ctrl+Y, Delete, Escape, etc.)
   - [x] Command-Palette-Toggle per Ctrl+K (Intent/Command-Kette vorbereitet)
+  - [x] Keyboard-Guard bei TextEdit-Focus (`wants_keyboard_input`-Pruefung; Ctrl+K und Escape bleiben aktiv)
 - [x] Command Palette (Ctrl+K, Suchfeld, Pfeilnavigation, Enter-Ausfuehrung)
 - [x] Options-Dialog (Farben, Groessen, Breiten – Live-Preview)
 - [x] TOML-Persistierung (fs25_auto_drive_editor.toml neben Binary)
@@ -497,10 +498,21 @@
 - ℹ️ Dokumentation wird aktuell manuell gepflegt (kein Auto-Sync-Mechanismus aktiv)
 - ✅ CI-Basis vorhanden: Layer-Boundary-Check via `make ci-check`
 
+**Errungenschaften (UI-Modernisierung 2026-03-07):**
+- ✅ NodeFlagChangeRequested Intent + SetNodeFlag Command + Handler + UseCase (`node_flag.rs`)
+- ✅ Tool-Config aus Properties-Panel entfernt (DRY-Bereinigung: kein doppeltes Render)
+- ✅ CommandPaletteToggled Intent + Ctrl+K Shortcut vollstaendig verdrahtet
+- ✅ Flag-Editor im Property Inspector (ComboBox: Regular / SubPrio)
+- ✅ Connection-Listing im Property Inspector (eingehend/ausgehend pro Einzelnode)
+- ✅ Edit-Panel zeigt Route-Config permanent bei aktivem Route-Tool
+- ✅ Keyboard-Guard bei TextEdit-Focus (`wants_keyboard_input`; Ctrl+K + Escape aktiv)
+- ✅ Command Palette mit Suchfunktion, Pfeilnavigation und dynamischem Route-Tool-Katalog
+- ✅ Lucide-SVG-Icons: 14 bestehende Icons ersetzt + 6 neue Icons
+- ✅ grleconvert-Link in README ergaenzt
+
 **Naechste Aufgaben:**
 1. 🟡 100k+ Performance-Benchmarks
 2. 🟢 Undo/Redo auf Delta-basiert umstellen (Skalierung fuer 100k+ Nodes)
 3. 🟢 LOD-System fuer grosse Strecken
-4. 🟢 Theme/Icons
-5. 🟢 Marker-Groups
-6. 🟢 Toast-Notifications fuer User-Feedback
+4. 🟢 Marker-Groups
+5. 🟢 Toast-Notifications fuer User-Feedback
