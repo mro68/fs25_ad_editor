@@ -80,6 +80,7 @@ pub(super) fn collect_keyboard_intents(
         key_1_pressed,
         key_2_pressed,
         key_3_pressed,
+        key_k_pressed,
         key_c_pressed,
         key_v_pressed,
         key_x_pressed,
@@ -94,6 +95,7 @@ pub(super) fn collect_keyboard_intents(
             i.key_pressed(egui::Key::Num1),
             i.key_pressed(egui::Key::Num2),
             i.key_pressed(egui::Key::Num3),
+            i.key_pressed(egui::Key::K),
             i.key_pressed(egui::Key::C),
             i.key_pressed(egui::Key::V),
             i.key_pressed(egui::Key::X),
@@ -128,6 +130,10 @@ pub(super) fn collect_keyboard_intents(
         events.push(AppIntent::SetEditorToolRequested {
             tool: EditorTool::AddNode,
         });
+    }
+
+    if modifiers.command && key_k_pressed {
+        events.push(AppIntent::CommandPaletteToggled);
     }
 
     // C = Verbinden (bei genau 2 selektierten Nodes)

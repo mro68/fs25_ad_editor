@@ -230,6 +230,7 @@ impl AppController {
                 handlers::dialog::apply_options(state, *options)?
             }
             AppCommand::ResetOptions => handlers::dialog::reset_options(state)?,
+            AppCommand::ToggleCommandPalette => handlers::dialog::toggle_command_palette(state),
             AppCommand::DismissDeduplicateDialog => handlers::dialog::dismiss_dedup_dialog(state),
 
             // === History ===

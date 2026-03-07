@@ -108,6 +108,7 @@ pub struct UiState {
     pub show_heightmap_dialog: bool,
     pub show_background_map_dialog: bool,
     pub show_overview_dialog: bool,
+    pub show_command_palette: bool,
     pub show_heightmap_warning: bool,
     pub heightmap_warning_confirmed: bool,
     pub pending_save_path: Option<String>,
@@ -589,6 +590,7 @@ pub enum AppIntent {
     CloseOptionsDialogRequested,
     OptionsChanged { options: Box<EditorOptions> },
     ResetOptionsRequested,
+    CommandPaletteToggled,
 
     // Route-Tool
     RouteToolClicked { world_pos: glam::Vec2, ctrl: bool },
@@ -733,6 +735,7 @@ pub enum AppCommand {
     CloseOptionsDialog,
     ApplyOptions { options: Box<EditorOptions> },
     ResetOptions,
+    ToggleCommandPalette,
 
     // Undo/Redo
     Undo,
