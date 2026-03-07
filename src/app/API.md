@@ -615,8 +615,6 @@ pub enum AppIntent {
 
     // Segment-Bearbeitung (nachtraegliche Bearbeitung erstellter Linien)
     EditSegmentRequested { record_id: u64 },
-    ToggleSegmentLockRequested { segment_id: u64 },
-    DissolveSegmentRequested { segment_id: u64 },
     // Distanzen: Selektierte Nodes-Kette gleichmaessig neu verteilen
     ResamplePathRequested,
     StreckenteilungAktivieren,
@@ -763,8 +761,6 @@ pub enum AppCommand {
 
     // Segment-Bearbeitung
     EditSegment { record_id: u64 },
-    ToggleSegmentLock { segment_id: u64 },
-    DissolveSegment { segment_id: u64 },
     // Distanzen: Selektierte Nodes-Kette per Catmull-Rom-Spline neu verteilen
     ResamplePath,
     StreckenteilungAktivieren,
@@ -789,6 +785,8 @@ pub enum AppCommand {
     // Segment-Lock
     /// Segment-Lock umschalten (gesperrt ↔ entsperrt)
     ToggleSegmentLock { segment_id: u64 },
+    /// Segment aufloesen (Segment-Record entfernen, Nodes beibehalten)
+    DissolveSegment { segment_id: u64 },
 
     // Extras
     /// Alle Farmland-Polygone als Wegpunkt-Ring nachzeichnen (Batch-Operation)
@@ -832,7 +830,7 @@ flowchart TD
     H_SEL -->|"use_cases::selection"| STATE
     H_EDIT -->|"use_cases::editing"| STATE
     H_ROUTE -->|"RouteTool / ToolManager"| STATE
-    H_SEG -->|"SegmentRegistry::toggle_lock"| STATE
+    H_SEG -->|"SegmentRegistry::toggle_lock / remove"| STATE
     H_HIST -->|"EditHistory pop/push"| STATE
     H_DLG -->|"UiState / Dialog-Flags"| STATE
 
