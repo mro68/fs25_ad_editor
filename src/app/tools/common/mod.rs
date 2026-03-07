@@ -14,10 +14,14 @@ mod tangent;
 
 pub(crate) use builder::assemble_tool_result;
 pub(crate) use input_helpers::wheel_dir;
-// angle_to_compass wird in #[cfg(test)]-Modulen verwendet
+// angle_to_compass und local_perp werden in Teilmodulen/Tests verwendet
 #[allow(unused_imports)]
 pub(crate) use geometry::angle_to_compass;
-pub(crate) use geometry::{linear_connections, populate_neighbors, tangent_options};
+#[allow(unused_imports)]
+pub(crate) use geometry::local_perp;
+pub(crate) use geometry::{
+    linear_connections, parallel_offset, populate_neighbors, tangent_options,
+};
 pub(crate) use lifecycle::{render_segment_config_3modes, SegmentConfig, ToolLifecycleState};
 pub use tangent::TangentSource;
 pub(crate) use tangent::{render_tangent_combo, TangentMenuData, TangentState};

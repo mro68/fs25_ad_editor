@@ -11,6 +11,7 @@
 //! Die Hauptstrecke beginnt/endet jeweils `d_blend = |offset| × 1.5` entlang der Kette
 //! versetzt, damit die S-Kurven ausreichend Laengsraum fuer tangentiale Uebergaenge haben.
 
+use crate::app::tools::common::parallel_offset;
 use crate::shared::spline_geometry::{
     catmull_rom_chain_with_tangents, polyline_length, resample_by_distance,
 };
@@ -178,36 +179,4 @@ fn sample_bezier(p0: Vec2, p1: Vec2, p2: Vec2, p3: Vec2, step: f32) -> Vec<Vec2>
         .map(|i| cubic_bezier(p0, p1, p2, p3, i as f32 / DENSE as f32))
         .collect();
     resample_by_distance(&dense, step)
-}
-
-/// Berechnet einen Parallel-Offset einer Polyline.
-///
-/// `offset > 0` → links (positive Senkrechte), `offset < 0` → rechts.
-fn parallel_offset(polyline: &[Vec2], offset: f32) -> Vec<Vec2> {
-    if polyline.len() < 2 {
-        return polyline.to_vec();
-    }
-    polyline
-        .iter()
-        .enumerate()
-        .map(|(i, &p)| {
-            let perp = local_perp(i, polyline);
-            p + perp * offset
-        })
-        .collect()
-}
-
-/// Lokale Senkrechte am Index `i` einer Polyline (Durchschnitt benachbarter Segmente).
-fn local_perp(i: usize, poly: &[Vec2]) -> Vec2 {
-    let n = poly.len();
-    let tangent = if i == 0 {
-        (poly[1] - poly[0]).normalize_or_zero()
-    } else if i == n - 1 {
-        (poly[n - 1] - poly[n - 2]).normalize_or_zero()
-    } else {
-        let t1 = (poly[i] - poly[i - 1]).normalize_or_zero();
-        let t2 = (poly[i + 1] - poly[i]).normalize_or_zero();
-        (t1 + t2).normalize_or_zero()
-    };
-    Vec2::new(-tangent.y, tangent.x)
 }

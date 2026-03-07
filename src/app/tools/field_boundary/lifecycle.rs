@@ -119,6 +119,7 @@ impl crate::app::tools::RouteTool for FieldBoundaryTool {
             internal_connections,
             external_connections: Vec::new(),
             markers: Vec::new(),
+            nodes_to_remove: Vec::new(),
         })
     }
 

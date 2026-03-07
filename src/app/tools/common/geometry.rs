@@ -1,6 +1,7 @@
 //! Rein-mathematische Hilfsfunktionen ohne egui-Abhaengigkeit.
 
 use crate::core::{ConnectedNeighbor, RoadMap};
+use glam::Vec2;
 
 use super::super::{snap_to_node, ToolAnchor};
 
@@ -77,4 +78,42 @@ pub fn tangent_options(neighbors: &[ConnectedNeighbor]) -> Vec<(super::TangentSo
         ));
     }
     opts
+}
+
+// ── Polyline-Geometrie (gemeinsam fuer BypassTool + RouteOffsetTool) ──────────
+
+/// Berechnet einen Parallel-Offset einer Polyline.
+///
+/// `offset > 0` → links (positive Senkrechte in Fahrtrichtung).
+/// `offset < 0` → rechts.
+/// Bei weniger als 2 Punkten wird die Eingabe unveraendert zurueckgegeben.
+pub(crate) fn parallel_offset(polyline: &[Vec2], offset: f32) -> Vec<Vec2> {
+    if polyline.len() < 2 {
+        return polyline.to_vec();
+    }
+    polyline
+        .iter()
+        .enumerate()
+        .map(|(i, &p)| {
+            let perp = local_perp(i, polyline);
+            p + perp * offset
+        })
+        .collect()
+}
+
+/// Lokale Senkrechte am Index `i` einer Polyline (Durchschnitt benachbarter Segmente).
+///
+/// Randpunkte (i==0 oder i==n-1) nutzen nur das angrenzende Segment.
+pub(crate) fn local_perp(i: usize, poly: &[Vec2]) -> Vec2 {
+    let n = poly.len();
+    let tangent = if i == 0 {
+        (poly[1] - poly[0]).normalize_or_zero()
+    } else if i == n - 1 {
+        (poly[n - 1] - poly[n - 2]).normalize_or_zero()
+    } else {
+        let t1 = (poly[i] - poly[i - 1]).normalize_or_zero();
+        let t2 = (poly[i + 1] - poly[i]).normalize_or_zero();
+        (t1 + t2).normalize_or_zero()
+    };
+    Vec2::new(-tangent.y, tangent.x)
 }
