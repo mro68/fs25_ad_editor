@@ -47,24 +47,18 @@ pub fn render_edit_panel(
         return events;
     }
 
-    // Route-Tool Edit-Modus (nur wenn Tool aktiv mit pending input)
+    // Route-Tool Edit-Modus (immer wenn Tool aktiv)
     if active_tool == EditorTool::Route {
         if let Some(manager) = tool_manager {
-            let has_input = manager
-                .active_tool()
-                .map(|t| t.has_pending_input())
-                .unwrap_or(false);
-            if has_input {
-                render_route_tool_panel(
-                    ctx,
-                    manager,
-                    default_direction,
-                    default_priority,
-                    distance_wheel_step_m,
-                    panel_pos,
-                    &mut events,
-                );
-            }
+            render_route_tool_panel(
+                ctx,
+                manager,
+                default_direction,
+                default_priority,
+                distance_wheel_step_m,
+                panel_pos,
+                &mut events,
+            );
         }
     }
 
@@ -230,6 +224,11 @@ fn render_route_tool_panel(
     panel_pos: Option<egui::Pos2>,
     events: &mut Vec<AppIntent>,
 ) {
+    let has_pending_input = tool_manager
+        .active_tool()
+        .map(|tool| tool.has_pending_input())
+        .unwrap_or(false);
+
     let mut window = egui::Window::new("📐 Route-Tool")
         .collapsible(false)
         .resizable(false)
@@ -280,7 +279,10 @@ fn render_route_tool_panel(
 
         ui.add_space(8.0);
         ui.horizontal(|ui| {
-            if ui.button("✓ Ausfuehren").clicked() {
+            if ui
+                .add_enabled(has_pending_input, egui::Button::new("✓ Ausfuehren"))
+                .clicked()
+            {
                 events.push(AppIntent::RouteToolExecuteRequested);
             }
             if ui.button("✕ Abbrechen").clicked() {
