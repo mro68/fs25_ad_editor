@@ -586,7 +586,7 @@ pub enum AppIntent {
     // Optionen
     OpenOptionsDialogRequested,
     CloseOptionsDialogRequested,
-    OptionsChanged { options: EditorOptions },
+    OptionsChanged { options: Box<EditorOptions> },
     ResetOptionsRequested,
 
     // Route-Tool
@@ -729,7 +729,7 @@ pub enum AppCommand {
     // Optionen
     OpenOptionsDialog,
     CloseOptionsDialog,
-    ApplyOptions { options: EditorOptions },
+    ApplyOptions { options: Box<EditorOptions> },
     ResetOptions,
 
     // Undo/Redo

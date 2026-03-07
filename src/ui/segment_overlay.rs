@@ -112,9 +112,13 @@ pub fn render_segment_overlays(
         if let Some(click) = clicked_pos {
             if bg_rect.expand(4.0).contains(click) {
                 let ev = if ctrl_held {
-                    SegmentOverlayEvent::Dissolved { segment_id: record.id }
+                    SegmentOverlayEvent::Dissolved {
+                        segment_id: record.id,
+                    }
                 } else {
-                    SegmentOverlayEvent::LockToggled { segment_id: record.id }
+                    SegmentOverlayEvent::LockToggled {
+                        segment_id: record.id,
+                    }
                 };
                 events.push(ev);
             }

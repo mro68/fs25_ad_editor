@@ -164,7 +164,7 @@ pub enum AppCommand {
     /// Options-Dialog schliessen
     CloseOptionsDialog,
     /// Optionen anwenden und speichern
-    ApplyOptions { options: EditorOptions },
+    ApplyOptions { options: Box<EditorOptions> },
     /// Optionen auf Standardwerte zuruecksetzen
     ResetOptions,
     /// Selektion aufheben
