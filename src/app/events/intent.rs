@@ -167,7 +167,7 @@ pub enum AppIntent {
     /// Options-Dialog schliessen
     CloseOptionsDialogRequested,
     /// Optionen wurden geaendert (sofortige Anwendung)
-    OptionsChanged { options: EditorOptions },
+    OptionsChanged { options: Box<EditorOptions> },
     /// Optionen auf Standardwerte zuruecksetzen
     ResetOptionsRequested,
 
@@ -262,6 +262,8 @@ pub enum AppIntent {
     // ── Segment-Lock ──────────────────────────────────────────────────
     /// Segment-Lock umschalten (gesperrt ↔ entsperrt)
     ToggleSegmentLockRequested { segment_id: u64 },
+    /// Segment aufloesen (Segment-Record entfernen, Nodes beibehalten)
+    DissolveSegmentRequested { segment_id: u64 },
 
     // ── Extras ───────────────────────────────────────────────────────
     /// Alle erkannten Farmland-Polygone als Wegpunkt-Ring nachzeichnen

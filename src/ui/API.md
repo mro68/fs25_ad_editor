@@ -40,57 +40,58 @@ Das `ui`-Modul enthält egui-UI-Komponenten (Menüs, Statusbar, Input-Handling, 
 - `segment_overlay.rs` — Segment-Rahmen und Lock-Icons als egui-Overlay (`SegmentOverlayEvent`, `render_segment_overlays()`)
 
 ## Funktionen
+---
 
-### `render_menu`
+### `SegmentOverlayEvent`
 
-Rendert die Top-Menü-Leiste und gibt gesammelte Intents zurück.
+Event, den das Segment-Overlay beim Klick auf ein Lock-Icon ausloest.
 
 ```rust
-pub fn render_menu(ctx: &egui::Context, state: &AppState) -> Vec<AppIntent>
+pub enum SegmentOverlayEvent {
+  /// Der Lock-Zustand des Segments soll umgeschaltet werden.
+  LockToggled { segment_id: u64 },
+  /// Das Segment soll aufgeloest werden (nur Segment-Record entfernen).
+  Dissolved { segment_id: u64 },
+}
 ```
 
-**Menü-Struktur:**
-
-- **File**
-  - Open... → `AppIntent::OpenFileRequested`
-  - Save (nur wenn Datei geladen) → `AppIntent::SaveRequested`
-  - Save As... (nur wenn Datei geladen) → `AppIntent::SaveAsRequested`
-  - Select/Change Heightmap... → `AppIntent::HeightmapSelectionRequested`
-  - Clear Heightmap (nur wenn gesetzt) → `AppIntent::HeightmapCleared`
-  - Übersichtskarte generieren... → `AppIntent::GenerateOverviewRequested`
-  - Exit → `AppIntent::ExitRequested`
-
-- **View**
-  - Reset Camera → `AppIntent::ResetCameraRequested`
-  - Zoom In → `AppIntent::ZoomInRequested`
-  - Zoom Out → `AppIntent::ZoomOutRequested`
-  - Hintergrund laden/ändern → `AppIntent::BackgroundMapSelectionRequested`
-  - Render Quality → Submenu (Low/Medium/High) → `AppIntent::RenderQualityChanged`
-  - Options... → `AppIntent::OpenOptionsDialogRequested`
-
-- **Edit**
-  - Undo/Redo
-  - Kopieren (`Ctrl+C`) → `AppIntent::CopySelectionRequested`
-  - Einfuegen (`Ctrl+V`) → `AppIntent::PasteStartRequested`
-
-- **Help**
-  - About → Loggt Version
-
-- **Extras**
-  - 🌾 Feld erkennen (nur aktivierbar wenn `state.farmland_polygons.is_some()`) → `AppIntent::SelectRouteToolRequested { index: TOOL_INDEX_FIELD_BOUNDARY }`
-  - 📍 Alle Felder nachzeichnen (nur aktivierbar wenn `state.farmland_polygons.is_some()`) → `AppIntent::TraceAllFieldsRequested`
+Wird von `render_segment_overlays()` zurueckgegeben und in den Intent-Flow als
+`AppIntent::ToggleSegmentLockRequested { segment_id }` bzw.
+`AppIntent::DissolveSegmentRequested { segment_id }` uebersetzt.
 
 ---
 
-### `render_toolbar`
+### `render_segment_overlays`
 
-Rendert die Werkzeugleiste und gibt gesammelte Intents zurück.
-
+Zeichnet Segment-Rahmen (AABB) und Lock-Icons als egui-Overlay ueber den Viewport.
 ```rust
-pub fn render_toolbar(ctx: &egui::Context, state: &AppState) -> Vec<AppIntent>
+pub fn render_segment_overlays(
+  painter: &egui::Painter,
+  rect: egui::Rect,
+  camera: &Camera2D,
+  viewport_size: Vec2,
+  registry: &SegmentRegistry,
+  road_map: &RoadMap,
+  selected_node_ids: &IndexSet<u64>,
+  clicked_pos: Option<egui::Pos2>,
+  ctrl_held: bool,
+  icon_size_px: f32,
+) -> Vec<SegmentOverlayEvent>
 ```
 
-**Enthaltene Buttons:**
+**Verhalten:**
+
+- Iteriert ueber selektierte Nodes und dedupliziert Segment-IDs
+- Zeichnet pro Segment ein Lock-Icon ueber dem ersten selektierten Node
+- `Ctrl` + Klick auf das Icon erzeugt `SegmentOverlayEvent::Dissolved`
+- Die Icon-Größe entspricht `segment_lock_icon_size_px` in `EditorOptions`
+- Normaler Klick auf das Icon erzeugt `SegmentOverlayEvent::LockToggled`
+
+**Lock-Zustand:**
+
+- Entsperrt (`locked = false`): grauer Rahmen, offenes Schloss-Icon
+- Gesperrt (`locked = true`): gelber Rahmen, 15%-schwarze Fuellung, geschlossenes Schloss-Icon
+---
 
 - Select / Connect / AddNode / Route (immer sichtbar)
 - Linien-Tool-Dropdown: Zeigt alle Route-Tools ausser FieldBoundaryTool
@@ -505,13 +506,16 @@ Event, den das Segment-Overlay beim Klick auf ein Lock-Icon ausloest.
 
 ```rust
 pub enum SegmentOverlayEvent {
-    /// Der Lock-Zustand des Segments soll umgeschaltet werden.
-    LockToggled { segment_id: u64 },
+  /// Der Lock-Zustand des Segments soll umgeschaltet werden.
+  LockToggled { segment_id: u64 },
+  /// Das Segment soll aufgeloest werden (nur Segment-Record entfernen).
+  Dissolved { segment_id: u64 },
 }
 ```
 
 Wird von `render_segment_overlays()` zurueckgegeben und in den Intent-Flow als
-`AppIntent::ToggleSegmentLockRequested { segment_id }` uebersetzt.
+`AppIntent::ToggleSegmentLockRequested { segment_id }` bzw.
+`AppIntent::DissolveSegmentRequested { segment_id }` uebersetzt.
 
 ---
 
@@ -527,17 +531,20 @@ pub fn render_segment_overlays(
     viewport_size: Vec2,
     registry: &SegmentRegistry,
     road_map: &RoadMap,
+    selected_node_ids: &IndexSet<u64>,
     clicked_pos: Option<egui::Pos2>,
+    ctrl_held: bool,
+    icon_size_px: f32,
 ) -> Vec<SegmentOverlayEvent>
 ```
 
 **Verhalten:**
 
-- Iteriert ueber alle gueltigen Segmente in der Registry
-- Zeichnet eine halbtransparente Fuellung (nur bei gesperrten Segmenten)
-- Zeichnet einen Rahmen (gelb = gesperrt, grau = entsperrt)
-- Platziert Lock-Icons an den 4 Seitenmittelpunkten (N/O/S/W) der Bounding-Box
-- Gibt `SegmentOverlayEvent::LockToggled` zurueck wenn ein Icon angeklickt wurde
+- Iteriert ueber selektierte Nodes und dedupliziert Segment-IDs
+- Zeichnet pro Segment ein Lock-Icon ueber dem ersten selektierten Node
+- `Ctrl` + Klick auf das Icon erzeugt `SegmentOverlayEvent::Dissolved`
+- Die Icon-Größe basiert auf `EditorOptions::segment_lock_icon_size_px`
+- Normaler Klick auf das Icon erzeugt `SegmentOverlayEvent::LockToggled`
 
 **Lock-Zustand:**
 

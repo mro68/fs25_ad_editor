@@ -98,11 +98,20 @@
   - [x] `AppIntent::ToggleSegmentLockRequested` / `AppCommand::ToggleSegmentLock`
   - [x] `handlers::segment::toggle_lock()` — neuer Handler
   - [x] `ui::segment_overlay`: `render_segment_overlays()` / `SegmentOverlayEvent::LockToggled` — Viewport-Overlay mit Rahmen und klickbaren Lock-Icons
+  - [x] `EditorOptions::segment_lock_icon_size_px` — Lock-Icon-Größe im Overlay konfigurierbar
+
+- [x] **Segment-Flow-Überarbeitung (2026-03-07, Branch `feature/segment-flow-rework`)**
+  - [x] `FieldBoundaryTool::load_for_edit()` — Vollständige Implementierung: stellt Feld-ID, Node-Abstand, Versatz, Begradigung und Richtung/Priorität aus dem `SegmentRecord` wieder her; wählt das korrekte Polygon aus `farmland_data`
+  - [x] `expand_segment_selection()` entfernt — automatische Segment-Selektion beim Pick entfernt (verhinderte korrektes Dimming bei Multi-Selection)
+  - [x] `AppIntent::DissolveSegmentRequested` / `AppCommand::DissolveSegment` / `handlers::segment::dissolve()` — neues Feature: Segment-Record per `Ctrl + Lock-Icon-Klick` auflösen (Nodes bleiben erhalten)
+  - [x] `SegmentOverlayEvent::Dissolved { segment_id }` — neues Overlay-Event für Segment-Auflösung
+  - [x] `icon_size_px`-Parameter in `render_segment_overlays()` — Icon-Größe aus `EditorOptions::segment_lock_icon_size_px` steuerbar
 
 - [x] **Segment-Fixes (2026-03-07)**
   - [x] **Bug A: Multi-Selection Dimming** (`render_scene.rs::compute_dimmed_ids`) — Korrekter Dimm-Pass über alle Records: Nodes werden nur gedimmt wenn ihr Segment mind. einen selektierten Node hat und der Node selbst NICHT selektiert ist
   - [x] **Bug B: Lock-Icon bei Multi-Selection** (`segment_overlay.rs::render_segment_overlays`) — Lock-Icon-Deduplizierung per Segment-ID; bei Multi-Selection werden mehrere Icons korrekt gezeichnet
   - [x] **Bug C: edit_segment bewahrt Anker-Nodes** (`handlers/editing.rs::edit_segment`) — ExistingNode-Anker werden mit HashSet ausgeschlossen; nur innere Nodes werden gelöscht, Start-/End-Anker bleiben erhalten
+  - [x] **Bug D: Segment aufloesen per Ctrl+Lock-Icon** (`SegmentOverlayEvent::Dissolved`, `AppIntent::DissolveSegmentRequested`, `AppCommand::DissolveSegment`, `handlers::segment::dissolve`) — Segment-Record wird entfernt, Nodes bleiben unveraendert
 
 - [x] **RouteOffsetTool — Strecke Versetzen (2026-03-07)**
   - [x] Neues Modul `src/app/tools/route_offset/` (state.rs, geometry.rs, lifecycle.rs, config_ui.rs, tests.rs)
