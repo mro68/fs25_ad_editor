@@ -8,7 +8,7 @@ Hochperformanter Editor fuer [AutoDrive](https://github.com/Stephan-S/FS25_AutoD
 
 ## Warum?
 
-Der Original-[AutoDrive Course Editor](https://github.com/Jesper-Hustad/AutoDrive_Course_Editor) (JavaScript/Electron) wird bei grossen Karten mit 10'000+ Wegpunkten bei mir langsam. Dieser Editor nutzt GPU-Rendering fuer fluessiges Arbeiten auch bei sehr grossen Kursnetzwerken.
+Der originale [AutoDrive Course Editor](https://github.com/KillBait/AutoDrive_Course_Editor) (JavaScript/Electron) von KillBait wird bei grossen Karten mit 10'000+ Wegpunkten bei mir langsam. Dieser Editor nutzt GPU-Rendering fuer fluessiges Arbeiten auch bei sehr grossen Kursnetzwerken.
 
 ## Features
 
@@ -123,7 +123,7 @@ cargo bench           # Benchmarks
 
 - **[AutoDrive](https://github.com/Stephan-S/FS25_AutoDrive)** von Stephan S. – Die Grundlage fuer das XML-Format und die Wegpunkt-Logik
 - **[grleconvert](https://github.com/Paint-a-Farm/grleconvert)** von Paint-a-Farm – Konvertierung von GIANTS-Engine `.grle`-Dateien
-- **GRLE/GDM-Parsing** basiert auf Erkenntnissen der FS-Modding-Community
+- **GRLE/GDM-Parsing** basiert auf `grleconvert` von Kim Brandwijk (MIT-Lizenz) und Erkenntnissen der FS-Modding-Community
 - Die Uebersichtskarten-Generierung (`fs25_map_overview` Crate) dekodiert GIANTS-eigene GDM/GRLE-Formate fuer Farmland-Grenzen und Terrain-Daten
 
 ## Lizenz
@@ -132,11 +132,7 @@ GPL-3.0 – siehe [LICENSE](LICENSE).
 
 ## Mitmachen / Contributing
 
-Dieses Projekt ist mein erstes oeffentliches Repository – ich bin komplett neu im Umgang mit Git und GitHub. Ueber Tipps, Anregungen und Verbesserungsvorschlaege freue ich mich sehr! Erstelle gerne ein [Issue](https://github.com/mro68/fs25_ad_editor/issues) oder einen Pull Request.
+Dein Feedback, Issues und Pull Requests sind willkommen! Ich freue mich über Verbesserungen und Anregungen. Erstelle gerne ein [Issue](https://github.com/mro68/fs25_ad_editor/issues) oder einen Pull Request.
 
 **Sprache / Language:**
 Meine Muttersprache ist Deutsch. Ich verstehe Englisch, aber eine umfangreiche Unterhaltung auf Englisch faellt mir schwer. Issues und Kommentare auf Deutsch sind willkommen – English is fine too for short messages.
-
-## Credits
-
-Inspiriert vom Original [AutoDrive Course Editor](https://github.com/Jesper-Hustad/AutoDrive_Course_Editor) von Jesper Hustad.
