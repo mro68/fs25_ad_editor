@@ -12,7 +12,6 @@ use crate::ui::properties::selectors::{
     render_direction_icon_selector, render_priority_icon_selector,
 };
 use indexmap::IndexSet;
-use std::collections::HashSet;
 use std::hash::{Hash, Hasher};
 
 /// Rendert das Floating-Edit-Panel und gibt erzeugte Events zurueck.
@@ -93,7 +92,7 @@ fn render_streckenteilung_panel(
         distanzen_state.distance.to_bits().hash(&mut hasher);
         let signature = hasher.finish();
 
-        let chain = order_chain(selected_node_ids, rm);
+        let chain = rm.ordered_chain_nodes(selected_node_ids);
         if let Some(ordered) = chain {
             if signature != distanzen_state.preview_cache_signature
                 || distanzen_state.preview_positions.is_empty()
@@ -289,50 +288,6 @@ fn render_route_tool_panel(
             }
         });
     });
-}
-
-/// Ordnet selektierte Node-IDs als zusammenhaengende Kette.
-fn order_chain(node_ids: &IndexSet<u64>, road_map: &RoadMap) -> Option<Vec<u64>> {
-    let start = node_ids
-        .iter()
-        .find(|&&id| {
-            road_map
-                .connections_iter()
-                .filter(|c| c.end_id == id && node_ids.contains(&c.start_id))
-                .count()
-                == 0
-        })
-        .copied()
-        .or_else(|| node_ids.iter().next().copied())?;
-
-    let mut path = Vec::with_capacity(node_ids.len());
-    let mut visited = HashSet::new();
-    let mut current = start;
-
-    loop {
-        path.push(current);
-        visited.insert(current);
-
-        let next = road_map
-            .connections_iter()
-            .find(|c| {
-                c.start_id == current
-                    && node_ids.contains(&c.end_id)
-                    && !visited.contains(&c.end_id)
-            })
-            .map(|c| c.end_id);
-
-        match next {
-            Some(n) => current = n,
-            None => break,
-        }
-    }
-
-    if path.len() == node_ids.len() {
-        Some(path)
-    } else {
-        None
-    }
 }
 
 /// Berechnet die Vorschau-Positionen fuer die Streckenteilung.
