@@ -1,4 +1,3 @@
-
 //! Segment-Overlay: Zeichnet Lock-Icons ueber selektierten Segment-Nodes.
 //!
 //! Fuer jeden selektierten Node wird geprueft, ob er zu einem gespeicherten Segment
@@ -24,11 +23,11 @@ pub enum SegmentOverlayEvent {
 /// Zeichnet Lock-Icons ueber selektierten Segment-Nodes.
 ///
 /// Fuer jeden selektierten Node wird geprueft, ob er zu einem gueltigen Segment
-/// gehoert. Pro Segment wird ein Schloss-Icon (🔒 oder 🔓) 28px ueber dem ersten
-/// selektierten Node dieses Segments gerendert. Bei Multi-Selection ueber mehrere
-/// Segmente werden mehrere Icons gezeichnet.
-/// Ein Klick auf ein Icon loest `SegmentOverlayEvent::LockToggled` aus.
-/// `Ctrl` + Klick loest `SegmentOverlayEvent::Dissolved` aus.
+/// gehoert. Pro Segment wird ein Schloss-Icon (🔒 oder 🔓) oberhalb des ersten
+/// selektierten Nodes dieses Segments gerendert. Bei Multi-Selection ueber mehrere
+/// Segmente werden mehrere Icons gezeichnet. Ein Klick auf ein Icon loest
+/// `SegmentOverlayEvent::LockToggled` aus. `Ctrl` + Klick loest
+/// `SegmentOverlayEvent::Dissolved` aus.
 ///
 /// # Parameter
 /// - `painter`: egui-Painter fuer den Viewport
@@ -40,6 +39,7 @@ pub enum SegmentOverlayEvent {
 /// - `selected_node_ids`: Aktuell selektierte Node-IDs
 /// - `clicked_pos`: Screen-Position eines Klicks in diesem Frame (None = kein Klick)
 /// - `ctrl_held`: true, wenn im Klick-Frame die Ctrl-Taste gedrueckt war
+/// - `icon_size_px`: Schriftgroesse des Lock-Icons in Pixeln
 #[allow(clippy::too_many_arguments)]
 pub fn render_segment_overlays(
     painter: &egui::Painter,
@@ -51,24 +51,25 @@ pub fn render_segment_overlays(
     selected_node_ids: &IndexSet<u64>,
     clicked_pos: Option<egui::Pos2>,
     ctrl_held: bool,
+    icon_size_px: f32,
 ) -> Vec<SegmentOverlayEvent> {
     let mut events = Vec::new();
 
-    // Bei leerer Selektion gibt es nichts zu zeichnen
     if selected_node_ids.is_empty() {
         return events;
     }
 
-    // Pro Segment nur ein Icon zeichnen (Deduplizierung ueber Segment-ID)
+    let icon_size = icon_size_px.max(4.0);
+    let icon_offset = icon_size + 12.0;
+    let bg_size = egui::vec2(icon_size + 8.0, icon_size + 8.0);
+
     let mut seen_segment_ids = std::collections::HashSet::new();
 
     for &selected_id in selected_node_ids.iter() {
-        // Pruefen ob dieser Node zu einem Segment gehoert
         let Some(record) = registry.find_first_by_node_id(selected_id) else {
             continue;
         };
 
-        // Jedes Segment hoechstens einmal (Icon ueber erstem selektierten Node)
         if !seen_segment_ids.insert(record.id) {
             continue;
         }
@@ -77,54 +78,45 @@ pub fn render_segment_overlays(
             continue;
         }
 
-        // Node-Position aus RoadMap holen
         let Some(node) = road_map.nodes.get(&selected_id) else {
             continue;
         };
 
-        // Welt→Screen: 28px ueber dem Node
         let screen_local = camera.world_to_screen(node.position, viewport_size);
         let icon_pos = egui::pos2(
             rect.min.x + screen_local.x,
-            rect.min.y + screen_local.y - 28.0,
+            rect.min.y + screen_local.y - icon_offset,
         );
 
-        // Icon-Text je nach Lock-Zustand
         let icon_text = if record.locked {
-            "\u{1F512}" // 🔒
+            "\u{1F512}"
         } else {
-            "\u{1F513}" // 🔓
+            "\u{1F513}"
         };
 
-        // Hintergrund-Box fuer bessere Lesbarkeit
-        let bg_rect = egui::Rect::from_center_size(icon_pos, egui::vec2(24.0, 24.0));
+        let bg_rect = egui::Rect::from_center_size(icon_pos, bg_size);
         painter.rect_filled(
             bg_rect,
             4.0,
             egui::Color32::from_rgba_unmultiplied(30, 30, 30, 200),
         );
 
-        // Icon zeichnen
         painter.text(
             icon_pos,
             egui::Align2::CENTER_CENTER,
             icon_text,
-            egui::FontId::proportional(16.0),
+            egui::FontId::proportional(icon_size),
             egui::Color32::WHITE,
         );
 
-        // Klick-Erkennung (Hit-Test mit kleinem Extra-Padding)
         if let Some(click) = clicked_pos {
             if bg_rect.expand(4.0).contains(click) {
-                if ctrl_held {
-                    events.push(SegmentOverlayEvent::Dissolved {
-                        segment_id: record.id,
-                    });
+                let ev = if ctrl_held {
+                    SegmentOverlayEvent::Dissolved { segment_id: record.id }
                 } else {
-                    events.push(SegmentOverlayEvent::LockToggled {
-                        segment_id: record.id,
-                    });
-                }
+                    SegmentOverlayEvent::LockToggled { segment_id: record.id }
+                };
+                events.push(ev);
             }
         }
     }
