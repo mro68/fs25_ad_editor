@@ -109,6 +109,25 @@ pub enum SegmentKind {
         /// Gemeinsame Basis-Parameter
         base: SegmentBase,
     },
+    /// Parallelversatz einer selektierten Kette (ohne S-Kurven-Anbindung).
+    RouteOffset {
+        /// Geordnete Positionen der Quell-Kette
+        chain_positions: Vec<Vec2>,
+        /// ID des ersten Ketten-Nodes
+        chain_start_id: u64,
+        /// ID des letzten Ketten-Nodes
+        chain_end_id: u64,
+        /// Versatz links in Metern (0.0 = deaktiviert)
+        offset_left: f32,
+        /// Versatz rechts in Metern (0.0 = deaktiviert, intern immer positiv)
+        offset_right: f32,
+        /// Original-Kette beibehalten?
+        keep_original: bool,
+        /// Node-Abstand auf der Offset-Kette
+        base_spacing: f32,
+        /// Gemeinsame Basis-Parameter
+        base: SegmentBase,
+    },
 }
 
 /// Tool-Index fuer `StraightLineTool` im `ToolManager` (Registrierungs-Slot 0).
@@ -129,6 +148,8 @@ pub const TOOL_INDEX_CONSTRAINT_ROUTE: usize = 5;
 pub const TOOL_INDEX_PARKING: usize = 6;
 /// Tool-Index fuer `FieldBoundaryTool` im `ToolManager` (Registrierungs-Slot 7).
 pub const TOOL_INDEX_FIELD_BOUNDARY: usize = 7;
+/// Tool-Index fuer `RouteOffsetTool` im `ToolManager` (Registrierungs-Slot 8).
+pub const TOOL_INDEX_ROUTE_OFFSET: usize = 8;
 
 impl SegmentKind {
     /// Gibt den Tool-Index im ToolManager fuer dieses Segment zurueck.
@@ -145,6 +166,7 @@ impl SegmentKind {
             SegmentKind::Bypass { .. } => TOOL_INDEX_BYPASS,
             SegmentKind::Parking { .. } => TOOL_INDEX_PARKING,
             SegmentKind::FieldBoundary { .. } => TOOL_INDEX_FIELD_BOUNDARY,
+            SegmentKind::RouteOffset { .. } => TOOL_INDEX_ROUTE_OFFSET,
         }
     }
 }

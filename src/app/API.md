@@ -296,6 +296,17 @@ pub enum SegmentKind {
         straighten_tolerance: f32, // Douglas-Peucker-Toleranz in Metern (0 = keine)
         base: SegmentBase,
     },
+    /// Parallelversatz einer selektierten Kette (ohne S-Kurven-Anbindung)
+    RouteOffset {
+        chain_positions: Vec<Vec2>,  // Geordnete Positionen der Quell-Kette
+        chain_start_id: u64,         // ID des ersten Ketten-Nodes
+        chain_end_id: u64,           // ID des letzten Ketten-Nodes
+        offset_left: f32,            // Versatz links in Metern (0.0 = deaktiviert)
+        offset_right: f32,           // Versatz rechts in Metern (0.0 = deaktiviert)
+        keep_original: bool,         // Original-Kette beibehalten?
+        base_spacing: f32,           // Node-Abstand auf der Offset-Kette
+        base: SegmentBase,
+    },
 }
 
 /// Tool-Indizes im ToolManager
@@ -307,6 +318,7 @@ pub const TOOL_INDEX_BYPASS: usize = 4;
 pub const TOOL_INDEX_CONSTRAINT_ROUTE: usize = 5;
 pub const TOOL_INDEX_PARKING: usize = 6;
 pub const TOOL_INDEX_FIELD_BOUNDARY: usize = 7;
+pub const TOOL_INDEX_ROUTE_OFFSET: usize = 8;
 ```
 
 **Methoden:**
@@ -371,6 +383,17 @@ pub enum SegmentKind {
         node_spacing: f32,         // Node-Abstand in Metern
         offset: f32,               // Innen-/Aussenversatz in Metern
         straighten_tolerance: f32, // Douglas-Peucker-Toleranz in Metern
+        base: SegmentBase,
+    },
+    /// Parallelversatz einer selektierten Kette (ohne S-Kurven-Anbindung)
+    RouteOffset {
+        chain_positions: Vec<Vec2>, // Geordnete Positionen der Quell-Kette
+        chain_start_id: u64,        // ID des ersten Ketten-Nodes
+        chain_end_id: u64,          // ID des letzten Ketten-Nodes
+        offset_left: f32,           // Versatz links in Metern (0.0 = deaktiviert)
+        offset_right: f32,          // Versatz rechts in Metern
+        keep_original: bool,        // Original-Kette beibehalten?
+        base_spacing: f32,          // Node-Abstand auf der Offset-Kette
         base: SegmentBase,
     },
 }

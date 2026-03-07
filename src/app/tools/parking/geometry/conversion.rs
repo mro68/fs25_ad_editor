@@ -16,6 +16,7 @@ pub fn build_parking_result(layout: ParkingLayout) -> ToolResult {
         internal_connections: layout.connections,
         external_connections: vec![],
         markers: layout.markers,
+        nodes_to_remove: Vec::new(),
     }
 }
 

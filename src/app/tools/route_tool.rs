@@ -275,4 +275,11 @@ pub trait RouteTool:
     fn load_chain(&mut self, _positions: Vec<Vec2>, _start_id: u64, _end_id: u64) {
         <Self as RouteToolChainInput>::load_chain_cap(self, _positions, _start_id, _end_id)
     }
+
+    /// Setzt die inneren Node-IDs der geladenen Kette (ohne Start/Ende).
+    ///
+    /// Wird nach `load_chain` vom Handler aufgerufen um produktionskorrekte IDs
+    /// fuer das "Original entfernen"-Feature bereitzustellen.
+    /// Standard-Implementierung: no-op (die meisten Tools benoetigen keine inneren IDs).
+    fn set_chain_inner_ids(&mut self, _ids: Vec<u64>) {}
 }

@@ -36,6 +36,12 @@ fn apply_result_inner(state: &mut AppState, result: ToolResult) -> Vec<u64> {
     };
     let road_map = Arc::make_mut(road_map_arc);
 
+    // Nodes entfernen (z.B. Original-Kette bei RouteOffsetTool mit "Original entfernen")
+    // Muss VOR der Erstellung neuer Nodes erfolgen damit Undo alles in einem Snapshot abdeckt.
+    for &node_id in &result.nodes_to_remove {
+        road_map.remove_node(node_id);
+    }
+
     let new_ids = create_nodes_and_connections(road_map, &result);
 
     // Selektion auf neue Nodes setzen
