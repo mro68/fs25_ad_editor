@@ -2,7 +2,7 @@
 
 use crate::app::use_cases;
 use crate::app::AppState;
-use crate::core::{ConnectionDirection, ConnectionPriority};
+use crate::core::{ConnectionDirection, ConnectionPriority, NodeFlag};
 
 /// Aktiviert ein Editor-Werkzeug und setzt tool-spezifische Zwischenselektion zurueck.
 pub fn set_editor_tool(state: &mut AppState, tool: crate::app::state::EditorTool) {
@@ -60,6 +60,11 @@ pub fn set_connection_priority(
     priority: ConnectionPriority,
 ) {
     use_cases::editing::set_connection_priority(state, start_id, end_id, priority);
+}
+
+/// Setzt das Flag eines bestehenden Nodes.
+pub fn set_node_flag(state: &mut AppState, node_id: u64, flag: NodeFlag) {
+    use_cases::editing::set_node_flag(state, node_id, flag);
 }
 
 /// Aktualisiert die Standard-Richtung fuer neue Verbindungen.

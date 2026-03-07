@@ -108,6 +108,7 @@ pub struct UiState {
     pub show_heightmap_dialog: bool,
     pub show_background_map_dialog: bool,
     pub show_overview_dialog: bool,
+    pub show_command_palette: bool,
     pub show_heightmap_warning: bool,
     pub heightmap_warning_confirmed: bool,
     pub pending_save_path: Option<String>,
@@ -539,6 +540,7 @@ pub enum AppIntent {
     RemoveConnectionBetweenRequested { node_a: u64, node_b: u64 },
     SetConnectionDirectionRequested { start_id: u64, end_id: u64, direction: ConnectionDirection },
     SetConnectionPriorityRequested { start_id: u64, end_id: u64, priority: ConnectionPriority },
+    NodeFlagChangeRequested { node_id: u64, flag: NodeFlag },
     SetDefaultDirectionRequested { direction: ConnectionDirection },
     SetDefaultPriorityRequested { priority: ConnectionPriority },
 
@@ -588,6 +590,7 @@ pub enum AppIntent {
     CloseOptionsDialogRequested,
     OptionsChanged { options: Box<EditorOptions> },
     ResetOptionsRequested,
+    CommandPaletteToggled,
 
     // Route-Tool
     RouteToolClicked { world_pos: glam::Vec2, ctrl: bool },
@@ -685,6 +688,7 @@ pub enum AppCommand {
     RemoveConnectionBetween { node_a: u64, node_b: u64 },
     SetConnectionDirection { start_id: u64, end_id: u64, direction: ConnectionDirection },
     SetConnectionPriority { start_id: u64, end_id: u64, priority: ConnectionPriority },
+    SetNodeFlag { node_id: u64, flag: NodeFlag },
     SetDefaultDirection { direction: ConnectionDirection },
     SetDefaultPriority { priority: ConnectionPriority },
     SetAllConnectionsDirectionBetweenSelected { direction: ConnectionDirection },
@@ -731,6 +735,7 @@ pub enum AppCommand {
     CloseOptionsDialog,
     ApplyOptions { options: Box<EditorOptions> },
     ResetOptions,
+    ToggleCommandPalette,
 
     // Undo/Redo
     Undo,

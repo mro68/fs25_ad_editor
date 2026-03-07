@@ -208,6 +208,8 @@ pub struct UiState {
     pub show_background_map_dialog: bool,
     /// Ob der Uebersichtskarten-ZIP-Auswahl-Dialog geoeffnet werden soll
     pub show_overview_dialog: bool,
+    /// Ob die Command-Palette angezeigt werden soll
+    pub show_command_palette: bool,
     /// Ob die Heightmap-Warnung angezeigt werden soll
     pub show_heightmap_warning: bool,
     /// Ob die Heightmap-Warnung fuer diese Save-Operation bereits bestaetigt wurde
@@ -245,6 +247,7 @@ impl UiState {
             show_heightmap_dialog: false,
             show_background_map_dialog: false,
             show_overview_dialog: false,
+            show_command_palette: false,
             show_heightmap_warning: false,
             heightmap_warning_confirmed: false,
             pending_save_path: None,

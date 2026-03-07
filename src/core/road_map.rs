@@ -93,6 +93,16 @@ impl RoadMap {
         true
     }
 
+    /// Setzt das Flag eines Nodes — O(1)
+    pub fn set_node_flag(&mut self, node_id: u64, flag: super::NodeFlag) -> bool {
+        if let Some(node) = self.nodes.get_mut(&node_id) {
+            node.flag = flag;
+            true
+        } else {
+            false
+        }
+    }
+
     /// Fuegt eine Verbindung hinzu
     pub fn add_connection(&mut self, connection: Connection) {
         self.connections

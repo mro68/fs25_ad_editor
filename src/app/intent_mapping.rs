@@ -138,6 +138,9 @@ pub fn map_intent_to_commands(state: &AppState, intent: AppIntent) -> Vec<AppCom
             end_id,
             priority,
         }],
+        AppIntent::NodeFlagChangeRequested { node_id, flag } => {
+            vec![AppCommand::SetNodeFlag { node_id, flag }]
+        }
         AppIntent::SetDefaultDirectionRequested { direction } => {
             vec![AppCommand::SetDefaultDirection { direction }]
         }
@@ -206,6 +209,7 @@ pub fn map_intent_to_commands(state: &AppState, intent: AppIntent) -> Vec<AppCom
         AppIntent::CloseOptionsDialogRequested => vec![AppCommand::CloseOptionsDialog],
         AppIntent::OptionsChanged { options } => vec![AppCommand::ApplyOptions { options }],
         AppIntent::ResetOptionsRequested => vec![AppCommand::ResetOptions],
+        AppIntent::CommandPaletteToggled => vec![AppCommand::ToggleCommandPalette],
         AppIntent::ClearSelectionRequested => vec![AppCommand::ClearSelection],
         AppIntent::SelectAllRequested => vec![AppCommand::SelectAllNodes],
         AppIntent::DeduplicateConfirmed => vec![AppCommand::DeduplicateNodes],

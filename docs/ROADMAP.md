@@ -31,8 +31,11 @@
 - [x] File-Dialogs (Open)
 - [x] File-Dialogs (Save mit Heightmap-Warnung)
 - [x] File-Dialogs (Save As)
-- [🟡] Basic Theme/Icons (egui_extras image_loaders vorhanden, volles Theme ausstehend)
+- [x] Basic Theme/Icons (Lucide-SVG-Icons integriert: 14 bestehende Icons ersetzt + 6 neue Icons hinzugefuegt)
 - [x] Keyboard-Shortcuts (Ctrl+O, Ctrl+S, Ctrl+Z, Ctrl+Y, Delete, Escape, etc.)
+  - [x] Command-Palette-Toggle per Ctrl+K (Intent/Command-Kette vorbereitet)
+  - [x] Keyboard-Guard bei TextEdit-Focus (`wants_keyboard_input`-Pruefung; Ctrl+K und Escape bleiben aktiv)
+- [x] Command Palette (Ctrl+K, Suchfeld, Pfeilnavigation, Enter-Ausfuehrung)
 - [x] Options-Dialog (Farben, Groessen, Breiten – Live-Preview)
 - [x] TOML-Persistierung (fs25_auto_drive_editor.toml neben Binary)
 
@@ -66,6 +69,8 @@
   - [x] UI-Buttons + Shortcuts (Ctrl+Z / Ctrl+Y)
   - [x] CommandLog fuer Debug-Zwecke
 - [x] Properties-Panel (Node-IDs, Positionen, Verbindungen anzeigen/editieren)
+  - [x] Flag-Editor fuer Einzelnode (Regular/SubPrio via ComboBox)
+  - [x] Connection-Listing fuer Einzelnode (eingehend/ausgehend)
 - [x] Mausrad-Steuerung fuer Distanz/Node-Felder (Scroll hoch = erhoehen, runter = verringern)
 - [x] Context-Menu (Rechtsklick → Verbindungsaktionen)
 - [x] **AddNode-Verhalten konfigurierbar** (2026-02-24)
@@ -241,6 +246,13 @@
     - [x] `core/API.md`: `SpatialIndex` — Hinweis auf `ImmutableKdTree` von kiddo ergaenzt
     - [x] `docs/ARCHITECTURE_PLAN.md`: Stand aktualisiert, Zoom-Kompensation- und Decimation-Pattern beschrieben
     - [x] ROADMAP.md: Stand, Prozente und neue Feature-Eintraege aktualisiert
+  - [x] **Tool-Encapsulation-Audit (2026-03-07, Branch `feat/tool-encapsulation-audit`)**
+    - [x] Encapsulation-Audit: 0 Layer-Boundary-Verletzungen (keine wgpu/render-Imports in Tools)
+    - [x] API-Unification: Alle 9 Tools nutzen RouteTool-Trait + 4 Capability-Traits konsistent
+    - [x] ToolResult-Analyse: 6/9 Tools nutzen `assemble_tool_result()`, 3 mit manueller Topologie (geschlossene Ringe, Multi-Offsets)
+    - [x] Editierbarkeit: Alle 9 Tools unterstuetzen `make_segment_record()` + `load_for_edit()`
+    - [x] `docs/ARCHITECTURE_PLAN.md`: Neuer Abschnitt "Tool-Encapsulation-Regeln" mit Renderer-Vertrag, Preview-Vertrag und Segment-Editierbarkeit
+    - [x] Audit-Report: `target/tmp/PLANS/TOOL_ENCAPSULATION_AUDIT.md` mit 10 Findings, Code-Vorschlaegen und Umsetzungsplan
   - [x] **Bugfix: PNG-Farmland-Erkennung (2026-03-06, Branch `fix/farmland-json-persistence`)**
     - [x] `extract_farmland_polygons_from_ids()` als formatunabhaengige pub-Funktion extrahiert (GRLE+PNG)
     - [x] `try_extract_polygons_from_files()`: PNG-Branch (`infoLayer_farmlands.png`) unterstuetzt Polygon-Extraktion via Luma-Dekodierung
@@ -310,7 +322,7 @@
 - Phase 3: ✅ 98% (Theme fehlt)
 - Phase 4: ✅ 100% (alle Features implementiert, 100k-Benchmarks ausstehend)
 - Phase 5: 🟡 90% (DDS-Background + Marker-Editor + Bézier-Kurven + Catmull-Rom-Spline + Uebersichtskarte fertig)
-- Phase 6: 🟡 65% (Handler-Split, CI-Checks, unwrap-Bereinigung, API-Docs, Docstrings, Zoom-Kompensation, Node-Decimation, Deep-Structure-Audit durchgefuehrt)
+- Phase 6: 🟡 70% (Handler-Split, CI-Checks, unwrap-Bereinigung, API-Docs, Docstrings, Zoom-Kompensation, Node-Decimation, Deep-Structure-Audit, Tool-Encapsulation-Audit durchgefuehrt)
 
 **Errungenschaften seit letztem Update (Tool-Konsistenz-Refactoring 2026-03-05):**
 - ✅ BypassTool Lifecycle-Nachrüstung: neues `lifecycle: ToolLifecycleState` Feld
@@ -486,10 +498,21 @@
 - ℹ️ Dokumentation wird aktuell manuell gepflegt (kein Auto-Sync-Mechanismus aktiv)
 - ✅ CI-Basis vorhanden: Layer-Boundary-Check via `make ci-check`
 
+**Errungenschaften (UI-Modernisierung 2026-03-07):**
+- ✅ NodeFlagChangeRequested Intent + SetNodeFlag Command + Handler + UseCase (`node_flag.rs`)
+- ✅ Tool-Config aus Properties-Panel entfernt (DRY-Bereinigung: kein doppeltes Render)
+- ✅ CommandPaletteToggled Intent + Ctrl+K Shortcut vollstaendig verdrahtet
+- ✅ Flag-Editor im Property Inspector (ComboBox: Regular / SubPrio)
+- ✅ Connection-Listing im Property Inspector (eingehend/ausgehend pro Einzelnode)
+- ✅ Edit-Panel zeigt Route-Config permanent bei aktivem Route-Tool
+- ✅ Keyboard-Guard bei TextEdit-Focus (`wants_keyboard_input`; Ctrl+K + Escape aktiv)
+- ✅ Command Palette mit Suchfunktion, Pfeilnavigation und dynamischem Route-Tool-Katalog
+- ✅ Lucide-SVG-Icons: 14 bestehende Icons ersetzt + 6 neue Icons
+- ✅ grleconvert-Link in README ergaenzt
+
 **Naechste Aufgaben:**
 1. 🟡 100k+ Performance-Benchmarks
 2. 🟢 Undo/Redo auf Delta-basiert umstellen (Skalierung fuer 100k+ Nodes)
 3. 🟢 LOD-System fuer grosse Strecken
-4. 🟢 Theme/Icons
-5. 🟢 Marker-Groups
-6. 🟢 Toast-Notifications fuer User-Feedback
+4. 🟢 Marker-Groups
+5. 🟢 Toast-Notifications fuer User-Feedback

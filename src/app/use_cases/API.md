@@ -72,6 +72,7 @@ pub enum AddNodeResult {
 - `remove_connection_between(state, node_a, node_b)` — Alle Verbindungen zwischen zwei Nodes entfernen
 - `set_connection_direction(state, start_id, end_id, direction)` — Richtung aendern
 - `set_connection_priority(state, start_id, end_id, priority)` — Prioritaet aendern
+- `set_node_flag(state, node_id, flag)` — Node-Flag direkt setzen (mit Undo-Snapshot)
 - `set_all_connections_direction_between_selected(state, direction)` — Bulk: Richtung aller Verbindungen zwischen Selektion aendern
 - `remove_all_connections_between_selected(state)` — Bulk: Alle Verbindungen zwischen Selektion trennen
 - `invert_all_connections_between_selected(state)` — Bulk: Richtung invertieren (start↔end)

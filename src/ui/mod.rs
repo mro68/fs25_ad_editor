@@ -1,5 +1,7 @@
 //! UI-Komponenten: Menue, Toolbar, Properties, Input-Handling, Dialoge.
 
+/// Command Palette Overlay mit Suchfeld und Schnellaktionen.
+pub mod command_palette;
 /// Kontext-Menue fuer Rechtsklick-Aktionen im Viewport.
 pub mod context_menu;
 /// Panel fuer Default-Werte neuer Verbindungen (Richtung, Prioritaet).
