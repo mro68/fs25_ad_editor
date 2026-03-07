@@ -2,7 +2,7 @@
 
 use super::super::state::EditorTool;
 use crate::app::tools::common::TangentSource;
-use crate::core::{ConnectionDirection, ConnectionPriority};
+use crate::core::{ConnectionDirection, ConnectionPriority, NodeFlag};
 use crate::shared::EditorOptions;
 use crate::shared::RenderQuality;
 
@@ -41,6 +41,8 @@ pub enum AppCommand {
         end_id: u64,
         priority: ConnectionPriority,
     },
+    /// Setzt das Flag eines Nodes
+    SetNodeFlag { node_id: u64, flag: NodeFlag },
     /// Standard-Richtung fuer neue Verbindungen setzen
     SetDefaultDirection { direction: ConnectionDirection },
     /// Standard-Prioritaet fuer neue Verbindungen setzen

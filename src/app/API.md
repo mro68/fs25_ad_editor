@@ -539,6 +539,7 @@ pub enum AppIntent {
     RemoveConnectionBetweenRequested { node_a: u64, node_b: u64 },
     SetConnectionDirectionRequested { start_id: u64, end_id: u64, direction: ConnectionDirection },
     SetConnectionPriorityRequested { start_id: u64, end_id: u64, priority: ConnectionPriority },
+    NodeFlagChangeRequested { node_id: u64, flag: NodeFlag },
     SetDefaultDirectionRequested { direction: ConnectionDirection },
     SetDefaultPriorityRequested { priority: ConnectionPriority },
 
@@ -685,6 +686,7 @@ pub enum AppCommand {
     RemoveConnectionBetween { node_a: u64, node_b: u64 },
     SetConnectionDirection { start_id: u64, end_id: u64, direction: ConnectionDirection },
     SetConnectionPriority { start_id: u64, end_id: u64, priority: ConnectionPriority },
+    SetNodeFlag { node_id: u64, flag: NodeFlag },
     SetDefaultDirection { direction: ConnectionDirection },
     SetDefaultPriority { priority: ConnectionPriority },
     SetAllConnectionsDirectionBetweenSelected { direction: ConnectionDirection },

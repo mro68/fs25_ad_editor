@@ -213,6 +213,12 @@ pub fn set_node_position(state: &mut AppState, node_id: u64, new_pos: glam::Vec2
 Verschiebt einen Node (mit Spatial-Index-Update).
 
 ```rust
+pub fn set_node_flag(state: &mut AppState, node_id: u64, flag: NodeFlag)
+```
+
+Setzt das Flag eines vorhandenen Nodes (z.B. `Regular`, `SubPrio`) inklusive Undo-Snapshot ueber den Editing-Use-Case.
+
+```rust
 pub fn create_connection(
     state: &mut AppState,
     start_id: u64,
