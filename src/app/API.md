@@ -77,6 +77,10 @@ pub struct AppState {
     /// Geladene Farmland-Polygone fuer das FieldBoundaryTool.
     /// Wird beim Laden einer Uebersichtskarte befuellt; `None` solange keine Map geladen ist.
     pub farmland_polygons: Option<Arc<Vec<FieldPolygon>>>,
+    /// Extrahierte Strassenmaske aus Weight-Maps (Grayscale).
+    /// `None` wenn noch keine Overview mit Strassen-Weight-Maps generiert wurde.
+    /// Wird parallel zur `overview.jpg` als `overview_roads.png` gespeichert.
+    pub road_mask: Option<Arc<image::GrayImage>>,
 }
 
 pub struct SelectionState {
@@ -197,6 +201,7 @@ pub struct ViewState {
     pub background_visible: bool,
     pub background_scale: f32,      // Skalierungsfaktor (1.0 = Original)
     pub background_dirty: bool,  // GPU-Upload-Signal
+    pub show_road_overlay: bool, // Strassenoverlay aktiv (benoetigt AppState.road_mask)
 }
 
 pub struct EditorToolState {
@@ -621,6 +626,8 @@ pub enum AppIntent {
     // Extras
     /// Alle erkannten Farmland-Polygone als Wegpunkt-Ring nachzeichnen
     TraceAllFieldsRequested,
+    /// Strassenoverlay ein-/ausblenden
+    ToggleRoadOverlay,
 }
 
 pub enum AppCommand {
@@ -766,6 +773,8 @@ pub enum AppCommand {
     // Extras
     /// Alle Farmland-Polygone als Wegpunkt-Ring nachzeichnen (Batch-Operation)
     TraceAllFields,
+    /// Strassenoverlay ein-/ausblenden
+    ToggleRoadOverlay,
 }
 ```
 

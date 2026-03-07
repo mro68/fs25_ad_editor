@@ -147,6 +147,7 @@
   - [x] Auto-Detection: Heightmap und Map-Mod-ZIP nach XML-Laden (Umlaut-tolerantes Fuzzy-Matching)
   - [x] overview.jpg: Auto-Load beim XML-Oeffnen, Speichern-Dialog nach ZIP-Extraktion/Generierung
   - [x] **Alle Felder nachzeichnen (2026-03-06):** `AppIntent::TraceAllFieldsRequested` → `AppCommand::TraceAllFields` → `use_cases::editing::trace_all_fields()` — Batch-Nachzeichnen aller geladenen Farmland-Polygone in einem einzigen Undo-Schritt; Menueä `📍 Alle Felder nachzeichnen` in Extras (aktiviert wenn Farmland-Polygone geladen)
+  - [x] **Strassenoverlay (2026-03-07):** `extract_road_mask()` in `fs25_map_overview::road_mask` — Weight-Maps nach Strassen-Stems filtern, per `max()` kombinieren zu Grayscale-Maske. `overview_roads.png` neben `overview.jpg` speichern/laden. CPU-Blending (#505050, 50% Alpha) vor GPU-Upload. `AppIntent::ToggleRoadOverlay` im Extras-Menü (disabled wenn keine Maske)
 
 ## Phase 6: Performance & Qualitaet
 - [ ] Performance-Optimierung

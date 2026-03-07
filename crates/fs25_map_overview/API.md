@@ -29,6 +29,7 @@ crates/fs25_map_overview/src/
   grle.rs         # GRLE-Dekoder (GIANTS Run-Length Encoded InfoLayer)
   hillshade.rs    # Hillshade-Berechnung aus DEM
   palette.rs      # Farbpalette für Terrain-Layer
+  road_mask.rs    # Strassenmaske aus Road-Weight-Maps extrahieren
   terrain.rs      # Weight-Map-Compositing → RGB-Terrain-Bild
   text.rs         # Textrenderung auf Bildern
 ```
@@ -94,11 +95,29 @@ pub struct OverviewResult {
     pub grle_height: u32,
     /// Weltgröße in Metern (aus MapInfo)
     pub map_size: f32,
+    /// Kombinierte Strassenmaske aus Weight-Maps (Grayscale, Pixel > 0 = Strasse).
+    /// `None` wenn keine Road-Weight-Maps in der Map gefunden wurden.
+    pub road_mask: Option<image::GrayImage>,
 }
 ```
 
 **Koordinaten-Umrechnung:**  
 `world = pixel * (map_size / grle_width)` — muss vom Aufrufer durchgeführt werden.
+
+---
+
+### `extract_road_mask` (road_mask.rs)
+
+```rust
+pub fn extract_road_mask(
+    images: &[(String, DynamicImage)],
+    target_size: u32,
+) -> Option<GrayImage>
+```
+
+Filtert Weight-Maps nach Strassen-Stems (`tarmac`, `asphalt`, `sideRoadTarmac`, u.a.)
+und kombiniert sie pixelweise per `max()` zu einer Grayscale-Maske.
+Gibt `None` zurück wenn keine passenden Layer gefunden wurden.
 
 ---
 
