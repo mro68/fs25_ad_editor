@@ -7,7 +7,7 @@ use indexmap::IndexSet;
 
 use crate::app::{
     segment_registry::SegmentRegistry, AppIntent, Connection, ConnectionDirection,
-    ConnectionPriority, RoadMap,
+    ConnectionPriority, NodeFlag, RoadMap,
 };
 use distances::render_distance_panel;
 use selectors::{render_direction_icon_selector, render_priority_icon_selector};
@@ -113,7 +113,28 @@ fn render_single_node_info(
         "Position: ({:.1}, {:.1})",
         node.position.x, node.position.y
     ));
-    ui.label(format!("Flag: {:?}", node.flag));
+
+    // Editierbare Flags — nur Regular und SubPrio sind user-gesetzt.
+    let editable_flags = [
+        (NodeFlag::Regular, "Regular (Hauptstrasse)"),
+        (NodeFlag::SubPrio, "SubPrio (Nebenstrasse)"),
+    ];
+    let mut current_flag = node.flag;
+    ui.horizontal(|ui| {
+        ui.label("Flag:");
+        egui::ComboBox::from_id_salt(("node_flag_editor", node_id))
+            .selected_text(format!("{:?}", current_flag))
+            .show_ui(ui, |ui| {
+                for (flag, label) in &editable_flags {
+                    if ui.selectable_value(&mut current_flag, *flag, *label).changed() {
+                        events.push(AppIntent::NodeFlagChangeRequested {
+                            node_id,
+                            flag: *flag,
+                        });
+                    }
+                }
+            });
+    });
 
     ui.separator();
     if let Some(marker) = road_map.find_marker_by_node_id(node_id) {
@@ -247,4 +268,5 @@ fn render_segment_edit_buttons(
         }
     }
 }
+
 
