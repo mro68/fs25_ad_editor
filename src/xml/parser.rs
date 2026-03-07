@@ -204,40 +204,7 @@ pub fn parse_autodrive_config(xml_content: &str) -> Result<RoadMap> {
         bail!("Pflichtfelder in <waypoints> fehlen");
     }
 
-    let ids = waypoints::parse_list::<u64>(&waypoint_ids, ',')
-        .context("Fehler beim Parsen der ID-Liste")?;
-    let xs = waypoints::parse_list::<f32>(&waypoint_x, ',')
-        .context("Fehler beim Parsen der X-Koordinaten")?;
-    let zs = waypoints::parse_list::<f32>(&waypoint_z, ',')
-        .context("Fehler beim Parsen der Z-Koordinaten")?;
-    let flags = waypoints::parse_list::<u32>(&waypoint_flags, ',')
-        .context("Fehler beim Parsen der Flags")?;
-    let outgoing = waypoints::parse_nested_list(&waypoint_out)
-        .context("Fehler beim Parsen der Outgoing-Liste")?;
-    let incoming = waypoints::parse_nested_list(&waypoint_incoming)
-        .context("Fehler beim Parsen der Incoming-Liste")?;
-
-    let mut ys: Option<Vec<f32>> = None;
-    if !waypoint_y.is_empty() {
-        ys = Some(waypoints::parse_list::<f32>(&waypoint_y, ',')?);
-    }
-
-    let expected_len = ids.len();
-    if xs.len() != expected_len
-        || zs.len() != expected_len
-        || flags.len() != expected_len
-        || outgoing.len() != expected_len
-        || incoming.len() != expected_len
-    {
-        bail!("Laengen der Waypoint-Listen stimmen nicht ueberein");
-    }
-
-    if let Some(ref ys) = ys {
-        if ys.len() != expected_len {
-            bail!("Laenge der y-Liste stimmt nicht ueberein");
-        }
-    }
-
+    // Parsing und Laengen-Validierung erfolgen einmalig in build_nodes_and_connections
     let y_str = if !waypoint_y.is_empty() {
         Some(waypoint_y.as_str())
     } else {
