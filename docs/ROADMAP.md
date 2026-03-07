@@ -33,6 +33,7 @@
 - [x] File-Dialogs (Save As)
 - [🟡] Basic Theme/Icons (egui_extras image_loaders vorhanden, volles Theme ausstehend)
 - [x] Keyboard-Shortcuts (Ctrl+O, Ctrl+S, Ctrl+Z, Ctrl+Y, Delete, Escape, etc.)
+  - [x] Command-Palette-Toggle per Ctrl+K (Intent/Command-Kette vorbereitet)
 - [x] Options-Dialog (Farben, Groessen, Breiten – Live-Preview)
 - [x] TOML-Persistierung (fs25_auto_drive_editor.toml neben Binary)
 
@@ -66,6 +67,8 @@
   - [x] UI-Buttons + Shortcuts (Ctrl+Z / Ctrl+Y)
   - [x] CommandLog fuer Debug-Zwecke
 - [x] Properties-Panel (Node-IDs, Positionen, Verbindungen anzeigen/editieren)
+  - [x] Flag-Editor fuer Einzelnode (Regular/SubPrio via ComboBox)
+  - [x] Connection-Listing fuer Einzelnode (eingehend/ausgehend)
 - [x] Mausrad-Steuerung fuer Distanz/Node-Felder (Scroll hoch = erhoehen, runter = verringern)
 - [x] Context-Menu (Rechtsklick → Verbindungsaktionen)
 - [x] **AddNode-Verhalten konfigurierbar** (2026-02-24)

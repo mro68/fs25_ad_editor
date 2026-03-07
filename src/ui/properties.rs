@@ -151,6 +151,18 @@ fn render_single_node_info(
     } else if ui.button("🗺 Marker erstellen").clicked() {
         events.push(AppIntent::CreateMarkerRequested { node_id });
     }
+
+    let neighbors = road_map.connected_neighbors(node_id);
+    if !neighbors.is_empty() {
+        ui.separator();
+        ui.label(format!("Verbindungen ({})", neighbors.len()));
+        for n in &neighbors {
+            let arrow = if n.is_outgoing { "→" } else { "←" };
+            ui.horizontal(|ui| {
+                ui.label(format!("{} Node #{}", arrow, n.neighbor_id));
+            });
+        }
+    }
 }
 
 /// Zeigt Zwei-Node-Info: Verbindungen, Richtungs-/Prioritätsauswahl, Verbinden/Trennen.
