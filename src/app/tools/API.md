@@ -16,7 +16,7 @@ pub struct ToolManager { /* intern */ }
 
 **Methoden:**
 
-- `new() → Self` — Erstellt ToolManager mit vorregistrierten Standard-Tools (StraightLine, Bézier Grad 2, Bézier Grad 3, Spline, Bypass, ConstraintRoute)
+- `new() → Self` — Erstellt ToolManager mit vorregistrierten Standard-Tools (StraightLine, Bézier Grad 2, Bézier Grad 3, Spline, Bypass, ConstraintRoute, Parking, FieldBoundary, RouteOffset)
 - `register(tool)` — Neues Route-Tool registrieren
 - `tool_count() → usize` — Anzahl registrierter Tools
 - `tool_names() → Vec<(usize, &str)>` — Name + Index aller Tools
@@ -64,6 +64,7 @@ Schnittstelle fuer alle Route-Tools (Linie, Kurve, …). Tools sind zustandsbeha
 - `on_drag_end(road_map)` — Drag beenden (Re-Snap bei Start/Ende)
 - `tangent_menu_data() → Option<TangentMenuData>` — liefert Tangenten-Menuedaten fuer das Kontextmenue
 - `apply_tangent_selection(start, end)` — wendet die im Kontextmenue gewaehlten Tangenten an
+- `set_chain_inner_ids(ids: Vec<u64>)` — Setzt die inneren Node-IDs der geladenen Kette (ohne Start/Ende); wird nach `load_chain()` vom Handler aufgerufen um korrekte IDs fuer das "Original entfernen"-Feature bereitzustellen (Standard-Impl.: no-op)
 
 **`ToolPreview` Felder**
 
@@ -110,6 +111,7 @@ Documentation moved to [`../API.md#segmentbase--segmentkind`](../API.md#segmentb
 | 5 | `ConstraintRouteTool` | `⊿` | `ConstraintRouteTool::new()` |
 | 6 | `ParkingTool` | `🅿` | `ParkingTool::new()` |
 | 7 | `FieldBoundaryTool` | `🌾` | `FieldBoundaryTool::new()` |
+| 8 | `RouteOffsetTool` | `⇶` | `RouteOffsetTool::new()` |
 
 ### `StraightLineTool`
 
@@ -274,6 +276,56 @@ pub struct FieldBoundaryTool {
 
 Modulstruktur: `mod.rs` (Re-Exporte), `state.rs` (Struct, Phasen-Enum, Default), `lifecycle.rs` (RouteTool-Impl, Ring-Berechnung), `config_ui.rs` (egui-Panel)
 
+### `RouteOffsetTool`
+
+Parallelversatz einer selektierten Kette ohne S-Kurven-Anbindung (Slot 8 im ToolManager). Generiert eine oder zwei Parallel-Versatz-Ketten (links und/oder rechts) mit konfigurierbarem Abstand und optionalem Entfernen der Original-Kette.
+
+**Voraussetzung:** Eine selektierte Kette muss beim Aktivieren des Tools vorhanden sein (`load_chain()` wird automatisch in `init_chain_if_needed()` aufgerufen).
+
+**Phasen:** Kein Phasenmodell — Tool ist direkt nach Ketten-Laden bereit (Enter = Ausführen).
+
+**Konfiguration (`OffsetConfig`):**
+
+- `left_enabled: bool` — Links-Versatz aktiviert
+- `right_enabled: bool` — Rechts-Versatz aktiviert
+- `left_distance: f32` — Versatz-Distanz links in Metern (Standard: 8 m)
+- `right_distance: f32` — Versatz-Distanz rechts in Metern (Standard: 8 m)
+- `keep_original: bool` — Original-Kette beibehalten (false = Original-Nodes entfernen)
+- `base_spacing: f32` — Maximaler Abstand zwischen Nodes auf der Offset-Kette (Standard: 6 m)
+
+**Felder:**
+
+```rust
+pub struct RouteOffsetTool {
+    pub(crate) chain_positions: Vec<Vec2>,   // Geordnete Positionen der Quell-Kette
+    pub(crate) chain_start_id: u64,          // ID des ersten Ketten-Nodes
+    pub(crate) chain_end_id: u64,            // ID des letzten Ketten-Nodes
+    pub(crate) chain_inner_ids: Vec<u64>,    // IDs innerer Nodes (fuer "Original entfernen")
+    pub direction: ConnectionDirection,
+    pub priority: ConnectionPriority,
+    pub config: OffsetConfig,
+    pub(crate) cached_preview: Option<(Vec<Vec2>, Vec<(usize, usize)>)>,
+    pub(crate) lifecycle: ToolLifecycleState,
+}
+```
+
+**Execute-Logik:**
+
+1. `compute_offset_positions(chain, ±distance, base_spacing)` — verschobene Punkte berechnen
+2. `resample_by_distance()` — gleichmäßiges Resampling
+3. Wenn `!keep_original`: `nodes_to_remove = chain_inner_ids` → Original-Nodes werden im selben Undo-Schritt entfernt
+4. `ToolResult.nodes_to_remove` wird von `apply_tool_result()` vor Erstellung neuer Nodes verarbeitet
+
+**Geometrie-Funktionen (`geometry.rs`):**
+
+- `compute_offset_positions(chain, offset, base_spacing) → Option<Vec<Vec2>>` — Nutzt `parallel_offset()` + `resample_by_distance()`
+
+**Segment-Record:** `SegmentKind::RouteOffset { chain_positions, chain_start_id, chain_end_id, offset_left, offset_right, keep_original, base_spacing, base }` (Slot 8 im ToolManager)
+
+Modulstruktur: `mod.rs` (Re-Exporte), `state.rs` (Struct + OffsetConfig), `lifecycle.rs` (RouteTool-Impl), `geometry.rs` (compute_offset_positions), `config_ui.rs` (egui-Panel), `tests.rs`
+
+---
+
 ### `BypassTool`
 
 Parallele Ausweichstrecke einer selektierten Kette mit S-förmigen An-/Abfahrten. Das Tool benötigt eine Eingabe-Kette (via `load_chain()`), generiert dann automatisch die Bypass-Positionen und erstellt neue Nodes mit entsprechenden Verbindungen.
@@ -316,6 +368,11 @@ Aufgeteilt in vier Submodule (alle privat, Re-Exporte via `common/mod.rs`):
 ### `geometry.rs`
 
 Hilfsfunktionen: `angle_to_compass`, `node_count_from_length`, `populate_neighbors`, `snap_with_neighbors`, `linear_connections`, `tangent_options`
+
+**Polyline-Geometrie** (gemeinsam fuer BypassTool + RouteOffsetTool):
+
+- **`parallel_offset(polyline, offset) → Vec<Vec2>`** — Berechnet eine parallel versetzte Polyline. `offset > 0` = links (positive Senkrechte in Fahrtrichtung), `offset < 0` = rechts.
+- **`local_perp(i, poly) → Vec2`** — Lokale Senkrechte am Index `i` einer Polyline (Durchschnitt benachbarter Segmente; Randpunkte nutzen nur das angrenzende Segment).
 
 ### `tangent.rs`
 
