@@ -126,6 +126,7 @@ Der Editor liest und schreibt **AutoDrive-XML** im FS25-Format:
 ```
 
 **Wichtige Regeln:**
+
 - IDs muessen lueckenlos von 1 bis N durchnummeriert sein
 - `out` = ausgehende Verbindungen (kommaseparierte IDs)
 - `incoming` = eingehende Verbindungen (kommaseparierte IDs)

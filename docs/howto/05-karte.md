@@ -59,6 +59,7 @@ Der Editor enthaelt ein Hilfswerkzeug zum Generieren hochwertiger Uebersichtskar
 ### Voraussetzung
 
 Eine installierte FS25-Map-Entpackstruktur mit:
+
 - `map/` Verzeichnis (enthaelt GRLE/GDM-Dateien)
 - Standardmaessiger FS25-Map-Struktur
 
@@ -90,6 +91,7 @@ Nach dem Laden einer AutoDrive-XML prueft der Editor automatisch:
 4. **Hintergrundkarte** — Wenn im Map-Verzeichnis eine passende Karte gefunden wird, wird sie automatisch geladen
 
 **Status-Ausgaben:**
+
 - Oben in der Statusleiste erscheinen kurze Meldungen wie „Hintergrundkarte geladen" oder „3 Flags bereinigt"
 
 ---

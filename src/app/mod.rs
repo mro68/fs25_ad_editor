@@ -37,3 +37,5 @@ pub use state::{
     AppState, Clipboard, EditorTool, EditorToolState, PostLoadDialogState, SelectionState, UiState,
     ViewState,
 };
+pub use tools::field_boundary::compute_ring;
+pub use tools::ToolAnchor;

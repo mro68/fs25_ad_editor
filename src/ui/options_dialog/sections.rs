@@ -1,3 +1,8 @@
+//! Einzelne Einstellungs-Abschnitte fuer den Options-Dialog.
+//!
+//! Jede `render_*`-Funktion rendert einen thematischen Block und gibt `true`
+//! zurueck wenn sich ein Wert geaendert hat.
+
 use crate::shared::{EditorOptions, SelectionStyle, ValueAdjustInputMode};
 
 fn color_edit(ui: &mut egui::Ui, label: &str, color: &mut [f32; 4]) -> bool {
@@ -21,6 +26,7 @@ fn color_edit(ui: &mut egui::Ui, label: &str, color: &mut [f32; 4]) -> bool {
     changed
 }
 
+/// Rendert die Node-Darstellungseinstellungen (Groesse, Farben, Hitbox).
 pub(super) fn render_nodes(ui: &mut egui::Ui, opts: &mut EditorOptions) -> bool {
     let mut changed = false;
     ui.horizontal(|ui| {
@@ -51,6 +57,7 @@ pub(super) fn render_nodes(ui: &mut egui::Ui, opts: &mut EditorOptions) -> bool 
     changed
 }
 
+/// Rendert die Werkzeug-Einstellungen (Eingabemodus, Snap-Radius, Mausrad-Schritt).
 pub(super) fn render_tools(ui: &mut egui::Ui, opts: &mut EditorOptions) -> bool {
     let mut changed = false;
     ui.horizontal(|ui| {
@@ -109,6 +116,7 @@ pub(super) fn render_tools(ui: &mut egui::Ui, opts: &mut EditorOptions) -> bool 
     changed
 }
 
+/// Rendert die Selektions-Einstellungen (Groessenfaktor, Markierungsstil).
 pub(super) fn render_selection(ui: &mut egui::Ui, opts: &mut EditorOptions) -> bool {
     let mut changed = false;
     ui.horizontal(|ui| {
@@ -146,6 +154,7 @@ pub(super) fn render_selection(ui: &mut egui::Ui, opts: &mut EditorOptions) -> b
     changed
 }
 
+/// Rendert die Verbindungs-Darstellungseinstellungen (Breite, Pfeilgroessen, Farben).
 pub(super) fn render_connections(ui: &mut egui::Ui, opts: &mut EditorOptions) -> bool {
     let mut changed = false;
     ui.horizontal(|ui| {
@@ -198,6 +207,7 @@ pub(super) fn render_connections(ui: &mut egui::Ui, opts: &mut EditorOptions) ->
     changed
 }
 
+/// Rendert die Marker-Darstellungseinstellungen (Pin-Groesse, Farben).
 pub(super) fn render_markers(ui: &mut egui::Ui, opts: &mut EditorOptions) -> bool {
     let mut changed = false;
     ui.horizontal(|ui| {
@@ -215,6 +225,7 @@ pub(super) fn render_markers(ui: &mut egui::Ui, opts: &mut EditorOptions) -> boo
     changed
 }
 
+/// Rendert die Kamera-Einstellungen (Zoom-Grenzen, Scroll-Schritt, Kompensation).
 pub(super) fn render_camera(ui: &mut egui::Ui, opts: &mut EditorOptions) -> bool {
     let mut changed = false;
     ui.horizontal(|ui| {
@@ -347,6 +358,7 @@ pub(super) fn render_lod(ui: &mut egui::Ui, opts: &mut EditorOptions) -> bool {
     changed
 }
 
+/// Rendert die Hintergrundkarten-Einstellungen (Deckung, Fade-out).
 pub(super) fn render_background(ui: &mut egui::Ui, opts: &mut EditorOptions) -> bool {
     let mut changed = false;
     ui.horizontal(|ui| {
@@ -382,6 +394,7 @@ pub(super) fn render_background(ui: &mut egui::Ui, opts: &mut EditorOptions) -> 
     changed
 }
 
+/// Rendert die Uebersichtskarten-Layer-Einstellungen (Hillshade, Farmlands, POIs).
 pub(super) fn render_overview_layers(ui: &mut egui::Ui, opts: &mut EditorOptions) -> bool {
     let mut changed = false;
     changed |= ui
@@ -402,6 +415,7 @@ pub(super) fn render_overview_layers(ui: &mut egui::Ui, opts: &mut EditorOptions
     changed
 }
 
+/// Rendert die Node-Verhalten-Einstellungen (Reconnect beim Loeschen, Verbindung teilen).
 pub(super) fn render_node_behavior(ui: &mut egui::Ui, opts: &mut EditorOptions) -> bool {
     let mut changed = false;
     if ui

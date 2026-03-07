@@ -15,6 +15,7 @@ pub fn parse_autodrive_config(xml_content: &str) -> Result<RoadMap>
 ```
 
 **Beispiel:**
+
 ```rust
 let xml = std::fs::read_to_string("config.xml")?;
 let road_map = parse_autodrive_config(&xml)?;
@@ -23,6 +24,7 @@ println!("Nodes: {}", road_map.node_count());
 ```
 
 **Features:**
+
 - Parst SoA-Format (parallele Listen: `<id>`, `<x>`, `<z>`, etc.)
 - Delimiter: Komma (`,`) fuer Listen, Semikolon (`;`) fuer verschachtelt
 - **Flag-Bereinigung:** Flags 2 und 4 werden automatisch zu 0 konvertiert
@@ -30,6 +32,7 @@ println!("Nodes: {}", road_map.node_count());
 - Rekonstruiert Connections aus `out`/`incoming`-Listen
 
 **Fehler:**
+
 - `anyhow::Error` bei Parsing-Fehler oder fehlenden Pflichtfeldern
 
 ---
@@ -47,6 +50,7 @@ pub fn write_autodrive_config(
 ```
 
 **Beispiel:**
+
 ```rust
 // Ohne Heightmap (Y-Werte = 0.0)
 let xml = write_autodrive_config(&road_map, None, 255.0)?;
@@ -59,6 +63,7 @@ std::fs::write("output.xml", xml)?;
 ```
 
 **Features:**
+
 - Sortierte Node-IDs mit Remap auf fortlaufende IDs (`1..N`)
 - Berechnet `out`/`incoming`-Listen aus Connections
 - Schreibt MapMarkers als `<mmN>`-Elemente mit `<id>`, `<name>`, `<group>`
@@ -68,6 +73,7 @@ std::fs::write("output.xml", xml)?;
 - Exakte Replikation des Original-Formats (encoding, standalone)
 
 **Output-Format:**
+
 ```xml
 <?xml version="1.0" encoding="utf-8" standalone="no"?>
 <AutoDrive>
@@ -96,6 +102,7 @@ std::fs::write("output.xml", xml)?;
 ### Structure of Arrays (SoA)
 
 Daten werden als parallele Listen gespeichert:
+
 - **Listen:** Durch Komma getrennt (`1,2,3`)
 - **Verschachtelt:** Durch Semikolon getrennt (`2,3;4;`)
 - **Leer:** Leere Liste zwischen Semikola

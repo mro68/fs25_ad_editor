@@ -36,6 +36,7 @@ pub struct RenderScene {
 (z. B. bei Vorschau-Overlays im Properties-Panel), ohne die Domain-Daten zu mutieren.
 
 **Methoden:**
+
 - `has_map() -> bool` — Prueft ob eine RoadMap vorhanden ist
 
 ---
@@ -61,27 +62,34 @@ Zentral gesammelte Konfigurationswerte, gegliedert nach Bereich:
 | Bereich | Konstante | Wert | Beschreibung |
 |---------|-----------|------|-------------|
 | Kamera | `CAMERA_BASE_WORLD_EXTENT` | 2048.0 | Sichtbare Welt-Halbbreite bei Zoom 1.0 (Referenz-Duplikat, kanonisch in `Camera2D`) |
-| Kamera | `CAMERA_ZOOM_MIN` / `MAX` | 0.1 / 100.0 | Zoom-Grenzen (Referenz-Duplikat) |
-| Kamera | `CAMERA_ZOOM_STEP` | 1.2 | Zoom-Schritt bei Menue-Buttons / Shortcuts |
-| Kamera | `CAMERA_SCROLL_ZOOM_STEP` | 1.1 | Zoom-Schritt bei Mausrad-Scroll |
-| Selektion | `SELECTION_SIZE_FACTOR` | 130.0 | Vergroesserung selektierter Nodes in % (100..=200) |
+| Kamera | `CAMERA_ZOOM_MIN` / `MAX` | 0.75 / 200.0 | Zoom-Grenzen (konfigurierbarer Default) |
+| Kamera | `CAMERA_ZOOM_STEP` | 1.1 | Zoom-Schritt bei Menue-Buttons / Shortcuts |
+| Kamera | `CAMERA_SCROLL_ZOOM_STEP` | 1.025 | Zoom-Schritt bei Mausrad-Scroll |
+| Selektion | `SELECTION_SIZE_FACTOR` | 125.0 | Vergroesserung selektierter Nodes in % (100..=200) |
 | Nodes | `NODE_SIZE_WORLD` | 0.5 | Feste Node-Groesse in Welt-Einheiten |
-| Nodes | `NODE_COLOR_DEFAULT` | `[0.0, 0.8, 1.0, 1.0]` | Cyan (Regular) |
-| Nodes | `NODE_COLOR_SUBPRIO` | `[1.0, 1.0, 0.0, 1.0]` | Gelb (SubPrio) |
-| Nodes | `NODE_COLOR_SELECTED` | `[1.0, 0.0, 1.0, 1.0]` | Magenta (Selektiert) |
+| Nodes | `NODE_COLOR_DEFAULT` | `[0.0, 0.298, 1.0, 1.0]` | Blau (Regular) |
+| Nodes | `NODE_COLOR_SUBPRIO` | `[1.0, 0.733, 0.0, 1.0]` | Gelborange (SubPrio) |
+| Nodes | `NODE_COLOR_SELECTED` | `[0.843, 0.0, 1.0, 1.0]` | Violett (Selektiert) |
 | Nodes | `NODE_COLOR_WARNING` | `[1.0, 0.0, 0.0, 1.0]` | Rot (Warning) |
-| Connections | `CONNECTION_THICKNESS_WORLD` | 0.2 | Hauptstrassen-Linienbreite |
-| Connections | `CONNECTION_THICKNESS_SUBPRIO_WORLD` | 0.1 | Nebenstrassen-Linienbreite |
-| Connections | `ARROW_LENGTH_WORLD` / `WIDTH` | 1.0 / 0.6 | Pfeilgeometrie |
-| Connections | `CONNECTION_COLOR_REGULAR` | `[0.2, 0.9, 0.2, 1.0]` | Gruen |
-| Connections | `CONNECTION_COLOR_DUAL` | `[0.2, 0.7, 1.0, 1.0]` | Blau |
-| Connections | `CONNECTION_COLOR_REVERSE` | `[1.0, 0.5, 0.1, 1.0]` | Orange |
-| Marker | `MARKER_SIZE_WORLD` | 2.0 | Pin-Hoehe in Welt-Einheiten |
-| Marker | `MARKER_COLOR` | `[0.9, 0.1, 0.1, 1.0]` | Rot |
-| Marker | `MARKER_OUTLINE_COLOR` | `[0.6, 0.0, 0.0, 1.0]` | Dunkles Rot |
+| Nodes | `MIN_NODE_SIZE_PX` | 3.0 | Mindestgroesse in Pixeln beim Herauszoomen (0 = deaktiviert) |
+| Connections | `CONNECTION_THICKNESS_WORLD` | 0.1 | Hauptstrassen-Linienbreite |
+| Connections | `CONNECTION_THICKNESS_SUBPRIO_WORLD` | 0.05 | Nebenstrassen-Linienbreite |
+| Connections | `ARROW_LENGTH_WORLD` / `ARROW_WIDTH_WORLD` | 1.0 / 0.5 | Pfeilgeometrie |
+| Connections | `MIN_CONNECTION_WIDTH_PX` | 1.5 | Mindestbreite in Pixeln beim Herauszoomen |
+| Connections | `MIN_ARROW_SIZE_PX` | 4.0 | Mindestpfeil-Groesse in Pixeln |
+| Connections | `CONNECTION_COLOR_REGULAR` | `[0.0, 0.694, 1.0, 1.0]` | Blau (Einrichtung) |
+| Connections | `CONNECTION_COLOR_DUAL` | `[0.890, 1.0, 0.396, 1.0]` | Hellgruen (Bidirektional) |
+| Connections | `CONNECTION_COLOR_REVERSE` | `[1.0, 0.5, 0.1, 1.0]` | Orange (Rueckwaerts) |
+| Marker | `MARKER_SIZE_WORLD` | 2.6 | Pin-Hoehe in Welt-Einheiten |
+| Marker | `MARKER_COLOR` | `[0.0, 0.467, 0.102, 1.0]` | Dunkelgruen |
+| Marker | `MARKER_OUTLINE_COLOR` | `[1.0, 0.643, 0.0, 1.0]` | Goldgelb |
+| Marker | `MIN_MARKER_SIZE_PX` | 8.0 | Mindestgroesse in Pixeln |
+| Decimation | `NODE_DECIMATION_SPACING_PX` | 6.0 | Mindestabstand (px) fuer Grid-Decimation |
 | Tools | `SNAP_SCALE_PERCENT` | 100.0 | Snap-Radius in % der Node-Groesse |
 | Tools | `HITBOX_SCALE_PERCENT` | 100.0 | Standard-Hitbox-Skalierung in % der Node-Groesse |
 | Tools | `MOUSE_WHEEL_DISTANCE_STEP_M` | 0.1 | Schrittweite (m) fuer Distanz-Felder bei Mausrad |
+| Terrain | `TERRAIN_HEIGHT_SCALE` | 255.0 | Hoehenskala fuer Heightmap-Export |
+| Zoom-Kompensation | `DEFAULT_ZOOM_COMPENSATION_MAX` | 4.0 | Standard-Maximum fuer den Zoom-Kompensationsfaktor (1.0 = deaktiviert) |
 
 ### `ValueAdjustInputMode`
 
@@ -93,8 +101,6 @@ pub enum ValueAdjustInputMode {
     MouseWheel,     // Mausrad hoch/runter
 }
 ```
-| Terrain | `TERRAIN_HEIGHT_SCALE` | 255.0 | Hoehenskala fuer Heightmap-Export |
-| Zoom-Kompensation | `DEFAULT_ZOOM_COMPENSATION_MAX` | 4.0 | Standard-Maximum fuer den Zoom-Kompensationsfaktor (1.0 = deaktiviert) |
 
 ### `OverviewLayerOptions`
 
@@ -195,10 +201,17 @@ pub struct EditorOptions {
     /// Maximaler Zoom-Kompensationsfaktor (1.0 = deaktiviert, 4.0 = Standard).
     /// Verhindert, dass Nodes und Verbindungen beim Herauszoomen unsichtbar werden.
     pub zoom_compensation_max: f32,
+    // LOD / Mindestgroessen (Zoomout-Darstellung)
+    pub min_node_size_px: f32,
+    pub min_connection_width_px: f32,
+    pub min_arrow_size_px: f32,
+    pub min_marker_size_px: f32,
+    pub node_decimation_spacing_px: f32,
 }
 ```
 
 **Methoden:**
+
 - `EditorOptions::load_from_file(path) -> Self` — TOML-Datei laden (bei Fehler: Defaults)
 - `EditorOptions::save_to_file(&self, path) -> Result<()>` — Als TOML speichern
 - `EditorOptions::config_path() -> PathBuf` — Pfad zur Optionen-Datei neben der Binary

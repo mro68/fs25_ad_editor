@@ -162,6 +162,8 @@
   - [x] `ctx.request_repaint()` nur bei Aenderungen (CPU-Idle-Verbrauch reduzieren)
   - [x] **RenderScene-Hotpath:** `RenderScene.options` auf `Arc<EditorOptions>` umgestellt (O(1)-Clone statt Deep-Clone pro Frame, 2026-03-04)
   - [x] **Zoom-kompensierte Skalierung (2026-03-06):** `EditorOptions.zoom_compensation_max` + `zoom_compensation(zoom)` — Nodes und Verbindungen bleiben bei kleinem Zoom sichtbar (Faktor clamped auf [1.0, max], konfigurierbar im Options-Dialog)
+  - [x] **Node-Decimation (2026-03-06):** `EditorOptions.node_decimation_spacing_px` + `NODE_DECIMATION_SPACING_PX` — Nodes, die im aktuellen Zoom enger als N Pixel liegen, werden zusammengefasst (Grid-Decimation im Render-Hotpath); konfigurierbar im Options-Dialog (0.0 = deaktiviert)
+  - [x] **Mindestgrößen (2026-03-06):** Nodes und Verbindungen erhalten via Zoom-Kompensation eine garantierte Mindestgröße im Viewport — unabhängig vom Zoomlevel immer erkennbar
   - [ ] **Preview-Clone Hot-Path optimieren** (empfohlen vom Tester, 2026-03-05)
     - [ ] `constraint_route/lifecycle.rs`: `preview_connections.clone()` und `preview_positions.clone()` im `preview()`-Aufruf durch `Arc`/`Cow` ersetzen (aktuell pro Frame, kleine Vecs — LOW-Severity)
 - [🟡] Error-Handling & User-Feedback
@@ -205,6 +207,12 @@
     - [x] `ui/API.md`: Menueä `📍 Alle Felder nachzeichnen` im Extras-Submenu
     - [x] `render/API.md`: Zoom-Kompensation in NodeRenderer und ConnectionRenderer dokumentiert
     - [x] ROADMAP.md: Beide Features als abgeschlossen markiert
+  - [x] **Doku-Sync Deep-Structure-Audit (2026-03-07, Branch `refactor/deep-structure-audit`)**
+    - [x] `crates/fs25_map_overview/API.md`: Neues API.md fuer das Overview-Crate erstellt (pub Structs, Funktionen, Module)
+    - [x] `app/API.md`: `ToolAnchor` und `compute_ring` als explizite Re-Exports erwaehnt
+    - [x] `core/API.md`: `SpatialIndex` — Hinweis auf `ImmutableKdTree` von kiddo ergaenzt
+    - [x] `docs/ARCHITECTURE_PLAN.md`: Stand aktualisiert, Zoom-Kompensation- und Decimation-Pattern beschrieben
+    - [x] ROADMAP.md: Stand, Prozente und neue Feature-Eintraege aktualisiert
   - [x] **Bugfix: PNG-Farmland-Erkennung (2026-03-06, Branch `fix/farmland-json-persistence`)**
     - [x] `extract_farmland_polygons_from_ids()` als formatunabhaengige pub-Funktion extrahiert (GRLE+PNG)
     - [x] `try_extract_polygons_from_files()`: PNG-Branch (`infoLayer_farmlands.png`) unterstuetzt Polygon-Extraktion via Luma-Dekodierung
@@ -266,7 +274,7 @@
 
 ---
 
-## 📊 Aktueller Status (Stand: 2026-02-28)
+## 📊 Aktueller Status (Stand: 2026-03-07)
 
 **Fertigstellung:**
 - Phase 1: ✅ 100%
@@ -274,7 +282,7 @@
 - Phase 3: ✅ 98% (Theme fehlt)
 - Phase 4: ✅ 100% (alle Features implementiert, 100k-Benchmarks ausstehend)
 - Phase 5: 🟡 90% (DDS-Background + Marker-Editor + Bézier-Kurven + Catmull-Rom-Spline + Uebersichtskarte fertig)
-- Phase 6: 🟡 50% (Handler-Split, CI-Checks, unwrap-Bereinigung, API-Docs, Docstrings, Audit-Fixes durchgefuehrt)
+- Phase 6: 🟡 65% (Handler-Split, CI-Checks, unwrap-Bereinigung, API-Docs, Docstrings, Zoom-Kompensation, Node-Decimation, Deep-Structure-Audit durchgefuehrt)
 
 **Errungenschaften seit letztem Update (Tool-Konsistenz-Refactoring 2026-03-05):**
 - ✅ BypassTool Lifecycle-Nachrüstung: neues `lifecycle: ToolLifecycleState` Feld

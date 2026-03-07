@@ -50,6 +50,7 @@ pub fn render_menu(ctx: &egui::Context, state: &AppState) -> Vec<AppIntent>
 ```
 
 **Menü-Struktur:**
+
 - **File**
   - Open... → `AppIntent::OpenFileRequested`
   - Save (nur wenn Datei geladen) → `AppIntent::SaveRequested`
@@ -90,15 +91,16 @@ pub fn render_toolbar(ctx: &egui::Context, state: &AppState) -> Vec<AppIntent>
 ```
 
 **Enthaltene Buttons:**
+
 - Select / Connect / AddNode / Route (immer sichtbar)
 - Linien-Tool-Dropdown: Zeigt alle Route-Tools ausser FieldBoundaryTool
-
 
 ### `render_properties_panel`
 
 Rendert das Properties-Panel mit Detailanzeige selektierter Nodes (IDs, Positionen, Verbindungen).
 
 Zeigt tool- und selektionsabhängig:
+
 - Distanzen-Panel (wenn ≥ 2 Nodes selektiert): Catmull-Rom-Resample (→ `ResamplePathRequested`)
 - Route-Tool-Konfiguration (wenn `active_tool == EditorTool::Route`)
 - Standard-Richtung und Straßenart-Selector
@@ -131,6 +133,7 @@ pub fn render_status_bar(ctx: &egui::Context, state: &AppState)
 ```
 
 **Angezeigte Informationen:**
+
 - Node-Count, Connection-Count, Marker-Count
 - Map-Name (falls vorhanden)
 - Zoom und Kamera-Position
@@ -236,12 +239,14 @@ pub fn render_context_menu(
 Alle Commands werden durch ein Precondition-System gefiltert: Nur Commands deren Bedingungen erfuellt sind werden angezeigt.
 
 **Segment-Integration:**
+
 - `segment_registry` wird zur Validierung herangezogen
 - Prueft ob alle selektierten Nodes zu einem einzigen validen Segment gehoeren
 - Wenn ja → `EditSegment` Command verfuegbar im Katalog
 - Segment-Validierung: Nodes existieren und Originalpositionen unveraendert
 
 **Unterstützte Interaktionen (gesamt):**
+
 - **Linksklick:** Node-Pick (mit Shift: additiv + Pfad-Erweiterung)
 - **Doppelklick:** Segment-Selektion zwischen Kreuzungen
 - **Links-Drag:** Kamera-Pan, Selektion-Move, oder Route-Tool-Steuerpunkt-Drag
@@ -349,6 +354,7 @@ pub fn render_route_defaults_panel(
   default_priority: ConnectionPriority,
 ) -> Vec<AppIntent>
 ```
+
 ```
 
 ---
@@ -376,10 +382,12 @@ pub fn show_dedup_dialog(ctx: &egui::Context, ui_state: &UiState) -> Vec<AppInte
 ```
 
 **Emittierte Intents:**
+
 - `AppIntent::DeduplicateConfirmed` — Benutzer bestätigt Bereinigung
 - `AppIntent::DeduplicateCancelled` — Benutzer bricht ab
 
 **Layout:**
+
 ```
 [Titel: "Duplizierte Wegpunkte erkannt"]
   ⚠ AutoDrive hat Teile des Netzwerks mehrfach erstellt.
@@ -398,10 +406,12 @@ pub fn show_zip_browser(ctx: &egui::Context, ui_state: &mut UiState) -> Vec<AppI
 ```
 
 **Emittierte Intents:**
+
 - `AppIntent::ZipBackgroundFileSelected { zip_path, entry_name }` — Bild aus ZIP gewählt (Doppelklick oder Übernehmen-Button)
 - `AppIntent::ZipBrowserCancelled` — Abbrechen oder X-Button
 
 **Layout:**
+
 ```
 [Titel: "Bild aus ZIP wählen"]
   N Bilddateien gefunden:
@@ -423,10 +433,12 @@ pub fn show_post_load_dialog(ctx: &egui::Context, ui_state: &mut UiState) -> Vec
 ```
 
 **Emittierte Intents:**
+
 - `AppIntent::PostLoadGenerateOverview { zip_path }` — Benutzer will Übersichtskarte generieren
 - `AppIntent::PostLoadDialogDismissed` — Benutzer schließt den Dialog
 
 **Layout:**
+
 ```
 [Titel: "Nach dem Laden erkannt"]
   ✓ Heightmap automatisch geladen
@@ -453,6 +465,7 @@ pub fn show_overview_options_dialog(
 ```
 
 **Emittierte Intents:**
+
 - `AppIntent::OverviewOptionsConfirmed`
 - `AppIntent::OverviewOptionsCancelled`
 
@@ -467,10 +480,12 @@ pub fn show_save_overview_dialog(ctx: &egui::Context, ui_state: &mut UiState) ->
 ```
 
 **Emittierte Intents:**
+
 - `AppIntent::SaveBackgroundAsOverviewConfirmed` — Benutzer bestätigt Speichern
 - `AppIntent::SaveBackgroundAsOverviewDismissed` — Benutzer lehnt ab
 
 **Layout:**
+
 ```
 [Titel: "Hintergrundbild speichern?"]
   Soll das Hintergrundbild als overview.jpg
@@ -517,6 +532,7 @@ pub fn render_segment_overlays(
 ```
 
 **Verhalten:**
+
 - Iteriert ueber alle gueltigen Segmente in der Registry
 - Zeichnet eine halbtransparente Fuellung (nur bei gesperrten Segmenten)
 - Zeichnet einen Rahmen (gelb = gesperrt, grau = entsperrt)
@@ -524,6 +540,7 @@ pub fn render_segment_overlays(
 - Gibt `SegmentOverlayEvent::LockToggled` zurueck wenn ein Icon angeklickt wurde
 
 **Lock-Zustand:**
+
 - Entsperrt (`locked = false`): grauer Rahmen, offenes Schloss-Icon
 - Gesperrt (`locked = true`): gelber Rahmen, 15%-schwarze Fuellung, geschlossenes Schloss-Icon
 

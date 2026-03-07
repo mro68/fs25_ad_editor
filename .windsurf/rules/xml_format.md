@@ -1,9 +1,11 @@
 # AutoDrive XML-Format
 
 ## Struktur
+
 Das AutoDrive Config-Format nutzt **Structure of Arrays** (SoA): Parallele Listen in separaten XML-Tags.
 
 ## Beispiel
+
 ```xml
 <?xml version="1.0" encoding="utf-8" standalone="no"?>
 <AutoDrive>
@@ -25,15 +27,19 @@ Das AutoDrive Config-Format nutzt **Structure of Arrays** (SoA): Parallele Liste
 ```
 
 ## Delimiter-Regeln
+
 - **Comma (`,`):** Fuer einfache Listen (id, x, y, z, flags)
 - **Semicolon (`;`):** Fuer verschachtelte Listen (out, incoming) - aeussere Ebene
 - **Comma (`,`):** Innerhalb der verschachtelten Listen
 
 ### Beispiel `out`-Feld
+
 ```
 out = "2,3;3,4;;1"
 ```
+
 Bedeutet:
+
 - Node 1 hat Connections zu [2, 3]
 - Node 2 hat Connections zu [3, 4]
 - Node 3 hat keine Connections ([])
@@ -42,7 +48,9 @@ Bedeutet:
 ## Versions-Logik (Wichtig!)
 
 ### FS22/FS25 Flag-Bereinigung
+
 Beim **Laden** von Configs mit `version >= 2`:
+
 - Pruefe alle `flags` Werte
 - Wenn Flag == 2 oder Flag == 4:
   - Diese wurden automatisch von AutoDrive generiert (Spline-Import)
@@ -61,6 +69,7 @@ if config.version >= 2 {
 ```
 
 ## Flag-Bedeutungen
+
 ```rust
 pub enum NodeFlag {
     Regular = 0,
@@ -74,10 +83,12 @@ pub enum NodeFlag {
 ```
 
 ## Parsing-Strategie
+
 1. Lese alle parallelen Listen in separate `Vec<String>`
 2. Parse jede Liste in ihren Zieltyp (`Vec<f32>`, `Vec<u64>`, etc.)
 3. Validiere, dass alle Listen gleiche Laenge haben
 4. Konstruiere Nodes aus parallelen Indizes:
+
    ```rust
    for i in 0..ids.len() {
        let node = MapNode {
@@ -91,6 +102,7 @@ pub enum NodeFlag {
    ```
 
 ## Error-Handling
+
 - Fehlende Tags → Leere Listen (oder Fehler, je nach Kontext)
 - Ungueltige Zahlenformate → Parsing-Fehler
 - Laengen-Mismatch → Kritischer Fehler

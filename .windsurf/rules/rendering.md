@@ -1,9 +1,11 @@
 # Rendering-Architektur
 
 ## Ziel
+
 Fluessiges Rendering von 100k+ Punkten und Verbindungen auf der GPU.
 
 ## Strategie
+
 1. **GPU-Instancing:** Ein Draw-Call fuer alle Nodes, ein Draw-Call fuer alle Connections
 2. **Viewport-Culling:** Nur Elemente im sichtbaren Bereich rendern
 3. **LOD (Level of Detail):** Zoom-abhaengige Darstellung (Icons vs. einfache Kreise)
@@ -11,6 +13,7 @@ Fluessiges Rendering von 100k+ Punkten und Verbindungen auf der GPU.
 ## wgpu Pipeline
 
 ### Vertex-Buffer-Layout
+
 ```rust
 // Node-Instanz-Daten (GPU-Instancing pro sichtbarem Node)
 struct NodeInstance {
@@ -38,6 +41,7 @@ struct MarkerInstance {
 ```
 
 ### Uniform-Buffer
+
 ```rust
 struct Uniforms {
     view_proj: [[f32; 4]; 4], // View-Projection Matrix
@@ -46,6 +50,7 @@ struct Uniforms {
 ```
 
 ## Integration in egui
+
 - Verwende `egui::PaintCallback` fuer Custom-Rendering
 - Render-Zyklus:
   1. egui zeichnet UI-Elemente
@@ -55,16 +60,19 @@ struct Uniforms {
 ## Shader-Logik (WGSL)
 
 ### Node Vertex Shader
+
 - Nimmt instanzierte Quad-Vertices
 - Transformiert mit Camera-Matrix
 - Leitet Node-Typ weiter fuer Fragment Shader
 
 ### Node Fragment Shader
+
 - SDF (Signed Distance Field) fuer Kreise
 - Faerbung basierend auf Node-Typ und Selection
 - Optional: Texture-Lookup fuer Icons
 
 ### Connection Vertex Shader
+
 - Generiert Linie mit Thickness (ueber Geometry Expansion)
 - Erzeugt Pfeilspitzen fuer Richtung
 
@@ -76,6 +84,7 @@ struct Uniforms {
 Verbesserungspotential: Spatial-Vorfilter (z.B. Midpoint-KD-Tree) fuer O(k) statt O(n).
 
 ### Scratch-Buffer-Pattern (alle Renderer)
+
 ```rust
 // Vermeidet Heap-Allokation pro Frame
 let mut scratch = std::mem::take(&mut self.instance_scratch);
@@ -85,6 +94,7 @@ self.instance_scratch = scratch; // Kapazitaet bleibt erhalten
 ```
 
 ### Viewport-Berechnung
+
 ```rust
 // compute_visible_rect() in render/types.rs
 let (min, max) = compute_visible_rect(&render_context);
@@ -92,6 +102,7 @@ let (min, max) = compute_visible_rect(&render_context);
 ```
 
 ## Performance-Budget
+
 - **Node Rendering:** <5ms bei 100k Nodes
 - **Connection Rendering:** <3ms bei 100k Connections
 - **Culling:** <1ms

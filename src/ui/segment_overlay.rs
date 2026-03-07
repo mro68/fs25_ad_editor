@@ -6,8 +6,7 @@
 use eframe::egui;
 use glam::Vec2;
 
-use crate::app::SegmentRegistry;
-use crate::core::{Camera2D, RoadMap};
+use crate::app::{Camera2D, RoadMap, SegmentRegistry};
 
 /// Event, der vom Segment-Overlay ausgeloest wird.
 #[derive(Debug, Clone)]

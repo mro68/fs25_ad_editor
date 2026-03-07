@@ -4,5 +4,5 @@ mod config_ui;
 mod lifecycle;
 mod state;
 
-pub(crate) use lifecycle::compute_ring;
+pub use lifecycle::compute_ring;
 pub use state::FieldBoundaryTool;
