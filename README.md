@@ -122,6 +122,7 @@ cargo bench           # Benchmarks
 ## Danksagungen / Attributionen
 
 - **[AutoDrive](https://github.com/Stephan-S/FS25_AutoDrive)** von Stephan S. – Die Grundlage fuer das XML-Format und die Wegpunkt-Logik
+- **[grleconvert](https://github.com/Paint-a-Farm/grleconvert)** von Paint-a-Farm – Konvertierung von GIANTS-Engine `.grle`-Dateien
 - **GRLE/GDM-Parsing** basiert auf Erkenntnissen der FS-Modding-Community
 - Die Uebersichtskarten-Generierung (`fs25_map_overview` Crate) dekodiert GIANTS-eigene GDM/GRLE-Formate fuer Farmland-Grenzen und Terrain-Daten
 
