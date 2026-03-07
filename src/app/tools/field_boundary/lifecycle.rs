@@ -203,12 +203,7 @@ impl crate::app::tools::RouteTool for FieldBoundaryTool {
 /// - `offset`: Verschiebung der Vertices nach innen (negativ) oder aussen (positiv)
 /// - `tolerance`: Douglas-Peucker-Vereinfachung (0 = keine)
 /// - `spacing`: maximaler Segment-Abstand beim Resampling
-pub(crate) fn compute_ring(
-    vertices: &[Vec2],
-    offset: f32,
-    tolerance: f32,
-    spacing: f32,
-) -> Vec<Vec2> {
+pub fn compute_ring(vertices: &[Vec2], offset: f32, tolerance: f32, spacing: f32) -> Vec<Vec2> {
     let offsetted = offset_polygon(vertices, offset);
     let simplified = simplify_polygon(&offsetted, tolerance);
     if simplified.len() < 3 {

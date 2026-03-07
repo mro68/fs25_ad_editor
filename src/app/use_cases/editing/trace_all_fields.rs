@@ -4,7 +4,7 @@
 //! mit den Standard-Parametern des FieldBoundaryTool. Alle Polygone werden
 //! in einem einzigen Undo-Schritt zusammengefasst.
 
-use crate::app::tools::field_boundary::compute_ring;
+use crate::app::compute_ring;
 use crate::app::AppState;
 use crate::core::{Connection, ConnectionDirection, ConnectionPriority, MapNode, NodeFlag};
 use std::sync::Arc;
