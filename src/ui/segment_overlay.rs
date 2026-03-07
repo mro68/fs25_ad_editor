@@ -32,6 +32,7 @@ pub enum SegmentOverlayEvent {
 /// - `road_map`: RoadMap fuer Node-Positionen
 /// - `selected_node_ids`: Aktuell selektierte Node-IDs
 /// - `clicked_pos`: Screen-Position eines Klicks in diesem Frame (None = kein Klick)
+#[allow(clippy::too_many_arguments)]
 pub fn render_segment_overlays(
     painter: &egui::Painter,
     rect: egui::Rect,
