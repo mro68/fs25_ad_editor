@@ -26,6 +26,7 @@ pub mod gdm;
 pub mod grle;
 pub mod hillshade;
 pub mod palette;
+pub mod road_mask;
 pub mod terrain;
 pub mod text;
 
@@ -40,8 +41,9 @@ pub use discovery::MapInfo;
 pub use farmland::{
     extract_farmland_polygons, extract_farmland_polygons_from_ids, FarmlandPolygon,
 };
+pub use road_mask::extract_road_mask;
 
-/// Ergebnis der Overview-Generierung mit optionalen Farmland-Polygonen.
+/// Ergebnis der Overview-Generierung mit optionalen Farmland-Polygonen und Straßenmaske.
 pub struct OverviewResult {
     /// Generiertes Uebersichtsbild als dynamisches Bild
     pub image: DynamicImage,
@@ -53,6 +55,9 @@ pub struct OverviewResult {
     pub grle_height: u32,
     /// Weltgroesse in Metern (aus MapInfo)
     pub map_size: f32,
+    /// Kombinierte Straßenmaske aus Weight-Maps (Grayscale, Pixel > 0 = Straße).
+    /// `None` wenn keine Straßen-Weight-Maps in der Map gefunden wurden.
+    pub road_mask: Option<image::GrayImage>,
 }
 
 /// Generiert eine Overview-Map aus einem FS25 Map-Mod-ZIP.
@@ -81,6 +86,26 @@ pub fn generate_overview_from_zip(zip_path: &str, options: &OverviewOptions) -> 
     generate_overview(&files, &map_info, options)
 }
 
+/// Laedt alle Weight-Map-Bilder aus den ZIP-Dateien.
+///
+/// Gibt eine Liste von `(Dateiname, DynamicImage)`-Paaren zurueck.
+fn load_weight_images(
+    files: &HashMap<String, Vec<u8>>,
+    data_dir: &str,
+) -> Vec<(String, DynamicImage)> {
+    let weight_maps = discovery::find_weight_maps(files, data_dir);
+    let images: Vec<(String, DynamicImage)> = weight_maps
+        .iter()
+        .filter_map(|(path, data)| {
+            let img = image::load_from_memory(data).ok()?;
+            let name = Path::new(path).file_name()?.to_str()?.to_string();
+            Some((name, img))
+        })
+        .collect();
+    log::info!("{} Weight-Maps geladen", images.len());
+    images
+}
+
 /// Generiert eine Overview-Map aus bereits extrahierten Dateien.
 ///
 /// Nuetzlich wenn das ZIP bereits entpackt vorliegt oder
@@ -90,26 +115,28 @@ pub fn generate_overview(
     map_info: &MapInfo,
     options: &OverviewOptions,
 ) -> Result<RgbImage> {
+    let weight_images = load_weight_images(files, &map_info.data_dir);
+    generate_overview_from_weight_images(files, map_info, options, &weight_images)
+}
+
+/// Interne Hilfsfunktion: Generiert das Uebersichtsbild aus bereits geladenen Weight-Maps.
+///
+/// Trennt das Laden der Weight-Maps von der Verarbeitung, damit
+/// `generate_overview_result_from_zip()` die gleichen Bilder fuer
+/// Road-Mask-Extraktion und Terrain-Compositing nutzen kann.
+fn generate_overview_from_weight_images(
+    files: &HashMap<String, Vec<u8>>,
+    map_info: &MapInfo,
+    options: &OverviewOptions,
+    weight_images: &[(String, DynamicImage)],
+) -> Result<RgbImage> {
     let map_size = map_info.map_size;
-
-    // 3. Weight-Maps laden und compositen
-    let weight_maps = discovery::find_weight_maps(files, &map_info.data_dir);
-    let weight_images: Vec<(String, DynamicImage)> = weight_maps
-        .iter()
-        .filter_map(|(path, data)| {
-            let img = image::load_from_memory(data).ok()?;
-            let name = Path::new(path).file_name()?.to_str()?.to_string();
-            Some((name, img))
-        })
-        .collect();
-
-    log::info!("{} Weight-Maps geladen", weight_images.len());
 
     let mut image = if weight_images.is_empty() {
         // Fallback: einheitliches Gruen
         RgbImage::from_pixel(map_size, map_size, image::Rgb([80, 100, 60]))
     } else {
-        terrain::composite_terrain_from_images(&weight_images, map_size)?
+        terrain::composite_terrain_from_images(weight_images, map_size)?
     };
 
     // 4. Hillshade
@@ -242,7 +269,11 @@ pub fn generate_overview_result_from_zip(
     let files = extract_zip(zip_path)?;
     let map_info = discovery::discover_map(&files)?;
 
-    let rgb_image = generate_overview(&files, &map_info, options)?;
+    // Weight-Maps einmalig laden – werden fuer Terrain-Compositing UND Road-Mask benoetigt
+    let weight_images = load_weight_images(&files, &map_info.data_dir);
+    let road_mask = road_mask::extract_road_mask(&weight_images, map_info.map_size);
+    let rgb_image =
+        generate_overview_from_weight_images(&files, &map_info, options, &weight_images)?;
 
     let (farmland_polygons, grle_width, grle_height) =
         try_extract_polygons_from_files(&files, &map_info);
@@ -253,6 +284,7 @@ pub fn generate_overview_result_from_zip(
         grle_width,
         grle_height,
         map_size: map_info.map_size as f32,
+        road_mask,
     })
 }
 

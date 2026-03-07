@@ -266,4 +266,6 @@ pub enum AppIntent {
     // ── Extras ───────────────────────────────────────────────────────
     /// Alle erkannten Farmland-Polygone als Wegpunkt-Ring nachzeichnen
     TraceAllFieldsRequested,
+    /// Straßenoverlay auf dem Hintergrundbild ein-/ausblenden
+    ToggleRoadOverlay,
 }

@@ -56,6 +56,11 @@ pub struct AppState {
     /// Enthält geordnete Umriss-Vertices pro Feld in Weltkoordinaten.
     /// `None` solange noch keine Overview mit Farmland-Daten geladen wurde.
     pub farmland_polygons: Option<Arc<Vec<FieldPolygon>>>,
+    /// Extrahierte Straßenmaske aus Weight-Maps (Grayscale).
+    ///
+    /// `None` wenn noch keine Overview mit Straßen-Weight-Maps generiert wurde.
+    /// Wird parallel zur `overview.jpg` als `overview_roads.png` gespeichert.
+    pub road_mask: Option<Arc<image::GrayImage>>,
 }
 
 impl AppState {
@@ -80,6 +85,7 @@ impl AppState {
             segment_registry: SegmentRegistry::new(),
             should_exit: false,
             farmland_polygons: None,
+            road_mask: None,
         }
     }
 

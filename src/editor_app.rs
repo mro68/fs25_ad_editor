@@ -456,12 +456,30 @@ impl EditorApp {
             return;
         };
         if let Some(bg_map) = self.state.view.background_map.as_deref() {
-            renderer.set_background(
-                &self.device,
-                &self.queue,
-                bg_map,
-                self.state.view.background_scale,
-            );
+            let scale = self.state.view.background_scale;
+
+            // Road-Overlay anwenden wenn aktiv und Maske vorhanden
+            if self.state.view.show_road_overlay {
+                if let Some(road_mask) = self.state.road_mask.as_deref() {
+                    match fs25_auto_drive_editor::app::use_cases::background_map::apply_road_overlay(
+                        bg_map, road_mask,
+                    ) {
+                        Ok(blended) => {
+                            renderer.set_background(&self.device, &self.queue, &blended, scale);
+                            log::info!("Background-Map mit Strassenoverlay hochgeladen");
+                            return;
+                        }
+                        Err(e) => {
+                            log::warn!(
+                                "Road-Overlay konnte nicht angewendet werden: {} – lade Original",
+                                e
+                            );
+                        }
+                    }
+                }
+            }
+
+            renderer.set_background(&self.device, &self.queue, bg_map, scale);
             log::info!("Background-Map in Renderer hochgeladen");
         } else {
             renderer.clear_background();
