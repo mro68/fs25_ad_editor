@@ -163,8 +163,25 @@ pub fn edit_segment(state: &mut AppState, record_id: u64) {
         }
     }
 
-    // Segment-Nodes loeschen
-    use_cases::editing::delete_nodes_by_ids(state, &record.node_ids.clone());
+    // Segment-Nodes loeschen — ExistingNode-Anker ausschliessen, da sie
+    // zu anderen Verbindungen gehoeren und von anderen Segmenten referenziert werden.
+    let anchor_ids: std::collections::HashSet<u64> = [&record.start_anchor, &record.end_anchor]
+        .into_iter()
+        .filter_map(|a| {
+            if let crate::app::tools::ToolAnchor::ExistingNode(id, _) = a {
+                Some(*id)
+            } else {
+                None
+            }
+        })
+        .collect();
+    let inner_ids: Vec<u64> = record
+        .node_ids
+        .iter()
+        .copied()
+        .filter(|id| !anchor_ids.contains(id))
+        .collect();
+    use_cases::editing::delete_nodes_by_ids(state, &inner_ids);
 
     // Record aus Registry entfernen (wird beim erneuten execute() neu angelegt)
     state.segment_registry.remove(record_id);
