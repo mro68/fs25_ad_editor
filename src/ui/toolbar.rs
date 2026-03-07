@@ -157,10 +157,7 @@ pub fn render_toolbar(ctx: &egui::Context, state: &AppState) -> Vec<AppIntent> {
             )
             .tint(icon_color);
             let delete_btn = egui::Button::image_and_text(delete_icon, "Delete (Del)");
-            if ui
-                .add_enabled(has_selection, delete_btn)
-                .clicked()
-            {
+            if ui.add_enabled(has_selection, delete_btn).clicked() {
                 events.push(AppIntent::DeleteSelectedRequested);
             }
 
