@@ -265,7 +265,9 @@ pub struct Connection {
 
 ### `SpatialIndex` / `SpatialMatch`
 
-KD-Tree-basierter Spatial Index (kiddo).
+KD-Tree-basierter Spatial Index (kiddo `ImmutableKdTree<f64, 2>`).
+
+> **Implementierungsdetail:** Intern wird `kiddo::ImmutableKdTree<f64, 2>` verwendet. Der Index ist nach dem Aufbau unveraenderlich (immutable); Node-Mutationen markieren das dirty-Flag und triggern einen vollstaendigen Rebuild beim naechsten `ensure_spatial_index()`-Aufruf.
 
 ```rust
 pub struct SpatialIndex { /* intern */ }

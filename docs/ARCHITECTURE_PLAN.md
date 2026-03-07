@@ -1,6 +1,6 @@
 # Architektur-Plan (Soll-Zustand)
 
-Stand: 2026-03-02  
+Stand: 2026-03-07  
 Status: Umgesetzt — Architektur-Grenzen und API-Verträge aktiv durchgesetzt
 
 ## Zielbild
@@ -149,10 +149,12 @@ graph BT
 **Verantwortung**
 
 - Generierung der Übersichtsmap (Terrain-Komposition + optionale Overlays)
+- Extraktion von Farmland-Polygonen fuer das `FieldBoundaryTool`
 
 **Modulnotiz**
 
 - `composite.rs` wird schrittweise in `composite/`-Submodule zerlegt (Start mit `legend.rs`).
+- Detaillierte API: siehe [`crates/fs25_map_overview/API.md`](../crates/fs25_map_overview/API.md)
 
 **Darf**
 
@@ -611,3 +613,44 @@ graph TB
     style SHARED fill:#FEE
     style RENDER fill:#FCC
     style XML fill:#EEE
+```
+
+---
+
+## Performance-Patterns (aktiv, Stand 2026-03-07)
+
+### Zoom-Kompensation (`EditorOptions.zoom_compensation_max`)
+
+Nodes und Verbindungen erhalten eine garantierte Mindestgröße im Viewport, unabhängig vom Zoomlevel:
+
+```
+display_size = base_size * zoom_compensation(zoom)
+zoom_compensation(zoom) = clamp(1 / zoom * ref_zoom, 1.0, max)
+```
+
+- `zoom_compensation_max` ist konfigurierbar (Standard: 4.0)
+- Verhindert, dass Nodes bei 100k+ Waypoints auf < 1px schrumpfen
+- Implementiert in `shared::options` (`zoom_compensation()`) und im Render-Hotpath angewendet
+
+### Node-Decimation (Grid-Decimation, `EditorOptions.node_decimation_spacing_px`)
+
+Nodes, die im aktuellen Zoom enger als N Pixel liegen, werden für das Rendering zusammengefasst:
+
+```
+Für jeden Node: world_to_screen(pos) → in NxN Pixel-Grid einordnen → nur ersten pro Zelle zeichnen
+```
+
+- Reduktion der Instanz-Daten im GPU-Hotpath bei weit herausgezoomter Ansicht
+- `node_decimation_spacing_px = 0.0` deaktiviert Decimation vollständig
+- Selektierte Nodes werden nie dezimiert (immer gezeichnet)
+
+### Arc-basierter Clone-Schutz (`Arc<EditorOptions>`, `Arc<IndexSet<u64>>`)
+
+Häufig geklonte State-Teile werden in `Arc` verpackt:
+- `RenderScene.options: Arc<EditorOptions>` — O(1)-Clone statt Deep-Copy pro Frame
+- `SelectionState.selected_node_ids: Arc<IndexSet<u64>>` — Copy-on-Write (CoW) via `Arc::make_mut`
+
+### Lazy Spatial Index (`ensure_spatial_index()`)
+
+`SpatialIndex` intern: `kiddo::ImmutableKdTree<f64, 2>`.  
+Nach node-mutierenden Operationen wird dirty-Flag gesetzt; Rebuild erfolgt lazy beim nächsten Query — nicht sofort nach jeder Einzeloperation in Bulk-Loops.
