@@ -7,7 +7,6 @@ Das `app`-Modul verwaltet den globalen State, verarbeitet `AppIntent`s zentral u
 **Hinweis:** `Camera2D` lebt im `core`-Modul (reiner Geometrie-Typ). `app` re-exportiert `Camera2D`, `ConnectionDirection`, `ConnectionPriority`, `RoadMap`, `ParkingConfig`, `ToolAnchor`, `compute_ring` und andere zentrale Typen aus `core` und `tools`.
 
 **Weitere API-Dokumentationen:**
-
 - [`handlers/API.md`](handlers/API.md) — alle Handler-Funktionen mit detaillierter Dokumentation
 - [`use_cases/API.md`](use_cases/API.md) — alle Use-Case-Funktionen (camera, file_io, selection, editing, …)
 - [`tools/API.md`](tools/API.md) — ToolManager, RouteTool-Trait, registrierte Tools, gemeinsame Infrastruktur
@@ -33,14 +32,12 @@ let scene = controller.build_render_scene(&state, [width, height]);
 ```
 
 **Features:**
-
 - Verarbeitet UI- und Input-Intents gegen `AppState`
 - Mappt Intents auf Commands (Mapping ist in `intent_mapping.rs` ausgelagert)
 - Dispatcht Commands an Feature-Handler (`handlers/`)
 - Baut den expliziten Render-Vertrag (`RenderScene`)
 
 **Handler-Module** (`app/handlers/`):
-
 - `file_io` — Datei-Operationen (Oeffnen, Speichern, Heightmap)
 - `view` — Kamera, Viewport, Background-Map
 - `selection` — Selektions-Operationen
@@ -51,11 +48,9 @@ let scene = controller.build_render_scene(&state, [width, height]);
 - `history` — Undo/Redo
 
 **Intent-Mapping** (`intent_mapping.rs`):
-
 ```rust
 pub fn map_intent_to_commands(state: &AppState, intent: AppIntent) -> Vec<AppCommand>
 ```
-
 Uebersetzt einen `AppIntent` in eine Liste von `AppCommand`s. Reine Funktion ohne Seiteneffekte — alle Entscheidungslogik (z.B. Pick-Radius-Berechnung, aktuellen Dateipfad pruefen) ist hier lokalisiert.
 
 ---
@@ -147,7 +142,6 @@ pub struct DistanzenState {
 }
 
 **Methoden:**
-
 - `sync_from_distance()` — Berechnet `count` aus `distance` und `path_length`
 - `sync_from_count()` — Berechnet `distance` aus `count` und `path_length`
 - `deactivate()` — Deaktiviert den Vorschau-Modus und loescht die Vorschau-Daten
@@ -212,7 +206,6 @@ pub struct EditorToolState {
     pub default_priority: ConnectionPriority,
     pub tool_manager: ToolManager,
 }
-
 ```
 
 **Methoden:**
@@ -321,14 +314,13 @@ pub const TOOL_INDEX_FIELD_BOUNDARY: usize = 7;
 ```rust
 pub fn tool_index(&self) -> usize
 ```
-
 Gibt den Tool-Index im ToolManager fuer diese SegmentKind-Variante zurueck (z.B. `SegmentKind::Bypass { .. }.tool_index()` → `TOOL_INDEX_BYPASS`).
 
 ---
 
 ### `SegmentKind`
 
-Segment-Art mit tool-spezifischen Parametern. Re-exportiert aus `app` (definiert in `segment_registry.rs`).
+Segment-Art mit tool-spezifischen Parametern. Re-exportiert aus `app` (definiert in `segment_registry/types.rs`).
 
 ```rust
 pub enum SegmentKind {
@@ -385,7 +377,6 @@ pub enum SegmentKind {
 ```
 
 **Methoden:**
-
 - `tool_index() → usize` — Index des zugehoerigen Tools im `ToolManager` (fuer Segment-Editing)
 
 **Hinweis:** Alle Varianten enthalten `base: SegmentBase` mit gemeinsamen Parametern. Die `segment_registry` speichert diese Metadaten fuer nachtraegliche Bearbeitung.
@@ -424,7 +415,6 @@ pub struct SegmentRecord {
 In-Session-Registry aller erstellten Segmente — ermoeglicht nachtraegliches Editieren von Segmenten durch Speicherung der Tool-Parameter und Validitaetspruefung.
 
 **Merkmale:**
-
 - Nicht persistent: Wird beim Laden einer Datei geleert
 - Segment-Validierung: Prueft ob alle Nodes noch existieren und Positionen unveraendert sind
 - Segment-Selektion: Erlaubt Klick auf Segment-Node → Selektion aller Segment-Nodes
@@ -469,7 +459,6 @@ if let Some(record) = segment_registry.find_first_by_node_id(clicked_node_id) {
 `AppIntent` beschreibt Eingaben aus UI/System. `AppCommand` beschreibt mutierende Schritte am State.
 
 Kanonische Definitionen liegen in:
-
 - `src/app/events/intent.rs`
 - `src/app/events/command.rs`
 
@@ -870,7 +859,6 @@ pub struct CommandLog { /* intern */ }
 ```
 
 **Methoden:**
-
 - `new() → Self`
 - `record(&mut self, command: &AppCommand)` — Command protokollieren (speichert Debug-String)
 - `len() → usize` — Anzahl geloggter Commands
@@ -889,7 +877,6 @@ pub struct Snapshot { /* intern */ }
 ```
 
 **EditHistory-Methoden:**
-
 - `new_with_capacity(max_depth: usize) → Self` — Manager mit maximaler Undo/Redo-Tiefe erstellen
 - `record_snapshot(snapshot: Snapshot)` — Snapshot auf den Undo-Stack legen (loescht Redo-Stack)
 - `pop_undo_with_current(current: Snapshot) → Option<Snapshot>` — Undo: aktuellen Zustand auf Redo-Stack, vorherigen Snapshot zurueckgeben
@@ -897,7 +884,6 @@ pub struct Snapshot { /* intern */ }
 - `can_undo() → bool` / `can_redo() → bool`
 
 **AppState Helper:**
-
 - `record_undo_snapshot(&mut self)` — Convenience-Methode: erstellt Snapshot via `Snapshot::from_state(self)` und legt ihn auf den History-Stack
 
 ---

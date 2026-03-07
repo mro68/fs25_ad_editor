@@ -1,7 +1,6 @@
 # Roadmap
 
 ## Phase 1: Foundation ✅
-
 - [x] Projekt-Setup
 - [x] Core-Datenmodelle (`RoadMap`, `MapNode`, `Connection`)
 - [x] XML-Parser (Import)
@@ -17,7 +16,6 @@
 - [x] Integration-Tests mit echten AutoDrive-Configs
 
 ## Phase 2: 2D-Rendering ✅
-
 - [x] wgpu Setup und Basic 2D-Rendering
 - [x] Node Instancing (Punkte als Quads)
 - [x] Connection Instancing (Linien mit Pfeilspitzen)
@@ -27,7 +25,6 @@
 - [x] Render-Quality-Presets im UI
 
 ## Phase 3: UI Basics ✅
-
 - [x] egui Integration
 - [x] Toolbar (Tool-Auswahl: Select, Connect, AddNode)
 - [x] Status-Panel (Node-Count, Selection-Info)
@@ -40,7 +37,6 @@
 - [x] TOML-Persistierung (fs25_auto_drive_editor.toml neben Binary)
 
 ## Phase 4: Editor-Tools ✅ (Kern abgeschlossen)
-
 - [x] **KD-Tree Integration (kiddo)**
   - [x] Spatial Index in RoadMap integrieren
   - [x] Query-API: `nearest_node()`, `nodes_within_radius()`, `nodes_within_rect()`
@@ -115,7 +111,6 @@
   - [x] `handlers::route_tool`: `FarmlandData-Injection` via `set_farmland_data()` beim Tool-Wechsel
 
 ## Phase 5: Advanced Features
-
 - [x] DDS-Import fuer Map-Hintergruende
   - [x] Texture-Loader implementieren (PNG, JPG, DDS)
   - [x] Background-Quad-Renderer
@@ -154,7 +149,6 @@
   - [x] **Alle Felder nachzeichnen (2026-03-06):** `AppIntent::TraceAllFieldsRequested` → `AppCommand::TraceAllFields` → `use_cases::editing::trace_all_fields()` — Batch-Nachzeichnen aller geladenen Farmland-Polygone in einem einzigen Undo-Schritt; Menueä `📍 Alle Felder nachzeichnen` in Extras (aktiviert wenn Farmland-Polygone geladen)
 
 ## Phase 6: Performance & Qualitaet
-
 - [ ] Performance-Optimierung
   - [x] `within_rect` auf KD-Tree Range-Query umstellen (aktuell O(n) Brute-Force)
   - [x] **Connection-Lookup O(1):** `connections: Vec<Connection>` → `HashMap<(u64,u64), Connection>`
@@ -168,6 +162,8 @@
   - [x] `ctx.request_repaint()` nur bei Aenderungen (CPU-Idle-Verbrauch reduzieren)
   - [x] **RenderScene-Hotpath:** `RenderScene.options` auf `Arc<EditorOptions>` umgestellt (O(1)-Clone statt Deep-Clone pro Frame, 2026-03-04)
   - [x] **Zoom-kompensierte Skalierung (2026-03-06):** `EditorOptions.zoom_compensation_max` + `zoom_compensation(zoom)` — Nodes und Verbindungen bleiben bei kleinem Zoom sichtbar (Faktor clamped auf [1.0, max], konfigurierbar im Options-Dialog)
+  - [x] **Node-Decimation (2026-03-06):** `EditorOptions.node_decimation_spacing_px` + `NODE_DECIMATION_SPACING_PX` — Nodes, die im aktuellen Zoom enger als N Pixel liegen, werden zusammengefasst (Grid-Decimation im Render-Hotpath); konfigurierbar im Options-Dialog (0.0 = deaktiviert)
+  - [x] **Mindestgrößen (2026-03-06):** Nodes und Verbindungen erhalten via Zoom-Kompensation eine garantierte Mindestgröße im Viewport — unabhängig vom Zoomlevel immer erkennbar
   - [ ] **Preview-Clone Hot-Path optimieren** (empfohlen vom Tester, 2026-03-05)
     - [ ] `constraint_route/lifecycle.rs`: `preview_connections.clone()` und `preview_positions.clone()` im `preview()`-Aufruf durch `Arc`/`Cow` ersetzen (aktuell pro Frame, kleine Vecs — LOW-Severity)
 - [🟡] Error-Handling & User-Feedback
@@ -211,6 +207,12 @@
     - [x] `ui/API.md`: Menueä `📍 Alle Felder nachzeichnen` im Extras-Submenu
     - [x] `render/API.md`: Zoom-Kompensation in NodeRenderer und ConnectionRenderer dokumentiert
     - [x] ROADMAP.md: Beide Features als abgeschlossen markiert
+  - [x] **Doku-Sync Deep-Structure-Audit (2026-03-07, Branch `refactor/deep-structure-audit`)**
+    - [x] `crates/fs25_map_overview/API.md`: Neues API.md fuer das Overview-Crate erstellt (pub Structs, Funktionen, Module)
+    - [x] `app/API.md`: `ToolAnchor` und `compute_ring` als explizite Re-Exports erwaehnt
+    - [x] `core/API.md`: `SpatialIndex` — Hinweis auf `ImmutableKdTree` von kiddo ergaenzt
+    - [x] `docs/ARCHITECTURE_PLAN.md`: Stand aktualisiert, Zoom-Kompensation- und Decimation-Pattern beschrieben
+    - [x] ROADMAP.md: Stand, Prozente und neue Feature-Eintraege aktualisiert
   - [x] **Bugfix: PNG-Farmland-Erkennung (2026-03-06, Branch `fix/farmland-json-persistence`)**
     - [x] `extract_farmland_polygons_from_ids()` als formatunabhaengige pub-Funktion extrahiert (GRLE+PNG)
     - [x] `try_extract_polygons_from_files()`: PNG-Branch (`infoLayer_farmlands.png`) unterstuetzt Polygon-Extraktion via Luma-Dekodierung
@@ -231,7 +233,6 @@
     - [ ] GitHub Actions Workflow
 
 ## Phase 7: Optional / Future
-
 - [ ] Web-Version (WASM)
   - [ ] wgpu WebGL/WebGPU Backend
   - [ ] Browser-File-Access
@@ -259,7 +260,6 @@
 ## 🎯 MVP-Checkliste (Minimale nutzbare Version)
 
 **Muss haben fuer MVP:**
-
 - [x] XML Import/Export
 - [x] Roundtrip-Tests bestehen
 - [x] Viewport mit Pan/Zoom
@@ -277,7 +277,6 @@
 ## 📊 Aktueller Status (Stand: 2026-03-07)
 
 **Fertigstellung:**
-
 - Phase 1: ✅ 100%
 - Phase 2: ✅ 100%
 - Phase 3: ✅ 98% (Theme fehlt)
@@ -286,7 +285,6 @@
 - Phase 6: 🟡 65% (Handler-Split, CI-Checks, unwrap-Bereinigung, API-Docs, Docstrings, Zoom-Kompensation, Node-Decimation, Deep-Structure-Audit durchgefuehrt)
 
 **Errungenschaften seit letztem Update (Tool-Konsistenz-Refactoring 2026-03-05):**
-
 - ✅ BypassTool Lifecycle-Nachrüstung: neues `lifecycle: ToolLifecycleState` Feld
   - ✅ 6 neue Lifecycle-Delegation-Methoden: `set_snap_radius`, `last_created_ids`, `last_end_anchor`, `needs_recreate`, `clear_recreate_flag`, `set_last_created`
   - ✅ 15 Unit-Tests hinzugefügt (Geometrie, Lifecycle, ToolLifecycleState)
@@ -301,7 +299,6 @@
 - ✅ BypassTool Tests: 6 Geometrie-Tests, 6 Lifecycle-Tests, 3 ToolLifecycleState-Tests
 
 **Errungenschaften seit letztem Update (Strukturelles Audit 2026-03-05):**
-
 - ✅ Parking-Geometrie modulbereichert: `parking/geometry.rs` → `parking/geometry/{mod,layout,blueprint,conversion}.rs`
   - ✅ Öffentliche API unverändert (`generate_parking_layout`, `build_parking_result`, `build_preview`)
   - ✅ Neuer öffentlicher Struct `ParkingLayout` als Zwischenformat
@@ -317,7 +314,6 @@
 - ✅ Dokumentation synchronisiert: `src/app/API.md#segmentbase--segmentkind`, `src/ui/API.md` (context_menu), `src/app/tools/API.md`
 
 **Errungenschaften seit letztem Update (Strukturelles Audit 2026-02-28):**
-
 - ✅ `src/shared/options.rs` in modulare Struktur `src/shared/options/{camera,render,tools,editor}.rs` aufgeteilt (Wartbarkeit verbessert, API stabil)
 - ✅ RouteTool-Capabilities eingefuehrt (`RouteToolDrag`, `RouteToolTangent`, `RouteToolRegistry`, `RouteToolChainInput`) bei kompatiblem `RouteTool`-Obervertrag
 - ✅ Preview-Hotpath optimiert: Connection-Indizes in `BypassTool` und `ConstraintRouteTool` gecacht
@@ -331,7 +327,6 @@
 - ✅ ROADMAP.md Feature-Status korrigiert (Keyboard-Shortcuts, Benchmarks, Toast, Theme)
 
 **Errungenschaften (Audit-Follow-up 2026-03-04):**
-
 - ✅ CurveTool-Preview-Hotpath: Positions-LUT per Key-Cache wiederverwendet (`CurvePreviewCacheKey`, `preview_positions_for`)
 - ✅ DRY-Refactor Route-Tool-Lifecycle: gemeinsamer `set_last_created`-Flow via Macro-Hooks (`current_end_anchor`, `save_anchors_for_recreate`)
 - ✅ DRY-Helfer `snap_with_neighbors()` fuer Snap + Nachbar-Ermittlung in Route-Tools eingefuehrt
@@ -349,7 +344,6 @@
 - ✅ Constraint-Route-Config: Mausrad-Unterstuetzung fuer Max-Winkel- und Minimaldistanz-Slider ergaenzt (neben LMT li/re)
 
 **Errungenschaften (Segment-Selektion und Bearbeitung 2026-03-05):**
-
 - ✅ `SegmentRecord.original_positions` — speichert Node-Positionen zum Erstellen-Zeitpunkt
 - ✅ `SegmentRegistry.find_first_by_node_id()` — findet das erste Segment mit dieser Node
 - ✅ `SegmentRegistry.is_segment_valid()` — prueft ob Nodes existieren und Positionen gleich sind
@@ -359,7 +353,6 @@
 - ✅ Dokumentation synchronisiert: `src/app/API.md`, `src/ui/API.md`, `src/app/handlers/API.md`, `src/app/use_cases/API.md`, `docs/DATA_MODEL.md`
 
 **Errungenschaften (Segment-Support für alle Tools 2026-03-05):**
-
 - ✅ `SegmentRecord.marker_node_ids` — Tracker fuer Marker-Cleanup bei Segment-Edit
 - ✅ `BypassTool::make_segment_record()` + `load_for_edit()` implementiert (RouteToolRegistry Trait)
 - ✅ `ParkingTool::make_segment_record()` + `load_for_edit()` implementiert (RouteToolRegistry Trait)
@@ -370,7 +363,6 @@
 - ✅ Dokumentation synchronisiert: `src/app/API.md` (SegmentKind erweitert), `src/app/handlers/API.md` (edit_segment dokumentiert), `src/app/tools/API.md` (ParkingTool + Registry-Traits)
 
 **Errungenschaften (ParkingTool Interaktionsflow ueberarbeitet 2026-03-05):**
-
 - ✅ Phase-basierter State: Idle → Placing → Configuring ↔ Adjusting
   - Neue `ParkingPhase` Enum-Varianten: `Placing`, `Configuring`, `Adjusting`
   - `Phase::Placing`: Klick setzt Origin und fixiert Winkel
@@ -395,7 +387,6 @@
   - `docs/ROADMAP.md`: Feature in Errungenschaften markiert
 
 **Errungenschaften (Spline-Tool 2026-02-21):**
-
 - ✅ Neues Route-Tool: Catmull-Rom-Spline (interpolierend, Kurs fuehrt durch alle geklickten Punkte)
 - ✅ Arc-Length-Resampling fuer gleichmaessige Node-Verteilung
 - ✅ Fortlaufende Vorschau (Cursor als naechster Punkt)
@@ -404,7 +395,6 @@
 - ✅ 11 Unit-Tests (Geometrie + Tool-Flow)
 
 **Errungenschaften (Struktur- und Hotpath-Run 2026-02-24):**
-
 - ✅ API-Doku-Sync: `RenderScene.hidden_node_ids` in `shared/API.md` und `render/API.md`
 - ✅ `ui/API.md` an aktuelles Properties-Panel-Verhalten angepasst
 - ✅ Distanzen-Preview-Hotpath: per-frame `clone/collect` im Overlay entfernt (`paint_preview_polyline`)
@@ -416,7 +406,6 @@
 - ✅ Konsistenztests fuer `intent_mapping` ergaenzt
 
 **Errungenschaften (Tools-Modularisierung abgeschlossen 2026-02-22):**
-
 - ✅ `curve.rs` → `curve/mod.rs` (einheitliche Verzeichnisstruktur fuer alle drei Tools)
 - ✅ `common.rs` → `common/` aufgeteilt: `geometry.rs`, `tangent.rs`, `lifecycle.rs`, `builder.rs`
 - ✅ Alle drei Tools + common/ folgen demselben Modul-Schema — kein weiteres Wachstum der Hauptdateien
@@ -424,7 +413,6 @@
 - ✅ 134 + 35 Tests gruen, cargo check + clippy clean
 
 **Errungenschaften (Modularisierungs-Session 2026-02-21):**
-
 - ✅ Tool-Preview-Overlay aus `main.rs` in eigenstaendiges `ui/tool_preview.rs`-Modul extrahiert (65 Zeilen Inline-Code entfernt)
 - ✅ DRY-Refactor `apply_tool_result.rs`: gemeinsame Logik in `apply_result_inner()` + `create_nodes_and_connections()` extrahiert (~60 Zeilen Duplikation eliminiert)
 - ✅ DRY-Refactor `straight_line.rs`: gemeinsame `build_result()`-Funktion fuer `execute()` und `execute_from_anchors()` (~120 Zeilen Duplikation eliminiert)
@@ -433,7 +421,6 @@
 - ✅ 134 Tests gruen, Clippy sauber, Layer-Check bestanden
 
 **Errungenschaften (Vorherige Refactoring-Session):**
-
 - ✅ `connections` in `RoadMap`: `Vec<Connection>` → `HashMap<(u64,u64), Connection>` — alle lookup-Operationen O(1)
 - ✅ COW-Undo: `Snapshot` nutzt `Arc<RoadMap>` statt Deep-Clone — O(1) statt O(n) pro Undo-Schritt
 - ✅ Shader-Deduplication: `shaders.wgsl` wird einmal in `Renderer::new()` geladen, an alle 4 Sub-Renderer weitergegeben
@@ -444,7 +431,6 @@
 - ✅ Alle 29 Tests gruen nach dem Refactoring
 
 **Errungenschaften (Vorherige Session):**
-
 - ✅ Architektur-Verletzung behoben: `ui/dialogs.rs` importiert `RoadMap` via `app` statt direkt aus `core`
 - ✅ `core`-Modul von `shared`-Abhaengigkeit entkoppelt: Kamera-Konstanten direkt in `Camera2D`, `pick_radius_world()` nimmt `pick_radius_px`-Parameter
 - ✅ Alle 6 API.md-Dateien auf aktuellen Code-Stand nachgefuehrt
@@ -461,7 +447,6 @@
   - Render Culling-Basis: Geometrie-/Schnittlogik (`src/render/connection_renderer.rs` Unit-Tests)
 
 **Errungenschaften (Architektur-Session 2025-07-02):**
-
 - ✅ Controller in Feature-Handler aufgeteilt (`handlers/file_io`, `view`, `selection`, `editing`, `route_tool`, `dialog`, `history`)
 - ✅ UI→Core-Layerverletzung behoben (`properties.rs` importiert `RoadMap` via `app` statt direkt aus `core`)
 - ✅ CI-Check-Script fuer Schichtgrenzen (`scripts/check_layer_boundaries.sh` + Makefile-Integration)
@@ -470,12 +455,10 @@
 - ✅ Alle Tests gruen nach Refactoring
 
 **Hinweis zu Doku/Automatisierung:**
-
 - ℹ️ Dokumentation wird aktuell manuell gepflegt (kein Auto-Sync-Mechanismus aktiv)
 - ✅ CI-Basis vorhanden: Layer-Boundary-Check via `make ci-check`
 
 **Naechste Aufgaben:**
-
 1. 🟡 100k+ Performance-Benchmarks
 2. 🟢 Undo/Redo auf Delta-basiert umstellen (Skalierung fuer 100k+ Nodes)
 3. 🟢 LOD-System fuer grosse Strecken

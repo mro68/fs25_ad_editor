@@ -37,7 +37,6 @@ renderer.clear_background();                       // Background-Map entfernen
 ```
 
 **Parameter von `render_scene`:**
-
 - `device: &wgpu::Device`
 - `queue: &wgpu::Queue`
 - `render_pass: &mut RenderPass<'static>`
@@ -68,7 +67,6 @@ pub struct RenderScene {
 (z. B. Original-Node-Pfad waehrend einer Distanzen-Vorschau), ohne Aenderungen an `RoadMap`.
 
 **Methoden:**
-
 - `has_map() -> bool` — Prueft ob eine RoadMap vorhanden ist
 
 ---
@@ -78,7 +76,6 @@ pub struct RenderScene {
 Interner Renderer fuer Nodes (Wegpunkte) mit GPU-Instancing.
 
 **Features:**
-
 - GPU-Instancing fuer 100k+ Nodes
 - Shader-basierte kreisfoermige Darstellung via Distance Field
 - Adaptives Anti-Aliasing (Low/Medium/High via `RenderQuality`)
@@ -89,7 +86,6 @@ Interner Renderer fuer Nodes (Wegpunkte) mit GPU-Instancing.
   - Rot `[1.0, 0.0, 0.0]`: Warning
 
 **Konstanten:**
-
 - `NODE_SIZE_WORLD: 0.5` — Feste Node-Groesse in Welt-Einheiten
 
 ---
@@ -99,7 +95,6 @@ Interner Renderer fuer Nodes (Wegpunkte) mit GPU-Instancing.
 Interner Renderer fuer Verbindungslinien und Richtungspfeile.
 
 **Features:**
-
 - Linien als Quad-Geometrie mit konfigurierbarer Breite
 - Richtungspfeile an Verbindungs-Mittelpunkten
 - **Zoom-Kompensation:** Linienbreite und Pfeilgrößen werden via `EditorOptions::zoom_compensation(zoom)` skaliert — konsistent mit Node-Skalierung
@@ -110,11 +105,10 @@ Interner Renderer fuer Verbindungslinien und Richtungspfeile.
 - SubPriority-Verbindungen werden heller dargestellt
 
 **Konstanten:**
-
-- `CONNECTION_THICKNESS_WORLD: 0.2` (Hauptstrasse)
-- `CONNECTION_THICKNESS_SUBPRIO_WORLD: 0.1` (Nebenstrasse)
+- `CONNECTION_THICKNESS_WORLD: 0.1` (Hauptstrasse)
+- `CONNECTION_THICKNESS_SUBPRIO_WORLD: 0.05` (Nebenstrasse)
 - `ARROW_LENGTH_WORLD: 1.0`
-- `ARROW_WIDTH_WORLD: 0.6`
+- `ARROW_WIDTH_WORLD: 0.5`
 
 ---
 
@@ -134,11 +128,9 @@ pub struct Uniforms { pub view_proj: [[f32; 4]; 4], pub aa_params: [f32; 4] }
 ```
 
 **Vertex-Buffer-Layouts:**
-
 - `Vertex::desc()` / `ConnectionVertex::desc()` / `NodeInstance::desc()` / `MarkerInstance::desc()`
 
 **Hilfsfunktionen (`pub(crate)`):**
-
 - `build_view_projection(camera: &Camera2D, viewport_size: [f32; 2]) -> Mat4` — Orthographische View-Projection-Matrix (Zoom ausschliesslich ueber Extent-Skalierung, nicht View-Matrix)
 - `compute_visible_rect(ctx: &RenderContext) -> (Vec2, Vec2)` — Berechnet die sichtbare Welt-AABB mit 8-Pixel-Padding fuer Viewport-Culling. Gibt `(min, max)` in Weltkoordinaten zurueck.
 
@@ -227,7 +219,6 @@ let view_proj = projection * view_as_mat4;
 Interner Renderer fuer Map-Hintergrund.
 
 **Features:**
-
 - Textured Quad in Weltkoordinaten
 - Opacity-Steuerung (0.0–1.0)
 - Sichtbarkeits-Toggle
@@ -240,14 +231,12 @@ Interner Renderer fuer Map-Hintergrund.
 Interner Renderer fuer Map-Marker (Pin-Symbole) mit GPU-Instancing.
 
 **Features:**
-
 - GPU-Instancing fuer beliebig viele Marker
 - Pin-Form via SDF (Kreis + Traene) im Fragment-Shader
 - Pin-Spitze steht exakt auf dem Node-Zentrum
 - Outline-Farbe fuer bessere Sichtbarkeit
 
 **Konstanten:**
-
 - `MARKER_SIZE_WORLD: 2.0` — Pin-Hoehe in Welt-Einheiten
 - `MARKER_COLOR: [0.9, 0.1, 0.1]` — Rot
 - `MARKER_OUTLINE_COLOR: [0.6, 0.0, 0.0]` — Dunkles Rot
