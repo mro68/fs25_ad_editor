@@ -146,6 +146,7 @@
   - [x] Persistent gespeicherte Standard-Layer in EditorOptions
   - [x] Auto-Detection: Heightmap und Map-Mod-ZIP nach XML-Laden (Umlaut-tolerantes Fuzzy-Matching)
   - [x] overview.jpg: Auto-Load beim XML-Oeffnen, Speichern-Dialog nach ZIP-Extraktion/Generierung
+  - [x] **Alle Felder nachzeichnen (2026-03-06):** `AppIntent::TraceAllFieldsRequested` → `AppCommand::TraceAllFields` → `use_cases::editing::trace_all_fields()` — Batch-Nachzeichnen aller geladenen Farmland-Polygone in einem einzigen Undo-Schritt; Menueä `📍 Alle Felder nachzeichnen` in Extras (aktiviert wenn Farmland-Polygone geladen)
 
 ## Phase 6: Performance & Qualitaet
 - [ ] Performance-Optimierung
@@ -160,6 +161,7 @@
   - [ ] Memory-Profiling
   - [x] `ctx.request_repaint()` nur bei Aenderungen (CPU-Idle-Verbrauch reduzieren)
   - [x] **RenderScene-Hotpath:** `RenderScene.options` auf `Arc<EditorOptions>` umgestellt (O(1)-Clone statt Deep-Clone pro Frame, 2026-03-04)
+  - [x] **Zoom-kompensierte Skalierung (2026-03-06):** `EditorOptions.zoom_compensation_max` + `zoom_compensation(zoom)` — Nodes und Verbindungen bleiben bei kleinem Zoom sichtbar (Faktor clamped auf [1.0, max], konfigurierbar im Options-Dialog)
   - [ ] **Preview-Clone Hot-Path optimieren** (empfohlen vom Tester, 2026-03-05)
     - [ ] `constraint_route/lifecycle.rs`: `preview_connections.clone()` und `preview_positions.clone()` im `preview()`-Aufruf durch `Arc`/`Cow` ersetzen (aktuell pro Frame, kleine Vecs — LOW-Severity)
 - [🟡] Error-Handling & User-Feedback
@@ -195,6 +197,14 @@
     - [x] `app/tools/API.md`: FieldBoundaryTool vollstaendig dokumentiert (Phasen, Felder, Ring-Berechnung)
     - [x] `ui/API.md`: Toolbar-Button, Context-Menu Extras-Submenu, Precondition::FarmlandPolygonsLoaded
     - [x] ROADMAP.md: Felderkennung als abgeschlossen markiert
+  - [x] **Doku-Sync Zoom-Kompensation + Alle Felder nachzeichnen (2026-03-06)**
+    - [x] `shared/API.md`: `zoom_compensation_max`-Feld, `DEFAULT_ZOOM_COMPENSATION_MAX`-Konstante und `zoom_compensation()`-Methode ergaenzt
+    - [x] `app/API.md`: `TraceAllFieldsRequested` und `TraceAllFields` in Intent/Command-Listen
+    - [x] `app/handlers/API.md`: `editing::trace_all_fields()` Handler-Funktion
+    - [x] `app/use_cases/API.md`: `use_cases::editing::trace_all_fields()` Use-Case
+    - [x] `ui/API.md`: Menueä `📍 Alle Felder nachzeichnen` im Extras-Submenu
+    - [x] `render/API.md`: Zoom-Kompensation in NodeRenderer und ConnectionRenderer dokumentiert
+    - [x] ROADMAP.md: Beide Features als abgeschlossen markiert
   - [x] **Bugfix: PNG-Farmland-Erkennung (2026-03-06, Branch `fix/farmland-json-persistence`)**
     - [x] `extract_farmland_polygons_from_ids()` als formatunabhaengige pub-Funktion extrahiert (GRLE+PNG)
     - [x] `try_extract_polygons_from_files()`: PNG-Branch (`infoLayer_farmlands.png`) unterstuetzt Polygon-Extraktion via Luma-Dekodierung

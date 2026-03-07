@@ -83,6 +83,7 @@ pub enum AddNodeResult {
 - `apply_tool_result_no_snapshot(state, result) -> Vec<u64>` — Wie `apply_tool_result`, aber ohne Undo-Snapshot (fuer Neuberechnung)
 - `delete_nodes_by_ids(state, ids)` — Loescht Nodes mit den angegebenen IDs + zugehoerige Connections; invalidiert betroffene Eintraege in `state.segment_registry`
 - `resample_selected_path(state)` — Selektierte Nodes-Kette per Catmull-Rom-Spline gleichmaessig neu verteilen; Konfiguration aus `state.ui.distanzen`
+- `trace_all_fields(state)` — Zeichnet alle geladenen Farmland-Polygone als Wegpunkt-Ring nach (Batch-Operation). Verwendet Standard-Parameter des FieldBoundaryTool (spacing=10, offset=0, tolerance=0, direction=Dual, priority=Regular). Alle Polygone werden in einem einzigen Undo-Schritt zusammengefasst; Spatial-Index-Rebuild und Flag-Berechnung erfolgen nur einmal am Ende.
 
 ### `use_cases::editing::markers`
 

@@ -80,6 +80,12 @@ fn render_selected_section(
                 render_subsection(ui, "Marker", None, |ui| sections::render_markers(ui, opts));
             changed |=
                 render_subsection(ui, "Kamera", None, |ui| sections::render_camera(ui, opts));
+            changed |= render_subsection(
+                ui,
+                "LOD / Mindestgroessen",
+                Some("Pixel-Untergrenzen und Node-Ausdünnung beim Herauszoomen."),
+                |ui| sections::render_lod(ui, opts),
+            );
             changed |= render_subsection(ui, "Hintergrund", None, |ui| {
                 sections::render_background(ui, opts)
             });

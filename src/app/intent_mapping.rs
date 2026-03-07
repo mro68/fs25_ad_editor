@@ -306,6 +306,9 @@ pub fn map_intent_to_commands(state: &AppState, intent: AppIntent) -> Vec<AppCom
         AppIntent::ToggleSegmentLockRequested { segment_id } => {
             vec![AppCommand::ToggleSegmentLock { segment_id }]
         }
+
+        // ── Extras ───────────────────────────────────────────────────────
+        AppIntent::TraceAllFieldsRequested => vec![AppCommand::TraceAllFields],
     }
 }
 

@@ -357,6 +357,13 @@ pub fn resample_path(state: &mut AppState)
 Verteilt die selektierten Nodes gleichmäßig entlang eines Catmull-Rom-Splines.
 
 ```rust
+pub fn trace_all_fields(state: &mut AppState)
+```
+Zeichnet alle geladenen Farmland-Polygone als Wegpunkt-Ring nach (Batch-Operation).
+Alle Polygone werden in einem einzigen Undo-Schritt zusammengefasst.
+Gibt fruehzeitig zurueck wenn keine Polygone geladen oder keine RoadMap vorhanden.
+
+```rust
 pub fn streckenteilung_aktivieren(state: &mut AppState)
 ```
 Aktiviert die Streckenteilungs-Vorschau für die selektierten Nodes (min. 2 erforderlich).

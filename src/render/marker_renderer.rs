@@ -170,16 +170,22 @@ impl MarkerRenderer {
         ctx.queue
             .write_buffer(&self.uniform_buffer, 0, bytemuck::cast_slice(&[uniforms]));
 
+        // Zoom-Kompensation und Mindestgroesse einmalig pro Frame berechnen.
+        let compensation = ctx.options.zoom_compensation(ctx.camera.zoom);
+        let wpp = ctx.camera.world_per_pixel(ctx.viewport_size[1]);
+        let min_marker_world = ctx.options.min_marker_size_px * wpp;
+
         // Instanz-Daten vorbereiten (Scratch-Buffer wiederverwenden)
         self.instance_scratch.clear();
         self.instance_scratch
             .extend(road_map.map_markers.iter().filter_map(|marker| {
                 let node = road_map.nodes.get(&marker.id)?;
+                let size = (ctx.options.marker_size_world * compensation).max(min_marker_world);
                 Some(MarkerInstance::new(
                     [node.position.x, node.position.y],
                     ctx.options.marker_color,
                     ctx.options.marker_outline_color,
-                    ctx.options.marker_size_world,
+                    size,
                 ))
             }));
         let instances = &self.instance_scratch;

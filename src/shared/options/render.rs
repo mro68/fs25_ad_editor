@@ -36,6 +36,23 @@ pub const CONNECTION_COLOR_REVERSE: [f32; 4] = [1.0, 0.5, 0.1, 1.0];
 
 /// Marker-Groesse in Welteinheiten.
 pub const MARKER_SIZE_WORLD: f32 = 2.6;
+
+/// Standard-Maximum fuer den Zoom-Kompensationsfaktor.
+///
+/// Bei `1.0` ist die Kompensation deaktiviert (keine Vergroesserung beim Herauszoomen).
+pub const DEFAULT_ZOOM_COMPENSATION_MAX: f32 = 4.0;
+
+/// Mindestgroesse fuer Nodes in Pixeln beim Zoomout (0.0 = deaktiviert).
+pub const MIN_NODE_SIZE_PX: f32 = 3.0;
+/// Mindestbreite fuer Verbindungslinien in Pixeln beim Zoomout (0.0 = deaktiviert).
+pub const MIN_CONNECTION_WIDTH_PX: f32 = 1.5;
+/// Mindestgroesse fuer Richtungspfeile in Pixeln beim Zoomout (0.0 = deaktiviert).
+pub const MIN_ARROW_SIZE_PX: f32 = 4.0;
+/// Mindestgroesse fuer Marker-Pins in Pixeln beim Zoomout (0.0 = deaktiviert).
+pub const MIN_MARKER_SIZE_PX: f32 = 8.0;
+/// Mindestabstand zwischen Nodes in Pixeln fuer Grid-Decimation (0.0 = deaktiviert).
+pub const NODE_DECIMATION_SPACING_PX: f32 = 6.0;
+
 /// Fuellfarbe der Map-Marker (RGBA: Dunkelgruen).
 pub const MARKER_COLOR: [f32; 4] = [0.0, 0.46666667, 0.101960786, 1.0];
 /// Outline-Farbe der Map-Marker (RGBA: Goldgelb).

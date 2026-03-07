@@ -31,6 +31,7 @@ mod disconnect;
 mod markers;
 mod priority;
 mod resample_path;
+mod trace_all_fields;
 
 pub use add_node::add_node_at_position;
 pub use add_node::AddNodeResult;
@@ -52,3 +53,4 @@ pub use disconnect::remove_connection_between;
 pub use markers::{create_marker, open_marker_dialog, remove_marker, update_marker};
 pub use priority::set_connection_priority;
 pub use resample_path::resample_selected_path;
+pub use trace_all_fields::trace_all_fields;
