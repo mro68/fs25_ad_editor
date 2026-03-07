@@ -260,6 +260,8 @@ pub enum AppCommand {
     // ── Segment-Lock ──────────────────────────────────────────────────
     /// Segment-Lock umschalten (gesperrt ↔ entsperrt)
     ToggleSegmentLock { segment_id: u64 },
+    /// Segment aufloesen (Segment-Record entfernen, Nodes beibehalten)
+    DissolveSegment { segment_id: u64 },
 
     // ── Extras ───────────────────────────────────────────────────────
     /// Alle Farmland-Polygone als Wegpunkt-Ring nachzeichnen (Batch-Operation)

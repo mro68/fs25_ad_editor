@@ -286,6 +286,9 @@ impl AppController {
             AppCommand::ToggleSegmentLock { segment_id } => {
                 handlers::segment::toggle_lock(state, segment_id)
             }
+            AppCommand::DissolveSegment { segment_id } => {
+                handlers::segment::dissolve(state, segment_id)
+            }
 
             // === Copy/Paste ===
             AppCommand::CopySelection => handlers::editing::copy_selection(state),

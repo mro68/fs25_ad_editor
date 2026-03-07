@@ -9,3 +9,11 @@ use crate::app::AppState;
 pub fn toggle_lock(state: &mut AppState, segment_id: u64) {
     state.segment_registry.toggle_lock(segment_id);
 }
+
+/// Loest ein Segment auf, indem nur der Segment-Record entfernt wird.
+///
+/// Die zugehoerigen Nodes und Verbindungen in der RoadMap bleiben unveraendert.
+/// Unbekannte IDs werden ignoriert.
+pub fn dissolve(state: &mut AppState, segment_id: u64) {
+    state.segment_registry.remove(segment_id);
+}
