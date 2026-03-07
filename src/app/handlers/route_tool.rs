@@ -141,6 +141,12 @@ pub fn init_chain_if_needed(state: &mut AppState) {
 
     if let Some(tool) = state.editor.tool_manager.active_tool_mut() {
         tool.load_chain(positions, start_id, end_id);
+        // Innere Node-IDs fuer "Original entfernen" explizit setzen (ueberschreibt Inferenz)
+        let n = ordered_ids.len();
+        if n > 2 {
+            let inner_ids: Vec<u64> = ordered_ids[1..n - 1].to_vec();
+            tool.set_chain_inner_ids(inner_ids);
+        }
         log::info!(
             "Route-Tool Kette geladen: {} Nodes ({} → {})",
             ordered_ids.len(),
