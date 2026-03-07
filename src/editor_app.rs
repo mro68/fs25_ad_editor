@@ -405,6 +405,7 @@ impl EditorApp {
                     vp,
                     &self.state.segment_registry,
                     rm,
+                    self.state.selection.selected_node_ids.as_ref(),
                     clicked_pos,
                 );
                 for ev in overlay_events {
