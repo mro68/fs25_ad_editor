@@ -194,6 +194,9 @@ pub struct EditorOptions {
     // Copy/Paste
     /// Deckkraft der Paste-Vorschau (0.0 transparent … 1.0 opak)
     pub copy_preview_opacity: f32,
+    // Segment-Overlay
+    /// Schriftgroesse des Lock-Icons im Segment-Overlay in Pixeln
+    pub segment_lock_icon_size_px: f32,
     // Uebersichtskarte
     /// Layer-Optionen fuer Uebersichtskarten-Generierung
     pub overview_layers: OverviewLayerOptions,

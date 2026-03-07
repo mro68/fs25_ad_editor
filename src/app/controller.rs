@@ -224,7 +224,7 @@ impl AppController {
             AppCommand::OpenOptionsDialog => handlers::dialog::open_options_dialog(state),
             AppCommand::CloseOptionsDialog => handlers::dialog::close_options_dialog(state),
             AppCommand::ApplyOptions { options } => {
-                handlers::dialog::apply_options(state, options)?
+                handlers::dialog::apply_options(state, *options)?
             }
             AppCommand::ResetOptions => handlers::dialog::reset_options(state)?,
             AppCommand::DismissDeduplicateDialog => handlers::dialog::dismiss_dedup_dialog(state),
@@ -285,6 +285,9 @@ impl AppController {
             // === Segment ===
             AppCommand::ToggleSegmentLock { segment_id } => {
                 handlers::segment::toggle_lock(state, segment_id)
+            }
+            AppCommand::DissolveSegment { segment_id } => {
+                handlers::segment::dissolve(state, segment_id)
             }
 
             // === Copy/Paste ===

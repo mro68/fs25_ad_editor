@@ -164,7 +164,7 @@ pub enum AppCommand {
     /// Options-Dialog schliessen
     CloseOptionsDialog,
     /// Optionen anwenden und speichern
-    ApplyOptions { options: EditorOptions },
+    ApplyOptions { options: Box<EditorOptions> },
     /// Optionen auf Standardwerte zuruecksetzen
     ResetOptions,
     /// Selektion aufheben
@@ -260,6 +260,8 @@ pub enum AppCommand {
     // ── Segment-Lock ──────────────────────────────────────────────────
     /// Segment-Lock umschalten (gesperrt ↔ entsperrt)
     ToggleSegmentLock { segment_id: u64 },
+    /// Segment aufloesen (Segment-Record entfernen, Nodes beibehalten)
+    DissolveSegment { segment_id: u64 },
 
     // ── Extras ───────────────────────────────────────────────────────
     /// Alle Farmland-Polygone als Wegpunkt-Ring nachzeichnen (Batch-Operation)

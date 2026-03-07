@@ -197,6 +197,47 @@ impl crate::app::tools::RouteTool for FieldBoundaryTool {
             },
         })
     }
+
+    fn load_for_edit(&mut self, _record: &SegmentRecord, kind: &SegmentKind) {
+        let SegmentKind::FieldBoundary {
+            field_id,
+            node_spacing,
+            offset,
+            straighten_tolerance,
+            base,
+        } = kind
+        else {
+            return;
+        };
+
+        self.node_spacing = *node_spacing;
+        self.offset = *offset;
+        self.straighten_tolerance = *straighten_tolerance;
+        self.direction = base.direction;
+        self.priority = base.priority;
+
+        let Some(polygons) = &self.farmland_data else {
+            log::warn!(
+                "FieldBoundary edit: keine Farmland-Daten verfuegbar fuer Feld-ID {}",
+                field_id
+            );
+            self.selected_polygon = None;
+            self.phase = FieldBoundaryPhase::Idle;
+            return;
+        };
+
+        if let Some(polygon) = polygons.iter().find(|polygon| polygon.id == *field_id) {
+            self.selected_polygon = Some(polygon.clone());
+            self.phase = FieldBoundaryPhase::Configuring;
+        } else {
+            log::warn!(
+                "FieldBoundary edit: Feld-ID {} nicht in Farmland-Daten gefunden",
+                field_id
+            );
+            self.selected_polygon = None;
+            self.phase = FieldBoundaryPhase::Idle;
+        }
+    }
 }
 
 /// Berechnet einen gleichmaessig abgetasteten, geschlossenen Ring aus einem Polygon.
