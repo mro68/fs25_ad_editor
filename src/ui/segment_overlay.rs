@@ -1,8 +1,9 @@
-//! Segment-Overlay: Zeichnet ein Lock-Icon ueber dem selektierten Segment-Node.
+//! Segment-Overlay: Zeichnet Lock-Icons ueber selektierten Segment-Nodes.
 //!
-//! Wenn genau ein Node selektiert ist und dieser zu einem gespeicherten Segment
-//! gehoert, wird ein Schloss-Icon ueber dem Node angezeigt. Ein Klick auf das
-//! Icon loest `SegmentOverlayEvent::LockToggled` aus.
+//! Fuer jeden selektierten Node wird geprueft, ob er zu einem gespeicherten Segment
+//! gehoert. Pro Segment wird maximal ein Schloss-Icon (ueber dem ersten selektierten
+//! Node dieses Segments) angezeigt. Ein Klick auf das Icon loest
+//! `SegmentOverlayEvent::LockToggled` aus.
 
 use eframe::egui;
 use glam::Vec2;
@@ -17,11 +18,13 @@ pub enum SegmentOverlayEvent {
     LockToggled { segment_id: u64 },
 }
 
-/// Zeichnet ein Lock-Icon ueber dem selektierten Segment-Node.
+/// Zeichnet Lock-Icons ueber selektierten Segment-Nodes.
 ///
-/// Wenn genau ein Node selektiert ist und dieser zu einem gueltigen Segment
-/// gehoert, wird ein Schloss-Icon (🔒 oder 🔓) 28px ueber dem Node gerendert.
-/// Ein Klick auf das Icon loest `SegmentOverlayEvent::LockToggled` aus.
+/// Fuer jeden selektierten Node wird geprueft, ob er zu einem gueltigen Segment
+/// gehoert. Pro Segment wird ein Schloss-Icon (🔒 oder 🔓) 28px ueber dem ersten
+/// selektierten Node dieses Segments gerendert. Bei Multi-Selection ueber mehrere
+/// Segmente werden mehrere Icons gezeichnet.
+/// Ein Klick auf ein Icon loest `SegmentOverlayEvent::LockToggled` aus.
 ///
 /// # Parameter
 /// - `painter`: egui-Painter fuer den Viewport
@@ -45,62 +48,72 @@ pub fn render_segment_overlays(
 ) -> Vec<SegmentOverlayEvent> {
     let mut events = Vec::new();
 
-    // Nur wenn genau 1 Node selektiert
-    if selected_node_ids.len() != 1 {
-        return events;
-    }
-    let selected_id = *selected_node_ids.iter().next().expect("len == 1");
-
-    // Pruefen ob der selektierte Node zu einem gueltigen Segment gehoert
-    let Some(record) = registry.find_first_by_node_id(selected_id) else {
-        return events;
-    };
-    if !registry.is_segment_valid(record, road_map) {
+    // Bei leerer Selektion gibt es nichts zu zeichnen
+    if selected_node_ids.is_empty() {
         return events;
     }
 
-    // Node-Position aus RoadMap holen
-    let Some(node) = road_map.nodes.get(&selected_id) else {
-        return events;
-    };
+    // Pro Segment nur ein Icon zeichnen (Deduplizierung ueber Segment-ID)
+    let mut seen_segment_ids = std::collections::HashSet::new();
 
-    // Welt→Screen: 28px ueber dem Node
-    let screen_local = camera.world_to_screen(node.position, viewport_size);
-    let icon_pos = egui::pos2(
-        rect.min.x + screen_local.x,
-        rect.min.y + screen_local.y - 28.0,
-    );
+    for &selected_id in selected_node_ids.iter() {
+        // Pruefen ob dieser Node zu einem Segment gehoert
+        let Some(record) = registry.find_first_by_node_id(selected_id) else {
+            continue;
+        };
 
-    // Icon-Text je nach Lock-Zustand
-    let icon_text = if record.locked {
-        "\u{1F512}" // 🔒
-    } else {
-        "\u{1F513}" // 🔓
-    };
+        // Jedes Segment hoechstens einmal (Icon ueber erstem selektierten Node)
+        if !seen_segment_ids.insert(record.id) {
+            continue;
+        }
 
-    // Hintergrund-Box fuer bessere Lesbarkeit
-    let bg_rect = egui::Rect::from_center_size(icon_pos, egui::vec2(24.0, 24.0));
-    painter.rect_filled(
-        bg_rect,
-        4.0,
-        egui::Color32::from_rgba_unmultiplied(30, 30, 30, 200),
-    );
+        if !registry.is_segment_valid(record, road_map) {
+            continue;
+        }
 
-    // Icon zeichnen
-    painter.text(
-        icon_pos,
-        egui::Align2::CENTER_CENTER,
-        icon_text,
-        egui::FontId::proportional(16.0),
-        egui::Color32::WHITE,
-    );
+        // Node-Position aus RoadMap holen
+        let Some(node) = road_map.nodes.get(&selected_id) else {
+            continue;
+        };
 
-    // Klick-Erkennung (Hit-Test mit kleinem Extra-Padding)
-    if let Some(click) = clicked_pos {
-        if bg_rect.expand(4.0).contains(click) {
-            events.push(SegmentOverlayEvent::LockToggled {
-                segment_id: record.id,
-            });
+        // Welt→Screen: 28px ueber dem Node
+        let screen_local = camera.world_to_screen(node.position, viewport_size);
+        let icon_pos = egui::pos2(
+            rect.min.x + screen_local.x,
+            rect.min.y + screen_local.y - 28.0,
+        );
+
+        // Icon-Text je nach Lock-Zustand
+        let icon_text = if record.locked {
+            "\u{1F512}" // 🔒
+        } else {
+            "\u{1F513}" // 🔓
+        };
+
+        // Hintergrund-Box fuer bessere Lesbarkeit
+        let bg_rect = egui::Rect::from_center_size(icon_pos, egui::vec2(24.0, 24.0));
+        painter.rect_filled(
+            bg_rect,
+            4.0,
+            egui::Color32::from_rgba_unmultiplied(30, 30, 30, 200),
+        );
+
+        // Icon zeichnen
+        painter.text(
+            icon_pos,
+            egui::Align2::CENTER_CENTER,
+            icon_text,
+            egui::FontId::proportional(16.0),
+            egui::Color32::WHITE,
+        );
+
+        // Klick-Erkennung (Hit-Test mit kleinem Extra-Padding)
+        if let Some(click) = clicked_pos {
+            if bg_rect.expand(4.0).contains(click) {
+                events.push(SegmentOverlayEvent::LockToggled {
+                    segment_id: record.id,
+                });
+            }
         }
     }
 

@@ -20,26 +20,30 @@ fn empty_hidden_ids() -> Arc<IndexSet<u64>> {
 
 /// Berechnet die zu dimmenden Node-IDs fuer einen Frame.
 ///
-/// Wenn genau 1 Node selektiert ist und dieser zu einem Segment gehoert,
-/// werden alle anderen Nodes des Segments in die Rueckgabemenge aufgenommen.
-/// In allen anderen Faellen wird eine leere Menge zurueckgegeben.
+/// Fuer alle selektierten Nodes werden die betroffenen Segmente ermittelt.
+/// Alle Segment-Nodes, die NICHT selektiert sind, werden in die Dimm-Menge aufgenommen.
+/// Bei leerer Selektion oder wenn kein Node zu einem Segment gehoert, wird eine
+/// leere Menge zurueckgegeben.
+///
+/// Implementierung als einziger Pass ueber alle Records statt pro-Node-Lookup —
+/// effizienter fuer den Frame-Hot-Path bei vielen selektierten Nodes.
 fn compute_dimmed_ids(
     registry: &SegmentRegistry,
     selected: &Arc<IndexSet<u64>>,
 ) -> Arc<IndexSet<u64>> {
-    if selected.len() != 1 {
+    if selected.is_empty() {
         return empty_hidden_ids();
     }
-    let node_id = *selected.iter().next().expect("len == 1");
-    let Some(record) = registry.find_first_by_node_id(node_id) else {
-        return empty_hidden_ids();
-    };
-    let dimmed: IndexSet<u64> = record
-        .node_ids
-        .iter()
-        .copied()
-        .filter(|&id| id != node_id)
-        .collect();
+    let mut dimmed = IndexSet::new();
+    for record in registry.records() {
+        if record.node_ids.iter().any(|id| selected.contains(id)) {
+            for &id in &record.node_ids {
+                if !selected.contains(&id) {
+                    dimmed.insert(id);
+                }
+            }
+        }
+    }
     if dimmed.is_empty() {
         empty_hidden_ids()
     } else {
