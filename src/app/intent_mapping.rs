@@ -138,6 +138,9 @@ pub fn map_intent_to_commands(state: &AppState, intent: AppIntent) -> Vec<AppCom
             end_id,
             priority,
         }],
+        AppIntent::NodeFlagChangeRequested { node_id, flag } => {
+            vec![AppCommand::SetNodeFlag { node_id, flag }]
+        }
         AppIntent::SetDefaultDirectionRequested { direction } => {
             vec![AppCommand::SetDefaultDirection { direction }]
         }
