@@ -241,6 +241,13 @@
     - [x] `core/API.md`: `SpatialIndex` — Hinweis auf `ImmutableKdTree` von kiddo ergaenzt
     - [x] `docs/ARCHITECTURE_PLAN.md`: Stand aktualisiert, Zoom-Kompensation- und Decimation-Pattern beschrieben
     - [x] ROADMAP.md: Stand, Prozente und neue Feature-Eintraege aktualisiert
+  - [x] **Tool-Encapsulation-Audit (2026-03-07, Branch `feat/tool-encapsulation-audit`)**
+    - [x] Encapsulation-Audit: 0 Layer-Boundary-Verletzungen (keine wgpu/render-Imports in Tools)
+    - [x] API-Unification: Alle 9 Tools nutzen RouteTool-Trait + 4 Capability-Traits konsistent
+    - [x] ToolResult-Analyse: 6/9 Tools nutzen `assemble_tool_result()`, 3 mit manueller Topologie (geschlossene Ringe, Multi-Offsets)
+    - [x] Editierbarkeit: Alle 9 Tools unterstuetzen `make_segment_record()` + `load_for_edit()`
+    - [x] `docs/ARCHITECTURE_PLAN.md`: Neuer Abschnitt "Tool-Encapsulation-Regeln" mit Renderer-Vertrag, Preview-Vertrag und Segment-Editierbarkeit
+    - [x] Audit-Report: `target/tmp/PLANS/TOOL_ENCAPSULATION_AUDIT.md` mit 10 Findings, Code-Vorschlaegen und Umsetzungsplan
   - [x] **Bugfix: PNG-Farmland-Erkennung (2026-03-06, Branch `fix/farmland-json-persistence`)**
     - [x] `extract_farmland_polygons_from_ids()` als formatunabhaengige pub-Funktion extrahiert (GRLE+PNG)
     - [x] `try_extract_polygons_from_files()`: PNG-Branch (`infoLayer_farmlands.png`) unterstuetzt Polygon-Extraktion via Luma-Dekodierung
@@ -310,7 +317,7 @@
 - Phase 3: ✅ 98% (Theme fehlt)
 - Phase 4: ✅ 100% (alle Features implementiert, 100k-Benchmarks ausstehend)
 - Phase 5: 🟡 90% (DDS-Background + Marker-Editor + Bézier-Kurven + Catmull-Rom-Spline + Uebersichtskarte fertig)
-- Phase 6: 🟡 65% (Handler-Split, CI-Checks, unwrap-Bereinigung, API-Docs, Docstrings, Zoom-Kompensation, Node-Decimation, Deep-Structure-Audit durchgefuehrt)
+- Phase 6: 🟡 70% (Handler-Split, CI-Checks, unwrap-Bereinigung, API-Docs, Docstrings, Zoom-Kompensation, Node-Decimation, Deep-Structure-Audit, Tool-Encapsulation-Audit durchgefuehrt)
 
 **Errungenschaften seit letztem Update (Tool-Konsistenz-Refactoring 2026-03-05):**
 - ✅ BypassTool Lifecycle-Nachrüstung: neues `lifecycle: ToolLifecycleState` Feld
