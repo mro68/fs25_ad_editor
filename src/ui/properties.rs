@@ -6,8 +6,8 @@ pub(crate) mod selectors;
 use indexmap::IndexSet;
 
 use crate::app::{
-    segment_registry::SegmentRegistry, tools::ToolManager, AppIntent, Connection,
-    ConnectionDirection, ConnectionPriority, EditorTool, RoadMap,
+    segment_registry::SegmentRegistry, AppIntent, Connection, ConnectionDirection,
+    ConnectionPriority, RoadMap,
 };
 use distances::render_distance_panel;
 use selectors::{render_direction_icon_selector, render_priority_icon_selector};
@@ -21,8 +21,6 @@ pub fn render_properties_panel(
     default_direction: ConnectionDirection,
     default_priority: ConnectionPriority,
     distance_wheel_step_m: f32,
-    active_tool: EditorTool,
-    tool_manager: Option<&mut ToolManager>,
     segment_registry: Option<&SegmentRegistry>,
     distance_state: &mut crate::app::state::DistanzenState,
 ) -> Vec<AppIntent> {
@@ -65,15 +63,6 @@ pub fn render_properties_panel(
             } else if distance_state.active {
                 // Selektion verloren → Vorschau deaktivieren
                 distance_state.deactivate();
-            }
-
-            // Route-Tool-Konfiguration (Distanz/Anzahl-Slider wenn Tool aktiv)
-            if active_tool == EditorTool::Route {
-                events.extend(render_route_tool_config(
-                    ui,
-                    tool_manager,
-                    distance_wheel_step_m,
-                ));
             }
         });
 
@@ -259,30 +248,3 @@ fn render_segment_edit_buttons(
     }
 }
 
-fn render_route_tool_config(
-    ui: &mut egui::Ui,
-    tool_manager: Option<&mut ToolManager>,
-    distance_wheel_step_m: f32,
-) -> Vec<AppIntent> {
-    let mut events = Vec::new();
-
-    ui.separator();
-    ui.heading("Route-Tool");
-
-    if let Some(tool) = tool_manager
-        .as_deref()
-        .and_then(|manager| manager.active_tool())
-    {
-        ui.label(tool.status_text());
-        ui.add_space(4.0);
-    }
-
-    if let Some(tool) = tool_manager.and_then(|manager| manager.active_tool_mut()) {
-        let changed = tool.render_config(ui, distance_wheel_step_m);
-        if changed && tool.needs_recreate() {
-            events.push(AppIntent::RouteToolConfigChanged);
-        }
-    }
-
-    events
-}

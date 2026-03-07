@@ -116,8 +116,6 @@ pub fn render_properties_panel(
   default_direction: ConnectionDirection,
   default_priority: ConnectionPriority,
   distance_wheel_step_m: f32,
-  active_tool: EditorTool,
-  tool_manager: Option<&mut ToolManager>,
   segment_registry: Option<&SegmentRegistry>,
   distance_state: &mut DistanzenState,
 ) -> Vec<AppIntent>
