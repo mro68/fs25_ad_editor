@@ -167,7 +167,7 @@ pub enum AppIntent {
     /// Options-Dialog schliessen
     CloseOptionsDialogRequested,
     /// Optionen wurden geaendert (sofortige Anwendung)
-    OptionsChanged { options: EditorOptions },
+    OptionsChanged { options: Box<EditorOptions> },
     /// Optionen auf Standardwerte zuruecksetzen
     ResetOptionsRequested,
 

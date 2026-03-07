@@ -197,7 +197,9 @@ pub fn show_options_dialog(
 
     // Aenderungen sofort anwenden (Live-Preview)
     if changed {
-        events.push(AppIntent::OptionsChanged { options: opts });
+        events.push(AppIntent::OptionsChanged {
+            options: Box::new(opts),
+        });
     }
 
     events
