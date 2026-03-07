@@ -36,6 +36,7 @@ pub struct RenderScene {
 (z. B. bei Vorschau-Overlays im Properties-Panel), ohne die Domain-Daten zu mutieren.
 
 **Methoden:**
+
 - `has_map() -> bool` — Prueft ob eine RoadMap vorhanden ist
 
 ---
@@ -210,6 +211,7 @@ pub struct EditorOptions {
 ```
 
 **Methoden:**
+
 - `EditorOptions::load_from_file(path) -> Self` — TOML-Datei laden (bei Fehler: Defaults)
 - `EditorOptions::save_to_file(&self, path) -> Result<()>` — Als TOML speichern
 - `EditorOptions::config_path() -> PathBuf` — Pfad zur Optionen-Datei neben der Binary

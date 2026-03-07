@@ -6,6 +6,7 @@ Status: Umgesetzt — Architektur-Grenzen und API-Verträge aktiv durchgesetzt
 ## Zielbild
 
 Dieser Plan trennt strikt in fünf Schichten plus ein geteiltes Shared-Modul:
+
 - UI (`src/ui/*`): Darstellung + Intent-Erzeugung
 - Application (`src/app/*`): Event-Verarbeitung + Orchestrierung + Use-Cases
 - Domain (`src/core/*`): Datenmodell + Fachlogik
@@ -89,14 +90,15 @@ graph BT
 
 > **Regel:** Pfeile zeigen "darf importieren". Gestrichelt = explizit verboten (CI-geprüft via `scripts/check_layer_boundaries.sh`).
 
-
-
 ### UI Layer (`src/ui/*`)
+
 **Verantwortung**
+
 - Panels, Menüs, Viewport-HUD anzeigen
 - Benutzeraktionen in `AppIntent` übersetzen
 
 **Modul-Aufbau:**
+
 - `input.rs` — Orchestrator, delegiert an Sub-Module
   - `keyboard.rs` — Tastatur-Shortcuts (Delete, Escape, Ctrl+A)
   - `drag.rs` — Drag-Operationen (Pan, Move, Rect-/Lasso-Selektion)
@@ -111,24 +113,29 @@ graph BT
 - `dialogs.rs` — Datei-Dialoge und modale Fenster
 
 **Darf**
+
 - Read-only auf UI/View-Teile von `AppState`
 - Events an Application Layer senden
 - Nur aus `app` importieren (re-exportierte Core-Typen)
 
 **Darf nicht**
+
 - `core` direkt importieren
 - `RoadMap` direkt mutieren
 - XML lesen/schreiben
 - Renderer direkt steuern
 
 ### Application Layer (`src/app/*`)
+
 **Verantwortung**
+
 - Zentrale Event-Verarbeitung (`AppController`)
 - Use-Cases (Load/Save, Kamera, Selektion, Heightmap, Tools)
 - Aufbau von `RenderScene` aus Domain + ViewState
 - Re-Export von Core-Typen für UI (z.B. `ConnectionDirection`, `ConnectionPriority`, `RoadMap`)
 
 **Use-Case-Module:**
+
 - `use_cases/file_io.rs` — Laden, Speichern, Heightmap-Warnung
 - `use_cases/camera.rs` — Kamera-Operationen
 - `use_cases/viewport.rs` — Viewport-Logik
@@ -138,44 +145,57 @@ graph BT
 - `state.rs` — Fassade; Typen in `state/{app_state,dialogs,editor,selection,view}.rs`
 
 ### Overview-Crate (`crates/fs25_map_overview/src/*`)
+
 **Verantwortung**
+
 - Generierung der Übersichtsmap (Terrain-Komposition + optionale Overlays)
 
 **Modulnotiz**
+
 - `composite.rs` wird schrittweise in `composite/`-Submodule zerlegt (Start mit `legend.rs`).
 
 **Darf**
+
 - Domain-API aufrufen
 - XML-Use-Cases ausführen
 - Renderer nur über `RenderScene` beliefern
 
 ### Domain/Core Layer (`src/core/*`)
+
 **Verantwortung**
+
 - Fachmodell (`RoadMap`, Knoten/Kanten, Marker, Meta)
 - Invarianten und Regeln (IDs, Flags, Verbindungslogik)
 - Deterministische Queries
 
 **Darf nicht**
+
 - UI-/egui-Typen kennen
 - wgpu/Renderer-Typen kennen
 - Dateidialoge oder direkte I/O enthalten
 
 ### Persistence Layer (`src/xml/*`)
+
 **Verantwortung**
+
 - XML <-> Domain Mapping (SoA, Delimiter-Regeln, Flag-Bereinigung)
 - Datei-Ein-/Ausgabe für AD-Konfigurationen
 
 **Darf nicht**
+
 - UI- oder Kamera-Entscheidungen treffen
 - Renderlogik enthalten
 
 ### Rendering Layer (`src/render/*`)
+
 **Verantwortung**
+
 - GPU-Ressourcen, Batching, Draw-Calls, Culling
 - Darstellung auf Basis von `RenderScene`
 - **Shader-Deduplication:** `shaders.wgsl` wird einmal in `Renderer::new()` geladen und an alle Sub-Renderer weitergegeben
 
 **Darf nicht**
+
 - Domain mutieren
 - XML/Datei-I/O durchführen
 
@@ -344,14 +364,15 @@ flowchart LR
 ```
 
 Verbindliche Regeln:
+
 1. UI spricht nur mit `app` (`AppIntent` + read-only State) und `shared` (z.B. `EditorOptions`). **Kein direkter `core`-Import.**
 2. Domain (`core`) kennt keine Infrastruktur (UI/Render/XML-Details).
 3. Renderer konsumiert nur `RenderScene` und importiert `Camera2D`/`RoadMap` aus `core` (nicht aus `app`).
 4. XML bleibt technisch; fachliche Entscheidungen liegen in `core`/`app`.
 5. `AppState` enthält keine I/O-Logik; Dateisystem-Operationen sind in `use_cases::file_io` zentralisiert.
 6. Renderer darf keine UI-Typen importieren. **Ausnahme:** `render/callback.rs` implementiert `egui_wgpu::CallbackTrait` — das ist die wgpu-Brücke zwischen egui und dem Rendering-System, kein semantischer UI-Import.
-6. `app/mod.rs` re-exportiert alle Core-Typen, die UI benötigt (z.B. `ConnectionDirection`, `ConnectionPriority`, `RoadMap`).
-7. `shared`-Modul enthält Typen, die von mehreren Layern genutzt werden (`RenderScene`, `RenderQuality`).
+7. `app/mod.rs` re-exportiert alle Core-Typen, die UI benötigt (z.B. `ConnectionDirection`, `ConnectionPriority`, `RoadMap`).
+8. `shared`-Modul enthält Typen, die von mehreren Layern genutzt werden (`RenderScene`, `RenderQuality`).
 
 ## Aktuelle Modulstruktur
 
@@ -468,34 +489,40 @@ src/
 ## Umsetzungsphasen
 
 ### Phase 1: Intent-Grenze ✅
+
 - `AppIntent` als einziges UI->App Übergabeformat etabliert
 - UI von direkten Domain-Mutationen entkoppelt
 - Input-Sammeln in `collect_app_events(...)` gekapselt
 
 ### Phase 2: Controller-Zentrum ✅
+
 - `AppController::handle_intent(...)` als zentraler Einstieg
 - Intent->Command Mapping und `handle_command(...)` eingezogen
 - Load/Save, Kamera und Viewport in dedizierte Use-Cases verschoben
 - Heightmap-Logik in eigenständigen Use-Case extrahiert
 
 ### Phase 3: RenderScene-Vertrag ✅
+
 - `RenderScene` als stabile Schnittstelle app->render eingeführt (in `shared`)
 - Renderpfad auf read-only Renderdaten umgestellt
 - Orphaned `render/scene.rs` entfernt
 
 ### Phase 4: Modularisierung ✅
+
 - UI-Input aufgeteilt in `keyboard`, `drag`, `context_menu` Sub-Module
 - Pick-Distanz-Berechnung zentralisiert (`Camera2D::pick_radius_world()`)
 - UI importiert nur aus `app` (Core-Typen re-exportiert)
 - API-Dokumentation auf aktuellen Stand gebracht
 
 ### Phase 5: Edit-Workflow ✅
+
 - Selection/Move/Connect über Intents + Use-Cases implementiert
 - Undo/Redo auf Snapshot-Basis (CommandLog/History vorhanden)
 - Background-Map-Rendering (DDS/PNG/JPG) mit Use-Cases
 - Marker-Rendering + erstellen/löschen via Use-Cases
 
 ### Phase 6: Handler-Split + Architektur-Guardrails ✅
+
 - `handle_command()` in Feature-Handler aufgeteilt (`handlers/`)
 - Controller ist jetzt schlanker Dispatcher, Logik in Handlern
 - UI→Core-Layerverletzung behoben (properties.rs)
