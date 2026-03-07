@@ -274,7 +274,7 @@
 
 ---
 
-## 📊 Aktueller Status (Stand: 2026-02-28)
+## 📊 Aktueller Status (Stand: 2026-03-07)
 
 **Fertigstellung:**
 
@@ -283,7 +283,7 @@
 - Phase 3: ✅ 98% (Theme fehlt)
 - Phase 4: ✅ 100% (alle Features implementiert, 100k-Benchmarks ausstehend)
 - Phase 5: 🟡 90% (DDS-Background + Marker-Editor + Bézier-Kurven + Catmull-Rom-Spline + Uebersichtskarte fertig)
-- Phase 6: 🟡 50% (Handler-Split, CI-Checks, unwrap-Bereinigung, API-Docs, Docstrings, Audit-Fixes durchgefuehrt)
+- Phase 6: 🟡 65% (Handler-Split, CI-Checks, unwrap-Bereinigung, API-Docs, Docstrings, Zoom-Kompensation, Node-Decimation, Deep-Structure-Audit durchgefuehrt)
 
 **Errungenschaften seit letztem Update (Tool-Konsistenz-Refactoring 2026-03-05):**
 
