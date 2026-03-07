@@ -295,6 +295,9 @@ impl AppController {
             }
             AppCommand::ConfirmPaste => handlers::editing::confirm_paste(state),
             AppCommand::CancelPastePreview => handlers::editing::cancel_paste_preview(state),
+
+            // === Extras ===
+            AppCommand::TraceAllFields => handlers::editing::trace_all_fields(state),
         }
 
         Ok(())

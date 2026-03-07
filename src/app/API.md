@@ -613,6 +613,14 @@ pub enum AppIntent {
     PastePreviewMoved { world_pos: glam::Vec2 },
     PasteConfirmRequested,
     PasteCancelled,
+
+    // Segment-Lock
+    /// Segment-Lock umschalten (gesperrt ↔ entsperrt)
+    ToggleSegmentLockRequested { segment_id: u64 },
+
+    // Extras
+    /// Alle erkannten Farmland-Polygone als Wegpunkt-Ring nachzeichnen
+    TraceAllFieldsRequested,
 }
 
 pub enum AppCommand {
@@ -750,6 +758,14 @@ pub enum AppCommand {
     UpdatePastePreview { world_pos: glam::Vec2 },
     ConfirmPaste,
     CancelPastePreview,
+
+    // Segment-Lock
+    /// Segment-Lock umschalten (gesperrt ↔ entsperrt)
+    ToggleSegmentLock { segment_id: u64 },
+
+    // Extras
+    /// Alle Farmland-Polygone als Wegpunkt-Ring nachzeichnen (Batch-Operation)
+    TraceAllFields,
 }
 ```
 

@@ -201,6 +201,20 @@ pub fn render_menu(ctx: &egui::Context, state: &AppState) -> Vec<AppIntent> {
                     });
                     ui.close();
                 }
+                if ui
+                    .add_enabled(
+                        has_farmland,
+                        egui::Button::new("\u{1F4CD} Alle Felder nachzeichnen"),
+                    )
+                    .on_disabled_hover_text("Hintergrund mit Feldgrenzen zuerst laden")
+                    .on_hover_text(
+                        "Alle erkannten Felder automatisch mit Wegpunkten nachzeichnen (ein Undo-Schritt)",
+                    )
+                    .clicked()
+                {
+                    events.push(AppIntent::TraceAllFieldsRequested);
+                    ui.close();
+                }
             });
 
             ui.menu_button("Help", |ui| {

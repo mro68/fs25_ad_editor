@@ -1,0 +1,110 @@
+//! Use-Case: Alle Farmland-Polygone als Wegpunkt-Ring nachzeichnen (Batch-Operation).
+//!
+//! Erzeugt fuer jedes erkannte Feldpolygon einen geschlossenen Wegpunkt-Ring
+//! mit den Standard-Parametern des FieldBoundaryTool. Alle Polygone werden
+//! in einem einzigen Undo-Schritt zusammengefasst.
+
+use crate::app::tools::field_boundary::compute_ring;
+use crate::app::AppState;
+use crate::core::{Connection, ConnectionDirection, ConnectionPriority, MapNode, NodeFlag};
+use std::sync::Arc;
+
+/// Zeichnet alle erkannten Farmland-Polygone als Wegpunkt-Ring nach.
+///
+/// Alle erstellten Nodes und Verbindungen werden in einem einzigen Undo-Schritt
+/// zusammengefasst. Der Spatial-Index wird nur einmal am Ende rebuildet.
+///
+/// Gibt fruehzeitig zurueck wenn keine Polygone geladen oder keine RoadMap vorhanden.
+pub fn trace_all_fields(state: &mut AppState) {
+    // Polygone vor dem Snapshot klonen (Arc, O(1))
+    let polygons = match &state.farmland_polygons {
+        Some(p) if !p.is_empty() => Arc::clone(p),
+        _ => {
+            log::info!("Keine Farmland-Polygone vorhanden — Abbruch");
+            return;
+        }
+    };
+
+    if state.road_map.is_none() {
+        log::warn!("Keine RoadMap geladen — Alle Felder nachzeichnen abgebrochen");
+        return;
+    }
+
+    // Standard-Parameter (entsprechen FieldBoundaryTool::new())
+    let spacing = 10.0_f32;
+    let offset = 0.0_f32;
+    let tolerance = 0.0_f32;
+    let direction = ConnectionDirection::Dual;
+    let priority = ConnectionPriority::Regular;
+
+    // Undo-Snapshot VOR der Batch-Mutation (Arc-Clone, O(1))
+    state.record_undo_snapshot();
+
+    let all_new_ids = {
+        let road_map = Arc::make_mut(state.road_map.as_mut().expect("road_map vorhanden"));
+
+        let mut all_new_ids: Vec<u64> = Vec::new();
+        let mut field_count = 0usize;
+
+        for polygon in polygons.iter() {
+            let positions = compute_ring(&polygon.vertices, offset, tolerance, spacing);
+            if positions.len() < 2 {
+                log::debug!(
+                    "Feld {}: zu wenige Punkte nach Ring-Berechnung — uebersprungen",
+                    polygon.id
+                );
+                continue;
+            }
+
+            let n = positions.len();
+            let mut poly_ids: Vec<u64> = Vec::with_capacity(n);
+
+            // Nodes erstellen
+            for pos in &positions {
+                let id = road_map.next_node_id();
+                road_map.add_node(MapNode::new(id, *pos, NodeFlag::Regular));
+                poly_ids.push(id);
+                all_new_ids.push(id);
+            }
+
+            // Verbindungen als geschlossener Ring erstellen
+            for i in 0..n {
+                let from_id = poly_ids[i];
+                let to_id = poly_ids[(i + 1) % n];
+                let from_pos = road_map.nodes[&from_id].position;
+                let to_pos = road_map.nodes[&to_id].position;
+                let conn = Connection::new(from_id, to_id, direction, priority, from_pos, to_pos);
+                road_map.add_connection(conn);
+            }
+
+            field_count += 1;
+            log::debug!("Feld {}: {} Nodes erstellt", polygon.id, n);
+        }
+
+        if !all_new_ids.is_empty() {
+            // Flag-Berechnung und Spatial-Index-Rebuild exakt 1x am Ende der Batch-Operation
+            road_map.recalculate_node_flags(&all_new_ids);
+            road_map.ensure_spatial_index();
+            log::info!(
+                "Alle Felder nachgezeichnet: {} Felder, {} Nodes erstellt",
+                field_count,
+                all_new_ids.len()
+            );
+        } else {
+            log::info!("Alle Felder nachzeichnen: keine verwertbaren Polygone gefunden");
+        }
+
+        all_new_ids
+    };
+
+    if all_new_ids.is_empty() {
+        return;
+    }
+
+    // Selektion auf neu erstellte Nodes setzen
+    state.selection.ids_mut().clear();
+    for &id in &all_new_ids {
+        state.selection.ids_mut().insert(id);
+    }
+    state.selection.selection_anchor_node_id = all_new_ids.last().copied();
+}

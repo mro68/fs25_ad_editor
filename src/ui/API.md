@@ -77,6 +77,7 @@ pub fn render_menu(ctx: &egui::Context, state: &AppState) -> Vec<AppIntent>
 
 - **Extras**
   - 🌾 Feld erkennen (nur aktivierbar wenn `state.farmland_polygons.is_some()`) → `AppIntent::SelectRouteToolRequested { index: TOOL_INDEX_FIELD_BOUNDARY }`
+  - 📍 Alle Felder nachzeichnen (nur aktivierbar wenn `state.farmland_polygons.is_some()`) → `AppIntent::TraceAllFieldsRequested`
 
 ---
 
