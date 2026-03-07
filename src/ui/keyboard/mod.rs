@@ -69,10 +69,7 @@ pub(super) fn collect_keyboard_intents(
                 )
             });
 
-            (
-                ctrl_or_cmd_k_pressed,
-                i.key_pressed(egui::Key::Escape),
-            )
+            (ctrl_or_cmd_k_pressed, i.key_pressed(egui::Key::Escape))
         });
 
         if ctrl_or_cmd_k_pressed {

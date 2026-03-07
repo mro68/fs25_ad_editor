@@ -56,7 +56,8 @@ fn collect_with_key_event_text_input_focus(
             let response = ui.text_edit_singleline(&mut text);
             ui.memory_mut(|m| m.request_focus(response.id));
 
-            events = collect_keyboard_intents(ui, &selected, active_tool, false, false, false, false);
+            events =
+                collect_keyboard_intents(ui, &selected, active_tool, false, false, false, false);
         });
     });
 
@@ -293,5 +294,3 @@ fn test_text_input_focus_allows_escape_behavior() {
         .iter()
         .any(|event| matches!(event, AppIntent::ClearSelectionRequested)));
 }
-
-
