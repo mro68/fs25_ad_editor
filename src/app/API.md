@@ -616,6 +616,7 @@ pub enum AppIntent {
     // Segment-Bearbeitung (nachtraegliche Bearbeitung erstellter Linien)
     EditSegmentRequested { record_id: u64 },
     ToggleSegmentLockRequested { segment_id: u64 },
+    DissolveSegmentRequested { segment_id: u64 },
     // Distanzen: Selektierte Nodes-Kette gleichmaessig neu verteilen
     ResamplePathRequested,
     StreckenteilungAktivieren,
@@ -640,6 +641,8 @@ pub enum AppIntent {
     // Segment-Lock
     /// Segment-Lock umschalten (gesperrt ↔ entsperrt)
     ToggleSegmentLockRequested { segment_id: u64 },
+    /// Segment aufloesen (nur Segment-Record entfernen)
+    DissolveSegmentRequested { segment_id: u64 },
 
     // Extras
     /// Alle erkannten Farmland-Polygone als Wegpunkt-Ring nachzeichnen
@@ -761,6 +764,7 @@ pub enum AppCommand {
     // Segment-Bearbeitung
     EditSegment { record_id: u64 },
     ToggleSegmentLock { segment_id: u64 },
+    DissolveSegment { segment_id: u64 },
     // Distanzen: Selektierte Nodes-Kette per Catmull-Rom-Spline neu verteilen
     ResamplePath,
     StreckenteilungAktivieren,

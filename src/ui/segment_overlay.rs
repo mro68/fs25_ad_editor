@@ -1,3 +1,4 @@
+
 //! Segment-Overlay: Zeichnet Lock-Icons ueber selektierten Segment-Nodes.
 //!
 //! Fuer jeden selektierten Node wird geprueft, ob er zu einem gespeicherten Segment
@@ -16,6 +17,8 @@ use crate::app::{Camera2D, RoadMap, SegmentRegistry};
 pub enum SegmentOverlayEvent {
     /// Der Lock-Zustand des Segments soll umgeschaltet werden.
     LockToggled { segment_id: u64 },
+    /// Das Segment soll aufgeloest werden (nur Segment-Record entfernen).
+    Dissolved { segment_id: u64 },
 }
 
 /// Zeichnet Lock-Icons ueber selektierten Segment-Nodes.
@@ -25,6 +28,7 @@ pub enum SegmentOverlayEvent {
 /// selektierten Node dieses Segments gerendert. Bei Multi-Selection ueber mehrere
 /// Segmente werden mehrere Icons gezeichnet.
 /// Ein Klick auf ein Icon loest `SegmentOverlayEvent::LockToggled` aus.
+/// `Ctrl` + Klick loest `SegmentOverlayEvent::Dissolved` aus.
 ///
 /// # Parameter
 /// - `painter`: egui-Painter fuer den Viewport
@@ -35,6 +39,7 @@ pub enum SegmentOverlayEvent {
 /// - `road_map`: RoadMap fuer Node-Positionen
 /// - `selected_node_ids`: Aktuell selektierte Node-IDs
 /// - `clicked_pos`: Screen-Position eines Klicks in diesem Frame (None = kein Klick)
+/// - `ctrl_held`: true, wenn im Klick-Frame die Ctrl-Taste gedrueckt war
 #[allow(clippy::too_many_arguments)]
 pub fn render_segment_overlays(
     painter: &egui::Painter,
@@ -45,6 +50,7 @@ pub fn render_segment_overlays(
     road_map: &RoadMap,
     selected_node_ids: &IndexSet<u64>,
     clicked_pos: Option<egui::Pos2>,
+    ctrl_held: bool,
 ) -> Vec<SegmentOverlayEvent> {
     let mut events = Vec::new();
 
@@ -110,9 +116,15 @@ pub fn render_segment_overlays(
         // Klick-Erkennung (Hit-Test mit kleinem Extra-Padding)
         if let Some(click) = clicked_pos {
             if bg_rect.expand(4.0).contains(click) {
-                events.push(SegmentOverlayEvent::LockToggled {
-                    segment_id: record.id,
-                });
+                if ctrl_held {
+                    events.push(SegmentOverlayEvent::Dissolved {
+                        segment_id: record.id,
+                    });
+                } else {
+                    events.push(SegmentOverlayEvent::LockToggled {
+                        segment_id: record.id,
+                    });
+                }
             }
         }
     }

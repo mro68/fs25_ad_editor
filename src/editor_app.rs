@@ -397,6 +397,7 @@ impl EditorApp {
                 } else {
                     None
                 };
+                let ctrl_held = ui.ctx().input(|i| i.modifiers.ctrl);
                 let painter = ui.painter_at(rect);
                 let overlay_events = ui::render_segment_overlays(
                     &painter,
@@ -407,6 +408,7 @@ impl EditorApp {
                     rm,
                     self.state.selection.selected_node_ids.as_ref(),
                     clicked_pos,
+                    ctrl_held,
                 );
                 for ev in overlay_events {
                     match ev {
@@ -415,6 +417,14 @@ impl EditorApp {
                                 .handle_intent(
                                     &mut self.state,
                                     AppIntent::ToggleSegmentLockRequested { segment_id },
+                                )
+                                .ok();
+                        }
+                        ui::SegmentOverlayEvent::Dissolved { segment_id } => {
+                            self.controller
+                                .handle_intent(
+                                    &mut self.state,
+                                    AppIntent::DissolveSegmentRequested { segment_id },
                                 )
                                 .ok();
                         }

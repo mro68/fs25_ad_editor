@@ -103,6 +103,7 @@
   - [x] **Bug A: Multi-Selection Dimming** (`render_scene.rs::compute_dimmed_ids`) — Korrekter Dimm-Pass über alle Records: Nodes werden nur gedimmt wenn ihr Segment mind. einen selektierten Node hat und der Node selbst NICHT selektiert ist
   - [x] **Bug B: Lock-Icon bei Multi-Selection** (`segment_overlay.rs::render_segment_overlays`) — Lock-Icon-Deduplizierung per Segment-ID; bei Multi-Selection werden mehrere Icons korrekt gezeichnet
   - [x] **Bug C: edit_segment bewahrt Anker-Nodes** (`handlers/editing.rs::edit_segment`) — ExistingNode-Anker werden mit HashSet ausgeschlossen; nur innere Nodes werden gelöscht, Start-/End-Anker bleiben erhalten
+  - [x] **Bug D: Segment aufloesen per Ctrl+Lock-Icon** (`SegmentOverlayEvent::Dissolved`, `AppIntent::DissolveSegmentRequested`, `AppCommand::DissolveSegment`, `handlers::segment::dissolve`) — Segment-Record wird entfernt, Nodes bleiben unveraendert
 
 - [x] **RouteOffsetTool — Strecke Versetzen (2026-03-07)**
   - [x] Neues Modul `src/app/tools/route_offset/` (state.rs, geometry.rs, lifecycle.rs, config_ui.rs, tests.rs)
