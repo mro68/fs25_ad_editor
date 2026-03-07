@@ -1,15 +1,18 @@
 # Projekt: FS25 AutoDrive Editor (RADE)
 
 ## Ueberblick
+
 Neuimplementierung des AutoDrive Course Editors in Rust mit egui + wgpu. Hochperformantes Tool fuer 100k+ Wegpunkte mit Cross-Platform-Faehigkeit.
 
 ## Architektur
+
 - **Core:** Datenmodelle (RoadMap, MapNode), XML-IO, Algorithmen
 - **Render:** wgpu-Pipeline mit Instancing, Culling, Viewport-Management
 - **App:** Controller + `AppIntent`/`AppCommand`-Flow, Use-Cases, State-Management
 - **UI:** egui-Interface, emittiert nur `AppIntent` (keine direkten Domain-Mutationen)
 
 ## Event- und Mutationsfluss
+
 - UI erzeugt `AppIntent`
 - `AppController` mappt auf `AppCommand`
 - Commands werden ueber Use-Cases ausgefuehrt
@@ -17,6 +20,7 @@ Neuimplementierung des AutoDrive Course Editors in Rust mit egui + wgpu. Hochper
 - Renderer bekommt ausschliesslich `RenderScene`
 
 ## Technologie-Stack
+
 - **UI Framework:** egui
 - **Rendering:** wgpu (GPU-basiert, WebGL/Vulkan/Metal)
 - **Spatial Index:** kiddo (KD-Tree fuer Nearest-Neighbor)
@@ -25,19 +29,23 @@ Neuimplementierung des AutoDrive Course Editors in Rust mit egui + wgpu. Hochper
 - **Assets:** egui_extras (SVG-Support)
 
 ## Datenmodell
+
 ### MapNode
+
 - ID als Key (`HashMap<u64, MapNode>`)
 - `position: Vec2` (x, z — nur 2D, y wird nur beim XML-Export geschrieben)
 - `flag: NodeFlag` (Regular, SubPrio, Warning, etc.)
 - **Keine** Connections-Liste auf dem Node — Connections leben in `RoadMap.connections`
 
 ### Connection
+
 - `start_id: u64` / `end_id: u64`
 - `direction: ConnectionDirection` (Regular, Dual, Reverse)
 - `priority: ConnectionPriority` (Regular, SubPriority)
 - `midpoint: Vec2` / `angle: f32` (berechnete Geometrie)
 
 ### RoadMap
+
 - `nodes: HashMap<u64, MapNode>`
 - `connections: HashMap<(u64, u64), Connection>` — Key ist `(start_id, end_id)`
 - `markers: Vec<MapMarker>`
@@ -45,7 +53,9 @@ Neuimplementierung des AutoDrive Course Editors in Rust mit egui + wgpu. Hochper
 - `spatial: SpatialIndex` (KD-Tree fuer schnelle 2D-Abfragen)
 
 ## XML-Format (AutoDrive Config)
+
 **Structure of Arrays:** Parallele CSV-Listen in XML-Tags
+
 - `id`: Comma-separated
 - `x, y, z`: Comma-separated
 - `out, incoming`: Semicolon-separated (outer), Comma-separated (inner)
@@ -54,19 +64,23 @@ Neuimplementierung des AutoDrive Course Editors in Rust mit egui + wgpu. Hochper
 **Versions-Logik:** FS22/FS25 Configs bereinigen Flags 2/4 → 0 beim Laden
 
 ## Performance-Ziele
+
 - 100k+ Nodes/Connections fluessig (>60 FPS)
 - GPU-Instancing fuer Batch-Rendering
 - Viewport-Culling (nur sichtbare Elemente rendern)
 - KD-Tree fuer schnelle raeumliche Abfragen (<1ms bei Mausklicks)
 
 ## Code-Konventionen
+
 - **Kommunikation:** Deutsch
 - **Code/Variablen/Typen:** Englisch
 - **Kommentare/Docstrings/README:** Deutsch
 - **Fehler-Messages:** Deutsch (User-facing) / Englisch (Debug-Logs)
 
 ## Dokumentations-Pflicht
+
 Dokumentation wird **im selben Commit** wie der Code geaendert — nie spaeter:
+
 - **Docstrings (`///`):** Jede oeffentliche Funktion/Struct/Enum braucht einen deutschen Docstring. Bei Signaturnaenderungen sofort anpassen.
 - **`src/*/API.md`:** Je ein `API.md` pro Layer (`app/`, `core/`, `render/`, `shared/`, `xml/`). Aenderungen an der oeffentlichen API → `API.md` sofort nachfuehren.
 - **`docs/ROADMAP.md`:** Fertige Items als `[x]` markieren, neue Todos eintragen.

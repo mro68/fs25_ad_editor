@@ -1,10 +1,13 @@
 //! Render-Szene als expliziter Uebergabevertrag zwischen App und Renderer.
 //!
 //! Lebt im shared-Modul, da `app` sie baut und `render` sie konsumiert.
+//!
+//! Core-Typen werden ueber den Crate-Root eingebunden (nicht ueber direkte Submodul-Pfade),
+//! da `shared` gemaess Architektur-Konvention keine direkten Submodul-Imports enthalten darf.
 
 use super::options::EditorOptions;
 use super::RenderQuality;
-use crate::core::{BackgroundMap, Camera2D, RoadMap};
+use crate::{BackgroundMap, Camera2D, RoadMap};
 use indexmap::IndexSet;
 use std::sync::Arc;
 

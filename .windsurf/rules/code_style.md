@@ -1,12 +1,14 @@
 # Code Style Guide
 
 ## Sprache
+
 - **Code, Variablen, Typen, Funktionen:** Englisch
 - **Kommentare, Docstrings, README:** Deutsch
 - **User-facing Messages:** Deutsch
 - **Debug-Logs:** Englisch
 
 ## Rust Conventions
+
 - Standard Rust formatting (`cargo fmt`)
 - Clippy lints aktiviert (`cargo clippy`)
 - Dokumentationskommentare fuer public API
@@ -36,6 +38,7 @@ for (source_id, target_ids) in connections {
 ```
 
 ## Struktur
+
 - `src/app/` - AppController, Intents/Commands, Use-Cases, AppState
 - `src/core/` - Datenmodelle und Business-Logik
 - `src/xml/` - XML-Parsing und Serialization
@@ -43,11 +46,13 @@ for (source_id, target_ids) in connections {
 - `src/ui/` - egui Interface-Code
 
 ## Tests
+
 - Unit-Tests direkt in Modulen (`#[cfg(test)]`)
 - Integration-Tests in `tests/`
 - Test-Fixtures in `tests/fixtures/`
 
 ## Dokumentations-Pflicht
+
 Bei jeder Codeaenderung muessen folgende Dokumente synchron gehalten werden:
 
 | Aenderungstyp | Was aktualisieren |

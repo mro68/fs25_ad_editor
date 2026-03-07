@@ -7,6 +7,7 @@ Das Core-Datenmodell speichert AutoDrive-Konfigurationen als `RoadMap` mit Nodes
 ## Datenabbildung
 
 ### RoadMap
+
 - **Nodes**: `HashMap<u64, MapNode>` – ID → Node
 - **Connections**: `HashMap<(u64, u64), Connection>` – (start_id, end_id) → Connection
 - **MapMarkers**: `Vec<MapMarker>` – Liste der Marker
@@ -14,22 +15,26 @@ Das Core-Datenmodell speichert AutoDrive-Konfigurationen als `RoadMap` mit Nodes
 - **SpatialIndex**: Persistenter KD-Tree fuer schnelle Node-Abfragen
 
 ### MapNode
+
 - **id**: u64 (eindeutig)
 - **position**: Vec2 (x,z – 2D)
 - **flag**: NodeFlag (Regular, SubPrio, Warning)
 
 ### Connection
+
 - **start_id/end_id**: u64 (Referenzen auf Nodes)
 - **direction**: ConnectionDirection (Regular, Dual, Reverse)
 - **priority**: ConnectionPriority (Regular, SubPriority)
 - **midpoint/angle**: Vec2/f32 (Geometrie fuer Rendering)
 
 ### MapMarker
+
 - **id**: u64 (Node-ID)
 - **name/group**: String
 - **marker_index**: u32
 
 ### AutoDriveMeta
+
 - **config_version/route_version/route_author**: Option<String>
 - **options**: Vec<(String, String)> (in Original-Reihenfolge)
 
@@ -84,6 +89,7 @@ classDiagram
 ## Speicherung
 
 Daten werden als XML gespeichert (SoA-Format):
+
 - **Waypoints**: Parallele Listen `<id>`, `<x>`, `<z>`, `<flags>`, `<out>`, `<incoming>`
 - **Connections**: Abgeleitet aus `out`/`incoming` beim Schreiben
 - **MapMarkers**: `<mapmarker>`-Block mit Attributen
@@ -104,6 +110,7 @@ flowchart TD
 ## Abfragen
 
 Queries laufen im Core ueber `kiddo` (Spatial Index):
+
 - **Nearest**: `nearest_node(query) -> Option<SpatialMatch>` – Naechster Node inkl. Distanz
 - **Radius**: `nodes_within_radius(query, radius) -> Vec<SpatialMatch>` – Nodes im Radius
 - **Range**: `nodes_within_rect(min, max) -> Vec<NodeId>` – Nodes im Rechteck
@@ -130,6 +137,7 @@ sequenceDiagram
 Y-Koordinaten (Hoehenwerte) werden beim XML-Export aus PNG-Heightmaps berechnet.
 
 ### HeightmapData
+
 ```rust
 pub struct Heightmap {
     image: DynamicImage,
@@ -147,6 +155,7 @@ pub struct WorldBounds {
 ```
 
 ### Interpolation
+
 - **Methode:** Bikubische Interpolation (16 Nachbarpixel)
 - **Spline:** Catmull-Rom fuer glatte Kurven
 - **Mapping:** Grauwert 0 (schwarz) = min. Hoehe, 255 (weiss) = max. Hoehe
@@ -154,12 +163,14 @@ pub struct WorldBounds {
 - **Clipping:** Koordinaten ausserhalb werden auf Heightmap-Rand geclippt
 
 ### Workflow
+
 1. User waehlt Heightmap-PNG beim Speichern (optional)
 2. Fuer jeden Node: `y = heightmap.sample_height(x, z, height_scale)`
 3. Fallback ohne Heightmap: `y = 0.0`
 4. Warnung wenn keine Heightmap ausgewaehlt
 
 ### WorldBounds-Konfiguration
+
 ```rust
 // Standard FS25-Map (2048×2048m, zentriert bei 0,0)
 let bounds = WorldBounds::default_fs25();  // -1024 bis +1024
@@ -184,6 +195,7 @@ let bounds = WorldBounds::from_map_size(4096.0);  // -2048 bis +2048
 ## Application-State-Strukturen
 
 ### AppState
+
 ```rust
 pub struct AppState {
     pub road_map: Option<Arc<RoadMap>>,
@@ -199,20 +211,24 @@ pub struct AppState {
     pub should_exit: bool,
 }
 ```
+
 - Zentraler Laufzeitzustand fuer Controller/Handler/UI
 - `road_map` und `selection.selected_node_ids` sind `Arc`-basiert fuer guenstige Frame-Uebergaben
 
 ### SelectionState
+
 ```rust
 pub struct SelectionState {
     pub selected_node_ids: Arc<IndexSet<u64>>,  // Arc fuer O(1)-Clone (Copy-on-Write)
     pub selection_anchor_node_id: Option<u64>,  // Anker fuer Pfad-Selektion
 }
 ```
+
 - **CoW-Pattern:** `Arc::make_mut` bei Mutation → klont IndexSet nur wenn mehrere Referenzen existieren
 - Wird als `Arc` in `RenderScene` geteilt (kein Deep-Clone pro Frame)
 
 ### EditHistory / Snapshot
+
 ```rust
 pub struct EditHistory { /* undo/redo stacks */ }
 pub struct Snapshot {
@@ -221,10 +237,12 @@ pub struct Snapshot {
     // weitere UI-/Tool-Felder
 }
 ```
+
 - Snapshot-basiertes Undo/Redo
 - `Arc<RoadMap>` ermoeglicht O(1)-Snapshots (Copy-on-Write)
 
 ### SegmentRegistry
+
 ```rust
 pub struct SegmentRecord {
     pub id: u64,
@@ -241,10 +259,12 @@ pub struct SegmentRegistry {
     next_id: u64,
 }
 ```
+
 - In-Session-Registry fuer nachtraegliche Bearbeitung erstellter Route-Segmente
 - Erlaubt Segment-Laenge/Node-Anzahl nach Erstellung per Slider zu aendern
 
 ### DistanzenState
+
 ```rust
 pub struct DistanzenState {
     pub by_count: bool,
@@ -256,10 +276,12 @@ pub struct DistanzenState {
     pub preview_positions: Vec<Vec2>,
 }
 ```
+
 - Steuert das Distanzen-Neuverteilen-Feature (Catmull-Rom-Resampling)
 - Wechselseitige Berechnung: Anzahl ↔ Abstand ueber `path_length`
 
 ### EditorToolState
+
 ```rust
 pub struct EditorToolState {
     pub active_tool: EditorTool,
@@ -269,5 +291,6 @@ pub struct EditorToolState {
     pub tool_manager: ToolManager,
 }
 ```
+
 - `ToolManager` verwaltet alle registrierten Route-Tools (Straight, Curve2/3, Spline, Bypass, Constraint)
 - `active_tool` bestimmt welches Editor-Werkzeug gerade aktiv ist

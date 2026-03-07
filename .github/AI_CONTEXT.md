@@ -7,6 +7,7 @@ Dieses Projekt nutzt mehrere Dokumentations-Ebenen fuer AI-Assistenten:
 3. **`docs/*.md`** → Projektdokumentation
 
 Alle enthalten konsistente Informationen zu:
+
 - Architektur (egui + wgpu)
 - App-Fluss (`AppIntent` -> `AppCommand` -> Use-Cases)
 - Code-Konventionen (DE/EN Mix)

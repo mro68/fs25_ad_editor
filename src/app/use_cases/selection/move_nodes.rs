@@ -65,7 +65,7 @@ pub fn move_selected_nodes(state: &mut AppState, delta_world: glam::Vec2) {
 mod tests {
     use super::*;
     use crate::app::segment_registry::{SegmentBase, SegmentKind, SegmentRecord};
-    use crate::app::tools::ToolAnchor;
+    use crate::app::ToolAnchor;
     use crate::{ConnectionDirection, ConnectionPriority, MapNode, NodeFlag, RoadMap};
     use glam::Vec2;
     use std::sync::Arc;

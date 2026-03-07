@@ -105,10 +105,10 @@ Interner Renderer fuer Verbindungslinien und Richtungspfeile.
 - SubPriority-Verbindungen werden heller dargestellt
 
 **Konstanten:**
-- `CONNECTION_THICKNESS_WORLD: 0.2` (Hauptstrasse)
-- `CONNECTION_THICKNESS_SUBPRIO_WORLD: 0.1` (Nebenstrasse)
+- `CONNECTION_THICKNESS_WORLD: 0.1` (Hauptstrasse)
+- `CONNECTION_THICKNESS_SUBPRIO_WORLD: 0.05` (Nebenstrasse)
 - `ARROW_LENGTH_WORLD: 1.0`
-- `ARROW_WIDTH_WORLD: 0.6`
+- `ARROW_WIDTH_WORLD: 0.5`
 
 ---
 
