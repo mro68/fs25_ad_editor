@@ -72,6 +72,11 @@ impl EditorApp {
         // Panels und Dialoge
         events.extend(self.collect_panel_events(ctx));
         events.extend(self.collect_dialog_events(ctx));
+        events.extend(ui::command_palette::render_command_palette(
+            ctx,
+            &mut self.state.ui.show_command_palette,
+            Some(&self.state.editor.tool_manager),
+        ));
 
         // Zentraler Viewport (Rendering + Input + Overlays)
         egui::CentralPanel::default()
@@ -80,8 +85,14 @@ impl EditorApp {
                 let (rect, response) =
                     ui.allocate_exact_size(ui.available_size(), egui::Sense::click_and_drag());
                 let viewport_size = [rect.width(), rect.height()];
+                let command_palette_open = self.state.ui.show_command_palette;
 
-                events.extend(self.collect_viewport_events(ui, &response, viewport_size));
+                events.extend(self.collect_viewport_events(
+                    ui,
+                    &response,
+                    viewport_size,
+                    command_palette_open,
+                ));
                 self.render_viewport(ui, rect, viewport_size);
                 self.render_overlays(ui, rect, &response, viewport_size);
             });
@@ -184,6 +195,7 @@ impl EditorApp {
         ui: &egui::Ui,
         response: &egui::Response,
         viewport_size: [f32; 2],
+        command_palette_open: bool,
     ) -> Vec<AppIntent> {
         let mut events = Vec::new();
 
@@ -262,6 +274,7 @@ impl EditorApp {
                 self.state.editor.active_tool,
                 route_tool_is_drawing,
                 &self.state.options,
+                command_palette_open,
                 default_direction,
                 default_priority,
                 &drag_targets,
@@ -476,6 +489,7 @@ impl EditorApp {
     fn maybe_request_repaint(&self, ctx: &egui::Context, has_meaningful_events: bool) {
         if has_meaningful_events
             || ctx.input(|i| i.pointer.is_moving())
+            || self.state.ui.show_command_palette
             || self.state.ui.show_heightmap_warning
             || self.state.ui.marker_dialog.visible
             || self.state.show_options_dialog

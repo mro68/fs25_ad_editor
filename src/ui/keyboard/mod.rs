@@ -46,7 +46,13 @@ pub(super) fn collect_keyboard_intents(
     route_tool_is_drawing: bool,
     distanzen_active: bool,
     clipboard_has_data: bool,
+    command_palette_open: bool,
 ) -> Vec<AppIntent> {
+    // Solange die Command Palette offen ist, verarbeitet ausschliesslich die Palette Tastatureingaben.
+    if command_palette_open {
+        return vec![];
+    }
+
     // Guard: Shortcuts unterdruecken wenn ein Widget Keyboard-Input haben moechte.
     // Ctrl+K und Escape bleiben erlaubt.
     if ui.ctx().wants_keyboard_input() {

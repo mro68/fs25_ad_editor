@@ -34,6 +34,7 @@
 - [🟡] Basic Theme/Icons (egui_extras image_loaders vorhanden, volles Theme ausstehend)
 - [x] Keyboard-Shortcuts (Ctrl+O, Ctrl+S, Ctrl+Z, Ctrl+Y, Delete, Escape, etc.)
   - [x] Command-Palette-Toggle per Ctrl+K (Intent/Command-Kette vorbereitet)
+- [x] Command Palette (Ctrl+K, Suchfeld, Pfeilnavigation, Enter-Ausfuehrung)
 - [x] Options-Dialog (Farben, Groessen, Breiten – Live-Preview)
 - [x] TOML-Persistierung (fs25_auto_drive_editor.toml neben Binary)
 
