@@ -1,13 +1,1 @@
-<svg width="64" height="64" viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg"><defs>
-    <radialGradient id="ringGlow" cx="50%" cy="50%" r="50%" fx="50%" fy="50%">
-      <stop offset="0%" stop-color="#ffffff" stop-opacity="1" />
-      <stop offset="50%" stop-color="#ffffff" stop-opacity="0" />
-      <stop offset="100%" stop-color="#ffffff" stop-opacity="1" />
-    </radialGradient>
-  </defs>
-  <!-- Straight road -->
-  <line x1="12" y1="52" x2="52" y2="12" stroke="#ffffff" stroke-width="1.5" stroke-linecap="round"/>
-  <circle  cx="12" cy="52" r="5"  fill="url(#ringGlow)" stroke="none" />
-  <circle  cx="32" cy="32" r="5"  fill="url(#ringGlow)" stroke="none" />
-  <circle  cx="52" cy="12" r="5"  fill="url(#ringGlow)" stroke="none" />
-</svg>
+<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="#ffa200" stroke-width="1" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-route-icon lucide-route"><circle cx="6" cy="19" r="3"/><path d="M9 19h8.5a3.5 3.5 0 0 0 0-7h-11a3.5 3.5 0 0 1 0-7H15"/><circle cx="18" cy="5" r="3"/></svg>
