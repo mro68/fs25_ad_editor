@@ -9,6 +9,7 @@ Das `ui`-Modul enthält egui-UI-Komponenten (Menüs, Statusbar, Input-Handling, 
 - `menu.rs` — Top-Menü-Leiste
 - `status.rs` — Statusleiste
 - `toolbar.rs` — Werkzeugleiste
+- `command_palette.rs` — Command Palette Overlay (Suche + Intent-Auswahl)
 - `properties.rs` — Properties-Panel (Detailanzeige selektierter Nodes)
 - `options_dialog/` — Optionen-Dialog für Laufzeit-Einstellungen (`mod.rs`, `sections.rs`)
 - `tool_preview.rs` — Tool-Preview-Overlay (Route-Tool-Vorschau im Viewport)
@@ -187,7 +188,7 @@ let intents = input.collect_viewport_events(
     ui, &response, viewport_size,
     &camera, road_map.as_deref(), &selected_node_ids,
     active_tool, route_tool_is_drawing,
-  &options, default_direction, default_priority,
+  &options, command_palette_open, default_direction, default_priority,
   &drag_targets, &mut distanzen_state, tangent_data,
 );
 ```
@@ -274,6 +275,28 @@ Zeigt die Heightmap-Warnung als modales Fenster.
 ```rust
 pub fn show_heightmap_warning(ctx: &egui::Context, show: bool) -> Vec<AppIntent>
 ```
+
+---
+
+### `render_command_palette`
+
+Rendert die Command Palette als zentriertes Overlay-Fenster mit Substring-Suche.
+
+```rust
+pub fn render_command_palette(
+  ctx: &egui::Context,
+  show: &mut bool,
+  tool_manager: Option<&ToolManager>,
+) -> Vec<AppIntent>
+```
+
+**Verhalten:**
+
+- Suchfeld mit Auto-Focus beim Oeffnen
+- Filterung ueber `entry.label.contains(search)` (case-insensitive)
+- Tastatur: Pfeil hoch/runter, Enter (ausfuehren), Escape (schliessen)
+- Klick ausserhalb schliesst die Palette
+- Katalog: statische Befehle + dynamische Route-Tools (`SelectRouteToolRequested { index }`)
 
 ---
 

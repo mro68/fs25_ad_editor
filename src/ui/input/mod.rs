@@ -109,6 +109,7 @@ impl InputState {
         active_tool: EditorTool,
         route_tool_is_drawing: bool,
         options: &EditorOptions,
+        command_palette_open: bool,
         default_direction: ConnectionDirection,
         default_priority: ConnectionPriority,
         drag_targets: &[glam::Vec2],
@@ -144,6 +145,7 @@ impl InputState {
             route_tool_is_drawing,
             distanzen_state.active,
             clipboard_has_data,
+            command_palette_open,
         ));
 
         let modifiers = ui.input(|i| i.modifiers);
