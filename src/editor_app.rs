@@ -110,11 +110,6 @@ impl EditorApp {
             ValueAdjustInputMode::DragHorizontal => 0.0,
             ValueAdjustInputMode::MouseWheel => self.state.options.mouse_wheel_distance_step_m,
         };
-        let route_tool_manager = if active_tool == EditorTool::Route {
-            Some(&mut self.state.editor.tool_manager)
-        } else {
-            None
-        };
         events.extend(ui::render_properties_panel(
             ctx,
             road_map_for_properties.as_deref(),
@@ -122,8 +117,6 @@ impl EditorApp {
             default_direction,
             default_priority,
             distance_wheel_step_m,
-            active_tool,
-            route_tool_manager,
             Some(&self.state.segment_registry),
             &mut self.state.ui.distanzen,
         ));
