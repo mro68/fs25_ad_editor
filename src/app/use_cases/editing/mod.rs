@@ -7,6 +7,7 @@
 //! - `disconnect` — Verbindungen entfernen
 //! - `direction` — Verbindungsrichtung aendern
 //! - `priority` — Verbindungsprioritaet aendern
+//! - `node_flag` — Node-Flag gezielt setzen
 //! - `bulk_connections` — Bulk-Aenderungen an Verbindungen
 //! - `markers` — Map-Marker-Operationen
 //! - `resample_path` — Nodes-Kette per Catmull-Rom-Spline neu verteilen (Distanzen)
@@ -29,6 +30,7 @@ mod delete_nodes_by_ids;
 mod direction;
 mod disconnect;
 mod markers;
+mod node_flag;
 mod priority;
 mod resample_path;
 mod trace_all_fields;
@@ -51,6 +53,7 @@ pub use delete_nodes_by_ids::delete_nodes_by_ids;
 pub use direction::set_connection_direction;
 pub use disconnect::remove_connection_between;
 pub use markers::{create_marker, open_marker_dialog, remove_marker, update_marker};
+pub use node_flag::set_node_flag;
 pub use priority::set_connection_priority;
 pub use resample_path::resample_selected_path;
 pub use trace_all_fields::trace_all_fields;

@@ -151,10 +151,13 @@ pub fn render_toolbar(ctx: &egui::Context, state: &AppState) -> Vec<AppIntent> {
 
             // Delete-Button (nur wenn Selektion vorhanden)
             let has_selection = !state.selection.selected_node_ids.is_empty();
-            if ui
-                .add_enabled(has_selection, egui::Button::new("🗑 Delete (Del)"))
-                .clicked()
-            {
+            let delete_icon = svg_icon(
+                egui::include_image!("../../assets/icon_delete.svg"),
+                ICON_SIZE,
+            )
+            .tint(icon_color);
+            let delete_btn = egui::Button::image_and_text(delete_icon, "Delete (Del)");
+            if ui.add_enabled(has_selection, delete_btn).clicked() {
                 events.push(AppIntent::DeleteSelectedRequested);
             }
 
@@ -182,12 +185,21 @@ pub fn render_toolbar(ctx: &egui::Context, state: &AppState) -> Vec<AppIntent> {
                     ui.label("Hintergrund:");
 
                     let visible = state.view.background_visible;
-                    let toggle_text = if visible {
-                        "👁 Sichtbar"
+                    let toggle_icon = if visible {
+                        egui::include_image!("../../assets/icon_visible.svg")
                     } else {
-                        "🚫 Ausgeblendet"
+                        egui::include_image!("../../assets/icon_hidden.svg")
                     };
-                    if ui.button(toggle_text).clicked() {
+                    let toggle_text = if visible { "Sichtbar" } else { "Ausgeblendet" };
+                    let toggle_btn = egui::Button::image_and_text(
+                        svg_icon(toggle_icon, ICON_SIZE).tint(if visible {
+                            active_icon_color
+                        } else {
+                            icon_color
+                        }),
+                        toggle_text,
+                    );
+                    if ui.add(toggle_btn).clicked() {
                         events.push(AppIntent::ToggleBackgroundVisibility);
                     }
 
@@ -233,6 +245,9 @@ fn route_tool_icon(idx: usize) -> egui::ImageSource<'static> {
         3 => egui::include_image!("../../assets/icon_spline.svg"),
         4 => egui::include_image!("../../assets/icon_bypass.svg"),
         5 => egui::include_image!("../../assets/icon_constraint_route.svg"),
+        6 => egui::include_image!("../../assets/icon_parking.svg"),
+        7 => egui::include_image!("../../assets/icon_field_boundary.svg"),
+        8 => egui::include_image!("../../assets/icon_route_offset.svg"),
         _ => egui::include_image!("../../assets/icon_straight_road.svg"),
     }
 }

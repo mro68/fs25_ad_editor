@@ -2,7 +2,7 @@
 
 use super::super::state::EditorTool;
 use crate::app::tools::common::TangentSource;
-use crate::core::{ConnectionDirection, ConnectionPriority};
+use crate::core::{ConnectionDirection, ConnectionPriority, NodeFlag};
 use crate::shared::EditorOptions;
 use crate::shared::RenderQuality;
 
@@ -124,6 +124,8 @@ pub enum AppIntent {
         end_id: u64,
         priority: ConnectionPriority,
     },
+    /// Node-Flag aendern (Regular, SubPrio, etc.)
+    NodeFlagChangeRequested { node_id: u64, flag: NodeFlag },
     /// Standard-Richtung fuer neue Verbindungen aendern
     SetDefaultDirectionRequested { direction: ConnectionDirection },
     /// Standard-Strassenart fuer neue Verbindungen aendern
@@ -170,6 +172,8 @@ pub enum AppIntent {
     OptionsChanged { options: Box<EditorOptions> },
     /// Optionen auf Standardwerte zuruecksetzen
     ResetOptionsRequested,
+    /// Command-Palette oeffnen/schliessen
+    CommandPaletteToggled,
 
     /// Route-Tool: Viewport-Klick
     RouteToolClicked { world_pos: glam::Vec2, ctrl: bool },

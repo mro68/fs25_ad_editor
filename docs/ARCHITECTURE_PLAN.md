@@ -654,3 +654,46 @@ Häufig geklonte State-Teile werden in `Arc` verpackt:
 
 `SpatialIndex` intern: `kiddo::ImmutableKdTree<f64, 2>`.  
 Nach node-mutierenden Operationen wird dirty-Flag gesetzt; Rebuild erfolgt lazy beim nächsten Query — nicht sofort nach jeder Einzeloperation in Bulk-Loops.
+
+---
+
+## Tool-Encapsulation-Regeln (Stand 2026-03-07)
+
+### Verbotene Abhaengigkeiten
+
+- Tools (`src/app/tools/`) duerfen **niemals** auf `src/render/`, `wgpu` oder `RenderScene` zugreifen
+- Tools erhalten ausschliesslich `&RoadMap` (read-only) als Domain-Kontext
+- Keine GPU-spezifischen Typen (Vertex-Buffer, Shader, Pipelines) in Tool-Code
+- Kein Zugriff auf `AppState` — der Handler (`src/app/handlers/route_tool.rs`) vermittelt
+
+### Preview-Vertrag
+
+- `preview()` liefert **reine Geometrie** (`Vec<Vec2>` + Index-basierte Verbindungen)
+- Keine Farben, Texturen oder Render-Hints im `ToolPreview`-Output
+- Die Konvertierung zu visuellen Elementen erfolgt im UI-Layer (`src/ui/tool_preview.rs`)
+- Tools kennen weder `egui::Color32` noch `egui::Painter` (ausser in `render_config()` fuer UI-Panels)
+
+### Segment-Editierbarkeit
+
+- Jedes Tool implementiert `make_segment_record()` → speichert Konfiguration in `SegmentRegistry`
+- `load_for_edit()` rekonstituiert den Tool-State fuer erneute Bearbeitung
+- `SegmentRecord.locked` verhindert versehentliche Mutation
+- Undo-Snapshot wird vor jeder Mutation automatisch erstellt (`apply_tool_result`)
+
+### ToolResult-Aufbau
+
+- Lineare Ketten-Tools nutzen `assemble_tool_result()` (`common/builder.rs`)
+- Spezial-Topologien (geschlossene Ringe, Multi-Seiten-Offsets) bauen `ToolResult` manuell
+- Alle `ToolResult`-Instanzen verwenden den **gleichen Struct** — einheitliches Interface
+
+```
+Tool.preview() → ToolPreview (pure Geometrie)
+     ↓
+UI: paint_preview() → egui::Painter (2D-Overlay)
+
+Tool.execute() → ToolResult (Nodes + Connections)
+     ↓
+Handler: apply_tool_result() → RoadMap-Mutation
+     ↓
+Naechster Frame: RenderScene wird aus RoadMap neu gebaut
+```

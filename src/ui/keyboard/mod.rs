@@ -5,6 +5,37 @@
 use crate::app::{AppIntent, ConnectionDirection, ConnectionPriority, EditorTool};
 use indexmap::IndexSet;
 
+fn collect_escape_intents(
+    selected_node_ids: &IndexSet<u64>,
+    active_tool: EditorTool,
+    route_tool_is_drawing: bool,
+    distanzen_active: bool,
+) -> Vec<AppIntent> {
+    if distanzen_active {
+        // Distanzen-Vorschau aktiv -> Esc wird im Properties-Panel behandelt
+        return vec![];
+    }
+
+    if active_tool == EditorTool::Route && route_tool_is_drawing {
+        // Tool zeichnet gerade -> Eingabe abbrechen
+        return vec![AppIntent::RouteToolCancelled];
+    }
+
+    if !selected_node_ids.is_empty() {
+        // Selektion aufheben (gilt fuer alle Tools inkl. Route im Leerlauf)
+        return vec![AppIntent::ClearSelectionRequested];
+    }
+
+    if active_tool != EditorTool::Select {
+        // Zurueck zum Select-Tool
+        return vec![AppIntent::SetEditorToolRequested {
+            tool: EditorTool::Select,
+        }];
+    }
+
+    vec![]
+}
+
 /// Verarbeitet Keyboard-Shortcuts und gibt AppIntents zurueck.
 ///
 /// `clipboard_has_data`: true wenn die Zwischenablage Nodes enthaelt (fuer Ctrl+V).
@@ -15,7 +46,48 @@ pub(super) fn collect_keyboard_intents(
     route_tool_is_drawing: bool,
     distanzen_active: bool,
     clipboard_has_data: bool,
+    command_palette_open: bool,
 ) -> Vec<AppIntent> {
+    // Solange die Command Palette offen ist, verarbeitet ausschliesslich die Palette Tastatureingaben.
+    if command_palette_open {
+        return vec![];
+    }
+
+    // Guard: Shortcuts unterdruecken wenn ein Widget Keyboard-Input haben moechte.
+    // Ctrl+K und Escape bleiben erlaubt.
+    if ui.ctx().wants_keyboard_input() {
+        let (ctrl_or_cmd_k_pressed, key_escape_pressed) = ui.input(|i| {
+            let ctrl_or_cmd_k_pressed = i.events.iter().any(|event| {
+                matches!(
+                    event,
+                    egui::Event::Key {
+                        key: egui::Key::K,
+                        pressed: true,
+                        modifiers,
+                        ..
+                    } if modifiers.command || modifiers.ctrl
+                )
+            });
+
+            (ctrl_or_cmd_k_pressed, i.key_pressed(egui::Key::Escape))
+        });
+
+        if ctrl_or_cmd_k_pressed {
+            return vec![AppIntent::CommandPaletteToggled];
+        }
+
+        if key_escape_pressed {
+            return collect_escape_intents(
+                selected_node_ids,
+                active_tool,
+                route_tool_is_drawing,
+                distanzen_active,
+            );
+        }
+
+        return vec![];
+    }
+
     let mut events = Vec::new();
 
     // Undo / Redo (Cmd/Ctrl + Z / Y, Shift+Cmd+Z)
@@ -58,20 +130,12 @@ pub(super) fn collect_keyboard_intents(
     }
 
     if key_escape_pressed {
-        if distanzen_active {
-            // Distanzen-Vorschau aktiv → Esc wird im Properties-Panel behandelt
-        } else if active_tool == EditorTool::Route && route_tool_is_drawing {
-            // Tool zeichnet gerade → Eingabe abbrechen
-            events.push(AppIntent::RouteToolCancelled);
-        } else if !selected_node_ids.is_empty() {
-            // Selektion aufheben (gilt fuer alle Tools inkl. Route im Leerlauf)
-            events.push(AppIntent::ClearSelectionRequested);
-        } else if active_tool != EditorTool::Select {
-            // Zurueck zum Select-Tool
-            events.push(AppIntent::SetEditorToolRequested {
-                tool: EditorTool::Select,
-            });
-        }
+        events.extend(collect_escape_intents(
+            selected_node_ids,
+            active_tool,
+            route_tool_is_drawing,
+            distanzen_active,
+        ));
     }
 
     // Delete, Tool-Wechsel, Connect/Disconnect, Enter (Route-Tool)
@@ -80,6 +144,7 @@ pub(super) fn collect_keyboard_intents(
         key_1_pressed,
         key_2_pressed,
         key_3_pressed,
+        key_k_pressed,
         key_c_pressed,
         key_v_pressed,
         key_x_pressed,
@@ -94,6 +159,7 @@ pub(super) fn collect_keyboard_intents(
             i.key_pressed(egui::Key::Num1),
             i.key_pressed(egui::Key::Num2),
             i.key_pressed(egui::Key::Num3),
+            i.key_pressed(egui::Key::K),
             i.key_pressed(egui::Key::C),
             i.key_pressed(egui::Key::V),
             i.key_pressed(egui::Key::X),
@@ -128,6 +194,10 @@ pub(super) fn collect_keyboard_intents(
         events.push(AppIntent::SetEditorToolRequested {
             tool: EditorTool::AddNode,
         });
+    }
+
+    if (modifiers.command || modifiers.ctrl) && key_k_pressed {
+        events.push(AppIntent::CommandPaletteToggled);
     }
 
     // C = Verbinden (bei genau 2 selektierten Nodes)

@@ -4,7 +4,6 @@ use indexmap::IndexSet;
 fn collect_with_key_event(event: egui::Event, selected: IndexSet<u64>) -> Vec<AppIntent> {
     collect_with_key_event_full(event, selected, EditorTool::Select, false)
 }
-
 fn collect_with_key_event_and_tool(
     event: egui::Event,
     selected: IndexSet<u64>,
@@ -33,7 +32,32 @@ fn collect_with_key_event_full(
                 route_tool_is_drawing,
                 false,
                 false,
+                false,
             );
+        });
+    });
+
+    events
+}
+
+fn collect_with_key_event_text_input_focus(
+    event: egui::Event,
+    selected: IndexSet<u64>,
+    active_tool: EditorTool,
+) -> Vec<AppIntent> {
+    let ctx = egui::Context::default();
+    let mut raw_input = egui::RawInput::default();
+    raw_input.events.push(event);
+
+    let mut events = Vec::new();
+    let _ = ctx.run(raw_input, |ctx| {
+        egui::CentralPanel::default().show(ctx, |ui| {
+            let mut text = String::new();
+            let response = ui.text_edit_singleline(&mut text);
+            ui.memory_mut(|m| m.request_focus(response.id));
+
+            events =
+                collect_keyboard_intents(ui, &selected, active_tool, false, false, false, false);
         });
     });
 
@@ -208,4 +232,65 @@ fn test_escape_route_tool_idle_no_selection_switches_to_select() {
             tool: EditorTool::Select
         }
     )));
+}
+
+#[test]
+fn test_text_input_focus_blocks_regular_shortcuts() {
+    let events = collect_with_key_event_text_input_focus(
+        egui::Event::Key {
+            key: egui::Key::Num2,
+            physical_key: None,
+            pressed: true,
+            repeat: false,
+            modifiers: egui::Modifiers::default(),
+        },
+        IndexSet::new(),
+        EditorTool::Select,
+    );
+
+    assert!(events.is_empty());
+}
+
+#[test]
+fn test_text_input_focus_allows_ctrl_k() {
+    let events = collect_with_key_event_text_input_focus(
+        egui::Event::Key {
+            key: egui::Key::K,
+            physical_key: None,
+            pressed: true,
+            repeat: false,
+            modifiers: egui::Modifiers {
+                ctrl: true,
+                ..egui::Modifiers::default()
+            },
+        },
+        IndexSet::new(),
+        EditorTool::Select,
+    );
+
+    assert!(events
+        .iter()
+        .any(|event| matches!(event, AppIntent::CommandPaletteToggled)));
+}
+
+#[test]
+fn test_text_input_focus_allows_escape_behavior() {
+    let mut selected = IndexSet::new();
+    selected.insert(12);
+
+    let events = collect_with_key_event_text_input_focus(
+        egui::Event::Key {
+            key: egui::Key::Escape,
+            physical_key: None,
+            pressed: true,
+            repeat: false,
+            modifiers: egui::Modifiers::default(),
+        },
+        selected,
+        EditorTool::Select,
+    );
+
+    assert!(events
+        .iter()
+        .any(|event| matches!(event, AppIntent::ClearSelectionRequested)));
 }

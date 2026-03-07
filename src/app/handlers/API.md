@@ -113,6 +113,12 @@ pub fn reset_options(state: &mut AppState) -> anyhow::Result<()>
 Verwaltet den Options-Dialog. `apply_options()` validiert die neuen Optionen, persistiert sie in die Konfigurationsdatei und aktualisiert den State.
 
 ```rust
+pub fn toggle_command_palette(state: &mut AppState)
+```
+
+Schaltet die Sichtbarkeit der Command Palette um (`state.ui.show_command_palette`). Wird durch `AppCommand::ToggleCommandPalette` (Ctrl+K) ausgeloest.
+
+```rust
 pub fn open_overview_options_dialog(state: &mut AppState, zip_path: String)
 ```
 
@@ -211,6 +217,12 @@ pub fn set_node_position(state: &mut AppState, node_id: u64, new_pos: glam::Vec2
 ```
 
 Verschiebt einen Node (mit Spatial-Index-Update).
+
+```rust
+pub fn set_node_flag(state: &mut AppState, node_id: u64, flag: NodeFlag)
+```
+
+Setzt das Flag eines vorhandenen Nodes (z.B. `Regular`, `SubPrio`) inklusive Undo-Snapshot ueber den Editing-Use-Case.
 
 ```rust
 pub fn create_connection(

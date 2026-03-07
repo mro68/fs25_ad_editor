@@ -141,6 +141,7 @@ pub struct RoadMap {
 - `add_node(&mut self, node: MapNode)` — Fuegt Node hinzu (markiert Spatial-Index als dirty)
 - `remove_node(&mut self, node_id: u64) -> Option<MapNode>` — Entfernt Node + betroffene Verbindungen
 - `update_node_position(&mut self, node_id: u64, new_position: Vec2) -> bool` — Position aktualisieren (baut Geometrie neu, markiert Spatial als dirty)
+- `set_node_flag(&mut self, node_id: u64, flag: NodeFlag) -> bool` — Setzt das Node-Flag direkt
 - `add_connection(&mut self, connection: Connection)` — Fuegt Verbindung hinzu
 - `has_connection(&self, start_id: u64, end_id: u64) -> bool` — Prueft ob Verbindung existiert
 - `find_connection(&self, start_id: u64, end_id: u64) -> Option<&Connection>` — Findet exakte Verbindung

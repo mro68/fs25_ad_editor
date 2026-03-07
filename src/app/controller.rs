@@ -133,6 +133,9 @@ impl AppController {
                 end_id,
                 priority,
             } => handlers::editing::set_connection_priority(state, start_id, end_id, priority),
+            AppCommand::SetNodeFlag { node_id, flag } => {
+                handlers::editing::set_node_flag(state, node_id, flag)
+            }
             AppCommand::SetDefaultDirection { direction } => {
                 handlers::editing::set_default_direction(state, direction)
             }
@@ -227,6 +230,7 @@ impl AppController {
                 handlers::dialog::apply_options(state, *options)?
             }
             AppCommand::ResetOptions => handlers::dialog::reset_options(state)?,
+            AppCommand::ToggleCommandPalette => handlers::dialog::toggle_command_palette(state),
             AppCommand::DismissDeduplicateDialog => handlers::dialog::dismiss_dedup_dialog(state),
 
             // === History ===
