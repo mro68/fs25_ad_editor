@@ -538,6 +538,26 @@ Schnelle Konfigurationsanpassungen per Pfeiltasten (Numerische Feinabstimmung). 
 
 ---
 
+### `segment` — Segment-Lock und Segment-Auflösung
+
+Verwaltet den Lock-Zustand von Segmenten und loest Segment-Records auf.
+
+**Funktionen:**
+
+```rust
+pub fn toggle_lock(state: &mut AppState, segment_id: u64)
+```
+
+Schaltet den Lock-Zustand eines Segments um. Gesperrte Segmente bewegen alle zugehoerigen Nodes gemeinsam beim Drag. Unbekannte IDs werden ignoriert.
+
+```rust
+pub fn dissolve(state: &mut AppState, segment_id: u64)
+```
+
+Loest ein Segment auf: Entfernt nur den Segment-Record aus der Registry. Die zugehoerigen Nodes und Verbindungen in der RoadMap bleiben unveraendert. Wird per `Ctrl + Klick` auf das Lock-Icon ausgeloest. Unbekannte IDs werden ignoriert.
+
+---
+
 ### `history` — Undo/Redo-Verwaltung
 
 Verarbeitet Undo/Redo-Operationen.
