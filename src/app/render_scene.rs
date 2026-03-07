@@ -4,7 +4,7 @@
 //! in den expliziten Render-Vertrag `RenderScene`. Die gebaute Szene enthaelt alle
 //! Informationen, die der Render-Layer benoetigt, ohne den State direkt zu koppeln.
 
-use crate::app::AppState;
+use crate::app::{AppState, SegmentRegistry};
 use crate::shared::RenderScene;
 use indexmap::IndexSet;
 use std::sync::{Arc, OnceLock};
@@ -16,6 +16,35 @@ use std::sync::{Arc, OnceLock};
 fn empty_hidden_ids() -> Arc<IndexSet<u64>> {
     static EMPTY: OnceLock<Arc<IndexSet<u64>>> = OnceLock::new();
     Arc::clone(EMPTY.get_or_init(|| Arc::new(IndexSet::new())))
+}
+
+/// Berechnet die zu dimmenden Node-IDs fuer einen Frame.
+///
+/// Wenn genau 1 Node selektiert ist und dieser zu einem Segment gehoert,
+/// werden alle anderen Nodes des Segments in die Rueckgabemenge aufgenommen.
+/// In allen anderen Faellen wird eine leere Menge zurueckgegeben.
+fn compute_dimmed_ids(
+    registry: &SegmentRegistry,
+    selected: &Arc<IndexSet<u64>>,
+) -> Arc<IndexSet<u64>> {
+    if selected.len() != 1 {
+        return empty_hidden_ids();
+    }
+    let node_id = *selected.iter().next().expect("len == 1");
+    let Some(record) = registry.find_first_by_node_id(node_id) else {
+        return empty_hidden_ids();
+    };
+    let dimmed: IndexSet<u64> = record
+        .node_ids
+        .iter()
+        .copied()
+        .filter(|&id| id != node_id)
+        .collect();
+    if dimmed.is_empty() {
+        empty_hidden_ids()
+    } else {
+        Arc::new(dimmed)
+    }
 }
 
 /// Baut eine RenderScene aus dem aktuellen AppState.
@@ -55,6 +84,9 @@ pub fn build(state: &AppState, viewport_size: [f32; 2]) -> RenderScene {
         empty_hidden_ids()
     };
 
+    // Gedimmte Nodes: alle anderen Nodes des Segments wenn 1 Segment-Node selektiert.
+    let dimmed_node_ids = compute_dimmed_ids(&state.segment_registry, &selected_arc);
+
     RenderScene {
         road_map: state.road_map.clone(),
         camera: state.view.camera.clone(),
@@ -66,5 +98,6 @@ pub fn build(state: &AppState, viewport_size: [f32; 2]) -> RenderScene {
         background_visible: state.view.background_visible,
         options: state.options_arc(),
         hidden_node_ids,
+        dimmed_node_ids,
     }
 }

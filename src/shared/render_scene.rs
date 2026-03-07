@@ -34,6 +34,11 @@ pub struct RenderScene {
     pub options: Arc<EditorOptions>,
     /// Node-IDs, die im aktuellen Frame ausgeblendet werden sollen (z.B. Distanzen-Vorschau)
     pub hidden_node_ids: Arc<IndexSet<u64>>,
+    /// Node-IDs, die mit 50% Opacity gerendert werden sollen.
+    ///
+    /// Wird befuellt wenn ein selektierter Node zu einem Segment gehoert —
+    /// alle anderen Nodes des gleichen Segments werden gedimmt.
+    pub dimmed_node_ids: Arc<IndexSet<u64>>,
 }
 
 impl RenderScene {

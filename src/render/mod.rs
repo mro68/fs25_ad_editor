@@ -97,6 +97,7 @@ impl Renderer {
             viewport_size: scene.viewport_size,
             options: scene.options.as_ref(),
             hidden_node_ids: scene.hidden_node_ids.as_ref(),
+            dimmed_node_ids: scene.dimmed_node_ids.as_ref(),
         };
 
         // 1. Render Background zuerst (falls vorhanden)

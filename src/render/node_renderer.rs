@@ -240,11 +240,15 @@ impl NodeRenderer {
 
             let is_selected = selected_set.contains(&node.id);
             // Basisfarbe entspricht dem Node-Flag (bleibt mittig sichtbar)
-            let base_color = match node.flag {
+            let mut base_color = match node.flag {
                 NodeFlag::SubPrio => ctx.options.node_color_subprio,
                 NodeFlag::Warning => ctx.options.node_color_warning,
                 _ => ctx.options.node_color_default,
             };
+            // Gedimmte Nodes des gleichen Segments auf 50% Opacity setzen
+            if ctx.dimmed_node_ids.contains(&node.id) {
+                base_color[3] *= 0.5;
+            }
             // Rim/Markierungsfarbe aussen — nur bei selektierten Nodes anders.
             // rim_color.a kodiert das Verhaeltnis Innendurchmesser/Aussendurchmesser fuer den Shader.
             let rim_color = if is_selected {
