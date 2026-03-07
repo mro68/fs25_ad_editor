@@ -38,6 +38,7 @@ Das Eigenschaften-Panel zeigt kontextabhaengig Infos zur aktuellen Selektion und
 ### Toolbar
 
 Zeigt die verfuegbaren Werkzeuge:
+
 - **⊹ Select (1)** — Standard-Werkzeug: Nodes selektieren und verschieben
 - **⟷ Connect (2)** — Verbindungen zwischen Nodes erstellen
 - **＋ Add Node (3)** — Neue Nodes auf der Karte platzieren
@@ -48,6 +49,7 @@ Zeigt die verfuegbaren Werkzeuge:
 ### Statusleiste
 
 Zeigt folgende Informationen (nur Anzeige, nicht interaktiv):
+
 - Node-Count, Connection-Count, Marker-Count
 - Map-Name (falls vorhanden)
 - Zoom-Stufe und Kamera-Position

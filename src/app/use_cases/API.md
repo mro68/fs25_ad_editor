@@ -47,6 +47,7 @@ Alle Use-Case-Funktionen des `app::use_cases`-Moduls. Use-Cases mutieren `AppSta
 - `clear_selection(state)` — Selektion explizit loeschen
 
 **Interner Helfer:**
+
 - `expand_segment_selection(state, node_id)` — Wenn der geklickte Node zu einem registrierten Segment gehoert und das Segment gueltig ist (alle Nodes existieren und Originalpositionen unveraendert), werden alle Segment-Nodes zur Selektion hinzugefuegt. Beseitigt manuelle Multi-Select-redundanz bei erstellten Segmenten.
 
 ---

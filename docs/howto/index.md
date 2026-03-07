@@ -3,6 +3,7 @@
 Der FS25 AutoDrive Editor dient zum Erstellen und Bearbeiten von AutoDrive-Kursen fuer den Farming Simulator 25. Er laedt XML-Konfigurationsdateien (`AutoDrive_config*.xml`), stellt das Strassennetzwerk grafisch dar und ermoeglicht das Bearbeiten von Wegpunkten (Nodes), Verbindungen (Connections) und Map-Markern.
 
 **Kernfeatures:**
+
 - GPU-beschleunigtes Rendering fuer 100.000+ Wegpunkte
 - Rect- und Lasso-Selektion
 - Verbindungs-Bearbeitung (Richtung, Prioritaet, Invertierung)

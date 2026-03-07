@@ -104,6 +104,7 @@ Map-Marker sind benannte Ziele auf der Karte (z. B. „Hof", „Feld 1", „Silo
 ### Darstellung
 
 Marker werden als **rote Pin-Symbole** dargestellt:
+
 - Pin-Spitze sitzt exakt auf dem Node-Zentrum
 - Rote Fuellung mit dunkelrotem Rand
 - Groesse: 2.0 Welteinheiten
@@ -122,6 +123,7 @@ Alle destruktiven Operationen erzeugen automatisch einen Undo-Snapshot:
 Auch ueber **Edit → Undo / Redo** im Menue verfuegbar (mit Anzeige ob verfuegbar).
 
 **Operationen mit Undo-Support:**
+
 - Nodes hinzufuegen / loeschen
 - Nodes verschieben
 - Verbindungen erstellen / entfernen / aendern

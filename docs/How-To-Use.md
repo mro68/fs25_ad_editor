@@ -34,6 +34,7 @@
 Der FS25 AutoDrive Editor dient zum Erstellen und Bearbeiten von AutoDrive-Kursen fuer den Farming Simulator 25. Er laedt XML-Konfigurationsdateien (`AutoDrive_config*.xml`), stellt das Strassennetzwerk grafisch dar und ermoeglicht das Bearbeiten von Wegpunkten (Nodes), Verbindungen (Connections) und Map-Markern.
 
 **Kernfeatures:**
+
 - GPU-beschleunigtes Rendering fuer 100.000+ Wegpunkte
 - Rect- und Lasso-Selektion
 - Verbindungs-Bearbeitung (Richtung, Prioritaet, Invertierung)
@@ -56,6 +57,7 @@ Der FS25 AutoDrive Editor dient zum Erstellen und Bearbeiten von AutoDrive-Kurse
 Oeffnet einen Datei-Dialog zur Auswahl einer AutoDrive-XML-Konfigurationsdatei. Nach dem Laden wird die Kamera automatisch auf die Bounding-Box des Netzwerks zentriert.
 
 **Automatische Erkennung:** Nach dem Laden prueft der Editor automatisch:
+
 - Ob eine `terrain.heightmap.png` im selben Verzeichnis liegt → wird direkt als Heightmap gesetzt
 - Ob im Mods-Verzeichnis (`../../mods/` relativ zum Savegame) ein passender Map-Mod-ZIP zum Kartennamen existiert → Dialog bietet Uebersichtskarten-Generierung an
 
@@ -114,6 +116,7 @@ Das Eigenschaften-Panel zeigt kontextabhaengig Infos zur aktuellen Selektion und
 ### Toolbar
 
 Zeigt die verfuegbaren Werkzeuge:
+
 - **⊹ Select (1)** — Standard-Werkzeug: Nodes selektieren und verschieben
 - **⟷ Connect (2)** — Verbindungen zwischen Nodes erstellen
 - **＋ Add Node (3)** — Neue Nodes auf der Karte platzieren- **Route-Tools (4)** — Route-Werkzeuge: Gerade Strecke, Bézier-Kurve, Spline- **🗑 Delete (Del)** — Selektierte Nodes loeschen (nur aktiv bei Selektion)
@@ -122,6 +125,7 @@ Zeigt die verfuegbaren Werkzeuge:
 ### Statusleiste
 
 Zeigt folgende Informationen (nur Anzeige, nicht interaktiv):
+
 - Node-Count, Connection-Count, Marker-Count
 - Map-Name (falls vorhanden)
 - Zoom-Stufe und Kamera-Position
@@ -229,6 +233,7 @@ Zeigt folgende Informationen (nur Anzeige, nicht interaktiv):
 Das Standard-Werkzeug fuer Auswahl und Verschiebung von Nodes.
 
 **Funktionen:**
+
 - Einzelklick: Node selektieren (Pick-Radius: 12px)
 - Ctrl+Klick: Additiv selektieren
 - Shift+Klick: Pfad-Selektion (kuerzester Pfad von Anker zu Ziel)
@@ -241,11 +246,13 @@ Das Standard-Werkzeug fuer Auswahl und Verschiebung von Nodes.
 Erstellt Verbindungen zwischen zwei Nodes.
 
 **Workflow:**
+
 1. Ersten Node anklicken → in Toolbar erscheint "Startknoten: [ID] → Waehle Zielknoten"
 2. Zweiten Node anklicken → Verbindung wird erstellt
 3. Werkzeug bleibt aktiv fuer weitere Verbindungen
 
 **Standard-Einstellungen:**
+
 - Richtung: Regular (Einbahn vom Start zum Ziel)
 - Prioritaet: Regular (Hauptstrasse)
 
@@ -254,6 +261,7 @@ Erstellt Verbindungen zwischen zwei Nodes.
 Platziert neue Wegpunkte auf der Karte.
 
 **Workflow:**
+
 - Klick auf eine beliebige Stelle → neuer Node wird an der Welt-Position eingefuegt
 - Der neue Node erhaelt automatisch die naechste freie ID
 
@@ -266,6 +274,7 @@ Erstellt Strecken und Kurse ueber vordefinierte Geometrien. Im Route-Modus stehe
 Zeichnet eine gerade Linie zwischen zwei Punkten mit automatischen Zwischen-Nodes.
 
 **Workflow:**
+
 1. Startpunkt klicken
 2. Endpunkt klicken → Vorschau erscheint
 3. Enter → Strecke wird erstellt
@@ -277,6 +286,7 @@ Zeichnet eine gerade Linie zwischen zwei Punkten mit automatischen Zwischen-Node
 Zeichnet eine Bézier-Kurve (Grad 2 oder 3) mit Steuerpunkten.
 
 **Workflow:**
+
 1. Startpunkt klicken
 2. Endpunkt klicken
 3. Steuerpunkt(e) klicken → Vorschau erscheint
@@ -290,6 +300,7 @@ Zeichnet eine Bézier-Kurve (Grad 2 oder 3) mit Steuerpunkten.
 Zeichnet einen interpolierenden Spline, der durch **alle geklickten Punkte** fuehrt. Im Gegensatz zur Bézier-Kurve (die Steuerpunkte nur annaehert) verlaeuft der Spline exakt durch jeden gesetzten Punkt.
 
 **Workflow:**
+
 1. Beliebig viele Punkte nacheinander klicken (mindestens 2)
 2. Vorschau wird fortlaufend aktualisiert (Cursor = naechster Punkt)
 3. Enter → Spline wird erstellt
@@ -297,6 +308,7 @@ Zeichnet einen interpolierenden Spline, der durch **alle geklickten Punkte** fue
 **Einstellungen:** Min. Abstand (Segment-Laenge) und Anzahl Nodes.
 
 **Besonderheiten:**
+
 - Ab 3 Punkten entsteht eine glatte Kurve (Catmull-Rom-Interpolation)
 - Mit 2 Punkten wird eine gerade Strecke erzeugt
 - Verkettung: Nach Enter wird der letzte Endpunkt automatisch als neuer Startpunkt uebernommen
@@ -438,6 +450,7 @@ Map-Marker sind benannte Ziele auf der Karte (z. B. „Hof", „Feld 1", „Silo
 ### Darstellung
 
 Marker werden als **rote Pin-Symbole** dargestellt:
+
 - Pin-Spitze sitzt exakt auf dem Node-Zentrum
 - Rote Fuellung mit dunkelrotem Rand
 - Groesse: 2.0 Welteinheiten
@@ -523,7 +536,7 @@ flowchart TD
 | **POI-Marker** | ✅ | Verkaufsstellen, Silos, Tankstellen etc. |
 | **Legende** | ❌ | Farbcodierung der Bodentypen |
 
-4. **Generieren** klicken — die Karte wird berechnet und als Hintergrund geladen
+1. **Generieren** klicken — die Karte wird berechnet und als Hintergrund geladen
 
 ### Layer-Standardeinstellungen
 
@@ -553,6 +566,7 @@ Der Kartenname aus der XML-Datei (z.B. `<MapName>Hoeflingen Valley</MapName>`) w
 - **Trennzeichen-flexibel:** Leerzeichen und Underscores werden als Wildcard behandelt
 
 **Beispiel:** Kartenname `Hoeflingen Valley` findet:
+
 - `FS25_Hoeflingen.zip` ✓
 - `FS25_Hoeflingen_V2.zip` ✓
 - `FS25_Hoeflingen_Valley.zip` ✓
@@ -614,6 +628,7 @@ Die Heightmap wird fuer die korrekte Y-Koordinaten-Berechnung beim XML-Export be
 ### Heightmap-Warnung
 
 Beim Speichern ohne Heightmap erscheint eine Warnung. Sie koennen:
+
 - **Bestaetigen** → Speichern ohne Y-Koordinaten-Aktualisierung
 - **Abbrechen** → Zurueck zum Editor
 
@@ -738,6 +753,7 @@ Alle destruktiven Operationen erzeugen automatisch einen Undo-Snapshot:
 Auch ueber **Edit → Undo / Redo** im Menue verfuegbar (mit Anzeige ob verfuegbar).
 
 **Operationen mit Undo-Support:**
+
 - Nodes hinzufuegen / loeschen
 - Nodes verschieben
 - Verbindungen erstellen / entfernen / aendern

@@ -7,6 +7,7 @@
 Das Standard-Werkzeug fuer Auswahl und Verschiebung von Nodes.
 
 **Funktionen:**
+
 - Einzelklick: Node selektieren (Pick-Radius: 12px)
 - Ctrl+Klick: Additiv selektieren
 - Shift+Klick: Pfad-Selektion (kuerzester Pfad von Anker zu Ziel)
@@ -21,11 +22,13 @@ Das Standard-Werkzeug fuer Auswahl und Verschiebung von Nodes.
 Erstellt Verbindungen zwischen zwei Nodes.
 
 **Workflow:**
+
 1. Ersten Node anklicken → in Toolbar erscheint "Startknoten: [ID] → Waehle Zielknoten"
 2. Zweiten Node anklicken → Verbindung wird erstellt
 3. Werkzeug bleibt aktiv fuer weitere Verbindungen
 
 **Standard-Einstellungen:**
+
 - Richtung: Regular (Einbahn vom Start zum Ziel)
 - Prioritaet: Regular (Hauptstrasse)
 
@@ -36,6 +39,7 @@ Erstellt Verbindungen zwischen zwei Nodes.
 Platziert neue Wegpunkte auf der Karte.
 
 **Workflow:**
+
 - Klick auf eine beliebige Stelle → neuer Node wird an der Welt-Position eingefuegt
 - Der neue Node erhaelt automatisch die naechste freie ID
 
@@ -50,6 +54,7 @@ Erstellt Strecken und Kurse ueber vordefinierte Geometrien. Im Route-Modus stehe
 Zeichnet eine gerade Linie zwischen zwei Punkten mit automatischen Zwischen-Nodes.
 
 **Workflow:**
+
 1. Startpunkt klicken
 2. Endpunkt klicken → Vorschau erscheint
 3. Enter → Strecke wird erstellt
@@ -63,6 +68,7 @@ Zeichnet eine gerade Linie zwischen zwei Punkten mit automatischen Zwischen-Node
 Zeichnet eine Bézier-Kurve (Grad 2 oder 3) mit Steuerpunkten.
 
 **Workflow:**
+
 1. Startpunkt klicken
 2. Endpunkt klicken
 3. Steuerpunkt(e) klicken → Vorschau erscheint
@@ -78,6 +84,7 @@ Zeichnet eine Bézier-Kurve (Grad 2 oder 3) mit Steuerpunkten.
 Zeichnet einen interpolierenden Spline, der durch **alle geklickten Punkte** fuehrt. Im Gegensatz zur Bézier-Kurve (die Steuerpunkte nur annaehert) verlaeuft der Spline exakt durch jeden gesetzten Punkt.
 
 **Workflow:**
+
 1. Beliebig viele Punkte nacheinander klicken (mindestens 2)
 2. Vorschau wird fortlaufend aktualisiert (Cursor = naechster Punkt)
 3. Enter → Spline wird erstellt
@@ -85,6 +92,7 @@ Zeichnet einen interpolierenden Spline, der durch **alle geklickten Punkte** fue
 **Einstellungen:** Min. Abstand (Segment-Laenge) und Anzahl Nodes.
 
 **Besonderheiten:**
+
 - Ab 3 Punkten entsteht eine glatte Kurve (Catmull-Rom-Interpolation)
 - Mit 2 Punkten wird eine gerade Strecke erzeugt
 - Verkettung: Nach Enter wird der letzte Endpunkt automatisch als neuer Startpunkt uebernommen

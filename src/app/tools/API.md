@@ -15,6 +15,7 @@ pub struct ToolManager { /* intern */ }
 ```
 
 **Methoden:**
+
 - `new() → Self` — Erstellt ToolManager mit vorregistrierten Standard-Tools (StraightLine, Bézier Grad 2, Bézier Grad 3, Spline, Bypass, ConstraintRoute)
 - `register(tool)` — Neues Route-Tool registrieren
 - `tool_count() → usize` — Anzahl registrierter Tools
@@ -33,6 +34,7 @@ pub struct ToolManager { /* intern */ }
 Schnittstelle fuer alle Route-Tools (Linie, Kurve, …). Tools sind zustandsbehaftet und erzeugen Preview-Geometrie + `ToolResult`.
 
 **Pflicht-Methoden:**
+
 - `name() → &str` — Anzeigename
 - `icon() → &str` — Icon-Zeichen fuer das Dropdown (rechts vom Label); Default: `""`
 - `description() → &str` — Tooltip-Text
@@ -45,6 +47,7 @@ Schnittstelle fuer alle Route-Tools (Linie, Kurve, …). Tools sind zustandsbeha
 - `is_ready() → bool` — Bereit zur Ausfuehrung?
 
 **Optionale Methoden (Default-Implementierung):**
+
 - `has_pending_input() → bool` — Hat das Tool angefangene Eingaben? (fuer stufenweise Escape-Logik)
 - `on_scroll_rotate(&mut self, delta: f32)` — Scroll-basierte Rotation verarbeiten (z.B. ParkingTool-Winkel-Steuerung)
 - `set_direction(dir)` / `set_priority(prio)` — Editor-Defaults uebernehmen
@@ -63,6 +66,7 @@ Schnittstelle fuer alle Route-Tools (Linie, Kurve, …). Tools sind zustandsbeha
 - `apply_tangent_selection(start, end)` — wendet die im Kontextmenue gewaehlten Tangenten an
 
 **`ToolPreview` Felder**
+
 - `nodes: Vec<Vec2>` — Vorschau-Node-Positionen
 - `connections: Vec<(usize, usize)>` — Index-Paare in `nodes`
 - `connection_styles: Vec<(ConnectionDirection, ConnectionPriority)>` — Stil pro Verbindung (gleiche Laenge wie `connections`)
@@ -77,6 +81,7 @@ Der optionale Teil wurde zusaetzlich in Capability-Traits gekapselt. `RouteTool`
 - `RouteToolChainInput` — `needs_chain_input`, `load_chain`
 
 **Registry-Erweiterungen** (fuer `SegmentRegistry`, siehe [`../use_cases/API.md`](../use_cases/API.md)):
+
 ```rust
 // Wird nach execute() + apply_tool_result() aufgerufen:
 fn make_segment_record(&self, id: u64, node_ids: &[u64]) -> Option<SegmentRecord>;
@@ -119,6 +124,7 @@ Konstruktoren: `CurveTool::new()` (Grad 2), `CurveTool::new_cubic()` (Grad 3).
 Modulstruktur: `state.rs` (Enums, Struct, Ctors), `lifecycle.rs` (RouteTool-Impl), `drag.rs` (Drag-Logik), `config_ui.rs` (egui-Panel), `geometry.rs` (Bézier-Mathe), `tests.rs`
 
 **Cubic-Extras (Grad 3):**
+
 - **Auto-Tangente:** Beim Eintreten in Phase::Control wird automatisch der beste Start-Nachbar gewaehlt (bevorzugt eingehende Verbindungen; max `dot(continuation_dir, chord_dir)`). CP1 und CP2 werden sofort gesetzt.
 - **Virtueller Scheitelpunkt (Apex):** `virtual_apex = B(0.5)` wird als fuenftes Drag-Handle angeboten. Drag verschiebt B(0.5) und passt CP1/CP2 via inverser Bézier-Formel an:
   - Mit Start-Tangente: CP1 fixiert → nur CP2 = `(8·apex − P0 − 3·CP1 − P3) / 3`
@@ -132,6 +138,7 @@ Catmull-Rom-Spline: interpolierende Kurve durch alle geklickten Punkte. Beliebig
 ### `ConstraintRouteTool`
 
 Winkelgeglaettete Route mit automatischen Tangenten-Uebergaengen. Solver-Pipeline:
+
 1. **Approach-Steerer:** Auto-Steuerpunkt am Start (Dot-Product-basierte Nachbar-Auswahl, dynamischer Abstand)
 2. **User-Kontrollpunkte:** Beliebig viele Zwischen-Kontrollpunkte (Phase::ControlNodes)
 3. **Departure-Steerer:** Analog am Ende
@@ -140,6 +147,7 @@ Winkelgeglaettete Route mit automatischen Tangenten-Uebergaengen. Solver-Pipelin
 6. **Resampling:** Finale Punkte auf gleichmaessige Abstaende
 
 **Steuerpunkte (Steerer):**
+
 - Automatisch berechnet aus Nachbar-Richtungen (`connected_neighbors`)
 - Im UI als Steuerpunkte angezeigt (Config-Panel + Viewport)
 - Per Drag im Viewport verschiebbar (wird dann als manuell markiert)
@@ -147,11 +155,13 @@ Winkelgeglaettete Route mit automatischen Tangenten-Uebergaengen. Solver-Pipelin
 - Manuell verschobene Steuerpunkte werden als Kontrollpunkte an den Solver uebergeben
 
 **Solver-Typen:**
+
 - `SolverResult` — Positionen + optionale Approach/Departure-Steuerpunkte
 - `ConstraintRouteInput` — Eingabeparameter fuer den Solver
 - Oeffentliche Helper-Exporte: `constraint_route::solve_route`, `constraint_route::ConstraintRouteInput` (u.a. fuer Benchmarks)
 
 **Solver-Parameter:**
+
 - `max_angle_deg: f32` (5°..135°) — Maximale Richtungsaenderung pro Segment
 - `max_segment_length: f32` — via `SegmentConfig`
 
@@ -168,6 +178,7 @@ Modulstruktur: `state.rs`, `lifecycle.rs`, `geometry.rs`, `drag.rs`, `config_ui.
 Parkplatz-Layout-Generator: Erstellt einen Wendekreis mit Parkreihen in einem konfigurierbaren Raster-Layout.
 
 **Neuer Interaktionsflow (2026-03-05):**
+
 - **Phase::Idle** — Wartet auf Eingabe
 - **Rotation (Alt+Scroll):** `on_scroll_rotate()` callback — aendert `self.angle` kontinuierlich (Viewport-Steuerung)
 - **Phase::Placing (Klick):** Setzt Origin + fixiert Winkel → wandelt zu `Phase::Configuring` um
@@ -178,6 +189,7 @@ Parkplatz-Layout-Generator: Erstellt einen Wendekreis mit Parkreihen in einem ko
 **Phasen-Enum:** `ParkingPhase { Idle, Placing, Configuring, Adjusting }`
 
 **Felder:**
+
 - `phase: ParkingPhase` — Aktueller Interaktions-Status
 - `origin: Option<Vec2>` — Position des Parkplatz-Zentrums (gesetzt in Phase::Placing)
 - `angle: f32` — Rotationswinkel (Radiant; wird via `on_scroll_rotate()` angepasst)
@@ -192,14 +204,17 @@ Parkplatz-Layout-Generator: Erstellt einen Wendekreis mit Parkreihen in einem ko
 - `priority: ConnectionPriority` — Prioritaet fuer die erzeugten Verbindungen
 
 **Lifecycle-Integration:**
+
 - Enthaelt gemeinsamen `ToolLifecycleState` fuer Snap-Radius, letzte erstellte Node-IDs, Recreate-Flag
 - Methoden: `set_snap_radius()`, `last_created_ids()`, `last_end_anchor()`, `needs_recreate()`, `clear_recreate_flag()`, `set_last_created()`
 
 **Segment-Registry:**
+
 - Implementiert `RouteToolRegistry` Trait (`make_segment_record()`, `load_for_edit()`)
 - Speichert Layout-Parameter fuer nachtraegliche Bearbeitung
 
 **Public Exports:**
+
 - `generate_parking_layout(config) → ParkingLayout` — Generiert das Layout (fuer Tests)
 - `build_parking_result(layout, origin, angle, ...) → Vec<Vec2>` — Konvertiert zu Positionen
 - `build_preview(layout, origin, angle, ...) → (Vec<Vec2>, Vec<(usize, usize)>)` — Vorschau-Geometrie
@@ -213,16 +228,19 @@ Felderkennung: Erkennt das GRLE-Farmland-Polygon an der Klickposition und erzeug
 **Voraussetzung:** `farmland_polygons` muss im `AppState` geladen sein (wird bei Overview-Generierung aus dem Map-ZIP befuellt). Der Toolbar-Button und der Kontextmenue-Eintrag sind deaktiviert wenn keine Farmland-Daten vorliegen.
 
 **Phasen:**
+
 - **`FieldBoundaryPhase::Idle`** — Wartet auf Klick in ein Feld
 - **`FieldBoundaryPhase::Configuring`** — Feldgrenze erkannt, Vorschau aktiv
 
 **Interaktionsflow:**
+
 1. Klick im Idle-Zustand → `find_polygon_at()` → selektiertes Feld gespeichert → Phase::Configuring
 2. Config-Panel: Node-Abstand, Versatz, Begradigen (Douglas-Peucker), Richtung, Prioritaet
 3. Erneuter Klick im Configuring-Zustand → Phase::Idle (Auswahl zuruecksetzen)
 4. Confirm-Button → `execute()` → geschlossener Ring mit N Nodes und N Verbindungen (0→1, 1→2, …, N−1→0)
 
 **Konfiguration:**
+
 - `node_spacing: f32` — Abstand zwischen Nodes (1–50 m; Standard 10 m)
 - `offset: f32` — Versatz nach innen (<0) oder aussen (>0) in Metern (−20..+20)
 - `straighten_tolerance: f32` — Douglas-Peucker-Toleranz (0..10 m; 0 = keine Vereinfachung)
@@ -230,6 +248,7 @@ Felderkennung: Erkennt das GRLE-Farmland-Polygon an der Klickposition und erzeug
 - `priority: ConnectionPriority` — Verbindungsprioriaet (Standard: Regular)
 
 **Felder:**
+
 ```rust
 pub struct FieldBoundaryTool {
     pub(crate) phase: FieldBoundaryPhase,
@@ -245,6 +264,7 @@ pub struct FieldBoundaryTool {
 ```
 
 **Interne Ring-Berechnung:**
+
 1. `offset_polygon()` — Polygon nach innen/aussen verschieben
 2. `simplify_polygon()` — Douglas-Peucker vereinfachen
 3. `resample_by_distance()` — Gleichmaessiges Resampling mit `node_spacing`
@@ -259,25 +279,30 @@ Modulstruktur: `mod.rs` (Re-Exporte), `state.rs` (Struct, Phasen-Enum, Default),
 Parallele Ausweichstrecke einer selektierten Kette mit S-förmigen An-/Abfahrten. Das Tool benötigt eine Eingabe-Kette (via `load_chain()`), generiert dann automatisch die Bypass-Positionen und erstellt neue Nodes mit entsprechenden Verbindungen.
 
 **Input-Modus:** Chain-basiert (nutzt `RouteToolChainInput` Trait).
+
 - `needs_chain_input() → true`
 - `load_chain(positions, start_id, end_id)` — Laedt die Kette aus der User-Selektion
 
 **Konfiguration:**
+
 - `offset: f32` — Seitlicher Versatz in Welteinheiten (positiv = links, negativ = rechts)
 - `base_spacing: f32` — Abstand zwischen Nodes auf der Hauptstrecke
 - `direction: ConnectionDirection` — Richtung fuer die erzeugten Verbindungen
 - `priority: ConnectionPriority` — Prioritaet fuer die erzeugten Verbindungen
 
 **Caching:**
+
 - `cached_positions` — Gecachte Bypass-Positionen (wird invalidiert bei Config-Aenderung)
 - `cached_connections` — Gecachte Preview-Connections inkl. Start/End-Anker
 
 **Lifecycle-Integration:**
+
 - Enthaelt gemeinsamen `ToolLifecycleState` fuer Snap-Radius, letzte erstellte Node-IDs, Recreate-Flag
 - Methoden: `set_snap_radius()`, `last_created_ids()`, `last_end_anchor()`, `needs_recreate()`, `clear_recreate_flag()`, `set_last_created()`
 - Nutzt `lifecycle.save_created_ids()` zur Verwaltung erstellter IDs
 
 **Public Exports:**
+
 - `compute_bypass_positions(chain, offset, base_spacing) → Option<(Vec<Vec2>, f32)>` — Berechnet Bypass-Positionen und Uebergangslaenge (fuer Benchmarks + Tests)
 
 Modulstruktur: `state.rs` (Struct + Config), `lifecycle.rs` (RouteTool-Impl + Lifecycle-Delegation), `config_ui.rs` (egui-Panel), `geometry.rs` (Bypass-Mathe), `tests.rs` (15 Unit-Tests)
@@ -295,6 +320,7 @@ Hilfsfunktionen: `angle_to_compass`, `node_count_from_length`, `populate_neighbo
 ### `tangent.rs`
 
 **`TangentSource`** — Tangenten-Quelle am Start-/Endpunkt (fuer Curve + Spline):
+
 - `None` — Kein Tangenten-Vorschlag
 - `Connection { neighbor_id, angle }` — Tangente aus bestehender Verbindung
 
@@ -305,12 +331,14 @@ Hilfsfunktionen: `angle_to_compass`, `node_count_from_length`, `populate_neighbo
 **`ToolLifecycleState`**, **`SegmentConfig`**, **`LastEdited`**
 
 **`SegmentConfig`** — Gekapselte Konfiguration fuer Segment-Laenge und Node-Anzahl:
+
 - `max_segment_length: f32` — Maximaler Abstand zwischen Zwischen-Nodes
 - `node_count: usize` — Gewuenschte Anzahl Nodes (inkl. Start+End)
 - `last_edited: LastEdited` — Welcher Wert zuletzt geaendert wurde (bestimmt Sync-Richtung)
 - `sync_from_length(length)` — Synchronisiert abhaengigen Wert aus Streckenlaenge
 
 **`ToolLifecycleState`-Methoden:**
+
 - `save_created_ids(&mut self, ids: &[u64])` — Speichert erstellte Node-IDs und setzt das Recreate-Flag zurueck
 - `has_last_created() → bool` — Prueft ob letzte erstellte IDs vorhanden sind
 - `chaining_start_anchor() → Option<ToolAnchor>` — Gibt den End-Anker fuer die Verkettung zurueck, wobei `NewPosition` zu `ExistingNode` hochgestuft wird (verhindert doppelte Nodes am Verkettungspunkt)
@@ -321,6 +349,7 @@ Hilfsfunktionen: `angle_to_compass`, `node_count_from_length`, `populate_neighbo
 **`impl_lifecycle_delegation!`** — Makro zur Delegation der Standard-RouteTool-Lifecycle-Methoden (`set_direction`, `set_priority`, `set_snap_radius`, `last_created_ids`, `last_end_anchor`, `needs_recreate`, `clear_recreate_flag`, Inkrement/Decrement-Helfer) an die gemeinsamen Felder. Eliminiert Boilerplate pro Tool.
 
 Der Makro-Flow fuer `set_last_created` ist vereinheitlicht:
+
 1. `current_end_anchor()` uebernehmen
 2. `save_anchors_for_recreate(road_map)` aufrufen
 3. `lifecycle.save_created_ids(ids)` ausfuehren
