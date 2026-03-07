@@ -1,11 +1,14 @@
 #!/usr/bin/env bash
 # CI-Check: Architektur-Guardrails fuer Schichtentrennung.
 #
-# Regel: src/ui/ darf NICHT direkt aus crate::core importieren.
-# UI-Code muss Core-Typen ueber die Re-Exports in crate::app beziehen.
-#
-# Verwendung:
-#   ./scripts/check_layer_boundaries.sh
+# Regeln (Importrichtungen):
+#   UI       → App → Core (niemals crate::core direkt)
+#   UI       darf nicht crate::xml oder crate::render importieren
+#   Render   → Shared (niemals crate::app oder crate::ui)
+#   Core     darf nicht UI/Render/App importieren
+#   Shared   darf nicht crate::core direkt importieren (nur Crate-Root-Re-Exports)
+#   XML      darf nicht App/UI/Render importieren
+#   use_cases duerfen nicht tools-interne Submodule importieren
 #   make check-layers   (wenn in Makefile eingebunden)
 
 set -euo pipefail
@@ -78,6 +81,15 @@ USE_CASES_TOOLS_VIOLATIONS=$(grep -rn 'crate::app::tools::' src/app/use_cases/ -
 if [ -n "$USE_CASES_TOOLS_VIOLATIONS" ]; then
     echo "FEHLER: use_cases importiert aus tools-internen Submodulen (gemeinsame Logik muss in shared liegen):"
     echo "$USE_CASES_TOOLS_VIOLATIONS"
+    VIOLATIONS=$((VIOLATIONS + 1))
+fi
+
+# Regel 9: shared darf nicht direkt aus crate::core importieren
+# (Core-Typen muessen ueber den Crate-Root eingebunden werden, z.B. crate::Camera2D)
+SHARED_CORE_VIOLATIONS=$(grep -rn 'crate::core' src/shared/ --include='*.rs' 2>/dev/null || true)
+if [ -n "$SHARED_CORE_VIOLATIONS" ]; then
+    echo "FEHLER: shared importiert direkt aus crate::core (Crate-Root-Re-Exports verwenden):"
+    echo "$SHARED_CORE_VIOLATIONS"
     VIOLATIONS=$((VIOLATIONS + 1))
 fi
 
