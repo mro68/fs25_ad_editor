@@ -209,4 +209,3 @@ fn test_escape_route_tool_idle_no_selection_switches_to_select() {
         }
     )));
 }
-

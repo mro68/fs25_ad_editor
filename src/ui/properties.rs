@@ -126,7 +126,10 @@ fn render_single_node_info(
             .selected_text(format!("{:?}", current_flag))
             .show_ui(ui, |ui| {
                 for (flag, label) in &editable_flags {
-                    if ui.selectable_value(&mut current_flag, *flag, *label).changed() {
+                    if ui
+                        .selectable_value(&mut current_flag, *flag, *label)
+                        .changed()
+                    {
                         events.push(AppIntent::NodeFlagChangeRequested {
                             node_id,
                             flag: *flag,
@@ -280,5 +283,3 @@ fn render_segment_edit_buttons(
         }
     }
 }
-
-
