@@ -99,6 +99,21 @@
   - [x] `handlers::segment::toggle_lock()` — neuer Handler
   - [x] `ui::segment_overlay`: `render_segment_overlays()` / `SegmentOverlayEvent::LockToggled` — Viewport-Overlay mit Rahmen und klickbaren Lock-Icons
 
+- [x] **Segment-Fixes (2026-03-07)**
+  - [x] **Bug A: Multi-Selection Dimming** (`render_scene.rs::compute_dimmed_ids`) — Korrekter Dimm-Pass über alle Records: Nodes werden nur gedimmt wenn ihr Segment mind. einen selektierten Node hat und der Node selbst NICHT selektiert ist
+  - [x] **Bug B: Lock-Icon bei Multi-Selection** (`segment_overlay.rs::render_segment_overlays`) — Lock-Icon-Deduplizierung per Segment-ID; bei Multi-Selection werden mehrere Icons korrekt gezeichnet
+  - [x] **Bug C: edit_segment bewahrt Anker-Nodes** (`handlers/editing.rs::edit_segment`) — ExistingNode-Anker werden mit HashSet ausgeschlossen; nur innere Nodes werden gelöscht, Start-/End-Anker bleiben erhalten
+
+- [x] **RouteOffsetTool — Strecke Versetzen (2026-03-07)**
+  - [x] Neues Modul `src/app/tools/route_offset/` (state.rs, geometry.rs, lifecycle.rs, config_ui.rs, tests.rs)
+  - [x] `SegmentKind::RouteOffset` + `TOOL_INDEX_ROUTE_OFFSET = 8`
+  - [x] `parallel_offset()` + `local_perp()` nach `common/geometry.rs` extrahiert (gemeinsam mit BypassTool)
+  - [x] `ToolResult.nodes_to_remove: Vec<u64>` — Original-Nodes im selben Undo-Schritt entfernbar
+  - [x] `RouteTool::set_chain_inner_ids()` — neue Trait-Methode für explizite innere Ketten-IDs
+  - [x] `handlers::route_tool::init_chain_if_needed()` — lädt Kette + setzt innere IDs via `set_chain_inner_ids()`
+  - [x] Toolbar-Eintrag `⇶ Strecke versetzen` (Slot 8 im ToolManager)
+  - [x] Config-Panel: Links/Rechts-Versatz-Checkboxen, Distanz-DragValues mit Mausrad, Original-beibehalten-Checkbox, Knotenabstand
+
 - [x] **Felderkennung (FieldBoundaryTool)** (2026-03-05, Branch `feat/field-boundary-detection`)
   - [x] `crates/fs25_map_overview`: Moore-Neighbor-Boundary-Tracing → `FarmlandPolygon` (Pixel-Koordinaten)
   - [x] `core::farmland`: `FieldPolygon` (Weltkoordinaten), `point_in_polygon()`, `simplify_polygon()`, `offset_polygon()`, `find_polygon_at()`
@@ -198,6 +213,10 @@
     - [x] `app/API.md`: farmland_polygons in AppState, SegmentKind::FieldBoundary, TOOL_INDEX_FIELD_BOUNDARY
     - [x] `app/tools/API.md`: FieldBoundaryTool vollstaendig dokumentiert (Phasen, Felder, Ring-Berechnung)
     - [x] `ui/API.md`: Toolbar-Button, Context-Menu Extras-Submenu, Precondition::FarmlandPolygonsLoaded
+  - [x] **Doku-Sync RouteOffsetTool + Segment-Fixes (2026-03-07)**
+    - [x] `app/API.md`: SegmentKind::RouteOffset, TOOL_INDEX_ROUTE_OFFSET = 8, beide SegmentKind-Blöcke
+    - [x] `app/tools/API.md`: RouteOffsetTool-Sektion (Felder, Config, Execute-Logik, Modulstruktur); ToolManager-Tabelle Slot 8; set_chain_inner_ids() in RouteTool-Trait; parallel_offset/local_perp in common/geometry.rs
+    - [x] ROADMAP.md: RouteOffsetTool + alle drei Segment-Fixes als abgeschlossen markiert
     - [x] ROADMAP.md: Felderkennung als abgeschlossen markiert
   - [x] **Doku-Sync Zoom-Kompensation + Alle Felder nachzeichnen (2026-03-06)**
     - [x] `shared/API.md`: `zoom_compensation_max`-Feld, `DEFAULT_ZOOM_COMPENSATION_MAX`-Konstante und `zoom_compensation()`-Methode ergaenzt
