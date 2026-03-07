@@ -264,4 +264,6 @@ pub enum AppCommand {
     // ── Extras ───────────────────────────────────────────────────────
     /// Alle Farmland-Polygone als Wegpunkt-Ring nachzeichnen (Batch-Operation)
     TraceAllFields,
+    /// Straßenoverlay ein-/ausblenden
+    ToggleRoadOverlay,
 }

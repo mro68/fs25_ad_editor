@@ -215,6 +215,24 @@ pub fn render_menu(ctx: &egui::Context, state: &AppState) -> Vec<AppIntent> {
                     events.push(AppIntent::TraceAllFieldsRequested);
                     ui.close();
                 }
+
+                let has_road_mask = state.road_mask.is_some();
+                let road_label = if state.view.show_road_overlay {
+                    "\u{2713} \u{1F6E3} Strassenoverlay"
+                } else {
+                    "\u{1F6E3} Strassenoverlay"
+                };
+                if ui
+                    .add_enabled(has_road_mask, egui::Button::new(road_label))
+                    .on_disabled_hover_text(
+                        "Hintergrundbild mit Strassen-Weight-Maps zuerst generieren",
+                    )
+                    .on_hover_text("Strassenmaske als Overlay ein-/ausblenden")
+                    .clicked()
+                {
+                    events.push(AppIntent::ToggleRoadOverlay);
+                    ui.close();
+                }
             });
 
             ui.menu_button("Help", |ui| {

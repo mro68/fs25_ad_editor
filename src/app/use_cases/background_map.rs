@@ -5,7 +5,7 @@ use crate::app::AppState;
 use crate::core::{self, BackgroundMap, FieldPolygon};
 use anyhow::Result;
 use glam::Vec2;
-use image::GenericImageView;
+use image::{DynamicImage, GenericImageView, GrayImage};
 use std::path::Path;
 use std::sync::Arc;
 
@@ -15,6 +15,14 @@ use std::sync::Arc;
 fn json_path_for(image_path: &str) -> String {
     let p = Path::new(image_path);
     p.with_extension("json").to_string_lossy().into_owned()
+}
+
+/// Leitet den Pfad der Straßenmaske aus dem Bildpfad ab.
+///
+/// Beispiel: `overview.jpg` → `overview_roads.png`
+fn road_mask_path_for(image_path: &str) -> String {
+    let stem = image_path.rsplit_once('.').map_or(image_path, |(s, _)| s);
+    format!("{}_roads.png", stem)
 }
 
 /// Oeffnet den Background-Map-Auswahl-Dialog.
@@ -54,6 +62,9 @@ pub fn load_background_map(
 
     // Farmland-Polygone aus begleitender JSON-Datei laden (falls vorhanden)
     load_farmland_json(state, &path);
+    // Straßenmaske neben der Bilddatei laden (falls vorhanden)
+    state.road_mask = None;
+    load_road_mask_png(state, &path);
 
     Ok(())
 }
@@ -152,6 +163,9 @@ pub fn load_background_from_zip(
 
     // Farmland-Polygone aus begleitender JSON-Datei neben dem ZIP laden (falls vorhanden)
     load_farmland_json(state, &zip_path);
+    // Straßenmaske neben der Bilddatei laden (falls vorhanden)
+    state.road_mask = None;
+    load_road_mask_png(state, &zip_path);
 
     // Speichern als overview.jpg anbieten (falls XML geladen)
     prompt_save_as_overview(state);
@@ -218,6 +232,9 @@ pub fn generate_overview_with_options(state: &mut AppState) -> Result<()> {
         state.farmland_polygons = None;
     }
 
+    // Straßenmaske aus Overview-Ergebnis speichern
+    state.road_mask = overview.road_mask.map(Arc::new);
+
     let bg_map = BackgroundMap::from_image(overview.image, &zip_path, None)?;
 
     state.view.background_map = Some(Arc::new(bg_map));
@@ -279,6 +296,8 @@ pub fn save_background_as_overview(state: &mut AppState, path: String) -> Result
 
     // Farmland-Polygone als JSON parallel zur Bilddatei speichern
     save_farmland_json(state, &path);
+    // Straßenmaske als PNG parallel zur Bilddatei speichern
+    save_road_mask_png(state, &path);
 
     Ok(())
 }
@@ -329,4 +348,79 @@ pub fn load_farmland_json(state: &mut AppState, image_path: &str) {
         },
         Err(e) => log::warn!("Farmland-JSON konnte nicht gelesen werden: {}", e),
     }
+}
+
+/// Speichert die Straßenmaske als PNG-Datei neben der Bilddatei.
+///
+/// Pfad wird aus dem Bildpfad abgeleitet (z.B. `overview.jpg` → `overview_roads.png`).
+/// Ohne Straßenmaske im State wird nichts geschrieben.
+fn save_road_mask_png(state: &AppState, image_path: &str) {
+    let Some(ref mask) = state.road_mask else {
+        return;
+    };
+    let mask_path = road_mask_path_for(image_path);
+    let dyn_image = DynamicImage::ImageLuma8(mask.as_ref().clone());
+    match dyn_image.save(&mask_path) {
+        Ok(()) => log::info!(
+            "Straßenmaske gespeichert: {} ({}x{})",
+            mask_path,
+            mask.width(),
+            mask.height()
+        ),
+        Err(e) => log::warn!("Straßenmaske konnte nicht gespeichert werden: {}", e),
+    }
+}
+
+/// Laedt die Straßenmaske aus einer PNG-Datei neben der Bilddatei.
+///
+/// Prueft ob eine `_roads.png`-Datei neben dem Bildpfad existiert und laedt
+/// die Grayscale-Daten ein. Wird beim Auto-Load der overview.jpg aufgerufen.
+pub fn load_road_mask_png(state: &mut AppState, image_path: &str) {
+    let mask_path = road_mask_path_for(image_path);
+    let p = Path::new(&mask_path);
+    if !p.is_file() {
+        return;
+    }
+    match image::open(p) {
+        Ok(img) => {
+            let gray = img.to_luma8();
+            log::info!(
+                "Straßenmaske geladen: {} ({}x{})",
+                mask_path,
+                gray.width(),
+                gray.height()
+            );
+            state.road_mask = Some(Arc::new(gray));
+        }
+        Err(e) => log::warn!("Straßenmaske konnte nicht geladen werden: {}", e),
+    }
+}
+
+/// Erzeugt eine Kopie der BackgroundMap mit aufgeblendeter Straßenmaske.
+///
+/// Pixel der Maske mit Wert > 0 werden mit Asphalt-Grau (`#505050`) ueberlagert.
+/// Alphagewichtung: 50 % bezogen auf den Maskenwert (0–255).
+pub fn apply_road_overlay(bg_map: &BackgroundMap, road_mask: &GrayImage) -> Result<BackgroundMap> {
+    let mut rgb = bg_map.image_data().to_rgb8();
+    let overlay_color = [80u8, 80, 80]; // #505050 Asphalt-Grau
+    let overlay_alpha = 0.5_f32;
+
+    let mask_w = road_mask.width();
+    let mask_h = road_mask.height();
+
+    for (x, y, pixel) in rgb.enumerate_pixels_mut() {
+        // Grenzen pruefen fuer den Fall unterschiedlicher Aufloesungen
+        if x >= mask_w || y >= mask_h {
+            continue;
+        }
+        let mask_val = road_mask.get_pixel(x, y)[0];
+        if mask_val > 0 {
+            let blend = (mask_val as f32 / 255.0) * overlay_alpha;
+            pixel[0] = (pixel[0] as f32 * (1.0 - blend) + overlay_color[0] as f32 * blend) as u8;
+            pixel[1] = (pixel[1] as f32 * (1.0 - blend) + overlay_color[1] as f32 * blend) as u8;
+            pixel[2] = (pixel[2] as f32 * (1.0 - blend) + overlay_color[2] as f32 * blend) as u8;
+        }
+    }
+
+    BackgroundMap::from_image(DynamicImage::ImageRgb8(rgb), "road-overlay", None)
 }

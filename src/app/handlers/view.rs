@@ -82,3 +82,20 @@ pub fn generate_overview_with_options(state: &mut AppState) -> anyhow::Result<()
 pub fn save_background_as_overview(state: &mut AppState, path: String) -> anyhow::Result<()> {
     use_cases::background_map::save_background_as_overview(state, path)
 }
+
+/// Schaltet das Stra\u00dfenoverlay auf der Hintergrundkarte ein oder aus.
+///
+/// Setzt `background_dirty = true`, damit die GPU-Textur
+/// beim naechsten Frame neu aufgebaut wird.
+pub fn toggle_road_overlay(state: &mut AppState) {
+    state.view.show_road_overlay = !state.view.show_road_overlay;
+    state.view.background_dirty = true;
+    log::info!(
+        "Strassenoverlay: {}",
+        if state.view.show_road_overlay {
+            "an"
+        } else {
+            "aus"
+        }
+    );
+}

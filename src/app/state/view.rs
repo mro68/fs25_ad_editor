@@ -19,6 +19,10 @@ pub struct ViewState {
     pub background_scale: f32,
     /// Signalisiert, dass die Background-Map neu in den GPU-Renderer hochgeladen werden muss
     pub background_dirty: bool,
+    /// Ob das Straßenoverlay auf dem Hintergrundbild angezeigt wird.
+    ///
+    /// Nur wirksam wenn `AppState.road_mask` gesetzt ist.
+    pub show_road_overlay: bool,
 }
 
 impl ViewState {
@@ -32,6 +36,7 @@ impl ViewState {
             background_visible: true,
             background_scale: 1.0,
             background_dirty: false,
+            show_road_overlay: false,
         }
     }
 }

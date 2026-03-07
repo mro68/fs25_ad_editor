@@ -309,6 +309,7 @@ pub fn map_intent_to_commands(state: &AppState, intent: AppIntent) -> Vec<AppCom
 
         // ── Extras ───────────────────────────────────────────────────────
         AppIntent::TraceAllFieldsRequested => vec![AppCommand::TraceAllFields],
+        AppIntent::ToggleRoadOverlay => vec![AppCommand::ToggleRoadOverlay],
     }
 }
 

@@ -298,6 +298,7 @@ impl AppController {
 
             // === Extras ===
             AppCommand::TraceAllFields => handlers::editing::trace_all_fields(state),
+            AppCommand::ToggleRoadOverlay => handlers::view::toggle_road_overlay(state),
         }
 
         Ok(())
