@@ -241,14 +241,17 @@ pub fn render_command_palette(
 
     if !filtered_indices.is_empty() {
         if arrow_down {
-            state.selected_index = (state.selected_index + 1) % filtered_indices.len(); // layer-ok
+            let next_index = (state.selected_index + 1) % filtered_indices.len();
+            state.selected_index = next_index; // layer-ok
         }
         if arrow_up {
-            state.selected_index = if state.selected_index == 0 { // layer-ok
+            let selected_index = state.selected_index;
+            let wrapped_index = if selected_index == 0 {
                 filtered_indices.len() - 1
             } else {
-                state.selected_index - 1
+                selected_index - 1
             };
+            state.selected_index = wrapped_index; // layer-ok
         }
     }
 
