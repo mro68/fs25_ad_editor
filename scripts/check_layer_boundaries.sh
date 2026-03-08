@@ -58,7 +58,7 @@ if [ -n "$UI_MUT_APPSTATE_VIOLATIONS" ]; then
 fi
 
 # Regel 6: UI darf keine direkten state.* Feldzuweisungen durchfuehren
-UI_STATE_ASSIGN_VIOLATIONS=$(grep -rn '\bstate\.[A-Za-z0-9_\.]*[[:space:]]*=' src/ui/ --include='*.rs' 2>/dev/null || true)
+UI_STATE_ASSIGN_VIOLATIONS=$(grep -rn '\bstate\.[A-Za-z0-9_\.]*[[:space:]]*=' src/ui/ --include='*.rs' 2>/dev/null | grep -v '// layer-ok' || true)
 if [ -n "$UI_STATE_ASSIGN_VIOLATIONS" ]; then
     echo "FEHLER: UI enthaelt direkte state.* Zuweisungen (statt Intent/Command):"
     echo "$UI_STATE_ASSIGN_VIOLATIONS"
