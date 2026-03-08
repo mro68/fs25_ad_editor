@@ -246,6 +246,10 @@
     - [x] `core/API.md`: `SpatialIndex` — Hinweis auf `ImmutableKdTree` von kiddo ergaenzt
     - [x] `docs/ARCHITECTURE_PLAN.md`: Stand aktualisiert, Zoom-Kompensation- und Decimation-Pattern beschrieben
     - [x] ROADMAP.md: Stand, Prozente und neue Feature-Eintraege aktualisiert
+  - [x] **Doku-Sync UI-Toolbar-Redesign (2026-03-08)**
+    - [x] `render_toolbar()` Docstring aktualisiert: schwebendes `egui::Window` statt `TopBottomPanel`, Gruppen-Layout mit Icon-Buttons beschrieben
+    - [x] `ui/API.md`: verwaiste Bullet-Points durch vollständige `render_toolbar`-Sektion ersetzt; `route_tool_icon()`-Tabelle ergänzt
+    - [x] `docs/ARCHITECTURE_PLAN.md`: `toolbar.rs`-Beschreibung auf schwebendes Window aktualisiert
   - [x] **Tool-Encapsulation-Audit (2026-03-07, Branch `feat/tool-encapsulation-audit`)**
     - [x] Encapsulation-Audit: 0 Layer-Boundary-Verletzungen (keine wgpu/render-Imports in Tools)
     - [x] API-Unification: Alle 9 Tools nutzen RouteTool-Trait + 4 Capability-Traits konsistent

@@ -105,7 +105,7 @@ graph BT
   - `context_menu.rs` — Rechtsklick-Kontextmenü
 - `menu.rs` — Top-Menü-Leiste
 - `status.rs` — Statusleiste
-- `toolbar.rs` — Werkzeugleiste
+- `toolbar.rs` — Werkzeugleiste (schwebendes `egui::Window`, Icon-Buttons in drei Gruppen: Haupt-Tools, Route-Tools, Aktionen)
 - `properties.rs` — Properties-Panel
   - intern modularisiert über `properties/`-Submodule (u. a. Selektoren und Distanzen-Panel)
 - `options_dialog.rs` — Optionen-Dialog (Farben, Größen, Zoom)
