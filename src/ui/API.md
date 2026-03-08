@@ -94,8 +94,50 @@ pub fn render_segment_overlays(
 - Gesperrt (`locked = true`): gelber Rahmen, 15%-schwarze Fuellung, geschlossenes Schloss-Icon
 ---
 
-- Select / Connect / AddNode / Route (immer sichtbar)
-- Linien-Tool-Dropdown: Zeigt alle Route-Tools ausser FieldBoundaryTool
+### `render_toolbar`
+
+Rendert die schwebende Werkzeugleiste als `egui::Window` und gibt erzeugte Intents zurück.
+
+```rust
+pub fn render_toolbar(ctx: &egui::Context, state: &AppState) -> Vec<AppIntent>
+```
+
+Das Fenster ist zusammenklappbar, nicht skalierbar und standardmäßig bei `(300, 40)` positioniert.
+Die Buttons sind per `horizontal_wrapped` Layout in drei Gruppen angeordnet:
+
+- **Haupt-Tools:** Select (1), Connect (2), AddNode (3) — Icon-Buttons, Tooltip mit Shortcut
+- **Route-Tools:** alle `ToolManager`-Einträge außer `FieldBoundaryTool` — Icon-Buttons via `route_tool_icon()`. Auswahl erzeugt `SetEditorToolRequested` + `SelectRouteToolRequested { index }`.
+- **Aktionen:** Delete-Button (disabled wenn keine Selektion vorhanden)
+
+Bei aktivem Connect- oder Route-Tool wird nach einem Separator ein Status-Label gerendert.
+
+Wenn `state.view.background_map.is_some()`, erscheint eine zweite Hintergrund-Steuergruppe
+(Sichtbarkeit-Toggle, Skalierungs-`-`/`+`/`1:1`-Buttons).
+
+---
+
+### `route_tool_icon` (privat)
+
+Gibt die `ImageSource` fuer das SVG-Icon eines Route-Tools anhand des Slot-Index zurück.
+
+```rust
+fn route_tool_icon(idx: usize) -> egui::ImageSource<'static>
+```
+
+| Index | Icon-Datei |
+|-------|------------|
+| 0     | `assets/new/minus.svg` (StraightLineTool) |
+| 1     | `assets/icon_bezier_quadratic.svg` |
+| 2     | `assets/icon_bezier_cubic.svg` |
+| 3     | `assets/icon_spline.svg` |
+| 4     | `assets/icon_bypass.svg` |
+| 5     | `assets/icon_constraint_route.svg` |
+| 6     | `assets/icon_parking.svg` |
+| 7     | `assets/icon_field_boundary.svg` |
+| 8     | `assets/icon_route_offset.svg` |
+| _     | `assets/new/minus.svg` (Fallback) |
+
+---
 
 ### `render_properties_panel`
 

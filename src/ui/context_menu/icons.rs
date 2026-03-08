@@ -73,7 +73,7 @@ pub(super) fn command_icon(
             egui::include_image!("../../../assets/icon_add_node.svg")
         }
         CommandId::SetToolRouteStraight | CommandId::RouteStraight => {
-            egui::include_image!("../../../assets/icon_straight_road.svg")
+            egui::include_image!("../../../assets/new/minus.svg")
         }
         CommandId::SetToolRouteConstraint | CommandId::RouteConstraint => {
             egui::include_image!("../../../assets/icon_constraint_route.svg")
