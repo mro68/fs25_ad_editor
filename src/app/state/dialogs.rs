@@ -210,6 +210,10 @@ pub struct UiState {
     pub show_overview_dialog: bool,
     /// Ob die Command-Palette angezeigt werden soll
     pub show_command_palette: bool,
+    /// Ob die freie Tool-Palette angezeigt wird (Toggle via 'T')
+    pub show_tool_palette: bool,
+    /// Position der Tool-Palette (Mausposition beim Oeffnen)
+    pub tool_palette_pos: Option<egui::Pos2>,
     /// Ob die Heightmap-Warnung angezeigt werden soll
     pub show_heightmap_warning: bool,
     /// Ob die Heightmap-Warnung fuer diese Save-Operation bereits bestaetigt wurde
@@ -248,6 +252,8 @@ impl UiState {
             show_background_map_dialog: false,
             show_overview_dialog: false,
             show_command_palette: false,
+            show_tool_palette: false,
+            tool_palette_pos: None,
             show_heightmap_warning: false,
             heightmap_warning_confirmed: false,
             pending_save_path: None,

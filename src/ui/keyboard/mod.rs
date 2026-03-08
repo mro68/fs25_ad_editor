@@ -196,6 +196,27 @@ pub(super) fn collect_keyboard_intents(
         });
     }
 
+    // T-Taste: Tool-Palette toggling
+    let should_toggle_tool_palette = ui.input(|i| {
+        i.events.iter().any(|event| {
+            matches!(
+                event,
+                egui::Event::Key {
+                    key: egui::Key::T,
+                    pressed: true,
+                    modifiers,
+                    ..
+                } if {
+                    let command = modifiers.command || modifiers.ctrl;
+                    !command && !modifiers.shift && !modifiers.alt
+                }
+            )
+        })
+    });
+    if should_toggle_tool_palette {
+        events.push(AppIntent::ToggleToolPalette);
+    }
+
     if (modifiers.command || modifiers.ctrl) && key_k_pressed {
         events.push(AppIntent::CommandPaletteToggled);
     }

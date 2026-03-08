@@ -294,3 +294,42 @@ fn test_text_input_focus_allows_escape_behavior() {
         .iter()
         .any(|event| matches!(event, AppIntent::ClearSelectionRequested)));
 }
+
+#[test]
+fn test_t_toggles_tool_palette_without_modifiers() {
+    let events = collect_with_key_event(
+        egui::Event::Key {
+            key: egui::Key::T,
+            physical_key: None,
+            pressed: true,
+            repeat: false,
+            modifiers: egui::Modifiers::default(),
+        },
+        IndexSet::new(),
+    );
+
+    assert!(events
+        .iter()
+        .any(|event| matches!(event, AppIntent::ToggleToolPalette)));
+}
+
+#[test]
+fn test_t_with_ctrl_does_not_toggle_tool_palette() {
+    let events = collect_with_key_event(
+        egui::Event::Key {
+            key: egui::Key::T,
+            physical_key: None,
+            pressed: true,
+            repeat: false,
+            modifiers: egui::Modifiers {
+                ctrl: true,
+                ..egui::Modifiers::default()
+            },
+        },
+        IndexSet::new(),
+    );
+
+    assert!(!events
+        .iter()
+        .any(|event| matches!(event, AppIntent::ToggleToolPalette)));
+}

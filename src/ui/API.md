@@ -8,7 +8,9 @@ Das `ui`-Modul enthält egui-UI-Komponenten (Menüs, Statusbar, Input-Handling, 
 
 - `menu.rs` — Top-Menü-Leiste
 - `status.rs` — Statusleiste
-- `toolbar.rs` — Werkzeugleiste
+- `toolbar.rs` — Schwebende Tool-Palette (Toggle via `T`)
+- `icons.rs` — Gemeinsame Icon-Konstanten/Helfer (`ICON_SIZE`, `svg_icon`, `route_tool_icon`)
+- `defaults_panel.rs` — Linke Sidebar (Werkzeuge, Routen, Aktionen, Defaults, Hintergrund)
 - `command_palette.rs` — Command Palette Overlay (Suche + Intent-Auswahl)
 - `properties.rs` — Properties-Panel (Detailanzeige selektierter Nodes)
 - `options_dialog/` — Optionen-Dialog für Laufzeit-Einstellungen (`mod.rs`, `sections.rs`)
@@ -94,48 +96,34 @@ pub fn render_segment_overlays(
 - Gesperrt (`locked = true`): gelber Rahmen, 15%-schwarze Fuellung, geschlossenes Schloss-Icon
 ---
 
-### `render_toolbar`
+### `render_tool_palette`
 
-Rendert die schwebende Werkzeugleiste als `egui::Window` und gibt erzeugte Intents zurück.
+Rendert die freie Tool-Palette als schwebendes `egui::Window` ohne Titelleiste.
+Die Palette wird per `T`-Shortcut geoeffnet und an `UiState.tool_palette_pos` positioniert.
 
 ```rust
-pub fn render_toolbar(ctx: &egui::Context, state: &AppState) -> Vec<AppIntent>
+pub fn render_tool_palette(
+  ctx: &egui::Context,
+  state: &AppState,
+) -> (Vec<AppIntent>, bool)
 ```
 
-Das Fenster ist zusammenklappbar, nicht skalierbar und standardmäßig bei `(300, 40)` positioniert.
-Die Buttons sind per `horizontal_wrapped` Layout in drei Gruppen angeordnet:
+Rueckgabe:
 
-- **Haupt-Tools:** Select (1), Connect (2), AddNode (3) — Icon-Buttons, Tooltip mit Shortcut
-- **Route-Tools:** alle `ToolManager`-Einträge außer `FieldBoundaryTool` — Icon-Buttons via `route_tool_icon()`. Auswahl erzeugt `SetEditorToolRequested` + `SelectRouteToolRequested { index }`.
-- **Aktionen:** Delete-Button (disabled wenn keine Selektion vorhanden)
-
-Bei aktivem Connect- oder Route-Tool wird nach einem Separator ein Status-Label gerendert.
-
-Wenn `state.view.background_map.is_some()`, erscheint eine zweite Hintergrund-Steuergruppe
-(Sichtbarkeit-Toggle, Skalierungs-`-`/`+`/`1:1`-Buttons).
+- `Vec<AppIntent>` fuer Tool-Auswahl (Select/Connect/AddNode + Route-Tools ohne FieldBoundary)
+- `should_close = true` bei Tool-Auswahl oder Klick ausserhalb des Fensters
 
 ---
 
-### `route_tool_icon` (privat)
+### `ui::icons`
 
-Gibt die `ImageSource` fuer das SVG-Icon eines Route-Tools anhand des Slot-Index zurück.
+Gemeinsame UI-Icon-Helfer fuer Tool-Buttons.
 
 ```rust
-fn route_tool_icon(idx: usize) -> egui::ImageSource<'static>
+pub const ICON_SIZE: f32;
+pub fn svg_icon(source: ImageSource<'_>, size: f32) -> Image<'_>;
+pub fn route_tool_icon(idx: usize) -> ImageSource<'static>;
 ```
-
-| Index | Icon-Datei |
-|-------|------------|
-| 0     | `assets/new/minus.svg` (StraightLineTool) |
-| 1     | `assets/icon_bezier_quadratic.svg` |
-| 2     | `assets/icon_bezier_cubic.svg` |
-| 3     | `assets/icon_spline.svg` |
-| 4     | `assets/icon_bypass.svg` |
-| 5     | `assets/icon_constraint_route.svg` |
-| 6     | `assets/icon_parking.svg` |
-| 7     | `assets/icon_field_boundary.svg` |
-| 8     | `assets/icon_route_offset.svg` |
-| _     | `assets/new/minus.svg` (Fallback) |
 
 ---
 
@@ -410,16 +398,13 @@ pub fn paint_preview_polyline(
 
 ### `render_route_defaults_panel`
 
-Linkes Panel fuer Standard-Richtung und -Prioritaet (Icon-Only, vertikal gestapelt).
+Linke Sidebar fuer Werkzeugauswahl, Route-Tools, Aktionen sowie Defaults und Hintergrund.
 
 ```rust
 pub fn render_route_defaults_panel(
   ctx: &egui::Context,
-  default_direction: ConnectionDirection,
-  default_priority: ConnectionPriority,
+  state: &AppState,
 ) -> Vec<AppIntent>
-```
-
 ```
 
 ---
