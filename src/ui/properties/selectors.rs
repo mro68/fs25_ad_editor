@@ -5,13 +5,13 @@ const OPTION_ICON_SIZE: egui::Vec2 = egui::Vec2::new(32.0, 32.0);
 fn direction_icon(direction: ConnectionDirection) -> egui::ImageSource<'static> {
     match direction {
         ConnectionDirection::Regular => {
-            egui::include_image!("../../../assets/icon_direction_regular.svg")
+            egui::include_image!("../../../assets/icons/icon_direction_regular.svg")
         }
         ConnectionDirection::Dual => {
-            egui::include_image!("../../../assets/icon_direction_dual.svg")
+            egui::include_image!("../../../assets/icons/icon_direction_dual.svg")
         }
         ConnectionDirection::Reverse => {
-            egui::include_image!("../../../assets/icon_direction_reverse.svg")
+            egui::include_image!("../../../assets/icons/icon_direction_reverse.svg")
         }
     }
 }
@@ -19,10 +19,10 @@ fn direction_icon(direction: ConnectionDirection) -> egui::ImageSource<'static> 
 fn priority_icon(priority: ConnectionPriority) -> egui::ImageSource<'static> {
     match priority {
         ConnectionPriority::Regular => {
-            egui::include_image!("../../../assets/icon_priority_main.svg")
+            egui::include_image!("../../../assets/icons/icon_priority_main.svg")
         }
         ConnectionPriority::SubPriority => {
-            egui::include_image!("../../../assets/icon_priority_side.svg")
+            egui::include_image!("../../../assets/icons/icon_priority_side.svg")
         }
     }
 }
