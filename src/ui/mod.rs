@@ -11,6 +11,8 @@ pub mod dialogs;
 mod drag;
 /// Editor-Panel fuer die Bearbeitung selektierter Knoten und Verbindungen.
 pub mod edit_panel;
+/// Gemeinsame Icon-Helfer fuer Tool-Buttons.
+pub mod icons;
 /// Viewport-Input-Verarbeitung (Drag, Scroll, Mausklick, Selektion).
 pub mod input;
 mod keyboard;
@@ -26,7 +28,7 @@ pub mod segment_overlay;
 pub mod status;
 /// Live-Vorschau aktiver Werkzeuge im Viewport (Overlay-Rendering).
 pub mod tool_preview;
-/// Werkzeug-Toolbar fuer Werkzeugauswahl und -konfiguration.
+/// Schwebende Tool-Palette fuer Werkzeugauswahl.
 pub mod toolbar;
 
 pub use defaults_panel::render_route_defaults_panel;
@@ -45,4 +47,4 @@ pub use status::render_status_bar;
 pub use tool_preview::{
     paint_clipboard_preview, paint_preview, paint_preview_polyline, render_tool_preview,
 };
-pub use toolbar::render_toolbar;
+pub use toolbar::render_tool_palette;

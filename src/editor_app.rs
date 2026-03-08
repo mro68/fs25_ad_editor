@@ -56,7 +56,7 @@ impl eframe::App for EditorApp {
             .iter()
             .any(|e| !matches!(e, AppIntent::ViewportResized { .. }));
 
-        self.process_events(&events);
+        self.process_events(ctx, &events);
 
         self.sync_background_upload();
 
@@ -106,12 +106,15 @@ impl EditorApp {
 
         ui::render_status_bar(ctx, &self.state);
         events.extend(ui::render_menu(ctx, &self.state));
-        events.extend(ui::render_toolbar(ctx, &self.state));
-        events.extend(ui::render_route_defaults_panel(
-            ctx,
-            self.state.editor.default_direction,
-            self.state.editor.default_priority,
-        ));
+        if self.state.ui.show_tool_palette {
+            let (palette_events, should_close) = ui::render_tool_palette(ctx, &self.state);
+            events.extend(palette_events);
+            if should_close {
+                self.state.ui.show_tool_palette = false;
+                self.state.ui.tool_palette_pos = None;
+            }
+        }
+        events.extend(ui::render_route_defaults_panel(ctx, &self.state));
 
         let road_map_for_properties = self.state.road_map.clone();
         let default_direction = self.state.editor.default_direction;
@@ -451,8 +454,19 @@ impl EditorApp {
         }
     }
 
-    fn process_events(&mut self, events: &[AppIntent]) {
+    fn process_events(&mut self, ctx: &egui::Context, events: &[AppIntent]) {
         for event in events {
+            if matches!(event, AppIntent::ToggleToolPalette) {
+                self.state.ui.show_tool_palette = !self.state.ui.show_tool_palette;
+                if self.state.ui.show_tool_palette {
+                    self.state.ui.tool_palette_pos =
+                        ctx.input(|i| i.pointer.hover_pos().or(i.pointer.latest_pos()));
+                } else {
+                    self.state.ui.tool_palette_pos = None;
+                }
+                continue;
+            }
+
             if let Err(e) = self
                 .controller
                 .handle_intent(&mut self.state, event.clone())
@@ -490,6 +504,7 @@ impl EditorApp {
         if has_meaningful_events
             || ctx.input(|i| i.pointer.is_moving())
             || self.state.ui.show_command_palette
+            || self.state.ui.show_tool_palette
             || self.state.ui.show_heightmap_warning
             || self.state.ui.marker_dialog.visible
             || self.state.show_options_dialog

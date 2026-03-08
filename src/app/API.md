@@ -109,6 +109,8 @@ pub struct UiState {
     pub show_background_map_dialog: bool,
     pub show_overview_dialog: bool,
     pub show_command_palette: bool,
+    pub show_tool_palette: bool,
+    pub tool_palette_pos: Option<egui::Pos2>,
     pub show_heightmap_warning: bool,
     pub heightmap_warning_confirmed: bool,
     pub pending_save_path: Option<String>,
@@ -591,6 +593,7 @@ pub enum AppIntent {
     OptionsChanged { options: Box<EditorOptions> },
     ResetOptionsRequested,
     CommandPaletteToggled,
+    ToggleToolPalette,
 
     // Route-Tool
     RouteToolClicked { world_pos: glam::Vec2, ctrl: bool },

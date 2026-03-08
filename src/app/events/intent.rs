@@ -174,6 +174,8 @@ pub enum AppIntent {
     ResetOptionsRequested,
     /// Command-Palette oeffnen/schliessen
     CommandPaletteToggled,
+    /// Tool-Palette an Mausposition anzeigen/verbergen (T-Taste)
+    ToggleToolPalette,
 
     /// Route-Tool: Viewport-Klick
     RouteToolClicked { world_pos: glam::Vec2, ctrl: bool },

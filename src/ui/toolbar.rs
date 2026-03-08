@@ -1,16 +1,8 @@
-//! Toolbar für Editor-Werkzeugauswahl.
+//! Schwebende Tool-Palette fuer Editor-Werkzeugauswahl.
 
 use crate::app::segment_registry::TOOL_INDEX_FIELD_BOUNDARY;
 use crate::app::{AppIntent, AppState, ConnectionDirection, ConnectionPriority, EditorTool};
-
-// ── SVG-Icon-Konstanten (compile-time eingebettet) ──────────────
-
-const ICON_SIZE: egui::Vec2 = egui::Vec2::new(20.0, 20.0);
-
-/// Erstellt ein `egui::Image` aus einer `ImageSource` in der gewünschten Größe.
-fn svg_icon(source: egui::ImageSource<'_>, size: egui::Vec2) -> egui::Image<'_> {
-    egui::Image::new(source).fit_to_exact_size(size)
-}
+use crate::ui::icons::{route_tool_icon, svg_icon, ICON_SIZE};
 
 fn color32_from_rgba(color: [f32; 4]) -> egui::Color32 {
     egui::Color32::from_rgba_unmultiplied(
@@ -36,34 +28,30 @@ fn accent_icon_color(state: &AppState) -> egui::Color32 {
     }
 }
 
-/// Rendert die schwebende Werkzeugleiste als `egui::Window` und gibt erzeugte Intents zurück.
-///
-/// Das Fenster ist zusammenklappbar und nicht skalierbar. Es enthält drei Gruppen,
-/// die per `horizontal_wrapped` Layout und `ui.separator()` getrennt werden:
-///
-/// 1. **Haupt-Tools:** Select, Connect, AddNode — jeweils als Icon-Button
-/// 2. **Route-Tools:** alle ToolManager-Einträge außer `FieldBoundaryTool`, als Icon-Buttons
-///    (Icons via `route_tool_icon()`), inklusive Status-Anzeige im aktiven Zustand
-/// 3. **Aktionen:** Delete-Button (aktiviert wenn Selektion vorhanden)
-///
-/// Wenn ein Hintergrund-Bild geladen ist, wird eine zusätzliche Hintergrund-Steuergruppe
-/// (Sichtbarkeit, Skalierung, 1:1-Reset) in einem zweiten `horizontal_wrapped`-Block gerendert.
-pub fn render_toolbar(ctx: &egui::Context, state: &AppState) -> Vec<AppIntent> {
+/// Rendert die freie Tool-Palette als schwebendes Fenster ohne Titelleiste.
+/// Wird bei 'T'-Taste an der Mausposition angezeigt.
+/// Gibt `(events, should_close)` zurueck.
+pub fn render_tool_palette(ctx: &egui::Context, state: &AppState) -> (Vec<AppIntent>, bool) {
     let mut events = Vec::new();
+    let mut should_close = false;
     let active = state.editor.active_tool;
     let icon_color = function_icon_color(state);
     let active_icon_color = accent_icon_color(state);
+    let pos = state
+        .ui
+        .tool_palette_pos
+        .unwrap_or(egui::pos2(300.0, 300.0));
 
-    egui::Window::new("🔧 Werkzeuge")
-        .id(egui::Id::new("floating_toolbar"))
-        .collapsible(true)
+    let window_response = egui::Window::new("tool_palette")
+        .id(egui::Id::new("tool_palette_window"))
+        .title_bar(false)
+        .collapsible(false)
         .resizable(false)
-        .default_pos(egui::pos2(300.0, 40.0))
+        .fixed_pos(pos)
         .show(ctx, |ui| {
             ui.horizontal_wrapped(|ui| {
-                // ── Haupt-Tools ──
                 let select_icon = svg_icon(
-                    egui::include_image!("../../assets/icon_select_node.svg"),
+                    egui::include_image!("../../assets/icons/icon_select_node.svg"),
                     ICON_SIZE,
                 )
                 .tint(if active == EditorTool::Select {
@@ -79,10 +67,11 @@ pub fn render_toolbar(ctx: &egui::Context, state: &AppState) -> Vec<AppIntent> {
                     events.push(AppIntent::SetEditorToolRequested {
                         tool: EditorTool::Select,
                     });
+                    should_close = true;
                 }
 
                 let connect_icon = svg_icon(
-                    egui::include_image!("../../assets/icon_connect.svg"),
+                    egui::include_image!("../../assets/icons/icon_connect.svg"),
                     ICON_SIZE,
                 )
                 .tint(if active == EditorTool::Connect {
@@ -98,10 +87,11 @@ pub fn render_toolbar(ctx: &egui::Context, state: &AppState) -> Vec<AppIntent> {
                     events.push(AppIntent::SetEditorToolRequested {
                         tool: EditorTool::Connect,
                     });
+                    should_close = true;
                 }
 
                 let add_icon = svg_icon(
-                    egui::include_image!("../../assets/icon_add_node.svg"),
+                    egui::include_image!("../../assets/icons/icon_add_node.svg"),
                     ICON_SIZE,
                 )
                 .tint(if active == EditorTool::AddNode {
@@ -117,11 +107,11 @@ pub fn render_toolbar(ctx: &egui::Context, state: &AppState) -> Vec<AppIntent> {
                     events.push(AppIntent::SetEditorToolRequested {
                         tool: EditorTool::AddNode,
                     });
+                    should_close = true;
                 }
 
                 ui.separator();
 
-                // ── Route-Tools als Icon-Buttons ──
                 let active_route_index = if active == EditorTool::Route {
                     state.editor.tool_manager.active_index()
                 } else {
@@ -133,13 +123,11 @@ pub fn render_toolbar(ctx: &egui::Context, state: &AppState) -> Vec<AppIntent> {
                     }
 
                     let is_active = active_route_index == Some(idx);
-                    let icon_img = egui::Image::new(route_tool_icon(idx))
-                        .fit_to_exact_size(ICON_SIZE)
-                        .tint(if is_active {
-                            active_icon_color
-                        } else {
-                            icon_color
-                        });
+                    let icon_img = svg_icon(route_tool_icon(idx), ICON_SIZE).tint(if is_active {
+                        active_icon_color
+                    } else {
+                        icon_color
+                    });
 
                     if ui
                         .add(egui::Button::image(icon_img).selected(is_active))
@@ -150,116 +138,25 @@ pub fn render_toolbar(ctx: &egui::Context, state: &AppState) -> Vec<AppIntent> {
                             tool: EditorTool::Route,
                         });
                         events.push(AppIntent::SelectRouteToolRequested { index: idx });
-                    }
-                }
-
-                ui.separator();
-
-                // ── Sonstige Aktionen ──
-                let has_selection = !state.selection.selected_node_ids.is_empty();
-                let delete_icon = svg_icon(
-                    egui::include_image!("../../assets/icon_delete.svg"),
-                    ICON_SIZE,
-                )
-                .tint(icon_color);
-                if ui
-                    .add_enabled(has_selection, egui::Button::image(delete_icon))
-                    .on_hover_text("Delete (Del)")
-                    .clicked()
-                {
-                    events.push(AppIntent::DeleteSelectedRequested);
-                }
-
-                // Status-Text bleibt in der Toolbar
-                if active == EditorTool::Connect {
-                    ui.separator();
-                    if let Some(source_id) = state.editor.connect_source_node {
-                        ui.label(format!("Startknoten: {} -> Waehle Zielknoten", source_id));
-                    } else {
-                        ui.label("Waehle Startknoten");
-                    }
-                }
-
-                if active == EditorTool::Route {
-                    ui.separator();
-                    if let Some(tool) = state.editor.tool_manager.active_tool() {
-                        ui.label(tool.status_text());
+                        should_close = true;
                     }
                 }
             });
-
-            // Background-Controls separat gruppieren
-            if state.view.background_map.is_some() {
-                ui.separator();
-                ui.horizontal_wrapped(|ui| {
-                    ui.label("Hintergrund:");
-
-                    let visible = state.view.background_visible;
-                    let toggle_icon = if visible {
-                        egui::include_image!("../../assets/icon_visible.svg")
-                    } else {
-                        egui::include_image!("../../assets/icon_hidden.svg")
-                    };
-                    let toggle_img = svg_icon(toggle_icon, ICON_SIZE).tint(if visible {
-                        active_icon_color
-                    } else {
-                        icon_color
-                    });
-                    if ui
-                        .add(egui::Button::image(toggle_img))
-                        .on_hover_text(if visible {
-                            "Hintergrund ausblenden"
-                        } else {
-                            "Hintergrund einblenden"
-                        })
-                        .clicked()
-                    {
-                        events.push(AppIntent::ToggleBackgroundVisibility);
-                    }
-
-                    let scale = state.view.background_scale;
-                    if ui
-                        .button("-")
-                        .on_hover_text("Ausdehnung halbieren")
-                        .clicked()
-                    {
-                        events.push(AppIntent::ScaleBackground { factor: 0.5 });
-                    }
-                    ui.label(format!("x{scale:.2}"));
-                    if ui
-                        .button("+")
-                        .on_hover_text("Ausdehnung verdoppeln")
-                        .clicked()
-                    {
-                        events.push(AppIntent::ScaleBackground { factor: 2.0 });
-                    }
-                    if (scale - 1.0).abs() > f32::EPSILON
-                        && ui.button("1:1").on_hover_text("Originalgroesse").clicked()
-                    {
-                        // Setze Scale zurück auf 1.0 durch Faktor = 1/aktuell
-                        events.push(AppIntent::ScaleBackground {
-                            factor: 1.0 / scale,
-                        });
-                    }
-                });
-            }
         });
 
-    events
-}
-
-/// Gibt die `ImageSource` für das SVG-Icon eines Route-Tools anhand des Index zurück.
-fn route_tool_icon(idx: usize) -> egui::ImageSource<'static> {
-    match idx {
-        0 => egui::include_image!("../../assets/new/minus.svg"),
-        1 => egui::include_image!("../../assets/icon_bezier_quadratic.svg"),
-        2 => egui::include_image!("../../assets/icon_bezier_cubic.svg"),
-        3 => egui::include_image!("../../assets/icon_spline.svg"),
-        4 => egui::include_image!("../../assets/icon_bypass.svg"),
-        5 => egui::include_image!("../../assets/icon_constraint_route.svg"),
-        6 => egui::include_image!("../../assets/icon_parking.svg"),
-        7 => egui::include_image!("../../assets/icon_field_boundary.svg"),
-        8 => egui::include_image!("../../assets/icon_route_offset.svg"),
-        _ => egui::include_image!("../../assets/new/minus.svg"),
+    if let Some(inner) = &window_response {
+        let palette_rect = inner.response.rect;
+        let clicked_outside = ctx.input(|i| {
+            let pointer_pos = i.pointer.interact_pos().or(i.pointer.hover_pos());
+            i.pointer.any_pressed()
+                && pointer_pos
+                    .map(|pos| !palette_rect.contains(pos))
+                    .unwrap_or(false)
+        });
+        if clicked_outside {
+            should_close = true;
+        }
     }
+
+    (events, should_close)
 }

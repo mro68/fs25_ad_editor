@@ -250,6 +250,9 @@
     - [x] `render_toolbar()` Docstring aktualisiert: schwebendes `egui::Window` statt `TopBottomPanel`, Gruppen-Layout mit Icon-Buttons beschrieben
     - [x] `ui/API.md`: verwaiste Bullet-Points durch vollständige `render_toolbar`-Sektion ersetzt; `route_tool_icon()`-Tabelle ergänzt
     - [x] `docs/ARCHITECTURE_PLAN.md`: `toolbar.rs`-Beschreibung auf schwebendes Window aktualisiert
+  - [x] **Doku-Sync Sidebar-Integration + T-Tool-Palette (2026-03-08)**
+    - [x] `ui/API.md`: `render_tool_palette()` dokumentiert, `ui::icons`-API ergänzt, neue `render_route_defaults_panel(ctx, &AppState)`-Signatur nachgezogen
+    - [x] `app/API.md`: `UiState` um `show_tool_palette`/`tool_palette_pos` und `AppIntent::ToggleToolPalette` ergänzt
   - [x] **Tool-Encapsulation-Audit (2026-03-07, Branch `feat/tool-encapsulation-audit`)**
     - [x] Encapsulation-Audit: 0 Layer-Boundary-Verletzungen (keine wgpu/render-Imports in Tools)
     - [x] API-Unification: Alle 9 Tools nutzen RouteTool-Trait + 4 Capability-Traits konsistent
