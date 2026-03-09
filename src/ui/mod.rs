@@ -13,11 +13,11 @@ mod drag;
 pub mod edit_panel;
 /// Gemeinsame Icon-Helfer fuer Tool-Buttons.
 pub mod icons;
-/// Wiederverwendbares Long-Press-Dropdown fuer Icon-Gruppen.
-pub mod long_press;
 /// Viewport-Input-Verarbeitung (Drag, Scroll, Mausklick, Selektion).
 pub mod input;
 mod keyboard;
+/// Wiederverwendbares Long-Press-Dropdown fuer Icon-Gruppen.
+pub mod long_press;
 /// Menue-Leiste mit Datei-, Bearbeitungs- und Ansicht-Aktionen.
 pub mod menu;
 /// Optionen-Dialog fuer Editor-Einstellungen.
