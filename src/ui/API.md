@@ -10,6 +10,7 @@ Das `ui`-Modul enthält egui-UI-Komponenten (Menüs, Statusbar, Input-Handling, 
 - `status.rs` — Statusleiste
 - `toolbar.rs` — Schwebende Tool-Palette (Toggle via `T`)
 - `icons.rs` — Gemeinsame Icon-Konstanten/Helfer (`ICON_SIZE`, `svg_icon`, `route_tool_icon`)
+- `long_press.rs` — Wiederverwendbares Long-Press-Dropdown-Widget (`LongPressState`, `LongPressGroup`, `render_long_press_button`)
 - `defaults_panel.rs` — Linke Sidebar (Werkzeuge, Routen, Aktionen, Defaults, Hintergrund)
 - `command_palette.rs` — Command Palette Overlay (Suche + Intent-Auswahl)
 - `properties.rs` — Properties-Panel (Detailanzeige selektierter Nodes)
