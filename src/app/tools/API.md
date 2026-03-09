@@ -16,7 +16,7 @@ pub struct ToolManager { /* intern */ }
 
 **Methoden:**
 
-- `new() → Self` — Erstellt ToolManager mit vorregistrierten Standard-Tools (StraightLine, Bézier Grad 2, Bézier Grad 3, Spline, Bypass, ConstraintRoute, Parking, FieldBoundary, RouteOffset)
+- `new() → Self` — Erstellt ToolManager mit vorregistrierten Standard-Tools (StraightLine, Bézier Grad 2, Bézier Grad 3, Spline, Bypass, SmoothCurve, Parking, FieldBoundary, RouteOffset)
 - `register(tool)` — Neues Route-Tool registrieren
 - `tool_count() → usize` — Anzahl registrierter Tools
 - `tool_names() → Vec<(usize, &str)>` — Name + Index aller Tools
@@ -108,7 +108,7 @@ Documentation moved to [`../API.md#segmentbase--segmentkind`](../API.md#segmentb
 | 2 | `CurveTool` (Grad 3) | `〜` | `CurveTool::new_cubic()` |
 | 3 | `SplineTool` | `〰` | `SplineTool::new()` |
 | 4 | `BypassTool` | `⤴` | `BypassTool::new()` |
-| 5 | `ConstraintRouteTool` | `⊿` | `ConstraintRouteTool::new()` |
+| 5 | `SmoothCurveTool` | `⊿` | `SmoothCurveTool::new()` |
 | 6 | `ParkingTool` | `🅿` | `ParkingTool::new()` |
 | 7 | `FieldBoundaryTool` | `🌾` | `FieldBoundaryTool::new()` |
 | 8 | `RouteOffsetTool` | `⇶` | `RouteOffsetTool::new()` |
@@ -137,7 +137,7 @@ Modulstruktur: `state.rs` (Enums, Struct, Ctors), `lifecycle.rs` (RouteTool-Impl
 
 Catmull-Rom-Spline: interpolierende Kurve durch alle geklickten Punkte. Beliebig viele Kontrollpunkte, fortlaufende Vorschau (Cursor als naechster Punkt), Enter bestaetigt. Nachbearbeitung (Segment-Laenge/Node-Anzahl) und Verkettung unterstuetzt.
 
-### `ConstraintRouteTool`
+### `SmoothCurveTool`
 
 Winkelgeglaettete Route mit automatischen Tangenten-Uebergaengen. Solver-Pipeline:
 
@@ -159,8 +159,8 @@ Winkelgeglaettete Route mit automatischen Tangenten-Uebergaengen. Solver-Pipelin
 **Solver-Typen:**
 
 - `SolverResult` — Positionen + optionale Approach/Departure-Steuerpunkte
-- `ConstraintRouteInput` — Eingabeparameter fuer den Solver
-- Oeffentliche Helper-Exporte: `constraint_route::solve_route`, `constraint_route::ConstraintRouteInput` (u.a. fuer Benchmarks)
+- `SmoothCurveInput` — Eingabeparameter fuer den Solver
+- Oeffentliche Helper-Exporte: `smooth_curve::solve_route`, `smooth_curve::SmoothCurveInput` (u.a. fuer Benchmarks)
 
 **Solver-Parameter:**
 

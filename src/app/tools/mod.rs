@@ -8,8 +8,6 @@
 pub mod bypass;
 /// Gemeinsame Hilfsfunktionen fuer Route-Tools.
 pub mod common;
-/// Constraint-Route-Tool — winkelgeglaettete Route mit automatischen Tangenten-Uebergaengen.
-pub mod constraint_route;
 /// Bézier-Kurven-Tool (Grad 2 + 3) mit sequentieller Punkt-Platzierung.
 pub mod curve;
 /// Feldgrenz-Erkennungs-Tool: erzeugt eine Route entlang eines erkannten Feldumrisses.
@@ -20,6 +18,8 @@ pub mod parking;
 pub mod route_offset;
 /// RouteTool-Trait — Schnittstelle fuer alle Route-Tools.
 mod route_tool;
+/// Geglättete-Kurve-Tool — winkelgeglaettete Route mit automatischen Tangenten-Uebergaengen.
+pub mod smooth_curve;
 /// Catmull-Rom-Spline-Tool — interpolierende Kurve durch alle geklickten Punkte.
 pub mod spline;
 /// Gerade-Linie-Tool mit konfigurierbarem Node-Abstand.
@@ -175,7 +175,7 @@ impl ToolManager {
         manager.register(Box::new(curve::CurveTool::new_cubic()));
         manager.register(Box::new(spline::SplineTool::new()));
         manager.register(Box::new(bypass::BypassTool::new()));
-        manager.register(Box::new(constraint_route::ConstraintRouteTool::new()));
+        manager.register(Box::new(smooth_curve::SmoothCurveTool::new()));
         manager.register(Box::new(parking::ParkingTool::new()));
         manager.register(Box::new(field_boundary::FieldBoundaryTool::new()));
         manager.register(Box::new(route_offset::RouteOffsetTool::new()));

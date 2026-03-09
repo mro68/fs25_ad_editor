@@ -19,7 +19,7 @@ pub fn route_tool_icon(idx: usize) -> ImageSource<'static> {
         2 => egui::include_image!("../../assets/icons/icon_bezier_cubic.svg"),
         3 => egui::include_image!("../../assets/icons/icon_spline.svg"),
         4 => egui::include_image!("../../assets/icons/icon_bypass.svg"),
-        5 => egui::include_image!("../../assets/icons/icon_constraint_route.svg"),
+        5 => egui::include_image!("../../assets/icons/icon_smooth_curve.svg"),
         6 => egui::include_image!("../../assets/icons/icon_parking.svg"),
         7 => egui::include_image!("../../assets/icons/icon_field_boundary.svg"),
         8 => egui::include_image!("../../assets/icons/icon_route_offset.svg"),

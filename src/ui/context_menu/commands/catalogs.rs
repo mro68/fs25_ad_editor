@@ -39,8 +39,8 @@ impl MenuCatalog {
                 label: "📐 Strecke".into(),
                 entries: vec![
                     MenuEntry::Command {
-                        id: CommandId::SetToolRouteConstraint,
-                        label: "Constraint-Route (4)".into(),
+                        id: CommandId::SetToolRouteSmoothCurve,
+                        label: "Geglättete Kurve (4)".into(),
                         preconditions: vec![],
                     },
                     MenuEntry::Command {
@@ -88,8 +88,8 @@ impl MenuCatalog {
                 label: "📐 Strecke erzeugen".into(),
                 entries: vec![
                     MenuEntry::Command {
-                        id: CommandId::RouteConstraint,
-                        label: "Constraint-Route".into(),
+                        id: CommandId::RouteSmoothCurve,
+                        label: "Geglättete Kurve".into(),
                         preconditions: vec![Precondition::ExactlyTwoSelected],
                     },
                     MenuEntry::Command {

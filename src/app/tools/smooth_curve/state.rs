@@ -1,4 +1,4 @@
-//! State-Definitionen, Phase-Enum und Konstruktor fuer das Constraint-Route-Tool.
+//! State-Definitionen, Phase-Enum und Konstruktor fuer das Geglättete-Kurve-Tool.
 
 use super::super::common::{SegmentConfig, ToolLifecycleState};
 use super::super::ToolAnchor;
@@ -21,13 +21,13 @@ pub(crate) enum Phase {
     ControlNodes,
 }
 
-/// Constraint-Route-Tool: Erzeugt Routen mit automatischer Winkelglaettung.
+/// Geglättete-Kurve-Tool: Erzeugt Routen mit automatischer Winkelglaettung.
 ///
 /// Nach Start/End-Platzierung koennen beliebig viele Zwischen-Kontrollpunkte
 /// gesetzt werden. Der Solver erzeugt eine geglaettete Route die
 /// Winkel-Constraints einhaelt und glatt in bestehende Verbindungen uebergeht.
 /// Automatische Steuerpunkte (Approach/Departure) sind sichtbar und verschiebbar.
-pub struct ConstraintRouteTool {
+pub struct SmoothCurveTool {
     /// Startpunkt der Route
     pub(crate) start: Option<ToolAnchor>,
     /// Endpunkt der Route
@@ -87,8 +87,8 @@ pub(crate) enum DragTarget {
     DepartureSteerer,
 }
 
-impl ConstraintRouteTool {
-    /// Erstellt ein neues Constraint-Route-Tool mit Standardwerten.
+impl SmoothCurveTool {
+    /// Erstellt ein neues Geglättete-Kurve-Tool mit Standardwerten.
     pub fn new() -> Self {
         Self {
             start: None,
@@ -158,7 +158,7 @@ impl ConstraintRouteTool {
             }
         }
 
-        let input = super::geometry::ConstraintRouteInput {
+        let input = super::geometry::SmoothCurveInput {
             start: start.position(),
             end: end.position(),
             control_nodes: solver_control,
@@ -219,7 +219,7 @@ impl ConstraintRouteTool {
     }
 }
 
-impl Default for ConstraintRouteTool {
+impl Default for SmoothCurveTool {
     fn default() -> Self {
         Self::new()
     }
@@ -235,8 +235,8 @@ mod tests {
     use super::*;
 
     #[test]
-    fn constraint_route_defaults_match_requested_values() {
-        let tool = ConstraintRouteTool::new();
+    fn smooth_curve_defaults_match_requested_values() {
+        let tool = SmoothCurveTool::new();
         assert_eq!(tool.max_angle_deg, 10.0);
         assert_eq!(tool.seg.max_segment_length, 10.0);
         assert_eq!(tool.min_distance, 2.0);
