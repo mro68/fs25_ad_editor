@@ -8,8 +8,6 @@
 pub mod bypass;
 /// Gemeinsame Hilfsfunktionen fuer Route-Tools.
 pub mod common;
-/// Geglättete-Kurve-Tool — winkelgeglaettete Route mit automatischen Tangenten-Uebergaengen.
-pub mod smooth_curve;
 /// Bézier-Kurven-Tool (Grad 2 + 3) mit sequentieller Punkt-Platzierung.
 pub mod curve;
 /// Feldgrenz-Erkennungs-Tool: erzeugt eine Route entlang eines erkannten Feldumrisses.
@@ -20,6 +18,8 @@ pub mod parking;
 pub mod route_offset;
 /// RouteTool-Trait — Schnittstelle fuer alle Route-Tools.
 mod route_tool;
+/// Geglättete-Kurve-Tool — winkelgeglaettete Route mit automatischen Tangenten-Uebergaengen.
+pub mod smooth_curve;
 /// Catmull-Rom-Spline-Tool — interpolierende Kurve durch alle geklickten Punkte.
 pub mod spline;
 /// Gerade-Linie-Tool mit konfigurierbarem Node-Abstand.

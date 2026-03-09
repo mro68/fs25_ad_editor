@@ -17,8 +17,8 @@ pub use preconditions::{Precondition, PreconditionContext};
 pub use validation::{validate_entries, ValidatedEntry};
 
 use crate::app::segment_registry::{
-    TOOL_INDEX_SMOOTH_CURVE, TOOL_INDEX_CURVE_CUBIC, TOOL_INDEX_CURVE_QUAD,
-    TOOL_INDEX_FIELD_BOUNDARY, TOOL_INDEX_STRAIGHT,
+    TOOL_INDEX_CURVE_CUBIC, TOOL_INDEX_CURVE_QUAD, TOOL_INDEX_FIELD_BOUNDARY,
+    TOOL_INDEX_SMOOTH_CURVE, TOOL_INDEX_STRAIGHT,
 };
 use crate::app::{AppIntent, ConnectionDirection, ConnectionPriority, EditorTool};
 

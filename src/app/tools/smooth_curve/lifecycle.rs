@@ -3,7 +3,7 @@
 use super::super::common::linear_connections;
 use super::super::{RouteTool, ToolAction, ToolPreview, ToolResult};
 use super::geometry::{build_result, BuildResultParams};
-use super::state::{SmoothCurveTool, Phase};
+use super::state::{Phase, SmoothCurveTool};
 use crate::app::segment_registry::{SegmentBase, SegmentKind, SegmentRecord};
 use crate::core::RoadMap;
 use glam::Vec2;
@@ -61,8 +61,7 @@ impl RouteTool for SmoothCurveTool {
             }
             Phase::End => {
                 self.end = Some(anchor);
-                self.end_neighbor_dirs =
-                    SmoothCurveTool::collect_neighbor_dirs(&anchor, road_map);
+                self.end_neighbor_dirs = SmoothCurveTool::collect_neighbor_dirs(&anchor, road_map);
                 self.phase = Phase::ControlNodes;
                 self.sync_derived();
                 self.update_preview();
