@@ -9,7 +9,6 @@ Das `ui`-Modul enthält egui-UI-Komponenten (Menüs, Statusbar, Input-Handling, 
 - `menu.rs` — Top-Menü-Leiste
 - `status.rs` — Statusleiste
 - `floating_menu.rs` — Schwebende Kontextmenues fuer Werkzeuggruppen (Toggle via `W/G/S/T`)
-- `toolbar.rs` — Legacy-Tool-Palette (vorerst vorhanden, nicht mehr aktiv gerendert)
 - `icons.rs` — Gemeinsame Icon-Konstanten/Helfer (`ICON_SIZE`, `svg_icon`, `route_tool_icon`)
 - `long_press.rs` — Wiederverwendbares Long-Press-Dropdown-Widget (`LongPressState`, `LongPressGroup`, `render_long_press_button`)
 - `defaults_panel.rs` — Linke Sidebar im Gruppen-Layout (Long-Press fuer Werkzeuge/Route-Gruppen/Defaults, Hintergrund)

@@ -109,8 +109,6 @@ pub struct UiState {
     pub show_background_map_dialog: bool,
     pub show_overview_dialog: bool,
     pub show_command_palette: bool,
-    pub show_tool_palette: bool,
-    pub tool_palette_pos: Option<egui::Pos2>,
     pub floating_menu: Option<FloatingMenuState>,
     pub show_heightmap_warning: bool,
     pub heightmap_warning_confirmed: bool,
@@ -617,7 +615,6 @@ pub enum AppIntent {
     ResetOptionsRequested,
     CommandPaletteToggled,
     ToggleFloatingMenu { kind: FloatingMenuKind },
-    ToggleToolPalette,
 
     // Route-Tool
     RouteToolClicked { world_pos: glam::Vec2, ctrl: bool },
