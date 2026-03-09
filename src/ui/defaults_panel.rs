@@ -71,65 +71,65 @@ pub fn render_route_defaults_panel(ctx: &egui::Context, state: &AppState) -> Vec
     let tools_items = [
         LongPressItem {
             icon: egui::include_image!("../../assets/icons/icon_select_node.svg"),
-            tooltip: "Auswahl (1)",
+            tooltip: "Auswahl (Taste 1)\nNodes per Klick oder Lasso selektieren.\nSelektierte Nodes per Drag verschieben.",
             value: EditorTool::Select,
         },
         LongPressItem {
             icon: egui::include_image!("../../assets/icons/icon_connect.svg"),
-            tooltip: "Verbinden (2)",
+            tooltip: "Verbinden (Taste 2)\nVerbindung zwischen 2 Nodes erstellen (Taste C)\noder loeschen (Taste X). Pfeilrichtung = Fahrtrichtung.",
             value: EditorTool::Connect,
         },
         LongPressItem {
             icon: egui::include_image!("../../assets/icons/icon_add_node.svg"),
-            tooltip: "Node hinzufuegen (3)",
+            tooltip: "Node hinzufuegen (Taste 3)\nNeuen Wegpunkt per Klick in die Karte setzen.",
             value: EditorTool::AddNode,
         },
     ];
 
     let straights_items = [LongPressItem {
         icon: route_tool_icon(TOOL_INDEX_STRAIGHT),
-        tooltip: "Gerade Strecke",
+        tooltip: "Gerade Strecke (G)\nNodes mit gleichmaessigem Abstand entlang einer Linie platzieren.\nPfeiltasten: Abstand/Anzahl anpassen. Enter: Bestaetigen.",
         value: TOOL_INDEX_STRAIGHT,
     }];
 
     let curves_items = [
         LongPressItem {
             icon: route_tool_icon(TOOL_INDEX_CURVE_QUAD),
-            tooltip: "Bezier Grad 2",
+            tooltip: "Bezier-Kurve quadratisch (G)\n1 Kontrollpunkt. Einfache, gleichmaessige Kurve.",
             value: TOOL_INDEX_CURVE_QUAD,
         },
         LongPressItem {
             icon: route_tool_icon(TOOL_INDEX_CURVE_CUBIC),
-            tooltip: "Bezier Grad 3",
+            tooltip: "Bezier-Kurve kubisch (G)\n2 Kontrollpunkte fuer maximale Formkontrolle.",
             value: TOOL_INDEX_CURVE_CUBIC,
         },
         LongPressItem {
             icon: route_tool_icon(TOOL_INDEX_SPLINE),
-            tooltip: "Spline",
+            tooltip: "Catmull-Rom Spline (G)\nGlatte Kurve durch existierende Nodes.\nZusaetzliche Zwischenpunkte werden berechnet.",
             value: TOOL_INDEX_SPLINE,
         },
     ];
 
     let constraint_items = [LongPressItem {
         icon: route_tool_icon(TOOL_INDEX_CONSTRAINT_ROUTE),
-        tooltip: "Constraint-Route",
+        tooltip: "Constraint-Route (G)\nWinkelgeglaettete Strecke zwischen zwei Nodes.\nAutomatische Ausrichtung an Strassenrasterwinkeln.",
         value: TOOL_INDEX_CONSTRAINT_ROUTE,
     }];
 
     let section_tools_items = [
         LongPressItem {
             icon: route_tool_icon(TOOL_INDEX_BYPASS),
-            tooltip: "Ausweichstrecke",
+            tooltip: "Ausweichstrecke (S)\nErzeugt eine parallele Umgehungsstrecke zur Selektion.",
             value: TOOL_INDEX_BYPASS,
         },
         LongPressItem {
             icon: route_tool_icon(TOOL_INDEX_PARKING),
-            tooltip: "Parkplatz",
+            tooltip: "Parkplatz (S)\nGeneriert ein Parkplatz-Layout aus der Selektion.",
             value: TOOL_INDEX_PARKING,
         },
         LongPressItem {
             icon: route_tool_icon(TOOL_INDEX_ROUTE_OFFSET),
-            tooltip: "Strecke versetzen",
+            tooltip: "Strecke versetzen (S)\nVerschiebt die selektierte Route parallel um einen konfigurierbaren Abstand.",
             value: TOOL_INDEX_ROUTE_OFFSET,
         },
     ];
@@ -137,17 +137,17 @@ pub fn render_route_defaults_panel(ctx: &egui::Context, state: &AppState) -> Vec
     let direction_items = [
         LongPressItem {
             icon: egui::include_image!("../../assets/icons/icon_direction_regular.svg"),
-            tooltip: "Einbahn vorwaerts",
+            tooltip: "Einbahn vorwaerts\nFahrzeuge nutzen diese Verbindungen nur in Vorwaertsrichtung.\nStandard fuer normale gerichtete Strecken.",
             value: ConnectionDirection::Regular,
         },
         LongPressItem {
             icon: egui::include_image!("../../assets/icons/icon_direction_dual.svg"),
-            tooltip: "Zweirichtung",
+            tooltip: "Zweirichtung\nFahrzeuge koennen in beide Richtungen fahren.\nFuer Wege die in beiden Richtungen befahrbar sein sollen.",
             value: ConnectionDirection::Dual,
         },
         LongPressItem {
             icon: egui::include_image!("../../assets/icons/icon_direction_reverse.svg"),
-            tooltip: "Einbahn rueckwaerts",
+            tooltip: "Einbahn rueckwaerts\nFahrzeuge fahren ausschliesslich rueckwaerts auf dieser Strecke.",
             value: ConnectionDirection::Reverse,
         },
     ];
@@ -155,12 +155,12 @@ pub fn render_route_defaults_panel(ctx: &egui::Context, state: &AppState) -> Vec
     let priority_items = [
         LongPressItem {
             icon: egui::include_image!("../../assets/icons/icon_priority_main.svg"),
-            tooltip: "Hauptstrasse",
+            tooltip: "Hauptstrasse\nHohe Prioritaet. AutoDrive bevorzugt diese Strecken.\nFuer Hauptverbindungen und viel genutzte Wege.",
             value: ConnectionPriority::Regular,
         },
         LongPressItem {
             icon: egui::include_image!("../../assets/icons/icon_priority_side.svg"),
-            tooltip: "Nebenstrasse",
+            tooltip: "Nebenstrasse\nNiedrigere Prioritaet. Nur bei Bedarf genutzt.\nFuer Feldwege und selten befahrene Verbindungen.",
             value: ConnectionPriority::SubPriority,
         },
     ];
@@ -209,8 +209,9 @@ pub fn render_route_defaults_panel(ctx: &egui::Context, state: &AppState) -> Vec
 
     egui::SidePanel::left("route_defaults_panel")
         .resizable(false)
-        .default_width(64.0)
+        .default_width(80.0)
         .show(ctx, |ui| {
+            ui.label(egui::RichText::new("Werkzeuge").small().weak());
             if let Some(tool) = render_long_press_with_memory(
                 ui,
                 icon_color,
@@ -225,6 +226,7 @@ pub fn render_route_defaults_panel(ctx: &egui::Context, state: &AppState) -> Vec
             ui.separator();
             ui.add_space(6.0);
 
+            ui.label(egui::RichText::new("Grundbefehle").small().weak());
             if let Some(index) = render_long_press_with_memory(
                 ui,
                 icon_color,
@@ -259,6 +261,7 @@ pub fn render_route_defaults_panel(ctx: &egui::Context, state: &AppState) -> Vec
             ui.separator();
             ui.add_space(6.0);
 
+            ui.label(egui::RichText::new("Bearbeiten").small().weak());
             if let Some(index) = render_long_press_with_memory(
                 ui,
                 icon_color,
@@ -273,6 +276,7 @@ pub fn render_route_defaults_panel(ctx: &egui::Context, state: &AppState) -> Vec
             ui.separator();
             ui.add_space(6.0);
 
+            ui.label(egui::RichText::new("Richtung").small().weak());
             if let Some(direction) = render_long_press_with_memory(
                 ui,
                 icon_color,
@@ -287,6 +291,7 @@ pub fn render_route_defaults_panel(ctx: &egui::Context, state: &AppState) -> Vec
             ui.separator();
             ui.add_space(6.0);
 
+            ui.label(egui::RichText::new("Strassenart").small().weak());
             if let Some(priority) = render_long_press_with_memory(
                 ui,
                 icon_color,

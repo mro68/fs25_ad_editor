@@ -1,12 +1,13 @@
-//! Wiederverwendbares Long-Press-Dropdown-Widget fuer Icon-Buttons.
+//! Geteilter Icon-Button mit Dropdown-Popup fuer Werkzeuggruppen.
+//!
+//! Klick linke Haelfte: aktives Item aktivieren.
+//! Klick rechte Haelfte (Pfeil-Bereich): Auswahl-Popup sofort oeffnen.
 
 use crate::ui::icons::{svg_icon, ICON_SIZE};
 
-/// Long-Press-Status einer Button-Gruppe.
+/// Zustand eines geteilten Icon-Buttons (Dropdown-Gruppe).
 #[derive(Debug, Clone, Default)]
 pub struct LongPressState {
-    /// Startzeitpunkt des gedrueckten Buttons (egui-Zeit in Sekunden).
-    pub press_start: Option<f64>,
     /// Ob das Auswahl-Popup aktuell offen ist.
     pub popup_open: bool,
     /// Position des Popups im Screen-Space.
@@ -35,10 +36,14 @@ pub struct LongPressGroup<'a, T: Clone + PartialEq> {
     pub items: &'a [LongPressItem<T>],
 }
 
-/// Rendert einen Long-Press-Button mit optionalem Auswahl-Popup.
+/// Rendert einen geteilten Icon-Button fuer eine Gruppe auswaehlbarer Items.
 ///
-/// Kurzer Klick aktiviert das aktuell angezeigte Item.
-/// Long-Press (>= 1s) oeffnet ein Popup mit allen Items.
+/// - Klick auf die **linke Haelfte**: Aktiviert das aktuell angezeigte Item direkt.
+/// - Klick auf die **rechte Haelfte** (Pfeil-Bereich, nur bei mehreren Items):
+///   Oeffnet sofort ein Auswahl-Popup mit allen Items der Gruppe.
+///
+/// Der Button leuchtet in `active_icon_color` wenn ein Item der Gruppe aktiv ist,
+/// sonst in `icon_color`.
 pub fn render_long_press_button<T: Clone + PartialEq>(
     ui: &mut egui::Ui,
     icon_color: egui::Color32,
@@ -53,44 +58,46 @@ pub fn render_long_press_button<T: Clone + PartialEq>(
         .find(|item| &item.value == active_value)
         .or_else(|| group.items.first())?;
 
-    let icon = svg_icon(active_item.icon.clone(), ICON_SIZE).tint(active_icon_color);
+    // Gruppe leuchtet nur wenn eines ihrer Items gerade aktiv ist.
+    let group_is_active = group.items.iter().any(|item| &item.value == active_value);
+    let button_tint = if group_is_active {
+        active_icon_color
+    } else {
+        icon_color
+    };
 
+    let has_multiple = group.items.len() > 1;
+
+    let icon = svg_icon(active_item.icon.clone(), ICON_SIZE).tint(button_tint);
     let response = ui
-        .add(egui::Button::image(icon).selected(true))
-        .on_hover_text(group.label);
+        .add(egui::Button::image(icon).selected(group_is_active))
+        .on_hover_text(active_item.tooltip);
 
-    paint_dropdown_arrow(ui, &response);
+    if has_multiple {
+        paint_dropdown_arrow(ui, &response);
+    }
 
-    let now = ui.ctx().input(|i| i.time);
-
-    if response.is_pointer_button_down_on() {
-        if lp_state.press_start.is_none() {
-            lp_state.press_start = Some(now);
-        }
-
-        if lp_state.press_start.is_some() && !lp_state.popup_open {
-            ui.ctx().request_repaint();
-        }
-
-        if let Some(start) = lp_state.press_start {
-            if now - start >= 1.0 && !lp_state.popup_open {
-                lp_state.popup_open = true;
-                lp_state.popup_pos = Some(response.rect.right_top());
-                lp_state.press_start = None;
+    if response.clicked() {
+        if has_multiple {
+            // Split-Klick: rechte 40 % des Buttons oeffnen das Auswahl-Popup sofort.
+            let click_pos = ui.ctx().input(|i| i.pointer.interact_pos());
+            if let Some(pos) = click_pos {
+                let split_x = response.rect.left() + response.rect.width() * 0.6;
+                if pos.x >= split_x {
+                    lp_state.popup_open = true;
+                    lp_state.popup_pos = Some(response.rect.right_top());
+                    return None;
+                }
             }
         }
-    } else if let Some(start) = lp_state.press_start.take() {
-        let elapsed = now - start;
-        if elapsed < 1.0 && !lp_state.popup_open && response.clicked() {
-            return Some(active_item.value.clone());
-        }
+        // Linke Haelfte (oder Single-Item): aktuelles Item aktivieren.
+        return Some(active_item.value.clone());
     }
 
     if lp_state.popup_open {
         if lp_state.popup_pos.is_none() {
             lp_state.popup_pos = Some(response.rect.right_top());
         }
-
         return render_popup(
             ui.ctx(),
             group,
@@ -177,11 +184,11 @@ pub fn render_popup<T: Clone + PartialEq>(
     None
 }
 
-/// Zeichnet einen kleinen Dropdown-Pfeil in die untere rechte Ecke des Buttons.
+/// Zeichnet einen Dropdown-Pfeil in die untere rechte Ecke des Buttons.
 pub fn paint_dropdown_arrow(ui: &egui::Ui, response: &egui::Response) {
     let rect = response.rect;
-    let size = 5.0;
-    let inset = 2.0;
+    let size = 8.0;
+    let inset = 3.0;
 
     let p1 = egui::pos2(rect.right() - size - inset, rect.bottom() - size - inset);
     let p2 = egui::pos2(rect.right() - inset, rect.bottom() - size - inset);

@@ -4,7 +4,7 @@ use crate::app::{AppState, ConnectionDirection, ConnectionPriority};
 use egui::{Image, ImageSource, Vec2};
 
 /// Standard-Icon-Groesse fuer Tool-Buttons.
-pub const ICON_SIZE: f32 = 20.0;
+pub const ICON_SIZE: f32 = 40.0;
 
 /// Erstellt ein `Image`-Widget aus einer `ImageSource`.
 pub fn svg_icon(source: ImageSource<'_>, size: f32) -> Image<'_> {
