@@ -687,7 +687,7 @@ pub enum AppCommand {
 
     // Selektion
     SelectNearestNode { world_pos: glam::Vec2, max_distance: f32, additive: bool, extend_path: bool },
-    SelectSegmentBetweenNearestIntersections { world_pos: glam::Vec2, max_distance: f32, additive: bool },
+    SelectSegmentBetweenNearestIntersections { world_pos: glam::Vec2, max_distance: f32, additive: bool, stop_at_junction: bool, max_angle_deg: f32 },
     SelectNodesInRect { min: glam::Vec2, max: glam::Vec2, additive: bool },
     SelectNodesInLasso { polygon: Vec<glam::Vec2>, additive: bool },
     ClearSelection,

@@ -89,7 +89,16 @@ impl AppController {
                 world_pos,
                 max_distance,
                 additive,
-            } => handlers::selection::select_segment(state, world_pos, max_distance, additive),
+                stop_at_junction,
+                max_angle_deg,
+            } => handlers::selection::select_segment(
+                state,
+                world_pos,
+                max_distance,
+                additive,
+                stop_at_junction,
+                max_angle_deg,
+            ),
             AppCommand::SelectNodesInRect { min, max, additive } => {
                 handlers::selection::select_in_rect(state, min, max, additive)
             }
