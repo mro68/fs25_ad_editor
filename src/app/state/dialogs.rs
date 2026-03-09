@@ -1,5 +1,4 @@
 use crate::shared::OverviewLayerOptions;
-use crate::ui::long_press::LongPressState;
 use std::path::PathBuf;
 
 /// Zustand eines schwebenden Kontextmenues.
@@ -259,20 +258,6 @@ pub struct UiState {
     pub save_overview_dialog: SaveOverviewDialogState,
     /// Distanzen-Neuverteilen-Konfiguration (Eigenschaften-Panel)
     pub distanzen: DistanzenState,
-    /// Long-Press-State fuer Werkzeuge.
-    pub lp_tools: LongPressState,
-    /// Long-Press-State fuer Geraden.
-    pub lp_straights: LongPressState,
-    /// Long-Press-State fuer Kurven.
-    pub lp_curves: LongPressState,
-    /// Long-Press-State fuer Constraint-Tools.
-    pub lp_constraint: LongPressState,
-    /// Long-Press-State fuer Abschnittswerkzeuge.
-    pub lp_section_tools: LongPressState,
-    /// Long-Press-State fuer Richtungs-Defaults.
-    pub lp_direction: LongPressState,
-    /// Long-Press-State fuer Prioritaets-Defaults.
-    pub lp_priority: LongPressState,
 }
 
 impl UiState {
@@ -299,13 +284,6 @@ impl UiState {
             post_load_dialog: PostLoadDialogState::new(),
             save_overview_dialog: SaveOverviewDialogState::default(),
             distanzen: DistanzenState::default(),
-            lp_tools: LongPressState::default(),
-            lp_straights: LongPressState::default(),
-            lp_curves: LongPressState::default(),
-            lp_constraint: LongPressState::default(),
-            lp_section_tools: LongPressState::default(),
-            lp_direction: LongPressState::default(),
-            lp_priority: LongPressState::default(),
         }
     }
 }

@@ -105,8 +105,8 @@ Die Menue-Art wird ueber `UiState.floating_menu.kind` gesteuert.
 ```rust
 pub fn render_floating_menu(
   ctx: &egui::Context,
-  state: &mut AppState,
-) -> Vec<AppIntent>
+  state: &AppState,
+) -> (Vec<AppIntent>, bool)
 ```
 
 Unterstuetzte Menues:

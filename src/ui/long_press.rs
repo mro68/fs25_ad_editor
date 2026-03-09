@@ -26,13 +26,13 @@ pub struct LongPressItem<T: Clone> {
 
 /// Definiert eine Long-Press-Gruppe mit mehreren auswählbaren Items.
 #[derive(Clone)]
-pub struct LongPressGroup<T: Clone + PartialEq> {
+pub struct LongPressGroup<'a, T: Clone + PartialEq> {
     /// Eindeutige ID fuer egui.
     pub id: &'static str,
     /// Anzeigename der Gruppe.
     pub label: &'static str,
     /// Alle auswählbaren Items.
-    pub items: Vec<LongPressItem<T>>,
+    pub items: &'a [LongPressItem<T>],
 }
 
 /// Rendert einen Long-Press-Button mit optionalem Auswahl-Popup.
@@ -43,7 +43,7 @@ pub fn render_long_press_button<T: Clone + PartialEq>(
     ui: &mut egui::Ui,
     icon_color: egui::Color32,
     active_icon_color: egui::Color32,
-    group: &LongPressGroup<T>,
+    group: &LongPressGroup<'_, T>,
     active_value: &T,
     lp_state: &mut LongPressState,
 ) -> Option<T> {
@@ -107,7 +107,7 @@ pub fn render_long_press_button<T: Clone + PartialEq>(
 /// Rendert das Long-Press-Popup neben dem Button.
 pub fn render_popup<T: Clone + PartialEq>(
     ctx: &egui::Context,
-    group: &LongPressGroup<T>,
+    group: &LongPressGroup<'_, T>,
     active_value: &T,
     icon_color: egui::Color32,
     active_icon_color: egui::Color32,
@@ -126,7 +126,7 @@ pub fn render_popup<T: Clone + PartialEq>(
                         ui.separator();
 
                         let mut selected = None;
-                        for item in &group.items {
+                        for item in group.items {
                             let is_active = &item.value == active_value;
                             let tint = if is_active {
                                 active_icon_color
