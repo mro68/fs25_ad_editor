@@ -1,35 +1,13 @@
 //! Linkes Sidebar-Panel fuer Werkzeuge, Defaults und Hintergrund-Controls.
 
 use crate::app::segment_registry::TOOL_INDEX_FIELD_BOUNDARY;
-use crate::app::{AppIntent, AppState, ConnectionDirection, ConnectionPriority, EditorTool};
-use crate::ui::icons::{route_tool_icon, svg_icon, ICON_SIZE};
+use crate::app::{AppIntent, AppState, EditorTool};
+use crate::ui::icons::{
+    accent_icon_color, function_icon_color, route_tool_icon, svg_icon, ICON_SIZE,
+};
 use crate::ui::properties::selectors::{
     render_direction_icon_selector_vertical, render_priority_icon_selector_vertical,
 };
-
-fn color32_from_rgba(color: [f32; 4]) -> egui::Color32 {
-    egui::Color32::from_rgba_unmultiplied(
-        (color[0].clamp(0.0, 1.0) * 255.0) as u8,
-        (color[1].clamp(0.0, 1.0) * 255.0) as u8,
-        (color[2].clamp(0.0, 1.0) * 255.0) as u8,
-        (color[3].clamp(0.0, 1.0) * 255.0) as u8,
-    )
-}
-
-fn function_icon_color(state: &AppState) -> egui::Color32 {
-    match state.editor.default_priority {
-        ConnectionPriority::Regular => color32_from_rgba(state.options.connection_color_regular),
-        ConnectionPriority::SubPriority => color32_from_rgba(state.options.node_color_subprio),
-    }
-}
-
-fn accent_icon_color(state: &AppState) -> egui::Color32 {
-    match state.editor.default_direction {
-        ConnectionDirection::Regular => color32_from_rgba(state.options.connection_color_regular),
-        ConnectionDirection::Dual => color32_from_rgba(state.options.connection_color_dual),
-        ConnectionDirection::Reverse => color32_from_rgba(state.options.connection_color_reverse),
-    }
-}
 
 /// Rendert die linke Sidebar mit Tool-Auswahl, Route-Tools und Defaults.
 pub fn render_route_defaults_panel(ctx: &egui::Context, state: &AppState) -> Vec<AppIntent> {
