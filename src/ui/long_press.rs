@@ -38,29 +38,26 @@ pub struct LongPressGroup<'a, T: Clone + PartialEq> {
 
 /// Rendert einen geteilten Icon-Button fuer eine Gruppe auswaehlbarer Items.
 ///
-/// - Klick auf die **linke Haelfte**: Aktiviert das aktuell angezeigte Item direkt.
-/// - Klick auf die **rechte Haelfte** (Pfeil-Bereich, nur bei mehreren Items):
-///   Oeffnet sofort ein Auswahl-Popup mit allen Items der Gruppe.
-///
-/// Der Button leuchtet in `active_icon_color` wenn ein Item der Gruppe aktiv ist,
-/// sonst in `icon_color`.
+/// - `display_value`: Welches Icon gezeigt wird und im Popup selektiert ist (letztes benutztes Item).
+/// - `is_button_active`: Ob der Button in Akzentfarbe aufleuchtet (nur wenn dieses Tool gerade aktiv ist).
+/// - Klick links: aktiviert das angezeigte Item.
+/// - Klick rechts (Pfeil, nur ab 2 Items): oeffnet das Auswahl-Popup sofort.
 pub fn render_long_press_button<T: Clone + PartialEq>(
     ui: &mut egui::Ui,
     icon_color: egui::Color32,
     active_icon_color: egui::Color32,
     group: &LongPressGroup<'_, T>,
-    active_value: &T,
+    display_value: &T,
+    is_button_active: bool,
     lp_state: &mut LongPressState,
 ) -> Option<T> {
-    let active_item = group
+    let display_item = group
         .items
         .iter()
-        .find(|item| &item.value == active_value)
+        .find(|item| &item.value == display_value)
         .or_else(|| group.items.first())?;
 
-    // Gruppe leuchtet nur wenn eines ihrer Items gerade aktiv ist.
-    let group_is_active = group.items.iter().any(|item| &item.value == active_value);
-    let button_tint = if group_is_active {
+    let button_tint = if is_button_active {
         active_icon_color
     } else {
         icon_color
@@ -68,10 +65,10 @@ pub fn render_long_press_button<T: Clone + PartialEq>(
 
     let has_multiple = group.items.len() > 1;
 
-    let icon = svg_icon(active_item.icon.clone(), ICON_SIZE).tint(button_tint);
+    let icon = svg_icon(display_item.icon.clone(), ICON_SIZE).tint(button_tint);
     let response = ui
-        .add(egui::Button::image(icon).selected(group_is_active))
-        .on_hover_text(active_item.tooltip);
+        .add(egui::Button::image(icon).selected(is_button_active))
+        .on_hover_text(display_item.tooltip);
 
     if has_multiple {
         paint_dropdown_arrow(ui, &response);
@@ -91,7 +88,7 @@ pub fn render_long_press_button<T: Clone + PartialEq>(
             }
         }
         // Linke Haelfte (oder Single-Item): aktuelles Item aktivieren.
-        return Some(active_item.value.clone());
+        return Some(display_item.value.clone());
     }
 
     if lp_state.popup_open {
@@ -101,7 +98,7 @@ pub fn render_long_press_button<T: Clone + PartialEq>(
         return render_popup(
             ui.ctx(),
             group,
-            active_value,
+            display_value,
             icon_color,
             active_icon_color,
             lp_state,
@@ -115,7 +112,7 @@ pub fn render_long_press_button<T: Clone + PartialEq>(
 pub fn render_popup<T: Clone + PartialEq>(
     ctx: &egui::Context,
     group: &LongPressGroup<'_, T>,
-    active_value: &T,
+    selected_value: &T,
     icon_color: egui::Color32,
     active_icon_color: egui::Color32,
     lp_state: &mut LongPressState,
@@ -134,7 +131,7 @@ pub fn render_popup<T: Clone + PartialEq>(
 
                         let mut selected = None;
                         for item in group.items {
-                            let is_active = &item.value == active_value;
+                            let is_active = &item.value == selected_value;
                             let tint = if is_active {
                                 active_icon_color
                             } else {
