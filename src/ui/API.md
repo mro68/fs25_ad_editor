@@ -8,7 +8,10 @@ Das `ui`-Modul enthält egui-UI-Komponenten (Menüs, Statusbar, Input-Handling, 
 
 - `menu.rs` — Top-Menü-Leiste
 - `status.rs` — Statusleiste
-- `toolbar.rs` — Werkzeugleiste
+- `floating_menu.rs` — Schwebende Kontextmenues fuer Werkzeuggruppen (Toggle via `W/G/S/T`)
+- `icons.rs` — Gemeinsame Icon-Konstanten/Helfer (`ICON_SIZE`, `svg_icon`, `route_tool_icon`)
+- `long_press.rs` — Wiederverwendbares Long-Press-Dropdown-Widget (`LongPressState`, `LongPressGroup`, `render_long_press_button`)
+- `defaults_panel.rs` — Linke Sidebar im Gruppen-Layout (Long-Press fuer Werkzeuge/Route-Gruppen/Defaults, Hintergrund)
 - `command_palette.rs` — Command Palette Overlay (Suche + Intent-Auswahl)
 - `properties.rs` — Properties-Panel (Detailanzeige selektierter Nodes)
 - `options_dialog/` — Optionen-Dialog für Laufzeit-Einstellungen (`mod.rs`, `sections.rs`)
@@ -94,8 +97,43 @@ pub fn render_segment_overlays(
 - Gesperrt (`locked = true`): gelber Rahmen, 15%-schwarze Fuellung, geschlossenes Schloss-Icon
 ---
 
-- Select / Connect / AddNode / Route (immer sichtbar)
-- Linien-Tool-Dropdown: Zeigt alle Route-Tools ausser FieldBoundaryTool
+### `render_floating_menu`
+
+Rendert ein schwebendes Kontextmenue an `UiState.floating_menu.pos`.
+Die Menue-Art wird ueber `UiState.floating_menu.kind` gesteuert.
+
+```rust
+pub fn render_floating_menu(
+  ctx: &egui::Context,
+  state: &AppState,
+) -> (Vec<AppIntent>, bool)
+```
+
+Unterstuetzte Menues:
+
+- `FloatingMenuKind::Tools` — Select / Connect / AddNode
+- `FloatingMenuKind::Basics` — Gerade, Bezier (Q/C), Spline, Constraint
+- `FloatingMenuKind::SectionTools` — Ausweichstrecke, Parkplatz, Strecke versetzen
+
+Verhalten:
+
+- Aktive Auswahl wird mit Akzentfarbe hervorgehoben
+- Item-Klick emittiert passende Intents und schliesst das Menue
+- Klick ausserhalb schliesst das Menue
+
+---
+
+### `ui::icons`
+
+Gemeinsame UI-Icon-Helfer fuer Tool-Buttons.
+
+```rust
+pub const ICON_SIZE: f32;
+pub fn svg_icon(source: ImageSource<'_>, size: f32) -> Image<'_>;
+pub fn route_tool_icon(idx: usize) -> ImageSource<'static>;
+```
+
+---
 
 ### `render_properties_panel`
 
@@ -204,6 +242,8 @@ let intents = input.collect_viewport_events(
   - `Ctrl+V` → Paste-Vorschau starten
   - `Ctrl+O` → Datei öffnen
   - `Ctrl+S` → Datei speichern
+  - `W` / `G` / `S` / `T` (ohne Modifier) → Floating-Menues (Tools/Basics/SectionTools)
+  - `K` (ohne Modifier) und `Ctrl+K` → Command-Palette toggeln
   - `Ctrl+Z` → Undo
   - `Ctrl+Y` → Redo
 
@@ -365,19 +405,88 @@ pub fn paint_preview_polyline(
   viewport_size: Vec2,
   positions: &[Vec2],
 )
+```
+
+---
+
+### Long-Press-Widget (`long_press.rs`)
+
+Wiederverwendbares Long-Press-Dropdown-Widget fuer Icon-Buttons mit optionalem Auswahl-Popup.
+
+#### Typen
+
+```rust
+/// Long-Press-Status einer Button-Gruppe.
+pub struct LongPressState {
+    pub press_start: Option<f64>,  // Startzeitpunkt (egui-Zeit in Sekunden)
+    pub popup_open: bool,          // Ob das Auswahl-Popup offen ist
+    pub popup_pos: Option<egui::Pos2>, // Position des Popups im Screen-Space
+}
+
+/// Ein auswaehlbares Item innerhalb einer Long-Press-Gruppe.
+pub struct LongPressItem<T: Clone> {
+    pub icon: egui::ImageSource<'static>,
+    pub tooltip: &'static str,
+    pub value: T,
+}
+
+/// Definiert eine Long-Press-Gruppe mit mehreren auswaehlbaren Items.
+pub struct LongPressGroup<T: Clone + PartialEq> {
+    pub id: &'static str,       // Eindeutige ID fuer egui
+    pub label: &'static str,    // Anzeigename der Gruppe
+    pub items: Vec<LongPressItem<T>>,
+}
+```
+
+#### Funktionen
+
+```rust
+/// Rendert einen Long-Press-Button mit optionalem Auswahl-Popup.
+/// Kurzer Klick aktiviert das aktuelle Item; Long-Press (>= 1s) oeffnet Popup.
+pub fn render_long_press_button<T: Clone + PartialEq>(
+    ui: &mut egui::Ui,
+    icon_color: egui::Color32,
+    active_icon_color: egui::Color32,
+    group: &LongPressGroup<T>,
+    active_value: &T,
+    lp_state: &mut LongPressState,
+) -> Option<T>
+
+/// Rendert das Long-Press-Popup neben dem Button.
+pub fn render_popup<T: Clone + PartialEq>(
+    ctx: &egui::Context,
+    group: &LongPressGroup<T>,
+    active_value: &T,
+    icon_color: egui::Color32,
+    active_icon_color: egui::Color32,
+    lp_state: &mut LongPressState,
+) -> Option<T>
+
+/// Zeichnet einen kleinen Dropdown-Pfeil in die untere rechte Ecke des Buttons.
+pub fn paint_dropdown_arrow(ui: &egui::Ui, response: &egui::Response)
+```
+
+**Verhalten:**
+- Return `Some(value)` wenn ein Item ausgewaehlt wurde (kurzer Klick oder Popup-Klick)
+- `LongPressState` muss pro Gruppe getrennt im `UiState` gehalten werden (`lp_tools`, `lp_straights`, `lp_curves`, `lp_constraint`, `lp_section_tools`, `lp_direction`, `lp_priority`)
+- Popup schliesst sich bei Klick ausserhalb
+
+---
 
 ### `render_route_defaults_panel`
 
-Linkes Panel fuer Standard-Richtung und -Prioritaet (Icon-Only, vertikal gestapelt).
+Linke Sidebar im kompakten Gruppen-Layout (64px):
+
+- Long-Press-Gruppe `Werkzeuge` (Select, Connect, AddNode)
+- Long-Press-Gruppen fuer Route-Tools (Geraden, Kurven, Constraint, Abschnittswerkzeuge; ohne FieldBoundary)
+- Long-Press fuer Richtungs- und Prioritaets-Defaults
+- `Hintergrund` als `CollapsingHeader`
 
 ```rust
 pub fn render_route_defaults_panel(
   ctx: &egui::Context,
-  default_direction: ConnectionDirection,
-  default_priority: ConnectionPriority,
+  state: &mut AppState,
 ) -> Vec<AppIntent>
-```
-
 ```
 
 ---

@@ -268,6 +268,17 @@ pub enum AppCommand {
     DissolveSegment { segment_id: u64 },
 
     // ── Extras ───────────────────────────────────────────────────────
+    /// Einstellungsdialog "Alle Felder nachzeichnen" oeffnen
+    OpenTraceAllFieldsDialog,
+    /// Einstellungsdialog "Alle Felder nachzeichnen" schliessen (Abbruch)
+    CloseTraceAllFieldsDialog,
     /// Alle Farmland-Polygone als Wegpunkt-Ring nachzeichnen (Batch-Operation)
-    TraceAllFields,
+    TraceAllFields {
+        /// Abstand zwischen Wegpunkten in Metern
+        spacing: f32,
+        /// Randversatz in Metern
+        offset: f32,
+        /// Begradigung: Douglas-Peucker-Toleranz (0 = aus)
+        tolerance: f32,
+    },
 }

@@ -24,7 +24,6 @@ scripts/fs25_overview_map.py
 scripts/README.md
 **/*AUDIT*.*
 **/*_PLAN.*
-assets/**/
 .zram.sh
 memories
 .vscode/tasks.json

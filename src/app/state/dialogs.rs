@@ -1,6 +1,26 @@
 use crate::shared::OverviewLayerOptions;
 use std::path::PathBuf;
 
+/// Zustand eines schwebenden Kontextmenues.
+#[derive(Debug, Clone, Copy)]
+pub struct FloatingMenuState {
+    /// Art des aktuell geoeffneten Menues.
+    pub kind: FloatingMenuKind,
+    /// Bildschirmposition des Menues.
+    pub pos: egui::Pos2,
+}
+
+/// Typ des schwebenden Kontextmenues.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub enum FloatingMenuKind {
+    /// Werkzeug-Menue (Select/Connect/AddNode).
+    Tools,
+    /// Basis-Menue (Gerade/Kurve/Constraint).
+    Basics,
+    /// Menue fuer Abschnittswerkzeuge.
+    SectionTools,
+}
+
 /// Zustand des Marker-Bearbeiten-Dialogs
 #[derive(Default)]
 pub struct MarkerDialogState {
@@ -118,6 +138,30 @@ pub struct SaveOverviewDialogState {
     pub is_overwrite: bool,
 }
 
+/// Einstellungen fuer den "Alle Felder nachzeichnen"-Dialog.
+#[derive(Debug, Clone)]
+pub struct TraceAllFieldsDialogState {
+    /// Ob der Dialog sichtbar ist.
+    pub visible: bool,
+    /// Abstand zwischen generierten Wegpunkten in Welteinheiten (Meter).
+    pub spacing: f32,
+    /// Versatz vom Feldrand nach innen (positiv = nach innen, negativ = nach aussen).
+    pub offset: f32,
+    /// Begradigung: Douglas-Peucker-Toleranz in Welteinheiten (0 = kein).
+    pub tolerance: f32,
+}
+
+impl Default for TraceAllFieldsDialogState {
+    fn default() -> Self {
+        Self {
+            visible: false,
+            spacing: 10.0,
+            offset: 0.0,
+            tolerance: 0.0,
+        }
+    }
+}
+
 /// Konfiguration fuer das Distanzen-Neuverteilen-Feature im Eigenschaften-Bereich.
 #[derive(Debug, Clone)]
 pub struct DistanzenState {
@@ -210,6 +254,8 @@ pub struct UiState {
     pub show_overview_dialog: bool,
     /// Ob die Command-Palette angezeigt werden soll
     pub show_command_palette: bool,
+    /// Optionales schwebendes Menue an der Mausposition.
+    pub floating_menu: Option<FloatingMenuState>,
     /// Ob die Heightmap-Warnung angezeigt werden soll
     pub show_heightmap_warning: bool,
     /// Ob die Heightmap-Warnung fuer diese Save-Operation bereits bestaetigt wurde
@@ -236,6 +282,8 @@ pub struct UiState {
     pub save_overview_dialog: SaveOverviewDialogState,
     /// Distanzen-Neuverteilen-Konfiguration (Eigenschaften-Panel)
     pub distanzen: DistanzenState,
+    /// Dialog fuer "Alle Felder nachzeichnen"-Einstellungen
+    pub trace_all_fields_dialog: TraceAllFieldsDialogState,
 }
 
 impl UiState {
@@ -248,6 +296,7 @@ impl UiState {
             show_background_map_dialog: false,
             show_overview_dialog: false,
             show_command_palette: false,
+            floating_menu: None,
             show_heightmap_warning: false,
             heightmap_warning_confirmed: false,
             pending_save_path: None,
@@ -261,6 +310,7 @@ impl UiState {
             post_load_dialog: PostLoadDialogState::new(),
             save_overview_dialog: SaveOverviewDialogState::default(),
             distanzen: DistanzenState::default(),
+            trace_all_fields_dialog: TraceAllFieldsDialogState::default(),
         }
     }
 }

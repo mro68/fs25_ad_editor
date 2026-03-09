@@ -109,6 +109,7 @@ pub struct UiState {
     pub show_background_map_dialog: bool,
     pub show_overview_dialog: bool,
     pub show_command_palette: bool,
+    pub floating_menu: Option<FloatingMenuState>,
     pub show_heightmap_warning: bool,
     pub heightmap_warning_confirmed: bool,
     pub pending_save_path: Option<String>,
@@ -123,6 +124,17 @@ pub struct UiState {
     pub save_overview_dialog: SaveOverviewDialogState,
     /// Konfiguration fuer das Distanzen-Neuverteilen-Feature
     pub distanzen: DistanzenState,
+}
+
+pub struct FloatingMenuState {
+    pub kind: FloatingMenuKind,
+    pub pos: egui::Pos2,
+}
+
+pub enum FloatingMenuKind {
+    Tools,
+    Basics,
+    SectionTools,
 }
 
 pub struct DistanzenState {
@@ -205,6 +217,10 @@ pub struct EditorToolState {
     pub connect_source_node: Option<u64>,
     pub default_direction: ConnectionDirection,
     pub default_priority: ConnectionPriority,
+    pub last_straight_index: usize,
+    pub last_curve_index: usize,
+    pub last_constraint_index: usize,
+    pub last_section_tool_index: usize,
     pub tool_manager: ToolManager,
 }
 ```
@@ -591,6 +607,7 @@ pub enum AppIntent {
     OptionsChanged { options: Box<EditorOptions> },
     ResetOptionsRequested,
     CommandPaletteToggled,
+    ToggleFloatingMenu { kind: FloatingMenuKind },
 
     // Route-Tool
     RouteToolClicked { world_pos: glam::Vec2, ctrl: bool },

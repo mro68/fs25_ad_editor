@@ -81,6 +81,7 @@ fn execute_and_apply(state: &mut AppState) {
 pub fn cancel(state: &mut AppState) {
     if let Some(tool) = state.editor.tool_manager.active_tool_mut() {
         tool.reset();
+        state.editor.active_tool = EditorTool::Select;
     }
 }
 

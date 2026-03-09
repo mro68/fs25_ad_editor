@@ -64,43 +64,43 @@ pub(super) fn command_icon(
 ) -> Option<egui::Image<'static>> {
     let source: egui::ImageSource<'static> = match id {
         CommandId::SetToolSelect => {
-            egui::include_image!("../../../assets/icon_select_node.svg")
+            egui::include_image!("../../../assets/icons/icon_select_node.svg")
         }
         CommandId::SetToolConnect => {
-            egui::include_image!("../../../assets/icon_connect.svg")
+            egui::include_image!("../../../assets/icons/icon_connect.svg")
         }
         CommandId::SetToolAddNode => {
-            egui::include_image!("../../../assets/icon_add_node.svg")
+            egui::include_image!("../../../assets/icons/icon_add_node.svg")
         }
         CommandId::SetToolRouteStraight | CommandId::RouteStraight => {
-            egui::include_image!("../../../assets/icon_straight_road.svg")
+            egui::include_image!("../../../assets/icons/icon_straight_line.svg")
         }
         CommandId::SetToolRouteConstraint | CommandId::RouteConstraint => {
-            egui::include_image!("../../../assets/icon_constraint_route.svg")
+            egui::include_image!("../../../assets/icons/icon_constraint_route.svg")
         }
         CommandId::SetToolRouteQuadratic | CommandId::RouteQuadratic => {
-            egui::include_image!("../../../assets/icon_bezier_quadratic.svg")
+            egui::include_image!("../../../assets/icons/icon_bezier_quadratic.svg")
         }
         CommandId::SetToolRouteCubic | CommandId::RouteCubic => {
-            egui::include_image!("../../../assets/icon_bezier_cubic.svg")
+            egui::include_image!("../../../assets/icons/icon_bezier_cubic.svg")
         }
         CommandId::SetToolFieldBoundary => {
-            egui::include_image!("../../../assets/icon_field_boundary.svg")
+            egui::include_image!("../../../assets/icons/icon_field_boundary.svg")
         }
         CommandId::DirectionRegular => {
-            egui::include_image!("../../../assets/icon_direction_regular.svg")
+            egui::include_image!("../../../assets/icons/icon_direction_regular.svg")
         }
         CommandId::DirectionDual => {
-            egui::include_image!("../../../assets/icon_direction_dual.svg")
+            egui::include_image!("../../../assets/icons/icon_direction_dual.svg")
         }
         CommandId::DirectionReverse => {
-            egui::include_image!("../../../assets/icon_direction_reverse.svg")
+            egui::include_image!("../../../assets/icons/icon_direction_reverse.svg")
         }
         CommandId::PriorityRegular => {
-            egui::include_image!("../../../assets/icon_priority_main.svg")
+            egui::include_image!("../../../assets/icons/icon_priority_main.svg")
         }
         CommandId::PrioritySub => {
-            egui::include_image!("../../../assets/icon_priority_side.svg")
+            egui::include_image!("../../../assets/icons/icon_priority_side.svg")
         }
         _ => return None,
     };
