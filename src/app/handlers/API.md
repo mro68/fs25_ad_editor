@@ -284,10 +284,16 @@ pub fn select_segment(
     world_pos: glam::Vec2,
     max_distance: f32,
     additive: bool,
+    stop_at_junction: bool,
+    max_angle_deg: f32,
 )
 ```
 
-Selektiert das Segment zwischen den nächsten Kreuzungen (Intermediate Junctions).
+Selektiert das Segment zwischen den nächsten Segmentgrenzen. Abbruchbedingungen:
+- `stop_at_junction = true`: Stopp bei Kreuzungen (Knotengrad != 2)
+- `max_angle_deg > 0`: Stopp wenn die Richtungsänderung diesen Winkel überschreitet (0 = deaktiviert)
+
+Beide Werte werden aus `EditorOptions` (via `AppCommand`) übergeben.
 
 ```rust
 pub fn select_in_rect(state: &mut AppState, min: glam::Vec2, max: glam::Vec2, additive: bool)

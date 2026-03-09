@@ -98,6 +98,10 @@ pub enum AppCommand {
         world_pos: glam::Vec2,
         max_distance: f32,
         additive: bool,
+        /// Bei Kreuzung (degree != 2) stoppen.
+        stop_at_junction: bool,
+        /// Max. Winkelabweichung in Grad (0.0 = nicht pruefen).
+        max_angle_deg: f32,
     },
     /// Nodes innerhalb eines Rechtecks selektieren
     SelectNodesInRect {

@@ -30,14 +30,18 @@ pub fn select_segment(
     world_pos: glam::Vec2,
     max_distance: f32,
     additive: bool,
+    stop_at_junction: bool,
+    max_angle_deg: f32,
 ) {
+    let (old_selected, old_anchor) = helpers::capture_selection_snapshot(state);
     use_cases::selection::select_segment_between_nearest_intersections(
         state,
         world_pos,
         max_distance,
         additive,
+        stop_at_junction,
+        max_angle_deg,
     );
-    let (old_selected, old_anchor) = helpers::capture_selection_snapshot(state);
     helpers::record_selection_if_changed(state, old_selected, old_anchor);
 }
 

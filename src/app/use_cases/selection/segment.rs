@@ -3,39 +3,70 @@
 use crate::AppState;
 use std::collections::HashMap;
 
-use super::helpers::{build_undirected_adjacency, clear_selection};
+use super::helpers::{build_undirected_adjacency_with_angles, clear_selection, AdjacencyNeighbor};
 
-/// Laeuft entlang einer Kette von Grad-2-Nodes bis zur naechsten Segmentgrenze.
+/// Konfig fuer die Abbruchbedingungen des Segment-Walks.
+struct WalkConfig {
+    /// Stopp bei Knoten mit Grad != 2 (Kreuzung).
+    stop_at_junction: bool,
+    /// Max. Winkelabweichung in Radiant (0.0 = deaktiviert).
+    max_angle_rad: f32,
+}
+
+/// Berechnet die Abweichung zwischen Einlauf- und Auslaufwinkel.
+///
+/// Misst, wie stark die Richtung abknickt (0 = geradeaus, PI = Umkehr).
+fn angle_deviation(incoming: f32, outgoing: f32) -> f32 {
+    let diff = (outgoing - incoming + std::f32::consts::PI).rem_euclid(std::f32::consts::TAU)
+        - std::f32::consts::PI;
+    diff.abs()
+}
+
+/// Laeuft entlang einer Kette von Nodes bis zur naechsten Segmentgrenze.
+///
+/// Abbruchbedingungen werden ueber `WalkConfig` konfiguriert.
 fn walk_to_segment_boundary(
     start: u64,
     first_neighbor: u64,
-    adjacency: &HashMap<u64, Vec<u64>>,
+    adjacency: &HashMap<u64, Vec<AdjacencyNeighbor>>,
+    config: &WalkConfig,
 ) -> Vec<u64> {
     let mut path = vec![start, first_neighbor];
     let mut previous = start;
     let mut current = first_neighbor;
 
-    loop {
-        let degree = adjacency.get(&current).map(|n| n.len()).unwrap_or(0);
-        if degree != 2 {
+    while let Some(neighbors) = adjacency.get(&current) {
+        // Abbruch: Kreuzung (degree != 2)
+        if config.stop_at_junction && neighbors.len() != 2 {
             break;
         }
 
-        let Some(neighbors) = adjacency.get(&current) else {
+        // Naechsten Node bestimmen (nicht previous)
+        let Some(next_entry) = neighbors.iter().find(|n| n.node_id != previous) else {
             break;
         };
 
-        let Some(&next) = neighbors.iter().find(|&&neighbor| neighbor != previous) else {
-            break;
-        };
+        // Abbruch: Winkelabweichung pruefen
+        if config.max_angle_rad > 0.0 {
+            let incoming_angle = adjacency
+                .get(&previous)
+                .and_then(|ns| ns.iter().find(|n| n.node_id == current))
+                .map(|n| n.angle);
+            if let Some(in_angle) = incoming_angle {
+                let deviation = angle_deviation(in_angle, next_entry.angle);
+                if deviation > config.max_angle_rad {
+                    break;
+                }
+            }
+        }
 
-        if path.contains(&next) {
+        if path.contains(&next_entry.node_id) {
             break;
         }
 
-        path.push(next);
+        path.push(next_entry.node_id);
         previous = current;
-        current = next;
+        current = next_entry.node_id;
     }
 
     path
@@ -43,13 +74,16 @@ fn walk_to_segment_boundary(
 
 /// Selektiert den Korridor um den getroffenen Node bis zu den naechsten Segmentgrenzen.
 ///
-/// Segmentgrenzen sind Nodes mit Grad != 2, also Verzweigungen oder Sackgassen.
-/// Bei `additive = true` wird das Segment zur bestehenden Selektion hinzugefuegt.
+/// Segmentgrenzen koennen Kreuzungen (Grad != 2) und/oder Winkelabweichungen sein,
+/// je nach Konfiguration. Bei `additive = true` wird das Segment zur bestehenden
+/// Selektion hinzugefuegt.
 pub fn select_segment_between_nearest_intersections(
     state: &mut AppState,
     world_pos: glam::Vec2,
     max_distance: f32,
     additive: bool,
+    stop_at_junction: bool,
+    max_angle_deg: f32,
 ) {
     if max_distance < 0.0 {
         if !additive {
@@ -76,8 +110,11 @@ pub fn select_segment_between_nearest_intersections(
         return;
     };
 
-    let adjacency = build_undirected_adjacency(road_map);
-    let neighbors = adjacency.get(&hit_id).cloned().unwrap_or_default();
+    let adjacency = build_undirected_adjacency_with_angles(road_map);
+    let neighbors = adjacency
+        .get(&hit_id)
+        .map(|ns| ns.iter().map(|n| n.node_id).collect::<Vec<_>>())
+        .unwrap_or_default();
 
     if neighbors.is_empty() {
         if !additive {
@@ -88,9 +125,18 @@ pub fn select_segment_between_nearest_intersections(
         return;
     }
 
+    let config = WalkConfig {
+        stop_at_junction,
+        max_angle_rad: if max_angle_deg > 0.0 {
+            max_angle_deg.to_radians()
+        } else {
+            0.0
+        },
+    };
+
     let mut paths = neighbors
         .into_iter()
-        .map(|neighbor| walk_to_segment_boundary(hit_id, neighbor, &adjacency))
+        .map(|neighbor| walk_to_segment_boundary(hit_id, neighbor, &adjacency, &config))
         .collect::<Vec<_>>();
 
     if paths.len() > 2 {
@@ -191,6 +237,8 @@ mod tests {
             glam::Vec2::new(0.2, 0.0),
             2.0,
             false,
+            true,
+            15.0,
         );
 
         for node_id in [10_u64, 11, 12, 13, 14] {
@@ -289,6 +337,8 @@ mod tests {
             glam::Vec2::new(0.2, 0.0),
             2.0,
             false,
+            true,
+            15.0,
         );
 
         // Alle 5 Nodes des Segments sollen selektiert sein
@@ -305,5 +355,124 @@ mod tests {
         assert!(!state.selection.selected_node_ids.contains(&22));
         assert!(!state.selection.selected_node_ids.contains(&23));
         assert_eq!(state.selection.selection_anchor_node_id, Some(12));
+    }
+
+    // --- Neue Tests fuer angle_deviation ---
+
+    #[test]
+    fn angle_deviation_straight() {
+        // Geradeaus: gleicher Winkel → Abweichung 0
+        let dev = angle_deviation(0.0, 0.0);
+        assert!(dev.abs() < 1e-6, "Geradeaus sollte 0 sein, ist {dev}");
+    }
+
+    #[test]
+    fn angle_deviation_right_angle() {
+        // 90°-Abweichung
+        let dev = angle_deviation(0.0, std::f32::consts::FRAC_PI_2);
+        let expected = std::f32::consts::FRAC_PI_2;
+        assert!((dev - expected).abs() < 1e-5, "PI/2 erwartet, ist {dev}");
+    }
+
+    #[test]
+    fn angle_deviation_wraparound() {
+        // -170° und +170° liegen nahe beieinander → Abweichung ~20° (nicht 340°)
+        let incoming = (-170_f32).to_radians();
+        let outgoing = 170_f32.to_radians();
+        let dev = angle_deviation(incoming, outgoing);
+        let expected = 20_f32.to_radians();
+        assert!(
+            (dev - expected).abs() < 1e-4,
+            "~20° erwartet, ist {}°",
+            dev.to_degrees()
+        );
+    }
+
+    // --- Neue Tests fuer Walk-Abbruch bei Winkelabweichung ---
+
+    /// Hilfsfunktion: L-foermige Strecke 10→11→12 mit 90°-Knick bei Node 11.
+    /// Node 10: (0,0), Node 11: (10,0), Node 12: (10,10)
+    fn build_l_shaped_map() -> RoadMap {
+        let mut map = RoadMap::new(3);
+        map.add_node(MapNode::new(
+            10,
+            glam::Vec2::new(0.0, 0.0),
+            NodeFlag::Regular,
+        ));
+        map.add_node(MapNode::new(
+            11,
+            glam::Vec2::new(10.0, 0.0),
+            NodeFlag::Regular,
+        ));
+        map.add_node(MapNode::new(
+            12,
+            glam::Vec2::new(10.0, 10.0),
+            NodeFlag::Regular,
+        ));
+        let conn = |s, e, sx, sy, ex, ey| {
+            Connection::new(
+                s,
+                e,
+                ConnectionDirection::Regular,
+                ConnectionPriority::Regular,
+                glam::Vec2::new(sx, sy),
+                glam::Vec2::new(ex, ey),
+            )
+        };
+        map.add_connection(conn(10, 11, 0.0, 0.0, 10.0, 0.0));
+        map.add_connection(conn(11, 12, 10.0, 0.0, 10.0, 10.0));
+        map.ensure_spatial_index();
+        map
+    }
+
+    #[test]
+    fn segment_walk_stops_at_angle() {
+        // L-foermige Strecke: 10→11→12 mit 90°-Knick bei Node 11
+        // Klick auf Node 10 (vor dem Knick), max_angle=15° → Walk darf nicht um die Ecke gehen
+        let mut state = AppState::new();
+        state.road_map = Some(Arc::new(build_l_shaped_map()));
+
+        select_segment_between_nearest_intersections(
+            &mut state,
+            glam::Vec2::new(0.0, 0.0), // Node 10 (vor dem Knick)
+            1.0,
+            false,
+            false, // stop_at_junction=false: Grad-Pruefung deaktiviert
+            15.0,  // max_angle=15°: Winkel-Abbruch aktiv
+        );
+
+        // Node 10 und 11 sollen selektiert sein (Walk erreicht Knick und stoppt)
+        assert!(state.selection.selected_node_ids.contains(&10));
+        assert!(state.selection.selected_node_ids.contains(&11));
+        // Node 12 soll NICHT selektiert sein (90° > 15°)
+        assert!(
+            !state.selection.selected_node_ids.contains(&12),
+            "Node 12 sollte NICHT selektiert sein (90°-Knick ueberschreitet 15°-Limit)"
+        );
+    }
+
+    #[test]
+    fn segment_walk_angle_disabled() {
+        // Gleiche L-foermige Strecke, aber max_angle=0 → Winkelcheck deaktiviert
+        // stop_at_junction=false → Alle 3 Nodes werden selektiert
+        let mut state = AppState::new();
+        state.road_map = Some(Arc::new(build_l_shaped_map()));
+
+        select_segment_between_nearest_intersections(
+            &mut state,
+            glam::Vec2::new(0.0, 0.0), // Node 10 (Startpunkt)
+            1.0,
+            false,
+            false, // Kreuzungs-Stopp aus
+            0.0,   // Winkelcheck deaktiviert
+        );
+
+        // Alle 3 Nodes sollen selektiert sein
+        for node_id in [10_u64, 11, 12] {
+            assert!(
+                state.selection.selected_node_ids.contains(&node_id),
+                "Node {node_id} sollte selektiert sein (Winkelcheck deaktiviert)"
+            );
+        }
     }
 }
