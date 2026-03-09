@@ -10,9 +10,9 @@ use super::super::{common, ToolAnchor, ToolResult};
 use crate::core::{ConnectionDirection, ConnectionPriority, RoadMap};
 use glam::Vec2;
 
-/// Eingabe-Parameter fuer den Constraint-Route-Solver.
+/// Eingabe-Parameter fuer den Geglättete-Kurve-Solver.
 #[derive(Debug, Clone)]
-pub struct ConstraintRouteInput {
+pub struct SmoothCurveInput {
     /// Startposition der Route
     pub start: Vec2,
     /// Endposition der Route
@@ -42,14 +42,14 @@ pub struct SolverResult {
     pub departure_steerer: Option<Vec2>,
 }
 
-/// Hauptfunktion des Constraint-Route-Solvers.
+/// Hauptfunktion des Geglättete-Kurve-Solvers.
 ///
 /// Erzeugt eine geglaettete Waypoint-Kette die:
 /// 1. Durch Start, Kontrollpunkte und End verlaeuft
 /// 2. Winkel-Constraints einhaelt (Chaikin-Corner-Cutting)
 /// 3. Glatte Uebergaenge zu bestehenden Verbindungen sicherstellt (Steerer-Nodes)
 /// 4. Gleichmaessig abgetastete Punkte mit ≤ max_segment_length Abstand liefert
-pub fn solve_route(input: &ConstraintRouteInput) -> SolverResult {
+pub fn solve_route(input: &SmoothCurveInput) -> SolverResult {
     let max_angle_rad = input.max_direction_change_deg.to_radians();
     let total_dist = input.start.distance(input.end);
 
@@ -326,7 +326,7 @@ pub(crate) struct BuildResultParams<'a> {
 ///
 /// Berechnet Solver-Positionen und delegiert Node-/Verbindungs-Aufbau an `assemble_tool_result`.
 pub(crate) fn build_result(p: &BuildResultParams, road_map: &RoadMap) -> Option<ToolResult> {
-    let input = ConstraintRouteInput {
+    let input = SmoothCurveInput {
         start: p.start.position(),
         end: p.end.position(),
         control_nodes: p.control_nodes.to_vec(),

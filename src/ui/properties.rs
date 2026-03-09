@@ -268,8 +268,8 @@ fn render_segment_edit_buttons(
             crate::app::segment_registry::SegmentKind::CurveQuad { .. } => "✏ Kurve Grad 2",
             crate::app::segment_registry::SegmentKind::CurveCubic { .. } => "✏ Kurve Grad 3",
             crate::app::segment_registry::SegmentKind::Spline { .. } => "✏ Spline",
-            crate::app::segment_registry::SegmentKind::ConstraintRoute { .. } => {
-                "✏ Constraint-Route"
+            crate::app::segment_registry::SegmentKind::SmoothCurve { .. } => {
+                "✏ Geglättete Kurve"
             }
             crate::app::segment_registry::SegmentKind::Bypass { .. } => "✏ Ausweichstrecke",
             crate::app::segment_registry::SegmentKind::Parking { .. } => "✏ Parkplatz",

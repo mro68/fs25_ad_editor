@@ -1,7 +1,7 @@
 //! Schwebendes Kontextmenue fuer Werkzeuggruppen an der Mausposition.
 
 use crate::app::segment_registry::{
-    TOOL_INDEX_BYPASS, TOOL_INDEX_CONSTRAINT_ROUTE, TOOL_INDEX_CURVE_CUBIC, TOOL_INDEX_CURVE_QUAD,
+    TOOL_INDEX_BYPASS, TOOL_INDEX_SMOOTH_CURVE, TOOL_INDEX_CURVE_CUBIC, TOOL_INDEX_CURVE_QUAD,
     TOOL_INDEX_PARKING, TOOL_INDEX_ROUTE_OFFSET, TOOL_INDEX_SPLINE, TOOL_INDEX_STRAIGHT,
 };
 use crate::app::state::FloatingMenuKind;
@@ -81,7 +81,7 @@ pub fn render_floating_menu(ctx: &egui::Context, state: &AppState) -> (Vec<AppIn
                             (TOOL_INDEX_CURVE_QUAD, "Bezier Grad 2"),
                             (TOOL_INDEX_CURVE_CUBIC, "Bezier Grad 3"),
                             (TOOL_INDEX_SPLINE, "Spline"),
-                            (TOOL_INDEX_CONSTRAINT_ROUTE, "Constraint-Route"),
+                            (TOOL_INDEX_SMOOTH_CURVE, "Geglättete Kurve"),
                         ] {
                             if route_icon_button(
                                 ui,

@@ -240,7 +240,7 @@ fn catalog_empty_area_shows_tools() {
     assert!(has_command(&entries, CommandId::SetToolSelect));
     assert!(has_command(&entries, CommandId::SetToolConnect));
     assert!(has_command(&entries, CommandId::SetToolAddNode));
-    assert!(has_command(&entries, CommandId::SetToolRouteConstraint));
+    assert!(has_command(&entries, CommandId::SetToolRouteSmoothCurve));
     assert!(has_command(&entries, CommandId::SetToolRouteStraight));
     assert!(has_command(&entries, CommandId::SetToolRouteQuadratic));
     assert!(has_command(&entries, CommandId::SetToolRouteCubic));
@@ -248,7 +248,7 @@ fn catalog_empty_area_shows_tools() {
 }
 
 #[test]
-fn catalog_empty_area_constraint_route_is_first_route_entry() {
+fn catalog_empty_area_smooth_curve_is_first_route_entry() {
     let catalog = MenuCatalog::for_empty_area();
     let route_submenu = catalog
         .entries
@@ -264,7 +264,7 @@ fn catalog_empty_area_constraint_route_is_first_route_entry() {
         _ => None,
     });
 
-    assert_eq!(first_route_id, Some(CommandId::SetToolRouteConstraint));
+    assert_eq!(first_route_id, Some(CommandId::SetToolRouteSmoothCurve));
 }
 
 #[test]
@@ -452,13 +452,13 @@ fn catalog_multi_nodes_route_tools_only_when_two_selected() {
     let entries = validate_entries(&catalog, &ctx, &intent_ctx);
 
     assert!(!has_command(&entries, CommandId::RouteStraight));
-    assert!(!has_command(&entries, CommandId::RouteConstraint));
+    assert!(!has_command(&entries, CommandId::RouteSmoothCurve));
     assert!(!has_command(&entries, CommandId::RouteQuadratic));
     assert!(!has_command(&entries, CommandId::RouteCubic));
 }
 
 #[test]
-fn catalog_selection_constraint_route_is_first_generate_entry() {
+fn catalog_selection_smooth_curve_is_first_generate_entry() {
     let entries = MenuCatalog::for_selection_only().entries;
     let generate_submenu = entries
         .iter()
@@ -475,7 +475,7 @@ fn catalog_selection_constraint_route_is_first_generate_entry() {
         _ => None,
     });
 
-    assert_eq!(first_route_id, Some(CommandId::RouteConstraint));
+    assert_eq!(first_route_id, Some(CommandId::RouteSmoothCurve));
 }
 
 #[test]
