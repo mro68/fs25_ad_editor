@@ -3,7 +3,7 @@
 use crate::ui::icons::{svg_icon, ICON_SIZE};
 
 /// Long-Press-Status einer Button-Gruppe.
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Default)]
 pub struct LongPressState {
     /// Startzeitpunkt des gedrueckten Buttons (egui-Zeit in Sekunden).
     pub press_start: Option<f64>,
@@ -11,16 +11,6 @@ pub struct LongPressState {
     pub popup_open: bool,
     /// Position des Popups im Screen-Space.
     pub popup_pos: Option<egui::Pos2>,
-}
-
-impl Default for LongPressState {
-    fn default() -> Self {
-        Self {
-            press_start: None,
-            popup_open: false,
-            popup_pos: None,
-        }
-    }
 }
 
 /// Ein auswählbares Item innerhalb einer Long-Press-Gruppe.
