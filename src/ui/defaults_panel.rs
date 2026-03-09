@@ -41,7 +41,8 @@ fn render_long_press_with_memory<T: Clone + PartialEq>(
     icon_color: egui::Color32,
     active_icon_color: egui::Color32,
     group: &LongPressGroup<'_, T>,
-    active_value: &T,
+    display_value: &T,
+    is_button_active: bool,
 ) -> Option<T> {
     let key = egui::Id::new(("defaults_panel_long_press", group.id));
     let mut lp_state = ui
@@ -53,7 +54,8 @@ fn render_long_press_with_memory<T: Clone + PartialEq>(
         icon_color,
         active_icon_color,
         group,
-        active_value,
+        display_value,
+        is_button_active,
         &mut lp_state,
     );
 
@@ -67,6 +69,27 @@ pub fn render_route_defaults_panel(ctx: &egui::Context, state: &AppState) -> Vec
     let active_tool = state.editor.active_tool;
     let icon_color = function_icon_color(state);
     let active_icon_color = accent_icon_color(state);
+
+    // Aktueller Route-Tool-Index – None wenn kein Route-Tool aktiv.
+    let active_route_index: Option<usize> = if active_tool == EditorTool::Route {
+        state.editor.tool_manager.active_index()
+    } else {
+        None
+    };
+    let is_werkzeug_active = matches!(
+        active_tool,
+        EditorTool::Select | EditorTool::Connect | EditorTool::AddNode
+    );
+    let is_straight_active   = active_route_index == Some(TOOL_INDEX_STRAIGHT);
+    let is_curve_active      = matches!(
+        active_route_index,
+        Some(i) if i == TOOL_INDEX_CURVE_QUAD || i == TOOL_INDEX_CURVE_CUBIC || i == TOOL_INDEX_SPLINE
+    );
+    let is_constraint_active = active_route_index == Some(TOOL_INDEX_CONSTRAINT_ROUTE);
+    let is_section_active    = matches!(
+        active_route_index,
+        Some(i) if i == TOOL_INDEX_BYPASS || i == TOOL_INDEX_PARKING || i == TOOL_INDEX_ROUTE_OFFSET
+    );
 
     let tools_items = [
         LongPressItem {
@@ -218,6 +241,7 @@ pub fn render_route_defaults_panel(ctx: &egui::Context, state: &AppState) -> Vec
                 active_icon_color,
                 &tools_group,
                 &active_tool,
+                is_werkzeug_active,
             ) {
                 events.push(AppIntent::SetEditorToolRequested { tool });
             }
@@ -233,6 +257,7 @@ pub fn render_route_defaults_panel(ctx: &egui::Context, state: &AppState) -> Vec
                 active_icon_color,
                 &straights_group,
                 &state.editor.last_straight_index,
+                is_straight_active,
             ) {
                 push_route_tool_selection(&mut events, RouteGroup::Straight, index);
             }
@@ -243,6 +268,7 @@ pub fn render_route_defaults_panel(ctx: &egui::Context, state: &AppState) -> Vec
                 active_icon_color,
                 &curves_group,
                 &state.editor.last_curve_index,
+                is_curve_active,
             ) {
                 push_route_tool_selection(&mut events, RouteGroup::Curve, index);
             }
@@ -253,6 +279,7 @@ pub fn render_route_defaults_panel(ctx: &egui::Context, state: &AppState) -> Vec
                 active_icon_color,
                 &constraint_group,
                 &state.editor.last_constraint_index,
+                is_constraint_active,
             ) {
                 push_route_tool_selection(&mut events, RouteGroup::Constraint, index);
             }
@@ -268,6 +295,7 @@ pub fn render_route_defaults_panel(ctx: &egui::Context, state: &AppState) -> Vec
                 active_icon_color,
                 &section_tools_group,
                 &state.editor.last_section_tool_index,
+                is_section_active,
             ) {
                 push_route_tool_selection(&mut events, RouteGroup::Section, index);
             }
@@ -283,6 +311,7 @@ pub fn render_route_defaults_panel(ctx: &egui::Context, state: &AppState) -> Vec
                 active_icon_color,
                 &direction_group,
                 &state.editor.default_direction,
+                false,
             ) {
                 events.push(AppIntent::SetDefaultDirectionRequested { direction });
             }
@@ -298,6 +327,7 @@ pub fn render_route_defaults_panel(ctx: &egui::Context, state: &AppState) -> Vec
                 active_icon_color,
                 &priority_group,
                 &state.editor.default_priority,
+                false,
             ) {
                 events.push(AppIntent::SetDefaultPriorityRequested { priority });
             }
