@@ -1,6 +1,6 @@
 //! Wiederverwendbares Long-Press-Dropdown-Widget fuer Icon-Buttons.
 
-use crate::ui::icons::{svg_icon, ICON_SIZE};
+use crate::ui::icons::{ICON_SIZE, svg_icon};
 
 /// Long-Press-Status einer Button-Gruppe.
 #[derive(Debug, Clone)]
@@ -52,7 +52,7 @@ pub struct LongPressGroup<T: Clone + PartialEq> {
 pub fn render_long_press_button<T: Clone + PartialEq>(
     ui: &mut egui::Ui,
     icon_color: egui::Color32,
-    active_icon: egui::Color32,
+    active_icon_color: egui::Color32,
     group: &LongPressGroup<T>,
     active_value: &T,
     lp_state: &mut LongPressState,
@@ -62,7 +62,8 @@ pub fn render_long_press_button<T: Clone + PartialEq>(
         .iter()
         .find(|item| &item.value == active_value)
         .or_else(|| group.items.first())?;
-    let icon = svg_icon(active_item.icon.clone(), ICON_SIZE).tint(active_icon);
+
+    let icon = svg_icon(active_item.icon.clone(), ICON_SIZE).tint(active_icon_color);
 
     let response = ui
         .add(egui::Button::image(icon).selected(true))
@@ -105,7 +106,7 @@ pub fn render_long_press_button<T: Clone + PartialEq>(
             group,
             active_value,
             icon_color,
-            active_icon,
+            active_icon_color,
             lp_state,
         );
     }
@@ -128,36 +129,35 @@ pub fn render_popup<T: Clone + PartialEq>(
         .order(egui::Order::Foreground)
         .fixed_pos(popup_pos)
         .show(ctx, |ui| {
-            egui::Frame::popup(ui.style())
-                .show(ui, |ui| {
-                    ui.vertical(|ui| {
-                        ui.label(group.label);
-                        ui.separator();
+            egui::Frame::popup(ui.style()).show(ui, |ui| {
+                ui.vertical(|ui| {
+                    ui.label(group.label);
+                    ui.separator();
 
-                        let mut selected = None;
-                        for item in &group.items {
-                            let is_active = &item.value == active_value;
-                            let tint = if is_active {
-                                active_icon_color
-                            } else {
-                                icon_color
-                            };
-                            let icon = svg_icon(item.icon.clone(), ICON_SIZE).tint(tint);
+                    let mut selected = None;
+                    for item in &group.items {
+                        let is_active = &item.value == active_value;
+                        let tint = if is_active {
+                            active_icon_color
+                        } else {
+                            icon_color
+                        };
+                        let icon = svg_icon(item.icon.clone(), ICON_SIZE).tint(tint);
 
-                            if ui
-                                .add(egui::Button::image(icon).selected(is_active))
-                                .on_hover_text(item.tooltip)
-                                .clicked()
-                            {
-                                selected = Some(item.value.clone());
-                            }
+                        if ui
+                            .add(egui::Button::image(icon).selected(is_active))
+                            .on_hover_text(item.tooltip)
+                            .clicked()
+                        {
+                            selected = Some(item.value.clone());
                         }
+                    }
 
-                        selected
-                    })
-                    .inner
+                    selected
                 })
                 .inner
+            })
+            .inner
         });
 
     let selected = area_response.inner;
