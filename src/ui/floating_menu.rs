@@ -1,20 +1,22 @@
 //! Schwebendes Kontextmenue fuer Werkzeuggruppen an der Mausposition.
 
 use crate::app::segment_registry::{
-    TOOL_INDEX_BYPASS, TOOL_INDEX_CONSTRAINT_ROUTE, TOOL_INDEX_CURVE_CUBIC, TOOL_INDEX_CURVE_QUAD,
-    TOOL_INDEX_PARKING, TOOL_INDEX_ROUTE_OFFSET, TOOL_INDEX_SPLINE, TOOL_INDEX_STRAIGHT,
+    TOOL_INDEX_BYPASS, TOOL_INDEX_CONSTRAINT_ROUTE, TOOL_INDEX_CURVE_CUBIC,
+    TOOL_INDEX_CURVE_QUAD, TOOL_INDEX_PARKING, TOOL_INDEX_ROUTE_OFFSET, TOOL_INDEX_SPLINE,
+    TOOL_INDEX_STRAIGHT,
 };
 use crate::app::state::FloatingMenuKind;
 use crate::app::{AppIntent, AppState, EditorTool};
 use crate::ui::icons::{
-    accent_icon_color, function_icon_color, route_tool_icon, svg_icon, ICON_SIZE,
+    ICON_SIZE, accent_icon_color, function_icon_color, route_tool_icon, svg_icon,
 };
 
 /// Rendert ein schwebendes Menue an der gespeicherten Position.
 /// Gibt `AppIntent`s zurueck, wenn ein Menueeintrag geklickt wurde.
-pub fn render_floating_menu(ctx: &egui::Context, state: &mut AppState) -> Vec<AppIntent> {
+/// Der boolesche Rueckgabewert signalisiert, ob das Menue geschlossen werden soll.
+pub fn render_floating_menu(ctx: &egui::Context, state: &AppState) -> (Vec<AppIntent>, bool) {
     let Some(menu) = state.ui.floating_menu else {
-        return vec![];
+        return (vec![], false);
     };
 
     let mut events = Vec::new();
@@ -131,10 +133,10 @@ pub fn render_floating_menu(ctx: &egui::Context, state: &mut AppState) -> Vec<Ap
     });
 
     if !events.is_empty() || clicked_outside {
-        state.ui.floating_menu = None;
+        return (events, true);
     }
 
-    events
+    (events, false)
 }
 
 fn tool_icon_button(

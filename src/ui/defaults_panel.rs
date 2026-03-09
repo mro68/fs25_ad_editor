@@ -1,14 +1,17 @@
 //! Linkes Sidebar-Panel fuer Werkzeuge, Defaults und Hintergrund-Controls.
 
 use crate::app::segment_registry::{
-    TOOL_INDEX_BYPASS, TOOL_INDEX_CONSTRAINT_ROUTE, TOOL_INDEX_CURVE_CUBIC, TOOL_INDEX_CURVE_QUAD,
-    TOOL_INDEX_PARKING, TOOL_INDEX_ROUTE_OFFSET, TOOL_INDEX_SPLINE, TOOL_INDEX_STRAIGHT,
+    TOOL_INDEX_BYPASS, TOOL_INDEX_CONSTRAINT_ROUTE, TOOL_INDEX_CURVE_CUBIC,
+    TOOL_INDEX_CURVE_QUAD, TOOL_INDEX_PARKING, TOOL_INDEX_ROUTE_OFFSET, TOOL_INDEX_SPLINE,
+    TOOL_INDEX_STRAIGHT,
 };
 use crate::app::{AppIntent, AppState, ConnectionDirection, ConnectionPriority, EditorTool};
 use crate::ui::icons::{
     accent_icon_color, function_icon_color, route_tool_icon, svg_icon, ICON_SIZE,
 };
-use crate::ui::long_press::{render_long_press_button, LongPressGroup, LongPressItem};
+use crate::ui::long_press::{
+    LongPressGroup, LongPressItem, LongPressState, render_long_press_button,
+};
 
 #[derive(Debug, Clone, Copy)]
 enum RouteGroup {
@@ -29,25 +32,42 @@ fn route_group_label(group: RouteGroup) -> &'static str {
 
 fn push_route_tool_selection(
     events: &mut Vec<AppIntent>,
-    state: &mut AppState,
-    group: RouteGroup,
+    _group: RouteGroup,
     index: usize,
 ) {
-    match group {
-        RouteGroup::Straight => state.editor.last_straight_index = index,
-        RouteGroup::Curve => state.editor.last_curve_index = index,
-        RouteGroup::Constraint => state.editor.last_constraint_index = index,
-        RouteGroup::Section => state.editor.last_section_tool_index = index,
-    }
-
     events.push(AppIntent::SetEditorToolRequested {
         tool: EditorTool::Route,
     });
     events.push(AppIntent::SelectRouteToolRequested { index });
 }
 
+fn render_long_press_with_memory<T: Clone + PartialEq>(
+    ui: &mut egui::Ui,
+    icon_color: egui::Color32,
+    active_icon_color: egui::Color32,
+    group: &LongPressGroup<T>,
+    active_value: &T,
+) -> Option<T> {
+    let key = egui::Id::new(("defaults_panel_long_press", group.id));
+    let mut lp_state = ui
+        .ctx()
+        .data_mut(|d| d.get_temp::<LongPressState>(key).unwrap_or_default());
+
+    let selection = render_long_press_button(
+        ui,
+        icon_color,
+        active_icon_color,
+        group,
+        active_value,
+        &mut lp_state,
+    );
+
+    ui.ctx().data_mut(|d| d.insert_temp(key, lp_state));
+    selection
+}
+
 /// Rendert die linke Sidebar mit Tool-Auswahl, Route-Tools und Defaults.
-pub fn render_route_defaults_panel(ctx: &egui::Context, state: &mut AppState) -> Vec<AppIntent> {
+pub fn render_route_defaults_panel(ctx: &egui::Context, state: &AppState) -> Vec<AppIntent> {
     let mut events = Vec::new();
     let active_tool = state.editor.active_tool;
     let icon_color = function_icon_color(state);
@@ -182,13 +202,12 @@ pub fn render_route_defaults_panel(ctx: &egui::Context, state: &mut AppState) ->
         .resizable(false)
         .default_width(64.0)
         .show(ctx, |ui| {
-            if let Some(tool) = render_long_press_button(
+            if let Some(tool) = render_long_press_with_memory(
                 ui,
                 icon_color,
                 active_icon_color,
                 &tools_group,
                 &active_tool,
-                &mut state.ui.lp_tools,
             ) {
                 events.push(AppIntent::SetEditorToolRequested { tool });
             }
@@ -197,82 +216,80 @@ pub fn render_route_defaults_panel(ctx: &egui::Context, state: &mut AppState) ->
             ui.separator();
             ui.add_space(6.0);
 
-            if let Some(index) = render_long_press_button(
+            if let Some(index) = render_long_press_with_memory(
                 ui,
                 icon_color,
                 active_icon_color,
                 &straights_group,
                 &state.editor.last_straight_index,
-                &mut state.ui.lp_straights,
             ) {
-                push_route_tool_selection(&mut events, state, RouteGroup::Straight, index);
+                push_route_tool_selection(&mut events, RouteGroup::Straight, index);
             }
 
-            if let Some(index) = render_long_press_button(
+            if let Some(index) = render_long_press_with_memory(
                 ui,
                 icon_color,
                 active_icon_color,
                 &curves_group,
                 &state.editor.last_curve_index,
-                &mut state.ui.lp_curves,
             ) {
-                push_route_tool_selection(&mut events, state, RouteGroup::Curve, index);
+                push_route_tool_selection(&mut events, RouteGroup::Curve, index);
             }
 
-            if let Some(index) = render_long_press_button(
+            if let Some(index) = render_long_press_with_memory(
                 ui,
                 icon_color,
                 active_icon_color,
                 &constraint_group,
                 &state.editor.last_constraint_index,
-                &mut state.ui.lp_constraint,
             ) {
-                push_route_tool_selection(&mut events, state, RouteGroup::Constraint, index);
+                push_route_tool_selection(&mut events, RouteGroup::Constraint, index);
             }
 
             ui.add_space(6.0);
             ui.separator();
             ui.add_space(6.0);
 
-            if let Some(index) = render_long_press_button(
+            if let Some(index) = render_long_press_with_memory(
                 ui,
                 icon_color,
                 active_icon_color,
                 &section_tools_group,
                 &state.editor.last_section_tool_index,
-                &mut state.ui.lp_section_tools,
             ) {
-                push_route_tool_selection(&mut events, state, RouteGroup::Section, index);
+                push_route_tool_selection(&mut events, RouteGroup::Section, index);
             }
 
             ui.add_space(6.0);
             ui.separator();
             ui.add_space(6.0);
 
-            if let Some(direction) = render_long_press_button(
+            if let Some(direction) = render_long_press_with_memory(
                 ui,
                 icon_color,
                 active_icon_color,
                 &direction_group,
                 &state.editor.default_direction,
-                &mut state.ui.lp_direction,
             ) {
-                events.push(AppIntent::SetDefaultDirectionRequested { direction });
+                events.push(AppIntent::SetDefaultDirectionRequested {
+                    direction,
+                });
             }
 
             ui.add_space(6.0);
             ui.separator();
             ui.add_space(6.0);
 
-            if let Some(priority) = render_long_press_button(
+            if let Some(priority) = render_long_press_with_memory(
                 ui,
                 icon_color,
                 active_icon_color,
                 &priority_group,
                 &state.editor.default_priority,
-                &mut state.ui.lp_priority,
             ) {
-                events.push(AppIntent::SetDefaultPriorityRequested { priority });
+                events.push(AppIntent::SetDefaultPriorityRequested {
+                    priority,
+                });
             }
 
             if state.view.background_map.is_some() {
