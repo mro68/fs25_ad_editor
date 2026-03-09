@@ -3,8 +3,8 @@
 use eframe::egui;
 use eframe::egui_wgpu;
 use fs25_auto_drive_editor::app::segment_registry::{
-    TOOL_INDEX_BYPASS, TOOL_INDEX_SMOOTH_CURVE, TOOL_INDEX_CURVE_CUBIC, TOOL_INDEX_CURVE_QUAD,
-    TOOL_INDEX_PARKING, TOOL_INDEX_ROUTE_OFFSET, TOOL_INDEX_SPLINE, TOOL_INDEX_STRAIGHT,
+    TOOL_INDEX_BYPASS, TOOL_INDEX_CURVE_CUBIC, TOOL_INDEX_CURVE_QUAD, TOOL_INDEX_PARKING,
+    TOOL_INDEX_ROUTE_OFFSET, TOOL_INDEX_SMOOTH_CURVE, TOOL_INDEX_SPLINE, TOOL_INDEX_STRAIGHT,
 };
 use fs25_auto_drive_editor::app::state::{FloatingMenuKind, FloatingMenuState};
 use fs25_auto_drive_editor::{

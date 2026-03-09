@@ -3,7 +3,7 @@
 //! Ermoeglicht das Verschieben von Start, End und Kontrollpunkten per Drag.
 
 use super::super::ToolAnchor;
-use super::state::{SmoothCurveTool, DragTarget, Phase};
+use super::state::{DragTarget, Phase, SmoothCurveTool};
 use crate::core::RoadMap;
 use glam::Vec2;
 
