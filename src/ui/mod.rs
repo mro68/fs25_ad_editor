@@ -8,18 +8,18 @@ pub mod context_menu;
 pub mod defaults_panel;
 /// Alle Dialoge (Datei-IO, Dedup, Marker, Heightmap, Uebersichtskarte).
 pub mod dialogs;
-/// Schwebendes Kontextmenue fuer Werkzeuggruppen an der Mausposition.
-pub mod floating_menu;
 mod drag;
 /// Editor-Panel fuer die Bearbeitung selektierter Knoten und Verbindungen.
 pub mod edit_panel;
+/// Schwebendes Kontextmenue fuer Werkzeuggruppen an der Mausposition.
+pub mod floating_menu;
 /// Gemeinsame Icon-Helfer fuer Tool-Buttons.
 pub mod icons;
-/// Wiederverwendbares Long-Press-Dropdown fuer Icon-Gruppen.
-pub mod long_press;
 /// Viewport-Input-Verarbeitung (Drag, Scroll, Mausklick, Selektion).
 pub mod input;
 mod keyboard;
+/// Wiederverwendbares Long-Press-Dropdown fuer Icon-Gruppen.
+pub mod long_press;
 /// Menue-Leiste mit Datei-, Bearbeitungs- und Ansicht-Aktionen.
 pub mod menu;
 /// Optionen-Dialog fuer Editor-Einstellungen.

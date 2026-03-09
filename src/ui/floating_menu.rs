@@ -1,14 +1,13 @@
 //! Schwebendes Kontextmenue fuer Werkzeuggruppen an der Mausposition.
 
 use crate::app::segment_registry::{
-    TOOL_INDEX_BYPASS, TOOL_INDEX_CONSTRAINT_ROUTE, TOOL_INDEX_CURVE_CUBIC,
-    TOOL_INDEX_CURVE_QUAD, TOOL_INDEX_PARKING, TOOL_INDEX_ROUTE_OFFSET, TOOL_INDEX_SPLINE,
-    TOOL_INDEX_STRAIGHT,
+    TOOL_INDEX_BYPASS, TOOL_INDEX_CONSTRAINT_ROUTE, TOOL_INDEX_CURVE_CUBIC, TOOL_INDEX_CURVE_QUAD,
+    TOOL_INDEX_PARKING, TOOL_INDEX_ROUTE_OFFSET, TOOL_INDEX_SPLINE, TOOL_INDEX_STRAIGHT,
 };
 use crate::app::state::FloatingMenuKind;
 use crate::app::{AppIntent, AppState, EditorTool};
 use crate::ui::icons::{
-    ICON_SIZE, accent_icon_color, function_icon_color, route_tool_icon, svg_icon,
+    accent_icon_color, function_icon_color, route_tool_icon, svg_icon, ICON_SIZE,
 };
 
 /// Rendert ein schwebendes Menue an der gespeicherten Position.
