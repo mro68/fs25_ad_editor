@@ -1,11 +1,11 @@
-//! Unit-Tests fuer den Constraint-Route-Solver.
+//! Unit-Tests fuer den Geglättete-Kurve-Solver.
 
-use crate::app::tools::constraint_route::geometry::*;
+use crate::app::tools::smooth_curve::geometry::*;
 use glam::Vec2;
 
 #[test]
 fn gerade_strecke_ohne_constraints() {
-    let input = ConstraintRouteInput {
+    let input = SmoothCurveInput {
         start: Vec2::new(0.0, 0.0),
         end: Vec2::new(30.0, 0.0),
         control_nodes: vec![],
@@ -30,7 +30,7 @@ fn gerade_strecke_ohne_constraints() {
 
 #[test]
 fn strecke_mit_kontrollpunkt() {
-    let input = ConstraintRouteInput {
+    let input = SmoothCurveInput {
         start: Vec2::new(0.0, 0.0),
         end: Vec2::new(30.0, 0.0),
         control_nodes: vec![Vec2::new(15.0, 10.0)],
@@ -49,7 +49,7 @@ fn strecke_mit_kontrollpunkt() {
 
 #[test]
 fn max_segment_laenge_eingehalten() {
-    let input = ConstraintRouteInput {
+    let input = SmoothCurveInput {
         start: Vec2::new(0.0, 0.0),
         end: Vec2::new(60.0, 0.0),
         control_nodes: vec![],
@@ -69,7 +69,7 @@ fn max_segment_laenge_eingehalten() {
 #[test]
 fn steerer_wird_bei_scharfem_winkel_eingefuegt() {
     // Nachbar-Richtung senkrecht zur Route-Richtung → 90° Winkel
-    let input = ConstraintRouteInput {
+    let input = SmoothCurveInput {
         start: Vec2::new(0.0, 0.0),
         end: Vec2::new(30.0, 0.0),
         control_nodes: vec![],
@@ -93,7 +93,7 @@ fn steerer_wird_bei_scharfem_winkel_eingefuegt() {
         ap
     );
     // Mehr Punkte als ohne Steerer
-    let input_ohne = ConstraintRouteInput {
+    let input_ohne = SmoothCurveInput {
         start_neighbor_directions: vec![],
         ..input.clone()
     };
@@ -106,7 +106,7 @@ fn steerer_wird_bei_scharfem_winkel_eingefuegt() {
 
 #[test]
 fn kurze_strecke_liefert_mindestens_2_punkte() {
-    let input = ConstraintRouteInput {
+    let input = SmoothCurveInput {
         start: Vec2::new(0.0, 0.0),
         end: Vec2::new(1.0, 0.0),
         control_nodes: vec![],
@@ -122,7 +122,7 @@ fn kurze_strecke_liefert_mindestens_2_punkte() {
 
 #[test]
 fn identische_start_end_position() {
-    let input = ConstraintRouteInput {
+    let input = SmoothCurveInput {
         start: Vec2::new(10.0, 10.0),
         end: Vec2::new(10.0, 10.0),
         control_nodes: vec![],
@@ -186,7 +186,7 @@ fn departure_steerer_bei_scharfem_winkel() {
 
 #[test]
 fn solver_result_enthaelt_steuerpunkte() {
-    let input = ConstraintRouteInput {
+    let input = SmoothCurveInput {
         start: Vec2::new(0.0, 0.0),
         end: Vec2::new(20.0, 0.0),
         control_nodes: vec![],

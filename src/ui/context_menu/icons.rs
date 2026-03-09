@@ -75,8 +75,8 @@ pub(super) fn command_icon(
         CommandId::SetToolRouteStraight | CommandId::RouteStraight => {
             egui::include_image!("../../../assets/icons/icon_straight_line.svg")
         }
-        CommandId::SetToolRouteConstraint | CommandId::RouteConstraint => {
-            egui::include_image!("../../../assets/icons/icon_constraint_route.svg")
+        CommandId::SetToolRouteSmoothCurve | CommandId::RouteSmoothCurve => {
+            egui::include_image!("../../../assets/icons/icon_smooth_curve.svg")
         }
         CommandId::SetToolRouteQuadratic | CommandId::RouteQuadratic => {
             egui::include_image!("../../../assets/icons/icon_bezier_quadratic.svg")

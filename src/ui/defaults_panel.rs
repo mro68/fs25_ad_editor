@@ -1,7 +1,7 @@
 //! Linkes Sidebar-Panel fuer Werkzeuge, Defaults und Hintergrund-Controls.
 
 use crate::app::segment_registry::{
-    TOOL_INDEX_BYPASS, TOOL_INDEX_CONSTRAINT_ROUTE, TOOL_INDEX_CURVE_CUBIC, TOOL_INDEX_CURVE_QUAD,
+    TOOL_INDEX_BYPASS, TOOL_INDEX_SMOOTH_CURVE, TOOL_INDEX_CURVE_CUBIC, TOOL_INDEX_CURVE_QUAD,
     TOOL_INDEX_PARKING, TOOL_INDEX_ROUTE_OFFSET, TOOL_INDEX_SPLINE, TOOL_INDEX_STRAIGHT,
 };
 use crate::app::{AppIntent, AppState, ConnectionDirection, ConnectionPriority, EditorTool};
@@ -16,7 +16,6 @@ use crate::ui::long_press::{
 enum RouteGroup {
     Straight,
     Curve,
-    Constraint,
     Section,
 }
 
@@ -24,7 +23,6 @@ fn route_group_label(group: RouteGroup) -> &'static str {
     match group {
         RouteGroup::Straight => "Geraden",
         RouteGroup::Curve => "Kurven",
-        RouteGroup::Constraint => "Constraint",
         RouteGroup::Section => "Tools",
     }
 }
@@ -83,9 +81,8 @@ pub fn render_route_defaults_panel(ctx: &egui::Context, state: &AppState) -> Vec
     let is_straight_active = active_route_index == Some(TOOL_INDEX_STRAIGHT);
     let is_curve_active = matches!(
         active_route_index,
-        Some(i) if i == TOOL_INDEX_CURVE_QUAD || i == TOOL_INDEX_CURVE_CUBIC || i == TOOL_INDEX_SPLINE
+        Some(i) if i == TOOL_INDEX_CURVE_QUAD || i == TOOL_INDEX_CURVE_CUBIC || i == TOOL_INDEX_SPLINE || i == TOOL_INDEX_SMOOTH_CURVE
     );
-    let is_constraint_active = active_route_index == Some(TOOL_INDEX_CONSTRAINT_ROUTE);
     let is_section_active = matches!(
         active_route_index,
         Some(i) if i == TOOL_INDEX_BYPASS || i == TOOL_INDEX_PARKING || i == TOOL_INDEX_ROUTE_OFFSET
@@ -131,13 +128,12 @@ pub fn render_route_defaults_panel(ctx: &egui::Context, state: &AppState) -> Vec
             tooltip: "Catmull-Rom Spline (G)\nGlatte Kurve durch existierende Nodes.\nZusaetzliche Zwischenpunkte werden berechnet.",
             value: TOOL_INDEX_SPLINE,
         },
+        LongPressItem {
+            icon: route_tool_icon(TOOL_INDEX_SMOOTH_CURVE),
+            tooltip: "Geglättete Kurve (G)\nWinkelgeglaettete Strecke zwischen zwei Nodes.\nAutomatische Ausrichtung an Strassenrasterwinkeln.",
+            value: TOOL_INDEX_SMOOTH_CURVE,
+        },
     ];
-
-    let constraint_items = [LongPressItem {
-        icon: route_tool_icon(TOOL_INDEX_CONSTRAINT_ROUTE),
-        tooltip: "Constraint-Route (G)\nWinkelgeglaettete Strecke zwischen zwei Nodes.\nAutomatische Ausrichtung an Strassenrasterwinkeln.",
-        value: TOOL_INDEX_CONSTRAINT_ROUTE,
-    }];
 
     let section_tools_items = [
         LongPressItem {
@@ -206,12 +202,6 @@ pub fn render_route_defaults_panel(ctx: &egui::Context, state: &AppState) -> Vec
         items: &curves_items,
     };
 
-    let constraint_group = LongPressGroup {
-        id: "grundbefehle_constraint",
-        label: route_group_label(RouteGroup::Constraint),
-        items: &constraint_items,
-    };
-
     let section_tools_group = LongPressGroup {
         id: "tools_abschnitt",
         label: route_group_label(RouteGroup::Section),
@@ -271,17 +261,6 @@ pub fn render_route_defaults_panel(ctx: &egui::Context, state: &AppState) -> Vec
                 is_curve_active,
             ) {
                 push_route_tool_selection(&mut events, RouteGroup::Curve, index);
-            }
-
-            if let Some(index) = render_long_press_with_memory(
-                ui,
-                icon_color,
-                active_icon_color,
-                &constraint_group,
-                &state.editor.last_constraint_index,
-                is_constraint_active,
-            ) {
-                push_route_tool_selection(&mut events, RouteGroup::Constraint, index);
             }
 
             ui.add_space(6.0);

@@ -59,8 +59,8 @@ pub enum SegmentKind {
         /// Gemeinsame Basis-Parameter
         base: SegmentBase,
     },
-    /// Constraint-Route (winkelgeglaettet mit automatischen Tangenten)
-    ConstraintRoute {
+    /// Geglättete Kurve (winkelgeglaettet mit automatischen Tangenten)
+    SmoothCurve {
         /// Zwischen-Kontrollpunkte
         control_nodes: Vec<Vec2>,
         /// Maximale Richtungsaenderung pro Segment (Grad)
@@ -142,8 +142,8 @@ pub const TOOL_INDEX_CURVE_CUBIC: usize = 2;
 pub const TOOL_INDEX_SPLINE: usize = 3;
 /// Tool-Index fuer `BypassTool` im `ToolManager` (Registrierungs-Slot 4).
 pub const TOOL_INDEX_BYPASS: usize = 4;
-/// Tool-Index fuer `ConstraintRouteTool` im `ToolManager` (Registrierungs-Slot 5).
-pub const TOOL_INDEX_CONSTRAINT_ROUTE: usize = 5;
+/// Tool-Index fuer `SmoothCurveTool` im `ToolManager` (Registrierungs-Slot 5).
+pub const TOOL_INDEX_SMOOTH_CURVE: usize = 5;
 /// Tool-Index fuer `ParkingTool` im `ToolManager` (Registrierungs-Slot 6).
 pub const TOOL_INDEX_PARKING: usize = 6;
 /// Tool-Index fuer `FieldBoundaryTool` im `ToolManager` (Registrierungs-Slot 7).
@@ -162,7 +162,7 @@ impl SegmentKind {
             SegmentKind::CurveQuad { .. } => TOOL_INDEX_CURVE_QUAD,
             SegmentKind::CurveCubic { .. } => TOOL_INDEX_CURVE_CUBIC,
             SegmentKind::Spline { .. } => TOOL_INDEX_SPLINE,
-            SegmentKind::ConstraintRoute { .. } => TOOL_INDEX_CONSTRAINT_ROUTE,
+            SegmentKind::SmoothCurve { .. } => TOOL_INDEX_SMOOTH_CURVE,
             SegmentKind::Bypass { .. } => TOOL_INDEX_BYPASS,
             SegmentKind::Parking { .. } => TOOL_INDEX_PARKING,
             SegmentKind::FieldBoundary { .. } => TOOL_INDEX_FIELD_BOUNDARY,
@@ -223,8 +223,8 @@ mod tests {
             "TOOL_INDEX_SPLINE zeigt nicht auf SplineTool"
         );
         assert_eq!(
-            names[TOOL_INDEX_CONSTRAINT_ROUTE], "Constraint-Route",
-            "TOOL_INDEX_CONSTRAINT_ROUTE zeigt nicht auf ConstraintRouteTool"
+            names[TOOL_INDEX_SMOOTH_CURVE], "Geglättete Kurve",
+            "TOOL_INDEX_SMOOTH_CURVE zeigt nicht auf SmoothCurveTool"
         );
         assert_eq!(
             names[TOOL_INDEX_BYPASS], "Ausweichstrecke",

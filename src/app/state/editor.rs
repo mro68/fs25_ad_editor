@@ -1,5 +1,5 @@
 use crate::app::segment_registry::{
-    TOOL_INDEX_BYPASS, TOOL_INDEX_CONSTRAINT_ROUTE, TOOL_INDEX_CURVE_QUAD, TOOL_INDEX_STRAIGHT,
+    TOOL_INDEX_BYPASS, TOOL_INDEX_SMOOTH_CURVE, TOOL_INDEX_CURVE_QUAD, TOOL_INDEX_STRAIGHT,
 };
 use crate::app::tools::ToolManager;
 use crate::core::{ConnectionDirection, ConnectionPriority};
@@ -32,8 +32,8 @@ pub struct EditorToolState {
     pub last_straight_index: usize,
     /// Zuletzt gewaehlter Tool-Index in der Gruppe "Kurven".
     pub last_curve_index: usize,
-    /// Zuletzt gewaehlter Tool-Index in der Gruppe "Constraint".
-    pub last_constraint_index: usize,
+    /// Zuletzt gewaehlter Tool-Index in der Gruppe "Kurven" (inkl. geglättete Kurve).
+    pub last_smooth_curve_index: usize,
     /// Zuletzt gewaehlter Tool-Index in der Gruppe "Abschnittswerkzeuge".
     pub last_section_tool_index: usize,
     /// Route-Tool-Manager (Linie, Parkplatz, Kurve, …)
@@ -56,7 +56,7 @@ impl EditorToolState {
             default_priority: ConnectionPriority::Regular,
             last_straight_index: TOOL_INDEX_STRAIGHT,
             last_curve_index: TOOL_INDEX_CURVE_QUAD,
-            last_constraint_index: TOOL_INDEX_CONSTRAINT_ROUTE,
+            last_smooth_curve_index: TOOL_INDEX_SMOOTH_CURVE,
             last_section_tool_index: TOOL_INDEX_BYPASS,
             tool_manager: ToolManager::new(),
         }
