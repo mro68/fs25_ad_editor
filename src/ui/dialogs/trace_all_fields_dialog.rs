@@ -1,5 +1,5 @@
 //! Einstellungsdialog fuer "Alle Felder nachzeichnen".
-//! 
+//!
 //! Oeffnet sich wenn der Nutzer im Extras-Menue "Alle Felder nachzeichnen" waehlt.
 //! Zeigt Sliders fuer Nodedistanz, Versatz und Begradigung.
 //! Keine Vorschau — nach Bestaetigung wird direkt gezeichnet.
@@ -11,10 +11,7 @@ use crate::app::{AppIntent, UiState};
 /// Solange `state.trace_all_fields_dialog.visible` gesetzt ist, wird das Fenster
 /// zentriert angezeigt. Der Dialog mutiert seinen State direkt (Arbeitskopie in
 /// `UiState`), damit die Werte beim naechsten Oeffnen erhalten bleiben.
-pub fn show_trace_all_fields_dialog(
-    ctx: &egui::Context,
-    ui_state: &mut UiState,
-) -> Vec<AppIntent> {
+pub fn show_trace_all_fields_dialog(ctx: &egui::Context, ui_state: &mut UiState) -> Vec<AppIntent> {
     let mut events = Vec::new();
 
     if !ui_state.trace_all_fields_dialog.visible {
