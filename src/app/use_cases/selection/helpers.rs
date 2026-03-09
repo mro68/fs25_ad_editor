@@ -46,3 +46,45 @@ pub(super) fn build_undirected_adjacency(road_map: &RoadMap) -> HashMap<u64, Vec
         .map(|(k, v)| (k, v.into_iter().collect()))
         .collect()
 }
+
+/// Nachbar-Eintrag mit Winkelinformation fuer den Segment-Walk.
+pub(super) struct AdjacencyNeighbor {
+    /// ID des Nachbar-Nodes.
+    pub node_id: u64,
+    /// atan2-Winkel der Verbindung (Richtung: aktueller Node → Nachbar).
+    pub angle: f32,
+}
+
+/// Baut eine ungerichtete Adjazenzliste mit Winkelinformation.
+///
+/// Jeder Eintrag enthaelt den Nachbar-Node und den Winkel der Verbindung
+/// (Richtung: aktueller Node → Nachbar). Duplikate werden dedupliziert.
+pub(super) fn build_undirected_adjacency_with_angles(
+    road_map: &RoadMap,
+) -> HashMap<u64, Vec<AdjacencyNeighbor>> {
+    let mut adjacency: HashMap<u64, Vec<AdjacencyNeighbor>> = HashMap::new();
+    for connection in road_map.connections_iter() {
+        let s = connection.start_id;
+        let e = connection.end_id;
+        if !road_map.nodes.contains_key(&s) || !road_map.nodes.contains_key(&e) {
+            continue;
+        }
+        let angle_s_to_e = connection.angle;
+        let angle_e_to_s = connection.angle + std::f32::consts::PI;
+        let entry_s = adjacency.entry(s).or_default();
+        if !entry_s.iter().any(|n| n.node_id == e) {
+            entry_s.push(AdjacencyNeighbor {
+                node_id: e,
+                angle: angle_s_to_e,
+            });
+        }
+        let entry_e = adjacency.entry(e).or_default();
+        if !entry_e.iter().any(|n| n.node_id == s) {
+            entry_e.push(AdjacencyNeighbor {
+                node_id: s,
+                angle: angle_e_to_s,
+            });
+        }
+    }
+    adjacency
+}
