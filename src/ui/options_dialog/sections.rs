@@ -155,10 +155,7 @@ pub(super) fn render_selection(ui: &mut egui::Ui, opts: &mut EditorOptions) -> b
     ui.label("Doppelklick-Segment:");
     ui.horizontal(|ui| {
         changed |= ui
-            .checkbox(
-                &mut opts.segment_stop_at_junction,
-                "Bei Kreuzung stoppen",
-            )
+            .checkbox(&mut opts.segment_stop_at_junction, "Bei Kreuzung stoppen")
             .changed();
     });
     ui.horizontal(|ui| {
