@@ -113,6 +113,7 @@ pub fn render_direction_icon_selector(
 }
 
 /// Rendert einen vertikalen Icon-Selector fuer `ConnectionDirection`.
+#[allow(dead_code)]
 pub fn render_direction_icon_selector_vertical(
     ui: &mut egui::Ui,
     selected: &mut ConnectionDirection,
@@ -131,6 +132,7 @@ pub fn render_priority_icon_selector(
 }
 
 /// Rendert einen vertikalen Icon-Selector fuer `ConnectionPriority`.
+#[allow(dead_code)]
 pub fn render_priority_icon_selector_vertical(
     ui: &mut egui::Ui,
     selected: &mut ConnectionPriority,

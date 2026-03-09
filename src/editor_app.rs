@@ -114,7 +114,7 @@ impl EditorApp {
                 self.state.ui.tool_palette_pos = None;
             }
         }
-        events.extend(ui::render_route_defaults_panel(ctx, &self.state));
+        events.extend(ui::render_route_defaults_panel(ctx, &mut self.state));
 
         let road_map_for_properties = self.state.road_map.clone();
         let default_direction = self.state.editor.default_direction;

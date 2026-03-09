@@ -253,6 +253,9 @@
   - [x] **Doku-Sync Sidebar-Integration + T-Tool-Palette (2026-03-08)**
     - [x] `ui/API.md`: `render_tool_palette()` dokumentiert, `ui::icons`-API ergänzt, neue `render_route_defaults_panel(ctx, &AppState)`-Signatur nachgezogen
     - [x] `app/API.md`: `UiState` um `show_tool_palette`/`tool_palette_pos` und `AppIntent::ToggleToolPalette` ergänzt
+  - [x] **Doku-Sync Sidebar-Gruppenlayout mit Long-Press (2026-03-09)**
+    - [x] `ui/API.md`: `render_route_defaults_panel(ctx, &mut AppState)`-Signatur und neues Gruppen-Layout dokumentiert
+    - [x] Sidebar-Details aktualisiert: Route-Gruppen (Geraden/Kurven/Constraint/Tools), Default-Gruppen (Richtung/Prioritaet), Aktionen-Block entfernt
   - [x] **Tool-Encapsulation-Audit (2026-03-07, Branch `feat/tool-encapsulation-audit`)**
     - [x] Encapsulation-Audit: 0 Layer-Boundary-Verletzungen (keine wgpu/render-Imports in Tools)
     - [x] API-Unification: Alle 9 Tools nutzen RouteTool-Trait + 4 Capability-Traits konsistent
