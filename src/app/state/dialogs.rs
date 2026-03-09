@@ -1,5 +1,26 @@
 use crate::shared::OverviewLayerOptions;
+use crate::ui::long_press::LongPressState;
 use std::path::PathBuf;
+
+/// Zustand eines schwebenden Kontextmenues.
+#[derive(Debug, Clone, Copy)]
+pub struct FloatingMenuState {
+    /// Art des aktuell geoeffneten Menues.
+    pub kind: FloatingMenuKind,
+    /// Bildschirmposition des Menues.
+    pub pos: egui::Pos2,
+}
+
+/// Typ des schwebenden Kontextmenues.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum FloatingMenuKind {
+    /// Werkzeug-Menue (Select/Connect/AddNode).
+    Tools,
+    /// Basis-Menue (Gerade/Kurve/Constraint).
+    Basics,
+    /// Menue fuer Abschnittswerkzeuge.
+    SectionTools,
+}
 
 /// Zustand des Marker-Bearbeiten-Dialogs
 #[derive(Default)]
@@ -214,6 +235,8 @@ pub struct UiState {
     pub show_tool_palette: bool,
     /// Position der Tool-Palette (Mausposition beim Oeffnen)
     pub tool_palette_pos: Option<egui::Pos2>,
+    /// Optionales schwebendes Menue an der Mausposition.
+    pub floating_menu: Option<FloatingMenuState>,
     /// Ob die Heightmap-Warnung angezeigt werden soll
     pub show_heightmap_warning: bool,
     /// Ob die Heightmap-Warnung fuer diese Save-Operation bereits bestaetigt wurde
@@ -240,6 +263,20 @@ pub struct UiState {
     pub save_overview_dialog: SaveOverviewDialogState,
     /// Distanzen-Neuverteilen-Konfiguration (Eigenschaften-Panel)
     pub distanzen: DistanzenState,
+    /// Long-Press-State fuer Werkzeuge.
+    pub lp_tools: LongPressState,
+    /// Long-Press-State fuer Geraden.
+    pub lp_straights: LongPressState,
+    /// Long-Press-State fuer Kurven.
+    pub lp_curves: LongPressState,
+    /// Long-Press-State fuer Constraint-Tools.
+    pub lp_constraint: LongPressState,
+    /// Long-Press-State fuer Abschnittswerkzeuge.
+    pub lp_section_tools: LongPressState,
+    /// Long-Press-State fuer Richtungs-Defaults.
+    pub lp_direction: LongPressState,
+    /// Long-Press-State fuer Prioritaets-Defaults.
+    pub lp_priority: LongPressState,
 }
 
 impl UiState {
@@ -254,6 +291,7 @@ impl UiState {
             show_command_palette: false,
             show_tool_palette: false,
             tool_palette_pos: None,
+            floating_menu: None,
             show_heightmap_warning: false,
             heightmap_warning_confirmed: false,
             pending_save_path: None,
@@ -267,6 +305,13 @@ impl UiState {
             post_load_dialog: PostLoadDialogState::new(),
             save_overview_dialog: SaveOverviewDialogState::default(),
             distanzen: DistanzenState::default(),
+            lp_tools: LongPressState::default(),
+            lp_straights: LongPressState::default(),
+            lp_curves: LongPressState::default(),
+            lp_constraint: LongPressState::default(),
+            lp_section_tools: LongPressState::default(),
+            lp_direction: LongPressState::default(),
+            lp_priority: LongPressState::default(),
         }
     }
 }

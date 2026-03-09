@@ -111,6 +111,7 @@ pub struct UiState {
     pub show_command_palette: bool,
     pub show_tool_palette: bool,
     pub tool_palette_pos: Option<egui::Pos2>,
+    pub floating_menu: Option<FloatingMenuState>,
     pub show_heightmap_warning: bool,
     pub heightmap_warning_confirmed: bool,
     pub pending_save_path: Option<String>,
@@ -125,6 +126,24 @@ pub struct UiState {
     pub save_overview_dialog: SaveOverviewDialogState,
     /// Konfiguration fuer das Distanzen-Neuverteilen-Feature
     pub distanzen: DistanzenState,
+    pub lp_tools: LongPressState,
+    pub lp_straights: LongPressState,
+    pub lp_curves: LongPressState,
+    pub lp_constraint: LongPressState,
+    pub lp_section_tools: LongPressState,
+    pub lp_direction: LongPressState,
+    pub lp_priority: LongPressState,
+}
+
+pub struct FloatingMenuState {
+    pub kind: FloatingMenuKind,
+    pub pos: egui::Pos2,
+}
+
+pub enum FloatingMenuKind {
+    Tools,
+    Basics,
+    SectionTools,
 }
 
 pub struct DistanzenState {
@@ -207,6 +226,10 @@ pub struct EditorToolState {
     pub connect_source_node: Option<u64>,
     pub default_direction: ConnectionDirection,
     pub default_priority: ConnectionPriority,
+    pub last_straight_index: usize,
+    pub last_curve_index: usize,
+    pub last_constraint_index: usize,
+    pub last_section_tool_index: usize,
     pub tool_manager: ToolManager,
 }
 ```
