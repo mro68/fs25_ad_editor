@@ -1,4 +1,4 @@
-//! UI-Komponenten: Menue, Toolbar, Properties, Input-Handling, Dialoge.
+//! UI-Komponenten: Menue, Properties, Input-Handling, Dialoge.
 
 /// Command Palette Overlay mit Suchfeld und Schnellaktionen.
 pub mod command_palette;
@@ -8,18 +8,18 @@ pub mod context_menu;
 pub mod defaults_panel;
 /// Alle Dialoge (Datei-IO, Dedup, Marker, Heightmap, Uebersichtskarte).
 pub mod dialogs;
+/// Schwebendes Kontextmenue fuer Werkzeuggruppen an der Mausposition.
+pub mod floating_menu;
 mod drag;
 /// Editor-Panel fuer die Bearbeitung selektierter Knoten und Verbindungen.
 pub mod edit_panel;
-/// Schwebendes Kontextmenue fuer Werkzeuggruppen an der Mausposition.
-pub mod floating_menu;
 /// Gemeinsame Icon-Helfer fuer Tool-Buttons.
 pub mod icons;
+/// Wiederverwendbares Long-Press-Dropdown fuer Icon-Gruppen.
+pub mod long_press;
 /// Viewport-Input-Verarbeitung (Drag, Scroll, Mausklick, Selektion).
 pub mod input;
 mod keyboard;
-/// Wiederverwendbares Long-Press-Dropdown fuer Icon-Gruppen.
-pub mod long_press;
 /// Menue-Leiste mit Datei-, Bearbeitungs- und Ansicht-Aktionen.
 pub mod menu;
 /// Optionen-Dialog fuer Editor-Einstellungen.
@@ -32,9 +32,6 @@ pub mod segment_overlay;
 pub mod status;
 /// Live-Vorschau aktiver Werkzeuge im Viewport (Overlay-Rendering).
 pub mod tool_preview;
-/// Schwebende Tool-Palette fuer Werkzeugauswahl.
-pub mod toolbar;
-
 pub use defaults_panel::render_route_defaults_panel;
 pub use dialogs::{
     handle_file_dialogs, show_dedup_dialog, show_heightmap_warning, show_marker_dialog,

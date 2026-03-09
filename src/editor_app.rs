@@ -450,11 +450,6 @@ impl EditorApp {
 
     fn process_events(&mut self, ctx: &egui::Context, events: &[AppIntent]) {
         for event in events {
-            if matches!(event, AppIntent::ToggleToolPalette) {
-                self.toggle_floating_menu(ctx, FloatingMenuKind::Tools);
-                continue;
-            }
-
             if let AppIntent::ToggleFloatingMenu { kind } = event {
                 self.toggle_floating_menu(ctx, *kind);
                 continue;
@@ -512,7 +507,6 @@ impl EditorApp {
             || ctx.input(|i| i.pointer.is_moving())
             || self.state.ui.show_command_palette
             || self.state.ui.floating_menu.is_some()
-            || self.state.ui.show_tool_palette
             || self.state.ui.show_heightmap_warning
             || self.state.ui.marker_dialog.visible
             || self.state.show_options_dialog

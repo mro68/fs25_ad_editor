@@ -178,8 +178,6 @@ pub enum AppIntent {
     ToggleFloatingMenu {
         kind: crate::app::state::FloatingMenuKind,
     },
-    /// Tool-Palette an Mausposition anzeigen/verbergen (T-Taste)
-    ToggleToolPalette,
 
     /// Route-Tool: Viewport-Klick
     RouteToolClicked { world_pos: glam::Vec2, ctrl: bool },
