@@ -34,8 +34,8 @@ pub use events::{AppCommand, AppIntent};
 pub use render_scene::build as build_render_scene;
 pub use segment_registry::{SegmentBase, SegmentKind, SegmentRecord, SegmentRegistry};
 pub use state::{
-    AppState, Clipboard, EditorTool, EditorToolState, PostLoadDialogState, SelectionState, UiState,
-    ViewState,
+    AppState, Clipboard, EditorTool, EditorToolState, FloatingMenuKind, FloatingMenuState,
+    PostLoadDialogState, SelectionState, UiState, ViewState,
 };
 pub use tools::field_boundary::compute_ring;
 pub use tools::ToolAnchor;

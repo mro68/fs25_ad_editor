@@ -35,6 +35,7 @@
 - [x] Keyboard-Shortcuts (Ctrl+O, Ctrl+S, Ctrl+Z, Ctrl+Y, Delete, Escape, etc.)
   - [x] Command-Palette-Toggle per Ctrl+K (Intent/Command-Kette vorbereitet)
   - [x] Keyboard-Guard bei TextEdit-Focus (`wants_keyboard_input`-Pruefung; Ctrl+K und Escape bleiben aktiv)
+  - [x] Floating-Menue-Shortcuts ohne Modifier: `W` (Werkzeuge), `G` (Grundbefehle), `S` (Abschnitt-Tools), `T` (Alias Werkzeuge), `K` (Command-Palette)
 - [x] Command Palette (Ctrl+K, Suchfeld, Pfeilnavigation, Enter-Ausfuehrung)
 - [x] Options-Dialog (Farben, Groessen, Breiten – Live-Preview)
 - [x] TOML-Persistierung (fs25_auto_drive_editor.toml neben Binary)
@@ -246,6 +247,25 @@
     - [x] `core/API.md`: `SpatialIndex` — Hinweis auf `ImmutableKdTree` von kiddo ergaenzt
     - [x] `docs/ARCHITECTURE_PLAN.md`: Stand aktualisiert, Zoom-Kompensation- und Decimation-Pattern beschrieben
     - [x] ROADMAP.md: Stand, Prozente und neue Feature-Eintraege aktualisiert
+  - [x] **Doku-Sync UI-Toolbar-Redesign (2026-03-08)**
+    - [x] `render_toolbar()` Docstring aktualisiert: schwebendes `egui::Window` statt `TopBottomPanel`, Gruppen-Layout mit Icon-Buttons beschrieben
+    - [x] `ui/API.md`: verwaiste Bullet-Points durch vollständige `render_toolbar`-Sektion ersetzt; `route_tool_icon()`-Tabelle ergänzt
+    - [x] `docs/ARCHITECTURE_PLAN.md`: `toolbar.rs`-Beschreibung auf schwebendes Window aktualisiert
+  - [x] **Doku-Sync Sidebar-Integration + T-Tool-Palette (2026-03-08)**
+    - [x] `ui/API.md`: `render_tool_palette()` dokumentiert, `ui::icons`-API ergänzt, neue `render_route_defaults_panel(ctx, &AppState)`-Signatur nachgezogen
+    - [x] `app/API.md`: `UiState` um `show_tool_palette`/`tool_palette_pos` und `AppIntent::ToggleToolPalette` ergänzt
+  - [x] **Cleanup Legacy-Tool-Palette (2026-03-09)**
+    - [x] `ui/mod.rs`: `toolbar`-Modul-Export entfernt und `ui/toolbar.rs` geloescht
+    - [x] `app/state/dialogs.rs`: `show_tool_palette` und `tool_palette_pos` aus `UiState` entfernt
+    - [x] `editor_app.rs` / `app/events/intent.rs` / `app/intent_mapping.rs`: `ToggleToolPalette`-Fallback und no-op-Handling entfernt
+    - [x] API-Doku synchronisiert: `app/API.md` und `ui/API.md`
+  - [x] **Doku-Sync Sidebar-Gruppenlayout mit Long-Press (2026-03-09)**
+    - [x] `ui/API.md`: `render_route_defaults_panel(ctx, &mut AppState)`-Signatur und neues Gruppen-Layout dokumentiert
+    - [x] Sidebar-Details aktualisiert: Route-Gruppen (Geraden/Kurven/Constraint/Tools), Default-Gruppen (Richtung/Prioritaet), Aktionen-Block entfernt
+  - [x] **Doku-Sync Sidebar-Redesign vollstaendig (2026-03-09)**
+    - [x] `ui/API.md`: Vollstaendige API-Sektion fuer `long_press.rs` ergaenzt (`LongPressState`, `LongPressGroup<T>`, `LongPressItem<T>`, `render_long_press_button`, `render_popup`, `paint_dropdown_arrow`)
+    - [x] `ui/API.md`: Formatierungsfehler behoben — fehlendes abschliessendes ` ``` ` nach `paint_preview_polyline`-Block
+    - [x] `docs/ARCHITECTURE_PLAN.md`: UI-Layer-Modul-Liste aktualisiert — `toolbar.rs` durch `defaults_panel.rs`, `long_press.rs` und `floating_menu.rs` ersetzt; `keyboard.rs` um W/G/S/T/K-Shortcuts ergaenzt
   - [x] **Tool-Encapsulation-Audit (2026-03-07, Branch `feat/tool-encapsulation-audit`)**
     - [x] Encapsulation-Audit: 0 Layer-Boundary-Verletzungen (keine wgpu/render-Imports in Tools)
     - [x] API-Unification: Alle 9 Tools nutzen RouteTool-Trait + 4 Capability-Traits konsistent

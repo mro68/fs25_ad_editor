@@ -304,7 +304,20 @@ impl AppController {
             AppCommand::CancelPastePreview => handlers::editing::cancel_paste_preview(state),
 
             // === Extras ===
-            AppCommand::TraceAllFields => handlers::editing::trace_all_fields(state),
+            AppCommand::OpenTraceAllFieldsDialog => {
+                state.ui.trace_all_fields_dialog.visible = true;
+            }
+            AppCommand::CloseTraceAllFieldsDialog => {
+                state.ui.trace_all_fields_dialog.visible = false;
+            }
+            AppCommand::TraceAllFields {
+                spacing,
+                offset,
+                tolerance,
+            } => {
+                state.ui.trace_all_fields_dialog.visible = false;
+                handlers::editing::trace_all_fields(state, spacing, offset, tolerance);
+            }
         }
 
         Ok(())

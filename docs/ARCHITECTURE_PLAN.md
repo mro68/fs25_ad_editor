@@ -100,12 +100,14 @@ graph BT
 **Modul-Aufbau:**
 
 - `input.rs` — Orchestrator, delegiert an Sub-Module
-  - `keyboard.rs` — Tastatur-Shortcuts (Delete, Escape, Ctrl+A)
+  - `keyboard.rs` — Tastatur-Shortcuts (Delete, Escape, Ctrl+A, W/G/S/T/K fuer Floating-Menues)
   - `drag.rs` — Drag-Operationen (Pan, Move, Rect-/Lasso-Selektion)
   - `context_menu.rs` — Rechtsklick-Kontextmenü
 - `menu.rs` — Top-Menü-Leiste
 - `status.rs` — Statusleiste
-- `toolbar.rs` — Werkzeugleiste
+- `defaults_panel.rs` — Linke Sidebar mit Long-Press-Gruppen (Werkzeuge, Route-Tools, Defaults, Hintergrund; 64px breit)
+- `long_press.rs` — Wiederverwendbares Long-Press-Dropdown-Widget (`LongPressState`, `LongPressGroup<T>`, `render_long_press_button`)
+- `floating_menu.rs` — Schwebendes Kontextmenue an der Mausposition (W/G/S-Taste; `FloatingMenuKind::Tools/Basics/SectionTools`)
 - `properties.rs` — Properties-Panel
   - intern modularisiert über `properties/`-Submodule (u. a. Selektoren und Distanzen-Panel)
 - `options_dialog.rs` — Optionen-Dialog (Farben, Größen, Zoom)

@@ -210,6 +210,7 @@ pub fn map_intent_to_commands(state: &AppState, intent: AppIntent) -> Vec<AppCom
         AppIntent::OptionsChanged { options } => vec![AppCommand::ApplyOptions { options }],
         AppIntent::ResetOptionsRequested => vec![AppCommand::ResetOptions],
         AppIntent::CommandPaletteToggled => vec![AppCommand::ToggleCommandPalette],
+        AppIntent::ToggleFloatingMenu { .. } => vec![],
         AppIntent::ClearSelectionRequested => vec![AppCommand::ClearSelection],
         AppIntent::SelectAllRequested => vec![AppCommand::SelectAllNodes],
         AppIntent::DeduplicateConfirmed => vec![AppCommand::DeduplicateNodes],
@@ -315,7 +316,19 @@ pub fn map_intent_to_commands(state: &AppState, intent: AppIntent) -> Vec<AppCom
         }
 
         // ── Extras ───────────────────────────────────────────────────────
-        AppIntent::TraceAllFieldsRequested => vec![AppCommand::TraceAllFields],
+        AppIntent::OpenTraceAllFieldsDialogRequested => {
+            vec![AppCommand::OpenTraceAllFieldsDialog]
+        }
+        AppIntent::TraceAllFieldsConfirmed {
+            spacing,
+            offset,
+            tolerance,
+        } => vec![AppCommand::TraceAllFields {
+            spacing,
+            offset,
+            tolerance,
+        }],
+        AppIntent::TraceAllFieldsCancelled => vec![AppCommand::CloseTraceAllFieldsDialog],
     }
 }
 

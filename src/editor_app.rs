@@ -2,6 +2,11 @@
 
 use eframe::egui;
 use eframe::egui_wgpu;
+use fs25_auto_drive_editor::app::segment_registry::{
+    TOOL_INDEX_BYPASS, TOOL_INDEX_CONSTRAINT_ROUTE, TOOL_INDEX_CURVE_CUBIC, TOOL_INDEX_CURVE_QUAD,
+    TOOL_INDEX_PARKING, TOOL_INDEX_ROUTE_OFFSET, TOOL_INDEX_SPLINE, TOOL_INDEX_STRAIGHT,
+};
+use fs25_auto_drive_editor::app::state::{FloatingMenuKind, FloatingMenuState};
 use fs25_auto_drive_editor::{
     render, ui, AppController, AppIntent, AppState, EditorOptions, EditorTool, ValueAdjustInputMode,
 };
@@ -56,7 +61,7 @@ impl eframe::App for EditorApp {
             .iter()
             .any(|e| !matches!(e, AppIntent::ViewportResized { .. }));
 
-        self.process_events(&events);
+        self.process_events(ctx, &events);
 
         self.sync_background_upload();
 
@@ -106,12 +111,13 @@ impl EditorApp {
 
         ui::render_status_bar(ctx, &self.state);
         events.extend(ui::render_menu(ctx, &self.state));
-        events.extend(ui::render_toolbar(ctx, &self.state));
-        events.extend(ui::render_route_defaults_panel(
-            ctx,
-            self.state.editor.default_direction,
-            self.state.editor.default_priority,
-        ));
+        let (floating_events, should_close_floating_menu) =
+            ui::render_floating_menu(ctx, &self.state);
+        if should_close_floating_menu {
+            self.state.ui.floating_menu = None;
+        }
+        events.extend(floating_events);
+        events.extend(ui::render_route_defaults_panel(ctx, &self.state));
 
         let road_map_for_properties = self.state.road_map.clone();
         let default_direction = self.state.editor.default_direction;
@@ -180,6 +186,7 @@ impl EditorApp {
         ));
         events.extend(ui::show_post_load_dialog(ctx, &mut self.state.ui));
         events.extend(ui::show_save_overview_dialog(ctx, &mut self.state.ui));
+        events.extend(ui::show_trace_all_fields_dialog(ctx, &mut self.state.ui));
         events.extend(ui::show_options_dialog(
             ctx,
             self.state.show_options_dialog,
@@ -451,14 +458,51 @@ impl EditorApp {
         }
     }
 
-    fn process_events(&mut self, events: &[AppIntent]) {
+    fn process_events(&mut self, ctx: &egui::Context, events: &[AppIntent]) {
         for event in events {
+            if let AppIntent::ToggleFloatingMenu { kind } = event {
+                self.toggle_floating_menu(ctx, *kind);
+                continue;
+            }
+
+            if let AppIntent::SelectRouteToolRequested { index } = event {
+                self.update_last_route_tool_index(*index);
+            }
+
             if let Err(e) = self
                 .controller
                 .handle_intent(&mut self.state, event.clone())
             {
                 log::error!("Event handling failed: {:#}", e);
             }
+        }
+    }
+
+    fn update_last_route_tool_index(&mut self, index: usize) {
+        match index {
+            TOOL_INDEX_STRAIGHT => self.state.editor.last_straight_index = index,
+            TOOL_INDEX_CURVE_QUAD | TOOL_INDEX_CURVE_CUBIC | TOOL_INDEX_SPLINE => {
+                self.state.editor.last_curve_index = index;
+            }
+            TOOL_INDEX_CONSTRAINT_ROUTE => self.state.editor.last_constraint_index = index,
+            TOOL_INDEX_BYPASS | TOOL_INDEX_PARKING | TOOL_INDEX_ROUTE_OFFSET => {
+                self.state.editor.last_section_tool_index = index;
+            }
+            _ => {}
+        }
+    }
+
+    fn toggle_floating_menu(&mut self, ctx: &egui::Context, kind: FloatingMenuKind) {
+        if let Some(existing) = self.state.ui.floating_menu {
+            if existing.kind == kind {
+                self.state.ui.floating_menu = None;
+            } else {
+                let pos = ctx.input(|i| i.pointer.hover_pos().or(i.pointer.latest_pos()));
+                self.state.ui.floating_menu = pos.map(|p| FloatingMenuState { kind, pos: p });
+            }
+        } else {
+            let pos = ctx.input(|i| i.pointer.hover_pos().or(i.pointer.latest_pos()));
+            self.state.ui.floating_menu = pos.map(|p| FloatingMenuState { kind, pos: p });
         }
     }
 
@@ -490,6 +534,7 @@ impl EditorApp {
         if has_meaningful_events
             || ctx.input(|i| i.pointer.is_moving())
             || self.state.ui.show_command_palette
+            || self.state.ui.floating_menu.is_some()
             || self.state.ui.show_heightmap_warning
             || self.state.ui.marker_dialog.visible
             || self.state.show_options_dialog
