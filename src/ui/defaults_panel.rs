@@ -80,13 +80,13 @@ pub fn render_route_defaults_panel(ctx: &egui::Context, state: &AppState) -> Vec
         active_tool,
         EditorTool::Select | EditorTool::Connect | EditorTool::AddNode
     );
-    let is_straight_active   = active_route_index == Some(TOOL_INDEX_STRAIGHT);
-    let is_curve_active      = matches!(
+    let is_straight_active = active_route_index == Some(TOOL_INDEX_STRAIGHT);
+    let is_curve_active = matches!(
         active_route_index,
         Some(i) if i == TOOL_INDEX_CURVE_QUAD || i == TOOL_INDEX_CURVE_CUBIC || i == TOOL_INDEX_SPLINE
     );
     let is_constraint_active = active_route_index == Some(TOOL_INDEX_CONSTRAINT_ROUTE);
-    let is_section_active    = matches!(
+    let is_section_active = matches!(
         active_route_index,
         Some(i) if i == TOOL_INDEX_BYPASS || i == TOOL_INDEX_PARKING || i == TOOL_INDEX_ROUTE_OFFSET
     );

@@ -138,6 +138,30 @@ pub struct SaveOverviewDialogState {
     pub is_overwrite: bool,
 }
 
+/// Einstellungen fuer den "Alle Felder nachzeichnen"-Dialog.
+#[derive(Debug, Clone)]
+pub struct TraceAllFieldsDialogState {
+    /// Ob der Dialog sichtbar ist.
+    pub visible: bool,
+    /// Abstand zwischen generierten Wegpunkten in Welteinheiten (Meter).
+    pub spacing: f32,
+    /// Versatz vom Feldrand nach innen (positiv = nach innen, negativ = nach aussen).
+    pub offset: f32,
+    /// Begradigung: Douglas-Peucker-Toleranz in Welteinheiten (0 = kein).
+    pub tolerance: f32,
+}
+
+impl Default for TraceAllFieldsDialogState {
+    fn default() -> Self {
+        Self {
+            visible: false,
+            spacing: 10.0,
+            offset: 0.0,
+            tolerance: 0.0,
+        }
+    }
+}
+
 /// Konfiguration fuer das Distanzen-Neuverteilen-Feature im Eigenschaften-Bereich.
 #[derive(Debug, Clone)]
 pub struct DistanzenState {
@@ -258,6 +282,8 @@ pub struct UiState {
     pub save_overview_dialog: SaveOverviewDialogState,
     /// Distanzen-Neuverteilen-Konfiguration (Eigenschaften-Panel)
     pub distanzen: DistanzenState,
+    /// Dialog fuer "Alle Felder nachzeichnen"-Einstellungen
+    pub trace_all_fields_dialog: TraceAllFieldsDialogState,
 }
 
 impl UiState {
@@ -284,6 +310,7 @@ impl UiState {
             post_load_dialog: PostLoadDialogState::new(),
             save_overview_dialog: SaveOverviewDialogState::default(),
             distanzen: DistanzenState::default(),
+            trace_all_fields_dialog: TraceAllFieldsDialogState::default(),
         }
     }
 }

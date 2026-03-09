@@ -274,6 +274,17 @@ pub enum AppIntent {
     DissolveSegmentRequested { segment_id: u64 },
 
     // ── Extras ───────────────────────────────────────────────────────
-    /// Alle erkannten Farmland-Polygone als Wegpunkt-Ring nachzeichnen
-    TraceAllFieldsRequested,
+    /// Alle-Felder-nachzeichnen-Einstellungsdialog oeffnen
+    OpenTraceAllFieldsDialogRequested,
+    /// Alle-Felder-nachzeichnen bestaetigt (nach Dialog-Eingabe)
+    TraceAllFieldsConfirmed {
+        /// Abstand zwischen Wegpunkten in Metern
+        spacing: f32,
+        /// Randversatz in Metern (positiv = nach innen)
+        offset: f32,
+        /// Begradigung: Douglas-Peucker-Toleranz (0 = aus)
+        tolerance: f32,
+    },
+    /// Alle-Felder-nachzeichnen-Dialog abgebrochen
+    TraceAllFieldsCancelled,
 }

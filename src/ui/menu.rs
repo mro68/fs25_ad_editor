@@ -212,7 +212,7 @@ pub fn render_menu(ctx: &egui::Context, state: &AppState) -> Vec<AppIntent> {
                     )
                     .clicked()
                 {
-                    events.push(AppIntent::TraceAllFieldsRequested);
+                    events.push(AppIntent::OpenTraceAllFieldsDialogRequested);
                     ui.close();
                 }
             });
