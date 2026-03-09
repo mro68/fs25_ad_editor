@@ -40,7 +40,7 @@ fn render_long_press_with_memory<T: Clone + PartialEq>(
     ui: &mut egui::Ui,
     icon_color: egui::Color32,
     active_icon_color: egui::Color32,
-    group: &LongPressGroup<T>,
+    group: &LongPressGroup<'_, T>,
     active_value: &T,
 ) -> Option<T> {
     let key = egui::Id::new(("defaults_panel_long_press", group.id));
@@ -68,129 +68,143 @@ pub fn render_route_defaults_panel(ctx: &egui::Context, state: &AppState) -> Vec
     let icon_color = function_icon_color(state);
     let active_icon_color = accent_icon_color(state);
 
+    let tools_items = [
+        LongPressItem {
+            icon: egui::include_image!("../../assets/icons/icon_select_node.svg"),
+            tooltip: "Auswahl (1)",
+            value: EditorTool::Select,
+        },
+        LongPressItem {
+            icon: egui::include_image!("../../assets/icons/icon_connect.svg"),
+            tooltip: "Verbinden (2)",
+            value: EditorTool::Connect,
+        },
+        LongPressItem {
+            icon: egui::include_image!("../../assets/icons/icon_add_node.svg"),
+            tooltip: "Node hinzufuegen (3)",
+            value: EditorTool::AddNode,
+        },
+    ];
+
+    let straights_items = [LongPressItem {
+        icon: route_tool_icon(TOOL_INDEX_STRAIGHT),
+        tooltip: "Gerade Strecke",
+        value: TOOL_INDEX_STRAIGHT,
+    }];
+
+    let curves_items = [
+        LongPressItem {
+            icon: route_tool_icon(TOOL_INDEX_CURVE_QUAD),
+            tooltip: "Bezier Grad 2",
+            value: TOOL_INDEX_CURVE_QUAD,
+        },
+        LongPressItem {
+            icon: route_tool_icon(TOOL_INDEX_CURVE_CUBIC),
+            tooltip: "Bezier Grad 3",
+            value: TOOL_INDEX_CURVE_CUBIC,
+        },
+        LongPressItem {
+            icon: route_tool_icon(TOOL_INDEX_SPLINE),
+            tooltip: "Spline",
+            value: TOOL_INDEX_SPLINE,
+        },
+    ];
+
+    let constraint_items = [LongPressItem {
+        icon: route_tool_icon(TOOL_INDEX_CONSTRAINT_ROUTE),
+        tooltip: "Constraint-Route",
+        value: TOOL_INDEX_CONSTRAINT_ROUTE,
+    }];
+
+    let section_tools_items = [
+        LongPressItem {
+            icon: route_tool_icon(TOOL_INDEX_BYPASS),
+            tooltip: "Ausweichstrecke",
+            value: TOOL_INDEX_BYPASS,
+        },
+        LongPressItem {
+            icon: route_tool_icon(TOOL_INDEX_PARKING),
+            tooltip: "Parkplatz",
+            value: TOOL_INDEX_PARKING,
+        },
+        LongPressItem {
+            icon: route_tool_icon(TOOL_INDEX_ROUTE_OFFSET),
+            tooltip: "Strecke versetzen",
+            value: TOOL_INDEX_ROUTE_OFFSET,
+        },
+    ];
+
+    let direction_items = [
+        LongPressItem {
+            icon: egui::include_image!("../../assets/icons/icon_direction_regular.svg"),
+            tooltip: "Einbahn vorwaerts",
+            value: ConnectionDirection::Regular,
+        },
+        LongPressItem {
+            icon: egui::include_image!("../../assets/icons/icon_direction_dual.svg"),
+            tooltip: "Zweirichtung",
+            value: ConnectionDirection::Dual,
+        },
+        LongPressItem {
+            icon: egui::include_image!("../../assets/icons/icon_direction_reverse.svg"),
+            tooltip: "Einbahn rueckwaerts",
+            value: ConnectionDirection::Reverse,
+        },
+    ];
+
+    let priority_items = [
+        LongPressItem {
+            icon: egui::include_image!("../../assets/icons/icon_priority_main.svg"),
+            tooltip: "Hauptstrasse",
+            value: ConnectionPriority::Regular,
+        },
+        LongPressItem {
+            icon: egui::include_image!("../../assets/icons/icon_priority_side.svg"),
+            tooltip: "Nebenstrasse",
+            value: ConnectionPriority::SubPriority,
+        },
+    ];
+
     let tools_group = LongPressGroup {
         id: "werkzeuge",
         label: "Werkzeuge",
-        items: vec![
-            LongPressItem {
-                icon: egui::include_image!("../../assets/icons/icon_select_node.svg"),
-                tooltip: "Auswahl (1)",
-                value: EditorTool::Select,
-            },
-            LongPressItem {
-                icon: egui::include_image!("../../assets/icons/icon_connect.svg"),
-                tooltip: "Verbinden (2)",
-                value: EditorTool::Connect,
-            },
-            LongPressItem {
-                icon: egui::include_image!("../../assets/icons/icon_add_node.svg"),
-                tooltip: "Node hinzufuegen (3)",
-                value: EditorTool::AddNode,
-            },
-        ],
+        items: &tools_items,
     };
 
     let straights_group = LongPressGroup {
         id: "grundbefehle_geraden",
         label: route_group_label(RouteGroup::Straight),
-        items: vec![LongPressItem {
-            icon: route_tool_icon(TOOL_INDEX_STRAIGHT),
-            tooltip: "Gerade Strecke",
-            value: TOOL_INDEX_STRAIGHT,
-        }],
+        items: &straights_items,
     };
 
     let curves_group = LongPressGroup {
         id: "grundbefehle_kurven",
         label: route_group_label(RouteGroup::Curve),
-        items: vec![
-            LongPressItem {
-                icon: route_tool_icon(TOOL_INDEX_CURVE_QUAD),
-                tooltip: "Bezier Grad 2",
-                value: TOOL_INDEX_CURVE_QUAD,
-            },
-            LongPressItem {
-                icon: route_tool_icon(TOOL_INDEX_CURVE_CUBIC),
-                tooltip: "Bezier Grad 3",
-                value: TOOL_INDEX_CURVE_CUBIC,
-            },
-            LongPressItem {
-                icon: route_tool_icon(TOOL_INDEX_SPLINE),
-                tooltip: "Spline",
-                value: TOOL_INDEX_SPLINE,
-            },
-        ],
+        items: &curves_items,
     };
 
     let constraint_group = LongPressGroup {
         id: "grundbefehle_constraint",
         label: route_group_label(RouteGroup::Constraint),
-        items: vec![LongPressItem {
-            icon: route_tool_icon(TOOL_INDEX_CONSTRAINT_ROUTE),
-            tooltip: "Constraint-Route",
-            value: TOOL_INDEX_CONSTRAINT_ROUTE,
-        }],
+        items: &constraint_items,
     };
 
     let section_tools_group = LongPressGroup {
         id: "tools_abschnitt",
         label: route_group_label(RouteGroup::Section),
-        items: vec![
-            LongPressItem {
-                icon: route_tool_icon(TOOL_INDEX_BYPASS),
-                tooltip: "Ausweichstrecke",
-                value: TOOL_INDEX_BYPASS,
-            },
-            LongPressItem {
-                icon: route_tool_icon(TOOL_INDEX_PARKING),
-                tooltip: "Parkplatz",
-                value: TOOL_INDEX_PARKING,
-            },
-            LongPressItem {
-                icon: route_tool_icon(TOOL_INDEX_ROUTE_OFFSET),
-                tooltip: "Strecke versetzen",
-                value: TOOL_INDEX_ROUTE_OFFSET,
-            },
-        ],
+        items: &section_tools_items,
     };
 
     let direction_group = LongPressGroup {
         id: "defaults_richtung",
         label: "Voreinstellung Richtung",
-        items: vec![
-            LongPressItem {
-                icon: egui::include_image!("../../assets/icons/icon_direction_regular.svg"),
-                tooltip: "Einbahn vorwaerts",
-                value: ConnectionDirection::Regular,
-            },
-            LongPressItem {
-                icon: egui::include_image!("../../assets/icons/icon_direction_dual.svg"),
-                tooltip: "Zweirichtung",
-                value: ConnectionDirection::Dual,
-            },
-            LongPressItem {
-                icon: egui::include_image!("../../assets/icons/icon_direction_reverse.svg"),
-                tooltip: "Einbahn rueckwaerts",
-                value: ConnectionDirection::Reverse,
-            },
-        ],
+        items: &direction_items,
     };
 
     let priority_group = LongPressGroup {
         id: "defaults_prioritaet",
         label: "Voreinstellung Strassenart",
-        items: vec![
-            LongPressItem {
-                icon: egui::include_image!("../../assets/icons/icon_priority_main.svg"),
-                tooltip: "Hauptstrasse",
-                value: ConnectionPriority::Regular,
-            },
-            LongPressItem {
-                icon: egui::include_image!("../../assets/icons/icon_priority_side.svg"),
-                tooltip: "Nebenstrasse",
-                value: ConnectionPriority::SubPriority,
-            },
-        ],
+        items: &priority_items,
     };
 
     egui::SidePanel::left("route_defaults_panel")

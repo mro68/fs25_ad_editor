@@ -124,13 +124,6 @@ pub struct UiState {
     pub save_overview_dialog: SaveOverviewDialogState,
     /// Konfiguration fuer das Distanzen-Neuverteilen-Feature
     pub distanzen: DistanzenState,
-    pub lp_tools: LongPressState,
-    pub lp_straights: LongPressState,
-    pub lp_curves: LongPressState,
-    pub lp_constraint: LongPressState,
-    pub lp_section_tools: LongPressState,
-    pub lp_direction: LongPressState,
-    pub lp_priority: LongPressState,
 }
 
 pub struct FloatingMenuState {
