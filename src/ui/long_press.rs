@@ -1,9 +1,7 @@
 //! Wiederverwendbares Long-Press-Dropdown-Widget fuer Icon-Buttons.
 
 use crate::app::AppState;
-use crate::ui::icons::{
-    ICON_SIZE, accent_icon_color, function_icon_color, svg_icon,
-};
+use crate::ui::icons::{accent_icon_color, function_icon_color, svg_icon, ICON_SIZE};
 
 /// Long-Press-Status einer Button-Gruppe.
 #[derive(Debug, Clone)]
@@ -133,35 +131,36 @@ pub fn render_popup<T: Clone + PartialEq>(
         .order(egui::Order::Foreground)
         .fixed_pos(popup_pos)
         .show(ctx, |ui| {
-            egui::Frame::popup(ui.style()).show(ui, |ui| {
-                ui.vertical(|ui| {
-                    ui.label(group.label);
-                    ui.separator();
+            egui::Frame::popup(ui.style())
+                .show(ui, |ui| {
+                    ui.vertical(|ui| {
+                        ui.label(group.label);
+                        ui.separator();
 
-                    let mut selected = None;
-                    for item in &group.items {
-                        let is_active = &item.value == active_value;
-                        let tint = if is_active {
-                            active_icon_color
-                        } else {
-                            icon_color
-                        };
-                        let icon = svg_icon(item.icon.clone(), ICON_SIZE).tint(tint);
+                        let mut selected = None;
+                        for item in &group.items {
+                            let is_active = &item.value == active_value;
+                            let tint = if is_active {
+                                active_icon_color
+                            } else {
+                                icon_color
+                            };
+                            let icon = svg_icon(item.icon.clone(), ICON_SIZE).tint(tint);
 
-                        if ui
-                            .add(egui::Button::image(icon).selected(is_active))
-                            .on_hover_text(item.tooltip)
-                            .clicked()
-                        {
-                            selected = Some(item.value.clone());
+                            if ui
+                                .add(egui::Button::image(icon).selected(is_active))
+                                .on_hover_text(item.tooltip)
+                                .clicked()
+                            {
+                                selected = Some(item.value.clone());
+                            }
                         }
-                    }
 
-                    selected
+                        selected
+                    })
+                    .inner
                 })
                 .inner
-            })
-            .inner
         });
 
     let selected = area_response.inner;
