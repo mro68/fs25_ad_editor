@@ -12,7 +12,7 @@ pub struct FloatingMenuState {
 }
 
 /// Typ des schwebenden Kontextmenues.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum FloatingMenuKind {
     /// Werkzeug-Menue (Select/Connect/AddNode).
     Tools,

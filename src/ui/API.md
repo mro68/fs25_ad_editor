@@ -8,7 +8,8 @@ Das `ui`-Modul enthält egui-UI-Komponenten (Menüs, Statusbar, Input-Handling, 
 
 - `menu.rs` — Top-Menü-Leiste
 - `status.rs` — Statusleiste
-- `toolbar.rs` — Schwebende Tool-Palette (Toggle via `T`)
+- `floating_menu.rs` — Schwebende Kontextmenues fuer Werkzeuggruppen (Toggle via `W/G/S/T`)
+- `toolbar.rs` — Legacy-Tool-Palette (vorerst vorhanden, nicht mehr aktiv gerendert)
 - `icons.rs` — Gemeinsame Icon-Konstanten/Helfer (`ICON_SIZE`, `svg_icon`, `route_tool_icon`)
 - `long_press.rs` — Wiederverwendbares Long-Press-Dropdown-Widget (`LongPressState`, `LongPressGroup`, `render_long_press_button`)
 - `defaults_panel.rs` — Linke Sidebar im Gruppen-Layout (Long-Press fuer Werkzeuge/Route-Gruppen/Defaults, Hintergrund)
@@ -97,22 +98,29 @@ pub fn render_segment_overlays(
 - Gesperrt (`locked = true`): gelber Rahmen, 15%-schwarze Fuellung, geschlossenes Schloss-Icon
 ---
 
-### `render_tool_palette`
+### `render_floating_menu`
 
-Rendert die freie Tool-Palette als schwebendes `egui::Window` ohne Titelleiste.
-Die Palette wird per `T`-Shortcut geoeffnet und an `UiState.tool_palette_pos` positioniert.
+Rendert ein schwebendes Kontextmenue an `UiState.floating_menu.pos`.
+Die Menue-Art wird ueber `UiState.floating_menu.kind` gesteuert.
 
 ```rust
-pub fn render_tool_palette(
+pub fn render_floating_menu(
   ctx: &egui::Context,
-  state: &AppState,
-) -> (Vec<AppIntent>, bool)
+  state: &mut AppState,
+) -> Vec<AppIntent>
 ```
 
-Rueckgabe:
+Unterstuetzte Menues:
 
-- `Vec<AppIntent>` fuer Tool-Auswahl (Select/Connect/AddNode + Route-Tools ohne FieldBoundary)
-- `should_close = true` bei Tool-Auswahl oder Klick ausserhalb des Fensters
+- `FloatingMenuKind::Tools` — Select / Connect / AddNode
+- `FloatingMenuKind::Basics` — Gerade, Bezier (Q/C), Spline, Constraint
+- `FloatingMenuKind::SectionTools` — Ausweichstrecke, Parkplatz, Strecke versetzen
+
+Verhalten:
+
+- Aktive Auswahl wird mit Akzentfarbe hervorgehoben
+- Item-Klick emittiert passende Intents und schliesst das Menue
+- Klick ausserhalb schliesst das Menue
 
 ---
 
@@ -235,6 +243,8 @@ let intents = input.collect_viewport_events(
   - `Ctrl+V` → Paste-Vorschau starten
   - `Ctrl+O` → Datei öffnen
   - `Ctrl+S` → Datei speichern
+  - `W` / `G` / `S` / `T` (ohne Modifier) → Floating-Menues (Tools/Basics/SectionTools)
+  - `K` (ohne Modifier) und `Ctrl+K` → Command-Palette toggeln
   - `Ctrl+Z` → Undo
   - `Ctrl+Y` → Redo
 

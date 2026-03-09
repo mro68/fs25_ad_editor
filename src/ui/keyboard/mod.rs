@@ -2,7 +2,7 @@
 //!
 //! Verarbeitet globale Tastenkombinationen und mappt sie auf `AppIntent`s.
 
-use crate::app::{AppIntent, ConnectionDirection, ConnectionPriority, EditorTool};
+use crate::app::{AppIntent, ConnectionDirection, ConnectionPriority, EditorTool, FloatingMenuKind};
 use indexmap::IndexSet;
 
 fn collect_escape_intents(
@@ -144,7 +144,7 @@ pub(super) fn collect_keyboard_intents(
         key_1_pressed,
         key_2_pressed,
         key_3_pressed,
-        key_k_pressed,
+        key_s_pressed,
         key_c_pressed,
         key_v_pressed,
         key_x_pressed,
@@ -159,7 +159,7 @@ pub(super) fn collect_keyboard_intents(
             i.key_pressed(egui::Key::Num1),
             i.key_pressed(egui::Key::Num2),
             i.key_pressed(egui::Key::Num3),
-            i.key_pressed(egui::Key::K),
+            i.key_pressed(egui::Key::S),
             i.key_pressed(egui::Key::C),
             i.key_pressed(egui::Key::V),
             i.key_pressed(egui::Key::X),
@@ -196,28 +196,85 @@ pub(super) fn collect_keyboard_intents(
         });
     }
 
-    // T-Taste: Tool-Palette toggling
-    let should_toggle_tool_palette = ui.input(|i| {
-        i.events.iter().any(|event| {
-            matches!(
-                event,
-                egui::Event::Key {
-                    key: egui::Key::T,
-                    pressed: true,
-                    modifiers,
-                    ..
-                } if {
-                    let command = modifiers.command || modifiers.ctrl;
-                    !command && !modifiers.shift && !modifiers.alt
+    let (
+        key_w_no_mod,
+        key_g_no_mod,
+        key_s_no_mod,
+        key_t_no_mod,
+        key_k_no_mod,
+        key_k_ctrl_or_cmd,
+    ) = ui.input(|i| {
+        let mut key_w_no_mod = false;
+        let mut key_g_no_mod = false;
+        let mut key_s_no_mod = false;
+        let mut key_t_no_mod = false;
+        let mut key_k_no_mod = false;
+        let mut key_k_ctrl_or_cmd = false;
+
+        for event in &i.events {
+            if let egui::Event::Key {
+                key,
+                pressed: true,
+                modifiers,
+                ..
+            } = event
+            {
+                let no_mod =
+                    !modifiers.command && !modifiers.ctrl && !modifiers.shift && !modifiers.alt;
+                match key {
+                    egui::Key::W if no_mod => key_w_no_mod = true,
+                    egui::Key::G if no_mod => key_g_no_mod = true,
+                    egui::Key::S if no_mod => key_s_no_mod = true,
+                    egui::Key::T if no_mod => key_t_no_mod = true,
+                    egui::Key::K if no_mod => key_k_no_mod = true,
+                    egui::Key::K if modifiers.command || modifiers.ctrl => {
+                        key_k_ctrl_or_cmd = true;
+                    }
+                    _ => {}
                 }
-            )
-        })
+            }
+        }
+
+        (
+            key_w_no_mod,
+            key_g_no_mod,
+            key_s_no_mod,
+            key_t_no_mod,
+            key_k_no_mod,
+            key_k_ctrl_or_cmd,
+        )
     });
-    if should_toggle_tool_palette {
-        events.push(AppIntent::ToggleToolPalette);
+
+    if key_w_no_mod {
+        events.push(AppIntent::ToggleFloatingMenu {
+            kind: FloatingMenuKind::Tools,
+        });
     }
 
-    if (modifiers.command || modifiers.ctrl) && key_k_pressed {
+    if key_g_no_mod {
+        events.push(AppIntent::ToggleFloatingMenu {
+            kind: FloatingMenuKind::Basics,
+        });
+    }
+
+    if key_s_no_mod && key_s_pressed {
+        events.push(AppIntent::ToggleFloatingMenu {
+            kind: FloatingMenuKind::SectionTools,
+        });
+    }
+
+    // Alias: T oeffnet weiterhin das Werkzeuge-Menue.
+    if key_t_no_mod {
+        events.push(AppIntent::ToggleFloatingMenu {
+            kind: FloatingMenuKind::Tools,
+        });
+    }
+
+    if key_k_no_mod {
+        events.push(AppIntent::CommandPaletteToggled);
+    }
+
+    if key_k_ctrl_or_cmd {
         events.push(AppIntent::CommandPaletteToggled);
     }
 

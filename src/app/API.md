@@ -616,6 +616,7 @@ pub enum AppIntent {
     OptionsChanged { options: Box<EditorOptions> },
     ResetOptionsRequested,
     CommandPaletteToggled,
+    ToggleFloatingMenu { kind: FloatingMenuKind },
     ToggleToolPalette,
 
     // Route-Tool
