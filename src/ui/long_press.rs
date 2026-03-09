@@ -1,6 +1,6 @@
 //! Wiederverwendbares Long-Press-Dropdown-Widget fuer Icon-Buttons.
 
-use crate::ui::icons::{ICON_SIZE, svg_icon};
+use crate::ui::icons::{svg_icon, ICON_SIZE};
 
 /// Long-Press-Status einer Button-Gruppe.
 #[derive(Debug, Clone)]
