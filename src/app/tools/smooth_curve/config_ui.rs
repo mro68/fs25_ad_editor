@@ -1,4 +1,4 @@
-//! UI-Konfigurationspanel fuer das Constraint-Route-Tool.
+//! UI-Konfigurationspanel fuer das Geglättete-Kurve-Tool.
 //!
 //! Enthaelt:
 //! - Max-Winkel-Slider (Solver-Parameter)
@@ -9,12 +9,12 @@
 //! - Generierte Wegpunkt-Anzahl (Info)
 
 use super::super::common::{wheel_dir, SegmentConfig};
-use super::state::ConstraintRouteTool;
+use super::state::SmoothCurveTool;
 
-impl ConstraintRouteTool {
+impl SmoothCurveTool {
     /// Rendert nur den Max-Abstand-Slider (ohne Node-Anzahl).
     ///
-    /// Fuer das Constraint-Route-Tool ist die Node-Anzahl vom Solver bestimmt
+    /// Fuer das Geglättete-Kurve-Tool ist die Node-Anzahl vom Solver bestimmt
     /// (kruemmungsadaptive Verteilung), daher wird nur der Abstand-Slider angezeigt.
     /// Gibt `(changed, recreate_needed)` zurueck.
     fn render_segment_distance_only(

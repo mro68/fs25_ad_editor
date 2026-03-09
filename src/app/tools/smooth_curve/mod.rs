@@ -1,4 +1,4 @@
-//! Constraint-Route-Tool: Erzeugt Routen mit automatischer Winkelglaettung
+//! Geglättete-Kurve-Tool: Erzeugt Routen mit automatischer Winkelglaettung
 //! und tangentialen Uebergaengen zu bestehenden Verbindungen.
 //!
 //! Aufgeteilt in:
@@ -14,8 +14,8 @@ pub(crate) mod geometry;
 mod lifecycle;
 mod state;
 
-pub use geometry::{solve_route, ConstraintRouteInput};
-pub use state::ConstraintRouteTool;
+pub use geometry::{solve_route, SmoothCurveInput};
+pub use state::SmoothCurveTool;
 
 #[cfg(test)]
 mod tests;

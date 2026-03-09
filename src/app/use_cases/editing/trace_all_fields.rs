@@ -2,17 +2,25 @@
 //!
 //! Erzeugt fuer jedes erkannte Feldpolygon einen geschlossenen Wegpunkt-Ring
 //! mit den Standard-Parametern des FieldBoundaryTool. Alle Polygone werden
-//! in einem einzigen Undo-Schritt zusammengefasst.
+//! in einem einzigen Undo-Schritt zusammengefasst. Pro Feld wird ein
+//! `SegmentRecord` in der `segment_registry` angelegt, damit die erzeugten
+//! Strecken nachtraeglich bearbeitet werden koennen.
 
 use crate::app::compute_ring;
+use crate::app::segment_registry::{SegmentBase, SegmentKind, SegmentRecord};
+use crate::app::tools::ToolAnchor;
 use crate::app::AppState;
 use crate::core::{Connection, ConnectionDirection, ConnectionPriority, MapNode, NodeFlag};
+use glam::Vec2;
 use std::sync::Arc;
 
 /// Zeichnet alle erkannten Farmland-Polygone als Wegpunkt-Ring nach.
 ///
 /// Alle erstellten Nodes und Verbindungen werden in einem einzigen Undo-Schritt
 /// zusammengefasst. Der Spatial-Index wird nur einmal am Ende rebuildet.
+/// Pro Feld wird ein `SegmentRecord` in der `segment_registry` angelegt,
+/// damit die erzeugten Feldstrecken nachtraeglich als Segment angewaehlt
+/// und bearbeitet werden koennen.
 ///
 /// Gibt fruehzeitig zurueck wenn keine Polygone geladen oder keine RoadMap vorhanden.
 ///
@@ -42,10 +50,12 @@ pub fn trace_all_fields(state: &mut AppState, spacing: f32, offset: f32, toleran
     // Undo-Snapshot VOR der Batch-Mutation (Arc-Clone, O(1))
     state.record_undo_snapshot();
 
-    let all_new_ids = {
+    // (field_id, node_ids) — wird nach dem road_map-Block fuer Registry-Eintraege genutzt
+    let (all_new_ids, field_segments) = {
         let road_map = Arc::make_mut(state.road_map.as_mut().expect("road_map vorhanden"));
 
         let mut all_new_ids: Vec<u64> = Vec::new();
+        let mut field_segments: Vec<(u32, Vec<u64>)> = Vec::new();
         let mut field_count = 0usize;
 
         for polygon in polygons.iter() {
@@ -79,6 +89,7 @@ pub fn trace_all_fields(state: &mut AppState, spacing: f32, offset: f32, toleran
                 road_map.add_connection(conn);
             }
 
+            field_segments.push((polygon.id, poly_ids));
             field_count += 1;
             log::debug!("Feld {}: {} Nodes erstellt", polygon.id, n);
         }
@@ -96,11 +107,48 @@ pub fn trace_all_fields(state: &mut AppState, spacing: f32, offset: f32, toleran
             log::info!("Alle Felder nachzeichnen: keine verwertbaren Polygone gefunden");
         }
 
-        all_new_ids
+        (all_new_ids, field_segments)
     };
 
     if all_new_ids.is_empty() {
         return;
+    }
+
+    // Pro Feld einen SegmentRecord anlegen, damit die Strecken bearbeitbar bleiben
+    {
+        let road_map_ref = state.road_map.as_deref().expect("road_map vorhanden");
+        for (field_id, node_ids) in &field_segments {
+            let record_id = state.segment_registry.next_id();
+            let original_positions: Vec<Vec2> = node_ids
+                .iter()
+                .filter_map(|id| road_map_ref.nodes.get(id).map(|n| n.position))
+                .collect();
+            let record = SegmentRecord {
+                id: record_id,
+                node_ids: node_ids.clone(),
+                start_anchor: ToolAnchor::NewPosition(Vec2::ZERO),
+                end_anchor: ToolAnchor::NewPosition(Vec2::ZERO),
+                original_positions,
+                marker_node_ids: Vec::new(),
+                locked: true,
+                kind: SegmentKind::FieldBoundary {
+                    field_id: *field_id,
+                    node_spacing: spacing,
+                    offset,
+                    straighten_tolerance: tolerance,
+                    base: SegmentBase {
+                        direction,
+                        priority,
+                        max_segment_length: 0.0,
+                    },
+                },
+            };
+            state.segment_registry.register(record);
+        }
+        log::debug!(
+            "Segment-Registry: {} Feld-Segmente registriert",
+            field_segments.len()
+        );
     }
 
     // Selektion auf neu erstellte Nodes setzen

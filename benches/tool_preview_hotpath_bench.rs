@@ -2,11 +2,11 @@
 //!
 //! Misst die Kernberechnungen der Preview-Erzeugung in den aufwaendigeren Tools:
 //! - Bypass: `compute_bypass_positions`
-//! - ConstraintRoute: `solve_route`
+//! - SmoothCurve: `solve_route`
 
 use criterion::{criterion_group, criterion_main, BenchmarkId, Criterion};
 use fs25_auto_drive_editor::app::tools::bypass::compute_bypass_positions;
-use fs25_auto_drive_editor::app::tools::constraint_route::{solve_route, ConstraintRouteInput};
+use fs25_auto_drive_editor::app::tools::smooth_curve::{solve_route, SmoothCurveInput};
 use glam::Vec2;
 use std::hint::black_box;
 
@@ -41,8 +41,8 @@ fn bench_bypass_preview(c: &mut Criterion) {
     group.finish();
 }
 
-fn bench_constraint_preview(c: &mut Criterion) {
-    let mut group = c.benchmark_group("tool_preview_constraint_route");
+fn bench_smooth_curve_preview(c: &mut Criterion) {
+    let mut group = c.benchmark_group("tool_preview_smooth_curve");
 
     for &controls in &[0usize, 3, 8] {
         let start = Vec2::new(0.0, 0.0);
@@ -51,7 +51,7 @@ fn bench_constraint_preview(c: &mut Criterion) {
             .map(|i| Vec2::new(15.0 + i as f32 * 12.0, (i as f32 * 0.8).sin() * 18.0))
             .collect();
 
-        let input = ConstraintRouteInput {
+        let input = SmoothCurveInput {
             start,
             end,
             control_nodes,
@@ -80,6 +80,6 @@ fn bench_constraint_preview(c: &mut Criterion) {
 criterion_group!(
     tool_preview_hotpath_benches,
     bench_bypass_preview,
-    bench_constraint_preview
+    bench_smooth_curve_preview
 );
 criterion_main!(tool_preview_hotpath_benches);

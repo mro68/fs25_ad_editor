@@ -182,4 +182,4 @@ fn make_segment_record(&self, id: u64, node_ids: &[u64]) -> Option<SegmentRecord
 fn load_for_edit(&mut self, record: &SegmentRecord, kind: &SegmentKind);
 ```
 
-Implementierungen: `StraightLineTool`, `CurveTool` (Quad + Cubic), `SplineTool`, `BypassTool`, `ConstraintRouteTool`, `ParkingTool`, `RouteOffsetTool`, `FieldBoundaryTool`.
+Implementierungen: `StraightLineTool`, `CurveTool` (Quad + Cubic), `SplineTool`, `BypassTool`, `SmoothCurveTool`, `ParkingTool`, `RouteOffsetTool`, `FieldBoundaryTool`.

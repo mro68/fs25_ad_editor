@@ -1,16 +1,16 @@
-//! Lifecycle-Methoden des ConstraintRouteTool (RouteTool-Implementierung).
+//! Lifecycle-Methoden des SmoothCurveTool (RouteTool-Implementierung).
 
 use super::super::common::linear_connections;
 use super::super::{RouteTool, ToolAction, ToolPreview, ToolResult};
 use super::geometry::{build_result, BuildResultParams};
-use super::state::{ConstraintRouteTool, Phase};
+use super::state::{Phase, SmoothCurveTool};
 use crate::app::segment_registry::{SegmentBase, SegmentKind, SegmentRecord};
 use crate::core::RoadMap;
 use glam::Vec2;
 
-impl RouteTool for ConstraintRouteTool {
+impl RouteTool for SmoothCurveTool {
     fn name(&self) -> &str {
-        "Constraint-Route"
+        "Geglättete Kurve"
     }
 
     fn icon(&self) -> &str {
@@ -43,10 +43,10 @@ impl RouteTool for ConstraintRouteTool {
                     self.last_control_nodes.clear();
                     self.start = Some(last_end);
                     self.start_neighbor_dirs =
-                        ConstraintRouteTool::collect_neighbor_dirs(&last_end, road_map);
+                        SmoothCurveTool::collect_neighbor_dirs(&last_end, road_map);
                     self.end = Some(anchor);
                     self.end_neighbor_dirs =
-                        ConstraintRouteTool::collect_neighbor_dirs(&anchor, road_map);
+                        SmoothCurveTool::collect_neighbor_dirs(&anchor, road_map);
                     self.phase = Phase::ControlNodes;
                     self.sync_derived();
                     self.update_preview();
@@ -54,15 +54,14 @@ impl RouteTool for ConstraintRouteTool {
                 } else {
                     self.start = Some(anchor);
                     self.start_neighbor_dirs =
-                        ConstraintRouteTool::collect_neighbor_dirs(&anchor, road_map);
+                        SmoothCurveTool::collect_neighbor_dirs(&anchor, road_map);
                     self.phase = Phase::End;
                     ToolAction::Continue
                 }
             }
             Phase::End => {
                 self.end = Some(anchor);
-                self.end_neighbor_dirs =
-                    ConstraintRouteTool::collect_neighbor_dirs(&anchor, road_map);
+                self.end_neighbor_dirs = SmoothCurveTool::collect_neighbor_dirs(&anchor, road_map);
                 self.phase = Phase::ControlNodes;
                 self.sync_derived();
                 self.update_preview();
@@ -255,7 +254,7 @@ impl RouteTool for ConstraintRouteTool {
             original_positions: Vec::new(), // wird im Handler befüllt
             marker_node_ids: Vec::new(),
             locked: true,
-            kind: SegmentKind::ConstraintRoute {
+            kind: SegmentKind::SmoothCurve {
                 control_nodes: self.last_control_nodes.clone(),
                 max_angle_deg: self.max_angle_deg,
                 min_distance: self.min_distance,
@@ -269,7 +268,7 @@ impl RouteTool for ConstraintRouteTool {
     }
 
     fn load_for_edit(&mut self, record: &SegmentRecord, kind: &SegmentKind) {
-        let SegmentKind::ConstraintRoute {
+        let SegmentKind::SmoothCurve {
             control_nodes,
             max_angle_deg,
             min_distance,

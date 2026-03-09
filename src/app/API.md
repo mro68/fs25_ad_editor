@@ -219,7 +219,7 @@ pub struct EditorToolState {
     pub default_priority: ConnectionPriority,
     pub last_straight_index: usize,
     pub last_curve_index: usize,
-    pub last_constraint_index: usize,
+    pub last_smooth_curve_index: usize,
     pub last_section_tool_index: usize,
     pub tool_manager: ToolManager,
 }
@@ -285,7 +285,7 @@ pub enum SegmentKind {
         tangent_end: TangentSource,
         base: SegmentBase,
     },
-    ConstraintRoute {
+    SmoothCurve {
         control_nodes: Vec<Vec2>,
         max_angle_deg: f32,
         min_distance: f32,
@@ -332,7 +332,7 @@ pub const TOOL_INDEX_CURVE_QUAD: usize = 1;
 pub const TOOL_INDEX_CURVE_CUBIC: usize = 2;
 pub const TOOL_INDEX_SPLINE: usize = 3;
 pub const TOOL_INDEX_BYPASS: usize = 4;
-pub const TOOL_INDEX_CONSTRAINT_ROUTE: usize = 5;
+pub const TOOL_INDEX_SMOOTH_CURVE: usize = 5;
 pub const TOOL_INDEX_PARKING: usize = 6;
 pub const TOOL_INDEX_FIELD_BOUNDARY: usize = 7;
 pub const TOOL_INDEX_ROUTE_OFFSET: usize = 8;
@@ -371,8 +371,8 @@ pub enum SegmentKind {
         tangent_end: TangentSource,
         base: SegmentBase,
     },
-    /// Constraint-Route (winkelgeglaettet mit automatischen Tangenten)
-    ConstraintRoute {
+    /// Geglättete Kurve (winkelgeglaettet mit automatischen Tangenten)
+    SmoothCurve {
         control_nodes: Vec<Vec2>,
         max_angle_deg: f32,
         min_distance: f32,

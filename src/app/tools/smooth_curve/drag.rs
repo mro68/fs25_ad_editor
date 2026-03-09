@@ -1,16 +1,16 @@
-//! Drag-Logik fuer das Constraint-Route-Tool.
+//! Drag-Logik fuer das Geglättete-Kurve-Tool.
 //!
 //! Ermoeglicht das Verschieben von Start, End und Kontrollpunkten per Drag.
 
 use super::super::ToolAnchor;
-use super::state::{ConstraintRouteTool, DragTarget, Phase};
+use super::state::{DragTarget, Phase, SmoothCurveTool};
 use crate::core::RoadMap;
 use glam::Vec2;
 
 /// Gibt die Weltpositionen aller verschiebbaren Punkte zurueck.
 ///
 /// Reihenfolge: Start, End, Approach-Steuerpunkt, Departure-Steuerpunkt, Kontrollpunkte.
-pub(crate) fn drag_targets(tool: &ConstraintRouteTool) -> Vec<Vec2> {
+pub(crate) fn drag_targets(tool: &SmoothCurveTool) -> Vec<Vec2> {
     if tool.phase != Phase::ControlNodes || !is_ready(tool) {
         return vec![];
     }
@@ -35,7 +35,7 @@ pub(crate) fn drag_targets(tool: &ConstraintRouteTool) -> Vec<Vec2> {
 
 /// Startet einen Drag auf einem Punkt nahe `pos`.
 pub(crate) fn on_drag_start(
-    tool: &mut ConstraintRouteTool,
+    tool: &mut SmoothCurveTool,
     pos: Vec2,
     _road_map: &RoadMap,
     pick_radius: f32,
@@ -74,7 +74,7 @@ pub(crate) fn on_drag_start(
 }
 
 /// Aktualisiert die Position des gegriffenen Punkts waehrend eines Drags.
-pub(crate) fn on_drag_update(tool: &mut ConstraintRouteTool, pos: Vec2) {
+pub(crate) fn on_drag_update(tool: &mut SmoothCurveTool, pos: Vec2) {
     match tool.dragging {
         Some(DragTarget::Start) => {
             tool.start = Some(ToolAnchor::NewPosition(pos));
@@ -105,14 +105,14 @@ pub(crate) fn on_drag_update(tool: &mut ConstraintRouteTool, pos: Vec2) {
 }
 
 /// Beendet den Drag (ggf. Re-Snap auf existierenden Node).
-pub(crate) fn on_drag_end(tool: &mut ConstraintRouteTool, road_map: &RoadMap) {
+pub(crate) fn on_drag_end(tool: &mut SmoothCurveTool, road_map: &RoadMap) {
     match tool.dragging {
         Some(DragTarget::Start) => {
             if let Some(anchor) = &tool.start {
                 let re_snapped = tool.lifecycle.snap_at(anchor.position(), road_map);
                 tool.start = Some(re_snapped);
                 tool.start_neighbor_dirs =
-                    ConstraintRouteTool::collect_neighbor_dirs(&re_snapped, road_map);
+                    SmoothCurveTool::collect_neighbor_dirs(&re_snapped, road_map);
                 // Bei neuem Start Auto-Steuerpunkte zuruecksetzen
                 tool.approach_manual = false;
             }
@@ -122,7 +122,7 @@ pub(crate) fn on_drag_end(tool: &mut ConstraintRouteTool, road_map: &RoadMap) {
                 let re_snapped = tool.lifecycle.snap_at(anchor.position(), road_map);
                 tool.end = Some(re_snapped);
                 tool.end_neighbor_dirs =
-                    ConstraintRouteTool::collect_neighbor_dirs(&re_snapped, road_map);
+                    SmoothCurveTool::collect_neighbor_dirs(&re_snapped, road_map);
                 // Bei neuem Ende Auto-Steuerpunkte zuruecksetzen
                 tool.departure_manual = false;
             }
@@ -144,6 +144,6 @@ pub(crate) fn on_drag_end(tool: &mut ConstraintRouteTool, road_map: &RoadMap) {
 }
 
 /// Hilfsfunktion: Start und End gesetzt?
-fn is_ready(tool: &ConstraintRouteTool) -> bool {
+fn is_ready(tool: &SmoothCurveTool) -> bool {
     tool.start.is_some() && tool.end.is_some()
 }
