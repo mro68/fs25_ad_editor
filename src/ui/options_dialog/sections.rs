@@ -151,6 +151,26 @@ pub(super) fn render_selection(ui: &mut egui::Ui, opts: &mut EditorOptions) -> b
                 }
             });
     });
+    ui.separator();
+    ui.label("Doppelklick-Segment:");
+    ui.horizontal(|ui| {
+        changed |= ui
+            .checkbox(&mut opts.segment_stop_at_junction, "Bei Kreuzung stoppen")
+            .changed();
+    });
+    ui.horizontal(|ui| {
+        ui.label("Max. Winkel (°):");
+        changed |= ui
+            .add(
+                egui::DragValue::new(&mut opts.segment_max_angle_deg)
+                    .range(0.0..=180.0)
+                    .speed(1.0),
+            )
+            .changed();
+        if opts.segment_max_angle_deg == 0.0 {
+            ui.weak("(deaktiviert)");
+        }
+    });
     changed
 }
 

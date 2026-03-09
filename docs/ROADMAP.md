@@ -59,6 +59,7 @@
 - [x] Rectangle Select (Multi-Selection)
 - [x] Lasso-Selection
 - [x] Segment-Selektion (zwischen Kreuzungen)
+  - [x] **Konfigurierbare Abbruchbedingungen (2026-03-09):** `EditorOptions.segment_stop_at_junction` (Stopp bei Kreuzungen) + `segment_max_angle_deg` (Stopp bei Richtungsaenderung > Schwellwert); konfigurierbar im Options-Dialog; Werte werden per `AppCommand::SelectSegmentBetweenNearestIntersections` durchgereicht
 - [x] Add Node Tool (Click zum Hinzufuegen)
 - [x] Delete Tool (selektierte Nodes loeschen)
 - [x] Connect Tool (Regular, Dual, Reverse)

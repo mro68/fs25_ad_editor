@@ -74,6 +74,8 @@ pub fn map_intent_to_commands(state: &AppState, intent: AppIntent) -> Vec<AppCom
                 world_pos,
                 max_distance,
                 additive,
+                stop_at_junction: state.options.segment_stop_at_junction,
+                max_angle_deg: state.options.segment_max_angle_deg,
             }]
         }
         AppIntent::SelectNodesInRectRequested { min, max, additive } => {
