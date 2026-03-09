@@ -1,16 +1,15 @@
 //! Linkes Sidebar-Panel fuer Werkzeuge, Defaults und Hintergrund-Controls.
 
 use crate::app::segment_registry::{
-    TOOL_INDEX_BYPASS, TOOL_INDEX_CONSTRAINT_ROUTE, TOOL_INDEX_CURVE_CUBIC,
-    TOOL_INDEX_CURVE_QUAD, TOOL_INDEX_PARKING, TOOL_INDEX_ROUTE_OFFSET, TOOL_INDEX_SPLINE,
-    TOOL_INDEX_STRAIGHT,
+    TOOL_INDEX_BYPASS, TOOL_INDEX_CONSTRAINT_ROUTE, TOOL_INDEX_CURVE_CUBIC, TOOL_INDEX_CURVE_QUAD,
+    TOOL_INDEX_PARKING, TOOL_INDEX_ROUTE_OFFSET, TOOL_INDEX_SPLINE, TOOL_INDEX_STRAIGHT,
 };
 use crate::app::{AppIntent, AppState, ConnectionDirection, ConnectionPriority, EditorTool};
 use crate::ui::icons::{
     accent_icon_color, function_icon_color, route_tool_icon, svg_icon, ICON_SIZE,
 };
 use crate::ui::long_press::{
-    LongPressGroup, LongPressItem, LongPressState, render_long_press_button,
+    render_long_press_button, LongPressGroup, LongPressItem, LongPressState,
 };
 
 #[derive(Debug, Clone, Copy)]
@@ -30,11 +29,7 @@ fn route_group_label(group: RouteGroup) -> &'static str {
     }
 }
 
-fn push_route_tool_selection(
-    events: &mut Vec<AppIntent>,
-    _group: RouteGroup,
-    index: usize,
-) {
+fn push_route_tool_selection(events: &mut Vec<AppIntent>, _group: RouteGroup, index: usize) {
     events.push(AppIntent::SetEditorToolRequested {
         tool: EditorTool::Route,
     });
@@ -271,9 +266,7 @@ pub fn render_route_defaults_panel(ctx: &egui::Context, state: &AppState) -> Vec
                 &direction_group,
                 &state.editor.default_direction,
             ) {
-                events.push(AppIntent::SetDefaultDirectionRequested {
-                    direction,
-                });
+                events.push(AppIntent::SetDefaultDirectionRequested { direction });
             }
 
             ui.add_space(6.0);
@@ -287,9 +280,7 @@ pub fn render_route_defaults_panel(ctx: &egui::Context, state: &AppState) -> Vec
                 &priority_group,
                 &state.editor.default_priority,
             ) {
-                events.push(AppIntent::SetDefaultPriorityRequested {
-                    priority,
-                });
+                events.push(AppIntent::SetDefaultPriorityRequested { priority });
             }
 
             if state.view.background_map.is_some() {
