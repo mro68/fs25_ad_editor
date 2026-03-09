@@ -262,6 +262,10 @@
   - [x] **Doku-Sync Sidebar-Gruppenlayout mit Long-Press (2026-03-09)**
     - [x] `ui/API.md`: `render_route_defaults_panel(ctx, &mut AppState)`-Signatur und neues Gruppen-Layout dokumentiert
     - [x] Sidebar-Details aktualisiert: Route-Gruppen (Geraden/Kurven/Constraint/Tools), Default-Gruppen (Richtung/Prioritaet), Aktionen-Block entfernt
+  - [x] **Doku-Sync Sidebar-Redesign vollstaendig (2026-03-09)**
+    - [x] `ui/API.md`: Vollstaendige API-Sektion fuer `long_press.rs` ergaenzt (`LongPressState`, `LongPressGroup<T>`, `LongPressItem<T>`, `render_long_press_button`, `render_popup`, `paint_dropdown_arrow`)
+    - [x] `ui/API.md`: Formatierungsfehler behoben — fehlendes abschliessendes ` ``` ` nach `paint_preview_polyline`-Block
+    - [x] `docs/ARCHITECTURE_PLAN.md`: UI-Layer-Modul-Liste aktualisiert — `toolbar.rs` durch `defaults_panel.rs`, `long_press.rs` und `floating_menu.rs` ersetzt; `keyboard.rs` um W/G/S/T/K-Shortcuts ergaenzt
   - [x] **Tool-Encapsulation-Audit (2026-03-07, Branch `feat/tool-encapsulation-audit`)**
     - [x] Encapsulation-Audit: 0 Layer-Boundary-Verletzungen (keine wgpu/render-Imports in Tools)
     - [x] API-Unification: Alle 9 Tools nutzen RouteTool-Trait + 4 Capability-Traits konsistent

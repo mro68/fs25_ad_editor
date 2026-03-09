@@ -405,6 +405,73 @@ pub fn paint_preview_polyline(
   viewport_size: Vec2,
   positions: &[Vec2],
 )
+```
+
+---
+
+### Long-Press-Widget (`long_press.rs`)
+
+Wiederverwendbares Long-Press-Dropdown-Widget fuer Icon-Buttons mit optionalem Auswahl-Popup.
+
+#### Typen
+
+```rust
+/// Long-Press-Status einer Button-Gruppe.
+pub struct LongPressState {
+    pub press_start: Option<f64>,  // Startzeitpunkt (egui-Zeit in Sekunden)
+    pub popup_open: bool,          // Ob das Auswahl-Popup offen ist
+    pub popup_pos: Option<egui::Pos2>, // Position des Popups im Screen-Space
+}
+
+/// Ein auswaehlbares Item innerhalb einer Long-Press-Gruppe.
+pub struct LongPressItem<T: Clone> {
+    pub icon: egui::ImageSource<'static>,
+    pub tooltip: &'static str,
+    pub value: T,
+}
+
+/// Definiert eine Long-Press-Gruppe mit mehreren auswaehlbaren Items.
+pub struct LongPressGroup<T: Clone + PartialEq> {
+    pub id: &'static str,       // Eindeutige ID fuer egui
+    pub label: &'static str,    // Anzeigename der Gruppe
+    pub items: Vec<LongPressItem<T>>,
+}
+```
+
+#### Funktionen
+
+```rust
+/// Rendert einen Long-Press-Button mit optionalem Auswahl-Popup.
+/// Kurzer Klick aktiviert das aktuelle Item; Long-Press (>= 1s) oeffnet Popup.
+pub fn render_long_press_button<T: Clone + PartialEq>(
+    ui: &mut egui::Ui,
+    icon_color: egui::Color32,
+    active_icon_color: egui::Color32,
+    group: &LongPressGroup<T>,
+    active_value: &T,
+    lp_state: &mut LongPressState,
+) -> Option<T>
+
+/// Rendert das Long-Press-Popup neben dem Button.
+pub fn render_popup<T: Clone + PartialEq>(
+    ctx: &egui::Context,
+    group: &LongPressGroup<T>,
+    active_value: &T,
+    icon_color: egui::Color32,
+    active_icon_color: egui::Color32,
+    lp_state: &mut LongPressState,
+) -> Option<T>
+
+/// Zeichnet einen kleinen Dropdown-Pfeil in die untere rechte Ecke des Buttons.
+pub fn paint_dropdown_arrow(ui: &egui::Ui, response: &egui::Response)
+```
+
+**Verhalten:**
+- Return `Some(value)` wenn ein Item ausgewaehlt wurde (kurzer Klick oder Popup-Klick)
+- `LongPressState` muss pro Gruppe getrennt im `UiState` gehalten werden (`lp_tools`, `lp_straights`, `lp_curves`, `lp_constraint`, `lp_section_tools`, `lp_direction`, `lp_priority`)
+- Popup schliesst sich bei Klick ausserhalb
+
+---
 
 ### `render_route_defaults_panel`
 
