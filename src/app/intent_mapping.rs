@@ -316,7 +316,19 @@ pub fn map_intent_to_commands(state: &AppState, intent: AppIntent) -> Vec<AppCom
         }
 
         // ── Extras ───────────────────────────────────────────────────────
-        AppIntent::TraceAllFieldsRequested => vec![AppCommand::TraceAllFields],
+        AppIntent::OpenTraceAllFieldsDialogRequested => {
+            vec![AppCommand::OpenTraceAllFieldsDialog]
+        }
+        AppIntent::TraceAllFieldsConfirmed {
+            spacing,
+            offset,
+            tolerance,
+        } => vec![AppCommand::TraceAllFields {
+            spacing,
+            offset,
+            tolerance,
+        }],
+        AppIntent::TraceAllFieldsCancelled => vec![AppCommand::CloseTraceAllFieldsDialog],
     }
 }
 

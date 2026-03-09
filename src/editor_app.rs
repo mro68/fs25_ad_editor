@@ -3,8 +3,9 @@
 use eframe::egui;
 use eframe::egui_wgpu;
 use fs25_auto_drive_editor::app::segment_registry::{
-    TOOL_INDEX_BYPASS, TOOL_INDEX_CONSTRAINT_ROUTE, TOOL_INDEX_CURVE_CUBIC, TOOL_INDEX_CURVE_QUAD,
-    TOOL_INDEX_PARKING, TOOL_INDEX_ROUTE_OFFSET, TOOL_INDEX_SPLINE, TOOL_INDEX_STRAIGHT,
+    TOOL_INDEX_BYPASS, TOOL_INDEX_CONSTRAINT_ROUTE, TOOL_INDEX_CURVE_CUBIC,
+    TOOL_INDEX_CURVE_QUAD, TOOL_INDEX_PARKING, TOOL_INDEX_ROUTE_OFFSET, TOOL_INDEX_SPLINE,
+    TOOL_INDEX_STRAIGHT,
 };
 use fs25_auto_drive_editor::app::state::{FloatingMenuKind, FloatingMenuState};
 use fs25_auto_drive_editor::{
@@ -186,6 +187,7 @@ impl EditorApp {
         ));
         events.extend(ui::show_post_load_dialog(ctx, &mut self.state.ui));
         events.extend(ui::show_save_overview_dialog(ctx, &mut self.state.ui));
+        events.extend(ui::show_trace_all_fields_dialog(ctx, &mut self.state.ui));
         events.extend(ui::show_options_dialog(
             ctx,
             self.state.show_options_dialog,
@@ -497,7 +499,8 @@ impl EditorApp {
                 self.state.ui.floating_menu = None;
             } else {
                 let pos = ctx.input(|i| i.pointer.hover_pos().or(i.pointer.latest_pos()));
-                self.state.ui.floating_menu = pos.map(|p| FloatingMenuState { kind, pos: p });
+                self.state.ui.floating_menu =
+                    pos.map(|p| FloatingMenuState { kind, pos: p });
             }
         } else {
             let pos = ctx.input(|i| i.pointer.hover_pos().or(i.pointer.latest_pos()));

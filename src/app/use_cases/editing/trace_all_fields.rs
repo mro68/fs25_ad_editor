@@ -15,7 +15,12 @@ use std::sync::Arc;
 /// zusammengefasst. Der Spatial-Index wird nur einmal am Ende rebuildet.
 ///
 /// Gibt fruehzeitig zurueck wenn keine Polygone geladen oder keine RoadMap vorhanden.
-pub fn trace_all_fields(state: &mut AppState) {
+///
+/// # Parameter
+/// * `spacing` – Abstand zwischen Wegpunkten in Welteinheiten (Metern)
+/// * `offset` – Versatz vom Feldrand (positiv = nach innen)
+/// * `tolerance` – Douglas-Peucker-Toleranz fuer Begradigung (0 = aus)
+pub fn trace_all_fields(state: &mut AppState, spacing: f32, offset: f32, tolerance: f32) {
     // Polygone vor dem Snapshot klonen (Arc, O(1))
     let polygons = match &state.farmland_polygons {
         Some(p) if !p.is_empty() => Arc::clone(p),
@@ -31,9 +36,6 @@ pub fn trace_all_fields(state: &mut AppState) {
     }
 
     // Standard-Parameter (entsprechen FieldBoundaryTool::new())
-    let spacing = 10.0_f32;
-    let offset = 0.0_f32;
-    let tolerance = 0.0_f32;
     let direction = ConnectionDirection::Dual;
     let priority = ConnectionPriority::Regular;
 
