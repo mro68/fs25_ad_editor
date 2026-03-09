@@ -11,7 +11,7 @@ Das `ui`-Modul enthält egui-UI-Komponenten (Menüs, Statusbar, Input-Handling, 
 - `toolbar.rs` — Schwebende Tool-Palette (Toggle via `T`)
 - `icons.rs` — Gemeinsame Icon-Konstanten/Helfer (`ICON_SIZE`, `svg_icon`, `route_tool_icon`)
 - `long_press.rs` — Wiederverwendbares Long-Press-Dropdown-Widget (`LongPressState`, `LongPressGroup`, `render_long_press_button`)
-- `defaults_panel.rs` — Linke Sidebar (Werkzeuge, Routen, Aktionen, Defaults, Hintergrund)
+- `defaults_panel.rs` — Linke Sidebar im Gruppen-Layout (Long-Press fuer Werkzeuge/Route-Gruppen/Defaults, Hintergrund)
 - `command_palette.rs` — Command Palette Overlay (Suche + Intent-Auswahl)
 - `properties.rs` — Properties-Panel (Detailanzeige selektierter Nodes)
 - `options_dialog/` — Optionen-Dialog für Laufzeit-Einstellungen (`mod.rs`, `sections.rs`)
@@ -399,12 +399,17 @@ pub fn paint_preview_polyline(
 
 ### `render_route_defaults_panel`
 
-Linke Sidebar fuer Werkzeugauswahl, Route-Tools, Aktionen sowie Defaults und Hintergrund.
+Linke Sidebar im kompakten Gruppen-Layout (64px):
+
+- Long-Press-Gruppe `Werkzeuge` (Select, Connect, AddNode)
+- Long-Press-Gruppen fuer Route-Tools (Geraden, Kurven, Constraint, Abschnittswerkzeuge; ohne FieldBoundary)
+- Long-Press fuer Richtungs- und Prioritaets-Defaults
+- `Hintergrund` als `CollapsingHeader`
 
 ```rust
 pub fn render_route_defaults_panel(
   ctx: &egui::Context,
-  state: &AppState,
+  state: &mut AppState,
 ) -> Vec<AppIntent>
 ```
 

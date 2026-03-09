@@ -1,7 +1,6 @@
 //! Wiederverwendbares Long-Press-Dropdown-Widget fuer Icon-Buttons.
 
-use crate::app::AppState;
-use crate::ui::icons::{accent_icon_color, function_icon_color, svg_icon, ICON_SIZE};
+use crate::ui::icons::{ICON_SIZE, svg_icon};
 
 /// Long-Press-Status einer Button-Gruppe.
 #[derive(Debug, Clone)]
@@ -52,7 +51,8 @@ pub struct LongPressGroup<T: Clone + PartialEq> {
 /// Long-Press (>= 1s) oeffnet ein Popup mit allen Items.
 pub fn render_long_press_button<T: Clone + PartialEq>(
     ui: &mut egui::Ui,
-    state: &AppState,
+    icon_color: egui::Color32,
+    active_icon: egui::Color32,
     group: &LongPressGroup<T>,
     active_value: &T,
     lp_state: &mut LongPressState,
@@ -62,14 +62,11 @@ pub fn render_long_press_button<T: Clone + PartialEq>(
         .iter()
         .find(|item| &item.value == active_value)
         .or_else(|| group.items.first())?;
-
-    let icon_color = function_icon_color(state);
-    let active_icon = accent_icon_color(state);
     let icon = svg_icon(active_item.icon.clone(), ICON_SIZE).tint(active_icon);
 
     let response = ui
         .add(egui::Button::image(icon).selected(true))
-        .on_hover_text(active_item.tooltip);
+        .on_hover_text(group.label);
 
     paint_dropdown_arrow(ui, &response);
 
