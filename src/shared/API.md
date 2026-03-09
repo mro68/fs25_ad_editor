@@ -153,6 +153,10 @@ pub struct EditorOptions {
     // Selektion
     pub selection_size_factor: f32, // Prozentwert 100..=200
     pub selection_style: SelectionStyle,
+    /// Doppelklick-Segment: Bei Kreuzung (degree != 2) stoppen.
+    pub segment_stop_at_junction: bool,
+    /// Doppelklick-Segment: Max. Winkelabweichung in Grad (0 = nicht pruefen).
+    pub segment_max_angle_deg: f32,
     // Connections
     pub connection_thickness_world: f32,
     pub connection_thickness_subprio_world: f32,

@@ -30,6 +30,12 @@ pub struct EditorOptions {
     pub selection_size_factor: f32,
     #[serde(default)]
     pub selection_style: SelectionStyle,
+    /// Doppelklick-Segment: Bei Kreuzung (degree != 2) stoppen.
+    #[serde(default = "default_segment_stop_at_junction")]
+    pub segment_stop_at_junction: bool,
+    /// Doppelklick-Segment: Max. Winkelabweichung in Grad (0 = nicht pruefen).
+    #[serde(default = "default_segment_max_angle_deg")]
+    pub segment_max_angle_deg: f32,
 
     // Connections
     pub connection_thickness_world: f32,
@@ -125,6 +131,8 @@ impl Default for EditorOptions {
             node_color_warning: NODE_COLOR_WARNING,
             selection_size_factor: SELECTION_SIZE_FACTOR,
             selection_style: SelectionStyle::default(),
+            segment_stop_at_junction: default_segment_stop_at_junction(),
+            segment_max_angle_deg: default_segment_max_angle_deg(),
             connection_thickness_world: CONNECTION_THICKNESS_WORLD,
             connection_thickness_subprio_world: CONNECTION_THICKNESS_SUBPRIO_WORLD,
             arrow_length_world: ARROW_LENGTH_WORLD,
@@ -160,6 +168,14 @@ impl Default for EditorOptions {
             node_decimation_spacing_px: NODE_DECIMATION_SPACING_PX,
         }
     }
+}
+
+fn default_segment_stop_at_junction() -> bool {
+    true
+}
+
+fn default_segment_max_angle_deg() -> f32 {
+    15.0
 }
 
 fn default_copy_preview_opacity() -> f32 {
