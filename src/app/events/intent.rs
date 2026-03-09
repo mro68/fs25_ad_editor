@@ -174,6 +174,10 @@ pub enum AppIntent {
     ResetOptionsRequested,
     /// Command-Palette oeffnen/schliessen
     CommandPaletteToggled,
+    /// Schwebendes Menue an der Mausposition oeffnen/schliessen
+    ToggleFloatingMenu {
+        kind: crate::app::state::FloatingMenuKind,
+    },
     /// Tool-Palette an Mausposition anzeigen/verbergen (T-Taste)
     ToggleToolPalette,
 

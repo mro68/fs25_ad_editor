@@ -2,6 +2,7 @@
 
 use eframe::egui;
 use eframe::egui_wgpu;
+use fs25_auto_drive_editor::app::state::{FloatingMenuKind, FloatingMenuState};
 use fs25_auto_drive_editor::{
     render, ui, AppController, AppIntent, AppState, EditorOptions, EditorTool, ValueAdjustInputMode,
 };
@@ -106,14 +107,7 @@ impl EditorApp {
 
         ui::render_status_bar(ctx, &self.state);
         events.extend(ui::render_menu(ctx, &self.state));
-        if self.state.ui.show_tool_palette {
-            let (palette_events, should_close) = ui::render_tool_palette(ctx, &self.state);
-            events.extend(palette_events);
-            if should_close {
-                self.state.ui.show_tool_palette = false;
-                self.state.ui.tool_palette_pos = None;
-            }
-        }
+        events.extend(ui::render_floating_menu(ctx, &mut self.state));
         events.extend(ui::render_route_defaults_panel(ctx, &mut self.state));
 
         let road_map_for_properties = self.state.road_map.clone();
@@ -457,13 +451,12 @@ impl EditorApp {
     fn process_events(&mut self, ctx: &egui::Context, events: &[AppIntent]) {
         for event in events {
             if matches!(event, AppIntent::ToggleToolPalette) {
-                self.state.ui.show_tool_palette = !self.state.ui.show_tool_palette;
-                if self.state.ui.show_tool_palette {
-                    self.state.ui.tool_palette_pos =
-                        ctx.input(|i| i.pointer.hover_pos().or(i.pointer.latest_pos()));
-                } else {
-                    self.state.ui.tool_palette_pos = None;
-                }
+                self.toggle_floating_menu(ctx, FloatingMenuKind::Tools);
+                continue;
+            }
+
+            if let AppIntent::ToggleFloatingMenu { kind } = event {
+                self.toggle_floating_menu(ctx, *kind);
                 continue;
             }
 
@@ -473,6 +466,21 @@ impl EditorApp {
             {
                 log::error!("Event handling failed: {:#}", e);
             }
+        }
+    }
+
+    fn toggle_floating_menu(&mut self, ctx: &egui::Context, kind: FloatingMenuKind) {
+        if let Some(existing) = self.state.ui.floating_menu {
+            if existing.kind == kind {
+                self.state.ui.floating_menu = None;
+            } else {
+                let pos = ctx.input(|i| i.pointer.hover_pos().or(i.pointer.latest_pos()));
+                self.state.ui.floating_menu =
+                    pos.map(|p| FloatingMenuState { kind, pos: p });
+            }
+        } else {
+            let pos = ctx.input(|i| i.pointer.hover_pos().or(i.pointer.latest_pos()));
+            self.state.ui.floating_menu = pos.map(|p| FloatingMenuState { kind, pos: p });
         }
     }
 
@@ -504,6 +512,7 @@ impl EditorApp {
         if has_meaningful_events
             || ctx.input(|i| i.pointer.is_moving())
             || self.state.ui.show_command_palette
+            || self.state.ui.floating_menu.is_some()
             || self.state.ui.show_tool_palette
             || self.state.ui.show_heightmap_warning
             || self.state.ui.marker_dialog.visible

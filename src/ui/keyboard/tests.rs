@@ -308,9 +308,12 @@ fn test_t_toggles_tool_palette_without_modifiers() {
         IndexSet::new(),
     );
 
-    assert!(events
-        .iter()
-        .any(|event| matches!(event, AppIntent::ToggleToolPalette)));
+    assert!(events.iter().any(|event| matches!(
+        event,
+        AppIntent::ToggleFloatingMenu {
+            kind: FloatingMenuKind::Tools
+        }
+    )));
 }
 
 #[test]
@@ -329,7 +332,115 @@ fn test_t_with_ctrl_does_not_toggle_tool_palette() {
         IndexSet::new(),
     );
 
-    assert!(!events
+    assert!(!events.iter().any(|event| matches!(
+        event,
+        AppIntent::ToggleFloatingMenu {
+            kind: FloatingMenuKind::Tools
+        }
+    )));
+}
+
+#[test]
+fn test_w_toggles_tools_floating_menu() {
+    let events = collect_with_key_event(
+        egui::Event::Key {
+            key: egui::Key::W,
+            physical_key: None,
+            pressed: true,
+            repeat: false,
+            modifiers: egui::Modifiers::default(),
+        },
+        IndexSet::new(),
+    );
+
+    assert!(events.iter().any(|event| matches!(
+        event,
+        AppIntent::ToggleFloatingMenu {
+            kind: FloatingMenuKind::Tools
+        }
+    )));
+}
+
+#[test]
+fn test_g_toggles_basics_floating_menu() {
+    let events = collect_with_key_event(
+        egui::Event::Key {
+            key: egui::Key::G,
+            physical_key: None,
+            pressed: true,
+            repeat: false,
+            modifiers: egui::Modifiers::default(),
+        },
+        IndexSet::new(),
+    );
+
+    assert!(events.iter().any(|event| matches!(
+        event,
+        AppIntent::ToggleFloatingMenu {
+            kind: FloatingMenuKind::Basics
+        }
+    )));
+}
+
+#[test]
+fn test_s_toggles_section_tools_floating_menu() {
+    let events = collect_with_key_event(
+        egui::Event::Key {
+            key: egui::Key::S,
+            physical_key: None,
+            pressed: true,
+            repeat: false,
+            modifiers: egui::Modifiers::default(),
+        },
+        IndexSet::new(),
+    );
+
+    assert!(events.iter().any(|event| matches!(
+        event,
+        AppIntent::ToggleFloatingMenu {
+            kind: FloatingMenuKind::SectionTools
+        }
+    )));
+}
+
+#[test]
+fn test_ctrl_s_does_not_toggle_section_tools_floating_menu() {
+    let events = collect_with_key_event(
+        egui::Event::Key {
+            key: egui::Key::S,
+            physical_key: None,
+            pressed: true,
+            repeat: false,
+            modifiers: egui::Modifiers {
+                ctrl: true,
+                ..egui::Modifiers::default()
+            },
+        },
+        IndexSet::new(),
+    );
+
+    assert!(!events.iter().any(|event| matches!(
+        event,
+        AppIntent::ToggleFloatingMenu {
+            kind: FloatingMenuKind::SectionTools
+        }
+    )));
+}
+
+#[test]
+fn test_k_without_modifiers_toggles_command_palette() {
+    let events = collect_with_key_event(
+        egui::Event::Key {
+            key: egui::Key::K,
+            physical_key: None,
+            pressed: true,
+            repeat: false,
+            modifiers: egui::Modifiers::default(),
+        },
+        IndexSet::new(),
+    );
+
+    assert!(events
         .iter()
-        .any(|event| matches!(event, AppIntent::ToggleToolPalette)));
+        .any(|event| matches!(event, AppIntent::CommandPaletteToggled)));
 }

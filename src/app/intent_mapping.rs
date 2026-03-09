@@ -210,6 +210,7 @@ pub fn map_intent_to_commands(state: &AppState, intent: AppIntent) -> Vec<AppCom
         AppIntent::OptionsChanged { options } => vec![AppCommand::ApplyOptions { options }],
         AppIntent::ResetOptionsRequested => vec![AppCommand::ResetOptions],
         AppIntent::CommandPaletteToggled => vec![AppCommand::ToggleCommandPalette],
+        AppIntent::ToggleFloatingMenu { .. } => vec![],
         AppIntent::ToggleToolPalette => vec![],
         AppIntent::ClearSelectionRequested => vec![AppCommand::ClearSelection],
         AppIntent::SelectAllRequested => vec![AppCommand::SelectAllNodes],
