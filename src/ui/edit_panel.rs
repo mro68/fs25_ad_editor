@@ -217,6 +217,7 @@ pub fn render_streckenteilung_controls(
 }
 
 /// Route-Tool-Panel: Tool-Config + Ausfuehren/Abbrechen.
+#[allow(clippy::too_many_arguments)]
 fn render_route_tool_panel(
     ctx: &egui::Context,
     tool_manager: &mut ToolManager,

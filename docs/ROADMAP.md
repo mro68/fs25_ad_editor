@@ -263,6 +263,9 @@
   - [x] **Doku-Sync Sidebar-Gruppenlayout mit Long-Press (2026-03-09)**
     - [x] `ui/API.md`: `render_route_defaults_panel(ctx, &mut AppState)`-Signatur und neues Gruppen-Layout dokumentiert
     - [x] Sidebar-Details aktualisiert: Route-Gruppen (Geraden/Kurven/Constraint/Tools), Default-Gruppen (Richtung/Prioritaet), Aktionen-Block entfernt
+  - [x] **Doku-Sync Icon-Pin-Refactor (2026-03-10)**
+    - [x] `render/API.md`: `MarkerRenderer`-Sektion auf texturbasiertes Rendering aktualisiert (SDF-Referenzen entfernt, BindGroup-Struktur und `textureSample`-Shader dokumentiert, veraltete Konstanten durch `EditorOptions`-Felder ersetzt)
+    - [x] `src/render/marker_renderer.rs`: Struct-Docstring und `new()`-Docstring auf Textur-Loading und BindGroup erweitert; `render()`-Docstring um `textureSample`-Hinweis ergaenzt
   - [x] **Doku-Sync Sidebar-Redesign vollstaendig (2026-03-09)**
     - [x] `ui/API.md`: Vollstaendige API-Sektion fuer `long_press.rs` ergaenzt (`LongPressState`, `LongPressGroup<T>`, `LongPressItem<T>`, `render_long_press_button`, `render_popup`, `paint_dropdown_arrow`)
     - [x] `ui/API.md`: Formatierungsfehler behoben — fehlendes abschliessendes ` ``` ` nach `paint_preview_polyline`-Block

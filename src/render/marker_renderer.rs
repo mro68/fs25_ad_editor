@@ -5,7 +5,12 @@ use crate::RoadMap;
 use eframe::{egui_wgpu, wgpu};
 use wgpu::util::DeviceExt;
 
-/// Renderer fuer Map-Marker (Pin-Symbole)
+/// Renderer fuer Map-Marker (Pin-Symbole) mit GPU-Instancing und texturbasiertem Rendering.
+///
+/// Laedt das Pin-Icon `icon_map_pin.png` beim Start als wgpu-Textur (eingebettet via
+/// `include_bytes!`). Die BindGroup enthaelt drei Bindings: Uniform-Buffer (0),
+/// Textur-View (1) und Sampler (2). Der Fragment-Shader (`fs_marker`) faerbt den Pin
+/// per Instanz-Tint — die Textur-Alpha definiert die Pin-Form.
 pub struct MarkerRenderer {
     pipeline: wgpu::RenderPipeline,
     vertex_buffer: wgpu::Buffer,
@@ -21,7 +26,11 @@ pub struct MarkerRenderer {
 }
 
 impl MarkerRenderer {
-    /// Erstellt einen neuen Marker-Renderer
+    /// Erstellt einen neuen Marker-Renderer und laedt das Pin-Icon als wgpu-Textur.
+    ///
+    /// Die PNG-Datei `assets/icons/icon_map_pin.png` wird per `include_bytes!` statisch
+    /// eingebettet und als `wgpu::Texture` hochgeladen. Die BindGroup wird mit drei
+    /// Bindings initialisiert: Uniform-Buffer, Textur-View und Sampler.
     pub fn new(render_state: &egui_wgpu::RenderState, shader: &wgpu::ShaderModule) -> Self {
         let device = &render_state.device;
         let queue = &render_state.queue;
@@ -30,12 +39,8 @@ impl MarkerRenderer {
         let png_bytes = include_bytes!("../../assets/icons/icon_map_pin.png");
         let img = image::load_from_memory(png_bytes)
             .expect("icon_map_pin.png: konnte PNG nicht dekodieren");
-        let (texture, sampler) = super::texture::create_texture_from_image(
-            device,
-            queue,
-            &img,
-            "Marker Pin Texture",
-        );
+        let (texture, sampler) =
+            super::texture::create_texture_from_image(device, queue, &img, "Marker Pin Texture");
         let texture_view = texture.create_view(&wgpu::TextureViewDescriptor::default());
 
         // Uniform-Buffer erstellen
@@ -189,6 +194,8 @@ impl MarkerRenderer {
     /// Rendert alle sichtbaren Map-Marker per GPU-Instancing.
     ///
     /// Marker-Positionen werden ueber die referenzierte Node-ID aufgeloest.
+    /// Das Pin-Icon wird als Textur per `textureSample` gezeichnet; Farbe und Groesse
+    /// kommen aus den `EditorOptions` und werden zoom-kompensiert skaliert.
     pub fn render(
         &mut self,
         ctx: &RenderContext,

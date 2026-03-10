@@ -251,8 +251,10 @@ pub(super) fn render_markers(ui: &mut egui::Ui, opts: &mut EditorOptions) -> boo
     let mut changed = false;
     ui.horizontal(|ui| {
         ui.add(
-            egui::Image::new(egui::include_image!("../../../assets/icons/icon_map_pin.svg"))
-                .fit_to_exact_size(egui::Vec2::new(14.0, 14.0)),
+            egui::Image::new(egui::include_image!(
+                "../../../assets/icons/icon_map_pin.svg"
+            ))
+            .fit_to_exact_size(egui::Vec2::new(14.0, 14.0)),
         );
         ui.label("Pin-Groesse:");
         let r = ui.add(
