@@ -1,5 +1,7 @@
 //! UI-Komponenten: Menue, Properties, Input-Handling, Dialoge.
 
+/// Gemeinsame UI-Hilfsfunktionen (Wheel-Step, etc.).
+pub mod common;
 /// Command Palette Overlay mit Suchfeld und Schnellaktionen.
 pub mod command_palette;
 /// Kontext-Menue fuer Rechtsklick-Aktionen im Viewport.
