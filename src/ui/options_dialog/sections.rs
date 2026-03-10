@@ -26,18 +26,45 @@ fn color_edit(ui: &mut egui::Ui, label: &str, color: &mut [f32; 4]) -> bool {
     changed
 }
 
+/// Schwellenwert fuer Scroll-Events – unterdrückt Rauschen bei kleinen Scroll-Bewegungen.
+const WHEEL_THRESHOLD: f32 = 0.5;
+
+/// Wendet Mausrad-Scrolling auf einen numerischen Wert an.
+///
+/// Wenn die Response gehovert ist und ein Scroll-Event vorliegt,
+/// wird `value` um `step` in Scroll-Richtung geaendert und auf `range` geclampt.
+/// Gibt `true` zurueck wenn sich der Wert geaendert hat.
+fn apply_wheel_step(
+    ui: &egui::Ui,
+    response: &egui::Response,
+    value: &mut f32,
+    step: f32,
+    range: std::ops::RangeInclusive<f32>,
+) -> bool {
+    if !response.hovered() {
+        return false;
+    }
+    let delta = ui.input(|i| i.raw_scroll_delta.y);
+    if delta.abs() < WHEEL_THRESHOLD {
+        return false;
+    }
+    let old = *value;
+    *value = (*value + delta.signum() * step).clamp(*range.start(), *range.end());
+    *value != old
+}
+
 /// Rendert die Node-Darstellungseinstellungen (Groesse, Farben, Hitbox).
 pub(super) fn render_nodes(ui: &mut egui::Ui, opts: &mut EditorOptions) -> bool {
     let mut changed = false;
     ui.horizontal(|ui| {
         ui.label("Groesse (Welt):");
-        changed |= ui
-            .add(
-                egui::DragValue::new(&mut opts.node_size_world)
-                    .range(0.1..=5.0)
-                    .speed(0.01),
-            )
-            .changed();
+        let r = ui.add(
+            egui::DragValue::new(&mut opts.node_size_world)
+                .range(0.1..=5.0)
+                .speed(0.01),
+        );
+        changed |=
+            r.changed() | apply_wheel_step(ui, &r, &mut opts.node_size_world, 0.1, 0.1..=5.0);
     });
     changed |= color_edit(ui, "Standardfarbe:", &mut opts.node_color_default);
     changed |= color_edit(ui, "SubPrio-Farbe:", &mut opts.node_color_subprio);
@@ -45,14 +72,14 @@ pub(super) fn render_nodes(ui: &mut egui::Ui, opts: &mut EditorOptions) -> bool 
     changed |= color_edit(ui, "Warnung:", &mut opts.node_color_warning);
     ui.horizontal(|ui| {
         ui.label("Hitbox (% der Groesse):");
-        changed |= ui
-            .add(
-                egui::DragValue::new(&mut opts.hitbox_scale_percent)
-                    .range(50.0..=500.0)
-                    .speed(5.0)
-                    .suffix(" %"),
-            )
-            .changed();
+        let r = ui.add(
+            egui::DragValue::new(&mut opts.hitbox_scale_percent)
+                .range(50.0..=500.0)
+                .speed(5.0)
+                .suffix(" %"),
+        );
+        changed |= r.changed()
+            | apply_wheel_step(ui, &r, &mut opts.hitbox_scale_percent, 10.0, 50.0..=500.0);
     });
     changed
 }
@@ -93,25 +120,31 @@ pub(super) fn render_tools(ui: &mut egui::Ui, opts: &mut EditorOptions) -> bool 
     });
     ui.horizontal(|ui| {
         ui.label("Snap-Radius:");
-        changed |= ui
-            .add(
-                egui::DragValue::new(&mut opts.snap_scale_percent)
-                    .range(50.0..=2000.0)
-                    .speed(10.0)
-                    .suffix(" %"),
-            )
-            .changed();
+        let r = ui.add(
+            egui::DragValue::new(&mut opts.snap_scale_percent)
+                .range(50.0..=2000.0)
+                .speed(10.0)
+                .suffix(" %"),
+        );
+        changed |= r.changed()
+            | apply_wheel_step(ui, &r, &mut opts.snap_scale_percent, 10.0, 50.0..=2000.0);
     });
     ui.horizontal(|ui| {
         ui.label("Mausrad-Schritt Distanz:");
-        changed |= ui
-            .add(
-                egui::DragValue::new(&mut opts.mouse_wheel_distance_step_m)
-                    .range(0.01..=5.0)
-                    .speed(0.01)
-                    .suffix(" m"),
-            )
-            .changed();
+        let r = ui.add(
+            egui::DragValue::new(&mut opts.mouse_wheel_distance_step_m)
+                .range(0.01..=5.0)
+                .speed(0.01)
+                .suffix(" m"),
+        );
+        changed |= r.changed()
+            | apply_wheel_step(
+                ui,
+                &r,
+                &mut opts.mouse_wheel_distance_step_m,
+                0.1,
+                0.01..=5.0,
+            );
     });
     changed
 }
@@ -121,13 +154,13 @@ pub(super) fn render_selection(ui: &mut egui::Ui, opts: &mut EditorOptions) -> b
     let mut changed = false;
     ui.horizontal(|ui| {
         ui.label("Groessenfaktor (%):");
-        changed |= ui
-            .add(
-                egui::DragValue::new(&mut opts.selection_size_factor)
-                    .range(100.0..=200.0)
-                    .speed(1.0),
-            )
-            .changed();
+        let r = ui.add(
+            egui::DragValue::new(&mut opts.selection_size_factor)
+                .range(100.0..=200.0)
+                .speed(1.0),
+        );
+        changed |= r.changed()
+            | apply_wheel_step(ui, &r, &mut opts.selection_size_factor, 5.0, 100.0..=200.0);
     });
     ui.horizontal(|ui| {
         ui.label("Markierungsstil:");
@@ -160,13 +193,13 @@ pub(super) fn render_selection(ui: &mut egui::Ui, opts: &mut EditorOptions) -> b
     });
     ui.horizontal(|ui| {
         ui.label("Max. Winkel (°):");
-        changed |= ui
-            .add(
-                egui::DragValue::new(&mut opts.segment_max_angle_deg)
-                    .range(0.0..=180.0)
-                    .speed(1.0),
-            )
-            .changed();
+        let r = ui.add(
+            egui::DragValue::new(&mut opts.segment_max_angle_deg)
+                .range(0.0..=180.0)
+                .speed(1.0),
+        );
+        changed |= r.changed()
+            | apply_wheel_step(ui, &r, &mut opts.segment_max_angle_deg, 5.0, 0.0..=180.0);
         if opts.segment_max_angle_deg == 0.0 {
             ui.weak("(deaktiviert)");
         }
@@ -179,43 +212,55 @@ pub(super) fn render_connections(ui: &mut egui::Ui, opts: &mut EditorOptions) ->
     let mut changed = false;
     ui.horizontal(|ui| {
         ui.label("Breite Hauptstrasse:");
-        changed |= ui
-            .add(
-                egui::DragValue::new(&mut opts.connection_thickness_world)
-                    .range(0.01..=2.0)
-                    .speed(0.01),
-            )
-            .changed();
+        let r = ui.add(
+            egui::DragValue::new(&mut opts.connection_thickness_world)
+                .range(0.01..=2.0)
+                .speed(0.01),
+        );
+        changed |= r.changed()
+            | apply_wheel_step(
+                ui,
+                &r,
+                &mut opts.connection_thickness_world,
+                0.1,
+                0.01..=2.0,
+            );
     });
     ui.horizontal(|ui| {
         ui.label("Breite Nebenstrasse:");
-        changed |= ui
-            .add(
-                egui::DragValue::new(&mut opts.connection_thickness_subprio_world)
-                    .range(0.01..=2.0)
-                    .speed(0.01),
-            )
-            .changed();
+        let r = ui.add(
+            egui::DragValue::new(&mut opts.connection_thickness_subprio_world)
+                .range(0.01..=2.0)
+                .speed(0.01),
+        );
+        changed |= r.changed()
+            | apply_wheel_step(
+                ui,
+                &r,
+                &mut opts.connection_thickness_subprio_world,
+                0.1,
+                0.01..=2.0,
+            );
     });
     ui.horizontal(|ui| {
         ui.label("Pfeillaenge:");
-        changed |= ui
-            .add(
-                egui::DragValue::new(&mut opts.arrow_length_world)
-                    .range(0.1..=5.0)
-                    .speed(0.05),
-            )
-            .changed();
+        let r = ui.add(
+            egui::DragValue::new(&mut opts.arrow_length_world)
+                .range(0.1..=5.0)
+                .speed(0.05),
+        );
+        changed |=
+            r.changed() | apply_wheel_step(ui, &r, &mut opts.arrow_length_world, 0.5, 0.1..=5.0);
     });
     ui.horizontal(|ui| {
         ui.label("Pfeilbreite:");
-        changed |= ui
-            .add(
-                egui::DragValue::new(&mut opts.arrow_width_world)
-                    .range(0.1..=5.0)
-                    .speed(0.05),
-            )
-            .changed();
+        let r = ui.add(
+            egui::DragValue::new(&mut opts.arrow_width_world)
+                .range(0.1..=5.0)
+                .speed(0.05),
+        );
+        changed |=
+            r.changed() | apply_wheel_step(ui, &r, &mut opts.arrow_width_world, 0.5, 0.1..=5.0);
     });
     changed |= color_edit(ui, "Einbahn vorwaerts:", &mut opts.connection_color_regular);
     changed |= color_edit(ui, "Zweirichtungsverkehr:", &mut opts.connection_color_dual);
@@ -232,13 +277,13 @@ pub(super) fn render_markers(ui: &mut egui::Ui, opts: &mut EditorOptions) -> boo
     let mut changed = false;
     ui.horizontal(|ui| {
         ui.label("Pin-Groesse:");
-        changed |= ui
-            .add(
-                egui::DragValue::new(&mut opts.marker_size_world)
-                    .range(0.5..=10.0)
-                    .speed(0.1),
-            )
-            .changed();
+        let r = ui.add(
+            egui::DragValue::new(&mut opts.marker_size_world)
+                .range(0.5..=10.0)
+                .speed(0.1),
+        );
+        changed |=
+            r.changed() | apply_wheel_step(ui, &r, &mut opts.marker_size_world, 1.0, 0.5..=10.0);
     });
     changed |= color_edit(ui, "Pin-Farbe:", &mut opts.marker_color);
     changed |= color_edit(ui, "Umriss-Farbe:", &mut opts.marker_outline_color);
@@ -250,47 +295,47 @@ pub(super) fn render_camera(ui: &mut egui::Ui, opts: &mut EditorOptions) -> bool
     let mut changed = false;
     ui.horizontal(|ui| {
         ui.label("Min Zoom:");
-        changed |= ui
-            .add(
-                egui::DragValue::new(&mut opts.camera_zoom_min)
-                    .range(0.01..=10.0)
-                    .speed(0.01),
-            )
-            .changed();
+        let r = ui.add(
+            egui::DragValue::new(&mut opts.camera_zoom_min)
+                .range(0.01..=10.0)
+                .speed(0.01),
+        );
+        changed |=
+            r.changed() | apply_wheel_step(ui, &r, &mut opts.camera_zoom_min, 0.1, 0.01..=10.0);
     });
     ui.horizontal(|ui| {
         ui.label("Max Zoom:");
-        changed |= ui
-            .add(
-                egui::DragValue::new(&mut opts.camera_zoom_max)
-                    .range(1.0..=1000.0)
-                    .speed(1.0),
-            )
-            .changed();
+        let r = ui.add(
+            egui::DragValue::new(&mut opts.camera_zoom_max)
+                .range(1.0..=1000.0)
+                .speed(1.0),
+        );
+        changed |=
+            r.changed() | apply_wheel_step(ui, &r, &mut opts.camera_zoom_max, 5.0, 1.0..=1000.0);
     });
     ui.horizontal(|ui| {
         ui.label("Zoom-Schritt (Menue):");
-        changed |= ui
-            .add(
-                egui::DragValue::new(&mut opts.camera_zoom_step)
-                    .range(1.01..=3.0)
-                    .speed(0.01),
-            )
-            .changed();
+        let r = ui.add(
+            egui::DragValue::new(&mut opts.camera_zoom_step)
+                .range(1.01..=3.0)
+                .speed(0.01),
+        );
+        changed |=
+            r.changed() | apply_wheel_step(ui, &r, &mut opts.camera_zoom_step, 0.05, 1.01..=3.0);
     });
     ui.horizontal(|ui| {
         ui.label("Zoom-Schritt (Scroll):");
-        changed |= ui
-            .add(
-                egui::DragValue::new(&mut opts.camera_scroll_zoom_step)
-                    .range(1.01..=2.0)
-                    .speed(0.01),
-            )
-            .changed();
+        let r = ui.add(
+            egui::DragValue::new(&mut opts.camera_scroll_zoom_step)
+                .range(1.01..=2.0)
+                .speed(0.01),
+        );
+        changed |= r.changed()
+            | apply_wheel_step(ui, &r, &mut opts.camera_scroll_zoom_step, 0.05, 1.01..=2.0);
     });
     ui.horizontal(|ui| {
         ui.label("Zoom-Kompensation Max:");
-        changed |= ui
+        let r = ui
             .add(
                 egui::Slider::new(&mut opts.zoom_compensation_max, 1.0..=8.0)
                     .step_by(0.1)
@@ -298,8 +343,8 @@ pub(super) fn render_camera(ui: &mut egui::Ui, opts: &mut EditorOptions) -> bool
             )
             .on_hover_text(
                 "Wie stark Nodes und Verbindungen beim Herauszoomen vergroessert werden (1.0 = deaktiviert, 4.0 = Standard)"
-            )
-            .changed();
+            );
+        changed |= r.changed() | apply_wheel_step(ui, &r, &mut opts.zoom_compensation_max, 0.1, 1.0..=8.0);
     });
     changed
 }
@@ -310,7 +355,7 @@ pub(super) fn render_lod(ui: &mut egui::Ui, opts: &mut EditorOptions) -> bool {
     ui.label("Mindestgroessen (Pixel, 0 = deaktiviert):");
     ui.horizontal(|ui| {
         ui.label("Nodes:");
-        changed |= ui
+        let r = ui
             .add(
                 egui::Slider::new(&mut opts.min_node_size_px, 0.0..=20.0)
                     .step_by(0.5)
@@ -318,12 +363,13 @@ pub(super) fn render_lod(ui: &mut egui::Ui, opts: &mut EditorOptions) -> bool {
             )
             .on_hover_text(
                 "Mindestgroesse fuer Nodes in Pixeln beim Herauszoomen (0 = deaktiviert)",
-            )
-            .changed();
+            );
+        changed |=
+            r.changed() | apply_wheel_step(ui, &r, &mut opts.min_node_size_px, 1.0, 0.0..=20.0);
     });
     ui.horizontal(|ui| {
         ui.label("Verbindungen:");
-        changed |= ui
+        let r = ui
             .add(
                 egui::Slider::new(&mut opts.min_connection_width_px, 0.0..=10.0)
                     .step_by(0.5)
@@ -331,12 +377,12 @@ pub(super) fn render_lod(ui: &mut egui::Ui, opts: &mut EditorOptions) -> bool {
             )
             .on_hover_text(
                 "Mindestbreite fuer Verbindungslinien in Pixeln beim Herauszoomen (0 = deaktiviert)",
-            )
-            .changed();
+            );
+        changed |= r.changed() | apply_wheel_step(ui, &r, &mut opts.min_connection_width_px, 0.5, 0.0..=10.0);
     });
     ui.horizontal(|ui| {
         ui.label("Pfeile:");
-        changed |= ui
+        let r = ui
             .add(
                 egui::Slider::new(&mut opts.min_arrow_size_px, 0.0..=20.0)
                     .step_by(0.5)
@@ -344,12 +390,13 @@ pub(super) fn render_lod(ui: &mut egui::Ui, opts: &mut EditorOptions) -> bool {
             )
             .on_hover_text(
                 "Mindestgroesse fuer Richtungspfeile in Pixeln beim Herauszoomen (0 = deaktiviert)",
-            )
-            .changed();
+            );
+        changed |=
+            r.changed() | apply_wheel_step(ui, &r, &mut opts.min_arrow_size_px, 1.0, 0.0..=20.0);
     });
     ui.horizontal(|ui| {
         ui.label("Marker:");
-        changed |= ui
+        let r = ui
             .add(
                 egui::Slider::new(&mut opts.min_marker_size_px, 0.0..=30.0)
                     .step_by(1.0)
@@ -357,14 +404,15 @@ pub(super) fn render_lod(ui: &mut egui::Ui, opts: &mut EditorOptions) -> bool {
             )
             .on_hover_text(
                 "Mindestgroesse fuer Marker-Pins in Pixeln beim Herauszoomen (0 = deaktiviert)",
-            )
-            .changed();
+            );
+        changed |=
+            r.changed() | apply_wheel_step(ui, &r, &mut opts.min_marker_size_px, 1.0, 0.0..=30.0);
     });
     ui.separator();
     ui.label("Node-Ausdünnung:");
     ui.horizontal(|ui| {
         ui.label("Mindestabstand (px):");
-        changed |= ui
+        let r = ui
             .add(
                 egui::Slider::new(&mut opts.node_decimation_spacing_px, 0.0..=50.0)
                     .step_by(1.0)
@@ -372,8 +420,15 @@ pub(super) fn render_lod(ui: &mut egui::Ui, opts: &mut EditorOptions) -> bool {
             )
             .on_hover_text(
                 "Mindestabstand zwischen Nodes in Pixeln beim Herauszoomen. 0 = alle Nodes zeigen.",
-            )
-            .changed();
+            );
+        changed |= r.changed()
+            | apply_wheel_step(
+                ui,
+                &r,
+                &mut opts.node_decimation_spacing_px,
+                1.0,
+                0.0..=50.0,
+            );
     });
     changed
 }
@@ -383,33 +438,32 @@ pub(super) fn render_background(ui: &mut egui::Ui, opts: &mut EditorOptions) -> 
     let mut changed = false;
     ui.horizontal(|ui| {
         ui.label("Standard-Deckung:");
-        changed |= ui
-            .add(
-                egui::Slider::new(&mut opts.bg_opacity, 0.0..=1.0)
-                    .step_by(0.05)
-                    .fixed_decimals(2),
-            )
-            .changed();
+        let r = ui.add(
+            egui::Slider::new(&mut opts.bg_opacity, 0.0..=1.0)
+                .step_by(0.05)
+                .fixed_decimals(2),
+        );
+        changed |= r.changed() | apply_wheel_step(ui, &r, &mut opts.bg_opacity, 0.05, 0.0..=1.0);
     });
     ui.horizontal(|ui| {
         ui.label("Deckung bei Min-Zoom:");
-        changed |= ui
-            .add(
-                egui::Slider::new(&mut opts.bg_opacity_at_min_zoom, 0.0..=1.0)
-                    .step_by(0.05)
-                    .fixed_decimals(2),
-            )
-            .changed();
+        let r = ui.add(
+            egui::Slider::new(&mut opts.bg_opacity_at_min_zoom, 0.0..=1.0)
+                .step_by(0.05)
+                .fixed_decimals(2),
+        );
+        changed |= r.changed()
+            | apply_wheel_step(ui, &r, &mut opts.bg_opacity_at_min_zoom, 0.05, 0.0..=1.0);
     });
     ui.horizontal(|ui| {
         ui.label("Fade-out ab Zoom:");
-        changed |= ui
-            .add(
-                egui::DragValue::new(&mut opts.bg_fade_start_zoom)
-                    .range(0.1..=50.0)
-                    .speed(0.1),
-            )
-            .changed();
+        let r = ui.add(
+            egui::DragValue::new(&mut opts.bg_fade_start_zoom)
+                .range(0.1..=50.0)
+                .speed(0.1),
+        );
+        changed |=
+            r.changed() | apply_wheel_step(ui, &r, &mut opts.bg_fade_start_zoom, 0.5, 0.1..=50.0);
     });
     changed
 }
@@ -471,13 +525,13 @@ pub(super) fn render_copy_paste(ui: &mut egui::Ui, opts: &mut EditorOptions) -> 
         ui.label("Vorschau-Deckung:").on_hover_text(
             "Transparenz der Paste-Vorschau im Viewport (0 = unsichtbar, 1 = volle Deckkraft).",
         );
-        changed |= ui
-            .add(
-                egui::Slider::new(&mut opts.copy_preview_opacity, 0.0..=1.0)
-                    .step_by(0.05)
-                    .fixed_decimals(2),
-            )
-            .changed();
+        let r = ui.add(
+            egui::Slider::new(&mut opts.copy_preview_opacity, 0.0..=1.0)
+                .step_by(0.05)
+                .fixed_decimals(2),
+        );
+        changed |=
+            r.changed() | apply_wheel_step(ui, &r, &mut opts.copy_preview_opacity, 0.05, 0.0..=1.0);
     });
     changed
 }

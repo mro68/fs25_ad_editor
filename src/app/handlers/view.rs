@@ -82,3 +82,17 @@ pub fn generate_overview_with_options(state: &mut AppState) -> anyhow::Result<()
 pub fn save_background_as_overview(state: &mut AppState, path: String) -> anyhow::Result<()> {
     use_cases::background_map::save_background_as_overview(state, path)
 }
+
+/// Zoomt auf die Bounding Box der aktuellen Selektion — keine Operation wenn Selektion leer.
+pub fn zoom_to_selection_bounds(state: &mut AppState) {
+    if let Some(rm) = state.road_map.clone() {
+        use_cases::camera::zoom_to_selection_bounds(state, &rm);
+    }
+}
+
+/// Zoomt passend: auf Selektion wenn vorhanden, sonst auf die gesamte RoadMap.
+pub fn zoom_to_fit(state: &mut AppState) {
+    if let Some(rm) = state.road_map.clone() {
+        use_cases::camera::zoom_to_fit(state, &rm);
+    }
+}

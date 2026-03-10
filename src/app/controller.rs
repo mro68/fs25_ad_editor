@@ -78,13 +78,16 @@ impl AppController {
                 max_distance,
                 additive,
                 extend_path,
-            } => handlers::selection::select_nearest_node(
-                state,
-                world_pos,
-                max_distance,
-                additive,
-                extend_path,
-            ),
+            } => {
+                state.ui.segment_settings_popup.visible = false;
+                handlers::selection::select_nearest_node(
+                    state,
+                    world_pos,
+                    max_distance,
+                    additive,
+                    extend_path,
+                )
+            }
             AppCommand::SelectSegmentBetweenNearestIntersections {
                 world_pos,
                 max_distance,
@@ -110,7 +113,10 @@ impl AppController {
             }
             AppCommand::BeginMoveSelectedNodes => handlers::selection::begin_move(state),
             AppCommand::EndMoveSelectedNodes => { /* No-op: Move-Lifecycle Ende */ }
-            AppCommand::ClearSelection => handlers::selection::clear(state),
+            AppCommand::ClearSelection => {
+                state.ui.segment_settings_popup.visible = false;
+                handlers::selection::clear(state)
+            }
             AppCommand::SelectAllNodes => handlers::selection::select_all(state),
 
             // === Editing ===
@@ -288,8 +294,10 @@ impl AppController {
 
             // === View ===
             AppCommand::ZoomToFit => {
-                // TODO: Implementierung siehe RoadMap::calculate_bounds + Camera2D::fit_bounds
-                log::info!("ZoomToFit - Implementierung pending");
+                handlers::view::zoom_to_fit(state);
+            }
+            AppCommand::ZoomToSelectionBounds => {
+                handlers::view::zoom_to_selection_bounds(state);
             }
 
             // === Selection ===
@@ -326,6 +334,12 @@ impl AppController {
             } => {
                 state.ui.trace_all_fields_dialog.visible = false;
                 handlers::editing::trace_all_fields(state, spacing, offset, tolerance);
+            }
+
+            // === Popups ===
+            AppCommand::OpenSegmentSettingsPopup { world_pos } => {
+                state.ui.segment_settings_popup.visible = true;
+                state.ui.segment_settings_popup.world_pos = world_pos;
             }
         }
 

@@ -36,7 +36,7 @@ pub use defaults_panel::render_route_defaults_panel;
 pub use dialogs::{
     handle_file_dialogs, show_dedup_dialog, show_heightmap_warning, show_marker_dialog,
     show_overview_options_dialog, show_post_load_dialog, show_save_overview_dialog,
-    show_trace_all_fields_dialog, show_zip_browser,
+    show_segment_settings_popup, show_trace_all_fields_dialog, show_zip_browser,
 };
 pub use edit_panel::render_edit_panel;
 pub use floating_menu::render_floating_menu;
