@@ -158,6 +158,7 @@ impl EditorApp {
             distance_wheel_step_m,
             active_tool,
             edit_tool_manager,
+            &mut self.state.options.auto_create_segment,
             panel_pos,
         ));
 

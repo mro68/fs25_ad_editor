@@ -72,6 +72,9 @@ pub struct EditorOptions {
     pub reconnect_on_delete: bool,
     #[serde(default)]
     pub split_connection_on_place: bool,
+    /// Ob Route-Tool-Ergebnisse automatisch als Segment registriert werden.
+    #[serde(default = "default_true")]
+    pub auto_create_segment: bool,
 
     // Terrain
     pub terrain_height_scale: f32,
@@ -153,6 +156,7 @@ impl Default for EditorOptions {
             value_adjust_input_mode: ValueAdjustInputMode::default(),
             reconnect_on_delete: true,
             split_connection_on_place: true,
+            auto_create_segment: true,
             terrain_height_scale: TERRAIN_HEIGHT_SCALE,
             bg_opacity: 1.0,
             bg_opacity_at_min_zoom: 0.0,
@@ -171,6 +175,10 @@ impl Default for EditorOptions {
 }
 
 fn default_segment_stop_at_junction() -> bool {
+    true
+}
+
+fn default_true() -> bool {
     true
 }
 
