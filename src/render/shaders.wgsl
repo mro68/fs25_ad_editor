@@ -261,8 +261,8 @@ fn fs_marker(in: MarkerVertexOutput) -> @location(0) vec4<f32> {
         }
     }
     
-    // Outline: duenner Rand
-    let outline_thickness = 0.08;
+    // Outline: duenner Rand (Staerke aus Uniform aa_params.w)
+    let outline_thickness = uniforms.aa_params.w;
     let is_outline: bool = 
         (y > 0.0 && abs(dist_to_circle - circle_radius) < outline_thickness) ||
         (y <= 0.0 && y >= tip_y && abs(abs(x) - (circle_radius * (1.0 - (abs(y) * 1.2)))) < outline_thickness);

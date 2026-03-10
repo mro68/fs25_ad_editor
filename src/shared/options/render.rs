@@ -57,6 +57,8 @@ pub const NODE_DECIMATION_SPACING_PX: f32 = 6.0;
 pub const MARKER_COLOR: [f32; 4] = [0.0, 0.46666667, 0.101960786, 1.0];
 /// Outline-Farbe der Map-Marker (RGBA: Goldgelb).
 pub const MARKER_OUTLINE_COLOR: [f32; 4] = [1.0, 0.6431373, 0.0, 1.0];
+/// Standard-Umrissstärke für Map-Marker (Anteil am Radius, 0.01–0.3).
+pub const MARKER_OUTLINE_WIDTH: f32 = 0.08;
 
 /// Darstellungsmodus fuer selektierte Nodes.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Default)]

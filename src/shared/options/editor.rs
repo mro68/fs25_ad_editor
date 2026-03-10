@@ -5,7 +5,7 @@ use super::render::{
     OverviewLayerOptions, SelectionStyle, ARROW_LENGTH_WORLD, ARROW_WIDTH_WORLD,
     CONNECTION_COLOR_DUAL, CONNECTION_COLOR_REGULAR, CONNECTION_COLOR_REVERSE,
     CONNECTION_THICKNESS_SUBPRIO_WORLD, CONNECTION_THICKNESS_WORLD, DEFAULT_ZOOM_COMPENSATION_MAX,
-    MARKER_COLOR, MARKER_OUTLINE_COLOR, MARKER_SIZE_WORLD, MIN_ARROW_SIZE_PX,
+    MARKER_COLOR, MARKER_OUTLINE_COLOR, MARKER_OUTLINE_WIDTH, MARKER_SIZE_WORLD, MIN_ARROW_SIZE_PX,
     MIN_CONNECTION_WIDTH_PX, MIN_MARKER_SIZE_PX, MIN_NODE_SIZE_PX, NODE_COLOR_DEFAULT,
     NODE_COLOR_SELECTED, NODE_COLOR_SUBPRIO, NODE_COLOR_WARNING, NODE_DECIMATION_SPACING_PX,
     NODE_SIZE_WORLD, SELECTION_SIZE_FACTOR, TERRAIN_HEIGHT_SCALE,
@@ -50,6 +50,9 @@ pub struct EditorOptions {
     pub marker_size_world: f32,
     pub marker_color: [f32; 4],
     pub marker_outline_color: [f32; 4],
+    /// Umrissstärke des Map-Markers als Anteil am Radius (0.01–0.3).
+    #[serde(default = "default_marker_outline_width")]
+    pub marker_outline_width: f32,
 
     // Kamera
     #[serde(default = "default_camera_zoom_min")]
@@ -146,6 +149,7 @@ impl Default for EditorOptions {
             marker_size_world: MARKER_SIZE_WORLD,
             marker_color: MARKER_COLOR,
             marker_outline_color: MARKER_OUTLINE_COLOR,
+            marker_outline_width: MARKER_OUTLINE_WIDTH,
             camera_zoom_min: CAMERA_ZOOM_MIN,
             camera_zoom_max: CAMERA_ZOOM_MAX,
             camera_zoom_step: CAMERA_ZOOM_STEP,
@@ -204,6 +208,10 @@ fn default_hitbox_scale_percent() -> f32 {
 
 fn default_mouse_wheel_distance_step_m() -> f32 {
     MOUSE_WHEEL_DISTANCE_STEP_M
+}
+
+fn default_marker_outline_width() -> f32 {
+    MARKER_OUTLINE_WIDTH
 }
 
 fn default_camera_zoom_min() -> f32 {

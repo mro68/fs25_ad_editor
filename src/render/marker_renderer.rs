@@ -157,9 +157,9 @@ impl MarkerRenderer {
         // Uniforms erstellen (View-Projection-Matrix + AA aus View-Einstellungen)
         let view_proj = super::types::build_view_projection(ctx.camera, ctx.viewport_size);
         let aa_params = match render_quality {
-            RenderQuality::Low => [0.0, 1.0, 0.0, 0.0],
-            RenderQuality::Medium => [1.0, 0.0, 0.0, 0.0],
-            RenderQuality::High => [1.8, 0.0, 0.0, 0.0],
+            RenderQuality::Low => [0.0, 1.0, 0.0, ctx.options.marker_outline_width],
+            RenderQuality::Medium => [1.0, 0.0, 0.0, ctx.options.marker_outline_width],
+            RenderQuality::High => [1.8, 0.0, 0.0, ctx.options.marker_outline_width],
         };
         let uniforms = Uniforms {
             view_proj: view_proj.to_cols_array_2d(),

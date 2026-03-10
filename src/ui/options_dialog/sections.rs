@@ -248,10 +248,14 @@ pub(super) fn render_connections(ui: &mut egui::Ui, opts: &mut EditorOptions) ->
     changed
 }
 
-/// Rendert die Marker-Darstellungseinstellungen (Pin-Groesse, Farben).
+/// Rendert die Marker-Darstellungseinstellungen (Pin-Groesse, Farben, Umrissstaerke).
 pub(super) fn render_markers(ui: &mut egui::Ui, opts: &mut EditorOptions) -> bool {
     let mut changed = false;
     ui.horizontal(|ui| {
+        ui.add(
+            egui::Image::new(egui::include_image!("../../../assets/icons/map-pin.svg"))
+                .fit_to_exact_size(egui::Vec2::new(14.0, 14.0)),
+        );
         ui.label("Pin-Groesse:");
         let r = ui.add(
             egui::DragValue::new(&mut opts.marker_size_world)
@@ -262,7 +266,17 @@ pub(super) fn render_markers(ui: &mut egui::Ui, opts: &mut EditorOptions) -> boo
             r.changed() | apply_wheel_step(ui, &r, &mut opts.marker_size_world, 1.0, 0.5..=10.0);
     });
     changed |= color_edit(ui, "Pin-Farbe:", &mut opts.marker_color);
-    changed |= color_edit(ui, "Umriss-Farbe:", &mut opts.marker_outline_color);
+    ui.horizontal(|ui| {
+        ui.label("Umrissstaerke:");
+        let r = ui.add(
+            egui::DragValue::new(&mut opts.marker_outline_width)
+                .range(0.01..=0.3)
+                .speed(0.005)
+                .fixed_decimals(3),
+        );
+        changed |= r.changed()
+            | apply_wheel_step(ui, &r, &mut opts.marker_outline_width, 0.01, 0.01..=0.3);
+    });
     changed
 }
 
