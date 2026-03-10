@@ -88,10 +88,10 @@ pub(super) fn command_icon(
             egui::include_image!("../../../assets/icons/icon_field_boundary.svg")
         }
         CommandId::CreateMarker => {
-            egui::include_image!("../../../assets/icons/map-pin-plus.svg")
+            egui::include_image!("../../../assets/icons/icon_map_pin_plus.svg")
         }
         CommandId::RemoveMarker => {
-            egui::include_image!("../../../assets/icons/map-pin-minus.svg")
+            egui::include_image!("../../../assets/icons/icon_map_pin_minus.svg")
         }
         CommandId::DirectionRegular => {
             egui::include_image!("../../../assets/icons/icon_direction_regular.svg")
