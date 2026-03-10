@@ -13,6 +13,8 @@ Alle Use-Case-Funktionen des `app::use_cases`-Moduls. Use-Cases mutieren `AppSta
 - `pan(state, delta)` — Kamera verschieben (Delta in Welt-Einheiten)
 - `zoom_towards(state, factor, focus_world)` — Zoom mit optionalem Fokuspunkt in Weltkoordinaten
 - `center_on_road_map(state, road_map)` — Kamera auf Bounding-Box der geladenen RoadMap zentrieren
+- `zoom_to_selection_bounds(state, road_map)` — Kamera auf die Bounding Box der aktuellen Selektion zoomen; Padding-Faktor 80 % (Konstante `SELECTION_ZOOM_PADDING`); keine Operation wenn Selektion leer oder keine selektierten Nodes in der RoadMap vorhanden
+- `zoom_to_fit(state, road_map)` — Zoomt auf Selektion wenn vorhanden, sonst auf die gesamte RoadMap (delegiert an `zoom_to_selection_bounds` bzw. `center_on_road_map`)
 
 ---
 
