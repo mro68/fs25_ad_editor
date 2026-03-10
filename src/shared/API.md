@@ -83,6 +83,7 @@ Zentral gesammelte Konfigurationswerte, gegliedert nach Bereich:
 | Marker | `MARKER_SIZE_WORLD` | 2.6 | Pin-Hoehe in Welt-Einheiten |
 | Marker | `MARKER_COLOR` | `[0.0, 0.467, 0.102, 1.0]` | Dunkelgruen |
 | Marker | `MARKER_OUTLINE_COLOR` | `[1.0, 0.643, 0.0, 1.0]` | Goldgelb |
+| Marker | `MARKER_OUTLINE_WIDTH` | 0.08 | Standard-Umrissstärke (Anteil am Radius, 0.01–0.3) |
 | Marker | `MIN_MARKER_SIZE_PX` | 8.0 | Mindestgroesse in Pixeln |
 | Decimation | `NODE_DECIMATION_SPACING_PX` | 6.0 | Mindestabstand (px) fuer Grid-Decimation |
 | Tools | `SNAP_SCALE_PERCENT` | 100.0 | Snap-Radius in % der Node-Groesse |
@@ -169,6 +170,8 @@ pub struct EditorOptions {
     pub marker_size_world: f32,
     pub marker_color: [f32; 4],
     pub marker_outline_color: [f32; 4],
+    /// Umrissstärke des Map-Markers als Anteil am Radius (0.01–0.3).
+    pub marker_outline_width: f32,
     // Kamera
     pub camera_zoom_step: f32,
     pub camera_scroll_zoom_step: f32,
@@ -184,6 +187,8 @@ pub struct EditorOptions {
     pub reconnect_on_delete: bool,
     /// true = bestehende Verbindung beim Platzieren splitten
     pub split_connection_on_place: bool,
+    /// true = Route-Tool-Ergebnisse automatisch als Segment registrieren.
+    pub auto_create_segment: bool,
     // Kamera (erweitert)
     /// Minimaler Zoom-Faktor (konfig, ueberschreibt Camera2D::ZOOM_MIN)
     pub camera_zoom_min: f32,

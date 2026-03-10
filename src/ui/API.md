@@ -6,6 +6,7 @@ Das `ui`-Modul enthält egui-UI-Komponenten (Menüs, Statusbar, Input-Handling, 
 
 ## Module
 
+- `common.rs` — Gemeinsame UI-Hilfsfunktionen (Mausrad-Scroll-Helfer)
 - `menu.rs` — Top-Menü-Leiste
 - `status.rs` — Statusleiste
 - `floating_menu.rs` — Schwebende Kontextmenues fuer Werkzeuggruppen (Toggle via `W/G/S/T`)
@@ -296,6 +297,41 @@ Alle Commands werden durch ein Precondition-System gefiltert: Nur Commands deren
 - **Mittel/Rechts-Drag:** Kamera-Pan
 - **Scroll:** Zoom
 - **Rechtsklick:** Kontextmenü
+
+---
+
+### `ui::common` — Gemeinsame UI-Hilfsfunktionen
+
+Kleine, wiederverwendbare Helfer fuer egui-Widgets. Werden von mehreren UI-Modulen importiert.
+
+```rust
+/// Schwellenwert fuer Scroll-Events – unterdrückt Rauschen bei kleinen Scroll-Bewegungen.
+pub(crate) const WHEEL_THRESHOLD: f32 = 0.5;
+
+/// Wendet Mausrad-Scrolling auf einen numerischen Wert an.
+///
+/// Wenn die Response gehovert ist und ein Scroll-Event vorliegt,
+/// wird `value` um `step` in Scroll-Richtung veraendert und auf `range` geclampt.
+/// Gibt `true` zurueck wenn sich der Wert geaendert hat.
+pub(crate) fn apply_wheel_step(
+    ui: &egui::Ui,
+    response: &egui::Response,
+    value: &mut f32,
+    step: f32,
+    range: std::ops::RangeInclusive<f32>,
+) -> bool
+```
+
+**Verwendung:**
+
+```rust
+use crate::ui::common::apply_wheel_step;
+
+let r = ui.add(egui::DragValue::new(&mut opts.node_size_world));
+r.changed() | apply_wheel_step(ui, &r, &mut opts.node_size_world, 0.1, 0.1..=5.0);
+```
+
+Wird in `options_dialog/sections.rs` fuer alle 25 numerischen Options-Felder verwendet.
 
 ---
 

@@ -541,6 +541,12 @@
 - ✅ `apply_wheel_step()` in `options_dialog/sections.rs` — Mausrad-Support fuer alle 25 numerischen Felder im Options-Dialog
 - ✅ Dokumentation synchronisiert: `src/app/API.md`, `src/app/handlers/API.md`, `src/app/use_cases/API.md`, `docs/ROADMAP.md`
 
+**Errungenschaften (UI-Enhancements 2026-03-10):**
+- ✅ `src/ui/common.rs` — Neues Modul mit `apply_wheel_step()` und `WHEEL_THRESHOLD`; Mausrad-Support fuer numerische Felder (Options-Dialog und weitere Widgets)
+- ✅ `EditorOptions::auto_create_segment` — Checkbox steuert ob Route-Tool-Ergebnisse automatisch als Segment registriert werden (Default: `true`)
+- ✅ Neue Kontextmenu-Icons: `map-pin.svg`, `map-pin-plus.svg`, `map-pin-minus.svg` fuer `CreateMarker` / `RemoveMarker`
+- ✅ `EditorOptions::marker_outline_width` — Konfigurierbare Umrissstärke des Map-Markers (Anteil am Radius, Shader liest `aa_params.w`); Farb-Picker in UI entfernt
+
 **Naechste Aufgaben:**
 1. 🟡 100k+ Performance-Benchmarks
 2. 🟢 Undo/Redo auf Delta-basiert umstellen (Skalierung fuer 100k+ Nodes)
