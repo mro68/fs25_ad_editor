@@ -3,6 +3,9 @@
 use crate::app::AppState;
 use crate::core::RoadMap;
 
+/// Padding-Faktor fuer Zoom-to-Selection (80 % Viewport-Fuellgrad).
+const SELECTION_ZOOM_PADDING: f32 = 0.8;
+
 /// Setzt die Kamera auf Default zurueck.
 pub fn reset_camera(state: &mut AppState) {
     state.view.camera = Default::default();
@@ -104,6 +107,58 @@ pub fn center_on_road_map(state: &mut AppState, road_map: &RoadMap) {
         center_y,
         state.view.camera.zoom
     );
+}
+
+/// Zoomt die Kamera auf die Bounding Box der aktuellen Selektion.
+///
+/// Berechnet den Mittelpunkt und passenden Zoom-Level fuer alle selektierten Nodes.
+/// Keine Operation wenn die Selektion leer ist oder keine selektierten Nodes in der
+/// RoadMap vorhanden sind.
+pub fn zoom_to_selection_bounds(state: &mut AppState, road_map: &RoadMap) {
+    let selected = state.selection.selected_node_ids.clone();
+    if selected.is_empty() {
+        return;
+    }
+
+    let mut min_x = f32::MAX;
+    let mut max_x = f32::MIN;
+    let mut min_y = f32::MAX;
+    let mut max_y = f32::MIN;
+    let mut count = 0u32;
+
+    for &id in selected.iter() {
+        if let Some(node) = road_map.nodes.get(&id) {
+            min_x = min_x.min(node.position.x);
+            max_x = max_x.max(node.position.x);
+            min_y = min_y.min(node.position.y);
+            max_y = max_y.max(node.position.y);
+            count += 1;
+        }
+    }
+    if count == 0 {
+        return;
+    }
+
+    let center = glam::Vec2::new((min_x + max_x) / 2.0, (min_y + max_y) / 2.0);
+    state.view.camera.look_at(center);
+
+    // Mindestgroesse 1.0 verhindert Division-durch-null bei Einzelnode-Selektion
+    let extent = (max_x - min_x).max(max_y - min_y).max(1.0);
+    use crate::core::Camera2D;
+    state.view.camera.zoom = Camera2D::BASE_WORLD_EXTENT / (extent / 2.0) * SELECTION_ZOOM_PADDING;
+    state
+        .view
+        .camera
+        .clamp_zoom(state.options.camera_zoom_min, state.options.camera_zoom_max);
+}
+
+/// Zoomt die Kamera passend: auf die Selektion wenn vorhanden, sonst auf die gesamte RoadMap.
+pub fn zoom_to_fit(state: &mut AppState, road_map: &RoadMap) {
+    if !state.selection.selected_node_ids.is_empty() {
+        zoom_to_selection_bounds(state, road_map);
+    } else {
+        center_on_road_map(state, road_map);
+    }
 }
 
 #[cfg(test)]

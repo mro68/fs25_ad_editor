@@ -492,6 +492,16 @@ pub fn save_background_as_overview(state: &mut AppState, path: String) -> anyhow
 
 ZIP-Archiv-Support und Übersichtskarten-Generierung/Speicherung.
 
+```rust
+pub fn zoom_to_selection_bounds(state: &mut AppState)
+pub fn zoom_to_fit(state: &mut AppState)
+```
+
+Zoom-Hilfsfunktionen: `zoom_to_selection_bounds` zoomt auf die Bounding Box der
+aktuellen Selektion (keine Operation wenn Selektion leer). `zoom_to_fit` zoomt auf
+die Selektion wenn vorhanden, sonst auf die gesamte RoadMap. Beide Funktionen
+delegieren an `use_cases::camera` und haben keine Wirkung wenn keine RoadMap geladen ist.
+
 ---
 
 ### `route_tool` — Route-Tool-Operationen

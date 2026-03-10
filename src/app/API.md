@@ -124,6 +124,8 @@ pub struct UiState {
     pub save_overview_dialog: SaveOverviewDialogState,
     /// Konfiguration fuer das Distanzen-Neuverteilen-Feature
     pub distanzen: DistanzenState,
+    /// Segment-Einstellungs-Popup (Doppelklick auf Segment-Node)
+    pub segment_settings_popup: SegmentSettingsPopupState,
 }
 
 pub struct FloatingMenuState {
@@ -200,6 +202,13 @@ pub struct PostLoadDialogState {
 pub struct SaveOverviewDialogState {
     pub visible: bool,
     pub target_path: String,
+}
+
+pub struct SegmentSettingsPopupState {
+    /// Ob das Popup sichtbar ist
+    pub visible: bool,
+    /// Welt-Position des Doppelklicks (fuer Neu-Selektion bei Parameteraenderung)
+    pub world_pos: glam::Vec2,
 }
 
 pub struct ViewState {
@@ -665,6 +674,14 @@ pub enum AppIntent {
     // Extras
     /// Alle erkannten Farmland-Polygone als Wegpunkt-Ring nachzeichnen
     TraceAllFieldsRequested,
+
+    // Viewport (erweitert)
+    /// Kamera auf die Bounding Box der Selektion zoomen
+    ZoomToSelectionBoundsRequested,
+
+    // Segment-Einstellungs-Popup
+    /// Segment-Einstellungs-Popup an Weltposition oeffnen (per Doppelklick)
+    OpenSegmentSettingsPopupRequested { world_pos: glam::Vec2 },
 }
 
 pub enum AppCommand {
@@ -793,6 +810,8 @@ pub enum AppCommand {
 
     // Viewport
     ZoomToFit,
+    /// Kamera auf Bounding Box der aktuellen Selektion zoomen
+    ZoomToSelectionBounds,
 
     // Selektion (erweitert)
     InvertSelection,
@@ -813,6 +832,10 @@ pub enum AppCommand {
     // Extras
     /// Alle Farmland-Polygone als Wegpunkt-Ring nachzeichnen (Batch-Operation)
     TraceAllFields,
+
+    // Segment-Einstellungs-Popup
+    /// Segment-Einstellungs-Popup an angegebener Welt-Position oeffnen
+    OpenSegmentSettingsPopup { world_pos: glam::Vec2 },
 }
 ```
 

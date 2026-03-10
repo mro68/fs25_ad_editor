@@ -187,6 +187,11 @@ impl EditorApp {
         events.extend(ui::show_post_load_dialog(ctx, &mut self.state.ui));
         events.extend(ui::show_save_overview_dialog(ctx, &mut self.state.ui));
         events.extend(ui::show_trace_all_fields_dialog(ctx, &mut self.state.ui));
+        events.extend(ui::show_segment_settings_popup(
+            ctx,
+            &mut self.state.ui.segment_settings_popup,
+            &mut self.state.options,
+        ));
         events.extend(ui::show_options_dialog(
             ctx,
             self.state.show_options_dialog,
