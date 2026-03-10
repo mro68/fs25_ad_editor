@@ -61,6 +61,13 @@ Ueber **Datei → Einstellungen** oder die **Optionen-Toolbar** erreichbar.
 | **Node-IDs anzeigen** | Numerische IDs ueber Nodes einblenden |
 | **Grid anzeigen** | Hilfsgitter im Viewport |
 
+### Map-Marker-Optionen
+
+| Option | Bereich | Beschreibung |
+|--------|---------|---------------|
+| **Marker-Farbe** | Farb-Picker | Einheitliche Farbe fuer alle Map-Marker (ein Farb-Picker fuer alle) |
+| **Umrissstärke** | 0,01 – 0,3 | Staerke des Marker-Umrisses in Welteinheiten; kleinere Werte = feinerer Rand |
+
 ### Render-Qualitaet
 
 | Qualitaet | Beschreibung |

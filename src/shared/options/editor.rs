@@ -430,3 +430,68 @@ impl EditorOptions {
         self.node_decimation_spacing_px * world_per_pixel
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// Prüft, dass eine alte TOML-Datei ohne neue Felder korrekt mit Defaults geladen wird.
+    #[test]
+    fn test_deserialize_missing_new_fields_uses_defaults() {
+        // Minimale gueltige TOML ohne auto_create_segment und marker_outline_width
+        let toml_str = r#"
+node_size_world = 1.0
+node_color_default = [0.2, 0.6, 1.0, 1.0]
+node_color_subprio = [0.5, 0.5, 0.5, 1.0]
+node_color_selected = [1.0, 0.0, 0.0, 1.0]
+node_color_warning = [1.0, 1.0, 0.0, 1.0]
+selection_size_factor = 140.0
+connection_thickness_world = 0.3
+connection_thickness_subprio_world = 0.15
+arrow_length_world = 1.5
+arrow_width_world = 0.8
+connection_color_regular = [0.2, 0.6, 1.0, 1.0]
+connection_color_dual = [0.0, 1.0, 0.5, 1.0]
+connection_color_reverse = [1.0, 0.3, 0.3, 1.0]
+marker_size_world = 3.0
+marker_color = [1.0, 0.0, 0.0, 1.0]
+marker_outline_color = [0.0, 0.0, 0.0, 1.0]
+camera_zoom_step = 1.15
+camera_scroll_zoom_step = 1.05
+terrain_height_scale = 1.0
+"#;
+        let opts: EditorOptions =
+            toml::from_str(toml_str).expect("Deserialisierung fehlgeschlagen");
+        assert_eq!(
+            opts.auto_create_segment, true,
+            "auto_create_segment muss default true sein"
+        );
+        assert!(
+            (opts.marker_outline_width - MARKER_OUTLINE_WIDTH).abs() < f32::EPSILON,
+            "marker_outline_width muss default {} sein, ist {}",
+            MARKER_OUTLINE_WIDTH,
+            opts.marker_outline_width
+        );
+    }
+
+    /// Prüft, dass Roundtrip serialize → deserialize die neuen Felder erhält.
+    #[test]
+    fn test_toml_roundtrip_new_fields() {
+        let mut opts = EditorOptions::default();
+        opts.auto_create_segment = false;
+        opts.marker_outline_width = 0.15;
+
+        let toml_str = toml::to_string_pretty(&opts).expect("Serialisierung fehlgeschlagen");
+        let loaded: EditorOptions =
+            toml::from_str(&toml_str).expect("Deserialisierung fehlgeschlagen");
+
+        assert_eq!(
+            loaded.auto_create_segment, false,
+            "auto_create_segment muss false bleiben"
+        );
+        assert!(
+            (loaded.marker_outline_width - 0.15).abs() < f32::EPSILON,
+            "marker_outline_width muss 0.15 bleiben"
+        );
+    }
+}

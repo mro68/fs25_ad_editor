@@ -27,8 +27,6 @@ fn color_edit(ui: &mut egui::Ui, label: &str, color: &mut [f32; 4]) -> bool {
     changed
 }
 
-
-
 /// Rendert die Node-Darstellungseinstellungen (Groesse, Farben, Hitbox).
 pub(super) fn render_nodes(ui: &mut egui::Ui, opts: &mut EditorOptions) -> bool {
     let mut changed = false;
