@@ -9,8 +9,8 @@ mod view;
 pub use app_state::{AppState, Clipboard};
 pub use dialogs::{
     DedupDialogState, DistanzenState, FloatingMenuKind, FloatingMenuState, MarkerDialogState,
-    OverviewOptionsDialogState, PostLoadDialogState, SaveOverviewDialogState, UiState,
-    ZipBrowserState,
+    OverviewOptionsDialogState, PostLoadDialogState, SaveOverviewDialogState,
+    SegmentSettingsPopupState, UiState, ZipBrowserState,
 };
 pub use editor::{EditorTool, EditorToolState};
 pub use selection::SelectionState;

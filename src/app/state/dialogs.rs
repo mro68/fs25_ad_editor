@@ -138,6 +138,24 @@ pub struct SaveOverviewDialogState {
     pub is_overwrite: bool,
 }
 
+/// Zustand des Segment-Einstellungs-Popups (erscheint nach Doppelklick auf einen Segment-Node).
+#[derive(Debug, Clone)]
+pub struct SegmentSettingsPopupState {
+    /// Ob das Popup sichtbar ist.
+    pub visible: bool,
+    /// Welt-Position des Doppelklicks (fuer Neu-Selektion bei Parameteraenderung).
+    pub world_pos: glam::Vec2,
+}
+
+impl Default for SegmentSettingsPopupState {
+    fn default() -> Self {
+        Self {
+            visible: false,
+            world_pos: glam::Vec2::ZERO,
+        }
+    }
+}
+
 /// Einstellungen fuer den "Alle Felder nachzeichnen"-Dialog.
 #[derive(Debug, Clone)]
 pub struct TraceAllFieldsDialogState {
@@ -284,6 +302,8 @@ pub struct UiState {
     pub distanzen: DistanzenState,
     /// Dialog fuer "Alle Felder nachzeichnen"-Einstellungen
     pub trace_all_fields_dialog: TraceAllFieldsDialogState,
+    /// Segment-Einstellungs-Popup (erscheint nach Doppelklick auf Segment-Node)
+    pub segment_settings_popup: SegmentSettingsPopupState,
 }
 
 impl UiState {
@@ -311,6 +331,7 @@ impl UiState {
             save_overview_dialog: SaveOverviewDialogState::default(),
             distanzen: DistanzenState::default(),
             trace_all_fields_dialog: TraceAllFieldsDialogState::default(),
+            segment_settings_popup: SegmentSettingsPopupState::default(),
         }
     }
 }

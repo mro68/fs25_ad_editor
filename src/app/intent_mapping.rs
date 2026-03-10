@@ -70,13 +70,17 @@ pub fn map_intent_to_commands(state: &AppState, intent: AppIntent) -> Vec<AppCom
         } => {
             let max_distance = state.options.hitbox_radius();
 
-            vec![AppCommand::SelectSegmentBetweenNearestIntersections {
-                world_pos,
-                max_distance,
-                additive,
-                stop_at_junction: state.options.segment_stop_at_junction,
-                max_angle_deg: state.options.segment_max_angle_deg,
-            }]
+            vec![
+                AppCommand::SelectSegmentBetweenNearestIntersections {
+                    world_pos,
+                    max_distance,
+                    additive,
+                    stop_at_junction: state.options.segment_stop_at_junction,
+                    max_angle_deg: state.options.segment_max_angle_deg,
+                },
+                AppCommand::ZoomToSelectionBounds,
+                AppCommand::OpenSegmentSettingsPopup { world_pos },
+            ]
         }
         AppIntent::SelectNodesInRectRequested { min, max, additive } => {
             vec![AppCommand::SelectNodesInRect { min, max, additive }]
