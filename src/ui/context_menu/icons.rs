@@ -87,6 +87,12 @@ pub(super) fn command_icon(
         CommandId::SetToolFieldBoundary => {
             egui::include_image!("../../../assets/icons/icon_field_boundary.svg")
         }
+        CommandId::CreateMarker => {
+            egui::include_image!("../../../assets/icons/map-pin-plus.svg")
+        }
+        CommandId::RemoveMarker => {
+            egui::include_image!("../../../assets/icons/map-pin-minus.svg")
+        }
         CommandId::DirectionRegular => {
             egui::include_image!("../../../assets/icons/icon_direction_regular.svg")
         }
@@ -111,6 +117,8 @@ pub(super) fn command_icon(
         CommandId::DirectionReverse => direction_icon_color(options, ConnectionDirection::Reverse),
         CommandId::PriorityRegular => function_icon_color(options, ConnectionPriority::Regular),
         CommandId::PrioritySub => function_icon_color(options, ConnectionPriority::SubPriority),
+        // Map-Pin Icons haben bereits eine eingebettete Farbe — kein Tint
+        CommandId::CreateMarker | CommandId::RemoveMarker => egui::Color32::WHITE,
         _ => {
             let _accent = direction_icon_color(options, default_direction);
             function_icon_color(options, default_priority)
