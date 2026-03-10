@@ -207,12 +207,12 @@ fn vs_marker(
 ) -> MarkerVertexOutput {
     var out: MarkerVertexOutput;
     
-    // Skaliere das Quad mit der Instanz-Groesse
-    let scaled_pos = vertex.position * instance.instance_size;
+    // Skaliere das Quad mit der Instanz-Groesse, Breite um 25% reduzieren
+    let scaled_pos = vec2<f32>(vertex.position.x, vertex.position.y) * instance.instance_size;
     
-    // Verschiebe Pin nach oben (negatives Y = Bildschirm oben), damit die Spitze auf dem Node liegt
-    // Pin-Spitze ist bei uv.y = -0.8, also vertex.position.y = 0.8 → kompensieren mit -0.8 * size
-    let pin_offset = vec2<f32>(0.0, -0.8 * instance.instance_size);
+    // Verschiebe Pin nach unten (negatives Y), damit die Spitze auf dem Node liegt
+    // Pin-Spitze ist bei uv.y = 0 (unten nach Y-Flip-Entfernung) → verschieben mit -size
+    let pin_offset = vec2<f32>(0.0, -instance.instance_size);
     
     // Verschiebe zur Instanz-Position mit Offset
     let world_pos = scaled_pos + instance.instance_position + pin_offset;
@@ -222,8 +222,8 @@ fn vs_marker(
     out.color = instance.instance_color;
     out.outline_color = instance.instance_outline_color;
     
-    // UV: [-1..1] → [0..1], Y-Flip (Welt-Y=oben soll Textur-Y=0=oben entsprechen)
-    out.uv = vec2<f32>(vertex.position.x * 0.5 + 0.5, -vertex.position.y * 0.5 + 0.5);
+    // UV: [-1..1] → [0..1], keine Y-Flip (Textur-Y=0 ist unten = Pin-Spitze)
+    out.uv = vec2<f32>(vertex.position.x * 0.5 + 0.5, vertex.position.y * 0.5 + 0.5);
     
     return out;
 }
