@@ -531,6 +531,16 @@
 - ✅ Lucide-SVG-Icons: 14 bestehende Icons ersetzt + 6 neue Icons
 - ✅ grleconvert-Link in README ergaenzt
 
+**Errungenschaften (Doppelklick-Popup und Mausrad-Options 2026-03-10):**
+- ✅ `zoom_to_selection_bounds(state, road_map)` — Kamera auf Bounding Box der Selektion (Use-Case + Handler + Command + Intent)
+- ✅ `zoom_to_fit(state, road_map)` — Zoom auf Selektion oder RoadMap (Use-Case + Handler + Command)
+- ✅ `AppCommand::ZoomToSelectionBounds` + `AppIntent::ZoomToSelectionBoundsRequested` — neuer mutierender Command und Intent
+- ✅ `AppCommand::OpenSegmentSettingsPopup { world_pos }` + `AppIntent::OpenSegmentSettingsPopupRequested { world_pos }` — Segment-Popup nach Doppelklick
+- ✅ `SegmentSettingsPopupState { visible, world_pos }` — Dialog-Zustand in `UiState`
+- ✅ `src/ui/dialogs/segment_settings_popup.rs` — Popup-Dialog (stop_at_junction, max_angle_deg, Live-Neu-Selektion bei Aenderung)
+- ✅ `apply_wheel_step()` in `options_dialog/sections.rs` — Mausrad-Support fuer alle 25 numerischen Felder im Options-Dialog
+- ✅ Dokumentation synchronisiert: `src/app/API.md`, `src/app/handlers/API.md`, `src/app/use_cases/API.md`, `docs/ROADMAP.md`
+
 **Naechste Aufgaben:**
 1. 🟡 100k+ Performance-Benchmarks
 2. 🟢 Undo/Redo auf Delta-basiert umstellen (Skalierung fuer 100k+ Nodes)
