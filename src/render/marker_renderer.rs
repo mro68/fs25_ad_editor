@@ -15,12 +15,28 @@ pub struct MarkerRenderer {
     instance_capacity: usize,
     /// Wiederverwendbarer Scratch-Buffer fuer Instanz-Daten (verhindert per-Frame-Allokation)
     instance_scratch: Vec<MarkerInstance>,
+    // Pin-Icon-Textur (muss gehalten werden, damit GPU-Ressourcen nicht freigegeben werden)
+    _texture: wgpu::Texture,
+    _sampler: wgpu::Sampler,
 }
 
 impl MarkerRenderer {
     /// Erstellt einen neuen Marker-Renderer
     pub fn new(render_state: &egui_wgpu::RenderState, shader: &wgpu::ShaderModule) -> Self {
         let device = &render_state.device;
+        let queue = &render_state.queue;
+
+        // Pin-Icon-PNG laden und als wgpu-Textur erstellen
+        let png_bytes = include_bytes!("../../assets/icons/icon_map_pin.png");
+        let img = image::load_from_memory(png_bytes)
+            .expect("icon_map_pin.png: konnte PNG nicht dekodieren");
+        let (texture, sampler) = super::texture::create_texture_from_image(
+            device,
+            queue,
+            &img,
+            "Marker Pin Texture",
+        );
+        let texture_view = texture.create_view(&wgpu::TextureViewDescriptor::default());
 
         // Uniform-Buffer erstellen
         let uniform_buffer = device.create_buffer(&wgpu::BufferDescriptor {
@@ -30,29 +46,57 @@ impl MarkerRenderer {
             mapped_at_creation: false,
         });
 
-        // Bind-Group-Layout
+        // Bind-Group-Layout: Uniform + Textur + Sampler
         let bind_group_layout = device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
             label: Some("Marker Bind Group Layout"),
-            entries: &[wgpu::BindGroupLayoutEntry {
-                binding: 0,
-                visibility: wgpu::ShaderStages::VERTEX_FRAGMENT,
-                ty: wgpu::BindingType::Buffer {
-                    ty: wgpu::BufferBindingType::Uniform,
-                    has_dynamic_offset: false,
-                    min_binding_size: None,
+            entries: &[
+                wgpu::BindGroupLayoutEntry {
+                    binding: 0,
+                    visibility: wgpu::ShaderStages::VERTEX_FRAGMENT,
+                    ty: wgpu::BindingType::Buffer {
+                        ty: wgpu::BufferBindingType::Uniform,
+                        has_dynamic_offset: false,
+                        min_binding_size: None,
+                    },
+                    count: None,
                 },
-                count: None,
-            }],
+                wgpu::BindGroupLayoutEntry {
+                    binding: 1,
+                    visibility: wgpu::ShaderStages::FRAGMENT,
+                    ty: wgpu::BindingType::Texture {
+                        multisampled: false,
+                        view_dimension: wgpu::TextureViewDimension::D2,
+                        sample_type: wgpu::TextureSampleType::Float { filterable: true },
+                    },
+                    count: None,
+                },
+                wgpu::BindGroupLayoutEntry {
+                    binding: 2,
+                    visibility: wgpu::ShaderStages::FRAGMENT,
+                    ty: wgpu::BindingType::Sampler(wgpu::SamplerBindingType::Filtering),
+                    count: None,
+                },
+            ],
         });
 
         // Bind-Group erstellen
         let bind_group = device.create_bind_group(&wgpu::BindGroupDescriptor {
             label: Some("Marker Bind Group"),
             layout: &bind_group_layout,
-            entries: &[wgpu::BindGroupEntry {
-                binding: 0,
-                resource: uniform_buffer.as_entire_binding(),
-            }],
+            entries: &[
+                wgpu::BindGroupEntry {
+                    binding: 0,
+                    resource: uniform_buffer.as_entire_binding(),
+                },
+                wgpu::BindGroupEntry {
+                    binding: 1,
+                    resource: wgpu::BindingResource::TextureView(&texture_view),
+                },
+                wgpu::BindGroupEntry {
+                    binding: 2,
+                    resource: wgpu::BindingResource::Sampler(&sampler),
+                },
+            ],
         });
 
         // Pipeline-Layout
@@ -137,6 +181,8 @@ impl MarkerRenderer {
             instance_buffer: None,
             instance_capacity: 0,
             instance_scratch: Vec::with_capacity(256),
+            _texture: texture,
+            _sampler: sampler,
         }
     }
 

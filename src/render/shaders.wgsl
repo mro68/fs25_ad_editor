@@ -178,7 +178,13 @@ fn fs_background(in: BackgroundVertexOutput) -> @location(0) vec4<f32> {
     return vec4<f32>(texture_color.rgb, final_alpha);
 }
 
-// === Map-Marker-Rendering (Pin-Symbol wie Google Maps) ===
+// === Map-Marker-Rendering (Pin-Symbol als Textur) ===
+
+// Textur-Bindings fuer das Pin-Icon (group(0), bindings 1+2)
+@group(0) @binding(1)
+var marker_texture: texture_2d<f32>;
+@group(0) @binding(2)
+var marker_sampler: sampler;
 
 struct MarkerInstanceInput {
     @location(1) instance_position: vec2<f32>,
@@ -216,58 +222,22 @@ fn vs_marker(
     out.color = instance.instance_color;
     out.outline_color = instance.instance_outline_color;
     
-    // UV invertieren (Y-Flip), damit Pin richtig herum ist
-    out.uv = vec2<f32>(vertex.position.x, -vertex.position.y);
+    // UV: [-1..1] → [0..1], Y-Flip (Welt-Y=oben soll Textur-Y=0=oben entsprechen)
+    out.uv = vec2<f32>(vertex.position.x * 0.5 + 0.5, -vertex.position.y * 0.5 + 0.5);
     
     return out;
 }
 
 @fragment
 fn fs_marker(in: MarkerVertexOutput) -> @location(0) vec4<f32> {
-    // Pin-Form: Kreis oben (y > 0) + Traene unten (y <= 0)
-    let x = in.uv.x;
-    let y = in.uv.y;
+    // Textur-Sampling: Pin-Icon als Textur mit Alpha-Maske
+    let tex_color = textureSample(marker_texture, marker_sampler, in.uv);
     
-    // Kreis oben (zentriert bei y=0.3, radius=0.3)
-    let circle_center = vec2<f32>(0.0, 0.3);
-    let circle_radius = 0.3;
-    let dist_to_circle = distance(in.uv, circle_center);
-    
-    let tip_y = -0.8;
-    let hard_edges = uniforms.aa_params.y > 0.5;
-    
-    // Kombiniere Kreis und Traenenform mit AA aus View-Einstellungen
-    var alpha: f32;
-    if (y > 0.0) {
-        // Oberer Bereich: Kreisfoermig
-        if (hard_edges) {
-            alpha = select(0.0, 1.0, dist_to_circle <= circle_radius);
-        } else {
-            let edge = max(fwidth(dist_to_circle) * uniforms.aa_params.x, 0.0005);
-            alpha = 1.0 - smoothstep(circle_radius - edge, circle_radius + edge, dist_to_circle);
-        }
-    } else {
-        // Unterer Bereich: Traenenform — Breite nimmt nach unten ab
-        let width_at_y = circle_radius * (1.0 - (abs(y) * 1.2));
-        if (hard_edges) {
-            let is_inside = abs(x) <= width_at_y && y >= tip_y;
-            alpha = select(0.0, 1.0, is_inside);
-        } else {
-            let dist_to_side = width_at_y - abs(x);
-            let dist_to_bottom = y - tip_y;
-            let min_dist = min(dist_to_side, dist_to_bottom);
-            let edge = max(fwidth(min_dist) * uniforms.aa_params.x, 0.0005);
-            alpha = smoothstep(-edge, edge, min_dist);
-        }
+    // Transparente Bereiche verwerfen
+    if (tex_color.a < 0.01) {
+        discard;
     }
     
-    // Outline: duenner Rand (Staerke aus Uniform aa_params.w)
-    let outline_thickness = uniforms.aa_params.w;
-    let is_outline: bool = 
-        (y > 0.0 && abs(dist_to_circle - circle_radius) < outline_thickness) ||
-        (y <= 0.0 && y >= tip_y && abs(abs(x) - (circle_radius * (1.0 - (abs(y) * 1.2)))) < outline_thickness);
-    
-    let final_color = select(in.color.rgb, in.outline_color.rgb, is_outline);
-    
-    return vec4<f32>(final_color, alpha);
+    // Tinting: Textur-Alpha definiert die Pin-Form, instance_color faerbt den Pin
+    return vec4<f32>(in.color.rgb, tex_color.a * in.color.a);
 }
