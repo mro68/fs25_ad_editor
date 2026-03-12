@@ -32,7 +32,7 @@ impl EditorApp {
         let editor_options = EditorOptions::load_from_file(&config_path);
 
         let mut state = AppState::new();
-        state.options = editor_options;
+        state.set_options(editor_options);
 
         Self {
             state,
