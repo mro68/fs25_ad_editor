@@ -76,6 +76,11 @@ impl MenuCatalog {
                 label: "✏ Tool bearbeiten".into(),
                 preconditions: vec![Precondition::SelectionIsValidSegment],
             },
+            MenuEntry::Command {
+                id: CommandId::GroupSelectionAsSegment,
+                label: "📦 Als Segment gruppieren".into(),
+                preconditions: vec![Precondition::IsResampleableChain],
+            },
             MenuEntry::Separator,
             // ── Verbinden ────────────────────────────────────────
             MenuEntry::Command {

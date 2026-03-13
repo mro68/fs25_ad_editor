@@ -106,6 +106,8 @@ pub enum CommandId {
     // ── Segment ──────────────────────────────────────────────────────
     /// Selektiertes Segment nachtraeglich bearbeiten
     EditSegment,
+    /// Selektierte zusammenhaengende Nodes als neues Segment gruppieren
+    GroupSelectionAsSegment,
 
     // ── Extras ───────────────────────────────────────────────────────
     /// FieldBoundaryTool aktivieren
@@ -271,6 +273,7 @@ impl CommandId {
             Self::EditSegment => AppIntent::EditSegmentRequested {
                 record_id: ctx.segment_record_id.unwrap_or(0),
             },
+            Self::GroupSelectionAsSegment => AppIntent::GroupSelectionAsSegmentRequested,
 
             // ── Extras ───────────────────────────────────────────────────────
             Self::SetToolFieldBoundary => AppIntent::SelectRouteToolRequested {

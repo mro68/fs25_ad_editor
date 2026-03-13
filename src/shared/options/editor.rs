@@ -76,7 +76,7 @@ pub struct EditorOptions {
     #[serde(default)]
     pub split_connection_on_place: bool,
     /// Ob Route-Tool-Ergebnisse automatisch als Segment registriert werden.
-    #[serde(default = "default_true")]
+    #[serde(default)]
     pub auto_create_segment: bool,
 
     // Terrain
@@ -160,7 +160,7 @@ impl Default for EditorOptions {
             value_adjust_input_mode: ValueAdjustInputMode::default(),
             reconnect_on_delete: true,
             split_connection_on_place: true,
-            auto_create_segment: true,
+            auto_create_segment: false,
             terrain_height_scale: TERRAIN_HEIGHT_SCALE,
             bg_opacity: 1.0,
             bg_opacity_at_min_zoom: 0.0,
@@ -179,10 +179,6 @@ impl Default for EditorOptions {
 }
 
 fn default_segment_stop_at_junction() -> bool {
-    true
-}
-
-fn default_true() -> bool {
     true
 }
 
@@ -463,8 +459,8 @@ terrain_height_scale = 1.0
         let opts: EditorOptions =
             toml::from_str(toml_str).expect("Deserialisierung fehlgeschlagen");
         assert_eq!(
-            opts.auto_create_segment, true,
-            "auto_create_segment muss default true sein"
+            opts.auto_create_segment, false,
+            "auto_create_segment muss default false sein"
         );
         assert!(
             (opts.marker_outline_width - MARKER_OUTLINE_WIDTH).abs() < f32::EPSILON,

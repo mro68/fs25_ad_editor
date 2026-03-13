@@ -255,6 +255,9 @@ pub fn map_intent_to_commands(state: &AppState, intent: AppIntent) -> Vec<AppCom
         AppIntent::EditSegmentRequested { record_id } => {
             vec![AppCommand::EditSegment { record_id }]
         }
+        AppIntent::GroupSelectionAsSegmentRequested => {
+            vec![AppCommand::GroupSelectionAsSegment]
+        }
         AppIntent::ZipBackgroundBrowseRequested { path } => {
             vec![AppCommand::BrowseZipBackground { path }]
         }

@@ -272,6 +272,8 @@ pub enum AppIntent {
     ToggleSegmentLockRequested { segment_id: u64 },
     /// Segment aufloesen (Segment-Record entfernen, Nodes beibehalten)
     DissolveSegmentRequested { segment_id: u64 },
+    /// Selektierte zusammenhaengende Nodes als neues Segment in der Registry speichern
+    GroupSelectionAsSegmentRequested,
 
     // ── Extras ───────────────────────────────────────────────────────
     /// Alle-Felder-nachzeichnen-Einstellungsdialog oeffnen
