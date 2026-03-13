@@ -11,6 +11,17 @@ impl InputState {
             return;
         }
 
+        // Kein Zoom wenn die Maus ueber einem Fenster/Dialog liegt (z.B. Options-Dialog,
+        // Tool-Panel). layer_id_at verwendet die Memory-Areas und ist Layer-bestellungsgetreu.
+        let pointer_pos = ctx.ui.input(|i| i.pointer.latest_pos());
+        if let Some(pos) = pointer_pos {
+            let top_layer = ctx.ui.ctx().layer_id_at(pos);
+            // Background-Layer = Viewport; alles andere (Window, Tooltip, Popup) → kein Zoom
+            if top_layer.map_or(false, |l| l.order != egui::Order::Background) {
+                return;
+            }
+        }
+
         let scroll = ctx.ui.input(|i| i.smooth_scroll_delta.y);
         if scroll == 0.0 {
             return;

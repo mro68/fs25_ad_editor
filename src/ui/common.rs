@@ -7,6 +7,8 @@ pub(crate) const WHEEL_THRESHOLD: f32 = 0.5;
 ///
 /// Wenn die Response gehovert ist und ein Scroll-Event vorliegt,
 /// wird `value` um `step` in Scroll-Richtung geaendert und auf `range` geclampt.
+/// Das Scroll-Event wird konsumiert (nullgestellt), damit uebergeordnete ScrollAreas
+/// nicht gleichzeitig scrollen.
 /// Gibt `true` zurueck wenn sich der Wert geaendert hat.
 pub(crate) fn apply_wheel_step(
     ui: &egui::Ui,
@@ -18,11 +20,19 @@ pub(crate) fn apply_wheel_step(
     if !response.hovered() {
         return false;
     }
-    let delta = ui.input(|i| i.raw_scroll_delta.y);
-    if delta.abs() < WHEEL_THRESHOLD {
+    let (raw, smooth) = ui.input(|i| (i.raw_scroll_delta.y, i.smooth_scroll_delta.y));
+    // Scroll-Events konsumieren – auch Reste aus egui's Scroll-Smoothing,
+    // die ueber mehrere Frames aus unprocessed_scroll_delta nachfliessen.
+    if raw.abs() > 0.0 || smooth.abs() > 0.0 {
+        ui.input_mut(|i| {
+            i.raw_scroll_delta.y = 0.0;
+            i.smooth_scroll_delta.y = 0.0;
+        });
+    }
+    if raw.abs() < WHEEL_THRESHOLD {
         return false;
     }
     let old = *value;
-    *value = (*value + delta.signum() * step).clamp(*range.start(), *range.end());
+    *value = (*value + raw.signum() * step).clamp(*range.start(), *range.end());
     *value != old
 }
