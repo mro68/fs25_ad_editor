@@ -323,7 +323,9 @@ pub fn render_route_defaults_panel(ctx: &egui::Context, state: &AppState) -> Vec
                 ui.add_enabled_ui(has_selection, |ui| {
                     if ui
                         .button("Auf Auswahl")
-                        .on_hover_text("Viewport auf die selektierten Nodes einpassen (mind. 2 selektiert)")
+                        .on_hover_text(
+                            "Viewport auf die selektierten Nodes einpassen (mind. 2 selektiert)",
+                        )
                         .clicked()
                     {
                         events.push(AppIntent::ZoomToSelectionBoundsRequested);
@@ -332,7 +334,8 @@ pub fn render_route_defaults_panel(ctx: &egui::Context, state: &AppState) -> Vec
             });
 
             if state.view.background_map.is_some() {
-                egui::CollapsingHeader::new("Hintergrund").show(ui, |ui| {                    let visible = state.view.background_visible;
+                egui::CollapsingHeader::new("Hintergrund").show(ui, |ui| {
+                    let visible = state.view.background_visible;
                     let toggle_icon = if visible {
                         egui::include_image!("../../assets/icons/icon_visible.svg")
                     } else {

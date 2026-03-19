@@ -217,7 +217,11 @@ impl MenuCatalog {
 
     /// SelectionOnly: Befehle fuer selektierte Nodes (Rechtsklick ins Leere).
     pub fn for_selection_only() -> Self {
-        let mut entries = vec![Self::tool_submenu(), Self::zoom_submenu(), MenuEntry::Separator];
+        let mut entries = vec![
+            Self::tool_submenu(),
+            Self::zoom_submenu(),
+            MenuEntry::Separator,
+        ];
         entries.extend(Self::selection_entries());
         // ── Aktionen ─────────────────────────────────────────
         entries.push(MenuEntry::Separator);
