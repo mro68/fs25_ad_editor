@@ -228,18 +228,17 @@ Interner Renderer fuer Map-Hintergrund.
 
 ### `MarkerRenderer`
 
-Interner Renderer fuer Map-Marker (Pin-Symbole) mit GPU-Instancing.
+Interner Renderer fuer Map-Marker (Pin-Symbole) mit GPU-Instancing und texturbasiertem Rendering.
 
 **Features:**
 - GPU-Instancing fuer beliebig viele Marker
-- Pin-Form via SDF (Kreis + Traene) im Fragment-Shader
-- Pin-Spitze steht exakt auf dem Node-Zentrum
-- Outline-Farbe fuer bessere Sichtbarkeit
-
-**Konstanten:**
-- `MARKER_SIZE_WORLD: 2.0` — Pin-Hoehe in Welt-Einheiten
-- `MARKER_COLOR: [0.9, 0.1, 0.1]` — Rot
-- `MARKER_OUTLINE_COLOR: [0.6, 0.0, 0.0]` — Dunkles Rot
+- Pin-Symbol als PNG-Textur (`icon_map_pin.png`, eingebettet via `include_bytes!`)
+- Fragment-Shader `fs_marker` nutzt `textureSample` — Textur-Alpha definiert die Pin-Form
+- Instanz-Tinting: `instance_color` faerbt den Pin, Textur liefert nur Alpha-Maske
+- Pin-Spitze steht exakt auf dem Node-Zentrum (Y-Offset im Vertex-Shader: `−0.8 × size`)
+- BindGroup: Binding 0 = Uniform-Buffer, Binding 1 = `marker_texture`, Binding 2 = `marker_sampler`
+- Groesse und Farbe kommen aus `EditorOptions` (`marker_size_world`, `marker_color`, `marker_outline_color`)
+- Zoom-kompensierte Skalierung und konfigurierbare Mindestgroesse (`min_marker_size_px`)
 
 ---
 

@@ -124,6 +124,10 @@ Zeigt folgende Informationen (nur Anzeige, nicht interaktiv):
 |-------------|----------|
 | **Mausrad hoch** | Hineinzoomen (auf Mausposition) |
 | **Mausrad runter** | Herauszoomen (von Mausposition) |
+| **Mausrad auf numerichem Feld (Hover)** | Wert erhoehen (Distanzen: +0,1 m; Ganzzahlen: +1) |
+| **Mausrad runter auf numerichem Feld (Hover)** | Wert verringern (Distanzen: −0,1 m; Ganzzahlen: −1) |
+
+> **Tipp:** Alle numerischen Eingabefelder (Slider, Zahleneingaben) reagieren auf das Mausrad, sobald der Cursor darueber steht – kein Klick noetig.
 
 ### Kontextmenue (Rechtsklick)
 
@@ -144,9 +148,9 @@ Zeigt folgende Informationen (nur Anzeige, nicht interaktiv):
 
 | Menuepunkt | Aktion |
 |-----------|--------|
-| 🗺 Marker erstellen | Neuen Map-Marker auf diesem Node anlegen |
+| � Marker erstellen | Neuen Map-Marker auf diesem Node anlegen |
 | ✏ Marker aendern | Bestehenden Marker bearbeiten (Name, Gruppe) |
-| ✕ Marker loeschen | Marker von diesem Node entfernen |
+| 📍✕ Marker loeschen | Marker von diesem Node entfernen |
 
 ---
 

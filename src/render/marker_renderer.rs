@@ -5,7 +5,12 @@ use crate::RoadMap;
 use eframe::{egui_wgpu, wgpu};
 use wgpu::util::DeviceExt;
 
-/// Renderer fuer Map-Marker (Pin-Symbole)
+/// Renderer fuer Map-Marker (Pin-Symbole) mit GPU-Instancing und texturbasiertem Rendering.
+///
+/// Laedt das Pin-Icon `icon_map_pin.png` beim Start als wgpu-Textur (eingebettet via
+/// `include_bytes!`). Die BindGroup enthaelt drei Bindings: Uniform-Buffer (0),
+/// Textur-View (1) und Sampler (2). Der Fragment-Shader (`fs_marker`) faerbt den Pin
+/// per Instanz-Tint — die Textur-Alpha definiert die Pin-Form.
 pub struct MarkerRenderer {
     pipeline: wgpu::RenderPipeline,
     vertex_buffer: wgpu::Buffer,
@@ -15,12 +20,28 @@ pub struct MarkerRenderer {
     instance_capacity: usize,
     /// Wiederverwendbarer Scratch-Buffer fuer Instanz-Daten (verhindert per-Frame-Allokation)
     instance_scratch: Vec<MarkerInstance>,
+    // Pin-Icon-Textur (muss gehalten werden, damit GPU-Ressourcen nicht freigegeben werden)
+    _texture: wgpu::Texture,
+    _sampler: wgpu::Sampler,
 }
 
 impl MarkerRenderer {
-    /// Erstellt einen neuen Marker-Renderer
+    /// Erstellt einen neuen Marker-Renderer und laedt das Pin-Icon als wgpu-Textur.
+    ///
+    /// Die PNG-Datei `assets/icons/icon_map_pin.png` wird per `include_bytes!` statisch
+    /// eingebettet und als `wgpu::Texture` hochgeladen. Die BindGroup wird mit drei
+    /// Bindings initialisiert: Uniform-Buffer, Textur-View und Sampler.
     pub fn new(render_state: &egui_wgpu::RenderState, shader: &wgpu::ShaderModule) -> Self {
         let device = &render_state.device;
+        let queue = &render_state.queue;
+
+        // Pin-Icon-PNG laden und als wgpu-Textur erstellen
+        let png_bytes = include_bytes!("../../assets/icons/icon_map_pin.png");
+        let img = image::load_from_memory(png_bytes)
+            .expect("icon_map_pin.png: konnte PNG nicht dekodieren");
+        let (texture, sampler) =
+            super::texture::create_texture_from_image(device, queue, &img, "Marker Pin Texture");
+        let texture_view = texture.create_view(&wgpu::TextureViewDescriptor::default());
 
         // Uniform-Buffer erstellen
         let uniform_buffer = device.create_buffer(&wgpu::BufferDescriptor {
@@ -30,29 +51,57 @@ impl MarkerRenderer {
             mapped_at_creation: false,
         });
 
-        // Bind-Group-Layout
+        // Bind-Group-Layout: Uniform + Textur + Sampler
         let bind_group_layout = device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
             label: Some("Marker Bind Group Layout"),
-            entries: &[wgpu::BindGroupLayoutEntry {
-                binding: 0,
-                visibility: wgpu::ShaderStages::VERTEX_FRAGMENT,
-                ty: wgpu::BindingType::Buffer {
-                    ty: wgpu::BufferBindingType::Uniform,
-                    has_dynamic_offset: false,
-                    min_binding_size: None,
+            entries: &[
+                wgpu::BindGroupLayoutEntry {
+                    binding: 0,
+                    visibility: wgpu::ShaderStages::VERTEX_FRAGMENT,
+                    ty: wgpu::BindingType::Buffer {
+                        ty: wgpu::BufferBindingType::Uniform,
+                        has_dynamic_offset: false,
+                        min_binding_size: None,
+                    },
+                    count: None,
                 },
-                count: None,
-            }],
+                wgpu::BindGroupLayoutEntry {
+                    binding: 1,
+                    visibility: wgpu::ShaderStages::FRAGMENT,
+                    ty: wgpu::BindingType::Texture {
+                        multisampled: false,
+                        view_dimension: wgpu::TextureViewDimension::D2,
+                        sample_type: wgpu::TextureSampleType::Float { filterable: true },
+                    },
+                    count: None,
+                },
+                wgpu::BindGroupLayoutEntry {
+                    binding: 2,
+                    visibility: wgpu::ShaderStages::FRAGMENT,
+                    ty: wgpu::BindingType::Sampler(wgpu::SamplerBindingType::Filtering),
+                    count: None,
+                },
+            ],
         });
 
         // Bind-Group erstellen
         let bind_group = device.create_bind_group(&wgpu::BindGroupDescriptor {
             label: Some("Marker Bind Group"),
             layout: &bind_group_layout,
-            entries: &[wgpu::BindGroupEntry {
-                binding: 0,
-                resource: uniform_buffer.as_entire_binding(),
-            }],
+            entries: &[
+                wgpu::BindGroupEntry {
+                    binding: 0,
+                    resource: uniform_buffer.as_entire_binding(),
+                },
+                wgpu::BindGroupEntry {
+                    binding: 1,
+                    resource: wgpu::BindingResource::TextureView(&texture_view),
+                },
+                wgpu::BindGroupEntry {
+                    binding: 2,
+                    resource: wgpu::BindingResource::Sampler(&sampler),
+                },
+            ],
         });
 
         // Pipeline-Layout
@@ -137,12 +186,16 @@ impl MarkerRenderer {
             instance_buffer: None,
             instance_capacity: 0,
             instance_scratch: Vec::with_capacity(256),
+            _texture: texture,
+            _sampler: sampler,
         }
     }
 
     /// Rendert alle sichtbaren Map-Marker per GPU-Instancing.
     ///
     /// Marker-Positionen werden ueber die referenzierte Node-ID aufgeloest.
+    /// Das Pin-Icon wird als Textur per `textureSample` gezeichnet; Farbe und Groesse
+    /// kommen aus den `EditorOptions` und werden zoom-kompensiert skaliert.
     pub fn render(
         &mut self,
         ctx: &RenderContext,
@@ -157,9 +210,9 @@ impl MarkerRenderer {
         // Uniforms erstellen (View-Projection-Matrix + AA aus View-Einstellungen)
         let view_proj = super::types::build_view_projection(ctx.camera, ctx.viewport_size);
         let aa_params = match render_quality {
-            RenderQuality::Low => [0.0, 1.0, 0.0, 0.0],
-            RenderQuality::Medium => [1.0, 0.0, 0.0, 0.0],
-            RenderQuality::High => [1.8, 0.0, 0.0, 0.0],
+            RenderQuality::Low => [0.0, 1.0, 0.0, ctx.options.marker_outline_width],
+            RenderQuality::Medium => [1.0, 0.0, 0.0, ctx.options.marker_outline_width],
+            RenderQuality::High => [1.8, 0.0, 0.0, ctx.options.marker_outline_width],
         };
         let uniforms = Uniforms {
             view_proj: view_proj.to_cols_array_2d(),

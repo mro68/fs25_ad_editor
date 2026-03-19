@@ -32,6 +32,8 @@ pub enum Precondition {
     SelectionIsValidSegment,
     /// Farmland-Polygone sind geladen (fuer FieldBoundaryTool)
     FarmlandPolygonsLoaded,
+    /// Mindestens 2 Nodes selektiert (fuer Zoom-auf-Auswahl)
+    AtLeastTwoSelected,
 }
 
 /// Kontext fuer die Precondition-Auswertung — alle noetigen Daten aus dem aktuellen State.
@@ -87,6 +89,8 @@ impl Precondition {
             Self::SelectionIsValidSegment => ctx.segment_record_id.is_some(),
 
             Self::FarmlandPolygonsLoaded => ctx.farmland_polygons_loaded,
+
+            Self::AtLeastTwoSelected => ctx.selected_node_ids.len() >= 2,
         }
     }
 }

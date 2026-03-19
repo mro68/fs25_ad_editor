@@ -5,6 +5,7 @@
 //! Keine Vorschau — nach Bestaetigung wird direkt gezeichnet.
 
 use crate::app::{AppIntent, UiState};
+use crate::ui::common::apply_wheel_step;
 
 /// Rendert den Einstellungsdialog fuer die Batch-Feld-Nachzeichnung.
 ///
@@ -36,34 +37,37 @@ pub fn show_trace_all_fields_dialog(ctx: &egui::Context, ui_state: &mut UiState)
                     // Nodedistanz
                     ui.label("Nodedistanz (m):")
                         .on_hover_text("Abstand zwischen erzeugten Wegpunkten entlang der Feldgrenze");
-                    ui.add(
+                    let r = ui.add(
                         egui::DragValue::new(&mut dlg.spacing)
                             .range(1.0..=100.0)
                             .speed(0.5)
                             .suffix(" m"),
                     );
+                    apply_wheel_step(ui, &r, &mut dlg.spacing, 1.0, 1.0..=100.0);
                     ui.end_row();
 
                     // Versatz
                     ui.label("Versatz (m):")
                         .on_hover_text("Abstand vom Feldrand — positiv = nach innen, negativ = nach aussen");
-                    ui.add(
+                    let r = ui.add(
                         egui::DragValue::new(&mut dlg.offset)
                             .range(-50.0..=50.0)
                             .speed(0.5)
                             .suffix(" m"),
                     );
+                    apply_wheel_step(ui, &r, &mut dlg.offset, 0.5, -50.0..=50.0);
                     ui.end_row();
 
                     // Begradigung
                     ui.label("Begradigung (m):")
                         .on_hover_text("Douglas-Peucker-Toleranz — groessere Werte vereinfachen kurze Ausschwingungen heraus (0 = aus)");
-                    ui.add(
+                    let r = ui.add(
                         egui::DragValue::new(&mut dlg.tolerance)
                             .range(0.0..=20.0)
                             .speed(0.25)
                             .suffix(" m"),
                     );
+                    apply_wheel_step(ui, &r, &mut dlg.tolerance, 0.1, 0.0..=20.0);
                     ui.end_row();
                 });
 

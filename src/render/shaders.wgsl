@@ -178,7 +178,13 @@ fn fs_background(in: BackgroundVertexOutput) -> @location(0) vec4<f32> {
     return vec4<f32>(texture_color.rgb, final_alpha);
 }
 
-// === Map-Marker-Rendering (Pin-Symbol wie Google Maps) ===
+// === Map-Marker-Rendering (Pin-Symbol als Textur) ===
+
+// Textur-Bindings fuer das Pin-Icon (group(0), bindings 1+2)
+@group(0) @binding(1)
+var marker_texture: texture_2d<f32>;
+@group(0) @binding(2)
+var marker_sampler: sampler;
 
 struct MarkerInstanceInput {
     @location(1) instance_position: vec2<f32>,
@@ -201,12 +207,12 @@ fn vs_marker(
 ) -> MarkerVertexOutput {
     var out: MarkerVertexOutput;
     
-    // Skaliere das Quad mit der Instanz-Groesse
-    let scaled_pos = vertex.position * instance.instance_size;
+    // Skaliere das Quad mit der Instanz-Groesse, Breite um 25% reduzieren
+    let scaled_pos = vec2<f32>(vertex.position.x, vertex.position.y) * instance.instance_size;
     
-    // Verschiebe Pin nach oben (negatives Y = Bildschirm oben), damit die Spitze auf dem Node liegt
-    // Pin-Spitze ist bei uv.y = -0.8, also vertex.position.y = 0.8 → kompensieren mit -0.8 * size
-    let pin_offset = vec2<f32>(0.0, -0.8 * instance.instance_size);
+    // Verschiebe Pin nach unten (negatives Y), damit die Spitze auf dem Node liegt
+    // Pin-Spitze ist bei uv.y = 0 (unten nach Y-Flip-Entfernung) → verschieben mit -size
+    let pin_offset = vec2<f32>(0.0, -instance.instance_size);
     
     // Verschiebe zur Instanz-Position mit Offset
     let world_pos = scaled_pos + instance.instance_position + pin_offset;
@@ -216,58 +222,29 @@ fn vs_marker(
     out.color = instance.instance_color;
     out.outline_color = instance.instance_outline_color;
     
-    // UV invertieren (Y-Flip), damit Pin richtig herum ist
-    out.uv = vec2<f32>(vertex.position.x, -vertex.position.y);
+    // UV: [-1..1] → [0..1], keine Y-Flip (Textur-Y=0 ist unten = Pin-Spitze)
+    out.uv = vec2<f32>(vertex.position.x * 0.5 + 0.5, vertex.position.y * 0.5 + 0.5);
     
     return out;
 }
 
 @fragment
 fn fs_marker(in: MarkerVertexOutput) -> @location(0) vec4<f32> {
-    // Pin-Form: Kreis oben (y > 0) + Traene unten (y <= 0)
-    let x = in.uv.x;
-    let y = in.uv.y;
-    
-    // Kreis oben (zentriert bei y=0.3, radius=0.3)
-    let circle_center = vec2<f32>(0.0, 0.3);
-    let circle_radius = 0.3;
-    let dist_to_circle = distance(in.uv, circle_center);
-    
-    let tip_y = -0.8;
-    let hard_edges = uniforms.aa_params.y > 0.5;
-    
-    // Kombiniere Kreis und Traenenform mit AA aus View-Einstellungen
-    var alpha: f32;
-    if (y > 0.0) {
-        // Oberer Bereich: Kreisfoermig
-        if (hard_edges) {
-            alpha = select(0.0, 1.0, dist_to_circle <= circle_radius);
-        } else {
-            let edge = max(fwidth(dist_to_circle) * uniforms.aa_params.x, 0.0005);
-            alpha = 1.0 - smoothstep(circle_radius - edge, circle_radius + edge, dist_to_circle);
-        }
-    } else {
-        // Unterer Bereich: Traenenform — Breite nimmt nach unten ab
-        let width_at_y = circle_radius * (1.0 - (abs(y) * 1.2));
-        if (hard_edges) {
-            let is_inside = abs(x) <= width_at_y && y >= tip_y;
-            alpha = select(0.0, 1.0, is_inside);
-        } else {
-            let dist_to_side = width_at_y - abs(x);
-            let dist_to_bottom = y - tip_y;
-            let min_dist = min(dist_to_side, dist_to_bottom);
-            let edge = max(fwidth(min_dist) * uniforms.aa_params.x, 0.0005);
-            alpha = smoothstep(-edge, edge, min_dist);
-        }
+    // Textur-Sampling: Pin-Icon als Textur mit Alpha-Maske
+    let tex_color = textureSample(marker_texture, marker_sampler, in.uv);
+
+    // Transparente Bereiche verwerfen
+    if (tex_color.a < 0.01) {
+        discard;
     }
-    
-    // Outline: duenner Rand
-    let outline_thickness = 0.08;
-    let is_outline: bool = 
-        (y > 0.0 && abs(dist_to_circle - circle_radius) < outline_thickness) ||
-        (y <= 0.0 && y >= tip_y && abs(abs(x) - (circle_radius * (1.0 - (abs(y) * 1.2)))) < outline_thickness);
-    
-    let final_color = select(in.color.rgb, in.outline_color.rgb, is_outline);
-    
-    return vec4<f32>(final_color, alpha);
+
+    // Outline via Alpha-Gradient: marker_outline_width (aa_params.w) steuert die Breite.
+    // Innerer Schwellwert: Pixel mit Alpha > threshold gehoeren zum Kern (fill_color).
+    // Pixel zwischen discard-Schwelle und threshold erhalten outline_color.
+    let outline_width = uniforms.aa_params.w;
+    let threshold = 1.0 - outline_width;
+    let edge = smoothstep(threshold - 0.05, threshold + 0.05, tex_color.a);
+    let rgb = mix(in.outline_color.rgb, in.color.rgb, edge);
+
+    return vec4<f32>(rgb, tex_color.a * in.color.a);
 }

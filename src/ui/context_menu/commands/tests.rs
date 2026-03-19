@@ -244,7 +244,8 @@ fn catalog_empty_area_shows_tools() {
     assert!(has_command(&entries, CommandId::SetToolRouteStraight));
     assert!(has_command(&entries, CommandId::SetToolRouteQuadratic));
     assert!(has_command(&entries, CommandId::SetToolRouteCubic));
-    assert_eq!(count_commands(&entries), 7);
+    assert!(has_command(&entries, CommandId::ZoomToFit));
+    assert_eq!(count_commands(&entries), 8);
 }
 
 #[test]

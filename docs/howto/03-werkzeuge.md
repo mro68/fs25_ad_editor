@@ -107,6 +107,7 @@ Zeichnet einen interpolierenden Spline, der durch **alle geklickten Punkte** fue
 - **Verkettung:** Nach Erstellung wird der letzte Endpunkt als neuer Startpunkt uebernommen. Das Tool bleibt aktiv — der naechste Klick setzt den neuen Endpunkt. So koennen zusammenhaengende Strecken nahtlos hintereinander erstellt werden.
 - **Nachbearbeitung:** Segment-Laenge/Node-Anzahl koennen nach Erstellung per Slider angepasst werden. Die zuletzt erstellte Strecke wird automatisch geloescht und mit den neuen Parametern neu berechnet.
 - **Snap:** Start- und Endpunkte rasten auf existierende Nodes ein (Snap-Radius: 3m)
+- **Segment erstellen (Checkbox):** Steuert, ob die erstellte Route als benanntes Segment registriert wird. Wenn aktiviert, wird die Strecke im Segment-Verzeichnis gelistet und kann per Doppelklick als Ganzes selektiert werden. Deaktivieren, wenn nur lose Nodes ohne Segment-Zugehoerigkeit gewuenscht sind.
 
 ---
 

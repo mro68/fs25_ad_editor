@@ -85,7 +85,7 @@ Map-Marker sind benannte Ziele auf der Karte (z. B. „Hof", „Feld 1", „Silo
 ### Marker erstellen
 
 1. Einen einzelnen Node selektieren
-2. Rechtsklick → **"🗺 Marker erstellen"**
+2. Rechtsklick → **"� Marker erstellen"**
 3. Im Dialog Name und Gruppe eingeben
 4. Bestaetigen
 
@@ -99,15 +99,17 @@ Map-Marker sind benannte Ziele auf der Karte (z. B. „Hof", „Feld 1", „Silo
 ### Marker loeschen
 
 1. Den Node mit Marker selektieren
-2. Rechtsklick → **"✕ Marker loeschen"**
+2. Rechtsklick → **"📍✕ Marker loeschen"**
 
 ### Darstellung
 
-Marker werden als **rote Pin-Symbole** dargestellt:
+Marker werden als **Pin-Symbole** dargestellt:
 
 - Pin-Spitze sitzt exakt auf dem Node-Zentrum
-- Rote Fuellung mit dunkelrotem Rand
+- Farbe und Umrissstärke sind in den **Optionen** konfigurierbar
 - Groesse: 2.0 Welteinheiten
+
+> **Tipp:** Umrissstärke und Markerfarbe koennen unter **Datei → Einstellungen → Map-Marker** angepasst werden.
 
 ---
 

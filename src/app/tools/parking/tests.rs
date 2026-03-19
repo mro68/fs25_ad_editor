@@ -292,7 +292,7 @@ fn test_single_parking_matches_requested_blueprint() {
         num_rows: 1,
         row_spacing: 7.0,
         bay_length: 80.0,
-        entry_t: 0.5,
+        entry_t: 0.25,
         exit_t: 0.5,
         ramp_length: 5.0,
         entry_side: RampSide::Left,

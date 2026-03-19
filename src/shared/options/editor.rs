@@ -5,7 +5,7 @@ use super::render::{
     OverviewLayerOptions, SelectionStyle, ARROW_LENGTH_WORLD, ARROW_WIDTH_WORLD,
     CONNECTION_COLOR_DUAL, CONNECTION_COLOR_REGULAR, CONNECTION_COLOR_REVERSE,
     CONNECTION_THICKNESS_SUBPRIO_WORLD, CONNECTION_THICKNESS_WORLD, DEFAULT_ZOOM_COMPENSATION_MAX,
-    MARKER_COLOR, MARKER_OUTLINE_COLOR, MARKER_SIZE_WORLD, MIN_ARROW_SIZE_PX,
+    MARKER_COLOR, MARKER_OUTLINE_COLOR, MARKER_OUTLINE_WIDTH, MARKER_SIZE_WORLD, MIN_ARROW_SIZE_PX,
     MIN_CONNECTION_WIDTH_PX, MIN_MARKER_SIZE_PX, MIN_NODE_SIZE_PX, NODE_COLOR_DEFAULT,
     NODE_COLOR_SELECTED, NODE_COLOR_SUBPRIO, NODE_COLOR_WARNING, NODE_DECIMATION_SPACING_PX,
     NODE_SIZE_WORLD, SELECTION_SIZE_FACTOR, TERRAIN_HEIGHT_SCALE,
@@ -50,6 +50,9 @@ pub struct EditorOptions {
     pub marker_size_world: f32,
     pub marker_color: [f32; 4],
     pub marker_outline_color: [f32; 4],
+    /// Umrissstärke des Map-Markers als Anteil am Radius (0.01–0.3).
+    #[serde(default = "default_marker_outline_width")]
+    pub marker_outline_width: f32,
 
     // Kamera
     #[serde(default = "default_camera_zoom_min")]
@@ -72,6 +75,9 @@ pub struct EditorOptions {
     pub reconnect_on_delete: bool,
     #[serde(default)]
     pub split_connection_on_place: bool,
+    /// Ob Route-Tool-Ergebnisse automatisch als Segment registriert werden.
+    #[serde(default)]
+    pub auto_create_segment: bool,
 
     // Terrain
     pub terrain_height_scale: f32,
@@ -143,6 +149,7 @@ impl Default for EditorOptions {
             marker_size_world: MARKER_SIZE_WORLD,
             marker_color: MARKER_COLOR,
             marker_outline_color: MARKER_OUTLINE_COLOR,
+            marker_outline_width: MARKER_OUTLINE_WIDTH,
             camera_zoom_min: CAMERA_ZOOM_MIN,
             camera_zoom_max: CAMERA_ZOOM_MAX,
             camera_zoom_step: CAMERA_ZOOM_STEP,
@@ -153,6 +160,7 @@ impl Default for EditorOptions {
             value_adjust_input_mode: ValueAdjustInputMode::default(),
             reconnect_on_delete: true,
             split_connection_on_place: true,
+            auto_create_segment: false,
             terrain_height_scale: TERRAIN_HEIGHT_SCALE,
             bg_opacity: 1.0,
             bg_opacity_at_min_zoom: 0.0,
@@ -196,6 +204,10 @@ fn default_hitbox_scale_percent() -> f32 {
 
 fn default_mouse_wheel_distance_step_m() -> f32 {
     MOUSE_WHEEL_DISTANCE_STEP_M
+}
+
+fn default_marker_outline_width() -> f32 {
+    MARKER_OUTLINE_WIDTH
 }
 
 fn default_camera_zoom_min() -> f32 {
@@ -412,5 +424,72 @@ impl EditorOptions {
             return 0.0;
         }
         self.node_decimation_spacing_px * world_per_pixel
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// Prüft, dass eine alte TOML-Datei ohne neue Felder korrekt mit Defaults geladen wird.
+    #[test]
+    fn test_deserialize_missing_new_fields_uses_defaults() {
+        // Minimale gueltige TOML ohne auto_create_segment und marker_outline_width
+        let toml_str = r#"
+node_size_world = 1.0
+node_color_default = [0.2, 0.6, 1.0, 1.0]
+node_color_subprio = [0.5, 0.5, 0.5, 1.0]
+node_color_selected = [1.0, 0.0, 0.0, 1.0]
+node_color_warning = [1.0, 1.0, 0.0, 1.0]
+selection_size_factor = 140.0
+connection_thickness_world = 0.3
+connection_thickness_subprio_world = 0.15
+arrow_length_world = 1.5
+arrow_width_world = 0.8
+connection_color_regular = [0.2, 0.6, 1.0, 1.0]
+connection_color_dual = [0.0, 1.0, 0.5, 1.0]
+connection_color_reverse = [1.0, 0.3, 0.3, 1.0]
+marker_size_world = 3.0
+marker_color = [1.0, 0.0, 0.0, 1.0]
+marker_outline_color = [0.0, 0.0, 0.0, 1.0]
+camera_zoom_step = 1.15
+camera_scroll_zoom_step = 1.05
+terrain_height_scale = 1.0
+"#;
+        let opts: EditorOptions =
+            toml::from_str(toml_str).expect("Deserialisierung fehlgeschlagen");
+        assert!(
+            !opts.auto_create_segment,
+            "auto_create_segment muss default false sein"
+        );
+        assert!(
+            (opts.marker_outline_width - MARKER_OUTLINE_WIDTH).abs() < f32::EPSILON,
+            "marker_outline_width muss default {} sein, ist {}",
+            MARKER_OUTLINE_WIDTH,
+            opts.marker_outline_width
+        );
+    }
+
+    /// Prüft, dass Roundtrip serialize → deserialize die neuen Felder erhält.
+    #[test]
+    fn test_toml_roundtrip_new_fields() {
+        let opts = EditorOptions {
+            auto_create_segment: false,
+            marker_outline_width: 0.15,
+            ..EditorOptions::default()
+        };
+
+        let toml_str = toml::to_string_pretty(&opts).expect("Serialisierung fehlgeschlagen");
+        let loaded: EditorOptions =
+            toml::from_str(&toml_str).expect("Deserialisierung fehlgeschlagen");
+
+        assert!(
+            !loaded.auto_create_segment,
+            "auto_create_segment muss false bleiben"
+        );
+        assert!(
+            (loaded.marker_outline_width - 0.15).abs() < f32::EPSILON,
+            "marker_outline_width muss 0.15 bleiben"
+        );
     }
 }

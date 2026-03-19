@@ -95,6 +95,7 @@ impl RouteTool for SmoothCurveTool {
                     nodes,
                     connections,
                     connection_styles: styles,
+                    labels: vec![],
                 }
             }
             Phase::ControlNodes => {
@@ -128,6 +129,7 @@ impl RouteTool for SmoothCurveTool {
                     nodes,
                     connections,
                     connection_styles: styles,
+                    labels: vec![],
                 }
             }
         }

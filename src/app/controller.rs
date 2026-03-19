@@ -310,6 +310,7 @@ impl AppController {
             AppCommand::DissolveSegment { segment_id } => {
                 handlers::segment::dissolve(state, segment_id)
             }
+            AppCommand::GroupSelectionAsSegment => handlers::segment::group_selection(state),
 
             // === Copy/Paste ===
             AppCommand::CopySelection => handlers::editing::copy_selection(state),

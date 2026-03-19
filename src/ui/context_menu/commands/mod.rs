@@ -106,10 +106,18 @@ pub enum CommandId {
     // ── Segment ──────────────────────────────────────────────────────
     /// Selektiertes Segment nachtraeglich bearbeiten
     EditSegment,
+    /// Selektierte zusammenhaengende Nodes als neues Segment gruppieren
+    GroupSelectionAsSegment,
 
     // ── Extras ───────────────────────────────────────────────────────
     /// FieldBoundaryTool aktivieren
     SetToolFieldBoundary,
+
+    // ── Zoom ─────────────────────────────────────────────────────────
+    /// Alles in den Viewport einpassen
+    ZoomToFit,
+    /// Auf die Grenzen der aktuellen Selektion zoomen
+    ZoomToSelection,
 }
 
 // =============================================================================
@@ -271,11 +279,16 @@ impl CommandId {
             Self::EditSegment => AppIntent::EditSegmentRequested {
                 record_id: ctx.segment_record_id.unwrap_or(0),
             },
+            Self::GroupSelectionAsSegment => AppIntent::GroupSelectionAsSegmentRequested,
 
             // ── Extras ───────────────────────────────────────────────────────
             Self::SetToolFieldBoundary => AppIntent::SelectRouteToolRequested {
                 index: TOOL_INDEX_FIELD_BOUNDARY,
             },
+
+            // ── Zoom ─────────────────────────────────────────────────────────
+            Self::ZoomToFit => AppIntent::ZoomToFitRequested,
+            Self::ZoomToSelection => AppIntent::ZoomToSelectionBoundsRequested,
         }
     }
 }

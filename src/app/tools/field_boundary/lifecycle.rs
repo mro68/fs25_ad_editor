@@ -85,6 +85,7 @@ impl crate::app::tools::RouteTool for FieldBoundaryTool {
             nodes,
             connections,
             connection_styles,
+            labels: vec![],
         }
     }
 

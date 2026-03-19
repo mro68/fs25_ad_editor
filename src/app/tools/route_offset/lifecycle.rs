@@ -91,6 +91,7 @@ impl RouteTool for RouteOffsetTool {
             nodes,
             connections,
             connection_styles: styles,
+            labels: vec![],
         }
     }
 
