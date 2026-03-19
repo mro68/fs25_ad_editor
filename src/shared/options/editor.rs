@@ -458,8 +458,8 @@ terrain_height_scale = 1.0
 "#;
         let opts: EditorOptions =
             toml::from_str(toml_str).expect("Deserialisierung fehlgeschlagen");
-        assert_eq!(
-            opts.auto_create_segment, false,
+        assert!(
+            !opts.auto_create_segment,
             "auto_create_segment muss default false sein"
         );
         assert!(
@@ -473,16 +473,18 @@ terrain_height_scale = 1.0
     /// Prüft, dass Roundtrip serialize → deserialize die neuen Felder erhält.
     #[test]
     fn test_toml_roundtrip_new_fields() {
-        let mut opts = EditorOptions::default();
-        opts.auto_create_segment = false;
-        opts.marker_outline_width = 0.15;
+        let opts = EditorOptions {
+            auto_create_segment: false,
+            marker_outline_width: 0.15,
+            ..EditorOptions::default()
+        };
 
         let toml_str = toml::to_string_pretty(&opts).expect("Serialisierung fehlgeschlagen");
         let loaded: EditorOptions =
             toml::from_str(&toml_str).expect("Deserialisierung fehlgeschlagen");
 
-        assert_eq!(
-            loaded.auto_create_segment, false,
+        assert!(
+            !loaded.auto_create_segment,
             "auto_create_segment muss false bleiben"
         );
         assert!(

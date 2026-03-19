@@ -17,7 +17,7 @@ impl InputState {
         if let Some(pos) = pointer_pos {
             let top_layer = ctx.ui.ctx().layer_id_at(pos);
             // Background-Layer = Viewport; alles andere (Window, Tooltip, Popup) → kein Zoom
-            if top_layer.map_or(false, |l| l.order != egui::Order::Background) {
+            if top_layer.is_some_and(|l| l.order != egui::Order::Background) {
                 return;
             }
         }

@@ -232,12 +232,19 @@ fn vs_marker(
 fn fs_marker(in: MarkerVertexOutput) -> @location(0) vec4<f32> {
     // Textur-Sampling: Pin-Icon als Textur mit Alpha-Maske
     let tex_color = textureSample(marker_texture, marker_sampler, in.uv);
-    
+
     // Transparente Bereiche verwerfen
     if (tex_color.a < 0.01) {
         discard;
     }
-    
-    // Tinting: Textur-Alpha definiert die Pin-Form, instance_color faerbt den Pin
-    return vec4<f32>(in.color.rgb, tex_color.a * in.color.a);
+
+    // Outline via Alpha-Gradient: marker_outline_width (aa_params.w) steuert die Breite.
+    // Innerer Schwellwert: Pixel mit Alpha > threshold gehoeren zum Kern (fill_color).
+    // Pixel zwischen discard-Schwelle und threshold erhalten outline_color.
+    let outline_width = uniforms.aa_params.w;
+    let threshold = 1.0 - outline_width;
+    let edge = smoothstep(threshold - 0.05, threshold + 0.05, tex_color.a);
+    let rgb = mix(in.outline_color.rgb, in.color.rgb, edge);
+
+    return vec4<f32>(rgb, tex_color.a * in.color.a);
 }
