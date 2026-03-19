@@ -9,6 +9,7 @@ Das `shared`-Modul enthaelt Layer-uebergreifende Typen, die zwischen `app` (Prod
 - `render_scene.rs` — `RenderScene` Uebergabevertrag App → Render
 - `render_quality.rs` — `RenderQuality` Enum (Low/Medium/High)
 - `options/` — Zentrale Konfigurationskonstanten + `EditorOptions` (Laufzeit-Optionen), aufgeteilt in `camera.rs`, `render.rs`, `tools.rs`, `editor.rs`
+- `i18n/` — Mehrsprachigkeits-System: `Language`-Enum, `I18nKey`-Enum, `t()`-Funktion (DE + EN, Zero-Alloc)
 - `spline_geometry.rs` — Layer-neutrale Catmull-Rom-Geometrie-Funktionen (kein import aus `tools` noetig)
 
 ## Haupttypen
@@ -219,6 +220,9 @@ pub struct EditorOptions {
     pub min_arrow_size_px: f32,
     pub min_marker_size_px: f32,
     pub node_decimation_spacing_px: f32,
+    // Sprache
+    /// Aktive UI-Sprache (Standard: `Language::De`). Steuert alle UI-Übersetzungen via `t()`.
+    pub language: Language,
 }
 ```
 
@@ -231,3 +235,69 @@ pub struct EditorOptions {
 - `snap_radius(&self) -> f32` — Berechnet den Snap-Radius in Welteinheiten
 - `selection_size_multiplier(&self) -> f32` — Selektions-Multiplikator aus `selection_size_factor` in Prozent
 - `zoom_compensation(&self, zoom: f32) -> f32` — Berechnet den Zoom-Kompensationsfaktor fuer eine gegebene Zoom-Stufe. Formel: `(1/zoom)^0.5`, geclampt auf `[1.0, zoom_compensation_max]`. Bei `zoom >= 1.0` ist der Faktor `1.0`; bei `zoom_compensation_max <= 1.0` ist die Kompensation deaktiviert.
+
+---
+
+## Mehrsprachigkeit (`shared::i18n`)
+
+Compile-Time-sicheres i18n-System mit Enum-Keys. Alle Übersetzungen sind `&'static str` (Zero-Alloc).
+Unterstützte Sprachen: Deutsch (`De`, Standard) und Englisch (`En`).
+`match` in den Sprachdateien erzwingt Vollständigkeit bei neuen Keys.
+
+### `Language`
+
+```rust
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize, Default)]
+pub enum Language {
+    #[default]
+    De,
+    En,
+}
+```
+
+**Methoden:**
+- `display_name(self) -> &'static str` — Anzeigename in der jeweiligen Sprache (`"Deutsch"` / `"English"`)
+- `all() -> &'static [Language]` — Alle verfügbaren Sprachen — geeignet für ComboBox-Iteration
+
+### `I18nKey`
+
+Enum aller übersetzbaren UI-Schlüssel. Gruppen: Allgemein, Dialog-Chrome, Options-Dialog (Abschnitte, Felder, Tooltips), Menüleiste, Status-Bar, Tool-Namen.
+
+```rust
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub enum I18nKey {
+    // Allgemein
+    AppTitle, Ok, Cancel, Apply, Close, Reset, Delete, Add, Remove, LanguageLabel,
+    // Dialog-Chrome
+    DialogClose, DialogDefaults,
+    // Options-Dialog: Navigation
+    OptSectionGeneral, OptSectionNodes, OptSectionTools, OptSectionConnections, OptSectionBehavior,
+    // ... (insgesamt ~163 Varianten, vollständig in keys.rs)
+    // Menüleiste (MenuXxx — 29 Keys)
+    // Status-Bar (StatusXxx — 13 Keys)
+    // Tool-Namen (ToolNameXxx — 4 Keys)
+}
+```
+
+### `t()`
+
+```rust
+pub fn t(lang: Language, key: I18nKey) -> &'static str
+```
+
+Übersetzt `key` in die gewählte Sprache. Gibt immer `&'static str` zurück — keine Heap-Allokation.
+
+**Beispiel:**
+```rust
+use crate::shared::{t, I18nKey, Language};
+
+let lang = opts.language;
+ui.label(t(lang, I18nKey::OptSectionGeneral)); // → "Allgemein" oder "General"
+```
+
+**Re-Exports aus `shared`:**
+- `shared::t` — Übersetzungs-Funktion
+- `shared::Language` — Sprachen-Enum
+- `shared::I18nKey` — Schlüssel-Enum
+
+**Importrichtung:** `UI → shared::i18n`, `App → shared::i18n` (erlaubt, da `shared` Cross-Layer)

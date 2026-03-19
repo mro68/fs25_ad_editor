@@ -3,7 +3,7 @@
 //! Jede `render_*`-Funktion rendert einen thematischen Block und gibt `true`
 //! zurueck wenn sich ein Wert geaendert hat.
 
-use crate::shared::{EditorOptions, SelectionStyle, ValueAdjustInputMode};
+use crate::shared::{t, EditorOptions, I18nKey, Language, SelectionStyle, ValueAdjustInputMode};
 use crate::ui::common::apply_wheel_step;
 
 fn color_edit(ui: &mut egui::Ui, label: &str, color: &mut [f32; 4]) -> bool {
@@ -28,10 +28,10 @@ fn color_edit(ui: &mut egui::Ui, label: &str, color: &mut [f32; 4]) -> bool {
 }
 
 /// Rendert die Node-Darstellungseinstellungen (Groesse, Farben, Hitbox).
-pub(super) fn render_nodes(ui: &mut egui::Ui, opts: &mut EditorOptions) -> bool {
+pub(super) fn render_nodes(ui: &mut egui::Ui, opts: &mut EditorOptions, lang: Language) -> bool {
     let mut changed = false;
     ui.horizontal(|ui| {
-        ui.label("Groesse (Welt):");
+        ui.label(t(lang, I18nKey::OptNodeSizeWorld));
         let r = ui.add(
             egui::DragValue::new(&mut opts.node_size_world)
                 .range(0.1..=5.0)
@@ -39,14 +39,30 @@ pub(super) fn render_nodes(ui: &mut egui::Ui, opts: &mut EditorOptions) -> bool 
         );
         changed |=
             r.changed() | apply_wheel_step(ui, &r, &mut opts.node_size_world, 0.1, 0.1..=5.0);
-        r.on_hover_text("Durchmesser eines Wegpunkts in Welteinheiten (Meter).");
+        r.on_hover_text(t(lang, I18nKey::OptNodeSizeWorldHelp));
     });
-    changed |= color_edit(ui, "Standardfarbe:", &mut opts.node_color_default);
-    changed |= color_edit(ui, "SubPrio-Farbe:", &mut opts.node_color_subprio);
-    changed |= color_edit(ui, "Selektiert:", &mut opts.node_color_selected);
-    changed |= color_edit(ui, "Warnung:", &mut opts.node_color_warning);
+    changed |= color_edit(
+        ui,
+        t(lang, I18nKey::OptNodeColorDefault),
+        &mut opts.node_color_default,
+    );
+    changed |= color_edit(
+        ui,
+        t(lang, I18nKey::OptNodeColorSubprio),
+        &mut opts.node_color_subprio,
+    );
+    changed |= color_edit(
+        ui,
+        t(lang, I18nKey::OptNodeColorSelected),
+        &mut opts.node_color_selected,
+    );
+    changed |= color_edit(
+        ui,
+        t(lang, I18nKey::OptNodeColorWarning),
+        &mut opts.node_color_warning,
+    );
     ui.horizontal(|ui| {
-        ui.label("Hitbox (% der Groesse):");
+        ui.label(t(lang, I18nKey::OptHitboxScale));
         let r = ui.add(
             egui::DragValue::new(&mut opts.hitbox_scale_percent)
                 .range(50.0..=500.0)
@@ -55,19 +71,19 @@ pub(super) fn render_nodes(ui: &mut egui::Ui, opts: &mut EditorOptions) -> bool 
         );
         changed |= r.changed()
             | apply_wheel_step(ui, &r, &mut opts.hitbox_scale_percent, 10.0, 50.0..=500.0);
-        r.on_hover_text("Klickbereich um Nodes als Prozent der sichtbaren Groesse. Groessere Werte erleichtern das Anklicken.");
+        r.on_hover_text(t(lang, I18nKey::OptHitboxScaleHelp));
     });
     changed
 }
 
 /// Rendert die Werkzeug-Einstellungen (Eingabemodus, Snap-Radius, Mausrad-Schritt).
-pub(super) fn render_tools(ui: &mut egui::Ui, opts: &mut EditorOptions) -> bool {
+pub(super) fn render_tools(ui: &mut egui::Ui, opts: &mut EditorOptions, lang: Language) -> bool {
     let mut changed = false;
     ui.horizontal(|ui| {
-        ui.label("Wertaenderung:");
+        ui.label(t(lang, I18nKey::OptValueAdjustMode));
         let current_label = match opts.value_adjust_input_mode {
-            ValueAdjustInputMode::DragHorizontal => "LMT li/re",
-            ValueAdjustInputMode::MouseWheel => "Mausrad hoch/runter",
+            ValueAdjustInputMode::DragHorizontal => t(lang, I18nKey::OptValueAdjustDrag),
+            ValueAdjustInputMode::MouseWheel => t(lang, I18nKey::OptValueAdjustWheel),
         };
         egui::ComboBox::from_id_salt("value_adjust_input_mode")
             .selected_text(current_label)
@@ -76,7 +92,7 @@ pub(super) fn render_tools(ui: &mut egui::Ui, opts: &mut EditorOptions) -> bool 
                     .selectable_value(
                         &mut opts.value_adjust_input_mode,
                         ValueAdjustInputMode::DragHorizontal,
-                        "LMT li/re",
+                        t(lang, I18nKey::OptValueAdjustDrag),
                     )
                     .changed()
                 {
@@ -86,7 +102,7 @@ pub(super) fn render_tools(ui: &mut egui::Ui, opts: &mut EditorOptions) -> bool 
                     .selectable_value(
                         &mut opts.value_adjust_input_mode,
                         ValueAdjustInputMode::MouseWheel,
-                        "Mausrad hoch/runter",
+                        t(lang, I18nKey::OptValueAdjustWheel),
                     )
                     .changed()
                 {
@@ -95,9 +111,9 @@ pub(super) fn render_tools(ui: &mut egui::Ui, opts: &mut EditorOptions) -> bool 
             });
     })
     .response
-    .on_hover_text("Eingabemodus fuer DragValue-Felder: Maus ziehen oder Mausrad drehen.");
+    .on_hover_text(t(lang, I18nKey::OptValueAdjustModeHelp));
     ui.horizontal(|ui| {
-        ui.label("Snap-Radius:");
+        ui.label(t(lang, I18nKey::OptSnapRadius));
         let r = ui.add(
             egui::DragValue::new(&mut opts.snap_scale_percent)
                 .range(50.0..=2000.0)
@@ -106,10 +122,10 @@ pub(super) fn render_tools(ui: &mut egui::Ui, opts: &mut EditorOptions) -> bool 
         );
         changed |= r.changed()
             | apply_wheel_step(ui, &r, &mut opts.snap_scale_percent, 10.0, 50.0..=2000.0);
-        r.on_hover_text("Fangradius fuer Werkzeuge in Prozent der Node-Groesse. Bestimmt ab welcher Entfernung ein Node gefangen wird.");
+        r.on_hover_text(t(lang, I18nKey::OptSnapRadiusHelp));
     });
     ui.horizontal(|ui| {
-        ui.label("Mausrad-Schritt Distanz:");
+        ui.label(t(lang, I18nKey::OptMouseWheelDistStep));
         let r = ui.add(
             egui::DragValue::new(&mut opts.mouse_wheel_distance_step_m)
                 .range(0.01..=5.0)
@@ -124,16 +140,20 @@ pub(super) fn render_tools(ui: &mut egui::Ui, opts: &mut EditorOptions) -> bool 
                 0.1,
                 0.01..=5.0,
             );
-        r.on_hover_text("Schrittweite in Metern pro Mausrad-Tick bei Distanz-Eingaben.");
+        r.on_hover_text(t(lang, I18nKey::OptMouseWheelDistStepHelp));
     });
     changed
 }
 
 /// Rendert die Selektions-Einstellungen (Groessenfaktor, Markierungsstil).
-pub(super) fn render_selection(ui: &mut egui::Ui, opts: &mut EditorOptions) -> bool {
+pub(super) fn render_selection(
+    ui: &mut egui::Ui,
+    opts: &mut EditorOptions,
+    lang: Language,
+) -> bool {
     let mut changed = false;
     ui.horizontal(|ui| {
-        ui.label("Groessenfaktor (%):");
+        ui.label(t(lang, I18nKey::OptSelectionSizeFactor));
         let r = ui.add(
             egui::DragValue::new(&mut opts.selection_size_factor)
                 .range(100.0..=200.0)
@@ -141,20 +161,26 @@ pub(super) fn render_selection(ui: &mut egui::Ui, opts: &mut EditorOptions) -> b
         );
         changed |= r.changed()
             | apply_wheel_step(ui, &r, &mut opts.selection_size_factor, 5.0, 100.0..=200.0);
-        r.on_hover_text("Selektierte Nodes werden um diesen Faktor vergroessert dargestellt (100% = keine Vergroesserung).");
+        r.on_hover_text(t(lang, I18nKey::OptSelectionSizeFactorHelp));
     });
     ui.horizontal(|ui| {
-        ui.label("Markierungsstil:");
+        ui.label(t(lang, I18nKey::OptSelectionStyle));
         let current_label = match opts.selection_style {
-            SelectionStyle::Ring => "Ring",
-            SelectionStyle::Gradient => "Farbverlauf",
+            SelectionStyle::Ring => t(lang, I18nKey::OptSelectionStyleRing),
+            SelectionStyle::Gradient => t(lang, I18nKey::OptSelectionStyleGradient),
         };
         egui::ComboBox::from_id_salt("selection_style")
             .selected_text(current_label)
             .show_ui(ui, |ui| {
                 for (style, label) in [
-                    (SelectionStyle::Ring, "Ring"),
-                    (SelectionStyle::Gradient, "Farbverlauf"),
+                    (
+                        SelectionStyle::Ring,
+                        t(lang, I18nKey::OptSelectionStyleRing),
+                    ),
+                    (
+                        SelectionStyle::Gradient,
+                        t(lang, I18nKey::OptSelectionStyleGradient),
+                    ),
                 ] {
                     if ui
                         .selectable_value(&mut opts.selection_style, style, label)
@@ -166,21 +192,20 @@ pub(super) fn render_selection(ui: &mut egui::Ui, opts: &mut EditorOptions) -> b
             });
     })
     .response
-    .on_hover_text(
-        "Darstellung selektierter Nodes: Ring am Rand oder Farbverlauf von Mitte nach aussen.",
-    );
+    .on_hover_text(t(lang, I18nKey::OptSelectionStyleHelp));
     ui.separator();
-    ui.label("Doppelklick-Segment:");
+    ui.label(t(lang, I18nKey::OptDoubleClickSegment));
     ui.horizontal(|ui| {
         changed |= ui
-            .checkbox(&mut opts.segment_stop_at_junction, "Bei Kreuzung stoppen")
-            .on_hover_text(
-                "Doppelklick-Selektion stoppt an Kreuzungen (Nodes mit mehr als 2 Verbindungen).",
+            .checkbox(
+                &mut opts.segment_stop_at_junction,
+                t(lang, I18nKey::OptSegmentStopAtJunction),
             )
+            .on_hover_text(t(lang, I18nKey::OptSegmentStopAtJunctionHelp))
             .changed();
     });
     ui.horizontal(|ui| {
-        ui.label("Max. Winkel (°):");
+        ui.label(t(lang, I18nKey::OptSegmentMaxAngle));
         let r = ui.add(
             egui::DragValue::new(&mut opts.segment_max_angle_deg)
                 .range(0.0..=180.0)
@@ -188,19 +213,23 @@ pub(super) fn render_selection(ui: &mut egui::Ui, opts: &mut EditorOptions) -> b
         );
         changed |= r.changed()
             | apply_wheel_step(ui, &r, &mut opts.segment_max_angle_deg, 5.0, 0.0..=180.0);
-        r.on_hover_text("Maximale Winkelabweichung in Grad fuer Doppelklick-Segment-Erkennung. 0 = deaktiviert.");
+        r.on_hover_text(t(lang, I18nKey::OptSegmentMaxAngleHelp));
         if opts.segment_max_angle_deg == 0.0 {
-            ui.weak("(deaktiviert)");
+            ui.weak(t(lang, I18nKey::OptSegmentDisabled));
         }
     });
     changed
 }
 
 /// Rendert die Verbindungs-Darstellungseinstellungen (Breite, Pfeilgroessen, Farben).
-pub(super) fn render_connections(ui: &mut egui::Ui, opts: &mut EditorOptions) -> bool {
+pub(super) fn render_connections(
+    ui: &mut egui::Ui,
+    opts: &mut EditorOptions,
+    lang: Language,
+) -> bool {
     let mut changed = false;
     ui.horizontal(|ui| {
-        ui.label("Breite Hauptstrasse:");
+        ui.label(t(lang, I18nKey::OptConnectionWidthMain));
         let r = ui.add(
             egui::DragValue::new(&mut opts.connection_thickness_world)
                 .range(0.01..=2.0)
@@ -214,12 +243,10 @@ pub(super) fn render_connections(ui: &mut egui::Ui, opts: &mut EditorOptions) ->
                 0.1,
                 0.01..=2.0,
             );
-        r.on_hover_text(
-            "Linienstaerke fuer Verbindungen mit normaler Prioritaet in Welteinheiten.",
-        );
+        r.on_hover_text(t(lang, I18nKey::OptConnectionWidthMainHelp));
     });
     ui.horizontal(|ui| {
-        ui.label("Breite Nebenstrasse:");
+        ui.label(t(lang, I18nKey::OptConnectionWidthSubprio));
         let r = ui.add(
             egui::DragValue::new(&mut opts.connection_thickness_subprio_world)
                 .range(0.01..=2.0)
@@ -233,10 +260,10 @@ pub(super) fn render_connections(ui: &mut egui::Ui, opts: &mut EditorOptions) ->
                 0.1,
                 0.01..=2.0,
             );
-        r.on_hover_text("Linienstaerke fuer Verbindungen mit Sub-Prioritaet in Welteinheiten.");
+        r.on_hover_text(t(lang, I18nKey::OptConnectionWidthSubprioHelp));
     });
     ui.horizontal(|ui| {
-        ui.label("Pfeillaenge:");
+        ui.label(t(lang, I18nKey::OptArrowLength));
         let r = ui.add(
             egui::DragValue::new(&mut opts.arrow_length_world)
                 .range(0.1..=5.0)
@@ -244,10 +271,10 @@ pub(super) fn render_connections(ui: &mut egui::Ui, opts: &mut EditorOptions) ->
         );
         changed |=
             r.changed() | apply_wheel_step(ui, &r, &mut opts.arrow_length_world, 0.5, 0.1..=5.0);
-        r.on_hover_text("Laenge der Richtungspfeile auf Einbahn-Verbindungen in Welteinheiten.");
+        r.on_hover_text(t(lang, I18nKey::OptArrowLengthHelp));
     });
     ui.horizontal(|ui| {
-        ui.label("Pfeilbreite:");
+        ui.label(t(lang, I18nKey::OptArrowWidth));
         let r = ui.add(
             egui::DragValue::new(&mut opts.arrow_width_world)
                 .range(0.1..=5.0)
@@ -255,20 +282,28 @@ pub(super) fn render_connections(ui: &mut egui::Ui, opts: &mut EditorOptions) ->
         );
         changed |=
             r.changed() | apply_wheel_step(ui, &r, &mut opts.arrow_width_world, 0.5, 0.1..=5.0);
-        r.on_hover_text("Breite der Richtungspfeile auf Einbahn-Verbindungen in Welteinheiten.");
+        r.on_hover_text(t(lang, I18nKey::OptArrowWidthHelp));
     });
-    changed |= color_edit(ui, "Einbahn vorwaerts:", &mut opts.connection_color_regular);
-    changed |= color_edit(ui, "Zweirichtungsverkehr:", &mut opts.connection_color_dual);
     changed |= color_edit(
         ui,
-        "Einbahn rueckwaerts:",
+        t(lang, I18nKey::OptConnectionColorRegular),
+        &mut opts.connection_color_regular,
+    );
+    changed |= color_edit(
+        ui,
+        t(lang, I18nKey::OptConnectionColorDual),
+        &mut opts.connection_color_dual,
+    );
+    changed |= color_edit(
+        ui,
+        t(lang, I18nKey::OptConnectionColorReverse),
         &mut opts.connection_color_reverse,
     );
     changed
 }
 
 /// Rendert die Marker-Darstellungseinstellungen (Pin-Groesse, Farben, Umrissstaerke).
-pub(super) fn render_markers(ui: &mut egui::Ui, opts: &mut EditorOptions) -> bool {
+pub(super) fn render_markers(ui: &mut egui::Ui, opts: &mut EditorOptions, lang: Language) -> bool {
     let mut changed = false;
     ui.horizontal(|ui| {
         ui.add(
@@ -277,7 +312,7 @@ pub(super) fn render_markers(ui: &mut egui::Ui, opts: &mut EditorOptions) -> boo
             ))
             .fit_to_exact_size(egui::Vec2::new(14.0, 14.0)),
         );
-        ui.label("Pin-Groesse:");
+        ui.label(t(lang, I18nKey::OptMarkerSize));
         let r = ui.add(
             egui::DragValue::new(&mut opts.marker_size_world)
                 .range(0.5..=10.0)
@@ -285,11 +320,11 @@ pub(super) fn render_markers(ui: &mut egui::Ui, opts: &mut EditorOptions) -> boo
         );
         changed |=
             r.changed() | apply_wheel_step(ui, &r, &mut opts.marker_size_world, 1.0, 0.5..=10.0);
-        r.on_hover_text("Groesse des Marker-Pin-Icons in Welteinheiten.");
+        r.on_hover_text(t(lang, I18nKey::OptMarkerSizeHelp));
     });
-    changed |= color_edit(ui, "Pin-Farbe:", &mut opts.marker_color);
+    changed |= color_edit(ui, t(lang, I18nKey::OptMarkerColor), &mut opts.marker_color);
     ui.horizontal(|ui| {
-        ui.label("Umrissstaerke:");
+        ui.label(t(lang, I18nKey::OptMarkerOutlineWidth));
         let r = ui.add(
             egui::DragValue::new(&mut opts.marker_outline_width)
                 .range(0.01..=0.3)
@@ -298,16 +333,16 @@ pub(super) fn render_markers(ui: &mut egui::Ui, opts: &mut EditorOptions) -> boo
         );
         changed |= r.changed()
             | apply_wheel_step(ui, &r, &mut opts.marker_outline_width, 0.01, 0.01..=0.3);
-        r.on_hover_text("Strichdicke des Marker-Umrisses als Anteil am Radius. Aendert das SVG-Icon zur Laufzeit.");
+        r.on_hover_text(t(lang, I18nKey::OptMarkerOutlineWidthHelp));
     });
     changed
 }
 
 /// Rendert die Kamera-Einstellungen (Zoom-Grenzen, Scroll-Schritt, Kompensation).
-pub(super) fn render_camera(ui: &mut egui::Ui, opts: &mut EditorOptions) -> bool {
+pub(super) fn render_camera(ui: &mut egui::Ui, opts: &mut EditorOptions, lang: Language) -> bool {
     let mut changed = false;
     ui.horizontal(|ui| {
-        ui.label("Min Zoom:");
+        ui.label(t(lang, I18nKey::OptCameraZoomMin));
         let r = ui.add(
             egui::DragValue::new(&mut opts.camera_zoom_min)
                 .range(0.01..=10.0)
@@ -315,10 +350,10 @@ pub(super) fn render_camera(ui: &mut egui::Ui, opts: &mut EditorOptions) -> bool
         );
         changed |=
             r.changed() | apply_wheel_step(ui, &r, &mut opts.camera_zoom_min, 0.1, 0.01..=10.0);
-        r.on_hover_text("Minimaler Zoom-Faktor. Kleinere Werte erlauben staerkeres Herauszoomen.");
+        r.on_hover_text(t(lang, I18nKey::OptCameraZoomMinHelp));
     });
     ui.horizontal(|ui| {
-        ui.label("Max Zoom:");
+        ui.label(t(lang, I18nKey::OptCameraZoomMax));
         let r = ui.add(
             egui::DragValue::new(&mut opts.camera_zoom_max)
                 .range(1.0..=1000.0)
@@ -326,10 +361,10 @@ pub(super) fn render_camera(ui: &mut egui::Ui, opts: &mut EditorOptions) -> bool
         );
         changed |=
             r.changed() | apply_wheel_step(ui, &r, &mut opts.camera_zoom_max, 5.0, 1.0..=1000.0);
-        r.on_hover_text("Maximaler Zoom-Faktor. Groessere Werte erlauben staerkeres Hineinzoomen.");
+        r.on_hover_text(t(lang, I18nKey::OptCameraZoomMaxHelp));
     });
     ui.horizontal(|ui| {
-        ui.label("Zoom-Schritt (Menue):");
+        ui.label(t(lang, I18nKey::OptCameraZoomStep));
         let r = ui.add(
             egui::DragValue::new(&mut opts.camera_zoom_step)
                 .range(1.01..=3.0)
@@ -337,10 +372,10 @@ pub(super) fn render_camera(ui: &mut egui::Ui, opts: &mut EditorOptions) -> bool
         );
         changed |=
             r.changed() | apply_wheel_step(ui, &r, &mut opts.camera_zoom_step, 0.05, 1.01..=3.0);
-        r.on_hover_text("Zoom-Multiplikator bei Klick auf Zoom-Buttons oder Tastenkuerzel.");
+        r.on_hover_text(t(lang, I18nKey::OptCameraZoomStepHelp));
     });
     ui.horizontal(|ui| {
-        ui.label("Zoom-Schritt (Scroll):");
+        ui.label(t(lang, I18nKey::OptCameraScrollZoomStep));
         let r = ui.add(
             egui::DragValue::new(&mut opts.camera_scroll_zoom_step)
                 .range(1.01..=2.0)
@@ -348,98 +383,86 @@ pub(super) fn render_camera(ui: &mut egui::Ui, opts: &mut EditorOptions) -> bool
         );
         changed |= r.changed()
             | apply_wheel_step(ui, &r, &mut opts.camera_scroll_zoom_step, 0.05, 1.01..=2.0);
-        r.on_hover_text(
-            "Zoom-Multiplikator pro Mausrad-Schritt. Kleinere Werte = feineres Scrollen.",
-        );
+        r.on_hover_text(t(lang, I18nKey::OptCameraScrollZoomStepHelp));
     });
     ui.horizontal(|ui| {
-        ui.label("Zoom-Kompensation Max:");
+        ui.label(t(lang, I18nKey::OptZoomCompensationMax));
         let r = ui
             .add(
                 egui::Slider::new(&mut opts.zoom_compensation_max, 1.0..=8.0)
                     .step_by(0.1)
                     .fixed_decimals(1),
             )
-            .on_hover_text(
-                "Wie stark Nodes und Verbindungen beim Herauszoomen vergroessert werden (1.0 = deaktiviert, 4.0 = Standard)"
-            );
-        changed |= r.changed() | apply_wheel_step(ui, &r, &mut opts.zoom_compensation_max, 0.1, 1.0..=8.0);
+            .on_hover_text(t(lang, I18nKey::OptZoomCompensationMaxHelp));
+        changed |=
+            r.changed() | apply_wheel_step(ui, &r, &mut opts.zoom_compensation_max, 0.1, 1.0..=8.0);
     });
     changed
 }
 
 /// Rendert die LOD/Mindestgroessen-Einstellungen (Pixel-Untergrenzen + Node-Decimation).
-pub(super) fn render_lod(ui: &mut egui::Ui, opts: &mut EditorOptions) -> bool {
+pub(super) fn render_lod(ui: &mut egui::Ui, opts: &mut EditorOptions, lang: Language) -> bool {
     let mut changed = false;
-    ui.label("Mindestgroessen (Pixel, 0 = deaktiviert):");
+    ui.label(t(lang, I18nKey::OptLodMinSizes));
     ui.horizontal(|ui| {
-        ui.label("Nodes:");
+        ui.label(t(lang, I18nKey::OptLodNodes));
         let r = ui
             .add(
                 egui::Slider::new(&mut opts.min_node_size_px, 0.0..=20.0)
                     .step_by(0.5)
                     .fixed_decimals(1),
             )
-            .on_hover_text(
-                "Mindestgroesse fuer Nodes in Pixeln beim Herauszoomen (0 = deaktiviert)",
-            );
+            .on_hover_text(t(lang, I18nKey::OptLodNodesHelp));
         changed |=
             r.changed() | apply_wheel_step(ui, &r, &mut opts.min_node_size_px, 1.0, 0.0..=20.0);
     });
     ui.horizontal(|ui| {
-        ui.label("Verbindungen:");
+        ui.label(t(lang, I18nKey::OptLodConnections));
         let r = ui
             .add(
                 egui::Slider::new(&mut opts.min_connection_width_px, 0.0..=10.0)
                     .step_by(0.5)
                     .fixed_decimals(1),
             )
-            .on_hover_text(
-                "Mindestbreite fuer Verbindungslinien in Pixeln beim Herauszoomen (0 = deaktiviert)",
-            );
-        changed |= r.changed() | apply_wheel_step(ui, &r, &mut opts.min_connection_width_px, 0.5, 0.0..=10.0);
+            .on_hover_text(t(lang, I18nKey::OptLodConnectionsHelp));
+        changed |= r.changed()
+            | apply_wheel_step(ui, &r, &mut opts.min_connection_width_px, 0.5, 0.0..=10.0);
     });
     ui.horizontal(|ui| {
-        ui.label("Pfeile:");
+        ui.label(t(lang, I18nKey::OptLodArrows));
         let r = ui
             .add(
                 egui::Slider::new(&mut opts.min_arrow_size_px, 0.0..=20.0)
                     .step_by(0.5)
                     .fixed_decimals(1),
             )
-            .on_hover_text(
-                "Mindestgroesse fuer Richtungspfeile in Pixeln beim Herauszoomen (0 = deaktiviert)",
-            );
+            .on_hover_text(t(lang, I18nKey::OptLodArrowsHelp));
         changed |=
             r.changed() | apply_wheel_step(ui, &r, &mut opts.min_arrow_size_px, 1.0, 0.0..=20.0);
     });
     ui.horizontal(|ui| {
-        ui.label("Marker:");
+        ui.label(t(lang, I18nKey::OptLodMarkers));
         let r = ui
             .add(
                 egui::Slider::new(&mut opts.min_marker_size_px, 0.0..=30.0)
                     .step_by(1.0)
                     .fixed_decimals(0),
             )
-            .on_hover_text(
-                "Mindestgroesse fuer Marker-Pins in Pixeln beim Herauszoomen (0 = deaktiviert)",
-            );
+            .on_hover_text(t(lang, I18nKey::OptLodMarkersHelp));
         changed |=
             r.changed() | apply_wheel_step(ui, &r, &mut opts.min_marker_size_px, 1.0, 0.0..=30.0);
     });
     ui.separator();
-    ui.label("Node-Ausdünnung:");
+    ui.label(t(lang, I18nKey::OptLodNodeDecimation));
     ui.horizontal(|ui| {
-        ui.label("Mindestabstand (px):");
+        ui.label(t(lang, I18nKey::OptLodDecimationSpacing));
         let r = ui
             .add(
                 egui::Slider::new(&mut opts.node_decimation_spacing_px, 0.0..=50.0)
                     .step_by(1.0)
                     .fixed_decimals(0),
             )
-            .on_hover_text(
-                "Mindestabstand zwischen Nodes in Pixeln beim Herauszoomen. 0 = alle Nodes zeigen.",
-            );
+            .on_hover_text(t(lang, I18nKey::OptLodDecimationSpacingHelp));
         changed |= r.changed()
             | apply_wheel_step(
                 ui,
@@ -453,22 +476,24 @@ pub(super) fn render_lod(ui: &mut egui::Ui, opts: &mut EditorOptions) -> bool {
 }
 
 /// Rendert die Hintergrundkarten-Einstellungen (Deckung, Fade-out).
-pub(super) fn render_background(ui: &mut egui::Ui, opts: &mut EditorOptions) -> bool {
+pub(super) fn render_background(
+    ui: &mut egui::Ui,
+    opts: &mut EditorOptions,
+    lang: Language,
+) -> bool {
     let mut changed = false;
     ui.horizontal(|ui| {
-        ui.label("Standard-Deckung:");
+        ui.label(t(lang, I18nKey::OptBgOpacity));
         let r = ui.add(
             egui::Slider::new(&mut opts.bg_opacity, 0.0..=1.0)
                 .step_by(0.05)
                 .fixed_decimals(2),
         );
         changed |= r.changed() | apply_wheel_step(ui, &r, &mut opts.bg_opacity, 0.05, 0.0..=1.0);
-        r.on_hover_text(
-            "Initiale Hintergrundkarten-Transparenz (0 = unsichtbar, 1 = voll sichtbar).",
-        );
+        r.on_hover_text(t(lang, I18nKey::OptBgOpacityHelp));
     });
     ui.horizontal(|ui| {
-        ui.label("Deckung bei Min-Zoom:");
+        ui.label(t(lang, I18nKey::OptBgOpacityAtMinZoom));
         let r = ui.add(
             egui::Slider::new(&mut opts.bg_opacity_at_min_zoom, 0.0..=1.0)
                 .step_by(0.05)
@@ -476,10 +501,10 @@ pub(super) fn render_background(ui: &mut egui::Ui, opts: &mut EditorOptions) -> 
         );
         changed |= r.changed()
             | apply_wheel_step(ui, &r, &mut opts.bg_opacity_at_min_zoom, 0.05, 0.0..=1.0);
-        r.on_hover_text("Hintergrund-Transparenz beim maximalen Herauszoomen (Ueberblick).");
+        r.on_hover_text(t(lang, I18nKey::OptBgOpacityAtMinZoomHelp));
     });
     ui.horizontal(|ui| {
-        ui.label("Fade-out ab Zoom:");
+        ui.label(t(lang, I18nKey::OptBgFadeStartZoom));
         let r = ui.add(
             egui::DragValue::new(&mut opts.bg_fade_start_zoom)
                 .range(0.1..=50.0)
@@ -487,46 +512,69 @@ pub(super) fn render_background(ui: &mut egui::Ui, opts: &mut EditorOptions) -> 
         );
         changed |=
             r.changed() | apply_wheel_step(ui, &r, &mut opts.bg_fade_start_zoom, 0.5, 0.1..=50.0);
-        r.on_hover_text("Ab diesem Zoom-Level beginnt die Hintergrundkarte auszublenden.");
+        r.on_hover_text(t(lang, I18nKey::OptBgFadeStartZoomHelp));
     });
     changed
 }
 
 /// Rendert die Uebersichtskarten-Layer-Einstellungen (Hillshade, Farmlands, POIs).
-pub(super) fn render_overview_layers(ui: &mut egui::Ui, opts: &mut EditorOptions) -> bool {
+pub(super) fn render_overview_layers(
+    ui: &mut egui::Ui,
+    opts: &mut EditorOptions,
+    lang: Language,
+) -> bool {
     let mut changed = false;
     changed |= ui
-        .checkbox(&mut opts.overview_layers.hillshade, "Hillshade")
-        .on_hover_text("Schattierte Gelaendedarstellung fuer die Uebersichtskarte.")
+        .checkbox(
+            &mut opts.overview_layers.hillshade,
+            t(lang, I18nKey::OptOverviewHillshade),
+        )
+        .on_hover_text(t(lang, I18nKey::OptOverviewHillshadeHelp))
         .changed();
     changed |= ui
-        .checkbox(&mut opts.overview_layers.farmlands, "Farmland-Grenzen")
-        .on_hover_text("Umrisse der Farmland-Parzellen auf der Uebersichtskarte.")
+        .checkbox(
+            &mut opts.overview_layers.farmlands,
+            t(lang, I18nKey::OptOverviewFarmlands),
+        )
+        .on_hover_text(t(lang, I18nKey::OptOverviewFarmlandsHelp))
         .changed();
     changed |= ui
-        .checkbox(&mut opts.overview_layers.farmland_ids, "Farmland-IDs")
-        .on_hover_text("Numerische IDs der Farmland-Parzellen anzeigen.")
+        .checkbox(
+            &mut opts.overview_layers.farmland_ids,
+            t(lang, I18nKey::OptOverviewFarmlandIds),
+        )
+        .on_hover_text(t(lang, I18nKey::OptOverviewFarmlandIdsHelp))
         .changed();
     changed |= ui
-        .checkbox(&mut opts.overview_layers.pois, "POI-Marker")
-        .on_hover_text("Points of Interest (z.B. Verkaufsstellen) auf der Uebersichtskarte.")
+        .checkbox(
+            &mut opts.overview_layers.pois,
+            t(lang, I18nKey::OptOverviewPois),
+        )
+        .on_hover_text(t(lang, I18nKey::OptOverviewPoisHelp))
         .changed();
     changed |= ui
-        .checkbox(&mut opts.overview_layers.legend, "Legende")
-        .on_hover_text("Farblegende fuer die Farmland-Parzellen anzeigen.")
+        .checkbox(
+            &mut opts.overview_layers.legend,
+            t(lang, I18nKey::OptOverviewLegend),
+        )
+        .on_hover_text(t(lang, I18nKey::OptOverviewLegendHelp))
         .changed();
     changed
 }
 
 /// Rendert die Node-Verhalten-Einstellungen (Reconnect beim Loeschen, Verbindung teilen).
-pub(super) fn render_node_behavior(ui: &mut egui::Ui, opts: &mut EditorOptions) -> bool {
+pub(super) fn render_node_behavior(
+    ui: &mut egui::Ui,
+    opts: &mut EditorOptions,
+    lang: Language,
+) -> bool {
     let mut changed = false;
     if ui
-        .checkbox(&mut opts.reconnect_on_delete, "Nach Loeschen verbinden")
-        .on_hover_text(
-            "Wenn aktiviert: Wird ein Node mit jeweils genau einem Vorgaenger und Nachfolger \
-             geloescht, werden Vorgaenger und Nachfolger direkt miteinander verbunden.",
+        .checkbox(
+            &mut opts.reconnect_on_delete,
+            t(lang, I18nKey::OptReconnectOnDelete),
         )
+        .on_hover_text(t(lang, I18nKey::OptReconnectOnDeleteHelp))
         .changed()
     {
         changed = true;
@@ -534,12 +582,9 @@ pub(super) fn render_node_behavior(ui: &mut egui::Ui, opts: &mut EditorOptions) 
     if ui
         .checkbox(
             &mut opts.split_connection_on_place,
-            "Verbindung beim Platzieren teilen",
+            t(lang, I18nKey::OptSplitConnectionOnPlace),
         )
-        .on_hover_text(
-            "Wenn aktiviert: Wird ein neuer Node nahe einer bestehenden Verbindung \
-             platziert, wird diese Verbindung durch den neuen Node aufgeteilt.",
-        )
+        .on_hover_text(t(lang, I18nKey::OptSplitConnectionOnPlaceHelp))
         .changed()
     {
         changed = true;
@@ -548,10 +593,14 @@ pub(super) fn render_node_behavior(ui: &mut egui::Ui, opts: &mut EditorOptions) 
 }
 
 /// Rendert die Copy/Paste-Einstellungen (Vorschau-Deckung).
-pub(super) fn render_copy_paste(ui: &mut egui::Ui, opts: &mut EditorOptions) -> bool {
+pub(super) fn render_copy_paste(
+    ui: &mut egui::Ui,
+    opts: &mut EditorOptions,
+    lang: Language,
+) -> bool {
     let mut changed = false;
     ui.horizontal(|ui| {
-        ui.label("Vorschau-Deckung:");
+        ui.label(t(lang, I18nKey::OptCopyPastePreviewOpacity));
         let r = ui.add(
             egui::Slider::new(&mut opts.copy_preview_opacity, 0.0..=1.0)
                 .step_by(0.05)
@@ -559,9 +608,7 @@ pub(super) fn render_copy_paste(ui: &mut egui::Ui, opts: &mut EditorOptions) -> 
         );
         changed |=
             r.changed() | apply_wheel_step(ui, &r, &mut opts.copy_preview_opacity, 0.05, 0.0..=1.0);
-        r.on_hover_text(
-            "Transparenz der Paste-Vorschau im Viewport (0 = unsichtbar, 1 = volle Deckkraft).",
-        );
+        r.on_hover_text(t(lang, I18nKey::OptCopyPastePreviewOpacityHelp));
     });
     changed
 }
