@@ -285,4 +285,116 @@ pub enum I18nKey {
     OptCopyPastePreviewOpacity,
     /// Tooltip: Vorschau-Deckung Copy/Paste
     OptCopyPastePreviewOpacityHelp,
+
+    // === Menü: Datei ===
+    /// Menüeintrag "Datei"
+    MenuFile,
+    /// Menüeintrag "Öffnen…"
+    MenuOpen,
+    /// Menüeintrag "Speichern"
+    MenuSave,
+    /// Menüeintrag "Speichern unter…"
+    MenuSaveAs,
+    /// Menüeintrag "Höhenkarte auswählen…"
+    MenuSelectHeightmap,
+    /// Menüeintrag "Höhenkarte ändern…"
+    MenuChangeHeightmap,
+    /// Menüeintrag "Höhenkarte entfernen"
+    MenuClearHeightmap,
+    /// Menüeintrag "Übersichtskarte generieren…"
+    MenuGenerateOverview,
+    /// Menüeintrag "Beenden"
+    MenuExit,
+
+    // === Menü: Bearbeiten ===
+    /// Menüeintrag "Bearbeiten"
+    MenuEdit,
+    /// Menüeintrag "Rückgängig (Ctrl+Z)"
+    MenuUndo,
+    /// Menüeintrag "Wiederherstellen (Ctrl+Y)"
+    MenuRedo,
+    /// Menüeintrag "Kopieren (Ctrl+C)"
+    MenuCopy,
+    /// Menüeintrag "Einfügen (Ctrl+V)"
+    MenuPaste,
+    /// Menüeintrag "Optionen…"
+    MenuOptions,
+
+    // === Menü: Ansicht ===
+    /// Menüeintrag "Ansicht"
+    MenuView,
+    /// Menüeintrag "Kamera zurücksetzen"
+    MenuResetCamera,
+    /// Menüeintrag "Vergrößern"
+    MenuZoomIn,
+    /// Menüeintrag "Verkleinern"
+    MenuZoomOut,
+    /// Menüeintrag "Hintergrund laden…"
+    MenuLoadBackground,
+    /// Menüeintrag "Hintergrund ändern…"
+    MenuChangeBackground,
+    /// Untermenü "Renderqualität"
+    MenuRenderQuality,
+    /// Qualitätsstufe "Niedrig"
+    MenuQualityLow,
+    /// Qualitätsstufe "Mittel"
+    MenuQualityMedium,
+    /// Qualitätsstufe "Hoch"
+    MenuQualityHigh,
+
+    // === Menü: Extras ===
+    /// Menüeintrag "Extras"
+    MenuExtras,
+    /// Menüeintrag "Feld erkennen"
+    MenuDetectField,
+    /// Menüeintrag "Alle Felder nachzeichnen"
+    MenuTraceAllFields,
+    /// Disabled-Tooltip: Hintergrund mit Feldgrenzen zuerst laden
+    MenuExtrasNeedBackground,
+    /// Hover-Tooltip: Alle Felder nachzeichnen (Beschreibung)
+    MenuTraceAllFieldsHelp,
+
+    // === Menü: Hilfe ===
+    /// Menüeintrag "Hilfe"
+    MenuHelp,
+    /// Menüeintrag "Über"
+    MenuAbout,
+
+    // === Status-Bar ===
+    /// Status: Keine Datei geladen
+    StatusNoFile,
+    /// Status-Label "Knoten"
+    StatusNodes,
+    /// Status-Label "Verbindungen"
+    StatusConnections,
+    /// Status-Label "Marker"
+    StatusMarkers,
+    /// Status-Label "Karte"
+    StatusMap,
+    /// Status-Label "Zoom"
+    StatusZoom,
+    /// Status-Label "Position"
+    StatusPosition,
+    /// Status-Label "Höhenkarte"
+    StatusHeightmap,
+    /// Status-Wert "Keine" (z. B. bei fehlendem Heightmap)
+    StatusHeightmapNone,
+    /// Status-Label "Ausgewählte Knoten"
+    StatusSelectedNodes,
+    /// Abkürzung "z. B." für Status-Beispielwert
+    StatusExample,
+    /// Status-Label "Werkzeug"
+    StatusTool,
+    /// Status-Label "FPS"
+    StatusFps,
+
+    // === Werkzeug-Namen (Status-Bar) ===
+    /// Werkzeugname "Auswahl"
+    ToolNameSelect,
+    /// Werkzeugname "Verbinden"
+    ToolNameConnect,
+    /// Werkzeugname "Knoten hinzufügen"
+    ToolNameAddNode,
+    /// Werkzeugname "Routen-Werkzeug"
+    ToolNameRoute,
 }
