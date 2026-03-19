@@ -263,6 +263,9 @@
   - [x] **Doku-Sync Sidebar-Gruppenlayout mit Long-Press (2026-03-09)**
     - [x] `ui/API.md`: `render_route_defaults_panel(ctx, &mut AppState)`-Signatur und neues Gruppen-Layout dokumentiert
     - [x] Sidebar-Details aktualisiert: Route-Gruppen (Geraden/Kurven/Constraint/Tools), Default-Gruppen (Richtung/Prioritaet), Aktionen-Block entfernt
+  - [x] **Doku-Sync Icon-Pin-Refactor (2026-03-10)**
+    - [x] `render/API.md`: `MarkerRenderer`-Sektion auf texturbasiertes Rendering aktualisiert (SDF-Referenzen entfernt, BindGroup-Struktur und `textureSample`-Shader dokumentiert, veraltete Konstanten durch `EditorOptions`-Felder ersetzt)
+    - [x] `src/render/marker_renderer.rs`: Struct-Docstring und `new()`-Docstring auf Textur-Loading und BindGroup erweitert; `render()`-Docstring um `textureSample`-Hinweis ergaenzt
   - [x] **Doku-Sync Sidebar-Redesign vollstaendig (2026-03-09)**
     - [x] `ui/API.md`: Vollstaendige API-Sektion fuer `long_press.rs` ergaenzt (`LongPressState`, `LongPressGroup<T>`, `LongPressItem<T>`, `render_long_press_button`, `render_popup`, `paint_dropdown_arrow`)
     - [x] `ui/API.md`: Formatierungsfehler behoben — fehlendes abschliessendes ` ``` ` nach `paint_preview_polyline`-Block
@@ -540,6 +543,13 @@
 - ✅ `src/ui/dialogs/segment_settings_popup.rs` — Popup-Dialog (stop_at_junction, max_angle_deg, Live-Neu-Selektion bei Aenderung)
 - ✅ `apply_wheel_step()` in `options_dialog/sections.rs` — Mausrad-Support fuer alle 25 numerischen Felder im Options-Dialog
 - ✅ Dokumentation synchronisiert: `src/app/API.md`, `src/app/handlers/API.md`, `src/app/use_cases/API.md`, `docs/ROADMAP.md`
+
+**Errungenschaften (UI-Enhancements 2026-03-10):**
+- ✅ `src/ui/common.rs` — Neues Modul mit `apply_wheel_step()` und `WHEEL_THRESHOLD`; Mausrad-Support fuer numerische Felder (Options-Dialog und weitere Widgets)
+- ✅ `EditorOptions::auto_create_segment` — Checkbox steuert ob Route-Tool-Ergebnisse automatisch als Segment registriert werden (Default: `false`)
+- ✅ Kontextmenu-Eintrag "Als Segment gruppieren" (`CommandId::GroupSelectionAsSegment`) — selektierte zusammenhaengende Nodes direkt als Segment-Record registrieren (Precondition: `IsResampleableChain`)
+- ✅ Neue Kontextmenu-Icons: `icon_map_pin.svg`, `icon_map_pin_plus.svg`, `icon_map_pin_minus.svg` fuer `CreateMarker` / `RemoveMarker`
+- ✅ `EditorOptions::marker_outline_width` — Konfigurierbare Umrissstärke des Map-Markers (Anteil am Radius, Shader liest `aa_params.w`); Farb-Picker in UI entfernt
 
 **Naechste Aufgaben:**
 1. 🟡 100k+ Performance-Benchmarks

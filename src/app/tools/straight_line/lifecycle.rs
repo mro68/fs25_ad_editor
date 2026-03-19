@@ -75,6 +75,7 @@ impl RouteTool for StraightLineTool {
             nodes: positions,
             connections,
             connection_styles: styles,
+            labels: vec![],
         }
     }
 

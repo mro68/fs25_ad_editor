@@ -52,22 +52,24 @@ fn execute_and_apply(state: &mut AppState) {
             tool.set_last_created(&ids, rm);
         }
 
-        // Segment in Registry speichern (fuer nachtraegliche Bearbeitung)
-        let record_id = state.segment_registry.next_id();
-        if let Some(tool) = state.editor.tool_manager.active_tool() {
-            if let Some(mut record) = tool.make_segment_record(record_id, &ids) {
-                // Positionen aus RoadMap sammeln
-                record.original_positions = record
-                    .node_ids
-                    .iter()
-                    .filter_map(|id| state.road_map.as_ref()?.nodes.get(id).map(|n| n.position))
-                    .collect();
-                // Marker-Node-IDs fuer spaeteres Cleanup beim Edit
-                record.marker_node_ids = marker_indices
-                    .iter()
-                    .filter_map(|idx| ids.get(*idx).copied())
-                    .collect();
-                state.segment_registry.register(record);
+        // Segment in Registry speichern — nur wenn auto_create_segment aktiv
+        if state.options.auto_create_segment {
+            let record_id = state.segment_registry.next_id();
+            if let Some(tool) = state.editor.tool_manager.active_tool() {
+                if let Some(mut record) = tool.make_segment_record(record_id, &ids) {
+                    // Positionen aus RoadMap sammeln
+                    record.original_positions = record
+                        .node_ids
+                        .iter()
+                        .filter_map(|id| state.road_map.as_ref()?.nodes.get(id).map(|n| n.position))
+                        .collect();
+                    // Marker-Node-IDs fuer spaeteres Cleanup beim Edit
+                    record.marker_node_ids = marker_indices
+                        .iter()
+                        .filter_map(|idx| ids.get(*idx).copied())
+                        .collect();
+                    state.segment_registry.register(record);
+                }
             }
         }
     }

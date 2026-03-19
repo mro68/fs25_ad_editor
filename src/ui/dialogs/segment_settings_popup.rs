@@ -8,6 +8,7 @@
 
 use crate::app::{AppIntent, SegmentSettingsPopupState};
 use crate::shared::EditorOptions;
+use crate::ui::common::apply_wheel_step;
 
 /// Zeigt das Segment-Einstellungs-Popup nach einem Doppelklick auf einen Segment-Node.
 ///
@@ -43,13 +44,13 @@ pub fn show_segment_settings_popup(
 
             ui.horizontal(|ui| {
                 ui.label("Max. Winkel (°):");
-                changed |= ui
-                    .add(
-                        egui::DragValue::new(&mut opts.segment_max_angle_deg)
-                            .range(0.0..=180.0)
-                            .speed(1.0),
-                    )
-                    .changed();
+                let r = ui.add(
+                    egui::DragValue::new(&mut opts.segment_max_angle_deg)
+                        .range(0.0..=180.0)
+                        .speed(1.0),
+                );
+                changed |= r.changed()
+                    | apply_wheel_step(ui, &r, &mut opts.segment_max_angle_deg, 1.0, 0.0..=180.0);
                 if opts.segment_max_angle_deg == 0.0 {
                     ui.weak("(deaktiviert)");
                 }

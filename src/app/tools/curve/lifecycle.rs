@@ -148,6 +148,7 @@ impl RouteTool for CurveTool {
                     nodes: vec![start_pos, end_pos],
                     connections,
                     connection_styles: styles,
+                    labels: vec![],
                 }
             }
             Phase::Control => {
@@ -191,6 +192,7 @@ impl RouteTool for CurveTool {
                     nodes,
                     connections,
                     connection_styles: styles,
+                    labels: vec![],
                 }
             }
             _ => ToolPreview::default(),

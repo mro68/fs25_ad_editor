@@ -311,6 +311,28 @@ pub fn render_route_defaults_panel(ctx: &egui::Context, state: &AppState) -> Vec
                 events.push(AppIntent::SetDefaultPriorityRequested { priority });
             }
 
+            egui::CollapsingHeader::new("\u{1F50E} Zoom").show(ui, |ui| {
+                if ui
+                    .button("Auf komplette Map")
+                    .on_hover_text("Gesamte Map in den Viewport einpassen")
+                    .clicked()
+                {
+                    events.push(AppIntent::ZoomToFitRequested);
+                }
+                let has_selection = state.selection.selected_node_ids.len() >= 2;
+                ui.add_enabled_ui(has_selection, |ui| {
+                    if ui
+                        .button("Auf Auswahl")
+                        .on_hover_text(
+                            "Viewport auf die selektierten Nodes einpassen (mind. 2 selektiert)",
+                        )
+                        .clicked()
+                    {
+                        events.push(AppIntent::ZoomToSelectionBoundsRequested);
+                    }
+                });
+            });
+
             if state.view.background_map.is_some() {
                 egui::CollapsingHeader::new("Hintergrund").show(ui, |ui| {
                     let visible = state.view.background_visible;
