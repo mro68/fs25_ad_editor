@@ -1,15 +1,17 @@
 //! Top-Menue (File, Edit, View, etc.).
 
 use crate::app::{AppIntent, AppState, RenderQuality};
+use crate::shared::{t, I18nKey};
 
 /// Rendert die Menue-Leiste
 pub fn render_menu(ctx: &egui::Context, state: &AppState) -> Vec<AppIntent> {
     let mut events = Vec::new();
+    let lang = state.options.language;
 
     egui::TopBottomPanel::top("menu_bar").show(ctx, |ui| {
         egui::MenuBar::new().ui(ui, |ui| {
-            ui.menu_button("File", |ui| {
-                if ui.button("Open...").clicked() {
+            ui.menu_button(t(lang, I18nKey::MenuFile), |ui| {
+                if ui.button(t(lang, I18nKey::MenuOpen)).clicked() {
                     events.push(AppIntent::OpenFileRequested);
                     ui.close();
                 }
@@ -19,7 +21,7 @@ pub fn render_menu(ctx: &egui::Context, state: &AppState) -> Vec<AppIntent> {
                 let has_file = state.road_map.is_some();
 
                 if ui
-                    .add_enabled(has_file, egui::Button::new("Save"))
+                    .add_enabled(has_file, egui::Button::new(t(lang, I18nKey::MenuSave)))
                     .clicked()
                 {
                     events.push(AppIntent::SaveRequested);
@@ -27,7 +29,7 @@ pub fn render_menu(ctx: &egui::Context, state: &AppState) -> Vec<AppIntent> {
                 }
 
                 if ui
-                    .add_enabled(has_file, egui::Button::new("Save As..."))
+                    .add_enabled(has_file, egui::Button::new(t(lang, I18nKey::MenuSaveAs)))
                     .clicked()
                 {
                     events.push(AppIntent::SaveAsRequested);
@@ -38,9 +40,9 @@ pub fn render_menu(ctx: &egui::Context, state: &AppState) -> Vec<AppIntent> {
 
                 // Heightmap-Option
                 let heightmap_label = if state.ui.heightmap_path.is_some() {
-                    "Change Heightmap..."
+                    t(lang, I18nKey::MenuChangeHeightmap)
                 } else {
-                    "Select Heightmap..."
+                    t(lang, I18nKey::MenuSelectHeightmap)
                 };
 
                 if ui.button(heightmap_label).clicked() {
@@ -48,33 +50,35 @@ pub fn render_menu(ctx: &egui::Context, state: &AppState) -> Vec<AppIntent> {
                     ui.close();
                 }
 
-                if state.ui.heightmap_path.is_some() && ui.button("Clear Heightmap").clicked() {
+                if state.ui.heightmap_path.is_some()
+                    && ui.button(t(lang, I18nKey::MenuClearHeightmap)).clicked()
+                {
                     events.push(AppIntent::HeightmapCleared);
                     ui.close();
                 }
 
                 ui.separator();
 
-                if ui.button("Uebersichtskarte generieren...").clicked() {
+                if ui.button(t(lang, I18nKey::MenuGenerateOverview)).clicked() {
                     events.push(AppIntent::GenerateOverviewRequested);
                     ui.close();
                 }
 
                 ui.separator();
 
-                if ui.button("Exit").clicked() {
+                if ui.button(t(lang, I18nKey::MenuExit)).clicked() {
                     events.push(AppIntent::ExitRequested);
                     ui.close();
                 }
             });
 
             // Edit menu: Undo / Redo / Optionen
-            ui.menu_button("Edit", |ui| {
+            ui.menu_button(t(lang, I18nKey::MenuEdit), |ui| {
                 let can_undo = state.can_undo();
                 let can_redo = state.can_redo();
 
                 if ui
-                    .add_enabled(can_undo, egui::Button::new("Undo (Ctrl+Z)"))
+                    .add_enabled(can_undo, egui::Button::new(t(lang, I18nKey::MenuUndo)))
                     .clicked()
                 {
                     events.push(AppIntent::UndoRequested);
@@ -82,7 +86,7 @@ pub fn render_menu(ctx: &egui::Context, state: &AppState) -> Vec<AppIntent> {
                 }
 
                 if ui
-                    .add_enabled(can_redo, egui::Button::new("Redo (Ctrl+Y / Shift+Cmd+Z)"))
+                    .add_enabled(can_redo, egui::Button::new(t(lang, I18nKey::MenuRedo)))
                     .clicked()
                 {
                     events.push(AppIntent::RedoRequested);
@@ -96,7 +100,7 @@ pub fn render_menu(ctx: &egui::Context, state: &AppState) -> Vec<AppIntent> {
                 let has_clipboard = !state.clipboard.nodes.is_empty();
 
                 if ui
-                    .add_enabled(has_selection, egui::Button::new("Kopieren (Ctrl+C)"))
+                    .add_enabled(has_selection, egui::Button::new(t(lang, I18nKey::MenuCopy)))
                     .clicked()
                 {
                     events.push(AppIntent::CopySelectionRequested);
@@ -104,7 +108,10 @@ pub fn render_menu(ctx: &egui::Context, state: &AppState) -> Vec<AppIntent> {
                 }
 
                 if ui
-                    .add_enabled(has_clipboard, egui::Button::new("Einfuegen (Ctrl+V)"))
+                    .add_enabled(
+                        has_clipboard,
+                        egui::Button::new(t(lang, I18nKey::MenuPaste)),
+                    )
                     .clicked()
                 {
                     events.push(AppIntent::PasteStartRequested);
@@ -113,24 +120,24 @@ pub fn render_menu(ctx: &egui::Context, state: &AppState) -> Vec<AppIntent> {
 
                 ui.separator();
 
-                if ui.button("Optionen...").clicked() {
+                if ui.button(t(lang, I18nKey::MenuOptions)).clicked() {
                     events.push(AppIntent::OpenOptionsDialogRequested);
                     ui.close();
                 }
             });
 
-            ui.menu_button("View", |ui| {
-                if ui.button("Reset Camera").clicked() {
+            ui.menu_button(t(lang, I18nKey::MenuView), |ui| {
+                if ui.button(t(lang, I18nKey::MenuResetCamera)).clicked() {
                     events.push(AppIntent::ResetCameraRequested);
                     ui.close();
                 }
 
-                if ui.button("Zoom In").clicked() {
+                if ui.button(t(lang, I18nKey::MenuZoomIn)).clicked() {
                     events.push(AppIntent::ZoomInRequested);
                     ui.close();
                 }
 
-                if ui.button("Zoom Out").clicked() {
+                if ui.button(t(lang, I18nKey::MenuZoomOut)).clicked() {
                     events.push(AppIntent::ZoomOutRequested);
                     ui.close();
                 }
@@ -139,9 +146,9 @@ pub fn render_menu(ctx: &egui::Context, state: &AppState) -> Vec<AppIntent> {
 
                 // Background-Map-Option
                 let background_label = if state.view.background_map.is_some() {
-                    "Hintergrund aendern..."
+                    t(lang, I18nKey::MenuChangeBackground)
                 } else {
-                    "Hintergrund laden..."
+                    t(lang, I18nKey::MenuLoadBackground)
                 };
 
                 if ui.button(background_label).clicked() {
@@ -151,11 +158,14 @@ pub fn render_menu(ctx: &egui::Context, state: &AppState) -> Vec<AppIntent> {
 
                 ui.separator();
 
-                ui.menu_button("Render Quality", |ui| {
+                ui.menu_button(t(lang, I18nKey::MenuRenderQuality), |ui| {
                     let quality = state.view.render_quality;
 
                     if ui
-                        .selectable_label(quality == RenderQuality::Low, "Low")
+                        .selectable_label(
+                            quality == RenderQuality::Low,
+                            t(lang, I18nKey::MenuQualityLow),
+                        )
                         .clicked()
                     {
                         events.push(AppIntent::RenderQualityChanged {
@@ -165,7 +175,10 @@ pub fn render_menu(ctx: &egui::Context, state: &AppState) -> Vec<AppIntent> {
                     }
 
                     if ui
-                        .selectable_label(quality == RenderQuality::Medium, "Medium")
+                        .selectable_label(
+                            quality == RenderQuality::Medium,
+                            t(lang, I18nKey::MenuQualityMedium),
+                        )
                         .clicked()
                     {
                         events.push(AppIntent::RenderQualityChanged {
@@ -175,7 +188,10 @@ pub fn render_menu(ctx: &egui::Context, state: &AppState) -> Vec<AppIntent> {
                     }
 
                     if ui
-                        .selectable_label(quality == RenderQuality::High, "High")
+                        .selectable_label(
+                            quality == RenderQuality::High,
+                            t(lang, I18nKey::MenuQualityHigh),
+                        )
                         .clicked()
                     {
                         events.push(AppIntent::RenderQualityChanged {
@@ -186,14 +202,17 @@ pub fn render_menu(ctx: &egui::Context, state: &AppState) -> Vec<AppIntent> {
                 });
             });
 
-            ui.menu_button("Extras", |ui| {
+            ui.menu_button(t(lang, I18nKey::MenuExtras), |ui| {
                 let has_farmland = state
                     .farmland_polygons
                     .as_ref()
                     .is_some_and(|p| !p.is_empty());
                 if ui
-                    .add_enabled(has_farmland, egui::Button::new("\u{1F33E} Feld erkennen"))
-                    .on_disabled_hover_text("Hintergrund mit Feldgrenzen zuerst laden")
+                    .add_enabled(
+                        has_farmland,
+                        egui::Button::new(t(lang, I18nKey::MenuDetectField)),
+                    )
+                    .on_disabled_hover_text(t(lang, I18nKey::MenuExtrasNeedBackground))
                     .clicked()
                 {
                     events.push(AppIntent::SelectRouteToolRequested {
@@ -204,12 +223,10 @@ pub fn render_menu(ctx: &egui::Context, state: &AppState) -> Vec<AppIntent> {
                 if ui
                     .add_enabled(
                         has_farmland,
-                        egui::Button::new("\u{1F4CD} Alle Felder nachzeichnen"),
+                        egui::Button::new(t(lang, I18nKey::MenuTraceAllFields)),
                     )
-                    .on_disabled_hover_text("Hintergrund mit Feldgrenzen zuerst laden")
-                    .on_hover_text(
-                        "Alle erkannten Felder automatisch mit Wegpunkten nachzeichnen (ein Undo-Schritt)",
-                    )
+                    .on_disabled_hover_text(t(lang, I18nKey::MenuExtrasNeedBackground))
+                    .on_hover_text(t(lang, I18nKey::MenuTraceAllFieldsHelp))
                     .clicked()
                 {
                     events.push(AppIntent::OpenTraceAllFieldsDialogRequested);
@@ -217,8 +234,8 @@ pub fn render_menu(ctx: &egui::Context, state: &AppState) -> Vec<AppIntent> {
                 }
             });
 
-            ui.menu_button("Help", |ui| {
-                if ui.button("About").clicked() {
+            ui.menu_button(t(lang, I18nKey::MenuHelp), |ui| {
+                if ui.button(t(lang, I18nKey::MenuAbout)).clicked() {
                     log::info!("FS25 AutoDrive Editor v{}", env!("CARGO_PKG_VERSION"));
                     ui.close();
                 }

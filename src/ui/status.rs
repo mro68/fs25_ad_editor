@@ -1,34 +1,44 @@
 //! Status-Bar am unteren Bildschirmrand.
 
 use crate::app::{AppState, EditorTool};
+use crate::shared::{t, I18nKey};
 
 /// Rendert die Status-Bar
 pub fn render_status_bar(ctx: &egui::Context, state: &AppState) {
+    let lang = state.options.language;
+
     egui::TopBottomPanel::bottom("status_bar").show(ctx, |ui| {
         ui.horizontal(|ui| {
             if let Some(road_map) = &state.road_map {
                 ui.label(format!(
-                    "Nodes: {} | Connections: {} | Markers: {}",
+                    "{}: {} | {}: {} | {}: {}",
+                    t(lang, I18nKey::StatusNodes),
                     road_map.node_count(),
+                    t(lang, I18nKey::StatusConnections),
                     road_map.connection_count(),
+                    t(lang, I18nKey::StatusMarkers),
                     road_map.marker_count()
                 ));
 
                 ui.separator();
 
                 if let Some(map_name) = &road_map.map_name {
-                    ui.label(format!("Map: {}", map_name));
+                    ui.label(format!("{}: {}", t(lang, I18nKey::StatusMap), map_name));
                     ui.separator();
                 }
             } else {
-                ui.label("No file loaded");
+                ui.label(t(lang, I18nKey::StatusNoFile));
             }
 
             ui.separator();
 
             ui.label(format!(
-                "Zoom: {:.2}x | Position: ({:.1}, {:.1})",
-                state.view.camera.zoom, state.view.camera.position.x, state.view.camera.position.y
+                "{}: {:.2}x | {}: ({:.1}, {:.1})",
+                t(lang, I18nKey::StatusZoom),
+                state.view.camera.zoom,
+                t(lang, I18nKey::StatusPosition),
+                state.view.camera.position.x,
+                state.view.camera.position.y
             ));
 
             ui.separator();
@@ -39,9 +49,17 @@ pub fn render_status_bar(ctx: &egui::Context, state: &AppState) {
                     .file_name()
                     .and_then(|n| n.to_str())
                     .unwrap_or("unknown");
-                ui.label(format!("Heightmap: {}", filename));
+                ui.label(format!(
+                    "{}: {}",
+                    t(lang, I18nKey::StatusHeightmap),
+                    filename
+                ));
             } else {
-                ui.label("Heightmap: None");
+                ui.label(format!(
+                    "{}: {}",
+                    t(lang, I18nKey::StatusHeightmap),
+                    t(lang, I18nKey::StatusHeightmapNone)
+                ));
             }
 
             ui.separator();
@@ -56,23 +74,26 @@ pub fn render_status_bar(ctx: &egui::Context, state: &AppState) {
                     .copied()
                     .unwrap_or_default();
                 ui.label(format!(
-                    "Selected Nodes: {} (z.B. {})",
-                    selected_count, example_id
+                    "{}: {} ({} {})",
+                    t(lang, I18nKey::StatusSelectedNodes),
+                    selected_count,
+                    t(lang, I18nKey::StatusExample),
+                    example_id
                 ));
             } else {
-                ui.label("Selected Nodes: 0");
+                ui.label(format!("{}: 0", t(lang, I18nKey::StatusSelectedNodes)));
             }
 
             ui.separator();
 
             // Aktives Werkzeug
             let tool_name = match state.editor.active_tool {
-                EditorTool::Select => "Select",
-                EditorTool::Connect => "Connect",
-                EditorTool::AddNode => "Add Node",
-                EditorTool::Route => "Route-Tool",
+                EditorTool::Select => t(lang, I18nKey::ToolNameSelect),
+                EditorTool::Connect => t(lang, I18nKey::ToolNameConnect),
+                EditorTool::AddNode => t(lang, I18nKey::ToolNameAddNode),
+                EditorTool::Route => t(lang, I18nKey::ToolNameRoute),
             };
-            ui.label(format!("Tool: {}", tool_name));
+            ui.label(format!("{}: {}", t(lang, I18nKey::StatusTool), tool_name));
 
             // Statusnachricht (z.B. Duplikat-Bereinigung)
             if let Some(ref msg) = state.ui.status_message {
@@ -82,7 +103,11 @@ pub fn render_status_bar(ctx: &egui::Context, state: &AppState) {
 
             // FPS-Anzeige (rechts)
             ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
-                ui.label(format!("FPS: {:.0}", ctx.input(|i| 1.0 / i.stable_dt)));
+                ui.label(format!(
+                    "{}: {:.0}",
+                    t(lang, I18nKey::StatusFps),
+                    ctx.input(|i| 1.0 / i.stable_dt)
+                ));
             });
         });
     });
