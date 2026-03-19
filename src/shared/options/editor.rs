@@ -13,6 +13,7 @@ use super::render::{
 use super::tools::{
     ValueAdjustInputMode, HITBOX_SCALE_PERCENT, MOUSE_WHEEL_DISTANCE_STEP_M, SNAP_SCALE_PERCENT,
 };
+use crate::shared::i18n::Language;
 use serde::{Deserialize, Serialize};
 
 /// Alle zur Laufzeit aenderbaren Editor-Optionen.
@@ -125,6 +126,11 @@ pub struct EditorOptions {
     /// Mindestabstand zwischen Nodes in Pixeln fuer Grid-Decimation (0.0 = deaktiviert).
     #[serde(default = "default_node_decimation_spacing_px")]
     pub node_decimation_spacing_px: f32,
+
+    // Sprache
+    /// Aktive UI-Sprache des Editors.
+    #[serde(default)]
+    pub language: Language,
 }
 
 impl Default for EditorOptions {
@@ -174,6 +180,7 @@ impl Default for EditorOptions {
             min_arrow_size_px: MIN_ARROW_SIZE_PX,
             min_marker_size_px: MIN_MARKER_SIZE_PX,
             node_decimation_spacing_px: NODE_DECIMATION_SPACING_PX,
+            language: Language::default(),
         }
     }
 }

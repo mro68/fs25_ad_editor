@@ -376,7 +376,7 @@ Verbindliche Regeln:
 5. `AppState` enthält keine I/O-Logik; Dateisystem-Operationen sind in `use_cases::file_io` zentralisiert.
 6. Renderer darf keine UI-Typen importieren. **Ausnahme:** `render/callback.rs` implementiert `egui_wgpu::CallbackTrait` — das ist die wgpu-Brücke zwischen egui und dem Rendering-System, kein semantischer UI-Import.
 7. `app/mod.rs` re-exportiert alle Core-Typen, die UI benötigt (z.B. `ConnectionDirection`, `ConnectionPriority`, `RoadMap`).
-8. `shared`-Modul enthält Typen, die von mehreren Layern genutzt werden (`RenderScene`, `RenderQuality`).
+8. `shared`-Modul enthält Typen, die von mehreren Layern genutzt werden (`RenderScene`, `RenderQuality`, `i18n`). Importrichtung: `UI → shared`, `App → shared`, `Render → shared` (alle erlaubt).
 
 ## Aktuelle Modulstruktur
 
@@ -473,6 +473,7 @@ src/
     render_scene.rs     # RenderScene (Übergabevertrag App → Render)
     render_quality.rs   # RenderQuality Enum
     options.rs          # Zentrale Konfigurationskonstanten + EditorOptions
+    i18n/               # Mehrsprachigkeits-System (Language, I18nKey, t())
   ui/
     mod.rs
     menu.rs             # Top-Menü

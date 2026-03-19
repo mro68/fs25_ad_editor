@@ -39,6 +39,18 @@
 - [x] Command Palette (Ctrl+K, Suchfeld, Pfeilnavigation, Enter-Ausfuehrung)
 - [x] Options-Dialog (Farben, Groessen, Breiten – Live-Preview)
 - [x] TOML-Persistierung (fs25_auto_drive_editor.toml neben Binary)
+- [x] **Mehrsprachiges UI (i18n) — DE + EN**
+  - [x] i18n-Infrastruktur: `Language`-Enum, `I18nKey`-Enum, `t()`-Funktion (Zero-Alloc, Compile-Time-sicher)
+  - [x] Options-Dialog vollständig migriert (alle Labels, Tooltips, Abschnittsnamen)
+  - [x] Menüleiste vollständig migriert
+  - [x] Status-Bar vollständig migriert
+  - [x] `EditorOptions.language: Language` — persistiert in TOML, Standard `De`
+  - [x] Sprachauswahl-ComboBox im Options-Dialog
+  - [ ] Tool-Config-UIs (Folge-PR)
+  - [ ] Dialoge (Folge-PR)
+  - [ ] Context-Menüs (Folge-PR)
+  - [ ] Floating-Panels (Folge-PR)
+  - [ ] Properties-Panel (Folge-PR)
 
 ## Phase 4: Editor-Tools ✅ (Kern abgeschlossen)
 - [x] **KD-Tree Integration (kiddo)**
@@ -288,6 +300,10 @@
     - [x] Fallback fuer schmale 1px-Streifen (`b_at_first_return`) bleibt als Sicherheitsnetz erhalten
     - [x] `point_in_polygon` liefert fuer alle 254 Felder korrekte Ergebnisse (doppelte Vertices entfernt)
     - [x] Docstring `trace_moore_contour()` erklaert Stopping-Criterion und den korrigierten Bug
+  - [x] **Doku-Sync i18n-Mehrsprach-UI (2026-03-19, Branch `feat/i18n-multilang-ui`)**
+    - [x] `shared/API.md`: `i18n/`-Modul dokumentiert (Language, I18nKey, t()); language-Feld in EditorOptions ergaenzt
+    - [x] ROADMAP.md: i18n-Feature in Phase 3 eingetragen (Infrastruktur + Options-Dialog + Menue + Status-Bar)
+    - [x] `docs/ARCHITECTURE_PLAN.md`: `i18n/` in shared-Modulstruktur ergaenzt
 - [ ] Packaging
   - [ ] Windows Binaries (.exe)
   - [ ] Linux Binaries (AppImage)
