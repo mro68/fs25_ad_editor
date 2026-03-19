@@ -51,13 +51,13 @@ impl Default for ParkingConfig {
     fn default() -> Self {
         Self {
             num_rows: 2,
-            row_spacing: 7.0,
-            bay_length: 35.0,
-            entry_t: 0.4,
-            exit_t: 0.7,
-            ramp_length: 5.0,
+            row_spacing: 6.0,
+            bay_length: 25.0,
+            entry_t: 0.5,
+            exit_t: 0.75,
+            ramp_length: 3.0,
             entry_side: RampSide::Right,
-            exit_side: RampSide::Right,
+            exit_side: RampSide::Left,
             marker_group: "Parkplatz".to_string(),
         }
     }

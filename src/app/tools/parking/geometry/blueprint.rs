@@ -65,20 +65,18 @@ pub fn generate_blueprint_series_layout(
             nodes.push(to_world(lp.x, lp.y));
         }
 
-        // n7/n8 reagieren auf alle einstellbaren Parameter:
-        // - ramp_length: Distanz
-        // - entry_side/exit_side: Nord/Sued aus Marker-Sicht
-        // - entry_t/exit_t: X-Bias entlang der Hauptachse
-        let n2 = Vec2::new(20.0 * scale, y_offset);
-        let n3 = Vec2::new(40.0 * scale, y_offset);
-        let entry_bias_x = (config.entry_t - 0.5) * 10.0 * scale;
-        let exit_bias_x = (config.exit_t - 0.5) * 10.0 * scale;
+        // Einfahrt/Ausfahrt-Position als Anteil der Gesamtlaenge — Rampenwinkel bleibt konstant
+        let n2 = Vec2::new(config.entry_t * config.bay_length, y_offset);
+        let n3 = Vec2::new(config.exit_t * config.bay_length, y_offset);
+        // n2/n3 aus base_nodes-Loop mit Bias-Positionen ueberschreiben
+        nodes[base_idx + 1] = to_world(n2.x, n2.y);
+        nodes[base_idx + 2] = to_world(n3.x, n3.y);
         let n7 = Vec2::new(
-            n2.x - config.ramp_length + entry_bias_x,
+            n2.x - config.ramp_length,
             n2.y + super::side_sign_y(config.entry_side) * config.ramp_length,
         );
         let n8 = Vec2::new(
-            n3.x + config.ramp_length + exit_bias_x,
+            n3.x + config.ramp_length,
             n3.y + super::side_sign_y(config.exit_side) * config.ramp_length,
         );
         nodes.push(to_world(n7.x, n7.y));
