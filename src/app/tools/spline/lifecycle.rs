@@ -88,6 +88,7 @@ impl RouteTool for SplineTool {
             nodes,
             connections,
             connection_styles: styles,
+            labels: vec![],
         }
     }
 

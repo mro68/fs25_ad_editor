@@ -112,6 +112,12 @@ pub enum CommandId {
     // ── Extras ───────────────────────────────────────────────────────
     /// FieldBoundaryTool aktivieren
     SetToolFieldBoundary,
+
+    // ── Zoom ─────────────────────────────────────────────────────────
+    /// Alles in den Viewport einpassen
+    ZoomToFit,
+    /// Auf die Grenzen der aktuellen Selektion zoomen
+    ZoomToSelection,
 }
 
 // =============================================================================
@@ -279,6 +285,10 @@ impl CommandId {
             Self::SetToolFieldBoundary => AppIntent::SelectRouteToolRequested {
                 index: TOOL_INDEX_FIELD_BOUNDARY,
             },
+
+            // ── Zoom ─────────────────────────────────────────────────────────
+            Self::ZoomToFit => AppIntent::ZoomToFitRequested,
+            Self::ZoomToSelection => AppIntent::ZoomToSelectionBoundsRequested,
         }
     }
 }

@@ -242,6 +242,8 @@ pub enum AppIntent {
     StreckenteilungAktivieren,
     /// Alles in den Viewport einpassen (Zoom-to-fit)
     ZoomToFitRequested,
+    /// Viewport auf die Grenzen der aktuellen Selektion einpassen
+    ZoomToSelectionBoundsRequested,
     /// Auswahl invertieren (selektierte abwaehlen, nicht-selektierte waehlen)
     InvertSelectionRequested,
     /// Route-Tool: Strecke neu berechnen mit aktuellem Config (nach Parameter-Aenderung)

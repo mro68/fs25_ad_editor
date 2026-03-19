@@ -78,7 +78,6 @@ pub fn map_intent_to_commands(state: &AppState, intent: AppIntent) -> Vec<AppCom
                     stop_at_junction: state.options.segment_stop_at_junction,
                     max_angle_deg: state.options.segment_max_angle_deg,
                 },
-                AppCommand::ZoomToSelectionBounds,
                 AppCommand::OpenSegmentSettingsPopup { world_pos },
             ]
         }
@@ -296,6 +295,7 @@ pub fn map_intent_to_commands(state: &AppState, intent: AppIntent) -> Vec<AppCom
         AppIntent::ResamplePathRequested => vec![AppCommand::ResamplePath],
         AppIntent::StreckenteilungAktivieren => vec![AppCommand::StreckenteilungAktivieren],
         AppIntent::ZoomToFitRequested => vec![AppCommand::ZoomToFit],
+        AppIntent::ZoomToSelectionBoundsRequested => vec![AppCommand::ZoomToSelectionBounds],
         AppIntent::InvertSelectionRequested => vec![AppCommand::InvertSelection],
         AppIntent::RouteToolRecreateRequested => vec![AppCommand::RouteToolRecreate],
         AppIntent::IncreaseRouteToolNodeCount => vec![AppCommand::IncreaseRouteToolNodeCount],

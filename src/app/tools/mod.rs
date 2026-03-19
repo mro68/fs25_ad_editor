@@ -89,6 +89,8 @@ pub struct ToolPreview {
     pub connections: Vec<(usize, usize)>,
     /// Stil pro Verbindung (Index passt zu `connections`)
     pub connection_styles: Vec<(ConnectionDirection, ConnectionPriority)>,
+    /// Beschriftungen pro Node: (node_index, Labeltext)
+    pub labels: Vec<(usize, String)>,
 }
 
 /// Ergebnis eines Route-Tools — reine Daten, keine Mutation.

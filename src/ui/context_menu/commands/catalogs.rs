@@ -31,10 +31,30 @@ impl MenuCatalog {
         }
     }
 
+    /// Zoom-Submenu: Auf gesamte Map oder auf Selektion zoomen.
+    fn zoom_submenu() -> MenuEntry {
+        MenuEntry::Submenu {
+            label: "🔎 Zoom".into(),
+            entries: vec![
+                MenuEntry::Command {
+                    id: CommandId::ZoomToFit,
+                    label: "Auf komplette Map".into(),
+                    preconditions: vec![],
+                },
+                MenuEntry::Command {
+                    id: CommandId::ZoomToSelection,
+                    label: "Auf Auswahl".into(),
+                    preconditions: vec![Precondition::AtLeastTwoSelected],
+                },
+            ],
+        }
+    }
+
     /// EmptyArea: Tool-Auswahl inkl. Route-Tools, optional Streckenteilung.
     pub fn for_empty_area() -> Self {
         let entries = vec![
             Self::tool_submenu(),
+            Self::zoom_submenu(),
             MenuEntry::Submenu {
                 label: "📐 Strecke".into(),
                 entries: vec![
@@ -197,7 +217,7 @@ impl MenuCatalog {
 
     /// SelectionOnly: Befehle fuer selektierte Nodes (Rechtsklick ins Leere).
     pub fn for_selection_only() -> Self {
-        let mut entries = vec![Self::tool_submenu(), MenuEntry::Separator];
+        let mut entries = vec![Self::tool_submenu(), Self::zoom_submenu(), MenuEntry::Separator];
         entries.extend(Self::selection_entries());
         // ── Aktionen ─────────────────────────────────────────
         entries.push(MenuEntry::Separator);
@@ -225,6 +245,7 @@ impl MenuCatalog {
     pub fn for_node_focused(node_id: u64) -> Self {
         let mut entries = vec![
             Self::tool_submenu(),
+            Self::zoom_submenu(),
             MenuEntry::Separator,
             // ── Einzelnode-Befehle (oberer Bereich) ──────────────
             MenuEntry::Submenu {

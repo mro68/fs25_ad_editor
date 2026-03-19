@@ -76,6 +76,7 @@ impl RouteTool for BypassTool {
             nodes,
             connections,
             connection_styles: styles,
+            labels: vec![],
         }
     }
 

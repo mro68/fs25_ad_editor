@@ -117,6 +117,22 @@ pub fn paint_preview(
             painter.circle_filled(screen_pos, 3.5, preview_node_color(options));
         }
     }
+
+    // Node-Labels zeichnen (z.B. fuer Parking-Tool Vorschau)
+    let label_color = egui::Color32::from_rgba_unmultiplied(220, 220, 220, 180);
+    for &(node_idx, ref text) in &preview.labels {
+        if let Some(&pos) = preview.nodes.get(node_idx) {
+            let sp = camera.world_to_screen(pos, viewport_size);
+            let screen_pos = egui::pos2(rect.min.x + sp.x + 8.0, rect.min.y + sp.y - 8.0);
+            painter.text(
+                screen_pos,
+                egui::Align2::LEFT_BOTTOM,
+                text,
+                egui::FontId::proportional(11.0),
+                label_color,
+            );
+        }
+    }
 }
 
 /// Zeichnet eine einfache Polyline-Vorschau ohne temporaere `ToolPreview`-Allokationen.
