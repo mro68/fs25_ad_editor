@@ -1,6 +1,7 @@
 //! Marker-Renderer mit GPU-Instancing fuer Map-Marker (Pin-Symbole).
 
 use super::types::{MarkerInstance, RenderContext, RenderQuality, Uniforms, Vertex};
+use crate::shared::options::MARKER_OUTLINE_WIDTH;
 use crate::RoadMap;
 use eframe::{egui_wgpu, wgpu};
 use wgpu::util::DeviceExt;
@@ -15,6 +16,7 @@ pub struct MarkerRenderer {
     pipeline: wgpu::RenderPipeline,
     vertex_buffer: wgpu::Buffer,
     uniform_buffer: wgpu::Buffer,
+    bind_group_layout: wgpu::BindGroupLayout,
     bind_group: wgpu::BindGroup,
     instance_buffer: Option<wgpu::Buffer>,
     instance_capacity: usize,
@@ -23,6 +25,60 @@ pub struct MarkerRenderer {
     // Pin-Icon-Textur (muss gehalten werden, damit GPU-Ressourcen nicht freigegeben werden)
     _texture: wgpu::Texture,
     _sampler: wgpu::Sampler,
+    /// Letzter angewendeter outline_width-Wert (fuer Change-Detection bei Textur-Rebuild)
+    last_outline_width: f32,
+}
+
+/// Patcht die stroke-width im SVG-String auf den angegebenen Wert.
+fn patch_svg_stroke_width(svg: &str, svg_stroke_width: f32) -> String {
+    // SVG hat genau eine stroke-width-Angabe — direkte String-Manipulation
+    if let Some(start_idx) = svg.find("stroke-width=\"") {
+        let pos = start_idx + "stroke-width=\"".len();
+        if let Some(end_offset) = svg[pos..].find('"') {
+            let mut result = svg.to_string();
+            result.replace_range(pos..pos + end_offset, &format!("{:.3}", svg_stroke_width));
+            return result;
+        }
+    }
+    svg.to_string()
+}
+
+/// Rasterisiert das Pin-Icon-SVG mit der angegebenen Strichdicke als DynamicImage (64×64 RGBA).
+///
+/// `outline_width` ist der Optionswert (0.01–0.3) und wird auf SVG-Koordinaten skaliert
+/// (Faktor 10, viewBox 0 0 24 24 → stroke-width 0.1–3.0).
+fn rasterize_svg(svg_str: &str, outline_width: f32) -> image::DynamicImage {
+    use resvg::{tiny_skia, usvg};
+    let svg_stroke_width = outline_width * 10.0;
+    let patched = patch_svg_stroke_width(svg_str, svg_stroke_width);
+    let options = usvg::Options::default();
+    let tree =
+        usvg::Tree::from_str(&patched, &options).expect("Marker-SVG konnte nicht geparst werden");
+
+    const SIZE: u32 = 64;
+    let mut pixmap =
+        tiny_skia::Pixmap::new(SIZE, SIZE).expect("Pixmap konnte nicht erstellt werden");
+
+    let svg_size = tree.size();
+    let scale_x = SIZE as f32 / svg_size.width();
+    let scale_y = SIZE as f32 / svg_size.height();
+    let transform = tiny_skia::Transform::from_scale(scale_x, scale_y);
+    resvg::render(&tree, transform, &mut pixmap.as_mut());
+
+    // tiny-skia liefert prae-multipliziertes RGBA → in normales RGBA umrechnen
+    let mut unpremul = pixmap.data().to_vec();
+    for pixel in unpremul.chunks_mut(4) {
+        let a = pixel[3];
+        if a > 0 && a < 255 {
+            pixel[0] = ((pixel[0] as u32 * 255 + a as u32 / 2) / a as u32).min(255) as u8;
+            pixel[1] = ((pixel[1] as u32 * 255 + a as u32 / 2) / a as u32).min(255) as u8;
+            pixel[2] = ((pixel[2] as u32 * 255 + a as u32 / 2) / a as u32).min(255) as u8;
+        }
+    }
+
+    let rgba_image = image::RgbaImage::from_raw(SIZE, SIZE, unpremul)
+        .expect("Marker-RGBA-Bild konnte nicht erstellt werden");
+    image::DynamicImage::ImageRgba8(rgba_image)
 }
 
 impl MarkerRenderer {
@@ -35,10 +91,9 @@ impl MarkerRenderer {
         let device = &render_state.device;
         let queue = &render_state.queue;
 
-        // Pin-Icon-PNG laden und als wgpu-Textur erstellen
-        let png_bytes = include_bytes!("../../assets/icons/icon_map_pin.png");
-        let img = image::load_from_memory(png_bytes)
-            .expect("icon_map_pin.png: konnte PNG nicht dekodieren");
+        // Pin-Icon-SVG laden, rasterisieren und als wgpu-Textur erstellen
+        let svg_str = include_str!("../../assets/icons/icon_map_pin.svg");
+        let img = rasterize_svg(svg_str, MARKER_OUTLINE_WIDTH);
         let (texture, sampler) =
             super::texture::create_texture_from_image(device, queue, &img, "Marker Pin Texture");
         let texture_view = texture.create_view(&wgpu::TextureViewDescriptor::default());
@@ -182,13 +237,55 @@ impl MarkerRenderer {
             pipeline,
             vertex_buffer,
             uniform_buffer,
+            bind_group_layout,
             bind_group,
             instance_buffer: None,
             instance_capacity: 0,
             instance_scratch: Vec::with_capacity(256),
             _texture: texture,
             _sampler: sampler,
+            last_outline_width: MARKER_OUTLINE_WIDTH,
         }
+    }
+
+    /// Prueft ob `marker_outline_width` geaendert hat und rasterisiert das SVG neu.
+    ///
+    /// Erstellt neue Textur und BindGroup nur bei tatsaechlicher Aenderung
+    /// (Change-Detection via Epsilon-Vergleich).
+    fn rebuild_texture_if_needed(
+        &mut self,
+        device: &wgpu::Device,
+        queue: &wgpu::Queue,
+        outline_width: f32,
+    ) {
+        if (self.last_outline_width - outline_width).abs() < 1e-5 {
+            return;
+        }
+        let svg_str = include_str!("../../assets/icons/icon_map_pin.svg");
+        let img = rasterize_svg(svg_str, outline_width);
+        let (texture, _) =
+            super::texture::create_texture_from_image(device, queue, &img, "Marker Pin Texture");
+        let texture_view = texture.create_view(&wgpu::TextureViewDescriptor::default());
+        self.bind_group = device.create_bind_group(&wgpu::BindGroupDescriptor {
+            label: Some("Marker Bind Group"),
+            layout: &self.bind_group_layout,
+            entries: &[
+                wgpu::BindGroupEntry {
+                    binding: 0,
+                    resource: self.uniform_buffer.as_entire_binding(),
+                },
+                wgpu::BindGroupEntry {
+                    binding: 1,
+                    resource: wgpu::BindingResource::TextureView(&texture_view),
+                },
+                wgpu::BindGroupEntry {
+                    binding: 2,
+                    resource: wgpu::BindingResource::Sampler(&self._sampler),
+                },
+            ],
+        });
+        self._texture = texture;
+        self.last_outline_width = outline_width;
     }
 
     /// Rendert alle sichtbaren Map-Marker per GPU-Instancing.
@@ -207,12 +304,15 @@ impl MarkerRenderer {
             return;
         }
 
+        // Textur neu aufbauen wenn outline_width geaendert hat
+        self.rebuild_texture_if_needed(ctx.device, ctx.queue, ctx.options.marker_outline_width);
+
         // Uniforms erstellen (View-Projection-Matrix + AA aus View-Einstellungen)
         let view_proj = super::types::build_view_projection(ctx.camera, ctx.viewport_size);
         let aa_params = match render_quality {
-            RenderQuality::Low => [0.0, 1.0, 0.0, ctx.options.marker_outline_width],
-            RenderQuality::Medium => [1.0, 0.0, 0.0, ctx.options.marker_outline_width],
-            RenderQuality::High => [1.8, 0.0, 0.0, ctx.options.marker_outline_width],
+            RenderQuality::Low => [0.0, 1.0, 0.0, 0.0],
+            RenderQuality::Medium => [1.0, 0.0, 0.0, 0.0],
+            RenderQuality::High => [1.8, 0.0, 0.0, 0.0],
         };
         let uniforms = Uniforms {
             view_proj: view_proj.to_cols_array_2d(),

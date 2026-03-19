@@ -238,13 +238,7 @@ fn fs_marker(in: MarkerVertexOutput) -> @location(0) vec4<f32> {
         discard;
     }
 
-    // Outline via Alpha-Gradient: marker_outline_width (aa_params.w) steuert die Breite.
-    // Innerer Schwellwert: Pixel mit Alpha > threshold gehoeren zum Kern (fill_color).
-    // Pixel zwischen discard-Schwelle und threshold erhalten outline_color.
-    let outline_width = uniforms.aa_params.w;
-    let threshold = 1.0 - outline_width;
-    let edge = smoothstep(threshold - 0.05, threshold + 0.05, tex_color.a);
-    let rgb = mix(in.outline_color.rgb, in.color.rgb, edge);
-
-    return vec4<f32>(rgb, tex_color.a * in.color.a);
+    // Tinting: Textur-Alpha definiert die Pin-Form, instance_color faerbt den Pin.
+    // Strichdicke wird durch stroke-width im SVG gesteuert (zur Laufzeit neu rasterisiert).
+    return vec4<f32>(in.color.rgb, tex_color.a * in.color.a);
 }

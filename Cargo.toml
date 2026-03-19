@@ -55,6 +55,7 @@ kiddo = "5.2.4"
 
 # Image Processing
 image = { version = "0.25", features = ["dds", "png", "jpeg"] }
+resvg = "0.44"
 
 # ZIP-Archiv-Support
 zip = { version = "2", default-features = false, features = ["deflate"] }

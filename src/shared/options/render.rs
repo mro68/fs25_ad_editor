@@ -40,7 +40,7 @@ pub const MARKER_SIZE_WORLD: f32 = 5.6;
 /// Standard-Maximum fuer den Zoom-Kompensationsfaktor.
 ///
 /// Bei `1.0` ist die Kompensation deaktiviert (keine Vergroesserung beim Herauszoomen).
-pub const DEFAULT_ZOOM_COMPENSATION_MAX: f32 = 4.0;
+pub const DEFAULT_ZOOM_COMPENSATION_MAX: f32 = 5.0;
 
 /// Mindestgroesse fuer Nodes in Pixeln beim Zoomout (0.0 = deaktiviert).
 pub const MIN_NODE_SIZE_PX: f32 = 4.0;
@@ -58,7 +58,7 @@ pub const MARKER_COLOR: [f32; 4] = [1.0, 0.49411765, 0.0, 1.0];
 /// Outline-Farbe der Map-Marker (RGBA: Goldgelb).
 pub const MARKER_OUTLINE_COLOR: [f32; 4] = [1.0, 0.6431373, 0.0, 1.0];
 /// Standard-Umrissstärke für Map-Marker (Anteil am Radius, 0.01–0.3).
-pub const MARKER_OUTLINE_WIDTH: f32 = 0.1;
+pub const MARKER_OUTLINE_WIDTH: f32 = 0.2;
 
 /// Darstellungsmodus fuer selektierte Nodes.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Default)]
