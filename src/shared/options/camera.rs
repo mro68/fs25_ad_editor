@@ -9,4 +9,4 @@ pub const CAMERA_ZOOM_MAX: f32 = 200.0;
 /// Zoom-Schritt bei stufenweisem Zoom (Menue-Buttons / Shortcuts).
 pub const CAMERA_ZOOM_STEP: f32 = 1.1;
 /// Zoom-Schritt bei Mausrad-Scroll.
-pub const CAMERA_SCROLL_ZOOM_STEP: f32 = 1.025;
+pub const CAMERA_SCROLL_ZOOM_STEP: f32 = 1.045;

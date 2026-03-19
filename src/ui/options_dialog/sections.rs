@@ -39,6 +39,7 @@ pub(super) fn render_nodes(ui: &mut egui::Ui, opts: &mut EditorOptions) -> bool 
         );
         changed |=
             r.changed() | apply_wheel_step(ui, &r, &mut opts.node_size_world, 0.1, 0.1..=5.0);
+        r.on_hover_text("Durchmesser eines Wegpunkts in Welteinheiten (Meter).");
     });
     changed |= color_edit(ui, "Standardfarbe:", &mut opts.node_color_default);
     changed |= color_edit(ui, "SubPrio-Farbe:", &mut opts.node_color_subprio);
@@ -54,6 +55,7 @@ pub(super) fn render_nodes(ui: &mut egui::Ui, opts: &mut EditorOptions) -> bool 
         );
         changed |= r.changed()
             | apply_wheel_step(ui, &r, &mut opts.hitbox_scale_percent, 10.0, 50.0..=500.0);
+        r.on_hover_text("Klickbereich um Nodes als Prozent der sichtbaren Groesse. Groessere Werte erleichtern das Anklicken.");
     });
     changed
 }
@@ -91,7 +93,9 @@ pub(super) fn render_tools(ui: &mut egui::Ui, opts: &mut EditorOptions) -> bool 
                     changed = true;
                 }
             });
-    });
+    })
+    .response
+    .on_hover_text("Eingabemodus fuer DragValue-Felder: Maus ziehen oder Mausrad drehen.");
     ui.horizontal(|ui| {
         ui.label("Snap-Radius:");
         let r = ui.add(
@@ -102,6 +106,7 @@ pub(super) fn render_tools(ui: &mut egui::Ui, opts: &mut EditorOptions) -> bool 
         );
         changed |= r.changed()
             | apply_wheel_step(ui, &r, &mut opts.snap_scale_percent, 10.0, 50.0..=2000.0);
+        r.on_hover_text("Fangradius fuer Werkzeuge in Prozent der Node-Groesse. Bestimmt ab welcher Entfernung ein Node gefangen wird.");
     });
     ui.horizontal(|ui| {
         ui.label("Mausrad-Schritt Distanz:");
@@ -119,6 +124,7 @@ pub(super) fn render_tools(ui: &mut egui::Ui, opts: &mut EditorOptions) -> bool 
                 0.1,
                 0.01..=5.0,
             );
+        r.on_hover_text("Schrittweite in Metern pro Mausrad-Tick bei Distanz-Eingaben.");
     });
     changed
 }
@@ -135,6 +141,7 @@ pub(super) fn render_selection(ui: &mut egui::Ui, opts: &mut EditorOptions) -> b
         );
         changed |= r.changed()
             | apply_wheel_step(ui, &r, &mut opts.selection_size_factor, 5.0, 100.0..=200.0);
+        r.on_hover_text("Selektierte Nodes werden um diesen Faktor vergroessert dargestellt (100% = keine Vergroesserung).");
     });
     ui.horizontal(|ui| {
         ui.label("Markierungsstil:");
@@ -157,12 +164,19 @@ pub(super) fn render_selection(ui: &mut egui::Ui, opts: &mut EditorOptions) -> b
                     }
                 }
             });
-    });
+    })
+    .response
+    .on_hover_text(
+        "Darstellung selektierter Nodes: Ring am Rand oder Farbverlauf von Mitte nach aussen.",
+    );
     ui.separator();
     ui.label("Doppelklick-Segment:");
     ui.horizontal(|ui| {
         changed |= ui
             .checkbox(&mut opts.segment_stop_at_junction, "Bei Kreuzung stoppen")
+            .on_hover_text(
+                "Doppelklick-Selektion stoppt an Kreuzungen (Nodes mit mehr als 2 Verbindungen).",
+            )
             .changed();
     });
     ui.horizontal(|ui| {
@@ -174,6 +188,7 @@ pub(super) fn render_selection(ui: &mut egui::Ui, opts: &mut EditorOptions) -> b
         );
         changed |= r.changed()
             | apply_wheel_step(ui, &r, &mut opts.segment_max_angle_deg, 5.0, 0.0..=180.0);
+        r.on_hover_text("Maximale Winkelabweichung in Grad fuer Doppelklick-Segment-Erkennung. 0 = deaktiviert.");
         if opts.segment_max_angle_deg == 0.0 {
             ui.weak("(deaktiviert)");
         }
@@ -199,6 +214,9 @@ pub(super) fn render_connections(ui: &mut egui::Ui, opts: &mut EditorOptions) ->
                 0.1,
                 0.01..=2.0,
             );
+        r.on_hover_text(
+            "Linienstaerke fuer Verbindungen mit normaler Prioritaet in Welteinheiten.",
+        );
     });
     ui.horizontal(|ui| {
         ui.label("Breite Nebenstrasse:");
@@ -215,6 +233,7 @@ pub(super) fn render_connections(ui: &mut egui::Ui, opts: &mut EditorOptions) ->
                 0.1,
                 0.01..=2.0,
             );
+        r.on_hover_text("Linienstaerke fuer Verbindungen mit Sub-Prioritaet in Welteinheiten.");
     });
     ui.horizontal(|ui| {
         ui.label("Pfeillaenge:");
@@ -225,6 +244,7 @@ pub(super) fn render_connections(ui: &mut egui::Ui, opts: &mut EditorOptions) ->
         );
         changed |=
             r.changed() | apply_wheel_step(ui, &r, &mut opts.arrow_length_world, 0.5, 0.1..=5.0);
+        r.on_hover_text("Laenge der Richtungspfeile auf Einbahn-Verbindungen in Welteinheiten.");
     });
     ui.horizontal(|ui| {
         ui.label("Pfeilbreite:");
@@ -235,6 +255,7 @@ pub(super) fn render_connections(ui: &mut egui::Ui, opts: &mut EditorOptions) ->
         );
         changed |=
             r.changed() | apply_wheel_step(ui, &r, &mut opts.arrow_width_world, 0.5, 0.1..=5.0);
+        r.on_hover_text("Breite der Richtungspfeile auf Einbahn-Verbindungen in Welteinheiten.");
     });
     changed |= color_edit(ui, "Einbahn vorwaerts:", &mut opts.connection_color_regular);
     changed |= color_edit(ui, "Zweirichtungsverkehr:", &mut opts.connection_color_dual);
@@ -264,6 +285,7 @@ pub(super) fn render_markers(ui: &mut egui::Ui, opts: &mut EditorOptions) -> boo
         );
         changed |=
             r.changed() | apply_wheel_step(ui, &r, &mut opts.marker_size_world, 1.0, 0.5..=10.0);
+        r.on_hover_text("Groesse des Marker-Pin-Icons in Welteinheiten.");
     });
     changed |= color_edit(ui, "Pin-Farbe:", &mut opts.marker_color);
     ui.horizontal(|ui| {
@@ -276,6 +298,7 @@ pub(super) fn render_markers(ui: &mut egui::Ui, opts: &mut EditorOptions) -> boo
         );
         changed |= r.changed()
             | apply_wheel_step(ui, &r, &mut opts.marker_outline_width, 0.01, 0.01..=0.3);
+        r.on_hover_text("Strichdicke des Marker-Umrisses als Anteil am Radius. Aendert das SVG-Icon zur Laufzeit.");
     });
     changed
 }
@@ -292,6 +315,7 @@ pub(super) fn render_camera(ui: &mut egui::Ui, opts: &mut EditorOptions) -> bool
         );
         changed |=
             r.changed() | apply_wheel_step(ui, &r, &mut opts.camera_zoom_min, 0.1, 0.01..=10.0);
+        r.on_hover_text("Minimaler Zoom-Faktor. Kleinere Werte erlauben staerkeres Herauszoomen.");
     });
     ui.horizontal(|ui| {
         ui.label("Max Zoom:");
@@ -302,6 +326,7 @@ pub(super) fn render_camera(ui: &mut egui::Ui, opts: &mut EditorOptions) -> bool
         );
         changed |=
             r.changed() | apply_wheel_step(ui, &r, &mut opts.camera_zoom_max, 5.0, 1.0..=1000.0);
+        r.on_hover_text("Maximaler Zoom-Faktor. Groessere Werte erlauben staerkeres Hineinzoomen.");
     });
     ui.horizontal(|ui| {
         ui.label("Zoom-Schritt (Menue):");
@@ -312,6 +337,7 @@ pub(super) fn render_camera(ui: &mut egui::Ui, opts: &mut EditorOptions) -> bool
         );
         changed |=
             r.changed() | apply_wheel_step(ui, &r, &mut opts.camera_zoom_step, 0.05, 1.01..=3.0);
+        r.on_hover_text("Zoom-Multiplikator bei Klick auf Zoom-Buttons oder Tastenkuerzel.");
     });
     ui.horizontal(|ui| {
         ui.label("Zoom-Schritt (Scroll):");
@@ -322,6 +348,9 @@ pub(super) fn render_camera(ui: &mut egui::Ui, opts: &mut EditorOptions) -> bool
         );
         changed |= r.changed()
             | apply_wheel_step(ui, &r, &mut opts.camera_scroll_zoom_step, 0.05, 1.01..=2.0);
+        r.on_hover_text(
+            "Zoom-Multiplikator pro Mausrad-Schritt. Kleinere Werte = feineres Scrollen.",
+        );
     });
     ui.horizontal(|ui| {
         ui.label("Zoom-Kompensation Max:");
@@ -434,6 +463,9 @@ pub(super) fn render_background(ui: &mut egui::Ui, opts: &mut EditorOptions) -> 
                 .fixed_decimals(2),
         );
         changed |= r.changed() | apply_wheel_step(ui, &r, &mut opts.bg_opacity, 0.05, 0.0..=1.0);
+        r.on_hover_text(
+            "Initiale Hintergrundkarten-Transparenz (0 = unsichtbar, 1 = voll sichtbar).",
+        );
     });
     ui.horizontal(|ui| {
         ui.label("Deckung bei Min-Zoom:");
@@ -444,6 +476,7 @@ pub(super) fn render_background(ui: &mut egui::Ui, opts: &mut EditorOptions) -> 
         );
         changed |= r.changed()
             | apply_wheel_step(ui, &r, &mut opts.bg_opacity_at_min_zoom, 0.05, 0.0..=1.0);
+        r.on_hover_text("Hintergrund-Transparenz beim maximalen Herauszoomen (Ueberblick).");
     });
     ui.horizontal(|ui| {
         ui.label("Fade-out ab Zoom:");
@@ -454,6 +487,7 @@ pub(super) fn render_background(ui: &mut egui::Ui, opts: &mut EditorOptions) -> 
         );
         changed |=
             r.changed() | apply_wheel_step(ui, &r, &mut opts.bg_fade_start_zoom, 0.5, 0.1..=50.0);
+        r.on_hover_text("Ab diesem Zoom-Level beginnt die Hintergrundkarte auszublenden.");
     });
     changed
 }
@@ -463,18 +497,23 @@ pub(super) fn render_overview_layers(ui: &mut egui::Ui, opts: &mut EditorOptions
     let mut changed = false;
     changed |= ui
         .checkbox(&mut opts.overview_layers.hillshade, "Hillshade")
+        .on_hover_text("Schattierte Gelaendedarstellung fuer die Uebersichtskarte.")
         .changed();
     changed |= ui
         .checkbox(&mut opts.overview_layers.farmlands, "Farmland-Grenzen")
+        .on_hover_text("Umrisse der Farmland-Parzellen auf der Uebersichtskarte.")
         .changed();
     changed |= ui
         .checkbox(&mut opts.overview_layers.farmland_ids, "Farmland-IDs")
+        .on_hover_text("Numerische IDs der Farmland-Parzellen anzeigen.")
         .changed();
     changed |= ui
         .checkbox(&mut opts.overview_layers.pois, "POI-Marker")
+        .on_hover_text("Points of Interest (z.B. Verkaufsstellen) auf der Uebersichtskarte.")
         .changed();
     changed |= ui
         .checkbox(&mut opts.overview_layers.legend, "Legende")
+        .on_hover_text("Farblegende fuer die Farmland-Parzellen anzeigen.")
         .changed();
     changed
 }
@@ -512,9 +551,7 @@ pub(super) fn render_node_behavior(ui: &mut egui::Ui, opts: &mut EditorOptions) 
 pub(super) fn render_copy_paste(ui: &mut egui::Ui, opts: &mut EditorOptions) -> bool {
     let mut changed = false;
     ui.horizontal(|ui| {
-        ui.label("Vorschau-Deckung:").on_hover_text(
-            "Transparenz der Paste-Vorschau im Viewport (0 = unsichtbar, 1 = volle Deckkraft).",
-        );
+        ui.label("Vorschau-Deckung:");
         let r = ui.add(
             egui::Slider::new(&mut opts.copy_preview_opacity, 0.0..=1.0)
                 .step_by(0.05)
@@ -522,6 +559,9 @@ pub(super) fn render_copy_paste(ui: &mut egui::Ui, opts: &mut EditorOptions) -> 
         );
         changed |=
             r.changed() | apply_wheel_step(ui, &r, &mut opts.copy_preview_opacity, 0.05, 0.0..=1.0);
+        r.on_hover_text(
+            "Transparenz der Paste-Vorschau im Viewport (0 = unsichtbar, 1 = volle Deckkraft).",
+        );
     });
     changed
 }
