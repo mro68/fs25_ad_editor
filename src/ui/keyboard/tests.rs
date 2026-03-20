@@ -1,6 +1,36 @@
 use super::*;
 use indexmap::IndexSet;
 
+fn collect_with_key_event_and_modifiers(
+    event: egui::Event,
+    raw_modifiers: egui::Modifiers,
+    selected: IndexSet<u64>,
+) -> Vec<AppIntent> {
+    let ctx = egui::Context::default();
+    let mut raw_input = egui::RawInput {
+        modifiers: raw_modifiers,
+        ..Default::default()
+    };
+    raw_input.events.push(event);
+
+    let mut events = Vec::new();
+    let _ = ctx.run(raw_input, |ctx| {
+        egui::CentralPanel::default().show(ctx, |ui| {
+            events = collect_keyboard_intents(
+                ui,
+                &selected,
+                EditorTool::Select,
+                false,
+                false,
+                false,
+                false,
+            );
+        });
+    });
+
+    events
+}
+
 fn collect_with_key_event(event: egui::Event, selected: IndexSet<u64>) -> Vec<AppIntent> {
     collect_with_key_event_full(event, selected, EditorTool::Select, false)
 }
@@ -62,27 +92,6 @@ fn collect_with_key_event_text_input_focus(
     });
 
     events
-}
-
-#[test]
-fn test_num2_emits_connect_tool_intent() {
-    let events = collect_with_key_event(
-        egui::Event::Key {
-            key: egui::Key::Num2,
-            physical_key: None,
-            pressed: true,
-            repeat: false,
-            modifiers: egui::Modifiers::default(),
-        },
-        IndexSet::new(),
-    );
-
-    assert!(events.iter().any(|event| matches!(
-        event,
-        AppIntent::SetEditorToolRequested {
-            tool: EditorTool::Connect
-        }
-    )));
 }
 
 #[test]
@@ -341,27 +350,6 @@ fn test_t_with_ctrl_does_not_toggle_tool_palette() {
 }
 
 #[test]
-fn test_w_toggles_tools_floating_menu() {
-    let events = collect_with_key_event(
-        egui::Event::Key {
-            key: egui::Key::W,
-            physical_key: None,
-            pressed: true,
-            repeat: false,
-            modifiers: egui::Modifiers::default(),
-        },
-        IndexSet::new(),
-    );
-
-    assert!(events.iter().any(|event| matches!(
-        event,
-        AppIntent::ToggleFloatingMenu {
-            kind: FloatingMenuKind::Tools
-        }
-    )));
-}
-
-#[test]
 fn test_g_toggles_basics_floating_menu() {
     let events = collect_with_key_event(
         egui::Event::Key {
@@ -383,10 +371,28 @@ fn test_g_toggles_basics_floating_menu() {
 }
 
 #[test]
-fn test_s_toggles_section_tools_floating_menu() {
+fn test_k_without_modifiers_toggles_command_palette() {
     let events = collect_with_key_event(
         egui::Event::Key {
-            key: egui::Key::S,
+            key: egui::Key::K,
+            physical_key: None,
+            pressed: true,
+            repeat: false,
+            modifiers: egui::Modifiers::default(),
+        },
+        IndexSet::new(),
+    );
+
+    assert!(events
+        .iter()
+        .any(|event| matches!(event, AppIntent::CommandPaletteToggled)));
+}
+
+#[test]
+fn b_taste_oeffnet_section_tools_floating_menu() {
+    let events = collect_with_key_event(
+        egui::Event::Key {
+            key: egui::Key::B,
             physical_key: None,
             pressed: true,
             repeat: false,
@@ -404,34 +410,10 @@ fn test_s_toggles_section_tools_floating_menu() {
 }
 
 #[test]
-fn test_ctrl_s_does_not_toggle_section_tools_floating_menu() {
+fn r_taste_oeffnet_direction_priority_floating_menu() {
     let events = collect_with_key_event(
         egui::Event::Key {
-            key: egui::Key::S,
-            physical_key: None,
-            pressed: true,
-            repeat: false,
-            modifiers: egui::Modifiers {
-                ctrl: true,
-                ..egui::Modifiers::default()
-            },
-        },
-        IndexSet::new(),
-    );
-
-    assert!(!events.iter().any(|event| matches!(
-        event,
-        AppIntent::ToggleFloatingMenu {
-            kind: FloatingMenuKind::SectionTools
-        }
-    )));
-}
-
-#[test]
-fn test_k_without_modifiers_toggles_command_palette() {
-    let events = collect_with_key_event(
-        egui::Event::Key {
-            key: egui::Key::K,
+            key: egui::Key::R,
             physical_key: None,
             pressed: true,
             repeat: false,
@@ -440,7 +422,63 @@ fn test_k_without_modifiers_toggles_command_palette() {
         IndexSet::new(),
     );
 
+    assert!(events.iter().any(|event| matches!(
+        event,
+        AppIntent::ToggleFloatingMenu {
+            kind: FloatingMenuKind::DirectionPriority
+        }
+    )));
+}
+
+#[test]
+fn z_taste_oeffnet_zoom_floating_menu() {
+    let events = collect_with_key_event(
+        egui::Event::Key {
+            key: egui::Key::Z,
+            physical_key: None,
+            pressed: true,
+            repeat: false,
+            modifiers: egui::Modifiers::default(),
+        },
+        IndexSet::new(),
+    );
+
+    assert!(events.iter().any(|event| matches!(
+        event,
+        AppIntent::ToggleFloatingMenu {
+            kind: FloatingMenuKind::Zoom
+        }
+    )));
+}
+
+#[test]
+fn ctrl_z_bleibt_undo() {
+    // Auf Linux setzt eframe/winit bei Ctrl-Taste sowohl ctrl als auch command.
+    // RawInput.modifiers muss ebenfalls gesetzt sein, da i.modifiers daraus gelesen wird.
+    let ctrl_cmd = egui::Modifiers {
+        ctrl: true,
+        command: true,
+        ..egui::Modifiers::default()
+    };
+    let events = collect_with_key_event_and_modifiers(
+        egui::Event::Key {
+            key: egui::Key::Z,
+            physical_key: None,
+            pressed: true,
+            repeat: false,
+            modifiers: ctrl_cmd,
+        },
+        ctrl_cmd,
+        IndexSet::new(),
+    );
+
     assert!(events
         .iter()
-        .any(|event| matches!(event, AppIntent::CommandPaletteToggled)));
+        .any(|event| matches!(event, AppIntent::UndoRequested)));
+    assert!(!events.iter().any(|event| matches!(
+        event,
+        AppIntent::ToggleFloatingMenu {
+            kind: FloatingMenuKind::Zoom
+        }
+    )));
 }

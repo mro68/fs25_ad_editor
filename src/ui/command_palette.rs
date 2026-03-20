@@ -2,6 +2,7 @@
 
 use crate::app::tools::ToolManager;
 use crate::app::{AppIntent, EditorTool};
+use crate::shared::{t, I18nKey, Language};
 
 #[derive(Clone)]
 struct PaletteEntry {
@@ -21,70 +22,70 @@ struct PaletteState {
 }
 
 /// Baut den Command-Katalog aus statischen Befehlen und verfuegbaren Route-Tools.
-fn build_catalog(tool_manager: Option<&ToolManager>) -> Vec<PaletteEntry> {
+fn build_catalog(lang: Language, tool_manager: Option<&ToolManager>) -> Vec<PaletteEntry> {
     let mut catalog = vec![
         PaletteEntry {
-            label: "Datei oeffnen".to_owned(),
+            label: t(lang, I18nKey::PaletteOpenFile).to_owned(),
             shortcut: "Ctrl+O".to_owned(),
             intent: AppIntent::OpenFileRequested,
         },
         PaletteEntry {
-            label: "Speichern".to_owned(),
+            label: t(lang, I18nKey::PaletteSave).to_owned(),
             shortcut: "Ctrl+S".to_owned(),
             intent: AppIntent::SaveRequested,
         },
         PaletteEntry {
-            label: "Rueckgaengig".to_owned(),
+            label: t(lang, I18nKey::PaletteUndo).to_owned(),
             shortcut: "Ctrl+Z".to_owned(),
             intent: AppIntent::UndoRequested,
         },
         PaletteEntry {
-            label: "Wiederholen".to_owned(),
+            label: t(lang, I18nKey::PaletteRedo).to_owned(),
             shortcut: "Ctrl+Y".to_owned(),
             intent: AppIntent::RedoRequested,
         },
         PaletteEntry {
-            label: "Alles auswaehlen".to_owned(),
+            label: t(lang, I18nKey::PaletteSelectAll).to_owned(),
             shortcut: "Ctrl+A".to_owned(),
             intent: AppIntent::SelectAllRequested,
         },
         PaletteEntry {
-            label: "Auswahl loeschen".to_owned(),
+            label: t(lang, I18nKey::PaletteDeleteSelected).to_owned(),
             shortcut: "Del".to_owned(),
             intent: AppIntent::DeleteSelectedRequested,
         },
         PaletteEntry {
-            label: "Kopieren".to_owned(),
+            label: t(lang, I18nKey::PaletteCopy).to_owned(),
             shortcut: "Ctrl+C".to_owned(),
             intent: AppIntent::CopySelectionRequested,
         },
         PaletteEntry {
-            label: "Einfuegen".to_owned(),
+            label: t(lang, I18nKey::PalettePaste).to_owned(),
             shortcut: "Ctrl+V".to_owned(),
             intent: AppIntent::PasteStartRequested,
         },
         PaletteEntry {
-            label: "Kamera zuruecksetzen".to_owned(),
+            label: t(lang, I18nKey::PaletteResetCamera).to_owned(),
             shortcut: "Home".to_owned(),
             intent: AppIntent::ResetCameraRequested,
         },
         PaletteEntry {
-            label: "Select-Tool".to_owned(),
-            shortcut: "1".to_owned(),
+            label: t(lang, I18nKey::PaletteToolSelect).to_owned(),
+            shortcut: "T".to_owned(),
             intent: AppIntent::SetEditorToolRequested {
                 tool: EditorTool::Select,
             },
         },
         PaletteEntry {
-            label: "Connect-Tool".to_owned(),
-            shortcut: "2".to_owned(),
+            label: t(lang, I18nKey::PaletteToolConnect).to_owned(),
+            shortcut: "T".to_owned(),
             intent: AppIntent::SetEditorToolRequested {
                 tool: EditorTool::Connect,
             },
         },
         PaletteEntry {
-            label: "Add-Node-Tool".to_owned(),
-            shortcut: "3".to_owned(),
+            label: t(lang, I18nKey::PaletteToolAddNode).to_owned(),
+            shortcut: "T".to_owned(),
             intent: AppIntent::SetEditorToolRequested {
                 tool: EditorTool::AddNode,
             },
@@ -92,9 +93,10 @@ fn build_catalog(tool_manager: Option<&ToolManager>) -> Vec<PaletteEntry> {
     ];
 
     if let Some(tm) = tool_manager {
+        let prefix = t(lang, I18nKey::PaletteRouteToolPrefix);
         for (index, (_, name, _icon)) in tm.tool_entries().iter().enumerate() {
             catalog.push(PaletteEntry {
-                label: format!("Route-Tool: {name}"),
+                label: format!("{prefix} {name}"),
                 shortcut: String::new(),
                 intent: AppIntent::SelectRouteToolRequested { index },
             });
@@ -109,6 +111,7 @@ pub fn render_command_palette(
     ctx: &egui::Context,
     show: &mut bool,
     tool_manager: Option<&ToolManager>,
+    lang: Language,
 ) -> Vec<AppIntent> {
     if !*show {
         return Vec::new();
@@ -119,7 +122,7 @@ pub fn render_command_palette(
     let state_id = egui::Id::new("command_palette_state");
 
     let mut state = ctx.data_mut(|d| d.get_temp_mut_or_default::<PaletteState>(state_id).clone());
-    let catalog = build_catalog(tool_manager);
+    let catalog = build_catalog(lang, tool_manager);
     let needle = state.search_text.to_lowercase();
     let filtered_indices: Vec<usize> = catalog
         .iter()
@@ -148,7 +151,8 @@ pub fn render_command_palette(
         .open(&mut window_open)
         .show(ctx, |ui| {
             let search_response = ui.add(
-                egui::TextEdit::singleline(&mut state.search_text).hint_text("Befehl eingeben..."),
+                egui::TextEdit::singleline(&mut state.search_text)
+                    .hint_text(t(lang, I18nKey::PaletteSearchHint)),
             );
             if !state.focus_requested {
                 search_response.request_focus();
@@ -164,7 +168,7 @@ pub fn render_command_palette(
                 .max_height(280.0)
                 .show(ui, |ui| {
                     if filtered_indices.is_empty() {
-                        ui.label("Keine Treffer");
+                        ui.label(t(lang, I18nKey::PaletteNoResults));
                         return;
                     }
 

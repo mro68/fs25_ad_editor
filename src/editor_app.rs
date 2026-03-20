@@ -81,6 +81,7 @@ impl EditorApp {
             ctx,
             &mut self.state.ui.show_command_palette,
             Some(&self.state.editor.tool_manager),
+            self.state.options.language,
         ));
 
         // Zentraler Viewport (Rendering + Input + Overlays)

@@ -39,10 +39,10 @@ Das Eigenschaften-Panel zeigt kontextabhaengig Infos zur aktuellen Selektion und
 
 Zeigt die verfuegbaren Werkzeuge:
 
-- **⊹ Select (1)** — Standard-Werkzeug: Nodes selektieren und verschieben
-- **⟷ Connect (2)** — Verbindungen zwischen Nodes erstellen
-- **＋ Add Node (3)** — Neue Nodes auf der Karte platzieren
-- **Route-Tools (4)** — Route-Werkzeuge: Gerade Strecke, Bézier-Kurve, Spline
+- **⊹ Select** — Standard-Werkzeug: Nodes selektieren und verschieben
+- **⟷ Connect** — Verbindungen zwischen Nodes erstellen
+- **＋ Add Node** — Neue Nodes auf der Karte platzieren
+- **Route-Tools** — Route-Werkzeuge: Gerade Strecke, Bézier-Kurve, Spline
 - **🗑 Delete (Del)** — Selektierte Nodes loeschen (nur aktiv bei Selektion)
 - **Hintergrund-Controls** — Opacity-Slider und Sichtbarkeits-Toggle (rechts, nur wenn Hintergrund geladen)
 
@@ -73,13 +73,17 @@ Zeigt folgende Informationen (nur Anzeige, nicht interaktiv):
 | `Ctrl+A` | Alle Nodes selektieren |
 | `Escape` | Selektion aufheben |
 
-### Werkzeug-Shortcuts
+### Floating-Menue-Shortcuts
 
-| Shortcut | Werkzeug |
-|----------|----------|
-| `1` | Select-Tool (Auswaehlen/Verschieben) |
-| `2` | Connect-Tool (Verbindungen erstellen) |
-| `3` | Add-Node-Tool (Nodes hinzufuegen) |
+Werkzeuge und Aktionen werden ueber **Floating-Menues** aufgerufen. Jeder Tastendruck oeffnet ein Popup-Menue mit den zugehoerigen Optionen:
+
+| Shortcut | Floating-Menue | Inhalt |
+|----------|----------------|--------|
+| `T` | Werkzeuge | Select, Connect, Add Node, Gerade, Kurve, Spline |
+| `B` | Bearbeitungstools | Duplikate, Strecke aufteilen, sonstige Bearbeitungs-Aktionen |
+| `G` | Grundbefehle | Datei oeffnen, speichern, Undo, Redo |
+| `R` | Richtung & Strassenart | Einbahn vorwaerts, Zweirichtung, Einbahn rueckwaerts, Hauptstrasse, Nebenstrasse |
+| `Z` | Zoom | Auf komplette Map zoomen, Auf Auswahl zoomen |
 
 ### Bearbeitungs-Shortcuts
 

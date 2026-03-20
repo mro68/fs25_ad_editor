@@ -261,7 +261,7 @@ pub enum Language {
 
 ### `I18nKey`
 
-Enum aller übersetzbaren UI-Schlüssel. Gruppen: Allgemein, Dialog-Chrome, Options-Dialog (Abschnitte, Felder, Tooltips), Menüleiste, Status-Bar, Tool-Namen.
+Enum aller übersetzbaren UI-Schlüssel. Gruppen: Allgemein, Dialog-Chrome, Options-Dialog (Abschnitte, Felder, Tooltips), Menüleiste, Status-Bar, Tool-Namen, Sidebar, Zoom, Hintergrund, Route-Gruppen, Floating-Menus, Kontextmenüs, Command-Palette, LongPress-Tooltips.
 
 ```rust
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
@@ -270,12 +270,38 @@ pub enum I18nKey {
     AppTitle, Ok, Cancel, Apply, Close, Reset, Delete, Add, Remove, LanguageLabel,
     // Dialog-Chrome
     DialogClose, DialogDefaults,
-    // Options-Dialog: Navigation
+    // Options-Dialog: Navigation & Felder
     OptSectionGeneral, OptSectionNodes, OptSectionTools, OptSectionConnections, OptSectionBehavior,
-    // ... (insgesamt ~163 Varianten, vollständig in keys.rs)
+    // ... (Opt* — ~95 Keys, vollständig in keys.rs)
     // Menüleiste (MenuXxx — 29 Keys)
     // Status-Bar (StatusXxx — 13 Keys)
     // Tool-Namen (ToolNameXxx — 4 Keys)
+    // === NEU (Branch feature/zoom-shortcuts-i18n, 79 neue Keys) ===
+    // Sidebar-Abschnittstitel (SidebarXxx — 7 Keys: Tools, Basics, Edit, Direction, Priority, Zoom, Background)
+    SidebarTools, SidebarBasics, SidebarEdit, SidebarDirection, SidebarPriority, SidebarZoom, SidebarBackground,
+    // Zoom-Buttons (ZoomXxx — 4 Keys)
+    ZoomFullMap, ZoomFullMapHelp, ZoomToSelection, ZoomToSelectionHelp,
+    // Hintergrund-Buttons (BackgroundXxx — 5 Keys)
+    BackgroundHide, BackgroundShow, BackgroundScaleDown, BackgroundScaleUp, BackgroundScaleReset,
+    // Route-Gruppenbezeichnungen (RouteGroupXxx — 3 Keys)
+    RouteGroupStraight, RouteGroupCurves, RouteGroupSection,
+    // Floating-Menu Tooltips (FloatingXxx — 13 Keys: Tools, Basics, Edit, DirectionPriority, Zoom)
+    FloatingToolSelect, FloatingToolConnect, FloatingToolAddNode,
+    FloatingBasicStraight, FloatingBasicQuadratic, FloatingBasicCubic, FloatingBasicSpline, FloatingBasicSmoothCurve,
+    FloatingEditBypass, FloatingEditParking, FloatingEditRouteOffset,
+    FloatingDirectionRegular, FloatingDirectionDual, FloatingDirectionReverse, FloatingPriorityMain, FloatingPrioritySub,
+    FloatingZoomFullMap, FloatingZoomSelection,
+    // Kontextmenü-Einträge (CtxXxx — 28 Keys)
+    CtxToolSubmenu, CtxToolSelect, CtxToolConnect, CtxToolAddNode,
+    CtxZoomSubmenu, CtxZoomFullMap, CtxZoomSelection,
+    CtxRouteSubmenu, /* ... weitere Ctx* Keys */
+    // Command-Palette-Einträge (PaletteXxx — 14 Keys)
+    PaletteSearchHint, PaletteNoResults, PaletteOpenFile, /* ... weitere Palette* Keys */
+    // LongPress-Tooltips (LpXxx — 13 Keys: Tools, Basics, SectionTools, Direction, Priority)
+    LpToolSelect, LpToolConnect, LpToolAddNode,
+    LpStraight, LpCurveQuad, LpCurveCubic, LpSpline, LpSmoothCurve,
+    LpBypass, LpParking, LpRouteOffset,
+    LpDirectionRegular, LpDirectionDual, LpDirectionReverse, LpPriorityMain, LpPrioritySub,
 }
 ```
 
