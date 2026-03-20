@@ -38,9 +38,11 @@ Der FS25 AutoDrive Editor dient zum Erstellen und Bearbeiten von AutoDrive-Kurse
 | `Ctrl+Y` / `Shift+Ctrl+Z` | Redo |
 | `Ctrl+A` | Alle Nodes selektieren |
 | `Escape` | Selektion aufheben / Tool zuruecksetzen |
-| `1` | Select-Tool |
-| `2` | Connect-Tool |
-| `3` | Add-Node-Tool |
+| `T` | Werkzeuge Floating-Menue (Select, Connect, Add Node, Route-Tools) |
+| `B` | Bearbeitungstools Floating-Menue |
+| `G` | Grundbefehle Floating-Menue |
+| `R` | Richtung & Strassenart Floating-Menue |
+| `Z` | Zoom Floating-Menue |
 | `Delete` / `Backspace` | Selektierte Nodes loeschen |
 | `C` | Verbindung erstellen (2 Nodes selektiert) |
 | `X` | Verbindung trennen (2 Nodes selektiert) |

@@ -134,9 +134,16 @@ pub struct FloatingMenuState {
 }
 
 pub enum FloatingMenuKind {
+    /// Werkzeug-Menue (Select/Connect/AddNode) — Shortcut: `T`
     Tools,
+    /// Basis-Menue (Gerade/Kurve/Spline/Constraint) — Shortcut: `G`
     Basics,
+    /// Menue fuer Abschnittswerkzeuge (Bypass/Parking/RouteOffset) — Shortcut: `B`
     SectionTools,
+    /// Richtungs- und Strassenart-Menue (Regular/Dual/Reverse, Haupt/Neben) — Shortcut: `R`
+    DirectionPriority,
+    /// Zoom-Menue (Auf Map einpassen / Auf Auswahl einpassen) — Shortcut: `Z`
+    Zoom,
 }
 
 pub struct DistanzenState {

@@ -2,7 +2,7 @@
 
 ← [Benutzeroberflaeche](02-oberflaeche.md) | [Zurueck zur Uebersicht](index.md)
 
-## Select-Tool (1)
+## Select-Tool
 
 Das Standard-Werkzeug fuer Auswahl und Verschiebung von Nodes.
 
@@ -17,7 +17,7 @@ Das Standard-Werkzeug fuer Auswahl und Verschiebung von Nodes.
 
 ---
 
-## Connect-Tool (2)
+## Connect-Tool
 
 Erstellt Verbindungen zwischen zwei Nodes.
 
@@ -34,7 +34,7 @@ Erstellt Verbindungen zwischen zwei Nodes.
 
 ---
 
-## Add-Node-Tool (3)
+## Add-Node-Tool
 
 Platziert neue Wegpunkte auf der Karte.
 
@@ -45,9 +45,9 @@ Platziert neue Wegpunkte auf der Karte.
 
 ---
 
-## Route-Tools (4)
+## Route-Tools
 
-Erstellt Strecken und Kurse ueber vordefinierte Geometrien. Im Route-Modus stehen drei Sub-Tools zur Verfuegung:
+Erstellt Strecken und Kurse ueber vordefinierte Geometrien. Die Route-Tools werden ueber das **Werkzeuge-Floating-Menue (T)** aufgerufen. Im Route-Modus stehen drei Sub-Tools zur Verfuegung:
 
 ### 📏 Gerade Strecke
 

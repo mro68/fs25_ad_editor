@@ -51,6 +51,16 @@ Die Statusleiste zeigt an, wie viele Duplikate entfernt wurden.
 
 Ueber **Datei → Einstellungen** oder die **Optionen-Toolbar** erreichbar.
 
+### Sprache (i18n)
+
+Der Editor unterstuetzt mehrere Sprachen. Die Sprache wird in den Optionen umgestellt:
+
+| Option | Beschreibung |
+|--------|--------------|
+| **Sprache** | Umschalten zwischen Deutsch und Englisch |
+
+Die Aenderung wird sofort wirksam — ein Neustart ist nicht erforderlich.
+
 ### Anzeige-Optionen
 
 | Option | Beschreibung |
