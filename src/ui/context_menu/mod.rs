@@ -124,6 +124,7 @@ pub fn render_context_menu(
     events: &mut Vec<AppIntent>,
 ) -> bool {
     let Some(rm) = road_map else { return false };
+    let lang = options.language;
 
     response
         .context_menu(|ui| {
@@ -154,7 +155,7 @@ pub fn render_context_menu(
 
             match variant {
                 MenuVariant::EmptyArea => {
-                    let catalog = MenuCatalog::for_empty_area();
+                    let catalog = MenuCatalog::for_empty_area(lang);
                     let intent_ctx = IntentContext {
                         node_id: None,
                         node_position: None,
@@ -181,7 +182,7 @@ pub fn render_context_menu(
                         None
                     };
 
-                    let catalog = MenuCatalog::for_selection_only();
+                    let catalog = MenuCatalog::for_selection_only(lang);
                     let intent_ctx = IntentContext {
                         node_id: None,
                         node_position: None,
@@ -210,7 +211,7 @@ pub fn render_context_menu(
                         None
                     };
 
-                    let catalog = MenuCatalog::for_node_focused(*focused_node_id);
+                    let catalog = MenuCatalog::for_node_focused(*focused_node_id, lang);
                     let intent_ctx = IntentContext {
                         node_id: Some(*focused_node_id),
                         node_position: node_pos,

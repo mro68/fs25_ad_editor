@@ -19,6 +19,10 @@ pub enum FloatingMenuKind {
     Basics,
     /// Menue fuer Abschnittswerkzeuge.
     SectionTools,
+    /// Richtungs- und Strassenart-Menue (R).
+    DirectionPriority,
+    /// Zoom-Funktionen (Z).
+    Zoom,
 }
 
 /// Zustand des Marker-Bearbeiten-Dialogs

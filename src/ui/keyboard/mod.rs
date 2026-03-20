@@ -143,10 +143,6 @@ pub(super) fn collect_keyboard_intents(
     // Delete, Tool-Wechsel, Connect/Disconnect, Enter (Route-Tool)
     let (
         key_del_pressed,
-        key_1_pressed,
-        key_2_pressed,
-        key_3_pressed,
-        _, // S ohne Modifier wird ueber key_s_no_mod abgefragt
         key_c_pressed,
         key_v_pressed,
         key_x_pressed,
@@ -158,10 +154,6 @@ pub(super) fn collect_keyboard_intents(
     ) = ui.input(|i| {
         (
             i.key_pressed(egui::Key::Delete) || i.key_pressed(egui::Key::Backspace),
-            i.key_pressed(egui::Key::Num1),
-            i.key_pressed(egui::Key::Num2),
-            i.key_pressed(egui::Key::Num3),
-            i.key_pressed(egui::Key::S),
             i.key_pressed(egui::Key::C),
             i.key_pressed(egui::Key::V),
             i.key_pressed(egui::Key::X),
@@ -182,70 +174,58 @@ pub(super) fn collect_keyboard_intents(
         events.push(AppIntent::RouteToolExecuteRequested);
     }
 
-    if key_1_pressed && !modifiers.command {
-        events.push(AppIntent::SetEditorToolRequested {
-            tool: EditorTool::Select,
-        });
-    }
-    if key_2_pressed && !modifiers.command {
-        events.push(AppIntent::SetEditorToolRequested {
-            tool: EditorTool::Connect,
-        });
-    }
-    if key_3_pressed && !modifiers.command {
-        events.push(AppIntent::SetEditorToolRequested {
-            tool: EditorTool::AddNode,
-        });
-    }
+    let (
+        key_g_no_mod,
+        key_t_no_mod,
+        key_b_no_mod,
+        key_r_no_mod,
+        key_z_no_mod,
+        key_k_no_mod,
+        key_k_ctrl_or_cmd,
+    ) = ui.input(|i| {
+        let mut key_g_no_mod = false;
+        let mut key_t_no_mod = false;
+        let mut key_b_no_mod = false;
+        let mut key_r_no_mod = false;
+        let mut key_z_no_mod = false;
+        let mut key_k_no_mod = false;
+        let mut key_k_ctrl_or_cmd = false;
 
-    let (key_w_no_mod, key_g_no_mod, key_s_no_mod, key_t_no_mod, key_k_no_mod, key_k_ctrl_or_cmd) =
-        ui.input(|i| {
-            let mut key_w_no_mod = false;
-            let mut key_g_no_mod = false;
-            let mut key_s_no_mod = false;
-            let mut key_t_no_mod = false;
-            let mut key_k_no_mod = false;
-            let mut key_k_ctrl_or_cmd = false;
-
-            for event in &i.events {
-                if let egui::Event::Key {
-                    key,
-                    pressed: true,
-                    modifiers,
-                    ..
-                } = event
-                {
-                    let no_mod =
-                        !modifiers.command && !modifiers.ctrl && !modifiers.shift && !modifiers.alt;
-                    match key {
-                        egui::Key::W if no_mod => key_w_no_mod = true,
-                        egui::Key::G if no_mod => key_g_no_mod = true,
-                        egui::Key::S if no_mod => key_s_no_mod = true,
-                        egui::Key::T if no_mod => key_t_no_mod = true,
-                        egui::Key::K if no_mod => key_k_no_mod = true,
-                        egui::Key::K if modifiers.command || modifiers.ctrl => {
-                            key_k_ctrl_or_cmd = true;
-                        }
-                        _ => {}
+        for event in &i.events {
+            if let egui::Event::Key {
+                key,
+                pressed: true,
+                modifiers,
+                ..
+            } = event
+            {
+                let no_mod =
+                    !modifiers.command && !modifiers.ctrl && !modifiers.shift && !modifiers.alt;
+                match key {
+                    egui::Key::G if no_mod => key_g_no_mod = true,
+                    egui::Key::T if no_mod => key_t_no_mod = true,
+                    egui::Key::B if no_mod => key_b_no_mod = true,
+                    egui::Key::R if no_mod => key_r_no_mod = true,
+                    egui::Key::Z if no_mod => key_z_no_mod = true,
+                    egui::Key::K if no_mod => key_k_no_mod = true,
+                    egui::Key::K if modifiers.command || modifiers.ctrl => {
+                        key_k_ctrl_or_cmd = true;
                     }
+                    _ => {}
                 }
             }
+        }
 
-            (
-                key_w_no_mod,
-                key_g_no_mod,
-                key_s_no_mod,
-                key_t_no_mod,
-                key_k_no_mod,
-                key_k_ctrl_or_cmd,
-            )
-        });
-
-    if key_w_no_mod {
-        events.push(AppIntent::ToggleFloatingMenu {
-            kind: FloatingMenuKind::Tools,
-        });
-    }
+        (
+            key_g_no_mod,
+            key_t_no_mod,
+            key_b_no_mod,
+            key_r_no_mod,
+            key_z_no_mod,
+            key_k_no_mod,
+            key_k_ctrl_or_cmd,
+        )
+    });
 
     if key_g_no_mod {
         events.push(AppIntent::ToggleFloatingMenu {
@@ -253,16 +233,27 @@ pub(super) fn collect_keyboard_intents(
         });
     }
 
-    if key_s_no_mod {
+    if key_t_no_mod {
+        events.push(AppIntent::ToggleFloatingMenu {
+            kind: FloatingMenuKind::Tools,
+        });
+    }
+
+    if key_b_no_mod {
         events.push(AppIntent::ToggleFloatingMenu {
             kind: FloatingMenuKind::SectionTools,
         });
     }
 
-    // Alias: T oeffnet weiterhin das Werkzeuge-Menue.
-    if key_t_no_mod {
+    if key_r_no_mod {
         events.push(AppIntent::ToggleFloatingMenu {
-            kind: FloatingMenuKind::Tools,
+            kind: FloatingMenuKind::DirectionPriority,
+        });
+    }
+
+    if key_z_no_mod {
+        events.push(AppIntent::ToggleFloatingMenu {
+            kind: FloatingMenuKind::Zoom,
         });
     }
 

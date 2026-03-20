@@ -5,6 +5,7 @@ use crate::app::segment_registry::{
     TOOL_INDEX_ROUTE_OFFSET, TOOL_INDEX_SMOOTH_CURVE, TOOL_INDEX_SPLINE, TOOL_INDEX_STRAIGHT,
 };
 use crate::app::{AppIntent, AppState, ConnectionDirection, ConnectionPriority, EditorTool};
+use crate::shared::{t, I18nKey};
 use crate::ui::icons::{
     accent_icon_color, function_icon_color, route_tool_icon, svg_icon, ICON_SIZE,
 };
@@ -19,11 +20,11 @@ enum RouteGroup {
     Section,
 }
 
-fn route_group_label(group: RouteGroup) -> &'static str {
+fn route_group_label(group: RouteGroup, lang: crate::shared::Language) -> &'static str {
     match group {
-        RouteGroup::Straight => "Geraden",
-        RouteGroup::Curve => "Kurven",
-        RouteGroup::Section => "Tools",
+        RouteGroup::Straight => t(lang, I18nKey::RouteGroupStraight),
+        RouteGroup::Curve => t(lang, I18nKey::RouteGroupCurves),
+        RouteGroup::Section => t(lang, I18nKey::RouteGroupSection),
     }
 }
 
@@ -64,6 +65,7 @@ fn render_long_press_with_memory<T: Clone + PartialEq>(
 /// Rendert die linke Sidebar mit Tool-Auswahl, Route-Tools und Defaults.
 pub fn render_route_defaults_panel(ctx: &egui::Context, state: &AppState) -> Vec<AppIntent> {
     let mut events = Vec::new();
+    let lang = state.options.language;
     let active_tool = state.editor.active_tool;
     let icon_color = function_icon_color(state);
     let active_icon_color = accent_icon_color(state);
@@ -91,46 +93,46 @@ pub fn render_route_defaults_panel(ctx: &egui::Context, state: &AppState) -> Vec
     let tools_items = [
         LongPressItem {
             icon: egui::include_image!("../../assets/icons/icon_select_node.svg"),
-            tooltip: "Auswahl (Taste 1)\nNodes per Klick oder Lasso selektieren.\nSelektierte Nodes per Drag verschieben.",
+            tooltip: t(lang, I18nKey::LpToolSelect),
             value: EditorTool::Select,
         },
         LongPressItem {
             icon: egui::include_image!("../../assets/icons/icon_connect.svg"),
-            tooltip: "Verbinden (Taste 2)\nVerbindung zwischen 2 Nodes erstellen (Taste C)\noder loeschen (Taste X). Pfeilrichtung = Fahrtrichtung.",
+            tooltip: t(lang, I18nKey::LpToolConnect),
             value: EditorTool::Connect,
         },
         LongPressItem {
             icon: egui::include_image!("../../assets/icons/icon_add_node.svg"),
-            tooltip: "Node hinzufuegen (Taste 3)\nNeuen Wegpunkt per Klick in die Karte setzen.",
+            tooltip: t(lang, I18nKey::LpToolAddNode),
             value: EditorTool::AddNode,
         },
     ];
 
     let straights_items = [LongPressItem {
         icon: route_tool_icon(TOOL_INDEX_STRAIGHT),
-        tooltip: "Gerade Strecke (G)\nNodes mit gleichmaessigem Abstand entlang einer Linie platzieren.\nPfeiltasten: Abstand/Anzahl anpassen. Enter: Bestaetigen.",
+        tooltip: t(lang, I18nKey::LpStraight),
         value: TOOL_INDEX_STRAIGHT,
     }];
 
     let curves_items = [
         LongPressItem {
             icon: route_tool_icon(TOOL_INDEX_CURVE_QUAD),
-            tooltip: "Bezier-Kurve quadratisch (G)\n1 Kontrollpunkt. Einfache, gleichmaessige Kurve.",
+            tooltip: t(lang, I18nKey::LpCurveQuad),
             value: TOOL_INDEX_CURVE_QUAD,
         },
         LongPressItem {
             icon: route_tool_icon(TOOL_INDEX_CURVE_CUBIC),
-            tooltip: "Bezier-Kurve kubisch (G)\n2 Kontrollpunkte fuer maximale Formkontrolle.",
+            tooltip: t(lang, I18nKey::LpCurveCubic),
             value: TOOL_INDEX_CURVE_CUBIC,
         },
         LongPressItem {
             icon: route_tool_icon(TOOL_INDEX_SPLINE),
-            tooltip: "Catmull-Rom Spline (G)\nGlatte Kurve durch existierende Nodes.\nZusaetzliche Zwischenpunkte werden berechnet.",
+            tooltip: t(lang, I18nKey::LpSpline),
             value: TOOL_INDEX_SPLINE,
         },
         LongPressItem {
             icon: route_tool_icon(TOOL_INDEX_SMOOTH_CURVE),
-            tooltip: "Geglättete Kurve (G)\nWinkelgeglaettete Strecke zwischen zwei Nodes.\nAutomatische Ausrichtung an Strassenrasterwinkeln.",
+            tooltip: t(lang, I18nKey::LpSmoothCurve),
             value: TOOL_INDEX_SMOOTH_CURVE,
         },
     ];
@@ -138,17 +140,17 @@ pub fn render_route_defaults_panel(ctx: &egui::Context, state: &AppState) -> Vec
     let section_tools_items = [
         LongPressItem {
             icon: route_tool_icon(TOOL_INDEX_BYPASS),
-            tooltip: "Ausweichstrecke (S)\nErzeugt eine parallele Umgehungsstrecke zur Selektion.",
+            tooltip: t(lang, I18nKey::LpBypass),
             value: TOOL_INDEX_BYPASS,
         },
         LongPressItem {
             icon: route_tool_icon(TOOL_INDEX_PARKING),
-            tooltip: "Parkplatz (S)\nGeneriert ein Parkplatz-Layout aus der Selektion.",
+            tooltip: t(lang, I18nKey::LpParking),
             value: TOOL_INDEX_PARKING,
         },
         LongPressItem {
             icon: route_tool_icon(TOOL_INDEX_ROUTE_OFFSET),
-            tooltip: "Strecke versetzen (S)\nVerschiebt die selektierte Route parallel um einen konfigurierbaren Abstand.",
+            tooltip: t(lang, I18nKey::LpRouteOffset),
             value: TOOL_INDEX_ROUTE_OFFSET,
         },
     ];
@@ -156,17 +158,17 @@ pub fn render_route_defaults_panel(ctx: &egui::Context, state: &AppState) -> Vec
     let direction_items = [
         LongPressItem {
             icon: egui::include_image!("../../assets/icons/icon_direction_regular.svg"),
-            tooltip: "Einbahn vorwaerts\nFahrzeuge nutzen diese Verbindungen nur in Vorwaertsrichtung.\nStandard fuer normale gerichtete Strecken.",
+            tooltip: t(lang, I18nKey::LpDirectionRegular),
             value: ConnectionDirection::Regular,
         },
         LongPressItem {
             icon: egui::include_image!("../../assets/icons/icon_direction_dual.svg"),
-            tooltip: "Zweirichtung\nFahrzeuge koennen in beide Richtungen fahren.\nFuer Wege die in beiden Richtungen befahrbar sein sollen.",
+            tooltip: t(lang, I18nKey::LpDirectionDual),
             value: ConnectionDirection::Dual,
         },
         LongPressItem {
             icon: egui::include_image!("../../assets/icons/icon_direction_reverse.svg"),
-            tooltip: "Einbahn rueckwaerts\nFahrzeuge fahren ausschliesslich rueckwaerts auf dieser Strecke.",
+            tooltip: t(lang, I18nKey::LpDirectionReverse),
             value: ConnectionDirection::Reverse,
         },
     ];
@@ -174,49 +176,49 @@ pub fn render_route_defaults_panel(ctx: &egui::Context, state: &AppState) -> Vec
     let priority_items = [
         LongPressItem {
             icon: egui::include_image!("../../assets/icons/icon_priority_main.svg"),
-            tooltip: "Hauptstrasse\nHohe Prioritaet. AutoDrive bevorzugt diese Strecken.\nFuer Hauptverbindungen und viel genutzte Wege.",
+            tooltip: t(lang, I18nKey::LpPriorityMain),
             value: ConnectionPriority::Regular,
         },
         LongPressItem {
             icon: egui::include_image!("../../assets/icons/icon_priority_side.svg"),
-            tooltip: "Nebenstrasse\nNiedrigere Prioritaet. Nur bei Bedarf genutzt.\nFuer Feldwege und selten befahrene Verbindungen.",
+            tooltip: t(lang, I18nKey::LpPrioritySub),
             value: ConnectionPriority::SubPriority,
         },
     ];
 
     let tools_group = LongPressGroup {
         id: "werkzeuge",
-        label: "Werkzeuge",
+        label: t(lang, I18nKey::SidebarTools),
         items: &tools_items,
     };
 
     let straights_group = LongPressGroup {
         id: "grundbefehle_geraden",
-        label: route_group_label(RouteGroup::Straight),
+        label: route_group_label(RouteGroup::Straight, lang),
         items: &straights_items,
     };
 
     let curves_group = LongPressGroup {
         id: "grundbefehle_kurven",
-        label: route_group_label(RouteGroup::Curve),
+        label: route_group_label(RouteGroup::Curve, lang),
         items: &curves_items,
     };
 
     let section_tools_group = LongPressGroup {
         id: "tools_abschnitt",
-        label: route_group_label(RouteGroup::Section),
+        label: route_group_label(RouteGroup::Section, lang),
         items: &section_tools_items,
     };
 
     let direction_group = LongPressGroup {
         id: "defaults_richtung",
-        label: "Voreinstellung Richtung",
+        label: t(lang, I18nKey::SidebarDirection),
         items: &direction_items,
     };
 
     let priority_group = LongPressGroup {
         id: "defaults_prioritaet",
-        label: "Voreinstellung Strassenart",
+        label: t(lang, I18nKey::SidebarPriority),
         items: &priority_items,
     };
 
@@ -224,7 +226,11 @@ pub fn render_route_defaults_panel(ctx: &egui::Context, state: &AppState) -> Vec
         .resizable(false)
         .default_width(80.0)
         .show(ctx, |ui| {
-            ui.label(egui::RichText::new("Werkzeuge").small().weak());
+            ui.label(
+                egui::RichText::new(t(lang, I18nKey::SidebarTools))
+                    .small()
+                    .weak(),
+            );
             if let Some(tool) = render_long_press_with_memory(
                 ui,
                 icon_color,
@@ -240,7 +246,11 @@ pub fn render_route_defaults_panel(ctx: &egui::Context, state: &AppState) -> Vec
             ui.separator();
             ui.add_space(6.0);
 
-            ui.label(egui::RichText::new("Grundbefehle").small().weak());
+            ui.label(
+                egui::RichText::new(t(lang, I18nKey::SidebarBasics))
+                    .small()
+                    .weak(),
+            );
             if let Some(index) = render_long_press_with_memory(
                 ui,
                 icon_color,
@@ -267,7 +277,11 @@ pub fn render_route_defaults_panel(ctx: &egui::Context, state: &AppState) -> Vec
             ui.separator();
             ui.add_space(6.0);
 
-            ui.label(egui::RichText::new("Bearbeiten").small().weak());
+            ui.label(
+                egui::RichText::new(t(lang, I18nKey::SidebarEdit))
+                    .small()
+                    .weak(),
+            );
             if let Some(index) = render_long_press_with_memory(
                 ui,
                 icon_color,
@@ -283,7 +297,11 @@ pub fn render_route_defaults_panel(ctx: &egui::Context, state: &AppState) -> Vec
             ui.separator();
             ui.add_space(6.0);
 
-            ui.label(egui::RichText::new("Richtung").small().weak());
+            ui.label(
+                egui::RichText::new(t(lang, I18nKey::SidebarDirection))
+                    .small()
+                    .weak(),
+            );
             if let Some(direction) = render_long_press_with_memory(
                 ui,
                 icon_color,
@@ -299,7 +317,11 @@ pub fn render_route_defaults_panel(ctx: &egui::Context, state: &AppState) -> Vec
             ui.separator();
             ui.add_space(6.0);
 
-            ui.label(egui::RichText::new("Strassenart").small().weak());
+            ui.label(
+                egui::RichText::new(t(lang, I18nKey::SidebarPriority))
+                    .small()
+                    .weak(),
+            );
             if let Some(priority) = render_long_press_with_memory(
                 ui,
                 icon_color,
@@ -311,30 +333,45 @@ pub fn render_route_defaults_panel(ctx: &egui::Context, state: &AppState) -> Vec
                 events.push(AppIntent::SetDefaultPriorityRequested { priority });
             }
 
-            egui::CollapsingHeader::new("\u{1F50E} Zoom").show(ui, |ui| {
-                if ui
-                    .button("Auf komplette Map")
-                    .on_hover_text("Gesamte Map in den Viewport einpassen")
-                    .clicked()
-                {
-                    events.push(AppIntent::ZoomToFitRequested);
-                }
-                let has_selection = state.selection.selected_node_ids.len() >= 2;
-                ui.add_enabled_ui(has_selection, |ui| {
+            egui::CollapsingHeader::new(format!("\u{1F50E} {}", t(lang, I18nKey::SidebarZoom)))
+                .show(ui, |ui| {
+                    let zoom_full_img = svg_icon(
+                        egui::include_image!("../../assets/icons/icon_zoom_full_map.svg"),
+                        ICON_SIZE,
+                    )
+                    .tint(icon_color);
                     if ui
-                        .button("Auf Auswahl")
-                        .on_hover_text(
-                            "Viewport auf die selektierten Nodes einpassen (mind. 2 selektiert)",
-                        )
+                        .add(egui::Button::image_and_text(
+                            zoom_full_img,
+                            t(lang, I18nKey::ZoomFullMap),
+                        ))
+                        .on_hover_text(t(lang, I18nKey::ZoomFullMapHelp))
                         .clicked()
                     {
-                        events.push(AppIntent::ZoomToSelectionBoundsRequested);
+                        events.push(AppIntent::ZoomToFitRequested);
                     }
+                    let has_selection = state.selection.selected_node_ids.len() >= 2;
+                    ui.add_enabled_ui(has_selection, |ui| {
+                        let zoom_sel_img = svg_icon(
+                            egui::include_image!("../../assets/icons/icon_zoom_selection.svg"),
+                            ICON_SIZE,
+                        )
+                        .tint(icon_color);
+                        if ui
+                            .add(egui::Button::image_and_text(
+                                zoom_sel_img,
+                                t(lang, I18nKey::ZoomToSelection),
+                            ))
+                            .on_hover_text(t(lang, I18nKey::ZoomToSelectionHelp))
+                            .clicked()
+                        {
+                            events.push(AppIntent::ZoomToSelectionBoundsRequested);
+                        }
+                    });
                 });
-            });
 
             if state.view.background_map.is_some() {
-                egui::CollapsingHeader::new("Hintergrund").show(ui, |ui| {
+                egui::CollapsingHeader::new(t(lang, I18nKey::SidebarBackground)).show(ui, |ui| {
                     let visible = state.view.background_visible;
                     let toggle_icon = if visible {
                         egui::include_image!("../../assets/icons/icon_visible.svg")
@@ -350,9 +387,9 @@ pub fn render_route_defaults_panel(ctx: &egui::Context, state: &AppState) -> Vec
                     if ui
                         .add(egui::Button::image(toggle_img))
                         .on_hover_text(if visible {
-                            "Hintergrund ausblenden"
+                            t(lang, I18nKey::BackgroundHide)
                         } else {
-                            "Hintergrund einblenden"
+                            t(lang, I18nKey::BackgroundShow)
                         })
                         .clicked()
                     {
@@ -362,7 +399,7 @@ pub fn render_route_defaults_panel(ctx: &egui::Context, state: &AppState) -> Vec
                     let scale = state.view.background_scale;
                     if ui
                         .button("-")
-                        .on_hover_text("Ausdehnung halbieren")
+                        .on_hover_text(t(lang, I18nKey::BackgroundScaleDown))
                         .clicked()
                     {
                         events.push(AppIntent::ScaleBackground { factor: 0.5 });
@@ -370,13 +407,16 @@ pub fn render_route_defaults_panel(ctx: &egui::Context, state: &AppState) -> Vec
                     ui.label(format!("x{scale:.2}"));
                     if ui
                         .button("+")
-                        .on_hover_text("Ausdehnung verdoppeln")
+                        .on_hover_text(t(lang, I18nKey::BackgroundScaleUp))
                         .clicked()
                     {
                         events.push(AppIntent::ScaleBackground { factor: 2.0 });
                     }
                     if (scale - 1.0).abs() > f32::EPSILON
-                        && ui.button("1:1").on_hover_text("Originalgroesse").clicked()
+                        && ui
+                            .button("1:1")
+                            .on_hover_text(t(lang, I18nKey::BackgroundScaleReset))
+                            .clicked()
                     {
                         events.push(AppIntent::ScaleBackground {
                             factor: 1.0 / scale,

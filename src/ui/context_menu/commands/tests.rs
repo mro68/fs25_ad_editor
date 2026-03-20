@@ -3,6 +3,7 @@ use super::*;
 use crate::app::{
     Connection, ConnectionDirection, ConnectionPriority, MapMarker, MapNode, NodeFlag, RoadMap,
 };
+use crate::shared::{t, I18nKey, Language};
 use glam::Vec2;
 use indexmap::IndexSet;
 
@@ -234,7 +235,7 @@ fn catalog_empty_area_shows_tools() {
         segment_record_id: None,
     };
 
-    let catalog = MenuCatalog::for_empty_area();
+    let catalog = MenuCatalog::for_empty_area(Language::De);
     let entries = validate_entries(&catalog, &ctx, &intent_ctx);
 
     assert!(has_command(&entries, CommandId::SetToolSelect));
@@ -250,12 +251,16 @@ fn catalog_empty_area_shows_tools() {
 
 #[test]
 fn catalog_empty_area_smooth_curve_is_first_route_entry() {
-    let catalog = MenuCatalog::for_empty_area();
+    let catalog = MenuCatalog::for_empty_area(Language::De);
     let route_submenu = catalog
         .entries
         .iter()
         .find_map(|entry| match entry {
-            MenuEntry::Submenu { label, entries } if label == "📐 Strecke" => Some(entries),
+            MenuEntry::Submenu { label, entries }
+                if label == t(Language::De, I18nKey::CtxRouteSubmenu) =>
+            {
+                Some(entries)
+            }
             _ => None,
         })
         .expect("Strecke-Untermenue erwartet");
@@ -287,7 +292,7 @@ fn catalog_node_focused_shows_marker_create() {
         segment_record_id: None,
     };
 
-    let catalog = MenuCatalog::for_node_focused(42);
+    let catalog = MenuCatalog::for_node_focused(42, Language::De);
     let entries = validate_entries(&catalog, &ctx, &intent_ctx);
 
     assert!(has_command(&entries, CommandId::CreateMarker));
@@ -321,7 +326,7 @@ fn catalog_node_focused_shows_marker_edit_when_marker_exists() {
         segment_record_id: None,
     };
 
-    let catalog = MenuCatalog::for_node_focused(42);
+    let catalog = MenuCatalog::for_node_focused(42, Language::De);
     let entries = validate_entries(&catalog, &ctx, &intent_ctx);
 
     assert!(has_command(&entries, CommandId::EditMarker));
@@ -348,7 +353,7 @@ fn catalog_node_focused_shows_delete_and_duplicate() {
         segment_record_id: None,
     };
 
-    let catalog = MenuCatalog::for_node_focused(10);
+    let catalog = MenuCatalog::for_node_focused(10, Language::De);
     let entries = validate_entries(&catalog, &ctx, &intent_ctx);
 
     assert!(has_command(&entries, CommandId::DeleteSelected));
@@ -373,7 +378,7 @@ fn catalog_multi_nodes_connect_only_when_two_unconnected() {
         segment_record_id: None,
     };
 
-    let catalog = MenuCatalog::for_selection_only();
+    let catalog = MenuCatalog::for_selection_only(Language::De);
     let entries = validate_entries(&catalog, &ctx, &intent_ctx);
     assert!(has_command(&entries, CommandId::ConnectTwoNodes));
 
@@ -409,7 +414,7 @@ fn catalog_multi_nodes_direction_only_when_connected() {
         segment_record_id: None,
     };
 
-    let catalog = MenuCatalog::for_selection_only();
+    let catalog = MenuCatalog::for_selection_only(Language::De);
     let entries = validate_entries(&catalog, &ctx, &intent_ctx);
 
     assert!(!has_command(&entries, CommandId::DirectionRegular));
@@ -449,7 +454,7 @@ fn catalog_multi_nodes_route_tools_only_when_two_selected() {
         segment_record_id: None,
     };
 
-    let catalog = MenuCatalog::for_selection_only();
+    let catalog = MenuCatalog::for_selection_only(Language::De);
     let entries = validate_entries(&catalog, &ctx, &intent_ctx);
 
     assert!(!has_command(&entries, CommandId::RouteStraight));
@@ -460,11 +465,13 @@ fn catalog_multi_nodes_route_tools_only_when_two_selected() {
 
 #[test]
 fn catalog_selection_smooth_curve_is_first_generate_entry() {
-    let entries = MenuCatalog::for_selection_only().entries;
+    let entries = MenuCatalog::for_selection_only(Language::De).entries;
     let generate_submenu = entries
         .iter()
         .find_map(|entry| match entry {
-            MenuEntry::Submenu { label, entries } if label == "📐 Strecke erzeugen" => {
+            MenuEntry::Submenu { label, entries }
+                if label == t(Language::De, I18nKey::CtxCreateRoute) =>
+            {
                 Some(entries)
             }
             _ => None,
@@ -498,7 +505,7 @@ fn catalog_multi_nodes_selection_commands_always_visible() {
         segment_record_id: None,
     };
 
-    let catalog = MenuCatalog::for_selection_only();
+    let catalog = MenuCatalog::for_selection_only(Language::De);
     let entries = validate_entries(&catalog, &ctx, &intent_ctx);
 
     assert!(has_command(&entries, CommandId::DeleteSelected));
@@ -639,7 +646,7 @@ fn deleted_node_hides_all_commands() {
         segment_record_id: None,
     };
 
-    let catalog = MenuCatalog::for_node_focused(99);
+    let catalog = MenuCatalog::for_node_focused(99, Language::De);
     let entries = validate_entries(&catalog, &ctx, &intent_ctx);
 
     // Geloeschter Node: NodeExists-Precondition schlaegt fehl → keine node-spezifischen Commands
