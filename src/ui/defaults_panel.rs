@@ -226,7 +226,11 @@ pub fn render_route_defaults_panel(ctx: &egui::Context, state: &AppState) -> Vec
         .resizable(false)
         .default_width(80.0)
         .show(ctx, |ui| {
-            ui.label(egui::RichText::new(t(lang, I18nKey::SidebarTools)).small().weak());
+            ui.label(
+                egui::RichText::new(t(lang, I18nKey::SidebarTools))
+                    .small()
+                    .weak(),
+            );
             if let Some(tool) = render_long_press_with_memory(
                 ui,
                 icon_color,
@@ -242,7 +246,11 @@ pub fn render_route_defaults_panel(ctx: &egui::Context, state: &AppState) -> Vec
             ui.separator();
             ui.add_space(6.0);
 
-            ui.label(egui::RichText::new(t(lang, I18nKey::SidebarBasics)).small().weak());
+            ui.label(
+                egui::RichText::new(t(lang, I18nKey::SidebarBasics))
+                    .small()
+                    .weak(),
+            );
             if let Some(index) = render_long_press_with_memory(
                 ui,
                 icon_color,
@@ -269,7 +277,11 @@ pub fn render_route_defaults_panel(ctx: &egui::Context, state: &AppState) -> Vec
             ui.separator();
             ui.add_space(6.0);
 
-            ui.label(egui::RichText::new(t(lang, I18nKey::SidebarEdit)).small().weak());
+            ui.label(
+                egui::RichText::new(t(lang, I18nKey::SidebarEdit))
+                    .small()
+                    .weak(),
+            );
             if let Some(index) = render_long_press_with_memory(
                 ui,
                 icon_color,
@@ -285,7 +297,11 @@ pub fn render_route_defaults_panel(ctx: &egui::Context, state: &AppState) -> Vec
             ui.separator();
             ui.add_space(6.0);
 
-            ui.label(egui::RichText::new(t(lang, I18nKey::SidebarDirection)).small().weak());
+            ui.label(
+                egui::RichText::new(t(lang, I18nKey::SidebarDirection))
+                    .small()
+                    .weak(),
+            );
             if let Some(direction) = render_long_press_with_memory(
                 ui,
                 icon_color,
@@ -301,7 +317,11 @@ pub fn render_route_defaults_panel(ctx: &egui::Context, state: &AppState) -> Vec
             ui.separator();
             ui.add_space(6.0);
 
-            ui.label(egui::RichText::new(t(lang, I18nKey::SidebarPriority)).small().weak());
+            ui.label(
+                egui::RichText::new(t(lang, I18nKey::SidebarPriority))
+                    .small()
+                    .weak(),
+            );
             if let Some(priority) = render_long_press_with_memory(
                 ui,
                 icon_color,
@@ -313,33 +333,42 @@ pub fn render_route_defaults_panel(ctx: &egui::Context, state: &AppState) -> Vec
                 events.push(AppIntent::SetDefaultPriorityRequested { priority });
             }
 
-            egui::CollapsingHeader::new(format!("\u{1F50E} {}", t(lang, I18nKey::SidebarZoom))).show(ui, |ui| {
-                let zoom_full_img = svg_icon(
-                    egui::include_image!("../../assets/icons/icon_zoom_full_map.svg"),
-                    ICON_SIZE,
-                ).tint(icon_color);
-                if ui
-                    .add(egui::Button::image_and_text(zoom_full_img, t(lang, I18nKey::ZoomFullMap)))
-                    .on_hover_text(t(lang, I18nKey::ZoomFullMapHelp))
-                    .clicked()
-                {
-                    events.push(AppIntent::ZoomToFitRequested);
-                }
-                let has_selection = state.selection.selected_node_ids.len() >= 2;
-                ui.add_enabled_ui(has_selection, |ui| {
-                    let zoom_sel_img = svg_icon(
-                        egui::include_image!("../../assets/icons/icon_zoom_selection.svg"),
+            egui::CollapsingHeader::new(format!("\u{1F50E} {}", t(lang, I18nKey::SidebarZoom)))
+                .show(ui, |ui| {
+                    let zoom_full_img = svg_icon(
+                        egui::include_image!("../../assets/icons/icon_zoom_full_map.svg"),
                         ICON_SIZE,
-                    ).tint(icon_color);
+                    )
+                    .tint(icon_color);
                     if ui
-                        .add(egui::Button::image_and_text(zoom_sel_img, t(lang, I18nKey::ZoomToSelection)))
-                        .on_hover_text(t(lang, I18nKey::ZoomToSelectionHelp))
+                        .add(egui::Button::image_and_text(
+                            zoom_full_img,
+                            t(lang, I18nKey::ZoomFullMap),
+                        ))
+                        .on_hover_text(t(lang, I18nKey::ZoomFullMapHelp))
                         .clicked()
                     {
-                        events.push(AppIntent::ZoomToSelectionBoundsRequested);
+                        events.push(AppIntent::ZoomToFitRequested);
                     }
+                    let has_selection = state.selection.selected_node_ids.len() >= 2;
+                    ui.add_enabled_ui(has_selection, |ui| {
+                        let zoom_sel_img = svg_icon(
+                            egui::include_image!("../../assets/icons/icon_zoom_selection.svg"),
+                            ICON_SIZE,
+                        )
+                        .tint(icon_color);
+                        if ui
+                            .add(egui::Button::image_and_text(
+                                zoom_sel_img,
+                                t(lang, I18nKey::ZoomToSelection),
+                            ))
+                            .on_hover_text(t(lang, I18nKey::ZoomToSelectionHelp))
+                            .clicked()
+                        {
+                            events.push(AppIntent::ZoomToSelectionBoundsRequested);
+                        }
+                    });
                 });
-            });
 
             if state.view.background_map.is_some() {
                 egui::CollapsingHeader::new(t(lang, I18nKey::SidebarBackground)).show(ui, |ui| {
@@ -384,7 +413,10 @@ pub fn render_route_defaults_panel(ctx: &egui::Context, state: &AppState) -> Vec
                         events.push(AppIntent::ScaleBackground { factor: 2.0 });
                     }
                     if (scale - 1.0).abs() > f32::EPSILON
-                        && ui.button("1:1").on_hover_text(t(lang, I18nKey::BackgroundScaleReset)).clicked()
+                        && ui
+                            .button("1:1")
+                            .on_hover_text(t(lang, I18nKey::BackgroundScaleReset))
+                            .clicked()
                     {
                         events.push(AppIntent::ScaleBackground {
                             factor: 1.0 / scale,

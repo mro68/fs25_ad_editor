@@ -4,27 +4,28 @@
 
 use super::preconditions::Precondition;
 use super::{CommandId, MenuCatalog, MenuEntry};
+use crate::shared::{t, I18nKey, Language};
 
 impl MenuCatalog {
     /// Werkzeug-Submenu: Auswahl/Verbinden/Hinzufuegen — wird in allen Varianten
     /// ausser RouteToolActive verwendet.
-    fn tool_submenu() -> MenuEntry {
+    fn tool_submenu(lang: Language) -> MenuEntry {
         MenuEntry::Submenu {
-            label: "🛠 Werkzeug".into(),
+            label: t(lang, I18nKey::CtxToolSubmenu).into(),
             entries: vec![
                 MenuEntry::Command {
                     id: CommandId::SetToolSelect,
-                    label: "Auswahl (1)".into(),
+                    label: t(lang, I18nKey::CtxToolSelect).into(),
                     preconditions: vec![],
                 },
                 MenuEntry::Command {
                     id: CommandId::SetToolConnect,
-                    label: "Verbinden (2)".into(),
+                    label: t(lang, I18nKey::CtxToolConnect).into(),
                     preconditions: vec![],
                 },
                 MenuEntry::Command {
                     id: CommandId::SetToolAddNode,
-                    label: "Node hinzufuegen (3)".into(),
+                    label: t(lang, I18nKey::CtxToolAddNode).into(),
                     preconditions: vec![],
                 },
             ],
@@ -32,18 +33,18 @@ impl MenuCatalog {
     }
 
     /// Zoom-Submenu: Auf gesamte Map oder auf Selektion zoomen.
-    fn zoom_submenu() -> MenuEntry {
+    fn zoom_submenu(lang: Language) -> MenuEntry {
         MenuEntry::Submenu {
-            label: "🔎 Zoom".into(),
+            label: t(lang, I18nKey::CtxZoomSubmenu).into(),
             entries: vec![
                 MenuEntry::Command {
                     id: CommandId::ZoomToFit,
-                    label: "Auf komplette Map".into(),
+                    label: t(lang, I18nKey::CtxZoomFullMap).into(),
                     preconditions: vec![],
                 },
                 MenuEntry::Command {
                     id: CommandId::ZoomToSelection,
-                    label: "Auf Auswahl".into(),
+                    label: t(lang, I18nKey::CtxZoomSelection).into(),
                     preconditions: vec![Precondition::AtLeastTwoSelected],
                 },
             ],
@@ -51,31 +52,31 @@ impl MenuCatalog {
     }
 
     /// EmptyArea: Tool-Auswahl inkl. Route-Tools, optional Streckenteilung.
-    pub fn for_empty_area() -> Self {
+    pub fn for_empty_area(lang: Language) -> Self {
         let entries = vec![
-            Self::tool_submenu(),
-            Self::zoom_submenu(),
+            Self::tool_submenu(lang),
+            Self::zoom_submenu(lang),
             MenuEntry::Submenu {
-                label: "📐 Strecke".into(),
+                label: t(lang, I18nKey::CtxRouteSubmenu).into(),
                 entries: vec![
                     MenuEntry::Command {
                         id: CommandId::SetToolRouteSmoothCurve,
-                        label: "Geglättete Kurve (4)".into(),
+                        label: t(lang, I18nKey::CtxRouteSmoothCurve).into(),
                         preconditions: vec![],
                     },
                     MenuEntry::Command {
                         id: CommandId::SetToolRouteStraight,
-                        label: "Gerade Strecke (5)".into(),
+                        label: t(lang, I18nKey::CtxRouteStraight).into(),
                         preconditions: vec![],
                     },
                     MenuEntry::Command {
                         id: CommandId::SetToolRouteQuadratic,
-                        label: "Bézier Grad 2 (6)".into(),
+                        label: t(lang, I18nKey::CtxRouteQuadratic).into(),
                         preconditions: vec![],
                     },
                     MenuEntry::Command {
                         id: CommandId::SetToolRouteCubic,
-                        label: "Bézier Grad 3 (7)".into(),
+                        label: t(lang, I18nKey::CtxRouteCubic).into(),
                         preconditions: vec![],
                     },
                 ],
@@ -88,116 +89,116 @@ impl MenuCatalog {
     /// Selektions-Befehle (≥1 Nodes selektiert, kein fokussierter Node).
     ///
     /// Wird auch als unterer Teil von `for_node_focused()` verwendet.
-    fn selection_entries() -> Vec<MenuEntry> {
+    fn selection_entries(lang: Language) -> Vec<MenuEntry> {
         vec![
-            // ── Segment bearbeiten ────────────────────────────────
+            // ── Segment bearbeiten ────────────────────────────────────────────────
             MenuEntry::Command {
                 id: CommandId::EditSegment,
-                label: "✏ Tool bearbeiten".into(),
+                label: t(lang, I18nKey::CtxEditSegment).into(),
                 preconditions: vec![Precondition::SelectionIsValidSegment],
             },
             MenuEntry::Command {
                 id: CommandId::GroupSelectionAsSegment,
-                label: "📦 Als Segment gruppieren".into(),
+                label: t(lang, I18nKey::CtxGroupAsSegment).into(),
                 preconditions: vec![Precondition::IsResampleableChain],
             },
             MenuEntry::Separator,
             // ── Verbinden ────────────────────────────────────────
             MenuEntry::Command {
                 id: CommandId::ConnectTwoNodes,
-                label: "🔗 Nodes verbinden".into(),
+                label: t(lang, I18nKey::CtxConnectNodes).into(),
                 preconditions: vec![Precondition::TwoSelectedUnconnected],
             },
             // ── Strecke erzeugen (nur bei 2 Nodes) ───────────────
             MenuEntry::Submenu {
-                label: "📐 Strecke erzeugen".into(),
+                label: t(lang, I18nKey::CtxCreateRoute).into(),
                 entries: vec![
                     MenuEntry::Command {
                         id: CommandId::RouteSmoothCurve,
-                        label: "Geglättete Kurve".into(),
+                        label: t(lang, I18nKey::CtxRouteSmoothCurve).into(),
                         preconditions: vec![Precondition::ExactlyTwoSelected],
                     },
                     MenuEntry::Command {
                         id: CommandId::RouteStraight,
-                        label: "Gerade Strecke".into(),
+                        label: t(lang, I18nKey::CtxRouteStraight).into(),
                         preconditions: vec![Precondition::ExactlyTwoSelected],
                     },
                     MenuEntry::Command {
                         id: CommandId::RouteQuadratic,
-                        label: "Bézier Grad 2".into(),
+                        label: t(lang, I18nKey::CtxRouteQuadratic).into(),
                         preconditions: vec![Precondition::ExactlyTwoSelected],
                     },
                     MenuEntry::Command {
                         id: CommandId::RouteCubic,
-                        label: "Bézier Grad 3".into(),
+                        label: t(lang, I18nKey::CtxRouteCubic).into(),
                         preconditions: vec![Precondition::ExactlyTwoSelected],
                     },
                 ],
             },
             // ── Verbindungs-Management ────────────────────────────
             MenuEntry::Submenu {
-                label: "↔ Richtung".into(),
+                label: t(lang, I18nKey::CtxDirectionSubmenu).into(),
                 entries: vec![
                     MenuEntry::Command {
                         id: CommandId::DirectionRegular,
-                        label: "↦ Einbahn vorwaerts".into(),
+                        label: t(lang, I18nKey::CtxDirectionRegular).into(),
                         preconditions: vec![Precondition::HasConnectionsBetweenSelected],
                     },
                     MenuEntry::Command {
                         id: CommandId::DirectionDual,
-                        label: "⇆ Zweirichtungsverkehr".into(),
+                        label: t(lang, I18nKey::CtxDirectionDual).into(),
                         preconditions: vec![Precondition::HasConnectionsBetweenSelected],
                     },
                     MenuEntry::Command {
                         id: CommandId::DirectionReverse,
-                        label: "↤ Einbahn rueckwaerts".into(),
+                        label: t(lang, I18nKey::CtxDirectionReverse).into(),
                         preconditions: vec![Precondition::HasConnectionsBetweenSelected],
                     },
                     MenuEntry::Command {
                         id: CommandId::DirectionInvert,
-                        label: "⇄ Invertieren".into(),
+                        label: t(lang, I18nKey::CtxDirectionInvert).into(),
                         preconditions: vec![Precondition::HasConnectionsBetweenSelected],
                     },
                 ],
             },
             MenuEntry::Submenu {
-                label: "🚧 Strassenart".into(),
+                label: t(lang, I18nKey::CtxPrioritySubmenu).into(),
                 entries: vec![
                     MenuEntry::Command {
                         id: CommandId::PriorityRegular,
-                        label: "🛣 Hauptstrasse".into(),
+                        label: t(lang, I18nKey::CtxPriorityMain).into(),
                         preconditions: vec![Precondition::HasConnectionsBetweenSelected],
                     },
                     MenuEntry::Command {
                         id: CommandId::PrioritySub,
-                        label: "🛤 Nebenstrasse".into(),
+                        label: t(lang, I18nKey::CtxPrioritySub).into(),
                         preconditions: vec![Precondition::HasConnectionsBetweenSelected],
                     },
                 ],
             },
             MenuEntry::Command {
                 id: CommandId::RemoveAllConnections,
-                label: "✕ Alle trennen".into(),
+                label: t(lang, I18nKey::CtxRemoveAllConnections).into(),
                 preconditions: vec![Precondition::HasConnectionsBetweenSelected],
             },
             // ── Selektion ────────────────────────────────────────
             MenuEntry::Separator,
             MenuEntry::Submenu {
-                label: "📐 Selektion".into(),
+                label: t(lang, I18nKey::CtxSelectionSubmenu).into(),
                 entries: vec![
                     MenuEntry::Command {
                         id: CommandId::InvertSelection,
-                        label: "🔄 Invertieren".into(),
+                        label: t(lang, I18nKey::CtxSelectionInvert).into(),
                         preconditions: vec![],
                     },
                     MenuEntry::Command {
                         id: CommandId::SelectAll,
-                        label: "☑ Alles auswaehlen".into(),
+                        label: t(lang, I18nKey::CtxSelectAll).into(),
                         preconditions: vec![],
                     },
                     MenuEntry::Command {
                         id: CommandId::ClearSelection,
-                        label: "✕ Auswahl loeschen".into(),
+                        label: t(lang, I18nKey::CtxClearSelection).into(),
                         preconditions: vec![],
                     },
                 ],
@@ -206,7 +207,7 @@ impl MenuCatalog {
             MenuEntry::Separator,
             MenuEntry::Command {
                 id: CommandId::StreckenteilungMulti,
-                label: "📏 Streckenteilung".into(),
+                label: t(lang, I18nKey::CtxStreckenteilung).into(),
                 preconditions: vec![
                     Precondition::IsResampleableChain,
                     Precondition::StreckenteilungActive(false),
@@ -216,40 +217,40 @@ impl MenuCatalog {
     }
 
     /// SelectionOnly: Befehle fuer selektierte Nodes (Rechtsklick ins Leere).
-    pub fn for_selection_only() -> Self {
+    pub fn for_selection_only(lang: Language) -> Self {
         let mut entries = vec![
-            Self::tool_submenu(),
-            Self::zoom_submenu(),
+            Self::tool_submenu(lang),
+            Self::zoom_submenu(lang),
             MenuEntry::Separator,
         ];
-        entries.extend(Self::selection_entries());
+        entries.extend(Self::selection_entries(lang));
         // ── Aktionen ─────────────────────────────────────────
         entries.push(MenuEntry::Separator);
         entries.push(MenuEntry::Command {
             id: CommandId::DeleteSelected,
-            label: "🗑 Loeschen".into(),
+            label: t(lang, I18nKey::CtxDeleteSelected).into(),
             preconditions: vec![],
         });
         // ── Copy/Paste ────────────────────────────────────────
         entries.push(MenuEntry::Separator);
         entries.push(MenuEntry::Command {
             id: CommandId::CopySelection,
-            label: "📋 Kopieren".into(),
+            label: t(lang, I18nKey::CtxCopy).into(),
             preconditions: vec![Precondition::HasSelection],
         });
         entries.push(MenuEntry::Command {
             id: CommandId::PasteHere,
-            label: "📋 Einfuegen".into(),
+            label: t(lang, I18nKey::CtxPaste).into(),
             preconditions: vec![Precondition::ClipboardHasData],
         });
         MenuCatalog { entries }
     }
 
     /// NodeFocused: Werkzeug + Einzelnode-Befehle + Selektions-Befehle + Info.
-    pub fn for_node_focused(node_id: u64) -> Self {
+    pub fn for_node_focused(node_id: u64, lang: Language) -> Self {
         let mut entries = vec![
-            Self::tool_submenu(),
-            Self::zoom_submenu(),
+            Self::tool_submenu(lang),
+            Self::zoom_submenu(lang),
             MenuEntry::Separator,
             // ── Einzelnode-Befehle (oberer Bereich) ──────────────
             MenuEntry::Submenu {
@@ -283,7 +284,7 @@ impl MenuCatalog {
             },
             MenuEntry::Command {
                 id: CommandId::DeleteSelected,
-                label: "🗑 Loeschen".into(),
+                label: t(lang, I18nKey::CtxDeleteSelected).into(),
                 preconditions: vec![],
             },
         ];
@@ -292,18 +293,18 @@ impl MenuCatalog {
         entries.push(MenuEntry::Separator);
 
         // ── Selektions-Befehle (unterer Bereich) ─────────────────
-        entries.extend(Self::selection_entries());
+        entries.extend(Self::selection_entries(lang));
 
         // ── Copy/Paste ────────────────────────────────────────────
         entries.push(MenuEntry::Separator);
         entries.push(MenuEntry::Command {
             id: CommandId::CopySelection,
-            label: "📋 Kopieren".into(),
+            label: t(lang, I18nKey::CtxCopy).into(),
             preconditions: vec![Precondition::HasSelection],
         });
         entries.push(MenuEntry::Command {
             id: CommandId::PasteHere,
-            label: "📋 Einfuegen".into(),
+            label: t(lang, I18nKey::CtxPaste).into(),
             preconditions: vec![Precondition::ClipboardHasData],
         });
 
