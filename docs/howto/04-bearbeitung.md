@@ -37,7 +37,7 @@ Bei Drag auf einem bereits selektierten Node werden **alle selektierten Nodes ge
 
 | Methode | Beschreibung |
 |---------|--------------|
-| **Connect-Tool (2)** | Zwei Nodes nacheinander anklicken |
+| **Connect-Tool (T)** | Zwei Nodes nacheinander anklicken |
 | **Shortcut `C`** | Bei genau 2 selektierten Nodes → Regular-Verbindung erstellen |
 | **Kontextmenue** | Rechtsklick bei genau 2 Nodes → "Nodes verbinden" |
 

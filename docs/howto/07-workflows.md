@@ -7,11 +7,11 @@
 1. **Leere Datei erzeugen** — `Datei → Neu` (oder `Ctrl+N`)
 2. **Hintergrundkarte laden** (optional) — `Datei → Hintergrundkarte oeffnen`
 3. **Heightmap laden** (optional) — `Datei → Heightmap laden`
-4. **Nodes setzen** — Linksklick-Tool (`1`) aktivieren, Nodes auf der Karte platzieren
-5. **Verbindungen setzen** — Connect-Tool (`2`) aktivieren, Nodes paarweise klicken
+4. **Nodes setzen** — **Select-Tool** aktivieren (T → Select), Nodes auf der Karte platzieren
+5. **Verbindungen setzen** — **Connect-Tool** aktivieren (T → Connect), Nodes paarweise klicken
 6. **Speichern** — `Ctrl+S`
 
-> **Tipp:** Mit dem Route-Modus (Taste `R`) koennen Nodes und Verbindungen in einem Zug gesetzt werden.
+> **Tipp:** Mit den **Route-Tools** (T → Gerade / Kurve / Spline) koennen Nodes und Verbindungen in einem Zug gesetzt werden.
 
 ---
 
@@ -31,7 +31,7 @@
 1. **Erste Datei oeffnen** — `Ctrl+O`
 2. **Zweite Datei importieren** — `Datei → Importieren / Zusammenfuehren`
 3. **Verbindungspunkte suchen** — Betroffene Randbereiche heranzoomen
-4. **Snap-Punkte verbinden** — Connect-Tool (`2`), Nodes paarweise anklicken
+4. **Snap-Punkte verbinden** — Connect-Tool (T → Connect), Nodes paarweise anklicken
 5. **Duplikate bereinigen** — `Bearbeiten → Duplikate bereinigen` mit Toleranz 1–2 m
 6. **Speichern**
 
@@ -49,7 +49,7 @@
 
 ## Workflow 5: Kurvenabschnitt hinzufuegen
 
-1. **Curve-Tool aktivieren** — Taste `4`
+1. **Curve-Tool aktivieren** — T → Kurve
 2. **Kubischer Bézier-Modus** — im Tool-Panel `Cubic` auswaehlen
 3. **Startpunkt klicken** — auf bestehenden Node oder freie Position
 4. **Endpunkt klicken** — zweiter Klick setzt das Ende

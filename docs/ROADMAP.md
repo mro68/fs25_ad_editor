@@ -35,7 +35,7 @@
 - [x] Keyboard-Shortcuts (Ctrl+O, Ctrl+S, Ctrl+Z, Ctrl+Y, Delete, Escape, etc.)
   - [x] Command-Palette-Toggle per Ctrl+K (Intent/Command-Kette vorbereitet)
   - [x] Keyboard-Guard bei TextEdit-Focus (`wants_keyboard_input`-Pruefung; Ctrl+K und Escape bleiben aktiv)
-  - [x] Floating-Menue-Shortcuts ohne Modifier: `W` (Werkzeuge), `G` (Grundbefehle), `S` (Abschnitt-Tools), `T` (Alias Werkzeuge), `K` (Command-Palette)
+    - [x] Floating-Menue-Shortcuts ohne Modifier: `T` (Werkzeuge), `G` (Grundbefehle), `B` (Abschnitt-Tools), `R` (Richtung+Strassenart), `Z` (Zoom), `K` (Command-Palette)
 - [x] Command Palette (Ctrl+K, Suchfeld, Pfeilnavigation, Enter-Ausfuehrung)
 - [x] Options-Dialog (Farben, Groessen, Breiten – Live-Preview)
 - [x] TOML-Persistierung (fs25_auto_drive_editor.toml neben Binary)
@@ -46,10 +46,10 @@
   - [x] Status-Bar vollständig migriert
   - [x] `EditorOptions.language: Language` — persistiert in TOML, Standard `De`
   - [x] Sprachauswahl-ComboBox im Options-Dialog
-  - [ ] Tool-Config-UIs (Folge-PR)
-  - [ ] Dialoge (Folge-PR)
-  - [ ] Context-Menüs (Folge-PR)
-  - [ ] Floating-Panels (Folge-PR)
+  - [x] Tool-Config-UIs (Folge-PR)
+  - [x] Dialoge (Folge-PR)
+  - [x] Context-Menüs (Folge-PR)
+  - [x] Floating-Panels (Folge-PR)
   - [ ] Properties-Panel (Folge-PR)
 
 ## Phase 4: Editor-Tools ✅ (Kern abgeschlossen)
@@ -304,6 +304,11 @@
     - [x] `shared/API.md`: `i18n/`-Modul dokumentiert (Language, I18nKey, t()); language-Feld in EditorOptions ergaenzt
     - [x] ROADMAP.md: i18n-Feature in Phase 3 eingetragen (Infrastruktur + Options-Dialog + Menue + Status-Bar)
     - [x] `docs/ARCHITECTURE_PLAN.md`: `i18n/` in shared-Modulstruktur ergaenzt
+  - [x] **Doku-Sync Zoom-Shortcuts + i18n-Migration (2026-03-20, Branch `feature/zoom-shortcuts-i18n`)**
+    - [x] `src/app/API.md`: `FloatingMenuKind` um `DirectionPriority` und `Zoom` ergaenzt (inkl. Shortcut-Hinweise)
+    - [x] `src/ui/API.md`: `render_floating_menu` — 2 neue Menue-Arten dokumentiert; Keyboard-Shortcuts-Tabelle auf `T/G/B/R/Z` aktualisiert; Modulbeschreibung `floating_menu.rs` korrigiert
+    - [x] `src/shared/API.md`: `I18nKey`-Uebersicht um 79 neue Keys ergaenzt (Sidebar, Zoom, Background, RouteGroup, FloatingMenu, Ctx, Palette, Lp)
+    - [x] ROADMAP.md: i18n-Subfeatures (Context-Menues, Floating-Panels) als `[x]` markiert; Keyboard-Shortcut-Liste korrigiert
 - [ ] Packaging
   - [ ] Windows Binaries (.exe)
   - [ ] Linux Binaries (AppImage)

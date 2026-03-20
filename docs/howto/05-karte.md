@@ -13,11 +13,15 @@
 | **Rechte Maustaste + Drag** | Kamera verschieben (Pan, alternativ) |
 | `F` | Auf die aktuelle Selektion zoomen |
 | `Home` oder `Ctrl+0` | Ansicht auf alle Nodes zentrieren (Fit All) |
+| `Z` | Zoom Floating-Menue öffnen (Auf komplette Map / Auf Auswahl) |
 
 ### Zoom
 
 - Zoom via Scrollrad
 - Zoom-Level wird in der Statusleiste angezeigt
+- **Zoom Floating-Menue (`Z`):** Bietet zwei Schnelloptionen:
+  - **Auf komplette Map** — zeigt alle Nodes im Viewport (wie `Home`)
+  - **Auf Auswahl** — zoomt auf die aktuell selektierten Nodes (wie `F`)
 - Viewport-Culling: Nodes und Verbindungen ausserhalb des sichtbaren Bereichs werden nicht gerendert (Performance)
 
 ---

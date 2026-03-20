@@ -9,7 +9,7 @@ Das `ui`-Modul enthält egui-UI-Komponenten (Menüs, Statusbar, Input-Handling, 
 - `common.rs` — Gemeinsame UI-Hilfsfunktionen (Mausrad-Scroll-Helfer)
 - `menu.rs` — Top-Menü-Leiste
 - `status.rs` — Statusleiste
-- `floating_menu.rs` — Schwebende Kontextmenues fuer Werkzeuggruppen (Toggle via `W/G/S/T`)
+- `floating_menu.rs` — Schwebende Kontextmenues fuer Werkzeuggruppen (Toggle via `T/G/B/R/Z`)
 - `icons.rs` — Gemeinsame Icon-Konstanten/Helfer (`ICON_SIZE`, `svg_icon`, `route_tool_icon`)
 - `long_press.rs` — Wiederverwendbares Long-Press-Dropdown-Widget (`LongPressState`, `LongPressGroup`, `render_long_press_button`)
 - `defaults_panel.rs` — Linke Sidebar im Gruppen-Layout (Long-Press fuer Werkzeuge/Route-Gruppen/Defaults, Hintergrund)
@@ -115,6 +115,8 @@ Unterstuetzte Menues:
 - `FloatingMenuKind::Tools` — Select / Connect / AddNode
 - `FloatingMenuKind::Basics` — Gerade, Bezier (Q/C), Spline, Constraint
 - `FloatingMenuKind::SectionTools` — Ausweichstrecke, Parkplatz, Strecke versetzen
+- `FloatingMenuKind::DirectionPriority` — Verbindungsrichtung (Regular/Dual/Reverse) und Strassenart (Haupt-/Nebenstrasse)
+- `FloatingMenuKind::Zoom` — Auf komplette Map einpassen, Auf Auswahl einpassen
 
 Verhalten:
 
@@ -243,7 +245,11 @@ let intents = input.collect_viewport_events(
   - `Ctrl+V` → Paste-Vorschau starten
   - `Ctrl+O` → Datei öffnen
   - `Ctrl+S` → Datei speichern
-  - `W` / `G` / `S` / `T` (ohne Modifier) → Floating-Menues (Tools/Basics/SectionTools)
+  - `T` (ohne Modifier) → Floating-Menu Tools
+  - `G` (ohne Modifier) → Floating-Menu Grundbefehle (Basics)
+  - `B` (ohne Modifier) → Floating-Menu Abschnittswerkzeuge (SectionTools)
+  - `R` (ohne Modifier) → Floating-Menu Richtung & Strassenart (DirectionPriority)
+  - `Z` (ohne Modifier) → Floating-Menu Zoom
   - `K` (ohne Modifier) und `Ctrl+K` → Command-Palette toggeln
   - `Ctrl+Z` → Undo
   - `Ctrl+Y` → Redo
