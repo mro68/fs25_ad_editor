@@ -256,7 +256,11 @@ fn catalog_empty_area_smooth_curve_is_first_route_entry() {
         .entries
         .iter()
         .find_map(|entry| match entry {
-            MenuEntry::Submenu { label, entries } if label == t(Language::De, I18nKey::CtxRouteSubmenu) => Some(entries),
+            MenuEntry::Submenu { label, entries }
+                if label == t(Language::De, I18nKey::CtxRouteSubmenu) =>
+            {
+                Some(entries)
+            }
             _ => None,
         })
         .expect("Strecke-Untermenue erwartet");
@@ -465,7 +469,9 @@ fn catalog_selection_smooth_curve_is_first_generate_entry() {
     let generate_submenu = entries
         .iter()
         .find_map(|entry| match entry {
-            MenuEntry::Submenu { label, entries } if label == t(Language::De, I18nKey::CtxCreateRoute) => {
+            MenuEntry::Submenu { label, entries }
+                if label == t(Language::De, I18nKey::CtxCreateRoute) =>
+            {
                 Some(entries)
             }
             _ => None,
