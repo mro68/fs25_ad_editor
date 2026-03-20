@@ -1,12 +1,12 @@
 //! Schwebendes Kontextmenue fuer Werkzeuggruppen an der Mausposition.
 
-use crate::shared::{t, I18nKey};
 use crate::app::segment_registry::{
     TOOL_INDEX_BYPASS, TOOL_INDEX_CURVE_CUBIC, TOOL_INDEX_CURVE_QUAD, TOOL_INDEX_PARKING,
     TOOL_INDEX_ROUTE_OFFSET, TOOL_INDEX_SMOOTH_CURVE, TOOL_INDEX_SPLINE, TOOL_INDEX_STRAIGHT,
 };
 use crate::app::state::FloatingMenuKind;
 use crate::app::{AppIntent, AppState, ConnectionDirection, ConnectionPriority, EditorTool};
+use crate::shared::{t, I18nKey};
 use crate::ui::icons::{
     accent_icon_color, function_icon_color, route_tool_icon, svg_icon, ICON_SIZE,
 };
@@ -80,10 +80,16 @@ pub fn render_floating_menu(ctx: &egui::Context, state: &AppState) -> (Vec<AppIn
                     FloatingMenuKind::Basics => {
                         for &(index, tooltip) in &[
                             (TOOL_INDEX_STRAIGHT, t(lang, I18nKey::FloatingBasicStraight)),
-                            (TOOL_INDEX_CURVE_QUAD, t(lang, I18nKey::FloatingBasicQuadratic)),
+                            (
+                                TOOL_INDEX_CURVE_QUAD,
+                                t(lang, I18nKey::FloatingBasicQuadratic),
+                            ),
                             (TOOL_INDEX_CURVE_CUBIC, t(lang, I18nKey::FloatingBasicCubic)),
                             (TOOL_INDEX_SPLINE, t(lang, I18nKey::FloatingBasicSpline)),
-                            (TOOL_INDEX_SMOOTH_CURVE, t(lang, I18nKey::FloatingBasicSmoothCurve)),
+                            (
+                                TOOL_INDEX_SMOOTH_CURVE,
+                                t(lang, I18nKey::FloatingBasicSmoothCurve),
+                            ),
                         ] {
                             if route_icon_button(
                                 ui,
@@ -104,7 +110,10 @@ pub fn render_floating_menu(ctx: &egui::Context, state: &AppState) -> (Vec<AppIn
                         for &(index, tooltip) in &[
                             (TOOL_INDEX_BYPASS, t(lang, I18nKey::FloatingEditBypass)),
                             (TOOL_INDEX_PARKING, t(lang, I18nKey::FloatingEditParking)),
-                            (TOOL_INDEX_ROUTE_OFFSET, t(lang, I18nKey::FloatingEditRouteOffset)),
+                            (
+                                TOOL_INDEX_ROUTE_OFFSET,
+                                t(lang, I18nKey::FloatingEditRouteOffset),
+                            ),
                         ] {
                             if route_icon_button(
                                 ui,

@@ -151,7 +151,8 @@ pub fn render_command_palette(
         .open(&mut window_open)
         .show(ctx, |ui| {
             let search_response = ui.add(
-                egui::TextEdit::singleline(&mut state.search_text).hint_text(t(lang, I18nKey::PaletteSearchHint)),
+                egui::TextEdit::singleline(&mut state.search_text)
+                    .hint_text(t(lang, I18nKey::PaletteSearchHint)),
             );
             if !state.focus_requested {
                 search_response.request_focus();
