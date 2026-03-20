@@ -8,8 +8,8 @@
 
 use crate::app::compute_ring;
 use crate::app::segment_registry::{SegmentBase, SegmentKind, SegmentRecord};
-use crate::app::tools::ToolAnchor;
 use crate::app::AppState;
+use crate::app::ToolAnchor;
 use crate::core::{Connection, ConnectionDirection, ConnectionPriority, MapNode, NodeFlag};
 use glam::Vec2;
 use std::sync::Arc;
