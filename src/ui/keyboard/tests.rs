@@ -7,8 +7,10 @@ fn collect_with_key_event_and_modifiers(
     selected: IndexSet<u64>,
 ) -> Vec<AppIntent> {
     let ctx = egui::Context::default();
-    let mut raw_input = egui::RawInput::default();
-    raw_input.modifiers = raw_modifiers;
+    let mut raw_input = egui::RawInput {
+        modifiers: raw_modifiers,
+        ..Default::default()
+    };
     raw_input.events.push(event);
 
     let mut events = Vec::new();
