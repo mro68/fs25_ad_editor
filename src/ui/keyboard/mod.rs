@@ -174,51 +174,58 @@ pub(super) fn collect_keyboard_intents(
         events.push(AppIntent::RouteToolExecuteRequested);
     }
 
-    let (key_g_no_mod, key_t_no_mod, key_b_no_mod, key_r_no_mod, key_z_no_mod, key_k_no_mod, key_k_ctrl_or_cmd) =
-        ui.input(|i| {
-            let mut key_g_no_mod = false;
-            let mut key_t_no_mod = false;
-            let mut key_b_no_mod = false;
-            let mut key_r_no_mod = false;
-            let mut key_z_no_mod = false;
-            let mut key_k_no_mod = false;
-            let mut key_k_ctrl_or_cmd = false;
+    let (
+        key_g_no_mod,
+        key_t_no_mod,
+        key_b_no_mod,
+        key_r_no_mod,
+        key_z_no_mod,
+        key_k_no_mod,
+        key_k_ctrl_or_cmd,
+    ) = ui.input(|i| {
+        let mut key_g_no_mod = false;
+        let mut key_t_no_mod = false;
+        let mut key_b_no_mod = false;
+        let mut key_r_no_mod = false;
+        let mut key_z_no_mod = false;
+        let mut key_k_no_mod = false;
+        let mut key_k_ctrl_or_cmd = false;
 
-            for event in &i.events {
-                if let egui::Event::Key {
-                    key,
-                    pressed: true,
-                    modifiers,
-                    ..
-                } = event
-                {
-                    let no_mod =
-                        !modifiers.command && !modifiers.ctrl && !modifiers.shift && !modifiers.alt;
-                    match key {
-                        egui::Key::G if no_mod => key_g_no_mod = true,
-                        egui::Key::T if no_mod => key_t_no_mod = true,
-                        egui::Key::B if no_mod => key_b_no_mod = true,
-                        egui::Key::R if no_mod => key_r_no_mod = true,
-                        egui::Key::Z if no_mod => key_z_no_mod = true,
-                        egui::Key::K if no_mod => key_k_no_mod = true,
-                        egui::Key::K if modifiers.command || modifiers.ctrl => {
-                            key_k_ctrl_or_cmd = true;
-                        }
-                        _ => {}
+        for event in &i.events {
+            if let egui::Event::Key {
+                key,
+                pressed: true,
+                modifiers,
+                ..
+            } = event
+            {
+                let no_mod =
+                    !modifiers.command && !modifiers.ctrl && !modifiers.shift && !modifiers.alt;
+                match key {
+                    egui::Key::G if no_mod => key_g_no_mod = true,
+                    egui::Key::T if no_mod => key_t_no_mod = true,
+                    egui::Key::B if no_mod => key_b_no_mod = true,
+                    egui::Key::R if no_mod => key_r_no_mod = true,
+                    egui::Key::Z if no_mod => key_z_no_mod = true,
+                    egui::Key::K if no_mod => key_k_no_mod = true,
+                    egui::Key::K if modifiers.command || modifiers.ctrl => {
+                        key_k_ctrl_or_cmd = true;
                     }
+                    _ => {}
                 }
             }
+        }
 
-            (
-                key_g_no_mod,
-                key_t_no_mod,
-                key_b_no_mod,
-                key_r_no_mod,
-                key_z_no_mod,
-                key_k_no_mod,
-                key_k_ctrl_or_cmd,
-            )
-        });
+        (
+            key_g_no_mod,
+            key_t_no_mod,
+            key_b_no_mod,
+            key_r_no_mod,
+            key_z_no_mod,
+            key_k_no_mod,
+            key_k_ctrl_or_cmd,
+        )
+    });
 
     if key_g_no_mod {
         events.push(AppIntent::ToggleFloatingMenu {
