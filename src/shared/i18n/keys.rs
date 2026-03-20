@@ -397,4 +397,230 @@ pub enum I18nKey {
     ToolNameAddNode,
     /// Werkzeugname "Routen-Werkzeug"
     ToolNameRoute,
+
+    // === Sidebar: Sections ===
+    /// Abschnittstitel "Werkzeuge"
+    SidebarTools,
+    /// Abschnittstitel "Grundbefehle"
+    SidebarBasics,
+    /// Abschnittstitel "Bearbeiten"
+    SidebarEdit,
+    /// Abschnittstitel "Richtung"
+    SidebarDirection,
+    /// Abschnittstitel "Strassenart"
+    SidebarPriority,
+    /// Abschnittstitel "Zoom"
+    SidebarZoom,
+    /// Abschnittstitel "Hintergrund"
+    SidebarBackground,
+
+    // === Zoom ===
+    /// Button-Label "Auf komplette Map"
+    ZoomFullMap,
+    /// Tooltip "Gesamte Map einpassen"
+    ZoomFullMapHelp,
+    /// Button-Label "Auf Auswahl"
+    ZoomToSelection,
+    /// Tooltip "Auf selektierte Nodes einpassen"
+    ZoomToSelectionHelp,
+
+    // === Hintergrund ===
+    /// Button-Tooltip "Hintergrund ausblenden"
+    BackgroundHide,
+    /// Button-Tooltip "Hintergrund einblenden"
+    BackgroundShow,
+    /// Button-Tooltip "Ausdehnung halbieren"
+    BackgroundScaleDown,
+    /// Button-Tooltip "Ausdehnung verdoppeln"
+    BackgroundScaleUp,
+    /// Button-Tooltip "Originalgrösse"
+    BackgroundScaleReset,
+
+    // === Sidebar: Route-Gruppen ===
+    /// Gruppenname "Geraden"
+    RouteGroupStraight,
+    /// Gruppenname "Kurven"
+    RouteGroupCurves,
+    /// Gruppenname "Tools"
+    RouteGroupSection,
+
+    // === Floating-Menu: Tools ===
+    /// Tooltip "Auswahl"
+    FloatingToolSelect,
+    /// Tooltip "Verbinden"
+    FloatingToolConnect,
+    /// Tooltip "Node hinzufügen"
+    FloatingToolAddNode,
+
+    // === Floating-Menu: Grundbefehle ===
+    /// Tooltip "Gerade Strecke"
+    FloatingBasicStraight,
+    /// Tooltip "Bezier Grad 2"
+    FloatingBasicQuadratic,
+    /// Tooltip "Bezier Grad 3"
+    FloatingBasicCubic,
+    /// Tooltip "Spline"
+    FloatingBasicSpline,
+    /// Tooltip "Geglaettete Kurve"
+    FloatingBasicSmoothCurve,
+
+    // === Floating-Menu: Bearbeiten ===
+    /// Tooltip "Ausweichstrecke"
+    FloatingEditBypass,
+    /// Tooltip "Parkplatz"
+    FloatingEditParking,
+    /// Tooltip "Strecke versetzen"
+    FloatingEditRouteOffset,
+
+    // === Floating-Menu: Richtung + Strassenart ===
+    /// Tooltip "Einbahn vorwaerts"
+    FloatingDirectionRegular,
+    /// Tooltip "Zweirichtungsverkehr"
+    FloatingDirectionDual,
+    /// Tooltip "Einbahn rueckwaerts"
+    FloatingDirectionReverse,
+    /// Tooltip "Hauptstrasse"
+    FloatingPriorityMain,
+    /// Tooltip "Nebenstrasse"
+    FloatingPrioritySub,
+
+    // === Floating-Menu: Zoom ===
+    /// Tooltip "Auf komplette Map"
+    FloatingZoomFullMap,
+    /// Tooltip "Auf Auswahl"
+    FloatingZoomSelection,
+
+    // === Kontextmenue ===
+    /// Submenu-Titel "Werkzeug"
+    CtxToolSubmenu,
+    /// Eintrag "Auswahl (T)"
+    CtxToolSelect,
+    /// Eintrag "Verbinden (T)"
+    CtxToolConnect,
+    /// Eintrag "Node hinzufuegen (T)"
+    CtxToolAddNode,
+    /// Submenu-Titel "Zoom"
+    CtxZoomSubmenu,
+    /// Eintrag "Auf komplette Map (Z)"
+    CtxZoomFullMap,
+    /// Eintrag "Auf Auswahl (Z)"
+    CtxZoomSelection,
+    /// Submenu-Titel "Strecke"
+    CtxRouteSubmenu,
+    /// Eintrag "Geglaettete Kurve"
+    CtxRouteSmoothCurve,
+    /// Eintrag "Gerade Strecke"
+    CtxRouteStraight,
+    /// Eintrag "Bezier Grad 2"
+    CtxRouteQuadratic,
+    /// Eintrag "Bezier Grad 3"
+    CtxRouteCubic,
+    /// Eintrag "Segment bearbeiten"
+    CtxEditSegment,
+    /// Eintrag "Als Segment gruppieren"
+    CtxGroupAsSegment,
+    /// Eintrag "Nodes verbinden"
+    CtxConnectNodes,
+    /// Eintrag "Strecke erzeugen"
+    CtxCreateRoute,
+    /// Submenu-Titel "Richtung"
+    CtxDirectionSubmenu,
+    /// Eintrag "Einbahn vorwaerts"
+    CtxDirectionRegular,
+    /// Eintrag "Zweirichtungsverkehr"
+    CtxDirectionDual,
+    /// Eintrag "Einbahn rueckwaerts"
+    CtxDirectionReverse,
+    /// Eintrag "Invertieren"
+    CtxDirectionInvert,
+    /// Submenu-Titel "Strassenart"
+    CtxPrioritySubmenu,
+    /// Eintrag "Hauptstrasse"
+    CtxPriorityMain,
+    /// Eintrag "Nebenstrasse"
+    CtxPrioritySub,
+    /// Eintrag "Alle trennen"
+    CtxRemoveAllConnections,
+    /// Submenu-Titel "Selektion"
+    CtxSelectionSubmenu,
+    /// Eintrag "Invertieren"
+    CtxSelectionInvert,
+    /// Eintrag "Alles auswaehlen"
+    CtxSelectAll,
+    /// Eintrag "Auswahl aufheben"
+    CtxClearSelection,
+    /// Eintrag "Streckenteilung"
+    CtxStreckenteilung,
+    /// Eintrag "Loeschen"
+    CtxDeleteSelected,
+    /// Eintrag "Kopieren"
+    CtxCopy,
+    /// Eintrag "Einfuegen"
+    CtxPaste,
+
+    // === Command Palette ===
+    /// Placeholder "Befehl eingeben..."
+    PaletteSearchHint,
+    /// Nachricht "Keine Treffer"
+    PaletteNoResults,
+    /// Eintrag "Datei oeffnen"
+    PaletteOpenFile,
+    /// Eintrag "Speichern"
+    PaletteSave,
+    /// Eintrag "Rueckgaengig"
+    PaletteUndo,
+    /// Eintrag "Wiederholen"
+    PaletteRedo,
+    /// Eintrag "Alles auswaehlen"
+    PaletteSelectAll,
+    /// Eintrag "Auswahl loeschen"
+    PaletteDeleteSelected,
+    /// Eintrag "Kopieren"
+    PaletteCopy,
+    /// Eintrag "Einfuegen"
+    PalettePaste,
+    /// Eintrag "Kamera zuruecksetzen"
+    PaletteResetCamera,
+    /// Eintrag "Select-Tool"
+    PaletteToolSelect,
+    /// Eintrag "Connect-Tool"
+    PaletteToolConnect,
+    /// Eintrag "Add-Node-Tool"
+    PaletteToolAddNode,
+    /// Praefix "Route-Tool:"
+    PaletteRouteToolPrefix,
+
+    // === Sidebar: LongPress-Tooltips ===
+    /// LongPress-Tooltip fuer Select-Tool
+    LpToolSelect,
+    /// LongPress-Tooltip fuer Connect-Tool
+    LpToolConnect,
+    /// LongPress-Tooltip fuer AddNode-Tool
+    LpToolAddNode,
+    /// LongPress-Tooltip fuer Gerade Strecke
+    LpStraight,
+    /// LongPress-Tooltip fuer Bezier quadratisch
+    LpCurveQuad,
+    /// LongPress-Tooltip fuer Bezier kubisch
+    LpCurveCubic,
+    /// LongPress-Tooltip fuer Spline
+    LpSpline,
+    /// LongPress-Tooltip fuer Geglaettete Kurve
+    LpSmoothCurve,
+    /// LongPress-Tooltip fuer Ausweichstrecke
+    LpBypass,
+    /// LongPress-Tooltip fuer Parkplatz
+    LpParking,
+    /// LongPress-Tooltip fuer Strecke versetzen
+    LpRouteOffset,
+    /// LongPress-Tooltip fuer Einbahn vorwaerts
+    LpDirectionRegular,
+    /// LongPress-Tooltip fuer Zweirichtung
+    LpDirectionDual,
+    /// LongPress-Tooltip fuer Einbahn rueckwaerts
+    LpDirectionReverse,
+    /// LongPress-Tooltip fuer Hauptstrasse
+    LpPriorityMain,
+    /// LongPress-Tooltip fuer Nebenstrasse
+    LpPrioritySub,
 }

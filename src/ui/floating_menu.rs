@@ -5,7 +5,7 @@ use crate::app::segment_registry::{
     TOOL_INDEX_ROUTE_OFFSET, TOOL_INDEX_SMOOTH_CURVE, TOOL_INDEX_SPLINE, TOOL_INDEX_STRAIGHT,
 };
 use crate::app::state::FloatingMenuKind;
-use crate::app::{AppIntent, AppState, EditorTool};
+use crate::app::{AppIntent, AppState, ConnectionDirection, ConnectionPriority, EditorTool};
 use crate::ui::icons::{
     accent_icon_color, function_icon_color, route_tool_icon, svg_icon, ICON_SIZE,
 };
@@ -117,6 +117,85 @@ pub fn render_floating_menu(ctx: &egui::Context, state: &AppState) -> (Vec<AppIn
                                 });
                                 events.push(AppIntent::SelectRouteToolRequested { index });
                             }
+                        }
+                    }
+                    FloatingMenuKind::DirectionPriority => {
+                        for (direction, icon, tooltip) in [
+                            (
+                                ConnectionDirection::Regular,
+                                egui::include_image!(
+                                    "../../assets/icons/icon_direction_regular.svg"
+                                ),
+                                "Einbahn vorwaerts",
+                            ),
+                            (
+                                ConnectionDirection::Dual,
+                                egui::include_image!("../../assets/icons/icon_direction_dual.svg"),
+                                "Zweirichtungsverkehr",
+                            ),
+                            (
+                                ConnectionDirection::Reverse,
+                                egui::include_image!(
+                                    "../../assets/icons/icon_direction_reverse.svg"
+                                ),
+                                "Einbahn rueckwaerts",
+                            ),
+                        ] {
+                            if tool_icon_button(
+                                ui,
+                                icon,
+                                tooltip,
+                                false,
+                                icon_color,
+                                active_icon_color,
+                            ) {
+                                events.push(AppIntent::SetDefaultDirectionRequested { direction });
+                            }
+                        }
+                        for (priority, icon, tooltip) in [
+                            (
+                                ConnectionPriority::Regular,
+                                egui::include_image!("../../assets/icons/icon_priority_main.svg"),
+                                "Hauptstrasse",
+                            ),
+                            (
+                                ConnectionPriority::SubPriority,
+                                egui::include_image!("../../assets/icons/icon_priority_side.svg"),
+                                "Nebenstrasse",
+                            ),
+                        ] {
+                            if tool_icon_button(
+                                ui,
+                                icon,
+                                tooltip,
+                                false,
+                                icon_color,
+                                active_icon_color,
+                            ) {
+                                events.push(AppIntent::SetDefaultPriorityRequested { priority });
+                            }
+                        }
+                    }
+                    FloatingMenuKind::Zoom => {
+                        if tool_icon_button(
+                            ui,
+                            egui::include_image!("../../assets/icons/icon_zoom_full_map.svg"),
+                            "Auf komplette Map",
+                            false,
+                            icon_color,
+                            active_icon_color,
+                        ) {
+                            events.push(AppIntent::ZoomToFitRequested);
+                        }
+                        if tool_icon_button(
+                            ui,
+                            egui::include_image!("../../assets/icons/icon_zoom_selection.svg"),
+                            "Auf Auswahl",
+                            false,
+                            icon_color,
+                            active_icon_color,
+                        ) {
+                            events.push(AppIntent::ZoomToSelectionBoundsRequested);
                         }
                     }
                 });
