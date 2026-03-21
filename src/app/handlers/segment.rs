@@ -58,7 +58,7 @@ pub fn group_selection(state: &mut AppState) {
         node_ids: ordered_ids,
         start_anchor: ToolAnchor::ExistingNode(start_id, start_pos),
         end_anchor: ToolAnchor::ExistingNode(end_id, end_pos),
-        kind: SegmentKind::Straight {
+        kind: SegmentKind::Manual {
             base: SegmentBase {
                 direction: state.editor.default_direction,
                 priority: state.editor.default_priority,

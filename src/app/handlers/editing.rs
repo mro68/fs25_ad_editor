@@ -152,7 +152,13 @@ pub fn edit_segment(state: &mut AppState, record_id: u64) {
         }
     };
 
-    let tool_index = record.kind.tool_index();
+    let tool_index = match record.kind.tool_index() {
+        Some(idx) => idx,
+        None => {
+            log::warn!("Segment {} hat keinen Tool-Hintergrund, Edit nicht moeglich", record_id);
+            return;
+        }
+    };
 
     // Undo-Snapshot vor Loeschung
     state.record_undo_snapshot();
