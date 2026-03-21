@@ -493,6 +493,7 @@ pub fn is_locked(&self, segment_id: u64) -> bool // Lock-Zustand abfragen (false
 pub fn segment_bounding_box(&self, segment_id: u64, road_map: &RoadMap) -> Option<(Vec2, Vec2)> // AABB des Segments (min, max)
 pub fn expand_locked_selection(&self, selected_nodes: &[u64]) -> Vec<u64> // Selektion um Nodes aller betroffenen locked Segments erweitern
 pub fn update_original_positions(&mut self, segment_id: u64, road_map: &RoadMap) // original_positions nach Lock-Move aktualisieren
+pub fn open_nodes(&self, record_id: u64, road_map: &RoadMap) -> Option<Vec<BoundaryNode>> // Boundary-Nodes eines Segments (Nodes mit externen Verbindungen); None wenn Segment nicht existiert
 ```
 
 **Beispiel:**

@@ -304,6 +304,11 @@
     - [x] `shared/API.md`: `i18n/`-Modul dokumentiert (Language, I18nKey, t()); language-Feld in EditorOptions ergaenzt
     - [x] ROADMAP.md: i18n-Feature in Phase 3 eingetragen (Infrastruktur + Options-Dialog + Menue + Status-Bar)
     - [x] `docs/ARCHITECTURE_PLAN.md`: `i18n/` in shared-Modulstruktur ergaenzt
+  - [x] **Doku-Sync Gruppen-Feature: Boundary-Icons + i18n-Rename (2026-03-21, Branch `feat/group-nodes`)**
+    - [x] `core/API.md`: `BoundaryNode`-Struct + `boundary_nodes()`-Methode auf `RoadMap` dokumentiert
+    - [x] `app/API.md`: `SegmentRegistry::open_nodes()` in Methoden-Liste ergaenzt
+    - [x] `ui/API.md`: Neues Modul `group_boundary_overlay` mit `GroupBoundaryIcons` und `render_group_boundary_overlays()` dokumentiert
+    - [x] ROADMAP.md: Feature als abgeschlossen markiert
   - [x] **Doku-Sync Zoom-Shortcuts + i18n-Migration (2026-03-20, Branch `feature/zoom-shortcuts-i18n`)**
     - [x] `src/app/API.md`: `FloatingMenuKind` um `DirectionPriority` und `Zoom` ergaenzt (inkl. Shortcut-Hinweise)
     - [x] `src/ui/API.md`: `render_floating_menu` — 2 neue Menue-Arten dokumentiert; Keyboard-Shortcuts-Tabelle auf `T/G/B/R/Z` aktualisiert; Modulbeschreibung `floating_menu.rs` korrigiert
