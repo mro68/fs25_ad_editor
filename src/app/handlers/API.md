@@ -303,6 +303,20 @@ pub fn select_in_lasso(state: &mut AppState, polygon: &[glam::Vec2], additive: b
 Selektiert Nodes innerhalb eines Rechtecks (Shift+Drag) oder Lasso-Polygons (Alt+Drag).
 
 ```rust
+pub fn select_group_nodes(
+    state: &mut AppState,
+    world_pos: glam::Vec2,
+    max_distance: f32,
+    additive: bool,
+)
+```
+
+Selektiert alle Nodes der Gruppe, zu der der nächste Node gehört (Doppelklick-Handler).
+Findet den nächsten Node innerhalb `max_distance`, sucht den zugehörigen `GroupRecord` via `GroupRegistry::find_first_by_node_id()` und selektiert alle Node-IDs des Records.
+Bei `additive = true` werden Gruppen-Nodes zur bestehenden Selektion hinzugefügt.
+Tut nichts wenn kein Node gefunden oder der Node keiner Gruppe angehört.
+
+```rust
 pub fn select_all(state: &mut AppState)
 pub fn clear(state: &mut AppState)
 pub fn invert(state: &mut AppState)
@@ -583,7 +597,11 @@ pub fn dissolve(state: &mut AppState, segment_id: u64)
 ```
 
 Loest ein Segment auf: Entfernt nur den Gruppen-Record aus der Registry. Die zugehoerigen Nodes und Verbindungen in der RoadMap bleiben unveraendert. Wird **nach** Nutzer-Bestätigung im `ConfirmDissolveDialog` aufgerufen — nicht direkt durch `DissolveSegmentRequested` (dieser öffnet zunächst den Bestätigungsdialog via `OpenDissolveConfirmDialog`). Unbekannte IDs werden ignoriert.
+```rust
+pub fn remove_selected_from_groups(state: &mut AppState)
+```
 
+Entfernt alle selektierten Nodes aus ihren zugehörigen Gruppen. Nodes und Verbindungen in der RoadMap bleiben unveraendert. Gruppen mit weniger als 2 verbleibenden Nodes werden automatisch aufgeloest (`GroupRegistry::remove_nodes_from_record()`). Ist keine Selektion aktiv oder kein Node Mitglied einer Gruppe, wird nichts getan. Erstellt einen Undo-Snapshot vor dem Mutieren.
 ```rust
 pub fn start_group_edit(state: &mut AppState, record_id: u64)
 ```

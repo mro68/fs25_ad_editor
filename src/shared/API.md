@@ -9,6 +9,7 @@ Das `shared`-Modul enthaelt Layer-uebergreifende Typen, die zwischen `app` (Prod
 - `render_scene.rs` — `RenderScene` Uebergabevertrag App → Render
 - `render_quality.rs` — `RenderQuality` Enum (Low/Medium/High)
 - `options/` — Zentrale Konfigurationskonstanten + `EditorOptions` (Laufzeit-Optionen), aufgeteilt in `camera.rs`, `render.rs`, `tools.rs`, `editor.rs`
+- `geometry.rs` — Layer-uebergreifende Geometrie-Hilfsfunktionen (`angle_deviation()` fuer Winkelabweichungs-Berechnung)
 - `i18n/` — Mehrsprachigkeits-System: `Language`-Enum, `I18nKey`-Enum, `t()`-Funktion (DE + EN, Zero-Alloc)
 - `spline_geometry.rs` — Layer-neutrale Catmull-Rom-Geometrie-Funktionen (kein import aus `tools` noetig)
 
@@ -131,6 +132,25 @@ pub enum SelectionStyle {
     Gradient, // Farbverlauf von Mitte nach Rand
 }
 ```
+
+---
+
+### `angle_deviation` (Geometrie-Hilfsfunktion)
+
+Berechnet die Winkelabweichung zwischen Einlauf- und Auslaufrichtung. Nützlich für Richtungsfilter an Gruppen-Grenz-Nodes und Segment-Selektionen.
+
+```rust
+/// Berechnet die Abweichung zwischen Einlauf- und Auslaufwinkel (0 = geradeaus, PI = Umkehr).
+/// Der Rueckgabewert liegt im Bereich [0, PI].
+pub fn angle_deviation(incoming: f32, outgoing: f32) -> f32
+```
+
+Re-exportiert aus `shared` direkt:
+```rust
+use crate::shared::angle_deviation;
+```
+
+---
 
 ## Design-Prinzipien
 

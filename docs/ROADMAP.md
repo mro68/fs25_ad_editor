@@ -153,6 +153,17 @@
   - [x] Context-Menu `⚙ Extras → 🌾 Feld erkennen` — Precondition `FarmlandPolygonsLoaded`
   - [x] `handlers::route_tool`: `FarmlandData-Injection` via `set_farmland_data()` beim Tool-Wechsel
 
+- [x] **Gruppen-Selektions- und Verwaltungs-Erweiterungen (2026-03-21, Branch `refactor/group-unification`)**
+  - [x] Doppelklick auf Gruppen-Node → `SelectGroupByNearestNode`-Command selektiert alle Nodes der Gruppe
+  - [x] `select_group_by_nearest_node()` in `use_cases/selection/group.rs` + `select_group_nodes()` in `handlers/selection.rs`
+  - [x] Context-Menü-Eintrag „Aus Gruppe entfernen“ (“RemoveFromGroup”) → `RemoveSelectedNodesFromGroupRequested` / `RemoveSelectedNodesFromGroups`
+  - [x] `GroupRegistry::remove_nodes_from_record()` — Nodes aus Record entfernen; Auto-Dissolve bei < 2 verbleibenden Nodes
+  - [x] `handlers::group::remove_selected_from_groups()` — neuer Handler
+  - [x] Context-Menü-Eintrag „Gruppe erstellen“ (“GroupSelectionAsGroup”) → `GroupSelectionAsGroupRequested` / `GroupSelectionAsGroup`
+  - [x] `BoundaryInfo.max_external_angle_deviation: Option<f32>` — Winkelabweichung intern/extern, berechnet in `warm_boundary_cache()`
+  - [x] Winkelfilter in `render_group_boundary_overlays()` — Eingangs-Icons nur bei Abweichung ≤ 90° angezeigt
+  - [x] DRY: `angle_deviation()` nach `shared/geometry.rs` extrahiert (vorher in `use_cases/selection/segment.rs`)
+
 ## Phase 5: Advanced Features
 - [x] DDS-Import fuer Map-Hintergruende
   - [x] Texture-Loader implementieren (PNG, JPG, DDS)
@@ -328,6 +339,11 @@
     - [x] `src/ui/API.md`: `render_floating_menu` — 2 neue Menue-Arten dokumentiert; Keyboard-Shortcuts-Tabelle auf `T/G/B/R/Z` aktualisiert; Modulbeschreibung `floating_menu.rs` korrigiert
     - [x] `src/shared/API.md`: `I18nKey`-Uebersicht um 79 neue Keys ergaenzt (Sidebar, Zoom, Background, RouteGroup, FloatingMenu, Ctx, Palette, Lp)
     - [x] ROADMAP.md: i18n-Subfeatures (Context-Menues, Floating-Panels) als `[x]` markiert; Keyboard-Shortcut-Liste korrigiert
+  - [x] **Doku-Sync Gruppen-Selektions- und Verwaltungs-Erweiterungen (2026-03-21, Branch `refactor/group-unification`)**
+    - [x] `shared/API.md`: `geometry.rs`-Modul zum Modul-Index ergaenzt; neue Sektion `angle_deviation()` mit Signatur und Re-Export
+    - [x] `app/API.md`: `SelectGroupByNearestNode`-Command in Selektion-Block eingetragen; `GroupSelectionAsGroupRequested` / `GroupSelectionAsGroup` und `RemoveSelectedNodesFromGroupRequested` / `RemoveSelectedNodesFromGroups` ergaenzt; `GroupRegistry::remove_nodes_from_record()` in Methoden-Liste hinzugefuegt; `BoundaryInfo.max_external_angle_deviation` als neues Pflichtfeld dokumentiert; `OpenSegmentSettingsPopup` → `OpenGroupSettingsPopup` korrigiert
+    - [x] `app/handlers/API.md`: `select_group_nodes()` in selection-Sektion; `remove_selected_from_groups()` in group-Sektion
+    - [x] ROADMAP.md: Phase-4-Feature-Block fuer Gruppen-Selektions- und Entry-Erweiterungen eingetragen
 - [ ] Packaging
   - [ ] Windows Binaries (.exe)
   - [ ] Linux Binaries (AppImage)
