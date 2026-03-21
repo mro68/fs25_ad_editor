@@ -62,3 +62,6 @@ Der FS25 AutoDrive Editor dient zum Erstellen und Bearbeiten von AutoDrive-Kurse
 | Verbindung | Blau | Dual (bidirektional) |
 | Verbindung | Orange | Reverse (umgekehrt) |
 | Marker | Rot/Dunkelrot | Map-Marker (Pin) |
+| Gruppen-Icon → | Weiss | Grenzknoten: Eingang (externe Verbindung rein) |
+| Gruppen-Icon ← | Weiss | Grenzknoten: Ausgang (Verbindung raus) |
+| Gruppen-Icon ↔ | Weiss | Grenzknoten: Bidirektional |

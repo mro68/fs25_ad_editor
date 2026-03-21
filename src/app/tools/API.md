@@ -78,24 +78,24 @@ Der optionale Teil wurde zusaetzlich in Capability-Traits gekapselt. `RouteTool`
 
 - `RouteToolDrag` — `drag_targets`, `on_drag_start`, `on_drag_update`, `on_drag_end`
 - `RouteToolTangent` — `tangent_menu_data`, `apply_tangent_selection`
-- `RouteToolRegistry` — `make_segment_record`, `load_for_edit`
+- `RouteToolRegistry` — `make_group_record`, `load_for_edit`
 - `RouteToolChainInput` — `needs_chain_input`, `load_chain`
 
-**Registry-Erweiterungen** (fuer `SegmentRegistry`, siehe [`../use_cases/API.md`](../use_cases/API.md)):
+**Registry-Erweiterungen** (fuer `GroupRegistry`, siehe [`../use_cases/API.md`](../use_cases/API.md)):
 
 ```rust
 // Wird nach execute() + apply_tool_result() aufgerufen:
-fn make_segment_record(&self, id: u64, node_ids: &[u64]) -> Option<SegmentRecord>;
+fn make_group_record(&self, id: u64, node_ids: &[u64]) -> Option<GroupRecord>;
 
 // Wird in edit_segment() aufgerufen um das Tool wiederherzustellen:
-fn load_for_edit(&mut self, record: &SegmentRecord, kind: &SegmentKind);
+fn load_for_edit(&mut self, record: &GroupRecord, kind: &GroupKind);
 ```
 
 ---
 
-## `SegmentBase` und `SegmentKind` (Segment-Registry)
+## `GroupBase` und `GroupKind` (Group-Registry)
 
-Documentation moved to [`../API.md#segmentbase--segmentkind`](../API.md#segmentbase--segmentkind). Kurz: Alle Segmente speichern ihre grundlegenden Parameter (Richtung, Priorität, Max-Abstand) in `SegmentBase` ab, was Tool-typ and Editing-Flow vereinheitlicht.
+Documentation moved to [`../API.md#groupbase--groupkind`](../API.md#groupbase--groupkind). Kurz: Alle Gruppen speichern ihre grundlegenden Parameter (Richtung, Priorität, Max-Abstand) in `GroupBase` ab, was Tool-Typ und Editing-Flow vereinheitlicht.
 
 ---
 
@@ -210,9 +210,9 @@ Parkplatz-Layout-Generator: Erstellt einen Wendekreis mit Parkreihen in einem ko
 - Enthaelt gemeinsamen `ToolLifecycleState` fuer Snap-Radius, letzte erstellte Node-IDs, Recreate-Flag
 - Methoden: `set_snap_radius()`, `last_created_ids()`, `last_end_anchor()`, `needs_recreate()`, `clear_recreate_flag()`, `set_last_created()`
 
-**Segment-Registry:**
+**Group-Registry:**
 
-- Implementiert `RouteToolRegistry` Trait (`make_segment_record()`, `load_for_edit()`)
+- Implementiert `RouteToolRegistry` Trait (`make_group_record()`, `load_for_edit()`)
 - Speichert Layout-Parameter fuer nachtraegliche Bearbeitung
 
 **Public Exports:**
@@ -272,7 +272,7 @@ pub struct FieldBoundaryTool {
 3. `resample_by_distance()` — Gleichmaessiges Resampling mit `node_spacing`
 4. Geschlossener Ring: letzte Verbindung (N−1 → 0) schliesst den Ring
 
-**Segment-Record:** `SegmentKind::FieldBoundary { field_id, node_spacing, offset, straighten_tolerance, base }` (Slot 7 im ToolManager)
+**Gruppen-Record:** `GroupKind::FieldBoundary { field_id, node_spacing, offset, straighten_tolerance, base }` (Slot 7 im ToolManager)
 
 Modulstruktur: `mod.rs` (Re-Exporte), `state.rs` (Struct, Phasen-Enum, Default), `lifecycle.rs` (RouteTool-Impl, Ring-Berechnung), `config_ui.rs` (egui-Panel)
 
@@ -320,7 +320,7 @@ pub struct RouteOffsetTool {
 
 - `compute_offset_positions(chain, offset, base_spacing) → Option<Vec<Vec2>>` — Nutzt `parallel_offset()` + `resample_by_distance()`
 
-**Segment-Record:** `SegmentKind::RouteOffset { chain_positions, chain_start_id, chain_end_id, offset_left, offset_right, keep_original, base_spacing, base }` (Slot 8 im ToolManager)
+**Gruppen-Record:** `GroupKind::RouteOffset { chain_positions, chain_start_id, chain_end_id, offset_left, offset_right, keep_original, base_spacing, base }` (Slot 8 im ToolManager)
 
 Modulstruktur: `mod.rs` (Re-Exporte), `state.rs` (Struct + OffsetConfig), `lifecycle.rs` (RouteTool-Impl), `geometry.rs` (compute_offset_positions), `config_ui.rs` (egui-Panel), `tests.rs`
 

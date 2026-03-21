@@ -77,13 +77,13 @@ Uebertraegt Scroll-basierte Rotation auf das aktive Route-Tool via `on_scroll_ro
 pub fn execute(state: &mut AppState)
 ```
 
-Fuehrt das aktive Route-Tool aus (Enter-Bestaetigung). Erstellt Nodes + Connections, speichert Undo-Snapshot und registriert Segment-Record fuer nachtraegliche Bearbeitung.
+Fuehrt das aktive Route-Tool aus (Enter-Bestaetigung). Erstellt Nodes + Connections, speichert Undo-Snapshot und registriert Gruppen-Record fuer nachtraegliche Bearbeitung.
 
-**Segment-Registry-Integration:**
+**Group-Registry-Integration:**
 
 - Nach Tool-Ausfuehrung werden die `original_positions` aus der RoadMap gesammelt
-- Segment-Record wird mit allen Tool-Parametern registriert
-- Ermoeglicht spaeteres Editieren: `EditSegment { record_id }` laedt das Tool mit gespeicherten Parametern neu
+- Gruppen-Record wird mit allen Tool-Parametern registriert
+- Ermoeglicht spaeteres Editieren: `EditGroup { record_id }` laedt das Tool mit gespeicherten Parametern neu
 
 ```rust
 pub fn cancel(state: &mut AppState)
@@ -182,7 +182,7 @@ Handhabt Bearbeitung von Nodes, Verbindungen und Marker. Integriert Segment-Clea
 pub fn edit_segment(
     state: &mut AppState,
     record_id: u64,
-    kind: SegmentKind,
+    kind: GroupKind,
     node_ids_to_delete: &[u64],
 ) -> anyhow::Result<()>
 ```
@@ -194,11 +194,11 @@ Bearbeitet ein zuvor erstelltes Segment. Fuehrt folgende Schritte aus:
 3. **Tool-Reload:** Laedt das passende Route-Tool mit den gespeicherten Parametern (via `load_for_edit()`)
 4. **Neu-Ausfuehrung:** Tool wird neu mit den User-Aenderungen ausfuehrt (neue Node-IDs generiert)
 
-**Segment-Registry-Integration:**
+**Group-Registry-Integration:**
 
-- Nutzt `SegmentRecord` (fuer Marker-Cleanup und Tool-Parameter)
-- Lokalisiert via `segment_registry.get_record(record_id)`
-- Marker-Cleanup ist **kritisch:** Unvollstaendiges Cleanup verwaist BrainCells im SegmentRecord
+- Nutzt `GroupRecord` (fuer Marker-Cleanup und Tool-Parameter)
+- Lokalisiert via `group_registry.get(record_id)`
+- Marker-Cleanup ist **kritisch:** Unvollstaendiges Cleanup verwaist BrainCells im GroupRecord
 
 ```rust
 pub fn delete_nodes_by_ids(state: &mut AppState, node_ids: &[u64])
@@ -566,9 +566,9 @@ Schnelle Konfigurationsanpassungen per Pfeiltasten (Numerische Feinabstimmung). 
 
 ---
 
-### `segment` — Segment-Lock und Segment-Auflösung
+### `segment` — Gruppen-Lock und Segment-Auflösung
 
-Verwaltet den Lock-Zustand von Segmenten und loest Segment-Records auf.
+Verwaltet den Lock-Zustand von Segmenten und loest Gruppen-Records auf.
 
 **Funktionen:**
 
@@ -582,19 +582,19 @@ Schaltet den Lock-Zustand eines Segments um. Gesperrte Segmente bewegen alle zug
 pub fn dissolve(state: &mut AppState, segment_id: u64)
 ```
 
-Loest ein Segment auf: Entfernt nur den Segment-Record aus der Registry. Die zugehoerigen Nodes und Verbindungen in der RoadMap bleiben unveraendert. Wird **nach** Nutzer-Bestätigung im `ConfirmDissolveDialog` aufgerufen — nicht direkt durch `DissolveSegmentRequested` (dieser öffnet zunächst den Bestätigungsdialog via `OpenDissolveConfirmDialog`). Unbekannte IDs werden ignoriert.
+Loest ein Segment auf: Entfernt nur den Gruppen-Record aus der Registry. Die zugehoerigen Nodes und Verbindungen in der RoadMap bleiben unveraendert. Wird **nach** Nutzer-Bestätigung im `ConfirmDissolveDialog` aufgerufen — nicht direkt durch `DissolveSegmentRequested` (dieser öffnet zunächst den Bestätigungsdialog via `OpenDissolveConfirmDialog`). Unbekannte IDs werden ignoriert.
 
 ```rust
 pub fn start_group_edit(state: &mut AppState, record_id: u64)
 ```
 
-Startet den nicht-destruktiven Gruppen-Edit-Modus fuer einen Segment-Record. Erstellt einen Undo-Snapshot, entsperrt den Record temporaer (falls gesperrt), setzt den Edit-Guard in der SegmentRegistry (verhindert automatische Invalidierung), und selektiert alle zugehoerigen Nodes. Gibt eine Warnung aus wenn der Record nicht existiert oder bereits ein Group-Edit aktiv ist. Setzt `AppState::group_editing` auf `Some(GroupEditState { record_id, was_locked })`.
+Startet den nicht-destruktiven Gruppen-Edit-Modus fuer einen Gruppen-Record. Erstellt einen Undo-Snapshot, entsperrt den Record temporaer (falls gesperrt), setzt den Edit-Guard in der GroupRegistry (verhindert automatische Invalidierung), und selektiert alle zugehoerigen Nodes. Gibt eine Warnung aus wenn der Record nicht existiert oder bereits ein Group-Edit aktiv ist. Setzt `AppState::group_editing` auf `Some(GroupEditState { record_id, was_locked })`.
 
 ```rust
 pub fn apply_group_edit(state: &mut AppState)
 ```
 
-Schliesst den Gruppen-Edit-Modus ab und uebernimmt alle Aenderungen. Berechnet die neue Node-ID-Menge als Vereinigung von (Original-Nodes, die noch in der RoadMap existieren) und (aktuell selektierten Nodes). **Verbindungsfilter:** Neu hinzugefügte selektierte Nodes werden nur übernommen, wenn sie eine direkte oder indirekte Verbindung zu einem bereits erreichbaren Node im Record haben (iterativer Erreichbarkeits-Algorithmus). Isolierte Nodes ohne Verbindung zur Gruppe werden verworfen. Aktualisiert den Record via `SegmentRegistry::update_record()`, stellt den Lock-Zustand wieder her und hebt den Edit-Guard auf. Tut nichts wenn kein Edit aktiv ist.
+Schliesst den Gruppen-Edit-Modus ab und uebernimmt alle Aenderungen. Berechnet die neue Node-ID-Menge als Vereinigung von (Original-Nodes, die noch in der RoadMap existieren) und (aktuell selektierten Nodes). **Verbindungsfilter:** Neu hinzugefügte selektierte Nodes werden nur übernommen, wenn sie eine direkte oder indirekte Verbindung zu einem bereits erreichbaren Node im Record haben (iterativer Erreichbarkeits-Algorithmus). Isolierte Nodes ohne Verbindung zur Gruppe werden verworfen. Aktualisiert den Record via `GroupRegistry::update_record()`, stellt den Lock-Zustand wieder her und hebt den Edit-Guard auf. Tut nichts wenn kein Edit aktiv ist.
 
 ```rust
 pub fn cancel_group_edit(state: &mut AppState)

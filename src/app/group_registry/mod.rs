@@ -338,8 +338,7 @@ impl GroupRegistry {
             let Some(record) = self.records.get(&rid) else {
                 continue;
             };
-            let group_set: indexmap::IndexSet<u64> =
-                record.node_ids.iter().copied().collect();
+            let group_set: indexmap::IndexSet<u64> = record.node_ids.iter().copied().collect();
 
             // (has_incoming, has_outgoing, has_truly_external)
             let mut node_info: HashMap<u64, (bool, bool, bool)> = HashMap::new();
