@@ -279,6 +279,9 @@ pub fn map_intent_to_commands(state: &AppState, intent: AppIntent) -> Vec<AppCom
         AppIntent::GroupSelectionAsGroupRequested => {
             vec![AppCommand::GroupSelectionAsGroup]
         }
+        AppIntent::RemoveSelectedNodesFromGroupRequested => {
+            vec![AppCommand::RemoveSelectedNodesFromGroups]
+        }
         AppIntent::ZipBackgroundBrowseRequested { path } => {
             vec![AppCommand::BrowseZipBackground { path }]
         }

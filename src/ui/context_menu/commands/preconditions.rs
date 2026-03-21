@@ -26,6 +26,8 @@ pub enum Precondition {
     IsResampleableChain,
     /// Selektion bildet einen zusammenhaengenden Subgraphen (fuer Gruppierung)
     IsConnectedSubgraph,
+    /// Mindestens 1 selektierter Node gehoert zu einer Gruppe
+    SelectionHasGroupMember,
     /// Mindestens 1 Node selektiert (fuer Copy)
     HasSelection,
     /// Clipboard enthaelt Nodes (fuer Paste)
@@ -54,6 +56,8 @@ pub struct PreconditionContext<'a> {
     pub farmland_polygons_loaded: bool,
     /// Ob gerade ein Group-Edit aktiv ist (sperrt neue Gruppierungen)
     pub group_editing_active: bool,
+    /// Ob mindestens 1 selektierter Node zu einer Gruppe gehoert
+    pub selection_has_group_member: bool,
 }
 
 impl Precondition {
@@ -101,6 +105,8 @@ impl Precondition {
             Self::AtLeastTwoSelected => ctx.selected_node_ids.len() >= 2,
 
             Self::NoGroupEditActive => !ctx.group_editing_active,
+
+            Self::SelectionHasGroupMember => ctx.selection_has_group_member,
         }
     }
 }

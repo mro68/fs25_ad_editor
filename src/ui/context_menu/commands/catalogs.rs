@@ -105,6 +105,11 @@ impl MenuCatalog {
                     Precondition::NoGroupEditActive,
                 ],
             },
+            MenuEntry::Command {
+                id: CommandId::RemoveFromGroup,
+                label: t(lang, I18nKey::CtxRemoveFromGroup).into(),
+                preconditions: vec![Precondition::SelectionHasGroupMember],
+            },
             MenuEntry::Separator,
             // ── Verbinden ────────────────────────────────────────
             MenuEntry::Command {

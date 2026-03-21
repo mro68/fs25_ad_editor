@@ -108,6 +108,8 @@ pub enum CommandId {
     EditGroup,
     /// Selektierte zusammenhaengende Nodes als neues Segment gruppieren
     GroupSelectionAsGroup,
+    /// Selektierte Nodes aus ihrer Gruppe entfernen (Nodes bleiben erhalten)
+    RemoveFromGroup,
 
     // ── Extras ───────────────────────────────────────────────────────
     /// FieldBoundaryTool aktivieren
@@ -280,6 +282,7 @@ impl CommandId {
                 record_id: ctx.group_record_id.unwrap_or(0),
             },
             Self::GroupSelectionAsGroup => AppIntent::GroupSelectionAsGroupRequested,
+            Self::RemoveFromGroup => AppIntent::RemoveSelectedNodesFromGroupRequested,
 
             // ── Extras ───────────────────────────────────────────────────────
             Self::SetToolFieldBoundary => AppIntent::SelectRouteToolRequested {

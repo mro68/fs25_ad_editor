@@ -284,6 +284,8 @@ pub enum AppIntent {
     DissolveGroupConfirmed { segment_id: u64 },
     /// Selektierte zusammenhaengende Nodes als neues Segment in der Registry speichern
     GroupSelectionAsGroupRequested,
+    /// Selektierte Nodes aus ihrer Gruppe entfernen (Nodes bleiben in RoadMap erhalten)
+    RemoveSelectedNodesFromGroupRequested,
 
     // ── Extras ───────────────────────────────────────────────────────
     /// Alle-Felder-nachzeichnen-Einstellungsdialog oeffnen

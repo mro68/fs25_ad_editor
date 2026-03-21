@@ -144,6 +144,13 @@ pub fn render_context_menu(
                 None
             });
 
+            // Pruefen ob mindestens 1 selektierter Node zu einer Gruppe gehoert
+            let selection_has_group_member = group_registry.map_or(false, |registry| {
+                selected_node_ids
+                    .iter()
+                    .any(|&nid| !registry.groups_for_node(nid).is_empty())
+            });
+
             // Precondition-Kontext aus aktuellem State
             let precondition_ctx = PreconditionContext {
                 road_map: rm,
@@ -153,6 +160,7 @@ pub fn render_context_menu(
                 group_record_id,
                 farmland_polygons_loaded,
                 group_editing_active,
+                selection_has_group_member,
             };
 
             match variant {
