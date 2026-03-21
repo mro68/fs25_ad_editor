@@ -103,7 +103,8 @@ impl EditorApp {
                     command_palette_open,
                 ));
                 self.render_viewport(ui, rect, viewport_size);
-                self.render_overlays(ui, rect, &response, viewport_size);
+                let overlay_intents = self.render_overlays(ui, rect, &response, viewport_size);
+                events.extend(overlay_intents);
             });
 
         events
@@ -345,13 +346,15 @@ impl EditorApp {
     }
 
     /// Zeichnet Tool-Preview und Distanzen-Overlay ueber den Viewport.
+    /// Gibt gesammelte Overlay-Events als `AppIntent`-Vec zurueck.
     fn render_overlays(
         &mut self,
         ui: &egui::Ui,
         rect: egui::Rect,
         response: &egui::Response,
         viewport_size: [f32; 2],
-    ) {
+    ) -> Vec<AppIntent> {
+        let mut overlay_events: Vec<AppIntent> = Vec::new();
         // ── Tool-Preview-Overlay ─────────────
         if self.state.editor.active_tool == EditorTool::Route {
             let vp = glam::Vec2::new(viewport_size[0], viewport_size[1]);
@@ -423,7 +426,7 @@ impl EditorApp {
                 };
                 let ctrl_held = ui.ctx().input(|i| i.modifiers.ctrl);
                 let painter = ui.painter_at(rect);
-                let overlay_events = ui::render_segment_overlays(
+                let segment_overlay_events = ui::render_segment_overlays(
                     &painter,
                     rect,
                     &self.state.view.camera,
@@ -435,23 +438,15 @@ impl EditorApp {
                     ctrl_held,
                     self.state.options.segment_lock_icon_size_px,
                 );
-                for ev in overlay_events {
+                for ev in segment_overlay_events {
                     match ev {
                         ui::SegmentOverlayEvent::LockToggled { segment_id } => {
-                            self.controller
-                                .handle_intent(
-                                    &mut self.state,
-                                    AppIntent::ToggleSegmentLockRequested { segment_id },
-                                )
-                                .ok();
+                            overlay_events
+                                .push(AppIntent::ToggleSegmentLockRequested { segment_id });
                         }
                         ui::SegmentOverlayEvent::Dissolved { segment_id } => {
-                            self.controller
-                                .handle_intent(
-                                    &mut self.state,
-                                    AppIntent::DissolveSegmentRequested { segment_id },
-                                )
-                                .ok();
+                            overlay_events
+                                .push(AppIntent::DissolveSegmentRequested { segment_id });
                         }
                     }
                 }
@@ -492,6 +487,8 @@ impl EditorApp {
                 egui::Color32::WHITE,
             );
         }
+
+        overlay_events
     }
 
     fn process_events(&mut self, ctx: &egui::Context, events: &[AppIntent]) {
