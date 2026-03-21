@@ -165,6 +165,7 @@ impl EditorApp {
             edit_tool_manager,
             panel_pos,
             self.state.group_editing.as_ref(),
+            &mut self.state.options,
         ));
 
         events
@@ -459,6 +460,9 @@ impl EditorApp {
         // ── Gruppen-Boundary-Overlay ──────────────────
         if let Some(rm) = self.state.road_map.as_deref() {
             if !self.state.group_registry.is_empty() {
+                // Cache aufwaermen (O(1) wenn bereits gecacht, sonst O(|Records| * |connections|))
+                self.state.group_registry.warm_boundary_cache(rm);
+
                 // Icons lazy initialisieren (benoetigen egui::Context)
                 if self.group_boundary_icons.is_none() {
                     self.group_boundary_icons = Some(ui::GroupBoundaryIcons::load(ui.ctx()));
@@ -476,6 +480,7 @@ impl EditorApp {
                         self.state.selection.selected_node_ids.as_ref(),
                         icons,
                         self.state.options.segment_lock_icon_size_px,
+                        self.state.options.show_all_group_boundaries,
                     );
                 }
             }

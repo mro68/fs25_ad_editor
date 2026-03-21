@@ -592,6 +592,10 @@
 - ✅ Kontextmenu-Eintrag "Als Segment gruppieren" (`CommandId::GroupSelectionAsSegment`) — selektierte zusammenhaengende Nodes direkt als Segment-Record registrieren (Precondition: `IsResampleableChain`)
 - ✅ Neue Kontextmenu-Icons: `icon_map_pin.svg`, `icon_map_pin_plus.svg`, `icon_map_pin_minus.svg` fuer `CreateMarker` / `RemoveMarker`
 - ✅ `EditorOptions::marker_outline_width` — Konfigurierbare Umrissstärke des Map-Markers (Anteil am Radius, Shader liest `aa_params.w`); Farb-Picker in UI entfernt
+- ✅ `GroupRegistry::boundary_cache` — PTR-basierter Cache fuer Boundary-Infos; `warm_boundary_cache()` pro Frame aufgerufen, O(1) wenn bereits gecacht; verhindert O(|C|) pro Frame
+- ✅ `BoundaryInfo`/`BoundaryDirection` — neue Typen im `group_registry`-Modul; re-exportiert aus `app`
+- ✅ Icon-Logik uebertararbeitet — `show_all_group_boundaries`-Filter; `find_by_node_ids()` statt `find_first_by_node_id()`; alle Gruppen selektierter Nodes werden gezeigt
+- ✅ Checkbox "Rand-Icons an allen Gruppen-Grenzknoten anzeigen" im Gruppen-Edit-Panel (`render_edit_panel` erhaelt `options: &mut EditorOptions`)
 
 **Naechste Aufgaben:**
 1. 🟡 100k+ Performance-Benchmarks

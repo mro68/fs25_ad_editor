@@ -9,6 +9,7 @@ use crate::app::state::GroupEditState;
 use crate::app::tools::common::wheel_dir;
 use crate::app::tools::ToolManager;
 use crate::app::{AppIntent, ConnectionDirection, ConnectionPriority, EditorTool, RoadMap};
+use crate::shared::EditorOptions;
 use crate::ui::properties::selectors::{
     render_direction_icon_selector, render_priority_icon_selector,
 };
@@ -32,12 +33,13 @@ pub fn render_edit_panel(
     tool_manager: Option<&mut ToolManager>,
     panel_pos: Option<egui::Pos2>,
     group_editing: Option<&GroupEditState>,
+    options: &mut EditorOptions,
 ) -> Vec<AppIntent> {
     let mut events = Vec::new();
 
     // Gruppen-Edit-Panel (hat Vorrang vor Streckenteilung)
     if let Some(edit_state) = group_editing {
-        render_group_edit_panel(ctx, edit_state, panel_pos, &mut events);
+        render_group_edit_panel(ctx, edit_state, panel_pos, options, &mut events);
         return events;
     }
 
@@ -78,6 +80,7 @@ fn render_group_edit_panel(
     ctx: &egui::Context,
     edit_state: &GroupEditState,
     panel_pos: Option<egui::Pos2>,
+    options: &mut EditorOptions,
     events: &mut Vec<AppIntent>,
 ) {
     let mut window = egui::Window::new("✏ Gruppen-Bearbeitung")
@@ -108,6 +111,13 @@ fn render_group_edit_panel(
         if ui.input(|i| i.key_pressed(egui::Key::Escape)) {
             events.push(AppIntent::GroupEditCancelRequested);
         }
+        ui.add_space(6.0);
+        ui.separator();
+        ui.add_space(4.0);
+        ui.checkbox(
+            &mut options.show_all_group_boundaries,
+            "Rand-Icons an allen Gruppen-Grenzknoten anzeigen",
+        );
     });
 }
 

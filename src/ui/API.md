@@ -160,9 +160,10 @@ pub fn load(ctx: &egui::Context) -> Self
 
 ### `render_group_boundary_overlays`
 
-Zeichnet Boundary-Icons unterhalb der Nodes aller selektierten Segmente.
+Zeichnet Boundary-Icons unterhalb der Nodes aller selektierten Gruppen.
 
-Fuer jedes selektierte Segment werden per `SegmentRegistry::open_nodes()` die Boundary-Nodes ermittelt und mit dem passenden Icon markiert. Das Icon wird **unterhalb** des Nodes platziert (positiver Y-Offset), damit kein Z-Order-Konflikt mit dem Lock-Icon (oberhalb) entsteht. Das Overlay ist nur sichtbar wenn Nodes selektiert sind.
+Verwendet den `GroupRegistry::boundary_cache_for()`-Cache (statt pro-Frame `boundary_nodes()`).
+Iteriert ueber ALLE Gruppen selektierter Nodes via `find_by_node_ids()` (nicht nur die erste).
 
 ```rust
 pub fn render_group_boundary_overlays(
@@ -170,11 +171,12 @@ pub fn render_group_boundary_overlays(
     rect: egui::Rect,
     camera: &Camera2D,
     viewport_size: Vec2,
-    registry: &SegmentRegistry,
+    registry: &GroupRegistry,
     road_map: &RoadMap,
     selected_node_ids: &IndexSet<u64>,
     icons: &GroupBoundaryIcons,
     icon_size_px: f32,
+    show_all: bool,
 )
 ```
 
@@ -183,16 +185,19 @@ pub fn render_group_boundary_overlays(
 - `rect` — Viewport-Rechteck in Screen-Koordinaten
 - `camera` — Kamera fuer Welt→Screen-Transformation
 - `viewport_size` — Viewport-Abmessungen in Pixeln
-- `registry` — Segment-Registry mit allen gespeicherten Segmenten
-- `road_map` — RoadMap fuer Node-Positionen und Verbindungs-Queries
+- `registry` — Gruppen-Registry mit gecachten BoundaryInfos
+- `road_map` — RoadMap fuer Node-Positionen
 - `selected_node_ids` — Aktuell selektierte Node-IDs
 - `icons` — Gecachte Textur-Handles (via `GroupBoundaryIcons::load()`)
 - `icon_size_px` — Icon-Groesse in Pixeln (Minimum: 8 px)
+- `show_all` — `false` = nur Nodes mit Verbindungen zu ungrouped Nodes; `true` = alle Boundary-Nodes
 
 **Icon-Zuordnung:**
-- Eingang + Ausgang → Bidirektional-Icon
-- Nur Eingang → Eingang-Icon
-- Nur Ausgang → Ausgang-Icon
+- `BoundaryDirection::Bidirectional` → Bidirektional-Icon
+- `BoundaryDirection::Entry` → Eingang-Icon
+- `BoundaryDirection::Exit` → Ausgang-Icon
+
+**Voraussetzung:** `registry.warm_boundary_cache(road_map)` muss vor dem Aufruf erfolgt sein.
 
 ---
 
@@ -287,7 +292,7 @@ pub fn render_status_bar(ctx: &egui::Context, state: &AppState)
 
 Rendert das schwebende Edit-Panel für aktive Modi (Gruppen-Edit, Streckenteilung, Route-Tool)
 und gibt erzeugte Intents zurück. Bei aktivem `group_editing` wird ein Gruppen-Edit-Panel
-(Übernehmen/Abbrechen) angezeigt und die anderen Modi unterdrückt.
+(Übernehmen/Abbrechen + Checkbox) angezeigt und die anderen Modi unterdrückt.
 
 ```rust
 pub fn render_edit_panel(
@@ -302,8 +307,12 @@ pub fn render_edit_panel(
   tool_manager: Option<&mut ToolManager>,
   panel_pos: Option<egui::Pos2>,
   group_editing: Option<&GroupEditState>,
+  options: &mut EditorOptions,
 ) -> Vec<AppIntent>
 ```
+
+Im Gruppen-Bearbeitungsmodus enthält das Panel zusätzlich eine Checkbox für
+`options.show_all_group_boundaries` (steuert Sichtbarkeit aller Boundary-Icons).
 
 ---
 

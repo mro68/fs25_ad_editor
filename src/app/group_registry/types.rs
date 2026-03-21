@@ -135,6 +135,28 @@ pub enum GroupKind {
     },
 }
 
+/// Richtung einer Gruppen-Grenz-Verbindung (Ein-/Ausfahrtstyp).
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub enum BoundaryDirection {
+    /// Nur eingehende externe Verbindungen an diesem Node.
+    Entry,
+    /// Nur ausgehende externe Verbindungen an diesem Node.
+    Exit,
+    /// Ein- und ausgehende externe Verbindungen an diesem Node.
+    Bidirectional,
+}
+
+/// Gecachte Information ueber einen Gruppen-Grenz-Node.
+#[derive(Debug, Clone)]
+pub struct BoundaryInfo {
+    /// ID des Nodes an der Gruppengrenze.
+    pub node_id: u64,
+    /// true = mindestens eine Verbindung fuehrt zu einem Node ausserhalb JEDER registrierten Gruppe.
+    pub has_external_connection: bool,
+    /// Richtung der externen Verbindungen an diesem Node.
+    pub direction: BoundaryDirection,
+}
+
 /// Tool-Index fuer `StraightLineTool` im `ToolManager` (Registrierungs-Slot 0).
 ///
 /// Muss mit der Reihenfolge in `ToolManager::new()` uebereinstimmen.

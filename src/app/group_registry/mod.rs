@@ -37,6 +37,12 @@ pub struct GroupRegistry {
     edit_guard_id: Option<u64>,
     /// Reverse-Index: Node-ID → Liste der zugehoerigen Record-IDs.
     node_to_records: HashMap<u64, Vec<u64>>,
+    /// Cache fuer gecachte Boundary-Infos pro Record (Key = record_id).
+    /// Wird bei register/remove/update_record invalidiert;
+    /// bei neuem RoadMap-Pointer komplett geleert.
+    boundary_cache: HashMap<u64, Vec<BoundaryInfo>>,
+    /// Adresse der zuletzt verwendeten RoadMap fuer PTR-basierten Cache-Reset.
+    last_roadmap_ptr: usize,
 }
 
 impl GroupRegistry {
@@ -71,6 +77,8 @@ impl GroupRegistry {
             self.node_to_records.entry(nid).or_default().push(id);
         }
         self.records.insert(id, record);
+        // Cache fuer diesen Record invalidieren (neue Gruppe → neues Boundary-Bild noetig)
+        self.boundary_cache.remove(&id);
         id
     }
 
@@ -91,6 +99,7 @@ impl GroupRegistry {
         if let Some(record) = self.records.remove(&record_id) {
             self.remove_from_index(record_id, &record.node_ids);
         }
+        self.boundary_cache.remove(&record_id);
     }
 
     /// Gibt alle Records zurueck, die mindestens einen der angegebenen Node-IDs enthalten.
@@ -279,12 +288,113 @@ impl GroupRegistry {
             record.original_positions = original_positions;
             record.marker_node_ids.clear();
         }
+        // Cache-Eintrag invalidieren (Boundary-Bild veraltet nach Node-Aenderung)
+        self.boundary_cache.remove(&record_id);
         true
     }
 
     /// Gibt eine mutable Referenz auf den Record mit der angegebenen ID zurueck.
     fn get_mut(&mut self, record_id: u64) -> Option<&mut GroupRecord> {
         self.records.get_mut(&record_id)
+    }
+
+    /// Waermt den Boundary-Cache fuer alle nicht-gecachten Records auf.
+    ///
+    /// Muss einmal pro Frame VOR dem Rendern des Boundary-Overlays aufgerufen werden.
+    /// Invalidiert den kompletten Cache wenn sich der RoadMap-Pointer aendert
+    /// (d.h. eine neue Datei geladen wurde).
+    ///
+    /// Kosten: O(|Records ohne Cache-Eintrag| * |connections|) — typisch nur fuer
+    /// neue Records teuer; bereits gecachte Records werden uebersprungen.
+    pub fn warm_boundary_cache(&mut self, road_map: &RoadMap) {
+        use std::collections::HashSet;
+
+        let current_ptr = road_map as *const RoadMap as usize;
+        if current_ptr != self.last_roadmap_ptr {
+            self.boundary_cache.clear();
+            self.last_roadmap_ptr = current_ptr;
+        }
+
+        let missing_ids: Vec<u64> = self
+            .records
+            .keys()
+            .filter(|id| !self.boundary_cache.contains_key(*id))
+            .copied()
+            .collect();
+
+        if missing_ids.is_empty() {
+            return;
+        }
+
+        // Union aller gruppierten Nodes fuer "truly external"-Pruefung:
+        // hat der externe Nachbar eine eigene Gruppe, oder ist er komplett ungrouped?
+        let all_grouped_ids: HashSet<u64> = self
+            .records
+            .values()
+            .flat_map(|r| r.node_ids.iter().copied())
+            .collect();
+
+        for rid in missing_ids {
+            let Some(record) = self.records.get(&rid) else {
+                continue;
+            };
+            let group_set: indexmap::IndexSet<u64> =
+                record.node_ids.iter().copied().collect();
+
+            // (has_incoming, has_outgoing, has_truly_external)
+            let mut node_info: HashMap<u64, (bool, bool, bool)> = HashMap::new();
+
+            for conn in road_map.connections_iter() {
+                let start_in = group_set.contains(&conn.start_id);
+                let end_in = group_set.contains(&conn.end_id);
+
+                if start_in && !end_in {
+                    let entry = node_info
+                        .entry(conn.start_id)
+                        .or_insert((false, false, false));
+                    entry.1 = true; // has_outgoing
+                    if !all_grouped_ids.contains(&conn.end_id) {
+                        entry.2 = true; // Nachbar ausserhalb jeder Gruppe
+                    }
+                }
+                if end_in && !start_in {
+                    let entry = node_info
+                        .entry(conn.end_id)
+                        .or_insert((false, false, false));
+                    entry.0 = true; // has_incoming
+                    if !all_grouped_ids.contains(&conn.start_id) {
+                        entry.2 = true; // Nachbar ausserhalb jeder Gruppe
+                    }
+                }
+            }
+
+            let infos: Vec<BoundaryInfo> = node_info
+                .into_iter()
+                .map(|(id, (inc, out, ext))| {
+                    let direction = match (inc, out) {
+                        (true, true) => BoundaryDirection::Bidirectional,
+                        (true, false) => BoundaryDirection::Entry,
+                        (false, true) => BoundaryDirection::Exit,
+                        _ => BoundaryDirection::Entry,
+                    };
+                    BoundaryInfo {
+                        node_id: id,
+                        has_external_connection: ext,
+                        direction,
+                    }
+                })
+                .collect();
+
+            self.boundary_cache.insert(rid, infos);
+        }
+    }
+
+    /// Gibt die gecachten Boundary-Infos fuer den angegebenen Record zurueck.
+    ///
+    /// Gibt `None` zurueck wenn kein Cache-Eintrag existiert
+    /// (d.h. `warm_boundary_cache()` wurde noch nicht fuer diesen Record aufgerufen).
+    pub fn boundary_cache_for(&self, record_id: u64) -> Option<&[BoundaryInfo]> {
+        self.boundary_cache.get(&record_id).map(Vec::as_slice)
     }
 
     /// Ermittelt die Boundary-Nodes eines Segments (Nodes mit externen Verbindungen).
