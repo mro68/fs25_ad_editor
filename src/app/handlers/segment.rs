@@ -21,10 +21,11 @@ pub fn dissolve(state: &mut AppState, segment_id: u64) {
     state.segment_registry.remove(segment_id);
 }
 
-/// Gruppiert die selektierten zusammenhaengenden Nodes als neues Segment.
+/// Gruppiert die selektierten Nodes als neues Segment.
 ///
-/// Die Nodes werden in Ketten-Reihenfolge gespeichert. Ist die Selektion
-/// keine gueltige lineare Kette, wird der Aufruf ignoriert.
+/// Voraussetzung: Die Nodes muessen ein zusammenhaengendes Netzwerk bilden
+/// (Kreuzungen und Verzweigungen sind erlaubt). Ist die Selektion kein
+/// zusammenhaengender Subgraph, wird der Aufruf ignoriert.
 pub fn group_selection(state: &mut AppState) {
     let road_map = match state.road_map.as_deref() {
         Some(rm) => rm,

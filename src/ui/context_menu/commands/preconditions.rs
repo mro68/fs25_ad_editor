@@ -36,6 +36,8 @@ pub enum Precondition {
     FarmlandPolygonsLoaded,
     /// Mindestens 2 Nodes selektiert (fuer Zoom-auf-Auswahl)
     AtLeastTwoSelected,
+    /// Kein Group-Edit aktiv (fuer neue Gruppierung)
+    NoGroupEditActive,
 }
 
 /// Kontext fuer die Precondition-Auswertung — alle noetigen Daten aus dem aktuellen State.
@@ -50,6 +52,8 @@ pub struct PreconditionContext<'a> {
     pub segment_record_id: Option<u64>,
     /// Ob Farmland-Polygone geladen sind (fuer FieldBoundaryTool-Precondition)
     pub farmland_polygons_loaded: bool,
+    /// Ob gerade ein Group-Edit aktiv ist (sperrt neue Gruppierungen)
+    pub group_editing_active: bool,
 }
 
 impl Precondition {
@@ -95,6 +99,8 @@ impl Precondition {
             Self::FarmlandPolygonsLoaded => ctx.farmland_polygons_loaded,
 
             Self::AtLeastTwoSelected => ctx.selected_node_ids.len() >= 2,
+
+            Self::NoGroupEditActive => !ctx.group_editing_active,
         }
     }
 }

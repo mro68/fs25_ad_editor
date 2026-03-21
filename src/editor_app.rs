@@ -309,6 +309,7 @@ impl EditorApp {
                     .farmland_polygons
                     .as_ref()
                     .is_some_and(|p| !p.is_empty()),
+                self.state.group_editing.is_some(),
                 Some(&self.state.segment_registry),
             ),
         );
