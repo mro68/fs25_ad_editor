@@ -8,6 +8,7 @@
 //! - `move_nodes` — Verschieben selektierter Nodes
 //! - `helpers` — Gemeinsame Hilfsfunktionen
 
+mod group;
 ///
 /// Aufgeteilt nach Selektionsmodus:
 /// - `pick` — Einzelklick-Selektion (Nearest-Node)
@@ -17,7 +18,6 @@
 /// - `move_nodes` — Verschieben selektierter Nodes
 /// - `helpers` — Gemeinsame Hilfsfunktionen
 mod helpers;
-mod group;
 mod lasso;
 mod move_nodes;
 mod pick;

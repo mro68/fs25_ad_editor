@@ -401,10 +401,26 @@ impl GroupRegistry {
 
             // (has_incoming, has_outgoing, has_truly_external)
             let mut node_info: HashMap<u64, (bool, bool, bool)> = HashMap::new();
+            // Winkel interner Verbindungen pro Node (Richtung aus Sicht des Nodes)
+            let mut internal_angles: HashMap<u64, Vec<f32>> = HashMap::new();
+            // Winkel externer Verbindungen pro Node (Richtung aus Sicht des Nodes)
+            let mut external_angles: HashMap<u64, Vec<f32>> = HashMap::new();
 
             for conn in road_map.connections_iter() {
                 let start_in = group_set.contains(&conn.start_id);
                 let end_in = group_set.contains(&conn.end_id);
+
+                if start_in && end_in {
+                    // Interne Verbindung: Winkel aus Sicht beider Nodes sammeln
+                    internal_angles
+                        .entry(conn.start_id)
+                        .or_default()
+                        .push(conn.angle);
+                    internal_angles
+                        .entry(conn.end_id)
+                        .or_default()
+                        .push(conn.angle + std::f32::consts::PI);
+                }
 
                 if start_in && !end_in {
                     let entry = node_info
@@ -414,6 +430,11 @@ impl GroupRegistry {
                     if !all_grouped_ids.contains(&conn.end_id) {
                         entry.2 = true; // Nachbar ausserhalb jeder Gruppe
                     }
+                    // Ext. Winkel: aus Sicht des start_node Richtung end_node
+                    external_angles
+                        .entry(conn.start_id)
+                        .or_default()
+                        .push(conn.angle);
                 }
                 if end_in && !start_in {
                     let entry = node_info
@@ -423,6 +444,11 @@ impl GroupRegistry {
                     if !all_grouped_ids.contains(&conn.start_id) {
                         entry.2 = true; // Nachbar ausserhalb jeder Gruppe
                     }
+                    // Ext. Winkel: aus Sicht des end_node Richtung start_node (Gegenrichtung)
+                    external_angles
+                        .entry(conn.end_id)
+                        .or_default()
+                        .push(conn.angle + std::f32::consts::PI);
                 }
             }
 
@@ -435,10 +461,34 @@ impl GroupRegistry {
                         (false, true) => BoundaryDirection::Exit,
                         _ => BoundaryDirection::Entry,
                     };
+
+                    // Maximale Winkelabweichung: interner Durchschnittswinkel vs. externe Winkel
+                    let max_dev = {
+                        let int_angles =
+                            internal_angles.get(&id).map(Vec::as_slice).unwrap_or(&[]);
+                        let ext_angles =
+                            external_angles.get(&id).map(Vec::as_slice).unwrap_or(&[]);
+                        if !int_angles.is_empty() && !ext_angles.is_empty() {
+                            // Zirkulaerer Durchschnitt der internen Winkel via Einheitsvektoren
+                            let (sin_sum, cos_sum) = int_angles
+                                .iter()
+                                .fold((0.0f32, 0.0f32), |(s, c), &a| (s + a.sin(), c + a.cos()));
+                            let avg_internal = sin_sum.atan2(cos_sum);
+                            let max = ext_angles
+                                .iter()
+                                .map(|&ea| crate::shared::angle_deviation(avg_internal, ea))
+                                .fold(0.0f32, f32::max);
+                            Some(max)
+                        } else {
+                            None
+                        }
+                    };
+
                     BoundaryInfo {
                         node_id: id,
                         has_external_connection: ext,
                         direction,
+                        max_external_angle_deviation: max_dev,
                     }
                 })
                 .collect();
