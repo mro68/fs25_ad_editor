@@ -16,7 +16,7 @@ pub mod history;
 /// Handler fuer Route-Tool-Operationen (Linie, Parkplatz, Kurve, …).
 pub mod route_tool;
 /// Handler fuer Segment-Operationen (Lock-Toggle).
-pub mod segment;
+pub mod group;
 /// Handler fuer Selektions-Operationen (Pick, Rect, Lasso, Move).
 pub mod selection;
 /// Handler fuer Kamera, Viewport und Background-Map.

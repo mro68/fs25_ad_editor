@@ -17,7 +17,7 @@ use super::keyboard;
 use crate::app::tools::common::TangentMenuData;
 use crate::app::{
     AppIntent, Camera2D, ConnectionDirection, ConnectionPriority, EditorTool, RoadMap,
-    SegmentRegistry,
+    GroupRegistry,
 };
 use crate::shared::EditorOptions;
 use indexmap::IndexSet;
@@ -118,7 +118,7 @@ impl InputState {
         clipboard_has_data: bool,
         farmland_polygons_loaded: bool,
         group_editing_active: bool,
-        segment_registry: Option<&SegmentRegistry>,
+        group_registry: Option<&GroupRegistry>,
     ) -> Vec<AppIntent> {
         let ctx = ViewportContext {
             ui,
@@ -225,7 +225,7 @@ impl InputState {
             default_direction,
             default_priority,
             &variant,
-            segment_registry,
+            group_registry,
             &mut events,
         );
 

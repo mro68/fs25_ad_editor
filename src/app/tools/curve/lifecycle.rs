@@ -6,7 +6,7 @@ use super::super::{
 };
 use super::geometry::{build_tool_result, cubic_bezier, CurveParams};
 use super::state::{CurveDegree, CurvePreviewCacheKey, CurveTool, Phase};
-use crate::app::segment_registry::{SegmentBase, SegmentKind, SegmentRecord};
+use crate::app::group_registry::{GroupBase, GroupKind, GroupRecord};
 use crate::core::RoadMap;
 use glam::Vec2;
 
@@ -302,14 +302,14 @@ impl RouteTool for CurveTool {
         self.apply_tangent_from_menu(start, end);
     }
 
-    fn make_segment_record(&self, id: u64, node_ids: &[u64]) -> Option<SegmentRecord> {
+    fn make_group_record(&self, id: u64, node_ids: &[u64]) -> Option<GroupRecord> {
         let start = self.last_start_anchor?;
         let end = self.lifecycle.last_end_anchor?;
         let cp1 = self.last_control_point1?;
         let kind = match self.degree {
-            CurveDegree::Quadratic => SegmentKind::CurveQuad {
+            CurveDegree::Quadratic => GroupKind::CurveQuad {
                 cp1,
-                base: SegmentBase {
+                base: GroupBase {
                     direction: self.direction,
                     priority: self.priority,
                     max_segment_length: self.seg.max_segment_length,
@@ -317,12 +317,12 @@ impl RouteTool for CurveTool {
             },
             CurveDegree::Cubic => {
                 let cp2 = self.last_control_point2.unwrap_or(cp1);
-                SegmentKind::CurveCubic {
+                GroupKind::CurveCubic {
                     cp1,
                     cp2,
                     tangent_start: self.tangents.last_tangent_start,
                     tangent_end: self.tangents.last_tangent_end,
-                    base: SegmentBase {
+                    base: GroupBase {
                         direction: self.direction,
                         priority: self.priority,
                         max_segment_length: self.seg.max_segment_length,
@@ -330,7 +330,7 @@ impl RouteTool for CurveTool {
                 }
             }
         };
-        Some(SegmentRecord {
+        Some(GroupRecord {
             id,
             node_ids: node_ids.to_vec(),
             start_anchor: start,
@@ -342,18 +342,18 @@ impl RouteTool for CurveTool {
         })
     }
 
-    fn load_for_edit(&mut self, record: &SegmentRecord, kind: &SegmentKind) {
+    fn load_for_edit(&mut self, record: &GroupRecord, kind: &GroupKind) {
         self.start = Some(record.start_anchor);
         self.end = Some(record.end_anchor);
         match kind {
-            SegmentKind::CurveQuad { cp1, base } => {
+            GroupKind::CurveQuad { cp1, base } => {
                 self.control_point1 = Some(*cp1);
                 self.control_point2 = None;
                 self.direction = base.direction;
                 self.priority = base.priority;
                 self.seg.max_segment_length = base.max_segment_length;
             }
-            SegmentKind::CurveCubic {
+            GroupKind::CurveCubic {
                 cp1,
                 cp2,
                 tangent_start,

@@ -2,7 +2,7 @@
 
 use std::sync::Arc;
 
-use crate::app::segment_registry::{SegmentBase, SegmentKind, SegmentRecord};
+use crate::app::group_registry::{GroupBase, GroupKind, GroupRecord};
 use crate::app::tools::{ToolAction, ToolAnchor, ToolPreview, ToolResult};
 use crate::core::{
     find_polygon_at, offset_polygon, simplify_polygon, ConnectionDirection, ConnectionPriority,
@@ -175,9 +175,9 @@ impl crate::app::tools::RouteTool for FieldBoundaryTool {
         self.lifecycle.save_created_ids(ids);
     }
 
-    fn make_segment_record(&self, id: u64, node_ids: &[u64]) -> Option<SegmentRecord> {
+    fn make_group_record(&self, id: u64, node_ids: &[u64]) -> Option<GroupRecord> {
         let polygon = self.selected_polygon.as_ref()?;
-        Some(SegmentRecord {
+        Some(GroupRecord {
             id,
             node_ids: node_ids.to_vec(),
             start_anchor: ToolAnchor::NewPosition(Vec2::ZERO),
@@ -185,12 +185,12 @@ impl crate::app::tools::RouteTool for FieldBoundaryTool {
             original_positions: Vec::new(),
             marker_node_ids: Vec::new(),
             locked: true,
-            kind: SegmentKind::FieldBoundary {
+            kind: GroupKind::FieldBoundary {
                 field_id: polygon.id,
                 node_spacing: self.node_spacing,
                 offset: self.offset,
                 straighten_tolerance: self.straighten_tolerance,
-                base: SegmentBase {
+                base: GroupBase {
                     direction: self.direction,
                     priority: self.priority,
                     max_segment_length: 0.0,
@@ -199,8 +199,8 @@ impl crate::app::tools::RouteTool for FieldBoundaryTool {
         })
     }
 
-    fn load_for_edit(&mut self, _record: &SegmentRecord, kind: &SegmentKind) {
-        let SegmentKind::FieldBoundary {
+    fn load_for_edit(&mut self, _record: &GroupRecord, kind: &GroupKind) {
+        let GroupKind::FieldBoundary {
             field_id,
             node_spacing,
             offset,

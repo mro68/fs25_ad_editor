@@ -145,7 +145,7 @@ pub fn delete_selected_nodes(state: &mut AppState) {
 
     // Segment-Registry: Records mit diesen Nodes invalidieren
     state
-        .segment_registry
+        .group_registry
         .invalidate_by_node_ids(&ids_to_delete);
 
     state.selection.ids_mut().clear();

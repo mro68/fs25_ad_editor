@@ -219,7 +219,7 @@ pub enum AppCommand {
     /// Route-Tool: Scroll-Rotation anwenden
     RouteToolRotate { delta: f32 },
     /// Segment nachtraeglich bearbeiten
-    EditSegment { record_id: u64 },
+    EditGroup { record_id: u64 },
     /// Gruppen-Edit-Modus nicht-destruktiv starten
     GroupEditStart { record_id: u64 },
     /// Gruppen-Edit uebernehmen (Aenderungen persistieren)
@@ -275,13 +275,13 @@ pub enum AppCommand {
 
     // ── Segment-Lock ──────────────────────────────────────────────────
     /// Segment-Lock umschalten (gesperrt ↔ entsperrt)
-    ToggleSegmentLock { segment_id: u64 },
+    ToggleGroupLock { segment_id: u64 },
     /// Segment aufloesen (Segment-Record entfernen, Nodes beibehalten)
-    DissolveSegment { segment_id: u64 },
+    DissolveGroup { segment_id: u64 },
     /// Dialog zum Bestaetigen des Aufloesens oeffnen
     OpenDissolveConfirmDialog { segment_id: u64 },
     /// Selektierte zusammenhaengende Nodes als neues Segment in der Registry speichern
-    GroupSelectionAsSegment,
+    GroupSelectionAsGroup,
 
     // ── Extras ───────────────────────────────────────────────────────
     /// Einstellungsdialog "Alle Felder nachzeichnen" oeffnen
@@ -298,5 +298,5 @@ pub enum AppCommand {
         tolerance: f32,
     },
     /// Segment-Einstellungs-Popup oeffnen oder aktualisieren
-    OpenSegmentSettingsPopup { world_pos: glam::Vec2 },
+    OpenGroupSettingsPopup { world_pos: glam::Vec2 },
 }

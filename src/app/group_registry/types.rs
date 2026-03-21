@@ -1,6 +1,6 @@
 //! Typen und Konstanten fuer die Segment-Registry.
 //!
-//! Enthaelt alle Datentypes (`SegmentBase`, `SegmentKind`, `SegmentRecord`)
+//! Enthaelt alle Datentypes (`GroupBase`, `GroupKind`, `GroupRecord`)
 //! sowie die Tool-Index-Konstanten fuer den `ToolManager`.
 
 use crate::app::tools::common::TangentSource;
@@ -11,7 +11,7 @@ use glam::Vec2;
 
 /// Gemeinsame Segment-Parameter aller Route-Tools.
 #[derive(Debug, Clone)]
-pub struct SegmentBase {
+pub struct GroupBase {
     /// Verbindungsrichtung
     pub direction: ConnectionDirection,
     /// Strassenart
@@ -22,11 +22,11 @@ pub struct SegmentBase {
 
 /// Art des Segments — enthaelt alle tool-spezifischen Parameter.
 #[derive(Debug, Clone)]
-pub enum SegmentKind {
+pub enum GroupKind {
     /// Gerade Strecke
     Straight {
         /// Gemeinsame Basis-Parameter
-        base: SegmentBase,
+        base: GroupBase,
     },
     /// Kubische Bézier-Kurve (Grad 3)
     CurveCubic {
@@ -39,14 +39,14 @@ pub enum SegmentKind {
         /// Quell-Tangente am Endpunkt
         tangent_end: TangentSource,
         /// Gemeinsame Basis-Parameter
-        base: SegmentBase,
+        base: GroupBase,
     },
     /// Quadratische Bézier-Kurve (Grad 2)
     CurveQuad {
         /// Steuerpunkt
         cp1: Vec2,
         /// Gemeinsame Basis-Parameter
-        base: SegmentBase,
+        base: GroupBase,
     },
     /// Catmull-Rom-Spline
     Spline {
@@ -57,7 +57,7 @@ pub enum SegmentKind {
         /// Quell-Tangente am Endpunkt
         tangent_end: TangentSource,
         /// Gemeinsame Basis-Parameter
-        base: SegmentBase,
+        base: GroupBase,
     },
     /// Geglättete Kurve (winkelgeglaettet mit automatischen Tangenten)
     SmoothCurve {
@@ -68,7 +68,7 @@ pub enum SegmentKind {
         /// Minimaldistanz-Filter (Meter)
         min_distance: f32,
         /// Gemeinsame Basis-Parameter
-        base: SegmentBase,
+        base: GroupBase,
     },
     /// Ausweichstrecke zur selektierten Kette
     Bypass {
@@ -83,7 +83,7 @@ pub enum SegmentKind {
         /// Node-Abstand auf der Bypass-Strecke
         base_spacing: f32,
         /// Gemeinsame Basis-Parameter
-        base: SegmentBase,
+        base: GroupBase,
     },
     /// Parkplatz-Layout (Wendekreis + Parkreihen)
     Parking {
@@ -94,7 +94,7 @@ pub enum SegmentKind {
         /// Parkplatz-Konfiguration
         config: ParkingConfig,
         /// Gemeinsame Basis-Parameter
-        base: SegmentBase,
+        base: GroupBase,
     },
     /// Feldgrenz-Route (geschlossener Ring entlang eines Feldes)
     FieldBoundary {
@@ -107,12 +107,12 @@ pub enum SegmentKind {
         /// Vereinfachungs-Toleranz Douglas-Peucker (Meter)
         straighten_tolerance: f32,
         /// Gemeinsame Basis-Parameter
-        base: SegmentBase,
+        base: GroupBase,
     },
     /// Manuell gruppierte Nodes (kein Tool-Hintergrund).
     Manual {
         /// Gemeinsame Basis-Parameter
-        base: SegmentBase,
+        base: GroupBase,
     },
     /// Parallelversatz einer selektierten Kette (ohne S-Kurven-Anbindung).
     RouteOffset {
@@ -131,7 +131,7 @@ pub enum SegmentKind {
         /// Node-Abstand auf der Offset-Kette
         base_spacing: f32,
         /// Gemeinsame Basis-Parameter
-        base: SegmentBase,
+        base: GroupBase,
     },
 }
 
@@ -156,7 +156,7 @@ pub const TOOL_INDEX_FIELD_BOUNDARY: usize = 7;
 /// Tool-Index fuer `RouteOffsetTool` im `ToolManager` (Registrierungs-Slot 8).
 pub const TOOL_INDEX_ROUTE_OFFSET: usize = 8;
 
-impl SegmentKind {
+impl GroupKind {
     /// Gibt den Tool-Index im ToolManager fuer dieses Segment zurueck.
     ///
     /// Muss mit der Registrierungsreihenfolge in `ToolManager::new()` uebereinstimmen —
@@ -164,28 +164,28 @@ impl SegmentKind {
     /// Gibt `None` fuer `Manual`-Segmente zurueck, die keinem Tool zugeordnet sind.
     pub fn tool_index(&self) -> Option<usize> {
         match self {
-            SegmentKind::Straight { .. } => Some(TOOL_INDEX_STRAIGHT),
-            SegmentKind::CurveQuad { .. } => Some(TOOL_INDEX_CURVE_QUAD),
-            SegmentKind::CurveCubic { .. } => Some(TOOL_INDEX_CURVE_CUBIC),
-            SegmentKind::Spline { .. } => Some(TOOL_INDEX_SPLINE),
-            SegmentKind::SmoothCurve { .. } => Some(TOOL_INDEX_SMOOTH_CURVE),
-            SegmentKind::Bypass { .. } => Some(TOOL_INDEX_BYPASS),
-            SegmentKind::Parking { .. } => Some(TOOL_INDEX_PARKING),
-            SegmentKind::FieldBoundary { .. } => Some(TOOL_INDEX_FIELD_BOUNDARY),
-            SegmentKind::RouteOffset { .. } => Some(TOOL_INDEX_ROUTE_OFFSET),
-            SegmentKind::Manual { .. } => None,
+            GroupKind::Straight { .. } => Some(TOOL_INDEX_STRAIGHT),
+            GroupKind::CurveQuad { .. } => Some(TOOL_INDEX_CURVE_QUAD),
+            GroupKind::CurveCubic { .. } => Some(TOOL_INDEX_CURVE_CUBIC),
+            GroupKind::Spline { .. } => Some(TOOL_INDEX_SPLINE),
+            GroupKind::SmoothCurve { .. } => Some(TOOL_INDEX_SMOOTH_CURVE),
+            GroupKind::Bypass { .. } => Some(TOOL_INDEX_BYPASS),
+            GroupKind::Parking { .. } => Some(TOOL_INDEX_PARKING),
+            GroupKind::FieldBoundary { .. } => Some(TOOL_INDEX_FIELD_BOUNDARY),
+            GroupKind::RouteOffset { .. } => Some(TOOL_INDEX_ROUTE_OFFSET),
+            GroupKind::Manual { .. } => None,
         }
     }
 
     /// Gibt `true` zurueck wenn das Segment von einem Route-Tool erstellt wurde.
     pub fn is_tool_backed(&self) -> bool {
-        !matches!(self, SegmentKind::Manual { .. })
+        !matches!(self, GroupKind::Manual { .. })
     }
 }
 
 /// Ein gespeichertes Segment (fertig erstellte Line).
 #[derive(Debug, Clone)]
-pub struct SegmentRecord {
+pub struct GroupRecord {
     /// Eindeutige Registry-ID (nicht identisch mit Node-IDs)
     pub id: u64,
     /// IDs aller neu erstellten Nodes dieses Segments
@@ -195,7 +195,7 @@ pub struct SegmentRecord {
     /// End-Anker (ExistingNode oder NewPosition)
     pub end_anchor: ToolAnchor,
     /// Tool-spezifische Parameter
-    pub kind: SegmentKind,
+    pub kind: GroupKind,
     /// Original-Positionen der Nodes zum Zeitpunkt der Erstellung.
     /// Index-Reihenfolge entspricht `node_ids`; wird fuer Validitaetsprüfung genutzt.
     pub original_positions: Vec<Vec2>,
@@ -256,8 +256,8 @@ mod tests {
     #[test]
     fn manual_segment_hat_keinen_tool_index() {
         use crate::core::{ConnectionDirection, ConnectionPriority};
-        let kind = SegmentKind::Manual {
-            base: SegmentBase {
+        let kind = GroupKind::Manual {
+            base: GroupBase {
                 direction: ConnectionDirection::Dual,
                 priority: ConnectionPriority::Regular,
                 max_segment_length: 10.0,

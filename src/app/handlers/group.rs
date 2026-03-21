@@ -1,6 +1,6 @@
 //! Handler fuer Segment-Operationen (Lock-Toggle, Group-Edit).
 
-use crate::app::segment_registry::{SegmentBase, SegmentKind, SegmentRecord};
+use crate::app::group_registry::{GroupBase, GroupKind, GroupRecord};
 use crate::app::state::GroupEditState;
 use crate::app::tools::ToolAnchor;
 use crate::app::AppState;
@@ -10,7 +10,7 @@ use crate::app::AppState;
 /// Ist das Segment gesperrt, werden beim Verschieben eines zugehoerigen Nodes
 /// alle Segment-Nodes mitbewegt. Unbekannte IDs werden ignoriert.
 pub fn toggle_lock(state: &mut AppState, segment_id: u64) {
-    state.segment_registry.toggle_lock(segment_id);
+    state.group_registry.toggle_lock(segment_id);
 }
 
 /// Loest ein Segment auf, indem nur der Segment-Record entfernt wird.
@@ -18,7 +18,7 @@ pub fn toggle_lock(state: &mut AppState, segment_id: u64) {
 /// Die zugehoerigen Nodes und Verbindungen in der RoadMap bleiben unveraendert.
 /// Unbekannte IDs werden ignoriert.
 pub fn dissolve(state: &mut AppState, segment_id: u64) {
-    state.segment_registry.remove(segment_id);
+    state.group_registry.remove(segment_id);
 }
 
 /// Gruppiert die selektierten Nodes als neues Segment.
@@ -45,14 +45,14 @@ pub fn group_selection(state: &mut AppState) {
         .filter_map(|id| road_map.nodes.get(id).map(|n| n.position))
         .collect();
 
-    let record_id = state.segment_registry.next_id();
-    let record = SegmentRecord {
+    let record_id = state.group_registry.next_id();
+    let record = GroupRecord {
         id: record_id,
         node_ids,
         start_anchor: ToolAnchor::NewPosition(glam::Vec2::ZERO),
         end_anchor: ToolAnchor::NewPosition(glam::Vec2::ZERO),
-        kind: SegmentKind::Manual {
-            base: SegmentBase {
+        kind: GroupKind::Manual {
+            base: GroupBase {
                 direction: state.editor.default_direction,
                 priority: state.editor.default_priority,
                 max_segment_length: state.options.mouse_wheel_distance_step_m.max(1.0),
@@ -62,7 +62,7 @@ pub fn group_selection(state: &mut AppState) {
         marker_node_ids: vec![],
         locked: false,
     };
-    state.segment_registry.register(record);
+    state.group_registry.register(record);
 }
 
 /// Startet den nicht-destruktiven Gruppen-Edit-Modus fuer einen Record.
@@ -73,7 +73,7 @@ pub fn group_selection(state: &mut AppState) {
 pub fn start_group_edit(state: &mut AppState, record_id: u64) {
     // Pruefen ob Record existiert
     let (was_locked, node_ids) = {
-        let record = match state.segment_registry.get(record_id) {
+        let record = match state.group_registry.get(record_id) {
             Some(r) => r,
             None => {
                 log::warn!("start_group_edit: record {} not found", record_id);
@@ -99,11 +99,11 @@ pub fn start_group_edit(state: &mut AppState, record_id: u64) {
     });
 
     // Edit-Guard in Registry setzen (schuetzt vor Invalidierung)
-    state.segment_registry.set_edit_guard(Some(record_id));
+    state.group_registry.set_edit_guard(Some(record_id));
 
     // Temporaer entsperren damit Nodes einzeln bewegt werden koennen
     if was_locked {
-        state.segment_registry.set_locked(record_id, false);
+        state.group_registry.set_locked(record_id, false);
     }
 
     // Alle Nodes des Records selektieren
@@ -134,11 +134,11 @@ pub fn apply_group_edit(state: &mut AppState) {
     let record_id = edit_state.record_id;
 
     // Aktuelle Node-IDs des Records lesen
-    let original_node_ids: Vec<u64> = match state.segment_registry.get(record_id) {
+    let original_node_ids: Vec<u64> = match state.group_registry.get(record_id) {
         Some(r) => r.node_ids.clone(),
         None => {
             log::warn!("apply_group_edit: record {} not found", record_id);
-            state.segment_registry.set_edit_guard(None);
+            state.group_registry.set_edit_guard(None);
             return;
         }
     };
@@ -146,7 +146,7 @@ pub fn apply_group_edit(state: &mut AppState) {
     let road_map = match state.road_map.as_deref() {
         Some(rm) => rm,
         None => {
-            state.segment_registry.set_edit_guard(None);
+            state.group_registry.set_edit_guard(None);
             return;
         }
     };
@@ -215,16 +215,16 @@ pub fn apply_group_edit(state: &mut AppState) {
 
     // Record aktualisieren
     state
-        .segment_registry
+        .group_registry
         .update_record(record_id, new_node_ids, positions);
 
     // Lock-Zustand wiederherstellen
     if edit_state.was_locked {
-        state.segment_registry.set_locked(record_id, true);
+        state.group_registry.set_locked(record_id, true);
     }
 
     // Edit-Guard aufheben
-    state.segment_registry.set_edit_guard(None);
+    state.group_registry.set_edit_guard(None);
 
     log::info!("Group edit applied for record {}", record_id);
 }
@@ -240,7 +240,7 @@ pub fn cancel_group_edit(state: &mut AppState) {
 
     // Edit-State und Guard aufraumen
     state.group_editing = None;
-    state.segment_registry.set_edit_guard(None);
+    state.group_registry.set_edit_guard(None);
 
     // Undo zum Snapshot vor Edit-Start
     super::history::undo(state);

@@ -10,7 +10,7 @@ pub use app_state::{AppState, Clipboard, GroupEditState};
 pub use dialogs::{
     DedupDialogState, DistanzenState, FloatingMenuKind, FloatingMenuState, MarkerDialogState,
     OverviewOptionsDialogState, PostLoadDialogState, SaveOverviewDialogState,
-    SegmentSettingsPopupState, UiState, ZipBrowserState,
+    GroupSettingsPopupState, UiState, ZipBrowserState,
 };
 pub use editor::{EditorTool, EditorToolState};
 pub use selection::SelectionState;

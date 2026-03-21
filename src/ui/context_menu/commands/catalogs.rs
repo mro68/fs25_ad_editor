@@ -93,12 +93,12 @@ impl MenuCatalog {
         vec![
             // ── Segment bearbeiten ────────────────────────────────────────────────
             MenuEntry::Command {
-                id: CommandId::EditSegment,
-                label: t(lang, I18nKey::CtxEditSegment).into(),
+                id: CommandId::EditGroup,
+                label: t(lang, I18nKey::CtxEditGroup).into(),
                 preconditions: vec![Precondition::SelectionIsValidSegment],
             },
             MenuEntry::Command {
-                id: CommandId::GroupSelectionAsSegment,
+                id: CommandId::GroupSelectionAsGroup,
                 label: t(lang, I18nKey::CtxGroupAsSegment).into(),
                 preconditions: vec![
                     Precondition::IsConnectedSubgraph,

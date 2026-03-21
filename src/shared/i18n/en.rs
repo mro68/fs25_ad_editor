@@ -247,7 +247,7 @@ pub(super) fn translate(key: I18nKey) -> &'static str {
         I18nKey::CtxRouteStraight => "Straight Route",
         I18nKey::CtxRouteQuadratic => "Bezier Degree 2",
         I18nKey::CtxRouteCubic => "Bezier Degree 3",
-        I18nKey::CtxEditSegment => "Edit Group",
+        I18nKey::CtxEditGroup => "Edit Group",
         I18nKey::CtxGroupAsSegment => "Group Selection",
         I18nKey::CtxConnectNodes => "Connect Nodes",
         I18nKey::CtxCreateRoute => "Create Route",

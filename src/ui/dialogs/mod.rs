@@ -8,7 +8,7 @@ mod marker_dialog;
 mod overview_options_dialog;
 mod post_load_dialog;
 mod save_overview_dialog;
-mod segment_settings_popup;
+mod group_settings_popup;
 mod trace_all_fields_dialog;
 mod zip_browser;
 
@@ -20,6 +20,6 @@ pub use marker_dialog::show_marker_dialog;
 pub use overview_options_dialog::show_overview_options_dialog;
 pub use post_load_dialog::show_post_load_dialog;
 pub use save_overview_dialog::show_save_overview_dialog;
-pub use segment_settings_popup::show_segment_settings_popup;
+pub use group_settings_popup::show_group_settings_popup;
 pub use trace_all_fields_dialog::show_trace_all_fields_dialog;
 pub use zip_browser::show_zip_browser;

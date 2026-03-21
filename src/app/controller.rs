@@ -79,7 +79,7 @@ impl AppController {
                 additive,
                 extend_path,
             } => {
-                state.ui.segment_settings_popup.visible = false;
+                state.ui.group_settings_popup.visible = false;
                 handlers::selection::select_nearest_node(
                     state,
                     world_pos,
@@ -114,7 +114,7 @@ impl AppController {
             AppCommand::BeginMoveSelectedNodes => handlers::selection::begin_move(state),
             AppCommand::EndMoveSelectedNodes => { /* No-op: Move-Lifecycle Ende */ }
             AppCommand::ClearSelection => {
-                state.ui.segment_settings_popup.visible = false;
+                state.ui.group_settings_popup.visible = false;
                 handlers::selection::clear(state)
             }
             AppCommand::SelectAllNodes => handlers::selection::select_all(state),
@@ -225,8 +225,8 @@ impl AppController {
             AppCommand::DecreaseRouteToolSegmentLength => {
                 handlers::route_tool::decrease_segment_length(state)
             }
-            AppCommand::EditSegment { record_id } => {
-                handlers::editing::edit_segment(state, record_id)
+            AppCommand::EditGroup { record_id } => {
+                handlers::editing::edit_group(state, record_id)
             }
 
             // === Dialoge & Anwendungssteuerung ===
@@ -304,21 +304,21 @@ impl AppController {
             AppCommand::InvertSelection => handlers::selection::invert(state),
 
             // === Segment ===
-            AppCommand::ToggleSegmentLock { segment_id } => {
-                handlers::segment::toggle_lock(state, segment_id)
+            AppCommand::ToggleGroupLock { segment_id } => {
+                handlers::group::toggle_lock(state, segment_id)
             }
-            AppCommand::DissolveSegment { segment_id } => {
-                handlers::segment::dissolve(state, segment_id)
+            AppCommand::DissolveGroup { segment_id } => {
+                handlers::group::dissolve(state, segment_id)
             }
             AppCommand::OpenDissolveConfirmDialog { segment_id } => {
-                state.ui.confirm_dissolve_segment_id = Some(segment_id);
+                state.ui.confirm_dissolve_group_id = Some(segment_id);
             }
-            AppCommand::GroupSelectionAsSegment => handlers::segment::group_selection(state),
+            AppCommand::GroupSelectionAsGroup => handlers::group::group_selection(state),
             AppCommand::GroupEditStart { record_id } => {
-                handlers::segment::start_group_edit(state, record_id)
+                handlers::group::start_group_edit(state, record_id)
             }
-            AppCommand::GroupEditApply => handlers::segment::apply_group_edit(state),
-            AppCommand::GroupEditCancel => handlers::segment::cancel_group_edit(state),
+            AppCommand::GroupEditApply => handlers::group::apply_group_edit(state),
+            AppCommand::GroupEditCancel => handlers::group::cancel_group_edit(state),
 
             // === Copy/Paste ===
             AppCommand::CopySelection => handlers::editing::copy_selection(state),
@@ -346,9 +346,9 @@ impl AppController {
             }
 
             // === Popups ===
-            AppCommand::OpenSegmentSettingsPopup { world_pos } => {
-                state.ui.segment_settings_popup.visible = true;
-                state.ui.segment_settings_popup.world_pos = world_pos;
+            AppCommand::OpenGroupSettingsPopup { world_pos } => {
+                state.ui.group_settings_popup.visible = true;
+                state.ui.group_settings_popup.world_pos = world_pos;
             }
         }
 

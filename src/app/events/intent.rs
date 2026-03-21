@@ -210,7 +210,7 @@ pub enum AppIntent {
     /// Route-Tool: Alt+Scroll-Rotation
     RouteToolScrollRotated { delta: f32 },
     /// Segment nachtraeglich bearbeiten (Nodes loeschen + Tool laden)
-    EditSegmentRequested { record_id: u64 },
+    EditGroupRequested { record_id: u64 },
     /// Gruppen-Bearbeitung nicht-destruktiv starten (Select-Tool-Modus)
     GroupEditStartRequested { record_id: u64 },
     /// Gruppen-Bearbeitung abschliessen (Aenderungen uebernehmen)
@@ -277,13 +277,13 @@ pub enum AppIntent {
 
     // ── Segment-Lock ──────────────────────────────────────────────────
     /// Segment-Lock umschalten (gesperrt ↔ entsperrt)
-    ToggleSegmentLockRequested { segment_id: u64 },
+    ToggleGroupLockRequested { segment_id: u64 },
     /// Segment aufloesen (Segment-Record entfernen, Nodes beibehalten)
-    DissolveSegmentRequested { segment_id: u64 },
+    DissolveGroupRequested { segment_id: u64 },
     /// Bestaetigung: Gruppe aufloesen (nach Dialog-Bestaetigung)
-    DissolveSegmentConfirmed { segment_id: u64 },
+    DissolveGroupConfirmed { segment_id: u64 },
     /// Selektierte zusammenhaengende Nodes als neues Segment in der Registry speichern
-    GroupSelectionAsSegmentRequested,
+    GroupSelectionAsGroupRequested,
 
     // ── Extras ───────────────────────────────────────────────────────
     /// Alle-Felder-nachzeichnen-Einstellungsdialog oeffnen

@@ -6,7 +6,7 @@ use crate::shared::{t, I18nKey, Language};
 /// Zeigt den Bestaetigungs-Dialog zum Aufloesen einer Gruppe.
 ///
 /// Wird angezeigt wenn der Benutzer "Gruppe aufloesen" waehlt.
-/// Nach Bestaetigung wird `DissolveSegmentConfirmed` emittiert,
+/// Nach Bestaetigung wird `DissolveGroupConfirmed` emittiert,
 /// bei Abbruch wird der Dialog geschlossen ohne Aktion.
 pub fn show_confirm_dissolve_dialog(
     ctx: &egui::Context,
@@ -31,7 +31,7 @@ pub fn show_confirm_dissolve_dialog(
             ui.add_space(8.0);
             ui.horizontal(|ui| {
                 if ui.button(t(language, I18nKey::ConfirmDissolveOk)).clicked() {
-                    events.push(AppIntent::DissolveSegmentConfirmed { segment_id });
+                    events.push(AppIntent::DissolveGroupConfirmed { segment_id });
                     *confirm_dissolve_id = None;
                 }
                 if ui

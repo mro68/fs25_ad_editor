@@ -1,6 +1,6 @@
 //! RouteTool-Trait — Schnittstelle fuer alle Route-Tools.
 
-use crate::app::segment_registry::{SegmentKind, SegmentRecord};
+use crate::app::group_registry::{GroupKind, GroupRecord};
 use crate::core::{ConnectionDirection, ConnectionPriority, RoadMap};
 use glam::Vec2;
 
@@ -46,15 +46,15 @@ pub trait RouteToolTangent {
 
 impl<T: ?Sized> RouteToolTangent for T {}
 
-/// Registry-Capability fuer Route-Tools (SegmentRegistry).
+/// Registry-Capability fuer Route-Tools (GroupRegistry).
 pub trait RouteToolRegistry {
-    /// Erstellt einen `SegmentRecord` fuer die Registry aus dem aktuellen Tool-Zustand.
-    fn make_segment_record_cap(&self, _id: u64, _node_ids: &[u64]) -> Option<SegmentRecord> {
+    /// Erstellt einen `GroupRecord` fuer die Registry aus dem aktuellen Tool-Zustand.
+    fn make_group_record_cap(&self, _id: u64, _node_ids: &[u64]) -> Option<GroupRecord> {
         None
     }
 
-    /// Laedt einen gespeicherten `SegmentRecord` zur nachtraeglichen Bearbeitung.
-    fn load_for_edit_cap(&mut self, _record: &SegmentRecord, _kind: &SegmentKind) {}
+    /// Laedt einen gespeicherten `GroupRecord` zur nachtraeglichen Bearbeitung.
+    fn load_for_edit_cap(&mut self, _record: &GroupRecord, _kind: &GroupKind) {}
 }
 
 impl<T: ?Sized> RouteToolRegistry for T {}
@@ -230,20 +230,20 @@ pub trait RouteTool:
         <Self as RouteToolTangent>::apply_tangent_selection_cap(self, _start, _end)
     }
 
-    /// Erstellt einen `SegmentRecord` fuer die Registry aus dem aktuellen Tool-Zustand.
+    /// Erstellt einen `GroupRecord` fuer die Registry aus dem aktuellen Tool-Zustand.
     ///
     /// Wird nach `execute()` aufgerufen um das Segment in der Registry zu speichern.
     /// Gibt `None` zurueck wenn das Tool keine Registry-Eintraege unterstuetzt.
-    fn make_segment_record(&self, _id: u64, _node_ids: &[u64]) -> Option<SegmentRecord> {
-        <Self as RouteToolRegistry>::make_segment_record_cap(self, _id, _node_ids)
+    fn make_group_record(&self, _id: u64, _node_ids: &[u64]) -> Option<GroupRecord> {
+        <Self as RouteToolRegistry>::make_group_record_cap(self, _id, _node_ids)
     }
 
-    /// Laedt einen gespeicherten `SegmentRecord` zur nachtraeglichen Bearbeitung.
+    /// Laedt einen gespeicherten `GroupRecord` zur nachtraeglichen Bearbeitung.
     ///
     /// Stellt Start/End-Anker und alle tool-spezifischen Parameter (CP1, CP2,
     /// Tangenten, Anker-Liste) aus dem Record wieder her. Das Tool befindet
     /// sich anschliessend in der Control-Phase (bereit fuer Drag/Anpassung).
-    fn load_for_edit(&mut self, _record: &SegmentRecord, _kind: &SegmentKind) {
+    fn load_for_edit(&mut self, _record: &GroupRecord, _kind: &GroupKind) {
         <Self as RouteToolRegistry>::load_for_edit_cap(self, _record, _kind)
     }
 

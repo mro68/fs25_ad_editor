@@ -8,7 +8,7 @@ use eframe::egui::{self, ColorImage, TextureHandle, TextureOptions};
 use glam::Vec2;
 use indexmap::IndexSet;
 
-use crate::app::{BoundaryNode, Camera2D, RoadMap, SegmentRegistry};
+use crate::app::{BoundaryNode, Camera2D, RoadMap, GroupRegistry};
 
 const ICON_SIZE_PX: u32 = 32;
 
@@ -111,7 +111,7 @@ pub fn render_group_boundary_overlays(
     rect: egui::Rect,
     camera: &Camera2D,
     viewport_size: Vec2,
-    registry: &SegmentRegistry,
+    registry: &GroupRegistry,
     road_map: &RoadMap,
     selected_node_ids: &IndexSet<u64>,
     icons: &GroupBoundaryIcons,
@@ -137,7 +137,7 @@ pub fn render_group_boundary_overlays(
             continue;
         }
 
-        if !registry.is_segment_valid(record, road_map) {
+        if !registry.is_group_valid(record, road_map) {
             continue;
         }
 

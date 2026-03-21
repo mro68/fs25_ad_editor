@@ -11,7 +11,7 @@ pub fn undo(state: &mut AppState) {
     // Group-Edit implizit abbrechen bei manuellem Undo (Inkonsistenz-Schutz)
     if state.group_editing.is_some() {
         state.group_editing = None;
-        state.segment_registry.set_edit_guard(None);
+        state.group_registry.set_edit_guard(None);
         log::debug!("Undo: Group-Edit implizit abgebrochen");
     }
 

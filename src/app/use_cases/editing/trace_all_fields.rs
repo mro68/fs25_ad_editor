@@ -3,11 +3,11 @@
 //! Erzeugt fuer jedes erkannte Feldpolygon einen geschlossenen Wegpunkt-Ring
 //! mit den Standard-Parametern des FieldBoundaryTool. Alle Polygone werden
 //! in einem einzigen Undo-Schritt zusammengefasst. Pro Feld wird ein
-//! `SegmentRecord` in der `segment_registry` angelegt, damit die erzeugten
+//! `GroupRecord` in der `group_registry` angelegt, damit die erzeugten
 //! Strecken nachtraeglich bearbeitet werden koennen.
 
 use crate::app::compute_ring;
-use crate::app::segment_registry::{SegmentBase, SegmentKind, SegmentRecord};
+use crate::app::group_registry::{GroupBase, GroupKind, GroupRecord};
 use crate::app::AppState;
 use crate::app::ToolAnchor;
 use crate::core::{Connection, ConnectionDirection, ConnectionPriority, MapNode, NodeFlag};
@@ -18,7 +18,7 @@ use std::sync::Arc;
 ///
 /// Alle erstellten Nodes und Verbindungen werden in einem einzigen Undo-Schritt
 /// zusammengefasst. Der Spatial-Index wird nur einmal am Ende rebuildet.
-/// Pro Feld wird ein `SegmentRecord` in der `segment_registry` angelegt,
+/// Pro Feld wird ein `GroupRecord` in der `group_registry` angelegt,
 /// damit die erzeugten Feldstrecken nachtraeglich als Segment angewaehlt
 /// und bearbeitet werden koennen.
 ///
@@ -114,16 +114,16 @@ pub fn trace_all_fields(state: &mut AppState, spacing: f32, offset: f32, toleran
         return;
     }
 
-    // Pro Feld einen SegmentRecord anlegen, damit die Strecken bearbeitbar bleiben
+    // Pro Feld einen GroupRecord anlegen, damit die Strecken bearbeitbar bleiben
     {
         let road_map_ref = state.road_map.as_deref().expect("road_map vorhanden");
         for (field_id, node_ids) in &field_segments {
-            let record_id = state.segment_registry.next_id();
+            let record_id = state.group_registry.next_id();
             let original_positions: Vec<Vec2> = node_ids
                 .iter()
                 .filter_map(|id| road_map_ref.nodes.get(id).map(|n| n.position))
                 .collect();
-            let record = SegmentRecord {
+            let record = GroupRecord {
                 id: record_id,
                 node_ids: node_ids.clone(),
                 start_anchor: ToolAnchor::NewPosition(Vec2::ZERO),
@@ -131,19 +131,19 @@ pub fn trace_all_fields(state: &mut AppState, spacing: f32, offset: f32, toleran
                 original_positions,
                 marker_node_ids: Vec::new(),
                 locked: true,
-                kind: SegmentKind::FieldBoundary {
+                kind: GroupKind::FieldBoundary {
                     field_id: *field_id,
                     node_spacing: spacing,
                     offset,
                     straighten_tolerance: tolerance,
-                    base: SegmentBase {
+                    base: GroupBase {
                         direction,
                         priority,
                         max_segment_length: 0.0,
                     },
                 },
             };
-            state.segment_registry.register(record);
+            state.group_registry.register(record);
         }
         log::debug!(
             "Segment-Registry: {} Feld-Segmente registriert",

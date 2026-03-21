@@ -4,7 +4,7 @@ use std::borrow::Cow;
 
 use super::geometry::compute_bypass_positions;
 use super::state::BypassTool;
-use crate::app::segment_registry::{SegmentBase, SegmentKind, SegmentRecord};
+use crate::app::group_registry::{GroupBase, GroupKind, GroupRecord};
 use crate::app::tools::common::assemble_tool_result;
 use crate::app::tools::{RouteTool, ToolAction, ToolAnchor, ToolPreview, ToolResult};
 use crate::core::{ConnectionDirection, ConnectionPriority, RoadMap};
@@ -181,14 +181,14 @@ impl RouteTool for BypassTool {
         self.lifecycle.save_created_ids(ids);
     }
 
-    /// Erstellt einen `SegmentRecord` fuer die Registry aus dem aktuellen Tool-Zustand.
-    fn make_segment_record(&self, id: u64, node_ids: &[u64]) -> Option<SegmentRecord> {
+    /// Erstellt einen `GroupRecord` fuer die Registry aus dem aktuellen Tool-Zustand.
+    fn make_group_record(&self, id: u64, node_ids: &[u64]) -> Option<GroupRecord> {
         if !self.has_chain() {
             return None;
         }
         let start_pos = *self.chain_positions.first()?;
         let end_pos = *self.chain_positions.last()?;
-        Some(SegmentRecord {
+        Some(GroupRecord {
             id,
             node_ids: node_ids.to_vec(),
             start_anchor: ToolAnchor::ExistingNode(self.chain_start_id, start_pos),
@@ -196,13 +196,13 @@ impl RouteTool for BypassTool {
             original_positions: Vec::new(), // wird im Handler befuellt
             marker_node_ids: Vec::new(),
             locked: true,
-            kind: SegmentKind::Bypass {
+            kind: GroupKind::Bypass {
                 chain_positions: self.chain_positions.clone(),
                 chain_start_id: self.chain_start_id,
                 chain_end_id: self.chain_end_id,
                 offset: self.offset,
                 base_spacing: self.base_spacing,
-                base: SegmentBase {
+                base: GroupBase {
                     direction: self.direction,
                     priority: self.priority,
                     max_segment_length: self.base_spacing,
@@ -211,9 +211,9 @@ impl RouteTool for BypassTool {
         })
     }
 
-    /// Laedt einen gespeicherten `SegmentRecord` zur nachtraeglichen Bearbeitung.
-    fn load_for_edit(&mut self, _record: &SegmentRecord, kind: &SegmentKind) {
-        let SegmentKind::Bypass {
+    /// Laedt einen gespeicherten `GroupRecord` zur nachtraeglichen Bearbeitung.
+    fn load_for_edit(&mut self, _record: &GroupRecord, kind: &GroupKind) {
+        let GroupKind::Bypass {
             chain_positions,
             chain_start_id,
             chain_end_id,

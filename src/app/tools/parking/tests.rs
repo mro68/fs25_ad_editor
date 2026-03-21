@@ -2,7 +2,7 @@
 
 use super::geometry::{build_parking_result, build_preview, generate_parking_layout};
 use super::state::{ParkingConfig, ParkingPhase, ParkingTool, RampSide};
-use crate::app::segment_registry::SegmentKind;
+use crate::app::group_registry::GroupKind;
 use crate::app::tools::RouteTool;
 use crate::core::{ConnectionDirection, ConnectionPriority};
 use glam::Vec2;
@@ -643,9 +643,9 @@ fn test_build_parking_result_sets_regular_flags_and_empty_external_connections()
     );
 }
 
-// ─── SegmentRecord-Tests ──────────────────────────────────────────────────────
+// ─── GroupRecord-Tests ──────────────────────────────────────────────────────
 
-/// Roundtrip: make_segment_record erstellt den korrekten Record,
+/// Roundtrip: make_group_record erstellt den korrekten Record,
 /// load_for_edit stellt alle Felder exakt wieder her.
 #[test]
 fn parking_segment_record_roundtrip() {
@@ -658,18 +658,18 @@ fn parking_segment_record_roundtrip() {
     tool.direction = ConnectionDirection::Regular;
     tool.priority = ConnectionPriority::SubPriority;
 
-    let record = tool.make_segment_record(99, &[200, 201, 202]);
+    let record = tool.make_group_record(99, &[200, 201, 202]);
     assert!(record.is_some(), "Record muss vorhanden sein");
     let record = record.unwrap();
 
-    let SegmentKind::Parking {
+    let GroupKind::Parking {
         origin,
         angle,
         ref config,
         ref base,
     } = record.kind
     else {
-        panic!("Erwartetes SegmentKind::Parking, bekam etwas anderes");
+        panic!("Erwartetes GroupKind::Parking, bekam etwas anderes");
     };
     assert_eq!(
         origin,
@@ -722,14 +722,14 @@ fn parking_segment_record_roundtrip() {
     );
 }
 
-/// Ohne gesetzten Origin muss make_segment_record None liefern.
+/// Ohne gesetzten Origin muss make_group_record None liefern.
 #[test]
 fn parking_segment_record_none_ohne_origin() {
     let tool = ParkingTool::new();
-    let record = tool.make_segment_record(0, &[]);
+    let record = tool.make_group_record(0, &[]);
     assert!(
         record.is_none(),
-        "Ohne origin muss make_segment_record None liefern"
+        "Ohne origin muss make_group_record None liefern"
     );
 }
 

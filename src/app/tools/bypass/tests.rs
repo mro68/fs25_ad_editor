@@ -2,7 +2,7 @@
 
 use super::compute_bypass_positions;
 use super::BypassTool;
-use crate::app::segment_registry::SegmentKind;
+use crate::app::group_registry::GroupKind;
 use crate::app::tools::RouteTool;
 use crate::core::{ConnectionDirection, ConnectionPriority, RoadMap};
 use glam::Vec2;
@@ -209,9 +209,9 @@ fn test_set_last_created_speichert_ids() {
     assert_eq!(tool.last_created_ids(), &[10, 20, 30]);
 }
 
-// ─── SegmentRecord-Tests ─────────────────────────────────────────────────────
+// ─── GroupRecord-Tests ─────────────────────────────────────────────────────
 
-/// Roundtrip: make_segment_record erstellt den korrekten Record,
+/// Roundtrip: make_group_record erstellt den korrekten Record,
 /// load_for_edit stellt alle Felder exakt wieder her.
 #[test]
 fn bypass_segment_record_roundtrip() {
@@ -227,11 +227,11 @@ fn bypass_segment_record_roundtrip() {
     tool.direction = ConnectionDirection::Regular;
     tool.priority = ConnectionPriority::SubPriority;
 
-    let record = tool.make_segment_record(42, &[100, 101, 102]);
+    let record = tool.make_group_record(42, &[100, 101, 102]);
     assert!(record.is_some(), "Record muss vorhanden sein");
     let record = record.unwrap();
 
-    let SegmentKind::Bypass {
+    let GroupKind::Bypass {
         ref chain_positions,
         chain_start_id,
         chain_end_id,
@@ -240,7 +240,7 @@ fn bypass_segment_record_roundtrip() {
         ref base,
     } = record.kind
     else {
-        panic!("Erwartetes SegmentKind::Bypass, bekam etwas anderes");
+        panic!("Erwartetes GroupKind::Bypass, bekam etwas anderes");
     };
     assert_eq!(
         chain_positions, &chain,
@@ -288,13 +288,13 @@ fn bypass_segment_record_roundtrip() {
     );
 }
 
-/// Ohne geladene Kette muss make_segment_record None liefern.
+/// Ohne geladene Kette muss make_group_record None liefern.
 #[test]
 fn bypass_segment_record_none_ohne_chain() {
     let tool = BypassTool::new();
-    let record = tool.make_segment_record(0, &[]);
+    let record = tool.make_group_record(0, &[]);
     assert!(
         record.is_none(),
-        "Ohne Kette muss make_segment_record None liefern"
+        "Ohne Kette muss make_group_record None liefern"
     );
 }

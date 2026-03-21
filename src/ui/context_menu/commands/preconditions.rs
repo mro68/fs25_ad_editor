@@ -49,7 +49,7 @@ pub struct PreconditionContext<'a> {
     /// Ob die Zwischenablage Daten enthaelt
     pub clipboard_has_data: bool,
     /// Record-ID eines validen Segments (berechnet vor Validierung)
-    pub segment_record_id: Option<u64>,
+    pub group_record_id: Option<u64>,
     /// Ob Farmland-Polygone geladen sind (fuer FieldBoundaryTool-Precondition)
     pub farmland_polygons_loaded: bool,
     /// Ob gerade ein Group-Edit aktiv ist (sperrt neue Gruppierungen)
@@ -94,7 +94,7 @@ impl Precondition {
 
             Self::ClipboardHasData => ctx.clipboard_has_data,
 
-            Self::SelectionIsValidSegment => ctx.segment_record_id.is_some(),
+            Self::SelectionIsValidSegment => ctx.group_record_id.is_some(),
 
             Self::FarmlandPolygonsLoaded => ctx.farmland_polygons_loaded,
 

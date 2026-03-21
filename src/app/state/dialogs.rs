@@ -144,14 +144,14 @@ pub struct SaveOverviewDialogState {
 
 /// Zustand des Segment-Einstellungs-Popups (erscheint nach Doppelklick auf einen Segment-Node).
 #[derive(Debug, Clone)]
-pub struct SegmentSettingsPopupState {
+pub struct GroupSettingsPopupState {
     /// Ob das Popup sichtbar ist.
     pub visible: bool,
     /// Welt-Position des Doppelklicks (fuer Neu-Selektion bei Parameteraenderung).
     pub world_pos: glam::Vec2,
 }
 
-impl Default for SegmentSettingsPopupState {
+impl Default for GroupSettingsPopupState {
     fn default() -> Self {
         Self {
             visible: false,
@@ -307,9 +307,9 @@ pub struct UiState {
     /// Dialog fuer "Alle Felder nachzeichnen"-Einstellungen
     pub trace_all_fields_dialog: TraceAllFieldsDialogState,
     /// Segment-Einstellungs-Popup (erscheint nach Doppelklick auf Segment-Node)
-    pub segment_settings_popup: SegmentSettingsPopupState,
+    pub group_settings_popup: GroupSettingsPopupState,
     /// Bestaetigungsdialog zum Aufloesen einer Gruppe.
-    pub confirm_dissolve_segment_id: Option<u64>,
+    pub confirm_dissolve_group_id: Option<u64>,
 }
 
 impl UiState {
@@ -337,8 +337,8 @@ impl UiState {
             save_overview_dialog: SaveOverviewDialogState::default(),
             distanzen: DistanzenState::default(),
             trace_all_fields_dialog: TraceAllFieldsDialogState::default(),
-            segment_settings_popup: SegmentSettingsPopupState::default(),
-            confirm_dissolve_segment_id: None,
+            group_settings_popup: GroupSettingsPopupState::default(),
+            confirm_dissolve_group_id: None,
         }
     }
 }

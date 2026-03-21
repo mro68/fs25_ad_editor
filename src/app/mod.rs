@@ -14,7 +14,7 @@ mod intent_mapping;
 /// Builder fuer Render-Szenen aus dem AppState.
 pub mod render_scene;
 /// In-Session-Registry aller erstellten Segmente (fuer nachtraegliche Bearbeitung).
-pub mod segment_registry;
+pub mod group_registry;
 /// Application State — zentrale Datenhaltung (View, Editor, Selektion, Dialoge).
 pub mod state;
 /// Trait-basiertes Route-Tool-System fuer erweiterbare Strecken-Werkzeuge.
@@ -33,10 +33,10 @@ pub use command_log::CommandLog;
 pub use controller::AppController;
 pub use events::{AppCommand, AppIntent};
 pub use render_scene::build as build_render_scene;
-pub use segment_registry::{SegmentBase, SegmentKind, SegmentRecord, SegmentRegistry};
+pub use group_registry::{GroupBase, GroupKind, GroupRecord, GroupRegistry};
 pub use state::{
     AppState, Clipboard, EditorTool, EditorToolState, FloatingMenuKind, FloatingMenuState,
-    GroupEditState, PostLoadDialogState, SegmentSettingsPopupState, SelectionState, UiState,
+    GroupEditState, PostLoadDialogState, GroupSettingsPopupState, SelectionState, UiState,
     ViewState,
 };
 pub use tools::field_boundary::compute_ring;

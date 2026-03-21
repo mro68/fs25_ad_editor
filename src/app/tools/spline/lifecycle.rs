@@ -7,7 +7,7 @@ use super::super::{
     RouteTool, ToolAction, ToolPreview, ToolResult,
 };
 use super::state::SplineTool;
-use crate::app::segment_registry::{SegmentBase, SegmentKind, SegmentRecord};
+use crate::app::group_registry::{GroupBase, GroupKind, GroupRecord};
 use crate::core::RoadMap;
 use glam::Vec2;
 
@@ -199,13 +199,13 @@ impl RouteTool for SplineTool {
         }
     }
 
-    fn make_segment_record(&self, id: u64, node_ids: &[u64]) -> Option<SegmentRecord> {
+    fn make_group_record(&self, id: u64, node_ids: &[u64]) -> Option<GroupRecord> {
         if self.last_anchors.len() < 2 {
             return None;
         }
         let start = *self.last_anchors.first()?;
         let end = *self.last_anchors.last()?;
-        Some(SegmentRecord {
+        Some(GroupRecord {
             id,
             node_ids: node_ids.to_vec(),
             start_anchor: start,
@@ -213,11 +213,11 @@ impl RouteTool for SplineTool {
             original_positions: Vec::new(), // wird im Handler befüllt
             marker_node_ids: Vec::new(),
             locked: true,
-            kind: SegmentKind::Spline {
+            kind: GroupKind::Spline {
                 anchors: self.last_anchors.clone(),
                 tangent_start: self.tangents.last_tangent_start,
                 tangent_end: self.tangents.last_tangent_end,
-                base: SegmentBase {
+                base: GroupBase {
                     direction: self.direction,
                     priority: self.priority,
                     max_segment_length: self.seg.max_segment_length,
@@ -226,8 +226,8 @@ impl RouteTool for SplineTool {
         })
     }
 
-    fn load_for_edit(&mut self, _record: &SegmentRecord, kind: &SegmentKind) {
-        let SegmentKind::Spline {
+    fn load_for_edit(&mut self, _record: &GroupRecord, kind: &GroupKind) {
+        let GroupKind::Spline {
             anchors,
             tangent_start,
             tangent_end,

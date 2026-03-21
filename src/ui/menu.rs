@@ -216,7 +216,7 @@ pub fn render_menu(ctx: &egui::Context, state: &AppState) -> Vec<AppIntent> {
                     .clicked()
                 {
                     events.push(AppIntent::SelectRouteToolRequested {
-                        index: crate::app::segment_registry::TOOL_INDEX_FIELD_BOUNDARY,
+                        index: crate::app::group_registry::TOOL_INDEX_FIELD_BOUNDARY,
                     });
                     ui.close();
                 }

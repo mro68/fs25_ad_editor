@@ -6,7 +6,7 @@
 //!
 //! Bei Aenderung wird die Selektion automatisch mit den neuen Parametern neu berechnet.
 
-use crate::app::{AppIntent, SegmentSettingsPopupState};
+use crate::app::{AppIntent, GroupSettingsPopupState};
 use crate::shared::EditorOptions;
 use crate::ui::common::apply_wheel_step;
 
@@ -15,9 +15,9 @@ use crate::ui::common::apply_wheel_step;
 /// Bei Aenderung eines Parameters wird `NodeSegmentBetweenIntersectionsRequested`
 /// zurueckgegeben, damit die Selektion sofort mit den neuen Einstellungen neu berechnet wird.
 /// Das Popup schliesst sich automatisch wenn der User das Schliessen-X anklickt.
-pub fn show_segment_settings_popup(
+pub fn show_group_settings_popup(
     ctx: &egui::Context,
-    popup_state: &mut SegmentSettingsPopupState,
+    popup_state: &mut GroupSettingsPopupState,
     opts: &mut EditorOptions,
 ) -> Vec<AppIntent> {
     let mut intents = Vec::new();
