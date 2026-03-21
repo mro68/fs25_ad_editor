@@ -100,7 +100,7 @@ impl MenuCatalog {
             MenuEntry::Command {
                 id: CommandId::GroupSelectionAsSegment,
                 label: t(lang, I18nKey::CtxGroupAsSegment).into(),
-                preconditions: vec![Precondition::IsResampleableChain],
+                preconditions: vec![Precondition::IsConnectedSubgraph],
             },
             MenuEntry::Separator,
             // ── Verbinden ────────────────────────────────────────
