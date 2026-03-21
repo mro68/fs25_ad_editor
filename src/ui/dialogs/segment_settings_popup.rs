@@ -1,8 +1,8 @@
-//! Segment-Einstellungs-Popup (erscheint nach Doppelklick auf einen Segment-Node).
+//! Gruppen-Einstellungs-Popup (erscheint nach Doppelklick auf einen Gruppen-Node).
 //!
-//! Erlaubt Live-Anpassung der Segment-Selektionsparameter:
+//! Erlaubt Live-Anpassung der Gruppen-Selektionsparameter:
 //! - `segment_stop_at_junction`: Ob die Selektion an Kreuzungen stoppt.
-//! - `segment_max_angle_deg`: Maximale Winkelabweichung fuer Segment-Erkennung.
+//! - `segment_max_angle_deg`: Maximale Winkelabweichung fuer Gruppen-Erkennung.
 //!
 //! Bei Aenderung wird die Selektion automatisch mit den neuen Parametern neu berechnet.
 
@@ -10,7 +10,7 @@ use crate::app::{AppIntent, SegmentSettingsPopupState};
 use crate::shared::EditorOptions;
 use crate::ui::common::apply_wheel_step;
 
-/// Zeigt das Segment-Einstellungs-Popup nach einem Doppelklick auf einen Segment-Node.
+/// Zeigt das Gruppen-Einstellungs-Popup nach einem Doppelklick auf einen Gruppen-Node.
 ///
 /// Bei Aenderung eines Parameters wird `NodeSegmentBetweenIntersectionsRequested`
 /// zurueckgegeben, damit die Selektion sofort mit den neuen Einstellungen neu berechnet wird.
@@ -28,7 +28,7 @@ pub fn show_segment_settings_popup(
     let mut open = popup_state.visible;
     let mut changed = false;
 
-    egui::Window::new("Segment-Einstellungen")
+    egui::Window::new("Gruppen-Einstellungen")
         .collapsible(false)
         .resizable(false)
         .anchor(egui::Align2::CENTER_CENTER, [0.0, 0.0])
