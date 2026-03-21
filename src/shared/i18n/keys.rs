@@ -516,7 +516,7 @@ pub enum I18nKey {
     /// Eintrag "Bezier Grad 3"
     CtxRouteCubic,
     /// Eintrag "Gruppe bearbeiten"
-    CtxEditSegment,
+    CtxEditGroup,
     /// Eintrag "Als Gruppe zusammenfassen"
     CtxGroupAsSegment,
     /// Eintrag "Nodes verbinden"

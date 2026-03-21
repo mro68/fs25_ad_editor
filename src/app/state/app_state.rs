@@ -1,5 +1,5 @@
 use crate::app::history::Snapshot;
-use crate::app::segment_registry::SegmentRegistry;
+use crate::app::group_registry::GroupRegistry;
 use crate::app::CommandLog;
 use crate::core::{Connection, FieldPolygon, MapMarker, MapNode, RoadMap};
 use crate::shared::EditorOptions;
@@ -59,7 +59,7 @@ pub struct AppState {
     /// Ob der Options-Dialog angezeigt wird
     pub show_options_dialog: bool,
     /// In-Session-Registry aller erstellten Segmente (fuer nachtraegliche Bearbeitung)
-    pub segment_registry: SegmentRegistry,
+    pub group_registry: GroupRegistry,
     /// Signalisiert dem Host (eframe), die Anwendung kontrolliert zu beenden
     pub should_exit: bool,
     /// Beim letzten Overview-Laden extrahierte Farmland-Feldgrenz-Polygone
@@ -90,7 +90,7 @@ impl AppState {
             options,
             options_arc,
             show_options_dialog: false,
-            segment_registry: SegmentRegistry::new(),
+            group_registry: GroupRegistry::new(),
             should_exit: false,
             farmland_polygons: None,
             group_editing: None,

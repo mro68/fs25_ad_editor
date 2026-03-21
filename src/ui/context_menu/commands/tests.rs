@@ -66,7 +66,7 @@ fn precondition_node_exists() {
         selected_node_ids: &selected,
         distanzen_active: false,
         clipboard_has_data: false,
-        segment_record_id: None,
+        group_record_id: None,
         group_editing_active: false,
         farmland_polygons_loaded: false,
     };
@@ -85,7 +85,7 @@ fn precondition_has_marker() {
         selected_node_ids: &selected,
         distanzen_active: false,
         clipboard_has_data: false,
-        segment_record_id: None,
+        group_record_id: None,
         group_editing_active: false,
         farmland_polygons_loaded: false,
     };
@@ -108,7 +108,7 @@ fn precondition_exactly_two_selected() {
         selected_node_ids: &two,
         distanzen_active: false,
         clipboard_has_data: false,
-        segment_record_id: None,
+        group_record_id: None,
         group_editing_active: false,
         farmland_polygons_loaded: false,
     };
@@ -117,7 +117,7 @@ fn precondition_exactly_two_selected() {
         selected_node_ids: &three,
         distanzen_active: false,
         clipboard_has_data: false,
-        segment_record_id: None,
+        group_record_id: None,
         group_editing_active: false,
         farmland_polygons_loaded: false,
     };
@@ -126,7 +126,7 @@ fn precondition_exactly_two_selected() {
         selected_node_ids: &one,
         distanzen_active: false,
         clipboard_has_data: false,
-        segment_record_id: None,
+        group_record_id: None,
         group_editing_active: false,
         farmland_polygons_loaded: false,
     };
@@ -147,7 +147,7 @@ fn precondition_two_selected_unconnected() {
         selected_node_ids: &selected,
         distanzen_active: false,
         clipboard_has_data: false,
-        segment_record_id: None,
+        group_record_id: None,
         group_editing_active: false,
         farmland_polygons_loaded: false,
     };
@@ -156,7 +156,7 @@ fn precondition_two_selected_unconnected() {
         selected_node_ids: &selected,
         distanzen_active: false,
         clipboard_has_data: false,
-        segment_record_id: None,
+        group_record_id: None,
         group_editing_active: false,
         farmland_polygons_loaded: false,
     };
@@ -176,7 +176,7 @@ fn precondition_has_connections_between_selected() {
         selected_node_ids: &selected,
         distanzen_active: false,
         clipboard_has_data: false,
-        segment_record_id: None,
+        group_record_id: None,
         group_editing_active: false,
         farmland_polygons_loaded: false,
     };
@@ -185,7 +185,7 @@ fn precondition_has_connections_between_selected() {
         selected_node_ids: &selected,
         distanzen_active: false,
         clipboard_has_data: false,
-        segment_record_id: None,
+        group_record_id: None,
         group_editing_active: false,
         farmland_polygons_loaded: false,
     };
@@ -204,7 +204,7 @@ fn precondition_streckenteilung_active() {
         selected_node_ids: &selected,
         distanzen_active: true,
         clipboard_has_data: false,
-        segment_record_id: None,
+        group_record_id: None,
         group_editing_active: false,
         farmland_polygons_loaded: false,
     };
@@ -213,7 +213,7 @@ fn precondition_streckenteilung_active() {
         selected_node_ids: &selected,
         distanzen_active: false,
         clipboard_has_data: false,
-        segment_record_id: None,
+        group_record_id: None,
         group_editing_active: false,
         farmland_polygons_loaded: false,
     };
@@ -236,7 +236,7 @@ fn catalog_empty_area_shows_tools() {
         selected_node_ids: &selected,
         distanzen_active: false,
         clipboard_has_data: false,
-        segment_record_id: None,
+        group_record_id: None,
         group_editing_active: false,
         farmland_polygons_loaded: false,
     };
@@ -244,7 +244,7 @@ fn catalog_empty_area_shows_tools() {
         node_id: None,
         node_position: None,
         two_node_ids: None,
-        segment_record_id: None,
+        group_record_id: None,
     };
 
     let catalog = MenuCatalog::for_empty_area(Language::De);
@@ -294,7 +294,7 @@ fn catalog_node_focused_shows_marker_create() {
         selected_node_ids: &selected,
         distanzen_active: false,
         clipboard_has_data: false,
-        segment_record_id: None,
+        group_record_id: None,
         group_editing_active: false,
         farmland_polygons_loaded: false,
     };
@@ -302,7 +302,7 @@ fn catalog_node_focused_shows_marker_create() {
         node_id: Some(42),
         node_position: Some(Vec2::new(5.0, 5.0)),
         two_node_ids: None,
-        segment_record_id: None,
+        group_record_id: None,
     };
 
     let catalog = MenuCatalog::for_node_focused(42, Language::De);
@@ -329,7 +329,7 @@ fn catalog_node_focused_shows_marker_edit_when_marker_exists() {
         selected_node_ids: &selected,
         distanzen_active: false,
         clipboard_has_data: false,
-        segment_record_id: None,
+        group_record_id: None,
         group_editing_active: false,
         farmland_polygons_loaded: false,
     };
@@ -337,7 +337,7 @@ fn catalog_node_focused_shows_marker_edit_when_marker_exists() {
         node_id: Some(42),
         node_position: Some(Vec2::new(5.0, 5.0)),
         two_node_ids: None,
-        segment_record_id: None,
+        group_record_id: None,
     };
 
     let catalog = MenuCatalog::for_node_focused(42, Language::De);
@@ -357,7 +357,7 @@ fn catalog_node_focused_shows_delete_and_duplicate() {
         selected_node_ids: &selected,
         distanzen_active: false,
         clipboard_has_data: false,
-        segment_record_id: None,
+        group_record_id: None,
         group_editing_active: false,
         farmland_polygons_loaded: false,
     };
@@ -365,7 +365,7 @@ fn catalog_node_focused_shows_delete_and_duplicate() {
         node_id: Some(10),
         node_position: Some(Vec2::new(1.0, 1.0)),
         two_node_ids: None,
-        segment_record_id: None,
+        group_record_id: None,
     };
 
     let catalog = MenuCatalog::for_node_focused(10, Language::De);
@@ -383,7 +383,7 @@ fn catalog_multi_nodes_connect_only_when_two_unconnected() {
         selected_node_ids: &selected,
         distanzen_active: false,
         clipboard_has_data: false,
-        segment_record_id: None,
+        group_record_id: None,
         group_editing_active: false,
         farmland_polygons_loaded: false,
     };
@@ -391,7 +391,7 @@ fn catalog_multi_nodes_connect_only_when_two_unconnected() {
         node_id: None,
         node_position: None,
         two_node_ids: Some((1, 2)),
-        segment_record_id: None,
+        group_record_id: None,
     };
 
     let catalog = MenuCatalog::for_selection_only(Language::De);
@@ -404,7 +404,7 @@ fn catalog_multi_nodes_connect_only_when_two_unconnected() {
         selected_node_ids: &selected,
         distanzen_active: false,
         clipboard_has_data: false,
-        segment_record_id: None,
+        group_record_id: None,
         group_editing_active: false,
         farmland_polygons_loaded: false,
     };
@@ -421,7 +421,7 @@ fn catalog_multi_nodes_direction_only_when_connected() {
         selected_node_ids: &selected,
         distanzen_active: false,
         clipboard_has_data: false,
-        segment_record_id: None,
+        group_record_id: None,
         group_editing_active: false,
         farmland_polygons_loaded: false,
     };
@@ -429,7 +429,7 @@ fn catalog_multi_nodes_direction_only_when_connected() {
         node_id: None,
         node_position: None,
         two_node_ids: Some((1, 2)),
-        segment_record_id: None,
+        group_record_id: None,
     };
 
     let catalog = MenuCatalog::for_selection_only(Language::De);
@@ -444,7 +444,7 @@ fn catalog_multi_nodes_direction_only_when_connected() {
         selected_node_ids: &selected,
         distanzen_active: false,
         clipboard_has_data: false,
-        segment_record_id: None,
+        group_record_id: None,
         group_editing_active: false,
         farmland_polygons_loaded: false,
     };
@@ -463,7 +463,7 @@ fn catalog_multi_nodes_route_tools_only_when_two_selected() {
         selected_node_ids: &selected,
         distanzen_active: false,
         clipboard_has_data: false,
-        segment_record_id: None,
+        group_record_id: None,
         group_editing_active: false,
         farmland_polygons_loaded: false,
     };
@@ -471,7 +471,7 @@ fn catalog_multi_nodes_route_tools_only_when_two_selected() {
         node_id: None,
         node_position: None,
         two_node_ids: None,
-        segment_record_id: None,
+        group_record_id: None,
     };
 
     let catalog = MenuCatalog::for_selection_only(Language::De);
@@ -515,7 +515,7 @@ fn catalog_multi_nodes_selection_commands_always_visible() {
         selected_node_ids: &selected,
         distanzen_active: false,
         clipboard_has_data: false,
-        segment_record_id: None,
+        group_record_id: None,
         group_editing_active: false,
         farmland_polygons_loaded: false,
     };
@@ -523,7 +523,7 @@ fn catalog_multi_nodes_selection_commands_always_visible() {
         node_id: None,
         node_position: None,
         two_node_ids: Some((1, 2)),
-        segment_record_id: None,
+        group_record_id: None,
     };
 
     let catalog = MenuCatalog::for_selection_only(Language::De);
@@ -541,7 +541,7 @@ fn catalog_route_tool_basic_commands() {
         selected_node_ids: &selected,
         distanzen_active: false,
         clipboard_has_data: false,
-        segment_record_id: None,
+        group_record_id: None,
         group_editing_active: false,
         farmland_polygons_loaded: false,
     };
@@ -549,7 +549,7 @@ fn catalog_route_tool_basic_commands() {
         node_id: None,
         node_position: None,
         two_node_ids: None,
-        segment_record_id: None,
+        group_record_id: None,
     };
 
     let catalog = MenuCatalog::for_route_tool();
@@ -567,7 +567,7 @@ fn intent_mapping_delete_selected() {
         node_id: Some(42),
         node_position: Some(Vec2::new(5.0, 5.0)),
         two_node_ids: None,
-        segment_record_id: None,
+        group_record_id: None,
     };
     let intent = CommandId::DeleteSelected.to_intent(&ctx);
     assert!(matches!(intent, AppIntent::DeleteSelectedRequested));
@@ -579,7 +579,7 @@ fn intent_mapping_connect_two_nodes() {
         node_id: None,
         node_position: None,
         two_node_ids: Some((1, 2)),
-        segment_record_id: None,
+        group_record_id: None,
     };
     let intent = CommandId::ConnectTwoNodes.to_intent(&ctx);
     assert!(matches!(intent, AppIntent::ConnectSelectedNodesRequested));
@@ -658,7 +658,7 @@ fn deleted_node_hides_all_commands() {
         selected_node_ids: &selected,
         distanzen_active: false,
         clipboard_has_data: false,
-        segment_record_id: None,
+        group_record_id: None,
         group_editing_active: false,
         farmland_polygons_loaded: false,
     };
@@ -666,7 +666,7 @@ fn deleted_node_hides_all_commands() {
         node_id: Some(99),
         node_position: None,
         two_node_ids: None,
-        segment_record_id: None,
+        group_record_id: None,
     };
 
     let catalog = MenuCatalog::for_node_focused(99, Language::De);

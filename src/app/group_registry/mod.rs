@@ -10,8 +10,8 @@
 //! neu geladen.
 //!
 //! # Modulstruktur
-//! - [`types`]: Datentypes (`SegmentBase`, `SegmentKind`, `SegmentRecord`) und Tool-Index-Konstanten
-//! - Dieses Modul: [`SegmentRegistry`] mit allen CRUD-Operationen
+//! - [`types`]: Datentypes (`GroupBase`, `GroupKind`, `GroupRecord`) und Tool-Index-Konstanten
+//! - Dieses Modul: [`GroupRegistry`] mit allen CRUD-Operationen
 
 mod types;
 pub use types::*;
@@ -26,12 +26,12 @@ use std::collections::HashMap;
 /// Tool-Parameter beim Erstellen gespeichert und beim Bearbeiten
 /// wiederhergestellt werden.
 ///
-/// Interne Speicherung als `HashMap<u64, SegmentRecord>` fuer O(1)-Zugriffe.
+/// Interne Speicherung als `HashMap<u64, GroupRecord>` fuer O(1)-Zugriffe.
 /// Ein Reverse-Index `node_to_records` ermoeglicht effiziente Node→Segment-Abfragen.
 #[derive(Debug, Clone, Default)]
-pub struct SegmentRegistry {
-    /// Primaere Speicherstruktur: Record-ID → SegmentRecord.
-    records: HashMap<u64, SegmentRecord>,
+pub struct GroupRegistry {
+    /// Primaere Speicherstruktur: Record-ID → GroupRecord.
+    records: HashMap<u64, GroupRecord>,
     next_id: u64,
     /// Record-ID, die von automatischer Invalidierung ausgenommen ist (aktiver Group-Edit).
     edit_guard_id: Option<u64>,
@@ -39,7 +39,7 @@ pub struct SegmentRegistry {
     node_to_records: HashMap<u64, Vec<u64>>,
 }
 
-impl SegmentRegistry {
+impl GroupRegistry {
     /// Erstellt eine leere Registry.
     pub fn new() -> Self {
         Self::default()
@@ -65,7 +65,7 @@ impl SegmentRegistry {
     }
 
     /// Registriert ein neues Segment und gibt die vergebene ID zurueck.
-    pub fn register(&mut self, record: SegmentRecord) -> u64 {
+    pub fn register(&mut self, record: GroupRecord) -> u64 {
         let id = record.id;
         for &nid in &record.node_ids {
             self.node_to_records.entry(nid).or_default().push(id);
@@ -82,7 +82,7 @@ impl SegmentRegistry {
     }
 
     /// Gibt den Record mit der angegebenen ID zurueck (falls vorhanden).
-    pub fn get(&self, record_id: u64) -> Option<&SegmentRecord> {
+    pub fn get(&self, record_id: u64) -> Option<&GroupRecord> {
         self.records.get(&record_id)
     }
 
@@ -94,7 +94,7 @@ impl SegmentRegistry {
     }
 
     /// Gibt alle Records zurueck, die mindestens einen der angegebenen Node-IDs enthalten.
-    pub fn find_by_node_ids(&self, node_ids: &indexmap::IndexSet<u64>) -> Vec<&SegmentRecord> {
+    pub fn find_by_node_ids(&self, node_ids: &indexmap::IndexSet<u64>) -> Vec<&GroupRecord> {
         let mut seen_ids = std::collections::HashSet::new();
         let mut result = Vec::new();
         for &nid in node_ids {
@@ -133,7 +133,7 @@ impl SegmentRegistry {
     }
 
     /// Findet den ersten Record, der den angegebenen Node enthaelt.
-    pub fn find_first_by_node_id(&self, node_id: u64) -> Option<&SegmentRecord> {
+    pub fn find_first_by_node_id(&self, node_id: u64) -> Option<&GroupRecord> {
         self.node_to_records
             .get(&node_id)
             .and_then(|ids| ids.first())
@@ -141,7 +141,7 @@ impl SegmentRegistry {
     }
 
     /// Prueft ob ein Segment noch gueltig ist (Nodes existieren und Positionen unveraendert).
-    pub fn is_segment_valid(&self, record: &SegmentRecord, road_map: &RoadMap) -> bool {
+    pub fn is_group_valid(&self, record: &GroupRecord, road_map: &RoadMap) -> bool {
         if record.original_positions.len() != record.node_ids.len() {
             return false;
         }
@@ -159,22 +159,22 @@ impl SegmentRegistry {
     }
 
     /// Gibt alle Records als Iterator zurueck.
-    pub fn records(&self) -> impl Iterator<Item = &SegmentRecord> {
+    pub fn records(&self) -> impl Iterator<Item = &GroupRecord> {
         self.records.values()
     }
 
     /// Gibt eine veraenderliche Referenz auf alle Records als Iterator zurueck.
-    pub fn records_mut(&mut self) -> impl Iterator<Item = &mut SegmentRecord> {
+    pub fn records_mut(&mut self) -> impl Iterator<Item = &mut GroupRecord> {
         self.records.values_mut()
     }
 
     /// Gibt eine Referenz auf die interne HashMap zurueck.
-    pub fn records_map(&self) -> &HashMap<u64, SegmentRecord> {
+    pub fn records_map(&self) -> &HashMap<u64, GroupRecord> {
         &self.records
     }
 
     /// Findet alle Segment-IDs, zu denen ein Node gehoert.
-    pub fn segments_for_node(&self, node_id: u64) -> Vec<u64> {
+    pub fn groups_for_node(&self, node_id: u64) -> Vec<u64> {
         self.node_to_records
             .get(&node_id)
             .cloned()
@@ -209,7 +209,7 @@ impl SegmentRegistry {
     ///
     /// Liest die aktuellen Node-Positionen aus der RoadMap und ueberschreibt
     /// `original_positions`. Muss nach jedem Locked-Move aufgerufen werden,
-    /// damit `is_segment_valid()` weiterhin `true` zurueckgibt.
+    /// damit `is_group_valid()` weiterhin `true` zurueckgibt.
     pub fn update_original_positions(&mut self, segment_id: u64, road_map: &RoadMap) {
         if let Some(record) = self.get_mut(segment_id) {
             record.original_positions = record
@@ -283,7 +283,7 @@ impl SegmentRegistry {
     }
 
     /// Gibt eine mutable Referenz auf den Record mit der angegebenen ID zurueck.
-    fn get_mut(&mut self, record_id: u64) -> Option<&mut SegmentRecord> {
+    fn get_mut(&mut self, record_id: u64) -> Option<&mut GroupRecord> {
         self.records.get_mut(&record_id)
     }
 
@@ -353,14 +353,14 @@ mod registry_tests {
         node_ids: Vec<u64>,
         positions: Vec<Vec2>,
         locked: bool,
-    ) -> SegmentRecord {
-        SegmentRecord {
+    ) -> GroupRecord {
+        GroupRecord {
             id,
             node_ids,
             start_anchor: ToolAnchor::NewPosition(Vec2::ZERO),
             end_anchor: ToolAnchor::NewPosition(Vec2::ZERO),
-            kind: SegmentKind::Straight {
-                base: SegmentBase {
+            kind: GroupKind::Straight {
+                base: GroupBase {
                     direction: ConnectionDirection::Regular,
                     priority: ConnectionPriority::Regular,
                     max_segment_length: 10.0,
@@ -373,27 +373,27 @@ mod registry_tests {
     }
 
     #[test]
-    fn segments_for_node_findet_alle_zugehoerigen_segmente() {
-        let mut registry = SegmentRegistry::new();
+    fn groups_for_node_findet_alle_zugehoerigen_segmente() {
+        let mut registry = GroupRegistry::new();
         registry.register(make_test_record(0, vec![1, 2, 3], vec![], true));
         registry.register(make_test_record(1, vec![3, 4, 5], vec![], false));
         registry.register(make_test_record(2, vec![6, 7], vec![], true));
 
-        let result = registry.segments_for_node(3);
+        let result = registry.groups_for_node(3);
         assert_eq!(result.len(), 2, "Node 3 gehoert zu Segmenten 0 und 1");
         assert!(result.contains(&0));
         assert!(result.contains(&1));
 
-        let result_solo = registry.segments_for_node(7);
+        let result_solo = registry.groups_for_node(7);
         assert_eq!(result_solo, vec![2]);
 
-        let result_none = registry.segments_for_node(99);
+        let result_none = registry.groups_for_node(99);
         assert!(result_none.is_empty());
     }
 
     #[test]
     fn expand_locked_selection_gibt_alle_nodes_locked_segmente() {
-        let mut registry = SegmentRegistry::new();
+        let mut registry = GroupRegistry::new();
         // Locked: Nodes 1, 2, 3
         registry.register(make_test_record(0, vec![1, 2, 3], vec![], true));
         // Unlocked: Nodes 4, 5
@@ -422,7 +422,7 @@ mod registry_tests {
         map.add_node(MapNode::new(10, Vec2::new(5.0, 0.0), NodeFlag::Regular));
         map.add_node(MapNode::new(11, Vec2::new(15.0, 0.0), NodeFlag::Regular));
 
-        let mut registry = SegmentRegistry::new();
+        let mut registry = GroupRegistry::new();
         // original_positions absichtlich falsch (alt)
         registry.register(make_test_record(
             0,
@@ -441,30 +441,30 @@ mod registry_tests {
     /// Prüft, dass der Reverse-Index nach register/remove konsistent bleibt.
     #[test]
     fn reverse_index_konsistent_nach_register_und_remove() {
-        let mut registry = SegmentRegistry::new();
+        let mut registry = GroupRegistry::new();
         registry.register(make_test_record(0, vec![1, 2, 3], vec![], false));
         registry.register(make_test_record(1, vec![3, 4], vec![], false));
 
         // Node 3 gehoert zu beiden Records
-        assert_eq!(registry.segments_for_node(3).len(), 2);
+        assert_eq!(registry.groups_for_node(3).len(), 2);
 
         // Record 0 entfernen → Node 3 nur noch in Record 1
         registry.remove(0);
-        let segs = registry.segments_for_node(3);
+        let segs = registry.groups_for_node(3);
         assert_eq!(segs, vec![1], "Node 3 sollte nur noch Record 1 haben");
 
         // Nodes 1, 2 sollten keine Zuordnung mehr haben
-        assert!(registry.segments_for_node(1).is_empty());
-        assert!(registry.segments_for_node(2).is_empty());
+        assert!(registry.groups_for_node(1).is_empty());
+        assert!(registry.groups_for_node(2).is_empty());
 
         // Node 4 weiterhin Record 1
-        assert_eq!(registry.segments_for_node(4), vec![1]);
+        assert_eq!(registry.groups_for_node(4), vec![1]);
     }
 
     /// Prüft, dass update_record den Reverse-Index korrekt aktualisiert.
     #[test]
     fn reverse_index_konsistent_nach_update_record() {
-        let mut registry = SegmentRegistry::new();
+        let mut registry = GroupRegistry::new();
         registry.register(make_test_record(0, vec![1, 2, 3], vec![], false));
 
         // Alte Nodes: 1,2,3 → Neue Nodes: 2,4,5
@@ -473,19 +473,19 @@ mod registry_tests {
         assert!(success, "update_record sollte true zurueckgeben");
 
         // Node 1, 3 sollten nicht mehr zugeordnet sein
-        assert!(registry.segments_for_node(1).is_empty());
-        assert!(registry.segments_for_node(3).is_empty());
+        assert!(registry.groups_for_node(1).is_empty());
+        assert!(registry.groups_for_node(3).is_empty());
 
         // Node 2 sollte weiterhin, 4 und 5 neu zugeordnet sein
-        assert_eq!(registry.segments_for_node(2), vec![0]);
-        assert_eq!(registry.segments_for_node(4), vec![0]);
-        assert_eq!(registry.segments_for_node(5), vec![0]);
+        assert_eq!(registry.groups_for_node(2), vec![0]);
+        assert_eq!(registry.groups_for_node(4), vec![0]);
+        assert_eq!(registry.groups_for_node(5), vec![0]);
     }
 
     /// Prüft, dass update_record false zurückgibt bei nicht-existierender ID.
     #[test]
     fn update_record_nicht_existierend_gibt_false() {
-        let mut registry = SegmentRegistry::new();
+        let mut registry = GroupRegistry::new();
         let result = registry.update_record(99, vec![1], vec![Vec2::ZERO]);
         assert!(!result, "Nicht-existierende ID sollte false ergeben");
     }
@@ -493,7 +493,7 @@ mod registry_tests {
     /// Prüft, dass invalidate_by_node_ids den edit_guard respektiert.
     #[test]
     fn invalidate_respektiert_edit_guard() {
-        let mut registry = SegmentRegistry::new();
+        let mut registry = GroupRegistry::new();
         registry.register(make_test_record(0, vec![1, 2], vec![], false));
         registry.register(make_test_record(1, vec![2, 3], vec![], false));
 
@@ -513,7 +513,7 @@ mod registry_tests {
     /// Prüft, dass find_by_node_ids korrekte Records findet.
     #[test]
     fn find_by_node_ids_findet_betroffene_records() {
-        let mut registry = SegmentRegistry::new();
+        let mut registry = GroupRegistry::new();
         registry.register(make_test_record(0, vec![1, 2], vec![], false));
         registry.register(make_test_record(1, vec![3, 4], vec![], false));
         registry.register(make_test_record(2, vec![2, 5], vec![], false));
@@ -528,7 +528,7 @@ mod registry_tests {
     /// Prüft, dass find_first_by_node_id den ersten Record findet.
     #[test]
     fn find_first_by_node_id_findet_record() {
-        let mut registry = SegmentRegistry::new();
+        let mut registry = GroupRegistry::new();
         registry.register(make_test_record(0, vec![1, 2], vec![], false));
         registry.register(make_test_record(1, vec![3, 4], vec![], false));
 
@@ -539,7 +539,7 @@ mod registry_tests {
     /// Prüft, dass remove bei nicht-existierender ID nicht panikt.
     #[test]
     fn remove_nicht_existierend_ist_noop() {
-        let mut registry = SegmentRegistry::new();
+        let mut registry = GroupRegistry::new();
         registry.register(make_test_record(0, vec![1, 2], vec![], false));
 
         // Doppeltes Remove sollte kein Panic verursachen
@@ -553,9 +553,9 @@ mod registry_tests {
     /// Prüft Operationen auf leerer Registry.
     #[test]
     fn leere_registry_edge_cases() {
-        let registry = SegmentRegistry::new();
+        let registry = GroupRegistry::new();
 
-        assert!(registry.segments_for_node(1).is_empty());
+        assert!(registry.groups_for_node(1).is_empty());
         assert!(registry.expand_locked_selection(&[1, 2]).is_empty());
         assert!(registry.find_first_by_node_id(1).is_none());
 

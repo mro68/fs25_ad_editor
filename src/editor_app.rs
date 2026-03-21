@@ -2,7 +2,7 @@
 
 use eframe::egui;
 use eframe::egui_wgpu;
-use fs25_auto_drive_editor::app::segment_registry::{
+use fs25_auto_drive_editor::app::group_registry::{
     TOOL_INDEX_BYPASS, TOOL_INDEX_CURVE_CUBIC, TOOL_INDEX_CURVE_QUAD, TOOL_INDEX_PARKING,
     TOOL_INDEX_ROUTE_OFFSET, TOOL_INDEX_SMOOTH_CURVE, TOOL_INDEX_SPLINE, TOOL_INDEX_STRAIGHT,
 };
@@ -139,7 +139,7 @@ impl EditorApp {
             default_direction,
             default_priority,
             distance_wheel_step_m,
-            Some(&self.state.segment_registry),
+            Some(&self.state.group_registry),
             &mut self.state.ui.distanzen,
         ));
 
@@ -188,7 +188,7 @@ impl EditorApp {
         events.extend(ui::show_dedup_dialog(ctx, &self.state.ui));
         events.extend(ui::show_confirm_dissolve_dialog(
             ctx,
-            &mut self.state.ui.confirm_dissolve_segment_id,
+            &mut self.state.ui.confirm_dissolve_group_id,
             self.state.options.language,
         ));
         events.extend(ui::show_zip_browser(ctx, &mut self.state.ui));
@@ -199,9 +199,9 @@ impl EditorApp {
         events.extend(ui::show_post_load_dialog(ctx, &mut self.state.ui));
         events.extend(ui::show_save_overview_dialog(ctx, &mut self.state.ui));
         events.extend(ui::show_trace_all_fields_dialog(ctx, &mut self.state.ui));
-        events.extend(ui::show_segment_settings_popup(
+        events.extend(ui::show_group_settings_popup(
             ctx,
-            &mut self.state.ui.segment_settings_popup,
+            &mut self.state.ui.group_settings_popup,
             &mut self.state.options,
         ));
         events.extend(ui::show_options_dialog(
@@ -310,7 +310,7 @@ impl EditorApp {
                     .as_ref()
                     .is_some_and(|p| !p.is_empty()),
                 self.state.group_editing.is_some(),
-                Some(&self.state.segment_registry),
+                Some(&self.state.group_registry),
             ),
         );
 
@@ -422,7 +422,7 @@ impl EditorApp {
 
         // ── Segment-Overlay ──────────────────
         if let Some(rm) = self.state.road_map.as_deref() {
-            if !self.state.segment_registry.is_empty() {
+            if !self.state.group_registry.is_empty() {
                 let vp = glam::Vec2::new(viewport_size[0], viewport_size[1]);
                 // Klick nur weiterreichen wenn der Response einen Klick registriert hat
                 let clicked_pos = if response.clicked() {
@@ -432,26 +432,26 @@ impl EditorApp {
                 };
                 let ctrl_held = ui.ctx().input(|i| i.modifiers.ctrl);
                 let painter = ui.painter_at(rect);
-                let segment_overlay_events = ui::render_segment_overlays(
+                let group_overlay_events = ui::render_group_overlays(
                     &painter,
                     rect,
                     &self.state.view.camera,
                     vp,
-                    &self.state.segment_registry,
+                    &self.state.group_registry,
                     rm,
                     self.state.selection.selected_node_ids.as_ref(),
                     clicked_pos,
                     ctrl_held,
                     self.state.options.segment_lock_icon_size_px,
                 );
-                for ev in segment_overlay_events {
+                for ev in group_overlay_events {
                     match ev {
-                        ui::SegmentOverlayEvent::LockToggled { segment_id } => {
+                        ui::GroupOverlayEvent::LockToggled { segment_id } => {
                             overlay_events
-                                .push(AppIntent::ToggleSegmentLockRequested { segment_id });
+                                .push(AppIntent::ToggleGroupLockRequested { segment_id });
                         }
-                        ui::SegmentOverlayEvent::Dissolved { segment_id } => {
-                            overlay_events.push(AppIntent::DissolveSegmentRequested { segment_id });
+                        ui::GroupOverlayEvent::Dissolved { segment_id } => {
+                            overlay_events.push(AppIntent::DissolveGroupRequested { segment_id });
                         }
                     }
                 }
@@ -460,7 +460,7 @@ impl EditorApp {
 
         // ── Gruppen-Boundary-Overlay ──────────────────
         if let Some(rm) = self.state.road_map.as_deref() {
-            if !self.state.segment_registry.is_empty() {
+            if !self.state.group_registry.is_empty() {
                 // Icons lazy initialisieren (benoetigen egui::Context)
                 if self.group_boundary_icons.is_none() {
                     self.group_boundary_icons = Some(ui::GroupBoundaryIcons::load(ui.ctx()));
@@ -473,7 +473,7 @@ impl EditorApp {
                         rect,
                         &self.state.view.camera,
                         vp,
-                        &self.state.segment_registry,
+                        &self.state.group_registry,
                         rm,
                         self.state.selection.selected_node_ids.as_ref(),
                         icons,
