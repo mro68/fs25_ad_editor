@@ -117,6 +117,7 @@ impl InputState {
         tangent_data: Option<TangentMenuData>,
         clipboard_has_data: bool,
         farmland_polygons_loaded: bool,
+        group_editing_active: bool,
         segment_registry: Option<&SegmentRegistry>,
     ) -> Vec<AppIntent> {
         let ctx = ViewportContext {
@@ -219,6 +220,7 @@ impl InputState {
             distanzen_state.active,
             clipboard_has_data,
             farmland_polygons_loaded,
+            group_editing_active,
             options,
             default_direction,
             default_priority,

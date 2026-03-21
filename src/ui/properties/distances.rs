@@ -26,12 +26,12 @@ pub fn render_distance_panel(
     if selected_node_ids.len() > MAX_CHAIN_NODES {
         if distance_state.active {
             distance_state.deactivate();
+            ui.separator();
+            ui.label(format!(
+                "⚠ Ketten-Analyse: zu viele Nodes ({} > {MAX_CHAIN_NODES}).",
+                selected_node_ids.len()
+            ));
         }
-        ui.separator();
-        ui.label(format!(
-            "⚠ Ketten-Analyse: zu viele Nodes ({} > {MAX_CHAIN_NODES}).",
-            selected_node_ids.len()
-        ));
         return;
     }
 
@@ -39,9 +39,9 @@ pub fn render_distance_panel(
     let Some(ordered) = chain else {
         if distance_state.active {
             distance_state.deactivate();
+            ui.separator();
+            ui.label("⚠ Selektierte Nodes bilden keine zusammenhaengende Kette.");
         }
-        ui.separator();
-        ui.label("⚠ Selektierte Nodes bilden keine zusammenhaengende Kette.");
         return;
     };
 
