@@ -18,6 +18,18 @@ pub struct ConnectedNeighbor {
     pub is_outgoing: bool,
 }
 
+/// Ein Node, der Verbindungen ausserhalb einer Gruppe hat (Ein-/Ausfahrt).
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct BoundaryNode {
+    /// ID des Boundary-Nodes
+    pub node_id: u64,
+    /// true = Node hat mindestens eine eingehende Verbindung von ausserhalb
+    pub has_external_incoming: bool,
+    /// true = Node hat mindestens eine ausgehende Verbindung nach ausserhalb
+    pub has_external_outgoing: bool,
+}
+
+mod boundary;
 mod chain;
 mod dedup;
 mod neighbors;
