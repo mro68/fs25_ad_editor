@@ -1,4 +1,5 @@
 //! In-Session-Registry aller erstellten Segmente (zum nachtraeglichen Bearbeiten).
+//! NOTE: In der UI als "Gruppe" bezeichnet — intern bleibt "Segment" als historischer Begriff.
 //!
 //! Wird **nicht** in den Undo/Redo-Snapshot aufgenommen — die Registry ist
 //! transient und gilt nur fuer die aktuelle Session. Beim Laden einer Datei
@@ -170,6 +171,20 @@ impl SegmentRegistry {
             .find(|r| r.id == segment_id)
             .map(|r| r.locked)
             .unwrap_or(false)
+    }
+
+    /// Ermittelt die Boundary-Nodes eines Segments (Nodes mit externen Verbindungen).
+    ///
+    /// Gibt `None` zurueck wenn das Segment nicht existiert.
+    pub fn open_nodes(
+        &self,
+        record_id: u64,
+        road_map: &RoadMap,
+    ) -> Option<Vec<crate::core::BoundaryNode>> {
+        use std::collections::HashSet;
+        let record = self.get(record_id)?;
+        let group_ids: HashSet<u64> = record.node_ids.iter().copied().collect();
+        Some(road_map.boundary_nodes(&group_ids))
     }
 
     /// Berechnet die Achsen-ausgerichtete Bounding-Box (AABB) des Segments.

@@ -25,7 +25,8 @@ pub mod use_cases;
 pub use crate::core::Camera2D;
 pub use crate::core::ZipImageEntry;
 pub use crate::core::{
-    Connection, ConnectionDirection, ConnectionPriority, MapMarker, MapNode, NodeFlag, RoadMap,
+    BoundaryNode, Connection, ConnectionDirection, ConnectionPriority, MapMarker, MapNode,
+    NodeFlag, RoadMap,
 };
 pub use crate::shared::RenderQuality;
 pub use command_log::CommandLog;
