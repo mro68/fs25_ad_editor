@@ -170,8 +170,44 @@ pub fn apply_group_edit(state: &mut AppState) {
     }
 
     let selected: Vec<u64> = state.selection.selected_node_ids.iter().copied().collect();
-    for id in selected {
-        new_ids.insert(id);
+
+    // Iterativer Expansions-Algorithmus: selektierte Nodes nur hinzufuegen,
+    // wenn sie eine Verbindung zu einem bereits erreichbaren Node haben.
+    // Neue Nodes koennen Bruecken zu weiteren Nodes bilden (A→B→C).
+    let original_count = new_ids.len();
+    let mut reachable: indexmap::IndexSet<u64> = new_ids.clone();
+    let mut changed = true;
+    while changed {
+        changed = false;
+        for &sel_id in &selected {
+            if reachable.contains(&sel_id) {
+                continue;
+            }
+            // Pruefen ob sel_id eine Verbindung zu einem erreichbaren Node hat
+            let has_connection = road_map.connections_iter().any(|conn| {
+                (conn.start_id == sel_id && reachable.contains(&conn.end_id))
+                    || (conn.end_id == sel_id && reachable.contains(&conn.start_id))
+            });
+            if has_connection {
+                reachable.insert(sel_id);
+                changed = true;
+            }
+        }
+    }
+
+    // Nur erreichbare selektierte Nodes hinzufuegen
+    for &sel_id in &selected {
+        if reachable.contains(&sel_id) {
+            new_ids.insert(sel_id);
+        }
+    }
+
+    let filtered_count = selected.len().saturating_sub(new_ids.len().saturating_sub(original_count));
+    if filtered_count > 0 {
+        log::info!(
+            "apply_group_edit: {} nodes filtered (no connection to group)",
+            filtered_count
+        );
     }
 
     let new_node_ids: Vec<u64> = new_ids.into_iter().collect();
