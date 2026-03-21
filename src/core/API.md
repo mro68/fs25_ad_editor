@@ -154,6 +154,7 @@ pub struct RoadMap {
 - `connections_iter(&self) -> impl Iterator<Item = &Connection>` — Iterator ueber alle Verbindungen
 - `connections_between_ids(&self, ids: &IndexSet<u64>) -> Box<dyn Iterator<Item = &Connection>>` — Connections zwischen Nodes aus der gegebenen ID-Menge (O(n), fuer Bulk-Operationen)
 - `connected_neighbors(&self, node_id: u64) -> Vec<ConnectedNeighbor>` — Alle Nachbarn eines Nodes mit Richtung und Winkel
+- `boundary_nodes(&self, group_ids: &HashSet<u64>) -> Vec<BoundaryNode>` — Findet alle Nodes in `group_ids`, die Verbindungen nach ausserhalb haben (O(|connections|)); nur bei Gruppen-Aenderungen aufrufen, nicht pro Frame
 - `is_resampleable_chain(&self, node_ids: &IndexSet<u64>) -> bool` — Prueft ob die selektierten Nodes eine zusammenhaengende Kette bilden (Kreuzungen nur an Endpunkten erlaubt)
 - `next_node_id(&self) -> u64` — Naechste freie Node-ID
 - `add_map_marker(&mut self, marker: MapMarker)` — Fuegt Marker hinzu
@@ -189,6 +190,25 @@ pub struct ConnectedNeighbor {
     pub is_outgoing: bool, // true = Verbindung geht vom Quell-Node zum Nachbar
 }
 ```
+
+---
+
+### `BoundaryNode`
+
+Beschreibt einen Node, der Verbindungen ausserhalb einer Gruppe hat (Ein- oder Ausfahrt).
+Wird von `RoadMap::boundary_nodes()` zurueckgegeben.
+
+```rust
+pub struct BoundaryNode {
+    pub node_id: u64,
+    /// true = Node hat mindestens eine eingehende Verbindung von ausserhalb der Gruppe
+    pub has_external_incoming: bool,
+    /// true = Node hat mindestens eine ausgehende Verbindung nach ausserhalb der Gruppe
+    pub has_external_outgoing: bool,
+}
+```
+
+**Icon-Logik (UI):** Wenn beide Felder `true` sind → Bidirektional-Icon; nur `has_external_incoming` → Eingang-Icon; nur `has_external_outgoing` → Ausgang-Icon.
 
 ---
 

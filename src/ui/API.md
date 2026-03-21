@@ -43,6 +43,7 @@ Das `ui`-Modul enthält egui-UI-Komponenten (Menüs, Statusbar, Input-Handling, 
   - `post_load_dialog.rs` — Post-Load-Dialog (Auto-Erkennung von Heightmap/ZIP/Overview)
   - `save_overview_dialog.rs` — Dialog: Hintergrundbild als overview.jpg speichern
 - `segment_overlay.rs` — Segment-Rahmen und Lock-Icons als egui-Overlay (`SegmentOverlayEvent`, `render_segment_overlays()`)
+- `group_boundary_overlay.rs` — Boundary-Icons (Eingang/Ausgang/Bidirektional) ueber Nodes mit externen Verbindungen (`GroupBoundaryIcons`, `render_group_boundary_overlays()`)
 
 ## Funktionen
 ---
@@ -96,6 +97,68 @@ pub fn render_segment_overlays(
 
 - Entsperrt (`locked = false`): grauer Rahmen, offenes Schloss-Icon
 - Gesperrt (`locked = true`): gelber Rahmen, 15%-schwarze Fuellung, geschlossenes Schloss-Icon
+---
+
+### `GroupBoundaryIcons`
+
+Gecachte egui-Textur-Handles fuer die drei Boundary-Icon-Typen (Eingang, Ausgang, Bidirektional).
+Die Icons werden per SVG (usvg/resvg) als 32×32-RGBA-Texturen in egui geladen.
+
+```rust
+pub struct GroupBoundaryIcons {
+    pub entry: TextureHandle,        // Icon fuer Eingang-Nodes
+    pub exit: TextureHandle,         // Icon fuer Ausgang-Nodes
+    pub bidirectional: TextureHandle, // Icon fuer bidirektionale Nodes
+}
+```
+
+**Methoden:**
+
+```rust
+pub fn load(ctx: &egui::Context) -> Self
+```
+
+- Laedt und rasterisiert die drei SVG-Assets aus `assets/icons/group_entry.svg`, `group_exit.svg`, `group_bidirectional.svg`.
+- Soll einmal pro App-Lifetime aufgerufen werden (Lazy-Init beim ersten `update()`).
+
+---
+
+### `render_group_boundary_overlays`
+
+Zeichnet Boundary-Icons unterhalb der Nodes aller selektierten Segmente.
+
+Fuer jedes selektierte Segment werden per `SegmentRegistry::open_nodes()` die Boundary-Nodes ermittelt und mit dem passenden Icon markiert. Das Icon wird **unterhalb** des Nodes platziert (positiver Y-Offset), damit kein Z-Order-Konflikt mit dem Lock-Icon (oberhalb) entsteht. Das Overlay ist nur sichtbar wenn Nodes selektiert sind.
+
+```rust
+pub fn render_group_boundary_overlays(
+    painter: &egui::Painter,
+    rect: egui::Rect,
+    camera: &Camera2D,
+    viewport_size: Vec2,
+    registry: &SegmentRegistry,
+    road_map: &RoadMap,
+    selected_node_ids: &IndexSet<u64>,
+    icons: &GroupBoundaryIcons,
+    icon_size_px: f32,
+)
+```
+
+**Parameter:**
+- `painter` — egui-Painter fuer den Viewport
+- `rect` — Viewport-Rechteck in Screen-Koordinaten
+- `camera` — Kamera fuer Welt→Screen-Transformation
+- `viewport_size` — Viewport-Abmessungen in Pixeln
+- `registry` — Segment-Registry mit allen gespeicherten Segmenten
+- `road_map` — RoadMap fuer Node-Positionen und Verbindungs-Queries
+- `selected_node_ids` — Aktuell selektierte Node-IDs
+- `icons` — Gecachte Textur-Handles (via `GroupBoundaryIcons::load()`)
+- `icon_size_px` — Icon-Groesse in Pixeln (Minimum: 8 px)
+
+**Icon-Zuordnung:**
+- Eingang + Ausgang → Bidirektional-Icon
+- Nur Eingang → Eingang-Icon
+- Nur Ausgang → Ausgang-Icon
+
 ---
 
 ### `render_floating_menu`
