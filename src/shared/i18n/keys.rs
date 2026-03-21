@@ -137,17 +137,17 @@ pub enum I18nKey {
     OptSelectionStyleGradient,
     /// Tooltip: Markierungsstil
     OptSelectionStyleHelp,
-    /// Separator-Label: Doppelklick-Segment
+    /// Separator-Label: Doppelklick-Gruppe
     OptDoubleClickSegment,
     /// Checkbox: Bei Kreuzung stoppen
     OptSegmentStopAtJunction,
     /// Tooltip: Bei Kreuzung stoppen
     OptSegmentStopAtJunctionHelp,
-    /// Label: Max. Winkel Segmenterkennung
+    /// Label: Max. Winkel Gruppenerkennung
     OptSegmentMaxAngle,
-    /// Tooltip: Max. Winkel Segmenterkennung
+    /// Tooltip: Max. Winkel Gruppenerkennung
     OptSegmentMaxAngleHelp,
-    /// Schwacher Hinweistext: Segmenterkennung deaktiviert
+    /// Schwacher Hinweistext: Gruppenerkennung deaktiviert
     OptSegmentDisabled,
 
     // === Options-Dialog: Verbindungen ===
@@ -515,9 +515,9 @@ pub enum I18nKey {
     CtxRouteQuadratic,
     /// Eintrag "Bezier Grad 3"
     CtxRouteCubic,
-    /// Eintrag "Segment bearbeiten"
+    /// Eintrag "Gruppe bearbeiten"
     CtxEditSegment,
-    /// Eintrag "Als Segment gruppieren"
+    /// Eintrag "Als Gruppe zusammenfassen"
     CtxGroupAsSegment,
     /// Eintrag "Nodes verbinden"
     CtxConnectNodes,

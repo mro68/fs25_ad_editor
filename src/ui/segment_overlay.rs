@@ -1,4 +1,4 @@
-//! Segment-Overlay: Zeichnet Lock-Icons ueber selektierten Segment-Nodes.
+//! Gruppen-Overlay: Zeichnet Lock-Icons ueber selektierten Gruppen-Nodes.
 //!
 //! Fuer jeden selektierten Node wird geprueft, ob er zu einem gespeicherten Segment
 //! gehoert. Pro Segment wird maximal ein Schloss-Icon (ueber dem ersten selektierten
