@@ -70,6 +70,23 @@ pub fn map_intent_to_commands(state: &AppState, intent: AppIntent) -> Vec<AppCom
         } => {
             let max_distance = state.options.hitbox_radius();
 
+            // Pruefen ob der naechste Node zu einer Gruppe gehoert → Gruppen-Selektion
+            if let Some(rm) = state.road_map.as_deref() {
+                if let Some(hit) = rm.nearest_node(world_pos).filter(|h| h.distance <= max_distance) {
+                    if state.group_registry.find_first_by_node_id(hit.node_id).is_some() {
+                        return vec![
+                            AppCommand::SelectGroupByNearestNode {
+                                world_pos,
+                                max_distance,
+                                additive,
+                            },
+                            AppCommand::OpenGroupSettingsPopup { world_pos },
+                        ];
+                    }
+                }
+            }
+
+            // Fallback: normaler Segment-Walk
             vec![
                 AppCommand::SelectSegmentBetweenNearestIntersections {
                     world_pos,

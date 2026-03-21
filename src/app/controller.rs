@@ -102,6 +102,11 @@ impl AppController {
                 stop_at_junction,
                 max_angle_deg,
             ),
+            AppCommand::SelectGroupByNearestNode {
+                world_pos,
+                max_distance,
+                additive,
+            } => handlers::selection::select_group_nodes(state, world_pos, max_distance, additive),
             AppCommand::SelectNodesInRect { min, max, additive } => {
                 handlers::selection::select_in_rect(state, min, max, additive)
             }

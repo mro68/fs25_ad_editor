@@ -4,8 +4,7 @@
 ///
 /// Misst, wie stark die Richtung abknickt. Der Rueckgabewert liegt im Bereich [0, PI].
 pub fn angle_deviation(incoming: f32, outgoing: f32) -> f32 {
-    let diff = (outgoing - incoming + std::f32::consts::PI)
-        .rem_euclid(std::f32::consts::TAU)
+    let diff = (outgoing - incoming + std::f32::consts::PI).rem_euclid(std::f32::consts::TAU)
         - std::f32::consts::PI;
     diff.abs()
 }

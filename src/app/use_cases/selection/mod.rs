@@ -17,12 +17,14 @@
 /// - `move_nodes` — Verschieben selektierter Nodes
 /// - `helpers` — Gemeinsame Hilfsfunktionen
 mod helpers;
+mod group;
 mod lasso;
 mod move_nodes;
 mod pick;
 mod rect;
 mod segment;
 
+pub use group::select_group_by_nearest_node;
 pub use helpers::clear_selection;
 pub use lasso::select_nodes_in_lasso;
 pub use move_nodes::move_selected_nodes;

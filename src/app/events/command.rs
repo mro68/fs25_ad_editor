@@ -103,6 +103,12 @@ pub enum AppCommand {
         /// Max. Winkelabweichung in Grad (0.0 = nicht pruefen).
         max_angle_deg: f32,
     },
+    /// Alle Nodes einer Gruppe selektieren (identifiziert ueber Naehe zu world_pos)
+    SelectGroupByNearestNode {
+        world_pos: glam::Vec2,
+        max_distance: f32,
+        additive: bool,
+    },
     /// Nodes innerhalb eines Rechtecks selektieren
     SelectNodesInRect {
         min: glam::Vec2,
