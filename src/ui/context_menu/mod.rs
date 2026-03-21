@@ -145,7 +145,7 @@ pub fn render_context_menu(
             });
 
             // Pruefen ob mindestens 1 selektierter Node zu einer Gruppe gehoert
-            let selection_has_group_member = group_registry.map_or(false, |registry| {
+            let selection_has_group_member = group_registry.is_some_and(|registry| {
                 selected_node_ids
                     .iter()
                     .any(|&nid| !registry.groups_for_node(nid).is_empty())

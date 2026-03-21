@@ -300,11 +300,7 @@ impl GroupRegistry {
     /// gesamte Record aufgeloest (automatisches Dissolve).
     ///
     /// Gibt `true` zurueck wenn der Record noch existiert, `false` wenn aufgeloest.
-    pub fn remove_nodes_from_record(
-        &mut self,
-        record_id: u64,
-        nodes_to_remove: &[u64],
-    ) -> bool {
+    pub fn remove_nodes_from_record(&mut self, record_id: u64, nodes_to_remove: &[u64]) -> bool {
         // Benoetigte Daten zuerst klonen, damit der immutable Borrow endet
         // bevor die mutierbaren Methoden aufgerufen werden.
         let (old_node_ids, old_orig_pos) = match self.records.get(&record_id) {
@@ -312,8 +308,7 @@ impl GroupRegistry {
             None => return false,
         };
 
-        let remove_set: std::collections::HashSet<u64> =
-            nodes_to_remove.iter().copied().collect();
+        let remove_set: std::collections::HashSet<u64> = nodes_to_remove.iter().copied().collect();
 
         // Tatsaechlich vorhandene Nodes aus remove_set bestimmen + Reverse-Index bereinigen
         let actually_removed: Vec<u64> = old_node_ids
@@ -326,7 +321,7 @@ impl GroupRegistry {
         // node_ids und original_positions synchron filtern
         let pairs: Vec<(u64, Vec2)> = old_node_ids
             .into_iter()
-            .zip(old_orig_pos.into_iter())
+            .zip(old_orig_pos)
             .filter(|(id, _)| !remove_set.contains(id))
             .collect();
 
@@ -464,10 +459,8 @@ impl GroupRegistry {
 
                     // Maximale Winkelabweichung: interner Durchschnittswinkel vs. externe Winkel
                     let max_dev = {
-                        let int_angles =
-                            internal_angles.get(&id).map(Vec::as_slice).unwrap_or(&[]);
-                        let ext_angles =
-                            external_angles.get(&id).map(Vec::as_slice).unwrap_or(&[]);
+                        let int_angles = internal_angles.get(&id).map(Vec::as_slice).unwrap_or(&[]);
+                        let ext_angles = external_angles.get(&id).map(Vec::as_slice).unwrap_or(&[]);
                         if !int_angles.is_empty() && !ext_angles.is_empty() {
                             // Zirkulaerer Durchschnitt der internen Winkel via Einheitsvektoren
                             let (sin_sum, cos_sum) = int_angles
@@ -782,5 +775,110 @@ mod registry_tests {
 
         assert!(registry.is_empty());
         assert_eq!(registry.len(), 0);
+    }
+
+    // --- Tests fuer remove_nodes_from_record ---
+
+    /// Prüft, dass Nodes korrekt aus einem Record entfernt werden.
+    #[test]
+    fn remove_nodes_from_record_entfernt_subset() {
+        let mut registry = GroupRegistry::new();
+        let positions = vec![Vec2::ZERO, Vec2::X, Vec2::Y, Vec2::ONE];
+        registry.register(make_test_record(0, vec![1, 2, 3, 4], positions, false));
+
+        let still_alive = registry.remove_nodes_from_record(0, &[2, 3]);
+        assert!(
+            still_alive,
+            "Record sollte bestehen bleiben (2 Nodes uebrig)"
+        );
+
+        let record = registry.get(0).expect("Record vorhanden");
+        assert_eq!(record.node_ids, vec![1, 4]);
+        assert_eq!(record.original_positions.len(), 2);
+
+        // Reverse-Index: entfernte Nodes sollten weg sein
+        assert!(registry.groups_for_node(2).is_empty());
+        assert!(registry.groups_for_node(3).is_empty());
+        // Verbleibende Nodes weiterhin zugeordnet
+        assert_eq!(registry.groups_for_node(1), vec![0]);
+        assert_eq!(registry.groups_for_node(4), vec![0]);
+    }
+
+    /// Prüft, dass der Record aufgeloest wird wenn weniger als 2 Nodes verbleiben.
+    #[test]
+    fn remove_nodes_from_record_dissolve_bei_weniger_als_2() {
+        let mut registry = GroupRegistry::new();
+        let positions = vec![Vec2::ZERO, Vec2::X, Vec2::Y];
+        registry.register(make_test_record(0, vec![1, 2, 3], positions, false));
+
+        let still_alive = registry.remove_nodes_from_record(0, &[1, 2]);
+        assert!(
+            !still_alive,
+            "Record sollte aufgeloest worden sein (<2 Nodes)"
+        );
+        assert!(
+            registry.get(0).is_none(),
+            "Record darf nicht mehr existieren"
+        );
+
+        // Alle Nodes aus dem Reverse-Index entfernt
+        assert!(registry.groups_for_node(1).is_empty());
+        assert!(registry.groups_for_node(2).is_empty());
+        assert!(registry.groups_for_node(3).is_empty());
+    }
+
+    /// Prüft, dass nicht-existierende Nodes im remove-Set keine Probleme verursachen.
+    #[test]
+    fn remove_nodes_from_record_ignoriert_unbekannte_nodes() {
+        let mut registry = GroupRegistry::new();
+        let positions = vec![Vec2::ZERO, Vec2::X, Vec2::Y];
+        registry.register(make_test_record(0, vec![1, 2, 3], positions, false));
+
+        let still_alive = registry.remove_nodes_from_record(0, &[99, 100]);
+        assert!(still_alive, "Record bleibt (keine echten Entfernungen)");
+
+        let record = registry.get(0).expect("Record vorhanden");
+        assert_eq!(record.node_ids.len(), 3, "Keine Nodes entfernt");
+    }
+
+    /// Prüft, dass remove_nodes_from_record false bei unbekannter Record-ID liefert.
+    #[test]
+    fn remove_nodes_from_record_unbekannte_id() {
+        let mut registry = GroupRegistry::new();
+        let result = registry.remove_nodes_from_record(42, &[1, 2]);
+        assert!(!result, "Nicht-existierende ID sollte false ergeben");
+    }
+
+    /// Prüft, dass der Boundary-Cache nach Node-Entfernung invalidiert wird.
+    #[test]
+    fn remove_nodes_from_record_invalidiert_boundary_cache() {
+        let mut map = RoadMap::new(4);
+        map.add_node(MapNode::new(1, Vec2::new(0.0, 0.0), NodeFlag::Regular));
+        map.add_node(MapNode::new(2, Vec2::new(10.0, 0.0), NodeFlag::Regular));
+        map.add_node(MapNode::new(3, Vec2::new(20.0, 0.0), NodeFlag::Regular));
+        map.add_node(MapNode::new(4, Vec2::new(30.0, 0.0), NodeFlag::Regular));
+
+        let mut registry = GroupRegistry::new();
+        let positions = vec![
+            Vec2::new(0.0, 0.0),
+            Vec2::new(10.0, 0.0),
+            Vec2::new(20.0, 0.0),
+            Vec2::new(30.0, 0.0),
+        ];
+        registry.register(make_test_record(0, vec![1, 2, 3, 4], positions, false));
+
+        // Cache aufwaermen
+        registry.warm_boundary_cache(&map);
+        assert!(
+            registry.boundary_cache_for(0).is_some(),
+            "Cache sollte nach warm vorhanden sein"
+        );
+
+        // Node entfernen → Cache muss invalidiert sein
+        registry.remove_nodes_from_record(0, &[3]);
+        assert!(
+            registry.boundary_cache_for(0).is_none(),
+            "Cache muss nach Node-Entfernung invalidiert sein"
+        );
     }
 }

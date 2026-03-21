@@ -296,6 +296,9 @@ pub struct BoundaryInfo {
     /// true = mindestens eine Verbindung fuehrt zu einem Node ausserhalb JEDER registrierten Gruppe
     pub has_external_connection: bool,
     pub direction: BoundaryDirection,
+    /// Maximale Winkelabweichung zwischen interner Fahrtrichtung und externer Verbindung (Radiant, 0..PI).
+    /// `None` wenn keine internen Verbindungen vorhanden (Winkelvergleich nicht moeglich).
+    pub max_external_angle_deviation: Option<f32>,
 }
 ```
 
@@ -528,6 +531,7 @@ pub fn register(&mut self, record: GroupRecord) -> u64 // Registriert neu erstel
 pub fn next_id(&mut self) -> u64 // Erzeugt naechste auto-increment ID (vor Konstruktion eines Records)
 pub fn get(&self, record_id: u64) -> Option<&GroupRecord> // Findet Record nach ID
 pub fn remove(&mut self, record_id: u64) // Loescht Record
+pub fn remove_nodes_from_record(&mut self, record_id: u64, nodes_to_remove: &[u64]) -> bool // Entfernt Nodes aus Record; loest Record automatisch auf wenn < 2 Nodes verbleiben
 pub fn find_by_node_ids(&self, node_ids: &IndexSet<u64>) -> Vec<&GroupRecord> // Alle Records mit mind. einer Node-ID
 pub fn find_first_by_node_id(&self, node_id: u64) -> Option<&GroupRecord> // Erstes Record mit dieser Node
 pub fn is_group_valid(&self, record: &GroupRecord, road_map: &RoadMap) -> bool // Validitaetspruefung
@@ -733,6 +737,11 @@ pub enum AppIntent {
     /// Segment aufloesen nach Nutzer-Bestätigung im Confirm-Dialog
     DissolveGroupConfirmed { segment_id: u64 },
 
+    /// Selektierte zusammenhaengende Nodes als neue Gruppe in der Registry registrieren
+    GroupSelectionAsGroupRequested,
+    /// Selektierte Nodes aus ihrer Gruppe entfernen (Nodes bleiben in RoadMap erhalten)
+    RemoveSelectedNodesFromGroupRequested,
+
     // Extras
     /// Alle erkannten Farmland-Polygone als Wegpunkt-Ring nachzeichnen
     TraceAllFieldsRequested,
@@ -740,10 +749,6 @@ pub enum AppIntent {
     // Viewport (erweitert)
     /// Kamera auf die Bounding Box der Selektion zoomen
     ZoomToSelectionBoundsRequested,
-
-    // Segment-Einstellungs-Popup
-    /// Segment-Einstellungs-Popup an Weltposition oeffnen (per Doppelklick)
-    OpenSegmentSettingsPopupRequested { world_pos: glam::Vec2 },
 
     // Nicht-destruktives Gruppen-Editing
     /// Gruppen-Edit-Modus starten (entsperrt Nodes, legt Undo-Snapshot an)
@@ -775,6 +780,7 @@ pub enum AppCommand {
     // Selektion
     SelectNearestNode { world_pos: glam::Vec2, max_distance: f32, additive: bool, extend_path: bool },
     SelectSegmentBetweenNearestIntersections { world_pos: glam::Vec2, max_distance: f32, additive: bool, stop_at_junction: bool, max_angle_deg: f32 },
+    SelectGroupByNearestNode { world_pos: glam::Vec2, max_distance: f32, additive: bool },
     SelectNodesInRect { min: glam::Vec2, max: glam::Vec2, additive: bool },
     SelectNodesInLasso { polygon: Vec<glam::Vec2>, additive: bool },
     ClearSelection,
@@ -900,14 +906,18 @@ pub enum AppCommand {
     OpenDissolveConfirmDialog { segment_id: u64 },
     /// Segment aufloesen (Gruppen-Record entfernen, Nodes beibehalten)
     DissolveGroup { segment_id: u64 },
+    /// Selektierte zusammenhaengende Nodes als neue Gruppe registrieren
+    GroupSelectionAsGroup,
+    /// Selektierte Nodes aus ihren zugehoerigen Gruppen entfernen
+    RemoveSelectedNodesFromGroups,
 
     // Extras
     /// Alle Farmland-Polygone als Wegpunkt-Ring nachzeichnen (Batch-Operation)
     TraceAllFields,
 
-    // Segment-Einstellungs-Popup
-    /// Segment-Einstellungs-Popup an angegebener Welt-Position oeffnen
-    OpenSegmentSettingsPopup { world_pos: glam::Vec2 },
+    // Gruppen-Einstellungs-Popup
+    /// Gruppen-Einstellungs-Popup an angegebener Welt-Position oeffnen
+    OpenGroupSettingsPopup { world_pos: glam::Vec2 },
 
     // Nicht-destruktives Gruppen-Editing
     /// Gruppen-Edit-Modus nicht-destruktiv starten
