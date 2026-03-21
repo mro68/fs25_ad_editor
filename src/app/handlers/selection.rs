@@ -45,6 +45,18 @@ pub fn select_segment(
     helpers::record_selection_if_changed(state, old_selected, old_anchor);
 }
 
+/// Selektiert alle Nodes der Gruppe, zu der der naechste Node gehoert.
+pub fn select_group_nodes(
+    state: &mut AppState,
+    world_pos: glam::Vec2,
+    max_distance: f32,
+    additive: bool,
+) {
+    let (old_selected, old_anchor) = helpers::capture_selection_snapshot(state);
+    use_cases::selection::select_group_by_nearest_node(state, world_pos, max_distance, additive);
+    helpers::record_selection_if_changed(state, old_selected, old_anchor);
+}
+
 /// Selektiert Nodes innerhalb eines Rechtecks.
 pub fn select_in_rect(state: &mut AppState, min: glam::Vec2, max: glam::Vec2, additive: bool) {
     use_cases::selection::select_nodes_in_rect(state, min, max, additive);
