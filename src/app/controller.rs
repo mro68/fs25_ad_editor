@@ -225,9 +225,7 @@ impl AppController {
             AppCommand::DecreaseRouteToolSegmentLength => {
                 handlers::route_tool::decrease_segment_length(state)
             }
-            AppCommand::EditGroup { record_id } => {
-                handlers::editing::edit_group(state, record_id)
-            }
+            AppCommand::EditGroup { record_id } => handlers::editing::edit_group(state, record_id),
 
             // === Dialoge & Anwendungssteuerung ===
             AppCommand::RequestExit => handlers::dialog::request_exit(state),

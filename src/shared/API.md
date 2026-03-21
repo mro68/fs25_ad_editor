@@ -188,8 +188,6 @@ pub struct EditorOptions {
     pub reconnect_on_delete: bool,
     /// true = bestehende Verbindung beim Platzieren splitten
     pub split_connection_on_place: bool,
-    /// true = Route-Tool-Ergebnisse automatisch als Segment registrieren.
-    pub auto_create_segment: bool,
     // Kamera (erweitert)
     /// Minimaler Zoom-Faktor (konfig, ueberschreibt Camera2D::ZOOM_MIN)
     pub camera_zoom_min: f32,
@@ -207,6 +205,8 @@ pub struct EditorOptions {
     // Segment-Overlay
     /// Schriftgroesse des Lock-Icons im Segment-Overlay in Pixeln
     pub segment_lock_icon_size_px: f32,
+    /// Wenn aktiviert, Icons an ALLEN Gruppen-Randknoten (sonst nur Aussengrenzen)
+    pub show_all_group_boundaries: bool,
     // Uebersichtskarte
     /// Layer-Optionen fuer Uebersichtskarten-Generierung
     pub overview_layers: OverviewLayerOptions,

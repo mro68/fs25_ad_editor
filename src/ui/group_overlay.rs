@@ -9,7 +9,7 @@ use eframe::egui;
 use glam::Vec2;
 use indexmap::IndexSet;
 
-use crate::app::{Camera2D, RoadMap, GroupRegistry};
+use crate::app::{Camera2D, GroupRegistry, RoadMap};
 
 /// Event, der vom Segment-Overlay ausgeloest wird.
 #[derive(Debug, Clone)]

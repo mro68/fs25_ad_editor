@@ -300,7 +300,6 @@ pub fn render_edit_panel(
   distance_wheel_step_m: f32,
   active_tool: EditorTool,
   tool_manager: Option<&mut ToolManager>,
-  auto_create_segment: &mut bool,
   panel_pos: Option<egui::Pos2>,
   group_editing: Option<&GroupEditState>,
 ) -> Vec<AppIntent>

@@ -8,7 +8,7 @@ use eframe::egui::{self, ColorImage, TextureHandle, TextureOptions};
 use glam::Vec2;
 use indexmap::IndexSet;
 
-use crate::app::{BoundaryNode, Camera2D, RoadMap, GroupRegistry};
+use crate::app::{BoundaryNode, Camera2D, GroupRegistry, RoadMap};
 
 const ICON_SIZE_PX: u32 = 32;
 

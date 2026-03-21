@@ -30,7 +30,6 @@ pub fn render_edit_panel(
     distance_wheel_step_m: f32,
     active_tool: EditorTool,
     tool_manager: Option<&mut ToolManager>,
-    auto_create_segment: &mut bool,
     panel_pos: Option<egui::Pos2>,
     group_editing: Option<&GroupEditState>,
 ) -> Vec<AppIntent> {
@@ -65,7 +64,6 @@ pub fn render_edit_panel(
                 default_direction,
                 default_priority,
                 distance_wheel_step_m,
-                auto_create_segment,
                 panel_pos,
                 &mut events,
             );
@@ -270,7 +268,6 @@ fn render_route_tool_panel(
     default_direction: ConnectionDirection,
     default_priority: ConnectionPriority,
     distance_wheel_step_m: f32,
-    auto_create_segment: &mut bool,
     panel_pos: Option<egui::Pos2>,
     events: &mut Vec<AppIntent>,
 ) {
@@ -319,8 +316,6 @@ fn render_route_tool_panel(
         }
 
         ui.add_space(6.0);
-
-        ui.checkbox(auto_create_segment, "Gruppe erstellen");
 
         if let Some(tool) = tool_manager.active_tool_mut() {
             let changed = tool.render_config(ui, distance_wheel_step_m);

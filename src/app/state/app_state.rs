@@ -1,5 +1,5 @@
-use crate::app::history::Snapshot;
 use crate::app::group_registry::GroupRegistry;
+use crate::app::history::Snapshot;
 use crate::app::CommandLog;
 use crate::core::{Connection, FieldPolygon, MapMarker, MapNode, RoadMap};
 use crate::shared::EditorOptions;
