@@ -47,7 +47,6 @@ pub fn move_selected_nodes(state: &mut AppState, delta_world: glam::Vec2) {
         let locked_segment_ids: Vec<u64> = state
             .segment_registry
             .records()
-            .iter()
             .filter(|r| r.locked && r.node_ids.iter().any(|id| move_ids.contains(id)))
             .map(|r| r.id)
             .collect();

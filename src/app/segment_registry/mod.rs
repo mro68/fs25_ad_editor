@@ -18,18 +18,25 @@ pub use types::*;
 
 use crate::core::RoadMap;
 use glam::Vec2;
+use std::collections::HashMap;
 
 /// In-Session-Registry aller erstellten Segmente.
 ///
 /// Ermoeglicht das nachtraegliche Bearbeiten von Segmenten, indem die
 /// Tool-Parameter beim Erstellen gespeichert und beim Bearbeiten
 /// wiederhergestellt werden.
+///
+/// Interne Speicherung als `HashMap<u64, SegmentRecord>` fuer O(1)-Zugriffe.
+/// Ein Reverse-Index `node_to_records` ermoeglicht effiziente Node→Segment-Abfragen.
 #[derive(Debug, Clone, Default)]
 pub struct SegmentRegistry {
-    records: Vec<SegmentRecord>,
+    /// Primaere Speicherstruktur: Record-ID → SegmentRecord.
+    records: HashMap<u64, SegmentRecord>,
     next_id: u64,
     /// Record-ID, die von automatischer Invalidierung ausgenommen ist (aktiver Group-Edit).
     edit_guard_id: Option<u64>,
+    /// Reverse-Index: Node-ID → Liste der zugehoerigen Record-IDs.
+    node_to_records: HashMap<u64, Vec<u64>>,
 }
 
 impl SegmentRegistry {
@@ -38,10 +45,31 @@ impl SegmentRegistry {
         Self::default()
     }
 
+    /// Fuegt alle Node-IDs eines Records zum Reverse-Index hinzu.
+    fn add_to_index(&mut self, record_id: u64, node_ids: &[u64]) {
+        for &nid in node_ids {
+            self.node_to_records.entry(nid).or_default().push(record_id);
+        }
+    }
+
+    /// Entfernt alle Node-IDs eines Records aus dem Reverse-Index.
+    fn remove_from_index(&mut self, record_id: u64, node_ids: &[u64]) {
+        for &nid in node_ids {
+            if let Some(vec) = self.node_to_records.get_mut(&nid) {
+                vec.retain(|&id| id != record_id);
+                if vec.is_empty() {
+                    self.node_to_records.remove(&nid);
+                }
+            }
+        }
+    }
+
     /// Registriert ein neues Segment und gibt die vergebene ID zurueck.
     pub fn register(&mut self, record: SegmentRecord) -> u64 {
         let id = record.id;
-        self.records.push(record);
+        let node_ids_clone: Vec<u64> = record.node_ids.clone();
+        self.records.insert(id, record);
+        self.add_to_index(id, &node_ids_clone);
         id
     }
 
@@ -54,20 +82,34 @@ impl SegmentRegistry {
 
     /// Gibt den Record mit der angegebenen ID zurueck (falls vorhanden).
     pub fn get(&self, record_id: u64) -> Option<&SegmentRecord> {
-        self.records.iter().find(|r| r.id == record_id)
+        self.records.get(&record_id)
     }
 
     /// Entfernt den Record mit der angegebenen ID.
     pub fn remove(&mut self, record_id: u64) {
-        self.records.retain(|r| r.id != record_id);
+        if let Some(record) = self.records.get(&record_id) {
+            let node_ids: Vec<u64> = record.node_ids.clone();
+            self.remove_from_index(record_id, &node_ids);
+        }
+        self.records.remove(&record_id);
     }
 
     /// Gibt alle Records zurueck, die mindestens einen der angegebenen Node-IDs enthalten.
     pub fn find_by_node_ids(&self, node_ids: &indexmap::IndexSet<u64>) -> Vec<&SegmentRecord> {
-        self.records
-            .iter()
-            .filter(|r| r.node_ids.iter().any(|nid| node_ids.contains(nid)))
-            .collect()
+        let mut seen_ids = std::collections::HashSet::new();
+        let mut result = Vec::new();
+        for &nid in node_ids {
+            if let Some(record_ids) = self.node_to_records.get(&nid) {
+                for &rid in record_ids {
+                    if seen_ids.insert(rid) {
+                        if let Some(record) = self.records.get(&rid) {
+                            result.push(record);
+                        }
+                    }
+                }
+            }
+        }
+        result
     }
 
     /// Entfernt alle Records, die mindestens einen der angegebenen Node-IDs enthalten.
@@ -75,19 +117,28 @@ impl SegmentRegistry {
     /// Wird aufgerufen wenn Nodes manuell geloescht werden (z.B. Delete-Taste).
     /// Records, deren ID dem aktiven `edit_guard_id` entspricht, werden nie invalidiert.
     pub fn invalidate_by_node_ids(&mut self, node_ids: &[u64]) {
-        let id_set: std::collections::HashSet<u64> = node_ids.iter().copied().collect();
-        self.records.retain(|r| {
-            // Aktiv bearbeiteten Record nie invalidieren
-            if Some(r.id) == self.edit_guard_id {
-                return true;
+        // IDs der zu entfernenden Records sammeln (ohne edit_guard)
+        let mut to_remove: std::collections::HashSet<u64> = std::collections::HashSet::new();
+        for &nid in node_ids {
+            if let Some(record_ids) = self.node_to_records.get(&nid) {
+                for &rid in record_ids {
+                    if Some(rid) != self.edit_guard_id {
+                        to_remove.insert(rid);
+                    }
+                }
             }
-            !r.node_ids.iter().any(|nid| id_set.contains(nid))
-        });
+        }
+        for rid in to_remove {
+            self.remove(rid);
+        }
     }
 
     /// Findet den ersten Record, der den angegebenen Node enthaelt.
     pub fn find_first_by_node_id(&self, node_id: u64) -> Option<&SegmentRecord> {
-        self.records.iter().find(|r| r.node_ids.contains(&node_id))
+        self.node_to_records
+            .get(&node_id)
+            .and_then(|ids| ids.first())
+            .and_then(|id| self.records.get(id))
     }
 
     /// Prueft ob ein Segment noch gueltig ist (Nodes existieren und Positionen unveraendert).
@@ -108,23 +159,27 @@ impl SegmentRegistry {
             })
     }
 
-    /// Gibt alle Records als Slice zurueck.
-    pub fn records(&self) -> &[SegmentRecord] {
-        &self.records
+    /// Gibt alle Records als Iterator zurueck.
+    pub fn records(&self) -> impl Iterator<Item = &SegmentRecord> {
+        self.records.values()
     }
 
-    /// Gibt eine veraenderliche Referenz auf alle Records zurueck.
-    pub fn records_mut(&mut self) -> &mut [SegmentRecord] {
-        &mut self.records
+    /// Gibt eine veraenderliche Referenz auf alle Records als Iterator zurueck.
+    pub fn records_mut(&mut self) -> impl Iterator<Item = &mut SegmentRecord> {
+        self.records.values_mut()
+    }
+
+    /// Gibt eine Referenz auf die interne HashMap zurueck.
+    pub fn records_map(&self) -> &HashMap<u64, SegmentRecord> {
+        &self.records
     }
 
     /// Findet alle Segment-IDs, zu denen ein Node gehoert.
     pub fn segments_for_node(&self, node_id: u64) -> Vec<u64> {
-        self.records
-            .iter()
-            .filter(|r| r.node_ids.contains(&node_id))
-            .map(|r| r.id)
-            .collect()
+        self.node_to_records
+            .get(&node_id)
+            .cloned()
+            .unwrap_or_default()
     }
 
     /// Sammelt alle Node-IDs von locked Segments, die mindestens einen der
@@ -133,14 +188,19 @@ impl SegmentRegistry {
     /// Wird bei jedem Drag-Update aufgerufen — intern HashSet fuer O(1)-Lookup.
     pub fn expand_locked_selection(&self, selected_nodes: &[u64]) -> Vec<u64> {
         use std::collections::HashSet;
-        let selected_set: HashSet<u64> = selected_nodes.iter().copied().collect();
         let mut expanded: HashSet<u64> = HashSet::new();
-        for record in &self.records {
-            if !record.locked {
-                continue;
-            }
-            if record.node_ids.iter().any(|id| selected_set.contains(id)) {
-                expanded.extend(record.node_ids.iter().copied());
+        let mut processed_segments: HashSet<u64> = HashSet::new();
+        for &nid in selected_nodes {
+            if let Some(record_ids) = self.node_to_records.get(&nid) {
+                for &rid in record_ids {
+                    if processed_segments.insert(rid) {
+                        if let Some(record) = self.records.get(&rid) {
+                            if record.locked {
+                                expanded.extend(record.node_ids.iter().copied());
+                            }
+                        }
+                    }
+                }
             }
         }
         expanded.into_iter().collect()
@@ -184,8 +244,7 @@ impl SegmentRegistry {
     /// Gibt `false` zurueck wenn das Segment nicht existiert.
     pub fn is_locked(&self, segment_id: u64) -> bool {
         self.records
-            .iter()
-            .find(|r| r.id == segment_id)
+            .get(&segment_id)
             .map(|r| r.locked)
             .unwrap_or(false)
     }
@@ -199,6 +258,7 @@ impl SegmentRegistry {
 
     /// Aktualisiert einen bestehenden Record in-place (ID und locked-Status bleiben erhalten).
     ///
+    /// Passt den Reverse-Index an die neuen Node-IDs an.
     /// Gibt `false` zurueck wenn kein Record mit dieser ID existiert.
     pub fn update_record(
         &mut self,
@@ -206,19 +266,26 @@ impl SegmentRegistry {
         node_ids: Vec<u64>,
         original_positions: Vec<glam::Vec2>,
     ) -> bool {
-        if let Some(record) = self.get_mut(record_id) {
-            record.node_ids = node_ids;
+        // Alte node_ids klonen bevor der Borrow beginnt
+        let old_ids = match self.records.get(&record_id) {
+            Some(r) => r.node_ids.clone(),
+            None => return false,
+        };
+        // Record aktualisieren
+        if let Some(record) = self.records.get_mut(&record_id) {
+            record.node_ids = node_ids.clone();
             record.original_positions = original_positions;
             record.marker_node_ids.clear();
-            true
-        } else {
-            false
         }
+        // Reverse-Index aktualisieren
+        self.remove_from_index(record_id, &old_ids);
+        self.add_to_index(record_id, &node_ids);
+        true
     }
 
     /// Gibt eine mutable Referenz auf den Record mit der angegebenen ID zurueck.
     fn get_mut(&mut self, record_id: u64) -> Option<&mut SegmentRecord> {
-        self.records.iter_mut().find(|r| r.id == record_id)
+        self.records.get_mut(&record_id)
     }
 
     /// Ermittelt die Boundary-Nodes eines Segments (Nodes mit externen Verbindungen).
@@ -244,7 +311,7 @@ impl SegmentRegistry {
         segment_id: u64,
         road_map: &RoadMap,
     ) -> Option<(Vec2, Vec2)> {
-        let record = self.records.iter().find(|r| r.id == segment_id)?;
+        let record = self.records.get(&segment_id)?;
         if record.node_ids.is_empty() {
             return None;
         }
