@@ -31,23 +31,15 @@ pub fn group_selection(state: &mut AppState) {
         None => return,
     };
     let selected_ids = &state.selection.selected_node_ids;
-    let ordered_ids = match road_map.ordered_chain_nodes(selected_ids) {
-        Some(ids) => ids,
-        None => return,
-    };
 
-    let start_id = *ordered_ids.first().unwrap();
-    let end_id = *ordered_ids.last().unwrap();
-    let start_pos = match road_map.nodes.get(&start_id) {
-        Some(n) => n.position,
-        None => return,
-    };
-    let end_pos = match road_map.nodes.get(&end_id) {
-        Some(n) => n.position,
-        None => return,
-    };
+    // Nodes muessen einen zusammenhaengenden Subgraphen bilden (keine lineare Kette noetig)
+    if !road_map.is_connected_subgraph(selected_ids) {
+        return;
+    }
 
-    let original_positions: Vec<_> = ordered_ids
+    let node_ids: Vec<u64> = selected_ids.iter().copied().collect();
+
+    let original_positions: Vec<_> = node_ids
         .iter()
         .filter_map(|id| road_map.nodes.get(id).map(|n| n.position))
         .collect();
@@ -55,9 +47,9 @@ pub fn group_selection(state: &mut AppState) {
     let record_id = state.segment_registry.next_id();
     let record = SegmentRecord {
         id: record_id,
-        node_ids: ordered_ids,
-        start_anchor: ToolAnchor::ExistingNode(start_id, start_pos),
-        end_anchor: ToolAnchor::ExistingNode(end_id, end_pos),
+        node_ids,
+        start_anchor: ToolAnchor::NewPosition(glam::Vec2::ZERO),
+        end_anchor: ToolAnchor::NewPosition(glam::Vec2::ZERO),
         kind: SegmentKind::Manual {
             base: SegmentBase {
                 direction: state.editor.default_direction,

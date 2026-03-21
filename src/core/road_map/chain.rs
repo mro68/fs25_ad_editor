@@ -125,9 +125,15 @@ impl RoadMap {
                 continue;
             }
             for conn in self.connections.values() {
-                if conn.start_id == current && node_ids.contains(&conn.end_id) && !visited.contains(&conn.end_id) {
+                if conn.start_id == current
+                    && node_ids.contains(&conn.end_id)
+                    && !visited.contains(&conn.end_id)
+                {
                     stack.push(conn.end_id);
-                } else if conn.end_id == current && node_ids.contains(&conn.start_id) && !visited.contains(&conn.start_id) {
+                } else if conn.end_id == current
+                    && node_ids.contains(&conn.start_id)
+                    && !visited.contains(&conn.start_id)
+                {
                     stack.push(conn.start_id);
                 }
             }
@@ -158,7 +164,14 @@ mod tests {
         for &end in &[2, 3, 4] {
             let start_pos = glam::Vec2::new(10.0, 0.0);
             let end_pos = glam::Vec2::new(end as f32 * 10.0, 0.0);
-            map.add_connection(Connection::new(1, end, ConnectionDirection::Regular, ConnectionPriority::Regular, start_pos, end_pos));
+            map.add_connection(Connection::new(
+                1,
+                end,
+                ConnectionDirection::Regular,
+                ConnectionPriority::Regular,
+                start_pos,
+                end_pos,
+            ));
         }
         map
     }
@@ -204,12 +217,23 @@ mod tests {
         // Lineare Kette: 1 → 2 → 3 → 4
         let mut map = RoadMap::new(3);
         for id in 1..=4 {
-            map.add_node(MapNode::new(id, glam::Vec2::new(id as f32, 0.0), NodeFlag::Regular));
+            map.add_node(MapNode::new(
+                id,
+                glam::Vec2::new(id as f32, 0.0),
+                NodeFlag::Regular,
+            ));
         }
         for start in 1..=3 {
             let start_pos = glam::Vec2::new(start as f32, 0.0);
             let end_pos = glam::Vec2::new((start + 1) as f32, 0.0);
-            map.add_connection(Connection::new(start, start + 1, ConnectionDirection::Regular, ConnectionPriority::Regular, start_pos, end_pos));
+            map.add_connection(Connection::new(
+                start,
+                start + 1,
+                ConnectionDirection::Regular,
+                ConnectionPriority::Regular,
+                start_pos,
+                end_pos,
+            ));
         }
         let ids: IndexSet<u64> = [1, 2, 3, 4].into_iter().collect();
         assert!(map.is_connected_subgraph(&ids));
