@@ -109,6 +109,11 @@ pub enum SegmentKind {
         /// Gemeinsame Basis-Parameter
         base: SegmentBase,
     },
+    /// Manuell gruppierte Nodes (kein Tool-Hintergrund).
+    Manual {
+        /// Gemeinsame Basis-Parameter
+        base: SegmentBase,
+    },
     /// Parallelversatz einer selektierten Kette (ohne S-Kurven-Anbindung).
     RouteOffset {
         /// Geordnete Positionen der Quell-Kette
@@ -156,18 +161,25 @@ impl SegmentKind {
     ///
     /// Muss mit der Registrierungsreihenfolge in `ToolManager::new()` uebereinstimmen —
     /// abgesichert durch den Unit-Test `tool_index_stimmt_mit_tool_manager_reihenfolge_ueberein`.
-    pub fn tool_index(&self) -> usize {
+    /// Gibt `None` fuer `Manual`-Segmente zurueck, die keinem Tool zugeordnet sind.
+    pub fn tool_index(&self) -> Option<usize> {
         match self {
-            SegmentKind::Straight { .. } => TOOL_INDEX_STRAIGHT,
-            SegmentKind::CurveQuad { .. } => TOOL_INDEX_CURVE_QUAD,
-            SegmentKind::CurveCubic { .. } => TOOL_INDEX_CURVE_CUBIC,
-            SegmentKind::Spline { .. } => TOOL_INDEX_SPLINE,
-            SegmentKind::SmoothCurve { .. } => TOOL_INDEX_SMOOTH_CURVE,
-            SegmentKind::Bypass { .. } => TOOL_INDEX_BYPASS,
-            SegmentKind::Parking { .. } => TOOL_INDEX_PARKING,
-            SegmentKind::FieldBoundary { .. } => TOOL_INDEX_FIELD_BOUNDARY,
-            SegmentKind::RouteOffset { .. } => TOOL_INDEX_ROUTE_OFFSET,
+            SegmentKind::Straight { .. } => Some(TOOL_INDEX_STRAIGHT),
+            SegmentKind::CurveQuad { .. } => Some(TOOL_INDEX_CURVE_QUAD),
+            SegmentKind::CurveCubic { .. } => Some(TOOL_INDEX_CURVE_CUBIC),
+            SegmentKind::Spline { .. } => Some(TOOL_INDEX_SPLINE),
+            SegmentKind::SmoothCurve { .. } => Some(TOOL_INDEX_SMOOTH_CURVE),
+            SegmentKind::Bypass { .. } => Some(TOOL_INDEX_BYPASS),
+            SegmentKind::Parking { .. } => Some(TOOL_INDEX_PARKING),
+            SegmentKind::FieldBoundary { .. } => Some(TOOL_INDEX_FIELD_BOUNDARY),
+            SegmentKind::RouteOffset { .. } => Some(TOOL_INDEX_ROUTE_OFFSET),
+            SegmentKind::Manual { .. } => None,
         }
+    }
+
+    /// Gibt `true` zurueck wenn das Segment von einem Route-Tool erstellt wurde.
+    pub fn is_tool_backed(&self) -> bool {
+        !matches!(self, SegmentKind::Manual { .. })
     }
 }
 
@@ -238,5 +250,20 @@ mod tests {
             names[TOOL_INDEX_FIELD_BOUNDARY], "Feld erkennen",
             "TOOL_INDEX_FIELD_BOUNDARY zeigt nicht auf FieldBoundaryTool"
         );
+    }
+
+    /// Stellt sicher, dass `Manual`-Segmente keinen Tool-Index haben und nicht tool-backed sind.
+    #[test]
+    fn manual_segment_hat_keinen_tool_index() {
+        use crate::core::{ConnectionDirection, ConnectionPriority};
+        let kind = SegmentKind::Manual {
+            base: SegmentBase {
+                direction: ConnectionDirection::Dual,
+                priority: ConnectionPriority::Regular,
+                max_segment_length: 10.0,
+            },
+        };
+        assert_eq!(kind.tool_index(), None);
+        assert!(!kind.is_tool_backed());
     }
 }
