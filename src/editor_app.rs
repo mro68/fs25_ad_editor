@@ -163,7 +163,6 @@ impl EditorApp {
             distance_wheel_step_m,
             active_tool,
             edit_tool_manager,
-            &mut self.state.options.auto_create_segment,
             panel_pos,
             self.state.group_editing.as_ref(),
         ));
@@ -447,8 +446,7 @@ impl EditorApp {
                 for ev in group_overlay_events {
                     match ev {
                         ui::GroupOverlayEvent::LockToggled { segment_id } => {
-                            overlay_events
-                                .push(AppIntent::ToggleGroupLockRequested { segment_id });
+                            overlay_events.push(AppIntent::ToggleGroupLockRequested { segment_id });
                         }
                         ui::GroupOverlayEvent::Dissolved { segment_id } => {
                             overlay_events.push(AppIntent::DissolveGroupRequested { segment_id });

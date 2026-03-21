@@ -16,8 +16,8 @@ use super::drag::{draw_drag_selection_overlay, DragSelection};
 use super::keyboard;
 use crate::app::tools::common::TangentMenuData;
 use crate::app::{
-    AppIntent, Camera2D, ConnectionDirection, ConnectionPriority, EditorTool, RoadMap,
-    GroupRegistry,
+    AppIntent, Camera2D, ConnectionDirection, ConnectionPriority, EditorTool, GroupRegistry,
+    RoadMap,
 };
 use crate::shared::EditorOptions;
 use indexmap::IndexSet;

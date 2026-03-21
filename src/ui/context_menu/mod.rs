@@ -15,7 +15,7 @@ mod render;
 mod tangent_ui;
 
 use crate::app::tools::common::TangentMenuData;
-use crate::app::{AppIntent, ConnectionDirection, ConnectionPriority, RoadMap, GroupRegistry};
+use crate::app::{AppIntent, ConnectionDirection, ConnectionPriority, GroupRegistry, RoadMap};
 use crate::shared::EditorOptions;
 use commands::{validate_entries, IntentContext, MenuCatalog, PreconditionContext};
 use indexmap::IndexSet;

@@ -586,7 +586,9 @@
 
 **Errungenschaften (UI-Enhancements 2026-03-10):**
 - ✅ `src/ui/common.rs` — Neues Modul mit `apply_wheel_step()` und `WHEEL_THRESHOLD`; Mausrad-Support fuer numerische Felder (Options-Dialog und weitere Widgets)
-- ✅ `EditorOptions::auto_create_segment` — Checkbox steuert ob Route-Tool-Ergebnisse automatisch als Segment registriert werden (Default: `false`)
+- ✅ `EditorOptions::auto_create_segment` — entfernt; Gruppen werden jetzt IMMER nach `execute_and_apply()` registriert
+- ✅ `EditorOptions::show_all_group_boundaries` — neues Flag (Default: `false`); steuert ob Randknoten-Icons an ALLEN oder nur an Aussengrenzen-Knoten gezeigt werden
+- ✅ `recreate()`-Fix — nach Neuberechnung einer Strecke wird die Gruppe korrekt neu in der GroupRegistry registriert
 - ✅ Kontextmenu-Eintrag "Als Segment gruppieren" (`CommandId::GroupSelectionAsSegment`) — selektierte zusammenhaengende Nodes direkt als Segment-Record registrieren (Precondition: `IsResampleableChain`)
 - ✅ Neue Kontextmenu-Icons: `icon_map_pin.svg`, `icon_map_pin_plus.svg`, `icon_map_pin_minus.svg` fuer `CreateMarker` / `RemoveMarker`
 - ✅ `EditorOptions::marker_outline_width` — Konfigurierbare Umrissstärke des Map-Markers (Anteil am Radius, Shader liest `aa_params.w`); Farb-Picker in UI entfernt
