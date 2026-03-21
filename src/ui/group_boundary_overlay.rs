@@ -141,17 +141,19 @@ pub fn render_group_boundary_overlays(
         };
 
         for bi in boundary_infos {
-            // Filterung: ohne show_all nur Nodes mit wirklich externen Verbindungen
-            if !show_all && !bi.has_external_connection {
-                continue;
-            }
-
-            // Winkelfilter: Icon nur anzeigen wenn Abweichung <= 90° (Verbindung physisch nutzbar)
-            const ANGLE_THRESHOLD: f32 = std::f32::consts::FRAC_PI_2;
-            if let Some(max_dev) = bi.max_external_angle_deviation {
-                if max_dev > ANGLE_THRESHOLD {
-                    continue;
+            // Warn-Modus: Icons nur bei Problemstellen anzeigen
+            // - Externer Eingang mit Winkel ≤90° → OK, kein Icon nötig
+            // - Externer Eingang mit Winkel >90° → Warnung (physisch nicht nutzbar)
+            // - Kein Winkelinfo (None) → Warnung (konservativer Ansatz)
+            if !show_all {
+                const ANGLE_THRESHOLD: f32 = std::f32::consts::FRAC_PI_2;
+                // Nur wenn der Winkel bekannt und ≤90° ist, kein Icon anzeigen
+                if let Some(max_dev) = bi.max_external_angle_deviation {
+                    if max_dev <= ANGLE_THRESHOLD {
+                        continue; // Winkel OK → kein Problem
+                    }
                 }
+                // >90° oder None (kein Winkelvergleich möglich) → Icon anzeigen
             }
 
             let Some(node) = road_map.nodes.get(&bi.node_id) else {
