@@ -155,6 +155,9 @@ pub struct BoundaryInfo {
     pub has_external_connection: bool,
     /// Richtung der externen Verbindungen an diesem Node.
     pub direction: BoundaryDirection,
+    /// Maximale Winkelabweichung zwischen interner Fahrtrichtung und externer Verbindung (Radiant, 0..PI).
+    /// `None` wenn keine internen Verbindungen vorhanden (Winkelvergleich nicht moeglich).
+    pub max_external_angle_deviation: Option<f32>,
 }
 
 /// Tool-Index fuer `StraightLineTool` im `ToolManager` (Registrierungs-Slot 0).

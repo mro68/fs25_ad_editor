@@ -33,8 +33,7 @@ pub fn remove_selected_from_groups(state: &mut AppState) {
     }
 
     // Alle betroffenen Record-IDs sammeln
-    let mut affected_records: std::collections::HashSet<u64> =
-        std::collections::HashSet::new();
+    let mut affected_records: std::collections::HashSet<u64> = std::collections::HashSet::new();
     for &nid in &selected {
         for rid in state.group_registry.groups_for_node(nid) {
             affected_records.insert(rid);
@@ -49,7 +48,9 @@ pub fn remove_selected_from_groups(state: &mut AppState) {
 
     // Pro Record: Betroffene Nodes entfernen
     for rid in affected_records {
-        state.group_registry.remove_nodes_from_record(rid, &selected);
+        state
+            .group_registry
+            .remove_nodes_from_record(rid, &selected);
     }
 }
 

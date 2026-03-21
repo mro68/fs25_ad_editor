@@ -146,6 +146,14 @@ pub fn render_group_boundary_overlays(
                 continue;
             }
 
+            // Winkelfilter: Icon nur anzeigen wenn Abweichung <= 90° (Verbindung physisch nutzbar)
+            const ANGLE_THRESHOLD: f32 = std::f32::consts::FRAC_PI_2;
+            if let Some(max_dev) = bi.max_external_angle_deviation {
+                if max_dev > ANGLE_THRESHOLD {
+                    continue;
+                }
+            }
+
             let Some(node) = road_map.nodes.get(&bi.node_id) else {
                 continue;
             };
