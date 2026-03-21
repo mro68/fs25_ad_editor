@@ -122,6 +122,9 @@ Alle Optionen werden in der **`fs25_auto_drive_editor.toml`** im Anwendungs-Konf
 | **Hellblau** | Node-Kreis | Hover |
 | **Rot** | Map-Marker | Benanntes Ziel |
 | **Cyan** | Vorschau | Tool-Vorschau (noch nicht bestaetigt) |
+| **Weiss** | Gruppen-Icon (→) | Grenzknoten Eingang |
+| **Weiss** | Gruppen-Icon (←) | Grenzknoten Ausgang |
+| **Weiss** | Gruppen-Icon (↔) | Grenzknoten Bidirektional |
 
 ---
 

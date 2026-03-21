@@ -82,7 +82,7 @@ struct RoadMap {
    - `show_dedup_dialog` in `ui/API.md` nachgetragen
    - 45 Struct-Level-Docstrings auf oeffentlichen Typen ergaenzt
 10. ✅ Strukturelles Audit (2026-02-28):
-    - Docstrings fuer `AppCommand`, `AppIntent`, `Snapshot`, `EditHistory`, `CommandLog`, `SegmentRecord`, `SegmentRegistry`
+    - Docstrings fuer `AppCommand`, `AppIntent`, `Snapshot`, `EditHistory`, `CommandLog`, `GroupRecord`, `GroupRegistry`
     - `reset()` Docstrings fuer alle RouteTool-Implementierungen
     - SplineTool: `tangent_menu_data()` + `apply_tangent_selection()` implementiert
     - `app/API.md` um fehlende Varianten vervollstaendigt

@@ -207,7 +207,7 @@ pub struct AppState {
     pub history: EditHistory,
     pub options: EditorOptions,
     pub show_options_dialog: bool,
-    pub segment_registry: SegmentRegistry,
+    pub group_registry: GroupRegistry,
     pub should_exit: bool,
 }
 ```
@@ -241,21 +241,21 @@ pub struct Snapshot {
 - Snapshot-basiertes Undo/Redo
 - `Arc<RoadMap>` ermoeglicht O(1)-Snapshots (Copy-on-Write)
 
-### SegmentRegistry
+### GroupRegistry
 
 ```rust
-pub struct SegmentRecord {
+pub struct GroupRecord {
     pub id: u64,
     pub node_ids: Vec<u64>,
     pub start_anchor: ToolAnchor,
     pub end_anchor: ToolAnchor,
-    pub kind: SegmentKind,
+    pub kind: GroupKind,
     pub original_positions: Vec<Vec2>,  // Fuer Validitaetspruefung
 }
 }
 
-pub struct SegmentRegistry {
-    records: Vec<SegmentRecord>,
+pub struct GroupRegistry {
+    records: Vec<GroupRecord>,
     next_id: u64,
 }
 ```

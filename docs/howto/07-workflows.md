@@ -83,4 +83,19 @@ In engen Kurven oder fuer AutoDrive-Strecken mit feiner Granularitaet:
 
 ---
 
+## Workflow 8: Gruppen-Übergänge prüfen und korrigieren
+
+Beim Zusammenführen mehrerer Kurse kann geprüft werden, an welchen Stellen Gruppen Verbindungen nach außen haben (Übergangsstellen zum restlichen Netz).
+
+1. **Gruppe doppelklicken** — zur Gruppen-Selektion (Doppelklick auf einen Gruppen-Node)
+2. **Grenzknoten prüfen** — der Editor zeigt automatisch Icons unterhalb der Grenzknoten:
+   - **→ (Eingang):** Verbindung von außen in die Gruppe
+   - **← (Ausgang):** Verbindung aus der Gruppe nach außen
+   - **↔ (Bidirektional):** beidseitige Verbindung über die Gruppengrenze
+3. **Optional: Alle Grenzknoten-Icons anzeigen** — Im Gruppen-Bearbeitungsmodus (Rechtsklick → "Gruppe bearbeiten") Checkbox **"Rand-Icons an allen Gruppen-Grenzknoten anzeigen"** aktivieren, um auch potenzielle Übergangspunkte ohne bestehende externe Verbindung zu sehen
+4. **Fehlende Verbindungen ergänzen** — Connect-Tool (T → Connect) nutzen
+5. **Übernehmen** (Enter) oder **Abbrechen** (Escape)
+
+---
+
 ← [Extras & Optionen](06-extras.md) | [Zurueck zur Uebersicht](index.md)

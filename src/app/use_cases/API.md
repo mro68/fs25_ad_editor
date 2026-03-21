@@ -79,9 +79,9 @@ pub enum AddNodeResult {
 - `remove_all_connections_between_selected(state)` — Bulk: Alle Verbindungen zwischen Selektion trennen
 - `invert_all_connections_between_selected(state)` — Bulk: Richtung invertieren (start↔end)
 - `set_all_connections_priority_between_selected(state, priority)` — Bulk: Prioritaet aendern
-- `apply_tool_result(state, result) -> Vec<u64>` — Wendet ein `ToolResult` auf den AppState an (mit Undo-Snapshot): erstellt Nodes + Connections, setzt Selektion; ruft danach `make_segment_record()` auf dem aktiven Tool auf und speichert den Record in `state.segment_registry`
+- `apply_tool_result(state, result) -> Vec<u64>` — Wendet ein `ToolResult` auf den AppState an (mit Undo-Snapshot): erstellt Nodes + Connections, setzt Selektion; ruft danach `make_group_record()` auf dem aktiven Tool auf und speichert den Record in `state.group_registry`
 - `apply_tool_result_no_snapshot(state, result) -> Vec<u64>` — Wie `apply_tool_result`, aber ohne Undo-Snapshot (fuer Neuberechnung)
-- `delete_nodes_by_ids(state, ids)` — Loescht Nodes mit den angegebenen IDs + zugehoerige Connections; invalidiert betroffene Eintraege in `state.segment_registry`
+- `delete_nodes_by_ids(state, ids)` — Loescht Nodes mit den angegebenen IDs + zugehoerige Connections; invalidiert betroffene Eintraege in `state.group_registry`
 - `resample_selected_path(state)` — Selektierte Nodes-Kette per Catmull-Rom-Spline gleichmaessig neu verteilen; Konfiguration aus `state.ui.distanzen`
 - `trace_all_fields(state)` — Zeichnet alle geladenen Farmland-Polygone als Wegpunkt-Ring nach (Batch-Operation). Verwendet Standard-Parameter des FieldBoundaryTool (spacing=10, offset=0, tolerance=0, direction=Dual, priority=Regular). Alle Polygone werden in einem einzigen Undo-Schritt zusammengefasst; Spatial-Index-Rebuild und Flag-Berechnung erfolgen nur einmal am Ende.
 
@@ -116,7 +116,7 @@ pub enum AddNodeResult {
 
 ---
 
-## `SegmentRegistry`
+## `GroupRegistry`
 
 In-Session-Registry aller erstellten Segmente (fuer nachtraegliche Bearbeitung).
 
@@ -125,7 +125,7 @@ In-Session-Registry aller erstellten Segmente (fuer nachtraegliche Bearbeitung).
 - **Invalidierung:** Beim manuellen Loeschen von Nodes werden betroffene Records automatisch entfernt.
 
 ```rust
-pub enum SegmentKind {
+pub enum GroupKind {
     Straight     { direction, priority, max_segment_length },
     CurveQuad    { cp1, direction, priority, max_segment_length },
     CurveCubic   { cp1, cp2, tangent_start, tangent_end, direction, priority, max_segment_length },
@@ -139,12 +139,12 @@ pub const TOOL_INDEX_CURVE_QUAD: usize = 1;
 pub const TOOL_INDEX_CURVE_CUBIC: usize = 2;
 pub const TOOL_INDEX_SPLINE: usize = 3;
 
-pub struct SegmentRecord {
+pub struct GroupRecord {
     pub id: u64,
     pub node_ids: Vec<u64>,
     pub start_anchor: ToolAnchor,
     pub end_anchor: ToolAnchor,
-    pub kind: SegmentKind,
+    pub kind: GroupKind,
 }
 ```
 
@@ -152,9 +152,9 @@ pub struct SegmentRecord {
 
 ```rust
 registry.register(record) -> u64
-registry.get(record_id) -> Option<&SegmentRecord>
+registry.get(record_id) -> Option<&GroupRecord>
 registry.remove(record_id)
-registry.find_by_node_ids(node_ids: &IndexSet<u64>) -> Vec<&SegmentRecord>
+registry.find_by_node_ids(node_ids: &IndexSet<u64>) -> Vec<&GroupRecord>
 registry.invalidate_by_node_ids(node_ids)  // bei manuellem Node-Loeschen
 registry.len() / is_empty()
 ```
@@ -178,10 +178,10 @@ Properties-Panel (Button "Bearbeiten")
 
 ```rust
 // Wird nach execute() + apply_tool_result() aufgerufen:
-fn make_segment_record(&self, id: u64, node_ids: &[u64]) -> Option<SegmentRecord>;
+fn make_group_record(&self, id: u64, node_ids: &[u64]) -> Option<GroupRecord>;
 
 // Wird in edit_segment() aufgerufen um das Tool wiederherzustellen:
-fn load_for_edit(&mut self, record: &SegmentRecord, kind: &SegmentKind);
+fn load_for_edit(&mut self, record: &GroupRecord, kind: &GroupKind);
 ```
 
 Implementierungen: `StraightLineTool`, `CurveTool` (Quad + Cubic), `SplineTool`, `BypassTool`, `SmoothCurveTool`, `ParkingTool`, `RouteOffsetTool`, `FieldBoundaryTool`.

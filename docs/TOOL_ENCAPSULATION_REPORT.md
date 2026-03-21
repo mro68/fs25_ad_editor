@@ -1,7 +1,7 @@
 # Tool Encapsulation & API Unification — Audit-Report
 
 > **Stand:** 2026-03-07  
-> **Scope:** `src/app/tools/`, `src/app/segment_registry/`, `src/app/handlers/route_tool.rs`  
+> **Scope:** `src/app/tools/`, `src/app/group_registry/`, `src/app/handlers/route_tool.rs`  
 > **Methodik:** Vollständige Code-Analyse aller 9 Tool-Module + Common-Infrastruktur
 
 ---
@@ -34,7 +34,7 @@ Das Tools-System ist **architektonisch solide aufgebaut**:
 **Hauptbefunde:**
 - 3 Tools (FieldBoundary, Parking, RouteOffset) bauen `ToolResult` manuell statt über `assemble_tool_result()`
 - Preview-Allokationen: 2 Tools klonen Caches pro Frame (ConstraintRoute, Bypass)
-- Segment-Editierbarkeit ist funktional, aber nicht per Trait standardisiert
+- Gruppen-Editierbarkeit ist funktional, aber nicht per Trait standardisiert
 - Config-UI zeigt hohe Diversität (domain-bedingt, nicht kritisch)
 
 ---
@@ -164,13 +164,13 @@ erweitern den Lifecycle sauber über optionale Methoden mit Default-Implementier
 
 ### 4.1 Post-Creation Mutablility
 
-Segmente werden über `SegmentRegistry` verwaltet:
+Gruppen werden über `GroupRegistry` verwaltet:
 
 ```rust
-pub struct SegmentRecord {
+pub struct GroupRecord {
     pub id: u64,
     pub node_ids: Vec<u64>,
-    pub kind: SegmentKind,
+    pub kind: GroupKind,
     pub original_positions: Vec<Vec2>,
     pub marker_node_ids: Vec<u64>,
     pub locked: bool,
@@ -179,13 +179,13 @@ pub struct SegmentRecord {
 
 **Editier-Flow:**
 1. Tool erzeugt `ToolResult` → `apply_tool_result()` schreibt in `RoadMap`
-2. `make_segment_record()` speichert Segmenttyp + Parameter in `SegmentRegistry`
-3. `load_for_edit()` rekonstituiert Tool-State aus gespeichertem `SegmentRecord`
+2. `make_group_record()` speichert Gruppentyp + Parameter in `GroupRegistry`
+3. `load_for_edit()` rekonstituiert Tool-State aus gespeichertem `GroupRecord`
 4. Erneutes `execute()` überschreibt die Nodes (Undo-Snapshot vorher)
 
 **Status pro Tool:**
 
-| Tool | make_segment_record | load_for_edit | Editierbar |
+| Tool | make_group_record | load_for_edit | Editierbar |
 |------|--------------------:|:-------------|:-----------|
 | StraightLine | ✅ | ✅ | ✅ Vollständig |
 | Curve (Quad/Cubic) | ✅ | ✅ | ✅ Vollständig |
@@ -198,7 +198,7 @@ pub struct SegmentRecord {
 
 ### 4.2 Mutation Safeguards
 
-- **Segment-Lock:** `SegmentRecord.locked: bool` verhindert versehentliche Bearbeitung
+- **Gruppen-Lock:** `GroupRecord.locked: bool` verhindert versehentliche Bearbeitung
 - **Validierung:** `is_segment_valid()` prüft Node-Existenz und Positionsgleichheit (Toleranz 0.01)
 - **Undo-Integration:** `apply_tool_result()` ruft `record_undo_snapshot()` vor jeder Mutation auf
 - **Position-Tracking:** `update_original_positions()` synchronisiert nach Move-Operationen
@@ -373,13 +373,13 @@ Bestehende Benchmarks in `benches/`:
 ### 7.2 API.md Status
 
 - `src/app/tools/API.md` — ✅ Vollständig und aktuell (alle 9 Tools, Capabilities, Common-Module)
-- `src/app/API.md` — ✅ Aktuell (SegmentKind, SegmentRecord, AppIntent/AppCommand)
+- `src/app/API.md` — ✅ Aktuell (GroupKind, GroupRecord, AppIntent/AppCommand)
 
 ### 7.3 Architektur-Dokumentation
 
 `docs/ARCHITECTURE_PLAN.md` enthält **keine expliziten Regeln** für:
 - Tool-Encapsulation (Renderer-Unabhängigkeit)
-- Segment-Editierbarkeit
+- Gruppen-Editierbarkeit
 - Preview-Performance-Richtlinien
 
 **→ Empfehlung:** Abschnitt "Tool-Encapsulation-Regeln" ergänzen.
@@ -460,10 +460,10 @@ pub fn assemble_tool_result_ext(
 - Keine Farben, Texturen oder Render-Hints im Preview-Output
 - Die Konvertierung zu visuellen Elementen erfolgt im UI-Layer (`src/ui/tool_preview.rs`)
 
-### Segment-Editierbarkeit
-- Jedes Tool implementiert `make_segment_record()` → speichert Konfiguration in `SegmentRegistry`
+### Gruppen-Editierbarkeit
+- Jedes Tool implementiert `make_group_record()` → speichert Konfiguration in `GroupRegistry`
 - `load_for_edit()` rekonstituiert den Tool-State für erneute Bearbeitung
-- `SegmentRecord.locked` verhindert versehentliche Mutation
+- `GroupRecord.locked` verhindert versehentliche Mutation
 - Undo-Snapshot wird vor jeder Mutation automatisch erstellt (`apply_tool_result`)
 ```
 
@@ -480,13 +480,13 @@ Handler: route_tool::click()
   ▼
 Handler: execute_and_apply()
   │ 1. tool.execute(&road_map) → ToolResult
-  │ 2. tool.make_segment_record(id, node_ids) → SegmentRecord
+  │ 2. tool.make_group_record(id, node_ids) → GroupRecord
   │ 3. apply_tool_result(state, result) → Vec<u64>
   │    ├── state.record_undo_snapshot()
   │    ├── road_map.add_node() × N
   │    ├── road_map.add_connection() × M
   │    └── road_map.ensure_spatial_index()
-  │ 4. segment_registry.register(record)
+  │ 4. group_registry.register(record)
   │ 5. tool.set_last_created(new_ids, &road_map)
   │ 6. tool.reset()
   │
@@ -563,7 +563,7 @@ Nächster Frame: RenderScene wird aus RoadMap neu gebaut ← Render-Layer
 │                        │ ToolResult                             │
 │  ┌─────────────────────▼───────────────────────────────────┐   │
 │  │  apply_tool_result() → use_cases/editing                │   │
-│  │  SegmentRegistry → segment_registry/                    │   │
+│  │  GroupRegistry → group_registry/                    │   │
 │  └─────────────────────┬───────────────────────────────────┘   │
 ├─────────────────────────┼──────────────────────────────────────┤
 │                        ▼         Core Layer                     │
