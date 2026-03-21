@@ -21,6 +21,38 @@ pub fn dissolve(state: &mut AppState, segment_id: u64) {
     state.group_registry.remove(segment_id);
 }
 
+/// Entfernt alle selektierten Nodes aus ihren Gruppen.
+///
+/// Nodes und Verbindungen in der RoadMap bleiben unveraendert.
+/// Gruppen mit weniger als 2 verbleibenden Nodes werden automatisch aufgeloest.
+/// Ist keine Selektion aktiv, wird die Funktion ohne Effekt beendet.
+pub fn remove_selected_from_groups(state: &mut AppState) {
+    let selected: Vec<u64> = state.selection.selected_node_ids.iter().copied().collect();
+    if selected.is_empty() {
+        return;
+    }
+
+    // Alle betroffenen Record-IDs sammeln
+    let mut affected_records: std::collections::HashSet<u64> =
+        std::collections::HashSet::new();
+    for &nid in &selected {
+        for rid in state.group_registry.groups_for_node(nid) {
+            affected_records.insert(rid);
+        }
+    }
+
+    if affected_records.is_empty() {
+        return;
+    }
+
+    state.record_undo_snapshot();
+
+    // Pro Record: Betroffene Nodes entfernen
+    for rid in affected_records {
+        state.group_registry.remove_nodes_from_record(rid, &selected);
+    }
+}
+
 /// Gruppiert die selektierten Nodes als neues Segment.
 ///
 /// Voraussetzung: Die Nodes muessen ein zusammenhaengendes Netzwerk bilden

@@ -288,6 +288,8 @@ pub enum AppCommand {
     OpenDissolveConfirmDialog { segment_id: u64 },
     /// Selektierte zusammenhaengende Nodes als neues Segment in der Registry speichern
     GroupSelectionAsGroup,
+    /// Selektierte Nodes aus ihren zugehoerigen Gruppen entfernen
+    RemoveSelectedNodesFromGroups,
 
     // ── Extras ───────────────────────────────────────────────────────
     /// Einstellungsdialog "Alle Felder nachzeichnen" oeffnen

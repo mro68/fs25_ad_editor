@@ -317,6 +317,9 @@ impl AppController {
                 state.ui.confirm_dissolve_group_id = Some(segment_id);
             }
             AppCommand::GroupSelectionAsGroup => handlers::group::group_selection(state),
+            AppCommand::RemoveSelectedNodesFromGroups => {
+                handlers::group::remove_selected_from_groups(state);
+            }
             AppCommand::GroupEditStart { record_id } => {
                 handlers::group::start_group_edit(state, record_id)
             }

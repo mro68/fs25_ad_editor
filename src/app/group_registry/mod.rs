@@ -293,6 +293,65 @@ impl GroupRegistry {
         true
     }
 
+    /// Entfernt die angegebenen Nodes aus einem Record.
+    ///
+    /// Aktualisiert `node_ids`, `original_positions` und den Reverse-Index.
+    /// Wenn nach der Entfernung weniger als 2 Nodes verbleiben, wird der
+    /// gesamte Record aufgeloest (automatisches Dissolve).
+    ///
+    /// Gibt `true` zurueck wenn der Record noch existiert, `false` wenn aufgeloest.
+    pub fn remove_nodes_from_record(
+        &mut self,
+        record_id: u64,
+        nodes_to_remove: &[u64],
+    ) -> bool {
+        // Benoetigte Daten zuerst klonen, damit der immutable Borrow endet
+        // bevor die mutierbaren Methoden aufgerufen werden.
+        let (old_node_ids, old_orig_pos) = match self.records.get(&record_id) {
+            Some(r) => (r.node_ids.clone(), r.original_positions.clone()),
+            None => return false,
+        };
+
+        let remove_set: std::collections::HashSet<u64> =
+            nodes_to_remove.iter().copied().collect();
+
+        // Tatsaechlich vorhandene Nodes aus remove_set bestimmen + Reverse-Index bereinigen
+        let actually_removed: Vec<u64> = old_node_ids
+            .iter()
+            .copied()
+            .filter(|id| remove_set.contains(id))
+            .collect();
+        self.remove_from_index(record_id, &actually_removed);
+
+        // node_ids und original_positions synchron filtern
+        let pairs: Vec<(u64, Vec2)> = old_node_ids
+            .into_iter()
+            .zip(old_orig_pos.into_iter())
+            .filter(|(id, _)| !remove_set.contains(id))
+            .collect();
+
+        let remaining = pairs.len();
+
+        // Weniger als 2 Nodes uebrig → Record aufloesen
+        if remaining < 2 {
+            // Verbleibende Nodes aus Reverse-Index entfernen
+            let leftover: Vec<u64> = pairs.iter().map(|(id, _)| *id).collect();
+            self.remove_from_index(record_id, &leftover);
+            self.records.remove(&record_id);
+            self.boundary_cache.remove(&record_id);
+            return false;
+        }
+
+        // Record aktualisieren
+        if let Some(record) = self.records.get_mut(&record_id) {
+            record.node_ids = pairs.iter().map(|(id, _)| *id).collect();
+            record.original_positions = pairs.iter().map(|(_, pos)| *pos).collect();
+            record.marker_node_ids.retain(|id| !remove_set.contains(id));
+        }
+        self.boundary_cache.remove(&record_id);
+        true
+    }
+
     /// Gibt eine mutable Referenz auf den Record mit der angegebenen ID zurueck.
     fn get_mut(&mut self, record_id: u64) -> Option<&mut GroupRecord> {
         self.records.get_mut(&record_id)

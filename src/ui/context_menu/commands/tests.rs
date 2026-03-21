@@ -68,6 +68,7 @@ fn precondition_node_exists() {
         clipboard_has_data: false,
         group_record_id: None,
         group_editing_active: false,
+        selection_has_group_member: false,
         farmland_polygons_loaded: false,
     };
 
@@ -87,6 +88,7 @@ fn precondition_has_marker() {
         clipboard_has_data: false,
         group_record_id: None,
         group_editing_active: false,
+        selection_has_group_member: false,
         farmland_polygons_loaded: false,
     };
 
@@ -110,6 +112,7 @@ fn precondition_exactly_two_selected() {
         clipboard_has_data: false,
         group_record_id: None,
         group_editing_active: false,
+        selection_has_group_member: false,
         farmland_polygons_loaded: false,
     };
     let ctx3 = PreconditionContext {
@@ -119,6 +122,7 @@ fn precondition_exactly_two_selected() {
         clipboard_has_data: false,
         group_record_id: None,
         group_editing_active: false,
+        selection_has_group_member: false,
         farmland_polygons_loaded: false,
     };
     let ctx1 = PreconditionContext {
@@ -128,6 +132,7 @@ fn precondition_exactly_two_selected() {
         clipboard_has_data: false,
         group_record_id: None,
         group_editing_active: false,
+        selection_has_group_member: false,
         farmland_polygons_loaded: false,
     };
 
@@ -149,6 +154,7 @@ fn precondition_two_selected_unconnected() {
         clipboard_has_data: false,
         group_record_id: None,
         group_editing_active: false,
+        selection_has_group_member: false,
         farmland_polygons_loaded: false,
     };
     let ctx_connected = PreconditionContext {
@@ -158,6 +164,7 @@ fn precondition_two_selected_unconnected() {
         clipboard_has_data: false,
         group_record_id: None,
         group_editing_active: false,
+        selection_has_group_member: false,
         farmland_polygons_loaded: false,
     };
 
@@ -178,6 +185,7 @@ fn precondition_has_connections_between_selected() {
         clipboard_has_data: false,
         group_record_id: None,
         group_editing_active: false,
+        selection_has_group_member: false,
         farmland_polygons_loaded: false,
     };
     let ctx_no = PreconditionContext {
@@ -187,6 +195,7 @@ fn precondition_has_connections_between_selected() {
         clipboard_has_data: false,
         group_record_id: None,
         group_editing_active: false,
+        selection_has_group_member: false,
         farmland_polygons_loaded: false,
     };
 
@@ -206,6 +215,7 @@ fn precondition_streckenteilung_active() {
         clipboard_has_data: false,
         group_record_id: None,
         group_editing_active: false,
+        selection_has_group_member: false,
         farmland_polygons_loaded: false,
     };
     let ctx_inactive = PreconditionContext {
@@ -215,6 +225,7 @@ fn precondition_streckenteilung_active() {
         clipboard_has_data: false,
         group_record_id: None,
         group_editing_active: false,
+        selection_has_group_member: false,
         farmland_polygons_loaded: false,
     };
 
@@ -238,6 +249,7 @@ fn catalog_empty_area_shows_tools() {
         clipboard_has_data: false,
         group_record_id: None,
         group_editing_active: false,
+        selection_has_group_member: false,
         farmland_polygons_loaded: false,
     };
     let intent_ctx = IntentContext {
@@ -296,6 +308,7 @@ fn catalog_node_focused_shows_marker_create() {
         clipboard_has_data: false,
         group_record_id: None,
         group_editing_active: false,
+        selection_has_group_member: false,
         farmland_polygons_loaded: false,
     };
     let intent_ctx = IntentContext {
@@ -331,6 +344,7 @@ fn catalog_node_focused_shows_marker_edit_when_marker_exists() {
         clipboard_has_data: false,
         group_record_id: None,
         group_editing_active: false,
+        selection_has_group_member: false,
         farmland_polygons_loaded: false,
     };
     let intent_ctx = IntentContext {
@@ -359,6 +373,7 @@ fn catalog_node_focused_shows_delete_and_duplicate() {
         clipboard_has_data: false,
         group_record_id: None,
         group_editing_active: false,
+        selection_has_group_member: false,
         farmland_polygons_loaded: false,
     };
     let intent_ctx = IntentContext {
@@ -385,6 +400,7 @@ fn catalog_multi_nodes_connect_only_when_two_unconnected() {
         clipboard_has_data: false,
         group_record_id: None,
         group_editing_active: false,
+        selection_has_group_member: false,
         farmland_polygons_loaded: false,
     };
     let intent_ctx = IntentContext {
@@ -406,6 +422,7 @@ fn catalog_multi_nodes_connect_only_when_two_unconnected() {
         clipboard_has_data: false,
         group_record_id: None,
         group_editing_active: false,
+        selection_has_group_member: false,
         farmland_polygons_loaded: false,
     };
     let entries_connected = validate_entries(&catalog, &ctx_connected, &intent_ctx);
@@ -423,6 +440,7 @@ fn catalog_multi_nodes_direction_only_when_connected() {
         clipboard_has_data: false,
         group_record_id: None,
         group_editing_active: false,
+        selection_has_group_member: false,
         farmland_polygons_loaded: false,
     };
     let intent_ctx = IntentContext {
@@ -446,6 +464,7 @@ fn catalog_multi_nodes_direction_only_when_connected() {
         clipboard_has_data: false,
         group_record_id: None,
         group_editing_active: false,
+        selection_has_group_member: false,
         farmland_polygons_loaded: false,
     };
     let entries_connected = validate_entries(&catalog, &ctx_connected, &intent_ctx);
@@ -465,6 +484,7 @@ fn catalog_multi_nodes_route_tools_only_when_two_selected() {
         clipboard_has_data: false,
         group_record_id: None,
         group_editing_active: false,
+        selection_has_group_member: false,
         farmland_polygons_loaded: false,
     };
     let intent_ctx = IntentContext {
@@ -517,6 +537,7 @@ fn catalog_multi_nodes_selection_commands_always_visible() {
         clipboard_has_data: false,
         group_record_id: None,
         group_editing_active: false,
+        selection_has_group_member: false,
         farmland_polygons_loaded: false,
     };
     let intent_ctx = IntentContext {
@@ -543,6 +564,7 @@ fn catalog_route_tool_basic_commands() {
         clipboard_has_data: false,
         group_record_id: None,
         group_editing_active: false,
+        selection_has_group_member: false,
         farmland_polygons_loaded: false,
     };
     let intent_ctx = IntentContext {
@@ -660,6 +682,7 @@ fn deleted_node_hides_all_commands() {
         clipboard_has_data: false,
         group_record_id: None,
         group_editing_active: false,
+        selection_has_group_member: false,
         farmland_polygons_loaded: false,
     };
     let intent_ctx = IntentContext {
