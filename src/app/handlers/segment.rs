@@ -202,7 +202,9 @@ pub fn apply_group_edit(state: &mut AppState) {
         }
     }
 
-    let filtered_count = selected.len().saturating_sub(new_ids.len().saturating_sub(original_count));
+    let filtered_count = selected
+        .len()
+        .saturating_sub(new_ids.len().saturating_sub(original_count));
     if filtered_count > 0 {
         log::info!(
             "apply_group_edit: {} nodes filtered (no connection to group)",
