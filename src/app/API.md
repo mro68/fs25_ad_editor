@@ -278,6 +278,31 @@ pub enum EditorTool {
 
 ---
 
+### `BoundaryDirection` und `BoundaryInfo`
+
+Gecachte Boundary-Informationen aus `GroupRegistry::warm_boundary_cache()`.
+
+```rust
+/// Richtung einer Gruppen-Grenz-Verbindung.
+pub enum BoundaryDirection {
+    Entry,        // Nur eingehende externe Verbindungen
+    Exit,         // Nur ausgehende externe Verbindungen
+    Bidirectional, // Ein- und ausgehende externe Verbindungen
+}
+
+/// Gecachte Information ueber einen Gruppen-Grenz-Node.
+pub struct BoundaryInfo {
+    pub node_id: u64,
+    /// true = mindestens eine Verbindung fuehrt zu einem Node ausserhalb JEDER registrierten Gruppe
+    pub has_external_connection: bool,
+    pub direction: BoundaryDirection,
+}
+```
+
+Re-exportiert aus `app`: `BoundaryDirection`, `BoundaryInfo`.
+
+---
+
 ### `SegmentBase` und `SegmentKind`
 
 Gemeinsame Basis-Parameter fuer alle Route-Tools. Wird von `SegmentKind` verwendet.
@@ -518,6 +543,9 @@ pub fn update_record(&mut self, record_id: u64, node_ids: Vec<u64>, original_pos
 pub fn segment_bounding_box(&self, segment_id: u64, road_map: &RoadMap) -> Option<(Vec2, Vec2)> // AABB des Segments (min, max)
 pub fn expand_locked_selection(&self, selected_nodes: &[u64]) -> Vec<u64> // Selektion um Nodes aller betroffenen locked Segments erweitern
 pub fn update_original_positions(&mut self, segment_id: u64, road_map: &RoadMap) // original_positions nach Lock-Move aktualisieren
+pub fn warm_boundary_cache(&mut self, road_map: &RoadMap) // Boundary-Cache fuer alle Records aufwaermen (einmal pro Frame vor dem Rendering)
+pub fn boundary_cache_for(&self, record_id: u64) -> Option<&[BoundaryInfo]> // Gecachte BoundaryInfos fuer einen Record abfragen
+pub fn open_nodes(&self, record_id: u64, road_map: &RoadMap) -> Option<Vec<BoundaryNode>> // Boundary-Nodes (ungecacht, fuer Sonderfaelle)
 pub fn open_nodes(&self, record_id: u64, road_map: &RoadMap) -> Option<Vec<BoundaryNode>> // Boundary-Nodes eines Segments (Nodes mit externen Verbindungen); None wenn Segment nicht existiert
 ```
 

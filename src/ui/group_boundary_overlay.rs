@@ -8,7 +8,7 @@ use eframe::egui::{self, ColorImage, TextureHandle, TextureOptions};
 use glam::Vec2;
 use indexmap::IndexSet;
 
-use crate::app::{BoundaryNode, Camera2D, GroupRegistry, RoadMap};
+use crate::app::{BoundaryDirection, Camera2D, GroupRegistry, RoadMap};
 
 const ICON_SIZE_PX: u32 = 32;
 
@@ -77,20 +77,19 @@ impl GroupBoundaryIcons {
         }
     }
 
-    /// Gibt den passenden TextureHandle fuer einen `BoundaryNode` zurueck.
-    fn icon_for(&self, node: &BoundaryNode) -> &TextureHandle {
-        match (node.has_external_incoming, node.has_external_outgoing) {
-            (true, true) => &self.bidirectional,
-            (true, false) => &self.entry,
-            (false, true) => &self.exit,
-            (false, false) => &self.entry, // Fallback — sollte nicht auftreten
+    /// Gibt den passenden TextureHandle fuer eine `BoundaryDirection` zurueck.
+    fn icon_for_direction(&self, direction: BoundaryDirection) -> &TextureHandle {
+        match direction {
+            BoundaryDirection::Entry => &self.entry,
+            BoundaryDirection::Exit => &self.exit,
+            BoundaryDirection::Bidirectional => &self.bidirectional,
         }
     }
 }
 
 /// Zeichnet Boundary-Icons unterhalb der Nodes aller selektierten Gruppen.
 ///
-/// Fuer jede selektierte Gruppe werden alle Boundary-Nodes ermittelt und mit
+/// Fuer jede selektierte Gruppe werden alle gecachten Boundary-Nodes mit
 /// dem passenden Icon (Eingang/Ausgang/Bidirektional) beschriftet. Das Icon wird
 /// **unterhalb** des Nodes platziert, sodass es nicht mit dem Lock-Icon (oberhalb)
 /// kollidiert.
@@ -105,6 +104,8 @@ impl GroupBoundaryIcons {
 /// - `selected_node_ids`: Aktuell selektierte Node-IDs
 /// - `icons`: Gecachte Textur-Handles fuer die Icon-Typen
 /// - `icon_size_px`: Groesse des Icons in Pixeln
+/// - `show_all`: true = Icons fuer alle Boundary-Nodes; false = nur Nodes mit Verbindungen
+///   zu Nodes ausserhalb JEDER registrierten Gruppe
 #[allow(clippy::too_many_arguments)]
 pub fn render_group_boundary_overlays(
     painter: &egui::Painter,
@@ -116,6 +117,7 @@ pub fn render_group_boundary_overlays(
     selected_node_ids: &IndexSet<u64>,
     icons: &GroupBoundaryIcons,
     icon_size_px: f32,
+    show_all: bool,
 ) {
     if selected_node_ids.is_empty() {
         return;
@@ -126,27 +128,25 @@ pub fn render_group_boundary_overlays(
     let icon_offset_y = icon_size + 12.0;
     let half = icon_size * 0.5;
 
-    let mut seen_segment_ids = std::collections::HashSet::new();
+    // Alle Gruppen finden, die mindestens einen selektierten Node enthalten
+    let records = registry.find_by_node_ids(selected_node_ids);
 
-    for &selected_id in selected_node_ids.iter() {
-        let Some(record) = registry.find_first_by_node_id(selected_id) else {
-            continue;
-        };
-
-        if !seen_segment_ids.insert(record.id) {
-            continue;
-        }
-
+    for record in records {
         if !registry.is_group_valid(record, road_map) {
             continue;
         }
 
-        let Some(boundary_nodes) = registry.open_nodes(record.id, road_map) else {
+        let Some(boundary_infos) = registry.boundary_cache_for(record.id) else {
             continue;
         };
 
-        for bn in &boundary_nodes {
-            let Some(node) = road_map.nodes.get(&bn.node_id) else {
+        for bi in boundary_infos {
+            // Filterung: ohne show_all nur Nodes mit wirklich externen Verbindungen
+            if !show_all && !bi.has_external_connection {
+                continue;
+            }
+
+            let Some(node) = road_map.nodes.get(&bi.node_id) else {
                 continue;
             };
 
@@ -165,21 +165,19 @@ pub fn render_group_boundary_overlays(
                 egui::Color32::from_rgba_unmultiplied(20, 20, 20, 180),
             );
 
-            let texture_id = icons.icon_for(bn).id();
+            let texture_id = icons.icon_for_direction(bi.direction).id();
             let uv = egui::Rect::from_min_max(egui::pos2(0.0, 0.0), egui::pos2(1.0, 1.0));
             painter.image(texture_id, icon_rect, uv, egui::Color32::WHITE);
 
-            // Tooltip (Debug-Info) nur bei sehr kleinen Icons als Unicode-Fallback
+            // Unicode-Fallback bei sehr kleinen Icons
             if half < 6.0 {
                 painter.text(
                     center,
                     egui::Align2::CENTER_CENTER,
-                    if bn.has_external_incoming && bn.has_external_outgoing {
-                        "↔"
-                    } else if bn.has_external_incoming {
-                        "→"
-                    } else {
-                        "←"
+                    match bi.direction {
+                        BoundaryDirection::Bidirectional => "↔",
+                        BoundaryDirection::Entry => "→",
+                        BoundaryDirection::Exit => "←",
                     },
                     egui::FontId::proportional(icon_size),
                     egui::Color32::from_rgb(255, 162, 0),
