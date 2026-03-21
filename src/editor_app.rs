@@ -186,6 +186,11 @@ impl EditorApp {
             self.state.road_map.as_deref(),
         ));
         events.extend(ui::show_dedup_dialog(ctx, &self.state.ui));
+        events.extend(ui::show_confirm_dissolve_dialog(
+            ctx,
+            &mut self.state.ui.confirm_dissolve_segment_id,
+            self.state.options.language,
+        ));
         events.extend(ui::show_zip_browser(ctx, &mut self.state.ui));
         events.extend(ui::show_overview_options_dialog(
             ctx,
@@ -445,7 +450,8 @@ impl EditorApp {
                                 .push(AppIntent::ToggleSegmentLockRequested { segment_id });
                         }
                         ui::SegmentOverlayEvent::Dissolved { segment_id } => {
-                            overlay_events.push(AppIntent::DissolveSegmentRequested { segment_id });
+                            overlay_events
+                                .push(AppIntent::DissolveSegmentRequested { segment_id });
                         }
                     }
                 }
