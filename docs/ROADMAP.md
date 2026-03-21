@@ -254,6 +254,15 @@
     - [x] `ui/API.md`: Menueä `📍 Alle Felder nachzeichnen` im Extras-Submenu
     - [x] `render/API.md`: Zoom-Kompensation in NodeRenderer und ConnectionRenderer dokumentiert
     - [x] ROADMAP.md: Beide Features als abgeschlossen markiert
+  - [x] **Nicht-destruktives Gruppen-Editing (2026-03-21, Branch `feat/group-nodes`)**
+    - [x] `GroupEditState` in `AppState` — Zustand des aktiven Gruppen-Edit-Modus
+    - [x] `AppIntent::GroupEditStartRequested` / `GroupEditApplyRequested` / `GroupEditCancelRequested`
+    - [x] `AppCommand::GroupEditStart` / `GroupEditApply` / `GroupEditCancel`
+    - [x] `handlers::segment::start_group_edit()` / `apply_group_edit()` / `cancel_group_edit()`
+    - [x] `SegmentRegistry::set_edit_guard()` — schuetzt aktiven Record vor automatischer Invalidierung
+    - [x] `SegmentRegistry::update_record()` — Record nach Edit in-place aktualisieren
+    - [x] `render_edit_panel()` um `group_editing`-Parameter erweitert — Gruppen-Edit-Panel mit Uebernehmen/Abbrechen-Buttons
+    - [x] Doku-Sync: `app/API.md`, `handlers/API.md`, `ui/API.md`, ROADMAP.md
   - [x] **Doku-Sync Deep-Structure-Audit (2026-03-07, Branch `refactor/deep-structure-audit`)**
     - [x] `crates/fs25_map_overview/API.md`: Neues API.md fuer das Overview-Crate erstellt (pub Structs, Funktionen, Module)
     - [x] `app/API.md`: `ToolAnchor` und `compute_ring` als explizite Re-Exports erwaehnt

@@ -77,6 +77,14 @@ pub struct AppState {
     /// Geladene Farmland-Polygone fuer das FieldBoundaryTool.
     /// Wird beim Laden einer Uebersichtskarte befuellt; `None` solange keine Map geladen ist.
     pub farmland_polygons: Option<Arc<Vec<FieldPolygon>>>,
+    /// Aktiver Gruppen-Edit-Modus (None = Normal-Modus, Some = nicht-destruktives Editing aktiv).
+    pub group_editing: Option<GroupEditState>,
+}
+
+/// Zustand einer aktiven Gruppen-Bearbeitung (nicht-destruktiver Edit-Modus).
+pub struct GroupEditState {
+    pub record_id: u64,      // Record-ID der bearbeiteten Gruppe
+    pub was_locked: bool,    // Lock-Zustand vor dem Edit (wird bei Apply/Cancel wiederhergestellt)
 }
 
 pub struct SelectionState {
@@ -489,7 +497,10 @@ pub fn records(&self) -> &[SegmentRecord] // Alle Records als unveraenderlicher 
 pub fn records_mut(&mut self) -> &mut [SegmentRecord] // Alle Records als veraenderlicher Slice
 pub fn segments_for_node(&self, node_id: u64) -> Vec<u64> // Alle Segment-IDs die diesen Node enthalten
 pub fn toggle_lock(&mut self, segment_id: u64) // Lock-Zustand des Segments umschalten
+pub fn set_locked(&mut self, segment_id: u64, locked: bool) // Lock-Zustand explizit setzen
 pub fn is_locked(&self, segment_id: u64) -> bool // Lock-Zustand abfragen (false wenn nicht gefunden)
+pub fn set_edit_guard(&mut self, record_id: Option<u64>) // Guard fuer Group-Edit: dieser Record wird nicht invalidiert
+pub fn update_record(&mut self, record_id: u64, node_ids: Vec<u64>, original_positions: Vec<Vec2>) -> bool // Record in-place aktualisieren
 pub fn segment_bounding_box(&self, segment_id: u64, road_map: &RoadMap) -> Option<(Vec2, Vec2)> // AABB des Segments (min, max)
 pub fn expand_locked_selection(&self, selected_nodes: &[u64]) -> Vec<u64> // Selektion um Nodes aller betroffenen locked Segments erweitern
 pub fn update_original_positions(&mut self, segment_id: u64, road_map: &RoadMap) // original_positions nach Lock-Move aktualisieren
@@ -690,6 +701,14 @@ pub enum AppIntent {
     // Segment-Einstellungs-Popup
     /// Segment-Einstellungs-Popup an Weltposition oeffnen (per Doppelklick)
     OpenSegmentSettingsPopupRequested { world_pos: glam::Vec2 },
+
+    // Nicht-destruktives Gruppen-Editing
+    /// Gruppen-Edit-Modus starten (entsperrt Nodes, legt Undo-Snapshot an)
+    GroupEditStartRequested { record_id: u64 },
+    /// Gruppen-Edit abschliessen (Aenderungen uebernehmen, Record aktualisieren)
+    GroupEditApplyRequested,
+    /// Gruppen-Edit abbrechen (Undo zum Snapshot vor Edit-Start)
+    GroupEditCancelRequested,
 }
 
 pub enum AppCommand {
@@ -844,6 +863,14 @@ pub enum AppCommand {
     // Segment-Einstellungs-Popup
     /// Segment-Einstellungs-Popup an angegebener Welt-Position oeffnen
     OpenSegmentSettingsPopup { world_pos: glam::Vec2 },
+
+    // Nicht-destruktives Gruppen-Editing
+    /// Gruppen-Edit-Modus nicht-destruktiv starten
+    GroupEditStart { record_id: u64 },
+    /// Gruppen-Edit uebernehmen (Aenderungen persistieren, Record aktualisieren)
+    GroupEditApply,
+    /// Gruppen-Edit abbrechen (Undo zum Snapshot)
+    GroupEditCancel,
 }
 ```
 

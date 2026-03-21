@@ -584,6 +584,24 @@ pub fn dissolve(state: &mut AppState, segment_id: u64)
 
 Loest ein Segment auf: Entfernt nur den Segment-Record aus der Registry. Die zugehoerigen Nodes und Verbindungen in der RoadMap bleiben unveraendert. Wird per `Ctrl + Klick` auf das Lock-Icon ausgeloest. Unbekannte IDs werden ignoriert.
 
+```rust
+pub fn start_group_edit(state: &mut AppState, record_id: u64)
+```
+
+Startet den nicht-destruktiven Gruppen-Edit-Modus fuer einen Segment-Record. Erstellt einen Undo-Snapshot, entsperrt den Record temporaer (falls gesperrt), setzt den Edit-Guard in der SegmentRegistry (verhindert automatische Invalidierung), und selektiert alle zugehoerigen Nodes. Gibt eine Warnung aus wenn der Record nicht existiert oder bereits ein Group-Edit aktiv ist. Setzt `AppState::group_editing` auf `Some(GroupEditState { record_id, was_locked })`.
+
+```rust
+pub fn apply_group_edit(state: &mut AppState)
+```
+
+Schliesst den Gruppen-Edit-Modus ab und uebernimmt alle Aenderungen. Berechnet die neue Node-ID-Menge als Vereinigung von (Original-Nodes, die noch in der RoadMap existieren) und (aktuell selektierten Nodes). Aktualisiert den Record via `SegmentRegistry::update_record()`, stellt den Lock-Zustand wieder her und hebt den Edit-Guard auf. Tut nichts wenn kein Edit aktiv ist.
+
+```rust
+pub fn cancel_group_edit(state: &mut AppState)
+```
+
+Bricht den Gruppen-Edit-Modus ab und stellt den Zustand ueber Undo wieder her. Der Undo-Snapshot wurde in `start_group_edit` angelegt. Hebt den Edit-Guard auf und setzt `group_editing` auf `None`.
+
 ---
 
 ### `history` — Undo/Redo-Verwaltung

@@ -250,8 +250,9 @@ pub fn render_status_bar(ctx: &egui::Context, state: &AppState)
 
 ### `render_edit_panel`
 
-Rendert das schwebende Edit-Panel für aktive Modi (Streckenteilung, Route-Tool)
-und gibt erzeugte Intents zurück.
+Rendert das schwebende Edit-Panel für aktive Modi (Gruppen-Edit, Streckenteilung, Route-Tool)
+und gibt erzeugte Intents zurück. Bei aktivem `group_editing` wird ein Gruppen-Edit-Panel
+(Übernehmen/Abbrechen) angezeigt und die anderen Modi unterdrückt.
 
 ```rust
 pub fn render_edit_panel(
@@ -264,7 +265,9 @@ pub fn render_edit_panel(
   distance_wheel_step_m: f32,
   active_tool: EditorTool,
   tool_manager: Option<&mut ToolManager>,
+  auto_create_segment: &mut bool,
   panel_pos: Option<egui::Pos2>,
+  group_editing: Option<&GroupEditState>,
 ) -> Vec<AppIntent>
 ```
 
