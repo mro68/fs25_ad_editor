@@ -15,6 +15,8 @@ mod drag;
 pub mod edit_panel;
 /// Schwebendes Kontextmenue fuer Werkzeuggruppen an der Mausposition.
 pub mod floating_menu;
+/// Gruppen-Boundary-Overlay: Ein-/Ausfahrt-Icons fuer Boundary-Nodes einer Gruppe.
+pub mod group_boundary_overlay;
 /// Gemeinsame Icon-Helfer fuer Tool-Buttons.
 pub mod icons;
 /// Viewport-Input-Verarbeitung (Drag, Scroll, Mausklick, Selektion).
@@ -42,6 +44,7 @@ pub use dialogs::{
 };
 pub use edit_panel::render_edit_panel;
 pub use floating_menu::render_floating_menu;
+pub use group_boundary_overlay::{render_group_boundary_overlays, GroupBoundaryIcons};
 pub use input::InputState;
 pub use menu::render_menu;
 pub use options_dialog::show_options_dialog;

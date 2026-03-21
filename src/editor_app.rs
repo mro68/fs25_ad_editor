@@ -22,6 +22,8 @@ pub(crate) struct EditorApp {
     /// Gecachte Cursor-Weltposition fuer Tool-Preview
     /// (bleibt erhalten wenn Maus den Viewport verlaesst).
     last_cursor_world: Option<glam::Vec2>,
+    /// Gecachte egui-Textur-Handles fuer Gruppen-Boundary-Icons (lazy initialisiert).
+    group_boundary_icons: Option<ui::GroupBoundaryIcons>,
 }
 
 impl EditorApp {
@@ -44,6 +46,7 @@ impl EditorApp {
             queue: render_state.queue.clone(),
             input: ui::InputState::new(),
             last_cursor_world: None,
+            group_boundary_icons: None,
         }
     }
 }
@@ -450,6 +453,31 @@ impl EditorApp {
                                 .ok();
                         }
                     }
+                }
+            }
+        }
+
+        // ── Gruppen-Boundary-Overlay ──────────────────
+        if let Some(rm) = self.state.road_map.as_deref() {
+            if !self.state.segment_registry.is_empty() {
+                // Icons lazy initialisieren (benoetigen egui::Context)
+                if self.group_boundary_icons.is_none() {
+                    self.group_boundary_icons = Some(ui::GroupBoundaryIcons::load(ui.ctx()));
+                }
+                if let Some(icons) = &self.group_boundary_icons {
+                    let vp = glam::Vec2::new(viewport_size[0], viewport_size[1]);
+                    let painter = ui.painter_at(rect);
+                    ui::render_group_boundary_overlays(
+                        &painter,
+                        rect,
+                        &self.state.view.camera,
+                        vp,
+                        &self.state.segment_registry,
+                        rm,
+                        self.state.selection.selected_node_ids.as_ref(),
+                        icons,
+                        self.state.options.segment_lock_icon_size_px,
+                    );
                 }
             }
         }
