@@ -154,7 +154,7 @@ pub struct RoadMap {
 - `connections_iter(&self) -> impl Iterator<Item = &Connection>` — Iterator ueber alle Verbindungen
 - `connections_between_ids(&self, ids: &IndexSet<u64>) -> Box<dyn Iterator<Item = &Connection>>` — Connections zwischen Nodes aus der gegebenen ID-Menge (O(n), fuer Bulk-Operationen)
 - `connected_neighbors(&self, node_id: u64) -> Vec<ConnectedNeighbor>` — Alle Nachbarn eines Nodes mit Richtung und Winkel
-- `boundary_nodes(&self, group_ids: &HashSet<u64>) -> Vec<BoundaryNode>` — Findet alle Nodes in `group_ids`, die Verbindungen nach ausserhalb haben (O(|connections|)); nur bei Gruppen-Aenderungen aufrufen, nicht pro Frame
+- `boundary_nodes(&self, group_ids: &IndexSet<u64>) -> Vec<BoundaryNode>` — Findet alle Nodes in `group_ids`, die Verbindungen nach ausserhalb haben (O(|connections|)); nur bei Gruppen-Aenderungen aufrufen, nicht pro Frame
 - `is_resampleable_chain(&self, node_ids: &IndexSet<u64>) -> bool` — Prueft ob die selektierten Nodes eine zusammenhaengende Kette bilden (Kreuzungen nur an Endpunkten erlaubt)
 - `next_node_id(&self) -> u64` — Naechste freie Node-ID
 - `add_map_marker(&mut self, marker: MapMarker)` — Fuegt Marker hinzu
