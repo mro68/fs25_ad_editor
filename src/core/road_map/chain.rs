@@ -100,4 +100,118 @@ impl RoadMap {
             None
         }
     }
+
+    /// Prueft ob die selektierten Nodes einen zusammenhaengenden Subgraphen bilden.
+    ///
+    /// Mindestens 2 Nodes erforderlich. Im Gegensatz zu `is_resampleable_chain`
+    /// duerfen die Nodes beliebige Verbindungstopologien haben (Kreuzungen,
+    /// Verzweigungen, Schleifen). Es muss lediglich jeder Node ueber Verbindungen
+    /// (direkt oder transitiv) von jedem anderen Node erreichbar sein.
+    pub fn is_connected_subgraph(&self, node_ids: &IndexSet<u64>) -> bool {
+        if node_ids.len() < 2 {
+            return false;
+        }
+
+        let start = match node_ids.iter().next().copied() {
+            Some(id) => id,
+            None => return false,
+        };
+
+        let mut visited = HashSet::with_capacity(node_ids.len());
+        let mut stack = vec![start];
+
+        while let Some(current) = stack.pop() {
+            if !visited.insert(current) {
+                continue;
+            }
+            for conn in self.connections.values() {
+                if conn.start_id == current && node_ids.contains(&conn.end_id) && !visited.contains(&conn.end_id) {
+                    stack.push(conn.end_id);
+                } else if conn.end_id == current && node_ids.contains(&conn.start_id) && !visited.contains(&conn.start_id) {
+                    stack.push(conn.start_id);
+                }
+            }
+        }
+
+        visited.len() == node_ids.len()
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::{Connection, ConnectionDirection, ConnectionPriority, MapNode, NodeFlag, RoadMap};
+
+    fn make_map_with_star() -> RoadMap {
+        // Stern-Topologie: Node 1 in der Mitte, verbunden mit 2, 3, 4
+        //     2
+        //     |
+        // 3 - 1 - 4
+        let mut map = RoadMap::new(3);
+        for id in 1..=4 {
+            map.add_node(MapNode::new(
+                id,
+                glam::Vec2::new(id as f32 * 10.0, 0.0),
+                NodeFlag::Regular,
+            ));
+        }
+        for &end in &[2, 3, 4] {
+            let start_pos = glam::Vec2::new(10.0, 0.0);
+            let end_pos = glam::Vec2::new(end as f32 * 10.0, 0.0);
+            map.add_connection(Connection::new(1, end, ConnectionDirection::Regular, ConnectionPriority::Regular, start_pos, end_pos));
+        }
+        map
+    }
+
+    #[test]
+    fn connected_subgraph_stern() {
+        let map = make_map_with_star();
+        let ids: IndexSet<u64> = [1, 2, 3, 4].into_iter().collect();
+        assert!(map.is_connected_subgraph(&ids));
+    }
+
+    #[test]
+    fn connected_subgraph_teilmenge_verbunden() {
+        let map = make_map_with_star();
+        let ids: IndexSet<u64> = [1, 2].into_iter().collect();
+        assert!(map.is_connected_subgraph(&ids));
+    }
+
+    #[test]
+    fn connected_subgraph_teilmenge_unverbunden() {
+        let map = make_map_with_star();
+        // 2 und 3 sind nicht direkt verbunden (nur ueber 1)
+        let ids: IndexSet<u64> = [2, 3].into_iter().collect();
+        assert!(!map.is_connected_subgraph(&ids));
+    }
+
+    #[test]
+    fn connected_subgraph_einzelner_node() {
+        let map = make_map_with_star();
+        let ids: IndexSet<u64> = [1].into_iter().collect();
+        assert!(!map.is_connected_subgraph(&ids));
+    }
+
+    #[test]
+    fn connected_subgraph_leere_menge() {
+        let map = make_map_with_star();
+        let ids: IndexSet<u64> = IndexSet::new();
+        assert!(!map.is_connected_subgraph(&ids));
+    }
+
+    #[test]
+    fn connected_subgraph_kette() {
+        // Lineare Kette: 1 → 2 → 3 → 4
+        let mut map = RoadMap::new(3);
+        for id in 1..=4 {
+            map.add_node(MapNode::new(id, glam::Vec2::new(id as f32, 0.0), NodeFlag::Regular));
+        }
+        for start in 1..=3 {
+            let start_pos = glam::Vec2::new(start as f32, 0.0);
+            let end_pos = glam::Vec2::new((start + 1) as f32, 0.0);
+            map.add_connection(Connection::new(start, start + 1, ConnectionDirection::Regular, ConnectionPriority::Regular, start_pos, end_pos));
+        }
+        let ids: IndexSet<u64> = [1, 2, 3, 4].into_iter().collect();
+        assert!(map.is_connected_subgraph(&ids));
+    }
 }

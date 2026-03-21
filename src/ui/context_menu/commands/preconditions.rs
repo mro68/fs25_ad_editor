@@ -24,6 +24,8 @@ pub enum Precondition {
     StreckenteilungActive(bool),
     /// Selektion bildet eine zusammenhaengende Kette (fuer Streckenteilung)
     IsResampleableChain,
+    /// Selektion bildet einen zusammenhaengenden Subgraphen (fuer Gruppierung)
+    IsConnectedSubgraph,
     /// Mindestens 1 Node selektiert (fuer Copy)
     HasSelection,
     /// Clipboard enthaelt Nodes (fuer Paste)
@@ -81,6 +83,8 @@ impl Precondition {
             Self::StreckenteilungActive(expected) => ctx.distanzen_active == *expected,
 
             Self::IsResampleableChain => ctx.road_map.is_resampleable_chain(ctx.selected_node_ids),
+
+            Self::IsConnectedSubgraph => ctx.road_map.is_connected_subgraph(ctx.selected_node_ids),
 
             Self::HasSelection => !ctx.selected_node_ids.is_empty(),
 
