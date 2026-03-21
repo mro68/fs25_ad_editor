@@ -1,5 +1,6 @@
 //! Use-Case: Segment-Selektion zwischen Kreuzungen (Doppelklick).
 
+use crate::shared::angle_deviation;
 use crate::AppState;
 use std::collections::HashMap;
 
@@ -11,15 +12,6 @@ struct WalkConfig {
     stop_at_junction: bool,
     /// Max. Winkelabweichung in Radiant (0.0 = deaktiviert).
     max_angle_rad: f32,
-}
-
-/// Berechnet die Abweichung zwischen Einlauf- und Auslaufwinkel.
-///
-/// Misst, wie stark die Richtung abknickt (0 = geradeaus, PI = Umkehr).
-fn angle_deviation(incoming: f32, outgoing: f32) -> f32 {
-    let diff = (outgoing - incoming + std::f32::consts::PI).rem_euclid(std::f32::consts::TAU)
-        - std::f32::consts::PI;
-    diff.abs()
 }
 
 /// Laeuft entlang einer Kette von Nodes bis zur naechsten Segmentgrenze.
