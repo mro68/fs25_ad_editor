@@ -1,5 +1,6 @@
 //! Datei-Dialoge und modale Fenster.
 
+mod confirm_dissolve_dialog;
 mod dedup_dialog;
 mod file_dialogs;
 mod heightmap_warning;
@@ -11,6 +12,7 @@ mod segment_settings_popup;
 mod trace_all_fields_dialog;
 mod zip_browser;
 
+pub use confirm_dissolve_dialog::show_confirm_dissolve_dialog;
 pub use dedup_dialog::show_dedup_dialog;
 pub use file_dialogs::handle_file_dialogs;
 pub use heightmap_warning::show_heightmap_warning;

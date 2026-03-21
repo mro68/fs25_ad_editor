@@ -445,8 +445,7 @@ impl EditorApp {
                                 .push(AppIntent::ToggleSegmentLockRequested { segment_id });
                         }
                         ui::SegmentOverlayEvent::Dissolved { segment_id } => {
-                            overlay_events
-                                .push(AppIntent::DissolveSegmentRequested { segment_id });
+                            overlay_events.push(AppIntent::DissolveSegmentRequested { segment_id });
                         }
                     }
                 }

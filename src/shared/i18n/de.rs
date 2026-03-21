@@ -161,6 +161,11 @@ pub(super) fn translate(key: I18nKey) -> &'static str {
         I18nKey::MenuTraceAllFields => "\u{1F4CD} Alle Felder nachzeichnen",
         I18nKey::MenuExtrasNeedBackground => "Hintergrund mit Feldgrenzen zuerst laden",
         I18nKey::MenuTraceAllFieldsHelp => "Alle erkannten Felder automatisch mit Wegpunkten nachzeichnen (ein Undo-Schritt)",
+        // === Bestaetigungsdialog: Gruppe aufloesen ===
+        I18nKey::ConfirmDissolveTitle => "Gruppe auflösen",
+        I18nKey::ConfirmDissolveMessage => "Soll die Gruppe wirklich aufgelöst werden? Die Nodes bleiben erhalten.",
+        I18nKey::ConfirmDissolveOk => "Auflösen",
+        I18nKey::ConfirmDissolveCancel => "Abbrechen",
         // === Menü: Hilfe ===
         I18nKey::MenuHelp => "Hilfe",
         I18nKey::MenuAbout => "Über",

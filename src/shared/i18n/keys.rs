@@ -623,4 +623,14 @@ pub enum I18nKey {
     LpPriorityMain,
     /// LongPress-Tooltip fuer Nebenstrasse
     LpPrioritySub,
+
+    // === Bestaetigungsdialog: Gruppe aufloesen ===
+    /// Bestätigungsdialog: Titel
+    ConfirmDissolveTitle,
+    /// Bestätigungsdialog: Erklärungstext
+    ConfirmDissolveMessage,
+    /// Bestätigungsdialog: Bestätigen-Button
+    ConfirmDissolveOk,
+    /// Bestätigungsdialog: Abbrechen-Button
+    ConfirmDissolveCancel,
 }
