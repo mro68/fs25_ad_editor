@@ -308,6 +308,8 @@ pub struct UiState {
     pub trace_all_fields_dialog: TraceAllFieldsDialogState,
     /// Segment-Einstellungs-Popup (erscheint nach Doppelklick auf Segment-Node)
     pub segment_settings_popup: SegmentSettingsPopupState,
+    /// Bestaetigungsdialog zum Aufloesen einer Gruppe.
+    pub confirm_dissolve_segment_id: Option<u64>,
 }
 
 impl UiState {
@@ -336,6 +338,7 @@ impl UiState {
             distanzen: DistanzenState::default(),
             trace_all_fields_dialog: TraceAllFieldsDialogState::default(),
             segment_settings_popup: SegmentSettingsPopupState::default(),
+            confirm_dissolve_segment_id: None,
         }
     }
 }

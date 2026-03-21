@@ -310,6 +310,9 @@ impl AppController {
             AppCommand::DissolveSegment { segment_id } => {
                 handlers::segment::dissolve(state, segment_id)
             }
+            AppCommand::OpenDissolveConfirmDialog { segment_id } => {
+                state.ui.confirm_dissolve_segment_id = Some(segment_id);
+            }
             AppCommand::GroupSelectionAsSegment => handlers::segment::group_selection(state),
             AppCommand::GroupEditStart { record_id } => {
                 handlers::segment::start_group_edit(state, record_id)

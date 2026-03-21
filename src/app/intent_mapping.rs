@@ -326,6 +326,9 @@ pub fn map_intent_to_commands(state: &AppState, intent: AppIntent) -> Vec<AppCom
             vec![AppCommand::ToggleSegmentLock { segment_id }]
         }
         AppIntent::DissolveSegmentRequested { segment_id } => {
+            vec![AppCommand::OpenDissolveConfirmDialog { segment_id }]
+        }
+        AppIntent::DissolveSegmentConfirmed { segment_id } => {
             vec![AppCommand::DissolveSegment { segment_id }]
         }
 

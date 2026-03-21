@@ -134,6 +134,8 @@ pub struct UiState {
     pub distanzen: DistanzenState,
     /// Segment-Einstellungs-Popup (Doppelklick auf Segment-Node)
     pub segment_settings_popup: SegmentSettingsPopupState,
+    /// ID des Segments, dessen Auflösung vom User bestätigt werden soll (`None` = kein Dialog)
+    pub confirm_dissolve_segment_id: Option<u64>,
 }
 
 pub struct FloatingMenuState {
@@ -348,6 +350,10 @@ pub enum SegmentKind {
         base_spacing: f32,           // Node-Abstand auf der Offset-Kette
         base: SegmentBase,
     },
+    /// Manuell gruppierte Nodes (kein Tool-Hintergrund — via Kontextmenü "Gruppe erstellen")
+    Manual {
+        base: SegmentBase,
+    },
 }
 
 /// Tool-Indizes im ToolManager
@@ -365,9 +371,9 @@ pub const TOOL_INDEX_ROUTE_OFFSET: usize = 8;
 **Methoden:**
 
 ```rust
-pub fn tool_index(&self) -> usize
+pub fn tool_index(&self) -> Option<usize>
 ```
-Gibt den Tool-Index im ToolManager fuer diese SegmentKind-Variante zurueck (z.B. `SegmentKind::Bypass { .. }.tool_index()` → `TOOL_INDEX_BYPASS`).
+Gibt den Tool-Index im ToolManager fuer diese SegmentKind-Variante zurueck (z.B. `SegmentKind::Bypass { .. }.tool_index()` → `Some(TOOL_INDEX_BYPASS)`). Gibt `None` fuer `Manual`-Segmente zurueck, die keinem Tool zugeordnet sind.
 
 ---
 
@@ -437,11 +443,16 @@ pub enum SegmentKind {
         base_spacing: f32,          // Node-Abstand auf der Offset-Kette
         base: SegmentBase,
     },
+    /// Manuell gruppierte Nodes (kein Tool-Hintergrund — via Kontextmenü "Gruppe erstellen")
+    Manual {
+        base: SegmentBase,
+    },
 }
 ```
 
 **Methoden:**
-- `tool_index() → usize` — Index des zugehoerigen Tools im `ToolManager` (fuer Segment-Editing)
+- `tool_index() → Option<usize>` — Index des zugehoerigen Tools im `ToolManager`. Gibt `None` fuer `Manual`-Segmente zurueck, da sie keinem Tool zugeordnet sind.
+- `is_tool_backed() → bool` — `true` wenn das Segment von einem Route-Tool erstellt wurde (alle Varianten ausser `Manual`).
 
 **Hinweis:** Alle Varianten enthalten `base: SegmentBase` mit gemeinsamen Parametern. Die `segment_registry` speichert diese Metadaten fuer nachtraegliche Bearbeitung.
 
@@ -480,6 +491,8 @@ In-Session-Registry aller erstellten Segmente — ermoeglicht nachtraegliches Ed
 
 **Merkmale:**
 - Nicht persistent: Wird beim Laden einer Datei geleert
+- Interne Speicherung als `HashMap<u64, SegmentRecord>` fuer O(1)-Zugriff nach ID
+- Reverse-Index `node_to_records: HashMap<u64, Vec<u64>>` fuer effiziente Node→Segment-Abfragen
 - Segment-Validierung: Prueft ob alle Nodes noch existieren und Positionen unveraendert sind
 - Segment-Selektion: Erlaubt Klick auf Segment-Node → Selektion aller Segment-Nodes
 
@@ -493,8 +506,9 @@ pub fn remove(&mut self, record_id: u64) // Loescht Record
 pub fn find_by_node_ids(&self, node_ids: &IndexSet<u64>) -> Vec<&SegmentRecord> // Alle Records mit mind. einer Node-ID
 pub fn find_first_by_node_id(&self, node_id: u64) -> Option<&SegmentRecord> // Erstes Record mit dieser Node
 pub fn is_segment_valid(&self, record: &SegmentRecord, road_map: &RoadMap) -> bool // Validitaetspruefung
-pub fn records(&self) -> &[SegmentRecord] // Alle Records als unveraenderlicher Slice
-pub fn records_mut(&mut self) -> &mut [SegmentRecord] // Alle Records als veraenderlicher Slice
+pub fn records(&self) -> impl Iterator<Item = &SegmentRecord> // Alle Records als Iterator
+pub fn records_mut(&mut self) -> impl Iterator<Item = &mut SegmentRecord> // Alle Records (veränderlich)
+pub fn records_map(&self) -> &HashMap<u64, SegmentRecord> // Direkter Zugriff auf interne HashMap
 pub fn segments_for_node(&self, node_id: u64) -> Vec<u64> // Alle Segment-IDs die diesen Node enthalten
 pub fn toggle_lock(&mut self, segment_id: u64) // Lock-Zustand des Segments umschalten
 pub fn set_locked(&mut self, segment_id: u64, locked: bool) // Lock-Zustand explizit setzen
@@ -687,8 +701,10 @@ pub enum AppIntent {
     // Segment-Lock
     /// Segment-Lock umschalten (gesperrt ↔ entsperrt)
     ToggleSegmentLockRequested { segment_id: u64 },
-    /// Segment aufloesen (nur Segment-Record entfernen)
+    /// Segment aufloesen — öffnet zuerst einen Bestätigungsdialog
     DissolveSegmentRequested { segment_id: u64 },
+    /// Segment aufloesen nach Nutzer-Bestätigung im Confirm-Dialog
+    DissolveSegmentConfirmed { segment_id: u64 },
 
     // Extras
     /// Alle erkannten Farmland-Polygone als Wegpunkt-Ring nachzeichnen
@@ -853,6 +869,8 @@ pub enum AppCommand {
     // Segment-Lock
     /// Segment-Lock umschalten (gesperrt ↔ entsperrt)
     ToggleSegmentLock { segment_id: u64 },
+    /// Bestätigungsdialog für Segment-Auflösung öffnen (setzt `UiState::confirm_dissolve_segment_id`)
+    OpenDissolveConfirmDialog { segment_id: u64 },
     /// Segment aufloesen (Segment-Record entfernen, Nodes beibehalten)
     DissolveSegment { segment_id: u64 },
 

@@ -67,9 +67,10 @@ impl SegmentRegistry {
     /// Registriert ein neues Segment und gibt die vergebene ID zurueck.
     pub fn register(&mut self, record: SegmentRecord) -> u64 {
         let id = record.id;
-        let node_ids_clone: Vec<u64> = record.node_ids.clone();
+        for &nid in &record.node_ids {
+            self.node_to_records.entry(nid).or_default().push(id);
+        }
         self.records.insert(id, record);
-        self.add_to_index(id, &node_ids_clone);
         id
     }
 
@@ -87,11 +88,9 @@ impl SegmentRegistry {
 
     /// Entfernt den Record mit der angegebenen ID.
     pub fn remove(&mut self, record_id: u64) {
-        if let Some(record) = self.records.get(&record_id) {
-            let node_ids: Vec<u64> = record.node_ids.clone();
-            self.remove_from_index(record_id, &node_ids);
+        if let Some(record) = self.records.remove(&record_id) {
+            self.remove_from_index(record_id, &record.node_ids);
         }
-        self.records.remove(&record_id);
     }
 
     /// Gibt alle Records zurueck, die mindestens einen der angegebenen Node-IDs enthalten.
@@ -271,15 +270,15 @@ impl SegmentRegistry {
             Some(r) => r.node_ids.clone(),
             None => return false,
         };
-        // Record aktualisieren
+        // Reverse-Index aktualisieren (vor Record-Mutation, damit node_ids per Move geht)
+        self.remove_from_index(record_id, &old_ids);
+        self.add_to_index(record_id, &node_ids);
+        // Record aktualisieren (Move statt Clone)
         if let Some(record) = self.records.get_mut(&record_id) {
-            record.node_ids = node_ids.clone();
+            record.node_ids = node_ids;
             record.original_positions = original_positions;
             record.marker_node_ids.clear();
         }
-        // Reverse-Index aktualisieren
-        self.remove_from_index(record_id, &old_ids);
-        self.add_to_index(record_id, &node_ids);
         true
     }
 
@@ -437,5 +436,133 @@ mod registry_tests {
         let record = registry.get(0).expect("Record vorhanden");
         assert_eq!(record.original_positions[0], Vec2::new(5.0, 0.0));
         assert_eq!(record.original_positions[1], Vec2::new(15.0, 0.0));
+    }
+
+    /// Prüft, dass der Reverse-Index nach register/remove konsistent bleibt.
+    #[test]
+    fn reverse_index_konsistent_nach_register_und_remove() {
+        let mut registry = SegmentRegistry::new();
+        registry.register(make_test_record(0, vec![1, 2, 3], vec![], false));
+        registry.register(make_test_record(1, vec![3, 4], vec![], false));
+
+        // Node 3 gehoert zu beiden Records
+        assert_eq!(registry.segments_for_node(3).len(), 2);
+
+        // Record 0 entfernen → Node 3 nur noch in Record 1
+        registry.remove(0);
+        let segs = registry.segments_for_node(3);
+        assert_eq!(segs, vec![1], "Node 3 sollte nur noch Record 1 haben");
+
+        // Nodes 1, 2 sollten keine Zuordnung mehr haben
+        assert!(registry.segments_for_node(1).is_empty());
+        assert!(registry.segments_for_node(2).is_empty());
+
+        // Node 4 weiterhin Record 1
+        assert_eq!(registry.segments_for_node(4), vec![1]);
+    }
+
+    /// Prüft, dass update_record den Reverse-Index korrekt aktualisiert.
+    #[test]
+    fn reverse_index_konsistent_nach_update_record() {
+        let mut registry = SegmentRegistry::new();
+        registry.register(make_test_record(0, vec![1, 2, 3], vec![], false));
+
+        // Alte Nodes: 1,2,3 → Neue Nodes: 2,4,5
+        let success =
+            registry.update_record(0, vec![2, 4, 5], vec![Vec2::ZERO, Vec2::ZERO, Vec2::ZERO]);
+        assert!(success, "update_record sollte true zurueckgeben");
+
+        // Node 1, 3 sollten nicht mehr zugeordnet sein
+        assert!(registry.segments_for_node(1).is_empty());
+        assert!(registry.segments_for_node(3).is_empty());
+
+        // Node 2 sollte weiterhin, 4 und 5 neu zugeordnet sein
+        assert_eq!(registry.segments_for_node(2), vec![0]);
+        assert_eq!(registry.segments_for_node(4), vec![0]);
+        assert_eq!(registry.segments_for_node(5), vec![0]);
+    }
+
+    /// Prüft, dass update_record false zurückgibt bei nicht-existierender ID.
+    #[test]
+    fn update_record_nicht_existierend_gibt_false() {
+        let mut registry = SegmentRegistry::new();
+        let result = registry.update_record(99, vec![1], vec![Vec2::ZERO]);
+        assert!(!result, "Nicht-existierende ID sollte false ergeben");
+    }
+
+    /// Prüft, dass invalidate_by_node_ids den edit_guard respektiert.
+    #[test]
+    fn invalidate_respektiert_edit_guard() {
+        let mut registry = SegmentRegistry::new();
+        registry.register(make_test_record(0, vec![1, 2], vec![], false));
+        registry.register(make_test_record(1, vec![2, 3], vec![], false));
+
+        // Record 1 als edit_guard setzen
+        registry.set_edit_guard(Some(1));
+
+        // Node 2 invalidieren → sollte nur Record 0 entfernen
+        registry.invalidate_by_node_ids(&[2]);
+
+        assert!(registry.get(0).is_none(), "Record 0 sollte entfernt sein");
+        assert!(
+            registry.get(1).is_some(),
+            "Record 1 sollte durch Guard geschuetzt sein"
+        );
+    }
+
+    /// Prüft, dass find_by_node_ids korrekte Records findet.
+    #[test]
+    fn find_by_node_ids_findet_betroffene_records() {
+        let mut registry = SegmentRegistry::new();
+        registry.register(make_test_record(0, vec![1, 2], vec![], false));
+        registry.register(make_test_record(1, vec![3, 4], vec![], false));
+        registry.register(make_test_record(2, vec![2, 5], vec![], false));
+
+        let query: indexmap::IndexSet<u64> = [2, 3].into_iter().collect();
+        let found = registry.find_by_node_ids(&query);
+        let mut found_ids: Vec<u64> = found.iter().map(|r| r.id).collect();
+        found_ids.sort();
+        assert_eq!(found_ids, vec![0, 1, 2], "Alle Records mit Node 2 oder 3");
+    }
+
+    /// Prüft, dass find_first_by_node_id den ersten Record findet.
+    #[test]
+    fn find_first_by_node_id_findet_record() {
+        let mut registry = SegmentRegistry::new();
+        registry.register(make_test_record(0, vec![1, 2], vec![], false));
+        registry.register(make_test_record(1, vec![3, 4], vec![], false));
+
+        assert!(registry.find_first_by_node_id(1).is_some());
+        assert!(registry.find_first_by_node_id(99).is_none());
+    }
+
+    /// Prüft, dass remove bei nicht-existierender ID nicht panikt.
+    #[test]
+    fn remove_nicht_existierend_ist_noop() {
+        let mut registry = SegmentRegistry::new();
+        registry.register(make_test_record(0, vec![1, 2], vec![], false));
+
+        // Doppeltes Remove sollte kein Panic verursachen
+        registry.remove(0);
+        registry.remove(0);
+        registry.remove(99);
+
+        assert!(registry.is_empty());
+    }
+
+    /// Prüft Operationen auf leerer Registry.
+    #[test]
+    fn leere_registry_edge_cases() {
+        let registry = SegmentRegistry::new();
+
+        assert!(registry.segments_for_node(1).is_empty());
+        assert!(registry.expand_locked_selection(&[1, 2]).is_empty());
+        assert!(registry.find_first_by_node_id(1).is_none());
+
+        let query: indexmap::IndexSet<u64> = [1, 2].into_iter().collect();
+        assert!(registry.find_by_node_ids(&query).is_empty());
+
+        assert!(registry.is_empty());
+        assert_eq!(registry.len(), 0);
     }
 }

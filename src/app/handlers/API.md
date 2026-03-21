@@ -582,7 +582,7 @@ Schaltet den Lock-Zustand eines Segments um. Gesperrte Segmente bewegen alle zug
 pub fn dissolve(state: &mut AppState, segment_id: u64)
 ```
 
-Loest ein Segment auf: Entfernt nur den Segment-Record aus der Registry. Die zugehoerigen Nodes und Verbindungen in der RoadMap bleiben unveraendert. Wird per `Ctrl + Klick` auf das Lock-Icon ausgeloest. Unbekannte IDs werden ignoriert.
+Loest ein Segment auf: Entfernt nur den Segment-Record aus der Registry. Die zugehoerigen Nodes und Verbindungen in der RoadMap bleiben unveraendert. Wird **nach** Nutzer-Bestätigung im `ConfirmDissolveDialog` aufgerufen — nicht direkt durch `DissolveSegmentRequested` (dieser öffnet zunächst den Bestätigungsdialog via `OpenDissolveConfirmDialog`). Unbekannte IDs werden ignoriert.
 
 ```rust
 pub fn start_group_edit(state: &mut AppState, record_id: u64)
@@ -594,7 +594,7 @@ Startet den nicht-destruktiven Gruppen-Edit-Modus fuer einen Segment-Record. Ers
 pub fn apply_group_edit(state: &mut AppState)
 ```
 
-Schliesst den Gruppen-Edit-Modus ab und uebernimmt alle Aenderungen. Berechnet die neue Node-ID-Menge als Vereinigung von (Original-Nodes, die noch in der RoadMap existieren) und (aktuell selektierten Nodes). Aktualisiert den Record via `SegmentRegistry::update_record()`, stellt den Lock-Zustand wieder her und hebt den Edit-Guard auf. Tut nichts wenn kein Edit aktiv ist.
+Schliesst den Gruppen-Edit-Modus ab und uebernimmt alle Aenderungen. Berechnet die neue Node-ID-Menge als Vereinigung von (Original-Nodes, die noch in der RoadMap existieren) und (aktuell selektierten Nodes). **Verbindungsfilter:** Neu hinzugefügte selektierte Nodes werden nur übernommen, wenn sie eine direkte oder indirekte Verbindung zu einem bereits erreichbaren Node im Record haben (iterativer Erreichbarkeits-Algorithmus). Isolierte Nodes ohne Verbindung zur Gruppe werden verworfen. Aktualisiert den Record via `SegmentRegistry::update_record()`, stellt den Lock-Zustand wieder her und hebt den Edit-Guard auf. Tut nichts wenn kein Edit aktiv ist.
 
 ```rust
 pub fn cancel_group_edit(state: &mut AppState)

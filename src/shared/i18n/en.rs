@@ -161,6 +161,11 @@ pub(super) fn translate(key: I18nKey) -> &'static str {
         I18nKey::MenuTraceAllFields => "\u{1F4CD} Trace All Fields",
         I18nKey::MenuExtrasNeedBackground => "Load background with field boundaries first",
         I18nKey::MenuTraceAllFieldsHelp => "Automatically trace all detected fields with waypoints (one undo step)",
+        // === Confirmation dialog: dissolve group ===
+        I18nKey::ConfirmDissolveTitle => "Dissolve Group",
+        I18nKey::ConfirmDissolveMessage => "Really dissolve the group? Nodes will be preserved.",
+        I18nKey::ConfirmDissolveOk => "Dissolve",
+        I18nKey::ConfirmDissolveCancel => "Cancel",
         // === Menü: Hilfe ===
         I18nKey::MenuHelp => "Help",
         I18nKey::MenuAbout => "About",

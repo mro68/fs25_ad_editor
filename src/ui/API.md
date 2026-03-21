@@ -42,10 +42,45 @@ Das `ui`-Modul enthält egui-UI-Komponenten (Menüs, Statusbar, Input-Handling, 
   - `zip_browser.rs` — ZIP-Browser für Background-Map-Auswahl
   - `post_load_dialog.rs` — Post-Load-Dialog (Auto-Erkennung von Heightmap/ZIP/Overview)
   - `save_overview_dialog.rs` — Dialog: Hintergrundbild als overview.jpg speichern
+  - `confirm_dissolve_dialog.rs` — Bestätigungsdialog vor dem Auflösen einer Segment-Gruppe
 - `segment_overlay.rs` — Segment-Rahmen und Lock-Icons als egui-Overlay (`SegmentOverlayEvent`, `render_segment_overlays()`)
 - `group_boundary_overlay.rs` — Boundary-Icons (Eingang/Ausgang/Bidirektional) ueber Nodes mit externen Verbindungen (`GroupBoundaryIcons`, `render_group_boundary_overlays()`)
 
 ## Funktionen
+---
+
+### `show_confirm_dissolve_dialog`
+
+Zeigt einen modalen Bestätigungsdialog zum Auflösen einer Segment-Gruppe. Wird aufgerufen wenn `UiState::confirm_dissolve_segment_id` gesetzt ist.
+
+```rust
+pub fn show_confirm_dissolve_dialog(
+    ctx: &egui::Context,
+    confirm_dissolve_id: &mut Option<u64>,
+    language: Language,
+) -> Vec<AppIntent>
+```
+
+**Verhalten:**
+
+- Ist `confirm_dissolve_id` `None`, tut die Funktion nichts und gibt einen leeren Vec zurück
+- Zeigt ein zentriertes, nicht minimierbares `egui::Window` mit Titel `ConfirmDissolveTitle`
+- Klick auf `ConfirmDissolveOk` → emittiert `AppIntent::DissolveSegmentConfirmed { segment_id }` und setzt `confirm_dissolve_id = None`
+- Klick auf `ConfirmDissolveCancel` oder Schließen des Fensters → setzt `confirm_dissolve_id = None` ohne Aktion
+- Texte werden über `t(language, I18nKey::ConfirmDissolveXxx)` übersetzt
+
+**Intent-Flow:**
+```
+Ctrl+Lock-Icon-Klick
+  → DissolveSegmentRequested
+  → OpenDissolveConfirmDialog  (via intent_mapping)
+  → UiState::confirm_dissolve_segment_id = Some(id)
+  → [nächster Frame] show_confirm_dissolve_dialog() zeigt Dialog
+  → DissolveSegmentConfirmed  (bei Bestätigung)
+  → DissolveSegment  (via intent_mapping)
+  → handlers::segment::dissolve()
+```
+
 ---
 
 ### `SegmentOverlayEvent`

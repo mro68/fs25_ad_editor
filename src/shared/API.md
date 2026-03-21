@@ -302,6 +302,11 @@ pub enum I18nKey {
     LpStraight, LpCurveQuad, LpCurveCubic, LpSpline, LpSmoothCurve,
     LpBypass, LpParking, LpRouteOffset,
     LpDirectionRegular, LpDirectionDual, LpDirectionReverse, LpPriorityMain, LpPrioritySub,
+    // Bestätigungs-Dialoge (ConfirmDissolveXxx — 4 Keys)
+    ConfirmDissolveTitle,   // "Gruppe auflösen"
+    ConfirmDissolveMessage, // "Soll die Gruppe wirklich aufgelöst werden? Die Nodes bleiben erhalten."
+    ConfirmDissolveOk,      // "Auflösen"
+    ConfirmDissolveCancel,  // "Abbrechen"
 }
 ```
 

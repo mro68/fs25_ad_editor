@@ -318,6 +318,11 @@
     - [x] `app/API.md`: `SegmentRegistry::open_nodes()` in Methoden-Liste ergaenzt
     - [x] `ui/API.md`: Neues Modul `group_boundary_overlay` mit `GroupBoundaryIcons` und `render_group_boundary_overlays()` dokumentiert
     - [x] ROADMAP.md: Feature als abgeschlossen markiert
+  - [x] **Doku-Sync Segment-Registry-Refactoring (2026-03-21, Branch `refactor/segment-registry`)**
+    - [x] `app/API.md`: `SegmentKind::Manual`-Variante in beiden SegmentKind-Bloecken ergaenzt; `tool_index()` Rueckgabetyp `usize` → `Option<usize>` korrigiert; `is_tool_backed()` neu dokumentiert; `SegmentRegistry`-Merkmale um HashMap/Reverse-Index ergaenzt; `records()`/`records_mut()` von Slice auf Iterator-Rueckgabe aktualisiert; `records_map()` neu; `OpenDissolveConfirmDialog`-Command und `DissolveSegmentConfirmed`-Intent hinzugefuegt; `UiState::confirm_dissolve_segment_id` ergaenzt
+    - [x] `app/handlers/API.md`: `apply_group_edit()` um Verbindungsfilter-Beschreibung ergaenzt; `dissolve()` auf 2-schrittige Dialog-Bestaetigung hingewiesen
+    - [x] `ui/API.md`: `confirm_dissolve_dialog.rs` im Modul-Index; neue Sektion `show_confirm_dissolve_dialog()` mit Intent-Flow-Diagramm
+    - [x] `shared/API.md`: 4 neue i18n-Keys `ConfirmDissolveTitle/Message/Ok/Cancel` in `I18nKey`-Uebersicht
   - [x] **Doku-Sync Zoom-Shortcuts + i18n-Migration (2026-03-20, Branch `feature/zoom-shortcuts-i18n`)**
     - [x] `src/app/API.md`: `FloatingMenuKind` um `DirectionPriority` und `Zoom` ergaenzt (inkl. Shortcut-Hinweise)
     - [x] `src/ui/API.md`: `render_floating_menu` — 2 neue Menue-Arten dokumentiert; Keyboard-Shortcuts-Tabelle auf `T/G/B/R/Z` aktualisiert; Modulbeschreibung `floating_menu.rs` korrigiert
