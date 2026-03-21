@@ -311,6 +311,11 @@ impl AppController {
                 handlers::segment::dissolve(state, segment_id)
             }
             AppCommand::GroupSelectionAsSegment => handlers::segment::group_selection(state),
+            AppCommand::GroupEditStart { record_id } => {
+                handlers::segment::start_group_edit(state, record_id)
+            }
+            AppCommand::GroupEditApply => handlers::segment::apply_group_edit(state),
+            AppCommand::GroupEditCancel => handlers::segment::cancel_group_edit(state),
 
             // === Copy/Paste ===
             AppCommand::CopySelection => handlers::editing::copy_selection(state),

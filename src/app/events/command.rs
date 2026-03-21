@@ -220,6 +220,12 @@ pub enum AppCommand {
     RouteToolRotate { delta: f32 },
     /// Segment nachtraeglich bearbeiten
     EditSegment { record_id: u64 },
+    /// Gruppen-Edit-Modus nicht-destruktiv starten
+    GroupEditStart { record_id: u64 },
+    /// Gruppen-Edit uebernehmen (Aenderungen persistieren)
+    GroupEditApply,
+    /// Gruppen-Edit abbrechen (Undo zum Snapshot)
+    GroupEditCancel,
     /// ZIP-Archiv oeffnen und Bilddateien im Browser anzeigen
     BrowseZipBackground { path: String },
     /// Bilddatei aus ZIP als Background-Map laden

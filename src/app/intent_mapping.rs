@@ -254,6 +254,11 @@ pub fn map_intent_to_commands(state: &AppState, intent: AppIntent) -> Vec<AppCom
         AppIntent::EditSegmentRequested { record_id } => {
             vec![AppCommand::EditSegment { record_id }]
         }
+        AppIntent::GroupEditStartRequested { record_id } => {
+            vec![AppCommand::GroupEditStart { record_id }]
+        }
+        AppIntent::GroupEditApplyRequested => vec![AppCommand::GroupEditApply],
+        AppIntent::GroupEditCancelRequested => vec![AppCommand::GroupEditCancel],
         AppIntent::GroupSelectionAsSegmentRequested => {
             vec![AppCommand::GroupSelectionAsSegment]
         }
