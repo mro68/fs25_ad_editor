@@ -276,7 +276,7 @@ impl CommandId {
             Self::PasteHere => AppIntent::PasteStartRequested,
 
             // ── Segment ──────────────────────────────────────────────────────
-            Self::EditSegment => AppIntent::EditSegmentRequested {
+            Self::EditSegment => AppIntent::GroupEditStartRequested {
                 record_id: ctx.segment_record_id.unwrap_or(0),
             },
             Self::GroupSelectionAsSegment => AppIntent::GroupSelectionAsSegmentRequested,

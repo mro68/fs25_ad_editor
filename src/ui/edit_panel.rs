@@ -5,6 +5,7 @@
 //! Einstellungen mit Uebernehmen/Abbrechen-Buttons.
 
 use crate::app::state::DistanzenState;
+use crate::app::state::GroupEditState;
 use crate::app::tools::common::wheel_dir;
 use crate::app::tools::ToolManager;
 use crate::app::{AppIntent, ConnectionDirection, ConnectionPriority, EditorTool, RoadMap};
@@ -31,8 +32,15 @@ pub fn render_edit_panel(
     tool_manager: Option<&mut ToolManager>,
     auto_create_segment: &mut bool,
     panel_pos: Option<egui::Pos2>,
+    group_editing: Option<&GroupEditState>,
 ) -> Vec<AppIntent> {
     let mut events = Vec::new();
+
+    // Gruppen-Edit-Panel (hat Vorrang vor Streckenteilung)
+    if let Some(edit_state) = group_editing {
+        render_group_edit_panel(ctx, edit_state, panel_pos, &mut events);
+        return events;
+    }
 
     // Streckenteilung Edit-Modus
     if distanzen_state.active {
@@ -65,6 +73,44 @@ pub fn render_edit_panel(
     }
 
     events
+}
+
+/// Gruppen-Edit-Panel: Anzeige aktiver Edit-Modus mit Uebernehmen/Abbrechen.
+fn render_group_edit_panel(
+    ctx: &egui::Context,
+    edit_state: &GroupEditState,
+    panel_pos: Option<egui::Pos2>,
+    events: &mut Vec<AppIntent>,
+) {
+    let mut window = egui::Window::new("✏ Gruppen-Bearbeitung")
+        .collapsible(false)
+        .resizable(false)
+        .auto_sized();
+
+    if let Some(pos) = panel_pos {
+        window = window.default_pos(pos);
+    }
+
+    window.show(ctx, |ui| {
+        ui.label(format!("Gruppe #{} bearbeiten", edit_state.record_id));
+        ui.label("Nodes verschieben, hinzufuegen oder loeschen.");
+        ui.add_space(4.0);
+        ui.horizontal(|ui| {
+            if ui.button("✓ Uebernehmen").clicked() {
+                events.push(AppIntent::GroupEditApplyRequested);
+            }
+            if ui.button("✕ Abbrechen").clicked() {
+                events.push(AppIntent::GroupEditCancelRequested);
+            }
+        });
+        // Keyboard-Shortcuts
+        if ui.input(|i| i.key_pressed(egui::Key::Enter)) {
+            events.push(AppIntent::GroupEditApplyRequested);
+        }
+        if ui.input(|i| i.key_pressed(egui::Key::Escape)) {
+            events.push(AppIntent::GroupEditCancelRequested);
+        }
+    });
 }
 
 /// Streckenteilung-Panel: Abstand/Nodes + Vorschau + Uebernehmen/Verwerfen.
@@ -274,7 +320,7 @@ fn render_route_tool_panel(
 
         ui.add_space(6.0);
 
-        ui.checkbox(auto_create_segment, "Segment erstellen");
+        ui.checkbox(auto_create_segment, "Gruppe erstellen");
 
         if let Some(tool) = tool_manager.active_tool_mut() {
             let changed = tool.render_config(ui, distance_wheel_step_m);

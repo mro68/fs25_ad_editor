@@ -164,6 +164,7 @@ impl EditorApp {
             edit_tool_manager,
             &mut self.state.options.auto_create_segment,
             panel_pos,
+            self.state.group_editing.as_ref(),
         ));
 
         events

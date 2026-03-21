@@ -245,7 +245,7 @@ fn render_connection_editor(ui: &mut egui::Ui, conn: &Connection, events: &mut V
     });
 }
 
-/// Zeigt Segment-Bearbeiten-Buttons wenn passende Segmente im Registry existieren.
+/// Zeigt Gruppen-Bearbeiten-Buttons wenn passende Gruppen im Registry existieren.
 fn render_segment_edit_buttons(
     ui: &mut egui::Ui,
     selected: &IndexSet<u64>,
@@ -261,7 +261,7 @@ fn render_segment_edit_buttons(
     }
 
     ui.separator();
-    ui.label("Segment bearbeiten:");
+    ui.label("Gruppe bearbeiten:");
     for record in matching {
         let label = match &record.kind {
             crate::app::segment_registry::SegmentKind::Straight { .. } => "✏ Gerade Strecke",
@@ -275,7 +275,7 @@ fn render_segment_edit_buttons(
             crate::app::segment_registry::SegmentKind::RouteOffset { .. } => "✏ Strecke versetzen",
         };
         if ui.button(label).clicked() {
-            events.push(AppIntent::EditSegmentRequested {
+            events.push(AppIntent::GroupEditStartRequested {
                 record_id: record.id,
             });
         }
