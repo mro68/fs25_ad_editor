@@ -28,6 +28,8 @@ use glam::Vec2;
 pub struct SegmentRegistry {
     records: Vec<SegmentRecord>,
     next_id: u64,
+    /// Record-ID, die von automatischer Invalidierung ausgenommen ist (aktiver Group-Edit).
+    edit_guard_id: Option<u64>,
 }
 
 impl SegmentRegistry {
@@ -71,10 +73,16 @@ impl SegmentRegistry {
     /// Entfernt alle Records, die mindestens einen der angegebenen Node-IDs enthalten.
     ///
     /// Wird aufgerufen wenn Nodes manuell geloescht werden (z.B. Delete-Taste).
+    /// Records, deren ID dem aktiven `edit_guard_id` entspricht, werden nie invalidiert.
     pub fn invalidate_by_node_ids(&mut self, node_ids: &[u64]) {
         let id_set: std::collections::HashSet<u64> = node_ids.iter().copied().collect();
-        self.records
-            .retain(|r| !r.node_ids.iter().any(|nid| id_set.contains(nid)));
+        self.records.retain(|r| {
+            // Aktiv bearbeiteten Record nie invalidieren
+            if Some(r.id) == self.edit_guard_id {
+                return true;
+            }
+            !r.node_ids.iter().any(|nid| id_set.contains(nid))
+        });
     }
 
     /// Findet den ersten Record, der den angegebenen Node enthaelt.
@@ -144,7 +152,7 @@ impl SegmentRegistry {
     /// `original_positions`. Muss nach jedem Locked-Move aufgerufen werden,
     /// damit `is_segment_valid()` weiterhin `true` zurueckgibt.
     pub fn update_original_positions(&mut self, segment_id: u64, road_map: &RoadMap) {
-        if let Some(record) = self.records.iter_mut().find(|r| r.id == segment_id) {
+        if let Some(record) = self.get_mut(segment_id) {
             record.original_positions = record
                 .node_ids
                 .iter()
@@ -157,8 +165,17 @@ impl SegmentRegistry {
     ///
     /// Tut nichts, wenn kein Segment mit dieser ID existiert.
     pub fn toggle_lock(&mut self, segment_id: u64) {
-        if let Some(record) = self.records.iter_mut().find(|r| r.id == segment_id) {
+        if let Some(record) = self.get_mut(segment_id) {
             record.locked = !record.locked;
+        }
+    }
+
+    /// Setzt den Lock-Zustand des Segments explizit.
+    ///
+    /// Tut nichts, wenn kein Segment mit dieser ID existiert.
+    pub fn set_locked(&mut self, segment_id: u64, locked: bool) {
+        if let Some(record) = self.get_mut(segment_id) {
+            record.locked = locked;
         }
     }
 
@@ -173,6 +190,37 @@ impl SegmentRegistry {
             .unwrap_or(false)
     }
 
+    /// Setzt die Record-ID, die von automatischer Invalidierung ausgenommen werden soll.
+    ///
+    /// `None` = kein Guard aktiv (Normal-Modus).
+    pub fn set_edit_guard(&mut self, record_id: Option<u64>) {
+        self.edit_guard_id = record_id;
+    }
+
+    /// Aktualisiert einen bestehenden Record in-place (ID und locked-Status bleiben erhalten).
+    ///
+    /// Gibt `false` zurueck wenn kein Record mit dieser ID existiert.
+    pub fn update_record(
+        &mut self,
+        record_id: u64,
+        node_ids: Vec<u64>,
+        original_positions: Vec<glam::Vec2>,
+    ) -> bool {
+        if let Some(record) = self.get_mut(record_id) {
+            record.node_ids = node_ids;
+            record.original_positions = original_positions;
+            record.marker_node_ids.clear();
+            true
+        } else {
+            false
+        }
+    }
+
+    /// Gibt eine mutable Referenz auf den Record mit der angegebenen ID zurueck.
+    fn get_mut(&mut self, record_id: u64) -> Option<&mut SegmentRecord> {
+        self.records.iter_mut().find(|r| r.id == record_id)
+    }
+
     /// Ermittelt die Boundary-Nodes eines Segments (Nodes mit externen Verbindungen).
     ///
     /// Gibt `None` zurueck wenn das Segment nicht existiert.
@@ -181,9 +229,9 @@ impl SegmentRegistry {
         record_id: u64,
         road_map: &RoadMap,
     ) -> Option<Vec<crate::core::BoundaryNode>> {
-        use std::collections::HashSet;
+        use indexmap::IndexSet;
         let record = self.get(record_id)?;
-        let group_ids: HashSet<u64> = record.node_ids.iter().copied().collect();
+        let group_ids: IndexSet<u64> = record.node_ids.iter().copied().collect();
         Some(road_map.boundary_nodes(&group_ids))
     }
 

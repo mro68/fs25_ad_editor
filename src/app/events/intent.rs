@@ -211,6 +211,12 @@ pub enum AppIntent {
     RouteToolScrollRotated { delta: f32 },
     /// Segment nachtraeglich bearbeiten (Nodes loeschen + Tool laden)
     EditSegmentRequested { record_id: u64 },
+    /// Gruppen-Bearbeitung nicht-destruktiv starten (Select-Tool-Modus)
+    GroupEditStartRequested { record_id: u64 },
+    /// Gruppen-Bearbeitung abschliessen (Aenderungen uebernehmen)
+    GroupEditApplyRequested,
+    /// Gruppen-Bearbeitung abbrechen (Undo zum Snapshot vor Edit-Start)
+    GroupEditCancelRequested,
     /// ZIP-Datei wurde als Background-Map gewaehlt → Browser oeffnen
     ZipBackgroundBrowseRequested { path: String },
     /// Bilddatei aus ZIP-Browser gewaehlt
