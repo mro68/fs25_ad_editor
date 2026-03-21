@@ -64,7 +64,7 @@
 
 In engen Kurven oder fuer AutoDrive-Strecken mit feiner Granularitaet:
 
-1. **Abschnitt selektieren** — Pfad-Selektion mit Shift+Klick oder Segment-Doppelklick
+1. **Abschnitt selektieren** — Pfad-Selektion mit Shift+Klick oder Gruppen-Doppelklick
 2. **Streckenteilung oeffnen** — `Bearbeiten → Strecke aufteilen`
 3. **Zielabstand eingeben** (z. B. 3 – 5 m)
 4. **Ausfuehren** — Nodes werden gleichmaessig neu verteilt

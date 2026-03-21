@@ -104,8 +104,8 @@ Werkzeuge und Aktionen werden ueber **Floating-Menues** aufgerufen. Jeder Tasten
 | **Linksklick** | Select | Node unter Mauszeiger selektieren (ersetzt bestehende Selektion) |
 | **Ctrl+Linksklick** | Select | Node additiv zur Selektion hinzufuegen |
 | **Shift+Linksklick** | Select | Pfad-Selektion: Selektiert alle Nodes auf dem kuerzesten Pfad zwischen Anker-Node und Ziel-Node |
-| **Doppelklick** | Select | Segment-Selektion: Selektiert alle Nodes zwischen den naechsten Kreuzungen/Sackgassen |
-| **Ctrl+Doppelklick** | Select | Segment additiv zur Selektion hinzufuegen |
+| **Doppelklick** | Select | Gruppen-Selektion: Selektiert alle Nodes zwischen den naechsten Kreuzungen/Sackgassen |
+| **Ctrl+Doppelklick** | Select | Gruppe additiv zur Selektion hinzufuegen |
 | **Linksklick** | Connect | Erster Klick = Startknoten, Zweiter Klick = Zielknoten → Verbindung erstellen |
 | **Linksklick** | Add Node | Neuen Node an Klickposition einfuegen |
 

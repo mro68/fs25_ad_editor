@@ -1,7 +1,7 @@
 //! Gruppen-Boundary-Overlay: Zeichnet Ein-/Ausfahrt-Icons ueber Boundary-Nodes einer Gruppe.
 //!
-//! Fuer jeden selektierten Node wird geprueft, ob er zu einem Segment gehoert.
-//! Pro Segment werden die Boundary-Nodes (Nodes mit externen Verbindungen) mit
+//! Fuer jeden selektierten Node wird geprueft, ob er zu einer Gruppe gehoert.
+//! Pro Gruppe werden die Boundary-Nodes (Nodes mit externen Verbindungen) mit
 //! Richtungs-Icons markiert: Eingang, Ausgang oder bidirektional.
 
 use eframe::egui::{self, ColorImage, TextureHandle, TextureOptions};
@@ -88,9 +88,9 @@ impl GroupBoundaryIcons {
     }
 }
 
-/// Zeichnet Boundary-Icons unterhalb der Nodes aller selektierten Segmente.
+/// Zeichnet Boundary-Icons unterhalb der Nodes aller selektierten Gruppen.
 ///
-/// Fuer jedes selektierte Segment werden alle Boundary-Nodes ermittelt und mit
+/// Fuer jede selektierte Gruppe werden alle Boundary-Nodes ermittelt und mit
 /// dem passenden Icon (Eingang/Ausgang/Bidirektional) beschriftet. Das Icon wird
 /// **unterhalb** des Nodes platziert, sodass es nicht mit dem Lock-Icon (oberhalb)
 /// kollidiert.
@@ -100,7 +100,7 @@ impl GroupBoundaryIcons {
 /// - `rect`: Viewport-Rechteck in Screen-Koordinaten
 /// - `camera`: Kamera fuer Welt→Screen-Transformation
 /// - `viewport_size`: Viewport-Abmessungen (Pixel)
-/// - `registry`: Segment-Registry mit allen gespeicherten Segmenten
+/// - `registry`: Gruppen-Registry mit allen gespeicherten Gruppen
 /// - `road_map`: RoadMap fuer Node-Positionen
 /// - `selected_node_ids`: Aktuell selektierte Node-IDs
 /// - `icons`: Gecachte Textur-Handles fuer die Icon-Typen
