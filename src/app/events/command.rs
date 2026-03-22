@@ -124,6 +124,12 @@ pub enum AppCommand {
     },
     /// Selektierte Nodes um Delta verschieben
     MoveSelectedNodes { delta_world: glam::Vec2 },
+    /// Rotation-Lifecycle: Starten (Undo-Snapshot aufnehmen)
+    BeginRotateSelectedNodes,
+    /// Rotation-Lifecycle: Selektierte Nodes um Delta-Winkel (Radiant) rotieren
+    RotateSelectedNodes { delta_angle: f32 },
+    /// Rotation-Lifecycle: Beenden (Spatial-Index rebuild anstoßen)
+    EndRotateSelectedNodes,
     /// Render-Qualitaet setzen
     SetRenderQuality { quality: RenderQuality },
     /// XML-Datei laden

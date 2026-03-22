@@ -19,10 +19,24 @@ pub fn generate_blueprint_series_layout(
     priority: ConnectionPriority,
 ) -> ParkingLayout {
     let (sin_a, cos_a) = angle.sin_cos();
+    let count = config.num_rows.max(1);
+
+    // Geometrisches Zentrum des Row-Grids (Mitte von X- und Y-Ausdehnung aller Reihen).
+    // Die Rotation erfolgt um diesen Punkt, sodass sich das Layout beim Drehen
+    // um seine eigene Mitte dreht und nicht um die Ecke Row 0.
+    let layout_center = Vec2::new(
+        config.bay_length / 2.0,
+        (count - 1) as f32 * config.row_spacing / 2.0,
+    );
+
+    // Transformiert lokale Koordinaten nach Weltkoordinaten mit Rotation um layout_center.
+    // Formel: world = origin + rotate(local - center, angle) + center
     let to_world = |lx: f32, ly: f32| -> Vec2 {
+        let dx = lx - layout_center.x;
+        let dy = ly - layout_center.y;
         Vec2::new(
-            origin.x + cos_a * lx - sin_a * ly,
-            origin.y + sin_a * lx + cos_a * ly,
+            origin.x + cos_a * dx - sin_a * dy + layout_center.x,
+            origin.y + sin_a * dx + cos_a * dy + layout_center.y,
         )
     };
 
@@ -47,7 +61,6 @@ pub fn generate_blueprint_series_layout(
         (2, 7, ConnectionDirection::Regular),
     ];
 
-    let count = config.num_rows.max(1);
     let scale = (config.bay_length / 80.0).max(0.1);
     let spacing = config.row_spacing;
 

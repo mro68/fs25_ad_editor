@@ -75,6 +75,13 @@ pub enum AppIntent {
     /// Move-Lifecycle Ende: Drag-Verschieben abgeschlossen
     EndMoveSelectedNodesRequested,
 
+    /// Rotation-Lifecycle Start: Undo-Snapshot aufnehmen
+    BeginRotateSelectedNodesRequested,
+    /// Rotation-Lifecycle Update: Selektierte Nodes um Delta-Winkel (Radiant) rotieren
+    RotateSelectedNodesRequested { delta_angle: f32 },
+    /// Rotation-Lifecycle Ende: Spatial-Index rebuild ausloesen
+    EndRotateSelectedNodesRequested,
+
     /// Render-Qualitaetsstufe aendern
     RenderQualityChanged { quality: RenderQuality },
     /// Datei wurde im Dialog ausgewaehlt (Laden)

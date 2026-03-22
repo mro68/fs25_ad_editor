@@ -81,6 +81,24 @@ pub fn begin_move(state: &mut AppState) {
     state.record_undo_snapshot();
 }
 
+/// Startet einen Rotation-Lifecycle (nimmt Undo-Snapshot auf).
+pub fn begin_rotate(state: &mut AppState) {
+    state.record_undo_snapshot();
+}
+
+/// Rotiert alle selektierten Nodes um den Delta-Winkel (Radiant).
+pub fn rotate_selected(state: &mut AppState, delta_angle: f32) {
+    use_cases::selection::rotate_selected_nodes(state, delta_angle);
+}
+
+/// Beendet den Rotation-Lifecycle und stoesst den Spatial-Index-Rebuild an.
+pub fn end_rotate(state: &mut AppState) {
+    if let Some(road_map) = state.road_map.as_mut() {
+        let road_map_mut = Arc::make_mut(road_map);
+        road_map_mut.rebuild_spatial_index();
+    }
+}
+
 /// Hebt die aktuelle Selektion auf.
 pub fn clear(state: &mut AppState) {
     let (old_selected, old_anchor) = helpers::capture_selection_snapshot(state);

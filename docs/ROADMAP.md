@@ -164,6 +164,14 @@
   - [x] Winkelfilter in `render_group_boundary_overlays()` — Eingangs-Icons nur bei Abweichung ≤ 90° angezeigt
   - [x] DRY: `angle_deviation()` nach `shared/geometry.rs` extrahiert (vorher in `use_cases/selection/segment.rs`)
 
+- [x] **Gruppen-Rotation per Alt+Mausrad (2026-03-22, Branch `fix/rotation-center-and-group-rotate`)**
+  - [x] `rotate_selected_nodes(state, angle_rad)` in `use_cases/selection/rotate_nodes.rs` — Rotation um arithmetisches Zentrum, Lock-Aware, kein Spatial-Rebuild per Tick
+  - [x] 3-Phasen-Lifecycle: `BeginRotateSelectedNodes` (Undo-Snapshot) → `RotateSelectedNodes` (pro Tick) → `EndRotateSelectedNodes` (Spatial-Rebuild)
+  - [x] Neue Intents: `BeginRotateSelectedNodesRequested`, `RotateSelectedNodesRequested { delta_angle }`, `EndRotateSelectedNodesRequested`
+  - [x] Neue Commands: `BeginRotateSelectedNodes`, `RotateSelectedNodes { delta_angle }`, `EndRotateSelectedNodes`
+  - [x] `InputState.rotation_active: bool` — End-Trigger bei Alt-Loslassen (nicht bei scroll==0)
+  - [x] `zoom.rs`: Alt+Scroll + Select-Tool + nicht-leere Selektion → Rotation-Lifecycle; 5° Schritt pro Tick
+
 ## Phase 5: Advanced Features
 - [x] DDS-Import fuer Map-Hintergruende
   - [x] Texture-Loader implementieren (PNG, JPG, DDS)
