@@ -243,8 +243,8 @@ pub struct EditorToolState {
     pub connect_source_node: Option<u64>,
     pub default_direction: ConnectionDirection,
     pub default_priority: ConnectionPriority,
-    pub last_straight_index: usize,
-    pub last_curve_index: usize,
+    /// Zuletzt gewählter Tool-Index in „Grundbefehle" (Gerade + alle Kurven).
+    pub last_basic_command_index: usize,
     pub last_smooth_curve_index: usize,
     pub last_section_tool_index: usize,
     pub tool_manager: ToolManager,

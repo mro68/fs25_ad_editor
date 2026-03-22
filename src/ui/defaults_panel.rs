@@ -13,22 +13,16 @@ use crate::ui::long_press::{
     render_long_press_button, LongPressGroup, LongPressItem, LongPressState,
 };
 
-#[derive(Debug, Clone, Copy)]
-enum RouteGroup {
-    Straight,
-    Curve,
-    Section,
+/// Zoom-Ziel fuer den LongPress-Button in der Zoom-Sektion.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum ZoomTarget {
+    /// Gesamte Map in den Viewport einpassen.
+    FullMap,
+    /// Viewport auf die selektierten Nodes einpassen.
+    Selection,
 }
 
-fn route_group_label(group: RouteGroup, lang: crate::shared::Language) -> &'static str {
-    match group {
-        RouteGroup::Straight => t(lang, I18nKey::RouteGroupStraight),
-        RouteGroup::Curve => t(lang, I18nKey::RouteGroupCurves),
-        RouteGroup::Section => t(lang, I18nKey::RouteGroupSection),
-    }
-}
-
-fn push_route_tool_selection(events: &mut Vec<AppIntent>, _group: RouteGroup, index: usize) {
+fn push_route_tool_selection(events: &mut Vec<AppIntent>, index: usize) {
     events.push(AppIntent::SetEditorToolRequested {
         tool: EditorTool::Route,
     });
@@ -80,10 +74,13 @@ pub fn render_route_defaults_panel(ctx: &egui::Context, state: &AppState) -> Vec
         active_tool,
         EditorTool::Select | EditorTool::Connect | EditorTool::AddNode
     );
-    let is_straight_active = active_route_index == Some(TOOL_INDEX_STRAIGHT);
-    let is_curve_active = matches!(
+    let is_basic_command_active = matches!(
         active_route_index,
-        Some(i) if i == TOOL_INDEX_CURVE_QUAD || i == TOOL_INDEX_CURVE_CUBIC || i == TOOL_INDEX_SPLINE || i == TOOL_INDEX_SMOOTH_CURVE
+        Some(i) if i == TOOL_INDEX_STRAIGHT
+            || i == TOOL_INDEX_CURVE_QUAD
+            || i == TOOL_INDEX_CURVE_CUBIC
+            || i == TOOL_INDEX_SPLINE
+            || i == TOOL_INDEX_SMOOTH_CURVE
     );
     let is_section_active = matches!(
         active_route_index,
@@ -108,13 +105,12 @@ pub fn render_route_defaults_panel(ctx: &egui::Context, state: &AppState) -> Vec
         },
     ];
 
-    let straights_items = [LongPressItem {
-        icon: route_tool_icon(TOOL_INDEX_STRAIGHT),
-        tooltip: t(lang, I18nKey::LpStraight),
-        value: TOOL_INDEX_STRAIGHT,
-    }];
-
-    let curves_items = [
+    let basic_items = [
+        LongPressItem {
+            icon: route_tool_icon(TOOL_INDEX_STRAIGHT),
+            tooltip: t(lang, I18nKey::LpStraight),
+            value: TOOL_INDEX_STRAIGHT,
+        },
         LongPressItem {
             icon: route_tool_icon(TOOL_INDEX_CURVE_QUAD),
             tooltip: t(lang, I18nKey::LpCurveQuad),
@@ -192,21 +188,15 @@ pub fn render_route_defaults_panel(ctx: &egui::Context, state: &AppState) -> Vec
         items: &tools_items,
     };
 
-    let straights_group = LongPressGroup {
-        id: "grundbefehle_geraden",
-        label: route_group_label(RouteGroup::Straight, lang),
-        items: &straights_items,
-    };
-
-    let curves_group = LongPressGroup {
-        id: "grundbefehle_kurven",
-        label: route_group_label(RouteGroup::Curve, lang),
-        items: &curves_items,
+    let basic_commands_group = LongPressGroup {
+        id: "grundbefehle",
+        label: t(lang, I18nKey::SidebarBasics),
+        items: &basic_items,
     };
 
     let section_tools_group = LongPressGroup {
         id: "tools_abschnitt",
-        label: route_group_label(RouteGroup::Section, lang),
+        label: t(lang, I18nKey::RouteGroupSection),
         items: &section_tools_items,
     };
 
@@ -255,22 +245,11 @@ pub fn render_route_defaults_panel(ctx: &egui::Context, state: &AppState) -> Vec
                 ui,
                 icon_color,
                 active_icon_color,
-                &straights_group,
-                &state.editor.last_straight_index,
-                is_straight_active,
+                &basic_commands_group,
+                &state.editor.last_basic_command_index,
+                is_basic_command_active,
             ) {
-                push_route_tool_selection(&mut events, RouteGroup::Straight, index);
-            }
-
-            if let Some(index) = render_long_press_with_memory(
-                ui,
-                icon_color,
-                active_icon_color,
-                &curves_group,
-                &state.editor.last_curve_index,
-                is_curve_active,
-            ) {
-                push_route_tool_selection(&mut events, RouteGroup::Curve, index);
+                push_route_tool_selection(&mut events, index);
             }
 
             ui.add_space(6.0);
@@ -290,7 +269,7 @@ pub fn render_route_defaults_panel(ctx: &egui::Context, state: &AppState) -> Vec
                 &state.editor.last_section_tool_index,
                 is_section_active,
             ) {
-                push_route_tool_selection(&mut events, RouteGroup::Section, index);
+                push_route_tool_selection(&mut events, index);
             }
 
             ui.add_space(6.0);
@@ -336,34 +315,92 @@ pub fn render_route_defaults_panel(ctx: &egui::Context, state: &AppState) -> Vec
             ui.add_space(6.0);
             ui.separator();
             ui.add_space(2.0);
+
+            ui.label(
+                egui::RichText::new(t(lang, I18nKey::SidebarZoom))
+                    .small()
+                    .weak(),
+            );
+
+            // Zoom-Ziel-Auswahl via LongPressGroup
+            let has_selection = state.selection.selected_node_ids.len() >= 2;
+            let zoom_target_key = egui::Id::new("sidebar_last_zoom_target");
+            let last_zoom_target = ctx
+                .data_mut(|d| d.get_temp::<ZoomTarget>(zoom_target_key))
+                .unwrap_or(ZoomTarget::FullMap);
+
+            let zoom_target_items = [
+                LongPressItem {
+                    icon: egui::include_image!("../../assets/icons/icon_zoom_full_map.svg"),
+                    tooltip: t(lang, I18nKey::ZoomFullMapHelp),
+                    value: ZoomTarget::FullMap,
+                },
+                LongPressItem {
+                    icon: egui::include_image!("../../assets/icons/icon_zoom_selection.svg"),
+                    tooltip: t(lang, I18nKey::ZoomToSelectionHelp),
+                    value: ZoomTarget::Selection,
+                },
+            ];
+            let zoom_target_group = LongPressGroup {
+                id: "zoom_ziel",
+                label: t(lang, I18nKey::SidebarZoom),
+                items: &zoom_target_items,
+            };
+
+            let zoom_target_key_lp = egui::Id::new(("defaults_panel_long_press", "zoom_ziel"));
+            let mut lp_zoom_state = ui
+                .ctx()
+                .data_mut(|d| d.get_temp::<LongPressState>(zoom_target_key_lp).unwrap_or_default());
+
+            let selected_zoom = render_long_press_button(
+                ui,
+                icon_color,
+                active_icon_color,
+                &zoom_target_group,
+                &last_zoom_target,
+                false,
+                &mut lp_zoom_state,
+            );
+            ui.ctx()
+                .data_mut(|d| d.insert_temp(zoom_target_key_lp, lp_zoom_state));
+
+            if let Some(target) = selected_zoom {
+                ctx.data_mut(|d| d.insert_temp(zoom_target_key, target));
+                match target {
+                    ZoomTarget::FullMap => events.push(AppIntent::ZoomToFitRequested),
+                    ZoomTarget::Selection if has_selection => {
+                        events.push(AppIntent::ZoomToSelectionBoundsRequested);
+                    }
+                    ZoomTarget::Selection => {}
+                }
+            }
+
+            // Zoom-In / Zoom-Out Buttons
             ui.horizontal(|ui| {
-                let zoom_full_img = svg_icon(
-                    egui::include_image!("../../assets/icons/icon_zoom_full_map.svg"),
+                let zoom_in_img = svg_icon(
+                    egui::include_image!("../../assets/icons/icon_zoom_in.svg"),
                     ICON_SIZE,
                 )
                 .tint(icon_color);
                 if ui
-                    .add(egui::Button::image(zoom_full_img))
-                    .on_hover_text(t(lang, I18nKey::ZoomFullMapHelp))
+                    .add(egui::Button::image(zoom_in_img))
+                    .on_hover_text(t(lang, I18nKey::MenuZoomIn))
                     .clicked()
                 {
-                    events.push(AppIntent::ZoomToFitRequested);
+                    events.push(AppIntent::ZoomInRequested);
                 }
-                let has_selection = state.selection.selected_node_ids.len() >= 2;
-                ui.add_enabled_ui(has_selection, |ui| {
-                    let zoom_sel_img = svg_icon(
-                        egui::include_image!("../../assets/icons/icon_zoom_selection.svg"),
-                        ICON_SIZE,
-                    )
-                    .tint(icon_color);
-                    if ui
-                        .add(egui::Button::image(zoom_sel_img))
-                        .on_hover_text(t(lang, I18nKey::ZoomToSelectionHelp))
-                        .clicked()
-                    {
-                        events.push(AppIntent::ZoomToSelectionBoundsRequested);
-                    }
-                });
+                let zoom_out_img = svg_icon(
+                    egui::include_image!("../../assets/icons/icon_zoom_out.svg"),
+                    ICON_SIZE,
+                )
+                .tint(icon_color);
+                if ui
+                    .add(egui::Button::image(zoom_out_img))
+                    .on_hover_text(t(lang, I18nKey::MenuZoomOut))
+                    .clicked()
+                {
+                    events.push(AppIntent::ZoomOutRequested);
+                }
             });
 
             if state.view.background_map.is_some() {

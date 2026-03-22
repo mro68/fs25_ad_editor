@@ -1,5 +1,5 @@
 use crate::app::group_registry::{
-    TOOL_INDEX_BYPASS, TOOL_INDEX_CURVE_QUAD, TOOL_INDEX_SMOOTH_CURVE, TOOL_INDEX_STRAIGHT,
+    TOOL_INDEX_BYPASS, TOOL_INDEX_SMOOTH_CURVE, TOOL_INDEX_STRAIGHT,
 };
 use crate::app::tools::ToolManager;
 use crate::core::{ConnectionDirection, ConnectionPriority};
@@ -28,11 +28,9 @@ pub struct EditorToolState {
     pub default_direction: ConnectionDirection,
     /// Standard-Strassenart fuer neue Verbindungen
     pub default_priority: ConnectionPriority,
-    /// Zuletzt gewaehlter Tool-Index in der Gruppe "Geraden".
-    pub last_straight_index: usize,
-    /// Zuletzt gewaehlter Tool-Index in der Gruppe "Kurven".
-    pub last_curve_index: usize,
-    /// Zuletzt gewaehlter Tool-Index in der Gruppe "Kurven" (inkl. geglättete Kurve).
+    /// Zuletzt gewaehlter Tool-Index in der Gruppe "Grundbefehle" (Gerade + alle Kurven).
+    pub last_basic_command_index: usize,
+    /// Zuletzt gewaehlter Tool-Index fuer geglättete Kurve (internes Tracking).
     pub last_smooth_curve_index: usize,
     /// Zuletzt gewaehlter Tool-Index in der Gruppe "Abschnittswerkzeuge".
     pub last_section_tool_index: usize,
@@ -54,8 +52,7 @@ impl EditorToolState {
             connect_source_node: None,
             default_direction: ConnectionDirection::Regular,
             default_priority: ConnectionPriority::Regular,
-            last_straight_index: TOOL_INDEX_STRAIGHT,
-            last_curve_index: TOOL_INDEX_CURVE_QUAD,
+            last_basic_command_index: TOOL_INDEX_STRAIGHT,
             last_smooth_curve_index: TOOL_INDEX_SMOOTH_CURVE,
             last_section_tool_index: TOOL_INDEX_BYPASS,
             tool_manager: ToolManager::new(),
