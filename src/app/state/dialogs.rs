@@ -171,6 +171,10 @@ pub struct TraceAllFieldsDialogState {
     pub offset: f32,
     /// Begradigung: Douglas-Peucker-Toleranz in Welteinheiten (0 = kein).
     pub tolerance: f32,
+    /// Ecken-Erkennung aktiviert?
+    pub corner_detection_enabled: bool,
+    /// Winkel-Schwellwert fuer Ecken-Erkennung in Grad (Standard: 90°).
+    pub corner_angle_threshold_deg: f32,
 }
 
 impl Default for TraceAllFieldsDialogState {
@@ -180,6 +184,8 @@ impl Default for TraceAllFieldsDialogState {
             spacing: 10.0,
             offset: 0.0,
             tolerance: 0.0,
+            corner_detection_enabled: false,
+            corner_angle_threshold_deg: 90.0,
         }
     }
 }

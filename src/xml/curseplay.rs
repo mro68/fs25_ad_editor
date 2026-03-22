@@ -32,7 +32,10 @@ pub fn parse_curseplay(xml_content: &str) -> Result<Vec<Vec2>> {
                 in_vertex = false;
             }
             Ok(Event::Text(ref e)) if in_vertex => {
-                let text = e.xml_content().context("Vertex-Text ungueltig")?.into_owned();
+                let text = e
+                    .xml_content()
+                    .context("Vertex-Text ungueltig")?
+                    .into_owned();
                 let text = text.trim();
                 let mut parts = text.split_whitespace();
                 let x_str = parts
@@ -129,8 +132,18 @@ mod tests {
         let parsed = parse_curseplay(&xml).expect("Roundtrip muss klappen");
         assert_eq!(parsed.len(), original.len());
         for (a, b) in original.iter().zip(parsed.iter()) {
-            assert!((a.x - b.x).abs() < 0.001, "x abweichend: {} vs {}", a.x, b.x);
-            assert!((a.y - b.y).abs() < 0.001, "y abweichend: {} vs {}", a.y, b.y);
+            assert!(
+                (a.x - b.x).abs() < 0.001,
+                "x abweichend: {} vs {}",
+                a.x,
+                b.x
+            );
+            assert!(
+                (a.y - b.y).abs() < 0.001,
+                "y abweichend: {} vs {}",
+                a.y,
+                b.y
+            );
         }
     }
 

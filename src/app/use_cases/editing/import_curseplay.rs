@@ -82,9 +82,5 @@ pub fn import_curseplay(state: &mut AppState, path: &str) {
         road_map.ensure_spatial_index();
     }
 
-    log::info!(
-        "Imported {} nodes from Curseplay file '{}'",
-        n,
-        path
-    );
+    log::info!("Imported {} nodes from Curseplay file '{}'", n, path);
 }

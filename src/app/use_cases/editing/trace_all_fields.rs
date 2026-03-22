@@ -28,7 +28,14 @@ use std::sync::Arc;
 /// * `spacing` – Abstand zwischen Wegpunkten in Welteinheiten (Metern)
 /// * `offset` – Versatz vom Feldrand (positiv = nach innen)
 /// * `tolerance` – Douglas-Peucker-Toleranz fuer Begradigung (0 = aus)
-pub fn trace_all_fields(state: &mut AppState, spacing: f32, offset: f32, tolerance: f32) {
+/// * `corner_angle` – Winkel-Schwellwert fuer Ecken-Erkennung in Grad (None = deaktiviert)
+pub fn trace_all_fields(
+    state: &mut AppState,
+    spacing: f32,
+    offset: f32,
+    tolerance: f32,
+    corner_angle: Option<f32>,
+) {
     // Polygone vor dem Snapshot klonen (Arc, O(1))
     let polygons = match &state.farmland_polygons {
         Some(p) if !p.is_empty() => Arc::clone(p),
@@ -59,7 +66,8 @@ pub fn trace_all_fields(state: &mut AppState, spacing: f32, offset: f32, toleran
         let mut field_count = 0usize;
 
         for polygon in polygons.iter() {
-            let positions = compute_ring(&polygon.vertices, offset, tolerance, spacing);
+            let positions =
+                compute_ring(&polygon.vertices, offset, tolerance, spacing, corner_angle);
             if positions.len() < 2 {
                 log::debug!(
                     "Feld {}: zu wenige Punkte nach Ring-Berechnung — uebersprungen",
@@ -138,6 +146,7 @@ pub fn trace_all_fields(state: &mut AppState, spacing: f32, offset: f32, toleran
                     node_spacing: spacing,
                     offset,
                     straighten_tolerance: tolerance,
+                    corner_angle_threshold: corner_angle,
                     base: GroupBase {
                         direction,
                         priority,

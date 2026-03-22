@@ -223,8 +223,14 @@ pub fn resample_path(state: &mut AppState) {
 }
 
 /// Zeichnet alle erkannten Farmland-Polygone als Wegpunkt-Ring nach (Batch-Operation).
-pub fn trace_all_fields(state: &mut AppState, spacing: f32, offset: f32, tolerance: f32) {
-    use_cases::editing::trace_all_fields(state, spacing, offset, tolerance);
+pub fn trace_all_fields(
+    state: &mut AppState,
+    spacing: f32,
+    offset: f32,
+    tolerance: f32,
+    corner_angle: Option<f32>,
+) {
+    use_cases::editing::trace_all_fields(state, spacing, offset, tolerance, corner_angle);
 }
 
 /// Aktiviert die Streckenteilung wenn mindestens 2 Nodes selektiert sind.
