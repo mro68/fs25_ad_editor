@@ -14,6 +14,23 @@ use crate::core::{Connection, ConnectionDirection, ConnectionPriority, MapNode, 
 use glam::Vec2;
 use std::sync::Arc;
 
+/// Berechnet die Flaeche eines Polygons mittels Shoelace-Formel.
+///
+/// Gibt 0 zurueck wenn das Polygon weniger als 3 Vertices hat.
+fn polygon_area(vertices: &[Vec2]) -> f32 {
+    let n = vertices.len();
+    if n < 3 {
+        return 0.0;
+    }
+    let mut area = 0.0f32;
+    for i in 0..n {
+        let j = (i + 1) % n;
+        area += vertices[i].x * vertices[j].y;
+        area -= vertices[j].x * vertices[i].y;
+    }
+    area.abs() / 2.0
+}
+
 /// Zeichnet alle erkannten Farmland-Polygone als Wegpunkt-Ring nach.
 ///
 /// Alle erstellten Nodes und Verbindungen werden in einem einzigen Undo-Schritt
@@ -64,8 +81,22 @@ pub fn trace_all_fields(
         let mut all_new_ids: Vec<u64> = Vec::new();
         let mut field_segments: Vec<(u32, Vec<u64>)> = Vec::new();
         let mut field_count = 0usize;
+        // Mindestflaeche: mindestens 4 Node-Abstands-Quadrate wert, sonst Noise-Patch
+        let min_area = spacing * spacing * 4.0;
 
         for polygon in polygons.iter() {
+            // Fix: Sehr kleine Polygone (Noise-Patches, 1–3 Pixel) ueberspringen
+            let area = polygon_area(&polygon.vertices);
+            if area < min_area {
+                log::debug!(
+                    "Feld {}: Flaeche {:.1} < Schwellwert {:.1} — uebersprungen",
+                    polygon.id,
+                    area,
+                    min_area
+                );
+                continue;
+            }
+
             let positions =
                 compute_ring(&polygon.vertices, offset, tolerance, spacing, corner_angle);
             if positions.len() < 2 {
@@ -168,4 +199,54 @@ pub fn trace_all_fields(
         state.selection.ids_mut().insert(id);
     }
     state.selection.selection_anchor_node_id = all_new_ids.last().copied();
+}
+
+// ---------------------------------------------------------------------------
+// Tests
+// ---------------------------------------------------------------------------
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// Grundtest: Flaeche eines 2×2-Quadrats = 4.
+    #[test]
+    fn test_polygon_area_square() {
+        let verts = vec![
+            Vec2::new(0.0, 0.0),
+            Vec2::new(2.0, 0.0),
+            Vec2::new(2.0, 2.0),
+            Vec2::new(0.0, 2.0),
+        ];
+        let area = polygon_area(&verts);
+        assert!(
+            (area - 4.0).abs() < 1e-4,
+            "Erwartete Flaeche 4.0, bekam {}",
+            area
+        );
+    }
+
+    /// Ein Dreieck mit bekannter Flaeche.
+    #[test]
+    fn test_polygon_area_triangle() {
+        let verts = vec![
+            Vec2::new(0.0, 0.0),
+            Vec2::new(4.0, 0.0),
+            Vec2::new(0.0, 3.0),
+        ];
+        let area = polygon_area(&verts);
+        assert!(
+            (area - 6.0).abs() < 1e-4,
+            "Erwartete Flaeche 6.0, bekam {}",
+            area
+        );
+    }
+
+    /// Weniger als 3 Vertices → Flaeche 0.
+    #[test]
+    fn test_polygon_area_too_few_vertices() {
+        assert_eq!(polygon_area(&[]), 0.0);
+        assert_eq!(polygon_area(&[Vec2::ZERO]), 0.0);
+        assert_eq!(polygon_area(&[Vec2::ZERO, Vec2::ONE]), 0.0);
+    }
 }
