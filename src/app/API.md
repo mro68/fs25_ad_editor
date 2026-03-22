@@ -614,6 +614,11 @@ pub enum AppIntent {
     MoveSelectedNodesRequested { delta_world: glam::Vec2 },
     EndMoveSelectedNodesRequested,
 
+    // Rotation-Lifecycle (Alt+Mausrad Gruppen-Rotation)
+    BeginRotateSelectedNodesRequested,
+    RotateSelectedNodesRequested { delta_angle: f32 },
+    EndRotateSelectedNodesRequested,
+
     // Undo / Redo
     UndoRequested,
     RedoRequested,
@@ -788,6 +793,9 @@ pub enum AppCommand {
     BeginMoveSelectedNodes,
     MoveSelectedNodes { delta_world: glam::Vec2 },
     EndMoveSelectedNodes,
+    BeginRotateSelectedNodes,
+    RotateSelectedNodes { delta_angle: f32 },
+    EndRotateSelectedNodes,
 
     // Editing
     SetEditorTool { tool: EditorTool },
