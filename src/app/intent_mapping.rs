@@ -35,6 +35,9 @@ pub fn map_intent_to_commands(state: &AppState, intent: AppIntent) -> Vec<AppCom
             factor,
             focus_world,
         }],
+        AppIntent::CenterOnNodeRequested { node_id } => {
+            vec![AppCommand::CenterOnNode { node_id }]
+        }
         AppIntent::NodePickRequested {
             world_pos,
             additive,
@@ -70,6 +73,30 @@ pub fn map_intent_to_commands(state: &AppState, intent: AppIntent) -> Vec<AppCom
         } => {
             let max_distance = state.options.hitbox_radius();
 
+            // Pruefen ob der naechste Node zu einer Gruppe gehoert → Gruppen-Selektion
+            if let Some(rm) = state.road_map.as_deref() {
+                if let Some(hit) = rm
+                    .nearest_node(world_pos)
+                    .filter(|h| h.distance <= max_distance)
+                {
+                    if state
+                        .group_registry
+                        .find_first_by_node_id(hit.node_id)
+                        .is_some()
+                    {
+                        return vec![
+                            AppCommand::SelectGroupByNearestNode {
+                                world_pos,
+                                max_distance,
+                                additive,
+                            },
+                            AppCommand::OpenGroupSettingsPopup { world_pos },
+                        ];
+                    }
+                }
+            }
+
+            // Fallback: normaler Segment-Walk
             vec![
                 AppCommand::SelectSegmentBetweenNearestIntersections {
                     world_pos,
@@ -78,7 +105,7 @@ pub fn map_intent_to_commands(state: &AppState, intent: AppIntent) -> Vec<AppCom
                     stop_at_junction: state.options.segment_stop_at_junction,
                     max_angle_deg: state.options.segment_max_angle_deg,
                 },
-                AppCommand::OpenSegmentSettingsPopup { world_pos },
+                AppCommand::OpenGroupSettingsPopup { world_pos },
             ]
         }
         AppIntent::SelectNodesInRectRequested { min, max, additive } => {
@@ -251,11 +278,19 @@ pub fn map_intent_to_commands(state: &AppState, intent: AppIntent) -> Vec<AppCom
         AppIntent::RouteToolScrollRotated { delta } => {
             vec![AppCommand::RouteToolRotate { delta }]
         }
-        AppIntent::EditSegmentRequested { record_id } => {
-            vec![AppCommand::EditSegment { record_id }]
+        AppIntent::EditGroupRequested { record_id } => {
+            vec![AppCommand::EditGroup { record_id }]
         }
-        AppIntent::GroupSelectionAsSegmentRequested => {
-            vec![AppCommand::GroupSelectionAsSegment]
+        AppIntent::GroupEditStartRequested { record_id } => {
+            vec![AppCommand::GroupEditStart { record_id }]
+        }
+        AppIntent::GroupEditApplyRequested => vec![AppCommand::GroupEditApply],
+        AppIntent::GroupEditCancelRequested => vec![AppCommand::GroupEditCancel],
+        AppIntent::GroupSelectionAsGroupRequested => {
+            vec![AppCommand::GroupSelectionAsGroup]
+        }
+        AppIntent::RemoveSelectedNodesFromGroupRequested => {
+            vec![AppCommand::RemoveSelectedNodesFromGroups]
         }
         AppIntent::ZipBackgroundBrowseRequested { path } => {
             vec![AppCommand::BrowseZipBackground { path }]
@@ -317,11 +352,14 @@ pub fn map_intent_to_commands(state: &AppState, intent: AppIntent) -> Vec<AppCom
         AppIntent::PasteCancelled => vec![AppCommand::CancelPastePreview],
 
         // ── Segment-Lock ──────────────────────────────────────────────────
-        AppIntent::ToggleSegmentLockRequested { segment_id } => {
-            vec![AppCommand::ToggleSegmentLock { segment_id }]
+        AppIntent::ToggleGroupLockRequested { segment_id } => {
+            vec![AppCommand::ToggleGroupLock { segment_id }]
         }
-        AppIntent::DissolveSegmentRequested { segment_id } => {
-            vec![AppCommand::DissolveSegment { segment_id }]
+        AppIntent::DissolveGroupRequested { segment_id } => {
+            vec![AppCommand::OpenDissolveConfirmDialog { segment_id }]
+        }
+        AppIntent::DissolveGroupConfirmed { segment_id } => {
+            vec![AppCommand::DissolveGroup { segment_id }]
         }
 
         // ── Extras ───────────────────────────────────────────────────────

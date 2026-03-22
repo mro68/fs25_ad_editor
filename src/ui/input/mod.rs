@@ -16,8 +16,8 @@ use super::drag::{draw_drag_selection_overlay, DragSelection};
 use super::keyboard;
 use crate::app::tools::common::TangentMenuData;
 use crate::app::{
-    AppIntent, Camera2D, ConnectionDirection, ConnectionPriority, EditorTool, RoadMap,
-    SegmentRegistry,
+    AppIntent, Camera2D, ConnectionDirection, ConnectionPriority, EditorTool, GroupRegistry,
+    RoadMap,
 };
 use crate::shared::EditorOptions;
 use indexmap::IndexSet;
@@ -117,7 +117,8 @@ impl InputState {
         tangent_data: Option<TangentMenuData>,
         clipboard_has_data: bool,
         farmland_polygons_loaded: bool,
-        segment_registry: Option<&SegmentRegistry>,
+        group_editing_active: bool,
+        group_registry: Option<&GroupRegistry>,
     ) -> Vec<AppIntent> {
         let ctx = ViewportContext {
             ui,
@@ -219,11 +220,12 @@ impl InputState {
             distanzen_state.active,
             clipboard_has_data,
             farmland_polygons_loaded,
+            group_editing_active,
             options,
             default_direction,
             default_priority,
             &variant,
-            segment_registry,
+            group_registry,
             &mut events,
         );
 

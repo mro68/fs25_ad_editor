@@ -76,9 +76,6 @@ pub struct EditorOptions {
     pub reconnect_on_delete: bool,
     #[serde(default)]
     pub split_connection_on_place: bool,
-    /// Ob Route-Tool-Ergebnisse automatisch als Segment registriert werden.
-    #[serde(default)]
-    pub auto_create_segment: bool,
 
     // Terrain
     pub terrain_height_scale: f32,
@@ -99,6 +96,10 @@ pub struct EditorOptions {
     /// Schriftgroesse des Lock-Icons im Segment-Overlay in Pixeln.
     #[serde(default = "default_segment_lock_icon_size_px")]
     pub segment_lock_icon_size_px: f32,
+    /// Wenn aktiviert, werden Eingangs-/Ausgangs-Icons an ALLEN Gruppen-Randknoten angezeigt.
+    /// Wenn deaktiviert, nur an Knoten mit Verbindungen nach ausserhalb der Gruppe.
+    #[serde(default)]
+    pub show_all_group_boundaries: bool,
 
     // Uebersichtskarte
     #[serde(default)]
@@ -166,13 +167,13 @@ impl Default for EditorOptions {
             value_adjust_input_mode: ValueAdjustInputMode::default(),
             reconnect_on_delete: true,
             split_connection_on_place: true,
-            auto_create_segment: false,
             terrain_height_scale: TERRAIN_HEIGHT_SCALE,
             bg_opacity: 1.0,
             bg_opacity_at_min_zoom: 0.0,
             bg_fade_start_zoom: 3.5,
             copy_preview_opacity: default_copy_preview_opacity(),
             segment_lock_icon_size_px: default_segment_lock_icon_size_px(),
+            show_all_group_boundaries: false,
             overview_layers: OverviewLayerOptions::default(),
             zoom_compensation_max: DEFAULT_ZOOM_COMPENSATION_MAX,
             min_node_size_px: MIN_NODE_SIZE_PX,
@@ -441,7 +442,7 @@ mod tests {
     /// Prüft, dass eine alte TOML-Datei ohne neue Felder korrekt mit Defaults geladen wird.
     #[test]
     fn test_deserialize_missing_new_fields_uses_defaults() {
-        // Minimale gueltige TOML ohne auto_create_segment und marker_outline_width
+        // Minimale gueltige TOML ohne marker_outline_width und show_all_group_boundaries
         let toml_str = r#"
 node_size_world = 1.0
 node_color_default = [0.2, 0.6, 1.0, 1.0]
@@ -466,8 +467,8 @@ terrain_height_scale = 1.0
         let opts: EditorOptions =
             toml::from_str(toml_str).expect("Deserialisierung fehlgeschlagen");
         assert!(
-            !opts.auto_create_segment,
-            "auto_create_segment muss default false sein"
+            !opts.show_all_group_boundaries,
+            "show_all_group_boundaries muss default false sein"
         );
         assert!(
             (opts.marker_outline_width - MARKER_OUTLINE_WIDTH).abs() < f32::EPSILON,
@@ -481,7 +482,6 @@ terrain_height_scale = 1.0
     #[test]
     fn test_toml_roundtrip_new_fields() {
         let opts = EditorOptions {
-            auto_create_segment: false,
             marker_outline_width: 0.15,
             ..EditorOptions::default()
         };
@@ -490,10 +490,6 @@ terrain_height_scale = 1.0
         let loaded: EditorOptions =
             toml::from_str(&toml_str).expect("Deserialisierung fehlgeschlagen");
 
-        assert!(
-            !loaded.auto_create_segment,
-            "auto_create_segment muss false bleiben"
-        );
         assert!(
             (loaded.marker_outline_width - 0.15).abs() < f32::EPSILON,
             "marker_outline_width muss 0.15 bleiben"

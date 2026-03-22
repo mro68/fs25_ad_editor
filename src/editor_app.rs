@@ -2,7 +2,7 @@
 
 use eframe::egui;
 use eframe::egui_wgpu;
-use fs25_auto_drive_editor::app::segment_registry::{
+use fs25_auto_drive_editor::app::group_registry::{
     TOOL_INDEX_BYPASS, TOOL_INDEX_CURVE_CUBIC, TOOL_INDEX_CURVE_QUAD, TOOL_INDEX_PARKING,
     TOOL_INDEX_ROUTE_OFFSET, TOOL_INDEX_SMOOTH_CURVE, TOOL_INDEX_SPLINE, TOOL_INDEX_STRAIGHT,
 };
@@ -22,6 +22,8 @@ pub(crate) struct EditorApp {
     /// Gecachte Cursor-Weltposition fuer Tool-Preview
     /// (bleibt erhalten wenn Maus den Viewport verlaesst).
     last_cursor_world: Option<glam::Vec2>,
+    /// Gecachte egui-Textur-Handles fuer Gruppen-Boundary-Icons (lazy initialisiert).
+    group_boundary_icons: Option<ui::GroupBoundaryIcons>,
 }
 
 impl EditorApp {
@@ -44,6 +46,7 @@ impl EditorApp {
             queue: render_state.queue.clone(),
             input: ui::InputState::new(),
             last_cursor_world: None,
+            group_boundary_icons: None,
         }
     }
 }
@@ -100,7 +103,8 @@ impl EditorApp {
                     command_palette_open,
                 ));
                 self.render_viewport(ui, rect, viewport_size);
-                self.render_overlays(ui, rect, &response, viewport_size);
+                let overlay_intents = self.render_overlays(ui, rect, &response, viewport_size);
+                events.extend(overlay_intents);
             });
 
         events
@@ -120,6 +124,8 @@ impl EditorApp {
         events.extend(floating_events);
         events.extend(ui::render_route_defaults_panel(ctx, &self.state));
 
+        // Rechte Sidebar: Marker + Eigenschaften untereinander, einklappbar
+        // (muss vor CentralPanel aufgerufen werden)
         let road_map_for_properties = self.state.road_map.clone();
         let default_direction = self.state.editor.default_direction;
         let default_priority = self.state.editor.default_priority;
@@ -128,16 +134,39 @@ impl EditorApp {
             ValueAdjustInputMode::DragHorizontal => 0.0,
             ValueAdjustInputMode::MouseWheel => self.state.options.mouse_wheel_distance_step_m,
         };
-        events.extend(ui::render_properties_panel(
-            ctx,
-            road_map_for_properties.as_deref(),
-            &self.state.selection.selected_node_ids,
-            default_direction,
-            default_priority,
-            distance_wheel_step_m,
-            Some(&self.state.segment_registry),
-            &mut self.state.ui.distanzen,
-        ));
+        egui::SidePanel::right("right_sidebar")
+            .resizable(true)
+            .default_width(200.0)
+            .min_width(160.0)
+            .show(ctx, |ui| {
+                egui::ScrollArea::vertical().show(ui, |ui| {
+                    egui::CollapsingHeader::new("Marker")
+                        .default_open(true)
+                        .show(ui, |ui| {
+                            events.extend(ui::render_marker_content(
+                                ui,
+                                self.state.road_map.as_deref(),
+                            ));
+                        });
+
+                    ui.separator();
+
+                    egui::CollapsingHeader::new("Eigenschaften")
+                        .default_open(true)
+                        .show(ui, |ui| {
+                            events.extend(ui::render_properties_content(
+                                ui,
+                                road_map_for_properties.as_deref(),
+                                &self.state.selection.selected_node_ids,
+                                default_direction,
+                                default_priority,
+                                distance_wheel_step_m,
+                                Some(&self.state.group_registry),
+                                &mut self.state.ui.distanzen,
+                            ));
+                        });
+                });
+            });
 
         // Floating Edit-Panel (Streckenteilung / Route-Tool)
         let panel_pos = self
@@ -159,8 +188,9 @@ impl EditorApp {
             distance_wheel_step_m,
             active_tool,
             edit_tool_manager,
-            &mut self.state.options.auto_create_segment,
             panel_pos,
+            self.state.group_editing.as_ref(),
+            &mut self.state.options,
         ));
 
         events
@@ -181,6 +211,11 @@ impl EditorApp {
             self.state.road_map.as_deref(),
         ));
         events.extend(ui::show_dedup_dialog(ctx, &self.state.ui));
+        events.extend(ui::show_confirm_dissolve_dialog(
+            ctx,
+            &mut self.state.ui.confirm_dissolve_group_id,
+            self.state.options.language,
+        ));
         events.extend(ui::show_zip_browser(ctx, &mut self.state.ui));
         events.extend(ui::show_overview_options_dialog(
             ctx,
@@ -189,9 +224,9 @@ impl EditorApp {
         events.extend(ui::show_post_load_dialog(ctx, &mut self.state.ui));
         events.extend(ui::show_save_overview_dialog(ctx, &mut self.state.ui));
         events.extend(ui::show_trace_all_fields_dialog(ctx, &mut self.state.ui));
-        events.extend(ui::show_segment_settings_popup(
+        events.extend(ui::show_group_settings_popup(
             ctx,
-            &mut self.state.ui.segment_settings_popup,
+            &mut self.state.ui.group_settings_popup,
             &mut self.state.options,
         ));
         events.extend(ui::show_options_dialog(
@@ -299,7 +334,8 @@ impl EditorApp {
                     .farmland_polygons
                     .as_ref()
                     .is_some_and(|p| !p.is_empty()),
-                Some(&self.state.segment_registry),
+                self.state.group_editing.is_some(),
+                Some(&self.state.group_registry),
             ),
         );
 
@@ -341,13 +377,15 @@ impl EditorApp {
     }
 
     /// Zeichnet Tool-Preview und Distanzen-Overlay ueber den Viewport.
+    /// Gibt gesammelte Overlay-Events als `AppIntent`-Vec zurueck.
     fn render_overlays(
         &mut self,
         ui: &egui::Ui,
         rect: egui::Rect,
         response: &egui::Response,
         viewport_size: [f32; 2],
-    ) {
+    ) -> Vec<AppIntent> {
+        let mut overlay_events: Vec<AppIntent> = Vec::new();
         // ── Tool-Preview-Overlay ─────────────
         if self.state.editor.active_tool == EditorTool::Route {
             let vp = glam::Vec2::new(viewport_size[0], viewport_size[1]);
@@ -409,7 +447,7 @@ impl EditorApp {
 
         // ── Segment-Overlay ──────────────────
         if let Some(rm) = self.state.road_map.as_deref() {
-            if !self.state.segment_registry.is_empty() {
+            if !self.state.group_registry.is_empty() {
                 let vp = glam::Vec2::new(viewport_size[0], viewport_size[1]);
                 // Klick nur weiterreichen wenn der Response einen Klick registriert hat
                 let clicked_pos = if response.clicked() {
@@ -419,37 +457,56 @@ impl EditorApp {
                 };
                 let ctrl_held = ui.ctx().input(|i| i.modifiers.ctrl);
                 let painter = ui.painter_at(rect);
-                let overlay_events = ui::render_segment_overlays(
+                let group_overlay_events = ui::render_group_overlays(
                     &painter,
                     rect,
                     &self.state.view.camera,
                     vp,
-                    &self.state.segment_registry,
+                    &self.state.group_registry,
                     rm,
                     self.state.selection.selected_node_ids.as_ref(),
                     clicked_pos,
                     ctrl_held,
                     self.state.options.segment_lock_icon_size_px,
                 );
-                for ev in overlay_events {
+                for ev in group_overlay_events {
                     match ev {
-                        ui::SegmentOverlayEvent::LockToggled { segment_id } => {
-                            self.controller
-                                .handle_intent(
-                                    &mut self.state,
-                                    AppIntent::ToggleSegmentLockRequested { segment_id },
-                                )
-                                .ok();
+                        ui::GroupOverlayEvent::LockToggled { segment_id } => {
+                            overlay_events.push(AppIntent::ToggleGroupLockRequested { segment_id });
                         }
-                        ui::SegmentOverlayEvent::Dissolved { segment_id } => {
-                            self.controller
-                                .handle_intent(
-                                    &mut self.state,
-                                    AppIntent::DissolveSegmentRequested { segment_id },
-                                )
-                                .ok();
+                        ui::GroupOverlayEvent::Dissolved { segment_id } => {
+                            overlay_events.push(AppIntent::DissolveGroupRequested { segment_id });
                         }
                     }
+                }
+            }
+        }
+
+        // ── Gruppen-Boundary-Overlay ──────────────────
+        if let Some(rm) = self.state.road_map.as_deref() {
+            if !self.state.group_registry.is_empty() {
+                // Cache aufwaermen (O(1) wenn bereits gecacht, sonst O(|Records| * |connections|))
+                self.state.group_registry.warm_boundary_cache(rm);
+
+                // Icons lazy initialisieren (benoetigen egui::Context)
+                if self.group_boundary_icons.is_none() {
+                    self.group_boundary_icons = Some(ui::GroupBoundaryIcons::load(ui.ctx()));
+                }
+                if let Some(icons) = &self.group_boundary_icons {
+                    let vp = glam::Vec2::new(viewport_size[0], viewport_size[1]);
+                    let painter = ui.painter_at(rect);
+                    ui::render_group_boundary_overlays(
+                        &painter,
+                        rect,
+                        &self.state.view.camera,
+                        vp,
+                        &self.state.group_registry,
+                        rm,
+                        self.state.selection.selected_node_ids.as_ref(),
+                        icons,
+                        self.state.options.segment_lock_icon_size_px,
+                        self.state.options.show_all_group_boundaries,
+                    );
                 }
             }
         }
@@ -463,6 +520,8 @@ impl EditorApp {
                 egui::Color32::WHITE,
             );
         }
+
+        overlay_events
     }
 
     fn process_events(&mut self, ctx: &egui::Context, events: &[AppIntent]) {

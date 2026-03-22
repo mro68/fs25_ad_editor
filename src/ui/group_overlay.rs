@@ -1,19 +1,19 @@
-//! Segment-Overlay: Zeichnet Lock-Icons ueber selektierten Segment-Nodes.
+//! Gruppen-Overlay: Zeichnet Lock-Icons ueber selektierten Gruppen-Nodes.
 //!
 //! Fuer jeden selektierten Node wird geprueft, ob er zu einem gespeicherten Segment
 //! gehoert. Pro Segment wird maximal ein Schloss-Icon (ueber dem ersten selektierten
 //! Node dieses Segments) angezeigt. Ein Klick auf das Icon loest
-//! `SegmentOverlayEvent::LockToggled` aus.
+//! `GroupOverlayEvent::LockToggled` aus.
 
 use eframe::egui;
 use glam::Vec2;
 use indexmap::IndexSet;
 
-use crate::app::{Camera2D, RoadMap, SegmentRegistry};
+use crate::app::{Camera2D, GroupRegistry, RoadMap};
 
 /// Event, der vom Segment-Overlay ausgeloest wird.
 #[derive(Debug, Clone)]
-pub enum SegmentOverlayEvent {
+pub enum GroupOverlayEvent {
     /// Der Lock-Zustand des Segments soll umgeschaltet werden.
     LockToggled { segment_id: u64 },
     /// Das Segment soll aufgeloest werden (nur Segment-Record entfernen).
@@ -26,8 +26,8 @@ pub enum SegmentOverlayEvent {
 /// gehoert. Pro Segment wird ein Schloss-Icon (🔒 oder 🔓) oberhalb des ersten
 /// selektierten Nodes dieses Segments gerendert. Bei Multi-Selection ueber mehrere
 /// Segmente werden mehrere Icons gezeichnet. Ein Klick auf ein Icon loest
-/// `SegmentOverlayEvent::LockToggled` aus. `Ctrl` + Klick loest
-/// `SegmentOverlayEvent::Dissolved` aus.
+/// `GroupOverlayEvent::LockToggled` aus. `Ctrl` + Klick loest
+/// `GroupOverlayEvent::Dissolved` aus.
 ///
 /// # Parameter
 /// - `painter`: egui-Painter fuer den Viewport
@@ -41,18 +41,18 @@ pub enum SegmentOverlayEvent {
 /// - `ctrl_held`: true, wenn im Klick-Frame die Ctrl-Taste gedrueckt war
 /// - `icon_size_px`: Schriftgroesse des Lock-Icons in Pixeln
 #[allow(clippy::too_many_arguments)]
-pub fn render_segment_overlays(
+pub fn render_group_overlays(
     painter: &egui::Painter,
     rect: egui::Rect,
     camera: &Camera2D,
     viewport_size: Vec2,
-    registry: &SegmentRegistry,
+    registry: &GroupRegistry,
     road_map: &RoadMap,
     selected_node_ids: &IndexSet<u64>,
     clicked_pos: Option<egui::Pos2>,
     ctrl_held: bool,
     icon_size_px: f32,
-) -> Vec<SegmentOverlayEvent> {
+) -> Vec<GroupOverlayEvent> {
     let mut events = Vec::new();
 
     if selected_node_ids.is_empty() {
@@ -74,7 +74,7 @@ pub fn render_segment_overlays(
             continue;
         }
 
-        if !registry.is_segment_valid(record, road_map) {
+        if !registry.is_group_valid(record, road_map) {
             continue;
         }
 
@@ -112,11 +112,11 @@ pub fn render_segment_overlays(
         if let Some(click) = clicked_pos {
             if bg_rect.expand(4.0).contains(click) {
                 let ev = if ctrl_held {
-                    SegmentOverlayEvent::Dissolved {
+                    GroupOverlayEvent::Dissolved {
                         segment_id: record.id,
                     }
                 } else {
-                    SegmentOverlayEvent::LockToggled {
+                    GroupOverlayEvent::LockToggled {
                         segment_id: record.id,
                     }
                 };

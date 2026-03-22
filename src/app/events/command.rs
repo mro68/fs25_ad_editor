@@ -86,6 +86,8 @@ pub enum AppCommand {
         factor: f32,
         focus_world: Option<glam::Vec2>,
     },
+    /// Kamera auf Node zentrieren (Zoom beibehalten)
+    CenterOnNode { node_id: u64 },
     /// Naechsten Node zur Position selektieren
     SelectNearestNode {
         world_pos: glam::Vec2,
@@ -102,6 +104,12 @@ pub enum AppCommand {
         stop_at_junction: bool,
         /// Max. Winkelabweichung in Grad (0.0 = nicht pruefen).
         max_angle_deg: f32,
+    },
+    /// Alle Nodes einer Gruppe selektieren (identifiziert ueber Naehe zu world_pos)
+    SelectGroupByNearestNode {
+        world_pos: glam::Vec2,
+        max_distance: f32,
+        additive: bool,
     },
     /// Nodes innerhalb eines Rechtecks selektieren
     SelectNodesInRect {
@@ -219,7 +227,13 @@ pub enum AppCommand {
     /// Route-Tool: Scroll-Rotation anwenden
     RouteToolRotate { delta: f32 },
     /// Segment nachtraeglich bearbeiten
-    EditSegment { record_id: u64 },
+    EditGroup { record_id: u64 },
+    /// Gruppen-Edit-Modus nicht-destruktiv starten
+    GroupEditStart { record_id: u64 },
+    /// Gruppen-Edit uebernehmen (Aenderungen persistieren)
+    GroupEditApply,
+    /// Gruppen-Edit abbrechen (Undo zum Snapshot)
+    GroupEditCancel,
     /// ZIP-Archiv oeffnen und Bilddateien im Browser anzeigen
     BrowseZipBackground { path: String },
     /// Bilddatei aus ZIP als Background-Map laden
@@ -269,11 +283,15 @@ pub enum AppCommand {
 
     // ── Segment-Lock ──────────────────────────────────────────────────
     /// Segment-Lock umschalten (gesperrt ↔ entsperrt)
-    ToggleSegmentLock { segment_id: u64 },
+    ToggleGroupLock { segment_id: u64 },
     /// Segment aufloesen (Segment-Record entfernen, Nodes beibehalten)
-    DissolveSegment { segment_id: u64 },
+    DissolveGroup { segment_id: u64 },
+    /// Dialog zum Bestaetigen des Aufloesens oeffnen
+    OpenDissolveConfirmDialog { segment_id: u64 },
     /// Selektierte zusammenhaengende Nodes als neues Segment in der Registry speichern
-    GroupSelectionAsSegment,
+    GroupSelectionAsGroup,
+    /// Selektierte Nodes aus ihren zugehoerigen Gruppen entfernen
+    RemoveSelectedNodesFromGroups,
 
     // ── Extras ───────────────────────────────────────────────────────
     /// Einstellungsdialog "Alle Felder nachzeichnen" oeffnen
@@ -290,5 +308,5 @@ pub enum AppCommand {
         tolerance: f32,
     },
     /// Segment-Einstellungs-Popup oeffnen oder aktualisieren
-    OpenSegmentSettingsPopup { world_pos: glam::Vec2 },
+    OpenGroupSettingsPopup { world_pos: glam::Vec2 },
 }

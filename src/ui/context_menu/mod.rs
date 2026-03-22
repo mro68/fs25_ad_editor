@@ -15,7 +15,7 @@ mod render;
 mod tangent_ui;
 
 use crate::app::tools::common::TangentMenuData;
-use crate::app::{AppIntent, ConnectionDirection, ConnectionPriority, RoadMap, SegmentRegistry};
+use crate::app::{AppIntent, ConnectionDirection, ConnectionPriority, GroupRegistry, RoadMap};
 use crate::shared::EditorOptions;
 use commands::{validate_entries, IntentContext, MenuCatalog, PreconditionContext};
 use indexmap::IndexSet;
@@ -116,11 +116,12 @@ pub fn render_context_menu(
     distanzen_active: bool,
     clipboard_has_data: bool,
     farmland_polygons_loaded: bool,
+    group_editing_active: bool,
     options: &EditorOptions,
     default_direction: ConnectionDirection,
     default_priority: ConnectionPriority,
     variant: &MenuVariant,
-    segment_registry: Option<&SegmentRegistry>,
+    group_registry: Option<&GroupRegistry>,
     events: &mut Vec<AppIntent>,
 ) -> bool {
     let Some(rm) = road_map else { return false };
@@ -129,18 +130,25 @@ pub fn render_context_menu(
     response
         .context_menu(|ui| {
             // Segment-Record-ID berechnen: Alle selektierten Nodes gehoeren zu einem validen Segment?
-            let segment_record_id = segment_registry.and_then(|registry| {
+            let group_record_id = group_registry.and_then(|registry| {
                 let records = registry.find_by_node_ids(selected_node_ids);
                 if records.len() == 1 {
                     let record = records[0];
                     let all_belong = selected_node_ids
                         .iter()
                         .all(|id| record.node_ids.contains(id));
-                    if all_belong && registry.is_segment_valid(record, rm) {
+                    if all_belong && registry.is_group_valid(record, rm) {
                         return Some(record.id);
                     }
                 }
                 None
+            });
+
+            // Pruefen ob mindestens 1 selektierter Node zu einer Gruppe gehoert
+            let selection_has_group_member = group_registry.is_some_and(|registry| {
+                selected_node_ids
+                    .iter()
+                    .any(|&nid| !registry.groups_for_node(nid).is_empty())
             });
 
             // Precondition-Kontext aus aktuellem State
@@ -149,8 +157,10 @@ pub fn render_context_menu(
                 selected_node_ids,
                 distanzen_active,
                 clipboard_has_data,
-                segment_record_id,
+                group_record_id,
                 farmland_polygons_loaded,
+                group_editing_active,
+                selection_has_group_member,
             };
 
             match variant {
@@ -160,7 +170,7 @@ pub fn render_context_menu(
                         node_id: None,
                         node_position: None,
                         two_node_ids: None,
-                        segment_record_id: None,
+                        group_record_id: None,
                     };
                     let entries = validate_entries(&catalog, &precondition_ctx, &intent_ctx);
                     render_validated_entries(
@@ -187,7 +197,7 @@ pub fn render_context_menu(
                         node_id: None,
                         node_position: None,
                         two_node_ids: two_ids,
-                        segment_record_id,
+                        group_record_id,
                     };
                     let entries = validate_entries(&catalog, &precondition_ctx, &intent_ctx);
                     render_validated_entries(
@@ -216,7 +226,7 @@ pub fn render_context_menu(
                         node_id: Some(*focused_node_id),
                         node_position: node_pos,
                         two_node_ids: two_ids,
-                        segment_record_id,
+                        group_record_id,
                     };
                     let entries = validate_entries(&catalog, &precondition_ctx, &intent_ctx);
                     render_validated_entries(
@@ -239,7 +249,7 @@ pub fn render_context_menu(
                         node_id: None,
                         node_position: None,
                         two_node_ids: None,
-                        segment_record_id: None,
+                        group_record_id: None,
                     };
                     let entries = validate_entries(&catalog, &precondition_ctx, &intent_ctx);
                     render_validated_entries(

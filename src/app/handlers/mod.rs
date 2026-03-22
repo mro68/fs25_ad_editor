@@ -9,14 +9,14 @@ pub mod dialog;
 pub mod editing;
 /// Handler fuer Datei-Operationen (Oeffnen, Speichern, Heightmap, Dedup).
 pub mod file_io;
+/// Handler fuer Segment-Operationen (Lock-Toggle).
+pub mod group;
 /// Zentrale Helfer fuer Undo/Selection-Snapshots in den Handlern.
 pub mod helpers;
 /// Handler fuer Undo/Redo-Operationen.
 pub mod history;
 /// Handler fuer Route-Tool-Operationen (Linie, Parkplatz, Kurve, …).
 pub mod route_tool;
-/// Handler fuer Segment-Operationen (Lock-Toggle).
-pub mod segment;
 /// Handler fuer Selektions-Operationen (Pick, Rect, Lasso, Move).
 pub mod selection;
 /// Handler fuer Kamera, Viewport und Background-Map.

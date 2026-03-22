@@ -676,11 +676,11 @@ Nach node-mutierenden Operationen wird dirty-Flag gesetzt; Rebuild erfolgt lazy 
 - Die Konvertierung zu visuellen Elementen erfolgt im UI-Layer (`src/ui/tool_preview.rs`)
 - Tools kennen weder `egui::Color32` noch `egui::Painter` (ausser in `render_config()` fuer UI-Panels)
 
-### Segment-Editierbarkeit
+### Gruppen-Editierbarkeit
 
-- Jedes Tool implementiert `make_segment_record()` → speichert Konfiguration in `SegmentRegistry`
+- Jedes Tool implementiert `make_group_record()` → speichert Konfiguration in `GroupRegistry`
 - `load_for_edit()` rekonstituiert den Tool-State fuer erneute Bearbeitung
-- `SegmentRecord.locked` verhindert versehentliche Mutation
+- `GroupRecord.locked` verhindert versehentliche Mutation
 - Undo-Snapshot wird vor jeder Mutation automatisch erstellt (`apply_tool_result`)
 
 ### ToolResult-Aufbau

@@ -4,7 +4,7 @@ use super::super::common::linear_connections;
 use super::super::{RouteTool, ToolAction, ToolPreview, ToolResult};
 use super::geometry::{build_result, BuildResultParams};
 use super::state::{Phase, SmoothCurveTool};
-use crate::app::segment_registry::{SegmentBase, SegmentKind, SegmentRecord};
+use crate::app::group_registry::{GroupBase, GroupKind, GroupRecord};
 use crate::core::RoadMap;
 use glam::Vec2;
 
@@ -245,10 +245,10 @@ impl RouteTool for SmoothCurveTool {
         )
     }
 
-    fn make_segment_record(&self, id: u64, node_ids: &[u64]) -> Option<SegmentRecord> {
+    fn make_group_record(&self, id: u64, node_ids: &[u64]) -> Option<GroupRecord> {
         let start = self.last_start_anchor?;
         let end = self.lifecycle.last_end_anchor?;
-        Some(SegmentRecord {
+        Some(GroupRecord {
             id,
             node_ids: node_ids.to_vec(),
             start_anchor: start,
@@ -256,11 +256,11 @@ impl RouteTool for SmoothCurveTool {
             original_positions: Vec::new(), // wird im Handler befüllt
             marker_node_ids: Vec::new(),
             locked: true,
-            kind: SegmentKind::SmoothCurve {
+            kind: GroupKind::SmoothCurve {
                 control_nodes: self.last_control_nodes.clone(),
                 max_angle_deg: self.max_angle_deg,
                 min_distance: self.min_distance,
-                base: SegmentBase {
+                base: GroupBase {
                     direction: self.direction,
                     priority: self.priority,
                     max_segment_length: self.seg.max_segment_length,
@@ -269,8 +269,8 @@ impl RouteTool for SmoothCurveTool {
         })
     }
 
-    fn load_for_edit(&mut self, record: &SegmentRecord, kind: &SegmentKind) {
-        let SegmentKind::SmoothCurve {
+    fn load_for_edit(&mut self, record: &GroupRecord, kind: &GroupKind) {
+        let GroupKind::SmoothCurve {
             control_nodes,
             max_angle_deg,
             min_distance,

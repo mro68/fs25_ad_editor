@@ -8,6 +8,7 @@
 //! - `move_nodes` — Verschieben selektierter Nodes
 //! - `helpers` — Gemeinsame Hilfsfunktionen
 
+mod group;
 ///
 /// Aufgeteilt nach Selektionsmodus:
 /// - `pick` — Einzelklick-Selektion (Nearest-Node)
@@ -23,6 +24,7 @@ mod pick;
 mod rect;
 mod segment;
 
+pub use group::select_group_by_nearest_node;
 pub use helpers::clear_selection;
 pub use lasso::select_nodes_in_lasso;
 pub use move_nodes::move_selected_nodes;

@@ -42,60 +42,163 @@ Das `ui`-Modul enthält egui-UI-Komponenten (Menüs, Statusbar, Input-Handling, 
   - `zip_browser.rs` — ZIP-Browser für Background-Map-Auswahl
   - `post_load_dialog.rs` — Post-Load-Dialog (Auto-Erkennung von Heightmap/ZIP/Overview)
   - `save_overview_dialog.rs` — Dialog: Hintergrundbild als overview.jpg speichern
-- `segment_overlay.rs` — Segment-Rahmen und Lock-Icons als egui-Overlay (`SegmentOverlayEvent`, `render_segment_overlays()`)
+  - `confirm_dissolve_dialog.rs` — Bestätigungsdialog vor dem Auflösen einer Segment-Gruppe
+- `group_overlay.rs` — Segment-Rahmen und Lock-Icons als egui-Overlay (`GroupOverlayEvent`, `render_group_overlays()`)
+- `group_boundary_overlay.rs` — Boundary-Icons (Eingang/Ausgang/Bidirektional) ueber Nodes mit externen Verbindungen (`GroupBoundaryIcons`, `render_group_boundary_overlays()`)
 
 ## Funktionen
 ---
 
-### `SegmentOverlayEvent`
+### `show_confirm_dissolve_dialog`
+
+Zeigt einen modalen Bestätigungsdialog zum Auflösen einer Segment-Gruppe. Wird aufgerufen wenn `UiState::confirm_dissolve_segment_id` gesetzt ist.
+
+```rust
+pub fn show_confirm_dissolve_dialog(
+    ctx: &egui::Context,
+    confirm_dissolve_id: &mut Option<u64>,
+    language: Language,
+) -> Vec<AppIntent>
+```
+
+**Verhalten:**
+
+- Ist `confirm_dissolve_id` `None`, tut die Funktion nichts und gibt einen leeren Vec zurück
+- Zeigt ein zentriertes, nicht minimierbares `egui::Window` mit Titel `ConfirmDissolveTitle`
+- Klick auf `ConfirmDissolveOk` → emittiert `AppIntent::DissolveSegmentConfirmed { segment_id }` und setzt `confirm_dissolve_id = None`
+- Klick auf `ConfirmDissolveCancel` oder Schließen des Fensters → setzt `confirm_dissolve_id = None` ohne Aktion
+- Texte werden über `t(language, I18nKey::ConfirmDissolveXxx)` übersetzt
+
+**Intent-Flow:**
+```
+Ctrl+Lock-Icon-Klick
+  → DissolveSegmentRequested
+  → OpenDissolveConfirmDialog  (via intent_mapping)
+  → UiState::confirm_dissolve_segment_id = Some(id)
+  → [nächster Frame] show_confirm_dissolve_dialog() zeigt Dialog
+  → DissolveSegmentConfirmed  (bei Bestätigung)
+  → DissolveSegment  (via intent_mapping)
+  → handlers::group::dissolve()
+```
+
+---
+
+### `GroupOverlayEvent`
 
 Event, den das Segment-Overlay beim Klick auf ein Lock-Icon ausloest.
 
 ```rust
-pub enum SegmentOverlayEvent {
+pub enum GroupOverlayEvent {
   /// Der Lock-Zustand des Segments soll umgeschaltet werden.
   LockToggled { segment_id: u64 },
-  /// Das Segment soll aufgeloest werden (nur Segment-Record entfernen).
+  /// Das Segment soll aufgeloest werden (nur Gruppen-Record entfernen).
   Dissolved { segment_id: u64 },
 }
 ```
 
-Wird von `render_segment_overlays()` zurueckgegeben und in den Intent-Flow als
+Wird von `render_group_overlays()` zurueckgegeben und in den Intent-Flow als
 `AppIntent::ToggleSegmentLockRequested { segment_id }` bzw.
 `AppIntent::DissolveSegmentRequested { segment_id }` uebersetzt.
 
 ---
 
-### `render_segment_overlays`
+### `render_group_overlays`
 
 Zeichnet Segment-Rahmen (AABB) und Lock-Icons als egui-Overlay ueber den Viewport.
 ```rust
-pub fn render_segment_overlays(
+pub fn render_group_overlays(
   painter: &egui::Painter,
   rect: egui::Rect,
   camera: &Camera2D,
   viewport_size: Vec2,
-  registry: &SegmentRegistry,
+  registry: &GroupRegistry,
   road_map: &RoadMap,
   selected_node_ids: &IndexSet<u64>,
   clicked_pos: Option<egui::Pos2>,
   ctrl_held: bool,
   icon_size_px: f32,
-) -> Vec<SegmentOverlayEvent>
+) -> Vec<GroupOverlayEvent>
 ```
 
 **Verhalten:**
 
 - Iteriert ueber selektierte Nodes und dedupliziert Segment-IDs
 - Zeichnet pro Segment ein Lock-Icon ueber dem ersten selektierten Node
-- `Ctrl` + Klick auf das Icon erzeugt `SegmentOverlayEvent::Dissolved`
+- `Ctrl` + Klick auf das Icon erzeugt `GroupOverlayEvent::Dissolved`
 - Die Icon-Größe entspricht `segment_lock_icon_size_px` in `EditorOptions`
-- Normaler Klick auf das Icon erzeugt `SegmentOverlayEvent::LockToggled`
+- Normaler Klick auf das Icon erzeugt `GroupOverlayEvent::LockToggled`
 
 **Lock-Zustand:**
 
 - Entsperrt (`locked = false`): grauer Rahmen, offenes Schloss-Icon
 - Gesperrt (`locked = true`): gelber Rahmen, 15%-schwarze Fuellung, geschlossenes Schloss-Icon
+---
+
+### `GroupBoundaryIcons`
+
+Gecachte egui-Textur-Handles fuer die drei Boundary-Icon-Typen (Eingang, Ausgang, Bidirektional).
+Die Icons werden per SVG (usvg/resvg) als 32×32-RGBA-Texturen in egui geladen.
+
+```rust
+pub struct GroupBoundaryIcons {
+    pub entry: TextureHandle,        // Icon fuer Eingang-Nodes
+    pub exit: TextureHandle,         // Icon fuer Ausgang-Nodes
+    pub bidirectional: TextureHandle, // Icon fuer bidirektionale Nodes
+}
+```
+
+**Methoden:**
+
+```rust
+pub fn load(ctx: &egui::Context) -> Self
+```
+
+- Laedt und rasterisiert die drei SVG-Assets aus `assets/icons/group_entry.svg`, `group_exit.svg`, `group_bidirectional.svg`.
+- Soll einmal pro App-Lifetime aufgerufen werden (Lazy-Init beim ersten `update()`).
+
+---
+
+### `render_group_boundary_overlays`
+
+Zeichnet Boundary-Icons unterhalb der Nodes aller selektierten Gruppen.
+
+Verwendet den `GroupRegistry::boundary_cache_for()`-Cache (statt pro-Frame `boundary_nodes()`).
+Iteriert ueber ALLE Gruppen selektierter Nodes via `find_by_node_ids()` (nicht nur die erste).
+
+```rust
+pub fn render_group_boundary_overlays(
+    painter: &egui::Painter,
+    rect: egui::Rect,
+    camera: &Camera2D,
+    viewport_size: Vec2,
+    registry: &GroupRegistry,
+    road_map: &RoadMap,
+    selected_node_ids: &IndexSet<u64>,
+    icons: &GroupBoundaryIcons,
+    icon_size_px: f32,
+    show_all: bool,
+)
+```
+
+**Parameter:**
+- `painter` — egui-Painter fuer den Viewport
+- `rect` — Viewport-Rechteck in Screen-Koordinaten
+- `camera` — Kamera fuer Welt→Screen-Transformation
+- `viewport_size` — Viewport-Abmessungen in Pixeln
+- `registry` — Gruppen-Registry mit gecachten BoundaryInfos
+- `road_map` — RoadMap fuer Node-Positionen
+- `selected_node_ids` — Aktuell selektierte Node-IDs
+- `icons` — Gecachte Textur-Handles (via `GroupBoundaryIcons::load()`)
+- `icon_size_px` — Icon-Groesse in Pixeln (Minimum: 8 px)
+- `show_all` — `false` = nur Nodes mit Verbindungen zu ungrouped Nodes; `true` = alle Boundary-Nodes
+
+**Icon-Zuordnung:**
+- `BoundaryDirection::Bidirectional` → Bidirektional-Icon
+- `BoundaryDirection::Entry` → Eingang-Icon
+- `BoundaryDirection::Exit` → Ausgang-Icon
+
+**Voraussetzung:** `registry.warm_boundary_cache(road_map)` muss vor dem Aufruf erfolgt sein.
+
 ---
 
 ### `render_floating_menu`
@@ -159,7 +262,7 @@ pub fn render_properties_panel(
   default_direction: ConnectionDirection,
   default_priority: ConnectionPriority,
   distance_wheel_step_m: f32,
-  segment_registry: Option<&SegmentRegistry>,
+  group_registry: Option<&GroupRegistry>,
   distance_state: &mut DistanzenState,
 ) -> Vec<AppIntent>
 ```
@@ -187,8 +290,9 @@ pub fn render_status_bar(ctx: &egui::Context, state: &AppState)
 
 ### `render_edit_panel`
 
-Rendert das schwebende Edit-Panel für aktive Modi (Streckenteilung, Route-Tool)
-und gibt erzeugte Intents zurück.
+Rendert das schwebende Edit-Panel für aktive Modi (Gruppen-Edit, Streckenteilung, Route-Tool)
+und gibt erzeugte Intents zurück. Bei aktivem `group_editing` wird ein Gruppen-Edit-Panel
+(Übernehmen/Abbrechen + Checkbox) angezeigt und die anderen Modi unterdrückt.
 
 ```rust
 pub fn render_edit_panel(
@@ -202,8 +306,13 @@ pub fn render_edit_panel(
   active_tool: EditorTool,
   tool_manager: Option<&mut ToolManager>,
   panel_pos: Option<egui::Pos2>,
+  group_editing: Option<&GroupEditState>,
+  options: &mut EditorOptions,
 ) -> Vec<AppIntent>
 ```
+
+Im Gruppen-Bearbeitungsmodus enthält das Panel zusätzlich eine Checkbox für
+`options.show_all_group_boundaries` (steuert Sichtbarkeit aller Boundary-Icons).
 
 ---
 
@@ -262,7 +371,7 @@ let intents = input.collect_viewport_events(
   - Mittel/Rechts-Drag → Kamera-Pan
 
 - **`context_menu`:** Rechtsklick-Kontextmenü mit validiertem Command-System (CommandId + Preconditions → nur gültige Einträge). SVG-Icons werden aus `assets/` gerendert und über `EditorOptions` sowie die aktuell gewählte Standard-Richtung/-Priorität eingefärbt. Streckenteilung-Widget wird nur angezeigt wenn `RoadMap::is_resampleable_chain()` für die aktuelle Selektion `true` liefert (zusammenhängende Kette, Kreuzungen nur an Endpunkten).
-  - **Segment-Integration:** `segment_registry` wird zur Validierung herangezogen. Wenn alle selektierten Nodes zu einem einzigen validen Segment gehoeren → `EditSegment` Command verfuegbar.
+  - **Segment-Integration:** `group_registry` wird zur Validierung herangezogen. Wenn alle selektierten Nodes zu einem einzigen validen Segment gehoeren → `EditGroup` Command verfuegbar.
 
 ### `render_context_menu`
 
@@ -279,7 +388,7 @@ pub fn render_context_menu(
     default_direction: ConnectionDirection,
     default_priority: ConnectionPriority,
     variant: &MenuVariant,
-    segment_registry: Option<&SegmentRegistry>,
+    group_registry: Option<&GroupRegistry>,
     events: &mut Vec<AppIntent>,
 ) -> bool
 ```
@@ -288,9 +397,9 @@ Alle Commands werden durch ein Precondition-System gefiltert: Nur Commands deren
 
 **Segment-Integration:**
 
-- `segment_registry` wird zur Validierung herangezogen
+- `group_registry` wird zur Validierung herangezogen
 - Prueft ob alle selektierten Nodes zu einem einzigen validen Segment gehoeren
-- Wenn ja → `EditSegment` Command verfuegbar im Katalog
+- Wenn ja → `EditGroup` Command verfuegbar im Katalog
 - Segment-Validierung: Nodes existieren und Originalpositionen unveraendert
 
 **Unterstützte Interaktionen (gesamt):**
@@ -673,51 +782,51 @@ pub fn show_save_overview_dialog(ctx: &egui::Context, ui_state: &mut UiState) ->
 
 ---
 
-### `SegmentOverlayEvent`
+### `GroupOverlayEvent`
 
 Event, den das Segment-Overlay beim Klick auf ein Lock-Icon ausloest.
 
 ```rust
-pub enum SegmentOverlayEvent {
+pub enum GroupOverlayEvent {
   /// Der Lock-Zustand des Segments soll umgeschaltet werden.
   LockToggled { segment_id: u64 },
-  /// Das Segment soll aufgeloest werden (nur Segment-Record entfernen).
+  /// Das Segment soll aufgeloest werden (nur Gruppen-Record entfernen).
   Dissolved { segment_id: u64 },
 }
 ```
 
-Wird von `render_segment_overlays()` zurueckgegeben und in den Intent-Flow als
+Wird von `render_group_overlays()` zurueckgegeben und in den Intent-Flow als
 `AppIntent::ToggleSegmentLockRequested { segment_id }` bzw.
 `AppIntent::DissolveSegmentRequested { segment_id }` uebersetzt.
 
 ---
 
-### `render_segment_overlays`
+### `render_group_overlays`
 
 Zeichnet Segment-Rahmen (AABB) und Lock-Icons als egui-Overlay ueber den Viewport.
 
 ```rust
-pub fn render_segment_overlays(
+pub fn render_group_overlays(
     painter: &egui::Painter,
     rect: egui::Rect,
     camera: &Camera2D,
     viewport_size: Vec2,
-    registry: &SegmentRegistry,
+    registry: &GroupRegistry,
     road_map: &RoadMap,
     selected_node_ids: &IndexSet<u64>,
     clicked_pos: Option<egui::Pos2>,
     ctrl_held: bool,
     icon_size_px: f32,
-) -> Vec<SegmentOverlayEvent>
+) -> Vec<GroupOverlayEvent>
 ```
 
 **Verhalten:**
 
 - Iteriert ueber selektierte Nodes und dedupliziert Segment-IDs
 - Zeichnet pro Segment ein Lock-Icon ueber dem ersten selektierten Node
-- `Ctrl` + Klick auf das Icon erzeugt `SegmentOverlayEvent::Dissolved`
+- `Ctrl` + Klick auf das Icon erzeugt `GroupOverlayEvent::Dissolved`
 - Die Icon-Größe basiert auf `EditorOptions::segment_lock_icon_size_px`
-- Normaler Klick auf das Icon erzeugt `SegmentOverlayEvent::LockToggled`
+- Normaler Klick auf das Icon erzeugt `GroupOverlayEvent::LockToggled`
 
 **Lock-Zustand:**
 

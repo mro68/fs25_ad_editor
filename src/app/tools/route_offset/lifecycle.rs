@@ -2,7 +2,7 @@
 
 use super::geometry::compute_offset_positions;
 use super::state::RouteOffsetTool;
-use crate::app::segment_registry::{SegmentBase, SegmentKind, SegmentRecord};
+use crate::app::group_registry::{GroupBase, GroupKind, GroupRecord};
 use crate::app::tools::common::ToolLifecycleState;
 use crate::app::tools::{RouteTool, ToolAction, ToolAnchor, ToolPreview, ToolResult};
 use crate::core::{ConnectionDirection, ConnectionPriority, NodeFlag, RoadMap};
@@ -235,15 +235,15 @@ impl RouteTool for RouteOffsetTool {
         self.lifecycle.save_created_ids(ids);
     }
 
-    // ── SegmentRegistry-Delegation ───────────────────────────────────────────
+    // ── GroupRegistry-Delegation ───────────────────────────────────────────
 
-    fn make_segment_record(&self, id: u64, node_ids: &[u64]) -> Option<SegmentRecord> {
+    fn make_group_record(&self, id: u64, node_ids: &[u64]) -> Option<GroupRecord> {
         if !self.has_chain() {
             return None;
         }
         let start_pos = *self.chain_positions.first()?;
         let end_pos = *self.chain_positions.last()?;
-        Some(SegmentRecord {
+        Some(GroupRecord {
             id,
             node_ids: node_ids.to_vec(),
             start_anchor: ToolAnchor::ExistingNode(self.chain_start_id, start_pos),
@@ -251,7 +251,7 @@ impl RouteTool for RouteOffsetTool {
             original_positions: Vec::new(), // wird vom Handler befuellt
             marker_node_ids: Vec::new(),
             locked: true,
-            kind: SegmentKind::RouteOffset {
+            kind: GroupKind::RouteOffset {
                 chain_positions: self.chain_positions.clone(),
                 chain_start_id: self.chain_start_id,
                 chain_end_id: self.chain_end_id,
@@ -267,7 +267,7 @@ impl RouteTool for RouteOffsetTool {
                 },
                 keep_original: self.config.keep_original,
                 base_spacing: self.config.base_spacing,
-                base: SegmentBase {
+                base: GroupBase {
                     direction: self.direction,
                     priority: self.priority,
                     max_segment_length: self.config.base_spacing,
@@ -276,8 +276,8 @@ impl RouteTool for RouteOffsetTool {
         })
     }
 
-    fn load_for_edit(&mut self, _record: &SegmentRecord, kind: &SegmentKind) {
-        let SegmentKind::RouteOffset {
+    fn load_for_edit(&mut self, _record: &GroupRecord, kind: &GroupKind) {
+        let GroupKind::RouteOffset {
             chain_positions,
             chain_start_id,
             chain_end_id,

@@ -261,9 +261,7 @@ pub fn resample_selected_path(state: &mut AppState) {
     road_map.ensure_spatial_index();
 
     // Segment-Registry: Records mit alten Nodes invalidieren
-    state
-        .segment_registry
-        .invalidate_by_node_ids(&ids_to_delete);
+    state.group_registry.invalidate_by_node_ids(&ids_to_delete);
 
     // Neue Nodes selektieren
     state.selection.ids_mut().clear();

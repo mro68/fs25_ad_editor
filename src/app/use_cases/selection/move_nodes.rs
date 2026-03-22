@@ -25,7 +25,7 @@ pub fn move_selected_nodes(state: &mut AppState, delta_world: glam::Vec2) {
 
     // Selektion um Nodes von locked Segments erweitern
     let selected: Vec<u64> = state.selection.selected_node_ids.iter().copied().collect();
-    let extra = state.segment_registry.expand_locked_selection(&selected);
+    let extra = state.group_registry.expand_locked_selection(&selected);
 
     let move_ids: HashSet<u64> = selected.iter().copied().chain(extra).collect();
 
@@ -45,17 +45,16 @@ pub fn move_selected_nodes(state: &mut AppState, delta_world: glam::Vec2) {
 
         // IDs der betroffenen locked Segments sammeln (Borrow endet vor update-Loop)
         let locked_segment_ids: Vec<u64> = state
-            .segment_registry
+            .group_registry
             .records()
-            .iter()
             .filter(|r| r.locked && r.node_ids.iter().any(|id| move_ids.contains(id)))
             .map(|r| r.id)
             .collect();
 
-        // original_positions aktualisieren, damit is_segment_valid() true bleibt
+        // original_positions aktualisieren, damit is_group_valid() true bleibt
         for seg_id in locked_segment_ids {
             state
-                .segment_registry
+                .group_registry
                 .update_original_positions(seg_id, road_map_mut);
         }
     }
@@ -64,7 +63,7 @@ pub fn move_selected_nodes(state: &mut AppState, delta_world: glam::Vec2) {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::app::segment_registry::{SegmentBase, SegmentKind, SegmentRecord};
+    use crate::app::group_registry::{GroupBase, GroupKind, GroupRecord};
     use crate::app::ToolAnchor;
     use crate::{ConnectionDirection, ConnectionPriority, MapNode, NodeFlag, RoadMap};
     use glam::Vec2;
@@ -75,14 +74,14 @@ mod tests {
         node_ids: Vec<u64>,
         positions: Vec<Vec2>,
         locked: bool,
-    ) -> SegmentRecord {
-        SegmentRecord {
+    ) -> GroupRecord {
+        GroupRecord {
             id,
             node_ids,
             start_anchor: ToolAnchor::NewPosition(Vec2::ZERO),
             end_anchor: ToolAnchor::NewPosition(Vec2::ZERO),
-            kind: SegmentKind::Straight {
-                base: SegmentBase {
+            kind: GroupKind::Straight {
+                base: GroupBase {
                     direction: ConnectionDirection::Regular,
                     priority: ConnectionPriority::Regular,
                     max_segment_length: 10.0,
@@ -181,7 +180,7 @@ mod tests {
             vec![Vec2::new(0.0, 0.0), Vec2::new(10.0, 0.0)],
             true, // locked
         );
-        state.segment_registry.register(record);
+        state.group_registry.register(record);
 
         move_selected_nodes(&mut state, Vec2::new(5.0, 0.0));
 
@@ -216,7 +215,7 @@ mod tests {
             vec![Vec2::new(0.0, 0.0), Vec2::new(10.0, 0.0)],
             false, // unlocked
         );
-        state.segment_registry.register(record);
+        state.group_registry.register(record);
 
         move_selected_nodes(&mut state, Vec2::new(5.0, 0.0));
 
@@ -232,7 +231,7 @@ mod tests {
     #[test]
     fn locked_move_aktualisiert_original_positions() {
         // Nach einem Locked-Move müssen original_positions geupdated sein,
-        // damit is_segment_valid() weiterhin true zurückgibt.
+        // damit is_group_valid() weiterhin true zurückgibt.
         let mut map = RoadMap::new(3);
         map.add_node(MapNode::new(1, Vec2::new(0.0, 0.0), NodeFlag::Regular));
         map.add_node(MapNode::new(2, Vec2::new(10.0, 0.0), NodeFlag::Regular));
@@ -247,18 +246,18 @@ mod tests {
             vec![Vec2::new(0.0, 0.0), Vec2::new(10.0, 0.0)],
             true,
         );
-        state.segment_registry.register(record);
+        state.group_registry.register(record);
 
         move_selected_nodes(&mut state, Vec2::new(7.0, 3.0));
 
         let rm = state.road_map.as_ref().unwrap();
-        let seg = state.segment_registry.get(0).unwrap();
+        let seg = state.group_registry.get(0).unwrap();
         // original_positions müssen die neuen Positionen widerspiegeln
         assert_eq!(seg.original_positions[0], Vec2::new(7.0, 3.0));
         assert_eq!(seg.original_positions[1], Vec2::new(17.0, 3.0));
         // Segment muss noch gültig sein
         assert!(
-            state.segment_registry.is_segment_valid(seg, rm),
+            state.group_registry.is_group_valid(seg, rm),
             "Segment muss nach Locked-Move noch gueltig sein"
         );
     }
