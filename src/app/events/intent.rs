@@ -316,4 +316,12 @@ pub enum AppIntent {
     },
     /// Alle-Felder-nachzeichnen-Dialog abgebrochen
     TraceAllFieldsCancelled,
+    /// Curseplay-Import-Dialog anfordern
+    CurseplayImportRequested,
+    /// Curseplay-Export-Dialog anfordern
+    CurseplayExportRequested,
+    /// Curseplay-Importdatei wurde im Dialog ausgewaehlt
+    CurseplayFileSelected { path: String },
+    /// Curseplay-Exportpfad wurde im Dialog ausgewaehlt
+    CurseplayExportPathSelected { path: String },
 }

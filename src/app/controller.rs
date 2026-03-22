@@ -369,6 +369,18 @@ impl AppController {
                 state.ui.trace_all_fields_dialog.visible = false;
                 handlers::editing::trace_all_fields(state, spacing, offset, tolerance);
             }
+            AppCommand::RequestCurseplayImportDialog => {
+                state.ui.show_curseplay_import_dialog = true;
+            }
+            AppCommand::ImportCurseplay { path } => {
+                handlers::editing::import_curseplay_file(state, &path);
+            }
+            AppCommand::RequestCurseplayExportDialog => {
+                state.ui.show_curseplay_export_dialog = true;
+            }
+            AppCommand::ExportCurseplay { path } => {
+                handlers::editing::export_curseplay_file(state, &path);
+            }
 
             // === Popups ===
             AppCommand::OpenGroupSettingsPopup { world_pos } => {

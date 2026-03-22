@@ -310,6 +310,10 @@ pub struct UiState {
     pub group_settings_popup: GroupSettingsPopupState,
     /// Bestaetigungsdialog zum Aufloesen einer Gruppe.
     pub confirm_dissolve_group_id: Option<u64>,
+    /// Ob der Curseplay-Import-Dateidialog geoeffnet werden soll
+    pub show_curseplay_import_dialog: bool,
+    /// Ob der Curseplay-Export-Dateidialog geoeffnet werden soll
+    pub show_curseplay_export_dialog: bool,
 }
 
 impl UiState {
@@ -339,6 +343,8 @@ impl UiState {
             trace_all_fields_dialog: TraceAllFieldsDialogState::default(),
             group_settings_popup: GroupSettingsPopupState::default(),
             confirm_dissolve_group_id: None,
+            show_curseplay_import_dialog: false,
+            show_curseplay_export_dialog: false,
         }
     }
 }

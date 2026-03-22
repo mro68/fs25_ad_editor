@@ -319,6 +319,14 @@ pub enum AppCommand {
         /// Begradigung: Douglas-Peucker-Toleranz (0 = aus)
         tolerance: f32,
     },
+    /// Curseplay-Import-Dateidialog anfordern
+    RequestCurseplayImportDialog,
+    /// Curseplay-Datei importieren (Nodes + Ring-Verbindungen anlegen)
+    ImportCurseplay { path: String },
+    /// Curseplay-Export-Dateidialog anfordern
+    RequestCurseplayExportDialog,
+    /// Selektierte Strecke als Curseplay-XML exportieren
+    ExportCurseplay { path: String },
     /// Segment-Einstellungs-Popup oeffnen oder aktualisieren
     OpenGroupSettingsPopup { world_pos: glam::Vec2 },
 }

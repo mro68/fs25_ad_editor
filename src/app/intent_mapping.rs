@@ -392,6 +392,12 @@ pub fn map_intent_to_commands(state: &AppState, intent: AppIntent) -> Vec<AppCom
             tolerance,
         }],
         AppIntent::TraceAllFieldsCancelled => vec![AppCommand::CloseTraceAllFieldsDialog],
+        AppIntent::CurseplayImportRequested => vec![AppCommand::RequestCurseplayImportDialog],
+        AppIntent::CurseplayExportRequested => vec![AppCommand::RequestCurseplayExportDialog],
+        AppIntent::CurseplayFileSelected { path } => vec![AppCommand::ImportCurseplay { path }],
+        AppIntent::CurseplayExportPathSelected { path } => {
+            vec![AppCommand::ExportCurseplay { path }]
+        }
     }
 }
 

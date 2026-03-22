@@ -7,6 +7,9 @@
 pub mod parser;
 /// XML-Writer fuer AutoDrive-Konfigurationen mit lueckenloser ID-Neunummerierung.
 pub mod writer;
+/// Curseplay XML-Import/Export fuer Feldumrandungen (`<customField>`-Format).
+pub mod curseplay;
 
 pub use parser::parse_autodrive_config;
 pub use writer::write_autodrive_config;
+pub use curseplay::{parse_curseplay, write_curseplay};
