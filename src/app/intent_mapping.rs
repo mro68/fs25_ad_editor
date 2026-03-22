@@ -119,6 +119,13 @@ pub fn map_intent_to_commands(state: &AppState, intent: AppIntent) -> Vec<AppCom
             vec![AppCommand::MoveSelectedNodes { delta_world }]
         }
         AppIntent::EndMoveSelectedNodesRequested => vec![AppCommand::EndMoveSelectedNodes],
+        AppIntent::BeginRotateSelectedNodesRequested => {
+            vec![AppCommand::BeginRotateSelectedNodes]
+        }
+        AppIntent::RotateSelectedNodesRequested { delta_angle } => {
+            vec![AppCommand::RotateSelectedNodes { delta_angle }]
+        }
+        AppIntent::EndRotateSelectedNodesRequested => vec![AppCommand::EndRotateSelectedNodes],
         AppIntent::RenderQualityChanged { quality } => {
             vec![AppCommand::SetRenderQuality { quality }]
         }

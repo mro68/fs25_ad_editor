@@ -327,9 +327,14 @@ Bulk-Selektionen: Alle Nodes, Selektion aufheben, Selektion invertieren.
 ```rust
 pub fn begin_move(state: &mut AppState)
 pub fn move_selected(state: &mut AppState, delta_world: glam::Vec2)
+pub fn begin_rotate(state: &mut AppState)
+pub fn rotate_selected(state: &mut AppState, delta_angle: f32)
+pub fn end_rotate(state: &mut AppState)
 ```
 
 Move-Lifecycle: `begin_move()` zeichnet einen Undo-Snapshot auf, `move_selected()` verschiebt die selektierten Nodes um das Delta.
+
+Rotation-Lifecycle: `begin_rotate()` zeichnet einen Undo-Snapshot auf, `rotate_selected()` rotiert die selektierten Nodes um ihr Zentrum (kein Spatial-Rebuild), `end_rotate()` stößt den Spatial-Index-Rebuild ein.
 
 ---
 

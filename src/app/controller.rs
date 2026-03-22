@@ -125,6 +125,11 @@ impl AppController {
             }
             AppCommand::BeginMoveSelectedNodes => handlers::selection::begin_move(state),
             AppCommand::EndMoveSelectedNodes => { /* No-op: Move-Lifecycle Ende */ }
+            AppCommand::BeginRotateSelectedNodes => handlers::selection::begin_rotate(state),
+            AppCommand::RotateSelectedNodes { delta_angle } => {
+                handlers::selection::rotate_selected(state, delta_angle)
+            }
+            AppCommand::EndRotateSelectedNodes => handlers::selection::end_rotate(state),
             AppCommand::ClearSelection => {
                 state.ui.group_settings_popup.visible = false;
                 handlers::selection::clear(state)
