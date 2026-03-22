@@ -256,6 +256,8 @@ impl RouteTool for SmoothCurveTool {
             original_positions: Vec::new(), // wird im Handler befüllt
             marker_node_ids: Vec::new(),
             locked: true,
+            entry_node_id: None,
+            exit_node_id: None,
             kind: GroupKind::SmoothCurve {
                 control_nodes: self.last_control_nodes.clone(),
                 max_angle_deg: self.max_angle_deg,

@@ -162,7 +162,8 @@ pub fn load(ctx: &egui::Context) -> Self
 
 Zeichnet Boundary-Icons unterhalb der Nodes aller selektierten Gruppen.
 
-Verwendet den `GroupRegistry::boundary_cache_for()`-Cache (statt pro-Frame `boundary_nodes()`).
+Icons werden **ausschliesslich** gerendert wenn `record.entry_node_id` bzw. `record.exit_node_id` explizit gesetzt sind — keine automatische Zuweisung mehr. Bei `show_all=true` werden zusaetzlich alle gecachten `BoundaryInfo`-Eintraege aus dem Connection-Analyse-Cache gerendert (Debug-Ansicht).
+
 Iteriert ueber ALLE Gruppen selektierter Nodes via `find_by_node_ids()` (nicht nur die erste).
 
 ```rust
@@ -190,7 +191,7 @@ pub fn render_group_boundary_overlays(
 - `selected_node_ids` — Aktuell selektierte Node-IDs
 - `icons` — Gecachte Textur-Handles (via `GroupBoundaryIcons::load()`)
 - `icon_size_px` — Icon-Groesse in Pixeln (Minimum: 8 px)
-- `show_all` — `false` = nur Nodes mit Verbindungen zu ungrouped Nodes; `true` = alle Boundary-Nodes
+- `show_all` — `false` = nur Nodes mit explizit gesetzter Entry/Exit-ID; `true` = zusaetzlich alle BoundaryInfos aus dem Connection-Cache (Debug-Ansicht)
 
 **Icon-Zuordnung:**
 - `BoundaryDirection::Bidirectional` → Bidirektional-Icon
@@ -292,7 +293,7 @@ pub fn render_status_bar(ctx: &egui::Context, state: &AppState)
 
 Rendert das schwebende Edit-Panel für aktive Modi (Gruppen-Edit, Streckenteilung, Route-Tool)
 und gibt erzeugte Intents zurück. Bei aktivem `group_editing` wird ein Gruppen-Edit-Panel
-(Übernehmen/Abbrechen + Checkbox) angezeigt und die anderen Modi unterdrückt.
+(Übernehmen/Abbrechen + Checkbox + Entry/Exit-ComboBoxen) angezeigt und die anderen Modi unterdrückt.
 
 ```rust
 pub fn render_edit_panel(
@@ -307,12 +308,14 @@ pub fn render_edit_panel(
   tool_manager: Option<&mut ToolManager>,
   panel_pos: Option<egui::Pos2>,
   group_editing: Option<&GroupEditState>,
+  group_record: Option<&GroupRecord>,
   options: &mut EditorOptions,
 ) -> Vec<AppIntent>
 ```
 
-Im Gruppen-Bearbeitungsmodus enthält das Panel zusätzlich eine Checkbox für
-`options.show_all_group_boundaries` (steuert Sichtbarkeit aller Boundary-Icons).
+Im Gruppen-Bearbeitungsmodus enthält das Panel:
+- Checkbox für `options.show_all_group_boundaries` (Sichtbarkeit aller Boundary-Icons)
+- ComboBox „Einfahrt" und „Ausfahrt" — emittiert `AppIntent::SetGroupBoundaryNodes` bei Änderung
 
 ---
 

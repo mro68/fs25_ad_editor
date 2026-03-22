@@ -607,6 +607,13 @@ pub fn remove_selected_from_groups(state: &mut AppState)
 ```
 
 Entfernt alle selektierten Nodes aus ihren zugehörigen Gruppen. Nodes und Verbindungen in der RoadMap bleiben unveraendert. Gruppen mit weniger als 2 verbleibenden Nodes werden automatisch aufgeloest (`GroupRegistry::remove_nodes_from_record()`). Ist keine Selektion aktiv oder kein Node Mitglied einer Gruppe, wird nichts getan. Erstellt einen Undo-Snapshot vor dem Mutieren.
+
+```rust
+pub fn set_boundary_nodes(state: &mut AppState, record_id: u64, entry: Option<u64>, exit: Option<u64>)
+```
+
+Setzt Einfahrt- und Ausfahrt-Node-IDs fuer eine Gruppe. Delegiert an `GroupRegistry::set_entry_exit()`: Die Node-IDs werden auf Zugehoerigkeit zum Record validiert; ungueltige IDs werden verworfen. Gibt eine Warnung aus wenn die Validierung fehlschlaegt (unbekannte Record-ID oder IDs ausserhalb des Records). Kein Undo-Snapshot — die Zuweisung ist sofort wirksam und im naechsten Frame sichtbar.
+
 ```rust
 pub fn start_group_edit(state: &mut AppState, record_id: u64)
 ```

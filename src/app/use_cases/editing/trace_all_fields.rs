@@ -131,6 +131,8 @@ pub fn trace_all_fields(state: &mut AppState, spacing: f32, offset: f32, toleran
                 original_positions,
                 marker_node_ids: Vec::new(),
                 locked: true,
+                entry_node_id: None,
+                exit_node_id: None,
                 kind: GroupKind::FieldBoundary {
                     field_id: *field_id,
                     node_spacing: spacing,

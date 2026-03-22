@@ -229,6 +229,10 @@ pub struct GroupRecord {
     pub marker_node_ids: Vec<u64>,
     /// Ob das Segment gesperrt ist (true = alle Nodes bewegen sich gemeinsam)
     pub locked: bool,
+    /// Explizit gesetzte Einfahrt-Node-ID (None = kein Einfahrts-Icon).
+    pub entry_node_id: Option<u64>,
+    /// Explizit gesetzte Ausfahrt-Node-ID (None = kein Ausfahrts-Icon).
+    pub exit_node_id: Option<u64>,
 }
 
 #[cfg(test)]

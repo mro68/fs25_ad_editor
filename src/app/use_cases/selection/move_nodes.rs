@@ -90,6 +90,8 @@ mod tests {
             original_positions: positions,
             marker_node_ids: Vec::new(),
             locked,
+            entry_node_id: None,
+            exit_node_id: None,
         }
     }
 

@@ -247,6 +247,36 @@ impl GroupRegistry {
         }
     }
 
+    /// Setzt die Entry- und Exit-Node-IDs eines Segments.
+    ///
+    /// Validiert, dass die angegebenen Node-IDs im Record enthalten sind.
+    /// Invalidiert den Boundary-Cache fuer diesen Record.
+    /// Gibt `false` zurueck wenn das Segment nicht existiert oder eine ID ungueltig ist.
+    pub fn set_entry_exit(
+        &mut self,
+        record_id: u64,
+        entry: Option<u64>,
+        exit: Option<u64>,
+    ) -> bool {
+        let Some(record) = self.records.get_mut(&record_id) else {
+            return false;
+        };
+        if let Some(eid) = entry {
+            if !record.node_ids.contains(&eid) {
+                return false;
+            }
+        }
+        if let Some(eid) = exit {
+            if !record.node_ids.contains(&eid) {
+                return false;
+            }
+        }
+        record.entry_node_id = entry;
+        record.exit_node_id = exit;
+        self.boundary_cache.remove(&record_id);
+        true
+    }
+
     /// Gibt den Lock-Zustand des Segments zurueck.
     ///
     /// Gibt `false` zurueck wenn das Segment nicht existiert.
@@ -287,6 +317,17 @@ impl GroupRegistry {
             record.node_ids = node_ids;
             record.original_positions = original_positions;
             record.marker_node_ids.clear();
+            // Entry/Exit validieren: Node nicht mehr im Record → zuruecksetzen
+            let new_ids = &record.node_ids;
+            if record
+                .entry_node_id
+                .is_some_and(|id| !new_ids.contains(&id))
+            {
+                record.entry_node_id = None;
+            }
+            if record.exit_node_id.is_some_and(|id| !new_ids.contains(&id)) {
+                record.exit_node_id = None;
+            }
         }
         // Cache-Eintrag invalidieren (Boundary-Bild veraltet nach Node-Aenderung)
         self.boundary_cache.remove(&record_id);
@@ -342,6 +383,19 @@ impl GroupRegistry {
             record.node_ids = pairs.iter().map(|(id, _)| *id).collect();
             record.original_positions = pairs.iter().map(|(_, pos)| *pos).collect();
             record.marker_node_ids.retain(|id| !remove_set.contains(id));
+            // Entry/Exit: geloeschte Nodes auf None setzen
+            if record
+                .entry_node_id
+                .is_some_and(|id| remove_set.contains(&id))
+            {
+                record.entry_node_id = None;
+            }
+            if record
+                .exit_node_id
+                .is_some_and(|id| remove_set.contains(&id))
+            {
+                record.exit_node_id = None;
+            }
         }
         self.boundary_cache.remove(&record_id);
         true
@@ -608,6 +662,8 @@ mod registry_tests {
             original_positions: positions,
             marker_node_ids: Vec::new(),
             locked,
+            entry_node_id: None,
+            exit_node_id: None,
         }
     }
 

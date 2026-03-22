@@ -157,6 +157,9 @@ impl crate::app::tools::RouteTool for ParkingTool {
     fn make_group_record(&self, id: u64, node_ids: &[u64]) -> Option<GroupRecord> {
         let origin = self.origin?;
         let angle = self.angle;
+        // n7 (Index 6) ist die Einfahrt, n8 (letzter Index) die Ausfahrt
+        let entry_node_id = node_ids.get(6).copied();
+        let exit_node_id = node_ids.last().copied();
         Some(GroupRecord {
             id,
             node_ids: node_ids.to_vec(),
@@ -165,6 +168,8 @@ impl crate::app::tools::RouteTool for ParkingTool {
             original_positions: Vec::new(), // wird im Handler befuellt
             marker_node_ids: Vec::new(),    // wird im Handler befuellt
             locked: true,
+            entry_node_id,
+            exit_node_id,
             kind: GroupKind::Parking {
                 origin,
                 angle,
