@@ -124,9 +124,8 @@ impl EditorApp {
         events.extend(floating_events);
         events.extend(ui::render_route_defaults_panel(ctx, &self.state));
 
-        // Marker-Sidebar rechts (muss vor CentralPanel aufgerufen werden)
-        events.extend(ui::render_marker_panel(ctx, self.state.road_map.as_deref()));
-
+        // Rechte Sidebar: Marker + Eigenschaften untereinander, einklappbar
+        // (muss vor CentralPanel aufgerufen werden)
         let road_map_for_properties = self.state.road_map.clone();
         let default_direction = self.state.editor.default_direction;
         let default_priority = self.state.editor.default_priority;
@@ -135,16 +134,39 @@ impl EditorApp {
             ValueAdjustInputMode::DragHorizontal => 0.0,
             ValueAdjustInputMode::MouseWheel => self.state.options.mouse_wheel_distance_step_m,
         };
-        events.extend(ui::render_properties_panel(
-            ctx,
-            road_map_for_properties.as_deref(),
-            &self.state.selection.selected_node_ids,
-            default_direction,
-            default_priority,
-            distance_wheel_step_m,
-            Some(&self.state.group_registry),
-            &mut self.state.ui.distanzen,
-        ));
+        egui::SidePanel::right("right_sidebar")
+            .resizable(true)
+            .default_width(200.0)
+            .min_width(160.0)
+            .show(ctx, |ui| {
+                egui::ScrollArea::vertical().show(ui, |ui| {
+                    egui::CollapsingHeader::new("Marker")
+                        .default_open(true)
+                        .show(ui, |ui| {
+                            events.extend(ui::render_marker_content(
+                                ui,
+                                self.state.road_map.as_deref(),
+                            ));
+                        });
+
+                    ui.separator();
+
+                    egui::CollapsingHeader::new("Eigenschaften")
+                        .default_open(true)
+                        .show(ui, |ui| {
+                            events.extend(ui::render_properties_content(
+                                ui,
+                                road_map_for_properties.as_deref(),
+                                &self.state.selection.selected_node_ids,
+                                default_direction,
+                                default_priority,
+                                distance_wheel_step_m,
+                                Some(&self.state.group_registry),
+                                &mut self.state.ui.distanzen,
+                            ));
+                        });
+                });
+            });
 
         // Floating Edit-Panel (Streckenteilung / Route-Tool)
         let panel_pos = self

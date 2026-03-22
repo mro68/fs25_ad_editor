@@ -50,10 +50,10 @@ pub use floating_menu::render_floating_menu;
 pub use group_boundary_overlay::{render_group_boundary_overlays, GroupBoundaryIcons};
 pub use group_overlay::{render_group_overlays, GroupOverlayEvent};
 pub use input::InputState;
-pub use marker_panel::render_marker_panel;
+pub use marker_panel::render_marker_content;
 pub use menu::render_menu;
 pub use options_dialog::show_options_dialog;
-pub use properties::render_properties_panel;
+pub use properties::render_properties_content;
 pub use status::render_status_bar;
 pub use tool_preview::{
     paint_clipboard_preview, paint_preview, paint_preview_polyline, render_tool_preview,

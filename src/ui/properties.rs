@@ -12,10 +12,12 @@ use crate::app::{
 use distances::render_distance_panel;
 use selectors::{render_direction_icon_selector, render_priority_icon_selector};
 
-/// Rendert das Properties-Panel und gibt erzeugte Events zurück.
+/// Rendert den Properties-Inhalt in den übergebenen UI-Bereich.
+///
+/// Gibt eine Liste von `AppIntent`-Events zurück, die bei Interaktion erzeugt werden.
 #[allow(clippy::too_many_arguments)]
-pub fn render_properties_panel(
-    ctx: &egui::Context,
+pub fn render_properties_content(
+    ui: &mut egui::Ui,
     road_map: Option<&RoadMap>,
     selected_node_ids: &IndexSet<u64>,
     default_direction: ConnectionDirection,
@@ -26,45 +28,36 @@ pub fn render_properties_panel(
 ) -> Vec<AppIntent> {
     let mut events = Vec::new();
 
-    egui::SidePanel::right("properties_panel")
-        .default_width(200.0)
-        .min_width(160.0)
-        .resizable(true)
-        .show(ctx, |ui| {
-            ui.heading("Eigenschaften");
-            ui.separator();
+    if selected_node_ids.is_empty() {
+        ui.label("Keine Selektion");
+    } else if let Some(road_map) = road_map {
+        render_selection_info(
+            ui,
+            road_map,
+            selected_node_ids,
+            default_direction,
+            default_priority,
+            group_registry,
+            &mut events,
+        );
+    }
 
-            if selected_node_ids.is_empty() {
-                ui.label("Keine Selektion");
-            } else if let Some(road_map) = road_map {
-                render_selection_info(
-                    ui,
-                    road_map,
-                    selected_node_ids,
-                    default_direction,
-                    default_priority,
-                    group_registry,
-                    &mut events,
-                );
-            }
-
-            // Distanzen-Panel: immer sichtbar wenn 2+ Nodes selektiert
-            if selected_node_ids.len() >= 2 {
-                if let Some(rm) = road_map {
-                    render_distance_panel(
-                        ui,
-                        rm,
-                        selected_node_ids,
-                        distance_state,
-                        distance_wheel_step_m,
-                        &mut events,
-                    );
-                }
-            } else if distance_state.active {
-                // Selektion verloren → Vorschau deaktivieren
-                distance_state.deactivate();
-            }
-        });
+    // Distanzen-Panel: immer sichtbar wenn 2+ Nodes selektiert
+    if selected_node_ids.len() >= 2 {
+        if let Some(rm) = road_map {
+            render_distance_panel(
+                ui,
+                rm,
+                selected_node_ids,
+                distance_state,
+                distance_wheel_step_m,
+                &mut events,
+            );
+        }
+    } else if distance_state.active {
+        // Selektion verloren → Vorschau deaktivieren
+        distance_state.deactivate();
+    }
 
     events
 }
