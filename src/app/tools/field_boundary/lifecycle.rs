@@ -185,6 +185,8 @@ impl crate::app::tools::RouteTool for FieldBoundaryTool {
             original_positions: Vec::new(),
             marker_node_ids: Vec::new(),
             locked: true,
+            entry_node_id: None,
+            exit_node_id: None,
             kind: GroupKind::FieldBoundary {
                 field_id: polygon.id,
                 node_spacing: self.node_spacing,

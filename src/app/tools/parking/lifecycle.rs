@@ -165,6 +165,8 @@ impl crate::app::tools::RouteTool for ParkingTool {
             original_positions: Vec::new(), // wird im Handler befuellt
             marker_node_ids: Vec::new(),    // wird im Handler befuellt
             locked: true,
+            entry_node_id: None,
+            exit_node_id: None,
             kind: GroupKind::Parking {
                 origin,
                 angle,

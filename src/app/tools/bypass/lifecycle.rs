@@ -196,6 +196,8 @@ impl RouteTool for BypassTool {
             original_positions: Vec::new(), // wird im Handler befuellt
             marker_node_ids: Vec::new(),
             locked: true,
+            entry_node_id: None,
+            exit_node_id: None,
             kind: GroupKind::Bypass {
                 chain_positions: self.chain_positions.clone(),
                 chain_start_id: self.chain_start_id,
