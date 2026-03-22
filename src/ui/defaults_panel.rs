@@ -348,9 +348,10 @@ pub fn render_route_defaults_panel(ctx: &egui::Context, state: &AppState) -> Vec
             };
 
             let zoom_target_key_lp = egui::Id::new(("defaults_panel_long_press", "zoom_ziel"));
-            let mut lp_zoom_state = ui
-                .ctx()
-                .data_mut(|d| d.get_temp::<LongPressState>(zoom_target_key_lp).unwrap_or_default());
+            let mut lp_zoom_state = ui.ctx().data_mut(|d| {
+                d.get_temp::<LongPressState>(zoom_target_key_lp)
+                    .unwrap_or_default()
+            });
 
             let selected_zoom = render_long_press_button(
                 ui,
