@@ -43,6 +43,8 @@ pub enum AppIntent {
         factor: f32,
         focus_world: Option<glam::Vec2>,
     },
+    /// Kamera auf einen bestimmten Node zentrieren (Zoom beibehalten)
+    CenterOnNodeRequested { node_id: u64 },
     /// Node per Klick selektieren (Nearest-Node-Pick)
     NodePickRequested {
         world_pos: glam::Vec2,
