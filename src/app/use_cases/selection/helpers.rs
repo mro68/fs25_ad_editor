@@ -1,6 +1,6 @@
 //! Gemeinsame Hilfsfunktionen fuer Selektionslogik.
 
-use crate::core::RoadMap;
+use crate::core::{ConnectionDirection, ConnectionPriority, NodeFlag, RoadMap};
 use crate::AppState;
 use std::collections::HashMap;
 
@@ -53,6 +53,12 @@ pub(super) struct AdjacencyNeighbor {
     pub node_id: u64,
     /// atan2-Winkel der Verbindung (Richtung: aktueller Node → Nachbar).
     pub angle: f32,
+    /// Flag des Ziel-Nodes (Strassenart).
+    pub target_flag: NodeFlag,
+    /// Richtung der Verbindung (gerichtet vs. bidirektional).
+    pub connection_direction: ConnectionDirection,
+    /// Prioritaet der Verbindung (Haupt- vs. Nebenstrasse).
+    pub connection_priority: ConnectionPriority,
 }
 
 /// Baut eine ungerichtete Adjazenzliste mit Winkelinformation.
@@ -76,6 +82,9 @@ pub(super) fn build_undirected_adjacency_with_angles(
             entry_s.push(AdjacencyNeighbor {
                 node_id: e,
                 angle: angle_s_to_e,
+                target_flag: road_map.nodes[&e].flag,
+                connection_direction: connection.direction,
+                connection_priority: connection.priority,
             });
         }
         let entry_e = adjacency.entry(e).or_default();
@@ -83,6 +92,9 @@ pub(super) fn build_undirected_adjacency_with_angles(
             entry_e.push(AdjacencyNeighbor {
                 node_id: s,
                 angle: angle_e_to_s,
+                target_flag: road_map.nodes[&s].flag,
+                connection_direction: connection.direction,
+                connection_priority: connection.priority,
             });
         }
     }
