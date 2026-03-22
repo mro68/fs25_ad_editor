@@ -13,9 +13,13 @@ use crate::ui::long_press::{
     render_long_press_button, LongPressGroup, LongPressItem, LongPressState,
 };
 
-/// Zoom-Ziel fuer den LongPress-Button in der Zoom-Sektion.
+/// Zoom-Aktion fuer den LongPress-Button in der Zoom-Sektion.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-enum ZoomTarget {
+enum ZoomAction {
+    /// Stufenweise hineinzoomen.
+    ZoomIn,
+    /// Stufenweise herauszoomen.
+    ZoomOut,
     /// Gesamte Map in den Viewport einpassen.
     FullMap,
     /// Viewport auf die selektierten Nodes einpassen.
@@ -322,87 +326,60 @@ pub fn render_route_defaults_panel(ctx: &egui::Context, state: &AppState) -> Vec
                     .weak(),
             );
 
-            // Zoom-Ziel-Auswahl via LongPressGroup
+            // Zoom-Aktion via LongPressGroup (4 Items)
             let has_selection = state.selection.selected_node_ids.len() >= 2;
-            let zoom_target_key = egui::Id::new("sidebar_last_zoom_target");
-            let last_zoom_target = ctx
-                .data_mut(|d| d.get_temp::<ZoomTarget>(zoom_target_key))
-                .unwrap_or(ZoomTarget::FullMap);
+            let zoom_action_key = egui::Id::new("sidebar_last_zoom_action");
+            let last_zoom_action = ctx
+                .data_mut(|d| d.get_temp::<ZoomAction>(zoom_action_key))
+                .unwrap_or(ZoomAction::FullMap);
 
-            let zoom_target_items = [
+            let zoom_items = [
+                LongPressItem {
+                    icon: egui::include_image!("../../assets/icons/icon_zoom_in.svg"),
+                    tooltip: t(lang, I18nKey::ZoomInHelp),
+                    value: ZoomAction::ZoomIn,
+                },
+                LongPressItem {
+                    icon: egui::include_image!("../../assets/icons/icon_zoom_out.svg"),
+                    tooltip: t(lang, I18nKey::ZoomOutHelp),
+                    value: ZoomAction::ZoomOut,
+                },
                 LongPressItem {
                     icon: egui::include_image!("../../assets/icons/icon_zoom_full_map.svg"),
                     tooltip: t(lang, I18nKey::ZoomFullMapHelp),
-                    value: ZoomTarget::FullMap,
+                    value: ZoomAction::FullMap,
                 },
                 LongPressItem {
                     icon: egui::include_image!("../../assets/icons/icon_zoom_selection.svg"),
                     tooltip: t(lang, I18nKey::ZoomToSelectionHelp),
-                    value: ZoomTarget::Selection,
+                    value: ZoomAction::Selection,
                 },
             ];
-            let zoom_target_group = LongPressGroup {
+            let zoom_group = LongPressGroup {
                 id: "zoom_ziel",
                 label: t(lang, I18nKey::SidebarZoom),
-                items: &zoom_target_items,
+                items: &zoom_items,
             };
 
-            let zoom_target_key_lp = egui::Id::new(("defaults_panel_long_press", "zoom_ziel"));
-            let mut lp_zoom_state = ui.ctx().data_mut(|d| {
-                d.get_temp::<LongPressState>(zoom_target_key_lp)
-                    .unwrap_or_default()
-            });
-
-            let selected_zoom = render_long_press_button(
+            if let Some(action) = render_long_press_with_memory(
                 ui,
                 icon_color,
                 active_icon_color,
-                &zoom_target_group,
-                &last_zoom_target,
+                &zoom_group,
+                &last_zoom_action,
                 false,
-                &mut lp_zoom_state,
-            );
-            ui.ctx()
-                .data_mut(|d| d.insert_temp(zoom_target_key_lp, lp_zoom_state));
-
-            if let Some(target) = selected_zoom {
-                ctx.data_mut(|d| d.insert_temp(zoom_target_key, target));
-                match target {
-                    ZoomTarget::FullMap => events.push(AppIntent::ZoomToFitRequested),
-                    ZoomTarget::Selection if has_selection => {
+            ) {
+                ctx.data_mut(|d| d.insert_temp(zoom_action_key, action));
+                match action {
+                    ZoomAction::ZoomIn => events.push(AppIntent::ZoomInRequested),
+                    ZoomAction::ZoomOut => events.push(AppIntent::ZoomOutRequested),
+                    ZoomAction::FullMap => events.push(AppIntent::ZoomToFitRequested),
+                    ZoomAction::Selection if has_selection => {
                         events.push(AppIntent::ZoomToSelectionBoundsRequested);
                     }
-                    ZoomTarget::Selection => {}
+                    ZoomAction::Selection => {}
                 }
             }
-
-            // Zoom-In / Zoom-Out Buttons
-            ui.horizontal(|ui| {
-                let zoom_in_img = svg_icon(
-                    egui::include_image!("../../assets/icons/icon_zoom_in.svg"),
-                    ICON_SIZE,
-                )
-                .tint(icon_color);
-                if ui
-                    .add(egui::Button::image(zoom_in_img))
-                    .on_hover_text(t(lang, I18nKey::MenuZoomIn))
-                    .clicked()
-                {
-                    events.push(AppIntent::ZoomInRequested);
-                }
-                let zoom_out_img = svg_icon(
-                    egui::include_image!("../../assets/icons/icon_zoom_out.svg"),
-                    ICON_SIZE,
-                )
-                .tint(icon_color);
-                if ui
-                    .add(egui::Button::image(zoom_out_img))
-                    .on_hover_text(t(lang, I18nKey::MenuZoomOut))
-                    .clicked()
-                {
-                    events.push(AppIntent::ZoomOutRequested);
-                }
-            });
 
             if state.view.background_map.is_some() {
                 egui::CollapsingHeader::new(t(lang, I18nKey::SidebarBackground)).show(ui, |ui| {

@@ -423,6 +423,10 @@ pub enum I18nKey {
     ZoomToSelection,
     /// Tooltip "Auf selektierte Nodes einpassen"
     ZoomToSelectionHelp,
+    /// Tooltip "Hineinzoomen (+)"
+    ZoomInHelp,
+    /// Tooltip "Herauszoomen (-)"
+    ZoomOutHelp,
 
     // === Hintergrund ===
     /// Button-Tooltip "Hintergrund ausblenden"
