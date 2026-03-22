@@ -42,7 +42,7 @@ Alle Use-Case-Funktionen des `app::use_cases`-Moduls. Use-Cases mutieren `AppSta
 ## `use_cases::selection`
 
 - `select_nearest_node(state, world_pos, max_distance, additive, extend_path)` — Node per Klick selektieren; `additive` fuer Ctrl/Shift-Add, `extend_path` nur fuer Shift-Pfadselektion zwischen Anker und Ziel.
-- `select_segment_between_nearest_intersections(state, world_pos, max_distance, additive, stop_at_junction, max_angle_deg)` — Doppelklick selektiert den Korridor bis zu den naechsten Segmentgrenzen. `stop_at_junction`: Stopp bei Kreuzungen (Grad != 2); `max_angle_deg`: Stopp bei Richtungsänderung > Schwellwert (0.0 = deaktiviert). Konfiguration wird aus `EditorOptions` uebergeben.
+- `select_segment_between_nearest_intersections(state, world_pos, max_distance, additive, stop_at_junction, max_angle_deg)` — Doppelklick selektiert den Korridor bis zu den naechsten Segmentgrenzen. `stop_at_junction`: Stopp bei Kreuzungen (Grad != 2); `max_angle_deg`: harter Winkel-Constraint — Kandidaten mit Abweichung > Schwellwert werden verworfen (0.0 = deaktiviert). An Kreuzungen erfolgt score-basierte Auswahl: gleiche Strassenart wie Hit-Node (+40), `Regular`-Prioritaet (+20), gerichtete Verbindung (+10), geringe Winkelabweichung (+0..+10). Bei >2 Pfaden: Sortierung absteigend nach Strassenart-Match-Anzahl, Kuerzung auf 2. Konfiguration wird aus `EditorOptions` uebergeben.
 - `select_nodes_in_rect(state, corner_a, corner_b, additive)` — Rechteckselektion (Shift + Drag)
 - `select_nodes_in_lasso(state, polygon, additive)` — Lasso-Selektion (Alt + Drag)
 - `move_selected_nodes(state, delta_world)` — Alle selektierten Nodes gemeinsam verschieben

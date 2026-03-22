@@ -72,6 +72,7 @@
 - [x] Lasso-Selection
 - [x] Segment-Selektion (zwischen Kreuzungen)
   - [x] **Konfigurierbare Abbruchbedingungen (2026-03-09):** `EditorOptions.segment_stop_at_junction` (Stopp bei Kreuzungen) + `segment_max_angle_deg` (Stopp bei Richtungsaenderung > Schwellwert); konfigurierbar im Options-Dialog; Werte werden per `AppCommand::SelectSegmentBetweenNearestIntersections` durchgereicht
+  - [x] **Gewichteter Walk + Winkel-Constraint (2026-03-22, Branch `feat/doubleclick-segment-weighting`):** `score_neighbor()` bewertet Kreuzungs-Kandidaten nach Strassenart-Match (+40), `Regular`-Prioritaet (+20), gerichteter Verbindung (+10), Winkel-Tiebreaker (+0..+10); harter Winkel-Constraint filtert Kandidaten vor dem Scoring; `AdjacencyNeighbor` um `target_flag`, `connection_direction`, `connection_priority` erweitert; `WalkConfig` um `start_flag` ergaenzt; Pfad-Sortierung bei >2 Pfaden nutzt `start_flag` statt hartkodiertem `NodeFlag::Regular`
 - [x] Add Node Tool (Click zum Hinzufuegen)
 - [x] Delete Tool (selektierte Nodes loeschen)
 - [x] Connect Tool (Regular, Dual, Reverse)
