@@ -295,6 +295,12 @@ pub enum AppIntent {
     GroupSelectionAsGroupRequested,
     /// Selektierte Nodes aus ihrer Gruppe entfernen (Nodes bleiben in RoadMap erhalten)
     RemoveSelectedNodesFromGroupRequested,
+    /// Einfahrt/Ausfahrt-Nodes einer Gruppe setzen
+    SetGroupBoundaryNodes {
+        record_id: u64,
+        entry_node_id: Option<u64>,
+        exit_node_id: Option<u64>,
+    },
 
     // ── Extras ───────────────────────────────────────────────────────
     /// Alle-Felder-nachzeichnen-Einstellungsdialog oeffnen

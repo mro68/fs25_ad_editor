@@ -100,6 +100,24 @@ pub fn group_selection(state: &mut AppState) {
     state.group_registry.register(record);
 }
 
+/// Setzt Einfahrt- und Ausfahrt-Node-IDs fuer eine Gruppe.
+///
+/// Delegiert an `GroupRegistry::set_entry_exit()`. Gibt eine Warnung aus
+/// wenn die angegebenen Node-IDs nicht zur Gruppe gehoeren.
+pub fn set_boundary_nodes(
+    state: &mut AppState,
+    record_id: u64,
+    entry: Option<u64>,
+    exit: Option<u64>,
+) {
+    if !state.group_registry.set_entry_exit(record_id, entry, exit) {
+        log::warn!(
+            "set_boundary_nodes: Validierung fehlgeschlagen fuer Record {}",
+            record_id
+        );
+    }
+}
+
 /// Startet den nicht-destruktiven Gruppen-Edit-Modus fuer einen Record.
 ///
 /// Erstellt einen Undo-Snapshot, entsperrt den Record temporaer und
