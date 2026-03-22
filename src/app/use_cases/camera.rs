@@ -59,11 +59,48 @@ pub fn zoom_towards(state: &mut AppState, factor: f32, focus_world: Option<glam:
     }
 }
 
-/// Zentriert die Kamera auf die Bounding Box der RoadMap.
+/// Zentriert die Kamera auf die gesamte Karte.
 ///
-/// Berechnet Mittelpunkt und waehlt einen passenden Zoom-Level.
-/// Keine Operation wenn die RoadMap leer ist.
+/// Wenn eine Background-Map geladen ist, werden deren `WorldBounds` als
+/// Referenzrahmen verwendet (zeigt die gesamte Hintergrundkarte).
+/// Fallback: Bounding Box aller Nodes in der RoadMap.
+/// Keine Operation wenn weder Background-Map noch Nodes vorhanden sind.
 pub fn center_on_road_map(state: &mut AppState, road_map: &RoadMap) {
+    use crate::core::Camera2D;
+
+    // Prioritaet: BackgroundMap-Bounds zeigen die gesamte Karte
+    if let Some(bg_map) = state.view.background_map.as_deref() {
+        let bounds = bg_map.world_bounds();
+        let center_x = (bounds.min_x + bounds.max_x) / 2.0;
+        let center_y = (bounds.min_z + bounds.max_z) / 2.0;
+        state
+            .view
+            .camera
+            .look_at(glam::Vec2::new(center_x, center_y));
+
+        let width = bounds.max_x - bounds.min_x;
+        let height = bounds.max_z - bounds.min_z;
+        let max_extent = width.max(height);
+        state.view.camera.zoom = Camera2D::BASE_WORLD_EXTENT / (max_extent / 2.0);
+        state
+            .view
+            .camera
+            .clamp_zoom(state.options.camera_zoom_min, state.options.camera_zoom_max);
+
+        log::info!(
+            "Zoom-to-Map (BackgroundMap): ({:.1}, {:.1}) bis ({:.1}, {:.1}), center: ({:.1}, {:.1}), zoom: {:.2}",
+            bounds.min_x,
+            bounds.min_z,
+            bounds.max_x,
+            bounds.max_z,
+            center_x,
+            center_y,
+            state.view.camera.zoom
+        );
+        return;
+    }
+
+    // Fallback: Node-Bounds
     if road_map.nodes.is_empty() {
         return;
     }
@@ -90,7 +127,6 @@ pub fn center_on_road_map(state: &mut AppState, road_map: &RoadMap) {
     let width = max_x - min_x;
     let height = max_y - min_y;
     let max_extent = width.max(height);
-    use crate::core::Camera2D;
     state.view.camera.zoom = Camera2D::BASE_WORLD_EXTENT / (max_extent / 2.0);
     state
         .view
@@ -98,7 +134,7 @@ pub fn center_on_road_map(state: &mut AppState, road_map: &RoadMap) {
         .clamp_zoom(state.options.camera_zoom_min, state.options.camera_zoom_max);
 
     log::info!(
-        "Map bounds: ({:.1}, {:.1}) to ({:.1}, {:.1}), center: ({:.1}, {:.1}), zoom: {:.2}",
+        "Zoom-to-Map (Nodes): ({:.1}, {:.1}) bis ({:.1}, {:.1}), center: ({:.1}, {:.1}), zoom: {:.2}",
         min_x,
         min_y,
         max_x,
