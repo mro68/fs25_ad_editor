@@ -38,8 +38,7 @@ use std::path::Path;
 pub use composite::{OverviewOptions, Poi};
 pub use discovery::MapInfo;
 pub use farmland::{
-    extract_farmland_polygons, extract_farmland_polygons_from_ids,
-    extract_farmland_polygons_merged, merge_adjacent_farmland_regions, FarmlandPolygon,
+    extract_farmland_polygons, extract_farmland_polygons_from_ids, FarmlandPolygon,
 };
 
 /// Ergebnis der Overview-Generierung mit optionalen Farmland-Polygonen.
@@ -292,9 +291,9 @@ fn try_extract_polygons_from_files(
                 let luma = img.to_luma8();
                 let w = luma.width() as usize;
                 let h = luma.height() as usize;
-                let polygons = farmland::extract_farmland_polygons_merged(luma.as_raw(), w, h);
+                let polygons = farmland::extract_farmland_polygons_from_ids(luma.as_raw(), w, h);
                 log::info!(
-                    "Farmland-Polygone aus PNG extrahiert (nach Merge): {} Felder aus {}x{} Raster",
+                    "Farmland-Polygone aus PNG extrahiert: {} Felder aus {}x{} Raster",
                     polygons.len(),
                     w,
                     h
