@@ -178,6 +178,11 @@ impl EditorApp {
         } else {
             None
         };
+        let group_record = if let Some(es) = self.state.group_editing.as_ref() {
+            self.state.group_registry.get(es.record_id)
+        } else {
+            None
+        };
         events.extend(ui::render_edit_panel(
             ctx,
             self.state.road_map.as_deref(),
@@ -190,6 +195,7 @@ impl EditorApp {
             edit_tool_manager,
             panel_pos,
             self.state.group_editing.as_ref(),
+            group_record,
             &mut self.state.options,
         ));
 
