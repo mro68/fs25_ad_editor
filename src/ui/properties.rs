@@ -6,65 +6,58 @@ pub(crate) mod selectors;
 use indexmap::IndexSet;
 
 use crate::app::{
-    segment_registry::SegmentRegistry, AppIntent, Connection, ConnectionDirection,
-    ConnectionPriority, NodeFlag, RoadMap,
+    group_registry::GroupRegistry, AppIntent, Connection, ConnectionDirection, ConnectionPriority,
+    NodeFlag, RoadMap,
 };
 use distances::render_distance_panel;
 use selectors::{render_direction_icon_selector, render_priority_icon_selector};
 
-/// Rendert das Properties-Panel und gibt erzeugte Events zurück.
+/// Rendert den Properties-Inhalt in den übergebenen UI-Bereich.
+///
+/// Gibt eine Liste von `AppIntent`-Events zurück, die bei Interaktion erzeugt werden.
 #[allow(clippy::too_many_arguments)]
-pub fn render_properties_panel(
-    ctx: &egui::Context,
+pub fn render_properties_content(
+    ui: &mut egui::Ui,
     road_map: Option<&RoadMap>,
     selected_node_ids: &IndexSet<u64>,
     default_direction: ConnectionDirection,
     default_priority: ConnectionPriority,
     distance_wheel_step_m: f32,
-    segment_registry: Option<&SegmentRegistry>,
+    group_registry: Option<&GroupRegistry>,
     distance_state: &mut crate::app::state::DistanzenState,
 ) -> Vec<AppIntent> {
     let mut events = Vec::new();
 
-    egui::SidePanel::right("properties_panel")
-        .default_width(200.0)
-        .min_width(160.0)
-        .resizable(true)
-        .show(ctx, |ui| {
-            ui.heading("Eigenschaften");
-            ui.separator();
+    if selected_node_ids.is_empty() {
+        ui.label("Keine Selektion");
+    } else if let Some(road_map) = road_map {
+        render_selection_info(
+            ui,
+            road_map,
+            selected_node_ids,
+            default_direction,
+            default_priority,
+            group_registry,
+            &mut events,
+        );
+    }
 
-            if selected_node_ids.is_empty() {
-                ui.label("Keine Selektion");
-            } else if let Some(road_map) = road_map {
-                render_selection_info(
-                    ui,
-                    road_map,
-                    selected_node_ids,
-                    default_direction,
-                    default_priority,
-                    segment_registry,
-                    &mut events,
-                );
-            }
-
-            // Distanzen-Panel: immer sichtbar wenn 2+ Nodes selektiert
-            if selected_node_ids.len() >= 2 {
-                if let Some(rm) = road_map {
-                    render_distance_panel(
-                        ui,
-                        rm,
-                        selected_node_ids,
-                        distance_state,
-                        distance_wheel_step_m,
-                        &mut events,
-                    );
-                }
-            } else if distance_state.active {
-                // Selektion verloren → Vorschau deaktivieren
-                distance_state.deactivate();
-            }
-        });
+    // Distanzen-Panel: immer sichtbar wenn 2+ Nodes selektiert
+    if selected_node_ids.len() >= 2 {
+        if let Some(rm) = road_map {
+            render_distance_panel(
+                ui,
+                rm,
+                selected_node_ids,
+                distance_state,
+                distance_wheel_step_m,
+                &mut events,
+            );
+        }
+    } else if distance_state.active {
+        // Selektion verloren → Vorschau deaktivieren
+        distance_state.deactivate();
+    }
 
     events
 }
@@ -75,7 +68,7 @@ fn render_selection_info(
     selected: &IndexSet<u64>,
     default_direction: ConnectionDirection,
     default_priority: ConnectionPriority,
-    segment_registry: Option<&SegmentRegistry>,
+    group_registry: Option<&GroupRegistry>,
     events: &mut Vec<AppIntent>,
 ) {
     match selected.len() {
@@ -93,7 +86,7 @@ fn render_selection_info(
         }
     }
 
-    render_segment_edit_buttons(ui, selected, segment_registry, events);
+    render_segment_edit_buttons(ui, selected, group_registry, events);
 }
 
 /// Zeigt Einzelnode-Info: Position, Flag, Marker-Optionen.
@@ -245,14 +238,14 @@ fn render_connection_editor(ui: &mut egui::Ui, conn: &Connection, events: &mut V
     });
 }
 
-/// Zeigt Segment-Bearbeiten-Buttons wenn passende Segmente im Registry existieren.
+/// Zeigt Gruppen-Bearbeiten-Buttons wenn passende Gruppen im Registry existieren.
 fn render_segment_edit_buttons(
     ui: &mut egui::Ui,
     selected: &IndexSet<u64>,
-    segment_registry: Option<&SegmentRegistry>,
+    group_registry: Option<&GroupRegistry>,
     events: &mut Vec<AppIntent>,
 ) {
-    let Some(registry) = segment_registry else {
+    let Some(registry) = group_registry else {
         return;
     };
     let matching = registry.find_by_node_ids(selected);
@@ -261,21 +254,22 @@ fn render_segment_edit_buttons(
     }
 
     ui.separator();
-    ui.label("Segment bearbeiten:");
+    ui.label("Gruppe bearbeiten:");
     for record in matching {
         let label = match &record.kind {
-            crate::app::segment_registry::SegmentKind::Straight { .. } => "✏ Gerade Strecke",
-            crate::app::segment_registry::SegmentKind::CurveQuad { .. } => "✏ Kurve Grad 2",
-            crate::app::segment_registry::SegmentKind::CurveCubic { .. } => "✏ Kurve Grad 3",
-            crate::app::segment_registry::SegmentKind::Spline { .. } => "✏ Spline",
-            crate::app::segment_registry::SegmentKind::SmoothCurve { .. } => "✏ Geglättete Kurve",
-            crate::app::segment_registry::SegmentKind::Bypass { .. } => "✏ Ausweichstrecke",
-            crate::app::segment_registry::SegmentKind::Parking { .. } => "✏ Parkplatz",
-            crate::app::segment_registry::SegmentKind::FieldBoundary { .. } => "✏ Feld erkennen",
-            crate::app::segment_registry::SegmentKind::RouteOffset { .. } => "✏ Strecke versetzen",
+            crate::app::group_registry::GroupKind::Straight { .. } => "✏ Gerade Strecke",
+            crate::app::group_registry::GroupKind::CurveQuad { .. } => "✏ Kurve Grad 2",
+            crate::app::group_registry::GroupKind::CurveCubic { .. } => "✏ Kurve Grad 3",
+            crate::app::group_registry::GroupKind::Spline { .. } => "✏ Spline",
+            crate::app::group_registry::GroupKind::SmoothCurve { .. } => "✏ Geglättete Kurve",
+            crate::app::group_registry::GroupKind::Bypass { .. } => "✏ Ausweichstrecke",
+            crate::app::group_registry::GroupKind::Parking { .. } => "✏ Parkplatz",
+            crate::app::group_registry::GroupKind::FieldBoundary { .. } => "✏ Feld erkennen",
+            crate::app::group_registry::GroupKind::RouteOffset { .. } => "✏ Strecke versetzen",
+            crate::app::group_registry::GroupKind::Manual { .. } => "✏ Manuelle Gruppe",
         };
         if ui.button(label).clicked() {
-            events.push(AppIntent::EditSegmentRequested {
+            events.push(AppIntent::GroupEditStartRequested {
                 record_id: record.id,
             });
         }

@@ -24,6 +24,10 @@ pub enum Precondition {
     StreckenteilungActive(bool),
     /// Selektion bildet eine zusammenhaengende Kette (fuer Streckenteilung)
     IsResampleableChain,
+    /// Selektion bildet einen zusammenhaengenden Subgraphen (fuer Gruppierung)
+    IsConnectedSubgraph,
+    /// Mindestens 1 selektierter Node gehoert zu einer Gruppe
+    SelectionHasGroupMember,
     /// Mindestens 1 Node selektiert (fuer Copy)
     HasSelection,
     /// Clipboard enthaelt Nodes (fuer Paste)
@@ -34,6 +38,8 @@ pub enum Precondition {
     FarmlandPolygonsLoaded,
     /// Mindestens 2 Nodes selektiert (fuer Zoom-auf-Auswahl)
     AtLeastTwoSelected,
+    /// Kein Group-Edit aktiv (fuer neue Gruppierung)
+    NoGroupEditActive,
 }
 
 /// Kontext fuer die Precondition-Auswertung — alle noetigen Daten aus dem aktuellen State.
@@ -45,9 +51,13 @@ pub struct PreconditionContext<'a> {
     /// Ob die Zwischenablage Daten enthaelt
     pub clipboard_has_data: bool,
     /// Record-ID eines validen Segments (berechnet vor Validierung)
-    pub segment_record_id: Option<u64>,
+    pub group_record_id: Option<u64>,
     /// Ob Farmland-Polygone geladen sind (fuer FieldBoundaryTool-Precondition)
     pub farmland_polygons_loaded: bool,
+    /// Ob gerade ein Group-Edit aktiv ist (sperrt neue Gruppierungen)
+    pub group_editing_active: bool,
+    /// Ob mindestens 1 selektierter Node zu einer Gruppe gehoert
+    pub selection_has_group_member: bool,
 }
 
 impl Precondition {
@@ -82,15 +92,21 @@ impl Precondition {
 
             Self::IsResampleableChain => ctx.road_map.is_resampleable_chain(ctx.selected_node_ids),
 
+            Self::IsConnectedSubgraph => ctx.road_map.is_connected_subgraph(ctx.selected_node_ids),
+
             Self::HasSelection => !ctx.selected_node_ids.is_empty(),
 
             Self::ClipboardHasData => ctx.clipboard_has_data,
 
-            Self::SelectionIsValidSegment => ctx.segment_record_id.is_some(),
+            Self::SelectionIsValidSegment => ctx.group_record_id.is_some(),
 
             Self::FarmlandPolygonsLoaded => ctx.farmland_polygons_loaded,
 
             Self::AtLeastTwoSelected => ctx.selected_node_ids.len() >= 2,
+
+            Self::NoGroupEditActive => !ctx.group_editing_active,
+
+            Self::SelectionHasGroupMember => ctx.selection_has_group_member,
         }
     }
 }

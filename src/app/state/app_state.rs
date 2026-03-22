@@ -1,5 +1,5 @@
+use crate::app::group_registry::GroupRegistry;
 use crate::app::history::Snapshot;
-use crate::app::segment_registry::SegmentRegistry;
 use crate::app::CommandLog;
 use crate::core::{Connection, FieldPolygon, MapMarker, MapNode, RoadMap};
 use crate::shared::EditorOptions;
@@ -19,6 +19,17 @@ pub struct Clipboard {
     pub markers: Vec<MapMarker>,
     /// Geometrisches Zentrum der Kopie (fuer relativen Offset beim Paste)
     pub center: Vec2,
+}
+
+/// Zustand einer aktiven Gruppen-Bearbeitung.
+///
+/// Wird in `AppState::group_editing` gespeichert. `None` = Normal-Modus.
+#[derive(Debug, Clone)]
+pub struct GroupEditState {
+    /// Record-ID der bearbeiteten Gruppe
+    pub record_id: u64,
+    /// Lock-Zustand vor dem Edit (wird bei Apply/Cancel wiederhergestellt)
+    pub was_locked: bool,
 }
 
 /// Hauptzustand der Anwendung
@@ -48,7 +59,7 @@ pub struct AppState {
     /// Ob der Options-Dialog angezeigt wird
     pub show_options_dialog: bool,
     /// In-Session-Registry aller erstellten Segmente (fuer nachtraegliche Bearbeitung)
-    pub segment_registry: SegmentRegistry,
+    pub group_registry: GroupRegistry,
     /// Signalisiert dem Host (eframe), die Anwendung kontrolliert zu beenden
     pub should_exit: bool,
     /// Beim letzten Overview-Laden extrahierte Farmland-Feldgrenz-Polygone
@@ -56,6 +67,8 @@ pub struct AppState {
     /// Enthält geordnete Umriss-Vertices pro Feld in Weltkoordinaten.
     /// `None` solange noch keine Overview mit Farmland-Daten geladen wurde.
     pub farmland_polygons: Option<Arc<Vec<FieldPolygon>>>,
+    /// Aktive Gruppen-Bearbeitung (None = Normal-Modus, Some = Edit-Modus aktiv)
+    pub group_editing: Option<GroupEditState>,
 }
 
 impl AppState {
@@ -77,9 +90,10 @@ impl AppState {
             options,
             options_arc,
             show_options_dialog: false,
-            segment_registry: SegmentRegistry::new(),
+            group_registry: GroupRegistry::new(),
             should_exit: false,
             farmland_polygons: None,
+            group_editing: None,
         }
     }
 

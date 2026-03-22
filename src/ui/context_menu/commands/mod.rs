@@ -16,7 +16,7 @@ mod validation;
 pub use preconditions::{Precondition, PreconditionContext};
 pub use validation::{validate_entries, ValidatedEntry};
 
-use crate::app::segment_registry::{
+use crate::app::group_registry::{
     TOOL_INDEX_CURVE_CUBIC, TOOL_INDEX_CURVE_QUAD, TOOL_INDEX_FIELD_BOUNDARY,
     TOOL_INDEX_SMOOTH_CURVE, TOOL_INDEX_STRAIGHT,
 };
@@ -105,9 +105,13 @@ pub enum CommandId {
 
     // ── Segment ──────────────────────────────────────────────────────
     /// Selektiertes Segment nachtraeglich bearbeiten
-    EditSegment,
+    EditGroup,
     /// Selektierte zusammenhaengende Nodes als neues Segment gruppieren
-    GroupSelectionAsSegment,
+    GroupSelectionAsGroup,
+    /// Selektierte Nodes aus ihrer Gruppe entfernen (Nodes bleiben erhalten)
+    RemoveFromGroup,
+    /// Gruppe komplett aufloesen (alle Nodes bleiben erhalten)
+    DissolveGroup,
 
     // ── Extras ───────────────────────────────────────────────────────
     /// FieldBoundaryTool aktivieren
@@ -162,8 +166,8 @@ pub struct IntentContext {
     pub node_position: Option<glam::Vec2>,
     /// Sortierte Zwei-Node-IDs (fuer RouteToolWithAnchorsRequested)
     pub two_node_ids: Option<(u64, u64)>,
-    /// Record-ID eines validen Segments (fuer EditSegment-Command)
-    pub segment_record_id: Option<u64>,
+    /// Record-ID eines validen Segments (fuer EditGroup-Command)
+    pub group_record_id: Option<u64>,
 }
 
 impl CommandId {
@@ -276,10 +280,14 @@ impl CommandId {
             Self::PasteHere => AppIntent::PasteStartRequested,
 
             // ── Segment ──────────────────────────────────────────────────────
-            Self::EditSegment => AppIntent::EditSegmentRequested {
-                record_id: ctx.segment_record_id.unwrap_or(0),
+            Self::EditGroup => AppIntent::GroupEditStartRequested {
+                record_id: ctx.group_record_id.unwrap_or(0),
             },
-            Self::GroupSelectionAsSegment => AppIntent::GroupSelectionAsSegmentRequested,
+            Self::GroupSelectionAsGroup => AppIntent::GroupSelectionAsGroupRequested,
+            Self::RemoveFromGroup => AppIntent::RemoveSelectedNodesFromGroupRequested,
+            Self::DissolveGroup => AppIntent::DissolveGroupRequested {
+                segment_id: ctx.group_record_id.unwrap_or(0),
+            },
 
             // ── Extras ───────────────────────────────────────────────────────
             Self::SetToolFieldBoundary => AppIntent::SelectRouteToolRequested {

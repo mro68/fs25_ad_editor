@@ -4,7 +4,7 @@ use super::super::common::linear_connections;
 use super::super::{RouteTool, ToolAction, ToolPreview, ToolResult};
 use super::geometry::{build_result, compute_line_positions};
 use super::state::StraightLineTool;
-use crate::app::segment_registry::{SegmentBase, SegmentKind, SegmentRecord};
+use crate::app::group_registry::{GroupBase, GroupKind, GroupRecord};
 use crate::core::RoadMap;
 use glam::Vec2;
 
@@ -140,10 +140,10 @@ impl RouteTool for StraightLineTool {
         )
     }
 
-    fn make_segment_record(&self, id: u64, node_ids: &[u64]) -> Option<SegmentRecord> {
+    fn make_group_record(&self, id: u64, node_ids: &[u64]) -> Option<GroupRecord> {
         let start = self.last_start_anchor?;
         let end = self.lifecycle.last_end_anchor?;
-        Some(SegmentRecord {
+        Some(GroupRecord {
             id,
             node_ids: node_ids.to_vec(),
             start_anchor: start,
@@ -151,8 +151,8 @@ impl RouteTool for StraightLineTool {
             original_positions: Vec::new(), // wird im Handler befüllt
             marker_node_ids: Vec::new(),
             locked: true,
-            kind: SegmentKind::Straight {
-                base: SegmentBase {
+            kind: GroupKind::Straight {
+                base: GroupBase {
                     direction: self.direction,
                     priority: self.priority,
                     max_segment_length: self.seg.max_segment_length,
@@ -161,8 +161,8 @@ impl RouteTool for StraightLineTool {
         })
     }
 
-    fn load_for_edit(&mut self, record: &SegmentRecord, kind: &SegmentKind) {
-        let SegmentKind::Straight { base } = kind else {
+    fn load_for_edit(&mut self, record: &GroupRecord, kind: &GroupKind) {
+        let GroupKind::Straight { base } = kind else {
             return;
         };
         self.start = Some(record.start_anchor);

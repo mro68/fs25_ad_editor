@@ -107,34 +107,34 @@
   - [x] Intent/Command-Kette: `RouteToolScrollRotated { delta }` → `RouteToolRotate { delta }` → `handlers::route_tool::rotate()`
   - [x] Dokumentation synchronisiert: Intents, Commands, Tools-API, Handler-API
 
-- [x] **Segment-Lock** (2026-03-05)
-  - [x] `SegmentRecord.locked: bool` — gesperrte Segmente bewegen alle Nodes gemeinsam beim Drag
-  - [x] `SegmentRegistry::toggle_lock()` / `is_locked()` — Lock-Zustand abfragen und umschalten
-  - [x] `SegmentRegistry::expand_locked_selection()` — Selektion automatisch um alle Nodes gesperrter Segmente erweitern
-  - [x] `SegmentRegistry::update_original_positions()` — Positionen nach Lock-Move aktualisieren
-  - [x] `SegmentRegistry::segment_bounding_box()` / `segments_for_node()` / `records()` / `records_mut()` — neue Abfrage-API
-  - [x] `move_selected_nodes()` Lock-Aware: gesperrte Segment-Nodes werden mitbewegt
-  - [x] `AppIntent::ToggleSegmentLockRequested` / `AppCommand::ToggleSegmentLock`
-  - [x] `handlers::segment::toggle_lock()` — neuer Handler
-  - [x] `ui::segment_overlay`: `render_segment_overlays()` / `SegmentOverlayEvent::LockToggled` — Viewport-Overlay mit Rahmen und klickbaren Lock-Icons
+- [x] **Gruppen-Lock** (2026-03-05)
+  - [x] `GroupRecord.locked: bool` — gesperrte Gruppen bewegen alle Nodes gemeinsam beim Drag
+  - [x] `GroupRegistry::toggle_lock()` / `is_locked()` — Lock-Zustand abfragen und umschalten
+  - [x] `GroupRegistry::expand_locked_selection()` — Selektion automatisch um alle Nodes gesperrter Segmente erweitern
+  - [x] `GroupRegistry::update_original_positions()` — Positionen nach Lock-Move aktualisieren
+  - [x] `GroupRegistry::group_bounding_box()` / `groups_for_node()` / `records()` / `records_mut()` — neue Abfrage-API
+  - [x] `move_selected_nodes()` Lock-Aware: gesperrte Gruppen-Nodes werden mitbewegt
+  - [x] `AppIntent::ToggleGroupLockRequested` / `AppCommand::ToggleGroupLock`
+  - [x] `handlers::group::toggle_lock()` — neuer Handler
+  - [x] `ui::group_overlay`: `render_group_overlays()` / `GroupOverlayEvent::LockToggled` — Viewport-Overlay mit Rahmen und klickbaren Lock-Icons
   - [x] `EditorOptions::segment_lock_icon_size_px` — Lock-Icon-Größe im Overlay konfigurierbar
 
-- [x] **Segment-Flow-Überarbeitung (2026-03-07, Branch `feature/segment-flow-rework`)**
-  - [x] `FieldBoundaryTool::load_for_edit()` — Vollständige Implementierung: stellt Feld-ID, Node-Abstand, Versatz, Begradigung und Richtung/Priorität aus dem `SegmentRecord` wieder her; wählt das korrekte Polygon aus `farmland_data`
-  - [x] `expand_segment_selection()` entfernt — automatische Segment-Selektion beim Pick entfernt (verhinderte korrektes Dimming bei Multi-Selection)
-  - [x] `AppIntent::DissolveSegmentRequested` / `AppCommand::DissolveSegment` / `handlers::segment::dissolve()` — neues Feature: Segment-Record per `Ctrl + Lock-Icon-Klick` auflösen (Nodes bleiben erhalten)
-  - [x] `SegmentOverlayEvent::Dissolved { segment_id }` — neues Overlay-Event für Segment-Auflösung
-  - [x] `icon_size_px`-Parameter in `render_segment_overlays()` — Icon-Größe aus `EditorOptions::segment_lock_icon_size_px` steuerbar
+- [x] **Gruppen-Flow-Überarbeitung (2026-03-07, Branch `feature/segment-flow-rework`)**
+  - [x] `FieldBoundaryTool::load_for_edit()` — Vollständige Implementierung: stellt Feld-ID, Node-Abstand, Versatz, Begradigung und Richtung/Priorität aus dem `GroupRecord` wieder her; wählt das korrekte Polygon aus `farmland_data`
+  - [x] `expand_group_selection()` entfernt — automatische Segment-Selektion beim Pick entfernt (verhinderte korrektes Dimming bei Multi-Selection)
+  - [x] `AppIntent::DissolveGroupRequested` / `AppCommand::DissolveGroup` / `handlers::group::dissolve()` — neues Feature: Segment-Record per `Ctrl + Lock-Icon-Klick` auflösen (Nodes bleiben erhalten)
+  - [x] `GroupOverlayEvent::Dissolved { group_id }` — neues Overlay-Event für Segment-Auflösung
+  - [x] `icon_size_px`-Parameter in `render_group_overlays()` — Icon-Größe aus `EditorOptions::segment_lock_icon_size_px` steuerbar
 
-- [x] **Segment-Fixes (2026-03-07)**
-  - [x] **Bug A: Multi-Selection Dimming** (`render_scene.rs::compute_dimmed_ids`) — Korrekter Dimm-Pass über alle Records: Nodes werden nur gedimmt wenn ihr Segment mind. einen selektierten Node hat und der Node selbst NICHT selektiert ist
-  - [x] **Bug B: Lock-Icon bei Multi-Selection** (`segment_overlay.rs::render_segment_overlays`) — Lock-Icon-Deduplizierung per Segment-ID; bei Multi-Selection werden mehrere Icons korrekt gezeichnet
+- [x] **Gruppen-Fixes (2026-03-07)**
+  - [x] **Bug A: Multi-Selection Dimming** (`render_scene.rs::compute_dimmed_ids`) — Korrekter Dimm-Pass über alle Records: Nodes werden nur gedimmt wenn ihre Gruppe mind. einen selektierten Node hat und der Node selbst NICHT selektiert ist
+  - [x] **Bug B: Lock-Icon bei Multi-Selection** (`group_overlay.rs::render_group_overlays`) — Lock-Icon-Deduplizierung per Gruppen-ID; bei Multi-Selection werden mehrere Icons korrekt gezeichnet
   - [x] **Bug C: edit_segment bewahrt Anker-Nodes** (`handlers/editing.rs::edit_segment`) — ExistingNode-Anker werden mit HashSet ausgeschlossen; nur innere Nodes werden gelöscht, Start-/End-Anker bleiben erhalten
-  - [x] **Bug D: Segment aufloesen per Ctrl+Lock-Icon** (`SegmentOverlayEvent::Dissolved`, `AppIntent::DissolveSegmentRequested`, `AppCommand::DissolveSegment`, `handlers::segment::dissolve`) — Segment-Record wird entfernt, Nodes bleiben unveraendert
+  - [x] **Bug D: Segment aufloesen per Ctrl+Lock-Icon** (`GroupOverlayEvent::Dissolved`, `AppIntent::DissolveGroupRequested`, `AppCommand::DissolveGroup`, `handlers::group::dissolve`) — Segment-Record wird entfernt, Nodes bleiben unveraendert
 
 - [x] **RouteOffsetTool — Strecke Versetzen (2026-03-07)**
   - [x] Neues Modul `src/app/tools/route_offset/` (state.rs, geometry.rs, lifecycle.rs, config_ui.rs, tests.rs)
-  - [x] `SegmentKind::RouteOffset` + `TOOL_INDEX_ROUTE_OFFSET = 8`
+  - [x] `GroupKind::RouteOffset` + `TOOL_INDEX_ROUTE_OFFSET = 8`
   - [x] `parallel_offset()` + `local_perp()` nach `common/geometry.rs` extrahiert (gemeinsam mit BypassTool)
   - [x] `ToolResult.nodes_to_remove: Vec<u64>` — Original-Nodes im selben Undo-Schritt entfernbar
   - [x] `RouteTool::set_chain_inner_ids()` — neue Trait-Methode für explizite innere Ketten-IDs
@@ -148,10 +148,21 @@
   - [x] `OverviewResult.farmland_polygons` in `fs25_map_overview::lib` — Ergebnis-Struct erweitert
   - [x] `AppState.farmland_polygons: Option<Arc<Vec<FieldPolygon>>>` — State-Feld fuer geladene Polygone
   - [x] `FieldBoundaryTool` (Slot 7 im ToolManager): Phasen Idle/Configuring, Config-Panel (Node-Abstand, Versatz, Begradigen), geschlossener Ring-Erzeuger
-  - [x] `SegmentKind::FieldBoundary { field_id, node_spacing, offset, straighten_tolerance, base }` — Segment-Record fuer nachtraegliche Bearbeitung
+  - [x] `GroupKind::FieldBoundary { field_id, node_spacing, offset, straighten_tolerance, base }` — Gruppen-Record fuer nachtraegliche Bearbeitung
   - [x] Toolbar-Button `🌾 Feld erkennen` — deaktiviert wenn keine Farmland-Daten geladen
   - [x] Context-Menu `⚙ Extras → 🌾 Feld erkennen` — Precondition `FarmlandPolygonsLoaded`
   - [x] `handlers::route_tool`: `FarmlandData-Injection` via `set_farmland_data()` beim Tool-Wechsel
+
+- [x] **Gruppen-Selektions- und Verwaltungs-Erweiterungen (2026-03-21, Branch `refactor/group-unification`)**
+  - [x] Doppelklick auf Gruppen-Node → `SelectGroupByNearestNode`-Command selektiert alle Nodes der Gruppe
+  - [x] `select_group_by_nearest_node()` in `use_cases/selection/group.rs` + `select_group_nodes()` in `handlers/selection.rs`
+  - [x] Context-Menü-Eintrag „Aus Gruppe entfernen“ (“RemoveFromGroup”) → `RemoveSelectedNodesFromGroupRequested` / `RemoveSelectedNodesFromGroups`
+  - [x] `GroupRegistry::remove_nodes_from_record()` — Nodes aus Record entfernen; Auto-Dissolve bei < 2 verbleibenden Nodes
+  - [x] `handlers::group::remove_selected_from_groups()` — neuer Handler
+  - [x] Context-Menü-Eintrag „Gruppe erstellen“ (“GroupSelectionAsGroup”) → `GroupSelectionAsGroupRequested` / `GroupSelectionAsGroup`
+  - [x] `BoundaryInfo.max_external_angle_deviation: Option<f32>` — Winkelabweichung intern/extern, berechnet in `warm_boundary_cache()`
+  - [x] Winkelfilter in `render_group_boundary_overlays()` — Eingangs-Icons nur bei Abweichung ≤ 90° angezeigt
+  - [x] DRY: `angle_deviation()` nach `shared/geometry.rs` extrahiert (vorher in `use_cases/selection/segment.rs`)
 
 ## Phase 5: Advanced Features
 - [x] DDS-Import fuer Map-Hintergruende
@@ -220,7 +231,7 @@
   - [ ] UI-Integration-Tests
   - [x] Performance-Benchmarks (Basis mit Criterion)
   - [ ] Performance-Benchmarks mit 100k+ Nodes
-  - [x] `SegmentKind::tool_index()` durch Konstanten und Unit-Test abgesichert (2026-02-24)
+  - [x] `GroupKind::tool_index()` durch Konstanten und Unit-Test abgesichert (2026-02-24)
 - [🟡] Dokumentation
   - [ ] User-Guide
   - [x] API-Dokumentation pro Modul (API.md inkl. shared)
@@ -231,20 +242,20 @@
   - [x] Audit-Fixups: VecDeque-Undo, HashSet-Properties, Spline-Samples, Doku-Cleanup (2026-02-24)
   - [x] **Strukturelles Audit Docstring-Ergaenzungen (2026-03-05)**
     - [x] 84 fehlende `///`-Docstrings fuer alle `pub`-Items ergaenzt (`core`, `app`, `render`, `shared`, `ui`)
-    - [x] API.md alle 6 Layer synchronisiert (SegmentKind+Bypass/Parking, SegmentRecord+marker_node_ids, EditorOptions+bg/copy-Felder, compute_visible_rect)
+    - [x] API.md alle 6 Layer synchronisiert (GroupKind+Bypass/Parking, GroupRecord+marker_node_ids, EditorOptions+bg/copy-Felder, compute_visible_rect)
   - [x] **Doku-Sync Segment-Lock Feature (2026-03-05)**
-    - [x] `app/API.md`: SegmentRecord.locked, neue SegmentRegistry-Methoden, AppIntent/AppCommand-Varianten, Handler segment.rs
-    - [x] `ui/API.md`: Modul segment_overlay, SegmentOverlayEvent, render_segment_overlays()
-    - [x] ROADMAP.md: Segment-Lock als abgeschlossen markiert
+    - [x] `app/API.md`: GroupRecord.locked, neue GroupRegistry-Methoden, AppIntent/AppCommand-Varianten, Handler group.rs
+    - [x] `ui/API.md`: Modul group_overlay, GroupOverlayEvent, render_group_overlays()
+    - [x] ROADMAP.md: Gruppen-Lock als abgeschlossen markiert
   - [x] **Doku-Sync Felderkennung-Feature (2026-03-05)**
     - [x] `core/API.md`: FieldPolygon, point_in_polygon(), find_polygon_at(), simplify_polygon(), offset_polygon()
-    - [x] `app/API.md`: farmland_polygons in AppState, SegmentKind::FieldBoundary, TOOL_INDEX_FIELD_BOUNDARY
+    - [x] `app/API.md`: farmland_polygons in AppState, GroupKind::FieldBoundary, TOOL_INDEX_FIELD_BOUNDARY
     - [x] `app/tools/API.md`: FieldBoundaryTool vollstaendig dokumentiert (Phasen, Felder, Ring-Berechnung)
     - [x] `ui/API.md`: Toolbar-Button, Context-Menu Extras-Submenu, Precondition::FarmlandPolygonsLoaded
   - [x] **Doku-Sync RouteOffsetTool + Segment-Fixes (2026-03-07)**
-    - [x] `app/API.md`: SegmentKind::RouteOffset, TOOL_INDEX_ROUTE_OFFSET = 8, beide SegmentKind-Blöcke
+    - [x] `app/API.md`: GroupKind::RouteOffset, TOOL_INDEX_ROUTE_OFFSET = 8, beide GroupKind-Blöcke
     - [x] `app/tools/API.md`: RouteOffsetTool-Sektion (Felder, Config, Execute-Logik, Modulstruktur); ToolManager-Tabelle Slot 8; set_chain_inner_ids() in RouteTool-Trait; parallel_offset/local_perp in common/geometry.rs
-    - [x] ROADMAP.md: RouteOffsetTool + alle drei Segment-Fixes als abgeschlossen markiert
+    - [x] ROADMAP.md: RouteOffsetTool + alle drei Gruppen-Fixes als abgeschlossen markiert
     - [x] ROADMAP.md: Felderkennung als abgeschlossen markiert
   - [x] **Doku-Sync Zoom-Kompensation + Alle Felder nachzeichnen (2026-03-06)**
     - [x] `shared/API.md`: `zoom_compensation_max`-Feld, `DEFAULT_ZOOM_COMPENSATION_MAX`-Konstante und `zoom_compensation()`-Methode ergaenzt
@@ -254,6 +265,15 @@
     - [x] `ui/API.md`: Menueä `📍 Alle Felder nachzeichnen` im Extras-Submenu
     - [x] `render/API.md`: Zoom-Kompensation in NodeRenderer und ConnectionRenderer dokumentiert
     - [x] ROADMAP.md: Beide Features als abgeschlossen markiert
+  - [x] **Nicht-destruktives Gruppen-Editing (2026-03-21, Branch `feat/group-nodes`)**
+    - [x] `GroupEditState` in `AppState` — Zustand des aktiven Gruppen-Edit-Modus
+    - [x] `AppIntent::GroupEditStartRequested` / `GroupEditApplyRequested` / `GroupEditCancelRequested`
+    - [x] `AppCommand::GroupEditStart` / `GroupEditApply` / `GroupEditCancel`
+    - [x] `handlers::group::start_group_edit()` / `apply_group_edit()` / `cancel_group_edit()`
+    - [x] `GroupRegistry::set_edit_guard()` — schuetzt aktiven Record vor automatischer Invalidierung
+    - [x] `GroupRegistry::update_record()` — Record nach Edit in-place aktualisieren
+    - [x] `render_edit_panel()` um `group_editing`-Parameter erweitert — Gruppen-Edit-Panel mit Uebernehmen/Abbrechen-Buttons
+    - [x] Doku-Sync: `app/API.md`, `handlers/API.md`, `ui/API.md`, ROADMAP.md
   - [x] **Doku-Sync Deep-Structure-Audit (2026-03-07, Branch `refactor/deep-structure-audit`)**
     - [x] `crates/fs25_map_overview/API.md`: Neues API.md fuer das Overview-Crate erstellt (pub Structs, Funktionen, Module)
     - [x] `app/API.md`: `ToolAnchor` und `compute_ring` als explizite Re-Exports erwaehnt
@@ -286,8 +306,8 @@
     - [x] Encapsulation-Audit: 0 Layer-Boundary-Verletzungen (keine wgpu/render-Imports in Tools)
     - [x] API-Unification: Alle 9 Tools nutzen RouteTool-Trait + 4 Capability-Traits konsistent
     - [x] ToolResult-Analyse: 6/9 Tools nutzen `assemble_tool_result()`, 3 mit manueller Topologie (geschlossene Ringe, Multi-Offsets)
-    - [x] Editierbarkeit: Alle 9 Tools unterstuetzen `make_segment_record()` + `load_for_edit()`
-    - [x] `docs/ARCHITECTURE_PLAN.md`: Neuer Abschnitt "Tool-Encapsulation-Regeln" mit Renderer-Vertrag, Preview-Vertrag und Segment-Editierbarkeit
+    - [x] Editierbarkeit: Alle 9 Tools unterstuetzen `make_group_record()` + `load_for_edit()`
+    - [x] `docs/ARCHITECTURE_PLAN.md`: Neuer Abschnitt "Tool-Encapsulation-Regeln" mit Renderer-Vertrag, Preview-Vertrag und Gruppen-Editierbarkeit
     - [x] Audit-Report: `target/tmp/PLANS/TOOL_ENCAPSULATION_AUDIT.md` mit 10 Findings, Code-Vorschlaegen und Umsetzungsplan
   - [x] **Bugfix: PNG-Farmland-Erkennung (2026-03-06, Branch `fix/farmland-json-persistence`)**
     - [x] `extract_farmland_polygons_from_ids()` als formatunabhaengige pub-Funktion extrahiert (GRLE+PNG)
@@ -304,11 +324,26 @@
     - [x] `shared/API.md`: `i18n/`-Modul dokumentiert (Language, I18nKey, t()); language-Feld in EditorOptions ergaenzt
     - [x] ROADMAP.md: i18n-Feature in Phase 3 eingetragen (Infrastruktur + Options-Dialog + Menue + Status-Bar)
     - [x] `docs/ARCHITECTURE_PLAN.md`: `i18n/` in shared-Modulstruktur ergaenzt
+  - [x] **Doku-Sync Gruppen-Feature: Boundary-Icons + i18n-Rename (2026-03-21, Branch `feat/group-nodes`)**
+    - [x] `core/API.md`: `BoundaryNode`-Struct + `boundary_nodes()`-Methode auf `RoadMap` dokumentiert
+    - [x] `app/API.md`: `GroupRegistry::open_nodes()` in Methoden-Liste ergaenzt
+    - [x] `ui/API.md`: Neues Modul `group_boundary_overlay` mit `GroupBoundaryIcons` und `render_group_boundary_overlays()` dokumentiert
+    - [x] ROADMAP.md: Feature als abgeschlossen markiert
+  - [x] **Doku-Sync Segment→Group-Unification (2026-03-21, Branch `refactor/segment-registry`)**
+    - [x] `app/API.md`: `GroupKind::Manual`-Variante ergaenzt; `tool_index()` Rueckgabetyp `usize` → `Option<usize>` korrigiert; `is_tool_backed()` neu dokumentiert; `GroupRegistry`-Merkmale um HashMap/Reverse-Index ergaenzt; `records()`/`records_mut()` von Slice auf Iterator-Rueckgabe aktualisiert; `records_map()` neu; `OpenDissolveConfirmDialog`-Command und `DissolveGroupConfirmed`-Intent hinzugefuegt; `UiState::confirm_dissolve_group_id` ergaenzt
+    - [x] `app/handlers/API.md`: `apply_group_edit()` um Verbindungsfilter-Beschreibung ergaenzt; `dissolve()` auf 2-schrittige Dialog-Bestaetigung hingewiesen
+    - [x] `ui/API.md`: `confirm_dissolve_dialog.rs` im Modul-Index; neue Sektion `show_confirm_dissolve_dialog()` mit Intent-Flow-Diagramm
+    - [x] `shared/API.md`: 4 neue i18n-Keys `ConfirmDissolveTitle/Message/Ok/Cancel` in `I18nKey`-Uebersicht
   - [x] **Doku-Sync Zoom-Shortcuts + i18n-Migration (2026-03-20, Branch `feature/zoom-shortcuts-i18n`)**
     - [x] `src/app/API.md`: `FloatingMenuKind` um `DirectionPriority` und `Zoom` ergaenzt (inkl. Shortcut-Hinweise)
     - [x] `src/ui/API.md`: `render_floating_menu` — 2 neue Menue-Arten dokumentiert; Keyboard-Shortcuts-Tabelle auf `T/G/B/R/Z` aktualisiert; Modulbeschreibung `floating_menu.rs` korrigiert
     - [x] `src/shared/API.md`: `I18nKey`-Uebersicht um 79 neue Keys ergaenzt (Sidebar, Zoom, Background, RouteGroup, FloatingMenu, Ctx, Palette, Lp)
     - [x] ROADMAP.md: i18n-Subfeatures (Context-Menues, Floating-Panels) als `[x]` markiert; Keyboard-Shortcut-Liste korrigiert
+  - [x] **Doku-Sync Gruppen-Selektions- und Verwaltungs-Erweiterungen (2026-03-21, Branch `refactor/group-unification`)**
+    - [x] `shared/API.md`: `geometry.rs`-Modul zum Modul-Index ergaenzt; neue Sektion `angle_deviation()` mit Signatur und Re-Export
+    - [x] `app/API.md`: `SelectGroupByNearestNode`-Command in Selektion-Block eingetragen; `GroupSelectionAsGroupRequested` / `GroupSelectionAsGroup` und `RemoveSelectedNodesFromGroupRequested` / `RemoveSelectedNodesFromGroups` ergaenzt; `GroupRegistry::remove_nodes_from_record()` in Methoden-Liste hinzugefuegt; `BoundaryInfo.max_external_angle_deviation` als neues Pflichtfeld dokumentiert; `OpenSegmentSettingsPopup` → `OpenGroupSettingsPopup` korrigiert
+    - [x] `app/handlers/API.md`: `select_group_nodes()` in selection-Sektion; `remove_selected_from_groups()` in group-Sektion
+    - [x] ROADMAP.md: Phase-4-Feature-Block fuer Gruppen-Selektions- und Entry-Erweiterungen eingetragen
 - [ ] Packaging
   - [ ] Windows Binaries (.exe)
   - [ ] Linux Binaries (AppImage)
@@ -391,12 +426,12 @@
 - ✅ Context-Menu aufgesplittet: `context_menu/mod.rs` + Funktionsdelegation an `icons.rs`, `render.rs`, `tangent_ui.rs` (pub(super))
   - ✅ Öffentliche API (MenuVariant, determine_menu_variant, render_context_menu) unverändert
   - ✅ Modularisierung ohne Breaking Changes
-- ✅ `SegmentBase`-Struct in `segment_registry.rs` eingeführt
-  - ✅ Alle 5 `SegmentKind`-Varianten verwenden jetzt `base: SegmentBase` mit gemeinsamen Parametern
+- ✅ `GroupBase`-Struct in `group_registry/types.rs` eröffnet
+  - ✅ Alle 9 `GroupKind`-Varianten verwenden `base: GroupBase` mit gemeinsamen Parametern
   - ✅ Re-Export in `src/app/mod.rs`
   - ✅ Docstrings vollständig, API.md aktualisiert
 - ✅ Tests: 7 neue Parking-Geometrie-Tests hinzugefügt (`src/app/tools/parking/tests.rs`)
-- ✅ Dokumentation synchronisiert: `src/app/API.md#segmentbase--segmentkind`, `src/ui/API.md` (context_menu), `src/app/tools/API.md`
+- ✅ Dokumentation synchronisiert: `src/app/API.md#groupbase--groupkind`, `src/ui/API.md` (context_menu), `src/app/tools/API.md`
 
 **Errungenschaften seit letztem Update (Strukturelles Audit 2026-02-28):**
 - ✅ `src/shared/options.rs` in modulare Struktur `src/shared/options/{camera,render,tools,editor}.rs` aufgeteilt (Wartbarkeit verbessert, API stabil)
@@ -405,7 +440,7 @@
 - ✅ Neuer Benchmark `tool_preview_hotpath_bench` fuer `compute_bypass_positions` und `solve_route`
 - ✅ CI-Guardrail ergaenzt: `scripts/check_api_docs_sync.sh` + `make check-doc-contracts` + CI-Step
 - ✅ Docstrings fuer `AppCommand`, `AppIntent` (alle Varianten dokumentiert)
-- ✅ Docstrings fuer `Snapshot`, `EditHistory`, `CommandLog`, `SegmentRecord`, `SegmentRegistry`
+- ✅ Docstrings fuer `Snapshot`, `EditHistory`, `CommandLog`, `GroupRecord`, `GroupRegistry`
 - ✅ Docstrings fuer `reset()` in allen RouteTool-Implementierungen
 - ✅ SplineTool: `tangent_menu_data()` + `apply_tangent_selection()` implementiert
 - ✅ UI-Funktions-Docstrings (`render_toolbar`, `render_menu`, `render_status_bar`, `render_properties`)
@@ -417,7 +452,7 @@
 - ✅ DRY-Helfer `snap_with_neighbors()` fuer Snap + Nachbar-Ermittlung in Route-Tools eingefuehrt
 - ✅ Spline-State: `anchor_positions()` auf Iterator umgestellt (reduzierte Zwischenallokationen)
 - ✅ Streckenteilung-Preview: Recompute nur bei geaenderter Eingabe-Signatur (`preview_cache_signature`)
-- ✅ API-Doku-Sync: `app/API.md` (Route-Tool-Events), `ui/API.md` (Overview-/Preview-Funktionen), `docs/DATA_MODEL.md` (AppState/SelectionState/SegmentRegistry)
+- ✅ API-Doku-Sync: `app/API.md` (Route-Tool-Events), `ui/API.md` (Overview-/Preview-Funktionen), `docs/DATA_MODEL.md` (AppState/SelectionState/GroupRegistry)
 - ✅ `ui/options_dialog.rs` in `ui/options_dialog/{mod,sections}.rs` aufgeteilt (bessere Wartbarkeit ohne API-Aenderung)
 - ✅ Render-Hotpath optimiert: `RenderScene.options` nutzt `Arc<EditorOptions>`; API-Vertraege in `shared/API.md` und `render/API.md` synchronisiert
 - ✅ Fix Route-Tool-Richtungsabbildung: Externe Startkanten spiegeln jetzt `ConnectionDirection` korrekt (Regressionstest in `tools/common/builder.rs`)
@@ -429,23 +464,23 @@
 - ✅ Constraint-Route-Config: Mausrad-Unterstuetzung fuer Max-Winkel- und Minimaldistanz-Slider ergaenzt (neben LMT li/re)
 
 **Errungenschaften (Segment-Selektion und Bearbeitung 2026-03-05):**
-- ✅ `SegmentRecord.original_positions` — speichert Node-Positionen zum Erstellen-Zeitpunkt
-- ✅ `SegmentRegistry.find_first_by_node_id()` — findet das erste Segment mit dieser Node
-- ✅ `SegmentRegistry.is_segment_valid()` — prueft ob Nodes existieren und Positionen gleich sind
-- ✅ `expand_segment_selection()` — Klick auf Segment-Node selektiert alle Segment-Nodes (falls gueltig)
-- ✅ `CommandId::EditSegment` im Context-Menu mit `Precondition::SelectionIsValidSegment`
-- ✅ `render_context_menu()` + `collect_viewport_events()` um `segment_registry`-Parameter erweitert
+- ✅ `GroupRecord.original_positions` — speichert Node-Positionen zum Erstellen-Zeitpunkt
+- ✅ `GroupRegistry.find_first_by_node_id()` — findet das erste Segment mit dieser Node
+- ✅ `GroupRegistry.is_group_valid()` — prueft ob Nodes existieren und Positionen gleich sind
+- ✅ `expand_group_selection()` — Klick auf Segment-Node selektiert alle Segment-Nodes (falls gueltig)
+- ✅ `CommandId::EditGroup` im Context-Menu mit `Precondition::SelectionIsValidGroup`
+- ✅ `render_context_menu()` + `collect_viewport_events()` um `group_registry`-Parameter erweitert
 - ✅ Dokumentation synchronisiert: `src/app/API.md`, `src/ui/API.md`, `src/app/handlers/API.md`, `src/app/use_cases/API.md`, `docs/DATA_MODEL.md`
 
 **Errungenschaften (Segment-Support für alle Tools 2026-03-05):**
-- ✅ `SegmentRecord.marker_node_ids` — Tracker fuer Marker-Cleanup bei Segment-Edit
-- ✅ `BypassTool::make_segment_record()` + `load_for_edit()` implementiert (RouteToolRegistry Trait)
-- ✅ `ParkingTool::make_segment_record()` + `load_for_edit()` implementiert (RouteToolRegistry Trait)
-- ✅ `handlers::editing::edit_segment()` mit Marker-Cleanup vor Node-Loeschung
+- ✅ `GroupRecord.marker_node_ids` — Tracker fuer Marker-Cleanup bei Segment-Edit
+- ✅ `BypassTool::make_group_record()` + `load_for_edit()` implementiert (RouteToolRegistry Trait)
+- ✅ `ParkingTool::make_group_record()` + `load_for_edit()` implementiert (RouteToolRegistry Trait)
+- ✅ `handlers::editing::edit_group()` mit Marker-Cleanup vor Node-Loeschung
 - ✅ `handlers::route_tool` extrahiert `marker_indices` vor `apply_tool_result()` und befuellt `record.marker_node_ids`
-- ✅ Alle 7 Route-Tools unterstuetzen jetzt Segment-Bearbeitung ueber Registry
-- ✅ 4 neue Roundtrip-Tests fuer Bypass/Parking Segment-Records (persistierung + reload)
-- ✅ Dokumentation synchronisiert: `src/app/API.md` (SegmentKind erweitert), `src/app/handlers/API.md` (edit_segment dokumentiert), `src/app/tools/API.md` (ParkingTool + Registry-Traits)
+- ✅ Alle 9 Route-Tools unterstuetzen jetzt Gruppen-Bearbeitung ueber Registry
+- ✅ 4 neue Roundtrip-Tests fuer Bypass/Parking Gruppen-Records (persistierung + reload)
+- ✅ Dokumentation synchronisiert: `src/app/API.md` (GroupKind erweitert), `src/app/handlers/API.md` (edit_group dokumentiert), `src/app/tools/API.md` (ParkingTool + Registry-Traits)
 
 **Errungenschaften (ParkingTool Interaktionsflow ueberarbeitet 2026-03-05):**
 - ✅ Phase-basierter State: Idle → Placing → Configuring ↔ Adjusting
@@ -567,10 +602,16 @@
 
 **Errungenschaften (UI-Enhancements 2026-03-10):**
 - ✅ `src/ui/common.rs` — Neues Modul mit `apply_wheel_step()` und `WHEEL_THRESHOLD`; Mausrad-Support fuer numerische Felder (Options-Dialog und weitere Widgets)
-- ✅ `EditorOptions::auto_create_segment` — Checkbox steuert ob Route-Tool-Ergebnisse automatisch als Segment registriert werden (Default: `false`)
+- ✅ `EditorOptions::auto_create_segment` — entfernt; Gruppen werden jetzt IMMER nach `execute_and_apply()` registriert
+- ✅ `EditorOptions::show_all_group_boundaries` — neues Flag (Default: `false`); steuert ob Randknoten-Icons an ALLEN oder nur an Aussengrenzen-Knoten gezeigt werden
+- ✅ `recreate()`-Fix — nach Neuberechnung einer Strecke wird die Gruppe korrekt neu in der GroupRegistry registriert
 - ✅ Kontextmenu-Eintrag "Als Segment gruppieren" (`CommandId::GroupSelectionAsSegment`) — selektierte zusammenhaengende Nodes direkt als Segment-Record registrieren (Precondition: `IsResampleableChain`)
 - ✅ Neue Kontextmenu-Icons: `icon_map_pin.svg`, `icon_map_pin_plus.svg`, `icon_map_pin_minus.svg` fuer `CreateMarker` / `RemoveMarker`
 - ✅ `EditorOptions::marker_outline_width` — Konfigurierbare Umrissstärke des Map-Markers (Anteil am Radius, Shader liest `aa_params.w`); Farb-Picker in UI entfernt
+- ✅ `GroupRegistry::boundary_cache` — PTR-basierter Cache fuer Boundary-Infos; `warm_boundary_cache()` pro Frame aufgerufen, O(1) wenn bereits gecacht; verhindert O(|C|) pro Frame
+- ✅ `BoundaryInfo`/`BoundaryDirection` — neue Typen im `group_registry`-Modul; re-exportiert aus `app`
+- ✅ Icon-Logik uebertararbeitet — `show_all_group_boundaries`-Filter; `find_by_node_ids()` statt `find_first_by_node_id()`; alle Gruppen selektierter Nodes werden gezeigt
+- ✅ Checkbox "Rand-Icons an allen Gruppen-Grenzknoten anzeigen" im Gruppen-Edit-Panel (`render_edit_panel` erhaelt `options: &mut EditorOptions`)
 
 **Naechste Aufgaben:**
 1. 🟡 100k+ Performance-Benchmarks

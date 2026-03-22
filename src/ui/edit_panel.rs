@@ -5,9 +5,11 @@
 //! Einstellungen mit Uebernehmen/Abbrechen-Buttons.
 
 use crate::app::state::DistanzenState;
+use crate::app::state::GroupEditState;
 use crate::app::tools::common::wheel_dir;
 use crate::app::tools::ToolManager;
 use crate::app::{AppIntent, ConnectionDirection, ConnectionPriority, EditorTool, RoadMap};
+use crate::shared::EditorOptions;
 use crate::ui::properties::selectors::{
     render_direction_icon_selector, render_priority_icon_selector,
 };
@@ -29,10 +31,17 @@ pub fn render_edit_panel(
     distance_wheel_step_m: f32,
     active_tool: EditorTool,
     tool_manager: Option<&mut ToolManager>,
-    auto_create_segment: &mut bool,
     panel_pos: Option<egui::Pos2>,
+    group_editing: Option<&GroupEditState>,
+    options: &mut EditorOptions,
 ) -> Vec<AppIntent> {
     let mut events = Vec::new();
+
+    // Gruppen-Edit-Panel (hat Vorrang vor Streckenteilung)
+    if let Some(edit_state) = group_editing {
+        render_group_edit_panel(ctx, edit_state, panel_pos, options, &mut events);
+        return events;
+    }
 
     // Streckenteilung Edit-Modus
     if distanzen_state.active {
@@ -57,7 +66,6 @@ pub fn render_edit_panel(
                 default_direction,
                 default_priority,
                 distance_wheel_step_m,
-                auto_create_segment,
                 panel_pos,
                 &mut events,
             );
@@ -65,6 +73,52 @@ pub fn render_edit_panel(
     }
 
     events
+}
+
+/// Gruppen-Edit-Panel: Anzeige aktiver Edit-Modus mit Uebernehmen/Abbrechen.
+fn render_group_edit_panel(
+    ctx: &egui::Context,
+    edit_state: &GroupEditState,
+    panel_pos: Option<egui::Pos2>,
+    options: &mut EditorOptions,
+    events: &mut Vec<AppIntent>,
+) {
+    let mut window = egui::Window::new("✏ Gruppen-Bearbeitung")
+        .collapsible(false)
+        .resizable(false)
+        .auto_sized();
+
+    if let Some(pos) = panel_pos {
+        window = window.default_pos(pos);
+    }
+
+    window.show(ctx, |ui| {
+        ui.label(format!("Gruppe #{} bearbeiten", edit_state.record_id));
+        ui.label("Nodes verschieben, hinzufuegen oder loeschen.");
+        ui.add_space(4.0);
+        ui.horizontal(|ui| {
+            if ui.button("✓ Uebernehmen").clicked() {
+                events.push(AppIntent::GroupEditApplyRequested);
+            }
+            if ui.button("✕ Abbrechen").clicked() {
+                events.push(AppIntent::GroupEditCancelRequested);
+            }
+        });
+        // Keyboard-Shortcuts
+        if ui.input(|i| i.key_pressed(egui::Key::Enter)) {
+            events.push(AppIntent::GroupEditApplyRequested);
+        }
+        if ui.input(|i| i.key_pressed(egui::Key::Escape)) {
+            events.push(AppIntent::GroupEditCancelRequested);
+        }
+        ui.add_space(6.0);
+        ui.separator();
+        ui.add_space(4.0);
+        ui.checkbox(
+            &mut options.show_all_group_boundaries,
+            "Rand-Icons an allen Gruppen-Grenzknoten anzeigen",
+        );
+    });
 }
 
 /// Streckenteilung-Panel: Abstand/Nodes + Vorschau + Uebernehmen/Verwerfen.
@@ -224,7 +278,6 @@ fn render_route_tool_panel(
     default_direction: ConnectionDirection,
     default_priority: ConnectionPriority,
     distance_wheel_step_m: f32,
-    auto_create_segment: &mut bool,
     panel_pos: Option<egui::Pos2>,
     events: &mut Vec<AppIntent>,
 ) {
@@ -273,8 +326,6 @@ fn render_route_tool_panel(
         }
 
         ui.add_space(6.0);
-
-        ui.checkbox(auto_create_segment, "Segment erstellen");
 
         if let Some(tool) = tool_manager.active_tool_mut() {
             let changed = tool.render_config(ui, distance_wheel_step_m);

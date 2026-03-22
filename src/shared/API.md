@@ -9,6 +9,7 @@ Das `shared`-Modul enthaelt Layer-uebergreifende Typen, die zwischen `app` (Prod
 - `render_scene.rs` — `RenderScene` Uebergabevertrag App → Render
 - `render_quality.rs` — `RenderQuality` Enum (Low/Medium/High)
 - `options/` — Zentrale Konfigurationskonstanten + `EditorOptions` (Laufzeit-Optionen), aufgeteilt in `camera.rs`, `render.rs`, `tools.rs`, `editor.rs`
+- `geometry.rs` — Layer-uebergreifende Geometrie-Hilfsfunktionen (`angle_deviation()` fuer Winkelabweichungs-Berechnung)
 - `i18n/` — Mehrsprachigkeits-System: `Language`-Enum, `I18nKey`-Enum, `t()`-Funktion (DE + EN, Zero-Alloc)
 - `spline_geometry.rs` — Layer-neutrale Catmull-Rom-Geometrie-Funktionen (kein import aus `tools` noetig)
 
@@ -132,6 +133,25 @@ pub enum SelectionStyle {
 }
 ```
 
+---
+
+### `angle_deviation` (Geometrie-Hilfsfunktion)
+
+Berechnet die Winkelabweichung zwischen Einlauf- und Auslaufrichtung. Nützlich für Richtungsfilter an Gruppen-Grenz-Nodes und Segment-Selektionen.
+
+```rust
+/// Berechnet die Abweichung zwischen Einlauf- und Auslaufwinkel (0 = geradeaus, PI = Umkehr).
+/// Der Rueckgabewert liegt im Bereich [0, PI].
+pub fn angle_deviation(incoming: f32, outgoing: f32) -> f32
+```
+
+Re-exportiert aus `shared` direkt:
+```rust
+use crate::shared::angle_deviation;
+```
+
+---
+
 ## Design-Prinzipien
 
 1. **Entkopplung:** `shared` verhindert direkte Abhaengigkeiten zwischen `app` und `render`
@@ -188,8 +208,6 @@ pub struct EditorOptions {
     pub reconnect_on_delete: bool,
     /// true = bestehende Verbindung beim Platzieren splitten
     pub split_connection_on_place: bool,
-    /// true = Route-Tool-Ergebnisse automatisch als Segment registrieren.
-    pub auto_create_segment: bool,
     // Kamera (erweitert)
     /// Minimaler Zoom-Faktor (konfig, ueberschreibt Camera2D::ZOOM_MIN)
     pub camera_zoom_min: f32,
@@ -207,6 +225,8 @@ pub struct EditorOptions {
     // Segment-Overlay
     /// Schriftgroesse des Lock-Icons im Segment-Overlay in Pixeln
     pub segment_lock_icon_size_px: f32,
+    /// Wenn aktiviert, Icons an ALLEN Gruppen-Randknoten (sonst nur Aussengrenzen)
+    pub show_all_group_boundaries: bool,
     // Uebersichtskarte
     /// Layer-Optionen fuer Uebersichtskarten-Generierung
     pub overview_layers: OverviewLayerOptions,
@@ -302,6 +322,11 @@ pub enum I18nKey {
     LpStraight, LpCurveQuad, LpCurveCubic, LpSpline, LpSmoothCurve,
     LpBypass, LpParking, LpRouteOffset,
     LpDirectionRegular, LpDirectionDual, LpDirectionReverse, LpPriorityMain, LpPrioritySub,
+    // Bestätigungs-Dialoge (ConfirmDissolveXxx — 4 Keys)
+    ConfirmDissolveTitle,   // "Gruppe auflösen"
+    ConfirmDissolveMessage, // "Soll die Gruppe wirklich aufgelöst werden? Die Nodes bleiben erhalten."
+    ConfirmDissolveOk,      // "Auflösen"
+    ConfirmDissolveCancel,  // "Abbrechen"
 }
 ```
 

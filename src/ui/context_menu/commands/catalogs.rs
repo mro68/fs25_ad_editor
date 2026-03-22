@@ -93,14 +93,27 @@ impl MenuCatalog {
         vec![
             // ── Segment bearbeiten ────────────────────────────────────────────────
             MenuEntry::Command {
-                id: CommandId::EditSegment,
-                label: t(lang, I18nKey::CtxEditSegment).into(),
+                id: CommandId::EditGroup,
+                label: t(lang, I18nKey::CtxEditGroup).into(),
                 preconditions: vec![Precondition::SelectionIsValidSegment],
             },
             MenuEntry::Command {
-                id: CommandId::GroupSelectionAsSegment,
+                id: CommandId::GroupSelectionAsGroup,
                 label: t(lang, I18nKey::CtxGroupAsSegment).into(),
-                preconditions: vec![Precondition::IsResampleableChain],
+                preconditions: vec![
+                    Precondition::IsConnectedSubgraph,
+                    Precondition::NoGroupEditActive,
+                ],
+            },
+            MenuEntry::Command {
+                id: CommandId::RemoveFromGroup,
+                label: t(lang, I18nKey::CtxRemoveFromGroup).into(),
+                preconditions: vec![Precondition::SelectionHasGroupMember],
+            },
+            MenuEntry::Command {
+                id: CommandId::DissolveGroup,
+                label: t(lang, I18nKey::CtxDissolveGroup).into(),
+                preconditions: vec![Precondition::SelectionHasGroupMember],
             },
             MenuEntry::Separator,
             // ── Verbinden ────────────────────────────────────────

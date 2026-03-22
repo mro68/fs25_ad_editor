@@ -4,7 +4,7 @@
 //! in den expliziten Render-Vertrag `RenderScene`. Die gebaute Szene enthaelt alle
 //! Informationen, die der Render-Layer benoetigt, ohne den State direkt zu koppeln.
 
-use crate::app::{AppState, SegmentRegistry};
+use crate::app::{AppState, GroupRegistry};
 use crate::shared::RenderScene;
 use indexmap::IndexSet;
 use std::sync::{Arc, OnceLock};
@@ -28,7 +28,7 @@ fn empty_hidden_ids() -> Arc<IndexSet<u64>> {
 /// Implementierung als einziger Pass ueber alle Records statt pro-Node-Lookup —
 /// effizienter fuer den Frame-Hot-Path bei vielen selektierten Nodes.
 fn compute_dimmed_ids(
-    registry: &SegmentRegistry,
+    registry: &GroupRegistry,
     selected: &Arc<IndexSet<u64>>,
 ) -> Arc<IndexSet<u64>> {
     if selected.is_empty() {
@@ -89,7 +89,7 @@ pub fn build(state: &AppState, viewport_size: [f32; 2]) -> RenderScene {
     };
 
     // Gedimmte Nodes: alle anderen Nodes des Segments wenn 1 Segment-Node selektiert.
-    let dimmed_node_ids = compute_dimmed_ids(&state.segment_registry, &selected_arc);
+    let dimmed_node_ids = compute_dimmed_ids(&state.group_registry, &selected_arc);
 
     RenderScene {
         road_map: state.road_map.clone(),

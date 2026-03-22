@@ -176,8 +176,8 @@ Zeigt folgende Informationen (nur Anzeige, nicht interaktiv):
 | **Linksklick** | Select | Node unter Mauszeiger selektieren (ersetzt bestehende Selektion) |
 | **Ctrl+Linksklick** | Select | Node additiv zur Selektion hinzufuegen |
 | **Shift+Linksklick** | Select | Pfad-Selektion: Selektiert alle Nodes auf dem kuerzesten Pfad zwischen Anker-Node und Ziel-Node |
-| **Doppelklick** | Select | Segment-Selektion: Selektiert alle Nodes zwischen den naechsten Kreuzungen/Sackgassen |
-| **Ctrl+Doppelklick** | Select | Segment additiv zur Selektion hinzufuegen |
+| **Doppelklick** | Select | Gruppen-Selektion: Selektiert alle Nodes zwischen den naechsten Kreuzungen/Sackgassen |
+| **Ctrl+Doppelklick** | Select | Gruppe additiv zur Selektion hinzufuegen |
 | **Linksklick** | Connect | Ers­ter Klick = Startknoten, Zweiter Klick = Zielknoten → Verbindung erstellen |
 | **Linksklick** | Add Node | Neuen Node an Klickposition einfuegen |
 
@@ -237,7 +237,7 @@ Das Standard-Werkzeug fuer Auswahl und Verschiebung von Nodes.
 - Einzelklick: Node selektieren (Pick-Radius: 12px)
 - Ctrl+Klick: Additiv selektieren
 - Shift+Klick: Pfad-Selektion (kuerzester Pfad von Anker zu Ziel)
-- Doppelklick: Segment zwischen Kreuzungen selektieren
+- Doppelklick: Gruppe zwischen Kreuzungen selektieren
 - Drag auf selektiertem Node: Alle selektierten Nodes verschieben
 - Drag auf leerem Bereich: Kamera schwenken
 
@@ -357,7 +357,7 @@ Erkannte Drag-Ziele sind der/die Kontrollpunkt(e) sowie Start- und Endpunkt.
 | **Einzelselektion** | Linksklick | Ersetzt die aktuelle Selektion durch den angeklickten Node |
 | **Additive Selektion** | Ctrl+Linksklick | Fuegt den Node zur bestehenden Selektion hinzu |
 | **Pfad-Selektion** | Shift+Linksklick | Selektiert alle Nodes auf dem kuerzesten Pfad zwischen dem zuletzt selektierten Node (Anker) und dem angeklickten Node |
-| **Segment-Selektion** | Doppelklick | Selektiert alle Nodes eines Segments (bis zur naechsten Kreuzung oder Sackgasse) |
+| **Gruppen-Selektion** | Doppelklick | Selektiert alle Nodes einer Gruppe (bis zur naechsten Kreuzung oder Sackgasse) |
 | **Rechteck-Selektion** | Shift+Drag | Alle Nodes innerhalb des aufgezogenen Rechtecks |
 | **Lasso-Selektion** | Alt+Drag | Alle Nodes innerhalb des freihand gezeichneten Polygons |
 | **Alles selektieren** | Ctrl+A | Alle Nodes im Netzwerk selektieren |
@@ -369,7 +369,7 @@ Alle Selektionsmodi koennen mit **Ctrl** kombiniert werden, um die bestehende Se
 
 - `Ctrl+Shift+Drag` → Rechteck-Selektion additiv
 - `Ctrl+Alt+Drag` → Lasso-Selektion additiv
-- `Ctrl+Doppelklick` → Segment additiv hinzufuegen
+- `Ctrl+Doppelklick` → Gruppe additiv hinzufuegen
 
 ### Selektion verschieben
 
@@ -655,7 +655,7 @@ flowchart LR
     D --> F["Esc\n→ verwerfen"]
 ```
 
-1. Eine zusammenhaengende Kette von Nodes selektieren (z. B. per **Doppelklick** auf ein Segment oder **Shift+Klick** fuer Pfad-Selektion)
+1. Eine zusammenhaengende Kette von Nodes selektieren (z. B. per **Doppelklick** auf eine Gruppe oder **Shift+Klick** fuer Pfad-Selektion)
 2. Im Eigenschaften-Panel erscheint **Streckenteilung** mit der berechneten Streckenlaenge
 3. **▶ Einteilung aendern** klicken → Vorschau wird aktiviert
 4. Parameter anpassen:
@@ -796,7 +796,7 @@ flowchart LR
 3. Punkte auf der Karte klicken (Vorschau wird live angezeigt)
 4. Segment-Laenge / Node-Anzahl per Slider anpassen
 5. **Enter** → Route wird erstellt
-6. Fuer weitere Segmente: Verkettung nutzt automatisch den letzten Endpunkt
+6. Fuer weitere Gruppen: Verkettung nutzt automatisch den letzten Endpunkt
 
 ### Route manuell erstellen
 
@@ -806,11 +806,11 @@ flowchart LR
 4. Jeweils Start- und Ziel-Node anklicken um Verbindungen zu erstellen
 5. Alternativ: 2 Nodes selektieren → `C` fuer schnelle Verbindung
 
-### Segment bearbeiten
+### Gruppe bearbeiten
 
-1. **Doppelklick** auf ein Segment → selektiert alle Nodes bis zur naechsten Kreuzung
+1. **Doppelklick** auf eine Gruppe → selektiert alle Nodes bis zur naechsten Kreuzung
 2. Rechtsklick → Richtung/Prioritaet aendern oder invertieren
-3. Oder: `Delete` um das ganze Segment zu loeschen
+3. Oder: `Delete` um die ganze Gruppe zu loeschen
 
 ### Bulk-Bearbeitung
 
@@ -843,7 +843,7 @@ flowchart LR
 
 ### Strecke neu aufteilen (Streckenteilung)
 
-1. Zusammenhaengende Kette selektieren (z. B. Doppelklick auf Segment)
+1. Zusammenhaengende Kette selektieren (z. B. Doppelklick auf Gruppe)
 2. Im Eigenschaften-Panel: **▶ Einteilung aendern**
 3. Abstand oder Node-Anzahl wie gewuenscht einstellen
 4. Vorschau pruefen (optional: „Originale ausblenden")

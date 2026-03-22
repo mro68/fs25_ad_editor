@@ -1,6 +1,6 @@
 //! RouteTool-Implementierung fuer das ParkingTool.
 
-use crate::app::segment_registry::{SegmentBase, SegmentKind, SegmentRecord};
+use crate::app::group_registry::{GroupBase, GroupKind, GroupRecord};
 use crate::app::tools::{ToolAction, ToolAnchor, ToolPreview, ToolResult};
 use crate::core::{ConnectionDirection, ConnectionPriority, RoadMap};
 use glam::Vec2;
@@ -153,11 +153,11 @@ impl crate::app::tools::RouteTool for ParkingTool {
         self.lifecycle.save_created_ids(ids);
     }
 
-    /// Erstellt einen `SegmentRecord` fuer die Registry aus dem aktuellen Tool-Zustand.
-    fn make_segment_record(&self, id: u64, node_ids: &[u64]) -> Option<SegmentRecord> {
+    /// Erstellt einen `GroupRecord` fuer die Registry aus dem aktuellen Tool-Zustand.
+    fn make_group_record(&self, id: u64, node_ids: &[u64]) -> Option<GroupRecord> {
         let origin = self.origin?;
         let angle = self.angle;
-        Some(SegmentRecord {
+        Some(GroupRecord {
             id,
             node_ids: node_ids.to_vec(),
             start_anchor: ToolAnchor::NewPosition(origin),
@@ -165,11 +165,11 @@ impl crate::app::tools::RouteTool for ParkingTool {
             original_positions: Vec::new(), // wird im Handler befuellt
             marker_node_ids: Vec::new(),    // wird im Handler befuellt
             locked: true,
-            kind: SegmentKind::Parking {
+            kind: GroupKind::Parking {
                 origin,
                 angle,
                 config: self.config.clone(),
-                base: SegmentBase {
+                base: GroupBase {
                     direction: self.direction,
                     priority: self.priority,
                     max_segment_length: 0.0,
@@ -178,9 +178,9 @@ impl crate::app::tools::RouteTool for ParkingTool {
         })
     }
 
-    /// Laedt einen gespeicherten `SegmentRecord` zur nachtraeglichen Bearbeitung.
-    fn load_for_edit(&mut self, _record: &SegmentRecord, kind: &SegmentKind) {
-        let SegmentKind::Parking {
+    /// Laedt einen gespeicherten `GroupRecord` zur nachtraeglichen Bearbeitung.
+    fn load_for_edit(&mut self, _record: &GroupRecord, kind: &GroupKind) {
+        let GroupKind::Parking {
             origin,
             angle,
             config,

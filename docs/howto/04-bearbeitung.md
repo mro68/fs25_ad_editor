@@ -1,4 +1,4 @@
-# Bearbeitung: Selektion, Verbindungen, Marker, Undo
+# Bearbeitung: Selektion, Verbindungen, Gruppen, Marker, Undo
 
 ← [Werkzeuge](03-werkzeuge.md) | [Zurueck zur Uebersicht](index.md)
 
@@ -11,7 +11,7 @@
 | **Einzelselektion** | Linksklick | Ersetzt die aktuelle Selektion durch den angeklickten Node |
 | **Additive Selektion** | Ctrl+Linksklick | Fuegt den Node zur bestehenden Selektion hinzu |
 | **Pfad-Selektion** | Shift+Linksklick | Selektiert alle Nodes auf dem kuerzesten Pfad zwischen dem zuletzt selektierten Node (Anker) und dem angeklickten Node |
-| **Segment-Selektion** | Doppelklick | Selektiert alle Nodes eines Segments (bis zur naechsten Kreuzung oder Sackgasse) |
+| **Gruppen-Selektion** | Doppelklick | Selektiert alle Nodes einer Gruppe (bis zur naechsten Kreuzung oder Sackgasse) |
 | **Rechteck-Selektion** | Shift+Drag | Alle Nodes innerhalb des aufgezogenen Rechtecks |
 | **Lasso-Selektion** | Alt+Drag | Alle Nodes innerhalb des freihand gezeichneten Polygons |
 | **Alles selektieren** | Ctrl+A | Alle Nodes im Netzwerk selektieren |
@@ -23,7 +23,7 @@ Alle Selektionsmodi koennen mit **Ctrl** kombiniert werden, um die bestehende Se
 
 - `Ctrl+Shift+Drag` → Rechteck-Selektion additiv
 - `Ctrl+Alt+Drag` → Lasso-Selektion additiv
-- `Ctrl+Doppelklick` → Segment additiv hinzufuegen
+- `Ctrl+Doppelklick` → Gruppe additiv hinzufuegen
 
 ### Selektion verschieben
 
@@ -75,6 +75,60 @@ Ueber das **Kontextmenue**:
 | **Gruen** | Regular-Verbindung (Einrichtung) |
 | **Blau** | Dual-Verbindung (bidirektional) |
 | **Orange** | Reverse-Verbindung |
+
+---
+
+## Gruppen
+
+Gruppen sind benannte Streckenabschnitte, die als Einheit verwaltet werden können. Jede Gruppe enthält eine Menge von Nodes und gewährt schnellen Zugriff per Doppelklick-Selektion.
+
+### Was ist eine Gruppe?
+
+Eine Gruppe entsteht, wenn eine Strecke mit aktivierter **"Gruppe erstellen"**-Checkbox (Route-Tool) angelegt wird, oder wenn eine bestehende Selektion zu einer Gruppe zusammengeführt wird. Gruppen erscheinen im Gruppen-Verzeichnis und können gesperrt werden, um versehentliche Änderungen zu verhindern.
+
+### Gruppen selektieren
+
+| Methode | Beschreibung |
+|---------|--------------|
+| **Doppelklick** auf Node | Selektiert alle Nodes der Gruppe (bis zur nächsten Kreuzung oder Sackgasse) |
+| **Ctrl+Doppelklick** | Gruppe additiv zur bestehenden Selektion hinzufügen |
+
+### Gruppen-Bearbeitungsmodus
+
+Im Gruppen-Bearbeitungsmodus lassen sich Nodes einer Gruppe verschieben, hinzufügen oder löschen.
+
+**Aktivieren:** Rechtsklick auf eine Gruppe im Gruppen-Panel → **"Gruppe bearbeiten"**
+
+Das schwebende Fenster **"✏ Gruppen-Bearbeitung"** erscheint und zeigt die aktive Gruppen-ID.
+
+| Aktion | Beschreibung |
+|--------|--------------|
+| Nodes verschieben | Drag auf selektierten Node (wie im Normalbetrieb) |
+| Nodes hinzufügen | Add-Node-Tool (T → Add Node) |
+| Nodes löschen | `Delete` |
+| **✓ Übernehmen** oder `Enter` | Änderungen auf die Gruppe anwenden |
+| **✕ Abbrechen** oder `Escape` | Alle Änderungen rückgängig machen |
+
+### Grenzknoten-Icons (Eingang / Ausgang / Bidirektional)
+
+Wenn eine Gruppe selektiert ist, markiert der Editor automatisch alle **Grenzknoten** — Nodes, die Verbindungen zu Nodes außerhalb der Gruppe haben — mit einem Icon:
+
+| Icon | Bedeutung | Beschreibung |
+|------|-----------|--------------|
+| **Eingang** (→) | Externer Zufluss | Verbindung von außen führt in die Gruppe hinein |
+| **Ausgang** (←) | Externer Abfluss | Verbindung aus der Gruppe führt nach außen |
+| **Bidirektional** (↔) | Ein- und Ausgang | Verbindung verläuft in beide Richtungen über die Gruppengrenze |
+
+Die Icons erscheinen **unterhalb** des jeweiligen Nodes.
+
+#### Checkbox: "Rand-Icons an allen Gruppen-Grenzknoten anzeigen"
+
+Im Gruppen-Bearbeitungsmodus ist im Bearbeitungs-Panel diese Checkbox verfügbar:
+
+- **Deaktiviert (Standard):** Icons erscheinen nur bei Nodes mit tatsächlicher externer Verbindung — also Nodes, die wirklich mit einem Node außerhalb jeder registrierten Gruppe verbunden sind
+- **Aktiviert:** Icons erscheinen bei allen Grenzknoten der Gruppe, auch wenn aktuell noch keine externe Verbindung besteht. Nützlich um potenzielle Übergangspunkte beim Aufbau eines neuen Kurses zu erkunden.
+
+> **Tipp:** Die Einstellung wird in den Optionen gespeichert und bleibt nach einem Neustart aktiv.
 
 ---
 

@@ -43,7 +43,7 @@ let scene = controller.build_render_scene(&state, [width, height]);
 - `selection` — Selektions-Operationen
 - `editing` — Node/Connection-Editing, Marker
 - `route_tool` — Route-Tool-Operationen
-- `segment` — Segment-Lock-Toggle
+- `group` — Gruppen-Lock-Toggle, Gruppen-Aufloesung
 - `dialog` — Dialog-State und Anwendungssteuerung
 - `history` — Undo/Redo
 
@@ -72,11 +72,19 @@ pub struct AppState {
     pub history: EditHistory,
     pub options: EditorOptions,
     pub show_options_dialog: bool,
-    pub segment_registry: SegmentRegistry,  // In-Session-Registry fuer nachtraegliche Bearbeitung
+    pub group_registry: GroupRegistry,  // In-Session-Registry fuer nachtraegliche Bearbeitung
     pub should_exit: bool,
     /// Geladene Farmland-Polygone fuer das FieldBoundaryTool.
     /// Wird beim Laden einer Uebersichtskarte befuellt; `None` solange keine Map geladen ist.
     pub farmland_polygons: Option<Arc<Vec<FieldPolygon>>>,
+    /// Aktiver Gruppen-Edit-Modus (None = Normal-Modus, Some = nicht-destruktives Editing aktiv).
+    pub group_editing: Option<GroupEditState>,
+}
+
+/// Zustand einer aktiven Gruppen-Bearbeitung (nicht-destruktiver Edit-Modus).
+pub struct GroupEditState {
+    pub record_id: u64,      // Record-ID der bearbeiteten Gruppe
+    pub was_locked: bool,    // Lock-Zustand vor dem Edit (wird bei Apply/Cancel wiederhergestellt)
 }
 
 pub struct SelectionState {
@@ -124,8 +132,10 @@ pub struct UiState {
     pub save_overview_dialog: SaveOverviewDialogState,
     /// Konfiguration fuer das Distanzen-Neuverteilen-Feature
     pub distanzen: DistanzenState,
-    /// Segment-Einstellungs-Popup (Doppelklick auf Segment-Node)
-    pub segment_settings_popup: SegmentSettingsPopupState,
+    /// Gruppen-Einstellungs-Popup (Doppelklick auf Gruppen-Node)
+    pub group_settings_popup: GroupSettingsPopupState,
+    /// ID der Gruppe, deren Auflösung vom User bestätigt werden soll (`None` = kein Dialog)
+    pub confirm_dissolve_group_id: Option<u64>,
 }
 
 pub struct FloatingMenuState {
@@ -211,7 +221,7 @@ pub struct SaveOverviewDialogState {
     pub target_path: String,
 }
 
-pub struct SegmentSettingsPopupState {
+pub struct GroupSettingsPopupState {
     /// Ob das Popup sichtbar ist
     pub visible: bool,
     /// Welt-Position des Doppelklicks (fuer Neu-Selektion bei Parameteraenderung)
@@ -268,12 +278,40 @@ pub enum EditorTool {
 
 ---
 
-### `SegmentBase` und `SegmentKind`
+### `BoundaryDirection` und `BoundaryInfo`
 
-Gemeinsame Basis-Parameter fuer alle Route-Tools. Wird von `SegmentKind` verwendet.
+Gecachte Boundary-Informationen aus `GroupRegistry::warm_boundary_cache()`.
 
 ```rust
-pub struct SegmentBase {
+/// Richtung einer Gruppen-Grenz-Verbindung.
+pub enum BoundaryDirection {
+    Entry,        // Nur eingehende externe Verbindungen
+    Exit,         // Nur ausgehende externe Verbindungen
+    Bidirectional, // Ein- und ausgehende externe Verbindungen
+}
+
+/// Gecachte Information ueber einen Gruppen-Grenz-Node.
+pub struct BoundaryInfo {
+    pub node_id: u64,
+    /// true = mindestens eine Verbindung fuehrt zu einem Node ausserhalb JEDER registrierten Gruppe
+    pub has_external_connection: bool,
+    pub direction: BoundaryDirection,
+    /// Maximale Winkelabweichung zwischen interner Fahrtrichtung und externer Verbindung (Radiant, 0..PI).
+    /// `None` wenn keine internen Verbindungen vorhanden (Winkelvergleich nicht moeglich).
+    pub max_external_angle_deviation: Option<f32>,
+}
+```
+
+Re-exportiert aus `app`: `BoundaryDirection`, `BoundaryInfo`.
+
+---
+
+### `GroupBase` und `GroupKind`
+
+Gemeinsame Basis-Parameter fuer alle Route-Tools. Wird von `GroupKind` verwendet.
+
+```rust
+pub struct GroupBase {
     /// Verbindungsrichtung
     pub direction: ConnectionDirection,
     /// Strassenart (Regular oder SubPriority)
@@ -282,30 +320,30 @@ pub struct SegmentBase {
     pub max_segment_length: f32,
 }
 
-pub enum SegmentKind {
-    Straight { base: SegmentBase },
+pub enum GroupKind {
+    Straight { base: GroupBase },
     CurveCubic {
         cp1: Vec2,
         cp2: Vec2,
         tangent_start: TangentSource,
         tangent_end: TangentSource,
-        base: SegmentBase,
+        base: GroupBase,
     },
     CurveQuad {
         cp1: Vec2,
-        base: SegmentBase,
+        base: GroupBase,
     },
     Spline {
         anchors: Vec<ToolAnchor>,
         tangent_start: TangentSource,
         tangent_end: TangentSource,
-        base: SegmentBase,
+        base: GroupBase,
     },
     SmoothCurve {
         control_nodes: Vec<Vec2>,
         max_angle_deg: f32,
         min_distance: f32,
-        base: SegmentBase,
+        base: GroupBase,
     },
     Bypass {
         chain_positions: Vec<Vec2>,
@@ -313,13 +351,13 @@ pub enum SegmentKind {
         chain_end_id: u64,
         offset: f32,
         base_spacing: f32,
-        base: SegmentBase,
+        base: GroupBase,
     },
     Parking {
         origin: Vec2,
         angle: f32,
         config: ParkingConfig,
-        base: SegmentBase,
+        base: GroupBase,
     },
     /// Feldgrenz-Route (geschlossener Ring entlang eines Feldes)
     FieldBoundary {
@@ -327,7 +365,7 @@ pub enum SegmentKind {
         node_spacing: f32,      // Abstand zwischen Nodes in Metern
         offset: f32,            // Versatz nach innen (<0) oder aussen (>0) in Metern
         straighten_tolerance: f32, // Douglas-Peucker-Toleranz in Metern (0 = keine)
-        base: SegmentBase,
+        base: GroupBase,
     },
     /// Parallelversatz einer selektierten Kette (ohne S-Kurven-Anbindung)
     RouteOffset {
@@ -338,7 +376,11 @@ pub enum SegmentKind {
         offset_right: f32,           // Versatz rechts in Metern (0.0 = deaktiviert)
         keep_original: bool,         // Original-Kette beibehalten?
         base_spacing: f32,           // Node-Abstand auf der Offset-Kette
-        base: SegmentBase,
+        base: GroupBase,
+    },
+    /// Manuell gruppierte Nodes (kein Tool-Hintergrund — via Kontextmenü "Gruppe erstellen")
+    Manual {
+        base: GroupBase,
     },
 }
 
@@ -357,42 +399,42 @@ pub const TOOL_INDEX_ROUTE_OFFSET: usize = 8;
 **Methoden:**
 
 ```rust
-pub fn tool_index(&self) -> usize
+pub fn tool_index(&self) -> Option<usize>
 ```
-Gibt den Tool-Index im ToolManager fuer diese SegmentKind-Variante zurueck (z.B. `SegmentKind::Bypass { .. }.tool_index()` → `TOOL_INDEX_BYPASS`).
+Gibt den Tool-Index im ToolManager fuer diese GroupKind-Variante zurueck (z.B. `GroupKind::Bypass { .. }.tool_index()` → `Some(TOOL_INDEX_BYPASS)`). Gibt `None` fuer `Manual`-Segmente zurueck, die keinem Tool zugeordnet sind.
 
 ---
 
-### `SegmentKind`
+### `GroupKind`
 
-Segment-Art mit tool-spezifischen Parametern. Re-exportiert aus `app` (definiert in `segment_registry/types.rs`).
+Gruppen-Art mit tool-spezifischen Parametern. Re-exportiert aus `app` (definiert in `group_registry/types.rs`).
 
 ```rust
-pub enum SegmentKind {
+pub enum GroupKind {
     /// Gerade Strecke
-    Straight { base: SegmentBase },
+    Straight { base: GroupBase },
     /// Kubische Bézier-Kurve (Grad 3)
     CurveCubic {
         cp1: Vec2, cp2: Vec2,
         tangent_start: TangentSource,
         tangent_end: TangentSource,
-        base: SegmentBase,
+        base: GroupBase,
     },
     /// Quadratische Bézier-Kurve (Grad 2)
-    CurveQuad { cp1: Vec2, base: SegmentBase },
+    CurveQuad { cp1: Vec2, base: GroupBase },
     /// Catmull-Rom-Spline
     Spline {
         anchors: Vec<ToolAnchor>,
         tangent_start: TangentSource,
         tangent_end: TangentSource,
-        base: SegmentBase,
+        base: GroupBase,
     },
     /// Geglättete Kurve (winkelgeglaettet mit automatischen Tangenten)
     SmoothCurve {
         control_nodes: Vec<Vec2>,
         max_angle_deg: f32,
         min_distance: f32,
-        base: SegmentBase,
+        base: GroupBase,
     },
     /// Ausweichstrecke zur selektierten Kette
     Bypass {
@@ -401,14 +443,14 @@ pub enum SegmentKind {
         chain_end_id: u64,
         offset: f32,
         base_spacing: f32,
-        base: SegmentBase,
+        base: GroupBase,
     },
     /// Parkplatz-Layout (Wendekreis + Parkreihen)
     Parking {
         origin: Vec2,
         angle: f32,
         config: ParkingConfig,
-        base: SegmentBase,
+        base: GroupBase,
     },
     /// Feldgrenz-Route (geschlossener Ring entlang eines Feldes)
     FieldBoundary {
@@ -416,7 +458,7 @@ pub enum SegmentKind {
         node_spacing: f32,         // Node-Abstand in Metern
         offset: f32,               // Innen-/Aussenversatz in Metern
         straighten_tolerance: f32, // Douglas-Peucker-Toleranz in Metern
-        base: SegmentBase,
+        base: GroupBase,
     },
     /// Parallelversatz einer selektierten Kette (ohne S-Kurven-Anbindung)
     RouteOffset {
@@ -427,24 +469,29 @@ pub enum SegmentKind {
         offset_right: f32,          // Versatz rechts in Metern
         keep_original: bool,        // Original-Kette beibehalten?
         base_spacing: f32,          // Node-Abstand auf der Offset-Kette
-        base: SegmentBase,
+        base: GroupBase,
+    },
+    /// Manuell gruppierte Nodes (kein Tool-Hintergrund — via Kontextmenü "Gruppe erstellen")
+    Manual {
+        base: GroupBase,
     },
 }
 ```
 
 **Methoden:**
-- `tool_index() → usize` — Index des zugehoerigen Tools im `ToolManager` (fuer Segment-Editing)
+- `tool_index() → Option<usize>` — Index des zugehoerigen Tools im `ToolManager`. Gibt `None` fuer `Manual`-Segmente zurueck, da sie keinem Tool zugeordnet sind.
+- `is_tool_backed() → bool` — `true` wenn die Gruppe von einem Route-Tool erstellt wurde (alle Varianten ausser `Manual`).
 
-**Hinweis:** Alle Varianten enthalten `base: SegmentBase` mit gemeinsamen Parametern. Die `segment_registry` speichert diese Metadaten fuer nachtraegliche Bearbeitung.
+**Hinweis:** Alle Varianten enthalten `base: GroupBase` mit gemeinsamen Parametern. Die `group_registry` speichert diese Metadaten fuer nachtraegliche Bearbeitung.
 
 ---
 
-### `SegmentRecord`
+### `GroupRecord`
 
-Gespeicherte Segment-Parametrisierung fuer nachtraegliche Bearbeitung.
+Gespeicherte Gruppen-Parametrisierung fuer nachtraegliche Bearbeitung.
 
 ```rust
-pub struct SegmentRecord {
+pub struct GroupRecord {
     /// Eindeutige Registry-ID
     pub id: u64,
     /// IDs aller neu erstellten Nodes
@@ -454,53 +501,63 @@ pub struct SegmentRecord {
     /// End-Anker (ExistingNode oder NewPosition)
     pub end_anchor: ToolAnchor,
     /// Tool-spezifische Parameter
-    pub kind: SegmentKind,
+    pub kind: GroupKind,
     /// Original-Positionen der Nodes zum Zeitpunkt der Erstellung
     pub original_positions: Vec<Vec2>,
-    /// IDs der Nodes mit Map-Markern (fuer Cleanup bei Segment-Edit; leer wenn keine Marker)
+    /// IDs der Nodes mit Map-Markern (fuer Cleanup bei Gruppen-Edit; leer wenn keine Marker)
     pub marker_node_ids: Vec<u64>,
-    /// Ob das Segment gesperrt ist (true = alle Nodes bewegen sich gemeinsam beim Drag)
+    /// Ob die Gruppe gesperrt ist (true = alle Nodes bewegen sich gemeinsam beim Drag)
     pub locked: bool,
 }
 ```
 
 ---
 
-### `SegmentRegistry`
+### `GroupRegistry`
 
-In-Session-Registry aller erstellten Segmente — ermoeglicht nachtraegliches Editieren von Segmenten durch Speicherung der Tool-Parameter und Validitaetspruefung.
+In-Session-Registry aller erstellten Gruppen — ermöglicht nachträgliches Editieren von Gruppen durch Speicherung der Tool-Parameter und Validitätspruefung.
 
 **Merkmale:**
 - Nicht persistent: Wird beim Laden einer Datei geleert
+- Interne Speicherung als `HashMap<u64, GroupRecord>` fuer O(1)-Zugriff nach ID
+- Reverse-Index `node_to_records: HashMap<u64, Vec<u64>>` fuer effiziente Node→Segment-Abfragen
 - Segment-Validierung: Prueft ob alle Nodes noch existieren und Positionen unveraendert sind
-- Segment-Selektion: Erlaubt Klick auf Segment-Node → Selektion aller Segment-Nodes
+- Segment-Selektion: Erlaubt Klick auf Gruppen-Node → Selektion aller Gruppen-Nodes
 
 **Methoden:**
 
 ```rust
-pub fn register(&mut self, record: SegmentRecord) -> u64 // Registriert neu erstelltes Segment
+pub fn register(&mut self, record: GroupRecord) -> u64 // Registriert neu erstellte Gruppe
 pub fn next_id(&mut self) -> u64 // Erzeugt naechste auto-increment ID (vor Konstruktion eines Records)
-pub fn get(&self, record_id: u64) -> Option<&SegmentRecord> // Findet Record nach ID
+pub fn get(&self, record_id: u64) -> Option<&GroupRecord> // Findet Record nach ID
 pub fn remove(&mut self, record_id: u64) // Loescht Record
-pub fn find_by_node_ids(&self, node_ids: &IndexSet<u64>) -> Vec<&SegmentRecord> // Alle Records mit mind. einer Node-ID
-pub fn find_first_by_node_id(&self, node_id: u64) -> Option<&SegmentRecord> // Erstes Record mit dieser Node
-pub fn is_segment_valid(&self, record: &SegmentRecord, road_map: &RoadMap) -> bool // Validitaetspruefung
-pub fn records(&self) -> &[SegmentRecord] // Alle Records als unveraenderlicher Slice
-pub fn records_mut(&mut self) -> &mut [SegmentRecord] // Alle Records als veraenderlicher Slice
-pub fn segments_for_node(&self, node_id: u64) -> Vec<u64> // Alle Segment-IDs die diesen Node enthalten
-pub fn toggle_lock(&mut self, segment_id: u64) // Lock-Zustand des Segments umschalten
-pub fn is_locked(&self, segment_id: u64) -> bool // Lock-Zustand abfragen (false wenn nicht gefunden)
-pub fn segment_bounding_box(&self, segment_id: u64, road_map: &RoadMap) -> Option<(Vec2, Vec2)> // AABB des Segments (min, max)
-pub fn expand_locked_selection(&self, selected_nodes: &[u64]) -> Vec<u64> // Selektion um Nodes aller betroffenen locked Segments erweitern
-pub fn update_original_positions(&mut self, segment_id: u64, road_map: &RoadMap) // original_positions nach Lock-Move aktualisieren
+pub fn remove_nodes_from_record(&mut self, record_id: u64, nodes_to_remove: &[u64]) -> bool // Entfernt Nodes aus Record; loest Record automatisch auf wenn < 2 Nodes verbleiben
+pub fn find_by_node_ids(&self, node_ids: &IndexSet<u64>) -> Vec<&GroupRecord> // Alle Records mit mind. einer Node-ID
+pub fn find_first_by_node_id(&self, node_id: u64) -> Option<&GroupRecord> // Erstes Record mit dieser Node
+pub fn is_group_valid(&self, record: &GroupRecord, road_map: &RoadMap) -> bool // Validitaetspruefung
+pub fn records(&self) -> impl Iterator<Item = &GroupRecord> // Alle Records als Iterator
+pub fn records_mut(&mut self) -> impl Iterator<Item = &mut GroupRecord> // Alle Records (veränderlich)
+pub fn records_map(&self) -> &HashMap<u64, GroupRecord> // Direkter Zugriff auf interne HashMap
+pub fn groups_for_node(&self, node_id: u64) -> Vec<u64> // Alle Gruppen-IDs die diesen Node enthalten
+pub fn toggle_lock(&mut self, group_id: u64) // Lock-Zustand der Gruppe umschalten
+pub fn set_locked(&mut self, group_id: u64, locked: bool) // Lock-Zustand explizit setzen
+pub fn is_locked(&self, group_id: u64) -> bool // Lock-Zustand abfragen (false wenn nicht gefunden)
+pub fn set_edit_guard(&mut self, record_id: Option<u64>) // Guard fuer Group-Edit: dieser Record wird nicht invalidiert
+pub fn update_record(&mut self, record_id: u64, node_ids: Vec<u64>, original_positions: Vec<Vec2>) -> bool // Record in-place aktualisieren
+pub fn group_bounding_box(&self, group_id: u64, road_map: &RoadMap) -> Option<(Vec2, Vec2)> // AABB der Gruppe (min, max)
+pub fn expand_locked_selection(&self, selected_nodes: &[u64]) -> Vec<u64> // Selektion um Nodes aller betroffenen locked Gruppen erweitern
+pub fn update_original_positions(&mut self, group_id: u64, road_map: &RoadMap) // original_positions nach Lock-Move aktualisieren
+pub fn warm_boundary_cache(&mut self, road_map: &RoadMap) // Boundary-Cache fuer alle Records aufwaermen (einmal pro Frame vor dem Rendering)
+pub fn boundary_cache_for(&self, record_id: u64) -> Option<&[BoundaryInfo]> // Gecachte BoundaryInfos fuer einen Record abfragen
+pub fn open_nodes(&self, record_id: u64, road_map: &RoadMap) -> Option<Vec<BoundaryNode>> // Boundary-Nodes (ungecacht, fuer Sonderfaelle)
 ```
 
 **Beispiel:**
 
 ```rust
-// Klick auf Segment-Node → Auto-Selektion aller Nodes
-if let Some(record) = segment_registry.find_first_by_node_id(clicked_node_id) {
-    if segment_registry.is_segment_valid(record, &road_map) {
+// Klick auf Gruppen-Node → Auto-Selektion aller Nodes
+if let Some(record) = group_registry.find_first_by_node_id(clicked_node_id) {
+    if group_registry.is_group_valid(record, &road_map) {
         for id in &record.node_ids {
             selection.insert(*id);
         }
@@ -649,8 +706,8 @@ pub enum AppIntent {
     IncreaseRouteToolSegmentLength,
     DecreaseRouteToolSegmentLength,
 
-    // Segment-Bearbeitung (nachtraegliche Bearbeitung erstellter Linien)
-    EditSegmentRequested { record_id: u64 },
+    // Gruppen-Bearbeitung (nachtraegliche Bearbeitung erstellter Gruppen)
+    EditGroupRequested { record_id: u64 },
     // Distanzen: Selektierte Nodes-Kette gleichmaessig neu verteilen
     ResamplePathRequested,
     StreckenteilungAktivieren,
@@ -672,11 +729,18 @@ pub enum AppIntent {
     PasteConfirmRequested,
     PasteCancelled,
 
-    // Segment-Lock
-    /// Segment-Lock umschalten (gesperrt ↔ entsperrt)
-    ToggleSegmentLockRequested { segment_id: u64 },
-    /// Segment aufloesen (nur Segment-Record entfernen)
-    DissolveSegmentRequested { segment_id: u64 },
+    // Gruppen-Lock
+    /// Gruppen-Lock umschalten (gesperrt ↔ entsperrt)
+    ToggleGroupLockRequested { segment_id: u64 },
+    /// Segment aufloesen — öffnet zuerst einen Bestätigungsdialog
+    DissolveGroupRequested { segment_id: u64 },
+    /// Segment aufloesen nach Nutzer-Bestätigung im Confirm-Dialog
+    DissolveGroupConfirmed { segment_id: u64 },
+
+    /// Selektierte zusammenhaengende Nodes als neue Gruppe in der Registry registrieren
+    GroupSelectionAsGroupRequested,
+    /// Selektierte Nodes aus ihrer Gruppe entfernen (Nodes bleiben in RoadMap erhalten)
+    RemoveSelectedNodesFromGroupRequested,
 
     // Extras
     /// Alle erkannten Farmland-Polygone als Wegpunkt-Ring nachzeichnen
@@ -686,9 +750,13 @@ pub enum AppIntent {
     /// Kamera auf die Bounding Box der Selektion zoomen
     ZoomToSelectionBoundsRequested,
 
-    // Segment-Einstellungs-Popup
-    /// Segment-Einstellungs-Popup an Weltposition oeffnen (per Doppelklick)
-    OpenSegmentSettingsPopupRequested { world_pos: glam::Vec2 },
+    // Nicht-destruktives Gruppen-Editing
+    /// Gruppen-Edit-Modus starten (entsperrt Nodes, legt Undo-Snapshot an)
+    GroupEditStartRequested { record_id: u64 },
+    /// Gruppen-Edit abschliessen (Aenderungen uebernehmen, Record aktualisieren)
+    GroupEditApplyRequested,
+    /// Gruppen-Edit abbrechen (Undo zum Snapshot vor Edit-Start)
+    GroupEditCancelRequested,
 }
 
 pub enum AppCommand {
@@ -712,6 +780,7 @@ pub enum AppCommand {
     // Selektion
     SelectNearestNode { world_pos: glam::Vec2, max_distance: f32, additive: bool, extend_path: bool },
     SelectSegmentBetweenNearestIntersections { world_pos: glam::Vec2, max_distance: f32, additive: bool, stop_at_junction: bool, max_angle_deg: f32 },
+    SelectGroupByNearestNode { world_pos: glam::Vec2, max_distance: f32, additive: bool },
     SelectNodesInRect { min: glam::Vec2, max: glam::Vec2, additive: bool },
     SelectNodesInLasso { polygon: Vec<glam::Vec2>, additive: bool },
     ClearSelection,
@@ -805,8 +874,8 @@ pub enum AppCommand {
     // Route-Tool Rotation (Scroll-basierte Winkel-Anpassung)
     RouteToolRotate { delta: f32 },
 
-    // Segment-Bearbeitung
-    EditSegment { record_id: u64 },
+    // Gruppen-Bearbeitung
+    EditGroup { record_id: u64 },
     // Distanzen: Selektierte Nodes-Kette per Catmull-Rom-Spline neu verteilen
     ResamplePath,
     StreckenteilungAktivieren,
@@ -830,19 +899,33 @@ pub enum AppCommand {
     ConfirmPaste,
     CancelPastePreview,
 
-    // Segment-Lock
-    /// Segment-Lock umschalten (gesperrt ↔ entsperrt)
-    ToggleSegmentLock { segment_id: u64 },
-    /// Segment aufloesen (Segment-Record entfernen, Nodes beibehalten)
-    DissolveSegment { segment_id: u64 },
+    // Gruppen-Lock
+    /// Gruppen-Lock umschalten (gesperrt ↔ entsperrt)
+    ToggleGroupLock { segment_id: u64 },
+    /// Bestätigungsdialog für Segment-Auflösung öffnen (setzt `UiState::confirm_dissolve_segment_id`)
+    OpenDissolveConfirmDialog { segment_id: u64 },
+    /// Segment aufloesen (Gruppen-Record entfernen, Nodes beibehalten)
+    DissolveGroup { segment_id: u64 },
+    /// Selektierte zusammenhaengende Nodes als neue Gruppe registrieren
+    GroupSelectionAsGroup,
+    /// Selektierte Nodes aus ihren zugehoerigen Gruppen entfernen
+    RemoveSelectedNodesFromGroups,
 
     // Extras
     /// Alle Farmland-Polygone als Wegpunkt-Ring nachzeichnen (Batch-Operation)
     TraceAllFields,
 
-    // Segment-Einstellungs-Popup
-    /// Segment-Einstellungs-Popup an angegebener Welt-Position oeffnen
-    OpenSegmentSettingsPopup { world_pos: glam::Vec2 },
+    // Gruppen-Einstellungs-Popup
+    /// Gruppen-Einstellungs-Popup an angegebener Welt-Position oeffnen
+    OpenGroupSettingsPopup { world_pos: glam::Vec2 },
+
+    // Nicht-destruktives Gruppen-Editing
+    /// Gruppen-Edit-Modus nicht-destruktiv starten
+    GroupEditStart { record_id: u64 },
+    /// Gruppen-Edit uebernehmen (Aenderungen persistieren, Record aktualisieren)
+    GroupEditApply,
+    /// Gruppen-Edit abbrechen (Undo zum Snapshot)
+    GroupEditCancel,
 }
 ```
 
@@ -873,7 +956,7 @@ flowchart TD
     CTRL -->|dispatch| H_SEL[handlers/selection]
     CTRL -->|dispatch| H_EDIT[handlers/editing]
     CTRL -->|dispatch| H_ROUTE[handlers/route_tool]
-    CTRL -->|dispatch| H_SEG[handlers/segment]
+    CTRL -->|dispatch| H_SEG[handlers/group]
     CTRL -->|dispatch| H_HIST[handlers/history]
     CTRL -->|dispatch| H_DLG[handlers/dialog]
 
@@ -882,7 +965,7 @@ flowchart TD
     H_SEL -->|"use_cases::selection"| STATE
     H_EDIT -->|"use_cases::editing"| STATE
     H_ROUTE -->|"RouteTool / ToolManager"| STATE
-    H_SEG -->|"SegmentRegistry::toggle_lock / remove"| STATE
+    H_SEG -->|"GroupRegistry::toggle_lock / remove"| STATE
     H_HIST -->|"EditHistory pop/push"| STATE
     H_DLG -->|"UiState / Dialog-Flags"| STATE
 

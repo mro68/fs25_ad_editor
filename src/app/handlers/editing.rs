@@ -140,11 +140,11 @@ pub fn update_marker(state: &mut AppState, node_id: u64, name: &str, group: &str
 ///
 /// Loescht die zugehoerigen Nodes aus der RoadMap, aktiviert das passende
 /// Route-Tool und befuellt es mit den gespeicherten Parametern.
-pub fn edit_segment(state: &mut AppState, record_id: u64) {
+pub fn edit_group(state: &mut AppState, record_id: u64) {
     use crate::app::state::EditorTool;
 
     // Record aus Registry holen (Klon, da wir state danach mutieren)
-    let record = match state.segment_registry.get(record_id) {
+    let record = match state.group_registry.get(record_id) {
         Some(r) => r.clone(),
         None => {
             log::warn!("Segment-Record {} nicht gefunden", record_id);
@@ -152,7 +152,16 @@ pub fn edit_segment(state: &mut AppState, record_id: u64) {
         }
     };
 
-    let tool_index = record.kind.tool_index();
+    let tool_index = match record.kind.tool_index() {
+        Some(idx) => idx,
+        None => {
+            log::warn!(
+                "Segment {} hat keinen Tool-Hintergrund, Edit nicht moeglich",
+                record_id
+            );
+            return;
+        }
+    };
 
     // Undo-Snapshot vor Loeschung
     state.record_undo_snapshot();
@@ -189,7 +198,7 @@ pub fn edit_segment(state: &mut AppState, record_id: u64) {
     use_cases::editing::delete_nodes_by_ids(state, &inner_ids);
 
     // Record aus Registry entfernen (wird beim erneuten execute() neu angelegt)
-    state.segment_registry.remove(record_id);
+    state.group_registry.remove(record_id);
 
     // Passendes Route-Tool aktivieren
     super::route_tool::select(state, tool_index);
