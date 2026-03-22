@@ -110,6 +110,11 @@ impl MenuCatalog {
                 label: t(lang, I18nKey::CtxRemoveFromGroup).into(),
                 preconditions: vec![Precondition::SelectionHasGroupMember],
             },
+            MenuEntry::Command {
+                id: CommandId::DissolveGroup,
+                label: t(lang, I18nKey::CtxDissolveGroup).into(),
+                preconditions: vec![Precondition::SelectionHasGroupMember],
+            },
             MenuEntry::Separator,
             // ── Verbinden ────────────────────────────────────────
             MenuEntry::Command {

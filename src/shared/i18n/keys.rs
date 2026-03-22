@@ -521,6 +521,8 @@ pub enum I18nKey {
     CtxGroupAsSegment,
     /// Eintrag "Aus Gruppe entfernen"
     CtxRemoveFromGroup,
+    /// Eintrag "Gruppe aufloesen"
+    CtxDissolveGroup,
     /// Eintrag "Nodes verbinden"
     CtxConnectNodes,
     /// Eintrag "Strecke erzeugen"

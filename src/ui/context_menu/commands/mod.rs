@@ -110,6 +110,8 @@ pub enum CommandId {
     GroupSelectionAsGroup,
     /// Selektierte Nodes aus ihrer Gruppe entfernen (Nodes bleiben erhalten)
     RemoveFromGroup,
+    /// Gruppe komplett aufloesen (alle Nodes bleiben erhalten)
+    DissolveGroup,
 
     // ── Extras ───────────────────────────────────────────────────────
     /// FieldBoundaryTool aktivieren
@@ -283,6 +285,9 @@ impl CommandId {
             },
             Self::GroupSelectionAsGroup => AppIntent::GroupSelectionAsGroupRequested,
             Self::RemoveFromGroup => AppIntent::RemoveSelectedNodesFromGroupRequested,
+            Self::DissolveGroup => AppIntent::DissolveGroupRequested {
+                segment_id: ctx.group_record_id.unwrap_or(0),
+            },
 
             // ── Extras ───────────────────────────────────────────────────────
             Self::SetToolFieldBoundary => AppIntent::SelectRouteToolRequested {

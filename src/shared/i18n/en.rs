@@ -250,6 +250,7 @@ pub(super) fn translate(key: I18nKey) -> &'static str {
         I18nKey::CtxEditGroup => "Edit Group",
         I18nKey::CtxGroupAsSegment => "Group Selection",
         I18nKey::CtxRemoveFromGroup => "Remove from Group",
+        I18nKey::CtxDissolveGroup => "Dissolve Group",
         I18nKey::CtxConnectNodes => "Connect Nodes",
         I18nKey::CtxCreateRoute => "Create Route",
         I18nKey::CtxDirectionSubmenu => "Direction",
