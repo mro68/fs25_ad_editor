@@ -266,3 +266,13 @@ pub fn confirm_paste(state: &mut AppState) {
 pub fn cancel_paste_preview(state: &mut AppState) {
     use_cases::editing::cancel_paste_preview(state);
 }
+
+/// Importiert eine Curseplay-XML-Datei und legt Nodes + Ring-Verbindungen an.
+pub fn import_curseplay_file(state: &mut AppState, path: &str) {
+    use_cases::editing::import_curseplay(state, path);
+}
+
+/// Exportiert die selektierten Nodes als Curseplay-XML-Datei.
+pub fn export_curseplay_file(state: &AppState, path: &str) {
+    use_cases::editing::export_curseplay(state, path);
+}
