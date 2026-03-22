@@ -72,6 +72,9 @@ pub struct InputState {
     context_menu_snapshot: Option<ContextMenuSnapshot>,
     /// Bildschirmposition des letzten CM-Klicks fuer Edit-Panel-Positionierung.
     pub edit_panel_pos: Option<[f32; 2]>,
+    /// Zeigt an, ob gerade eine Gruppen-Rotation per Alt+Mausrad laeuft.
+    /// Wird benutzt um Begin/End-Lifecycle Intents korrekt zu emittieren.
+    pub(crate) rotation_active: bool,
 }
 
 impl InputState {
@@ -82,6 +85,7 @@ impl InputState {
             drag_selection: None,
             context_menu_snapshot: None,
             edit_panel_pos: None,
+            rotation_active: false,
         }
     }
 

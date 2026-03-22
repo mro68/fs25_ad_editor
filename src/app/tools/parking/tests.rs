@@ -466,7 +466,10 @@ fn test_marker_positions_follow_origin_and_row_spacing_without_rotation() {
     assert!((marker_2 - Vec2::new(10.0, 31.0)).length() < 0.001);
 }
 
-/// Prueft den 90°-Spezialfall: Reihenabstand wird auf X-Achse rotiert.
+/// Prueft 90°-Drehung: Rotation erfolgt um das geometrische Zentrum des Layouts,
+/// nicht um die Ecke Row 0. Das Zentrum (bay_length/2, (rows-1)*spacing/2) = (40, 6)
+/// bleibt in Weltkoordinaten an seiner Ausgangsposition (40, 6), waehrend alle
+/// anderen Nodes um diesen Punkt rotieren.
 #[test]
 fn test_marker_positions_rotate_correctly_at_ninety_degrees() {
     let config = ParkingConfig {
@@ -492,8 +495,19 @@ fn test_marker_positions_rotate_correctly_at_ninety_degrees() {
     let marker_1 = layout.nodes[layout.markers[0].0];
     let marker_2 = layout.nodes[layout.markers[1].0];
 
-    assert!((marker_1 - Vec2::new(0.0, 0.0)).length() < 0.001);
-    assert!((marker_2 - Vec2::new(-12.0, 0.0)).length() < 0.001);
+    // Bei 90°-Drehung um Zentrum (40, 6):
+    //   Marker 1 (lokal 0,0):  world = (46, -34)
+    //   Marker 2 (lokal 0,12): world = (34, -34)
+    assert!(
+        (marker_1 - Vec2::new(46.0, -34.0)).length() < 0.01,
+        "Marker 1 bei 90°: erwartet (46, -34), got {:?}",
+        marker_1
+    );
+    assert!(
+        (marker_2 - Vec2::new(34.0, -34.0)).length() < 0.01,
+        "Marker 2 bei 90°: erwartet (34, -34), got {:?}",
+        marker_2
+    );
 }
 
 /// Prueft Richtungslogik der Serien-Ketten fuer rechte Seite.

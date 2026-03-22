@@ -46,6 +46,7 @@ Alle Use-Case-Funktionen des `app::use_cases`-Moduls. Use-Cases mutieren `AppSta
 - `select_nodes_in_rect(state, corner_a, corner_b, additive)` — Rechteckselektion (Shift + Drag)
 - `select_nodes_in_lasso(state, polygon, additive)` — Lasso-Selektion (Alt + Drag)
 - `move_selected_nodes(state, delta_world)` — Alle selektierten Nodes gemeinsam verschieben
+- `rotate_selected_nodes(state, angle_rad)` — Alle selektierten Nodes um ihr gemeinsames Zentrum rotieren (Spatial-Index **nicht** rebuilt — muss separat per `EndRotateSelectedNodes` angestossen werden)
 - `clear_selection(state)` — Selektion explizit loeschen
 
 ---
