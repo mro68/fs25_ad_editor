@@ -33,6 +33,9 @@ impl InputState {
         }
 
         let modifiers = ctx.ui.input(|i| i.modifiers);
+        // Alt+Scroll-Rotation: raw_scroll_delta verwenden (kein Smoothing → 1× pro Tick statt ~13×)
+        // Normaler Zoom: smooth_scroll_delta bleibt unveraendert
+        let raw_scroll = ctx.ui.input(|i| i.raw_scroll_delta.y);
         let scroll = ctx.ui.input(|i| i.smooth_scroll_delta.y);
 
         // Gruppen-Rotation beenden wenn Alt losgelassen wurde oder Bedingungen nicht mehr gelten.
@@ -48,29 +51,45 @@ impl InputState {
             }
         }
 
-        if scroll == 0.0 {
-            return;
-        }
-
         // Alt+Scroll + Select-Tool + aktive Selektion → Gruppen-Rotation
+        // raw_scroll_delta statt smooth: verhindert 13× Feuern pro Mausrad-Tick
         if modifiers.alt
             && ctx.active_tool == EditorTool::Select
             && !ctx.selected_node_ids.is_empty()
         {
-            if !self.rotation_active {
-                self.rotation_active = true;
-                events.push(AppIntent::BeginRotateSelectedNodesRequested);
+            if raw_scroll.abs() >= 0.5 {
+                ctx.ui.input_mut(|i| {
+                    i.raw_scroll_delta.y = 0.0;
+                    i.smooth_scroll_delta.y = 0.0;
+                });
+                if !self.rotation_active {
+                    self.rotation_active = true;
+                    events.push(AppIntent::BeginRotateSelectedNodesRequested);
+                }
+                let step_rad = GROUP_ROTATION_STEP_DEG.to_radians();
+                events.push(AppIntent::RotateSelectedNodesRequested {
+                    delta_angle: raw_scroll.signum() * step_rad,
+                });
             }
-            let step_rad = GROUP_ROTATION_STEP_DEG.to_radians();
-            events.push(AppIntent::RotateSelectedNodesRequested {
-                delta_angle: scroll.signum() * step_rad,
-            });
             return;
         }
 
         // Alt+Scroll → Route-Tool-Rotation statt Zoom
+        // raw_scroll_delta statt smooth: verhindert Mehrfach-Feuern pro Tick
         if modifiers.alt && ctx.active_tool == EditorTool::Route {
-            events.push(AppIntent::RouteToolScrollRotated { delta: scroll });
+            if raw_scroll.abs() >= 0.5 {
+                ctx.ui.input_mut(|i| {
+                    i.raw_scroll_delta.y = 0.0;
+                    i.smooth_scroll_delta.y = 0.0;
+                });
+                events.push(AppIntent::RouteToolScrollRotated {
+                    delta: raw_scroll.signum(),
+                });
+            }
+            return;
+        }
+
+        if scroll == 0.0 {
             return;
         }
 
