@@ -98,10 +98,8 @@ pub fn handle_file_dialogs(ui_state: &mut UiState) -> Vec<AppIntent> {
     if ui_state.show_curseplay_import_dialog {
         ui_state.show_curseplay_import_dialog = false;
 
-        if let Some(path) = rfd::FileDialog::new()
-            .add_filter("Courseplay XML", &["xml"])
-            .pick_file()
-        {
+        // Kein Erweiterungsfilter: Curseplay-Dateien haben keine Dateierweiterung
+        if let Some(path) = rfd::FileDialog::new().pick_file() {
             events.push(AppIntent::CurseplayFileSelected {
                 path: path_to_ui_string(&path),
             });
@@ -112,9 +110,9 @@ pub fn handle_file_dialogs(ui_state: &mut UiState) -> Vec<AppIntent> {
     if ui_state.show_curseplay_export_dialog {
         ui_state.show_curseplay_export_dialog = false;
 
+        // Kein Erweiterungsfilter: Curseplay-Dateien haben keine Dateierweiterung
         if let Some(path) = rfd::FileDialog::new()
-            .add_filter("Courseplay XML", &["xml"])
-            .set_file_name("customField.xml")
+            .set_file_name("customField")
             .save_file()
         {
             events.push(AppIntent::CurseplayExportPathSelected {
