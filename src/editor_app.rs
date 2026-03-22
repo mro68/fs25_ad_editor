@@ -124,6 +124,9 @@ impl EditorApp {
         events.extend(floating_events);
         events.extend(ui::render_route_defaults_panel(ctx, &self.state));
 
+        // Marker-Sidebar rechts (muss vor CentralPanel aufgerufen werden)
+        events.extend(ui::render_marker_panel(ctx, self.state.road_map.as_deref()));
+
         let road_map_for_properties = self.state.road_map.clone();
         let default_direction = self.state.editor.default_direction;
         let default_priority = self.state.editor.default_priority;

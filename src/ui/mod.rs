@@ -26,6 +26,8 @@ pub mod input;
 mod keyboard;
 /// Wiederverwendbares Long-Press-Dropdown fuer Icon-Gruppen.
 pub mod long_press;
+/// Rechte Sidebar fuer Map-Marker (Kamera-Zentrierung bei Klick).
+pub mod marker_panel;
 /// Menue-Leiste mit Datei-, Bearbeitungs- und Ansicht-Aktionen.
 pub mod menu;
 /// Optionen-Dialog fuer Editor-Einstellungen.
@@ -48,6 +50,7 @@ pub use floating_menu::render_floating_menu;
 pub use group_boundary_overlay::{render_group_boundary_overlays, GroupBoundaryIcons};
 pub use group_overlay::{render_group_overlays, GroupOverlayEvent};
 pub use input::InputState;
+pub use marker_panel::render_marker_panel;
 pub use menu::render_menu;
 pub use options_dialog::show_options_dialog;
 pub use properties::render_properties_panel;

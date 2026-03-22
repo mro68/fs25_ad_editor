@@ -86,6 +86,8 @@ pub enum AppCommand {
         factor: f32,
         focus_world: Option<glam::Vec2>,
     },
+    /// Kamera auf Node zentrieren (Zoom beibehalten)
+    CenterOnNode { node_id: u64 },
     /// Naechsten Node zur Position selektieren
     SelectNearestNode {
         world_pos: glam::Vec2,

@@ -35,6 +35,9 @@ pub fn map_intent_to_commands(state: &AppState, intent: AppIntent) -> Vec<AppCom
             factor,
             focus_world,
         }],
+        AppIntent::CenterOnNodeRequested { node_id } => {
+            vec![AppCommand::CenterOnNode { node_id }]
+        }
         AppIntent::NodePickRequested {
             world_pos,
             additive,
