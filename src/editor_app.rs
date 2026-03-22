@@ -552,12 +552,14 @@ impl EditorApp {
 
     fn update_last_route_tool_index(&mut self, index: usize) {
         match index {
-            TOOL_INDEX_STRAIGHT => self.state.editor.last_straight_index = index,
-            TOOL_INDEX_CURVE_QUAD | TOOL_INDEX_CURVE_CUBIC | TOOL_INDEX_SPLINE => {
-                self.state.editor.last_curve_index = index;
+            TOOL_INDEX_STRAIGHT
+            | TOOL_INDEX_CURVE_QUAD
+            | TOOL_INDEX_CURVE_CUBIC
+            | TOOL_INDEX_SPLINE => {
+                self.state.editor.last_basic_command_index = index;
             }
             TOOL_INDEX_SMOOTH_CURVE => {
-                self.state.editor.last_curve_index = index;
+                self.state.editor.last_basic_command_index = index;
                 self.state.editor.last_smooth_curve_index = index;
             }
             TOOL_INDEX_BYPASS | TOOL_INDEX_PARKING | TOOL_INDEX_ROUTE_OFFSET => {
