@@ -94,6 +94,8 @@ pub fn group_selection(state: &mut AppState) {
         original_positions,
         marker_node_ids: vec![],
         locked: false,
+        entry_node_id: None,
+        exit_node_id: None,
     };
     state.group_registry.register(record);
 }

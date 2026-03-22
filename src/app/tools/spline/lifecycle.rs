@@ -213,6 +213,8 @@ impl RouteTool for SplineTool {
             original_positions: Vec::new(), // wird im Handler befüllt
             marker_node_ids: Vec::new(),
             locked: true,
+            entry_node_id: None,
+            exit_node_id: None,
             kind: GroupKind::Spline {
                 anchors: self.last_anchors.clone(),
                 tangent_start: self.tangents.last_tangent_start,
