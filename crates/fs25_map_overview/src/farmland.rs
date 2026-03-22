@@ -4,7 +4,7 @@
 //! aus rohen GRLE-Daten. Die Pixel-Koordinaten werden im Raster-Raum
 //! zurueckgegeben; die Umrechnung in Weltkoordinaten erfolgt in der aufrufenden Schicht.
 
-use std::collections::{HashMap, VecDeque};
+use std::collections::HashMap;
 
 use anyhow::Result;
 
@@ -94,99 +94,8 @@ pub fn extract_farmland_polygons(grle_data: &[u8]) -> Result<(Vec<FarmlandPolygo
     let decoded = grle::decode_grle(grle_data)?;
     let width = decoded.width;
     let height = decoded.height;
-    let polygons = extract_farmland_polygons_merged(&decoded.pixels, width, height);
+    let polygons = extract_farmland_polygons_from_ids(&decoded.pixels, width, height);
     Ok((polygons, width as u32, height as u32))
-}
-
-/// Fuehrt Connected-Component-Labeling auf einer binaeren Farmland-Maske durch.
-///
-/// Erstellt eine binaere Maske (pixel > 0 && pixel != 255) und weist jedem
-/// 4-verbundenen Bereich eine neue synthetische ID (1..=254) zu.
-/// Benachbarte Farmland-Regionen mit unterschiedlichen Original-IDs werden
-/// so zu einer einzigen Region zusammengefasst (Merge).
-///
-/// Regionen die an ein gemeinsames Farmland-Pixel angrenzen, aber getrennte
-/// Original-IDs haben (FS25-Splitting), erhalten dieselbe synthetische ID
-/// und werden danach als ein einziges Polygon extrahiert.
-///
-/// Gibt einen neuen Pixel-Puffer mit synthetischen IDs zurueck; 0 = Hintergrund.
-pub fn merge_adjacent_farmland_regions(pixels: &[u8], width: usize, height: usize) -> Vec<u8> {
-    let mut labels = vec![0u8; pixels.len()];
-    let mut component_count: u32 = 0;
-
-    for y in 0..height {
-        for x in 0..width {
-            let idx = y * width + x;
-            let pixel = pixels[idx];
-
-            // Hintergrund (0) und reservierten Wert (255) ueberspringen
-            if pixel == 0 || pixel == 255 || labels[idx] != 0 {
-                continue;
-            }
-
-            // Neue zusammenhaengende Farmland-Komponente — BFS starten
-            component_count += 1;
-            // Saettige bei 254: alle weiteren Regionen bekommen dieselbe ID
-            let label = component_count.min(254) as u8;
-
-            let mut queue = VecDeque::new();
-            queue.push_back((x, y));
-            labels[idx] = label;
-
-            while let Some((cx, cy)) = queue.pop_front() {
-                // 4-verbundene Nachbarn (oben, unten, links, rechts)
-                let neighbors = [
-                    (cx.wrapping_sub(1), cy),
-                    (cx + 1, cy),
-                    (cx, cy.wrapping_sub(1)),
-                    (cx, cy + 1),
-                ];
-                for (nx, ny) in neighbors {
-                    if nx >= width || ny >= height {
-                        continue;
-                    }
-                    let nidx = ny * width + nx;
-                    let npixel = pixels[nidx];
-                    if npixel != 0 && npixel != 255 && labels[nidx] == 0 {
-                        labels[nidx] = label;
-                        queue.push_back((nx, ny));
-                    }
-                }
-            }
-        }
-    }
-
-    if component_count > 254 {
-        log::warn!(
-            "merge_adjacent_farmland_regions: {} Regionen gefunden — ab Komponente 255 wird ID 254 verwendet",
-            component_count
-        );
-    }
-
-    log::debug!(
-        "Farmland-Merge: {} zusammenhaengende Regionen gefunden",
-        component_count.min(254)
-    );
-
-    labels
-}
-
-/// Extrahiert Farmland-Polygone aus Pixel-Daten nach vorherigem Region-Merge.
-///
-/// Fuehrt zunaechst ein Connected-Component-Labeling durch (beachbarte
-/// Farmland-Regionen mit unterschiedlichen IDs werden zusammengefasst),
-/// dann den Moore-Boundary-Tracer fuer jede zusammengefasste Komponente.
-///
-/// Dies behebt das FS25-Splitting-Problem, bei dem ein "visuelles Feld"
-/// auf mehrere Farmland-IDs aufgeteilt ist und `trace_all_fields` sonst
-/// mehrere ueberlagerte Ringe erzeugen wuerde.
-pub fn extract_farmland_polygons_merged(
-    pixels: &[u8],
-    width: usize,
-    height: usize,
-) -> Vec<FarmlandPolygon> {
-    let merged = merge_adjacent_farmland_regions(pixels, width, height);
-    extract_farmland_polygons_from_ids(&merged, width, height)
 }
 
 // ---------------------------------------------------------------------------
@@ -453,83 +362,4 @@ mod tests {
         }
     }
 
-    /// Zwei getrennte Felder mit unterschiedlichen IDs nebeneinander
-    /// werden nach dem Merge zu einer einzigen Region zusammengefasst.
-    #[test]
-    fn test_merge_adjacent_regions_merges_neighbors() {
-        // ID 1 und ID 2 teilen eine gemeinsame Kante → werden zu einer Region
-        #[rustfmt::skip]
-        let (pixels, w, h) = make_pixels(&[
-            &[0, 0, 0, 0, 0],
-            &[0, 1, 1, 2, 0],
-            &[0, 1, 1, 2, 0],
-            &[0, 1, 1, 2, 0],
-            &[0, 0, 0, 0, 0],
-        ]);
-
-        let merged = merge_adjacent_farmland_regions(&pixels, w, h);
-
-        // Alle Farmland-Pixel muessen dieselbe synthetische ID haben (eine Region)
-        let farmland_labels: Vec<u8> = merged.iter().copied().filter(|&l| l != 0).collect();
-        let first = farmland_labels[0];
-        assert!(
-            farmland_labels.iter().all(|&l| l == first),
-            "Benachbarte Felder wurden nicht zur selben Region gemergt"
-        );
-        assert_eq!(first, 1, "Erste Region sollte Label 1 haben");
-    }
-
-    /// Zwei isolierte Felder (nicht benachbart) bleiben getrennte Regionen.
-    #[test]
-    fn test_merge_isolated_regions_stay_separate() {
-        // ID 1 oben links, ID 2 unten rechts — durch Hintergrund getrennt
-        #[rustfmt::skip]
-        let (pixels, w, h) = make_pixels(&[
-            &[1, 1, 0, 0, 0],
-            &[1, 1, 0, 0, 0],
-            &[0, 0, 0, 0, 0],
-            &[0, 0, 0, 2, 2],
-            &[0, 0, 0, 2, 2],
-        ]);
-
-        let merged = merge_adjacent_farmland_regions(&pixels, w, h);
-
-        // Labelsatz muss genau {1, 2} ergeben (zwei getrennte Regionen)
-        let mut label_set: std::collections::HashSet<u8> =
-            merged.iter().copied().filter(|&l| l != 0).collect();
-        assert_eq!(
-            label_set.len(),
-            2,
-            "Isolierte Felder sollen 2 getrennte Regionen bleiben, aber Labels: {:?}",
-            label_set
-        );
-        // Reihenfolge invariant: kleinste Label ist 1
-        label_set.remove(&1);
-        label_set.remove(&2);
-        assert!(label_set.is_empty(), "Unerwartete Labels im Ergebnis");
-    }
-
-    /// Merged-Extraktion fasst benachbarte IDs zu einem Polygon zusammen.
-    #[test]
-    fn test_extract_merged_produces_single_polygon_for_adjacent_ids() {
-        // Zwei nebeneinander liegende Felder mit unterschiedlichen IDs
-        #[rustfmt::skip]
-        let (pixels, w, h) = make_pixels(&[
-            &[0, 0, 0, 0, 0, 0],
-            &[0, 1, 1, 2, 2, 0],
-            &[0, 1, 1, 2, 2, 0],
-            &[0, 1, 1, 2, 2, 0],
-            &[0, 0, 0, 0, 0, 0],
-        ]);
-
-        let polygons = extract_farmland_polygons_merged(&pixels, w, h);
-
-        // Ohne Merge wuerden 2 Polygone entstehen; mit Merge nur 1
-        assert_eq!(
-            polygons.len(),
-            1,
-            "Benachbarte IDs sollen ein einziges Polygon ergeben, bekam {}",
-            polygons.len()
-        );
-    }
 }
