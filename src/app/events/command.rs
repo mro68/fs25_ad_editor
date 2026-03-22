@@ -298,6 +298,12 @@ pub enum AppCommand {
     GroupSelectionAsGroup,
     /// Selektierte Nodes aus ihren zugehoerigen Gruppen entfernen
     RemoveSelectedNodesFromGroups,
+    /// Einfahrt/Ausfahrt-Nodes einer Gruppe setzen
+    SetGroupBoundaryNodes {
+        record_id: u64,
+        entry_node_id: Option<u64>,
+        exit_node_id: Option<u64>,
+    },
 
     // ── Extras ───────────────────────────────────────────────────────
     /// Einstellungsdialog "Alle Felder nachzeichnen" oeffnen

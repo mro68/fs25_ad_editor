@@ -299,6 +299,15 @@ pub fn map_intent_to_commands(state: &AppState, intent: AppIntent) -> Vec<AppCom
         AppIntent::RemoveSelectedNodesFromGroupRequested => {
             vec![AppCommand::RemoveSelectedNodesFromGroups]
         }
+        AppIntent::SetGroupBoundaryNodes {
+            record_id,
+            entry_node_id,
+            exit_node_id,
+        } => vec![AppCommand::SetGroupBoundaryNodes {
+            record_id,
+            entry_node_id,
+            exit_node_id,
+        }],
         AppIntent::ZipBackgroundBrowseRequested { path } => {
             vec![AppCommand::BrowseZipBackground { path }]
         }
