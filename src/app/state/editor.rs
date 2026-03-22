@@ -1,6 +1,4 @@
-use crate::app::group_registry::{
-    TOOL_INDEX_BYPASS, TOOL_INDEX_SMOOTH_CURVE, TOOL_INDEX_STRAIGHT,
-};
+use crate::app::group_registry::{TOOL_INDEX_BYPASS, TOOL_INDEX_SMOOTH_CURVE, TOOL_INDEX_STRAIGHT};
 use crate::app::tools::ToolManager;
 use crate::core::{ConnectionDirection, ConnectionPriority};
 
