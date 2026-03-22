@@ -136,69 +136,88 @@ pub fn render_group_boundary_overlays(
             continue;
         }
 
-        let Some(boundary_infos) = registry.boundary_cache_for(record.id) else {
-            continue;
-        };
+        // Explizite Entry/Exit-Icons (immer anzeigen wenn gesetzt)
+        if let Some(entry_id) = record.entry_node_id {
+            render_single_icon(
+                painter, rect, camera, viewport_size, road_map, icons,
+                entry_id, BoundaryDirection::Entry, icon_size, icon_offset_y, half,
+            );
+        }
+        if let Some(exit_id) = record.exit_node_id {
+            render_single_icon(
+                painter, rect, camera, viewport_size, road_map, icons,
+                exit_id, BoundaryDirection::Exit, icon_size, icon_offset_y, half,
+            );
+        }
 
-        for bi in boundary_infos {
-            // Eingangs-Icon-Filter:
-            // show_all=true  → Icons an allen Grenzknoten anzeigen
-            // show_all=false → Eingangsknoten mit gueltigem Eingangswinkel (≤90°) ausblenden,
-            //                  nur ungueltige (>90°) oder fehlende Eingaenge anzeigen
-            if !show_all {
-                let is_entry = matches!(
-                    bi.direction,
-                    BoundaryDirection::Entry | BoundaryDirection::Bidirectional
-                );
-                if is_entry {
-                    const ANGLE_THRESHOLD: f32 = std::f32::consts::FRAC_PI_2;
-                    if let Some(max_dev) = bi.max_external_angle_deviation {
-                        if max_dev <= ANGLE_THRESHOLD {
-                            continue; // Eingangswinkel OK → kein Icon noetig
-                        }
-                    }
-                    // >90° oder None → Icon anzeigen (ungueltig/fehlend)
-                }
-                // Exit-Nodes: immer anzeigen (Ausfahrt-Info bleibt sichtbar)
-            }
-
-            let Some(node) = road_map.nodes.get(&bi.node_id) else {
+        // show_all: Zusaetzlich alle auto-erkannten Boundary-Nodes anzeigen (Debug/Analyse)
+        if show_all {
+            let Some(boundary_infos) = registry.boundary_cache_for(record.id) else {
                 continue;
             };
-
-            let screen_local = camera.world_to_screen(node.position, viewport_size);
-            let center = egui::pos2(
-                rect.min.x + screen_local.x,
-                rect.min.y + screen_local.y + icon_offset_y,
-            );
-
-            let icon_rect = egui::Rect::from_center_size(center, egui::vec2(icon_size, icon_size));
-
-            // Hintergrund-Tint damit das Icon auf jedem Untergrund sichtbar ist
-            painter.rect_filled(
-                icon_rect.expand(2.0),
-                3.0,
-                egui::Color32::from_rgba_unmultiplied(20, 20, 20, 180),
-            );
-
-            let texture_id = icons.icon_for_direction(bi.direction).id();
-            let uv = egui::Rect::from_min_max(egui::pos2(0.0, 0.0), egui::pos2(1.0, 1.0));
-            painter.image(texture_id, icon_rect, uv, egui::Color32::WHITE);
-
-            // Unicode-Fallback bei sehr kleinen Icons
-            if half < 6.0 {
-                painter.text(
-                    center,
-                    egui::Align2::CENTER_CENTER,
-                    match bi.direction {
-                        BoundaryDirection::Bidirectional => "↔",
-                        BoundaryDirection::Entry => "→",
-                        BoundaryDirection::Exit => "←",
-                    },
-                    egui::FontId::proportional(icon_size),
-                    egui::Color32::from_rgb(255, 162, 0),
+            for bi in boundary_infos {
+                render_single_icon(
+                    painter, rect, camera, viewport_size, road_map, icons,
+                    bi.node_id, bi.direction, icon_size, icon_offset_y, half,
                 );
             }
         }
+    }
+}
+
+/// Zeichnet ein einzelnes Boundary-Icon fuer einen Node.
+///
+/// Laedt die Node-Position, berechnet die Screen-Koordinaten und rendert
+/// das passende Icon (mit Hintergrund-Tint und Unicode-Fallback).
+#[allow(clippy::too_many_arguments)]
+fn render_single_icon(
+    painter: &egui::Painter,
+    rect: egui::Rect,
+    camera: &Camera2D,
+    viewport_size: Vec2,
+    road_map: &RoadMap,
+    icons: &GroupBoundaryIcons,
+    node_id: u64,
+    direction: BoundaryDirection,
+    icon_size: f32,
+    icon_offset_y: f32,
+    half: f32,
+) {
+    let Some(node) = road_map.nodes.get(&node_id) else {
+        return;
+    };
+
+    let screen_local = camera.world_to_screen(node.position, viewport_size);
+    let center = egui::pos2(
+        rect.min.x + screen_local.x,
+        rect.min.y + screen_local.y + icon_offset_y,
+    );
+
+    let icon_rect = egui::Rect::from_center_size(center, egui::vec2(icon_size, icon_size));
+
+    // Hintergrund-Tint damit das Icon auf jedem Untergrund sichtbar ist
+    painter.rect_filled(
+        icon_rect.expand(2.0),
+        3.0,
+        egui::Color32::from_rgba_unmultiplied(20, 20, 20, 180),
+    );
+
+    let texture_id = icons.icon_for_direction(direction).id();
+    let uv = egui::Rect::from_min_max(egui::pos2(0.0, 0.0), egui::pos2(1.0, 1.0));
+    painter.image(texture_id, icon_rect, uv, egui::Color32::WHITE);
+
+    // Unicode-Fallback bei sehr kleinen Icons
+    if half < 6.0 {
+        painter.text(
+            center,
+            egui::Align2::CENTER_CENTER,
+            match direction {
+                BoundaryDirection::Bidirectional => "↔",
+                BoundaryDirection::Entry => "→",
+                BoundaryDirection::Exit => "←",
+            },
+            egui::FontId::proportional(icon_size),
+            egui::Color32::from_rgb(255, 162, 0),
+        );
     }
 }
