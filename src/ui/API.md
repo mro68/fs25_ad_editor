@@ -321,7 +321,12 @@ Im Gruppen-Bearbeitungsmodus enthält das Panel zusätzlich eine Checkbox für
 Orchestrator für Viewport-Input. Delegiert die eigentliche Logik an Sub-Module (`keyboard`, `drag`, `context_menu`).
 
 ```rust
-pub struct InputState { /* intern */ }
+pub struct InputState {
+    /// Zeigt an, ob gerade eine Gruppen-Rotation per Alt+Mausrad läuft.
+    /// Steuert korrekte Begin/End-Lifecycle-Intent-Emission in `zoom.rs`.
+    pub(crate) rotation_active: bool,
+    /* weitere Felder intern */
+}
 ```
 
 **Methoden:**
@@ -411,6 +416,7 @@ Alle Commands werden durch ein Precondition-System gefiltert: Nur Commands deren
 - **Shift+Alt+Drag:** Lasso-Selektion
 - **Mittel/Rechts-Drag:** Kamera-Pan
 - **Scroll:** Zoom
+- **Alt+Scroll** (Select-Tool + aktive Selektion): Gruppen-Rotation (5° pro Tick, Lifecycle: `BeginRotateSelectedNodesRequested` → `RotateSelectedNodesRequested` → `EndRotateSelectedNodesRequested`)
 - **Rechtsklick:** Kontextmenü
 
 ---
