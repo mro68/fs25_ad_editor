@@ -313,6 +313,8 @@ pub enum AppIntent {
         offset: f32,
         /// Begradigung: Douglas-Peucker-Toleranz (0 = aus)
         tolerance: f32,
+        /// Winkel-Schwellwert fuer Ecken-Erkennung in Grad (None = deaktiviert)
+        corner_angle: Option<f32>,
     },
     /// Alle-Felder-nachzeichnen-Dialog abgebrochen
     TraceAllFieldsCancelled,
