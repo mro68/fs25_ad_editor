@@ -508,6 +508,12 @@ pub struct GroupRecord {
     pub marker_node_ids: Vec<u64>,
     /// Ob die Gruppe gesperrt ist (true = alle Nodes bewegen sich gemeinsam beim Drag)
     pub locked: bool,
+    /// Explizit gesetzte Einfahrt-Node-ID fuer das Boundary-Icon (None = kein Icon).
+    /// Wird vom ParkingTool beim Erstellen gesetzt; aenderbar per Gruppen-Edit-Panel.
+    pub entry_node_id: Option<u64>,
+    /// Explizit gesetzte Ausfahrt-Node-ID fuer das Boundary-Icon (None = kein Icon).
+    /// Wird vom ParkingTool beim Erstellen gesetzt; aenderbar per Gruppen-Edit-Panel.
+    pub exit_node_id: Option<u64>,
 }
 ```
 
@@ -547,7 +553,8 @@ pub fn update_record(&mut self, record_id: u64, node_ids: Vec<u64>, original_pos
 pub fn group_bounding_box(&self, group_id: u64, road_map: &RoadMap) -> Option<(Vec2, Vec2)> // AABB der Gruppe (min, max)
 pub fn expand_locked_selection(&self, selected_nodes: &[u64]) -> Vec<u64> // Selektion um Nodes aller betroffenen locked Gruppen erweitern
 pub fn update_original_positions(&mut self, group_id: u64, road_map: &RoadMap) // original_positions nach Lock-Move aktualisieren
-pub fn warm_boundary_cache(&mut self, road_map: &RoadMap) // Boundary-Cache fuer alle Records aufwaermen (einmal pro Frame vor dem Rendering)
+pub fn set_entry_exit(&mut self, record_id: u64, entry: Option<u64>, exit: Option<u64>) -> bool // Einfahrt/Ausfahrt-IDs setzen; validiert Node-Zugehoerigkeit; invalidiert Boundary-Cache; gibt false zurueck wenn Record nicht gefunden oder IDs nicht im Record
+pub fn warm_boundary_cache(&mut self, road_map: &RoadMap) // Boundary-Cache fuer alle Records aufwaermen (Connection-basiert, einmal pro Frame vor dem Rendering; Parking-Sonderfall entfernt — Icons ausschliesslich ueber entry_node_id/exit_node_id)
 pub fn boundary_cache_for(&self, record_id: u64) -> Option<&[BoundaryInfo]> // Gecachte BoundaryInfos fuer einen Record abfragen
 pub fn open_nodes(&self, record_id: u64, road_map: &RoadMap) -> Option<Vec<BoundaryNode>> // Boundary-Nodes (ungecacht, fuer Sonderfaelle)
 ```
@@ -746,6 +753,12 @@ pub enum AppIntent {
     GroupSelectionAsGroupRequested,
     /// Selektierte Nodes aus ihrer Gruppe entfernen (Nodes bleiben in RoadMap erhalten)
     RemoveSelectedNodesFromGroupRequested,
+    /// Einfahrt/Ausfahrt-Nodes einer Gruppe explizit setzen
+    SetGroupBoundaryNodes {
+        record_id: u64,
+        entry_node_id: Option<u64>,
+        exit_node_id: Option<u64>,
+    },
 
     // Extras
     /// Alle erkannten Farmland-Polygone als Wegpunkt-Ring nachzeichnen
@@ -918,6 +931,12 @@ pub enum AppCommand {
     GroupSelectionAsGroup,
     /// Selektierte Nodes aus ihren zugehoerigen Gruppen entfernen
     RemoveSelectedNodesFromGroups,
+    /// Einfahrt/Ausfahrt-Nodes einer Gruppe explizit setzen
+    SetGroupBoundaryNodes {
+        record_id: u64,
+        entry_node_id: Option<u64>,
+        exit_node_id: Option<u64>,
+    },
 
     // Extras
     /// Alle Farmland-Polygone als Wegpunkt-Ring nachzeichnen (Batch-Operation)
