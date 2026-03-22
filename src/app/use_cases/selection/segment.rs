@@ -132,6 +132,17 @@ fn walk_to_segment_boundary(
 /// Segmentgrenzen koennen Kreuzungen (Grad != 2) und/oder Winkelabweichungen sein,
 /// je nach Konfiguration. Bei `additive = true` wird das Segment zur bestehenden
 /// Selektion hinzugefuegt.
+///
+/// An Kreuzungen (Grad > 2) wird der naechste Node score-basiert gewaehlt:
+/// - +40 fuer gleiche Strassenart wie der Hit-Node (`start_flag`)
+/// - +20 fuer `ConnectionPriority::Regular` (Hauptstrasse)
+/// - +10 fuer gerichtete Verbindung (nicht `Dual`)
+/// - 0..+10 als Tiebreaker nach Winkelabweichung (geringste Abweichung = hoechster Score)
+///
+/// Bei mehr als zwei Pfaden werden nach dem Walk die Pfade absteigend nach
+/// Strassenart-Matching-Anzahl sortiert und auf die zwei besten gekuerzt.
+/// `max_angle_deg > 0.0` aktiviert einen harten Winkel-Constraint: Kandidaten
+/// mit Abweichung groesser als der Schwellwert werden vor dem Scoring verworfen.
 pub fn select_segment_between_nearest_intersections(
     state: &mut AppState,
     world_pos: glam::Vec2,
