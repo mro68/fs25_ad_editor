@@ -139,14 +139,32 @@ pub fn render_group_boundary_overlays(
         // Explizite Entry/Exit-Icons (immer anzeigen wenn gesetzt)
         if let Some(entry_id) = record.entry_node_id {
             render_single_icon(
-                painter, rect, camera, viewport_size, road_map, icons,
-                entry_id, BoundaryDirection::Entry, icon_size, icon_offset_y, half,
+                painter,
+                rect,
+                camera,
+                viewport_size,
+                road_map,
+                icons,
+                entry_id,
+                BoundaryDirection::Entry,
+                icon_size,
+                icon_offset_y,
+                half,
             );
         }
         if let Some(exit_id) = record.exit_node_id {
             render_single_icon(
-                painter, rect, camera, viewport_size, road_map, icons,
-                exit_id, BoundaryDirection::Exit, icon_size, icon_offset_y, half,
+                painter,
+                rect,
+                camera,
+                viewport_size,
+                road_map,
+                icons,
+                exit_id,
+                BoundaryDirection::Exit,
+                icon_size,
+                icon_offset_y,
+                half,
             );
         }
 
@@ -157,8 +175,17 @@ pub fn render_group_boundary_overlays(
             };
             for bi in boundary_infos {
                 render_single_icon(
-                    painter, rect, camera, viewport_size, road_map, icons,
-                    bi.node_id, bi.direction, icon_size, icon_offset_y, half,
+                    painter,
+                    rect,
+                    camera,
+                    viewport_size,
+                    road_map,
+                    icons,
+                    bi.node_id,
+                    bi.direction,
+                    icon_size,
+                    icon_offset_y,
+                    half,
                 );
             }
         }

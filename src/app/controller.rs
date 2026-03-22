@@ -337,12 +337,7 @@ impl AppController {
                 entry_node_id,
                 exit_node_id,
             } => {
-                handlers::group::set_boundary_nodes(
-                    state,
-                    record_id,
-                    entry_node_id,
-                    exit_node_id,
-                );
+                handlers::group::set_boundary_nodes(state, record_id, entry_node_id, exit_node_id);
             }
             AppCommand::GroupEditStart { record_id } => {
                 handlers::group::start_group_edit(state, record_id)

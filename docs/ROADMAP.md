@@ -172,6 +172,15 @@
   - [x] `InputState.rotation_active: bool` — End-Trigger bei Alt-Loslassen (nicht bei scroll==0)
   - [x] `zoom.rs`: Alt+Scroll + Select-Tool + nicht-leere Selektion → Rotation-Lifecycle; 5° Schritt pro Tick
 
+- [x] **Einfahrt/Ausfahrt-Nodes per Gruppen-UI (2026-03-22, Branch `refactor/entry-exit-icons`)**
+  - [x] `GroupRecord.entry_node_id`/`exit_node_id: Option<u64>` — explizite Node-IDs statt automatischer Zuweisung
+  - [x] `GroupRegistry::set_entry_exit()` — validiert Node-Zugehoerigkeit, invalidiert Boundary-Cache
+  - [x] `render_group_boundary_overlays()` zeigt Icons **nur noch** bei explizit gesetzten IDs (Parking-Sonderfall aus `warm_boundary_cache()` entfernt)
+  - [x] `ParkingTool::make_group_record()` setzt Entry/Exit explizit beim Erstellen (Index 6 = Einfahrt, letzter = Ausfahrt)
+  - [x] `AppIntent::SetGroupBoundaryNodes` / `AppCommand::SetGroupBoundaryNodes` / `handlers::group::set_boundary_nodes()` — neuer Intent-Pfad
+  - [x] ComboBoxen „Einfahrt" / „Ausfahrt" im Gruppen-Edit-Panel (`render_group_edit_panel()`)
+  - [x] `render_edit_panel()` erhält neuen Parameter `group_record: Option<&GroupRecord>`
+
 ## Phase 5: Advanced Features
 - [x] DDS-Import fuer Map-Hintergruende
   - [x] Texture-Loader implementieren (PNG, JPG, DDS)
@@ -352,6 +361,11 @@
     - [x] `app/API.md`: `SelectGroupByNearestNode`-Command in Selektion-Block eingetragen; `GroupSelectionAsGroupRequested` / `GroupSelectionAsGroup` und `RemoveSelectedNodesFromGroupRequested` / `RemoveSelectedNodesFromGroups` ergaenzt; `GroupRegistry::remove_nodes_from_record()` in Methoden-Liste hinzugefuegt; `BoundaryInfo.max_external_angle_deviation` als neues Pflichtfeld dokumentiert; `OpenSegmentSettingsPopup` → `OpenGroupSettingsPopup` korrigiert
     - [x] `app/handlers/API.md`: `select_group_nodes()` in selection-Sektion; `remove_selected_from_groups()` in group-Sektion
     - [x] ROADMAP.md: Phase-4-Feature-Block fuer Gruppen-Selektions- und Entry-Erweiterungen eingetragen
+  - [x] **Doku-Sync Entry/Exit-Icons Refactor (2026-03-22, Branch `refactor/entry-exit-icons`)**
+    - [x] `app/API.md`: `GroupRecord.entry_node_id`/`exit_node_id` ergaenzt; `GroupRegistry::set_entry_exit()` in Methoden-Liste; `warm_boundary_cache()`-Beschreibung aktualisiert (Parking-Sonderfall entfernt)
+    - [x] `app/handlers/API.md`: `set_boundary_nodes()` in group-Sektion ergaenzt
+    - [x] `ui/API.md`: `render_group_boundary_overlays()` — Beschreibung auf explizite Entry/Exit-IDs aktualisiert; `show_all`-Parameter korrigiert
+    - [x] ROADMAP.md: Phase-4-Feature-Block fuer Einfahrt/Ausfahrt-UI eingetragen
 - [ ] Packaging
   - [ ] Windows Binaries (.exe)
   - [ ] Linux Binaries (AppImage)
