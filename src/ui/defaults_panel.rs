@@ -333,42 +333,38 @@ pub fn render_route_defaults_panel(ctx: &egui::Context, state: &AppState) -> Vec
                 events.push(AppIntent::SetDefaultPriorityRequested { priority });
             }
 
-            egui::CollapsingHeader::new(format!("\u{1F50E} {}", t(lang, I18nKey::SidebarZoom)))
-                .show(ui, |ui| {
-                    let zoom_full_img = svg_icon(
-                        egui::include_image!("../../assets/icons/icon_zoom_full_map.svg"),
+            ui.add_space(6.0);
+            ui.separator();
+            ui.add_space(2.0);
+            ui.horizontal(|ui| {
+                let zoom_full_img = svg_icon(
+                    egui::include_image!("../../assets/icons/icon_zoom_full_map.svg"),
+                    ICON_SIZE,
+                )
+                .tint(icon_color);
+                if ui
+                    .add(egui::Button::image(zoom_full_img))
+                    .on_hover_text(t(lang, I18nKey::ZoomFullMapHelp))
+                    .clicked()
+                {
+                    events.push(AppIntent::ZoomToFitRequested);
+                }
+                let has_selection = state.selection.selected_node_ids.len() >= 2;
+                ui.add_enabled_ui(has_selection, |ui| {
+                    let zoom_sel_img = svg_icon(
+                        egui::include_image!("../../assets/icons/icon_zoom_selection.svg"),
                         ICON_SIZE,
                     )
                     .tint(icon_color);
                     if ui
-                        .add(egui::Button::image_and_text(
-                            zoom_full_img,
-                            t(lang, I18nKey::ZoomFullMap),
-                        ))
-                        .on_hover_text(t(lang, I18nKey::ZoomFullMapHelp))
+                        .add(egui::Button::image(zoom_sel_img))
+                        .on_hover_text(t(lang, I18nKey::ZoomToSelectionHelp))
                         .clicked()
                     {
-                        events.push(AppIntent::ZoomToFitRequested);
+                        events.push(AppIntent::ZoomToSelectionBoundsRequested);
                     }
-                    let has_selection = state.selection.selected_node_ids.len() >= 2;
-                    ui.add_enabled_ui(has_selection, |ui| {
-                        let zoom_sel_img = svg_icon(
-                            egui::include_image!("../../assets/icons/icon_zoom_selection.svg"),
-                            ICON_SIZE,
-                        )
-                        .tint(icon_color);
-                        if ui
-                            .add(egui::Button::image_and_text(
-                                zoom_sel_img,
-                                t(lang, I18nKey::ZoomToSelection),
-                            ))
-                            .on_hover_text(t(lang, I18nKey::ZoomToSelectionHelp))
-                            .clicked()
-                        {
-                            events.push(AppIntent::ZoomToSelectionBoundsRequested);
-                        }
-                    });
                 });
+            });
 
             if state.view.background_map.is_some() {
                 egui::CollapsingHeader::new(t(lang, I18nKey::SidebarBackground)).show(ui, |ui| {
