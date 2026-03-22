@@ -1,1 +1,81 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="#ffa200" stroke-width="1" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-move-horizontal-icon lucide-move-horizontal"><path d="m18 8 4 4-4 4"/><path d="M2 12h20"/><path d="m6 8-4 4 4 4"/></svg>
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<svg
+   width="64"
+   height="64"
+   viewBox="0 0 24 24"
+   fill="none"
+   stroke="#ffa200"
+   stroke-width="1"
+   stroke-linecap="round"
+   stroke-linejoin="round"
+   class="lucide lucide-minus-icon-nodes lucide-minus-nodes"
+   version="1.1"
+   id="svg2"
+   xmlns="http://www.w3.org/2000/svg"
+   xmlns:svg="http://www.w3.org/2000/svg">
+  <defs
+     id="defs2" />
+  <g
+     id="g4"
+     transform="translate(0,-0.20447527)">
+    <path
+       d="M 5,5.7577465 H 19"
+       id="path1" />
+    <circle
+       cx="3"
+       cy="5.7577467"
+       r="2"
+       id="circle1" />
+    <circle
+       cx="21"
+       cy="5.7577467"
+       r="2"
+       id="circle2" />
+  </g>
+  <g
+     id="g3"
+     transform="translate(0.12761015,2.4772148)">
+    <path
+       d="M 4.8690141,16.233451 H 18.869014"
+       id="path1-6"
+       style="stroke-width:0.500063;stroke-dasharray:0.500063, 0.625078;stroke-dashoffset:0" />
+    <circle
+       cx="2.869014"
+       cy="16.23345"
+       r="2"
+       id="circle1-7"
+       style="stroke-width:0.500063;stroke-dasharray:0.500063, 0.625078;stroke-dashoffset:0" />
+    <circle
+       cx="20.869015"
+       cy="16.23345"
+       r="2"
+       id="circle2-5"
+       style="stroke-width:0.500063;stroke-dasharray:0.500063, 0.625078;stroke-dashoffset:0" />
+  </g>
+  <g
+     id="g2"
+     transform="matrix(0,0.81731891,-0.81094279,0,11.413531,5.9651759)"
+     style="stroke-width:0.566789;stroke-dasharray:0.566789, 0.623468;stroke-dashoffset:0">
+    <path
+       d="M 9.9223396,12.572183 12.219679,10.375 9.9223396,8.1778168"
+       id="path3"
+       style="stroke-width:0.566789;stroke-dasharray:0.566789, 0.623468;stroke-dashoffset:0" />
+    <path
+       d="M 12.219679,10.375 H 3.0303208"
+       id="path4"
+       style="stroke-width:0.566789;stroke-dasharray:0.566789, 0.623468;stroke-dashoffset:0" />
+  </g>
+  <g
+     id="g2-5"
+     transform="matrix(0,0.81731891,-0.81094279,0,29.413531,5.9651759)"
+     style="stroke-width:0.566789;stroke-dasharray:0.566789, 0.623468;stroke-dashoffset:0">
+    <path
+       d="M 9.9223396,12.572183 12.219679,10.375 9.9223396,8.1778168"
+       id="path3-6"
+       style="stroke-width:0.566789;stroke-dasharray:0.566789, 0.623468;stroke-dashoffset:0" />
+    <path
+       d="M 12.219679,10.375 H 3.0303208"
+       id="path4-2"
+       style="stroke-width:0.566789;stroke-dasharray:0.566789, 0.623468;stroke-dashoffset:0" />
+  </g>
+</svg>

@@ -315,6 +315,60 @@ pub(super) fn collect_keyboard_intents(
         if key_left_pressed {
             events.push(AppIntent::DecreaseRouteToolSegmentLength);
         }
+    } else if !modifiers.command && !modifiers.shift && !modifiers.alt {
+        // Pfeiltasten fuer Kamera-Pan (außer im Route-Tool beim Zeichnen)
+        const PAN_STEP: f32 = 100.0;
+        if key_up_pressed {
+            events.push(AppIntent::CameraPan {
+                delta: glam::Vec2::new(0.0, -PAN_STEP),
+            });
+        }
+        if key_down_pressed {
+            events.push(AppIntent::CameraPan {
+                delta: glam::Vec2::new(0.0, PAN_STEP),
+            });
+        }
+        if key_left_pressed {
+            events.push(AppIntent::CameraPan {
+                delta: glam::Vec2::new(-PAN_STEP, 0.0),
+            });
+        }
+        if key_right_pressed {
+            events.push(AppIntent::CameraPan {
+                delta: glam::Vec2::new(PAN_STEP, 0.0),
+            });
+        }
+    }
+
+    // Plus/Minus fuer stufenweises Zoomen (keine Modifier)
+    let (key_plus_no_mod, key_minus_no_mod) = ui.input(|i| {
+        let mut plus = false;
+        let mut minus = false;
+        for event in &i.events {
+            if let egui::Event::Key {
+                key,
+                pressed: true,
+                modifiers,
+                ..
+            } = event
+            {
+                let no_mod =
+                    !modifiers.command && !modifiers.ctrl && !modifiers.shift && !modifiers.alt;
+                match key {
+                    egui::Key::Plus if no_mod => plus = true,
+                    egui::Key::Minus if no_mod => minus = true,
+                    _ => {}
+                }
+            }
+        }
+        (plus, minus)
+    });
+
+    if key_plus_no_mod {
+        events.push(AppIntent::ZoomInRequested);
+    }
+    if key_minus_no_mod {
+        events.push(AppIntent::ZoomOutRequested);
     }
 
     events
