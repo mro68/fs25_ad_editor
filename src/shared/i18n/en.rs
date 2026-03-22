@@ -201,6 +201,8 @@ pub(super) fn translate(key: I18nKey) -> &'static str {
         I18nKey::ZoomFullMapHelp => "Fit entire map into viewport",
         I18nKey::ZoomToSelection => "Zoom to Selection",
         I18nKey::ZoomToSelectionHelp => "Fit viewport to selected nodes",
+        I18nKey::ZoomInHelp => "Zoom In (+)",
+        I18nKey::ZoomOutHelp => "Zoom Out (-)",
         // === Hintergrund ===
         I18nKey::BackgroundHide => "Hide background",
         I18nKey::BackgroundShow => "Show background",
