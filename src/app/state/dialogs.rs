@@ -179,6 +179,8 @@ pub struct TraceAllFieldsDialogState {
     pub corner_rounding_enabled: bool,
     /// Radius der Eckenverrundung in Metern (Standard: 5.0).
     pub corner_rounding_radius: f32,
+    /// Maximale Winkelabweichung zwischen Bogenpunkten in Grad (Standard: 15.0).
+    pub corner_rounding_max_angle_deg: f32,
 }
 
 impl Default for TraceAllFieldsDialogState {
@@ -192,6 +194,7 @@ impl Default for TraceAllFieldsDialogState {
             corner_angle_threshold_deg: 90.0,
             corner_rounding_enabled: false,
             corner_rounding_radius: 5.0,
+            corner_rounding_max_angle_deg: 15.0,
         }
     }
 }

@@ -324,6 +324,8 @@ pub enum AppCommand {
         corner_angle: Option<f32>,
         /// Verrundungsradius fuer Ecken in Metern (None = keine Verrundung)
         corner_rounding_radius: Option<f32>,
+        /// Maximale Winkelabweichung zwischen Bogenpunkten in Grad (None = 15°)
+        corner_rounding_max_angle_deg: Option<f32>,
     },
     /// Curseplay-Import-Dateidialog anfordern
     RequestCurseplayImportDialog,

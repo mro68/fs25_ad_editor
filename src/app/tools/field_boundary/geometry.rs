@@ -53,7 +53,7 @@ pub(super) fn detect_corners(vertices: &[Vec2], angle_threshold_rad: f32) -> Vec
 /// - `corner`: Eck-Vertex
 /// - `next`: Vertex nach der Ecke
 /// - `radius`: Verrundungsradius in Metern
-/// - `spacing`: Punkt-Abstand auf dem Bogen (ca. 2–3 m)
+/// - `max_angle_deg`: Maximale Winkelabweichung zwischen benachbarten Bogenpunkten in Grad
 ///
 /// Gibt alle Bogenpunkte von t1 bis t2 (inkl.) zurueck.
 /// Bei konkaven Ecken (Cross-Product <= 0, CCW-Konvention) oder degenerierten
@@ -63,7 +63,7 @@ pub(super) fn round_corner(
     corner: Vec2,
     next: Vec2,
     radius: f32,
-    spacing: f32,
+    max_angle_deg: f32,
 ) -> Vec<Vec2> {
     let dir_in = (corner - prev).normalize_or_zero();
     let dir_out = (next - corner).normalize_or_zero();
@@ -82,7 +82,7 @@ pub(super) fn round_corner(
     let max_in = (corner - prev).length() * 0.4;
     let max_out = (next - corner).length() * 0.4;
     let r = radius.min(max_in).min(max_out);
-    if r < spacing * 0.5 {
+    if r < 0.1 {
         return vec![corner]; // Radius zu klein fuer sinnvollen Bogen
     }
 
@@ -108,9 +108,9 @@ pub(super) fn round_corner(
     let a1 = (t1 - center).to_angle();
     let a2 = (t2 - center).to_angle();
 
-    // Bogenpunkte gleichmaessig verteilen
-    let arc_len = r * (2.0 * half_angle);
-    let n_points = ((arc_len / spacing).ceil() as usize).max(2);
+    // Bogenpunkte gleichmaessig ueber den Bogenwinkel verteilen
+    let arc_angle_rad = 2.0 * half_angle;
+    let n_points = ((arc_angle_rad / max_angle_deg.to_radians()).ceil() as usize).max(2);
 
     // Kuerzestes Winkelintervall (Gegenuhrzeigersinn bei CCW-Polygon)
     use std::f32::consts::PI;
@@ -135,8 +135,9 @@ pub(super) fn round_corner(
 ///
 /// - `simplified`: Vereinfachtes Polygon (nicht geschlossen, ohne letzten==ersten Punkt)
 /// - `corner_indices`: Sortierte Indizes der Eckpunkte
-/// - `spacing`: Maximaler Segment-Abstand beim Resampling
+/// - `spacing`: Maximaler Segment-Abstand beim Resampling der geraden Segmente
 /// - `rounding_radius`: Wenn angegeben, werden konvexe Ecken mit Kreisbogen verrundet
+/// - `max_angle_deg`: Maximale Winkelabweichung zwischen Bogenpunkten in Grad
 ///
 /// Ruckgabe: Resamplter Ring als `(Position, RingNodeKind)` pro Punkt.
 pub(super) fn resample_ring_with_corners(
@@ -144,6 +145,7 @@ pub(super) fn resample_ring_with_corners(
     corner_indices: &[usize],
     spacing: f32,
     rounding_radius: Option<f32>,
+    max_angle_deg: f32,
 ) -> Vec<(Vec2, RingNodeKind)> {
     if corner_indices.is_empty() {
         // Keine Ecken: gesamten Ring normal resampling
@@ -153,7 +155,10 @@ pub(super) fn resample_ring_with_corners(
         if r.len() > 1 {
             r.pop();
         }
-        return r.into_iter().map(|p| (p, RingNodeKind::Regular)).collect();
+        return r
+            .into_iter()
+            .map(|p| (p, RingNodeKind::Regular))
+            .collect();
     }
 
     let nc = corner_indices.len();
@@ -175,7 +180,7 @@ pub(super) fn resample_ring_with_corners(
                 let prev = simplified[(ci + n - 1) % n];
                 let curr = simplified[ci];
                 let nxt = simplified[(ci + 1) % n];
-                let pts = round_corner(prev, curr, nxt, r, sp);
+                let pts = round_corner(prev, curr, nxt, r, max_angle_deg);
                 if pts.len() > 1 {
                     return ArcEntry {
                         t1: pts[0],
@@ -291,7 +296,7 @@ mod tests {
         let prev = Vec2::new(0.0, 0.0);
         let corner = Vec2::new(100.0, 0.0);
         let next = Vec2::new(100.0, 100.0);
-        let pts = round_corner(prev, corner, next, 5.0, 1.0);
+        let pts = round_corner(prev, corner, next, 5.0, 15.0);
         assert!(pts.len() > 1, "Konvexe Ecke sollte Bogenpunkte erzeugen");
         // Erster Punkt ist t1 (auf Eingangs-Kante)
         let t1 = pts[0];
@@ -316,12 +321,8 @@ mod tests {
         let prev = Vec2::new(0.0, 0.0);
         let corner = Vec2::new(100.0, 0.0);
         let next = Vec2::new(100.0, -100.0);
-        let pts = round_corner(prev, corner, next, 5.0, 1.0);
-        assert_eq!(
-            pts.len(),
-            1,
-            "Konkave Ecke sollte nur den Eckpunkt zurueckgeben"
-        );
+        let pts = round_corner(prev, corner, next, 5.0, 15.0);
+        assert_eq!(pts.len(), 1, "Konkave Ecke sollte nur den Eckpunkt zurueckgeben");
         assert_eq!(pts[0], corner);
     }
 
@@ -331,12 +332,8 @@ mod tests {
         let prev = Vec2::new(0.0, 0.0);
         let corner = Vec2::new(50.0, 0.0);
         let next = Vec2::new(100.0, 0.0);
-        let pts = round_corner(prev, corner, next, 5.0, 1.0);
-        assert_eq!(
-            pts.len(),
-            1,
-            "Gerade Linie sollte nur Eckpunkt zurueckgeben"
-        );
+        let pts = round_corner(prev, corner, next, 5.0, 15.0);
+        assert_eq!(pts.len(), 1, "Gerade Linie sollte nur Eckpunkt zurueckgeben");
         assert_eq!(pts[0], corner);
     }
 
@@ -347,19 +344,11 @@ mod tests {
 
         // Schwelle 45°: 90° >= 45° → alle 4 Ecken erkannt
         let corners_45 = detect_corners(&verts, 45_f32.to_radians());
-        assert_eq!(
-            corners_45.len(),
-            4,
-            "Bei 45° Schwellwert alle 4 Ecken erwartet"
-        );
+        assert_eq!(corners_45.len(), 4, "Bei 45° Schwellwert alle 4 Ecken erwartet");
 
         // Schwelle genau 90°: 90° >= 90° → alle 4 Ecken erkannt
         let corners_90 = detect_corners(&verts, 90_f32.to_radians());
-        assert_eq!(
-            corners_90.len(),
-            4,
-            "Bei 90° Schwellwert alle 4 Ecken erwartet"
-        );
+        assert_eq!(corners_90.len(), 4, "Bei 90° Schwellwert alle 4 Ecken erwartet");
 
         // Schwelle knapp ueber 90°: 90° < 91° → keine Ecken erkannt
         let corners_91 = detect_corners(&verts, 91_f32.to_radians());
@@ -375,8 +364,8 @@ mod tests {
         // Rechteck mit Verrundungsradius 5m: mehr Punkte als ohne
         let verts = rectangle_vertices();
         let corners = detect_corners(&verts, 80_f32.to_radians());
-        let ohne = resample_ring_with_corners(&verts, &corners, 10.0, None);
-        let mit = resample_ring_with_corners(&verts, &corners, 10.0, Some(5.0));
+        let ohne = resample_ring_with_corners(&verts, &corners, 10.0, None, 15.0);
+        let mit = resample_ring_with_corners(&verts, &corners, 10.0, Some(5.0), 15.0);
         assert!(
             mit.len() >= ohne.len(),
             "Mit Verrundung sollte mindestens gleich viele Punkte geben"

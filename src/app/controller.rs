@@ -370,6 +370,7 @@ impl AppController {
                 tolerance,
                 corner_angle,
                 corner_rounding_radius,
+                corner_rounding_max_angle_deg,
             } => {
                 state.ui.trace_all_fields_dialog.visible = false;
                 handlers::editing::trace_all_fields(
@@ -379,6 +380,7 @@ impl AppController {
                     tolerance,
                     corner_angle,
                     corner_rounding_radius,
+                    corner_rounding_max_angle_deg,
                 );
             }
             AppCommand::RequestCurseplayImportDialog => {
