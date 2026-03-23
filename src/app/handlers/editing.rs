@@ -210,6 +210,9 @@ pub fn edit_group(state: &mut AppState, record_id: u64) {
         tool.load_for_edit(&record, &kind);
     }
 
+    // Merken, welches Segment bearbeitet wird (fuer Cancel-Wiederherstellung)
+    state.tool_editing_record_id = Some(record_id);
+
     log::info!(
         "Segment {} geladen fuer Bearbeitung (Tool-Index {})",
         record_id,

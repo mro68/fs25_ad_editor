@@ -349,6 +349,14 @@ pub fn compute_ring(
 ) -> Vec<(Vec2, RingNodeKind)> {
     use crate::shared::spline_geometry::resample_by_distance;
 
+    // Node-Abstand muss mindestens so gross sein wie der Verrundungsradius,
+    // damit Bogensegmente nicht staerker abgetastet werden als der Bogen lang ist.
+    let spacing = if let Some(r) = rounding_radius {
+        spacing.max(r)
+    } else {
+        spacing
+    };
+
     let offsetted = offset_polygon(vertices, offset);
     let simplified = simplify_polygon(&offsetted, tolerance);
     if simplified.len() < 3 {
