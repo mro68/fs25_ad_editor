@@ -74,6 +74,11 @@ pub struct AppState {
     /// Wird in `edit_group()` gesetzt und in Cancel/Confirm geloescht.
     /// `None` = kein aktiver Tool-Edit.
     pub tool_editing_record_id: Option<u64>,
+    /// Gesicherter GroupRecord des aktuell bearbeiteten Segments.
+    ///
+    /// Wird in `edit_group()` vor dem Loeschen aus der Registry gespeichert.
+    /// Bei Cancel wird der Record wiederhergestellt; bei Confirm wird das Backup geleert.
+    pub tool_editing_record_backup: Option<crate::app::group_registry::GroupRecord>,
 }
 
 impl AppState {
@@ -100,6 +105,7 @@ impl AppState {
             farmland_polygons: None,
             group_editing: None,
             tool_editing_record_id: None,
+            tool_editing_record_backup: None,
         }
     }
 
