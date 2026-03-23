@@ -1,4 +1,5 @@
 use crate::shared::OverviewLayerOptions;
+use fs25_map_overview::FieldDetectionSource;
 use std::path::PathBuf;
 
 /// Zustand eines schwebenden Kontextmenues.
@@ -84,6 +85,10 @@ pub struct OverviewOptionsDialogState {
     pub zip_path: String,
     /// Layer-Optionen (Arbeitskopie fuer den Dialog)
     pub layers: OverviewLayerOptions,
+    /// Gewaehlte Quelle fuer die Feldpolygon-Erkennung
+    pub field_detection_source: FieldDetectionSource,
+    /// Verfuegbare Quellen (befuellt beim Oeffnen des Dialogs)
+    pub available_sources: Vec<FieldDetectionSource>,
 }
 
 impl OverviewOptionsDialogState {
@@ -93,6 +98,8 @@ impl OverviewOptionsDialogState {
             visible: false,
             zip_path: String::new(),
             layers: OverviewLayerOptions::default(),
+            field_detection_source: FieldDetectionSource::default(),
+            available_sources: vec![FieldDetectionSource::FromZip],
         }
     }
 }
