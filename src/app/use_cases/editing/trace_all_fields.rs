@@ -97,9 +97,9 @@ pub fn trace_all_fields(
                 continue;
             }
 
-            let positions =
-                compute_ring(&polygon.vertices, offset, tolerance, spacing, corner_angle);
-            if positions.len() < 2 {
+            let ring =
+                compute_ring(&polygon.vertices, offset, tolerance, spacing, corner_angle, None);
+            if ring.len() < 2 {
                 log::debug!(
                     "Feld {}: zu wenige Punkte nach Ring-Berechnung — uebersprungen",
                     polygon.id
@@ -107,13 +107,19 @@ pub fn trace_all_fields(
                 continue;
             }
 
-            let n = positions.len();
+            let n = ring.len();
             let mut poly_ids: Vec<u64> = Vec::with_capacity(n);
 
             // Nodes erstellen
-            for pos in &positions {
+            for (pos, kind) in &ring {
+                use crate::app::tools::field_boundary::RingNodeKind;
+                let flag = if *kind == RingNodeKind::RoundedCorner {
+                    NodeFlag::RoundedCorner
+                } else {
+                    NodeFlag::Regular
+                };
                 let id = road_map.next_node_id();
-                road_map.add_node(MapNode::new(id, *pos, NodeFlag::Regular));
+                road_map.add_node(MapNode::new(id, *pos, flag));
                 poly_ids.push(id);
                 all_new_ids.push(id);
             }
@@ -178,6 +184,7 @@ pub fn trace_all_fields(
                     offset,
                     straighten_tolerance: tolerance,
                     corner_angle_threshold: corner_angle,
+                    corner_rounding_radius: None,
                     base: GroupBase {
                         direction,
                         priority,

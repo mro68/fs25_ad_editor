@@ -32,6 +32,10 @@ pub struct FieldBoundaryTool {
     pub(crate) corner_detection_enabled: bool,
     /// Winkel-Schwellwert fuer Ecken-Erkennung in Grad (Standard: 90°).
     pub(crate) corner_angle_threshold_deg: f32,
+    /// Eckenverrundung aktiviert?
+    pub(crate) corner_rounding_enabled: bool,
+    /// Radius der Eckenverrundung in Metern (Standard: 5.0).
+    pub(crate) corner_rounding_radius: f32,
     /// Verbindungsrichtung.
     pub direction: ConnectionDirection,
     /// Strassenart.
@@ -57,6 +61,8 @@ impl FieldBoundaryTool {
             straighten_tolerance: 0.0,
             corner_detection_enabled: false,
             corner_angle_threshold_deg: 90.0,
+            corner_rounding_enabled: false,
+            corner_rounding_radius: 5.0,
             direction: ConnectionDirection::Dual,
             priority: ConnectionPriority::Regular,
             lifecycle: ToolLifecycleState::new(3.0),
