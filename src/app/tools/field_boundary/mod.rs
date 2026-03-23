@@ -1,7 +1,7 @@
 //! Feldgrenz-Erkennungs-Tool: erzeugt eine geschlossene Route entlang eines Feldumrisses.
 
-pub mod geometry;
 mod config_ui;
+pub mod geometry;
 mod lifecycle;
 mod state;
 

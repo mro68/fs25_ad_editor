@@ -350,8 +350,8 @@ pub fn compute_ring(
 
 #[cfg(test)]
 mod tests {
-    use super::*;
     use super::super::geometry::detect_corners;
+    use super::*;
 
     /// Hilfsfunktion: Rechteck-Vertices aufbauen
     fn rectangle_vertices() -> Vec<Vec2> {

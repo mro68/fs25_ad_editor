@@ -46,12 +46,14 @@ fn polygon_area(vertices: &[Vec2]) -> f32 {
 /// * `offset` – Versatz vom Feldrand (positiv = nach innen)
 /// * `tolerance` – Douglas-Peucker-Toleranz fuer Begradigung (0 = aus)
 /// * `corner_angle` – Winkel-Schwellwert fuer Ecken-Erkennung in Grad (None = deaktiviert)
+/// * `corner_rounding_radius` – Verrundungsradius fuer Ecken in Metern (None = keine Verrundung)
 pub fn trace_all_fields(
     state: &mut AppState,
     spacing: f32,
     offset: f32,
     tolerance: f32,
     corner_angle: Option<f32>,
+    corner_rounding_radius: Option<f32>,
 ) {
     // Polygone vor dem Snapshot klonen (Arc, O(1))
     let polygons = match &state.farmland_polygons {
@@ -97,8 +99,14 @@ pub fn trace_all_fields(
                 continue;
             }
 
-            let ring =
-                compute_ring(&polygon.vertices, offset, tolerance, spacing, corner_angle, None);
+            let ring = compute_ring(
+                &polygon.vertices,
+                offset,
+                tolerance,
+                spacing,
+                corner_angle,
+                corner_rounding_radius,
+            );
             if ring.len() < 2 {
                 log::debug!(
                     "Feld {}: zu wenige Punkte nach Ring-Berechnung — uebersprungen",
@@ -184,7 +192,7 @@ pub fn trace_all_fields(
                     offset,
                     straighten_tolerance: tolerance,
                     corner_angle_threshold: corner_angle,
-                    corner_rounding_radius: None,
+                    corner_rounding_radius,
                     base: GroupBase {
                         direction,
                         priority,

@@ -390,11 +390,13 @@ pub fn map_intent_to_commands(state: &AppState, intent: AppIntent) -> Vec<AppCom
             offset,
             tolerance,
             corner_angle,
+            corner_rounding_radius,
         } => vec![AppCommand::TraceAllFields {
             spacing,
             offset,
             tolerance,
             corner_angle,
+            corner_rounding_radius,
         }],
         AppIntent::TraceAllFieldsCancelled => vec![AppCommand::CloseTraceAllFieldsDialog],
         AppIntent::CurseplayImportRequested => vec![AppCommand::RequestCurseplayImportDialog],
