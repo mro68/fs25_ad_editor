@@ -189,15 +189,46 @@ pub fn generate_overview_with_options(state: &mut AppState) -> Result<()> {
     let (width, height) = overview.image.dimensions();
     log::info!("Uebersichtskarte generiert: {}x{} Pixel", width, height);
 
-    // Farmland-Polygone von Pixel- in Weltkoordinaten umrechnen
-    // world = pixel * (map_size / grle_width) - map_size / 2
-    if !overview.farmland_polygons.is_empty() {
-        let scale_x = overview.map_size / overview.grle_width.max(1) as f32;
-        let scale_y = overview.map_size / overview.grle_height.max(1) as f32;
+    // Feldpolygone: Prioritaet 1 – infoLayer_fieldType.grle aus Savegame-Ordner;
+    // Fallback: Farmland-Polygone aus dem Map-ZIP.
+    let field_type_source = state
+        .ui
+        .current_file_path
+        .as_ref()
+        .and_then(|xml_path| Path::new(xml_path.as_str()).parent().map(|p| p.to_path_buf()))
+        .and_then(|savegame_dir| {
+            let grle_path = savegame_dir.join("infoLayer_fieldType.grle");
+            if grle_path.is_file() {
+                log::info!(
+                    "Savegame-FieldType-GRLE gefunden: {}",
+                    grle_path.display()
+                );
+                fs25_map_overview::try_extract_polygons_from_field_type_grle(&grle_path)
+            } else {
+                log::info!(
+                    "infoLayer_fieldType.grle nicht vorhanden – verwende Farmland-Polygone aus ZIP"
+                );
+                None
+            }
+        });
+
+    // Rohe Polygone und Rasterdimensionen ermitteln (aus FieldType oder Farmland-ZIP)
+    let (raw_polygons, grle_w, grle_h) = match field_type_source {
+        Some((polygons, w, h)) => (polygons, w, h),
+        None => (
+            overview.farmland_polygons,
+            overview.grle_width,
+            overview.grle_height,
+        ),
+    };
+
+    // Pixel → Weltkoordinaten: world = pixel * (map_size / grle_size) - map_size / 2
+    if !raw_polygons.is_empty() {
+        let scale_x = overview.map_size / grle_w.max(1) as f32;
+        let scale_y = overview.map_size / grle_h.max(1) as f32;
         let half = overview.map_size / 2.0;
 
-        let field_polygons: Vec<FieldPolygon> = overview
-            .farmland_polygons
+        let field_polygons: Vec<FieldPolygon> = raw_polygons
             .into_iter()
             .map(|fp| FieldPolygon {
                 id: fp.id,
@@ -210,7 +241,7 @@ pub fn generate_overview_with_options(state: &mut AppState) -> Result<()> {
             .collect();
 
         log::info!(
-            "Farmland-Polygone in Weltkoordinaten umgerechnet: {} Felder",
+            "Feldpolygone in Weltkoordinaten umgerechnet: {} Felder",
             field_polygons.len()
         );
         state.farmland_polygons = Some(Arc::new(field_polygons));
