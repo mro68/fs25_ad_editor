@@ -207,6 +207,10 @@ impl NodeRenderer {
                 let Some(node) = road_map.nodes.get(&node_id) else {
                     return false;
                 };
+                // Bogenpunkte immer sichtbar lassen (sonst erscheinen Boegen eckig bei Zoom-out)
+                if node.flag == NodeFlag::RoundedCorner {
+                    return true;
+                }
                 let cell = (
                     (node.position.x * inv_cell).floor() as i32,
                     (node.position.y * inv_cell).floor() as i32,
