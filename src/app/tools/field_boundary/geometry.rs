@@ -104,6 +104,10 @@ pub(super) fn round_corner(
     let center_dist = r / sin_half;
     let center = corner + bisector * center_dist;
 
+    // Echter Bogenradius: Abstand vom Bogenmittelpunkt zum Tangentenpunkt.
+    // Nur bei 90° gilt arc_radius == r; für andere Winkel ist arc_radius = r / tan(half_angle).
+    let arc_radius = (t1 - center).length();
+
     // Winkel von Mittelpunkt zu t1 und t2
     let a1 = (t1 - center).to_angle();
     let a2 = (t2 - center).to_angle();
@@ -126,7 +130,7 @@ pub(super) fn round_corner(
     for i in 0..=n_points {
         let t = i as f32 / n_points as f32;
         let angle = a1 + delta * t;
-        points.push(center + Vec2::from_angle(angle) * r);
+        points.push(center + Vec2::from_angle(angle) * arc_radius);
     }
     points
 }
@@ -392,5 +396,89 @@ mod tests {
             rounded_count > 0,
             "Mindestens ein RoundedCorner-Punkt erwartet, bekam 0"
         );
+    }
+
+    #[test]
+    fn test_round_corner_nicht_90_grad_bogenpunkte_auf_kreisbahn() {
+        // 60°-Ablenkungswinkel (CCW): dir_in=(1,0), dir_out=(0.5, 0.866)
+        // Tangentenpunkte t1/t2 liegen auf den Kanten; alle Bogenpunkte muessen
+        // denselben Abstand zum Bogenmittelpunkt haben (echter arc_radius != r).
+        let prev = Vec2::new(0.0, 0.0);
+        let corner = Vec2::new(100.0, 0.0);
+        // next so gewaehlt, dass dir_out ≈ (0.5, 0.866) → 60°-Drehung nach links
+        let next = Vec2::new(150.0, 86.6);
+        let radius = 5.0;
+        let pts = round_corner(prev, corner, next, radius, 15.0);
+
+        assert!(pts.len() > 1, "60°-Ecke sollte Bogenpunkte erzeugen");
+
+        // Ersten und letzten Punkt berechnen (t1, t2)
+        let t1_expected = Vec2::new(95.0, 0.0); // corner - dir_in * r
+        assert!(
+            (pts[0] - t1_expected).length() < 0.2,
+            "Erster Bogenpunkt sollte t1 ≈ {:?} sein, ist: {:?}",
+            t1_expected,
+            pts[0]
+        );
+
+        // Alle Punkte muessen gleich weit vom Bogenmittelpunkt entfernt sein
+        let dir_in = (corner - prev).normalize();
+        let dir_out = (next - corner).normalize();
+        let bisector = (-dir_in + dir_out).normalize_or_zero();
+        let half_angle = dir_in.dot(dir_out).clamp(-1.0, 1.0).acos() / 2.0;
+        let center_dist = radius / half_angle.sin();
+        let center = corner + bisector * center_dist;
+        let arc_radius = (pts[0] - center).length();
+
+        // arc_radius muss deutlich groesser als r sein (nicht 90°-Winkel)
+        assert!(
+            (arc_radius - radius).abs() > 0.5,
+            "arc_radius ({}) und r ({}) sollten bei 60°-Winkel deutlich abweichen",
+            arc_radius,
+            radius
+        );
+
+        for (i, pt) in pts.iter().enumerate() {
+            let dist = (*pt - center).length();
+            assert!(
+                (dist - arc_radius).abs() < 0.01,
+                "Bogenpunkt {} liegt nicht auf Kreisbahn: Abstand={}, erwartet={}",
+                i,
+                dist,
+                arc_radius
+            );
+        }
+    }
+
+    #[test]
+    fn test_round_corner_120_grad_bogenpunkte_auf_kreisbahn() {
+        // 120°-Ablenkungswinkel: stumpfe Ecke, Bogen kleiner als bei 60°
+        // dir_in=(1,0), dir_out=(-0.5, 0.866) → 120°-Drehung nach links
+        let prev = Vec2::new(0.0, 0.0);
+        let corner = Vec2::new(100.0, 0.0);
+        let next = Vec2::new(50.0, 86.6);
+        let radius = 5.0;
+        let pts = round_corner(prev, corner, next, radius, 15.0);
+
+        assert!(pts.len() > 1, "120°-Ecke sollte Bogenpunkte erzeugen");
+
+        let dir_in = (corner - prev).normalize();
+        let dir_out = (next - corner).normalize();
+        let bisector = (-dir_in + dir_out).normalize_or_zero();
+        let half_angle = dir_in.dot(dir_out).clamp(-1.0, 1.0).acos() / 2.0;
+        let center_dist = radius / half_angle.sin();
+        let center = corner + bisector * center_dist;
+        let arc_radius = (pts[0] - center).length();
+
+        for (i, pt) in pts.iter().enumerate() {
+            let dist = (*pt - center).length();
+            assert!(
+                (dist - arc_radius).abs() < 0.01,
+                "Bogenpunkt {} liegt nicht auf Kreisbahn: Abstand={}, erwartet={}",
+                i,
+                dist,
+                arc_radius
+            );
+        }
     }
 }
