@@ -293,6 +293,9 @@ pub fn map_intent_to_commands(state: &AppState, intent: AppIntent) -> Vec<AppCom
         }
         AppIntent::GroupEditApplyRequested => vec![AppCommand::GroupEditApply],
         AppIntent::GroupEditCancelRequested => vec![AppCommand::GroupEditCancel],
+        AppIntent::GroupEditToolRequested { record_id } => {
+            vec![AppCommand::BeginToolEditFromGroup { record_id }]
+        }
         AppIntent::GroupSelectionAsGroupRequested => {
             vec![AppCommand::GroupSelectionAsGroup]
         }

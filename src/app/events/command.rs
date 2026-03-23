@@ -240,6 +240,8 @@ pub enum AppCommand {
     GroupEditApply,
     /// Gruppen-Edit abbrechen (Undo zum Snapshot)
     GroupEditCancel,
+    /// Atomar: Gruppen-Edit aufraumen → Undo → Tool-Edit starten
+    BeginToolEditFromGroup { record_id: u64 },
     /// ZIP-Archiv oeffnen und Bilddateien im Browser anzeigen
     BrowseZipBackground { path: String },
     /// Bilddatei aus ZIP als Background-Map laden
