@@ -197,6 +197,9 @@ pub fn edit_group(state: &mut AppState, record_id: u64) {
         .collect();
     use_cases::editing::delete_nodes_by_ids(state, &inner_ids);
 
+    // Record sichern, bevor er aus der Registry entfernt wird (fuer Cancel-Wiederherstellung)
+    state.tool_editing_record_backup = Some(record.clone());
+
     // Record aus Registry entfernen (wird beim erneuten execute() neu angelegt)
     state.group_registry.remove(record_id);
 
