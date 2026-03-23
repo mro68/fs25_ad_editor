@@ -153,10 +153,7 @@ pub(super) fn resample_ring_with_corners(
         if r.len() > 1 {
             r.pop();
         }
-        return r
-            .into_iter()
-            .map(|p| (p, RingNodeKind::Regular))
-            .collect();
+        return r.into_iter().map(|p| (p, RingNodeKind::Regular)).collect();
     }
 
     let nc = corner_indices.len();
@@ -320,7 +317,11 @@ mod tests {
         let corner = Vec2::new(100.0, 0.0);
         let next = Vec2::new(100.0, -100.0);
         let pts = round_corner(prev, corner, next, 5.0, 1.0);
-        assert_eq!(pts.len(), 1, "Konkave Ecke sollte nur den Eckpunkt zurueckgeben");
+        assert_eq!(
+            pts.len(),
+            1,
+            "Konkave Ecke sollte nur den Eckpunkt zurueckgeben"
+        );
         assert_eq!(pts[0], corner);
     }
 

@@ -317,6 +317,8 @@ pub enum AppIntent {
         tolerance: f32,
         /// Winkel-Schwellwert fuer Ecken-Erkennung in Grad (None = deaktiviert)
         corner_angle: Option<f32>,
+        /// Verrundungsradius fuer Ecken in Metern (None = keine Verrundung)
+        corner_rounding_radius: Option<f32>,
     },
     /// Alle-Felder-nachzeichnen-Dialog abgebrochen
     TraceAllFieldsCancelled,

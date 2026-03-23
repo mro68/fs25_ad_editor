@@ -175,6 +175,10 @@ pub struct TraceAllFieldsDialogState {
     pub corner_detection_enabled: bool,
     /// Winkel-Schwellwert fuer Ecken-Erkennung in Grad (Standard: 90°).
     pub corner_angle_threshold_deg: f32,
+    /// Eckenverrundung aktiviert?
+    pub corner_rounding_enabled: bool,
+    /// Radius der Eckenverrundung in Metern (Standard: 5.0).
+    pub corner_rounding_radius: f32,
 }
 
 impl Default for TraceAllFieldsDialogState {
@@ -186,6 +190,8 @@ impl Default for TraceAllFieldsDialogState {
             tolerance: 0.0,
             corner_detection_enabled: false,
             corner_angle_threshold_deg: 90.0,
+            corner_rounding_enabled: false,
+            corner_rounding_radius: 5.0,
         }
     }
 }
