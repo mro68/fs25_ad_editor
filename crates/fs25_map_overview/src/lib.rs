@@ -39,7 +39,7 @@ pub use composite::{OverviewOptions, Poi};
 pub use discovery::MapInfo;
 pub use farmland::{
     extract_farmland_polygons, extract_farmland_polygons_from_ids,
-    extract_field_type_polygons_from_ids, FarmlandPolygon,
+    extract_field_polygons_by_ccl, extract_field_type_polygons_from_ids, FarmlandPolygon,
 };
 
 /// Quelle fuer die Feldpolygon-Erkennung beim Generieren der Uebersichtskarte.
@@ -227,20 +227,14 @@ pub fn try_extract_polygons_from_field_type_grle(
     path: &Path,
 ) -> Option<(Vec<FarmlandPolygon>, u32, u32)> {
     let data = std::fs::read(path)
-        .map_err(|e| {
-            log::warn!(
-                "FieldType-GRLE lesen fehlgeschlagen ({}): {}",
-                path.display(),
-                e
-            )
-        })
+        .map_err(|e| log::warn!("FieldType-GRLE lesen fehlgeschlagen ({}): {}", path.display(), e))
         .ok()?;
     let decoded = grle::decode_grle(&data)
         .map_err(|e| log::warn!("FieldType-GRLE Dekodierung fehlgeschlagen: {}", e))
         .ok()?;
     let w = decoded.width;
     let h = decoded.height;
-    let polygons = farmland::extract_field_type_polygons_from_ids(&decoded.pixels, w, h);
+    let polygons = farmland::extract_field_polygons_by_ccl(&decoded.pixels, w, h);
     if polygons.is_empty() {
         log::info!("Keine Feldpolygone in FieldType-GRLE gefunden");
         return None;
@@ -266,13 +260,7 @@ pub fn try_extract_polygons_from_ground_gdm(
     path: &Path,
 ) -> Option<(Vec<FarmlandPolygon>, u32, u32)> {
     let data = std::fs::read(path)
-        .map_err(|e| {
-            log::warn!(
-                "Ground-GDM lesen fehlgeschlagen ({}): {}",
-                path.display(),
-                e
-            )
-        })
+        .map_err(|e| log::warn!("Ground-GDM lesen fehlgeschlagen ({}): {}", path.display(), e))
         .ok()?;
     let img = gdm::decode_gdm(&data)
         .map_err(|e| log::warn!("Ground-GDM Dekodierung fehlgeschlagen: {}", e))
@@ -284,7 +272,7 @@ pub fn try_extract_polygons_from_ground_gdm(
     } else {
         img.pixels.iter().map(|&b| b & 0x0F).collect()
     };
-    let polygons = farmland::extract_field_type_polygons_from_ids(&converted, dim, dim);
+    let polygons = farmland::extract_field_polygons_by_ccl(&converted, dim, dim);
     if polygons.is_empty() {
         log::info!("Keine Feldpolygone in Ground-GDM gefunden");
         return None;
@@ -310,13 +298,7 @@ pub fn try_extract_polygons_from_fruits_gdm(
     path: &Path,
 ) -> Option<(Vec<FarmlandPolygon>, u32, u32)> {
     let data = std::fs::read(path)
-        .map_err(|e| {
-            log::warn!(
-                "Fruits-GDM lesen fehlgeschlagen ({}): {}",
-                path.display(),
-                e
-            )
-        })
+        .map_err(|e| log::warn!("Fruits-GDM lesen fehlgeschlagen ({}): {}", path.display(), e))
         .ok()?;
     let img = gdm::decode_gdm(&data)
         .map_err(|e| log::warn!("Fruits-GDM Dekodierung fehlgeschlagen: {}", e))
@@ -328,7 +310,7 @@ pub fn try_extract_polygons_from_fruits_gdm(
     } else {
         img.pixels.iter().map(|&b| b & 0x3F).collect()
     };
-    let polygons = farmland::extract_field_type_polygons_from_ids(&converted, dim, dim);
+    let polygons = farmland::extract_field_polygons_by_ccl(&converted, dim, dim);
     if polygons.is_empty() {
         log::info!("Keine Feldpolygone in Fruits-GDM gefunden");
         return None;
