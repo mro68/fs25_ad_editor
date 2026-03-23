@@ -316,9 +316,9 @@ impl RoadMap {
                 continue;
             };
 
-            // Warning/Reserved nicht anfassen
+            // Warning/Reserved/RoundedCorner nicht anfassen
             match node.flag {
-                NodeFlag::Warning | NodeFlag::Reserved => continue,
+                NodeFlag::Warning | NodeFlag::Reserved | NodeFlag::RoundedCorner => continue,
                 _ => {}
             }
 
