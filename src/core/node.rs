@@ -17,6 +17,9 @@ pub enum NodeFlag {
     SplineGenerated = 4,
     /// Warnung
     Warning = 5,
+    /// Eckenverrundungs-Node: generiert durch Rounding, aus Distanzberechnung ausgeschlossen.
+    /// Wird beim XML-Export als Regular (0) geschrieben (AutoDrive-Kompatibilitaet).
+    RoundedCorner = 6,
 }
 
 impl NodeFlag {
@@ -28,11 +31,12 @@ impl NodeFlag {
             2 | 4 => NodeFlag::Regular, // Auto-Bereinigung
             3 => NodeFlag::Reserved,
             5 => NodeFlag::Warning,
+            6 => NodeFlag::RoundedCorner,
             _ => NodeFlag::Regular,
         }
     }
 
-    /// Gibt den numerischen Flag-Wert zurueck
+    /// Gibt den numerischen Flag-Wert zurueck (interner Wert).
     pub fn to_u32(self) -> u32 {
         match self {
             NodeFlag::Regular => 0,
@@ -41,6 +45,16 @@ impl NodeFlag {
             NodeFlag::Reserved => 3,
             NodeFlag::SplineGenerated => 4,
             NodeFlag::Warning => 5,
+            NodeFlag::RoundedCorner => 6,
+        }
+    }
+
+    /// Gibt den Flag-Wert fuer den XML-Export zurueck.
+    /// `RoundedCorner` wird als `Regular` (0) exportiert, da AutoDrive Flag 6 nicht kennt.
+    pub fn to_export_u32(self) -> u32 {
+        match self {
+            NodeFlag::RoundedCorner => 0,
+            other => other.to_u32(),
         }
     }
 }
@@ -74,5 +88,14 @@ mod tests {
         assert_eq!(NodeFlag::from_u32(2), NodeFlag::Regular); // Auto-Bereinigung
         assert_eq!(NodeFlag::from_u32(4), NodeFlag::Regular); // Auto-Bereinigung
         assert_eq!(NodeFlag::from_u32(5), NodeFlag::Warning);
+        assert_eq!(NodeFlag::from_u32(6), NodeFlag::RoundedCorner);
+    }
+
+    #[test]
+    fn test_export_flag_rounded_corner() {
+        // RoundedCorner wird beim Export als Regular (0) geschrieben
+        assert_eq!(NodeFlag::RoundedCorner.to_export_u32(), 0);
+        assert_eq!(NodeFlag::Warning.to_export_u32(), 5);
+        assert_eq!(NodeFlag::SubPrio.to_export_u32(), 1);
     }
 }

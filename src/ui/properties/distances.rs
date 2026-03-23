@@ -2,6 +2,7 @@ use indexmap::IndexSet;
 use std::collections::{HashMap, HashSet};
 
 use crate::app::state::DistanzenState;
+use crate::core::NodeFlag;
 
 /// Maximale Anzahl selektierter Nodes fuer die Ketten-Analyse.
 /// Oberhalb dieses Limits wird die O(N·C)-Berechnung uebersprungen.
@@ -168,8 +169,18 @@ fn compute_resample_preview(
 /// Algorithmus: Adjacency-Map O(C) einmalig aufbauen, danach Chain-Building O(N).
 /// Vorbedingung: `node_ids.len() <= MAX_CHAIN_NODES` (Aufrufer prueft dies).
 fn order_chain_for_distance(node_ids: &IndexSet<u64>, road_map: &RoadMap) -> Option<Vec<u64>> {
-    // Adjacency-Map: start_id → end_id, gefiltert auf selektierte Nodes (O(C) einmalig)
-    let node_set: HashSet<u64> = node_ids.iter().copied().collect();
+    // Adjacency-Map: start_id → end_id, gefiltert auf selektierte Nodes (O(C) einmalig).
+    // RoundedCorner-Nodes werden ausgeschlossen (Verrundungspunkte zählen nicht zur Streckenlänge).
+    let node_set: HashSet<u64> = node_ids
+        .iter()
+        .copied()
+        .filter(|id| {
+            road_map
+                .nodes
+                .get(id)
+                .map_or(true, |n| n.flag != NodeFlag::RoundedCorner)
+        })
+        .collect();
     let forward: HashMap<u64, u64> = road_map
         .connections_iter()
         .filter(|c| node_set.contains(&c.start_id) && node_set.contains(&c.end_id))
