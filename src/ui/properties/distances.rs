@@ -2,7 +2,7 @@ use indexmap::IndexSet;
 use std::collections::{HashMap, HashSet};
 
 use crate::app::state::DistanzenState;
-use crate::core::NodeFlag;
+use crate::app::NodeFlag;
 
 /// Maximale Anzahl selektierter Nodes fuer die Ketten-Analyse.
 /// Oberhalb dieses Limits wird die O(N·C)-Berechnung uebersprungen.
@@ -178,7 +178,7 @@ fn order_chain_for_distance(node_ids: &IndexSet<u64>, road_map: &RoadMap) -> Opt
             road_map
                 .nodes
                 .get(id)
-                .map_or(true, |n| n.flag != NodeFlag::RoundedCorner)
+                .is_none_or(|n| n.flag != NodeFlag::RoundedCorner)
         })
         .collect();
     let forward: HashMap<u64, u64> = road_map
@@ -222,7 +222,7 @@ fn order_chain_for_distance(node_ids: &IndexSet<u64>, road_map: &RoadMap) -> Opt
 #[cfg(test)]
 mod tests {
     use super::order_chain_for_distance;
-    use crate::core::{
+    use crate::app::{
         Connection, ConnectionDirection, ConnectionPriority, MapNode, NodeFlag, RoadMap,
     };
     use glam::Vec2;

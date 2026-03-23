@@ -120,7 +120,7 @@ pub fn trace_all_fields(
 
             // Nodes erstellen
             for (pos, kind) in &ring {
-                use crate::app::tools::field_boundary::RingNodeKind;
+                use crate::app::RingNodeKind;
                 let flag = if *kind == RingNodeKind::RoundedCorner {
                     NodeFlag::RoundedCorner
                 } else {

@@ -139,4 +139,47 @@ Erkannte Drag-Ziele sind der/die Kontrollpunkt(e) sowie Start- und Endpunkt.
 
 ---
 
+## Felderkennung-Tool (FieldBoundary)
+
+Zeichnet automatisch Wegpunkte entlang der Grenze eines Feldes nach. Der Editor liest die Feldgrenzen aus der geladenen Karte (GRLE- oder PNG-Feldlayer) und erzeugt daraus einen geschlossenen Ring aus Nodes.
+
+**Workflow:**
+
+1. Karte mit Felddaten laden (Datei → Hintergrundkarte öffnen)
+2. FieldBoundary-Tool aus dem Tool-Menü auswählen
+3. Feld auf der Karte anklicken → Vorschau des Grenz-Rings erscheint
+4. Parameter im Konfigurations-Panel anpassen (Offset, Toleranz usw.)
+5. **Enter** → Ring wird als Gruppe von Nodes erstellt
+
+**Konfiguration:**
+
+| Parameter | Beschreibung |
+|-----------|--------------|
+| **Offset** | Abstand vom Feldrand nach innen (negativ = nach außen) in Metern |
+| **Toleranz** | Vereinfachungs-Schwelle für den Ring (douglas-peucker) |
+| **Knotenabstand** | Mindestabstand zwischen aufeinanderfolgenden Nodes |
+| **Eckenwinkel** | Winkel-Schwelle zur Erkennung von Ecken (0° = keine Ecken) |
+| **Ecken verrunden** | Checkbox — verrundet konvexe Ecken durch einen Bogenbogen |
+| **Radius** | Verrundungs-Radius (nur sichtbar wenn "Ecken verrunden" aktiviert) |
+| **Gruppe erstellen** | Ob der Ring als benannte Gruppe registriert wird |
+
+**Eckenverrundung:**
+
+- Nur **konvexe** Ecken werden verrundet — konkave Ecken (einspringende Winkel) bleiben scharf
+- Verrundete Nodes erhalten intern den Flag `RoundedCorner` und werden bei der Distanzberechnung übersprungen
+- Der Bogen wird gleichmäßig über Tangentenpunkte aufgespannt; der Radius wird auf max. 40 % der kürzeren Kante begrenzt
+- Überschreibbar: Nach dem Erstellen kann der Ring wie jede andere Gruppe nachbearbeitet werden
+
+**Alle Felder nachzeichnen:**
+
+Im Hauptmenü unter **Werkzeuge → Alle Felder nachzeichnen** steht ein Dialog bereit, um alle Felder der Karte in einem Schritt zu verarbeiten. Die Konfigurations-Optionen (inkl. Eckenverrundung) gelten für alle erzeugten Ringe.
+
+**Tipps:**
+
+- Kleiner Offset (z. B. 2 m) erzeugt eine fahrbahre Innenlinie
+- Bei unruhigen Feldgrenzen hilft eine höhere Toleranz (z. B. 1,5 m)
+- Eckenverrundung mit Radius 3–5 m verbessert die Einfahrten in enge Ecken für AutoDrive
+
+---
+
 ← [Benutzeroberflaeche](02-oberflaeche.md) | [Zurueck zur Uebersicht](index.md) | → [Bearbeitung](04-bearbeitung.md)

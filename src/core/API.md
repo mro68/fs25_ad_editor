@@ -256,11 +256,13 @@ pub struct MapNode {
 - `Reserved` (3) — Reserviert
 - `SplineGenerated` (4) — Wird beim Import zu Regular konvertiert
 - `Warning` (5) — Warnung
+- `RoundedCorner` (6) — Eckenverrundungs-Node: durch Kreisbogen-Algorithmus erzeugt; wird bei der Distanzberechnung übersprungen und beim XML-Export als `Regular` (0) geschrieben (AutoDrive-Kompatibilitaet)
 
 **NodeFlag-Konvertierung:**
 
 - `NodeFlag::from_u32(value) -> Self` — Zahl zu Flag (2/4 werden zu Regular konvertiert)
-- `NodeFlag::to_u32(self) -> u32` — Flag zu Zahl
+- `NodeFlag::to_u32(self) -> u32` — Flag zu Zahl (inkl. `RoundedCorner` = 6)
+- `NodeFlag::to_export_u32(self) -> u32` — Flag fuer XML-Export; `RoundedCorner` wird als 0 (Regular) zurückgegeben, alle anderen Flags bleiben unverändert
 
 ---
 

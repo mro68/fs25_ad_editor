@@ -106,6 +106,7 @@ Das schwebende Fenster **"✏ Gruppen-Bearbeitung"** erscheint und zeigt die akt
 | Nodes verschieben | Drag auf selektierten Node (wie im Normalbetrieb) |
 | Nodes hinzufügen | Add-Node-Tool (T → Add Node) |
 | Nodes löschen | `Delete` |
+| **🔧 Tool bearbeiten** | Öffnet das ursprüngliche Tool-Edit-Fenster der Gruppe (z. B. Parkplatz, Linien-Tool) — nur bei Tool-Gruppen sichtbar |
 | **✓ Übernehmen** oder `Enter` | Änderungen auf die Gruppe anwenden |
 | **✕ Abbrechen** oder `Escape` | Alle Änderungen rückgängig machen |
 
