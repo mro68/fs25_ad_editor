@@ -231,7 +231,14 @@ pub fn trace_all_fields(
     corner_angle: Option<f32>,
     corner_rounding_radius: Option<f32>,
 ) {
-    use_cases::editing::trace_all_fields(state, spacing, offset, tolerance, corner_angle, corner_rounding_radius);
+    use_cases::editing::trace_all_fields(
+        state,
+        spacing,
+        offset,
+        tolerance,
+        corner_angle,
+        corner_rounding_radius,
+    );
 }
 
 /// Aktiviert die Streckenteilung wenn mindestens 2 Nodes selektiert sind.

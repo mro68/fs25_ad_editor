@@ -98,4 +98,13 @@ mod tests {
         assert_eq!(NodeFlag::Warning.to_export_u32(), 5);
         assert_eq!(NodeFlag::SubPrio.to_export_u32(), 1);
     }
+
+    #[test]
+    fn test_rounded_corner_roundtrip() {
+        // from_u32(6) == RoundedCorner, to_u32() == 6 (interner Wert)
+        assert_eq!(NodeFlag::from_u32(6), NodeFlag::RoundedCorner);
+        assert_eq!(NodeFlag::RoundedCorner.to_u32(), 6);
+        // Export muss weiterhin 0 liefern (AutoDrive-Kompatibilitaet)
+        assert_eq!(NodeFlag::RoundedCorner.to_export_u32(), 0);
+    }
 }
