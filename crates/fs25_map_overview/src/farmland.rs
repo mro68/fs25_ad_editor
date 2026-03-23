@@ -45,13 +45,39 @@ pub fn extract_farmland_polygons_from_ids(
     width: usize,
     height: usize,
 ) -> Vec<FarmlandPolygon> {
-    // Ersten Vorkommen jeder ID in Scan-Reihenfolge (top-left) sammeln.
-    // ID 0 = kein Feld, ID 255 = Hintergrund/Restflaeche (FS25 GRLE Default-Wert).
+    // ID 0 = kein Feld, ID 255 = Hintergrund/Restflaeche (FS25 GRLE Default-Wert)
+    extract_polygons_from_ids_impl(pixels, width, height, |id| id != 0 && id != 255)
+}
+
+/// Extrahiert Feld-Polygone aus bereits decodierten Pixel-Daten des FieldType-Layers.
+///
+/// Wertet den `infoLayer_fieldType`-GRLE-Layer aus. Im Gegensatz zur Farmland-Extraktion
+/// ist hier Pixelwert 255 eine gueltige Frucht-ID — nur ID 0 bedeutet "kein Feld".
+pub fn extract_field_type_polygons_from_ids(
+    pixels: &[u8],
+    width: usize,
+    height: usize,
+) -> Vec<FarmlandPolygon> {
+    // Nur ID 0 herausfiltern; alle anderen Werte (inkl. 255) sind gueltige Frucht-IDs
+    extract_polygons_from_ids_impl(pixels, width, height, |id| id != 0)
+}
+
+/// Gemeinsamer Kern: Extrahiert Rand-Polygone fuer alle Pixel-IDs, die `should_include` bejaht.
+///
+/// Wird von `extract_farmland_polygons_from_ids` und `extract_field_type_polygons_from_ids`
+/// aufgerufen, um Duplikation der Tracing-Logik zu vermeiden.
+fn extract_polygons_from_ids_impl(
+    pixels: &[u8],
+    width: usize,
+    height: usize,
+    should_include: impl Fn(u8) -> bool,
+) -> Vec<FarmlandPolygon> {
+    // Erstes Vorkommen jeder geltenden ID in Scan-Reihenfolge (top-left) sammeln
     let mut start_pixels: HashMap<u8, (i32, i32)> = HashMap::new();
     for y in 0..height {
         for x in 0..width {
             let id = pixels[y * width + x];
-            if id != 0 && id != 255 {
+            if should_include(id) {
                 start_pixels.entry(id).or_insert((x as i32, y as i32));
             }
         }
@@ -74,7 +100,7 @@ pub fn extract_farmland_polygons_from_ids(
     }
 
     log::debug!(
-        "Farmland-Polygone extrahiert: {} Felder aus {}x{} Raster",
+        "Polygone extrahiert: {} Felder aus {}x{} Raster",
         polygons.len(),
         width,
         height

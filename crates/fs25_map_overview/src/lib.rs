@@ -38,7 +38,8 @@ use std::path::Path;
 pub use composite::{OverviewOptions, Poi};
 pub use discovery::MapInfo;
 pub use farmland::{
-    extract_farmland_polygons, extract_farmland_polygons_from_ids, FarmlandPolygon,
+    extract_farmland_polygons, extract_farmland_polygons_from_ids,
+    extract_field_type_polygons_from_ids, FarmlandPolygon,
 };
 
 /// Ergebnis der Overview-Generierung mit optionalen Farmland-Polygonen.
@@ -197,6 +198,39 @@ pub fn generate_overview(
     composite::draw_title_bar(&mut image, &map_info.title);
 
     Ok(image)
+}
+
+/// Versucht Feldpolygone aus einer `infoLayer_fieldType.grle`-Datei zu lesen.
+///
+/// Liegt die Datei im Savegame-Ordner (neben `AutoDrive_config.xml`), liefert
+/// diese Funktion Polygone fuer alle Pixel-IDs ≥ 1 (Frucht-ID). Pixelwert 255
+/// ist hier ein **gueltiger** Feldtyp und wird nicht herausgefiltert.
+///
+/// Rueckgabe: `Some((polygons, grle_width, grle_height))` oder `None` bei
+/// fehlender Datei oder Dekodierungsfehler.
+pub fn try_extract_polygons_from_field_type_grle(
+    path: &Path,
+) -> Option<(Vec<FarmlandPolygon>, u32, u32)> {
+    let data = std::fs::read(path)
+        .map_err(|e| log::warn!("FieldType-GRLE lesen fehlgeschlagen ({}): {}", path.display(), e))
+        .ok()?;
+    let decoded = grle::decode_grle(&data)
+        .map_err(|e| log::warn!("FieldType-GRLE Dekodierung fehlgeschlagen: {}", e))
+        .ok()?;
+    let w = decoded.width;
+    let h = decoded.height;
+    let polygons = farmland::extract_field_type_polygons_from_ids(&decoded.pixels, w, h);
+    if polygons.is_empty() {
+        log::info!("Keine Feldpolygone in FieldType-GRLE gefunden");
+        return None;
+    }
+    log::info!(
+        "FieldType-Polygone extrahiert: {} Felder aus {}x{} Raster",
+        polygons.len(),
+        w,
+        h
+    );
+    Some((polygons, w as u32, h as u32))
 }
 
 /// Extrahiert alle Dateien aus einem ZIP-Archiv in eine HashMap.
