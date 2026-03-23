@@ -75,8 +75,9 @@ fn execute_and_apply(state: &mut AppState) {
     if let Some(tool) = state.editor.tool_manager.active_tool_mut() {
         tool.reset();
     }
-    // Tool-Edit-Flag loeschen: neues Segment wurde erfolgreich erstellt
+    // Tool-Edit-Flag und Backup loeschen: neues Segment wurde erfolgreich erstellt
     state.tool_editing_record_id = None;
+    state.tool_editing_record_backup = None;
 }
 
 /// Bricht das aktive Route-Tool ab (Escape).
@@ -90,7 +91,11 @@ pub fn cancel(state: &mut AppState) {
     }
     if state.tool_editing_record_id.take().is_some() {
         super::history::undo(state);
-        log::info!("Tool-Edit abgebrochen: Undo ausgefuehrt, vorheriger Zustand wiederhergestellt");
+        // Gesicherten Record in die Registry zurueckschreiben
+        if let Some(backup) = state.tool_editing_record_backup.take() {
+            state.group_registry.register(backup);
+        }
+        log::info!("Tool-Edit abgebrochen: Undo ausgefuehrt, Record wiederhergestellt");
     }
 }
 
