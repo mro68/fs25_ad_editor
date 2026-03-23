@@ -344,6 +344,9 @@ impl AppController {
             }
             AppCommand::GroupEditApply => handlers::group::apply_group_edit(state),
             AppCommand::GroupEditCancel => handlers::group::cancel_group_edit(state),
+            AppCommand::BeginToolEditFromGroup { record_id } => {
+                handlers::group::begin_tool_edit_from_group(state, record_id);
+            }
 
             // === Copy/Paste ===
             AppCommand::CopySelection => handlers::editing::copy_selection(state),

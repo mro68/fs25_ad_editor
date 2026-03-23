@@ -226,6 +226,8 @@ pub enum AppIntent {
     GroupEditApplyRequested,
     /// Gruppen-Bearbeitung abbrechen (Undo zum Snapshot vor Edit-Start)
     GroupEditCancelRequested,
+    /// Aus Gruppen-Edit heraus das Tool-Edit starten (destruktiv/regenerativ)
+    GroupEditToolRequested { record_id: u64 },
     /// ZIP-Datei wurde als Background-Map gewaehlt → Browser oeffnen
     ZipBackgroundBrowseRequested { path: String },
     /// Bilddatei aus ZIP-Browser gewaehlt
