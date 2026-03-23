@@ -101,8 +101,15 @@ pub fn trace_all_fields(
                 continue;
             }
 
-            let ring =
-                compute_ring(&polygon.vertices, offset, tolerance, spacing, corner_angle, corner_rounding_radius, corner_rounding_max_angle_deg);
+            let ring = compute_ring(
+                &polygon.vertices,
+                offset,
+                tolerance,
+                spacing,
+                corner_angle,
+                corner_rounding_radius,
+                corner_rounding_max_angle_deg,
+            );
             if ring.len() < 2 {
                 log::debug!(
                     "Feld {}: zu wenige Punkte nach Ring-Berechnung — uebersprungen",

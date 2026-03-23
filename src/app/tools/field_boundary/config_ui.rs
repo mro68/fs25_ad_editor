@@ -149,9 +149,9 @@ impl FieldBoundaryTool {
                     let mut local_changed = response.changed();
                     let wd = wheel_dir(ui, &response);
                     if distance_wheel_step_m > 0.0 && wd != 0.0 {
-                        self.corner_rounding_radius =
-                            (self.corner_rounding_radius + wd * distance_wheel_step_m)
-                                .clamp(1.0, 50.0);
+                        self.corner_rounding_radius = (self.corner_rounding_radius
+                            + wd * distance_wheel_step_m)
+                            .clamp(1.0, 50.0);
                         local_changed = true;
                     }
                     if local_changed {

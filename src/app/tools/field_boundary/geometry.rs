@@ -155,10 +155,7 @@ pub(super) fn resample_ring_with_corners(
         if r.len() > 1 {
             r.pop();
         }
-        return r
-            .into_iter()
-            .map(|p| (p, RingNodeKind::Regular))
-            .collect();
+        return r.into_iter().map(|p| (p, RingNodeKind::Regular)).collect();
     }
 
     let nc = corner_indices.len();
@@ -322,7 +319,11 @@ mod tests {
         let corner = Vec2::new(100.0, 0.0);
         let next = Vec2::new(100.0, -100.0);
         let pts = round_corner(prev, corner, next, 5.0, 15.0);
-        assert_eq!(pts.len(), 1, "Konkave Ecke sollte nur den Eckpunkt zurueckgeben");
+        assert_eq!(
+            pts.len(),
+            1,
+            "Konkave Ecke sollte nur den Eckpunkt zurueckgeben"
+        );
         assert_eq!(pts[0], corner);
     }
 
@@ -333,7 +334,11 @@ mod tests {
         let corner = Vec2::new(50.0, 0.0);
         let next = Vec2::new(100.0, 0.0);
         let pts = round_corner(prev, corner, next, 5.0, 15.0);
-        assert_eq!(pts.len(), 1, "Gerade Linie sollte nur Eckpunkt zurueckgeben");
+        assert_eq!(
+            pts.len(),
+            1,
+            "Gerade Linie sollte nur Eckpunkt zurueckgeben"
+        );
         assert_eq!(pts[0], corner);
     }
 
@@ -344,11 +349,19 @@ mod tests {
 
         // Schwelle 45°: 90° >= 45° → alle 4 Ecken erkannt
         let corners_45 = detect_corners(&verts, 45_f32.to_radians());
-        assert_eq!(corners_45.len(), 4, "Bei 45° Schwellwert alle 4 Ecken erwartet");
+        assert_eq!(
+            corners_45.len(),
+            4,
+            "Bei 45° Schwellwert alle 4 Ecken erwartet"
+        );
 
         // Schwelle genau 90°: 90° >= 90° → alle 4 Ecken erkannt
         let corners_90 = detect_corners(&verts, 90_f32.to_radians());
-        assert_eq!(corners_90.len(), 4, "Bei 90° Schwellwert alle 4 Ecken erwartet");
+        assert_eq!(
+            corners_90.len(),
+            4,
+            "Bei 90° Schwellwert alle 4 Ecken erwartet"
+        );
 
         // Schwelle knapp ueber 90°: 90° < 91° → keine Ecken erkannt
         let corners_91 = detect_corners(&verts, 91_f32.to_radians());

@@ -153,7 +153,9 @@ pub fn show_trace_all_fields_dialog(ctx: &egui::Context, ui_state: &mut UiState)
             } else {
                 None
             },
-            corner_rounding_max_angle_deg: if dlg.corner_detection_enabled && dlg.corner_rounding_enabled {
+            corner_rounding_max_angle_deg: if dlg.corner_detection_enabled
+                && dlg.corner_rounding_enabled
+            {
                 Some(dlg.corner_rounding_max_angle_deg)
             } else {
                 None
