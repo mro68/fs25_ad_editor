@@ -94,5 +94,32 @@ pub fn handle_file_dialogs(ui_state: &mut UiState) -> Vec<AppIntent> {
         }
     }
 
+    // Curseplay-Import-Dialog
+    if ui_state.show_curseplay_import_dialog {
+        ui_state.show_curseplay_import_dialog = false;
+
+        // Kein Erweiterungsfilter: Curseplay-Dateien haben keine Dateierweiterung
+        if let Some(path) = rfd::FileDialog::new().pick_file() {
+            events.push(AppIntent::CurseplayFileSelected {
+                path: path_to_ui_string(&path),
+            });
+        }
+    }
+
+    // Curseplay-Export-Dialog
+    if ui_state.show_curseplay_export_dialog {
+        ui_state.show_curseplay_export_dialog = false;
+
+        // Kein Erweiterungsfilter: Curseplay-Dateien haben keine Dateierweiterung
+        if let Some(path) = rfd::FileDialog::new()
+            .set_file_name("customField")
+            .save_file()
+        {
+            events.push(AppIntent::CurseplayExportPathSelected {
+                path: path_to_ui_string(&path),
+            });
+        }
+    }
+
     events
 }

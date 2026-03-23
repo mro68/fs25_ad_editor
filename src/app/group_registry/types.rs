@@ -106,6 +106,8 @@ pub enum GroupKind {
         offset: f32,
         /// Vereinfachungs-Toleranz Douglas-Peucker (Meter)
         straighten_tolerance: f32,
+        /// Winkel-Schwellwert fuer Ecken-Erkennung in Grad (None = deaktiviert).
+        corner_angle_threshold: Option<f32>,
         /// Gemeinsame Basis-Parameter
         base: GroupBase,
     },

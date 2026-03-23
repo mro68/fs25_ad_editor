@@ -28,6 +28,10 @@ pub struct FieldBoundaryTool {
     pub(crate) offset: f32,
     /// Toleranz fuer Douglas-Peucker-Vereinfachung in Metern (0 = keine).
     pub(crate) straighten_tolerance: f32,
+    /// Ecken-Erkennung aktiviert?
+    pub(crate) corner_detection_enabled: bool,
+    /// Winkel-Schwellwert fuer Ecken-Erkennung in Grad (Standard: 90°).
+    pub(crate) corner_angle_threshold_deg: f32,
     /// Verbindungsrichtung.
     pub direction: ConnectionDirection,
     /// Strassenart.
@@ -51,6 +55,8 @@ impl FieldBoundaryTool {
             node_spacing: 10.0,
             offset: 0.0,
             straighten_tolerance: 0.0,
+            corner_detection_enabled: false,
+            corner_angle_threshold_deg: 90.0,
             direction: ConnectionDirection::Dual,
             priority: ConnectionPriority::Regular,
             lifecycle: ToolLifecycleState::new(3.0),

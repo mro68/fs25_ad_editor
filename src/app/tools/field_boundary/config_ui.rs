@@ -92,6 +92,42 @@ impl FieldBoundaryTool {
 
         ui.separator();
 
+        // Ecken-Erkennung
+        ui.horizontal(|ui| {
+            if ui
+                .checkbox(&mut self.corner_detection_enabled, "Ecken erkennen")
+                .on_hover_text("Eckpunkte als feste Anker beim Resampling beibehalten")
+                .changed()
+            {
+                changed = true;
+            }
+        });
+
+        // Winkel-Schwelle (nur sichtbar wenn aktiv)
+        if self.corner_detection_enabled {
+            ui.horizontal(|ui| {
+                ui.label("Winkel-Schwelle:");
+                let response = ui.add(
+                    egui::DragValue::new(&mut self.corner_angle_threshold_deg)
+                        .range(10.0..=170.0)
+                        .speed(1.0)
+                        .suffix("\u{b0}"),
+                );
+                let mut local_changed = response.changed();
+                let wd = wheel_dir(ui, &response);
+                if wd != 0.0 {
+                    self.corner_angle_threshold_deg =
+                        (self.corner_angle_threshold_deg + wd * 5.0).clamp(10.0, 170.0);
+                    local_changed = true;
+                }
+                if local_changed {
+                    changed = true;
+                }
+            });
+        }
+
+        ui.separator();
+
         // Verbindungsrichtung
         ui.horizontal(|ui| {
             ui.label("Richtung:");

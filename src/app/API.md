@@ -365,6 +365,9 @@ pub enum GroupKind {
         node_spacing: f32,      // Abstand zwischen Nodes in Metern
         offset: f32,            // Versatz nach innen (<0) oder aussen (>0) in Metern
         straighten_tolerance: f32, // Douglas-Peucker-Toleranz in Metern (0 = keine)
+        /// Winkel-Schwellwert fuer Ecken-Erkennung in Grad (None = deaktiviert).
+        /// Ist ein Wert gesetzt, werden Eckpunkte beim Ring-Resampling exakt erhalten.
+        corner_angle_threshold: Option<f32>,
         base: GroupBase,
     },
     /// Parallelversatz einer selektierten Kette (ohne S-Kurven-Anbindung)
@@ -458,6 +461,9 @@ pub enum GroupKind {
         node_spacing: f32,         // Node-Abstand in Metern
         offset: f32,               // Innen-/Aussenversatz in Metern
         straighten_tolerance: f32, // Douglas-Peucker-Toleranz in Metern
+        /// Winkel-Schwellwert fuer Ecken-Erkennung in Grad (None = deaktiviert).
+        /// Ist ein Wert gesetzt, werden Eckpunkte beim Ring-Resampling exakt erhalten.
+        corner_angle_threshold: Option<f32>,
         base: GroupBase,
     },
     /// Parallelversatz einer selektierten Kette (ohne S-Kurven-Anbindung)
@@ -764,6 +770,16 @@ pub enum AppIntent {
     /// Alle erkannten Farmland-Polygone als Wegpunkt-Ring nachzeichnen
     TraceAllFieldsRequested,
 
+    // Curseplay-Import/Export
+    /// Curseplay-Import-Dialog anfordern (rfd-Dateidialog)
+    CurseplayImportRequested,
+    /// Curseplay-Export-Dialog anfordern (rfd-Dateidialog)
+    CurseplayExportRequested,
+    /// Curseplay-Datei ausgewaehlt → Import starten
+    CurseplayFileSelected { path: String },
+    /// Zieldatei fuer Curseplay-Export ausgewaehlt → Export starten
+    CurseplayExportPathSelected { path: String },
+
     // Viewport (erweitert)
     /// Kamera auf die Bounding Box der Selektion zoomen
     ZoomToSelectionBoundsRequested,
@@ -941,6 +957,16 @@ pub enum AppCommand {
     // Extras
     /// Alle Farmland-Polygone als Wegpunkt-Ring nachzeichnen (Batch-Operation)
     TraceAllFields,
+
+    // Curseplay-Import/Export
+    /// Dateidialog fuer Curseplay-Import anzeigen
+    RequestCurseplayImportDialog,
+    /// Curseplay-XML-Datei importieren: Vertices → Nodes + Ring-Verbindungen
+    ImportCurseplay { path: String },
+    /// Dateidialog fuer Curseplay-Export anzeigen
+    RequestCurseplayExportDialog,
+    /// Selektierte Nodes als Curseplay-XML exportieren
+    ExportCurseplay { path: String },
 
     // Gruppen-Einstellungs-Popup
     /// Gruppen-Einstellungs-Popup an angegebener Welt-Position oeffnen

@@ -69,6 +69,26 @@ pub fn show_trace_all_fields_dialog(ctx: &egui::Context, ui_state: &mut UiState)
                     );
                     apply_wheel_step(ui, &r, &mut dlg.tolerance, 0.1, 0.0..=20.0);
                     ui.end_row();
+
+                    // Ecken-Erkennung
+                    ui.label("Ecken erkennen:")
+                        .on_hover_text("Eckpunkte als feste Anker beim Resampling beibehalten");
+                    ui.checkbox(&mut dlg.corner_detection_enabled, "");
+                    ui.end_row();
+
+                    // Winkel-Schwelle (nur sichtbar wenn Ecken-Erkennung aktiv)
+                    if dlg.corner_detection_enabled {
+                        ui.label("Winkel-Schwelle:")
+                            .on_hover_text("Kleinerer Winkel = aggressivere Erkennung, mehr Ecken (Standard: 90\u{b0})");
+                        let r = ui.add(
+                            egui::DragValue::new(&mut dlg.corner_angle_threshold_deg)
+                                .range(10.0..=170.0)
+                                .speed(1.0)
+                                .suffix("\u{b0}"),
+                        );
+                        apply_wheel_step(ui, &r, &mut dlg.corner_angle_threshold_deg, 5.0, 10.0..=170.0);
+                        ui.end_row();
+                    }
                 });
 
             ui.add_space(12.0);
@@ -91,6 +111,11 @@ pub fn show_trace_all_fields_dialog(ctx: &egui::Context, ui_state: &mut UiState)
             spacing: dlg.spacing,
             offset: dlg.offset,
             tolerance: dlg.tolerance,
+            corner_angle: if dlg.corner_detection_enabled {
+                Some(dlg.corner_angle_threshold_deg)
+            } else {
+                None
+            },
         });
     } else if cancelled {
         events.push(AppIntent::TraceAllFieldsCancelled);
