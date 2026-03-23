@@ -223,8 +223,14 @@ pub fn resample_path(state: &mut AppState) {
 }
 
 /// Zeichnet alle erkannten Farmland-Polygone als Wegpunkt-Ring nach (Batch-Operation).
-pub fn trace_all_fields(state: &mut AppState, spacing: f32, offset: f32, tolerance: f32) {
-    use_cases::editing::trace_all_fields(state, spacing, offset, tolerance);
+pub fn trace_all_fields(
+    state: &mut AppState,
+    spacing: f32,
+    offset: f32,
+    tolerance: f32,
+    corner_angle: Option<f32>,
+) {
+    use_cases::editing::trace_all_fields(state, spacing, offset, tolerance, corner_angle);
 }
 
 /// Aktiviert die Streckenteilung wenn mindestens 2 Nodes selektiert sind.
@@ -265,4 +271,14 @@ pub fn confirm_paste(state: &mut AppState) {
 /// Bricht die Einfuegen-Vorschau ab.
 pub fn cancel_paste_preview(state: &mut AppState) {
     use_cases::editing::cancel_paste_preview(state);
+}
+
+/// Importiert eine Curseplay-XML-Datei und legt Nodes + Ring-Verbindungen an.
+pub fn import_curseplay_file(state: &mut AppState, path: &str) {
+    use_cases::editing::import_curseplay(state, path);
+}
+
+/// Exportiert die selektierten Nodes als Curseplay-XML-Datei.
+pub fn export_curseplay_file(state: &AppState, path: &str) {
+    use_cases::editing::export_curseplay(state, path);
 }

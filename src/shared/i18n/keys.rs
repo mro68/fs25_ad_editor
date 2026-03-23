@@ -353,6 +353,10 @@ pub enum I18nKey {
     MenuExtrasNeedBackground,
     /// Hover-Tooltip: Alle Felder nachzeichnen (Beschreibung)
     MenuTraceAllFieldsHelp,
+    /// Menüeintrag "Courseplay importieren"
+    MenuCurseplayImport,
+    /// Menüeintrag "Courseplay exportieren"
+    MenuCurseplayExport,
 
     // === Menü: Hilfe ===
     /// Menüeintrag "Hilfe"

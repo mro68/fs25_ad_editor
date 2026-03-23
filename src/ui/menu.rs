@@ -232,6 +232,32 @@ pub fn render_menu(ctx: &egui::Context, state: &AppState) -> Vec<AppIntent> {
                     events.push(AppIntent::OpenTraceAllFieldsDialogRequested);
                     ui.close();
                 }
+
+                ui.separator();
+
+                let has_file = state.road_map.is_some();
+                if ui
+                    .add_enabled(
+                        has_file,
+                        egui::Button::new(t(lang, I18nKey::MenuCurseplayImport)),
+                    )
+                    .clicked()
+                {
+                    events.push(AppIntent::CurseplayImportRequested);
+                    ui.close();
+                }
+
+                let has_selection = !state.selection.selected_node_ids.is_empty();
+                if ui
+                    .add_enabled(
+                        has_selection,
+                        egui::Button::new(t(lang, I18nKey::MenuCurseplayExport)),
+                    )
+                    .clicked()
+                {
+                    events.push(AppIntent::CurseplayExportRequested);
+                    ui.close();
+                }
             });
 
             ui.menu_button(t(lang, I18nKey::MenuHelp), |ui| {

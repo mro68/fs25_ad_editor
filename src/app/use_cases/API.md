@@ -85,6 +85,8 @@ pub enum AddNodeResult {
 - `delete_nodes_by_ids(state, ids)` — Loescht Nodes mit den angegebenen IDs + zugehoerige Connections; invalidiert betroffene Eintraege in `state.group_registry`
 - `resample_selected_path(state)` — Selektierte Nodes-Kette per Catmull-Rom-Spline gleichmaessig neu verteilen; Konfiguration aus `state.ui.distanzen`
 - `trace_all_fields(state)` — Zeichnet alle geladenen Farmland-Polygone als Wegpunkt-Ring nach (Batch-Operation). Verwendet Standard-Parameter des FieldBoundaryTool (spacing=10, offset=0, tolerance=0, direction=Dual, priority=Regular). Alle Polygone werden in einem einzigen Undo-Schritt zusammengefasst; Spatial-Index-Rebuild und Flag-Berechnung erfolgen nur einmal am Ende.
+- `import_curseplay(state, path)` — Importiert eine Curseplay-`<customField>`-XML-Datei: Liesst Vertices, erstellt einen MapNode (Regular, Y=0.0) pro Vertex und verbindet aufeinanderfolgende Paare bidirektional als Dual/SubPriority-Ring (letzter→erster schliesst den Ring). Nimmt vor der Mutation einen Undo-Snapshot. Bricht fruehzeitig ab wenn keine RoadMap geladen ist oder die Datei keine Vertices enthaelt.
+- `export_curseplay(state, path)` — Exportiert die selektierten Nodes in Selektionsreihenfolge als Curseplay-`<customField>`-XML-Datei. Bricht fruehzeitig ab bei leerer Selektion oder fehlender RoadMap.
 
 ### `use_cases::editing::markers`
 

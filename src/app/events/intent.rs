@@ -313,7 +313,17 @@ pub enum AppIntent {
         offset: f32,
         /// Begradigung: Douglas-Peucker-Toleranz (0 = aus)
         tolerance: f32,
+        /// Winkel-Schwellwert fuer Ecken-Erkennung in Grad (None = deaktiviert)
+        corner_angle: Option<f32>,
     },
     /// Alle-Felder-nachzeichnen-Dialog abgebrochen
     TraceAllFieldsCancelled,
+    /// Curseplay-Import-Dialog anfordern
+    CurseplayImportRequested,
+    /// Curseplay-Export-Dialog anfordern
+    CurseplayExportRequested,
+    /// Curseplay-Importdatei wurde im Dialog ausgewaehlt
+    CurseplayFileSelected { path: String },
+    /// Curseplay-Exportpfad wurde im Dialog ausgewaehlt
+    CurseplayExportPathSelected { path: String },
 }

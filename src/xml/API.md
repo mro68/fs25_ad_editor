@@ -127,3 +127,63 @@ Daten werden als parallele Listen gespeichert:
 ## Roundtrip-Garantie
 
 Import → Export → Import sollte identische Daten liefern (ausser Whitespace).
+
+---
+
+### `parse_curseplay`
+
+Parst eine Curseplay-XML-Datei und gibt die Vertex-Positionen als Liste zurueck.
+
+```rust
+pub fn parse_curseplay(xml_content: &str) -> Result<Vec<Vec2>>
+```
+
+**Beispiel:**
+
+```rust
+let xml = std::fs::read_to_string("feld.xml")?;
+let vertices = parse_curseplay(&xml)?;
+println!("Vertices: {}", vertices.len());
+```
+
+**Features:**
+
+- Liest `<vertex>x z</vertex>`-Paare (Leerzeichen-getrennt)
+- Entfernt den ringschliessenden letzten Vertex automatisch (falls identisch mit dem ersten)
+- Gibt `anyhow::Error` bei ungueltigem XML oder leerer Vertex-Liste zurueck
+
+**Fehler:**
+
+- Kein `<vertex>`-Element gefunden → Fehler
+- Ungueltige Koordinate → Fehler mit Kontext
+
+---
+
+### `write_curseplay`
+
+Schreibt eine Liste von Positionen als Curseplay XML-Datei.
+
+```rust
+pub fn write_curseplay(vertices: &[Vec2]) -> String
+```
+
+**Beispiel:**
+
+```rust
+let positions = vec![Vec2::new(100.0, 200.0), Vec2::new(150.0, 250.0)];
+let xml = write_curseplay(&positions);
+std::fs::write("export.xml", xml)?;
+```
+
+**Output-Format:**
+
+```xml
+<?xml version="1.0" encoding="utf-8" standalone="no"?>
+<customField>
+    <vertex>100 200</vertex>
+    <vertex>150 250</vertex>
+    <vertex>100 200</vertex>
+</customField>
+```
+
+**Hinweis:** Der erste Vertex wird am Ende wiederholt (Ring-Marker gemaess Curseplay-Format).
