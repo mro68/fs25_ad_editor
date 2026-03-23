@@ -161,12 +161,13 @@ pub fn load_background_from_zip(
 
 /// Generiert eine Uebersichtskarte mit den Optionen aus dem Dialog und laedt sie als Background.
 ///
-/// Liest ZIP-Pfad und Layer-Optionen aus dem `OverviewOptionsDialogState`,
-/// persistiert die Layer-Einstellungen in den `EditorOptions` und generiert
-/// die Karte mit `fs25_map_overview`.
+/// Liest ZIP-Pfad, Layer-Optionen und die gewaehlte Feldpolygon-Quelle aus dem
+/// `OverviewOptionsDialogState`, persistiert die Layer-Einstellungen in den
+/// `EditorOptions` und generiert die Karte mit `fs25_map_overview`.
 pub fn generate_overview_with_options(state: &mut AppState) -> Result<()> {
     let zip_path = state.ui.overview_options_dialog.zip_path.clone();
     let layers = state.ui.overview_options_dialog.layers.clone();
+    let field_source = state.ui.overview_options_dialog.field_detection_source;
 
     log::info!("Generiere Uebersichtskarte aus: {}", zip_path);
 
@@ -189,31 +190,39 @@ pub fn generate_overview_with_options(state: &mut AppState) -> Result<()> {
     let (width, height) = overview.image.dimensions();
     log::info!("Uebersichtskarte generiert: {}x{} Pixel", width, height);
 
-    // Feldpolygone: Prioritaet 1 – infoLayer_fieldType.grle aus Savegame-Ordner;
-    // Fallback: Farmland-Polygone aus dem Map-ZIP.
-    let field_type_source = state
-        .ui
-        .current_file_path
-        .as_ref()
-        .and_then(|xml_path| Path::new(xml_path.as_str()).parent().map(|p| p.to_path_buf()))
-        .and_then(|savegame_dir| {
-            let grle_path = savegame_dir.join("infoLayer_fieldType.grle");
-            if grle_path.is_file() {
-                log::info!(
-                    "Savegame-FieldType-GRLE gefunden: {}",
-                    grle_path.display()
-                );
-                fs25_map_overview::try_extract_polygons_from_field_type_grle(&grle_path)
-            } else {
-                log::info!(
-                    "infoLayer_fieldType.grle nicht vorhanden – verwende Farmland-Polygone aus ZIP"
-                );
-                None
-            }
-        });
+    // Savegame-Verzeichnis (Elternordner der aktuell geladenen Config)
+    let savegame_dir = state.ui.current_file_path.as_ref().and_then(|xml_path| {
+        Path::new(xml_path.as_str())
+            .parent()
+            .map(|p| p.to_path_buf())
+    });
 
-    // Rohe Polygone und Rasterdimensionen ermitteln (aus FieldType oder Farmland-ZIP)
-    let (raw_polygons, grle_w, grle_h) = match field_type_source {
+    // Feldpolygone gemaess gewaehlter Quelle extrahieren
+    use fs25_map_overview::FieldDetectionSource;
+    let extracted = match field_source {
+        FieldDetectionSource::FromZip => {
+            log::info!("Feldpolygone: Quelle = Map-ZIP");
+            None // Fallback auf overview.farmland_polygons unten
+        }
+        FieldDetectionSource::FieldTypeGrle => savegame_dir.as_deref().and_then(|dir| {
+            let path = dir.join("infoLayer_fieldType.grle");
+            log::info!("Feldpolygone: Quelle = {}", path.display());
+            fs25_map_overview::try_extract_polygons_from_field_type_grle(&path)
+        }),
+        FieldDetectionSource::GroundGdm => savegame_dir.as_deref().and_then(|dir| {
+            let path = dir.join("densityMap_ground.gdm");
+            log::info!("Feldpolygone: Quelle = {}", path.display());
+            fs25_map_overview::try_extract_polygons_from_ground_gdm(&path)
+        }),
+        FieldDetectionSource::FruitsGdm => savegame_dir.as_deref().and_then(|dir| {
+            let path = dir.join("densityMap_fruits.gdm");
+            log::info!("Feldpolygone: Quelle = {}", path.display());
+            fs25_map_overview::try_extract_polygons_from_fruits_gdm(&path)
+        }),
+    };
+
+    // Rohe Polygone und Rasterdimensionen ermitteln
+    let (raw_polygons, grle_w, grle_h) = match extracted {
         Some((polygons, w, h)) => (polygons, w, h),
         None => (
             overview.farmland_polygons,

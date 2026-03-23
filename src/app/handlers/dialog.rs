@@ -3,6 +3,8 @@
 use crate::app::use_cases;
 use crate::app::AppState;
 use crate::shared::EditorOptions;
+use fs25_map_overview::FieldDetectionSource;
+use std::path::Path;
 
 /// Markiert die Anwendung zum Beenden im naechsten Frame.
 pub fn request_exit(state: &mut AppState) {
@@ -78,11 +80,35 @@ pub fn request_overview_dialog(state: &mut AppState) {
 }
 
 /// Oeffnet den Uebersichtskarten-Options-Dialog mit dem gewaehlten ZIP-Pfad.
+///
+/// Prueft welche Savegame-Dateien im Elternordner der aktuell geladenen
+/// Config-Datei vorhanden sind und befuellt die verfuegbaren Quellen.
 pub fn open_overview_options_dialog(state: &mut AppState, zip_path: String) {
     state.ui.show_overview_dialog = false;
     state.ui.overview_options_dialog.visible = true;
     state.ui.overview_options_dialog.zip_path = zip_path;
     state.ui.overview_options_dialog.layers = state.options.overview_layers.clone();
+
+    // Verfuegbare Quellen bestimmen
+    let mut available = vec![FieldDetectionSource::FromZip];
+    if let Some(xml_path) = state.ui.current_file_path.as_ref() {
+        if let Some(savegame_dir) = Path::new(xml_path.as_str()).parent() {
+            if savegame_dir.join("infoLayer_fieldType.grle").is_file() {
+                available.push(FieldDetectionSource::FieldTypeGrle);
+            }
+            if savegame_dir.join("densityMap_ground.gdm").is_file() {
+                available.push(FieldDetectionSource::GroundGdm);
+            }
+            if savegame_dir.join("densityMap_fruits.gdm").is_file() {
+                available.push(FieldDetectionSource::FruitsGdm);
+            }
+        }
+    }
+    // Aktuelle Auswahl auf verfuegbare Quelle korrigieren
+    if !available.contains(&state.ui.overview_options_dialog.field_detection_source) {
+        state.ui.overview_options_dialog.field_detection_source = FieldDetectionSource::FromZip;
+    }
+    state.ui.overview_options_dialog.available_sources = available;
 }
 
 /// Schliesst den Uebersichtskarten-Options-Dialog.

@@ -42,6 +42,21 @@ pub use farmland::{
     extract_field_type_polygons_from_ids, FarmlandPolygon,
 };
 
+/// Quelle fuer die Feldpolygon-Erkennung beim Generieren der Uebersichtskarte.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub enum FieldDetectionSource {
+    /// Aus infoLayer_farmlands (Map-ZIP) — bisherige Methode
+    #[default]
+    FromZip,
+    /// Aus infoLayer_fieldType.grle (Savegame)
+    FieldTypeGrle,
+    /// Aus densityMap_ground.gdm (Savegame)
+    GroundGdm,
+    /// Aus densityMap_fruits.gdm (Savegame)
+    FruitsGdm,
+}
+
+
 /// Ergebnis der Overview-Generierung mit optionalen Farmland-Polygonen.
 pub struct OverviewResult {
     /// Generiertes Uebersichtsbild als dynamisches Bild
@@ -212,7 +227,13 @@ pub fn try_extract_polygons_from_field_type_grle(
     path: &Path,
 ) -> Option<(Vec<FarmlandPolygon>, u32, u32)> {
     let data = std::fs::read(path)
-        .map_err(|e| log::warn!("FieldType-GRLE lesen fehlgeschlagen ({}): {}", path.display(), e))
+        .map_err(|e| {
+            log::warn!(
+                "FieldType-GRLE lesen fehlgeschlagen ({}): {}",
+                path.display(),
+                e
+            )
+        })
         .ok()?;
     let decoded = grle::decode_grle(&data)
         .map_err(|e| log::warn!("FieldType-GRLE Dekodierung fehlgeschlagen: {}", e))
@@ -231,6 +252,94 @@ pub fn try_extract_polygons_from_field_type_grle(
         h
     );
     Some((polygons, w as u32, h as u32))
+}
+
+/// Versucht Feldpolygone aus einer `densityMap_ground.gdm`-Datei zu lesen.
+///
+/// Dekodiert die GDM-Datei (16 Kanaele, RGB-Encoding) und extrahiert
+/// den Feld-Status aus dem unteren Nibble des R-Kanals (Bits 0–3).
+/// Pixel mit Wert != 0 werden als Feld gewertet.
+///
+/// Rueckgabe: `Some((polygons, width, height))` oder `None` bei
+/// fehlender Datei oder Dekodierungsfehler.
+pub fn try_extract_polygons_from_ground_gdm(
+    path: &Path,
+) -> Option<(Vec<FarmlandPolygon>, u32, u32)> {
+    let data = std::fs::read(path)
+        .map_err(|e| {
+            log::warn!(
+                "Ground-GDM lesen fehlgeschlagen ({}): {}",
+                path.display(),
+                e
+            )
+        })
+        .ok()?;
+    let img = gdm::decode_gdm(&data)
+        .map_err(|e| log::warn!("Ground-GDM Dekodierung fehlgeschlagen: {}", e))
+        .ok()?;
+    let dim = img.dimension;
+    // RGB-Encoding: R-Kanal enthaelt Bits 0–7; unteres Nibble = Feld-/Bodentyp
+    let converted: Vec<u8> = if img.is_rgb {
+        img.pixels.chunks(3).map(|rgb| rgb[0] & 0x0F).collect()
+    } else {
+        img.pixels.iter().map(|&b| b & 0x0F).collect()
+    };
+    let polygons = farmland::extract_field_type_polygons_from_ids(&converted, dim, dim);
+    if polygons.is_empty() {
+        log::info!("Keine Feldpolygone in Ground-GDM gefunden");
+        return None;
+    }
+    log::info!(
+        "Ground-GDM-Polygone extrahiert: {} Felder aus {}x{} Raster",
+        polygons.len(),
+        dim,
+        dim
+    );
+    Some((polygons, dim as u32, dim as u32))
+}
+
+/// Versucht Feldpolygone aus einer `densityMap_fruits.gdm`-Datei zu lesen.
+///
+/// Dekodiert die GDM-Datei (12 Kanaele, RGB-Encoding) und extrahiert
+/// die Frucht-ID aus den unteren 6 Bits des R-Kanals (Bits 0–5).
+/// Pixel mit Frucht-ID != 0 werden als Feld gewertet.
+///
+/// Rueckgabe: `Some((polygons, width, height))` oder `None` bei
+/// fehlender Datei oder Dekodierungsfehler.
+pub fn try_extract_polygons_from_fruits_gdm(
+    path: &Path,
+) -> Option<(Vec<FarmlandPolygon>, u32, u32)> {
+    let data = std::fs::read(path)
+        .map_err(|e| {
+            log::warn!(
+                "Fruits-GDM lesen fehlgeschlagen ({}): {}",
+                path.display(),
+                e
+            )
+        })
+        .ok()?;
+    let img = gdm::decode_gdm(&data)
+        .map_err(|e| log::warn!("Fruits-GDM Dekodierung fehlgeschlagen: {}", e))
+        .ok()?;
+    let dim = img.dimension;
+    // RGB-Encoding: R-Kanal enthaelt Bits 0–7; untere 6 Bit = Frucht-ID
+    let converted: Vec<u8> = if img.is_rgb {
+        img.pixels.chunks(3).map(|rgb| rgb[0] & 0x3F).collect()
+    } else {
+        img.pixels.iter().map(|&b| b & 0x3F).collect()
+    };
+    let polygons = farmland::extract_field_type_polygons_from_ids(&converted, dim, dim);
+    if polygons.is_empty() {
+        log::info!("Keine Feldpolygone in Fruits-GDM gefunden");
+        return None;
+    }
+    log::info!(
+        "Fruits-GDM-Polygone extrahiert: {} Felder aus {}x{} Raster",
+        polygons.len(),
+        dim,
+        dim
+    );
+    Some((polygons, dim as u32, dim as u32))
 }
 
 /// Extrahiert alle Dateien aus einem ZIP-Archiv in eine HashMap.
