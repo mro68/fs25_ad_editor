@@ -8,6 +8,21 @@ use glam::Vec2;
 use super::super::state::{ParkingConfig, RampSide};
 use super::ParkingLayout;
 
+/// Erzeugt gleichmaessig verteilte Zwischenpositionen zwischen zwei Punkten.
+///
+/// Gibt eine leere Liste zurueck, wenn der Abstand `max_distance` nicht ueberschritten wird.
+/// Die Endpunkte selbst sind nicht enthalten.
+fn interpolate_positions(from: Vec2, to: Vec2, max_distance: f32) -> Vec<Vec2> {
+    let dist = from.distance(to);
+    if dist <= max_distance {
+        return vec![];
+    }
+    let n = (dist / max_distance).ceil() as usize;
+    (1..n)
+        .map(|i| from.lerp(to, i as f32 / n as f32))
+        .collect()
+}
+
 /// Erzeugt ein skalierbares Blueprint-Serien-Layout fuer `config.num_rows` Parkplaetze.
 ///
 /// Grundlage ist ein Referenz-Blueprint in relativen Koordinaten (Gesamtlaenge 80m).
@@ -68,6 +83,8 @@ pub fn generate_blueprint_series_layout(
     let mut connections: Vec<(usize, usize, ConnectionDirection, ConnectionPriority)> =
         Vec::with_capacity(count * (base_connections.len() + 2));
     let mut markers: Vec<(usize, String, String)> = Vec::with_capacity(count);
+    // Rampenpunkt-Indizes pro Reihe fuer die Ketten-Verbindungen am Ende.
+    let mut row_ramp_indices: Vec<(usize, usize)> = Vec::with_capacity(count);
 
     for i in 0..count {
         let base_idx = nodes.len();
@@ -95,8 +112,34 @@ pub fn generate_blueprint_series_layout(
         nodes.push(to_world(n7.x, n7.y));
         nodes.push(to_world(n8.x, n8.y));
 
+        let entry_ramp_idx = base_idx + 6;
+        let exit_ramp_idx = base_idx + 7;
+        row_ramp_indices.push((entry_ramp_idx, exit_ramp_idx));
+
+        // Verbindungen: Bay-Strecken (0→1, 1→2, 2→3) mit optionalen Zwischenknoten;
+        // alle anderen Verbindungen werden direkt uebernommen.
         for (from, to, dir) in base_connections {
-            connections.push((base_idx + from, base_idx + to, dir, priority));
+            if matches!((from, to), (0, 1) | (1, 2) | (2, 3)) {
+                // Bay-Verbindungen: bei Bedarf Zwischenknoten einfuegen
+                let p_from = nodes[base_idx + from];
+                let p_to = nodes[base_idx + to];
+                let intermediates =
+                    interpolate_positions(p_from, p_to, config.max_node_distance);
+                if intermediates.is_empty() {
+                    connections.push((base_idx + from, base_idx + to, dir, priority));
+                } else {
+                    let mut prev = base_idx + from;
+                    for pos in intermediates {
+                        let new_idx = nodes.len();
+                        nodes.push(pos);
+                        connections.push((prev, new_idx, dir, priority));
+                        prev = new_idx;
+                    }
+                    connections.push((prev, base_idx + to, dir, priority));
+                }
+            } else {
+                connections.push((base_idx + from, base_idx + to, dir, priority));
+            }
         }
 
         markers.push((
@@ -118,22 +161,21 @@ pub fn generate_blueprint_series_layout(
     // Left-Seite (noerdlich): Fahrtrichtungen gespiegelt.
     //   Einfahrkette suedwaerts (next→curr), Ausfahrtkette nordwaerts (curr→next).
     if count > 1 {
-        let block = base_nodes.len() + 2;
         for i in 0..(count - 1) {
-            let curr = i * block;
-            let next = (i + 1) * block;
+            let (curr_entry, curr_exit) = row_ramp_indices[i];
+            let (next_entry, next_exit) = row_ramp_indices[i + 1];
 
             // Einfahrt-Kette: Richtung folgt dem Anfahrts-Traffic-Flow.
             let (ef, et) = match config.entry_side {
-                RampSide::Right => (curr + 6, next + 6), // suedlich → nordwaerts
-                RampSide::Left => (next + 6, curr + 6),  // noerdlich → suedwaerts
+                RampSide::Right => (curr_entry, next_entry), // suedlich → nordwaerts
+                RampSide::Left => (next_entry, curr_entry),  // noerdlich → suedwaerts
             };
             connections.push((ef, et, ConnectionDirection::Regular, priority));
 
             // Ausfahrt-Kette: Richtung entgegengesetzt zur Einfahrt (gleicher Ansatz).
             let (xf, xt) = match config.exit_side {
-                RampSide::Right => (next + 7, curr + 7), // suedlich → suedwaerts raus
-                RampSide::Left => (curr + 7, next + 7),  // noerdlich → nordwaerts raus
+                RampSide::Right => (next_exit, curr_exit), // suedlich → suedwaerts raus
+                RampSide::Left => (curr_exit, next_exit),  // noerdlich → nordwaerts raus
             };
             connections.push((xf, xt, ConnectionDirection::Regular, priority));
         }

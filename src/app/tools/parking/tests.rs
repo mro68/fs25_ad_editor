@@ -19,6 +19,7 @@ fn test_single_row_layout() {
         entry_side: RampSide::Right,
         exit_side: RampSide::Right,
         marker_group: "Test".to_string(),
+        max_node_distance: f32::MAX,
     };
     let layout = generate_parking_layout(
         Vec2::ZERO,
@@ -71,6 +72,7 @@ fn test_rotation() {
         entry_side: RampSide::Right,
         exit_side: RampSide::Right,
         marker_group: "Rot".to_string(),
+        max_node_distance: f32::MAX,
     };
     let layout_0 = generate_parking_layout(
         Vec2::ZERO,
@@ -137,6 +139,7 @@ fn test_marker_names_are_numbered_in_series() {
         entry_side: RampSide::Right,
         exit_side: RampSide::Left,
         marker_group: "Marker_Name".to_string(),
+        max_node_distance: f32::MAX,
     };
     let layout = generate_parking_layout(
         Vec2::ZERO,
@@ -164,6 +167,7 @@ fn test_entry_and_exit_ramps_are_45_deg_and_away_from_marker() {
         entry_side: RampSide::Right,
         exit_side: RampSide::Right,
         marker_group: "Test".to_string(),
+        max_node_distance: f32::MAX,
     };
     let layout = generate_parking_layout(
         Vec2::ZERO,
@@ -228,6 +232,7 @@ fn test_multi_parking_connects_entries_and_exits_one_way() {
         entry_side: RampSide::Left,
         exit_side: RampSide::Right,
         marker_group: "Serie".to_string(),
+        max_node_distance: f32::MAX,
     };
     let layout = generate_parking_layout(
         Vec2::ZERO,
@@ -267,6 +272,7 @@ fn test_reverse_maneuver_edge_exists_in_teardrop() {
         entry_side: RampSide::Right,
         exit_side: RampSide::Right,
         marker_group: "Test".to_string(),
+        max_node_distance: f32::MAX,
     };
     let layout = generate_parking_layout(
         Vec2::ZERO,
@@ -298,6 +304,7 @@ fn test_single_parking_matches_requested_blueprint() {
         entry_side: RampSide::Left,
         exit_side: RampSide::Right,
         marker_group: "Blueprint".to_string(),
+        max_node_distance: f32::MAX,
     };
     let layout = generate_parking_layout(
         Vec2::ZERO,
@@ -369,6 +376,7 @@ fn test_preview_params_move_entry_and_exit_nodes() {
         entry_side: RampSide::Right,
         exit_side: RampSide::Right,
         marker_group: "Cfg".to_string(),
+        max_node_distance: f32::MAX,
     };
     let a = generate_parking_layout(
         Vec2::ZERO,
@@ -413,6 +421,7 @@ fn test_blueprint_series_has_expected_node_and_connection_counts() {
         entry_side: RampSide::Right,
         exit_side: RampSide::Right,
         marker_group: "Serie2".to_string(),
+        max_node_distance: f32::MAX,
     };
 
     let layout = generate_parking_layout(
@@ -448,6 +457,7 @@ fn test_marker_positions_follow_origin_and_row_spacing_without_rotation() {
         entry_side: RampSide::Right,
         exit_side: RampSide::Right,
         marker_group: "Pos".to_string(),
+        max_node_distance: f32::MAX,
     };
 
     let origin = Vec2::new(10.0, 20.0);
@@ -482,6 +492,7 @@ fn test_marker_positions_rotate_correctly_at_ninety_degrees() {
         entry_side: RampSide::Right,
         exit_side: RampSide::Right,
         marker_group: "Rot90".to_string(),
+        max_node_distance: f32::MAX,
     };
 
     let layout = generate_parking_layout(
@@ -523,6 +534,7 @@ fn test_blueprint_series_chain_direction_for_right_side() {
         entry_side: RampSide::Right,
         exit_side: RampSide::Right,
         marker_group: "Rechts".to_string(),
+        max_node_distance: f32::MAX,
     };
 
     let layout = generate_parking_layout(
@@ -561,6 +573,7 @@ fn test_blueprint_extreme_scale_and_spacing_remain_finite() {
         entry_side: RampSide::Left,
         exit_side: RampSide::Right,
         marker_group: "Extreme".to_string(),
+        max_node_distance: f32::MAX,
     };
 
     let layout = generate_parking_layout(
@@ -594,6 +607,7 @@ fn test_build_preview_preserves_connection_order_and_styles() {
         entry_side: RampSide::Right,
         exit_side: RampSide::Left,
         marker_group: "Preview".to_string(),
+        max_node_distance: f32::MAX,
     };
     let layout = generate_parking_layout(
         Vec2::ZERO,
@@ -628,6 +642,7 @@ fn test_build_parking_result_sets_regular_flags_and_empty_external_connections()
         entry_side: RampSide::Right,
         exit_side: RampSide::Right,
         marker_group: "Result".to_string(),
+        max_node_distance: f32::MAX,
     };
     let layout = generate_parking_layout(
         Vec2::new(5.0, 6.0),
