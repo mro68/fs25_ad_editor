@@ -85,8 +85,7 @@ impl ParkingTool {
             let wd = wheel_dir(ui, &response);
             if distance_wheel_step_m > 0.0 && wd != 0.0 {
                 self.config.max_node_distance =
-                    (self.config.max_node_distance + wd * distance_wheel_step_m)
-                        .clamp(2.0, 20.0);
+                    (self.config.max_node_distance + wd * distance_wheel_step_m).clamp(2.0, 20.0);
                 local_changed = true;
             }
             if local_changed {
