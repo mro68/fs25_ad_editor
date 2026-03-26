@@ -77,7 +77,7 @@ impl ParkingTool {
         ui.horizontal(|ui| {
             ui.label("Max. Node-Abstand:");
             let response = ui.add(
-                egui::Slider::new(&mut self.config.max_node_distance, 2.0..=20.0)
+                egui::Slider::new(&mut self.config.max_node_distance, 2.0..=100.0)
                     .suffix(" m")
                     .fixed_decimals(1),
             );
