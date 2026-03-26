@@ -88,6 +88,38 @@ pub fn show_trace_all_fields_dialog(ctx: &egui::Context, ui_state: &mut UiState)
                         );
                         apply_wheel_step(ui, &r, &mut dlg.corner_angle_threshold_deg, 5.0, 10.0..=170.0);
                         ui.end_row();
+
+                        // Eckenverrundung
+                        ui.label("Ecken verrunden:")
+                            .on_hover_text("Erkannte Ecken mit Kreisbogen abrunden");
+                        ui.checkbox(&mut dlg.corner_rounding_enabled, "");
+                        ui.end_row();
+
+                        // Verrundungsradius (nur sichtbar wenn Eckenverrundung aktiv)
+                        if dlg.corner_rounding_enabled {
+                            ui.label("Radius (m):")
+                                .on_hover_text("Radius des Kreisbogens fuer die Eckenverrundung");
+                            let r = ui.add(
+                                egui::DragValue::new(&mut dlg.corner_rounding_radius)
+                                    .range(1.0..=50.0)
+                                    .speed(0.5)
+                                    .suffix(" m"),
+                            );
+                            apply_wheel_step(ui, &r, &mut dlg.corner_rounding_radius, 0.5, 1.0..=50.0);
+                            ui.end_row();
+
+                            // Max. Winkelabweichung (nur sichtbar wenn Verrundung aktiv)
+                            ui.label("Max. Winkelabw. (°):")
+                                .on_hover_text("Maximale Winkelabweichung zwischen benachbarten Bogenpunkten — kleinerer Wert = glatterer Bogen, mehr Punkte");
+                            let r = ui.add(
+                                egui::DragValue::new(&mut dlg.corner_rounding_max_angle_deg)
+                                    .range(1.0..=45.0)
+                                    .speed(0.5)
+                                    .suffix("°"),
+                            );
+                            apply_wheel_step(ui, &r, &mut dlg.corner_rounding_max_angle_deg, 1.0, 1.0..=45.0);
+                            ui.end_row();
+                        }
                     }
                 });
 
@@ -113,6 +145,18 @@ pub fn show_trace_all_fields_dialog(ctx: &egui::Context, ui_state: &mut UiState)
             tolerance: dlg.tolerance,
             corner_angle: if dlg.corner_detection_enabled {
                 Some(dlg.corner_angle_threshold_deg)
+            } else {
+                None
+            },
+            corner_rounding_radius: if dlg.corner_detection_enabled && dlg.corner_rounding_enabled {
+                Some(dlg.corner_rounding_radius)
+            } else {
+                None
+            },
+            corner_rounding_max_angle_deg: if dlg.corner_detection_enabled
+                && dlg.corner_rounding_enabled
+            {
+                Some(dlg.corner_rounding_max_angle_deg)
             } else {
                 None
             },

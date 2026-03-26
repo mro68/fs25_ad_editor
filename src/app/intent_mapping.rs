@@ -293,6 +293,9 @@ pub fn map_intent_to_commands(state: &AppState, intent: AppIntent) -> Vec<AppCom
         }
         AppIntent::GroupEditApplyRequested => vec![AppCommand::GroupEditApply],
         AppIntent::GroupEditCancelRequested => vec![AppCommand::GroupEditCancel],
+        AppIntent::GroupEditToolRequested { record_id } => {
+            vec![AppCommand::BeginToolEditFromGroup { record_id }]
+        }
         AppIntent::GroupSelectionAsGroupRequested => {
             vec![AppCommand::GroupSelectionAsGroup]
         }
@@ -387,11 +390,15 @@ pub fn map_intent_to_commands(state: &AppState, intent: AppIntent) -> Vec<AppCom
             offset,
             tolerance,
             corner_angle,
+            corner_rounding_radius,
+            corner_rounding_max_angle_deg,
         } => vec![AppCommand::TraceAllFields {
             spacing,
             offset,
             tolerance,
             corner_angle,
+            corner_rounding_radius,
+            corner_rounding_max_angle_deg,
         }],
         AppIntent::TraceAllFieldsCancelled => vec![AppCommand::CloseTraceAllFieldsDialog],
         AppIntent::CurseplayImportRequested => vec![AppCommand::RequestCurseplayImportDialog],

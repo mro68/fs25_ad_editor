@@ -246,6 +246,8 @@ Felderkennung: Erkennt das GRLE-Farmland-Polygon an der Klickposition und erzeug
 - `node_spacing: f32` — Abstand zwischen Nodes (1–50 m; Standard 10 m)
 - `offset: f32` — Versatz nach innen (<0) oder aussen (>0) in Metern (−20..+20)
 - `straighten_tolerance: f32` — Douglas-Peucker-Toleranz (0..10 m; 0 = keine Vereinfachung)
+- `corner_rounding_enabled: bool` — Aktiviert Kreisbogen-Verrundung erkannter Ecken
+- `corner_rounding_radius: f32` — Verrundungsradius in Metern (0.5–20 m; Standard 5 m)
 - `direction: ConnectionDirection` — Verbindungsrichtung (Standard: Dual)
 - `priority: ConnectionPriority` — Verbindungsprioriaet (Standard: Regular)
 
@@ -259,22 +261,56 @@ pub struct FieldBoundaryTool {
     pub(crate) node_spacing: f32,
     pub(crate) offset: f32,
     pub(crate) straighten_tolerance: f32,
+    pub(crate) corner_rounding_enabled: bool,
+    pub(crate) corner_rounding_radius: f32,
     pub direction: ConnectionDirection,
     pub priority: ConnectionPriority,
     pub(crate) lifecycle: ToolLifecycleState,
 }
 ```
 
-**Interne Ring-Berechnung:**
+**Interne Ring-Berechnung (`compute_ring`):**
 
+Signatur:
+```rust
+pub(super) fn compute_ring(
+    vertices: &[Vec2],
+    offset: f32,
+    tolerance: f32,
+    spacing: f32,
+    corner_angle: Option<f32>,
+    rounding_radius: Option<f32>,
+) -> Vec<(Vec2, RingNodeKind)>
+```
 1. `offset_polygon()` — Polygon nach innen/aussen verschieben
 2. `simplify_polygon()` — Douglas-Peucker vereinfachen
-3. `resample_by_distance()` — Gleichmaessiges Resampling mit `node_spacing`
-4. Geschlossener Ring: letzte Verbindung (N−1 → 0) schliesst den Ring
+3. `detect_corners()` — Eckpunkte anhand Ablenkungswinkel finden
+4. `resample_ring_with_corners()` — Ring segmentweise neu samplen; Ecken als Anker, dazwischen gleichmaessig, optionaler Kreisbogen mit `rounding_radius`
+5. Rückgabe: `Vec<(Vec2, RingNodeKind)>` — jeder Punkt mit geometrischer Klassifikation
 
-**Gruppen-Record:** `GroupKind::FieldBoundary { field_id, node_spacing, offset, straighten_tolerance, base }` (Slot 7 im ToolManager)
+**`RingNodeKind`-Enum (aus `geometry.rs`):**
 
-Modulstruktur: `mod.rs` (Re-Exporte), `state.rs` (Struct, Phasen-Enum, Default), `lifecycle.rs` (RouteTool-Impl, Ring-Berechnung), `config_ui.rs` (egui-Panel)
+```rust
+pub enum RingNodeKind {
+    Regular,        // Normaler Punkt zwischen Ecken
+    Corner,         // Erkannter Eckpunkt (Anker des Bogens)
+    RoundedCorner,  // Punkt auf einem Kreisbogen (wird als NodeFlag::RoundedCorner gespeichert)
+}
+```
+
+Das Mapping `RingNodeKind` → `NodeFlag`:
+- `RingNodeKind::RoundedCorner` → `NodeFlag::RoundedCorner` (6, intern; XML-Export: 0)
+- `RingNodeKind::Regular | Corner` → `NodeFlag::Regular` (0)
+
+**Geometrie-Funktionen (`tools/field_boundary/geometry.rs`):**
+
+- `detect_corners(vertices, angle_threshold_rad) -> Vec<usize>` — Sortierte Indizes aller Eckpunkte mit Ablenkungswinkel ≥ Schwellwert
+- `round_corner(prev, corner, next, radius, spacing) -> Vec<Vec2>` — Kreisbogen zwischen Tangentenpunkten einer konvexen Ecke. Konkave Ecken (Cross-Product ≤ 0) werden unverändert zurückgegeben. Tangentenpunkte begrenzt auf 40% der Kantenlaenge.
+- `resample_ring_with_corners(simplified, corner_indices, spacing, rounding_radius) -> Vec<(Vec2, RingNodeKind)>` — Resampled den Ring segmentweise mit Ecken als festen Ankern
+
+**Gruppen-Record:** `GroupKind::FieldBoundary { field_id, node_spacing, offset, straighten_tolerance, corner_angle_threshold, corner_rounding_radius, base }` (Slot 7 im ToolManager)
+
+Modulstruktur: `mod.rs` (Re-Exporte), `state.rs` (Struct, Phasen-Enum, Default), `lifecycle.rs` (RouteTool-Impl, Ring-Berechnung), `config_ui.rs` (egui-Panel), `geometry.rs` (RingNodeKind, detect_corners, round_corner, resample_ring_with_corners)
 
 ### `RouteOffsetTool`
 

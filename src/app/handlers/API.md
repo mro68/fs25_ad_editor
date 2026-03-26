@@ -632,6 +632,13 @@ pub fn cancel_group_edit(state: &mut AppState)
 
 Bricht den Gruppen-Edit-Modus ab und stellt den Zustand ueber Undo wieder her. Der Undo-Snapshot wurde in `start_group_edit` angelegt. Hebt den Edit-Guard auf und setzt `group_editing` auf `None`.
 
+```rust
+pub fn begin_tool_edit_from_group(state: &mut AppState, record_id: u64)
+```
+
+Wechselt aus dem aktiven Gruppen-Edit-Modus in den destruktiven Tool-Edit-Modus fuer den angegebenen Record. Setzt voraus, dass `group_editing` aktiv ist.
+Ablauf: `cleanup_group_edit_state()` (Edit-Guard aufheben, `group_editing` leeren) → Undo-Reset via `edit_group(state, record_id)` (loescht alte Nodes, laedt Tool mit gespeicherten Parametern neu). Gibt eine Warnung aus wenn kein Group-Edit aktiv ist.
+
 ---
 
 ### `history` — Undo/Redo-Verwaltung

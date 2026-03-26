@@ -124,6 +124,63 @@ impl FieldBoundaryTool {
                     changed = true;
                 }
             });
+
+            // Eckenverrundung (nur sichtbar wenn Ecken-Erkennung aktiv)
+            ui.horizontal(|ui| {
+                if ui
+                    .checkbox(&mut self.corner_rounding_enabled, "Ecken verrunden")
+                    .on_hover_text("Erkannte Ecken mit Kreisbogen abrunden")
+                    .changed()
+                {
+                    changed = true;
+                }
+            });
+
+            // Radius (nur sichtbar wenn Verrundung aktiv)
+            if self.corner_rounding_enabled {
+                ui.horizontal(|ui| {
+                    ui.label("Radius:");
+                    let response = ui.add(
+                        egui::DragValue::new(&mut self.corner_rounding_radius)
+                            .range(1.0..=50.0)
+                            .speed(0.5)
+                            .suffix(" m"),
+                    );
+                    let mut local_changed = response.changed();
+                    let wd = wheel_dir(ui, &response);
+                    if distance_wheel_step_m > 0.0 && wd != 0.0 {
+                        self.corner_rounding_radius = (self.corner_rounding_radius
+                            + wd * distance_wheel_step_m)
+                            .clamp(1.0, 50.0);
+                        local_changed = true;
+                    }
+                    if local_changed {
+                        changed = true;
+                    }
+                });
+
+                // Max. Winkelabweichung (nur sichtbar wenn Verrundung aktiv)
+                ui.horizontal(|ui| {
+                    ui.label("Max. Winkelabw.:")
+                        .on_hover_text("Maximale Winkelabweichung zwischen benachbarten Bogenpunkten \u{2014} kleinerer Wert = glatterer Bogen, mehr Punkte");
+                    let response = ui.add(
+                        egui::DragValue::new(&mut self.corner_rounding_max_angle_deg)
+                            .range(1.0..=45.0)
+                            .speed(0.5)
+                            .suffix("\u{b0}"),
+                    );
+                    let mut local_changed = response.changed();
+                    let wd = wheel_dir(ui, &response);
+                    if wd != 0.0 {
+                        self.corner_rounding_max_angle_deg =
+                            (self.corner_rounding_max_angle_deg + wd * 1.0).clamp(1.0, 45.0);
+                        local_changed = true;
+                    }
+                    if local_changed {
+                        changed = true;
+                    }
+                });
+            }
         }
 
         ui.separator();

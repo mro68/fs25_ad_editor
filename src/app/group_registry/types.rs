@@ -108,6 +108,10 @@ pub enum GroupKind {
         straighten_tolerance: f32,
         /// Winkel-Schwellwert fuer Ecken-Erkennung in Grad (None = deaktiviert).
         corner_angle_threshold: Option<f32>,
+        /// Verrundungsradius fuer erkannte Ecken in Metern (None = keine Verrundung).
+        corner_rounding_radius: Option<f32>,
+        /// Maximale Winkelabweichung zwischen Bogenpunkten in Grad (None = 15°).
+        corner_rounding_max_angle_deg: Option<f32>,
         /// Gemeinsame Basis-Parameter
         base: GroupBase,
     },

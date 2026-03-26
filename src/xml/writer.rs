@@ -133,7 +133,7 @@ pub fn write_autodrive_config(
         ys_text.push(format_float(y_value));
 
         zs_text.push(format_float(node.position.y));
-        flags_text.push(node.flag.to_u32().to_string());
+        flags_text.push(node.flag.to_export_u32().to_string());
 
         let mut out_list: Vec<u64> = outgoing
             .get(id)

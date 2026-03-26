@@ -316,6 +316,7 @@ pub fn render_edit_panel(
 Im Gruppen-Bearbeitungsmodus enthält das Panel:
 - Checkbox für `options.show_all_group_boundaries` (Sichtbarkeit aller Boundary-Icons)
 - ComboBox „Einfahrt" und „Ausfahrt" — emittiert `AppIntent::SetGroupBoundaryNodes` bei Änderung
+- Button „🔧 Tool bearbeiten" — nur sichtbar wenn `group_record.kind.tool_index().is_some()` (nicht fuer `Manual`-Gruppen); emittiert `AppIntent::GroupEditToolRequested { record_id }` → wechselt atomar in den destruktiven Tool-Edit-Modus
 
 ---
 

@@ -161,12 +161,13 @@ pub fn load_background_from_zip(
 
 /// Generiert eine Uebersichtskarte mit den Optionen aus dem Dialog und laedt sie als Background.
 ///
-/// Liest ZIP-Pfad und Layer-Optionen aus dem `OverviewOptionsDialogState`,
-/// persistiert die Layer-Einstellungen in den `EditorOptions` und generiert
-/// die Karte mit `fs25_map_overview`.
+/// Liest ZIP-Pfad, Layer-Optionen und die gewaehlte Feldpolygon-Quelle aus dem
+/// `OverviewOptionsDialogState`, persistiert die Layer-Einstellungen in den
+/// `EditorOptions` und generiert die Karte mit `fs25_map_overview`.
 pub fn generate_overview_with_options(state: &mut AppState) -> Result<()> {
     let zip_path = state.ui.overview_options_dialog.zip_path.clone();
     let layers = state.ui.overview_options_dialog.layers.clone();
+    let field_source = state.ui.overview_options_dialog.field_detection_source;
 
     log::info!("Generiere Uebersichtskarte aus: {}", zip_path);
 
@@ -189,15 +190,54 @@ pub fn generate_overview_with_options(state: &mut AppState) -> Result<()> {
     let (width, height) = overview.image.dimensions();
     log::info!("Uebersichtskarte generiert: {}x{} Pixel", width, height);
 
-    // Farmland-Polygone von Pixel- in Weltkoordinaten umrechnen
-    // world = pixel * (map_size / grle_width) - map_size / 2
-    if !overview.farmland_polygons.is_empty() {
-        let scale_x = overview.map_size / overview.grle_width.max(1) as f32;
-        let scale_y = overview.map_size / overview.grle_height.max(1) as f32;
+    // Savegame-Verzeichnis (Elternordner der aktuell geladenen Config)
+    let savegame_dir = state.ui.current_file_path.as_ref().and_then(|xml_path| {
+        Path::new(xml_path.as_str())
+            .parent()
+            .map(|p| p.to_path_buf())
+    });
+
+    // Feldpolygone gemaess gewaehlter Quelle extrahieren
+    use fs25_map_overview::FieldDetectionSource;
+    let extracted = match field_source {
+        FieldDetectionSource::FromZip => {
+            log::info!("Feldpolygone: Quelle = Map-ZIP");
+            None // Fallback auf overview.farmland_polygons unten
+        }
+        FieldDetectionSource::FieldTypeGrle => savegame_dir.as_deref().and_then(|dir| {
+            let path = dir.join("infoLayer_fieldType.grle");
+            log::info!("Feldpolygone: Quelle = {}", path.display());
+            fs25_map_overview::try_extract_polygons_from_field_type_grle(&path)
+        }),
+        FieldDetectionSource::GroundGdm => savegame_dir.as_deref().and_then(|dir| {
+            let path = dir.join("densityMap_ground.gdm");
+            log::info!("Feldpolygone: Quelle = {}", path.display());
+            fs25_map_overview::try_extract_polygons_from_ground_gdm(&path)
+        }),
+        FieldDetectionSource::FruitsGdm => savegame_dir.as_deref().and_then(|dir| {
+            let path = dir.join("densityMap_fruits.gdm");
+            log::info!("Feldpolygone: Quelle = {}", path.display());
+            fs25_map_overview::try_extract_polygons_from_fruits_gdm(&path)
+        }),
+    };
+
+    // Rohe Polygone und Rasterdimensionen ermitteln
+    let (raw_polygons, grle_w, grle_h) = match extracted {
+        Some((polygons, w, h)) => (polygons, w, h),
+        None => (
+            overview.farmland_polygons,
+            overview.grle_width,
+            overview.grle_height,
+        ),
+    };
+
+    // Pixel → Weltkoordinaten: world = pixel * (map_size / grle_size) - map_size / 2
+    if !raw_polygons.is_empty() {
+        let scale_x = overview.map_size / grle_w.max(1) as f32;
+        let scale_y = overview.map_size / grle_h.max(1) as f32;
         let half = overview.map_size / 2.0;
 
-        let field_polygons: Vec<FieldPolygon> = overview
-            .farmland_polygons
+        let field_polygons: Vec<FieldPolygon> = raw_polygons
             .into_iter()
             .map(|fp| FieldPolygon {
                 id: fp.id,
@@ -210,7 +250,7 @@ pub fn generate_overview_with_options(state: &mut AppState) -> Result<()> {
             .collect();
 
         log::info!(
-            "Farmland-Polygone in Weltkoordinaten umgerechnet: {} Felder",
+            "Feldpolygone in Weltkoordinaten umgerechnet: {} Felder",
             field_polygons.len()
         );
         state.farmland_polygons = Some(Arc::new(field_polygons));

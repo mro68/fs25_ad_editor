@@ -282,6 +282,14 @@ pub fn apply_group_edit(state: &mut AppState) {
     log::info!("Group edit applied for record {}", record_id);
 }
 
+/// Raumt den Gruppen-Edit-State auf (ohne Undo).
+///
+/// Setzt `group_editing` auf `None` und hebt den Edit-Guard in der Registry auf.
+fn cleanup_group_edit_state(state: &mut AppState) {
+    state.group_editing = None;
+    state.group_registry.set_edit_guard(None);
+}
+
 /// Bricht den Gruppen-Edit-Modus ab und stellt den Zustand via Undo wieder her.
 ///
 /// Der Undo-Snapshot wurde in `start_group_edit` angelegt.
@@ -291,12 +299,29 @@ pub fn cancel_group_edit(state: &mut AppState) {
         return;
     }
 
-    // Edit-State und Guard aufraumen
-    state.group_editing = None;
-    state.group_registry.set_edit_guard(None);
+    cleanup_group_edit_state(state);
 
     // Undo zum Snapshot vor Edit-Start
     super::history::undo(state);
 
     log::info!("Group edit cancelled");
+}
+
+/// Wechselt atomar vom Gruppen-Edit in den Tool-Edit-Modus.
+///
+/// Ablauf: Gruppen-Edit-State aufraumen → Undo (Snapshot vor Group-Edit) →
+/// `edit_group` (neuer Snapshot + Nodes loeschen + Tool laden).
+pub fn begin_tool_edit_from_group(state: &mut AppState, record_id: u64) {
+    if state.group_editing.is_none() {
+        log::warn!("begin_tool_edit_from_group: no active group edit");
+        return;
+    }
+
+    cleanup_group_edit_state(state);
+    super::history::undo(state);
+    super::editing::edit_group(state, record_id);
+    log::info!(
+        "Switched from group edit to tool edit for record {}",
+        record_id
+    );
 }

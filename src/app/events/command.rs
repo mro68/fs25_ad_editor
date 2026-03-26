@@ -240,6 +240,8 @@ pub enum AppCommand {
     GroupEditApply,
     /// Gruppen-Edit abbrechen (Undo zum Snapshot)
     GroupEditCancel,
+    /// Atomar: Gruppen-Edit aufraumen → Undo → Tool-Edit starten
+    BeginToolEditFromGroup { record_id: u64 },
     /// ZIP-Archiv oeffnen und Bilddateien im Browser anzeigen
     BrowseZipBackground { path: String },
     /// Bilddatei aus ZIP als Background-Map laden
@@ -320,6 +322,10 @@ pub enum AppCommand {
         tolerance: f32,
         /// Winkel-Schwellwert fuer Ecken-Erkennung in Grad (None = deaktiviert)
         corner_angle: Option<f32>,
+        /// Verrundungsradius fuer Ecken in Metern (None = keine Verrundung)
+        corner_rounding_radius: Option<f32>,
+        /// Maximale Winkelabweichung zwischen Bogenpunkten in Grad (None = 15°)
+        corner_rounding_max_angle_deg: Option<f32>,
     },
     /// Curseplay-Import-Dateidialog anfordern
     RequestCurseplayImportDialog,

@@ -2,6 +2,7 @@ use indexmap::IndexSet;
 use std::collections::{HashMap, HashSet};
 
 use crate::app::state::DistanzenState;
+use crate::app::NodeFlag;
 
 /// Maximale Anzahl selektierter Nodes fuer die Ketten-Analyse.
 /// Oberhalb dieses Limits wird die O(N·C)-Berechnung uebersprungen.
@@ -168,8 +169,18 @@ fn compute_resample_preview(
 /// Algorithmus: Adjacency-Map O(C) einmalig aufbauen, danach Chain-Building O(N).
 /// Vorbedingung: `node_ids.len() <= MAX_CHAIN_NODES` (Aufrufer prueft dies).
 fn order_chain_for_distance(node_ids: &IndexSet<u64>, road_map: &RoadMap) -> Option<Vec<u64>> {
-    // Adjacency-Map: start_id → end_id, gefiltert auf selektierte Nodes (O(C) einmalig)
-    let node_set: HashSet<u64> = node_ids.iter().copied().collect();
+    // Adjacency-Map: start_id → end_id, gefiltert auf selektierte Nodes (O(C) einmalig).
+    // RoundedCorner-Nodes werden ausgeschlossen (Verrundungspunkte zählen nicht zur Streckenlänge).
+    let node_set: HashSet<u64> = node_ids
+        .iter()
+        .copied()
+        .filter(|id| {
+            road_map
+                .nodes
+                .get(id)
+                .is_none_or(|n| n.flag != NodeFlag::RoundedCorner)
+        })
+        .collect();
     let forward: HashMap<u64, u64> = road_map
         .connections_iter()
         .filter(|c| node_set.contains(&c.start_id) && node_set.contains(&c.end_id))
@@ -177,12 +188,14 @@ fn order_chain_for_distance(node_ids: &IndexSet<u64>, road_map: &RoadMap) -> Opt
         .collect();
 
     // Start-Node: kein eingehender Pfeil im selektierten Subgraph
+    // Wichtig: Iteration über node_set (gefiltert), nicht node_ids (ungefiltert),
+    // damit RoundedCorner-Nodes nie als Start gewählt werden können.
     let has_incoming: HashSet<u64> = forward.values().copied().collect();
-    let start = node_ids
+    let start = node_set
         .iter()
         .find(|&&id| !has_incoming.contains(&id))
         .copied()
-        .or_else(|| node_ids.iter().next().copied())?;
+        .or_else(|| node_set.iter().next().copied())?;
 
     let mut path = Vec::with_capacity(node_ids.len());
     let mut visited = HashSet::new();
@@ -199,9 +212,69 @@ fn order_chain_for_distance(node_ids: &IndexSet<u64>, road_map: &RoadMap) -> Opt
         }
     }
 
-    if path.len() == node_ids.len() {
+    if path.len() == node_set.len() {
         Some(path)
     } else {
         None
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::order_chain_for_distance;
+    use crate::app::{
+        Connection, ConnectionDirection, ConnectionPriority, MapNode, NodeFlag, RoadMap,
+    };
+    use glam::Vec2;
+    use indexmap::IndexSet;
+
+    /// Baut eine RoadMap mit einer geraden 3-Node-Kette: 1 → 2 → 3.
+    fn build_chain(node2_flag: NodeFlag) -> (RoadMap, IndexSet<u64>) {
+        let mut map = RoadMap::new(3);
+        map.add_node(MapNode::new(1, Vec2::new(0.0, 0.0), NodeFlag::Regular));
+        map.add_node(MapNode::new(2, Vec2::new(5.0, 0.0), node2_flag));
+        map.add_node(MapNode::new(3, Vec2::new(10.0, 0.0), NodeFlag::Regular));
+        map.add_connection(Connection::new(
+            1,
+            2,
+            ConnectionDirection::Regular,
+            ConnectionPriority::Regular,
+            Vec2::new(0.0, 0.0),
+            Vec2::new(5.0, 0.0),
+        ));
+        map.add_connection(Connection::new(
+            2,
+            3,
+            ConnectionDirection::Regular,
+            ConnectionPriority::Regular,
+            Vec2::new(5.0, 0.0),
+            Vec2::new(10.0, 0.0),
+        ));
+        let mut ids = IndexSet::new();
+        ids.insert(1u64);
+        ids.insert(2u64);
+        ids.insert(3u64);
+        (map, ids)
+    }
+
+    #[test]
+    fn test_order_chain_regular_kette_aufgebaut() {
+        // Alle 3 Nodes sind Regular → Kette 1→2→3 wird korrekt aufgebaut
+        let (map, ids) = build_chain(NodeFlag::Regular);
+        let result = order_chain_for_distance(&ids, &map);
+        assert!(result.is_some(), "Regulaere Kette sollte aufgebaut werden");
+        assert_eq!(result.unwrap().len(), 3);
+    }
+
+    #[test]
+    fn test_order_chain_ignoriert_rounded_corner() {
+        // Node 2 ist RoundedCorner → wird aus node_set gefiltert,
+        // Verbindungen 1→2 und 2→3 fehlen, Kette kann nicht aufgebaut werden → None
+        let (map, ids) = build_chain(NodeFlag::RoundedCorner);
+        let result = order_chain_for_distance(&ids, &map);
+        assert!(
+            result.is_none(),
+            "RoundedCorner-Node soll aus Distanz-Kette ausgeschlossen werden"
+        );
     }
 }
