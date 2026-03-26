@@ -197,6 +197,9 @@ pub fn edit_group(state: &mut AppState, record_id: u64) {
         .collect();
     use_cases::editing::delete_nodes_by_ids(state, &inner_ids);
 
+    // Record sichern, bevor er aus der Registry entfernt wird (fuer Cancel-Wiederherstellung)
+    state.tool_editing_record_backup = Some(record.clone());
+
     // Record aus Registry entfernen (wird beim erneuten execute() neu angelegt)
     state.group_registry.remove(record_id);
 
@@ -209,6 +212,9 @@ pub fn edit_group(state: &mut AppState, record_id: u64) {
         let kind = record.kind.clone();
         tool.load_for_edit(&record, &kind);
     }
+
+    // Merken, welches Segment bearbeitet wird (fuer Cancel-Wiederherstellung)
+    state.tool_editing_record_id = Some(record_id);
 
     log::info!(
         "Segment {} geladen fuer Bearbeitung (Tool-Index {})",
@@ -229,8 +235,18 @@ pub fn trace_all_fields(
     offset: f32,
     tolerance: f32,
     corner_angle: Option<f32>,
+    corner_rounding_radius: Option<f32>,
+    corner_rounding_max_angle_deg: Option<f32>,
 ) {
-    use_cases::editing::trace_all_fields(state, spacing, offset, tolerance, corner_angle);
+    use_cases::editing::trace_all_fields(
+        state,
+        spacing,
+        offset,
+        tolerance,
+        corner_angle,
+        corner_rounding_radius,
+        corner_rounding_max_angle_deg,
+    );
 }
 
 /// Aktiviert die Streckenteilung wenn mindestens 2 Nodes selektiert sind.

@@ -344,6 +344,9 @@ impl AppController {
             }
             AppCommand::GroupEditApply => handlers::group::apply_group_edit(state),
             AppCommand::GroupEditCancel => handlers::group::cancel_group_edit(state),
+            AppCommand::BeginToolEditFromGroup { record_id } => {
+                handlers::group::begin_tool_edit_from_group(state, record_id);
+            }
 
             // === Copy/Paste ===
             AppCommand::CopySelection => handlers::editing::copy_selection(state),
@@ -366,6 +369,8 @@ impl AppController {
                 offset,
                 tolerance,
                 corner_angle,
+                corner_rounding_radius,
+                corner_rounding_max_angle_deg,
             } => {
                 state.ui.trace_all_fields_dialog.visible = false;
                 handlers::editing::trace_all_fields(
@@ -374,6 +379,8 @@ impl AppController {
                     offset,
                     tolerance,
                     corner_angle,
+                    corner_rounding_radius,
+                    corner_rounding_max_angle_deg,
                 );
             }
             AppCommand::RequestCurseplayImportDialog => {

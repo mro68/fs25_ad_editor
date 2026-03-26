@@ -226,6 +226,8 @@ pub enum AppIntent {
     GroupEditApplyRequested,
     /// Gruppen-Bearbeitung abbrechen (Undo zum Snapshot vor Edit-Start)
     GroupEditCancelRequested,
+    /// Aus Gruppen-Edit heraus das Tool-Edit starten (destruktiv/regenerativ)
+    GroupEditToolRequested { record_id: u64 },
     /// ZIP-Datei wurde als Background-Map gewaehlt → Browser oeffnen
     ZipBackgroundBrowseRequested { path: String },
     /// Bilddatei aus ZIP-Browser gewaehlt
@@ -315,6 +317,10 @@ pub enum AppIntent {
         tolerance: f32,
         /// Winkel-Schwellwert fuer Ecken-Erkennung in Grad (None = deaktiviert)
         corner_angle: Option<f32>,
+        /// Verrundungsradius fuer Ecken in Metern (None = keine Verrundung)
+        corner_rounding_radius: Option<f32>,
+        /// Maximale Winkelabweichung zwischen Bogenpunkten in Grad (None = 15°)
+        corner_rounding_max_angle_deg: Option<f32>,
     },
     /// Alle-Felder-nachzeichnen-Dialog abgebrochen
     TraceAllFieldsCancelled,

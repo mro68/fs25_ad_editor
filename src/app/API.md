@@ -368,6 +368,9 @@ pub enum GroupKind {
         /// Winkel-Schwellwert fuer Ecken-Erkennung in Grad (None = deaktiviert).
         /// Ist ein Wert gesetzt, werden Eckpunkte beim Ring-Resampling exakt erhalten.
         corner_angle_threshold: Option<f32>,
+        /// Verrundungsradius fuer erkannte Ecken in Metern (None = keine Verrundung).
+        /// Ecken werden durch einen Kreisbogen ersetzt; Verrundungspunkte erhalten NodeFlag::RoundedCorner.
+        corner_rounding_radius: Option<f32>,
         base: GroupBase,
     },
     /// Parallelversatz einer selektierten Kette (ohne S-Kurven-Anbindung)
@@ -464,6 +467,9 @@ pub enum GroupKind {
         /// Winkel-Schwellwert fuer Ecken-Erkennung in Grad (None = deaktiviert).
         /// Ist ein Wert gesetzt, werden Eckpunkte beim Ring-Resampling exakt erhalten.
         corner_angle_threshold: Option<f32>,
+        /// Verrundungsradius fuer erkannte Ecken in Metern (None = keine Verrundung).
+        /// Ecken werden durch einen Kreisbogen ersetzt; Verrundungspunkte erhalten NodeFlag::RoundedCorner.
+        corner_rounding_radius: Option<f32>,
         base: GroupBase,
     },
     /// Parallelversatz einer selektierten Kette (ohne S-Kurven-Anbindung)
@@ -791,6 +797,8 @@ pub enum AppIntent {
     GroupEditApplyRequested,
     /// Gruppen-Edit abbrechen (Undo zum Snapshot vor Edit-Start)
     GroupEditCancelRequested,
+    /// Aus dem Gruppen-Edit-Modus heraus das Tool-Edit starten (destruktiv/regenerativ)
+    GroupEditToolRequested { record_id: u64 },
 }
 
 pub enum AppCommand {
@@ -979,6 +987,8 @@ pub enum AppCommand {
     GroupEditApply,
     /// Gruppen-Edit abbrechen (Undo zum Snapshot)
     GroupEditCancel,
+    /// Aus Gruppen-Edit-Modus heraus das Tool-Edit starten (Cleanup + Undo + edit_group)
+    BeginToolEditFromGroup { record_id: u64 },
 }
 ```
 

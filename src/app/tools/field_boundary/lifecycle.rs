@@ -8,9 +8,9 @@ use crate::core::{
     find_polygon_at, offset_polygon, simplify_polygon, ConnectionDirection, ConnectionPriority,
     FieldPolygon, NodeFlag, RoadMap,
 };
-use crate::shared::spline_geometry::resample_by_distance;
 use glam::Vec2;
 
+use super::geometry::{detect_corners, resample_ring_with_corners, RingNodeKind};
 use super::state::{FieldBoundaryPhase, FieldBoundaryTool};
 
 impl crate::app::tools::RouteTool for FieldBoundaryTool {
@@ -73,17 +73,30 @@ impl crate::app::tools::RouteTool for FieldBoundaryTool {
         } else {
             None
         };
-        let nodes = compute_ring(
+        let rounding_radius = if self.corner_detection_enabled && self.corner_rounding_enabled {
+            Some(self.corner_rounding_radius)
+        } else {
+            None
+        };
+        let max_angle_deg = if self.corner_detection_enabled && self.corner_rounding_enabled {
+            Some(self.corner_rounding_max_angle_deg)
+        } else {
+            None
+        };
+        let ring = compute_ring(
             &polygon.vertices,
             self.offset,
             self.straighten_tolerance,
             self.node_spacing,
             corner_threshold,
+            rounding_radius,
+            max_angle_deg,
         );
-        if nodes.len() < 2 {
+        if ring.len() < 2 {
             return ToolPreview::default();
         }
-        let n = nodes.len();
+        let n = ring.len();
+        let nodes: Vec<Vec2> = ring.into_iter().map(|(p, _)| p).collect();
         let connections: Vec<(usize, usize)> = (0..n).map(|i| (i, (i + 1) % n)).collect();
         let style = (self.direction, self.priority);
         let connection_styles = vec![style; connections.len()];
@@ -109,20 +122,39 @@ impl crate::app::tools::RouteTool for FieldBoundaryTool {
         } else {
             None
         };
-        let positions = compute_ring(
+        let rounding_radius = if self.corner_detection_enabled && self.corner_rounding_enabled {
+            Some(self.corner_rounding_radius)
+        } else {
+            None
+        };
+        let max_angle_deg = if self.corner_detection_enabled && self.corner_rounding_enabled {
+            Some(self.corner_rounding_max_angle_deg)
+        } else {
+            None
+        };
+        let ring = compute_ring(
             &polygon.vertices,
             self.offset,
             self.straighten_tolerance,
             self.node_spacing,
             corner_threshold,
+            rounding_radius,
+            max_angle_deg,
         );
-        if positions.len() < 2 {
+        if ring.len() < 2 {
             return None;
         }
-        let n = positions.len();
-        let new_nodes: Vec<(Vec2, NodeFlag)> = positions
+        let n = ring.len();
+        let new_nodes: Vec<(Vec2, NodeFlag)> = ring
             .into_iter()
-            .map(|p| (p, NodeFlag::Regular))
+            .map(|(p, kind)| {
+                let flag = if kind == RingNodeKind::RoundedCorner {
+                    NodeFlag::RoundedCorner
+                } else {
+                    NodeFlag::Regular
+                };
+                (p, flag)
+            })
             .collect();
         let internal_connections = (0..n)
             .map(|i| (i, (i + 1) % n, self.direction, self.priority))
@@ -209,6 +241,20 @@ impl crate::app::tools::RouteTool for FieldBoundaryTool {
                 } else {
                     None
                 },
+                corner_rounding_radius: if self.corner_detection_enabled
+                    && self.corner_rounding_enabled
+                {
+                    Some(self.corner_rounding_radius)
+                } else {
+                    None
+                },
+                corner_rounding_max_angle_deg: if self.corner_detection_enabled
+                    && self.corner_rounding_enabled
+                {
+                    Some(self.corner_rounding_max_angle_deg)
+                } else {
+                    None
+                },
                 base: GroupBase {
                     direction: self.direction,
                     priority: self.priority,
@@ -225,6 +271,8 @@ impl crate::app::tools::RouteTool for FieldBoundaryTool {
             offset,
             straighten_tolerance,
             corner_angle_threshold,
+            corner_rounding_radius,
+            corner_rounding_max_angle_deg,
             base,
         } = kind
         else {
@@ -240,6 +288,18 @@ impl crate::app::tools::RouteTool for FieldBoundaryTool {
         } else {
             self.corner_detection_enabled = false;
             self.corner_angle_threshold_deg = 90.0;
+        }
+        if let Some(radius) = corner_rounding_radius {
+            self.corner_rounding_enabled = true;
+            self.corner_rounding_radius = *radius;
+        } else {
+            self.corner_rounding_enabled = false;
+            self.corner_rounding_radius = 5.0;
+        }
+        if let Some(angle) = corner_rounding_max_angle_deg {
+            self.corner_rounding_max_angle_deg = *angle;
+        } else {
+            self.corner_rounding_max_angle_deg = 15.0;
         }
         self.direction = base.direction;
         self.priority = base.priority;
@@ -268,103 +328,35 @@ impl crate::app::tools::RouteTool for FieldBoundaryTool {
     }
 }
 
-/// Erkennt Eckpunkte eines Polygons anhand des Ablenkungswinkels zwischen aufeinanderfolgenden Segmenten.
-///
-/// Ein Vertex gilt als Ecke, wenn der Ablenkungswinkel >= `angle_threshold_rad`.
-/// Kleinerer Schwellwert → mehr Ecken erkannt.
-///
-/// Gibt sortierte Indizes der erkannten Eckpunkte zurueck.
-fn detect_corners(vertices: &[Vec2], angle_threshold_rad: f32) -> Vec<usize> {
-    let n = vertices.len();
-    if n < 3 {
-        return Vec::new();
-    }
-    let mut corners = Vec::new();
-    for i in 0..n {
-        let prev = vertices[(i + n - 1) % n];
-        let curr = vertices[i];
-        let next = vertices[(i + 1) % n];
-        let seg_a = (curr - prev).normalize_or_zero();
-        let seg_b = (next - curr).normalize_or_zero();
-        if seg_a == Vec2::ZERO || seg_b == Vec2::ZERO {
-            continue;
-        }
-        // Ablenkungswinkel als Bogenwinkel (0 = Gerade, PI = U-Turn)
-        let cos_angle = seg_a.dot(seg_b).clamp(-1.0, 1.0);
-        let deflection = cos_angle.acos();
-        if deflection >= angle_threshold_rad {
-            corners.push(i);
-        }
-    }
-    corners
-}
-
-/// Resampled einen Polygon-Ring segmentweise mit Eckpunkten als festen Ankerpunkten.
-///
-/// - `simplified`: Vereinfachtes Polygon (nicht geschlossen, ohne letzten==ersten Punkt)
-/// - `corner_indices`: Sortierte Indizes der Eckpunkte
-/// - `spacing`: maximaler Segment-Abstand beim Resampling
-///
-/// Gibt den resamplten Ring zurueck (ohne abschliessenden Duplikat-Punkt).
-fn resample_ring_with_corners(
-    simplified: &[Vec2],
-    corner_indices: &[usize],
-    spacing: f32,
-) -> Vec<Vec2> {
-    if corner_indices.is_empty() {
-        // Keine Ecken → gesamten Ring normal resamplen
-        let mut closed = simplified.to_vec();
-        closed.push(simplified[0]);
-        let mut r = resample_by_distance(&closed, spacing.max(0.1));
-        if r.len() > 1 {
-            r.pop();
-        }
-        return r;
-    }
-
-    let nc = corner_indices.len();
-    let mut result = Vec::new();
-
-    for c in 0..nc {
-        let c_start = corner_indices[c];
-        let c_end = corner_indices[(c + 1) % nc];
-
-        // Segment vom aktuellen Eckpunkt zum naechsten aufbauen (mit Ring-Umbruch)
-        let segment: Vec<Vec2> = if c_end >= c_start {
-            simplified[c_start..=c_end].to_vec()
-        } else {
-            let mut seg = simplified[c_start..].to_vec();
-            seg.extend_from_slice(&simplified[..=c_end]);
-            seg
-        };
-
-        let resampled = resample_by_distance(&segment, spacing.max(0.1));
-
-        // Letzten Punkt weglassen — er ist der Startpunkt des naechsten Segments
-        let take = if resampled.len() > 1 {
-            resampled.len() - 1
-        } else {
-            resampled.len()
-        };
-        result.extend_from_slice(&resampled[..take]);
-    }
-
-    result
-}
-
 /// Berechnet einen gleichmaessig abgetasteten, geschlossenen Ring aus einem Polygon.
 ///
 /// - `offset`: Verschiebung der Vertices nach innen (negativ) oder aussen (positiv)
 /// - `tolerance`: Douglas-Peucker-Vereinfachung (0 = keine)
-/// - `spacing`: maximaler Segment-Abstand beim Resampling
+/// - `spacing`: maximaler Segment-Abstand beim Resampling der geraden Segmente
 /// - `corner_angle_threshold`: Winkel-Schwellwert in Grad fuer Ecken-Erkennung (None = deaktiviert)
+/// - `rounding_radius`: Verrundungsradius fuer konvexe Ecken in Metern (None = deaktiviert)
+/// - `max_angle_deg`: Maximale Winkelabweichung zwischen Bogenpunkten in Grad (None = 15°)
+///
+/// Ruckgabe: Alle Ring-Positionen mit `RingNodeKind`-Markierung.
 pub fn compute_ring(
     vertices: &[Vec2],
     offset: f32,
     tolerance: f32,
     spacing: f32,
     corner_angle_threshold: Option<f32>,
-) -> Vec<Vec2> {
+    rounding_radius: Option<f32>,
+    max_angle_deg: Option<f32>,
+) -> Vec<(Vec2, RingNodeKind)> {
+    use crate::shared::spline_geometry::resample_by_distance;
+
+    // Node-Abstand muss mindestens so gross sein wie der Verrundungsradius,
+    // damit Bogensegmente nicht staerker abgetastet werden als der Bogen lang ist.
+    let spacing = if let Some(r) = rounding_radius {
+        spacing.max(r)
+    } else {
+        spacing
+    };
+
     let offsetted = offset_polygon(vertices, offset);
     let simplified = simplify_polygon(&offsetted, tolerance);
     if simplified.len() < 3 {
@@ -374,7 +366,8 @@ pub fn compute_ring(
     if let Some(threshold_deg) = corner_angle_threshold {
         let threshold_rad = threshold_deg.to_radians();
         let corners = detect_corners(&simplified, threshold_rad);
-        resample_ring_with_corners(&simplified, &corners, spacing)
+        let angle = max_angle_deg.unwrap_or(15.0).clamp(1.0, 45.0);
+        resample_ring_with_corners(&simplified, &corners, spacing, rounding_radius, angle)
     } else {
         // Geschlossenen Ring fuer Resampling: letzter Punkt = erster Punkt
         let mut closed = simplified.clone();
@@ -385,11 +378,15 @@ pub fn compute_ring(
             resampled.pop();
         }
         resampled
+            .into_iter()
+            .map(|p| (p, RingNodeKind::Regular))
+            .collect()
     }
 }
 
 #[cfg(test)]
 mod tests {
+    use super::super::geometry::detect_corners;
     use super::*;
 
     /// Hilfsfunktion: Rechteck-Vertices aufbauen
@@ -406,7 +403,7 @@ mod tests {
     fn test_compute_ring_ohne_ecken_identisch_zu_vorher() {
         // Ohne Ecken-Erkennung muss compute_ring wie bisher Resampling durchfuehren
         let verts = rectangle_vertices();
-        let ring_ohne = compute_ring(&verts, 0.0, 0.0, 10.0, None);
+        let ring_ohne = compute_ring(&verts, 0.0, 0.0, 10.0, None, None, None);
         // Ring muss mindestens so viele Punkte haben wie der Umfang / Abstand
         let umfang = 2.0 * (100.0 + 50.0_f32);
         let erwartete_punkte = (umfang / 10.0).round() as usize;
@@ -418,8 +415,8 @@ mod tests {
         );
         // Kein Punkt darf doppelt sein (kein Closing-Duplikat)
         assert_ne!(
-            ring_ohne.first(),
-            ring_ohne.last(),
+            ring_ohne.first().map(|(p, _)| p),
+            ring_ohne.last().map(|(p, _)| p),
             "Erster != Letzter Punkt"
         );
     }
@@ -455,7 +452,7 @@ mod tests {
     fn test_compute_ring_mit_ecken_rechteck_enthaelt_ecken() {
         // Mit Ecken-Erkennung bei 80° → alle 4 Ecken des Rechtecks bleiben als Pflichtpunkte
         let verts = rectangle_vertices();
-        let ring_mit = compute_ring(&verts, 0.0, 0.0, 10.0, Some(80.0));
+        let ring_mit = compute_ring(&verts, 0.0, 0.0, 10.0, Some(80.0), None, None);
         assert!(
             ring_mit.len() >= 4,
             "Ring sollte mindestens 4 Punkte (= Ecken) haben"
@@ -469,7 +466,7 @@ mod tests {
         ];
         for ecke in &ecken {
             assert!(
-                ring_mit.iter().any(|p| (*p - *ecke).length() < 1e-3),
+                ring_mit.iter().any(|(p, _)| (*p - *ecke).length() < 1e-3),
                 "Ecke {:?} fehlt im Ring",
                 ecke
             );

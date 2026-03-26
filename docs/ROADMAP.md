@@ -220,6 +220,17 @@
   - [x] overview.jpg: Auto-Load beim XML-Oeffnen, Speichern-Dialog nach ZIP-Extraktion/Generierung
   - [x] **Alle Felder nachzeichnen (2026-03-06):** `AppIntent::TraceAllFieldsRequested` → `AppCommand::TraceAllFields` → `use_cases::editing::trace_all_fields()` — Batch-Nachzeichnen aller geladenen Farmland-Polygone in einem einzigen Undo-Schritt; Menueä `📍 Alle Felder nachzeichnen` in Extras (aktiviert wenn Farmland-Polygone geladen)
   - [x] **Ecken-Erkennung beim Nachzeichnen (2026-03-22):** `compute_ring()` um `corner_angle_threshold: Option<f32>` erweitert; neue private Funktionen `detect_corners()` und `resample_ring_with_corners()` in `field_boundary/lifecycle.rs`; `FieldBoundaryTool` und `GroupKind::FieldBoundary` um `corner_detection_enabled`/`corner_angle_threshold_deg` ergaenzt; `TraceAllFieldsDialogState` um Checkbox + Slider erweitert; Vorschau und Execute beachten den Schwellwert
+  - [x] **Eckenverrundung beim Nachzeichnen (2026-03-23, Branch `feat/group-edit-corner-rounding`):**
+    - [x] `NodeFlag::RoundedCorner = 6` — neues internes Flag; `to_export_u32()` schreibt es als 0 (AutoDrive-Kompatibilitaet)
+    - [x] `geometry.rs` (neu): `RingNodeKind` (Regular/Corner/RoundedCorner), `detect_corners()`, `round_corner()`, `resample_ring_with_corners()` — Kreisbogen-Verrundung konvexer Ecken
+    - [x] `FieldBoundaryTool`: `corner_rounding_enabled`/`corner_rounding_radius` als neue Config-Felder; Checkbox + Slider im Config-Panel
+    - [x] `GroupKind::FieldBoundary` um `corner_rounding_radius: Option<f32>` erweitert
+    - [x] `Bugfix order_chain_for_distance (Bug 3a+3b)`: Start-Node-Suche und Laengenvergleich gegen gefilterte Menge (`node_set`) statt `node_ids` — verhindert falschen Kettenabbruch bei RoundedCorner-Nodes
+  - [x] **Tool-Bearbeitung aus Gruppen-Editor (2026-03-23, Branch `feat/group-edit-corner-rounding`):**
+    - [x] `AppIntent::GroupEditToolRequested { record_id }` / `AppCommand::BeginToolEditFromGroup { record_id }` — neuer Intent-Pfad
+    - [x] `handlers::group::begin_tool_edit_from_group()` — cleanup → undo → edit_group()
+    - [x] DRY: `cleanup_group_edit_state()` als private Hilfsfunktion extrahiert
+    - [x] Button „🔧 Tool bearbeiten“ im `render_group_edit_panel()` (Guard: `record.kind.tool_index().is_some()`)
   - [x] **Curseplay-Import/Export (2026-03-22):** Neues Modul `src/xml/curseplay.rs` mit `parse_curseplay()` und `write_curseplay()`; neue AppIntents `CurseplayImportRequested`/`CurseplayExportRequested`/`CurseplayFileSelected`/`CurseplayExportPathSelected`; neue AppCommands `RequestCurseplayImportDialog`/`ImportCurseplay`/`RequestCurseplayExportDialog`/`ExportCurseplay`; Use-Cases `import_curseplay` und `export_curseplay` in `use_cases/editing/`; Handler `import_curseplay_file`/`export_curseplay_file` in `handlers/editing.rs`; Menue-Eintraege im Extras-Menue; rfd-Dateidialoge
 
 ## Phase 6: Performance & Qualitaet
@@ -373,6 +384,12 @@
     - [x] `xml/API.md`: `parse_curseplay()` und `write_curseplay()` mit Signatur, Beispiel und Output-Format dokumentiert
     - [x] `app/API.md`: `CurseplayImportRequested`/`ExportRequested`/`FileSelected`/`ExportPathSelected` in AppIntent-Block eingetragen; `RequestCurseplayImportDialog`/`ImportCurseplay`/`RequestCurseplayExportDialog`/`ExportCurseplay` in AppCommand-Block eingetragen; `GroupKind::FieldBoundary` um `corner_angle_threshold: Option<f32>`-Feld in beiden Blocken ergaenzt
     - [x] ROADMAP.md: Ecken-Erkennung und Curseplay-Import/Export in Phase-5-Block eingetragen
+  - [x] **Doku-Sync Gruppen-Edit-Button + Eckenverrundung (2026-03-23, Branch `feat/group-edit-corner-rounding`)**
+    - [x] `core/API.md`: `NodeFlag::RoundedCorner (6)` ergaenzt; `to_export_u32()` dokumentiert
+    - [x] `app/API.md`: `GroupEditToolRequested`/`BeginToolEditFromGroup` in Intent/Command-Bloecken; `corner_rounding_radius` in beiden `GroupKind::FieldBoundary`-Bloecken
+    - [x] `app/handlers/API.md`: `begin_tool_edit_from_group()` in group-Sektion ergaenzt
+    - [x] `app/tools/API.md`: `FieldBoundaryTool` vollstaendig aktualisiert — `RingNodeKind`, neue State-Felder, aktualisierte `compute_ring()`-Signatur, Geometrie-Module-Sektion
+    - [x] ROADMAP.md: Eckenverrundungs-Feature und Gruppen-Edit-Button als abgeschlossen eingetragen
 - [ ] Packaging
   - [ ] Windows Binaries (.exe)
   - [ ] Linux Binaries (AppImage)

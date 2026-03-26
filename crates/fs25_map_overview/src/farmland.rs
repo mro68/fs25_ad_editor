@@ -45,13 +45,39 @@ pub fn extract_farmland_polygons_from_ids(
     width: usize,
     height: usize,
 ) -> Vec<FarmlandPolygon> {
-    // Ersten Vorkommen jeder ID in Scan-Reihenfolge (top-left) sammeln.
-    // ID 0 = kein Feld, ID 255 = Hintergrund/Restflaeche (FS25 GRLE Default-Wert).
+    // ID 0 = kein Feld, ID 255 = Hintergrund/Restflaeche (FS25 GRLE Default-Wert)
+    extract_polygons_from_ids_impl(pixels, width, height, |id| id != 0 && id != 255)
+}
+
+/// Extrahiert Feld-Polygone aus bereits decodierten Pixel-Daten des FieldType-Layers.
+///
+/// Wertet den `infoLayer_fieldType`-GRLE-Layer aus. Im Gegensatz zur Farmland-Extraktion
+/// ist hier Pixelwert 255 eine gueltige Frucht-ID — nur ID 0 bedeutet "kein Feld".
+pub fn extract_field_type_polygons_from_ids(
+    pixels: &[u8],
+    width: usize,
+    height: usize,
+) -> Vec<FarmlandPolygon> {
+    // Nur ID 0 herausfiltern; alle anderen Werte (inkl. 255) sind gueltige Frucht-IDs
+    extract_polygons_from_ids_impl(pixels, width, height, |id| id != 0)
+}
+
+/// Gemeinsamer Kern: Extrahiert Rand-Polygone fuer alle Pixel-IDs, die `should_include` bejaht.
+///
+/// Wird von `extract_farmland_polygons_from_ids` und `extract_field_type_polygons_from_ids`
+/// aufgerufen, um Duplikation der Tracing-Logik zu vermeiden.
+fn extract_polygons_from_ids_impl(
+    pixels: &[u8],
+    width: usize,
+    height: usize,
+    should_include: impl Fn(u8) -> bool,
+) -> Vec<FarmlandPolygon> {
+    // Erstes Vorkommen jeder geltenden ID in Scan-Reihenfolge (top-left) sammeln
     let mut start_pixels: HashMap<u8, (i32, i32)> = HashMap::new();
     for y in 0..height {
         for x in 0..width {
             let id = pixels[y * width + x];
-            if id != 0 && id != 255 {
+            if should_include(id) {
                 start_pixels.entry(id).or_insert((x as i32, y as i32));
             }
         }
@@ -74,7 +100,7 @@ pub fn extract_farmland_polygons_from_ids(
     }
 
     log::debug!(
-        "Farmland-Polygone extrahiert: {} Felder aus {}x{} Raster",
+        "Polygone extrahiert: {} Felder aus {}x{} Raster",
         polygons.len(),
         width,
         height
@@ -98,6 +124,100 @@ pub fn extract_farmland_polygons(grle_data: &[u8]) -> Result<(Vec<FarmlandPolygo
     Ok((polygons, width as u32, height as u32))
 }
 
+/// Extrahiert Feld-Polygone mittels Connected Component Labeling (CCL).
+///
+/// Jede zusammenhaengende Nicht-Null-Flaeche wird als eigenstaendiges Feld
+/// erkannt und per Moore-Tracing umrandet. Geeignet fuer Datenquellen,
+/// bei denen gleiche Pixel-IDs getrennte physische Felder repraesentieren
+/// (z.B. `densityMap_fruits.gdm`, `densityMap_ground.gdm`,
+/// `infoLayer_fieldType.grle`).
+///
+/// Die Verbindung zwischen Pixeln wird per 4-Konnektivitaet (horizontal +
+/// vertikal) bestimmt; Diagonalen zaehlen nicht. Die `id`-Felder der
+/// zurueckgegebenen Polygone sind fortlaufende CCL-Label-IDs (1..N).
+pub fn extract_field_polygons_by_ccl(
+    pixels: &[u8],
+    width: usize,
+    height: usize,
+) -> Vec<FarmlandPolygon> {
+    // Phase 1: Flood-Fill CCL – 4-Konnektivitaet
+    let mut labels = vec![0u32; width * height];
+    let mut label_starts: Vec<(i32, i32)> = Vec::new();
+    let mut next_label = 1u32;
+
+    for y in 0..height {
+        for x in 0..width {
+            let idx = y * width + x;
+            if pixels[idx] != 0 && labels[idx] == 0 {
+                let label = next_label;
+                next_label += 1;
+                // Start-Pixel in Scan-Reihenfolge (top-left der Komponente)
+                label_starts.push((x as i32, y as i32));
+
+                // Iterativer Flood-Fill mit Stack (4-Konnektivitaet)
+                let mut stack = vec![(x, y)];
+                while let Some((cx, cy)) = stack.pop() {
+                    let cidx = cy * width + cx;
+                    if labels[cidx] != 0 {
+                        continue;
+                    }
+                    labels[cidx] = label;
+
+                    if cx > 0 {
+                        let ni = cy * width + (cx - 1);
+                        if pixels[ni] != 0 && labels[ni] == 0 {
+                            stack.push((cx - 1, cy));
+                        }
+                    }
+                    if cx + 1 < width {
+                        let ni = cy * width + (cx + 1);
+                        if pixels[ni] != 0 && labels[ni] == 0 {
+                            stack.push((cx + 1, cy));
+                        }
+                    }
+                    if cy > 0 {
+                        let ni = (cy - 1) * width + cx;
+                        if pixels[ni] != 0 && labels[ni] == 0 {
+                            stack.push((cx, cy - 1));
+                        }
+                    }
+                    if cy + 1 < height {
+                        let ni = (cy + 1) * width + cx;
+                        if pixels[ni] != 0 && labels[ni] == 0 {
+                            stack.push((cx, cy + 1));
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    // Phase 2: Pro Label -> Moore-Tracing auf Label-Array
+    let mut polygons = Vec::with_capacity(label_starts.len());
+
+    for (i, &start) in label_starts.iter().enumerate() {
+        let label = (i + 1) as u32;
+        let raw_contour = trace_moore_contour_labels(&labels, width, height, label, start);
+        let vertices = dedup_consecutive(raw_contour);
+
+        if vertices.len() >= 2 {
+            polygons.push(FarmlandPolygon {
+                id: label,
+                vertices,
+            });
+        }
+    }
+
+    log::debug!(
+        "CCL-Polygone extrahiert: {} Felder aus {}x{} Raster",
+        polygons.len(),
+        width,
+        height
+    );
+
+    polygons
+}
+
 // ---------------------------------------------------------------------------
 // Interne Hilfsfunktionen
 // ---------------------------------------------------------------------------
@@ -108,6 +228,15 @@ fn get_pixel(pixels: &[u8], width: usize, height: usize, x: i32, y: i32) -> u8 {
         0
     } else {
         pixels[y as usize * width + x as usize]
+    }
+}
+
+/// Liest den Label-Wert an (x, y) aus einem u32-Label-Array; gibt 0 zurueck wenn ausserhalb.
+fn get_label(labels: &[u32], width: usize, height: usize, x: i32, y: i32) -> u32 {
+    if x < 0 || y < 0 || x >= width as i32 || y >= height as i32 {
+        0
+    } else {
+        labels[y as usize * width + x as usize]
     }
 }
 
@@ -226,6 +355,72 @@ fn trace_moore_contour(
 fn dedup_consecutive(mut vertices: Vec<(f32, f32)>) -> Vec<(f32, f32)> {
     vertices.dedup();
     vertices
+}
+
+/// Moore-Neighbor-Boundary-Tracing auf einem u32-Label-Array.
+///
+/// Entspricht `trace_moore_contour`, operiert jedoch auf CCL-Label-Daten
+/// (u32) statt auf u8-Pixeln. Wird von `extract_field_polygons_by_ccl`
+/// verwendet.
+fn trace_moore_contour_labels(
+    labels: &[u32],
+    width: usize,
+    height: usize,
+    target_label: u32,
+    start: (i32, i32),
+) -> Vec<(f32, f32)> {
+    let initial_b = (start.0 - 1, start.1);
+    let mut contour = vec![(start.0 as f32, start.1 as f32)];
+    let mut current = start;
+    let mut b = initial_b;
+    let mut b_at_first_return: Option<(i32, i32)> = None;
+    let max_steps = width * height * 4;
+
+    for _ in 0..max_steps {
+        let start_idx = clockwise_start_index(current, b);
+        let mut found_next: Option<(i32, i32)> = None;
+        let mut new_b = b;
+
+        for i in 0..8_usize {
+            let idx = (start_idx + i) % 8;
+            let (dx, dy) = CLOCKWISE[idx];
+            let nx = current.0 + dx;
+            let ny = current.1 + dy;
+            if get_label(labels, width, height, nx, ny) == target_label {
+                found_next = Some((nx, ny));
+                break;
+            } else {
+                new_b = (nx, ny);
+            }
+        }
+
+        let next = match found_next {
+            Some(p) => p,
+            None => break,
+        };
+
+        b = new_b;
+        current = next;
+
+        if current == start {
+            if b == initial_b {
+                break;
+            }
+            match b_at_first_return {
+                None => {
+                    b_at_first_return = Some(b);
+                }
+                Some(stored) if b == stored => {
+                    break;
+                }
+                _ => {}
+            }
+        } else {
+            contour.push((current.0 as f32, current.1 as f32));
+        }
+    }
+
+    contour
 }
 
 // ---------------------------------------------------------------------------

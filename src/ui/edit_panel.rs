@@ -118,6 +118,14 @@ fn render_group_edit_panel(
                 events.push(AppIntent::GroupEditCancelRequested);
             }
         });
+        // Tool-Edit-Button: nur bei Tool-Gruppen (nicht Manual)
+        if let Some(rec) = group_record {
+            if rec.kind.tool_index().is_some() && ui.button("🔧 Tool bearbeiten").clicked() {
+                events.push(AppIntent::GroupEditToolRequested {
+                    record_id: edit_state.record_id,
+                });
+            }
+        }
         // Keyboard-Shortcuts
         if ui.input(|i| i.key_pressed(egui::Key::Enter)) {
             events.push(AppIntent::GroupEditApplyRequested);

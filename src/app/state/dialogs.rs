@@ -1,4 +1,5 @@
 use crate::shared::OverviewLayerOptions;
+use fs25_map_overview::FieldDetectionSource;
 use std::path::PathBuf;
 
 /// Zustand eines schwebenden Kontextmenues.
@@ -84,6 +85,10 @@ pub struct OverviewOptionsDialogState {
     pub zip_path: String,
     /// Layer-Optionen (Arbeitskopie fuer den Dialog)
     pub layers: OverviewLayerOptions,
+    /// Gewaehlte Quelle fuer die Feldpolygon-Erkennung
+    pub field_detection_source: FieldDetectionSource,
+    /// Verfuegbare Quellen (befuellt beim Oeffnen des Dialogs)
+    pub available_sources: Vec<FieldDetectionSource>,
 }
 
 impl OverviewOptionsDialogState {
@@ -93,6 +98,8 @@ impl OverviewOptionsDialogState {
             visible: false,
             zip_path: String::new(),
             layers: OverviewLayerOptions::default(),
+            field_detection_source: FieldDetectionSource::default(),
+            available_sources: vec![FieldDetectionSource::FromZip],
         }
     }
 }
@@ -175,6 +182,12 @@ pub struct TraceAllFieldsDialogState {
     pub corner_detection_enabled: bool,
     /// Winkel-Schwellwert fuer Ecken-Erkennung in Grad (Standard: 90°).
     pub corner_angle_threshold_deg: f32,
+    /// Eckenverrundung aktiviert?
+    pub corner_rounding_enabled: bool,
+    /// Radius der Eckenverrundung in Metern (Standard: 5.0).
+    pub corner_rounding_radius: f32,
+    /// Maximale Winkelabweichung zwischen Bogenpunkten in Grad (Standard: 15.0).
+    pub corner_rounding_max_angle_deg: f32,
 }
 
 impl Default for TraceAllFieldsDialogState {
@@ -186,6 +199,9 @@ impl Default for TraceAllFieldsDialogState {
             tolerance: 0.0,
             corner_detection_enabled: false,
             corner_angle_threshold_deg: 90.0,
+            corner_rounding_enabled: false,
+            corner_rounding_radius: 5.0,
+            corner_rounding_max_angle_deg: 15.0,
         }
     }
 }

@@ -42,4 +42,5 @@ pub use state::{
     ViewState,
 };
 pub use tools::field_boundary::compute_ring;
+pub use tools::field_boundary::RingNodeKind;
 pub use tools::ToolAnchor;
