@@ -45,6 +45,8 @@ pub struct ParkingConfig {
     pub exit_side: RampSide,
     /// Marker-Gruppe fuer alle erzeugten Buchten-Marker.
     pub marker_group: String,
+    /// Maximale Distanz zwischen benachbarten Nodes in der Parkbucht (Meter).
+    pub max_node_distance: f32,
 }
 
 impl Default for ParkingConfig {
@@ -59,6 +61,7 @@ impl Default for ParkingConfig {
             entry_side: RampSide::Right,
             exit_side: RampSide::Left,
             marker_group: "Parkplatz".to_string(),
+            max_node_distance: 5.0,
         }
     }
 }

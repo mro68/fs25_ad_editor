@@ -73,9 +73,28 @@ impl ParkingTool {
             }
         });
 
-        ui.separator();
+        // Maximaler Node-Abstand innerhalb der Parkbucht
+        ui.horizontal(|ui| {
+            ui.label("Max. Node-Abstand:");
+            let response = ui.add(
+                egui::Slider::new(&mut self.config.max_node_distance, 2.0..=20.0)
+                    .suffix(" m")
+                    .fixed_decimals(1),
+            );
+            let mut local_changed = response.changed();
+            let wd = wheel_dir(ui, &response);
+            if distance_wheel_step_m > 0.0 && wd != 0.0 {
+                self.config.max_node_distance =
+                    (self.config.max_node_distance + wd * distance_wheel_step_m)
+                        .clamp(2.0, 20.0);
+                local_changed = true;
+            }
+            if local_changed {
+                changed = true;
+            }
+        });
 
-        // Einfahrt-Position
+        ui.separator();
         ui.horizontal(|ui| {
             ui.label("Einfahrt:");
             let response = ui.add(
