@@ -18,9 +18,7 @@ fn interpolate_positions(from: Vec2, to: Vec2, max_distance: f32) -> Vec<Vec2> {
         return vec![];
     }
     let n = (dist / max_distance).ceil() as usize;
-    (1..n)
-        .map(|i| from.lerp(to, i as f32 / n as f32))
-        .collect()
+    (1..n).map(|i| from.lerp(to, i as f32 / n as f32)).collect()
 }
 
 /// Erzeugt ein skalierbares Blueprint-Serien-Layout fuer `config.num_rows` Parkplaetze.
@@ -123,8 +121,7 @@ pub fn generate_blueprint_series_layout(
                 // Bay-Verbindungen: bei Bedarf Zwischenknoten einfuegen
                 let p_from = nodes[base_idx + from];
                 let p_to = nodes[base_idx + to];
-                let intermediates =
-                    interpolate_positions(p_from, p_to, config.max_node_distance);
+                let intermediates = interpolate_positions(p_from, p_to, config.max_node_distance);
                 if intermediates.is_empty() {
                     connections.push((base_idx + from, base_idx + to, dir, priority));
                 } else {
