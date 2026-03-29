@@ -1,6 +1,5 @@
 //! Lifecycle-Methoden des StraightLineTool (RouteTool-Implementierung).
 
-use super::super::common::linear_connections;
 use super::super::{RouteTool, ToolAction, ToolPreview, ToolResult};
 use super::geometry::{build_result, compute_line_positions};
 use super::state::StraightLineTool;
@@ -68,15 +67,7 @@ impl RouteTool for StraightLineTool {
         };
 
         let positions = compute_line_positions(start_pos, end_pos, self.seg.max_segment_length);
-        let connections = linear_connections(positions.len());
-        let styles = vec![(self.direction, self.priority); connections.len()];
-
-        ToolPreview {
-            nodes: positions,
-            connections,
-            connection_styles: styles,
-            labels: vec![],
-        }
+        ToolPreview::from_polyline(positions, self.direction, self.priority)
     }
 
     fn render_config(&mut self, ui: &mut egui::Ui, distance_wheel_step_m: f32) -> bool {

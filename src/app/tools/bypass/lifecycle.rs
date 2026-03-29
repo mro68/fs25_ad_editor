@@ -55,8 +55,14 @@ impl RouteTool for BypassTool {
         };
 
         // Vollstaendige Preview-Sequenz: chain_start + bypass_nodes + chain_end
-        let chain_start = *self.chain_positions.first().expect("invariant: chain_positions ist nicht-leer nach load_chain()");
-        let chain_end = *self.chain_positions.last().expect("invariant: chain_positions ist nicht-leer nach load_chain()");
+        let chain_start = *self
+            .chain_positions
+            .first()
+            .expect("invariant: chain_positions ist nicht-leer nach load_chain()");
+        let chain_end = *self
+            .chain_positions
+            .last()
+            .expect("invariant: chain_positions ist nicht-leer nach load_chain()");
 
         let mut nodes = Vec::with_capacity(positions.len() + 2);
         nodes.push(chain_start);
@@ -92,8 +98,14 @@ impl RouteTool for BypassTool {
         let (new_positions, _d_blend) =
             compute_bypass_positions(&self.chain_positions, self.offset, self.base_spacing)?;
 
-        let chain_start_pos = *self.chain_positions.first().expect("invariant: chain_positions ist nicht-leer nach load_chain()");
-        let chain_end_pos = *self.chain_positions.last().expect("invariant: chain_positions ist nicht-leer nach load_chain()");
+        let chain_start_pos = *self
+            .chain_positions
+            .first()
+            .expect("invariant: chain_positions ist nicht-leer nach load_chain()");
+        let chain_end_pos = *self
+            .chain_positions
+            .last()
+            .expect("invariant: chain_positions ist nicht-leer nach load_chain()");
 
         // Vollstaendige Positions-Sequenz: start + neue Nodes + end
         let mut all_positions = Vec::with_capacity(new_positions.len() + 2);

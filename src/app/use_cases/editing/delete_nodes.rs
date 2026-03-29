@@ -102,7 +102,9 @@ pub fn delete_selected_nodes(state: &mut AppState) {
 
     // Reconnect-Operationen vorbereiten (falls Option aktiv)
     let reconnect_ops: Vec<ReconnectOp> = if state.options.reconnect_on_delete {
-        let road_map = state.road_map.as_deref()
+        let road_map = state
+            .road_map
+            .as_deref()
             .expect("road_map ist Some nach is_none()-Guard in delete_selected_nodes");
         ids_to_delete
             .iter()

@@ -150,12 +150,16 @@ pub fn resample_selected_path(state: &mut AppState) {
     state.record_undo_snapshot();
 
     let first_id = ordered[0];
-    let last_id = *ordered.last().expect("invariant: ordered ist nicht-leer nach order_chain()");
+    let last_id = *ordered
+        .last()
+        .expect("invariant: ordered ist nicht-leer nach order_chain()");
     let chain_set: HashSet<u64> = ordered.iter().copied().collect();
 
     // Externe Verbindungen der Endpunkte sichern (Verbindungen zu Nodes ausserhalb der Kette)
     let external_conns: Vec<ExternalConnection> = {
-        let rm = state.road_map.as_deref()
+        let rm = state
+            .road_map
+            .as_deref()
             .expect("road_map ist Some nach as_ref()-Guard in resample_selected_path");
         let mut ext = Vec::new();
         for conn in rm.connections_iter() {
@@ -217,8 +221,12 @@ pub fn resample_selected_path(state: &mut AppState) {
     road_map.recalculate_node_flags(&new_ids);
 
     // Externe Verbindungen der Ketten-Endpunkte wiederherstellen
-    let new_first_id = *new_ids.first().expect("invariant: new_ids ist nicht-leer – new_positions hat mindestens 2 Elemente");
-    let new_last_id = *new_ids.last().expect("invariant: new_ids ist nicht-leer – new_positions hat mindestens 2 Elemente");
+    let new_first_id = *new_ids
+        .first()
+        .expect("invariant: new_ids ist nicht-leer – new_positions hat mindestens 2 Elemente");
+    let new_last_id = *new_ids
+        .last()
+        .expect("invariant: new_ids ist nicht-leer – new_positions hat mindestens 2 Elemente");
     let mut reconnected_neighbors = Vec::new();
     for ec in &external_conns {
         let new_ep_id = if ec.is_first_endpoint {

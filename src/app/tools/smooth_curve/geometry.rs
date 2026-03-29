@@ -269,9 +269,13 @@ fn filter_min_distance(points: &[Vec2], min_dist: f32) -> Vec<Vec2> {
     let mut result = Vec::with_capacity(points.len());
     result.push(points[0]);
 
-    let last = *points.last().expect("invariant: points hat mehr als 2 Elemente nach len()<=2-Guard");
+    let last = *points
+        .last()
+        .expect("invariant: points hat mehr als 2 Elemente nach len()<=2-Guard");
     for &p in &points[1..points.len() - 1] {
-        let prev = *result.last().expect("invariant: result ist nicht-leer – points[0] wurde gepusht");
+        let prev = *result
+            .last()
+            .expect("invariant: result ist nicht-leer – points[0] wurde gepusht");
         // Punkt beibehalten wenn weit genug vom letzten behaltenen entfernt
         // UND weit genug vom Endpunkt entfernt
         if prev.distance_squared(p) >= min_dist_sq && p.distance_squared(last) >= min_dist_sq {
