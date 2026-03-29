@@ -116,15 +116,11 @@ pub fn draw_legend(image: &mut RgbImage, options: &OverviewOptions) {
 /// Halbtransparenter Hintergrund mit dem Kartennamen.
 pub fn draw_title_bar(image: &mut RgbImage, title: &str) {
     let scale = (image.width() / 800).clamp(2, 6);
-    let bar_h = text::text_height(scale) + scale * 6;
-    let bar_w = image.width();
-
-    text::draw_rect_blended(image, 0, 0, bar_w, bar_h, Rgb([30, 30, 30]), 0.7);
 
     let label = format!("{} - Overview", title);
     let tx = (scale * 4) as i32;
     let ty = (scale * 3) as i32;
-    text::draw_text(image, tx, ty, &label, Rgb([255, 255, 255]), scale);
+    text::draw_text_outlined(image, tx, ty, &label, Rgb([255, 255, 255]), scale);
 }
 
 fn draw_filled_circle(image: &mut RgbImage, cx: i32, cy: i32, radius: i32, color: Rgb<u8>) {
