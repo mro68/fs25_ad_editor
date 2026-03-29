@@ -5,7 +5,7 @@ use std::sync::Arc;
 use crate::app::group_registry::{GroupBase, GroupKind, GroupRecord};
 use crate::app::tools::{ToolAction, ToolAnchor, ToolPreview, ToolResult};
 use crate::core::{
-    find_polygon_at, offset_polygon, simplify_polygon, ConnectionDirection, ConnectionPriority,
+    find_polygon_at, offset_polygon, simplify_polygon,
     FieldPolygon, NodeFlag, RoadMap,
 };
 use glam::Vec2;
@@ -181,42 +181,12 @@ impl crate::app::tools::RouteTool for FieldBoundaryTool {
         self.phase == FieldBoundaryPhase::Configuring
     }
 
-    // ── Lifecycle-Delegation (manuell, da kein SegmentConfig) ────
+    // ── Lifecycle-Delegation ─────────────────────────────────────────────────
 
-    fn set_direction(&mut self, dir: ConnectionDirection) {
-        self.direction = dir;
-    }
-
-    fn set_priority(&mut self, prio: ConnectionPriority) {
-        self.priority = prio;
-    }
-
-    fn set_snap_radius(&mut self, radius: f32) {
-        self.lifecycle.snap_radius = radius;
-    }
+    crate::impl_lifecycle_delegation_no_seg!();
 
     fn set_farmland_data(&mut self, data: Option<Arc<Vec<FieldPolygon>>>) {
         self.farmland_data = data;
-    }
-
-    fn last_created_ids(&self) -> &[u64] {
-        &self.lifecycle.last_created_ids
-    }
-
-    fn last_end_anchor(&self) -> Option<ToolAnchor> {
-        self.lifecycle.last_end_anchor
-    }
-
-    fn needs_recreate(&self) -> bool {
-        self.lifecycle.recreate_needed
-    }
-
-    fn clear_recreate_flag(&mut self) {
-        self.lifecycle.recreate_needed = false;
-    }
-
-    fn set_last_created(&mut self, ids: &[u64], _road_map: &RoadMap) {
-        self.lifecycle.save_created_ids(ids);
     }
 
     fn make_group_record(&self, id: u64, node_ids: &[u64]) -> Option<GroupRecord> {
