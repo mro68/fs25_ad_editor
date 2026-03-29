@@ -77,10 +77,6 @@ impl EditorApp {
                 continue;
             }
 
-            if let AppIntent::SelectRouteToolRequested { index } = event {
-                self.update_last_route_tool_index(*index);
-            }
-
             if let Err(e) = self
                 .controller
                 .handle_intent(&mut self.state, event.clone())
