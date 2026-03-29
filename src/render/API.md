@@ -147,7 +147,10 @@ pub(crate) struct RenderContext<'a> {
     pub camera: &'a Camera2D,
     pub viewport_size: [f32; 2],
     pub options: &'a EditorOptions,
+    /// Node-IDs, die in diesem Frame ausgeblendet werden sollen
     pub hidden_node_ids: &'a IndexSet<u64>,
+    /// Node-IDs, die mit 50% Opacity gerendert werden sollen (gedimmte Segment-Nodes)
+    pub dimmed_node_ids: &'a IndexSet<u64>,
 }
 ```
 
@@ -232,7 +235,9 @@ Interner Renderer fuer Map-Marker (Pin-Symbole) mit GPU-Instancing und texturbas
 
 **Features:**
 - GPU-Instancing fuer beliebig viele Marker
-- Pin-Symbol als PNG-Textur (`icon_map_pin.png`, eingebettet via `include_bytes!`)
+- Pin-Symbol als SVG-Textur: `icon_map_pin.svg` wird per `resvg` zur Laufzeit in 64×64 RGBA gerastert
+- Strichdicke (`stroke-width`) wird aus `EditorOptions::marker_outline_width` skaliert und direkt im SVG gepatcht
+- Neu-Rasterisierung nur bei Aenderung von `outline_width` (Change-Detection via `last_outline_width`)
 - Fragment-Shader `fs_marker` nutzt `textureSample` — Textur-Alpha definiert die Pin-Form
 - Instanz-Tinting: `instance_color` faerbt den Pin, Textur liefert nur Alpha-Maske
 - Pin-Spitze steht exakt auf dem Node-Zentrum (Y-Offset im Vertex-Shader: `−0.8 × size`)
