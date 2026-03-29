@@ -109,6 +109,13 @@ impl AppState {
         }
     }
 
+    /// Gibt eine Referenz auf die aktuelle RoadMap zurück, falls eine Karte geladen ist.
+    ///
+    /// Bevorzugtes Pattern gegen `state.road_map.as_ref().unwrap()` in Use-Cases.
+    pub fn road_map_ref(&self) -> Option<&RoadMap> {
+        self.road_map.as_deref()
+    }
+
     /// Gibt die Anzahl der Nodes zurueck (fuer UI-Anzeige)
     pub fn node_count(&self) -> usize {
         self.road_map.as_ref().map_or(0, |rm| rm.node_count())

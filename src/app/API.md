@@ -1108,6 +1108,9 @@ pub struct Snapshot { /* intern */ }
 
 **AppState Helper:**
 - `record_undo_snapshot(&mut self)` — Convenience-Methode: erstellt Snapshot via `Snapshot::from_state(self)` und legt ihn auf den History-Stack
+- `road_map_ref(&self) → Option<&RoadMap>` — Sicherer Zugriff auf die aktuelle RoadMap (ersetzt `road_map.as_ref().unwrap()`)
+- `node_count(&self) → usize` — Anzahl der Nodes (0 wenn keine Map geladen)
+- `connection_count(&self) → usize` — Anzahl der Verbindungen (0 wenn keine Map geladen)
 
 ---
 

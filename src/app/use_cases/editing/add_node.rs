@@ -98,7 +98,12 @@ pub fn add_node_at_position(state: &mut AppState, world_pos: Vec2) -> AddNodeRes
     let snap_threshold = state.options.snap_radius() * 1.5;
     let split_target: Option<(u64, u64, ConnectionDirection, ConnectionPriority)> =
         if state.options.split_connection_on_place {
-            find_nearest_connection(state.road_map.as_ref().unwrap(), world_pos, snap_threshold)
+            find_nearest_connection(
+                state.road_map.as_deref()
+                    .expect("road_map ist Some nach as_ref()-Guard in add_node_at_position"),
+                world_pos,
+                snap_threshold,
+            )
         } else {
             None
         };
