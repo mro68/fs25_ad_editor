@@ -1,11 +1,7 @@
 use crate::shared::{t, EditorOptions, I18nKey, Language};
 
 /// Rendert die Node-Verhalten-Einstellungen (Reconnect beim Loeschen, Verbindung teilen).
-pub fn render_node_behavior(
-    ui: &mut egui::Ui,
-    opts: &mut EditorOptions,
-    lang: Language,
-) -> bool {
+pub fn render_node_behavior(ui: &mut egui::Ui, opts: &mut EditorOptions, lang: Language) -> bool {
     let mut changed = false;
     if ui
         .checkbox(

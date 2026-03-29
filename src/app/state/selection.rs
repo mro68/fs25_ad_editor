@@ -10,6 +10,9 @@ pub struct SelectionState {
     pub selected_node_ids: Arc<IndexSet<u64>>,
     /// Letzter selektierter Node als Anker fuer additive Bereichsselektion
     pub selection_anchor_node_id: Option<u64>,
+    /// Monoton steigender Zaehler: wird bei jeder Mutation erhoehen.
+    /// Dient als Invalidierungs-Token fuer den `dimmed_ids`-Cache in `AppState`.
+    pub generation: u64,
 }
 
 impl SelectionState {
@@ -18,6 +21,7 @@ impl SelectionState {
         Self {
             selected_node_ids: Arc::new(IndexSet::new()),
             selection_anchor_node_id: None,
+            generation: 0,
         }
     }
 
@@ -25,8 +29,10 @@ impl SelectionState {
     ///
     /// Alle Mutationen der Selektion gehen ueber diese Methode, damit der
     /// Arc-Klon in `RenderScene::build()` O(1) bleibt.
+    /// Erhoehen den Generations-Zaehler fuer Cache-Invalidierung.
     #[inline]
     pub fn ids_mut(&mut self) -> &mut IndexSet<u64> {
+        self.generation += 1;
         Arc::make_mut(&mut self.selected_node_ids)
     }
 }

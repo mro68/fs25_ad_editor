@@ -2,11 +2,7 @@ use crate::shared::{t, EditorOptions, I18nKey, Language};
 use crate::ui::common::apply_wheel_step;
 
 /// Rendert die Copy/Paste-Einstellungen (Vorschau-Deckung).
-pub fn render_copy_paste(
-    ui: &mut egui::Ui,
-    opts: &mut EditorOptions,
-    lang: Language,
-) -> bool {
+pub fn render_copy_paste(ui: &mut egui::Ui, opts: &mut EditorOptions, lang: Language) -> bool {
     let mut changed = false;
     ui.horizontal(|ui| {
         ui.label(t(lang, I18nKey::OptCopyPastePreviewOpacity));

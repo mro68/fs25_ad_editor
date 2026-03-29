@@ -39,6 +39,7 @@ pub fn record_selection_if_changed(
         let old_selection = SelectionState {
             selected_node_ids: old_selected,
             selection_anchor_node_id: old_anchor,
+            generation: 0,
         };
         let snap = Snapshot {
             road_map: state.road_map.clone(),

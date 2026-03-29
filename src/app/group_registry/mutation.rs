@@ -87,6 +87,7 @@ impl GroupRegistry {
         }
         // Cache-Eintrag invalidieren (Boundary-Bild veraltet nach Node-Aenderung)
         self.boundary_cache.remove(&record_id);
+        self.dimmed_generation += 1;
         true
     }
 
@@ -154,6 +155,7 @@ impl GroupRegistry {
             }
         }
         self.boundary_cache.remove(&record_id);
+        self.dimmed_generation += 1;
         true
     }
 }

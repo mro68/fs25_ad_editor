@@ -53,6 +53,9 @@ pub struct GroupRegistry {
     pub(super) boundary_cache: HashMap<u64, Vec<BoundaryInfo>>,
     /// Adresse der zuletzt verwendeten RoadMap fuer PTR-basierten Cache-Reset.
     pub(super) last_roadmap_ptr: usize,
+    /// Monoton steigender Zaehler: wird bei jeder Mutation erhoehen, die node_ids veraendert.
+    /// Dient als Invalidierungs-Token fuer den `dimmed_ids`-Cache in `AppState`.
+    pub(crate) dimmed_generation: u64,
 }
 
 impl GroupRegistry {
@@ -89,6 +92,7 @@ impl GroupRegistry {
         self.records.insert(id, record);
         // Cache fuer diesen Record invalidieren (neue Gruppe → neues Boundary-Bild noetig)
         self.boundary_cache.remove(&id);
+        self.dimmed_generation += 1;
         id
     }
 
@@ -110,6 +114,7 @@ impl GroupRegistry {
             self.remove_from_index(record_id, &record.node_ids);
         }
         self.boundary_cache.remove(&record_id);
+        self.dimmed_generation += 1;
     }
 
     /// Entfernt alle Records, die mindestens einen der angegebenen Node-IDs enthalten.

@@ -1,11 +1,7 @@
 use crate::shared::{t, EditorOptions, I18nKey, Language};
 
 /// Rendert die Uebersichtskarten-Layer-Einstellungen (Hillshade, Farmlands, POIs).
-pub fn render_overview_layers(
-    ui: &mut egui::Ui,
-    opts: &mut EditorOptions,
-    lang: Language,
-) -> bool {
+pub fn render_overview_layers(ui: &mut egui::Ui, opts: &mut EditorOptions, lang: Language) -> bool {
     let mut changed = false;
     changed |= ui
         .checkbox(
