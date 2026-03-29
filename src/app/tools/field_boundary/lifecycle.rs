@@ -5,8 +5,7 @@ use std::sync::Arc;
 use crate::app::group_registry::{GroupBase, GroupKind, GroupRecord};
 use crate::app::tools::{ToolAction, ToolAnchor, ToolPreview, ToolResult};
 use crate::core::{
-    find_polygon_at, offset_polygon, simplify_polygon,
-    FieldPolygon, NodeFlag, RoadMap,
+    find_polygon_at, offset_polygon, simplify_polygon, FieldPolygon, NodeFlag, RoadMap,
 };
 use glam::Vec2;
 
