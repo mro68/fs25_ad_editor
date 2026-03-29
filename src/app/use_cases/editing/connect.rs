@@ -100,3 +100,90 @@ pub fn connect_tool_pick_node(state: &mut AppState, world_pos: glam::Vec2, max_d
         log::info!("Connect-Tool: Startknoten {} gewaehlt", node_id);
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::core::{MapNode, NodeFlag, RoadMap};
+    use glam::Vec2;
+
+    /// Hilfsfunktion: AppState mit zwei verbundenen Nodes aufbauen
+    fn make_state_with_two_nodes() -> AppState {
+        let mut state = AppState::new();
+        let mut map = RoadMap::new(3);
+        map.add_node(MapNode::new(1, Vec2::new(0.0, 0.0), NodeFlag::Regular));
+        map.add_node(MapNode::new(2, Vec2::new(10.0, 0.0), NodeFlag::Regular));
+        state.road_map = Some(Arc::new(map));
+        state
+    }
+
+    #[test]
+    fn test_connect_creates_bidirectional() {
+        // Node 1 und 2 verbinden → beide sehen sich als Nachbarn
+        let mut state = make_state_with_two_nodes();
+        add_connection(
+            &mut state,
+            1,
+            2,
+            ConnectionDirection::Regular,
+            ConnectionPriority::Regular,
+        );
+        let rm = state.road_map.as_deref().unwrap();
+        let n1 = rm.connected_neighbors(1);
+        let n2 = rm.connected_neighbors(2);
+        assert!(n1.iter().any(|n| n.neighbor_id == 2));
+        assert!(n2.iter().any(|n| n.neighbor_id == 1));
+    }
+
+    #[test]
+    fn test_connect_self_loop_rejected() {
+        // Self-Loop darf nicht entstehen
+        let mut state = make_state_with_two_nodes();
+        add_connection(
+            &mut state,
+            1,
+            1,
+            ConnectionDirection::Regular,
+            ConnectionPriority::Regular,
+        );
+        let rm = state.road_map.as_deref().unwrap();
+        assert_eq!(rm.connection_count(), 0);
+    }
+
+    #[test]
+    fn test_connect_missing_node_rejected() {
+        // Verbindung zu nicht-existierender ID → kein Effekt
+        let mut state = make_state_with_two_nodes();
+        add_connection(
+            &mut state,
+            1,
+            99,
+            ConnectionDirection::Regular,
+            ConnectionPriority::Regular,
+        );
+        let rm = state.road_map.as_deref().unwrap();
+        assert_eq!(rm.connection_count(), 0);
+    }
+
+    #[test]
+    fn test_connect_duplicate_rejected() {
+        // Doppelter Verbindungsaufruf → nur eine Connection
+        let mut state = make_state_with_two_nodes();
+        add_connection(
+            &mut state,
+            1,
+            2,
+            ConnectionDirection::Regular,
+            ConnectionPriority::Regular,
+        );
+        add_connection(
+            &mut state,
+            1,
+            2,
+            ConnectionDirection::Regular,
+            ConnectionPriority::Regular,
+        );
+        let rm = state.road_map.as_deref().unwrap();
+        assert_eq!(rm.connection_count(), 1);
+    }
+}

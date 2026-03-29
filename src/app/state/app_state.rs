@@ -34,6 +34,11 @@ pub struct GroupEditState {
     pub was_locked: bool,
 }
 
+/// Cache-Eintrag fuer `compute_dimmed_ids`.
+///
+/// Tuple: `(selection_generation, registry_dimmed_generation, gecachtes_Ergebnis)`.
+type DimmedIdsCache = Option<(u64, u64, Arc<IndexSet<u64>>)>;
+
 /// Hauptzustand der Anwendung
 pub struct AppState {
     /// Aktuell geladene RoadMap (None = keine Datei geladen)
@@ -86,7 +91,7 @@ pub struct AppState {
     /// Tuple: `(selection_generation, registry_dimmed_generation, gecachtes_Ergebnis)`.
     /// Interior Mutability via `RefCell`, da `render_scene::build()` nur `&AppState` erhaelt.
     /// Wird invalidiert wenn sich selection oder group_registry aendern (Generations-Vergleich).
-    pub(crate) dimmed_ids_cache: RefCell<Option<(u64, u64, Arc<IndexSet<u64>>)>>,
+    pub(crate) dimmed_ids_cache: RefCell<DimmedIdsCache>,
 }
 
 impl AppState {
