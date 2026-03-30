@@ -65,6 +65,8 @@ Schnittstelle fuer alle Route-Tools (Linie, Kurve, …). Tools sind zustandsbeha
 - `tangent_menu_data() → Option<TangentMenuData>` — liefert Tangenten-Menuedaten fuer das Kontextmenue
 - `apply_tangent_selection(start, end)` — wendet die im Kontextmenue gewaehlten Tangenten an
 - `set_chain_inner_ids(ids: Vec<u64>)` — Setzt die inneren Node-IDs der geladenen Kette (ohne Start/Ende); wird nach `load_chain()` vom Handler aufgerufen um korrekte IDs fuer das "Original entfernen"-Feature bereitzustellen (Standard-Impl.: no-op)
+- `set_farmland_grid(grid: Option<Arc<FarmlandGrid>>)` — Setzt das Farmland-Raster fuer Pixel-basierte Analysen (z.B. Feldweg-Erkennung). Standard-Impl.: no-op
+- `set_background_map_image(image: Option<Arc<DynamicImage>>)` — Setzt das Hintergrundbild fuer farbbasierte Analysen. Standard-Impl.: no-op
 
 **`ToolPreview` Felder**
 
@@ -157,6 +159,7 @@ Documentation moved to [`../API.md#groupbase--groupkind`](../API.md#groupbase--g
 | 6 | `ParkingTool` | `🅿` | `ParkingTool::new()` |
 | 7 | `FieldBoundaryTool` | `🌾` | `FieldBoundaryTool::new()` |
 | 8 | `RouteOffsetTool` | `⇶` | `RouteOffsetTool::new()` |
+| 9 | `FieldPathTool` | `🛤` | `FieldPathTool::new()` |
 
 ### `StraightLineTool`
 
@@ -404,6 +407,74 @@ pub struct RouteOffsetTool {
 **Gruppen-Record:** `GroupKind::RouteOffset { chain_positions, chain_start_id, chain_end_id, offset_left, offset_right, keep_original, base_spacing, base }` (Slot 8 im ToolManager)
 
 Modulstruktur: `mod.rs` (Re-Exporte), `state.rs` (Struct + OffsetConfig), `lifecycle.rs` (RouteTool-Impl), `geometry.rs` (compute_offset_positions), `config_ui.rs` (egui-Panel), `tests.rs`
+
+---
+
+### `FieldPathTool`
+
+Feldweg-Erkennung: Berechnet eine Mittellinie zwischen zwei Farmland-Seiten via Voronoi-BFS und erzeugt daraus eine gleichmäßig abgetastete Waypoint-Route (Slot 9 im ToolManager).
+
+**Voraussetzung:** `farmland_grid` und `farmland_polygons` müssen im `AppState` geladen sein (werden beim Laden der Overview aus dem Map-ZIP befüllt).
+
+**Modi:**
+
+- **`FieldPathMode::Fields`** — ganze Farmland-Polygone pro Seite auswählen (Klick ins Feld)
+- **`FieldPathMode::Boundaries`** — einzelne Feldgrenz-Segmente pro Seite auswählen (Klick auf Grenzlinie)
+
+**Phasen:**
+
+- **`FieldPathPhase::Idle`** — Warten auf Nutzerinteraktion
+- **`FieldPathPhase::SelectingSide1`** — Felder oder Grenzsegmente für Seite 1 sammeln
+- **`FieldPathPhase::SelectingSide2`** — Felder oder Grenzsegmente für Seite 2 sammeln
+- **`FieldPathPhase::Preview`** — Berechnung abgeschlossen, Vorschau der Mittellinie aktiv
+
+**Konfiguration (`FieldPathConfig`):**
+
+- `node_spacing: f32` — Abstand zwischen generierten Nodes in Metern (Standard: 5 m)
+- `simplify_tolerance: f32` — Toleranz für Douglas-Peucker-Vereinfachung in Metern (Standard: 1 m)
+- `connect_to_existing: bool` — An nächste bestehende Nodes anschließen (Standard: true)
+
+**Felder:**
+
+```rust
+pub struct FieldPathTool {
+    pub(crate) mode: FieldPathMode,
+    pub(crate) phase: FieldPathPhase,
+    pub(crate) config: FieldPathConfig,
+
+    pub(crate) side1_field_ids: Vec<u32>,     // Ausgewählte Farmland-IDs für Seite 1
+    pub(crate) side2_field_ids: Vec<u32>,     // Ausgewählte Farmland-IDs für Seite 2
+    pub(crate) side1_segments: Vec<Vec<Vec2>>, // Ausgewählte Grenzsegmente für Seite 1
+    pub(crate) side2_segments: Vec<Vec<Vec2>>, // Ausgewählte Grenzsegmente für Seite 2
+
+    pub(crate) centerline: Vec<Vec2>,          // Vereinfachte Mittellinie (Welt-Koordinaten)
+    pub(crate) resampled_nodes: Vec<Vec2>,     // Gleichmäßig abgetastete Nodes der Mittellinie
+    pub(crate) voronoi_cache: Option<Arc<VoronoiGrid>>, // Voronoi-BFS-Cache (invalidiert bei Grid-Änderung)
+
+    pub(crate) farmland_grid: Option<Arc<FarmlandGrid>>,
+    pub(crate) farmland_polygons: Option<Arc<Vec<FieldPolygon>>>,
+    pub(crate) background_image: Option<Arc<DynamicImage>>, // Reserviert für spätere Analysen
+
+    pub direction: ConnectionDirection,
+    pub priority: ConnectionPriority,
+    pub(crate) lifecycle: ToolLifecycleState,
+}
+```
+
+**Interne Berechnungs-Pipeline (`compute_centerline`):**
+
+1. Voronoi-BFS auf dem Farmland-Grid berechnen (oder aus Cache verwenden)
+2. Im `Fields`-Modus: `extract_corridor_centerline()` zwischen side1/side2 Farmland-IDs
+3. Im `Boundaries`-Modus: `extract_boundary_centerline()` aus rasterisierten Grenzsegmenten
+4. `simplify_polyline()` mit Douglas-Peucker
+5. `resample_by_distance()` für gleichmäßigen Nodeabstand
+6. Ergebnis in `centerline` und `resampled_nodes` speichern; Phase → Preview
+
+**Boundary-Snap:**
+
+Im `Boundaries`-Modus sucht `find_nearest_boundary_segment()` das nächste Polygon-Kanten-Segment innerhalb von `BOUNDARY_SNAP_THRESHOLD = 20 m` und gibt es als Zwei-Punkt-Polyline zurück.
+
+Modulstruktur: `mod.rs` (Re-Export), `state.rs` (Structs, Enums, Felder), `lifecycle.rs` (RouteTool-Impl, compute_centerline), `config_ui.rs` (egui-Panel)
 
 ---
 

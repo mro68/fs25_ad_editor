@@ -202,22 +202,29 @@ fn chain_pixels(pixels: &[(u32, u32)]) -> Vec<(u32, u32)> {
 
     // Vorwärts-Walk
     let mut chain = vec![start];
-    {
-        let mut cur = start;
-        while let Some(n) = find_8neighbor(cur.0, cur.1, &remaining) {
-            remaining.remove(&n);
-            chain.push(n);
-            cur = n;
+    loop {
+        let &(cx, cy) = chain.last().expect("chain ist nicht leer");
+        match find_8neighbor(cx, cy, &remaining) {
+            Some(n) => {
+                remaining.remove(&n);
+                chain.push(n);
+            }
+            None => break,
         }
     }
 
     // Rückwärts-Walk vom Startpunkt aus (verbleibende Pixel einsammeln)
     let mut backward: Vec<(u32, u32)> = Vec::new();
-    let mut cur = start;
-    while let Some(n) = find_8neighbor(cur.0, cur.1, &remaining) {
-        remaining.remove(&n);
-        backward.push(n);
-        cur = n;
+    let (mut cx, mut cy) = start;
+    loop {
+        match find_8neighbor(cx, cy, &remaining) {
+            Some(n) => {
+                remaining.remove(&n);
+                backward.push(n);
+                (cx, cy) = n;
+            }
+            None => break,
+        }
     }
 
     // Ergebnis: rückwärts-Kette (umgekehrt) + vorwärts-Kette

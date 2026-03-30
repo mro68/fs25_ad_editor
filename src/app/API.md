@@ -78,6 +78,12 @@ pub struct AppState {
     /// Geladene Farmland-Polygone fuer das FieldBoundaryTool.
     /// Wird beim Laden einer Uebersichtskarte befuellt; `None` solange keine Map geladen ist.
     pub farmland_polygons: Option<Arc<Vec<FieldPolygon>>>,
+    /// GRLE-Raster mit Farmland-IDs fuer Pixel-basierte Analysen (z.B. Feldweg-Erkennung).
+    /// `None` solange kein Overview mit GRLE-Daten geladen wurde.
+    pub farmland_grid: Option<Arc<FarmlandGrid>>,
+    /// Gecachtes Hintergrundbild fuer farbbasierte Tool-Analysen.
+    /// `None` solange kein Overview geladen wurde.
+    pub background_image: Option<Arc<image::DynamicImage>>,
     /// Aktiver Gruppen-Edit-Modus (None = Normal-Modus, Some = nicht-destruktives Editing aktiv).
     pub group_editing: Option<GroupEditState>,
     /// Record-ID des aktuell per Tool bearbeiteten Segments (fuer Cancel-Wiederherstellung).

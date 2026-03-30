@@ -397,6 +397,10 @@ pub fn find_polygon_at<'a>(point: Vec2, polygons: &'a [FieldPolygon]) -> Option<
 // tolerance = 0.0 → kein Effekt; Mindestens 3 Punkte werden immer behalten.
 pub fn simplify_polygon(vertices: &[Vec2], tolerance: f32) -> Vec<Vec2>
 
+// Douglas-Peucker-Vereinfachung fuer offene Polylinien.
+// tolerance = 0.0 → kein Effekt; Weniger als 2 Punkte → Original wird zurueckgegeben.
+pub fn simplify_polyline(points: &[Vec2], tolerance: f32) -> Vec<Vec2>
+
 // Normalenbasiertes Polygon-Offset (negativ = nach innen, positiv = nach aussen).
 // Fallback auf Original bei Degeneration (Orientierungswechsel, Miter-Overshoot).
 pub fn offset_polygon(vertices: &[Vec2], offset: f32) -> Vec<Vec2>
@@ -416,6 +420,97 @@ if let Some(polygon) = find_polygon_at(click_pos, &farmland_polygons) {
     let simplified = simplify_polygon(&polygon.vertices, 5.0);
     let inset = offset_polygon(&simplified, -3.0);
 }
+```
+
+---
+
+### `FarmlandGrid`
+
+Speichert pro Pixel die Farmland-ID (0 = kein Feld, 1–255 = Feld-ID) und ermöglicht
+Pixel↔Welt-Koordinatentransformation. Wird für Pixel-basierte Analysen
+wie die Voronoi-BFS-Feldweg-Erkennung verwendet.
+
+```rust
+#[derive(Debug, Clone)]
+pub struct FarmlandGrid {
+    pub ids: Vec<u8>,   // Farmland-IDs, zeilenweise (row-major): ids[y * width + x]
+    pub width: u32,     // Rasterbreite in Pixeln
+    pub height: u32,    // Rasterhöhe in Pixeln
+    pub map_size: f32,  // Weltgröße in Metern (quadratische Karte)
+}
+```
+
+**Methoden:**
+
+- `FarmlandGrid::new(ids, width, height, map_size) → Self` — Erzeugt ein neues Grid
+- `pixel_to_world(px, py) → Vec2` — Pixelkoordinaten → Weltkoordinaten (Kartenmitte = Ursprung)
+- `world_to_pixel(world) → (u32, u32)` — Weltkoordinaten → Pixelkoordinaten (geclampt auf Rastergrenzen)
+- `id_at_pixel(px, py) → u8` — Farmland-ID an Pixelposition (0 wenn außerhalb)
+- `id_at_world(world) → u8` — Farmland-ID an Weltposition
+
+**Koordinaten-Formel:** `world = pixel * (map_size / width) - map_size / 2`
+
+---
+
+### Centerline-Berechnung (Voronoi-BFS)
+
+In `core::centerline` (re-exportiert aus `core`). Berechnet Mittellinien zwischen
+Farmland-Seiten über Multi-Source BFS (Voronoi-Approximation).
+
+```rust
+pub struct VoronoiGrid {
+    pub nearest_id: Vec<u8>,  // Nächste Farmland-ID pro Pixel (0 = nicht initialisiert)
+    pub distance: Vec<u16>,   // Distanz zum nächsten Farmland-Pixel (×10; gerade=10, diagonal=14)
+    pub width: u32,           // Rasterbreite in Pixeln
+    pub height: u32,          // Rasterhöhe in Pixeln
+}
+```
+
+**Freie Funktionen:**
+
+```rust
+// Multi-Source BFS: alle Farmland-Pixel als Seeds, Void-Pixel erhalten ID + Distanz.
+// 8-Konnektivität (diagonal ≈ 14, gerade = 10).
+pub fn compute_voronoi_bfs(grid: &FarmlandGrid) -> VoronoiGrid
+
+// Extrahiert die Mittellinie eines Korridors zwischen zwei Feldgruppen.
+// Gibt Voronoi-Kantenpixel zwischen side1_ids und side2_ids zurück (Welt-Koordinaten).
+pub fn extract_corridor_centerline(
+    voronoi: &VoronoiGrid,
+    side1_ids: &[u8],
+    side2_ids: &[u8],
+    grid: &FarmlandGrid,
+) -> Vec<Vec2>
+
+// Extrahiert die Mittellinie zwischen zwei Gruppen von Feldgrenzen-Segmenten.
+// Rasterisiert die Segmente als Pseudo-Felder (ID 254 / 255), dann BFS-Centerline.
+pub fn extract_boundary_centerline(
+    segments_side1: &[Vec<Vec2>],
+    segments_side2: &[Vec<Vec2>],
+    grid: &FarmlandGrid,
+) -> Vec<Vec2>
+```
+
+**Beispiel:**
+
+```rust
+use fs25_ad_editor::core::{compute_voronoi_bfs, extract_corridor_centerline};
+
+let voronoi = compute_voronoi_bfs(&farmland_grid);
+let centerline = extract_corridor_centerline(&voronoi, &[1, 2], &[3, 4], &farmland_grid);
+```
+
+---
+
+### `zhang_suen_thinning`
+
+In `core::thinning` (re-exportiert aus `core`). Skelettiert eine Binärmaske auf
+eine 1px-breite Mittellinie (Zhang-Suen-Algorithmus).
+
+```rust
+/// Reduziert eine Binärmaske auf ihr Skelett (1px breite Mittellinie).
+/// Modifiziert `mask` in-place.
+pub fn zhang_suen_thinning(mask: &mut [bool], width: usize, height: usize)
 ```
 
 ---

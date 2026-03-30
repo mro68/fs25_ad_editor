@@ -390,6 +390,22 @@
     - [x] `app/handlers/API.md`: `begin_tool_edit_from_group()` in group-Sektion ergaenzt
     - [x] `app/tools/API.md`: `FieldBoundaryTool` vollstaendig aktualisiert — `RingNodeKind`, neue State-Felder, aktualisierte `compute_ring()`-Signatur, Geometrie-Module-Sektion
     - [x] ROADMAP.md: Eckenverrundungs-Feature und Gruppen-Edit-Button als abgeschlossen eingetragen
+  - [x] **Doku-Sync FieldPathTool + Centerline-Infrastruktur (2026-03-30, Branch `feat/field-path-tool`)**
+    - [x] `core/API.md`: `FarmlandGrid` (Methoden: `new`, `pixel_to_world`, `world_to_pixel`, `id_at_pixel`, `id_at_world`), `VoronoiGrid`, `compute_voronoi_bfs`, `extract_corridor_centerline`, `extract_boundary_centerline`, `zhang_suen_thinning`, `simplify_polyline` ergaenzt
+    - [x] `app/API.md`: `farmland_grid`, `background_image` als neue `AppState`-Felder dokumentiert
+    - [x] `app/tools/API.md`: `FieldPathTool` vollstaendig dokumentiert (Phasen, Modi, Felder, Berechnungs-Pipeline); Tabelle um Slot 9 erweitert; `set_farmland_grid()`/`set_background_map_image()` in RouteTool-Trait ergaenzt
+    - [x] `crates/fs25_map_overview/API.md`: `OverviewResult.farmland_ids` als neues Feld dokumentiert
+    - [x] ROADMAP.md: FieldPathTool als abgeschlossen eingetragen
+
+- [x] **FieldPathTool — Feldweg-Mittellinie (2026-03-30, Branch `feat/field-path-tool`)**
+  - [x] `src/core/centerline.rs` — `VoronoiGrid`, `compute_voronoi_bfs()`, `extract_corridor_centerline()`, `extract_boundary_centerline()` (Multi-Source BFS, 8-Konnektivitaet)
+  - [x] `src/core/thinning.rs` — `zhang_suen_thinning()` (Zhang-Suen-Skelettierung)
+  - [x] `src/core/farmland.rs` — `FarmlandGrid` Struct mit Koordinatentransformation + `simplify_polyline()` (Douglas-Peucker fuer offene Linien)
+  - [x] `src/app/tools/field_path/` — `FieldPathTool` (Slot 9), `FieldPathMode` (Fields/Boundaries), `FieldPathPhase` (Idle/Selecting1/Selecting2/Preview), `FieldPathConfig` (node_spacing, simplify_tolerance, connect_to_existing)
+  - [x] `RouteTool::set_farmland_grid()` + `set_background_map_image()` — neue Default-No-Op-Methoden im Trait
+  - [x] `AppState.farmland_grid: Option<Arc<FarmlandGrid>>` + `background_image: Option<Arc<DynamicImage>>` — neue State-Felder
+  - [x] `OverviewResult.farmland_ids: Option<Vec<u8>>` — rohes ID-Raster fuer Feldweg-Erkennung
+
 - [ ] Packaging
   - [ ] Windows Binaries (.exe)
   - [ ] Linux Binaries (AppImage)
