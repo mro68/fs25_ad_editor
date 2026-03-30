@@ -168,10 +168,10 @@ impl RoadMap {
     pub fn remove_connection(&mut self, start_id: u64, end_id: u64) -> bool {
         if self.connections.remove(&(start_id, end_id)).is_some() {
             if let Some(adj) = self.adjacency.get_mut(&start_id) {
-                adj.retain(|&(nb, out)| !(nb == end_id && out));
+                adj.retain(|&(nb, out)| nb != end_id || !out);
             }
             if let Some(adj) = self.adjacency.get_mut(&end_id) {
-                adj.retain(|&(nb, out)| !(nb == start_id && !out));
+                adj.retain(|&(nb, out)| nb != start_id || out);
             }
             true
         } else {
@@ -185,20 +185,20 @@ impl RoadMap {
         if self.connections.remove(&(node_a, node_b)).is_some() {
             // A→B: adj[A] verliert (B, true), adj[B] verliert (A, false)
             if let Some(adj) = self.adjacency.get_mut(&node_a) {
-                adj.retain(|&(nb, out)| !(nb == node_b && out));
+                adj.retain(|&(nb, out)| nb != node_b || !out);
             }
             if let Some(adj) = self.adjacency.get_mut(&node_b) {
-                adj.retain(|&(nb, out)| !(nb == node_a && !out));
+                adj.retain(|&(nb, out)| nb != node_a || out);
             }
             removed += 1;
         }
         if self.connections.remove(&(node_b, node_a)).is_some() {
             // B→A: adj[B] verliert (A, true), adj[A] verliert (B, false)
             if let Some(adj) = self.adjacency.get_mut(&node_b) {
-                adj.retain(|&(nb, out)| !(nb == node_a && out));
+                adj.retain(|&(nb, out)| nb != node_a || !out);
             }
             if let Some(adj) = self.adjacency.get_mut(&node_a) {
-                adj.retain(|&(nb, out)| !(nb == node_b && !out));
+                adj.retain(|&(nb, out)| nb != node_b || out);
             }
             removed += 1;
         }

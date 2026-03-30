@@ -79,9 +79,7 @@ impl GroupRegistry {
                             .push(angle_from_node);
                     } else {
                         // Externe Verbindung: Flags und Winkel setzen
-                        let entry = node_info
-                            .entry(node_id)
-                            .or_insert((false, false, false));
+                        let entry = node_info.entry(node_id).or_insert((false, false, false));
                         if is_outgoing {
                             entry.1 = true; // has_outgoing
                         } else {

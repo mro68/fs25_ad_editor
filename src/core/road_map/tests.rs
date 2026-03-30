@@ -620,9 +620,18 @@ fn test_adjacency_after_remove_node() {
     // Node 2 entfernen → alle Verbindungen weg, Nachbarn bereinigt
     map.remove_node(2);
 
-    assert!(map.neighbors(1).is_empty(), "Node 1 sollte keine Nachbarn mehr haben");
-    assert!(map.neighbors(3).is_empty(), "Node 3 sollte keine Nachbarn mehr haben");
-    assert!(map.neighbors(2).is_empty(), "Geloeschter Node hat keine Adjacency mehr");
+    assert!(
+        map.neighbors(1).is_empty(),
+        "Node 1 sollte keine Nachbarn mehr haben"
+    );
+    assert!(
+        map.neighbors(3).is_empty(),
+        "Node 3 sollte keine Nachbarn mehr haben"
+    );
+    assert!(
+        map.neighbors(2).is_empty(),
+        "Geloeschter Node hat keine Adjacency mehr"
+    );
     assert_eq!(map.degree(2), 0);
 }
 
@@ -665,10 +674,24 @@ fn test_adjacency_after_invert_connection() {
     map.invert_connection(1, 2);
 
     // Nach Invertierung: umgekehrt
-    assert_eq!(map.outgoing_neighbors(1).count(), 0, "Node 1 hat keine ausgehenden mehr");
-    assert!(map.incoming_neighbors(1).any(|id| id == 2), "Node 1 erhaelt jetzt von 2");
-    assert!(map.outgoing_neighbors(2).any(|id| id == 1), "Node 2 sendet jetzt zu 1");
-    assert_eq!(map.incoming_neighbors(2).count(), 0, "Node 2 hat keine eingehenden mehr");
+    assert_eq!(
+        map.outgoing_neighbors(1).count(),
+        0,
+        "Node 1 hat keine ausgehenden mehr"
+    );
+    assert!(
+        map.incoming_neighbors(1).any(|id| id == 2),
+        "Node 1 erhaelt jetzt von 2"
+    );
+    assert!(
+        map.outgoing_neighbors(2).any(|id| id == 1),
+        "Node 2 sendet jetzt zu 1"
+    );
+    assert_eq!(
+        map.incoming_neighbors(2).count(),
+        0,
+        "Node 2 hat keine eingehenden mehr"
+    );
 }
 
 /// remove_connections_between bereinigt beide Richtungen im Index.

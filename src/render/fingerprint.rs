@@ -75,3 +75,84 @@ impl RenderFingerprint {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::RenderFingerprint;
+
+    /// Hilfsfunktion: Erzeugt einen Fingerabdruck mit definierten Testwerten.
+    fn make_fp(ptr: usize, cam_x: f32, cam_y: f32, zoom: f32) -> RenderFingerprint {
+        RenderFingerprint {
+            road_map_ptr: ptr,
+            options_ptr: 0x2000,
+            hidden_ptr: 0x3000,
+            dimmed_ptr: 0,
+            selected_ptr: 0,
+            camera_x: cam_x.to_bits(),
+            camera_y: cam_y.to_bits(),
+            camera_zoom: zoom.to_bits(),
+            viewport_w: 800.0f32.to_bits(),
+            viewport_h: 600.0f32.to_bits(),
+            quality: 0,
+        }
+    }
+
+    #[test]
+    fn gleiche_inputs_ergeben_gleichen_fingerprint() {
+        // Zwei identisch konstruierte Fingerabdruecke muessen gleich sein.
+        let fp1 = make_fp(0x1000, 10.0, 20.0, 1.5);
+        let fp2 = make_fp(0x1000, 10.0, 20.0, 1.5);
+        assert_eq!(fp1, fp2);
+    }
+
+    #[test]
+    fn geaenderter_kamera_zoom_ergibt_anderen_fingerprint() {
+        // Zoom-Aenderung muss erkannt werden.
+        let fp1 = make_fp(0x1000, 10.0, 20.0, 1.5);
+        let fp2 = make_fp(0x1000, 10.0, 20.0, 2.0);
+        assert_ne!(fp1, fp2);
+    }
+
+    #[test]
+    fn geaenderte_kamera_position_ergibt_anderen_fingerprint() {
+        // Pan-Bewegung muss zu unterschiedlichem Fingerprint fuehren.
+        let fp1 = make_fp(0x1000, 10.0, 20.0, 1.0);
+        let fp2 = make_fp(0x1000, 11.0, 20.0, 1.0);
+        let fp3 = make_fp(0x1000, 10.0, 21.0, 1.0);
+        assert_ne!(fp1, fp2, "Kamera-X geaendert muss ungleich sein");
+        assert_ne!(fp1, fp3, "Kamera-Y geaendert muss ungleich sein");
+    }
+
+    #[test]
+    fn geaenderter_roadmap_pointer_ergibt_anderen_fingerprint() {
+        // Neue RoadMap (neuer Arc) muss als Aenderung erkannt werden.
+        let fp1 = make_fp(0x1000, 0.0, 0.0, 1.0);
+        let fp2 = make_fp(0x2000, 0.0, 0.0, 1.0);
+        assert_ne!(fp1, fp2);
+    }
+
+    #[test]
+    fn default_fingerprint_ist_gleich_sich_selbst() {
+        // Default-Fingerprint muss reflexiv gleich sein.
+        let fp = RenderFingerprint::default();
+        assert_eq!(fp, fp.clone());
+    }
+
+    #[test]
+    fn ieee754_vergleich_unterscheidet_positive_null_von_normalen_werten() {
+        // Sicherstellen, dass 0.0 und 1.0 als Kamera-X unterschiedliche Bits liefern.
+        let fp1 = make_fp(0x1000, 0.0, 0.0, 1.0);
+        let fp2 = make_fp(0x1000, 1.0, 0.0, 1.0);
+        assert_ne!(fp1.camera_x, fp2.camera_x);
+    }
+
+    #[test]
+    fn quality_feld_wird_im_vergleich_beruecksichtigt() {
+        // Render-Qualitaetsstufe muss in den Fingerabdruck einfliessen.
+        let mut fp1 = make_fp(0x1000, 0.0, 0.0, 1.0);
+        let mut fp2 = fp1.clone();
+        fp1.quality = 0;
+        fp2.quality = 1;
+        assert_ne!(fp1, fp2);
+    }
+}
