@@ -126,6 +126,10 @@ pub fn resample_by_distance(polyline: &[Vec2], max_segment_length: f32) -> Vec<V
     }
 
     // Endpunkt immer exakt uebernehmen
-    result.push(*polyline.last().unwrap());
+    result.push(
+        *polyline
+            .last()
+            .expect("invariant: polyline ist nicht-leer nach len()<2-Guard"),
+    );
     result
 }

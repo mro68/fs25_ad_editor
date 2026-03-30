@@ -151,8 +151,12 @@ pub fn init_chain_if_needed(state: &mut AppState) {
         return;
     }
 
-    let start_id = *ordered_ids.first().unwrap();
-    let end_id = *ordered_ids.last().unwrap();
+    let start_id = *ordered_ids
+        .first()
+        .expect("invariant: ordered_ids ist nicht-leer nach positions.len()<2-Guard");
+    let end_id = *ordered_ids
+        .last()
+        .expect("invariant: ordered_ids ist nicht-leer nach positions.len()<2-Guard");
 
     if let Some(tool) = state.editor.tool_manager.active_tool_mut() {
         tool.load_chain(positions, start_id, end_id);

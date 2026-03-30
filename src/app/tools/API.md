@@ -71,6 +71,51 @@ Schnittstelle fuer alle Route-Tools (Linie, Kurve, …). Tools sind zustandsbeha
 - `nodes: Vec<Vec2>` — Vorschau-Node-Positionen
 - `connections: Vec<(usize, usize)>` — Index-Paare in `nodes`
 - `connection_styles: Vec<(ConnectionDirection, ConnectionPriority)>` — Stil pro Verbindung (gleiche Laenge wie `connections`)
+- `labels: Vec<(usize, String)>` — Optionale Beschriftungen pro Node (Index in `nodes` + Labeltext)
+
+**`ToolPreview::from_polyline()` — gemeinsamer Konstruktor**
+
+```rust
+pub fn from_polyline(
+    positions: Vec<Vec2>,
+    direction: ConnectionDirection,
+    priority: ConnectionPriority,
+) -> Self
+```
+
+Erzeugt eine Vorschau aus einer Polyline mit einheitlicher Richtung und Prioritaet.
+Verbindet `positions` linear (`[(0,1), (1,2), ...]`) und weist jeder Verbindung
+denselben `direction`/`priority`-Stil zu. Gemeinsames Konstruktor-Pattern aller
+Route-Tool-`preview()`-Methoden (`StraightLineTool`, `CurveTool`, `SmoothCurveTool`, …).
+
+---
+
+### `impl_lifecycle_delegation_no_seg!` (Makro)
+
+Liegt in `app/tools/common/lifecycle.rs`. Reduziert Boilerplate fuer Tools
+**ohne** `self.seg: SegmentConfig` (konkret: `BypassTool`, `ParkingTool`,
+`FieldBoundaryTool`, `RouteOffsetTool`).
+
+Das Makro implementiert innerhalb eines `impl RouteTool for X { ... }`-Blocks:
+
+- `set_direction(dir)` / `set_priority(prio)` / `set_snap_radius(radius)`
+- `last_created_ids() -> &[u64]`
+- `last_end_anchor() -> Option<ToolAnchor>`
+- `needs_recreate() -> bool` / `clear_recreate_flag()`
+- `set_last_created(ids, road_map)`
+
+**Voraussetzung:** Der Ziel-Typ muss `self.lifecycle: ToolLifecycleState`,
+`self.direction: ConnectionDirection` und `self.priority: ConnectionPriority` besitzen.
+
+```rust
+impl RouteTool for BypassTool {
+    crate::impl_lifecycle_delegation_no_seg!();
+    // ... weitere Methoden
+}
+```
+
+Analoges Pendant fuer Tools MIT `SegmentConfig` ist `impl_lifecycle_delegation!`
+(ohne `_no_seg`-Suffix) — dokumentiert in `common/lifecycle.rs`.
 
 ### Capability-Traits
 

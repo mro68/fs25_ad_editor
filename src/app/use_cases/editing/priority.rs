@@ -40,3 +40,40 @@ pub fn set_connection_priority(
         priority
     );
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::core::{
+        Connection, ConnectionDirection, ConnectionPriority, MapNode, NodeFlag, RoadMap,
+    };
+    use glam::Vec2;
+
+    /// Hilfsfunktion: AppState mit einer Verbindung aufbauen
+    fn make_state_with_connection(priority: ConnectionPriority) -> AppState {
+        let mut state = AppState::new();
+        let mut map = RoadMap::new(3);
+        map.add_node(MapNode::new(1, Vec2::new(0.0, 0.0), NodeFlag::Regular));
+        map.add_node(MapNode::new(2, Vec2::new(10.0, 0.0), NodeFlag::Regular));
+        map.add_connection(Connection::new(
+            1,
+            2,
+            ConnectionDirection::Regular,
+            priority,
+            Vec2::new(0.0, 0.0),
+            Vec2::new(10.0, 0.0),
+        ));
+        state.road_map = Some(Arc::new(map));
+        state
+    }
+
+    #[test]
+    fn test_set_priority_updates_connections() {
+        // Priorität auf SubPriority setzen → Connection wird geändert
+        let mut state = make_state_with_connection(ConnectionPriority::Regular);
+        set_connection_priority(&mut state, 1, 2, ConnectionPriority::SubPriority);
+        let rm = state.road_map.as_deref().unwrap();
+        let conn = rm.find_connection(1, 2).unwrap();
+        assert_eq!(conn.priority, ConnectionPriority::SubPriority);
+    }
+}

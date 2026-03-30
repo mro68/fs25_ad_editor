@@ -175,6 +175,53 @@ macro_rules! impl_lifecycle_delegation {
     };
 }
 
+/// Macro fuer die 8 identischen Lifecycle-Delegationsmethoden fuer Tools ohne SegmentConfig.
+///
+/// Fuer Tools ohne `self.seg: SegmentConfig` (Bypass, Parking, FieldBoundary, RouteOffset).
+/// Deckt `set_direction`, `set_priority`, `set_snap_radius` und die
+/// fuenf `ToolLifecycleState`-Delegationen ab.
+///
+/// Erwartet `self.lifecycle` (ToolLifecycleState), `self.direction` (ConnectionDirection)
+/// und `self.priority` (ConnectionPriority) am Ziel-Typ.
+///
+/// Wird innerhalb eines `impl RouteTool for X { ... }`-Blocks aufgerufen.
+#[macro_export]
+macro_rules! impl_lifecycle_delegation_no_seg {
+    () => {
+        fn set_direction(&mut self, dir: $crate::core::ConnectionDirection) {
+            self.direction = dir;
+        }
+
+        fn set_priority(&mut self, prio: $crate::core::ConnectionPriority) {
+            self.priority = prio;
+        }
+
+        fn set_snap_radius(&mut self, radius: f32) {
+            self.lifecycle.snap_radius = radius;
+        }
+
+        fn last_created_ids(&self) -> &[u64] {
+            &self.lifecycle.last_created_ids
+        }
+
+        fn last_end_anchor(&self) -> Option<$crate::app::tools::ToolAnchor> {
+            self.lifecycle.last_end_anchor
+        }
+
+        fn needs_recreate(&self) -> bool {
+            self.lifecycle.recreate_needed
+        }
+
+        fn clear_recreate_flag(&mut self) {
+            self.lifecycle.recreate_needed = false;
+        }
+
+        fn set_last_created(&mut self, ids: &[u64], _road_map: &$crate::core::RoadMap) {
+            self.lifecycle.save_created_ids(ids);
+        }
+    };
+}
+
 /// Gekapselte Konfiguration fuer Segment-Laenge und Node-Anzahl.
 ///
 /// Alle Route-Tools nutzen das gleiche Muster: ein Slider fuer den minimalen

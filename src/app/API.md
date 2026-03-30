@@ -66,19 +66,27 @@ pub struct AppState {
     pub ui: UiState,
     pub selection: SelectionState,
     pub editor: EditorToolState,
-    pub clipboard: Clipboard,           // Zwischenablage fuer Copy/Paste
+    pub clipboard: Clipboard,            // Zwischenablage fuer Copy/Paste
     pub paste_preview_pos: Option<Vec2>, // Aktuelle Paste-Vorschau-Position (None = kein aktiver Paste)
     pub command_log: CommandLog,
     pub history: EditHistory,
     pub options: EditorOptions,
+    // options_arc: Arc<EditorOptions>  -- privat; Zugriff via options_arc()
     pub show_options_dialog: bool,
-    pub group_registry: GroupRegistry,  // In-Session-Registry fuer nachtraegliche Bearbeitung
+    pub group_registry: GroupRegistry,   // In-Session-Registry fuer nachtraegliche Bearbeitung
     pub should_exit: bool,
     /// Geladene Farmland-Polygone fuer das FieldBoundaryTool.
     /// Wird beim Laden einer Uebersichtskarte befuellt; `None` solange keine Map geladen ist.
     pub farmland_polygons: Option<Arc<Vec<FieldPolygon>>>,
     /// Aktiver Gruppen-Edit-Modus (None = Normal-Modus, Some = nicht-destruktives Editing aktiv).
     pub group_editing: Option<GroupEditState>,
+    /// Record-ID des aktuell per Tool bearbeiteten Segments (fuer Cancel-Wiederherstellung).
+    /// `None` = kein aktiver Tool-Edit.
+    pub tool_editing_record_id: Option<u64>,
+    /// Gesicherter GroupRecord des aktuell bearbeiteten Segments.
+    /// Bei Cancel wird der Record wiederhergestellt; bei Confirm wird das Backup geleert.
+    pub tool_editing_record_backup: Option<GroupRecord>,
+    // dimmed_ids_cache: RefCell<Option<(u64, u64, Arc<IndexSet<u64>>)>> -- intern; Cache fuer compute_dimmed_ids
 }
 
 /// Zustand einer aktiven Gruppen-Bearbeitung (nicht-destruktiver Edit-Modus).
@@ -90,6 +98,9 @@ pub struct GroupEditState {
 pub struct SelectionState {
     pub selected_node_ids: Arc<IndexSet<u64>>,  // Arc fuer O(1)-Clone in RenderScene (CoW)
     pub selection_anchor_node_id: Option<u64>,
+    /// Monoton steigender Zaehler: wird bei jeder Mutation via `ids_mut()` erhoeht.
+    /// Dient als Invalidierungs-Token fuer den `dimmed_ids`-Cache in `AppState`.
+    pub generation: u64,
 }
 
 pub struct Clipboard {
@@ -259,7 +270,22 @@ let nodes = state.node_count();
 let connections = state.connection_count();
 let can_undo = state.can_undo();
 let can_redo = state.can_redo();
+
+// Komfort-Accessor fuer die geladene RoadMap (vermeidet .as_ref().unwrap() in Use-Cases)
+if let Some(rm) = state.road_map_ref() { /* rm: &RoadMap */ }
+
+// Arc-Optionen fuer zero-copy RenderScene-Build
+let arc = state.options_arc(); // Arc<EditorOptions> — O(1)-Clone pro Frame
+state.set_options(new_options); // setzt options + aktualisiert den geteilten Arc
+
+// Undo-Snapshot in einem Schritt anlegen (Boilerplate-Reduktion)
+state.record_undo_snapshot();
 ```
+
+- `road_map_ref() -> Option<&RoadMap>` — Kurzform fuer `road_map.as_deref()`
+- `options_arc() -> Arc<EditorOptions>` — Liefert den gecachten Arc (zero-copy pro Frame)
+- `set_options(opts: EditorOptions)` — Setzt `options` und aktualisiert `options_arc` atomar
+- `record_undo_snapshot()` — Erstellt Snapshot via `Snapshot::from_state()` und schreibt in `history`
 
 ---
 
@@ -535,10 +561,18 @@ pub struct GroupRecord {
 
 In-Session-Registry aller erstellten Gruppen — ermöglicht nachträgliches Editieren von Gruppen durch Speicherung der Tool-Parameter und Validitätspruefung.
 
+**Modulstruktur** (`app/group_registry/`):
+- `types.rs` — Datentypen: `GroupBase`, `GroupKind`, `GroupRecord`, Tool-Index-Konstanten
+- `query.rs` — Lookup- und Query-Methoden (read-only)
+- `lock.rs` — Lock- und Edit-Guard-Methoden
+- `mutation.rs` — Mutierende Methoden (register, remove, update)
+- `boundary_cache.rs` — Boundary-Cache-Logik (`warm_boundary_cache`, `boundary_cache_for`)
+
 **Merkmale:**
 - Nicht persistent: Wird beim Laden einer Datei geleert
 - Interne Speicherung als `HashMap<u64, GroupRecord>` fuer O(1)-Zugriff nach ID
 - Reverse-Index `node_to_records: HashMap<u64, Vec<u64>>` fuer effiziente Node→Segment-Abfragen
+- Generations-Zaehler `dimmed_generation: u64` — wird bei jeder node_ids-Mutation erhoehen; dient als Invalidierungs-Token fuer den `dimmed_ids`-Cache in `AppState`
 - Segment-Validierung: Prueft ob alle Nodes noch existieren und Positionen unveraendert sind
 - Segment-Selektion: Erlaubt Klick auf Gruppen-Node → Selektion aller Gruppen-Nodes
 
@@ -1108,12 +1142,21 @@ pub struct Snapshot { /* intern */ }
 
 **AppState Helper:**
 - `record_undo_snapshot(&mut self)` — Convenience-Methode: erstellt Snapshot via `Snapshot::from_state(self)` und legt ihn auf den History-Stack
+- `road_map_ref(&self) → Option<&RoadMap>` — Sicherer Zugriff auf die aktuelle RoadMap (ersetzt `road_map.as_ref().unwrap()`)
+- `node_count(&self) → usize` — Anzahl der Nodes (0 wenn keine Map geladen)
+- `connection_count(&self) → usize` — Anzahl der Verbindungen (0 wenn keine Map geladen)
 
 ---
 
 ## Tools
 
 Alle Tool-Typen, Traits und gemeinsame Infrastruktur sind in [`tools/API.md`](tools/API.md) dokumentiert.
+
+**Neuigkeiten aus diesem Refactoring:**
+
+- **`ToolPreview::from_polyline(positions, direction, priority) → Self`** — gemeinsamer Konstruktor; verbindet `positions` linear und weist jeder Verbindung denselben Stil zu. Wird von `StraightLineTool`, `CurveTool`, `SmoothCurveTool` und anderen genutzt. (→ `tools/API.md`)
+
+- **`impl_lifecycle_delegation_no_seg!()`** — Makro in `tools/common/lifecycle.rs`; implementiert automatisch `set_direction`, `set_priority`, `set_snap_radius`, `last_created_ids`, `last_end_anchor`, `needs_recreate`, `clear_recreate_flag` und `set_last_created` fuer Tools ohne `SegmentConfig` (`BypassTool`, `ParkingTool`, `FieldBoundaryTool`, `RouteOffsetTool`). (→ `tools/API.md`)
 
 ---
 
@@ -1123,4 +1166,39 @@ Baut die `RenderScene` aus dem aktuellen `AppState` und der Viewport-Groesse.
 
 ```rust
 pub fn build(state: &AppState, viewport_size: [f32; 2]) -> RenderScene
+```
+
+Erzeugt `dimmed_node_ids` via `compute_dimmed_ids()` — alle Segment-Nodes, die NICHT selektiert
+sind, werden in die Dimm-Menge aufgenommen (50% Opacity im Renderer). Ergebnis wird lazy gecacht:
+`AppState::dimmed_ids_cache` speichert Tupel `(selection_generation, registry_dimmed_generation, Arc<IndexSet<u64>>)`.
+Cache-Invalidierung erfolgt wenn sich `SelectionState::generation` oder `GroupRegistry::dimmed_generation` aendert.
+
+---
+
+## `editor_app` (Modul)
+
+Das `src/editor_app/`-Modul ist der eframe-App-Einstiegspunkt. Es wurde in Submodule aufgeteilt:
+
+| Submodul | Verantwortlichkeit |
+|---|---|
+| `event_collection.rs` | UI-Events sammeln und zu `AppIntent`s buendeln (`collect_ui_events()`) |
+| `overlays.rs` | Viewport-Overlays zeichnen (Tool-Preview, GroupBoundary-Icons, Selektion) |
+| `helpers.rs` | Interne Hilsfunktionen (Kamera-Viewport-Berechnungen, Cursor-Transformation) |
+| `mod.rs` | `EditorApp`-Struct + `eframe::App::update()` Haupt-Loop |
+
+**`EditorApp`-Felder:**
+
+```rust
+pub(crate) struct EditorApp {
+    state: AppState,
+    controller: AppController,
+    renderer: Arc<Mutex<render::Renderer>>,
+    device: wgpu::Device,
+    queue: wgpu::Queue,
+    input: ui::InputState,
+    /// Gecachte Cursor-Weltposition (bleibt erhalten wenn Maus den Viewport verlaesst)
+    last_cursor_world: Option<Vec2>,
+    /// Gecachte egui-Textur-Handles fuer Gruppen-Boundary-Icons (lazy initialisiert)
+    group_boundary_icons: Option<ui::GroupBoundaryIcons>,
+}
 ```
