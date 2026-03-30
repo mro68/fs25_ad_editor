@@ -29,7 +29,8 @@ pub use background_map::BackgroundMap;
 pub use background_map::{list_images_in_zip, load_from_zip, ZipImageEntry};
 pub use camera::Camera2D;
 pub use centerline::{
-    compute_voronoi_bfs, extract_boundary_centerline, extract_corridor_centerline, VoronoiGrid,
+    compute_polygon_centerline, compute_segment_centerline, compute_voronoi_bfs,
+    extract_boundary_centerline, extract_corridor_centerline, VoronoiGrid,
 };
 pub use connection::{Connection, ConnectionDirection, ConnectionPriority};
 pub use farmland::{

@@ -184,8 +184,10 @@ pub const TOOL_INDEX_SMOOTH_CURVE: usize = 5;
 pub const TOOL_INDEX_PARKING: usize = 6;
 /// Tool-Index fuer `FieldBoundaryTool` im `ToolManager` (Registrierungs-Slot 7).
 pub const TOOL_INDEX_FIELD_BOUNDARY: usize = 7;
-/// Tool-Index fuer `RouteOffsetTool` im `ToolManager` (Registrierungs-Slot 8).
-pub const TOOL_INDEX_ROUTE_OFFSET: usize = 8;
+/// Tool-Index fuer `FieldPathTool` im `ToolManager` (Registrierungs-Slot 8).
+pub const TOOL_INDEX_FIELD_PATH: usize = 8;
+/// Tool-Index fuer `RouteOffsetTool` im `ToolManager` (Registrierungs-Slot 9).
+pub const TOOL_INDEX_ROUTE_OFFSET: usize = 9;
 
 impl GroupKind {
     /// Gibt den Tool-Index im ToolManager fuer dieses Segment zurueck.

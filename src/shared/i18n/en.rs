@@ -163,6 +163,7 @@ pub(super) fn translate(key: I18nKey) -> &'static str {
         I18nKey::MenuTraceAllFieldsHelp => "Automatically trace all detected fields with waypoints (one undo step)",
         I18nKey::MenuCurseplayImport => "Import Courseplay",
         I18nKey::MenuCurseplayExport => "Export Courseplay",
+        I18nKey::MenuFieldPath => "\u{1F6E4} Detect Field Path",
         // === Confirmation dialog: dissolve group ===
         I18nKey::ConfirmDissolveTitle => "Dissolve Group",
         I18nKey::ConfirmDissolveMessage => "Really dissolve the group? Nodes will be preserved.",

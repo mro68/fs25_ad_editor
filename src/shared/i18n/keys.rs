@@ -357,6 +357,8 @@ pub enum I18nKey {
     MenuCurseplayImport,
     /// Menüeintrag "Courseplay exportieren"
     MenuCurseplayExport,
+    /// Menüeintrag "Feldweg erkennen"
+    MenuFieldPath,
 
     // === Menü: Hilfe ===
     /// Menüeintrag "Hilfe"

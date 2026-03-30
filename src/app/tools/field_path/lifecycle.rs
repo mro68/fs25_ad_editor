@@ -9,8 +9,8 @@ use std::sync::Arc;
 
 use crate::app::tools::{ToolAction, ToolPreview, ToolResult};
 use crate::core::{
-    compute_voronoi_bfs, extract_boundary_centerline, extract_corridor_centerline, find_polygon_at,
-    simplify_polyline, FarmlandGrid, FieldPolygon, NodeFlag, RoadMap,
+    compute_polygon_centerline, compute_segment_centerline, find_polygon_at, simplify_polyline,
+    FarmlandGrid, FieldPolygon, NodeFlag, RoadMap,
 };
 use crate::shared::spline_geometry::resample_by_distance;
 use glam::Vec2;
@@ -27,41 +27,60 @@ const BOUNDARY_SNAP_THRESHOLD: f32 = 20.0;
 impl FieldPathTool {
     /// Berechnet die Mittellinie basierend auf den aktuell gewaehlten Seiten.
     ///
-    /// Nutzt je nach Modus entweder Voronoi-BFS auf dem Farmland-Grid (Fields)
-    /// oder Grenzsegment-Rasterisierung (Boundaries).
+    /// Nutzt je nach Modus entweder polygon-basierte Kantenmittlung (Fields)
+    /// oder segment-basierte Mittlung (Boundaries).
     /// Das Ergebnis wird in `self.centerline` und `self.resampled_nodes` gespeichert.
     /// Bei Erfolg wechselt die Phase auf `Preview`.
     pub(crate) fn compute_centerline(&mut self) {
-        let Some(grid) = self.farmland_grid.clone() else {
-            log::warn!("Keine Farmland-Grid-Daten vorhanden — Berechnung nicht moeglich");
-            return;
-        };
-
         let raw = match self.mode {
             FieldPathMode::Fields => {
                 if self.side1_field_ids.is_empty() || self.side2_field_ids.is_empty() {
                     log::warn!("Berechnung abgebrochen: Seite 1 oder Seite 2 ohne Felder");
                     return;
                 }
-                // Voronoi-Cache aufbauen falls noch nicht vorhanden
-                if self.voronoi_cache.is_none() {
-                    self.voronoi_cache = Some(Arc::new(compute_voronoi_bfs(&grid)));
+                let Some(polygons) = &self.farmland_polygons else {
+                    log::warn!(
+                        "Keine Farmland-Polygone vorhanden — Berechnung nicht moeglich"
+                    );
+                    return;
+                };
+
+                // Polygon-Vertices fuer beide Seiten sammeln
+                let side1_verts: Vec<&[Vec2]> = polygons
+                    .iter()
+                    .filter(|p| self.side1_field_ids.contains(&p.id))
+                    .map(|p| p.vertices.as_slice())
+                    .collect();
+                let side2_verts: Vec<&[Vec2]> = polygons
+                    .iter()
+                    .filter(|p| self.side2_field_ids.contains(&p.id))
+                    .map(|p| p.vertices.as_slice())
+                    .collect();
+
+                if side1_verts.is_empty() || side2_verts.is_empty() {
+                    log::warn!("Polygon-Daten fuer gewaehlte Feld-IDs nicht gefunden");
+                    return;
                 }
-                let voronoi = self
-                    .voronoi_cache
-                    .as_ref()
-                    .expect("Voronoi-Cache wurde gerade erstellt");
-                // u32-IDs sicher nach u8 konvertieren (GRLE-IDs passen immer in u8)
-                let s1: Vec<u8> = self.side1_field_ids.iter().map(|&id| id as u8).collect();
-                let s2: Vec<u8> = self.side2_field_ids.iter().map(|&id| id as u8).collect();
-                extract_corridor_centerline(voronoi, &s1, &s2, &grid)
+
+                log::info!(
+                    "Polygon-Centerline: {} Polygone Seite 1, {} Polygone Seite 2",
+                    side1_verts.len(),
+                    side2_verts.len()
+                );
+                compute_polygon_centerline(&side1_verts, &side2_verts, 2.0)
             }
             FieldPathMode::Boundaries => {
                 if self.side1_segments.is_empty() || self.side2_segments.is_empty() {
-                    log::warn!("Berechnung abgebrochen: Seite 1 oder Seite 2 ohne Grenzsegmente");
+                    log::warn!(
+                        "Berechnung abgebrochen: Seite 1 oder Seite 2 ohne Grenzsegmente"
+                    );
                     return;
                 }
-                extract_boundary_centerline(&self.side1_segments, &self.side2_segments, &grid)
+                compute_segment_centerline(
+                    &self.side1_segments,
+                    &self.side2_segments,
+                    2.0,
+                )
             }
         };
 

@@ -1,4 +1,4 @@
-//! Centerline-Berechnung via Multi-Source BFS (Voronoi-Approximation).
+//! Centerline-Berechnung: Polygon-basiert (Hauptalgorithmus) und Pixel-BFS (Fallback).
 
 use super::farmland::FarmlandGrid;
 use glam::Vec2;
@@ -21,7 +21,104 @@ pub struct VoronoiGrid {
 }
 
 // ---------------------------------------------------------------------------
-// Öffentliche Funktionen
+// Polygon-basierte Centerline (Hauptalgorithmus — kein Pixel-Grid noetig)
+// ---------------------------------------------------------------------------
+
+/// Berechnet die Mittellinie zwischen zwei Gruppen von Feld-Polygonen.
+///
+/// Rein polygon-basiert: funktioniert ohne Pixel-Grid, nur mit Weltkoordinaten.
+/// Unterstuetzt mehrere Felder pro Seite (z.B. 2 Felder in Gruppe 1, 1 in Gruppe 2).
+///
+/// Algorithmus:
+/// 1. Kanten beider Polygon-Gruppen dicht abtasten
+/// 2. Fuer jeden Punkt auf Seite 1 den naechsten auf Seite 2 finden
+/// 3. Paare auf den Korridor-Bereich filtern (nur die zueinander gewandten Kanten)
+/// 4. Mittelpunkte berechnen und entlang der Hauptachse ordnen
+pub fn compute_polygon_centerline(
+    side1_polys: &[&[Vec2]],
+    side2_polys: &[&[Vec2]],
+    sample_spacing: f32,
+) -> Vec<Vec2> {
+    let samples1 = sample_multiple_polygon_edges(side1_polys, sample_spacing);
+    let samples2 = sample_multiple_polygon_edges(side2_polys, sample_spacing);
+
+    if samples1.is_empty() || samples2.is_empty() {
+        return Vec::new();
+    }
+
+    // Fuer jeden Punkt auf Seite 1: naechsten auf Seite 2 und Distanz
+    let mut pairs: Vec<(Vec2, Vec2, f32)> = samples1
+        .iter()
+        .map(|&p1| {
+            let (p2, d) = nearest_in_set(p1, &samples2);
+            (p1, p2, d)
+        })
+        .collect();
+
+    if pairs.is_empty() {
+        return Vec::new();
+    }
+
+    // Korridor-Filter: Nur die zueinander gewandten Kantenpaare behalten.
+    // Heuristik: Paare sortieren, untere Haelfte der Distanzen = Korridor-Bereich.
+    pairs.sort_by(|a, b| a.2.partial_cmp(&b.2).unwrap_or(std::cmp::Ordering::Equal));
+
+    let min_dist = pairs[0].2;
+    // Schwellwert: 3× die Minimaldistanz, mindestens 30m, maximal 50% der Paare
+    let dist_threshold = (min_dist * 3.0).max(30.0);
+    let max_count = (pairs.len() / 2).max(1);
+
+    let corridor_pairs: Vec<(Vec2, Vec2)> = pairs
+        .into_iter()
+        .filter(|&(_, _, d)| d <= dist_threshold)
+        .take(max_count)
+        .map(|(p1, p2, _)| (p1, p2))
+        .collect();
+
+    if corridor_pairs.is_empty() {
+        return Vec::new();
+    }
+
+    // Mittelpunkte berechnen
+    let midpoints: Vec<Vec2> = corridor_pairs
+        .iter()
+        .map(|&(p1, p2)| (p1 + p2) * 0.5)
+        .collect();
+
+    // Entlang der Hauptachse ordnen (PCA-basiert)
+    order_points_by_principal_axis(&midpoints)
+}
+
+/// Berechnet die Mittellinie zwischen zwei Gruppen von Grenz-Segmenten.
+///
+/// Rein geometrisch: funktioniert ohne Pixel-Grid.
+/// Nutzt den gleichen Ansatz wie `compute_polygon_centerline`, aber mit offenen Polylines.
+pub fn compute_segment_centerline(
+    side1_segs: &[Vec<Vec2>],
+    side2_segs: &[Vec<Vec2>],
+    sample_spacing: f32,
+) -> Vec<Vec2> {
+    let samples1 = sample_multiple_polylines(side1_segs, sample_spacing);
+    let samples2 = sample_multiple_polylines(side2_segs, sample_spacing);
+
+    if samples1.is_empty() || samples2.is_empty() {
+        return Vec::new();
+    }
+
+    // Alle Paare bilden (beide Seiten sind schon Korridor-Kanten)
+    let midpoints: Vec<Vec2> = samples1
+        .iter()
+        .map(|&p1| {
+            let (p2, _) = nearest_in_set(p1, &samples2);
+            (p1 + p2) * 0.5
+        })
+        .collect();
+
+    order_points_by_principal_axis(&midpoints)
+}
+
+// ---------------------------------------------------------------------------
+// Pixel-basierte Centerline (Voronoi-BFS — benoetigt FarmlandGrid)
 // ---------------------------------------------------------------------------
 
 /// Berechnet Multi-Source BFS auf dem Farmland-Grid.
@@ -179,7 +276,130 @@ pub fn extract_boundary_centerline(
 }
 
 // ---------------------------------------------------------------------------
-// Private Hilfsfunktionen
+// Hilfsfunktionen: Polygon-Sampling und Punkt-Ordnung
+// ---------------------------------------------------------------------------
+
+/// Tastet die Kanten mehrerer Polygone gleichmaessig ab.
+fn sample_multiple_polygon_edges(polys: &[&[Vec2]], spacing: f32) -> Vec<Vec2> {
+    let mut all = Vec::new();
+    for vertices in polys {
+        all.extend(sample_closed_ring(vertices, spacing));
+    }
+    all
+}
+
+/// Tastet mehrere offene Polylines gleichmaessig ab.
+fn sample_multiple_polylines(segs: &[Vec<Vec2>], spacing: f32) -> Vec<Vec2> {
+    let mut all = Vec::new();
+    for seg in segs {
+        all.extend(sample_open_polyline(seg, spacing));
+    }
+    all
+}
+
+/// Tastet einen geschlossenen Polygon-Ring gleichmaessig ab.
+fn sample_closed_ring(vertices: &[Vec2], spacing: f32) -> Vec<Vec2> {
+    if vertices.len() < 2 {
+        return vertices.to_vec();
+    }
+    let n = vertices.len();
+    let mut samples = Vec::new();
+    for i in 0..n {
+        let a = vertices[i];
+        let b = vertices[(i + 1) % n];
+        let edge_len = a.distance(b);
+        let steps = (edge_len / spacing).ceil().max(1.0) as usize;
+        for s in 0..steps {
+            let t = s as f32 / steps as f32;
+            samples.push(a.lerp(b, t));
+        }
+    }
+    samples
+}
+
+/// Tastet eine offene Polyline gleichmaessig ab.
+fn sample_open_polyline(points: &[Vec2], spacing: f32) -> Vec<Vec2> {
+    if points.len() < 2 {
+        return points.to_vec();
+    }
+    let mut samples = Vec::new();
+    for pair in points.windows(2) {
+        let a = pair[0];
+        let b = pair[1];
+        let edge_len = a.distance(b);
+        let steps = (edge_len / spacing).ceil().max(1.0) as usize;
+        for s in 0..steps {
+            let t = s as f32 / steps as f32;
+            samples.push(a.lerp(b, t));
+        }
+    }
+    // Letzten Punkt anfuegen
+    if let Some(&last) = points.last() {
+        samples.push(last);
+    }
+    samples
+}
+
+/// Findet den naechsten Punkt in einer Menge (Brute-Force).
+fn nearest_in_set(query: Vec2, set: &[Vec2]) -> (Vec2, f32) {
+    let mut best = set[0];
+    let mut best_d = query.distance_squared(best);
+    for &p in &set[1..] {
+        let d = query.distance_squared(p);
+        if d < best_d {
+            best_d = d;
+            best = p;
+        }
+    }
+    (best, best_d.sqrt())
+}
+
+/// Ordnet Punkte entlang ihrer Hauptachse (PCA-basiert).
+///
+/// Berechnet die Richtung maximaler Varianz und projiziert alle Punkte darauf.
+/// Dadurch entsteht eine sinnvolle Reihenfolge entlang des Korridors.
+fn order_points_by_principal_axis(points: &[Vec2]) -> Vec<Vec2> {
+    if points.len() < 2 {
+        return points.to_vec();
+    }
+
+    let n = points.len() as f32;
+    let centroid = points.iter().copied().sum::<Vec2>() / n;
+
+    // 2×2 Kovarianzmatrix
+    let mut cxx = 0.0f32;
+    let mut cyy = 0.0f32;
+    let mut cxy = 0.0f32;
+    for &p in points {
+        let d = p - centroid;
+        cxx += d.x * d.x;
+        cyy += d.y * d.y;
+        cxy += d.x * d.y;
+    }
+
+    // Haupteigenvektor der 2×2 Kovarianzmatrix
+    let angle = 0.5 * (2.0 * cxy).atan2(cxx - cyy);
+    let axis = Vec2::new(angle.cos(), angle.sin());
+
+    // Punkte auf Achse projizieren, nach Projektion sortieren, Duplikate entfernen
+    let mut projected: Vec<(f32, Vec2)> = points
+        .iter()
+        .map(|&p| ((p - centroid).dot(axis), p))
+        .collect();
+    projected.sort_by(|a, b| a.0.partial_cmp(&b.0).unwrap_or(std::cmp::Ordering::Equal));
+
+    // Eng beieinanderliegende Punkte deduplizieren (< 0.5m Abstand)
+    let mut result = Vec::with_capacity(projected.len());
+    for &(_, p) in &projected {
+        if result.last().map_or(true, |&last: &Vec2| last.distance(p) > 0.5) {
+            result.push(p);
+        }
+    }
+    result
+}
+
+// ---------------------------------------------------------------------------
+// Hilfsfunktionen: Pixel-Chaining und Rasterisierung
 // ---------------------------------------------------------------------------
 
 /// Verkettete Pixel-Liste aus unsortierten Kantenpixeln erstellen.
@@ -390,6 +610,99 @@ mod tests {
         let side2 = vec![Vec2::new(5.0, -8.0), Vec2::new(5.0, 8.0)];
 
         let result = extract_boundary_centerline(&[side1], &[side2], &grid);
+
+        assert!(!result.is_empty(), "Mittellinie darf nicht leer sein");
+        for pt in &result {
+            assert!(
+                pt.x.abs() < 3.0,
+                "Mittellinien-Punkt x={:.2} sollte nahe 0 liegen",
+                pt.x
+            );
+        }
+    }
+
+    /// Polygon-basierte Centerline zwischen zwei parallelen Rechtecken.
+    #[test]
+    fn test_polygon_centerline_two_rects() {
+        // Feld 1: Rechteck links (x = -20..-10, y = -30..30)
+        let poly1 = vec![
+            Vec2::new(-20.0, -30.0),
+            Vec2::new(-10.0, -30.0),
+            Vec2::new(-10.0, 30.0),
+            Vec2::new(-20.0, 30.0),
+        ];
+        // Feld 2: Rechteck rechts (x = 10..20, y = -30..30)
+        let poly2 = vec![
+            Vec2::new(10.0, -30.0),
+            Vec2::new(20.0, -30.0),
+            Vec2::new(20.0, 30.0),
+            Vec2::new(10.0, 30.0),
+        ];
+
+        let result = compute_polygon_centerline(
+            &[poly1.as_slice()],
+            &[poly2.as_slice()],
+            2.0,
+        );
+
+        assert!(!result.is_empty(), "Mittellinie darf nicht leer sein");
+        // Mittellinie muss zwischen x=-10 und x=10 liegen (nahe x=0)
+        for pt in &result {
+            assert!(
+                pt.x.abs() < 5.0,
+                "Mittellinien-Punkt x={:.2} sollte nahe 0 liegen",
+                pt.x
+            );
+        }
+    }
+
+    /// Polygon-Centerline mit 2 Feldern auf Seite 1, 1 Feld auf Seite 2.
+    #[test]
+    fn test_polygon_centerline_two_vs_one() {
+        // Seite 1: Zwei Felder nebeneinander (links oben + links unten)
+        let poly1a = vec![
+            Vec2::new(-20.0, 0.0),
+            Vec2::new(-10.0, 0.0),
+            Vec2::new(-10.0, 30.0),
+            Vec2::new(-20.0, 30.0),
+        ];
+        let poly1b = vec![
+            Vec2::new(-20.0, -30.0),
+            Vec2::new(-10.0, -30.0),
+            Vec2::new(-10.0, 0.0),
+            Vec2::new(-20.0, 0.0),
+        ];
+        // Seite 2: Ein Feld rechts
+        let poly2 = vec![
+            Vec2::new(10.0, -30.0),
+            Vec2::new(20.0, -30.0),
+            Vec2::new(20.0, 30.0),
+            Vec2::new(10.0, 30.0),
+        ];
+
+        let result = compute_polygon_centerline(
+            &[poly1a.as_slice(), poly1b.as_slice()],
+            &[poly2.as_slice()],
+            2.0,
+        );
+
+        assert!(!result.is_empty(), "Mittellinie darf nicht leer sein");
+        for pt in &result {
+            assert!(
+                pt.x.abs() < 5.0,
+                "Mittellinien-Punkt x={:.2} sollte nahe 0 liegen",
+                pt.x
+            );
+        }
+    }
+
+    /// Segment-basierte Centerline.
+    #[test]
+    fn test_segment_centerline() {
+        let side1 = vec![Vec2::new(-5.0, -20.0), Vec2::new(-5.0, 20.0)];
+        let side2 = vec![Vec2::new(5.0, -20.0), Vec2::new(5.0, 20.0)];
+
+        let result = compute_segment_centerline(&[side1], &[side2], 2.0);
 
         assert!(!result.is_empty(), "Mittellinie darf nicht leer sein");
         for pt in &result {
