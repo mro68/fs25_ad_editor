@@ -184,6 +184,22 @@ pub fn simplify_polygon(vertices: &[Vec2], tolerance: f32) -> Vec<Vec2> {
     result
 }
 
+/// Vereinfacht eine offene Polylinie durch Entfernen von Punkten, die
+/// weniger als `tolerance` von der Verbindungslinie abweichen
+/// (Douglas-Peucker-Algorithmus fuer offene Linien).
+///
+/// - `tolerance = 0.0` → keine Vereinfachung, Original wird zurueckgegeben.
+/// - Weniger als 2 Punkte → Original wird zurueckgegeben.
+pub fn simplify_polyline(points: &[Vec2], tolerance: f32) -> Vec<Vec2> {
+    if points.len() < 2 {
+        return points.to_vec();
+    }
+    if tolerance <= 0.0 {
+        return points.to_vec();
+    }
+    dp_open(points, tolerance)
+}
+
 /// Verschiebt ein Polygon um `offset` Meter nach innen (negativ) oder aussen (positiv).
 ///
 /// Nutzt Normalen-basiertes Vertex-Offset: jeder Vertex wird entlang des
@@ -298,10 +314,10 @@ impl FarmlandGrid {
     /// Welt-Koordinaten → Pixel-Koordinaten (geclampt auf Rastergrenzen).
     pub fn world_to_pixel(&self, world: Vec2) -> (u32, u32) {
         let scale = self.width as f32 / self.map_size;
-        let px = ((world.x + self.map_size / 2.0) * scale)
-            .clamp(0.0, (self.width - 1) as f32) as u32;
-        let py = ((world.y + self.map_size / 2.0) * scale)
-            .clamp(0.0, (self.height - 1) as f32) as u32;
+        let px =
+            ((world.x + self.map_size / 2.0) * scale).clamp(0.0, (self.width - 1) as f32) as u32;
+        let py =
+            ((world.y + self.map_size / 2.0) * scale).clamp(0.0, (self.height - 1) as f32) as u32;
         (px, py)
     }
 

@@ -420,8 +420,7 @@ fn try_extract_polygons_from_files(
             Ok(decoded) => {
                 let w = decoded.width;
                 let h = decoded.height;
-                let polygons =
-                    farmland::extract_farmland_polygons_from_ids(&decoded.pixels, w, h);
+                let polygons = farmland::extract_farmland_polygons_from_ids(&decoded.pixels, w, h);
                 log::info!(
                     "Farmland-Polygone extrahiert: {} Felder aus {}x{} Raster",
                     polygons.len(),

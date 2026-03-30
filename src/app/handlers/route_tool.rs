@@ -113,6 +113,8 @@ pub fn select(state: &mut AppState, index: usize) {
         tool.set_priority(prio);
         tool.set_snap_radius(snap_r);
         tool.set_farmland_data(farmland);
+        tool.set_farmland_grid(state.farmland_grid.clone());
+        tool.set_background_map_image(state.background_image.clone());
     }
 
     // Kette in chain-basierte Tools laden (z.B. BypassTool)

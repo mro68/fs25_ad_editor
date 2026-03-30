@@ -77,6 +77,9 @@ pub struct AppState {
     /// GRLE-Raster mit Farmland-IDs fuer Pixel-basierte Analysen (z.B. Feldweg-Erkennung).
     /// `None` solange kein Overview mit GRLE-Daten geladen wurde.
     pub farmland_grid: Option<Arc<FarmlandGrid>>,
+    /// Gecachtes Hintergrundbild fuer farbbasierte Tool-Analysen.
+    /// `None` solange kein Overview geladen wurde.
+    pub background_image: Option<Arc<image::DynamicImage>>,
     /// Aktive Gruppen-Bearbeitung (None = Normal-Modus, Some = Edit-Modus aktiv)
     pub group_editing: Option<GroupEditState>,
     /// Record-ID des aktuell per Tool bearbeiteten Segments (fuer Cancel-Wiederherstellung)
@@ -120,6 +123,7 @@ impl AppState {
             should_exit: false,
             farmland_polygons: None,
             farmland_grid: None,
+            background_image: None,
             group_editing: None,
             tool_editing_record_id: None,
             tool_editing_record_backup: None,

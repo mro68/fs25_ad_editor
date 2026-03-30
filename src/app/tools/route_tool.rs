@@ -144,6 +144,14 @@ pub trait RouteTool:
     fn set_farmland_data(&mut self, _data: Option<std::sync::Arc<Vec<crate::core::FieldPolygon>>>) {
     }
 
+    /// Setzt das Farmland-Raster fuer Pixel-basierte Analysen (z.B. Feldweg-Erkennung).
+    /// Default: ignoriert den Input.
+    fn set_farmland_grid(&mut self, _grid: Option<std::sync::Arc<crate::core::FarmlandGrid>>) {}
+
+    /// Setzt die Hintergrundkarte fuer farbbasierte Analysen.
+    /// Default: ignoriert den Input.
+    fn set_background_map_image(&mut self, _image: Option<std::sync::Arc<image::DynamicImage>>) {}
+
     /// Speichert die IDs der zuletzt erstellten Nodes (fuer nachtraegliche Anpassung).
     /// `road_map` erlaubt tools, Nachbar-Informationen fuer Feintuning zu cachen.
     fn set_last_created(&mut self, _ids: &[u64], _road_map: &RoadMap) {}

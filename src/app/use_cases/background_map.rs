@@ -271,8 +271,9 @@ pub fn generate_overview_with_options(state: &mut AppState) -> Result<()> {
         state.farmland_grid = None;
     }
 
-    let bg_map = BackgroundMap::from_image(overview.image, &zip_path, None)?;
+    let bg_map = BackgroundMap::from_image(overview.image.clone(), &zip_path, None)?;
 
+    state.background_image = Some(Arc::new(overview.image));
     state.view.background_map = Some(Arc::new(bg_map));
     state.view.background_scale = 1.0;
     state.view.background_dirty = true;
