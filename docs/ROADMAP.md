@@ -396,6 +396,10 @@
     - [x] `app/tools/API.md`: `FieldPathTool` vollstaendig dokumentiert (Phasen, Modi, Felder, Berechnungs-Pipeline); Tabelle um Slot 9 erweitert; `set_farmland_grid()`/`set_background_map_image()` in RouteTool-Trait ergaenzt
     - [x] `crates/fs25_map_overview/API.md`: `OverviewResult.farmland_ids` als neues Feld dokumentiert
     - [x] ROADMAP.md: FieldPathTool als abgeschlossen eingetragen
+  - [x] **Doku-Sync ColorPathTool + ToolLasso-Infrastruktur (2026-03-30, Branch `feat/color-path-tool`)**
+    - [x] `app/tools/API.md`: `ColorPathTool` vollstaendig dokumentiert (Phasen, Pipeline, Felder, Config, Sampling- und Skelett-Funktionen); Tabelle um Slot 10 erweitert; `needs_lasso_input()` + `on_lasso_completed()` in RouteTool-Trait ergaenzt; `ToolManager::new()` aktualisiert
+    - [x] `ui/API.md`: `DragSelectionMode::ToolLasso` und `ViewportContext.tool_needs_lasso` dokumentiert
+    - [x] ROADMAP.md: ColorPathTool als abgeschlossen eingetragen
 
 - [x] **FieldPathTool — Feldweg-Mittellinie (2026-03-30, Branch `feat/field-path-tool`)**
   - [x] `src/core/centerline.rs` — `VoronoiGrid`, `compute_voronoi_bfs()`, `extract_corridor_centerline()`, `extract_boundary_centerline()` (Multi-Source BFS, 8-Konnektivitaet)
@@ -405,6 +409,17 @@
   - [x] `RouteTool::set_farmland_grid()` + `set_background_map_image()` — neue Default-No-Op-Methoden im Trait
   - [x] `AppState.farmland_grid: Option<Arc<FarmlandGrid>>` + `background_image: Option<Arc<DynamicImage>>` — neue State-Felder
   - [x] `OverviewResult.farmland_ids: Option<Vec<u8>>` — rohes ID-Raster fuer Feldweg-Erkennung
+
+- [x] **ColorPathTool — Farb-Pfad-Erkennung (2026-03-30, Branch `feat/color-path-tool`)**
+  - [x] `src/app/tools/color_path/` — `ColorPathTool` (Slot 10), `ColorPathPhase` (Idle/Sampling/Preview), `ColorPathConfig` (color_tolerance, node_spacing, simplify_tolerance, noise_filter, connect_to_existing)
+  - [x] `RouteTool::needs_lasso_input()` + `RouteTool::on_lasso_completed()` — neue Default-Methoden im Trait fuer Alt+Drag-Lasso-Routing
+  - [x] `DragSelectionMode::ToolLasso` in `src/ui/drag.rs` — neuer Modus fuer Tool-gesteuertes Lasso statt Node-Selektion
+  - [x] `ViewportContext.tool_needs_lasso: bool` in `src/ui/input/mod.rs` — aktiviert ToolLasso-Routing
+  - [x] `AppIntent::RouteToolLassoCompleted` + `AppCommand::RouteToolLassoCompleted` — neuer Intent-Pfad
+  - [x] `handlers::route_tool::lasso_completed()` — neuer Handler
+  - [x] Pipeline: Farb-Sampling (Alt+Lasso) → Bool-Maske → Zhang-Suen-Skelettierung → Pfad-Ordnung (Durchmesser-BFS) → Douglas-Peucker → Resampling → Pfad-Auswahl → Execute
+  - [x] I18n-Key `MenuColorPath` (DE: „🎨 Farb-Pfad erkennen", EN: „🎨 Detect Color Path")
+  - [x] Menüeintrag in Extras
 
 - [ ] Packaging
   - [ ] Windows Binaries (.exe)

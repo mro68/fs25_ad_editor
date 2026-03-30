@@ -40,18 +40,13 @@ pub(super) fn render_config_view(
                 ui.horizontal(|ui| {
                     ui.label(format!("Samples: {sample_count}  Ø-Farbe:"));
                     // Farbvorschau-Quadrat
-                    let (rect, _) = ui.allocate_exact_size(
-                        egui::Vec2::splat(16.0),
-                        egui::Sense::hover(),
-                    );
+                    let (rect, _) =
+                        ui.allocate_exact_size(egui::Vec2::splat(16.0), egui::Sense::hover());
                     ui.painter().rect_filled(rect, 2.0, color);
                 });
             } else {
                 ui.label(format!("Samples: {sample_count}"));
-                ui.colored_label(
-                    egui::Color32::GRAY,
-                    "Alt+Drag zum Sampeln von Farben",
-                );
+                ui.colored_label(egui::Color32::GRAY, "Alt+Drag zum Sampeln von Farben");
             }
 
             ui.separator();
@@ -145,9 +140,7 @@ pub(super) fn render_config_view(
     ui.horizontal(|ui| {
         ui.label("Knotenabstand:");
         if ui
-            .add(
-                egui::Slider::new(&mut tool.config.node_spacing, 1.0..=50.0).suffix(" m"),
-            )
+            .add(egui::Slider::new(&mut tool.config.node_spacing, 1.0..=50.0).suffix(" m"))
             .changed()
         {
             // Resampling in Preview-Phase sofort neu berechnen
@@ -161,10 +154,7 @@ pub(super) fn render_config_view(
     ui.horizontal(|ui| {
         ui.label("Vereinfachung:");
         if ui
-            .add(
-                egui::Slider::new(&mut tool.config.simplify_tolerance, 0.0..=20.0)
-                    .suffix(" m"),
-            )
+            .add(egui::Slider::new(&mut tool.config.simplify_tolerance, 0.0..=20.0).suffix(" m"))
             .changed()
         {
             // Vereinfachung + Resampling in Preview-Phase sofort neu berechnen
@@ -185,7 +175,10 @@ pub(super) fn render_config_view(
     }
 
     if ui
-        .checkbox(&mut tool.config.connect_to_existing, "An Bestand anschliessen")
+        .checkbox(
+            &mut tool.config.connect_to_existing,
+            "An Bestand anschliessen",
+        )
         .changed()
     {
         changed = true;

@@ -6,8 +6,8 @@
 use glam::Vec2;
 use std::collections::{HashMap, VecDeque};
 
-use crate::core::zhang_suen_thinning;
 use super::sampling::{morphological_close, morphological_open, pixel_to_world};
+use crate::core::zhang_suen_thinning;
 
 /// Mindest-Pixelanzahl eines Pfades — kuerzere Fragmente werden verworfen.
 const MIN_PATH_LENGTH: usize = 5;
@@ -90,8 +90,7 @@ pub(crate) fn order_skeleton_pixels(pixels: &[(usize, usize)]) -> Vec<(usize, us
         return vec![pixels[0]];
     }
 
-    let pixel_set: std::collections::HashSet<(usize, usize)> =
-        pixels.iter().copied().collect();
+    let pixel_set: std::collections::HashSet<(usize, usize)> = pixels.iter().copied().collect();
 
     // BFS von einem Startknoten: gibt (farthest_node, parent_map) zurueck.
     // Die parent_map erlaubt die Pfad-Rekonstruktion vom farthest_node
