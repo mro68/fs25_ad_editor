@@ -29,18 +29,39 @@ pub(crate) fn world_to_pixel(
 
 /// Konvertiert Pixel-Koordinaten in Weltkoordinaten.
 ///
-/// Umkehrung von `world_to_pixel` (fuer quadratische Bilder exakt).
+/// Umkehrung von `world_to_pixel`. Fuer nicht-quadratische Bilder werden
+/// X und Y je mit dem korrekten Skalierungsfaktor umgerechnet.
 pub(crate) fn pixel_to_world(
     px: u32,
     py: u32,
     map_size: f32,
     img_width: u32,
-    _img_height: u32,
+    img_height: u32,
 ) -> Vec2 {
-    let scale = map_size / img_width as f32;
+    let scale_x = map_size / img_width as f32;
+    let scale_y = map_size / img_height as f32;
     Vec2::new(
-        px as f32 * scale - map_size / 2.0,
-        py as f32 * scale - map_size / 2.0,
+        px as f32 * scale_x - map_size / 2.0,
+        py as f32 * scale_y - map_size / 2.0,
+    )
+}
+
+/// Konvertiert Sub-Pixel-Koordinaten (Fließkomma) in Weltkoordinaten.
+///
+/// Wird fuer die Medial-Axis-Korrektur verwendet, wo Pixel-Positionen
+/// nicht ganzzahlig sind.
+pub(crate) fn pixel_to_world_f32(
+    px: f32,
+    py: f32,
+    map_size: f32,
+    img_width: u32,
+    img_height: u32,
+) -> Vec2 {
+    let scale_x = map_size / img_width as f32;
+    let scale_y = map_size / img_height as f32;
+    Vec2::new(
+        px * scale_x - map_size / 2.0,
+        py * scale_y - map_size / 2.0,
     )
 }
 
@@ -167,10 +188,11 @@ pub(crate) fn build_color_mask(
 // Morphologische Operationen
 // ---------------------------------------------------------------------------
 
-/// Erosion: Pixel wird false wenn ein Nachbar (4-Connectivity) false ist.
+/// Erosion: Pixel wird false wenn weniger als 3 von 4 orthogonalen Nachbarn true sind.
 ///
-/// Pixels am Bildrand gelten als nicht vorhanden (false), sodass Randbereiche
-/// immer erodiert werden.
+/// Schwächere Majority-Bedingung (≥ 3 von 4) statt ALL-Bedingung verhindert,
+/// dass dünne Verbindungen (1-3 px) durch Erosion komplett gelöscht werden.
+/// Pixels am Bildrand gelten als nicht vorhanden (false).
 pub(crate) fn erode(mask: &[bool], width: usize, height: usize) -> Vec<bool> {
     let mut result = vec![false; width * height];
     for y in 0..height {
@@ -180,12 +202,13 @@ pub(crate) fn erode(mask: &[bool], width: usize, height: usize) -> Vec<bool> {
                 // Bereits false — bleibt false
                 continue;
             }
-            // Pixel bleibt true nur wenn alle 4-Nachbarn ebenfalls true sind
+            // Pixel bleibt true nur wenn mindestens 3 von 4 Nachbarn true sind
             let left = x > 0 && mask[idx - 1];
             let right = x + 1 < width && mask[idx + 1];
             let up = y > 0 && mask[idx - width];
             let down = y + 1 < height && mask[idx + width];
-            result[idx] = left && right && up && down;
+            let count = [left, right, up, down].iter().filter(|&&v| v).count();
+            result[idx] = count >= 3;
         }
     }
     result

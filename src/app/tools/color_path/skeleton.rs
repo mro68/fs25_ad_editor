@@ -6,7 +6,7 @@
 use glam::Vec2;
 use std::collections::{HashMap, VecDeque};
 
-use super::sampling::{morphological_close, morphological_open, pixel_to_world};
+use super::sampling::{morphological_close, morphological_open, pixel_to_world_f32};
 use crate::core::zhang_suen_thinning;
 
 /// Mindest-Pixelanzahl eines Pfades — kuerzere Fragmente werden verworfen.
@@ -77,12 +77,19 @@ pub(crate) fn find_connected_components(
 /// Ordnet eine Menge von Skelett-Pixeln in eine lineare Sequenz.
 ///
 /// Algorithmus: Zweifache BFS (Durchmesser-Methode).
-/// 1. BFS von beliebigem Startpunkt → findet Endpunkt A (weitester Knoten).
+/// 1. BFS vom Startpunkt (Hint-Pixel oder beliebig) → findet Endpunkt A.
 /// 2. BFS von A → findet Endpunkt B und rekonstruiert den laengsten Pfad A→B.
+///
+/// Ist `hint` angegeben, wird als erster Startpunkt der Pixel aus `pixels`
+/// gewaehlt der dem Hint am naechsten liegt. Dadurch laeuft der Pfad von
+/// der Lasso-Startseite aus, nicht vom geometrischen Durchmesser-Endpunkt.
 ///
 /// Bei Verzweigungen wird automatisch der laengste Teilpfad gewaehlt,
 /// da der Graphdurchmesser immer die zwei weitesten Endpunkte verbindet.
-pub(crate) fn order_skeleton_pixels(pixels: &[(usize, usize)]) -> Vec<(usize, usize)> {
+pub(crate) fn order_skeleton_pixels(
+    pixels: &[(usize, usize)],
+    hint: Option<(usize, usize)>,
+) -> Vec<(usize, usize)> {
     if pixels.is_empty() {
         return Vec::new();
     }
@@ -91,6 +98,21 @@ pub(crate) fn order_skeleton_pixels(pixels: &[(usize, usize)]) -> Vec<(usize, us
     }
 
     let pixel_set: std::collections::HashSet<(usize, usize)> = pixels.iter().copied().collect();
+
+    // Startpunkt: Pixel am naechsten zum Hint (oder erstes Element als Fallback)
+    let initial_start = if let Some((hx, hy)) = hint {
+        pixels
+            .iter()
+            .copied()
+            .min_by_key(|&(px, py)| {
+                let dx = px as i64 - hx as i64;
+                let dy = py as i64 - hy as i64;
+                dx * dx + dy * dy
+            })
+            .unwrap_or(pixels[0])
+    } else {
+        pixels[0]
+    };
 
     // Rueckgabetyp-Alias fuer die BFS-Hilfsclosure (farthest_node + parent_map)
     type BfsResult = (
@@ -132,8 +154,8 @@ pub(crate) fn order_skeleton_pixels(pixels: &[(usize, usize)]) -> Vec<(usize, us
         (farthest, parent)
     };
 
-    // Schritt 1: BFS vom ersten Pixel → Endpunkt A (einer der Durchmesser-Enden)
-    let (far_a, _) = bfs_from(pixels[0]);
+    // Schritt 1: BFS vom Startpunkt → Endpunkt A (einer der Durchmesser-Enden)
+    let (far_a, _) = bfs_from(initial_start);
 
     // Schritt 2: BFS von A → Endpunkt B + Parent-Map fuer Pfad-Rekonstruktion
     let (far_b, parent_map) = bfs_from(far_a);
@@ -155,21 +177,110 @@ pub(crate) fn order_skeleton_pixels(pixels: &[(usize, usize)]) -> Vec<(usize, us
 }
 
 // ---------------------------------------------------------------------------
+// Medial-Axis-Korrektur
+// ---------------------------------------------------------------------------
+
+/// Sucht den Abstand zum naechsten Rand-Pixel in einer Richtung (nx, ny).
+///
+/// Schrittweise Abtastung entlang (nx, ny) ab (x, y). Gibt die Distanz (in
+/// Pixeln − 0.5) zurueck, an der erstmals ein `false`-Pixel oder der
+/// Bildrand erreicht wird.
+fn find_boundary_distance(
+    x: usize,
+    y: usize,
+    nx: f32,
+    ny: f32,
+    mask: &[bool],
+    width: usize,
+    height: usize,
+) -> f32 {
+    for step in 1..=30i32 {
+        let ix = (x as f32 + nx * step as f32).round() as i32;
+        let iy = (y as f32 + ny * step as f32).round() as i32;
+        if ix < 0 || iy < 0 || ix >= width as i32 || iy >= height as i32 {
+            return step as f32 - 0.5;
+        }
+        if !mask[iy as usize * width + ix as usize] {
+            return step as f32 - 0.5;
+        }
+    }
+    30.0
+}
+
+/// Korrigiert geordnete Skelett-Pixel auf die geometrische Mittelachse.
+///
+/// Fuer jeden Skelett-Pixel wird die lokale Tangente aus Vorgaenger und
+/// Nachfolger berechnet. Senkrecht dazu wird auf beiden Seiten der naechste
+/// Rand-Pixel in `original_mask` gesucht. Der korrigierte Punkt liegt auf
+/// dem geometrischen Mittelpunkt zwischen beiden Raendern.
+pub(crate) fn refine_medial_axis(
+    ordered: &[(usize, usize)],
+    original_mask: &[bool],
+    width: usize,
+    height: usize,
+) -> Vec<(f32, f32)> {
+    let n = ordered.len();
+    ordered
+        .iter()
+        .enumerate()
+        .map(|(i, &(x, y))| {
+            let (prev_x, prev_y) = if i > 0 {
+                ordered[i - 1]
+            } else if i + 1 < n {
+                ordered[i + 1]
+            } else {
+                (x, y)
+            };
+            let (next_x, next_y) = if i + 1 < n {
+                ordered[i + 1]
+            } else if i > 0 {
+                ordered[i - 1]
+            } else {
+                (x, y)
+            };
+
+            let dx = next_x as f32 - prev_x as f32;
+            let dy = next_y as f32 - prev_y as f32;
+            let len = (dx * dx + dy * dy).sqrt();
+
+            if len < 0.001 {
+                return (x as f32, y as f32);
+            }
+
+            // Normierte Tangente; Normale = 90°-Rotation
+            let (tx, ty) = (dx / len, dy / len);
+            let (nx_f, ny_f) = (-ty, tx);
+
+            // Abstand zum Rand in beiden Normalenrichtungen
+            let d_pos =
+                find_boundary_distance(x, y, nx_f, ny_f, original_mask, width, height);
+            let d_neg =
+                find_boundary_distance(x, y, -nx_f, -ny_f, original_mask, width, height);
+
+            // Mittelachsen-Offset: positiv = in Richtung +Normale
+            let offset = (d_pos - d_neg) / 2.0;
+            (x as f32 + nx_f * offset, y as f32 + ny_f * offset)
+        })
+        .collect()
+}
+
+// ---------------------------------------------------------------------------
 // Pixel → Weltkoordinaten
 // ---------------------------------------------------------------------------
 
-/// Konvertiert geordnete Pixel-Positionen in Weltkoordinaten.
+/// Konvertiert korrigierte Sub-Pixel-Positionen in Weltkoordinaten.
 ///
-/// Nutzt `sampling::pixel_to_world` fuer jeden Pixel einzeln.
-pub(crate) fn pixels_to_world(
-    pixels: &[(usize, usize)],
+/// Wird nach `refine_medial_axis` verwendet, wo Pixel-Positionen nicht
+/// ganzzahlig sein koennen.
+fn refined_pixels_to_world(
+    refined: &[(f32, f32)],
     map_size: f32,
     img_width: u32,
     img_height: u32,
 ) -> Vec<Vec2> {
-    pixels
+    refined
         .iter()
-        .map(|&(px, py)| pixel_to_world(px as u32, py as u32, map_size, img_width, img_height))
+        .map(|&(px, py)| pixel_to_world_f32(px, py, map_size, img_width, img_height))
         .collect()
 }
 
@@ -178,7 +289,7 @@ pub(crate) fn pixels_to_world(
 // ---------------------------------------------------------------------------
 
 /// Fuehrt die komplette Pipeline aus:
-/// Bool-Maske → Zhang-Suen → Komponenten finden → Pfade ordnen → Weltkoords.
+/// Bool-Maske → Zhang-Suen → Komponenten finden → Pfade ordnen → Medial-Axis → Weltkoords.
 ///
 /// Gibt alle gefundenen Pfade sortiert nach Laenge (laengster zuerst) zurueck.
 /// Fragmente mit weniger als 5 Pixeln werden verworfen.
@@ -186,12 +297,15 @@ pub(crate) fn pixels_to_world(
 /// - `noise_filter`: Wenn `true`, wird vor dem Thinning morphologisches
 ///   Opening (Erosion+Dilation) und Closing (Dilation+Erosion) angewendet
 ///   um Einzelpixel-Rauschen zu entfernen und kleine Luecken zu schliessen.
+/// - `start_hint`: Optionaler Pixel-Punkt in der Naehe des Lasso-Startpunkts.
+///   Steuert den Startpunkt der Skelett-Ordnung (vgl. `order_skeleton_pixels`).
 pub(crate) fn extract_paths_from_mask(
     mask: &mut Vec<bool>,
     width: u32,
     height: u32,
     noise_filter: bool,
     map_size: f32,
+    start_hint: Option<(usize, usize)>,
 ) -> Vec<Vec<Vec2>> {
     let w = width as usize;
     let h = height as usize;
@@ -204,19 +318,23 @@ pub(crate) fn extract_paths_from_mask(
         *mask = closed;
     }
 
+    // Original-Maske vor Zhang-Suen sichern (fuer Medial-Axis-Korrektur)
+    let original_mask = mask.clone();
+
     // Zhang-Suen: Maske auf 1-Pixel-breites Skelett reduzieren
     zhang_suen_thinning(mask, w, h);
 
     // Zusammenhaengende Skelett-Gruppen extrahieren
     let components = find_connected_components(mask, w, h);
 
-    // Jede Komponente: ordnen und in Weltkoordinaten umrechnen
+    // Jede Komponente: ordnen, auf Medial-Axis korrigieren, in Weltkoordinaten umrechnen
     let mut paths: Vec<Vec<Vec2>> = components
         .iter()
         .filter(|comp| comp.len() >= MIN_PATH_LENGTH)
         .map(|comp| {
-            let ordered = order_skeleton_pixels(comp);
-            pixels_to_world(&ordered, map_size, width, height)
+            let ordered = order_skeleton_pixels(comp, start_hint);
+            let refined = refine_medial_axis(&ordered, &original_mask, w, h);
+            refined_pixels_to_world(&refined, map_size, width, height)
         })
         .collect();
 
@@ -288,7 +406,7 @@ mod tests {
     #[test]
     fn order_linear_pfad_fuenf_pixel() {
         let pixels = vec![(0, 2), (1, 2), (2, 2), (3, 2), (4, 2)];
-        let ordered = order_skeleton_pixels(&pixels);
+        let ordered = order_skeleton_pixels(&pixels, None);
         assert_eq!(ordered.len(), 5, "Alle 5 Pixel muessen enthalten sein");
 
         // Endpunkte muessen (0,2) und (4,2) sein (Reihenfolge egal)
@@ -318,7 +436,7 @@ mod tests {
         // Kurzer Ast — per 8-Connectivity mit (2,2), (2,3) und (2,4) verbunden
         pixels.push((3, 3));
 
-        let ordered = order_skeleton_pixels(&pixels);
+        let ordered = order_skeleton_pixels(&pixels, None);
         assert_eq!(
             ordered.len(),
             6,
@@ -353,7 +471,7 @@ mod tests {
             }
         }
 
-        let paths = extract_paths_from_mask(&mut mask, width, height, false, 1000.0);
+        let paths = extract_paths_from_mask(&mut mask, width, height, false, 1000.0, None);
 
         assert_eq!(paths.len(), 1, "Genau ein Pfad nach Thinning erwartet");
         assert!(

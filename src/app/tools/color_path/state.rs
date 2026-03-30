@@ -79,6 +79,9 @@ pub struct ColorPathTool {
     pub(crate) centerline: Vec<Vec2>,
     /// Gleichmaessig abgetastete Nodes der Mittellinie
     pub(crate) resampled_nodes: Vec<Vec2>,
+    /// Weltposition des ersten Lasso-Klickpunkts (erster Polygon-Punkt des ersten Lassos).
+    /// Wird verwendet um den relevanten Pfad-Bereich auszuwaehlen.
+    pub(crate) lasso_start_world: Option<Vec2>,
 
     // ── Shared ──────────────────────────────────────────────────────────────
     /// Hintergrundbild fuer die Farberkennung
@@ -115,6 +118,7 @@ impl ColorPathTool {
             selected_path_index: None,
             centerline: Vec::new(),
             resampled_nodes: Vec::new(),
+            lasso_start_world: None,
             background_image: None,
             map_size: 2048.0,
             direction: ConnectionDirection::Dual,

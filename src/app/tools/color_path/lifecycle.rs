@@ -9,6 +9,7 @@ use crate::core::{simplify_polyline, FarmlandGrid, NodeFlag, RoadMap};
 use crate::shared::spline_geometry::resample_by_distance;
 use glam::Vec2;
 
+use super::sampling::world_to_pixel;
 use super::state::{ColorPathPhase, ColorPathTool};
 
 // ---------------------------------------------------------------------------
@@ -20,7 +21,7 @@ impl ColorPathTool {
     ///
     /// 1. Farbmaske aufbauen
     /// 2. Skelett-Pfade extrahieren (Zhang-Suen + BFS)
-    /// 3. Laengsten Pfad auswaehlen, vereinfachen und neu abtasten
+    /// 3. Pfad zum Lasso-Startpunkt auswaehlen, vereinfachen und neu abtasten
     /// 4. Phase wechseln
     pub(super) fn compute_pipeline(&mut self) {
         let (Some(image), Some(avg_color)) = (&self.background_image.clone(), self.avg_color)
@@ -28,6 +29,14 @@ impl ColorPathTool {
             log::warn!("ColorPathTool: Pipeline abgebrochen — kein Bild oder keine Farbsamples");
             return;
         };
+
+        // Lasso-Startpunkt in Pixelkoordinaten umrechnen (fuer Hint)
+        let img_w = image.width();
+        let img_h = image.height();
+        let start_hint = self.lasso_start_world.map(|w| {
+            let (px, py) = world_to_pixel(w, self.map_size, img_w, img_h);
+            (px as usize, py as usize)
+        });
 
         // Maske berechnen
         let (mut mask, width, height) = super::sampling::build_color_mask(
@@ -47,6 +56,7 @@ impl ColorPathTool {
             height,
             self.config.noise_filter,
             self.map_size,
+            start_hint,
         );
         // Maske nach Pipeline speichern (fuer spaetere Analyse)
         self.mask = mask;
@@ -69,8 +79,29 @@ impl ColorPathTool {
             return;
         }
 
-        // Laengsten Pfad (Index 0) automatisch auswaehlen
-        self.selected_path_index = Some(0);
+        // Pfad auswaehlen: Den naechsten zum Lasso-Startpunkt, nicht den laengsten.
+        // Fallback: Index 0 (laengster Pfad) wenn kein Hint vorhanden.
+        let best_index = if let Some(start_w) = self.lasso_start_world {
+            self.skeleton_paths
+                .iter()
+                .enumerate()
+                .min_by(|(_, a), (_, b)| {
+                    let dist_a = a
+                        .iter()
+                        .map(|p| p.distance_squared(start_w))
+                        .fold(f32::MAX, f32::min);
+                    let dist_b = b
+                        .iter()
+                        .map(|p| p.distance_squared(start_w))
+                        .fold(f32::MAX, f32::min);
+                    dist_a.partial_cmp(&dist_b).unwrap_or(std::cmp::Ordering::Equal)
+                })
+                .map(|(i, _)| i)
+                .unwrap_or(0)
+        } else {
+            0
+        };
+        self.selected_path_index = Some(best_index);
         self.apply_selected_path();
         self.phase = ColorPathPhase::Preview;
     }
@@ -193,6 +224,10 @@ impl crate::app::tools::RouteTool for ColorPathTool {
         // Farben innerhalb des Lasso-Polygons samplen
         let new_colors = super::sampling::sample_colors_in_polygon(&polygon, image, self.map_size);
         let new_count = new_colors.len();
+        // Ersten Lasso-Startpunkt merken (fuer spaetere Pfad-Auswahl)
+        if self.lasso_regions.is_empty() {
+            self.lasso_start_world = polygon.first().copied();
+        }
         self.sampled_colors.extend(new_colors);
         self.lasso_regions.push(polygon);
         // Mittelwert aus allen gesammelten Farben aktualisieren
@@ -289,6 +324,7 @@ impl crate::app::tools::RouteTool for ColorPathTool {
         self.selected_path_index = None;
         self.centerline.clear();
         self.resampled_nodes.clear();
+        self.lasso_start_world = None;
     }
 
     fn is_ready(&self) -> bool {

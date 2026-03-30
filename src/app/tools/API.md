@@ -513,12 +513,14 @@ an `handlers::route_tool::lasso_completed()` weitergeleitet, das `on_lasso_compl
 
 1. `build_color_mask()` — Bool-Maske aller Pixel innerhalb der Farb-Toleranz
 2. Morphologisches Opening + Closing (wenn `noise_filter == true`) — Rauschen entfernen
-3. `zhang_suen_thinning()` — Maske auf 1-Pixel-breites Skelett reduzieren
-4. `find_connected_components()` — Zusammenhaengende Skelett-Gruppen finden (8-Connectivity)
-5. `order_skeleton_pixels()` — Pixel-Gruppen linear ordnen (Durchmesser-BFS)
-6. `simplify_polyline()` — Douglas-Peucker-Vereinfachung
-7. `resample_by_distance()` — Gleichmaessige Node-Verteilung
-8. Laengsten Pfad automatisch vorauswaehlen → Phase::Preview
+3. Original-Maske sichern (vor Zhang-Suen, fuer Medial-Axis-Korrektur)
+4. `zhang_suen_thinning()` — Maske auf 1-Pixel-breites Skelett reduzieren
+5. `find_connected_components()` — Zusammenhaengende Skelett-Gruppen finden (8-Connectivity)
+6. `order_skeleton_pixels(hint)` — Pixel-Gruppen linear ordnen (BFS vom Hint-naechsten Startpunkt)
+7. `refine_medial_axis()` — Skelett-Pixel auf geometrische Mittelachse korrigieren
+8. `simplify_polyline()` — Douglas-Peucker-Vereinfachung
+9. `resample_by_distance()` — Gleichmaessige Node-Verteilung
+10. Pfad naechste zum Lasso-Startpunkt auswaehlen → Phase::Preview
 
 **Konfiguration (`ColorPathConfig`):**
 
@@ -538,6 +540,7 @@ pub struct ColorPathTool {
     pub(crate) lasso_regions: Vec<Vec<Vec2>>,   // Alle gezeichneten Lasso-Polygone (Weltkoords)
     pub(crate) sampled_colors: Vec<[u8; 3]>,    // Gesammelte RGB-Werte aus Lasso-Regionen
     pub(crate) avg_color: Option<[u8; 3]>,      // Berechneter RGB-Mittelwert
+    pub(crate) lasso_start_world: Option<Vec2>, // Erster Klickpunkt des ersten Lassos (Weltkoords)
     pub(crate) mask: Vec<bool>,                  // Bool-Maske (true = Pfadpixel), zeilenweise
     pub(crate) mask_width: u32,
     pub(crate) mask_height: u32,
@@ -556,21 +559,22 @@ pub struct ColorPathTool {
 **Sampling-Funktionen (`sampling.rs`):**
 
 - `world_to_pixel(world, map_size, img_w, img_h) → (u32, u32)` — Weltkoords → Bildpixel
-- `pixel_to_world(px, py, map_size, img_w, img_h) → Vec2` — Bildpixel → Weltkoords
+- `pixel_to_world(px, py, map_size, img_w, img_h) → Vec2` — Bildpixel → Weltkoords (X und Y je mit korrektem Skalierungsfaktor)
+- `pixel_to_world_f32(px, py, map_size, img_w, img_h) → Vec2` — Sub-Pixel-Position → Weltkoords (fuer Medial-Axis)
 - `sample_colors_in_polygon(polygon, image, map_size) → Vec<[u8; 3]>` — RGB-Pixel im Lasso-Polygon sammeln
 - `compute_average_color(colors) → [u8; 3]` — RGB-Mittelwert aller Samples
 - `build_color_mask(image, avg_color, tolerance, bounds, map_size) → (Vec<bool>, u32, u32)` — Bool-Maske erstellen
-- `erode(mask, w, h) → Vec<bool>` — Erosion (4-Connectivity)
+- `erode(mask, w, h) → Vec<bool>` — Erosion mit Majority-Bedingung (≥ 3 von 4 Nachbarn, zum Schutz duenner Verbindungen)
 - `dilate(mask, w, h) → Vec<bool>` — Dilatation (4-Connectivity)
 - `morphological_open(mask, w, h) → Vec<bool>` — Erosion + Dilatation (Rauschen entfernen)
-- `morphological_close(mask, w, h) → Vec<bool>` — Dilatation + Erosion (Lücken schliessen)
+- `morphological_close(mask, w, h) → Vec<bool>` — Dilatation + Erosion (Luecken schliessen)
 
 **Skelett-Funktionen (`skeleton.rs`):**
 
 - `find_connected_components(mask, w, h) → Vec<Vec<(usize, usize)>>` — Gruppen nach Groesse absteigend
-- `order_skeleton_pixels(pixels) → Vec<(usize, usize)>` — Lineare Ordnung per Durchmesser-BFS
-- `pixels_to_world(pixels, map_size, img_w, img_h) → Vec<Vec2>` — Pixel → Weltkoordinaten
-- `extract_paths_from_mask(mask, w, h, noise_filter, map_size) → Vec<Vec<Vec2>>` — Haupt-Pipeline
+- `order_skeleton_pixels(pixels, hint) → Vec<(usize, usize)>` — Lineare Ordnung; Startpunkt = Pixel naechste zum Hint (oder erster Pixel)
+- `refine_medial_axis(ordered, original_mask, w, h) → Vec<(f32, f32)>` — Skelett-Pixel auf geometrische Mittelachse korrigieren
+- `extract_paths_from_mask(mask, w, h, noise_filter, map_size, start_hint) → Vec<Vec<Vec2>>` — Haupt-Pipeline
 
 **Gruppen-Record:** ColorPathTool speichert keinen `GroupRecord` (keine nachträgliche Bearbeitung).
 
