@@ -3,9 +3,6 @@
 //! Pipeline: Bool-Maske → Zhang-Suen-Thinning → Verbundene Komponenten →
 //! Geordnete Polylines → Weltkoordinaten.
 
-// Oeffentliche API wird erst in Commit 5 (lifecycle.rs) aufgerufen
-#![allow(dead_code)]
-
 use glam::Vec2;
 use std::collections::{HashMap, VecDeque};
 

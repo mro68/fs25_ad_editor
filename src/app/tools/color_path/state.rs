@@ -17,7 +17,6 @@ pub enum ColorPathPhase {
 }
 
 /// Konfigurationsparameter fuer die Farb-Pfad-Erkennung.
-#[allow(dead_code)] // Felder werden in spaeteren Commits genutzt (Pipeline-Commits 3–5)
 pub struct ColorPathConfig {
     /// Farbtoleranz fuer die Binärmaske (Standard: 25.0, Bereich: 5–80)
     pub color_tolerance: f32,
@@ -28,6 +27,7 @@ pub struct ColorPathConfig {
     /// Rauschfilter aktivieren (Standard: true)
     pub noise_filter: bool,
     /// Optionaler Erkennungsbereich — None = gesamtes Bild
+    #[allow(dead_code)] // Geplantes Feature: Rect-Begrenzung fuer die Erkennung
     pub detection_bounds: Option<(Vec2, Vec2)>,
     /// An naechste bestehende Nodes anschliessen (Standard: true)
     pub connect_to_existing: bool,

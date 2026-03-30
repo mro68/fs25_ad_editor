@@ -107,11 +107,7 @@ pub(crate) fn compute_average_color(colors: &[[u8; 3]]) -> [u8; 3] {
         return [0, 0, 0];
     }
     let (sum_r, sum_g, sum_b) = colors.iter().fold((0u64, 0u64, 0u64), |acc, c| {
-        (
-            acc.0 + c[0] as u64,
-            acc.1 + c[1] as u64,
-            acc.2 + c[2] as u64,
-        )
+        (acc.0 + c[0] as u64, acc.1 + c[1] as u64, acc.2 + c[2] as u64)
     });
     let n = colors.len() as u64;
     [(sum_r / n) as u8, (sum_g / n) as u8, (sum_b / n) as u8]
@@ -126,7 +122,6 @@ pub(crate) fn compute_average_color(colors: &[[u8; 3]]) -> [u8; 3] {
 /// Maskengrösse = Bildgrösse (kein Downsampling). Das Ergebnis-Tuple enthaelt
 /// `(maske, breite, hoehe)`. Optionale `bounds` (Weltkoords min/max) begrenzen
 /// den berechneten Bereich auf eine Rect-Region.
-#[allow(dead_code)] // Wird in Commit 4 (Pipeline) genutzt
 pub(crate) fn build_color_mask(
     image: &DynamicImage,
     avg_color: [u8; 3],
@@ -172,7 +167,6 @@ pub(crate) fn build_color_mask(
 ///
 /// Pixels am Bildrand gelten als nicht vorhanden (false), sodass Randbereiche
 /// immer erodiert werden.
-#[allow(dead_code)]
 pub(crate) fn erode(mask: &[bool], width: usize, height: usize) -> Vec<bool> {
     let mut result = vec![false; width * height];
     for y in 0..height {
@@ -196,7 +190,6 @@ pub(crate) fn erode(mask: &[bool], width: usize, height: usize) -> Vec<bool> {
 /// Dilation: Pixel wird true wenn er selbst oder ein Nachbar (4-Connectivity) true ist.
 ///
 /// Vergrossert Objekte um einen Pixel in alle vier Richtungen.
-#[allow(dead_code)]
 pub(crate) fn dilate(mask: &[bool], width: usize, height: usize) -> Vec<bool> {
     let mut result = vec![false; width * height];
     for y in 0..height {
@@ -214,14 +207,12 @@ pub(crate) fn dilate(mask: &[bool], width: usize, height: usize) -> Vec<bool> {
 }
 
 /// Opening (Erosion + Dilation) — entfernt kleine Rausch-Inseln.
-#[allow(dead_code)]
 pub(crate) fn morphological_open(mask: &[bool], width: usize, height: usize) -> Vec<bool> {
     let eroded = erode(mask, width, height);
     dilate(&eroded, width, height)
 }
 
 /// Closing (Dilation + Erosion) — schliesst kleine Lücken.
-#[allow(dead_code)]
 pub(crate) fn morphological_close(mask: &[bool], width: usize, height: usize) -> Vec<bool> {
     let dilated = dilate(mask, width, height);
     erode(&dilated, width, height)
@@ -357,10 +348,7 @@ mod tests {
 
         let opened = morphological_open(&mask, width, height);
         // Nach Opening: der einzelne Pixel ist verschwunden
-        assert!(
-            !opened[2 * width + 2],
-            "Einzelner Pixel sollte nach Opening entfernt werden"
-        );
+        assert!(!opened[2 * width + 2], "Einzelner Pixel sollte nach Opening entfernt werden");
         // Alle anderen Pixel bleiben false
         assert!(opened.iter().all(|&v| !v));
     }
@@ -381,9 +369,6 @@ mod tests {
 
         let closed = morphological_close(&mask, width, height);
         // Luecke bei (x=2, y=1) muss durch Closing geschlossen werden
-        assert!(
-            closed[1 * width + 2],
-            "1px-Luecke (2,1) muss nach Closing geschlossen sein"
-        );
+        assert!(closed[1 * width + 2], "1px-Luecke (2,1) muss nach Closing geschlossen sein");
     }
 }

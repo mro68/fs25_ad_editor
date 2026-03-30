@@ -40,13 +40,18 @@ pub(super) fn render_config_view(
                 ui.horizontal(|ui| {
                     ui.label(format!("Samples: {sample_count}  Ø-Farbe:"));
                     // Farbvorschau-Quadrat
-                    let (rect, _) =
-                        ui.allocate_exact_size(egui::Vec2::splat(16.0), egui::Sense::hover());
+                    let (rect, _) = ui.allocate_exact_size(
+                        egui::Vec2::splat(16.0),
+                        egui::Sense::hover(),
+                    );
                     ui.painter().rect_filled(rect, 2.0, color);
                 });
             } else {
                 ui.label(format!("Samples: {sample_count}"));
-                ui.colored_label(egui::Color32::GRAY, "Alt+Drag zum Sampeln von Farben");
+                ui.colored_label(
+                    egui::Color32::GRAY,
+                    "Alt+Drag zum Sampeln von Farben",
+                );
             }
 
             ui.separator();
@@ -59,12 +64,7 @@ pub(super) fn render_config_view(
                 .on_disabled_hover_text("Zuerst Farben sampeln (Alt+Lasso)")
                 .clicked()
             {
-                // Pipeline folgt in Commit 4
-                log::info!(
-                    "ColorPathTool: Berechnung gestartet ({} Samples)",
-                    tool.sampled_colors.len()
-                );
-                tool.phase = ColorPathPhase::Preview;
+                tool.compute_pipeline();
                 changed = true;
             }
         }
@@ -77,14 +77,44 @@ pub(super) fn render_config_view(
                 ui.separator();
                 ui.label("Pfad auswaehlen:");
                 for i in 0..path_count {
-                    let label = format!("Pfad {}", i + 1);
+                    let pt_count = tool.skeleton_paths[i].len();
+                    let label = format!("Pfad {} ({} Punkte)", i + 1, pt_count);
                     let selected = tool.selected_path_index == Some(i);
                     if ui.selectable_label(selected, label).clicked() {
-                        tool.selected_path_index = Some(i);
+                        tool.select_path(i);
                         changed = true;
                     }
                 }
             }
+
+            ui.separator();
+
+            ui.horizontal(|ui| {
+                if ui
+                    .add_enabled(
+                        !tool.resampled_nodes.is_empty(),
+                        egui::Button::new("\u{2713} Uebernehmen"),
+                    )
+                    .on_disabled_hover_text("Keine Nodes zum Einfuegen")
+                    .clicked()
+                {
+                    use crate::app::tools::RouteTool;
+                    // ReadyToExecute wird ueber die normale Enter-Bestaetigung ausgeloest;
+                    // hier nur visuelles Feedback — Execute laeuft ueber den Controller-Flow
+                    let _ = tool.is_ready(); // Trigger fuer spaeteren Dispatch
+                    changed = true;
+                }
+
+                if ui.button("\u{2190} Zurueck").clicked() {
+                    tool.phase = ColorPathPhase::Sampling;
+                    tool.skeleton_paths.clear();
+                    tool.selected_path_index = None;
+                    tool.centerline.clear();
+                    tool.resampled_nodes.clear();
+                    tool.mask.clear();
+                    changed = true;
+                }
+            });
         }
     }
 
@@ -115,9 +145,15 @@ pub(super) fn render_config_view(
     ui.horizontal(|ui| {
         ui.label("Knotenabstand:");
         if ui
-            .add(egui::Slider::new(&mut tool.config.node_spacing, 1.0..=50.0).suffix(" m"))
+            .add(
+                egui::Slider::new(&mut tool.config.node_spacing, 1.0..=50.0).suffix(" m"),
+            )
             .changed()
         {
+            // Resampling in Preview-Phase sofort neu berechnen
+            if tool.phase == ColorPathPhase::Preview {
+                tool.apply_selected_path();
+            }
             changed = true;
         }
     });
@@ -125,9 +161,16 @@ pub(super) fn render_config_view(
     ui.horizontal(|ui| {
         ui.label("Vereinfachung:");
         if ui
-            .add(egui::Slider::new(&mut tool.config.simplify_tolerance, 0.0..=20.0).suffix(" m"))
+            .add(
+                egui::Slider::new(&mut tool.config.simplify_tolerance, 0.0..=20.0)
+                    .suffix(" m"),
+            )
             .changed()
         {
+            // Vereinfachung + Resampling in Preview-Phase sofort neu berechnen
+            if tool.phase == ColorPathPhase::Preview {
+                tool.apply_selected_path();
+            }
             changed = true;
         }
     });
@@ -142,10 +185,7 @@ pub(super) fn render_config_view(
     }
 
     if ui
-        .checkbox(
-            &mut tool.config.connect_to_existing,
-            "An Bestand anschliessen",
-        )
+        .checkbox(&mut tool.config.connect_to_existing, "An Bestand anschliessen")
         .changed()
     {
         changed = true;
