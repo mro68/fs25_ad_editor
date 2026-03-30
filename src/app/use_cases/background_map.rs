@@ -48,9 +48,11 @@ pub fn load_background_map(
     );
 
     // Speichere in State
+    let image_arc = Arc::new(bg_map.image_data().clone());
     state.view.background_map = Some(Arc::new(bg_map));
     state.view.background_scale = 1.0;
     state.view.background_dirty = true;
+    state.background_image = Some(image_arc);
 
     // Farmland-Polygone aus begleitender JSON-Datei laden (falls vorhanden)
     load_farmland_json(state, &path);
@@ -143,9 +145,11 @@ pub fn load_background_from_zip(
         bg_map.world_bounds()
     );
 
+    let image_arc = Arc::new(bg_map.image_data().clone());
     state.view.background_map = Some(Arc::new(bg_map));
     state.view.background_scale = 1.0;
     state.view.background_dirty = true;
+    state.background_image = Some(image_arc);
 
     // ZIP-Browser schliessen (falls offen)
     state.ui.zip_browser = None;
