@@ -166,9 +166,17 @@ pub struct RoadMap {
 - `ensure_spatial_index(&mut self)` — Baut Spatial-Index nur auf, wenn dirty-Flag gesetzt ist (lazy rebuild)
 - `build_spatial_index(&self) -> SpatialIndex` — Erstellt neuen Spatial-Index aus aktuellen Nodes
 - `rebuild_spatial_index(&mut self)` — Baut den internen Spatial-Index sofort neu auf
+- `rebuild_adjacency_index(&mut self)` — Baut den Adjacency-Index vollstaendig neu auf; nach XML-Laden und `deduplicate_nodes()` aufrufen
 - `node_count() -> usize` / `connection_count() -> usize` / `marker_count() -> usize`
 - `count_duplicates(&self, epsilon: f32) -> (u32, u32)` — Zaehlt Duplikat-Nodes und -Gruppen
 - `deduplicate_nodes(&mut self, epsilon: f32) -> DeduplicationResult` — Entfernt Duplikat-Nodes und verbindet Referenzen um
+
+**Adjacency-Index (O(1)-Nachbar-Abfragen, synchron gepflegt):**
+
+- `neighbors(&self, node_id: u64) -> &[(u64, bool)]` — Alle Nachbarn als Slice von `(nachbar_id, ist_ausgehend)`; leerer Slice wenn Node unbekannt
+- `outgoing_neighbors(&self, node_id: u64) -> impl Iterator<Item = u64>` — Nur ausgehende Nachbar-IDs
+- `incoming_neighbors(&self, node_id: u64) -> impl Iterator<Item = u64>` — Nur eingehende Nachbar-IDs
+- `degree(&self, node_id: u64) -> usize` — Anzahl aller Verbindungen (ein- und ausgehend) — O(1)
 
 **Spatial Queries (persistenter KD-Tree, lazy rebuild via `ensure_spatial_index`):**
 

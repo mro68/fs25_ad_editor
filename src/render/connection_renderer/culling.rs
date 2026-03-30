@@ -117,4 +117,105 @@ mod tests {
             top_left
         ));
     }
+
+    /// Hilfsfunktion: Erzeugt die vier Rect-Ecken aus min/max.
+    fn rect_corners(min: Vec2, max: Vec2) -> (Vec2, Vec2, Vec2, Vec2) {
+        (
+            Vec2::new(min.x, min.y), // bottom_left
+            Vec2::new(max.x, min.y), // bottom_right
+            Vec2::new(max.x, max.y), // top_right
+            Vec2::new(min.x, max.y), // top_left
+        )
+    }
+
+    #[test]
+    fn test_punkt_exakt_auf_ecke_liegt_im_rect() {
+        // Punkt auf der Ecke muss als INNERHALB gelten (inklusive Semantik).
+        let min = Vec2::new(0.0, 0.0);
+        let max = Vec2::new(10.0, 10.0);
+        assert!(
+            point_in_rect(Vec2::new(0.0, 0.0), min, max),
+            "untere-linke Ecke"
+        );
+        assert!(
+            point_in_rect(Vec2::new(10.0, 10.0), min, max),
+            "obere-rechte Ecke"
+        );
+        assert!(
+            point_in_rect(Vec2::new(10.0, 0.0), min, max),
+            "untere-rechte Ecke"
+        );
+        assert!(
+            point_in_rect(Vec2::new(0.0, 10.0), min, max),
+            "obere-linke Ecke"
+        );
+    }
+
+    #[test]
+    fn test_segment_komplett_innerhalb_schneidet_rect() {
+        // Segment komplett im Inneren muss als Schnitt gelten (beide Endpunkte drin).
+        let min = Vec2::new(-5.0, -5.0);
+        let max = Vec2::new(5.0, 5.0);
+        let (bl, br, tr, tl) = rect_corners(min, max);
+        assert!(segment_intersects_rect_cached(
+            Vec2::new(-1.0, -1.0),
+            Vec2::new(1.0, 1.0),
+            bl,
+            br,
+            tr,
+            tl,
+        ));
+    }
+
+    #[test]
+    fn test_segment_parallel_unter_rect_schneidet_nicht() {
+        // Waagerechtes Segment unterhalb des Rects darf nicht als Schnitt gelten.
+        let min = Vec2::new(-1.0, -1.0);
+        let max = Vec2::new(1.0, 1.0);
+        let (bl, br, tr, tl) = rect_corners(min, max);
+        assert!(!segment_intersects_rect_cached(
+            Vec2::new(-3.0, -2.0),
+            Vec2::new(3.0, -2.0),
+            bl,
+            br,
+            tr,
+            tl,
+        ));
+    }
+
+    #[test]
+    fn test_segment_beruehrt_ecke_des_rects() {
+        // Segment von außen, das exakt durch die untere-linke Ecke laeuft, zaehlt als Schnitt.
+        let min = Vec2::new(-1.0, -1.0);
+        let max = Vec2::new(1.0, 1.0);
+        let (bl, br, tr, tl) = rect_corners(min, max);
+
+        // Segment von (-2, 0) nach (0, -2) laeuft durch Punkt (-1, -1) = untere-linke Ecke
+        assert!(segment_intersects_rect_cached(
+            Vec2::new(-2.0, 0.0),
+            Vec2::new(0.0, -2.0),
+            bl,
+            br,
+            tr,
+            tl,
+        ));
+    }
+
+    #[test]
+    fn test_segment_entlang_kante_gilt_als_schnitt() {
+        // Segment kollinear auf einer Kante des Rects muss als Schnitt gelten.
+        let min = Vec2::new(-1.0, -1.0);
+        let max = Vec2::new(1.0, 1.0);
+        let (bl, br, tr, tl) = rect_corners(min, max);
+
+        // Entlang der unteren Kante (y = -1)
+        assert!(segment_intersects_rect_cached(
+            Vec2::new(-2.0, -1.0),
+            Vec2::new(2.0, -1.0),
+            bl,
+            br,
+            tr,
+            tl,
+        ));
+    }
 }

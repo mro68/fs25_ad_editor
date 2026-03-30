@@ -18,35 +18,6 @@ pub(super) fn rect_min_max(a: glam::Vec2, b: glam::Vec2) -> (glam::Vec2, glam::V
     )
 }
 
-/// Baut eine ungerichtete Adjazenzliste aus den Connections der RoadMap.
-///
-/// Duplikate werden entfernt, damit bidirektionale Verbindungen (A→B + B→A)
-/// den Grad eines Nodes nicht kuenstlich verdoppeln.
-pub(super) fn build_undirected_adjacency(road_map: &RoadMap) -> HashMap<u64, Vec<u64>> {
-    use std::collections::HashSet;
-    let mut adjacency_set: HashMap<u64, HashSet<u64>> = HashMap::new();
-
-    for connection in road_map.connections_iter() {
-        if road_map.nodes.contains_key(&connection.start_id)
-            && road_map.nodes.contains_key(&connection.end_id)
-        {
-            adjacency_set
-                .entry(connection.start_id)
-                .or_default()
-                .insert(connection.end_id);
-            adjacency_set
-                .entry(connection.end_id)
-                .or_default()
-                .insert(connection.start_id);
-        }
-    }
-
-    adjacency_set
-        .into_iter()
-        .map(|(k, v)| (k, v.into_iter().collect()))
-        .collect()
-}
-
 /// Nachbar-Eintrag mit Winkelinformation fuer den Segment-Walk.
 pub(super) struct AdjacencyNeighbor {
     /// ID des Nachbar-Nodes.

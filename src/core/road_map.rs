@@ -55,6 +55,9 @@ pub struct RoadMap {
     spatial_index: SpatialIndex,
     /// Signalisiert, dass der Spatial-Index veraltet ist und rebuild benoetigt
     spatial_dirty: bool,
+    /// Adjacency-Index: Node-ID → Liste von (Nachbar-ID, ist_ausgehend).
+    /// Wird bei jeder Connection-Mutation synchron gepflegt.
+    adjacency: HashMap<u64, Vec<(u64, bool)>>,
 }
 
 impl RoadMap {
@@ -69,11 +72,13 @@ impl RoadMap {
             map_name: None,
             spatial_index: SpatialIndex::empty(),
             spatial_dirty: false,
+            adjacency: HashMap::new(),
         }
     }
 
     /// Fuegt einen Node hinzu
     pub fn add_node(&mut self, node: MapNode) {
+        self.adjacency.entry(node.id).or_default();
         self.nodes.insert(node.id, node);
         self.spatial_dirty = true;
     }
@@ -82,6 +87,19 @@ impl RoadMap {
     pub fn remove_node(&mut self, node_id: u64) -> Option<MapNode> {
         let removed = self.nodes.remove(&node_id);
         if removed.is_some() {
+            // Adjacency-Eintraege der Nachbarn bereinigen — muss vor connections.retain() geschehen
+            let neighbors: Vec<u64> = self
+                .adjacency
+                .get(&node_id)
+                .map(|v| v.iter().map(|&(nb, _)| nb).collect())
+                .unwrap_or_default();
+            for nb in neighbors {
+                if let Some(adj) = self.adjacency.get_mut(&nb) {
+                    adj.retain(|&(id, _)| id != node_id);
+                }
+            }
+            self.adjacency.remove(&node_id);
+
             self.connections
                 .retain(|(s, e), _| *s != node_id && *e != node_id);
             self.spatial_dirty = true;
@@ -117,8 +135,11 @@ impl RoadMap {
 
     /// Fuegt eine Verbindung hinzu
     pub fn add_connection(&mut self, connection: Connection) {
-        self.connections
-            .insert((connection.start_id, connection.end_id), connection);
+        let s = connection.start_id;
+        let e = connection.end_id;
+        self.adjacency.entry(s).or_default().push((e, true));
+        self.adjacency.entry(e).or_default().push((s, false));
+        self.connections.insert((s, e), connection);
     }
 
     /// Prueft ob eine Verbindung existiert (exaktes Match auf start_id + end_id) — O(1)
@@ -145,16 +166,40 @@ impl RoadMap {
 
     /// Entfernt eine spezifische Verbindung (exaktes Match) — O(1)
     pub fn remove_connection(&mut self, start_id: u64, end_id: u64) -> bool {
-        self.connections.remove(&(start_id, end_id)).is_some()
+        if self.connections.remove(&(start_id, end_id)).is_some() {
+            if let Some(adj) = self.adjacency.get_mut(&start_id) {
+                adj.retain(|&(nb, out)| nb != end_id || !out);
+            }
+            if let Some(adj) = self.adjacency.get_mut(&end_id) {
+                adj.retain(|&(nb, out)| nb != start_id || out);
+            }
+            true
+        } else {
+            false
+        }
     }
 
     /// Entfernt alle Verbindungen zwischen zwei Nodes (in beiden Richtungen) — O(1)
     pub fn remove_connections_between(&mut self, node_a: u64, node_b: u64) -> usize {
         let mut removed = 0;
         if self.connections.remove(&(node_a, node_b)).is_some() {
+            // A→B: adj[A] verliert (B, true), adj[B] verliert (A, false)
+            if let Some(adj) = self.adjacency.get_mut(&node_a) {
+                adj.retain(|&(nb, out)| nb != node_b || !out);
+            }
+            if let Some(adj) = self.adjacency.get_mut(&node_b) {
+                adj.retain(|&(nb, out)| nb != node_a || out);
+            }
             removed += 1;
         }
         if self.connections.remove(&(node_b, node_a)).is_some() {
+            // B→A: adj[B] verliert (A, true), adj[A] verliert (B, false)
+            if let Some(adj) = self.adjacency.get_mut(&node_b) {
+                adj.retain(|&(nb, out)| nb != node_a || !out);
+            }
+            if let Some(adj) = self.adjacency.get_mut(&node_a) {
+                adj.retain(|&(nb, out)| nb != node_b || out);
+            }
             removed += 1;
         }
         removed
@@ -201,6 +246,25 @@ impl RoadMap {
                 conn.update_geometry(s, e);
             }
             self.connections.insert((end_id, start_id), conn);
+
+            // Adjacency: in adj[start_id] (end_id, true) → (end_id, false)
+            if let Some(adj) = self.adjacency.get_mut(&start_id) {
+                for entry in adj.iter_mut() {
+                    if entry.0 == end_id && entry.1 {
+                        entry.1 = false;
+                        break;
+                    }
+                }
+            }
+            // Adjacency: in adj[end_id] (start_id, false) → (start_id, true)
+            if let Some(adj) = self.adjacency.get_mut(&end_id) {
+                for entry in adj.iter_mut() {
+                    if entry.0 == start_id && !entry.1 {
+                        entry.1 = true;
+                        break;
+                    }
+                }
+            }
             true
         } else {
             false
@@ -335,6 +399,71 @@ impl RoadMap {
                 node.flag = new_flag;
             }
         }
+    }
+
+    /// Baut den Adjacency-Index vollstaendig aus den aktuellen Nodes und Connections neu auf.
+    ///
+    /// Internale Methode — aufrufen nach Bulk-Ladungen oder Dedup-Operationen.
+    fn rebuild_adjacency(&mut self) {
+        self.adjacency.clear();
+        for &node_id in self.nodes.keys() {
+            self.adjacency.entry(node_id).or_default();
+        }
+        for conn in self.connections.values() {
+            self.adjacency
+                .entry(conn.start_id)
+                .or_default()
+                .push((conn.end_id, true));
+            self.adjacency
+                .entry(conn.end_id)
+                .or_default()
+                .push((conn.start_id, false));
+        }
+    }
+
+    /// Baut den Adjacency-Index neu auf — oeffentlich fuer den XML-Parser und Bulk-Operationen.
+    ///
+    /// Nach Mass-Inserts (z. B. XML-Laden, `deduplicate_nodes`) aufrufen,
+    /// damit isolierte Nodes einen leeren Eintrag erhalten und der Index konsistent ist.
+    pub fn rebuild_adjacency_index(&mut self) {
+        self.rebuild_adjacency();
+    }
+
+    /// Gibt alle Nachbar-Eintraege eines Nodes zurueck — O(1) Lookup.
+    ///
+    /// Jeder Eintrag ist `(nachbar_id, ist_ausgehend)`:
+    /// - `true`  = Verbindung von `node_id` zum Nachbar (outgoing)
+    /// - `false` = Verbindung vom Nachbar zu `node_id` (incoming)
+    ///
+    /// Gibt einen leeren Slice zurueck, wenn der Node unbekannt ist.
+    pub fn neighbors(&self, node_id: u64) -> &[(u64, bool)] {
+        self.adjacency
+            .get(&node_id)
+            .map(Vec::as_slice)
+            .unwrap_or(&[])
+    }
+
+    /// Iterator ueber alle ausgehenden Nachbar-IDs eines Nodes.
+    pub fn outgoing_neighbors(&self, node_id: u64) -> impl Iterator<Item = u64> + '_ {
+        self.adjacency
+            .get(&node_id)
+            .into_iter()
+            .flat_map(|v| v.iter())
+            .filter_map(|&(nb, out)| if out { Some(nb) } else { None })
+    }
+
+    /// Iterator ueber alle eingehenden Nachbar-IDs eines Nodes.
+    pub fn incoming_neighbors(&self, node_id: u64) -> impl Iterator<Item = u64> + '_ {
+        self.adjacency
+            .get(&node_id)
+            .into_iter()
+            .flat_map(|v| v.iter())
+            .filter_map(|&(nb, out)| if !out { Some(nb) } else { None })
+    }
+
+    /// Gibt den Grad (Anzahl aller Verbindungen, ein- und ausgehend) eines Nodes zurueck — O(1).
+    pub fn degree(&self, node_id: u64) -> usize {
+        self.adjacency.get(&node_id).map(Vec::len).unwrap_or(0)
     }
 
     /// Baut einen read-only Spatial-Index aus allen Nodes.

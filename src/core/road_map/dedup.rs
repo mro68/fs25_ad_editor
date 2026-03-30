@@ -117,6 +117,7 @@ impl RoadMap {
         self.map_markers.retain(|m| seen_marker_ids.insert(m.id));
 
         self.rebuild_spatial_index();
+        self.rebuild_adjacency_index();
 
         DeduplicationResult {
             removed_nodes: removed_nodes as u32,

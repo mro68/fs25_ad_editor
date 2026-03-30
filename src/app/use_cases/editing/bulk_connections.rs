@@ -11,10 +11,14 @@ fn collect_selected_connection_keys(
     road_map: &RoadMap,
     selected: &IndexSet<u64>,
 ) -> Vec<(u64, u64)> {
-    road_map
-        .connections_iter()
-        .filter(|c| selected.contains(&c.start_id) && selected.contains(&c.end_id))
-        .map(|c| (c.start_id, c.end_id))
+    selected
+        .iter()
+        .flat_map(|&id| {
+            road_map
+                .outgoing_neighbors(id)
+                .filter(move |&nb| selected.contains(&nb))
+                .map(move |nb| (id, nb))
+        })
         .collect()
 }
 
@@ -41,9 +45,11 @@ where
             return 0;
         };
 
-        let has_affected = road_map_arc
-            .connections_iter()
-            .any(|c| selected.contains(&c.start_id) && selected.contains(&c.end_id));
+        let has_affected = selected.iter().any(|&id| {
+            road_map_arc
+                .outgoing_neighbors(id)
+                .any(|nb| selected.contains(&nb))
+        });
 
         if !has_affected {
             log::debug!(

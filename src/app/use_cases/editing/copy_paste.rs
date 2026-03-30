@@ -38,11 +38,16 @@ pub fn copy_selected_to_clipboard(state: &mut AppState) {
 
     // Interne Verbindungen: beide Endpunkte muessen in der Selektion sein
     let selected_set: std::collections::HashSet<u64> = selected_ids.iter().copied().collect();
-    let connections: Vec<Connection> = road_map
-        .connections_iter()
-        .filter(|c| selected_set.contains(&c.start_id) && selected_set.contains(&c.end_id))
-        .cloned()
-        .collect();
+    let mut connections: Vec<Connection> = Vec::new();
+    for &id in selected_ids.iter() {
+        for nb in road_map.outgoing_neighbors(id) {
+            if selected_set.contains(&nb) {
+                if let Some(c) = road_map.find_connection(id, nb) {
+                    connections.push(c.clone());
+                }
+            }
+        }
+    }
 
     // Marker: nur fuer selektierte Nodes
     let markers: Vec<MapMarker> = road_map

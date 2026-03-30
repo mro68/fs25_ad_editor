@@ -1,5 +1,6 @@
 //! Marker-Renderer mit GPU-Instancing fuer Map-Marker (Pin-Symbole).
 
+use super::fingerprint::RenderFingerprint;
 use super::types::{MarkerInstance, RenderContext, RenderQuality, Uniforms, Vertex};
 use crate::shared::options::MARKER_OUTLINE_WIDTH;
 use crate::RoadMap;
@@ -27,6 +28,10 @@ pub struct MarkerRenderer {
     _sampler: wgpu::Sampler,
     /// Letzter angewendeter outline_width-Wert (fuer Change-Detection bei Textur-Rebuild)
     last_outline_width: f32,
+    /// Fingerabdruck der letzten Render-Inputs fuer Buffer-Skip-Detection.
+    last_fingerprint: Option<RenderFingerprint>,
+    /// Instanzanzahl des letzten Render-Passes (fuer Draw-Call bei Skip).
+    last_instance_count: u32,
 }
 
 /// Patcht die stroke-width im SVG-String auf den angegebenen Wert.
@@ -245,6 +250,8 @@ impl MarkerRenderer {
             _texture: texture,
             _sampler: sampler,
             last_outline_width: MARKER_OUTLINE_WIDTH,
+            last_fingerprint: None,
+            last_instance_count: 0,
         }
     }
 
@@ -304,75 +311,97 @@ impl MarkerRenderer {
             return;
         }
 
-        // Textur neu aufbauen wenn outline_width geaendert hat
-        self.rebuild_texture_if_needed(ctx.device, ctx.queue, ctx.options.marker_outline_width);
-
-        // Uniforms erstellen (View-Projection-Matrix + AA aus View-Einstellungen)
-        let view_proj = super::types::build_view_projection(ctx.camera, ctx.viewport_size);
-        let aa_params = match render_quality {
-            RenderQuality::Low => [0.0, 1.0, 0.0, 0.0],
-            RenderQuality::Medium => [1.0, 0.0, 0.0, 0.0],
-            RenderQuality::High => [1.8, 0.0, 0.0, 0.0],
-        };
-        let uniforms = Uniforms {
-            view_proj: view_proj.to_cols_array_2d(),
-            aa_params,
+        // Fingerabdruck berechnen und mit dem letzten Frame vergleichen.
+        // Bei Uebereinstimmung koennen Instanz-Aufbau und GPU-Upload uebersprungen werden.
+        let new_fp = {
+            let mut fp = RenderFingerprint::from_context(ctx, road_map);
+            fp.quality = render_quality as u8;
+            fp
         };
 
-        // Uniforms hochladen
-        ctx.queue
-            .write_buffer(&self.uniform_buffer, 0, bytemuck::cast_slice(&[uniforms]));
+        let skip_rebuild = self.last_fingerprint.as_ref() == Some(&new_fp);
+        if skip_rebuild {
+            // Inputs unveraendert — Draw-Call mit gespeichertem Ergebnis wiederholen.
+            if self.last_instance_count == 0 || self.instance_buffer.is_none() {
+                return; // nichts zu zeichnen
+            }
+        } else {
+            // Textur neu aufbauen wenn outline_width geaendert hat
+            self.rebuild_texture_if_needed(ctx.device, ctx.queue, ctx.options.marker_outline_width);
 
-        // Zoom-Kompensation und Mindestgroesse einmalig pro Frame berechnen.
-        let compensation = ctx.options.zoom_compensation(ctx.camera.zoom);
-        let wpp = ctx.camera.world_per_pixel(ctx.viewport_size[1]);
-        let min_marker_world = ctx.options.min_marker_size_px * wpp;
+            // Uniforms erstellen (View-Projection-Matrix + AA aus View-Einstellungen)
+            let view_proj = super::types::build_view_projection(ctx.camera, ctx.viewport_size);
+            let aa_params = match render_quality {
+                RenderQuality::Low => [0.0, 1.0, 0.0, 0.0],
+                RenderQuality::Medium => [1.0, 0.0, 0.0, 0.0],
+                RenderQuality::High => [1.8, 0.0, 0.0, 0.0],
+            };
+            let uniforms = Uniforms {
+                view_proj: view_proj.to_cols_array_2d(),
+                aa_params,
+            };
 
-        // Instanz-Daten vorbereiten (Scratch-Buffer wiederverwenden)
-        self.instance_scratch.clear();
-        self.instance_scratch
-            .extend(road_map.map_markers.iter().filter_map(|marker| {
-                let node = road_map.nodes.get(&marker.id)?;
-                let size = (ctx.options.marker_size_world * compensation).max(min_marker_world);
-                Some(MarkerInstance::new(
-                    [node.position.x, node.position.y],
-                    ctx.options.marker_color,
-                    ctx.options.marker_outline_color,
-                    size,
-                ))
-            }));
-        let instances = &self.instance_scratch;
-
-        if instances.is_empty() {
-            return;
-        }
-
-        // Instanz-Buffer erstellen oder resizen
-        let needed_capacity = instances.len();
-        if self.instance_buffer.is_none() || self.instance_capacity < needed_capacity {
-            let new_capacity = needed_capacity.max(64).next_power_of_two();
-            self.instance_buffer = Some(ctx.device.create_buffer(&wgpu::BufferDescriptor {
-                label: Some("Marker Instance Buffer"),
-                size: (new_capacity * std::mem::size_of::<MarkerInstance>()) as u64,
-                usage: wgpu::BufferUsages::VERTEX | wgpu::BufferUsages::COPY_DST,
-                mapped_at_creation: false,
-            }));
-            self.instance_capacity = new_capacity;
-        }
-
-        // Daten hochladen
-        if let Some(buffer) = &self.instance_buffer {
+            // Uniforms hochladen
             ctx.queue
-                .write_buffer(buffer, 0, bytemuck::cast_slice(instances));
+                .write_buffer(&self.uniform_buffer, 0, bytemuck::cast_slice(&[uniforms]));
+
+            // Zoom-Kompensation und Mindestgroesse einmalig pro Frame berechnen.
+            let compensation = ctx.options.zoom_compensation(ctx.camera.zoom);
+            let wpp = ctx.camera.world_per_pixel(ctx.viewport_size[1]);
+            let min_marker_world = ctx.options.min_marker_size_px * wpp;
+
+            // Instanz-Daten vorbereiten (Scratch-Buffer wiederverwenden)
+            self.instance_scratch.clear();
+            self.instance_scratch
+                .extend(road_map.map_markers.iter().filter_map(|marker| {
+                    let node = road_map.nodes.get(&marker.id)?;
+                    let size = (ctx.options.marker_size_world * compensation).max(min_marker_world);
+                    Some(MarkerInstance::new(
+                        [node.position.x, node.position.y],
+                        ctx.options.marker_color,
+                        ctx.options.marker_outline_color,
+                        size,
+                    ))
+                }));
+
+            if self.instance_scratch.is_empty() {
+                // Fingerabdruck speichern damit bei naechstem identischen Frame fruehzeitig
+                // abgebrochen werden kann.
+                self.last_fingerprint = Some(new_fp);
+                self.last_instance_count = 0;
+                return;
+            }
+
+            // Instanz-Buffer erstellen oder resizen
+            let needed_capacity = self.instance_scratch.len();
+            if self.instance_buffer.is_none() || self.instance_capacity < needed_capacity {
+                let new_capacity = needed_capacity.max(64).next_power_of_two();
+                self.instance_buffer = Some(ctx.device.create_buffer(&wgpu::BufferDescriptor {
+                    label: Some("Marker Instance Buffer"),
+                    size: (new_capacity * std::mem::size_of::<MarkerInstance>()) as u64,
+                    usage: wgpu::BufferUsages::VERTEX | wgpu::BufferUsages::COPY_DST,
+                    mapped_at_creation: false,
+                }));
+                self.instance_capacity = new_capacity;
+            }
+
+            // Daten hochladen
+            if let Some(buffer) = &self.instance_buffer {
+                ctx.queue
+                    .write_buffer(buffer, 0, bytemuck::cast_slice(&self.instance_scratch));
+            }
+
+            self.last_instance_count = self.instance_scratch.len() as u32;
+            self.last_fingerprint = Some(new_fp);
         }
 
-        // Rendern
+        // Draw-Call (laeuft immer — sowohl nach Rebuild als auch bei Skip)
         render_pass.set_pipeline(&self.pipeline);
         render_pass.set_bind_group(0, &self.bind_group, &[]);
         render_pass.set_vertex_buffer(0, self.vertex_buffer.slice(..));
         if let Some(buffer) = &self.instance_buffer {
             render_pass.set_vertex_buffer(1, buffer.slice(..));
         }
-        render_pass.draw(0..6, 0..instances.len() as u32);
+        render_pass.draw(0..6, 0..self.last_instance_count);
     }
 }

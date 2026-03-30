@@ -21,12 +21,11 @@ pub(crate) fn delete_nodes_internal(road_map: &mut RoadMap, ids: &[u64], remove_
 
     // Nachbar-Nodes sammeln, deren Flags sich aendern koennten
     let mut affected_neighbors: Vec<u64> = Vec::new();
-    for conn in road_map.connections_iter() {
-        if id_set.contains(&conn.start_id) && !id_set.contains(&conn.end_id) {
-            affected_neighbors.push(conn.end_id);
-        }
-        if id_set.contains(&conn.end_id) && !id_set.contains(&conn.start_id) {
-            affected_neighbors.push(conn.start_id);
+    for &id in ids {
+        for &(nb, _) in road_map.neighbors(id) {
+            if !id_set.contains(&nb) {
+                affected_neighbors.push(nb);
+            }
         }
     }
 

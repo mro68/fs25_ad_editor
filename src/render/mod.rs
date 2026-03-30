@@ -3,6 +3,7 @@
 mod background_renderer;
 mod callback;
 mod connection_renderer;
+mod fingerprint;
 mod marker_renderer;
 mod node_renderer;
 mod texture;
