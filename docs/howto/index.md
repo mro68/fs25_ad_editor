@@ -20,7 +20,7 @@ Der FS25 AutoDrive Editor dient zum Erstellen und Bearbeiten von AutoDrive-Kurse
 |-------|--------|
 | [Start & Dateiverwaltung](01-start.md) | Ueberblick, Datei oeffnen/speichern |
 | [Benutzeroberflaeche](02-oberflaeche.md) | Fensteraufbau, Tastatur-Shortcuts, Maus-Bedienung |
-| [Werkzeuge](03-werkzeuge.md) | Select, Connect, Add Node, Gerade, Kurve, Spline, Tangenten |
+| [Werkzeuge](03-werkzeuge.md) | Select, Connect, Add Node, Gerade, Kurve, Spline, Tangenten, Ausweichstrecke, Parkplatz |
 | [Bearbeitung](04-bearbeitung.md) | Selektion, Verbindungen, Map-Marker, Undo/Redo |
 | [Karte & Hintergrund](05-karte.md) | Kamera, Hintergrundbild, Uebersichtskarte, Auto-Detection, Heightmap |
 | [Extras](06-extras.md) | Streckenteilung, Duplikat-Bereinigung, Optionen, Farbcodierung, Dateiformat |

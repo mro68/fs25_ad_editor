@@ -89,7 +89,20 @@ pub fn build(state: &AppState, viewport_size: [f32; 2]) -> RenderScene {
     };
 
     // Gedimmte Nodes: alle anderen Nodes des Segments wenn 1 Segment-Node selektiert.
-    let dimmed_node_ids = compute_dimmed_ids(&state.group_registry, &selected_arc);
+    // Cache-Hit wenn weder Selektion noch Registry seit dem letzten Build geaendert haben.
+    let dimmed_node_ids = {
+        let sel_gen = state.selection.generation;
+        let reg_gen = state.group_registry.dimmed_generation;
+        let mut cache = state.dimmed_ids_cache.borrow_mut();
+        match cache.as_ref() {
+            Some((s, r, result)) if *s == sel_gen && *r == reg_gen => Arc::clone(result),
+            _ => {
+                let result = compute_dimmed_ids(&state.group_registry, &selected_arc);
+                *cache = Some((sel_gen, reg_gen, Arc::clone(&result)));
+                result
+            }
+        }
+    };
 
     RenderScene {
         road_map: state.road_map.clone(),

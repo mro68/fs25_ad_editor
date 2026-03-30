@@ -30,12 +30,21 @@ pub struct RenderScene {
     pub background_map: Option<Arc<BackgroundMap>>,
     pub background_visible: bool,
     pub options: Arc<EditorOptions>,
+    /// Node-IDs, die im aktuellen Frame ausgeblendet werden sollen
     pub hidden_node_ids: Arc<IndexSet<u64>>,
+    /// Node-IDs, die mit 50% Opacity gerendert werden sollen (gedimmte Segment-Nodes).
+    ///
+    /// Gesetzt wenn ein selektierter Node zu einem Segment gehoert — alle anderen
+    /// Nodes des gleichen Segments werden gedimmt (visuelles Segment-Feedback).
+    pub dimmed_node_ids: Arc<IndexSet<u64>>,
 }
 ```
 
 `hidden_node_ids` wird genutzt, um Nodes im aktuellen Frame temporaer auszublenden
 (z. B. bei Vorschau-Overlays im Properties-Panel), ohne die Domain-Daten zu mutieren.
+
+`dimmed_node_ids` bewirkt eine halbdurchsichtige Darstellung (50% Opacity) fuer Nodes
+desselben Segments, die nicht selektiert sind.
 
 **Methoden:**
 

@@ -29,9 +29,15 @@ impl Snapshot {
     }
 
     /// Stellt den Snapshot wieder her (O(1) Arc-Zuweisung).
+    ///
+    /// Der Generations-Zaehler der Selektion wird auf `max(aktuell, snapshot) + 1`
+    /// gesetzt, damit der `dimmed_ids`-Cache nach Undo/Redo immer neu berechnet wird
+    /// und keine veralteten Eintraege getroffen werden koennen (Branching-Schutz).
     pub fn apply_to(self, state: &mut crate::app::AppState) {
+        let fresh_gen = state.selection.generation.max(self.selection.generation) + 1;
         state.road_map = self.road_map;
         state.selection = self.selection;
+        state.selection.generation = fresh_gen;
     }
 }
 

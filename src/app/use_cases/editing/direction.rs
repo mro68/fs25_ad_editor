@@ -63,3 +63,68 @@ pub fn set_connection_direction(
         direction
     );
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::core::{
+        Connection, ConnectionDirection, ConnectionPriority, MapNode, NodeFlag, RoadMap,
+    };
+    use glam::Vec2;
+
+    /// Hilfsfunktion: AppState mit zwei Nodes und einer Verbindung A→B aufbauen
+    fn make_state_ab(dir: ConnectionDirection) -> AppState {
+        let mut state = AppState::new();
+        let mut map = RoadMap::new(3);
+        map.add_node(MapNode::new(1, Vec2::new(0.0, 0.0), NodeFlag::Regular));
+        map.add_node(MapNode::new(2, Vec2::new(10.0, 0.0), NodeFlag::Regular));
+        map.add_connection(Connection::new(
+            1,
+            2,
+            dir,
+            ConnectionPriority::Regular,
+            Vec2::new(0.0, 0.0),
+            Vec2::new(10.0, 0.0),
+        ));
+        state.road_map = Some(Arc::new(map));
+        state
+    }
+
+    #[test]
+    fn test_toggle_dual_creates_reverse() {
+        // A→B (Regular) + B→A (Regular) bereits vorhanden → toggle A→B auf Dual → beide bleiben
+        let mut state = make_state_ab(ConnectionDirection::Regular);
+        // Rückwärts-Connection manuell hinzufügen
+        Arc::make_mut(state.road_map.as_mut().unwrap()).add_connection(Connection::new(
+            2,
+            1,
+            ConnectionDirection::Regular,
+            ConnectionPriority::Regular,
+            Vec2::new(10.0, 0.0),
+            Vec2::new(0.0, 0.0),
+        ));
+        set_connection_direction(&mut state, 1, 2, ConnectionDirection::Dual);
+        let rm = state.road_map.as_deref().unwrap();
+        // Beide Verbindungen müssen noch existieren (kein Entfernen beim Wechsel zu Dual)
+        assert!(rm.has_connection(1, 2));
+        assert!(rm.has_connection(2, 1));
+    }
+
+    #[test]
+    fn test_toggle_regular_removes_reverse() {
+        // A→B (Dual) + B→A (Dual) → toggle A→B auf Regular → B→A wird entfernt
+        let mut state = make_state_ab(ConnectionDirection::Dual);
+        Arc::make_mut(state.road_map.as_mut().unwrap()).add_connection(Connection::new(
+            2,
+            1,
+            ConnectionDirection::Dual,
+            ConnectionPriority::Regular,
+            Vec2::new(10.0, 0.0),
+            Vec2::new(0.0, 0.0),
+        ));
+        set_connection_direction(&mut state, 1, 2, ConnectionDirection::Regular);
+        let rm = state.road_map.as_deref().unwrap();
+        assert!(rm.has_connection(1, 2));
+        assert!(!rm.has_connection(2, 1));
+    }
+}

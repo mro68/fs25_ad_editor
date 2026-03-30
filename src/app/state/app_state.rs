@@ -4,6 +4,8 @@ use crate::app::CommandLog;
 use crate::core::{Connection, FieldPolygon, MapMarker, MapNode, RoadMap};
 use crate::shared::EditorOptions;
 use glam::Vec2;
+use indexmap::IndexSet;
+use std::cell::RefCell;
 use std::sync::Arc;
 
 use super::{EditorToolState, SelectionState, UiState, ViewState};
@@ -31,6 +33,11 @@ pub struct GroupEditState {
     /// Lock-Zustand vor dem Edit (wird bei Apply/Cancel wiederhergestellt)
     pub was_locked: bool,
 }
+
+/// Cache-Eintrag fuer `compute_dimmed_ids`.
+///
+/// Tuple: `(selection_generation, registry_dimmed_generation, gecachtes_Ergebnis)`.
+type DimmedIdsCache = Option<(u64, u64, Arc<IndexSet<u64>>)>;
 
 /// Hauptzustand der Anwendung
 pub struct AppState {
@@ -79,6 +86,12 @@ pub struct AppState {
     /// Wird in `edit_group()` vor dem Loeschen aus der Registry gespeichert.
     /// Bei Cancel wird der Record wiederhergestellt; bei Confirm wird das Backup geleert.
     pub tool_editing_record_backup: Option<crate::app::group_registry::GroupRecord>,
+    /// Lazy Cache fuer `compute_dimmed_ids`.
+    ///
+    /// Tuple: `(selection_generation, registry_dimmed_generation, gecachtes_Ergebnis)`.
+    /// Interior Mutability via `RefCell`, da `render_scene::build()` nur `&AppState` erhaelt.
+    /// Wird invalidiert wenn sich selection oder group_registry aendern (Generations-Vergleich).
+    pub(crate) dimmed_ids_cache: RefCell<DimmedIdsCache>,
 }
 
 impl AppState {
@@ -106,7 +119,15 @@ impl AppState {
             group_editing: None,
             tool_editing_record_id: None,
             tool_editing_record_backup: None,
+            dimmed_ids_cache: RefCell::new(None),
         }
+    }
+
+    /// Gibt eine Referenz auf die aktuelle RoadMap zurück, falls eine Karte geladen ist.
+    ///
+    /// Bevorzugtes Pattern gegen `state.road_map.as_ref().unwrap()` in Use-Cases.
+    pub fn road_map_ref(&self) -> Option<&RoadMap> {
+        self.road_map.as_deref()
     }
 
     /// Gibt die Anzahl der Nodes zurueck (fuer UI-Anzeige)

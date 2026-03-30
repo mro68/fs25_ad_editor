@@ -142,14 +142,7 @@ impl RouteTool for CurveTool {
         match self.phase {
             Phase::End => {
                 let end_pos = self.lifecycle.snap_at(cursor_pos, road_map).position();
-                let connections = vec![(0, 1)];
-                let styles = vec![(self.direction, self.priority)];
-                ToolPreview {
-                    nodes: vec![start_pos, end_pos],
-                    connections,
-                    connection_styles: styles,
-                    labels: vec![],
-                }
+                ToolPreview::from_polyline(vec![start_pos, end_pos], self.direction, self.priority)
             }
             Phase::Control => {
                 let end_pos = match &self.end {

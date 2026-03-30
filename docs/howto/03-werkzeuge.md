@@ -139,6 +139,96 @@ Erkannte Drag-Ziele sind der/die Kontrollpunkt(e) sowie Start- und Endpunkt.
 
 ---
 
+## Ausweichstrecken-Tool ⤴ (B-Menue)
+
+Generiert eine parallele Ausweichstrecke zu einer selektierten Kette von Nodes. Die Ausweichstrecke wird seitlich versetzt mit S-foermigen An- und Abfahrten verbunden, sodass Traktoren die Hauptstrecke umfahren koennen.
+
+**Voraussetzung:** Eine zusammenhaengende Kette von Nodes muss selektiert sein, bevor das Tool aktiviert wird.
+
+**Workflow:**
+
+1. Nodes einer Streckenkette mit Shift+Klick oder Doppelklick selektieren
+2. **B** druecken → Floating-Menue → ⤴ Ausweichstrecke waehlen
+3. Im Eigenschaften-Panel erscheint die Konfiguration (Versatz, Abstand)
+4. Vorschau der Ausweichstrecke ist sofort sichtbar
+5. **Enter** → Ausweichstrecke wird erstellt (neue Nodes + Verbindungen)
+6. **Escape** → Abbrechen
+
+**Konfiguration:**
+
+| Parameter | Beschreibung | Standardwert |
+|-----------|--------------|-------------|
+| **Versatz** | Seitlicher Abstand zur Originalkette (positiv = links, negativ = rechts) | 8 m |
+| **Abstand** | Node-Abstand auf der Hauptstrecke (S-Kurven: halber Abstand) | 6 m |
+| **Richtung** | Verbindungsrichtung der erzeugten Nodes | Dual |
+| **Strassenart** | Prioritaet der erzeugten Verbindungen | Regular |
+
+**Info-Anzeige im Panel:**
+
+- Neue Nodes: Anzahl der erzeugten Bypass-Knoten
+- Kette: Anzahl Nodes in der Quell-Kette
+- Uebergangslaenge: Berechnetete Laenge der S-Kurven-Uebergaenge
+
+**Tipps:**
+
+- Groesserer Versatz erfordert eine laengere Kette (min. 2× Versatz Laenge)
+- Negativer Versatz legt die Ausweichstrecke auf die rechte Seite
+- Nach Erstellung bleiben die Original-Nodes unveraendert — die Ausweichstrecke ist eine eigenstaendige Gruppe
+- Kette zu kurz → Vorschau bleibt leer (Meldung im Panel)
+
+---
+
+## Parkplatz-Tool 🅿 (B-Menue)
+
+Erzeugt ein vollstaendiges Parkplatz-Layout mit mehreren Parkreihen, Wendekreis sowie uni­direktionaler Ein- und Ausfahrt. Map-Marker werden automatisch an den Parkpositionen gesetzt.
+
+**Workflow:**
+
+1. **B** druecken → Floating-Menue → 🅿 Parkplatz waehlen
+2. **Phase Idle** — Vorschau folgt dem Cursor; Ausgangspunkt per Klick setzen
+3. **Alt+Mausrad** waehrend Idle — Layout um den eingestellten Winkelschritt drehen
+4. Klick → Position wird fixiert, **Phase Configuring** beginnt
+5. Im Eigenschaften-Panel alle Parameter anpassen (Reihen, Abstaende, Einfahrt usw.)
+6. **Enter** → Layout wird erstellt
+7. **Escape** → Abbrechen und Zurueck zu Idle
+
+**Phasen-Uebersicht:**
+
+| Phase | Beschreibung | Aktion |
+|-------|--------------|--------|
+| **Idle** | Vorschau folgt Cursor, Rotation per Alt+Scroll | Klick → Configuring |
+| **Configuring** | Position fixiert, Config-Panel aktiv | Enter (erstellen) oder Escape (abbrechen) |
+| **Adjusting** | Vorschau folgt Cursor erneut (Repositionierung) | Klick → zurueck zu Configuring |
+
+> **Tipp:** Waehrend Configuring kann durch Klick in den Viewport die Repositioniering (Adjusting) gestartet werden — so laesst sich die Position nachtraeglich korriegieren ohne das Tool neu zu starten.
+
+**Konfiguration:**
+
+| Parameter | Beschreibung | Standard | Bereich |
+|-----------|--------------|---------|---------|
+| **Reihen** | Anzahl Parkreihen | 2 | 1–10 |
+| **Abstand** | Abstand zwischen benachbarten Reihen | 6 m | 4–20 m |
+| **Laenge** | Laenge jeder Reihe (Ost-West-Ausdehnung) | 25 m | 10–100 m |
+| **Max. Node-Abstand** | Maximaler Abstand aufeinanderfolgender Nodes in der Reihe | 5 m | 2–20 m |
+| **Einfahrt** | Position der Einfahrt entlang der Reihe (0 = Ost, 1 = West) | 0,50 | 0–1 |
+| **Ausfahrt** | Position der Ausfahrt entlang der Reihe (0 = Ost, 1 = West) | 0,75 | 0–1 |
+| **Rampenlaenge** | Laenge der 45°-Rampen fuer Ein-/Ausfahrt | 3 m | 2–20 m |
+| **Einfahrt-Seite** | Seite der Einfahrt aus Sicht des Markers | Rechts | Links / Rechts |
+| **Ausfahrt-Seite** | Seite der Ausfahrt aus Sicht des Markers | Links | Links / Rechts |
+| **Gruppe** | Name der Map-Marker-Gruppe fuer alle Parkbuchten | Parkplatz | Freitext |
+| **Richtung** | Verbindungsrichtung der erzeugten Nodes | Dual | — |
+| **Strassenart** | Prioritaet der erzeugten Verbindungen | Regular | — |
+| **Winkelschritt** | Drehungs-Schrittweite bei Alt+Mausrad | 5° | Freitext |
+
+**Tipps:**
+
+- Einfahrt und Ausfahrt auf verschiedene Seiten legen verhindert Gegenverkehr im Parkplatz
+- Rampenlaenge auf 4–6 m setzen fuer groessere Fahrzeuge mit breitem Wendekreis
+- Mit Alt+Mausrad vor dem Fixieren den Parkplatz an bestehende Wege ausrichten
+- Alle erzeugten Marker erscheinen unter dem konfigurierten Gruppennamen im Map-Marker-Panel
+
+---
+
 ## Felderkennung-Tool (FieldBoundary)
 
 Zeichnet automatisch Wegpunkte entlang der Grenze eines Feldes nach. Der Editor liest die Feldgrenzen aus der geladenen Karte (GRLE- oder PNG-Feldlayer) und erzeugt daraus einen geschlossenen Ring aus Nodes.

@@ -93,6 +93,28 @@ pub struct ToolPreview {
     pub labels: Vec<(usize, String)>,
 }
 
+impl ToolPreview {
+    /// Erzeugt eine Vorschau aus einer Polyline mit einheitlicher Richtung und Prioritaet.
+    ///
+    /// Gemeinsames Konstruktor-Pattern aller Route-Tool-`preview()`-Methoden:
+    /// Verbindet `positions` linear (`[(0,1), (1,2), ...]`) und weist jeder Verbindung
+    /// denselben `direction`/`priority`-Stil zu.
+    pub fn from_polyline(
+        positions: Vec<Vec2>,
+        direction: ConnectionDirection,
+        priority: ConnectionPriority,
+    ) -> Self {
+        let connections = common::linear_connections(positions.len());
+        let connection_styles = vec![(direction, priority); connections.len()];
+        Self {
+            nodes: positions,
+            connections,
+            connection_styles,
+            labels: vec![],
+        }
+    }
+}
+
 /// Ergebnis eines Route-Tools — reine Daten, keine Mutation.
 ///
 /// Dieses Struct enthaelt alle geometrischen Daten, die von einem Tool erzeugt werden:

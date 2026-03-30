@@ -89,14 +89,7 @@ impl RouteTool for SmoothCurveTool {
                 let snapped = self.lifecycle.snap_at(cursor_pos, road_map);
                 let end_pos = snapped.position();
                 let nodes = vec![start_pos, end_pos];
-                let connections = linear_connections(nodes.len());
-                let styles = vec![(self.direction, self.priority); connections.len()];
-                ToolPreview {
-                    nodes,
-                    connections,
-                    connection_styles: styles,
-                    labels: vec![],
-                }
+                ToolPreview::from_polyline(nodes, self.direction, self.priority)
             }
             Phase::ControlNodes => {
                 // Gecachte Solver-Ausgabe verwenden

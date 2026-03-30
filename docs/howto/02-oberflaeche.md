@@ -80,7 +80,7 @@ Werkzeuge und Aktionen werden ueber **Floating-Menues** aufgerufen. Jeder Tasten
 | Shortcut | Floating-Menue | Inhalt |
 |----------|----------------|--------|
 | `T` | Werkzeuge | Select, Connect, Add Node, Gerade, Kurve, Spline |
-| `B` | Bearbeitungstools | Duplikate, Strecke aufteilen, sonstige Bearbeitungs-Aktionen |
+| `B` | Bearbeitungstools | Ausweichstrecke, Parkplatz, Strecke versetzen |
 | `G` | Grundbefehle | Datei oeffnen, speichern, Undo, Redo |
 | `R` | Richtung & Strassenart | Einbahn vorwaerts, Zweirichtung, Einbahn rueckwaerts, Hauptstrasse, Nebenstrasse |
 | `Z` | Zoom | Auf komplette Map zoomen, Auf Auswahl zoomen |
