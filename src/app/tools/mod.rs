@@ -12,6 +12,8 @@ pub mod common;
 pub mod curve;
 /// Feldgrenz-Erkennungs-Tool: erzeugt eine Route entlang eines erkannten Feldumrisses.
 pub mod field_boundary;
+/// Farb-Pfad-Tool: erkennt Wege anhand der Farbe im Hintergrundbild.
+pub mod color_path;
 /// Feldweg-Erkennungs-Tool: berechnet eine Mittellinie zwischen zwei Farmland-Seiten.
 pub mod field_path;
 /// Parkplatz-Layout-Tool mit Wendekreis und konfigurierbaren Parkreihen.
@@ -206,6 +208,7 @@ impl ToolManager {
         manager.register(Box::new(field_boundary::FieldBoundaryTool::new()));
         manager.register(Box::new(field_path::FieldPathTool::new()));
         manager.register(Box::new(route_offset::RouteOffsetTool::new()));
+        manager.register(Box::new(color_path::ColorPathTool::new()));
         manager
     }
 

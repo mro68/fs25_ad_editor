@@ -359,6 +359,8 @@ pub enum I18nKey {
     MenuCurseplayExport,
     /// Menüeintrag "Feldweg erkennen"
     MenuFieldPath,
+    /// Menüeintrag "Farb-Pfad erkennen"
+    MenuColorPath,
 
     // === Menü: Hilfe ===
     /// Menüeintrag "Hilfe"

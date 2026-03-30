@@ -101,15 +101,16 @@ pub(super) fn draw_drag_selection_overlay(
             }
 
             // Tool-Lasso in Orange darstellen (unterscheidet sich vom normalen Lasso)
-            let tool_stroke =
-                egui::Stroke::new(1.5, egui::Color32::from_rgb(255, 165, 0));
-            let tool_fill =
-                egui::Color32::from_rgba_unmultiplied(255, 165, 0, 30);
+            let tool_stroke = egui::Stroke::new(1.5, egui::Color32::from_rgb(255, 165, 0));
+            let tool_fill = egui::Color32::from_rgba_unmultiplied(255, 165, 0, 30);
 
             let mut polygon = selection.points_screen.clone();
             if polygon.len() >= 3 {
-                painter
-                    .add(egui::Shape::convex_polygon(polygon.clone(), tool_fill, tool_stroke));
+                painter.add(egui::Shape::convex_polygon(
+                    polygon.clone(),
+                    tool_fill,
+                    tool_stroke,
+                ));
                 polygon.push(polygon[0]);
             }
 

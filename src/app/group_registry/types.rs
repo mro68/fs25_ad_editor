@@ -188,6 +188,8 @@ pub const TOOL_INDEX_FIELD_BOUNDARY: usize = 7;
 pub const TOOL_INDEX_FIELD_PATH: usize = 8;
 /// Tool-Index fuer `RouteOffsetTool` im `ToolManager` (Registrierungs-Slot 9).
 pub const TOOL_INDEX_ROUTE_OFFSET: usize = 9;
+/// Tool-Index fuer `ColorPathTool` im `ToolManager` (Registrierungs-Slot 10).
+pub const TOOL_INDEX_COLOR_PATH: usize = 10;
 
 impl GroupKind {
     /// Gibt den Tool-Index im ToolManager fuer dieses Segment zurueck.
