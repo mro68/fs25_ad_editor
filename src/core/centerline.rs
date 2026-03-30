@@ -2,7 +2,7 @@
 
 use super::farmland::FarmlandGrid;
 use glam::Vec2;
-use std::collections::VecDeque;
+use std::collections::{HashSet, VecDeque};
 
 // ---------------------------------------------------------------------------
 // VoronoiGrid
@@ -184,48 +184,71 @@ pub fn extract_boundary_centerline(
 
 /// Verkettete Pixel-Liste aus unsortierten Kantenpixeln erstellen.
 ///
-/// Nearest-Neighbor-Greedy: Start beim ersten Pixel, jeweils nächsten unbesuchten Nachbarn wählen.
+/// HashSet-basierter 8-Nachbar-Walk: O(n) im Normalfall statt O(n²) brute force.
+/// Wächst vom Startpunkt aus in beide Richtungen.
 fn chain_pixels(pixels: &[(u32, u32)]) -> Vec<(u32, u32)> {
     if pixels.is_empty() {
         return Vec::new();
     }
 
-    let mut visited = vec![false; pixels.len()];
-    let mut chain = Vec::with_capacity(pixels.len());
-    let mut current_idx = 0;
-    visited[0] = true;
-    chain.push(pixels[0]);
+    let mut remaining: HashSet<(u32, u32)> = pixels.iter().copied().collect();
 
-    for _ in 1..pixels.len() {
-        let (cx, cy) = chain[chain.len() - 1];
-        let mut best_idx = None;
-        let mut best_dist = u64::MAX;
+    // Startpunkt: minimales (x, y) für deterministisches Ergebnis
+    let start = *pixels
+        .iter()
+        .min_by_key(|&&(x, y)| (x, y))
+        .expect("pixels ist nicht leer");
+    remaining.remove(&start);
 
-        for (i, &(px, py)) in pixels.iter().enumerate() {
-            if visited[i] {
-                continue;
-            }
-            let dx = (px as i64 - cx as i64).unsigned_abs();
-            let dy = (py as i64 - cy as i64).unsigned_abs();
-            let dist = dx * dx + dy * dy;
-            if dist < best_dist {
-                best_dist = dist;
-                best_idx = Some(i);
-            }
-        }
-
-        match best_idx {
-            Some(i) => {
-                visited[i] = true;
-                chain.push(pixels[i]);
-                current_idx = i;
-            }
-            None => break,
+    // Vorwärts-Walk
+    let mut chain = vec![start];
+    {
+        let mut cur = start;
+        while let Some(n) = find_8neighbor(cur.0, cur.1, &remaining) {
+            remaining.remove(&n);
+            chain.push(n);
+            cur = n;
         }
     }
 
-    let _ = current_idx; // verhindert unused-warning
-    chain
+    // Rückwärts-Walk vom Startpunkt aus (verbleibende Pixel einsammeln)
+    let mut backward: Vec<(u32, u32)> = Vec::new();
+    let mut cur = start;
+    while let Some(n) = find_8neighbor(cur.0, cur.1, &remaining) {
+        remaining.remove(&n);
+        backward.push(n);
+        cur = n;
+    }
+
+    // Ergebnis: rückwärts-Kette (umgekehrt) + vorwärts-Kette
+    backward.reverse();
+    backward.extend(chain);
+    backward
+}
+
+/// Sucht den ersten 8-Nachbarn von `(cx, cy)` der in `remaining` liegt.
+fn find_8neighbor(cx: u32, cy: u32, remaining: &HashSet<(u32, u32)>) -> Option<(u32, u32)> {
+    const DIRS: [(i32, i32); 8] = [
+        (-1, 0),
+        (1, 0),
+        (0, -1),
+        (0, 1),
+        (-1, -1),
+        (1, -1),
+        (-1, 1),
+        (1, 1),
+    ];
+    for (dx, dy) in DIRS {
+        let nx = cx as i32 + dx;
+        let ny = cy as i32 + dy;
+        if nx >= 0 && ny >= 0 {
+            let candidate = (nx as u32, ny as u32);
+            if remaining.contains(&candidate) {
+                return Some(candidate);
+            }
+        }
+    }
+    None
 }
 
 /// Rasterisiert eine Liste von Polylines auf das Grid mit Bresenham-Linien.
@@ -340,5 +363,34 @@ mod tests {
     fn test_chain_pixels_empty() {
         let chained = chain_pixels(&[]);
         assert!(chained.is_empty());
+    }
+
+    /// `extract_boundary_centerline` mit zwei parallelen vertikalen Linien.
+    ///
+    /// Die Mittellinie muss zwischen den beiden Seiten liegen (x ≈ 0).
+    #[test]
+    fn test_extract_boundary_centerline_basic() {
+        let w = 20u32;
+        let h = 20u32;
+        let map_size = 20.0_f32;
+        // scale = map_size / w = 1.0, half = 10.0
+        // pixel x=5  → world x = 5*1 - 10 = -5.0
+        // pixel x=15 → world x = 15*1 - 10 =  5.0
+        let ids = vec![0u8; (w * h) as usize];
+        let grid = FarmlandGrid::new(ids, w, h, map_size);
+
+        let side1 = vec![Vec2::new(-5.0, -8.0), Vec2::new(-5.0, 8.0)];
+        let side2 = vec![Vec2::new(5.0, -8.0), Vec2::new(5.0, 8.0)];
+
+        let result = extract_boundary_centerline(&[side1], &[side2], &grid);
+
+        assert!(!result.is_empty(), "Mittellinie darf nicht leer sein");
+        for pt in &result {
+            assert!(
+                pt.x.abs() < 3.0,
+                "Mittellinien-Punkt x={:.2} sollte nahe 0 liegen",
+                pt.x
+            );
+        }
     }
 }
