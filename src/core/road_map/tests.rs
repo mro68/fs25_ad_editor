@@ -503,3 +503,186 @@ fn resampleable_chain_two_unconnected_nodes() {
     let sel: IndexSet<u64> = [1, 2].into();
     assert!(!map.is_resampleable_chain(&sel));
 }
+
+// ═══════════════════════════════════════════════════════════════════
+// Adjacency-Index Tests
+// ═══════════════════════════════════════════════════════════════════
+
+/// Hilfsfunktion fuer einfache Verbindungen (dupliziert make_conn aus neighbors::tests)
+fn make_adj_conn(s: u64, e: u64, sx: f32, sy: f32, ex: f32, ey: f32) -> Connection {
+    Connection::new(
+        s,
+        e,
+        ConnectionDirection::Regular,
+        ConnectionPriority::Regular,
+        Vec2::new(sx, sy),
+        Vec2::new(ex, ey),
+    )
+}
+
+/// Leerer Node hat degree 0 und leere Nachbar-Liste.
+#[test]
+fn test_adjacency_empty_node() {
+    let mut map = RoadMap::new(3);
+    map.add_node(MapNode::new(1, Vec2::ZERO, NodeFlag::Regular));
+
+    assert_eq!(map.degree(1), 0);
+    assert!(map.neighbors(1).is_empty());
+    assert_eq!(map.outgoing_neighbors(1).count(), 0);
+    assert_eq!(map.incoming_neighbors(1).count(), 0);
+}
+
+/// Unbekannte Node-ID liefert leeren Slice statt Panic.
+#[test]
+fn test_adjacency_unknown_node_returns_empty() {
+    let map = RoadMap::new(3);
+    assert!(map.neighbors(999).is_empty());
+    assert_eq!(map.degree(999), 0);
+}
+
+/// Nach add_connection korrekte Adjacency fuer beide Endpunkte.
+#[test]
+fn test_adjacency_after_add_connection() {
+    let mut map = RoadMap::new(3);
+    map.add_node(MapNode::new(1, Vec2::new(0.0, 0.0), NodeFlag::Regular));
+    map.add_node(MapNode::new(2, Vec2::new(10.0, 0.0), NodeFlag::Regular));
+    map.add_connection(make_adj_conn(1, 2, 0.0, 0.0, 10.0, 0.0));
+
+    // Node 1: ausgehend zu Node 2
+    assert_eq!(map.degree(1), 1);
+    let n1 = map.neighbors(1);
+    assert_eq!(n1.len(), 1);
+    assert_eq!(n1[0], (2, true));
+
+    // Node 2: eingehend von Node 1
+    assert_eq!(map.degree(2), 1);
+    let n2 = map.neighbors(2);
+    assert_eq!(n2.len(), 1);
+    assert_eq!(n2[0], (1, false));
+
+    // Iterator-API pruefen
+    let out: Vec<u64> = map.outgoing_neighbors(1).collect();
+    assert_eq!(out, vec![2]);
+    assert_eq!(map.incoming_neighbors(1).count(), 0);
+
+    let inc: Vec<u64> = map.incoming_neighbors(2).collect();
+    assert_eq!(inc, vec![1]);
+    assert_eq!(map.outgoing_neighbors(2).count(), 0);
+}
+
+/// Nach remove_connection wird der Index bereinigt.
+#[test]
+fn test_adjacency_after_remove_connection() {
+    let mut map = RoadMap::new(3);
+    map.add_node(MapNode::new(1, Vec2::new(0.0, 0.0), NodeFlag::Regular));
+    map.add_node(MapNode::new(2, Vec2::new(10.0, 0.0), NodeFlag::Regular));
+    map.add_connection(make_adj_conn(1, 2, 0.0, 0.0, 10.0, 0.0));
+
+    let removed = map.remove_connection(1, 2);
+    assert!(removed);
+
+    assert_eq!(map.degree(1), 0);
+    assert_eq!(map.degree(2), 0);
+    assert!(map.neighbors(1).is_empty());
+    assert!(map.neighbors(2).is_empty());
+}
+
+/// Bidirektionale Verbindungen (A\u2192B und B\u2192A) erzeugen korrekte Adjacency.
+#[test]
+fn test_adjacency_bidirectional_connections() {
+    let mut map = RoadMap::new(3);
+    map.add_node(MapNode::new(1, Vec2::new(0.0, 0.0), NodeFlag::Regular));
+    map.add_node(MapNode::new(2, Vec2::new(10.0, 0.0), NodeFlag::Regular));
+    map.add_connection(make_adj_conn(1, 2, 0.0, 0.0, 10.0, 0.0));
+    map.add_connection(make_adj_conn(2, 1, 10.0, 0.0, 0.0, 0.0));
+
+    // Beide Richtungen zaehlen → degree 2 pro Node
+    assert_eq!(map.degree(1), 2);
+    assert_eq!(map.degree(2), 2);
+
+    // Node 1: (2, true) = ausgehend, (2, false) = eingehend
+    let out1: Vec<u64> = map.outgoing_neighbors(1).collect();
+    let inc1: Vec<u64> = map.incoming_neighbors(1).collect();
+    assert_eq!(out1, vec![2]);
+    assert_eq!(inc1, vec![2]);
+}
+
+/// remove_node bereinigt auch die Adjacency-Eintraege der Nachbarn.
+#[test]
+fn test_adjacency_after_remove_node() {
+    let mut map = RoadMap::new(3);
+    map.add_node(MapNode::new(1, Vec2::new(0.0, 0.0), NodeFlag::Regular));
+    map.add_node(MapNode::new(2, Vec2::new(10.0, 0.0), NodeFlag::Regular));
+    map.add_node(MapNode::new(3, Vec2::new(20.0, 0.0), NodeFlag::Regular));
+    map.add_connection(make_adj_conn(1, 2, 0.0, 0.0, 10.0, 0.0));
+    map.add_connection(make_adj_conn(2, 3, 10.0, 0.0, 20.0, 0.0));
+
+    // Node 2 entfernen → alle Verbindungen weg, Nachbarn bereinigt
+    map.remove_node(2);
+
+    assert!(map.neighbors(1).is_empty(), "Node 1 sollte keine Nachbarn mehr haben");
+    assert!(map.neighbors(3).is_empty(), "Node 3 sollte keine Nachbarn mehr haben");
+    assert!(map.neighbors(2).is_empty(), "Geloeschter Node hat keine Adjacency mehr");
+    assert_eq!(map.degree(2), 0);
+}
+
+/// rebuild_adjacency_index stimmt mit inkrementeller Pflege ueberein.
+#[test]
+fn test_adjacency_rebuild_consistent_with_incremental() {
+    let mut map = RoadMap::new(3);
+    map.add_node(MapNode::new(1, Vec2::new(0.0, 0.0), NodeFlag::Regular));
+    map.add_node(MapNode::new(2, Vec2::new(10.0, 0.0), NodeFlag::Regular));
+    map.add_node(MapNode::new(3, Vec2::new(5.0, 5.0), NodeFlag::Regular));
+    map.add_connection(make_adj_conn(1, 2, 0.0, 0.0, 10.0, 0.0));
+    map.add_connection(make_adj_conn(1, 3, 0.0, 0.0, 5.0, 5.0));
+    map.add_connection(make_adj_conn(3, 2, 5.0, 5.0, 10.0, 0.0));
+
+    // Zustand nach inkrementeller Pflege
+    let deg1_before = map.degree(1);
+    let deg2_before = map.degree(2);
+    let deg3_before = map.degree(3);
+
+    // Rebuild erzeugt identischen Zustand
+    map.rebuild_adjacency_index();
+
+    assert_eq!(map.degree(1), deg1_before);
+    assert_eq!(map.degree(2), deg2_before);
+    assert_eq!(map.degree(3), deg3_before);
+}
+
+/// invert_connection aktualisiert die Richtungs-Flags im Adjacency-Index korrekt.
+#[test]
+fn test_adjacency_after_invert_connection() {
+    let mut map = RoadMap::new(3);
+    map.add_node(MapNode::new(1, Vec2::new(0.0, 0.0), NodeFlag::Regular));
+    map.add_node(MapNode::new(2, Vec2::new(10.0, 0.0), NodeFlag::Regular));
+    map.add_connection(make_adj_conn(1, 2, 0.0, 0.0, 10.0, 0.0));
+
+    // Vor Invertierung: 1\u2192 outgoing nach 2, 2 \u2190 incoming von 1
+    assert!(map.outgoing_neighbors(1).any(|id| id == 2));
+    assert!(map.incoming_neighbors(2).any(|id| id == 1));
+
+    map.invert_connection(1, 2);
+
+    // Nach Invertierung: umgekehrt
+    assert_eq!(map.outgoing_neighbors(1).count(), 0, "Node 1 hat keine ausgehenden mehr");
+    assert!(map.incoming_neighbors(1).any(|id| id == 2), "Node 1 erhaelt jetzt von 2");
+    assert!(map.outgoing_neighbors(2).any(|id| id == 1), "Node 2 sendet jetzt zu 1");
+    assert_eq!(map.incoming_neighbors(2).count(), 0, "Node 2 hat keine eingehenden mehr");
+}
+
+/// remove_connections_between bereinigt beide Richtungen im Index.
+#[test]
+fn test_adjacency_after_remove_connections_between() {
+    let mut map = RoadMap::new(3);
+    map.add_node(MapNode::new(1, Vec2::new(0.0, 0.0), NodeFlag::Regular));
+    map.add_node(MapNode::new(2, Vec2::new(10.0, 0.0), NodeFlag::Regular));
+    map.add_connection(make_adj_conn(1, 2, 0.0, 0.0, 10.0, 0.0));
+    map.add_connection(make_adj_conn(2, 1, 10.0, 0.0, 0.0, 0.0));
+
+    let count = map.remove_connections_between(1, 2);
+    assert_eq!(count, 2);
+
+    assert_eq!(map.degree(1), 0);
+    assert_eq!(map.degree(2), 0);
+}

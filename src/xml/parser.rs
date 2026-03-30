@@ -234,6 +234,7 @@ pub fn parse_autodrive_config(xml_content: &str) -> Result<RoadMap> {
         options,
     };
     road_map.rebuild_spatial_index();
+    road_map.rebuild_adjacency_index();
 
     Ok(road_map)
 }

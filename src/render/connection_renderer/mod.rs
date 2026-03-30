@@ -259,7 +259,9 @@ impl ConnectionRenderer {
                     let color =
                         connection_color(connection.direction, connection.priority, ctx.options);
                     let thickness = (match connection.priority {
-                        crate::ConnectionPriority::Regular => ctx.options.connection_thickness_world,
+                        crate::ConnectionPriority::Regular => {
+                            ctx.options.connection_thickness_world
+                        }
                         crate::ConnectionPriority::SubPriority => {
                             ctx.options.connection_thickness_subprio_world
                         }
@@ -271,7 +273,8 @@ impl ConnectionRenderer {
                     match connection.direction {
                         ConnectionDirection::Regular | ConnectionDirection::Reverse => {
                             // Bei Reverse zeigt der Pfeil in die entgegengesetzte Richtung (start→end negiert).
-                            let arrow_dir = if connection.direction == ConnectionDirection::Reverse {
+                            let arrow_dir = if connection.direction == ConnectionDirection::Reverse
+                            {
                                 -direction
                             } else {
                                 direction
@@ -321,8 +324,11 @@ impl ConnectionRenderer {
             }
 
             if let Some(vertex_buffer) = &self.vertex_buffer {
-                ctx.queue
-                    .write_buffer(vertex_buffer, 0, bytemuck::cast_slice(&self.vertex_scratch));
+                ctx.queue.write_buffer(
+                    vertex_buffer,
+                    0,
+                    bytemuck::cast_slice(&self.vertex_scratch),
+                );
             }
 
             self.last_vertex_count = self.vertex_scratch.len() as u32;

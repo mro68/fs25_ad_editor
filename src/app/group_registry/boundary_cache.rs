@@ -54,49 +54,47 @@ impl GroupRegistry {
             // Winkel externer Verbindungen pro Node (Richtung aus Sicht des Nodes)
             let mut external_angles: HashMap<u64, Vec<f32>> = HashMap::new();
 
-            for conn in road_map.connections_iter() {
-                let start_in = group_set.contains(&conn.start_id);
-                let end_in = group_set.contains(&conn.end_id);
+            for &node_id in &group_set {
+                for &(nb_id, is_outgoing) in road_map.neighbors(node_id) {
+                    let nb_in = group_set.contains(&nb_id);
 
-                if start_in && end_in {
-                    // Interne Verbindung: Winkel aus Sicht beider Nodes sammeln
-                    internal_angles
-                        .entry(conn.start_id)
-                        .or_default()
-                        .push(conn.angle);
-                    internal_angles
-                        .entry(conn.end_id)
-                        .or_default()
-                        .push(conn.angle + std::f32::consts::PI);
-                }
+                    // Verbindung fuer Winkel nachschlagen — O(1)
+                    let conn = if is_outgoing {
+                        road_map.find_connection(node_id, nb_id)
+                    } else {
+                        road_map.find_connection(nb_id, node_id)
+                    };
+                    let Some(c) = conn else { continue };
+                    let angle_from_node = if is_outgoing {
+                        c.angle
+                    } else {
+                        c.angle + std::f32::consts::PI
+                    };
 
-                if start_in && !end_in {
-                    let entry = node_info
-                        .entry(conn.start_id)
-                        .or_insert((false, false, false));
-                    entry.1 = true; // has_outgoing
-                    if !all_grouped_ids.contains(&conn.end_id) {
-                        entry.2 = true; // Nachbar ausserhalb jeder Gruppe
+                    if nb_in {
+                        // Interne Verbindung: Winkel aus Sicht dieses Nodes
+                        internal_angles
+                            .entry(node_id)
+                            .or_default()
+                            .push(angle_from_node);
+                    } else {
+                        // Externe Verbindung: Flags und Winkel setzen
+                        let entry = node_info
+                            .entry(node_id)
+                            .or_insert((false, false, false));
+                        if is_outgoing {
+                            entry.1 = true; // has_outgoing
+                        } else {
+                            entry.0 = true; // has_incoming
+                        }
+                        if !all_grouped_ids.contains(&nb_id) {
+                            entry.2 = true; // Nachbar ausserhalb jeder Gruppe
+                        }
+                        external_angles
+                            .entry(node_id)
+                            .or_default()
+                            .push(angle_from_node);
                     }
-                    // Ext. Winkel: aus Sicht des start_node Richtung end_node
-                    external_angles
-                        .entry(conn.start_id)
-                        .or_default()
-                        .push(conn.angle);
-                }
-                if end_in && !start_in {
-                    let entry = node_info
-                        .entry(conn.end_id)
-                        .or_insert((false, false, false));
-                    entry.0 = true; // has_incoming
-                    if !all_grouped_ids.contains(&conn.start_id) {
-                        entry.2 = true; // Nachbar ausserhalb jeder Gruppe
-                    }
-                    // Ext. Winkel: aus Sicht des end_node Richtung start_node (Gegenrichtung)
-                    external_angles
-                        .entry(conn.end_id)
-                        .or_default()
-                        .push(conn.angle + std::f32::consts::PI);
                 }
             }
 

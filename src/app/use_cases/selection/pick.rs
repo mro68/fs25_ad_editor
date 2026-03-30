@@ -4,8 +4,6 @@ use crate::core::RoadMap;
 use crate::AppState;
 use std::collections::{HashMap, HashSet, VecDeque};
 
-use super::helpers::build_undirected_adjacency;
-
 /// Berechnet den kuerzesten Pfad (BFS) zwischen zwei Nodes.
 fn shortest_path_nodes(road_map: &RoadMap, start: u64, goal: u64) -> Option<Vec<u64>> {
     if start == goal {
@@ -15,8 +13,6 @@ fn shortest_path_nodes(road_map: &RoadMap, start: u64, goal: u64) -> Option<Vec<
     if !road_map.nodes.contains_key(&start) || !road_map.nodes.contains_key(&goal) {
         return None;
     }
-
-    let adjacency = build_undirected_adjacency(road_map);
 
     let mut queue = VecDeque::new();
     let mut visited = HashSet::new();
@@ -30,12 +26,10 @@ fn shortest_path_nodes(road_map: &RoadMap, start: u64, goal: u64) -> Option<Vec<
             break;
         }
 
-        if let Some(neighbors) = adjacency.get(&current) {
-            for &neighbor in neighbors {
-                if visited.insert(neighbor) {
-                    predecessors.insert(neighbor, current);
-                    queue.push_back(neighbor);
-                }
+        for &(neighbor, _) in road_map.neighbors(current) {
+            if visited.insert(neighbor) {
+                predecessors.insert(neighbor, current);
+                queue.push_back(neighbor);
             }
         }
     }
