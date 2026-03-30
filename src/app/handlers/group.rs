@@ -230,10 +230,10 @@ pub fn apply_group_edit(state: &mut AppState) {
                 continue;
             }
             // Pruefen ob sel_id eine Verbindung zu einem erreichbaren Node hat
-            let has_connection = road_map.connections_iter().any(|conn| {
-                (conn.start_id == sel_id && reachable.contains(&conn.end_id))
-                    || (conn.end_id == sel_id && reachable.contains(&conn.start_id))
-            });
+            let has_connection = road_map
+                .neighbors(sel_id)
+                .iter()
+                .any(|&(nb, _)| reachable.contains(&nb));
             if has_connection {
                 reachable.insert(sel_id);
                 changed = true;

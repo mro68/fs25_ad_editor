@@ -9,23 +9,22 @@ use super::{BoundaryNode, RoadMap};
 impl RoadMap {
     /// Ermittelt alle Nodes in `group_ids`, die Verbindungen nach ausserhalb haben.
     ///
-    /// Iteriert ueber alle Connections — O(|connections|).
+    /// Nutzt den Adjacency-Index — O(|group| * degree) statt O(|connections|).
     /// Nur bei Gruppen-Aenderungen aufrufen, nicht pro Frame.
     pub fn boundary_nodes(&self, group_ids: &IndexSet<u64>) -> Vec<BoundaryNode> {
         // (has_incoming, has_outgoing)
         let mut result_map: HashMap<u64, (bool, bool)> = HashMap::new();
 
-        for conn in self.connections.values() {
-            let start_in = group_ids.contains(&conn.start_id);
-            let end_in = group_ids.contains(&conn.end_id);
-
-            if start_in && !end_in {
-                // start_id ist in der Gruppe, end_id draussen → outgoing
-                result_map.entry(conn.start_id).or_insert((false, false)).1 = true;
-            }
-            if end_in && !start_in {
-                // end_id ist in der Gruppe, start_id draussen → incoming
-                result_map.entry(conn.end_id).or_insert((false, false)).0 = true;
+        for &node_id in group_ids {
+            for &(nb_id, is_outgoing) in self.neighbors(node_id) {
+                if !group_ids.contains(&nb_id) {
+                    let entry = result_map.entry(node_id).or_insert((false, false));
+                    if is_outgoing {
+                        entry.1 = true; // has_external_outgoing
+                    } else {
+                        entry.0 = true; // has_external_incoming
+                    }
+                }
             }
         }
 
@@ -75,6 +74,8 @@ mod tests {
             };
             map.connections.insert((start, end), conn);
         }
+        // Adjacency-Index nach direkten Inserts aufbauen
+        map.rebuild_adjacency_index();
         map
     }
 

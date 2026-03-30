@@ -5,25 +5,29 @@ use super::{ConnectedNeighbor, RoadMap};
 impl RoadMap {
     /// Gibt alle Nachbar-Nodes zurueck, die ueber Verbindungen mit `node_id` verbunden sind.
     ///
-    /// Iteriert ueber alle Connections — O(n), aber nur bei Snap-Events aufgerufen.
+    /// Nutzt den Adjacency-Index — O(degree) statt O(|connections|).
     pub fn connected_neighbors(&self, node_id: u64) -> Vec<ConnectedNeighbor> {
-        let mut neighbors = Vec::new();
-        for conn in self.connections.values() {
-            if conn.start_id == node_id {
-                neighbors.push(ConnectedNeighbor {
-                    neighbor_id: conn.end_id,
-                    angle: conn.angle,
-                    is_outgoing: true,
-                });
-            } else if conn.end_id == node_id {
-                neighbors.push(ConnectedNeighbor {
-                    neighbor_id: conn.start_id,
-                    angle: conn.angle + std::f32::consts::PI,
-                    is_outgoing: false,
-                });
-            }
-        }
-        neighbors
+        self.neighbors(node_id)
+            .iter()
+            .filter_map(|&(nb_id, is_outgoing)| {
+                let (start, end) = if is_outgoing {
+                    (node_id, nb_id)
+                } else {
+                    (nb_id, node_id)
+                };
+                let conn = self.connections.get(&(start, end))?;
+                let angle = if is_outgoing {
+                    conn.angle
+                } else {
+                    conn.angle + std::f32::consts::PI
+                };
+                Some(ConnectedNeighbor {
+                    neighbor_id: nb_id,
+                    angle,
+                    is_outgoing,
+                })
+            })
+            .collect()
     }
 }
 

@@ -10,13 +10,14 @@ impl RoadMap {
     /// Interner Helfer fuer `is_resampleable_chain` und `ordered_chain_nodes`.
     /// Gibt `None` zurueck wenn keine Node in `node_ids` ist.
     fn collect_ordered_path(&self, node_ids: &IndexSet<u64>) -> Option<Vec<u64>> {
+        // Startknoten: kein eingehender Nachbar aus der Selektion — O(nodes * degree)
         let start = node_ids
             .iter()
             .find(|&&id| {
                 !self
-                    .connections
-                    .values()
-                    .any(|c| c.end_id == id && node_ids.contains(&c.start_id))
+                    .neighbors(id)
+                    .iter()
+                    .any(|&(nb, out)| !out && node_ids.contains(&nb))
             })
             .copied()
             .or_else(|| node_ids.iter().next().copied())?;
@@ -29,15 +30,10 @@ impl RoadMap {
             path.push(current);
             visited.insert(current);
 
+            // Naechster: ausgehender Nachbar in der Selektion, noch nicht besucht
             let next = self
-                .connections
-                .values()
-                .find(|c| {
-                    c.start_id == current
-                        && node_ids.contains(&c.end_id)
-                        && !visited.contains(&c.end_id)
-                })
-                .map(|c| c.end_id);
+                .outgoing_neighbors(current)
+                .find(|&nb| node_ids.contains(&nb) && !visited.contains(&nb));
 
             match next {
                 Some(n) => current = n,
@@ -67,13 +63,10 @@ impl RoadMap {
 
         // Innere Nodes duerfen keine Kreuzungen sein (Grad innerhalb Selektion ≤ 2)
         for &nid in &path[1..path.len() - 1] {
-            let degree: usize = self
-                .connections
-                .values()
-                .filter(|c| {
-                    (c.start_id == nid && node_ids.contains(&c.end_id))
-                        || (c.end_id == nid && node_ids.contains(&c.start_id))
-                })
+            let degree = self
+                .neighbors(nid)
+                .iter()
+                .filter(|&&(nb, _)| node_ids.contains(&nb))
                 .count();
             if degree > 2 {
                 return false;
@@ -124,17 +117,9 @@ impl RoadMap {
             if !visited.insert(current) {
                 continue;
             }
-            for conn in self.connections.values() {
-                if conn.start_id == current
-                    && node_ids.contains(&conn.end_id)
-                    && !visited.contains(&conn.end_id)
-                {
-                    stack.push(conn.end_id);
-                } else if conn.end_id == current
-                    && node_ids.contains(&conn.start_id)
-                    && !visited.contains(&conn.start_id)
-                {
-                    stack.push(conn.start_id);
+            for &(nb, _) in self.neighbors(current) {
+                if node_ids.contains(&nb) && !visited.contains(&nb) {
+                    stack.push(nb);
                 }
             }
         }
