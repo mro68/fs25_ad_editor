@@ -393,7 +393,7 @@ fn order_points_by_principal_axis(points: &[Vec2]) -> Vec<Vec2> {
     for &(_, p) in &projected {
         if result
             .last()
-            .map_or(true, |&last: &Vec2| last.distance(p) > 0.5)
+            .is_none_or(|&last: &Vec2| last.distance(p) > 0.5)
         {
             result.push(p);
         }
@@ -439,15 +439,10 @@ fn chain_pixels(pixels: &[(u32, u32)]) -> Vec<(u32, u32)> {
     // Rückwärts-Walk vom Startpunkt aus (verbleibende Pixel einsammeln)
     let mut backward: Vec<(u32, u32)> = Vec::new();
     let (mut cx, mut cy) = start;
-    loop {
-        match find_8neighbor(cx, cy, &remaining) {
-            Some(n) => {
-                remaining.remove(&n);
-                backward.push(n);
-                (cx, cy) = n;
-            }
-            None => break,
-        }
+    while let Some(n) = find_8neighbor(cx, cy, &remaining) {
+        remaining.remove(&n);
+        backward.push(n);
+        (cx, cy) = n;
     }
 
     // Ergebnis: rückwärts-Kette (umgekehrt) + vorwärts-Kette

@@ -66,7 +66,7 @@ pub(crate) fn find_connected_components(
     }
 
     // Laengste Gruppe zuerst
-    components.sort_by(|a, b| b.len().cmp(&a.len()));
+    components.sort_by_key(|c: &Vec<(usize, usize)>| std::cmp::Reverse(c.len()));
     components
 }
 
@@ -92,13 +92,16 @@ pub(crate) fn order_skeleton_pixels(pixels: &[(usize, usize)]) -> Vec<(usize, us
 
     let pixel_set: std::collections::HashSet<(usize, usize)> = pixels.iter().copied().collect();
 
+    // Rueckgabetyp-Alias fuer die BFS-Hilfsclosure (farthest_node + parent_map)
+    type BfsResult = (
+        (usize, usize),
+        HashMap<(usize, usize), Option<(usize, usize)>>,
+    );
+
     // BFS von einem Startknoten: gibt (farthest_node, parent_map) zurueck.
     // Die parent_map erlaubt die Pfad-Rekonstruktion vom farthest_node
     // zurueck zum Startknoten.
-    let bfs_from = |start: (usize, usize)| -> (
-        (usize, usize),
-        HashMap<(usize, usize), Option<(usize, usize)>>,
-    ) {
+    let bfs_from = |start: (usize, usize)| -> BfsResult {
         let mut queue = VecDeque::new();
         let mut parent: HashMap<(usize, usize), Option<(usize, usize)>> = HashMap::new();
         queue.push_back(start);
@@ -218,7 +221,7 @@ pub(crate) fn extract_paths_from_mask(
         .collect();
 
     // Laengster Pfad zuerst (nach Weltkoordinaten-Punktanzahl)
-    paths.sort_by(|a, b| b.len().cmp(&a.len()));
+    paths.sort_by_key(|p: &Vec<Vec2>| std::cmp::Reverse(p.len()));
     paths
 }
 

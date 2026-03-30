@@ -377,7 +377,7 @@ mod tests {
         let closed = morphological_close(&mask, width, height);
         // Luecke bei (x=2, y=1) muss durch Closing geschlossen werden
         assert!(
-            closed[1 * width + 2],
+            closed[width + 2],
             "1px-Luecke (2,1) muss nach Closing geschlossen sein"
         );
     }
