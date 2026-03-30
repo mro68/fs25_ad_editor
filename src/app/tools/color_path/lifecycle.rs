@@ -48,14 +48,12 @@ impl crate::app::tools::RouteTool for ColorPathTool {
             return ToolAction::Continue;
         };
         // Farben innerhalb des Lasso-Polygons samplen
-        let new_colors =
-            super::sampling::sample_colors_in_polygon(&polygon, image, self.map_size);
+        let new_colors = super::sampling::sample_colors_in_polygon(&polygon, image, self.map_size);
         let new_count = new_colors.len();
         self.sampled_colors.extend(new_colors);
         self.lasso_regions.push(polygon);
         // Mittelwert aus allen gesammelten Farben aktualisieren
-        self.avg_color =
-            Some(super::sampling::compute_average_color(&self.sampled_colors));
+        self.avg_color = Some(super::sampling::compute_average_color(&self.sampled_colors));
         log::info!(
             "Color sampling: {} new pixels, {} total, avg color: {:?}",
             new_count,

@@ -107,7 +107,11 @@ pub(crate) fn compute_average_color(colors: &[[u8; 3]]) -> [u8; 3] {
         return [0, 0, 0];
     }
     let (sum_r, sum_g, sum_b) = colors.iter().fold((0u64, 0u64, 0u64), |acc, c| {
-        (acc.0 + c[0] as u64, acc.1 + c[1] as u64, acc.2 + c[2] as u64)
+        (
+            acc.0 + c[0] as u64,
+            acc.1 + c[1] as u64,
+            acc.2 + c[2] as u64,
+        )
     });
     let n = colors.len() as u64;
     [(sum_r / n) as u8, (sum_g / n) as u8, (sum_b / n) as u8]
@@ -353,7 +357,10 @@ mod tests {
 
         let opened = morphological_open(&mask, width, height);
         // Nach Opening: der einzelne Pixel ist verschwunden
-        assert!(!opened[2 * width + 2], "Einzelner Pixel sollte nach Opening entfernt werden");
+        assert!(
+            !opened[2 * width + 2],
+            "Einzelner Pixel sollte nach Opening entfernt werden"
+        );
         // Alle anderen Pixel bleiben false
         assert!(opened.iter().all(|&v| !v));
     }
@@ -374,6 +381,9 @@ mod tests {
 
         let closed = morphological_close(&mask, width, height);
         // Luecke bei (x=2, y=1) muss durch Closing geschlossen werden
-        assert!(closed[1 * width + 2], "1px-Luecke (2,1) muss nach Closing geschlossen sein");
+        assert!(
+            closed[1 * width + 2],
+            "1px-Luecke (2,1) muss nach Closing geschlossen sein"
+        );
     }
 }
