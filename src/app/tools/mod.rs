@@ -6,14 +6,14 @@
 
 /// Ausweichstrecken-Tool — generiert eine parallele Strecke zur selektierten Kette.
 pub mod bypass;
+/// Farb-Pfad-Tool: erkennt Wege anhand der Farbe im Hintergrundbild.
+pub mod color_path;
 /// Gemeinsame Hilfsfunktionen fuer Route-Tools.
 pub mod common;
 /// Bézier-Kurven-Tool (Grad 2 + 3) mit sequentieller Punkt-Platzierung.
 pub mod curve;
 /// Feldgrenz-Erkennungs-Tool: erzeugt eine Route entlang eines erkannten Feldumrisses.
 pub mod field_boundary;
-/// Farb-Pfad-Tool: erkennt Wege anhand der Farbe im Hintergrundbild.
-pub mod color_path;
 /// Feldweg-Erkennungs-Tool: berechnet eine Mittellinie zwischen zwei Farmland-Seiten.
 pub mod field_path;
 /// Parkplatz-Layout-Tool mit Wendekreis und konfigurierbaren Parkreihen.

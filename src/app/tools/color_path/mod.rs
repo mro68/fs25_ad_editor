@@ -2,6 +2,7 @@
 
 mod config_ui;
 mod lifecycle;
+pub(crate) mod sampling;
 mod state;
 
 pub use state::ColorPathTool;
