@@ -39,9 +39,7 @@ impl FieldPathTool {
                     return;
                 }
                 let Some(polygons) = &self.farmland_polygons else {
-                    log::warn!(
-                        "Keine Farmland-Polygone vorhanden — Berechnung nicht moeglich"
-                    );
+                    log::warn!("Keine Farmland-Polygone vorhanden — Berechnung nicht moeglich");
                     return;
                 };
 
@@ -71,16 +69,10 @@ impl FieldPathTool {
             }
             FieldPathMode::Boundaries => {
                 if self.side1_segments.is_empty() || self.side2_segments.is_empty() {
-                    log::warn!(
-                        "Berechnung abgebrochen: Seite 1 oder Seite 2 ohne Grenzsegmente"
-                    );
+                    log::warn!("Berechnung abgebrochen: Seite 1 oder Seite 2 ohne Grenzsegmente");
                     return;
                 }
-                compute_segment_centerline(
-                    &self.side1_segments,
-                    &self.side2_segments,
-                    2.0,
-                )
+                compute_segment_centerline(&self.side1_segments, &self.side2_segments, 2.0)
             }
         };
 

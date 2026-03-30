@@ -391,7 +391,10 @@ fn order_points_by_principal_axis(points: &[Vec2]) -> Vec<Vec2> {
     // Eng beieinanderliegende Punkte deduplizieren (< 0.5m Abstand)
     let mut result = Vec::with_capacity(projected.len());
     for &(_, p) in &projected {
-        if result.last().map_or(true, |&last: &Vec2| last.distance(p) > 0.5) {
+        if result
+            .last()
+            .map_or(true, |&last: &Vec2| last.distance(p) > 0.5)
+        {
             result.push(p);
         }
     }
@@ -639,11 +642,7 @@ mod tests {
             Vec2::new(10.0, 30.0),
         ];
 
-        let result = compute_polygon_centerline(
-            &[poly1.as_slice()],
-            &[poly2.as_slice()],
-            2.0,
-        );
+        let result = compute_polygon_centerline(&[poly1.as_slice()], &[poly2.as_slice()], 2.0);
 
         assert!(!result.is_empty(), "Mittellinie darf nicht leer sein");
         // Mittellinie muss zwischen x=-10 und x=10 liegen (nahe x=0)
