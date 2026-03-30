@@ -210,6 +210,8 @@ pub enum AppIntent {
         end: TangentSource,
     },
 
+    /// Route-Tool: Lasso-Polygon abgeschlossen (Alt+Drag bei Tools die `needs_lasso_input()` setzen)
+    RouteToolLassoCompleted { polygon: Vec<glam::Vec2> },
     /// Route-Tool: Drag auf Steuerpunkt/Anker gestartet
     RouteToolDragStarted { world_pos: glam::Vec2 },
     /// Route-Tool: Drag-Position aktualisiert

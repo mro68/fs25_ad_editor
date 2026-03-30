@@ -230,6 +230,9 @@ impl AppController {
             }
             AppCommand::RouteToolDragEnd => handlers::route_tool::drag_end(state),
             AppCommand::RouteToolRotate { delta } => handlers::route_tool::rotate(state, delta),
+            AppCommand::RouteToolLassoCompleted { polygon } => {
+                handlers::route_tool::lasso_completed(state, polygon)
+            }
             AppCommand::IncreaseRouteToolNodeCount => {
                 handlers::route_tool::increase_node_count(state)
             }

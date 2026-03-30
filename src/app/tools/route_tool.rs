@@ -290,4 +290,23 @@ pub trait RouteTool:
     /// fuer das "Original entfernen"-Feature bereitzustellen.
     /// Standard-Implementierung: no-op (die meisten Tools benoetigen keine inneren IDs).
     fn set_chain_inner_ids(&mut self, _ids: Vec<u64>) {}
+
+    /// Gibt `true` zurueck wenn das Tool Alt+Drag als Lasso-Eingabe benoetigt
+    /// (z.B. `ColorPathTool`).
+    ///
+    /// Ist `true`, wird ein Alt+Drag-Lasso als `ToolLasso` geroutet und der
+    /// abgeschlossene Polygon per `on_lasso_completed` geliefert — statt die
+    /// normale Node-Selektion auszuloesen.
+    fn needs_lasso_input(&self) -> bool {
+        false
+    }
+
+    /// Verarbeitet ein abgeschlossenes Lasso-Polygon in Weltkoordinaten.
+    ///
+    /// Wird aufgerufen sobald der User einen Alt+Drag-Lasso abgeschlossen hat
+    /// und das Tool `needs_lasso_input()` zurueckgibt. Das Polygon enthaelt die
+    /// Eckpunkte in Weltkoordinaten (gleiche Einheit wie `MapNode.position`).
+    fn on_lasso_completed(&mut self, _polygon: Vec<Vec2>) -> ToolAction {
+        ToolAction::Continue
+    }
 }

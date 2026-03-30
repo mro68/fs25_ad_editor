@@ -224,6 +224,8 @@ pub enum AppCommand {
         end: TangentSource,
     },
 
+    /// Route-Tool: Lasso-Polygon an das aktive Route-Tool weiterleiten
+    RouteToolLassoCompleted { polygon: Vec<glam::Vec2> },
     /// Route-Tool: Drag auf Steuerpunkt/Anker starten
     RouteToolDragStart { world_pos: glam::Vec2 },
     /// Route-Tool: Drag-Position aktualisieren
