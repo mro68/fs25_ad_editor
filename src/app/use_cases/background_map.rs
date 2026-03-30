@@ -2,7 +2,7 @@
 
 use crate::app::state::ZipBrowserState;
 use crate::app::AppState;
-use crate::core::{self, BackgroundMap, FieldPolygon};
+use crate::core::{self, BackgroundMap, FarmlandGrid, FieldPolygon};
 use anyhow::Result;
 use glam::Vec2;
 use image::GenericImageView;
@@ -256,6 +256,19 @@ pub fn generate_overview_with_options(state: &mut AppState) -> Result<()> {
         state.farmland_polygons = Some(Arc::new(field_polygons));
     } else {
         state.farmland_polygons = None;
+    }
+
+    // FarmlandGrid aus rohen GRLE/PNG-IDs aufbauen (falls vorhanden)
+    if let Some(ids) = overview.farmland_ids {
+        state.farmland_grid = Some(Arc::new(FarmlandGrid::new(
+            ids,
+            grle_w.max(1),
+            grle_h.max(1),
+            overview.map_size,
+        )));
+        log::info!("FarmlandGrid gespeichert: {}x{} Pixel", grle_w, grle_h);
+    } else {
+        state.farmland_grid = None;
     }
 
     let bg_map = BackgroundMap::from_image(overview.image, &zip_path, None)?;

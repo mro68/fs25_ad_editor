@@ -256,6 +256,72 @@ pub fn offset_polygon(vertices: &[Vec2], offset: f32) -> Vec<Vec2> {
 }
 
 // ---------------------------------------------------------------------------
+// Rasterbasierte Farmland-ID-Karte
+// ---------------------------------------------------------------------------
+
+/// Rasterbasierte Farmland-ID-Karte (aus GRLE/PNG extrahiert).
+///
+/// Speichert pro Pixel die Farmland-ID (0 = kein Feld, 1–255 = Feld-ID).
+/// Ermoeglicht Pixel↔Welt-Koordinatentransformation.
+#[derive(Debug, Clone)]
+pub struct FarmlandGrid {
+    /// Farmland-IDs, zeilenweise (row-major): `ids[y * width + x]`
+    pub ids: Vec<u8>,
+    /// Rasterbreite in Pixeln
+    pub width: u32,
+    /// Rasterhoehe in Pixeln
+    pub height: u32,
+    /// Weltgroesse in Metern (quadratische Karte)
+    pub map_size: f32,
+}
+
+impl FarmlandGrid {
+    /// Erzeugt ein neues FarmlandGrid.
+    pub fn new(ids: Vec<u8>, width: u32, height: u32, map_size: f32) -> Self {
+        Self {
+            ids,
+            width,
+            height,
+            map_size,
+        }
+    }
+
+    /// Pixel-Koordinaten → Welt-Koordinaten (Kartenmitte = Ursprung).
+    pub fn pixel_to_world(&self, px: u32, py: u32) -> Vec2 {
+        let scale = self.map_size / self.width as f32;
+        Vec2::new(
+            px as f32 * scale - self.map_size / 2.0,
+            py as f32 * scale - self.map_size / 2.0,
+        )
+    }
+
+    /// Welt-Koordinaten → Pixel-Koordinaten (geclampt auf Rastergrenzen).
+    pub fn world_to_pixel(&self, world: Vec2) -> (u32, u32) {
+        let scale = self.width as f32 / self.map_size;
+        let px = ((world.x + self.map_size / 2.0) * scale)
+            .clamp(0.0, (self.width - 1) as f32) as u32;
+        let py = ((world.y + self.map_size / 2.0) * scale)
+            .clamp(0.0, (self.height - 1) as f32) as u32;
+        (px, py)
+    }
+
+    /// Farmland-ID an gegebener Pixel-Position (0 wenn ausserhalb).
+    pub fn id_at_pixel(&self, px: u32, py: u32) -> u8 {
+        if px < self.width && py < self.height {
+            self.ids[(py * self.width + px) as usize]
+        } else {
+            0
+        }
+    }
+
+    /// Farmland-ID an gegebener Welt-Position.
+    pub fn id_at_world(&self, world: Vec2) -> u8 {
+        let (px, py) = self.world_to_pixel(world);
+        self.id_at_pixel(px, py)
+    }
+}
+
+// ---------------------------------------------------------------------------
 // Unit-Tests
 // ---------------------------------------------------------------------------
 

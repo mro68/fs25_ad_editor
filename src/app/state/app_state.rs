@@ -1,7 +1,7 @@
 use crate::app::group_registry::GroupRegistry;
 use crate::app::history::Snapshot;
 use crate::app::CommandLog;
-use crate::core::{Connection, FieldPolygon, MapMarker, MapNode, RoadMap};
+use crate::core::{Connection, FarmlandGrid, FieldPolygon, MapMarker, MapNode, RoadMap};
 use crate::shared::EditorOptions;
 use glam::Vec2;
 use indexmap::IndexSet;
@@ -74,6 +74,9 @@ pub struct AppState {
     /// Enthält geordnete Umriss-Vertices pro Feld in Weltkoordinaten.
     /// `None` solange noch keine Overview mit Farmland-Daten geladen wurde.
     pub farmland_polygons: Option<Arc<Vec<FieldPolygon>>>,
+    /// GRLE-Raster mit Farmland-IDs fuer Pixel-basierte Analysen (z.B. Feldweg-Erkennung).
+    /// `None` solange kein Overview mit GRLE-Daten geladen wurde.
+    pub farmland_grid: Option<Arc<FarmlandGrid>>,
     /// Aktive Gruppen-Bearbeitung (None = Normal-Modus, Some = Edit-Modus aktiv)
     pub group_editing: Option<GroupEditState>,
     /// Record-ID des aktuell per Tool bearbeiteten Segments (fuer Cancel-Wiederherstellung)
@@ -116,6 +119,7 @@ impl AppState {
             group_registry: GroupRegistry::new(),
             should_exit: false,
             farmland_polygons: None,
+            farmland_grid: None,
             group_editing: None,
             tool_editing_record_id: None,
             tool_editing_record_backup: None,
