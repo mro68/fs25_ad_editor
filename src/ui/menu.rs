@@ -232,6 +232,33 @@ pub fn render_menu(ctx: &egui::Context, state: &AppState) -> Vec<AppIntent> {
                     events.push(AppIntent::OpenTraceAllFieldsDialogRequested);
                     ui.close();
                 }
+                if ui
+                    .add_enabled(
+                        has_farmland,
+                        egui::Button::new(t(lang, I18nKey::MenuFieldPath)),
+                    )
+                    .on_disabled_hover_text(t(lang, I18nKey::MenuExtrasNeedBackground))
+                    .clicked()
+                {
+                    events.push(AppIntent::SelectRouteToolRequested {
+                        index: crate::app::group_registry::TOOL_INDEX_FIELD_PATH,
+                    });
+                    ui.close();
+                }
+                let has_background = state.background_image.is_some();
+                if ui
+                    .add_enabled(
+                        has_background,
+                        egui::Button::new(t(lang, I18nKey::MenuColorPath)),
+                    )
+                    .on_disabled_hover_text("Hintergrundkarte zuerst laden")
+                    .clicked()
+                {
+                    events.push(AppIntent::SelectRouteToolRequested {
+                        index: crate::app::group_registry::TOOL_INDEX_COLOR_PATH,
+                    });
+                    ui.close();
+                }
 
                 ui.separator();
 

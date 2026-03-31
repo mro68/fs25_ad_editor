@@ -6,12 +6,16 @@
 
 /// Ausweichstrecken-Tool — generiert eine parallele Strecke zur selektierten Kette.
 pub mod bypass;
+/// Farb-Pfad-Tool: erkennt Wege anhand der Farbe im Hintergrundbild.
+pub mod color_path;
 /// Gemeinsame Hilfsfunktionen fuer Route-Tools.
 pub mod common;
 /// Bézier-Kurven-Tool (Grad 2 + 3) mit sequentieller Punkt-Platzierung.
 pub mod curve;
 /// Feldgrenz-Erkennungs-Tool: erzeugt eine Route entlang eines erkannten Feldumrisses.
 pub mod field_boundary;
+/// Feldweg-Erkennungs-Tool: berechnet eine Mittellinie zwischen zwei Farmland-Seiten.
+pub mod field_path;
 /// Parkplatz-Layout-Tool mit Wendekreis und konfigurierbaren Parkreihen.
 pub mod parking;
 /// Strecken-Versatz-Tool — generiert parallele Versatz-Kette(n) zur selektierten Kette.
@@ -202,7 +206,9 @@ impl ToolManager {
         manager.register(Box::new(smooth_curve::SmoothCurveTool::new()));
         manager.register(Box::new(parking::ParkingTool::new()));
         manager.register(Box::new(field_boundary::FieldBoundaryTool::new()));
+        manager.register(Box::new(field_path::FieldPathTool::new()));
         manager.register(Box::new(route_offset::RouteOffsetTool::new()));
+        manager.register(Box::new(color_path::ColorPathTool::new()));
         manager
     }
 

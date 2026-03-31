@@ -138,14 +138,14 @@ impl PostLoadDialogState {
     }
 }
 
-/// Dialog-State fuer "Als overview.jpg speichern"-Abfrage nach ZIP-Extraktion.
+/// Dialog-State fuer "Als overview.png speichern"-Abfrage nach ZIP-Extraktion.
 #[derive(Default)]
 pub struct SaveOverviewDialogState {
     /// Ob der Dialog sichtbar ist
     pub visible: bool,
-    /// Ziel-Pfad: overview.jpg im XML-Verzeichnis
+    /// Ziel-Pfad: overview.png im XML-Verzeichnis
     pub target_path: String,
-    /// true wenn eine bestehende overview.jpg ueberschrieben wuerde
+    /// true wenn eine bestehende overview.png ueberschrieben wuerde
     pub is_overwrite: bool,
 }
 

@@ -23,6 +23,23 @@ pub fn click(state: &mut AppState, world_pos: glam::Vec2, ctrl: bool) {
     }
 }
 
+/// Leitet ein abgeschlossenes Lasso-Polygon (Weltkoordinaten) an das aktive Route-Tool weiter.
+///
+/// Wird aufgerufen wenn der User einen Alt+Drag-Lasso abgeschlossen hat und
+/// das aktive Tool `needs_lasso_input()` meldet.
+pub fn lasso_completed(state: &mut AppState, polygon: Vec<glam::Vec2>) {
+    let action = {
+        let Some(tool) = state.editor.tool_manager.active_tool_mut() else {
+            return;
+        };
+        tool.on_lasso_completed(polygon)
+    };
+
+    if action == ToolAction::ReadyToExecute {
+        execute_and_apply(state);
+    }
+}
+
 /// Fuehrt das aktive Route-Tool aus (Enter-Bestaetigung).
 pub fn execute(state: &mut AppState) {
     execute_and_apply(state);
@@ -113,6 +130,8 @@ pub fn select(state: &mut AppState, index: usize) {
         tool.set_priority(prio);
         tool.set_snap_radius(snap_r);
         tool.set_farmland_data(farmland);
+        tool.set_farmland_grid(state.farmland_grid.clone());
+        tool.set_background_map_image(state.background_image.clone());
     }
 
     // Kette in chain-basierte Tools laden (z.B. BypassTool)

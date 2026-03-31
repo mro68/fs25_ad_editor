@@ -17,11 +17,16 @@ impl InputState {
         }
 
         if modifiers.shift || modifiers.alt {
-            // Shift = Rect-Selektion, Alt = Lasso-Selektion
+            // Shift = Rect-Selektion, Alt = Lasso-Selektion (oder Tool-Lasso)
             // Ctrl zusaetzlich = additiv (zur bestehenden Selektion hinzufuegen)
             if let Some(pointer_pos) = ctx.response.interact_pointer_pos() {
                 let mode = if modifiers.alt {
-                    DragSelectionMode::Lasso
+                    // Wenn das aktive Route-Tool Lasso-Input anfordert, ToolLasso verwenden
+                    if ctx.tool_needs_lasso {
+                        DragSelectionMode::ToolLasso
+                    } else {
+                        DragSelectionMode::Lasso
+                    }
                 } else {
                     DragSelectionMode::Rect
                 };
@@ -116,7 +121,7 @@ impl InputState {
                         selection.points_screen[1] = pointer_pos;
                     }
                 }
-                DragSelectionMode::Lasso => {
+                DragSelectionMode::Lasso | DragSelectionMode::ToolLasso => {
                     selection.push_lasso_point(pointer_pos);
                 }
             }
@@ -172,6 +177,24 @@ impl InputState {
                             polygon,
                             additive: selection.additive,
                         });
+                    }
+                }
+                DragSelectionMode::ToolLasso => {
+                    if selection.points_screen.len() >= 3 {
+                        let polygon = selection
+                            .points_screen
+                            .into_iter()
+                            .map(|point| {
+                                screen_pos_to_world(
+                                    point,
+                                    ctx.response,
+                                    ctx.viewport_size,
+                                    ctx.camera,
+                                )
+                            })
+                            .collect::<Vec<_>>();
+
+                        events.push(AppIntent::RouteToolLassoCompleted { polygon });
                     }
                 }
             }

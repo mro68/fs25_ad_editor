@@ -16,7 +16,7 @@ pub struct ToolManager { /* intern */ }
 
 **Methoden:**
 
-- `new() → Self` — Erstellt ToolManager mit vorregistrierten Standard-Tools (StraightLine, Bézier Grad 2, Bézier Grad 3, Spline, Bypass, SmoothCurve, Parking, FieldBoundary, RouteOffset)
+- `new() → Self` — Erstellt ToolManager mit vorregistrierten Standard-Tools (StraightLine, Bézier Grad 2, Bézier Grad 3, Spline, Bypass, SmoothCurve, Parking, FieldBoundary, RouteOffset, FieldPath, ColorPath)
 - `register(tool)` — Neues Route-Tool registrieren
 - `tool_count() → usize` — Anzahl registrierter Tools
 - `tool_names() → Vec<(usize, &str)>` — Name + Index aller Tools
@@ -65,6 +65,10 @@ Schnittstelle fuer alle Route-Tools (Linie, Kurve, …). Tools sind zustandsbeha
 - `tangent_menu_data() → Option<TangentMenuData>` — liefert Tangenten-Menuedaten fuer das Kontextmenue
 - `apply_tangent_selection(start, end)` — wendet die im Kontextmenue gewaehlten Tangenten an
 - `set_chain_inner_ids(ids: Vec<u64>)` — Setzt die inneren Node-IDs der geladenen Kette (ohne Start/Ende); wird nach `load_chain()` vom Handler aufgerufen um korrekte IDs fuer das "Original entfernen"-Feature bereitzustellen (Standard-Impl.: no-op)
+- `set_farmland_grid(grid: Option<Arc<FarmlandGrid>>)` — Setzt das Farmland-Raster fuer Pixel-basierte Analysen (z.B. Feldweg-Erkennung). Standard-Impl.: no-op
+- `set_background_map_image(image: Option<Arc<DynamicImage>>)` — Setzt das Hintergrundbild fuer farbbasierte Analysen. Standard-Impl.: no-op
+- `needs_lasso_input() → bool` — Gibt `true` zurueck wenn das Tool Alt+Drag als Lasso-Eingabe benoetigt (z.B. `ColorPathTool` in Phase `Sampling`). Ist `true`, wird ein Alt+Drag-Lasso als `ToolLasso` geroutet und per `on_lasso_completed` geliefert statt die normale Node-Selektion auszuloesen. Standard-Impl.: `false`
+- `on_lasso_completed(polygon: Vec<Vec2>) → ToolAction` — Verarbeitet ein abgeschlossenes Lasso-Polygon in Weltkoordinaten. Wird aufgerufen sobald der User einen Alt+Drag-Lasso abgeschlossen hat und `needs_lasso_input()` gilt. Standard-Impl.: gibt `ToolAction::Continue` zurueck (no-op)
 
 **`ToolPreview` Felder**
 
@@ -157,6 +161,8 @@ Documentation moved to [`../API.md#groupbase--groupkind`](../API.md#groupbase--g
 | 6 | `ParkingTool` | `🅿` | `ParkingTool::new()` |
 | 7 | `FieldBoundaryTool` | `🌾` | `FieldBoundaryTool::new()` |
 | 8 | `RouteOffsetTool` | `⇶` | `RouteOffsetTool::new()` |
+| 9 | `FieldPathTool` | `🛤` | `FieldPathTool::new()` |
+| 10 | `ColorPathTool` | `🎨` | `ColorPathTool::new()` |
 
 ### `StraightLineTool`
 
@@ -404,6 +410,175 @@ pub struct RouteOffsetTool {
 **Gruppen-Record:** `GroupKind::RouteOffset { chain_positions, chain_start_id, chain_end_id, offset_left, offset_right, keep_original, base_spacing, base }` (Slot 8 im ToolManager)
 
 Modulstruktur: `mod.rs` (Re-Exporte), `state.rs` (Struct + OffsetConfig), `lifecycle.rs` (RouteTool-Impl), `geometry.rs` (compute_offset_positions), `config_ui.rs` (egui-Panel), `tests.rs`
+
+---
+
+### `FieldPathTool`
+
+Feldweg-Erkennung: Berechnet eine Mittellinie zwischen zwei Farmland-Seiten via Voronoi-BFS und erzeugt daraus eine gleichmäßig abgetastete Waypoint-Route (Slot 9 im ToolManager).
+
+**Voraussetzung:** `farmland_grid` und `farmland_polygons` müssen im `AppState` geladen sein (werden beim Laden der Overview aus dem Map-ZIP befüllt).
+
+**Modi:**
+
+- **`FieldPathMode::Fields`** — ganze Farmland-Polygone pro Seite auswählen (Klick ins Feld)
+- **`FieldPathMode::Boundaries`** — einzelne Feldgrenz-Segmente pro Seite auswählen (Klick auf Grenzlinie)
+
+**Phasen:**
+
+- **`FieldPathPhase::Idle`** — Warten auf Nutzerinteraktion
+- **`FieldPathPhase::SelectingSide1`** — Felder oder Grenzsegmente für Seite 1 sammeln
+- **`FieldPathPhase::SelectingSide2`** — Felder oder Grenzsegmente für Seite 2 sammeln
+- **`FieldPathPhase::Preview`** — Berechnung abgeschlossen, Vorschau der Mittellinie aktiv
+
+**Konfiguration (`FieldPathConfig`):**
+
+- `node_spacing: f32` — Abstand zwischen generierten Nodes in Metern (Standard: 5 m)
+- `simplify_tolerance: f32` — Toleranz für Douglas-Peucker-Vereinfachung in Metern (Standard: 1 m)
+- `connect_to_existing: bool` — An nächste bestehende Nodes anschließen (Standard: true)
+
+**Felder:**
+
+```rust
+pub struct FieldPathTool {
+    pub(crate) mode: FieldPathMode,
+    pub(crate) phase: FieldPathPhase,
+    pub(crate) config: FieldPathConfig,
+
+    pub(crate) side1_field_ids: Vec<u32>,     // Ausgewählte Farmland-IDs für Seite 1
+    pub(crate) side2_field_ids: Vec<u32>,     // Ausgewählte Farmland-IDs für Seite 2
+    pub(crate) side1_segments: Vec<Vec<Vec2>>, // Ausgewählte Grenzsegmente für Seite 1
+    pub(crate) side2_segments: Vec<Vec<Vec2>>, // Ausgewählte Grenzsegmente für Seite 2
+
+    pub(crate) centerline: Vec<Vec2>,          // Vereinfachte Mittellinie (Welt-Koordinaten)
+    pub(crate) resampled_nodes: Vec<Vec2>,     // Gleichmäßig abgetastete Nodes der Mittellinie
+    pub(crate) voronoi_cache: Option<Arc<VoronoiGrid>>, // Voronoi-BFS-Cache (invalidiert bei Grid-Änderung)
+
+    pub(crate) farmland_grid: Option<Arc<FarmlandGrid>>,
+    pub(crate) farmland_polygons: Option<Arc<Vec<FieldPolygon>>>,
+    pub(crate) background_image: Option<Arc<DynamicImage>>, // Reserviert für spätere Analysen
+
+    pub direction: ConnectionDirection,
+    pub priority: ConnectionPriority,
+    pub(crate) lifecycle: ToolLifecycleState,
+}
+```
+
+**Interne Berechnungs-Pipeline (`compute_centerline`):**
+
+1. Voronoi-BFS auf dem Farmland-Grid berechnen (oder aus Cache verwenden)
+2. Im `Fields`-Modus: `extract_corridor_centerline()` zwischen side1/side2 Farmland-IDs
+3. Im `Boundaries`-Modus: `extract_boundary_centerline()` aus rasterisierten Grenzsegmenten
+4. `simplify_polyline()` mit Douglas-Peucker
+5. `resample_by_distance()` für gleichmäßigen Nodeabstand
+6. Ergebnis in `centerline` und `resampled_nodes` speichern; Phase → Preview
+
+**Boundary-Snap:**
+
+Im `Boundaries`-Modus sucht `find_nearest_boundary_segment()` das nächste Polygon-Kanten-Segment innerhalb von `BOUNDARY_SNAP_THRESHOLD = 20 m` und gibt es als Zwei-Punkt-Polyline zurück.
+
+Modulstruktur: `mod.rs` (Re-Export), `state.rs` (Structs, Enums, Felder), `lifecycle.rs` (RouteTool-Impl, compute_centerline), `config_ui.rs` (egui-Panel)
+
+---
+
+### `ColorPathTool`
+
+Farb-Pfad-Erkennung: Erkennt Wege anhand der Farbe im Hintergrundbild, skelettiert sie per Zhang-Suen-Thinning und erzeugt daraus eine gleichmaessig abgetastete Waypoint-Route (Slot 10 im ToolManager).
+
+**Voraussetzung:** Ein Hintergrundbild muss geladen sein (`set_background_map_image()`). Das Tool bezieht die `map_size` automatisch aus `set_farmland_grid()`.
+
+**Phasen (`ColorPathPhase`):**
+
+- **`Idle`** — Warten auf Nutzerinteraktion (Klick oder Alt+Lasso startet Sampling)
+- **`Sampling`** — User sammelt Farbproben per Alt+Lasso; Berechnen-Button startet Pipeline
+- **`Preview`** — Mittellinie berechnet und als Vorschau angezeigt; Enter fuegt Nodes ein
+
+**ToolLasso-Mechanismus:**
+
+Das Tool setzt `needs_lasso_input() = true` sobald `phase == Sampling`. Damit wird
+jeder Alt+Drag im Viewport als `DragSelectionMode::ToolLasso` geroutet (statt als
+normale Node-Selektion). Das abgeschlossene Polygon wird per `AppIntent::RouteToolLassoCompleted`
+an `handlers::route_tool::lasso_completed()` weitergeleitet, das `on_lasso_completed()` aufruft.
+
+**Interaktionsflow:**
+
+1. Tool aktivieren → Phase::Idle
+2. Alt+Drag zeichnet ein Lasso-Polygon → `on_lasso_completed()` sampelt Farben im Polygon
+3. Mehrere Lasso-Polygone moeglich (Sampling kumulativ)
+4. Sidebar: Berechnen-Button → `compute_pipeline()` → Phase::Preview
+5. Sidebar: Pfad auswaehlen (falls mehrere gefunden) → `select_path(idx)`
+6. Enter / Uebernehmen-Button → `execute()` → Nodes in Road Map einfuegen
+
+**Erkennungs-Pipeline (`compute_pipeline()`):**
+
+1. `build_color_mask()` — Bool-Maske aller Pixel innerhalb der Farb-Toleranz
+2. Morphologisches Opening + Closing (wenn `noise_filter == true`) — Rauschen entfernen
+3. Original-Maske sichern (vor Zhang-Suen, fuer Medial-Axis-Korrektur)
+4. `zhang_suen_thinning()` — Maske auf 1-Pixel-breites Skelett reduzieren
+5. `find_connected_components()` — Zusammenhaengende Skelett-Gruppen finden (8-Connectivity)
+6. `order_skeleton_pixels(hint)` — Pixel-Gruppen linear ordnen (BFS vom Hint-naechsten Startpunkt)
+7. `refine_medial_axis()` — Skelett-Pixel auf geometrische Mittelachse korrigieren
+8. `simplify_polyline()` — Douglas-Peucker-Vereinfachung
+9. `resample_by_distance()` — Gleichmaessige Node-Verteilung
+10. Pfad naechste zum Lasso-Startpunkt auswaehlen → Phase::Preview
+
+**Konfiguration (`ColorPathConfig`):**
+
+- `color_tolerance: f32` — Farb-Toleranz (euklidischer RGB-Abstand; Standard: 25.0, Bereich: 5–80)
+- `node_spacing: f32` — Abstand zwischen generierten Nodes in Metern (Standard: 5.0, Bereich: 1–50)
+- `simplify_tolerance: f32` — Douglas-Peucker-Toleranz in Metern (Standard: 1.0, Bereich: 0–20)
+- `noise_filter: bool` — Morphologischen Rauschfilter aktivieren (Standard: true)
+- `connect_to_existing: bool` — Start-/End-Node an naechsten bestehenden Node anschliessen (Standard: true)
+- `detection_bounds: Option<(Vec2, Vec2)>` — Begrenzt Farberkennung auf eine Rect-Region (geplant)
+
+**Felder:**
+
+```rust
+pub struct ColorPathTool {
+    pub(crate) phase: ColorPathPhase,
+    pub(crate) config: ColorPathConfig,
+    pub(crate) lasso_regions: Vec<Vec<Vec2>>,   // Alle gezeichneten Lasso-Polygone (Weltkoords)
+    pub(crate) sampled_colors: Vec<[u8; 3]>,    // Gesammelte RGB-Werte aus Lasso-Regionen
+    pub(crate) avg_color: Option<[u8; 3]>,      // Berechneter RGB-Mittelwert
+    pub(crate) lasso_start_world: Option<Vec2>, // Erster Klickpunkt des ersten Lassos (Weltkoords)
+    pub(crate) mask: Vec<bool>,                  // Bool-Maske (true = Pfadpixel), zeilenweise
+    pub(crate) mask_width: u32,
+    pub(crate) mask_height: u32,
+    pub(crate) skeleton_paths: Vec<Vec<Vec2>>,  // Alle gefundenen Skelett-Pfade (Weltkoords)
+    pub(crate) selected_path_index: Option<usize>,
+    pub(crate) centerline: Vec<Vec2>,           // Vereinfachte Mittellinie
+    pub(crate) resampled_nodes: Vec<Vec2>,      // Gleichmaessig abgetastete Nodes
+    pub(crate) background_image: Option<Arc<image::DynamicImage>>,
+    pub(crate) map_size: f32,                   // Kartengroesse in Metern (aus FarmlandGrid)
+    pub direction: ConnectionDirection,
+    pub priority: ConnectionPriority,
+    pub(crate) lifecycle: ToolLifecycleState,
+}
+```
+
+**Sampling-Funktionen (`sampling.rs`):**
+
+- `world_to_pixel(world, map_size, img_w, img_h) → (u32, u32)` — Weltkoords → Bildpixel
+- `pixel_to_world(px, py, map_size, img_w, img_h) → Vec2` — Bildpixel → Weltkoords (X und Y je mit korrektem Skalierungsfaktor)
+- `pixel_to_world_f32(px, py, map_size, img_w, img_h) → Vec2` — Sub-Pixel-Position → Weltkoords (fuer Medial-Axis)
+- `sample_colors_in_polygon(polygon, image, map_size) → Vec<[u8; 3]>` — RGB-Pixel im Lasso-Polygon sammeln
+- `compute_average_color(colors) → [u8; 3]` — RGB-Mittelwert aller Samples
+- `build_color_mask(image, avg_color, tolerance, bounds, map_size) → (Vec<bool>, u32, u32)` — Bool-Maske erstellen
+- `erode(mask, w, h) → Vec<bool>` — Erosion mit Majority-Bedingung (≥ 3 von 4 Nachbarn, zum Schutz duenner Verbindungen)
+- `dilate(mask, w, h) → Vec<bool>` — Dilatation (4-Connectivity)
+- `morphological_open(mask, w, h) → Vec<bool>` — Erosion + Dilatation (Rauschen entfernen)
+- `morphological_close(mask, w, h) → Vec<bool>` — Dilatation + Erosion (Luecken schliessen)
+
+**Skelett-Funktionen (`skeleton.rs`):**
+
+- `find_connected_components(mask, w, h) → Vec<Vec<(usize, usize)>>` — Gruppen nach Groesse absteigend
+- `order_skeleton_pixels(pixels, hint) → Vec<(usize, usize)>` — Lineare Ordnung; Startpunkt = Pixel naechste zum Hint (oder erster Pixel)
+- `refine_medial_axis(ordered, original_mask, w, h) → Vec<(f32, f32)>` — Skelett-Pixel auf geometrische Mittelachse korrigieren
+- `extract_paths_from_mask(mask, w, h, noise_filter, map_size, start_hint) → Vec<Vec<Vec2>>` — Haupt-Pipeline
+
+**Gruppen-Record:** ColorPathTool speichert keinen `GroupRecord` (keine nachträgliche Bearbeitung).
+
+Modulstruktur: `mod.rs` (Re-Export), `state.rs` (Struct, Phasen-Enum, Config, Default), `lifecycle.rs` (RouteTool-Impl, Pipeline-Methoden), `config_ui.rs` (egui-Panel), `sampling.rs` (Farb-Sampling + Masken-Erstellung), `skeleton.rs` (Skelett-Extraktion + Pfad-Ordnung)
 
 ---
 

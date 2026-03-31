@@ -68,6 +68,9 @@ pub struct OverviewResult {
     pub grle_height: u32,
     /// Weltgroesse in Metern (aus MapInfo)
     pub map_size: f32,
+    /// Rohes Farmland-ID-Raster (1 Byte pro Pixel, 0 = kein Feld).
+    /// Fuer Pixel-basierte Analysen im Editor (z.B. Feldweg-Erkennung).
+    pub farmland_ids: Option<Vec<u8>>,
 }
 
 /// Generiert eine Overview-Map aus einem FS25 Map-Mod-ZIP.
@@ -386,7 +389,7 @@ pub fn generate_overview_result_from_zip(
 
     let rgb_image = generate_overview(&files, &map_info, options)?;
 
-    let (farmland_polygons, grle_width, grle_height) =
+    let (farmland_polygons, grle_width, grle_height, farmland_ids) =
         try_extract_polygons_from_files(&files, &map_info);
 
     Ok(OverviewResult {
@@ -395,35 +398,40 @@ pub fn generate_overview_result_from_zip(
         grle_width,
         grle_height,
         map_size: map_info.map_size as f32,
+        farmland_ids,
     })
 }
 
-/// Versucht Farmland-Polygone aus den ZIP-Dateien zu extrahieren.
+/// Versucht Farmland-Polygone und rohe ID-Pixeldaten aus den ZIP-Dateien zu extrahieren.
 ///
-/// Schlaegt bei fehlenden oder fehlerhaften Daten still fehl (leere Liste).
+/// Schlaegt bei fehlenden oder fehlerhaften Daten still fehl (leere Liste, None).
+/// Gibt `(polygons, width, height, raw_ids)` zurueck.
 fn try_extract_polygons_from_files(
     files: &HashMap<String, Vec<u8>>,
     map_info: &discovery::MapInfo,
-) -> (Vec<FarmlandPolygon>, u32, u32) {
+) -> (Vec<FarmlandPolygon>, u32, u32, Option<Vec<u8>>) {
     let Some((path, data)) = discovery::find_farmlands(files, &map_info.data_dir) else {
         log::info!("Keine Farmland-Daten gefunden – Polygone werden nicht extrahiert");
-        return (Vec::new(), map_info.map_size, map_info.map_size);
+        return (Vec::new(), map_info.map_size, map_info.map_size, None);
     };
 
     if path.ends_with(".grle") {
-        match farmland::extract_farmland_polygons(data) {
-            Ok((polygons, w, h)) => {
+        match crate::grle::decode_grle(data) {
+            Ok(decoded) => {
+                let w = decoded.width;
+                let h = decoded.height;
+                let polygons = farmland::extract_farmland_polygons_from_ids(&decoded.pixels, w, h);
                 log::info!(
                     "Farmland-Polygone extrahiert: {} Felder aus {}x{} Raster",
                     polygons.len(),
                     w,
                     h
                 );
-                (polygons, w, h)
+                (polygons, w as u32, h as u32, Some(decoded.pixels))
             }
             Err(e) => {
-                log::warn!("Farmland-Polygon-Extraktion fehlgeschlagen: {}", e);
-                (Vec::new(), map_info.map_size, map_info.map_size)
+                log::warn!("Farmland-GRLE-Dekodierung fehlgeschlagen: {}", e);
+                (Vec::new(), map_info.map_size, map_info.map_size, None)
             }
         }
     } else if path.ends_with(".png") {
@@ -433,18 +441,19 @@ fn try_extract_polygons_from_files(
                 let luma = img.to_luma8();
                 let w = luma.width() as usize;
                 let h = luma.height() as usize;
-                let polygons = farmland::extract_farmland_polygons_from_ids(luma.as_raw(), w, h);
+                let raw_ids = luma.as_raw().clone();
+                let polygons = farmland::extract_farmland_polygons_from_ids(&raw_ids, w, h);
                 log::info!(
                     "Farmland-Polygone aus PNG extrahiert: {} Felder aus {}x{} Raster",
                     polygons.len(),
                     w,
                     h
                 );
-                (polygons, w as u32, h as u32)
+                (polygons, w as u32, h as u32, Some(raw_ids))
             }
             Err(e) => {
                 log::warn!("PNG-Farmland konnte nicht dekodiert werden: {}", e);
-                (Vec::new(), map_info.map_size, map_info.map_size)
+                (Vec::new(), map_info.map_size, map_info.map_size, None)
             }
         }
     } else {
@@ -452,6 +461,6 @@ fn try_extract_polygons_from_files(
             "Farmland-Datei in unbekanntem Format ({}), Polygon-Extraktion uebersprungen",
             path
         );
-        (Vec::new(), map_info.map_size, map_info.map_size)
+        (Vec::new(), map_info.map_size, map_info.map_size, None)
     }
 }

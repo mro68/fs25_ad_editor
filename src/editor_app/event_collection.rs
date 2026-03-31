@@ -252,6 +252,15 @@ impl EditorApp {
             None
         };
 
+        // Prueft ob das aktive Route-Tool Alt+Drag als Lasso-Eingabe benoetigt
+        let tool_needs_lasso = self.state.editor.active_tool == EditorTool::Route
+            && self
+                .state
+                .editor
+                .tool_manager
+                .active_tool()
+                .is_some_and(|t| t.needs_lasso_input());
+
         events.extend(
             self.input.collect_viewport_events(
                 ui,
@@ -276,6 +285,7 @@ impl EditorApp {
                     .is_some_and(|p| !p.is_empty()),
                 self.state.group_editing.is_some(),
                 Some(&self.state.group_registry),
+                tool_needs_lasso,
             ),
         );
 

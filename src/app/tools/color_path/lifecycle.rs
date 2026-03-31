@@ -1,0 +1,379 @@
+//! RouteTool-Implementierung fuer das ColorPathTool.
+//!
+//! Enthaelt die Berechnen-Pipeline, Preview-Logik und Execute-Logik.
+
+use image::GenericImageView;
+use std::sync::Arc;
+
+use crate::app::tools::{ToolAction, ToolPreview, ToolResult};
+use crate::core::{simplify_polyline, FarmlandGrid, NodeFlag, RoadMap};
+use crate::shared::spline_geometry::resample_by_distance;
+use glam::Vec2;
+
+use super::sampling::world_to_pixel;
+use super::state::{ColorPathPhase, ColorPathTool};
+
+// ---------------------------------------------------------------------------
+// Interne Methoden
+// ---------------------------------------------------------------------------
+
+impl ColorPathTool {
+    /// Fuehrt die komplette Erkennungs-Pipeline aus.
+    ///
+    /// 1. Farbmaske aufbauen
+    /// 2. Skelett-Pfade extrahieren (Zhang-Suen + BFS)
+    /// 3. Pfad zum Lasso-Startpunkt auswaehlen, vereinfachen und neu abtasten
+    /// 4. Phase wechseln
+    pub(super) fn compute_pipeline(&mut self) {
+        let Some(image) = &self.background_image.clone() else {
+            log::warn!("ColorPathTool: Pipeline abgebrochen — kein Hintergrundbild");
+            return;
+        };
+        if self.color_palette.is_empty() {
+            log::warn!("ColorPathTool: Pipeline abgebrochen — keine Farbsamples");
+            return;
+        }
+
+        // Lasso-Startpunkt in Pixelkoordinaten umrechnen (fuer Hint und Flood-Fill)
+        let img_w = image.width();
+        let img_h = image.height();
+        let start_px = self
+            .lasso_start_world
+            .map(|w| world_to_pixel(w, self.map_size, img_w, img_h))
+            .unwrap_or((img_w / 2, img_h / 2));
+        let start_hint = Some((start_px.0 as usize, start_px.1 as usize));
+
+        // Maske per Flood-Fill ab Lasso-Startpunkt berechnen
+        let (mut mask, width, height) = super::sampling::flood_fill_color_mask(
+            image,
+            &self.color_palette,
+            self.config.color_tolerance,
+            start_px,
+        );
+        self.mask_width = width;
+        self.mask_height = height;
+
+        // Pfade extrahieren
+        let paths = super::skeleton::extract_paths_from_mask(
+            &mut mask,
+            width,
+            height,
+            self.config.noise_filter,
+            self.map_size,
+            start_hint,
+        );
+        // Maske nach Pipeline speichern (fuer spaetere Analyse)
+        self.mask = mask;
+
+        let path_count = paths.len();
+        let longest_len = paths.first().map(|p| p.len()).unwrap_or(0);
+        log::info!(
+            "Pipeline complete: {} paths found, longest has {} points",
+            path_count,
+            longest_len
+        );
+
+        self.skeleton_paths = paths;
+
+        if self.skeleton_paths.is_empty() {
+            log::warn!("ColorPathTool: Keine Pfade gefunden — Phase bleibt Sampling");
+            self.selected_path_index = None;
+            self.centerline.clear();
+            self.resampled_nodes.clear();
+            return;
+        }
+
+        // Nach Flood-Fill gibt es genau einen zusammenhaengenden Bereich
+        self.selected_path_index = Some(0);
+        self.apply_selected_path();
+        self.phase = ColorPathPhase::Preview;
+    }
+
+    /// Wendet den aktuell ausgewaehlten Pfad an:
+    /// Vereinfachung + Resampling aus `skeleton_paths[selected_path_index]`.
+    pub(super) fn apply_selected_path(&mut self) {
+        let Some(idx) = self.selected_path_index else {
+            return;
+        };
+        let Some(raw) = self.skeleton_paths.get(idx) else {
+            return;
+        };
+        let simplified = simplify_polyline(raw, self.config.simplify_tolerance);
+        let resampled = resample_by_distance(&simplified, self.config.node_spacing);
+        log::info!(
+            "Pfad {}: {} Rohpunkte → {} vereinfacht → {} Nodes",
+            idx,
+            raw.len(),
+            simplified.len(),
+            resampled.len()
+        );
+        self.centerline = simplified;
+        self.resampled_nodes = resampled;
+    }
+
+    /// Waehlt einen Pfad per Index aus und berechnet Mittellinie + Nodes neu.
+    pub(super) fn select_path(&mut self, index: usize) {
+        self.selected_path_index = Some(index);
+        self.apply_selected_path();
+    }
+
+    /// Baut die Vorschau fuer die Sampling-Phase:
+    /// Alle bisher gezeichneten Lasso-Regionen als Linien-Polygone anzeigen.
+    fn build_sampling_preview(&self) -> ToolPreview {
+        use crate::core::{ConnectionDirection, ConnectionPriority};
+        let mut nodes: Vec<Vec2> = Vec::new();
+        let mut connections: Vec<(usize, usize)> = Vec::new();
+
+        for polygon in &self.lasso_regions {
+            if polygon.len() < 2 {
+                continue;
+            }
+            let start = nodes.len();
+            nodes.extend_from_slice(polygon);
+            let n = polygon.len();
+            // Polygon schliessen
+            for i in 0..n {
+                connections.push((start + i, start + (i + 1) % n));
+            }
+        }
+
+        // Flood-Fill-Kontur als geschlossenes Polygon hinzufuegen
+        if !self.flood_fill_contour.is_empty() {
+            let base = nodes.len();
+            nodes.extend_from_slice(&self.flood_fill_contour);
+            let contour_len = self.flood_fill_contour.len();
+            for i in 0..contour_len {
+                let next = (i + 1) % contour_len;
+                connections.push((base + i, base + next));
+            }
+        }
+
+        let cn = connections.len();
+        ToolPreview {
+            nodes,
+            connections,
+            connection_styles: vec![(ConnectionDirection::Dual, ConnectionPriority::Regular); cn],
+            labels: vec![],
+        }
+    }
+
+    /// Baut die Vorschau fuer die Preview-Phase:
+    /// Ausgewaehlter Pfad als Node-Kette.
+    fn build_path_preview(&self) -> ToolPreview {
+        if self.resampled_nodes.is_empty() {
+            return ToolPreview::default();
+        }
+        let n = self.resampled_nodes.len();
+        let connections: Vec<(usize, usize)> =
+            (0..n.saturating_sub(1)).map(|i| (i, i + 1)).collect();
+        let cn = connections.len();
+        ToolPreview {
+            nodes: self.resampled_nodes.clone(),
+            connections: connections.clone(),
+            connection_styles: vec![(self.direction, self.priority); cn],
+            labels: vec![],
+        }
+    }
+}
+
+impl crate::app::tools::RouteTool for ColorPathTool {
+    fn name(&self) -> &str {
+        "Farb-Pfad"
+    }
+
+    fn icon(&self) -> &str {
+        "🎨"
+    }
+
+    fn description(&self) -> &str {
+        "Wege anhand der Farbe im Hintergrundbild erkennen"
+    }
+
+    fn status_text(&self) -> &str {
+        match self.phase {
+            ColorPathPhase::Idle => "Alt+Lasso fuer Farbsample",
+            ColorPathPhase::Sampling => "Berechnen fuer Mittellinie",
+            ColorPathPhase::Preview => "Enter zum Einfuegen, Reset zum Zuruecksetzen",
+        }
+    }
+
+    fn on_click(&mut self, _pos: Vec2, _road_map: &RoadMap, _ctrl: bool) -> ToolAction {
+        match self.phase {
+            ColorPathPhase::Idle => {
+                self.phase = ColorPathPhase::Sampling;
+                ToolAction::Continue
+            }
+            ColorPathPhase::Sampling | ColorPathPhase::Preview => ToolAction::Continue,
+        }
+    }
+
+    fn on_lasso_completed(&mut self, polygon: Vec<Vec2>) -> ToolAction {
+        if self.phase != ColorPathPhase::Sampling {
+            return ToolAction::Continue;
+        }
+        let Some(image) = &self.background_image else {
+            log::warn!("ColorPathTool: Kein Hintergrundbild vorhanden — Lasso wird ignoriert");
+            return ToolAction::Continue;
+        };
+        // Farben innerhalb des Lasso-Polygons samplen
+        let new_colors = super::sampling::sample_colors_in_polygon(&polygon, image, self.map_size);
+        let new_count = new_colors.len();
+        // Ersten Lasso-Startpunkt merken (fuer spaetere Pfad-Auswahl)
+        if self.lasso_regions.is_empty() {
+            self.lasso_start_world = polygon.first().copied();
+        }
+        self.sampled_colors.extend(new_colors);
+        self.lasso_regions.push(polygon);
+        // Mittelwert (Anzeigewert) und quantisierte Palette aktualisieren
+        self.avg_color = Some(super::sampling::compute_average_color(&self.sampled_colors));
+        self.color_palette = super::sampling::build_color_palette(&self.sampled_colors, 8);
+        log::info!(
+            "Color sampling: {} new pixels, {} total, palette size: {}, avg color: {:?}",
+            new_count,
+            self.sampled_colors.len(),
+            self.color_palette.len(),
+            self.avg_color
+        );
+        // Quick-Flood-Fill fuer Vorschau der Bereichs-Umrisse
+        if let Some(lasso_start) = self.lasso_start_world {
+            let img_w = image.width();
+            let img_h = image.height();
+            let start_px = world_to_pixel(lasso_start, self.map_size, img_w, img_h);
+            let (mask, w, h) = super::sampling::flood_fill_color_mask(
+                image,
+                &self.color_palette,
+                self.config.color_tolerance,
+                start_px,
+            );
+            self.flood_fill_contour =
+                super::sampling::extract_contour_from_mask(&mask, w, h, self.map_size);
+            log::info!(
+                "Flood-Fill Vorschau: {} Kontur-Punkte",
+                self.flood_fill_contour.len()
+            );
+        }
+        ToolAction::Continue
+    }
+
+    fn needs_lasso_input(&self) -> bool {
+        self.phase == ColorPathPhase::Sampling
+    }
+
+    fn preview(&self, _cursor_pos: Vec2, _road_map: &RoadMap) -> ToolPreview {
+        match self.phase {
+            ColorPathPhase::Idle => ToolPreview::default(),
+            ColorPathPhase::Sampling => self.build_sampling_preview(),
+            ColorPathPhase::Preview => self.build_path_preview(),
+        }
+    }
+
+    fn execute(&self, road_map: &RoadMap) -> Option<ToolResult> {
+        if self.phase != ColorPathPhase::Preview || self.resampled_nodes.is_empty() {
+            return None;
+        }
+
+        let n = self.resampled_nodes.len();
+        let new_nodes: Vec<(Vec2, NodeFlag)> = self
+            .resampled_nodes
+            .iter()
+            .map(|&pos| (pos, NodeFlag::Regular))
+            .collect();
+
+        // Kette: 0 → 1 → 2 → …
+        let internal_connections = (0..n.saturating_sub(1))
+            .map(|i| (i, i + 1, self.direction, self.priority))
+            .collect();
+
+        // Externe Verbindungen an Start und Ende (optional)
+        let mut external_connections = Vec::new();
+        if self.config.connect_to_existing {
+            if let Some(&start_pos) = self.resampled_nodes.first() {
+                if let Some(hit) = road_map.nearest_node(start_pos) {
+                    external_connections.push((
+                        0,
+                        hit.node_id,
+                        true,
+                        self.direction,
+                        self.priority,
+                    ));
+                }
+            }
+            if n >= 2 {
+                if let Some(&end_pos) = self.resampled_nodes.last() {
+                    if let Some(hit) = road_map.nearest_node(end_pos) {
+                        external_connections.push((
+                            n - 1,
+                            hit.node_id,
+                            false,
+                            self.direction,
+                            self.priority,
+                        ));
+                    }
+                }
+            }
+        }
+
+        Some(ToolResult {
+            new_nodes,
+            internal_connections,
+            external_connections,
+            markers: Vec::new(),
+            nodes_to_remove: Vec::new(),
+        })
+    }
+
+    fn render_config(&mut self, ui: &mut egui::Ui, distance_wheel_step_m: f32) -> bool {
+        super::config_ui::render_config_view(self, ui, distance_wheel_step_m)
+    }
+
+    fn reset(&mut self) {
+        self.phase = ColorPathPhase::Idle;
+        self.lasso_regions.clear();
+        self.sampled_colors.clear();
+        self.avg_color = None;
+        self.color_palette.clear();
+        self.mask.clear();
+        self.mask_width = 0;
+        self.mask_height = 0;
+        self.skeleton_paths.clear();
+        self.selected_path_index = None;
+        self.centerline.clear();
+        self.resampled_nodes.clear();
+        self.lasso_start_world = None;
+        self.flood_fill_contour.clear();
+    }
+
+    fn is_ready(&self) -> bool {
+        self.phase == ColorPathPhase::Preview && !self.resampled_nodes.is_empty()
+    }
+
+    fn has_pending_input(&self) -> bool {
+        self.phase != ColorPathPhase::Idle
+    }
+
+    fn set_background_map_image(&mut self, image: Option<Arc<image::DynamicImage>>) {
+        if let Some(ref img) = image {
+            // map_size aus Bilddimensionen ableiten (Fallback wenn kein FarmlandGrid)
+            let (w, h) = img.dimensions();
+            let img_map_size = w.min(h) as f32;
+            if self.map_size == 2048.0 || (self.map_size - img_map_size).abs() > 1.0 {
+                log::info!(
+                    "ColorPathTool: map_size aus Bild abgeleitet: {} (war {})",
+                    img_map_size,
+                    self.map_size
+                );
+                self.map_size = img_map_size;
+            }
+        }
+        self.background_image = image;
+    }
+
+    fn set_farmland_grid(&mut self, grid: Option<Arc<FarmlandGrid>>) {
+        if let Some(g) = &grid {
+            self.map_size = g.map_size;
+        }
+        // Grid selbst wird nicht gecacht — map_size genuegt fuer Pixel<->Welt-Umrechnung
+    }
+
+    crate::impl_lifecycle_delegation_no_seg!();
+}
