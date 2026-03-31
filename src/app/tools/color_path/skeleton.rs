@@ -349,10 +349,7 @@ fn build_segment_polyline(
     if !chain_pixels.is_empty() {
         let refined = refine_medial_axis(chain_pixels, original_mask, width, height);
         polyline.extend(refined_pixels_to_world(
-            &refined,
-            map_size,
-            img_width,
-            img_height,
+            &refined, map_size, img_width, img_height,
         ));
     }
 
@@ -427,12 +424,7 @@ fn extract_component_network(
         .collect();
 
     let graph = build_component_graph(
-        component,
-        &degrees,
-        map_size,
-        img_width,
-        img_height,
-        start_hint,
+        component, &degrees, map_size, img_width, img_height, start_hint,
     );
 
     let mut segments = Vec::new();

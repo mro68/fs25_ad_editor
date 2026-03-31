@@ -80,7 +80,9 @@ pub(super) fn render_config_view(
             ui.label(format!(
                 "Kreuzungen: {junction_count}  Offene Enden: {open_end_count}"
             ));
-            ui.label(format!("Segmente: {segment_count}  Preview-Nodes: {node_count}"));
+            ui.label(format!(
+                "Segmente: {segment_count}  Preview-Nodes: {node_count}"
+            ));
 
             ui.separator();
 

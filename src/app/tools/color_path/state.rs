@@ -30,11 +30,7 @@ pub enum ExistingConnectionMode {
 
 impl ExistingConnectionMode {
     /// Alle UI-Optionen in stabiler Reihenfolge.
-    pub const ALL: [Self; 3] = [
-        Self::Never,
-        Self::OpenEnds,
-        Self::OpenEndsAndJunctions,
-    ];
+    pub const ALL: [Self; 3] = [Self::Never, Self::OpenEnds, Self::OpenEndsAndJunctions];
 
     /// Lesbares UI-Label.
     pub fn label(self) -> &'static str {
