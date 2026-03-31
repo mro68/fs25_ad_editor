@@ -163,6 +163,8 @@ pub(super) fn translate(key: I18nKey) -> &'static str {
         I18nKey::MenuTraceAllFieldsHelp => "Alle erkannten Felder automatisch mit Wegpunkten nachzeichnen (ein Undo-Schritt)",
         I18nKey::MenuCurseplayImport => "Courseplay importieren",
         I18nKey::MenuCurseplayExport => "Courseplay exportieren",
+        I18nKey::MenuFieldPath => "\u{1F6E4} Feldweg erkennen",
+        I18nKey::MenuColorPath => "\u{1F3A8} Farb-Pfad erkennen",
         // === Bestaetigungsdialog: Gruppe aufloesen ===
         I18nKey::ConfirmDissolveTitle => "Gruppe auflösen",
         I18nKey::ConfirmDissolveMessage => "Soll die Gruppe wirklich aufgelöst werden? Die Nodes bleiben erhalten.",

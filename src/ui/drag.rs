@@ -5,8 +5,11 @@
 pub(crate) enum DragSelectionMode {
     /// Rechteck-Selektion
     Rect,
-    /// Freihand-Lasso-Selektion
+    /// Freihand-Lasso-Selektion (Node-Selektion)
     Lasso,
+    /// Freihand-Lasso fuer das aktive Route-Tool (z.B. ColorPathTool).
+    /// Wird an das Tool weitergeleitet statt zur Node-Selektion verwendet.
+    ToolLasso,
 }
 
 /// Zustand einer aktiven Drag-Selektion
@@ -91,6 +94,27 @@ pub(super) fn draw_drag_selection_overlay(
             }
 
             painter.add(egui::Shape::line(polygon, stroke));
+        }
+        DragSelectionMode::ToolLasso => {
+            if selection.points_screen.len() < 2 {
+                return;
+            }
+
+            // Tool-Lasso in Orange darstellen (unterscheidet sich vom normalen Lasso)
+            let tool_stroke = egui::Stroke::new(1.5, egui::Color32::from_rgb(255, 165, 0));
+            let tool_fill = egui::Color32::from_rgba_unmultiplied(255, 165, 0, 30);
+
+            let mut polygon = selection.points_screen.clone();
+            if polygon.len() >= 3 {
+                painter.add(egui::Shape::convex_polygon(
+                    polygon.clone(),
+                    tool_fill,
+                    tool_stroke,
+                ));
+                polygon.push(polygon[0]);
+            }
+
+            painter.add(egui::Shape::line(polygon, tool_stroke));
         }
     }
 }

@@ -45,6 +45,36 @@ Das `ui`-Modul enthält egui-UI-Komponenten (Menüs, Statusbar, Input-Handling, 
   - `confirm_dissolve_dialog.rs` — Bestätigungsdialog vor dem Auflösen einer Segment-Gruppe
 - `group_overlay.rs` — Segment-Rahmen und Lock-Icons als egui-Overlay (`GroupOverlayEvent`, `render_group_overlays()`)
 - `group_boundary_overlay.rs` — Boundary-Icons (Eingang/Ausgang/Bidirektional) ueber Nodes mit externen Verbindungen (`GroupBoundaryIcons`, `render_group_boundary_overlays()`)
+- `drag.rs` — Drag-Selektion-Overlay und `DragSelection`-Typen
+
+### `DragSelectionMode`
+
+```rust
+pub(crate) enum DragSelectionMode {
+    Rect,       // Rechteck-Selektion (Standard-Drag)
+    Lasso,      // Freihand-Lasso fuer Node-Selektion
+    ToolLasso,  // Freihand-Lasso fuer das aktive Route-Tool (z.B. ColorPathTool)
+}
+```
+
+`ToolLasso` unterscheidet sich von `Lasso` dadurch, dass das abgeschlossene Polygon
+nicht zur Node-Selektion verwendet, sondern per `AppIntent::RouteToolLassoCompleted`
+an das aktive Route-Tool weitergeleitet wird. Den Modus schaltet
+`drag_primary.rs` automatisch ein wenn `ViewportContext.tool_needs_lasso == true`.
+
+### `ViewportContext.tool_needs_lasso`
+
+```rust
+pub(crate) struct ViewportContext<'a> {
+    // ...
+    /// Gibt an, ob das aktive Route-Tool Alt+Drag als Lasso-Eingabe benoetigt.
+    pub tool_needs_lasso: bool,
+}
+```
+
+Wird von `input/mod.rs` befuellt: `tool_needs_lasso = active_tool.needs_lasso_input()`.
+Ist `true`, behandelt `drag_primary.rs` einen Alt+Drag als `DragSelectionMode::ToolLasso`
+statt als normale Lasso-Selektion.
 
 ## Funktionen
 ---

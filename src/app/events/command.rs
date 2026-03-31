@@ -224,6 +224,8 @@ pub enum AppCommand {
         end: TangentSource,
     },
 
+    /// Route-Tool: Lasso-Polygon an das aktive Route-Tool weiterleiten
+    RouteToolLassoCompleted { polygon: Vec<glam::Vec2> },
     /// Route-Tool: Drag auf Steuerpunkt/Anker starten
     RouteToolDragStart { world_pos: glam::Vec2 },
     /// Route-Tool: Drag-Position aktualisieren
@@ -262,9 +264,9 @@ pub enum AppCommand {
     CloseOverviewOptionsDialog,
     /// Post-Load-Dialog schliessen
     DismissPostLoadDialog,
-    /// Background-Map als overview.jpg im XML-Verzeichnis speichern
+    /// Background-Map als overview.png im XML-Verzeichnis speichern
     SaveBackgroundAsOverview { path: String },
-    /// overview.jpg-Speichern-Dialog schliessen
+    /// overview.png-Speichern-Dialog schliessen
     DismissSaveOverviewDialog,
     /// Selektierte Nodes-Kette als gleichmaessig verteilte Wegpunkte neu berechnen (Distanzen)
     ResamplePath,

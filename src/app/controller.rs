@@ -230,6 +230,9 @@ impl AppController {
             }
             AppCommand::RouteToolDragEnd => handlers::route_tool::drag_end(state),
             AppCommand::RouteToolRotate { delta } => handlers::route_tool::rotate(state, delta),
+            AppCommand::RouteToolLassoCompleted { polygon } => {
+                handlers::route_tool::lasso_completed(state, polygon)
+            }
             AppCommand::IncreaseRouteToolNodeCount => {
                 handlers::route_tool::increase_node_count(state)
             }
@@ -293,7 +296,7 @@ impl AppController {
             // === Post-Load-Dialog ===
             AppCommand::DismissPostLoadDialog => handlers::dialog::dismiss_post_load_dialog(state),
 
-            // === overview.jpg speichern ===
+            // === overview.png speichern ===
             AppCommand::SaveBackgroundAsOverview { path } => {
                 handlers::view::save_background_as_overview(state, path)?
             }

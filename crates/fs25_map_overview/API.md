@@ -94,6 +94,10 @@ pub struct OverviewResult {
     pub grle_height: u32,
     /// Weltgröße in Metern (aus MapInfo)
     pub map_size: f32,
+    /// Rohes Farmland-ID-Raster (1 Byte pro Pixel, 0 = kein Feld).
+    /// Für Pixel-basierte Analysen im Editor (z.B. Feldweg-Erkennung via `FarmlandGrid`).
+    /// `None` wenn kein Farmland-Layer verfügbar war.
+    pub farmland_ids: Option<Vec<u8>>,
 }
 ```
 

@@ -44,6 +44,8 @@ pub(crate) struct ViewportContext<'a> {
     pub active_tool: EditorTool,
     pub options: &'a EditorOptions,
     pub drag_targets: &'a [glam::Vec2],
+    /// Gibt an, ob das aktive Route-Tool Alt+Drag als Lasso-Eingabe benoetigt.
+    pub tool_needs_lasso: bool,
 }
 
 /// Immutable Snapshot des Kontextmenue-States beim Rechtsklick.
@@ -123,6 +125,7 @@ impl InputState {
         farmland_polygons_loaded: bool,
         group_editing_active: bool,
         group_registry: Option<&GroupRegistry>,
+        tool_needs_lasso: bool,
     ) -> Vec<AppIntent> {
         let ctx = ViewportContext {
             ui,
@@ -134,6 +137,7 @@ impl InputState {
             active_tool,
             options,
             drag_targets,
+            tool_needs_lasso,
         };
 
         let mut events = Vec::new();

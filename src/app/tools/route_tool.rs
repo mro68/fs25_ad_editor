@@ -144,6 +144,14 @@ pub trait RouteTool:
     fn set_farmland_data(&mut self, _data: Option<std::sync::Arc<Vec<crate::core::FieldPolygon>>>) {
     }
 
+    /// Setzt das Farmland-Raster fuer Pixel-basierte Analysen (z.B. Feldweg-Erkennung).
+    /// Default: ignoriert den Input.
+    fn set_farmland_grid(&mut self, _grid: Option<std::sync::Arc<crate::core::FarmlandGrid>>) {}
+
+    /// Setzt die Hintergrundkarte fuer farbbasierte Analysen.
+    /// Default: ignoriert den Input.
+    fn set_background_map_image(&mut self, _image: Option<std::sync::Arc<image::DynamicImage>>) {}
+
     /// Speichert die IDs der zuletzt erstellten Nodes (fuer nachtraegliche Anpassung).
     /// `road_map` erlaubt tools, Nachbar-Informationen fuer Feintuning zu cachen.
     fn set_last_created(&mut self, _ids: &[u64], _road_map: &RoadMap) {}
@@ -282,4 +290,23 @@ pub trait RouteTool:
     /// fuer das "Original entfernen"-Feature bereitzustellen.
     /// Standard-Implementierung: no-op (die meisten Tools benoetigen keine inneren IDs).
     fn set_chain_inner_ids(&mut self, _ids: Vec<u64>) {}
+
+    /// Gibt `true` zurueck wenn das Tool Alt+Drag als Lasso-Eingabe benoetigt
+    /// (z.B. `ColorPathTool`).
+    ///
+    /// Ist `true`, wird ein Alt+Drag-Lasso als `ToolLasso` geroutet und der
+    /// abgeschlossene Polygon per `on_lasso_completed` geliefert — statt die
+    /// normale Node-Selektion auszuloesen.
+    fn needs_lasso_input(&self) -> bool {
+        false
+    }
+
+    /// Verarbeitet ein abgeschlossenes Lasso-Polygon in Weltkoordinaten.
+    ///
+    /// Wird aufgerufen sobald der User einen Alt+Drag-Lasso abgeschlossen hat
+    /// und das Tool `needs_lasso_input()` zurueckgibt. Das Polygon enthaelt die
+    /// Eckpunkte in Weltkoordinaten (gleiche Einheit wie `MapNode.position`).
+    fn on_lasso_completed(&mut self, _polygon: Vec<Vec2>) -> ToolAction {
+        ToolAction::Continue
+    }
 }

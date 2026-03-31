@@ -285,6 +285,9 @@ pub fn map_intent_to_commands(state: &AppState, intent: AppIntent) -> Vec<AppCom
         AppIntent::RouteToolScrollRotated { delta } => {
             vec![AppCommand::RouteToolRotate { delta }]
         }
+        AppIntent::RouteToolLassoCompleted { polygon } => {
+            vec![AppCommand::RouteToolLassoCompleted { polygon }]
+        }
         AppIntent::EditGroupRequested { record_id } => {
             vec![AppCommand::EditGroup { record_id }]
         }

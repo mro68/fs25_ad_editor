@@ -210,6 +210,8 @@ pub enum AppIntent {
         end: TangentSource,
     },
 
+    /// Route-Tool: Lasso-Polygon abgeschlossen (Alt+Drag bei Tools die `needs_lasso_input()` setzen)
+    RouteToolLassoCompleted { polygon: Vec<glam::Vec2> },
     /// Route-Tool: Drag auf Steuerpunkt/Anker gestartet
     RouteToolDragStarted { world_pos: glam::Vec2 },
     /// Route-Tool: Drag-Position aktualisiert
@@ -249,9 +251,9 @@ pub enum AppIntent {
     PostLoadGenerateOverview { zip_path: String },
     /// Post-Load-Dialog: geschlossen ohne Aktion
     PostLoadDialogDismissed,
-    /// Benutzer hat bestaetigt: Background als overview.jpg speichern
+    /// Benutzer hat bestaetigt: Background als overview.png speichern
     SaveBackgroundAsOverviewConfirmed,
-    /// Benutzer hat abgelehnt: overview.jpg nicht speichern
+    /// Benutzer hat abgelehnt: overview.png nicht speichern
     SaveBackgroundAsOverviewDismissed,
     /// Selektierte Nodes-Kette als gleichmaessig verteilte Wegpunkte neu berechnen (Distanzen)
     ResamplePathRequested,

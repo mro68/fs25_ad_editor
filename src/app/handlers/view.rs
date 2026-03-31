@@ -78,7 +78,7 @@ pub fn generate_overview_with_options(state: &mut AppState) -> anyhow::Result<()
     use_cases::background_map::generate_overview_with_options(state)
 }
 
-/// Speichert die aktuelle Background-Map als overview.jpg.
+/// Speichert die aktuelle Background-Map als overview.png.
 pub fn save_background_as_overview(state: &mut AppState, path: String) -> anyhow::Result<()> {
     use_cases::background_map::save_background_as_overview(state, path)
 }

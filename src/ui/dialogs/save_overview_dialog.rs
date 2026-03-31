@@ -1,8 +1,8 @@
-//! Dialog: Hintergrundbild als overview.jpg im Savegame-Verzeichnis speichern.
+//! Dialog: Hintergrundbild als overview.png im Savegame-Verzeichnis speichern.
 
 use crate::app::{AppIntent, UiState};
 
-/// Zeigt den Dialog "Als overview.jpg speichern?" nach ZIP-Extraktion.
+/// Zeigt den Dialog "Als overview.png speichern?" nach ZIP-Extraktion.
 pub fn show_save_overview_dialog(ctx: &egui::Context, ui_state: &mut UiState) -> Vec<AppIntent> {
     let mut events = Vec::new();
 
@@ -19,10 +19,10 @@ pub fn show_save_overview_dialog(ctx: &egui::Context, ui_state: &mut UiState) ->
             ui.vertical_centered(|ui| {
                 ui.add_space(8.0);
                 if ui_state.save_overview_dialog.is_overwrite {
-                    ui.label("Es existiert bereits eine overview.jpg.");
+                    ui.label("Es existiert bereits eine overview.png.");
                     ui.label("Soll sie mit dem extrahierten Bild ueberschrieben werden?");
                 } else {
-                    ui.label("Soll das Hintergrundbild als overview.jpg");
+                    ui.label("Soll das Hintergrundbild als overview.png");
                     ui.label("im Savegame-Verzeichnis gespeichert werden?");
                 }
                 ui.add_space(4.0);
