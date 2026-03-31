@@ -2,6 +2,24 @@
 
 use image::DynamicImage;
 
+/// Erstellt einen Textur-Sampler mit einheitlichem Filtermodus fuer Min-/Mag-Filter.
+pub(crate) fn create_sampler(
+    device: &wgpu::Device,
+    label: &str,
+    filter_mode: wgpu::FilterMode,
+) -> wgpu::Sampler {
+    device.create_sampler(&wgpu::SamplerDescriptor {
+        label: Some(label),
+        address_mode_u: wgpu::AddressMode::ClampToEdge,
+        address_mode_v: wgpu::AddressMode::ClampToEdge,
+        address_mode_w: wgpu::AddressMode::ClampToEdge,
+        mag_filter: filter_mode,
+        min_filter: filter_mode,
+        mipmap_filter: wgpu::FilterMode::Nearest,
+        ..Default::default()
+    })
+}
+
 /// Erstellt eine wgpu-Texture aus einem DynamicImage
 ///
 /// # Parameter
@@ -68,16 +86,11 @@ pub fn create_texture_from_image(
     );
 
     // Erstelle Sampler (kein Mipmap-Filter, da nur 1 Mip-Level vorhanden)
-    let sampler = device.create_sampler(&wgpu::SamplerDescriptor {
-        label: Some(&format!("{}_sampler", label)),
-        address_mode_u: wgpu::AddressMode::ClampToEdge,
-        address_mode_v: wgpu::AddressMode::ClampToEdge,
-        address_mode_w: wgpu::AddressMode::ClampToEdge,
-        mag_filter: wgpu::FilterMode::Linear,
-        min_filter: wgpu::FilterMode::Linear,
-        mipmap_filter: wgpu::FilterMode::Nearest,
-        ..Default::default()
-    });
+    let sampler = create_sampler(
+        device,
+        &format!("{}_sampler", label),
+        wgpu::FilterMode::Linear,
+    );
 
     (texture, sampler)
 }

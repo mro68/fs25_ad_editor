@@ -1,5 +1,4 @@
-use crate::app::group_registry::{TOOL_INDEX_BYPASS, TOOL_INDEX_SMOOTH_CURVE, TOOL_INDEX_STRAIGHT};
-use crate::app::tools::ToolManager;
+use crate::app::tools::{RouteToolGroup, RouteToolId, ToolManager};
 use crate::core::{ConnectionDirection, ConnectionPriority};
 
 /// Aktives Editor-Werkzeug
@@ -16,7 +15,48 @@ pub enum EditorTool {
     Route,
 }
 
-/// Zustand des aktuellen Editor-Werkzeugs
+/// Merkt das zuletzt gewaehlte Route-Tool pro Katalog-Gruppe.
+#[derive(Debug, Clone, Copy)]
+pub struct RouteToolSelectionMemory {
+    /// Zuletzt gewaehlt in der Gruppe „Basics".
+    pub basics: RouteToolId,
+    /// Zuletzt gewaehlt in der Gruppe „Section".
+    pub section: RouteToolId,
+    /// Zuletzt gewaehlt in der Gruppe „Analysis".
+    pub analysis: RouteToolId,
+}
+
+impl Default for RouteToolSelectionMemory {
+    fn default() -> Self {
+        Self {
+            basics: RouteToolId::Straight,
+            section: RouteToolId::Bypass,
+            analysis: RouteToolId::FieldBoundary,
+        }
+    }
+}
+
+impl RouteToolSelectionMemory {
+    /// Liefert das zuletzt gewaehlte Tool fuer eine Gruppe.
+    pub fn selected_for(self, group: RouteToolGroup) -> RouteToolId {
+        match group {
+            RouteToolGroup::Basics => self.basics,
+            RouteToolGroup::Section => self.section,
+            RouteToolGroup::Analysis => self.analysis,
+        }
+    }
+
+    /// Merkt das zuletzt verwendete Tool fuer dessen Gruppe.
+    pub fn remember(&mut self, group: RouteToolGroup, tool_id: RouteToolId) {
+        match group {
+            RouteToolGroup::Basics => self.basics = tool_id,
+            RouteToolGroup::Section => self.section = tool_id,
+            RouteToolGroup::Analysis => self.analysis = tool_id,
+        }
+    }
+}
+
+/// Aktueller Zustand des Editor-Werkzeugs inklusive Route-Tool-Memory.
 pub struct EditorToolState {
     /// Aktives Werkzeug
     pub active_tool: EditorTool,
@@ -26,12 +66,8 @@ pub struct EditorToolState {
     pub default_direction: ConnectionDirection,
     /// Standard-Strassenart fuer neue Verbindungen
     pub default_priority: ConnectionPriority,
-    /// Zuletzt gewaehlter Tool-Index in der Gruppe "Grundbefehle" (Gerade + alle Kurven).
-    pub last_basic_command_index: usize,
-    /// Zuletzt gewaehlter Tool-Index fuer geglättete Kurve (internes Tracking).
-    pub last_smooth_curve_index: usize,
-    /// Zuletzt gewaehlter Tool-Index in der Gruppe "Abschnittswerkzeuge".
-    pub last_section_tool_index: usize,
+    /// Zuletzt gewaehlte Route-Tools pro Gruppe.
+    pub route_tool_memory: RouteToolSelectionMemory,
     /// Route-Tool-Manager (Linie, Parkplatz, Kurve, …)
     pub tool_manager: ToolManager,
 }
@@ -50,10 +86,13 @@ impl EditorToolState {
             connect_source_node: None,
             default_direction: ConnectionDirection::Regular,
             default_priority: ConnectionPriority::Regular,
-            last_basic_command_index: TOOL_INDEX_STRAIGHT,
-            last_smooth_curve_index: TOOL_INDEX_SMOOTH_CURVE,
-            last_section_tool_index: TOOL_INDEX_BYPASS,
+            route_tool_memory: RouteToolSelectionMemory::default(),
             tool_manager: ToolManager::new(),
         }
+    }
+
+    /// Merkt die Selektion eines Route-Tools fuer dessen Gruppe.
+    pub fn remember_route_tool(&mut self, group: RouteToolGroup, tool_id: RouteToolId) {
+        self.route_tool_memory.remember(group, tool_id);
     }
 }

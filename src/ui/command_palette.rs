@@ -1,8 +1,12 @@
 //! Command Palette Overlay mit Suchfeld und Tastatur-Navigation.
 
-use crate::app::tools::ToolManager;
-use crate::app::{AppIntent, EditorTool};
+use crate::app::tools::{
+    resolve_route_tool_entries, route_tool_disabled_reason_key, route_tool_label_key,
+    RouteToolSurface,
+};
+use crate::app::{AppIntent, AppState, EditorTool};
 use crate::shared::{t, I18nKey, Language};
+use crate::ui::common::route_tool_availability_context;
 
 #[derive(Clone)]
 struct PaletteEntry {
@@ -12,6 +16,10 @@ struct PaletteEntry {
     shortcut: String,
     /// Intent, der bei Auswahl emittiert wird.
     intent: AppIntent,
+    /// `true` wenn der Eintrag aktuell ausgefuehrt werden darf.
+    enabled: bool,
+    /// Optionaler Disabled-Grund fuer sichtbare, aber deaktivierte Eintraege.
+    disabled_reason: Option<String>,
 }
 
 #[derive(Clone, Default)]
@@ -21,97 +29,136 @@ struct PaletteState {
     focus_requested: bool,
 }
 
-/// Baut den Command-Katalog aus statischen Befehlen und verfuegbaren Route-Tools.
-fn build_catalog(lang: Language, tool_manager: Option<&ToolManager>) -> Vec<PaletteEntry> {
+fn palette_entry(label: String, shortcut: &str, intent: AppIntent) -> PaletteEntry {
+    PaletteEntry {
+        label,
+        shortcut: shortcut.to_owned(),
+        intent,
+        enabled: true,
+        disabled_reason: None,
+    }
+}
+
+fn selected_catalog_intent(
+    catalog: &[PaletteEntry],
+    filtered_indices: &[usize],
+    selected_index: usize,
+) -> Option<AppIntent> {
+    let catalog_idx = filtered_indices.get(selected_index).copied()?;
+    let entry = &catalog[catalog_idx];
+    entry.enabled.then(|| entry.intent.clone())
+}
+
+/// Baut den Command-Katalog aus statischen Befehlen und allen katalogsichtbaren Route-Tools.
+fn build_catalog(lang: Language, state: &AppState) -> Vec<PaletteEntry> {
     let mut catalog = vec![
-        PaletteEntry {
-            label: t(lang, I18nKey::PaletteOpenFile).to_owned(),
-            shortcut: "Ctrl+O".to_owned(),
-            intent: AppIntent::OpenFileRequested,
-        },
-        PaletteEntry {
-            label: t(lang, I18nKey::PaletteSave).to_owned(),
-            shortcut: "Ctrl+S".to_owned(),
-            intent: AppIntent::SaveRequested,
-        },
-        PaletteEntry {
-            label: t(lang, I18nKey::PaletteUndo).to_owned(),
-            shortcut: "Ctrl+Z".to_owned(),
-            intent: AppIntent::UndoRequested,
-        },
-        PaletteEntry {
-            label: t(lang, I18nKey::PaletteRedo).to_owned(),
-            shortcut: "Ctrl+Y".to_owned(),
-            intent: AppIntent::RedoRequested,
-        },
-        PaletteEntry {
-            label: t(lang, I18nKey::PaletteSelectAll).to_owned(),
-            shortcut: "Ctrl+A".to_owned(),
-            intent: AppIntent::SelectAllRequested,
-        },
-        PaletteEntry {
-            label: t(lang, I18nKey::PaletteDeleteSelected).to_owned(),
-            shortcut: "Del".to_owned(),
-            intent: AppIntent::DeleteSelectedRequested,
-        },
-        PaletteEntry {
-            label: t(lang, I18nKey::PaletteCopy).to_owned(),
-            shortcut: "Ctrl+C".to_owned(),
-            intent: AppIntent::CopySelectionRequested,
-        },
-        PaletteEntry {
-            label: t(lang, I18nKey::PalettePaste).to_owned(),
-            shortcut: "Ctrl+V".to_owned(),
-            intent: AppIntent::PasteStartRequested,
-        },
-        PaletteEntry {
-            label: t(lang, I18nKey::PaletteResetCamera).to_owned(),
-            shortcut: "Home".to_owned(),
-            intent: AppIntent::ResetCameraRequested,
-        },
-        PaletteEntry {
-            label: t(lang, I18nKey::PaletteToolSelect).to_owned(),
-            shortcut: "T".to_owned(),
-            intent: AppIntent::SetEditorToolRequested {
+        palette_entry(
+            t(lang, I18nKey::PaletteOpenFile).to_owned(),
+            "Ctrl+O",
+            AppIntent::OpenFileRequested,
+        ),
+        palette_entry(
+            t(lang, I18nKey::PaletteSave).to_owned(),
+            "Ctrl+S",
+            AppIntent::SaveRequested,
+        ),
+        palette_entry(
+            t(lang, I18nKey::PaletteUndo).to_owned(),
+            "Ctrl+Z",
+            AppIntent::UndoRequested,
+        ),
+        palette_entry(
+            t(lang, I18nKey::PaletteRedo).to_owned(),
+            "Ctrl+Y",
+            AppIntent::RedoRequested,
+        ),
+        palette_entry(
+            t(lang, I18nKey::PaletteSelectAll).to_owned(),
+            "Ctrl+A",
+            AppIntent::SelectAllRequested,
+        ),
+        palette_entry(
+            t(lang, I18nKey::PaletteDeleteSelected).to_owned(),
+            "Del",
+            AppIntent::DeleteSelectedRequested,
+        ),
+        palette_entry(
+            t(lang, I18nKey::PaletteCopy).to_owned(),
+            "Ctrl+C",
+            AppIntent::CopySelectionRequested,
+        ),
+        palette_entry(
+            t(lang, I18nKey::PalettePaste).to_owned(),
+            "Ctrl+V",
+            AppIntent::PasteStartRequested,
+        ),
+        palette_entry(
+            t(lang, I18nKey::PaletteResetCamera).to_owned(),
+            "Home",
+            AppIntent::ResetCameraRequested,
+        ),
+        palette_entry(
+            t(lang, I18nKey::PaletteToolSelect).to_owned(),
+            "T",
+            AppIntent::SetEditorToolRequested {
                 tool: EditorTool::Select,
             },
-        },
-        PaletteEntry {
-            label: t(lang, I18nKey::PaletteToolConnect).to_owned(),
-            shortcut: "T".to_owned(),
-            intent: AppIntent::SetEditorToolRequested {
+        ),
+        palette_entry(
+            t(lang, I18nKey::PaletteToolConnect).to_owned(),
+            "T",
+            AppIntent::SetEditorToolRequested {
                 tool: EditorTool::Connect,
             },
-        },
-        PaletteEntry {
-            label: t(lang, I18nKey::PaletteToolAddNode).to_owned(),
-            shortcut: "T".to_owned(),
-            intent: AppIntent::SetEditorToolRequested {
+        ),
+        palette_entry(
+            t(lang, I18nKey::PaletteToolAddNode).to_owned(),
+            "T",
+            AppIntent::SetEditorToolRequested {
                 tool: EditorTool::AddNode,
             },
-        },
+        ),
     ];
 
-    if let Some(tm) = tool_manager {
-        let prefix = t(lang, I18nKey::PaletteRouteToolPrefix);
-        for (index, (_, name, _icon)) in tm.tool_entries().iter().enumerate() {
-            catalog.push(PaletteEntry {
-                label: format!("{prefix} {name}"),
-                shortcut: String::new(),
-                intent: AppIntent::SelectRouteToolRequested { index },
-            });
-        }
+    let prefix = t(lang, I18nKey::PaletteRouteToolPrefix);
+    let availability = route_tool_availability_context(state);
+    for entry in [
+        crate::app::tools::RouteToolGroup::Basics,
+        crate::app::tools::RouteToolGroup::Section,
+        crate::app::tools::RouteToolGroup::Analysis,
+    ]
+    .into_iter()
+    .flat_map(|group| {
+        resolve_route_tool_entries(RouteToolSurface::CommandPalette, group, availability)
+    }) {
+        catalog.push(PaletteEntry {
+            label: format!(
+                "{prefix} {}",
+                t(lang, route_tool_label_key(entry.descriptor.id))
+            ),
+            shortcut: String::new(),
+            intent: AppIntent::SelectRouteToolRequested {
+                tool_id: entry.descriptor.id,
+            },
+            enabled: entry.enabled,
+            disabled_reason: entry
+                .disabled_reason
+                .map(|reason| t(lang, route_tool_disabled_reason_key(reason)).to_owned()),
+        });
     }
 
     catalog
 }
 
 /// Rendert die Command Palette als zentriertes Overlay-Fenster.
+///
+/// Deaktivierte Route-Tools bleiben im Katalog sichtbar und tragen ihren
+/// Disabled-Grund, koennen aber weder per Klick noch per Enter ausgefuehrt
+/// werden.
 pub fn render_command_palette(
     ctx: &egui::Context,
     show: &mut bool,
-    tool_manager: Option<&ToolManager>,
-    lang: Language,
+    state: &AppState,
 ) -> Vec<AppIntent> {
     if !*show {
         return Vec::new();
@@ -120,10 +167,12 @@ pub fn render_command_palette(
     let mut intents = Vec::new();
     let mut window_open = *show;
     let state_id = egui::Id::new("command_palette_state");
+    let lang = state.options.language;
 
-    let mut state = ctx.data_mut(|d| d.get_temp_mut_or_default::<PaletteState>(state_id).clone());
-    let catalog = build_catalog(lang, tool_manager);
-    let needle = state.search_text.to_lowercase();
+    let mut palette_state =
+        ctx.data_mut(|d| d.get_temp_mut_or_default::<PaletteState>(state_id).clone());
+    let catalog = build_catalog(lang, state);
+    let needle = palette_state.search_text.to_lowercase();
     let filtered_indices: Vec<usize> = catalog
         .iter()
         .enumerate()
@@ -136,8 +185,8 @@ pub fn render_command_palette(
         })
         .collect();
 
-    if state.selected_index >= filtered_indices.len() {
-        state.selected_index = 0; // layer-ok
+    if palette_state.selected_index >= filtered_indices.len() {
+        palette_state.selected_index = 0; // layer-ok
     }
 
     let mut trigger_selected = false;
@@ -151,15 +200,15 @@ pub fn render_command_palette(
         .open(&mut window_open)
         .show(ctx, |ui| {
             let search_response = ui.add(
-                egui::TextEdit::singleline(&mut state.search_text)
+                egui::TextEdit::singleline(&mut palette_state.search_text)
                     .hint_text(t(lang, I18nKey::PaletteSearchHint)),
             );
-            if !state.focus_requested {
+            if !palette_state.focus_requested {
                 search_response.request_focus();
-                state.focus_requested = true; // layer-ok
+                palette_state.focus_requested = true; // layer-ok
             }
             if search_response.changed() {
-                state.selected_index = 0; // layer-ok
+                palette_state.selected_index = 0; // layer-ok
             }
 
             ui.separator();
@@ -174,7 +223,7 @@ pub fn render_command_palette(
 
                     for (visible_idx, catalog_idx) in filtered_indices.iter().copied().enumerate() {
                         let entry = &catalog[catalog_idx];
-                        let selected = visible_idx == state.selected_index;
+                        let selected = visible_idx == palette_state.selected_index;
                         let fill = if selected {
                             ui.visuals().selection.bg_fill
                         } else {
@@ -186,11 +235,17 @@ pub fn render_command_palette(
                             .inner_margin(egui::Margin::symmetric(8, 4))
                             .show(ui, |ui| {
                                 ui.horizontal(|ui| {
-                                    ui.label(&entry.label);
+                                    ui.label(if entry.enabled {
+                                        egui::RichText::new(&entry.label)
+                                    } else {
+                                        egui::RichText::new(&entry.label).weak()
+                                    });
                                     ui.with_layout(
                                         egui::Layout::right_to_left(egui::Align::Center),
                                         |ui| {
-                                            if !entry.shortcut.is_empty() {
+                                            if let Some(reason) = &entry.disabled_reason {
+                                                ui.label(egui::RichText::new(reason).weak());
+                                            } else if !entry.shortcut.is_empty() {
                                                 ui.label(
                                                     egui::RichText::new(&entry.shortcut)
                                                         .weak()
@@ -201,11 +256,18 @@ pub fn render_command_palette(
                                     );
                                 });
                             })
-                            .response
-                            .interact(egui::Sense::click());
+                            .response;
+
+                        let row = if entry.enabled {
+                            row.interact(egui::Sense::click())
+                        } else if let Some(reason) = &entry.disabled_reason {
+                            row.on_hover_text(reason)
+                        } else {
+                            row
+                        };
 
                         if row.clicked() {
-                            state.selected_index = visible_idx; // layer-ok
+                            palette_state.selected_index = visible_idx; // layer-ok
                             trigger_selected = true;
                         }
                     }
@@ -245,17 +307,17 @@ pub fn render_command_palette(
 
     if !filtered_indices.is_empty() {
         if arrow_down {
-            let next_index = (state.selected_index + 1) % filtered_indices.len();
-            state.selected_index = next_index; // layer-ok
+            let next_index = (palette_state.selected_index + 1) % filtered_indices.len();
+            palette_state.selected_index = next_index; // layer-ok
         }
         if arrow_up {
-            let selected_index = state.selected_index;
+            let selected_index = palette_state.selected_index;
             let wrapped_index = if selected_index == 0 {
                 filtered_indices.len() - 1
             } else {
                 selected_index - 1
             };
-            state.selected_index = wrapped_index; // layer-ok
+            palette_state.selected_index = wrapped_index; // layer-ok
         }
     }
 
@@ -264,8 +326,10 @@ pub fn render_command_palette(
     }
 
     if trigger_selected {
-        if let Some(catalog_idx) = filtered_indices.get(state.selected_index).copied() {
-            intents.push(catalog[catalog_idx].intent.clone());
+        if let Some(intent) =
+            selected_catalog_intent(&catalog, &filtered_indices, palette_state.selected_index)
+        {
+            intents.push(intent);
             window_open = false;
         }
     }
@@ -282,7 +346,7 @@ pub fn render_command_palette(
 
     if window_open {
         ctx.data_mut(|d| {
-            d.insert_temp(state_id, state);
+            d.insert_temp(state_id, palette_state);
         });
     } else {
         ctx.data_mut(|d| {
@@ -292,4 +356,86 @@ pub fn render_command_palette(
 
     *show = window_open;
     intents
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::app::tools::RouteToolId;
+
+    fn route_tool_entry(catalog: &[PaletteEntry], tool_id: RouteToolId) -> (usize, &PaletteEntry) {
+        catalog
+            .iter()
+            .enumerate()
+            .find(|(_, entry)| match &entry.intent {
+                AppIntent::SelectRouteToolRequested {
+                    tool_id: entry_tool_id,
+                } => *entry_tool_id == tool_id,
+                _ => false,
+            })
+            .expect("Route-Tool-Eintrag muss im Palette-Katalog vorhanden sein")
+    }
+
+    #[test]
+    fn command_palette_zeigt_route_tools_trotz_disabled_state() {
+        let state = AppState::new();
+        let catalog = build_catalog(state.options.language, &state);
+
+        for tool_id in RouteToolId::ALL {
+            route_tool_entry(&catalog, tool_id);
+        }
+
+        for tool_id in [
+            RouteToolId::Straight,
+            RouteToolId::CurveQuad,
+            RouteToolId::CurveCubic,
+            RouteToolId::Spline,
+            RouteToolId::SmoothCurve,
+            RouteToolId::Parking,
+        ] {
+            let (_, entry) = route_tool_entry(&catalog, tool_id);
+            assert!(entry.enabled, "{:?} sollte aktivierbar bleiben", tool_id);
+            assert!(
+                entry.disabled_reason.is_none(),
+                "{:?} sollte keinen Disabled-Grund tragen",
+                tool_id
+            );
+        }
+
+        for tool_id in [
+            RouteToolId::Bypass,
+            RouteToolId::FieldBoundary,
+            RouteToolId::FieldPath,
+            RouteToolId::RouteOffset,
+            RouteToolId::ColorPath,
+        ] {
+            let (_, entry) = route_tool_entry(&catalog, tool_id);
+            assert!(
+                !entry.enabled,
+                "{:?} muss sichtbar, aber disabled sein",
+                tool_id
+            );
+            assert!(
+                entry.disabled_reason.is_some(),
+                "{:?} muss seinen Disabled-Grund in der Palette behalten",
+                tool_id
+            );
+        }
+    }
+
+    #[test]
+    fn command_palette_blockiert_enter_auf_disabled_route_tools() {
+        let state = AppState::new();
+        let catalog = build_catalog(state.options.language, &state);
+        let (disabled_idx, _) = route_tool_entry(&catalog, RouteToolId::Bypass);
+        let (enabled_idx, _) = route_tool_entry(&catalog, RouteToolId::Straight);
+
+        assert!(selected_catalog_intent(&catalog, &[disabled_idx], 0).is_none());
+        assert!(matches!(
+            selected_catalog_intent(&catalog, &[enabled_idx], 0),
+            Some(AppIntent::SelectRouteToolRequested {
+                tool_id: RouteToolId::Straight,
+            })
+        ));
+    }
 }

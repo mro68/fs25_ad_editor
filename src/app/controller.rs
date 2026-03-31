@@ -210,14 +210,17 @@ impl AppController {
             }
             AppCommand::RouteToolExecute => handlers::route_tool::execute(state),
             AppCommand::RouteToolCancel => handlers::route_tool::cancel(state),
-            AppCommand::SelectRouteTool { index } => handlers::route_tool::select(state, index),
+            AppCommand::SelectRouteTool { tool_id } => handlers::route_tool::select(state, tool_id),
             AppCommand::RouteToolWithAnchors {
-                index,
+                tool_id,
                 start_node_id,
                 end_node_id,
-            } => {
-                handlers::route_tool::select_with_anchors(state, index, start_node_id, end_node_id)
-            }
+            } => handlers::route_tool::select_with_anchors(
+                state,
+                tool_id,
+                start_node_id,
+                end_node_id,
+            ),
             AppCommand::RouteToolRecreate => handlers::route_tool::recreate(state),
             AppCommand::RouteToolApplyTangent { start, end } => {
                 handlers::route_tool::apply_tangent(state, start, end)

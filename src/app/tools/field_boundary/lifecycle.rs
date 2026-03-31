@@ -3,7 +3,7 @@
 use std::sync::Arc;
 
 use crate::app::group_registry::{GroupBase, GroupKind, GroupRecord};
-use crate::app::tools::{ToolAction, ToolAnchor, ToolPreview, ToolResult};
+use crate::app::tools::{RouteToolId, ToolAction, ToolAnchor, ToolPreview, ToolResult};
 use crate::core::{
     find_polygon_at, offset_polygon, simplify_polygon, FieldPolygon, NodeFlag, RoadMap,
 };
@@ -192,6 +192,7 @@ impl crate::app::tools::RouteTool for FieldBoundaryTool {
         let polygon = self.selected_polygon.as_ref()?;
         Some(GroupRecord {
             id,
+            tool_id: Some(RouteToolId::FieldBoundary),
             node_ids: node_ids.to_vec(),
             start_anchor: ToolAnchor::NewPosition(Vec2::ZERO),
             end_anchor: ToolAnchor::NewPosition(Vec2::ZERO),

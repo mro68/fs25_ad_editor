@@ -7,3 +7,36 @@ pub(crate) mod skeleton;
 mod state;
 
 pub use state::ColorPathTool;
+
+/// Fuehrt die Kernpipeline des ColorPathTool fuer Benchmarks und Analysen aus.
+///
+/// Die Funktion kapselt Flood-Fill und Netzextraktion, ohne interne
+/// Skelett-Typen nach aussen zu exponieren. Rueckgabe:
+/// `(node_count, segment_count, junction_count, open_end_count)`.
+pub fn compute_color_path_network_stats(
+    image: &image::DynamicImage,
+    palette: &[[u8; 3]],
+    tolerance: f32,
+    start_pixel: (u32, u32),
+    noise_filter: bool,
+    map_size: f32,
+) -> (usize, usize, usize, usize) {
+    let (mut mask, width, height) =
+        sampling::flood_fill_color_mask(image, palette, tolerance, start_pixel);
+    let start_hint = Some((start_pixel.0 as usize, start_pixel.1 as usize));
+    let network = skeleton::extract_network_from_mask(
+        &mut mask,
+        width,
+        height,
+        noise_filter,
+        map_size,
+        start_hint,
+    );
+
+    (
+        network.nodes.len(),
+        network.segments.len(),
+        network.junction_count(),
+        network.open_end_count(),
+    )
+}

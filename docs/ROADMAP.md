@@ -135,12 +135,12 @@
 
 - [x] **RouteOffsetTool — Strecke Versetzen (2026-03-07)**
   - [x] Neues Modul `src/app/tools/route_offset/` (state.rs, geometry.rs, lifecycle.rs, config_ui.rs, tests.rs)
-  - [x] `GroupKind::RouteOffset` + `TOOL_INDEX_ROUTE_OFFSET = 8`
+  - [x] `GroupKind::RouteOffset` + explizite Tool-Zuordnung ueber `GroupRecord.tool_id = Some(RouteToolId::RouteOffset)`; kanonischer Katalog-Slot inzwischen 9
   - [x] `parallel_offset()` + `local_perp()` nach `common/geometry.rs` extrahiert (gemeinsam mit BypassTool)
   - [x] `ToolResult.nodes_to_remove: Vec<u64>` — Original-Nodes im selben Undo-Schritt entfernbar
   - [x] `RouteTool::set_chain_inner_ids()` — neue Trait-Methode für explizite innere Ketten-IDs
   - [x] `handlers::route_tool::init_chain_if_needed()` — lädt Kette + setzt innere IDs via `set_chain_inner_ids()`
-  - [x] Toolbar-Eintrag `⇶ Strecke versetzen` (Slot 8 im ToolManager)
+  - [x] Toolbar-Eintrag `⇶ Strecke versetzen` (kanonischer Katalog-Slot 9)
   - [x] Config-Panel: Links/Rechts-Versatz-Checkboxen, Distanz-DragValues mit Mausrad, Original-beibehalten-Checkbox, Knotenabstand
 
 - [x] **Felderkennung (FieldBoundaryTool)** (2026-03-05, Branch `feat/field-boundary-detection`)
@@ -218,6 +218,7 @@
   - [x] Persistent gespeicherte Standard-Layer in EditorOptions
   - [x] Auto-Detection: Heightmap und Map-Mod-ZIP nach XML-Laden (Umlaut-tolerantes Fuzzy-Matching)
   - [x] overview.jpg: Auto-Load beim XML-Oeffnen, Speichern-Dialog nach ZIP-Extraktion/Generierung
+  - [x] Zoom-abhaengige Background-Samplerumschaltung (2026-03-31) — bei starkem Reinzoomen pixelgenaues `Nearest`-Sampling fuer Debugging/ColorPath, sonst lineares Sampling
   - [x] **Alle Felder nachzeichnen (2026-03-06):** `AppIntent::TraceAllFieldsRequested` → `AppCommand::TraceAllFields` → `use_cases::editing::trace_all_fields()` — Batch-Nachzeichnen aller geladenen Farmland-Polygone in einem einzigen Undo-Schritt; Menueä `📍 Alle Felder nachzeichnen` in Extras (aktiviert wenn Farmland-Polygone geladen)
   - [x] **Ecken-Erkennung beim Nachzeichnen (2026-03-22):** `compute_ring()` um `corner_angle_threshold: Option<f32>` erweitert; neue private Funktionen `detect_corners()` und `resample_ring_with_corners()` in `field_boundary/lifecycle.rs`; `FieldBoundaryTool` und `GroupKind::FieldBoundary` um `corner_detection_enabled`/`corner_angle_threshold_deg` ergaenzt; `TraceAllFieldsDialogState` um Checkbox + Slider erweitert; Vorschau und Execute beachten den Schwellwert
   - [x] **Eckenverrundung beim Nachzeichnen (2026-03-23, Branch `feat/group-edit-corner-rounding`):**
@@ -230,7 +231,7 @@
     - [x] `AppIntent::GroupEditToolRequested { record_id }` / `AppCommand::BeginToolEditFromGroup { record_id }` — neuer Intent-Pfad
     - [x] `handlers::group::begin_tool_edit_from_group()` — cleanup → undo → edit_group()
     - [x] DRY: `cleanup_group_edit_state()` als private Hilfsfunktion extrahiert
-    - [x] Button „🔧 Tool bearbeiten“ im `render_group_edit_panel()` (Guard: `record.kind.tool_index().is_some()`)
+    - [x] Button „🔧 Tool bearbeiten“ im `render_group_edit_panel()` (Guard: `GroupRecord::is_tool_editable()`)
   - [x] **Curseplay-Import/Export (2026-03-22):** Neues Modul `src/xml/curseplay.rs` mit `parse_curseplay()` und `write_curseplay()`; neue AppIntents `CurseplayImportRequested`/`CurseplayExportRequested`/`CurseplayFileSelected`/`CurseplayExportPathSelected`; neue AppCommands `RequestCurseplayImportDialog`/`ImportCurseplay`/`RequestCurseplayExportDialog`/`ExportCurseplay`; Use-Cases `import_curseplay` und `export_curseplay` in `use_cases/editing/`; Handler `import_curseplay_file`/`export_curseplay_file` in `handlers/editing.rs`; Menue-Eintraege im Extras-Menue; rfd-Dateidialoge
 
 ## Phase 6: Performance & Qualitaet
@@ -262,7 +263,7 @@
   - [ ] UI-Integration-Tests
   - [x] Performance-Benchmarks (Basis mit Criterion)
   - [ ] Performance-Benchmarks mit 100k+ Nodes
-  - [x] `GroupKind::tool_index()` durch Konstanten und Unit-Test abgesichert (2026-02-24)
+  - [x] Route-Tool-Katalog via Invariant-Tests fuer `RouteToolId`, Reihenfolge und Backing-Modi abgesichert (2026-03-31)
 - [🟡] Dokumentation
   - [ ] User-Guide
   - [x] API-Dokumentation pro Modul (API.md inkl. shared)
@@ -280,12 +281,12 @@
     - [x] ROADMAP.md: Gruppen-Lock als abgeschlossen markiert
   - [x] **Doku-Sync Felderkennung-Feature (2026-03-05)**
     - [x] `core/API.md`: FieldPolygon, point_in_polygon(), find_polygon_at(), simplify_polygon(), offset_polygon()
-    - [x] `app/API.md`: farmland_polygons in AppState, GroupKind::FieldBoundary, TOOL_INDEX_FIELD_BOUNDARY
+    - [x] `app/API.md`: farmland_polygons in AppState, `GroupKind::FieldBoundary` und der explizite `GroupRecord.tool_id`-/Backing-Mode-Vertrag
     - [x] `app/tools/API.md`: FieldBoundaryTool vollstaendig dokumentiert (Phasen, Felder, Ring-Berechnung)
     - [x] `ui/API.md`: Toolbar-Button, Context-Menu Extras-Submenu, Precondition::FarmlandPolygonsLoaded
   - [x] **Doku-Sync RouteOffsetTool + Segment-Fixes (2026-03-07)**
-    - [x] `app/API.md`: GroupKind::RouteOffset, TOOL_INDEX_ROUTE_OFFSET = 8, beide GroupKind-Blöcke
-    - [x] `app/tools/API.md`: RouteOffsetTool-Sektion (Felder, Config, Execute-Logik, Modulstruktur); ToolManager-Tabelle Slot 8; set_chain_inner_ids() in RouteTool-Trait; parallel_offset/local_perp in common/geometry.rs
+    - [x] `app/API.md`: `GroupKind::RouteOffset`, explizite Tool-Zuordnung ueber `GroupRecord.tool_id` und aktueller GroupRegistry-Vertrag
+    - [x] `app/tools/API.md`: RouteOffsetTool-Sektion (Felder, Config, Execute-Logik, Modulstruktur); Katalog-Eintrag fuer `RouteToolId::RouteOffset`; `set_chain_inner_ids()` in RouteTool-Trait; `parallel_offset()`/`local_perp()` in `common/geometry.rs`
     - [x] ROADMAP.md: RouteOffsetTool + alle drei Gruppen-Fixes als abgeschlossen markiert
     - [x] ROADMAP.md: Felderkennung als abgeschlossen markiert
   - [x] **Doku-Sync Zoom-Kompensation + Alle Felder nachzeichnen (2026-03-06)**
@@ -361,7 +362,7 @@
     - [x] `ui/API.md`: Neues Modul `group_boundary_overlay` mit `GroupBoundaryIcons` und `render_group_boundary_overlays()` dokumentiert
     - [x] ROADMAP.md: Feature als abgeschlossen markiert
   - [x] **Doku-Sync Segment→Group-Unification (2026-03-21, Branch `refactor/segment-registry`)**
-    - [x] `app/API.md`: `GroupKind::Manual`-Variante ergaenzt; `tool_index()` Rueckgabetyp `usize` → `Option<usize>` korrigiert; `is_tool_backed()` neu dokumentiert; `GroupRegistry`-Merkmale um HashMap/Reverse-Index ergaenzt; `records()`/`records_mut()` von Slice auf Iterator-Rueckgabe aktualisiert; `records_map()` neu; `OpenDissolveConfirmDialog`-Command und `DissolveGroupConfirmed`-Intent hinzugefuegt; `UiState::confirm_dissolve_group_id` ergaenzt
+    - [x] `app/API.md`: `GroupKind::Manual`-Variante ergaenzt; alter Tool-Index-Vertrag durch `GroupRecord.tool_id`, `backing_mode()` und `is_tool_editable()` ersetzt; `GroupRegistry`-Merkmale um HashMap/Reverse-Index ergaenzt; `records()`/`records_mut()` von Slice auf Iterator-Rueckgabe aktualisiert; `records_map()` und `segment_bounding_box()` dokumentiert; `OpenDissolveConfirmDialog`-Command und `DissolveGroupConfirmed`-Intent hinzugefuegt; `UiState::confirm_dissolve_group_id` ergaenzt
     - [x] `app/handlers/API.md`: `apply_group_edit()` um Verbindungsfilter-Beschreibung ergaenzt; `dissolve()` auf 2-schrittige Dialog-Bestaetigung hingewiesen
     - [x] `ui/API.md`: `confirm_dissolve_dialog.rs` im Modul-Index; neue Sektion `show_confirm_dissolve_dialog()` mit Intent-Flow-Diagramm
     - [x] `shared/API.md`: 4 neue i18n-Keys `ConfirmDissolveTitle/Message/Ok/Cancel` in `I18nKey`-Uebersicht
@@ -393,7 +394,7 @@
   - [x] **Doku-Sync FieldPathTool + Centerline-Infrastruktur (2026-03-30, Branch `feat/field-path-tool`)**
     - [x] `core/API.md`: `FarmlandGrid` (Methoden: `new`, `pixel_to_world`, `world_to_pixel`, `id_at_pixel`, `id_at_world`), `VoronoiGrid`, `compute_voronoi_bfs`, `extract_corridor_centerline`, `extract_boundary_centerline`, `zhang_suen_thinning`, `simplify_polyline` ergaenzt
     - [x] `app/API.md`: `farmland_grid`, `background_image` als neue `AppState`-Felder dokumentiert
-    - [x] `app/tools/API.md`: `FieldPathTool` vollstaendig dokumentiert (Phasen, Modi, Felder, Berechnungs-Pipeline); Tabelle um Slot 9 erweitert; `set_farmland_grid()`/`set_background_map_image()` in RouteTool-Trait ergaenzt
+    - [x] `app/tools/API.md`: `FieldPathTool` vollstaendig dokumentiert (Phasen, Modi, Felder, Berechnungs-Pipeline); Katalog um `RouteToolId::FieldPath` (Slot 8) erweitert; `set_farmland_grid()`/`set_background_map_image()` in RouteTool-Trait ergaenzt
     - [x] `crates/fs25_map_overview/API.md`: `OverviewResult.farmland_ids` als neues Feld dokumentiert
     - [x] ROADMAP.md: FieldPathTool als abgeschlossen eingetragen
   - [x] **Doku-Sync ColorPathTool + ToolLasso-Infrastruktur (2026-03-30, Branch `feat/color-path-tool`)**
@@ -405,19 +406,22 @@
   - [x] `src/core/centerline.rs` — `VoronoiGrid`, `compute_voronoi_bfs()`, `extract_corridor_centerline()`, `extract_boundary_centerline()` (Multi-Source BFS, 8-Konnektivitaet)
   - [x] `src/core/thinning.rs` — `zhang_suen_thinning()` (Zhang-Suen-Skelettierung)
   - [x] `src/core/farmland.rs` — `FarmlandGrid` Struct mit Koordinatentransformation + `simplify_polyline()` (Douglas-Peucker fuer offene Linien)
-  - [x] `src/app/tools/field_path/` — `FieldPathTool` (Slot 9), `FieldPathMode` (Fields/Boundaries), `FieldPathPhase` (Idle/Selecting1/Selecting2/Preview), `FieldPathConfig` (node_spacing, simplify_tolerance, connect_to_existing)
+  - [x] `src/app/tools/field_path/` — `FieldPathTool` (Slot 8), `FieldPathMode` (Fields/Boundaries), `FieldPathPhase` (Idle/Selecting1/Selecting2/Preview), `FieldPathConfig` (node_spacing, simplify_tolerance, connect_to_existing)
   - [x] `RouteTool::set_farmland_grid()` + `set_background_map_image()` — neue Default-No-Op-Methoden im Trait
   - [x] `AppState.farmland_grid: Option<Arc<FarmlandGrid>>` + `background_image: Option<Arc<DynamicImage>>` — neue State-Felder
   - [x] `OverviewResult.farmland_ids: Option<Vec<u8>>` — rohes ID-Raster fuer Feldweg-Erkennung
 
 - [x] **ColorPathTool — Farb-Pfad-Erkennung (2026-03-30, Branch `feat/color-path-tool`)**
-  - [x] `src/app/tools/color_path/` — `ColorPathTool` (Slot 10), `ColorPathPhase` (Idle/Sampling/Preview), `ColorPathConfig` (color_tolerance, node_spacing, simplify_tolerance, noise_filter, connect_to_existing)
+  - [x] `src/app/tools/color_path/` — `ColorPathTool` (Slot 10), `ColorPathPhase` (Idle/Sampling/Preview), `ColorPathConfig` (exact_color_match, color_tolerance, node_spacing, simplify_tolerance, noise_filter, existing_connection_mode)
   - [x] `RouteTool::needs_lasso_input()` + `RouteTool::on_lasso_completed()` — neue Default-Methoden im Trait fuer Alt+Drag-Lasso-Routing
   - [x] `DragSelectionMode::ToolLasso` in `src/ui/drag.rs` — neuer Modus fuer Tool-gesteuertes Lasso statt Node-Selektion
   - [x] `ViewportContext.tool_needs_lasso: bool` in `src/ui/input/mod.rs` — aktiviert ToolLasso-Routing
   - [x] `AppIntent::RouteToolLassoCompleted` + `AppCommand::RouteToolLassoCompleted` — neuer Intent-Pfad
   - [x] `handlers::route_tool::lasso_completed()` — neuer Handler
-  - [x] Pipeline: Farb-Sampling (Alt+Lasso) → Bool-Maske → Zhang-Suen-Skelettierung → Pfad-Ordnung (Durchmesser-BFS) → Douglas-Peucker → Resampling → Pfad-Auswahl → Execute
+  - [x] Pipeline: Farb-Sampling (Alt+Lasso) → Flood-Fill-Maske → Zhang-Suen-Skelettierung → Graph-Extraktion mit Junction-Clustering → Segment-Vereinfachung/Resampling → Netz-Preview → Execute
+  - [x] Exaktmodus (2026-03-31) — Standardmaessig aktiv; matcht exakt gegen gelasso-te RGB-Farben, blendet die Toleranz-UI aus und schaltet bei Bedarf auf quantisierte Palette + Toleranz um
+  - [x] Netzmodus-Erweiterung (2026-03-31) — Preview zeigt Kreuzungen/offene Enden/Segmente; Export legt Junction-/End-Knoten einmalig an und nutzt Snap-basierten Bestandsanschluss (`Never` / `OpenEnds` / `OpenEndsAndJunctions`)
+  - [x] Sampling-Preview zeigt nach jeder Lasso-Auswahl alle Randsegmente des erkannten Flood-Fill-Bereichs (inkl. Innenkanten/Loecher), nicht nur eine Einzelkontur
   - [x] I18n-Key `MenuColorPath` (DE: „🎨 Farb-Pfad erkennen", EN: „🎨 Detect Color Path")
   - [x] Menüeintrag in Extras
 
@@ -496,6 +500,16 @@
 - ✅ BypassTool Tests: 6 Geometrie-Tests, 6 Lifecycle-Tests, 3 ToolLifecycleState-Tests
 
 **Errungenschaften seit letztem Update (Strukturelles Audit 2026-03-05):**
+- ✅ RouteTool-UI harmonisiert: `defaults_panel`, `floating_menu`, Hauptmenue und Command-Palette nutzen den kanonischen Tool-Katalog mit `RouteToolId`, `RouteToolGroup::{Basics, Section, Analysis}` und Disabled-Reason-Aufloesung
+- ✅ Analyse-Tools voll integriert: neue Analysis-Gruppe in Sidebar/Floating-Menue, neue Icons fuer `FieldPath`/`ColorPath`, i18n-Labels + Disabled-Tooltips synchronisiert
+- ✅ RouteTool-Vertrag vereinfacht: ungenutzte Capability-Traits entfernt, optionale Hooks liegen direkt auf `RouteTool`
+- ✅ Tool-Edit-Guard vereinheitlicht: Gruppen-Edit-Panel nutzt `GroupRecord::is_tool_editable()` statt impliziter Tool-Index-Heuristik
+- ✅ Regression-Netz erweitert: Katalog-Invarianten + Controller-Flow fuer `SelectRouteToolRequested { tool_id: RouteToolId::ColorPath }`
+- ✅ Hotpath-Bench erweitert: `tool_preview_hotpath_bench` misst jetzt auch `compute_offset_positions`, Centerline-Hotpaths und die ColorPath-Kernpipeline
+- ✅ Doku-/Guardrail-Sync: `app/API.md`, `ui/API.md`, `app/tools/API.md`, `ARCHITECTURE_PLAN.md` und `check_api_docs_sync.sh` auf katalogbasierten RouteTool-Stand aktualisiert
+- ✅ Modul-Splits ohne API-Bruch: `app/handlers/route_tool.rs` und `ui/edit_panel.rs` intern in Submodule zerlegt, um Ausfuehrungs-/Panel-Logik klarer zu trennen
+
+- **Vorherige Errungenschaften (gleicher Audit-Block):**
 - ✅ Parking-Geometrie modulbereichert: `parking/geometry.rs` → `parking/geometry/{mod,layout,blueprint,conversion}.rs`
   - ✅ Öffentliche API unverändert (`generate_parking_layout`, `build_parking_result`, `build_preview`)
   - ✅ Neuer öffentlicher Struct `ParkingLayout` als Zwischenformat

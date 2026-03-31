@@ -1,6 +1,6 @@
 //! Lifecycle-Methoden des StraightLineTool (RouteTool-Implementierung).
 
-use super::super::{RouteTool, ToolAction, ToolPreview, ToolResult};
+use super::super::{RouteTool, RouteToolId, ToolAction, ToolPreview, ToolResult};
 use super::geometry::{build_result, compute_line_positions};
 use super::state::StraightLineTool;
 use crate::app::group_registry::{GroupBase, GroupKind, GroupRecord};
@@ -136,6 +136,7 @@ impl RouteTool for StraightLineTool {
         let end = self.lifecycle.last_end_anchor?;
         Some(GroupRecord {
             id,
+            tool_id: Some(RouteToolId::Straight),
             node_ids: node_ids.to_vec(),
             start_anchor: start,
             end_anchor: end,

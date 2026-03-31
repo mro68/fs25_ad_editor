@@ -17,6 +17,8 @@ mod intent_mapping;
 pub mod render_scene;
 /// Application State — zentrale Datenhaltung (View, Editor, Selektion, Dialoge).
 pub mod state;
+/// App-weiter Vertrag fuer Route-Tool-Identitaeten und Ankerdaten.
+pub mod tool_contract;
 /// Trait-basiertes Route-Tool-System fuer erweiterbare Strecken-Werkzeuge.
 pub mod tools;
 /// Mutierende Use-Case-Funktionen fuer alle Editing-Operationen.
@@ -41,6 +43,6 @@ pub use state::{
     GroupEditState, GroupSettingsPopupState, PostLoadDialogState, SelectionState, UiState,
     ViewState,
 };
+pub use tool_contract::{RouteToolId, ToolAnchor};
 pub use tools::field_boundary::compute_ring;
 pub use tools::field_boundary::RingNodeKind;
-pub use tools::ToolAnchor;

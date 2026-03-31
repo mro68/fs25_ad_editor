@@ -125,11 +125,6 @@ impl RouteOffsetTool {
             changed = true;
         }
 
-        // ── Cache-Invalidierung bei Aenderung ─────────────────────────────────
-        if changed {
-            self.cached_preview = None;
-        }
-
         // ── Info-Zeile ────────────────────────────────────────────────────────
         ui.add_space(4.0);
         ui.separator();

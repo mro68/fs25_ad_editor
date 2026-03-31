@@ -9,13 +9,14 @@ Das `ui`-Modul enthält egui-UI-Komponenten (Menüs, Statusbar, Input-Handling, 
 - `common.rs` — Gemeinsame UI-Hilfsfunktionen (Mausrad-Scroll-Helfer)
 - `menu.rs` — Top-Menü-Leiste
 - `status.rs` — Statusleiste
-- `floating_menu.rs` — Schwebende Kontextmenues fuer Werkzeuggruppen (Toggle via `T/G/B/R/Z`)
+- `floating_menu.rs` — Schwebende Kontextmenues fuer Werkzeug- und RouteTool-Gruppen (Toggle via `T/G/B/A/R/Z`)
 - `icons.rs` — Gemeinsame Icon-Konstanten/Helfer (`ICON_SIZE`, `svg_icon`, `route_tool_icon`)
 - `long_press.rs` — Wiederverwendbares Long-Press-Dropdown-Widget (`LongPressState`, `LongPressGroup`, `render_long_press_button`)
-- `defaults_panel.rs` — Linke Sidebar im Gruppen-Layout (Long-Press fuer Werkzeuge/Route-Gruppen/Defaults, Hintergrund)
-- `command_palette.rs` — Command Palette Overlay (Suche + Intent-Auswahl)
+- `defaults_panel.rs` — Linke Sidebar im Gruppen-Layout (Long-Press fuer Werkzeuge, RouteTool-Gruppen `Basics/Section/Analysis`, Defaults, Hintergrund)
+- `command_palette.rs` — Command Palette Overlay (Suche + katalogbasierte Intent-Auswahl; deaktivierte Route-Tools bleiben sichtbar und tragen ihren Disabled-Grund)
 - `properties.rs` — Properties-Panel (Detailanzeige selektierter Nodes)
 - `options_dialog/` — Optionen-Dialog für Laufzeit-Einstellungen (`mod.rs`, `sections.rs`)
+- `edit_panel.rs` — Schwebendes Edit-Panel; intern aufgeteilt in `edit_panel/group_panel.rs`, `edit_panel/route_tool_panel.rs`, `edit_panel/streckenteilung_panel.rs`
 - `tool_preview.rs` — Tool-Preview-Overlay (Route-Tool-Vorschau im Viewport)
 - `input/` — Viewport-Input-Orchestrator (phasenbasierte Submodule)
   - `clicks.rs` — Klick-Events (Einfach-/Doppel-Klick, Tool-Routing)
@@ -247,14 +248,16 @@ pub fn render_floating_menu(
 Unterstuetzte Menues:
 
 - `FloatingMenuKind::Tools` — Select / Connect / AddNode
-- `FloatingMenuKind::Basics` — Gerade, Bezier (Q/C), Spline, Constraint
-- `FloatingMenuKind::SectionTools` — Ausweichstrecke, Parkplatz, Strecke versetzen
+- `FloatingMenuKind::RouteTools(RouteToolGroup::Basics)` — Gerade, Bezier (Grad 2/3), Spline, SmoothCurve
+- `FloatingMenuKind::RouteTools(RouteToolGroup::Section)` — Bypass, Parkplatz, Strecke versetzen
+- `FloatingMenuKind::RouteTools(RouteToolGroup::Analysis)` — FieldBoundary, FieldPath, ColorPath
 - `FloatingMenuKind::DirectionPriority` — Verbindungsrichtung (Regular/Dual/Reverse) und Strassenart (Haupt-/Nebenstrasse)
 - `FloatingMenuKind::Zoom` — Auf komplette Map einpassen, Auf Auswahl einpassen
 
 Verhalten:
 
 - Aktive Auswahl wird mit Akzentfarbe hervorgehoben
+- RouteTool-Eintraege kommen aus dem kanonischen Katalog und koennen mit Disabled-Tooltip gerendert werden
 - Item-Klick emittiert passende Intents und schliesst das Menue
 - Klick ausserhalb schliesst das Menue
 
@@ -267,7 +270,7 @@ Gemeinsame UI-Icon-Helfer fuer Tool-Buttons.
 ```rust
 pub const ICON_SIZE: f32;
 pub fn svg_icon(source: ImageSource<'_>, size: f32) -> Image<'_>;
-pub fn route_tool_icon(idx: usize) -> ImageSource<'static>;
+pub fn route_tool_icon(tool_id: RouteToolId) -> ImageSource<'static>;
 ```
 
 ---
@@ -346,7 +349,7 @@ pub fn render_edit_panel(
 Im Gruppen-Bearbeitungsmodus enthält das Panel:
 - Checkbox für `options.show_all_group_boundaries` (Sichtbarkeit aller Boundary-Icons)
 - ComboBox „Einfahrt" und „Ausfahrt" — emittiert `AppIntent::SetGroupBoundaryNodes` bei Änderung
-- Button „🔧 Tool bearbeiten" — nur sichtbar wenn `group_record.kind.tool_index().is_some()` (nicht fuer `Manual`-Gruppen); emittiert `AppIntent::GroupEditToolRequested { record_id }` → wechselt atomar in den destruktiven Tool-Edit-Modus
+- Button „🔧 Tool bearbeiten" — nur sichtbar wenn `group_record.is_tool_editable()`; `Manual`-Gruppen sowie `Ephemeral`-Tools wie `FieldPath`/`ColorPath` bieten bewusst keinen Tool-Edit an; emittiert `AppIntent::GroupEditToolRequested { record_id }` → wechselt atomar in den destruktiven Tool-Edit-Modus
 
 ---
 
@@ -512,13 +515,13 @@ pub fn show_heightmap_warning(ctx: &egui::Context, show: bool) -> Vec<AppIntent>
 
 ### `render_command_palette`
 
-Rendert die Command Palette als zentriertes Overlay-Fenster mit Substring-Suche.
+Rendert die Command Palette als zentriertes Overlay-Fenster mit Substring-Suche und sichtbaren Disabled-States fuer Route-Tools.
 
 ```rust
 pub fn render_command_palette(
   ctx: &egui::Context,
   show: &mut bool,
-  tool_manager: Option<&ToolManager>,
+  state: &AppState,
 ) -> Vec<AppIntent>
 ```
 
@@ -526,9 +529,10 @@ pub fn render_command_palette(
 
 - Suchfeld mit Auto-Focus beim Oeffnen
 - Filterung ueber `entry.label.contains(search)` (case-insensitive)
-- Tastatur: Pfeil hoch/runter, Enter (ausfuehren), Escape (schliessen)
+- Tastatur: Pfeil hoch/runter, Enter (nur aktivierbare Eintraege ausfuehren), Escape (schliessen)
 - Klick ausserhalb schliesst die Palette
-- Katalog: statische Befehle + dynamische Route-Tools (`SelectRouteToolRequested { index }`)
+- Katalog: statische Befehle + dynamische Route-Tools (`SelectRouteToolRequested { tool_id }`)
+- Deaktivierte Route-Tools bleiben sichtbar und tragen ihren Disabled-Grund statt aus dem Katalog gefiltert zu werden
 
 ---
 

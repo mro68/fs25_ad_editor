@@ -8,13 +8,18 @@ Mit der Streckenteilung lassen sich Wegpunkt-Abstaende gleichmaessig neu verteil
 
 ### Zugang
 
-In der **Toolbar** oder ueber **Bearbeiten → Strecke aufteilen**
+Bei einer passenden Selektion gibt es zwei Zugangswege:
+
+- im rechten Eigenschaften-Bereich ueber den Abschnitt **Streckenteilung**
+- per Rechtsklick ueber das Kontextmenue **Streckenteilung**
 
 ### Verwendung
 
-1. Einen zusammenhaengenden Pfad selektieren (Start- und Endpunkt auswaehlen)
-2. **Zielabstand** in der Optionsleiste eingeben (z. B. 5 Meter)
-3. "Strecke aufteilen" ausfuehren
+1. Eine zusammenhaengende, geordnete Kette selektieren.
+2. Im Eigenschaften-Bereich auf **▶ Einteilung aendern** klicken oder das Kontextmenue oeffnen.
+3. Abstand oder Node-Anzahl einstellen.
+4. Die Vorschau pruefen und bei Bedarf **Originale ausblenden** aktivieren.
+5. Mit **`Enter`** oder **Uebernehmen** bestaetigen, mit **`Escape`** oder **Verwerfen** abbrechen.
 
 ### Ergebnis
 
@@ -49,7 +54,7 @@ Die Statusleiste zeigt an, wie viele Duplikate entfernt wurden.
 
 ## Optionen
 
-Ueber **Datei → Einstellungen** oder die **Optionen-Toolbar** erreichbar.
+Ueber **Bearbeiten -> Optionen** erreichbar.
 
 ### Sprache (i18n)
 
@@ -86,7 +91,7 @@ Die Aenderung wird sofort wirksam — ein Neustart ist nicht erforderlich.
 | **Medium** | Geglaettete Kreise, Standard |
 | **High** | Volles Anti-Aliasing, Spline-Kurven geglaettet |
 
-Einstellung ueber **Ansicht → Render-Qualitaet** oder Dropdown in der Toolbar.
+Einstellung ueber **Ansicht -> Render-Qualitaet**.
 
 ### Snap-Optionen
 

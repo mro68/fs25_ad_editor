@@ -10,7 +10,7 @@
 //! neu geladen.
 //!
 //! # Modulstruktur
-//! - [`types`]: Datentypes (`GroupBase`, `GroupKind`, `GroupRecord`) und Tool-Index-Konstanten
+//! - [`types`]: Datentypes (`GroupBase`, `GroupKind`, `GroupRecord`) und der explizite Tool-Vertrag
 //! - [`query`]: Lookup- und Query-Methoden
 //! - [`lock`]: Lock- und Edit-Guard-Methoden
 //! - [`mutation`]: Mutierende Methoden

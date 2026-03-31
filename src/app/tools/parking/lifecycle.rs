@@ -1,7 +1,7 @@
 //! RouteTool-Implementierung fuer das ParkingTool.
 
 use crate::app::group_registry::{GroupBase, GroupKind, GroupRecord};
-use crate::app::tools::{ToolAction, ToolAnchor, ToolPreview, ToolResult};
+use crate::app::tools::{RouteToolId, ToolAction, ToolAnchor, ToolPreview, ToolResult};
 use crate::core::RoadMap;
 use glam::Vec2;
 
@@ -132,6 +132,7 @@ impl crate::app::tools::RouteTool for ParkingTool {
         let exit_node_id = node_ids.last().copied();
         Some(GroupRecord {
             id,
+            tool_id: Some(RouteToolId::Parking),
             node_ids: node_ids.to_vec(),
             start_anchor: ToolAnchor::NewPosition(origin),
             end_anchor: ToolAnchor::NewPosition(origin),

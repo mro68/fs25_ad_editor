@@ -6,6 +6,8 @@
 
 /// Ausweichstrecken-Tool — generiert eine parallele Strecke zur selektierten Kette.
 pub mod bypass;
+/// Kanonischer Tool-Katalog mit stabilen Tool-IDs und Surface-Metadaten.
+mod catalog;
 /// Farb-Pfad-Tool: erkennt Wege anhand der Farbe im Hintergrundbild.
 pub mod color_path;
 /// Gemeinsame Hilfsfunktionen fuer Route-Tools.
@@ -29,8 +31,16 @@ pub mod spline;
 /// Gerade-Linie-Tool mit konfigurierbarem Node-Abstand.
 pub mod straight_line;
 
+pub use crate::app::tool_contract::{RouteToolId, ToolAnchor};
+pub use catalog::{
+    resolve_route_tool_entries, route_tool_catalog, route_tool_defaults_tooltip_key,
+    route_tool_descriptor, route_tool_descriptor_by_slot, route_tool_disabled_reason,
+    route_tool_disabled_reason_key, route_tool_group_label_key, route_tool_label_key,
+    route_tool_slot, ResolvedRouteToolEntry, RouteToolAvailabilityContext, RouteToolBackingMode,
+    RouteToolDescriptor, RouteToolDisabledReason, RouteToolGroup, RouteToolRequirement,
+    RouteToolSurface,
+};
 pub use route_tool::RouteTool;
-pub use route_tool::{RouteToolChainInput, RouteToolDrag, RouteToolRegistry, RouteToolTangent};
 
 use crate::core::{ConnectionDirection, ConnectionPriority, NodeFlag, RoadMap};
 use glam::Vec2;
@@ -53,25 +63,6 @@ pub fn snap_to_node(pos: Vec2, road_map: &RoadMap, snap_radius: f32) -> ToolAnch
 }
 
 // ── Typen ────────────────────────────────────────────────────────
-
-/// Anker-Punkt: entweder ein existierender Node oder eine freie Position.
-#[derive(Debug, Clone, Copy)]
-pub enum ToolAnchor {
-    /// Snap auf existierenden Node
-    ExistingNode(u64, Vec2),
-    /// Freie Position (neuer Node wird erstellt)
-    NewPosition(Vec2),
-}
-
-impl ToolAnchor {
-    /// Gibt die Welt-Position des Ankers zurueck.
-    pub fn position(&self) -> Vec2 {
-        match self {
-            ToolAnchor::ExistingNode(_, pos) => *pos,
-            ToolAnchor::NewPosition(pos) => *pos,
-        }
-    }
-}
 
 /// Rueckgabe von `on_click` — steuert den Tool-Flow.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -180,8 +171,13 @@ pub struct ToolResult {
 
 /// Verwaltet registrierte Route-Tools und den aktiven Tool-Index.
 pub struct ToolManager {
-    tools: Vec<Box<dyn RouteTool>>,
+    tools: Vec<RegisteredTool>,
     active_index: Option<usize>,
+}
+
+struct RegisteredTool {
+    id: RouteToolId,
+    tool: Box<dyn RouteTool>,
 }
 
 impl Default for ToolManager {
@@ -197,24 +193,15 @@ impl ToolManager {
             tools: Vec::new(),
             active_index: None,
         };
-        // Standard-Tools registrieren
-        manager.register(Box::new(straight_line::StraightLineTool::new()));
-        manager.register(Box::new(curve::CurveTool::new()));
-        manager.register(Box::new(curve::CurveTool::new_cubic()));
-        manager.register(Box::new(spline::SplineTool::new()));
-        manager.register(Box::new(bypass::BypassTool::new()));
-        manager.register(Box::new(smooth_curve::SmoothCurveTool::new()));
-        manager.register(Box::new(parking::ParkingTool::new()));
-        manager.register(Box::new(field_boundary::FieldBoundaryTool::new()));
-        manager.register(Box::new(field_path::FieldPathTool::new()));
-        manager.register(Box::new(route_offset::RouteOffsetTool::new()));
-        manager.register(Box::new(color_path::ColorPathTool::new()));
+        for descriptor in route_tool_catalog() {
+            manager.register(descriptor.id, (descriptor.factory)());
+        }
         manager
     }
 
     /// Registriert ein neues Route-Tool.
-    pub fn register(&mut self, tool: Box<dyn RouteTool>) {
-        self.tools.push(tool);
+    pub fn register(&mut self, tool_id: RouteToolId, tool: Box<dyn RouteTool>) {
+        self.tools.push(RegisteredTool { id: tool_id, tool });
     }
 
     /// Gibt die Anzahl registrierter Tools zurueck.
@@ -223,56 +210,66 @@ impl ToolManager {
     }
 
     /// Gibt Name und Index aller registrierten Tools zurueck.
-    pub fn tool_names(&self) -> Vec<(usize, &str)> {
+    pub fn tool_names(&self) -> Vec<(RouteToolId, &str)> {
         self.tools
             .iter()
-            .enumerate()
-            .map(|(i, t)| (i, t.name()))
+            .map(|entry| (entry.id, entry.tool.name()))
             .collect()
     }
 
     /// Gibt Index, Name und Icon aller registrierten Tools zurueck.
-    pub fn tool_entries(&self) -> Vec<(usize, &str, &str)> {
+    pub fn tool_entries(&self) -> Vec<(RouteToolId, &str, &str)> {
         self.tools
             .iter()
-            .enumerate()
-            .map(|(i, t)| (i, t.name(), t.icon()))
+            .map(|entry| (entry.id, entry.tool.name(), entry.tool.icon()))
             .collect()
     }
 
-    /// Setzt das aktive Route-Tool per Index.
-    pub fn set_active(&mut self, index: usize) {
+    fn set_active_slot(&mut self, index: usize) {
         if index < self.tools.len() {
             // Altes Tool zuruecksetzen
             if let Some(old) = self.active_index {
                 if old != index {
-                    self.tools[old].reset();
+                    self.tools[old].tool.reset();
                 }
             }
             self.active_index = Some(index);
         }
     }
 
-    /// Gibt den Index des aktiven Tools zurueck.
-    pub fn active_index(&self) -> Option<usize> {
-        self.active_index
+    /// Setzt das aktive Route-Tool per stabiler Tool-ID.
+    pub fn set_active_by_id(&mut self, tool_id: RouteToolId) {
+        if let Some(slot) = route_tool_slot(tool_id) {
+            self.set_active_slot(slot);
+        }
+    }
+
+    /// Gibt die Tool-ID des aktiven Tools zurueck.
+    pub fn active_id(&self) -> Option<RouteToolId> {
+        self.active_index.map(|index| self.tools[index].id)
+    }
+
+    /// Gibt den Descriptor des aktiven Tools zurueck.
+    pub fn active_descriptor(&self) -> Option<&'static RouteToolDescriptor> {
+        self.active_id().map(route_tool_descriptor)
     }
 
     /// Gibt eine Referenz auf das aktive Tool zurueck.
     pub fn active_tool(&self) -> Option<&dyn RouteTool> {
-        self.active_index.map(|i| self.tools[i].as_ref())
+        self.active_index
+            .map(|index| self.tools[index].tool.as_ref())
     }
 
     /// Gibt eine mutable Referenz auf das aktive Tool zurueck.
     pub fn active_tool_mut(&mut self) -> Option<&mut dyn RouteTool> {
-        let i = self.active_index?;
-        Some(self.tools[i].as_mut())
+        let index = self.active_index?;
+        Some(self.tools[index].tool.as_mut())
     }
 
     /// Setzt alle Tools zurueck und deaktiviert das aktive Tool.
     pub fn reset(&mut self) {
         if let Some(i) = self.active_index {
-            self.tools[i].reset();
+            self.tools[i].tool.reset();
         }
         self.active_index = None;
     }

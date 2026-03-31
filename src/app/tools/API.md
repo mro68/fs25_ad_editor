@@ -2,13 +2,15 @@
 
 Dokumentation fuer `app::tools`: `ToolManager`, `RouteTool`-Trait, registrierte Tools und gemeinsame Infrastruktur.
 
+`RouteToolId` und `ToolAnchor` gehoeren zum app-weiten Tool-Vertrag in `app::tool_contract` und werden hier fuer die Tool-Implementierungen weiterverwendet.
+
 **Zurueck:** [`../API.md`](../API.md)
 
 ---
 
 ## `ToolManager`
 
-Verwaltet registrierte Route-Tools und den aktiven Tool-Index.
+Verwaltet registrierte Route-Tools ueber stabile `RouteToolId`s und den kanonischen Tool-Katalog.
 
 ```rust
 pub struct ToolManager { /* intern */ }
@@ -16,13 +18,14 @@ pub struct ToolManager { /* intern */ }
 
 **Methoden:**
 
-- `new() → Self` — Erstellt ToolManager mit vorregistrierten Standard-Tools (StraightLine, Bézier Grad 2, Bézier Grad 3, Spline, Bypass, SmoothCurve, Parking, FieldBoundary, RouteOffset, FieldPath, ColorPath)
-- `register(tool)` — Neues Route-Tool registrieren
+- `new() → Self` — Erstellt ToolManager aus `route_tool_catalog()` in kanonischer Reihenfolge
+- `register(tool_id, tool)` — Neues Route-Tool unter stabiler ID registrieren
 - `tool_count() → usize` — Anzahl registrierter Tools
-- `tool_names() → Vec<(usize, &str)>` — Name + Index aller Tools
-- `tool_entries() → Vec<(usize, &str, &str)>` — Index, Name und Icon aller Tools (fuer Dropdown-Rendering)
-- `set_active(index)` — Aktives Tool setzen (Reset des vorherigen)
-- `active_index() → Option<usize>` — Index des aktiven Tools
+- `tool_names() → Vec<(RouteToolId, &str)>` — Name + stabile ID aller Tools
+- `tool_entries() → Vec<(RouteToolId, &str, &str)>` — ID, Name und Icon aller Tools (fuer Dropdown-Rendering)
+- `set_active_by_id(tool_id)` — Aktives Tool setzen (Reset des vorherigen)
+- `active_id() → Option<RouteToolId>` — ID des aktiven Tools
+- `active_descriptor() → Option<&'static RouteToolDescriptor>` — Katalog-Descriptor des aktiven Tools
 - `active_tool() → Option<&dyn RouteTool>` — Referenz auf aktives Tool
 - `active_tool_mut() → Option<&mut dyn RouteTool>` — Mutable Referenz
 - `reset()` — Alle Tools zuruecksetzen, aktives deaktivieren
@@ -121,14 +124,15 @@ impl RouteTool for BypassTool {
 Analoges Pendant fuer Tools MIT `SegmentConfig` ist `impl_lifecycle_delegation!`
 (ohne `_no_seg`-Suffix) — dokumentiert in `common/lifecycle.rs`.
 
-### Capability-Traits
+### Direkte Erweiterungspunkte
 
-Der optionale Teil wurde zusaetzlich in Capability-Traits gekapselt. `RouteTool` bleibt als kompatibler Obervertrag bestehen und delegiert seine Default-Implementierungen an diese Traits:
+Der optionale Teil des Vertrags wird direkt ueber Default-Methoden auf `RouteTool` abgebildet. Es gibt keine separaten Capability-Traits mehr.
 
-- `RouteToolDrag` — `drag_targets`, `on_drag_start`, `on_drag_update`, `on_drag_end`
-- `RouteToolTangent` — `tangent_menu_data`, `apply_tangent_selection`
-- `RouteToolRegistry` — `make_group_record`, `load_for_edit`
-- `RouteToolChainInput` — `needs_chain_input`, `load_chain`
+- Drag/Nachbearbeitung: `drag_targets`, `on_drag_start`, `on_drag_update`, `on_drag_end`
+- Tangenten: `tangent_menu_data`, `apply_tangent_selection`
+- GroupRegistry: `make_group_record`, `load_for_edit`
+- Ketten-Input: `needs_chain_input`, `load_chain`, `set_chain_inner_ids`
+- Analyse-Input: `set_farmland_data`, `set_farmland_grid`, `set_background_map_image`, `needs_lasso_input`, `on_lasso_completed`
 
 **Registry-Erweiterungen** (fuer `GroupRegistry`, siehe [`../use_cases/API.md`](../use_cases/API.md)):
 
@@ -150,19 +154,21 @@ Documentation moved to [`../API.md#groupbase--groupkind`](../API.md#groupbase--g
 
 ## Registrierte Tools
 
-| Idx | Tool | Icon | Konstruktor |
-|-----|------|------|-------------|
-| 0 | `StraightLineTool` | `━` | `StraightLineTool::new()` |
-| 1 | `CurveTool` (Grad 2) | `⌒` | `CurveTool::new()` |
-| 2 | `CurveTool` (Grad 3) | `〜` | `CurveTool::new_cubic()` |
-| 3 | `SplineTool` | `〰` | `SplineTool::new()` |
-| 4 | `BypassTool` | `⤴` | `BypassTool::new()` |
-| 5 | `SmoothCurveTool` | `⊿` | `SmoothCurveTool::new()` |
-| 6 | `ParkingTool` | `🅿` | `ParkingTool::new()` |
-| 7 | `FieldBoundaryTool` | `🌾` | `FieldBoundaryTool::new()` |
-| 8 | `RouteOffsetTool` | `⇶` | `RouteOffsetTool::new()` |
-| 9 | `FieldPathTool` | `🛤` | `FieldPathTool::new()` |
-| 10 | `ColorPathTool` | `🎨` | `ColorPathTool::new()` |
+Der kanonische Katalog beschreibt jedes Tool ueber `RouteToolId`, Anzeigegruppe, Anforderungen und Persistenzvertrag:
+
+| Tool-ID | Gruppe | Voraussetzungen | Backing | Konstruktor |
+|---------|--------|-----------------|---------|-------------|
+| `RouteToolId::Straight` | `Basics` | keine | `GroupBackedEditable` | `StraightLineTool::new()` |
+| `RouteToolId::CurveQuad` | `Basics` | keine | `GroupBackedEditable` | `CurveTool::new()` |
+| `RouteToolId::CurveCubic` | `Basics` | keine | `GroupBackedEditable` | `CurveTool::new_cubic()` |
+| `RouteToolId::Spline` | `Basics` | keine | `GroupBackedEditable` | `SplineTool::new()` |
+| `RouteToolId::Bypass` | `Section` | geordnete Kette | `GroupBackedEditable` | `BypassTool::new()` |
+| `RouteToolId::SmoothCurve` | `Basics` | keine | `GroupBackedEditable` | `SmoothCurveTool::new()` |
+| `RouteToolId::Parking` | `Section` | keine | `GroupBackedEditable` | `ParkingTool::new()` |
+| `RouteToolId::FieldBoundary` | `Analysis` | Farmland geladen | `GroupBackedEditable` | `FieldBoundaryTool::new()` |
+| `RouteToolId::FieldPath` | `Analysis` | Farmland geladen | `Ephemeral` | `FieldPathTool::new()` |
+| `RouteToolId::RouteOffset` | `Section` | geordnete Kette | `GroupBackedEditable` | `RouteOffsetTool::new()` |
+| `RouteToolId::ColorPath` | `Analysis` | Hintergrundbild geladen | `Ephemeral` | `ColorPathTool::new()` |
 
 ### `StraightLineTool`
 
@@ -263,7 +269,7 @@ Parkplatz-Layout-Generator: Erstellt einen Wendekreis mit Parkreihen in einem ko
 
 **Group-Registry:**
 
-- Implementiert `RouteToolRegistry` Trait (`make_group_record()`, `load_for_edit()`)
+- Ueberschreibt die `RouteTool`-Hooks `make_group_record()` und `load_for_edit()`
 - Speichert Layout-Parameter fuer nachtraegliche Bearbeitung
 
 **Public Exports:**
@@ -359,13 +365,13 @@ Das Mapping `RingNodeKind` → `NodeFlag`:
 - `round_corner(prev, corner, next, radius, spacing) -> Vec<Vec2>` — Kreisbogen zwischen Tangentenpunkten einer konvexen Ecke. Konkave Ecken (Cross-Product ≤ 0) werden unverändert zurückgegeben. Tangentenpunkte begrenzt auf 40% der Kantenlaenge.
 - `resample_ring_with_corners(simplified, corner_indices, spacing, rounding_radius) -> Vec<(Vec2, RingNodeKind)>` — Resampled den Ring segmentweise mit Ecken als festen Ankern
 
-**Gruppen-Record:** `GroupKind::FieldBoundary { field_id, node_spacing, offset, straighten_tolerance, corner_angle_threshold, corner_rounding_radius, base }` (Slot 7 im ToolManager)
+**Gruppen-Record:** `GroupKind::FieldBoundary { field_id, node_spacing, offset, straighten_tolerance, corner_angle_threshold, corner_rounding_radius, base }` unter `RouteToolId::FieldBoundary`
 
 Modulstruktur: `mod.rs` (Re-Exporte), `state.rs` (Struct, Phasen-Enum, Default), `lifecycle.rs` (RouteTool-Impl, Ring-Berechnung), `config_ui.rs` (egui-Panel), `geometry.rs` (RingNodeKind, detect_corners, round_corner, resample_ring_with_corners)
 
 ### `RouteOffsetTool`
 
-Parallelversatz einer selektierten Kette ohne S-Kurven-Anbindung (Slot 8 im ToolManager). Generiert eine oder zwei Parallel-Versatz-Ketten (links und/oder rechts) mit konfigurierbarem Abstand und optionalem Entfernen der Original-Kette.
+Parallelversatz einer selektierten Kette ohne S-Kurven-Anbindung (`RouteToolId::RouteOffset`). Generiert eine oder zwei Parallel-Versatz-Ketten (links und/oder rechts) mit konfigurierbarem Abstand und optionalem Entfernen der Original-Kette.
 
 **Voraussetzung:** Eine selektierte Kette muss beim Aktivieren des Tools vorhanden sein (`load_chain()` wird automatisch in `init_chain_if_needed()` aufgerufen).
 
@@ -391,7 +397,6 @@ pub struct RouteOffsetTool {
     pub direction: ConnectionDirection,
     pub priority: ConnectionPriority,
     pub config: OffsetConfig,
-    pub(crate) cached_preview: Option<(Vec<Vec2>, Vec<(usize, usize)>)>,
     pub(crate) lifecycle: ToolLifecycleState,
 }
 ```
@@ -407,7 +412,12 @@ pub struct RouteOffsetTool {
 
 - `compute_offset_positions(chain, offset, base_spacing) → Option<Vec<Vec2>>` — Nutzt `parallel_offset()` + `resample_by_distance()`
 
-**Gruppen-Record:** `GroupKind::RouteOffset { chain_positions, chain_start_id, chain_end_id, offset_left, offset_right, keep_original, base_spacing, base }` (Slot 8 im ToolManager)
+**Public Exports (`mod.rs`):**
+
+- `RouteOffsetTool`
+- `compute_offset_positions()` — Hotpath-Helfer fuer Benchmarks/Tests
+
+**Gruppen-Record:** `GroupKind::RouteOffset { chain_positions, chain_start_id, chain_end_id, offset_left, offset_right, keep_original, base_spacing, base }` unter `RouteToolId::RouteOffset`
 
 Modulstruktur: `mod.rs` (Re-Exporte), `state.rs` (Struct + OffsetConfig), `lifecycle.rs` (RouteTool-Impl), `geometry.rs` (compute_offset_positions), `config_ui.rs` (egui-Panel), `tests.rs`
 
@@ -415,7 +425,7 @@ Modulstruktur: `mod.rs` (Re-Exporte), `state.rs` (Struct + OffsetConfig), `lifec
 
 ### `FieldPathTool`
 
-Feldweg-Erkennung: Berechnet eine Mittellinie zwischen zwei Farmland-Seiten via Voronoi-BFS und erzeugt daraus eine gleichmäßig abgetastete Waypoint-Route (Slot 9 im ToolManager).
+Feldweg-Erkennung: Berechnet eine Mittellinie zwischen zwei Farmland-Seiten und erzeugt daraus eine gleichmäßig abgetastete Waypoint-Route (`RouteToolId::FieldPath`).
 
 **Voraussetzung:** `farmland_grid` und `farmland_polygons` müssen im `AppState` geladen sein (werden beim Laden der Overview aus dem Map-ZIP befüllt).
 
@@ -483,7 +493,7 @@ Modulstruktur: `mod.rs` (Re-Export), `state.rs` (Structs, Enums, Felder), `lifec
 
 ### `ColorPathTool`
 
-Farb-Pfad-Erkennung: Erkennt Wege anhand der Farbe im Hintergrundbild, skelettiert sie per Zhang-Suen-Thinning und erzeugt daraus eine gleichmaessig abgetastete Waypoint-Route (Slot 10 im ToolManager).
+Farb-Pfad-Erkennung: Erkennt zusammenhaengende Teilnetze anhand der Farbe im Hintergrundbild, skelettiert sie per Zhang-Suen-Thinning und exportiert daraus ein Waypoint-Netz mit offenen Enden, Kreuzungen und Segmenten (`RouteToolId::ColorPath`).
 
 **Voraussetzung:** Ein Hintergrundbild muss geladen sein (`set_background_map_image()`). Das Tool bezieht die `map_size` automatisch aus `set_farmland_grid()`.
 
@@ -491,7 +501,7 @@ Farb-Pfad-Erkennung: Erkennt Wege anhand der Farbe im Hintergrundbild, skelettie
 
 - **`Idle`** — Warten auf Nutzerinteraktion (Klick oder Alt+Lasso startet Sampling)
 - **`Sampling`** — User sammelt Farbproben per Alt+Lasso; Berechnen-Button startet Pipeline
-- **`Preview`** — Mittellinie berechnet und als Vorschau angezeigt; Enter fuegt Nodes ein
+- **`Preview`** — Teilnetz berechnet und als Vorschau angezeigt; Enter fuegt Nodes ein
 
 **ToolLasso-Mechanismus:**
 
@@ -506,29 +516,37 @@ an `handlers::route_tool::lasso_completed()` weitergeleitet, das `on_lasso_compl
 2. Alt+Drag zeichnet ein Lasso-Polygon → `on_lasso_completed()` sampelt Farben im Polygon
 3. Mehrere Lasso-Polygone moeglich (Sampling kumulativ)
 4. Sidebar: Berechnen-Button → `compute_pipeline()` → Phase::Preview
-5. Sidebar: Pfad auswaehlen (falls mehrere gefunden) → `select_path(idx)`
-6. Enter / Uebernehmen-Button → `execute()` → Nodes in Road Map einfuegen
+5. Sidebar: Netz pruefen (Kreuzungen, offene Enden, Segmente) + Anschlussmodus waehlen
+6. Enter / Uebernehmen-Button → `execute()` → Graph in Road Map einfuegen
 
 **Erkennungs-Pipeline (`compute_pipeline()`):**
 
-1. `build_color_mask()` — Bool-Maske aller Pixel innerhalb der Farb-Toleranz
+1. `flood_fill_color_mask()` — Bool-Maske des zusammenhaengenden Farb-Bereichs ab Lasso-Startpunkt
 2. Morphologisches Opening + Closing (wenn `noise_filter == true`) — Rauschen entfernen
 3. Original-Maske sichern (vor Zhang-Suen, fuer Medial-Axis-Korrektur)
 4. `zhang_suen_thinning()` — Maske auf 1-Pixel-breites Skelett reduzieren
 5. `find_connected_components()` — Zusammenhaengende Skelett-Gruppen finden (8-Connectivity)
-6. `order_skeleton_pixels(hint)` — Pixel-Gruppen linear ordnen (BFS vom Hint-naechsten Startpunkt)
-7. `refine_medial_axis()` — Skelett-Pixel auf geometrische Mittelachse korrigieren
-8. `simplify_polyline()` — Douglas-Peucker-Vereinfachung
-9. `resample_by_distance()` — Gleichmaessige Node-Verteilung
-10. Pfad naechste zum Lasso-Startpunkt auswaehlen → Phase::Preview
+6. Pixelgrad klassifizieren: offene Enden (`degree == 1`), Kettenpixel (`degree == 2`), Junctions (`degree >= 3`)
+7. Benachbarte Junction-Pixel zu Clustern zusammenfassen und pro Cluster einen zentralen Knoten berechnen
+8. Zwischen den Graph-Knoten alle Grad-2-Ketten als Segmente verfolgen und per `refine_medial_axis()` in Weltkoordinaten umrechnen
+9. Pro Segment `simplify_polyline()` + `resample_by_distance()` anwenden
+10. Preview-Netz aufbauen und fuer Export bereithalten
+
+**Preview/Export:**
+
+- Preview zeigt Kennzahlen fuer Kreuzungen, offene Enden, Segmente und Preview-Nodes
+- Sampling-Preview zeigt nach jeder Lasso-Auswahl alle Randsegmente der Flood-Fill-Maske, nicht nur eine Einzelkontur
+- Export legt Junction-/End-Knoten genau einmal an und fuegt pro Segment nur die Zwischenpunkte neu ein
+- Bestandsanschluss nutzt `ToolLifecycleState::snap_at()` und damit den konfigurierten Snap-Radius
 
 **Konfiguration (`ColorPathConfig`):**
 
-- `color_tolerance: f32` — Farb-Toleranz (euklidischer RGB-Abstand; Standard: 25.0, Bereich: 5–80)
+- `exact_color_match: bool` — Exaktmodus; matcht nur auf exakt gelasso-te RGB-Farben und deaktiviert die Toleranz-UI (Standard: `true`)
+- `color_tolerance: f32` — Farb-Toleranz im unscharfen Modus (euklidischer RGB-Abstand; Standard: 25.0, Bereich: 1–80)
 - `node_spacing: f32` — Abstand zwischen generierten Nodes in Metern (Standard: 5.0, Bereich: 1–50)
 - `simplify_tolerance: f32` — Douglas-Peucker-Toleranz in Metern (Standard: 1.0, Bereich: 0–20)
 - `noise_filter: bool` — Morphologischen Rauschfilter aktivieren (Standard: true)
-- `connect_to_existing: bool` — Start-/End-Node an naechsten bestehenden Node anschliessen (Standard: true)
+- `existing_connection_mode: ExistingConnectionMode` — Bestandsanschluss: `Never`, `OpenEnds`, `OpenEndsAndJunctions` (Standard: `OpenEnds`)
 - `detection_bounds: Option<(Vec2, Vec2)>` — Begrenzt Farberkennung auf eine Rect-Region (geplant)
 
 **Felder:**
@@ -544,10 +562,8 @@ pub struct ColorPathTool {
     pub(crate) mask: Vec<bool>,                  // Bool-Maske (true = Pfadpixel), zeilenweise
     pub(crate) mask_width: u32,
     pub(crate) mask_height: u32,
-    pub(crate) skeleton_paths: Vec<Vec<Vec2>>,  // Alle gefundenen Skelett-Pfade (Weltkoords)
-    pub(crate) selected_path_index: Option<usize>,
-    pub(crate) centerline: Vec<Vec2>,           // Vereinfachte Mittellinie
-    pub(crate) resampled_nodes: Vec<Vec2>,      // Gleichmaessig abgetastete Nodes
+    pub(crate) skeleton_network: Option<SkeletonNetwork>, // Junctions + offene Enden + Segmente
+    pub(crate) prepared_segments: Vec<PreparedSegment>,   // Vereinfachte/abgetastete Preview-Segmente
     pub(crate) background_image: Option<Arc<image::DynamicImage>>,
     pub(crate) map_size: f32,                   // Kartengroesse in Metern (aus FarmlandGrid)
     pub direction: ConnectionDirection,
@@ -563,7 +579,9 @@ pub struct ColorPathTool {
 - `pixel_to_world_f32(px, py, map_size, img_w, img_h) → Vec2` — Sub-Pixel-Position → Weltkoords (fuer Medial-Axis)
 - `sample_colors_in_polygon(polygon, image, map_size) → Vec<[u8; 3]>` — RGB-Pixel im Lasso-Polygon sammeln
 - `compute_average_color(colors) → [u8; 3]` — RGB-Mittelwert aller Samples
+- `build_exact_color_set(raw_colors) → Vec<[u8; 3]>` — Eindeutige Rohfarben fuer Exaktmodus ohne Quantisierung
 - `build_color_mask(image, avg_color, tolerance, bounds, map_size) → (Vec<bool>, u32, u32)` — Bool-Maske erstellen
+- `extract_boundary_segments_from_mask(mask, w, h, map_size) → Vec<(Vec2, Vec2)>` — Alle Grenzen der Flood-Fill-Maske als Preview-Segmente (inkl. Innenkanten/Loecher)
 - `erode(mask, w, h) → Vec<bool>` — Erosion mit Majority-Bedingung (≥ 3 von 4 Nachbarn, zum Schutz duenner Verbindungen)
 - `dilate(mask, w, h) → Vec<bool>` — Dilatation (4-Connectivity)
 - `morphological_open(mask, w, h) → Vec<bool>` — Erosion + Dilatation (Rauschen entfernen)
@@ -572,13 +590,18 @@ pub struct ColorPathTool {
 **Skelett-Funktionen (`skeleton.rs`):**
 
 - `find_connected_components(mask, w, h) → Vec<Vec<(usize, usize)>>` — Gruppen nach Groesse absteigend
-- `order_skeleton_pixels(pixels, hint) → Vec<(usize, usize)>` — Lineare Ordnung; Startpunkt = Pixel naechste zum Hint (oder erster Pixel)
 - `refine_medial_axis(ordered, original_mask, w, h) → Vec<(f32, f32)>` — Skelett-Pixel auf geometrische Mittelachse korrigieren
-- `extract_paths_from_mask(mask, w, h, noise_filter, map_size, start_hint) → Vec<Vec<Vec2>>` — Haupt-Pipeline
+- `extract_network_from_mask(mask, w, h, noise_filter, map_size, start_hint) → SkeletonNetwork` — Haupt-Pipeline fuer Netz-Knoten und Segmente
+- `extract_paths_from_mask(...) → Vec<Vec<Vec2>>` — Legacy-Wrapper fuer lineare Pfad-Konsumenten/Tests
+
+**Public Exports (`mod.rs`):**
+
+- `ColorPathTool`
+- `compute_color_path_network_stats()` — Flood-Fill + Netzextraktion fuer Benchmarks/Analyse, ohne interne Skelett-Typen offenzulegen
 
 **Gruppen-Record:** ColorPathTool speichert keinen `GroupRecord` (keine nachträgliche Bearbeitung).
 
-Modulstruktur: `mod.rs` (Re-Export), `state.rs` (Struct, Phasen-Enum, Config, Default), `lifecycle.rs` (RouteTool-Impl, Pipeline-Methoden), `config_ui.rs` (egui-Panel), `sampling.rs` (Farb-Sampling + Masken-Erstellung), `skeleton.rs` (Skelett-Extraktion + Pfad-Ordnung)
+Modulstruktur: `mod.rs` (Re-Export), `state.rs` (Struct, Phasen-Enum, Config, Default), `lifecycle.rs` (RouteTool-Impl, Netz-Pipeline, Export), `config_ui.rs` (egui-Panel), `sampling.rs` (Farb-Sampling + Masken-Erstellung), `skeleton.rs` (Skelett-Extraktion + Graph-Aufbau)
 
 ---
 
@@ -586,7 +609,7 @@ Modulstruktur: `mod.rs` (Re-Export), `state.rs` (Struct, Phasen-Enum, Config, De
 
 Parallele Ausweichstrecke einer selektierten Kette mit S-förmigen An-/Abfahrten. Das Tool benötigt eine Eingabe-Kette (via `load_chain()`), generiert dann automatisch die Bypass-Positionen und erstellt neue Nodes mit entsprechenden Verbindungen.
 
-**Input-Modus:** Chain-basiert (nutzt `RouteToolChainInput` Trait).
+**Input-Modus:** Chain-basiert (nutzt die `RouteTool`-Hooks `needs_chain_input()` und `load_chain()`).
 
 - `needs_chain_input() → true`
 - `load_chain(positions, start_id, end_id)` — Laedt die Kette aus der User-Selektion

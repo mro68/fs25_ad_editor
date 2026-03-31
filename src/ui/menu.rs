@@ -1,7 +1,55 @@
 //! Top-Menue (File, Edit, View, etc.).
 
+use crate::app::tools::{
+    resolve_route_tool_entries, route_tool_disabled_reason_key, route_tool_group_label_key,
+    route_tool_label_key, RouteToolGroup, RouteToolId, RouteToolSurface,
+};
 use crate::app::{AppIntent, AppState, RenderQuality};
 use crate::shared::{t, I18nKey};
+use crate::ui::common::route_tool_availability_context;
+
+fn push_route_tool_selection(events: &mut Vec<AppIntent>, tool_id: RouteToolId) {
+    events.push(AppIntent::SelectRouteToolRequested { tool_id });
+}
+
+fn render_route_tool_group_menu(
+    ui: &mut egui::Ui,
+    state: &AppState,
+    events: &mut Vec<AppIntent>,
+    group: RouteToolGroup,
+) {
+    let lang = state.options.language;
+    let availability = route_tool_availability_context(state);
+    let active_route_id = state.active_route_tool_id();
+
+    ui.menu_button(t(lang, route_tool_group_label_key(group)), |ui| {
+        for entry in resolve_route_tool_entries(RouteToolSurface::MainMenu, group, availability) {
+            let response = ui.add_enabled(
+                entry.enabled,
+                egui::Button::new(t(lang, route_tool_label_key(entry.descriptor.id)))
+                    .selected(active_route_id == Some(entry.descriptor.id)),
+            );
+
+            let response = if entry.enabled {
+                response.on_hover_text(t(lang, route_tool_label_key(entry.descriptor.id)))
+            } else {
+                response.on_disabled_hover_text(t(
+                    lang,
+                    route_tool_disabled_reason_key(
+                        entry
+                            .disabled_reason
+                            .expect("disabled route tool menu entry requires reason"),
+                    ),
+                ))
+            };
+
+            if response.clicked() {
+                push_route_tool_selection(events, entry.descriptor.id);
+                ui.close();
+            }
+        }
+    });
+}
 
 /// Rendert die Menue-Leiste
 pub fn render_menu(ctx: &egui::Context, state: &AppState) -> Vec<AppIntent> {
@@ -126,6 +174,12 @@ pub fn render_menu(ctx: &egui::Context, state: &AppState) -> Vec<AppIntent> {
                 }
             });
 
+            ui.menu_button(t(lang, I18nKey::MenuRouteTools), |ui| {
+                render_route_tool_group_menu(ui, state, &mut events, RouteToolGroup::Basics);
+                render_route_tool_group_menu(ui, state, &mut events, RouteToolGroup::Section);
+                render_route_tool_group_menu(ui, state, &mut events, RouteToolGroup::Analysis);
+            });
+
             ui.menu_button(t(lang, I18nKey::MenuView), |ui| {
                 if ui.button(t(lang, I18nKey::MenuResetCamera)).clicked() {
                     events.push(AppIntent::ResetCameraRequested);
@@ -210,53 +264,13 @@ pub fn render_menu(ctx: &egui::Context, state: &AppState) -> Vec<AppIntent> {
                 if ui
                     .add_enabled(
                         has_farmland,
-                        egui::Button::new(t(lang, I18nKey::MenuDetectField)),
-                    )
-                    .on_disabled_hover_text(t(lang, I18nKey::MenuExtrasNeedBackground))
-                    .clicked()
-                {
-                    events.push(AppIntent::SelectRouteToolRequested {
-                        index: crate::app::group_registry::TOOL_INDEX_FIELD_BOUNDARY,
-                    });
-                    ui.close();
-                }
-                if ui
-                    .add_enabled(
-                        has_farmland,
                         egui::Button::new(t(lang, I18nKey::MenuTraceAllFields)),
                     )
-                    .on_disabled_hover_text(t(lang, I18nKey::MenuExtrasNeedBackground))
+                    .on_disabled_hover_text(t(lang, I18nKey::RouteToolNeedFarmland))
                     .on_hover_text(t(lang, I18nKey::MenuTraceAllFieldsHelp))
                     .clicked()
                 {
                     events.push(AppIntent::OpenTraceAllFieldsDialogRequested);
-                    ui.close();
-                }
-                if ui
-                    .add_enabled(
-                        has_farmland,
-                        egui::Button::new(t(lang, I18nKey::MenuFieldPath)),
-                    )
-                    .on_disabled_hover_text(t(lang, I18nKey::MenuExtrasNeedBackground))
-                    .clicked()
-                {
-                    events.push(AppIntent::SelectRouteToolRequested {
-                        index: crate::app::group_registry::TOOL_INDEX_FIELD_PATH,
-                    });
-                    ui.close();
-                }
-                let has_background = state.background_image.is_some();
-                if ui
-                    .add_enabled(
-                        has_background,
-                        egui::Button::new(t(lang, I18nKey::MenuColorPath)),
-                    )
-                    .on_disabled_hover_text("Hintergrundkarte zuerst laden")
-                    .clicked()
-                {
-                    events.push(AppIntent::SelectRouteToolRequested {
-                        index: crate::app::group_registry::TOOL_INDEX_COLOR_PATH,
-                    });
                     ui.close();
                 }
 

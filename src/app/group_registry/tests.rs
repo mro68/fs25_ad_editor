@@ -1,4 +1,5 @@
 use super::*;
+use crate::app::tools::RouteToolId;
 use crate::app::tools::ToolAnchor;
 use crate::{ConnectionDirection, ConnectionPriority, MapNode, NodeFlag, RoadMap};
 use glam::Vec2;
@@ -11,6 +12,7 @@ fn make_test_record(
 ) -> GroupRecord {
     GroupRecord {
         id,
+        tool_id: Some(RouteToolId::Straight),
         node_ids,
         start_anchor: ToolAnchor::NewPosition(Vec2::ZERO),
         end_anchor: ToolAnchor::NewPosition(Vec2::ZERO),

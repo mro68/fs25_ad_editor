@@ -4,7 +4,7 @@
 
 Das `app`-Modul verwaltet den globalen State, verarbeitet `AppIntent`s zentral ueber den `AppController`, mappt diese auf `AppCommand`s und baut die `RenderScene` fuer das Rendering.
 
-**Hinweis:** `Camera2D` lebt im `core`-Modul (reiner Geometrie-Typ). `app` re-exportiert `Camera2D`, `ConnectionDirection`, `ConnectionPriority`, `RoadMap`, `ParkingConfig`, `ToolAnchor`, `compute_ring` und andere zentrale Typen aus `core` und `tools`.
+**Hinweis:** `Camera2D` lebt im `core`-Modul (reiner Geometrie-Typ). `app` re-exportiert `Camera2D`, `ConnectionDirection`, `ConnectionPriority`, `RoadMap`, `RouteToolId`, `ToolAnchor`, `compute_ring` und andere zentrale Typen aus `core`, `tool_contract` und `tools`.
 
 **Weitere API-Dokumentationen:**
 - [`handlers/API.md`](handlers/API.md) — alle Handler-Funktionen mit detaillierter Dokumentation
@@ -126,6 +126,7 @@ sel.ids_mut().insert(42);
 
 - `new() → Self`
 - `ids_mut() → &mut IndexSet<u64>` — Mutable Zugriff via `Arc::make_mut` (Copy-on-Write)
+- `active_route_tool_id() → Option<RouteToolId>` — Aktive Route-Tool-ID im Route-Modus, sonst `None`
 
 pub struct UiState {
     pub show_file_dialog: bool,
@@ -163,10 +164,8 @@ pub struct FloatingMenuState {
 pub enum FloatingMenuKind {
     /// Werkzeug-Menue (Select/Connect/AddNode) — Shortcut: `T`
     Tools,
-    /// Basis-Menue (Gerade/Kurve/Spline/Constraint) — Shortcut: `G`
-    Basics,
-    /// Menue fuer Abschnittswerkzeuge (Bypass/Parking/RouteOffset) — Shortcut: `B`
-    SectionTools,
+    /// Route-Tool-Menue fuer eine kanonische Tool-Gruppe — Shortcuts: `G`/`B`/`A`
+    RouteTools(RouteToolGroup),
     /// Richtungs- und Strassenart-Menue (Regular/Dual/Reverse, Haupt/Neben) — Shortcut: `R`
     DirectionPriority,
     /// Zoom-Menue (Auf Map einpassen / Auf Auswahl einpassen) — Shortcut: `Z`
@@ -260,11 +259,15 @@ pub struct EditorToolState {
     pub connect_source_node: Option<u64>,
     pub default_direction: ConnectionDirection,
     pub default_priority: ConnectionPriority,
-    /// Zuletzt gewählter Tool-Index in „Grundbefehle" (Gerade + alle Kurven).
-    pub last_basic_command_index: usize,
-    pub last_smooth_curve_index: usize,
-    pub last_section_tool_index: usize,
+    /// Zuletzt gewaehlt pro RouteTool-Gruppe (`Basics`, `Section`, `Analysis`).
+    pub route_tool_memory: RouteToolSelectionMemory,
     pub tool_manager: ToolManager,
+}
+
+pub struct RouteToolSelectionMemory {
+    pub basics: RouteToolId,
+    pub section: RouteToolId,
+    pub analysis: RouteToolId,
 }
 ```
 
@@ -340,15 +343,15 @@ Re-exportiert aus `app`: `BoundaryDirection`, `BoundaryInfo`.
 
 ### `GroupBase` und `GroupKind`
 
-Gemeinsame Basis-Parameter fuer alle Route-Tools. Wird von `GroupKind` verwendet.
+Gemeinsame Basis-Parameter fuer alle group-backed Route-Tools. `GroupKind`
+enthaelt nur persistierte Tool-Konfigurationen; `FieldPath` und `ColorPath`
+sind laut kanonischem Katalog `Ephemeral` und tauchen deshalb bewusst nicht in
+`GroupKind` bzw. `GroupRecord` auf.
 
 ```rust
 pub struct GroupBase {
-    /// Verbindungsrichtung
     pub direction: ConnectionDirection,
-    /// Strassenart (Regular oder SubPriority)
     pub priority: ConnectionPriority,
-    /// Maximaler Abstand zwischen Zwischen-Nodes
     pub max_segment_length: f32,
 }
 
@@ -391,142 +394,35 @@ pub enum GroupKind {
         config: ParkingConfig,
         base: GroupBase,
     },
-    /// Feldgrenz-Route (geschlossener Ring entlang eines Feldes)
     FieldBoundary {
-        field_id: u32,          // Farmland-ID des verwendeten Feldes
-        node_spacing: f32,      // Abstand zwischen Nodes in Metern
-        offset: f32,            // Versatz nach innen (<0) oder aussen (>0) in Metern
-        straighten_tolerance: f32, // Douglas-Peucker-Toleranz in Metern (0 = keine)
-        /// Winkel-Schwellwert fuer Ecken-Erkennung in Grad (None = deaktiviert).
-        /// Ist ein Wert gesetzt, werden Eckpunkte beim Ring-Resampling exakt erhalten.
+        field_id: u32,
+        node_spacing: f32,
+        offset: f32,
+        straighten_tolerance: f32,
         corner_angle_threshold: Option<f32>,
-        /// Verrundungsradius fuer erkannte Ecken in Metern (None = keine Verrundung).
-        /// Ecken werden durch einen Kreisbogen ersetzt; Verrundungspunkte erhalten NodeFlag::RoundedCorner.
         corner_rounding_radius: Option<f32>,
+        corner_rounding_max_angle_deg: Option<f32>,
         base: GroupBase,
     },
-    /// Parallelversatz einer selektierten Kette (ohne S-Kurven-Anbindung)
+    Manual { base: GroupBase },
     RouteOffset {
-        chain_positions: Vec<Vec2>,  // Geordnete Positionen der Quell-Kette
-        chain_start_id: u64,         // ID des ersten Ketten-Nodes
-        chain_end_id: u64,           // ID des letzten Ketten-Nodes
-        offset_left: f32,            // Versatz links in Metern (0.0 = deaktiviert)
-        offset_right: f32,           // Versatz rechts in Metern (0.0 = deaktiviert)
-        keep_original: bool,         // Original-Kette beibehalten?
-        base_spacing: f32,           // Node-Abstand auf der Offset-Kette
-        base: GroupBase,
-    },
-    /// Manuell gruppierte Nodes (kein Tool-Hintergrund — via Kontextmenü "Gruppe erstellen")
-    Manual {
-        base: GroupBase,
-    },
-}
-
-/// Tool-Indizes im ToolManager
-pub const TOOL_INDEX_STRAIGHT: usize = 0;
-pub const TOOL_INDEX_CURVE_QUAD: usize = 1;
-pub const TOOL_INDEX_CURVE_CUBIC: usize = 2;
-pub const TOOL_INDEX_SPLINE: usize = 3;
-pub const TOOL_INDEX_BYPASS: usize = 4;
-pub const TOOL_INDEX_SMOOTH_CURVE: usize = 5;
-pub const TOOL_INDEX_PARKING: usize = 6;
-pub const TOOL_INDEX_FIELD_BOUNDARY: usize = 7;
-pub const TOOL_INDEX_ROUTE_OFFSET: usize = 8;
-```
-
-**Methoden:**
-
-```rust
-pub fn tool_index(&self) -> Option<usize>
-```
-Gibt den Tool-Index im ToolManager fuer diese GroupKind-Variante zurueck (z.B. `GroupKind::Bypass { .. }.tool_index()` → `Some(TOOL_INDEX_BYPASS)`). Gibt `None` fuer `Manual`-Segmente zurueck, die keinem Tool zugeordnet sind.
-
----
-
-### `GroupKind`
-
-Gruppen-Art mit tool-spezifischen Parametern. Re-exportiert aus `app` (definiert in `group_registry/types.rs`).
-
-```rust
-pub enum GroupKind {
-    /// Gerade Strecke
-    Straight { base: GroupBase },
-    /// Kubische Bézier-Kurve (Grad 3)
-    CurveCubic {
-        cp1: Vec2, cp2: Vec2,
-        tangent_start: TangentSource,
-        tangent_end: TangentSource,
-        base: GroupBase,
-    },
-    /// Quadratische Bézier-Kurve (Grad 2)
-    CurveQuad { cp1: Vec2, base: GroupBase },
-    /// Catmull-Rom-Spline
-    Spline {
-        anchors: Vec<ToolAnchor>,
-        tangent_start: TangentSource,
-        tangent_end: TangentSource,
-        base: GroupBase,
-    },
-    /// Geglättete Kurve (winkelgeglaettet mit automatischen Tangenten)
-    SmoothCurve {
-        control_nodes: Vec<Vec2>,
-        max_angle_deg: f32,
-        min_distance: f32,
-        base: GroupBase,
-    },
-    /// Ausweichstrecke zur selektierten Kette
-    Bypass {
         chain_positions: Vec<Vec2>,
         chain_start_id: u64,
         chain_end_id: u64,
-        offset: f32,
+        offset_left: f32,
+        offset_right: f32,
+        keep_original: bool,
         base_spacing: f32,
-        base: GroupBase,
-    },
-    /// Parkplatz-Layout (Wendekreis + Parkreihen)
-    Parking {
-        origin: Vec2,
-        angle: f32,
-        config: ParkingConfig,
-        base: GroupBase,
-    },
-    /// Feldgrenz-Route (geschlossener Ring entlang eines Feldes)
-    FieldBoundary {
-        field_id: u32,             // Farmland-ID
-        node_spacing: f32,         // Node-Abstand in Metern
-        offset: f32,               // Innen-/Aussenversatz in Metern
-        straighten_tolerance: f32, // Douglas-Peucker-Toleranz in Metern
-        /// Winkel-Schwellwert fuer Ecken-Erkennung in Grad (None = deaktiviert).
-        /// Ist ein Wert gesetzt, werden Eckpunkte beim Ring-Resampling exakt erhalten.
-        corner_angle_threshold: Option<f32>,
-        /// Verrundungsradius fuer erkannte Ecken in Metern (None = keine Verrundung).
-        /// Ecken werden durch einen Kreisbogen ersetzt; Verrundungspunkte erhalten NodeFlag::RoundedCorner.
-        corner_rounding_radius: Option<f32>,
-        base: GroupBase,
-    },
-    /// Parallelversatz einer selektierten Kette (ohne S-Kurven-Anbindung)
-    RouteOffset {
-        chain_positions: Vec<Vec2>, // Geordnete Positionen der Quell-Kette
-        chain_start_id: u64,        // ID des ersten Ketten-Nodes
-        chain_end_id: u64,          // ID des letzten Ketten-Nodes
-        offset_left: f32,           // Versatz links in Metern (0.0 = deaktiviert)
-        offset_right: f32,          // Versatz rechts in Metern
-        keep_original: bool,        // Original-Kette beibehalten?
-        base_spacing: f32,          // Node-Abstand auf der Offset-Kette
-        base: GroupBase,
-    },
-    /// Manuell gruppierte Nodes (kein Tool-Hintergrund — via Kontextmenü "Gruppe erstellen")
-    Manual {
         base: GroupBase,
     },
 }
 ```
 
-**Methoden:**
-- `tool_index() → Option<usize>` — Index des zugehoerigen Tools im `ToolManager`. Gibt `None` fuer `Manual`-Segmente zurueck, da sie keinem Tool zugeordnet sind.
-- `is_tool_backed() → bool` — `true` wenn die Gruppe von einem Route-Tool erstellt wurde (alle Varianten ausser `Manual`).
+**Hinweise:**
 
-**Hinweis:** Alle Varianten enthalten `base: GroupBase` mit gemeinsamen Parametern. Die `group_registry` speichert diese Metadaten fuer nachtraegliche Bearbeitung.
+- Die Zuordnung zu einem konkreten Route-Tool laeuft nicht mehr ueber historische Tool-Indizes, sondern ueber `GroupRecord.tool_id: Option<RouteToolId>`.
+- `Manual` repraesentiert bewusst Gruppen ohne Tool-Hintergrund.
+- `FieldPath` und `ColorPath` bleiben in allen Pflicht-Surfaces sichtbar, erzeugen aber keinen `GroupKind`-/`GroupRecord`-Pfad.
 
 ---
 
@@ -538,6 +434,8 @@ Gespeicherte Gruppen-Parametrisierung fuer nachtraegliche Bearbeitung.
 pub struct GroupRecord {
     /// Eindeutige Registry-ID
     pub id: u64,
+    /// Explizite Tool-Herkunft (`None` fuer manuelle Gruppen)
+    pub tool_id: Option<RouteToolId>,
     /// IDs aller neu erstellten Nodes
     pub node_ids: Vec<u64>,
     /// Start-Anker (ExistingNode oder NewPosition)
@@ -561,14 +459,24 @@ pub struct GroupRecord {
 }
 ```
 
+**Methoden:**
+
+- `tool_descriptor() -> Option<&'static RouteToolDescriptor>` — Loest den kanonischen Tool-Descriptor ueber `tool_id` auf
+- `backing_mode() -> Option<RouteToolBackingMode>` — Liefert den Persistenz-/Editierbarkeitsvertrag des zugeordneten Tools
+- `is_tool_backed() -> bool` — `true` nur fuer `GroupBackedReadOnly` bzw. `GroupBackedEditable`
+- `is_tool_editable() -> bool` — `true` nur fuer `GroupBackedEditable`; wird vom Gruppen-Edit-Panel und von `handlers::editing::edit_group()` als Guard verwendet
+
+**Hinweis:** `FieldPath` und `ColorPath` bleiben `Ephemeral`; fuer sie existiert deshalb kein `GroupRecord` und kein Tool-Edit-Flow.
+
 ---
 
 ### `GroupRegistry`
 
-In-Session-Registry aller erstellten Gruppen — ermöglicht nachträgliches Editieren von Gruppen durch Speicherung der Tool-Parameter und Validitätspruefung.
+In-Session-Registry aller erstellten Gruppen. Speichert group-backed Tool-Ergebnisse,
+prueft deren Validitaet und bietet Lookup-, Lock- und Boundary-Cache-Funktionen.
 
 **Modulstruktur** (`app/group_registry/`):
-- `types.rs` — Datentypen: `GroupBase`, `GroupKind`, `GroupRecord`, Tool-Index-Konstanten
+- `types.rs` — Datentypen: `GroupBase`, `GroupKind`, `GroupRecord` und der explizite Tool-Vertrag
 - `query.rs` — Lookup- und Query-Methoden (read-only)
 - `lock.rs` — Lock- und Edit-Guard-Methoden
 - `mutation.rs` — Mutierende Methoden (register, remove, update)
@@ -578,17 +486,20 @@ In-Session-Registry aller erstellten Gruppen — ermöglicht nachträgliches Edi
 - Nicht persistent: Wird beim Laden einer Datei geleert
 - Interne Speicherung als `HashMap<u64, GroupRecord>` fuer O(1)-Zugriff nach ID
 - Reverse-Index `node_to_records: HashMap<u64, Vec<u64>>` fuer effiziente Node→Segment-Abfragen
+- Expliziter Tool-Vertrag ueber `GroupRecord.tool_id` + `RouteToolBackingMode` statt impliziter Slot-Heuristiken
 - Generations-Zaehler `dimmed_generation: u64` — wird bei jeder node_ids-Mutation erhoehen; dient als Invalidierungs-Token fuer den `dimmed_ids`-Cache in `AppState`
 - Segment-Validierung: Prueft ob alle Nodes noch existieren und Positionen unveraendert sind
-- Segment-Selektion: Erlaubt Klick auf Gruppen-Node → Selektion aller Gruppen-Nodes
+- Boundary-Cache ist pointer-sensitiv: bei neuer `RoadMap` wird der Cache komplett invalidiert
 
 **Methoden:**
 
 ```rust
+pub fn new() -> Self // Leere Registry erzeugen
 pub fn register(&mut self, record: GroupRecord) -> u64 // Registriert neu erstellte Gruppe
 pub fn next_id(&mut self) -> u64 // Erzeugt naechste auto-increment ID (vor Konstruktion eines Records)
 pub fn get(&self, record_id: u64) -> Option<&GroupRecord> // Findet Record nach ID
 pub fn remove(&mut self, record_id: u64) // Loescht Record
+pub fn invalidate_by_node_ids(&mut self, node_ids: &[u64]) // Entfernt alle betroffenen Records (ausser aktivem Edit-Guard)
 pub fn remove_nodes_from_record(&mut self, record_id: u64, nodes_to_remove: &[u64]) -> bool // Entfernt Nodes aus Record; loest Record automatisch auf wenn < 2 Nodes verbleiben
 pub fn find_by_node_ids(&self, node_ids: &IndexSet<u64>) -> Vec<&GroupRecord> // Alle Records mit mind. einer Node-ID
 pub fn find_first_by_node_id(&self, node_id: u64) -> Option<&GroupRecord> // Erstes Record mit dieser Node
@@ -596,17 +507,19 @@ pub fn is_group_valid(&self, record: &GroupRecord, road_map: &RoadMap) -> bool /
 pub fn records(&self) -> impl Iterator<Item = &GroupRecord> // Alle Records als Iterator
 pub fn records_mut(&mut self) -> impl Iterator<Item = &mut GroupRecord> // Alle Records (veränderlich)
 pub fn records_map(&self) -> &HashMap<u64, GroupRecord> // Direkter Zugriff auf interne HashMap
+pub fn len(&self) -> usize // Anzahl Records
+pub fn is_empty(&self) -> bool // Registry leer?
 pub fn groups_for_node(&self, node_id: u64) -> Vec<u64> // Alle Gruppen-IDs die diesen Node enthalten
 pub fn toggle_lock(&mut self, group_id: u64) // Lock-Zustand der Gruppe umschalten
 pub fn set_locked(&mut self, group_id: u64, locked: bool) // Lock-Zustand explizit setzen
 pub fn is_locked(&self, group_id: u64) -> bool // Lock-Zustand abfragen (false wenn nicht gefunden)
 pub fn set_edit_guard(&mut self, record_id: Option<u64>) // Guard fuer Group-Edit: dieser Record wird nicht invalidiert
 pub fn update_record(&mut self, record_id: u64, node_ids: Vec<u64>, original_positions: Vec<Vec2>) -> bool // Record in-place aktualisieren
-pub fn group_bounding_box(&self, group_id: u64, road_map: &RoadMap) -> Option<(Vec2, Vec2)> // AABB der Gruppe (min, max)
+pub fn segment_bounding_box(&self, segment_id: u64, road_map: &RoadMap) -> Option<(Vec2, Vec2)> // AABB der Gruppe (min, max)
 pub fn expand_locked_selection(&self, selected_nodes: &[u64]) -> Vec<u64> // Selektion um Nodes aller betroffenen locked Gruppen erweitern
 pub fn update_original_positions(&mut self, group_id: u64, road_map: &RoadMap) // original_positions nach Lock-Move aktualisieren
 pub fn set_entry_exit(&mut self, record_id: u64, entry: Option<u64>, exit: Option<u64>) -> bool // Einfahrt/Ausfahrt-IDs setzen; validiert Node-Zugehoerigkeit; invalidiert Boundary-Cache; gibt false zurueck wenn Record nicht gefunden oder IDs nicht im Record
-pub fn warm_boundary_cache(&mut self, road_map: &RoadMap) // Boundary-Cache fuer alle Records aufwaermen (Connection-basiert, einmal pro Frame vor dem Rendering; Parking-Sonderfall entfernt — Icons ausschliesslich ueber entry_node_id/exit_node_id)
+pub fn warm_boundary_cache(&mut self, road_map: &RoadMap) // Boundary-Cache fuer alle Records aufwaermen; invalidiert komplett bei neuer RoadMap
 pub fn boundary_cache_for(&self, record_id: u64) -> Option<&[BoundaryInfo]> // Gecachte BoundaryInfos fuer einen Record abfragen
 pub fn open_nodes(&self, record_id: u64, road_map: &RoadMap) -> Option<Vec<BoundaryNode>> // Boundary-Nodes (ungecacht, fuer Sonderfaelle)
 ```
@@ -750,10 +663,15 @@ pub enum AppIntent {
     RouteToolClicked { world_pos: glam::Vec2, ctrl: bool },
     RouteToolExecuteRequested,
     RouteToolCancelled,
-    SelectRouteToolRequested { index: usize },
+    SelectRouteToolRequested { tool_id: RouteToolId },
     RouteToolConfigChanged,
-    RouteToolWithAnchorsRequested { index: usize, start_node_id: u64, end_node_id: u64 },
+    RouteToolWithAnchorsRequested {
+        tool_id: RouteToolId,
+        start_node_id: u64,
+        end_node_id: u64,
+    },
     RouteToolTangentSelected { start: TangentSource, end: TangentSource },
+    RouteToolLassoCompleted { polygon: Vec<glam::Vec2> },
     RouteToolRecreateRequested,
 
     // Route-Tool Drag (Steuerpunkt-Verschiebung)
@@ -940,10 +858,15 @@ pub enum AppCommand {
     RouteToolClick { world_pos: glam::Vec2, ctrl: bool },
     RouteToolExecute,
     RouteToolCancel,
-    SelectRouteTool { index: usize },
+    SelectRouteTool { tool_id: RouteToolId },
     RouteToolRecreate,
-    RouteToolWithAnchors { index: usize, start_node_id: u64, end_node_id: u64 },
+    RouteToolWithAnchors {
+        tool_id: RouteToolId,
+        start_node_id: u64,
+        end_node_id: u64,
+    },
     RouteToolApplyTangent { start: TangentSource, end: TangentSource },
+    RouteToolLassoCompleted { polygon: Vec<glam::Vec2> },
 
     // Route-Tool Schnellsteuerung
     IncreaseRouteToolNodeCount,

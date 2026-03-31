@@ -1,5 +1,8 @@
 //! Gemeinsame UI-Hilfsfunktionen.
 
+use crate::app::tools::RouteToolAvailabilityContext;
+use crate::app::AppState;
+
 /// Schwellenwert fuer Scroll-Events – unterdrückt Rauschen bei kleinen Scroll-Bewegungen.
 pub(crate) const WHEEL_THRESHOLD: f32 = 0.5;
 
@@ -35,4 +38,24 @@ pub(crate) fn apply_wheel_step(
     let old = *value;
     *value = (*value + raw.signum() * step).clamp(*range.start(), *range.end());
     *value != old
+}
+
+/// Baut den zentralen Availability-Kontext fuer alle Route-Tool-Surfaces.
+pub(crate) fn route_tool_availability_context(state: &AppState) -> RouteToolAvailabilityContext {
+    let has_farmland = state
+        .farmland_polygons
+        .as_ref()
+        .is_some_and(|polygons| !polygons.is_empty());
+    let has_background = state.background_image.is_some();
+    let has_ordered_chain = state.road_map.as_deref().is_some_and(|road_map| {
+        road_map
+            .ordered_chain_nodes(&state.selection.selected_node_ids)
+            .is_some()
+    });
+
+    RouteToolAvailabilityContext {
+        has_farmland,
+        has_background,
+        has_ordered_chain,
+    }
 }
