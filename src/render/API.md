@@ -8,9 +8,9 @@ Das `render`-Modul implementiert GPU-beschleunigtes Rendering mit wgpu. Importie
 
 - `node_renderer.rs` — GPU-Instanced Nodes (Wegpunkte)
 - `connection_renderer/` — Verbindungslinien + Richtungspfeile (Submodule: `culling.rs` Viewport-Culling-Geometrie, `mesh.rs` Vertex-Generierung)
-- `background_renderer.rs` — Background-Map-Quad mit Texture-Sampling
+- `background_renderer.rs` — Background-Map-Quad mit zoomabhaengigem Texture-Sampling (linear/nearest)
 - `marker_renderer.rs` — GPU-Instanced Map-Marker (Pin-Symbole)
-- `texture.rs` — Texture-Erstellung aus DynamicImage (PNG/JPG/DDS)
+- `texture.rs` — Texture- und Sampler-Erstellung aus DynamicImage (PNG/JPG/DDS)
 - `callback.rs` — wgpu Render Callback fuer egui-Integration (`WgpuRenderCallback`, `WgpuRenderData`)
 - `types.rs` — GPU-Typen (`Vertex`, `ConnectionVertex`, `NodeInstance`, `MarkerInstance`, `Uniforms`), View-Projection
 - `shaders.wgsl` — WGSL Shader (Node, Connection, Background, Marker)

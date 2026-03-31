@@ -259,15 +259,15 @@ pub fn map_intent_to_commands(state: &AppState, intent: AppIntent) -> Vec<AppCom
         }
         AppIntent::RouteToolExecuteRequested => vec![AppCommand::RouteToolExecute],
         AppIntent::RouteToolCancelled => vec![AppCommand::RouteToolCancel],
-        AppIntent::SelectRouteToolRequested { index } => {
-            vec![AppCommand::SelectRouteTool { index }]
+        AppIntent::SelectRouteToolRequested { tool_id } => {
+            vec![AppCommand::SelectRouteTool { tool_id }]
         }
         AppIntent::RouteToolWithAnchorsRequested {
-            index,
+            tool_id,
             start_node_id,
             end_node_id,
         } => vec![AppCommand::RouteToolWithAnchors {
-            index,
+            tool_id,
             start_node_id,
             end_node_id,
         }],

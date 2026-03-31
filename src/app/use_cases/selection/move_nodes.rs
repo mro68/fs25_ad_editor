@@ -64,6 +64,7 @@ pub fn move_selected_nodes(state: &mut AppState, delta_world: glam::Vec2) {
 mod tests {
     use super::*;
     use crate::app::group_registry::{GroupBase, GroupKind, GroupRecord};
+    use crate::app::RouteToolId;
     use crate::app::ToolAnchor;
     use crate::{ConnectionDirection, ConnectionPriority, MapNode, NodeFlag, RoadMap};
     use glam::Vec2;
@@ -77,6 +78,7 @@ mod tests {
     ) -> GroupRecord {
         GroupRecord {
             id,
+            tool_id: Some(RouteToolId::Straight),
             node_ids,
             start_anchor: ToolAnchor::NewPosition(Vec2::ZERO),
             end_anchor: ToolAnchor::NewPosition(Vec2::ZERO),

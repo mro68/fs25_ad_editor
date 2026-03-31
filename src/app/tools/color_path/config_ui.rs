@@ -1,6 +1,6 @@
 //! Sidebar-Konfiguration fuer das ColorPathTool.
 
-use super::state::{ColorPathPhase, ColorPathTool};
+use super::state::{ColorPathPhase, ColorPathTool, ExistingConnectionMode};
 
 /// Rendert die ColorPathTool-Konfiguration im Properties-Panel.
 ///
@@ -18,7 +18,7 @@ pub(super) fn render_config_view(
     // ── Status-Text ──────────────────────────────────────────────────────────
     let status = match tool.phase {
         ColorPathPhase::Idle => "Alt+Lasso fuer Farbsample",
-        ColorPathPhase::Sampling => "Berechnen fuer Mittellinie",
+        ColorPathPhase::Sampling => "Berechnen fuer Wegenetz",
         ColorPathPhase::Preview => "Enter zum Einfuegen, Reset zum Zuruecksetzen",
     };
     ui.colored_label(egui::Color32::LIGHT_BLUE, status);
@@ -45,7 +45,12 @@ pub(super) fn render_config_view(
                     ui.painter().rect_filled(rect, 2.0, color);
                 });
                 let palette_size = tool.color_palette.len();
-                ui.label(format!("Palette: {palette_size} Farben"));
+                let palette_label = if tool.config.exact_color_match {
+                    "Exakte Farben"
+                } else {
+                    "Palette"
+                };
+                ui.label(format!("{palette_label}: {palette_size} Farben"));
                 // Palette-Vorschau: kleine Quadrate fuer jeden Eintrag (max. 20)
                 ui.horizontal_wrapped(|ui| {
                     for &c in tool.color_palette.iter().take(20) {
@@ -75,30 +80,21 @@ pub(super) fn render_config_view(
             }
         }
         ColorPathPhase::Preview => {
-            let path_count = tool.skeleton_paths.len();
-            let node_count = tool.resampled_nodes.len();
-            ui.label(format!("Pfade: {path_count}  Nodes: {node_count}"));
-
-            if path_count > 1 {
-                ui.separator();
-                ui.label("Pfad auswaehlen:");
-                for i in 0..path_count {
-                    let pt_count = tool.skeleton_paths[i].len();
-                    let label = format!("Pfad {} ({} Punkte)", i + 1, pt_count);
-                    let selected = tool.selected_path_index == Some(i);
-                    if ui.selectable_label(selected, label).clicked() {
-                        tool.select_path(i);
-                        changed = true;
-                    }
-                }
-            }
+            let (junction_count, open_end_count, segment_count) = tool.preview_stats();
+            let node_count = tool.preview_node_count();
+            ui.label(format!(
+                "Kreuzungen: {junction_count}  Offene Enden: {open_end_count}"
+            ));
+            ui.label(format!(
+                "Segmente: {segment_count}  Preview-Nodes: {node_count}"
+            ));
 
             ui.separator();
 
             ui.horizontal(|ui| {
                 if ui
                     .add_enabled(
-                        !tool.resampled_nodes.is_empty(),
+                        !tool.prepared_segments.is_empty(),
                         egui::Button::new("\u{2713} Uebernehmen"),
                     )
                     .on_disabled_hover_text("Keine Nodes zum Einfuegen")
@@ -113,10 +109,8 @@ pub(super) fn render_config_view(
 
                 if ui.button("\u{2190} Zurueck").clicked() {
                     tool.phase = ColorPathPhase::Sampling;
-                    tool.skeleton_paths.clear();
-                    tool.selected_path_index = None;
-                    tool.centerline.clear();
-                    tool.resampled_nodes.clear();
+                    tool.skeleton_network = None;
+                    tool.prepared_segments.clear();
                     tool.mask.clear();
                     changed = true;
                 }
@@ -138,12 +132,22 @@ pub(super) fn render_config_view(
     // ── Konfigurations-Slider ─────────────────────────────────────────────────
     ui.label("Einstellungen:");
 
+    if ui
+        .checkbox(&mut tool.config.exact_color_match, "Exaktmodus")
+        .changed()
+    {
+        tool.on_matching_config_changed();
+        changed = true;
+    }
+
     ui.horizontal(|ui| {
         ui.label("Farbtoleranz:");
-        if ui
-            .add(egui::Slider::new(&mut tool.config.color_tolerance, 5.0..=80.0).suffix(""))
-            .changed()
-        {
+        let response = ui.add_enabled(
+            !tool.config.exact_color_match,
+            egui::Slider::new(&mut tool.config.color_tolerance, 1.0..=80.0).suffix(""),
+        );
+        if response.changed() {
+            tool.on_matching_config_changed();
             changed = true;
         }
     });
@@ -156,7 +160,7 @@ pub(super) fn render_config_view(
         {
             // Resampling in Preview-Phase sofort neu berechnen
             if tool.phase == ColorPathPhase::Preview {
-                tool.apply_selected_path();
+                tool.rebuild_preview_segments();
             }
             changed = true;
         }
@@ -170,7 +174,7 @@ pub(super) fn render_config_view(
         {
             // Vereinfachung + Resampling in Preview-Phase sofort neu berechnen
             if tool.phase == ColorPathPhase::Preview {
-                tool.apply_selected_path();
+                tool.rebuild_preview_segments();
             }
             changed = true;
         }
@@ -185,15 +189,25 @@ pub(super) fn render_config_view(
         changed = true;
     }
 
-    if ui
-        .checkbox(
-            &mut tool.config.connect_to_existing,
-            "An Bestand anschliessen",
-        )
-        .changed()
-    {
-        changed = true;
-    }
+    ui.horizontal(|ui| {
+        ui.label("Bestandsanschluss:");
+        egui::ComboBox::from_id_salt("color_path_existing_connection_mode")
+            .selected_text(tool.config.existing_connection_mode.label())
+            .show_ui(ui, |ui| {
+                for mode in ExistingConnectionMode::ALL {
+                    if ui
+                        .selectable_value(
+                            &mut tool.config.existing_connection_mode,
+                            mode,
+                            mode.label(),
+                        )
+                        .changed()
+                    {
+                        changed = true;
+                    }
+                }
+            });
+    });
 
     changed
 }

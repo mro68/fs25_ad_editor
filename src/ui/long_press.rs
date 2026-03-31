@@ -23,6 +23,10 @@ pub struct LongPressItem<T: Clone> {
     pub tooltip: &'static str,
     /// Rueckgabewert bei Auswahl.
     pub value: T,
+    /// Ist dieses Item aktuell aktivierbar?
+    pub enabled: bool,
+    /// Optionaler Tooltip fuer den deaktivierten Zustand.
+    pub disabled_tooltip: Option<&'static str>,
 }
 
 /// Definiert eine Long-Press-Gruppe mit mehreren auswählbaren Items.
@@ -56,6 +60,7 @@ pub fn render_long_press_button<T: Clone + PartialEq>(
         .iter()
         .find(|item| &item.value == display_value)
         .or_else(|| group.items.first())?;
+    let group_has_enabled_item = group.items.iter().any(|item| item.enabled);
 
     let button_tint = if is_button_active {
         active_icon_color
@@ -66,9 +71,21 @@ pub fn render_long_press_button<T: Clone + PartialEq>(
     let has_multiple = group.items.len() > 1;
 
     let icon = svg_icon(display_item.icon.clone(), ICON_SIZE).tint(button_tint);
-    let response = ui
-        .add(egui::Button::image(icon).selected(is_button_active))
-        .on_hover_text(display_item.tooltip);
+    let response = ui.add_enabled(
+        group_has_enabled_item,
+        egui::Button::image(icon).selected(is_button_active),
+    );
+    let response = if display_item.enabled {
+        response.on_hover_text(display_item.tooltip)
+    } else {
+        response
+            .on_hover_text(display_item.tooltip)
+            .on_disabled_hover_text(
+                display_item
+                    .disabled_tooltip
+                    .unwrap_or(display_item.tooltip),
+            )
+    };
 
     if has_multiple {
         paint_dropdown_arrow(ui, &response);
@@ -88,7 +105,15 @@ pub fn render_long_press_button<T: Clone + PartialEq>(
             }
         }
         // Linke Haelfte (oder Single-Item): aktuelles Item aktivieren.
-        return Some(display_item.value.clone());
+        // Ist das angezeigte Item deaktiviert, wird stattdessen das Popup geoefnet,
+        // sofern die Gruppe noch andere aktivierbare Eintraege anbietet.
+        if display_item.enabled {
+            return Some(display_item.value.clone());
+        }
+        if has_multiple && group_has_enabled_item {
+            lp_state.popup_open = true;
+            lp_state.popup_pos = Some(response.rect.right_top());
+        }
     }
 
     if lp_state.popup_open {
@@ -139,11 +164,19 @@ pub fn render_popup<T: Clone + PartialEq>(
                             };
                             let icon = svg_icon(item.icon.clone(), ICON_SIZE).tint(tint);
 
-                            if ui
-                                .add(egui::Button::image(icon).selected(is_active))
-                                .on_hover_text(item.tooltip)
-                                .clicked()
-                            {
+                            let response = ui.add_enabled(
+                                item.enabled,
+                                egui::Button::image(icon).selected(is_active),
+                            );
+                            let response = if item.enabled {
+                                response.on_hover_text(item.tooltip)
+                            } else {
+                                response.on_hover_text(item.tooltip).on_disabled_hover_text(
+                                    item.disabled_tooltip.unwrap_or(item.tooltip),
+                                )
+                            };
+
+                            if response.clicked() {
                                 selected = Some(item.value.clone());
                             }
                         }

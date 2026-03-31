@@ -80,24 +80,26 @@ Ueber das **Kontextmenue**:
 
 ## Gruppen
 
-Gruppen sind benannte Streckenabschnitte, die als Einheit verwaltet werden können. Jede Gruppe enthält eine Menge von Nodes und gewährt schnellen Zugriff per Doppelklick-Selektion.
+Gruppen sind benannte Streckenabschnitte, die als Einheit verwaltet werden koennen. Jede Gruppe enthaelt eine Menge von Nodes und ermoeglicht eine gemeinsame Selektion und Nachbearbeitung.
 
 ### Was ist eine Gruppe?
 
-Eine Gruppe entsteht, wenn eine Strecke mit aktivierter **"Gruppe erstellen"**-Checkbox (Route-Tool) angelegt wird, oder wenn eine bestehende Selektion zu einer Gruppe zusammengeführt wird. Gruppen erscheinen im Gruppen-Verzeichnis und können gesperrt werden, um versehentliche Änderungen zu verhindern.
+Eine Gruppe entsteht, wenn ein gruppenfaehiges Route-Tool ein Ergebnis erzeugt oder wenn eine bestehende Selektion manuell zu einer Gruppe zusammengefasst wird. Gruppen koennen gesperrt werden, um versehentliche Aenderungen zu verhindern.
+
+> **Wichtig:** Ergebnisse von **Feldweg erkennen** und **Farb-Pfad erkennen** sind bewusst **nicht** ueber einen spaeteren Tool-Edit-Pfad nachbearbeitbar. Sie bleiben normal selektierbar und manuell editierbar, erzeugen aber keinen **Tool bearbeiten**-Button.
 
 ### Gruppen selektieren
 
 | Methode | Beschreibung |
 |---------|--------------|
-| **Doppelklick** auf Node | Selektiert alle Nodes der Gruppe (bis zur nächsten Kreuzung oder Sackgasse) |
+| **Doppelklick** auf Gruppen-Node | Selektiert alle Nodes der Gruppe |
 | **Ctrl+Doppelklick** | Gruppe additiv zur bestehenden Selektion hinzufügen |
 
 ### Gruppen-Bearbeitungsmodus
 
 Im Gruppen-Bearbeitungsmodus lassen sich Nodes einer Gruppe verschieben, hinzufügen oder löschen.
 
-**Aktivieren:** Rechtsklick auf eine Gruppe im Gruppen-Panel → **"Gruppe bearbeiten"**
+**Aktivieren:** Gruppe selektieren, dann per Rechtsklick **"Gruppe bearbeiten"** waehlen.
 
 Das schwebende Fenster **"✏ Gruppen-Bearbeitung"** erscheint und zeigt die aktive Gruppen-ID.
 
@@ -106,7 +108,7 @@ Das schwebende Fenster **"✏ Gruppen-Bearbeitung"** erscheint und zeigt die akt
 | Nodes verschieben | Drag auf selektierten Node (wie im Normalbetrieb) |
 | Nodes hinzufügen | Add-Node-Tool (T → Add Node) |
 | Nodes löschen | `Delete` |
-| **🔧 Tool bearbeiten** | Öffnet das ursprüngliche Tool-Edit-Fenster der Gruppe (z. B. Parkplatz, Linien-Tool) — nur bei Tool-Gruppen sichtbar |
+| **🔧 Tool bearbeiten** | Oeffnet das urspruengliche Tool erneut, aber nur fuer Gruppen mit explizitem Tool-Edit-Vertrag. Der Button fehlt bewusst bei manuell erzeugten Gruppen sowie bei Ergebnissen von Feldweg erkennen und Farb-Pfad erkennen. |
 | **✓ Übernehmen** oder `Enter` | Änderungen auf die Gruppe anwenden |
 | **✕ Abbrechen** oder `Escape` | Alle Änderungen rückgängig machen |
 

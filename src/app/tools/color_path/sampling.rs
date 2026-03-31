@@ -13,24 +13,31 @@ use image::{DynamicImage, GenericImageView};
 
 /// Konvertiert Weltkoordinaten in Pixel-Koordinaten des Hintergrundbildes.
 ///
-/// Das Bild ist quadratisch und zentriert bei (0,0); `map_size` gibt
-/// die Seitenlaenge in Metern an. `img_width` steuert den Massstab.
+/// Das Bild ist zentriert bei (0,0); `map_size` gibt die Seitenlaenge in
+/// Metern an. Ganzzahlige Rueckgabewerte adressieren Pixelzellen, nicht deren
+/// Zentren.
 pub(crate) fn world_to_pixel(
     world: Vec2,
     map_size: f32,
     img_width: u32,
     img_height: u32,
 ) -> (u32, u32) {
-    let scale = img_width as f32 / map_size;
-    let px = ((world.x + map_size / 2.0) * scale).clamp(0.0, (img_width - 1) as f32) as u32;
-    let py = ((world.y + map_size / 2.0) * scale).clamp(0.0, (img_height - 1) as f32) as u32;
+    let scale_x = img_width as f32 / map_size;
+    let scale_y = img_height as f32 / map_size;
+    let px = ((world.x + map_size / 2.0) * scale_x)
+        .floor()
+        .clamp(0.0, (img_width - 1) as f32) as u32;
+    let py = ((world.y + map_size / 2.0) * scale_y)
+        .floor()
+        .clamp(0.0, (img_height - 1) as f32) as u32;
     (px, py)
 }
 
 /// Konvertiert Pixel-Koordinaten in Weltkoordinaten.
 ///
-/// Umkehrung von `world_to_pixel`. Fuer nicht-quadratische Bilder werden
-/// X und Y je mit dem korrekten Skalierungsfaktor umgerechnet.
+/// Ganzzahlige Pixelkoordinaten werden als Pixelzentren interpretiert.
+/// Fuer nicht-quadratische Bilder werden X und Y je mit dem korrekten
+/// Skalierungsfaktor umgerechnet.
 pub(crate) fn pixel_to_world(
     px: u32,
     py: u32,
@@ -41,15 +48,16 @@ pub(crate) fn pixel_to_world(
     let scale_x = map_size / img_width as f32;
     let scale_y = map_size / img_height as f32;
     Vec2::new(
-        px as f32 * scale_x - map_size / 2.0,
-        py as f32 * scale_y - map_size / 2.0,
+        (px as f32 + 0.5) * scale_x - map_size / 2.0,
+        (py as f32 + 0.5) * scale_y - map_size / 2.0,
     )
 }
 
 /// Konvertiert Sub-Pixel-Koordinaten (Fließkomma) in Weltkoordinaten.
 ///
 /// Wird fuer die Medial-Axis-Korrektur verwendet, wo Pixel-Positionen
-/// nicht ganzzahlig sind.
+/// nicht ganzzahlig sind. Der Wert `0.0` entspricht dabei dem Zentrum des
+/// ersten Pixels; `-0.5` und `+0.5` liegen auf dessen linker/rechter Kante.
 pub(crate) fn pixel_to_world_f32(
     px: f32,
     py: f32,
@@ -59,7 +67,10 @@ pub(crate) fn pixel_to_world_f32(
 ) -> Vec2 {
     let scale_x = map_size / img_width as f32;
     let scale_y = map_size / img_height as f32;
-    Vec2::new(px * scale_x - map_size / 2.0, py * scale_y - map_size / 2.0)
+    Vec2::new(
+        (px + 0.5) * scale_x - map_size / 2.0,
+        (py + 0.5) * scale_y - map_size / 2.0,
+    )
 }
 
 // ---------------------------------------------------------------------------
@@ -139,6 +150,16 @@ pub(crate) fn compute_average_color(colors: &[[u8; 3]]) -> [u8; 3] {
 // Farbpalette
 // ---------------------------------------------------------------------------
 
+/// Dedupliziert Rohfarben ohne Quantisierung fuer exaktes RGB-Matching.
+pub(crate) fn build_exact_color_set(raw_colors: &[[u8; 3]]) -> Vec<[u8; 3]> {
+    use std::collections::HashSet;
+    let mut seen = HashSet::new();
+    for &color in raw_colors {
+        seen.insert(color);
+    }
+    seen.into_iter().collect()
+}
+
 /// Quantisiert Rohfarben auf ein Raster und gibt die eindeutigen Farb-Buckets zurueck.
 ///
 /// `bucket_size` bestimmt die Rasterung (z.B. 8 → Werte 0, 8, 16, …, 248).
@@ -165,6 +186,7 @@ pub(crate) fn build_color_palette(raw_colors: &[[u8; 3]], bucket_size: u8) -> Ve
 ///
 /// Expandiert ab `start_pixel` zu allen 4-verbundenen Nachbarn,
 /// deren Farbe innerhalb der Toleranz eines Palette-Eintrags liegt.
+/// Mit `tolerance = 0.0` entspricht dies exakter RGB-Uebereinstimmung.
 /// Ergibt immer genau einen zusammenhaengenden Bereich.
 pub(crate) fn flood_fill_color_mask(
     image: &DynamicImage,
@@ -336,54 +358,74 @@ pub(crate) fn morphological_close(mask: &[bool], width: usize, height: usize) ->
 // Kontur-Extraktion
 // ---------------------------------------------------------------------------
 
-/// Extrahiert die aeussere Kontur einer Bool-Maske als Weltkoordinaten-Polygon.
+/// Extrahiert alle Randsegmente einer Bool-Maske im Pixelraum.
 ///
-/// Algorithmus: Pro Scan-Zeile werden das linkeste und rechteste `true`-Pixel
-/// bestimmt. Linke Kante (oben→unten) und rechte Kante (unten→oben) werden
-/// zu einem geschlossenen Umriss-Polygon zusammengefuegt.
-///
-/// Geeignet fuer konvexe und leicht konkave Formen (Strassenabschnitte,
-/// Feldgrenzen). Zeilen ohne `true`-Pixel werden uebersprungen.
-pub(crate) fn extract_contour_from_mask(
+/// Fuer jedes `true`-Pixel werden die vier Zellkanten gegen die orthogonalen
+/// Nachbarn geprueft. Liegt ausserhalb der Maske oder ein `false`-Pixel an,
+/// wird genau dieses Randsegment ausgegeben. So bleiben auch innere Loecher
+/// und beide Seiten eines verzweigten Strassennetzes erhalten.
+fn extract_boundary_segments_from_mask_pixels(
+    mask: &[bool],
+    width: usize,
+    height: usize,
+) -> Vec<((f32, f32), (f32, f32))> {
+    let mut segments = Vec::new();
+
+    for y in 0..height {
+        for x in 0..width {
+            if !mask[y * width + x] {
+                continue;
+            }
+
+            let x = x as f32;
+            let y = y as f32;
+
+            let left_empty = x <= 0.0 || !mask[y as usize * width + (x as usize).saturating_sub(1)];
+            if left_empty {
+                segments.push(((x - 0.5, y - 0.5), (x - 0.5, y + 0.5)));
+            }
+
+            let right_empty = x as usize + 1 >= width || !mask[y as usize * width + x as usize + 1];
+            if right_empty {
+                segments.push(((x + 0.5, y - 0.5), (x + 0.5, y + 0.5)));
+            }
+
+            let top_empty = y <= 0.0 || !mask[(y as usize).saturating_sub(1) * width + x as usize];
+            if top_empty {
+                segments.push(((x - 0.5, y - 0.5), (x + 0.5, y - 0.5)));
+            }
+
+            let bottom_empty =
+                y as usize + 1 >= height || !mask[(y as usize + 1) * width + x as usize];
+            if bottom_empty {
+                segments.push(((x - 0.5, y + 0.5), (x + 0.5, y + 0.5)));
+            }
+        }
+    }
+
+    segments
+}
+
+/// Extrahiert alle Randsegmente einer Bool-Maske als Weltkoordinaten.
+pub(crate) fn extract_boundary_segments_from_mask(
     mask: &[bool],
     width: u32,
     height: u32,
     map_size: f32,
-) -> Vec<Vec2> {
+) -> Vec<(Vec2, Vec2)> {
     if mask.is_empty() || width == 0 || height == 0 {
         return Vec::new();
     }
 
-    let mut left_edge: Vec<Vec2> = Vec::new();
-    let mut right_edge: Vec<Vec2> = Vec::new();
-
-    for y in 0..height {
-        let mut min_x: Option<u32> = None;
-        let mut max_x: Option<u32> = None;
-        for x in 0..width {
-            let idx = (y * width + x) as usize;
-            if mask[idx] {
-                if min_x.is_none() {
-                    min_x = Some(x);
-                }
-                max_x = Some(x);
-            }
-        }
-        if let (Some(lx), Some(rx)) = (min_x, max_x) {
-            left_edge.push(pixel_to_world(lx, y, map_size, width, height));
-            right_edge.push(pixel_to_world(rx, y, map_size, width, height));
-        }
-    }
-
-    if left_edge.is_empty() {
-        return Vec::new();
-    }
-
-    // Linke Kante oben→unten, rechte Kante unten→oben → geschlossenes Polygon
-    let mut contour = left_edge;
-    right_edge.reverse();
-    contour.extend(right_edge);
-    contour
+    extract_boundary_segments_from_mask_pixels(mask, width as usize, height as usize)
+        .into_iter()
+        .map(|((sx, sy), (ex, ey))| {
+            (
+                pixel_to_world_f32(sx, sy, map_size, width, height),
+                pixel_to_world_f32(ex, ey, map_size, width, height),
+            )
+        })
+        .collect()
 }
 
 // ---------------------------------------------------------------------------
@@ -440,6 +482,23 @@ mod tests {
     }
 
     #[test]
+    fn pixel_to_world_maps_integer_pixels_to_texel_centers() {
+        let world = pixel_to_world(0, 0, 4.0, 4, 4);
+        assert_eq!(world, Vec2::new(-1.5, -1.5));
+
+        let edge = pixel_to_world_f32(-0.5, -0.5, 4.0, 4, 4);
+        assert_eq!(edge, Vec2::new(-2.0, -2.0));
+    }
+
+    #[test]
+    fn world_to_pixel_uses_independent_axis_scale() {
+        let world = Vec2::new(0.0, 1.5);
+        let (px, py) = world_to_pixel(world, 4.0, 4, 8);
+        assert_eq!(px, 2);
+        assert_eq!(py, 7);
+    }
+
+    #[test]
     fn compute_average_color_bekannte_werte() {
         // Drei bekannte Farben → erwarteter Mittelwert
         let colors: &[[u8; 3]] = &[[10, 20, 30], [20, 40, 60], [30, 60, 90]];
@@ -451,6 +510,16 @@ mod tests {
     fn compute_average_color_leer_gibt_null() {
         let avg = compute_average_color(&[]);
         assert_eq!(avg, [0, 0, 0]);
+    }
+
+    #[test]
+    fn build_exact_color_set_dedupliziert_ohne_quantisierung() {
+        let colors = vec![[10, 20, 30], [10, 20, 30], [11, 20, 30]];
+        let exact = build_exact_color_set(&colors);
+
+        assert_eq!(exact.len(), 2);
+        assert!(exact.contains(&[10, 20, 30]));
+        assert!(exact.contains(&[11, 20, 30]));
     }
 
     #[test]
@@ -479,6 +548,20 @@ mod tests {
                 );
             }
         }
+    }
+
+    #[test]
+    fn flood_fill_color_mask_mit_toleranz_null_matcht_nur_exakte_farben() {
+        let img = DynamicImage::ImageRgb8(RgbImage::from_fn(3, 1, |x, _| match x {
+            0 => Rgb([200, 0, 0]),
+            1 => Rgb([201, 0, 0]),
+            _ => Rgb([200, 0, 0]),
+        }));
+
+        let (mask, width, height) = flood_fill_color_mask(&img, &[[200, 0, 0]], 0.0, (0, 0));
+        assert_eq!(width, 3);
+        assert_eq!(height, 1);
+        assert_eq!(mask, vec![true, false, false]);
     }
 
     #[test]
@@ -543,6 +626,33 @@ mod tests {
         assert!(
             closed[width + 2],
             "1px-Luecke (2,1) muss nach Closing geschlossen sein"
+        );
+    }
+
+    #[test]
+    fn boundary_segments_enthalten_aussen_und_innenkanten() {
+        let width = 3usize;
+        let height = 3usize;
+        let mask = vec![true, true, true, true, false, true, true, true, true];
+
+        let segments = extract_boundary_segments_from_mask_pixels(&mask, width, height);
+        assert_eq!(
+            segments.len(),
+            16,
+            "Aussenrand 12 + Innenloch 4 Segmente erwartet"
+        );
+
+        assert!(
+            segments.contains(&((0.5, 0.5), (1.5, 0.5))),
+            "Oberkante des Innenlochs muss enthalten sein"
+        );
+        assert!(
+            segments.contains(&((0.5, 1.5), (1.5, 1.5))),
+            "Unterkante des Innenlochs muss enthalten sein"
+        );
+        assert!(
+            segments.contains(&((-0.5, -0.5), (0.5, -0.5))),
+            "Aussenkante oben links muss enthalten sein"
         );
     }
 }

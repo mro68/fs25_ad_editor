@@ -1,5 +1,6 @@
 //! Gemeinsame Icon-Konstanten und -Hilfsfunktionen fuer die UI.
 
+use crate::app::tools::RouteToolId;
 use crate::app::{AppState, ConnectionDirection, ConnectionPriority};
 use egui::{Image, ImageSource, Vec2};
 
@@ -11,19 +12,30 @@ pub fn svg_icon(source: ImageSource<'_>, size: f32) -> Image<'_> {
     Image::new(source).fit_to_exact_size(Vec2::splat(size))
 }
 
-/// Liefert die `ImageSource` fuer ein Route-Tool anhand seines Index.
-pub fn route_tool_icon(idx: usize) -> ImageSource<'static> {
-    match idx {
-        0 => egui::include_image!("../../assets/icons/icon_straight_line.svg"),
-        1 => egui::include_image!("../../assets/icons/icon_bezier_quadratic.svg"),
-        2 => egui::include_image!("../../assets/icons/icon_bezier_cubic.svg"),
-        3 => egui::include_image!("../../assets/icons/icon_spline.svg"),
-        4 => egui::include_image!("../../assets/icons/icon_bypass.svg"),
-        5 => egui::include_image!("../../assets/icons/icon_smooth_curve.svg"),
-        6 => egui::include_image!("../../assets/icons/icon_parking.svg"),
-        7 => egui::include_image!("../../assets/icons/icon_field_boundary.svg"),
-        8 => egui::include_image!("../../assets/icons/icon_route_offset.svg"),
-        _ => egui::include_image!("../../assets/icons/icon_straight_line.svg"),
+/// Liefert die `ImageSource` fuer ein Route-Tool anhand seiner stabilen ID.
+pub fn route_tool_icon(tool_id: RouteToolId) -> ImageSource<'static> {
+    match tool_id {
+        RouteToolId::Straight => egui::include_image!("../../assets/icons/icon_straight_line.svg"),
+        RouteToolId::CurveQuad => {
+            egui::include_image!("../../assets/icons/icon_bezier_quadratic.svg")
+        }
+        RouteToolId::CurveCubic => {
+            egui::include_image!("../../assets/icons/icon_bezier_cubic.svg")
+        }
+        RouteToolId::Spline => egui::include_image!("../../assets/icons/icon_spline.svg"),
+        RouteToolId::Bypass => egui::include_image!("../../assets/icons/icon_bypass.svg"),
+        RouteToolId::SmoothCurve => {
+            egui::include_image!("../../assets/icons/icon_smooth_curve.svg")
+        }
+        RouteToolId::Parking => egui::include_image!("../../assets/icons/icon_parking.svg"),
+        RouteToolId::FieldBoundary => {
+            egui::include_image!("../../assets/icons/icon_field_boundary.svg")
+        }
+        RouteToolId::FieldPath => egui::include_image!("../../assets/icons/icon_field_path.svg"),
+        RouteToolId::RouteOffset => {
+            egui::include_image!("../../assets/icons/icon_route_offset.svg")
+        }
+        RouteToolId::ColorPath => egui::include_image!("../../assets/icons/icon_color_path.svg"),
     }
 }
 

@@ -1,11 +1,14 @@
 //! Typen und Konstanten fuer die Segment-Registry.
 //!
 //! Enthaelt alle Datentypes (`GroupBase`, `GroupKind`, `GroupRecord`)
-//! sowie die Tool-Index-Konstanten fuer den `ToolManager`.
+//! sowie den expliziten Tool-Vertrag fuer `GroupRecord`.
 
 use crate::app::tools::common::TangentSource;
 use crate::app::tools::parking::ParkingConfig;
 use crate::app::tools::ToolAnchor;
+use crate::app::tools::{
+    route_tool_descriptor, RouteToolBackingMode, RouteToolDescriptor, RouteToolId,
+};
 use crate::core::{ConnectionDirection, ConnectionPriority};
 use glam::Vec2;
 
@@ -166,63 +169,13 @@ pub struct BoundaryInfo {
     pub max_external_angle_deviation: Option<f32>,
 }
 
-/// Tool-Index fuer `StraightLineTool` im `ToolManager` (Registrierungs-Slot 0).
-///
-/// Muss mit der Reihenfolge in `ToolManager::new()` uebereinstimmen.
-pub const TOOL_INDEX_STRAIGHT: usize = 0;
-/// Tool-Index fuer `CurveTool(Grad 2)` im `ToolManager` (Registrierungs-Slot 1).
-pub const TOOL_INDEX_CURVE_QUAD: usize = 1;
-/// Tool-Index fuer `CurveTool(Grad 3)` im `ToolManager` (Registrierungs-Slot 2).
-pub const TOOL_INDEX_CURVE_CUBIC: usize = 2;
-/// Tool-Index fuer `SplineTool` im `ToolManager` (Registrierungs-Slot 3).
-pub const TOOL_INDEX_SPLINE: usize = 3;
-/// Tool-Index fuer `BypassTool` im `ToolManager` (Registrierungs-Slot 4).
-pub const TOOL_INDEX_BYPASS: usize = 4;
-/// Tool-Index fuer `SmoothCurveTool` im `ToolManager` (Registrierungs-Slot 5).
-pub const TOOL_INDEX_SMOOTH_CURVE: usize = 5;
-/// Tool-Index fuer `ParkingTool` im `ToolManager` (Registrierungs-Slot 6).
-pub const TOOL_INDEX_PARKING: usize = 6;
-/// Tool-Index fuer `FieldBoundaryTool` im `ToolManager` (Registrierungs-Slot 7).
-pub const TOOL_INDEX_FIELD_BOUNDARY: usize = 7;
-/// Tool-Index fuer `FieldPathTool` im `ToolManager` (Registrierungs-Slot 8).
-pub const TOOL_INDEX_FIELD_PATH: usize = 8;
-/// Tool-Index fuer `RouteOffsetTool` im `ToolManager` (Registrierungs-Slot 9).
-pub const TOOL_INDEX_ROUTE_OFFSET: usize = 9;
-/// Tool-Index fuer `ColorPathTool` im `ToolManager` (Registrierungs-Slot 10).
-pub const TOOL_INDEX_COLOR_PATH: usize = 10;
-
-impl GroupKind {
-    /// Gibt den Tool-Index im ToolManager fuer dieses Segment zurueck.
-    ///
-    /// Muss mit der Registrierungsreihenfolge in `ToolManager::new()` uebereinstimmen —
-    /// abgesichert durch den Unit-Test `tool_index_stimmt_mit_tool_manager_reihenfolge_ueberein`.
-    /// Gibt `None` fuer `Manual`-Segmente zurueck, die keinem Tool zugeordnet sind.
-    pub fn tool_index(&self) -> Option<usize> {
-        match self {
-            GroupKind::Straight { .. } => Some(TOOL_INDEX_STRAIGHT),
-            GroupKind::CurveQuad { .. } => Some(TOOL_INDEX_CURVE_QUAD),
-            GroupKind::CurveCubic { .. } => Some(TOOL_INDEX_CURVE_CUBIC),
-            GroupKind::Spline { .. } => Some(TOOL_INDEX_SPLINE),
-            GroupKind::SmoothCurve { .. } => Some(TOOL_INDEX_SMOOTH_CURVE),
-            GroupKind::Bypass { .. } => Some(TOOL_INDEX_BYPASS),
-            GroupKind::Parking { .. } => Some(TOOL_INDEX_PARKING),
-            GroupKind::FieldBoundary { .. } => Some(TOOL_INDEX_FIELD_BOUNDARY),
-            GroupKind::RouteOffset { .. } => Some(TOOL_INDEX_ROUTE_OFFSET),
-            GroupKind::Manual { .. } => None,
-        }
-    }
-
-    /// Gibt `true` zurueck wenn das Segment von einem Route-Tool erstellt wurde.
-    pub fn is_tool_backed(&self) -> bool {
-        !matches!(self, GroupKind::Manual { .. })
-    }
-}
-
 /// Ein gespeichertes Segment (fertig erstellte Line).
 #[derive(Debug, Clone)]
 pub struct GroupRecord {
     /// Eindeutige Registry-ID (nicht identisch mit Node-IDs)
     pub id: u64,
+    /// Explizite Tool-Herkunft des Records (`None` fuer manuelle Gruppen).
+    pub tool_id: Option<RouteToolId>,
     /// IDs aller neu erstellten Nodes dieses Segments
     pub node_ids: Vec<u64>,
     /// Start-Anker (ExistingNode oder NewPosition)
@@ -245,64 +198,75 @@ pub struct GroupRecord {
     pub exit_node_id: Option<u64>,
 }
 
+impl GroupRecord {
+    /// Liefert den Descriptor des zugeordneten Route-Tools.
+    pub fn tool_descriptor(&self) -> Option<&'static RouteToolDescriptor> {
+        self.tool_id.map(route_tool_descriptor)
+    }
+
+    /// Liefert den Backing-Modus des zugeordneten Route-Tools.
+    pub fn backing_mode(&self) -> Option<RouteToolBackingMode> {
+        self.tool_descriptor()
+            .map(|descriptor| descriptor.backing_mode)
+    }
+
+    /// Gibt `true` zurueck wenn der Record von einem group-backed Tool stammt.
+    pub fn is_tool_backed(&self) -> bool {
+        self.backing_mode()
+            .is_some_and(RouteToolBackingMode::is_group_backed)
+    }
+
+    /// Gibt `true` zurueck wenn der Record ueber den Tool-Edit-Flow bearbeitbar ist.
+    pub fn is_tool_editable(&self) -> bool {
+        self.backing_mode()
+            .is_some_and(RouteToolBackingMode::is_editable)
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::app::tools::route_tool_catalog;
     use crate::app::tools::ToolManager;
 
-    /// Stellt sicher, dass `tool_index()` mit der Registrierungsreihenfolge
-    /// in `ToolManager::new()` uebereinstimmt. Bricht sofort beim Umbenennen
-    /// oder Umsortieren der Tools.
+    /// Stellt sicher, dass Katalog und ToolManager dieselbe Reihenfolge und Namen nutzen.
     #[test]
-    fn tool_index_stimmt_mit_tool_manager_reihenfolge_ueberein() {
+    fn tool_catalog_stimmt_mit_tool_manager_reihenfolge_ueberein() {
         let manager = ToolManager::new();
-        let names: Vec<&str> = manager.tool_names().into_iter().map(|(_, n)| n).collect();
-        assert_eq!(
-            names[TOOL_INDEX_STRAIGHT], "Gerade Strecke",
-            "TOOL_INDEX_STRAIGHT zeigt nicht auf StraightLineTool"
-        );
-        assert_eq!(
-            names[TOOL_INDEX_CURVE_QUAD], "Bézier Grad 2",
-            "TOOL_INDEX_CURVE_QUAD zeigt nicht auf CurveTool(Grad 2)"
-        );
-        assert_eq!(
-            names[TOOL_INDEX_CURVE_CUBIC], "Bézier Grad 3",
-            "TOOL_INDEX_CURVE_CUBIC zeigt nicht auf CurveTool(Grad 3)"
-        );
-        assert_eq!(
-            names[TOOL_INDEX_SPLINE], "Spline",
-            "TOOL_INDEX_SPLINE zeigt nicht auf SplineTool"
-        );
-        assert_eq!(
-            names[TOOL_INDEX_SMOOTH_CURVE], "Geglättete Kurve",
-            "TOOL_INDEX_SMOOTH_CURVE zeigt nicht auf SmoothCurveTool"
-        );
-        assert_eq!(
-            names[TOOL_INDEX_BYPASS], "Ausweichstrecke",
-            "TOOL_INDEX_BYPASS zeigt nicht auf BypassTool"
-        );
-        assert_eq!(
-            names[TOOL_INDEX_PARKING], "Parkplatz",
-            "TOOL_INDEX_PARKING zeigt nicht auf ParkingTool"
-        );
-        assert_eq!(
-            names[TOOL_INDEX_FIELD_BOUNDARY], "Feld erkennen",
-            "TOOL_INDEX_FIELD_BOUNDARY zeigt nicht auf FieldBoundaryTool"
-        );
+        let entries = manager.tool_names();
+        assert_eq!(entries.len(), route_tool_catalog().len());
+        for ((tool_id, runtime_name), descriptor) in entries.iter().zip(route_tool_catalog()) {
+            assert_eq!(*tool_id, descriptor.id);
+            assert_eq!(*runtime_name, descriptor.name);
+        }
     }
 
-    /// Stellt sicher, dass `Manual`-Segmente keinen Tool-Index haben und nicht tool-backed sind.
+    /// Stellt sicher, dass manuelle Gruppen keinen Tool-Vertrag haben.
     #[test]
-    fn manual_segment_hat_keinen_tool_index() {
+    fn manual_segment_hat_keinen_tool_vertrag() {
         use crate::core::{ConnectionDirection, ConnectionPriority};
-        let kind = GroupKind::Manual {
-            base: GroupBase {
-                direction: ConnectionDirection::Dual,
-                priority: ConnectionPriority::Regular,
-                max_segment_length: 10.0,
+        let record = GroupRecord {
+            id: 1,
+            tool_id: None,
+            node_ids: vec![1, 2],
+            start_anchor: ToolAnchor::NewPosition(Vec2::ZERO),
+            end_anchor: ToolAnchor::NewPosition(Vec2::ZERO),
+            kind: GroupKind::Manual {
+                base: GroupBase {
+                    direction: ConnectionDirection::Dual,
+                    priority: ConnectionPriority::Regular,
+                    max_segment_length: 10.0,
+                },
             },
+            original_positions: vec![Vec2::ZERO, Vec2::X],
+            marker_node_ids: Vec::new(),
+            locked: false,
+            entry_node_id: None,
+            exit_node_id: None,
         };
-        assert_eq!(kind.tool_index(), None);
-        assert!(!kind.is_tool_backed());
+        assert!(record.tool_descriptor().is_none());
+        assert_eq!(record.backing_mode(), None);
+        assert!(!record.is_tool_backed());
+        assert!(!record.is_tool_editable());
     }
 }

@@ -1,5 +1,6 @@
 //! Handler fuer Node/Connection-Editing, Marker und Editor-Werkzeug.
 
+use crate::app::tools::route_tool_descriptor;
 use crate::app::use_cases;
 use crate::app::AppState;
 use crate::core::{ConnectionDirection, ConnectionPriority, NodeFlag};
@@ -152,8 +153,16 @@ pub fn edit_group(state: &mut AppState, record_id: u64) {
         }
     };
 
-    let tool_index = match record.kind.tool_index() {
-        Some(idx) => idx,
+    let tool_id = match record.tool_id {
+        Some(tool_id) if record.is_tool_editable() => tool_id,
+        Some(tool_id) => {
+            log::warn!(
+                "Segment {} nutzt {:?}, ist aber laut Vertrag nicht per Tool editierbar",
+                record_id,
+                tool_id
+            );
+            return;
+        }
         None => {
             log::warn!(
                 "Segment {} hat keinen Tool-Hintergrund, Edit nicht moeglich",
@@ -204,7 +213,7 @@ pub fn edit_group(state: &mut AppState, record_id: u64) {
     state.group_registry.remove(record_id);
 
     // Passendes Route-Tool aktivieren
-    super::route_tool::select(state, tool_index);
+    super::route_tool::select(state, tool_id);
     state.editor.active_tool = EditorTool::Route;
 
     // Tool mit gespeicherten Parametern laden
@@ -217,9 +226,10 @@ pub fn edit_group(state: &mut AppState, record_id: u64) {
     state.tool_editing_record_id = Some(record_id);
 
     log::info!(
-        "Segment {} geladen fuer Bearbeitung (Tool-Index {})",
+        "Segment {} geladen fuer Bearbeitung ({:?}, Gruppe {:?})",
         record_id,
-        tool_index
+        tool_id,
+        route_tool_descriptor(tool_id).group
     );
 }
 

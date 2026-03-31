@@ -2,6 +2,7 @@
 
 use super::super::state::EditorTool;
 use crate::app::tools::common::TangentSource;
+use crate::app::tools::RouteToolId;
 use crate::core::{ConnectionDirection, ConnectionPriority, NodeFlag};
 use crate::shared::EditorOptions;
 use crate::shared::RenderQuality;
@@ -194,11 +195,11 @@ pub enum AppIntent {
     RouteToolExecuteRequested,
     /// Route-Tool: Abbrechen (Escape)
     RouteToolCancelled,
-    /// Route-Tool auswaehlen (per Index im ToolManager)
-    SelectRouteToolRequested { index: usize },
+    /// Route-Tool auswaehlen (ueber stabile Tool-ID im Katalog)
+    SelectRouteToolRequested { tool_id: RouteToolId },
     /// Route-Tool mit vordefinierten Start/End-Nodes aktivieren (Kontextmenue bei 2 selektierten Nodes)
     RouteToolWithAnchorsRequested {
-        index: usize,
+        tool_id: RouteToolId,
         start_node_id: u64,
         end_node_id: u64,
     },

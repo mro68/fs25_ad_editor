@@ -4,7 +4,7 @@ use super::geometry::compute_offset_positions;
 use super::state::RouteOffsetTool;
 use crate::app::group_registry::{GroupBase, GroupKind, GroupRecord};
 use crate::app::tools::common::ToolLifecycleState;
-use crate::app::tools::{RouteTool, ToolAction, ToolAnchor, ToolPreview, ToolResult};
+use crate::app::tools::{RouteTool, RouteToolId, ToolAction, ToolAnchor, ToolPreview, ToolResult};
 use crate::core::{ConnectionDirection, ConnectionPriority, NodeFlag, RoadMap};
 use glam::Vec2;
 
@@ -186,7 +186,6 @@ impl RouteTool for RouteOffsetTool {
         self.chain_start_id = 0;
         self.chain_end_id = 0;
         self.chain_inner_ids.clear();
-        self.cached_preview = None;
         let snap_radius = self.lifecycle.snap_radius;
         self.lifecycle = ToolLifecycleState::new(snap_radius);
     }
@@ -213,6 +212,7 @@ impl RouteTool for RouteOffsetTool {
         let end_pos = *self.chain_positions.last()?;
         Some(GroupRecord {
             id,
+            tool_id: Some(RouteToolId::RouteOffset),
             node_ids: node_ids.to_vec(),
             start_anchor: ToolAnchor::ExistingNode(self.chain_start_id, start_pos),
             end_anchor: ToolAnchor::ExistingNode(self.chain_end_id, end_pos),
@@ -300,7 +300,6 @@ impl RouteTool for RouteOffsetTool {
         self.chain_start_id = start_id;
         self.chain_end_id = end_id;
         self.chain_inner_ids = inferred;
-        self.cached_preview = None;
     }
 
     fn set_chain_inner_ids(&mut self, ids: Vec<u64>) {

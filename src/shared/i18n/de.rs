@@ -196,6 +196,7 @@ pub(super) fn translate(key: I18nKey) -> &'static str {
         I18nKey::SidebarTools => "Werkzeuge",
         I18nKey::SidebarBasics => "Grundbefehle",
         I18nKey::SidebarEdit => "Bearbeiten",
+        I18nKey::SidebarAnalysis => "Analyse",
         I18nKey::SidebarDirection => "Richtung",
         I18nKey::SidebarPriority => "Strassenart",
         I18nKey::SidebarZoom => "Zoom",
@@ -217,6 +218,7 @@ pub(super) fn translate(key: I18nKey) -> &'static str {
         I18nKey::RouteGroupStraight => "Geraden",
         I18nKey::RouteGroupCurves => "Kurven",
         I18nKey::RouteGroupSection => "Tools",
+        I18nKey::RouteGroupAnalysis => "Analyse",
         // === Floating-Menu: Tools ===
         I18nKey::FloatingToolSelect => "Auswahl",
         I18nKey::FloatingToolConnect => "Verbinden",
@@ -231,6 +233,9 @@ pub(super) fn translate(key: I18nKey) -> &'static str {
         I18nKey::FloatingEditBypass => "Ausweichstrecke",
         I18nKey::FloatingEditParking => "Parkplatz",
         I18nKey::FloatingEditRouteOffset => "Strecke versetzen",
+        I18nKey::FloatingAnalysisFieldBoundary => "Feld erkennen",
+        I18nKey::FloatingAnalysisFieldPath => "Feldweg erkennen",
+        I18nKey::FloatingAnalysisColorPath => "Farb-Pfad erkennen",
         // === Floating-Menu: Richtung + Strassenart ===
         I18nKey::FloatingDirectionRegular => "Einbahn vorwaerts",
         I18nKey::FloatingDirectionDual => "Zweirichtungsverkehr",
@@ -292,6 +297,7 @@ pub(super) fn translate(key: I18nKey) -> &'static str {
         I18nKey::PaletteToolConnect => "Connect-Tool",
         I18nKey::PaletteToolAddNode => "Add-Node-Tool",
         I18nKey::PaletteRouteToolPrefix => "Route-Tool:",
+        I18nKey::MenuRouteTools => "Route-Tools",
         // === Sidebar: LongPress-Tooltips ===
         I18nKey::LpToolSelect => "Auswahl\nNodes per Klick oder Lasso selektieren.\nSelektierte Nodes per Drag verschieben.\n(Taste T)",
         I18nKey::LpToolConnect => "Verbinden\nVerbindung zwischen 2 Nodes erstellen (Taste C)\noder loeschen (Taste X). Pfeilrichtung = Fahrtrichtung.\n(Taste T)",
@@ -304,10 +310,16 @@ pub(super) fn translate(key: I18nKey) -> &'static str {
         I18nKey::LpBypass => "Ausweichstrecke\nErzeugt eine parallele Umgehungsstrecke zur Selektion.\n(B)",
         I18nKey::LpParking => "Parkplatz\nGeneriert ein Parkplatz-Layout aus der Selektion.\n(B)",
         I18nKey::LpRouteOffset => "Strecke versetzen\nVerschiebt die selektierte Route parallel um einen konfigurierbaren Abstand.\n(B)",
+        I18nKey::LpFieldBoundary => "Feld erkennen\nExtrahiert aus geladenen Farmland-Daten eine bearbeitbare Feldgrenze.\nBenötigt Farmland-Daten.\n(A)",
+        I18nKey::LpFieldPath => "Feldweg erkennen\nErmittelt aus Farmland-Daten einen Fahrpfad innerhalb eines Feldes.\nBenötigt Farmland-Daten.\n(A)",
+        I18nKey::LpColorPath => "Farb-Pfad erkennen\nLeitet aus der geladenen Hintergrundkarte einen Pfad per Farbsegmentierung ab.\nBenötigt eine Hintergrundkarte.\n(A)",
         I18nKey::LpDirectionRegular => "Einbahn vorwaerts\nFahrzeuge nutzen diese Verbindungen nur in Vorwaertsrichtung.\nStandard fuer normale gerichtete Strecken.\n(R)",
         I18nKey::LpDirectionDual => "Zweirichtung\nFahrzeuge koennen in beide Richtungen fahren.\nFuer Wege die in beiden Richtungen befahrbar sein sollen.\n(R)",
         I18nKey::LpDirectionReverse => "Einbahn rueckwaerts\nFahrzeuge fahren ausschliesslich rueckwaerts auf dieser Strecke.\n(R)",
         I18nKey::LpPriorityMain => "Hauptstrasse\nHohe Prioritaet. AutoDrive bevorzugt diese Strecken.\nFuer Hauptverbindungen und viel genutzte Wege.\n(R)",
         I18nKey::LpPrioritySub => "Nebenstrasse\nNiedrigere Prioritaet. Nur bei Bedarf genutzt.\nFuer Feldwege und selten befahrene Verbindungen.\n(R)",
+        I18nKey::RouteToolNeedFarmland => "Farmland-Daten zuerst laden",
+        I18nKey::RouteToolNeedBackground => "Hintergrundkarte zuerst laden",
+        I18nKey::RouteToolNeedOrderedChain => "Geordnete Node-Kette selektieren",
     }
 }

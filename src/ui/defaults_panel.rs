@@ -1,11 +1,13 @@
 //! Linkes Sidebar-Panel fuer Werkzeuge, Defaults und Hintergrund-Controls.
 
-use crate::app::group_registry::{
-    TOOL_INDEX_BYPASS, TOOL_INDEX_CURVE_CUBIC, TOOL_INDEX_CURVE_QUAD, TOOL_INDEX_PARKING,
-    TOOL_INDEX_ROUTE_OFFSET, TOOL_INDEX_SMOOTH_CURVE, TOOL_INDEX_SPLINE, TOOL_INDEX_STRAIGHT,
+use crate::app::tools::{
+    resolve_route_tool_entries, route_tool_defaults_tooltip_key, route_tool_descriptor,
+    route_tool_disabled_reason_key, route_tool_group_label_key, RouteToolGroup, RouteToolId,
+    RouteToolSurface,
 };
 use crate::app::{AppIntent, AppState, ConnectionDirection, ConnectionPriority, EditorTool};
 use crate::shared::{t, I18nKey};
+use crate::ui::common::route_tool_availability_context;
 use crate::ui::icons::{
     accent_icon_color, function_icon_color, route_tool_icon, svg_icon, ICON_SIZE,
 };
@@ -26,11 +28,65 @@ enum ZoomAction {
     Selection,
 }
 
-fn push_route_tool_selection(events: &mut Vec<AppIntent>, index: usize) {
+fn push_route_tool_selection(events: &mut Vec<AppIntent>, tool_id: RouteToolId) {
     events.push(AppIntent::SetEditorToolRequested {
         tool: EditorTool::Route,
     });
-    events.push(AppIntent::SelectRouteToolRequested { index });
+    events.push(AppIntent::SelectRouteToolRequested { tool_id });
+}
+
+fn tool_item(
+    icon: egui::ImageSource<'static>,
+    tooltip: &'static str,
+    value: EditorTool,
+) -> LongPressItem<EditorTool> {
+    LongPressItem {
+        icon,
+        tooltip,
+        value,
+        enabled: true,
+        disabled_tooltip: None,
+    }
+}
+
+fn value_item<T: Clone>(
+    icon: egui::ImageSource<'static>,
+    tooltip: &'static str,
+    value: T,
+) -> LongPressItem<T> {
+    LongPressItem {
+        icon,
+        tooltip,
+        value,
+        enabled: true,
+        disabled_tooltip: None,
+    }
+}
+
+fn route_tool_items_for_group(
+    state: &AppState,
+    lang: crate::shared::Language,
+    group: RouteToolGroup,
+) -> Vec<LongPressItem<RouteToolId>> {
+    let availability = route_tool_availability_context(state);
+    resolve_route_tool_entries(RouteToolSurface::DefaultsPanel, group, availability)
+        .into_iter()
+        .map(|entry| LongPressItem {
+            icon: route_tool_icon(entry.descriptor.id),
+            tooltip: t(lang, route_tool_defaults_tooltip_key(entry.descriptor.id)),
+            value: entry.descriptor.id,
+            enabled: entry.enabled,
+            disabled_tooltip: entry
+                .disabled_reason
+                .map(|reason| t(lang, route_tool_disabled_reason_key(reason))),
+        })
+        .collect()
+}
+
+fn is_route_group_active(active_route_id: Option<RouteToolId>, group: RouteToolGroup) -> bool {
+    active_route_id
+        .map(|tool_id| route_tool_descriptor(tool_id).group == group)
+        .unwrap_or(false)
 }
 
 fn render_long_press_with_memory<T: Clone + PartialEq>(
@@ -68,122 +124,62 @@ pub fn render_route_defaults_panel(ctx: &egui::Context, state: &AppState) -> Vec
     let icon_color = function_icon_color(state);
     let active_icon_color = accent_icon_color(state);
 
-    // Aktueller Route-Tool-Index – None wenn kein Route-Tool aktiv.
-    let active_route_index: Option<usize> = if active_tool == EditorTool::Route {
-        state.editor.tool_manager.active_index()
-    } else {
-        None
-    };
+    let active_route_id: Option<RouteToolId> = state.active_route_tool_id();
     let is_werkzeug_active = matches!(
         active_tool,
         EditorTool::Select | EditorTool::Connect | EditorTool::AddNode
     );
-    let is_basic_command_active = matches!(
-        active_route_index,
-        Some(i) if i == TOOL_INDEX_STRAIGHT
-            || i == TOOL_INDEX_CURVE_QUAD
-            || i == TOOL_INDEX_CURVE_CUBIC
-            || i == TOOL_INDEX_SPLINE
-            || i == TOOL_INDEX_SMOOTH_CURVE
-    );
-    let is_section_active = matches!(
-        active_route_index,
-        Some(i) if i == TOOL_INDEX_BYPASS || i == TOOL_INDEX_PARKING || i == TOOL_INDEX_ROUTE_OFFSET
-    );
-
     let tools_items = [
-        LongPressItem {
-            icon: egui::include_image!("../../assets/icons/icon_select_node.svg"),
-            tooltip: t(lang, I18nKey::LpToolSelect),
-            value: EditorTool::Select,
-        },
-        LongPressItem {
-            icon: egui::include_image!("../../assets/icons/icon_connect.svg"),
-            tooltip: t(lang, I18nKey::LpToolConnect),
-            value: EditorTool::Connect,
-        },
-        LongPressItem {
-            icon: egui::include_image!("../../assets/icons/icon_add_node.svg"),
-            tooltip: t(lang, I18nKey::LpToolAddNode),
-            value: EditorTool::AddNode,
-        },
+        tool_item(
+            egui::include_image!("../../assets/icons/icon_select_node.svg"),
+            t(lang, I18nKey::LpToolSelect),
+            EditorTool::Select,
+        ),
+        tool_item(
+            egui::include_image!("../../assets/icons/icon_connect.svg"),
+            t(lang, I18nKey::LpToolConnect),
+            EditorTool::Connect,
+        ),
+        tool_item(
+            egui::include_image!("../../assets/icons/icon_add_node.svg"),
+            t(lang, I18nKey::LpToolAddNode),
+            EditorTool::AddNode,
+        ),
     ];
 
-    let basic_items = [
-        LongPressItem {
-            icon: route_tool_icon(TOOL_INDEX_STRAIGHT),
-            tooltip: t(lang, I18nKey::LpStraight),
-            value: TOOL_INDEX_STRAIGHT,
-        },
-        LongPressItem {
-            icon: route_tool_icon(TOOL_INDEX_CURVE_QUAD),
-            tooltip: t(lang, I18nKey::LpCurveQuad),
-            value: TOOL_INDEX_CURVE_QUAD,
-        },
-        LongPressItem {
-            icon: route_tool_icon(TOOL_INDEX_CURVE_CUBIC),
-            tooltip: t(lang, I18nKey::LpCurveCubic),
-            value: TOOL_INDEX_CURVE_CUBIC,
-        },
-        LongPressItem {
-            icon: route_tool_icon(TOOL_INDEX_SPLINE),
-            tooltip: t(lang, I18nKey::LpSpline),
-            value: TOOL_INDEX_SPLINE,
-        },
-        LongPressItem {
-            icon: route_tool_icon(TOOL_INDEX_SMOOTH_CURVE),
-            tooltip: t(lang, I18nKey::LpSmoothCurve),
-            value: TOOL_INDEX_SMOOTH_CURVE,
-        },
-    ];
-
-    let section_tools_items = [
-        LongPressItem {
-            icon: route_tool_icon(TOOL_INDEX_BYPASS),
-            tooltip: t(lang, I18nKey::LpBypass),
-            value: TOOL_INDEX_BYPASS,
-        },
-        LongPressItem {
-            icon: route_tool_icon(TOOL_INDEX_PARKING),
-            tooltip: t(lang, I18nKey::LpParking),
-            value: TOOL_INDEX_PARKING,
-        },
-        LongPressItem {
-            icon: route_tool_icon(TOOL_INDEX_ROUTE_OFFSET),
-            tooltip: t(lang, I18nKey::LpRouteOffset),
-            value: TOOL_INDEX_ROUTE_OFFSET,
-        },
-    ];
+    let basic_items = route_tool_items_for_group(state, lang, RouteToolGroup::Basics);
+    let section_items = route_tool_items_for_group(state, lang, RouteToolGroup::Section);
+    let analysis_items = route_tool_items_for_group(state, lang, RouteToolGroup::Analysis);
 
     let direction_items = [
-        LongPressItem {
-            icon: egui::include_image!("../../assets/icons/icon_direction_regular.svg"),
-            tooltip: t(lang, I18nKey::LpDirectionRegular),
-            value: ConnectionDirection::Regular,
-        },
-        LongPressItem {
-            icon: egui::include_image!("../../assets/icons/icon_direction_dual.svg"),
-            tooltip: t(lang, I18nKey::LpDirectionDual),
-            value: ConnectionDirection::Dual,
-        },
-        LongPressItem {
-            icon: egui::include_image!("../../assets/icons/icon_direction_reverse.svg"),
-            tooltip: t(lang, I18nKey::LpDirectionReverse),
-            value: ConnectionDirection::Reverse,
-        },
+        value_item(
+            egui::include_image!("../../assets/icons/icon_direction_regular.svg"),
+            t(lang, I18nKey::LpDirectionRegular),
+            ConnectionDirection::Regular,
+        ),
+        value_item(
+            egui::include_image!("../../assets/icons/icon_direction_dual.svg"),
+            t(lang, I18nKey::LpDirectionDual),
+            ConnectionDirection::Dual,
+        ),
+        value_item(
+            egui::include_image!("../../assets/icons/icon_direction_reverse.svg"),
+            t(lang, I18nKey::LpDirectionReverse),
+            ConnectionDirection::Reverse,
+        ),
     ];
 
     let priority_items = [
-        LongPressItem {
-            icon: egui::include_image!("../../assets/icons/icon_priority_main.svg"),
-            tooltip: t(lang, I18nKey::LpPriorityMain),
-            value: ConnectionPriority::Regular,
-        },
-        LongPressItem {
-            icon: egui::include_image!("../../assets/icons/icon_priority_side.svg"),
-            tooltip: t(lang, I18nKey::LpPrioritySub),
-            value: ConnectionPriority::SubPriority,
-        },
+        value_item(
+            egui::include_image!("../../assets/icons/icon_priority_main.svg"),
+            t(lang, I18nKey::LpPriorityMain),
+            ConnectionPriority::Regular,
+        ),
+        value_item(
+            egui::include_image!("../../assets/icons/icon_priority_side.svg"),
+            t(lang, I18nKey::LpPrioritySub),
+            ConnectionPriority::SubPriority,
+        ),
     ];
 
     let tools_group = LongPressGroup {
@@ -194,14 +190,20 @@ pub fn render_route_defaults_panel(ctx: &egui::Context, state: &AppState) -> Vec
 
     let basic_commands_group = LongPressGroup {
         id: "grundbefehle",
-        label: t(lang, I18nKey::SidebarBasics),
-        items: &basic_items,
+        label: t(lang, route_tool_group_label_key(RouteToolGroup::Basics)),
+        items: basic_items.as_slice(),
     };
 
     let section_tools_group = LongPressGroup {
         id: "tools_abschnitt",
-        label: t(lang, I18nKey::RouteGroupSection),
-        items: &section_tools_items,
+        label: t(lang, route_tool_group_label_key(RouteToolGroup::Section)),
+        items: section_items.as_slice(),
+    };
+
+    let analysis_tools_group = LongPressGroup {
+        id: "tools_analysis",
+        label: t(lang, route_tool_group_label_key(RouteToolGroup::Analysis)),
+        items: analysis_items.as_slice(),
     };
 
     let direction_group = LongPressGroup {
@@ -245,15 +247,19 @@ pub fn render_route_defaults_panel(ctx: &egui::Context, state: &AppState) -> Vec
                     .small()
                     .weak(),
             );
-            if let Some(index) = render_long_press_with_memory(
+            let basic_tool = state
+                .editor
+                .route_tool_memory
+                .selected_for(RouteToolGroup::Basics);
+            if let Some(tool_id) = render_long_press_with_memory(
                 ui,
                 icon_color,
                 active_icon_color,
                 &basic_commands_group,
-                &state.editor.last_basic_command_index,
-                is_basic_command_active,
+                &basic_tool,
+                is_route_group_active(active_route_id, RouteToolGroup::Basics),
             ) {
-                push_route_tool_selection(&mut events, index);
+                push_route_tool_selection(&mut events, tool_id);
             }
 
             ui.add_space(6.0);
@@ -265,15 +271,43 @@ pub fn render_route_defaults_panel(ctx: &egui::Context, state: &AppState) -> Vec
                     .small()
                     .weak(),
             );
-            if let Some(index) = render_long_press_with_memory(
+            let section_tool = state
+                .editor
+                .route_tool_memory
+                .selected_for(RouteToolGroup::Section);
+            if let Some(tool_id) = render_long_press_with_memory(
                 ui,
                 icon_color,
                 active_icon_color,
                 &section_tools_group,
-                &state.editor.last_section_tool_index,
-                is_section_active,
+                &section_tool,
+                is_route_group_active(active_route_id, RouteToolGroup::Section),
             ) {
-                push_route_tool_selection(&mut events, index);
+                push_route_tool_selection(&mut events, tool_id);
+            }
+
+            ui.add_space(6.0);
+            ui.separator();
+            ui.add_space(6.0);
+
+            ui.label(
+                egui::RichText::new(t(lang, I18nKey::SidebarAnalysis))
+                    .small()
+                    .weak(),
+            );
+            let analysis_tool = state
+                .editor
+                .route_tool_memory
+                .selected_for(RouteToolGroup::Analysis);
+            if let Some(tool_id) = render_long_press_with_memory(
+                ui,
+                icon_color,
+                active_icon_color,
+                &analysis_tools_group,
+                &analysis_tool,
+                is_route_group_active(active_route_id, RouteToolGroup::Analysis),
+            ) {
+                push_route_tool_selection(&mut events, tool_id);
             }
 
             ui.add_space(6.0);
@@ -334,25 +368,27 @@ pub fn render_route_defaults_panel(ctx: &egui::Context, state: &AppState) -> Vec
                 .unwrap_or(ZoomAction::FullMap);
 
             let zoom_items = [
-                LongPressItem {
-                    icon: egui::include_image!("../../assets/icons/icon_zoom_in.svg"),
-                    tooltip: t(lang, I18nKey::ZoomInHelp),
-                    value: ZoomAction::ZoomIn,
-                },
-                LongPressItem {
-                    icon: egui::include_image!("../../assets/icons/icon_zoom_out.svg"),
-                    tooltip: t(lang, I18nKey::ZoomOutHelp),
-                    value: ZoomAction::ZoomOut,
-                },
-                LongPressItem {
-                    icon: egui::include_image!("../../assets/icons/icon_zoom_full_map.svg"),
-                    tooltip: t(lang, I18nKey::ZoomFullMapHelp),
-                    value: ZoomAction::FullMap,
-                },
+                value_item(
+                    egui::include_image!("../../assets/icons/icon_zoom_in.svg"),
+                    t(lang, I18nKey::ZoomInHelp),
+                    ZoomAction::ZoomIn,
+                ),
+                value_item(
+                    egui::include_image!("../../assets/icons/icon_zoom_out.svg"),
+                    t(lang, I18nKey::ZoomOutHelp),
+                    ZoomAction::ZoomOut,
+                ),
+                value_item(
+                    egui::include_image!("../../assets/icons/icon_zoom_full_map.svg"),
+                    t(lang, I18nKey::ZoomFullMapHelp),
+                    ZoomAction::FullMap,
+                ),
                 LongPressItem {
                     icon: egui::include_image!("../../assets/icons/icon_zoom_selection.svg"),
                     tooltip: t(lang, I18nKey::ZoomToSelectionHelp),
                     value: ZoomAction::Selection,
+                    enabled: has_selection,
+                    disabled_tooltip: Some(t(lang, I18nKey::ZoomToSelectionHelp)),
                 },
             ];
             let zoom_group = LongPressGroup {

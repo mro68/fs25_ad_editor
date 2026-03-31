@@ -2,99 +2,111 @@
 
 ← [Extras & Optionen](06-extras.md) | [Zurueck zur Uebersicht](index.md)
 
-## Workflow 1: Neuen Kurs von Grund auf erstellen
+## Workflow 1: Kurs oeffnen und Arbeitsumgebung vorbereiten
 
-1. **Leere Datei erzeugen** — `Datei → Neu` (oder `Ctrl+N`)
-2. **Hintergrundkarte laden** (optional) — `Datei → Hintergrundkarte oeffnen`
-3. **Heightmap laden** (optional) — `Datei → Heightmap laden`
-4. **Nodes setzen** — **Select-Tool** aktivieren (T → Select), Nodes auf der Karte platzieren
-5. **Verbindungen setzen** — **Connect-Tool** aktivieren (T → Connect), Nodes paarweise klicken
-6. **Speichern** — `Ctrl+S`
+1. **Datei oeffnen** mit **`Ctrl+O`**.
+2. Automatische Erkennung fuer Heightmap, Uebersichtskarte oder passendes Map-ZIP pruefen.
+3. Falls noetig zusaetzlich eine Hintergrundkarte ueber **Ansicht -> Hintergrund laden...** laden.
+4. Im linken Panel Richtung und Strassenart fuer neue Verbindungen voreinstellen.
 
-> **Tipp:** Mit den **Route-Tools** (T → Gerade / Kurve / Spline) koennen Nodes und Verbindungen in einem Zug gesetzt werden.
+> **Tipp:** Analyse-Tools zeigen schon jetzt sichtbar an, ob noch Farmland-Daten oder eine Hintergrundkarte fehlen.
 
 ---
 
-## Workflow 2: Bestehenden Kurs bearbeiten
+## Workflow 2: Passendes Route-Tool schnell finden
 
-1. **Oeffnen** — `Datei → Oeffnen` oder `Ctrl+O`
-2. **Bereich zoomen** — Scrollrad oder `F` nach Selektion
-3. **Nodes verschieben** — Selektieren, dann Drag
-4. **Falsche Verbindungen loeschen** — 2 Nodes selektieren, `X`
-5. **Neue Verbindungen setzen** — 2 Nodes selektieren, `C`
-6. **Speichern** — `Ctrl+S`
+1. Fuer Basis-Geometrie **`G`** druecken.
+2. Fuer Abschnitts-Tools **`B`** druecken.
+3. Fuer Analyse-Tools **`A`** druecken.
+4. Alternativ die Command Palette mit **`K`** oder **`Ctrl+K`** oeffnen und nach dem Toolnamen suchen.
+5. Deaktivierte Eintraege lesen statt suchen: der Disabled-Hinweis sagt direkt, was noch fehlt.
 
----
-
-## Workflow 3: Zwei Kurse zusammenfuehren (Merge)
-
-1. **Erste Datei oeffnen** — `Ctrl+O`
-2. **Zweite Datei importieren** — `Datei → Importieren / Zusammenfuehren`
-3. **Verbindungspunkte suchen** — Betroffene Randbereiche heranzoomen
-4. **Snap-Punkte verbinden** — Connect-Tool (T → Connect), Nodes paarweise anklicken
-5. **Duplikate bereinigen** — `Bearbeiten → Duplikate bereinigen` mit Toleranz 1–2 m
-6. **Speichern**
+> **Beispiele:**
+> **Geordnete Node-Kette selektieren** fuer Ausweichstrecke oder Strecke versetzen.
+> **Farmland-Daten zuerst laden** fuer Feld erkennen oder Feldweg erkennen.
+> **Hintergrundkarte zuerst laden** fuer Farb-Pfad erkennen.
 
 ---
 
-## Workflow 4: Abschnitt loeschen
+## Workflow 3: Neue Strecke mit Grundbefehlen zeichnen
 
-1. **Bereich selektieren** — Shift+Drag (Rechteck) oder Alt+Drag (Lasso)
-2. **Selektion pruefen** — Properties-Panel zeigt Anzahl der selektierten Nodes
-3. **Loeschen** — `Delete`-Taste
-4. **Verbindungen pruefen** — angrenzende Nodes nach losen Enden kontrollieren
-5. **Speichern**
+1. Ein Basis-Tool ueber **`G`**, die Seitenleiste oder **Route-Tools** aktivieren.
+2. Start- und Endpunkt setzen.
+3. Je nach Tool Kontrollpunkte, Tangenten oder Zwischenpunkte ergaenzen.
+4. Richtung, Strassenart und Segmentierung im Route-Tool-Panel einstellen.
+5. Mit **`Enter`** bestaetigen.
 
----
+**Empfehlung nach Anwendungsfall:**
 
-## Workflow 5: Kurvenabschnitt hinzufuegen
-
-1. **Curve-Tool aktivieren** — T → Kurve
-2. **Kubischer Bézier-Modus** — im Tool-Panel `Cubic` auswaehlen
-3. **Startpunkt klicken** — auf bestehenden Node oder freie Position
-4. **Endpunkt klicken** — zweiter Klick setzt das Ende
-5. **Kontrollpunkte anpassen** — Drag der blauen Kontrollpunkt-Handles
-6. **Bestaetigen** — Enter oder abschliessender Klick
-
-> **Tipp:** Den Start/End-Punkt auf einen bestehenden Node setzen sorgt fuer automatisches Snapping.
+- **Gerade Strecke** fuer lineare Abschnitte.
+- **Bezier Grad 2** fuer einfache Kurven.
+- **Bezier Grad 3** fuer praezise Formkontrolle mit Start-/End-Tangente.
+- **Spline** fuer Verlaeufe durch viele Punkte.
+- **Geglaettete Kurve** fuer weich an bestehende Winkel angeschlossene Verbindungen.
 
 ---
 
-## Workflow 6: Route gleichmaessig unterteilen
+## Workflow 4: Ausweichstrecke oder Versatz auf eine bestehende Kette anwenden
 
-In engen Kurven oder fuer AutoDrive-Strecken mit feiner Granularitaet:
+1. Eine geordnete Kette selektieren, zum Beispiel per **Shift+Klick**, Rechteck-Lasso oder Doppelklick.
+2. Mit **`B`** die Gruppe **Bearbeiten** oeffnen.
+3. **Ausweichstrecke** oder **Strecke versetzen** waehlen.
+4. Vorschau und Parameter pruefen.
+5. Mit **`Enter`** bestaetigen.
 
-1. **Abschnitt selektieren** — Pfad-Selektion mit Shift+Klick oder Gruppen-Doppelklick
-2. **Streckenteilung oeffnen** — `Bearbeiten → Strecke aufteilen`
-3. **Zielabstand eingeben** (z. B. 3 – 5 m)
-4. **Ausfuehren** — Nodes werden gleichmaessig neu verteilt
-5. **Undo** bei Bedarf — `Ctrl+Z`
-
----
-
-## Workflow 7: Kurs exportieren und in FS25 testen
-
-1. **Speichern** — `Ctrl+S` → Datei wird als `AutoDrive_config.xml` gespeichert
-2. **Datei in FS25-Savegame kopieren** — in `Savegame/vehicles/AutoDrive/`
-3. **FS25 starten** und AutoDrive laden
-4. **Testen** — einen Auftrag mit der neuen Route planen
-
-> **Wichtig:** AutoDrive benoetigt lueckenlose IDs (1, 2, 3 ... N). Der Editor remappt IDs automatisch beim Speichern — manuelle Korrekturen sind nicht notwendig.
+> **Tipp:** Wenn das Tool im Menue sichtbar, aber deaktiviert ist, bildet die aktuelle Selektion keine gueltige geordnete Kette.
 
 ---
 
-## Workflow 8: Gruppen-Übergänge prüfen und korrigieren
+## Workflow 5: Feldgrenze oder Feldweg aus Farmland-Daten erzeugen
 
-Beim Zusammenführen mehrerer Kurse kann geprüft werden, an welchen Stellen Gruppen Verbindungen nach außen haben (Übergangsstellen zum restlichen Netz).
+1. Eine Uebersichtskarte mit Farmland-Daten laden oder ueber **Datei -> Uebersichtskarte generieren** erzeugen.
+2. Mit **`A`** die Analyse-Gruppe oeffnen.
+3. Fuer geschlossene Feldringe **Feld erkennen** waehlen.
+4. Fuer eine Mittellinie zwischen zwei Feldseiten **Feldweg erkennen** waehlen.
+5. Die Vorschau pruefen und mit **`Enter`** uebernehmen.
 
-1. **Gruppe doppelklicken** — zur Gruppen-Selektion (Doppelklick auf einen Gruppen-Node)
-2. **Grenzknoten prüfen** — der Editor zeigt automatisch Icons unterhalb der Grenzknoten:
-   - **→ (Eingang):** Verbindung von außen in die Gruppe
-   - **← (Ausgang):** Verbindung aus der Gruppe nach außen
-   - **↔ (Bidirektional):** beidseitige Verbindung über die Gruppengrenze
-3. **Optional: Alle Grenzknoten-Icons anzeigen** — Im Gruppen-Bearbeitungsmodus (Rechtsklick → "Gruppe bearbeiten") Checkbox **"Rand-Icons an allen Gruppen-Grenzknoten anzeigen"** aktivieren, um auch potenzielle Übergangspunkte ohne bestehende externe Verbindung zu sehen
-4. **Fehlende Verbindungen ergänzen** — Connect-Tool (T → Connect) nutzen
-5. **Übernehmen** (Enter) oder **Abbrechen** (Escape)
+> **Tipp:** **Feld erkennen** erzeugt spaeter wieder oeffenbare Tool-Gruppen. **Feldweg erkennen** erzeugt ein normales Ergebnis ohne spaeteren Tool-Edit.
+
+---
+
+## Workflow 6: Farb-Pfad aus einer Hintergrundkarte ableiten
+
+1. Eine passende Hintergrundkarte laden.
+2. **Farb-Pfad erkennen** ueber **`A`** oder die Command Palette aktivieren.
+3. Mit **`Alt+Drag`** eine oder mehrere Lasso-Regionen fuer Farbproben zeichnen.
+4. Im Tool-Panel Berechnung, Toleranz und Anschlussmodus einstellen.
+5. Netzstatistik pruefen und mit **`Enter`** bestaetigen.
+
+> **Tipp:** Das Tool bleibt im Katalog sichtbar, auch wenn noch keine Hintergrundkarte geladen ist. So sehen Sie sofort, warum es gerade nicht aktivierbar ist.
+
+---
+
+## Workflow 7: Eine Gruppe spaeter erneut oeffnen
+
+1. Die Gruppe per Doppelklick auf einen Gruppen-Node selektieren.
+2. Rechtsklick und **Gruppe bearbeiten** waehlen.
+3. Im Gruppen-Bearbeitungsfenster pruefen, ob **Tool bearbeiten** verfuegbar ist.
+4. Falls der Button sichtbar ist, das urspruengliche Tool erneut oeffnen und Parameter anpassen.
+5. Falls der Button fehlt, das Ergebnis manuell bearbeiten oder das Tool neu ausfuehren.
+
+**Der Button fehlt absichtlich bei:**
+
+- manuell erzeugten Gruppen
+- Ergebnissen von **Feldweg erkennen**
+- Ergebnissen von **Farb-Pfad erkennen**
+
+---
+
+## Workflow 8: Strecke gleichmaessig neu verteilen und exportieren
+
+1. Eine zusammenhaengende Kette selektieren.
+2. Im Eigenschaften-Bereich **▶ Einteilung aendern** waehlen oder das Kontextmenue **Streckenteilung** nutzen.
+3. Abstand oder Node-Anzahl anpassen.
+4. Vorschau bestaetigen und mit **`Enter`** uebernehmen.
+5. Mit **`Ctrl+S`** speichern und die Datei in FS25 testen.
+
+> **Wichtig:** Der Editor remappt IDs beim Speichern automatisch auf eine lueckenlose Reihenfolge. Manuelle XML-Korrekturen sind dafuer nicht noetig.
 
 ---
 

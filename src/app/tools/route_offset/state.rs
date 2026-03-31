@@ -4,8 +4,6 @@ use crate::app::tools::common::ToolLifecycleState;
 use crate::core::{ConnectionDirection, ConnectionPriority};
 use glam::Vec2;
 
-type CachedPreview = (Vec<Vec2>, Vec<(usize, usize)>);
-
 /// Konfiguration fuer das RouteOffsetTool.
 #[derive(Debug, Clone)]
 pub struct OffsetConfig {
@@ -56,8 +54,6 @@ pub struct RouteOffsetTool {
     pub priority: ConnectionPriority,
     /// Tool-Konfiguration (Versatz, Original, Spacing)
     pub config: OffsetConfig,
-    /// Gecachte Preview-Daten: (Nodes, Connections) — None = Cache ungueltig
-    pub(crate) cached_preview: Option<CachedPreview>,
     /// Gemeinsamer Lifecycle-Zustand (Snap-Radius, letzte IDs, Recreate-Flag)
     pub(crate) lifecycle: ToolLifecycleState,
 }
@@ -73,7 +69,6 @@ impl RouteOffsetTool {
             direction: ConnectionDirection::Dual,
             priority: ConnectionPriority::Regular,
             config: OffsetConfig::default(),
-            cached_preview: None,
             lifecycle: ToolLifecycleState::new(3.0),
         }
     }

@@ -6,7 +6,7 @@ use super::geometry::compute_bypass_positions;
 use super::state::BypassTool;
 use crate::app::group_registry::{GroupBase, GroupKind, GroupRecord};
 use crate::app::tools::common::assemble_tool_result;
-use crate::app::tools::{RouteTool, ToolAction, ToolAnchor, ToolPreview, ToolResult};
+use crate::app::tools::{RouteTool, RouteToolId, ToolAction, ToolAnchor, ToolPreview, ToolResult};
 use crate::core::{ConnectionDirection, ConnectionPriority, RoadMap};
 use glam::Vec2;
 
@@ -202,6 +202,7 @@ impl RouteTool for BypassTool {
         let end_pos = *self.chain_positions.last()?;
         Some(GroupRecord {
             id,
+            tool_id: Some(RouteToolId::Bypass),
             node_ids: node_ids.to_vec(),
             start_anchor: ToolAnchor::ExistingNode(self.chain_start_id, start_pos),
             end_anchor: ToolAnchor::ExistingNode(self.chain_end_id, end_pos),

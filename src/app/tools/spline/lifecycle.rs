@@ -4,7 +4,7 @@ use super::super::{
     common::{
         linear_connections, populate_neighbors, tangent_options, TangentMenuData, TangentSource,
     },
-    RouteTool, ToolAction, ToolPreview, ToolResult,
+    RouteTool, RouteToolId, ToolAction, ToolPreview, ToolResult,
 };
 use super::state::SplineTool;
 use crate::app::group_registry::{GroupBase, GroupKind, GroupRecord};
@@ -207,6 +207,7 @@ impl RouteTool for SplineTool {
         let end = *self.last_anchors.last()?;
         Some(GroupRecord {
             id,
+            tool_id: Some(RouteToolId::Spline),
             node_ids: node_ids.to_vec(),
             start_anchor: start,
             end_anchor: end,

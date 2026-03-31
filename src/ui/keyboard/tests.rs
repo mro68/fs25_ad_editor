@@ -1,4 +1,5 @@
 use super::*;
+use crate::app::tools::RouteToolGroup;
 use indexmap::IndexSet;
 
 fn collect_with_key_event_and_modifiers(
@@ -365,7 +366,28 @@ fn test_g_toggles_basics_floating_menu() {
     assert!(events.iter().any(|event| matches!(
         event,
         AppIntent::ToggleFloatingMenu {
-            kind: FloatingMenuKind::Basics
+            kind: FloatingMenuKind::RouteTools(RouteToolGroup::Basics)
+        }
+    )));
+}
+
+#[test]
+fn test_a_toggles_analysis_floating_menu() {
+    let events = collect_with_key_event(
+        egui::Event::Key {
+            key: egui::Key::A,
+            physical_key: None,
+            pressed: true,
+            repeat: false,
+            modifiers: egui::Modifiers::default(),
+        },
+        IndexSet::new(),
+    );
+
+    assert!(events.iter().any(|event| matches!(
+        event,
+        AppIntent::ToggleFloatingMenu {
+            kind: FloatingMenuKind::RouteTools(RouteToolGroup::Analysis)
         }
     )));
 }
@@ -404,7 +426,7 @@ fn b_taste_oeffnet_section_tools_floating_menu() {
     assert!(events.iter().any(|event| matches!(
         event,
         AppIntent::ToggleFloatingMenu {
-            kind: FloatingMenuKind::SectionTools
+            kind: FloatingMenuKind::RouteTools(RouteToolGroup::Section)
         }
     )));
 }

@@ -11,17 +11,19 @@
 | **Scroll** | Zoom in/out |
 | **Mittlere Maustaste + Drag** | Kamera verschieben (Pan) |
 | **Rechte Maustaste + Drag** | Kamera verschieben (Pan, alternativ) |
-| `F` | Auf die aktuelle Selektion zoomen |
-| `Home` oder `Ctrl+0` | Ansicht auf alle Nodes zentrieren (Fit All) |
-| `Z` | Zoom Floating-Menue öffnen (Auf komplette Map / Auf Auswahl) |
+| `Pfeiltasten` | Kamera verschieben, solange kein aktives Route-Tool gezeichnet wird |
+| `+` / `-` | Stufenweise hinein- oder herauszoomen |
+| `Z` | Zoom-Floating-Menue oeffnen (Hinein, Heraus, Auf komplette Map, Auf Auswahl) |
+
+Die Ansicht laesst sich ausserdem ueber **Ansicht -> Kamera zuruecksetzen** oder ueber die Command Palette zuruecksetzen.
 
 ### Zoom
 
 - Zoom via Scrollrad
 - Zoom-Level wird in der Statusleiste angezeigt
 - **Zoom Floating-Menue (`Z`):** Bietet zwei Schnelloptionen:
-  - **Auf komplette Map** — zeigt alle Nodes im Viewport (wie `Home`)
-  - **Auf Auswahl** — zoomt auf die aktuell selektierten Nodes (wie `F`)
+  - **Auf komplette Map** — zeigt alle Nodes im Viewport
+  - **Auf Auswahl** — zoomt auf die aktuell selektierten Nodes
 - Viewport-Culling: Nodes und Verbindungen ausserhalb des sichtbaren Bereichs werden nicht gerendert (Performance)
 
 ---
@@ -30,7 +32,7 @@
 
 ### Laden
 
-1. **Datei → Hintergrundkarte oeffnen** oder **Ctrl+Shift+O**
+1. **Ansicht -> Hintergrund laden...** oder **Ansicht -> Hintergrund aendern...**
 2. Unterstuetzte Formate: PNG, JPEG, DDS
 
 ### Automatische Erkennung
@@ -48,7 +50,7 @@ Die Hintergrundkarte wird automatisch mit den Weltkoordinaten der XML-Datei ausg
 
 ### Anzeige ein-/ausblenden
 
-**Ansicht → Hintergrundkarte** oder Schaltflaeche in der Toolbar.
+Ueber die linke Seitenleiste im Abschnitt **Hintergrund** oder ueber **Ansicht -> Hintergrund laden... / Hintergrund aendern...**.
 
 ### DDS-Unterstuetzung
 
@@ -69,7 +71,7 @@ Eine installierte FS25-Map-Entpackstruktur mit:
 
 ### Starten
 
-**Datei → Uebersichtskarte generieren** (oder Ctrl+Shift+G)
+**Datei -> Uebersichtskarte generieren**
 
 ### Verarbeitungsschritte
 

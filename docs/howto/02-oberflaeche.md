@@ -8,90 +8,128 @@ Das Hauptfenster besteht aus folgenden Bereichen:
 
 ```mermaid
 block-beta
-    columns 2
-    menu["Menue-Leiste (File | Edit | View | Help)"]:2
-    toolbar["Toolbar (Werkzeug | Delete | Background)"]:2
-    viewport["Viewport\n(Karten-Darstellung)"] props["Eigenschaften\n(Panel)"]
-    status["Statusleiste (Nodes | Connections | Zoom …)"]:2
+    columns 3
+    menu["Menueleiste\n(Datei | Bearbeiten | Route-Tools | Ansicht | Extras | Hilfe)"]:3
+    left["Linke Seitenleiste\nWerkzeuge | Grundbefehle | Bearbeiten | Analyse\nRichtung | Strassenart | Zoom | Hintergrund"]
+    viewport["Viewport\nKarte, Vorschau, Overlays"]
+    right["Rechte Seite\nEigenschaften, Streckenteilung, Edit-Panels"]
+    status["Statusleiste\nKnoten | Verbindungen | Marker | Zoom | Karte | Heightmap | FPS"]:3
 ```
 
-### Menue-Leiste
+### Menueleiste
 
-- **File**: Oeffnen, Speichern, Heightmap, Exit
-- **Edit**: Undo, Redo, Optionen
-- **View**: Kamera-Reset, Zoom, Hintergrund-Karte, Render-Quality
-- **Help**: About (Versionsinformation)
+- **Datei**: Oeffnen, Speichern, Speichern unter, Heightmap waehlen, Uebersichtskarte generieren, Beenden
+- **Bearbeiten**: Undo, Redo, Kopieren, Einfuegen, Optionen
+- **Route-Tools**: derselbe Route-Tool-Katalog wie in Sidebar, Floating-Menues und Command Palette
+- **Ansicht**: Kamera zuruecksetzen, Zoom, Hintergrund laden/aendern, Renderqualitaet
+- **Extras**: Alle Felder nachzeichnen, Courseplay-Import, Courseplay-Export
+- **Hilfe**: About / Versionsinformation
 
-### Eigenschaften-Panel (rechte Seitenleiste)
+### Linke Seitenleiste
 
-Das Eigenschaften-Panel zeigt kontextabhaengig Infos zur aktuellen Selektion und enthaelt die Standard-Verbindungseinstellungen sowie bei aktivem Route-Tool die Route-Konfiguration.
+Die linke Seitenleiste ist die dauerhaft sichtbare Schnellsteuerung fuer Werkzeuge und Standardwerte.
 
-| Inhalt | Bedingung |
-|--------|-----------|
-| „Keine Selektion" | Kein Node selektiert |
-| Node-ID, Position, Flag, Marker-Controls | Genau 1 Node selektiert |
-| Verbindungs-Details, Richtungs-/Prioritaets-ComboBox, Trennen-Button | Genau 2 Nodes selektiert |
-| „N Nodes selektiert" | 3+ Nodes selektiert |
-| Standard-Richtung und Strassenart (ComboBox) | Immer sichtbar (unterer Bereich) |
-| Route-Tool-Konfiguration (Slider) | Nur wenn Route-Tool aktiv |
+| Bereich | Inhalt |
+|--------|--------|
+| **Werkzeuge** | Select, Connect, Add Node |
+| **Grundbefehle** | Gerade Strecke, Bezier Grad 2, Bezier Grad 3, Spline, Geglaettete Kurve |
+| **Bearbeiten** | Ausweichstrecke, Parkplatz, Strecke versetzen |
+| **Analyse** | Feld erkennen, Feldweg erkennen, Farb-Pfad erkennen |
+| **Richtung** | Standard-Richtung fuer neue Verbindungen |
+| **Strassenart** | Standard-Prioritaet fuer neue Verbindungen |
+| **Zoom** | Hinein, Heraus, Auf komplette Map, Auf Auswahl |
+| **Hintergrund** | Sichtbarkeit und Skalierung, sobald eine Hintergrundkarte geladen ist |
 
-### Toolbar
+### Rechte Seite und schwebende Panels
 
-Zeigt die verfuegbaren Werkzeuge:
+Rechts werden Eigenschaften und modale Bearbeitungsflaechen angezeigt:
 
-- **⊹ Select** — Standard-Werkzeug: Nodes selektieren und verschieben
-- **⟷ Connect** — Verbindungen zwischen Nodes erstellen
-- **＋ Add Node** — Neue Nodes auf der Karte platzieren
-- **Route-Tools** — Route-Werkzeuge: Gerade Strecke, Bézier-Kurve, Spline
-- **🗑 Delete (Del)** — Selektierte Nodes loeschen (nur aktiv bei Selektion)
-- **Hintergrund-Controls** — Opacity-Slider und Sichtbarkeits-Toggle (rechts, nur wenn Hintergrund geladen)
+| Inhalt | Wann sichtbar |
+|--------|---------------|
+| **Keine Selektion** | Kein Node ist selektiert |
+| **Node-Details** | Genau 1 Node ist selektiert |
+| **Verbindungs-Editor** | Genau 2 Nodes sind selektiert |
+| **N Nodes selektiert** | 3 oder mehr Nodes sind selektiert |
+| **Streckenteilung** | Ab 2 selektierten Nodes |
+| **Route-Tool-Panel** | Sobald ein Route-Tool aktiv ist |
+| **Gruppen-Bearbeitung** | Wenn eine Gruppe im Bearbeitungsmodus geoeffnet ist |
 
-### Statusleiste
+Das schwebende Route-Tool-Panel zeigt Status, Richtung, Strassenart, tool-spezifische Konfiguration sowie **Ausfuehren** und **Abbrechen**.
 
-Zeigt folgende Informationen (nur Anzeige, nicht interaktiv):
+### Gemeinsamer Route-Tool-Katalog
 
-- Node-Count, Connection-Count, Marker-Count
-- Map-Name (falls vorhanden)
-- Zoom-Stufe und Kamera-Position
-- Heightmap-Status (Dateiname oder "None")
-- Anzahl selektierter Nodes
-- FPS (rechts)
+Die Route-Tools erscheinen ueberall mit demselben Katalog und denselben Gruppen:
+
+- **Grundbefehle**: Gerade Strecke, Bezier Grad 2, Bezier Grad 3, Spline, Geglaettete Kurve
+- **Bearbeiten**: Ausweichstrecke, Parkplatz, Strecke versetzen
+- **Analyse**: Feld erkennen, Feldweg erkennen, Farb-Pfad erkennen
+
+Wenn ein Tool Voraussetzungen hat, bleibt es trotzdem sichtbar. Statt zu verschwinden, wird es deaktiviert und zeigt den Grund an, zum Beispiel:
+
+- **Farmland-Daten zuerst laden**
+- **Hintergrundkarte zuerst laden**
+- **Geordnete Node-Kette selektieren**
+
+### Command Palette
+
+Die Command Palette wird mit **`K`** oder **`Ctrl+K`** geoeffnet und durchsucht:
+
+- globale Befehle wie Oeffnen, Speichern, Undo, Redo, Kopieren und Einfuegen
+- die drei Basis-Werkzeuge Select, Connect und Add Node
+- alle Route-Tools aus dem kanonischen Katalog
+
+Wichtig fuer die Discoverability:
+
+- deaktivierte Route-Tools bleiben sichtbar
+- der Disabled-Grund wird direkt in der Liste angezeigt
+- nur aktivierbare Eintraege reagieren auf Klick oder **`Enter`**
 
 ---
 
 ## Tastatur-Shortcuts
 
-### Globale Shortcuts
+### Globale Befehle
 
 | Shortcut | Aktion |
 |----------|--------|
 | `Ctrl+O` | Datei oeffnen |
 | `Ctrl+S` | Datei speichern |
-| `Ctrl+Z` | Undo (Rueckgaengig) |
-| `Ctrl+Y` | Redo (Wiederherstellen) |
+| `Ctrl+Z` | Undo |
+| `Ctrl+Y` | Redo |
 | `Shift+Ctrl+Z` | Redo (Alternative) |
 | `Ctrl+A` | Alle Nodes selektieren |
-| `Escape` | Selektion aufheben |
+| `Ctrl+C` | Selektion kopieren |
+| `Ctrl+V` | Einfuegen-Vorschau starten |
+| `K` | Command Palette umschalten |
+| `Ctrl+K` | Command Palette umschalten |
+| `Escape` | Kontextabhaengig: Route-Tool abbrechen, Selektion aufheben oder zum Select-Tool zurueckkehren |
 
-### Floating-Menue-Shortcuts
+### Floating-Menues
 
-Werkzeuge und Aktionen werden ueber **Floating-Menues** aufgerufen. Jeder Tastendruck oeffnet ein Popup-Menue mit den zugehoerigen Optionen:
+Jeder Shortcut oeffnet ein kleines Menue an der Mausposition:
 
-| Shortcut | Floating-Menue | Inhalt |
-|----------|----------------|--------|
-| `T` | Werkzeuge | Select, Connect, Add Node, Gerade, Kurve, Spline |
-| `B` | Bearbeitungstools | Ausweichstrecke, Parkplatz, Strecke versetzen |
-| `G` | Grundbefehle | Datei oeffnen, speichern, Undo, Redo |
-| `R` | Richtung & Strassenart | Einbahn vorwaerts, Zweirichtung, Einbahn rueckwaerts, Hauptstrasse, Nebenstrasse |
-| `Z` | Zoom | Auf komplette Map zoomen, Auf Auswahl zoomen |
+| Shortcut | Menue | Inhalt |
+|----------|-------|--------|
+| `T` | Werkzeuge | Select, Connect, Add Node |
+| `G` | Grundbefehle | Gerade Strecke, Bezier Grad 2, Bezier Grad 3, Spline, Geglaettete Kurve |
+| `B` | Bearbeiten | Ausweichstrecke, Parkplatz, Strecke versetzen |
+| `A` | Analyse | Feld erkennen, Feldweg erkennen, Farb-Pfad erkennen |
+| `R` | Richtung & Strassenart | Regular, Dual, Reverse, Hauptstrasse, Nebenstrasse |
+| `Z` | Zoom | Hinein, Heraus, Auf komplette Map, Auf Auswahl |
 
-### Bearbeitungs-Shortcuts
+### Bearbeitung und Navigation
 
 | Shortcut | Aktion | Bedingung |
 |----------|--------|-----------|
 | `Delete` / `Backspace` | Selektierte Nodes loeschen | Mindestens 1 Node selektiert |
-| `C` | Verbindung erstellen (Regular-Richtung) | Genau 2 Nodes selektiert |
-| `X` | Verbindung zwischen Nodes trennen | Genau 2 Nodes selektiert |
+| `C` | Verbindung erstellen | Genau 2 Nodes selektiert |
+| `X` | Verbindung trennen | Genau 2 Nodes selektiert |
+| `Enter` | Aktives Route-Tool ausfuehren | Route-Tool aktiv |
+| `Pfeil hoch` / `Pfeil runter` | Node-Anzahl des aktiven Route-Tools erhoehen / verringern | Route-Tool zeichnet gerade |
+| `Pfeil links` / `Pfeil rechts` | Segmentlaenge des aktiven Route-Tools verringern / erhoehen | Route-Tool zeichnet gerade |
+| `Pfeiltasten` | Kamera schwenken | Kein aktives Route-Tool mit laufender Eingabe |
+| `+` | Stufenweise hineinzoomen | Viewport aktiv |
+| `-` | Stufenweise herauszoomen | Viewport aktiv |
 
 ---
 
@@ -101,60 +139,48 @@ Werkzeuge und Aktionen werden ueber **Floating-Menues** aufgerufen. Jeder Tasten
 
 | Maus-Aktion | Werkzeug | Ergebnis |
 |-------------|----------|----------|
-| **Linksklick** | Select | Node unter Mauszeiger selektieren (ersetzt bestehende Selektion) |
+| **Linksklick** | Select | Node unter Maus selektieren |
 | **Ctrl+Linksklick** | Select | Node additiv zur Selektion hinzufuegen |
-| **Shift+Linksklick** | Select | Pfad-Selektion: Selektiert alle Nodes auf dem kuerzesten Pfad zwischen Anker-Node und Ziel-Node |
-| **Doppelklick** | Select | Gruppen-Selektion: Selektiert alle Nodes zwischen den naechsten Kreuzungen/Sackgassen |
-| **Ctrl+Doppelklick** | Select | Gruppe additiv zur Selektion hinzufuegen |
-| **Linksklick** | Connect | Erster Klick = Startknoten, Zweiter Klick = Zielknoten → Verbindung erstellen |
-| **Linksklick** | Add Node | Neuen Node an Klickposition einfuegen |
+| **Shift+Linksklick** | Select | Pfad-Selektion zwischen Anker und Ziel |
+| **Doppelklick** | Select | Wenn der Node zu einer Gruppe gehoert: ganze Gruppe selektieren, sonst Abschnitt zwischen den naechsten Kreuzungen selektieren |
+| **Ctrl+Doppelklick** | Select | Gruppen- oder Abschnitts-Selektion additiv erweitern |
+| **Linksklick** | Connect | Erster Klick = Start, zweiter Klick = Ziel |
+| **Linksklick** | Add Node | Neuen Node an der Klickposition einfuegen |
+| **Linksklick** | Route-Tool | Naechsten Anker-, End- oder Kontrollpunkt setzen |
 
-### Drag-Aktionen (Ziehen mit gedrueckter Maustaste)
+### Drag-Aktionen
 
 | Maus-Aktion | Ergebnis |
 |-------------|----------|
 | **Links-Drag auf selektiertem Node** | Alle selektierten Nodes gemeinsam verschieben |
-| **Links-Drag auf leerem Bereich** | Kamera schwenken (Pan) |
-| **Shift+Links-Drag** | Rechteck-Selektion → alle Nodes im Rechteck werden selektiert |
-| **Shift+Ctrl+Links-Drag** | Rechteck-Selektion (additiv, erweitert bestehende Selektion) |
-| **Alt+Links-Drag** | Lasso-Selektion → freigeformte Polygon-Selektion |
-| **Alt+Ctrl+Links-Drag** | Lasso-Selektion (additiv, erweitert bestehende Selektion) |
-| **Mittelklick-Drag** | Kamera schwenken (Pan) |
-| **Rechtsklick-Drag** | Kamera schwenken (Pan) |
+| **Links-Drag auf leerem Bereich** | Kamera schwenken |
+| **Shift+Links-Drag** | Rechteck-Selektion |
+| **Shift+Ctrl+Links-Drag** | Rechteck-Selektion additiv |
+| **Alt+Links-Drag** | Lasso-Selektion |
+| **Alt+Ctrl+Links-Drag** | Lasso-Selektion additiv |
+| **Alt+Links-Drag im Farb-Pfad-Sampling** | Werkzeug-Lasso fuer Farbproben statt normaler Node-Selektion |
+| **Mittelklick-Drag** | Kamera schwenken |
+| **Rechtsklick-Drag** | Kamera schwenken |
 
 ### Scroll-Aktionen
 
 | Maus-Aktion | Ergebnis |
 |-------------|----------|
-| **Mausrad hoch** | Hineinzoomen (auf Mausposition) |
-| **Mausrad runter** | Herauszoomen (von Mausposition) |
-| **Mausrad auf numerichem Feld (Hover)** | Wert erhoehen (Distanzen: +0,1 m; Ganzzahlen: +1) |
-| **Mausrad runter auf numerichem Feld (Hover)** | Wert verringern (Distanzen: −0,1 m; Ganzzahlen: −1) |
+| **Mausrad hoch / runter** | Auf Mausposition hinein- oder herauszoomen |
+| **Alt+Mausrad im Select-Tool** | Aktuelle Selektion in 5-Grad-Schritten rotieren |
+| **Alt+Mausrad im Route-Tool** | Route-Tool-Vorschau drehen, z. B. Parkplatz |
+| **Mausrad auf Zahleneingaben** | Wert in Scroll-Richtung anpassen |
 
-> **Tipp:** Alle numerischen Eingabefelder (Slider, Zahleneingaben) reagieren auf das Mausrad, sobald der Cursor darueber steht – kein Klick noetig.
+> **Tipp:** Fast alle Distanz-, Winkel- und Mengenfelder reagieren direkt auf das Mausrad, sobald der Cursor darueber steht.
 
-### Kontextmenue (Rechtsklick)
+### Kontextmenue
 
-#### Bei 2+ selektierten Nodes (mit Verbindungen dazwischen)
+Per Rechtsklick oeffnet sich ein kontextabhaengiges Menue:
 
-| Menuepunkt | Aktion |
-|-----------|--------|
-| 🔗 Nodes verbinden | Verbindung erstellen (bei genau 2 Nodes ohne Verbindung) |
-| ↦ Regular (Einbahn) | Alle Verbindungen auf Regular-Richtung setzen |
-| ⇆ Dual (beidseitig) | Alle Verbindungen auf Dual-Richtung setzen |
-| ↤ Reverse (rueckwaerts) | Alle Verbindungen auf Reverse-Richtung setzen |
-| ⇄ Invertieren | Start/End aller Verbindungen tauschen |
-| 🛣 Hauptstrasse | Prioritaet aller Verbindungen auf Regular setzen |
-| 🛤 Nebenstrasse | Prioritaet aller Verbindungen auf SubPriority setzen |
-| ✕ Alle trennen | Alle Verbindungen zwischen selektierten Nodes entfernen |
-
-#### Bei 1 selektiertem Node
-
-| Menuepunkt | Aktion |
-|-----------|--------|
-| � Marker erstellen | Neuen Map-Marker auf diesem Node anlegen |
-| ✏ Marker aendern | Bestehenden Marker bearbeiten (Name, Gruppe) |
-| 📍✕ Marker loeschen | Marker von diesem Node entfernen |
+- **Leerer Bereich**: Werkzeug-, Zoom- und Route-Untermenues
+- **Selektion**: Verbinden, Strecke erzeugen, Richtung, Strassenart, Streckenteilung, Gruppe bearbeiten
+- **Gruppen-Selektion**: zusaetzlich Gruppe entfernen, aufloesen oder im Tool-Edit oeffnen, falls editierbar
+- **Einzelner Node**: Marker erstellen, bearbeiten oder loeschen
 
 ---
 

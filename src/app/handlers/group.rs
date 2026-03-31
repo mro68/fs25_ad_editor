@@ -81,6 +81,7 @@ pub fn group_selection(state: &mut AppState) {
     let record_id = state.group_registry.next_id();
     let record = GroupRecord {
         id: record_id,
+        tool_id: None,
         node_ids,
         start_anchor: ToolAnchor::NewPosition(glam::Vec2::ZERO),
         end_anchor: ToolAnchor::NewPosition(glam::Vec2::ZERO),
