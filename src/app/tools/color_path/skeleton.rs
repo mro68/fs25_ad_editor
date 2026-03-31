@@ -325,20 +325,34 @@ pub(crate) fn extract_paths_from_mask(
     // Zusammenhaengende Skelett-Gruppen extrahieren
     let components = find_connected_components(mask, w, h);
 
-    // Jede Komponente: ordnen, auf Medial-Axis korrigieren, in Weltkoordinaten umrechnen
-    let mut paths: Vec<Vec<Vec2>> = components
+    // Alle Komponenten ab MIN_PATH_LENGTH zusammenfuehren — sie stammen aus
+    // demselben Flood-Fill-Bereich und wurden nur durch Thinning-Artefakte
+    // oder morphologische Operationen getrennt.
+    let merged_pixels: Vec<(usize, usize)> = components
         .iter()
         .filter(|comp| comp.len() >= MIN_PATH_LENGTH)
-        .map(|comp| {
-            let ordered = order_skeleton_pixels(comp, start_hint);
-            let refined = refine_medial_axis(&ordered, &original_mask, w, h);
-            refined_pixels_to_world(&refined, map_size, width, height)
-        })
+        .flat_map(|comp| comp.iter().copied())
         .collect();
 
-    // Laengster Pfad zuerst (nach Weltkoordinaten-Punktanzahl)
-    paths.sort_by_key(|p: &Vec<Vec2>| std::cmp::Reverse(p.len()));
-    paths
+    if merged_pixels.is_empty() {
+        return Vec::new();
+    }
+
+    log::info!(
+        "Skelett: {} Komponenten ({} Pixel total) zu einem Pfad zusammengefuehrt",
+        components.iter().filter(|c| c.len() >= MIN_PATH_LENGTH).count(),
+        merged_pixels.len()
+    );
+
+    let ordered = order_skeleton_pixels(&merged_pixels, start_hint);
+    let refined = refine_medial_axis(&ordered, &original_mask, w, h);
+    let path = refined_pixels_to_world(&refined, map_size, width, height);
+
+    if path.is_empty() {
+        Vec::new()
+    } else {
+        vec![path]
+    }
 }
 
 // ---------------------------------------------------------------------------
