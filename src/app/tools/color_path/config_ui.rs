@@ -45,7 +45,12 @@ pub(super) fn render_config_view(
                     ui.painter().rect_filled(rect, 2.0, color);
                 });
                 let palette_size = tool.color_palette.len();
-                ui.label(format!("Palette: {palette_size} Farben"));
+                let palette_label = if tool.config.exact_color_match {
+                    "Exakte Farben"
+                } else {
+                    "Palette"
+                };
+                ui.label(format!("{palette_label}: {palette_size} Farben"));
                 // Palette-Vorschau: kleine Quadrate fuer jeden Eintrag (max. 20)
                 ui.horizontal_wrapped(|ui| {
                     for &c in tool.color_palette.iter().take(20) {
@@ -80,9 +85,7 @@ pub(super) fn render_config_view(
             ui.label(format!(
                 "Kreuzungen: {junction_count}  Offene Enden: {open_end_count}"
             ));
-            ui.label(format!(
-                "Segmente: {segment_count}  Preview-Nodes: {node_count}"
-            ));
+            ui.label(format!("Segmente: {segment_count}  Preview-Nodes: {node_count}"));
 
             ui.separator();
 
@@ -127,12 +130,22 @@ pub(super) fn render_config_view(
     // ── Konfigurations-Slider ─────────────────────────────────────────────────
     ui.label("Einstellungen:");
 
+    if ui
+        .checkbox(&mut tool.config.exact_color_match, "Exaktmodus")
+        .changed()
+    {
+        tool.on_matching_config_changed();
+        changed = true;
+    }
+
     ui.horizontal(|ui| {
         ui.label("Farbtoleranz:");
-        if ui
-            .add(egui::Slider::new(&mut tool.config.color_tolerance, 5.0..=80.0).suffix(""))
-            .changed()
-        {
+        let response = ui.add_enabled(
+            !tool.config.exact_color_match,
+            egui::Slider::new(&mut tool.config.color_tolerance, 1.0..=80.0).suffix(""),
+        );
+        if response.changed() {
+            tool.on_matching_config_changed();
             changed = true;
         }
     });

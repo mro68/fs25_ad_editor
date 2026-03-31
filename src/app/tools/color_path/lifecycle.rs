@@ -6,7 +6,7 @@ use image::GenericImageView;
 use std::sync::Arc;
 
 use crate::app::tools::{ToolAction, ToolAnchor, ToolPreview, ToolResult};
-use crate::core::{simplify_polyline, ConnectionDirection, FarmlandGrid, NodeFlag, RoadMap};
+use crate::core::{ConnectionDirection, FarmlandGrid, NodeFlag, RoadMap, simplify_polyline};
 use crate::shared::spline_geometry::resample_by_distance;
 use glam::Vec2;
 
@@ -19,6 +19,62 @@ use super::state::{ColorPathPhase, ColorPathTool, ExistingConnectionMode, Prepar
 // ---------------------------------------------------------------------------
 
 impl ColorPathTool {
+    /// Liefert die aktuell wirksame Matching-Toleranz.
+    fn matching_tolerance(&self) -> f32 {
+        if self.config.exact_color_match {
+            0.0
+        } else {
+            self.config.color_tolerance
+        }
+    }
+
+    /// Aktualisiert die aktive Farbreferenzmenge aus den gelasso-ten Samples.
+    pub(super) fn refresh_matching_colors(&mut self) {
+        self.color_palette = if self.config.exact_color_match {
+            super::sampling::build_exact_color_set(&self.sampled_colors)
+        } else {
+            super::sampling::build_color_palette(&self.sampled_colors, 8)
+        };
+    }
+
+    /// Aktualisiert die Sampling-Vorschau des Flood-Fill-Bereichs.
+    pub(super) fn refresh_sampling_boundary_preview(&mut self) {
+        let Some(image) = self.background_image.as_ref() else {
+            self.flood_fill_boundary_segments.clear();
+            return;
+        };
+        let Some(lasso_start) = self.lasso_start_world else {
+            self.flood_fill_boundary_segments.clear();
+            return;
+        };
+        if self.color_palette.is_empty() {
+            self.flood_fill_boundary_segments.clear();
+            return;
+        }
+
+        let img_w = image.width();
+        let img_h = image.height();
+        let start_px = world_to_pixel(lasso_start, self.map_size, img_w, img_h);
+        let (mask, w, h) = super::sampling::flood_fill_color_mask(
+            image,
+            &self.color_palette,
+            self.matching_tolerance(),
+            start_px,
+        );
+        self.flood_fill_boundary_segments =
+            super::sampling::extract_boundary_segments_from_mask(&mask, w, h, self.map_size);
+    }
+
+    /// Reagiert auf Aenderungen am Farb-Matching (Exaktmodus/Toleranz).
+    pub(super) fn on_matching_config_changed(&mut self) {
+        self.refresh_matching_colors();
+        match self.phase {
+            ColorPathPhase::Idle => {}
+            ColorPathPhase::Sampling => self.refresh_sampling_boundary_preview(),
+            ColorPathPhase::Preview => self.compute_pipeline(),
+        }
+    }
+
     /// Fuehrt die komplette Erkennungs-Pipeline aus.
     ///
     /// 1. Farbmaske aufbauen
@@ -26,6 +82,7 @@ impl ColorPathTool {
     /// 3. Segmente vereinfachen und neu abtasten
     /// 4. Phase wechseln
     pub(super) fn compute_pipeline(&mut self) {
+        self.refresh_matching_colors();
         let Some(image) = self.background_image.as_ref() else {
             log::warn!("ColorPathTool: Pipeline abgebrochen — kein Hintergrundbild");
             return;
@@ -48,7 +105,7 @@ impl ColorPathTool {
         let (mut mask, width, height) = super::sampling::flood_fill_color_mask(
             image,
             &self.color_palette,
-            self.config.color_tolerance,
+            self.matching_tolerance(),
             start_px,
         );
         self.mask_width = width;
@@ -86,9 +143,7 @@ impl ColorPathTool {
         self.skeleton_network = Some(network);
         self.rebuild_preview_segments();
         if self.prepared_segments.is_empty() {
-            log::warn!(
-                "ColorPathTool: Netz extrahiert, aber keine gueltigen Preview-Segmente erzeugt"
-            );
+            log::warn!("ColorPathTool: Netz extrahiert, aber keine gueltigen Preview-Segmente erzeugt");
             self.skeleton_network = None;
             return;
         }
@@ -159,10 +214,7 @@ impl ColorPathTool {
             ExistingConnectionMode::Never => false,
             ExistingConnectionMode::OpenEnds => kind == SkeletonGraphNodeKind::OpenEnd,
             ExistingConnectionMode::OpenEndsAndJunctions => {
-                matches!(
-                    kind,
-                    SkeletonGraphNodeKind::OpenEnd | SkeletonGraphNodeKind::Junction
-                )
+                matches!(kind, SkeletonGraphNodeKind::OpenEnd | SkeletonGraphNodeKind::Junction)
             }
         }
     }
@@ -241,11 +293,7 @@ impl ColorPathTool {
             return ToolPreview::default();
         }
 
-        let mut nodes: Vec<Vec2> = network
-            .nodes
-            .iter()
-            .map(|node| node.world_position)
-            .collect();
+        let mut nodes: Vec<Vec2> = network.nodes.iter().map(|node| node.world_position).collect();
         let mut connections = Vec::new();
         let mut connection_styles = Vec::new();
 
@@ -335,34 +383,21 @@ impl crate::app::tools::RouteTool for ColorPathTool {
         }
         self.sampled_colors.extend(new_colors);
         self.lasso_regions.push(polygon);
-        // Mittelwert (Anzeigewert) und quantisierte Palette aktualisieren
+        // Mittelwert (Anzeigewert) und aktive Matching-Farben aktualisieren
         self.avg_color = Some(super::sampling::compute_average_color(&self.sampled_colors));
-        self.color_palette = super::sampling::build_color_palette(&self.sampled_colors, 8);
+        self.refresh_matching_colors();
         log::info!(
-            "Color sampling: {} new pixels, {} total, palette size: {}, avg color: {:?}",
+            "Color sampling: {} new pixels, {} total, match colors: {}, avg color: {:?}",
             new_count,
             self.sampled_colors.len(),
             self.color_palette.len(),
             self.avg_color
         );
-        // Quick-Flood-Fill fuer Vorschau der Bereichs-Umrisse
-        if let Some(lasso_start) = self.lasso_start_world {
-            let img_w = image.width();
-            let img_h = image.height();
-            let start_px = world_to_pixel(lasso_start, self.map_size, img_w, img_h);
-            let (mask, w, h) = super::sampling::flood_fill_color_mask(
-                image,
-                &self.color_palette,
-                self.config.color_tolerance,
-                start_px,
-            );
-            self.flood_fill_boundary_segments =
-                super::sampling::extract_boundary_segments_from_mask(&mask, w, h, self.map_size);
-            log::info!(
-                "Flood-Fill Vorschau: {} Randsegmente",
-                self.flood_fill_boundary_segments.len()
-            );
-        }
+        self.refresh_sampling_boundary_preview();
+        log::info!(
+            "Flood-Fill Vorschau: {} Randsegmente",
+            self.flood_fill_boundary_segments.len()
+        );
         ToolAction::Continue
     }
 
@@ -514,10 +549,10 @@ impl crate::app::tools::RouteTool for ColorPathTool {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::app::tools::RouteTool;
     use crate::app::tools::color_path::skeleton::{
         SkeletonGraphNode, SkeletonGraphNodeKind, SkeletonNetwork,
     };
-    use crate::app::tools::RouteTool;
     use crate::core::{ConnectionPriority, MapNode};
 
     fn sample_network() -> SkeletonNetwork {
@@ -575,21 +610,11 @@ mod tests {
         let tool = build_preview_tool(ExistingConnectionMode::Never);
         let road_map = RoadMap::new(3);
 
-        let result = tool
-            .execute(&road_map)
-            .expect("Preview-Netz sollte exportierbar sein");
+        let result = tool.execute(&road_map).expect("Preview-Netz sollte exportierbar sein");
 
-        assert_eq!(
-            result.new_nodes.len(),
-            5,
-            "3 Graph-Knoten + 2 Zwischenknoten"
-        );
+        assert_eq!(result.new_nodes.len(), 5, "3 Graph-Knoten + 2 Zwischenknoten");
         assert_eq!(result.internal_connections.len(), 4);
-        assert_eq!(
-            result.new_nodes[0].0,
-            Vec2::ZERO,
-            "Junction nur einmal anlegen"
-        );
+        assert_eq!(result.new_nodes[0].0, Vec2::ZERO, "Junction nur einmal anlegen");
         assert!(
             result
                 .internal_connections
@@ -626,11 +651,12 @@ mod tests {
             .expect("Junction-Modus sollte exportierbar sein");
         assert_eq!(result_with_junctions.external_connections.len(), 2);
         assert!(
-            result_with_junctions.external_connections.iter().any(
-                |&(idx, existing_id, _, direction, _)| {
+            result_with_junctions
+                .external_connections
+                .iter()
+                .any(|&(idx, existing_id, _, direction, _)| {
                     idx == 0 && existing_id == 200 && direction == ConnectionDirection::Dual
-                }
-            ),
+                }),
             "Gemischt gerichtete Junction-Anschluesse muessen als Dual exportiert werden"
         );
     }

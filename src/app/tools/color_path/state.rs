@@ -30,7 +30,11 @@ pub enum ExistingConnectionMode {
 
 impl ExistingConnectionMode {
     /// Alle UI-Optionen in stabiler Reihenfolge.
-    pub const ALL: [Self; 3] = [Self::Never, Self::OpenEnds, Self::OpenEndsAndJunctions];
+    pub const ALL: [Self; 3] = [
+        Self::Never,
+        Self::OpenEnds,
+        Self::OpenEndsAndJunctions,
+    ];
 
     /// Lesbares UI-Label.
     pub fn label(self) -> &'static str {
@@ -55,7 +59,12 @@ pub(crate) struct PreparedSegment {
 
 /// Konfigurationsparameter fuer die Farb-Pfad-Erkennung.
 pub struct ColorPathConfig {
-    /// Farbtoleranz fuer die Binärmaske (Standard: 25.0, Bereich: 5–80)
+    /// Exakte Farbübereinstimmung gegen eine der gelasso-ten Farben verwenden.
+    ///
+    /// Wenn aktiv, wird die Toleranz ignoriert und nur auf exakte RGB-Treffer
+    /// gegen die gelasso-ten Farben gematcht.
+    pub exact_color_match: bool,
+    /// Farbtoleranz fuer die Binaermaske im unscharfen Modus (Standard: 25.0, Bereich: 1–80)
     pub color_tolerance: f32,
     /// Abstand zwischen generierten Nodes in Metern (Standard: 5.0, Bereich: 1–50)
     pub node_spacing: f32,
@@ -73,6 +82,7 @@ pub struct ColorPathConfig {
 impl Default for ColorPathConfig {
     fn default() -> Self {
         Self {
+            exact_color_match: true,
             color_tolerance: 25.0,
             node_spacing: 5.0,
             simplify_tolerance: 1.0,
@@ -100,7 +110,8 @@ pub struct ColorPathTool {
     pub(crate) sampled_colors: Vec<[u8; 3]>,
     /// Berechneter RGB-Mittelwert aller Samples (nur fuer die Anzeige)
     pub(crate) avg_color: Option<[u8; 3]>,
-    /// Quantisierte Farbpalette aus dem Lasso (eindeutige Farb-Buckets)
+    /// Aktive Farbreferenzmenge fuer Matching und Anzeige.
+    /// Im Exaktmodus sind dies eindeutige Rohfarben, sonst quantisierte Buckets.
     pub(crate) color_palette: Vec<[u8; 3]>,
 
     // ── Berechnung ──────────────────────────────────────────────────────────

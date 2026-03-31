@@ -139,6 +139,16 @@ pub(crate) fn compute_average_color(colors: &[[u8; 3]]) -> [u8; 3] {
 // Farbpalette
 // ---------------------------------------------------------------------------
 
+/// Dedupliziert Rohfarben ohne Quantisierung fuer exaktes RGB-Matching.
+pub(crate) fn build_exact_color_set(raw_colors: &[[u8; 3]]) -> Vec<[u8; 3]> {
+    use std::collections::HashSet;
+    let mut seen = HashSet::new();
+    for &color in raw_colors {
+        seen.insert(color);
+    }
+    seen.into_iter().collect()
+}
+
 /// Quantisiert Rohfarben auf ein Raster und gibt die eindeutigen Farb-Buckets zurueck.
 ///
 /// `bucket_size` bestimmt die Rasterung (z.B. 8 → Werte 0, 8, 16, …, 248).
@@ -165,6 +175,7 @@ pub(crate) fn build_color_palette(raw_colors: &[[u8; 3]], bucket_size: u8) -> Ve
 ///
 /// Expandiert ab `start_pixel` zu allen 4-verbundenen Nachbarn,
 /// deren Farbe innerhalb der Toleranz eines Palette-Eintrags liegt.
+/// Mit `tolerance = 0.0` entspricht dies exakter RGB-Uebereinstimmung.
 /// Ergibt immer genau einen zusammenhaengenden Bereich.
 pub(crate) fn flood_fill_color_mask(
     image: &DynamicImage,
@@ -373,8 +384,7 @@ fn extract_boundary_segments_from_mask_pixels(
                 segments.push(((x - 0.5, y - 0.5), (x + 0.5, y - 0.5)));
             }
 
-            let bottom_empty =
-                y as usize + 1 >= height || !mask[(y as usize + 1) * width + x as usize];
+            let bottom_empty = y as usize + 1 >= height || !mask[(y as usize + 1) * width + x as usize];
             if bottom_empty {
                 segments.push(((x - 0.5, y + 0.5), (x + 0.5, y + 0.5)));
             }
@@ -474,6 +484,16 @@ mod tests {
     }
 
     #[test]
+    fn build_exact_color_set_dedupliziert_ohne_quantisierung() {
+        let colors = vec![[10, 20, 30], [10, 20, 30], [11, 20, 30]];
+        let exact = build_exact_color_set(&colors);
+
+        assert_eq!(exact.len(), 2);
+        assert!(exact.contains(&[10, 20, 30]));
+        assert!(exact.contains(&[11, 20, 30]));
+    }
+
+    #[test]
     fn build_color_mask_trifft_passende_pixel() {
         // 4x4-Bild: links rot [200,0,0], rechts gruen [0,200,0]
         let img = split_image_4x4();
@@ -499,6 +519,20 @@ mod tests {
                 );
             }
         }
+    }
+
+    #[test]
+    fn flood_fill_color_mask_mit_toleranz_null_matcht_nur_exakte_farben() {
+        let img = DynamicImage::ImageRgb8(RgbImage::from_fn(3, 1, |x, _| match x {
+            0 => Rgb([200, 0, 0]),
+            1 => Rgb([201, 0, 0]),
+            _ => Rgb([200, 0, 0]),
+        }));
+
+        let (mask, width, height) = flood_fill_color_mask(&img, &[[200, 0, 0]], 0.0, (0, 0));
+        assert_eq!(width, 3);
+        assert_eq!(height, 1);
+        assert_eq!(mask, vec![true, false, false]);
     }
 
     #[test]
@@ -570,14 +604,14 @@ mod tests {
     fn boundary_segments_enthalten_aussen_und_innenkanten() {
         let width = 3usize;
         let height = 3usize;
-        let mask = vec![true, true, true, true, false, true, true, true, true];
+        let mask = vec![
+            true, true, true,
+            true, false, true,
+            true, true, true,
+        ];
 
         let segments = extract_boundary_segments_from_mask_pixels(&mask, width, height);
-        assert_eq!(
-            segments.len(),
-            16,
-            "Aussenrand 12 + Innenloch 4 Segmente erwartet"
-        );
+        assert_eq!(segments.len(), 16, "Aussenrand 12 + Innenloch 4 Segmente erwartet");
 
         assert!(
             segments.contains(&((0.5, 0.5), (1.5, 0.5))),

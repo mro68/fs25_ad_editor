@@ -411,13 +411,14 @@
   - [x] `OverviewResult.farmland_ids: Option<Vec<u8>>` — rohes ID-Raster fuer Feldweg-Erkennung
 
 - [x] **ColorPathTool — Farb-Pfad-Erkennung (2026-03-30, Branch `feat/color-path-tool`)**
-  - [x] `src/app/tools/color_path/` — `ColorPathTool` (Slot 10), `ColorPathPhase` (Idle/Sampling/Preview), `ColorPathConfig` (color_tolerance, node_spacing, simplify_tolerance, noise_filter, existing_connection_mode)
+  - [x] `src/app/tools/color_path/` — `ColorPathTool` (Slot 10), `ColorPathPhase` (Idle/Sampling/Preview), `ColorPathConfig` (exact_color_match, color_tolerance, node_spacing, simplify_tolerance, noise_filter, existing_connection_mode)
   - [x] `RouteTool::needs_lasso_input()` + `RouteTool::on_lasso_completed()` — neue Default-Methoden im Trait fuer Alt+Drag-Lasso-Routing
   - [x] `DragSelectionMode::ToolLasso` in `src/ui/drag.rs` — neuer Modus fuer Tool-gesteuertes Lasso statt Node-Selektion
   - [x] `ViewportContext.tool_needs_lasso: bool` in `src/ui/input/mod.rs` — aktiviert ToolLasso-Routing
   - [x] `AppIntent::RouteToolLassoCompleted` + `AppCommand::RouteToolLassoCompleted` — neuer Intent-Pfad
   - [x] `handlers::route_tool::lasso_completed()` — neuer Handler
   - [x] Pipeline: Farb-Sampling (Alt+Lasso) → Flood-Fill-Maske → Zhang-Suen-Skelettierung → Graph-Extraktion mit Junction-Clustering → Segment-Vereinfachung/Resampling → Netz-Preview → Execute
+  - [x] Exaktmodus (2026-03-31) — Standardmaessig aktiv; matcht exakt gegen gelasso-te RGB-Farben, blendet die Toleranz-UI aus und schaltet bei Bedarf auf quantisierte Palette + Toleranz um
   - [x] Netzmodus-Erweiterung (2026-03-31) — Preview zeigt Kreuzungen/offene Enden/Segmente; Export legt Junction-/End-Knoten einmalig an und nutzt Snap-basierten Bestandsanschluss (`Never` / `OpenEnds` / `OpenEndsAndJunctions`)
   - [x] Sampling-Preview zeigt nach jeder Lasso-Auswahl alle Randsegmente des erkannten Flood-Fill-Bereichs (inkl. Innenkanten/Loecher), nicht nur eine Einzelkontur
   - [x] I18n-Key `MenuColorPath` (DE: „🎨 Farb-Pfad erkennen", EN: „🎨 Detect Color Path")

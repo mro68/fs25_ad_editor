@@ -531,7 +531,8 @@ an `handlers::route_tool::lasso_completed()` weitergeleitet, das `on_lasso_compl
 
 **Konfiguration (`ColorPathConfig`):**
 
-- `color_tolerance: f32` — Farb-Toleranz (euklidischer RGB-Abstand; Standard: 25.0, Bereich: 5–80)
+- `exact_color_match: bool` — Exaktmodus; matcht nur auf exakt gelasso-te RGB-Farben und deaktiviert die Toleranz-UI (Standard: `true`)
+- `color_tolerance: f32` — Farb-Toleranz im unscharfen Modus (euklidischer RGB-Abstand; Standard: 25.0, Bereich: 1–80)
 - `node_spacing: f32` — Abstand zwischen generierten Nodes in Metern (Standard: 5.0, Bereich: 1–50)
 - `simplify_tolerance: f32` — Douglas-Peucker-Toleranz in Metern (Standard: 1.0, Bereich: 0–20)
 - `noise_filter: bool` — Morphologischen Rauschfilter aktivieren (Standard: true)
@@ -568,6 +569,7 @@ pub struct ColorPathTool {
 - `pixel_to_world_f32(px, py, map_size, img_w, img_h) → Vec2` — Sub-Pixel-Position → Weltkoords (fuer Medial-Axis)
 - `sample_colors_in_polygon(polygon, image, map_size) → Vec<[u8; 3]>` — RGB-Pixel im Lasso-Polygon sammeln
 - `compute_average_color(colors) → [u8; 3]` — RGB-Mittelwert aller Samples
+- `build_exact_color_set(raw_colors) → Vec<[u8; 3]>` — Eindeutige Rohfarben fuer Exaktmodus ohne Quantisierung
 - `build_color_mask(image, avg_color, tolerance, bounds, map_size) → (Vec<bool>, u32, u32)` — Bool-Maske erstellen
 - `extract_boundary_segments_from_mask(mask, w, h, map_size) → Vec<(Vec2, Vec2)>` — Alle Grenzen der Flood-Fill-Maske als Preview-Segmente (inkl. Innenkanten/Loecher)
 - `erode(mask, w, h) → Vec<bool>` — Erosion mit Majority-Bedingung (≥ 3 von 4 Nachbarn, zum Schutz duenner Verbindungen)
