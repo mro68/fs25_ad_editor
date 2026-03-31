@@ -252,10 +252,8 @@ pub(crate) fn refine_medial_axis(
             let (nx_f, ny_f) = (-ty, tx);
 
             // Abstand zum Rand in beiden Normalenrichtungen
-            let d_pos =
-                find_boundary_distance(x, y, nx_f, ny_f, original_mask, width, height);
-            let d_neg =
-                find_boundary_distance(x, y, -nx_f, -ny_f, original_mask, width, height);
+            let d_pos = find_boundary_distance(x, y, nx_f, ny_f, original_mask, width, height);
+            let d_neg = find_boundary_distance(x, y, -nx_f, -ny_f, original_mask, width, height);
 
             // Mittelachsen-Offset: positiv = in Richtung +Normale
             let offset = (d_pos - d_neg) / 2.0;
