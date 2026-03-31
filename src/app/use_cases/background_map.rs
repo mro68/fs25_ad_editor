@@ -11,7 +11,7 @@ use std::sync::Arc;
 
 /// Berechnet den JSON-Pfad fuer Farmland-Polygone parallel zur Bilddatei.
 ///
-/// Ersetzt die Dateiendung durch `.json` (z.B. `overview.jpg` → `overview.json`).
+/// Ersetzt die Dateiendung durch `.json` (z.B. `overview.png` → `overview.json`).
 fn json_path_for(image_path: &str) -> String {
     let p = Path::new(image_path);
     p.with_extension("json").to_string_lossy().into_owned()
@@ -157,7 +157,7 @@ pub fn load_background_from_zip(
     // Farmland-Polygone aus begleitender JSON-Datei neben dem ZIP laden (falls vorhanden)
     load_farmland_json(state, &zip_path);
 
-    // Speichern als overview.jpg anbieten (falls XML geladen)
+    // Speichern als overview.png anbieten (falls XML geladen)
     prompt_save_as_overview(state);
 
     Ok(())
@@ -285,15 +285,15 @@ pub fn generate_overview_with_options(state: &mut AppState) -> Result<()> {
     // Dialog schliessen
     state.ui.overview_options_dialog.visible = false;
 
-    // Speichern als overview.jpg anbieten (falls XML geladen)
+    // Speichern als overview.png anbieten (falls XML geladen)
     prompt_save_as_overview(state);
 
     Ok(())
 }
 
-/// Prueft ob dem User das Speichern als overview.jpg angeboten werden soll.
+/// Prueft ob dem User das Speichern als overview.png angeboten werden soll.
 ///
-/// Zeigt Dialog immer an. Falls overview.jpg bereits existiert, wird der User
+/// Zeigt Dialog immer an. Falls overview.png bereits existiert, wird der User
 /// gefragt ob er die bestehende Datei ueberschreiben moechte.
 fn prompt_save_as_overview(state: &mut AppState) {
     let Some(ref xml_path) = state.ui.current_file_path else {
@@ -302,19 +302,19 @@ fn prompt_save_as_overview(state: &mut AppState) {
     let Some(dir) = Path::new(xml_path).parent() else {
         return;
     };
-    let target = dir.join("overview.jpg");
+    let target = dir.join("overview.png");
     let is_overwrite = target.exists();
     state.ui.save_overview_dialog.visible = true;
     state.ui.save_overview_dialog.target_path = target.to_string_lossy().into_owned();
     state.ui.save_overview_dialog.is_overwrite = is_overwrite;
     log::info!(
-        "Angebot: Hintergrund als overview.jpg speichern in {} (ueberschreiben: {})",
+        "Angebot: Hintergrund als overview.png speichern in {} (ueberschreiben: {})",
         dir.display(),
         is_overwrite,
     );
 }
 
-/// Speichert die aktuelle Background-Map als overview.jpg (maximale Qualitaet).
+/// Speichert die aktuelle Background-Map als overview.png (verlustfreies PNG).
 pub fn save_background_as_overview(state: &mut AppState, path: String) -> Result<()> {
     let bg_map = state
         .view
@@ -323,17 +323,9 @@ pub fn save_background_as_overview(state: &mut AppState, path: String) -> Result
         .ok_or_else(|| anyhow::anyhow!("Keine Background-Map geladen"))?;
 
     let rgb_image = bg_map.image_data().to_rgb8();
-    let file = std::fs::File::create(&path)?;
-    let encoder = image::codecs::jpeg::JpegEncoder::new_with_quality(file, 90);
-    use image::ImageEncoder;
-    encoder.write_image(
-        rgb_image.as_raw(),
-        rgb_image.width(),
-        rgb_image.height(),
-        image::ExtendedColorType::Rgb8,
-    )?;
+    rgb_image.save(&path)?;
 
-    log::info!("Background-Map als overview.jpg gespeichert: {}", path);
+    log::info!("Background-Map als overview.png gespeichert: {}", path);
 
     // Farmland-Polygone als JSON parallel zur Bilddatei speichern
     save_farmland_json(state, &path);

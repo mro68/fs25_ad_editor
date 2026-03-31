@@ -36,11 +36,11 @@ pub fn detect_post_load(xml_path: &Path, map_name: Option<&str>) -> PostLoadDete
     }
 }
 
-/// Prueft ob `overview.jpg` (oder `overview.png`) im selben Verzeichnis wie die XML liegt.
+/// Prueft ob `overview.png` (oder `overview.jpg`) im selben Verzeichnis wie die XML liegt.
 fn find_overview_next_to(xml_path: &Path) -> Option<PathBuf> {
     let dir = xml_path.parent()?;
-    // Bevorzugt .jpg, Fallback auf .png
-    for name in &["overview.jpg", "overview.png"] {
+    // Bevorzugt .png (verlustfrei), Fallback auf .jpg (Abwaertskompatibilitaet)
+    for name in &["overview.png", "overview.jpg"] {
         let candidate = dir.join(name);
         if candidate.is_file() {
             return Some(candidate);

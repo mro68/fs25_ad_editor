@@ -264,9 +264,9 @@ pub enum AppCommand {
     CloseOverviewOptionsDialog,
     /// Post-Load-Dialog schliessen
     DismissPostLoadDialog,
-    /// Background-Map als overview.jpg im XML-Verzeichnis speichern
+    /// Background-Map als overview.png im XML-Verzeichnis speichern
     SaveBackgroundAsOverview { path: String },
-    /// overview.jpg-Speichern-Dialog schliessen
+    /// overview.png-Speichern-Dialog schliessen
     DismissSaveOverviewDialog,
     /// Selektierte Nodes-Kette als gleichmaessig verteilte Wegpunkte neu berechnen (Distanzen)
     ResamplePath,

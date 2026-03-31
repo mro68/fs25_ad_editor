@@ -251,9 +251,9 @@ pub enum AppIntent {
     PostLoadGenerateOverview { zip_path: String },
     /// Post-Load-Dialog: geschlossen ohne Aktion
     PostLoadDialogDismissed,
-    /// Benutzer hat bestaetigt: Background als overview.jpg speichern
+    /// Benutzer hat bestaetigt: Background als overview.png speichern
     SaveBackgroundAsOverviewConfirmed,
-    /// Benutzer hat abgelehnt: overview.jpg nicht speichern
+    /// Benutzer hat abgelehnt: overview.png nicht speichern
     SaveBackgroundAsOverviewDismissed,
     /// Selektierte Nodes-Kette als gleichmaessig verteilte Wegpunkte neu berechnen (Distanzen)
     ResamplePathRequested,

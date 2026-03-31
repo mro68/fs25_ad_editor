@@ -296,7 +296,7 @@ impl AppController {
             // === Post-Load-Dialog ===
             AppCommand::DismissPostLoadDialog => handlers::dialog::dismiss_post_load_dialog(state),
 
-            // === overview.jpg speichern ===
+            // === overview.png speichern ===
             AppCommand::SaveBackgroundAsOverview { path } => {
                 handlers::view::save_background_as_overview(state, path)?
             }
