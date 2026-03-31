@@ -94,7 +94,9 @@ impl ColorPathTool {
                         .iter()
                         .map(|p| p.distance_squared(start_w))
                         .fold(f32::MAX, f32::min);
-                    dist_a.partial_cmp(&dist_b).unwrap_or(std::cmp::Ordering::Equal)
+                    dist_a
+                        .partial_cmp(&dist_b)
+                        .unwrap_or(std::cmp::Ordering::Equal)
                 })
                 .map(|(i, _)| i)
                 .unwrap_or(0)

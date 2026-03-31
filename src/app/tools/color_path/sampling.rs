@@ -59,10 +59,7 @@ pub(crate) fn pixel_to_world_f32(
 ) -> Vec2 {
     let scale_x = map_size / img_width as f32;
     let scale_y = map_size / img_height as f32;
-    Vec2::new(
-        px * scale_x - map_size / 2.0,
-        py * scale_y - map_size / 2.0,
-    )
+    Vec2::new(px * scale_x - map_size / 2.0, py * scale_y - map_size / 2.0)
 }
 
 // ---------------------------------------------------------------------------

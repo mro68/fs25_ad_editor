@@ -61,8 +61,10 @@ pub struct ColorPathTool {
     pub(crate) lasso_regions: Vec<Vec<Vec2>>,
     /// Gesammelte RGB-Farben aus den Lasso-Regionen
     pub(crate) sampled_colors: Vec<[u8; 3]>,
-    /// Berechneter RGB-Mittelwert aller Samples
+    /// Berechneter RGB-Mittelwert aller Samples (nur fuer die Anzeige)
     pub(crate) avg_color: Option<[u8; 3]>,
+    /// Quantisierte Farbpalette aus dem Lasso (eindeutige Farb-Buckets)
+    pub(crate) color_palette: Vec<[u8; 3]>,
 
     // ── Berechnung ──────────────────────────────────────────────────────────
     /// Bool-Maske (true = Pfadpixel), zeilenweise row-major
@@ -111,6 +113,7 @@ impl ColorPathTool {
             lasso_regions: Vec::new(),
             sampled_colors: Vec::new(),
             avg_color: None,
+            color_palette: Vec::new(),
             mask: Vec::new(),
             mask_width: 0,
             mask_height: 0,

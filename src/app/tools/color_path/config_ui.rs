@@ -39,10 +39,21 @@ pub(super) fn render_config_view(
                 let color = egui::Color32::from_rgb(avg[0], avg[1], avg[2]);
                 ui.horizontal(|ui| {
                     ui.label(format!("Samples: {sample_count}  Ø-Farbe:"));
-                    // Farbvorschau-Quadrat
+                    // Farbvorschau-Quadrat (Mittelwert)
                     let (rect, _) =
                         ui.allocate_exact_size(egui::Vec2::splat(16.0), egui::Sense::hover());
                     ui.painter().rect_filled(rect, 2.0, color);
+                });
+                let palette_size = tool.color_palette.len();
+                ui.label(format!("Palette: {palette_size} Farben"));
+                // Palette-Vorschau: kleine Quadrate fuer jeden Eintrag (max. 20)
+                ui.horizontal_wrapped(|ui| {
+                    for &c in tool.color_palette.iter().take(20) {
+                        let pc = egui::Color32::from_rgb(c[0], c[1], c[2]);
+                        let (rect, _) =
+                            ui.allocate_exact_size(egui::Vec2::splat(10.0), egui::Sense::hover());
+                        ui.painter().rect_filled(rect, 1.0, pc);
+                    }
                 });
             } else {
                 ui.label(format!("Samples: {sample_count}"));
