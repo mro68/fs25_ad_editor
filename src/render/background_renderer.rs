@@ -4,6 +4,10 @@ use crate::{BackgroundMap, Camera2D, WorldBounds};
 use eframe::{egui_wgpu, wgpu};
 use wgpu::util::DeviceExt;
 
+/// Ab diesem Wert wird auf pixelgenaues Sampling umgeschaltet.
+/// 1.0 bedeutet: ein Hintergrund-Texel belegt mindestens einen Screen-Pixel.
+const NEAREST_SAMPLING_TEXEL_THRESHOLD_PX: f32 = 1.0;
+
 /// Uniforms fuer Background-Rendering
 #[repr(C)]
 #[derive(Copy, Clone, Debug, bytemuck::Pod, bytemuck::Zeroable)]
@@ -46,9 +50,37 @@ pub struct BackgroundRenderer {
 
     // Optional: aktuelle Background-Map
     texture: Option<wgpu::Texture>,
-    sampler: Option<wgpu::Sampler>,
-    bind_group: Option<wgpu::BindGroup>,
+    linear_sampler: Option<wgpu::Sampler>,
+    nearest_sampler: Option<wgpu::Sampler>,
+    linear_bind_group: Option<wgpu::BindGroup>,
+    nearest_bind_group: Option<wgpu::BindGroup>,
     current_bounds: Option<WorldBounds>,
+    texture_dimensions: Option<[u32; 2]>,
+}
+
+fn screen_pixels_per_background_texel(
+    bounds: &WorldBounds,
+    texture_dimensions: [u32; 2],
+    camera: &Camera2D,
+    viewport_size: [f32; 2],
+) -> f32 {
+    let world_width = (bounds.max_x - bounds.min_x).abs().max(f32::EPSILON);
+    let world_height = (bounds.max_z - bounds.min_z).abs().max(f32::EPSILON);
+    let texel_world_x = world_width / texture_dimensions[0].max(1) as f32;
+    let texel_world_y = world_height / texture_dimensions[1].max(1) as f32;
+    let texel_world = texel_world_x.max(texel_world_y);
+    let world_per_pixel = camera.world_per_pixel(viewport_size[1].max(1.0));
+    texel_world / world_per_pixel
+}
+
+fn should_use_nearest_background_sampling(
+    bounds: &WorldBounds,
+    texture_dimensions: [u32; 2],
+    camera: &Camera2D,
+    viewport_size: [f32; 2],
+) -> bool {
+    screen_pixels_per_background_texel(bounds, texture_dimensions, camera, viewport_size)
+        >= NEAREST_SAMPLING_TEXEL_THRESHOLD_PX
 }
 
 impl BackgroundRenderer {
@@ -182,9 +214,12 @@ impl BackgroundRenderer {
             vertex_buffer,
             uniform_buffer,
             texture: None,
-            sampler: None,
-            bind_group: None,
+            linear_sampler: None,
+            nearest_sampler: None,
+            linear_bind_group: None,
+            nearest_bind_group: None,
             current_bounds: None,
+            texture_dimensions: None,
         }
     }
 
@@ -199,17 +234,23 @@ impl BackgroundRenderer {
         log::info!("BackgroundRenderer: Lade Background-Texture...");
 
         // Erstelle Texture aus Image
-        let (texture, sampler) = super::texture::create_texture_from_image(
+        let (texture, linear_sampler) = super::texture::create_texture_from_image(
             device,
             queue,
             bg_map.image_data(),
             "Background Texture",
         );
+        let nearest_sampler = super::texture::create_sampler(
+            device,
+            "Background Texture nearest_sampler",
+            wgpu::FilterMode::Nearest,
+        );
+        let texture_view = texture.create_view(&wgpu::TextureViewDescriptor::default());
 
-        // Erstelle Bind-Group
+        // Erstelle Bind-Groups fuer lineares und pixelgenaues Sampling.
         let bind_group_layout = device.create_bind_group_layout(&self.bind_group_layout);
-        let bind_group = device.create_bind_group(&wgpu::BindGroupDescriptor {
-            label: Some("Background Bind Group"),
+        let linear_bind_group = device.create_bind_group(&wgpu::BindGroupDescriptor {
+            label: Some("Background Linear Bind Group"),
             layout: &bind_group_layout,
             entries: &[
                 wgpu::BindGroupEntry {
@@ -218,13 +259,29 @@ impl BackgroundRenderer {
                 },
                 wgpu::BindGroupEntry {
                     binding: 1,
-                    resource: wgpu::BindingResource::TextureView(
-                        &texture.create_view(&wgpu::TextureViewDescriptor::default()),
-                    ),
+                    resource: wgpu::BindingResource::TextureView(&texture_view),
                 },
                 wgpu::BindGroupEntry {
                     binding: 2,
-                    resource: wgpu::BindingResource::Sampler(&sampler),
+                    resource: wgpu::BindingResource::Sampler(&linear_sampler),
+                },
+            ],
+        });
+        let nearest_bind_group = device.create_bind_group(&wgpu::BindGroupDescriptor {
+            label: Some("Background Nearest Bind Group"),
+            layout: &bind_group_layout,
+            entries: &[
+                wgpu::BindGroupEntry {
+                    binding: 0,
+                    resource: self.uniform_buffer.as_entire_binding(),
+                },
+                wgpu::BindGroupEntry {
+                    binding: 1,
+                    resource: wgpu::BindingResource::TextureView(&texture_view),
+                },
+                wgpu::BindGroupEntry {
+                    binding: 2,
+                    resource: wgpu::BindingResource::Sampler(&nearest_sampler),
                 },
             ],
         });
@@ -266,14 +323,17 @@ impl BackgroundRenderer {
 
         // Speichere skalierte Bounds (fuer konsistentes UV-Mapping im Shader)
         self.texture = Some(texture);
-        self.sampler = Some(sampler);
-        self.bind_group = Some(bind_group);
+        self.linear_sampler = Some(linear_sampler);
+        self.nearest_sampler = Some(nearest_sampler);
+        self.linear_bind_group = Some(linear_bind_group);
+        self.nearest_bind_group = Some(nearest_bind_group);
         self.current_bounds = Some(WorldBounds {
             min_x,
             max_x,
             min_z,
             max_z,
         });
+        self.texture_dimensions = Some([bg_map.dimensions().0, bg_map.dimensions().1]);
 
         log::info!(
             "BackgroundRenderer: Texture geladen ({}x{})",
@@ -285,9 +345,12 @@ impl BackgroundRenderer {
     /// Entfernt die aktuelle Background-Map
     pub fn clear_background(&mut self) {
         self.texture = None;
-        self.sampler = None;
-        self.bind_group = None;
+        self.linear_sampler = None;
+        self.nearest_sampler = None;
+        self.linear_bind_group = None;
+        self.nearest_bind_group = None;
         self.current_bounds = None;
+        self.texture_dimensions = None;
         log::info!("BackgroundRenderer: Background entfernt");
     }
 
@@ -305,11 +368,28 @@ impl BackgroundRenderer {
         if !visible || opacity <= 0.0 {
             return;
         }
-        let Some(bind_group) = self.bind_group.as_ref() else {
+        let Some(linear_bind_group) = self.linear_bind_group.as_ref() else {
+            return;
+        };
+        let Some(nearest_bind_group) = self.nearest_bind_group.as_ref() else {
             return;
         };
         let Some(bounds) = self.current_bounds.as_ref() else {
             return;
+        };
+        let Some(texture_dimensions) = self.texture_dimensions else {
+            return;
+        };
+
+        let bind_group = if should_use_nearest_background_sampling(
+            bounds,
+            texture_dimensions,
+            camera,
+            viewport_size,
+        ) {
+            nearest_bind_group
+        } else {
+            linear_bind_group
         };
 
         // Update Uniforms
@@ -332,5 +412,37 @@ impl BackgroundRenderer {
         render_pass.draw(0..6, 0..1);
 
         log::trace!("BackgroundRenderer: Gerendert");
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn nearest_sampling_is_used_when_texels_are_magnified() {
+        let bounds = WorldBounds::from_map_size(2048.0);
+        let mut camera = Camera2D::new();
+        camera.zoom = 8.0;
+
+        assert!(should_use_nearest_background_sampling(
+            &bounds,
+            [2048, 2048],
+            &camera,
+            [800.0, 600.0],
+        ));
+    }
+
+    #[test]
+    fn linear_sampling_is_kept_when_texels_are_subpixel() {
+        let bounds = WorldBounds::from_map_size(2048.0);
+        let camera = Camera2D::new();
+
+        assert!(!should_use_nearest_background_sampling(
+            &bounds,
+            [2048, 2048],
+            &camera,
+            [800.0, 600.0],
+        ));
     }
 }

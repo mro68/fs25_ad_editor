@@ -13,24 +13,31 @@ use image::{DynamicImage, GenericImageView};
 
 /// Konvertiert Weltkoordinaten in Pixel-Koordinaten des Hintergrundbildes.
 ///
-/// Das Bild ist quadratisch und zentriert bei (0,0); `map_size` gibt
-/// die Seitenlaenge in Metern an. `img_width` steuert den Massstab.
+/// Das Bild ist zentriert bei (0,0); `map_size` gibt die Seitenlaenge in
+/// Metern an. Ganzzahlige Rueckgabewerte adressieren Pixelzellen, nicht deren
+/// Zentren.
 pub(crate) fn world_to_pixel(
     world: Vec2,
     map_size: f32,
     img_width: u32,
     img_height: u32,
 ) -> (u32, u32) {
-    let scale = img_width as f32 / map_size;
-    let px = ((world.x + map_size / 2.0) * scale).clamp(0.0, (img_width - 1) as f32) as u32;
-    let py = ((world.y + map_size / 2.0) * scale).clamp(0.0, (img_height - 1) as f32) as u32;
+    let scale_x = img_width as f32 / map_size;
+    let scale_y = img_height as f32 / map_size;
+    let px = ((world.x + map_size / 2.0) * scale_x)
+        .floor()
+        .clamp(0.0, (img_width - 1) as f32) as u32;
+    let py = ((world.y + map_size / 2.0) * scale_y)
+        .floor()
+        .clamp(0.0, (img_height - 1) as f32) as u32;
     (px, py)
 }
 
 /// Konvertiert Pixel-Koordinaten in Weltkoordinaten.
 ///
-/// Umkehrung von `world_to_pixel`. Fuer nicht-quadratische Bilder werden
-/// X und Y je mit dem korrekten Skalierungsfaktor umgerechnet.
+/// Ganzzahlige Pixelkoordinaten werden als Pixelzentren interpretiert.
+/// Fuer nicht-quadratische Bilder werden X und Y je mit dem korrekten
+/// Skalierungsfaktor umgerechnet.
 pub(crate) fn pixel_to_world(
     px: u32,
     py: u32,
@@ -41,15 +48,16 @@ pub(crate) fn pixel_to_world(
     let scale_x = map_size / img_width as f32;
     let scale_y = map_size / img_height as f32;
     Vec2::new(
-        px as f32 * scale_x - map_size / 2.0,
-        py as f32 * scale_y - map_size / 2.0,
+        (px as f32 + 0.5) * scale_x - map_size / 2.0,
+        (py as f32 + 0.5) * scale_y - map_size / 2.0,
     )
 }
 
 /// Konvertiert Sub-Pixel-Koordinaten (Fließkomma) in Weltkoordinaten.
 ///
 /// Wird fuer die Medial-Axis-Korrektur verwendet, wo Pixel-Positionen
-/// nicht ganzzahlig sind.
+/// nicht ganzzahlig sind. Der Wert `0.0` entspricht dabei dem Zentrum des
+/// ersten Pixels; `-0.5` und `+0.5` liegen auf dessen linker/rechter Kante.
 pub(crate) fn pixel_to_world_f32(
     px: f32,
     py: f32,
@@ -59,7 +67,10 @@ pub(crate) fn pixel_to_world_f32(
 ) -> Vec2 {
     let scale_x = map_size / img_width as f32;
     let scale_y = map_size / img_height as f32;
-    Vec2::new(px * scale_x - map_size / 2.0, py * scale_y - map_size / 2.0)
+    Vec2::new(
+        (px + 0.5) * scale_x - map_size / 2.0,
+        (py + 0.5) * scale_y - map_size / 2.0,
+    )
 }
 
 // ---------------------------------------------------------------------------
@@ -468,6 +479,23 @@ mod tests {
             recovered.y,
             original.y
         );
+    }
+
+    #[test]
+    fn pixel_to_world_maps_integer_pixels_to_texel_centers() {
+        let world = pixel_to_world(0, 0, 4.0, 4, 4);
+        assert_eq!(world, Vec2::new(-1.5, -1.5));
+
+        let edge = pixel_to_world_f32(-0.5, -0.5, 4.0, 4, 4);
+        assert_eq!(edge, Vec2::new(-2.0, -2.0));
+    }
+
+    #[test]
+    fn world_to_pixel_uses_independent_axis_scale() {
+        let world = Vec2::new(0.0, 1.5);
+        let (px, py) = world_to_pixel(world, 4.0, 4, 8);
+        assert_eq!(px, 2);
+        assert_eq!(py, 7);
     }
 
     #[test]

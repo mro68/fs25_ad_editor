@@ -218,6 +218,7 @@
   - [x] Persistent gespeicherte Standard-Layer in EditorOptions
   - [x] Auto-Detection: Heightmap und Map-Mod-ZIP nach XML-Laden (Umlaut-tolerantes Fuzzy-Matching)
   - [x] overview.jpg: Auto-Load beim XML-Oeffnen, Speichern-Dialog nach ZIP-Extraktion/Generierung
+  - [x] Zoom-abhaengige Background-Samplerumschaltung (2026-03-31) — bei starkem Reinzoomen pixelgenaues `Nearest`-Sampling fuer Debugging/ColorPath, sonst lineares Sampling
   - [x] **Alle Felder nachzeichnen (2026-03-06):** `AppIntent::TraceAllFieldsRequested` → `AppCommand::TraceAllFields` → `use_cases::editing::trace_all_fields()` — Batch-Nachzeichnen aller geladenen Farmland-Polygone in einem einzigen Undo-Schritt; Menueä `📍 Alle Felder nachzeichnen` in Extras (aktiviert wenn Farmland-Polygone geladen)
   - [x] **Ecken-Erkennung beim Nachzeichnen (2026-03-22):** `compute_ring()` um `corner_angle_threshold: Option<f32>` erweitert; neue private Funktionen `detect_corners()` und `resample_ring_with_corners()` in `field_boundary/lifecycle.rs`; `FieldBoundaryTool` und `GroupKind::FieldBoundary` um `corner_detection_enabled`/`corner_angle_threshold_deg` ergaenzt; `TraceAllFieldsDialogState` um Checkbox + Slider erweitert; Vorschau und Execute beachten den Schwellwert
   - [x] **Eckenverrundung beim Nachzeichnen (2026-03-23, Branch `feat/group-edit-corner-rounding`):**
