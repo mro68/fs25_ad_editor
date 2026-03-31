@@ -247,7 +247,10 @@ impl crate::app::tools::RouteTool for ColorPathTool {
             );
             self.flood_fill_contour =
                 super::sampling::extract_contour_from_mask(&mask, w, h, self.map_size);
-            log::info!("Flood-Fill Vorschau: {} Kontur-Punkte", self.flood_fill_contour.len());
+            log::info!(
+                "Flood-Fill Vorschau: {} Kontur-Punkte",
+                self.flood_fill_contour.len()
+            );
         }
         ToolAction::Continue
     }
