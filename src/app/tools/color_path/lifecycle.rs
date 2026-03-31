@@ -3,6 +3,7 @@
 //! Enthaelt die Berechnen-Pipeline, Preview-Logik und Execute-Logik.
 
 use std::sync::Arc;
+use image::GenericImageView;
 
 use crate::app::tools::{ToolAction, ToolPreview, ToolResult};
 use crate::core::{simplify_polyline, FarmlandGrid, NodeFlag, RoadMap};
@@ -321,6 +322,19 @@ impl crate::app::tools::RouteTool for ColorPathTool {
     }
 
     fn set_background_map_image(&mut self, image: Option<Arc<image::DynamicImage>>) {
+        if let Some(ref img) = image {
+            // map_size aus Bilddimensionen ableiten (Fallback wenn kein FarmlandGrid)
+            let (w, h) = img.dimensions();
+            let img_map_size = w.min(h) as f32;
+            if self.map_size == 2048.0 || (self.map_size - img_map_size).abs() > 1.0 {
+                log::info!(
+                    "ColorPathTool: map_size aus Bild abgeleitet: {} (war {})",
+                    img_map_size,
+                    self.map_size
+                );
+                self.map_size = img_map_size;
+            }
+        }
         self.background_image = image;
     }
 
