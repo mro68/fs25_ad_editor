@@ -340,7 +340,10 @@ pub(crate) fn extract_paths_from_mask(
 
     log::info!(
         "Skelett: {} Komponenten ({} Pixel total) zu einem Pfad zusammengefuehrt",
-        components.iter().filter(|c| c.len() >= MIN_PATH_LENGTH).count(),
+        components
+            .iter()
+            .filter(|c| c.len() >= MIN_PATH_LENGTH)
+            .count(),
         merged_pixels.len()
     );
 

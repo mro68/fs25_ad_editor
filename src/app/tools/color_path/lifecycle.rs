@@ -2,8 +2,8 @@
 //!
 //! Enthaelt die Berechnen-Pipeline, Preview-Logik und Execute-Logik.
 
-use std::sync::Arc;
 use image::GenericImageView;
+use std::sync::Arc;
 
 use crate::app::tools::{ToolAction, ToolPreview, ToolResult};
 use crate::core::{simplify_polyline, FarmlandGrid, NodeFlag, RoadMap};
