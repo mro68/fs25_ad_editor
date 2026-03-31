@@ -384,7 +384,8 @@ fn extract_boundary_segments_from_mask_pixels(
                 segments.push(((x - 0.5, y - 0.5), (x + 0.5, y - 0.5)));
             }
 
-            let bottom_empty = y as usize + 1 >= height || !mask[(y as usize + 1) * width + x as usize];
+            let bottom_empty =
+                y as usize + 1 >= height || !mask[(y as usize + 1) * width + x as usize];
             if bottom_empty {
                 segments.push(((x - 0.5, y + 0.5), (x + 0.5, y + 0.5)));
             }
@@ -604,14 +605,14 @@ mod tests {
     fn boundary_segments_enthalten_aussen_und_innenkanten() {
         let width = 3usize;
         let height = 3usize;
-        let mask = vec![
-            true, true, true,
-            true, false, true,
-            true, true, true,
-        ];
+        let mask = vec![true, true, true, true, false, true, true, true, true];
 
         let segments = extract_boundary_segments_from_mask_pixels(&mask, width, height);
-        assert_eq!(segments.len(), 16, "Aussenrand 12 + Innenloch 4 Segmente erwartet");
+        assert_eq!(
+            segments.len(),
+            16,
+            "Aussenrand 12 + Innenloch 4 Segmente erwartet"
+        );
 
         assert!(
             segments.contains(&((0.5, 0.5), (1.5, 0.5))),

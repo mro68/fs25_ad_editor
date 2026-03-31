@@ -6,7 +6,7 @@ use image::GenericImageView;
 use std::sync::Arc;
 
 use crate::app::tools::{ToolAction, ToolAnchor, ToolPreview, ToolResult};
-use crate::core::{ConnectionDirection, FarmlandGrid, NodeFlag, RoadMap, simplify_polyline};
+use crate::core::{simplify_polyline, ConnectionDirection, FarmlandGrid, NodeFlag, RoadMap};
 use crate::shared::spline_geometry::resample_by_distance;
 use glam::Vec2;
 
@@ -143,7 +143,9 @@ impl ColorPathTool {
         self.skeleton_network = Some(network);
         self.rebuild_preview_segments();
         if self.prepared_segments.is_empty() {
-            log::warn!("ColorPathTool: Netz extrahiert, aber keine gueltigen Preview-Segmente erzeugt");
+            log::warn!(
+                "ColorPathTool: Netz extrahiert, aber keine gueltigen Preview-Segmente erzeugt"
+            );
             self.skeleton_network = None;
             return;
         }
@@ -214,7 +216,10 @@ impl ColorPathTool {
             ExistingConnectionMode::Never => false,
             ExistingConnectionMode::OpenEnds => kind == SkeletonGraphNodeKind::OpenEnd,
             ExistingConnectionMode::OpenEndsAndJunctions => {
-                matches!(kind, SkeletonGraphNodeKind::OpenEnd | SkeletonGraphNodeKind::Junction)
+                matches!(
+                    kind,
+                    SkeletonGraphNodeKind::OpenEnd | SkeletonGraphNodeKind::Junction
+                )
             }
         }
     }
@@ -293,7 +298,11 @@ impl ColorPathTool {
             return ToolPreview::default();
         }
 
-        let mut nodes: Vec<Vec2> = network.nodes.iter().map(|node| node.world_position).collect();
+        let mut nodes: Vec<Vec2> = network
+            .nodes
+            .iter()
+            .map(|node| node.world_position)
+            .collect();
         let mut connections = Vec::new();
         let mut connection_styles = Vec::new();
 
@@ -549,10 +558,10 @@ impl crate::app::tools::RouteTool for ColorPathTool {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::app::tools::RouteTool;
     use crate::app::tools::color_path::skeleton::{
         SkeletonGraphNode, SkeletonGraphNodeKind, SkeletonNetwork,
     };
+    use crate::app::tools::RouteTool;
     use crate::core::{ConnectionPriority, MapNode};
 
     fn sample_network() -> SkeletonNetwork {
@@ -610,11 +619,21 @@ mod tests {
         let tool = build_preview_tool(ExistingConnectionMode::Never);
         let road_map = RoadMap::new(3);
 
-        let result = tool.execute(&road_map).expect("Preview-Netz sollte exportierbar sein");
+        let result = tool
+            .execute(&road_map)
+            .expect("Preview-Netz sollte exportierbar sein");
 
-        assert_eq!(result.new_nodes.len(), 5, "3 Graph-Knoten + 2 Zwischenknoten");
+        assert_eq!(
+            result.new_nodes.len(),
+            5,
+            "3 Graph-Knoten + 2 Zwischenknoten"
+        );
         assert_eq!(result.internal_connections.len(), 4);
-        assert_eq!(result.new_nodes[0].0, Vec2::ZERO, "Junction nur einmal anlegen");
+        assert_eq!(
+            result.new_nodes[0].0,
+            Vec2::ZERO,
+            "Junction nur einmal anlegen"
+        );
         assert!(
             result
                 .internal_connections
@@ -651,12 +670,11 @@ mod tests {
             .expect("Junction-Modus sollte exportierbar sein");
         assert_eq!(result_with_junctions.external_connections.len(), 2);
         assert!(
-            result_with_junctions
-                .external_connections
-                .iter()
-                .any(|&(idx, existing_id, _, direction, _)| {
+            result_with_junctions.external_connections.iter().any(
+                |&(idx, existing_id, _, direction, _)| {
                     idx == 0 && existing_id == 200 && direction == ConnectionDirection::Dual
-                }),
+                }
+            ),
             "Gemischt gerichtete Junction-Anschluesse muessen als Dual exportiert werden"
         );
     }
