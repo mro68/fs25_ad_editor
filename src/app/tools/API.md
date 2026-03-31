@@ -483,7 +483,7 @@ Modulstruktur: `mod.rs` (Re-Export), `state.rs` (Structs, Enums, Felder), `lifec
 
 ### `ColorPathTool`
 
-Farb-Pfad-Erkennung: Erkennt Wege anhand der Farbe im Hintergrundbild, skelettiert sie per Zhang-Suen-Thinning und erzeugt daraus eine gleichmaessig abgetastete Waypoint-Route (Slot 10 im ToolManager).
+Farb-Pfad-Erkennung: Erkennt zusammenhaengende Teilnetze anhand der Farbe im Hintergrundbild, skelettiert sie per Zhang-Suen-Thinning und exportiert daraus ein Waypoint-Netz mit offenen Enden, Kreuzungen und Segmenten (Slot 10 im ToolManager).
 
 **Voraussetzung:** Ein Hintergrundbild muss geladen sein (`set_background_map_image()`). Das Tool bezieht die `map_size` automatisch aus `set_farmland_grid()`.
 
@@ -491,7 +491,7 @@ Farb-Pfad-Erkennung: Erkennt Wege anhand der Farbe im Hintergrundbild, skelettie
 
 - **`Idle`** — Warten auf Nutzerinteraktion (Klick oder Alt+Lasso startet Sampling)
 - **`Sampling`** — User sammelt Farbproben per Alt+Lasso; Berechnen-Button startet Pipeline
-- **`Preview`** — Mittellinie berechnet und als Vorschau angezeigt; Enter fuegt Nodes ein
+- **`Preview`** — Teilnetz berechnet und als Vorschau angezeigt; Enter fuegt Nodes ein
 
 **ToolLasso-Mechanismus:**
 
@@ -506,21 +506,27 @@ an `handlers::route_tool::lasso_completed()` weitergeleitet, das `on_lasso_compl
 2. Alt+Drag zeichnet ein Lasso-Polygon → `on_lasso_completed()` sampelt Farben im Polygon
 3. Mehrere Lasso-Polygone moeglich (Sampling kumulativ)
 4. Sidebar: Berechnen-Button → `compute_pipeline()` → Phase::Preview
-5. Sidebar: Pfad auswaehlen (falls mehrere gefunden) → `select_path(idx)`
-6. Enter / Uebernehmen-Button → `execute()` → Nodes in Road Map einfuegen
+5. Sidebar: Netz pruefen (Kreuzungen, offene Enden, Segmente) + Anschlussmodus waehlen
+6. Enter / Uebernehmen-Button → `execute()` → Graph in Road Map einfuegen
 
 **Erkennungs-Pipeline (`compute_pipeline()`):**
 
-1. `build_color_mask()` — Bool-Maske aller Pixel innerhalb der Farb-Toleranz
+1. `flood_fill_color_mask()` — Bool-Maske des zusammenhaengenden Farb-Bereichs ab Lasso-Startpunkt
 2. Morphologisches Opening + Closing (wenn `noise_filter == true`) — Rauschen entfernen
 3. Original-Maske sichern (vor Zhang-Suen, fuer Medial-Axis-Korrektur)
 4. `zhang_suen_thinning()` — Maske auf 1-Pixel-breites Skelett reduzieren
 5. `find_connected_components()` — Zusammenhaengende Skelett-Gruppen finden (8-Connectivity)
-6. `order_skeleton_pixels(hint)` — Pixel-Gruppen linear ordnen (BFS vom Hint-naechsten Startpunkt)
-7. `refine_medial_axis()` — Skelett-Pixel auf geometrische Mittelachse korrigieren
-8. `simplify_polyline()` — Douglas-Peucker-Vereinfachung
-9. `resample_by_distance()` — Gleichmaessige Node-Verteilung
-10. Pfad naechste zum Lasso-Startpunkt auswaehlen → Phase::Preview
+6. Pixelgrad klassifizieren: offene Enden (`degree == 1`), Kettenpixel (`degree == 2`), Junctions (`degree >= 3`)
+7. Benachbarte Junction-Pixel zu Clustern zusammenfassen und pro Cluster einen zentralen Knoten berechnen
+8. Zwischen den Graph-Knoten alle Grad-2-Ketten als Segmente verfolgen und per `refine_medial_axis()` in Weltkoordinaten umrechnen
+9. Pro Segment `simplify_polyline()` + `resample_by_distance()` anwenden
+10. Preview-Netz aufbauen und fuer Export bereithalten
+
+**Preview/Export:**
+
+- Preview zeigt Kennzahlen fuer Kreuzungen, offene Enden, Segmente und Preview-Nodes
+- Export legt Junction-/End-Knoten genau einmal an und fuegt pro Segment nur die Zwischenpunkte neu ein
+- Bestandsanschluss nutzt `ToolLifecycleState::snap_at()` und damit den konfigurierten Snap-Radius
 
 **Konfiguration (`ColorPathConfig`):**
 
@@ -528,7 +534,7 @@ an `handlers::route_tool::lasso_completed()` weitergeleitet, das `on_lasso_compl
 - `node_spacing: f32` — Abstand zwischen generierten Nodes in Metern (Standard: 5.0, Bereich: 1–50)
 - `simplify_tolerance: f32` — Douglas-Peucker-Toleranz in Metern (Standard: 1.0, Bereich: 0–20)
 - `noise_filter: bool` — Morphologischen Rauschfilter aktivieren (Standard: true)
-- `connect_to_existing: bool` — Start-/End-Node an naechsten bestehenden Node anschliessen (Standard: true)
+- `existing_connection_mode: ExistingConnectionMode` — Bestandsanschluss: `Never`, `OpenEnds`, `OpenEndsAndJunctions` (Standard: `OpenEnds`)
 - `detection_bounds: Option<(Vec2, Vec2)>` — Begrenzt Farberkennung auf eine Rect-Region (geplant)
 
 **Felder:**
@@ -544,10 +550,8 @@ pub struct ColorPathTool {
     pub(crate) mask: Vec<bool>,                  // Bool-Maske (true = Pfadpixel), zeilenweise
     pub(crate) mask_width: u32,
     pub(crate) mask_height: u32,
-    pub(crate) skeleton_paths: Vec<Vec<Vec2>>,  // Alle gefundenen Skelett-Pfade (Weltkoords)
-    pub(crate) selected_path_index: Option<usize>,
-    pub(crate) centerline: Vec<Vec2>,           // Vereinfachte Mittellinie
-    pub(crate) resampled_nodes: Vec<Vec2>,      // Gleichmaessig abgetastete Nodes
+    pub(crate) skeleton_network: Option<SkeletonNetwork>, // Junctions + offene Enden + Segmente
+    pub(crate) prepared_segments: Vec<PreparedSegment>,   // Vereinfachte/abgetastete Preview-Segmente
     pub(crate) background_image: Option<Arc<image::DynamicImage>>,
     pub(crate) map_size: f32,                   // Kartengroesse in Metern (aus FarmlandGrid)
     pub direction: ConnectionDirection,
@@ -572,13 +576,13 @@ pub struct ColorPathTool {
 **Skelett-Funktionen (`skeleton.rs`):**
 
 - `find_connected_components(mask, w, h) → Vec<Vec<(usize, usize)>>` — Gruppen nach Groesse absteigend
-- `order_skeleton_pixels(pixels, hint) → Vec<(usize, usize)>` — Lineare Ordnung; Startpunkt = Pixel naechste zum Hint (oder erster Pixel)
 - `refine_medial_axis(ordered, original_mask, w, h) → Vec<(f32, f32)>` — Skelett-Pixel auf geometrische Mittelachse korrigieren
-- `extract_paths_from_mask(mask, w, h, noise_filter, map_size, start_hint) → Vec<Vec<Vec2>>` — Haupt-Pipeline
+- `extract_network_from_mask(mask, w, h, noise_filter, map_size, start_hint) → SkeletonNetwork` — Haupt-Pipeline fuer Netz-Knoten und Segmente
+- `extract_paths_from_mask(...) → Vec<Vec<Vec2>>` — Legacy-Wrapper fuer lineare Pfad-Konsumenten/Tests
 
 **Gruppen-Record:** ColorPathTool speichert keinen `GroupRecord` (keine nachträgliche Bearbeitung).
 
-Modulstruktur: `mod.rs` (Re-Export), `state.rs` (Struct, Phasen-Enum, Config, Default), `lifecycle.rs` (RouteTool-Impl, Pipeline-Methoden), `config_ui.rs` (egui-Panel), `sampling.rs` (Farb-Sampling + Masken-Erstellung), `skeleton.rs` (Skelett-Extraktion + Pfad-Ordnung)
+Modulstruktur: `mod.rs` (Re-Export), `state.rs` (Struct, Phasen-Enum, Config, Default), `lifecycle.rs` (RouteTool-Impl, Netz-Pipeline, Export), `config_ui.rs` (egui-Panel), `sampling.rs` (Farb-Sampling + Masken-Erstellung), `skeleton.rs` (Skelett-Extraktion + Graph-Aufbau)
 
 ---
 

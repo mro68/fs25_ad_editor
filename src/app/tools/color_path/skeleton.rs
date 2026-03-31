@@ -1,16 +1,84 @@
 //! Skelett-Extraktion fuer das ColorPathTool.
 //!
-//! Pipeline: Bool-Maske → Zhang-Suen-Thinning → Verbundene Komponenten →
-//! Geordnete Polylines → Weltkoordinaten.
+//! Pipeline: Bool-Maske → Zhang-Suen-Thinning → Pixel-Graph →
+//! Junction-Clustering → Segment-Polylines in Weltkoordinaten.
 
 use glam::Vec2;
-use std::collections::{HashMap, VecDeque};
+use std::collections::{HashMap, HashSet, VecDeque};
 
 use super::sampling::{morphological_close, morphological_open, pixel_to_world_f32};
 use crate::core::zhang_suen_thinning;
 
-/// Mindest-Pixelanzahl eines Pfades — kuerzere Fragmente werden verworfen.
-const MIN_PATH_LENGTH: usize = 5;
+/// Mindest-Pixelanzahl einer Komponente — kuerzere Fragmente werden verworfen.
+const MIN_COMPONENT_PIXELS: usize = 5;
+
+type Pixel = (usize, usize);
+
+/// Typ eines Netz-Knotens im extrahierten Skelettgraph.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(crate) enum SkeletonGraphNodeKind {
+    /// Offenes Segment-Ende (Pixelgrad 1).
+    OpenEnd,
+    /// Verzweigung/Kreuzung (Cluster aus Pixeln mit Grad >= 3).
+    Junction,
+    /// Künstlicher Anker fuer geschlossene Schleifen ohne Enden/Junctions.
+    LoopAnchor,
+}
+
+/// Ein Knoten des extrahierten Skelettgraphen.
+#[derive(Debug, Clone)]
+pub(crate) struct SkeletonGraphNode {
+    /// Knoten-Typ fuer Preview-Stats und Anschluss-Modi.
+    pub kind: SkeletonGraphNodeKind,
+    /// Pixelposition des Knotenzentrums (fuer Tests/Analyse).
+    #[allow(dead_code)]
+    pub pixel_position: Vec2,
+    /// Weltposition des Knotens.
+    pub world_position: Vec2,
+}
+
+/// Ein Segment zwischen zwei Graph-Knoten.
+#[derive(Debug, Clone)]
+pub(crate) struct SkeletonGraphSegment {
+    /// Start-Knotenindex in `SkeletonNetwork.nodes`.
+    pub start_node: usize,
+    /// End-Knotenindex in `SkeletonNetwork.nodes`.
+    pub end_node: usize,
+    /// Roh-Polyline in Weltkoordinaten inklusive Start/End-Knoten.
+    pub polyline: Vec<Vec2>,
+}
+
+/// Vollstaendiges Teilnetz aus Knoten und Segmenten.
+#[derive(Debug, Clone, Default)]
+pub(crate) struct SkeletonNetwork {
+    /// Alle offenen Enden, Kreuzungen und Schleifen-Anker.
+    pub nodes: Vec<SkeletonGraphNode>,
+    /// Alle verfolgten Segmente zwischen den Knoten.
+    pub segments: Vec<SkeletonGraphSegment>,
+}
+
+impl SkeletonNetwork {
+    /// Gibt `true` zurueck wenn kein exportierbares Segment vorliegt.
+    pub fn is_empty(&self) -> bool {
+        self.segments.is_empty()
+    }
+
+    /// Anzahl der Kreuzungs-/Verzweigungsknoten.
+    pub fn junction_count(&self) -> usize {
+        self.nodes
+            .iter()
+            .filter(|node| node.kind == SkeletonGraphNodeKind::Junction)
+            .count()
+    }
+
+    /// Anzahl der offenen Segmentenden.
+    pub fn open_end_count(&self) -> usize {
+        self.nodes
+            .iter()
+            .filter(|node| node.kind == SkeletonGraphNodeKind::OpenEnd)
+            .count()
+    }
+}
 
 // ---------------------------------------------------------------------------
 // Verbundene Komponenten (Flood-Fill)
@@ -24,7 +92,7 @@ pub(crate) fn find_connected_components(
     mask: &[bool],
     width: usize,
     height: usize,
-) -> Vec<Vec<(usize, usize)>> {
+) -> Vec<Vec<Pixel>> {
     let mut visited = vec![false; mask.len()];
     let mut components = Vec::new();
 
@@ -71,6 +139,364 @@ pub(crate) fn find_connected_components(
 }
 
 // ---------------------------------------------------------------------------
+// Pixel-Graph-Helfer
+// ---------------------------------------------------------------------------
+
+/// Liefert alle 8-benachbarten Skelettpixel eines Pixels.
+fn skeleton_neighbors(pixel: Pixel, pixel_set: &HashSet<Pixel>) -> Vec<Pixel> {
+    let (x, y) = pixel;
+    let mut neighbors = Vec::with_capacity(8);
+    for dy in -1i32..=1 {
+        for dx in -1i32..=1 {
+            if dx == 0 && dy == 0 {
+                continue;
+            }
+            let nx = x as i32 + dx;
+            let ny = y as i32 + dy;
+            if nx < 0 || ny < 0 {
+                continue;
+            }
+            let candidate = (nx as usize, ny as usize);
+            if pixel_set.contains(&candidate) {
+                neighbors.push(candidate);
+            }
+        }
+    }
+    neighbors
+}
+
+/// Normiert eine Pixelkante fuer ungerichtete Besuchsmarkierungen.
+fn normalized_edge(a: Pixel, b: Pixel) -> (Pixel, Pixel) {
+    if a <= b {
+        (a, b)
+    } else {
+        (b, a)
+    }
+}
+
+/// Gruppiert zusammenhaengende Pixel in 8-Nachbarschafts-Clustern.
+fn cluster_pixels(pixels: &HashSet<Pixel>) -> Vec<Vec<Pixel>> {
+    let mut visited: HashSet<Pixel> = HashSet::new();
+    let mut seeds: Vec<Pixel> = pixels.iter().copied().collect();
+    seeds.sort_unstable();
+
+    let mut clusters = Vec::new();
+    for seed in seeds {
+        if visited.contains(&seed) {
+            continue;
+        }
+
+        let mut queue = VecDeque::new();
+        let mut cluster = Vec::new();
+        queue.push_back(seed);
+        visited.insert(seed);
+
+        while let Some(pixel) = queue.pop_front() {
+            cluster.push(pixel);
+            for neighbor in skeleton_neighbors(pixel, pixels) {
+                if visited.insert(neighbor) {
+                    queue.push_back(neighbor);
+                }
+            }
+        }
+
+        cluster.sort_unstable();
+        clusters.push(cluster);
+    }
+
+    clusters
+}
+
+/// Waehlt fuer eine geschlossene Schleife einen stabilen Startpixel.
+fn choose_anchor_pixel(pixels: &[Pixel], hint: Option<Pixel>) -> Pixel {
+    if let Some((hx, hy)) = hint {
+        pixels
+            .iter()
+            .copied()
+            .min_by_key(|&(px, py)| {
+                let dx = px as i64 - hx as i64;
+                let dy = py as i64 - hy as i64;
+                dx * dx + dy * dy
+            })
+            .unwrap_or(pixels[0])
+    } else {
+        pixels[0]
+    }
+}
+
+/// Berechnet einen Graph-Knoten aus einem Pixel-Cluster.
+fn build_graph_node(
+    pixels: &[Pixel],
+    kind: SkeletonGraphNodeKind,
+    map_size: f32,
+    img_width: u32,
+    img_height: u32,
+) -> SkeletonGraphNode {
+    let count = pixels.len() as f32;
+    let (sum_x, sum_y) = pixels.iter().fold((0.0f32, 0.0f32), |acc, &(x, y)| {
+        (acc.0 + x as f32, acc.1 + y as f32)
+    });
+    let pixel_position = Vec2::new(sum_x / count, sum_y / count);
+    let world_position = pixel_to_world_f32(
+        pixel_position.x,
+        pixel_position.y,
+        map_size,
+        img_width,
+        img_height,
+    );
+
+    SkeletonGraphNode {
+        kind,
+        pixel_position,
+        world_position,
+    }
+}
+
+/// Interne Repräsentation der Pixel-zu-Knoten-Zuordnung einer Komponente.
+struct ComponentGraph {
+    nodes: Vec<SkeletonGraphNode>,
+    node_pixels: Vec<Vec<Pixel>>,
+    pixel_to_node: HashMap<Pixel, usize>,
+}
+
+/// Baut Kreuzungs- und Endknoten fuer eine Komponente auf.
+fn build_component_graph(
+    component: &[Pixel],
+    degrees: &HashMap<Pixel, usize>,
+    map_size: f32,
+    img_width: u32,
+    img_height: u32,
+    start_hint: Option<Pixel>,
+) -> ComponentGraph {
+    let junction_pixels: HashSet<Pixel> = degrees
+        .iter()
+        .filter_map(|(&pixel, &degree)| (degree >= 3).then_some(pixel))
+        .collect();
+    let mut endpoint_pixels: Vec<Pixel> = degrees
+        .iter()
+        .filter_map(|(&pixel, &degree)| (degree <= 1).then_some(pixel))
+        .collect();
+    endpoint_pixels.sort_unstable();
+
+    let mut nodes = Vec::new();
+    let mut node_pixels = Vec::new();
+    let mut pixel_to_node = HashMap::new();
+
+    for cluster in cluster_pixels(&junction_pixels) {
+        let node_index = nodes.len();
+        for &pixel in &cluster {
+            pixel_to_node.insert(pixel, node_index);
+        }
+        nodes.push(build_graph_node(
+            &cluster,
+            SkeletonGraphNodeKind::Junction,
+            map_size,
+            img_width,
+            img_height,
+        ));
+        node_pixels.push(cluster);
+    }
+
+    for endpoint in endpoint_pixels {
+        let node_index = nodes.len();
+        pixel_to_node.insert(endpoint, node_index);
+        nodes.push(build_graph_node(
+            &[endpoint],
+            SkeletonGraphNodeKind::OpenEnd,
+            map_size,
+            img_width,
+            img_height,
+        ));
+        node_pixels.push(vec![endpoint]);
+    }
+
+    // Geschlossene Schleifen haben nur Grad-2-Pixel und brauchen einen kuenstlichen Anker.
+    if nodes.is_empty() {
+        let anchor = choose_anchor_pixel(component, start_hint);
+        pixel_to_node.insert(anchor, 0);
+        nodes.push(build_graph_node(
+            &[anchor],
+            SkeletonGraphNodeKind::LoopAnchor,
+            map_size,
+            img_width,
+            img_height,
+        ));
+        node_pixels.push(vec![anchor]);
+    }
+
+    ComponentGraph {
+        nodes,
+        node_pixels,
+        pixel_to_node,
+    }
+}
+
+/// Baut die Welt-Polyline eines Segments aus den Start-/End-Knoten und Kettenpixeln.
+fn build_segment_polyline(
+    start_node: &SkeletonGraphNode,
+    end_node: &SkeletonGraphNode,
+    chain_pixels: &[Pixel],
+    original_mask: &[bool],
+    width: usize,
+    height: usize,
+    map_size: f32,
+    img_width: u32,
+    img_height: u32,
+) -> Vec<Vec2> {
+    let mut polyline = Vec::with_capacity(chain_pixels.len() + 2);
+    polyline.push(start_node.world_position);
+
+    if !chain_pixels.is_empty() {
+        let refined = refine_medial_axis(chain_pixels, original_mask, width, height);
+        polyline.extend(refined_pixels_to_world(
+            &refined,
+            map_size,
+            img_width,
+            img_height,
+        ));
+    }
+
+    polyline.push(end_node.world_position);
+    polyline
+}
+
+/// Verfolgt ein einzelnes Segment ab einem Graph-Knoten durch Grad-2-Kettenpixel.
+fn trace_segment(
+    start_node: usize,
+    start_pixel: Pixel,
+    first_pixel: Pixel,
+    pixel_set: &HashSet<Pixel>,
+    pixel_to_node: &HashMap<Pixel, usize>,
+    visited_edges: &mut HashSet<(Pixel, Pixel)>,
+) -> Option<(usize, Vec<Pixel>)> {
+    let mut prev = start_pixel;
+    let mut current = first_pixel;
+    let mut chain_pixels = Vec::new();
+
+    loop {
+        visited_edges.insert(normalized_edge(prev, current));
+
+        if let Some(&node_id) = pixel_to_node.get(&current) {
+            return Some((node_id, chain_pixels));
+        }
+
+        chain_pixels.push(current);
+
+        let mut next_candidates: Vec<Pixel> = skeleton_neighbors(current, pixel_set)
+            .into_iter()
+            .filter(|&candidate| candidate != prev)
+            .collect();
+
+        if next_candidates.is_empty() {
+            return None;
+        }
+
+        next_candidates.sort_unstable();
+        let fallback = next_candidates[0];
+        let next = next_candidates
+            .iter()
+            .copied()
+            .find(|&candidate| !visited_edges.contains(&normalized_edge(current, candidate)))
+            .unwrap_or(fallback);
+
+        prev = current;
+        current = next;
+
+        if pixel_to_node.get(&prev) == Some(&start_node) && current == start_pixel {
+            return Some((start_node, chain_pixels));
+        }
+    }
+}
+
+/// Extrahiert fuer eine einzelne Komponente deren Teilnetz.
+fn extract_component_network(
+    component: &[Pixel],
+    original_mask: &[bool],
+    width: usize,
+    height: usize,
+    map_size: f32,
+    img_width: u32,
+    img_height: u32,
+    start_hint: Option<Pixel>,
+) -> SkeletonNetwork {
+    let pixel_set: HashSet<Pixel> = component.iter().copied().collect();
+    let degrees: HashMap<Pixel, usize> = component
+        .iter()
+        .copied()
+        .map(|pixel| (pixel, skeleton_neighbors(pixel, &pixel_set).len()))
+        .collect();
+
+    let graph = build_component_graph(
+        component,
+        &degrees,
+        map_size,
+        img_width,
+        img_height,
+        start_hint,
+    );
+
+    let mut segments = Vec::new();
+    let mut visited_edges: HashSet<(Pixel, Pixel)> = HashSet::new();
+
+    for (node_id, cluster_pixels) in graph.node_pixels.iter().enumerate() {
+        let mut frontier_map: HashMap<Pixel, Pixel> = HashMap::new();
+        for &node_pixel in cluster_pixels {
+            for neighbor in skeleton_neighbors(node_pixel, &pixel_set) {
+                if graph.pixel_to_node.get(&neighbor) == Some(&node_id) {
+                    continue;
+                }
+                frontier_map.entry(neighbor).or_insert(node_pixel);
+            }
+        }
+
+        let mut frontiers: Vec<(Pixel, Pixel)> = frontier_map.into_iter().collect();
+        frontiers.sort_unstable_by_key(|&(neighbor, start_pixel)| (neighbor, start_pixel));
+
+        for (neighbor, start_pixel) in frontiers {
+            let edge = normalized_edge(start_pixel, neighbor);
+            if visited_edges.contains(&edge) {
+                continue;
+            }
+
+            let Some((end_node, chain_pixels)) = trace_segment(
+                node_id,
+                start_pixel,
+                neighbor,
+                &pixel_set,
+                &graph.pixel_to_node,
+                &mut visited_edges,
+            ) else {
+                continue;
+            };
+
+            let polyline = build_segment_polyline(
+                &graph.nodes[node_id],
+                &graph.nodes[end_node],
+                &chain_pixels,
+                original_mask,
+                width,
+                height,
+                map_size,
+                img_width,
+                img_height,
+            );
+            if polyline.len() >= 2 {
+                segments.push(SkeletonGraphSegment {
+                    start_node: node_id,
+                    end_node,
+                    polyline,
+                });
+            }
+        }
+    }
+
+    SkeletonNetwork {
+        nodes: graph.nodes,
+        segments,
+    }
+}
+
+// ---------------------------------------------------------------------------
 // Skelett-Pfad ordnen (Durchmesser-BFS)
 // ---------------------------------------------------------------------------
 
@@ -86,6 +512,7 @@ pub(crate) fn find_connected_components(
 ///
 /// Bei Verzweigungen wird automatisch der laengste Teilpfad gewaehlt,
 /// da der Graphdurchmesser immer die zwei weitesten Endpunkte verbindet.
+#[cfg_attr(not(test), allow(dead_code))]
 pub(crate) fn order_skeleton_pixels(
     pixels: &[(usize, usize)],
     hint: Option<(usize, usize)>,
@@ -286,25 +713,25 @@ fn refined_pixels_to_world(
 // Haupt-Pipeline
 // ---------------------------------------------------------------------------
 
-/// Fuehrt die komplette Pipeline aus:
-/// Bool-Maske → Zhang-Suen → Komponenten finden → Pfade ordnen → Medial-Axis → Weltkoords.
+/// Fuehrt die komplette Netz-Pipeline aus:
+/// Bool-Maske → Zhang-Suen → Komponenten → Graph-Knoten/Segmente → Weltkoords.
 ///
-/// Gibt alle gefundenen Pfade sortiert nach Laenge (laengster zuerst) zurueck.
-/// Fragmente mit weniger als 5 Pixeln werden verworfen.
+/// Gibt ein zusammenhaengendes Teilnetz mit Kreuzungen, offenen Enden und Segmenten zurueck.
+/// Komponenten unterhalb der Mindestgroesse werden verworfen.
 ///
 /// - `noise_filter`: Wenn `true`, wird vor dem Thinning morphologisches
 ///   Opening (Erosion+Dilation) und Closing (Dilation+Erosion) angewendet
 ///   um Einzelpixel-Rauschen zu entfernen und kleine Luecken zu schliessen.
 /// - `start_hint`: Optionaler Pixel-Punkt in der Naehe des Lasso-Startpunkts.
-///   Steuert den Startpunkt der Skelett-Ordnung (vgl. `order_skeleton_pixels`).
-pub(crate) fn extract_paths_from_mask(
+///   Steuert bei geschlossenen Schleifen den kuenstlichen Start-/Ankerpunkt.
+pub(crate) fn extract_network_from_mask(
     mask: &mut Vec<bool>,
     width: u32,
     height: u32,
     noise_filter: bool,
     map_size: f32,
     start_hint: Option<(usize, usize)>,
-) -> Vec<Vec<Vec2>> {
+) -> SkeletonNetwork {
     let w = width as usize;
     let h = height as usize;
 
@@ -325,37 +752,63 @@ pub(crate) fn extract_paths_from_mask(
     // Zusammenhaengende Skelett-Gruppen extrahieren
     let components = find_connected_components(mask, w, h);
 
-    // Alle Komponenten ab MIN_PATH_LENGTH zusammenfuehren — sie stammen aus
-    // demselben Flood-Fill-Bereich und wurden nur durch Thinning-Artefakte
-    // oder morphologische Operationen getrennt.
-    let merged_pixels: Vec<(usize, usize)> = components
-        .iter()
-        .filter(|comp| comp.len() >= MIN_PATH_LENGTH)
-        .flat_map(|comp| comp.iter().copied())
-        .collect();
+    let mut kept_components = 0usize;
+    let mut network = SkeletonNetwork::default();
 
-    if merged_pixels.is_empty() {
-        return Vec::new();
+    for component in components
+        .into_iter()
+        .filter(|comp| comp.len() >= MIN_COMPONENT_PIXELS)
+    {
+        kept_components += 1;
+        let component_network = extract_component_network(
+            &component,
+            &original_mask,
+            w,
+            h,
+            map_size,
+            width,
+            height,
+            start_hint,
+        );
+
+        let node_offset = network.nodes.len();
+        network.nodes.extend(component_network.nodes);
+        network
+            .segments
+            .extend(component_network.segments.into_iter().map(|mut segment| {
+                segment.start_node += node_offset;
+                segment.end_node += node_offset;
+                segment
+            }));
     }
 
     log::info!(
-        "Skelett: {} Komponenten ({} Pixel total) zu einem Pfad zusammengefuehrt",
-        components
-            .iter()
-            .filter(|c| c.len() >= MIN_PATH_LENGTH)
-            .count(),
-        merged_pixels.len()
+        "Skelett: {} Komponenten → {} Knoten ({} Kreuzungen, {} offene Enden) und {} Segmente",
+        kept_components,
+        network.nodes.len(),
+        network.junction_count(),
+        network.open_end_count(),
+        network.segments.len()
     );
 
-    let ordered = order_skeleton_pixels(&merged_pixels, start_hint);
-    let refined = refine_medial_axis(&ordered, &original_mask, w, h);
-    let path = refined_pixels_to_world(&refined, map_size, width, height);
+    network
+}
 
-    if path.is_empty() {
-        Vec::new()
-    } else {
-        vec![path]
-    }
+/// Legacy-Helfer fuer lineare Pfad-Konsumenten und bestehende Tests.
+#[cfg_attr(not(test), allow(dead_code))]
+pub(crate) fn extract_paths_from_mask(
+    mask: &mut Vec<bool>,
+    width: u32,
+    height: u32,
+    noise_filter: bool,
+    map_size: f32,
+    start_hint: Option<(usize, usize)>,
+) -> Vec<Vec<Vec2>> {
+    extract_network_from_mask(mask, width, height, noise_filter, map_size, start_hint)
+        .segments
+        .into_iter()
+        .map(|segment| segment.polyline)
+        .collect()
 }
 
 // ---------------------------------------------------------------------------
@@ -494,5 +947,66 @@ mod tests {
             "Pfad muss mindestens 5 Punkte haben, hat: {}",
             paths[0].len()
         );
+    }
+
+    /// Ein T-Knoten wird als ein Junction-Cluster mit drei Segmenten erkannt.
+    #[test]
+    fn extract_network_t_knoten_liefert_junction_und_segmente() {
+        let width = 7u32;
+        let height = 7u32;
+        let w = width as usize;
+        let mut mask = vec![false; (width * height) as usize];
+
+        for y in 1usize..=5 {
+            set_pixel(&mut mask, 3, y, w);
+        }
+        for x in 1usize..=5 {
+            set_pixel(&mut mask, x, 3, w);
+        }
+
+        let network = extract_network_from_mask(&mut mask, width, height, false, 1000.0, None);
+
+        assert_eq!(network.junction_count(), 1);
+        assert_eq!(network.open_end_count(), 4);
+        assert_eq!(network.segments.len(), 4);
+    }
+
+    /// Zwei benachbarte Branch-Pixel werden zu genau einer Junction zusammengefasst.
+    #[test]
+    fn adjacent_branch_pixels_are_clustered_into_one_junction() {
+        let width = 8usize;
+        let height = 6usize;
+        let mut mask = vec![false; width * height];
+        let component = vec![
+            (0, 2),
+            (1, 2),
+            (2, 2),
+            (3, 2),
+            (4, 2),
+            (5, 2),
+            (2, 1),
+            (2, 0),
+            (3, 3),
+            (3, 4),
+        ];
+
+        for &(x, y) in &component {
+            set_pixel(&mut mask, x, y, width);
+        }
+
+        let network = extract_component_network(
+            &component,
+            &mask,
+            width,
+            height,
+            1000.0,
+            width as u32,
+            height as u32,
+            None,
+        );
+
+        assert_eq!(network.junction_count(), 1);
+        assert_eq!(network.open_end_count(), 4);
+        assert_eq!(network.segments.len(), 4);
     }
 }

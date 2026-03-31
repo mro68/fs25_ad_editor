@@ -1,5 +1,6 @@
 //! State-Strukturen fuer das ColorPathTool.
 
+use super::skeleton::SkeletonNetwork;
 use crate::app::tools::common::ToolLifecycleState;
 use crate::core::{ConnectionDirection, ConnectionPriority};
 use glam::Vec2;
@@ -12,8 +13,48 @@ pub enum ColorPathPhase {
     Idle,
     /// User sampelt Farben per Alt+Lasso
     Sampling,
-    /// Mittellinie berechnet, wird als Vorschau angezeigt
+    /// Teilnetz berechnet, wird als Vorschau angezeigt
     Preview,
+}
+
+/// Wie das erkannte Netz an bestehende Nodes angeschlossen werden soll.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum ExistingConnectionMode {
+    /// Nie an bestehende Nodes anschliessen.
+    Never,
+    /// Nur offene Segment-Enden anschliessen.
+    OpenEnds,
+    /// Offene Enden und Junctions anschliessen.
+    OpenEndsAndJunctions,
+}
+
+impl ExistingConnectionMode {
+    /// Alle UI-Optionen in stabiler Reihenfolge.
+    pub const ALL: [Self; 3] = [
+        Self::Never,
+        Self::OpenEnds,
+        Self::OpenEndsAndJunctions,
+    ];
+
+    /// Lesbares UI-Label.
+    pub fn label(self) -> &'static str {
+        match self {
+            Self::Never => "Nie",
+            Self::OpenEnds => "Nur offene Enden",
+            Self::OpenEndsAndJunctions => "Offene Enden + Kreuzungen",
+        }
+    }
+}
+
+/// Aufbereitete Vorschau eines extrahierten Segments.
+#[derive(Debug, Clone)]
+pub(crate) struct PreparedSegment {
+    /// Start-Knotenindex in `SkeletonNetwork.nodes`.
+    pub start_node: usize,
+    /// End-Knotenindex in `SkeletonNetwork.nodes`.
+    pub end_node: usize,
+    /// Vereinfachte und neu abgetastete Segmentpunkte inklusive Start/Ende.
+    pub resampled_nodes: Vec<Vec2>,
 }
 
 /// Konfigurationsparameter fuer die Farb-Pfad-Erkennung.
@@ -29,8 +70,8 @@ pub struct ColorPathConfig {
     /// Optionaler Erkennungsbereich — None = gesamtes Bild
     #[allow(dead_code)] // Geplantes Feature: Rect-Begrenzung fuer die Erkennung
     pub detection_bounds: Option<(Vec2, Vec2)>,
-    /// An naechste bestehende Nodes anschliessen (Standard: true)
-    pub connect_to_existing: bool,
+    /// Anschlussmodus fuer bestehende Nodes (Standard: offene Enden)
+    pub existing_connection_mode: ExistingConnectionMode,
 }
 
 impl Default for ColorPathConfig {
@@ -41,7 +82,7 @@ impl Default for ColorPathConfig {
             simplify_tolerance: 1.0,
             noise_filter: true,
             detection_bounds: None,
-            connect_to_existing: true,
+            existing_connection_mode: ExistingConnectionMode::OpenEnds,
         }
     }
 }
@@ -49,7 +90,7 @@ impl Default for ColorPathConfig {
 /// Tool zur automatischen Wege-Erkennung anhand der Farbe im Hintergrundbild.
 ///
 /// Der User sampelt per Alt+Lasso Farbwerte, das Tool baut daraus eine
-/// Binärmaske, skelettiert via Zhang-Suen und erzeugt daraus Waypoint-Nodes.
+/// Binaermaske, skelettiert via Zhang-Suen und erzeugt daraus ein Waypoint-Netz.
 pub struct ColorPathTool {
     /// Aktuelle Interaktionsphase
     pub(crate) phase: ColorPathPhase,
@@ -73,14 +114,10 @@ pub struct ColorPathTool {
     pub(crate) mask_width: u32,
     /// Maskenhoehe in Pixeln
     pub(crate) mask_height: u32,
-    /// Alle gefundenen Skelett-Pfade in Weltkoordinaten
-    pub(crate) skeleton_paths: Vec<Vec<Vec2>>,
-    /// Vom User ausgewaehlter Pfad-Index
-    pub(crate) selected_path_index: Option<usize>,
-    /// Vereinfachte Mittellinie in Weltkoordinaten
-    pub(crate) centerline: Vec<Vec2>,
-    /// Gleichmaessig abgetastete Nodes der Mittellinie
-    pub(crate) resampled_nodes: Vec<Vec2>,
+    /// Extrahiertes Teilnetz mit Junctions, offenen Enden und Segmenten.
+    pub(crate) skeleton_network: Option<SkeletonNetwork>,
+    /// Vereinfachte und gleichmaessig abgetastete Preview-Segmente.
+    pub(crate) prepared_segments: Vec<PreparedSegment>,
     /// Weltposition des ersten Lasso-Klickpunkts (erster Polygon-Punkt des ersten Lassos).
     /// Wird verwendet um den relevanten Pfad-Bereich auszuwaehlen.
     pub(crate) lasso_start_world: Option<Vec2>,
@@ -120,10 +157,8 @@ impl ColorPathTool {
             mask: Vec::new(),
             mask_width: 0,
             mask_height: 0,
-            skeleton_paths: Vec::new(),
-            selected_path_index: None,
-            centerline: Vec::new(),
-            resampled_nodes: Vec::new(),
+            skeleton_network: None,
+            prepared_segments: Vec::new(),
             lasso_start_world: None,
             flood_fill_contour: Vec::new(),
             background_image: None,
