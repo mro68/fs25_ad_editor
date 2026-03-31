@@ -413,6 +413,8 @@ pub enum I18nKey {
     SidebarBasics,
     /// Abschnittstitel "Bearbeiten"
     SidebarEdit,
+    /// Abschnittstitel "Analyse"
+    SidebarAnalysis,
     /// Abschnittstitel "Richtung"
     SidebarDirection,
     /// Abschnittstitel "Strassenart"
@@ -455,6 +457,8 @@ pub enum I18nKey {
     RouteGroupCurves,
     /// Gruppenname "Tools"
     RouteGroupSection,
+    /// Gruppenname "Analyse"
+    RouteGroupAnalysis,
 
     // === Floating-Menu: Tools ===
     /// Tooltip "Auswahl"
@@ -483,6 +487,12 @@ pub enum I18nKey {
     FloatingEditParking,
     /// Tooltip "Strecke versetzen"
     FloatingEditRouteOffset,
+    /// Tooltip "Feld erkennen"
+    FloatingAnalysisFieldBoundary,
+    /// Tooltip "Feldweg erkennen"
+    FloatingAnalysisFieldPath,
+    /// Tooltip "Farb-Pfad erkennen"
+    FloatingAnalysisColorPath,
 
     // === Floating-Menu: Richtung + Strassenart ===
     /// Tooltip "Einbahn vorwaerts"
@@ -605,6 +615,8 @@ pub enum I18nKey {
     PaletteToolAddNode,
     /// Praefix "Route-Tool:"
     PaletteRouteToolPrefix,
+    /// Menueeintrag "Route-Tools"
+    MenuRouteTools,
 
     // === Sidebar: LongPress-Tooltips ===
     /// LongPress-Tooltip fuer Select-Tool
@@ -629,6 +641,12 @@ pub enum I18nKey {
     LpParking,
     /// LongPress-Tooltip fuer Strecke versetzen
     LpRouteOffset,
+    /// LongPress-Tooltip fuer Feld erkennen
+    LpFieldBoundary,
+    /// LongPress-Tooltip fuer Feldweg erkennen
+    LpFieldPath,
+    /// LongPress-Tooltip fuer Farb-Pfad erkennen
+    LpColorPath,
     /// LongPress-Tooltip fuer Einbahn vorwaerts
     LpDirectionRegular,
     /// LongPress-Tooltip fuer Zweirichtung
@@ -639,6 +657,12 @@ pub enum I18nKey {
     LpPriorityMain,
     /// LongPress-Tooltip fuer Nebenstrasse
     LpPrioritySub,
+    /// Disabled-Text fuer fehlende Farmland-Daten
+    RouteToolNeedFarmland,
+    /// Disabled-Text fuer fehlendes Hintergrundbild
+    RouteToolNeedBackground,
+    /// Disabled-Text fuer fehlende geordnete Kette
+    RouteToolNeedOrderedChain,
 
     // === Bestaetigungsdialog: Gruppe aufloesen ===
     /// Bestätigungsdialog: Titel

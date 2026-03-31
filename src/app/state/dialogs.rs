@@ -1,3 +1,4 @@
+use crate::app::tools::RouteToolGroup;
 use crate::shared::OverviewLayerOptions;
 use fs25_map_overview::FieldDetectionSource;
 use std::path::PathBuf;
@@ -16,10 +17,8 @@ pub struct FloatingMenuState {
 pub enum FloatingMenuKind {
     /// Werkzeug-Menue (Select/Connect/AddNode).
     Tools,
-    /// Basis-Menue (Gerade/Kurve/Constraint).
-    Basics,
-    /// Menue fuer Abschnittswerkzeuge.
-    SectionTools,
+    /// Route-Tool-Menue fuer eine kanonische Tool-Gruppe.
+    RouteTools(RouteToolGroup),
     /// Richtungs- und Strassenart-Menue (R).
     DirectionPriority,
     /// Zoom-Funktionen (Z).

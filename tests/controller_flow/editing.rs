@@ -1,5 +1,7 @@
 use fs25_auto_drive_editor::app::handlers;
 use fs25_auto_drive_editor::app::tools::common::TangentSource;
+use fs25_auto_drive_editor::app::tools::RouteToolId;
+use fs25_auto_drive_editor::app::{GroupBase, GroupKind, GroupRecord, ToolAnchor};
 use fs25_auto_drive_editor::EditorTool;
 use fs25_auto_drive_editor::{AppController, AppIntent, AppState};
 use fs25_auto_drive_editor::{
@@ -104,16 +106,43 @@ fn current_cubic_tangents(state: &AppState) -> (TangentSource, TangentSource) {
     (menu.current_start, menu.current_end)
 }
 
+fn make_manual_group_record(id: u64, tool_id: Option<RouteToolId>) -> GroupRecord {
+    GroupRecord {
+        id,
+        tool_id,
+        node_ids: vec![1, 2],
+        start_anchor: ToolAnchor::ExistingNode(1, glam::Vec2::new(0.0, 0.0)),
+        end_anchor: ToolAnchor::ExistingNode(2, glam::Vec2::new(10.0, 0.0)),
+        kind: GroupKind::Manual {
+            base: GroupBase {
+                direction: ConnectionDirection::Regular,
+                priority: ConnectionPriority::Regular,
+                max_segment_length: 10.0,
+            },
+        },
+        original_positions: vec![glam::Vec2::new(0.0, 0.0), glam::Vec2::new(10.0, 0.0)],
+        marker_node_ids: Vec::new(),
+        locked: false,
+        entry_node_id: None,
+        exit_node_id: None,
+    }
+}
+
 #[test]
 fn test_cubic_with_anchors_matches_manual_tangent_defaults() {
     // Flow A: via RouteToolWithAnchors (2 selektierte Nodes)
     let mut state_with_anchors = make_curve_anchor_map();
-    handlers::route_tool::select_with_anchors(&mut state_with_anchors, 2, 1, 2);
+    handlers::route_tool::select_with_anchors(
+        &mut state_with_anchors,
+        RouteToolId::CurveCubic,
+        1,
+        2,
+    );
     let tangents_with_anchors = current_cubic_tangents(&state_with_anchors);
 
     // Flow B: manuell (Tool waehlen -> Start klicken -> Ende klicken)
     let mut state_manual = make_curve_anchor_map();
-    handlers::route_tool::select(&mut state_manual, 2);
+    handlers::route_tool::select(&mut state_manual, RouteToolId::CurveCubic);
     handlers::route_tool::click(&mut state_manual, glam::Vec2::new(0.0, 0.0), false);
     handlers::route_tool::click(&mut state_manual, glam::Vec2::new(10.0, 0.0), false);
     let tangents_manual = current_cubic_tangents(&state_manual);
@@ -131,6 +160,74 @@ fn test_cubic_with_anchors_matches_manual_tangent_defaults() {
         matches!(tangents_with_anchors.1, TangentSource::Connection { .. }),
         "End-Tangente sollte als Verbindungs-Tangente vorbelegt sein"
     );
+}
+
+#[test]
+fn select_route_tool_requested_merkt_analysis_tool_per_tool_id() {
+    let mut controller = AppController::new();
+    let mut state = make_test_map();
+
+    controller
+        .handle_intent(
+            &mut state,
+            AppIntent::SelectRouteToolRequested {
+                tool_id: RouteToolId::ColorPath,
+            },
+        )
+        .expect("SelectRouteToolRequested sollte ueber RouteToolId funktionieren");
+
+    assert_eq!(state.editor.active_tool, EditorTool::Route);
+    assert_eq!(
+        state.editor.tool_manager.active_id(),
+        Some(RouteToolId::ColorPath)
+    );
+    assert_eq!(
+        state.editor.route_tool_memory.analysis,
+        RouteToolId::ColorPath
+    );
+}
+
+#[test]
+fn group_edit_tool_requested_bricht_fuer_nicht_editierbare_tools_ohne_nebeneffekte_ab() {
+    let mut controller = AppController::new();
+    let mut state = make_test_map();
+    let record_id = state.group_registry.next_id();
+    state.group_registry.register(make_manual_group_record(
+        record_id,
+        Some(RouteToolId::ColorPath),
+    ));
+
+    controller
+        .handle_intent(&mut state, AppIntent::GroupEditStartRequested { record_id })
+        .expect("GroupEditStartRequested sollte den Gruppen-Edit starten");
+
+    let before_node_count = state.road_map.as_ref().unwrap().node_count();
+    let before_connection_count = state.road_map.as_ref().unwrap().connection_count();
+    let before_active_tool = state.editor.active_tool;
+    let before_active_route_id = state.editor.tool_manager.active_id();
+
+    controller
+        .handle_intent(&mut state, AppIntent::GroupEditToolRequested { record_id })
+        .expect("Nicht editierbare Tools duerfen den Flow nicht crashen");
+
+    assert!(state.group_editing.is_none());
+    assert!(state.group_registry.get(record_id).is_some());
+    assert_eq!(
+        state.road_map.as_ref().unwrap().node_count(),
+        before_node_count
+    );
+    assert_eq!(
+        state.road_map.as_ref().unwrap().connection_count(),
+        before_connection_count
+    );
+    assert_eq!(state.editor.active_tool, before_active_tool);
+    assert_eq!(
+        state.editor.tool_manager.active_id(),
+        before_active_route_id
+    );
+    assert!(state.selection.selected_node_ids.is_empty());
+    assert_eq!(state.tool_editing_record_id, None);
+    assert!(state.tool_editing_record_backup.is_none());
 }
 
 #[test]

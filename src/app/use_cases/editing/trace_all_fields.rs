@@ -8,8 +8,7 @@
 
 use crate::app::compute_ring;
 use crate::app::group_registry::{GroupBase, GroupKind, GroupRecord};
-use crate::app::AppState;
-use crate::app::ToolAnchor;
+use crate::app::{AppState, RouteToolId, ToolAnchor};
 use crate::core::{Connection, ConnectionDirection, ConnectionPriority, MapNode, NodeFlag};
 use glam::Vec2;
 use std::sync::Arc;
@@ -181,6 +180,7 @@ pub fn trace_all_fields(
                 .collect();
             let record = GroupRecord {
                 id: record_id,
+                tool_id: Some(RouteToolId::FieldBoundary),
                 node_ids: node_ids.clone(),
                 start_anchor: ToolAnchor::NewPosition(Vec2::ZERO),
                 end_anchor: ToolAnchor::NewPosition(Vec2::ZERO),

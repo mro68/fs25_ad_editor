@@ -2,7 +2,7 @@
 
 use super::super::{
     common::{linear_connections, populate_neighbors, TangentMenuData},
-    RouteTool, ToolAction, ToolPreview, ToolResult,
+    RouteTool, RouteToolId, ToolAction, ToolPreview, ToolResult,
 };
 use super::geometry::{build_tool_result, cubic_bezier, CurveParams};
 use super::state::{CurveDegree, CurvePreviewCacheKey, CurveTool, Phase};
@@ -325,6 +325,10 @@ impl RouteTool for CurveTool {
         };
         Some(GroupRecord {
             id,
+            tool_id: Some(match self.degree {
+                CurveDegree::Quadratic => RouteToolId::CurveQuad,
+                CurveDegree::Cubic => RouteToolId::CurveCubic,
+            }),
             node_ids: node_ids.to_vec(),
             start_anchor: start,
             end_anchor: end,

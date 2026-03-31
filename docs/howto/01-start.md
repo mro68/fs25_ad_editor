@@ -22,7 +22,7 @@ Der FS25 AutoDrive Editor dient zum Erstellen und Bearbeiten von AutoDrive-Kurse
 
 | Aktion | Weg |
 |--------|-----|
-| Menue | **File → Open...** |
+| Menue | **Datei -> Oeffnen...** |
 | Shortcut | `Ctrl+O` |
 
 Oeffnet einen Datei-Dialog zur Auswahl einer AutoDrive-XML-Konfigurationsdatei. Nach dem Laden wird die Kamera automatisch auf die Bounding-Box des Netzwerks zentriert.
@@ -42,8 +42,8 @@ Mehr zur Auto-Detection: [Karte & Hintergrund → Automatische Erkennung](05-kar
 
 | Aktion | Weg |
 |--------|-----|
-| Speichern | **File → Save** oder `Ctrl+S` |
-| Speichern unter | **File → Save As...** |
+| Speichern | **Datei -> Speichern** oder `Ctrl+S` |
+| Speichern unter | **Datei -> Speichern unter...** |
 
 Beim Speichern wird geprueft, ob eine Heightmap geladen ist. Falls nicht, erscheint eine Warnung, dass Y-Koordinaten nicht korrekt geschrieben werden koennen.
 
@@ -53,7 +53,7 @@ Beim Speichern wird geprueft, ob eine Heightmap geladen ist. Falls nicht, ersche
 
 | Aktion | Weg |
 |--------|-----|
-| Menue | **File → Exit** |
+| Menue | **Datei -> Beenden** |
 
 ---
 

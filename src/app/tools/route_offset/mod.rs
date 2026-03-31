@@ -10,4 +10,5 @@ mod state;
 #[cfg(test)]
 mod tests;
 
+pub use geometry::compute_offset_positions;
 pub use state::RouteOffsetTool;

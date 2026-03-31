@@ -196,6 +196,7 @@ pub(super) fn translate(key: I18nKey) -> &'static str {
         I18nKey::SidebarTools => "Tools",
         I18nKey::SidebarBasics => "Basics",
         I18nKey::SidebarEdit => "Edit",
+        I18nKey::SidebarAnalysis => "Analysis",
         I18nKey::SidebarDirection => "Direction",
         I18nKey::SidebarPriority => "Road Type",
         I18nKey::SidebarZoom => "Zoom",
@@ -217,6 +218,7 @@ pub(super) fn translate(key: I18nKey) -> &'static str {
         I18nKey::RouteGroupStraight => "Straights",
         I18nKey::RouteGroupCurves => "Curves",
         I18nKey::RouteGroupSection => "Tools",
+        I18nKey::RouteGroupAnalysis => "Analysis",
         // === Floating-Menu: Tools ===
         I18nKey::FloatingToolSelect => "Select",
         I18nKey::FloatingToolConnect => "Connect",
@@ -231,6 +233,9 @@ pub(super) fn translate(key: I18nKey) -> &'static str {
         I18nKey::FloatingEditBypass => "Bypass Route",
         I18nKey::FloatingEditParking => "Parking",
         I18nKey::FloatingEditRouteOffset => "Route Offset",
+        I18nKey::FloatingAnalysisFieldBoundary => "Detect Field",
+        I18nKey::FloatingAnalysisFieldPath => "Detect Field Path",
+        I18nKey::FloatingAnalysisColorPath => "Detect Color Path",
         // === Floating-Menu: Richtung + Strassenart ===
         I18nKey::FloatingDirectionRegular => "One-way forward",
         I18nKey::FloatingDirectionDual => "Bidirectional",
@@ -292,6 +297,7 @@ pub(super) fn translate(key: I18nKey) -> &'static str {
         I18nKey::PaletteToolConnect => "Connect Tool",
         I18nKey::PaletteToolAddNode => "Add Node Tool",
         I18nKey::PaletteRouteToolPrefix => "Route Tool:",
+        I18nKey::MenuRouteTools => "Route Tools",
         // === Sidebar: LongPress-Tooltips ===
         I18nKey::LpToolSelect => "Select\nSelect nodes by click or lasso.\nDrag selected nodes to move them.\n(Key T)",
         I18nKey::LpToolConnect => "Connect\nCreate connection between 2 nodes (Key C)\nor delete (Key X). Arrow direction = travel direction.\n(Key T)",
@@ -304,10 +310,16 @@ pub(super) fn translate(key: I18nKey) -> &'static str {
         I18nKey::LpBypass => "Bypass Route\nCreates a parallel bypass route from the selection.\n(B)",
         I18nKey::LpParking => "Parking\nGenerates a parking layout from the selection.\n(B)",
         I18nKey::LpRouteOffset => "Route Offset\nShifts the selected route parallel by a configurable distance.\n(B)",
+        I18nKey::LpFieldBoundary => "Detect Field\nExtracts an editable field boundary from loaded farmland data.\nRequires farmland data.\n(A)",
+        I18nKey::LpFieldPath => "Detect Field Path\nDerives an in-field driving path from farmland data.\nRequires farmland data.\n(A)",
+        I18nKey::LpColorPath => "Detect Color Path\nDerives a path from the loaded background map via color segmentation.\nRequires a background image.\n(A)",
         I18nKey::LpDirectionRegular => "One-way forward\nVehicles use these connections in forward direction only.\nDefault for normal directed routes.\n(R)",
         I18nKey::LpDirectionDual => "Bidirectional\nVehicles can travel in both directions.\nFor paths that should be traversable in both directions.\n(R)",
         I18nKey::LpDirectionReverse => "One-way reverse\nVehicles travel exclusively in reverse on this route.\n(R)",
         I18nKey::LpPriorityMain => "Main road\nHigh priority. AutoDrive prefers these routes.\nFor main connections and frequently used paths.\n(R)",
         I18nKey::LpPrioritySub => "Side road\nLower priority. Used only when needed.\nFor field paths and rarely traveled connections.\n(R)",
+        I18nKey::RouteToolNeedFarmland => "Load farmland data first",
+        I18nKey::RouteToolNeedBackground => "Load a background map first",
+        I18nKey::RouteToolNeedOrderedChain => "Select an ordered node chain",
     }
 }

@@ -2,273 +2,328 @@
 
 ← [Benutzeroberflaeche](02-oberflaeche.md) | [Zurueck zur Uebersicht](index.md)
 
-## Select-Tool
+## Werkzeug-Katalog und Zugriff
 
-Das Standard-Werkzeug fuer Auswahl und Verschiebung von Nodes.
+Der Editor nutzt einen gemeinsamen Katalog fuer alle Werkzeugsurfaces. Dieselben Eintraege erscheinen in:
 
-**Funktionen:**
+- der linken Seitenleiste
+- der Menueleiste unter **Route-Tools**
+- den Floating-Menues **`T`**, **`G`**, **`B`** und **`A`**
+- der Command Palette mit **`K`** oder **`Ctrl+K`**
 
-- Einzelklick: Node selektieren (Pick-Radius: 12px)
-- Ctrl+Klick: Additiv selektieren
-- Shift+Klick: Pfad-Selektion (kuerzester Pfad von Anker zu Ziel)
-- Doppelklick: Gruppe zwischen Kreuzungen selektieren
-- Drag auf selektiertem Node: Alle selektierten Nodes verschieben
-- Drag auf leerem Bereich: Kamera schwenken
+| Gruppe | Shortcut | Tools | Deaktiviert wenn |
+|--------|----------|-------|------------------|
+| **Werkzeuge** | `T` | Select, Connect, Add Node | nie |
+| **Grundbefehle** | `G` | Gerade Strecke, Bezier Grad 2, Bezier Grad 3, Spline, Geglaettete Kurve | nie |
+| **Bearbeiten** | `B` | Ausweichstrecke, Parkplatz, Strecke versetzen | keine geordnete Kette bei chain-basierten Tools |
+| **Analyse** | `A` | Feld erkennen, Feldweg erkennen, Farb-Pfad erkennen | fehlende Farmland-Daten oder fehlende Hintergrundkarte |
+
+Wenn ein Tool Voraussetzungen hat, bleibt es sichtbar. Statt zu verschwinden, zeigt es seinen Disabled-Grund an.
+
+## Gemeinsame Route-Tool-Bedienung
+
+Alle Route-Tools teilen sich denselben Grundablauf:
+
+- Aktivierung ueber Seitenleiste, Menue, Floating-Menue oder Command Palette
+- Konfiguration im schwebenden **Route-Tool**-Panel
+- **`Enter`** oder **Ausfuehren** bestaetigt das aktuelle Tool
+- **`Escape`** oder **Abbrechen** setzt das Tool zurueck
+- Start- und Endpunkte snappen auf bestehende Nodes
+- **`Pfeil hoch / runter`** aendert waehrend des Zeichnens die Node-Anzahl
+- **`Pfeil links / rechts`** aendert waehrend des Zeichnens die Segmentlaenge
+- Richtung und Strassenart gelten fuer die neu erzeugten Verbindungen
+
+## Sichtbarkeit und spaetere Bearbeitung
+
+Nicht jedes Tool erzeugt spaeter denselben Bearbeitungsweg:
+
+- **Mit spaeterem Tool-Edit**: Gerade Strecke, Bezier Grad 2, Bezier Grad 3, Spline, Geglaettete Kurve, Ausweichstrecke, Parkplatz, Strecke versetzen, Feld erkennen
+- **Ohne spaeteres Tool-Edit**: Feldweg erkennen und Farb-Pfad erkennen
+
+Fuer Tools ohne spaeteres Tool-Edit gilt:
+
+- das Ergebnis bleibt normal selektierbar und manuell bearbeitbar
+- im Gruppen-Bearbeitungsfenster erscheint kein Button **Tool bearbeiten**
+- wenn Sie dieselbe Analyse erneut parametrisieren wollen, starten Sie das Tool neu
 
 ---
 
-## Connect-Tool
+## Select (T)
 
-Erstellt Verbindungen zwischen zwei Nodes.
+Das Standard-Werkzeug fuer Auswahl, Verschiebung und Abschnittsarbeit.
 
 **Workflow:**
-
-1. Ersten Node anklicken → in Toolbar erscheint "Startknoten: [ID] → Waehle Zielknoten"
-2. Zweiten Node anklicken → Verbindung wird erstellt
-3. Werkzeug bleibt aktiv fuer weitere Verbindungen
-
-**Standard-Einstellungen:**
-
-- Richtung: Regular (Einbahn vom Start zum Ziel)
-- Prioritaet: Regular (Hauptstrasse)
-
----
-
-## Add-Node-Tool
-
-Platziert neue Wegpunkte auf der Karte.
-
-**Workflow:**
-
-- Klick auf eine beliebige Stelle → neuer Node wird an der Welt-Position eingefuegt
-- Der neue Node erhaelt automatisch die naechste freie ID
-
----
-
-## Route-Tools
-
-Erstellt Strecken und Kurse ueber vordefinierte Geometrien. Die Route-Tools werden ueber das **Werkzeuge-Floating-Menue (T)** aufgerufen. Im Route-Modus stehen drei Sub-Tools zur Verfuegung:
-
-### 📏 Gerade Strecke
-
-Zeichnet eine gerade Linie zwischen zwei Punkten mit automatischen Zwischen-Nodes.
-
-**Workflow:**
-
-1. Startpunkt klicken
-2. Endpunkt klicken → Vorschau erscheint
-3. Enter → Strecke wird erstellt
-
-**Einstellungen:** Min. Abstand (Segment-Laenge) und Anzahl Nodes.
-
----
-
-### 🔀 Kurve (Bézier)
-
-Zeichnet eine Bézier-Kurve (Grad 2 oder 3) mit Steuerpunkten.
-
-**Workflow:**
-
-1. Startpunkt klicken
-2. Endpunkt klicken
-3. Steuerpunkt(e) klicken → Vorschau erscheint
-4. Optional: Punkte per Drag anpassen
-5. Enter → Kurve wird erstellt
-
-**Einstellungen:** Grad (Quadratisch/Kubisch), Min. Abstand, Anzahl Nodes.
-
----
-
-### 〰️ Spline (Catmull-Rom)
-
-Zeichnet einen interpolierenden Spline, der durch **alle geklickten Punkte** fuehrt. Im Gegensatz zur Bézier-Kurve (die Steuerpunkte nur annaehert) verlaeuft der Spline exakt durch jeden gesetzten Punkt.
-
-**Workflow:**
-
-1. Beliebig viele Punkte nacheinander klicken (mindestens 2)
-2. Vorschau wird fortlaufend aktualisiert (Cursor = naechster Punkt)
-3. Enter → Spline wird erstellt
-
-**Einstellungen:** Min. Abstand (Segment-Laenge) und Anzahl Nodes.
-
-**Besonderheiten:**
-
-- Ab 3 Punkten entsteht eine glatte Kurve (Catmull-Rom-Interpolation)
-- Mit 2 Punkten wird eine gerade Strecke erzeugt
-- Verkettung: Nach Enter wird der letzte Endpunkt automatisch als neuer Startpunkt uebernommen
-- Nachbearbeitung: Segment-Laenge / Node-Anzahl koennen nach Erstellung geaendert werden
-
----
-
-## Gemeinsame Eigenschaften aller Route-Tools
-
-- **Enter** bestaetigt und erstellt die Route
-- **Escape** bricht ab und setzt das Tool zurueck
-- **Verkettung:** Nach Erstellung wird der letzte Endpunkt als neuer Startpunkt uebernommen. Das Tool bleibt aktiv — der naechste Klick setzt den neuen Endpunkt. So koennen zusammenhaengende Strecken nahtlos hintereinander erstellt werden.
-- **Nachbearbeitung:** Segment-Laenge/Node-Anzahl koennen nach Erstellung per Slider angepasst werden. Die zuletzt erstellte Strecke wird automatisch geloescht und mit den neuen Parametern neu berechnet.
-- **Snap:** Start- und Endpunkte rasten auf existierende Nodes ein (Snap-Radius: 3m)
-- **Gruppe erstellen (Checkbox):** Steuert, ob die erstellte Route als benannte Gruppe registriert wird. Wenn aktiviert, wird die Strecke im Gruppen-Verzeichnis gelistet und kann per Doppelklick als Ganzes selektiert werden. Deaktivieren, wenn nur lose Nodes ohne Gruppen-Zugehoerigkeit gewuenscht sind.
-
----
-
-## Tangent-Ausrichtung (Kurve und Spline)
-
-Wenn Start- oder Endpunkt einer **kubischen Bézier-Kurve** oder eines **Splines** auf einen existierenden Node snapt, kann die lokale Tangente an einer vorhandenen Verbindung ausgerichtet werden:
-
-1. Route-Tool (Kurve oder Spline) aktivieren
-2. Start- oder Endpunkt auf einen existierenden Node klicken (Snap)
-3. Im **Eigenschaften-Panel** erscheint eine Tangent-Auswahl (ComboBox):
-   - **Manuell** — keine automatische Tangente
-   - **→ Node #42 (NO)** — Tangente entlang der Verbindung zum Nachbar-Node (mit Kompassrichtung)
-4. Bei Auswahl einer Tangente wird der zugehoerige Kontrollpunkt automatisch entlang der Verbindungsrichtung platziert
-5. Der Tangent-Vorschlag kann durch manuelles Klicken/Drag ueberschrieben werden
-
-> **Hinweis:** Tangent-Ausrichtung ist nur bei kubischen Kurven und Splines verfuegbar, da diese separate Kontrollpunkte fuer Start und Ende haben.
-
----
-
-## Control-Point-Drag (nur Kurve)
-
-Bei der **Bézier-Kurve** koennen die Steuerpunkte nach dem Setzen per Drag verschoben werden:
-
-1. In der Kontrollpunkt-Phase auf einen Steuerpunkt klicken und ziehen
-2. Die Kurve wird in Echtzeit aktualisiert
-3. Loslassen fixiert die neue Position
-
-Erkannte Drag-Ziele sind der/die Kontrollpunkt(e) sowie Start- und Endpunkt.
-
----
-
-## Ausweichstrecken-Tool ⤴ (B-Menue)
-
-Generiert eine parallele Ausweichstrecke zu einer selektierten Kette von Nodes. Die Ausweichstrecke wird seitlich versetzt mit S-foermigen An- und Abfahrten verbunden, sodass Traktoren die Hauptstrecke umfahren koennen.
-
-**Voraussetzung:** Eine zusammenhaengende Kette von Nodes muss selektiert sein, bevor das Tool aktiviert wird.
-
-**Workflow:**
-
-1. Nodes einer Streckenkette mit Shift+Klick oder Doppelklick selektieren
-2. **B** druecken → Floating-Menue → ⤴ Ausweichstrecke waehlen
-3. Im Eigenschaften-Panel erscheint die Konfiguration (Versatz, Abstand)
-4. Vorschau der Ausweichstrecke ist sofort sichtbar
-5. **Enter** → Ausweichstrecke wird erstellt (neue Nodes + Verbindungen)
-6. **Escape** → Abbrechen
+1. Mit **`T`** das Werkzeug-Menue oeffnen oder den Button in der Seitenleiste klicken.
+2. Node per Klick selektieren, per **`Ctrl`** additiv erweitern oder per **`Shift`** als Pfad ergaenzen.
+3. Selektierte Nodes per Drag verschieben.
 
 **Konfiguration:**
-
-| Parameter | Beschreibung | Standardwert |
-|-----------|--------------|-------------|
-| **Versatz** | Seitlicher Abstand zur Originalkette (positiv = links, negativ = rechts) | 8 m |
-| **Abstand** | Node-Abstand auf der Hauptstrecke (S-Kurven: halber Abstand) | 6 m |
-| **Richtung** | Verbindungsrichtung der erzeugten Nodes | Dual |
-| **Strassenart** | Prioritaet der erzeugten Verbindungen | Regular |
-
-**Info-Anzeige im Panel:**
-
-- Neue Nodes: Anzahl der erzeugten Bypass-Knoten
-- Kette: Anzahl Nodes in der Quell-Kette
-- Uebergangslaenge: Berechnetete Laenge der S-Kurven-Uebergaenge
+- Keine eigene Tool-Konfiguration.
 
 **Tipps:**
+- Doppelklick auf einen Gruppen-Node selektiert die ganze Gruppe.
+- Doppelklick ausserhalb von Gruppen selektiert den Abschnitt zwischen den naechsten Kreuzungen.
 
-- Groesserer Versatz erfordert eine laengere Kette (min. 2× Versatz Laenge)
-- Negativer Versatz legt die Ausweichstrecke auf die rechte Seite
-- Nach Erstellung bleiben die Original-Nodes unveraendert — die Ausweichstrecke ist eine eigenstaendige Gruppe
-- Kette zu kurz → Vorschau bleibt leer (Meldung im Panel)
+## Connect (T)
+
+Erstellt Verbindungen zwischen zwei vorhandenen Nodes.
+
+**Workflow:**
+1. Connect aktivieren.
+2. Start-Node anklicken.
+3. Ziel-Node anklicken, um die Verbindung zu erstellen.
+
+**Konfiguration:**
+- Richtung: aus dem aktuellen Standard fuer Verbindungen.
+- Strassenart: aus dem aktuellen Standard fuer Verbindungen.
+
+**Tipps:**
+- Fuer genau zwei selektierte Nodes ist **`C`** der schnellste Weg.
+- Mit **`X`** trennen Sie die Verbindung derselben Zwei-Node-Selektion wieder.
+
+## Add Node (T)
+
+Setzt neue Wegpunkte direkt in die Karte.
+
+**Workflow:**
+1. Add Node aktivieren.
+2. In den Viewport klicken.
+3. Der Editor legt an dieser Position einen neuen Node an.
+
+**Konfiguration:**
+- Keine eigene Tool-Konfiguration.
+
+**Tipps:**
+- Wenn eine Heightmap geladen ist, wird die Hoehe beim Anlegen mitberuecksichtigt.
+- Add Node eignet sich gut fuer kleine manuelle Korrekturen zwischen Tool-Ergebnissen.
 
 ---
 
-## Parkplatz-Tool 🅿 (B-Menue)
+## Gerade Strecke (G)
 
-Erzeugt ein vollstaendiges Parkplatz-Layout mit mehreren Parkreihen, Wendekreis sowie uni­direktionaler Ein- und Ausfahrt. Map-Marker werden automatisch an den Parkpositionen gesetzt.
+Erstellt eine lineare Strecke mit gleichmaessiger Unterteilung zwischen zwei Punkten.
 
 **Workflow:**
-
-1. **B** druecken → Floating-Menue → 🅿 Parkplatz waehlen
-2. **Phase Idle** — Vorschau folgt dem Cursor; Ausgangspunkt per Klick setzen
-3. **Alt+Mausrad** waehrend Idle — Layout um den eingestellten Winkelschritt drehen
-4. Klick → Position wird fixiert, **Phase Configuring** beginnt
-5. Im Eigenschaften-Panel alle Parameter anpassen (Reihen, Abstaende, Einfahrt usw.)
-6. **Enter** → Layout wird erstellt
-7. **Escape** → Abbrechen und Zurueck zu Idle
-
-**Phasen-Uebersicht:**
-
-| Phase | Beschreibung | Aktion |
-|-------|--------------|--------|
-| **Idle** | Vorschau folgt Cursor, Rotation per Alt+Scroll | Klick → Configuring |
-| **Configuring** | Position fixiert, Config-Panel aktiv | Enter (erstellen) oder Escape (abbrechen) |
-| **Adjusting** | Vorschau folgt Cursor erneut (Repositionierung) | Klick → zurueck zu Configuring |
-
-> **Tipp:** Waehrend Configuring kann durch Klick in den Viewport die Repositioniering (Adjusting) gestartet werden — so laesst sich die Position nachtraeglich korriegieren ohne das Tool neu zu starten.
+1. Mit **`G`** die Gruppe **Grundbefehle** oeffnen und **Gerade Strecke** waehlen.
+2. Startpunkt setzen.
+3. Endpunkt setzen und die Vorschau pruefen.
+4. Mit **`Enter`** bestaetigen.
 
 **Konfiguration:**
-
-| Parameter | Beschreibung | Standard | Bereich |
-|-----------|--------------|---------|---------|
-| **Reihen** | Anzahl Parkreihen | 2 | 1–10 |
-| **Abstand** | Abstand zwischen benachbarten Reihen | 6 m | 4–20 m |
-| **Laenge** | Laenge jeder Reihe (Ost-West-Ausdehnung) | 25 m | 10–100 m |
-| **Max. Node-Abstand** | Maximaler Abstand aufeinanderfolgender Nodes in der Reihe | 5 m | 2–20 m |
-| **Einfahrt** | Position der Einfahrt entlang der Reihe (0 = Ost, 1 = West) | 0,50 | 0–1 |
-| **Ausfahrt** | Position der Ausfahrt entlang der Reihe (0 = Ost, 1 = West) | 0,75 | 0–1 |
-| **Rampenlaenge** | Laenge der 45°-Rampen fuer Ein-/Ausfahrt | 3 m | 2–20 m |
-| **Einfahrt-Seite** | Seite der Einfahrt aus Sicht des Markers | Rechts | Links / Rechts |
-| **Ausfahrt-Seite** | Seite der Ausfahrt aus Sicht des Markers | Links | Links / Rechts |
-| **Gruppe** | Name der Map-Marker-Gruppe fuer alle Parkbuchten | Parkplatz | Freitext |
-| **Richtung** | Verbindungsrichtung der erzeugten Nodes | Dual | — |
-| **Strassenart** | Prioritaet der erzeugten Verbindungen | Regular | — |
-| **Winkelschritt** | Drehungs-Schrittweite bei Alt+Mausrad | 5° | Freitext |
+- Segmentlaenge: maximaler Abstand zwischen erzeugten Nodes.
+- Node-Anzahl: alternative Kontrolle ueber die Unterteilung.
 
 **Tipps:**
+- Ideal fuer Zufahrten, Hofverbindungen und einfache Verlaengerungen.
+- Nach dem Erstellen kann die Gruppe spaeter erneut per **Tool bearbeiten** geoeffnet werden.
 
-- Einfahrt und Ausfahrt auf verschiedene Seiten legen verhindert Gegenverkehr im Parkplatz
-- Rampenlaenge auf 4–6 m setzen fuer groessere Fahrzeuge mit breitem Wendekreis
-- Mit Alt+Mausrad vor dem Fixieren den Parkplatz an bestehende Wege ausrichten
-- Alle erzeugten Marker erscheinen unter dem konfigurierten Gruppennamen im Map-Marker-Panel
+## Bezier Grad 2 (G)
+
+Erstellt eine quadratische Bezier-Kurve mit einem Kontrollpunkt.
+
+**Workflow:**
+1. **Bezier Grad 2** aktivieren.
+2. Start- und Endpunkt setzen.
+3. Den Kontrollpunkt platzieren oder per Drag nachziehen.
+4. Mit **`Enter`** bestaetigen.
+
+**Konfiguration:**
+- Segmentlaenge.
+- Node-Anzahl.
+
+**Tipps:**
+- Gut fuer weiche, einfache Biegungen mit wenig Bedienaufwand.
+- Start, Ende und Kontrollpunkt koennen im Viewport nach dem Setzen per Drag verfeinert werden.
+
+## Bezier Grad 3 (G)
+
+Erstellt eine kubische Bezier-Kurve mit zwei Kontrollpunkten und optionaler Tangenten-Ausrichtung.
+
+**Workflow:**
+1. **Bezier Grad 3** aktivieren.
+2. Startpunkt und Endpunkt setzen.
+3. Kontrollpunkte setzen oder vorhandene Tangenten uebernehmen.
+4. Die Form per Drag anpassen und mit **`Enter`** bestaetigen.
+
+**Konfiguration:**
+- Segmentlaenge.
+- Node-Anzahl.
+- Start-Tangente und End-Tangente, wenn an bestehende Nodes gesnappt wurde.
+
+**Tipps:**
+- Wenn Start oder Ende auf einen vorhandenen Node snappt, kann im Panel eine Verbindung als Tangente ausgewaehlt werden.
+- Die automatische Tangente ist nur ein Vorschlag und kann jederzeit durch manuelle Handles ersetzt werden.
+
+## Spline (G)
+
+Erstellt einen Catmull-Rom-Spline, der durch alle gesetzten Punkte verlaeuft.
+
+**Workflow:**
+1. **Spline** aktivieren.
+2. Beliebig viele Punkte nacheinander setzen.
+3. Die laufende Vorschau beobachten.
+4. Mit **`Enter`** abschliessen.
+
+**Konfiguration:**
+- Segmentlaenge.
+- Node-Anzahl.
+- Start- und End-Tangente, wenn auf bestehende Nodes gesnappt wurde.
+
+**Tipps:**
+- Mit nur zwei Punkten entsteht praktisch eine gerade Verbindung.
+- Mit drei oder mehr Punkten eignet sich der Spline fuer lange, organische Verlaeufe.
+
+## Geglaettete Kurve (G)
+
+Erstellt eine geglaettete Route mit automatischen Ein- und Auslauf-Tangenten.
+
+**Workflow:**
+1. **Geglaettete Kurve** aktivieren.
+2. Start- und Endpunkt setzen.
+3. Optional weitere Zwischenpunkte in der Phase **Control Nodes** setzen.
+4. Steerer- und Kontrollpunkte bei Bedarf im Viewport verschieben.
+5. Mit **`Enter`** bestaetigen.
+
+**Konfiguration:**
+- Segmentlaenge.
+- Maximaler Winkel pro Segment.
+- Reset fuer automatisch berechnete Start-/End-Steerer.
+
+**Tipps:**
+- Das Tool ist hilfreich, wenn eine Route weich an bestehende Strassenwinkel angeschlossen werden soll.
+- Manuell verschobene Steerer bleiben erhalten, bis sie explizit zurueckgesetzt werden.
 
 ---
 
-## Felderkennung-Tool (FieldBoundary)
+## Ausweichstrecke (B)
 
-Zeichnet automatisch Wegpunkte entlang der Grenze eines Feldes nach. Der Editor liest die Feldgrenzen aus der geladenen Karte (GRLE- oder PNG-Feldlayer) und erzeugt daraus einen geschlossenen Ring aus Nodes.
+Erzeugt eine parallele Umgehungsstrecke mit S-foermigen An- und Abfahrten.
 
 **Workflow:**
-
-1. Karte mit Felddaten laden (Datei → Hintergrundkarte öffnen)
-2. FieldBoundary-Tool aus dem Tool-Menü auswählen
-3. Feld auf der Karte anklicken → Vorschau des Grenz-Rings erscheint
-4. Parameter im Konfigurations-Panel anpassen (Offset, Toleranz usw.)
-5. **Enter** → Ring wird als Gruppe von Nodes erstellt
+1. Eine geordnete Node-Kette selektieren.
+2. Mit **`B`** die Gruppe **Bearbeiten** oeffnen und **Ausweichstrecke** waehlen.
+3. Versatz und Abstand im Tool-Panel einstellen.
+4. Vorschau pruefen und mit **`Enter`** bestaetigen.
 
 **Konfiguration:**
-
-| Parameter | Beschreibung |
-|-----------|--------------|
-| **Offset** | Abstand vom Feldrand nach innen (negativ = nach außen) in Metern |
-| **Toleranz** | Vereinfachungs-Schwelle für den Ring (douglas-peucker) |
-| **Knotenabstand** | Mindestabstand zwischen aufeinanderfolgenden Nodes |
-| **Eckenwinkel** | Winkel-Schwelle zur Erkennung von Ecken (0° = keine Ecken) |
-| **Ecken verrunden** | Checkbox — verrundet konvexe Ecken durch einen Bogenbogen |
-| **Radius** | Verrundungs-Radius (nur sichtbar wenn "Ecken verrunden" aktiviert) |
-| **Gruppe erstellen** | Ob der Ring als benannte Gruppe registriert wird |
-
-**Eckenverrundung:**
-
-- Nur **konvexe** Ecken werden verrundet — konkave Ecken (einspringende Winkel) bleiben scharf
-- Verrundete Nodes erhalten intern den Flag `RoundedCorner` und werden bei der Distanzberechnung übersprungen
-- Der Bogen wird gleichmäßig über Tangentenpunkte aufgespannt; der Radius wird auf max. 40 % der kürzeren Kante begrenzt
-- Überschreibbar: Nach dem Erstellen kann der Ring wie jede andere Gruppe nachbearbeitet werden
-
-**Alle Felder nachzeichnen:**
-
-Im Hauptmenü unter **Werkzeuge → Alle Felder nachzeichnen** steht ein Dialog bereit, um alle Felder der Karte in einem Schritt zu verarbeiten. Die Konfigurations-Optionen (inkl. Eckenverrundung) gelten für alle erzeugten Ringe.
+- Versatz: positiv = links, negativ = rechts.
+- Abstand: Grundabstand der erzeugten Nodes.
+- Richtung und Strassenart fuer die neue Strecke.
 
 **Tipps:**
+- Wenn keine geordnete Kette selektiert ist, bleibt das Tool sichtbar, aber deaktiviert.
+- Die Original-Kette bleibt erhalten; die Ausweichstrecke wird als eigene, spaeter editierbare Gruppe angelegt.
 
-- Kleiner Offset (z. B. 2 m) erzeugt eine fahrbahre Innenlinie
-- Bei unruhigen Feldgrenzen hilft eine höhere Toleranz (z. B. 1,5 m)
-- Eckenverrundung mit Radius 3–5 m verbessert die Einfahrten in enge Ecken für AutoDrive
+## Parkplatz (B)
+
+Erstellt ein Parkplatz-Layout mit Reihen, Rampen und Ein-/Ausfahrt.
+
+**Workflow:**
+1. **Parkplatz** aktivieren.
+2. Den Ursprung per Klick setzen.
+3. Vor oder waehrend des Platzierens mit **`Alt+Mausrad`** drehen.
+4. In der Konfigurationsphase Reihen, Abstaende und Ein-/Ausfahrt einstellen.
+5. Mit **`Enter`** bestaetigen.
+
+**Konfiguration:**
+- Reihen, Laenge und Abstaende.
+- Einfahrt, Ausfahrt und Rampenlaenge.
+- Einfahrts- und Ausfahrtsseite.
+- Richtung und Strassenart.
+
+**Tipps:**
+- Ein Klick in den Viewport startet aus der Konfigurationsphase eine Repositionierung.
+- Das Tool legt eine editierbare Gruppe an und setzt Einfahrt/Ausfahrt fuer die Gruppe explizit.
+
+## Strecke versetzen (B)
+
+Erzeugt einen oder zwei Parallelversatze entlang einer selektierten Kette.
+
+**Workflow:**
+1. Eine geordnete Node-Kette selektieren.
+2. **Strecke versetzen** aktivieren.
+3. Linken und/oder rechten Versatz einschalten und Distanzen setzen.
+4. Optional festlegen, ob die Original-Kette erhalten bleibt.
+5. Mit **`Enter`** bestaetigen.
+
+**Konfiguration:**
+- Linker Versatz aktiv / Distanz.
+- Rechter Versatz aktiv / Distanz.
+- Original behalten.
+- Knotenabstand auf der Offset-Strecke.
+
+**Tipps:**
+- Das Tool bleibt sichtbar, auch wenn noch keine Kette selektiert ist; der Disabled-Hinweis zeigt dann den fehlenden Schritt.
+- Wenn **Original behalten** deaktiviert ist, ersetzt die neue Strecke die innere Kette im selben Undo-Schritt.
+
+---
+
+## Feld erkennen (A)
+
+Zeichnet einen Feldrand aus geladenen Farmland-Daten als geschlossenen Ring nach.
+
+**Workflow:**
+1. Eine Uebersichtskarte mit Farmland-Daten laden oder generieren.
+2. Mit **`A`** die Analyse-Gruppe oeffnen und **Feld erkennen** waehlen.
+3. In das gewuenschte Feld klicken.
+4. Offset, Toleranz, Knotenabstand und optionale Eckenverrundung einstellen.
+5. Mit **`Enter`** bestaetigen.
+
+**Konfiguration:**
+- Knotenabstand.
+- Offset nach innen oder aussen.
+- Toleranz fuer die Vereinfachung.
+- Ecken-Erkennung und optionale Eckenverrundung.
+
+**Tipps:**
+- Das Ergebnis ist spaeter erneut per **Tool bearbeiten** oeffnbar.
+- Ueber **Extras -> Alle Felder nachzeichnen** koennen dieselben Parameter fuer alle Felder im Stapel angewendet werden.
+
+## Feldweg erkennen (A)
+
+Berechnet eine Mittellinie zwischen zwei Feldseiten und erzeugt daraus einen Fahrpfad.
+
+**Workflow:**
+1. Farmland-Daten laden.
+2. **Feldweg erkennen** aktivieren.
+3. Modus **Fields** oder **Boundaries** waehlen.
+4. Seite 1 sammeln und bestaetigen.
+5. Seite 2 sammeln und die Vorschau berechnen lassen.
+6. Mit **`Enter`** den Pfad einfuegen.
+
+**Konfiguration:**
+- Modus: ganze Felder oder einzelne Grenzsegmente.
+- Node-Abstand.
+- Vereinfachungs-Toleranz.
+- An bestehende Nodes anschliessen.
+
+**Tipps:**
+- Der Pfad bleibt normal bearbeitbar, hat aber keinen spaeteren **Tool bearbeiten**-Pfad.
+- Im Boundary-Modus funktioniert der Workflow am besten mit klar voneinander getrennten Feldseiten.
+
+## Farb-Pfad erkennen (A)
+
+Leitet ein Wegnetz direkt aus Farbstrukturen der Hintergrundkarte ab.
+
+**Workflow:**
+1. Eine Hintergrundkarte laden.
+2. **Farb-Pfad erkennen** aktivieren.
+3. Mit **`Alt+Drag`** eine oder mehrere Lasso-Regionen fuer Farbproben zeichnen.
+4. Im Tool-Panel die Berechnung starten.
+5. Netzstatistik und Anschlussmodus pruefen.
+6. Mit **`Enter`** das Netz einfuegen.
+
+**Konfiguration:**
+- Exakter Farbvergleich oder Toleranz-Modus.
+- Farb-Toleranz.
+- Node-Abstand.
+- Vereinfachungs-Toleranz.
+- Rauschfilter.
+- Anschlussmodus an bestehende Verbindungen.
+
+**Tipps:**
+- Waehlen Sie mehrere Lasso-Regionen, wenn der Zielpfad aus mehreren aehnlichen Farbinseln besteht.
+- Das Ergebnis ist nicht ueber **Tool bearbeiten** rekonstruierbar; fuer andere Parameter muss das Sampling erneut gestartet werden.
 
 ---
 

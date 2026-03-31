@@ -100,14 +100,16 @@ graph BT
 **Modul-Aufbau:**
 
 - `input.rs` — Orchestrator, delegiert an Sub-Module
-  - `keyboard.rs` — Tastatur-Shortcuts (Delete, Escape, Ctrl+A, W/G/S/T/K fuer Floating-Menues)
+  - `keyboard.rs` — Tastatur-Shortcuts (Delete, Escape, Ctrl+A, W/G/B/A/R/Z/K fuer Floating-Menues)
   - `drag.rs` — Drag-Operationen (Pan, Move, Rect-/Lasso-Selektion)
   - `context_menu.rs` — Rechtsklick-Kontextmenü
 - `menu.rs` — Top-Menü-Leiste
 - `status.rs` — Statusleiste
-- `defaults_panel.rs` — Linke Sidebar mit Long-Press-Gruppen (Werkzeuge, Route-Tools, Defaults, Hintergrund; 64px breit)
+- `defaults_panel.rs` — Linke Sidebar mit Long-Press-Gruppen (Werkzeuge, RouteTool-Gruppen `Basics/Section/Analysis`, Defaults, Hintergrund; 64px breit)
 - `long_press.rs` — Wiederverwendbares Long-Press-Dropdown-Widget (`LongPressState`, `LongPressGroup<T>`, `render_long_press_button`)
-- `floating_menu.rs` — Schwebendes Kontextmenue an der Mausposition (W/G/S-Taste; `FloatingMenuKind::Tools/Basics/SectionTools`)
+- `floating_menu.rs` — Schwebendes Kontextmenue an der Mausposition (T/G/B/A/R/Z; `FloatingMenuKind::Tools` bzw. `FloatingMenuKind::RouteTools(RouteToolGroup)`)
+- `command_palette.rs` — Zentrales Overlay fuer statische Befehle plus alle katalogsichtbaren Route-Tools; disabled Eintraege bleiben sichtbar und tragen ihren Grund
+- `edit_panel.rs` — Kontextabhaengiges Edit-Panel fuer Gruppen-Edit, Streckenteilung und aktives Route-Tool
 - `properties.rs` — Properties-Panel
   - intern modularisiert über `properties/`-Submodule (u. a. Selektoren und Distanzen-Panel)
 - `options_dialog.rs` — Optionen-Dialog (Farben, Größen, Zoom)
@@ -135,6 +137,7 @@ graph BT
 - Use-Cases (Load/Save, Kamera, Selektion, Heightmap, Tools)
 - Aufbau von `RenderScene` aus Domain + ViewState
 - Re-Export von Core-Typen für UI (z.B. `ConnectionDirection`, `ConnectionPriority`, `RoadMap`)
+- Kanonischer RouteTool-Katalog (`tools/catalog.rs`) als Single Source of Truth fuer `RouteToolId`, `RouteToolGroup`, `RouteToolBackingMode`, Surface-Sichtbarkeit und Aktivierungs-Voraussetzungen
 
 **Use-Case-Module:**
 
@@ -533,7 +536,7 @@ src/
 - UI→Core-Layerverletzung behoben (properties.rs)
 - CI-Check-Script für Schichtgrenzen (`scripts/check_layer_boundaries.sh`)
 - Alle unwrap()-Aufrufe in Produktionscode durch graceful handling ersetzt
-- Route-Tool-Intents: `RouteToolClicked`, `RouteToolExecuteRequested`, `RouteToolCancelled`, `SelectRouteToolRequested`, `RouteToolConfigChanged`
+- Route-Tool-Intents: `RouteToolClicked`, `RouteToolExecuteRequested`, `RouteToolCancelled`, `SelectRouteToolRequested`, `RouteToolConfigChanged`, `RouteToolWithAnchorsRequested`, `RouteToolTangentSelected`, `RouteToolLassoCompleted`, `RouteToolRecreateRequested`
 - Duplikat-Erkennung: `DeduplicateConfirmed`, `DeduplicateCancelled`
 - Optionen-Dialog: `OpenOptionsDialogRequested`, `CloseOptionsDialogRequested`, `OptionsChanged`, `ResetOptionsRequested`
 
@@ -579,11 +582,11 @@ participant HAND as Handler<br/>(apply)
 participant STATE as AppState<br/>(Mutation)
 participant SCENE as RenderScene<br/>(Build)
 
-UI->>CTRL: AppIntent::SelectNodeRequested
+UI->>CTRL: AppIntent::NodePickRequested { world_pos, additive, extend_path }
 activate CTRL
-CTRL->>HAND: AppCommand::SelectNode(id)
+CTRL->>HAND: AppCommand::SelectNearestNode { world_pos, max_distance, additive, extend_path }
 activate HAND
-HAND->>STATE: state.selection.ids_mut().insert(id)
+HAND->>STATE: use_cases::selection::select_nearest_node(...)
 deactivate HAND
 CTRL->>SCENE: build_render_scene()
 CTRL->>UI: Observer notified
@@ -678,8 +681,10 @@ Nach node-mutierenden Operationen wird dirty-Flag gesetzt; Rebuild erfolgt lazy 
 
 ### Gruppen-Editierbarkeit
 
-- Jedes Tool implementiert `make_group_record()` → speichert Konfiguration in `GroupRegistry`
-- `load_for_edit()` rekonstituiert den Tool-State fuer erneute Bearbeitung
+- Nur group-backed Tools implementieren `make_group_record()` und schreiben damit einen `GroupRecord`
+- `load_for_edit()` ist nur fuer `GroupBackedEditable` relevant; `FieldPath` und `ColorPath` bleiben `Ephemeral`
+- Tool-Edit wird ueber `GroupRecord.tool_id` + `RouteToolBackingMode` freigeschaltet, nicht ueber historische Tool-Slots
+- Alle Pflicht-Surfaces lesen Route-Tools ueber `resolve_route_tool_entries()`; deaktivierte Tools bleiben sichtbar und tragen ihren Disabled-Grund
 - `GroupRecord.locked` verhindert versehentliche Mutation
 - Undo-Snapshot wird vor jeder Mutation automatisch erstellt (`apply_tool_result`)
 

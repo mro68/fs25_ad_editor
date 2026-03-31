@@ -16,10 +16,7 @@ mod validation;
 pub use preconditions::{Precondition, PreconditionContext};
 pub use validation::{validate_entries, ValidatedEntry};
 
-use crate::app::group_registry::{
-    TOOL_INDEX_CURVE_CUBIC, TOOL_INDEX_CURVE_QUAD, TOOL_INDEX_FIELD_BOUNDARY,
-    TOOL_INDEX_SMOOTH_CURVE, TOOL_INDEX_STRAIGHT,
-};
+use crate::app::tools::RouteToolId;
 use crate::app::{AppIntent, ConnectionDirection, ConnectionPriority, EditorTool};
 
 // =============================================================================
@@ -185,16 +182,16 @@ impl CommandId {
                 tool: EditorTool::AddNode,
             },
             Self::SetToolRouteStraight => AppIntent::SelectRouteToolRequested {
-                index: TOOL_INDEX_STRAIGHT,
+                tool_id: RouteToolId::Straight,
             },
             Self::SetToolRouteSmoothCurve => AppIntent::SelectRouteToolRequested {
-                index: TOOL_INDEX_SMOOTH_CURVE,
+                tool_id: RouteToolId::SmoothCurve,
             },
             Self::SetToolRouteQuadratic => AppIntent::SelectRouteToolRequested {
-                index: TOOL_INDEX_CURVE_QUAD,
+                tool_id: RouteToolId::CurveQuad,
             },
             Self::SetToolRouteCubic => AppIntent::SelectRouteToolRequested {
-                index: TOOL_INDEX_CURVE_CUBIC,
+                tool_id: RouteToolId::CurveCubic,
             },
             Self::StreckenteilungEmptyArea | Self::StreckenteilungMulti => {
                 AppIntent::StreckenteilungAktivieren
@@ -217,7 +214,7 @@ impl CommandId {
             Self::RouteStraight => {
                 let (s, e) = ctx.two_node_ids.unwrap_or((0, 0));
                 AppIntent::RouteToolWithAnchorsRequested {
-                    index: TOOL_INDEX_STRAIGHT,
+                    tool_id: RouteToolId::Straight,
                     start_node_id: s,
                     end_node_id: e,
                 }
@@ -225,7 +222,7 @@ impl CommandId {
             Self::RouteSmoothCurve => {
                 let (s, e) = ctx.two_node_ids.unwrap_or((0, 0));
                 AppIntent::RouteToolWithAnchorsRequested {
-                    index: TOOL_INDEX_SMOOTH_CURVE,
+                    tool_id: RouteToolId::SmoothCurve,
                     start_node_id: s,
                     end_node_id: e,
                 }
@@ -233,7 +230,7 @@ impl CommandId {
             Self::RouteQuadratic => {
                 let (s, e) = ctx.two_node_ids.unwrap_or((0, 0));
                 AppIntent::RouteToolWithAnchorsRequested {
-                    index: TOOL_INDEX_CURVE_QUAD,
+                    tool_id: RouteToolId::CurveQuad,
                     start_node_id: s,
                     end_node_id: e,
                 }
@@ -241,7 +238,7 @@ impl CommandId {
             Self::RouteCubic => {
                 let (s, e) = ctx.two_node_ids.unwrap_or((0, 0));
                 AppIntent::RouteToolWithAnchorsRequested {
-                    index: TOOL_INDEX_CURVE_CUBIC,
+                    tool_id: RouteToolId::CurveCubic,
                     start_node_id: s,
                     end_node_id: e,
                 }
@@ -291,7 +288,7 @@ impl CommandId {
 
             // ── Extras ───────────────────────────────────────────────────────
             Self::SetToolFieldBoundary => AppIntent::SelectRouteToolRequested {
-                index: TOOL_INDEX_FIELD_BOUNDARY,
+                tool_id: RouteToolId::FieldBoundary,
             },
 
             // ── Zoom ─────────────────────────────────────────────────────────

@@ -2,6 +2,7 @@
 //!
 //! Verarbeitet globale Tastenkombinationen und mappt sie auf `AppIntent`s.
 
+use crate::app::tools::RouteToolGroup;
 use crate::app::{
     AppIntent, ConnectionDirection, ConnectionPriority, EditorTool, FloatingMenuKind,
 };
@@ -175,6 +176,7 @@ pub(super) fn collect_keyboard_intents(
     }
 
     let (
+        key_a_no_mod,
         key_g_no_mod,
         key_t_no_mod,
         key_b_no_mod,
@@ -183,6 +185,7 @@ pub(super) fn collect_keyboard_intents(
         key_k_no_mod,
         key_k_ctrl_or_cmd,
     ) = ui.input(|i| {
+        let mut key_a_no_mod = false;
         let mut key_g_no_mod = false;
         let mut key_t_no_mod = false;
         let mut key_b_no_mod = false;
@@ -202,6 +205,7 @@ pub(super) fn collect_keyboard_intents(
                 let no_mod =
                     !modifiers.command && !modifiers.ctrl && !modifiers.shift && !modifiers.alt;
                 match key {
+                    egui::Key::A if no_mod => key_a_no_mod = true,
                     egui::Key::G if no_mod => key_g_no_mod = true,
                     egui::Key::T if no_mod => key_t_no_mod = true,
                     egui::Key::B if no_mod => key_b_no_mod = true,
@@ -217,6 +221,7 @@ pub(super) fn collect_keyboard_intents(
         }
 
         (
+            key_a_no_mod,
             key_g_no_mod,
             key_t_no_mod,
             key_b_no_mod,
@@ -227,9 +232,15 @@ pub(super) fn collect_keyboard_intents(
         )
     });
 
+    if key_a_no_mod {
+        events.push(AppIntent::ToggleFloatingMenu {
+            kind: FloatingMenuKind::RouteTools(RouteToolGroup::Analysis),
+        });
+    }
+
     if key_g_no_mod {
         events.push(AppIntent::ToggleFloatingMenu {
-            kind: FloatingMenuKind::Basics,
+            kind: FloatingMenuKind::RouteTools(RouteToolGroup::Basics),
         });
     }
 
@@ -241,7 +252,7 @@ pub(super) fn collect_keyboard_intents(
 
     if key_b_no_mod {
         events.push(AppIntent::ToggleFloatingMenu {
-            kind: FloatingMenuKind::SectionTools,
+            kind: FloatingMenuKind::RouteTools(RouteToolGroup::Section),
         });
     }
 

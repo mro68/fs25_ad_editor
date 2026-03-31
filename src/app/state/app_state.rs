@@ -1,5 +1,6 @@
 use crate::app::group_registry::GroupRegistry;
 use crate::app::history::Snapshot;
+use crate::app::tool_contract::RouteToolId;
 use crate::app::CommandLog;
 use crate::core::{Connection, FarmlandGrid, FieldPolygon, MapMarker, MapNode, RoadMap};
 use crate::shared::EditorOptions;
@@ -8,7 +9,7 @@ use indexmap::IndexSet;
 use std::cell::RefCell;
 use std::sync::Arc;
 
-use super::{EditorToolState, SelectionState, UiState, ViewState};
+use super::{EditorTool, EditorToolState, SelectionState, UiState, ViewState};
 
 /// Zwischenablage fuer Nodes, Verbindungen und Marker
 #[derive(Debug, Clone, Default)]
@@ -146,6 +147,15 @@ impl AppState {
     /// Gibt die Anzahl der Connections zurueck (fuer UI-Anzeige)
     pub fn connection_count(&self) -> usize {
         self.road_map.as_ref().map_or(0, |rm| rm.connection_count())
+    }
+
+    /// Liefert die ID des aktiven Route-Tools, wenn der Editor im Route-Modus ist.
+    pub fn active_route_tool_id(&self) -> Option<RouteToolId> {
+        if self.editor.active_tool == EditorTool::Route {
+            self.editor.tool_manager.active_id()
+        } else {
+            None
+        }
     }
 
     /// Undo/Redo helpers

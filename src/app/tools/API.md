@@ -2,13 +2,15 @@
 
 Dokumentation fuer `app::tools`: `ToolManager`, `RouteTool`-Trait, registrierte Tools und gemeinsame Infrastruktur.
 
+`RouteToolId` und `ToolAnchor` gehoeren zum app-weiten Tool-Vertrag in `app::tool_contract` und werden hier fuer die Tool-Implementierungen weiterverwendet.
+
 **Zurueck:** [`../API.md`](../API.md)
 
 ---
 
 ## `ToolManager`
 
-Verwaltet registrierte Route-Tools und den aktiven Tool-Index.
+Verwaltet registrierte Route-Tools ueber stabile `RouteToolId`s und den kanonischen Tool-Katalog.
 
 ```rust
 pub struct ToolManager { /* intern */ }
@@ -16,13 +18,14 @@ pub struct ToolManager { /* intern */ }
 
 **Methoden:**
 
-- `new() → Self` — Erstellt ToolManager mit vorregistrierten Standard-Tools (StraightLine, Bézier Grad 2, Bézier Grad 3, Spline, Bypass, SmoothCurve, Parking, FieldBoundary, RouteOffset, FieldPath, ColorPath)
-- `register(tool)` — Neues Route-Tool registrieren
+- `new() → Self` — Erstellt ToolManager aus `route_tool_catalog()` in kanonischer Reihenfolge
+- `register(tool_id, tool)` — Neues Route-Tool unter stabiler ID registrieren
 - `tool_count() → usize` — Anzahl registrierter Tools
-- `tool_names() → Vec<(usize, &str)>` — Name + Index aller Tools
-- `tool_entries() → Vec<(usize, &str, &str)>` — Index, Name und Icon aller Tools (fuer Dropdown-Rendering)
-- `set_active(index)` — Aktives Tool setzen (Reset des vorherigen)
-- `active_index() → Option<usize>` — Index des aktiven Tools
+- `tool_names() → Vec<(RouteToolId, &str)>` — Name + stabile ID aller Tools
+- `tool_entries() → Vec<(RouteToolId, &str, &str)>` — ID, Name und Icon aller Tools (fuer Dropdown-Rendering)
+- `set_active_by_id(tool_id)` — Aktives Tool setzen (Reset des vorherigen)
+- `active_id() → Option<RouteToolId>` — ID des aktiven Tools
+- `active_descriptor() → Option<&'static RouteToolDescriptor>` — Katalog-Descriptor des aktiven Tools
 - `active_tool() → Option<&dyn RouteTool>` — Referenz auf aktives Tool
 - `active_tool_mut() → Option<&mut dyn RouteTool>` — Mutable Referenz
 - `reset()` — Alle Tools zuruecksetzen, aktives deaktivieren
@@ -121,14 +124,15 @@ impl RouteTool for BypassTool {
 Analoges Pendant fuer Tools MIT `SegmentConfig` ist `impl_lifecycle_delegation!`
 (ohne `_no_seg`-Suffix) — dokumentiert in `common/lifecycle.rs`.
 
-### Capability-Traits
+### Direkte Erweiterungspunkte
 
-Der optionale Teil wurde zusaetzlich in Capability-Traits gekapselt. `RouteTool` bleibt als kompatibler Obervertrag bestehen und delegiert seine Default-Implementierungen an diese Traits:
+Der optionale Teil des Vertrags wird direkt ueber Default-Methoden auf `RouteTool` abgebildet. Es gibt keine separaten Capability-Traits mehr.
 
-- `RouteToolDrag` — `drag_targets`, `on_drag_start`, `on_drag_update`, `on_drag_end`
-- `RouteToolTangent` — `tangent_menu_data`, `apply_tangent_selection`
-- `RouteToolRegistry` — `make_group_record`, `load_for_edit`
-- `RouteToolChainInput` — `needs_chain_input`, `load_chain`
+- Drag/Nachbearbeitung: `drag_targets`, `on_drag_start`, `on_drag_update`, `on_drag_end`
+- Tangenten: `tangent_menu_data`, `apply_tangent_selection`
+- GroupRegistry: `make_group_record`, `load_for_edit`
+- Ketten-Input: `needs_chain_input`, `load_chain`, `set_chain_inner_ids`
+- Analyse-Input: `set_farmland_data`, `set_farmland_grid`, `set_background_map_image`, `needs_lasso_input`, `on_lasso_completed`
 
 **Registry-Erweiterungen** (fuer `GroupRegistry`, siehe [`../use_cases/API.md`](../use_cases/API.md)):
 
@@ -150,19 +154,21 @@ Documentation moved to [`../API.md#groupbase--groupkind`](../API.md#groupbase--g
 
 ## Registrierte Tools
 
-| Idx | Tool | Icon | Konstruktor |
-|-----|------|------|-------------|
-| 0 | `StraightLineTool` | `━` | `StraightLineTool::new()` |
-| 1 | `CurveTool` (Grad 2) | `⌒` | `CurveTool::new()` |
-| 2 | `CurveTool` (Grad 3) | `〜` | `CurveTool::new_cubic()` |
-| 3 | `SplineTool` | `〰` | `SplineTool::new()` |
-| 4 | `BypassTool` | `⤴` | `BypassTool::new()` |
-| 5 | `SmoothCurveTool` | `⊿` | `SmoothCurveTool::new()` |
-| 6 | `ParkingTool` | `🅿` | `ParkingTool::new()` |
-| 7 | `FieldBoundaryTool` | `🌾` | `FieldBoundaryTool::new()` |
-| 8 | `RouteOffsetTool` | `⇶` | `RouteOffsetTool::new()` |
-| 9 | `FieldPathTool` | `🛤` | `FieldPathTool::new()` |
-| 10 | `ColorPathTool` | `🎨` | `ColorPathTool::new()` |
+Der kanonische Katalog beschreibt jedes Tool ueber `RouteToolId`, Anzeigegruppe, Anforderungen und Persistenzvertrag:
+
+| Tool-ID | Gruppe | Voraussetzungen | Backing | Konstruktor |
+|---------|--------|-----------------|---------|-------------|
+| `RouteToolId::Straight` | `Basics` | keine | `GroupBackedEditable` | `StraightLineTool::new()` |
+| `RouteToolId::CurveQuad` | `Basics` | keine | `GroupBackedEditable` | `CurveTool::new()` |
+| `RouteToolId::CurveCubic` | `Basics` | keine | `GroupBackedEditable` | `CurveTool::new_cubic()` |
+| `RouteToolId::Spline` | `Basics` | keine | `GroupBackedEditable` | `SplineTool::new()` |
+| `RouteToolId::Bypass` | `Section` | geordnete Kette | `GroupBackedEditable` | `BypassTool::new()` |
+| `RouteToolId::SmoothCurve` | `Basics` | keine | `GroupBackedEditable` | `SmoothCurveTool::new()` |
+| `RouteToolId::Parking` | `Section` | keine | `GroupBackedEditable` | `ParkingTool::new()` |
+| `RouteToolId::FieldBoundary` | `Analysis` | Farmland geladen | `GroupBackedEditable` | `FieldBoundaryTool::new()` |
+| `RouteToolId::FieldPath` | `Analysis` | Farmland geladen | `Ephemeral` | `FieldPathTool::new()` |
+| `RouteToolId::RouteOffset` | `Section` | geordnete Kette | `GroupBackedEditable` | `RouteOffsetTool::new()` |
+| `RouteToolId::ColorPath` | `Analysis` | Hintergrundbild geladen | `Ephemeral` | `ColorPathTool::new()` |
 
 ### `StraightLineTool`
 
@@ -263,7 +269,7 @@ Parkplatz-Layout-Generator: Erstellt einen Wendekreis mit Parkreihen in einem ko
 
 **Group-Registry:**
 
-- Implementiert `RouteToolRegistry` Trait (`make_group_record()`, `load_for_edit()`)
+- Ueberschreibt die `RouteTool`-Hooks `make_group_record()` und `load_for_edit()`
 - Speichert Layout-Parameter fuer nachtraegliche Bearbeitung
 
 **Public Exports:**
@@ -359,13 +365,13 @@ Das Mapping `RingNodeKind` → `NodeFlag`:
 - `round_corner(prev, corner, next, radius, spacing) -> Vec<Vec2>` — Kreisbogen zwischen Tangentenpunkten einer konvexen Ecke. Konkave Ecken (Cross-Product ≤ 0) werden unverändert zurückgegeben. Tangentenpunkte begrenzt auf 40% der Kantenlaenge.
 - `resample_ring_with_corners(simplified, corner_indices, spacing, rounding_radius) -> Vec<(Vec2, RingNodeKind)>` — Resampled den Ring segmentweise mit Ecken als festen Ankern
 
-**Gruppen-Record:** `GroupKind::FieldBoundary { field_id, node_spacing, offset, straighten_tolerance, corner_angle_threshold, corner_rounding_radius, base }` (Slot 7 im ToolManager)
+**Gruppen-Record:** `GroupKind::FieldBoundary { field_id, node_spacing, offset, straighten_tolerance, corner_angle_threshold, corner_rounding_radius, base }` unter `RouteToolId::FieldBoundary`
 
 Modulstruktur: `mod.rs` (Re-Exporte), `state.rs` (Struct, Phasen-Enum, Default), `lifecycle.rs` (RouteTool-Impl, Ring-Berechnung), `config_ui.rs` (egui-Panel), `geometry.rs` (RingNodeKind, detect_corners, round_corner, resample_ring_with_corners)
 
 ### `RouteOffsetTool`
 
-Parallelversatz einer selektierten Kette ohne S-Kurven-Anbindung (Slot 8 im ToolManager). Generiert eine oder zwei Parallel-Versatz-Ketten (links und/oder rechts) mit konfigurierbarem Abstand und optionalem Entfernen der Original-Kette.
+Parallelversatz einer selektierten Kette ohne S-Kurven-Anbindung (`RouteToolId::RouteOffset`). Generiert eine oder zwei Parallel-Versatz-Ketten (links und/oder rechts) mit konfigurierbarem Abstand und optionalem Entfernen der Original-Kette.
 
 **Voraussetzung:** Eine selektierte Kette muss beim Aktivieren des Tools vorhanden sein (`load_chain()` wird automatisch in `init_chain_if_needed()` aufgerufen).
 
@@ -391,7 +397,6 @@ pub struct RouteOffsetTool {
     pub direction: ConnectionDirection,
     pub priority: ConnectionPriority,
     pub config: OffsetConfig,
-    pub(crate) cached_preview: Option<(Vec<Vec2>, Vec<(usize, usize)>)>,
     pub(crate) lifecycle: ToolLifecycleState,
 }
 ```
@@ -407,7 +412,12 @@ pub struct RouteOffsetTool {
 
 - `compute_offset_positions(chain, offset, base_spacing) → Option<Vec<Vec2>>` — Nutzt `parallel_offset()` + `resample_by_distance()`
 
-**Gruppen-Record:** `GroupKind::RouteOffset { chain_positions, chain_start_id, chain_end_id, offset_left, offset_right, keep_original, base_spacing, base }` (Slot 8 im ToolManager)
+**Public Exports (`mod.rs`):**
+
+- `RouteOffsetTool`
+- `compute_offset_positions()` — Hotpath-Helfer fuer Benchmarks/Tests
+
+**Gruppen-Record:** `GroupKind::RouteOffset { chain_positions, chain_start_id, chain_end_id, offset_left, offset_right, keep_original, base_spacing, base }` unter `RouteToolId::RouteOffset`
 
 Modulstruktur: `mod.rs` (Re-Exporte), `state.rs` (Struct + OffsetConfig), `lifecycle.rs` (RouteTool-Impl), `geometry.rs` (compute_offset_positions), `config_ui.rs` (egui-Panel), `tests.rs`
 
@@ -415,7 +425,7 @@ Modulstruktur: `mod.rs` (Re-Exporte), `state.rs` (Struct + OffsetConfig), `lifec
 
 ### `FieldPathTool`
 
-Feldweg-Erkennung: Berechnet eine Mittellinie zwischen zwei Farmland-Seiten via Voronoi-BFS und erzeugt daraus eine gleichmäßig abgetastete Waypoint-Route (Slot 9 im ToolManager).
+Feldweg-Erkennung: Berechnet eine Mittellinie zwischen zwei Farmland-Seiten und erzeugt daraus eine gleichmäßig abgetastete Waypoint-Route (`RouteToolId::FieldPath`).
 
 **Voraussetzung:** `farmland_grid` und `farmland_polygons` müssen im `AppState` geladen sein (werden beim Laden der Overview aus dem Map-ZIP befüllt).
 
@@ -483,7 +493,7 @@ Modulstruktur: `mod.rs` (Re-Export), `state.rs` (Structs, Enums, Felder), `lifec
 
 ### `ColorPathTool`
 
-Farb-Pfad-Erkennung: Erkennt zusammenhaengende Teilnetze anhand der Farbe im Hintergrundbild, skelettiert sie per Zhang-Suen-Thinning und exportiert daraus ein Waypoint-Netz mit offenen Enden, Kreuzungen und Segmenten (Slot 10 im ToolManager).
+Farb-Pfad-Erkennung: Erkennt zusammenhaengende Teilnetze anhand der Farbe im Hintergrundbild, skelettiert sie per Zhang-Suen-Thinning und exportiert daraus ein Waypoint-Netz mit offenen Enden, Kreuzungen und Segmenten (`RouteToolId::ColorPath`).
 
 **Voraussetzung:** Ein Hintergrundbild muss geladen sein (`set_background_map_image()`). Das Tool bezieht die `map_size` automatisch aus `set_farmland_grid()`.
 
@@ -584,6 +594,11 @@ pub struct ColorPathTool {
 - `extract_network_from_mask(mask, w, h, noise_filter, map_size, start_hint) → SkeletonNetwork` — Haupt-Pipeline fuer Netz-Knoten und Segmente
 - `extract_paths_from_mask(...) → Vec<Vec<Vec2>>` — Legacy-Wrapper fuer lineare Pfad-Konsumenten/Tests
 
+**Public Exports (`mod.rs`):**
+
+- `ColorPathTool`
+- `compute_color_path_network_stats()` — Flood-Fill + Netzextraktion fuer Benchmarks/Analyse, ohne interne Skelett-Typen offenzulegen
+
 **Gruppen-Record:** ColorPathTool speichert keinen `GroupRecord` (keine nachträgliche Bearbeitung).
 
 Modulstruktur: `mod.rs` (Re-Export), `state.rs` (Struct, Phasen-Enum, Config, Default), `lifecycle.rs` (RouteTool-Impl, Netz-Pipeline, Export), `config_ui.rs` (egui-Panel), `sampling.rs` (Farb-Sampling + Masken-Erstellung), `skeleton.rs` (Skelett-Extraktion + Graph-Aufbau)
@@ -594,7 +609,7 @@ Modulstruktur: `mod.rs` (Re-Export), `state.rs` (Struct, Phasen-Enum, Config, De
 
 Parallele Ausweichstrecke einer selektierten Kette mit S-förmigen An-/Abfahrten. Das Tool benötigt eine Eingabe-Kette (via `load_chain()`), generiert dann automatisch die Bypass-Positionen und erstellt neue Nodes mit entsprechenden Verbindungen.
 
-**Input-Modus:** Chain-basiert (nutzt `RouteToolChainInput` Trait).
+**Input-Modus:** Chain-basiert (nutzt die `RouteTool`-Hooks `needs_chain_input()` und `load_chain()`).
 
 - `needs_chain_input() → true`
 - `load_chain(positions, start_id, end_id)` — Laedt die Kette aus der User-Selektion

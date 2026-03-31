@@ -1,7 +1,7 @@
 //! Lifecycle-Methoden des SmoothCurveTool (RouteTool-Implementierung).
 
 use super::super::common::linear_connections;
-use super::super::{RouteTool, ToolAction, ToolPreview, ToolResult};
+use super::super::{RouteTool, RouteToolId, ToolAction, ToolPreview, ToolResult};
 use super::geometry::{build_result, BuildResultParams};
 use super::state::{Phase, SmoothCurveTool};
 use crate::app::group_registry::{GroupBase, GroupKind, GroupRecord};
@@ -243,6 +243,7 @@ impl RouteTool for SmoothCurveTool {
         let end = self.lifecycle.last_end_anchor?;
         Some(GroupRecord {
             id,
+            tool_id: Some(RouteToolId::SmoothCurve),
             node_ids: node_ids.to_vec(),
             start_anchor: start,
             end_anchor: end,

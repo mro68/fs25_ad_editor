@@ -14,6 +14,21 @@ const MIN_COMPONENT_PIXELS: usize = 5;
 
 type Pixel = (usize, usize);
 
+#[derive(Clone, Copy)]
+struct SkeletonBuildContext {
+    width: usize,
+    height: usize,
+    map_size: f32,
+    img_width: u32,
+    img_height: u32,
+}
+
+impl SkeletonBuildContext {
+    fn pixel_to_world(self, x: f32, y: f32) -> Vec2 {
+        pixel_to_world_f32(x, y, self.map_size, self.img_width, self.img_height)
+    }
+}
+
 /// Typ eines Netz-Knotens im extrahierten Skelettgraph.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub(crate) enum SkeletonGraphNodeKind {
@@ -228,22 +243,14 @@ fn choose_anchor_pixel(pixels: &[Pixel], hint: Option<Pixel>) -> Pixel {
 fn build_graph_node(
     pixels: &[Pixel],
     kind: SkeletonGraphNodeKind,
-    map_size: f32,
-    img_width: u32,
-    img_height: u32,
+    context: SkeletonBuildContext,
 ) -> SkeletonGraphNode {
     let count = pixels.len() as f32;
     let (sum_x, sum_y) = pixels.iter().fold((0.0f32, 0.0f32), |acc, &(x, y)| {
         (acc.0 + x as f32, acc.1 + y as f32)
     });
     let pixel_position = Vec2::new(sum_x / count, sum_y / count);
-    let world_position = pixel_to_world_f32(
-        pixel_position.x,
-        pixel_position.y,
-        map_size,
-        img_width,
-        img_height,
-    );
+    let world_position = context.pixel_to_world(pixel_position.x, pixel_position.y);
 
     SkeletonGraphNode {
         kind,
@@ -263,9 +270,7 @@ struct ComponentGraph {
 fn build_component_graph(
     component: &[Pixel],
     degrees: &HashMap<Pixel, usize>,
-    map_size: f32,
-    img_width: u32,
-    img_height: u32,
+    context: SkeletonBuildContext,
     start_hint: Option<Pixel>,
 ) -> ComponentGraph {
     let junction_pixels: HashSet<Pixel> = degrees
@@ -290,9 +295,7 @@ fn build_component_graph(
         nodes.push(build_graph_node(
             &cluster,
             SkeletonGraphNodeKind::Junction,
-            map_size,
-            img_width,
-            img_height,
+            context,
         ));
         node_pixels.push(cluster);
     }
@@ -303,9 +306,7 @@ fn build_component_graph(
         nodes.push(build_graph_node(
             &[endpoint],
             SkeletonGraphNodeKind::OpenEnd,
-            map_size,
-            img_width,
-            img_height,
+            context,
         ));
         node_pixels.push(vec![endpoint]);
     }
@@ -317,9 +318,7 @@ fn build_component_graph(
         nodes.push(build_graph_node(
             &[anchor],
             SkeletonGraphNodeKind::LoopAnchor,
-            map_size,
-            img_width,
-            img_height,
+            context,
         ));
         node_pixels.push(vec![anchor]);
     }
@@ -337,20 +336,15 @@ fn build_segment_polyline(
     end_node: &SkeletonGraphNode,
     chain_pixels: &[Pixel],
     original_mask: &[bool],
-    width: usize,
-    height: usize,
-    map_size: f32,
-    img_width: u32,
-    img_height: u32,
+    context: SkeletonBuildContext,
 ) -> Vec<Vec2> {
     let mut polyline = Vec::with_capacity(chain_pixels.len() + 2);
     polyline.push(start_node.world_position);
 
     if !chain_pixels.is_empty() {
-        let refined = refine_medial_axis(chain_pixels, original_mask, width, height);
-        polyline.extend(refined_pixels_to_world(
-            &refined, map_size, img_width, img_height,
-        ));
+        let refined =
+            refine_medial_axis(chain_pixels, original_mask, context.width, context.height);
+        polyline.extend(refined_pixels_to_world(&refined, context));
     }
 
     polyline.push(end_node.world_position);
@@ -409,11 +403,7 @@ fn trace_segment(
 fn extract_component_network(
     component: &[Pixel],
     original_mask: &[bool],
-    width: usize,
-    height: usize,
-    map_size: f32,
-    img_width: u32,
-    img_height: u32,
+    context: SkeletonBuildContext,
     start_hint: Option<Pixel>,
 ) -> SkeletonNetwork {
     let pixel_set: HashSet<Pixel> = component.iter().copied().collect();
@@ -423,9 +413,7 @@ fn extract_component_network(
         .map(|pixel| (pixel, skeleton_neighbors(pixel, &pixel_set).len()))
         .collect();
 
-    let graph = build_component_graph(
-        component, &degrees, map_size, img_width, img_height, start_hint,
-    );
+    let graph = build_component_graph(component, &degrees, context, start_hint);
 
     let mut segments = Vec::new();
     let mut visited_edges: HashSet<(Pixel, Pixel)> = HashSet::new();
@@ -466,11 +454,7 @@ fn extract_component_network(
                 &graph.nodes[end_node],
                 &chain_pixels,
                 original_mask,
-                width,
-                height,
-                map_size,
-                img_width,
-                img_height,
+                context,
             );
             if polyline.len() >= 2 {
                 segments.push(SkeletonGraphSegment {
@@ -689,15 +673,10 @@ pub(crate) fn refine_medial_axis(
 ///
 /// Wird nach `refine_medial_axis` verwendet, wo Pixel-Positionen nicht
 /// ganzzahlig sein koennen.
-fn refined_pixels_to_world(
-    refined: &[(f32, f32)],
-    map_size: f32,
-    img_width: u32,
-    img_height: u32,
-) -> Vec<Vec2> {
+fn refined_pixels_to_world(refined: &[(f32, f32)], context: SkeletonBuildContext) -> Vec<Vec2> {
     refined
         .iter()
-        .map(|&(px, py)| pixel_to_world_f32(px, py, map_size, img_width, img_height))
+        .map(|&(px, py)| context.pixel_to_world(px, py))
         .collect()
 }
 
@@ -726,6 +705,13 @@ pub(crate) fn extract_network_from_mask(
 ) -> SkeletonNetwork {
     let w = width as usize;
     let h = height as usize;
+    let context = SkeletonBuildContext {
+        width: w,
+        height: h,
+        map_size,
+        img_width: width,
+        img_height: height,
+    };
 
     // Optional: Rauschfilter — Opening entfernt isolierte Pixel,
     // Closing schliesst kleine Luecken
@@ -752,16 +738,8 @@ pub(crate) fn extract_network_from_mask(
         .filter(|comp| comp.len() >= MIN_COMPONENT_PIXELS)
     {
         kept_components += 1;
-        let component_network = extract_component_network(
-            &component,
-            &original_mask,
-            w,
-            h,
-            map_size,
-            width,
-            height,
-            start_hint,
-        );
+        let component_network =
+            extract_component_network(&component, &original_mask, context, start_hint);
 
         let node_offset = network.nodes.len();
         network.nodes.extend(component_network.nodes);
@@ -986,16 +964,15 @@ mod tests {
             set_pixel(&mut mask, x, y, width);
         }
 
-        let network = extract_component_network(
-            &component,
-            &mask,
+        let context = SkeletonBuildContext {
             width,
             height,
-            1000.0,
-            width as u32,
-            height as u32,
-            None,
-        );
+            map_size: 1000.0,
+            img_width: width as u32,
+            img_height: height as u32,
+        };
+
+        let network = extract_component_network(&component, &mask, context, None);
 
         assert_eq!(network.junction_count(), 1);
         assert_eq!(network.open_end_count(), 4);
