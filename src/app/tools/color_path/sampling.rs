@@ -136,17 +136,102 @@ pub(crate) fn compute_average_color(colors: &[[u8; 3]]) -> [u8; 3] {
 }
 
 // ---------------------------------------------------------------------------
+// Farbpalette
+// ---------------------------------------------------------------------------
+
+/// Quantisiert Rohfarben auf ein Raster und gibt die eindeutigen Farb-Buckets zurueck.
+///
+/// `bucket_size` bestimmt die Rasterung (z.B. 8 → Werte 0, 8, 16, …, 248).
+/// Typisch 5–30 Eintraege bei realen Kartenausschnitten.
+pub(crate) fn build_color_palette(raw_colors: &[[u8; 3]], bucket_size: u8) -> Vec<[u8; 3]> {
+    use std::collections::HashSet;
+    let mut seen = HashSet::new();
+    for &c in raw_colors {
+        let q = [
+            (c[0] / bucket_size) * bucket_size,
+            (c[1] / bucket_size) * bucket_size,
+            (c[2] / bucket_size) * bucket_size,
+        ];
+        seen.insert(q);
+    }
+    seen.into_iter().collect()
+}
+
+// ---------------------------------------------------------------------------
 // Bool-Maske
 // ---------------------------------------------------------------------------
 
-/// Erstellt eine Bool-Maske aller Pixel deren Farbe innerhalb der Toleranz liegt.
+/// Erstellt eine Binaermaske per Flood-Fill ab einem Startpunkt.
+///
+/// Expandiert ab `start_pixel` zu allen 4-verbundenen Nachbarn,
+/// deren Farbe innerhalb der Toleranz eines Palette-Eintrags liegt.
+/// Ergibt immer genau einen zusammenhaengenden Bereich.
+pub(crate) fn flood_fill_color_mask(
+    image: &DynamicImage,
+    palette: &[[u8; 3]],
+    tolerance: f32,
+    start_pixel: (u32, u32),
+) -> (Vec<bool>, u32, u32) {
+    let (width, height) = image.dimensions();
+    let rgb = image.to_rgb8();
+    let mut mask = vec![false; (width * height) as usize];
+
+    let tolerance_sq = (tolerance as i32) * (tolerance as i32);
+
+    // Prueft ob ein Pixel in der Palette liegt
+    let pixel_matches = |x: u32, y: u32| -> bool {
+        let px = rgb.get_pixel(x, y).0;
+        palette.iter().any(|c| {
+            let dr = px[0] as i32 - c[0] as i32;
+            let dg = px[1] as i32 - c[1] as i32;
+            let db = px[2] as i32 - c[2] as i32;
+            dr * dr + dg * dg + db * db <= tolerance_sq
+        })
+    };
+
+    // Startpunkt pruefen
+    let (sx, sy) = start_pixel;
+    if sx >= width || sy >= height || !pixel_matches(sx, sy) {
+        return (mask, width, height);
+    }
+
+    // BFS Flood-Fill
+    use std::collections::VecDeque;
+    let mut queue = VecDeque::new();
+    let start_idx = (sy * width + sx) as usize;
+    mask[start_idx] = true;
+    queue.push_back((sx, sy));
+
+    while let Some((x, y)) = queue.pop_front() {
+        for (nx, ny) in [
+            (x.wrapping_sub(1), y),
+            (x + 1, y),
+            (x, y.wrapping_sub(1)),
+            (x, y + 1),
+        ] {
+            if nx < width && ny < height {
+                let idx = (ny * width + nx) as usize;
+                if !mask[idx] && pixel_matches(nx, ny) {
+                    mask[idx] = true;
+                    queue.push_back((nx, ny));
+                }
+            }
+        }
+    }
+
+    (mask, width, height)
+}
+
+/// Erstellt eine Bool-Maske aller Pixel deren Farbe mit einem Eintrag der Palette uebereinstimmt.
 ///
 /// Maskengrösse = Bildgrösse (kein Downsampling). Das Ergebnis-Tuple enthaelt
 /// `(maske, breite, hoehe)`. Optionale `bounds` (Weltkoords min/max) begrenzen
 /// den berechneten Bereich auf eine Rect-Region.
+/// Die Toleranzprüfung erfolgt als quadratische Distanz (kein sqrt nötig).
+#[allow(dead_code)]
 pub(crate) fn build_color_mask(
     image: &DynamicImage,
-    avg_color: [u8; 3],
+    palette: &[[u8; 3]],
     tolerance: f32,
     bounds: Option<(Vec2, Vec2)>,
     map_size: f32,
@@ -166,15 +251,20 @@ pub(crate) fn build_color_mask(
     // Maske der vollen Bildgrösse (für einfache Index-Berechnung)
     let mut mask = vec![false; (width * height) as usize];
 
-    let [avg_r, avg_g, avg_b] = avg_color;
+    let tolerance_sq = (tolerance as i32) * (tolerance as i32);
     for py in py_min..=py_max {
         for px in px_min..=px_max {
             let pixel = image.get_pixel(px, py);
-            let dr = pixel[0] as f32 - avg_r as f32;
-            let dg = pixel[1] as f32 - avg_g as f32;
-            let db = pixel[2] as f32 - avg_b as f32;
-            let dist = (dr * dr + dg * dg + db * db).sqrt();
-            mask[(py * width + px) as usize] = dist <= tolerance;
+            let pr = pixel[0] as i32;
+            let pg = pixel[1] as i32;
+            let pb = pixel[2] as i32;
+            let hit = palette.iter().any(|c| {
+                let dr = pr - c[0] as i32;
+                let dg = pg - c[1] as i32;
+                let db = pb - c[2] as i32;
+                dr * dr + dg * dg + db * db <= tolerance_sq
+            });
+            mask[(py * width + px) as usize] = hit;
         }
     }
 
@@ -317,7 +407,7 @@ mod tests {
         let tolerance = 30.0;
         let map_size = 4.0; // 1 Pixel = 1 Welteinheit
 
-        let (mask, width, height) = build_color_mask(&img, avg, tolerance, None, map_size);
+        let (mask, width, height) = build_color_mask(&img, &[avg], tolerance, None, map_size);
         assert_eq!(width, 4);
         assert_eq!(height, 4);
 
@@ -349,7 +439,7 @@ mod tests {
         // Bild 4x4, map_size=4: Weltkoords von -2.0 bis +2.0
         // Rechte Haelfte: x von 0.0 bis +2.0
         let bounds = Some((Vec2::new(0.0, -2.0), Vec2::new(2.0, 2.0)));
-        let (mask, width, height) = build_color_mask(&img, avg, tolerance, bounds, map_size);
+        let (mask, width, height) = build_color_mask(&img, &[avg], tolerance, bounds, map_size);
         assert_eq!(width, 4);
         assert_eq!(height, 4);
 

@@ -24,27 +24,30 @@ impl ColorPathTool {
     /// 3. Pfad zum Lasso-Startpunkt auswaehlen, vereinfachen und neu abtasten
     /// 4. Phase wechseln
     pub(super) fn compute_pipeline(&mut self) {
-        let (Some(image), Some(avg_color)) = (&self.background_image.clone(), self.avg_color)
-        else {
-            log::warn!("ColorPathTool: Pipeline abgebrochen — kein Bild oder keine Farbsamples");
+        let Some(image) = &self.background_image.clone() else {
+            log::warn!("ColorPathTool: Pipeline abgebrochen — kein Hintergrundbild");
             return;
         };
+        if self.color_palette.is_empty() {
+            log::warn!("ColorPathTool: Pipeline abgebrochen — keine Farbsamples");
+            return;
+        }
 
-        // Lasso-Startpunkt in Pixelkoordinaten umrechnen (fuer Hint)
+        // Lasso-Startpunkt in Pixelkoordinaten umrechnen (fuer Hint und Flood-Fill)
         let img_w = image.width();
         let img_h = image.height();
-        let start_hint = self.lasso_start_world.map(|w| {
-            let (px, py) = world_to_pixel(w, self.map_size, img_w, img_h);
-            (px as usize, py as usize)
-        });
+        let start_px = self
+            .lasso_start_world
+            .map(|w| world_to_pixel(w, self.map_size, img_w, img_h))
+            .unwrap_or((img_w / 2, img_h / 2));
+        let start_hint = Some((start_px.0 as usize, start_px.1 as usize));
 
-        // Maske berechnen
-        let (mut mask, width, height) = super::sampling::build_color_mask(
+        // Maske per Flood-Fill ab Lasso-Startpunkt berechnen
+        let (mut mask, width, height) = super::sampling::flood_fill_color_mask(
             image,
-            avg_color,
+            &self.color_palette,
             self.config.color_tolerance,
-            self.config.detection_bounds,
-            self.map_size,
+            start_px,
         );
         self.mask_width = width;
         self.mask_height = height;
@@ -79,31 +82,8 @@ impl ColorPathTool {
             return;
         }
 
-        // Pfad auswaehlen: Den naechsten zum Lasso-Startpunkt, nicht den laengsten.
-        // Fallback: Index 0 (laengster Pfad) wenn kein Hint vorhanden.
-        let best_index = if let Some(start_w) = self.lasso_start_world {
-            self.skeleton_paths
-                .iter()
-                .enumerate()
-                .min_by(|(_, a), (_, b)| {
-                    let dist_a = a
-                        .iter()
-                        .map(|p| p.distance_squared(start_w))
-                        .fold(f32::MAX, f32::min);
-                    let dist_b = b
-                        .iter()
-                        .map(|p| p.distance_squared(start_w))
-                        .fold(f32::MAX, f32::min);
-                    dist_a
-                        .partial_cmp(&dist_b)
-                        .unwrap_or(std::cmp::Ordering::Equal)
-                })
-                .map(|(i, _)| i)
-                .unwrap_or(0)
-        } else {
-            0
-        };
-        self.selected_path_index = Some(best_index);
+        // Nach Flood-Fill gibt es genau einen zusammenhaengenden Bereich
+        self.selected_path_index = Some(0);
         self.apply_selected_path();
         self.phase = ColorPathPhase::Preview;
     }
@@ -232,12 +212,14 @@ impl crate::app::tools::RouteTool for ColorPathTool {
         }
         self.sampled_colors.extend(new_colors);
         self.lasso_regions.push(polygon);
-        // Mittelwert aus allen gesammelten Farben aktualisieren
+        // Mittelwert (Anzeigewert) und quantisierte Palette aktualisieren
         self.avg_color = Some(super::sampling::compute_average_color(&self.sampled_colors));
+        self.color_palette = super::sampling::build_color_palette(&self.sampled_colors, 8);
         log::info!(
-            "Color sampling: {} new pixels, {} total, avg color: {:?}",
+            "Color sampling: {} new pixels, {} total, palette size: {}, avg color: {:?}",
             new_count,
             self.sampled_colors.len(),
+            self.color_palette.len(),
             self.avg_color
         );
         ToolAction::Continue
@@ -319,6 +301,7 @@ impl crate::app::tools::RouteTool for ColorPathTool {
         self.lasso_regions.clear();
         self.sampled_colors.clear();
         self.avg_color = None;
+        self.color_palette.clear();
         self.mask.clear();
         self.mask_width = 0;
         self.mask_height = 0;
