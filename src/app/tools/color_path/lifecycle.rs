@@ -215,15 +215,12 @@ impl ColorPathTool {
             }
         }
 
-        // Flood-Fill-Kontur als geschlossenes Polygon hinzufuegen
-        if !self.flood_fill_contour.is_empty() {
+        // Alle Flood-Fill-Randsegmente der erkannten Maske anzeigen.
+        for &(start, end) in &self.flood_fill_boundary_segments {
             let base = nodes.len();
-            nodes.extend_from_slice(&self.flood_fill_contour);
-            let contour_len = self.flood_fill_contour.len();
-            for i in 0..contour_len {
-                let next = (i + 1) % contour_len;
-                connections.push((base + i, base + next));
-            }
+            nodes.push(start);
+            nodes.push(end);
+            connections.push((base, base + 1));
         }
 
         let cn = connections.len();
@@ -359,11 +356,11 @@ impl crate::app::tools::RouteTool for ColorPathTool {
                 self.config.color_tolerance,
                 start_px,
             );
-            self.flood_fill_contour =
-                super::sampling::extract_contour_from_mask(&mask, w, h, self.map_size);
+            self.flood_fill_boundary_segments =
+                super::sampling::extract_boundary_segments_from_mask(&mask, w, h, self.map_size);
             log::info!(
-                "Flood-Fill Vorschau: {} Kontur-Punkte",
-                self.flood_fill_contour.len()
+                "Flood-Fill Vorschau: {} Randsegmente",
+                self.flood_fill_boundary_segments.len()
             );
         }
         ToolAction::Continue
@@ -476,7 +473,7 @@ impl crate::app::tools::RouteTool for ColorPathTool {
         self.skeleton_network = None;
         self.prepared_segments.clear();
         self.lasso_start_world = None;
-        self.flood_fill_contour.clear();
+        self.flood_fill_boundary_segments.clear();
     }
 
     fn is_ready(&self) -> bool {

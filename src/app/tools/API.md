@@ -525,6 +525,7 @@ an `handlers::route_tool::lasso_completed()` weitergeleitet, das `on_lasso_compl
 **Preview/Export:**
 
 - Preview zeigt Kennzahlen fuer Kreuzungen, offene Enden, Segmente und Preview-Nodes
+- Sampling-Preview zeigt nach jeder Lasso-Auswahl alle Randsegmente der Flood-Fill-Maske, nicht nur eine Einzelkontur
 - Export legt Junction-/End-Knoten genau einmal an und fuegt pro Segment nur die Zwischenpunkte neu ein
 - Bestandsanschluss nutzt `ToolLifecycleState::snap_at()` und damit den konfigurierten Snap-Radius
 
@@ -568,6 +569,7 @@ pub struct ColorPathTool {
 - `sample_colors_in_polygon(polygon, image, map_size) → Vec<[u8; 3]>` — RGB-Pixel im Lasso-Polygon sammeln
 - `compute_average_color(colors) → [u8; 3]` — RGB-Mittelwert aller Samples
 - `build_color_mask(image, avg_color, tolerance, bounds, map_size) → (Vec<bool>, u32, u32)` — Bool-Maske erstellen
+- `extract_boundary_segments_from_mask(mask, w, h, map_size) → Vec<(Vec2, Vec2)>` — Alle Grenzen der Flood-Fill-Maske als Preview-Segmente (inkl. Innenkanten/Loecher)
 - `erode(mask, w, h) → Vec<bool>` — Erosion mit Majority-Bedingung (≥ 3 von 4 Nachbarn, zum Schutz duenner Verbindungen)
 - `dilate(mask, w, h) → Vec<bool>` — Dilatation (4-Connectivity)
 - `morphological_open(mask, w, h) → Vec<bool>` — Erosion + Dilatation (Rauschen entfernen)

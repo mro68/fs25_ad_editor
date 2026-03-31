@@ -419,6 +419,7 @@
   - [x] `handlers::route_tool::lasso_completed()` — neuer Handler
   - [x] Pipeline: Farb-Sampling (Alt+Lasso) → Flood-Fill-Maske → Zhang-Suen-Skelettierung → Graph-Extraktion mit Junction-Clustering → Segment-Vereinfachung/Resampling → Netz-Preview → Execute
   - [x] Netzmodus-Erweiterung (2026-03-31) — Preview zeigt Kreuzungen/offene Enden/Segmente; Export legt Junction-/End-Knoten einmalig an und nutzt Snap-basierten Bestandsanschluss (`Never` / `OpenEnds` / `OpenEndsAndJunctions`)
+  - [x] Sampling-Preview zeigt nach jeder Lasso-Auswahl alle Randsegmente des erkannten Flood-Fill-Bereichs (inkl. Innenkanten/Loecher), nicht nur eine Einzelkontur
   - [x] I18n-Key `MenuColorPath` (DE: „🎨 Farb-Pfad erkennen", EN: „🎨 Detect Color Path")
   - [x] Menüeintrag in Extras
 

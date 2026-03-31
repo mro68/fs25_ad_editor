@@ -7,18 +7,6 @@ use crate::core::point_in_polygon;
 use glam::Vec2;
 use image::{DynamicImage, GenericImageView};
 
-/// Clockwise-Neighbor-Offsets fuer Moore-Boundary-Tracing (W, NW, N, NE, E, SE, S, SW).
-const CLOCKWISE: [(i32, i32); 8] = [
-    (-1, 0),
-    (-1, -1),
-    (0, -1),
-    (1, -1),
-    (1, 0),
-    (1, 1),
-    (0, 1),
-    (-1, 1),
-];
-
 // ---------------------------------------------------------------------------
 // Koordinaten-Umrechnung
 // ---------------------------------------------------------------------------
@@ -348,124 +336,73 @@ pub(crate) fn morphological_close(mask: &[bool], width: usize, height: usize) ->
 // Kontur-Extraktion
 // ---------------------------------------------------------------------------
 
-/// Liest ein Pixel aus einer Bool-Maske; ausserhalb des Bildes = `false`.
-fn get_mask_pixel(mask: &[bool], width: usize, height: usize, x: i32, y: i32) -> bool {
-    if x < 0 || y < 0 || x >= width as i32 || y >= height as i32 {
-        return false;
-    }
-    mask[y as usize * width + x as usize]
-}
-
-/// Startindex fuer die Moore-Nachbarschaft relativ zum Backtrack-Pixel.
-fn clockwise_start_index(current: (i32, i32), backtrack: (i32, i32)) -> usize {
-    let dx = backtrack.0 - current.0;
-    let dy = backtrack.1 - current.1;
-    CLOCKWISE
-        .iter()
-        .position(|&(odx, ody)| odx == dx && ody == dy)
-        .unwrap_or(0)
-}
-
-/// Traced die aeussere Kontur einer zusammenhaengenden Bool-Maske per Moore-Neighbor.
-fn trace_moore_contour_mask(
+/// Extrahiert alle Randsegmente einer Bool-Maske im Pixelraum.
+///
+/// Fuer jedes `true`-Pixel werden die vier Zellkanten gegen die orthogonalen
+/// Nachbarn geprueft. Liegt ausserhalb der Maske oder ein `false`-Pixel an,
+/// wird genau dieses Randsegment ausgegeben. So bleiben auch innere Loecher
+/// und beide Seiten eines verzweigten Strassennetzes erhalten.
+fn extract_boundary_segments_from_mask_pixels(
     mask: &[bool],
     width: usize,
     height: usize,
-    start: (i32, i32),
-) -> Vec<(f32, f32)> {
-    let initial_b = (start.0 - 1, start.1);
-    let mut contour = vec![(start.0 as f32, start.1 as f32)];
-    let mut current = start;
-    let mut b = initial_b;
-    let mut b_at_first_return: Option<(i32, i32)> = None;
-    let max_steps = width * height * 4;
+) -> Vec<((f32, f32), (f32, f32))> {
+    let mut segments = Vec::new();
 
-    for _ in 0..max_steps {
-        let start_idx = clockwise_start_index(current, b);
-        let mut found_next: Option<(i32, i32)> = None;
-        let mut new_b = b;
-
-        for i in 0..8usize {
-            let idx = (start_idx + i) % 8;
-            let (dx, dy) = CLOCKWISE[idx];
-            let nx = current.0 + dx;
-            let ny = current.1 + dy;
-            if get_mask_pixel(mask, width, height, nx, ny) {
-                found_next = Some((nx, ny));
-                break;
+    for y in 0..height {
+        for x in 0..width {
+            if !mask[y * width + x] {
+                continue;
             }
-            new_b = (nx, ny);
-        }
 
-        let next = match found_next {
-            Some(p) => p,
-            None => break,
-        };
+            let x = x as f32;
+            let y = y as f32;
 
-        b = new_b;
-        current = next;
-
-        if current == start {
-            if b == initial_b {
-                break;
+            let left_empty = x <= 0.0 || !mask[y as usize * width + (x as usize).saturating_sub(1)];
+            if left_empty {
+                segments.push(((x - 0.5, y - 0.5), (x - 0.5, y + 0.5)));
             }
-            match b_at_first_return {
-                None => b_at_first_return = Some(b),
-                Some(stored) if b == stored => break,
-                _ => {}
+
+            let right_empty = x as usize + 1 >= width || !mask[y as usize * width + x as usize + 1];
+            if right_empty {
+                segments.push(((x + 0.5, y - 0.5), (x + 0.5, y + 0.5)));
             }
-        } else {
-            contour.push((current.0 as f32, current.1 as f32));
+
+            let top_empty = y <= 0.0 || !mask[(y as usize).saturating_sub(1) * width + x as usize];
+            if top_empty {
+                segments.push(((x - 0.5, y - 0.5), (x + 0.5, y - 0.5)));
+            }
+
+            let bottom_empty =
+                y as usize + 1 >= height || !mask[(y as usize + 1) * width + x as usize];
+            if bottom_empty {
+                segments.push(((x - 0.5, y + 0.5), (x + 0.5, y + 0.5)));
+            }
         }
     }
 
-    contour
+    segments
 }
 
-/// Entfernt aufeinanderfolgende doppelte Vertices.
-fn dedup_consecutive(mut vertices: Vec<(f32, f32)>) -> Vec<(f32, f32)> {
-    vertices.dedup();
-    vertices
-}
-
-/// Extrahiert die aeussere Kontur einer Bool-Maske als Weltkoordinaten-Polygon.
-///
-/// Die Kontur wird per Moore-Neighbor-Boundary-Tracing verfolgt, sodass die
-/// komplette Flood-Fill-Grenze umlaufen wird statt nur einer Scanline-Huelle.
-pub(crate) fn extract_contour_from_mask(
+/// Extrahiert alle Randsegmente einer Bool-Maske als Weltkoordinaten.
+pub(crate) fn extract_boundary_segments_from_mask(
     mask: &[bool],
     width: u32,
     height: u32,
     map_size: f32,
-) -> Vec<Vec2> {
+) -> Vec<(Vec2, Vec2)> {
     if mask.is_empty() || width == 0 || height == 0 {
         return Vec::new();
     }
 
-    let mut start: Option<(i32, i32)> = None;
-    'outer: for y in 0..height as usize {
-        for x in 0..width as usize {
-            if mask[y * width as usize + x] {
-                start = Some((x as i32, y as i32));
-                break 'outer;
-            }
-        }
-    }
-
-    let Some(start) = start else {
-        return Vec::new();
-    };
-
-    let contour = dedup_consecutive(trace_moore_contour_mask(
-        mask,
-        width as usize,
-        height as usize,
-        start,
-    ));
-
-    contour
+    extract_boundary_segments_from_mask_pixels(mask, width as usize, height as usize)
         .into_iter()
-        .map(|(px, py)| pixel_to_world_f32(px, py, map_size, width, height))
+        .map(|((sx, sy), (ex, ey))| {
+            (
+                pixel_to_world_f32(sx, sy, map_size, width, height),
+                pixel_to_world_f32(ex, ey, map_size, width, height),
+            )
+        })
         .collect()
 }
 
@@ -630,31 +567,29 @@ mod tests {
     }
 
     #[test]
-    fn contour_tracing_umlaeuft_rechteck_auf_allen_seiten() {
-        let width = 8usize;
-        let height = 8usize;
-        let mut mask = vec![false; width * height];
+    fn boundary_segments_enthalten_aussen_und_innenkanten() {
+        let width = 3usize;
+        let height = 3usize;
+        let mask = vec![true, true, true, true, false, true, true, true, true];
 
-        for y in 2..=5 {
-            for x in 1..=4 {
-                mask[y * width + x] = true;
-            }
-        }
-
-        let contour = trace_moore_contour_mask(&mask, width, height, (1, 2));
-        assert!(
-            contour.len() >= 10,
-            "Erwartet mehrere Randpunkte fuer das Rechteck"
+        let segments = extract_boundary_segments_from_mask_pixels(&mask, width, height);
+        assert_eq!(
+            segments.len(),
+            16,
+            "Aussenrand 12 + Innenloch 4 Segmente erwartet"
         );
 
-        let min_x = contour.iter().map(|(x, _)| *x as i32).min().unwrap();
-        let max_x = contour.iter().map(|(x, _)| *x as i32).max().unwrap();
-        let min_y = contour.iter().map(|(_, y)| *y as i32).min().unwrap();
-        let max_y = contour.iter().map(|(_, y)| *y as i32).max().unwrap();
-
-        assert_eq!(min_x, 1);
-        assert_eq!(max_x, 4);
-        assert_eq!(min_y, 2);
-        assert_eq!(max_y, 5);
+        assert!(
+            segments.contains(&((0.5, 0.5), (1.5, 0.5))),
+            "Oberkante des Innenlochs muss enthalten sein"
+        );
+        assert!(
+            segments.contains(&((0.5, 1.5), (1.5, 1.5))),
+            "Unterkante des Innenlochs muss enthalten sein"
+        );
+        assert!(
+            segments.contains(&((-0.5, -0.5), (0.5, -0.5))),
+            "Aussenkante oben links muss enthalten sein"
+        );
     }
 }
