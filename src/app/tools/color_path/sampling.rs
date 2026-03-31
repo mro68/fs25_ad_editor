@@ -642,7 +642,10 @@ mod tests {
         }
 
         let contour = trace_moore_contour_mask(&mask, width, height, (1, 2));
-        assert!(contour.len() >= 10, "Erwartet mehrere Randpunkte fuer das Rechteck");
+        assert!(
+            contour.len() >= 10,
+            "Erwartet mehrere Randpunkte fuer das Rechteck"
+        );
 
         let min_x = contour.iter().map(|(x, _)| *x as i32).min().unwrap();
         let max_x = contour.iter().map(|(x, _)| *x as i32).max().unwrap();
