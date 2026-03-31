@@ -137,6 +137,17 @@ impl ColorPathTool {
             }
         }
 
+        // Flood-Fill-Kontur als geschlossenes Polygon hinzufuegen
+        if !self.flood_fill_contour.is_empty() {
+            let base = nodes.len();
+            nodes.extend_from_slice(&self.flood_fill_contour);
+            let contour_len = self.flood_fill_contour.len();
+            for i in 0..contour_len {
+                let next = (i + 1) % contour_len;
+                connections.push((base + i, base + next));
+            }
+        }
+
         let cn = connections.len();
         ToolPreview {
             nodes,
@@ -223,6 +234,21 @@ impl crate::app::tools::RouteTool for ColorPathTool {
             self.color_palette.len(),
             self.avg_color
         );
+        // Quick-Flood-Fill fuer Vorschau der Bereichs-Umrisse
+        if let Some(lasso_start) = self.lasso_start_world {
+            let img_w = image.width();
+            let img_h = image.height();
+            let start_px = world_to_pixel(lasso_start, self.map_size, img_w, img_h);
+            let (mask, w, h) = super::sampling::flood_fill_color_mask(
+                image,
+                &self.color_palette,
+                self.config.color_tolerance,
+                start_px,
+            );
+            self.flood_fill_contour =
+                super::sampling::extract_contour_from_mask(&mask, w, h, self.map_size);
+            log::info!("Flood-Fill Vorschau: {} Kontur-Punkte", self.flood_fill_contour.len());
+        }
         ToolAction::Continue
     }
 
@@ -311,6 +337,7 @@ impl crate::app::tools::RouteTool for ColorPathTool {
         self.centerline.clear();
         self.resampled_nodes.clear();
         self.lasso_start_world = None;
+        self.flood_fill_contour.clear();
     }
 
     fn is_ready(&self) -> bool {

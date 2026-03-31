@@ -84,6 +84,9 @@ pub struct ColorPathTool {
     /// Weltposition des ersten Lasso-Klickpunkts (erster Polygon-Punkt des ersten Lassos).
     /// Wird verwendet um den relevanten Pfad-Bereich auszuwaehlen.
     pub(crate) lasso_start_world: Option<Vec2>,
+    /// Umriss des erkannten Flood-Fill-Bereichs (Weltkoordinaten, geschlossenes Polygon).
+    /// Wird nach jeder Lasso-Auswahl aktualisiert und als Vorschau angezeigt.
+    pub(crate) flood_fill_contour: Vec<Vec2>,
 
     // ── Shared ──────────────────────────────────────────────────────────────
     /// Hintergrundbild fuer die Farberkennung
@@ -122,6 +125,7 @@ impl ColorPathTool {
             centerline: Vec::new(),
             resampled_nodes: Vec::new(),
             lasso_start_world: None,
+            flood_fill_contour: Vec::new(),
             background_image: None,
             map_size: 2048.0,
             direction: ConnectionDirection::Dual,

@@ -333,6 +333,60 @@ pub(crate) fn morphological_close(mask: &[bool], width: usize, height: usize) ->
 }
 
 // ---------------------------------------------------------------------------
+// Kontur-Extraktion
+// ---------------------------------------------------------------------------
+
+/// Extrahiert die aeussere Kontur einer Bool-Maske als Weltkoordinaten-Polygon.
+///
+/// Algorithmus: Pro Scan-Zeile werden das linkeste und rechteste `true`-Pixel
+/// bestimmt. Linke Kante (oben→unten) und rechte Kante (unten→oben) werden
+/// zu einem geschlossenen Umriss-Polygon zusammengefuegt.
+///
+/// Geeignet fuer konvexe und leicht konkave Formen (Strassenabschnitte,
+/// Feldgrenzen). Zeilen ohne `true`-Pixel werden uebersprungen.
+pub(crate) fn extract_contour_from_mask(
+    mask: &[bool],
+    width: u32,
+    height: u32,
+    map_size: f32,
+) -> Vec<Vec2> {
+    if mask.is_empty() || width == 0 || height == 0 {
+        return Vec::new();
+    }
+
+    let mut left_edge: Vec<Vec2> = Vec::new();
+    let mut right_edge: Vec<Vec2> = Vec::new();
+
+    for y in 0..height {
+        let mut min_x: Option<u32> = None;
+        let mut max_x: Option<u32> = None;
+        for x in 0..width {
+            let idx = (y * width + x) as usize;
+            if mask[idx] {
+                if min_x.is_none() {
+                    min_x = Some(x);
+                }
+                max_x = Some(x);
+            }
+        }
+        if let (Some(lx), Some(rx)) = (min_x, max_x) {
+            left_edge.push(pixel_to_world(lx, y, map_size, width, height));
+            right_edge.push(pixel_to_world(rx, y, map_size, width, height));
+        }
+    }
+
+    if left_edge.is_empty() {
+        return Vec::new();
+    }
+
+    // Linke Kante oben→unten, rechte Kante unten→oben → geschlossenes Polygon
+    let mut contour = left_edge;
+    right_edge.reverse();
+    contour.extend(right_edge);
+    contour
+}
+
+// ---------------------------------------------------------------------------
 // Unit-Tests
 // ---------------------------------------------------------------------------
 
