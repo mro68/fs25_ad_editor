@@ -65,7 +65,10 @@ pub(super) fn render_route_tool_panel(
         ui.add_space(8.0);
         ui.horizontal(|ui| {
             if ui
-                .add_enabled(panel_data.has_pending_input, egui::Button::new("✓ Ausfuehren"))
+                .add_enabled(
+                    panel_data.has_pending_input,
+                    egui::Button::new("✓ Ausfuehren"),
+                )
                 .clicked()
             {
                 events.push(AppIntent::RouteToolExecuteRequested);

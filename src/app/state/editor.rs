@@ -118,7 +118,11 @@ impl EditorToolState {
     }
 
     /// Berechnet die aktuelle Preview-Geometrie des aktiven Route-Tools.
-    pub fn route_tool_preview(&self, cursor_world: Vec2, road_map: &RoadMap) -> Option<ToolPreview> {
+    pub fn route_tool_preview(
+        &self,
+        cursor_world: Vec2,
+        road_map: &RoadMap,
+    ) -> Option<ToolPreview> {
         if self.active_tool != EditorTool::Route {
             return None;
         }
@@ -162,14 +166,21 @@ mod tests {
             .expect("Im Route-Modus muss die Preview weitergereicht werden");
         assert_eq!(
             preview.nodes,
-            vec![Vec2::new(0.0, 0.0), Vec2::new(6.0, 0.0), Vec2::new(12.0, 0.0)]
+            vec![
+                Vec2::new(0.0, 0.0),
+                Vec2::new(6.0, 0.0),
+                Vec2::new(12.0, 0.0)
+            ]
         );
         assert_eq!(preview.connections, vec![(0, 1), (1, 2)]);
 
         state.active_tool = EditorTool::Select;
 
         assert!(state.route_tool_panel_adapter().is_none());
-        assert_eq!(state.route_tool_viewport_data(), RouteToolViewportData::default());
+        assert_eq!(
+            state.route_tool_viewport_data(),
+            RouteToolViewportData::default()
+        );
         assert!(state.route_tool_preview(cursor_world, &road_map).is_none());
     }
 }
