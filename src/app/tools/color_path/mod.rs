@@ -2,6 +2,8 @@
 
 mod config_ui;
 mod lifecycle;
+mod pipeline;
+mod preview;
 pub(crate) mod sampling;
 pub(crate) mod skeleton;
 mod state;
@@ -21,17 +23,13 @@ pub fn compute_color_path_network_stats(
     noise_filter: bool,
     map_size: f32,
 ) -> (usize, usize, usize, usize) {
-    let (mut mask, width, height) =
+    let (mask, width, height) =
         sampling::flood_fill_color_mask(image, palette, tolerance, start_pixel);
+    let prepared_mask =
+        sampling::prepare_mask_for_skeleton(&mask, width as usize, height as usize, noise_filter);
     let start_hint = Some((start_pixel.0 as usize, start_pixel.1 as usize));
-    let network = skeleton::extract_network_from_mask(
-        &mut mask,
-        width,
-        height,
-        noise_filter,
-        map_size,
-        start_hint,
-    );
+    let network =
+        skeleton::extract_network_from_mask(&prepared_mask, width, height, map_size, start_hint);
 
     (
         network.nodes.len(),

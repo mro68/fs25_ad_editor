@@ -582,6 +582,12 @@ stateDiagram-v2
   Control --> [*]: Escape/reset()
 ```
 
+#### Analyse-Tool-Stages
+
+- `ColorPathTool` trennt intern sieben Stages: A Sampling-Input, B Matching-Spezifikation, C Pixel-Maske + Sampling-Vorschau, D Maskenaufbereitung, E Skeleton-/Netzextraktion, F Preview-Aufbereitung und G Execute-Konvertierung.
+- `lifecycle.rs` bleibt dabei auf Orchestrierung, Phase-Wechsel und den `RouteTool`-Adapter beschraenkt; die Stage-Logik lebt in `pipeline.rs` und `preview.rs`.
+- Preview und Execute teilen `PreparedSegment` als gemeinsame Wahrheit; es gibt bewusst keine Dirty-Bits, keine Cache-Ketten und keine gestaffelte Invalidation.
+
 ### Command-Intent-Flow
 
 ```mermaid

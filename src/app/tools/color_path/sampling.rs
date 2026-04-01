@@ -354,6 +354,24 @@ pub(crate) fn morphological_close(mask: &[bool], width: usize, height: usize) ->
     erode(&dilated, width, height)
 }
 
+/// Bereitet eine Stage-C-Maske fuer die Skeleton-Extraktion vor.
+///
+/// Wenn `noise_filter` aktiv ist, werden Opening und Closing auf die Eingabe
+/// angewendet; andernfalls bleibt die Maske unveraendert.
+pub(super) fn prepare_mask_for_skeleton(
+    mask: &[bool],
+    width: usize,
+    height: usize,
+    noise_filter: bool,
+) -> Vec<bool> {
+    if !noise_filter {
+        return mask.to_vec();
+    }
+
+    let opened = morphological_open(mask, width, height);
+    morphological_close(&opened, width, height)
+}
+
 // ---------------------------------------------------------------------------
 // Kontur-Extraktion
 // ---------------------------------------------------------------------------

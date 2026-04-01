@@ -1,12 +1,12 @@
 //! Skelett-Extraktion fuer das ColorPathTool.
 //!
-//! Pipeline: Bool-Maske → Zhang-Suen-Thinning → Pixel-Graph →
+//! Pipeline: vorbereitete Bool-Maske → Zhang-Suen-Thinning → Pixel-Graph →
 //! Junction-Clustering → Segment-Polylines in Weltkoordinaten.
 
 use glam::Vec2;
 use std::collections::{HashMap, HashSet, VecDeque};
 
-use super::sampling::{morphological_close, morphological_open, pixel_to_world_f32};
+use super::sampling::pixel_to_world_f32;
 use crate::core::zhang_suen_thinning;
 
 /// Mindest-Pixelanzahl einer Komponente — kuerzere Fragmente werden verworfen.
@@ -684,22 +684,19 @@ fn refined_pixels_to_world(refined: &[(f32, f32)], context: SkeletonBuildContext
 // Haupt-Pipeline
 // ---------------------------------------------------------------------------
 
-/// Fuehrt die komplette Netz-Pipeline aus:
+/// Fuehrt die Netz-Extraktion auf einer vorbereiteten Maske aus:
 /// Bool-Maske → Zhang-Suen → Komponenten → Graph-Knoten/Segmente → Weltkoords.
 ///
 /// Gibt ein zusammenhaengendes Teilnetz mit Kreuzungen, offenen Enden und Segmenten zurueck.
-/// Komponenten unterhalb der Mindestgroesse werden verworfen.
+/// Komponenten unterhalb der Mindestgroesse werden verworfen. Die Eingabemaske
+/// ist bereits Stage-D-bereinigt und wird nicht mutiert.
 ///
-/// - `noise_filter`: Wenn `true`, wird vor dem Thinning morphologisches
-///   Opening (Erosion+Dilation) und Closing (Dilation+Erosion) angewendet
-///   um Einzelpixel-Rauschen zu entfernen und kleine Luecken zu schliessen.
 /// - `start_hint`: Optionaler Pixel-Punkt in der Naehe des Lasso-Startpunkts.
 ///   Steuert bei geschlossenen Schleifen den kuenstlichen Start-/Ankerpunkt.
 pub(crate) fn extract_network_from_mask(
-    mask: &mut Vec<bool>,
+    mask: &[bool],
     width: u32,
     height: u32,
-    noise_filter: bool,
     map_size: f32,
     start_hint: Option<(usize, usize)>,
 ) -> SkeletonNetwork {
@@ -713,22 +710,17 @@ pub(crate) fn extract_network_from_mask(
         img_height: height,
     };
 
-    // Optional: Rauschfilter — Opening entfernt isolierte Pixel,
-    // Closing schliesst kleine Luecken
-    if noise_filter {
-        let opened = morphological_open(mask, w, h);
-        let closed = morphological_close(&opened, w, h);
-        *mask = closed;
-    }
+    // Original-Maske der vorbereiteten Stage-D-Ausgabe fuer Medial-Axis-Korrektur sichern.
+    let original_mask = mask.to_vec();
 
-    // Original-Maske vor Zhang-Suen sichern (fuer Medial-Axis-Korrektur)
-    let original_mask = mask.clone();
+    // Lokale Arbeitskopie fuer das Thinning; die Eingabe bleibt unveraendert.
+    let mut skeleton_mask = original_mask.clone();
 
     // Zhang-Suen: Maske auf 1-Pixel-breites Skelett reduzieren
-    zhang_suen_thinning(mask, w, h);
+    zhang_suen_thinning(&mut skeleton_mask, w, h);
 
     // Zusammenhaengende Skelett-Gruppen extrahieren
-    let components = find_connected_components(mask, w, h);
+    let components = find_connected_components(&skeleton_mask, w, h);
 
     let mut kept_components = 0usize;
     let mut network = SkeletonNetwork::default();
@@ -767,14 +759,13 @@ pub(crate) fn extract_network_from_mask(
 /// Legacy-Helfer fuer lineare Pfad-Konsumenten und bestehende Tests.
 #[cfg_attr(not(test), allow(dead_code))]
 pub(crate) fn extract_paths_from_mask(
-    mask: &mut Vec<bool>,
+    mask: &[bool],
     width: u32,
     height: u32,
-    noise_filter: bool,
     map_size: f32,
     start_hint: Option<(usize, usize)>,
 ) -> Vec<Vec<Vec2>> {
-    extract_network_from_mask(mask, width, height, noise_filter, map_size, start_hint)
+    extract_network_from_mask(mask, width, height, map_size, start_hint)
         .segments
         .into_iter()
         .map(|segment| segment.polyline)
@@ -909,7 +900,7 @@ mod tests {
             }
         }
 
-        let paths = extract_paths_from_mask(&mut mask, width, height, false, 1000.0, None);
+        let paths = extract_paths_from_mask(&mask, width, height, 1000.0, None);
 
         assert_eq!(paths.len(), 1, "Genau ein Pfad nach Thinning erwartet");
         assert!(
@@ -934,7 +925,7 @@ mod tests {
             set_pixel(&mut mask, x, 3, w);
         }
 
-        let network = extract_network_from_mask(&mut mask, width, height, false, 1000.0, None);
+        let network = extract_network_from_mask(&mask, width, height, 1000.0, None);
 
         assert_eq!(network.junction_count(), 1);
         assert_eq!(network.open_end_count(), 4);
