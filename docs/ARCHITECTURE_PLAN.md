@@ -84,6 +84,8 @@ graph BT
 
     CORE  -.->|verboten| UI
     CORE  -.->|verboten| RENDER
+    APP   -.->|verboten| UI
+    APP   -.->|verboten| RENDER
     RENDER -.->|verboten| CORE
     XML   -.->|verboten| APP
 ```
