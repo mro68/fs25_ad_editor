@@ -1,4 +1,7 @@
-use super::helpers::{nearest_in_set, order_points_by_principal_axis, sample_multiple_polylines};
+use super::{
+    helpers::{order_points_by_principal_axis, sample_multiple_polylines},
+    search::SampleSearchIndex,
+};
 use glam::Vec2;
 
 /// Berechnet die Mittellinie zwischen zwei Gruppen von Grenz-Segmenten.
@@ -17,11 +20,15 @@ pub fn compute_segment_centerline(
         return Vec::new();
     }
 
+    let samples2_index = SampleSearchIndex::from_points(samples2);
+
     // Alle Paare bilden (beide Seiten sind schon Korridor-Kanten)
     let midpoints: Vec<Vec2> = samples1
         .iter()
         .map(|&p1| {
-            let (p2, _) = nearest_in_set(p1, &samples2);
+            let (p2, _) = samples2_index
+                .nearest(p1)
+                .expect("samples2_index enthaelt mindestens einen Punkt");
             (p1 + p2) * 0.5
         })
         .collect();
