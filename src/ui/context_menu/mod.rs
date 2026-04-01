@@ -50,22 +50,10 @@ pub fn find_nearest_node_at(
     road_map: &RoadMap,
     snap_radius: f32,
 ) -> Option<u64> {
-    let mut nearest: Option<(u64, f32)> = None;
-
-    for (id, node) in &road_map.nodes {
-        let dist = node.position.distance(world_pos);
-        if dist <= snap_radius {
-            if let Some((_, best_dist)) = nearest {
-                if dist < best_dist {
-                    nearest = Some((*id, dist));
-                }
-            } else {
-                nearest = Some((*id, dist));
-            }
-        }
-    }
-
-    nearest.map(|(id, _)| id)
+    road_map
+        .nearest_node(world_pos)
+        .filter(|hit| hit.distance <= snap_radius)
+        .map(|hit| hit.node_id)
 }
 
 // =============================================================================
@@ -269,4 +257,40 @@ pub fn render_context_menu(
             }
         })
         .is_some()
+}
+
+#[cfg(test)]
+mod tests {
+    use super::find_nearest_node_at;
+    use crate::core::{MapNode, NodeFlag, RoadMap};
+    use glam::Vec2;
+
+    fn build_test_map() -> RoadMap {
+        let mut map = RoadMap::new(3);
+        map.add_node(MapNode::new(1, Vec2::ZERO, NodeFlag::Regular));
+        map.add_node(MapNode::new(2, Vec2::new(4.0, 0.0), NodeFlag::Regular));
+        map.rebuild_spatial_index();
+        map
+    }
+
+    #[test]
+    fn find_nearest_node_at_prefers_the_closest_node_inside_snap_radius() {
+        let map = build_test_map();
+
+        assert_eq!(
+            find_nearest_node_at(Vec2::new(3.2, 0.0), &map, 5.0),
+            Some(2)
+        );
+    }
+
+    #[test]
+    fn find_nearest_node_at_keeps_the_snap_radius_boundary() {
+        let map = build_test_map();
+
+        assert_eq!(
+            find_nearest_node_at(Vec2::new(1.0, 0.0), &map, 1.0),
+            Some(1)
+        );
+        assert_eq!(find_nearest_node_at(Vec2::new(1.01, 0.0), &map, 1.0), None);
+    }
 }
