@@ -1,4 +1,4 @@
-use crate::app::tools::ToolManager;
+use crate::app::ui_contract::RouteToolPanelAdapter;
 use crate::app::{AppIntent, ConnectionDirection, ConnectionPriority};
 use crate::ui::properties::selectors::{
     render_direction_icon_selector, render_priority_icon_selector,
@@ -8,17 +8,14 @@ use crate::ui::properties::selectors::{
 #[allow(clippy::too_many_arguments)]
 pub(super) fn render_route_tool_panel(
     ctx: &egui::Context,
-    tool_manager: &mut ToolManager,
+    mut route_tool: RouteToolPanelAdapter<'_>,
     default_direction: ConnectionDirection,
     default_priority: ConnectionPriority,
     distance_wheel_step_m: f32,
     panel_pos: Option<egui::Pos2>,
     events: &mut Vec<AppIntent>,
 ) {
-    let has_pending_input = tool_manager
-        .active_tool()
-        .map(|tool| tool.has_pending_input())
-        .unwrap_or(false);
+    let panel_data = route_tool.data();
 
     let mut window = egui::Window::new("📐 Route-Tool")
         .collapsible(false)
@@ -36,8 +33,8 @@ pub(super) fn render_route_tool_panel(
         ui.set_min_width(320.0);
         ui.set_max_width(420.0);
 
-        if let Some(tool) = tool_manager.active_tool() {
-            ui.label(tool.status_text());
+        if let Some(status_text) = panel_data.status_text.as_deref() {
+            ui.label(status_text);
         }
 
         ui.add_space(6.0);
@@ -60,17 +57,15 @@ pub(super) fn render_route_tool_panel(
 
         ui.add_space(6.0);
 
-        if let Some(tool) = tool_manager.active_tool_mut() {
-            let changed = tool.render_config(ui, distance_wheel_step_m);
-            if changed && tool.needs_recreate() {
-                events.push(AppIntent::RouteToolConfigChanged);
-            }
+        let config_result = route_tool.render_config(ui, distance_wheel_step_m);
+        if config_result.changed && config_result.needs_recreate {
+            events.push(AppIntent::RouteToolConfigChanged);
         }
 
         ui.add_space(8.0);
         ui.horizontal(|ui| {
             if ui
-                .add_enabled(has_pending_input, egui::Button::new("✓ Ausfuehren"))
+                .add_enabled(panel_data.has_pending_input, egui::Button::new("✓ Ausfuehren"))
                 .clicked()
             {
                 events.push(AppIntent::RouteToolExecuteRequested);

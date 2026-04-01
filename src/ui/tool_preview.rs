@@ -4,8 +4,8 @@ use eframe::egui;
 use glam::Vec2;
 
 use crate::app::state::Clipboard;
-use crate::app::tools::{ToolManager, ToolPreview};
-use crate::app::{Camera2D, RoadMap};
+use crate::app::tools::ToolPreview;
+use crate::app::Camera2D;
 use crate::shared::EditorOptions;
 use crate::{ConnectionDirection, ConnectionPriority};
 
@@ -18,23 +18,15 @@ pub struct ToolPreviewContext<'a> {
     pub rect: egui::Rect,
     pub camera: &'a Camera2D,
     pub viewport_size: Vec2,
-    pub tool_manager: &'a ToolManager,
-    pub road_map: &'a RoadMap,
-    pub cursor_world: Vec2,
+    pub preview: &'a ToolPreview,
     pub options: &'a EditorOptions,
 }
 
 /// Zeichnet das Tool-Preview-Overlay in den Viewport.
 ///
-/// Liest die Preview-Daten vom aktiven Route-Tool und rendert
-/// Verbindungen (Linien) und Nodes (Kreise/Rauten) halbtransparent.
+/// Rendert bereits app-seitig vorbereitete Preview-Daten als halbtransparentes Overlay.
 pub fn render_tool_preview(ctx: &ToolPreviewContext<'_>) {
-    let Some(tool) = ctx.tool_manager.active_tool() else {
-        return;
-    };
-
-    let preview = tool.preview(ctx.cursor_world, ctx.road_map);
-    if preview.nodes.is_empty() {
+    if ctx.preview.nodes.is_empty() {
         return;
     }
 
@@ -43,7 +35,7 @@ pub fn render_tool_preview(ctx: &ToolPreviewContext<'_>) {
         ctx.rect,
         ctx.camera,
         ctx.viewport_size,
-        &preview,
+        ctx.preview,
         ctx.options,
     );
 }

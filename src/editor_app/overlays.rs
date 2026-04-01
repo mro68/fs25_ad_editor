@@ -34,19 +34,19 @@ impl EditorApp {
 
             if let Some(cursor_world) = self.last_cursor_world {
                 if let Some(rm) = self.state.road_map.as_deref() {
-                    let painter = ui.painter_at(rect);
-                    let ctx = ui::tool_preview::ToolPreviewContext {
-                        painter: &painter,
-                        rect,
-                        camera: &self.state.view.camera,
-                        viewport_size: vp,
-                        tool_manager: &self.state.editor.tool_manager,
-                        road_map: rm,
-                        cursor_world,
-                        options: &self.state.options,
-                    };
+                    if let Some(preview) = self.state.editor.route_tool_preview(cursor_world, rm) {
+                        let painter = ui.painter_at(rect);
+                        let ctx = ui::tool_preview::ToolPreviewContext {
+                            painter: &painter,
+                            rect,
+                            camera: &self.state.view.camera,
+                            viewport_size: vp,
+                            preview: &preview,
+                            options: &self.state.options,
+                        };
 
-                    ui::render_tool_preview(&ctx);
+                        ui::render_tool_preview(&ctx);
+                    }
                 }
             }
         }
