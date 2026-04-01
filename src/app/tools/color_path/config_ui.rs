@@ -34,8 +34,8 @@ pub(super) fn render_config_view(
         }
         ColorPathPhase::Sampling => {
             // Farbinfos anzeigen
-            let sample_count = tool.sampled_colors.len();
-            if let Some(avg) = tool.avg_color {
+            let sample_count = tool.sampling.sampled_colors.len();
+            if let Some(avg) = tool.sampling.avg_color {
                 let color = egui::Color32::from_rgb(avg[0], avg[1], avg[2]);
                 ui.horizontal(|ui| {
                     ui.label(format!("Samples: {sample_count}  Ø-Farbe:"));
@@ -44,7 +44,7 @@ pub(super) fn render_config_view(
                         ui.allocate_exact_size(egui::Vec2::splat(16.0), egui::Sense::hover());
                     ui.painter().rect_filled(rect, 2.0, color);
                 });
-                let palette_size = tool.color_palette.len();
+                let palette_size = tool.matching.palette.len();
                 let palette_label = if tool.config.exact_color_match {
                     "Exakte Farben"
                 } else {
@@ -53,7 +53,7 @@ pub(super) fn render_config_view(
                 ui.label(format!("{palette_label}: {palette_size} Farben"));
                 // Palette-Vorschau: kleine Quadrate fuer jeden Eintrag (max. 20)
                 ui.horizontal_wrapped(|ui| {
-                    for &c in tool.color_palette.iter().take(20) {
+                    for &c in tool.matching.palette.iter().take(20) {
                         let pc = egui::Color32::from_rgb(c[0], c[1], c[2]);
                         let (rect, _) =
                             ui.allocate_exact_size(egui::Vec2::splat(10.0), egui::Sense::hover());
@@ -69,7 +69,7 @@ pub(super) fn render_config_view(
 
             if ui
                 .add_enabled(
-                    !tool.sampled_colors.is_empty(),
+                    !tool.sampling.sampled_colors.is_empty(),
                     egui::Button::new("Berechnen \u{2192}"),
                 )
                 .on_disabled_hover_text("Zuerst Farben sampeln (Alt+Lasso)")
@@ -92,9 +92,13 @@ pub(super) fn render_config_view(
             ui.separator();
 
             ui.horizontal(|ui| {
+                let has_prepared_segments = tool
+                    .preview_data
+                    .as_ref()
+                    .is_some_and(|preview| !preview.prepared_segments.is_empty());
                 if ui
                     .add_enabled(
-                        !tool.prepared_segments.is_empty(),
+                        has_prepared_segments,
                         egui::Button::new("\u{2713} Uebernehmen"),
                     )
                     .on_disabled_hover_text("Keine Nodes zum Einfuegen")
@@ -109,9 +113,7 @@ pub(super) fn render_config_view(
 
                 if ui.button("\u{2190} Zurueck").clicked() {
                     tool.phase = ColorPathPhase::Sampling;
-                    tool.skeleton_network = None;
-                    tool.prepared_segments.clear();
-                    tool.mask.clear();
+                    tool.clear_preview_pipeline();
                     changed = true;
                 }
             });
@@ -160,7 +162,7 @@ pub(super) fn render_config_view(
         {
             // Resampling in Preview-Phase sofort neu berechnen
             if tool.phase == ColorPathPhase::Preview {
-                tool.rebuild_preview_segments();
+                tool.rebuild_prepared_segments();
             }
             changed = true;
         }
@@ -174,7 +176,7 @@ pub(super) fn render_config_view(
         {
             // Vereinfachung + Resampling in Preview-Phase sofort neu berechnen
             if tool.phase == ColorPathPhase::Preview {
-                tool.rebuild_preview_segments();
+                tool.rebuild_prepared_segments();
             }
             changed = true;
         }

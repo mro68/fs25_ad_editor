@@ -422,6 +422,7 @@
   - [x] Exaktmodus (2026-03-31) — Standardmaessig aktiv; matcht exakt gegen gelasso-te RGB-Farben, blendet die Toleranz-UI aus und schaltet bei Bedarf auf quantisierte Palette + Toleranz um
   - [x] Netzmodus-Erweiterung (2026-03-31) — Preview zeigt Kreuzungen/offene Enden/Segmente; Export legt Junction-/End-Knoten einmalig an und nutzt Snap-basierten Bestandsanschluss (`Never` / `OpenEnds` / `OpenEndsAndJunctions`)
   - [x] Sampling-Preview zeigt nach jeder Lasso-Auswahl alle Randsegmente des erkannten Flood-Fill-Bereichs (inkl. Innenkanten/Loecher), nicht nur eine Einzelkontur
+  - [x] F7a Stage-Split (2026-04-01) — interne Pipeline in Sampling-Input, Matching, Pixel-Maske, Maskenaufbereitung, Skeleton, Preview-Aufbereitung und Execute getrennt; `lifecycle.rs` auf Orchestrierung reduziert; Preview und Execute teilen `PreparedSegment` als gemeinsame Wahrheit
   - [x] I18n-Key `MenuColorPath` (DE: „🎨 Farb-Pfad erkennen", EN: „🎨 Detect Color Path")
   - [x] Menüeintrag in Extras
 

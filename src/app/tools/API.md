@@ -523,24 +523,22 @@ an `handlers::route_tool::lasso_completed()` weitergeleitet, das `on_lasso_compl
 5. Sidebar: Netz pruefen (Kreuzungen, offene Enden, Segmente) + Anschlussmodus waehlen
 6. Enter / Uebernehmen-Button → `execute()` → Graph in Road Map einfuegen
 
-**Erkennungs-Pipeline (`compute_pipeline()`):**
+**Interne Stage-Pipeline (`compute_pipeline()`):**
 
-1. `flood_fill_color_mask()` — Bool-Maske des zusammenhaengenden Farb-Bereichs ab Lasso-Startpunkt
-2. Morphologisches Opening + Closing (wenn `noise_filter == true`) — Rauschen entfernen
-3. Original-Maske sichern (vor Zhang-Suen, fuer Medial-Axis-Korrektur)
-4. `zhang_suen_thinning()` — Maske auf 1-Pixel-breites Skelett reduzieren
-5. `find_connected_components()` — Zusammenhaengende Skelett-Gruppen finden (8-Connectivity)
-6. Pixelgrad klassifizieren: offene Enden (`degree == 1`), Kettenpixel (`degree == 2`), Junctions (`degree >= 3`)
-7. Benachbarte Junction-Pixel zu Clustern zusammenfassen und pro Cluster einen zentralen Knoten berechnen
-8. Zwischen den Graph-Knoten alle Grad-2-Ketten als Segmente verfolgen und per `refine_medial_axis()` in Weltkoordinaten umrechnen
-9. Pro Segment `simplify_polyline()` + `resample_by_distance()` anwenden
-10. Preview-Netz aufbauen und fuer Export bereithalten
+1. **Stage A: Sampling-Input** — `SamplingInput` sammelt Lasso-Regionen, Rohfarben, Durchschnittsfarbe und den ersten Lasso-Startpunkt
+2. **Stage B: Matching-Spezifikation** — `MatchingSpec` leitet aus Exaktmodus/Toleranz die wirksame Palette + Toleranz ab
+3. **Stage C: Pixel-Maske + Sampling-Vorschau** — `flood_fill_color_mask()` erzeugt die Flood-Fill-Maske; `SamplingPreviewData` haelt dieselbe Maske plus Boundary-Segmente fuer die Sampling-Preview
+4. **Stage D: Maskenaufbereitung** — `prepare_mask_for_skeleton()` wendet optional Opening + Closing an und erzeugt die vorbereitete Arbeitsmaske
+5. **Stage E: Skeleton-/Netzextraktion** — `extract_network_from_mask()` fuehrt Zhang-Suen, Komponentenbildung, Junction-Clustering, Segment-Trace und Medial-Axis-Korrektur auf der vorbereiteten Maske aus
+6. **Stage F: Preview-Aufbereitung** — `simplify_polyline()` + `resample_by_distance()` erzeugen `PreparedSegment`-Ketten; `PreviewData` haelt Netz + PreparedSegments als gemeinsame Wahrheit fuer Preview und Execute
+7. **Stage G: Execute-Konvertierung** — `execute_result()` baut aus `PreviewData.network` und denselben `PreparedSegment`s das `ToolResult` inklusive optionaler Bestandsanschluesse
 
 **Preview/Export:**
 
 - Preview zeigt Kennzahlen fuer Kreuzungen, offene Enden, Segmente und Preview-Nodes
 - Sampling-Preview zeigt nach jeder Lasso-Auswahl alle Randsegmente der Flood-Fill-Maske, nicht nur eine Einzelkontur
-- Export legt Junction-/End-Knoten genau einmal an und fuegt pro Segment nur die Zwischenpunkte neu ein
+- Sampling-Preview und Berechnen-Pipeline lesen dieselbe Stage-C-Maskenwahrheit; es gibt keine separaten Preview-Maskenpfade
+- Preview und Export teilen dieselben `PreparedSegment`-Artefakte; Execute legt Junction-/End-Knoten genau einmal an und fuegt pro Segment nur die Zwischenpunkte neu ein
 - Bestandsanschluss nutzt `ToolLifecycleState::snap_at()` und damit den konfigurierten Snap-Radius
 
 **Konfiguration (`ColorPathConfig`):**
@@ -559,22 +557,24 @@ an `handlers::route_tool::lasso_completed()` weitergeleitet, das `on_lasso_compl
 pub struct ColorPathTool {
     pub(crate) phase: ColorPathPhase,
     pub(crate) config: ColorPathConfig,
-    pub(crate) lasso_regions: Vec<Vec<Vec2>>,   // Alle gezeichneten Lasso-Polygone (Weltkoords)
-    pub(crate) sampled_colors: Vec<[u8; 3]>,    // Gesammelte RGB-Werte aus Lasso-Regionen
-    pub(crate) avg_color: Option<[u8; 3]>,      // Berechneter RGB-Mittelwert
-    pub(crate) lasso_start_world: Option<Vec2>, // Erster Klickpunkt des ersten Lassos (Weltkoords)
-    pub(crate) mask: Vec<bool>,                  // Bool-Maske (true = Pfadpixel), zeilenweise
-    pub(crate) mask_width: u32,
-    pub(crate) mask_height: u32,
-    pub(crate) skeleton_network: Option<SkeletonNetwork>, // Junctions + offene Enden + Segmente
-    pub(crate) prepared_segments: Vec<PreparedSegment>,   // Vereinfachte/abgetastete Preview-Segmente
+    pub(super) sampling: SamplingInput,
+    pub(super) matching: MatchingSpec,
+    pub(super) sampling_preview: Option<SamplingPreviewData>,
+    pub(super) preview_data: Option<PreviewData>,
     pub(crate) background_image: Option<Arc<image::DynamicImage>>,
-    pub(crate) map_size: f32,                   // Kartengroesse in Metern (aus FarmlandGrid)
+    pub(crate) map_size: f32,
     pub direction: ConnectionDirection,
     pub priority: ConnectionPriority,
     pub(crate) lifecycle: ToolLifecycleState,
 }
 ```
+
+**Interne Stage-Artefakte:**
+
+- `SamplingInput` — `lasso_regions`, `sampled_colors`, `avg_color`, `lasso_start_world`
+- `MatchingSpec` — wirksame `palette` + `tolerance`
+- `SamplingPreviewData` — `input_mask`, `boundary_segments`, `start_pixel`
+- `PreviewData` — `prepared_mask`, `network`, `prepared_segments`
 
 **Sampling-Funktionen (`sampling.rs`):**
 
@@ -584,8 +584,10 @@ pub struct ColorPathTool {
 - `sample_colors_in_polygon(polygon, image, map_size) → Vec<[u8; 3]>` — RGB-Pixel im Lasso-Polygon sammeln
 - `compute_average_color(colors) → [u8; 3]` — RGB-Mittelwert aller Samples
 - `build_exact_color_set(raw_colors) → Vec<[u8; 3]>` — Eindeutige Rohfarben fuer Exaktmodus ohne Quantisierung
-- `build_color_mask(image, avg_color, tolerance, bounds, map_size) → (Vec<bool>, u32, u32)` — Bool-Maske erstellen
+- `build_color_mask(image, palette, tolerance, bounds, map_size) → (Vec<bool>, u32, u32)` — Bool-Maske ueber einen rechteckig begrenzten Bereich erstellen
+- `flood_fill_color_mask(image, palette, tolerance, start_pixel) → (Vec<bool>, u32, u32)` — zusammenhaengende Stage-C-Maske ab Startpixel berechnen
 - `extract_boundary_segments_from_mask(mask, w, h, map_size) → Vec<(Vec2, Vec2)>` — Alle Grenzen der Flood-Fill-Maske als Preview-Segmente (inkl. Innenkanten/Loecher)
+- `prepare_mask_for_skeleton(mask, w, h, noise_filter) → Vec<bool>` — Stage-D-Aufbereitung der Flood-Fill-Maske fuer die Skeleton-Extraktion
 - `erode(mask, w, h) → Vec<bool>` — Erosion mit Majority-Bedingung (≥ 3 von 4 Nachbarn, zum Schutz duenner Verbindungen)
 - `dilate(mask, w, h) → Vec<bool>` — Dilatation (4-Connectivity)
 - `morphological_open(mask, w, h) → Vec<bool>` — Erosion + Dilatation (Rauschen entfernen)
@@ -595,7 +597,7 @@ pub struct ColorPathTool {
 
 - `find_connected_components(mask, w, h) → Vec<Vec<(usize, usize)>>` — Gruppen nach Groesse absteigend
 - `refine_medial_axis(ordered, original_mask, w, h) → Vec<(f32, f32)>` — Skelett-Pixel auf geometrische Mittelachse korrigieren
-- `extract_network_from_mask(mask, w, h, noise_filter, map_size, start_hint) → SkeletonNetwork` — Haupt-Pipeline fuer Netz-Knoten und Segmente
+- `extract_network_from_mask(mask, w, h, map_size, start_hint) → SkeletonNetwork` — Netzextraktion auf bereits vorbereiteter Stage-D-Maske
 - `extract_paths_from_mask(...) → Vec<Vec<Vec2>>` — Legacy-Wrapper fuer lineare Pfad-Konsumenten/Tests
 
 **Public Exports (`mod.rs`):**
@@ -605,7 +607,7 @@ pub struct ColorPathTool {
 
 **Gruppen-Record:** ColorPathTool speichert keinen `GroupRecord` (keine nachträgliche Bearbeitung).
 
-Modulstruktur: `mod.rs` (Re-Export), `state.rs` (Struct, Phasen-Enum, Config, Default), `lifecycle.rs` (RouteTool-Impl, Netz-Pipeline, Export), `config_ui.rs` (egui-Panel), `sampling.rs` (Farb-Sampling + Masken-Erstellung), `skeleton.rs` (Skelett-Extraktion + Graph-Aufbau)
+Modulstruktur: `mod.rs` (Re-Export + Benchmark-Fassade), `state.rs` (Stage-Artefakte, Phasen-Enum, Config, Default), `lifecycle.rs` (Phasenwechsel + RouteTool-Adapter), `pipeline.rs` (Stages B-F), `preview.rs` (Preview-/Execute-Aufbereitung mit `PreparedSegment` als gemeinsamer Wahrheit), `config_ui.rs` (egui-Panel), `sampling.rs` (Farb-Sampling + Masken-Erstellung), `skeleton.rs` (Skelett-Extraktion + Graph-Aufbau)
 
 ---
 

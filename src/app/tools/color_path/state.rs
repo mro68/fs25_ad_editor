@@ -53,6 +53,85 @@ pub(crate) struct PreparedSegment {
     pub resampled_nodes: Vec<Vec2>,
 }
 
+/// Stage A: Nutzereingaben fuer die Farb-Pfad-Erkennung.
+#[derive(Debug, Clone, Default)]
+pub(super) struct SamplingInput {
+    /// Alle Lasso-Polygone in Weltkoordinaten.
+    pub lasso_regions: Vec<Vec<Vec2>>,
+    /// Gesammelte RGB-Farben aus den Lasso-Regionen.
+    pub sampled_colors: Vec<[u8; 3]>,
+    /// Berechneter RGB-Mittelwert aller Samples fuer die UI.
+    pub avg_color: Option<[u8; 3]>,
+    /// Weltposition des ersten Lasso-Klickpunkts.
+    pub lasso_start_world: Option<Vec2>,
+}
+
+/// Stage B: Aufbereitete Matching-Spezifikation fuer Flood-Fill und Preview.
+#[derive(Debug, Clone, Default)]
+pub(super) struct MatchingSpec {
+    /// Wirksame Farbtoleranz des Matchings.
+    pub tolerance: f32,
+    /// Aktive Farbreferenzmenge fuer Matching und Anzeige.
+    pub palette: Vec<[u8; 3]>,
+}
+
+impl MatchingSpec {
+    /// Gibt `true` zurueck, wenn noch keine Match-Farben vorliegen.
+    pub(super) fn is_empty(&self) -> bool {
+        self.palette.is_empty()
+    }
+}
+
+/// Gemeinsames Maskenartefakt fuer Sampling-Preview und Berechnen-Pipeline.
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
+pub(super) struct ColorPathMask {
+    /// Bool-Maske (`true` = Pfadpixel), zeilenweise row-major.
+    pub pixels: Vec<bool>,
+    /// Maskenbreite in Pixeln.
+    pub width: u32,
+    /// Maskenhoehe in Pixeln.
+    pub height: u32,
+}
+
+impl ColorPathMask {
+    /// Erstellt ein neues Maskenartefakt aus Pixeln und Dimensionen.
+    pub(super) fn new(pixels: Vec<bool>, width: u32, height: u32) -> Self {
+        Self {
+            pixels,
+            width,
+            height,
+        }
+    }
+
+    /// Gibt `true` zurueck, wenn keine gueltige Maskengeometrie vorliegt.
+    pub(super) fn is_empty(&self) -> bool {
+        self.pixels.is_empty() || self.width == 0 || self.height == 0
+    }
+}
+
+/// Stage C: Sampling-Maske und deren Boundary-Preview im Viewport.
+#[derive(Debug, Clone, Default)]
+pub(super) struct SamplingPreviewData {
+    /// Flood-Fill-Maske direkt aus Sampling-Input + Matching-Spezifikation.
+    pub input_mask: ColorPathMask,
+    /// Randsegmente der Stage-C-Maske in Weltkoordinaten.
+    pub boundary_segments: Vec<(Vec2, Vec2)>,
+    /// Startpixel des Flood-Fills fuer spaetere Stage-Uebergaenge.
+    pub start_pixel: (u32, u32),
+}
+
+/// Stages D-F: vorbereitete Maske, extrahiertes Netz und gemeinsame Preview-Segmente.
+#[derive(Debug, Clone, Default)]
+pub(super) struct PreviewData {
+    /// Stage D: optional entrauschte und geschlossene Arbeitsmaske.
+    #[allow(dead_code)]
+    pub prepared_mask: ColorPathMask,
+    /// Stage E: extrahiertes Skeleton-/Netz-Artefakt.
+    pub network: SkeletonNetwork,
+    /// Stage F: vereinfachte und neu abgetastete Segmente als gemeinsame Wahrheit.
+    pub prepared_segments: Vec<PreparedSegment>,
+}
+
 /// Konfigurationsparameter fuer die Farb-Pfad-Erkennung.
 pub struct ColorPathConfig {
     /// Exakte Farbübereinstimmung gegen eine der gelasso-ten Farben verwenden.
@@ -99,34 +178,15 @@ pub struct ColorPathTool {
     /// Konfigurationsparameter
     pub(crate) config: ColorPathConfig,
 
-    // ── Farb-Daten ──────────────────────────────────────────────────────────
-    /// Alle Lasso-Polygone (Weltkoordinaten)
-    pub(crate) lasso_regions: Vec<Vec<Vec2>>,
-    /// Gesammelte RGB-Farben aus den Lasso-Regionen
-    pub(crate) sampled_colors: Vec<[u8; 3]>,
-    /// Berechneter RGB-Mittelwert aller Samples (nur fuer die Anzeige)
-    pub(crate) avg_color: Option<[u8; 3]>,
-    /// Aktive Farbreferenzmenge fuer Matching und Anzeige.
-    /// Im Exaktmodus sind dies eindeutige Rohfarben, sonst quantisierte Buckets.
-    pub(crate) color_palette: Vec<[u8; 3]>,
-
-    // ── Berechnung ──────────────────────────────────────────────────────────
-    /// Bool-Maske (true = Pfadpixel), zeilenweise row-major
-    pub(crate) mask: Vec<bool>,
-    /// Maskenbreite in Pixeln
-    pub(crate) mask_width: u32,
-    /// Maskenhoehe in Pixeln
-    pub(crate) mask_height: u32,
-    /// Extrahiertes Teilnetz mit Junctions, offenen Enden und Segmenten.
-    pub(crate) skeleton_network: Option<SkeletonNetwork>,
-    /// Vereinfachte und gleichmaessig abgetastete Preview-Segmente.
-    pub(crate) prepared_segments: Vec<PreparedSegment>,
-    /// Weltposition des ersten Lasso-Klickpunkts (erster Polygon-Punkt des ersten Lassos).
-    /// Wird verwendet um den relevanten Pfad-Bereich auszuwaehlen.
-    pub(crate) lasso_start_world: Option<Vec2>,
-    /// Alle Randsegmente des erkannten Flood-Fill-Bereichs in Weltkoordinaten.
-    /// Wird nach jeder Lasso-Auswahl aktualisiert und als Vorschau angezeigt.
-    pub(crate) flood_fill_boundary_segments: Vec<(Vec2, Vec2)>,
+    // ── Stage-A-bis-F-Artefakte ─────────────────────────────────────────────
+    /// Stage A: rohe Nutzereingaben (Lasso, Farben, Startpunkt).
+    pub(super) sampling: SamplingInput,
+    /// Stage B: abgeleitete Matching-Spezifikation.
+    pub(super) matching: MatchingSpec,
+    /// Stage C: Pixel-Maske + Sampling-Vorschau.
+    pub(super) sampling_preview: Option<SamplingPreviewData>,
+    /// Stages D-F: Maskenaufbereitung, Netzextraktion und PreparedSegments.
+    pub(super) preview_data: Option<PreviewData>,
 
     // ── Shared ──────────────────────────────────────────────────────────────
     /// Hintergrundbild fuer die Farberkennung
@@ -153,17 +213,10 @@ impl ColorPathTool {
         Self {
             phase: ColorPathPhase::Idle,
             config: ColorPathConfig::default(),
-            lasso_regions: Vec::new(),
-            sampled_colors: Vec::new(),
-            avg_color: None,
-            color_palette: Vec::new(),
-            mask: Vec::new(),
-            mask_width: 0,
-            mask_height: 0,
-            skeleton_network: None,
-            prepared_segments: Vec::new(),
-            lasso_start_world: None,
-            flood_fill_boundary_segments: Vec::new(),
+            sampling: SamplingInput::default(),
+            matching: MatchingSpec::default(),
+            sampling_preview: None,
+            preview_data: None,
             background_image: None,
             map_size: 2048.0,
             direction: ConnectionDirection::Dual,
