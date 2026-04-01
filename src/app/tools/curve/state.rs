@@ -1,10 +1,11 @@
 //! State-Definitionen und Konstruktor fuer das Bézier-Kurven-Tool.
 
-use super::super::common::{SegmentConfig, TangentSource, TangentState, ToolLifecycleState};
+use super::super::common::{SegmentConfig, TangentState, ToolLifecycleState};
 use super::super::ToolAnchor;
 use super::geometry::{
     approx_length, compute_curve_positions, compute_tangent_cp, cubic_bezier, quadratic_bezier,
 };
+use crate::app::tool_contract::TangentSource;
 use crate::core::{ConnectionDirection, ConnectionPriority};
 use crate::shared::options::{HITBOX_SCALE_PERCENT, NODE_SIZE_WORLD};
 use glam::Vec2;

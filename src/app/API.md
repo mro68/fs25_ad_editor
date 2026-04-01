@@ -4,12 +4,17 @@
 
 Das `app`-Modul verwaltet den globalen State, verarbeitet `AppIntent`s zentral ueber den `AppController`, mappt diese auf `AppCommand`s und baut die `RenderScene` fuer das Rendering.
 
-**Hinweis:** `Camera2D` lebt im `core`-Modul (reiner Geometrie-Typ). `app` re-exportiert `Camera2D`, `ConnectionDirection`, `ConnectionPriority`, `RoadMap`, `RouteToolId`, `ToolAnchor`, `compute_ring` und andere zentrale Typen aus `core`, `tool_contract` und `tools`.
+**Hinweis:** `Camera2D` lebt im `core`-Modul (reiner Geometrie-Typ). `app` re-exportiert `Camera2D`, `ConnectionDirection`, `ConnectionPriority`, `RoadMap`, `RouteToolId`, `ToolAnchor`, `TangentSource`, `TangentMenuData`, `TangentOptionData`, `compute_ring` und andere zentrale Typen aus `core`, `tool_contract`, `ui_contract` und `tools`.
 
 **Weitere API-Dokumentationen:**
 - [`handlers/API.md`](handlers/API.md) — alle Handler-Funktionen mit detaillierter Dokumentation
 - [`use_cases/API.md`](use_cases/API.md) — alle Use-Case-Funktionen (camera, file_io, selection, editing, …)
 - [`tools/API.md`](tools/API.md) — ToolManager, RouteTool-Trait, registrierte Tools, gemeinsame Infrastruktur
+
+## Tool-Vertraege
+
+- `tool_contract.rs` — semantische Route-Tool-Vertraege wie `RouteToolId`, `ToolAnchor` und `TangentSource`
+- `ui_contract.rs` — UI-taugliche Read-DTOs wie `TangentMenuData` und `TangentOptionData`
 
 ## Haupttypen
 
@@ -1032,7 +1037,7 @@ AppIntent::CameraPan { delta: Vec2::new(-dx * wpp, -dy * wpp) }
 3. **Command Execution:** `AppController` mappt Intents auf Commands und fuehrt diese aus
 4. **Render Contract:** Ausgabe an Renderer erfolgt nur ueber `RenderScene`
 5. **I/O in Use-Cases:** Dateisystem-Operationen sind in `use_cases::file_io` zentralisiert
-6. **Re-Exports:** `app` re-exportiert `Camera2D`, `ConnectionDirection`, `ConnectionPriority`, `RoadMap` aus `core` sowie `ToolAnchor`, `compute_ring`, `ParkingConfig` aus `tools`, damit UI nicht direkt auf `core` zugreift
+6. **Re-Exports:** `app` re-exportiert `Camera2D`, `ConnectionDirection`, `ConnectionPriority`, `RoadMap` aus `core`, die Route-Tool-Vertraege `RouteToolId`, `ToolAnchor`, `TangentSource` aus `tool_contract`, die UI-DTOs `TangentMenuData` und `TangentOptionData` aus `ui_contract` sowie `compute_ring` und `ParkingConfig` aus `tools`, damit UI nicht direkt auf `core` oder Tool-Interna zugreift
 
 ## Weitere Typen
 

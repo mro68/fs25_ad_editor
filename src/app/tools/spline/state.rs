@@ -1,8 +1,9 @@
 //! State-Definitionen und Hilfsmethoden fuer das Catmull-Rom-Spline-Tool.
 
-use super::super::common::{self, SegmentConfig, TangentSource, TangentState, ToolLifecycleState};
+use super::super::common::{self, SegmentConfig, TangentState, ToolLifecycleState};
 use super::super::{ToolAnchor, ToolResult};
 use super::geometry::{catmull_rom_chain_with_tangents, polyline_length, resample_by_distance};
+use crate::app::tool_contract::TangentSource;
 use crate::core::{ConnectionDirection, ConnectionPriority, RoadMap};
 use glam::Vec2;
 

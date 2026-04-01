@@ -14,7 +14,7 @@ mod icons;
 mod render;
 mod tangent_ui;
 
-use crate::app::tools::common::TangentMenuData;
+use crate::app::ui_contract::TangentMenuData;
 use crate::app::{AppIntent, ConnectionDirection, ConnectionPriority, GroupRegistry, RoadMap};
 use crate::shared::EditorOptions;
 use commands::{validate_entries, IntentContext, MenuCatalog, PreconditionContext};
@@ -262,7 +262,7 @@ pub fn render_context_menu(
 #[cfg(test)]
 mod tests {
     use super::find_nearest_node_at;
-    use crate::core::{MapNode, NodeFlag, RoadMap};
+    use crate::app::{MapNode, NodeFlag, RoadMap};
     use glam::Vec2;
 
     fn build_test_map() -> RoadMap {
@@ -277,20 +277,14 @@ mod tests {
     fn find_nearest_node_at_prefers_the_closest_node_inside_snap_radius() {
         let map = build_test_map();
 
-        assert_eq!(
-            find_nearest_node_at(Vec2::new(3.2, 0.0), &map, 5.0),
-            Some(2)
-        );
+        assert_eq!(find_nearest_node_at(Vec2::new(3.2, 0.0), &map, 5.0), Some(2));
     }
 
     #[test]
     fn find_nearest_node_at_keeps_the_snap_radius_boundary() {
         let map = build_test_map();
 
-        assert_eq!(
-            find_nearest_node_at(Vec2::new(1.0, 0.0), &map, 1.0),
-            Some(1)
-        );
+        assert_eq!(find_nearest_node_at(Vec2::new(1.0, 0.0), &map, 1.0), Some(1));
         assert_eq!(find_nearest_node_at(Vec2::new(1.01, 0.0), &map, 1.0), None);
     }
 }

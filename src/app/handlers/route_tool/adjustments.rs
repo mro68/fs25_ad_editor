@@ -1,4 +1,4 @@
-use crate::app::tools::common::TangentSource;
+use crate::app::tool_contract::TangentSource;
 use crate::app::AppState;
 
 /// Wendet die vom User gewaehlten Tangenten an und triggert ggf. eine Neuberechnung.

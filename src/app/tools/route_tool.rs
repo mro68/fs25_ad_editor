@@ -1,10 +1,11 @@
 //! RouteTool-Trait — Schnittstelle fuer alle Route-Tools.
 
+use crate::app::tool_contract::TangentSource;
+use crate::app::ui_contract::TangentMenuData;
 use crate::app::group_registry::{GroupKind, GroupRecord};
 use crate::core::{ConnectionDirection, ConnectionPriority, RoadMap};
 use glam::Vec2;
 
-use super::common::TangentMenuData;
 use super::{ToolAction, ToolAnchor, ToolPreview, ToolResult};
 
 /// Schnittstelle fuer alle Route-Tools (Linie, Parkplatz, Kurve, ...).
@@ -161,8 +162,8 @@ pub trait RouteTool {
     /// Kontrollpunkte und setzt ggf. das Recreate-Flag.
     fn apply_tangent_selection(
         &mut self,
-        _start: super::common::TangentSource,
-        _end: super::common::TangentSource,
+        _start: TangentSource,
+        _end: TangentSource,
     ) {
     }
 

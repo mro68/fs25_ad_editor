@@ -6,11 +6,13 @@
 //! - `apply_tangent_from_menu` — Anwendung der Tangenten-Auswahl aus dem Kontextmenue
 
 use super::super::common::{
-    render_segment_config_3modes, render_tangent_combo, tangent_options, TangentMenuData,
+    render_segment_config_3modes, render_tangent_combo, tangent_options,
 };
 use super::super::RouteTool;
 use super::geometry::{approx_length, cubic_bezier, quadratic_bezier};
 use super::state::{CurveDegree, CurveTool, Phase};
+use crate::app::tool_contract::TangentSource;
+use crate::app::ui_contract::TangentMenuData;
 
 impl CurveTool {
     /// Rendert das Konfigurationspanel im Properties-Panel.
@@ -181,8 +183,8 @@ impl CurveTool {
     /// Aktualisiert Kontrollpunkte, derived state und setzt ggf. das Recreate-Flag.
     pub(super) fn apply_tangent_from_menu(
         &mut self,
-        start: super::super::common::TangentSource,
-        end: super::super::common::TangentSource,
+        start: TangentSource,
+        end: TangentSource,
     ) {
         self.tangents.tangent_start = start;
         self.tangents.tangent_end = end;

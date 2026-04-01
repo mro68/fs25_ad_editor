@@ -1,5 +1,5 @@
 use fs25_auto_drive_editor::app::handlers;
-use fs25_auto_drive_editor::app::tools::common::TangentSource;
+use fs25_auto_drive_editor::app::tool_contract::TangentSource;
 use fs25_auto_drive_editor::app::tools::RouteToolId;
 use fs25_auto_drive_editor::app::{GroupBase, GroupKind, GroupRecord, ToolAnchor};
 use fs25_auto_drive_editor::EditorTool;

@@ -1,7 +1,7 @@
 //! Mutierende App-Commands fuer den zentralen Controller-Dispatch.
 
 use super::super::state::EditorTool;
-use crate::app::tools::common::TangentSource;
+use crate::app::tool_contract::TangentSource;
 use crate::app::tools::RouteToolId;
 use crate::core::{ConnectionDirection, ConnectionPriority, NodeFlag};
 use crate::shared::EditorOptions;

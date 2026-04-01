@@ -1,5 +1,7 @@
 //! Rein-mathematische Hilfsfunktionen ohne egui-Abhaengigkeit.
 
+use crate::app::tool_contract::TangentSource;
+use crate::app::ui_contract::TangentOptionData;
 use crate::core::{ConnectedNeighbor, RoadMap};
 use glam::Vec2;
 
@@ -63,19 +65,22 @@ pub fn linear_connections(count: usize) -> Vec<(usize, usize)> {
     (0..count.saturating_sub(1)).map(|i| (i, i + 1)).collect()
 }
 
-/// Formatiert Tangenten-Optionen aus Nachbar-Liste als `(TangentSource, Label)`-Paare.
+/// Formatiert Tangenten-Optionen aus Nachbar-Liste als benannte UI-DTOs.
 ///
 /// Gemeinsame Daten-Aufbereitung fuer ComboBox und Kontextmenue.
-pub fn tangent_options(neighbors: &[ConnectedNeighbor]) -> Vec<(super::TangentSource, String)> {
-    let mut opts = vec![(super::TangentSource::None, "Manuell".to_string())];
+pub fn tangent_options(neighbors: &[ConnectedNeighbor]) -> Vec<TangentOptionData> {
+    let mut opts = vec![TangentOptionData {
+        source: TangentSource::None,
+        label: "Manuell".to_string(),
+    }];
     for n in neighbors {
-        opts.push((
-            super::TangentSource::Connection {
+        opts.push(TangentOptionData {
+            source: TangentSource::Connection {
                 neighbor_id: n.neighbor_id,
                 angle: n.angle,
             },
-            format!("→ Node #{} ({})", n.neighbor_id, angle_to_compass(n.angle)),
-        ));
+            label: format!("→ Node #{} ({})", n.neighbor_id, angle_to_compass(n.angle)),
+        });
     }
     opts
 }
