@@ -3,6 +3,7 @@
 use std::sync::Arc;
 
 use crate::app::group_registry::{GroupBase, GroupKind, GroupRecord};
+use crate::app::tools::common::ToolResultBuilder;
 use crate::app::tools::{RouteToolId, ToolAction, ToolAnchor, ToolPreview, ToolResult};
 use crate::core::{
     find_polygon_at, offset_polygon, simplify_polygon, FieldPolygon, NodeFlag, RoadMap,
@@ -158,13 +159,7 @@ impl crate::app::tools::RouteTool for FieldBoundaryTool {
         let internal_connections = (0..n)
             .map(|i| (i, (i + 1) % n, self.direction, self.priority))
             .collect();
-        Some(ToolResult {
-            new_nodes,
-            internal_connections,
-            external_connections: Vec::new(),
-            markers: Vec::new(),
-            nodes_to_remove: Vec::new(),
-        })
+        Some(ToolResultBuilder::new(new_nodes, internal_connections).build())
     }
 
     fn reset(&mut self) {
@@ -358,6 +353,8 @@ pub fn compute_ring(
 mod tests {
     use super::super::geometry::detect_corners;
     use super::*;
+    use crate::app::tools::RouteTool;
+    use crate::core::RoadMap;
 
     /// Hilfsfunktion: Rechteck-Vertices aufbauen
     fn rectangle_vertices() -> Vec<Vec2> {
@@ -441,5 +438,25 @@ mod tests {
                 ecke
             );
         }
+    }
+
+    #[test]
+    fn test_execute_kanonisiert_leere_tool_result_seitenkanaele() {
+        let mut tool = FieldBoundaryTool::new();
+        tool.phase = FieldBoundaryPhase::Configuring;
+        tool.selected_polygon = Some(FieldPolygon {
+            id: 7,
+            vertices: rectangle_vertices(),
+        });
+
+        let result = tool
+            .execute(&RoadMap::new(2))
+            .expect("Konfiguriertes Rechteck muss ein ToolResult liefern");
+
+        assert!(!result.new_nodes.is_empty());
+        assert!(!result.internal_connections.is_empty());
+        assert!(result.external_connections.is_empty());
+        assert!(result.markers.is_empty());
+        assert!(result.nodes_to_remove.is_empty());
     }
 }

@@ -272,11 +272,11 @@ Parkplatz-Layout-Generator: Erstellt einen Wendekreis mit Parkreihen in einem ko
 - Ueberschreibt die `RouteTool`-Hooks `make_group_record()` und `load_for_edit()`
 - Speichert Layout-Parameter fuer nachtraegliche Bearbeitung
 
-**Public Exports:**
+**Geometrie-/Konvertierungspfad:**
 
-- `generate_parking_layout(config) → ParkingLayout` — Generiert das Layout (fuer Tests)
-- `build_parking_result(layout, origin, angle, ...) → Vec<Vec2>` — Konvertiert zu Positionen
-- `build_preview(layout, origin, angle, ...) → (Vec<Vec2>, Vec<(usize, usize)>)` — Vorschau-Geometrie
+- `generate_parking_layout(config) → ParkingLayout` — Oeffentlicher Layout-Generator fuer Tests und Benchmarks
+- `build_parking_result(layout) → ToolResult` — Modulintern: konvertiert das Layout via `ToolResultBuilder`; befuellt `markers` und laesst `external_connections` sowie `nodes_to_remove` kanonisch leer
+- `build_preview(layout) → ToolPreview` — Modulintern: Vorschau-Geometrie inkl. Verbindungsstilen und Labels
 
 Modulstruktur: `state.rs` (Struct + Config), `lifecycle.rs` (RouteTool-Impl + Lifecycle-Delegation), `config_ui.rs` (egui-Panel), `geometry/{mod,layout,blueprint,conversion}.rs` (Layout-Mathe), `tests.rs` (7 Unit-Tests)
 
@@ -359,6 +359,8 @@ Das Mapping `RingNodeKind` → `NodeFlag`:
 - `RingNodeKind::RoundedCorner` → `NodeFlag::RoundedCorner` (6, intern; XML-Export: 0)
 - `RingNodeKind::Regular | Corner` → `NodeFlag::Regular` (0)
 
+**ToolResult-Aufbau:** `execute()` nutzt `ToolResultBuilder`; der geschlossene Ring befuellt nur `new_nodes` und `internal_connections`, waehrend `external_connections`, `markers` und `nodes_to_remove` kanonisch leer bleiben.
+
 **Geometrie-Funktionen (`tools/field_boundary/geometry.rs`):**
 
 - `detect_corners(vertices, angle_threshold_rad) -> Vec<usize>` — Sortierte Indizes aller Eckpunkte mit Ablenkungswinkel ≥ Schwellwert
@@ -407,6 +409,8 @@ pub struct RouteOffsetTool {
 2. `resample_by_distance()` — gleichmäßiges Resampling
 3. Wenn `!keep_original`: `nodes_to_remove = chain_inner_ids` → Original-Nodes werden im selben Undo-Schritt entfernt
 4. `ToolResult.nodes_to_remove` wird von `apply_tool_result()` vor Erstellung neuer Nodes verarbeitet
+
+Die finale Ausgabe wird ueber `ToolResultBuilder` aufgebaut: interne Offset-Ketten gehen in `new_nodes`/`internal_connections`, die lateralen Anschluesse in `with_external_connections(...)` und das optionale Entfernen der Original-Kette in `with_nodes_to_remove(...)`.
 
 **Geometrie-Funktionen (`geometry.rs`):**
 
@@ -642,7 +646,7 @@ Modulstruktur: `state.rs` (Struct + Config), `lifecycle.rs` (RouteTool-Impl + Li
 
 ## Gemeinsame Tool-Infrastruktur (`tools/common/`)
 
-Aufgeteilt in vier Submodule (alle privat, Re-Exporte via `common/mod.rs`):
+Aufgeteilt in fuenf Submodule (alle privat, Re-Exporte via `common/mod.rs`):
 
 ### `geometry.rs`
 
@@ -691,6 +695,18 @@ Der Makro-Flow fuer `set_last_created` ist vereinheitlicht:
 
 - Oeffentlicher Helper-Export: `bypass::compute_bypass_positions` (u.a. fuer Preview-Benchmarks)
 
+### `result.rs`
+
+**`ToolResultBuilder`** — Schmaler Shared-Builder fuer `ToolResult`-Faelle mit kanonischen leeren Defaults der optionalen Sammlungen.
+
+- `new(new_nodes, internal_connections) → ToolResultBuilder` — initialisiert `external_connections`, `markers` und `nodes_to_remove` leer
+- `with_external_connections(...)` — setzt nur die benoetigten Anbindungen an bestehende Nodes
+- `with_markers(...)` — setzt Marker nur fuer Tools mit Marker-Semantik
+- `with_nodes_to_remove(...)` — setzt zu entfernende Bestands-Nodes nur fuer Ersetzungsfaelle
+- `build() → ToolResult` — gibt das fertige Ergebnis zurueck
+
+Stand F5: `assemble_tool_result()` sowie die spezialisierten Ausgabepfade von `FieldBoundaryTool`, `RouteOffsetTool` und `ParkingTool` nutzen diesen Builder. Dadurch bleiben Default-Felder konsistent, ohne in jedem Tool ein volles `ToolResult` manuell initialisieren zu muessen.
+
 ### `builder.rs`
 
 **`assemble_tool_result(positions, start, end, direction, priority, road_map) → ToolResult`** — Gemeinsame Logik aller Route-Tools: Nimmt berechnete Positionen, erstellt neue Nodes (ueberspringt existierende) und baut interne/externe Verbindungen auf.
@@ -699,3 +715,5 @@ Der Makro-Flow fuer `set_last_created` ist vereinheitlicht:
 `(new_node_idx, existing_node_id, existing_to_new, direction, priority)`.
 Damit bleibt die Richtung (`Regular`/`Dual`/`Reverse`) an Start- und Endrand konsistent,
 ohne implizite Richtungs-Spiegelung.
+
+Die Rueckgabe wird intern ueber `ToolResultBuilder` erzeugt, sodass `markers` und `nodes_to_remove` auch in den einfachen Polyline-Pfaden kanonisch leer initialisiert werden.
