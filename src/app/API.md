@@ -910,7 +910,7 @@ pub enum AppCommand {
     // Gruppen-Lock
     /// Gruppen-Lock umschalten (gesperrt ↔ entsperrt)
     ToggleGroupLock { segment_id: u64 },
-    /// Bestätigungsdialog für Segment-Auflösung öffnen (setzt `UiState::confirm_dissolve_segment_id`)
+    /// Bestätigungsdialog für Segment-Auflösung öffnen (setzt `UiState::confirm_dissolve_group_id`)
     OpenDissolveConfirmDialog { segment_id: u64 },
     /// Segment aufloesen (Gruppen-Record entfernen, Nodes beibehalten)
     DissolveGroup { segment_id: u64 },

@@ -1,8 +1,10 @@
 # Tool Encapsulation & API Unification — Audit-Report
 
-> **Stand:** 2026-03-07  
+> **Status:** Historisches Audit-Dokument  
+> Dieser Report dokumentiert einen Analyse-Snapshot vom 2026-03-07. Er ist **nicht** die kanonische Beschreibung des aktuellen Tool-Katalogs oder der aktuell gueltigen Tool-Vertraege. Maßgeblich sind die jeweils aktuellen API-Dokumente und Modul-Docstrings, insbesondere in `src/app/tools/` und den angrenzenden App/UI-Modulen.  
+> **Audit-Stand:** 2026-03-07  
 > **Scope:** `src/app/tools/`, `src/app/group_registry/`, `src/app/handlers/route_tool.rs`  
-> **Methodik:** Vollständige Code-Analyse aller 9 Tool-Module + Common-Infrastruktur
+> **Methodik:** Vollständige Code-Analyse des damaligen Tool-Bestands (9 Tool-Module) + Common-Infrastruktur
 
 ---
 
@@ -24,6 +26,8 @@
 ## 1. Zusammenfassung
 
 ### Gesamtbewertung: ✅ Gut — mit gezieltem Optimierungspotenzial
+
+**Einordnung:** Die nachfolgenden Befunde beschreiben den damaligen Audit-Stand. Benennungen einzelner Tools, Capability-Zuschnitte und Vertragsdetails koennen inzwischen abweichen.
 
 Das Tools-System ist **architektonisch solide aufgebaut**:
 - **Keine Renderer-Kopplung** — Tools kennen weder `wgpu` noch `RenderScene`

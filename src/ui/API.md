@@ -82,7 +82,7 @@ statt als normale Lasso-Selektion.
 
 ### `show_confirm_dissolve_dialog`
 
-Zeigt einen modalen Bestätigungsdialog zum Auflösen einer Segment-Gruppe. Wird aufgerufen wenn `UiState::confirm_dissolve_segment_id` gesetzt ist.
+Zeigt einen modalen Bestätigungsdialog zum Auflösen einer Segment-Gruppe. Wird aufgerufen wenn `UiState::confirm_dissolve_group_id` gesetzt ist.
 
 ```rust
 pub fn show_confirm_dissolve_dialog(
@@ -96,19 +96,19 @@ pub fn show_confirm_dissolve_dialog(
 
 - Ist `confirm_dissolve_id` `None`, tut die Funktion nichts und gibt einen leeren Vec zurück
 - Zeigt ein zentriertes, nicht minimierbares `egui::Window` mit Titel `ConfirmDissolveTitle`
-- Klick auf `ConfirmDissolveOk` → emittiert `AppIntent::DissolveSegmentConfirmed { segment_id }` und setzt `confirm_dissolve_id = None`
+- Klick auf `ConfirmDissolveOk` → emittiert `AppIntent::DissolveGroupConfirmed { segment_id }` und setzt `confirm_dissolve_id = None`
 - Klick auf `ConfirmDissolveCancel` oder Schließen des Fensters → setzt `confirm_dissolve_id = None` ohne Aktion
 - Texte werden über `t(language, I18nKey::ConfirmDissolveXxx)` übersetzt
 
 **Intent-Flow:**
 ```
 Ctrl+Lock-Icon-Klick
-  → DissolveSegmentRequested
+  → DissolveGroupRequested
   → OpenDissolveConfirmDialog  (via intent_mapping)
-  → UiState::confirm_dissolve_segment_id = Some(id)
+  → UiState::confirm_dissolve_group_id = Some(id)
   → [nächster Frame] show_confirm_dissolve_dialog() zeigt Dialog
-  → DissolveSegmentConfirmed  (bei Bestätigung)
-  → DissolveSegment  (via intent_mapping)
+  → DissolveGroupConfirmed  (bei Bestätigung)
+  → DissolveGroup  (via intent_mapping)
   → handlers::group::dissolve()
 ```
 
@@ -128,8 +128,8 @@ pub enum GroupOverlayEvent {
 ```
 
 Wird von `render_group_overlays()` zurueckgegeben und in den Intent-Flow als
-`AppIntent::ToggleSegmentLockRequested { segment_id }` bzw.
-`AppIntent::DissolveSegmentRequested { segment_id }` uebersetzt.
+`AppIntent::ToggleGroupLockRequested { segment_id }` bzw.
+`AppIntent::DissolveGroupRequested { segment_id }` uebersetzt.
 
 ---
 
@@ -840,8 +840,8 @@ pub enum GroupOverlayEvent {
 ```
 
 Wird von `render_group_overlays()` zurueckgegeben und in den Intent-Flow als
-`AppIntent::ToggleSegmentLockRequested { segment_id }` bzw.
-`AppIntent::DissolveSegmentRequested { segment_id }` uebersetzt.
+`AppIntent::ToggleGroupLockRequested { segment_id }` bzw.
+`AppIntent::DissolveGroupRequested { segment_id }` uebersetzt.
 
 ---
 
