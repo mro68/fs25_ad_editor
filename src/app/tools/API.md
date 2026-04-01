@@ -566,6 +566,7 @@ pub struct ColorPathTool {
     pub direction: ConnectionDirection,
     pub priority: ConnectionPriority,
     pub(crate) lifecycle: ToolLifecycleState,
+    pub(super) cache: ColorPathCacheState,
 }
 ```
 
@@ -604,6 +605,9 @@ pub struct ColorPathTool {
 
 - `ColorPathTool`
 - `compute_color_path_network_stats()` — Flood-Fill + Netzextraktion fuer Benchmarks/Analyse, ohne interne Skelett-Typen offenzulegen
+- `ColorPathBenchmarkHarness` — baut ueber den echten Tool-Flow reproduzierbare Sampling-/Preview-Ausgangszustaende fuer Criterion-Benchmarks auf
+- `ColorPathBenchmarkAction` — vorbereitete Einzelaktion fuer `SamplingPreview`, `compute_pipeline()`, Preview-Core- oder PreparedSegments-Rebuild
+- `ColorPathBenchmarkStats` — beobachtbare Kennzahlen und Revisionszaehler einer einzelnen Benchmark-Aktion
 
 **Gruppen-Record:** ColorPathTool speichert keinen `GroupRecord` (keine nachträgliche Bearbeitung).
 

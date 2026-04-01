@@ -160,10 +160,7 @@ pub(super) fn render_config_view(
             .add(egui::Slider::new(&mut tool.config.node_spacing, 1.0..=50.0).suffix(" m"))
             .changed()
         {
-            // Resampling in Preview-Phase sofort neu berechnen
-            if tool.phase == ColorPathPhase::Preview {
-                tool.rebuild_prepared_segments();
-            }
+            tool.on_preview_geometry_config_changed();
             changed = true;
         }
     });
@@ -174,10 +171,7 @@ pub(super) fn render_config_view(
             .add(egui::Slider::new(&mut tool.config.simplify_tolerance, 0.0..=20.0).suffix(" m"))
             .changed()
         {
-            // Vereinfachung + Resampling in Preview-Phase sofort neu berechnen
-            if tool.phase == ColorPathPhase::Preview {
-                tool.rebuild_prepared_segments();
-            }
+            tool.on_preview_geometry_config_changed();
             changed = true;
         }
     });
@@ -188,6 +182,7 @@ pub(super) fn render_config_view(
         .checkbox(&mut tool.config.noise_filter, "Rauschfilter")
         .changed()
     {
+        tool.on_preview_core_config_changed();
         changed = true;
     }
 
