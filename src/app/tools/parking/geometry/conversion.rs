@@ -1,5 +1,6 @@
 //! Konvertierung von ParkingLayout zu ToolResult und ToolPreview.
 
+use crate::app::tools::common::ToolResultBuilder;
 use crate::app::tools::{ToolPreview, ToolResult};
 use crate::core::NodeFlag;
 
@@ -7,17 +8,21 @@ use super::ParkingLayout;
 
 /// Konvertiert ein ParkingLayout in ein ToolResult.
 pub fn build_parking_result(layout: ParkingLayout) -> ToolResult {
-    ToolResult {
-        new_nodes: layout
-            .nodes
+    let ParkingLayout {
+        nodes,
+        connections,
+        markers,
+    } = layout;
+
+    ToolResultBuilder::new(
+        nodes
             .into_iter()
             .map(|pos| (pos, NodeFlag::Regular))
             .collect(),
-        internal_connections: layout.connections,
-        external_connections: vec![],
-        markers: layout.markers,
-        nodes_to_remove: Vec::new(),
-    }
+        connections,
+    )
+    .with_markers(markers)
+    .build()
 }
 
 /// Konvertiert ein ParkingLayout in eine ToolPreview.
