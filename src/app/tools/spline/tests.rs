@@ -1,7 +1,7 @@
-use crate::app::tool_contract::TangentSource;
 use super::super::{RouteTool, ToolAction};
 use super::geometry::{catmull_rom_chain, resample_by_distance};
 use super::state::SplineTool;
+use crate::app::tool_contract::TangentSource;
 use crate::core::RoadMap;
 use glam::Vec2;
 

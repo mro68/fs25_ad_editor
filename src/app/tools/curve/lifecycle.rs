@@ -289,11 +289,7 @@ impl RouteTool for CurveTool {
         self.build_tangent_menu_data()
     }
 
-    fn apply_tangent_selection(
-        &mut self,
-        start: TangentSource,
-        end: TangentSource,
-    ) {
+    fn apply_tangent_selection(&mut self, start: TangentSource, end: TangentSource) {
         self.apply_tangent_from_menu(start, end);
     }
 

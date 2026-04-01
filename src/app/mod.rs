@@ -19,10 +19,10 @@ pub mod render_scene;
 pub mod state;
 /// App-weiter Vertrag fuer Route-Tool-Identitaeten und Ankerdaten.
 pub mod tool_contract;
-/// App-weite Read-Vertraege fuer UI-nahe Route-Tool-Daten.
-pub mod ui_contract;
 /// Trait-basiertes Route-Tool-System fuer erweiterbare Strecken-Werkzeuge.
 pub mod tools;
+/// App-weite Read-Vertraege fuer UI-nahe Route-Tool-Daten.
+pub mod ui_contract;
 /// Mutierende Use-Case-Funktionen fuer alle Editing-Operationen.
 pub mod use_cases;
 
@@ -46,6 +46,6 @@ pub use state::{
     ViewState,
 };
 pub use tool_contract::{RouteToolId, TangentSource, ToolAnchor};
-pub use ui_contract::{TangentMenuData, TangentOptionData};
 pub use tools::field_boundary::compute_ring;
 pub use tools::field_boundary::RingNodeKind;
+pub use ui_contract::{TangentMenuData, TangentOptionData};
