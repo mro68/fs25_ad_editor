@@ -4,18 +4,22 @@
 //! - Bypass: `compute_bypass_positions`
 //! - RouteOffset: `compute_offset_positions`
 //! - FieldPath: `compute_polygon_centerline` / `compute_segment_centerline`
-//! - ColorPath: Flood-Fill + Netzextraktion
+//! - ColorPath: echte Sampling-/Preview-Rebuilds des ColorPathTool
 //! - SmoothCurve: `solve_route`
 
 use criterion::{criterion_group, criterion_main, BenchmarkId, Criterion};
 use fs25_auto_drive_editor::app::tools::bypass::compute_bypass_positions;
-use fs25_auto_drive_editor::app::tools::color_path::compute_color_path_network_stats;
+use fs25_auto_drive_editor::app::tools::color_path::{
+    ColorPathBenchmarkAction, ColorPathBenchmarkHarness,
+};
 use fs25_auto_drive_editor::app::tools::route_offset::compute_offset_positions;
 use fs25_auto_drive_editor::app::tools::smooth_curve::{solve_route, SmoothCurveInput};
 use fs25_auto_drive_editor::core::{compute_polygon_centerline, compute_segment_centerline};
 use glam::Vec2;
 use image::{DynamicImage, ImageBuffer, Rgb, RgbImage};
 use std::hint::black_box;
+use std::sync::Arc;
+use std::time::{Duration, Instant};
 
 fn make_chain(count: usize, step: f32) -> Vec<Vec2> {
     (0..count)
@@ -70,6 +74,54 @@ fn make_color_path_image(size: u32) -> DynamicImage {
         }
     });
     DynamicImage::ImageRgb8(img)
+}
+
+fn pixel_rect_to_world_polygon(
+    size: u32,
+    min_x: u32,
+    min_y: u32,
+    max_x: u32,
+    max_y: u32,
+) -> Vec<Vec2> {
+    let half = size as f32 / 2.0;
+    vec![
+        Vec2::new(min_x as f32 - half, min_y as f32 - half),
+        Vec2::new(max_x as f32 + 1.0 - half, min_y as f32 - half),
+        Vec2::new(max_x as f32 + 1.0 - half, max_y as f32 + 1.0 - half),
+        Vec2::new(min_x as f32 - half, max_y as f32 + 1.0 - half),
+    ]
+}
+
+fn make_color_path_lasso(size: u32) -> Vec<Vec2> {
+    let band = (size / 18).max(6);
+    let center = size / 2;
+    let max = size.saturating_sub(1);
+    pixel_rect_to_world_polygon(
+        size,
+        center.saturating_sub(band),
+        center.saturating_sub(band),
+        (center + band).min(max),
+        (center + band).min(max),
+    )
+}
+
+fn measure_color_path_action<F>(
+    harness: &ColorPathBenchmarkHarness,
+    iters: u64,
+    prepare: F,
+) -> Duration
+where
+    F: Fn(&ColorPathBenchmarkHarness) -> ColorPathBenchmarkAction,
+{
+    let mut elapsed = Duration::default();
+    for _ in 0..iters {
+        let action = prepare(harness);
+        let start = Instant::now();
+        let stats = action.run();
+        elapsed += start.elapsed();
+        black_box(stats);
+    }
+    elapsed
 }
 
 fn bench_bypass_preview(c: &mut Criterion) {
@@ -201,27 +253,71 @@ fn bench_field_path_segment_centerline(c: &mut Criterion) {
     group.finish();
 }
 
-fn bench_color_path_pipeline(c: &mut Criterion) {
+fn bench_color_path_stage_rebuilds(c: &mut Criterion) {
     let mut group = c.benchmark_group("tool_preview_color_path");
 
     for &size in &[128u32, 256, 512] {
-        let image = make_color_path_image(size);
-        let palette = vec![[150, 120, 72], [154, 120, 70], [156, 120, 69]];
-        let start_pixel = (size / 2, size / 2);
+        let harness = ColorPathBenchmarkHarness::new(
+            Arc::new(make_color_path_image(size)),
+            make_color_path_lasso(size),
+        )
+        .expect("ColorPath-Benchmark-Harness sollte aufgebaut werden");
 
-        group.bench_with_input(BenchmarkId::new("compute_network", size), &size, |b, _| {
-            b.iter(|| {
-                let stats = compute_color_path_network_stats(
-                    black_box(&image),
-                    black_box(&palette),
-                    18.0,
-                    start_pixel,
-                    true,
-                    size as f32,
-                );
-                black_box(stats)
-            })
-        });
+        group.bench_with_input(
+            BenchmarkId::new("sampling_preview_rebuild", size),
+            &harness,
+            |b, harness| {
+                b.iter_custom(|iters| {
+                    measure_color_path_action(
+                        harness,
+                        iters,
+                        ColorPathBenchmarkHarness::sampling_preview_rebuild_action,
+                    )
+                })
+            },
+        );
+
+        group.bench_with_input(
+            BenchmarkId::new("compute_pipeline", size),
+            &harness,
+            |b, harness| {
+                b.iter_custom(|iters| {
+                    measure_color_path_action(
+                        harness,
+                        iters,
+                        ColorPathBenchmarkHarness::compute_pipeline_action,
+                    )
+                })
+            },
+        );
+
+        group.bench_with_input(
+            BenchmarkId::new("preview_core_rebuild", size),
+            &harness,
+            |b, harness| {
+                b.iter_custom(|iters| {
+                    measure_color_path_action(
+                        harness,
+                        iters,
+                        ColorPathBenchmarkHarness::preview_core_rebuild_action,
+                    )
+                })
+            },
+        );
+
+        group.bench_with_input(
+            BenchmarkId::new("prepared_segments_rebuild", size),
+            &harness,
+            |b, harness| {
+                b.iter_custom(|iters| {
+                    measure_color_path_action(
+                        harness,
+                        iters,
+                        ColorPathBenchmarkHarness::prepared_segments_rebuild_action,
+                    )
+                })
+            },
+        );
     }
 
     group.finish();
@@ -233,7 +329,7 @@ criterion_group!(
     bench_route_offset_preview,
     bench_field_path_polygon_centerline,
     bench_field_path_segment_centerline,
-    bench_color_path_pipeline,
+    bench_color_path_stage_rebuilds,
     bench_smooth_curve_preview
 );
 criterion_main!(tool_preview_hotpath_benches);

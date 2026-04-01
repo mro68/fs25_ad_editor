@@ -4,6 +4,7 @@ use super::skeleton::SkeletonNetwork;
 use crate::app::tools::common::ToolLifecycleState;
 use crate::core::{ConnectionDirection, ConnectionPriority};
 use glam::Vec2;
+use image::RgbImage;
 use std::sync::Arc;
 
 /// Aktuelle Phase des ColorPathTool.
@@ -67,12 +68,108 @@ pub(super) struct SamplingInput {
 }
 
 /// Stage B: Aufbereitete Matching-Spezifikation fuer Flood-Fill und Preview.
-#[derive(Debug, Clone, Default)]
+#[derive(Debug, Clone, Default, PartialEq)]
 pub(super) struct MatchingSpec {
     /// Wirksame Farbtoleranz des Matchings.
     pub tolerance: f32,
     /// Aktive Farbreferenzmenge fuer Matching und Anzeige.
     pub palette: Vec<[u8; 3]>,
+}
+
+/// Bitstabile Schluessel-Repräsentation fuer eine Weltposition.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(super) struct Vec2CacheKey {
+    /// Bitmuster der X-Koordinate.
+    pub x_bits: u32,
+    /// Bitmuster der Y-Koordinate.
+    pub y_bits: u32,
+}
+
+impl From<Vec2> for Vec2CacheKey {
+    fn from(value: Vec2) -> Self {
+        Self {
+            x_bits: value.x.to_bits(),
+            y_bits: value.y.to_bits(),
+        }
+    }
+}
+
+/// Cache-Key fuer die Matching-Spezifikation (Stage B).
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(super) struct MatchingCacheKey {
+    /// Revision der Sampling-Eingaben.
+    pub sampling_revision: u64,
+    /// Exaktmodus fuer die Farbauswahl.
+    pub exact_color_match: bool,
+    /// Effektive Toleranz-Konfiguration als Bitmuster.
+    pub color_tolerance_bits: u32,
+}
+
+/// Cache-Key fuer Sampling-Maske und Boundary-Preview (Stage C).
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(super) struct SamplingPreviewCacheKey {
+    /// Identitaet des aktuell gebundenen Hintergrundbilds.
+    pub background_image_id: usize,
+    /// Aktuelle Kartenkante als Bitmuster.
+    pub map_size_bits: u32,
+    /// Lasso-Startpunkt in bitstabiler Form.
+    pub lasso_start_world: Vec2CacheKey,
+    /// Upstream-Revision der Matching-Spezifikation.
+    pub matching_revision: u64,
+}
+
+/// Cache-Key fuer vorbereitete Maske und Skeleton-Netz (Stages D/E).
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(super) struct PreviewCoreCacheKey {
+    /// Revision der Sampling-Vorschau.
+    pub sampling_preview_revision: u64,
+    /// Aktivierter Rauschfilter.
+    pub noise_filter: bool,
+}
+
+/// Cache-Key fuer PreparedSegments (Stage F).
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(super) struct PreparedSegmentsCacheKey {
+    /// Revision des Preview-Kerns.
+    pub preview_core_revision: u64,
+    /// Vereinfachung als Bitmuster.
+    pub simplify_tolerance_bits: u32,
+    /// Node-Abstand als Bitmuster.
+    pub node_spacing_bits: u32,
+}
+
+/// Lazy gecachte RGB-Sicht auf das Hintergrundbild.
+#[derive(Debug, Clone)]
+pub(super) struct CachedRgbImage {
+    /// Identitaet des zugrunde liegenden Hintergrundbilds.
+    pub background_image_id: usize,
+    /// Materialisierte RGB-Pixel fuer wiederholte Flood-Fills.
+    pub image: Arc<RgbImage>,
+}
+
+/// Interner Cache- und Revisionszustand fuer die ColorPath-Stages.
+#[derive(Debug, Clone, Default)]
+pub(super) struct ColorPathCacheState {
+    /// Revision der Sampling-Eingaben (Stage A).
+    pub sampling_revision: u64,
+    /// Revision der Matching-Spezifikation (Stage B).
+    pub matching_revision: u64,
+    /// Revision der Sampling-Vorschau (Stage C).
+    pub sampling_preview_revision: u64,
+    /// Revision von vorbereiteter Maske und Skeleton-Netz (Stages D/E).
+    pub preview_core_revision: u64,
+    /// Revision der PreparedSegments (Stage F).
+    pub prepared_segments_revision: u64,
+    /// Letzter gueltiger Cache-Key fuer Stage B.
+    pub matching_key: Option<MatchingCacheKey>,
+    /// Letzter gueltiger Cache-Key fuer Stage C.
+    pub sampling_preview_key: Option<SamplingPreviewCacheKey>,
+    /// Letzter gueltiger Cache-Key fuer Stages D/E.
+    pub preview_core_key: Option<PreviewCoreCacheKey>,
+    /// Letzter gueltiger Cache-Key fuer Stage F.
+    pub prepared_segments_key: Option<PreparedSegmentsCacheKey>,
+    /// Lazy RGB-Cache fuer wiederholte Flood-Fills auf demselben Bild.
+    pub rgb_image: Option<CachedRgbImage>,
 }
 
 impl MatchingSpec {
@@ -133,6 +230,7 @@ pub(super) struct PreviewData {
 }
 
 /// Konfigurationsparameter fuer die Farb-Pfad-Erkennung.
+#[derive(Clone)]
 pub struct ColorPathConfig {
     /// Exakte Farbübereinstimmung gegen eine der gelasso-ten Farben verwenden.
     ///
@@ -172,6 +270,7 @@ impl Default for ColorPathConfig {
 ///
 /// Der User sampelt per Alt+Lasso Farbwerte, das Tool baut daraus eine
 /// Binaermaske, skelettiert via Zhang-Suen und erzeugt daraus ein Waypoint-Netz.
+#[derive(Clone)]
 pub struct ColorPathTool {
     /// Aktuelle Interaktionsphase
     pub(crate) phase: ColorPathPhase,
@@ -199,6 +298,8 @@ pub struct ColorPathTool {
     pub priority: ConnectionPriority,
     /// Gemeinsamer Lifecycle-Zustand (letzte IDs, End-Anker, Snap-Radius)
     pub(crate) lifecycle: ToolLifecycleState,
+    /// Interne Stage-Keys, Revisionen und Lazy-Caches.
+    pub(super) cache: ColorPathCacheState,
 }
 
 impl Default for ColorPathTool {
@@ -222,6 +323,7 @@ impl ColorPathTool {
             direction: ConnectionDirection::Dual,
             priority: ConnectionPriority::Regular,
             lifecycle: ToolLifecycleState::new(3.0),
+            cache: ColorPathCacheState::default(),
         }
     }
 }

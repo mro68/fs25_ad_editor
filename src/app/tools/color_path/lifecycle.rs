@@ -16,10 +16,30 @@ impl ColorPathTool {
     pub(super) fn on_matching_config_changed(&mut self) {
         match self.phase {
             ColorPathPhase::Idle => self.refresh_matching_spec(),
-            ColorPathPhase::Sampling => {
-                self.clear_preview_pipeline();
-                self.rebuild_sampling_preview();
-            }
+            ColorPathPhase::Sampling => self.rebuild_sampling_preview(),
+            ColorPathPhase::Preview => self.compute_pipeline(),
+        }
+    }
+
+    /// Reagiert auf Aenderungen der Stage-D/E-Konfiguration.
+    pub(super) fn on_preview_core_config_changed(&mut self) {
+        if self.phase == ColorPathPhase::Preview {
+            let _ = self.rebuild_preview_from_sampling_artifacts();
+        }
+    }
+
+    /// Reagiert auf Aenderungen der Stage-F-Konfiguration.
+    pub(super) fn on_preview_geometry_config_changed(&mut self) {
+        if self.phase == ColorPathPhase::Preview {
+            self.rebuild_prepared_segments();
+        }
+    }
+
+    /// Reagiert auf Aenderungen am Bild-/Map-Kontext der Sampling-Pipeline.
+    pub(super) fn on_sampling_context_changed(&mut self) {
+        match self.phase {
+            ColorPathPhase::Idle => self.clear_sampling_preview(),
+            ColorPathPhase::Sampling => self.rebuild_sampling_preview(),
             ColorPathPhase::Preview => self.compute_pipeline(),
         }
     }
@@ -28,18 +48,18 @@ impl ColorPathTool {
     pub(super) fn compute_pipeline(&mut self) {
         let Some(_image) = self.background_image.as_ref() else {
             log::warn!("ColorPathTool: Pipeline abgebrochen — kein Hintergrundbild");
+            self.clear_sampling_preview();
             return;
         };
         if self.sampling.sampled_colors.is_empty() {
             log::warn!("ColorPathTool: Pipeline abgebrochen — keine Farbsamples");
             self.refresh_matching_spec();
-            self.sampling_preview = None;
-            self.preview_data = None;
+            self.clear_sampling_preview();
             return;
         }
         if self.sampling.lasso_start_world.is_none() {
             log::warn!("ColorPathTool: Pipeline abgebrochen — kein Lasso-Startpunkt");
-            self.preview_data = None;
+            self.clear_sampling_preview();
             return;
         }
 
@@ -109,7 +129,7 @@ impl crate::app::tools::RouteTool for ColorPathTool {
         self.sampling.avg_color = Some(super::sampling::compute_average_color(
             &self.sampling.sampled_colors,
         ));
-        self.clear_preview_pipeline();
+        self.mark_sampling_input_changed();
         self.rebuild_sampling_preview();
 
         log::info!(
@@ -158,6 +178,7 @@ impl crate::app::tools::RouteTool for ColorPathTool {
         self.matching = super::state::MatchingSpec::default();
         self.sampling_preview = None;
         self.preview_data = None;
+        self.cache = super::state::ColorPathCacheState::default();
     }
 
     fn is_ready(&self) -> bool {
@@ -173,6 +194,12 @@ impl crate::app::tools::RouteTool for ColorPathTool {
     }
 
     fn set_background_map_image(&mut self, image: Option<Arc<image::DynamicImage>>) {
+        let previous_image_id = self
+            .background_image
+            .as_ref()
+            .map(|current| Arc::as_ptr(current) as usize);
+        let previous_map_size_bits = self.map_size.to_bits();
+
         if let Some(ref img) = image {
             let (w, h) = img.dimensions();
             let img_map_size = w.min(h) as f32;
@@ -186,11 +213,26 @@ impl crate::app::tools::RouteTool for ColorPathTool {
             }
         }
         self.background_image = image;
+
+        let current_image_id = self
+            .background_image
+            .as_ref()
+            .map(|current| Arc::as_ptr(current) as usize);
+        let context_changed = previous_image_id != current_image_id
+            || previous_map_size_bits != self.map_size.to_bits();
+        if context_changed {
+            self.cache.rgb_image = None;
+            self.on_sampling_context_changed();
+        }
     }
 
     fn set_farmland_grid(&mut self, grid: Option<Arc<FarmlandGrid>>) {
         if let Some(g) = &grid {
+            let previous_map_size_bits = self.map_size.to_bits();
             self.map_size = g.map_size;
+            if previous_map_size_bits != self.map_size.to_bits() {
+                self.on_sampling_context_changed();
+            }
         }
     }
 
@@ -199,7 +241,10 @@ impl crate::app::tools::RouteTool for ColorPathTool {
 
 #[cfg(test)]
 mod tests {
+    use std::sync::Arc;
+
     use super::*;
+    use crate::app::tools::color_path::sampling::pixel_to_world;
     use crate::app::tools::color_path::skeleton::{
         SkeletonGraphNode, SkeletonGraphNodeKind, SkeletonNetwork,
     };
@@ -208,6 +253,17 @@ mod tests {
     };
     use crate::app::tools::RouteTool;
     use crate::core::{ConnectionDirection, ConnectionPriority, MapNode, NodeFlag};
+    use image::{DynamicImage, Rgb, RgbImage};
+
+    fn build_test_image() -> DynamicImage {
+        DynamicImage::ImageRgb8(RgbImage::from_fn(10, 10, |x, _| {
+            if x < 8 {
+                Rgb([200, 0, 0])
+            } else {
+                Rgb([0, 200, 0])
+            }
+        }))
+    }
 
     fn sample_network() -> SkeletonNetwork {
         SkeletonNetwork {
@@ -322,5 +378,27 @@ mod tests {
                 idx == 0 && existing_id == 200 && direction == ConnectionDirection::Dual
             }
         ));
+    }
+
+    #[test]
+    fn set_background_map_image_with_same_arc_keeps_sampling_preview_cache() {
+        let image = Arc::new(build_test_image());
+        let mut tool = ColorPathTool::new();
+        tool.phase = ColorPathPhase::Sampling;
+        tool.set_background_map_image(Some(Arc::clone(&image)));
+        tool.sampling.sampled_colors = vec![[200, 0, 0]];
+        tool.sampling.lasso_start_world = Some(pixel_to_world(0, 0, tool.map_size, 10, 10));
+        tool.mark_sampling_input_changed();
+
+        tool.rebuild_sampling_preview();
+        let sampling_preview_revision = tool.cache.sampling_preview_revision;
+
+        tool.set_background_map_image(Some(Arc::clone(&image)));
+
+        assert_eq!(
+            tool.cache.sampling_preview_revision,
+            sampling_preview_revision
+        );
+        assert!(tool.sampling_preview.is_some());
     }
 }
