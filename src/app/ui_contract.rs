@@ -1,7 +1,7 @@
 //! App-weite Read-DTOs und schmale UI-Adapter fuer Route-Tool-Daten.
 
-use crate::app::tools::RouteTool;
 use crate::app::tool_contract::TangentSource;
+use crate::app::tools::RouteTool;
 use glam::Vec2;
 
 /// Eine waehlbare Tangenten-Option mit bereits aufbereitetem UI-Label.
@@ -216,7 +216,10 @@ mod tests {
 
         let data = RouteToolViewportData::from_active_tool(Some(&tool));
 
-        assert_eq!(data.drag_targets, vec![Vec2::new(1.0, 2.0), Vec2::new(3.0, 4.0)]);
+        assert_eq!(
+            data.drag_targets,
+            vec![Vec2::new(1.0, 2.0), Vec2::new(3.0, 4.0)]
+        );
         assert!(data.has_pending_input);
         assert_eq!(data.tangent_menu_data, Some(tangent_menu_data));
         assert!(data.needs_lasso_input);
