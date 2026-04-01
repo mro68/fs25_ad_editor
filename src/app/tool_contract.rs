@@ -1,4 +1,4 @@
-//! App-weiter Vertrag fuer Route-Tool-Identitaeten und Ankerdaten.
+//! App-weiter Vertrag fuer Route-Tool-Identitaeten, Anker- und Tangentendaten.
 
 use glam::Vec2;
 
@@ -62,4 +62,16 @@ impl ToolAnchor {
             Self::ExistingNode(_, pos) | Self::NewPosition(pos) => *pos,
         }
     }
+}
+
+/// Quelle einer Tangente am Start- oder Endpunkt eines Route-Tools.
+///
+/// Wird von Curve- und Spline-Tool verwendet, um Kontroll- oder Phantom-Punkte
+/// tangential an einer bestehenden Verbindung auszurichten.
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub enum TangentSource {
+    /// Kein Tangenten-Vorschlag — Punkt wird manuell gesetzt.
+    None,
+    /// Tangente aus bestehender Verbindung.
+    Connection { neighbor_id: u64, angle: f32 },
 }

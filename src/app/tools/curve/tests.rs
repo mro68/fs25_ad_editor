@@ -1,4 +1,5 @@
-use super::super::common::{angle_to_compass, TangentSource};
+use super::super::common::angle_to_compass;
+use crate::app::tool_contract::TangentSource;
 use super::super::{RouteTool, ToolAction, ToolAnchor};
 use super::geometry::{
     approx_length, compute_curve_positions, compute_tangent_cp, cubic_bezier,

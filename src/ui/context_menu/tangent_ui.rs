@@ -1,6 +1,6 @@
 //! Tangenten-Auswahl und Node-Info-Submenu für das Kontextmenü.
 
-use crate::app::tools::common::TangentMenuData;
+use crate::app::ui_contract::TangentMenuData;
 use crate::app::{AppIntent, RoadMap};
 
 /// Info-Submenu für einen Node (öffnet bei Hover, zeigt Details).
@@ -47,11 +47,11 @@ pub(super) fn render_tangent_selection(
 
     if has_start {
         ui.label("Start:");
-        for (source, label) in &data.start_options {
-            let is_sel = *source == data.current_start;
-            if ui.selectable_label(is_sel, label).clicked() {
+        for option in &data.start_options {
+            let is_sel = option.source == data.current_start;
+            if ui.selectable_label(is_sel, &option.label).clicked() {
                 events.push(AppIntent::RouteToolTangentSelected {
-                    start: *source,
+                    start: option.source,
                     end: data.current_end,
                 });
                 ui.close();
@@ -65,12 +65,12 @@ pub(super) fn render_tangent_selection(
 
     if has_end {
         ui.label("Ende:");
-        for (source, label) in &data.end_options {
-            let is_sel = *source == data.current_end;
-            if ui.selectable_label(is_sel, label).clicked() {
+        for option in &data.end_options {
+            let is_sel = option.source == data.current_end;
+            if ui.selectable_label(is_sel, &option.label).clicked() {
                 events.push(AppIntent::RouteToolTangentSelected {
                     start: data.current_start,
-                    end: *source,
+                    end: option.source,
                 });
                 ui.close();
             }

@@ -2,7 +2,7 @@
 
 Dokumentation fuer `app::tools`: `ToolManager`, `RouteTool`-Trait, registrierte Tools und gemeinsame Infrastruktur.
 
-`RouteToolId` und `ToolAnchor` gehoeren zum app-weiten Tool-Vertrag in `app::tool_contract` und werden hier fuer die Tool-Implementierungen weiterverwendet.
+`RouteToolId`, `ToolAnchor` und `TangentSource` gehoeren zum app-weiten Tool-Vertrag in `app::tool_contract`. UI-taugliche Read-DTOs wie `TangentMenuData` und `TangentOptionData` gehoeren nach `app::ui_contract`. Beides wird hier fuer die Tool-Implementierungen weiterverwendet.
 
 **Zurueck:** [`../API.md`](../API.md)
 
@@ -655,12 +655,9 @@ Hilfsfunktionen: `angle_to_compass`, `node_count_from_length`, `populate_neighbo
 
 ### `tangent.rs`
 
-**`TangentSource`** — Tangenten-Quelle am Start-/Endpunkt (fuer Curve + Spline):
+**`render_tangent_combo(ui, id_salt, label, none_label, current, neighbors) → bool`** — Gemeinsamer UI-Baustein fuer Tangenten-ComboBoxen (verwendet von Curve + Spline config_ui). Arbeitet auf `app::tool_contract::TangentSource`.
 
-- `None` — Kein Tangenten-Vorschlag
-- `Connection { neighbor_id, angle }` — Tangente aus bestehender Verbindung
-
-**`render_tangent_combo(ui, id_salt, label, none_label, current, neighbors) → bool`** — Gemeinsamer UI-Baustein fuer Tangenten-ComboBoxen (verwendet von Curve + Spline config_ui).
+Die Menue-DTOs fuer die UI (`TangentMenuData`, `TangentOptionData`) liegen seit F4a bewusst in `app::ui_contract`; `tools/common` liefert dafuer nur noch die Aufbereitung ueber `geometry::tangent_options()`.
 
 ### `lifecycle.rs`
 

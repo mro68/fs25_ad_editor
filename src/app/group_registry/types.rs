@@ -3,7 +3,7 @@
 //! Enthaelt alle Datentypes (`GroupBase`, `GroupKind`, `GroupRecord`)
 //! sowie den expliziten Tool-Vertrag fuer `GroupRecord`.
 
-use crate::app::tools::common::TangentSource;
+use crate::app::tool_contract::TangentSource;
 use crate::app::tools::parking::ParkingConfig;
 use crate::app::tools::ToolAnchor;
 use crate::app::tools::{

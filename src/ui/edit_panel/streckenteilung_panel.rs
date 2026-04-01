@@ -1,6 +1,6 @@
 use crate::app::state::DistanzenState;
-use crate::app::tools::common::wheel_dir;
 use crate::app::{AppIntent, RoadMap};
+use crate::shared::ui_input::wheel_dir;
 use indexmap::IndexSet;
 use std::hash::{Hash, Hasher};
 
