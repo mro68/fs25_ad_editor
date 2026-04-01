@@ -1,5 +1,6 @@
-use super::helpers::{
-    nearest_in_set, order_points_by_principal_axis, sample_multiple_polygon_edges,
+use super::{
+    helpers::{order_points_by_principal_axis, sample_multiple_polygon_edges},
+    search::SampleSearchIndex,
 };
 use glam::Vec2;
 
@@ -25,11 +26,15 @@ pub fn compute_polygon_centerline(
         return Vec::new();
     }
 
+    let samples2_index = SampleSearchIndex::from_points(samples2);
+
     // Fuer jeden Punkt auf Seite 1: naechsten auf Seite 2 und Distanz
     let mut pairs: Vec<(Vec2, Vec2, f32)> = samples1
         .iter()
         .map(|&p1| {
-            let (p2, d) = nearest_in_set(p1, &samples2);
+            let (p2, d) = samples2_index
+                .nearest(p1)
+                .expect("samples2_index enthaelt mindestens einen Punkt");
             (p1, p2, d)
         })
         .collect();

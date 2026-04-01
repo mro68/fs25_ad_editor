@@ -3,6 +3,7 @@
 mod extract;
 mod helpers;
 mod polygon;
+mod search;
 mod segment;
 mod voronoi;
 

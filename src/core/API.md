@@ -455,9 +455,9 @@ pub struct FarmlandGrid {
 ### Centerline-Berechnung
 
 In `core::centerline` (re-exportiert aus `core`). Die interne Implementierung ist
-nach Verantwortlichkeiten in `polygon`, `segment`, `voronoi`, `extract` und
-`helpers` aufgeteilt; die öffentliche Fassade über `core` und `core::centerline`
-bleibt dabei stabil.
+nach Verantwortlichkeiten in `polygon`, `segment`, `voronoi`, `extract`,
+`helpers` und `search` aufgeteilt; die öffentliche Fassade über `core` und
+`core::centerline` bleibt dabei stabil.
 
 ```rust
 pub struct VoronoiGrid {
@@ -512,6 +512,7 @@ pub fn extract_boundary_centerline(
 - `polygon` und `segment` enthalten die rein geometrischen Varianten ohne Pixel-Grid.
 - `voronoi` enthält Typ und BFS-Berechnung für rasterbasierte Kandidaten.
 - `extract` enthält die Korridor- und Boundary-Extraktion auf Basis des Rasterpfads.
+- `search` kapselt den internen Sample-Suchindex für Nearest-Neighbor-Abfragen auf den abgetasteten Korridorkanten.
 
 **Beispiel:**
 

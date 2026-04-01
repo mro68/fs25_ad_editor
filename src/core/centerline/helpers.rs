@@ -19,20 +19,6 @@ pub(super) fn sample_multiple_polylines(segs: &[Vec<Vec2>], spacing: f32) -> Vec
     all
 }
 
-/// Findet den naechsten Punkt in einer Menge (Brute-Force).
-pub(super) fn nearest_in_set(query: Vec2, set: &[Vec2]) -> (Vec2, f32) {
-    let mut best = set[0];
-    let mut best_d = query.distance_squared(best);
-    for &p in &set[1..] {
-        let d = query.distance_squared(p);
-        if d < best_d {
-            best_d = d;
-            best = p;
-        }
-    }
-    (best, best_d.sqrt())
-}
-
 /// Ordnet Punkte entlang ihrer Hauptachse (PCA-basiert).
 ///
 /// Berechnet die Richtung maximaler Varianz und projiziert alle Punkte darauf.
