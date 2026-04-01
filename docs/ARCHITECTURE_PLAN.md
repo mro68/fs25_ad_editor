@@ -447,6 +447,14 @@ src/
   core/
     mod.rs
     camera.rs           # Camera2D + pick_radius_world()
+    centerline.rs       # Oeffentliche Fassade fuer Mittellinien-Berechnung
+    centerline/
+      polygon.rs        # Polygon-basierte Centerline ohne Raster-Grid
+      segment.rs        # Segment-basierte Centerline ohne Raster-Grid
+      voronoi.rs        # VoronoiGrid + Multi-Source-BFS auf Farmland-Rastern
+      extract.rs        # Korridor- und Boundary-Extraktion aus Rasterdaten
+      helpers.rs        # Gemeinsame Raster- und Geometrie-Helfer
+      tests.rs          # Unit-Tests fuer die interne Aufteilung
     node.rs             # MapNode, NodeFlag
     connection.rs       # Connection, ConnectionDirection, ConnectionPriority
     road_map.rs         # RoadMap (HashMap-basiert, lazy Spatial-Index-Rebuild)
