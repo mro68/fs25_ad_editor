@@ -11,8 +11,8 @@ mod geometry;
 mod lifecycle;
 mod tangent;
 
-pub(crate) use builder::assemble_tool_result;
 pub(crate) use crate::shared::ui_input::wheel_dir;
+pub(crate) use builder::assemble_tool_result;
 // angle_to_compass und local_perp werden in Teilmodulen/Tests verwendet
 #[allow(unused_imports)]
 pub(crate) use geometry::angle_to_compass;

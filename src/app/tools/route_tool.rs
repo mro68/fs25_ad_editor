@@ -1,8 +1,8 @@
 //! RouteTool-Trait — Schnittstelle fuer alle Route-Tools.
 
+use crate::app::group_registry::{GroupKind, GroupRecord};
 use crate::app::tool_contract::TangentSource;
 use crate::app::ui_contract::TangentMenuData;
-use crate::app::group_registry::{GroupKind, GroupRecord};
 use crate::core::{ConnectionDirection, ConnectionPriority, RoadMap};
 use glam::Vec2;
 
@@ -160,12 +160,7 @@ pub trait RouteTool {
     /// Wird vom Context-Menu-Router aufgerufen nachdem der User eine
     /// Tangente im Menue ausgewaehlt hat. Das Tool aktualisiert seine
     /// Kontrollpunkte und setzt ggf. das Recreate-Flag.
-    fn apply_tangent_selection(
-        &mut self,
-        _start: TangentSource,
-        _end: TangentSource,
-    ) {
-    }
+    fn apply_tangent_selection(&mut self, _start: TangentSource, _end: TangentSource) {}
 
     /// Erstellt einen `GroupRecord` fuer die Registry aus dem aktuellen Tool-Zustand.
     ///

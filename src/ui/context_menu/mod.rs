@@ -277,14 +277,20 @@ mod tests {
     fn find_nearest_node_at_prefers_the_closest_node_inside_snap_radius() {
         let map = build_test_map();
 
-        assert_eq!(find_nearest_node_at(Vec2::new(3.2, 0.0), &map, 5.0), Some(2));
+        assert_eq!(
+            find_nearest_node_at(Vec2::new(3.2, 0.0), &map, 5.0),
+            Some(2)
+        );
     }
 
     #[test]
     fn find_nearest_node_at_keeps_the_snap_radius_boundary() {
         let map = build_test_map();
 
-        assert_eq!(find_nearest_node_at(Vec2::new(1.0, 0.0), &map, 1.0), Some(1));
+        assert_eq!(
+            find_nearest_node_at(Vec2::new(1.0, 0.0), &map, 1.0),
+            Some(1)
+        );
         assert_eq!(find_nearest_node_at(Vec2::new(1.01, 0.0), &map, 1.0), None);
     }
 }
