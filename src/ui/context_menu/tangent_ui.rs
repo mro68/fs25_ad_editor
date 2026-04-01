@@ -14,14 +14,8 @@ pub(super) fn render_node_info_submenu(ui: &mut egui::Ui, node_id: u64, road_map
             ));
             ui.label(format!("Flag: {:?}", node.flag));
             ui.separator();
-            let out_count = road_map
-                .connections_iter()
-                .filter(|c| c.start_id == node_id)
-                .count();
-            let in_count = road_map
-                .connections_iter()
-                .filter(|c| c.end_id == node_id)
-                .count();
+            let out_count = road_map.outgoing_neighbors(node_id).count();
+            let in_count = road_map.incoming_neighbors(node_id).count();
             ui.label(format!("Ausgehend: {}", out_count));
             ui.label(format!("Eingehend: {}", in_count));
             if let Some(marker) = road_map.find_marker_by_node_id(node_id) {
