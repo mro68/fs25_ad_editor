@@ -338,13 +338,15 @@ pub fn render_edit_panel(
   default_priority: ConnectionPriority,
   distance_wheel_step_m: f32,
   active_tool: EditorTool,
-  tool_manager: Option<&mut ToolManager>,
+  route_tool: Option<RouteToolPanelAdapter<'_>>,
   panel_pos: Option<egui::Pos2>,
   group_editing: Option<&GroupEditState>,
   group_record: Option<&GroupRecord>,
   options: &mut EditorOptions,
 ) -> Vec<AppIntent>
 ```
+
+Die Route-Tool-Konfiguration arbeitet hier bewusst nur noch ueber die app-seitige Fassade `RouteToolPanelAdapter`; der breite `ToolManager` bleibt im Application-Layer gekapselt.
 
 Im Gruppen-Bearbeitungsmodus enthält das Panel:
 - Checkbox für `options.show_all_group_boundaries` (Sichtbarkeit aller Boundary-Icons)
@@ -371,10 +373,8 @@ pub struct InputState {
 ```rust
 let mut input = InputState::new();
 
-// Drag-Targets vom aktiven Route-Tool berechnen
-let drag_targets = tool_manager.active_tool()
-    .map(|t| t.drag_targets())
-    .unwrap_or_default();
+// Read-DTO fuer alle Route-Tool-spezifischen Viewport-Daten
+let route_tool_view = editor_state.route_tool_viewport_data();
 
 // Sammelt Viewport-Events aus egui-Input
 let intents = input.collect_viewport_events(
@@ -382,7 +382,9 @@ let intents = input.collect_viewport_events(
     &camera, road_map.as_deref(), &selected_node_ids,
     active_tool, route_tool_is_drawing,
   &options, command_palette_open, default_direction, default_priority,
-  &drag_targets, &mut distanzen_state, tangent_data,
+  &route_tool_view.drag_targets,
+  &mut distanzen_state,
+  route_tool_view.tangent_menu_data,
 );
 ```
 
@@ -552,7 +554,7 @@ pub fn show_options_dialog(
 
 ### `render_tool_preview`
 
-Zeichnet das Tool-Preview-Overlay in den Viewport (Verbindungen als Linien, Nodes als Kreise/Rauten, halbtransparent).
+Zeichnet das Tool-Preview-Overlay in den Viewport (Verbindungen als Linien, Nodes als Kreise/Rauten, halbtransparent). Die Preview-Geometrie wird app-seitig vorbereitet, z.B. ueber `EditorToolState::route_tool_preview()`.
 
 ```rust
 pub fn render_tool_preview(

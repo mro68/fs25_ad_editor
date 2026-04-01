@@ -9,7 +9,7 @@ mod streckenteilung_panel;
 
 use crate::app::state::DistanzenState;
 use crate::app::state::GroupEditState;
-use crate::app::tools::ToolManager;
+use crate::app::ui_contract::RouteToolPanelAdapter;
 use crate::app::{
     AppIntent, ConnectionDirection, ConnectionPriority, EditorTool, GroupRecord, RoadMap,
 };
@@ -32,7 +32,7 @@ pub fn render_edit_panel(
     default_priority: ConnectionPriority,
     distance_wheel_step_m: f32,
     active_tool: EditorTool,
-    tool_manager: Option<&mut ToolManager>,
+    route_tool: Option<RouteToolPanelAdapter<'_>>,
     panel_pos: Option<egui::Pos2>,
     group_editing: Option<&GroupEditState>,
     group_record: Option<&GroupRecord>,
@@ -70,10 +70,10 @@ pub fn render_edit_panel(
 
     // Route-Tool Edit-Modus (immer wenn Tool aktiv)
     if active_tool == EditorTool::Route {
-        if let Some(manager) = tool_manager {
+        if let Some(route_tool) = route_tool {
             route_tool_panel::render_route_tool_panel(
                 ctx,
-                manager,
+                route_tool,
                 default_direction,
                 default_priority,
                 distance_wheel_step_m,
