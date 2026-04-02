@@ -6,7 +6,7 @@
 //! - RenderScene: HashSet-Clone (vorher: HashSet→Vec Konvertierung)
 
 use criterion::{criterion_group, criterion_main, BenchmarkId, Criterion};
-use fs25_auto_drive_editor::{MapMarker, MapNode, NodeFlag, RoadMap};
+use fs25_auto_drive_editor::core::{MapMarker, MapNode, NodeFlag, RoadMap};
 use glam::Vec2;
 use std::collections::HashSet;
 use std::hint::black_box;
