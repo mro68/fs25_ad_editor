@@ -62,20 +62,11 @@ pub fn compute_color_path_network_stats(
     let rgb_image = cached_rgb_image_for_stats(image);
     let (mask, width, height) =
         sampling::flood_fill_color_mask_from_rgb(&rgb_image, palette, tolerance, start_pixel);
-    let prepared_mask = sampling::prepare_mask_for_skeleton(
-        &mask,
-        width as usize,
-        height as usize,
-        noise_filter,
-    );
+    let prepared_mask =
+        sampling::prepare_mask_for_skeleton(&mask, width as usize, height as usize, noise_filter);
     let start_hint = Some((start_pixel.0 as usize, start_pixel.1 as usize));
-    let network = skeleton::extract_network_from_mask(
-        &prepared_mask,
-        width,
-        height,
-        map_size,
-        start_hint,
-    );
+    let network =
+        skeleton::extract_network_from_mask(&prepared_mask, width, height, map_size, start_hint);
 
     (
         network.nodes.len(),
@@ -291,10 +282,8 @@ mod tests {
         let img: RgbImage = ImageBuffer::from_fn(size, size, |x, y| {
             let xi = x as i32;
             let yi = y as i32;
-            let on_horizontal =
-                (yi - half).abs() <= thickness && x > size / 8 && x < size * 7 / 8;
-            let on_vertical =
-                (xi - half).abs() <= thickness && y > size / 6 && y < size * 5 / 6;
+            let on_horizontal = (yi - half).abs() <= thickness && x > size / 8 && x < size * 7 / 8;
+            let on_vertical = (xi - half).abs() <= thickness && y > size / 6 && y < size * 5 / 6;
             let on_diagonal = ((xi - yi) - half / 3).abs() <= thickness / 2 && x > size / 5;
 
             if on_horizontal || on_vertical || on_diagonal {
@@ -338,11 +327,8 @@ mod tests {
     }
 
     fn build_harness() -> ColorPathBenchmarkHarness {
-        ColorPathBenchmarkHarness::new(
-            Arc::new(build_test_image(128)),
-            build_test_lasso(128),
-        )
-        .expect("Benchmark-Harness sollte aufgebaut werden")
+        ColorPathBenchmarkHarness::new(Arc::new(build_test_image(128)), build_test_lasso(128))
+            .expect("Benchmark-Harness sollte aufgebaut werden")
     }
 
     #[test]
