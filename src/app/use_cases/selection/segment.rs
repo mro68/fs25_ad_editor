@@ -785,4 +785,86 @@ mod tests {
             "Node 20 sollte NICHT selektiert sein (90°-Abzweig > 89°-Constraint)"
         );
     }
+
+    #[test]
+    fn walk_propagates_incoming_angle_over_multiple_steps() {
+        // Graduelle Kurve: 10→11→12→13→14, je ~45° Richtungsaenderung pro Schritt.
+        //
+        //  Node 10: (  0,  0)   Winkel 10→11:  0° (Ost)
+        //  Node 11: ( 10,  0)   Winkel 11→12: 45° (NO-Diagonale)
+        //  Node 12: ( 17,  7)   Winkel 12→13: 90° (Nord)
+        //  Node 13: ( 17, 17)   Winkel 13→14: 135° (NW-Diagonale)
+        //  Node 14: ( 10, 24)
+        //
+        // Mit korrekter Propagation gilt: jede Einzel-Abweichung ~45° < max_angle 60°
+        // → alle 5 Nodes werden selektiert.
+        //
+        // Ohne Propagation (incoming_angle bleibt dauerhaft bei 0°) wuerde der Walk
+        // bereits bei Schritt 12→13 (kumulative Abweichung 90° > 60°) abbrechen
+        // und die Nodes 13 und 14 verfehlen.
+        let mut map = RoadMap::new(5);
+        map.add_node(MapNode::new(
+            10,
+            glam::Vec2::new(0.0, 0.0),
+            NodeFlag::Regular,
+        ));
+        map.add_node(MapNode::new(
+            11,
+            glam::Vec2::new(10.0, 0.0),
+            NodeFlag::Regular,
+        ));
+        map.add_node(MapNode::new(
+            12,
+            glam::Vec2::new(17.0, 7.0),
+            NodeFlag::Regular,
+        ));
+        map.add_node(MapNode::new(
+            13,
+            glam::Vec2::new(17.0, 17.0),
+            NodeFlag::Regular,
+        ));
+        map.add_node(MapNode::new(
+            14,
+            glam::Vec2::new(10.0, 24.0),
+            NodeFlag::Regular,
+        ));
+
+        let conn = |s, e, sx: f32, sy: f32, ex: f32, ey: f32| {
+            Connection::new(
+                s,
+                e,
+                ConnectionDirection::Regular,
+                ConnectionPriority::Regular,
+                glam::Vec2::new(sx, sy),
+                glam::Vec2::new(ex, ey),
+            )
+        };
+        map.add_connection(conn(10, 11, 0.0, 0.0, 10.0, 0.0)); // Winkel: 0°
+        map.add_connection(conn(11, 12, 10.0, 0.0, 17.0, 7.0)); // Winkel: ~45°
+        map.add_connection(conn(12, 13, 17.0, 7.0, 17.0, 17.0)); // Winkel: 90°
+        map.add_connection(conn(13, 14, 17.0, 17.0, 10.0, 24.0)); // Winkel: ~135°
+        map.ensure_spatial_index();
+
+        let mut state = AppState::new();
+        state.road_map = Some(Arc::new(map));
+
+        // Klick auf Node 10 (Kettenanfang): Walk laeuft 3+ Schritte mit stetig drehendem Winkel
+        select_segment_between_nearest_intersections(
+            &mut state,
+            glam::Vec2::new(0.0, 0.0), // Node 10
+            1.0,
+            false,
+            false, // stop_at_junction=false
+            60.0,  // max_angle=60°: Einzel-Abweichung ~45° liegt darunter — kumuliert nicht
+        );
+
+        // Alle 5 Nodes muessen selektiert sein — beweist, dass incoming_angle
+        // nach jedem Schritt korrekt aktualisiert wird statt beim Startwert zu verharren
+        for node_id in [10_u64, 11, 12, 13, 14] {
+            assert!(
+                state.selection.selected_node_ids.contains(&node_id),
+                "Node {node_id} sollte selektiert sein — incoming_angle muss pro Schritt propagiert werden"
+            );
+        }
+    }
 }
