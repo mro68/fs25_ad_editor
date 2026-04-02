@@ -3,9 +3,8 @@
 use crate::core::{ConnectionDirection, ConnectionPriority, NodeFlag};
 use crate::shared::angle_deviation;
 use crate::AppState;
-use std::collections::HashMap;
 
-use super::helpers::{build_undirected_adjacency_with_angles, clear_selection, AdjacencyNeighbor};
+use super::helpers::{clear_selection, neighbors_for_segment_walk, AdjacencyNeighbor};
 
 /// Konfig fuer die Abbruchbedingungen des Segment-Walks.
 struct WalkConfig {
@@ -62,36 +61,35 @@ fn score_neighbor(
 /// Bei Kreuzungen (>2 Nachbarn) wird score-basiert der beste Kandidat gewaehlt.
 fn walk_to_segment_boundary(
     start: u64,
-    first_neighbor: u64,
-    adjacency: &HashMap<u64, Vec<AdjacencyNeighbor>>,
+    first_neighbor: AdjacencyNeighbor,
+    road_map: &crate::core::RoadMap,
     config: &WalkConfig,
 ) -> Vec<u64> {
-    let mut path = vec![start, first_neighbor];
+    let mut path = vec![start, first_neighbor.node_id];
     let mut previous = start;
-    let mut current = first_neighbor;
+    let mut current = first_neighbor.node_id;
+    let mut incoming_angle = Some(first_neighbor.angle);
 
-    while let Some(neighbors) = adjacency.get(&current) {
+    loop {
+        let neighbors = neighbors_for_segment_walk(road_map, current);
+
         // Abbruch: Kreuzung (degree != 2)
         if config.stop_at_junction && neighbors.len() != 2 {
             break;
         }
 
-        // Eingangswinkel fuer Constraint + Scoring ermitteln
-        let incoming_angle = adjacency
-            .get(&previous)
-            .and_then(|ns| ns.iter().find(|n| n.node_id == current))
-            .map(|n| n.angle);
-
         // Kandidaten: alle Nachbarn ausser previous
-        let candidates: Vec<&AdjacencyNeighbor> =
-            neighbors.iter().filter(|n| n.node_id != previous).collect();
+        let candidates: Vec<AdjacencyNeighbor> = neighbors
+            .into_iter()
+            .filter(|neighbor| neighbor.node_id != previous)
+            .collect();
 
         if candidates.is_empty() {
             break;
         }
 
         // Harter Winkel-Constraint: nur Kandidaten innerhalb max_angle_rad behalten
-        let viable: Vec<&AdjacencyNeighbor> = if config.max_angle_rad > 0.0 {
+        let viable: Vec<AdjacencyNeighbor> = if config.max_angle_rad > 0.0 {
             if let Some(in_angle) = incoming_angle {
                 candidates
                     .into_iter()
@@ -108,12 +106,12 @@ fn walk_to_segment_boundary(
             break;
         }
 
-        // Besten Kandidaten nach Score waehlen
-        // SAFETY: viable ist nicht leer (oben geprueft)
-        let next_entry = viable
+        let Some(next_entry) = viable
             .into_iter()
             .max_by_key(|n| score_neighbor(n, config.start_flag, incoming_angle))
-            .expect("viable ist nicht leer");
+        else {
+            break;
+        };
 
         if path.contains(&next_entry.node_id) {
             break;
@@ -122,6 +120,7 @@ fn walk_to_segment_boundary(
         path.push(next_entry.node_id);
         previous = current;
         current = next_entry.node_id;
+        incoming_angle = Some(next_entry.angle);
     }
 
     path
@@ -176,11 +175,7 @@ pub fn select_segment_between_nearest_intersections(
         return;
     };
 
-    let adjacency = build_undirected_adjacency_with_angles(road_map);
-    let neighbors = adjacency
-        .get(&hit_id)
-        .map(|ns| ns.iter().map(|n| n.node_id).collect::<Vec<_>>())
-        .unwrap_or_default();
+    let neighbors = neighbors_for_segment_walk(road_map, hit_id);
 
     if neighbors.is_empty() {
         if !additive {
@@ -209,7 +204,7 @@ pub fn select_segment_between_nearest_intersections(
 
     let mut paths = neighbors
         .into_iter()
-        .map(|neighbor| walk_to_segment_boundary(hit_id, neighbor, &adjacency, &config))
+        .map(|neighbor| walk_to_segment_boundary(hit_id, neighbor, road_map, &config))
         .collect::<Vec<_>>();
 
     if paths.len() > 2 {

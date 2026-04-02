@@ -4,6 +4,7 @@ use crate::core::{ConnectionDirection, ConnectionPriority, NodeFlag, RoadMap};
 use glam::Vec2;
 
 use super::super::{ToolAnchor, ToolResult};
+use super::result::ToolResultBuilder;
 
 /// Baut ein `ToolResult` aus einer Positions-Sequenz und Start-/End-Ankern.
 ///
@@ -12,6 +13,8 @@ use super::super::{ToolAnchor, ToolResult};
 /// 2. Interne und externe Verbindungen zwischen aufeinanderfolgenden Positionen aufbauen
 ///
 /// Die Geometrie (Positionen) wird vorher tool-spezifisch berechnet und uebergeben.
+/// Optionale `ToolResult`-Felder werden ueber den kanonischen Shared-Builder
+/// konsistent leer initialisiert.
 pub fn assemble_tool_result(
     positions: &[Vec2],
     start: &ToolAnchor,
@@ -106,13 +109,9 @@ pub fn assemble_tool_result(
         }
     }
 
-    ToolResult {
-        new_nodes,
-        internal_connections,
-        external_connections,
-        markers: vec![],
-        nodes_to_remove: Vec::new(),
-    }
+    ToolResultBuilder::new(new_nodes, internal_connections)
+        .with_external_connections(external_connections)
+        .build()
 }
 
 #[cfg(test)]
@@ -143,6 +142,8 @@ mod tests {
         assert_eq!(existing_id, 1);
         assert!(existing_to_new);
         assert_eq!(direction, ConnectionDirection::Regular);
+        assert!(result.markers.is_empty());
+        assert!(result.nodes_to_remove.is_empty());
     }
 
     #[test]
@@ -168,5 +169,7 @@ mod tests {
         assert_eq!(existing_id, 2);
         assert!(!existing_to_new);
         assert_eq!(direction, ConnectionDirection::Regular);
+        assert!(result.markers.is_empty());
+        assert!(result.nodes_to_remove.is_empty());
     }
 }

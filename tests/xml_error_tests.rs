@@ -1,7 +1,7 @@
-use fs25_auto_drive_editor::{
-    parse_autodrive_config, write_autodrive_config, AutoDriveMeta, Connection, ConnectionDirection,
-    ConnectionPriority, MapNode, NodeFlag, RoadMap,
+use fs25_auto_drive_editor::core::{
+    AutoDriveMeta, Connection, ConnectionDirection, ConnectionPriority, MapNode, NodeFlag, RoadMap,
 };
+use fs25_auto_drive_editor::xml::{parse_autodrive_config, write_autodrive_config};
 use glam::Vec2;
 
 /// Prüft, dass der Parser nicht-numerische ID-Listen ablehnt.

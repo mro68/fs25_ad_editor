@@ -157,7 +157,9 @@ pub(crate) fn build_exact_color_set(raw_colors: &[[u8; 3]]) -> Vec<[u8; 3]> {
     for &color in raw_colors {
         seen.insert(color);
     }
-    seen.into_iter().collect()
+    let mut colors: Vec<_> = seen.into_iter().collect();
+    colors.sort_unstable();
+    colors
 }
 
 /// Quantisiert Rohfarben auf ein Raster und gibt die eindeutigen Farb-Buckets zurueck.
@@ -175,7 +177,9 @@ pub(crate) fn build_color_palette(raw_colors: &[[u8; 3]], bucket_size: u8) -> Ve
         ];
         seen.insert(q);
     }
-    seen.into_iter().collect()
+    let mut colors: Vec<_> = seen.into_iter().collect();
+    colors.sort_unstable();
+    colors
 }
 
 // ---------------------------------------------------------------------------
@@ -188,21 +192,32 @@ pub(crate) fn build_color_palette(raw_colors: &[[u8; 3]], bucket_size: u8) -> Ve
 /// deren Farbe innerhalb der Toleranz eines Palette-Eintrags liegt.
 /// Mit `tolerance = 0.0` entspricht dies exakter RGB-Uebereinstimmung.
 /// Ergibt immer genau einen zusammenhaengenden Bereich.
+#[allow(dead_code)]
 pub(crate) fn flood_fill_color_mask(
     image: &DynamicImage,
     palette: &[[u8; 3]],
     tolerance: f32,
     start_pixel: (u32, u32),
 ) -> (Vec<bool>, u32, u32) {
-    let (width, height) = image.dimensions();
     let rgb = image.to_rgb8();
+    flood_fill_color_mask_from_rgb(&rgb, palette, tolerance, start_pixel)
+}
+
+/// Erstellt eine Binaermaske per Flood-Fill auf einer bereits materialisierten RGB-Sicht.
+pub(super) fn flood_fill_color_mask_from_rgb(
+    image: &image::RgbImage,
+    palette: &[[u8; 3]],
+    tolerance: f32,
+    start_pixel: (u32, u32),
+) -> (Vec<bool>, u32, u32) {
+    let (width, height) = image.dimensions();
     let mut mask = vec![false; (width * height) as usize];
 
     let tolerance_sq = (tolerance as i32) * (tolerance as i32);
 
     // Prueft ob ein Pixel in der Palette liegt
     let pixel_matches = |x: u32, y: u32| -> bool {
-        let px = rgb.get_pixel(x, y).0;
+        let px = image.get_pixel(x, y).0;
         palette.iter().any(|c| {
             let dr = px[0] as i32 - c[0] as i32;
             let dg = px[1] as i32 - c[1] as i32;
@@ -352,6 +367,24 @@ pub(crate) fn morphological_open(mask: &[bool], width: usize, height: usize) -> 
 pub(crate) fn morphological_close(mask: &[bool], width: usize, height: usize) -> Vec<bool> {
     let dilated = dilate(mask, width, height);
     erode(&dilated, width, height)
+}
+
+/// Bereitet eine Stage-C-Maske fuer die Skeleton-Extraktion vor.
+///
+/// Wenn `noise_filter` aktiv ist, werden Opening und Closing auf die Eingabe
+/// angewendet; andernfalls bleibt die Maske unveraendert.
+pub(super) fn prepare_mask_for_skeleton(
+    mask: &[bool],
+    width: usize,
+    height: usize,
+    noise_filter: bool,
+) -> Vec<bool> {
+    if !noise_filter {
+        return mask.to_vec();
+    }
+
+    let opened = morphological_open(mask, width, height);
+    morphological_close(&opened, width, height)
 }
 
 // ---------------------------------------------------------------------------

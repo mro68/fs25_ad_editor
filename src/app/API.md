@@ -4,12 +4,20 @@
 
 Das `app`-Modul verwaltet den globalen State, verarbeitet `AppIntent`s zentral ueber den `AppController`, mappt diese auf `AppCommand`s und baut die `RenderScene` fuer das Rendering.
 
-**Hinweis:** `Camera2D` lebt im `core`-Modul (reiner Geometrie-Typ). `app` re-exportiert `Camera2D`, `ConnectionDirection`, `ConnectionPriority`, `RoadMap`, `RouteToolId`, `ToolAnchor`, `compute_ring` und andere zentrale Typen aus `core`, `tool_contract` und `tools`.
+**Hinweis:** `Camera2D` lebt im `core`-Modul (reiner Geometrie-Typ). `app` re-exportiert `Camera2D`, `ConnectionDirection`, `ConnectionPriority`, `RoadMap`, `RouteToolId`, `ToolAnchor`, `TangentSource`, `TangentMenuData`, `TangentOptionData`, `compute_ring` und andere zentrale Typen aus `core`, `tool_contract`, `ui_contract` und `tools`. Zusaetzliche UI-Fassaden wie `RouteToolPanelAdapter` und `RouteToolViewportData` liegen bewusst nur unter `app::ui_contract`, damit der Root-Export schlank bleibt.
+
+Die eframe-Integrationsschale unter `src/editor_app/*` gehoert bewusst nicht zum `app`-Layer. Ihre kanonische Dokumentation steht in `../editor_app/API.md`, damit `app/API.md` nur den Application-Layer beschreibt.
 
 **Weitere API-Dokumentationen:**
 - [`handlers/API.md`](handlers/API.md) — alle Handler-Funktionen mit detaillierter Dokumentation
 - [`use_cases/API.md`](use_cases/API.md) — alle Use-Case-Funktionen (camera, file_io, selection, editing, …)
 - [`tools/API.md`](tools/API.md) — ToolManager, RouteTool-Trait, registrierte Tools, gemeinsame Infrastruktur
+- [`../editor_app/API.md`](../editor_app/API.md) — kanonische Doku der eframe-Integrationsschale (`EditorApp`, Viewport-Anbindung, Overlays)
+
+## Tool-Vertraege
+
+- `tool_contract.rs` — semantische Route-Tool-Vertraege wie `RouteToolId`, `ToolAnchor` und `TangentSource`
+- `ui_contract.rs` — UI-taugliche Read-DTOs und schmale App-Fassaden wie `TangentMenuData`, `TangentOptionData`, `RouteToolPanelAdapter`, `RouteToolPanelData` und `RouteToolViewportData`
 
 ## Haupttypen
 
@@ -270,6 +278,13 @@ pub struct RouteToolSelectionMemory {
     pub analysis: RouteToolId,
 }
 ```
+
+**EditorToolState-Methoden:**
+
+- `remember_route_tool(group, tool_id)` — merkt die letzte Route-Tool-Wahl pro Gruppe
+- `route_tool_panel_adapter() -> Option<RouteToolPanelAdapter<'_>>` — liefert die schmale UI-Fassade fuer das Floating-Route-Tool-Panel im Route-Modus
+- `route_tool_viewport_data() -> RouteToolViewportData` — liefert Drag-Ziele, Tangenten-Menuedaten und Lasso-Bedarf als Read-DTO fuer den Viewport
+- `route_tool_preview(cursor_world, road_map) -> Option<ToolPreview>` — berechnet die Preview-Geometrie des aktiven Route-Tools app-seitig, sodass die UI keinen `ToolManager` direkt lesen muss
 
 **Methoden:**
 
@@ -910,7 +925,7 @@ pub enum AppCommand {
     // Gruppen-Lock
     /// Gruppen-Lock umschalten (gesperrt ↔ entsperrt)
     ToggleGroupLock { segment_id: u64 },
-    /// Bestätigungsdialog für Segment-Auflösung öffnen (setzt `UiState::confirm_dissolve_segment_id`)
+    /// Bestätigungsdialog für Segment-Auflösung öffnen (setzt `UiState::confirm_dissolve_group_id`)
     OpenDissolveConfirmDialog { segment_id: u64 },
     /// Segment aufloesen (Gruppen-Record entfernen, Nodes beibehalten)
     DissolveGroup { segment_id: u64 },
@@ -1032,7 +1047,7 @@ AppIntent::CameraPan { delta: Vec2::new(-dx * wpp, -dy * wpp) }
 3. **Command Execution:** `AppController` mappt Intents auf Commands und fuehrt diese aus
 4. **Render Contract:** Ausgabe an Renderer erfolgt nur ueber `RenderScene`
 5. **I/O in Use-Cases:** Dateisystem-Operationen sind in `use_cases::file_io` zentralisiert
-6. **Re-Exports:** `app` re-exportiert `Camera2D`, `ConnectionDirection`, `ConnectionPriority`, `RoadMap` aus `core` sowie `ToolAnchor`, `compute_ring`, `ParkingConfig` aus `tools`, damit UI nicht direkt auf `core` zugreift
+6. **Re-Exports:** `app` re-exportiert `Camera2D`, `ConnectionDirection`, `ConnectionPriority`, `RoadMap` aus `core`, die Route-Tool-Vertraege `RouteToolId`, `ToolAnchor`, `TangentSource` aus `tool_contract`, die UI-DTOs `TangentMenuData` und `TangentOptionData` aus `ui_contract` sowie `compute_ring` und `ParkingConfig` aus `tools`, damit UI nicht direkt auf `core` oder Tool-Interna zugreift
 
 ## Weitere Typen
 
@@ -1104,30 +1119,8 @@ Cache-Invalidierung erfolgt wenn sich `SelectionState::generation` oder `GroupRe
 
 ---
 
-## `editor_app` (Modul)
+## `editor_app` (Integrationsschale)
 
-Das `src/editor_app/`-Modul ist der eframe-App-Einstiegspunkt. Es wurde in Submodule aufgeteilt:
+Die eframe-Integrationsschale gehoert bewusst nicht zur `app`-API. Die kanonische Dokumentation fuer `EditorApp`, Event-Sammlung, Overlay-Anbindung und Viewport-Rendering steht in [`../editor_app/API.md`](../editor_app/API.md).
 
-| Submodul | Verantwortlichkeit |
-|---|---|
-| `event_collection.rs` | UI-Events sammeln und zu `AppIntent`s buendeln (`collect_ui_events()`) |
-| `overlays.rs` | Viewport-Overlays zeichnen (Tool-Preview, GroupBoundary-Icons, Selektion) |
-| `helpers.rs` | Interne Hilsfunktionen (Kamera-Viewport-Berechnungen, Cursor-Transformation) |
-| `mod.rs` | `EditorApp`-Struct + `eframe::App::update()` Haupt-Loop |
-
-**`EditorApp`-Felder:**
-
-```rust
-pub(crate) struct EditorApp {
-    state: AppState,
-    controller: AppController,
-    renderer: Arc<Mutex<render::Renderer>>,
-    device: wgpu::Device,
-    queue: wgpu::Queue,
-    input: ui::InputState,
-    /// Gecachte Cursor-Weltposition (bleibt erhalten wenn Maus den Viewport verlaesst)
-    last_cursor_world: Option<Vec2>,
-    /// Gecachte egui-Textur-Handles fuer Gruppen-Boundary-Icons (lazy initialisiert)
-    group_boundary_icons: Option<ui::GroupBoundaryIcons>,
-}
-```
+`app/API.md` dokumentiert nur den eigentlichen Application-Layer: `AppController`, `AppState`, Intents/Commands, Handler, Use-Cases und Tool-Vertraege.

@@ -601,7 +601,7 @@ Schaltet den Lock-Zustand eines Segments um. Gesperrte Segmente bewegen alle zug
 pub fn dissolve(state: &mut AppState, segment_id: u64)
 ```
 
-Loest ein Segment auf: Entfernt nur den Gruppen-Record aus der Registry. Die zugehoerigen Nodes und Verbindungen in der RoadMap bleiben unveraendert. Wird **nach** Nutzer-Bestätigung im `ConfirmDissolveDialog` aufgerufen — nicht direkt durch `DissolveSegmentRequested` (dieser öffnet zunächst den Bestätigungsdialog via `OpenDissolveConfirmDialog`). Unbekannte IDs werden ignoriert.
+Loest ein Segment auf: Entfernt nur den Gruppen-Record aus der Registry. Die zugehoerigen Nodes und Verbindungen in der RoadMap bleiben unveraendert. Wird **nach** Nutzer-Bestaetigung aufgerufen, nachdem `DissolveGroupRequested` zunaechst den Bestaetigungsdialog via `OpenDissolveConfirmDialog` geoeffnet hat. Unbekannte IDs werden ignoriert.
 ```rust
 pub fn remove_selected_from_groups(state: &mut AppState)
 ```

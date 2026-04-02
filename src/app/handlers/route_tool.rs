@@ -5,7 +5,7 @@ mod apply;
 mod selection;
 
 use crate::app::state::EditorTool;
-use crate::app::tools::common::TangentSource;
+use crate::app::tool_contract::TangentSource;
 use crate::app::tools::{RouteToolId, ToolAction};
 use crate::app::AppState;
 

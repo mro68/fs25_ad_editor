@@ -13,9 +13,91 @@
 
 set -euo pipefail
 
+ROOT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)"
+cd "$ROOT_DIR"
+
 VIOLATIONS=0
 
 echo "=== Architektur-Check: Layer-Grenzen ==="
+
+find_forbidden_use_imports() {
+    local scope_dir="$1"
+    local module_segment="$2"
+
+    # Prueft komplette Rust-use-Statements inklusive mehrzeiliger crate::{...}-Gruppierungen.
+    # Top-Level-Eintraege werden bewusst separat ausgewertet, damit verschachtelte
+    # Submodule wie shared::options::render keine False Positives ausloesen.
+    while IFS= read -r -d '' file; do
+        perl -0ne '
+            use strict;
+            use warnings;
+
+            our $module;
+
+            BEGIN {
+                $module = shift @ARGV;
+            }
+
+            sub grouped_item_matches {
+                my ($item, $module) = @_;
+                $item =~ s/^\s+|\s+$//g;
+                return 0 if $item eq q{};
+
+                return $item =~ /^\Q$module\E(?:$|::|\s+as\b)/ ? 1 : 0;
+            }
+
+            sub imports_forbidden_top_level_module {
+                my ($statement, $module) = @_;
+
+                return 1
+                    if $statement =~ /\buse\s+crate::\Q$module\E(?:\s+as\b|::|\s*;)/;
+
+                return 0 unless $statement =~ /\buse\s+crate::\{(.*)\}\s*;/;
+
+                my $grouped_items = $1;
+                my $depth = 0;
+                my $current_item = q{};
+
+                for my $char (split //, $grouped_items) {
+                    if ($char eq q{{}) {
+                        $depth++;
+                    } elsif ($char eq q{}}) {
+                        $depth--;
+                    }
+
+                    if ($char eq q{,} && $depth == 0) {
+                        return 1 if grouped_item_matches($current_item, $module);
+                        $current_item = q{};
+                        next;
+                    }
+
+                    $current_item .= $char;
+                }
+
+                return grouped_item_matches($current_item, $module);
+            }
+
+            my $file = $ARGV;
+            my $content = $_;
+
+            while ($content =~ /(^[ \t]*(?:pub(?:\([^)]*\))?[ \t]+)?use\b[\s\S]*?;)/mg) {
+                my $statement = $1;
+                my $prefix = substr($content, 0, $-[1]);
+                my $start_line = 1 + ($prefix =~ tr/\n/\n/);
+                my $normalized = $statement;
+
+                $normalized =~ s{//[^\n]*}{}g;
+                $normalized =~ s{/\*.*?\*/}{}gs;
+                $normalized =~ s/\s+/ /gs;
+                $normalized =~ s/^\s+|\s+$//g;
+
+                if (imports_forbidden_top_level_module($normalized, $module)) {
+                    print "$file:$start_line:$normalized\n";
+                }
+            }
+        ' "$module_segment" "$file"
+    done < <(rg --files -0 --glob '*.rs' "$scope_dir" 2>/dev/null || true)
+}
 
 # Regel 1: UI darf nicht direkt auf Core zugreifen
 UI_CORE_VIOLATIONS=$(grep -rn 'crate::core' src/ui/ --include='*.rs' 2>/dev/null || true)
@@ -30,6 +112,25 @@ CORE_UI_VIOLATIONS=$(grep -rn 'crate::ui\|crate::render\|crate::app' src/core/ -
 if [ -n "$CORE_UI_VIOLATIONS" ]; then
     echo "FEHLER: Core importiert aus UI/Render/App:"
     echo "$CORE_UI_VIOLATIONS"
+    VIOLATIONS=$((VIOLATIONS + 1))
+fi
+
+# Regel 2a: App darf nicht auf UI zugreifen
+# Es werden nur explizite Rust-Importe geprueft, damit Kommentare und Dokumentation
+# keine False Positives erzeugen.
+APP_UI_VIOLATIONS=$(find_forbidden_use_imports src/app ui)
+if [ -n "$APP_UI_VIOLATIONS" ]; then
+    echo "FEHLER: App importiert aus UI (Application darf Presentation nicht kennen):"
+    echo "$APP_UI_VIOLATIONS"
+    VIOLATIONS=$((VIOLATIONS + 1))
+fi
+
+# Regel 2b: App darf nicht auf Render zugreifen
+# Gleiches Vorgehen wie bei UI: nur explizite use-Importe statt Freitext-Matches.
+APP_RENDER_VIOLATIONS=$(find_forbidden_use_imports src/app render)
+if [ -n "$APP_RENDER_VIOLATIONS" ]; then
+    echo "FEHLER: App importiert aus Render (Application darf Rendering nicht kennen):"
+    echo "$APP_RENDER_VIOLATIONS"
     VIOLATIONS=$((VIOLATIONS + 1))
 fi
 

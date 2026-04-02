@@ -6,7 +6,7 @@ use super::geometry::{
     solve_cps_from_apex_both_tangents,
 };
 use super::state::{CurveDegree, CurveTool, DragTarget, Phase};
-use crate::app::tools::common::TangentSource;
+use crate::app::tool_contract::TangentSource;
 use crate::core::RoadMap;
 use glam::Vec2;
 

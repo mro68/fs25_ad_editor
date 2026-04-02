@@ -115,6 +115,8 @@ impl ToolPreview {
 /// Dieses Struct enthaelt alle geometrischen Daten, die von einem Tool erzeugt werden:
 /// neue Nodes mit ihren Positionen und Flags, sowie Verbindungen zwischen
 /// diesen Nodes sowie zu bestehenden Nodes in der Road Map.
+/// Optionale Sammlungen bleiben fuer einfache Tools leer und werden intern
+/// ueber gemeinsame Helper in `app::tools::common` kanonisch initialisiert.
 ///
 /// Die Ausfuehrung erfolgt zentral in `apply_tool_result()` — das Tool
 /// selbst verursacht keine direkten State-Mutationen.

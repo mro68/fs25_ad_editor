@@ -452,10 +452,12 @@ pub struct FarmlandGrid {
 
 ---
 
-### Centerline-Berechnung (Voronoi-BFS)
+### Centerline-Berechnung
 
-In `core::centerline` (re-exportiert aus `core`). Berechnet Mittellinien zwischen
-Farmland-Seiten über Multi-Source BFS (Voronoi-Approximation).
+In `core::centerline` (re-exportiert aus `core`). Die interne Implementierung ist
+nach Verantwortlichkeiten in `polygon`, `segment`, `voronoi`, `extract`,
+`helpers` und `search` aufgeteilt; die öffentliche Fassade über `core` und
+`core::centerline` bleibt dabei stabil.
 
 ```rust
 pub struct VoronoiGrid {
@@ -469,6 +471,20 @@ pub struct VoronoiGrid {
 **Freie Funktionen:**
 
 ```rust
+// Polygon-basierte Mittellinie zwischen zwei Gruppen von Feld-Polygonen.
+pub fn compute_polygon_centerline(
+    side1_polys: &[&[Vec2]],
+    side2_polys: &[&[Vec2]],
+    sample_spacing: f32,
+) -> Vec<Vec2>
+
+// Segment-basierte Mittellinie zwischen zwei Gruppen von Grenz-Segmenten.
+pub fn compute_segment_centerline(
+    side1_segs: &[Vec<Vec2>],
+    side2_segs: &[Vec<Vec2>],
+    sample_spacing: f32,
+) -> Vec<Vec2>
+
 // Multi-Source BFS: alle Farmland-Pixel als Seeds, Void-Pixel erhalten ID + Distanz.
 // 8-Konnektivität (diagonal ≈ 14, gerade = 10).
 pub fn compute_voronoi_bfs(grid: &FarmlandGrid) -> VoronoiGrid
@@ -490,6 +506,13 @@ pub fn extract_boundary_centerline(
     grid: &FarmlandGrid,
 ) -> Vec<Vec2>
 ```
+
+**Interne Aufteilung:**
+
+- `polygon` und `segment` enthalten die rein geometrischen Varianten ohne Pixel-Grid.
+- `voronoi` enthält Typ und BFS-Berechnung für rasterbasierte Kandidaten.
+- `extract` enthält die Korridor- und Boundary-Extraktion auf Basis des Rasterpfads.
+- `search` kapselt den internen Sample-Suchindex für Nearest-Neighbor-Abfragen auf den abgetasteten Korridorkanten.
 
 **Beispiel:**
 

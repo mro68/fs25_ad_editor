@@ -1,5 +1,6 @@
 use criterion::{criterion_group, criterion_main, BenchmarkId, Criterion};
-use fs25_auto_drive_editor::{parse_autodrive_config, MapNode, NodeFlag, RoadMap};
+use fs25_auto_drive_editor::core::{MapNode, NodeFlag, RoadMap};
+use fs25_auto_drive_editor::xml::parse_autodrive_config;
 use glam::Vec2;
 use std::hint::black_box;
 

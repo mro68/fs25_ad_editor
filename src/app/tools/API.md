@@ -2,7 +2,7 @@
 
 Dokumentation fuer `app::tools`: `ToolManager`, `RouteTool`-Trait, registrierte Tools und gemeinsame Infrastruktur.
 
-`RouteToolId` und `ToolAnchor` gehoeren zum app-weiten Tool-Vertrag in `app::tool_contract` und werden hier fuer die Tool-Implementierungen weiterverwendet.
+`RouteToolId`, `ToolAnchor` und `TangentSource` gehoeren zum app-weiten Tool-Vertrag in `app::tool_contract`. UI-taugliche Read-DTOs wie `TangentMenuData` und `TangentOptionData` gehoeren nach `app::ui_contract`. Beides wird hier fuer die Tool-Implementierungen weiterverwendet.
 
 **Zurueck:** [`../API.md`](../API.md)
 
@@ -272,11 +272,11 @@ Parkplatz-Layout-Generator: Erstellt einen Wendekreis mit Parkreihen in einem ko
 - Ueberschreibt die `RouteTool`-Hooks `make_group_record()` und `load_for_edit()`
 - Speichert Layout-Parameter fuer nachtraegliche Bearbeitung
 
-**Public Exports:**
+**Geometrie-/Konvertierungspfad:**
 
-- `generate_parking_layout(config) → ParkingLayout` — Generiert das Layout (fuer Tests)
-- `build_parking_result(layout, origin, angle, ...) → Vec<Vec2>` — Konvertiert zu Positionen
-- `build_preview(layout, origin, angle, ...) → (Vec<Vec2>, Vec<(usize, usize)>)` — Vorschau-Geometrie
+- `generate_parking_layout(config) → ParkingLayout` — Oeffentlicher Layout-Generator fuer Tests und Benchmarks
+- `build_parking_result(layout) → ToolResult` — Modulintern: konvertiert das Layout via `ToolResultBuilder`; befuellt `markers` und laesst `external_connections` sowie `nodes_to_remove` kanonisch leer
+- `build_preview(layout) → ToolPreview` — Modulintern: Vorschau-Geometrie inkl. Verbindungsstilen und Labels
 
 Modulstruktur: `state.rs` (Struct + Config), `lifecycle.rs` (RouteTool-Impl + Lifecycle-Delegation), `config_ui.rs` (egui-Panel), `geometry/{mod,layout,blueprint,conversion}.rs` (Layout-Mathe), `tests.rs` (7 Unit-Tests)
 
@@ -359,6 +359,8 @@ Das Mapping `RingNodeKind` → `NodeFlag`:
 - `RingNodeKind::RoundedCorner` → `NodeFlag::RoundedCorner` (6, intern; XML-Export: 0)
 - `RingNodeKind::Regular | Corner` → `NodeFlag::Regular` (0)
 
+**ToolResult-Aufbau:** `execute()` nutzt `ToolResultBuilder`; der geschlossene Ring befuellt nur `new_nodes` und `internal_connections`, waehrend `external_connections`, `markers` und `nodes_to_remove` kanonisch leer bleiben.
+
 **Geometrie-Funktionen (`tools/field_boundary/geometry.rs`):**
 
 - `detect_corners(vertices, angle_threshold_rad) -> Vec<usize>` — Sortierte Indizes aller Eckpunkte mit Ablenkungswinkel ≥ Schwellwert
@@ -407,6 +409,8 @@ pub struct RouteOffsetTool {
 2. `resample_by_distance()` — gleichmäßiges Resampling
 3. Wenn `!keep_original`: `nodes_to_remove = chain_inner_ids` → Original-Nodes werden im selben Undo-Schritt entfernt
 4. `ToolResult.nodes_to_remove` wird von `apply_tool_result()` vor Erstellung neuer Nodes verarbeitet
+
+Die finale Ausgabe wird ueber `ToolResultBuilder` aufgebaut: interne Offset-Ketten gehen in `new_nodes`/`internal_connections`, die lateralen Anschluesse in `with_external_connections(...)` und das optionale Entfernen der Original-Kette in `with_nodes_to_remove(...)`.
 
 **Geometrie-Funktionen (`geometry.rs`):**
 
@@ -519,24 +523,22 @@ an `handlers::route_tool::lasso_completed()` weitergeleitet, das `on_lasso_compl
 5. Sidebar: Netz pruefen (Kreuzungen, offene Enden, Segmente) + Anschlussmodus waehlen
 6. Enter / Uebernehmen-Button → `execute()` → Graph in Road Map einfuegen
 
-**Erkennungs-Pipeline (`compute_pipeline()`):**
+**Interne Stage-Pipeline (`compute_pipeline()`):**
 
-1. `flood_fill_color_mask()` — Bool-Maske des zusammenhaengenden Farb-Bereichs ab Lasso-Startpunkt
-2. Morphologisches Opening + Closing (wenn `noise_filter == true`) — Rauschen entfernen
-3. Original-Maske sichern (vor Zhang-Suen, fuer Medial-Axis-Korrektur)
-4. `zhang_suen_thinning()` — Maske auf 1-Pixel-breites Skelett reduzieren
-5. `find_connected_components()` — Zusammenhaengende Skelett-Gruppen finden (8-Connectivity)
-6. Pixelgrad klassifizieren: offene Enden (`degree == 1`), Kettenpixel (`degree == 2`), Junctions (`degree >= 3`)
-7. Benachbarte Junction-Pixel zu Clustern zusammenfassen und pro Cluster einen zentralen Knoten berechnen
-8. Zwischen den Graph-Knoten alle Grad-2-Ketten als Segmente verfolgen und per `refine_medial_axis()` in Weltkoordinaten umrechnen
-9. Pro Segment `simplify_polyline()` + `resample_by_distance()` anwenden
-10. Preview-Netz aufbauen und fuer Export bereithalten
+1. **Stage A: Sampling-Input** — `SamplingInput` sammelt Lasso-Regionen, Rohfarben, Durchschnittsfarbe und den ersten Lasso-Startpunkt
+2. **Stage B: Matching-Spezifikation** — `MatchingSpec` leitet aus Exaktmodus/Toleranz die wirksame Palette + Toleranz ab
+3. **Stage C: Pixel-Maske + Sampling-Vorschau** — `flood_fill_color_mask()` erzeugt die Flood-Fill-Maske; `SamplingPreviewData` haelt dieselbe Maske plus Boundary-Segmente fuer die Sampling-Preview
+4. **Stage D: Maskenaufbereitung** — `prepare_mask_for_skeleton()` wendet optional Opening + Closing an und erzeugt die vorbereitete Arbeitsmaske
+5. **Stage E: Skeleton-/Netzextraktion** — `extract_network_from_mask()` fuehrt Zhang-Suen, Komponentenbildung, Junction-Clustering, Segment-Trace und Medial-Axis-Korrektur auf der vorbereiteten Maske aus
+6. **Stage F: Preview-Aufbereitung** — `simplify_polyline()` + `resample_by_distance()` erzeugen `PreparedSegment`-Ketten; `PreviewData` haelt Netz + PreparedSegments als gemeinsame Wahrheit fuer Preview und Execute
+7. **Stage G: Execute-Konvertierung** — `execute_result()` baut aus `PreviewData.network` und denselben `PreparedSegment`s das `ToolResult` inklusive optionaler Bestandsanschluesse
 
 **Preview/Export:**
 
 - Preview zeigt Kennzahlen fuer Kreuzungen, offene Enden, Segmente und Preview-Nodes
 - Sampling-Preview zeigt nach jeder Lasso-Auswahl alle Randsegmente der Flood-Fill-Maske, nicht nur eine Einzelkontur
-- Export legt Junction-/End-Knoten genau einmal an und fuegt pro Segment nur die Zwischenpunkte neu ein
+- Sampling-Preview und Berechnen-Pipeline lesen dieselbe Stage-C-Maskenwahrheit; es gibt keine separaten Preview-Maskenpfade
+- Preview und Export teilen dieselben `PreparedSegment`-Artefakte; Execute legt Junction-/End-Knoten genau einmal an und fuegt pro Segment nur die Zwischenpunkte neu ein
 - Bestandsanschluss nutzt `ToolLifecycleState::snap_at()` und damit den konfigurierten Snap-Radius
 
 **Konfiguration (`ColorPathConfig`):**
@@ -555,22 +557,25 @@ an `handlers::route_tool::lasso_completed()` weitergeleitet, das `on_lasso_compl
 pub struct ColorPathTool {
     pub(crate) phase: ColorPathPhase,
     pub(crate) config: ColorPathConfig,
-    pub(crate) lasso_regions: Vec<Vec<Vec2>>,   // Alle gezeichneten Lasso-Polygone (Weltkoords)
-    pub(crate) sampled_colors: Vec<[u8; 3]>,    // Gesammelte RGB-Werte aus Lasso-Regionen
-    pub(crate) avg_color: Option<[u8; 3]>,      // Berechneter RGB-Mittelwert
-    pub(crate) lasso_start_world: Option<Vec2>, // Erster Klickpunkt des ersten Lassos (Weltkoords)
-    pub(crate) mask: Vec<bool>,                  // Bool-Maske (true = Pfadpixel), zeilenweise
-    pub(crate) mask_width: u32,
-    pub(crate) mask_height: u32,
-    pub(crate) skeleton_network: Option<SkeletonNetwork>, // Junctions + offene Enden + Segmente
-    pub(crate) prepared_segments: Vec<PreparedSegment>,   // Vereinfachte/abgetastete Preview-Segmente
+    pub(super) sampling: SamplingInput,
+    pub(super) matching: MatchingSpec,
+    pub(super) sampling_preview: Option<SamplingPreviewData>,
+    pub(super) preview_data: Option<PreviewData>,
     pub(crate) background_image: Option<Arc<image::DynamicImage>>,
-    pub(crate) map_size: f32,                   // Kartengroesse in Metern (aus FarmlandGrid)
+    pub(crate) map_size: f32,
     pub direction: ConnectionDirection,
     pub priority: ConnectionPriority,
     pub(crate) lifecycle: ToolLifecycleState,
+    pub(super) cache: ColorPathCacheState,
 }
 ```
+
+**Interne Stage-Artefakte:**
+
+- `SamplingInput` — `lasso_regions`, `sampled_colors`, `avg_color`, `lasso_start_world`
+- `MatchingSpec` — wirksame `palette` + `tolerance`
+- `SamplingPreviewData` — `input_mask`, `boundary_segments`, `start_pixel`
+- `PreviewData` — `prepared_mask`, `network`, `prepared_segments`
 
 **Sampling-Funktionen (`sampling.rs`):**
 
@@ -580,8 +585,10 @@ pub struct ColorPathTool {
 - `sample_colors_in_polygon(polygon, image, map_size) → Vec<[u8; 3]>` — RGB-Pixel im Lasso-Polygon sammeln
 - `compute_average_color(colors) → [u8; 3]` — RGB-Mittelwert aller Samples
 - `build_exact_color_set(raw_colors) → Vec<[u8; 3]>` — Eindeutige Rohfarben fuer Exaktmodus ohne Quantisierung
-- `build_color_mask(image, avg_color, tolerance, bounds, map_size) → (Vec<bool>, u32, u32)` — Bool-Maske erstellen
+- `build_color_mask(image, palette, tolerance, bounds, map_size) → (Vec<bool>, u32, u32)` — Bool-Maske ueber einen rechteckig begrenzten Bereich erstellen
+- `flood_fill_color_mask(image, palette, tolerance, start_pixel) → (Vec<bool>, u32, u32)` — zusammenhaengende Stage-C-Maske ab Startpixel berechnen
 - `extract_boundary_segments_from_mask(mask, w, h, map_size) → Vec<(Vec2, Vec2)>` — Alle Grenzen der Flood-Fill-Maske als Preview-Segmente (inkl. Innenkanten/Loecher)
+- `prepare_mask_for_skeleton(mask, w, h, noise_filter) → Vec<bool>` — Stage-D-Aufbereitung der Flood-Fill-Maske fuer die Skeleton-Extraktion
 - `erode(mask, w, h) → Vec<bool>` — Erosion mit Majority-Bedingung (≥ 3 von 4 Nachbarn, zum Schutz duenner Verbindungen)
 - `dilate(mask, w, h) → Vec<bool>` — Dilatation (4-Connectivity)
 - `morphological_open(mask, w, h) → Vec<bool>` — Erosion + Dilatation (Rauschen entfernen)
@@ -591,17 +598,20 @@ pub struct ColorPathTool {
 
 - `find_connected_components(mask, w, h) → Vec<Vec<(usize, usize)>>` — Gruppen nach Groesse absteigend
 - `refine_medial_axis(ordered, original_mask, w, h) → Vec<(f32, f32)>` — Skelett-Pixel auf geometrische Mittelachse korrigieren
-- `extract_network_from_mask(mask, w, h, noise_filter, map_size, start_hint) → SkeletonNetwork` — Haupt-Pipeline fuer Netz-Knoten und Segmente
+- `extract_network_from_mask(mask, w, h, map_size, start_hint) → SkeletonNetwork` — Netzextraktion auf bereits vorbereiteter Stage-D-Maske
 - `extract_paths_from_mask(...) → Vec<Vec<Vec2>>` — Legacy-Wrapper fuer lineare Pfad-Konsumenten/Tests
 
 **Public Exports (`mod.rs`):**
 
 - `ColorPathTool`
 - `compute_color_path_network_stats()` — Flood-Fill + Netzextraktion fuer Benchmarks/Analyse, ohne interne Skelett-Typen offenzulegen
+- `ColorPathBenchmarkHarness` — baut ueber den echten Tool-Flow reproduzierbare Sampling-/Preview-Ausgangszustaende fuer Criterion-Benchmarks auf
+- `ColorPathBenchmarkAction` — vorbereitete Einzelaktion fuer `SamplingPreview`, `compute_pipeline()`, Preview-Core- oder PreparedSegments-Rebuild
+- `ColorPathBenchmarkStats` — beobachtbare Kennzahlen und Revisionszaehler einer einzelnen Benchmark-Aktion
 
 **Gruppen-Record:** ColorPathTool speichert keinen `GroupRecord` (keine nachträgliche Bearbeitung).
 
-Modulstruktur: `mod.rs` (Re-Export), `state.rs` (Struct, Phasen-Enum, Config, Default), `lifecycle.rs` (RouteTool-Impl, Netz-Pipeline, Export), `config_ui.rs` (egui-Panel), `sampling.rs` (Farb-Sampling + Masken-Erstellung), `skeleton.rs` (Skelett-Extraktion + Graph-Aufbau)
+Modulstruktur: `mod.rs` (Re-Export + Benchmark-Fassade), `state.rs` (Stage-Artefakte, Phasen-Enum, Config, Default), `lifecycle.rs` (Phasenwechsel + RouteTool-Adapter), `pipeline.rs` (Stages B-F), `preview.rs` (Preview-/Execute-Aufbereitung mit `PreparedSegment` als gemeinsamer Wahrheit), `config_ui.rs` (egui-Panel), `sampling.rs` (Farb-Sampling + Masken-Erstellung), `skeleton.rs` (Skelett-Extraktion + Graph-Aufbau)
 
 ---
 
@@ -642,7 +652,7 @@ Modulstruktur: `state.rs` (Struct + Config), `lifecycle.rs` (RouteTool-Impl + Li
 
 ## Gemeinsame Tool-Infrastruktur (`tools/common/`)
 
-Aufgeteilt in vier Submodule (alle privat, Re-Exporte via `common/mod.rs`):
+Aufgeteilt in fuenf Submodule (alle privat, Re-Exporte via `common/mod.rs`):
 
 ### `geometry.rs`
 
@@ -655,12 +665,9 @@ Hilfsfunktionen: `angle_to_compass`, `node_count_from_length`, `populate_neighbo
 
 ### `tangent.rs`
 
-**`TangentSource`** — Tangenten-Quelle am Start-/Endpunkt (fuer Curve + Spline):
+**`render_tangent_combo(ui, id_salt, label, none_label, current, neighbors) → bool`** — Gemeinsamer UI-Baustein fuer Tangenten-ComboBoxen (verwendet von Curve + Spline config_ui). Arbeitet auf `app::tool_contract::TangentSource`.
 
-- `None` — Kein Tangenten-Vorschlag
-- `Connection { neighbor_id, angle }` — Tangente aus bestehender Verbindung
-
-**`render_tangent_combo(ui, id_salt, label, none_label, current, neighbors) → bool`** — Gemeinsamer UI-Baustein fuer Tangenten-ComboBoxen (verwendet von Curve + Spline config_ui).
+Die Menue-DTOs fuer die UI (`TangentMenuData`, `TangentOptionData`) liegen seit F4a bewusst in `app::ui_contract`; `tools/common` liefert dafuer nur noch die Aufbereitung ueber `geometry::tangent_options()`.
 
 ### `lifecycle.rs`
 
@@ -694,6 +701,18 @@ Der Makro-Flow fuer `set_last_created` ist vereinheitlicht:
 
 - Oeffentlicher Helper-Export: `bypass::compute_bypass_positions` (u.a. fuer Preview-Benchmarks)
 
+### `result.rs`
+
+**`ToolResultBuilder`** — Schmaler Shared-Builder fuer `ToolResult`-Faelle mit kanonischen leeren Defaults der optionalen Sammlungen.
+
+- `new(new_nodes, internal_connections) → ToolResultBuilder` — initialisiert `external_connections`, `markers` und `nodes_to_remove` leer
+- `with_external_connections(...)` — setzt nur die benoetigten Anbindungen an bestehende Nodes
+- `with_markers(...)` — setzt Marker nur fuer Tools mit Marker-Semantik
+- `with_nodes_to_remove(...)` — setzt zu entfernende Bestands-Nodes nur fuer Ersetzungsfaelle
+- `build() → ToolResult` — gibt das fertige Ergebnis zurueck
+
+Stand F5: `assemble_tool_result()` sowie die spezialisierten Ausgabepfade von `FieldBoundaryTool`, `RouteOffsetTool` und `ParkingTool` nutzen diesen Builder. Dadurch bleiben Default-Felder konsistent, ohne in jedem Tool ein volles `ToolResult` manuell initialisieren zu muessen.
+
 ### `builder.rs`
 
 **`assemble_tool_result(positions, start, end, direction, priority, road_map) → ToolResult`** — Gemeinsame Logik aller Route-Tools: Nimmt berechnete Positionen, erstellt neue Nodes (ueberspringt existierende) und baut interne/externe Verbindungen auf.
@@ -702,3 +721,5 @@ Der Makro-Flow fuer `set_last_created` ist vereinheitlicht:
 `(new_node_idx, existing_node_id, existing_to_new, direction, priority)`.
 Damit bleibt die Richtung (`Regular`/`Dual`/`Reverse`) an Start- und Endrand konsistent,
 ohne implizite Richtungs-Spiegelung.
+
+Die Rueckgabe wird intern ueber `ToolResultBuilder` erzeugt, sodass `markers` und `nodes_to_remove` auch in den einfachen Polyline-Pfaden kanonisch leer initialisiert werden.

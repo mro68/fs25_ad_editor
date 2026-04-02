@@ -1,19 +1,8 @@
-//! Tangenten-Zustand und UI-Baustein fuer Curve- und Spline-Tool.
+//! Tangenten-Zustand und interner UI-Baustein fuer Curve- und Spline-Tool.
 
 use super::geometry::angle_to_compass;
+use crate::app::tool_contract::TangentSource;
 use crate::core::ConnectedNeighbor;
-
-/// Quelle einer Tangente am Start- oder Endpunkt eines Route-Tools.
-///
-/// Wird von Curve- und Spline-Tool verwendet, um den Kontrollpunkt
-/// bzw. Phantom-Punkt tangential an einer bestehenden Verbindung auszurichten.
-#[derive(Debug, Clone, Copy, PartialEq)]
-pub enum TangentSource {
-    /// Kein Tangenten-Vorschlag — Punkt wird manuell gesetzt
-    None,
-    /// Tangente aus bestehender Verbindung
-    Connection { neighbor_id: u64, angle: f32 },
-}
 
 /// Rendert eine Tangenten-ComboBox und gibt `true` zurueck wenn die Auswahl geaendert wurde.
 ///
@@ -56,23 +45,6 @@ pub fn render_tangent_combo(
             }
         });
     *current != old
-}
-
-/// Reine Daten fuer das Tangenten-Kontextmenue (kein UI).
-///
-/// Wird vom RouteTool-Trait via `tangent_menu_data()` geliefert,
-/// damit der zentrale Context-Menu-Router die Tangenten-Auswahl
-/// in einem einzigen `response.context_menu()`-Aufruf rendern kann.
-#[derive(Debug, Clone)]
-pub struct TangentMenuData {
-    /// Aufbereitete Optionen fuer Start-Tangente: (TangentSource, Label)
-    pub start_options: Vec<(TangentSource, String)>,
-    /// Aufbereitete Optionen fuer End-Tangente: (TangentSource, Label)
-    pub end_options: Vec<(TangentSource, String)>,
-    /// Aktuell gewaehlte Start-Tangente
-    pub current_start: TangentSource,
-    /// Aktuell gewaehlte End-Tangente
-    pub current_end: TangentSource,
 }
 
 /// Gemeinsamer Tangenten-Zustand fuer Curve- und Spline-Tool.

@@ -1,8 +1,17 @@
 # Tool Encapsulation & API Unification — Audit-Report
 
-> **Stand:** 2026-03-07  
+> **Status:** Historisches Audit-Dokument  
+> Dieser Report dokumentiert einen Analyse-Snapshot vom 2026-03-07. Er ist **nicht** die kanonische Beschreibung des aktuellen Tool-Katalogs oder der aktuell gueltigen Tool-Vertraege. Maßgeblich sind die jeweils aktuellen API-Dokumente und Modul-Docstrings, insbesondere in `src/app/tools/` und den angrenzenden App/UI-Modulen.  
+> **Audit-Stand:** 2026-03-07  
 > **Scope:** `src/app/tools/`, `src/app/group_registry/`, `src/app/handlers/route_tool.rs`  
-> **Methodik:** Vollständige Code-Analyse aller 9 Tool-Module + Common-Infrastruktur
+> **Methodik:** Vollständige Code-Analyse des damaligen Tool-Bestands (9 Tool-Module) + Common-Infrastruktur
+
+## Nachtrag 2026-04-01 — F5 ToolResult-Defaults
+
+- Der damalige DRY-Befund zum manuellen `ToolResult`-Aufbau ist im aktuellen Code nicht mehr wörtlich gueltig.
+- Seit F5 existiert ein schmaler `ToolResultBuilder` in `src/app/tools/common/result.rs`.
+- `assemble_tool_result()` sowie die Pfade in `field_boundary/lifecycle.rs`, `route_offset/lifecycle.rs` und `parking/geometry/conversion.rs` nutzen den Builder inzwischen fuer kanonische leere Default-Sammlungen.
+- Die aktuelle Referenz fuer den heutigen Stand ist `src/app/tools/API.md`; die nachfolgenden Kapitel bleiben als Audit-Snapshot lesbar, enthalten fuer F5 aber teils ueberholte Handlungsempfehlungen.
 
 ---
 
@@ -25,14 +34,16 @@
 
 ### Gesamtbewertung: ✅ Gut — mit gezieltem Optimierungspotenzial
 
+**Einordnung:** Die nachfolgenden Befunde beschreiben den damaligen Audit-Stand. Benennungen einzelner Tools, Capability-Zuschnitte und Vertragsdetails koennen inzwischen abweichen.
+
 Das Tools-System ist **architektonisch solide aufgebaut**:
 - **Keine Renderer-Kopplung** — Tools kennen weder `wgpu` noch `RenderScene`
 - **Klare Layer-Trennung** — Tools interagieren nur über `&RoadMap` mit dem Domain-Layer
-- **Zentralisierte Builder-Logik** — `assemble_tool_result()` wird von 6/9 Tools genutzt
+- **Zentralisierte Builder-Logik** — `assemble_tool_result()` und `ToolResultBuilder` kanonisieren `ToolResult`-Defaults in den einfachen und migrierten Spezialpfaden
 - **Trait-basierte Capabilities** — 4 optionale Traits für Drag/Tangent/Registry/Chain
 
 **Hauptbefunde:**
-- 3 Tools (FieldBoundary, Parking, RouteOffset) bauen `ToolResult` manuell statt über `assemble_tool_result()`
+- Audit-Stand 2026-03-07: 3 Tools (FieldBoundary, Parking, RouteOffset) bauten `ToolResult` noch manuell; dieser Befund ist seit F5 durch `ToolResultBuilder` in den betroffenen Pfaden ueberholt
 - Preview-Allokationen: 2 Tools klonen Caches pro Frame (ConstraintRoute, Bypass)
 - Gruppen-Editierbarkeit ist funktional, aber nicht per Trait standardisiert
 - Config-UI zeigt hohe Diversität (domain-bedingt, nicht kritisch)
@@ -94,7 +105,7 @@ Das `RouteTool`-Trait definiert **11 Pflichtmethoden + ~20 optionale mit Default
 | `status_text()` | Pflicht | ✅ Phasenabhängig | Kontextsensitive Statusmeldungen |
 | `on_click()` | Pflicht | ✅ Einheitlich | `→ ToolAction` |
 | `preview()` | Pflicht | ✅ Einheitlich | `→ ToolPreview` |
-| `execute()` | Pflicht | ⚠️ Divergent | 3 Tools bauen ToolResult manuell |
+| `execute()` | Pflicht | ✅ Weitgehend vereinheitlicht | Default-Felder werden in `assemble_tool_result()` sowie FieldBoundary/RouteOffset/Parking ueber `ToolResultBuilder` kanonisiert |
 | `render_config()` | Pflicht | ✅ Domain-bedingt | UI-Diversität ist akzeptabel |
 | `reset()` | Pflicht | ✅ Einheitlich | Alle setzen State zurück |
 | `is_ready()` | Pflicht | ✅ Einheitlich | Boolean-Check |
@@ -128,7 +139,7 @@ Breaking Change mit **geringem Mehrwert**, da:
 - Die nachgelagerte ID-Vergabe über `apply_tool_result()` ist korrekt und atomisch
 - HashMap-Lookup vor ID-Vergabe wäre sinnlos
 
-**→ Empfehlung:** `ToolResult` beibehalten, aber die 3 manuellen Builder vereinheitlichen (→ Abschnitt 5).
+**→ Empfehlung:** `ToolResult` beibehalten. Der fruehere Vereinheitlichungsbedarf fuer Default-Felder wurde seit F5 ueber `ToolResultBuilder` adressiert; verbleibende Spezialpfade koennen fallweise separat bleiben.
 
 ### 3.3 Lifecycle-Standardisierung ✅
 
@@ -220,7 +231,7 @@ bei nur 9 Tools kein dringendes Refactoring.
 
 | Pattern | Shared Module | Genutzt von |
 |---------|--------------|-------------|
-| `assemble_tool_result()` | `common/builder.rs` | 6 Tools |
+| `assemble_tool_result()` + `ToolResultBuilder` | `common/{builder,result}.rs` | Einfache Polyline-Tools plus FieldBoundary, RouteOffset und Parking |
 | `ToolLifecycleState` | `common/lifecycle.rs` | 8 Tools |
 | `SegmentConfig` | `common/lifecycle.rs` | 4 Tools |
 | `TangentState` | `common/tangent.rs` | Curve, Spline |
@@ -229,33 +240,19 @@ bei nur 9 Tools kein dringendes Refactoring.
 
 #### ⚠️ Duplikations-Kandidaten
 
-**D-01 — Manueller ToolResult-Aufbau (3 Tools)**
+**D-01 — Historischer Befund: manueller ToolResult-Aufbau**
 
-`FieldBoundaryTool`, `ParkingTool` und `RouteOffsetTool` bauen `ToolResult` manuell,
-weil sie spezielle Topologien haben:
+Zum Audit-Stand 2026-03-07 bauten `FieldBoundaryTool`, `ParkingTool` und `RouteOffsetTool` ihre `ToolResult`-Werte noch ohne gemeinsamen Default-Kanal auf.
 
-| Tool | Grund für manuellen Build | Aufwand Vereinheitlichung |
-|------|--------------------------|--------------------------|
-| FieldBoundary | Geschlossener Ring (letzter Node → erster) | Mittel |
-| Parking | Turnaround-Reihen mit Marker-Integration | Hoch |
-| RouteOffset | Links/Rechts-Varianten + `nodes_to_remove` | Mittel |
+**Stand nach F5:**
 
-**Empfehlung:** Anstelle einer Zwangs-Vereinheitlichung eine erweiterte Builder-Variante:
+| Tool | Aktueller Builder-Pfad |
+|------|------------------------|
+| FieldBoundary | `ToolResultBuilder::new(...).build()` fuer den geschlossenen Ring |
+| Parking | `build_parking_result()` nutzt `ToolResultBuilder` plus `with_markers(...)` |
+| RouteOffset | `ToolResultBuilder` plus `with_external_connections(...)` und `with_nodes_to_remove(...)` |
 
-```rust
-/// Erweiterte Builder-Optionen für assemble_tool_result
-pub struct AssembleOptions {
-    /// Schließe die Verbindung (letzter → erster Node)
-    pub close_loop: bool,
-    /// Nodes, die nach der Erstellung entfernt werden sollen
-    pub nodes_to_remove: Vec<u64>,
-    /// Marker-Definitionen (Index → Name, Gruppe)
-    pub markers: Vec<(usize, String, String)>,
-}
-```
-
-Damit könnten FieldBoundary und RouteOffset auf `assemble_tool_result_ext()` migriert werden.
-Parking bleibt aufgrund der Multi-Reihen-Topologie ein Sonderfall.
+Die im Audit skizzierte Richtung `assemble_tool_result_ext()` ist damit nicht mehr die aktuelle Umsetzung. Stattdessen bleibt `assemble_tool_result()` schmal, waehrend `ToolResultBuilder` die kanonischen leeren Defaults fuer optionale Sammlungen setzt.
 
 **D-02 — Preview-Pattern für Cache-basierte Tools**
 
@@ -391,9 +388,9 @@ Bestehende Benchmarks in `benches/`:
 | ID | Schwere | Datei | Bereich | Befund | Empfehlung |
 |----|---------|-------|---------|--------|------------|
 | **F-01** | 🟡 Mittel | `tools/route_tool.rs` | API | 4 Capability-Trait-Methoden ohne Docstrings | Docstrings ergänzen |
-| **F-02** | 🟡 Mittel | `field_boundary/lifecycle.rs` | DRY | Manueller ToolResult-Aufbau statt `assemble_tool_result()` | `assemble_tool_result_ext()` mit `close_loop` |
-| **F-03** | 🟡 Mittel | `route_offset/lifecycle.rs` | DRY | Manueller ToolResult-Aufbau | Dito, mit `nodes_to_remove` |
-| **F-04** | 🟢 Niedrig | `parking/lifecycle.rs` | DRY | Manueller ToolResult-Aufbau | Sonderfall (Multi-Reihen), belassen |
+| **F-02** | ✅ Erledigt | `field_boundary/lifecycle.rs` | DRY | Default-Felder werden ueber `ToolResultBuilder` kanonisch gesetzt | Kein weiterer Handlungsbedarf fuer F5 |
+| **F-03** | ✅ Erledigt | `route_offset/lifecycle.rs` | DRY | `ToolResultBuilder` deckt `external_connections` und `nodes_to_remove` ab | Kein weiterer Handlungsbedarf fuer F5 |
+| **F-04** | ✅ Erledigt | `parking/geometry/conversion.rs` | DRY | Parking-Konvertierung nutzt `ToolResultBuilder` + Marker-Pfad | Kein weiterer Handlungsbedarf fuer F5 |
 | **F-05** | 🟢 Niedrig | `constraint_route/state.rs` | Perf | `.clone()` auf Preview-Cache pro Frame | `CachedPreview`-Helper oder `Arc` |
 | **F-06** | 🟢 Niedrig | `bypass/lifecycle.rs` | Perf | Clone auf Cached Positions | Dito |
 | **F-07** | 🟢 Niedrig | `docs/ARCHITECTURE_PLAN.md` | Doku | Keine Tool-Encapsulation-Regeln | Abschnitt ergänzen |
@@ -405,45 +402,9 @@ Bestehende Benchmarks in `benches/`:
 
 ## 9. Code-Vorschläge
 
-### 9.1 Erweiterter Builder (F-02, F-03)
+### 9.1 Nachtrag: tatsaechliche Umsetzung fuer F5
 
-```rust
-// src/app/tools/common/builder.rs — Neue Funktion
-
-/// Erweiterte Optionen für assemble_tool_result.
-#[derive(Default)]
-pub struct AssembleOptions {
-    /// Schließe die Verbindung (letzter → erster Node).
-    pub close_loop: bool,
-    /// Nodes, die nach der Erstellung entfernt werden sollen.
-    pub nodes_to_remove: Vec<u64>,
-    /// Marker-Definitionen (Index → Name, Gruppe).
-    pub markers: Vec<(usize, String, String)>,
-}
-
-/// Wie `assemble_tool_result`, aber mit erweiterten Optionen.
-pub fn assemble_tool_result_ext(
-    positions: &[Vec2],
-    start: &ToolAnchor,
-    end: &ToolAnchor,
-    direction: ConnectionDirection,
-    priority: ConnectionPriority,
-    road_map: &RoadMap,
-    options: AssembleOptions,
-) -> ToolResult {
-    let mut result = assemble_tool_result(positions, start, end, direction, priority, road_map);
-    
-    if options.close_loop && positions.len() >= 2 {
-        // Verbindung vom letzten zum ersten Node hinzufügen
-        let last_idx = positions.len() - 1;
-        result.internal_connections.push((last_idx, 0, direction, priority));
-    }
-    
-    result.nodes_to_remove = options.nodes_to_remove;
-    result.markers = options.markers;
-    result
-}
-```
+Der im Audit skizzierte Vorschlag `assemble_tool_result_ext()` wurde nicht umgesetzt. Stattdessen fuehrt der aktuelle Code einen schmalen `ToolResultBuilder` in `common/result.rs` ein und nutzt ihn sowohl in `assemble_tool_result()` als auch in den spezialisierten Pfaden von FieldBoundary, RouteOffset und Parking. Damit werden optionale `ToolResult`-Sammlungen kanonisch leer initialisiert, ohne die bestehende Polyline-Helferfunktion aufzublaehen.
 
 ### 9.2 Architektur-Regeln für ARCHITECTURE_PLAN.md (F-07)
 
@@ -507,12 +468,12 @@ Nächster Frame: RenderScene wird aus RoadMap neu gebaut ← Render-Layer
 - [ ] `src/app/tools/route_tool.rs` — 4 fehlende Docstrings für Capability-Methoden
 - [ ] `src/app/tools/common/geometry.rs` — Docstrings für `parallel_offset()`, `local_perp()`
 
-### Phase 2: Builder-Erweiterung (mittel) — Commit 2
+### Phase 2: ToolResult-Defaults kanonisieren (umgesetzt abweichend vom Auditvorschlag)
 
-- [ ] `assemble_tool_result_ext()` in `common/builder.rs` implementieren
-- [ ] `FieldBoundaryTool::execute()` auf `assemble_tool_result_ext(close_loop: true)` migrieren
-- [ ] `RouteOffsetTool::execute()` auf `assemble_tool_result_ext(nodes_to_remove: ...)` migrieren
-- [ ] Tests für erweiterten Builder schreiben
+- [x] Schmalen `ToolResultBuilder` in `common/result.rs` eingefuehrt
+- [x] `assemble_tool_result()` auf Builder-basierte Default-Initialisierung umgestellt
+- [x] `FieldBoundaryTool::execute()`, `RouteOffsetTool::execute()` und `build_parking_result()` auf den Builder ausgerichtet
+- [x] Builder-Tests fuer kanonisch leere optionale Sammlungen ergaenzt
 
 ### Phase 3: Preview-Optimierung (optional, niedrig) — Commit 3
 
