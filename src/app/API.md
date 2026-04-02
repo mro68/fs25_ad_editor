@@ -6,10 +6,13 @@ Das `app`-Modul verwaltet den globalen State, verarbeitet `AppIntent`s zentral u
 
 **Hinweis:** `Camera2D` lebt im `core`-Modul (reiner Geometrie-Typ). `app` re-exportiert `Camera2D`, `ConnectionDirection`, `ConnectionPriority`, `RoadMap`, `RouteToolId`, `ToolAnchor`, `TangentSource`, `TangentMenuData`, `TangentOptionData`, `compute_ring` und andere zentrale Typen aus `core`, `tool_contract`, `ui_contract` und `tools`. Zusaetzliche UI-Fassaden wie `RouteToolPanelAdapter` und `RouteToolViewportData` liegen bewusst nur unter `app::ui_contract`, damit der Root-Export schlank bleibt.
 
+Die eframe-Integrationsschale unter `src/editor_app/*` gehoert bewusst nicht zum `app`-Layer. Ihre kanonische Dokumentation steht in `../editor_app/API.md`, damit `app/API.md` nur den Application-Layer beschreibt.
+
 **Weitere API-Dokumentationen:**
 - [`handlers/API.md`](handlers/API.md) — alle Handler-Funktionen mit detaillierter Dokumentation
 - [`use_cases/API.md`](use_cases/API.md) — alle Use-Case-Funktionen (camera, file_io, selection, editing, …)
 - [`tools/API.md`](tools/API.md) — ToolManager, RouteTool-Trait, registrierte Tools, gemeinsame Infrastruktur
+- [`../editor_app/API.md`](../editor_app/API.md) — kanonische Doku der eframe-Integrationsschale (`EditorApp`, Viewport-Anbindung, Overlays)
 
 ## Tool-Vertraege
 
@@ -1116,30 +1119,8 @@ Cache-Invalidierung erfolgt wenn sich `SelectionState::generation` oder `GroupRe
 
 ---
 
-## `editor_app` (Modul)
+## `editor_app` (Integrationsschale)
 
-Das `src/editor_app/`-Modul ist der eframe-App-Einstiegspunkt. Es wurde in Submodule aufgeteilt:
+Die eframe-Integrationsschale gehoert bewusst nicht zur `app`-API. Die kanonische Dokumentation fuer `EditorApp`, Event-Sammlung, Overlay-Anbindung und Viewport-Rendering steht in [`../editor_app/API.md`](../editor_app/API.md).
 
-| Submodul | Verantwortlichkeit |
-|---|---|
-| `event_collection.rs` | UI-Events sammeln und zu `AppIntent`s buendeln (`collect_ui_events()`) |
-| `overlays.rs` | Viewport-Overlays zeichnen (Tool-Preview, GroupBoundary-Icons, Selektion) |
-| `helpers.rs` | Interne Hilsfunktionen (Kamera-Viewport-Berechnungen, Cursor-Transformation) |
-| `mod.rs` | `EditorApp`-Struct + `eframe::App::update()` Haupt-Loop |
-
-**`EditorApp`-Felder:**
-
-```rust
-pub(crate) struct EditorApp {
-    state: AppState,
-    controller: AppController,
-    renderer: Arc<Mutex<render::Renderer>>,
-    device: wgpu::Device,
-    queue: wgpu::Queue,
-    input: ui::InputState,
-    /// Gecachte Cursor-Weltposition (bleibt erhalten wenn Maus den Viewport verlaesst)
-    last_cursor_world: Option<Vec2>,
-    /// Gecachte egui-Textur-Handles fuer Gruppen-Boundary-Icons (lazy initialisiert)
-    group_boundary_icons: Option<ui::GroupBoundaryIcons>,
-}
-```
+`app/API.md` dokumentiert nur den eigentlichen Application-Layer: `AppController`, `AppState`, Intents/Commands, Handler, Use-Cases und Tool-Vertraege.

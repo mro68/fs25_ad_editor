@@ -1,11 +1,13 @@
 # Architektur-Plan (Soll-Zustand)
 
-Stand: 2026-03-07  
+Stand: 2026-04-02  
 Status: Umgesetzt — Architektur-Grenzen und API-Verträge aktiv durchgesetzt
 
 ## Zielbild
 
-Dieser Plan trennt strikt in fünf Schichten plus ein geteiltes Shared-Modul:
+Dieser Plan trennt fachliche Verantwortlichkeiten in fuenf Schichten plus ein geteiltes Shared-Modul. Davor sitzt eine duenne Integrationsschale fuer den Binary-Start und eframe/wgpu:
+
+- Integrationsschale (`src/editor_app/*`, `src/runtime.rs`, `src/main.rs`): Start, Frame-Zyklus und Anbindung zwischen UI, Application und Renderer
 
 - UI (`src/ui/*`): Darstellung + Intent-Erzeugung
 - Application (`src/app/*`): Event-Verarbeitung + Orchestrierung + Use-Cases
@@ -15,6 +17,8 @@ Dieser Plan trennt strikt in fünf Schichten plus ein geteiltes Shared-Modul:
 - Shared (`src/shared/*`): Gemeinsame Typen (RenderScene, RenderQuality)
 
 Kernfluss: **Input -> AppIntent -> AppController -> AppCommand -> AppState/Domain -> RenderScene -> Renderer**.
+
+Die Integrationsschale ist bewusst kein zusaetzlicher Fach-Layer. Sie koordiniert `ui`, `app` und `render`, enthaelt aber keine eigenen Use-Cases oder Domain-Logik.
 
 ## Systemübersicht
 
@@ -92,6 +96,28 @@ graph BT
 
 > **Regel:** Pfeile zeigen "darf importieren". Gestrichelt = explizit verboten (CI-geprüft via `scripts/check_layer_boundaries.sh`).
 
+### Integrationsschale (`src/editor_app/*`, `src/runtime.rs`, `src/main.rs`)
+
+**Verantwortung**
+
+- Startet `EditorApp` aus `runtime.rs` heraus und bindet eframe/wgpu an die Layer-Architektur an
+- Sammelt pro Frame Panel-, Dialog-, Viewport- und Overlay-Events und reicht sie als `AppIntent` an `AppController` weiter
+- Registriert den Render-Callback und verwaltet nur fensterlokalen Integrationszustand (`render::Renderer`, `ui::InputState`, Cursor-/Icon-Caches)
+
+**Darf**
+
+- `ui`, `app` und `render` koordinieren
+- Read-only auf `AppState` zugreifen, wenn Panels oder Overlays Daten benoetigen
+
+**Darf nicht**
+
+- Eigene Fachlogik oder Duplicate-Use-Cases enthalten
+- Domain-Daten am `AppController` vorbei mutieren
+
+**API-Hinweis**
+
+- Kanonische Doku: [`../src/editor_app/API.md`](../src/editor_app/API.md)
+
 ### UI Layer (`src/ui/*`)
 
 **Verantwortung**
@@ -140,6 +166,10 @@ graph BT
 - Aufbau von `RenderScene` aus Domain + ViewState
 - Re-Export von Core-Typen für UI (z.B. `ConnectionDirection`, `ConnectionPriority`, `RoadMap`)
 - Kanonischer RouteTool-Katalog (`tools/catalog.rs`) als Single Source of Truth fuer `RouteToolId`, `RouteToolGroup`, `RouteToolBackingMode`, Surface-Sichtbarkeit und Aktivierungs-Voraussetzungen
+
+**Abgrenzung**
+
+- `src/editor_app/*` gehoert nicht zum Application-Layer. Die Integrationsschale kapselt nur eframe-Frame-Zyklus, Event-Sammlung und Overlay-Anbindung und delegiert fachliche Mutationen an `AppController`.
 
 **Use-Case-Module:**
 
@@ -387,6 +417,13 @@ Verbindliche Regeln:
 
 ```text
 src/
+  main.rs             # Binary-Einstieg; ruft runtime::run()
+  runtime.rs          # eframe-Bootstrap und EditorApp-Erzeugung
+  editor_app/
+    mod.rs            # EditorApp + eframe::App::update(); duenne Integrationsschale
+    event_collection.rs # Panels, Dialoge und Viewport-Input zu AppIntents buendeln
+    helpers.rs        # Render-Callback, Floating-Menue, Background-Upload, Repaint-Gating
+    overlays.rs       # Tool-, Clipboard-, Distanz- und Gruppen-Overlays
   app/
     mod.rs              # Re-Exports (ConnectionDirection, ConnectionPriority, RoadMap, etc.)
     controller.rs       # AppController: Intent → Command Dispatch an Handler
@@ -553,7 +590,7 @@ src/
 ## Definition of Done
 
 - Keine Domain-Mutationslogik in `ui`.
-- `main.rs` enthält nur Bootstrap/Wiring.
+- `main.rs` und `runtime.rs` enthalten nur Bootstrap/Wiring; `src/editor_app/*` bleibt die duenne eframe-Integrationsschale.
 - Alle User-Interaktionen laufen über `AppIntent`.
 - Renderer arbeitet ohne direkten Domain-Zugriff.
 - XML-Funktionalität ist unabhängig von UI/Render testbar.
