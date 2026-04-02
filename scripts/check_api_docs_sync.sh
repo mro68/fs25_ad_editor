@@ -9,20 +9,55 @@ while IFS= read -r -d '' file; do
   API_DOC_FILES+=("$file")
 done < <(find src -type f -name API.md -print0)
 
+search_regex() {
+  local pattern="$1"
+  shift
+
+  if command -v rg >/dev/null 2>&1; then
+    rg -n --no-heading "$pattern" "$@"
+  else
+    grep -n -E -- "$pattern" "$@"
+  fi
+}
+
+search_literal() {
+  local needle="$1"
+  shift
+
+  if command -v rg >/dev/null 2>&1; then
+    rg -n --no-heading -F "$needle" "$@"
+  else
+    grep -n -F -- "$needle" "$@"
+  fi
+}
+
 check_no_match() {
   local pattern="$1"
   local hint="$2"
   shift 2
 
   local tmp_file
+  local search_status
   tmp_file="$(mktemp)"
 
-  if rg -n --no-heading "$pattern" "$@" >"$tmp_file"; then
+  set +e
+  search_regex "$pattern" "$@" >"$tmp_file"
+  search_status=$?
+  set -e
+
+  if [ "$search_status" -eq 0 ]; then
     echo "[FAIL] Veraltete API-Dokumentation gefunden: $hint"
     cat "$tmp_file"
     rm -f "$tmp_file"
     exit 1
   fi
+
+  if [ "$search_status" -ne 1 ]; then
+    rm -f "$tmp_file"
+    echo "[FAIL] API-Doku-Suche fehlgeschlagen: $hint"
+    exit 1
+  fi
+
   rm -f "$tmp_file"
 }
 
@@ -32,13 +67,26 @@ check_has_literal() {
   shift 2
 
   local tmp_file
+  local search_status
   tmp_file="$(mktemp)"
 
-  if ! rg -n --no-heading -F "$needle" "$@" >"$tmp_file"; then
+  set +e
+  search_literal "$needle" "$@" >"$tmp_file"
+  search_status=$?
+  set -e
+
+  if [ "$search_status" -eq 1 ]; then
     echo "[FAIL] Erwartete Doku-Aussage fehlt: $hint"
     rm -f "$tmp_file"
     exit 1
   fi
+
+  if [ "$search_status" -ne 0 ]; then
+    rm -f "$tmp_file"
+    echo "[FAIL] API-Doku-Suche fehlgeschlagen: $hint"
+    exit 1
+  fi
+
   rm -f "$tmp_file"
 }
 
