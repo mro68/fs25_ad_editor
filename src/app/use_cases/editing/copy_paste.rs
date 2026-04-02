@@ -26,7 +26,7 @@ pub fn copy_selected_to_clipboard(state: &mut AppState) {
     // Nodes kopieren
     let nodes: Vec<MapNode> = selected_ids
         .iter()
-        .filter_map(|&id| road_map.nodes.get(&id).cloned())
+        .filter_map(|&id| road_map.node(id).cloned())
         .collect();
 
     if nodes.is_empty() {
@@ -51,7 +51,7 @@ pub fn copy_selected_to_clipboard(state: &mut AppState) {
 
     // Marker: nur fuer selektierte Nodes
     let markers: Vec<MapMarker> = road_map
-        .map_markers
+        .map_markers()
         .iter()
         .filter(|m| selected_set.contains(&m.id))
         .cloned()
@@ -174,16 +174,8 @@ pub fn confirm_paste(state: &mut AppState) {
             continue;
         };
 
-        let start_pos = road_map
-            .nodes
-            .get(&new_start)
-            .map(|n| n.position)
-            .unwrap_or_default();
-        let end_pos = road_map
-            .nodes
-            .get(&new_end)
-            .map(|n| n.position)
-            .unwrap_or_default();
+        let start_pos = road_map.node_position(new_start).unwrap_or_default();
+        let end_pos = road_map.node_position(new_end).unwrap_or_default();
 
         let new_conn = Connection::new(
             new_start,
@@ -197,7 +189,7 @@ pub fn confirm_paste(state: &mut AppState) {
     }
 
     // Marker einfuegen (mit remappten Node-IDs)
-    let next_marker_index = road_map.map_markers.len() as u32;
+    let next_marker_index = road_map.marker_count() as u32;
     for (i, marker) in state.clipboard.markers.iter().enumerate() {
         let Some(&new_node_id) = id_map.get(&marker.id) else {
             continue;

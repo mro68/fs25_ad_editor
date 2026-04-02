@@ -76,5 +76,5 @@ fn test_deduplicate_on_duplicated_xml() {
 
     // Marker wurde von Node 3 auf Node 1 umgeleitet
     assert_eq!(result.remapped_markers, 1);
-    assert_eq!(road_map.map_markers[0].id, 1);
+    assert_eq!(road_map.map_markers()[0].id, 1);
 }

@@ -1,7 +1,7 @@
 # Architektur-Plan (Soll-Zustand)
 
 Stand: 2026-04-02  
-Status: Umgesetzt — Architektur-Grenzen und API-Verträge aktiv durchgesetzt
+Status: Teilweise umgesetzt — Render/shared-Vertrag und Layer-Guardrails technisch durchgesetzt; weitere Best-Practice-Remediationsphasen bleiben offen
 
 ## Zielbild
 
@@ -14,7 +14,7 @@ Dieser Plan trennt fachliche Verantwortlichkeiten in fuenf Schichten plus ein ge
 - Domain (`src/core/*`): Datenmodell + Fachlogik
 - Persistence (`src/xml/*`): XML-Mapping und I/O
 - Rendering (`src/render/*`): GPU-Darstellung aus vorbereiteten Renderdaten
-- Shared (`src/shared/*`): Gemeinsame Typen (RenderScene, RenderQuality)
+- Shared (`src/shared/*`): Gemeinsame Vertraege (u. a. RenderScene, RenderQuality)
 
 Kernfluss: **Input -> AppIntent -> AppController -> AppCommand -> AppState/Domain -> RenderScene -> Renderer**.
 
@@ -327,7 +327,7 @@ pub struct ViewState {
 
 ```text
 pub struct SelectionState {
-  pub selected_node_ids: Arc<HashSet<u64>>,
+  pub selected_node_ids: Arc<IndexSet<u64>>,
   pub selection_anchor_node_id: Option<u64>,
 }
 ```
@@ -336,17 +336,14 @@ pub struct SelectionState {
 
 ```text
 pub struct RenderScene {
-  pub road_map: Option<Arc<RoadMap>>,
-  pub camera: Camera2D,
-  pub viewport_size: [f32; 2],
-  pub render_quality: RenderQuality,
-  pub selected_node_ids: Arc<IndexSet<u64>>,
-  pub connect_source_node: Option<u64>,
-  pub background_map: Option<Arc<BackgroundMap>>,
-  pub background_visible: bool,
-  pub options: Arc<EditorOptions>,
-  pub hidden_node_ids: Arc<IndexSet<u64>>,
+  // private Felder
 }
+
+// enthaelt intern:
+// - RenderMap-Snapshot (Nodes, Connections, Marker, KD-Index)
+// - RenderCamera-Snapshot
+// - Selection-/Hidden-/Dimmed-Mengen
+// - RenderQuality, Optionen und Hintergrundstatus
 
 impl Renderer {
   pub fn render_scene(
@@ -406,7 +403,7 @@ Verbindliche Regeln:
 
 1. UI spricht nur mit `app` (`AppIntent` + read-only State) und `shared` (z.B. `EditorOptions`). **Kein direkter `core`-Import.**
 2. Domain (`core`) kennt keine Infrastruktur (UI/Render/XML-Details).
-3. Renderer konsumiert nur `RenderScene` und importiert `Camera2D`/`RoadMap` aus `core` (nicht aus `app`).
+3. Renderer konsumiert nur `RenderScene` plus render-eigene Upload-Vertraege und importiert keine Core-Typen.
 4. XML bleibt technisch; fachliche Entscheidungen liegen in `core`/`app`.
 5. `AppState` enthält keine I/O-Logik; Dateisystem-Operationen sind in `use_cases::file_io` zentralisiert.
 6. Renderer darf keine UI-Typen importieren. **Ausnahme:** `render/callback.rs` implementiert `egui_wgpu::CallbackTrait` — das ist die wgpu-Brücke zwischen egui und dem Rendering-System, kein semantischer UI-Import.
@@ -559,7 +556,7 @@ src/
 ### Phase 3: RenderScene-Vertrag ✅
 
 - `RenderScene` als stabile Schnittstelle app->render eingeführt (in `shared`)
-- Renderpfad auf read-only Renderdaten umgestellt
+- Renderpfad auf read-only Render-Snapshots ohne `RoadMap`-/`Camera2D`-Vertrag umgestellt
 - Orphaned `render/scene.rs` entfernt
 
 ### Phase 4: Modularisierung ✅
@@ -756,5 +753,5 @@ Tool.execute() → ToolResult (Nodes + Connections)
      ↓
 Handler: apply_tool_result() → RoadMap-Mutation
      ↓
-Naechster Frame: RenderScene wird aus RoadMap neu gebaut
+Naechster Frame: RenderScene aktualisiert den gecachten Render-Snapshot bei geaenderter RoadMap-Revision
 ```

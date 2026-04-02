@@ -10,6 +10,12 @@ Fluessiges Rendering von 100k+ Punkten und Verbindungen auf der GPU.
 2. **Viewport-Culling:** Nur Elemente im sichtbaren Bereich rendern
 3. **LOD (Level of Detail):** Zoom-abhaengige Darstellung (Icons vs. einfache Kreise)
 
+## Render-Vertrag
+
+- `src/render/*` konsumiert ausschliesslich `RenderScene` aus `shared` und render-eigene Upload-Daten.
+- Core-Typen wie `RoadMap`, `Camera2D`, `BackgroundMap` oder `WorldBounds` duerfen nicht im Render-Layer auftauchen.
+- App baut einen gecachten `RenderMap`-Snapshot (Nodes, Connections, Marker, KD-Index); der Render-Hotpath arbeitet nur auf diesem Snapshot.
+
 ## wgpu Pipeline
 
 ### Vertex-Buffer-Layout
@@ -78,7 +84,7 @@ struct Uniforms {
 
 ## Culling-Strategie
 
-**Nodes:** KD-Tree-basiert via `SpatialIndex::within_rect()` — nur Viewport-sichtbare Nodes.
+**Nodes:** KD-Tree-basiert via immutablem `RenderMap`-Index — nur Viewport-sichtbare Nodes.
 
 **Connections:** Aktuell lineare Iteration ueber alle Connections mit Segment-Rect-Intersection-Test.
 Verbesserungspotential: Spatial-Vorfilter (z.B. Midpoint-KD-Tree) fuer O(k) statt O(n).

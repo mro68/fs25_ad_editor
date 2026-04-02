@@ -25,3 +25,7 @@ pub use options::ValueAdjustInputMode;
 pub use options::{SNAP_SCALE_PERCENT, TERRAIN_HEIGHT_SCALE};
 pub use render_quality::RenderQuality;
 pub use render_scene::RenderScene;
+pub(crate) use render_scene::{
+    RenderCamera, RenderConnection, RenderConnectionDirection, RenderConnectionPriority, RenderMap,
+    RenderMarker, RenderNode, RenderNodeKind, RenderSceneFrameData,
+};

@@ -149,8 +149,7 @@ impl GroupRegistry {
             .zip(record.original_positions.iter())
             .all(|(id, orig_pos)| {
                 road_map
-                    .nodes
-                    .get(id)
+                    .node(*id)
                     .map(|node| node.position.distance(*orig_pos) < 0.01)
                     .unwrap_or(false)
             })

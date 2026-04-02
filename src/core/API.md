@@ -126,9 +126,9 @@ Container fuer das gesamte AutoDrive-Strassennetzwerk.
 
 ```rust
 pub struct RoadMap {
-    pub nodes: HashMap<u64, MapNode>,
+    nodes: HashMap<u64, MapNode>,
     connections: HashMap<(u64, u64), Connection>,  // Privat, Zugriff ueber connections_iter()
-    pub map_markers: Vec<MapMarker>,
+    map_markers: Vec<MapMarker>,
     pub meta: AutoDriveMeta,
     pub version: u32,
     pub map_name: Option<String>,
@@ -138,9 +138,16 @@ pub struct RoadMap {
 **Methoden:**
 
 - `new(version: u32) -> Self` — Erstellt leere RoadMap
+- `nodes(&self) -> &HashMap<u64, MapNode>` — Read-only Zugriff auf alle Nodes
+- `node(&self, node_id: u64) -> Option<&MapNode>` — Einzelnen Node per ID lesen
+- `contains_node(&self, node_id: u64) -> bool` — Existenzpruefung fuer Node-IDs
+- `node_position(&self, node_id: u64) -> Option<Vec2>` — Position eines Nodes direkt lesen
+- `node_ids(&self) -> impl Iterator<Item = u64>` — Iterator ueber alle Node-IDs
 - `add_node(&mut self, node: MapNode)` — Fuegt Node hinzu (markiert Spatial-Index als dirty)
 - `remove_node(&mut self, node_id: u64) -> Option<MapNode>` — Entfernt Node + betroffene Verbindungen
 - `update_node_position(&mut self, node_id: u64, new_position: Vec2) -> bool` — Position aktualisieren (baut Geometrie neu, markiert Spatial als dirty)
+- `translate_nodes(&mut self, node_ids: &[u64], delta_world: Vec2) -> bool` — Verschiebt mehrere Nodes in einem Schritt und invalidiert Render-/Spatial-Status konsistent
+- `rotate_nodes(&mut self, node_ids: &[u64], center: Vec2, angle_rad: f32) -> bool` — Rotiert mehrere Nodes in einem Schritt und invalidiert Render-/Spatial-Status konsistent
 - `set_node_flag(&mut self, node_id: u64, flag: NodeFlag) -> bool` — Setzt das Node-Flag direkt
 - `add_connection(&mut self, connection: Connection)` — Fuegt Verbindung hinzu
 - `has_connection(&self, start_id: u64, end_id: u64) -> bool` — Prueft ob Verbindung existiert
@@ -157,9 +164,12 @@ pub struct RoadMap {
 - `boundary_nodes(&self, group_ids: &IndexSet<u64>) -> Vec<BoundaryNode>` — Findet alle Nodes in `group_ids`, die Verbindungen nach ausserhalb haben (O(|connections|)); nur bei Gruppen-Aenderungen aufrufen, nicht pro Frame
 - `is_resampleable_chain(&self, node_ids: &IndexSet<u64>) -> bool` — Prueft ob die selektierten Nodes eine zusammenhaengende Kette bilden (Kreuzungen nur an Endpunkten erlaubt)
 - `next_node_id(&self) -> u64` — Naechste freie Node-ID
+- `map_markers(&self) -> &[MapMarker]` — Read-only Zugriff auf alle Marker
+- `next_marker_index(&self) -> u32` — Naechster freier Marker-Index
 - `add_map_marker(&mut self, marker: MapMarker)` — Fuegt Marker hinzu
 - `has_marker(&self, node_id: u64) -> bool` — Prueft ob Node einen Marker hat
 - `find_marker_by_node_id(&self, node_id: u64) -> Option<&MapMarker>` — Marker eines Nodes finden
+- `update_marker(&mut self, node_id: u64, name: String, group: String) -> bool` — Aktualisiert Name und Gruppe eines bestehenden Markers
 - `remove_marker(&mut self, node_id: u64) -> bool` — Marker eines Nodes entfernen
 - `rebuild_connection_geometry(&mut self)` — Aktualisiert Connection-Geometrie
 - `recalculate_node_flags(&mut self, node_ids: &[u64])` — NodeFlags basierend auf Verbindungsprioriaeten neu berechnen

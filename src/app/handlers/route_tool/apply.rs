@@ -28,7 +28,7 @@ pub(super) fn execute_and_apply(state: &mut AppState) {
                 record.original_positions = record
                     .node_ids
                     .iter()
-                    .filter_map(|id| state.road_map.as_ref()?.nodes.get(id).map(|n| n.position))
+                    .filter_map(|id| state.road_map.as_ref()?.node(*id).map(|n| n.position))
                     .collect();
                 record.marker_node_ids = marker_indices
                     .iter()
@@ -85,7 +85,7 @@ pub(super) fn recreate(state: &mut AppState) {
                 record.original_positions = record
                     .node_ids
                     .iter()
-                    .filter_map(|id| state.road_map.as_ref()?.nodes.get(id).map(|n| n.position))
+                    .filter_map(|id| state.road_map.as_ref()?.node(*id).map(|n| n.position))
                     .collect();
                 record.marker_node_ids = Vec::new();
                 state.group_registry.register(record);

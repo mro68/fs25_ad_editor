@@ -61,7 +61,7 @@ impl AppController {
             } => handlers::view::zoom_towards(state, factor, focus_world),
             AppCommand::CenterOnNode { node_id } => {
                 if let Some(rm) = state.road_map.as_deref() {
-                    if let Some(node) = rm.nodes.get(&node_id) {
+                    if let Some(node) = rm.node(node_id) {
                         state.view.camera.look_at(node.position);
                     }
                 }

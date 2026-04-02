@@ -118,6 +118,7 @@ impl RoadMap {
 
         self.rebuild_spatial_index();
         self.rebuild_adjacency_index();
+        self.mark_render_dirty();
 
         DeduplicationResult {
             removed_nodes: removed_nodes as u32,

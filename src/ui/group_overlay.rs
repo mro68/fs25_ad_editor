@@ -78,7 +78,7 @@ pub fn render_group_overlays(
             continue;
         }
 
-        let Some(node) = road_map.nodes.get(&selected_id) else {
+        let Some(node) = road_map.node(selected_id) else {
             continue;
         };
 

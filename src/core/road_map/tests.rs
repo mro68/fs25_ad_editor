@@ -120,6 +120,60 @@ fn test_spatial_index_consistency_on_remove_and_update() {
 }
 
 #[test]
+fn test_translate_nodes_invalidates_render_cache_without_connections() {
+    let mut map = RoadMap::new(3);
+    map.add_node(MapNode::new(1, Vec2::new(0.0, 0.0), NodeFlag::Regular));
+
+    let before = map.render_cache_key();
+    assert!(map.translate_nodes(&[1], Vec2::new(5.0, 2.0)));
+    let after = map.render_cache_key();
+
+    assert_eq!(after.0, before.0);
+    assert_eq!(after.1, before.1 + 1);
+    assert_eq!(
+        map.node(1).expect("node 1 vorhanden").position,
+        Vec2::new(5.0, 2.0)
+    );
+}
+
+#[test]
+fn test_rotate_nodes_invalidates_render_cache_once() {
+    let mut map = RoadMap::new(3);
+    map.add_node(MapNode::new(1, Vec2::new(1.0, 0.0), NodeFlag::Regular));
+    map.add_node(MapNode::new(2, Vec2::new(-1.0, 0.0), NodeFlag::Regular));
+
+    let before = map.render_cache_key();
+    assert!(map.rotate_nodes(&[1, 2], Vec2::ZERO, std::f32::consts::FRAC_PI_2));
+    let after = map.render_cache_key();
+
+    assert_eq!(after.0, before.0);
+    assert_eq!(after.1, before.1 + 1);
+}
+
+#[test]
+fn test_update_marker_invalidates_render_cache() {
+    let mut map = RoadMap::new(3);
+    map.add_node(MapNode::new(1, Vec2::ZERO, NodeFlag::Regular));
+    map.add_map_marker(MapMarker::new(
+        1,
+        "Alt".to_string(),
+        "All".to_string(),
+        1,
+        false,
+    ));
+
+    let before = map.render_cache_key();
+    assert!(map.update_marker(1, "Neu".to_string(), "Hub".to_string()));
+    let after = map.render_cache_key();
+
+    assert_eq!(after.0, before.0);
+    assert_eq!(after.1, before.1 + 1);
+    let marker = map.find_marker_by_node_id(1).expect("Marker vorhanden");
+    assert_eq!(marker.name, "Neu");
+    assert_eq!(marker.group, "Hub");
+}
+
+#[test]
 fn test_recalculate_node_flags_subprio_only() {
     let mut map = RoadMap::new(3);
     map.add_node(MapNode::new(1, Vec2::ZERO, NodeFlag::Regular));
@@ -360,6 +414,21 @@ fn test_deduplicate_updates_markers() {
     assert_eq!(result.remapped_markers, 1);
     assert_eq!(map.map_markers.len(), 1);
     assert_eq!(map.map_markers[0].id, 1);
+}
+
+#[test]
+fn test_deduplicate_invalidates_render_cache() {
+    let mut map = RoadMap::new(3);
+    map.add_node(MapNode::new(1, Vec2::new(0.0, 0.0), NodeFlag::Regular));
+    map.add_node(MapNode::new(2, Vec2::new(0.0, 0.0), NodeFlag::Regular));
+
+    let before = map.render_cache_key();
+    let result = map.deduplicate_nodes(0.01);
+    let after = map.render_cache_key();
+
+    assert!(result.had_duplicates());
+    assert_eq!(after.0, before.0);
+    assert_eq!(after.1, before.1 + 1);
 }
 
 #[test]

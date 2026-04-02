@@ -108,7 +108,7 @@ pub fn resample_selected_path(state: &mut AppState) {
     // Positionen und Verbindungsparameter
     let positions: Vec<Vec2> = ordered
         .iter()
-        .filter_map(|id| road_map_ref.nodes.get(id).map(|n| n.position))
+        .filter_map(|id| road_map_ref.node(*id).map(|n| n.position))
         .collect();
 
     if positions.len() < 2 {
@@ -207,7 +207,7 @@ pub fn resample_selected_path(state: &mut AppState) {
         road_map.add_node(node);
 
         if let Some(p_id) = prev_id {
-            if let Some(p_node) = road_map.nodes.get(&p_id) {
+            if let Some(p_node) = road_map.node(p_id) {
                 let p_pos = p_node.position;
                 let conn = Connection::new(p_id, id, direction, priority, p_pos, pos);
                 road_map.add_connection(conn);
@@ -234,8 +234,8 @@ pub fn resample_selected_path(state: &mut AppState) {
         } else {
             new_last_id
         };
-        let ep_pos = road_map.nodes.get(&new_ep_id).map(|n| n.position);
-        let ext_pos = road_map.nodes.get(&ec.external_id).map(|n| n.position);
+        let ep_pos = road_map.node_position(new_ep_id);
+        let ext_pos = road_map.node_position(ec.external_id);
         if let (Some(ep), Some(ext)) = (ep_pos, ext_pos) {
             let conn = if ec.endpoint_is_start {
                 // Endpunkt war start_id → new_ep → external

@@ -54,7 +54,7 @@ use glam::Vec2;
 pub fn snap_to_node(pos: Vec2, road_map: &RoadMap, snap_radius: f32) -> ToolAnchor {
     if let Some(hit) = road_map.nearest_node(pos) {
         if hit.distance <= snap_radius {
-            if let Some(node) = road_map.nodes.get(&hit.node_id) {
+            if let Some(node) = road_map.node(hit.node_id) {
                 return ToolAnchor::ExistingNode(hit.node_id, node.position);
             }
         }

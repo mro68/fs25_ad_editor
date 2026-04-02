@@ -125,9 +125,7 @@ pub fn delete_selected_nodes(state: &mut AppState) {
     // Reconnect: neue Verbindungen zwischen Vorgaenger und Nachfolger erstellen
     if !reconnect_ops.is_empty() {
         for op in &reconnect_ops {
-            if let (Some(p_node), Some(s_node)) =
-                (road_map.nodes.get(&op.pred), road_map.nodes.get(&op.succ))
-            {
+            if let (Some(p_node), Some(s_node)) = (road_map.node(op.pred), road_map.node(op.succ)) {
                 let p_pos = p_node.position;
                 let s_pos = s_node.position;
                 let conn =

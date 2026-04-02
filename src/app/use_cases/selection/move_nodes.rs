@@ -28,19 +28,12 @@ pub fn move_selected_nodes(state: &mut AppState, delta_world: glam::Vec2) {
     let extra = state.group_registry.expand_locked_selection(&selected);
 
     let move_ids: HashSet<u64> = selected.iter().copied().chain(extra).collect();
+    let move_ids_vec: Vec<u64> = move_ids.iter().copied().collect();
 
     let road_map_mut = Arc::make_mut(road_map);
-    let mut moved_any = false;
-
-    for &node_id in &move_ids {
-        if let Some(node) = road_map_mut.nodes.get_mut(&node_id) {
-            node.position += delta_world;
-            moved_any = true;
-        }
-    }
+    let moved_any = road_map_mut.translate_nodes(&move_ids_vec, delta_world);
 
     if moved_any {
-        road_map_mut.rebuild_connection_geometry();
         road_map_mut.rebuild_spatial_index();
 
         // IDs der betroffenen locked Segments sammeln (Borrow endet vor update-Loop)
@@ -119,8 +112,8 @@ mod tests {
         move_selected_nodes(&mut state, glam::Vec2::new(2.0, 3.0));
 
         let road_map = state.road_map.as_ref().expect("map vorhanden");
-        let node1 = road_map.nodes.get(&1).expect("node 1 vorhanden");
-        let node2 = road_map.nodes.get(&2).expect("node 2 vorhanden");
+        let node1 = road_map.node(1).expect("node 1 vorhanden");
+        let node2 = road_map.node(2).expect("node 2 vorhanden");
         assert_eq!(node1.position, glam::Vec2::new(2.0, 3.0));
         assert_eq!(node2.position, glam::Vec2::new(12.0, 3.0));
     }
@@ -190,12 +183,12 @@ mod tests {
 
         let rm = state.road_map.as_ref().unwrap();
         assert_eq!(
-            rm.nodes[&1].position,
+            rm.node(1).expect("node 1 vorhanden").position,
             Vec2::new(5.0, 0.0),
             "Node 1 muss verschoben sein"
         );
         assert_eq!(
-            rm.nodes[&2].position,
+            rm.node(2).expect("node 2 vorhanden").position,
             Vec2::new(15.0, 0.0),
             "Node 2 muss mitbewegt werden"
         );
@@ -224,9 +217,12 @@ mod tests {
         move_selected_nodes(&mut state, Vec2::new(5.0, 0.0));
 
         let rm = state.road_map.as_ref().unwrap();
-        assert_eq!(rm.nodes[&1].position, Vec2::new(5.0, 0.0));
         assert_eq!(
-            rm.nodes[&2].position,
+            rm.node(1).expect("node 1 vorhanden").position,
+            Vec2::new(5.0, 0.0)
+        );
+        assert_eq!(
+            rm.node(2).expect("node 2 vorhanden").position,
             Vec2::new(10.0, 0.0),
             "Node 2 darf nicht bewegt werden"
         );

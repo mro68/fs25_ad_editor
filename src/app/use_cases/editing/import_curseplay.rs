@@ -65,8 +65,10 @@ pub fn import_curseplay(state: &mut AppState, path: &str) {
         for i in 0..n {
             let from_id = new_ids[i];
             let to_id = new_ids[(i + 1) % n];
-            let from_pos = road_map.nodes[&from_id].position;
-            let to_pos = road_map.nodes[&to_id].position;
+            let from_pos = road_map
+                .node_position(from_id)
+                .expect("Start-Node vorhanden");
+            let to_pos = road_map.node_position(to_id).expect("End-Node vorhanden");
             let conn = Connection::new(
                 from_id,
                 to_id,

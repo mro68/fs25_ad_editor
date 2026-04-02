@@ -64,7 +64,7 @@ impl Precondition {
     /// Prueft ob die Vorbedingung im gegebenen Kontext erfuellt ist.
     pub fn is_valid(&self, ctx: &PreconditionContext) -> bool {
         match self {
-            Self::NodeExists(id) => ctx.road_map.nodes.contains_key(id),
+            Self::NodeExists(id) => ctx.road_map.contains_node(*id),
 
             Self::HasMarker(id) => ctx.road_map.has_marker(*id),
 

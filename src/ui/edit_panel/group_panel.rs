@@ -108,9 +108,7 @@ fn format_node_label(node_id: Option<u64>, road_map: Option<&RoadMap>) -> String
     let Some(id) = node_id else {
         return "Keine".to_string();
     };
-    let pos = road_map
-        .and_then(|rm| rm.nodes.get(&id))
-        .map(|n| n.position);
+    let pos = road_map.and_then(|rm| rm.node(id)).map(|n| n.position);
     match pos {
         Some(p) => format!("#{} ({:.0}, {:.0})", id, p.x, p.y),
         None => format!("#{}", id),

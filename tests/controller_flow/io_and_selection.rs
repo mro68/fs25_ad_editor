@@ -211,8 +211,8 @@ fn test_move_selected_nodes_requested_moves_all_selected_nodes() {
         .expect("MoveSelectedNodesRequested sollte funktionieren");
 
     let road_map = state.road_map.as_ref().expect("map vorhanden");
-    let node1 = road_map.nodes.get(&1).expect("node 1 vorhanden");
-    let node2 = road_map.nodes.get(&2).expect("node 2 vorhanden");
+    let node1 = road_map.node(1).expect("node 1 vorhanden");
+    let node2 = road_map.node(2).expect("node 2 vorhanden");
 
     assert_eq!(node1.position, glam::Vec2::new(2.0, -1.0));
     assert_eq!(node2.position, glam::Vec2::new(12.0, 4.0));
@@ -271,7 +271,7 @@ fn test_undo_redo_moves_revert_and_restore_positions() {
 
     let after_move = state.road_map.as_ref().unwrap();
     assert_eq!(
-        after_move.nodes.get(&1).unwrap().position,
+        after_move.node(1).unwrap().position,
         glam::Vec2::new(3.0, 1.0)
     );
 
@@ -282,7 +282,7 @@ fn test_undo_redo_moves_revert_and_restore_positions() {
 
     let after_undo = state.road_map.as_ref().unwrap();
     assert_eq!(
-        after_undo.nodes.get(&1).unwrap().position,
+        after_undo.node(1).unwrap().position,
         glam::Vec2::new(0.0, 0.0)
     );
 
@@ -293,7 +293,7 @@ fn test_undo_redo_moves_revert_and_restore_positions() {
 
     let after_redo = state.road_map.as_ref().unwrap();
     assert_eq!(
-        after_redo.nodes.get(&1).unwrap().position,
+        after_redo.node(1).unwrap().position,
         glam::Vec2::new(3.0, 1.0)
     );
 }
