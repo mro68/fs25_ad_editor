@@ -239,6 +239,7 @@
   - [x] `within_rect` auf KD-Tree Range-Query umstellen (aktuell O(n) Brute-Force)
   - [x] **Connection-Lookup O(1):** `connections: Vec<Connection>` → `HashMap<(u64,u64), Connection>`
   - [x] **COW-Undo via `Arc<RoadMap>`:** Snapshot ist O(1) statt O(n) Deep-Clone (Copy-on-Write)
+  - [x] **Render-Vertrag gehaertet (2026-04-02):** `RenderScene` transportiert nur noch Render-Snapshots; `src/render/*` kennt keine Core-Typen mehr; `check_layer_boundaries.sh` erkennt Root-Re-Export-Verstoesse in `render`/`shared`
   - [x] Tool-Preview: Steuerpunkt-Erkennung von O(n·m) auf O(n+m) umgestellt (precomputed Node-Connectivity)
   - [x] **EditHistory: VecDeque statt Vec** — `pop_front()` O(1) statt O(n) `remove(0)` (2026-02-24)
   - [x] **Properties-Panel:** `selected_node_ids: &HashSet<u64>` direkt uebergeben — eliminiert doppeltes `.collect()` (2026-02-24)

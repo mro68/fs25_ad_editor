@@ -4,8 +4,7 @@ use super::fingerprint::RenderFingerprint;
 use super::types::{
     compute_visible_rect, NodeInstance, RenderContext, RenderQuality, Uniforms, Vertex,
 };
-use crate::shared::SelectionStyle;
-use crate::{NodeFlag, RoadMap};
+use crate::shared::{RenderMap, RenderNodeKind, SelectionStyle};
 use eframe::{egui_wgpu, wgpu};
 use indexmap::IndexSet;
 use std::collections::HashMap;
@@ -167,7 +166,7 @@ impl NodeRenderer {
         &mut self,
         ctx: &RenderContext,
         render_pass: &mut wgpu::RenderPass<'static>,
-        road_map: &RoadMap,
+        render_map: &RenderMap,
         render_quality: RenderQuality,
         selected_node_ids: &IndexSet<u64>,
     ) {
@@ -185,7 +184,7 @@ impl NodeRenderer {
         // Fingerabdruck berechnen und mit dem letzten Frame vergleichen.
         // Bei Uebereinstimmung kann der gesamte CPU/GPU-Rebuild uebersprungen werden.
         let new_fp = {
-            let mut fp = RenderFingerprint::from_context(ctx, road_map);
+            let mut fp = RenderFingerprint::from_context(ctx, render_map);
             fp.dimmed_ptr = ctx.dimmed_node_ids as *const IndexSet<u64> as usize;
             fp.selected_ptr = selected_node_ids as *const IndexSet<u64> as usize;
             fp.quality = render_quality as u8;
@@ -206,7 +205,7 @@ impl NodeRenderer {
             // node_id_scratch wird vom Spatial-Query befuellt; vorher leeren.
             self.node_id_scratch.clear();
 
-            road_map.nodes_within_rect_into(min, max, &mut self.node_id_scratch);
+            render_map.nodes_within_rect_into(min, max, &mut self.node_id_scratch);
 
             // Zoom-Kompensationsfaktor einmalig pro Frame berechnen (nicht pro Node).
             let compensation = ctx.options.zoom_compensation(ctx.camera.zoom);
@@ -228,11 +227,11 @@ impl NodeRenderer {
                     if selected_set.contains(&node_id) {
                         return true;
                     }
-                    let Some(node) = road_map.nodes.get(&node_id) else {
+                    let Some(node) = render_map.node(&node_id) else {
                         return false;
                     };
                     // Bogenpunkte immer sichtbar lassen (sonst erscheinen Boegen eckig bei Zoom-out)
-                    if node.flag == NodeFlag::RoundedCorner {
+                    if node.preserve_when_decimating {
                         return true;
                     }
                     let cell = (
@@ -262,16 +261,16 @@ impl NodeRenderer {
                 if ctx.hidden_node_ids.contains(node_id) {
                     continue;
                 }
-                let Some(node) = road_map.nodes.get(node_id) else {
+                let Some(node) = render_map.node(node_id) else {
                     continue;
                 };
 
                 let is_selected = selected_set.contains(&node.id);
                 // Basisfarbe entspricht dem Node-Flag (bleibt mittig sichtbar)
-                let mut base_color = match node.flag {
-                    NodeFlag::SubPrio => ctx.options.node_color_subprio,
-                    NodeFlag::Warning => ctx.options.node_color_warning,
-                    _ => ctx.options.node_color_default,
+                let mut base_color = match node.kind {
+                    RenderNodeKind::SubPrio => ctx.options.node_color_subprio,
+                    RenderNodeKind::Warning => ctx.options.node_color_warning,
+                    RenderNodeKind::Regular => ctx.options.node_color_default,
                 };
                 // Gedimmte Nodes des gleichen Segments auf 50% Opacity setzen
                 if ctx.dimmed_node_ids.contains(&node.id) {

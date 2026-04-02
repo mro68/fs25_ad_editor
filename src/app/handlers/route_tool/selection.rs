@@ -50,7 +50,7 @@ pub(super) fn init_chain_if_needed(state: &mut AppState) {
 
     let positions: Vec<glam::Vec2> = ordered_ids
         .iter()
-        .filter_map(|id| road_map.nodes.get(id).map(|n| n.position))
+        .filter_map(|id| road_map.node(*id).map(|n| n.position))
         .collect();
 
     if positions.len() < 2 {
@@ -97,8 +97,8 @@ pub(super) fn select_with_anchors(
         let Some(road_map) = state.road_map.as_deref() else {
             return;
         };
-        let start = road_map.nodes.get(&start_node_id);
-        let end = road_map.nodes.get(&end_node_id);
+        let start = road_map.node(start_node_id);
+        let end = road_map.node(end_node_id);
         match (start, end) {
             (Some(s), Some(e)) => (s.position, e.position),
             _ => {

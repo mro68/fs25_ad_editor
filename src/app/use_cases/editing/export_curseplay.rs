@@ -30,7 +30,7 @@ pub fn export_curseplay(state: &AppState, path: &str) {
     // Positionen in Selektionsreihenfolge sammeln
     let positions: Vec<Vec2> = selected_ids
         .iter()
-        .filter_map(|id| road_map.nodes.get(id))
+        .filter_map(|id| road_map.node(*id))
         .map(|node| node.position)
         .collect();
 

@@ -6,7 +6,7 @@ use crate::app::{AppIntent, RoadMap};
 /// Info-Submenu für einen Node (öffnet bei Hover, zeigt Details).
 pub(super) fn render_node_info_submenu(ui: &mut egui::Ui, node_id: u64, road_map: &RoadMap) {
     ui.menu_button("ℹ Info", |ui| {
-        if let Some(node) = road_map.nodes.get(&node_id) {
+        if let Some(node) = road_map.node(node_id) {
             ui.label(format!("📍 Node {}", node_id));
             ui.label(format!(
                 "Position: ({:.1}, {:.1})",

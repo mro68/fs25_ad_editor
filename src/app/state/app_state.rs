@@ -3,7 +3,7 @@ use crate::app::history::Snapshot;
 use crate::app::tool_contract::RouteToolId;
 use crate::app::CommandLog;
 use crate::core::{Connection, FarmlandGrid, FieldPolygon, MapMarker, MapNode, RoadMap};
-use crate::shared::EditorOptions;
+use crate::shared::{EditorOptions, RenderMap};
 use glam::Vec2;
 use indexmap::IndexSet;
 use std::cell::RefCell;
@@ -39,6 +39,11 @@ pub struct GroupEditState {
 ///
 /// Tuple: `(selection_generation, registry_dimmed_generation, gecachtes_Ergebnis)`.
 type DimmedIdsCache = Option<(u64, u64, Arc<IndexSet<u64>>)>;
+
+/// Cache-Eintrag fuer den render-seitigen Map-Snapshot.
+///
+/// Tuple: `(render_instance_id, render_revision, gecachter_RenderMap_Snapshot)`.
+type RenderMapCache = Option<(u64, u64, Arc<RenderMap>)>;
 
 /// Hauptzustand der Anwendung
 pub struct AppState {
@@ -99,6 +104,11 @@ pub struct AppState {
     /// Interior Mutability via `RefCell`, da `render_scene::build()` nur `&AppState` erhaelt.
     /// Wird invalidiert wenn sich selection oder group_registry aendern (Generations-Vergleich).
     pub(crate) dimmed_ids_cache: RefCell<DimmedIdsCache>,
+    /// Lazy Cache fuer den render-seitigen Map-Snapshot.
+    ///
+    /// Wird ueber `(render_instance_id, render_revision)` invalidiert, damit der
+    /// Snapshot nur bei render-relevanten RoadMap-Aenderungen neu aufgebaut wird.
+    pub(crate) render_map_cache: RefCell<RenderMapCache>,
 }
 
 impl AppState {
@@ -129,6 +139,7 @@ impl AppState {
             tool_editing_record_id: None,
             tool_editing_record_backup: None,
             dimmed_ids_cache: RefCell::new(None),
+            render_map_cache: RefCell::new(None),
         }
     }
 

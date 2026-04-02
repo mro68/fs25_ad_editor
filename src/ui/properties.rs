@@ -97,7 +97,7 @@ fn render_single_node_info(
     events: &mut Vec<AppIntent>,
 ) {
     let node_id = *selected.iter().next().unwrap();
-    let Some(node) = road_map.nodes.get(&node_id) else {
+    let Some(node) = road_map.node(node_id) else {
         return;
     };
 

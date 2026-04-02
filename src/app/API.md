@@ -1117,6 +1117,8 @@ sind, werden in die Dimm-Menge aufgenommen (50% Opacity im Renderer). Ergebnis w
 `AppState::dimmed_ids_cache` speichert Tupel `(selection_generation, registry_dimmed_generation, Arc<IndexSet<u64>>)`.
 Cache-Invalidierung erfolgt wenn sich `SelectionState::generation` oder `GroupRegistry::dimmed_generation` aendert.
 
+Zusätzlich baut `render_scene::build()` einen render-seitigen `RenderMap`-Snapshot der aktuellen `RoadMap`. Dieser Snapshot enthaelt nur Renderdaten (Nodes, Verbindungen, Marker-Positionen, immutable KD-Index) und wird ueber `AppState::render_map_cache` gecacht. Die Invalidierung erfolgt ueber die interne `RoadMap::render_cache_key()`-Revision, sodass der Renderer keinen Core-Typenvertrag mehr benoetigt.
+
 ---
 
 ## `editor_app` (Integrationsschale)

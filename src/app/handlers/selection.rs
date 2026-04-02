@@ -110,7 +110,7 @@ pub fn clear(state: &mut AppState) {
 pub fn select_all(state: &mut AppState) {
     if let Some(road_map) = state.road_map.as_deref() {
         let (old_selected, old_anchor) = helpers::capture_selection_snapshot(state);
-        state.selection.selected_node_ids = Arc::new(road_map.nodes.keys().copied().collect());
+        state.selection.selected_node_ids = Arc::new(road_map.node_ids().collect());
         state.selection.selection_anchor_node_id = None;
         helpers::record_selection_if_changed(state, old_selected, old_anchor);
         log::info!(
@@ -125,12 +125,8 @@ pub fn invert(state: &mut AppState) {
     if let Some(rm) = &state.road_map {
         let (old_selected, old_anchor) = helpers::capture_selection_snapshot(state);
         let current = &state.selection.selected_node_ids;
-        let inverted: indexmap::IndexSet<u64> = rm
-            .nodes
-            .keys()
-            .copied()
-            .filter(|id| !current.contains(id))
-            .collect();
+        let inverted: indexmap::IndexSet<u64> =
+            rm.node_ids().filter(|id| !current.contains(id)).collect();
         state.selection.selected_node_ids = Arc::new(inverted);
         helpers::record_selection_if_changed(state, old_selected, old_anchor);
     }

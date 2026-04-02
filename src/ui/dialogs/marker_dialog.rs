@@ -25,7 +25,7 @@ pub fn show_marker_dialog(
     };
 
     let existing_groups: BTreeSet<String> = road_map
-        .map(|rm| rm.map_markers.iter().map(|m| m.group.clone()).collect())
+        .map(|rm| rm.map_markers().iter().map(|m| m.group.clone()).collect())
         .unwrap_or_default();
 
     let mut confirmed = false;

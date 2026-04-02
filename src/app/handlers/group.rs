@@ -75,7 +75,7 @@ pub fn group_selection(state: &mut AppState) {
 
     let original_positions: Vec<_> = node_ids
         .iter()
-        .filter_map(|id| road_map.nodes.get(id).map(|n| n.position))
+        .filter_map(|id| road_map.node(*id).map(|n| n.position))
         .collect();
 
     let record_id = state.group_registry.next_id();
@@ -211,7 +211,7 @@ pub fn apply_group_edit(state: &mut AppState) {
     let mut new_ids: indexmap::IndexSet<u64> = indexmap::IndexSet::new();
 
     for id in &original_node_ids {
-        if road_map.nodes.contains_key(id) {
+        if road_map.contains_node(*id) {
             new_ids.insert(*id);
         }
     }
@@ -264,7 +264,7 @@ pub fn apply_group_edit(state: &mut AppState) {
     // Positionen der neuen Node-IDs sammeln
     let positions: Vec<glam::Vec2> = new_node_ids
         .iter()
-        .filter_map(|id| road_map.nodes.get(id).map(|n| n.position))
+        .filter_map(|id| road_map.node(*id).map(|n| n.position))
         .collect();
 
     // Record aktualisieren

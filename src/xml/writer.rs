@@ -52,7 +52,7 @@ pub fn write_autodrive_config(
         output.push_str(&format!("    <{}>{}</{}>\n", key, escape_xml(value), key));
     }
 
-    let mut node_ids: Vec<u64> = road_map.nodes.keys().copied().collect();
+    let mut node_ids: Vec<u64> = road_map.node_ids().collect();
     node_ids.sort_unstable();
 
     // Renumbering: Interne IDs → lueckenlose 1-basierte IDs (AutoDrive erwartet kontiguoese IDs)
@@ -104,7 +104,7 @@ pub fn write_autodrive_config(
     let mut incoming_text = Vec::new();
 
     for id in &node_ids {
-        let node = road_map.nodes.get(id).ok_or_else(|| {
+        let node = road_map.node(*id).ok_or_else(|| {
             anyhow::anyhow!("Inkonsistente RoadMap: Node {} fehlt beim XML-Export", id)
         })?;
         let new_id = id_remap[id];
@@ -187,7 +187,7 @@ pub fn write_autodrive_config(
     output.push_str("    </waypoints>\n");
 
     output.push_str("    <mapmarker>\n");
-    for (index, marker) in road_map.map_markers.iter().enumerate() {
+    for (index, marker) in road_map.map_markers().iter().enumerate() {
         let marker_tag = format!("mm{}", index + 1);
         // Marker-ID remappen (zeigt auf Node-ID)
         let remapped_marker_id = match id_remap.get(&marker.id).copied() {

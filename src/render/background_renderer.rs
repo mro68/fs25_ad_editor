@@ -1,12 +1,42 @@
 //! Background-Renderer fuer Map-Hintergrund.
 
-use crate::{BackgroundMap, Camera2D, WorldBounds};
+use crate::shared::RenderCamera;
 use eframe::{egui_wgpu, wgpu};
+use image::{DynamicImage, GenericImageView};
 use wgpu::util::DeviceExt;
 
 /// Ab diesem Wert wird auf pixelgenaues Sampling umgeschaltet.
 /// 1.0 bedeutet: ein Hintergrund-Texel belegt mindestens einen Screen-Pixel.
 const NEAREST_SAMPLING_TEXEL_THRESHOLD_PX: f32 = 1.0;
+
+/// Weltkoordinaten-Bereich des Hintergrund-Quads im Render-Vertrag.
+#[derive(Debug, Clone, Copy)]
+pub struct BackgroundWorldBounds {
+    /// Linke Kante in Weltkoordinaten.
+    pub min_x: f32,
+    /// Rechte Kante in Weltkoordinaten.
+    pub max_x: f32,
+    /// Untere Kante in Weltkoordinaten.
+    pub min_y: f32,
+    /// Obere Kante in Weltkoordinaten.
+    pub max_y: f32,
+}
+
+impl BackgroundWorldBounds {
+    fn scaled(self, scale: f32) -> Self {
+        let half_w = (self.max_x - self.min_x) * 0.5;
+        let half_h = (self.max_y - self.min_y) * 0.5;
+        let cx = (self.min_x + self.max_x) * 0.5;
+        let cy = (self.min_y + self.max_y) * 0.5;
+
+        Self {
+            min_x: cx - half_w * scale,
+            max_x: cx + half_w * scale,
+            min_y: cy - half_h * scale,
+            max_y: cy + half_h * scale,
+        }
+    }
+}
 
 /// Uniforms fuer Background-Rendering
 #[repr(C)]
@@ -54,18 +84,18 @@ pub struct BackgroundRenderer {
     nearest_sampler: Option<wgpu::Sampler>,
     linear_bind_group: Option<wgpu::BindGroup>,
     nearest_bind_group: Option<wgpu::BindGroup>,
-    current_bounds: Option<WorldBounds>,
+    current_bounds: Option<BackgroundWorldBounds>,
     texture_dimensions: Option<[u32; 2]>,
 }
 
 fn screen_pixels_per_background_texel(
-    bounds: &WorldBounds,
+    bounds: &BackgroundWorldBounds,
     texture_dimensions: [u32; 2],
-    camera: &Camera2D,
+    camera: &RenderCamera,
     viewport_size: [f32; 2],
 ) -> f32 {
     let world_width = (bounds.max_x - bounds.min_x).abs().max(f32::EPSILON);
-    let world_height = (bounds.max_z - bounds.min_z).abs().max(f32::EPSILON);
+    let world_height = (bounds.max_y - bounds.min_y).abs().max(f32::EPSILON);
     let texel_world_x = world_width / texture_dimensions[0].max(1) as f32;
     let texel_world_y = world_height / texture_dimensions[1].max(1) as f32;
     let texel_world = texel_world_x.max(texel_world_y);
@@ -74,9 +104,9 @@ fn screen_pixels_per_background_texel(
 }
 
 fn should_use_nearest_background_sampling(
-    bounds: &WorldBounds,
+    bounds: &BackgroundWorldBounds,
     texture_dimensions: [u32; 2],
-    camera: &Camera2D,
+    camera: &RenderCamera,
     viewport_size: [f32; 2],
 ) -> bool {
     screen_pixels_per_background_texel(bounds, texture_dimensions, camera, viewport_size)
@@ -228,18 +258,15 @@ impl BackgroundRenderer {
         &mut self,
         device: &wgpu::Device,
         queue: &wgpu::Queue,
-        bg_map: &BackgroundMap,
+        image: &DynamicImage,
+        world_bounds: BackgroundWorldBounds,
         scale: f32,
     ) {
         log::info!("BackgroundRenderer: Lade Background-Texture...");
 
         // Erstelle Texture aus Image
-        let (texture, linear_sampler) = super::texture::create_texture_from_image(
-            device,
-            queue,
-            bg_map.image_data(),
-            "Background Texture",
-        );
+        let (texture, linear_sampler) =
+            super::texture::create_texture_from_image(device, queue, image, "Background Texture");
         let nearest_sampler = super::texture::create_sampler(
             device,
             "Background Texture nearest_sampler",
@@ -287,35 +314,27 @@ impl BackgroundRenderer {
         });
 
         // Update Vertex-Buffer mit korrekten Quad-Koordinaten (Weltkoordinaten)
-        let bounds = bg_map.world_bounds();
-        let half_w = (bounds.max_x - bounds.min_x) * 0.5;
-        let half_h = (bounds.max_z - bounds.min_z) * 0.5;
-        let cx = (bounds.min_x + bounds.max_x) * 0.5;
-        let cz = (bounds.min_z + bounds.max_z) * 0.5;
-        let min_x = cx - half_w * scale;
-        let max_x = cx + half_w * scale;
-        let min_z = cz - half_h * scale;
-        let max_z = cz + half_h * scale;
+        let bounds = world_bounds.scaled(scale);
         let vertices = [
             // Dreieck 1
             BackgroundVertex {
-                position: [min_x, min_z],
+                position: [bounds.min_x, bounds.min_y],
             },
             BackgroundVertex {
-                position: [max_x, min_z],
+                position: [bounds.max_x, bounds.min_y],
             },
             BackgroundVertex {
-                position: [max_x, max_z],
+                position: [bounds.max_x, bounds.max_y],
             },
             // Dreieck 2
             BackgroundVertex {
-                position: [min_x, min_z],
+                position: [bounds.min_x, bounds.min_y],
             },
             BackgroundVertex {
-                position: [max_x, max_z],
+                position: [bounds.max_x, bounds.max_y],
             },
             BackgroundVertex {
-                position: [min_x, max_z],
+                position: [bounds.min_x, bounds.max_y],
             },
         ];
 
@@ -327,18 +346,13 @@ impl BackgroundRenderer {
         self.nearest_sampler = Some(nearest_sampler);
         self.linear_bind_group = Some(linear_bind_group);
         self.nearest_bind_group = Some(nearest_bind_group);
-        self.current_bounds = Some(WorldBounds {
-            min_x,
-            max_x,
-            min_z,
-            max_z,
-        });
-        self.texture_dimensions = Some([bg_map.dimensions().0, bg_map.dimensions().1]);
+        self.current_bounds = Some(bounds);
+        self.texture_dimensions = Some([image.dimensions().0, image.dimensions().1]);
 
         log::info!(
             "BackgroundRenderer: Texture geladen ({}x{})",
-            bg_map.dimensions().0,
-            bg_map.dimensions().1
+            image.dimensions().0,
+            image.dimensions().1
         );
     }
 
@@ -359,7 +373,7 @@ impl BackgroundRenderer {
         &self,
         queue: &wgpu::Queue,
         render_pass: &mut wgpu::RenderPass<'static>,
-        camera: &Camera2D,
+        camera: &RenderCamera,
         viewport_size: [f32; 2],
         visible: bool,
         opacity: f32,
@@ -400,7 +414,7 @@ impl BackgroundRenderer {
             _padding1: 0.0,
             _padding2: 0.0,
             _padding3: 0.0,
-            texture_bounds: [bounds.min_x, bounds.max_x, bounds.min_z, bounds.max_z],
+            texture_bounds: [bounds.min_x, bounds.max_x, bounds.min_y, bounds.max_y],
         };
 
         queue.write_buffer(&self.uniform_buffer, 0, bytemuck::cast_slice(&[uniforms]));
@@ -421,8 +435,13 @@ mod tests {
 
     #[test]
     fn nearest_sampling_is_used_when_texels_are_magnified() {
-        let bounds = WorldBounds::from_map_size(2048.0);
-        let mut camera = Camera2D::new();
+        let bounds = BackgroundWorldBounds {
+            min_x: -1024.0,
+            max_x: 1024.0,
+            min_y: -1024.0,
+            max_y: 1024.0,
+        };
+        let mut camera = RenderCamera::new(glam::Vec2::ZERO, 1.0);
         camera.zoom = 8.0;
 
         assert!(should_use_nearest_background_sampling(
@@ -435,8 +454,13 @@ mod tests {
 
     #[test]
     fn linear_sampling_is_kept_when_texels_are_subpixel() {
-        let bounds = WorldBounds::from_map_size(2048.0);
-        let camera = Camera2D::new();
+        let bounds = BackgroundWorldBounds {
+            min_x: -1024.0,
+            max_x: 1024.0,
+            min_y: -1024.0,
+            max_y: 1024.0,
+        };
+        let camera = RenderCamera::new(glam::Vec2::ZERO, 1.0);
 
         assert!(!should_use_nearest_background_sampling(
             &bounds,

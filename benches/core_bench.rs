@@ -24,9 +24,7 @@ fn build_synthetic_road_map(node_count: usize) -> RoadMap {
         let row = (index / 1000) as f32;
         let x = column + row * 0.001;
         let y = row + column * 0.001;
-        road_map
-            .nodes
-            .insert(id, MapNode::new(id, Vec2::new(x, y), NodeFlag::Regular));
+        road_map.add_node(MapNode::new(id, Vec2::new(x, y), NodeFlag::Regular));
     }
 
     road_map.rebuild_spatial_index();

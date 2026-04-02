@@ -10,7 +10,7 @@ fn shortest_path_nodes(road_map: &RoadMap, start: u64, goal: u64) -> Option<Vec<
         return Some(vec![start]);
     }
 
-    if !road_map.nodes.contains_key(&start) || !road_map.nodes.contains_key(&goal) {
+    if !road_map.contains_node(start) || !road_map.contains_node(goal) {
         return None;
     }
 

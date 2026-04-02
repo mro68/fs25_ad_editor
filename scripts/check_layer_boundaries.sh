@@ -4,9 +4,9 @@
 # Regeln (Importrichtungen):
 #   UI       → App → Core (niemals crate::core direkt)
 #   UI       darf nicht crate::xml oder crate::render importieren
-#   Render   → Shared (niemals crate::app oder crate::ui)
+#   Render   → Shared (niemals crate::app, crate::ui oder Core via Root-Re-Export)
 #   Core     darf nicht UI/Render/App importieren
-#   Shared   darf nicht crate::core direkt importieren (nur Crate-Root-Re-Exports)
+#   Shared   darf keine Core-Typen direkt oder ueber Crate-Root-Re-Exports importieren
 #   XML      darf nicht App/UI/Render importieren
 #   use_cases duerfen nicht tools-interne Submodule importieren
 #   make check-layers   (wenn in Makefile eingebunden)
@@ -17,6 +17,8 @@ ROOT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT_DIR"
 
 VIOLATIONS=0
+CORE_ROOT_EXPORTS='AutoDriveMeta|BackgroundMap|Camera2D|Connection|ConnectionDirection|ConnectionPriority|MapMarker|MapNode|NodeFlag|RoadMap|SpatialIndex|SpatialMatch|WorldBounds'
+ROOT_CORE_PATTERN="crate::(${CORE_ROOT_EXPORTS})(::|[^[:alnum:]_]|$)"
 
 echo "=== Architektur-Check: Layer-Grenzen ==="
 
@@ -134,10 +136,12 @@ if [ -n "$APP_RENDER_VIOLATIONS" ]; then
     VIOLATIONS=$((VIOLATIONS + 1))
 fi
 
-# Regel 3: Render darf nicht auf UI/App zugreifen
-RENDER_VIOLATIONS=$(grep -rn 'crate::ui\|crate::app' src/render/ --include='*.rs' 2>/dev/null || true)
+# Regel 3: Render darf nicht auf UI/App/Core zugreifen
+# Der Check prueft explizit auch Root-Re-Exports wie `crate::RoadMap`, damit
+# Layer-Verletzungen nicht mehr durch das Crate-Root maskiert werden.
+RENDER_VIOLATIONS=$(grep -rnE "crate::ui|crate::app|crate::core|${ROOT_CORE_PATTERN}" src/render/ --include='*.rs' 2>/dev/null || true)
 if [ -n "$RENDER_VIOLATIONS" ]; then
-    echo "FEHLER: Render importiert aus UI/App:"
+    echo "FEHLER: Render importiert aus UI/App/Core oder ueber Root-Re-Exports aus Core:"
     echo "$RENDER_VIOLATIONS"
     VIOLATIONS=$((VIOLATIONS + 1))
 fi
@@ -185,11 +189,10 @@ if [ -n "$USE_CASES_TOOLS_VIOLATIONS" ]; then
     VIOLATIONS=$((VIOLATIONS + 1))
 fi
 
-# Regel 9: shared darf nicht direkt aus crate::core importieren
-# (Core-Typen muessen ueber den Crate-Root eingebunden werden, z.B. crate::Camera2D)
-SHARED_CORE_VIOLATIONS=$(grep -rn 'crate::core' src/shared/ --include='*.rs' 2>/dev/null || true)
+# Regel 9: shared darf keine Core-Typen importieren — weder direkt noch ueber Root-Re-Exports
+SHARED_CORE_VIOLATIONS=$(grep -rnE "crate::core|${ROOT_CORE_PATTERN}" src/shared/ --include='*.rs' 2>/dev/null || true)
 if [ -n "$SHARED_CORE_VIOLATIONS" ]; then
-    echo "FEHLER: shared importiert direkt aus crate::core (Crate-Root-Re-Exports verwenden):"
+    echo "FEHLER: shared importiert aus Core oder ueber Root-Re-Exports aus Core:"
     echo "$SHARED_CORE_VIOLATIONS"
     VIOLATIONS=$((VIOLATIONS + 1))
 fi

@@ -202,16 +202,12 @@ impl SmoothCurveTool {
                 let neighbors = road_map.connected_neighbors(*id);
                 neighbors
                     .iter()
-                    .map(|n| {
+                    .map(|n| -> Vec2 {
                         // Richtungsvektor vom Anchor zum Nachbar
-                        let neighbor_pos = road_map
-                            .nodes
-                            .get(&n.neighbor_id)
-                            .map(|node| node.position)
-                            .unwrap_or(*pos);
+                        let neighbor_pos = road_map.node_position(n.neighbor_id).unwrap_or(*pos);
                         (neighbor_pos - *pos).normalize_or_zero()
                     })
-                    .filter(|v| v.length() > 0.0)
+                    .filter(|direction: &Vec2| direction.length() > 0.0)
                     .collect()
             }
             ToolAnchor::NewPosition(_) => Vec::new(),

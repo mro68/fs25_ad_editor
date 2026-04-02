@@ -252,7 +252,7 @@ fn test_add_node_at_position() {
     // Neuer Node sollte selektiert sein
     assert_eq!(state.selection.selected_node_ids.len(), 1);
     let new_id = *state.selection.selected_node_ids.iter().next().unwrap();
-    let node = rm.nodes.get(&new_id).expect("Neuer Node existiert");
+    let node = rm.node(new_id).expect("Neuer Node existiert");
     assert_eq!(node.position, glam::Vec2::new(50.0, 50.0));
 }
 
@@ -296,7 +296,7 @@ fn test_delete_selected_nodes() {
 
     let rm = state.road_map.as_ref().unwrap();
     assert_eq!(rm.node_count(), 2);
-    assert!(!rm.nodes.contains_key(&1));
+    assert!(!rm.contains_node(1));
     // Verbindung 1→2 sollte auch entfernt sein
     assert_eq!(rm.connection_count(), 0);
     // Selektion leer
@@ -318,7 +318,7 @@ fn test_delete_is_undoable() {
         .handle_intent(&mut state, AppIntent::UndoRequested)
         .unwrap();
     assert_eq!(state.road_map.as_ref().unwrap().node_count(), 3);
-    assert!(state.road_map.as_ref().unwrap().nodes.contains_key(&1));
+    assert!(state.road_map.as_ref().unwrap().contains_node(1));
     assert_eq!(state.road_map.as_ref().unwrap().connection_count(), 1);
 }
 

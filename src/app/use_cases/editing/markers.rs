@@ -28,7 +28,7 @@ pub fn create_marker(state: &mut AppState, node_id: u64, name: &str, group: &str
         return;
     };
 
-    if !road_map_arc.nodes.contains_key(&node_id) {
+    if !road_map_arc.contains_node(node_id) {
         log::warn!("Node {} existiert nicht", node_id);
         return;
     }
@@ -45,7 +45,7 @@ pub fn create_marker(state: &mut AppState, node_id: u64, name: &str, group: &str
         return;
     };
     let road_map = Arc::make_mut(road_map_arc);
-    let marker_index = road_map.map_markers.len() as u32 + 1;
+    let marker_index = road_map.next_marker_index();
 
     let marker = MapMarker {
         id: node_id,
@@ -83,9 +83,7 @@ pub fn update_marker(state: &mut AppState, node_id: u64, name: &str, group: &str
         return;
     };
     let road_map = Arc::make_mut(road_map_arc);
-    if let Some(marker) = road_map.map_markers.iter_mut().find(|m| m.id == node_id) {
-        marker.name = name.to_string();
-        marker.group = group.to_string();
+    if road_map.update_marker(node_id, name.to_string(), group.to_string()) {
         log::info!(
             "Marker bei Node {} aktualisiert (Name: {}, Gruppe: {})",
             node_id,

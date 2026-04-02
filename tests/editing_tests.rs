@@ -57,7 +57,7 @@ fn test_delete_middle_node_ohne_reconnect_hinterlaesst_keine_verbindung() {
         .expect("DeleteSelectedRequested darf nicht paniken");
 
     let rm = state.road_map.as_ref().unwrap();
-    assert!(!rm.nodes.contains_key(&2), "Node 2 muss geloescht sein");
+    assert!(!rm.contains_node(2), "Node 2 muss geloescht sein");
     // Ohne Reconnect: keine direkte Verbindung A→C
     assert!(
         !rm.has_connection(1, 3),
@@ -81,7 +81,7 @@ fn test_delete_middle_node_mit_reconnect_verbindet_a_und_c() {
         .expect("DeleteSelectedRequested darf nicht paniken");
 
     let rm = state.road_map.as_ref().unwrap();
-    assert!(!rm.nodes.contains_key(&2), "Node 2 muss geloescht sein");
+    assert!(!rm.contains_node(2), "Node 2 muss geloescht sein");
     assert!(
         rm.has_connection(1, 3),
         "Mit reconnect_on_delete muss A→C verbunden sein"
@@ -104,9 +104,9 @@ fn test_delete_endnode_mit_reconnect_keine_neue_verbindung() {
         .expect("DeleteSelectedRequested darf nicht paniken");
 
     let rm = state.road_map.as_ref().unwrap();
-    assert!(!rm.nodes.contains_key(&1), "Node 1 (A) muss geloescht sein");
+    assert!(!rm.contains_node(1), "Node 1 (A) muss geloescht sein");
     // Node 2 und 3 bleiben, aber keine neue Verbindung (B hat keinen neuen Vorgaenger)
-    assert!(rm.nodes.contains_key(&2), "Node 2 muss erhalten bleiben");
+    assert!(rm.contains_node(2), "Node 2 muss erhalten bleiben");
 }
 
 // ─── reconnect: Richtungs-/Prioritaets-Vererbung ─────────────────────────────
@@ -298,7 +298,7 @@ fn test_add_node_mit_split_teilt_verbindung() {
     let rm = state.road_map.as_ref().unwrap();
     // Es muss ein neuer (dritter) Node entstanden sein
     assert_eq!(
-        rm.nodes.len(),
+        rm.node_count(),
         3,
         "Nach Split muessen 3 Nodes existieren (war: 2)"
     );
@@ -319,13 +319,13 @@ fn test_resample_path_ohne_selektion_keine_aenderung() {
     state.view.viewport_size = [1280.0, 720.0];
     // Keine Nodes selektiert
 
-    let node_count_vorher = state.road_map.as_ref().unwrap().nodes.len();
+    let node_count_vorher = state.road_map.as_ref().unwrap().node_count();
 
     controller
         .handle_intent(&mut state, AppIntent::ResamplePathRequested)
         .expect("ResamplePathRequested darf ohne Selektion nicht paniken");
 
-    let node_count_nachher = state.road_map.as_ref().unwrap().nodes.len();
+    let node_count_nachher = state.road_map.as_ref().unwrap().node_count();
     assert_eq!(
         node_count_vorher, node_count_nachher,
         "Ohne Selektion darf ResamplePath die Map nicht veraendern"
@@ -354,9 +354,9 @@ fn test_resample_path_nach_distanz_erzeugt_neue_nodes() {
     let rm = state.road_map.as_ref().unwrap();
     // Mindestens 3 Nodes (keine Regression), aber mehr als vorher
     assert!(
-        rm.nodes.len() >= 3,
+        rm.node_count() >= 3,
         "Nach Resample muessen mindestens 3 Nodes vorhanden sein, haben: {}",
-        rm.nodes.len()
+        rm.node_count()
     );
 }
 
@@ -386,7 +386,11 @@ fn test_add_node_auf_existierenden_node_selektiert_statt_erstellt() {
 
     let rm = state.road_map.as_ref().unwrap();
     // Kein neuer Node erstellt
-    assert_eq!(rm.nodes.len(), 1, "Es darf kein neuer Node erstellt werden");
+    assert_eq!(
+        rm.node_count(),
+        1,
+        "Es darf kein neuer Node erstellt werden"
+    );
     // Node 1 ist selektiert
     assert!(
         state.selection.selected_node_ids.contains(&1),
@@ -417,7 +421,7 @@ fn test_add_node_auf_leerer_flaeche_erstellt_neuen_node() {
         .expect("AddNodeRequested darf nicht paniken");
 
     let rm = state.road_map.as_ref().unwrap();
-    assert_eq!(rm.nodes.len(), 2, "Ein neuer Node muss erstellt werden");
+    assert_eq!(rm.node_count(), 2, "Ein neuer Node muss erstellt werden");
 }
 
 // ─── ResamplePath: Externe Verbindungen erhalten ─────────────────────────────
@@ -491,27 +495,18 @@ fn test_resample_path_erhalt_externe_verbindungen() {
 
     // X(10) und D(20) muessen weiterhin existieren
     assert!(
-        rm.nodes.contains_key(&10),
+        rm.contains_node(10),
         "Externer Node X(10) muss noch existieren"
     );
     assert!(
-        rm.nodes.contains_key(&20),
+        rm.contains_node(20),
         "Externer Node D(20) muss noch existieren"
     );
 
     // A, B, C (alte IDs 1, 2, 3) sind geloescht
-    assert!(
-        !rm.nodes.contains_key(&1),
-        "Alter Node A(1) muss geloescht sein"
-    );
-    assert!(
-        !rm.nodes.contains_key(&2),
-        "Alter Node B(2) muss geloescht sein"
-    );
-    assert!(
-        !rm.nodes.contains_key(&3),
-        "Alter Node C(3) muss geloescht sein"
-    );
+    assert!(!rm.contains_node(1), "Alter Node A(1) muss geloescht sein");
+    assert!(!rm.contains_node(2), "Alter Node B(2) muss geloescht sein");
+    assert!(!rm.contains_node(3), "Alter Node C(3) muss geloescht sein");
 
     // X(10) muss eine ausgehende Verbindung zu einem neuen Node haben
     let x_outgoing: Vec<u64> = rm

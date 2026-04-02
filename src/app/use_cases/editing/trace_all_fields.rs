@@ -138,8 +138,10 @@ pub fn trace_all_fields(
             for i in 0..n {
                 let from_id = poly_ids[i];
                 let to_id = poly_ids[(i + 1) % n];
-                let from_pos = road_map.nodes[&from_id].position;
-                let to_pos = road_map.nodes[&to_id].position;
+                let from_pos = road_map
+                    .node_position(from_id)
+                    .expect("Start-Node vorhanden");
+                let to_pos = road_map.node_position(to_id).expect("End-Node vorhanden");
                 let conn = Connection::new(from_id, to_id, direction, priority, from_pos, to_pos);
                 road_map.add_connection(conn);
             }
@@ -176,7 +178,7 @@ pub fn trace_all_fields(
             let record_id = state.group_registry.next_id();
             let original_positions: Vec<Vec2> = node_ids
                 .iter()
-                .filter_map(|id| road_map_ref.nodes.get(id).map(|n| n.position))
+                .filter_map(|id| road_map_ref.node(*id).map(|n| n.position))
                 .collect();
             let record = GroupRecord {
                 id: record_id,

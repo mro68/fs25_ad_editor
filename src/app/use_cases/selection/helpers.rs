@@ -46,7 +46,7 @@ pub(super) fn neighbors_for_segment_walk(
         .connected_neighbors(node_id)
         .into_iter()
         .filter_map(|neighbor| {
-            let target_node = road_map.nodes.get(&neighbor.neighbor_id)?;
+            let target_node = road_map.node(neighbor.neighbor_id)?;
             let (start_id, end_id) = if neighbor.is_outgoing {
                 (node_id, neighbor.neighbor_id)
             } else {

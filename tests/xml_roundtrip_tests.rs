@@ -15,7 +15,7 @@ fn test_xml_roundtrip_preserves_core_counts_and_ids() {
     assert_eq!(parsed.marker_count(), reparsed.marker_count());
 
     // IDs sind nach Export lueckenlos 1..N
-    let mut reparsed_ids: Vec<u64> = reparsed.nodes.keys().copied().collect();
+    let mut reparsed_ids: Vec<u64> = reparsed.node_ids().collect();
     reparsed_ids.sort_unstable();
     let expected_ids: Vec<u64> = (1..=parsed.node_count() as u64).collect();
     assert_eq!(reparsed_ids, expected_ids);
@@ -46,7 +46,7 @@ fn test_xml_roundtrip_renumbers_gapped_ids() {
     let reparsed = parse_autodrive_config(&written).expect("Re-Parsing fehlgeschlagen");
 
     // Nach Export: IDs sind 1, 2, 3
-    let mut ids: Vec<u64> = reparsed.nodes.keys().copied().collect();
+    let mut ids: Vec<u64> = reparsed.node_ids().collect();
     ids.sort_unstable();
     assert_eq!(ids, vec![1, 2, 3]);
 
@@ -121,7 +121,7 @@ fn test_xml_roundtrip_marker_remapping() {
 
     // Marker muss auf die neue ID 2 zeigen (5 → 2)
     assert_eq!(reparsed.marker_count(), 1);
-    let marker = &reparsed.map_markers[0];
+    let marker = &reparsed.map_markers()[0];
     assert_eq!(marker.id, 2, "Marker-ID sollte nach Remapping 2 sein");
     assert_eq!(marker.name, "Hof");
     assert_eq!(marker.group, "default");
@@ -197,7 +197,7 @@ fn test_xml_roundtrip_special_characters_in_marker() {
 </AutoDrive>"#;
 
     let parsed = parse_autodrive_config(xml).expect("Parsing fehlgeschlagen");
-    assert_eq!(parsed.map_markers[0].name, "Bauer & Sohn");
+    assert_eq!(parsed.map_markers()[0].name, "Bauer & Sohn");
 
     let written = write_autodrive_config(&parsed, None, 255.0).expect("Export fehlgeschlagen");
 
@@ -210,7 +210,8 @@ fn test_xml_roundtrip_special_characters_in_marker() {
 
     let reparsed = parse_autodrive_config(&written).expect("Re-Parsing fehlgeschlagen");
     assert_eq!(
-        reparsed.map_markers[0].name, "Bauer & Sohn",
+        reparsed.map_markers()[0].name,
+        "Bauer & Sohn",
         "Sonderzeichen muessen nach Roundtrip erhalten bleiben"
     );
 }

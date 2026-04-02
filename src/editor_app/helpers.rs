@@ -59,10 +59,17 @@ impl EditorApp {
             return;
         };
         if let Some(bg_map) = self.state.view.background_map.as_deref() {
+            let bounds = bg_map.world_bounds();
             renderer.set_background(
                 &self.device,
                 &self.queue,
-                bg_map,
+                bg_map.image_data(),
+                render::BackgroundWorldBounds {
+                    min_x: bounds.min_x,
+                    max_x: bounds.max_x,
+                    min_y: bounds.min_z,
+                    max_y: bounds.max_z,
+                },
                 self.state.view.background_scale,
             );
             log::info!("Background-Map in Renderer hochgeladen");
