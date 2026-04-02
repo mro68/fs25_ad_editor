@@ -3,8 +3,8 @@
 //! - DeleteSelected mit reconnect_on_delete
 //! - ResamplePath (Distanzen-Feature)
 
-use fs25_auto_drive_editor::{AppController, AppIntent, AppState};
-use fs25_auto_drive_editor::{
+use fs25_auto_drive_editor::app::{AppController, AppIntent, AppState};
+use fs25_auto_drive_editor::core::{
     Connection, ConnectionDirection, ConnectionPriority, MapNode, NodeFlag, RoadMap,
 };
 use glam::Vec2;

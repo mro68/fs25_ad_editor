@@ -1,7 +1,9 @@
 //! Event-Sammlung fuer Panels, Dialoge und Viewport.
 
 use eframe::egui;
-use fs25_auto_drive_editor::{ui, AppIntent, EditorTool, ValueAdjustInputMode};
+use fs25_auto_drive_editor::app::{AppIntent, EditorTool};
+use fs25_auto_drive_editor::shared::ValueAdjustInputMode;
+use fs25_auto_drive_editor::ui;
 use glam::Vec2;
 
 use super::EditorApp;
