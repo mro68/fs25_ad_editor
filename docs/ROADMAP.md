@@ -322,7 +322,7 @@
   - [x] **Cleanup Legacy-Tool-Palette (2026-03-09)**
     - [x] `ui/mod.rs`: `toolbar`-Modul-Export entfernt und `ui/toolbar.rs` geloescht
     - [x] `app/state/dialogs.rs`: `show_tool_palette` und `tool_palette_pos` aus `UiState` entfernt
-    - [x] `editor_app.rs` / `app/events/intent.rs` / `app/intent_mapping.rs`: `ToggleToolPalette`-Fallback und no-op-Handling entfernt
+    - [x] `src/editor_app/*` / `app/events/intent.rs` / `app/intent_mapping.rs`: `ToggleToolPalette`-Fallback und no-op-Handling entfernt
     - [x] API-Doku synchronisiert: `app/API.md` und `ui/API.md`
   - [x] **Doku-Sync Sidebar-Gruppenlayout mit Long-Press (2026-03-09)**
     - [x] `ui/API.md`: `render_route_defaults_panel(ctx, &mut AppState)`-Signatur und neues Gruppen-Layout dokumentiert
