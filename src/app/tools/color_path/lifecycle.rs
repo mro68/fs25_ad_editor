@@ -244,7 +244,6 @@ mod tests {
     use std::sync::Arc;
 
     use super::*;
-    use crate::app::tools::RouteTool;
     use crate::app::tools::color_path::sampling::pixel_to_world;
     use crate::app::tools::color_path::skeleton::{
         SkeletonGraphNode, SkeletonGraphNodeKind, SkeletonNetwork,
@@ -252,6 +251,7 @@ mod tests {
     use crate::app::tools::color_path::state::{
         ColorPathMask, ExistingConnectionMode, PreparedSegment, PreviewData,
     };
+    use crate::app::tools::RouteTool;
     use crate::core::{ConnectionDirection, ConnectionPriority, MapNode, NodeFlag};
     use image::{DynamicImage, Rgb, RgbImage};
 
@@ -395,7 +395,10 @@ mod tests {
 
         tool.set_background_map_image(Some(Arc::clone(&image)));
 
-        assert_eq!(tool.cache.sampling_preview_revision, sampling_preview_revision);
+        assert_eq!(
+            tool.cache.sampling_preview_revision,
+            sampling_preview_revision
+        );
         assert!(tool.sampling_preview.is_some());
     }
 }

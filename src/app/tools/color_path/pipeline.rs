@@ -10,9 +10,9 @@ use super::sampling::{
 };
 use super::skeleton::extract_network_from_mask;
 use super::state::{
-    CachedRgbImage, ColorPathMask, ColorPathTool, MatchingCacheKey, MatchingSpec,
-    PreparedSegment, PreparedSegmentsCacheKey, PreviewCoreCacheKey, PreviewData,
-    SamplingPreviewCacheKey, SamplingPreviewData, Vec2CacheKey,
+    CachedRgbImage, ColorPathMask, ColorPathTool, MatchingCacheKey, MatchingSpec, PreparedSegment,
+    PreparedSegmentsCacheKey, PreviewCoreCacheKey, PreviewData, SamplingPreviewCacheKey,
+    SamplingPreviewData, Vec2CacheKey,
 };
 
 fn bump_revision(revision: &mut u64) {
@@ -251,7 +251,8 @@ impl ColorPathTool {
                 return false;
             }
         } else if let Some(preview_core_key) = self.preview_core_cache_key() {
-            if self.cache.preview_core_key != Some(preview_core_key) && !self.ensure_preview_core() {
+            if self.cache.preview_core_key != Some(preview_core_key) && !self.ensure_preview_core()
+            {
                 return false;
             }
         }
@@ -411,7 +412,10 @@ mod tests {
             stage_c
         );
         assert_eq!(preview_data.prepared_mask.pixels, expected_prepared);
-        assert_eq!(tool.cache.sampling_preview_revision, sampling_preview_revision);
+        assert_eq!(
+            tool.cache.sampling_preview_revision,
+            sampling_preview_revision
+        );
     }
 
     #[test]
@@ -480,7 +484,10 @@ mod tests {
         tool.rebuild_sampling_preview();
 
         assert_eq!(tool.cache.matching_revision, matching_revision);
-        assert_eq!(tool.cache.sampling_preview_revision, sampling_preview_revision);
+        assert_eq!(
+            tool.cache.sampling_preview_revision,
+            sampling_preview_revision
+        );
     }
 
     #[test]
@@ -502,7 +509,10 @@ mod tests {
         tool.config.noise_filter = !tool.config.noise_filter;
         let _ = tool.rebuild_preview_from_sampling_artifacts();
 
-        assert_eq!(tool.cache.sampling_preview_revision, sampling_preview_revision);
+        assert_eq!(
+            tool.cache.sampling_preview_revision,
+            sampling_preview_revision
+        );
         assert!(tool.cache.preview_core_revision > preview_core_revision);
         assert!(tool.cache.prepared_segments_revision > prepared_segments_revision);
     }
