@@ -53,5 +53,8 @@ jobs:
       - name: Build
         run: cargo build --release
 
+      - name: Cleanup release artifacts
+        run: cargo clean --release
+
       - name: Test
         run: cargo test
