@@ -6,7 +6,9 @@ mod overlays;
 
 use eframe::egui;
 use eframe::egui_wgpu;
-use fs25_auto_drive_editor::{render, ui, AppController, AppIntent, AppState, EditorOptions};
+use fs25_auto_drive_editor::app::{AppController, AppIntent, AppState};
+use fs25_auto_drive_editor::shared::EditorOptions;
+use fs25_auto_drive_editor::{render, ui};
 
 /// Haupt-Anwendungsstruktur.
 pub(crate) struct EditorApp {

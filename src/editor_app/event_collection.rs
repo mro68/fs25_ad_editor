@@ -1,7 +1,9 @@
 //! Event-Sammlung fuer Panels, Dialoge und Viewport.
 
 use eframe::egui;
-use fs25_auto_drive_editor::{ui, AppIntent, EditorTool, ValueAdjustInputMode};
+use fs25_auto_drive_editor::app::{AppIntent, EditorTool};
+use fs25_auto_drive_editor::shared::ValueAdjustInputMode;
+use fs25_auto_drive_editor::ui;
 use glam::Vec2;
 
 use super::EditorApp;
@@ -69,6 +71,7 @@ impl EditorApp {
             ValueAdjustInputMode::DragHorizontal => 0.0,
             ValueAdjustInputMode::MouseWheel => self.state.options.mouse_wheel_distance_step_m,
         };
+        let route_tool_panel = self.state.editor.route_tool_panel_adapter();
         egui::SidePanel::right("right_sidebar")
             .resizable(true)
             .default_width(200.0)
@@ -108,11 +111,6 @@ impl EditorApp {
             .input
             .edit_panel_pos
             .map(|p| egui::Pos2::new(p[0], p[1]));
-        let edit_tool_manager = if active_tool == EditorTool::Route {
-            Some(&mut self.state.editor.tool_manager)
-        } else {
-            None
-        };
         let group_record = if let Some(es) = self.state.group_editing.as_ref() {
             self.state.group_registry.get(es.record_id)
         } else {
@@ -127,7 +125,7 @@ impl EditorApp {
             default_priority,
             distance_wheel_step_m,
             active_tool,
-            edit_tool_manager,
+            route_tool_panel,
             panel_pos,
             self.state.group_editing.as_ref(),
             group_record,
@@ -224,43 +222,10 @@ impl EditorApp {
         }
         // ─────────────────────────────────────────────────────────────────────
 
-        let drag_targets = self
-            .state
-            .editor
-            .tool_manager
-            .active_tool()
-            .map(|t| t.drag_targets())
-            .unwrap_or_default();
-
-        let route_tool_is_drawing = self
-            .state
-            .editor
-            .tool_manager
-            .active_tool()
-            .map(|t| t.has_pending_input())
-            .unwrap_or(false);
+        let route_tool_view = self.state.editor.route_tool_viewport_data();
+        let route_tool_is_drawing = route_tool_view.has_pending_input;
         let default_direction = self.state.editor.default_direction;
         let default_priority = self.state.editor.default_priority;
-
-        // Tangenten-Daten vom aktiven Route-Tool abfragen (nur Daten, kein UI)
-        let tangent_data = if self.state.editor.active_tool == EditorTool::Route {
-            self.state
-                .editor
-                .tool_manager
-                .active_tool()
-                .and_then(|t| t.tangent_menu_data())
-        } else {
-            None
-        };
-
-        // Prueft ob das aktive Route-Tool Alt+Drag als Lasso-Eingabe benoetigt
-        let tool_needs_lasso = self.state.editor.active_tool == EditorTool::Route
-            && self
-                .state
-                .editor
-                .tool_manager
-                .active_tool()
-                .is_some_and(|t| t.needs_lasso_input());
 
         events.extend(
             self.input.collect_viewport_events(
@@ -276,9 +241,9 @@ impl EditorApp {
                 command_palette_open,
                 default_direction,
                 default_priority,
-                &drag_targets,
+                &route_tool_view.drag_targets,
                 &mut self.state.ui.distanzen,
-                tangent_data,
+                route_tool_view.tangent_menu_data,
                 !self.state.clipboard.nodes.is_empty(),
                 self.state
                     .farmland_polygons
@@ -286,7 +251,7 @@ impl EditorApp {
                     .is_some_and(|p| !p.is_empty()),
                 self.state.group_editing.is_some(),
                 Some(&self.state.group_registry),
-                tool_needs_lasso,
+                route_tool_view.needs_lasso_input,
             ),
         );
 

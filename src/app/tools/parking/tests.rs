@@ -662,6 +662,7 @@ fn test_build_parking_result_sets_regular_flags_and_empty_external_connections()
     assert_eq!(result.internal_connections.len(), expected_conn_count);
     assert_eq!(result.external_connections.len(), 0);
     assert_eq!(result.markers, expected_markers);
+    assert!(result.nodes_to_remove.is_empty());
 
     assert!(
         result

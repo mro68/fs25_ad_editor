@@ -3,7 +3,7 @@
 use super::geometry::compute_offset_positions;
 use super::state::RouteOffsetTool;
 use crate::app::group_registry::{GroupBase, GroupKind, GroupRecord};
-use crate::app::tools::common::ToolLifecycleState;
+use crate::app::tools::common::{ToolLifecycleState, ToolResultBuilder};
 use crate::app::tools::{RouteTool, RouteToolId, ToolAction, ToolAnchor, ToolPreview, ToolResult};
 use crate::core::{ConnectionDirection, ConnectionPriority, NodeFlag, RoadMap};
 use glam::Vec2;
@@ -172,13 +172,12 @@ impl RouteTool for RouteOffsetTool {
             Vec::new()
         };
 
-        Some(ToolResult {
-            new_nodes,
-            internal_connections,
-            external_connections,
-            markers: Vec::new(),
-            nodes_to_remove,
-        })
+        Some(
+            ToolResultBuilder::new(new_nodes, internal_connections)
+                .with_external_connections(external_connections)
+                .with_nodes_to_remove(nodes_to_remove)
+                .build(),
+        )
     }
 
     fn reset(&mut self) {

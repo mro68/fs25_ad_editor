@@ -1,12 +1,14 @@
 //! Lifecycle-Methoden des CurveTool (on_click, preview, execute, reset, etc.).
 
 use super::super::{
-    common::{linear_connections, populate_neighbors, TangentMenuData},
+    common::{linear_connections, populate_neighbors},
     RouteTool, RouteToolId, ToolAction, ToolPreview, ToolResult,
 };
 use super::geometry::{build_tool_result, cubic_bezier, CurveParams};
 use super::state::{CurveDegree, CurvePreviewCacheKey, CurveTool, Phase};
 use crate::app::group_registry::{GroupBase, GroupKind, GroupRecord};
+use crate::app::tool_contract::TangentSource;
+use crate::app::ui_contract::TangentMenuData;
 use crate::core::RoadMap;
 use glam::Vec2;
 
@@ -87,7 +89,7 @@ impl RouteTool for CurveTool {
                     let (start_anchor, start_neighbors) =
                         self.lifecycle.snap_with_neighbors(pos, road_map);
                     self.tangents.start_neighbors = start_neighbors;
-                    self.tangents.tangent_start = super::super::common::TangentSource::None;
+                    self.tangents.tangent_start = TangentSource::None;
                     self.start = Some(start_anchor);
                     self.phase = Phase::End;
                     ToolAction::Continue
@@ -96,7 +98,7 @@ impl RouteTool for CurveTool {
             Phase::End => {
                 let (end_anchor, end_neighbors) = self.lifecycle.snap_with_neighbors(pos, road_map);
                 self.tangents.end_neighbors = end_neighbors;
-                self.tangents.tangent_end = super::super::common::TangentSource::None;
+                self.tangents.tangent_end = TangentSource::None;
                 self.end = Some(end_anchor);
                 self.phase = Phase::Control;
                 // Auto-Tangente + beide CPs + Apex initialisieren
@@ -119,10 +121,10 @@ impl RouteTool for CurveTool {
                     CurveDegree::Cubic => {
                         if self.control_point1.is_none() {
                             self.control_point1 = Some(pos);
-                            self.tangents.tangent_start = super::super::common::TangentSource::None;
+                            self.tangents.tangent_start = TangentSource::None;
                         } else if self.control_point2.is_none() {
                             self.control_point2 = Some(pos);
-                            self.tangents.tangent_end = super::super::common::TangentSource::None;
+                            self.tangents.tangent_end = TangentSource::None;
                         }
                     }
                 }
@@ -287,11 +289,7 @@ impl RouteTool for CurveTool {
         self.build_tangent_menu_data()
     }
 
-    fn apply_tangent_selection(
-        &mut self,
-        start: super::super::common::TangentSource,
-        end: super::super::common::TangentSource,
-    ) {
+    fn apply_tangent_selection(&mut self, start: TangentSource, end: TangentSource) {
         self.apply_tangent_from_menu(start, end);
     }
 

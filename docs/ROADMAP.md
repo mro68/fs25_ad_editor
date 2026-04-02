@@ -322,7 +322,7 @@
   - [x] **Cleanup Legacy-Tool-Palette (2026-03-09)**
     - [x] `ui/mod.rs`: `toolbar`-Modul-Export entfernt und `ui/toolbar.rs` geloescht
     - [x] `app/state/dialogs.rs`: `show_tool_palette` und `tool_palette_pos` aus `UiState` entfernt
-    - [x] `editor_app.rs` / `app/events/intent.rs` / `app/intent_mapping.rs`: `ToggleToolPalette`-Fallback und no-op-Handling entfernt
+    - [x] `src/editor_app/*` / `app/events/intent.rs` / `app/intent_mapping.rs`: `ToggleToolPalette`-Fallback und no-op-Handling entfernt
     - [x] API-Doku synchronisiert: `app/API.md` und `ui/API.md`
   - [x] **Doku-Sync Sidebar-Gruppenlayout mit Long-Press (2026-03-09)**
     - [x] `ui/API.md`: `render_route_defaults_panel(ctx, &mut AppState)`-Signatur und neues Gruppen-Layout dokumentiert
@@ -422,6 +422,7 @@
   - [x] Exaktmodus (2026-03-31) — Standardmaessig aktiv; matcht exakt gegen gelasso-te RGB-Farben, blendet die Toleranz-UI aus und schaltet bei Bedarf auf quantisierte Palette + Toleranz um
   - [x] Netzmodus-Erweiterung (2026-03-31) — Preview zeigt Kreuzungen/offene Enden/Segmente; Export legt Junction-/End-Knoten einmalig an und nutzt Snap-basierten Bestandsanschluss (`Never` / `OpenEnds` / `OpenEndsAndJunctions`)
   - [x] Sampling-Preview zeigt nach jeder Lasso-Auswahl alle Randsegmente des erkannten Flood-Fill-Bereichs (inkl. Innenkanten/Loecher), nicht nur eine Einzelkontur
+  - [x] F7a Stage-Split (2026-04-01) — interne Pipeline in Sampling-Input, Matching, Pixel-Maske, Maskenaufbereitung, Skeleton, Preview-Aufbereitung und Execute getrennt; `lifecycle.rs` auf Orchestrierung reduziert; Preview und Execute teilen `PreparedSegment` als gemeinsame Wahrheit
   - [x] I18n-Key `MenuColorPath` (DE: „🎨 Farb-Pfad erkennen", EN: „🎨 Detect Color Path")
   - [x] Menüeintrag in Extras
 

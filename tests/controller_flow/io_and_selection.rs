@@ -1,5 +1,5 @@
-use fs25_auto_drive_editor::{AppController, AppIntent, AppState};
-use fs25_auto_drive_editor::{
+use fs25_auto_drive_editor::app::{AppController, AppIntent, AppState};
+use fs25_auto_drive_editor::core::{
     Connection, ConnectionDirection, ConnectionPriority, MapNode, NodeFlag, RoadMap,
 };
 use std::sync::Arc;

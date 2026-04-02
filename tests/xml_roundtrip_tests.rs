@@ -1,4 +1,4 @@
-use fs25_auto_drive_editor::{parse_autodrive_config, write_autodrive_config};
+use fs25_auto_drive_editor::xml::{parse_autodrive_config, write_autodrive_config};
 
 #[test]
 fn test_xml_roundtrip_preserves_core_counts_and_ids() {

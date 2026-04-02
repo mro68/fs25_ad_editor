@@ -2,7 +2,7 @@
 
 use crate::core::{ConnectionDirection, ConnectionPriority, NodeFlag, RoadMap};
 use crate::AppState;
-use std::collections::HashMap;
+use std::collections::HashSet;
 
 /// Loescht die aktuelle Selektion explizit.
 pub fn clear_selection(state: &mut AppState) {
@@ -32,42 +32,73 @@ pub(super) struct AdjacencyNeighbor {
     pub connection_priority: ConnectionPriority,
 }
 
-/// Baut eine ungerichtete Adjazenzliste mit Winkelinformation.
+/// Liest die Nachbarn fuer den Segment-Walk on demand aus der RoadMap.
 ///
-/// Jeder Eintrag enthaelt den Nachbar-Node und den Winkel der Verbindung
-/// (Richtung: aktueller Node → Nachbar). Duplikate werden dedupliziert.
-pub(super) fn build_undirected_adjacency_with_angles(
+/// Gegenlaeufige Kanten zum selben Nachbar-Node werden dedupliziert, damit
+/// bidirektionale Strassen beim Grad-Test weiterhin als ein Ast zaehlen.
+pub(super) fn neighbors_for_segment_walk(
     road_map: &RoadMap,
-) -> HashMap<u64, Vec<AdjacencyNeighbor>> {
-    let mut adjacency: HashMap<u64, Vec<AdjacencyNeighbor>> = HashMap::new();
-    for connection in road_map.connections_iter() {
-        let s = connection.start_id;
-        let e = connection.end_id;
-        if !road_map.nodes.contains_key(&s) || !road_map.nodes.contains_key(&e) {
-            continue;
-        }
-        let angle_s_to_e = connection.angle;
-        let angle_e_to_s = connection.angle + std::f32::consts::PI;
-        let entry_s = adjacency.entry(s).or_default();
-        if !entry_s.iter().any(|n| n.node_id == e) {
-            entry_s.push(AdjacencyNeighbor {
-                node_id: e,
-                angle: angle_s_to_e,
-                target_flag: road_map.nodes[&e].flag,
+    node_id: u64,
+) -> Vec<AdjacencyNeighbor> {
+    let mut seen_neighbor_ids = HashSet::new();
+
+    road_map
+        .connected_neighbors(node_id)
+        .into_iter()
+        .filter_map(|neighbor| {
+            let target_node = road_map.nodes.get(&neighbor.neighbor_id)?;
+            let (start_id, end_id) = if neighbor.is_outgoing {
+                (node_id, neighbor.neighbor_id)
+            } else {
+                (neighbor.neighbor_id, node_id)
+            };
+            let connection = road_map.find_connection(start_id, end_id)?;
+
+            if !seen_neighbor_ids.insert(neighbor.neighbor_id) {
+                return None;
+            }
+
+            Some(AdjacencyNeighbor {
+                node_id: neighbor.neighbor_id,
+                angle: neighbor.angle,
+                target_flag: target_node.flag,
                 connection_direction: connection.direction,
                 connection_priority: connection.priority,
-            });
-        }
-        let entry_e = adjacency.entry(e).or_default();
-        if !entry_e.iter().any(|n| n.node_id == s) {
-            entry_e.push(AdjacencyNeighbor {
-                node_id: s,
-                angle: angle_e_to_s,
-                target_flag: road_map.nodes[&s].flag,
-                connection_direction: connection.direction,
-                connection_priority: connection.priority,
-            });
-        }
+            })
+        })
+        .collect()
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::core::{Connection, MapNode};
+    use glam::Vec2;
+
+    #[test]
+    fn neighbors_for_segment_walk_deduplicates_opposite_connections() {
+        let mut map = RoadMap::new(3);
+        map.add_node(MapNode::new(1, Vec2::ZERO, NodeFlag::Regular));
+        map.add_node(MapNode::new(2, Vec2::new(10.0, 0.0), NodeFlag::Regular));
+        map.add_connection(Connection::new(
+            1,
+            2,
+            ConnectionDirection::Dual,
+            ConnectionPriority::Regular,
+            Vec2::ZERO,
+            Vec2::new(10.0, 0.0),
+        ));
+        map.add_connection(Connection::new(
+            2,
+            1,
+            ConnectionDirection::Dual,
+            ConnectionPriority::Regular,
+            Vec2::new(10.0, 0.0),
+            Vec2::ZERO,
+        ));
+
+        let neighbors = neighbors_for_segment_walk(&map, 1);
+        assert_eq!(neighbors.len(), 1);
+        assert_eq!(neighbors[0].node_id, 2);
     }
-    adjacency
 }

@@ -4,7 +4,7 @@
 pub mod background_map;
 /// 2D-Kamera mit Pan und Zoom fuer den Viewport.
 pub mod camera;
-/// Centerline-Berechnung via Multi-Source BFS (Voronoi-Approximation).
+/// Centerline-Berechnung fuer Feldkorridore (polygon-, segment- und rasterbasiert).
 pub mod centerline;
 /// Verbindungen zwischen Wegpunkten (Richtung, Prioritaet, Geometrie).
 pub mod connection;

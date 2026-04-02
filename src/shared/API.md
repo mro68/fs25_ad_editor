@@ -12,6 +12,19 @@ Das `shared`-Modul enthaelt Layer-uebergreifende Typen, die zwischen `app` (Prod
 - `geometry.rs` — Layer-uebergreifende Geometrie-Hilfsfunktionen (`angle_deviation()` fuer Winkelabweichungs-Berechnung)
 - `i18n/` — Mehrsprachigkeits-System: `Language`-Enum, `I18nKey`-Enum, `t()`-Funktion (DE + EN, Zero-Alloc)
 - `spline_geometry.rs` — Layer-neutrale Catmull-Rom-Geometrie-Funktionen (kein import aus `tools` noetig)
+- `ui_input.rs` — generische egui-Eingabe-Helfer wie `wheel_dir()` fuer App- und UI-Layer
+
+## UI-Eingabe-Helfer
+
+### `wheel_dir`
+
+```rust
+pub fn wheel_dir(ui: &egui::Ui, response: &egui::Response) -> f32
+```
+
+Ermittelt fuer ein gehovertes Widget die Scroll-Richtung als `+1.0`, `-1.0` oder `0.0`.
+Der Helper konsumiert erkannte Scroll-Events direkt, damit uebergeordnete Scroll-Areas
+nicht gleichzeitig reagieren. Der Typ ist bewusst stateless und lebt deshalb in `shared`.
 
 ## Haupttypen
 

@@ -21,6 +21,8 @@ pub mod state;
 pub mod tool_contract;
 /// Trait-basiertes Route-Tool-System fuer erweiterbare Strecken-Werkzeuge.
 pub mod tools;
+/// App-weite Read-Vertraege fuer UI-nahe Route-Tool-Daten.
+pub mod ui_contract;
 /// Mutierende Use-Case-Funktionen fuer alle Editing-Operationen.
 pub mod use_cases;
 
@@ -43,6 +45,7 @@ pub use state::{
     GroupEditState, GroupSettingsPopupState, PostLoadDialogState, SelectionState, UiState,
     ViewState,
 };
-pub use tool_contract::{RouteToolId, ToolAnchor};
+pub use tool_contract::{RouteToolId, TangentSource, ToolAnchor};
 pub use tools::field_boundary::compute_ring;
 pub use tools::field_boundary::RingNodeKind;
+pub use ui_contract::{TangentMenuData, TangentOptionData};

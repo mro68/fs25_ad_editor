@@ -58,6 +58,16 @@ fn test_offset_links_gerade_kette() {
     assert!(result.is_some(), "Links-Versatz sollte Ergebnis liefern");
     let r = result.unwrap();
     assert!(!r.new_nodes.is_empty(), "Neue Nodes erwartet");
+    assert_eq!(
+        r.external_connections.len(),
+        2,
+        "Eine Offset-Seite muss genau zwei laterale Anker-Verbindungen erzeugen"
+    );
+    assert!(r.markers.is_empty(), "RouteOffset erzeugt keine Marker");
+    assert!(
+        r.nodes_to_remove.is_empty(),
+        "Bei keep_original=true duerfen keine Nodes geloescht werden"
+    );
 }
 
 /// Rechts-Versatz erzeugt Nodes auf der anderen Seite.
