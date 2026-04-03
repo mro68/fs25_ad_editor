@@ -87,6 +87,7 @@
   - [x] Flag-Editor fuer Einzelnode (Regular/SubPrio via ComboBox)
   - [x] Connection-Listing fuer Einzelnode (eingehend/ausgehend)
 - [x] Mausrad-Steuerung fuer Distanz/Node-Felder (Scroll hoch = erhoehen, runter = verringern)
+- [x] Mausrad-Steuerung fuer numerische Route-Tool-/Analysis-Felder (DragValue + Slider, adaptive Float-Schritte 0.1/0.01/0.001)
 - [x] Context-Menu (Rechtsklick → Verbindungsaktionen)
 - [x] **AddNode-Verhalten konfigurierbar** (2026-02-24)
   - [x] Checkbox „Nach Loeschen verbinden": Vorgaenger/Nachfolger eines geloeschten Nodes direkt verbinden
@@ -242,6 +243,7 @@
   - [x] **Render-Vertrag gehaertet (2026-04-02):** `RenderScene` transportiert nur noch Render-Snapshots; `src/render/*` kennt keine Core-Typen mehr; `check_layer_boundaries.sh` erkennt Root-Re-Export-Verstoesse in `render`/`shared`
   - [x] **Best-Practice-Remediation Phase 4 (2026-04-03):** `GroupRegistry` auf tool-neutralen Kern reduziert; separates `app/tool_editing`-Modul mit `RouteToolEditPayload`, `ToolEditStore`, `ActiveToolEditSession` und Service-Funktionen eingefuehrt; group-backed Tools exponieren Persistenz ueber `RouteToolGroupEdit`; Gruppen- und Tool-Edit-UI lesen Editierbarkeit jetzt ueber gespeicherte Tool-Snapshots statt ueber Felder im `GroupRecord`
   - [x] **Best-Practice-Remediation Phase 5 (2026-04-03):** `shared` auf neutrale Vertraege zurueckgefuehrt; `wheel_dir()` nach `ui::common` verlagert; `EditorOptions` auf Datenmodell plus Validierung reduziert; Standardpfad und TOML-I/O liegen jetzt in `app::use_cases::options`
+  - [x] **Mousewheel-Modifier fuer numerische Panels (2026-04-03):** `ui::common` kapselt die gemeinsame Scroll-Auswertung; Float-Felder skalieren ihre Basis-Schrittweite mit `Shift` x10 und `Ctrl` x0.1, `usize`-Felder ignorieren `Ctrl` bewusst; Route-Tool- und Analysis-Panels reichen weiterhin nur `wheel_enabled` durch
   - [x] **Best-Practice-Remediation Phase 6 (2026-04-03):** Root-Fassade auf `AppController`, `AppState`, `AppIntent`, `AppCommand` plus XML-I/O reduziert; `app` re-exportiert keine Tool-Vertraege, Tangenten-DTOs oder `RingNodeKind` mehr und haelt nur `compute_ring` als gezielte App-Bruecke; betroffene Call-Sites nutzen jetzt explizite Modulpfade wie `app::tool_contract` und `core::*`
   - [x] **Best-Practice-Remediation Phase 7 (2026-04-03):** Control-Plane entlang der bestehenden Handler-Features geschnitten; `controller.rs` und `intent_mapping.rs` delegieren intern in `by_feature/*`; `AppIntent` und `AppCommand` tragen eine gemeinsame interne `AppEventFeature`-Klassifikation; Controller-Flow-Regressionen fuer Dialog-, Group- und Editing-Dialogpfade ausgebaut
   - [x] **All-Packages-Remediation: Architektur + Assets (2026-04-03):** `AppState` kapselt Farmland-/Background-Zugriffe ueber `farmland_polygons_arc()`, `farmland_grid_arc()`, `background_image_arc()` und `has_*`; Background-/Overview-Assets laufen ueber einen kanonischen Apply-/Clear-Pfad mit `Arc<DynamicImage>` in `BackgroundMap`; das Route-Tool-Panel ist intern vertikalisiert und UI-Surfaces loesen Tool-Icons ueber `RouteToolIconKey` aus dem Katalog auf

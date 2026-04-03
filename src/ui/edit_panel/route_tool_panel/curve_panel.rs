@@ -2,9 +2,14 @@
 
 use super::*;
 
+/// Rendert den Kurven-Konfigurationsbereich im Route-Tool-Panel.
+///
+/// Numerische Segment-Felder erhalten `wheel_enabled`, damit adaptive
+/// Mausrad-Schritte zentral ueber `ui::common` angewendet werden.
 pub(super) fn render_curve_panel(
     ui: &mut egui::Ui,
     state: &CurvePanelState,
+    wheel_enabled: bool,
     events: &mut Vec<AppIntent>,
 ) {
     ui.horizontal(|ui| {
@@ -38,11 +43,12 @@ pub(super) fn render_curve_panel(
     }
 
     ui.separator();
-    render_segment_config(ui, &state.segment, events, |action| {
+    render_segment_config(ui, &state.segment, wheel_enabled, events, |action| {
         RouteToolPanelAction::Curve(CurvePanelAction::Segment(action))
     });
 }
 
+/// Rendert die Tangenten-Auswahl fuer Bezier-Kurven im Route-Tool-Panel.
 pub(super) fn render_curve_tangents(
     ui: &mut egui::Ui,
     state: &CurveTangentsPanelState,
@@ -60,9 +66,14 @@ pub(super) fn render_curve_tangents(
     });
 }
 
+/// Rendert den Spline-Konfigurationsbereich im Route-Tool-Panel.
+///
+/// Numerische Segment-Felder erhalten `wheel_enabled`, damit adaptive
+/// Mausrad-Schritte zentral ueber `ui::common` angewendet werden.
 pub(super) fn render_spline_panel(
     ui: &mut egui::Ui,
     state: &SplinePanelState,
+    wheel_enabled: bool,
     events: &mut Vec<AppIntent>,
 ) {
     if let Some(control_point_count) = state.control_point_count {
@@ -83,7 +94,7 @@ pub(super) fn render_spline_panel(
     }
 
     ui.separator();
-    render_segment_config(ui, &state.segment, events, |action| {
+    render_segment_config(ui, &state.segment, wheel_enabled, events, |action| {
         RouteToolPanelAction::Spline(SplinePanelAction::Segment(action))
     });
 }
