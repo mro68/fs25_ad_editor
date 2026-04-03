@@ -98,7 +98,9 @@ Zentral gesammelte Konfigurationswerte, gegliedert nach Bereich:
 
 ### `ValueAdjustInputMode`
 
-Steuert, wie numerische Felder im UI veraendert werden.
+Steuert die bevorzugte Primaer-Interaktion fuer numerische DragValue-Felder.
+Mausrad-Unterstuetzung in numerischen Feldern bleibt zusaetzlich aktiv und wird
+nicht global durch diesen Modus abgeschaltet.
 
 ```rust
 pub enum ValueAdjustInputMode {
