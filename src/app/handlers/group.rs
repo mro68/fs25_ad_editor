@@ -21,6 +21,11 @@ pub fn dissolve(state: &mut AppState, segment_id: u64) {
     state.tool_edit_store.remove(segment_id);
 }
 
+/// Oeffnet den Bestaetigungsdialog fuer das Aufloesen eines Segments.
+pub fn open_dissolve_confirm_dialog(state: &mut AppState, segment_id: u64) {
+    state.ui.confirm_dissolve_group_id = Some(segment_id);
+}
+
 /// Entfernt alle selektierten Nodes aus ihren Gruppen.
 ///
 /// Nodes und Verbindungen in der RoadMap bleiben unveraendert.
@@ -108,6 +113,17 @@ pub fn set_boundary_nodes(
             record_id
         );
     }
+}
+
+/// Oeffnet oder aktualisiert das Gruppen-Einstellungs-Popup an einer Weltposition.
+pub fn open_settings_popup(state: &mut AppState, world_pos: glam::Vec2) {
+    state.ui.group_settings_popup.visible = true;
+    state.ui.group_settings_popup.world_pos = world_pos;
+}
+
+/// Schliesst das Gruppen-Einstellungs-Popup.
+pub fn close_settings_popup(state: &mut AppState) {
+    state.ui.group_settings_popup.visible = false;
 }
 
 /// Startet den nicht-destruktiven Gruppen-Edit-Modus fuer einen Record.

@@ -1,6 +1,7 @@
 //! Mutierende App-Commands fuer den zentralen Controller-Dispatch.
 
 use super::super::state::EditorTool;
+use super::AppEventFeature;
 use crate::app::tool_contract::{RouteToolId, TangentSource};
 use crate::app::ui_contract::RouteToolPanelAction;
 use crate::core::{ConnectionDirection, ConnectionPriority, NodeFlag};
@@ -342,4 +343,167 @@ pub enum AppCommand {
     ExportCurseplay { path: String },
     /// Segment-Einstellungs-Popup oeffnen oder aktualisieren
     OpenGroupSettingsPopup { world_pos: glam::Vec2 },
+}
+
+impl AppCommand {
+    /// Ordnet einen Command einem internen Feature-Slice fuer Controller-Dispatch und Tests zu.
+    pub(crate) fn feature(&self) -> AppEventFeature {
+        match self {
+            Self::RequestOpenFileDialog
+            | Self::RequestSaveFileDialog
+            | Self::ConfirmAndSaveFile
+            | Self::LoadFile { .. }
+            | Self::SaveFile { .. }
+            | Self::ClearHeightmap
+            | Self::SetHeightmap { .. }
+            | Self::DeduplicateNodes => AppEventFeature::FileIo,
+            Self::ResetCamera
+            | Self::ZoomIn
+            | Self::ZoomOut
+            | Self::SetViewportSize { .. }
+            | Self::PanCamera { .. }
+            | Self::ZoomCamera { .. }
+            | Self::CenterOnNode { .. }
+            | Self::SetRenderQuality { .. }
+            | Self::LoadBackgroundMap { .. }
+            | Self::ToggleBackgroundVisibility
+            | Self::ScaleBackground { .. }
+            | Self::BrowseZipBackground { .. }
+            | Self::LoadBackgroundFromZip { .. }
+            | Self::GenerateOverviewWithOptions
+            | Self::SaveBackgroundAsOverview { .. }
+            | Self::ZoomToFit
+            | Self::ZoomToSelectionBounds => AppEventFeature::View,
+            Self::SelectNearestNode { .. }
+            | Self::SelectSegmentBetweenNearestIntersections { .. }
+            | Self::SelectGroupByNearestNode { .. }
+            | Self::SelectNodesInRect { .. }
+            | Self::SelectNodesInLasso { .. }
+            | Self::MoveSelectedNodes { .. }
+            | Self::BeginMoveSelectedNodes
+            | Self::EndMoveSelectedNodes
+            | Self::BeginRotateSelectedNodes
+            | Self::RotateSelectedNodes { .. }
+            | Self::EndRotateSelectedNodes
+            | Self::ClearSelection
+            | Self::SelectAllNodes
+            | Self::InvertSelection => AppEventFeature::Selection,
+            Self::SetEditorTool { .. }
+            | Self::AddNodeAtPosition { .. }
+            | Self::DeleteSelectedNodes
+            | Self::ConnectToolPickNode { .. }
+            | Self::AddConnection { .. }
+            | Self::RemoveConnectionBetween { .. }
+            | Self::SetConnectionDirection { .. }
+            | Self::SetConnectionPriority { .. }
+            | Self::SetNodeFlag { .. }
+            | Self::SetDefaultDirection { .. }
+            | Self::SetDefaultPriority { .. }
+            | Self::SetAllConnectionsDirectionBetweenSelected { .. }
+            | Self::RemoveAllConnectionsBetweenSelected
+            | Self::InvertAllConnectionsBetweenSelected
+            | Self::SetAllConnectionsPriorityBetweenSelected { .. }
+            | Self::ConnectSelectedNodes
+            | Self::CreateMarker { .. }
+            | Self::RemoveMarker { .. }
+            | Self::OpenMarkerDialog { .. }
+            | Self::UpdateMarker { .. }
+            | Self::ResamplePath
+            | Self::StreckenteilungAktivieren
+            | Self::CopySelection
+            | Self::StartPastePreview
+            | Self::UpdatePastePreview { .. }
+            | Self::ConfirmPaste
+            | Self::CancelPastePreview
+            | Self::TraceAllFields { .. }
+            | Self::ImportCurseplay { .. }
+            | Self::ExportCurseplay { .. } => AppEventFeature::Editing,
+            Self::RouteToolClick { .. }
+            | Self::RouteToolExecute
+            | Self::RouteToolCancel
+            | Self::SelectRouteTool { .. }
+            | Self::RouteToolWithAnchors { .. }
+            | Self::RouteToolRecreate
+            | Self::RouteToolPanelAction { .. }
+            | Self::IncreaseRouteToolNodeCount
+            | Self::DecreaseRouteToolNodeCount
+            | Self::IncreaseRouteToolSegmentLength
+            | Self::DecreaseRouteToolSegmentLength
+            | Self::RouteToolApplyTangent { .. }
+            | Self::RouteToolLassoCompleted { .. }
+            | Self::RouteToolDragStart { .. }
+            | Self::RouteToolDragUpdate { .. }
+            | Self::RouteToolDragEnd
+            | Self::RouteToolRotate { .. } => AppEventFeature::RouteTool,
+            Self::EditGroup { .. }
+            | Self::ToggleGroupLock { .. }
+            | Self::DissolveGroup { .. }
+            | Self::OpenDissolveConfirmDialog { .. }
+            | Self::GroupSelectionAsGroup
+            | Self::RemoveSelectedNodesFromGroups
+            | Self::SetGroupBoundaryNodes { .. }
+            | Self::GroupEditStart { .. }
+            | Self::GroupEditApply
+            | Self::GroupEditCancel
+            | Self::BeginToolEditFromGroup { .. }
+            | Self::OpenGroupSettingsPopup { .. } => AppEventFeature::Group,
+            Self::RequestExit
+            | Self::RequestHeightmapDialog
+            | Self::RequestBackgroundMapDialog
+            | Self::DismissHeightmapWarning
+            | Self::CloseMarkerDialog
+            | Self::OpenOptionsDialog
+            | Self::CloseOptionsDialog
+            | Self::ApplyOptions { .. }
+            | Self::ResetOptions
+            | Self::ToggleCommandPalette
+            | Self::DismissDeduplicateDialog
+            | Self::CloseZipBrowser
+            | Self::RequestOverviewDialog
+            | Self::OpenOverviewOptionsDialog { .. }
+            | Self::CloseOverviewOptionsDialog
+            | Self::DismissPostLoadDialog
+            | Self::DismissSaveOverviewDialog
+            | Self::OpenTraceAllFieldsDialog
+            | Self::CloseTraceAllFieldsDialog
+            | Self::RequestCurseplayImportDialog
+            | Self::RequestCurseplayExportDialog => AppEventFeature::Dialog,
+            Self::Undo | Self::Redo => AppEventFeature::History,
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::AppCommand;
+    use crate::app::events::AppEventFeature;
+    use crate::app::ui_contract::{ParkingPanelAction, RouteToolPanelAction};
+
+    #[test]
+    fn classifies_dialog_group_and_editing_commands() {
+        assert_eq!(
+            AppCommand::OpenTraceAllFieldsDialog.feature(),
+            AppEventFeature::Dialog
+        );
+        assert_eq!(
+            AppCommand::OpenDissolveConfirmDialog { segment_id: 1 }.feature(),
+            AppEventFeature::Group
+        );
+        assert_eq!(AppCommand::ConfirmPaste.feature(), AppEventFeature::Editing);
+    }
+
+    #[test]
+    fn classifies_view_and_route_tool_commands() {
+        assert_eq!(
+            AppCommand::GenerateOverviewWithOptions.feature(),
+            AppEventFeature::View
+        );
+        assert_eq!(
+            AppCommand::RouteToolPanelAction {
+                action: RouteToolPanelAction::Parking(ParkingPanelAction::SetNumRows(3)),
+            }
+            .feature(),
+            AppEventFeature::RouteTool
+        );
+    }
 }

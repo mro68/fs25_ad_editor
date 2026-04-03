@@ -21,6 +21,26 @@ pub fn request_background_map_dialog(state: &mut AppState) {
     use_cases::background_map::request_background_map_dialog(state);
 }
 
+/// Oeffnet den Dialog fuer das Nachzeichnen aller Felder.
+pub fn open_trace_all_fields_dialog(state: &mut AppState) {
+    state.ui.trace_all_fields_dialog.visible = true;
+}
+
+/// Schliesst den Dialog fuer das Nachzeichnen aller Felder.
+pub fn close_trace_all_fields_dialog(state: &mut AppState) {
+    state.ui.trace_all_fields_dialog.visible = false;
+}
+
+/// Oeffnet den Curseplay-Import-Dateidialog.
+pub fn request_curseplay_import_dialog(state: &mut AppState) {
+    state.ui.show_curseplay_import_dialog = true;
+}
+
+/// Oeffnet den Curseplay-Export-Dateidialog.
+pub fn request_curseplay_export_dialog(state: &mut AppState) {
+    state.ui.show_curseplay_export_dialog = true;
+}
+
 /// Schliesst die Heightmap-Warnung.
 pub fn dismiss_heightmap_warning(state: &mut AppState) {
     use_cases::heightmap::dismiss_heightmap_warning(state);

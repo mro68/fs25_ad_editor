@@ -43,9 +43,13 @@ let scene = controller.build_render_scene(&state, [width, height]);
 
 **Features:**
 - Verarbeitet UI- und Input-Intents gegen `AppState`
-- Mappt Intents auf Commands (Mapping ist in `intent_mapping.rs` ausgelagert)
-- Dispatcht Commands an Feature-Handler (`handlers/`)
+- Mappt Intents auf Commands ueber gemeinsame Feature-Slices (`intent_mapping.rs` + `intent_mapping/by_feature/*`)
+- Dispatcht Commands ueber dieselben Feature-Slices (`controller/by_feature/*`) an Feature-Handler (`handlers/`)
 - Baut den expliziten Render-Vertrag (`RenderScene`)
+
+**Interner Zuschnitt:**
+- `events::AppEventFeature` taggt `AppIntent` und `AppCommand` intern in dieselben acht Bereiche: `file_io`, `view`, `selection`, `editing`, `route_tool`, `group`, `dialog`, `history`
+- `controller.rs` und `intent_mapping.rs` bleiben dadurch duenne Fassaden; die eigentlichen Match-Bloecke liegen in den jeweiligen `by_feature/`-Untermodulen
 
 **Handler-Module** (`app/handlers/`):
 - `file_io` — Datei-Operationen (Oeffnen, Speichern, Heightmap)
@@ -61,7 +65,7 @@ let scene = controller.build_render_scene(&state, [width, height]);
 ```rust
 pub fn map_intent_to_commands(state: &AppState, intent: AppIntent) -> Vec<AppCommand>
 ```
-Uebersetzt einen `AppIntent` in eine Liste von `AppCommand`s. Reine Funktion ohne Seiteneffekte — alle Entscheidungslogik (z.B. Pick-Radius-Berechnung, aktuellen Dateipfad pruefen) ist hier lokalisiert.
+Uebersetzt einen `AppIntent` in eine Liste von `AppCommand`s. Reine Funktion ohne Seiteneffekte — die Root-Datei delegiert intern in `intent_mapping/by_feature/*`, damit Pick-Radius-Berechnung, Dialog-Verdrahtung und Tool-/Group-Flows entlang derselben Feature-Schnitte wie der Controller gepflegt werden.
 
 ---
 
@@ -951,6 +955,8 @@ flowchart TD
 ```
 
 *Ablauf:* UI emittiert `AppIntent` → `AppController` uebersetzt via `map_intent_to_commands()` in `Vec<AppCommand>` → Handler-Module mutieren `AppState` via Use-Cases → `build_render_scene()` serialisiert den State in den `RenderScene`-Vertrag → Renderer zeichnet.
+
+Intern schneiden `events::AppEventFeature`, `intent_mapping/by_feature/*` und `controller/by_feature/*` diesen Ablauf in dieselben acht Feature-Slices. Dadurch bleiben die oeffentlichen Einstiegspunkte stabil, waehrend die Control-Plane nicht mehr in einem einzigen monolithischen Match-Block gepflegt wird.
 
 ## Interaktions-Pattern
 

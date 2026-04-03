@@ -424,13 +424,21 @@ src/
     overlays.rs       # Tool-, Clipboard-, Distanz- und Gruppen-Overlays
   app/
     mod.rs              # Schmale Re-Exports fuer AppState/Controller + stabile UI-Lesetypen
-    controller.rs       # AppController: Intent → Command Dispatch an Handler
-    events.rs           # AppIntent & AppCommand Enums
+    controller.rs       # AppController: duenne Fassade fuer Intent-Loop + Command-Logging
+    controller/
+      by_feature/       # Feature-Slices fuer Command-Dispatch (file_io, view, selection, editing, ...)
+    events/
+      mod.rs            # Re-Exports fuer AppIntent & AppCommand
+      feature.rs        # Interne AppEventFeature-Klassifikation fuer Intent/Command-Schnitt
+      intent.rs         # AppIntent + interne Feature-Zuordnung
+      command.rs        # AppCommand + interne Feature-Zuordnung
     state.rs            # AppState, ViewState, SelectionState, UiState, MarkerDialogState, DedupDialogState
     render_scene.rs     # RenderScene-Builder
     command_log.rs      # Command-Log für Debugging
     history.rs          # Undo/Redo-History
-    intent_mapping.rs   # Intent → Command Mapping (reine Funktion)
+    intent_mapping.rs   # duenne Fassade fuer Intent → Command Mapping
+    intent_mapping/
+      by_feature/       # Feature-Slices fuer reines Intent-Mapping
     handlers/           # Feature-Handler für Command-Verarbeitung
       mod.rs
       file_io.rs        # Datei-Operationen (Öffnen, Speichern, Heightmap)
@@ -448,6 +456,8 @@ src/
       common/           # Gemeinsame Tool-Infrastruktur (alle Submodule privat)
         mod.rs          # Re-Exporte
         geometry.rs     # angle_to_compass, populate_neighbors
+
+      Die Root-Dateien `controller.rs` und `intent_mapping.rs` bleiben damit stabil fuer Call-Sites und Dokumentation, waehrend die eigentlichen Match-Bloecke featureweise in `by_feature/*` liegen. `AppIntent` und `AppCommand` teilen sich dafuer intern die nicht-oeffentliche Klassifikation `AppEventFeature`.
         tangent.rs      # TangentSource, TangentState, render_tangent_combo
         lifecycle.rs    # ToolLifecycleState, SegmentConfig, LastEdited
         builder.rs      # assemble_tool_result

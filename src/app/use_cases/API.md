@@ -2,6 +2,8 @@
 
 Alle Use-Case-Funktionen des `app::use_cases`-Moduls. Use-Cases mutieren `AppState` direkt und enthalten die gesamte Business-Logik. Sie werden ausschliesslich von Handler-Modulen (`app/handlers/`) aufgerufen.
 
+Seit Phase 7 schneiden `controller.rs` und `intent_mapping.rs` die Control-Plane zwar intern in `by_feature/*`-Slices, die Grenze zu `use_cases` bleibt aber unveraendert: Handler bleiben die einzige Schreib-Schale oberhalb der Use-Cases; Intents und Commands dringen nicht in dieses Modul ein.
+
 **Zurueck:** [`../API.md`](../API.md)
 
 ---
