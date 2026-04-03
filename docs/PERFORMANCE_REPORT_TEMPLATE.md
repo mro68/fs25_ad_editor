@@ -19,8 +19,12 @@
 ## Ausgefuehrte Kommandos
 
 - `cargo bench`
-- `cargo bench --bench core_bench -- spatial_queries/nearest_batch/100000`
-- `cargo bench --bench core_bench -- spatial_queries/rect_query/100000`
+- `cargo bench --bench core_bench -- spatial_queries/nearest_batch/100000 --sample-size 20`
+- `cargo bench --bench core_bench -- spatial_queries/rect_query/100000 --sample-size 20`
+- `cargo bench --bench tool_preview_hotpath_bench -- tool_preview_route_offset/compute_positions/200 --sample-size 20`
+- `cargo bench --bench tool_preview_hotpath_bench -- tool_preview_smooth_curve/solve_route/8 --sample-size 20`
+- `cargo bench --bench render_hotpath_bench -- node_renderer_instance_build/build_instances/100000 --sample-size 20`
+- `cargo bench --bench render_hotpath_bench -- marker_renderer_collect/marker_filter_collect/100000n_200m --sample-size 20`
 
 ## Ergebnisse (Criterion)
 
@@ -31,16 +35,35 @@
 | `spatial_queries/nearest_batch/100000` | 100k |  |  |  |  |
 | `spatial_queries/rect_query/10000` | 10k |  |  |  |  |
 | `spatial_queries/rect_query/100000` | 100k |  |  |  |  |
+| `tool_preview_route_offset/compute_positions/200` | 200 |  |  |  |  |
+| `tool_preview_smooth_curve/solve_route/8` | 8 |  |  |  |  |
+| `node_renderer_instance_build/build_instances/100000` | 100k |  |  |  |  |
+| `marker_renderer_collect/marker_filter_collect/100000n_200m` | 100k/200 |  |  |  |  |
+
+## Snapshot-Budget (RenderMap)
+
+- Rebuild-Szenario:
+- Log-Zeile:
+- Nodes:
+- Connections:
+- Marker:
+- Approx-Bytes:
+- Kommentar:
+
+Quelle: Debug-Log aus `app::render_scene::render_map_snapshot()` in der Form `RenderMap-Snapshot neu aufgebaut: nodes=..., connections=..., markers=..., approx_bytes=...`.
 
 ## Beobachtungen
 
 - Hotspots:
+- Budget-Auffaelligkeiten:
 - Auffaellige Regressionen:
 - Erwartung vs. Ergebnis:
 
 ## Akzeptanzkriterien (Vorschlag)
 
 - `nearest_batch/100000` bleibt stabil ueber 3 Laeufe (Abweichung < 10%).
+- `rect_query/100000`, `tool_preview_route_offset/compute_positions/200` und `tool_preview_smooth_curve/solve_route/8` bleiben stabil ueber 3 Laeufe oder werden mit Datensatz-/Config-Unterschieden erklaert.
+- Fuer denselben Datensatz ist mindestens ein `RenderMap`-Rebuild mit `approx_bytes` dokumentiert.
 - Kein signifikanter Regressionssprung (> 15%) gegenueber letzter Baseline.
 - `cargo check` und `cargo test` bleiben gruen.
 

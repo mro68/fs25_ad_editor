@@ -57,10 +57,9 @@ pub(crate) fn apply_wheel_step(
 /// Baut den zentralen Availability-Kontext fuer alle Route-Tool-Surfaces.
 pub(crate) fn route_tool_availability_context(state: &AppState) -> RouteToolAvailabilityContext {
     let has_farmland = state
-        .farmland_polygons
-        .as_ref()
+        .farmland_polygons_arc()
         .is_some_and(|polygons| !polygons.is_empty());
-    let has_background = state.background_image.is_some();
+    let has_background = state.has_background_image();
     let has_ordered_chain = state.road_map.as_deref().is_some_and(|road_map| {
         road_map
             .ordered_chain_nodes(&state.selection.selected_node_ids)

@@ -145,6 +145,38 @@ impl AppState {
         self.road_map.as_deref()
     }
 
+    /// Gibt geladene Farmland-Polygone als Arc-Clone zurueck.
+    pub fn farmland_polygons_arc(&self) -> Option<Arc<Vec<FieldPolygon>>> {
+        self.farmland_polygons.clone()
+    }
+
+    /// Gibt das geladene Farmland-Raster als Arc-Clone zurueck.
+    pub fn farmland_grid_arc(&self) -> Option<Arc<FarmlandGrid>> {
+        self.farmland_grid.clone()
+    }
+
+    /// Gibt das aktuell kanonische Hintergrundbild als Arc-Clone zurueck.
+    ///
+    /// Primäre Quelle ist die geladene `BackgroundMap`. Das Feld
+    /// `background_image` dient als kompatibler Fallback fuer Legacy-Pfade.
+    pub fn background_image_arc(&self) -> Option<Arc<image::DynamicImage>> {
+        self.view
+            .background_map
+            .as_deref()
+            .map(|background| background.image_arc())
+            .or_else(|| self.background_image.clone())
+    }
+
+    /// Gibt `true` zurueck, wenn Farmland-Polygone geladen sind.
+    pub fn has_farmland_polygons(&self) -> bool {
+        self.farmland_polygons.is_some()
+    }
+
+    /// Gibt `true` zurueck, wenn ein Hintergrundbild geladen ist.
+    pub fn has_background_image(&self) -> bool {
+        self.background_image_arc().is_some()
+    }
+
     /// Gibt die Anzahl der Nodes zurueck (fuer UI-Anzeige)
     pub fn node_count(&self) -> usize {
         self.road_map.as_ref().map_or(0, |rm| rm.node_count())

@@ -47,8 +47,8 @@ Die `update()`-Implementierung bildet den Frame-Zyklus der Integrationsschale:
 
 1. Exit-Guard pruefen (`state.should_exit`)
 2. UI-, Dialog-, Viewport- und Overlay-Events sammeln
-3. Lokale Shell-Events behandeln (z.B. `ToggleFloatingMenu`)
-4. Uebrige `AppIntent`s an `AppController` delegieren
+3. Die gesammelte `Vec<AppIntent>` by-value durchlaufen und schalenlokale Events behandeln (z.B. `ToggleFloatingMenu`)
+4. Uebrige `AppIntent`s ohne zusaetzliches `event.clone()` an `AppController` delegieren
 5. Hintergrund-Uploads und Repaint-Entscheidung ausfuehren
 
 ## Integrationsrelevante Funktionen
@@ -57,7 +57,7 @@ Die `update()`-Implementierung bildet den Frame-Zyklus der Integrationsschale:
 |---|---|
 | `pub(crate) fn new(render_state: &egui_wgpu::RenderState) -> Self` | Laedt `EditorOptions` ueber `app::use_cases::options::load_editor_options()`, initialisiert `AppState`, `AppController`, `render::Renderer` und `ui::InputState` |
 | `fn update(&mut self, ctx: &egui::Context, frame: &mut eframe::Frame)` | Zentraler eframe-Frame-Zyklus der Integrationsschale |
-| `fn process_events(&mut self, ctx: &egui::Context, events: &[AppIntent])` | Behandelt schalenlokale Events und delegiert den Rest an den Controller |
+| `fn process_events(&mut self, ctx: &egui::Context, events: Vec<AppIntent>)` | Behandelt die gesammelten Intents by-value, verarbeitet schalenlokale Events in-place und delegiert den Rest ohne zusaetzliche Clone-Kaskade an den Controller |
 | `fn collect_ui_events(&mut self, ctx: &egui::Context) -> Vec<AppIntent>` | Buendelt Menue-, Dialog-, Viewport- und Overlay-Events in einer Intent-Liste |
 | `fn render_viewport(&mut self, ui: &egui::Ui, rect: egui::Rect, viewport_size: [f32; 2])` | Baut `RenderScene` und registriert den egui/wgpu-Render-Callback |
 | `fn render_overlays(&mut self, ui: &egui::Ui, rect: egui::Rect, response: &egui::Response, viewport_size: [f32; 2]) -> Vec<AppIntent>` | Zeichnet Overlays ueber dem Viewport und mappt Overlay-Interaktionen auf `AppIntent`s |

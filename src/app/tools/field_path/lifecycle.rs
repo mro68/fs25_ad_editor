@@ -152,11 +152,11 @@ impl FieldPathTool {
     fn handle_selection_click(&mut self, pos: Vec2, is_side1: bool) {
         match self.mode {
             FieldPathMode::Fields => {
-                let Some(polygons) = self.farmland_polygons.clone() else {
+                let Some(polygons) = self.farmland_polygons.as_deref() else {
                     log::warn!("Keine Farmland-Polygone geladen — Feld-Auswahl nicht moeglich");
                     return;
                 };
-                if let Some(poly) = find_polygon_at(pos, &polygons) {
+                if let Some(poly) = find_polygon_at(pos, polygons) {
                     let id = poly.id;
                     if is_side1 {
                         toggle_u32(&mut self.side1_field_ids, id);
@@ -173,11 +173,11 @@ impl FieldPathTool {
                 }
             }
             FieldPathMode::Boundaries => {
-                let Some(polygons) = self.farmland_polygons.clone() else {
+                let Some(polygons) = self.farmland_polygons.as_deref() else {
                     log::warn!("Keine Farmland-Polygone geladen — Grenz-Auswahl nicht moeglich");
                     return;
                 };
-                if let Some(seg) = Self::find_nearest_boundary_segment(pos, &polygons) {
+                if let Some(seg) = Self::find_nearest_boundary_segment(pos, polygons) {
                     if is_side1 {
                         Self::toggle_segment(&mut self.side1_segments, seg);
                     } else {
@@ -194,12 +194,17 @@ impl FieldPathTool {
             return ToolPreview::default();
         };
 
+        let polygon_by_id: std::collections::HashMap<u32, &crate::core::FieldPolygon> = polygons
+            .iter()
+            .map(|polygon| (polygon.id, polygon))
+            .collect();
+
         let mut nodes: Vec<Vec2> = Vec::new();
         let mut connections: Vec<(usize, usize)> = Vec::new();
 
         // Seite-1-Felder: Polygon-Umrisse
         for &id in &self.side1_field_ids {
-            if let Some(poly) = polygons.iter().find(|p| p.id == id) {
+            if let Some(poly) = polygon_by_id.get(&id) {
                 let start = nodes.len();
                 nodes.extend_from_slice(&poly.vertices);
                 let n = poly.vertices.len();
@@ -211,7 +216,7 @@ impl FieldPathTool {
 
         // Seite-2-Felder: Polygon-Umrisse
         for &id in &self.side2_field_ids {
-            if let Some(poly) = polygons.iter().find(|p| p.id == id) {
+            if let Some(poly) = polygon_by_id.get(&id) {
                 let start = nodes.len();
                 nodes.extend_from_slice(&poly.vertices);
                 let n = poly.vertices.len();

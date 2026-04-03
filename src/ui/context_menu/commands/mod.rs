@@ -168,6 +168,27 @@ pub struct IntentContext {
 }
 
 impl CommandId {
+    fn route_tool_selection_id(&self) -> Option<RouteToolId> {
+        match self {
+            Self::SetToolRouteStraight => Some(RouteToolId::Straight),
+            Self::SetToolRouteSmoothCurve => Some(RouteToolId::SmoothCurve),
+            Self::SetToolRouteQuadratic => Some(RouteToolId::CurveQuad),
+            Self::SetToolRouteCubic => Some(RouteToolId::CurveCubic),
+            Self::SetToolFieldBoundary => Some(RouteToolId::FieldBoundary),
+            _ => None,
+        }
+    }
+
+    fn route_tool_anchor_id(&self) -> Option<RouteToolId> {
+        match self {
+            Self::RouteStraight => Some(RouteToolId::Straight),
+            Self::RouteSmoothCurve => Some(RouteToolId::SmoothCurve),
+            Self::RouteQuadratic => Some(RouteToolId::CurveQuad),
+            Self::RouteCubic => Some(RouteToolId::CurveCubic),
+            _ => None,
+        }
+    }
+
     /// Erzeugt den passenden `AppIntent` fuer diesen Command.
     pub fn to_intent(&self, ctx: &IntentContext) -> AppIntent {
         match self {
@@ -181,17 +202,14 @@ impl CommandId {
             Self::SetToolAddNode => AppIntent::SetEditorToolRequested {
                 tool: EditorTool::AddNode,
             },
-            Self::SetToolRouteStraight => AppIntent::SelectRouteToolRequested {
-                tool_id: RouteToolId::Straight,
-            },
-            Self::SetToolRouteSmoothCurve => AppIntent::SelectRouteToolRequested {
-                tool_id: RouteToolId::SmoothCurve,
-            },
-            Self::SetToolRouteQuadratic => AppIntent::SelectRouteToolRequested {
-                tool_id: RouteToolId::CurveQuad,
-            },
-            Self::SetToolRouteCubic => AppIntent::SelectRouteToolRequested {
-                tool_id: RouteToolId::CurveCubic,
+            Self::SetToolRouteStraight
+            | Self::SetToolRouteSmoothCurve
+            | Self::SetToolRouteQuadratic
+            | Self::SetToolRouteCubic
+            | Self::SetToolFieldBoundary => AppIntent::SelectRouteToolRequested {
+                tool_id: self
+                    .route_tool_selection_id()
+                    .expect("invariant: Route-Tool-Selektionsbefehl muss Tool-ID liefern"),
             },
             Self::StreckenteilungEmptyArea | Self::StreckenteilungMulti => {
                 AppIntent::StreckenteilungAktivieren
@@ -211,34 +229,15 @@ impl CommandId {
 
             // ── Selection-Befehle ────────────────────────────────────
             Self::ConnectTwoNodes => AppIntent::ConnectSelectedNodesRequested,
-            Self::RouteStraight => {
+            Self::RouteStraight
+            | Self::RouteSmoothCurve
+            | Self::RouteQuadratic
+            | Self::RouteCubic => {
                 let (s, e) = ctx.two_node_ids.unwrap_or((0, 0));
                 AppIntent::RouteToolWithAnchorsRequested {
-                    tool_id: RouteToolId::Straight,
-                    start_node_id: s,
-                    end_node_id: e,
-                }
-            }
-            Self::RouteSmoothCurve => {
-                let (s, e) = ctx.two_node_ids.unwrap_or((0, 0));
-                AppIntent::RouteToolWithAnchorsRequested {
-                    tool_id: RouteToolId::SmoothCurve,
-                    start_node_id: s,
-                    end_node_id: e,
-                }
-            }
-            Self::RouteQuadratic => {
-                let (s, e) = ctx.two_node_ids.unwrap_or((0, 0));
-                AppIntent::RouteToolWithAnchorsRequested {
-                    tool_id: RouteToolId::CurveQuad,
-                    start_node_id: s,
-                    end_node_id: e,
-                }
-            }
-            Self::RouteCubic => {
-                let (s, e) = ctx.two_node_ids.unwrap_or((0, 0));
-                AppIntent::RouteToolWithAnchorsRequested {
-                    tool_id: RouteToolId::CurveCubic,
+                    tool_id: self
+                        .route_tool_anchor_id()
+                        .expect("invariant: Route-Tool-Ankerbefehl muss Tool-ID liefern"),
                     start_node_id: s,
                     end_node_id: e,
                 }
@@ -285,12 +284,6 @@ impl CommandId {
             Self::DissolveGroup => AppIntent::DissolveGroupRequested {
                 segment_id: ctx.group_record_id.unwrap_or(0),
             },
-
-            // ── Extras ───────────────────────────────────────────────────────
-            Self::SetToolFieldBoundary => AppIntent::SelectRouteToolRequested {
-                tool_id: RouteToolId::FieldBoundary,
-            },
-
             // ── Zoom ─────────────────────────────────────────────────────────
             Self::ZoomToFit => AppIntent::ZoomToFitRequested,
             Self::ZoomToSelection => AppIntent::ZoomToSelectionBoundsRequested,

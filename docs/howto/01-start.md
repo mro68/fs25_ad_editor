@@ -30,7 +30,10 @@ Oeffnet einen Datei-Dialog zur Auswahl einer AutoDrive-XML-Konfigurationsdatei. 
 **Automatische Erkennung:** Nach dem Laden prueft der Editor automatisch:
 
 - Ob eine `terrain.heightmap.png` im selben Verzeichnis liegt → wird direkt als Heightmap gesetzt
+- Ob eine `overview.png` oder `overview.jpg` im selben Verzeichnis liegt → wird direkt als Hintergrund geladen
 - Ob im Mods-Verzeichnis (`../../mods/` relativ zum Savegame) ein passender Map-Mod-ZIP zum Kartennamen existiert → Dialog bietet Uebersichtskarten-Generierung an
+
+Wenn dabei etwas gefunden wird, fasst der Dialog **Nach dem Laden erkannt** die Treffer zusammen.
 
 Das Matching beruecksichtigt Umlaute (ae↔ae, oe↔oe, ue↔ue, ss↔ss), ist case-insensitive und behandelt Leerzeichen/Unterstriche als Wildcard.
 
