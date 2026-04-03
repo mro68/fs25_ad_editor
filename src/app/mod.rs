@@ -28,11 +28,12 @@ pub mod ui_contract;
 /// Mutierende Use-Case-Funktionen fuer alle Editing-Operationen.
 pub mod use_cases;
 
+use self::tools::field_boundary::geometry::RingNodeKind;
+
 pub use crate::core::Camera2D;
 pub use crate::core::ZipImageEntry;
 pub use crate::core::{
-    BoundaryNode, Connection, ConnectionDirection, ConnectionPriority, MapMarker, MapNode,
-    NodeFlag, RoadMap,
+    Connection, ConnectionDirection, ConnectionPriority, MapMarker, MapNode, NodeFlag, RoadMap,
 };
 pub use crate::shared::RenderQuality;
 pub use command_log::CommandLog;
@@ -45,7 +46,12 @@ pub use state::{
     GroupEditState, GroupSettingsPopupState, PostLoadDialogState, SelectionState, UiState,
     ViewState,
 };
-pub use tool_contract::{RouteToolId, TangentSource, ToolAnchor};
 pub use tools::field_boundary::compute_ring;
-pub use tools::field_boundary::RingNodeKind;
-pub use ui_contract::{TangentMenuData, TangentOptionData};
+
+/// Ordnet die interne Ring-Klassifikation des FieldBoundary-Tools auf persistierbare Node-Flags ab.
+pub(crate) fn field_boundary_ring_node_flag(kind: RingNodeKind) -> NodeFlag {
+    match kind {
+        RingNodeKind::RoundedCorner => NodeFlag::RoundedCorner,
+        RingNodeKind::Regular | RingNodeKind::Corner => NodeFlag::Regular,
+    }
+}

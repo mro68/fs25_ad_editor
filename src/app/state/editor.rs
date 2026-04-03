@@ -1,4 +1,5 @@
-use crate::app::tools::{RouteToolGroup, RouteToolId, ToolManager, ToolPreview};
+use crate::app::tool_contract::RouteToolId;
+use crate::app::tools::{RouteToolGroup, ToolManager, ToolPreview};
 use crate::app::ui_contract::{RouteToolPanelState, RouteToolViewportData};
 use crate::core::{ConnectionDirection, ConnectionPriority, RoadMap};
 use glam::Vec2;
@@ -171,7 +172,8 @@ impl EditorToolState {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::app::tools::{RouteToolId, ToolAction};
+    use crate::app::tool_contract::RouteToolId;
+    use crate::app::tools::ToolAction;
 
     #[test]
     fn route_facades_only_expose_active_tool_in_route_mode() {

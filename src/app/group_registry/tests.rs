@@ -1,5 +1,5 @@
 use super::*;
-use crate::{MapNode, NodeFlag, RoadMap};
+use crate::core::{MapNode, NodeFlag, RoadMap};
 use glam::Vec2;
 
 fn make_test_record(

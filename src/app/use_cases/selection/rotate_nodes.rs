@@ -69,7 +69,7 @@ pub fn rotate_selected_nodes(state: &mut AppState, angle_rad: f32) {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{MapNode, NodeFlag, RoadMap};
+    use crate::core::{MapNode, NodeFlag, RoadMap};
     use std::f32::consts::PI;
 
     fn make_state_with_nodes(positions: &[(u64, f32, f32)]) -> AppState {

@@ -1,8 +1,7 @@
 //! UI/System-Intents als nicht-mutierende Eingabeebene.
 
 use super::super::state::EditorTool;
-use crate::app::tool_contract::TangentSource;
-use crate::app::tools::RouteToolId;
+use crate::app::tool_contract::{RouteToolId, TangentSource};
 use crate::app::ui_contract::RouteToolPanelAction;
 use crate::core::{ConnectionDirection, ConnectionPriority, NodeFlag};
 use crate::shared::EditorOptions;

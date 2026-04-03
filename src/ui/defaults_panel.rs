@@ -1,9 +1,9 @@
 //! Linkes Sidebar-Panel fuer Werkzeuge, Defaults und Hintergrund-Controls.
 
+use crate::app::tool_contract::RouteToolId;
 use crate::app::tools::{
     resolve_route_tool_entries, route_tool_defaults_tooltip_key, route_tool_descriptor,
-    route_tool_disabled_reason_key, route_tool_group_label_key, RouteToolGroup, RouteToolId,
-    RouteToolSurface,
+    route_tool_disabled_reason_key, route_tool_group_label_key, RouteToolGroup, RouteToolSurface,
 };
 use crate::app::{AppIntent, AppState, ConnectionDirection, ConnectionPriority, EditorTool};
 use crate::shared::{t, I18nKey};

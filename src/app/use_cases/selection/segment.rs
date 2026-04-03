@@ -237,7 +237,9 @@ pub fn select_segment_between_nearest_intersections(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{Connection, ConnectionDirection, ConnectionPriority, MapNode, NodeFlag, RoadMap};
+    use crate::core::{
+        Connection, ConnectionDirection, ConnectionPriority, MapNode, NodeFlag, RoadMap,
+    };
     use std::sync::Arc;
 
     #[test]

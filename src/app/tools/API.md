@@ -2,7 +2,7 @@
 
 Dokumentation fuer `app::tools`: `ToolManager`, `RouteTool`-Trait, registrierte Tools und gemeinsame Infrastruktur.
 
-`RouteToolId`, `ToolAnchor` und `TangentSource` gehoeren zum app-weiten Tool-Vertrag in `app::tool_contract`. UI-taugliche Read-DTOs wie `TangentMenuData` und `TangentOptionData` gehoeren nach `app::ui_contract`. Beides wird hier fuer die Tool-Implementierungen weiterverwendet.
+`RouteToolId`, `ToolAnchor` und `TangentSource` gehoeren zum app-weiten Tool-Vertrag in `app::tool_contract`. `RouteToolId` wird ausserhalb der Tool-Implementierungen explizit von dort importiert; `app::tools` bleibt fuer Katalog, Manager, Traits und gemeinsame Tool-Helfer zustaendig. UI-taugliche Read-DTOs wie `TangentMenuData` und `TangentOptionData` gehoeren nach `app::ui_contract`.
 
 **Zurueck:** [`../API.md`](../API.md)
 
@@ -317,6 +317,8 @@ pub(super) fn compute_ring(
 5. Rückgabe: `Vec<(Vec2, RingNodeKind)>` — jeder Punkt mit geometrischer Klassifikation
 
 **`RingNodeKind`-Enum (aus `geometry.rs`):**
+
+`RingNodeKind` bleibt bewusst im Geometrie-Modul verankert; `app::use_cases` konsumieren die Ring-Ausgabe nur indirekt ueber die schmale App-Bruecke um `compute_ring`.
 
 ```rust
 pub enum RingNodeKind {

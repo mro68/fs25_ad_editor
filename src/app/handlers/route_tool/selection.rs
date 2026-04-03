@@ -1,5 +1,6 @@
 use crate::app::state::EditorTool;
-use crate::app::tools::{route_tool_descriptor, OrderedNodeChain, RouteToolId, ToolAction};
+use crate::app::tool_contract::RouteToolId;
+use crate::app::tools::{route_tool_descriptor, OrderedNodeChain, ToolAction};
 use crate::app::AppState;
 
 /// Aktiviert ein Route-Tool per stabiler Tool-ID.

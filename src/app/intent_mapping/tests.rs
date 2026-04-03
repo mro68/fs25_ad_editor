@@ -1,5 +1,6 @@
 use crate::app::ui_contract::{ParkingPanelAction, RouteToolPanelAction};
-use crate::app::{AppCommand, AppIntent, AppState, ConnectionDirection};
+use crate::app::{AppCommand, AppIntent, AppState};
+use crate::core::ConnectionDirection;
 
 use super::map_intent_to_commands;
 

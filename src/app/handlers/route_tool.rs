@@ -5,8 +5,8 @@ mod apply;
 mod selection;
 
 use crate::app::state::EditorTool;
-use crate::app::tool_contract::TangentSource;
-use crate::app::tools::{RouteToolId, ToolAction, ToolHostContext};
+use crate::app::tool_contract::{RouteToolId, TangentSource};
+use crate::app::tools::{ToolAction, ToolHostContext};
 use crate::app::ui_contract::{RouteToolPanelAction, RouteToolPanelFollowUp};
 use crate::app::AppState;
 

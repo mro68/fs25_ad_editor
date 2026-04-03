@@ -1,8 +1,10 @@
 //! ToolManager und Capability-Discovery fuer Route-Tools.
 
+use crate::app::tool_contract::RouteToolId;
+
 use super::{
     route_tool_catalog, route_tool_descriptor, route_tool_slot, OrderedNodeChain, RouteTool,
-    RouteToolChainInput, RouteToolDescriptor, RouteToolDrag, RouteToolGroupEdit, RouteToolId,
+    RouteToolChainInput, RouteToolDescriptor, RouteToolDrag, RouteToolGroupEdit,
     RouteToolLassoInput, RouteToolRecreate, RouteToolRotate, RouteToolSegmentAdjustments,
     RouteToolTangent, ToolHostContext,
 };

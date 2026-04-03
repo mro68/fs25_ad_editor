@@ -37,7 +37,7 @@ pub mod spline;
 /// Gerade-Linie-Tool mit konfigurierbarem Node-Abstand.
 pub mod straight_line;
 
-pub use crate::app::tool_contract::{RouteToolId, ToolAnchor};
+pub use crate::app::tool_contract::ToolAnchor;
 pub use capabilities::{
     OrderedNodeChain, RouteToolChainInput, RouteToolDrag, RouteToolGroupEdit, RouteToolLassoInput,
     RouteToolRecreate, RouteToolRotate, RouteToolSegmentAdjustments, RouteToolTangent,
