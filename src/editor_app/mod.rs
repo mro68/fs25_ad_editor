@@ -61,7 +61,7 @@ impl eframe::App for EditorApp {
             .iter()
             .any(|e| !matches!(e, AppIntent::ViewportResized { .. }));
 
-        self.process_events(ctx, &events);
+        self.process_events(ctx, events);
 
         self.sync_background_upload();
 
@@ -70,18 +70,17 @@ impl eframe::App for EditorApp {
 }
 
 impl EditorApp {
-    fn process_events(&mut self, ctx: &egui::Context, events: &[AppIntent]) {
+    fn process_events(&mut self, ctx: &egui::Context, events: Vec<AppIntent>) {
         for event in events {
-            if let AppIntent::ToggleFloatingMenu { kind } = event {
-                self.toggle_floating_menu(ctx, *kind);
-                continue;
-            }
-
-            if let Err(e) = self
-                .controller
-                .handle_intent(&mut self.state, event.clone())
-            {
-                log::error!("Event handling failed: {:#}", e);
+            match event {
+                AppIntent::ToggleFloatingMenu { kind } => {
+                    self.toggle_floating_menu(ctx, kind);
+                }
+                intent => {
+                    if let Err(e) = self.controller.handle_intent(&mut self.state, intent) {
+                        log::error!("Event handling failed: {:#}", e);
+                    }
+                }
             }
         }
     }
