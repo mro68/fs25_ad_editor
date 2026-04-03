@@ -3,7 +3,7 @@ use std::collections::{HashMap, HashSet};
 
 use crate::app::state::DistanzenState;
 use crate::app::NodeFlag;
-use crate::shared::ui_input::wheel_dir;
+use crate::ui::common::wheel_dir;
 
 /// Maximale Anzahl selektierter Nodes fuer die Ketten-Analyse.
 /// Oberhalb dieses Limits wird die O(N·C)-Berechnung uebersprungen.

@@ -6,7 +6,7 @@ Das `ui`-Modul enthält egui-UI-Komponenten (Menüs, Statusbar, Input-Handling, 
 
 ## Module
 
-- `common.rs` — Gemeinsame UI-Hilfsfunktionen (Mausrad-Scroll-Helfer)
+- `common.rs` — Gemeinsame UI-Hilfsfunktionen (Scroll-Helfer, Availability-Kontext)
 - `menu.rs` — Top-Menü-Leiste
 - `status.rs` — Statusleiste
 - `floating_menu.rs` — Schwebende Kontextmenues fuer Werkzeug- und RouteTool-Gruppen (Toggle via `T/G/B/A/R/Z`)
@@ -474,6 +474,9 @@ Kleine, wiederverwendbare Helfer fuer egui-Widgets. Werden von mehreren UI-Modul
 /// Schwellenwert fuer Scroll-Events – unterdrückt Rauschen bei kleinen Scroll-Bewegungen.
 pub(crate) const WHEEL_THRESHOLD: f32 = 0.5;
 
+/// Liefert fuer ein gehovertes Widget die Scroll-Richtung und konsumiert das Event.
+pub(crate) fn wheel_dir(ui: &egui::Ui, response: &egui::Response) -> f32;
+
 /// Wendet Mausrad-Scrolling auf einen numerischen Wert an.
 ///
 /// Wenn die Response gehovert ist und ein Scroll-Event vorliegt,
@@ -487,6 +490,8 @@ pub(crate) fn apply_wheel_step(
     range: std::ops::RangeInclusive<f32>,
 ) -> bool
 ```
+
+`wheel_dir()` ist der gemeinsame Low-Level-Helfer fuer Widgets, die Mausrad-Impulse selbst in diskrete Aktionen umsetzen muessen, etwa die Distanz-/Node-Felder in `properties/distances.rs` und `edit_panel/streckenteilung_panel.rs`.
 
 **Verwendung:**
 

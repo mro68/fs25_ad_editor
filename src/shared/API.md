@@ -2,7 +2,7 @@
 
 ## Ueberblick
 
-Das `shared`-Modul enthaelt Layer-uebergreifende Typen, die zwischen `app` (Produzent) und `render` (Konsument) geteilt werden, um direkte Abhaengigkeiten zwischen diesen Schichten zu vermeiden. Der wichtigste Vertrag in diesem Bereich ist `RenderScene`: Die App baut daraus read-only Render-Snapshots, der Render-Layer konsumiert nur diese Snapshots und kennt weder `RoadMap` noch `Camera2D` direkt.
+Das `shared`-Modul enthaelt neutrale, layer-uebergreifende Typen, die zwischen `app` (Produzent) und `render` (Konsument) geteilt werden, um direkte Abhaengigkeiten zwischen diesen Schichten zu vermeiden. Der wichtigste Vertrag in diesem Bereich ist `RenderScene`: Die App baut daraus read-only Render-Snapshots, der Render-Layer konsumiert nur diese Snapshots und kennt weder `RoadMap` noch `Camera2D` direkt. UI-spezifische Eingabe-Helfer und Runtime-/Dateisystem-Policy gehoeren bewusst nicht mehr in diese Schicht.
 
 ## Module
 
@@ -12,19 +12,6 @@ Das `shared`-Modul enthaelt Layer-uebergreifende Typen, die zwischen `app` (Prod
 - `geometry.rs` — Layer-uebergreifende Geometrie-Hilfsfunktionen (`angle_deviation()` fuer Winkelabweichungs-Berechnung)
 - `i18n/` — Mehrsprachigkeits-System: `Language`-Enum, `I18nKey`-Enum, `t()`-Funktion (DE + EN, Zero-Alloc)
 - `spline_geometry.rs` — Layer-neutrale Catmull-Rom-Geometrie-Funktionen (kein import aus `tools` noetig)
-- `ui_input.rs` — generische egui-Eingabe-Helfer wie `wheel_dir()` fuer App- und UI-Layer
-
-## UI-Eingabe-Helfer
-
-### `wheel_dir`
-
-```rust
-pub fn wheel_dir(ui: &egui::Ui, response: &egui::Response) -> f32
-```
-
-Ermittelt fuer ein gehovertes Widget die Scroll-Richtung als `+1.0`, `-1.0` oder `0.0`.
-Der Helper konsumiert erkannte Scroll-Events direkt, damit uebergeordnete Scroll-Areas
-nicht gleichzeitig reagieren. Der Typ ist bewusst stateless und lebt deshalb in `shared`.
 
 ## Haupttypen
 
@@ -178,7 +165,7 @@ use crate::shared::angle_deviation;
 
 ### `EditorOptions` (Laufzeit-Optionen)
 
-Alle zur Laufzeit aenderbaren Editor-Optionen. Wird als `fs25_auto_drive_editor.toml` neben der Binary gespeichert.
+Alle zur Laufzeit aenderbaren Editor-Optionen. `shared` enthaelt dabei nur das serialisierbare Datenmodell plus Validierung und abgeleitete Hilfswerte; TOML-I/O und Standardpfad liegen in `app::use_cases::options`.
 
 ```rust
 pub struct EditorOptions {
@@ -264,9 +251,7 @@ pub struct EditorOptions {
 
 **Methoden:**
 
-- `EditorOptions::load_from_file(path) -> Self` — TOML-Datei laden (bei Fehler: Defaults)
-- `EditorOptions::save_to_file(&self, path) -> Result<()>` — Als TOML speichern
-- `EditorOptions::config_path() -> PathBuf` — Pfad zur Optionen-Datei neben der Binary
+- `validate(&self) -> Result<()>` — Prueft den Optionssatz auf konsistente Grenzwerte
 - `hitbox_radius(&self) -> f32` — Berechnet den Hitbox-Radius in Welteinheiten (`node_size_world * hitbox_scale_percent / 100`)
 - `snap_radius(&self) -> f32` — Berechnet den Snap-Radius in Welteinheiten
 - `selection_size_multiplier(&self) -> f32` — Selektions-Multiplikator aus `selection_size_factor` in Prozent

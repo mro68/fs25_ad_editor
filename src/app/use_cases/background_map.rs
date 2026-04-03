@@ -178,8 +178,7 @@ pub fn generate_overview_with_options(state: &mut AppState) -> Result<()> {
     // Layer-Optionen persistent speichern
     state.options.overview_layers = layers.clone();
     state.refresh_options_arc();
-    let config_path = crate::shared::EditorOptions::config_path();
-    let _ = state.options.save_to_file(&config_path);
+    let _ = super::options::save_editor_options(&state.options);
 
     let options = fs25_map_overview::OverviewOptions {
         hillshade: layers.hillshade,
