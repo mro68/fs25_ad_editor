@@ -1,19 +1,15 @@
 //! Kleiner Umbrella-Vertrag fuer Route-Tools.
 
-use crate::app::group_registry::{GroupKind, GroupRecord};
-
 use super::{
-    RouteToolChainInput, RouteToolCore, RouteToolDrag, RouteToolHostSync, RouteToolLassoInput,
-    RouteToolPanelBridge, RouteToolRecreate, RouteToolRotate, RouteToolSegmentAdjustments,
-    RouteToolTangent,
+    RouteToolChainInput, RouteToolCore, RouteToolDrag, RouteToolGroupEdit, RouteToolHostSync,
+    RouteToolLassoInput, RouteToolPanelBridge, RouteToolRecreate, RouteToolRotate,
+    RouteToolSegmentAdjustments, RouteToolTangent,
 };
 
 /// Object-safe Umbrella ueber den Kernvertrag, Panel-Bruecke und Host-Sync.
 ///
 /// Optionale Interaktionen werden nicht mehr direkt ueber den Kern angesprochen,
 /// sondern ueber Capability-Discovery (`as_drag()`, `as_tangent()`, ...).
-/// Die Registry-/Edit-Hooks bleiben in Commit 3 bewusst hier, damit Commit 4
-/// sie spaeter isoliert entkoppeln kann.
 pub trait RouteTool: RouteToolCore + RouteToolPanelBridge + RouteToolHostSync {
     /// Liefert die Recreate-Capability, falls das Tool sie unterstuetzt.
     fn as_recreate(&self) -> Option<&dyn RouteToolRecreate> {
@@ -85,11 +81,13 @@ pub trait RouteTool: RouteToolCore + RouteToolPanelBridge + RouteToolHostSync {
         None
     }
 
-    /// Erstellt einen `GroupRecord` fuer die Registry aus dem aktuellen Tool-Zustand.
-    fn make_group_record(&self, _id: u64, _node_ids: &[u64]) -> Option<GroupRecord> {
+    /// Liefert die Group-Edit-Capability, falls das Tool persistierbar ist.
+    fn as_group_edit(&self) -> Option<&dyn RouteToolGroupEdit> {
         None
     }
 
-    /// Laedt einen gespeicherten `GroupRecord` zur nachtraeglichen Bearbeitung.
-    fn load_for_edit(&mut self, _record: &GroupRecord, _kind: &GroupKind) {}
+    /// Liefert die mutable Group-Edit-Capability, falls das Tool persistierbar ist.
+    fn as_group_edit_mut(&mut self) -> Option<&mut dyn RouteToolGroupEdit> {
+        None
+    }
 }

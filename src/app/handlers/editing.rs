@@ -1,6 +1,5 @@
 //! Handler fuer Node/Connection-Editing, Marker und Editor-Werkzeug.
 
-use crate::app::tools::route_tool_descriptor;
 use crate::app::use_cases;
 use crate::app::AppState;
 use crate::core::{ConnectionDirection, ConnectionPriority, NodeFlag};
@@ -140,95 +139,7 @@ pub fn update_marker(state: &mut AppState, node_id: u64, name: &str, group: &str
 /// Loescht die zugehoerigen Nodes aus der RoadMap, aktiviert das passende
 /// Route-Tool und befuellt es mit den gespeicherten Parametern.
 pub fn edit_group(state: &mut AppState, record_id: u64) {
-    use crate::app::state::EditorTool;
-
-    // Record aus Registry holen (Klon, da wir state danach mutieren)
-    let record = match state.group_registry.get(record_id) {
-        Some(r) => r.clone(),
-        None => {
-            log::warn!("Segment-Record {} nicht gefunden", record_id);
-            return;
-        }
-    };
-
-    let tool_id = match record.tool_id {
-        Some(tool_id) if record.is_tool_editable() => tool_id,
-        Some(tool_id) => {
-            log::warn!(
-                "Segment {} nutzt {:?}, ist aber laut Vertrag nicht per Tool editierbar",
-                record_id,
-                tool_id
-            );
-            return;
-        }
-        None => {
-            log::warn!(
-                "Segment {} hat keinen Tool-Hintergrund, Edit nicht moeglich",
-                record_id
-            );
-            return;
-        }
-    };
-
-    // Undo-Snapshot vor Loeschung
-    state.record_undo_snapshot();
-
-    // Marker der Segment-Nodes loeschen (z.B. ParkingTool erzeugt Marker an Nodes)
-    if !record.marker_node_ids.is_empty() {
-        use std::sync::Arc;
-        if let Some(road_map_arc) = state.road_map.as_mut() {
-            let road_map = Arc::make_mut(road_map_arc);
-            for &node_id in &record.marker_node_ids {
-                road_map.remove_marker(node_id);
-            }
-        }
-    }
-
-    // Segment-Nodes loeschen — ExistingNode-Anker ausschliessen, da sie
-    // zu anderen Verbindungen gehoeren und von anderen Segmenten referenziert werden.
-    let anchor_ids: std::collections::HashSet<u64> = [&record.start_anchor, &record.end_anchor]
-        .into_iter()
-        .filter_map(|a| {
-            if let crate::app::tools::ToolAnchor::ExistingNode(id, _) = a {
-                Some(*id)
-            } else {
-                None
-            }
-        })
-        .collect();
-    let inner_ids: Vec<u64> = record
-        .node_ids
-        .iter()
-        .copied()
-        .filter(|id| !anchor_ids.contains(id))
-        .collect();
-    use_cases::editing::delete_nodes_by_ids(state, &inner_ids);
-
-    // Record sichern, bevor er aus der Registry entfernt wird (fuer Cancel-Wiederherstellung)
-    state.tool_editing_record_backup = Some(record.clone());
-
-    // Record aus Registry entfernen (wird beim erneuten execute() neu angelegt)
-    state.group_registry.remove(record_id);
-
-    // Passendes Route-Tool aktivieren
-    super::route_tool::select(state, tool_id);
-    state.editor.active_tool = EditorTool::Route;
-
-    // Tool mit gespeicherten Parametern laden
-    if let Some(tool) = state.editor.tool_manager.active_tool_mut() {
-        let kind = record.kind.clone();
-        tool.load_for_edit(&record, &kind);
-    }
-
-    // Merken, welches Segment bearbeitet wird (fuer Cancel-Wiederherstellung)
-    state.tool_editing_record_id = Some(record_id);
-
-    log::info!(
-        "Segment {} geladen fuer Bearbeitung ({:?}, Gruppe {:?})",
-        record_id,
-        tool_id,
-        route_tool_descriptor(tool_id).group
-    );
+    crate::app::tool_editing::begin_edit(state, record_id);
 }
 
 /// Verteilt die selektierten Nodes gleichmaessig entlang eines Catmull-Rom-Splines.

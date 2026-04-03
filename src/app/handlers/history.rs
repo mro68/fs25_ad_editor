@@ -5,22 +5,37 @@ use crate::app::AppState;
 
 /// Fuehrt einen Undo-Schritt aus, falls vorhanden.
 ///
-/// Bei aktivem Group-Edit wird der Edit-Modus zuerst implizit abgebrochen
-/// (Guard wird zurueckgesetzt), bevor Undo ausgefuehrt wird.
+/// Aktive Group- und Tool-Edits werden dabei als transiente Restore-Flows
+/// behandelt: Der Zwischenzustand wird verworfen und erzeugt bewusst keinen
+/// Redo-Eintrag.
 pub fn undo(state: &mut AppState) {
-    // Group-Edit implizit abbrechen bei manuellem Undo (Inkonsistenz-Schutz)
-    if state.group_editing.is_some() {
-        state.group_editing = None;
-        state.group_registry.set_edit_guard(None);
-        log::debug!("Undo: Group-Edit implizit abgebrochen");
+    if state.active_tool_edit_session.is_some() {
+        crate::app::tool_editing::cancel_active_edit(state);
+        return;
     }
 
-    let current = Snapshot::from_state(state);
-    if let Some(prev) = state.history.pop_undo_with_current(current) {
-        prev.apply_to(state);
+    if super::group::abort_active_group_edit(state) {
+        if restore_last_snapshot_without_redo(state) {
+            log::info!("Undo: aktiver Group-Edit verworfen");
+        } else {
+            log::debug!("Undo: kein Snapshot fuer aktiven Group-Edit vorhanden");
+        }
+        return;
+    }
+
+    if apply_undo_with_redo(state) {
         log::info!("Undo ausgefuehrt");
     } else {
         log::debug!("Undo: nichts zu tun");
+    }
+}
+
+pub(crate) fn restore_last_snapshot_without_redo(state: &mut AppState) -> bool {
+    if let Some(prev) = state.history.pop_undo_discard_current() {
+        prev.apply_to(state);
+        true
+    } else {
+        false
     }
 }
 
@@ -32,5 +47,15 @@ pub fn redo(state: &mut AppState) {
         log::info!("Redo ausgefuehrt");
     } else {
         log::debug!("Redo: nichts zu tun");
+    }
+}
+
+fn apply_undo_with_redo(state: &mut AppState) -> bool {
+    let current = Snapshot::from_state(state);
+    if let Some(prev) = state.history.pop_undo_with_current(current) {
+        prev.apply_to(state);
+        true
+    } else {
+        false
     }
 }

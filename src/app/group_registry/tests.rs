@@ -1,7 +1,5 @@
 use super::*;
-use crate::app::tools::RouteToolId;
-use crate::app::tools::ToolAnchor;
-use crate::{ConnectionDirection, ConnectionPriority, MapNode, NodeFlag, RoadMap};
+use crate::{MapNode, NodeFlag, RoadMap};
 use glam::Vec2;
 
 fn make_test_record(
@@ -12,17 +10,7 @@ fn make_test_record(
 ) -> GroupRecord {
     GroupRecord {
         id,
-        tool_id: Some(RouteToolId::Straight),
         node_ids,
-        start_anchor: ToolAnchor::NewPosition(Vec2::ZERO),
-        end_anchor: ToolAnchor::NewPosition(Vec2::ZERO),
-        kind: GroupKind::Straight {
-            base: GroupBase {
-                direction: ConnectionDirection::Regular,
-                priority: ConnectionPriority::Regular,
-                max_segment_length: 10.0,
-            },
-        },
         original_positions: positions,
         marker_node_ids: Vec::new(),
         locked,
@@ -160,7 +148,9 @@ fn invalidate_respektiert_edit_guard() {
     registry.set_edit_guard(Some(1));
 
     // Node 2 invalidieren → sollte nur Record 0 entfernen
-    registry.invalidate_by_node_ids(&[2]);
+    let invalidated = registry.invalidate_by_node_ids(&[2]);
+
+    assert_eq!(invalidated, vec![0]);
 
     assert!(registry.get(0).is_none(), "Record 0 sollte entfernt sein");
     assert!(

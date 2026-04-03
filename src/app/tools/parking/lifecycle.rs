@@ -1,10 +1,10 @@
 //! RouteTool-Implementierung fuer das ParkingTool.
 
-use crate::app::group_registry::{GroupBase, GroupKind, GroupRecord};
+use crate::app::tool_editing::{RouteToolEditPayload, ToolRouteBase};
 use crate::app::tools::common::sync_tool_host;
 use crate::app::tools::{
-    RouteTool, RouteToolCore, RouteToolHostSync, RouteToolId, RouteToolPanelBridge,
-    RouteToolRotate, ToolAction, ToolAnchor, ToolHostContext, ToolPreview, ToolResult,
+    RouteTool, RouteToolCore, RouteToolGroupEdit, RouteToolHostSync, RouteToolPanelBridge,
+    RouteToolRotate, ToolAction, ToolHostContext, ToolPreview, ToolResult,
 };
 use crate::app::ui_contract::{RouteToolConfigState, RouteToolPanelAction, RouteToolPanelEffect};
 use crate::core::RoadMap;
@@ -141,42 +141,38 @@ impl RouteTool for ParkingTool {
         Some(self)
     }
 
-    fn make_group_record(&self, id: u64, node_ids: &[u64]) -> Option<GroupRecord> {
+    fn as_group_edit(&self) -> Option<&dyn RouteToolGroupEdit> {
+        Some(self)
+    }
+
+    fn as_group_edit_mut(&mut self) -> Option<&mut dyn RouteToolGroupEdit> {
+        Some(self)
+    }
+}
+
+impl RouteToolGroupEdit for ParkingTool {
+    fn build_edit_payload(&self) -> Option<RouteToolEditPayload> {
         let origin = self.origin?;
         let angle = self.angle;
-        let entry_node_id = node_ids.get(6).copied();
-        let exit_node_id = node_ids.last().copied();
-        Some(GroupRecord {
-            id,
-            tool_id: Some(RouteToolId::Parking),
-            node_ids: node_ids.to_vec(),
-            start_anchor: ToolAnchor::NewPosition(origin),
-            end_anchor: ToolAnchor::NewPosition(origin),
-            original_positions: Vec::new(),
-            marker_node_ids: Vec::new(),
-            locked: true,
-            entry_node_id,
-            exit_node_id,
-            kind: GroupKind::Parking {
-                origin,
-                angle,
-                config: self.config.clone(),
-                base: GroupBase {
-                    direction: self.direction,
-                    priority: self.priority,
-                    max_segment_length: 0.0,
-                },
+        Some(RouteToolEditPayload::Parking {
+            origin,
+            angle,
+            config: self.config.clone(),
+            base: ToolRouteBase {
+                direction: self.direction,
+                priority: self.priority,
+                max_segment_length: 0.0,
             },
         })
     }
 
-    fn load_for_edit(&mut self, _record: &GroupRecord, kind: &GroupKind) {
-        let GroupKind::Parking {
+    fn restore_edit_payload(&mut self, payload: &RouteToolEditPayload) {
+        let RouteToolEditPayload::Parking {
             origin,
             angle,
             config,
             base,
-        } = kind
+        } = payload
         else {
             return;
         };

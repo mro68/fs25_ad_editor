@@ -2,13 +2,13 @@
 
 use super::super::{
     common::{record_applied_tool_state, sync_tool_host},
-    RouteTool, RouteToolCore, RouteToolHostSync, RouteToolId, RouteToolPanelBridge,
+    RouteTool, RouteToolCore, RouteToolGroupEdit, RouteToolHostSync, RouteToolPanelBridge,
     RouteToolRecreate, RouteToolSegmentAdjustments, ToolAction, ToolHostContext, ToolPreview,
     ToolResult,
 };
 use super::geometry::{build_result, compute_line_positions};
 use super::state::StraightLineTool;
-use crate::app::group_registry::{GroupBase, GroupKind, GroupRecord};
+use crate::app::tool_editing::{RouteToolEditPayload, ToolEditAnchors, ToolRouteBase};
 use crate::app::ui_contract::{RouteToolConfigState, RouteToolPanelAction, RouteToolPanelEffect};
 use crate::core::RoadMap;
 use glam::Vec2;
@@ -189,36 +189,35 @@ impl RouteTool for StraightLineTool {
         Some(self)
     }
 
-    fn make_group_record(&self, id: u64, node_ids: &[u64]) -> Option<GroupRecord> {
+    fn as_group_edit(&self) -> Option<&dyn RouteToolGroupEdit> {
+        Some(self)
+    }
+
+    fn as_group_edit_mut(&mut self) -> Option<&mut dyn RouteToolGroupEdit> {
+        Some(self)
+    }
+}
+
+impl RouteToolGroupEdit for StraightLineTool {
+    fn build_edit_payload(&self) -> Option<RouteToolEditPayload> {
         let start = self.last_start_anchor?;
         let end = self.lifecycle.last_end_anchor?;
-        Some(GroupRecord {
-            id,
-            tool_id: Some(RouteToolId::Straight),
-            node_ids: node_ids.to_vec(),
-            start_anchor: start,
-            end_anchor: end,
-            original_positions: Vec::new(), // wird im Handler befüllt
-            marker_node_ids: Vec::new(),
-            locked: true,
-            entry_node_id: None,
-            exit_node_id: None,
-            kind: GroupKind::Straight {
-                base: GroupBase {
-                    direction: self.direction,
-                    priority: self.priority,
-                    max_segment_length: self.seg.max_segment_length,
-                },
+        Some(RouteToolEditPayload::Straight {
+            anchors: ToolEditAnchors { start, end },
+            base: ToolRouteBase {
+                direction: self.direction,
+                priority: self.priority,
+                max_segment_length: self.seg.max_segment_length,
             },
         })
     }
 
-    fn load_for_edit(&mut self, record: &GroupRecord, kind: &GroupKind) {
-        let GroupKind::Straight { base } = kind else {
+    fn restore_edit_payload(&mut self, payload: &RouteToolEditPayload) {
+        let RouteToolEditPayload::Straight { anchors, base } = payload else {
             return;
         };
-        self.start = Some(record.start_anchor);
-        self.end = Some(record.end_anchor);
+        self.start = Some(anchors.start);
+        self.end = Some(anchors.end);
         self.direction = base.direction;
         self.priority = base.priority;
         self.seg.max_segment_length = base.max_segment_length;

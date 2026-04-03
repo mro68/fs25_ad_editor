@@ -4,12 +4,12 @@ use std::borrow::Cow;
 
 use super::geometry::compute_bypass_positions;
 use super::state::BypassTool;
-use crate::app::group_registry::{GroupBase, GroupKind, GroupRecord};
+use crate::app::tool_editing::{RouteToolEditPayload, ToolRouteBase};
 use crate::app::tools::common::{assemble_tool_result, record_applied_tool_state, sync_tool_host};
 use crate::app::tools::{
-    OrderedNodeChain, RouteTool, RouteToolChainInput, RouteToolCore, RouteToolHostSync,
-    RouteToolId, RouteToolPanelBridge, RouteToolRecreate, ToolAction, ToolAnchor, ToolHostContext,
-    ToolPreview, ToolResult,
+    OrderedNodeChain, RouteTool, RouteToolChainInput, RouteToolCore, RouteToolGroupEdit,
+    RouteToolHostSync, RouteToolPanelBridge, RouteToolRecreate, ToolAction, ToolAnchor,
+    ToolHostContext, ToolPreview, ToolResult,
 };
 use crate::app::ui_contract::{RouteToolConfigState, RouteToolPanelAction, RouteToolPanelEffect};
 use crate::core::RoadMap;
@@ -210,47 +210,43 @@ impl RouteTool for BypassTool {
         Some(self)
     }
 
-    fn make_group_record(&self, id: u64, node_ids: &[u64]) -> Option<GroupRecord> {
+    fn as_group_edit(&self) -> Option<&dyn RouteToolGroupEdit> {
+        Some(self)
+    }
+
+    fn as_group_edit_mut(&mut self) -> Option<&mut dyn RouteToolGroupEdit> {
+        Some(self)
+    }
+}
+
+impl RouteToolGroupEdit for BypassTool {
+    fn build_edit_payload(&self) -> Option<RouteToolEditPayload> {
         if !self.has_chain() {
             return None;
         }
-        let start_pos = *self.chain_positions.first()?;
-        let end_pos = *self.chain_positions.last()?;
-        Some(GroupRecord {
-            id,
-            tool_id: Some(RouteToolId::Bypass),
-            node_ids: node_ids.to_vec(),
-            start_anchor: ToolAnchor::ExistingNode(self.chain_start_id, start_pos),
-            end_anchor: ToolAnchor::ExistingNode(self.chain_end_id, end_pos),
-            original_positions: Vec::new(),
-            marker_node_ids: Vec::new(),
-            locked: true,
-            entry_node_id: None,
-            exit_node_id: None,
-            kind: GroupKind::Bypass {
-                chain_positions: self.chain_positions.clone(),
-                chain_start_id: self.chain_start_id,
-                chain_end_id: self.chain_end_id,
-                offset: self.offset,
-                base_spacing: self.base_spacing,
-                base: GroupBase {
-                    direction: self.direction,
-                    priority: self.priority,
-                    max_segment_length: self.base_spacing,
-                },
+        Some(RouteToolEditPayload::Bypass {
+            chain_positions: self.chain_positions.clone(),
+            chain_start_id: self.chain_start_id,
+            chain_end_id: self.chain_end_id,
+            offset: self.offset,
+            base_spacing: self.base_spacing,
+            base: ToolRouteBase {
+                direction: self.direction,
+                priority: self.priority,
+                max_segment_length: self.base_spacing,
             },
         })
     }
 
-    fn load_for_edit(&mut self, _record: &GroupRecord, kind: &GroupKind) {
-        let GroupKind::Bypass {
+    fn restore_edit_payload(&mut self, payload: &RouteToolEditPayload) {
+        let RouteToolEditPayload::Bypass {
             chain_positions,
             chain_start_id,
             chain_end_id,
             offset,
             base_spacing,
             base,
-        } = kind
+        } = payload
         else {
             return;
         };

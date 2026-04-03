@@ -2,9 +2,9 @@
 
 use super::{
     route_tool_catalog, route_tool_descriptor, route_tool_slot, OrderedNodeChain, RouteTool,
-    RouteToolChainInput, RouteToolDescriptor, RouteToolDrag, RouteToolId, RouteToolLassoInput,
-    RouteToolRecreate, RouteToolRotate, RouteToolSegmentAdjustments, RouteToolTangent,
-    ToolHostContext,
+    RouteToolChainInput, RouteToolDescriptor, RouteToolDrag, RouteToolGroupEdit, RouteToolId,
+    RouteToolLassoInput, RouteToolRecreate, RouteToolRotate, RouteToolSegmentAdjustments,
+    RouteToolTangent, ToolHostContext,
 };
 
 /// Verwaltet registrierte Route-Tools und den aktiven Tool-Slot.
@@ -192,6 +192,17 @@ impl ToolManager {
     pub fn active_lasso_input_mut(&mut self) -> Option<&mut dyn RouteToolLassoInput> {
         self.active_tool_mut()
             .and_then(|tool| tool.as_lasso_input_mut())
+    }
+
+    /// Liefert die Group-Edit-Capability des aktiven Tools, falls vorhanden.
+    pub fn active_group_edit(&self) -> Option<&dyn RouteToolGroupEdit> {
+        self.active_tool().and_then(|tool| tool.as_group_edit())
+    }
+
+    /// Liefert die mutable Group-Edit-Capability des aktiven Tools, falls vorhanden.
+    pub fn active_group_edit_mut(&mut self) -> Option<&mut dyn RouteToolGroupEdit> {
+        self.active_tool_mut()
+            .and_then(|tool| tool.as_group_edit_mut())
     }
 
     /// Laedt eine geordnete Kette in das aktive Tool, falls die Capability vorhanden ist.

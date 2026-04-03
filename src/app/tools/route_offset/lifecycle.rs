@@ -2,14 +2,14 @@
 
 use super::geometry::compute_offset_positions;
 use super::state::RouteOffsetTool;
-use crate::app::group_registry::{GroupBase, GroupKind, GroupRecord};
+use crate::app::tool_editing::{RouteToolEditPayload, ToolRouteBase};
 use crate::app::tools::common::{
     record_applied_tool_state, sync_tool_host, ToolLifecycleState, ToolResultBuilder,
 };
 use crate::app::tools::{
-    OrderedNodeChain, RouteTool, RouteToolChainInput, RouteToolCore, RouteToolHostSync,
-    RouteToolId, RouteToolPanelBridge, RouteToolRecreate, ToolAction, ToolAnchor, ToolHostContext,
-    ToolPreview, ToolResult,
+    OrderedNodeChain, RouteTool, RouteToolChainInput, RouteToolCore, RouteToolGroupEdit,
+    RouteToolHostSync, RouteToolPanelBridge, RouteToolRecreate, ToolAction, ToolAnchor,
+    ToolHostContext, ToolPreview, ToolResult,
 };
 use crate::app::ui_contract::{RouteToolConfigState, RouteToolPanelAction, RouteToolPanelEffect};
 use crate::core::{ConnectionDirection, ConnectionPriority, NodeFlag, RoadMap};
@@ -274,50 +274,46 @@ impl RouteTool for RouteOffsetTool {
         Some(self)
     }
 
-    fn make_group_record(&self, id: u64, node_ids: &[u64]) -> Option<GroupRecord> {
+    fn as_group_edit(&self) -> Option<&dyn RouteToolGroupEdit> {
+        Some(self)
+    }
+
+    fn as_group_edit_mut(&mut self) -> Option<&mut dyn RouteToolGroupEdit> {
+        Some(self)
+    }
+}
+
+impl RouteToolGroupEdit for RouteOffsetTool {
+    fn build_edit_payload(&self) -> Option<RouteToolEditPayload> {
         if !self.has_chain() {
             return None;
         }
-        let start_pos = *self.chain_positions.first()?;
-        let end_pos = *self.chain_positions.last()?;
-        Some(GroupRecord {
-            id,
-            tool_id: Some(RouteToolId::RouteOffset),
-            node_ids: node_ids.to_vec(),
-            start_anchor: ToolAnchor::ExistingNode(self.chain_start_id, start_pos),
-            end_anchor: ToolAnchor::ExistingNode(self.chain_end_id, end_pos),
-            original_positions: Vec::new(),
-            marker_node_ids: Vec::new(),
-            locked: true,
-            entry_node_id: None,
-            exit_node_id: None,
-            kind: GroupKind::RouteOffset {
-                chain_positions: self.chain_positions.clone(),
-                chain_start_id: self.chain_start_id,
-                chain_end_id: self.chain_end_id,
-                offset_left: if self.config.left_enabled {
-                    self.config.left_distance
-                } else {
-                    0.0
-                },
-                offset_right: if self.config.right_enabled {
-                    self.config.right_distance
-                } else {
-                    0.0
-                },
-                keep_original: self.config.keep_original,
-                base_spacing: self.config.base_spacing,
-                base: GroupBase {
-                    direction: self.direction,
-                    priority: self.priority,
-                    max_segment_length: self.config.base_spacing,
-                },
+        Some(RouteToolEditPayload::RouteOffset {
+            chain_positions: self.chain_positions.clone(),
+            chain_start_id: self.chain_start_id,
+            chain_end_id: self.chain_end_id,
+            offset_left: if self.config.left_enabled {
+                self.config.left_distance
+            } else {
+                0.0
+            },
+            offset_right: if self.config.right_enabled {
+                self.config.right_distance
+            } else {
+                0.0
+            },
+            keep_original: self.config.keep_original,
+            base_spacing: self.config.base_spacing,
+            base: ToolRouteBase {
+                direction: self.direction,
+                priority: self.priority,
+                max_segment_length: self.config.base_spacing,
             },
         })
     }
 
-    fn load_for_edit(&mut self, _record: &GroupRecord, kind: &GroupKind) {
-        let GroupKind::RouteOffset {
+    fn restore_edit_payload(&mut self, payload: &RouteToolEditPayload) {
+        let RouteToolEditPayload::RouteOffset {
             chain_positions,
             chain_start_id,
             chain_end_id,
@@ -326,7 +322,7 @@ impl RouteTool for RouteOffsetTool {
             keep_original,
             base_spacing,
             base,
-        } = kind
+        } = payload
         else {
             return;
         };

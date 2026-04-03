@@ -108,9 +108,11 @@ Das schwebende Fenster **"✏ Gruppen-Bearbeitung"** erscheint und zeigt die akt
 | Nodes verschieben | Drag auf selektierten Node (wie im Normalbetrieb) |
 | Nodes hinzufügen | Add-Node-Tool (T → Add Node) |
 | Nodes löschen | `Delete` |
-| **🔧 Tool bearbeiten** | Oeffnet das urspruengliche Tool erneut, aber nur fuer Gruppen mit explizitem Tool-Edit-Vertrag. Der Button fehlt bewusst bei manuell erzeugten Gruppen sowie bei Ergebnissen von Feldweg erkennen und Farb-Pfad erkennen. |
+| **🔧 Tool bearbeiten** | Oeffnet das urspruengliche Tool erneut, aber nur solange fuer die Gruppe noch ein gueltiger Tool-Snapshot gespeichert ist. Der Button fehlt bewusst bei manuell erzeugten Gruppen, ephemeren Analyse-Tools sowie Gruppen mit bereits invalidiertem Snapshot. |
 | **✓ Übernehmen** oder `Enter` | Änderungen auf die Gruppe anwenden |
 | **✕ Abbrechen** oder `Escape` | Alle Änderungen rückgängig machen |
+
+> **Hinweis:** Wenn du im Gruppen-Bearbeitungsmodus die Struktur einer Gruppe manuell veraenderst und uebernimmst, wird der gespeicherte Tool-Snapshot absichtlich verworfen. Danach bleibt die Gruppe normal bearbeitbar, aber nicht mehr ueber **Tool bearbeiten** rehydrierbar.
 
 ### Grenzknoten-Icons (Eingang / Ausgang / Bidirektional)
 

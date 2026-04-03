@@ -1,7 +1,7 @@
 # Architektur-Plan (Soll-Zustand)
 
-Stand: 2026-04-02  
-Status: Teilweise umgesetzt — Render/shared-Vertrag und Layer-Guardrails technisch durchgesetzt; weitere Best-Practice-Remediationsphasen bleiben offen
+Stand: 2026-04-03  
+Status: Weitgehend umgesetzt — Render/shared-Vertrag, Tool-UI-Grenze, Capability-Split und Registry/Katalog/Edit-Flow sind technisch entkoppelt; spaetere Remediationsphasen bleiben offen
 
 ## Zielbild
 
@@ -166,6 +166,7 @@ graph BT
 - Aufbau von `RenderScene` aus Domain + ViewState
 - Re-Export von Core-Typen für UI (z.B. `ConnectionDirection`, `ConnectionPriority`, `RoadMap`)
 - Kanonischer RouteTool-Katalog (`tools/catalog.rs`) als Single Source of Truth fuer `RouteToolId`, `RouteToolGroup`, `RouteToolBackingMode`, Surface-Sichtbarkeit und Aktivierungs-Voraussetzungen
+- Separater Tool-Editing-Layer (`tool_editing/*`) fuer persistente Tool-Snapshots, Rehydrierung sowie Cancel/Undo im destruktiven Tool-Edit-Flow
 
 **Abgrenzung**
 
@@ -738,9 +739,9 @@ Nach node-mutierenden Operationen wird dirty-Flag gesetzt; Rebuild erfolgt lazy 
 
 ### Gruppen-Editierbarkeit
 
-- Nur group-backed Tools implementieren `make_group_record()` und schreiben damit einen `GroupRecord`
-- `load_for_edit()` ist nur fuer `GroupBackedEditable` relevant; `FieldPath` und `ColorPath` bleiben `Ephemeral`
-- Tool-Edit wird ueber `GroupRecord.tool_id` + `RouteToolBackingMode` freigeschaltet, nicht ueber historische Tool-Slots
+- Nur group-backed editierbare Tools implementieren `RouteToolGroupEdit` und liefern damit ein `RouteToolEditPayload`
+- `FieldPath` und `ColorPath` bleiben `Ephemeral`; fuer sie gibt es keinen `ToolEditStore`-Eintrag und keinen destruktiven Tool-Edit
+- `GroupRegistry` bleibt tool-neutral; Tool-Edit wird ueber `ToolEditStore` + `RouteToolId` freigeschaltet, nicht ueber Felder im `GroupRecord`
 - Alle Pflicht-Surfaces lesen Route-Tools ueber `resolve_route_tool_entries()`; deaktivierte Tools bleiben sichtbar und tragen ihren Disabled-Grund
 - `GroupRecord.locked` verhindert versehentliche Mutation
 - Undo-Snapshot wird vor jeder Mutation automatisch erstellt (`apply_tool_result`)

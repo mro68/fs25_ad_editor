@@ -1,6 +1,7 @@
 use crate::app::group_registry::GroupRegistry;
 use crate::app::history::Snapshot;
 use crate::app::tool_contract::RouteToolId;
+use crate::app::tool_editing::{ActiveToolEditSession, ToolEditStore};
 use crate::app::CommandLog;
 use crate::core::{Connection, FarmlandGrid, FieldPolygon, MapMarker, MapNode, RoadMap};
 use crate::shared::{EditorOptions, RenderMap};
@@ -88,16 +89,10 @@ pub struct AppState {
     pub background_image: Option<Arc<image::DynamicImage>>,
     /// Aktive Gruppen-Bearbeitung (None = Normal-Modus, Some = Edit-Modus aktiv)
     pub group_editing: Option<GroupEditState>,
-    /// Record-ID des aktuell per Tool bearbeiteten Segments (fuer Cancel-Wiederherstellung)
-    ///
-    /// Wird in `edit_group()` gesetzt und in Cancel/Confirm geloescht.
-    /// `None` = kein aktiver Tool-Edit.
-    pub tool_editing_record_id: Option<u64>,
-    /// Gesicherter GroupRecord des aktuell bearbeiteten Segments.
-    ///
-    /// Wird in `edit_group()` vor dem Loeschen aus der Registry gespeichert.
-    /// Bei Cancel wird der Record wiederhergestellt; bei Confirm wird das Backup geleert.
-    pub tool_editing_record_backup: Option<crate::app::group_registry::GroupRecord>,
+    /// Separater Store fuer tool-spezifische Edit-Payloads.
+    pub tool_edit_store: ToolEditStore,
+    /// Aktive Tool-Edit-Session mit Backups fuer Cancel/Wiederherstellung.
+    pub active_tool_edit_session: Option<ActiveToolEditSession>,
     /// Lazy Cache fuer `compute_dimmed_ids`.
     ///
     /// Tuple: `(selection_generation, registry_dimmed_generation, gecachtes_Ergebnis)`.
@@ -136,8 +131,8 @@ impl AppState {
             farmland_grid: None,
             background_image: None,
             group_editing: None,
-            tool_editing_record_id: None,
-            tool_editing_record_backup: None,
+            tool_edit_store: ToolEditStore::new(),
+            active_tool_edit_session: None,
             dimmed_ids_cache: RefCell::new(None),
             render_map_cache: RefCell::new(None),
         }

@@ -1,10 +1,10 @@
 //! RouteTool-Implementierung fuer das FieldBoundaryTool.
 
-use crate::app::group_registry::{GroupBase, GroupKind, GroupRecord};
+use crate::app::tool_editing::{RouteToolEditPayload, ToolRouteBase};
 use crate::app::tools::common::{sync_tool_host, ToolResultBuilder};
 use crate::app::tools::{
-    RouteTool, RouteToolCore, RouteToolHostSync, RouteToolId, RouteToolPanelBridge, ToolAction,
-    ToolAnchor, ToolHostContext, ToolPreview, ToolResult,
+    RouteTool, RouteToolCore, RouteToolGroupEdit, RouteToolHostSync, RouteToolPanelBridge,
+    ToolAction, ToolHostContext, ToolPreview, ToolResult,
 };
 use crate::app::ui_contract::{RouteToolConfigState, RouteToolPanelAction, RouteToolPanelEffect};
 use crate::core::{find_polygon_at, offset_polygon, simplify_polygon, NodeFlag, RoadMap};
@@ -185,54 +185,51 @@ impl RouteToolHostSync for FieldBoundaryTool {
 }
 
 impl RouteTool for FieldBoundaryTool {
-    fn make_group_record(&self, id: u64, node_ids: &[u64]) -> Option<GroupRecord> {
+    fn as_group_edit(&self) -> Option<&dyn RouteToolGroupEdit> {
+        Some(self)
+    }
+
+    fn as_group_edit_mut(&mut self) -> Option<&mut dyn RouteToolGroupEdit> {
+        Some(self)
+    }
+}
+
+impl RouteToolGroupEdit for FieldBoundaryTool {
+    fn build_edit_payload(&self) -> Option<RouteToolEditPayload> {
         let polygon = self.selected_polygon.as_ref()?;
-        Some(GroupRecord {
-            id,
-            tool_id: Some(RouteToolId::FieldBoundary),
-            node_ids: node_ids.to_vec(),
-            start_anchor: ToolAnchor::NewPosition(Vec2::ZERO),
-            end_anchor: ToolAnchor::NewPosition(Vec2::ZERO),
-            original_positions: Vec::new(),
-            marker_node_ids: Vec::new(),
-            locked: true,
-            entry_node_id: None,
-            exit_node_id: None,
-            kind: GroupKind::FieldBoundary {
-                field_id: polygon.id,
-                node_spacing: self.node_spacing,
-                offset: self.offset,
-                straighten_tolerance: self.straighten_tolerance,
-                corner_angle_threshold: if self.corner_detection_enabled {
-                    Some(self.corner_angle_threshold_deg)
-                } else {
-                    None
-                },
-                corner_rounding_radius: if self.corner_detection_enabled
-                    && self.corner_rounding_enabled
-                {
-                    Some(self.corner_rounding_radius)
-                } else {
-                    None
-                },
-                corner_rounding_max_angle_deg: if self.corner_detection_enabled
-                    && self.corner_rounding_enabled
-                {
-                    Some(self.corner_rounding_max_angle_deg)
-                } else {
-                    None
-                },
-                base: GroupBase {
-                    direction: self.direction,
-                    priority: self.priority,
-                    max_segment_length: 0.0,
-                },
+        Some(RouteToolEditPayload::FieldBoundary {
+            field_id: polygon.id,
+            node_spacing: self.node_spacing,
+            offset: self.offset,
+            straighten_tolerance: self.straighten_tolerance,
+            corner_angle_threshold: if self.corner_detection_enabled {
+                Some(self.corner_angle_threshold_deg)
+            } else {
+                None
+            },
+            corner_rounding_radius: if self.corner_detection_enabled && self.corner_rounding_enabled
+            {
+                Some(self.corner_rounding_radius)
+            } else {
+                None
+            },
+            corner_rounding_max_angle_deg: if self.corner_detection_enabled
+                && self.corner_rounding_enabled
+            {
+                Some(self.corner_rounding_max_angle_deg)
+            } else {
+                None
+            },
+            base: ToolRouteBase {
+                direction: self.direction,
+                priority: self.priority,
+                max_segment_length: 0.0,
             },
         })
     }
 
-    fn load_for_edit(&mut self, _record: &GroupRecord, kind: &GroupKind) {
-        let GroupKind::FieldBoundary {
+    fn restore_edit_payload(&mut self, payload: &RouteToolEditPayload) {
+        let RouteToolEditPayload::FieldBoundary {
             field_id,
             node_spacing,
             offset,
@@ -241,7 +238,7 @@ impl RouteTool for FieldBoundaryTool {
             corner_rounding_radius,
             corner_rounding_max_angle_deg,
             base,
-        } = kind
+        } = payload
         else {
             return;
         };

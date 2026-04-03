@@ -100,6 +100,7 @@ impl EditorApp {
                                 default_priority,
                                 distance_wheel_step_m,
                                 Some(&self.state.group_registry),
+                                Some(&self.state.tool_edit_store),
                                 &mut self.state.ui.distanzen,
                             ));
                         });
@@ -129,6 +130,7 @@ impl EditorApp {
             panel_pos,
             self.state.group_editing.as_ref(),
             group_record,
+            Some(&self.state.tool_edit_store),
             &mut self.state.options,
         ));
 

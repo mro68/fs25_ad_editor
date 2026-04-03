@@ -2,13 +2,13 @@
 
 use super::super::common::{linear_connections, record_applied_tool_state, sync_tool_host};
 use super::super::{
-    RouteTool, RouteToolCore, RouteToolDrag, RouteToolHostSync, RouteToolId, RouteToolPanelBridge,
-    RouteToolRecreate, RouteToolSegmentAdjustments, ToolAction, ToolHostContext, ToolPreview,
-    ToolResult,
+    RouteTool, RouteToolCore, RouteToolDrag, RouteToolGroupEdit, RouteToolHostSync,
+    RouteToolPanelBridge, RouteToolRecreate, RouteToolSegmentAdjustments, ToolAction,
+    ToolHostContext, ToolPreview, ToolResult,
 };
 use super::geometry::{build_result, BuildResultParams};
 use super::state::{Phase, SmoothCurveTool};
-use crate::app::group_registry::{GroupBase, GroupKind, GroupRecord};
+use crate::app::tool_editing::{RouteToolEditPayload, ToolEditAnchors, ToolRouteBase};
 use crate::app::ui_contract::{RouteToolConfigState, RouteToolPanelAction, RouteToolPanelEffect};
 use crate::core::RoadMap;
 use glam::Vec2;
@@ -320,45 +320,45 @@ impl RouteTool for SmoothCurveTool {
         Some(self)
     }
 
-    fn make_group_record(&self, id: u64, node_ids: &[u64]) -> Option<GroupRecord> {
+    fn as_group_edit(&self) -> Option<&dyn RouteToolGroupEdit> {
+        Some(self)
+    }
+
+    fn as_group_edit_mut(&mut self) -> Option<&mut dyn RouteToolGroupEdit> {
+        Some(self)
+    }
+}
+
+impl RouteToolGroupEdit for SmoothCurveTool {
+    fn build_edit_payload(&self) -> Option<RouteToolEditPayload> {
         let start = self.last_start_anchor?;
         let end = self.lifecycle.last_end_anchor?;
-        Some(GroupRecord {
-            id,
-            tool_id: Some(RouteToolId::SmoothCurve),
-            node_ids: node_ids.to_vec(),
-            start_anchor: start,
-            end_anchor: end,
-            original_positions: Vec::new(), // wird im Handler befüllt
-            marker_node_ids: Vec::new(),
-            locked: true,
-            entry_node_id: None,
-            exit_node_id: None,
-            kind: GroupKind::SmoothCurve {
-                control_nodes: self.last_control_nodes.clone(),
-                max_angle_deg: self.max_angle_deg,
-                min_distance: self.min_distance,
-                base: GroupBase {
-                    direction: self.direction,
-                    priority: self.priority,
-                    max_segment_length: self.seg.max_segment_length,
-                },
+        Some(RouteToolEditPayload::SmoothCurve {
+            anchors: ToolEditAnchors { start, end },
+            control_nodes: self.last_control_nodes.clone(),
+            max_angle_deg: self.max_angle_deg,
+            min_distance: self.min_distance,
+            base: ToolRouteBase {
+                direction: self.direction,
+                priority: self.priority,
+                max_segment_length: self.seg.max_segment_length,
             },
         })
     }
 
-    fn load_for_edit(&mut self, record: &GroupRecord, kind: &GroupKind) {
-        let GroupKind::SmoothCurve {
+    fn restore_edit_payload(&mut self, payload: &RouteToolEditPayload) {
+        let RouteToolEditPayload::SmoothCurve {
+            anchors,
             control_nodes,
             max_angle_deg,
             min_distance,
             base,
-        } = kind
+        } = payload
         else {
             return;
         };
-        self.start = Some(record.start_anchor);
-        self.end = Some(record.end_anchor);
+        self.start = Some(anchors.start);
+        self.end = Some(anchors.end);
         self.control_nodes = control_nodes.clone();
         self.max_angle_deg = *max_angle_deg;
         self.direction = base.direction;
