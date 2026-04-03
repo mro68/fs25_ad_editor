@@ -11,7 +11,7 @@
 | **Einzelselektion** | Linksklick | Ersetzt die aktuelle Selektion durch den angeklickten Node |
 | **Additive Selektion** | Ctrl+Linksklick | Fuegt den Node zur bestehenden Selektion hinzu |
 | **Pfad-Selektion** | Shift+Linksklick | Selektiert alle Nodes auf dem kuerzesten Pfad zwischen dem zuletzt selektierten Node (Anker) und dem angeklickten Node |
-| **Gruppen-Selektion** | Doppelklick | Selektiert alle Nodes einer Gruppe (bis zur naechsten Kreuzung oder Sackgasse) |
+| **Gruppen-/Abschnitts-Selektion** | Doppelklick | Auf einem Gruppen-Node wird die ganze Gruppe selektiert, sonst der Abschnitt zwischen den naechsten Kreuzungen |
 | **Rechteck-Selektion** | Shift+Drag | Alle Nodes innerhalb des aufgezogenen Rechtecks |
 | **Lasso-Selektion** | Alt+Drag | Alle Nodes innerhalb des freihand gezeichneten Polygons |
 | **Alles selektieren** | Ctrl+A | Alle Nodes im Netzwerk selektieren |
@@ -23,7 +23,9 @@ Alle Selektionsmodi koennen mit **Ctrl** kombiniert werden, um die bestehende Se
 
 - `Ctrl+Shift+Drag` → Rechteck-Selektion additiv
 - `Ctrl+Alt+Drag` → Lasso-Selektion additiv
-- `Ctrl+Doppelklick` → Gruppe additiv hinzufuegen
+- `Ctrl+Doppelklick` → Gruppen- oder Abschnitts-Selektion additiv erweitern
+
+> **Hinweis:** Nach einem Doppelklick kann das Popup **Gruppen-Einstellungen** erscheinen. Dort lassen sich **Bei Kreuzung stoppen** und **Max. Winkel** fuer die Abschnitts-Selektion anpassen.
 
 ### Selektion verschieben
 
@@ -99,7 +101,7 @@ Eine Gruppe entsteht, wenn ein gruppenfaehiges Route-Tool ein Ergebnis erzeugt o
 
 Im Gruppen-Bearbeitungsmodus lassen sich Nodes einer Gruppe verschieben, hinzufügen oder löschen.
 
-**Aktivieren:** Gruppe selektieren, dann per Rechtsklick **"Gruppe bearbeiten"** waehlen.
+**Aktivieren:** Gruppe selektieren, dann im Eigenschaften-Bereich unter **Gruppe bearbeiten** oder per Rechtsklick **"Gruppe bearbeiten"** waehlen.
 
 Das schwebende Fenster **"✏ Gruppen-Bearbeitung"** erscheint und zeigt die aktive Gruppen-ID.
 
