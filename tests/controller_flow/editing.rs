@@ -572,6 +572,45 @@ fn test_add_node_at_position() {
 }
 
 #[test]
+fn trace_all_fields_dialog_requested_and_cancelled_toggle_visibility() {
+    let mut controller = AppController::new();
+    let mut state = AppState::new();
+
+    assert!(!state.ui.trace_all_fields_dialog.visible);
+
+    controller
+        .handle_intent(&mut state, AppIntent::OpenTraceAllFieldsDialogRequested)
+        .expect("OpenTraceAllFieldsDialogRequested sollte den Dialog oeffnen");
+
+    assert!(state.ui.trace_all_fields_dialog.visible);
+
+    controller
+        .handle_intent(&mut state, AppIntent::TraceAllFieldsCancelled)
+        .expect("TraceAllFieldsCancelled sollte den Dialog schliessen");
+
+    assert!(!state.ui.trace_all_fields_dialog.visible);
+}
+
+#[test]
+fn curseplay_dialog_requests_toggle_import_and_export_flags() {
+    let mut controller = AppController::new();
+    let mut state = AppState::new();
+
+    assert!(!state.ui.show_curseplay_import_dialog);
+    assert!(!state.ui.show_curseplay_export_dialog);
+
+    controller
+        .handle_intent(&mut state, AppIntent::CurseplayImportRequested)
+        .expect("CurseplayImportRequested sollte den Import-Dialog oeffnen");
+    controller
+        .handle_intent(&mut state, AppIntent::CurseplayExportRequested)
+        .expect("CurseplayExportRequested sollte den Export-Dialog oeffnen");
+
+    assert!(state.ui.show_curseplay_import_dialog);
+    assert!(state.ui.show_curseplay_export_dialog);
+}
+
+#[test]
 fn test_add_node_is_undoable() {
     let mut controller = AppController::new();
     let mut state = make_test_map();

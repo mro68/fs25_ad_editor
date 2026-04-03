@@ -6,15 +6,15 @@ Das `handlers`-Modul gruppiert die Verarbeitung von `AppCommand`s in Feature-ber
 
 **Architektur:**
 
-1. Der `AppController` (in `controller.rs`) dispatcht jeden `AppCommand` an den passenden Handler
+1. Der `AppController` (in `controller.rs`) dispatcht jeden `AppCommand` ueber `controller/by_feature/*` anhand der internen `events::AppEventFeature`-Schnitte an den passenden Handler
 2. Handler rufen Funktionen aus `use_cases/` auf — diese enthalten die Geschäftslogik
 3. Handler selbst sind dünn und koordinieren hauptsächlich Undo-Snapshots und State-Updates
 
-**Re-Exports:**  
-Die Handler-Module werden in [`src/app/mod.rs`](../mod.rs) re-exportiert:
+**Modulzugriff:**  
+Die Handler-Module liegen unter [`src/app/handlers`](.) und werden intern vom Controller genutzt:
 
 ```rust
-pub use handlers::{dialog, editing, file_io, helpers, history, route_tool, selection, view};
+app::handlers::{dialog, editing, file_io, group, helpers, history, route_tool, selection, view}
 ```
 
 ---
@@ -37,9 +37,24 @@ Markiert die Anwendung zum Beenden im nächsten Frame. Setzt `.should_exit = tru
 pub fn request_heightmap_dialog(state: &mut AppState)
 pub fn request_background_map_dialog(state: &mut AppState)
 pub fn request_overview_dialog(state: &mut AppState)
+pub fn open_trace_all_fields_dialog(state: &mut AppState)
+pub fn close_trace_all_fields_dialog(state: &mut AppState)
+pub fn request_curseplay_import_dialog(state: &mut AppState)
+pub fn request_curseplay_export_dialog(state: &mut AppState)
 ```
 
-Öffnet die Datei-Dialoge für Heightmap, Background-Map bzw. Übersichtskarten-ZIP.
+Oeffnet die Datei- und Feature-Dialoge fuer Heightmap, Background-Map, Uebersichtskarten-ZIP, Batch-Feldnachzeichnen und Curseplay-Import/Export.
+
+```rust
+pub fn open_options_dialog(state: &mut AppState)
+pub fn close_options_dialog(state: &mut AppState)
+pub fn apply_options(state: &mut AppState, options: EditorOptions) -> anyhow::Result<()>
+pub fn reset_options(state: &mut AppState) -> anyhow::Result<()>
+pub fn toggle_command_palette(state: &mut AppState)
+pub fn open_overview_options_dialog(state: &mut AppState, zip_path: String)
+```
+
+Verwaltet app-weite Dialoge und Overlay-Zustaende. `apply_options()` validiert und persistiert neue Optionen; `toggle_command_palette()` schaltet die Palette um; `open_overview_options_dialog()` bereitet den ZIP-basierten Overview-Flow vor.
 
 ```rust
 pub fn dismiss_heightmap_warning(state: &mut AppState)
@@ -108,27 +123,6 @@ pub fn select_with_anchors(
 ```
 
 Aktiviert Tool und setzt Start/End-Anker aus zwei selektierten Nodes. Simuliert zwei `on_click()`-Aufrufe; bei StraightLine => sofortige Ausfuehrung, bei Curves => Phase::Control fuer Steuerpunkt-Platzierung.
-
-```rust
-pub fn open_options_dialog(state: &mut AppState)
-pub fn close_options_dialog(state: &mut AppState)
-pub fn apply_options(state: &mut AppState, options: EditorOptions) -> anyhow::Result<()>
-pub fn reset_options(state: &mut AppState) -> anyhow::Result<()>
-```
-
-Verwaltet den Options-Dialog. `apply_options()` validiert die neuen Optionen, persistiert sie in die Konfigurationsdatei und aktualisiert den State.
-
-```rust
-pub fn toggle_command_palette(state: &mut AppState)
-```
-
-Schaltet die Sichtbarkeit der Command Palette um (`state.ui.show_command_palette`). Wird durch `AppCommand::ToggleCommandPalette` (Ctrl+K) ausgeloest.
-
-```rust
-pub fn open_overview_options_dialog(state: &mut AppState, zip_path: String)
-```
-
-Öffnet den Optionen-Dialog für die Übersichtskarten-Generierung mit einem bestimmten ZIP-Pfad.
 
 ---
 
@@ -476,9 +470,10 @@ Kamera-Steuerung (schrittweise Operationen).
 ```rust
 pub fn pan(state: &mut AppState, delta: glam::Vec2)
 pub fn zoom_towards(state: &mut AppState, factor: f32, focus_world: Option<glam::Vec2>)
+pub fn center_on_node(state: &mut AppState, node_id: u64)
 ```
 
-Kontinuierliche Kamera-Bewegung (wird typischerweise pro Frame aufgerufen).
+Kontinuierliche Kamera-Bewegung (wird typischerweise pro Frame aufgerufen). `center_on_node()` springt gezielt auf einen vorhandenen Node, ohne den Zoom zu veraendern.
 
 ```rust
 pub fn set_viewport_size(state: &mut AppState, size: [f32; 2])
@@ -593,7 +588,7 @@ Schnelle Konfigurationsanpassungen per Pfeiltasten (Numerische Feinabstimmung). 
 
 ---
 
-### `segment` — Gruppen-Lock und Segment-Auflösung
+### `group` — Gruppen-Lock, Popup- und Segment-Aufloesungs-Flow
 
 Verwaltet den Lock-Zustand von Segmenten und loest Gruppen-Records auf.
 
@@ -607,9 +602,18 @@ Schaltet den Lock-Zustand eines Segments um. Gesperrte Segmente bewegen alle zug
 
 ```rust
 pub fn dissolve(state: &mut AppState, segment_id: u64)
+pub fn open_dissolve_confirm_dialog(state: &mut AppState, segment_id: u64)
+pub fn open_settings_popup(state: &mut AppState, world_pos: glam::Vec2)
+pub fn close_settings_popup(state: &mut AppState)
 ```
 
-Loest ein Segment auf: Entfernt nur den Gruppen-Record aus der Registry. Die zugehoerigen Nodes und Verbindungen in der RoadMap bleiben unveraendert. Wird **nach** Nutzer-Bestaetigung aufgerufen, nachdem `DissolveGroupRequested` zunaechst den Bestaetigungsdialog via `OpenDissolveConfirmDialog` geoeffnet hat. Unbekannte IDs werden ignoriert.
+`dissolve()`: Entfernt nur den Gruppen-Record aus der Registry. Die zugehoerigen Nodes und Verbindungen in der RoadMap bleiben unveraendert. Wird **nach** Nutzer-Bestaetigung aufgerufen, nachdem `DissolveGroupRequested` zunaechst den Bestaetigungsdialog via `open_dissolve_confirm_dialog()` geoeffnet hat. Unbekannte IDs werden ignoriert.
+
+`open_dissolve_confirm_dialog()`: Setzt den modalen Bestaetigungsdialog fuer die Segment-Aufloesung.
+
+`open_settings_popup()`: Oeffnet bzw. aktualisiert das Gruppen-Einstellungs-Popup an der Weltposition eines Segment-Doppelklicks.
+
+`close_settings_popup()`: Schliesst das Gruppen-Einstellungs-Popup wieder, wenn ein Selection-Command den Fokus aus dem Segment-Popup herausnimmt.
 ```rust
 pub fn remove_selected_from_groups(state: &mut AppState)
 ```

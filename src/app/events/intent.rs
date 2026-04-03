@@ -1,6 +1,7 @@
 //! UI/System-Intents als nicht-mutierende Eingabeebene.
 
 use super::super::state::EditorTool;
+use super::AppEventFeature;
 use crate::app::tool_contract::{RouteToolId, TangentSource};
 use crate::app::ui_contract::RouteToolPanelAction;
 use crate::core::{ConnectionDirection, ConnectionPriority, NodeFlag};
@@ -337,4 +338,172 @@ pub enum AppIntent {
     CurseplayFileSelected { path: String },
     /// Curseplay-Exportpfad wurde im Dialog ausgewaehlt
     CurseplayExportPathSelected { path: String },
+}
+
+impl AppIntent {
+    /// Ordnet einen Intent einem internen Feature-Slice fuer Mapping und Tests zu.
+    pub(crate) fn feature(&self) -> AppEventFeature {
+        match self {
+            Self::OpenFileRequested
+            | Self::SaveRequested
+            | Self::SaveAsRequested
+            | Self::HeightmapSelectionRequested
+            | Self::HeightmapCleared
+            | Self::HeightmapWarningConfirmed
+            | Self::HeightmapWarningCancelled
+            | Self::FileSelected { .. }
+            | Self::SaveFilePathSelected { .. }
+            | Self::HeightmapSelected { .. }
+            | Self::DeduplicateConfirmed
+            | Self::DeduplicateCancelled => AppEventFeature::FileIo,
+            Self::ResetCameraRequested
+            | Self::ZoomInRequested
+            | Self::ZoomOutRequested
+            | Self::ViewportResized { .. }
+            | Self::CameraPan { .. }
+            | Self::CameraZoom { .. }
+            | Self::CenterOnNodeRequested { .. }
+            | Self::RenderQualityChanged { .. }
+            | Self::BackgroundMapSelectionRequested
+            | Self::BackgroundMapSelected { .. }
+            | Self::ToggleBackgroundVisibility
+            | Self::ScaleBackground { .. }
+            | Self::ZipBackgroundBrowseRequested { .. }
+            | Self::ZipBackgroundFileSelected { .. }
+            | Self::ZipBrowserCancelled
+            | Self::GenerateOverviewRequested
+            | Self::GenerateOverviewFromZip { .. }
+            | Self::OverviewOptionsConfirmed
+            | Self::OverviewOptionsCancelled
+            | Self::PostLoadGenerateOverview { .. }
+            | Self::PostLoadDialogDismissed
+            | Self::SaveBackgroundAsOverviewConfirmed
+            | Self::SaveBackgroundAsOverviewDismissed
+            | Self::ZoomToFitRequested
+            | Self::ZoomToSelectionBoundsRequested => AppEventFeature::View,
+            Self::NodePickRequested { .. }
+            | Self::NodeSegmentBetweenIntersectionsRequested { .. }
+            | Self::SelectNodesInRectRequested { .. }
+            | Self::SelectNodesInLassoRequested { .. }
+            | Self::BeginMoveSelectedNodesRequested
+            | Self::MoveSelectedNodesRequested { .. }
+            | Self::EndMoveSelectedNodesRequested
+            | Self::BeginRotateSelectedNodesRequested
+            | Self::RotateSelectedNodesRequested { .. }
+            | Self::EndRotateSelectedNodesRequested
+            | Self::ClearSelectionRequested
+            | Self::SelectAllRequested
+            | Self::InvertSelectionRequested => AppEventFeature::Selection,
+            Self::SetEditorToolRequested { .. }
+            | Self::AddNodeRequested { .. }
+            | Self::DeleteSelectedRequested
+            | Self::ConnectToolNodeClicked { .. }
+            | Self::AddConnectionRequested { .. }
+            | Self::RemoveConnectionBetweenRequested { .. }
+            | Self::SetConnectionDirectionRequested { .. }
+            | Self::SetConnectionPriorityRequested { .. }
+            | Self::NodeFlagChangeRequested { .. }
+            | Self::SetDefaultDirectionRequested { .. }
+            | Self::SetDefaultPriorityRequested { .. }
+            | Self::SetAllConnectionsDirectionBetweenSelectedRequested { .. }
+            | Self::RemoveAllConnectionsBetweenSelectedRequested
+            | Self::InvertAllConnectionsBetweenSelectedRequested
+            | Self::SetAllConnectionsPriorityBetweenSelectedRequested { .. }
+            | Self::ConnectSelectedNodesRequested
+            | Self::CreateMarkerRequested { .. }
+            | Self::RemoveMarkerRequested { .. }
+            | Self::EditMarkerRequested { .. }
+            | Self::MarkerDialogConfirmed { .. }
+            | Self::MarkerDialogCancelled
+            | Self::ResamplePathRequested
+            | Self::StreckenteilungAktivieren
+            | Self::CopySelectionRequested
+            | Self::PasteStartRequested
+            | Self::PastePreviewMoved { .. }
+            | Self::PasteConfirmRequested
+            | Self::PasteCancelled
+            | Self::OpenTraceAllFieldsDialogRequested
+            | Self::TraceAllFieldsConfirmed { .. }
+            | Self::TraceAllFieldsCancelled
+            | Self::CurseplayImportRequested
+            | Self::CurseplayExportRequested
+            | Self::CurseplayFileSelected { .. }
+            | Self::CurseplayExportPathSelected { .. } => AppEventFeature::Editing,
+            Self::RouteToolClicked { .. }
+            | Self::RouteToolExecuteRequested
+            | Self::RouteToolCancelled
+            | Self::SelectRouteToolRequested { .. }
+            | Self::RouteToolWithAnchorsRequested { .. }
+            | Self::RouteToolConfigChanged
+            | Self::RouteToolPanelActionRequested { .. }
+            | Self::RouteToolTangentSelected { .. }
+            | Self::RouteToolLassoCompleted { .. }
+            | Self::RouteToolDragStarted { .. }
+            | Self::RouteToolDragUpdated { .. }
+            | Self::RouteToolDragEnded
+            | Self::RouteToolScrollRotated { .. }
+            | Self::RouteToolRecreateRequested
+            | Self::IncreaseRouteToolNodeCount
+            | Self::DecreaseRouteToolNodeCount
+            | Self::IncreaseRouteToolSegmentLength
+            | Self::DecreaseRouteToolSegmentLength => AppEventFeature::RouteTool,
+            Self::EditGroupRequested { .. }
+            | Self::GroupEditStartRequested { .. }
+            | Self::GroupEditApplyRequested
+            | Self::GroupEditCancelRequested
+            | Self::GroupEditToolRequested { .. }
+            | Self::GroupSelectionAsGroupRequested
+            | Self::RemoveSelectedNodesFromGroupRequested
+            | Self::SetGroupBoundaryNodes { .. }
+            | Self::ToggleGroupLockRequested { .. }
+            | Self::DissolveGroupRequested { .. }
+            | Self::DissolveGroupConfirmed { .. } => AppEventFeature::Group,
+            Self::ExitRequested
+            | Self::OpenOptionsDialogRequested
+            | Self::CloseOptionsDialogRequested
+            | Self::OptionsChanged { .. }
+            | Self::ResetOptionsRequested
+            | Self::CommandPaletteToggled
+            | Self::ToggleFloatingMenu { .. } => AppEventFeature::Dialog,
+            Self::UndoRequested | Self::RedoRequested => AppEventFeature::History,
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::AppIntent;
+    use crate::app::events::AppEventFeature;
+    use crate::app::ui_contract::{ParkingPanelAction, RouteToolPanelAction};
+
+    #[test]
+    fn classifies_editing_group_and_dialog_intents() {
+        assert_eq!(
+            AppIntent::PasteCancelled.feature(),
+            AppEventFeature::Editing
+        );
+        assert_eq!(
+            AppIntent::GroupEditToolRequested { record_id: 7 }.feature(),
+            AppEventFeature::Group
+        );
+        assert_eq!(
+            AppIntent::CommandPaletteToggled.feature(),
+            AppEventFeature::Dialog
+        );
+    }
+
+    #[test]
+    fn classifies_view_and_route_tool_intents() {
+        assert_eq!(
+            AppIntent::GenerateOverviewRequested.feature(),
+            AppEventFeature::View
+        );
+        assert_eq!(
+            AppIntent::RouteToolPanelActionRequested {
+                action: RouteToolPanelAction::Parking(ParkingPanelAction::SetNumRows(3)),
+            }
+            .feature(),
+            AppEventFeature::RouteTool
+        );
+    }
 }

@@ -83,3 +83,43 @@ fn route_tool_shortcut_intents_map_to_adjustment_commands() {
         AppCommand::DecreaseRouteToolSegmentLength
     ));
 }
+
+#[test]
+fn command_palette_toggled_maps_to_toggle_command_palette() {
+    let state = AppState::new();
+
+    let commands = map_intent_to_commands(&state, AppIntent::CommandPaletteToggled);
+
+    assert_eq!(commands.len(), 1);
+    assert!(matches!(commands[0], AppCommand::ToggleCommandPalette));
+}
+
+#[test]
+fn dissolve_group_requested_maps_to_confirm_dialog_command() {
+    let state = AppState::new();
+
+    let commands =
+        map_intent_to_commands(&state, AppIntent::DissolveGroupRequested { segment_id: 42 });
+
+    assert_eq!(commands.len(), 1);
+    assert!(matches!(
+        commands[0],
+        AppCommand::OpenDissolveConfirmDialog { segment_id: 42 }
+    ));
+}
+
+#[test]
+fn editing_dialog_request_intents_map_to_dialog_commands() {
+    let state = AppState::new();
+
+    let commands = map_intent_to_commands(&state, AppIntent::OpenTraceAllFieldsDialogRequested);
+    assert_eq!(commands.len(), 1);
+    assert!(matches!(commands[0], AppCommand::OpenTraceAllFieldsDialog));
+
+    let commands = map_intent_to_commands(&state, AppIntent::CurseplayImportRequested);
+    assert_eq!(commands.len(), 1);
+    assert!(matches!(
+        commands[0],
+        AppCommand::RequestCurseplayImportDialog
+    ));
+}
