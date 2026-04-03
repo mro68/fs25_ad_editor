@@ -30,6 +30,16 @@ Alle Use-Case-Funktionen des `app::use_cases`-Moduls. Use-Cases mutieren `AppSta
 
 ---
 
+## `use_cases::options`
+
+- `config_path() -> PathBuf` — Standardpfad der Optionen-Datei neben der Binary bestimmen
+- `load_editor_options() -> EditorOptions` — Optionen vom Standardpfad laden; bei Fehlern Defaults verwenden
+- `load_editor_options_from_file(path) -> EditorOptions` — Optionen aus einer konkreten TOML-Datei laden; Legacy-Prozentwerte normalisieren und validieren
+- `save_editor_options(options) -> anyhow::Result<()>` — Optionen am Standardpfad validieren und speichern
+- `save_editor_options_to_file(path, options) -> anyhow::Result<()>` — Optionen als TOML an einen konkreten Pfad schreiben
+
+---
+
 ## `use_cases::heightmap`
 
 - `request_heightmap_dialog(state)` — Heightmap-Dialog oeffnen

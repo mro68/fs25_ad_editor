@@ -1,4 +1,4 @@
-//! Laufzeitoptionen (`EditorOptions`) inkl. Persistenz und Validierung.
+//! Laufzeitoptionen (`EditorOptions`) inkl. Validierung.
 
 use super::camera::{CAMERA_SCROLL_ZOOM_STEP, CAMERA_ZOOM_MAX, CAMERA_ZOOM_MIN, CAMERA_ZOOM_STEP};
 use super::render::{
@@ -17,7 +17,6 @@ use crate::shared::i18n::Language;
 use serde::{Deserialize, Serialize};
 
 /// Alle zur Laufzeit aenderbaren Editor-Optionen.
-/// Wird als `fs25_auto_drive_editor.toml` neben der Binary gespeichert.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct EditorOptions {
     // Nodes
@@ -263,46 +262,6 @@ fn default_node_decimation_spacing_px() -> f32 {
 }
 
 impl EditorOptions {
-    /// Laedt Optionen aus einer TOML-Datei. Bei Fehler: Standardwerte.
-    pub fn load_from_file(path: &std::path::Path) -> Self {
-        match std::fs::read_to_string(path) {
-            Ok(content) => match toml::from_str::<EditorOptions>(&content) {
-                Ok(mut opts) => {
-                    if opts.selection_size_factor > 0.0 && opts.selection_size_factor <= 5.0 {
-                        opts.selection_size_factor *= 100.0;
-                    }
-
-                    if let Err(e) = opts.validate() {
-                        log::warn!(
-                            "Optionen-Validierung fehlgeschlagen, verwende Standardwerte: {}",
-                            e
-                        );
-                        return Self::default();
-                    }
-                    log::info!("Optionen geladen aus: {}", path.display());
-                    opts
-                }
-                Err(e) => {
-                    log::warn!("Optionen-Datei fehlerhaft, verwende Standardwerte: {}", e);
-                    Self::default()
-                }
-            },
-            Err(_) => {
-                log::info!("Keine Optionen-Datei gefunden, verwende Standardwerte");
-                Self::default()
-            }
-        }
-    }
-
-    /// Speichert Optionen als TOML-Datei.
-    pub fn save_to_file(&self, path: &std::path::Path) -> anyhow::Result<()> {
-        self.validate()?;
-        let content = toml::to_string_pretty(self)?;
-        std::fs::write(path, content)?;
-        log::info!("Optionen gespeichert nach: {}", path.display());
-        Ok(())
-    }
-
     /// Validiert EditorOptions auf Konsistenz.
     pub fn validate(&self) -> anyhow::Result<()> {
         if self.camera_zoom_min >= self.camera_zoom_max {
@@ -384,16 +343,6 @@ impl EditorOptions {
 
         Ok(())
     }
-
-    /// Ermittelt den Pfad zur Optionen-Datei neben der Binary.
-    pub fn config_path() -> std::path::PathBuf {
-        std::env::current_exe()
-            .unwrap_or_else(|_| std::path::PathBuf::from("fs25_auto_drive_editor"))
-            .parent()
-            .unwrap_or_else(|| std::path::Path::new("."))
-            .join("fs25_auto_drive_editor.toml")
-    }
-
     /// Berechnet den Hitbox-Radius in Welteinheiten.
     pub fn hitbox_radius(&self) -> f32 {
         self.node_size_world * self.hitbox_scale_percent / 100.0

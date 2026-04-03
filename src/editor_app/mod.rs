@@ -6,8 +6,7 @@ mod overlays;
 
 use eframe::egui;
 use eframe::egui_wgpu;
-use fs25_auto_drive_editor::app::{AppController, AppIntent, AppState};
-use fs25_auto_drive_editor::shared::EditorOptions;
+use fs25_auto_drive_editor::app::{use_cases, AppController, AppIntent, AppState};
 use fs25_auto_drive_editor::{render, ui};
 
 /// Haupt-Anwendungsstruktur.
@@ -29,8 +28,7 @@ impl EditorApp {
     /// Erstellt die Editor-App mit geladenen Optionen und initialisiertem Renderer.
     pub(crate) fn new(render_state: &egui_wgpu::RenderState) -> Self {
         // Optionen aus TOML laden (oder Standardwerte)
-        let config_path = EditorOptions::config_path();
-        let editor_options = EditorOptions::load_from_file(&config_path);
+        let editor_options = use_cases::options::load_editor_options();
 
         let mut state = AppState::new();
         state.set_options(editor_options);

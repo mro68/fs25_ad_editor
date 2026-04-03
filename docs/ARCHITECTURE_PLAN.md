@@ -1,7 +1,7 @@
 # Architektur-Plan (Soll-Zustand)
 
 Stand: 2026-04-03  
-Status: Weitgehend umgesetzt — Render/shared-Vertrag, Tool-UI-Grenze, Capability-Split und Registry/Katalog/Edit-Flow sind technisch entkoppelt; spaetere Remediationsphasen bleiben offen
+Status: Weitgehend umgesetzt — Render/shared-Vertrag, Tool-UI-Grenze, Capability-Split, Registry/Katalog/Edit-Flow und Shared-Neutralisierung sind technisch entkoppelt; spaetere Remediationsphasen bleiben offen
 
 ## Zielbild
 
@@ -14,7 +14,7 @@ Dieser Plan trennt fachliche Verantwortlichkeiten in fuenf Schichten plus ein ge
 - Domain (`src/core/*`): Datenmodell + Fachlogik
 - Persistence (`src/xml/*`): XML-Mapping und I/O
 - Rendering (`src/render/*`): GPU-Darstellung aus vorbereiteten Renderdaten
-- Shared (`src/shared/*`): Gemeinsame Vertraege (u. a. RenderScene, RenderQuality)
+- Shared (`src/shared/*`): Neutrale, schichtuebergreifende Vertraege und Utilities (u. a. RenderScene, RenderQuality, EditorOptions, i18n) ohne egui- oder Dateisystem-Policy
 
 Kernfluss: **Input -> AppIntent -> AppController -> AppCommand -> AppState/Domain -> RenderScene -> Renderer**.
 
@@ -406,10 +406,10 @@ Verbindliche Regeln:
 2. Domain (`core`) kennt keine Infrastruktur (UI/Render/XML-Details).
 3. Renderer konsumiert nur `RenderScene` plus render-eigene Upload-Vertraege und importiert keine Core-Typen.
 4. XML bleibt technisch; fachliche Entscheidungen liegen in `core`/`app`.
-5. `AppState` enthält keine I/O-Logik; Dateisystem-Operationen sind in `use_cases::file_io` zentralisiert.
+5. `AppState` enthält keine I/O-Logik; Dateisystem- und Options-Persistenz liegen in Use-Cases bzw. der Integrationsschale, nicht im State oder in `shared`.
 6. Renderer darf keine UI-Typen importieren. **Ausnahme:** `render/callback.rs` implementiert `egui_wgpu::CallbackTrait` — das ist die wgpu-Brücke zwischen egui und dem Rendering-System, kein semantischer UI-Import.
 7. `app/mod.rs` re-exportiert alle Core-Typen, die UI benötigt (z.B. `ConnectionDirection`, `ConnectionPriority`, `RoadMap`).
-8. `shared`-Modul enthält Typen, die von mehreren Layern genutzt werden (`RenderScene`, `RenderQuality`, `i18n`). Importrichtung: `UI → shared`, `App → shared`, `Render → shared` (alle erlaubt).
+8. `shared`-Modul enthält nur neutrale Typen und Utilities, die von mehreren Layern genutzt werden (`RenderScene`, `RenderQuality`, `EditorOptions`, `i18n`, Geometrie-Helfer). Egui-Eingabe-Helfer leben in `ui`, Runtime-/Pfad-Policy in `app` bzw. `editor_app`. Importrichtung: `UI → shared`, `App → shared`, `Render → shared` (alle erlaubt).
 
 ## Aktuelle Modulstruktur
 

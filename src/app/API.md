@@ -4,6 +4,8 @@
 
 Das `app`-Modul verwaltet den globalen State, verarbeitet `AppIntent`s zentral ueber den `AppController`, mappt diese auf `AppCommand`s und baut die `RenderScene` fuer das Rendering.
 
+Die Laufzeit-Persistenz fuer `EditorOptions` liegt bewusst im Application-Layer unter `app::use_cases::options`; `shared::EditorOptions` bleibt damit ein neutrales Daten- und Validierungsmodell ohne Dateisystem- oder Pfad-Policy.
+
 **Hinweis:** `Camera2D` lebt im `core`-Modul (reiner Geometrie-Typ). `app` re-exportiert `Camera2D`, `ConnectionDirection`, `ConnectionPriority`, `RoadMap`, `RouteToolId`, `ToolAnchor`, `TangentSource`, `TangentMenuData`, `TangentOptionData`, `compute_ring` und andere zentrale Typen aus `core`, `tool_contract`, `ui_contract` und `tools`. Route-Tool-Panels laufen bewusst ueber egui-freie DTOs wie `RouteToolPanelState`, `RouteToolConfigState`, `RouteToolPanelAction` und `RouteToolViewportData` in `app::ui_contract`, damit der Root-Export schlank bleibt.
 
 Die eframe-Integrationsschale unter `src/editor_app/*` gehoert bewusst nicht zum `app`-Layer. Ihre kanonische Dokumentation steht in `../editor_app/API.md`, damit `app/API.md` nur den Application-Layer beschreibt.

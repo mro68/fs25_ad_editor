@@ -47,15 +47,13 @@ pub fn apply_options(state: &mut AppState, options: EditorOptions) -> anyhow::Re
     // Erst validieren, damit keine inkonsistenten Werte temporaer in den State gelangen.
     options.validate()?;
     state.set_options(options);
-    let path = EditorOptions::config_path();
-    state.options.save_to_file(&path)
+    use_cases::options::save_editor_options(&state.options)
 }
 
 /// Setzt Optionen auf Standardwerte zurueck und persistiert sie.
 pub fn reset_options(state: &mut AppState) -> anyhow::Result<()> {
     state.set_options(EditorOptions::default());
-    let path = EditorOptions::config_path();
-    state.options.save_to_file(&path)
+    use_cases::options::save_editor_options(&state.options)
 }
 
 /// Schaltet die Sichtbarkeit der Command-Palette um.

@@ -13,8 +13,6 @@ mod render_quality;
 mod render_scene;
 /// Spline-Geometrie-Hilfsfunktionen (Catmull-Rom, Arc-Length-Resampling).
 pub mod spline_geometry;
-/// Generische egui-Eingabe-Helfer fuer mehrere Layer.
-pub mod ui_input;
 
 pub use geometry::angle_deviation;
 pub use i18n::{t, I18nKey, Language};
