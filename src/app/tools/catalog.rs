@@ -32,6 +32,33 @@ pub enum RouteToolSurface {
     CommandPalette,
 }
 
+/// Katalogschluessel fuer Route-Tool-Icons.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub enum RouteToolIconKey {
+    /// Icon fuer Gerade Strecke.
+    Straight,
+    /// Icon fuer Bézier Grad 2.
+    CurveQuad,
+    /// Icon fuer Bézier Grad 3.
+    CurveCubic,
+    /// Icon fuer Spline.
+    Spline,
+    /// Icon fuer Ausweichstrecke.
+    Bypass,
+    /// Icon fuer Geglaettete Kurve.
+    SmoothCurve,
+    /// Icon fuer Parkplatz.
+    Parking,
+    /// Icon fuer Feldgrenze.
+    FieldBoundary,
+    /// Icon fuer Feldweg.
+    FieldPath,
+    /// Icon fuer Streckenversatz.
+    RouteOffset,
+    /// Icon fuer Farbpfad.
+    ColorPath,
+}
+
 /// Verfuegbarkeits-Anforderung eines Route-Tools.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum RouteToolRequirement {
@@ -99,6 +126,8 @@ pub struct RouteToolDescriptor {
     pub legacy_icon: &'static str,
     /// Kurzbeschreibung des Tools.
     pub description: &'static str,
+    /// Katalogschluessel fuer die Icon-Aufloesung in UI-Surfaces.
+    pub icon_key: RouteToolIconKey,
     /// Anzeige-Gruppe ueber alle Surfaces.
     pub group: RouteToolGroup,
     /// Surfaces, auf denen das Tool sichtbar ist.
@@ -216,6 +245,7 @@ pub const ROUTE_TOOL_CATALOG: [RouteToolDescriptor; 11] = [
         name: "Gerade Strecke",
         legacy_icon: "━",
         description: "Zeichnet eine gerade Linie zwischen zwei Punkten mit Zwischen-Nodes",
+        icon_key: RouteToolIconKey::Straight,
         group: RouteToolGroup::Basics,
         visible_on: &ALL_ROUTE_TOOL_SURFACES,
         requirements: &REQUIREMENTS_NONE,
@@ -227,6 +257,7 @@ pub const ROUTE_TOOL_CATALOG: [RouteToolDescriptor; 11] = [
         name: "Bézier Grad 2",
         legacy_icon: "⌒",
         description: "Zeichnet eine quadratische Bézier-Kurve mit einem Steuerpunkt",
+        icon_key: RouteToolIconKey::CurveQuad,
         group: RouteToolGroup::Basics,
         visible_on: &ALL_ROUTE_TOOL_SURFACES,
         requirements: &REQUIREMENTS_NONE,
@@ -238,6 +269,7 @@ pub const ROUTE_TOOL_CATALOG: [RouteToolDescriptor; 11] = [
         name: "Bézier Grad 3",
         legacy_icon: "〜",
         description: "Zeichnet eine kubische Bézier-Kurve mit zwei Steuerpunkten",
+        icon_key: RouteToolIconKey::CurveCubic,
         group: RouteToolGroup::Basics,
         visible_on: &ALL_ROUTE_TOOL_SURFACES,
         requirements: &REQUIREMENTS_NONE,
@@ -249,6 +281,7 @@ pub const ROUTE_TOOL_CATALOG: [RouteToolDescriptor; 11] = [
         name: "Spline",
         legacy_icon: "〰",
         description: "Zeichnet einen Catmull-Rom-Spline durch alle geklickten Punkte",
+        icon_key: RouteToolIconKey::Spline,
         group: RouteToolGroup::Basics,
         visible_on: &ALL_ROUTE_TOOL_SURFACES,
         requirements: &REQUIREMENTS_NONE,
@@ -260,6 +293,7 @@ pub const ROUTE_TOOL_CATALOG: [RouteToolDescriptor; 11] = [
         name: "Ausweichstrecke",
         legacy_icon: "⤴",
         description: "Generiert eine parallele Ausweichstrecke zur selektierten Kette",
+        icon_key: RouteToolIconKey::Bypass,
         group: RouteToolGroup::Section,
         visible_on: &ALL_ROUTE_TOOL_SURFACES,
         requirements: &REQUIREMENT_ORDERED_CHAIN,
@@ -272,6 +306,7 @@ pub const ROUTE_TOOL_CATALOG: [RouteToolDescriptor; 11] = [
         legacy_icon: "⊿",
         description:
             "Erzeugt eine winkelgeglaettete Route mit automatischen Tangenten-Uebergaengen",
+        icon_key: RouteToolIconKey::SmoothCurve,
         group: RouteToolGroup::Basics,
         visible_on: &ALL_ROUTE_TOOL_SURFACES,
         requirements: &REQUIREMENTS_NONE,
@@ -283,6 +318,7 @@ pub const ROUTE_TOOL_CATALOG: [RouteToolDescriptor; 11] = [
         name: "Parkplatz",
         legacy_icon: "\u{1f17f}",
         description: "Erzeugt ein Parkplatz-Layout mit Wendekreis",
+        icon_key: RouteToolIconKey::Parking,
         group: RouteToolGroup::Section,
         visible_on: &ALL_ROUTE_TOOL_SURFACES,
         requirements: &REQUIREMENTS_NONE,
@@ -294,6 +330,7 @@ pub const ROUTE_TOOL_CATALOG: [RouteToolDescriptor; 11] = [
         name: "Feld erkennen",
         legacy_icon: "\u{1f33e}",
         description: "Erzeugt eine Route entlang der erkannten Feldgrenze",
+        icon_key: RouteToolIconKey::FieldBoundary,
         group: RouteToolGroup::Analysis,
         visible_on: &ALL_ROUTE_TOOL_SURFACES,
         requirements: &REQUIREMENT_FARMLAND,
@@ -305,6 +342,7 @@ pub const ROUTE_TOOL_CATALOG: [RouteToolDescriptor; 11] = [
         name: "Feldweg",
         legacy_icon: "\u{1f6e4}",
         description: "Berechnet Mittellinien zwischen Farmland-Grenzen",
+        icon_key: RouteToolIconKey::FieldPath,
         group: RouteToolGroup::Analysis,
         visible_on: &ALL_ROUTE_TOOL_SURFACES,
         requirements: &REQUIREMENT_FARMLAND,
@@ -316,6 +354,7 @@ pub const ROUTE_TOOL_CATALOG: [RouteToolDescriptor; 11] = [
         name: "Strecke versetzen",
         legacy_icon: "⇶",
         description: "Verschiebt eine selektierte Kette parallel nach links und/oder rechts",
+        icon_key: RouteToolIconKey::RouteOffset,
         group: RouteToolGroup::Section,
         visible_on: &ALL_ROUTE_TOOL_SURFACES,
         requirements: &REQUIREMENT_ORDERED_CHAIN,
@@ -327,6 +366,7 @@ pub const ROUTE_TOOL_CATALOG: [RouteToolDescriptor; 11] = [
         name: "Farb-Pfad",
         legacy_icon: "🎨",
         description: "Erkennt Wege anhand der Farbe im Hintergrundbild",
+        icon_key: RouteToolIconKey::ColorPath,
         group: RouteToolGroup::Analysis,
         visible_on: &ALL_ROUTE_TOOL_SURFACES,
         requirements: &REQUIREMENT_BACKGROUND,
