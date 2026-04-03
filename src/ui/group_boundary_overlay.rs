@@ -210,7 +210,7 @@ fn render_single_icon(
     icon_offset_y: f32,
     half: f32,
 ) {
-    let Some(node) = road_map.nodes.get(&node_id) else {
+    let Some(node) = road_map.node(node_id) else {
         return;
     };
 

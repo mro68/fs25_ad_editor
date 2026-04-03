@@ -9,7 +9,8 @@ mod streckenteilung_panel;
 
 use crate::app::state::DistanzenState;
 use crate::app::state::GroupEditState;
-use crate::app::ui_contract::RouteToolPanelAdapter;
+use crate::app::tool_editing::ToolEditStore;
+use crate::app::ui_contract::RouteToolPanelState;
 use crate::app::{
     AppIntent, ConnectionDirection, ConnectionPriority, EditorTool, GroupRecord, RoadMap,
 };
@@ -32,10 +33,11 @@ pub fn render_edit_panel(
     default_priority: ConnectionPriority,
     distance_wheel_step_m: f32,
     active_tool: EditorTool,
-    route_tool: Option<RouteToolPanelAdapter<'_>>,
+    route_tool: Option<RouteToolPanelState>,
     panel_pos: Option<egui::Pos2>,
     group_editing: Option<&GroupEditState>,
     group_record: Option<&GroupRecord>,
+    tool_edit_store: Option<&ToolEditStore>,
     options: &mut EditorOptions,
 ) -> Vec<AppIntent> {
     let mut events = Vec::new();
@@ -45,11 +47,14 @@ pub fn render_edit_panel(
         group_panel::render_group_edit_panel(
             ctx,
             edit_state,
-            group_record,
-            road_map,
-            panel_pos,
-            options,
-            &mut events,
+            group_panel::GroupEditPanelContext::new(
+                group_record,
+                tool_edit_store,
+                road_map,
+                panel_pos,
+                options,
+                &mut events,
+            ),
         );
         return events;
     }

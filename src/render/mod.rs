@@ -11,6 +11,7 @@ mod types;
 
 pub use crate::shared::{RenderQuality, RenderScene};
 pub(crate) use background_renderer::BackgroundRenderer;
+pub use background_renderer::BackgroundWorldBounds;
 pub use callback::{WgpuRenderCallback, WgpuRenderData};
 pub(crate) use connection_renderer::ConnectionRenderer;
 pub(crate) use marker_renderer::MarkerRenderer;
@@ -86,7 +87,7 @@ impl Renderer {
         scene: &RenderScene,
     ) {
         log::debug!(
-            "Renderer.render_scene() called, road_map: {}",
+            "Renderer.render_scene() called, has_map: {}",
             scene.has_map()
         );
 
@@ -94,64 +95,66 @@ impl Renderer {
         let ctx = RenderContext {
             device,
             queue,
-            camera: &scene.camera,
-            viewport_size: scene.viewport_size,
-            options: scene.options.as_ref(),
-            hidden_node_ids: scene.hidden_node_ids.as_ref(),
-            dimmed_node_ids: scene.dimmed_node_ids.as_ref(),
+            camera: scene.camera(),
+            viewport_size: scene.viewport_size(),
+            options: scene.options(),
+            hidden_node_ids: scene.hidden_node_ids(),
+            dimmed_node_ids: scene.dimmed_node_ids(),
         };
 
         // 1. Render Background zuerst (falls vorhanden)
-        if scene.background_map.is_some() {
-            let opacity = compute_background_opacity(scene.camera.zoom, scene.options.as_ref());
+        if scene.has_background() {
+            let opacity = compute_background_opacity(scene.camera().zoom, scene.options());
             self.background_renderer.render(
                 queue,
                 render_pass,
-                &scene.camera,
-                scene.viewport_size,
-                scene.background_visible,
+                scene.camera(),
+                scene.viewport_size(),
+                scene.background_visible(),
                 opacity,
             );
         }
 
         // 2. Render Markers (hinter Connections und Nodes)
-        if let Some(road_map) = scene.road_map.as_deref() {
-            if !road_map.map_markers.is_empty() {
-                log::debug!("Rendering {} markers", road_map.map_markers.len());
+        if let Some(render_map) = scene.map() {
+            if render_map.marker_count() > 0 {
+                log::debug!("Rendering {} markers", render_map.marker_count());
                 self.marker_renderer
-                    .render(&ctx, render_pass, road_map, scene.render_quality);
+                    .render(&ctx, render_pass, render_map, scene.render_quality());
             }
 
             // 3. Render Connections (darueber)
-            self.connection_renderer.render(&ctx, render_pass, road_map);
+            self.connection_renderer
+                .render(&ctx, render_pass, render_map);
 
             // 4. Render Nodes (zuoberst)
             log::debug!(
                 "Delegating to node_renderer, {} nodes",
-                road_map.nodes.len()
+                render_map.node_count()
             );
             self.node_renderer.render(
                 &ctx,
                 render_pass,
-                road_map,
-                scene.render_quality,
-                &scene.selected_node_ids, // jetzt &HashSet<u64>, kein Re-collect noetig
+                render_map,
+                scene.render_quality(),
+                scene.selected_node_ids(),
             );
         } else {
-            log::debug!("No road_map to render");
+            log::debug!("No render_map to render");
         }
     }
 
-    /// Setzt die Background-Map
+    /// Setzt das Hintergrundbild fuer den Renderer.
     pub fn set_background(
         &mut self,
         device: &eframe::wgpu::Device,
         queue: &eframe::wgpu::Queue,
-        bg_map: &crate::BackgroundMap,
+        image: &image::DynamicImage,
+        world_bounds: BackgroundWorldBounds,
         scale: f32,
     ) {
         self.background_renderer
-            .set_background(device, queue, bg_map, scale);
+            .set_background(device, queue, image, world_bounds, scale);
     }
 
     /// Entfernt die Background-Map

@@ -1,26 +1,19 @@
-//! Lifecycle-Methoden des SmoothCurveTool (RouteTool-Implementierung).
+//! Lifecycle-Methoden des SmoothCurveTool.
 
-use super::super::common::linear_connections;
-use super::super::{RouteTool, RouteToolId, ToolAction, ToolPreview, ToolResult};
+use super::super::common::{linear_connections, record_applied_tool_state, sync_tool_host};
+use super::super::{
+    RouteTool, RouteToolCore, RouteToolDrag, RouteToolGroupEdit, RouteToolHostSync,
+    RouteToolPanelBridge, RouteToolRecreate, RouteToolSegmentAdjustments, ToolAction,
+    ToolHostContext, ToolPreview, ToolResult,
+};
 use super::geometry::{build_result, BuildResultParams};
 use super::state::{Phase, SmoothCurveTool};
-use crate::app::group_registry::{GroupBase, GroupKind, GroupRecord};
+use crate::app::tool_editing::{RouteToolEditPayload, ToolEditAnchors, ToolRouteBase};
+use crate::app::ui_contract::{RouteToolConfigState, RouteToolPanelAction, RouteToolPanelEffect};
 use crate::core::RoadMap;
 use glam::Vec2;
 
-impl RouteTool for SmoothCurveTool {
-    fn name(&self) -> &str {
-        "Geglättete Kurve"
-    }
-
-    fn icon(&self) -> &str {
-        "⊿"
-    }
-
-    fn description(&self) -> &str {
-        "Erzeugt eine winkelgeglaettete Route mit automatischen Tangenten-Uebergaengen"
-    }
-
+impl RouteToolPanelBridge for SmoothCurveTool {
     fn status_text(&self) -> &str {
         match self.phase {
             Phase::Start => "Startpunkt klicken",
@@ -31,12 +24,25 @@ impl RouteTool for SmoothCurveTool {
         }
     }
 
+    fn panel_state(&self) -> RouteToolConfigState {
+        RouteToolConfigState::SmoothCurve(self.panel_state())
+    }
+
+    fn apply_panel_action(&mut self, action: RouteToolPanelAction) -> RouteToolPanelEffect {
+        let RouteToolPanelAction::SmoothCurve(action) = action else {
+            return RouteToolPanelEffect::default();
+        };
+
+        self.apply_panel_action(action)
+    }
+}
+
+impl RouteToolCore for SmoothCurveTool {
     fn on_click(&mut self, pos: Vec2, road_map: &RoadMap, _ctrl: bool) -> ToolAction {
         let (anchor, _neighbors) = self.lifecycle.snap_with_neighbors(pos, road_map);
 
         match self.phase {
             Phase::Start => {
-                // Verkettung: letzten Endpunkt als Start verwenden
                 if let Some(last_end) = self.lifecycle.chaining_start_anchor() {
                     self.lifecycle.prepare_for_chaining();
                     self.last_start_anchor = None;
@@ -68,7 +74,6 @@ impl RouteTool for SmoothCurveTool {
                 ToolAction::UpdatePreview
             }
             Phase::ControlNodes => {
-                // Neuen Kontrollpunkt hinzufuegen
                 self.control_nodes.push(pos);
                 self.sync_derived();
                 self.update_preview();
@@ -81,7 +86,6 @@ impl RouteTool for SmoothCurveTool {
         match self.phase {
             Phase::Start => ToolPreview::default(),
             Phase::End => {
-                // Linie vom Start zur aktuellen Mausposition
                 let start_pos = match &self.start {
                     Some(a) => a.position(),
                     None => return ToolPreview::default(),
@@ -92,28 +96,23 @@ impl RouteTool for SmoothCurveTool {
                 ToolPreview::from_polyline(nodes, self.direction, self.priority)
             }
             Phase::ControlNodes => {
-                // Gecachte Solver-Ausgabe verwenden
                 if self.preview_positions.is_empty() {
                     return ToolPreview::default();
                 }
-                // Cow::Borrowed vermeidet Clone bei unveraendertem Cache-Hit
                 let connections: Vec<(usize, usize)> = if self.preview_connections.is_empty() {
                     linear_connections(self.preview_positions.len())
                 } else {
                     self.preview_connections.clone()
                 };
                 let styles = vec![(self.direction, self.priority); connections.len()];
-                // Positionen als Basis; Steuerpunkte als unverbundene Rauten-Nodes
                 let mut nodes = self.preview_positions.clone();
 
-                // Steuerpunkte als unverbundene Nodes hinzufuegen (werden als Rauten gerendert)
                 if let Some(ap) = self.approach_steerer {
                     nodes.push(ap);
                 }
                 if let Some(dp) = self.departure_steerer {
                     nodes.push(dp);
                 }
-                // Kontrollpunkte als unverbundene Nodes hinzufuegen
                 for &cp in &self.control_nodes {
                     nodes.push(cp);
                 }
@@ -126,10 +125,6 @@ impl RouteTool for SmoothCurveTool {
                 }
             }
         }
-    }
-
-    fn render_config(&mut self, ui: &mut egui::Ui, distance_wheel_step_m: f32) -> bool {
-        self.render_config_view(ui, distance_wheel_step_m)
     }
 
     fn execute(&self, road_map: &RoadMap) -> Option<ToolResult> {
@@ -175,10 +170,6 @@ impl RouteTool for SmoothCurveTool {
         )
     }
 
-    /// Setzt das Tool auf den Anfangszustand zurueck.
-    ///
-    /// Loescht Start/End/Kontrollpunkte. `lifecycle.last_created_ids` und `last_*_anchor`
-    /// bleiben erhalten fuer Verkettung und Nachbearbeitung.
     fn reset(&mut self) {
         self.start = None;
         self.end = None;
@@ -202,20 +193,45 @@ impl RouteTool for SmoothCurveTool {
     fn has_pending_input(&self) -> bool {
         self.phase != Phase::Start
     }
+}
 
-    crate::impl_lifecycle_delegation!();
-
-    fn current_end_anchor(&self) -> Option<super::super::ToolAnchor> {
-        self.end.or(self.lifecycle.last_end_anchor)
+impl RouteToolHostSync for SmoothCurveTool {
+    fn sync_host(&mut self, context: &ToolHostContext) {
+        sync_tool_host(
+            &mut self.direction,
+            &mut self.priority,
+            &mut self.lifecycle,
+            context,
+        );
     }
+}
 
-    fn save_anchors_for_recreate(&mut self, _road_map: &RoadMap) {
+impl RouteToolRecreate for SmoothCurveTool {
+    fn on_applied(&mut self, ids: &[u64], _road_map: &RoadMap) {
         if self.start.is_some() {
             self.last_start_anchor = self.start;
         }
         if !self.control_nodes.is_empty() {
             self.last_control_nodes = self.control_nodes.clone();
         }
+        let end_anchor = self.end.or(self.lifecycle.last_end_anchor);
+        record_applied_tool_state(&mut self.lifecycle, ids, end_anchor);
+    }
+
+    fn last_created_ids(&self) -> &[u64] {
+        &self.lifecycle.last_created_ids
+    }
+
+    fn last_end_anchor(&self) -> Option<super::super::ToolAnchor> {
+        self.lifecycle.last_end_anchor
+    }
+
+    fn needs_recreate(&self) -> bool {
+        self.lifecycle.recreate_needed
+    }
+
+    fn clear_recreate_flag(&mut self) {
+        self.lifecycle.recreate_needed = false;
     }
 
     fn execute_from_anchors(&self, road_map: &RoadMap) -> Option<ToolResult> {
@@ -237,57 +253,9 @@ impl RouteTool for SmoothCurveTool {
             road_map,
         )
     }
+}
 
-    fn make_group_record(&self, id: u64, node_ids: &[u64]) -> Option<GroupRecord> {
-        let start = self.last_start_anchor?;
-        let end = self.lifecycle.last_end_anchor?;
-        Some(GroupRecord {
-            id,
-            tool_id: Some(RouteToolId::SmoothCurve),
-            node_ids: node_ids.to_vec(),
-            start_anchor: start,
-            end_anchor: end,
-            original_positions: Vec::new(), // wird im Handler befüllt
-            marker_node_ids: Vec::new(),
-            locked: true,
-            entry_node_id: None,
-            exit_node_id: None,
-            kind: GroupKind::SmoothCurve {
-                control_nodes: self.last_control_nodes.clone(),
-                max_angle_deg: self.max_angle_deg,
-                min_distance: self.min_distance,
-                base: GroupBase {
-                    direction: self.direction,
-                    priority: self.priority,
-                    max_segment_length: self.seg.max_segment_length,
-                },
-            },
-        })
-    }
-
-    fn load_for_edit(&mut self, record: &GroupRecord, kind: &GroupKind) {
-        let GroupKind::SmoothCurve {
-            control_nodes,
-            max_angle_deg,
-            min_distance,
-            base,
-        } = kind
-        else {
-            return;
-        };
-        self.start = Some(record.start_anchor);
-        self.end = Some(record.end_anchor);
-        self.control_nodes = control_nodes.clone();
-        self.max_angle_deg = *max_angle_deg;
-        self.direction = base.direction;
-        self.priority = base.priority;
-        self.seg.max_segment_length = base.max_segment_length;
-        self.min_distance = *min_distance;
-        self.phase = Phase::ControlNodes;
-        self.sync_derived();
-        self.update_preview();
-    }
-
+impl RouteToolDrag for SmoothCurveTool {
     fn drag_targets(&self) -> Vec<Vec2> {
         super::drag::drag_targets(self)
     }
@@ -302,5 +270,103 @@ impl RouteTool for SmoothCurveTool {
 
     fn on_drag_end(&mut self, road_map: &RoadMap) {
         super::drag::on_drag_end(self, road_map);
+    }
+}
+
+impl RouteToolSegmentAdjustments for SmoothCurveTool {
+    fn increase_node_count(&mut self) {
+        self.seg.increase_node_count();
+        self.lifecycle.recreate_needed = true;
+    }
+
+    fn decrease_node_count(&mut self) {
+        self.seg.decrease_node_count();
+        self.lifecycle.recreate_needed = true;
+    }
+
+    fn increase_segment_length(&mut self) {
+        self.seg.increase_segment_length();
+        self.lifecycle.recreate_needed = true;
+    }
+
+    fn decrease_segment_length(&mut self) {
+        self.seg.decrease_segment_length();
+        self.lifecycle.recreate_needed = true;
+    }
+}
+
+impl RouteTool for SmoothCurveTool {
+    fn as_recreate(&self) -> Option<&dyn RouteToolRecreate> {
+        Some(self)
+    }
+
+    fn as_recreate_mut(&mut self) -> Option<&mut dyn RouteToolRecreate> {
+        Some(self)
+    }
+
+    fn as_drag(&self) -> Option<&dyn RouteToolDrag> {
+        Some(self)
+    }
+
+    fn as_drag_mut(&mut self) -> Option<&mut dyn RouteToolDrag> {
+        Some(self)
+    }
+
+    fn as_segment_adjustments(&self) -> Option<&dyn RouteToolSegmentAdjustments> {
+        Some(self)
+    }
+
+    fn as_segment_adjustments_mut(&mut self) -> Option<&mut dyn RouteToolSegmentAdjustments> {
+        Some(self)
+    }
+
+    fn as_group_edit(&self) -> Option<&dyn RouteToolGroupEdit> {
+        Some(self)
+    }
+
+    fn as_group_edit_mut(&mut self) -> Option<&mut dyn RouteToolGroupEdit> {
+        Some(self)
+    }
+}
+
+impl RouteToolGroupEdit for SmoothCurveTool {
+    fn build_edit_payload(&self) -> Option<RouteToolEditPayload> {
+        let start = self.last_start_anchor?;
+        let end = self.lifecycle.last_end_anchor?;
+        Some(RouteToolEditPayload::SmoothCurve {
+            anchors: ToolEditAnchors { start, end },
+            control_nodes: self.last_control_nodes.clone(),
+            max_angle_deg: self.max_angle_deg,
+            min_distance: self.min_distance,
+            base: ToolRouteBase {
+                direction: self.direction,
+                priority: self.priority,
+                max_segment_length: self.seg.max_segment_length,
+            },
+        })
+    }
+
+    fn restore_edit_payload(&mut self, payload: &RouteToolEditPayload) {
+        let RouteToolEditPayload::SmoothCurve {
+            anchors,
+            control_nodes,
+            max_angle_deg,
+            min_distance,
+            base,
+        } = payload
+        else {
+            return;
+        };
+        self.start = Some(anchors.start);
+        self.end = Some(anchors.end);
+        self.control_nodes = control_nodes.clone();
+        self.max_angle_deg = *max_angle_deg;
+        self.direction = base.direction;
+        self.priority = base.priority;
+        self.seg.max_segment_length = base.max_segment_length;
+        self.min_distance = *min_distance;
+        self.phase = Phase::ControlNodes;
+        self.sync_derived();
+        self.update_preview();
     }
 }

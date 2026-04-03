@@ -17,7 +17,8 @@ Neuimplementierung des AutoDrive Course Editors in Rust mit egui + wgpu. Hochper
 - `AppController` mappt auf `AppCommand`
 - Commands werden ueber Use-Cases ausgefuehrt
 - Mutationen laufen zentral gegen `AppState`
-- Renderer bekommt ausschliesslich `RenderScene`
+- Renderer bekommt pro Frame ausschliesslich `RenderScene`
+- `RenderScene` transportiert nur Render-Snapshots; Core-Typen duerfen nicht nach `src/render/*` durchgereicht werden
 
 ## Technologie-Stack
 

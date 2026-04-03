@@ -10,7 +10,7 @@ fn shortest_path_nodes(road_map: &RoadMap, start: u64, goal: u64) -> Option<Vec<
         return Some(vec![start]);
     }
 
-    if !road_map.nodes.contains_key(&start) || !road_map.nodes.contains_key(&goal) {
+    if !road_map.contains_node(start) || !road_map.contains_node(goal) {
         return None;
     }
 
@@ -122,7 +122,9 @@ pub fn select_nearest_node(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{Connection, ConnectionDirection, ConnectionPriority, MapNode, NodeFlag, RoadMap};
+    use crate::core::{
+        Connection, ConnectionDirection, ConnectionPriority, MapNode, NodeFlag, RoadMap,
+    };
     use std::sync::Arc;
 
     fn with_test_map() -> AppState {

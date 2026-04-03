@@ -1,6 +1,6 @@
 //! Gemeinsame Icon-Konstanten und -Hilfsfunktionen fuer die UI.
 
-use crate::app::tools::RouteToolId;
+use crate::app::tool_contract::RouteToolId;
 use crate::app::{AppState, ConnectionDirection, ConnectionPriority};
 use egui::{Image, ImageSource, Vec2};
 

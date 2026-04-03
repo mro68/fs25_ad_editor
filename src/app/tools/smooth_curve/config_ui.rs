@@ -1,98 +1,36 @@
-//! UI-Konfigurationspanel fuer das Geglättete-Kurve-Tool.
-//!
-//! Enthaelt:
-//! - Max-Winkel-Slider (Solver-Parameter)
-//! - Segment-Laenge (Max. Abstand zwischen Nodes)
-//! - Minimaldistanz (filtert zu nahe beieinanderliegende Nodes)
-//! - Steuerpunkte (automatisch berechnete Approach/Departure-Punkte)
-//! - Kontrollpunkt-Liste mit Entfernen-Button
-//! - Generierte Wegpunkt-Anzahl (Info)
+//! Egui-freie Panel-Bruecke fuer das Geglaettete-Kurve-Tool.
 
-use super::super::common::{wheel_dir, SegmentConfig};
+use super::super::common::SegmentConfig;
 use super::state::SmoothCurveTool;
+use crate::app::ui_contract::{
+    RouteToolPanelEffect, SegmentConfigPanelAction, SmoothCurvePanelAction, SmoothCurvePanelState,
+    SmoothCurveSteererState, SMOOTH_CURVE_MAX_ANGLE_LIMITS, SMOOTH_CURVE_MIN_DISTANCE_LIMITS,
+};
 
 impl SmoothCurveTool {
-    /// Rendert nur den Max-Abstand-Slider (ohne Node-Anzahl).
-    ///
-    /// Fuer das Geglättete-Kurve-Tool ist die Node-Anzahl vom Solver bestimmt
-    /// (kruemmungsadaptive Verteilung), daher wird nur der Abstand-Slider angezeigt.
-    /// Gibt `(changed, recreate_needed)` zurueck.
-    fn render_segment_distance_only(
+    /// Wendet nur die Distanz-Aktion auf den Segmentzustand an.
+    fn apply_segment_distance_only(
         seg: &mut SegmentConfig,
-        ui: &mut egui::Ui,
+        value: f32,
         adjusting: bool,
         ready: bool,
         length: f32,
-        label: &str,
-        distance_wheel_step_m: f32,
-    ) -> (bool, bool) {
-        let mut changed = false;
-        let mut recreate = false;
-
-        if adjusting || ready {
-            ui.label(format!("{}: {:.1} m", label, length));
-            ui.add_space(4.0);
-        }
-
-        ui.label("Max. Abstand:");
-        let max_seg = if adjusting || ready {
-            length.max(1.0)
-        } else {
-            20.0
-        };
-        let response =
-            ui.add(egui::Slider::new(&mut seg.max_segment_length, 1.0..=max_seg).suffix(" m"));
-        let mut distance_changed = response.changed();
-        let wheel_dir = wheel_dir(ui, &response);
-        if distance_wheel_step_m > 0.0 && wheel_dir != 0.0 {
-            seg.max_segment_length =
-                (seg.max_segment_length + wheel_dir * distance_wheel_step_m).clamp(1.0, max_seg);
-            distance_changed = true;
-        }
-        if distance_changed {
-            changed = true;
-            if adjusting {
-                recreate = true;
-            }
-        }
-
-        (changed, recreate)
-    }
-    /// Rendert das Konfigurationspanel im Properties-Panel.
-    ///
-    /// Gibt `true` zurueck wenn sich eine Einstellung geaendert hat.
-    pub(super) fn render_config_view(
-        &mut self,
-        ui: &mut egui::Ui,
-        distance_wheel_step_m: f32,
-    ) -> bool {
-        let mut changed = false;
-
-        // Max-Winkel-Slider
-        ui.label("Max. Richtungsaenderung:");
-        let angle_response = ui.add(
-            egui::Slider::new(&mut self.max_angle_deg, 5.0..=135.0)
-                .suffix("°")
-                .fixed_decimals(0),
+    ) -> RouteToolPanelEffect {
+        let result = seg.apply_panel_action(
+            SegmentConfigPanelAction::SetMaxSegmentLength(value),
+            adjusting,
+            ready,
+            length,
+            false,
         );
-        let mut angle_changed = angle_response.changed();
-        let angle_wheel_dir = wheel_dir(ui, &angle_response);
-        if angle_wheel_dir != 0.0 {
-            self.max_angle_deg = (self.max_angle_deg + angle_wheel_dir).clamp(5.0, 135.0);
-            angle_changed = true;
+        RouteToolPanelEffect {
+            changed: result.changed,
+            needs_recreate: result.recreate,
+            next_action: None,
         }
-        if angle_changed {
-            changed = true;
-            self.update_preview();
-            if !self.lifecycle.last_created_ids.is_empty() {
-                self.lifecycle.recreate_needed = true;
-            }
-        }
-
-        ui.add_space(6.0);
-
-        // Segment-Konfiguration — nur Max-Abstand-Slider (keine Node-Anzahl,
-        // da der Solver die Verteilung kruemmungsadaptiv bestimmt)
+    }
+    /// Liefert den egui-freien Panelzustand des Geglaettete-Kurve-Tools.
+    pub(super) fn panel_state(&self) -> SmoothCurvePanelState {
         let adjusting = !self.lifecycle.last_created_ids.is_empty()
             && self.last_start_anchor.is_some()
             && self.lifecycle.last_end_anchor.is_some();
@@ -105,145 +43,162 @@ impl SmoothCurveTool {
             self.total_distance()
         };
 
-        let ready = self.start.is_some() && self.end.is_some();
-        let (seg_changed, recreate) = Self::render_segment_distance_only(
-            &mut self.seg,
-            ui,
-            adjusting,
-            ready,
-            length,
-            "Routenlaenge",
-            distance_wheel_step_m,
-        );
-        if seg_changed {
-            changed = true;
-            self.update_preview();
+        SmoothCurvePanelState {
+            max_angle_deg: self.max_angle_deg,
+            segment: self.seg.panel_state(
+                adjusting,
+                self.start.is_some() && self.end.is_some(),
+                length,
+                "Routenlaenge",
+                false,
+            ),
+            min_distance: self.min_distance,
+            approach_steerer: self
+                .approach_steerer
+                .map(|position| SmoothCurveSteererState {
+                    position,
+                    is_manual: self.approach_manual,
+                }),
+            departure_steerer: self
+                .departure_steerer
+                .map(|position| SmoothCurveSteererState {
+                    position,
+                    is_manual: self.departure_manual,
+                }),
+            control_nodes: self.control_nodes.clone(),
+            preview_node_count: (!self.preview_positions.is_empty())
+                .then_some(self.preview_positions.len()),
         }
-        if recreate {
+    }
+
+    /// Wendet eine semantische Panel-Aktion auf das Geglaettete-Kurve-Tool an.
+    pub(super) fn apply_panel_action(
+        &mut self,
+        action: SmoothCurvePanelAction,
+    ) -> RouteToolPanelEffect {
+        match action {
+            SmoothCurvePanelAction::SetMaxAngleDeg(value) => self.apply_angle_action(value),
+            SmoothCurvePanelAction::SetMaxSegmentLength(value) => self.apply_segment_action(value),
+            SmoothCurvePanelAction::SetMinDistance(value) => self.apply_min_distance_action(value),
+            SmoothCurvePanelAction::ResetApproachSteerer => self.reset_approach_steerer(),
+            SmoothCurvePanelAction::ResetDepartureSteerer => self.reset_departure_steerer(),
+            SmoothCurvePanelAction::RemoveControlNode { index } => self.remove_control_node(index),
+        }
+    }
+
+    fn apply_angle_action(&mut self, value: f32) -> RouteToolPanelEffect {
+        let clamped = SMOOTH_CURVE_MAX_ANGLE_LIMITS.clamp(value);
+        if (self.max_angle_deg - clamped).abs() < f32::EPSILON {
+            return RouteToolPanelEffect::default();
+        }
+        self.max_angle_deg = clamped;
+        self.update_preview();
+        let needs_recreate = !self.lifecycle.last_created_ids.is_empty();
+        if needs_recreate {
             self.lifecycle.recreate_needed = true;
         }
+        RouteToolPanelEffect {
+            changed: true,
+            needs_recreate,
+            next_action: None,
+        }
+    }
 
-        // Minimaldistanz-Slider
-        ui.add_space(4.0);
-        ui.label("Minimaldistanz:");
-        let min_dist_response = ui.add(
-            egui::Slider::new(&mut self.min_distance, 0.5..=20.0)
-                .suffix(" m")
-                .fixed_decimals(1),
+    fn apply_segment_action(&mut self, value: f32) -> RouteToolPanelEffect {
+        let adjusting = !self.lifecycle.last_created_ids.is_empty()
+            && self.last_start_anchor.is_some()
+            && self.lifecycle.last_end_anchor.is_some();
+        let length = if adjusting {
+            let start = self.last_start_anchor.unwrap().position();
+            let end = self.lifecycle.last_end_anchor.unwrap().position();
+            start.distance(end)
+        } else {
+            self.total_distance()
+        };
+        let effect = Self::apply_segment_distance_only(
+            &mut self.seg,
+            value,
+            adjusting,
+            self.start.is_some() && self.end.is_some(),
+            length,
         );
-        let mut min_dist_changed = min_dist_response.changed();
-        let min_dist_wheel_dir = wheel_dir(ui, &min_dist_response);
-        if distance_wheel_step_m > 0.0 && min_dist_wheel_dir != 0.0 {
-            self.min_distance =
-                (self.min_distance + min_dist_wheel_dir * distance_wheel_step_m).clamp(0.5, 20.0);
-            min_dist_changed = true;
+        if !effect.changed {
+            return effect;
         }
-        if min_dist_changed {
-            changed = true;
-            self.update_preview();
-            if !self.lifecycle.last_created_ids.is_empty() {
-                self.lifecycle.recreate_needed = true;
-            }
+        self.update_preview();
+        if effect.needs_recreate {
+            self.lifecycle.recreate_needed = true;
         }
+        effect
+    }
 
-        // ── Steuerpunkte (Auto-Approach/Departure) ────────────────────
-        let has_steerers = self.approach_steerer.is_some() || self.departure_steerer.is_some();
-        if has_steerers {
-            ui.add_space(6.0);
-            ui.label(egui::RichText::new("Steuerpunkte").strong());
-            ui.label(
-                egui::RichText::new("Verschiebbar per Drag im Viewport")
-                    .weak()
-                    .small(),
-            );
-
-            if let Some(ap) = self.approach_steerer {
-                ui.horizontal(|ui| {
-                    let label = if self.approach_manual {
-                        format!("  ⊳ Approach: ({:.1}, {:.1}) ✎", ap.x, ap.y)
-                    } else {
-                        format!("  ⊳ Approach: ({:.1}, {:.1})", ap.x, ap.y)
-                    };
-                    ui.label(label);
-                    if self.approach_manual
-                        && ui
-                            .small_button("↺")
-                            .on_hover_text("Zuruecksetzen auf Auto")
-                            .clicked()
-                    {
-                        self.approach_manual = false;
-                        self.update_preview();
-                        changed = true;
-                        if !self.lifecycle.last_created_ids.is_empty() {
-                            self.lifecycle.recreate_needed = true;
-                        }
-                    }
-                });
-            }
-
-            if let Some(dp) = self.departure_steerer {
-                ui.horizontal(|ui| {
-                    let label = if self.departure_manual {
-                        format!("  ⊲ Departure: ({:.1}, {:.1}) ✎", dp.x, dp.y)
-                    } else {
-                        format!("  ⊲ Departure: ({:.1}, {:.1})", dp.x, dp.y)
-                    };
-                    ui.label(label);
-                    if self.departure_manual
-                        && ui
-                            .small_button("↺")
-                            .on_hover_text("Zuruecksetzen auf Auto")
-                            .clicked()
-                    {
-                        self.departure_manual = false;
-                        self.update_preview();
-                        changed = true;
-                        if !self.lifecycle.last_created_ids.is_empty() {
-                            self.lifecycle.recreate_needed = true;
-                        }
-                    }
-                });
-            }
+    fn apply_min_distance_action(&mut self, value: f32) -> RouteToolPanelEffect {
+        let clamped = SMOOTH_CURVE_MIN_DISTANCE_LIMITS.clamp(value);
+        if (self.min_distance - clamped).abs() < f32::EPSILON {
+            return RouteToolPanelEffect::default();
         }
-
-        // ── Kontrollpunkt-Liste ───────────────────────────────────────
-        if !self.control_nodes.is_empty() {
-            ui.add_space(6.0);
-            ui.label(format!("Kontrollpunkte ({})", self.control_nodes.len()));
-
-            let mut remove_idx = None;
-            for (i, cp) in self.control_nodes.iter().enumerate() {
-                ui.horizontal(|ui| {
-                    ui.label(format!("  #{}: ({:.1}, {:.1})", i + 1, cp.x, cp.y));
-                    if ui.small_button("✕").clicked() {
-                        remove_idx = Some(i);
-                    }
-                });
-            }
-            if let Some(idx) = remove_idx {
-                self.control_nodes.remove(idx);
-                self.sync_derived();
-                self.update_preview();
-                changed = true;
-                if !self.lifecycle.last_created_ids.is_empty() {
-                    self.lifecycle.recreate_needed = true;
-                }
-            }
+        self.min_distance = clamped;
+        self.update_preview();
+        let needs_recreate = !self.lifecycle.last_created_ids.is_empty();
+        if needs_recreate {
+            self.lifecycle.recreate_needed = true;
         }
-
-        // ── Vorschau-Statistik ────────────────────────────────────────
-        if !self.preview_positions.is_empty() {
-            ui.add_space(4.0);
-            ui.label(
-                egui::RichText::new(format!(
-                    "Vorschau: {} Wegpunkte",
-                    self.preview_positions.len()
-                ))
-                .weak()
-                .small(),
-            );
+        RouteToolPanelEffect {
+            changed: true,
+            needs_recreate,
+            next_action: None,
         }
+    }
 
-        changed
+    fn reset_approach_steerer(&mut self) -> RouteToolPanelEffect {
+        if !self.approach_manual {
+            return RouteToolPanelEffect::default();
+        }
+        self.approach_manual = false;
+        self.update_preview();
+        let needs_recreate = !self.lifecycle.last_created_ids.is_empty();
+        if needs_recreate {
+            self.lifecycle.recreate_needed = true;
+        }
+        RouteToolPanelEffect {
+            changed: true,
+            needs_recreate,
+            next_action: None,
+        }
+    }
+
+    fn reset_departure_steerer(&mut self) -> RouteToolPanelEffect {
+        if !self.departure_manual {
+            return RouteToolPanelEffect::default();
+        }
+        self.departure_manual = false;
+        self.update_preview();
+        let needs_recreate = !self.lifecycle.last_created_ids.is_empty();
+        if needs_recreate {
+            self.lifecycle.recreate_needed = true;
+        }
+        RouteToolPanelEffect {
+            changed: true,
+            needs_recreate,
+            next_action: None,
+        }
+    }
+
+    fn remove_control_node(&mut self, index: usize) -> RouteToolPanelEffect {
+        if index >= self.control_nodes.len() {
+            return RouteToolPanelEffect::default();
+        }
+        self.control_nodes.remove(index);
+        self.sync_derived();
+        self.update_preview();
+        let needs_recreate = !self.lifecycle.last_created_ids.is_empty();
+        if needs_recreate {
+            self.lifecycle.recreate_needed = true;
+        }
+        RouteToolPanelEffect {
+            changed: true,
+            needs_recreate,
+            next_action: None,
+        }
     }
 }

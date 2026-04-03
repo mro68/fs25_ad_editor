@@ -1,6 +1,6 @@
 //! Boundary-Cache-Logik der [`GroupRegistry`].
 
-use super::{BoundaryDirection, BoundaryInfo, GroupKind, GroupRegistry};
+use super::{BoundaryDirection, BoundaryInfo, GroupRegistry};
 use crate::core::RoadMap;
 use std::collections::HashMap;
 
@@ -135,17 +135,11 @@ impl GroupRegistry {
                 })
                 .collect();
 
-            // Spezialfall Parking: n7 (Eingang) und n8 (Ausgang) erzwingen,
-            // auch wenn sie keine externen Verbindungen haben.
-            // Pro Bay: 8 Nodes (0-5=base, 6=n7/Entry, 7=n8/Exit).
-            // Erster Eingang: n7 der ersten Bay (Index 6).
-            // Letzter Ausgang: n8 der letzten Bay (letzter Index).
-            if matches!(record.kind, GroupKind::Parking { .. }) && record.node_ids.len() >= 8 {
-                let entry_id = record.node_ids[6]; // n7 der ersten Bay
-                let exit_id = record.node_ids[record.node_ids.len() - 1]; // n8 der letzten Bay
+            // Explizite Entry-/Exit-Knoten immer im Boundary-Overlay halten,
+            // auch wenn dort aktuell keine externe Verbindung mehr existiert.
+            let existing_ids: HashSet<u64> = infos.iter().map(|bi| bi.node_id).collect();
 
-                let existing_ids: HashSet<u64> = infos.iter().map(|bi| bi.node_id).collect();
-
+            if let Some(entry_id) = record.entry_node_id {
                 if !existing_ids.contains(&entry_id) {
                     infos.push(BoundaryInfo {
                         node_id: entry_id,
@@ -154,6 +148,8 @@ impl GroupRegistry {
                         max_external_angle_deviation: None, // None = immer Icon anzeigen
                     });
                 }
+            }
+            if let Some(exit_id) = record.exit_node_id {
                 if !existing_ids.contains(&exit_id) {
                     infos.push(BoundaryInfo {
                         node_id: exit_id,

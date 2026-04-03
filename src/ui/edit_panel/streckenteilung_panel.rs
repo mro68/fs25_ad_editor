@@ -1,6 +1,6 @@
 use crate::app::state::DistanzenState;
 use crate::app::{AppIntent, RoadMap};
-use crate::shared::ui_input::wheel_dir;
+use crate::ui::common::wheel_dir;
 use indexmap::IndexSet;
 use std::hash::{Hash, Hasher};
 
@@ -31,7 +31,7 @@ pub(super) fn render_streckenteilung_panel(
             {
                 let positions: Vec<glam::Vec2> = ordered
                     .iter()
-                    .filter_map(|id| rm.nodes.get(id).map(|n| n.position))
+                    .filter_map(|id| rm.node(*id).map(|n| n.position))
                     .collect();
 
                 if positions.len() >= 2 {

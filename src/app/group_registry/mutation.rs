@@ -15,7 +15,7 @@ impl GroupRegistry {
             record.original_positions = record
                 .node_ids
                 .iter()
-                .filter_map(|id| road_map.nodes.get(id).map(|n| n.position))
+                .filter_map(|id| road_map.node(*id).map(|n| n.position))
                 .collect();
         }
     }

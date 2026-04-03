@@ -1,222 +1,224 @@
-//! Sidebar-Konfiguration fuer das FieldPathTool.
+//! Egui-freie Panel-Bruecke fuer das FieldPathTool.
 
 use super::state::{FieldPathMode, FieldPathPhase, FieldPathTool};
-use crate::app::tools::common::wheel_dir;
-use crate::app::tools::RouteTool;
+use crate::app::ui_contract::{
+    FieldPathModeChoice, FieldPathPanelAction, FieldPathPanelPhase, FieldPathPanelState,
+    FieldPathSelectionSummary, RouteToolPanelEffect,
+};
 
 impl FieldPathTool {
-    /// Rendert die FieldPathTool-Konfiguration im Properties-Panel.
-    ///
-    /// Gibt `true` zurueck wenn sich Einstellungen geaendert haben (Neuzeichnung noetig).
-    pub(super) fn render_config_view(
+    /// Liefert den egui-freien Panelzustand des FieldPathTools.
+    pub(super) fn panel_state(&self) -> FieldPathPanelState {
+        FieldPathPanelState {
+            mode: mode_choice(self.mode),
+            phase: panel_phase(self.phase),
+            side1: self.selection_summary(true),
+            side2: matches!(
+                self.phase,
+                FieldPathPhase::SelectingSide2 | FieldPathPhase::Preview
+            )
+            .then(|| self.selection_summary(false)),
+            can_advance_to_side2: self.can_advance_to_side2(),
+            can_compute: self.can_compute(),
+            preview_message: match self.phase {
+                FieldPathPhase::Preview if self.resampled_nodes.is_empty() => {
+                    Some("Keine Mittellinie gefunden — Seiten anpassen".to_owned())
+                }
+                FieldPathPhase::Preview => {
+                    Some(format!("{} Nodes generiert", self.resampled_nodes.len()))
+                }
+                _ => None,
+            },
+            node_spacing: self.config.node_spacing,
+            simplify_tolerance: self.config.simplify_tolerance,
+            connect_to_existing: self.config.connect_to_existing,
+        }
+    }
+
+    /// Wendet eine semantische Panel-Aktion auf das FieldPathTool an.
+    pub(super) fn apply_panel_action(
         &mut self,
-        ui: &mut egui::Ui,
-        distance_wheel_step_m: f32,
-    ) -> bool {
-        let mut changed = false;
-
-        ui.label("Feldweg-Erkennung");
-        ui.separator();
-
-        // ── Modus-Auswahl ────────────────────────────────────────────────────
-        ui.horizontal(|ui| {
-            ui.label("Modus:");
-            egui::ComboBox::from_id_salt("field_path_mode")
-                .selected_text(match self.mode {
-                    FieldPathMode::Fields => "Felder",
-                    FieldPathMode::Boundaries => "Grenzen",
-                })
-                .show_ui(ui, |ui| {
-                    if ui
-                        .selectable_value(&mut self.mode, FieldPathMode::Fields, "Felder")
-                        .clicked()
-                    {
-                        changed = true;
-                    }
-                    if ui
-                        .selectable_value(&mut self.mode, FieldPathMode::Boundaries, "Grenzen")
-                        .clicked()
-                    {
-                        changed = true;
-                    }
-                });
-        });
-
-        ui.separator();
-
-        // ── Seite 1 ──────────────────────────────────────────────────────────
-        ui.label("── Seite 1 ──");
-        match self.mode {
-            FieldPathMode::Fields => {
-                if self.side1_field_ids.is_empty() {
-                    ui.colored_label(egui::Color32::GRAY, "Keine Felder ausgewaehlt");
+        action: FieldPathPanelAction,
+    ) -> RouteToolPanelEffect {
+        let changed = match action {
+            FieldPathPanelAction::SetMode(choice) => {
+                let mode = mode_from_choice(choice);
+                if self.mode == mode {
+                    false
                 } else {
-                    let labels: Vec<String> = self
-                        .side1_field_ids
-                        .iter()
-                        .map(|id| format!("#{id}"))
-                        .collect();
-                    ui.label(format!("Felder: {}", labels.join(", ")));
+                    self.mode = mode;
+                    true
                 }
             }
-            FieldPathMode::Boundaries => {
-                ui.label(format!("Segmente: {}", self.side1_segments.len()));
-            }
-        }
-
-        // ── Seite 2 (nur ab SelectingSide2/Preview sichtbar) ─────────────────
-        if matches!(
-            self.phase,
-            FieldPathPhase::SelectingSide2 | FieldPathPhase::Preview
-        ) {
-            ui.separator();
-            ui.label("── Seite 2 ──");
-            match self.mode {
-                FieldPathMode::Fields => {
-                    if self.side2_field_ids.is_empty() {
-                        ui.colored_label(egui::Color32::GRAY, "Keine Felder ausgewaehlt");
-                    } else {
-                        let labels: Vec<String> = self
-                            .side2_field_ids
-                            .iter()
-                            .map(|id| format!("#{id}"))
-                            .collect();
-                        ui.label(format!("Felder: {}", labels.join(", ")));
-                    }
-                }
-                FieldPathMode::Boundaries => {
-                    ui.label(format!("Segmente: {}", self.side2_segments.len()));
-                }
-            }
-        }
-
-        ui.separator();
-
-        // ── Phasen-Aktionen ───────────────────────────────────────────────────
-        match self.phase {
-            FieldPathPhase::Idle => {
-                if ui.button("Starten \u{2192}").clicked() {
+            FieldPathPanelAction::Start => {
+                if self.phase == FieldPathPhase::Idle {
                     self.phase = FieldPathPhase::SelectingSide1;
-                    changed = true;
-                }
-            }
-            FieldPathPhase::SelectingSide1 => {
-                let can_advance = match self.mode {
-                    FieldPathMode::Fields => !self.side1_field_ids.is_empty(),
-                    FieldPathMode::Boundaries => !self.side1_segments.is_empty(),
-                };
-                ui.add_enabled_ui(can_advance, |ui| {
-                    if ui.button("Seite 2 \u{2192}").clicked() {
-                        self.phase = FieldPathPhase::SelectingSide2;
-                        changed = true;
-                    }
-                });
-                if ui.button("Zuruecksetzen").clicked() {
-                    self.reset();
-                    changed = true;
-                }
-            }
-            FieldPathPhase::SelectingSide2 => {
-                let can_compute = match self.mode {
-                    FieldPathMode::Fields => !self.side2_field_ids.is_empty(),
-                    FieldPathMode::Boundaries => !self.side2_segments.is_empty(),
-                };
-                ui.add_enabled_ui(can_compute, |ui| {
-                    if ui.button("Berechnen").clicked() {
-                        self.compute_centerline();
-                        changed = true;
-                    }
-                });
-                if ui.button("\u{2190} Zurueck").clicked() {
-                    self.phase = FieldPathPhase::SelectingSide1;
-                    changed = true;
-                }
-            }
-            FieldPathPhase::Preview => {
-                if self.resampled_nodes.is_empty() {
-                    ui.colored_label(
-                        egui::Color32::from_rgb(220, 120, 0),
-                        "Keine Mittellinie gefunden \u{2014} Seiten anpassen",
-                    );
+                    true
                 } else {
-                    ui.label(format!("{} Nodes generiert", self.resampled_nodes.len()));
+                    false
                 }
-                if ui.button("\u{2190} Seite 2 neu waehlen").clicked() {
+            }
+            FieldPathPanelAction::AdvanceToSide2 => {
+                if self.phase == FieldPathPhase::SelectingSide1 && self.can_advance_to_side2() {
+                    self.phase = FieldPathPhase::SelectingSide2;
+                    true
+                } else {
+                    false
+                }
+            }
+            FieldPathPanelAction::Compute => {
+                if self.phase == FieldPathPhase::SelectingSide2 && self.can_compute() {
+                    self.compute_centerline();
+                    true
+                } else {
+                    false
+                }
+            }
+            FieldPathPanelAction::BackToSide1 => {
+                if self.phase == FieldPathPhase::SelectingSide2 {
+                    self.phase = FieldPathPhase::SelectingSide1;
+                    true
+                } else {
+                    false
+                }
+            }
+            FieldPathPanelAction::BackToSide2 => {
+                if self.phase == FieldPathPhase::Preview {
                     self.phase = FieldPathPhase::SelectingSide2;
                     self.centerline.clear();
                     self.resampled_nodes.clear();
-                    changed = true;
+                    true
+                } else {
+                    false
+                }
+            }
+            FieldPathPanelAction::Reset => {
+                let had_pending = !matches!(self.phase, FieldPathPhase::Idle)
+                    || !self.side1_field_ids.is_empty()
+                    || !self.side2_field_ids.is_empty()
+                    || !self.side1_segments.is_empty()
+                    || !self.side2_segments.is_empty()
+                    || !self.centerline.is_empty()
+                    || !self.resampled_nodes.is_empty();
+                self.phase = FieldPathPhase::Idle;
+                self.side1_field_ids.clear();
+                self.side2_field_ids.clear();
+                self.side1_segments.clear();
+                self.side2_segments.clear();
+                self.centerline.clear();
+                self.resampled_nodes.clear();
+                had_pending
+            }
+            FieldPathPanelAction::SetNodeSpacing(value) => {
+                set_f32(&mut self.config.node_spacing, value.clamp(1.0, 50.0))
+            }
+            FieldPathPanelAction::SetSimplifyTolerance(value) => {
+                set_f32(&mut self.config.simplify_tolerance, value.clamp(0.0, 20.0))
+            }
+            FieldPathPanelAction::SetConnectToExisting(value) => {
+                set_bool(&mut self.config.connect_to_existing, value)
+            }
+        };
+
+        RouteToolPanelEffect {
+            changed,
+            needs_recreate: false,
+            next_action: None,
+        }
+    }
+
+    fn selection_summary(&self, side1: bool) -> FieldPathSelectionSummary {
+        let title = if side1 { "Seite 1" } else { "Seite 2" }.to_owned();
+
+        match self.mode {
+            FieldPathMode::Fields => {
+                let ids = if side1 {
+                    &self.side1_field_ids
+                } else {
+                    &self.side2_field_ids
+                };
+                if ids.is_empty() {
+                    FieldPathSelectionSummary {
+                        title,
+                        text: "Keine Felder ausgewaehlt".to_owned(),
+                        is_empty: true,
+                    }
+                } else {
+                    let labels: Vec<String> = ids.iter().map(|id| format!("#{id}")).collect();
+                    FieldPathSelectionSummary {
+                        title,
+                        text: format!("Felder: {}", labels.join(", ")),
+                        is_empty: false,
+                    }
+                }
+            }
+            FieldPathMode::Boundaries => {
+                let count = if side1 {
+                    self.side1_segments.len()
+                } else {
+                    self.side2_segments.len()
+                };
+                FieldPathSelectionSummary {
+                    title,
+                    text: format!("Segmente: {count}"),
+                    is_empty: count == 0,
                 }
             }
         }
+    }
 
-        ui.separator();
-
-        // ── Einstellungen ─────────────────────────────────────────────────────
-        ui.label("── Einstellungen ──");
-
-        // Knotenabstand
-        ui.horizontal(|ui| {
-            ui.label("Knotenabstand:");
-            let response = ui.add(
-                egui::DragValue::new(&mut self.config.node_spacing)
-                    .range(1.0..=50.0)
-                    .speed(0.5)
-                    .suffix(" m"),
-            );
-            let mut local_changed = response.changed();
-            let wd = wheel_dir(ui, &response);
-            if distance_wheel_step_m > 0.0 && wd != 0.0 {
-                self.config.node_spacing =
-                    (self.config.node_spacing + wd * distance_wheel_step_m).clamp(1.0, 50.0);
-                local_changed = true;
-            }
-            if local_changed {
-                changed = true;
-            }
-        });
-
-        // Vereinfachungs-Toleranz (Douglas-Peucker)
-        ui.horizontal(|ui| {
-            ui.label("Vereinfachung:");
-            let response = ui.add(
-                egui::DragValue::new(&mut self.config.simplify_tolerance)
-                    .range(0.0..=20.0)
-                    .speed(0.1)
-                    .suffix(" m"),
-            );
-            let mut local_changed = response.changed();
-            let wd = wheel_dir(ui, &response);
-            if distance_wheel_step_m > 0.0 && wd != 0.0 {
-                self.config.simplify_tolerance =
-                    (self.config.simplify_tolerance + wd * distance_wheel_step_m).clamp(0.0, 20.0);
-                local_changed = true;
-            }
-            if local_changed {
-                changed = true;
-            }
-        });
-
-        // An bestehende Nodes anschliessen
-        if ui
-            .checkbox(
-                &mut self.config.connect_to_existing,
-                "An bestehende Nodes anschl.",
-            )
-            .changed()
-        {
-            changed = true;
+    fn can_advance_to_side2(&self) -> bool {
+        match self.mode {
+            FieldPathMode::Fields => !self.side1_field_ids.is_empty(),
+            FieldPathMode::Boundaries => !self.side1_segments.is_empty(),
         }
+    }
 
-        // Abbrechen-Button (immer sichtbar wenn nicht Idle)
-        if !matches!(self.phase, FieldPathPhase::Idle) {
-            ui.separator();
-            if ui.button("Abbrechen").clicked() {
-                self.reset();
-                changed = true;
-            }
+    fn can_compute(&self) -> bool {
+        match self.mode {
+            FieldPathMode::Fields => !self.side2_field_ids.is_empty(),
+            FieldPathMode::Boundaries => !self.side2_segments.is_empty(),
         }
+    }
+}
 
-        changed
+fn mode_choice(mode: FieldPathMode) -> FieldPathModeChoice {
+    match mode {
+        FieldPathMode::Fields => FieldPathModeChoice::Fields,
+        FieldPathMode::Boundaries => FieldPathModeChoice::Boundaries,
+    }
+}
+
+fn mode_from_choice(choice: FieldPathModeChoice) -> FieldPathMode {
+    match choice {
+        FieldPathModeChoice::Fields => FieldPathMode::Fields,
+        FieldPathModeChoice::Boundaries => FieldPathMode::Boundaries,
+    }
+}
+
+fn panel_phase(phase: FieldPathPhase) -> FieldPathPanelPhase {
+    match phase {
+        FieldPathPhase::Idle => FieldPathPanelPhase::Idle,
+        FieldPathPhase::SelectingSide1 => FieldPathPanelPhase::SelectingSide1,
+        FieldPathPhase::SelectingSide2 => FieldPathPanelPhase::SelectingSide2,
+        FieldPathPhase::Preview => FieldPathPanelPhase::Preview,
+    }
+}
+
+fn set_f32(target: &mut f32, value: f32) -> bool {
+    if (*target - value).abs() < f32::EPSILON {
+        false
+    } else {
+        *target = value;
+        true
+    }
+}
+
+fn set_bool(target: &mut bool, value: bool) -> bool {
+    if *target == value {
+        false
+    } else {
+        *target = value;
+        true
     }
 }

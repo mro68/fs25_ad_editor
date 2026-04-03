@@ -1,135 +1,79 @@
-//! Konfigurationspanel fuer das Strecken-Versatz-Tool.
-//!
-//! Zeigt Checkboxen fuer Links/Rechts-Versatz, Distanz-Felder,
-//! "Original beibehalten"-Option sowie eine Ketten-Info-Zeile.
+//! Egui-freie Panel-Bruecke fuer das Strecken-Versatz-Tool.
 
-use super::super::common::wheel_dir;
 use super::state::RouteOffsetTool;
+use crate::app::ui_contract::{
+    RouteOffsetPanelAction, RouteOffsetPanelState, RouteToolPanelEffect,
+    ROUTE_OFFSET_BASE_SPACING_LIMITS, ROUTE_OFFSET_DISTANCE_LIMITS,
+};
 
 impl RouteOffsetTool {
-    /// Rendert das Konfigurationspanel im Properties-Panel.
-    ///
-    /// Gibt `true` zurueck wenn sich eine Einstellung geaendert hat.
-    pub(super) fn render_config_view(
+    /// Liefert den egui-freien Panelzustand des Strecken-Versatz-Tools.
+    pub(super) fn panel_state(&self) -> RouteOffsetPanelState {
+        RouteOffsetPanelState {
+            has_chain: self.has_chain(),
+            empty_message: (!self.has_chain())
+                .then_some("Kette selektieren und Route-Tool neu aktivieren.".to_owned()),
+            left_enabled: self.config.left_enabled,
+            left_distance: self.config.left_distance,
+            right_enabled: self.config.right_enabled,
+            right_distance: self.config.right_distance,
+            base_spacing: self.config.base_spacing,
+            keep_original: self.config.keep_original,
+            chain_node_count: self.chain_positions.len(),
+        }
+    }
+
+    /// Wendet eine semantische Panel-Aktion auf das Strecken-Versatz-Tool an.
+    pub(super) fn apply_panel_action(
         &mut self,
-        ui: &mut egui::Ui,
-        distance_wheel_step_m: f32,
-    ) -> bool {
-        let mut changed = false;
-
-        if !self.has_chain() {
-            ui.label("Kette selektieren und Route-Tool neu aktivieren.");
-            return false;
-        }
-
-        // ── Links-Versatz ────────────────────────────────────────────────────
-        ui.horizontal(|ui| {
-            if ui
-                .checkbox(&mut self.config.left_enabled, "Links versetzen")
-                .changed()
-            {
-                changed = true;
+        action: RouteOffsetPanelAction,
+    ) -> RouteToolPanelEffect {
+        let changed = match action {
+            RouteOffsetPanelAction::SetLeftEnabled(value) => {
+                set_bool(&mut self.config.left_enabled, value)
             }
-        });
-
-        if self.config.left_enabled {
-            ui.horizontal(|ui| {
-                ui.label("  Distanz:");
-                let r = ui.add(
-                    egui::DragValue::new(&mut self.config.left_distance)
-                        .speed(0.5)
-                        .range(0.5..=200.0)
-                        .suffix(" m"),
-                );
-                let mut local_changed = r.changed();
-                let wheel = wheel_dir(ui, &r);
-                if distance_wheel_step_m > 0.0 && wheel != 0.0 {
-                    self.config.left_distance = (self.config.left_distance
-                        + wheel * distance_wheel_step_m)
-                        .clamp(0.5, 200.0);
-                    local_changed = true;
-                }
-                if local_changed {
-                    changed = true;
-                }
-            });
-        }
-
-        ui.add_space(4.0);
-
-        // ── Rechts-Versatz ───────────────────────────────────────────────────
-        ui.horizontal(|ui| {
-            if ui
-                .checkbox(&mut self.config.right_enabled, "Rechts versetzen")
-                .changed()
-            {
-                changed = true;
+            RouteOffsetPanelAction::SetLeftDistance(value) => set_f32(
+                &mut self.config.left_distance,
+                ROUTE_OFFSET_DISTANCE_LIMITS.clamp(value),
+            ),
+            RouteOffsetPanelAction::SetRightEnabled(value) => {
+                set_bool(&mut self.config.right_enabled, value)
             }
-        });
-
-        if self.config.right_enabled {
-            ui.horizontal(|ui| {
-                ui.label("  Distanz:");
-                let r = ui.add(
-                    egui::DragValue::new(&mut self.config.right_distance)
-                        .speed(0.5)
-                        .range(0.5..=200.0)
-                        .suffix(" m"),
-                );
-                let mut local_changed = r.changed();
-                let wheel = wheel_dir(ui, &r);
-                if distance_wheel_step_m > 0.0 && wheel != 0.0 {
-                    self.config.right_distance = (self.config.right_distance
-                        + wheel * distance_wheel_step_m)
-                        .clamp(0.5, 200.0);
-                    local_changed = true;
-                }
-                if local_changed {
-                    changed = true;
-                }
-            });
-        }
-
-        ui.add_space(4.0);
-        ui.separator();
-
-        // ── Knotenabstand ────────────────────────────────────────────────────
-        ui.horizontal(|ui| {
-            ui.label("Abstand:");
-            let r = ui.add(
-                egui::DragValue::new(&mut self.config.base_spacing)
-                    .speed(0.5)
-                    .range(1.0..=50.0)
-                    .suffix(" m"),
-            );
-            let mut local_changed = r.changed();
-            let wheel = wheel_dir(ui, &r);
-            if distance_wheel_step_m > 0.0 && wheel != 0.0 {
-                self.config.base_spacing =
-                    (self.config.base_spacing + wheel * distance_wheel_step_m).clamp(1.0, 50.0);
-                local_changed = true;
+            RouteOffsetPanelAction::SetRightDistance(value) => set_f32(
+                &mut self.config.right_distance,
+                ROUTE_OFFSET_DISTANCE_LIMITS.clamp(value),
+            ),
+            RouteOffsetPanelAction::SetBaseSpacing(value) => set_f32(
+                &mut self.config.base_spacing,
+                ROUTE_OFFSET_BASE_SPACING_LIMITS.clamp(value),
+            ),
+            RouteOffsetPanelAction::SetKeepOriginal(value) => {
+                set_bool(&mut self.config.keep_original, value)
             }
-            if local_changed {
-                changed = true;
-            }
-        });
+        };
 
-        ui.add_space(4.0);
-        ui.separator();
-
-        // ── Original-Option ───────────────────────────────────────────────────
-        if ui
-            .checkbox(&mut self.config.keep_original, "Original beibehalten")
-            .changed()
-        {
-            changed = true;
+        RouteToolPanelEffect {
+            changed,
+            needs_recreate: false,
+            next_action: None,
         }
+    }
+}
 
-        // ── Info-Zeile ────────────────────────────────────────────────────────
-        ui.add_space(4.0);
-        ui.separator();
-        ui.label(format!("Kette: {} Nodes", self.chain_positions.len()));
+fn set_f32(target: &mut f32, value: f32) -> bool {
+    if (*target - value).abs() < f32::EPSILON {
+        false
+    } else {
+        *target = value;
+        true
+    }
+}
 
-        changed
+fn set_bool(target: &mut bool, value: bool) -> bool {
+    if *target == value {
+        false
+    } else {
+        *target = value;
+        true
     }
 }

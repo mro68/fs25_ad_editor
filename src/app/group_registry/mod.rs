@@ -5,12 +5,11 @@
 //! transient und gilt nur fuer die aktuelle Session. Beim Laden einer Datei
 //! ist sie leer.
 //!
-//! Beim Bearbeiten eines Segments werden die zugehoerigen Nodes aus der
-//! RoadMap geloescht und das passende Tool mit den gespeicherten Parametern
-//! neu geladen.
+//! Tool-spezifische Edit-Payloads werden nicht in der Registry gespeichert,
+//! sondern separat im Tool-Editing-Layer gehalten.
 //!
 //! # Modulstruktur
-//! - [`types`]: Datentypes (`GroupBase`, `GroupKind`, `GroupRecord`) und der explizite Tool-Vertrag
+//! - [`types`]: Tool-neutrale Datentypen (`BoundaryInfo`, `GroupRecord`)
 //! - [`query`]: Lookup- und Query-Methoden
 //! - [`lock`]: Lock- und Edit-Guard-Methoden
 //! - [`mutation`]: Mutierende Methoden
@@ -32,9 +31,8 @@ use std::collections::HashMap;
 
 /// In-Session-Registry aller erstellten Segmente.
 ///
-/// Ermoeglicht das nachtraegliche Bearbeiten von Segmenten, indem die
-/// Tool-Parameter beim Erstellen gespeichert und beim Bearbeiten
-/// wiederhergestellt werden.
+/// Verwaltet nur gruppenneutrale Session-Daten wie Mitgliedschaft,
+/// Boundary-Caching, Lock-Status und Validitaet.
 ///
 /// Interne Speicherung als `HashMap<u64, GroupRecord>` fuer O(1)-Zugriffe.
 /// Ein Reverse-Index `node_to_records` ermoeglicht effiziente Node→Segment-Abfragen.
@@ -121,7 +119,7 @@ impl GroupRegistry {
     ///
     /// Wird aufgerufen wenn Nodes manuell geloescht werden (z.B. Delete-Taste).
     /// Records, deren ID dem aktiven `edit_guard_id` entspricht, werden nie invalidiert.
-    pub fn invalidate_by_node_ids(&mut self, node_ids: &[u64]) {
+    pub fn invalidate_by_node_ids(&mut self, node_ids: &[u64]) -> Vec<u64> {
         // IDs der zu entfernenden Records sammeln (ohne edit_guard)
         let mut to_remove: std::collections::HashSet<u64> = std::collections::HashSet::new();
         for &nid in node_ids {
@@ -133,9 +131,11 @@ impl GroupRegistry {
                 }
             }
         }
-        for rid in to_remove {
+        let removed_ids: Vec<u64> = to_remove.iter().copied().collect();
+        for rid in removed_ids.iter().copied() {
             self.remove(rid);
         }
+        removed_ids
     }
 
     /// Prueft ob ein Segment noch gueltig ist (Nodes existieren und Positionen unveraendert).
@@ -149,8 +149,7 @@ impl GroupRegistry {
             .zip(record.original_positions.iter())
             .all(|(id, orig_pos)| {
                 road_map
-                    .nodes
-                    .get(id)
+                    .node(*id)
                     .map(|node| node.position.distance(*orig_pos) < 0.01)
                     .unwrap_or(false)
             })

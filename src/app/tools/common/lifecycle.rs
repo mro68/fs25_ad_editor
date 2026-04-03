@@ -1,12 +1,15 @@
 //! Lifecycle-Zustand und Segment-Konfiguration fuer Route-Tools.
 
-use super::super::ToolAnchor;
+use super::super::{ToolAnchor, ToolHostContext};
 use super::geometry::{
     node_count_from_length, segment_length_from_count,
     snap_with_neighbors as geom_snap_with_neighbors,
 };
 use crate::app::tools::snap_to_node;
-use crate::core::{ConnectedNeighbor, RoadMap};
+use crate::app::ui_contract::{
+    SegmentConfigPanelAction, SegmentConfigPanelState, SegmentPanelMode,
+};
+use crate::core::{ConnectedNeighbor, ConnectionDirection, ConnectionPriority, RoadMap};
 
 /// Welcher Wert wurde zuletzt vom User geaendert?
 ///
@@ -107,6 +110,28 @@ impl ToolLifecycleState {
     ) -> (ToolAnchor, Vec<ConnectedNeighbor>) {
         geom_snap_with_neighbors(pos, road_map, self.snap_radius)
     }
+}
+
+/// Synchronisiert gemeinsame Host-Defaults in ein Tool.
+pub fn sync_tool_host(
+    direction: &mut ConnectionDirection,
+    priority: &mut ConnectionPriority,
+    lifecycle: &mut ToolLifecycleState,
+    context: &ToolHostContext,
+) {
+    *direction = context.direction;
+    *priority = context.priority;
+    lifecycle.snap_radius = context.snap_radius;
+}
+
+/// Speichert die zuletzt erzeugten IDs und den End-Anker eines Tools.
+pub fn record_applied_tool_state(
+    lifecycle: &mut ToolLifecycleState,
+    ids: &[u64],
+    end_anchor: Option<ToolAnchor>,
+) {
+    lifecycle.last_end_anchor = end_anchor;
+    lifecycle.save_created_ids(ids);
 }
 
 /// Macro fuer die 7 identischen Lifecycle-Delegationsmethoden aller Route-Tools.
@@ -224,9 +249,8 @@ macro_rules! impl_lifecycle_delegation_no_seg {
 
 /// Gekapselte Konfiguration fuer Segment-Laenge und Node-Anzahl.
 ///
-/// Alle Route-Tools nutzen das gleiche Muster: ein Slider fuer den minimalen
-/// Abstand und einer fuer die Node-Anzahl, die sich gegenseitig ableiten.
-/// `SegmentConfig` kapselt diese Logik inkl. der egui-Slider.
+/// Alle Route-Tools nutzen das gleiche Muster: minimaler Abstand und
+/// Node-Anzahl leiten sich gegenseitig aus der aktuellen Streckenlaenge ab.
 #[derive(Debug, Clone)]
 pub struct SegmentConfig {
     /// Maximaler Abstand zwischen Zwischen-Nodes
@@ -262,100 +286,104 @@ impl SegmentConfig {
         }
     }
 
-    /// Rendert die Segment-Slider. Bei `is_adjusting == true` wird der Gegenwert
-    /// direkt gesetzt und `recreate = true` signalisiert; sonst via `sync_from_length()`.
-    ///
-    /// Gibt `(changed, recreate_needed)` zurueck.
-    fn render_sliders(
-        &mut self,
-        ui: &mut egui::Ui,
+    /// Liefert den semantischen Panelzustand fuer die gemeinsame Segment-Konfiguration.
+    pub fn panel_state(
+        &self,
+        adjusting: bool,
+        ready: bool,
         length: f32,
         label: &str,
-        distance_wheel_step_m: f32,
-        is_adjusting: bool,
-    ) -> (bool, bool) {
-        let mut changed = false;
-        let mut recreate = false;
+        with_node_count: bool,
+    ) -> SegmentConfigPanelState {
+        let mode = panel_mode(adjusting, ready);
+        let (length_m, max_segment_length_max, node_count, node_count_min, node_count_max) =
+            match mode {
+                SegmentPanelMode::Default => (None, 20.0, None, None, None),
+                SegmentPanelMode::Ready | SegmentPanelMode::Adjusting => {
+                    let max_nodes = (length / 1.0).ceil().max(2.0) as usize;
+                    (
+                        Some(length),
+                        length.max(1.0),
+                        with_node_count.then_some(self.node_count),
+                        with_node_count.then_some(2),
+                        with_node_count.then_some(max_nodes),
+                    )
+                }
+            };
 
-        ui.label(format!("{}: {:.1} m", label, length));
-        ui.add_space(4.0);
-
-        // --- Distance-Slider ---
-        ui.label("Min. Abstand:");
-        let max_seg = length.max(1.0);
-        let distance_response =
-            ui.add(egui::Slider::new(&mut self.max_segment_length, 1.0..=max_seg).suffix(" m"));
-        let mut distance_changed = distance_response.changed();
-        let distance_wheel_dir = super::wheel_dir(ui, &distance_response);
-        if distance_wheel_step_m > 0.0 && distance_wheel_dir != 0.0 {
-            self.max_segment_length = (self.max_segment_length
-                + distance_wheel_dir * distance_wheel_step_m)
-                .clamp(1.0, max_seg);
-            distance_changed = true;
+        SegmentConfigPanelState {
+            mode,
+            length_label: label.to_owned(),
+            length_m,
+            max_segment_length: self.max_segment_length,
+            max_segment_length_min: 1.0,
+            max_segment_length_max,
+            node_count,
+            node_count_min,
+            node_count_max,
         }
-        if distance_changed {
-            self.last_edited = LastEdited::Distance;
-            if is_adjusting {
-                self.node_count = node_count_from_length(length, self.max_segment_length);
-                recreate = true;
-            } else {
-                self.sync_from_length(length);
-            }
-            changed = true;
-        }
-
-        ui.add_space(4.0);
-
-        // --- NodeCount-Slider ---
-        ui.label("Anzahl Nodes:");
-        let max_nodes = (length / 1.0).ceil().max(2.0) as usize;
-        let node_response = ui.add(egui::Slider::new(&mut self.node_count, 2..=max_nodes));
-        let mut node_changed = node_response.changed();
-        let node_wheel_dir = super::wheel_dir(ui, &node_response);
-        if distance_wheel_step_m > 0.0 && node_wheel_dir != 0.0 {
-            if node_wheel_dir > 0.0 {
-                self.node_count = self.node_count.saturating_add(1).min(max_nodes);
-            } else {
-                self.node_count = self.node_count.saturating_sub(1).max(2);
-            }
-            node_changed = true;
-        }
-        if node_changed {
-            self.last_edited = LastEdited::NodeCount;
-            if is_adjusting {
-                self.max_segment_length = segment_length_from_count(length, self.node_count);
-                recreate = true;
-            } else {
-                self.sync_from_length(length);
-            }
-            changed = true;
-        }
-
-        (changed, recreate)
     }
 
-    /// Rendert den Segment-Slider im Default-Modus (Tool noch nicht bereit).
-    ///
-    /// Gibt `true` zurueck wenn sich etwas geaendert hat.
-    fn render_default(&mut self, ui: &mut egui::Ui, distance_wheel_step_m: f32) -> bool {
-        let mut changed = false;
-
-        ui.label("Max. Segment-Laenge:");
-        let response =
-            ui.add(egui::Slider::new(&mut self.max_segment_length, 1.0..=20.0).suffix(" m"));
-        let mut distance_changed = response.changed();
-        let wheel_dir = super::wheel_dir(ui, &response);
-        if distance_wheel_step_m > 0.0 && wheel_dir != 0.0 {
-            self.max_segment_length =
-                (self.max_segment_length + wheel_dir * distance_wheel_step_m).clamp(1.0, 20.0);
-            distance_changed = true;
+    /// Wendet eine semantische Panel-Aktion auf die Segment-Konfiguration an.
+    pub fn apply_panel_action(
+        &mut self,
+        action: SegmentConfigPanelAction,
+        adjusting: bool,
+        ready: bool,
+        length: f32,
+        with_node_count: bool,
+    ) -> SegmentConfigApplyResult {
+        let mode = panel_mode(adjusting, ready);
+        match action {
+            SegmentConfigPanelAction::SetMaxSegmentLength(value) => {
+                let max_value = match mode {
+                    SegmentPanelMode::Default => 20.0,
+                    SegmentPanelMode::Ready | SegmentPanelMode::Adjusting => length.max(1.0),
+                };
+                let clamped = value.clamp(1.0, max_value);
+                if (self.max_segment_length - clamped).abs() < f32::EPSILON {
+                    return SegmentConfigApplyResult::default();
+                }
+                self.max_segment_length = clamped;
+                self.last_edited = LastEdited::Distance;
+                let recreate = if mode == SegmentPanelMode::Adjusting {
+                    self.node_count = node_count_from_length(length, self.max_segment_length);
+                    true
+                } else {
+                    if mode == SegmentPanelMode::Ready {
+                        self.sync_from_length(length);
+                    }
+                    false
+                };
+                SegmentConfigApplyResult {
+                    changed: true,
+                    recreate,
+                }
+            }
+            SegmentConfigPanelAction::SetNodeCount(value) => {
+                if !with_node_count || mode == SegmentPanelMode::Default {
+                    return SegmentConfigApplyResult::default();
+                }
+                let max_nodes = (length / 1.0).ceil().max(2.0) as usize;
+                let clamped = value.clamp(2, max_nodes);
+                if self.node_count == clamped {
+                    return SegmentConfigApplyResult::default();
+                }
+                self.node_count = clamped;
+                self.last_edited = LastEdited::NodeCount;
+                let recreate = if mode == SegmentPanelMode::Adjusting {
+                    self.max_segment_length = segment_length_from_count(length, self.node_count);
+                    true
+                } else {
+                    self.sync_from_length(length);
+                    false
+                };
+                SegmentConfigApplyResult {
+                    changed: true,
+                    recreate,
+                }
+            }
         }
-        if distance_changed {
-            self.last_edited = LastEdited::Distance;
-            changed = true;
-        }
-
-        changed
     }
 
     /// Erhoeht die Anzahl der Nodes um 1.
@@ -383,27 +411,21 @@ impl SegmentConfig {
     }
 }
 
-/// Rendert die 3-Modus-Segment-Konfiguration (adjusting / live / default).
-///
-/// Gemeinsames Pattern aller Route-Tools. Gibt `(changed, recreate_needed)` zurueck.
-/// - `adjusting`: Nachbearbeitungs-Modus (Segment wurde bereits platziert)
-/// - `ready`: Tool ist bereit zur Ausfuehrung
-/// - `length`: Aktuelle Streckenlaenge (irrelevant fuer Default-Modus)
-/// - `label`: Anzeige-Label fuer die Laenge (z.B. "Kurvenlaenge", "Spline-Laenge")
-pub fn render_segment_config_3modes(
-    seg: &mut SegmentConfig,
-    ui: &mut egui::Ui,
-    adjusting: bool,
-    ready: bool,
-    length: f32,
-    label: &str,
-    distance_wheel_step_m: f32,
-) -> (bool, bool) {
+/// Ergebnis einer semantischen Segment-Aktion.
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
+pub struct SegmentConfigApplyResult {
+    /// Mindestens ein Wert wurde geaendert.
+    pub changed: bool,
+    /// Die Aenderung erfordert eine Neuberechnung bestehender Geometrie.
+    pub recreate: bool,
+}
+
+fn panel_mode(adjusting: bool, ready: bool) -> SegmentPanelMode {
     if adjusting {
-        seg.render_sliders(ui, length, label, distance_wheel_step_m, true)
+        SegmentPanelMode::Adjusting
     } else if ready {
-        seg.render_sliders(ui, length, label, distance_wheel_step_m, false)
+        SegmentPanelMode::Ready
     } else {
-        (seg.render_default(ui, distance_wheel_step_m), false)
+        SegmentPanelMode::Default
     }
 }

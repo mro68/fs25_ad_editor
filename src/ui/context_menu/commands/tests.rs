@@ -19,8 +19,8 @@ fn make_road_map(nodes: &[(u64, f32, f32)]) -> RoadMap {
 /// Erstellt eine RoadMap mit 2 Nodes und einer Verbindung dazwischen.
 fn make_connected_map(id_a: u64, id_b: u64) -> RoadMap {
     let mut map = make_road_map(&[(id_a, 0.0, 0.0), (id_b, 10.0, 10.0)]);
-    let pos_a = map.nodes[&id_a].position;
-    let pos_b = map.nodes[&id_b].position;
+    let pos_a = map.node(id_a).expect("Start-Node vorhanden").position;
+    let pos_b = map.node(id_b).expect("End-Node vorhanden").position;
     map.add_connection(Connection::new(
         id_a,
         id_b,

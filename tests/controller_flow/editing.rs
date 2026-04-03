@@ -1,9 +1,10 @@
 use fs25_auto_drive_editor::app::handlers;
-use fs25_auto_drive_editor::app::tool_contract::TangentSource;
-use fs25_auto_drive_editor::app::tools::RouteToolId;
-use fs25_auto_drive_editor::app::{
-    AppController, AppIntent, AppState, EditorTool, GroupBase, GroupKind, GroupRecord, ToolAnchor,
+use fs25_auto_drive_editor::app::tool_contract::{RouteToolId, TangentSource};
+use fs25_auto_drive_editor::app::ui_contract::{
+    BypassPanelAction, ParkingPanelAction, RouteOffsetPanelAction, RouteToolConfigState,
+    RouteToolPanelAction, SmoothCurvePanelAction,
 };
+use fs25_auto_drive_editor::app::{AppController, AppIntent, AppState, EditorTool, GroupRecord};
 use fs25_auto_drive_editor::core::{
     Connection, ConnectionDirection, ConnectionPriority, MapNode, NodeFlag, RoadMap,
 };
@@ -95,37 +96,77 @@ fn make_curve_anchor_map() -> AppState {
 }
 
 fn current_cubic_tangents(state: &AppState) -> (TangentSource, TangentSource) {
-    let tool = state
+    let menu = state
         .editor
         .tool_manager
-        .active_tool()
-        .expect("Route-Tool muss aktiv sein");
-    let menu = tool
-        .tangent_menu_data()
+        .active_tangent()
+        .and_then(|tool| tool.tangent_menu_data())
         .expect("Tangenten-Menue muss in Control-Phase verfuegbar sein");
     (menu.current_start, menu.current_end)
 }
 
-fn make_manual_group_record(id: u64, tool_id: Option<RouteToolId>) -> GroupRecord {
+fn make_manual_group_record(id: u64) -> GroupRecord {
     GroupRecord {
         id,
-        tool_id,
         node_ids: vec![1, 2],
-        start_anchor: ToolAnchor::ExistingNode(1, glam::Vec2::new(0.0, 0.0)),
-        end_anchor: ToolAnchor::ExistingNode(2, glam::Vec2::new(10.0, 0.0)),
-        kind: GroupKind::Manual {
-            base: GroupBase {
-                direction: ConnectionDirection::Regular,
-                priority: ConnectionPriority::Regular,
-                max_segment_length: 10.0,
-            },
-        },
         original_positions: vec![glam::Vec2::new(0.0, 0.0), glam::Vec2::new(10.0, 0.0)],
         marker_node_ids: Vec::new(),
         locked: false,
         entry_node_id: None,
         exit_node_id: None,
     }
+}
+
+fn current_route_tool_config(state: &AppState) -> RouteToolConfigState {
+    state
+        .editor
+        .route_tool_panel_state()
+        .and_then(|panel| panel.config_state)
+        .expect("Aktives Route-Tool muss Panel-Konfiguration liefern")
+}
+
+fn make_tool_editable_straight_state() -> (AppState, u64) {
+    let mut map = RoadMap::new(3);
+    map.add_node(MapNode::new(
+        1,
+        glam::Vec2::new(0.0, 0.0),
+        NodeFlag::Regular,
+    ));
+    map.add_node(MapNode::new(
+        2,
+        glam::Vec2::new(30.0, 0.0),
+        NodeFlag::Regular,
+    ));
+    map.ensure_spatial_index();
+
+    let mut state = AppState::new();
+    state.road_map = Some(Arc::new(map));
+    state.view.viewport_size = [1280.0, 720.0];
+
+    handlers::route_tool::select_with_anchors(&mut state, RouteToolId::Straight, 1, 2);
+
+    let record_id = state
+        .group_registry
+        .records()
+        .next()
+        .expect("Gerade Strecke muss einen persistierten GroupRecord anlegen")
+        .id;
+
+    assert!(
+        !state
+            .group_registry
+            .get(record_id)
+            .expect("GroupRecord muss vorhanden sein")
+            .node_ids
+            .is_empty(),
+        "Persistierte Gerade muss innere Nodes besitzen"
+    );
+    assert!(
+        state.tool_edit_store.get(record_id).is_some(),
+        "Persistierte Gerade muss einen Tool-Edit-Snapshot besitzen"
+    );
+
+    (state, record_id)
 }
 
 #[test]
@@ -192,10 +233,9 @@ fn group_edit_tool_requested_bricht_fuer_nicht_editierbare_tools_ohne_nebeneffek
     let mut controller = AppController::new();
     let mut state = make_test_map();
     let record_id = state.group_registry.next_id();
-    state.group_registry.register(make_manual_group_record(
-        record_id,
-        Some(RouteToolId::ColorPath),
-    ));
+    state
+        .group_registry
+        .register(make_manual_group_record(record_id));
 
     controller
         .handle_intent(&mut state, AppIntent::GroupEditStartRequested { record_id })
@@ -226,8 +266,283 @@ fn group_edit_tool_requested_bricht_fuer_nicht_editierbare_tools_ohne_nebeneffek
         before_active_route_id
     );
     assert!(state.selection.selected_node_ids.is_empty());
-    assert_eq!(state.tool_editing_record_id, None);
-    assert!(state.tool_editing_record_backup.is_none());
+    assert!(state.active_tool_edit_session.is_none());
+    assert!(state.tool_edit_store.get(record_id).is_none());
+}
+
+#[test]
+fn route_tool_cancel_restores_registry_and_store_after_active_tool_edit() {
+    let mut controller = AppController::new();
+    let (mut state, record_id) = make_tool_editable_straight_state();
+    let original_node_count = state.road_map.as_ref().unwrap().node_count();
+    let original_record = state
+        .group_registry
+        .get(record_id)
+        .expect("Persistierter Record muss vor Tool-Edit existieren")
+        .clone();
+
+    controller
+        .handle_intent(&mut state, AppIntent::EditGroupRequested { record_id })
+        .expect("EditGroupRequested sollte den Tool-Edit starten");
+
+    assert!(state.active_tool_edit_session.is_some());
+    assert!(state.group_registry.get(record_id).is_none());
+    assert!(state.tool_edit_store.get(record_id).is_none());
+    assert!(state.road_map.as_ref().unwrap().node_count() < original_node_count);
+
+    controller
+        .handle_intent(&mut state, AppIntent::RouteToolCancelled)
+        .expect("RouteToolCancelled sollte den Tool-Edit sauber abbrechen");
+
+    assert!(state.active_tool_edit_session.is_none());
+    assert_eq!(state.editor.active_tool, EditorTool::Select);
+    assert_eq!(
+        state.road_map.as_ref().unwrap().node_count(),
+        original_node_count
+    );
+
+    let restored_record = state
+        .group_registry
+        .get(record_id)
+        .expect("GroupRecord muss nach Cancel wiederhergestellt sein");
+    assert_eq!(restored_record.node_ids, original_record.node_ids);
+    assert_eq!(restored_record.locked, original_record.locked);
+    assert!(state.tool_edit_store.get(record_id).is_some());
+}
+
+#[test]
+fn undo_requested_restores_active_tool_edit_without_transient_redo_state() {
+    let mut controller = AppController::new();
+    let (mut state, record_id) = make_tool_editable_straight_state();
+    let original_node_count = state.road_map.as_ref().unwrap().node_count();
+
+    controller
+        .handle_intent(&mut state, AppIntent::EditGroupRequested { record_id })
+        .expect("EditGroupRequested sollte den Tool-Edit starten");
+
+    assert!(state.active_tool_edit_session.is_some());
+    assert!(state.group_registry.get(record_id).is_none());
+
+    controller
+        .handle_intent(&mut state, AppIntent::UndoRequested)
+        .expect("UndoRequested muss aktiven Tool-Edit ueber Restore abbrechen");
+
+    assert!(state.active_tool_edit_session.is_none());
+    assert_eq!(state.editor.active_tool, EditorTool::Select);
+    assert_eq!(
+        state.road_map.as_ref().unwrap().node_count(),
+        original_node_count
+    );
+    assert!(state.group_registry.get(record_id).is_some());
+    assert!(state.tool_edit_store.get(record_id).is_some());
+    assert!(
+        !state.can_redo(),
+        "Transienter Tool-Edit darf keinen redo-faehigen Zwischenzustand hinterlassen"
+    );
+}
+
+#[test]
+fn group_edit_to_tool_edit_cancel_restores_locked_group_state() {
+    let mut controller = AppController::new();
+    let (mut state, record_id) = make_tool_editable_straight_state();
+
+    assert!(
+        state.group_registry.is_locked(record_id),
+        "Persistierte Tool-Gruppen muessen initial gesperrt sein"
+    );
+
+    controller
+        .handle_intent(&mut state, AppIntent::GroupEditStartRequested { record_id })
+        .expect("GroupEditStartRequested sollte den Gruppen-Edit starten");
+
+    assert!(state.group_editing.is_some());
+    assert!(
+        !state.group_registry.is_locked(record_id),
+        "Aktiver Gruppen-Edit muss die Gruppe temporaer entsperren"
+    );
+
+    controller
+        .handle_intent(&mut state, AppIntent::GroupEditToolRequested { record_id })
+        .expect("GroupEditToolRequested sollte in den Tool-Edit wechseln");
+
+    assert!(state.group_editing.is_none());
+    assert!(state.active_tool_edit_session.is_some());
+    assert!(state.group_registry.get(record_id).is_none());
+    assert!(
+        state
+            .active_tool_edit_session
+            .as_ref()
+            .expect("Tool-Edit-Session muss aktiv sein")
+            .group_record_backup
+            .locked,
+        "Backup fuer Tool-Edit muss den urspruenglichen Lock-Zustand behalten"
+    );
+
+    controller
+        .handle_intent(&mut state, AppIntent::RouteToolCancelled)
+        .expect("RouteToolCancelled sollte den Tool-Edit abbrechen");
+
+    assert!(state.group_registry.is_locked(record_id));
+    assert!(state.tool_edit_store.get(record_id).is_some());
+    assert!(state.group_registry.get(record_id).is_some());
+}
+
+#[test]
+fn route_tool_panel_action_requested_accepts_large_bypass_offset_via_controller_flow() {
+    let mut controller = AppController::new();
+    let mut state = make_test_map();
+    state.selection.ids_mut().insert(1);
+    state.selection.ids_mut().insert(2);
+
+    controller
+        .handle_intent(
+            &mut state,
+            AppIntent::SelectRouteToolRequested {
+                tool_id: RouteToolId::Bypass,
+            },
+        )
+        .expect("Bypass-Tool sollte ueber den Controller waehlbar sein");
+
+    controller
+        .handle_intent(
+            &mut state,
+            AppIntent::RouteToolPanelActionRequested {
+                action: RouteToolPanelAction::Bypass(BypassPanelAction::SetOffset(175.0)),
+            },
+        )
+        .expect("Bypass-Panel-Aktion sollte ueber den Controller-Flow laufen");
+
+    let RouteToolConfigState::Bypass(panel) = current_route_tool_config(&state) else {
+        panic!("Bypass-Panelzustand erwartet");
+    };
+    assert!(
+        panel.has_chain,
+        "Die selektierte Kette muss geladen bleiben"
+    );
+    assert_eq!(
+        panel.offset, 175.0,
+        "Groesse Werte duerfen nicht mehr auf 50 m beschnitten werden"
+    );
+}
+
+#[test]
+fn route_tool_panel_action_requested_accepts_large_route_offset_distance_via_controller_flow() {
+    let mut controller = AppController::new();
+    let mut state = make_test_map();
+    state.selection.ids_mut().insert(1);
+    state.selection.ids_mut().insert(2);
+
+    controller
+        .handle_intent(
+            &mut state,
+            AppIntent::SelectRouteToolRequested {
+                tool_id: RouteToolId::RouteOffset,
+            },
+        )
+        .expect("RouteOffset-Tool sollte ueber den Controller waehlbar sein");
+
+    controller
+        .handle_intent(
+            &mut state,
+            AppIntent::RouteToolPanelActionRequested {
+                action: RouteToolPanelAction::RouteOffset(RouteOffsetPanelAction::SetLeftDistance(
+                    175.0,
+                )),
+            },
+        )
+        .expect("RouteOffset-Panel-Aktion sollte ueber den Controller-Flow laufen");
+
+    let RouteToolConfigState::RouteOffset(panel) = current_route_tool_config(&state) else {
+        panic!("RouteOffset-Panelzustand erwartet");
+    };
+    assert!(
+        panel.has_chain,
+        "Die selektierte Kette muss geladen bleiben"
+    );
+    assert_eq!(
+        panel.left_distance, 175.0,
+        "Groesse Werte duerfen nicht mehr auf 50 m beschnitten werden"
+    );
+}
+
+#[test]
+fn route_tool_panel_action_requested_clamps_parking_values_via_controller_flow() {
+    let mut controller = AppController::new();
+    let mut state = make_test_map();
+
+    controller
+        .handle_intent(
+            &mut state,
+            AppIntent::SelectRouteToolRequested {
+                tool_id: RouteToolId::Parking,
+            },
+        )
+        .expect("Parking-Tool sollte ueber den Controller waehlbar sein");
+
+    controller
+        .handle_intent(
+            &mut state,
+            AppIntent::RouteToolPanelActionRequested {
+                action: RouteToolPanelAction::Parking(ParkingPanelAction::SetNumRows(200)),
+            },
+        )
+        .expect("Parking-Panel-Aktion sollte ueber den Controller-Flow laufen");
+
+    let RouteToolConfigState::Parking(panel) = current_route_tool_config(&state) else {
+        panic!("Parking-Panelzustand erwartet");
+    };
+    assert_eq!(
+        panel.num_rows, 10,
+        "Parking muss die fachliche Obergrenze auch im Panel-Flow einhalten"
+    );
+}
+
+#[test]
+fn route_tool_panel_action_requested_clamps_smooth_curve_values_via_controller_flow() {
+    let mut controller = AppController::new();
+    let mut state = make_test_map();
+
+    controller
+        .handle_intent(
+            &mut state,
+            AppIntent::SelectRouteToolRequested {
+                tool_id: RouteToolId::SmoothCurve,
+            },
+        )
+        .expect("SmoothCurve-Tool sollte ueber den Controller waehlbar sein");
+
+    controller
+        .handle_intent(
+            &mut state,
+            AppIntent::RouteToolPanelActionRequested {
+                action: RouteToolPanelAction::SmoothCurve(SmoothCurvePanelAction::SetMaxAngleDeg(
+                    180.0,
+                )),
+            },
+        )
+        .expect("SmoothCurve-Winkel sollte ueber den Controller-Flow laufen");
+    controller
+        .handle_intent(
+            &mut state,
+            AppIntent::RouteToolPanelActionRequested {
+                action: RouteToolPanelAction::SmoothCurve(SmoothCurvePanelAction::SetMinDistance(
+                    0.1,
+                )),
+            },
+        )
+        .expect("SmoothCurve-Minimaldistanz sollte ueber den Controller-Flow laufen");
+
+    let RouteToolConfigState::SmoothCurve(panel) = current_route_tool_config(&state) else {
+        panic!("SmoothCurve-Panelzustand erwartet");
+    };
+    assert_eq!(
+        panel.max_angle_deg, 135.0,
+        "SmoothCurve muss die fachliche Winkelobergrenze einhalten"
+    );
+    assert_eq!(
+        panel.min_distance, 0.5,
+        "SmoothCurve muss die fachliche Minimaldistanz einhalten"
+    );
 }
 
 #[test]
@@ -252,8 +567,47 @@ fn test_add_node_at_position() {
     // Neuer Node sollte selektiert sein
     assert_eq!(state.selection.selected_node_ids.len(), 1);
     let new_id = *state.selection.selected_node_ids.iter().next().unwrap();
-    let node = rm.nodes.get(&new_id).expect("Neuer Node existiert");
+    let node = rm.node(new_id).expect("Neuer Node existiert");
     assert_eq!(node.position, glam::Vec2::new(50.0, 50.0));
+}
+
+#[test]
+fn trace_all_fields_dialog_requested_and_cancelled_toggle_visibility() {
+    let mut controller = AppController::new();
+    let mut state = AppState::new();
+
+    assert!(!state.ui.trace_all_fields_dialog.visible);
+
+    controller
+        .handle_intent(&mut state, AppIntent::OpenTraceAllFieldsDialogRequested)
+        .expect("OpenTraceAllFieldsDialogRequested sollte den Dialog oeffnen");
+
+    assert!(state.ui.trace_all_fields_dialog.visible);
+
+    controller
+        .handle_intent(&mut state, AppIntent::TraceAllFieldsCancelled)
+        .expect("TraceAllFieldsCancelled sollte den Dialog schliessen");
+
+    assert!(!state.ui.trace_all_fields_dialog.visible);
+}
+
+#[test]
+fn curseplay_dialog_requests_toggle_import_and_export_flags() {
+    let mut controller = AppController::new();
+    let mut state = AppState::new();
+
+    assert!(!state.ui.show_curseplay_import_dialog);
+    assert!(!state.ui.show_curseplay_export_dialog);
+
+    controller
+        .handle_intent(&mut state, AppIntent::CurseplayImportRequested)
+        .expect("CurseplayImportRequested sollte den Import-Dialog oeffnen");
+    controller
+        .handle_intent(&mut state, AppIntent::CurseplayExportRequested)
+        .expect("CurseplayExportRequested sollte den Export-Dialog oeffnen");
+
+    assert!(state.ui.show_curseplay_import_dialog);
+    assert!(state.ui.show_curseplay_export_dialog);
 }
 
 #[test]
@@ -296,7 +650,7 @@ fn test_delete_selected_nodes() {
 
     let rm = state.road_map.as_ref().unwrap();
     assert_eq!(rm.node_count(), 2);
-    assert!(!rm.nodes.contains_key(&1));
+    assert!(!rm.contains_node(1));
     // Verbindung 1→2 sollte auch entfernt sein
     assert_eq!(rm.connection_count(), 0);
     // Selektion leer
@@ -318,7 +672,7 @@ fn test_delete_is_undoable() {
         .handle_intent(&mut state, AppIntent::UndoRequested)
         .unwrap();
     assert_eq!(state.road_map.as_ref().unwrap().node_count(), 3);
-    assert!(state.road_map.as_ref().unwrap().nodes.contains_key(&1));
+    assert!(state.road_map.as_ref().unwrap().contains_node(1));
     assert_eq!(state.road_map.as_ref().unwrap().connection_count(), 1);
 }
 

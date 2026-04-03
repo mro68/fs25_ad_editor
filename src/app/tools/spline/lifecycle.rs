@@ -1,29 +1,24 @@
-//! Lifecycle-Methoden des SplineTool (RouteTool-Implementierung).
+//! Lifecycle-Methoden des SplineTool.
 
 use super::super::{
-    common::{linear_connections, populate_neighbors, tangent_options},
-    RouteTool, RouteToolId, ToolAction, ToolPreview, ToolResult,
+    common::{
+        linear_connections, populate_neighbors, record_applied_tool_state, sync_tool_host,
+        tangent_options,
+    },
+    RouteTool, RouteToolCore, RouteToolGroupEdit, RouteToolHostSync, RouteToolPanelBridge,
+    RouteToolRecreate, RouteToolSegmentAdjustments, RouteToolTangent, ToolAction, ToolHostContext,
+    ToolPreview, ToolResult,
 };
 use super::state::SplineTool;
-use crate::app::group_registry::{GroupBase, GroupKind, GroupRecord};
 use crate::app::tool_contract::TangentSource;
-use crate::app::ui_contract::TangentMenuData;
+use crate::app::tool_editing::{RouteToolEditPayload, ToolRouteBase};
+use crate::app::ui_contract::{
+    RouteToolConfigState, RouteToolPanelAction, RouteToolPanelEffect, TangentMenuData,
+};
 use crate::core::RoadMap;
 use glam::Vec2;
 
-impl RouteTool for SplineTool {
-    fn name(&self) -> &str {
-        "Spline"
-    }
-
-    fn icon(&self) -> &str {
-        "〰"
-    }
-
-    fn description(&self) -> &str {
-        "Zeichnet einen Catmull-Rom-Spline durch alle geklickten Punkte"
-    }
-
+impl RouteToolPanelBridge for SplineTool {
     fn status_text(&self) -> &str {
         match self.anchors.len() {
             0 => "Startpunkt klicken",
@@ -32,11 +27,24 @@ impl RouteTool for SplineTool {
         }
     }
 
+    fn panel_state(&self) -> RouteToolConfigState {
+        RouteToolConfigState::Spline(self.panel_state())
+    }
+
+    fn apply_panel_action(&mut self, action: RouteToolPanelAction) -> RouteToolPanelEffect {
+        let RouteToolPanelAction::Spline(action) = action else {
+            return RouteToolPanelEffect::default();
+        };
+
+        self.apply_panel_action(action)
+    }
+}
+
+impl RouteToolCore for SplineTool {
     fn on_click(&mut self, pos: Vec2, road_map: &RoadMap, _ctrl: bool) -> ToolAction {
         let (anchor, _neighbors) = self.lifecycle.snap_with_neighbors(pos, road_map);
 
         if self.anchors.is_empty() {
-            // Verkettung: letzten Endpunkt als Start verwenden
             if let Some(last_end) = self.lifecycle.chaining_start_anchor() {
                 self.lifecycle.prepare_for_chaining();
                 self.last_anchors.clear();
@@ -66,18 +74,15 @@ impl RouteTool for SplineTool {
         let snapped_cursor = self.lifecycle.snap_at(cursor_pos, road_map).position();
 
         let positions = if self.anchors.len() == 1 {
-            // Nur Start + Cursor → gerade Linie (Preview)
             let start = self.anchors[0].position();
             vec![start, snapped_cursor]
         } else {
-            // Spline durch alle Anker + Cursor
             self.compute_resampled(Some(snapped_cursor))
         };
 
         let connections = linear_connections(positions.len());
         let styles = vec![(self.direction, self.priority); connections.len()];
 
-        // Kontrollpunkte (Anker) als zusaetzliche Preview-Nodes (fuer visuelle Markierung)
         let mut nodes = positions;
         for anchor in &self.anchors {
             nodes.push(anchor.position());
@@ -92,10 +97,6 @@ impl RouteTool for SplineTool {
         }
     }
 
-    fn render_config(&mut self, ui: &mut egui::Ui, distance_wheel_step_m: f32) -> bool {
-        self.render_config_view(ui, distance_wheel_step_m)
-    }
-
     fn execute(&self, road_map: &RoadMap) -> Option<ToolResult> {
         Self::build_result_from_anchors(
             &self.anchors,
@@ -108,11 +109,6 @@ impl RouteTool for SplineTool {
         )
     }
 
-    /// Setzt das Tool auf den Anfangszustand zurueck.
-    ///
-    /// Loescht Anker und Tangenten-Auswahl. `last_anchors`, `start_neighbors`,
-    /// `end_neighbors` und `lifecycle.last_*` bleiben erhalten fuer
-    /// Nachbearbeitung und Verkettung.
     fn reset(&mut self) {
         self.anchors.clear();
         self.tangents.reset_tangents();
@@ -125,23 +121,24 @@ impl RouteTool for SplineTool {
     fn has_pending_input(&self) -> bool {
         !self.anchors.is_empty()
     }
+}
 
-    crate::impl_lifecycle_delegation!();
-
-    fn current_end_anchor(&self) -> Option<super::super::ToolAnchor> {
-        self.anchors
-            .last()
-            .copied()
-            .or_else(|| self.last_anchors.last().copied())
-            .or(self.lifecycle.last_end_anchor)
+impl RouteToolHostSync for SplineTool {
+    fn sync_host(&mut self, context: &ToolHostContext) {
+        sync_tool_host(
+            &mut self.direction,
+            &mut self.priority,
+            &mut self.lifecycle,
+            context,
+        );
     }
+}
 
-    fn save_anchors_for_recreate(&mut self, road_map: &RoadMap) {
-        // Nur bei Erst-Erstellung Anker uebernehmen; bei Recreate bleiben last_anchors erhalten
+impl RouteToolRecreate for SplineTool {
+    fn on_applied(&mut self, ids: &[u64], road_map: &RoadMap) {
         if !self.anchors.is_empty() {
             self.last_anchors = self.anchors.clone();
         }
-        // Nachbarn aus den richtigen Ankern befuellen (anchors oder last_anchors)
         let source = if !self.anchors.is_empty() {
             &self.anchors
         } else {
@@ -154,6 +151,29 @@ impl RouteTool for SplineTool {
             self.tangents.end_neighbors = populate_neighbors(last, road_map);
         }
         self.tangents.save_for_recreate();
+        let end_anchor = self
+            .anchors
+            .last()
+            .copied()
+            .or_else(|| self.last_anchors.last().copied())
+            .or(self.lifecycle.last_end_anchor);
+        record_applied_tool_state(&mut self.lifecycle, ids, end_anchor);
+    }
+
+    fn last_created_ids(&self) -> &[u64] {
+        &self.lifecycle.last_created_ids
+    }
+
+    fn last_end_anchor(&self) -> Option<super::super::ToolAnchor> {
+        self.lifecycle.last_end_anchor
+    }
+
+    fn needs_recreate(&self) -> bool {
+        self.lifecycle.recreate_needed
+    }
+
+    fn clear_recreate_flag(&mut self) {
+        self.lifecycle.recreate_needed = false;
     }
 
     fn execute_from_anchors(&self, road_map: &RoadMap) -> Option<ToolResult> {
@@ -169,7 +189,9 @@ impl RouteTool for SplineTool {
             road_map,
         )
     }
+}
 
+impl RouteToolTangent for SplineTool {
     fn tangent_menu_data(&self) -> Option<TangentMenuData> {
         let adjusting = !self.lifecycle.last_created_ids.is_empty() && self.last_anchors.len() >= 2;
         if !adjusting {
@@ -198,44 +220,88 @@ impl RouteTool for SplineTool {
             self.lifecycle.recreate_needed = true;
         }
     }
+}
 
-    fn make_group_record(&self, id: u64, node_ids: &[u64]) -> Option<GroupRecord> {
+impl RouteToolSegmentAdjustments for SplineTool {
+    fn increase_node_count(&mut self) {
+        self.seg.increase_node_count();
+        self.lifecycle.recreate_needed = true;
+    }
+
+    fn decrease_node_count(&mut self) {
+        self.seg.decrease_node_count();
+        self.lifecycle.recreate_needed = true;
+    }
+
+    fn increase_segment_length(&mut self) {
+        self.seg.increase_segment_length();
+        self.lifecycle.recreate_needed = true;
+    }
+
+    fn decrease_segment_length(&mut self) {
+        self.seg.decrease_segment_length();
+        self.lifecycle.recreate_needed = true;
+    }
+}
+
+impl RouteTool for SplineTool {
+    fn as_recreate(&self) -> Option<&dyn RouteToolRecreate> {
+        Some(self)
+    }
+
+    fn as_recreate_mut(&mut self) -> Option<&mut dyn RouteToolRecreate> {
+        Some(self)
+    }
+
+    fn as_tangent(&self) -> Option<&dyn RouteToolTangent> {
+        Some(self)
+    }
+
+    fn as_tangent_mut(&mut self) -> Option<&mut dyn RouteToolTangent> {
+        Some(self)
+    }
+
+    fn as_segment_adjustments(&self) -> Option<&dyn RouteToolSegmentAdjustments> {
+        Some(self)
+    }
+
+    fn as_segment_adjustments_mut(&mut self) -> Option<&mut dyn RouteToolSegmentAdjustments> {
+        Some(self)
+    }
+
+    fn as_group_edit(&self) -> Option<&dyn RouteToolGroupEdit> {
+        Some(self)
+    }
+
+    fn as_group_edit_mut(&mut self) -> Option<&mut dyn RouteToolGroupEdit> {
+        Some(self)
+    }
+}
+
+impl RouteToolGroupEdit for SplineTool {
+    fn build_edit_payload(&self) -> Option<RouteToolEditPayload> {
         if self.last_anchors.len() < 2 {
             return None;
         }
-        let start = *self.last_anchors.first()?;
-        let end = *self.last_anchors.last()?;
-        Some(GroupRecord {
-            id,
-            tool_id: Some(RouteToolId::Spline),
-            node_ids: node_ids.to_vec(),
-            start_anchor: start,
-            end_anchor: end,
-            original_positions: Vec::new(), // wird im Handler befüllt
-            marker_node_ids: Vec::new(),
-            locked: true,
-            entry_node_id: None,
-            exit_node_id: None,
-            kind: GroupKind::Spline {
-                anchors: self.last_anchors.clone(),
-                tangent_start: self.tangents.last_tangent_start,
-                tangent_end: self.tangents.last_tangent_end,
-                base: GroupBase {
-                    direction: self.direction,
-                    priority: self.priority,
-                    max_segment_length: self.seg.max_segment_length,
-                },
+        Some(RouteToolEditPayload::Spline {
+            anchors: self.last_anchors.clone(),
+            tangent_start: self.tangents.last_tangent_start,
+            tangent_end: self.tangents.last_tangent_end,
+            base: ToolRouteBase {
+                direction: self.direction,
+                priority: self.priority,
+                max_segment_length: self.seg.max_segment_length,
             },
         })
     }
 
-    fn load_for_edit(&mut self, _record: &GroupRecord, kind: &GroupKind) {
-        let GroupKind::Spline {
+    fn restore_edit_payload(&mut self, payload: &RouteToolEditPayload) {
+        let RouteToolEditPayload::Spline {
             anchors,
             tangent_start,
             tangent_end,
             base,
-        } = kind
+        } = payload
         else {
             return;
         };

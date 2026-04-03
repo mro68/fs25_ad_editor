@@ -1,7 +1,7 @@
 //! Use-Case: Rotation selektierter Nodes um ihr gemeinsames Zentrum.
 
 use crate::AppState;
-use glam::{Mat2, Vec2};
+use glam::Vec2;
 use std::collections::HashSet;
 use std::sync::Arc;
 
@@ -30,6 +30,7 @@ pub fn rotate_selected_nodes(state: &mut AppState, angle_rad: f32) {
     let extra = state.group_registry.expand_locked_selection(&selected);
 
     let rotate_ids: HashSet<u64> = selected.iter().copied().chain(extra).collect();
+    let rotate_ids_vec: Vec<u64> = rotate_ids.iter().copied().collect();
 
     let road_map_ref = road_map.as_ref();
 
@@ -37,7 +38,7 @@ pub fn rotate_selected_nodes(state: &mut AppState, angle_rad: f32) {
     let mut sum = Vec2::ZERO;
     let mut count = 0usize;
     for &node_id in &rotate_ids {
-        if let Some(node) = road_map_ref.nodes.get(&node_id) {
+        if let Some(node) = road_map_ref.node(node_id) {
             sum += node.position;
             count += 1;
         }
@@ -47,18 +48,8 @@ pub fn rotate_selected_nodes(state: &mut AppState, angle_rad: f32) {
     }
     let center = sum / count as f32;
 
-    let rot = Mat2::from_angle(angle_rad);
     let road_map_mut = Arc::make_mut(road_map);
-
-    for &node_id in &rotate_ids {
-        if let Some(node) = road_map_mut.nodes.get_mut(&node_id) {
-            node.position = center + rot * (node.position - center);
-        }
-    }
-
-    // Connection-Geometrie aktualisieren (Linien richtig zeichnen)
-    // Spatial-Index NICHT rebuilden — wird einmalig bei EndRotateSelectedNodes gemacht
-    road_map_mut.rebuild_connection_geometry();
+    road_map_mut.rotate_nodes(&rotate_ids_vec, center, angle_rad);
 
     // Locked-Segment-original_positions aktualisieren
     let locked_segment_ids: Vec<u64> = state
@@ -78,7 +69,7 @@ pub fn rotate_selected_nodes(state: &mut AppState, angle_rad: f32) {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{MapNode, NodeFlag, RoadMap};
+    use crate::core::{MapNode, NodeFlag, RoadMap};
     use std::f32::consts::PI;
 
     fn make_state_with_nodes(positions: &[(u64, f32, f32)]) -> AppState {
@@ -100,7 +91,7 @@ mod tests {
         rotate_selected_nodes(&mut state, PI / 2.0);
 
         let rm = state.road_map.as_ref().unwrap();
-        let pos = rm.nodes[&1].position;
+        let pos = rm.node(1).expect("node 1 vorhanden").position;
         assert!((pos.x - 3.0).abs() < 1e-5, "x={}", pos.x);
         assert!((pos.y - 4.0).abs() < 1e-5, "y={}", pos.y);
     }
@@ -116,8 +107,8 @@ mod tests {
         rotate_selected_nodes(&mut state, PI / 2.0);
 
         let rm = state.road_map.as_ref().unwrap();
-        let p1 = rm.nodes[&1].position;
-        let p2 = rm.nodes[&2].position;
+        let p1 = rm.node(1).expect("node 1 vorhanden").position;
+        let p2 = rm.node(2).expect("node 2 vorhanden").position;
 
         // Zentrum = (0,0); 90° Rotation im Gegenuhrzeigersinn
         // (1,0) → (0,1)
@@ -139,9 +130,9 @@ mod tests {
 
         let rm_before = state.road_map.as_ref().unwrap();
         let center_before = {
-            let p1 = rm_before.nodes[&1].position;
-            let p2 = rm_before.nodes[&2].position;
-            let p3 = rm_before.nodes[&3].position;
+            let p1 = rm_before.node(1).expect("node 1 vorhanden").position;
+            let p2 = rm_before.node(2).expect("node 2 vorhanden").position;
+            let p3 = rm_before.node(3).expect("node 3 vorhanden").position;
             (p1 + p2 + p3) / 3.0
         };
 
@@ -149,9 +140,9 @@ mod tests {
 
         let rm = state.road_map.as_ref().unwrap();
         let center_after = {
-            let p1 = rm.nodes[&1].position;
-            let p2 = rm.nodes[&2].position;
-            let p3 = rm.nodes[&3].position;
+            let p1 = rm.node(1).expect("node 1 vorhanden").position;
+            let p2 = rm.node(2).expect("node 2 vorhanden").position;
+            let p3 = rm.node(3).expect("node 3 vorhanden").position;
             (p1 + p2 + p3) / 3.0
         };
 
@@ -174,7 +165,7 @@ mod tests {
         rotate_selected_nodes(&mut state, 0.0);
 
         let rm = state.road_map.as_ref().unwrap();
-        let pos = rm.nodes[&1].position;
+        let pos = rm.node(1).expect("node 1 vorhanden").position;
         assert_eq!(pos, Vec2::new(5.0, 7.0));
     }
 }

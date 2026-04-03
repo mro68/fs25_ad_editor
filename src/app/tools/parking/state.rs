@@ -31,13 +31,13 @@ pub struct ParkingConfig {
     pub num_rows: usize,
     /// Abstand zwischen benachbarten Reihen in Metern (4–20).
     pub row_spacing: f32,
-    /// Laenge jeder Reihe (Ost-West-Ausdehnung) in Metern (10–50).
+    /// Laenge jeder Reihe (Ost-West-Ausdehnung) in Metern (10–100).
     pub bay_length: f32,
     /// Position der Einfahrt entlang der Reihenlaenge (0.0 = Ost, 1.0 = West).
     pub entry_t: f32,
     /// Position der Ausfahrt entlang der Reihenlaenge (0.0 = Ost, 1.0 = West).
     pub exit_t: f32,
-    /// Laenge der 45°-Rampen fuer Ein- und Ausfahrt in Metern.
+    /// Laenge der 45°-Rampen fuer Ein- und Ausfahrt in Metern (2–20).
     pub ramp_length: f32,
     /// Seite der Einfahrt aus Sicht des Markers.
     pub entry_side: RampSide,
@@ -45,7 +45,7 @@ pub struct ParkingConfig {
     pub exit_side: RampSide,
     /// Marker-Gruppe fuer alle erzeugten Buchten-Marker.
     pub marker_group: String,
-    /// Maximale Distanz zwischen benachbarten Nodes in der Parkbucht (Meter).
+    /// Maximale Distanz zwischen benachbarten Nodes in der Parkbucht (2–20 Meter).
     pub max_node_distance: f32,
 }
 

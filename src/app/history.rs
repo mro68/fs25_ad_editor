@@ -109,13 +109,23 @@ impl EditHistory {
             None
         }
     }
+
+    /// Entfernt den obersten Undo-Eintrag, ohne den aktuellen Zustand auf den
+    /// Redo-Stack zu legen.
+    ///
+    /// Dieser Pfad ist nur fuer transiente Restore-Flows gedacht, deren
+    /// Zwischenzustand bewusst nicht redo-faehig ist (z.B. aktiver Group- oder
+    /// Tool-Edit waehrend eines Abbruchs).
+    pub(crate) fn pop_undo_discard_current(&mut self) -> Option<Snapshot> {
+        self.undo_stack.pop_back()
+    }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
     use crate::app::AppState;
-    use crate::{MapNode, NodeFlag, RoadMap};
+    use crate::core::{MapNode, NodeFlag, RoadMap};
     use std::sync::Arc;
 
     fn make_snapshot_with_node_count(count: usize) -> Snapshot {

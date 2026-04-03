@@ -5,9 +5,8 @@ use glam::Vec2;
 
 use crate::app::state::Clipboard;
 use crate::app::tools::ToolPreview;
-use crate::app::Camera2D;
+use crate::app::{Camera2D, ConnectionDirection, ConnectionPriority};
 use crate::shared::EditorOptions;
-use crate::{ConnectionDirection, ConnectionPriority};
 
 /// Kontext-Bündel für `render_tool_preview`.
 ///

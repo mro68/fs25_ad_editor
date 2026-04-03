@@ -13,8 +13,6 @@ mod render_quality;
 mod render_scene;
 /// Spline-Geometrie-Hilfsfunktionen (Catmull-Rom, Arc-Length-Resampling).
 pub mod spline_geometry;
-/// Generische egui-Eingabe-Helfer fuer mehrere Layer.
-pub mod ui_input;
 
 pub use geometry::angle_deviation;
 pub use i18n::{t, I18nKey, Language};
@@ -25,3 +23,7 @@ pub use options::ValueAdjustInputMode;
 pub use options::{SNAP_SCALE_PERCENT, TERRAIN_HEIGHT_SCALE};
 pub use render_quality::RenderQuality;
 pub use render_scene::RenderScene;
+pub(crate) use render_scene::{
+    RenderCamera, RenderConnection, RenderConnectionDirection, RenderConnectionPriority, RenderMap,
+    RenderMarker, RenderNode, RenderNodeKind, RenderSceneFrameData,
+};

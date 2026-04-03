@@ -1,247 +1,136 @@
-//! UI-Panel fuer die ParkingTool-Konfiguration.
+//! Egui-freie Panel-Bruecke fuer das ParkingTool.
 
-use super::super::common::wheel_dir;
 use super::state::{ParkingPhase, ParkingTool, RampSide};
+use crate::app::ui_contract::{
+    ParkingPanelAction, ParkingPanelState, ParkingRampSideChoice, RouteToolPanelEffect,
+    PARKING_BAY_LENGTH_LIMITS, PARKING_ENTRY_EXIT_T_LIMITS, PARKING_MAX_NODE_DISTANCE_LIMITS,
+    PARKING_NUM_ROWS_LIMITS, PARKING_RAMP_LENGTH_LIMITS, PARKING_ROTATION_STEP_LIMITS,
+    PARKING_ROW_SPACING_LIMITS,
+};
 
 impl ParkingTool {
-    /// Rendert die Parkplatz-Konfiguration im Properties-Panel.
-    /// Gibt `true` zurueck wenn sich ein Wert geaendert hat.
-    pub(super) fn render_config_view(
-        &mut self,
-        ui: &mut egui::Ui,
-        distance_wheel_step_m: f32,
-    ) -> bool {
-        let mut changed = false;
-
-        ui.label("Parkplatz-Konfiguration");
-        ui.separator();
-
-        // Anzahl Reihen
-        ui.horizontal(|ui| {
-            ui.label("Reihen:");
-            let mut rows = self.config.num_rows as u32;
-            let response = ui.add(egui::Slider::new(&mut rows, 1..=10));
-            let mut local_changed = response.changed();
-            let wd = wheel_dir(ui, &response);
-            if wd != 0.0 {
-                rows = (rows as i32 + wd as i32).clamp(1, 10) as u32;
-                local_changed = true;
-            }
-            if local_changed {
-                self.config.num_rows = rows as usize;
-                changed = true;
-            }
-        });
-
-        // Reihenabstand
-        ui.horizontal(|ui| {
-            ui.label("Abstand:");
-            let response = ui.add(
-                egui::Slider::new(&mut self.config.row_spacing, 4.0..=20.0)
-                    .suffix(" m")
-                    .fixed_decimals(1),
-            );
-            let mut local_changed = response.changed();
-            let wd = wheel_dir(ui, &response);
-            if distance_wheel_step_m > 0.0 && wd != 0.0 {
-                self.config.row_spacing =
-                    (self.config.row_spacing + wd * distance_wheel_step_m).clamp(4.0, 20.0);
-                local_changed = true;
-            }
-            if local_changed {
-                changed = true;
-            }
-        });
-
-        // Bucht-Laenge
-        ui.horizontal(|ui| {
-            ui.label("Laenge:");
-            let response = ui.add(
-                egui::Slider::new(&mut self.config.bay_length, 10.0..=100.0)
-                    .suffix(" m")
-                    .fixed_decimals(1),
-            );
-            let mut local_changed = response.changed();
-            let wd = wheel_dir(ui, &response);
-            if distance_wheel_step_m > 0.0 && wd != 0.0 {
-                self.config.bay_length =
-                    (self.config.bay_length + wd * distance_wheel_step_m).clamp(10.0, 100.0);
-                local_changed = true;
-            }
-            if local_changed {
-                changed = true;
-            }
-        });
-
-        // Maximaler Node-Abstand innerhalb der Parkbucht
-        ui.horizontal(|ui| {
-            ui.label("Max. Node-Abstand:");
-            let response = ui.add(
-                egui::Slider::new(&mut self.config.max_node_distance, 2.0..=20.0)
-                    .suffix(" m")
-                    .fixed_decimals(1),
-            );
-            let mut local_changed = response.changed();
-            let wd = wheel_dir(ui, &response);
-            if distance_wheel_step_m > 0.0 && wd != 0.0 {
-                self.config.max_node_distance =
-                    (self.config.max_node_distance + wd * distance_wheel_step_m).clamp(2.0, 20.0);
-                local_changed = true;
-            }
-            if local_changed {
-                changed = true;
-            }
-        });
-
-        ui.separator();
-        ui.horizontal(|ui| {
-            ui.label("Einfahrt:");
-            let response = ui.add(
-                egui::Slider::new(&mut self.config.entry_t, 0.0..=1.0)
-                    .fixed_decimals(2)
-                    .text("Ost \u{2190} \u{2192} West"),
-            );
-            let mut local_changed = response.changed();
-            let wd = wheel_dir(ui, &response);
-            if wd != 0.0 {
-                self.config.entry_t = (self.config.entry_t + wd * 0.01).clamp(0.0, 1.0);
-                local_changed = true;
-            }
-            if local_changed {
-                changed = true;
-            }
-        });
-
-        // Ausfahrt-Position
-        ui.horizontal(|ui| {
-            ui.label("Ausfahrt:");
-            let response = ui.add(
-                egui::Slider::new(&mut self.config.exit_t, 0.0..=1.0)
-                    .fixed_decimals(2)
-                    .text("Ost \u{2190} \u{2192} West"),
-            );
-            let mut local_changed = response.changed();
-            let wd = wheel_dir(ui, &response);
-            if wd != 0.0 {
-                self.config.exit_t = (self.config.exit_t + wd * 0.01).clamp(0.0, 1.0);
-                local_changed = true;
-            }
-            if local_changed {
-                changed = true;
-            }
-        });
-
-        // Rampenlaenge
-        ui.horizontal(|ui| {
-            ui.label("Rampenlaenge:");
-            let response = ui.add(
-                egui::Slider::new(&mut self.config.ramp_length, 2.0..=20.0)
-                    .suffix(" m")
-                    .fixed_decimals(1),
-            );
-            let mut local_changed = response.changed();
-            let wd = wheel_dir(ui, &response);
-            if distance_wheel_step_m > 0.0 && wd != 0.0 {
-                self.config.ramp_length =
-                    (self.config.ramp_length + wd * distance_wheel_step_m).clamp(2.0, 20.0);
-                local_changed = true;
-            }
-            if local_changed {
-                changed = true;
-            }
-        });
-
-        // Einfahrt-Seite
-        ui.horizontal(|ui| {
-            ui.label("Einfahrt-Seite:");
-            let mut side = self.config.entry_side;
-            egui::ComboBox::from_id_salt("parking_entry_side")
-                .selected_text(match side {
-                    RampSide::Left => "Links (Marker-Sicht)",
-                    RampSide::Right => "Rechts (Marker-Sicht)",
-                })
-                .show_ui(ui, |ui| {
-                    ui.selectable_value(&mut side, RampSide::Left, "Links (Marker-Sicht)");
-                    ui.selectable_value(&mut side, RampSide::Right, "Rechts (Marker-Sicht)");
-                });
-            if side != self.config.entry_side {
-                self.config.entry_side = side;
-                changed = true;
-            }
-        });
-
-        // Ausfahrt-Seite
-        ui.horizontal(|ui| {
-            ui.label("Ausfahrt-Seite:");
-            let mut side = self.config.exit_side;
-            egui::ComboBox::from_id_salt("parking_exit_side")
-                .selected_text(match side {
-                    RampSide::Left => "Links (Marker-Sicht)",
-                    RampSide::Right => "Rechts (Marker-Sicht)",
-                })
-                .show_ui(ui, |ui| {
-                    ui.selectable_value(&mut side, RampSide::Left, "Links (Marker-Sicht)");
-                    ui.selectable_value(&mut side, RampSide::Right, "Rechts (Marker-Sicht)");
-                });
-            if side != self.config.exit_side {
-                self.config.exit_side = side;
-                changed = true;
-            }
-        });
-
-        ui.separator();
-
-        // Marker-Gruppe
-        ui.horizontal(|ui| {
-            ui.label("Gruppe:");
-            if ui
-                .text_edit_singleline(&mut self.config.marker_group)
-                .changed()
-            {
-                changed = true;
-            }
-        });
-
-        // Rotation-Anzeige und Drehschritt
-        if self.origin.is_some() {
-            ui.separator();
-            ui.label(format!("Rotation: {:.1}°", self.angle.to_degrees()));
-        }
-
-        // Drehschritt-Konfiguration (immer sichtbar)
-        ui.horizontal(|ui| {
-            ui.label("Drehschritt (°):");
-            let response = ui.add(
-                egui::DragValue::new(&mut self.rotation_step_deg)
-                    .range(0.5..=45.0)
-                    .speed(0.5)
-                    .suffix("°")
-                    .fixed_decimals(1),
-            );
-            let wd = wheel_dir(ui, &response);
-            if wd != 0.0 {
-                self.rotation_step_deg = (self.rotation_step_deg + wd * 1.0).clamp(0.5, 45.0);
-                changed = true;
-            }
-            if response.changed() {
-                changed = true;
-            }
-        });
-
-        if self.origin.is_some() {
-            match self.phase {
-                ParkingPhase::Idle => {
-                    ui.small("Alt+Mausrad zum Drehen");
-                }
+    /// Liefert den egui-freien Panelzustand des ParkingTools.
+    pub(super) fn panel_state(&self) -> ParkingPanelState {
+        ParkingPanelState {
+            num_rows: self.config.num_rows,
+            row_spacing: self.config.row_spacing,
+            bay_length: self.config.bay_length,
+            max_node_distance: self.config.max_node_distance,
+            entry_t: self.config.entry_t,
+            exit_t: self.config.exit_t,
+            ramp_length: self.config.ramp_length,
+            entry_side: match self.config.entry_side {
+                RampSide::Left => ParkingRampSideChoice::Left,
+                RampSide::Right => ParkingRampSideChoice::Right,
+            },
+            exit_side: match self.config.exit_side {
+                RampSide::Left => ParkingRampSideChoice::Left,
+                RampSide::Right => ParkingRampSideChoice::Right,
+            },
+            marker_group: self.config.marker_group.clone(),
+            rotation_step_deg: self.rotation_step_deg,
+            angle_deg: self.origin.map(|_| self.angle.to_degrees()),
+            hint_text: self.origin.map(|_| match self.phase {
+                ParkingPhase::Idle => "Alt+Mausrad zum Drehen".to_owned(),
                 ParkingPhase::Configuring => {
-                    ui.small("Position fixiert — Viewport-Klick zum Verschieben");
+                    "Position fixiert — Viewport-Klick zum Verschieben".to_owned()
                 }
                 ParkingPhase::Adjusting => {
-                    ui.small("Klicken zum Fixieren — Alt+Mausrad zum Drehen");
+                    "Klicken zum Fixieren — Alt+Mausrad zum Drehen".to_owned()
                 }
-            };
+            }),
         }
+    }
 
-        changed
+    /// Wendet eine semantische Panel-Aktion auf das ParkingTool an.
+    pub(super) fn apply_panel_action(
+        &mut self,
+        action: ParkingPanelAction,
+    ) -> RouteToolPanelEffect {
+        let changed = match action {
+            ParkingPanelAction::SetNumRows(value) => set_usize(
+                &mut self.config.num_rows,
+                PARKING_NUM_ROWS_LIMITS.clamp(value),
+            ),
+            ParkingPanelAction::SetRowSpacing(value) => set_f32(
+                &mut self.config.row_spacing,
+                PARKING_ROW_SPACING_LIMITS.clamp(value),
+            ),
+            ParkingPanelAction::SetBayLength(value) => set_f32(
+                &mut self.config.bay_length,
+                PARKING_BAY_LENGTH_LIMITS.clamp(value),
+            ),
+            ParkingPanelAction::SetMaxNodeDistance(value) => set_f32(
+                &mut self.config.max_node_distance,
+                PARKING_MAX_NODE_DISTANCE_LIMITS.clamp(value),
+            ),
+            ParkingPanelAction::SetEntryT(value) => set_f32(
+                &mut self.config.entry_t,
+                PARKING_ENTRY_EXIT_T_LIMITS.clamp(value),
+            ),
+            ParkingPanelAction::SetExitT(value) => set_f32(
+                &mut self.config.exit_t,
+                PARKING_ENTRY_EXIT_T_LIMITS.clamp(value),
+            ),
+            ParkingPanelAction::SetRampLength(value) => set_f32(
+                &mut self.config.ramp_length,
+                PARKING_RAMP_LENGTH_LIMITS.clamp(value),
+            ),
+            ParkingPanelAction::SetEntrySide(value) => set_side(&mut self.config.entry_side, value),
+            ParkingPanelAction::SetExitSide(value) => set_side(&mut self.config.exit_side, value),
+            ParkingPanelAction::SetMarkerGroup(value) => {
+                set_string(&mut self.config.marker_group, value)
+            }
+            ParkingPanelAction::SetRotationStepDeg(value) => set_f32(
+                &mut self.rotation_step_deg,
+                PARKING_ROTATION_STEP_LIMITS.clamp(value),
+            ),
+        };
+
+        RouteToolPanelEffect {
+            changed,
+            needs_recreate: false,
+            next_action: None,
+        }
+    }
+}
+
+fn set_f32(target: &mut f32, value: f32) -> bool {
+    if (*target - value).abs() < f32::EPSILON {
+        false
+    } else {
+        *target = value;
+        true
+    }
+}
+
+fn set_usize(target: &mut usize, value: usize) -> bool {
+    if *target == value {
+        false
+    } else {
+        *target = value;
+        true
+    }
+}
+
+fn set_string(target: &mut String, value: String) -> bool {
+    if *target == value {
+        false
+    } else {
+        *target = value;
+        true
+    }
+}
+
+fn set_side(target: &mut RampSide, value: ParkingRampSideChoice) -> bool {
+    let mapped = match value {
+        ParkingRampSideChoice::Left => RampSide::Left,
+        ParkingRampSideChoice::Right => RampSide::Right,
+    };
+    if *target == mapped {
+        false
+    } else {
+        *target = mapped;
+        true
     }
 }

@@ -361,7 +361,7 @@ pub fn render_command_palette(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::app::tools::RouteToolId;
+    use crate::app::tool_contract::RouteToolId;
 
     fn route_tool_entry(catalog: &[PaletteEntry], tool_id: RouteToolId) -> (usize, &PaletteEntry) {
         catalog

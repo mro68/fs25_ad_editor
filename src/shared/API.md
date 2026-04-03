@@ -2,7 +2,7 @@
 
 ## Ueberblick
 
-Das `shared`-Modul enthaelt Layer-uebergreifende Typen, die zwischen `app` (Produzent) und `render` (Konsument) geteilt werden, um direkte Abhaengigkeiten zwischen diesen Schichten zu vermeiden.
+Das `shared`-Modul enthaelt neutrale, layer-uebergreifende Typen, die zwischen `app` (Produzent) und `render` (Konsument) geteilt werden, um direkte Abhaengigkeiten zwischen diesen Schichten zu vermeiden. Der wichtigste Vertrag in diesem Bereich ist `RenderScene`: Die App baut daraus read-only Render-Snapshots, der Render-Layer konsumiert nur diese Snapshots und kennt weder `RoadMap` noch `Camera2D` direkt. UI-spezifische Eingabe-Helfer und Runtime-/Dateisystem-Policy gehoeren bewusst nicht mehr in diese Schicht.
 
 ## Module
 
@@ -12,19 +12,6 @@ Das `shared`-Modul enthaelt Layer-uebergreifende Typen, die zwischen `app` (Prod
 - `geometry.rs` — Layer-uebergreifende Geometrie-Hilfsfunktionen (`angle_deviation()` fuer Winkelabweichungs-Berechnung)
 - `i18n/` — Mehrsprachigkeits-System: `Language`-Enum, `I18nKey`-Enum, `t()`-Funktion (DE + EN, Zero-Alloc)
 - `spline_geometry.rs` — Layer-neutrale Catmull-Rom-Geometrie-Funktionen (kein import aus `tools` noetig)
-- `ui_input.rs` — generische egui-Eingabe-Helfer wie `wheel_dir()` fuer App- und UI-Layer
-
-## UI-Eingabe-Helfer
-
-### `wheel_dir`
-
-```rust
-pub fn wheel_dir(ui: &egui::Ui, response: &egui::Response) -> f32
-```
-
-Ermittelt fuer ein gehovertes Widget die Scroll-Richtung als `+1.0`, `-1.0` oder `0.0`.
-Der Helper konsumiert erkannte Scroll-Events direkt, damit uebergeordnete Scroll-Areas
-nicht gleichzeitig reagieren. Der Typ ist bewusst stateless und lebt deshalb in `shared`.
 
 ## Haupttypen
 
@@ -33,35 +20,28 @@ nicht gleichzeitig reagieren. Der Typ ist bewusst stateless und lebt deshalb in 
 Expliziter, read-only Uebergabevertrag zwischen App-Layer und Renderer.
 
 ```rust
-pub struct RenderScene {
-    pub road_map: Option<Arc<RoadMap>>,
-    pub camera: Camera2D,
-    pub viewport_size: [f32; 2],
-    pub render_quality: RenderQuality,
-    pub selected_node_ids: Arc<IndexSet<u64>>,
-    pub connect_source_node: Option<u64>,
-    pub background_map: Option<Arc<BackgroundMap>>,
-    pub background_visible: bool,
-    pub options: Arc<EditorOptions>,
-    /// Node-IDs, die im aktuellen Frame ausgeblendet werden sollen
-    pub hidden_node_ids: Arc<IndexSet<u64>>,
-    /// Node-IDs, die mit 50% Opacity gerendert werden sollen (gedimmte Segment-Nodes).
-    ///
-    /// Gesetzt wenn ein selektierter Node zu einem Segment gehoert — alle anderen
-    /// Nodes des gleichen Segments werden gedimmt (visuelles Segment-Feedback).
-    pub dimmed_node_ids: Arc<IndexSet<u64>>,
+pub struct RenderScene { /* private Felder */ }
+
+impl RenderScene {
+    pub fn has_map(&self) -> bool;
+    pub fn has_background(&self) -> bool;
 }
 ```
 
-`hidden_node_ids` wird genutzt, um Nodes im aktuellen Frame temporaer auszublenden
-(z. B. bei Vorschau-Overlays im Properties-Panel), ohne die Domain-Daten zu mutieren.
+Intern kapselt `RenderScene` einen crate-internen `RenderMap`-Snapshot mit bereits fuer das Rendering vorbereiteten Nodes, Verbindungen, Marker-Positionen und einem immutable KD-Index fuer Viewport-Culling. Die App cached diesen Snapshot ueber eine render-relevante RoadMap-Revision, damit der Hotpath weiterhin ohne per-frame Domain-Kopie auskommt.
 
-`dimmed_node_ids` bewirkt eine halbdurchsichtige Darstellung (50% Opacity) fuer Nodes
-desselben Segments, die nicht selektiert sind.
+Zusatzdaten pro Frame:
+
+- `selected_node_ids` fuer Selection-Highlighting
+- `hidden_node_ids` fuer temporales Ausblenden von Nodes ohne Domain-Mutation
+- `dimmed_node_ids` fuer halbdurchsichtige Segment-Nodes
+- `options` als `Arc<EditorOptions>` fuer O(1)-Clones im Build-Pfad
+- `has_background` + `background_visible` fuer den Hintergrund-Renderpfad
 
 **Methoden:**
 
-- `has_map() -> bool` — Prueft ob eine RoadMap vorhanden ist
+- `has_map() -> bool` — Prueft ob ein RenderMap-Snapshot vorhanden ist
+- `has_background() -> bool` — Prueft ob fuer den Frame ein Hintergrundbild aktiv ist
 
 ---
 
@@ -179,12 +159,13 @@ use crate::shared::angle_deviation;
 1. **Entkopplung:** `shared` verhindert direkte Abhaengigkeiten zwischen `app` und `render`
 2. **Single Source of Truth:** Alle Rendering-Konstanten in `options.rs` zentralisiert
 3. **Immutable Contract:** `RenderScene` ist read-only (Clone, keine Mutation)
+4. **Snapshot statt Domain:** Der Render-Vertrag transportiert keine Core-Typen wie `RoadMap` oder `Camera2D`
 
 ---
 
 ### `EditorOptions` (Laufzeit-Optionen)
 
-Alle zur Laufzeit aenderbaren Editor-Optionen. Wird als `fs25_auto_drive_editor.toml` neben der Binary gespeichert.
+Alle zur Laufzeit aenderbaren Editor-Optionen. `shared` enthaelt dabei nur das serialisierbare Datenmodell plus Validierung und abgeleitete Hilfswerte; TOML-I/O und Standardpfad liegen in `app::use_cases::options`.
 
 ```rust
 pub struct EditorOptions {
@@ -270,9 +251,7 @@ pub struct EditorOptions {
 
 **Methoden:**
 
-- `EditorOptions::load_from_file(path) -> Self` — TOML-Datei laden (bei Fehler: Defaults)
-- `EditorOptions::save_to_file(&self, path) -> Result<()>` — Als TOML speichern
-- `EditorOptions::config_path() -> PathBuf` — Pfad zur Optionen-Datei neben der Binary
+- `validate(&self) -> Result<()>` — Prueft den Optionssatz auf konsistente Grenzwerte
 - `hitbox_radius(&self) -> f32` — Berechnet den Hitbox-Radius in Welteinheiten (`node_size_world * hitbox_scale_percent / 100`)
 - `snap_radius(&self) -> f32` — Berechnet den Snap-Radius in Welteinheiten
 - `selection_size_multiplier(&self) -> f32` — Selektions-Multiplikator aus `selection_size_factor` in Prozent

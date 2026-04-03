@@ -16,7 +16,7 @@ mod validation;
 pub use preconditions::{Precondition, PreconditionContext};
 pub use validation::{validate_entries, ValidatedEntry};
 
-use crate::app::tools::RouteToolId;
+use crate::app::tool_contract::RouteToolId;
 use crate::app::{AppIntent, ConnectionDirection, ConnectionPriority, EditorTool};
 
 // =============================================================================

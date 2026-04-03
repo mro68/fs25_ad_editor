@@ -2,7 +2,7 @@
 
 Dokumentation fuer `app::tools`: `ToolManager`, `RouteTool`-Trait, registrierte Tools und gemeinsame Infrastruktur.
 
-`RouteToolId`, `ToolAnchor` und `TangentSource` gehoeren zum app-weiten Tool-Vertrag in `app::tool_contract`. UI-taugliche Read-DTOs wie `TangentMenuData` und `TangentOptionData` gehoeren nach `app::ui_contract`. Beides wird hier fuer die Tool-Implementierungen weiterverwendet.
+`RouteToolId`, `ToolAnchor` und `TangentSource` gehoeren zum app-weiten Tool-Vertrag in `app::tool_contract`. `RouteToolId` wird ausserhalb der Tool-Implementierungen explizit von dort importiert; `app::tools` bleibt fuer Katalog, Manager, Traits und gemeinsame Tool-Helfer zustaendig. UI-taugliche Read-DTOs wie `TangentMenuData` und `TangentOptionData` gehoeren nach `app::ui_contract`.
 
 **Zurueck:** [`../API.md`](../API.md)
 
@@ -22,56 +22,50 @@ pub struct ToolManager { /* intern */ }
 - `register(tool_id, tool)` — Neues Route-Tool unter stabiler ID registrieren
 - `tool_count() → usize` — Anzahl registrierter Tools
 - `tool_names() → Vec<(RouteToolId, &str)>` — Name + stabile ID aller Tools
-- `tool_entries() → Vec<(RouteToolId, &str, &str)>` — ID, Name und Icon aller Tools (fuer Dropdown-Rendering)
+- `tool_entries() → Vec<(RouteToolId, &str, &str)>` — ID, Name und Legacy-Icon aller Tools (fuer Dropdown-Rendering)
 - `set_active_by_id(tool_id)` — Aktives Tool setzen (Reset des vorherigen)
 - `active_id() → Option<RouteToolId>` — ID des aktiven Tools
 - `active_descriptor() → Option<&'static RouteToolDescriptor>` — Katalog-Descriptor des aktiven Tools
 - `active_tool() → Option<&dyn RouteTool>` — Referenz auf aktives Tool
 - `active_tool_mut() → Option<&mut dyn RouteTool>` — Mutable Referenz
+- `sync_active_host(context)` — Synchronisiert Editor-Defaults und externe Assets in das aktive Tool
+- `active_recreate[_mut]()` / `active_drag[_mut]()` / `active_tangent[_mut]()` — Capability-Discovery fuer Recreate-, Drag- und Tangenten-Flows
+- `active_rotate[_mut]()` / `active_segment_adjustments[_mut]()` / `active_chain_input[_mut]()` / `active_lasso_input[_mut]()` — Zugriff auf Rotations-, Segment-Shortcut-, Ketten- und Lasso-Capabilities
+- `load_active_chain(chain)` — Laedt eine geordnete Kette ueber die `RouteToolChainInput`-Capability
 - `reset()` — Alle Tools zuruecksetzen, aktives deaktivieren
 
 ---
 
-## `RouteTool` (Trait)
+## Route-Tool-Vertraege
 
-Schnittstelle fuer alle Route-Tools (Linie, Kurve, …). Tools sind zustandsbehaftet und erzeugen Preview-Geometrie + `ToolResult`.
+Phase 3 teilt den frueher breiten Allzweck-Vertrag in drei feste Basisvertraege und additive Capabilities auf.
 
-**Pflicht-Methoden:**
+**Feste Basisvertraege:**
 
-- `name() → &str` — Anzeigename
-- `icon() → &str` — Icon-Zeichen fuer das Dropdown (rechts vom Label); Default: `""`
-- `description() → &str` — Tooltip-Text
-- `status_text() → &str` — Statustext fuer Properties-Panel
-- `on_click(pos, road_map, ctrl) → ToolAction` — Viewport-Klick verarbeiten
-- `preview(cursor_pos, road_map) → ToolPreview` — Preview-Geometrie berechnen
-- `render_config(ui, distance_wheel_step_m) → bool` — Tool-Konfiguration im Properties-Panel (inkl. Mausrad-Schrittweite fuer Distanz-Felder)
-- `execute(road_map) → Option<ToolResult>` — Ergebnis erzeugen
-- `reset()` — Tool-Zustand zuruecksetzen
-- `is_ready() → bool` — Bereit zur Ausfuehrung?
+- `RouteToolCore` — Kerninteraktion und Preview/Execute-Lifecycle: `on_click`, `preview`, `execute`, `reset`, `is_ready`, `has_pending_input`
+- `RouteToolPanelBridge` — egui-freie Panel-Anbindung: `status_text`, `panel_state`, `apply_panel_action`
+- `RouteToolHostSync` — Uebernahme des Editor-/Asset-Kontexts via `sync_host(context: &ToolHostContext)`
 
-**Optionale Methoden (Default-Implementierung):**
+**Umbrella-Vertrag:**
 
-- `has_pending_input() → bool` — Hat das Tool angefangene Eingaben? (fuer stufenweise Escape-Logik)
-- `on_scroll_rotate(&mut self, delta: f32)` — Scroll-basierte Rotation verarbeiten (z.B. ParkingTool-Winkel-Steuerung)
-- `set_direction(dir)` / `set_priority(prio)` — Editor-Defaults uebernehmen
-- `set_snap_radius(radius)` — Snap-Radius fuer Node-Snapping setzen
-- `set_last_created(ids, road_map)` / `last_created_ids() → &[u64]` — Erstellte Node-IDs (fuer Verkettung und Nachbearbeitung)
-- `current_end_anchor() → Option<ToolAnchor>` — Liefert den End-Anker fuer den gemeinsamen `set_last_created`-Flow
-- `save_anchors_for_recreate(road_map)` — Speichert tool-spezifische Recreate-Daten
-- `last_end_anchor() → Option<ToolAnchor>` — Letzter Endpunkt fuer Verkettung
-- `needs_recreate() → bool` / `clear_recreate_flag()` — Neuberechnung bei Config-Aenderung
-- `execute_from_anchors(road_map) → Option<ToolResult>` — ToolResult aus gespeicherten Ankern
-- `drag_targets() → Vec<Vec2>` — Weltpositionen verschiebbarer Punkte (fuer Drag-Hit-Test)
-- `on_drag_start(pos, road_map, pick_radius) → bool` — Drag auf einen Punkt starten
-- `on_drag_update(pos)` — Position des gegriffenen Punkts aktualisieren
-- `on_drag_end(road_map)` — Drag beenden (Re-Snap bei Start/Ende)
-- `tangent_menu_data() → Option<TangentMenuData>` — liefert Tangenten-Menuedaten fuer das Kontextmenue
-- `apply_tangent_selection(start, end)` — wendet die im Kontextmenue gewaehlten Tangenten an
-- `set_chain_inner_ids(ids: Vec<u64>)` — Setzt die inneren Node-IDs der geladenen Kette (ohne Start/Ende); wird nach `load_chain()` vom Handler aufgerufen um korrekte IDs fuer das "Original entfernen"-Feature bereitzustellen (Standard-Impl.: no-op)
-- `set_farmland_grid(grid: Option<Arc<FarmlandGrid>>)` — Setzt das Farmland-Raster fuer Pixel-basierte Analysen (z.B. Feldweg-Erkennung). Standard-Impl.: no-op
-- `set_background_map_image(image: Option<Arc<DynamicImage>>)` — Setzt das Hintergrundbild fuer farbbasierte Analysen. Standard-Impl.: no-op
-- `needs_lasso_input() → bool` — Gibt `true` zurueck wenn das Tool Alt+Drag als Lasso-Eingabe benoetigt (z.B. `ColorPathTool` in Phase `Sampling`). Ist `true`, wird ein Alt+Drag-Lasso als `ToolLasso` geroutet und per `on_lasso_completed` geliefert statt die normale Node-Selektion auszuloesen. Standard-Impl.: `false`
-- `on_lasso_completed(polygon: Vec<Vec2>) → ToolAction` — Verarbeitet ein abgeschlossenes Lasso-Polygon in Weltkoordinaten. Wird aufgerufen sobald der User einen Alt+Drag-Lasso abgeschlossen hat und `needs_lasso_input()` gilt. Standard-Impl.: gibt `ToolAction::Continue` zurueck (no-op)
+- `RouteTool: RouteToolCore + RouteToolPanelBridge + RouteToolHostSync`
+- enthaelt nur noch Capability-Discovery (`as_recreate()`, `as_drag()`, `as_tangent()`, `as_rotate()`, `as_segment_adjustments()`, `as_chain_input()`, `as_lasso_input()`, `as_group_edit()`)
+
+**Additive Capabilities:**
+
+- `RouteToolRecreate` — `on_applied`, `last_created_ids`, `last_end_anchor`, `needs_recreate`, `clear_recreate_flag`, `execute_from_anchors`
+- `RouteToolDrag` — `drag_targets`, `on_drag_start`, `on_drag_update`, `on_drag_end`
+- `RouteToolTangent` — `tangent_menu_data`, `apply_tangent_selection`
+- `RouteToolRotate` — `on_scroll_rotate`
+- `RouteToolSegmentAdjustments` — `increase_node_count`, `decrease_node_count`, `increase_segment_length`, `decrease_segment_length`
+- `RouteToolChainInput` — `load_chain(OrderedNodeChain)`
+- `RouteToolLassoInput` — `is_lasso_input_active`, `on_lasso_completed`
+- `RouteToolGroupEdit` — `build_edit_payload`, `restore_edit_payload`
+
+**Host-Kontext:**
+
+- `ToolHostContext` buendelt `direction`, `priority`, `snap_radius`, `farmland_data`, `farmland_grid` und `background_image`
+- Handler und `ToolManager` synchronisieren diesen Kontext zentral, statt viele einzelne Setter auf dem Tool-Vertrag zu fuehren
 
 **`ToolPreview` Felder**
 
@@ -97,58 +91,35 @@ Route-Tool-`preview()`-Methoden (`StraightLineTool`, `CurveTool`, `SmoothCurveTo
 
 ---
 
-### `impl_lifecycle_delegation_no_seg!` (Makro)
+### Gemeinsame Lifecycle-Helfer
 
-Liegt in `app/tools/common/lifecycle.rs`. Reduziert Boilerplate fuer Tools
-**ohne** `self.seg: SegmentConfig` (konkret: `BypassTool`, `ParkingTool`,
-`FieldBoundaryTool`, `RouteOffsetTool`).
+`app/tools/common/lifecycle.rs` enthaelt fuer den neuen Vertrag zwei zentrale Shared-Helfer:
 
-Das Makro implementiert innerhalb eines `impl RouteTool for X { ... }`-Blocks:
-
-- `set_direction(dir)` / `set_priority(prio)` / `set_snap_radius(radius)`
-- `last_created_ids() -> &[u64]`
-- `last_end_anchor() -> Option<ToolAnchor>`
-- `needs_recreate() -> bool` / `clear_recreate_flag()`
-- `set_last_created(ids, road_map)`
-
-**Voraussetzung:** Der Ziel-Typ muss `self.lifecycle: ToolLifecycleState`,
-`self.direction: ConnectionDirection` und `self.priority: ConnectionPriority` besitzen.
-
-```rust
-impl RouteTool for BypassTool {
-    crate::impl_lifecycle_delegation_no_seg!();
-    // ... weitere Methoden
-}
-```
-
-Analoges Pendant fuer Tools MIT `SegmentConfig` ist `impl_lifecycle_delegation!`
-(ohne `_no_seg`-Suffix) — dokumentiert in `common/lifecycle.rs`.
+- `sync_tool_host(direction, priority, lifecycle, context)` — uebernimmt Editor-Defaults und Snap-Radius in ein Tool
+- `record_applied_tool_state(lifecycle, ids, end_anchor)` — speichert letzte Node-IDs und den End-Anker nach erfolgreicher Anwendung
 
 ### Direkte Erweiterungspunkte
 
-Der optionale Teil des Vertrags wird direkt ueber Default-Methoden auf `RouteTool` abgebildet. Es gibt keine separaten Capability-Traits mehr.
+Optionales Verhalten wird nicht mehr ueber No-Op-Methoden auf `RouteTool` modelliert, sondern ueber Capability-Discovery im `ToolManager`.
 
-- Drag/Nachbearbeitung: `drag_targets`, `on_drag_start`, `on_drag_update`, `on_drag_end`
-- Tangenten: `tangent_menu_data`, `apply_tangent_selection`
-- GroupRegistry: `make_group_record`, `load_for_edit`
-- Ketten-Input: `needs_chain_input`, `load_chain`, `set_chain_inner_ids`
-- Analyse-Input: `set_farmland_data`, `set_farmland_grid`, `set_background_map_image`, `needs_lasso_input`, `on_lasso_completed`
+- Viewport-Drag und Tangenten gehen ueber `active_drag()` bzw. `active_tangent()`
+- Alt+Scroll-Rotation geht ueber `active_rotate_mut()`, Segment-Shortcuts nur bei vorhandener Capability ueber `active_segment_adjustments_mut()`
+- Recreate- und Chaining-Flows gehen ueber `active_recreate()` bzw. `active_chain_input()`
+- Alt+Lasso fuer Analyse-Tools wird ueber `active_lasso_input()` und `is_lasso_input_active()` geroutet
+- Persistierbare Tools exponieren ihren Edit-Snapshot ueber `active_group_edit()` bzw. `active_group_edit_mut()`
 
-**Registry-Erweiterungen** (fuer `GroupRegistry`, siehe [`../use_cases/API.md`](../use_cases/API.md)):
+**Tool-Edit-Erweiterung** (fuer den separaten Tool-Editing-Layer, siehe [`../API.md#tooleditstore-routetooleditpayload-und-activetooleditsession`](../API.md#tooleditstore-routetooleditpayload-und-activetooleditsession)):
 
 ```rust
-// Wird nach execute() + apply_tool_result() aufgerufen:
-fn make_group_record(&self, id: u64, node_ids: &[u64]) -> Option<GroupRecord>;
-
-// Wird in edit_segment() aufgerufen um das Tool wiederherzustellen:
-fn load_for_edit(&mut self, record: &GroupRecord, kind: &GroupKind);
+fn build_edit_payload(&self) -> Option<RouteToolEditPayload>;
+fn restore_edit_payload(&mut self, payload: &RouteToolEditPayload);
 ```
 
 ---
 
-## `GroupBase` und `GroupKind` (Group-Registry)
+## `RouteToolEditPayload` (Tool-Editing)
 
-Documentation moved to [`../API.md#groupbase--groupkind`](../API.md#groupbase--groupkind). Kurz: Alle Gruppen speichern ihre grundlegenden Parameter (Richtung, Priorität, Max-Abstand) in `GroupBase` ab, was Tool-Typ und Editing-Flow vereinheitlicht.
+Die kanonische Beschreibung des separaten Persistenz-/Edit-Vertrags liegt in [`../API.md#tooleditstore-routetooleditpayload-und-activetooleditsession`](../API.md#tooleditstore-routetooleditpayload-und-activetooleditsession). Kurz: group-backed editierbare Tools bauen ihren Snapshot ausserhalb der Registry als `RouteToolEditPayload`; das neutrale `GroupRecord` speichert nur Gruppenmitgliedschaft, Marker-Cleanup und Boundary-Metadaten.
 
 ---
 
@@ -180,7 +151,7 @@ Bézier-Kurve wahlweise Grad 2 (quadratisch, 1 Steuerpunkt) oder Grad 3 (kubisch
 
 Konstruktoren: `CurveTool::new()` (Grad 2), `CurveTool::new_cubic()` (Grad 3).
 
-Modulstruktur: `state.rs` (Enums, Struct, Ctors), `lifecycle.rs` (RouteTool-Impl), `drag.rs` (Drag-Logik), `config_ui.rs` (egui-Panel), `geometry.rs` (Bézier-Mathe), `tests.rs`
+Modulstruktur: `state.rs` (Enums, Struct, Ctors), `lifecycle.rs` (RouteTool-Impl), `drag.rs` (Drag-Logik), `config_ui.rs` (semantische Panel-Bruecke), `geometry.rs` (Bézier-Mathe), `tests.rs`
 
 **Cubic-Extras (Grad 3):**
 
@@ -267,10 +238,10 @@ Parkplatz-Layout-Generator: Erstellt einen Wendekreis mit Parkreihen in einem ko
 - Enthaelt gemeinsamen `ToolLifecycleState` fuer Snap-Radius, letzte erstellte Node-IDs, Recreate-Flag
 - Methoden: `set_snap_radius()`, `last_created_ids()`, `last_end_anchor()`, `needs_recreate()`, `clear_recreate_flag()`, `set_last_created()`
 
-**Group-Registry:**
+**Tool-Edit:**
 
-- Ueberschreibt die `RouteTool`-Hooks `make_group_record()` und `load_for_edit()`
-- Speichert Layout-Parameter fuer nachtraegliche Bearbeitung
+- Implementiert `RouteToolGroupEdit`
+- Liefert/stellt den Layout-Snapshot ueber `build_edit_payload()` und `restore_edit_payload()` wieder her
 
 **Geometrie-/Konvertierungspfad:**
 
@@ -278,7 +249,7 @@ Parkplatz-Layout-Generator: Erstellt einen Wendekreis mit Parkreihen in einem ko
 - `build_parking_result(layout) → ToolResult` — Modulintern: konvertiert das Layout via `ToolResultBuilder`; befuellt `markers` und laesst `external_connections` sowie `nodes_to_remove` kanonisch leer
 - `build_preview(layout) → ToolPreview` — Modulintern: Vorschau-Geometrie inkl. Verbindungsstilen und Labels
 
-Modulstruktur: `state.rs` (Struct + Config), `lifecycle.rs` (RouteTool-Impl + Lifecycle-Delegation), `config_ui.rs` (egui-Panel), `geometry/{mod,layout,blueprint,conversion}.rs` (Layout-Mathe), `tests.rs` (7 Unit-Tests)
+Modulstruktur: `state.rs` (Struct + Config), `lifecycle.rs` (RouteTool-Impl + Lifecycle-Delegation), `config_ui.rs` (semantische Panel-Bruecke), `geometry/{mod,layout,blueprint,conversion}.rs` (Layout-Mathe), `tests.rs` (7 Unit-Tests)
 
 ### `FieldBoundaryTool`
 
@@ -347,6 +318,8 @@ pub(super) fn compute_ring(
 
 **`RingNodeKind`-Enum (aus `geometry.rs`):**
 
+`RingNodeKind` bleibt bewusst im Geometrie-Modul verankert; `app::use_cases` konsumieren die Ring-Ausgabe nur indirekt ueber die schmale App-Bruecke um `compute_ring`.
+
 ```rust
 pub enum RingNodeKind {
     Regular,        // Normaler Punkt zwischen Ecken
@@ -367,9 +340,9 @@ Das Mapping `RingNodeKind` → `NodeFlag`:
 - `round_corner(prev, corner, next, radius, spacing) -> Vec<Vec2>` — Kreisbogen zwischen Tangentenpunkten einer konvexen Ecke. Konkave Ecken (Cross-Product ≤ 0) werden unverändert zurückgegeben. Tangentenpunkte begrenzt auf 40% der Kantenlaenge.
 - `resample_ring_with_corners(simplified, corner_indices, spacing, rounding_radius) -> Vec<(Vec2, RingNodeKind)>` — Resampled den Ring segmentweise mit Ecken als festen Ankern
 
-**Gruppen-Record:** `GroupKind::FieldBoundary { field_id, node_spacing, offset, straighten_tolerance, corner_angle_threshold, corner_rounding_radius, base }` unter `RouteToolId::FieldBoundary`
+**Edit-Payload:** `RouteToolEditPayload::FieldBoundary { field_id, node_spacing, offset, straighten_tolerance, corner_angle_threshold, corner_rounding_radius, corner_rounding_max_angle_deg, base }` fuer `RouteToolId::FieldBoundary`
 
-Modulstruktur: `mod.rs` (Re-Exporte), `state.rs` (Struct, Phasen-Enum, Default), `lifecycle.rs` (RouteTool-Impl, Ring-Berechnung), `config_ui.rs` (egui-Panel), `geometry.rs` (RingNodeKind, detect_corners, round_corner, resample_ring_with_corners)
+Modulstruktur: `mod.rs` (Re-Exporte), `state.rs` (Struct, Phasen-Enum, Default), `lifecycle.rs` (RouteTool-Impl, Ring-Berechnung), `config_ui.rs` (semantische Panel-Bruecke), `geometry.rs` (RingNodeKind, detect_corners, round_corner, resample_ring_with_corners)
 
 ### `RouteOffsetTool`
 
@@ -421,9 +394,9 @@ Die finale Ausgabe wird ueber `ToolResultBuilder` aufgebaut: interne Offset-Kett
 - `RouteOffsetTool`
 - `compute_offset_positions()` — Hotpath-Helfer fuer Benchmarks/Tests
 
-**Gruppen-Record:** `GroupKind::RouteOffset { chain_positions, chain_start_id, chain_end_id, offset_left, offset_right, keep_original, base_spacing, base }` unter `RouteToolId::RouteOffset`
+**Edit-Payload:** `RouteToolEditPayload::RouteOffset { chain_positions, chain_start_id, chain_end_id, offset_left, offset_right, keep_original, base_spacing, base }` fuer `RouteToolId::RouteOffset`
 
-Modulstruktur: `mod.rs` (Re-Exporte), `state.rs` (Struct + OffsetConfig), `lifecycle.rs` (RouteTool-Impl), `geometry.rs` (compute_offset_positions), `config_ui.rs` (egui-Panel), `tests.rs`
+Modulstruktur: `mod.rs` (Re-Exporte), `state.rs` (Struct + OffsetConfig), `lifecycle.rs` (RouteTool-Impl), `geometry.rs` (compute_offset_positions), `config_ui.rs` (semantische Panel-Bruecke), `tests.rs`
 
 ---
 
@@ -491,7 +464,7 @@ pub struct FieldPathTool {
 
 Im `Boundaries`-Modus sucht `find_nearest_boundary_segment()` das nächste Polygon-Kanten-Segment innerhalb von `BOUNDARY_SNAP_THRESHOLD = 20 m` und gibt es als Zwei-Punkt-Polyline zurück.
 
-Modulstruktur: `mod.rs` (Re-Export), `state.rs` (Structs, Enums, Felder), `lifecycle.rs` (RouteTool-Impl, compute_centerline), `config_ui.rs` (egui-Panel)
+Modulstruktur: `mod.rs` (Re-Export), `state.rs` (Structs, Enums, Felder), `lifecycle.rs` (RouteTool-Impl, compute_centerline), `config_ui.rs` (semantische Panel-Bruecke)
 
 ---
 
@@ -499,7 +472,7 @@ Modulstruktur: `mod.rs` (Re-Export), `state.rs` (Structs, Enums, Felder), `lifec
 
 Farb-Pfad-Erkennung: Erkennt zusammenhaengende Teilnetze anhand der Farbe im Hintergrundbild, skelettiert sie per Zhang-Suen-Thinning und exportiert daraus ein Waypoint-Netz mit offenen Enden, Kreuzungen und Segmenten (`RouteToolId::ColorPath`).
 
-**Voraussetzung:** Ein Hintergrundbild muss geladen sein (`set_background_map_image()`). Das Tool bezieht die `map_size` automatisch aus `set_farmland_grid()`.
+**Voraussetzung:** Ein Hintergrundbild muss im `ToolHostContext.background_image` vorhanden sein. Das Tool kann `map_size` zusaetzlich aus `ToolHostContext.farmland_grid` ableiten.
 
 **Phasen (`ColorPathPhase`):**
 
@@ -509,10 +482,11 @@ Farb-Pfad-Erkennung: Erkennt zusammenhaengende Teilnetze anhand der Farbe im Hin
 
 **ToolLasso-Mechanismus:**
 
-Das Tool setzt `needs_lasso_input() = true` sobald `phase == Sampling`. Damit wird
-jeder Alt+Drag im Viewport als `DragSelectionMode::ToolLasso` geroutet (statt als
-normale Node-Selektion). Das abgeschlossene Polygon wird per `AppIntent::RouteToolLassoCompleted`
-an `handlers::route_tool::lasso_completed()` weitergeleitet, das `on_lasso_completed()` aufruft.
+Das Tool exponiert in Phase `Sampling` die Capability `RouteToolLassoInput` und liefert dann
+`is_lasso_input_active() = true`. Damit wird jeder Alt+Drag im Viewport als
+`DragSelectionMode::ToolLasso` geroutet (statt als normale Node-Selektion). Das abgeschlossene
+Polygon wird per `AppIntent::RouteToolLassoCompleted` an `handlers::route_tool::lasso_completed()`
+weitergeleitet, das die Lasso-Capability des aktiven Tools aufruft.
 
 **Interaktionsflow:**
 
@@ -611,7 +585,7 @@ pub struct ColorPathTool {
 
 **Gruppen-Record:** ColorPathTool speichert keinen `GroupRecord` (keine nachträgliche Bearbeitung).
 
-Modulstruktur: `mod.rs` (Re-Export + Benchmark-Fassade), `state.rs` (Stage-Artefakte, Phasen-Enum, Config, Default), `lifecycle.rs` (Phasenwechsel + RouteTool-Adapter), `pipeline.rs` (Stages B-F), `preview.rs` (Preview-/Execute-Aufbereitung mit `PreparedSegment` als gemeinsamer Wahrheit), `config_ui.rs` (egui-Panel), `sampling.rs` (Farb-Sampling + Masken-Erstellung), `skeleton.rs` (Skelett-Extraktion + Graph-Aufbau)
+Modulstruktur: `mod.rs` (Re-Export + Benchmark-Fassade), `state.rs` (Stage-Artefakte, Phasen-Enum, Config, Default), `lifecycle.rs` (Phasenwechsel + RouteTool-Adapter), `pipeline.rs` (Stages B-F), `preview.rs` (Preview-/Execute-Aufbereitung mit `PreparedSegment` als gemeinsamer Wahrheit), `config_ui.rs` (semantische Panel-Bruecke), `sampling.rs` (Farb-Sampling + Masken-Erstellung), `skeleton.rs` (Skelett-Extraktion + Graph-Aufbau)
 
 ---
 
@@ -619,10 +593,10 @@ Modulstruktur: `mod.rs` (Re-Export + Benchmark-Fassade), `state.rs` (Stage-Artef
 
 Parallele Ausweichstrecke einer selektierten Kette mit S-förmigen An-/Abfahrten. Das Tool benötigt eine Eingabe-Kette (via `load_chain()`), generiert dann automatisch die Bypass-Positionen und erstellt neue Nodes mit entsprechenden Verbindungen.
 
-**Input-Modus:** Chain-basiert (nutzt die `RouteTool`-Hooks `needs_chain_input()` und `load_chain()`).
+**Input-Modus:** Chain-basiert ueber die `RouteToolChainInput`-Capability.
 
-- `needs_chain_input() → true`
-- `load_chain(positions, start_id, end_id)` — Laedt die Kette aus der User-Selektion
+- `ToolManager::active_chain_input()` signalisiert dem Handler, dass eine geordnete Kette benoetigt wird
+- `load_chain(OrderedNodeChain)` uebernimmt Positionen sowie Start-/End- und innere Node-IDs in einem DTO
 
 **Konfiguration:**
 
@@ -638,15 +612,15 @@ Parallele Ausweichstrecke einer selektierten Kette mit S-förmigen An-/Abfahrten
 
 **Lifecycle-Integration:**
 
-- Enthaelt gemeinsamen `ToolLifecycleState` fuer Snap-Radius, letzte erstellte Node-IDs, Recreate-Flag
-- Methoden: `set_snap_radius()`, `last_created_ids()`, `last_end_anchor()`, `needs_recreate()`, `clear_recreate_flag()`, `set_last_created()`
-- Nutzt `lifecycle.save_created_ids()` zur Verwaltung erstellter IDs
+- Enthaelt gemeinsamen `ToolLifecycleState` fuer Snap-Radius, letzte erstellte Node-IDs und Recreate-Flag
+- Host-Defaults laufen ueber `sync_tool_host(...)`
+- Recreate-Status und letzte IDs laufen ueber die Capability `RouteToolRecreate`
 
 **Public Exports:**
 
 - `compute_bypass_positions(chain, offset, base_spacing) → Option<(Vec<Vec2>, f32)>` — Berechnet Bypass-Positionen und Uebergangslaenge (fuer Benchmarks + Tests)
 
-Modulstruktur: `state.rs` (Struct + Config), `lifecycle.rs` (RouteTool-Impl + Lifecycle-Delegation), `config_ui.rs` (egui-Panel), `geometry.rs` (Bypass-Mathe), `tests.rs` (15 Unit-Tests)
+Modulstruktur: `state.rs` (Struct + Config), `lifecycle.rs` (RouteTool-Impl + Lifecycle-Delegation), `config_ui.rs` (semantische Panel-Bruecke), `geometry.rs` (Bypass-Mathe), `tests.rs` (15 Unit-Tests)
 
 ---
 
@@ -689,13 +663,9 @@ Die Menue-DTOs fuer die UI (`TangentMenuData`, `TangentOptionData`) liegen seit 
 
 **`render_segment_config_3modes(seg, ui, adjusting, ready, length, label, distance_wheel_step_m) → (changed, recreate)`** — Gemeinsame Hilfsfunktion fuer die 3 SegmentConfig-Darstellungsmodi (Adjusting/Live/Default) inkl. Mausrad-Aenderungen fuer Distanz/Node-Anzahl.
 
-**`impl_lifecycle_delegation!`** — Makro zur Delegation der Standard-RouteTool-Lifecycle-Methoden (`set_direction`, `set_priority`, `set_snap_radius`, `last_created_ids`, `last_end_anchor`, `needs_recreate`, `clear_recreate_flag`, Inkrement/Decrement-Helfer) an die gemeinsamen Felder. Eliminiert Boilerplate pro Tool.
+**`sync_tool_host(...)`** — Shared-Helper fuer den Host-Kontext-Sync (`direction`, `priority`, `snap_radius`) ueber alle Tools hinweg.
 
-Der Makro-Flow fuer `set_last_created` ist vereinheitlicht:
-
-1. `current_end_anchor()` uebernehmen
-2. `save_anchors_for_recreate(road_map)` aufrufen
-3. `lifecycle.save_created_ids(ids)` ausfuehren
+**`record_applied_tool_state(...)`** — Shared-Helper fuer `RouteToolRecreate::on_applied()`: uebernimmt letzte IDs und End-Anker in den gemeinsamen Lifecycle-State.
 
 ### `bypass::geometry` Export
 

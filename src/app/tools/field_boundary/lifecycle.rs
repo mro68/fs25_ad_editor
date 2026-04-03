@@ -1,31 +1,19 @@
 //! RouteTool-Implementierung fuer das FieldBoundaryTool.
 
-use std::sync::Arc;
-
-use crate::app::group_registry::{GroupBase, GroupKind, GroupRecord};
-use crate::app::tools::common::ToolResultBuilder;
-use crate::app::tools::{RouteToolId, ToolAction, ToolAnchor, ToolPreview, ToolResult};
-use crate::core::{
-    find_polygon_at, offset_polygon, simplify_polygon, FieldPolygon, NodeFlag, RoadMap,
+use crate::app::tool_editing::{RouteToolEditPayload, ToolRouteBase};
+use crate::app::tools::common::{sync_tool_host, ToolResultBuilder};
+use crate::app::tools::{
+    RouteTool, RouteToolCore, RouteToolGroupEdit, RouteToolHostSync, RouteToolPanelBridge,
+    ToolAction, ToolHostContext, ToolPreview, ToolResult,
 };
+use crate::app::ui_contract::{RouteToolConfigState, RouteToolPanelAction, RouteToolPanelEffect};
+use crate::core::{find_polygon_at, offset_polygon, simplify_polygon, NodeFlag, RoadMap};
 use glam::Vec2;
 
 use super::geometry::{detect_corners, resample_ring_with_corners, RingNodeKind};
 use super::state::{FieldBoundaryPhase, FieldBoundaryTool};
 
-impl crate::app::tools::RouteTool for FieldBoundaryTool {
-    fn name(&self) -> &str {
-        "Feld erkennen"
-    }
-
-    fn icon(&self) -> &str {
-        "\u{1f33e}" // 🌾
-    }
-
-    fn description(&self) -> &str {
-        "Erzeugt eine Route entlang der erkannten Feldgrenze"
-    }
-
+impl RouteToolPanelBridge for FieldBoundaryTool {
     fn status_text(&self) -> &str {
         match self.phase {
             FieldBoundaryPhase::Idle => "In ein Feld klicken zum Erkennen der Grenze",
@@ -35,10 +23,23 @@ impl crate::app::tools::RouteTool for FieldBoundaryTool {
         }
     }
 
+    fn panel_state(&self) -> RouteToolConfigState {
+        RouteToolConfigState::FieldBoundary(self.panel_state())
+    }
+
+    fn apply_panel_action(&mut self, action: RouteToolPanelAction) -> RouteToolPanelEffect {
+        let RouteToolPanelAction::FieldBoundary(action) = action else {
+            return RouteToolPanelEffect::default();
+        };
+
+        self.apply_panel_action(action)
+    }
+}
+
+impl RouteToolCore for FieldBoundaryTool {
     fn on_click(&mut self, pos: Vec2, _road_map: &RoadMap, _ctrl: bool) -> ToolAction {
         match self.phase {
             FieldBoundaryPhase::Idle => {
-                // Feldpolygon an Klickposition suchen
                 if let Some(data) = &self.farmland_data {
                     if let Some(polygon) = find_polygon_at(pos, data) {
                         self.selected_polygon = Some(polygon.clone());
@@ -56,7 +57,6 @@ impl crate::app::tools::RouteTool for FieldBoundaryTool {
                 ToolAction::Continue
             }
             FieldBoundaryPhase::Configuring => {
-                // Erneuter Klick → Auswahl zuruecksetzen, neues Feld suchen
                 self.selected_polygon = None;
                 self.phase = FieldBoundaryPhase::Idle;
                 ToolAction::Continue
@@ -106,10 +106,6 @@ impl crate::app::tools::RouteTool for FieldBoundaryTool {
             connection_styles,
             labels: vec![],
         }
-    }
-
-    fn render_config(&mut self, ui: &mut egui::Ui, distance_wheel_step_m: f32) -> bool {
-        self.render_config_view(ui, distance_wheel_step_m)
     }
 
     fn execute(&self, _road_map: &RoadMap) -> Option<ToolResult> {
@@ -174,63 +170,66 @@ impl crate::app::tools::RouteTool for FieldBoundaryTool {
     fn has_pending_input(&self) -> bool {
         self.phase == FieldBoundaryPhase::Configuring
     }
+}
 
-    // ── Lifecycle-Delegation ─────────────────────────────────────────────────
+impl RouteToolHostSync for FieldBoundaryTool {
+    fn sync_host(&mut self, context: &ToolHostContext) {
+        sync_tool_host(
+            &mut self.direction,
+            &mut self.priority,
+            &mut self.lifecycle,
+            context,
+        );
+        self.farmland_data = context.farmland_data.clone();
+    }
+}
 
-    crate::impl_lifecycle_delegation_no_seg!();
-
-    fn set_farmland_data(&mut self, data: Option<Arc<Vec<FieldPolygon>>>) {
-        self.farmland_data = data;
+impl RouteTool for FieldBoundaryTool {
+    fn as_group_edit(&self) -> Option<&dyn RouteToolGroupEdit> {
+        Some(self)
     }
 
-    fn make_group_record(&self, id: u64, node_ids: &[u64]) -> Option<GroupRecord> {
+    fn as_group_edit_mut(&mut self) -> Option<&mut dyn RouteToolGroupEdit> {
+        Some(self)
+    }
+}
+
+impl RouteToolGroupEdit for FieldBoundaryTool {
+    fn build_edit_payload(&self) -> Option<RouteToolEditPayload> {
         let polygon = self.selected_polygon.as_ref()?;
-        Some(GroupRecord {
-            id,
-            tool_id: Some(RouteToolId::FieldBoundary),
-            node_ids: node_ids.to_vec(),
-            start_anchor: ToolAnchor::NewPosition(Vec2::ZERO),
-            end_anchor: ToolAnchor::NewPosition(Vec2::ZERO),
-            original_positions: Vec::new(),
-            marker_node_ids: Vec::new(),
-            locked: true,
-            entry_node_id: None,
-            exit_node_id: None,
-            kind: GroupKind::FieldBoundary {
-                field_id: polygon.id,
-                node_spacing: self.node_spacing,
-                offset: self.offset,
-                straighten_tolerance: self.straighten_tolerance,
-                corner_angle_threshold: if self.corner_detection_enabled {
-                    Some(self.corner_angle_threshold_deg)
-                } else {
-                    None
-                },
-                corner_rounding_radius: if self.corner_detection_enabled
-                    && self.corner_rounding_enabled
-                {
-                    Some(self.corner_rounding_radius)
-                } else {
-                    None
-                },
-                corner_rounding_max_angle_deg: if self.corner_detection_enabled
-                    && self.corner_rounding_enabled
-                {
-                    Some(self.corner_rounding_max_angle_deg)
-                } else {
-                    None
-                },
-                base: GroupBase {
-                    direction: self.direction,
-                    priority: self.priority,
-                    max_segment_length: 0.0,
-                },
+        Some(RouteToolEditPayload::FieldBoundary {
+            field_id: polygon.id,
+            node_spacing: self.node_spacing,
+            offset: self.offset,
+            straighten_tolerance: self.straighten_tolerance,
+            corner_angle_threshold: if self.corner_detection_enabled {
+                Some(self.corner_angle_threshold_deg)
+            } else {
+                None
+            },
+            corner_rounding_radius: if self.corner_detection_enabled && self.corner_rounding_enabled
+            {
+                Some(self.corner_rounding_radius)
+            } else {
+                None
+            },
+            corner_rounding_max_angle_deg: if self.corner_detection_enabled
+                && self.corner_rounding_enabled
+            {
+                Some(self.corner_rounding_max_angle_deg)
+            } else {
+                None
+            },
+            base: ToolRouteBase {
+                direction: self.direction,
+                priority: self.priority,
+                max_segment_length: 0.0,
             },
         })
     }
 
-    fn load_for_edit(&mut self, _record: &GroupRecord, kind: &GroupKind) {
-        let GroupKind::FieldBoundary {
+    fn restore_edit_payload(&mut self, payload: &RouteToolEditPayload) {
+        let RouteToolEditPayload::FieldBoundary {
             field_id,
             node_spacing,
             offset,
@@ -239,7 +238,7 @@ impl crate::app::tools::RouteTool for FieldBoundaryTool {
             corner_rounding_radius,
             corner_rounding_max_angle_deg,
             base,
-        } = kind
+        } = payload
         else {
             return;
         };
@@ -353,8 +352,8 @@ pub fn compute_ring(
 mod tests {
     use super::super::geometry::detect_corners;
     use super::*;
-    use crate::app::tools::RouteTool;
-    use crate::core::RoadMap;
+    use crate::app::tools::RouteToolCore;
+    use crate::core::{FieldPolygon, RoadMap};
 
     /// Hilfsfunktion: Rechteck-Vertices aufbauen
     fn rectangle_vertices() -> Vec<Vec2> {

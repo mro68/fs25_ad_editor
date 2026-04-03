@@ -5,9 +5,21 @@ mod apply;
 mod selection;
 
 use crate::app::state::EditorTool;
-use crate::app::tool_contract::TangentSource;
-use crate::app::tools::{RouteToolId, ToolAction};
+use crate::app::tool_contract::{RouteToolId, TangentSource};
+use crate::app::tools::{ToolAction, ToolHostContext};
+use crate::app::ui_contract::{RouteToolPanelAction, RouteToolPanelFollowUp};
 use crate::app::AppState;
+
+pub(super) fn build_host_context(state: &AppState) -> ToolHostContext {
+    ToolHostContext {
+        direction: state.editor.default_direction,
+        priority: state.editor.default_priority,
+        snap_radius: state.options.snap_radius(),
+        farmland_data: state.farmland_polygons.clone(),
+        farmland_grid: state.farmland_grid.clone(),
+        background_image: state.background_image.clone(),
+    }
+}
 
 /// Verarbeitet einen Viewport-Klick im Route-Tool.
 pub fn click(state: &mut AppState, world_pos: glam::Vec2, ctrl: bool) {
@@ -32,7 +44,7 @@ pub fn click(state: &mut AppState, world_pos: glam::Vec2, ctrl: bool) {
 /// das aktive Tool `needs_lasso_input()` meldet.
 pub fn lasso_completed(state: &mut AppState, polygon: Vec<glam::Vec2>) {
     let action = {
-        let Some(tool) = state.editor.tool_manager.active_tool_mut() else {
+        let Some(tool) = state.editor.tool_manager.active_lasso_input_mut() else {
             return;
         };
         tool.on_lasso_completed(polygon)
@@ -53,17 +65,14 @@ pub fn execute(state: &mut AppState) {
 /// War ein Segment im Tool-Edit-Modus, wird durch Undo der Zustand vor der
 /// Bearbeitung wiederhergestellt (Nodes zurueck, nicht geloescht).
 pub fn cancel(state: &mut AppState) {
+    if state.active_tool_edit_session.is_some() {
+        crate::app::tool_editing::cancel_active_edit(state);
+        return;
+    }
+
     if let Some(tool) = state.editor.tool_manager.active_tool_mut() {
         tool.reset();
         state.editor.active_tool = EditorTool::Select;
-    }
-    if state.tool_editing_record_id.take().is_some() {
-        super::history::undo(state);
-        // Gesicherten Record in die Registry zurueckschreiben
-        if let Some(backup) = state.tool_editing_record_backup.take() {
-            state.group_registry.register(backup);
-        }
-        log::info!("Tool-Edit abgebrochen: Undo ausgefuehrt, Record wiederhergestellt");
     }
 }
 
@@ -95,6 +104,24 @@ pub fn select_with_anchors(
 /// Loescht die letzte Strecke und erstellt sie mit neuen Parametern neu.
 pub fn recreate(state: &mut AppState) {
     apply::recreate(state);
+}
+
+/// Wendet eine semantische Panel-Aktion an und fuehrt Folgefluesse aus.
+pub fn apply_panel_action(state: &mut AppState, action: RouteToolPanelAction) {
+    let effect = if let Some(tool) = state.editor.tool_manager.active_tool_mut() {
+        tool.apply_panel_action(action)
+    } else {
+        return;
+    };
+
+    if effect.needs_recreate {
+        apply::recreate(state);
+    }
+
+    match effect.next_action {
+        Some(RouteToolPanelFollowUp::ReadyToExecute) => apply::execute_and_apply(state),
+        Some(RouteToolPanelFollowUp::Continue | RouteToolPanelFollowUp::UpdatePreview) | None => {}
+    }
 }
 
 /// Wendet die vom User gewaehlten Tangenten an und triggert ggf. eine Neuberechnung.

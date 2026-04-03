@@ -20,11 +20,7 @@ fn collect_with_key_event_and_modifiers(
             events = collect_keyboard_intents(
                 ui,
                 &selected,
-                EditorTool::Select,
-                false,
-                false,
-                false,
-                false,
+                KeyboardContext::new(EditorTool::Select, false, false, false, false, false),
             );
         });
     });
@@ -49,6 +45,22 @@ fn collect_with_key_event_full(
     active_tool: EditorTool,
     route_tool_is_drawing: bool,
 ) -> Vec<AppIntent> {
+    collect_with_route_tool_state(
+        event,
+        selected,
+        active_tool,
+        route_tool_is_drawing,
+        route_tool_is_drawing && active_tool == EditorTool::Route,
+    )
+}
+
+fn collect_with_route_tool_state(
+    event: egui::Event,
+    selected: IndexSet<u64>,
+    active_tool: EditorTool,
+    route_tool_is_drawing: bool,
+    route_tool_segment_shortcuts_active: bool,
+) -> Vec<AppIntent> {
     let ctx = egui::Context::default();
     let mut raw_input = egui::RawInput::default();
     raw_input.events.push(event);
@@ -59,11 +71,14 @@ fn collect_with_key_event_full(
             events = collect_keyboard_intents(
                 ui,
                 &selected,
-                active_tool,
-                route_tool_is_drawing,
-                false,
-                false,
-                false,
+                KeyboardContext::new(
+                    active_tool,
+                    route_tool_is_drawing,
+                    route_tool_segment_shortcuts_active,
+                    false,
+                    false,
+                    false,
+                ),
             );
         });
     });
@@ -87,8 +102,11 @@ fn collect_with_key_event_text_input_focus(
             let response = ui.text_edit_singleline(&mut text);
             ui.memory_mut(|m| m.request_focus(response.id));
 
-            events =
-                collect_keyboard_intents(ui, &selected, active_tool, false, false, false, false);
+            events = collect_keyboard_intents(
+                ui,
+                &selected,
+                KeyboardContext::new(active_tool, false, false, false, false, false),
+            );
         });
     });
 
@@ -242,6 +260,55 @@ fn test_escape_route_tool_idle_no_selection_switches_to_select() {
             tool: EditorTool::Select
         }
     )));
+}
+
+#[test]
+fn test_route_tool_arrow_up_emits_segment_shortcut_when_capability_is_active() {
+    let events = collect_with_route_tool_state(
+        egui::Event::Key {
+            key: egui::Key::ArrowUp,
+            physical_key: None,
+            pressed: true,
+            repeat: false,
+            modifiers: egui::Modifiers::default(),
+        },
+        IndexSet::new(),
+        EditorTool::Route,
+        true,
+        true,
+    );
+
+    assert!(events
+        .iter()
+        .any(|event| matches!(event, AppIntent::IncreaseRouteToolNodeCount)));
+    assert!(!events
+        .iter()
+        .any(|event| matches!(event, AppIntent::CameraPan { .. })));
+}
+
+#[test]
+fn test_route_tool_arrow_up_pans_camera_without_segment_adjustment_capability() {
+    let events = collect_with_route_tool_state(
+        egui::Event::Key {
+            key: egui::Key::ArrowUp,
+            physical_key: None,
+            pressed: true,
+            repeat: false,
+            modifiers: egui::Modifiers::default(),
+        },
+        IndexSet::new(),
+        EditorTool::Route,
+        true,
+        false,
+    );
+
+    assert!(events.iter().any(|event| matches!(
+        event,
+        AppIntent::CameraPan { delta } if *delta == glam::Vec2::new(0.0, -100.0)
+    )));
+    assert!(!events
+        .iter()
+        .any(|event| matches!(event, AppIntent::IncreaseRouteToolNodeCount)));
 }
 
 #[test]

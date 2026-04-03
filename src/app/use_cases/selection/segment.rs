@@ -187,8 +187,7 @@ pub fn select_segment_between_nearest_intersections(
     }
 
     let start_flag = road_map
-        .nodes
-        .get(&hit_id)
+        .node(hit_id)
         .map(|n| n.flag)
         .unwrap_or(NodeFlag::Regular);
 
@@ -214,8 +213,7 @@ pub fn select_segment_between_nearest_intersections(
                 path.iter()
                     .filter(|id| {
                         road_map
-                            .nodes
-                            .get(*id)
+                            .node(**id)
                             .map(|n| n.flag == start_flag)
                             .unwrap_or(false)
                     })
@@ -239,7 +237,9 @@ pub fn select_segment_between_nearest_intersections(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{Connection, ConnectionDirection, ConnectionPriority, MapNode, NodeFlag, RoadMap};
+    use crate::core::{
+        Connection, ConnectionDirection, ConnectionPriority, MapNode, NodeFlag, RoadMap,
+    };
     use std::sync::Arc;
 
     #[test]

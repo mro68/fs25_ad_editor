@@ -11,7 +11,7 @@ pub fn set_node_flag(state: &mut AppState, node_id: u64, flag: NodeFlag) {
     };
 
     // Pruefe ob Node existiert und ob sich das Flag ueberhaupt aendert.
-    let Some(node) = road_map_arc.nodes.get(&node_id) else {
+    let Some(node) = road_map_arc.node(node_id) else {
         log::warn!("Node {} nicht gefunden", node_id);
         return;
     };
@@ -58,7 +58,10 @@ mod tests {
         let mut state = make_state_with_node(1, NodeFlag::Regular);
         set_node_flag(&mut state, 1, NodeFlag::Warning);
         let rm = state.road_map.as_deref().unwrap();
-        assert_eq!(rm.nodes[&1].flag, NodeFlag::Warning);
+        assert_eq!(
+            rm.node(1).expect("node 1 vorhanden").flag,
+            NodeFlag::Warning
+        );
     }
 
     #[test]

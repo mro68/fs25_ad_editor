@@ -1,9 +1,10 @@
 use crate::app::group_registry::GroupRegistry;
 use crate::app::history::Snapshot;
 use crate::app::tool_contract::RouteToolId;
+use crate::app::tool_editing::{ActiveToolEditSession, ToolEditStore};
 use crate::app::CommandLog;
 use crate::core::{Connection, FarmlandGrid, FieldPolygon, MapMarker, MapNode, RoadMap};
-use crate::shared::EditorOptions;
+use crate::shared::{EditorOptions, RenderMap};
 use glam::Vec2;
 use indexmap::IndexSet;
 use std::cell::RefCell;
@@ -39,6 +40,11 @@ pub struct GroupEditState {
 ///
 /// Tuple: `(selection_generation, registry_dimmed_generation, gecachtes_Ergebnis)`.
 type DimmedIdsCache = Option<(u64, u64, Arc<IndexSet<u64>>)>;
+
+/// Cache-Eintrag fuer den render-seitigen Map-Snapshot.
+///
+/// Tuple: `(render_instance_id, render_revision, gecachter_RenderMap_Snapshot)`.
+type RenderMapCache = Option<(u64, u64, Arc<RenderMap>)>;
 
 /// Hauptzustand der Anwendung
 pub struct AppState {
@@ -83,22 +89,21 @@ pub struct AppState {
     pub background_image: Option<Arc<image::DynamicImage>>,
     /// Aktive Gruppen-Bearbeitung (None = Normal-Modus, Some = Edit-Modus aktiv)
     pub group_editing: Option<GroupEditState>,
-    /// Record-ID des aktuell per Tool bearbeiteten Segments (fuer Cancel-Wiederherstellung)
-    ///
-    /// Wird in `edit_group()` gesetzt und in Cancel/Confirm geloescht.
-    /// `None` = kein aktiver Tool-Edit.
-    pub tool_editing_record_id: Option<u64>,
-    /// Gesicherter GroupRecord des aktuell bearbeiteten Segments.
-    ///
-    /// Wird in `edit_group()` vor dem Loeschen aus der Registry gespeichert.
-    /// Bei Cancel wird der Record wiederhergestellt; bei Confirm wird das Backup geleert.
-    pub tool_editing_record_backup: Option<crate::app::group_registry::GroupRecord>,
+    /// Separater Store fuer tool-spezifische Edit-Payloads.
+    pub tool_edit_store: ToolEditStore,
+    /// Aktive Tool-Edit-Session mit Backups fuer Cancel/Wiederherstellung.
+    pub active_tool_edit_session: Option<ActiveToolEditSession>,
     /// Lazy Cache fuer `compute_dimmed_ids`.
     ///
     /// Tuple: `(selection_generation, registry_dimmed_generation, gecachtes_Ergebnis)`.
     /// Interior Mutability via `RefCell`, da `render_scene::build()` nur `&AppState` erhaelt.
     /// Wird invalidiert wenn sich selection oder group_registry aendern (Generations-Vergleich).
     pub(crate) dimmed_ids_cache: RefCell<DimmedIdsCache>,
+    /// Lazy Cache fuer den render-seitigen Map-Snapshot.
+    ///
+    /// Wird ueber `(render_instance_id, render_revision)` invalidiert, damit der
+    /// Snapshot nur bei render-relevanten RoadMap-Aenderungen neu aufgebaut wird.
+    pub(crate) render_map_cache: RefCell<RenderMapCache>,
 }
 
 impl AppState {
@@ -126,9 +131,10 @@ impl AppState {
             farmland_grid: None,
             background_image: None,
             group_editing: None,
-            tool_editing_record_id: None,
-            tool_editing_record_backup: None,
+            tool_edit_store: ToolEditStore::new(),
+            active_tool_edit_session: None,
             dimmed_ids_cache: RefCell::new(None),
+            render_map_cache: RefCell::new(None),
         }
     }
 

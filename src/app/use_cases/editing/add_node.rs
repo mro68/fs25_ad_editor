@@ -38,10 +38,10 @@ fn find_nearest_connection(
     let mut best = None;
 
     for conn in road_map.connections_iter() {
-        let Some(s_node) = road_map.nodes.get(&conn.start_id) else {
+        let Some(s_node) = road_map.node(conn.start_id) else {
             continue;
         };
-        let Some(e_node) = road_map.nodes.get(&conn.end_id) else {
+        let Some(e_node) = road_map.node(conn.end_id) else {
             continue;
         };
         let dist = point_to_segment_dist(pt, s_node.position, e_node.position);
@@ -129,13 +129,13 @@ pub fn add_node_at_position(state: &mut AppState, world_pos: Vec2) -> AddNodeRes
         // Split-Modus: alte Verbindung entfernen, zwei neue einfuegen
         road_map.remove_connection(split_start, split_end);
 
-        if let Some(s_node) = road_map.nodes.get(&split_start) {
+        if let Some(s_node) = road_map.node(split_start) {
             let s_pos = s_node.position;
             let conn1 =
                 Connection::new(split_start, new_id, split_dir, split_prio, s_pos, world_pos);
             road_map.add_connection(conn1);
         }
-        if let Some(e_node) = road_map.nodes.get(&split_end) {
+        if let Some(e_node) = road_map.node(split_end) {
             let e_pos = e_node.position;
             let conn2 = Connection::new(new_id, split_end, split_dir, split_prio, world_pos, e_pos);
             road_map.add_connection(conn2);
@@ -151,8 +151,10 @@ pub fn add_node_at_position(state: &mut AppState, world_pos: Vec2) -> AddNodeRes
     } else {
         // Normaler Auto-Connect: Vom selektierten Node zum neuen Node verbinden
         if let Some(from_id) = connect_from {
-            if road_map.nodes.contains_key(&from_id) {
-                let start_pos = road_map.nodes[&from_id].position;
+            if road_map.contains_node(from_id) {
+                let start_pos = road_map
+                    .node_position(from_id)
+                    .expect("Start-Node vorhanden");
                 let end_pos = world_pos;
                 let conn =
                     Connection::new(from_id, new_id, direction, priority, start_pos, end_pos);

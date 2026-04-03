@@ -5,12 +5,15 @@
 //! - `on_click()` / `preview()` / `execute()` / `reset()`
 //! - Hilfsfunktionen fuer Feld- und Segmentauswahl
 
-use std::sync::Arc;
-
-use crate::app::tools::{ToolAction, ToolPreview, ToolResult};
+use crate::app::tools::common::sync_tool_host;
+use crate::app::tools::{
+    RouteTool, RouteToolCore, RouteToolHostSync, RouteToolPanelBridge, ToolAction, ToolHostContext,
+    ToolPreview, ToolResult,
+};
+use crate::app::ui_contract::{RouteToolConfigState, RouteToolPanelAction, RouteToolPanelEffect};
 use crate::core::{
     compute_polygon_centerline, compute_segment_centerline, find_polygon_at, simplify_polyline,
-    FarmlandGrid, FieldPolygon, NodeFlag, RoadMap,
+    FieldPolygon, NodeFlag, RoadMap,
 };
 use crate::shared::spline_geometry::resample_by_distance;
 use glam::Vec2;
@@ -270,19 +273,7 @@ impl FieldPathTool {
 // RouteTool-Implementierung
 // ---------------------------------------------------------------------------
 
-impl crate::app::tools::RouteTool for FieldPathTool {
-    fn name(&self) -> &str {
-        "Feldweg"
-    }
-
-    fn icon(&self) -> &str {
-        "\u{1f6e4}" // 🛤
-    }
-
-    fn description(&self) -> &str {
-        "Berechnet Mittellinien zwischen Farmland-Grenzen"
-    }
-
+impl RouteToolPanelBridge for FieldPathTool {
     fn status_text(&self) -> &str {
         match self.phase {
             FieldPathPhase::Idle => "Tool aktiv — Seite 1 waehlen oder Starten klicken",
@@ -302,6 +293,20 @@ impl crate::app::tools::RouteTool for FieldPathTool {
         }
     }
 
+    fn panel_state(&self) -> RouteToolConfigState {
+        RouteToolConfigState::FieldPath(self.panel_state())
+    }
+
+    fn apply_panel_action(&mut self, action: RouteToolPanelAction) -> RouteToolPanelEffect {
+        let RouteToolPanelAction::FieldPath(action) = action else {
+            return RouteToolPanelEffect::default();
+        };
+
+        self.apply_panel_action(action)
+    }
+}
+
+impl RouteToolCore for FieldPathTool {
     fn on_click(&mut self, pos: Vec2, _road_map: &RoadMap, _ctrl: bool) -> ToolAction {
         match self.phase {
             FieldPathPhase::Idle => {
@@ -331,10 +336,6 @@ impl crate::app::tools::RouteTool for FieldPathTool {
         }
     }
 
-    fn render_config(&mut self, ui: &mut egui::Ui, distance_wheel_step_m: f32) -> bool {
-        self.render_config_view(ui, distance_wheel_step_m)
-    }
-
     fn execute(&self, road_map: &RoadMap) -> Option<ToolResult> {
         if self.phase != FieldPathPhase::Preview || self.resampled_nodes.is_empty() {
             return None;
@@ -347,17 +348,14 @@ impl crate::app::tools::RouteTool for FieldPathTool {
             .map(|&pos| (pos, NodeFlag::Regular))
             .collect();
 
-        // Kette: 0→1, 1→2, ...
         let internal_connections = (0..n.saturating_sub(1))
             .map(|i| (i, i + 1, self.direction, self.priority))
             .collect();
 
-        // Externe Verbindungen an Start und Ende
         let mut external_connections = Vec::new();
         if self.config.connect_to_existing {
             if let Some(&start_pos) = self.resampled_nodes.first() {
                 if let Some(hit) = road_map.nearest_node(start_pos) {
-                    // Verbindung vom existierenden Node zum ersten neuen Node
                     external_connections.push((
                         0,
                         hit.node_id,
@@ -370,7 +368,6 @@ impl crate::app::tools::RouteTool for FieldPathTool {
             if n >= 2 {
                 if let Some(&end_pos) = self.resampled_nodes.last() {
                     if let Some(hit) = road_map.nearest_node(end_pos) {
-                        // Verbindung vom letzten neuen Node zum existierenden Node
                         external_connections.push((
                             n - 1,
                             hit.node_id,
@@ -409,23 +406,24 @@ impl crate::app::tools::RouteTool for FieldPathTool {
     fn has_pending_input(&self) -> bool {
         !matches!(self.phase, FieldPathPhase::Idle)
     }
+}
 
-    fn set_farmland_data(&mut self, data: Option<Arc<Vec<FieldPolygon>>>) {
-        self.farmland_polygons = data;
-    }
-
-    fn set_farmland_grid(&mut self, grid: Option<Arc<FarmlandGrid>>) {
-        self.farmland_grid = grid;
-        // Voronoi-Cache ungueltig machen bei Grid-Wechsel
+impl RouteToolHostSync for FieldPathTool {
+    fn sync_host(&mut self, context: &ToolHostContext) {
+        sync_tool_host(
+            &mut self.direction,
+            &mut self.priority,
+            &mut self.lifecycle,
+            context,
+        );
+        self.farmland_polygons = context.farmland_data.clone();
+        self.farmland_grid = context.farmland_grid.clone();
+        self.background_image = context.background_image.clone();
         self.voronoi_cache = None;
     }
-
-    fn set_background_map_image(&mut self, image: Option<std::sync::Arc<image::DynamicImage>>) {
-        self.background_image = image;
-    }
-
-    crate::impl_lifecycle_delegation_no_seg!();
 }
+
+impl RouteTool for FieldPathTool {}
 
 // ---------------------------------------------------------------------------
 // Private Hilfsfunktionen
