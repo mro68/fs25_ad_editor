@@ -34,6 +34,15 @@ pub fn zoom_towards(state: &mut AppState, factor: f32, focus_world: Option<glam:
     use_cases::camera::zoom_towards(state, factor, focus_world);
 }
 
+/// Zentriert die Kamera auf einen vorhandenen Node, ohne den Zoom zu veraendern.
+pub fn center_on_node(state: &mut AppState, node_id: u64) {
+    if let Some(rm) = state.road_map.as_deref() {
+        if let Some(node) = rm.node(node_id) {
+            state.view.camera.look_at(node.position);
+        }
+    }
+}
+
 /// Setzt die Render-Qualitaetsstufe.
 pub fn set_render_quality(state: &mut AppState, quality: RenderQuality) {
     use_cases::viewport::set_render_quality(state, quality);

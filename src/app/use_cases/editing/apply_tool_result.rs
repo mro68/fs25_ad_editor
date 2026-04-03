@@ -75,8 +75,10 @@ fn create_nodes_and_connections(road_map: &mut RoadMap, result: &ToolResult) -> 
     for &(from_idx, to_idx, direction, priority) in &result.internal_connections {
         let from_id = new_ids[from_idx];
         let to_id = new_ids[to_idx];
-        let start_pos = road_map.nodes[&from_id].position;
-        let end_pos = road_map.nodes[&to_id].position;
+        let start_pos = road_map
+            .node_position(from_id)
+            .expect("Start-Node vorhanden");
+        let end_pos = road_map.node_position(to_id).expect("End-Node vorhanden");
         let conn = Connection::new(from_id, to_id, direction, priority, start_pos, end_pos);
         road_map.add_connection(conn);
     }
@@ -86,7 +88,7 @@ fn create_nodes_and_connections(road_map: &mut RoadMap, result: &ToolResult) -> 
         &result.external_connections
     {
         let new_id = new_ids[new_idx];
-        if !road_map.nodes.contains_key(&existing_id) {
+        if !road_map.contains_node(existing_id) {
             log::warn!(
                 "Externer Node {} existiert nicht — Verbindung uebersprungen",
                 existing_id
@@ -98,8 +100,10 @@ fn create_nodes_and_connections(road_map: &mut RoadMap, result: &ToolResult) -> 
         } else {
             (new_id, existing_id)
         };
-        let from_pos = road_map.nodes[&from_id].position;
-        let to_pos = road_map.nodes[&to_id].position;
+        let from_pos = road_map
+            .node_position(from_id)
+            .expect("Start-Node vorhanden");
+        let to_pos = road_map.node_position(to_id).expect("End-Node vorhanden");
         let conn = Connection::new(from_id, to_id, direction, priority, from_pos, to_pos);
         road_map.add_connection(conn);
         affected_ids.insert(existing_id);
@@ -112,7 +116,7 @@ fn create_nodes_and_connections(road_map: &mut RoadMap, result: &ToolResult) -> 
     // Map-Marker erzeugen (z.B. ParkingTool)
     for (new_idx, name, group) in &result.markers {
         if let Some(&node_id) = new_ids.get(*new_idx) {
-            let marker_index = road_map.map_markers.len() as u32 + 1;
+            let marker_index = road_map.next_marker_index();
             let marker = MapMarker::new(node_id, name.clone(), group.clone(), marker_index, false);
             road_map.add_map_marker(marker);
         }

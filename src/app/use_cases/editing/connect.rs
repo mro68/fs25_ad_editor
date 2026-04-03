@@ -24,7 +24,7 @@ pub fn add_connection(
     };
 
     // Pruefe ob beide Nodes existieren
-    if !road_map_arc.nodes.contains_key(&from_id) || !road_map_arc.nodes.contains_key(&to_id) {
+    if !road_map_arc.contains_node(from_id) || !road_map_arc.contains_node(to_id) {
         log::warn!(
             "Verbindung nicht moeglich: Node {} oder {} existiert nicht",
             from_id,
@@ -48,8 +48,10 @@ pub fn add_connection(
     };
     let road_map = Arc::make_mut(road_map_arc);
 
-    let start_pos = road_map.nodes[&from_id].position;
-    let end_pos = road_map.nodes[&to_id].position;
+    let start_pos = road_map
+        .node_position(from_id)
+        .expect("Start-Node vorhanden");
+    let end_pos = road_map.node_position(to_id).expect("End-Node vorhanden");
 
     let conn = Connection::new(from_id, to_id, direction, priority, start_pos, end_pos);
     road_map.add_connection(conn);

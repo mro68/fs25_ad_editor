@@ -29,20 +29,6 @@ pub enum ExistingConnectionMode {
     OpenEndsAndJunctions,
 }
 
-impl ExistingConnectionMode {
-    /// Alle UI-Optionen in stabiler Reihenfolge.
-    pub const ALL: [Self; 3] = [Self::Never, Self::OpenEnds, Self::OpenEndsAndJunctions];
-
-    /// Lesbares UI-Label.
-    pub fn label(self) -> &'static str {
-        match self {
-            Self::Never => "Nie",
-            Self::OpenEnds => "Nur offene Enden",
-            Self::OpenEndsAndJunctions => "Offene Enden + Kreuzungen",
-        }
-    }
-}
-
 /// Aufbereitete Vorschau eines extrahierten Segments.
 #[derive(Debug, Clone)]
 pub(crate) struct PreparedSegment {

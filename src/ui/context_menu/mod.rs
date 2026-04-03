@@ -199,7 +199,7 @@ pub fn render_context_menu(
                 }
 
                 MenuVariant::NodeFocused { focused_node_id } => {
-                    let node_pos = rm.nodes.get(focused_node_id).map(|n| n.position);
+                    let node_pos = rm.node(*focused_node_id).map(|n| n.position);
 
                     // 2-Node-IDs in Selektionsreihenfolge (erster Klick = from, zweiter = to)
                     let two_ids = if selected_node_ids.len() == 2 {

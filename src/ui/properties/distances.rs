@@ -3,7 +3,7 @@ use std::collections::{HashMap, HashSet};
 
 use crate::app::state::DistanzenState;
 use crate::app::NodeFlag;
-use crate::shared::ui_input::wheel_dir;
+use crate::ui::common::wheel_dir;
 
 /// Maximale Anzahl selektierter Nodes fuer die Ketten-Analyse.
 /// Oberhalb dieses Limits wird die O(N·C)-Berechnung uebersprungen.
@@ -48,7 +48,7 @@ pub fn render_distance_panel(
 
     let positions: Vec<glam::Vec2> = ordered
         .iter()
-        .filter_map(|id| road_map.nodes.get(id).map(|n| n.position))
+        .filter_map(|id| road_map.node(*id).map(|n| n.position))
         .collect();
 
     if positions.len() < 2 {
@@ -176,8 +176,7 @@ fn order_chain_for_distance(node_ids: &IndexSet<u64>, road_map: &RoadMap) -> Opt
         .copied()
         .filter(|id| {
             road_map
-                .nodes
-                .get(id)
+                .node(*id)
                 .is_none_or(|n| n.flag != NodeFlag::RoundedCorner)
         })
         .collect();

@@ -1,18 +1,53 @@
 use crate::app::state::GroupEditState;
+use crate::app::tool_editing::ToolEditStore;
 use crate::app::{AppIntent, GroupRecord, RoadMap};
 use crate::shared::EditorOptions;
+
+pub(super) struct GroupEditPanelContext<'a> {
+    group_record: Option<&'a GroupRecord>,
+    tool_edit_store: Option<&'a ToolEditStore>,
+    road_map: Option<&'a RoadMap>,
+    panel_pos: Option<egui::Pos2>,
+    options: &'a mut EditorOptions,
+    events: &'a mut Vec<AppIntent>,
+}
+
+impl<'a> GroupEditPanelContext<'a> {
+    pub(super) fn new(
+        group_record: Option<&'a GroupRecord>,
+        tool_edit_store: Option<&'a ToolEditStore>,
+        road_map: Option<&'a RoadMap>,
+        panel_pos: Option<egui::Pos2>,
+        options: &'a mut EditorOptions,
+        events: &'a mut Vec<AppIntent>,
+    ) -> Self {
+        Self {
+            group_record,
+            tool_edit_store,
+            road_map,
+            panel_pos,
+            options,
+            events,
+        }
+    }
+}
 
 /// Gruppen-Edit-Panel: Anzeige aktiver Edit-Modus mit Uebernehmen/Abbrechen.
 /// Zeigt ausserdem ComboBoxen fuer Einfahrt- und Ausfahrt-Node-Zuweisung.
 pub(super) fn render_group_edit_panel(
     ctx: &egui::Context,
     edit_state: &GroupEditState,
-    group_record: Option<&GroupRecord>,
-    road_map: Option<&RoadMap>,
-    panel_pos: Option<egui::Pos2>,
-    options: &mut EditorOptions,
-    events: &mut Vec<AppIntent>,
+    context: GroupEditPanelContext<'_>,
 ) {
+    let GroupEditPanelContext {
+        group_record,
+        tool_edit_store,
+        road_map,
+        panel_pos,
+        options,
+        events,
+    } = context;
+
     let mut window = egui::Window::new("✏ Gruppen-Bearbeitung")
         .collapsible(false)
         .resizable(false)
@@ -35,7 +70,9 @@ pub(super) fn render_group_edit_panel(
             }
         });
         if let Some(rec) = group_record {
-            if rec.is_tool_editable() && ui.button("🔧 Tool bearbeiten").clicked() {
+            if tool_edit_store.is_some_and(|store| store.contains(rec.id))
+                && ui.button("🔧 Tool bearbeiten").clicked()
+            {
                 events.push(AppIntent::GroupEditToolRequested {
                     record_id: edit_state.record_id,
                 });
@@ -108,9 +145,7 @@ fn format_node_label(node_id: Option<u64>, road_map: Option<&RoadMap>) -> String
     let Some(id) = node_id else {
         return "Keine".to_string();
     };
-    let pos = road_map
-        .and_then(|rm| rm.nodes.get(&id))
-        .map(|n| n.position);
+    let pos = road_map.and_then(|rm| rm.node(id)).map(|n| n.position);
     match pos {
         Some(p) => format!("#{} ({:.0}, {:.0})", id, p.x, p.y),
         None => format!("#{}", id),

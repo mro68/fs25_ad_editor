@@ -211,8 +211,8 @@ fn test_move_selected_nodes_requested_moves_all_selected_nodes() {
         .expect("MoveSelectedNodesRequested sollte funktionieren");
 
     let road_map = state.road_map.as_ref().expect("map vorhanden");
-    let node1 = road_map.nodes.get(&1).expect("node 1 vorhanden");
-    let node2 = road_map.nodes.get(&2).expect("node 2 vorhanden");
+    let node1 = road_map.node(1).expect("node 1 vorhanden");
+    let node2 = road_map.node(2).expect("node 2 vorhanden");
 
     assert_eq!(node1.position, glam::Vec2::new(2.0, -1.0));
     assert_eq!(node2.position, glam::Vec2::new(12.0, 4.0));
@@ -271,7 +271,7 @@ fn test_undo_redo_moves_revert_and_restore_positions() {
 
     let after_move = state.road_map.as_ref().unwrap();
     assert_eq!(
-        after_move.nodes.get(&1).unwrap().position,
+        after_move.node(1).unwrap().position,
         glam::Vec2::new(3.0, 1.0)
     );
 
@@ -282,7 +282,7 @@ fn test_undo_redo_moves_revert_and_restore_positions() {
 
     let after_undo = state.road_map.as_ref().unwrap();
     assert_eq!(
-        after_undo.nodes.get(&1).unwrap().position,
+        after_undo.node(1).unwrap().position,
         glam::Vec2::new(0.0, 0.0)
     );
 
@@ -293,7 +293,7 @@ fn test_undo_redo_moves_revert_and_restore_positions() {
 
     let after_redo = state.road_map.as_ref().unwrap();
     assert_eq!(
-        after_redo.nodes.get(&1).unwrap().position,
+        after_redo.node(1).unwrap().position,
         glam::Vec2::new(3.0, 1.0)
     );
 }
@@ -659,6 +659,125 @@ fn test_node_segment_between_intersections_requested_selects_corridor() {
     assert!(!state.selection.selected_node_ids.contains(&21));
     assert!(!state.selection.selected_node_ids.contains(&22));
     assert!(!state.selection.selected_node_ids.contains(&23));
+}
+
+#[test]
+fn test_segment_pick_opens_group_settings_popup_and_clear_selection_closes_it() {
+    let mut controller = AppController::new();
+    let mut state = AppState::new();
+
+    let mut map = RoadMap::new(3);
+    map.add_node(MapNode::new(
+        10,
+        glam::Vec2::new(-20.0, 0.0),
+        NodeFlag::Regular,
+    ));
+    map.add_node(MapNode::new(
+        11,
+        glam::Vec2::new(-10.0, 0.0),
+        NodeFlag::Regular,
+    ));
+    map.add_node(MapNode::new(
+        12,
+        glam::Vec2::new(0.0, 0.0),
+        NodeFlag::Regular,
+    ));
+    map.add_node(MapNode::new(
+        13,
+        glam::Vec2::new(10.0, 0.0),
+        NodeFlag::Regular,
+    ));
+    map.add_node(MapNode::new(
+        14,
+        glam::Vec2::new(20.0, 0.0),
+        NodeFlag::Regular,
+    ));
+    map.add_node(MapNode::new(
+        20,
+        glam::Vec2::new(-20.0, 10.0),
+        NodeFlag::Regular,
+    ));
+    map.add_node(MapNode::new(
+        21,
+        glam::Vec2::new(20.0, 10.0),
+        NodeFlag::Regular,
+    ));
+
+    map.add_connection(Connection::new(
+        10,
+        11,
+        ConnectionDirection::Regular,
+        ConnectionPriority::Regular,
+        glam::Vec2::new(-20.0, 0.0),
+        glam::Vec2::new(-10.0, 0.0),
+    ));
+    map.add_connection(Connection::new(
+        11,
+        12,
+        ConnectionDirection::Regular,
+        ConnectionPriority::Regular,
+        glam::Vec2::new(-10.0, 0.0),
+        glam::Vec2::new(0.0, 0.0),
+    ));
+    map.add_connection(Connection::new(
+        12,
+        13,
+        ConnectionDirection::Regular,
+        ConnectionPriority::Regular,
+        glam::Vec2::new(0.0, 0.0),
+        glam::Vec2::new(10.0, 0.0),
+    ));
+    map.add_connection(Connection::new(
+        13,
+        14,
+        ConnectionDirection::Regular,
+        ConnectionPriority::Regular,
+        glam::Vec2::new(10.0, 0.0),
+        glam::Vec2::new(20.0, 0.0),
+    ));
+    map.add_connection(Connection::new(
+        10,
+        20,
+        ConnectionDirection::Regular,
+        ConnectionPriority::Regular,
+        glam::Vec2::new(-20.0, 0.0),
+        glam::Vec2::new(-20.0, 10.0),
+    ));
+    map.add_connection(Connection::new(
+        14,
+        21,
+        ConnectionDirection::Regular,
+        ConnectionPriority::Regular,
+        glam::Vec2::new(20.0, 0.0),
+        glam::Vec2::new(20.0, 10.0),
+    ));
+
+    map.ensure_spatial_index();
+    state.road_map = Some(Arc::new(map));
+    state.view.viewport_size = [1280.0, 720.0];
+
+    let world_pos = glam::Vec2::new(0.2, 0.0);
+    controller
+        .handle_intent(
+            &mut state,
+            AppIntent::NodeSegmentBetweenIntersectionsRequested {
+                world_pos,
+                additive: false,
+            },
+        )
+        .expect("Segment-Selektion sollte das Gruppen-Popup oeffnen");
+
+    assert!(state.ui.group_settings_popup.visible);
+    assert_eq!(state.ui.group_settings_popup.world_pos, world_pos);
+    assert!(state.selection.selected_node_ids.contains(&10));
+    assert!(state.selection.selected_node_ids.contains(&14));
+
+    controller
+        .handle_intent(&mut state, AppIntent::ClearSelectionRequested)
+        .expect("ClearSelectionRequested sollte das Gruppen-Popup schliessen");
+
+    assert!(state.selection.selected_node_ids.is_empty());
+    assert!(!state.ui.group_settings_popup.visible);
 }
 
 // ═══════════════════════════════════════════════════════════════════

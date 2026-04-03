@@ -2,8 +2,8 @@
 
 use super::compute_bypass_positions;
 use super::BypassTool;
-use crate::app::group_registry::GroupKind;
-use crate::app::tools::RouteTool;
+use crate::app::tool_editing::RouteToolEditPayload;
+use crate::app::tools::{RouteToolCore, RouteToolGroupEdit, RouteToolRecreate};
 use crate::core::{ConnectionDirection, ConnectionPriority, RoadMap};
 use glam::Vec2;
 
@@ -182,7 +182,7 @@ fn test_execute_ohne_kette_liefert_none() {
 #[test]
 fn test_set_snap_radius_wird_gespeichert() {
     let mut tool = BypassTool::new();
-    tool.set_snap_radius(7.5);
+    tool.lifecycle.snap_radius = 7.5;
     assert_eq!(tool.lifecycle.snap_radius, 7.5);
 }
 
@@ -190,7 +190,7 @@ fn test_set_snap_radius_wird_gespeichert() {
 #[test]
 fn test_snap_radius_bleibt_nach_reset() {
     let mut tool = BypassTool::new();
-    tool.set_snap_radius(5.0);
+    tool.lifecycle.snap_radius = 5.0;
     tool.load_chain(vec![Vec2::ZERO, Vec2::new(10.0, 0.0)], 1, 2);
     tool.reset();
     assert_eq!(
@@ -211,8 +211,8 @@ fn test_set_last_created_speichert_ids() {
 
 // ─── GroupRecord-Tests ─────────────────────────────────────────────────────
 
-/// Roundtrip: make_group_record erstellt den korrekten Record,
-/// load_for_edit stellt alle Felder exakt wieder her.
+/// Roundtrip: build_edit_payload erstellt den korrekten Snapshot,
+/// restore_edit_payload stellt alle Felder exakt wieder her.
 #[test]
 fn bypass_segment_record_roundtrip() {
     let mut tool = BypassTool::new();
@@ -227,20 +227,20 @@ fn bypass_segment_record_roundtrip() {
     tool.direction = ConnectionDirection::Regular;
     tool.priority = ConnectionPriority::SubPriority;
 
-    let record = tool.make_group_record(42, &[100, 101, 102]);
-    assert!(record.is_some(), "Record muss vorhanden sein");
-    let record = record.unwrap();
+    let payload = tool.build_edit_payload();
+    assert!(payload.is_some(), "Payload muss vorhanden sein");
+    let payload = payload.unwrap();
 
-    let GroupKind::Bypass {
+    let RouteToolEditPayload::Bypass {
         ref chain_positions,
         chain_start_id,
         chain_end_id,
         offset,
         base_spacing,
         ref base,
-    } = record.kind
+    } = payload
     else {
-        panic!("Erwartetes GroupKind::Bypass, bekam etwas anderes");
+        panic!("Erwartete RouteToolEditPayload::Bypass, bekam etwas anderes");
     };
     assert_eq!(
         chain_positions, &chain,
@@ -261,9 +261,9 @@ fn bypass_segment_record_roundtrip() {
         "priority im base"
     );
 
-    // Roundtrip: neues Tool, load_for_edit
+    // Roundtrip: neues Tool, restore_edit_payload
     let mut tool2 = BypassTool::new();
-    tool2.load_for_edit(&record, &record.kind);
+    tool2.restore_edit_payload(&payload);
 
     assert_eq!(
         tool2.chain_positions, chain,
@@ -288,13 +288,13 @@ fn bypass_segment_record_roundtrip() {
     );
 }
 
-/// Ohne geladene Kette muss make_group_record None liefern.
+/// Ohne geladene Kette muss build_edit_payload None liefern.
 #[test]
 fn bypass_segment_record_none_ohne_chain() {
     let tool = BypassTool::new();
-    let record = tool.make_group_record(0, &[]);
+    let record = tool.build_edit_payload();
     assert!(
         record.is_none(),
-        "Ohne Kette muss make_group_record None liefern"
+        "Ohne Kette muss build_edit_payload None liefern"
     );
 }

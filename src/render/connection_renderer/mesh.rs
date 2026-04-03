@@ -1,25 +1,24 @@
 //! Vertex-Generierung fuer Connection-Linien und Pfeilspitzen.
 
 use super::super::types::ConnectionVertex;
-use crate::shared::EditorOptions;
-use crate::{ConnectionDirection, ConnectionPriority};
+use crate::shared::{EditorOptions, RenderConnectionDirection, RenderConnectionPriority};
 use glam::Vec2;
 
 /// Bestimmt die Farbe einer Verbindung anhand von Richtung und Prioritaet.
 pub(super) fn connection_color(
-    direction: ConnectionDirection,
-    priority: ConnectionPriority,
+    direction: RenderConnectionDirection,
+    priority: RenderConnectionPriority,
     options: &EditorOptions,
 ) -> [f32; 4] {
     let base = match direction {
-        ConnectionDirection::Regular => options.connection_color_regular,
-        ConnectionDirection::Dual => options.connection_color_dual,
-        ConnectionDirection::Reverse => options.connection_color_reverse,
+        RenderConnectionDirection::Regular => options.connection_color_regular,
+        RenderConnectionDirection::Dual => options.connection_color_dual,
+        RenderConnectionDirection::Reverse => options.connection_color_reverse,
     };
 
     match priority {
-        ConnectionPriority::Regular => base,
-        ConnectionPriority::SubPriority => [
+        RenderConnectionPriority::Regular => base,
+        RenderConnectionPriority::SubPriority => [
             (base[0] + 1.0) * 0.5,
             (base[1] + 1.0) * 0.5,
             (base[2] + 1.0) * 0.5,
@@ -84,8 +83,7 @@ pub(super) fn push_arrow(
 #[cfg(test)]
 mod tests {
     use super::{connection_color, push_arrow, push_line_quad};
-    use crate::shared::EditorOptions;
-    use crate::{ConnectionDirection, ConnectionPriority};
+    use crate::shared::{EditorOptions, RenderConnectionDirection, RenderConnectionPriority};
     use glam::Vec2;
 
     /// Maximale akzeptable Float-Abweichung fuer Vertex-Positionen.
@@ -174,8 +172,8 @@ mod tests {
         // Regular-Richtung + Regular-Prioritaet muss die unveraenderte Regular-Farbe liefern.
         let opts = EditorOptions::default();
         let color = connection_color(
-            ConnectionDirection::Regular,
-            ConnectionPriority::Regular,
+            RenderConnectionDirection::Regular,
+            RenderConnectionPriority::Regular,
             &opts,
         );
         assert_eq!(color, opts.connection_color_regular);
@@ -186,8 +184,8 @@ mod tests {
         // Dual-Richtung muss die Dual-Farbe aus den Optionen liefern.
         let opts = EditorOptions::default();
         let color = connection_color(
-            ConnectionDirection::Dual,
-            ConnectionPriority::Regular,
+            RenderConnectionDirection::Dual,
+            RenderConnectionPriority::Regular,
             &opts,
         );
         assert_eq!(color, opts.connection_color_dual);
@@ -197,8 +195,8 @@ mod tests {
     fn connection_color_reverse_richtung_liefert_reverse_farbe() {
         let opts = EditorOptions::default();
         let color = connection_color(
-            ConnectionDirection::Reverse,
-            ConnectionPriority::Regular,
+            RenderConnectionDirection::Reverse,
+            RenderConnectionPriority::Regular,
             &opts,
         );
         assert_eq!(color, opts.connection_color_reverse);
@@ -210,8 +208,8 @@ mod tests {
         let opts = EditorOptions::default();
         let base = opts.connection_color_regular;
         let subprio = connection_color(
-            ConnectionDirection::Regular,
-            ConnectionPriority::SubPriority,
+            RenderConnectionDirection::Regular,
+            RenderConnectionPriority::SubPriority,
             &opts,
         );
 

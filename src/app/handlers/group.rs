@@ -1,8 +1,7 @@
 //! Handler fuer Segment-Operationen (Lock-Toggle, Group-Edit).
 
-use crate::app::group_registry::{GroupBase, GroupKind, GroupRecord};
+use crate::app::group_registry::GroupRecord;
 use crate::app::state::GroupEditState;
-use crate::app::tools::ToolAnchor;
 use crate::app::AppState;
 
 /// Schaltet den Lock-Zustand eines Segments um.
@@ -19,6 +18,12 @@ pub fn toggle_lock(state: &mut AppState, segment_id: u64) {
 /// Unbekannte IDs werden ignoriert.
 pub fn dissolve(state: &mut AppState, segment_id: u64) {
     state.group_registry.remove(segment_id);
+    state.tool_edit_store.remove(segment_id);
+}
+
+/// Oeffnet den Bestaetigungsdialog fuer das Aufloesen eines Segments.
+pub fn open_dissolve_confirm_dialog(state: &mut AppState, segment_id: u64) {
+    state.ui.confirm_dissolve_group_id = Some(segment_id);
 }
 
 /// Entfernt alle selektierten Nodes aus ihren Gruppen.
@@ -51,6 +56,7 @@ pub fn remove_selected_from_groups(state: &mut AppState) {
         state
             .group_registry
             .remove_nodes_from_record(rid, &selected);
+        state.tool_edit_store.remove(rid);
     }
 }
 
@@ -75,23 +81,13 @@ pub fn group_selection(state: &mut AppState) {
 
     let original_positions: Vec<_> = node_ids
         .iter()
-        .filter_map(|id| road_map.nodes.get(id).map(|n| n.position))
+        .filter_map(|id| road_map.node(*id).map(|n| n.position))
         .collect();
 
     let record_id = state.group_registry.next_id();
     let record = GroupRecord {
         id: record_id,
-        tool_id: None,
         node_ids,
-        start_anchor: ToolAnchor::NewPosition(glam::Vec2::ZERO),
-        end_anchor: ToolAnchor::NewPosition(glam::Vec2::ZERO),
-        kind: GroupKind::Manual {
-            base: GroupBase {
-                direction: state.editor.default_direction,
-                priority: state.editor.default_priority,
-                max_segment_length: state.options.mouse_wheel_distance_step_m.max(1.0),
-            },
-        },
         original_positions,
         marker_node_ids: vec![],
         locked: false,
@@ -117,6 +113,17 @@ pub fn set_boundary_nodes(
             record_id
         );
     }
+}
+
+/// Oeffnet oder aktualisiert das Gruppen-Einstellungs-Popup an einer Weltposition.
+pub fn open_settings_popup(state: &mut AppState, world_pos: glam::Vec2) {
+    state.ui.group_settings_popup.visible = true;
+    state.ui.group_settings_popup.world_pos = world_pos;
+}
+
+/// Schliesst das Gruppen-Einstellungs-Popup.
+pub fn close_settings_popup(state: &mut AppState) {
+    state.ui.group_settings_popup.visible = false;
 }
 
 /// Startet den nicht-destruktiven Gruppen-Edit-Modus fuer einen Record.
@@ -211,7 +218,7 @@ pub fn apply_group_edit(state: &mut AppState) {
     let mut new_ids: indexmap::IndexSet<u64> = indexmap::IndexSet::new();
 
     for id in &original_node_ids {
-        if road_map.nodes.contains_key(id) {
+        if road_map.contains_node(*id) {
             new_ids.insert(*id);
         }
     }
@@ -264,13 +271,14 @@ pub fn apply_group_edit(state: &mut AppState) {
     // Positionen der neuen Node-IDs sammeln
     let positions: Vec<glam::Vec2> = new_node_ids
         .iter()
-        .filter_map(|id| road_map.nodes.get(id).map(|n| n.position))
+        .filter_map(|id| road_map.node(*id).map(|n| n.position))
         .collect();
 
     // Record aktualisieren
     state
         .group_registry
         .update_record(record_id, new_node_ids, positions);
+    state.tool_edit_store.remove(record_id);
 
     // Lock-Zustand wiederherstellen
     if edit_state.was_locked {
@@ -283,43 +291,54 @@ pub fn apply_group_edit(state: &mut AppState) {
     log::info!("Group edit applied for record {}", record_id);
 }
 
-/// Raumt den Gruppen-Edit-State auf (ohne Undo).
+/// Bricht einen aktiven Gruppen-Edit lokal ab und stellt den Lock-Zustand wieder her.
 ///
-/// Setzt `group_editing` auf `None` und hebt den Edit-Guard in der Registry auf.
-fn cleanup_group_edit_state(state: &mut AppState) {
-    state.group_editing = None;
+/// Gibt `true` zurueck wenn zuvor ein Gruppen-Edit aktiv war.
+pub(crate) fn abort_active_group_edit(state: &mut AppState) -> bool {
+    let Some(edit_state) = state.group_editing.take() else {
+        return false;
+    };
+
     state.group_registry.set_edit_guard(None);
+
+    if edit_state.was_locked {
+        state.group_registry.set_locked(edit_state.record_id, true);
+    }
+
+    true
 }
 
 /// Bricht den Gruppen-Edit-Modus ab und stellt den Zustand via Undo wieder her.
 ///
 /// Der Undo-Snapshot wurde in `start_group_edit` angelegt.
 pub fn cancel_group_edit(state: &mut AppState) {
-    if state.group_editing.is_none() {
+    if !abort_active_group_edit(state) {
         log::warn!("cancel_group_edit: no active group edit");
         return;
     }
 
-    cleanup_group_edit_state(state);
-
-    // Undo zum Snapshot vor Edit-Start
-    super::history::undo(state);
+    if !super::history::restore_last_snapshot_without_redo(state) {
+        log::warn!("cancel_group_edit: undo snapshot missing");
+    }
 
     log::info!("Group edit cancelled");
 }
 
 /// Wechselt atomar vom Gruppen-Edit in den Tool-Edit-Modus.
 ///
-/// Ablauf: Gruppen-Edit-State aufraumen → Undo (Snapshot vor Group-Edit) →
-/// `edit_group` (neuer Snapshot + Nodes loeschen + Tool laden).
+/// Ablauf: Gruppen-Edit-State aufraumen + Lock wiederherstellen → transienten
+/// Snapshot vor Group-Edit zurueckholen → `edit_group`.
 pub fn begin_tool_edit_from_group(state: &mut AppState, record_id: u64) {
-    if state.group_editing.is_none() {
+    if !abort_active_group_edit(state) {
         log::warn!("begin_tool_edit_from_group: no active group edit");
         return;
     }
 
-    cleanup_group_edit_state(state);
-    super::history::undo(state);
+    if !super::history::restore_last_snapshot_without_redo(state) {
+        log::warn!("begin_tool_edit_from_group: undo snapshot missing");
+        return;
+    }
+
     super::editing::edit_group(state, record_id);
     log::info!(
         "Switched from group edit to tool edit for record {}",

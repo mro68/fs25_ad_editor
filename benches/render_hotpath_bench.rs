@@ -18,14 +18,12 @@ fn build_road_map_with_markers(node_count: usize, marker_count: usize) -> RoadMa
         let id = (i as u64) + 1;
         let x = (i % 1000) as f32 + (i as f32 * 0.0017).fract();
         let y = (i / 1000) as f32 + (i as f32 * 0.0031).fract();
-        road_map
-            .nodes
-            .insert(id, MapNode::new(id, Vec2::new(x, y), NodeFlag::Regular));
+        road_map.add_node(MapNode::new(id, Vec2::new(x, y), NodeFlag::Regular));
     }
 
     for i in 0..marker_count.min(node_count) {
         let id = (i as u64) + 1;
-        road_map.map_markers.push(MapMarker {
+        road_map.add_map_marker(MapMarker {
             id,
             name: format!("Marker {}", i),
             group: "default".to_string(),
@@ -99,10 +97,10 @@ fn bench_marker_instance_collect(c: &mut Criterion) {
                 b.iter(|| {
                     // Simuliert MarkerRenderer.render() Datenaufbereitung
                     let instances: Vec<(f32, f32)> = rm
-                        .map_markers
+                        .map_markers()
                         .iter()
                         .filter_map(|marker| {
-                            let node = rm.nodes.get(&marker.id)?;
+                            let node = rm.node(marker.id)?;
                             Some((node.position.x, node.position.y))
                         })
                         .collect();
@@ -131,7 +129,7 @@ fn bench_node_instance_build(c: &mut Criterion) {
                 b.iter(|| {
                     let mut instances: Vec<(f32, f32, bool)> = Vec::new();
                     for &node_id in vis {
-                        if let Some(node) = rm.nodes.get(&node_id) {
+                        if let Some(node) = rm.node(node_id) {
                             let is_selected = sel.contains(&node.id);
                             instances.push((node.position.x, node.position.y, is_selected));
                         }

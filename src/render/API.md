@@ -2,7 +2,7 @@
 
 ## Ueberblick
 
-Das `render`-Modul implementiert GPU-beschleunigtes Rendering mit wgpu. Importiert `Camera2D` und `RoadMap` aus `core` (keine Abhaengigkeit auf `app`).
+Das `render`-Modul implementiert GPU-beschleunigtes Rendering mit wgpu. Es konsumiert ausschliesslich den Snapshot-Vertrag aus `shared` (`RenderScene`) und einen render-eigenen Background-Upload-Vertrag; `src/render/*` importiert weder `app` noch `core`.
 
 ## Module
 
@@ -32,7 +32,18 @@ let renderer = Renderer::new(render_state);
 
 renderer.render_scene(device, queue, render_pass, &scene);
 
-renderer.set_background(device, queue, &bg_map, scale);  // Background-Map setzen (scale: f32)
+renderer.set_background(
+    device,
+    queue,
+    image,
+    BackgroundWorldBounds {
+        min_x,
+        max_x,
+        min_y,
+        max_y,
+    },
+    scale,
+);
 renderer.clear_background();                       // Background-Map entfernen
 ```
 
@@ -49,25 +60,34 @@ renderer.clear_background();                       // Background-Map entfernen
 Expliziter Uebergabevertrag zwischen App-Layer und Renderer. Definiert im `shared`-Modul (`shared::render_scene`).
 
 ```rust
-pub struct RenderScene {
-    pub road_map: Option<Arc<RoadMap>>,
-    pub camera: Camera2D,
-    pub viewport_size: [f32; 2],
-    pub render_quality: RenderQuality,
-    pub selected_node_ids: Arc<IndexSet<u64>>,
-    pub connect_source_node: Option<u64>,
-    pub background_map: Option<Arc<BackgroundMap>>,
-    pub background_visible: bool,
-    pub options: Arc<EditorOptions>,
-    pub hidden_node_ids: Arc<IndexSet<u64>>,
+pub struct RenderScene { /* private Felder */ }
+
+impl RenderScene {
+    pub fn has_map(&self) -> bool;
+    pub fn has_background(&self) -> bool;
 }
 ```
 
-`hidden_node_ids` erlaubt dem App-Layer, Nodes pro Frame selektiv auszublenden
-(z. B. Original-Node-Pfad waehrend einer Distanzen-Vorschau), ohne Aenderungen an `RoadMap`.
+`RenderScene` kapselt intern einen render-seitigen Kartensnapshot (`RenderMap`), eine render-seitige Kameraansicht sowie Sichtbarkeits- und Optionsdaten. Damit sieht der Renderer nur noch renderbare Daten und keine Core-Domain-Objekte mehr.
 
 **Methoden:**
-- `has_map() -> bool` — Prueft ob eine RoadMap vorhanden ist
+- `has_map() -> bool` — Prueft ob ein RenderMap-Snapshot vorhanden ist
+- `has_background() -> bool` — Prueft ob fuer den Frame ein Hintergrundbild aktiv ist
+
+---
+
+### `BackgroundWorldBounds`
+
+Render-seitiger Bounds-Vertrag fuer den Hintergrund-Upload.
+
+```rust
+pub struct BackgroundWorldBounds {
+    pub min_x: f32,
+    pub max_x: f32,
+    pub min_y: f32,
+    pub max_y: f32,
+}
+```
 
 ---
 
@@ -131,7 +151,7 @@ pub struct Uniforms { pub view_proj: [[f32; 4]; 4], pub aa_params: [f32; 4] }
 - `Vertex::desc()` / `ConnectionVertex::desc()` / `NodeInstance::desc()` / `MarkerInstance::desc()`
 
 **Hilfsfunktionen (`pub(crate)`):**
-- `build_view_projection(camera: &Camera2D, viewport_size: [f32; 2]) -> Mat4` — Orthographische View-Projection-Matrix (Zoom ausschliesslich ueber Extent-Skalierung, nicht View-Matrix)
+- `build_view_projection(camera: &RenderCamera, viewport_size: [f32; 2]) -> Mat4` — Orthographische View-Projection-Matrix (Zoom ausschliesslich ueber Extent-Skalierung, nicht View-Matrix)
 - `compute_visible_rect(ctx: &RenderContext) -> (Vec2, Vec2)` — Berechnet die sichtbare Welt-AABB mit 8-Pixel-Padding fuer Viewport-Culling. Gibt `(min, max)` in Weltkoordinaten zurueck.
 
 ---
@@ -144,7 +164,7 @@ Buendelt die gemeinsamen Render-Parameter fuer alle Sub-Renderer. Vermeidet wied
 pub(crate) struct RenderContext<'a> {
     pub device: &'a wgpu::Device,
     pub queue: &'a wgpu::Queue,
-    pub camera: &'a Camera2D,
+    pub camera: &'a RenderCamera,
     pub viewport_size: [f32; 2],
     pub options: &'a EditorOptions,
     /// Node-IDs, die in diesem Frame ausgeblendet werden sollen
@@ -194,7 +214,7 @@ pub enum RenderQuality { Low, Medium, High }
 ### View-Projektion-Aufbau
 
 ```rust
-// View-Matrix: nur Translation (Camera2D.view_matrix())
+// View-Matrix: nur Translation (RenderCamera.view_matrix())
 let view = Mat3::from_translation(-camera.position);
 
 // Orthographische Projektion: Zoom ueber Extent-Skalierung
@@ -259,4 +279,4 @@ Interner Renderer fuer Map-Marker (Pin-Symbole) mit GPU-Instancing und texturbas
 1. **State-Management:** Renderer verwaltet alle GPU-Ressourcen selbst
 2. **Render Contract:** Nimmt nur `RenderScene`-Referenz
 3. **Layered Rendering:** Background → Marker → Connections → Nodes
-4. **Kein App-Import:** Bezieht `Camera2D` und `RoadMap` aus `core`
+4. **Kein Domain-Import:** Arbeitet ausschliesslich auf Render-Snapshots und render-eigenen Upload-Daten

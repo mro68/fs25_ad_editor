@@ -1,5 +1,6 @@
-use crate::app::tools::{RouteToolGroup, RouteToolId, ToolManager, ToolPreview};
-use crate::app::ui_contract::{RouteToolPanelAdapter, RouteToolViewportData};
+use crate::app::tool_contract::RouteToolId;
+use crate::app::tools::{RouteToolGroup, ToolManager, ToolPreview};
+use crate::app::ui_contract::{RouteToolPanelState, RouteToolViewportData};
 use crate::core::{ConnectionDirection, ConnectionPriority, RoadMap};
 use glam::Vec2;
 
@@ -98,14 +99,26 @@ impl EditorToolState {
         self.route_tool_memory.remember(group, tool_id);
     }
 
-    /// Erzeugt eine schmale UI-Fassade fuer das schwebende Route-Tool-Panel.
+    /// Liefert den egui-freien Panelzustand des aktiven Route-Tools.
     ///
-    /// Gibt `Some(...)` nur im Route-Modus zurueck. Das enthaltene aktive Tool
-    /// kann trotzdem `None` sein, sodass die UI ihre generischen Controls weiter
-    /// anzeigen kann ohne den gesamten `ToolManager` zu kennen.
-    pub fn route_tool_panel_adapter(&mut self) -> Option<RouteToolPanelAdapter<'_>> {
-        (self.active_tool == EditorTool::Route)
-            .then(|| RouteToolPanelAdapter::new(self.tool_manager.active_tool_mut()))
+    /// Gibt `Some(...)` nur im Route-Modus zurueck. Ohne aktives Tool bleibt der
+    /// DTO leer genug, damit die UI generische Controls ohne Tool-Interna
+    /// rendern kann.
+    pub fn route_tool_panel_state(&self) -> Option<RouteToolPanelState> {
+        if self.active_tool != EditorTool::Route {
+            return None;
+        }
+
+        let active_tool_id = self.tool_manager.active_id();
+        let tool = self.tool_manager.active_tool();
+
+        Some(RouteToolPanelState {
+            active_tool_id,
+            status_text: tool.map(|tool| tool.status_text().to_owned()),
+            has_pending_input: tool.is_some_and(|tool| tool.has_pending_input()),
+            can_execute: tool.is_some_and(|tool| tool.is_ready()),
+            config_state: tool.map(|tool| tool.panel_state()),
+        })
     }
 
     /// Liefert die fuer den Viewport benoetigten Route-Tool-Daten als Read-DTO.
@@ -114,7 +127,30 @@ impl EditorToolState {
             return RouteToolViewportData::default();
         }
 
-        RouteToolViewportData::from_active_tool(self.tool_manager.active_tool())
+        if let Some(tool) = self.tool_manager.active_tool() {
+            let has_pending_input = tool.has_pending_input();
+
+            RouteToolViewportData {
+                drag_targets: self
+                    .tool_manager
+                    .active_drag()
+                    .map(|tool| tool.drag_targets())
+                    .unwrap_or_default(),
+                has_pending_input,
+                segment_shortcuts_active: has_pending_input
+                    && self.tool_manager.active_segment_adjustments().is_some(),
+                tangent_menu_data: self
+                    .tool_manager
+                    .active_tangent()
+                    .and_then(|tool| tool.tangent_menu_data()),
+                needs_lasso_input: self
+                    .tool_manager
+                    .active_lasso_input()
+                    .is_some_and(|tool| tool.is_lasso_input_active()),
+            }
+        } else {
+            RouteToolViewportData::default()
+        }
     }
 
     /// Berechnet die aktuelle Preview-Geometrie des aktiven Route-Tools.
@@ -136,7 +172,8 @@ impl EditorToolState {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::app::tools::{RouteToolId, ToolAction};
+    use crate::app::tool_contract::RouteToolId;
+    use crate::app::tools::ToolAction;
 
     #[test]
     fn route_facades_only_expose_active_tool_in_route_mode() {
@@ -155,9 +192,8 @@ mod tests {
         assert_eq!(action, ToolAction::Continue);
 
         let panel_data = state
-            .route_tool_panel_adapter()
-            .expect("Im Route-Modus muss ein Panel-Adapter vorhanden sein")
-            .data();
+            .route_tool_panel_state()
+            .expect("Im Route-Modus muss ein Panelzustand vorhanden sein");
         assert_eq!(panel_data.status_text.as_deref(), Some("Endpunkt klicken"));
         assert!(panel_data.has_pending_input);
 
@@ -176,11 +212,44 @@ mod tests {
 
         state.active_tool = EditorTool::Select;
 
-        assert!(state.route_tool_panel_adapter().is_none());
+        assert!(state.route_tool_panel_state().is_none());
         assert_eq!(
             state.route_tool_viewport_data(),
             RouteToolViewportData::default()
         );
         assert!(state.route_tool_preview(cursor_world, &road_map).is_none());
+    }
+
+    #[test]
+    fn route_viewport_data_only_activates_segment_shortcuts_for_matching_capability() {
+        let road_map = RoadMap::default();
+        let mut state = EditorToolState::new();
+
+        state.active_tool = EditorTool::Route;
+        state.tool_manager.set_active_by_id(RouteToolId::Parking);
+
+        let action = state
+            .tool_manager
+            .active_tool_mut()
+            .expect("Parking-Tool muss fuer den Shortcut-Test aktiv sein")
+            .on_click(Vec2::new(5.0, 5.0), &road_map, false);
+        assert_eq!(action, ToolAction::Continue);
+
+        let parking_view = state.route_tool_viewport_data();
+        assert!(parking_view.has_pending_input);
+        assert!(!parking_view.segment_shortcuts_active);
+
+        state.tool_manager.set_active_by_id(RouteToolId::Straight);
+
+        let action = state
+            .tool_manager
+            .active_tool_mut()
+            .expect("Straight-Tool muss fuer den Shortcut-Test aktiv sein")
+            .on_click(Vec2::ZERO, &road_map, false);
+        assert_eq!(action, ToolAction::Continue);
+
+        let straight_view = state.route_tool_viewport_data();
+        assert!(straight_view.has_pending_input);
+        assert!(straight_view.segment_shortcuts_active);
     }
 }

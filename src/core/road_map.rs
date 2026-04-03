@@ -4,8 +4,11 @@ use super::SpatialIndex;
 use super::{
     AutoDriveMeta, Connection, ConnectionDirection, ConnectionPriority, MapMarker, MapNode,
 };
-use glam::Vec2;
+use glam::{Mat2, Vec2};
 use std::collections::HashMap;
+use std::sync::atomic::{AtomicU64, Ordering};
+
+static NEXT_RENDER_INSTANCE_ID: AtomicU64 = AtomicU64::new(1);
 
 /// Ein Nachbar-Node, der ueber eine Verbindung erreichbar ist.
 #[derive(Debug, Clone, Copy)]
@@ -40,11 +43,11 @@ pub use dedup::DeduplicationResult;
 #[derive(Debug, Clone)]
 pub struct RoadMap {
     /// Alle Wegpunkte, indexiert nach ihrer ID
-    pub nodes: HashMap<u64, MapNode>,
+    nodes: HashMap<u64, MapNode>,
     /// Alle Verbindungen, indexiert nach (start_id, end_id) fuer O(1)-Zugriff
     connections: HashMap<(u64, u64), Connection>,
     /// Alle Map-Marker
-    pub map_markers: Vec<MapMarker>,
+    map_markers: Vec<MapMarker>,
     /// Zusaetzliche Metadaten aus der XML
     pub meta: AutoDriveMeta,
     /// Version der Config (3 = FS25, Legacy: 1 = FS19, 2 = FS22)
@@ -58,6 +61,10 @@ pub struct RoadMap {
     /// Adjacency-Index: Node-ID → Liste von (Nachbar-ID, ist_ausgehend).
     /// Wird bei jeder Connection-Mutation synchron gepflegt.
     adjacency: HashMap<u64, Vec<(u64, bool)>>,
+    /// Stabile Instanz-ID fuer render-seitige Snapshot-Caches.
+    render_instance_id: u64,
+    /// Revision fuer render-relevante Mutationen.
+    render_revision: u64,
 }
 
 impl RoadMap {
@@ -73,7 +80,105 @@ impl RoadMap {
             spatial_index: SpatialIndex::empty(),
             spatial_dirty: false,
             adjacency: HashMap::new(),
+            render_instance_id: NEXT_RENDER_INSTANCE_ID.fetch_add(1, Ordering::Relaxed),
+            render_revision: 0,
         }
+    }
+
+    pub(crate) fn from_parts(
+        version: u32,
+        nodes: HashMap<u64, MapNode>,
+        connections: Vec<Connection>,
+        map_markers: Vec<MapMarker>,
+        meta: AutoDriveMeta,
+        map_name: Option<String>,
+    ) -> Self {
+        let mut road_map = Self {
+            nodes,
+            connections: connections
+                .into_iter()
+                .map(|connection| ((connection.start_id, connection.end_id), connection))
+                .collect(),
+            map_markers,
+            meta,
+            version,
+            map_name,
+            spatial_index: SpatialIndex::empty(),
+            spatial_dirty: false,
+            adjacency: HashMap::new(),
+            render_instance_id: NEXT_RENDER_INSTANCE_ID.fetch_add(1, Ordering::Relaxed),
+            render_revision: 0,
+        };
+        road_map.rebuild_adjacency();
+        road_map.rebuild_spatial_index();
+        road_map
+    }
+
+    fn mark_render_dirty(&mut self) {
+        self.render_revision = self.render_revision.wrapping_add(1);
+    }
+
+    fn rebuild_connection_geometry_internal(&mut self) {
+        // Positionen zuerst einsammeln, um Borrow-Konflikt zu vermeiden
+        let updates: Vec<((u64, u64), Vec2, Vec2)> = self
+            .connections
+            .keys()
+            .filter_map(|&(s, e)| {
+                let start_pos = self.nodes.get(&s)?.position;
+                let end_pos = self.nodes.get(&e)?.position;
+                Some(((s, e), start_pos, end_pos))
+            })
+            .collect();
+        for ((s, e), start_pos, end_pos) in updates {
+            if let Some(conn) = self.connections.get_mut(&(s, e)) {
+                conn.update_geometry(start_pos, end_pos);
+            }
+        }
+    }
+
+    fn refresh_after_node_position_change(&mut self) {
+        self.rebuild_connection_geometry_internal();
+        self.spatial_dirty = true;
+        self.mark_render_dirty();
+    }
+
+    pub(crate) fn render_cache_key(&self) -> (u64, u64) {
+        (self.render_instance_id, self.render_revision)
+    }
+
+    /// Gibt read-only Zugriff auf alle Nodes.
+    pub fn nodes(&self) -> &HashMap<u64, MapNode> {
+        &self.nodes
+    }
+
+    /// Gibt einen Node anhand seiner ID zurueck.
+    pub fn node(&self, node_id: u64) -> Option<&MapNode> {
+        self.nodes.get(&node_id)
+    }
+
+    /// Prueft, ob ein Node mit der gegebenen ID existiert.
+    pub fn contains_node(&self, node_id: u64) -> bool {
+        self.nodes.contains_key(&node_id)
+    }
+
+    /// Gibt die Position eines Nodes zurueck.
+    pub fn node_position(&self, node_id: u64) -> Option<Vec2> {
+        self.nodes.get(&node_id).map(|node| node.position)
+    }
+
+    /// Iterator ueber alle Node-IDs.
+    pub fn node_ids(&self) -> impl Iterator<Item = u64> + '_ {
+        self.nodes.keys().copied()
+    }
+
+    /// Gibt read-only Zugriff auf alle Map-Marker.
+    pub fn map_markers(&self) -> &[MapMarker] {
+        &self.map_markers
+    }
+
+    /// Berechnet den naechsten freien Marker-Index.
+    pub fn next_marker_index(&self) -> u32 {
+        self.map_markers.len() as u32 + 1
     }
 
     /// Fuegt einen Node hinzu
@@ -81,6 +186,7 @@ impl RoadMap {
         self.adjacency.entry(node.id).or_default();
         self.nodes.insert(node.id, node);
         self.spatial_dirty = true;
+        self.mark_render_dirty();
     }
 
     /// Entfernt einen Node inklusive aller betroffenen Verbindungen
@@ -103,6 +209,7 @@ impl RoadMap {
             self.connections
                 .retain(|(s, e), _| *s != node_id && *e != node_id);
             self.spatial_dirty = true;
+            self.mark_render_dirty();
         }
         removed
     }
@@ -118,15 +225,65 @@ impl RoadMap {
         }
 
         node.position = new_position;
-        self.rebuild_connection_geometry();
-        self.spatial_dirty = true;
+        self.refresh_after_node_position_change();
         true
+    }
+
+    /// Verschiebt mehrere Nodes in einem Schritt.
+    ///
+    /// Aktualisiert Connection-Geometrie und Render-Revision konsistent nur einmal.
+    pub fn translate_nodes(&mut self, node_ids: &[u64], delta_world: Vec2) -> bool {
+        if node_ids.is_empty() || delta_world == Vec2::ZERO {
+            return false;
+        }
+
+        let mut changed = false;
+        for &node_id in node_ids {
+            if let Some(node) = self.nodes.get_mut(&node_id) {
+                node.position += delta_world;
+                changed = true;
+            }
+        }
+
+        if changed {
+            self.refresh_after_node_position_change();
+        }
+
+        changed
+    }
+
+    /// Rotiert mehrere Nodes in einem Schritt um ein gemeinsames Zentrum.
+    ///
+    /// Aktualisiert Connection-Geometrie und Render-Revision konsistent nur einmal.
+    pub fn rotate_nodes(&mut self, node_ids: &[u64], center: Vec2, angle_rad: f32) -> bool {
+        if node_ids.is_empty() || angle_rad == 0.0 {
+            return false;
+        }
+
+        let rotation = Mat2::from_angle(angle_rad);
+        let mut changed = false;
+        for &node_id in node_ids {
+            if let Some(node) = self.nodes.get_mut(&node_id) {
+                node.position = center + rotation * (node.position - center);
+                changed = true;
+            }
+        }
+
+        if changed {
+            self.refresh_after_node_position_change();
+        }
+
+        changed
     }
 
     /// Setzt das Flag eines Nodes — O(1)
     pub fn set_node_flag(&mut self, node_id: u64, flag: super::NodeFlag) -> bool {
         if let Some(node) = self.nodes.get_mut(&node_id) {
+            if node.flag == flag {
+                return true;
+            }
             node.flag = flag;
+            self.mark_render_dirty();
             true
         } else {
             false
@@ -140,6 +297,7 @@ impl RoadMap {
         self.adjacency.entry(s).or_default().push((e, true));
         self.adjacency.entry(e).or_default().push((s, false));
         self.connections.insert((s, e), connection);
+        self.mark_render_dirty();
     }
 
     /// Prueft ob eine Verbindung existiert (exaktes Match auf start_id + end_id) — O(1)
@@ -173,6 +331,7 @@ impl RoadMap {
             if let Some(adj) = self.adjacency.get_mut(&end_id) {
                 adj.retain(|&(nb, out)| nb != start_id || out);
             }
+            self.mark_render_dirty();
             true
         } else {
             false
@@ -202,6 +361,9 @@ impl RoadMap {
             }
             removed += 1;
         }
+        if removed > 0 {
+            self.mark_render_dirty();
+        }
         removed
     }
 
@@ -213,7 +375,11 @@ impl RoadMap {
         direction: ConnectionDirection,
     ) -> bool {
         if let Some(conn) = self.connections.get_mut(&(start_id, end_id)) {
+            if conn.direction == direction {
+                return true;
+            }
             conn.direction = direction;
+            self.mark_render_dirty();
             true
         } else {
             false
@@ -228,7 +394,11 @@ impl RoadMap {
         priority: ConnectionPriority,
     ) -> bool {
         if let Some(conn) = self.connections.get_mut(&(start_id, end_id)) {
+            if conn.priority == priority {
+                return true;
+            }
             conn.priority = priority;
+            self.mark_render_dirty();
             true
         } else {
             false
@@ -265,6 +435,7 @@ impl RoadMap {
                     }
                 }
             }
+            self.mark_render_dirty();
             true
         } else {
             false
@@ -284,6 +455,7 @@ impl RoadMap {
     /// Fuegt einen Map-Marker hinzu
     pub fn add_map_marker(&mut self, marker: MapMarker) {
         self.map_markers.push(marker);
+        self.mark_render_dirty();
     }
 
     /// Prueft ob ein Node einen Marker hat
@@ -296,29 +468,42 @@ impl RoadMap {
         self.map_markers.iter().find(|m| m.id == node_id)
     }
 
+    /// Aktualisiert Name und Gruppe eines bestehenden Markers.
+    pub fn update_marker(&mut self, node_id: u64, name: String, group: String) -> bool {
+        let Some(marker) = self
+            .map_markers
+            .iter_mut()
+            .find(|marker| marker.id == node_id)
+        else {
+            return false;
+        };
+
+        if marker.name == name && marker.group == group {
+            return true;
+        }
+
+        marker.name = name;
+        marker.group = group;
+        self.mark_render_dirty();
+        true
+    }
+
     /// Entfernt Marker fuer einen Node (gibt true zurueck falls gefunden)
     pub fn remove_marker(&mut self, node_id: u64) -> bool {
         let before = self.map_markers.len();
         self.map_markers.retain(|m| m.id != node_id);
-        self.map_markers.len() < before
+        let removed = self.map_markers.len() < before;
+        if removed {
+            self.mark_render_dirty();
+        }
+        removed
     }
 
     /// Aktualisiert die Geometrie aller Verbindungen
     pub fn rebuild_connection_geometry(&mut self) {
-        // Positionen zuerst einsammeln, um Borrow-Konflikt zu vermeiden
-        let updates: Vec<((u64, u64), Vec2, Vec2)> = self
-            .connections
-            .keys()
-            .filter_map(|&(s, e)| {
-                let start_pos = self.nodes.get(&s)?.position;
-                let end_pos = self.nodes.get(&e)?.position;
-                Some(((s, e), start_pos, end_pos))
-            })
-            .collect();
-        for ((s, e), start_pos, end_pos) in updates {
-            if let Some(conn) = self.connections.get_mut(&(s, e)) {
-                conn.update_geometry(start_pos, end_pos);
-            }
+        self.rebuild_connection_geometry_internal();
+        if !self.connections.is_empty() {
+            self.mark_render_dirty();
         }
     }
 
@@ -375,6 +560,7 @@ impl RoadMap {
             }
         }
 
+        let mut changed = false;
         for &nid in node_ids {
             let Some(node) = self.nodes.get(&nid) else {
                 continue;
@@ -396,8 +582,15 @@ impl RoadMap {
             };
 
             if let Some(node) = self.nodes.get_mut(&nid) {
-                node.flag = new_flag;
+                if node.flag != new_flag {
+                    node.flag = new_flag;
+                    changed = true;
+                }
             }
+        }
+
+        if changed {
+            self.mark_render_dirty();
         }
     }
 

@@ -1,114 +1,135 @@
-//! UI-Konfigurationspanel fuer das Catmull-Rom-Spline-Tool.
-//!
-//! Die `render_config_view`-Methode enthaelt die gesamte egui-Logik fuer:
-//! - Tangenten-ComboBoxen am Start/Ende (nur Nachbearbeitungs-Modus)
-//! - Laenge · Segment-Abstand · Node-Anzahl (Nachbearbeitungs- und Live-Modus)
+//! Egui-freie Panel-Bruecke fuer das Catmull-Rom-Spline-Tool.
 
-use super::super::common::{render_segment_config_3modes, render_tangent_combo};
-use super::super::RouteTool;
+use super::super::common::tangent_options;
+use super::super::RouteToolCore;
 use super::SplineTool;
+use crate::app::tool_contract::TangentSource;
+use crate::app::ui_contract::{
+    RouteToolPanelEffect, SegmentConfigPanelAction, SplinePanelAction, SplinePanelState,
+    TangentOptionData, TangentSelectionState,
+};
 
 impl SplineTool {
-    /// Rendert das Konfigurationspanel im Properties-Panel.
-    ///
-    /// Gibt `true` zurueck wenn sich eine Einstellung geaendert hat.
-    pub(super) fn render_config_view(
-        &mut self,
-        ui: &mut egui::Ui,
-        distance_wheel_step_m: f32,
-    ) -> bool {
-        let mut changed = false;
-
-        // Tangenten-Auswahl nur im Nachbearbeitungs-Modus —
-        // Start/Ende stehen erst nach Enter fest
+    /// Liefert den egui-freien Panelzustand des Catmull-Rom-Spline-Tools.
+    pub(super) fn panel_state(&self) -> SplinePanelState {
         let adjusting = !self.lifecycle.last_created_ids.is_empty() && self.last_anchors.len() >= 2;
-
-        if adjusting {
-            // Tangente Start
-            if !self.tangents.start_neighbors.is_empty()
-                && render_tangent_combo(
-                    ui,
-                    "spline_tangent_start",
-                    "Tangente Start:",
-                    "Standard",
-                    &mut self.tangents.tangent_start,
-                    &self.tangents.start_neighbors,
-                )
-            {
-                if !self.lifecycle.last_created_ids.is_empty() {
-                    self.lifecycle.recreate_needed = true;
-                }
-                changed = true;
-            }
-
-            // Tangente Ende
-            if !self.tangents.end_neighbors.is_empty()
-                && render_tangent_combo(
-                    ui,
-                    "spline_tangent_end",
-                    "Tangente Ende:",
-                    "Standard",
-                    &mut self.tangents.tangent_end,
-                    &self.tangents.end_neighbors,
-                )
-            {
-                if !self.lifecycle.last_created_ids.is_empty() {
-                    self.lifecycle.recreate_needed = true;
-                }
-                changed = true;
-            }
-
-            if !self.tangents.start_neighbors.is_empty() || !self.tangents.end_neighbors.is_empty()
-            {
-                ui.add_space(4.0);
-            }
-
-            // Slider fuer Min. Abstand und Node-Anzahl im Nachbearbeitungs-Modus
-            let length = Self::spline_length_from_anchors(
+        let length = if adjusting {
+            Self::spline_length_from_anchors(
                 &self.last_anchors,
                 self.tangents.tangent_start,
                 self.tangents.tangent_end,
-            );
-
-            let (seg_changed, recreate) = render_segment_config_3modes(
-                &mut self.seg,
-                ui,
-                true,
-                true,
-                length,
-                "Spline-Laenge",
-                distance_wheel_step_m,
-            );
-            if recreate {
-                self.lifecycle.recreate_needed = true;
-            }
-            changed |= seg_changed;
-        } else if self.is_ready() {
-            let length = self.spline_length();
-            ui.label(format!("Kontrollpunkte: {}", self.anchors.len()));
-            let (seg_changed, _) = render_segment_config_3modes(
-                &mut self.seg,
-                ui,
-                false,
-                true,
-                length,
-                "Spline-Laenge",
-                distance_wheel_step_m,
-            );
-            changed |= seg_changed;
+            )
         } else {
-            let (seg_changed, _) = render_segment_config_3modes(
-                &mut self.seg,
-                ui,
-                false,
-                false,
-                0.0,
+            self.spline_length()
+        };
+
+        SplinePanelState {
+            control_point_count: (!adjusting && self.is_ready()).then_some(self.anchors.len()),
+            start_tangent: adjusting
+                .then(|| {
+                    tangent_selection_state(
+                        "Tangente Start:",
+                        self.tangents.tangent_start,
+                        &self.tangents.start_neighbors,
+                    )
+                })
+                .filter(|state| !state.options.is_empty()),
+            end_tangent: adjusting
+                .then(|| {
+                    tangent_selection_state(
+                        "Tangente Ende:",
+                        self.tangents.tangent_end,
+                        &self.tangents.end_neighbors,
+                    )
+                })
+                .filter(|state| !state.options.is_empty()),
+            segment: self.seg.panel_state(
+                adjusting,
+                self.is_ready(),
+                length,
                 "Spline-Laenge",
-                distance_wheel_step_m,
-            );
-            changed |= seg_changed;
+                true,
+            ),
+        }
+    }
+
+    /// Wendet eine semantische Panel-Aktion auf das Catmull-Rom-Spline-Tool an.
+    pub(super) fn apply_panel_action(&mut self, action: SplinePanelAction) -> RouteToolPanelEffect {
+        match action {
+            SplinePanelAction::SetTangentStart(source) => self.apply_tangent_action(true, source),
+            SplinePanelAction::SetTangentEnd(source) => self.apply_tangent_action(false, source),
+            SplinePanelAction::Segment(segment_action) => self.apply_segment_action(segment_action),
+        }
+    }
+
+    fn apply_tangent_action(
+        &mut self,
+        is_start: bool,
+        source: TangentSource,
+    ) -> RouteToolPanelEffect {
+        let current = if is_start {
+            self.tangents.tangent_start
+        } else {
+            self.tangents.tangent_end
+        };
+        if current == source {
+            return RouteToolPanelEffect::default();
         }
 
-        changed
+        if is_start {
+            self.tangents.tangent_start = source;
+        } else {
+            self.tangents.tangent_end = source;
+        }
+        let needs_recreate = !self.lifecycle.last_created_ids.is_empty();
+        if needs_recreate {
+            self.lifecycle.recreate_needed = true;
+        }
+        RouteToolPanelEffect {
+            changed: true,
+            needs_recreate,
+            next_action: None,
+        }
+    }
+
+    fn apply_segment_action(&mut self, action: SegmentConfigPanelAction) -> RouteToolPanelEffect {
+        let adjusting = !self.lifecycle.last_created_ids.is_empty() && self.last_anchors.len() >= 2;
+        let length = if adjusting {
+            Self::spline_length_from_anchors(
+                &self.last_anchors,
+                self.tangents.tangent_start,
+                self.tangents.tangent_end,
+            )
+        } else {
+            self.spline_length()
+        };
+        let result = self
+            .seg
+            .apply_panel_action(action, adjusting, self.is_ready(), length, true);
+        if result.recreate {
+            self.lifecycle.recreate_needed = true;
+        }
+        RouteToolPanelEffect {
+            changed: result.changed,
+            needs_recreate: result.recreate,
+            next_action: None,
+        }
+    }
+}
+
+fn tangent_selection_state(
+    label: &str,
+    current: TangentSource,
+    neighbors: &[crate::core::ConnectedNeighbor],
+) -> TangentSelectionState {
+    TangentSelectionState {
+        label: label.to_owned(),
+        none_label: "Standard".to_owned(),
+        current,
+        options: tangent_options(neighbors)
+            .into_iter()
+            .filter(|option| option.source != TangentSource::None)
+            .collect::<Vec<TangentOptionData>>(),
+        enabled: true,
     }
 }

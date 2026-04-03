@@ -4,7 +4,9 @@
 
 Das `app`-Modul verwaltet den globalen State, verarbeitet `AppIntent`s zentral ueber den `AppController`, mappt diese auf `AppCommand`s und baut die `RenderScene` fuer das Rendering.
 
-**Hinweis:** `Camera2D` lebt im `core`-Modul (reiner Geometrie-Typ). `app` re-exportiert `Camera2D`, `ConnectionDirection`, `ConnectionPriority`, `RoadMap`, `RouteToolId`, `ToolAnchor`, `TangentSource`, `TangentMenuData`, `TangentOptionData`, `compute_ring` und andere zentrale Typen aus `core`, `tool_contract`, `ui_contract` und `tools`. Zusaetzliche UI-Fassaden wie `RouteToolPanelAdapter` und `RouteToolViewportData` liegen bewusst nur unter `app::ui_contract`, damit der Root-Export schlank bleibt.
+Die Laufzeit-Persistenz fuer `EditorOptions` liegt bewusst im Application-Layer unter `app::use_cases::options`; `shared::EditorOptions` bleibt damit ein neutrales Daten- und Validierungsmodell ohne Dateisystem- oder Pfad-Policy.
+
+**Hinweis:** `Camera2D` lebt im `core`-Modul (reiner Geometrie-Typ). `app` re-exportiert bewusst nur die stabile UI-Leseflaeche aus `core`/`shared` (`Camera2D`, `RoadMap`, `ConnectionDirection`, `ConnectionPriority`, `RenderQuality`, `ZipImageEntry` usw.), app-eigene State-/Controller-Typen sowie die gezielte App-Bruecke `compute_ring` fuer das Batch-Nachzeichnen. Tool-Vertraege und Tangenten-/Panel-DTOs werden dagegen explizit ueber `app::tool_contract` und `app::ui_contract` importiert; die Crate-Wurzel bleibt auf `AppController`, `AppState`, `AppIntent`, `AppCommand` plus XML-I/O begrenzt.
 
 Die eframe-Integrationsschale unter `src/editor_app/*` gehoert bewusst nicht zum `app`-Layer. Ihre kanonische Dokumentation steht in `../editor_app/API.md`, damit `app/API.md` nur den Application-Layer beschreibt.
 
@@ -17,7 +19,7 @@ Die eframe-Integrationsschale unter `src/editor_app/*` gehoert bewusst nicht zum
 ## Tool-Vertraege
 
 - `tool_contract.rs` — semantische Route-Tool-Vertraege wie `RouteToolId`, `ToolAnchor` und `TangentSource`
-- `ui_contract.rs` — UI-taugliche Read-DTOs und schmale App-Fassaden wie `TangentMenuData`, `TangentOptionData`, `RouteToolPanelAdapter`, `RouteToolPanelData` und `RouteToolViewportData`
+- `ui_contract.rs` — egui-freie UI-Vertraege wie `TangentMenuData`, `TangentOptionData`, `RouteToolPanelState`, `RouteToolConfigState`, `RouteToolPanelAction`, `RouteToolPanelEffect` und `RouteToolViewportData`
 
 ## Haupttypen
 
@@ -41,9 +43,13 @@ let scene = controller.build_render_scene(&state, [width, height]);
 
 **Features:**
 - Verarbeitet UI- und Input-Intents gegen `AppState`
-- Mappt Intents auf Commands (Mapping ist in `intent_mapping.rs` ausgelagert)
-- Dispatcht Commands an Feature-Handler (`handlers/`)
+- Mappt Intents auf Commands ueber gemeinsame Feature-Slices (`intent_mapping.rs` + `intent_mapping/by_feature/*`)
+- Dispatcht Commands ueber dieselben Feature-Slices (`controller/by_feature/*`) an Feature-Handler (`handlers/`)
 - Baut den expliziten Render-Vertrag (`RenderScene`)
+
+**Interner Zuschnitt:**
+- `events::AppEventFeature` taggt `AppIntent` und `AppCommand` intern in dieselben acht Bereiche: `file_io`, `view`, `selection`, `editing`, `route_tool`, `group`, `dialog`, `history`
+- `controller.rs` und `intent_mapping.rs` bleiben dadurch duenne Fassaden; die eigentlichen Match-Bloecke liegen in den jeweiligen `by_feature/`-Untermodulen
 
 **Handler-Module** (`app/handlers/`):
 - `file_io` — Datei-Operationen (Oeffnen, Speichern, Heightmap)
@@ -59,7 +65,7 @@ let scene = controller.build_render_scene(&state, [width, height]);
 ```rust
 pub fn map_intent_to_commands(state: &AppState, intent: AppIntent) -> Vec<AppCommand>
 ```
-Uebersetzt einen `AppIntent` in eine Liste von `AppCommand`s. Reine Funktion ohne Seiteneffekte — alle Entscheidungslogik (z.B. Pick-Radius-Berechnung, aktuellen Dateipfad pruefen) ist hier lokalisiert.
+Uebersetzt einen `AppIntent` in eine Liste von `AppCommand`s. Reine Funktion ohne Seiteneffekte — die Root-Datei delegiert intern in `intent_mapping/by_feature/*`, damit Pick-Radius-Berechnung, Dialog-Verdrahtung und Tool-/Group-Flows entlang derselben Feature-Schnitte wie der Controller gepflegt werden.
 
 ---
 
@@ -94,12 +100,10 @@ pub struct AppState {
     pub background_image: Option<Arc<image::DynamicImage>>,
     /// Aktiver Gruppen-Edit-Modus (None = Normal-Modus, Some = nicht-destruktives Editing aktiv).
     pub group_editing: Option<GroupEditState>,
-    /// Record-ID des aktuell per Tool bearbeiteten Segments (fuer Cancel-Wiederherstellung).
-    /// `None` = kein aktiver Tool-Edit.
-    pub tool_editing_record_id: Option<u64>,
-    /// Gesicherter GroupRecord des aktuell bearbeiteten Segments.
-    /// Bei Cancel wird der Record wiederhergestellt; bei Confirm wird das Backup geleert.
-    pub tool_editing_record_backup: Option<GroupRecord>,
+    /// Separater Store fuer tool-spezifische Edit-Payloads gruppenbasierter Route-Tools.
+    pub tool_edit_store: ToolEditStore,
+    /// Laufende destruktive Tool-Edit-Session inklusive Backups fuer Cancel/Undo.
+    pub active_tool_edit_session: Option<ActiveToolEditSession>,
     // dimmed_ids_cache: RefCell<Option<(u64, u64, Arc<IndexSet<u64>>)>> -- intern; Cache fuer compute_dimmed_ids
 }
 
@@ -282,8 +286,8 @@ pub struct RouteToolSelectionMemory {
 **EditorToolState-Methoden:**
 
 - `remember_route_tool(group, tool_id)` — merkt die letzte Route-Tool-Wahl pro Gruppe
-- `route_tool_panel_adapter() -> Option<RouteToolPanelAdapter<'_>>` — liefert die schmale UI-Fassade fuer das Floating-Route-Tool-Panel im Route-Modus
-- `route_tool_viewport_data() -> RouteToolViewportData` — liefert Drag-Ziele, Tangenten-Menuedaten und Lasso-Bedarf als Read-DTO fuer den Viewport
+- `route_tool_panel_state() -> Option<RouteToolPanelState>` — liefert den egui-freien Panelzustand fuer das Floating-Route-Tool-Panel im Route-Modus
+- `route_tool_viewport_data() -> RouteToolViewportData` — liefert Drag-Ziele, Tangenten-Menuedaten, Lasso-Bedarf und den aktiven Segment-Shortcut-Gate als Read-DTO fuer den Viewport
 - `route_tool_preview(cursor_world, road_map) -> Option<ToolPreview>` — berechnet die Preview-Geometrie des aktiven Route-Tools app-seitig, sodass die UI keinen `ToolManager` direkt lesen muss
 
 **Methoden:**
@@ -356,142 +360,78 @@ Re-exportiert aus `app`: `BoundaryDirection`, `BoundaryInfo`.
 
 ---
 
-### `GroupBase` und `GroupKind`
+### `ToolEditStore`, `RouteToolEditPayload` und `ActiveToolEditSession`
 
-Gemeinsame Basis-Parameter fuer alle group-backed Route-Tools. `GroupKind`
-enthaelt nur persistierte Tool-Konfigurationen; `FieldPath` und `ColorPath`
-sind laut kanonischem Katalog `Ephemeral` und tauchen deshalb bewusst nicht in
-`GroupKind` bzw. `GroupRecord` auf.
+Der destruktive Tool-Edit-Flow lebt getrennt von der Registry im Modul `app/tool_editing/`.
+Die Registry speichert nur neutrale Gruppendaten; tool-spezifische Parameter liegen
+im separaten Payload-Store.
 
 ```rust
-pub struct GroupBase {
-    pub direction: ConnectionDirection,
-    pub priority: ConnectionPriority,
-    pub max_segment_length: f32,
+pub struct ToolEditRecord {
+    pub group_id: u64,
+    pub tool_id: RouteToolId,
+    pub payload: RouteToolEditPayload,
 }
 
-pub enum GroupKind {
-    Straight { base: GroupBase },
-    CurveCubic {
-        cp1: Vec2,
-        cp2: Vec2,
-        tangent_start: TangentSource,
-        tangent_end: TangentSource,
-        base: GroupBase,
-    },
-    CurveQuad {
-        cp1: Vec2,
-        base: GroupBase,
-    },
-    Spline {
-        anchors: Vec<ToolAnchor>,
-        tangent_start: TangentSource,
-        tangent_end: TangentSource,
-        base: GroupBase,
-    },
-    SmoothCurve {
-        control_nodes: Vec<Vec2>,
-        max_angle_deg: f32,
-        min_distance: f32,
-        base: GroupBase,
-    },
-    Bypass {
-        chain_positions: Vec<Vec2>,
-        chain_start_id: u64,
-        chain_end_id: u64,
-        offset: f32,
-        base_spacing: f32,
-        base: GroupBase,
-    },
-    Parking {
-        origin: Vec2,
-        angle: f32,
-        config: ParkingConfig,
-        base: GroupBase,
-    },
-    FieldBoundary {
-        field_id: u32,
-        node_spacing: f32,
-        offset: f32,
-        straighten_tolerance: f32,
-        corner_angle_threshold: Option<f32>,
-        corner_rounding_radius: Option<f32>,
-        corner_rounding_max_angle_deg: Option<f32>,
-        base: GroupBase,
-    },
-    Manual { base: GroupBase },
-    RouteOffset {
-        chain_positions: Vec<Vec2>,
-        chain_start_id: u64,
-        chain_end_id: u64,
-        offset_left: f32,
-        offset_right: f32,
-        keep_original: bool,
-        base_spacing: f32,
-        base: GroupBase,
-    },
+pub struct ToolEditStore { /* intern: HashMap<u64, ToolEditRecord> */ }
+
+pub struct ActiveToolEditSession {
+    pub record_id: u64,
+    pub group_record_backup: GroupRecord,
+    pub tool_edit_backup: ToolEditRecord,
 }
 ```
 
+`RouteToolEditPayload` besitzt je eine Variante fuer alle group-backed editierbaren Tools:
+`Straight`, `CurveQuad`, `CurveCubic`, `Spline`, `SmoothCurve`, `Bypass`, `Parking`,
+`FieldBoundary` und `RouteOffset`.
+
+**Service-Funktionen** (`app/tool_editing/service.rs`):
+
+- `register_persisted_group(...) -> Option<u64>` — schreibt neutralen `GroupRecord` plus `ToolEditRecord`
+- `persist_after_apply(state, node_ids, marker_indices)` — koppelt den Apply-/Recreate-Flow an aktives Tool und aktive Edit-Session
+- `begin_edit(state, record_id)` — startet den destruktiven Tool-Edit mit Marker-Cleanup, geschuetzten ExistingNode-Ankern und Payload-Rehydrierung
+- `cancel_active_edit(state)` — stellt den letzten stabilen Snapshot ohne transienten Redo-Zwischenzustand wieder her und restauriert danach Registry plus Payload-Store aus den Backups
+
 **Hinweise:**
 
-- Die Zuordnung zu einem konkreten Route-Tool laeuft nicht mehr ueber historische Tool-Indizes, sondern ueber `GroupRecord.tool_id: Option<RouteToolId>`.
-- `Manual` repraesentiert bewusst Gruppen ohne Tool-Hintergrund.
-- `FieldPath` und `ColorPath` bleiben in allen Pflicht-Surfaces sichtbar, erzeugen aber keinen `GroupKind`-/`GroupRecord`-Pfad.
+- `FieldPath` und `ColorPath` bleiben `Ephemeral` und erzeugen bewusst keinen `ToolEditRecord`.
+- Nicht-destruktiver Gruppen-Edit (`group_editing`) und destruktiver Tool-Edit (`active_tool_edit_session`) sind getrennte Flows.
 
 ---
 
 ### `GroupRecord`
 
-Gespeicherte Gruppen-Parametrisierung fuer nachtraegliche Bearbeitung.
+Tool-neutraler Session-Record einer Gruppe.
 
 ```rust
 pub struct GroupRecord {
-    /// Eindeutige Registry-ID
     pub id: u64,
-    /// Explizite Tool-Herkunft (`None` fuer manuelle Gruppen)
-    pub tool_id: Option<RouteToolId>,
-    /// IDs aller neu erstellten Nodes
     pub node_ids: Vec<u64>,
-    /// Start-Anker (ExistingNode oder NewPosition)
-    pub start_anchor: ToolAnchor,
-    /// End-Anker (ExistingNode oder NewPosition)
-    pub end_anchor: ToolAnchor,
-    /// Tool-spezifische Parameter
-    pub kind: GroupKind,
-    /// Original-Positionen der Nodes zum Zeitpunkt der Erstellung
     pub original_positions: Vec<Vec2>,
-    /// IDs der Nodes mit Map-Markern (fuer Cleanup bei Gruppen-Edit; leer wenn keine Marker)
     pub marker_node_ids: Vec<u64>,
-    /// Ob die Gruppe gesperrt ist (true = alle Nodes bewegen sich gemeinsam beim Drag)
     pub locked: bool,
-    /// Explizit gesetzte Einfahrt-Node-ID fuer das Boundary-Icon (None = kein Icon).
-    /// Wird vom ParkingTool beim Erstellen gesetzt; aenderbar per Gruppen-Edit-Panel.
     pub entry_node_id: Option<u64>,
-    /// Explizit gesetzte Ausfahrt-Node-ID fuer das Boundary-Icon (None = kein Icon).
-    /// Wird vom ParkingTool beim Erstellen gesetzt; aenderbar per Gruppen-Edit-Panel.
     pub exit_node_id: Option<u64>,
 }
 ```
 
-**Methoden:**
+**Hinweise:**
 
-- `tool_descriptor() -> Option<&'static RouteToolDescriptor>` — Loest den kanonischen Tool-Descriptor ueber `tool_id` auf
-- `backing_mode() -> Option<RouteToolBackingMode>` — Liefert den Persistenz-/Editierbarkeitsvertrag des zugeordneten Tools
-- `is_tool_backed() -> bool` — `true` nur fuer `GroupBackedReadOnly` bzw. `GroupBackedEditable`
-- `is_tool_editable() -> bool` — `true` nur fuer `GroupBackedEditable`; wird vom Gruppen-Edit-Panel und von `handlers::editing::edit_group()` als Guard verwendet
-
-**Hinweis:** `FieldPath` und `ColorPath` bleiben `Ephemeral`; fuer sie existiert deshalb kein `GroupRecord` und kein Tool-Edit-Flow.
+- `GroupRecord` kennt keine Tool-ID, keine Anchors und keine Tool-Payload mehr.
+- `marker_node_ids` bleiben erhalten, damit der Tool-Edit Marker vor dem Neuaufbau bereinigen kann.
+- `entry_node_id` und `exit_node_id` modellieren Boundary-Icons neutral, ohne Parking-Sondertyp im Record.
 
 ---
 
 ### `GroupRegistry`
 
-In-Session-Registry aller erstellten Gruppen. Speichert group-backed Tool-Ergebnisse,
-prueft deren Validitaet und bietet Lookup-, Lock- und Boundary-Cache-Funktionen.
+Tool-neutrale In-Session-Registry aller erstellten Gruppen. Verwaltet Mitgliedschaft,
+Reverse-Index, Lock-Zustand, Validitaet und Boundary-Cache; tool-spezifische Persistenz
+liegt ausschliesslich im `ToolEditStore`.
 
 **Modulstruktur** (`app/group_registry/`):
-- `types.rs` — Datentypen: `GroupBase`, `GroupKind`, `GroupRecord` und der explizite Tool-Vertrag
+- `types.rs` — Datentypen `BoundaryInfo`, `BoundaryDirection`, `GroupRecord`
 - `query.rs` — Lookup- und Query-Methoden (read-only)
 - `lock.rs` — Lock- und Edit-Guard-Methoden
 - `mutation.rs` — Mutierende Methoden (register, remove, update)
@@ -500,11 +440,11 @@ prueft deren Validitaet und bietet Lookup-, Lock- und Boundary-Cache-Funktionen.
 **Merkmale:**
 - Nicht persistent: Wird beim Laden einer Datei geleert
 - Interne Speicherung als `HashMap<u64, GroupRecord>` fuer O(1)-Zugriff nach ID
-- Reverse-Index `node_to_records: HashMap<u64, Vec<u64>>` fuer effiziente Node→Segment-Abfragen
-- Expliziter Tool-Vertrag ueber `GroupRecord.tool_id` + `RouteToolBackingMode` statt impliziter Slot-Heuristiken
-- Generations-Zaehler `dimmed_generation: u64` — wird bei jeder node_ids-Mutation erhoehen; dient als Invalidierungs-Token fuer den `dimmed_ids`-Cache in `AppState`
-- Segment-Validierung: Prueft ob alle Nodes noch existieren und Positionen unveraendert sind
+- Reverse-Index `node_to_records: HashMap<u64, Vec<u64>>` fuer effiziente Node→Gruppen-Abfragen
+- Generations-Zaehler `dimmed_generation: u64` dient als Invalidierungs-Token fuer den `dimmed_ids`-Cache in `AppState`
+- Segment-Validierung prueft nur Node-Existenz und Positionsaenderungen
 - Boundary-Cache ist pointer-sensitiv: bei neuer `RoadMap` wird der Cache komplett invalidiert
+- `invalidate_by_node_ids(...) -> Vec<u64>` liefert entfernte Record-IDs zurueck, damit Caller passende Tool-Edit-Eintraege aus dem Store entfernen koennen
 
 **Methoden:**
 
@@ -514,7 +454,7 @@ pub fn register(&mut self, record: GroupRecord) -> u64 // Registriert neu erstel
 pub fn next_id(&mut self) -> u64 // Erzeugt naechste auto-increment ID (vor Konstruktion eines Records)
 pub fn get(&self, record_id: u64) -> Option<&GroupRecord> // Findet Record nach ID
 pub fn remove(&mut self, record_id: u64) // Loescht Record
-pub fn invalidate_by_node_ids(&mut self, node_ids: &[u64]) // Entfernt alle betroffenen Records (ausser aktivem Edit-Guard)
+pub fn invalidate_by_node_ids(&mut self, node_ids: &[u64]) -> Vec<u64> // Entfernt alle betroffenen Records (ausser aktivem Edit-Guard)
 pub fn remove_nodes_from_record(&mut self, record_id: u64, nodes_to_remove: &[u64]) -> bool // Entfernt Nodes aus Record; loest Record automatisch auf wenn < 2 Nodes verbleiben
 pub fn find_by_node_ids(&self, node_ids: &IndexSet<u64>) -> Vec<&GroupRecord> // Alle Records mit mind. einer Node-ID
 pub fn find_first_by_node_id(&self, node_id: u64) -> Option<&GroupRecord> // Erstes Record mit dieser Node
@@ -963,9 +903,9 @@ pub enum AppCommand {
     GroupEditStart { record_id: u64 },
     /// Gruppen-Edit uebernehmen (Aenderungen persistieren, Record aktualisieren)
     GroupEditApply,
-    /// Gruppen-Edit abbrechen (Undo zum Snapshot)
+    /// Gruppen-Edit abbrechen (transienter Restore zum Snapshot ohne Redo-Zwischenzustand)
     GroupEditCancel,
-    /// Aus Gruppen-Edit-Modus heraus das Tool-Edit starten (Cleanup + Undo + edit_group)
+    /// Aus Gruppen-Edit-Modus heraus das Tool-Edit starten (Cleanup + Lock-Restore + transienter Restore + edit_group)
     BeginToolEditFromGroup { record_id: u64 },
 }
 ```
@@ -1016,6 +956,8 @@ flowchart TD
 
 *Ablauf:* UI emittiert `AppIntent` → `AppController` uebersetzt via `map_intent_to_commands()` in `Vec<AppCommand>` → Handler-Module mutieren `AppState` via Use-Cases → `build_render_scene()` serialisiert den State in den `RenderScene`-Vertrag → Renderer zeichnet.
 
+Intern schneiden `events::AppEventFeature`, `intent_mapping/by_feature/*` und `controller/by_feature/*` diesen Ablauf in dieselben acht Feature-Slices. Dadurch bleiben die oeffentlichen Einstiegspunkte stabil, waehrend die Control-Plane nicht mehr in einem einzigen monolithischen Match-Block gepflegt wird.
+
 ## Interaktions-Pattern
 
 ### Typisches Update-Loop (Intent-basiert)
@@ -1047,7 +989,7 @@ AppIntent::CameraPan { delta: Vec2::new(-dx * wpp, -dy * wpp) }
 3. **Command Execution:** `AppController` mappt Intents auf Commands und fuehrt diese aus
 4. **Render Contract:** Ausgabe an Renderer erfolgt nur ueber `RenderScene`
 5. **I/O in Use-Cases:** Dateisystem-Operationen sind in `use_cases::file_io` zentralisiert
-6. **Re-Exports:** `app` re-exportiert `Camera2D`, `ConnectionDirection`, `ConnectionPriority`, `RoadMap` aus `core`, die Route-Tool-Vertraege `RouteToolId`, `ToolAnchor`, `TangentSource` aus `tool_contract`, die UI-DTOs `TangentMenuData` und `TangentOptionData` aus `ui_contract` sowie `compute_ring` und `ParkingConfig` aus `tools`, damit UI nicht direkt auf `core` oder Tool-Interna zugreift
+6. **Re-Exports:** `app` re-exportiert nur die stabile Leseoberflaeche fuer UI und Integrationsschale (z. B. `Camera2D`, `RoadMap`, `ConnectionDirection`, `ConnectionPriority`, `RenderQuality`, `ZipImageEntry`), app-eigene State-/Controller-Typen sowie die gezielte App-Bruecke `compute_ring`; Tool-Vertraege und Tangenten-/Panel-DTOs werden explizit ueber `app::tool_contract` und `app::ui_contract` importiert, und die Crate-Wurzel bleibt bewusst duenn
 
 ## Weitere Typen
 
@@ -1100,7 +1042,7 @@ Alle Tool-Typen, Traits und gemeinsame Infrastruktur sind in [`tools/API.md`](to
 
 - **`ToolPreview::from_polyline(positions, direction, priority) → Self`** — gemeinsamer Konstruktor; verbindet `positions` linear und weist jeder Verbindung denselben Stil zu. Wird von `StraightLineTool`, `CurveTool`, `SmoothCurveTool` und anderen genutzt. (→ `tools/API.md`)
 
-- **`impl_lifecycle_delegation_no_seg!()`** — Makro in `tools/common/lifecycle.rs`; implementiert automatisch `set_direction`, `set_priority`, `set_snap_radius`, `last_created_ids`, `last_end_anchor`, `needs_recreate`, `clear_recreate_flag` und `set_last_created` fuer Tools ohne `SegmentConfig` (`BypassTool`, `ParkingTool`, `FieldBoundaryTool`, `RouteOffsetTool`). (→ `tools/API.md`)
+- **Route-Tool-Vertrag gesplittet** — `RouteToolCore`, `RouteToolPanelBridge` und `RouteToolHostSync` bilden jetzt den festen Basisvertrag; Recreate, Drag, Tangenten, Adjustments, Chain-Input und Lasso laufen ueber additive Capability-Traits und ToolManager-Discovery. (→ `tools/API.md`)
 
 ---
 
@@ -1116,6 +1058,8 @@ Erzeugt `dimmed_node_ids` via `compute_dimmed_ids()` — alle Segment-Nodes, die
 sind, werden in die Dimm-Menge aufgenommen (50% Opacity im Renderer). Ergebnis wird lazy gecacht:
 `AppState::dimmed_ids_cache` speichert Tupel `(selection_generation, registry_dimmed_generation, Arc<IndexSet<u64>>)`.
 Cache-Invalidierung erfolgt wenn sich `SelectionState::generation` oder `GroupRegistry::dimmed_generation` aendert.
+
+Zusätzlich baut `render_scene::build()` einen render-seitigen `RenderMap`-Snapshot der aktuellen `RoadMap`. Dieser Snapshot enthaelt nur Renderdaten (Nodes, Verbindungen, Marker-Positionen, immutable KD-Index) und wird ueber `AppState::render_map_cache` gecacht. Die Invalidierung erfolgt ueber die interne `RoadMap::render_cache_key()`-Revision, sodass der Renderer keinen Core-Typenvertrag mehr benoetigt.
 
 ---
 

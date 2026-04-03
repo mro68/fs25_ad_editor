@@ -62,8 +62,6 @@ pub(crate) enum Phase {
 
 /// Bézier-Kurven-Tool (Grad 2 oder 3)
 pub struct CurveTool {
-    /// Statischer Anzeigename (gesetzt beim Erstellen)
-    pub(crate) tool_name: &'static str,
     pub(crate) phase: Phase,
     pub(crate) start: Option<ToolAnchor>,
     pub(crate) end: Option<ToolAnchor>,
@@ -96,7 +94,6 @@ impl CurveTool {
     /// Erstellt ein neues Kurven-Tool (Grad 2, quadratisch).
     pub fn new() -> Self {
         Self {
-            tool_name: "Bézier Grad 2",
             phase: Phase::Start,
             start: None,
             end: None,
@@ -120,7 +117,6 @@ impl CurveTool {
     /// Erstellt ein neues Kurven-Tool (Grad 3, kubisch).
     pub fn new_cubic() -> Self {
         Self {
-            tool_name: "Bézier Grad 3",
             degree: CurveDegree::Cubic,
             ..Self::new()
         }

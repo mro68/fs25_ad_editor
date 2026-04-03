@@ -220,23 +220,19 @@ pub fn parse_autodrive_config(xml_content: &str) -> Result<RoadMap> {
         &waypoint_incoming,
     )?;
 
-    let mut road_map = RoadMap::new(version);
-    road_map.map_name = map_name;
-    road_map.nodes = nodes;
-    for conn in connections {
-        road_map.add_connection(conn);
-    }
-    road_map.map_markers = map_markers;
-    road_map.meta = AutoDriveMeta {
-        config_version,
-        route_version,
-        route_author,
-        options,
-    };
-    road_map.rebuild_spatial_index();
-    road_map.rebuild_adjacency_index();
-
-    Ok(road_map)
+    Ok(RoadMap::from_parts(
+        version,
+        nodes,
+        connections,
+        map_markers,
+        AutoDriveMeta {
+            config_version,
+            route_version,
+            route_author,
+            options,
+        },
+        map_name,
+    ))
 }
 
 fn parse_version(version_attr: Option<String>, version_text: Option<String>) -> Result<u32> {

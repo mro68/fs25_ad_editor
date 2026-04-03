@@ -101,7 +101,7 @@ pub fn center_on_road_map(state: &mut AppState, road_map: &RoadMap) {
     }
 
     // Fallback: Node-Bounds
-    if road_map.nodes.is_empty() {
+    if road_map.nodes().is_empty() {
         return;
     }
 
@@ -110,7 +110,7 @@ pub fn center_on_road_map(state: &mut AppState, road_map: &RoadMap) {
     let mut min_y = f32::MAX;
     let mut max_y = f32::MIN;
 
-    for node in road_map.nodes.values() {
+    for node in road_map.nodes().values() {
         min_x = min_x.min(node.position.x);
         max_x = max_x.max(node.position.x);
         min_y = min_y.min(node.position.y);
@@ -163,7 +163,7 @@ pub fn zoom_to_selection_bounds(state: &mut AppState, road_map: &RoadMap) {
     let mut count = 0u32;
 
     for &id in selected.iter() {
-        if let Some(node) = road_map.nodes.get(&id) {
+        if let Some(node) = road_map.node(id) {
             min_x = min_x.min(node.position.x);
             max_x = max_x.max(node.position.x);
             min_y = min_y.min(node.position.y);

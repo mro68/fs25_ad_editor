@@ -12,6 +12,8 @@ pub mod editing;
 pub mod file_io;
 /// Use-Cases fuer Heightmap-Verwaltung (Setzen, Dialog, Warnung).
 pub mod heightmap;
+/// Use-Case-Funktionen fuer Editor-Optionen und deren Persistenz.
+pub mod options;
 /// Use-Case-Funktionen fuer Node-Selektion (Pick, Rect, Lasso, Move).
 pub mod selection;
 /// Use-Cases fuer Viewport-Groesse und Render-Qualitaet.

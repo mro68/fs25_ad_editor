@@ -7,7 +7,7 @@
 //!
 //! # Pointer-Vergleiche
 //!
-//! Fuer Arc-Inhalte (RoadMap, EditorOptions, IndexSets) wird die stabile Adresse der
+//! Fuer Arc-Inhalte (RenderMap, EditorOptions, IndexSets) wird die stabile Adresse der
 //! Arc-internen Daten (`Arc::as_ptr()` bzw. `&*arc as *const T`) als usize verglichen.
 //! Da diese Typen ausschliesslich als neues Arc ersetzt werden (Copy-on-Write-Semantik),
 //! zeigt ein veraenderter Pointer zuverlaessig auf geaenderte Inhalte.
@@ -17,8 +17,7 @@
 //! Kamera- und Viewport-Floats werden als IEEE-754-Bit-Muster (u32) verglichen,
 //! um NaN-Gleichheitsprobleme zu vermeiden und exakte Frame-zu-Frame-Aenderungen zu erkennen.
 
-use crate::shared::EditorOptions;
-use crate::RoadMap;
+use crate::shared::{EditorOptions, RenderMap};
 use indexmap::IndexSet;
 
 use super::types::RenderContext;
@@ -30,8 +29,8 @@ use super::types::RenderContext;
 /// Bei Uebereinstimmung koennen Buffer-Aufbau und GPU-Upload uebersprungen werden.
 #[derive(Debug, Clone, PartialEq, Eq, Default)]
 pub(crate) struct RenderFingerprint {
-    /// Pointer-Adresse der RoadMap-Daten (0 = keine Map).
-    pub road_map_ptr: usize,
+    /// Pointer-Adresse der RenderMap-Daten (0 = keine Map).
+    pub render_map_ptr: usize,
     /// Pointer-Adresse der EditorOptions-Daten.
     pub options_ptr: usize,
     /// Pointer-Adresse der HiddenNodeIds-Daten.
@@ -55,13 +54,13 @@ pub(crate) struct RenderFingerprint {
 }
 
 impl RenderFingerprint {
-    /// Erstellt einen Basis-Fingerabdruck aus dem gemeinsamen Render-Kontext und der RoadMap.
+    /// Erstellt einen Basis-Fingerabdruck aus dem gemeinsamen Render-Kontext und der RenderMap.
     ///
     /// Renderer-spezifische Felder (`dimmed_ptr`, `selected_ptr`, `quality`) sind auf
     /// Null initialisiert und muessen vom Aufrufer bei Bedarf manuell gesetzt werden.
-    pub fn from_context(ctx: &RenderContext<'_>, road_map: &RoadMap) -> Self {
+    pub fn from_context(ctx: &RenderContext<'_>, render_map: &RenderMap) -> Self {
         Self {
-            road_map_ptr: road_map as *const RoadMap as usize,
+            render_map_ptr: render_map as *const RenderMap as usize,
             options_ptr: ctx.options as *const EditorOptions as usize,
             hidden_ptr: ctx.hidden_node_ids as *const IndexSet<u64> as usize,
             dimmed_ptr: 0,
@@ -83,7 +82,7 @@ mod tests {
     /// Hilfsfunktion: Erzeugt einen Fingerabdruck mit definierten Testwerten.
     fn make_fp(ptr: usize, cam_x: f32, cam_y: f32, zoom: f32) -> RenderFingerprint {
         RenderFingerprint {
-            road_map_ptr: ptr,
+            render_map_ptr: ptr,
             options_ptr: 0x2000,
             hidden_ptr: 0x3000,
             dimmed_ptr: 0,
@@ -124,8 +123,8 @@ mod tests {
     }
 
     #[test]
-    fn geaenderter_roadmap_pointer_ergibt_anderen_fingerprint() {
-        // Neue RoadMap (neuer Arc) muss als Aenderung erkannt werden.
+    fn geaenderter_render_map_pointer_ergibt_anderen_fingerprint() {
+        // Neuer RenderMap-Snapshot (neuer Arc) muss als Aenderung erkannt werden.
         let fp1 = make_fp(0x1000, 0.0, 0.0, 1.0);
         let fp2 = make_fp(0x2000, 0.0, 0.0, 1.0);
         assert_ne!(fp1, fp2);

@@ -40,7 +40,7 @@ fn test_delete_node_with_marker_cascades_marker_removal() {
         .handle_intent(&mut state, AppIntent::DeleteSelectedRequested)
         .expect("Loeschen mit Marker sollte funktionieren");
 
-    assert!(!state.road_map.as_ref().unwrap().nodes.contains_key(&1));
+    assert!(!state.road_map.as_ref().unwrap().contains_node(1));
     assert_eq!(state.road_map.as_ref().unwrap().marker_count(), 0);
 }
 

@@ -3,7 +3,7 @@
 use super::fingerprint::RenderFingerprint;
 use super::types::{MarkerInstance, RenderContext, RenderQuality, Uniforms, Vertex};
 use crate::shared::options::MARKER_OUTLINE_WIDTH;
-use crate::RoadMap;
+use crate::shared::RenderMap;
 use eframe::{egui_wgpu, wgpu};
 use wgpu::util::DeviceExt;
 
@@ -304,17 +304,17 @@ impl MarkerRenderer {
         &mut self,
         ctx: &RenderContext,
         render_pass: &mut wgpu::RenderPass<'static>,
-        road_map: &RoadMap,
+        render_map: &RenderMap,
         render_quality: RenderQuality,
     ) {
-        if road_map.map_markers.is_empty() {
+        if render_map.marker_count() == 0 {
             return;
         }
 
         // Fingerabdruck berechnen und mit dem letzten Frame vergleichen.
         // Bei Uebereinstimmung koennen Instanz-Aufbau und GPU-Upload uebersprungen werden.
         let new_fp = {
-            let mut fp = RenderFingerprint::from_context(ctx, road_map);
+            let mut fp = RenderFingerprint::from_context(ctx, render_map);
             fp.quality = render_quality as u8;
             fp
         };
@@ -353,15 +353,14 @@ impl MarkerRenderer {
             // Instanz-Daten vorbereiten (Scratch-Buffer wiederverwenden)
             self.instance_scratch.clear();
             self.instance_scratch
-                .extend(road_map.map_markers.iter().filter_map(|marker| {
-                    let node = road_map.nodes.get(&marker.id)?;
+                .extend(render_map.markers().iter().map(|marker| {
                     let size = (ctx.options.marker_size_world * compensation).max(min_marker_world);
-                    Some(MarkerInstance::new(
-                        [node.position.x, node.position.y],
+                    MarkerInstance::new(
+                        [marker.position.x, marker.position.y],
                         ctx.options.marker_color,
                         ctx.options.marker_outline_color,
                         size,
-                    ))
+                    )
                 }));
 
             if self.instance_scratch.is_empty() {

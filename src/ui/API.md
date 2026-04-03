@@ -6,7 +6,7 @@ Das `ui`-Modul enthält egui-UI-Komponenten (Menüs, Statusbar, Input-Handling, 
 
 ## Module
 
-- `common.rs` — Gemeinsame UI-Hilfsfunktionen (Mausrad-Scroll-Helfer)
+- `common.rs` — Gemeinsame UI-Hilfsfunktionen (Scroll-Helfer, Availability-Kontext)
 - `menu.rs` — Top-Menü-Leiste
 - `status.rs` — Statusleiste
 - `floating_menu.rs` — Schwebende Kontextmenues fuer Werkzeug- und RouteTool-Gruppen (Toggle via `T/G/B/A/R/Z`)
@@ -73,9 +73,13 @@ pub(crate) struct ViewportContext<'a> {
 }
 ```
 
-Wird von `input/mod.rs` befuellt: `tool_needs_lasso = active_tool.needs_lasso_input()`.
-Ist `true`, behandelt `drag_primary.rs` einen Alt+Drag als `DragSelectionMode::ToolLasso`
-statt als normale Lasso-Selektion.
+Wird aus `EditorToolState::route_tool_viewport_data()` befuellt. Das App-Layer liest dafuer die
+Lasso-Capability des aktiven Tools ueber den `ToolManager` und setzt `needs_lasso_input`, wenn
+`RouteToolLassoInput::is_lasso_input_active()` aktiv ist. Ist der Wert `true`, behandelt
+`drag_primary.rs` einen Alt+Drag als `DragSelectionMode::ToolLasso` statt als normale Lasso-Selektion.
+Fuer Tastatur-Shortcuts setzt das App-Layer zusaetzlich `segment_shortcuts_active`, sobald das
+aktive Tool Eingaben haelt und `RouteToolSegmentAdjustments` bereitstellt; nur dann werden
+Pfeiltasten in `keyboard.rs` als Node-/Segment-Shortcuts statt als Kamera-Pan geroutet.
 
 ## Funktionen
 ---
@@ -338,20 +342,21 @@ pub fn render_edit_panel(
   default_priority: ConnectionPriority,
   distance_wheel_step_m: f32,
   active_tool: EditorTool,
-  route_tool: Option<RouteToolPanelAdapter<'_>>,
+  route_tool: Option<RouteToolPanelState>,
   panel_pos: Option<egui::Pos2>,
   group_editing: Option<&GroupEditState>,
   group_record: Option<&GroupRecord>,
+  tool_edit_store: Option<&ToolEditStore>,
   options: &mut EditorOptions,
 ) -> Vec<AppIntent>
 ```
 
-Die Route-Tool-Konfiguration arbeitet hier bewusst nur noch ueber die app-seitige Fassade `RouteToolPanelAdapter`; der breite `ToolManager` bleibt im Application-Layer gekapselt.
+Die Route-Tool-Konfiguration arbeitet hier bewusst nur noch ueber den egui-freien App-Vertrag `RouteToolPanelState`; konkrete Widget-Aenderungen emittieren `AppIntent::RouteToolPanelActionRequested { action }`, waehrend der breite `ToolManager` im Application-Layer gekapselt bleibt.
 
 Im Gruppen-Bearbeitungsmodus enthält das Panel:
 - Checkbox für `options.show_all_group_boundaries` (Sichtbarkeit aller Boundary-Icons)
 - ComboBox „Einfahrt" und „Ausfahrt" — emittiert `AppIntent::SetGroupBoundaryNodes` bei Änderung
-- Button „🔧 Tool bearbeiten" — nur sichtbar wenn `group_record.is_tool_editable()`; `Manual`-Gruppen sowie `Ephemeral`-Tools wie `FieldPath`/`ColorPath` bieten bewusst keinen Tool-Edit an; emittiert `AppIntent::GroupEditToolRequested { record_id }` → wechselt atomar in den destruktiven Tool-Edit-Modus
+- Button „🔧 Tool bearbeiten" — nur sichtbar wenn `tool_edit_store.contains(record.id)`; manuelle Gruppen, ephemere Tools (`FieldPath`/`ColorPath`) und Gruppen mit invalidiertem Snapshot bieten bewusst keinen Tool-Edit an; emittiert `AppIntent::GroupEditToolRequested { record_id }` → wechselt atomar in den destruktiven Tool-Edit-Modus
 
 ---
 
@@ -380,7 +385,7 @@ let route_tool_view = editor_state.route_tool_viewport_data();
 let intents = input.collect_viewport_events(
     ui, &response, viewport_size,
     &camera, road_map.as_deref(), &selected_node_ids,
-    active_tool, route_tool_is_drawing,
+    active_tool, route_tool_is_drawing, route_tool_view.segment_shortcuts_active,
   &options, command_palette_open, default_direction, default_priority,
   &route_tool_view.drag_targets,
   &mut distanzen_state,
@@ -398,6 +403,7 @@ let intents = input.collect_viewport_events(
   - `Ctrl+V` → Paste-Vorschau starten
   - `Ctrl+O` → Datei öffnen
   - `Ctrl+S` → Datei speichern
+  - Pfeiltasten → Kamera-Pan; waehrend aktiver `RouteToolSegmentAdjustments` stattdessen Node-/Segment-Shortcuts
   - `T` (ohne Modifier) → Floating-Menu Tools
   - `G` (ohne Modifier) → Floating-Menu Grundbefehle (Basics)
   - `B` (ohne Modifier) → Floating-Menu Abschnittswerkzeuge (SectionTools)
@@ -468,6 +474,9 @@ Kleine, wiederverwendbare Helfer fuer egui-Widgets. Werden von mehreren UI-Modul
 /// Schwellenwert fuer Scroll-Events – unterdrückt Rauschen bei kleinen Scroll-Bewegungen.
 pub(crate) const WHEEL_THRESHOLD: f32 = 0.5;
 
+/// Liefert fuer ein gehovertes Widget die Scroll-Richtung und konsumiert das Event.
+pub(crate) fn wheel_dir(ui: &egui::Ui, response: &egui::Response) -> f32;
+
 /// Wendet Mausrad-Scrolling auf einen numerischen Wert an.
 ///
 /// Wenn die Response gehovert ist und ein Scroll-Event vorliegt,
@@ -481,6 +490,8 @@ pub(crate) fn apply_wheel_step(
     range: std::ops::RangeInclusive<f32>,
 ) -> bool
 ```
+
+`wheel_dir()` ist der gemeinsame Low-Level-Helfer fuer Widgets, die Mausrad-Impulse selbst in diskrete Aktionen umsetzen muessen, etwa die Distanz-/Node-Felder in `properties/distances.rs` und `edit_panel/streckenteilung_panel.rs`.
 
 **Verwendung:**
 

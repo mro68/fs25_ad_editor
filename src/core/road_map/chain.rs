@@ -131,7 +131,9 @@ impl RoadMap {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{Connection, ConnectionDirection, ConnectionPriority, MapNode, NodeFlag, RoadMap};
+    use crate::core::{
+        Connection, ConnectionDirection, ConnectionPriority, MapNode, NodeFlag, RoadMap,
+    };
 
     fn make_map_with_star() -> RoadMap {
         // Stern-Topologie: Node 1 in der Mitte, verbunden mit 2, 3, 4

@@ -241,27 +241,32 @@ pub struct Snapshot {
 - Snapshot-basiertes Undo/Redo
 - `Arc<RoadMap>` ermoeglicht O(1)-Snapshots (Copy-on-Write)
 
-### GroupRegistry
+### GroupRegistry und ToolEditStore
 
 ```rust
 pub struct GroupRecord {
     pub id: u64,
     pub node_ids: Vec<u64>,
-    pub start_anchor: ToolAnchor,
-    pub end_anchor: ToolAnchor,
-    pub kind: GroupKind,
-    pub original_positions: Vec<Vec2>,  // Fuer Validitaetspruefung
-}
+    pub original_positions: Vec<Vec2>,
+    pub marker_node_ids: Vec<u64>,
+    pub locked: bool,
+    pub entry_node_id: Option<u64>,
+    pub exit_node_id: Option<u64>,
 }
 
 pub struct GroupRegistry {
-    records: Vec<GroupRecord>,
+    records: HashMap<u64, GroupRecord>,
     next_id: u64,
+}
+
+pub struct ToolEditStore {
+    records: HashMap<u64, ToolEditRecord>,
 }
 ```
 
-- In-Session-Registry fuer nachtraegliche Bearbeitung erstellter Route-Segmente
-- Erlaubt Segment-Laenge/Node-Anzahl nach Erstellung per Slider zu aendern
+- `GroupRegistry` ist eine tool-neutrale In-Session-Registry fuer Gruppenmitgliedschaft, Validitaet, Lock-Zustand und Boundary-Metadaten
+- Tool-spezifische Parameter editierbarer Route-Tools liegen separat im `ToolEditStore` als `RouteToolEditPayload`
+- Beim manuellen Loeschen, Resampling oder Gruppen-Umbau werden betroffene Registry- und Tool-Edit-Eintraege gemeinsam invalidiert
 
 ### DistanzenState
 

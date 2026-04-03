@@ -10,7 +10,7 @@ mod state;
 
 pub use state::ColorPathTool;
 
-use crate::app::tools::RouteTool;
+use crate::app::tools::{RouteToolCore, RouteToolLassoInput};
 use crate::core::RoadMap;
 use glam::Vec2;
 use std::cell::RefCell;
@@ -173,7 +173,7 @@ impl ColorPathBenchmarkHarness {
             .copied()
             .ok_or("Lasso-Polygon ist leer")?;
         let _ = tool.on_click(start_pos, &road_map, false);
-        let _ = tool.on_lasso_completed(lasso_polygon);
+        let _ = RouteToolLassoInput::on_lasso_completed(&mut tool, lasso_polygon);
 
         if tool.sampling.sampled_colors.is_empty() {
             return Err("Lasso hat keine Farbsamples erzeugt");

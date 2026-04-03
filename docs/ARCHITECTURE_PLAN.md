@@ -1,7 +1,7 @@
 # Architektur-Plan (Soll-Zustand)
 
-Stand: 2026-04-02  
-Status: Umgesetzt — Architektur-Grenzen und API-Verträge aktiv durchgesetzt
+Stand: 2026-04-03  
+Status: Weitgehend umgesetzt — Render/shared-Vertrag, Tool-UI-Grenze, Capability-Split, Registry/Katalog/Edit-Flow und Shared-Neutralisierung sind technisch entkoppelt; spaetere Remediationsphasen bleiben offen
 
 ## Zielbild
 
@@ -14,7 +14,7 @@ Dieser Plan trennt fachliche Verantwortlichkeiten in fuenf Schichten plus ein ge
 - Domain (`src/core/*`): Datenmodell + Fachlogik
 - Persistence (`src/xml/*`): XML-Mapping und I/O
 - Rendering (`src/render/*`): GPU-Darstellung aus vorbereiteten Renderdaten
-- Shared (`src/shared/*`): Gemeinsame Typen (RenderScene, RenderQuality)
+- Shared (`src/shared/*`): Neutrale, schichtuebergreifende Vertraege und Utilities (u. a. RenderScene, RenderQuality, EditorOptions, i18n) ohne egui- oder Dateisystem-Policy
 
 Kernfluss: **Input -> AppIntent -> AppController -> AppCommand -> AppState/Domain -> RenderScene -> Renderer**.
 
@@ -148,7 +148,7 @@ graph BT
 
 - Read-only auf UI/View-Teile von `AppState`
 - Events an Application Layer senden
-- Nur aus `app` importieren (re-exportierte Core-Typen)
+- Aus `app` und seinen expliziten Submodulen importieren; nur die stabile Leseoberflaeche (`Camera2D`, `RoadMap`, `ConnectionDirection`, `ConnectionPriority`, `RenderQuality`, `ZipImageEntry` usw.) bleibt direkt aus `app` re-exportiert, Tool-Vertraege laufen explizit ueber `app::tool_contract`, `app::ui_contract` und `app::tools::*`
 
 **Darf nicht**
 
@@ -164,8 +164,9 @@ graph BT
 - Zentrale Event-Verarbeitung (`AppController`)
 - Use-Cases (Load/Save, Kamera, Selektion, Heightmap, Tools)
 - Aufbau von `RenderScene` aus Domain + ViewState
-- Re-Export von Core-Typen für UI (z.B. `ConnectionDirection`, `ConnectionPriority`, `RoadMap`)
+- Schmale Read-only-Fassade fuer UI und Integrationsschale: app-eigene Typen plus bewusst ausgewaehlte Core-/Shared-Typen wie `ConnectionDirection`, `ConnectionPriority`, `RoadMap`, `Camera2D`, `RenderQuality`, `ZipImageEntry`
 - Kanonischer RouteTool-Katalog (`tools/catalog.rs`) als Single Source of Truth fuer `RouteToolId`, `RouteToolGroup`, `RouteToolBackingMode`, Surface-Sichtbarkeit und Aktivierungs-Voraussetzungen
+- Separater Tool-Editing-Layer (`tool_editing/*`) fuer persistente Tool-Snapshots, Rehydrierung sowie Cancel/Undo im destruktiven Tool-Edit-Flow
 
 **Abgrenzung**
 
@@ -327,7 +328,7 @@ pub struct ViewState {
 
 ```text
 pub struct SelectionState {
-  pub selected_node_ids: Arc<HashSet<u64>>,
+  pub selected_node_ids: Arc<IndexSet<u64>>,
   pub selection_anchor_node_id: Option<u64>,
 }
 ```
@@ -336,17 +337,14 @@ pub struct SelectionState {
 
 ```text
 pub struct RenderScene {
-  pub road_map: Option<Arc<RoadMap>>,
-  pub camera: Camera2D,
-  pub viewport_size: [f32; 2],
-  pub render_quality: RenderQuality,
-  pub selected_node_ids: Arc<IndexSet<u64>>,
-  pub connect_source_node: Option<u64>,
-  pub background_map: Option<Arc<BackgroundMap>>,
-  pub background_visible: bool,
-  pub options: Arc<EditorOptions>,
-  pub hidden_node_ids: Arc<IndexSet<u64>>,
+  // private Felder
 }
+
+// enthaelt intern:
+// - RenderMap-Snapshot (Nodes, Connections, Marker, KD-Index)
+// - RenderCamera-Snapshot
+// - Selection-/Hidden-/Dimmed-Mengen
+// - RenderQuality, Optionen und Hintergrundstatus
 
 impl Renderer {
   pub fn render_scene(
@@ -406,12 +404,12 @@ Verbindliche Regeln:
 
 1. UI spricht nur mit `app` (`AppIntent` + read-only State) und `shared` (z.B. `EditorOptions`). **Kein direkter `core`-Import.**
 2. Domain (`core`) kennt keine Infrastruktur (UI/Render/XML-Details).
-3. Renderer konsumiert nur `RenderScene` und importiert `Camera2D`/`RoadMap` aus `core` (nicht aus `app`).
+3. Renderer konsumiert nur `RenderScene` plus render-eigene Upload-Vertraege und importiert keine Core-Typen.
 4. XML bleibt technisch; fachliche Entscheidungen liegen in `core`/`app`.
-5. `AppState` enthält keine I/O-Logik; Dateisystem-Operationen sind in `use_cases::file_io` zentralisiert.
+5. `AppState` enthält keine I/O-Logik; Dateisystem- und Options-Persistenz liegen in Use-Cases bzw. der Integrationsschale, nicht im State oder in `shared`.
 6. Renderer darf keine UI-Typen importieren. **Ausnahme:** `render/callback.rs` implementiert `egui_wgpu::CallbackTrait` — das ist die wgpu-Brücke zwischen egui und dem Rendering-System, kein semantischer UI-Import.
-7. `app/mod.rs` re-exportiert alle Core-Typen, die UI benötigt (z.B. `ConnectionDirection`, `ConnectionPriority`, `RoadMap`).
-8. `shared`-Modul enthält Typen, die von mehreren Layern genutzt werden (`RenderScene`, `RenderQuality`, `i18n`). Importrichtung: `UI → shared`, `App → shared`, `Render → shared` (alle erlaubt).
+7. `app/mod.rs` bleibt eine schmale Lese-Fassade: app-eigene Typen plus bewusst ausgewaehlte Core-/Shared-Typen fuer UI und Integrationsschale; Tool-Vertraege und tool-spezifische Helfer werden nicht mehr ueber `app` root-reexportiert.
+8. `shared`-Modul enthält nur neutrale Typen und Utilities, die von mehreren Layern genutzt werden (`RenderScene`, `RenderQuality`, `EditorOptions`, `i18n`, Geometrie-Helfer). Egui-Eingabe-Helfer leben in `ui`, Runtime-/Pfad-Policy in `app` bzw. `editor_app`. Importrichtung: `UI → shared`, `App → shared`, `Render → shared` (alle erlaubt).
 
 ## Aktuelle Modulstruktur
 
@@ -425,14 +423,22 @@ src/
     helpers.rs        # Render-Callback, Floating-Menue, Background-Upload, Repaint-Gating
     overlays.rs       # Tool-, Clipboard-, Distanz- und Gruppen-Overlays
   app/
-    mod.rs              # Re-Exports (ConnectionDirection, ConnectionPriority, RoadMap, etc.)
-    controller.rs       # AppController: Intent → Command Dispatch an Handler
-    events.rs           # AppIntent & AppCommand Enums
+    mod.rs              # Schmale Re-Exports fuer AppState/Controller + stabile UI-Lesetypen
+    controller.rs       # AppController: duenne Fassade fuer Intent-Loop + Command-Logging
+    controller/
+      by_feature/       # Feature-Slices fuer Command-Dispatch (file_io, view, selection, editing, ...)
+    events/
+      mod.rs            # Re-Exports fuer AppIntent & AppCommand
+      feature.rs        # Interne AppEventFeature-Klassifikation fuer Intent/Command-Schnitt
+      intent.rs         # AppIntent + interne Feature-Zuordnung
+      command.rs        # AppCommand + interne Feature-Zuordnung
     state.rs            # AppState, ViewState, SelectionState, UiState, MarkerDialogState, DedupDialogState
     render_scene.rs     # RenderScene-Builder
     command_log.rs      # Command-Log für Debugging
     history.rs          # Undo/Redo-History
-    intent_mapping.rs   # Intent → Command Mapping (reine Funktion)
+    intent_mapping.rs   # duenne Fassade fuer Intent → Command Mapping
+    intent_mapping/
+      by_feature/       # Feature-Slices fuer reines Intent-Mapping
     handlers/           # Feature-Handler für Command-Verarbeitung
       mod.rs
       file_io.rs        # Datei-Operationen (Öffnen, Speichern, Heightmap)
@@ -443,10 +449,15 @@ src/
       dialog.rs         # Dialog-State und Anwendungssteuerung
       history.rs        # Undo/Redo
     tools/
-      mod.rs            # RouteTool-Trait + ToolManager + snap_to_node()
+      mod.rs            # Re-Exporte fuer Tool-Vertraege, Capabilities, Katalog und snap_to_node()
+      manager.rs        # ToolManager + Capability-Discovery
+      contracts/        # RouteToolCore, RouteToolPanelBridge, RouteToolHostSync
+      capabilities/     # Recreate, Drag, Tangent, Adjustments, ChainInput, LassoInput
       common/           # Gemeinsame Tool-Infrastruktur (alle Submodule privat)
         mod.rs          # Re-Exporte
         geometry.rs     # angle_to_compass, populate_neighbors
+
+      Die Root-Dateien `controller.rs` und `intent_mapping.rs` bleiben damit stabil fuer Call-Sites und Dokumentation, waehrend die eigentlichen Match-Bloecke featureweise in `by_feature/*` liegen. `AppIntent` und `AppCommand` teilen sich dafuer intern die nicht-oeffentliche Klassifikation `AppEventFeature`.
         tangent.rs      # TangentSource, TangentState, render_tangent_combo
         lifecycle.rs    # ToolLifecycleState, SegmentConfig, LastEdited
         builder.rs      # assemble_tool_result
@@ -539,7 +550,7 @@ src/
     tool_preview.rs     # Tool-Preview-Overlay
 ```
 
-**Hinweis:** `Camera2D` lebt in `core/camera.rs` (reiner Geometrie-Typ). `app` re-exportiert ihn für Abwärtskompatibilität.
+**Hinweis:** `Camera2D` lebt in `core/camera.rs` (reiner Geometrie-Typ). `app` re-exportiert ihn als Teil der stabilen UI-Leseflaeche; Tool-Vertraege bleiben in expliziten `app::*`-Submodulen.
 
 ## Umsetzungsphasen
 
@@ -559,14 +570,14 @@ src/
 ### Phase 3: RenderScene-Vertrag ✅
 
 - `RenderScene` als stabile Schnittstelle app->render eingeführt (in `shared`)
-- Renderpfad auf read-only Renderdaten umgestellt
+- Renderpfad auf read-only Render-Snapshots ohne `RoadMap`-/`Camera2D`-Vertrag umgestellt
 - Orphaned `render/scene.rs` entfernt
 
 ### Phase 4: Modularisierung ✅
 
 - UI-Input aufgeteilt in `keyboard`, `drag`, `context_menu` Sub-Module
 - Pick-Distanz-Berechnung zentralisiert (`Camera2D::pick_radius_world()`)
-- UI importiert nur aus `app` (Core-Typen re-exportiert)
+- UI importiert aus `app` und dessen expliziten Submodulen; nur die stabile Leseoberflaeche bleibt direkt aus `app` re-exportiert
 - API-Dokumentation auf aktuellen Stand gebracht
 
 ### Phase 5: Edit-Workflow ✅
@@ -607,13 +618,17 @@ src/
 
 ### Tool-Lifecycle (RouteTool-Pattern)
 
+- Der feste Tool-Kern besteht aus `RouteToolCore`, `RouteToolPanelBridge` und `RouteToolHostSync`.
+- Optionale Verhaltensweisen werden ueber additive Capability-Traits modelliert und vom `ToolManager` per Discovery angesprochen.
+- `handlers/route_tool.rs`, `state/editor.rs` und die UI lesen keine No-Op-Hooks mehr direkt vom Umbrella-Trait, sondern fragen gezielt Drag-, Tangent-, Recreate-, Chain- oder Lasso-Capabilities ab.
+
 ```mermaid
 stateDiagram-v2
   [*] --> Inactive
   Inactive --> Start: on_click(pos)
   Start --> End: on_click(pos)
   End --> Control: on_click(pos)
-  Control --> Control: preview(cursor_pos)\nrender_config(ui)
+  Control --> Control: preview(cursor_pos)\npanel_state()/apply_panel_action()
   Control --> Executing: Enter/execute()
   Executing --> [*]: Done
   Control --> [*]: Escape/reset()
@@ -622,7 +637,7 @@ stateDiagram-v2
 #### Analyse-Tool-Stages
 
 - `ColorPathTool` trennt intern sieben Stages: A Sampling-Input, B Matching-Spezifikation, C Pixel-Maske + Sampling-Vorschau, D Maskenaufbereitung, E Skeleton-/Netzextraktion, F Preview-Aufbereitung und G Execute-Konvertierung.
-- `lifecycle.rs` bleibt dabei auf Orchestrierung, Phase-Wechsel und den `RouteTool`-Adapter beschraenkt; die Stage-Logik lebt in `pipeline.rs` und `preview.rs`.
+- `lifecycle.rs` bleibt dabei auf Orchestrierung, Phase-Wechsel und die Implementierung der jeweiligen Basisvertraege/Capabilities beschraenkt; die Stage-Logik lebt in `pipeline.rs` und `preview.rs`.
 - Preview und Execute teilen `PreparedSegment` als gemeinsame Wahrheit; es gibt bewusst keine Dirty-Bits, keine Cache-Ketten und keine gestaffelte Invalidation.
 
 ### Command-Intent-Flow
@@ -730,13 +745,13 @@ Nach node-mutierenden Operationen wird dirty-Flag gesetzt; Rebuild erfolgt lazy 
 - `preview()` liefert **reine Geometrie** (`Vec<Vec2>` + Index-basierte Verbindungen)
 - Keine Farben, Texturen oder Render-Hints im `ToolPreview`-Output
 - Die Konvertierung zu visuellen Elementen erfolgt im UI-Layer (`src/ui/tool_preview.rs`)
-- Tools kennen weder `egui::Color32` noch `egui::Painter` (ausser in `render_config()` fuer UI-Panels)
+- Tools kennen weder `egui::Color32`, `egui::Painter` noch `egui::Ui`; das Floating-Panel liest `RouteToolPanelState` und sendet `RouteToolPanelAction` ueber den App-Intent-Flow zurueck
 
 ### Gruppen-Editierbarkeit
 
-- Nur group-backed Tools implementieren `make_group_record()` und schreiben damit einen `GroupRecord`
-- `load_for_edit()` ist nur fuer `GroupBackedEditable` relevant; `FieldPath` und `ColorPath` bleiben `Ephemeral`
-- Tool-Edit wird ueber `GroupRecord.tool_id` + `RouteToolBackingMode` freigeschaltet, nicht ueber historische Tool-Slots
+- Nur group-backed editierbare Tools implementieren `RouteToolGroupEdit` und liefern damit ein `RouteToolEditPayload`
+- `FieldPath` und `ColorPath` bleiben `Ephemeral`; fuer sie gibt es keinen `ToolEditStore`-Eintrag und keinen destruktiven Tool-Edit
+- `GroupRegistry` bleibt tool-neutral; Tool-Edit wird ueber `ToolEditStore` + `RouteToolId` freigeschaltet, nicht ueber Felder im `GroupRecord`
 - Alle Pflicht-Surfaces lesen Route-Tools ueber `resolve_route_tool_entries()`; deaktivierte Tools bleiben sichtbar und tragen ihren Disabled-Grund
 - `GroupRecord.locked` verhindert versehentliche Mutation
 - Undo-Snapshot wird vor jeder Mutation automatisch erstellt (`apply_tool_result`)
@@ -756,5 +771,5 @@ Tool.execute() → ToolResult (Nodes + Connections)
      ↓
 Handler: apply_tool_result() → RoadMap-Mutation
      ↓
-Naechster Frame: RenderScene wird aus RoadMap neu gebaut
+Naechster Frame: RenderScene aktualisiert den gecachten Render-Snapshot bei geaenderter RoadMap-Revision
 ```

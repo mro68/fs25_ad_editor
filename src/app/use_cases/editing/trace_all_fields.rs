@@ -6,10 +6,10 @@
 //! `GroupRecord` in der `group_registry` angelegt, damit die erzeugten
 //! Strecken nachtraeglich bearbeitet werden koennen.
 
-use crate::app::compute_ring;
-use crate::app::group_registry::{GroupBase, GroupKind, GroupRecord};
-use crate::app::{AppState, RouteToolId, ToolAnchor};
-use crate::core::{Connection, ConnectionDirection, ConnectionPriority, MapNode, NodeFlag};
+use crate::app::tool_contract::RouteToolId;
+use crate::app::tool_editing::{register_persisted_group, RouteToolEditPayload, ToolRouteBase};
+use crate::app::{compute_ring, field_boundary_ring_node_flag, AppState};
+use crate::core::{Connection, ConnectionDirection, ConnectionPriority, MapNode};
 use glam::Vec2;
 use std::sync::Arc;
 
@@ -122,12 +122,7 @@ pub fn trace_all_fields(
 
             // Nodes erstellen
             for (pos, kind) in &ring {
-                use crate::app::RingNodeKind;
-                let flag = if *kind == RingNodeKind::RoundedCorner {
-                    NodeFlag::RoundedCorner
-                } else {
-                    NodeFlag::Regular
-                };
+                let flag = field_boundary_ring_node_flag(*kind);
                 let id = road_map.next_node_id();
                 road_map.add_node(MapNode::new(id, *pos, flag));
                 poly_ids.push(id);
@@ -138,8 +133,10 @@ pub fn trace_all_fields(
             for i in 0..n {
                 let from_id = poly_ids[i];
                 let to_id = poly_ids[(i + 1) % n];
-                let from_pos = road_map.nodes[&from_id].position;
-                let to_pos = road_map.nodes[&to_id].position;
+                let from_pos = road_map
+                    .node_position(from_id)
+                    .expect("Start-Node vorhanden");
+                let to_pos = road_map.node_position(to_id).expect("End-Node vorhanden");
                 let conn = Connection::new(from_id, to_id, direction, priority, from_pos, to_pos);
                 road_map.add_connection(conn);
             }
@@ -169,42 +166,31 @@ pub fn trace_all_fields(
         return;
     }
 
-    // Pro Feld einen GroupRecord anlegen, damit die Strecken bearbeitbar bleiben
+    // Pro Feld einen GroupRecord plus Tool-Edit-Payload anlegen, damit die Strecken bearbeitbar bleiben
     {
-        let road_map_ref = state.road_map.as_deref().expect("road_map vorhanden");
         for (field_id, node_ids) in &field_segments {
-            let record_id = state.group_registry.next_id();
-            let original_positions: Vec<Vec2> = node_ids
-                .iter()
-                .filter_map(|id| road_map_ref.nodes.get(id).map(|n| n.position))
-                .collect();
-            let record = GroupRecord {
-                id: record_id,
-                tool_id: Some(RouteToolId::FieldBoundary),
-                node_ids: node_ids.clone(),
-                start_anchor: ToolAnchor::NewPosition(Vec2::ZERO),
-                end_anchor: ToolAnchor::NewPosition(Vec2::ZERO),
-                original_positions,
-                marker_node_ids: Vec::new(),
-                locked: true,
-                entry_node_id: None,
-                exit_node_id: None,
-                kind: GroupKind::FieldBoundary {
-                    field_id: *field_id,
-                    node_spacing: spacing,
-                    offset,
-                    straighten_tolerance: tolerance,
-                    corner_angle_threshold: corner_angle,
-                    corner_rounding_radius,
-                    corner_rounding_max_angle_deg,
-                    base: GroupBase {
-                        direction,
-                        priority,
-                        max_segment_length: 0.0,
-                    },
+            let payload = RouteToolEditPayload::FieldBoundary {
+                field_id: *field_id,
+                node_spacing: spacing,
+                offset,
+                straighten_tolerance: tolerance,
+                corner_angle_threshold: corner_angle,
+                corner_rounding_radius,
+                corner_rounding_max_angle_deg,
+                base: ToolRouteBase {
+                    direction,
+                    priority,
+                    max_segment_length: 0.0,
                 },
             };
-            state.group_registry.register(record);
+            let _ = register_persisted_group(
+                state,
+                None,
+                RouteToolId::FieldBoundary,
+                payload,
+                node_ids,
+                Vec::new(),
+            );
         }
         log::debug!(
             "Segment-Registry: {} Feld-Segmente registriert",

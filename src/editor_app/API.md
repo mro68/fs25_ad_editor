@@ -2,7 +2,7 @@
 
 ## Ueberblick
 
-Das `editor_app`-Modul ist die duenne Integrationsschale zwischen dem Binary-Start (`main.rs`/`runtime.rs`) und den fachlichen Layern aus `ui`, `app` und `render`. Es besitzt keinen eigenen Fach-Use-Case: Domain-Mutationen laufen weiterhin ausschliesslich ueber `AppController`, waehrend `EditorApp` nur den eframe-Frame-Zyklus, die Event-Sammlung, das Viewport-Rendering und die Overlay-Anbindung koordiniert.
+Das `editor_app`-Modul ist die duenne Integrationsschale zwischen dem Binary-Start (`main.rs`/`runtime.rs`) und den fachlichen Layern aus `ui`, `app` und `render`. Es besitzt keinen eigenen Fach-Use-Case: Domain-Mutationen laufen weiterhin ausschliesslich ueber `AppController`, waehrend `EditorApp` nur den eframe-Frame-Zyklus, die Event-Sammlung, das Viewport-Rendering und die Overlay-Anbindung koordiniert. Das Laden der Editor-Optionen erfolgt beim Start ueber `app::use_cases::options`, damit die Runtime-/Dateisystem-Policy nicht in `shared` lebt.
 
 Die API ist bewusst `pub(crate)` und nur fuer das Binary relevant. Die kanonische Dokumentation liegt hier, damit `src/app/API.md` ausschliesslich den Application-Layer beschreibt und nicht gleichzeitig die eframe-Integrationsschale als zweite Wahrheitsquelle pflegen muss.
 
@@ -55,7 +55,7 @@ Die `update()`-Implementierung bildet den Frame-Zyklus der Integrationsschale:
 
 | Signatur | Zweck |
 |---|---|
-| `pub(crate) fn new(render_state: &egui_wgpu::RenderState) -> Self` | Laedt `EditorOptions`, initialisiert `AppState`, `AppController`, `render::Renderer` und `ui::InputState` |
+| `pub(crate) fn new(render_state: &egui_wgpu::RenderState) -> Self` | Laedt `EditorOptions` ueber `app::use_cases::options::load_editor_options()`, initialisiert `AppState`, `AppController`, `render::Renderer` und `ui::InputState` |
 | `fn update(&mut self, ctx: &egui::Context, frame: &mut eframe::Frame)` | Zentraler eframe-Frame-Zyklus der Integrationsschale |
 | `fn process_events(&mut self, ctx: &egui::Context, events: &[AppIntent])` | Behandelt schalenlokale Events und delegiert den Rest an den Controller |
 | `fn collect_ui_events(&mut self, ctx: &egui::Context) -> Vec<AppIntent>` | Buendelt Menue-, Dialog-, Viewport- und Overlay-Events in einer Intent-Liste |

@@ -21,6 +21,26 @@ pub fn request_background_map_dialog(state: &mut AppState) {
     use_cases::background_map::request_background_map_dialog(state);
 }
 
+/// Oeffnet den Dialog fuer das Nachzeichnen aller Felder.
+pub fn open_trace_all_fields_dialog(state: &mut AppState) {
+    state.ui.trace_all_fields_dialog.visible = true;
+}
+
+/// Schliesst den Dialog fuer das Nachzeichnen aller Felder.
+pub fn close_trace_all_fields_dialog(state: &mut AppState) {
+    state.ui.trace_all_fields_dialog.visible = false;
+}
+
+/// Oeffnet den Curseplay-Import-Dateidialog.
+pub fn request_curseplay_import_dialog(state: &mut AppState) {
+    state.ui.show_curseplay_import_dialog = true;
+}
+
+/// Oeffnet den Curseplay-Export-Dateidialog.
+pub fn request_curseplay_export_dialog(state: &mut AppState) {
+    state.ui.show_curseplay_export_dialog = true;
+}
+
 /// Schliesst die Heightmap-Warnung.
 pub fn dismiss_heightmap_warning(state: &mut AppState) {
     use_cases::heightmap::dismiss_heightmap_warning(state);
@@ -47,15 +67,13 @@ pub fn apply_options(state: &mut AppState, options: EditorOptions) -> anyhow::Re
     // Erst validieren, damit keine inkonsistenten Werte temporaer in den State gelangen.
     options.validate()?;
     state.set_options(options);
-    let path = EditorOptions::config_path();
-    state.options.save_to_file(&path)
+    use_cases::options::save_editor_options(&state.options)
 }
 
 /// Setzt Optionen auf Standardwerte zurueck und persistiert sie.
 pub fn reset_options(state: &mut AppState) -> anyhow::Result<()> {
     state.set_options(EditorOptions::default());
-    let path = EditorOptions::config_path();
-    state.options.save_to_file(&path)
+    use_cases::options::save_editor_options(&state.options)
 }
 
 /// Schaltet die Sichtbarkeit der Command-Palette um.

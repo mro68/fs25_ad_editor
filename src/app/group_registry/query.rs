@@ -70,7 +70,7 @@ impl GroupRegistry {
         let mut max = Vec2::splat(f32::MIN);
         let mut found = false;
         for &node_id in &record.node_ids {
-            if let Some(node) = road_map.nodes.get(&node_id) {
+            if let Some(node) = road_map.node(node_id) {
                 min = min.min(node.position);
                 max = max.max(node.position);
                 found = true;

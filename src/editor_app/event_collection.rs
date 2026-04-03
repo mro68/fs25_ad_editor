@@ -71,7 +71,7 @@ impl EditorApp {
             ValueAdjustInputMode::DragHorizontal => 0.0,
             ValueAdjustInputMode::MouseWheel => self.state.options.mouse_wheel_distance_step_m,
         };
-        let route_tool_panel = self.state.editor.route_tool_panel_adapter();
+        let route_tool_panel = self.state.editor.route_tool_panel_state();
         egui::SidePanel::right("right_sidebar")
             .resizable(true)
             .default_width(200.0)
@@ -100,6 +100,7 @@ impl EditorApp {
                                 default_priority,
                                 distance_wheel_step_m,
                                 Some(&self.state.group_registry),
+                                Some(&self.state.tool_edit_store),
                                 &mut self.state.ui.distanzen,
                             ));
                         });
@@ -129,6 +130,7 @@ impl EditorApp {
             panel_pos,
             self.state.group_editing.as_ref(),
             group_record,
+            Some(&self.state.tool_edit_store),
             &mut self.state.options,
         ));
 
@@ -224,6 +226,7 @@ impl EditorApp {
 
         let route_tool_view = self.state.editor.route_tool_viewport_data();
         let route_tool_is_drawing = route_tool_view.has_pending_input;
+        let route_tool_segment_shortcuts_active = route_tool_view.segment_shortcuts_active;
         let default_direction = self.state.editor.default_direction;
         let default_priority = self.state.editor.default_priority;
 
@@ -237,6 +240,7 @@ impl EditorApp {
                 &self.state.selection.selected_node_ids,
                 self.state.editor.active_tool,
                 route_tool_is_drawing,
+                route_tool_segment_shortcuts_active,
                 &self.state.options,
                 command_palette_open,
                 default_direction,

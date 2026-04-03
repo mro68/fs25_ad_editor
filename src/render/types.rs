@@ -1,7 +1,7 @@
 //! Rendering-Typen und Konfiguration.
 
-use crate::shared::EditorOptions;
-use crate::Camera2D;
+use crate::shared::options::CAMERA_BASE_WORLD_EXTENT;
+use crate::shared::{EditorOptions, RenderCamera};
 use bytemuck::{Pod, Zeroable};
 use glam::Mat4;
 
@@ -17,7 +17,7 @@ pub(crate) struct RenderContext<'a> {
     /// wgpu Queue fuer Buffer-Uploads
     pub queue: &'a eframe::wgpu::Queue,
     /// Kamera (Position + Zoom)
-    pub camera: &'a Camera2D,
+    pub camera: &'a RenderCamera,
     /// Viewport-Groesse in Pixeln [width, height]
     pub viewport_size: [f32; 2],
     /// Editor-Optionen (Farben, Groessen, etc.)
@@ -221,12 +221,11 @@ pub struct Uniforms {
 /// Gibt `(min, max)` in Weltkoordinaten zurueck. Das Padding entspricht 8 Pixeln
 /// in Welteinheiten und verhindert Flackern an den Viewport-Raendern.
 pub(crate) fn compute_visible_rect(ctx: &RenderContext) -> (glam::Vec2, glam::Vec2) {
-    use crate::Camera2D;
     let viewport_width = ctx.viewport_size[0];
     let viewport_height = ctx.viewport_size[1];
     let aspect = viewport_width / viewport_height;
     let zoom_scale = 1.0 / ctx.camera.zoom;
-    let base_extent = Camera2D::BASE_WORLD_EXTENT;
+    let base_extent = CAMERA_BASE_WORLD_EXTENT;
     let half_height = base_extent * zoom_scale;
     let half_width = half_height * aspect;
     let padding = ctx.camera.world_per_pixel(viewport_height) * 8.0;
@@ -242,11 +241,11 @@ pub(crate) fn compute_visible_rect(ctx: &RenderContext) -> (glam::Vec2, glam::Ve
 }
 
 /// Berechnet die View-Projection-Matrix fuer den 2D-Viewport.
-pub(crate) fn build_view_projection(camera: &Camera2D, viewport_size: [f32; 2]) -> Mat4 {
+pub(crate) fn build_view_projection(camera: &RenderCamera, viewport_size: [f32; 2]) -> Mat4 {
     let view_matrix = camera.view_matrix();
     let aspect = viewport_size[0] / viewport_size[1];
     let zoom_scale = 1.0 / camera.zoom;
-    let base_extent = Camera2D::BASE_WORLD_EXTENT;
+    let base_extent = CAMERA_BASE_WORLD_EXTENT;
 
     let projection = Mat4::orthographic_rh(
         -base_extent * aspect * zoom_scale,
