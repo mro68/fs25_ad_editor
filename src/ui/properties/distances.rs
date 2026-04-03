@@ -3,7 +3,7 @@ use std::collections::{HashMap, HashSet};
 
 use crate::app::state::DistanzenState;
 use crate::app::NodeFlag;
-use crate::ui::common::wheel_dir;
+use crate::ui::common::{apply_wheel_step, apply_wheel_step_usize};
 
 /// Maximale Anzahl selektierter Nodes fuer die Ketten-Analyse.
 /// Oberhalb dieses Limits wird die O(N·C)-Berechnung uebersprungen.
@@ -89,10 +89,14 @@ pub fn render_distance_panel(
                 .range(1.0..=25.0)
                 .suffix(" m"),
         );
-        let wheel_dir = wheel_dir(ui, &response);
-        if distance_wheel_step_m > 0.0 && wheel_dir != 0.0 {
-            distance_state.distance =
-                (distance_state.distance + wheel_dir * distance_wheel_step_m).clamp(1.0, 25.0);
+        if distance_wheel_step_m > 0.0 {
+            let _ = apply_wheel_step(
+                ui,
+                &response,
+                &mut distance_state.distance,
+                distance_wheel_step_m,
+                1.0..=25.0,
+            );
         }
     });
     if (distance_state.distance - prev_distance).abs() > f32::EPSILON {
@@ -108,12 +112,15 @@ pub fn render_distance_panel(
                 .speed(1.0)
                 .range(2..=10000),
         );
-        let wheel_dir = wheel_dir(ui, &response);
-        if distance_wheel_step_m > 0.0 && wheel_dir > 0.0 {
-            distance_state.count = distance_state.count.saturating_add(1).min(10_000);
-        } else if distance_wheel_step_m > 0.0 && wheel_dir < 0.0 {
-            distance_state.count = distance_state.count.saturating_sub(1).max(2);
-        }
+        let mut count = distance_state.count as usize;
+        let _ = apply_wheel_step_usize(
+            ui,
+            &response,
+            &mut count,
+            2..=10_000,
+            distance_wheel_step_m > 0.0,
+        );
+        distance_state.count = count as u32;
     });
     if distance_state.count != prev_count {
         distance_state.by_count = true;
