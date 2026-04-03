@@ -10,13 +10,13 @@ Das `ui`-Modul enthält egui-UI-Komponenten (Menüs, Statusbar, Input-Handling, 
 - `menu.rs` — Top-Menü-Leiste
 - `status.rs` — Statusleiste
 - `floating_menu.rs` — Schwebende Kontextmenues fuer Werkzeug- und RouteTool-Gruppen (Toggle via `T/G/B/A/R/Z`)
-- `icons.rs` — Gemeinsame Icon-Konstanten/Helfer (`ICON_SIZE`, `svg_icon`, `route_tool_icon`)
+- `icons.rs` — Gemeinsame Icon-Konstanten/Helfer (`ICON_SIZE`, `svg_icon`, `route_tool_icon`); `route_tool_icon()` loest Route-Tool-Symbole katalogbasiert ueber `RouteToolDescriptor.icon_key` auf
 - `long_press.rs` — Wiederverwendbares Long-Press-Dropdown-Widget (`LongPressState`, `LongPressGroup`, `render_long_press_button`)
 - `defaults_panel.rs` — Linke Sidebar im Gruppen-Layout (Long-Press fuer Werkzeuge, RouteTool-Gruppen `Basics/Section/Analysis`, Defaults, Hintergrund)
 - `command_palette.rs` — Command Palette Overlay (Suche + katalogbasierte Intent-Auswahl; deaktivierte Route-Tools bleiben sichtbar und tragen ihren Disabled-Grund)
 - `properties.rs` — Properties-Panel (Detailanzeige selektierter Nodes)
 - `options_dialog/` — Optionen-Dialog für Laufzeit-Einstellungen (`mod.rs`, `sections.rs`)
-- `edit_panel.rs` — Schwebendes Edit-Panel; intern aufgeteilt in `edit_panel/group_panel.rs`, `edit_panel/route_tool_panel.rs`, `edit_panel/streckenteilung_panel.rs`
+- `edit_panel.rs` — Schwebendes Edit-Panel; intern aufgeteilt in `edit_panel/group_panel.rs`, `edit_panel/route_tool_panel.rs` mit `route_tool_panel/curve_panel.rs` und `route_tool_panel/analysis_panel.rs`, sowie `edit_panel/streckenteilung_panel.rs`
 - `tool_preview.rs` — Tool-Preview-Overlay (Route-Tool-Vorschau im Viewport)
 - `input/` — Viewport-Input-Orchestrator (phasenbasierte Submodule)
   - `clicks.rs` — Klick-Events (Einfach-/Doppel-Klick, Tool-Routing)
