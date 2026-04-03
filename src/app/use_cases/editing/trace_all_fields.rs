@@ -6,10 +6,10 @@
 //! `GroupRecord` in der `group_registry` angelegt, damit die erzeugten
 //! Strecken nachtraeglich bearbeitet werden koennen.
 
-use crate::app::compute_ring;
+use crate::app::tool_contract::RouteToolId;
 use crate::app::tool_editing::{register_persisted_group, RouteToolEditPayload, ToolRouteBase};
-use crate::app::{AppState, RouteToolId};
-use crate::core::{Connection, ConnectionDirection, ConnectionPriority, MapNode, NodeFlag};
+use crate::app::{compute_ring, field_boundary_ring_node_flag, AppState};
+use crate::core::{Connection, ConnectionDirection, ConnectionPriority, MapNode};
 use glam::Vec2;
 use std::sync::Arc;
 
@@ -122,12 +122,7 @@ pub fn trace_all_fields(
 
             // Nodes erstellen
             for (pos, kind) in &ring {
-                use crate::app::RingNodeKind;
-                let flag = if *kind == RingNodeKind::RoundedCorner {
-                    NodeFlag::RoundedCorner
-                } else {
-                    NodeFlag::Regular
-                };
+                let flag = field_boundary_ring_node_flag(*kind);
                 let id = road_map.next_node_id();
                 road_map.add_node(MapNode::new(id, *pos, flag));
                 poly_ids.push(id);

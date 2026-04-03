@@ -97,7 +97,9 @@ pub fn select_nodes_in_lasso(state: &mut AppState, polygon: &[glam::Vec2], addit
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{Connection, ConnectionDirection, ConnectionPriority, MapNode, NodeFlag, RoadMap};
+    use crate::core::{
+        Connection, ConnectionDirection, ConnectionPriority, MapNode, NodeFlag, RoadMap,
+    };
     use std::sync::Arc;
 
     fn with_path_test_map() -> AppState {

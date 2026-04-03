@@ -6,7 +6,7 @@ Das `app`-Modul verwaltet den globalen State, verarbeitet `AppIntent`s zentral u
 
 Die Laufzeit-Persistenz fuer `EditorOptions` liegt bewusst im Application-Layer unter `app::use_cases::options`; `shared::EditorOptions` bleibt damit ein neutrales Daten- und Validierungsmodell ohne Dateisystem- oder Pfad-Policy.
 
-**Hinweis:** `Camera2D` lebt im `core`-Modul (reiner Geometrie-Typ). `app` re-exportiert `Camera2D`, `ConnectionDirection`, `ConnectionPriority`, `RoadMap`, `RouteToolId`, `ToolAnchor`, `TangentSource`, `TangentMenuData`, `TangentOptionData`, `compute_ring` und andere zentrale Typen aus `core`, `tool_contract`, `ui_contract` und `tools`. Route-Tool-Panels laufen bewusst ueber egui-freie DTOs wie `RouteToolPanelState`, `RouteToolConfigState`, `RouteToolPanelAction` und `RouteToolViewportData` in `app::ui_contract`, damit der Root-Export schlank bleibt.
+**Hinweis:** `Camera2D` lebt im `core`-Modul (reiner Geometrie-Typ). `app` re-exportiert bewusst nur die stabile UI-Leseflaeche aus `core`/`shared` (`Camera2D`, `RoadMap`, `ConnectionDirection`, `ConnectionPriority`, `RenderQuality`, `ZipImageEntry` usw.), app-eigene State-/Controller-Typen sowie die gezielte App-Bruecke `compute_ring` fuer das Batch-Nachzeichnen. Tool-Vertraege und Tangenten-/Panel-DTOs werden dagegen explizit ueber `app::tool_contract` und `app::ui_contract` importiert; die Crate-Wurzel bleibt auf `AppController`, `AppState`, `AppIntent`, `AppCommand` plus XML-I/O begrenzt.
 
 Die eframe-Integrationsschale unter `src/editor_app/*` gehoert bewusst nicht zum `app`-Layer. Ihre kanonische Dokumentation steht in `../editor_app/API.md`, damit `app/API.md` nur den Application-Layer beschreibt.
 
@@ -983,7 +983,7 @@ AppIntent::CameraPan { delta: Vec2::new(-dx * wpp, -dy * wpp) }
 3. **Command Execution:** `AppController` mappt Intents auf Commands und fuehrt diese aus
 4. **Render Contract:** Ausgabe an Renderer erfolgt nur ueber `RenderScene`
 5. **I/O in Use-Cases:** Dateisystem-Operationen sind in `use_cases::file_io` zentralisiert
-6. **Re-Exports:** `app` re-exportiert `Camera2D`, `ConnectionDirection`, `ConnectionPriority`, `RoadMap` aus `core`, die Route-Tool-Vertraege `RouteToolId`, `ToolAnchor`, `TangentSource` aus `tool_contract`, die UI-DTOs `TangentMenuData` und `TangentOptionData` aus `ui_contract` sowie `compute_ring` und `ParkingConfig` aus `tools`, damit UI nicht direkt auf `core` oder Tool-Interna zugreift
+6. **Re-Exports:** `app` re-exportiert nur die stabile Leseoberflaeche fuer UI und Integrationsschale (z. B. `Camera2D`, `RoadMap`, `ConnectionDirection`, `ConnectionPriority`, `RenderQuality`, `ZipImageEntry`), app-eigene State-/Controller-Typen sowie die gezielte App-Bruecke `compute_ring`; Tool-Vertraege und Tangenten-/Panel-DTOs werden explizit ueber `app::tool_contract` und `app::ui_contract` importiert, und die Crate-Wurzel bleibt bewusst duenn
 
 ## Weitere Typen
 

@@ -125,7 +125,7 @@ impl EditHistory {
 mod tests {
     use super::*;
     use crate::app::AppState;
-    use crate::{MapNode, NodeFlag, RoadMap};
+    use crate::core::{MapNode, NodeFlag, RoadMap};
     use std::sync::Arc;
 
     fn make_snapshot_with_node_count(count: usize) -> Snapshot {

@@ -1,6 +1,5 @@
 use fs25_auto_drive_editor::app::handlers;
-use fs25_auto_drive_editor::app::tool_contract::TangentSource;
-use fs25_auto_drive_editor::app::tools::RouteToolId;
+use fs25_auto_drive_editor::app::tool_contract::{RouteToolId, TangentSource};
 use fs25_auto_drive_editor::app::ui_contract::{
     BypassPanelAction, ParkingPanelAction, RouteOffsetPanelAction, RouteToolConfigState,
     RouteToolPanelAction, SmoothCurvePanelAction,

@@ -57,7 +57,7 @@ pub fn move_selected_nodes(state: &mut AppState, delta_world: glam::Vec2) {
 mod tests {
     use super::*;
     use crate::app::group_registry::GroupRecord;
-    use crate::{MapNode, NodeFlag, RoadMap};
+    use crate::core::{MapNode, NodeFlag, RoadMap};
     use glam::Vec2;
     use std::sync::Arc;
 

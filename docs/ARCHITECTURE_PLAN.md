@@ -148,7 +148,7 @@ graph BT
 
 - Read-only auf UI/View-Teile von `AppState`
 - Events an Application Layer senden
-- Nur aus `app` importieren (re-exportierte Core-Typen)
+- Aus `app` und seinen expliziten Submodulen importieren; nur die stabile Leseoberflaeche (`Camera2D`, `RoadMap`, `ConnectionDirection`, `ConnectionPriority`, `RenderQuality`, `ZipImageEntry` usw.) bleibt direkt aus `app` re-exportiert, Tool-Vertraege laufen explizit ueber `app::tool_contract`, `app::ui_contract` und `app::tools::*`
 
 **Darf nicht**
 
@@ -164,7 +164,7 @@ graph BT
 - Zentrale Event-Verarbeitung (`AppController`)
 - Use-Cases (Load/Save, Kamera, Selektion, Heightmap, Tools)
 - Aufbau von `RenderScene` aus Domain + ViewState
-- Re-Export von Core-Typen für UI (z.B. `ConnectionDirection`, `ConnectionPriority`, `RoadMap`)
+- Schmale Read-only-Fassade fuer UI und Integrationsschale: app-eigene Typen plus bewusst ausgewaehlte Core-/Shared-Typen wie `ConnectionDirection`, `ConnectionPriority`, `RoadMap`, `Camera2D`, `RenderQuality`, `ZipImageEntry`
 - Kanonischer RouteTool-Katalog (`tools/catalog.rs`) als Single Source of Truth fuer `RouteToolId`, `RouteToolGroup`, `RouteToolBackingMode`, Surface-Sichtbarkeit und Aktivierungs-Voraussetzungen
 - Separater Tool-Editing-Layer (`tool_editing/*`) fuer persistente Tool-Snapshots, Rehydrierung sowie Cancel/Undo im destruktiven Tool-Edit-Flow
 
@@ -408,7 +408,7 @@ Verbindliche Regeln:
 4. XML bleibt technisch; fachliche Entscheidungen liegen in `core`/`app`.
 5. `AppState` enthält keine I/O-Logik; Dateisystem- und Options-Persistenz liegen in Use-Cases bzw. der Integrationsschale, nicht im State oder in `shared`.
 6. Renderer darf keine UI-Typen importieren. **Ausnahme:** `render/callback.rs` implementiert `egui_wgpu::CallbackTrait` — das ist die wgpu-Brücke zwischen egui und dem Rendering-System, kein semantischer UI-Import.
-7. `app/mod.rs` re-exportiert alle Core-Typen, die UI benötigt (z.B. `ConnectionDirection`, `ConnectionPriority`, `RoadMap`).
+7. `app/mod.rs` bleibt eine schmale Lese-Fassade: app-eigene Typen plus bewusst ausgewaehlte Core-/Shared-Typen fuer UI und Integrationsschale; Tool-Vertraege und tool-spezifische Helfer werden nicht mehr ueber `app` root-reexportiert.
 8. `shared`-Modul enthält nur neutrale Typen und Utilities, die von mehreren Layern genutzt werden (`RenderScene`, `RenderQuality`, `EditorOptions`, `i18n`, Geometrie-Helfer). Egui-Eingabe-Helfer leben in `ui`, Runtime-/Pfad-Policy in `app` bzw. `editor_app`. Importrichtung: `UI → shared`, `App → shared`, `Render → shared` (alle erlaubt).
 
 ## Aktuelle Modulstruktur
@@ -423,7 +423,7 @@ src/
     helpers.rs        # Render-Callback, Floating-Menue, Background-Upload, Repaint-Gating
     overlays.rs       # Tool-, Clipboard-, Distanz- und Gruppen-Overlays
   app/
-    mod.rs              # Re-Exports (ConnectionDirection, ConnectionPriority, RoadMap, etc.)
+    mod.rs              # Schmale Re-Exports fuer AppState/Controller + stabile UI-Lesetypen
     controller.rs       # AppController: Intent → Command Dispatch an Handler
     events.rs           # AppIntent & AppCommand Enums
     state.rs            # AppState, ViewState, SelectionState, UiState, MarkerDialogState, DedupDialogState
@@ -540,7 +540,7 @@ src/
     tool_preview.rs     # Tool-Preview-Overlay
 ```
 
-**Hinweis:** `Camera2D` lebt in `core/camera.rs` (reiner Geometrie-Typ). `app` re-exportiert ihn für Abwärtskompatibilität.
+**Hinweis:** `Camera2D` lebt in `core/camera.rs` (reiner Geometrie-Typ). `app` re-exportiert ihn als Teil der stabilen UI-Leseflaeche; Tool-Vertraege bleiben in expliziten `app::*`-Submodulen.
 
 ## Umsetzungsphasen
 
@@ -567,7 +567,7 @@ src/
 
 - UI-Input aufgeteilt in `keyboard`, `drag`, `context_menu` Sub-Module
 - Pick-Distanz-Berechnung zentralisiert (`Camera2D::pick_radius_world()`)
-- UI importiert nur aus `app` (Core-Typen re-exportiert)
+- UI importiert aus `app` und dessen expliziten Submodulen; nur die stabile Leseoberflaeche bleibt direkt aus `app` re-exportiert
 - API-Dokumentation auf aktuellen Stand gebracht
 
 ### Phase 5: Edit-Workflow ✅

@@ -1,8 +1,9 @@
 //! Top-Menue (File, Edit, View, etc.).
 
+use crate::app::tool_contract::RouteToolId;
 use crate::app::tools::{
     resolve_route_tool_entries, route_tool_disabled_reason_key, route_tool_group_label_key,
-    route_tool_label_key, RouteToolGroup, RouteToolId, RouteToolSurface,
+    route_tool_label_key, RouteToolGroup, RouteToolSurface,
 };
 use crate::app::{AppIntent, AppState, RenderQuality};
 use crate::shared::{t, I18nKey};

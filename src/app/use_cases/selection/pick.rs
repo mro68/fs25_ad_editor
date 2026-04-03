@@ -122,7 +122,9 @@ pub fn select_nearest_node(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{Connection, ConnectionDirection, ConnectionPriority, MapNode, NodeFlag, RoadMap};
+    use crate::core::{
+        Connection, ConnectionDirection, ConnectionPriority, MapNode, NodeFlag, RoadMap,
+    };
     use std::sync::Arc;
 
     fn with_test_map() -> AppState {
