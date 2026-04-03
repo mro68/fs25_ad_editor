@@ -85,7 +85,7 @@ pub fn render_distance_panel(
         ui.label("Abstand:");
         let response = ui.add(
             egui::DragValue::new(&mut distance_state.distance)
-                .speed(0.5)
+                .speed(0.1)
                 .range(1.0..=25.0)
                 .suffix(" m"),
         );

@@ -4,8 +4,8 @@ use super::*;
 
 /// Rendert den Kurven-Konfigurationsbereich im Route-Tool-Panel.
 ///
-/// Numerische Segment-Felder erhalten `wheel_enabled`, damit adaptive
-/// Mausrad-Schritte zentral ueber `ui::common` angewendet werden.
+/// Numerische Segment-Felder erhalten `wheel_enabled`, damit der zentrale
+/// Float-Standardschritt (`0.1`) aus `ui::common` angewendet wird.
 pub(super) fn render_curve_panel(
     ui: &mut egui::Ui,
     state: &CurvePanelState,
@@ -68,8 +68,8 @@ pub(super) fn render_curve_tangents(
 
 /// Rendert den Spline-Konfigurationsbereich im Route-Tool-Panel.
 ///
-/// Numerische Segment-Felder erhalten `wheel_enabled`, damit adaptive
-/// Mausrad-Schritte zentral ueber `ui::common` angewendet werden.
+/// Numerische Segment-Felder erhalten `wheel_enabled`, damit der zentrale
+/// Float-Standardschritt (`0.1`) aus `ui::common` angewendet wird.
 pub(super) fn render_spline_panel(
     ui: &mut egui::Ui,
     state: &SplinePanelState,

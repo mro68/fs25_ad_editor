@@ -87,7 +87,7 @@
   - [x] Flag-Editor fuer Einzelnode (Regular/SubPrio via ComboBox)
   - [x] Connection-Listing fuer Einzelnode (eingehend/ausgehend)
 - [x] Mausrad-Steuerung fuer Distanz/Node-Felder (Scroll hoch = erhoehen, runter = verringern)
-- [x] Mausrad-Steuerung fuer numerische Route-Tool-/Analysis-Felder (DragValue + Slider, adaptive Float-Schritte 0.1/0.01/0.001)
+- [x] Mausrad-Steuerung fuer numerische Route-Tool-/Analysis-Felder (DragValue + Slider, Float-Default 0.1; Alt x10, Ctrl x0.1)
 - [x] Context-Menu (Rechtsklick → Verbindungsaktionen)
 - [x] **AddNode-Verhalten konfigurierbar** (2026-02-24)
   - [x] Checkbox „Nach Loeschen verbinden": Vorgaenger/Nachfolger eines geloeschten Nodes direkt verbinden
@@ -243,7 +243,7 @@
   - [x] **Render-Vertrag gehaertet (2026-04-02):** `RenderScene` transportiert nur noch Render-Snapshots; `src/render/*` kennt keine Core-Typen mehr; `check_layer_boundaries.sh` erkennt Root-Re-Export-Verstoesse in `render`/`shared`
   - [x] **Best-Practice-Remediation Phase 4 (2026-04-03):** `GroupRegistry` auf tool-neutralen Kern reduziert; separates `app/tool_editing`-Modul mit `RouteToolEditPayload`, `ToolEditStore`, `ActiveToolEditSession` und Service-Funktionen eingefuehrt; group-backed Tools exponieren Persistenz ueber `RouteToolGroupEdit`; Gruppen- und Tool-Edit-UI lesen Editierbarkeit jetzt ueber gespeicherte Tool-Snapshots statt ueber Felder im `GroupRecord`
   - [x] **Best-Practice-Remediation Phase 5 (2026-04-03):** `shared` auf neutrale Vertraege zurueckgefuehrt; `wheel_dir()` nach `ui::common` verlagert; `EditorOptions` auf Datenmodell plus Validierung reduziert; Standardpfad und TOML-I/O liegen jetzt in `app::use_cases::options`
-  - [x] **Mousewheel-Modifier fuer numerische Panels (2026-04-03):** `ui::common` kapselt die gemeinsame Scroll-Auswertung; diskrete Steps laufen ueber `raw_scroll_delta` (1 Notch = 1 Schritt), Float-Felder skalieren ihre Basis-Schrittweite mit `Alt` x10 und `Ctrl` x0.1, `usize`-Felder ignorieren `Ctrl` bewusst; Route-Tool- und Analysis-Panels reichen weiterhin nur `wheel_enabled` durch
+  - [x] **Mousewheel-Modifier fuer numerische Panels (2026-04-03):** `ui::common` kapselt die gemeinsame Scroll-Auswertung; diskrete Steps laufen ueber `raw_scroll_delta` (1 Notch = 1 Schritt), gehoverte Numeric-Widgets konsumieren wirksame Raw-/Smooth-Scroll-Impulse gegen Scroll-Through, Float-Felder skalieren ihre Basis-Schrittweite mit `Alt` x10 und `Ctrl` x0.1, `usize`-Felder ignorieren `Ctrl` bewusst; Komma-Float-Felder im Options-Dialog nutzen repo-weit den Default-Schritt `0.1`, Route-Tool- und Analysis-Panels reichen weiterhin nur `wheel_enabled` durch
   - [x] **Best-Practice-Remediation Phase 6 (2026-04-03):** Root-Fassade auf `AppController`, `AppState`, `AppIntent`, `AppCommand` plus XML-I/O reduziert; `app` re-exportiert keine Tool-Vertraege, Tangenten-DTOs oder `RingNodeKind` mehr und haelt nur `compute_ring` als gezielte App-Bruecke; betroffene Call-Sites nutzen jetzt explizite Modulpfade wie `app::tool_contract` und `core::*`
   - [x] **Best-Practice-Remediation Phase 7 (2026-04-03):** Control-Plane entlang der bestehenden Handler-Features geschnitten; `controller.rs` und `intent_mapping.rs` delegieren intern in `by_feature/*`; `AppIntent` und `AppCommand` tragen eine gemeinsame interne `AppEventFeature`-Klassifikation; Controller-Flow-Regressionen fuer Dialog-, Group- und Editing-Dialogpfade ausgebaut
   - [x] **All-Packages-Remediation: Architektur + Assets (2026-04-03):** `AppState` kapselt Farmland-/Background-Zugriffe ueber `farmland_polygons_arc()`, `farmland_grid_arc()`, `background_image_arc()` und `has_*`; Background-/Overview-Assets laufen ueber einen kanonischen Apply-/Clear-Pfad mit `Arc<DynamicImage>` in `BackgroundMap`; das Route-Tool-Panel ist intern vertikalisiert und UI-Surfaces loesen Tool-Icons ueber `RouteToolIconKey` aus dem Katalog auf
@@ -700,11 +700,11 @@
 - ✅ `AppCommand::OpenSegmentSettingsPopup { world_pos }` + `AppIntent::OpenSegmentSettingsPopupRequested { world_pos }` — Segment-Popup nach Doppelklick
 - ✅ `SegmentSettingsPopupState { visible, world_pos }` — Dialog-Zustand in `UiState`
 - ✅ `src/ui/dialogs/segment_settings_popup.rs` — Popup-Dialog (stop_at_junction, max_angle_deg, Live-Neu-Selektion bei Aenderung)
-- ✅ `apply_wheel_step()` in `options_dialog/sections.rs` — Mausrad-Support fuer alle 25 numerischen Felder im Options-Dialog
+- ✅ `apply_wheel_step_default()` in `options_dialog/sections/*.rs` — Komma-Float-Felder im Options-Dialog nutzen zentral den Standard-Schritt `0.1`; Felder mit bewusst groberen Prozent-/Grad- oder ganzzahligen Pixel-Schritten behalten explizite Schrittweiten
 - ✅ Dokumentation synchronisiert: `src/app/API.md`, `src/app/handlers/API.md`, `src/app/use_cases/API.md`, `docs/ROADMAP.md`
 
 **Errungenschaften (UI-Enhancements 2026-03-10):**
-- ✅ `src/ui/common.rs` — Neues Modul mit `apply_wheel_step()` und `WHEEL_THRESHOLD`; Mausrad-Support fuer numerische Felder (Options-Dialog und weitere Widgets)
+- ✅ `src/ui/common.rs` — Zentrales UI-Helfer-Modul fuer numerische Felder mit `wheel_dir()`, `apply_wheel_step_default()`, `apply_wheel_step_default_enabled()` und `apply_wheel_step_usize()`; Float-Default `0.1`, `Alt` x10, `Ctrl` x0.1 sowie Hover-Scroll-Konsumierung gegen Scroll-Through
 - ✅ `EditorOptions::auto_create_segment` — entfernt; Gruppen werden jetzt IMMER nach `execute_and_apply()` registriert
 - ✅ `EditorOptions::show_all_group_boundaries` — neues Flag (Default: `false`); steuert ob Randknoten-Icons an ALLEN oder nur an Aussengrenzen-Knoten gezeigt werden
 - ✅ `recreate()`-Fix — nach Neuberechnung einer Strecke wird die Gruppe korrekt neu in der GroupRegistry registriert
