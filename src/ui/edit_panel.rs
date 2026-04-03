@@ -47,12 +47,14 @@ pub fn render_edit_panel(
         group_panel::render_group_edit_panel(
             ctx,
             edit_state,
-            group_record,
-            tool_edit_store,
-            road_map,
-            panel_pos,
-            options,
-            &mut events,
+            group_panel::GroupEditPanelContext::new(
+                group_record,
+                tool_edit_store,
+                road_map,
+                panel_pos,
+                options,
+                &mut events,
+            ),
         );
         return events;
     }

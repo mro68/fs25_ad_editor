@@ -154,12 +154,14 @@ impl InputState {
         events.extend(keyboard::collect_keyboard_intents(
             ui,
             selected_node_ids,
-            active_tool,
-            route_tool_is_drawing,
-            route_tool_segment_shortcuts_active,
-            distanzen_state.active,
-            clipboard_has_data,
-            command_palette_open,
+            keyboard::KeyboardContext::new(
+                active_tool,
+                route_tool_is_drawing,
+                route_tool_segment_shortcuts_active,
+                distanzen_state.active,
+                clipboard_has_data,
+                command_palette_open,
+            ),
         ));
 
         let modifiers = ui.input(|i| i.modifiers);

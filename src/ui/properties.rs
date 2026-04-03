@@ -12,6 +12,14 @@ use crate::app::{
 use distances::render_distance_panel;
 use selectors::{render_direction_icon_selector, render_priority_icon_selector};
 
+struct SelectionInfoContext<'a> {
+    default_direction: ConnectionDirection,
+    default_priority: ConnectionPriority,
+    group_registry: Option<&'a GroupRegistry>,
+    tool_edit_store: Option<&'a ToolEditStore>,
+    events: &'a mut Vec<AppIntent>,
+}
+
 /// Rendert den Properties-Inhalt in den übergebenen UI-Bereich.
 ///
 /// Gibt eine Liste von `AppIntent`-Events zurück, die bei Interaktion erzeugt werden.
@@ -36,11 +44,13 @@ pub fn render_properties_content(
             ui,
             road_map,
             selected_node_ids,
-            default_direction,
-            default_priority,
-            group_registry,
-            tool_edit_store,
-            &mut events,
+            SelectionInfoContext {
+                default_direction,
+                default_priority,
+                group_registry,
+                tool_edit_store,
+                events: &mut events,
+            },
         );
     }
 
@@ -68,12 +78,16 @@ fn render_selection_info(
     ui: &mut egui::Ui,
     road_map: &RoadMap,
     selected: &IndexSet<u64>,
-    default_direction: ConnectionDirection,
-    default_priority: ConnectionPriority,
-    group_registry: Option<&GroupRegistry>,
-    tool_edit_store: Option<&ToolEditStore>,
-    events: &mut Vec<AppIntent>,
+    context: SelectionInfoContext<'_>,
 ) {
+    let SelectionInfoContext {
+        default_direction,
+        default_priority,
+        group_registry,
+        tool_edit_store,
+        events,
+    } = context;
+
     match selected.len() {
         1 => render_single_node_info(ui, road_map, selected, events),
         2 => render_two_nodes_info(

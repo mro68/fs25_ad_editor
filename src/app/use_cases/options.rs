@@ -135,8 +135,10 @@ mod tests {
     fn load_editor_options_from_file_uses_defaults_when_validation_fails() {
         let path = temp_options_path("invalid_values");
         let defaults = EditorOptions::default();
-        let mut invalid = EditorOptions::default();
-        invalid.camera_zoom_min = invalid.camera_zoom_max;
+        let invalid = EditorOptions {
+            camera_zoom_min: defaults.camera_zoom_max,
+            ..EditorOptions::default()
+        };
 
         std::fs::write(
             &path,
@@ -154,8 +156,10 @@ mod tests {
     #[test]
     fn load_editor_options_from_file_normalizes_legacy_selection_factor() {
         let path = temp_options_path("legacy");
-        let mut legacy = EditorOptions::default();
-        legacy.selection_size_factor = 1.4;
+        let legacy = EditorOptions {
+            selection_size_factor: 1.4,
+            ..EditorOptions::default()
+        };
 
         std::fs::write(
             &path,
@@ -189,8 +193,10 @@ mod tests {
     #[test]
     fn save_editor_options_to_file_rejects_invalid_options_before_write() {
         let path = temp_options_path("save_invalid");
-        let mut invalid = EditorOptions::default();
-        invalid.camera_zoom_min = invalid.camera_zoom_max;
+        let invalid = EditorOptions {
+            camera_zoom_min: EditorOptions::default().camera_zoom_max,
+            ..EditorOptions::default()
+        };
 
         let error = save_editor_options_to_file(&path, &invalid)
             .expect_err("Ungueltige Optionen duerfen nicht gespeichert werden");
