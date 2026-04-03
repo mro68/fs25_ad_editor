@@ -229,35 +229,34 @@ impl EditorApp {
         let route_tool_segment_shortcuts_active = route_tool_view.segment_shortcuts_active;
         let default_direction = self.state.editor.default_direction;
         let default_priority = self.state.editor.default_priority;
+        let farmland_available = self
+            .state
+            .farmland_polygons_arc()
+            .is_some_and(|p| !p.is_empty());
 
-        events.extend(
-            self.input.collect_viewport_events(
-                ui,
-                response,
-                viewport_size,
-                &self.state.view.camera,
-                self.state.road_map.as_deref(),
-                &self.state.selection.selected_node_ids,
-                self.state.editor.active_tool,
-                route_tool_is_drawing,
-                route_tool_segment_shortcuts_active,
-                &self.state.options,
-                command_palette_open,
-                default_direction,
-                default_priority,
-                &route_tool_view.drag_targets,
-                &mut self.state.ui.distanzen,
-                route_tool_view.tangent_menu_data,
-                !self.state.clipboard.nodes.is_empty(),
-                self.state
-                    .farmland_polygons
-                    .as_ref()
-                    .is_some_and(|p| !p.is_empty()),
-                self.state.group_editing.is_some(),
-                Some(&self.state.group_registry),
-                route_tool_view.needs_lasso_input,
-            ),
-        );
+        events.extend(self.input.collect_viewport_events(
+            ui,
+            response,
+            viewport_size,
+            &self.state.view.camera,
+            self.state.road_map.as_deref(),
+            &self.state.selection.selected_node_ids,
+            self.state.editor.active_tool,
+            route_tool_is_drawing,
+            route_tool_segment_shortcuts_active,
+            &self.state.options,
+            command_palette_open,
+            default_direction,
+            default_priority,
+            &route_tool_view.drag_targets,
+            &mut self.state.ui.distanzen,
+            route_tool_view.tangent_menu_data,
+            !self.state.clipboard.nodes.is_empty(),
+            farmland_available,
+            self.state.group_editing.is_some(),
+            Some(&self.state.group_registry),
+            route_tool_view.needs_lasso_input,
+        ));
 
         // Mauszeiger im Viewport je nach aktivem Werkzeug anpassen
         if response.hovered() {
