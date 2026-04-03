@@ -1,6 +1,10 @@
 use fs25_auto_drive_editor::app::handlers;
 use fs25_auto_drive_editor::app::tool_contract::TangentSource;
 use fs25_auto_drive_editor::app::tools::RouteToolId;
+use fs25_auto_drive_editor::app::ui_contract::{
+    BypassPanelAction, ParkingPanelAction, RouteOffsetPanelAction, RouteToolConfigState,
+    RouteToolPanelAction, SmoothCurvePanelAction,
+};
 use fs25_auto_drive_editor::app::{
     AppController, AppIntent, AppState, EditorTool, GroupBase, GroupKind, GroupRecord, ToolAnchor,
 };
@@ -128,6 +132,14 @@ fn make_manual_group_record(id: u64, tool_id: Option<RouteToolId>) -> GroupRecor
     }
 }
 
+fn current_route_tool_config(state: &AppState) -> RouteToolConfigState {
+    state
+        .editor
+        .route_tool_panel_state()
+        .and_then(|panel| panel.config_state)
+        .expect("Aktives Route-Tool muss Panel-Konfiguration liefern")
+}
+
 #[test]
 fn test_cubic_with_anchors_matches_manual_tangent_defaults() {
     // Flow A: via RouteToolWithAnchors (2 selektierte Nodes)
@@ -228,6 +240,164 @@ fn group_edit_tool_requested_bricht_fuer_nicht_editierbare_tools_ohne_nebeneffek
     assert!(state.selection.selected_node_ids.is_empty());
     assert_eq!(state.tool_editing_record_id, None);
     assert!(state.tool_editing_record_backup.is_none());
+}
+
+#[test]
+fn route_tool_panel_action_requested_accepts_large_bypass_offset_via_controller_flow() {
+    let mut controller = AppController::new();
+    let mut state = make_test_map();
+    state.selection.ids_mut().insert(1);
+    state.selection.ids_mut().insert(2);
+
+    controller
+        .handle_intent(
+            &mut state,
+            AppIntent::SelectRouteToolRequested {
+                tool_id: RouteToolId::Bypass,
+            },
+        )
+        .expect("Bypass-Tool sollte ueber den Controller waehlbar sein");
+
+    controller
+        .handle_intent(
+            &mut state,
+            AppIntent::RouteToolPanelActionRequested {
+                action: RouteToolPanelAction::Bypass(BypassPanelAction::SetOffset(175.0)),
+            },
+        )
+        .expect("Bypass-Panel-Aktion sollte ueber den Controller-Flow laufen");
+
+    let RouteToolConfigState::Bypass(panel) = current_route_tool_config(&state) else {
+        panic!("Bypass-Panelzustand erwartet");
+    };
+    assert!(
+        panel.has_chain,
+        "Die selektierte Kette muss geladen bleiben"
+    );
+    assert_eq!(
+        panel.offset, 175.0,
+        "Groesse Werte duerfen nicht mehr auf 50 m beschnitten werden"
+    );
+}
+
+#[test]
+fn route_tool_panel_action_requested_accepts_large_route_offset_distance_via_controller_flow() {
+    let mut controller = AppController::new();
+    let mut state = make_test_map();
+    state.selection.ids_mut().insert(1);
+    state.selection.ids_mut().insert(2);
+
+    controller
+        .handle_intent(
+            &mut state,
+            AppIntent::SelectRouteToolRequested {
+                tool_id: RouteToolId::RouteOffset,
+            },
+        )
+        .expect("RouteOffset-Tool sollte ueber den Controller waehlbar sein");
+
+    controller
+        .handle_intent(
+            &mut state,
+            AppIntent::RouteToolPanelActionRequested {
+                action: RouteToolPanelAction::RouteOffset(RouteOffsetPanelAction::SetLeftDistance(
+                    175.0,
+                )),
+            },
+        )
+        .expect("RouteOffset-Panel-Aktion sollte ueber den Controller-Flow laufen");
+
+    let RouteToolConfigState::RouteOffset(panel) = current_route_tool_config(&state) else {
+        panic!("RouteOffset-Panelzustand erwartet");
+    };
+    assert!(
+        panel.has_chain,
+        "Die selektierte Kette muss geladen bleiben"
+    );
+    assert_eq!(
+        panel.left_distance, 175.0,
+        "Groesse Werte duerfen nicht mehr auf 50 m beschnitten werden"
+    );
+}
+
+#[test]
+fn route_tool_panel_action_requested_clamps_parking_values_via_controller_flow() {
+    let mut controller = AppController::new();
+    let mut state = make_test_map();
+
+    controller
+        .handle_intent(
+            &mut state,
+            AppIntent::SelectRouteToolRequested {
+                tool_id: RouteToolId::Parking,
+            },
+        )
+        .expect("Parking-Tool sollte ueber den Controller waehlbar sein");
+
+    controller
+        .handle_intent(
+            &mut state,
+            AppIntent::RouteToolPanelActionRequested {
+                action: RouteToolPanelAction::Parking(ParkingPanelAction::SetNumRows(200)),
+            },
+        )
+        .expect("Parking-Panel-Aktion sollte ueber den Controller-Flow laufen");
+
+    let RouteToolConfigState::Parking(panel) = current_route_tool_config(&state) else {
+        panic!("Parking-Panelzustand erwartet");
+    };
+    assert_eq!(
+        panel.num_rows, 10,
+        "Parking muss die fachliche Obergrenze auch im Panel-Flow einhalten"
+    );
+}
+
+#[test]
+fn route_tool_panel_action_requested_clamps_smooth_curve_values_via_controller_flow() {
+    let mut controller = AppController::new();
+    let mut state = make_test_map();
+
+    controller
+        .handle_intent(
+            &mut state,
+            AppIntent::SelectRouteToolRequested {
+                tool_id: RouteToolId::SmoothCurve,
+            },
+        )
+        .expect("SmoothCurve-Tool sollte ueber den Controller waehlbar sein");
+
+    controller
+        .handle_intent(
+            &mut state,
+            AppIntent::RouteToolPanelActionRequested {
+                action: RouteToolPanelAction::SmoothCurve(SmoothCurvePanelAction::SetMaxAngleDeg(
+                    180.0,
+                )),
+            },
+        )
+        .expect("SmoothCurve-Winkel sollte ueber den Controller-Flow laufen");
+    controller
+        .handle_intent(
+            &mut state,
+            AppIntent::RouteToolPanelActionRequested {
+                action: RouteToolPanelAction::SmoothCurve(SmoothCurvePanelAction::SetMinDistance(
+                    0.1,
+                )),
+            },
+        )
+        .expect("SmoothCurve-Minimaldistanz sollte ueber den Controller-Flow laufen");
+
+    let RouteToolConfigState::SmoothCurve(panel) = current_route_tool_config(&state) else {
+        panic!("SmoothCurve-Panelzustand erwartet");
+    };
+    assert_eq!(
+        panel.max_angle_deg, 135.0,
+        "SmoothCurve muss die fachliche Winkelobergrenze einhalten"
+    );
+    assert_eq!(
+        panel.min_distance, 0.5,
+        "SmoothCurve muss die fachliche Minimaldistanz einhalten"
+    );
 }
 
 #[test]

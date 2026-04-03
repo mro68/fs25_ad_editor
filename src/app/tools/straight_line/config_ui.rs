@@ -1,20 +1,13 @@
-//! UI-Konfigurationspanel fuer das Gerade-Strecke-Tool.
-//!
-//! Die `render_config_view`-Methode enthaelt die egui-Logik fuer:
-//! - Laenge · Segment-Abstand · Node-Anzahl (Nachbearbeitungs- und Live-Modus)
+//! Egui-freie Panel-Bruecke fuer das Gerade-Strecke-Tool.
 
-use super::super::common::render_segment_config_3modes;
 use super::state::StraightLineTool;
+use crate::app::ui_contract::{
+    RouteToolPanelEffect, SegmentConfigPanelAction, StraightPanelAction, StraightPanelState,
+};
 
 impl StraightLineTool {
-    /// Rendert das Konfigurationspanel im Properties-Panel.
-    ///
-    /// Gibt `true` zurueck wenn sich eine Einstellung geaendert hat.
-    pub(super) fn render_config_view(
-        &mut self,
-        ui: &mut egui::Ui,
-        distance_wheel_step_m: f32,
-    ) -> bool {
+    /// Liefert den egui-freien Panelzustand des Gerade-Strecke-Tools.
+    pub(super) fn panel_state(&self) -> StraightPanelState {
         let adjusting = !self.lifecycle.last_created_ids.is_empty()
             && self.last_start_anchor.is_some()
             && self.lifecycle.last_end_anchor.is_some();
@@ -27,19 +20,61 @@ impl StraightLineTool {
             self.total_distance()
         };
 
-        let ready = self.start.is_some() && self.end.is_some();
-        let (changed, recreate) = render_segment_config_3modes(
-            &mut self.seg,
-            ui,
+        StraightPanelState {
+            segment: self.seg.panel_state(
+                adjusting,
+                self.start.is_some() && self.end.is_some(),
+                length,
+                "Streckenlaenge",
+                true,
+            ),
+        }
+    }
+
+    /// Wendet eine semantische Panel-Aktion auf das Gerade-Strecke-Tool an.
+    pub(super) fn apply_panel_action(
+        &mut self,
+        action: StraightPanelAction,
+    ) -> RouteToolPanelEffect {
+        match action {
+            StraightPanelAction::Segment(segment_action) => {
+                self.apply_segment_action(segment_action)
+            }
+        }
+    }
+
+    fn apply_segment_action(&mut self, action: SegmentConfigPanelAction) -> RouteToolPanelEffect {
+        let adjusting = !self.lifecycle.last_created_ids.is_empty()
+            && self.last_start_anchor.is_some()
+            && self.lifecycle.last_end_anchor.is_some();
+        let length = if adjusting {
+            let start = self
+                .last_start_anchor
+                .expect("Start-Anker muss im Adjusting-Modus vorhanden sein")
+                .position();
+            let end = self
+                .lifecycle
+                .last_end_anchor
+                .expect("End-Anker muss im Adjusting-Modus vorhanden sein")
+                .position();
+            start.distance(end)
+        } else {
+            self.total_distance()
+        };
+        let result = self.seg.apply_panel_action(
+            action,
             adjusting,
-            ready,
+            self.start.is_some() && self.end.is_some(),
             length,
-            "Streckenlaenge",
-            distance_wheel_step_m,
+            true,
         );
-        if recreate {
+        if result.recreate {
             self.lifecycle.recreate_needed = true;
         }
-        changed
+        RouteToolPanelEffect {
+            changed: result.changed,
+            needs_recreate: result.recreate,
+            next_action: None,
+        }
     }
 }

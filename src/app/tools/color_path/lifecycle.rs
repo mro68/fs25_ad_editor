@@ -6,6 +6,7 @@ use image::GenericImageView;
 use std::sync::Arc;
 
 use crate::app::tools::{ToolAction, ToolPreview, ToolResult};
+use crate::app::ui_contract::{RouteToolConfigState, RouteToolPanelAction, RouteToolPanelEffect};
 use crate::core::{FarmlandGrid, RoadMap};
 use glam::Vec2;
 
@@ -168,8 +169,16 @@ impl crate::app::tools::RouteTool for ColorPathTool {
         self.execute_result(road_map)
     }
 
-    fn render_config(&mut self, ui: &mut egui::Ui, distance_wheel_step_m: f32) -> bool {
-        super::config_ui::render_config_view(self, ui, distance_wheel_step_m)
+    fn panel_state(&self) -> RouteToolConfigState {
+        RouteToolConfigState::ColorPath(self.panel_state())
+    }
+
+    fn apply_panel_action(&mut self, action: RouteToolPanelAction) -> RouteToolPanelEffect {
+        let RouteToolPanelAction::ColorPath(action) = action else {
+            return RouteToolPanelEffect::default();
+        };
+
+        self.apply_panel_action(action)
     }
 
     fn reset(&mut self) {

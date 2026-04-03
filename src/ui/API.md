@@ -338,7 +338,7 @@ pub fn render_edit_panel(
   default_priority: ConnectionPriority,
   distance_wheel_step_m: f32,
   active_tool: EditorTool,
-  route_tool: Option<RouteToolPanelAdapter<'_>>,
+  route_tool: Option<RouteToolPanelState>,
   panel_pos: Option<egui::Pos2>,
   group_editing: Option<&GroupEditState>,
   group_record: Option<&GroupRecord>,
@@ -346,7 +346,7 @@ pub fn render_edit_panel(
 ) -> Vec<AppIntent>
 ```
 
-Die Route-Tool-Konfiguration arbeitet hier bewusst nur noch ueber die app-seitige Fassade `RouteToolPanelAdapter`; der breite `ToolManager` bleibt im Application-Layer gekapselt.
+Die Route-Tool-Konfiguration arbeitet hier bewusst nur noch ueber den egui-freien App-Vertrag `RouteToolPanelState`; konkrete Widget-Aenderungen emittieren `AppIntent::RouteToolPanelActionRequested { action }`, waehrend der breite `ToolManager` im Application-Layer gekapselt bleibt.
 
 Im Gruppen-Bearbeitungsmodus enthält das Panel:
 - Checkbox für `options.show_all_group_boundaries` (Sichtbarkeit aller Boundary-Icons)

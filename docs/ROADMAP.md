@@ -510,6 +510,7 @@
 - ✅ Hotpath-Bench erweitert: `tool_preview_hotpath_bench` misst jetzt auch `compute_offset_positions`, Centerline-Hotpaths und die ColorPath-Kernpipeline
 - ✅ Doku-/Guardrail-Sync: `app/API.md`, `ui/API.md`, `app/tools/API.md`, `ARCHITECTURE_PLAN.md` und `check_api_docs_sync.sh` auf katalogbasierten RouteTool-Stand aktualisiert
 - ✅ Modul-Splits ohne API-Bruch: `app/handlers/route_tool.rs` und `ui/edit_panel.rs` intern in Submodule zerlegt, um Ausfuehrungs-/Panel-Logik klarer zu trennen
+- ✅ Route-Tool-Panel entkoppelt: App-/Tool-Vertraege liefern jetzt `RouteToolPanelState`/`RouteToolPanelAction` statt `egui`-Callbacks; das Floating-Panel rendert rein im UI-Layer
 
 - **Vorherige Errungenschaften (gleicher Audit-Block):**
 - ✅ Parking-Geometrie modulbereichert: `parking/geometry.rs` → `parking/geometry/{mod,layout,blueprint,conversion}.rs`

@@ -3,6 +3,7 @@
 use super::super::state::EditorTool;
 use crate::app::tool_contract::TangentSource;
 use crate::app::tools::RouteToolId;
+use crate::app::ui_contract::RouteToolPanelAction;
 use crate::core::{ConnectionDirection, ConnectionPriority, NodeFlag};
 use crate::shared::EditorOptions;
 use crate::shared::RenderQuality;
@@ -205,6 +206,8 @@ pub enum AppIntent {
     },
     /// Route-Tool: Konfiguration geaendert (Distanz/Anzahl) → Strecke neu berechnen
     RouteToolConfigChanged,
+    /// Route-Tool: Semantische Panel-Aktion aus dem schwebenden Panel.
+    RouteToolPanelActionRequested { action: RouteToolPanelAction },
     /// Route-Tool: Tangenten-Auswahl aus dem Kontextmenue aendern
     RouteToolTangentSelected {
         start: TangentSource,

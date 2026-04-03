@@ -1,238 +1,113 @@
-//! UI-Panel fuer die FieldBoundaryTool-Konfiguration.
+//! Egui-freie Panel-Bruecke fuer das FieldBoundaryTool.
 
-use super::super::common::wheel_dir;
 use super::state::{FieldBoundaryPhase, FieldBoundaryTool};
+use crate::app::ui_contract::{
+    FieldBoundaryPanelAction, FieldBoundaryPanelState, RouteToolPanelEffect,
+};
 use crate::core::{ConnectionDirection, ConnectionPriority};
 
 impl FieldBoundaryTool {
-    /// Rendert die FieldBoundaryTool-Konfiguration im Properties-Panel.
-    /// Gibt `true` zurueck wenn sich ein Wert geaendert hat.
-    pub(super) fn render_config_view(
+    /// Liefert den egui-freien Panelzustand des FieldBoundaryTools.
+    pub(super) fn panel_state(&self) -> FieldBoundaryPanelState {
+        FieldBoundaryPanelState {
+            selected_field_id: self.selected_polygon.as_ref().map(|polygon| polygon.id),
+            empty_selection_text: self
+                .selected_polygon
+                .is_none()
+                .then_some("Kein Feld ausgewaehlt — in ein Feld klicken".to_owned()),
+            node_spacing: self.node_spacing,
+            offset: self.offset,
+            straighten_tolerance: self.straighten_tolerance,
+            corner_detection_enabled: self.corner_detection_enabled,
+            corner_angle_threshold_deg: self.corner_angle_threshold_deg,
+            corner_rounding_enabled: self.corner_rounding_enabled,
+            corner_rounding_radius: self.corner_rounding_radius,
+            corner_rounding_max_angle_deg: self.corner_rounding_max_angle_deg,
+            direction: self.direction,
+            priority: self.priority,
+            hint_text: (self.phase == FieldBoundaryPhase::Configuring)
+                .then_some("Erneuter Klick im Viewport → anderes Feld auswählen".to_owned()),
+        }
+    }
+
+    /// Wendet eine semantische Panel-Aktion auf das FieldBoundaryTool an.
+    pub(super) fn apply_panel_action(
         &mut self,
-        ui: &mut egui::Ui,
-        distance_wheel_step_m: f32,
-    ) -> bool {
-        let mut changed = false;
+        action: FieldBoundaryPanelAction,
+    ) -> RouteToolPanelEffect {
+        let changed = match action {
+            FieldBoundaryPanelAction::SetNodeSpacing(value) => {
+                set_f32(&mut self.node_spacing, value.clamp(1.0, 50.0))
+            }
+            FieldBoundaryPanelAction::SetOffset(value) => {
+                set_f32(&mut self.offset, value.clamp(-20.0, 20.0))
+            }
+            FieldBoundaryPanelAction::SetStraightenTolerance(value) => {
+                set_f32(&mut self.straighten_tolerance, value.clamp(0.0, 10.0))
+            }
+            FieldBoundaryPanelAction::SetCornerDetectionEnabled(value) => {
+                set_bool(&mut self.corner_detection_enabled, value)
+            }
+            FieldBoundaryPanelAction::SetCornerAngleThresholdDeg(value) => set_f32(
+                &mut self.corner_angle_threshold_deg,
+                value.clamp(10.0, 170.0),
+            ),
+            FieldBoundaryPanelAction::SetCornerRoundingEnabled(value) => {
+                set_bool(&mut self.corner_rounding_enabled, value)
+            }
+            FieldBoundaryPanelAction::SetCornerRoundingRadius(value) => {
+                set_f32(&mut self.corner_rounding_radius, value.clamp(1.0, 50.0))
+            }
+            FieldBoundaryPanelAction::SetCornerRoundingMaxAngleDeg(value) => set_f32(
+                &mut self.corner_rounding_max_angle_deg,
+                value.clamp(1.0, 45.0),
+            ),
+            FieldBoundaryPanelAction::SetDirection(value) => {
+                set_direction(&mut self.direction, value)
+            }
+            FieldBoundaryPanelAction::SetPriority(value) => set_priority(&mut self.priority, value),
+        };
 
-        ui.label("Feldgrenz-Konfiguration");
-        ui.separator();
-
-        // Feldinfo
-        if let Some(polygon) = &self.selected_polygon {
-            ui.label(format!("Feld #{}", polygon.id));
-        } else {
-            ui.colored_label(
-                egui::Color32::GRAY,
-                "Kein Feld ausgewaehlt \u{2014} in ein Feld klicken",
-            );
+        RouteToolPanelEffect {
+            changed,
+            needs_recreate: false,
+            next_action: None,
         }
+    }
+}
 
-        ui.separator();
+fn set_f32(target: &mut f32, value: f32) -> bool {
+    if (*target - value).abs() < f32::EPSILON {
+        false
+    } else {
+        *target = value;
+        true
+    }
+}
 
-        // Node-Abstand
-        ui.horizontal(|ui| {
-            ui.label("Node-Abstand:");
-            let response = ui.add(
-                egui::DragValue::new(&mut self.node_spacing)
-                    .range(1.0..=50.0)
-                    .speed(0.5)
-                    .suffix(" m"),
-            );
-            let mut local_changed = response.changed();
-            let wd = wheel_dir(ui, &response);
-            if distance_wheel_step_m > 0.0 && wd != 0.0 {
-                self.node_spacing =
-                    (self.node_spacing + wd * distance_wheel_step_m).clamp(1.0, 50.0);
-                local_changed = true;
-            }
-            if local_changed {
-                changed = true;
-            }
-        });
+fn set_bool(target: &mut bool, value: bool) -> bool {
+    if *target == value {
+        false
+    } else {
+        *target = value;
+        true
+    }
+}
 
-        // Versatz
-        ui.horizontal(|ui| {
-            ui.label("Versatz:");
-            let response = ui.add(
-                egui::DragValue::new(&mut self.offset)
-                    .range(-20.0..=20.0)
-                    .speed(0.5)
-                    .suffix(" m"),
-            );
-            let mut local_changed = response.changed();
-            let wd = wheel_dir(ui, &response);
-            if distance_wheel_step_m > 0.0 && wd != 0.0 {
-                self.offset = (self.offset + wd * distance_wheel_step_m).clamp(-20.0, 20.0);
-                local_changed = true;
-            }
-            if local_changed {
-                changed = true;
-            }
-        });
+fn set_direction(target: &mut ConnectionDirection, value: ConnectionDirection) -> bool {
+    if *target == value {
+        false
+    } else {
+        *target = value;
+        true
+    }
+}
 
-        // Begradigen (Douglas-Peucker-Toleranz)
-        ui.horizontal(|ui| {
-            ui.label("Begradigen:");
-            let response = ui.add(
-                egui::DragValue::new(&mut self.straighten_tolerance)
-                    .range(0.0..=10.0)
-                    .speed(0.1)
-                    .suffix(" m"),
-            );
-            let mut local_changed = response.changed();
-            let wd = wheel_dir(ui, &response);
-            if wd != 0.0 {
-                self.straighten_tolerance = (self.straighten_tolerance + wd * 0.1).clamp(0.0, 10.0);
-                local_changed = true;
-            }
-            if local_changed {
-                changed = true;
-            }
-        });
-
-        ui.separator();
-
-        // Ecken-Erkennung
-        ui.horizontal(|ui| {
-            if ui
-                .checkbox(&mut self.corner_detection_enabled, "Ecken erkennen")
-                .on_hover_text("Eckpunkte als feste Anker beim Resampling beibehalten")
-                .changed()
-            {
-                changed = true;
-            }
-        });
-
-        // Winkel-Schwelle (nur sichtbar wenn aktiv)
-        if self.corner_detection_enabled {
-            ui.horizontal(|ui| {
-                ui.label("Winkel-Schwelle:");
-                let response = ui.add(
-                    egui::DragValue::new(&mut self.corner_angle_threshold_deg)
-                        .range(10.0..=170.0)
-                        .speed(1.0)
-                        .suffix("\u{b0}"),
-                );
-                let mut local_changed = response.changed();
-                let wd = wheel_dir(ui, &response);
-                if wd != 0.0 {
-                    self.corner_angle_threshold_deg =
-                        (self.corner_angle_threshold_deg + wd * 5.0).clamp(10.0, 170.0);
-                    local_changed = true;
-                }
-                if local_changed {
-                    changed = true;
-                }
-            });
-
-            // Eckenverrundung (nur sichtbar wenn Ecken-Erkennung aktiv)
-            ui.horizontal(|ui| {
-                if ui
-                    .checkbox(&mut self.corner_rounding_enabled, "Ecken verrunden")
-                    .on_hover_text("Erkannte Ecken mit Kreisbogen abrunden")
-                    .changed()
-                {
-                    changed = true;
-                }
-            });
-
-            // Radius (nur sichtbar wenn Verrundung aktiv)
-            if self.corner_rounding_enabled {
-                ui.horizontal(|ui| {
-                    ui.label("Radius:");
-                    let response = ui.add(
-                        egui::DragValue::new(&mut self.corner_rounding_radius)
-                            .range(1.0..=50.0)
-                            .speed(0.5)
-                            .suffix(" m"),
-                    );
-                    let mut local_changed = response.changed();
-                    let wd = wheel_dir(ui, &response);
-                    if distance_wheel_step_m > 0.0 && wd != 0.0 {
-                        self.corner_rounding_radius = (self.corner_rounding_radius
-                            + wd * distance_wheel_step_m)
-                            .clamp(1.0, 50.0);
-                        local_changed = true;
-                    }
-                    if local_changed {
-                        changed = true;
-                    }
-                });
-
-                // Max. Winkelabweichung (nur sichtbar wenn Verrundung aktiv)
-                ui.horizontal(|ui| {
-                    ui.label("Max. Winkelabw.:")
-                        .on_hover_text("Maximale Winkelabweichung zwischen benachbarten Bogenpunkten \u{2014} kleinerer Wert = glatterer Bogen, mehr Punkte");
-                    let response = ui.add(
-                        egui::DragValue::new(&mut self.corner_rounding_max_angle_deg)
-                            .range(1.0..=45.0)
-                            .speed(0.5)
-                            .suffix("\u{b0}"),
-                    );
-                    let mut local_changed = response.changed();
-                    let wd = wheel_dir(ui, &response);
-                    if wd != 0.0 {
-                        self.corner_rounding_max_angle_deg =
-                            (self.corner_rounding_max_angle_deg + wd * 1.0).clamp(1.0, 45.0);
-                        local_changed = true;
-                    }
-                    if local_changed {
-                        changed = true;
-                    }
-                });
-            }
-        }
-
-        ui.separator();
-
-        // Verbindungsrichtung
-        ui.horizontal(|ui| {
-            ui.label("Richtung:");
-            let mut dir = self.direction;
-            egui::ComboBox::from_id_salt("field_boundary_direction")
-                .selected_text(match dir {
-                    ConnectionDirection::Regular => "Einbahnstrasse",
-                    ConnectionDirection::Dual => "Beidseitig",
-                    ConnectionDirection::Reverse => "R\u{fc}ckw\u{e4}rts",
-                })
-                .show_ui(ui, |ui| {
-                    ui.selectable_value(&mut dir, ConnectionDirection::Regular, "Einbahnstrasse");
-                    ui.selectable_value(&mut dir, ConnectionDirection::Dual, "Beidseitig");
-                    ui.selectable_value(
-                        &mut dir,
-                        ConnectionDirection::Reverse,
-                        "R\u{fc}ckw\u{e4}rts",
-                    );
-                });
-            if dir != self.direction {
-                self.direction = dir;
-                changed = true;
-            }
-        });
-
-        // Strassenart (Prioritaet)
-        ui.horizontal(|ui| {
-            ui.label("Strassenart:");
-            let mut prio = self.priority;
-            egui::ComboBox::from_id_salt("field_boundary_priority")
-                .selected_text(match prio {
-                    ConnectionPriority::Regular => "Normal",
-                    ConnectionPriority::SubPriority => "Nebenstrecke",
-                })
-                .show_ui(ui, |ui| {
-                    ui.selectable_value(&mut prio, ConnectionPriority::Regular, "Normal");
-                    ui.selectable_value(&mut prio, ConnectionPriority::SubPriority, "Nebenstrecke");
-                });
-            if prio != self.priority {
-                self.priority = prio;
-                changed = true;
-            }
-        });
-
-        if self.phase == FieldBoundaryPhase::Configuring {
-            ui.small("Erneuter Klick im Viewport \u{2192} anderes Feld ausw\u{e4}hlen");
-        }
-
-        changed
+fn set_priority(target: &mut ConnectionPriority, value: ConnectionPriority) -> bool {
+    if *target == value {
+        false
+    } else {
+        *target = value;
+        true
     }
 }

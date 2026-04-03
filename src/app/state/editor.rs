@@ -1,5 +1,5 @@
 use crate::app::tools::{RouteToolGroup, RouteToolId, ToolManager, ToolPreview};
-use crate::app::ui_contract::{RouteToolPanelAdapter, RouteToolViewportData};
+use crate::app::ui_contract::{RouteToolPanelState, RouteToolViewportData};
 use crate::core::{ConnectionDirection, ConnectionPriority, RoadMap};
 use glam::Vec2;
 
@@ -98,14 +98,26 @@ impl EditorToolState {
         self.route_tool_memory.remember(group, tool_id);
     }
 
-    /// Erzeugt eine schmale UI-Fassade fuer das schwebende Route-Tool-Panel.
+    /// Liefert den egui-freien Panelzustand des aktiven Route-Tools.
     ///
-    /// Gibt `Some(...)` nur im Route-Modus zurueck. Das enthaltene aktive Tool
-    /// kann trotzdem `None` sein, sodass die UI ihre generischen Controls weiter
-    /// anzeigen kann ohne den gesamten `ToolManager` zu kennen.
-    pub fn route_tool_panel_adapter(&mut self) -> Option<RouteToolPanelAdapter<'_>> {
-        (self.active_tool == EditorTool::Route)
-            .then(|| RouteToolPanelAdapter::new(self.tool_manager.active_tool_mut()))
+    /// Gibt `Some(...)` nur im Route-Modus zurueck. Ohne aktives Tool bleibt der
+    /// DTO leer genug, damit die UI generische Controls ohne Tool-Interna
+    /// rendern kann.
+    pub fn route_tool_panel_state(&self) -> Option<RouteToolPanelState> {
+        if self.active_tool != EditorTool::Route {
+            return None;
+        }
+
+        let active_tool_id = self.tool_manager.active_id();
+        let tool = self.tool_manager.active_tool();
+
+        Some(RouteToolPanelState {
+            active_tool_id,
+            status_text: tool.map(|tool| tool.status_text().to_owned()),
+            has_pending_input: tool.is_some_and(|tool| tool.has_pending_input()),
+            can_execute: tool.is_some_and(|tool| tool.is_ready()),
+            config_state: tool.map(|tool| tool.panel_state()),
+        })
     }
 
     /// Liefert die fuer den Viewport benoetigten Route-Tool-Daten als Read-DTO.
@@ -114,7 +126,16 @@ impl EditorToolState {
             return RouteToolViewportData::default();
         }
 
-        RouteToolViewportData::from_active_tool(self.tool_manager.active_tool())
+        if let Some(tool) = self.tool_manager.active_tool() {
+            RouteToolViewportData {
+                drag_targets: tool.drag_targets(),
+                has_pending_input: tool.has_pending_input(),
+                tangent_menu_data: tool.tangent_menu_data(),
+                needs_lasso_input: tool.needs_lasso_input(),
+            }
+        } else {
+            RouteToolViewportData::default()
+        }
     }
 
     /// Berechnet die aktuelle Preview-Geometrie des aktiven Route-Tools.
@@ -155,9 +176,8 @@ mod tests {
         assert_eq!(action, ToolAction::Continue);
 
         let panel_data = state
-            .route_tool_panel_adapter()
-            .expect("Im Route-Modus muss ein Panel-Adapter vorhanden sein")
-            .data();
+            .route_tool_panel_state()
+            .expect("Im Route-Modus muss ein Panelzustand vorhanden sein");
         assert_eq!(panel_data.status_text.as_deref(), Some("Endpunkt klicken"));
         assert!(panel_data.has_pending_input);
 
@@ -176,7 +196,7 @@ mod tests {
 
         state.active_tool = EditorTool::Select;
 
-        assert!(state.route_tool_panel_adapter().is_none());
+        assert!(state.route_tool_panel_state().is_none());
         assert_eq!(
             state.route_tool_viewport_data(),
             RouteToolViewportData::default()

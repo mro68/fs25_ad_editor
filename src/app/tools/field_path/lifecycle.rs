@@ -8,6 +8,7 @@
 use std::sync::Arc;
 
 use crate::app::tools::{ToolAction, ToolPreview, ToolResult};
+use crate::app::ui_contract::{RouteToolConfigState, RouteToolPanelAction, RouteToolPanelEffect};
 use crate::core::{
     compute_polygon_centerline, compute_segment_centerline, find_polygon_at, simplify_polyline,
     FarmlandGrid, FieldPolygon, NodeFlag, RoadMap,
@@ -331,8 +332,16 @@ impl crate::app::tools::RouteTool for FieldPathTool {
         }
     }
 
-    fn render_config(&mut self, ui: &mut egui::Ui, distance_wheel_step_m: f32) -> bool {
-        self.render_config_view(ui, distance_wheel_step_m)
+    fn panel_state(&self) -> RouteToolConfigState {
+        RouteToolConfigState::FieldPath(self.panel_state())
+    }
+
+    fn apply_panel_action(&mut self, action: RouteToolPanelAction) -> RouteToolPanelEffect {
+        let RouteToolPanelAction::FieldPath(action) = action else {
+            return RouteToolPanelEffect::default();
+        };
+
+        self.apply_panel_action(action)
     }
 
     fn execute(&self, road_map: &RoadMap) -> Option<ToolResult> {

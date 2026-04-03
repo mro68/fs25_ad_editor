@@ -8,7 +8,9 @@ use super::geometry::{build_tool_result, cubic_bezier, CurveParams};
 use super::state::{CurveDegree, CurvePreviewCacheKey, CurveTool, Phase};
 use crate::app::group_registry::{GroupBase, GroupKind, GroupRecord};
 use crate::app::tool_contract::TangentSource;
-use crate::app::ui_contract::TangentMenuData;
+use crate::app::ui_contract::{
+    RouteToolConfigState, RouteToolPanelAction, RouteToolPanelEffect, TangentMenuData,
+};
 use crate::core::RoadMap;
 use glam::Vec2;
 
@@ -194,8 +196,16 @@ impl RouteTool for CurveTool {
         }
     }
 
-    fn render_config(&mut self, ui: &mut egui::Ui, distance_wheel_step_m: f32) -> bool {
-        self.render_config_view(ui, distance_wheel_step_m)
+    fn panel_state(&self) -> RouteToolConfigState {
+        RouteToolConfigState::Curve(self.panel_state())
+    }
+
+    fn apply_panel_action(&mut self, action: RouteToolPanelAction) -> RouteToolPanelEffect {
+        let RouteToolPanelAction::Curve(action) = action else {
+            return RouteToolPanelEffect::default();
+        };
+
+        self.apply_panel_action(action)
     }
 
     fn execute(&self, road_map: &RoadMap) -> Option<ToolResult> {

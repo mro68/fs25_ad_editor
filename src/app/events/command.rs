@@ -3,6 +3,7 @@
 use super::super::state::EditorTool;
 use crate::app::tool_contract::TangentSource;
 use crate::app::tools::RouteToolId;
+use crate::app::ui_contract::RouteToolPanelAction;
 use crate::core::{ConnectionDirection, ConnectionPriority, NodeFlag};
 use crate::shared::EditorOptions;
 use crate::shared::RenderQuality;
@@ -211,6 +212,8 @@ pub enum AppCommand {
     },
     /// Route-Tool: Strecke neu berechnen (Config geaendert)
     RouteToolRecreate,
+    /// Route-Tool: Semantische Panel-Aktion anwenden.
+    RouteToolPanelAction { action: RouteToolPanelAction },
     /// Route-Tool: Node-Anzahl erhoehen
     IncreaseRouteToolNodeCount,
     /// Route-Tool: Node-Anzahl verringern

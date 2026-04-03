@@ -272,6 +272,9 @@ pub fn map_intent_to_commands(state: &AppState, intent: AppIntent) -> Vec<AppCom
             end_node_id,
         }],
         AppIntent::RouteToolConfigChanged => vec![AppCommand::RouteToolRecreate],
+        AppIntent::RouteToolPanelActionRequested { action } => {
+            vec![AppCommand::RouteToolPanelAction { action }]
+        }
         AppIntent::RouteToolTangentSelected { start, end } => {
             vec![AppCommand::RouteToolApplyTangent { start, end }]
         }
