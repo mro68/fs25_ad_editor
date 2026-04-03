@@ -23,14 +23,13 @@ jobs:
       - name: Install Rust toolchain
         uses: dtolnay/rust-toolchain@stable
 
-      - name: Cache cargo
+      - name: Cache cargo dependencies
         uses: actions/cache@v4
         with:
           path: |
             ~/.cargo/registry
             ~/.cargo/git
-            target
-          key: linux-release-${{ hashFiles('**/Cargo.lock') }}
+          key: linux-release-${{ hashFiles('Cargo.lock') }}
           restore-keys: linux-release-
 
       - name: Install system dependencies
@@ -63,14 +62,13 @@ jobs:
       - name: Install Rust toolchain
         uses: dtolnay/rust-toolchain@stable
 
-      - name: Cache cargo
+      - name: Cache cargo dependencies
         uses: actions/cache@v4
         with:
           path: |
             ~/.cargo/registry
             ~/.cargo/git
-            target
-          key: windows-release-${{ hashFiles('**/Cargo.lock') }}
+          key: windows-release-${{ hashFiles('Cargo.lock') }}
           restore-keys: windows-release-
 
       - name: Build
