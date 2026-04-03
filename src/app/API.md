@@ -97,6 +97,9 @@ pub struct AppState {
     pub farmland_grid: Option<Arc<FarmlandGrid>>,
     /// Gecachtes Hintergrundbild fuer farbbasierte Tool-Analysen.
     /// `None` solange kein Overview geladen wurde.
+    ///
+    /// Hinweis: Das kanonische Asset lebt in `view.background_map`; dieses Feld
+    /// dient als kompatibler Fallback fuer bestehende Tool-Pfade.
     pub background_image: Option<Arc<image::DynamicImage>>,
     /// Aktiver Gruppen-Edit-Modus (None = Normal-Modus, Some = nicht-destruktives Editing aktiv).
     pub group_editing: Option<GroupEditState>,
@@ -139,6 +142,11 @@ sel.ids_mut().insert(42);
 - `new() → Self`
 - `ids_mut() → &mut IndexSet<u64>` — Mutable Zugriff via `Arc::make_mut` (Copy-on-Write)
 - `active_route_tool_id() → Option<RouteToolId>` — Aktive Route-Tool-ID im Route-Modus, sonst `None`
+- `farmland_polygons_arc() → Option<Arc<Vec<FieldPolygon>>>` — Arc-Clone der geladenen Farmland-Polygone
+- `farmland_grid_arc() → Option<Arc<FarmlandGrid>>` — Arc-Clone des geladenen Farmland-Rasters
+- `background_image_arc() → Option<Arc<image::DynamicImage>>` — Kanonisches Hintergrundbild (`view.background_map` bevorzugt)
+- `has_farmland_polygons() → bool` — `true` falls Farmland-Polygone geladen sind
+- `has_background_image() → bool` — `true` falls ein Hintergrundbild verfuegbar ist
 
 pub struct UiState {
     pub show_file_dialog: bool,

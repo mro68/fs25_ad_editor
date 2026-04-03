@@ -33,16 +33,19 @@ Die Ansicht laesst sich ausserdem ueber **Ansicht -> Kamera zuruecksetzen** oder
 ### Laden
 
 1. **Ansicht -> Hintergrund laden...** oder **Ansicht -> Hintergrund aendern...**
-2. Unterstuetzte Formate: PNG, JPEG, DDS
+2. Unterstuetzte Quellen: PNG, JPEG, DDS sowie ZIP-Archive mit Bilddateien
+3. Bei ZIP-Dateien mit genau einem Bild laedt der Editor den Treffer direkt.
+4. Bei ZIP-Dateien mit mehreren Bildern oeffnet sich der Dialog **Bild aus ZIP waehlen**. Dort koennen Sie optional auf Overview-Dateien filtern.
 
 ### Automatische Erkennung
 
-Wenn eine AutoDrive-XML geladen wird und `AutoDrive_config.xml` im selben Verzeichnis eine FS25-Map-Struktur erkennt, versucht der Editor automatisch:
+Wenn eine AutoDrive-XML geladen wird, prueft der Editor fuer Hintergrunddaten automatisch:
 
-1. eine `fs25_overview_map_*.png` zu finden (generierte Uebersichtskarte)
-2. eine `satellite_XXXXXX.dds` oder `terrain_XXXXXX.dds` zu laden
+1. `overview.png` im selben Verzeichnis wie die XML
+2. `overview.jpg` als Rueckfall fuer aeltere Setups
+3. passende Map-Mod-ZIPs im uebergeordneten `mods/`-Verzeichnis, falls eine neue Uebersichtskarte erzeugt werden soll
 
-Der Status wird in der Statusleiste angezeigt.
+Wenn etwas gefunden wird, erscheint der Dialog **Nach dem Laden erkannt**. Er bestaetigt automatisch geladene Assets und bietet bei passenden ZIPs direkt die Generierung einer neuen Uebersichtskarte an.
 
 ### Positionierung
 
@@ -71,7 +74,11 @@ Eine installierte FS25-Map-Entpackstruktur mit:
 
 ### Starten
 
-**Datei -> Uebersichtskarte generieren**
+Es gibt zwei Wege:
+
+1. **Datei -> Uebersichtskarte generieren** und eine FS25-Map-ZIP waehlen.
+2. Nach dem Oeffnen einer XML im Dialog **Nach dem Laden erkannt** auf **Uebersichtskarte generieren** klicken, wenn ein passender Mod-ZIP gefunden wurde.
+3. Im Dialog **Uebersichtskarte - Layer-Optionen** die sichtbaren Layer und die Quelle fuer Feldpolygone festlegen.
 
 ### Verarbeitungsschritte
 
@@ -83,7 +90,11 @@ Eine installierte FS25-Map-Entpackstruktur mit:
 
 ### Ausgabe
 
-Die generierte Karte landet im selben Verzeichnis wie die Map-Dateien und wird bei der naechsten XML-Ladeoperation automatisch als Hintergrund erkannt.
+Die generierte Karte wird sofort als aktuelle Hintergrundkarte geladen.
+
+Wenn bereits eine AutoDrive-XML geoeffnet ist, fragt der Editor anschliessend, ob das Bild als `overview.png` im Savegame-/XML-Verzeichnis gespeichert werden soll. Existiert dort bereits eine Datei, kann sie direkt ueberschrieben werden.
+
+Diese `overview.png` wird beim naechsten Oeffnen derselben XML automatisch als Hintergrund verwendet.
 
 ---
 
@@ -94,10 +105,13 @@ Nach dem Laden einer AutoDrive-XML prueft der Editor automatisch:
 1. **Flag-Bereinigung** — Flags 2 und 4 (FS22-Artefakte) werden auf 0 zurueckgesetzt
 2. **Verbindungsgeometrie** — Winkel und Laengen werden neu berechnet
 3. **Spatial-Index** — KD-Baum wird aufgebaut (fuer Snap, Selection, Nearest-Node)
-4. **Hintergrundkarte** — Wenn im Map-Verzeichnis eine passende Karte gefunden wird, wird sie automatisch geladen
+4. **Heightmap** — `terrain.heightmap.png` neben der XML wird automatisch gesetzt
+5. **Hintergrundkarte** — `overview.png` oder `overview.jpg` neben der XML wird automatisch geladen
+6. **Map-Mod-ZIPs** — Passende Archive im `mods/`-Verzeichnis werden im Dialog zur Uebersichtskarten-Generierung angeboten
 
 **Status-Ausgaben:**
 
+- Der Dialog **Nach dem Laden erkannt** fasst automatisch geladene Heightmap, Hintergrundbild und passende ZIP-Treffer zusammen.
 - Oben in der Statusleiste erscheinen kurze Meldungen wie „Hintergrundkarte geladen" oder „3 Flags bereinigt"
 
 ---

@@ -154,15 +154,17 @@ fn bench_smooth_curve_preview(c: &mut Criterion) {
         let control_nodes: Vec<Vec2> = (0..controls)
             .map(|i| Vec2::new(15.0 + i as f32 * 12.0, (i as f32 * 0.8).sin() * 18.0))
             .collect();
+        let start_neighbors = [Vec2::new(1.0, 0.0), Vec2::new(0.7, 0.3)];
+        let end_neighbors = [Vec2::new(-1.0, 0.0), Vec2::new(-0.7, -0.3)];
 
         let input = SmoothCurveInput {
             start,
             end,
-            control_nodes,
+            control_nodes: control_nodes.as_slice(),
             max_segment_length_m: 6.0,
             max_direction_change_deg: 45.0,
-            start_neighbor_directions: vec![Vec2::new(1.0, 0.0), Vec2::new(0.7, 0.3)],
-            end_neighbor_directions: vec![Vec2::new(-1.0, 0.0), Vec2::new(-0.7, -0.3)],
+            start_neighbor_directions: &start_neighbors,
+            end_neighbor_directions: &end_neighbors,
             min_distance: 1.0,
         };
 

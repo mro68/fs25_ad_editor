@@ -1,7 +1,7 @@
 //! Route-Tool-Implementierung fuer das Strecken-Versatz-Tool.
 
 use super::geometry::compute_offset_positions;
-use super::state::RouteOffsetTool;
+use super::state::{RouteOffsetPreviewCache, RouteOffsetPreviewKey, RouteOffsetTool};
 use crate::app::tool_editing::{RouteToolEditPayload, ToolRouteBase};
 use crate::app::tools::common::{
     record_applied_tool_state, sync_tool_host, ToolLifecycleState, ToolResultBuilder,
@@ -29,6 +29,50 @@ impl RouteOffsetTool {
         self.chain_start_id = start_id;
         self.chain_end_id = end_id;
         self.chain_inner_ids = inferred;
+        self.chain_revision = self.chain_revision.wrapping_add(1);
+        self.invalidate_preview_cache();
+    }
+
+    fn preview_key(&self) -> RouteOffsetPreviewKey {
+        RouteOffsetPreviewKey {
+            left_enabled: self.config.left_enabled,
+            right_enabled: self.config.right_enabled,
+            left_distance: self.config.left_distance,
+            right_distance: self.config.right_distance,
+            base_spacing: self.config.base_spacing,
+        }
+    }
+
+    fn ensure_preview_cache(&self) {
+        let key = self.preview_key();
+        let rebuild = {
+            let cache = self.preview_cache.borrow();
+            match cache.as_ref() {
+                Some(cached) => cached.chain_revision != self.chain_revision || cached.key != key,
+                None => true,
+            }
+        };
+        if !rebuild {
+            return;
+        }
+
+        let left_points = if key.left_enabled {
+            compute_offset_positions(&self.chain_positions, key.left_distance, key.base_spacing)
+        } else {
+            None
+        };
+        let right_points = if key.right_enabled {
+            compute_offset_positions(&self.chain_positions, -key.right_distance, key.base_spacing)
+        } else {
+            None
+        };
+
+        *self.preview_cache.borrow_mut() = Some(RouteOffsetPreviewCache {
+            chain_revision: self.chain_revision,
+            key,
+            left_points,
+            right_points,
+        });
     }
 }
 
@@ -64,6 +108,8 @@ impl RouteToolCore for RouteOffsetTool {
             return ToolPreview::default();
         }
 
+        self.ensure_preview_cache();
+
         let mut nodes: Vec<Vec2> = Vec::new();
         let mut connections: Vec<(usize, usize)> = Vec::new();
         let mut styles: Vec<(ConnectionDirection, ConnectionPriority)> = Vec::new();
@@ -75,33 +121,26 @@ impl RouteToolCore for RouteOffsetTool {
             styles.push((self.direction, self.priority));
         }
 
-        if self.config.left_enabled {
-            if let Some(pts) = compute_offset_positions(
-                &self.chain_positions,
-                self.config.left_distance,
-                self.config.base_spacing,
-            ) {
-                let start = nodes.len();
-                nodes.extend_from_slice(&pts);
-                for i in 0..pts.len().saturating_sub(1) {
-                    connections.push((start + i, start + i + 1));
-                    styles.push((self.direction, self.priority));
-                }
+        let cache = self.preview_cache.borrow();
+        let cached = cache
+            .as_ref()
+            .expect("invariant: preview cache must exist after ensure_preview_cache");
+
+        if let Some(pts) = cached.left_points.as_ref() {
+            let start = nodes.len();
+            nodes.extend_from_slice(pts);
+            for i in 0..pts.len().saturating_sub(1) {
+                connections.push((start + i, start + i + 1));
+                styles.push((self.direction, self.priority));
             }
         }
 
-        if self.config.right_enabled {
-            if let Some(pts) = compute_offset_positions(
-                &self.chain_positions,
-                -self.config.right_distance,
-                self.config.base_spacing,
-            ) {
-                let start = nodes.len();
-                nodes.extend_from_slice(&pts);
-                for i in 0..pts.len().saturating_sub(1) {
-                    connections.push((start + i, start + i + 1));
-                    styles.push((self.direction, self.priority));
-                }
+        if let Some(pts) = cached.right_points.as_ref() {
+            let start = nodes.len();
+            nodes.extend_from_slice(pts);
+            for i in 0..pts.len().saturating_sub(1) {
+                connections.push((start + i, start + i + 1));
+                styles.push((self.direction, self.priority));
             }
         }
 
@@ -197,6 +236,8 @@ impl RouteToolCore for RouteOffsetTool {
         self.chain_start_id = 0;
         self.chain_end_id = 0;
         self.chain_inner_ids.clear();
+        self.chain_revision = self.chain_revision.wrapping_add(1);
+        self.invalidate_preview_cache();
         let snap_radius = self.lifecycle.snap_radius;
         self.lifecycle = ToolLifecycleState::new(snap_radius);
     }

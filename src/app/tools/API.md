@@ -34,6 +34,11 @@ pub struct ToolManager { /* intern */ }
 - `load_active_chain(chain)` — Laedt eine geordnete Kette ueber die `RouteToolChainInput`-Capability
 - `reset()` — Alle Tools zuruecksetzen, aktives deaktivieren
 
+**Katalog-Metadaten für UI-Surfaces:**
+
+- `RouteToolDescriptor.icon_key: RouteToolIconKey` — kanonischer Icon-Schluessel fuer Menue, Palette und Floating-UI
+- `RouteToolIconKey` entkoppelt UI-Icon-Aufloesung von direkten `RouteToolId`-Matches in einzelnen UI-Komponenten
+
 ---
 
 ## Route-Tool-Vertraege

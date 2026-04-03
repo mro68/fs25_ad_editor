@@ -15,9 +15,9 @@ pub(super) fn build_host_context(state: &AppState) -> ToolHostContext {
         direction: state.editor.default_direction,
         priority: state.editor.default_priority,
         snap_radius: state.options.snap_radius(),
-        farmland_data: state.farmland_polygons.clone(),
-        farmland_grid: state.farmland_grid.clone(),
-        background_image: state.background_image.clone(),
+        farmland_data: state.farmland_polygons_arc(),
+        farmland_grid: state.farmland_grid_arc(),
+        background_image: state.background_image_arc(),
     }
 }
 

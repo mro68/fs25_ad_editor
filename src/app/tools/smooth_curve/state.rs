@@ -158,22 +158,23 @@ impl SmoothCurveTool {
             }
         }
 
+        let empty_neighbors: &[Vec2] = &[];
         let input = super::geometry::SmoothCurveInput {
             start: start.position(),
             end: end.position(),
-            control_nodes: solver_control,
+            control_nodes: &solver_control,
             max_segment_length_m: self.seg.max_segment_length,
             max_direction_change_deg: self.max_angle_deg,
             // Wenn Steuerpunkte manuell gesetzt, keine Auto-Berechnung
             start_neighbor_directions: if self.approach_manual {
-                vec![]
+                empty_neighbors
             } else {
-                self.start_neighbor_dirs.clone()
+                self.start_neighbor_dirs.as_slice()
             },
             end_neighbor_directions: if self.departure_manual {
-                vec![]
+                empty_neighbors
             } else {
-                self.end_neighbor_dirs.clone()
+                self.end_neighbor_dirs.as_slice()
             },
             min_distance: self.min_distance,
         };
