@@ -1,5 +1,5 @@
 use crate::shared::{t, EditorOptions, I18nKey, Language, ValueAdjustInputMode};
-use crate::ui::common::apply_wheel_step;
+use crate::ui::common::{apply_wheel_step, apply_wheel_step_default};
 
 /// Rendert die Werkzeug-Einstellungen (Eingabemodus, Snap-Radius, Mausrad-Schritt).
 pub fn render_tools(ui: &mut egui::Ui, opts: &mut EditorOptions, lang: Language) -> bool {
@@ -54,17 +54,11 @@ pub fn render_tools(ui: &mut egui::Ui, opts: &mut EditorOptions, lang: Language)
         let r = ui.add(
             egui::DragValue::new(&mut opts.mouse_wheel_distance_step_m)
                 .range(0.01..=5.0)
-                .speed(0.01)
+                .speed(0.1)
                 .suffix(" m"),
         );
         changed |= r.changed()
-            | apply_wheel_step(
-                ui,
-                &r,
-                &mut opts.mouse_wheel_distance_step_m,
-                0.1,
-                0.01..=5.0,
-            );
+            | apply_wheel_step_default(ui, &r, &mut opts.mouse_wheel_distance_step_m, 0.01..=5.0);
         r.on_hover_text(t(lang, I18nKey::OptMouseWheelDistStepHelp));
     });
     changed

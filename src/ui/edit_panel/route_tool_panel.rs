@@ -15,7 +15,7 @@ use crate::app::ui_contract::{
     ROUTE_OFFSET_DISTANCE_LIMITS, SMOOTH_CURVE_MAX_ANGLE_LIMITS, SMOOTH_CURVE_MIN_DISTANCE_LIMITS,
 };
 use crate::app::{AppIntent, ConnectionDirection, ConnectionPriority};
-use crate::ui::common::{apply_wheel_step_adaptive, apply_wheel_step_usize};
+use crate::ui::common::{apply_wheel_step_default_enabled, apply_wheel_step_usize};
 use crate::ui::properties::selectors::{
     render_direction_icon_selector, render_priority_icon_selector,
 };
@@ -180,7 +180,7 @@ fn render_smooth_curve_panel(
         "Max. Winkel:",
         state.max_angle_deg,
         SMOOTH_CURVE_MAX_ANGLE_LIMITS.range(),
-        1.0,
+        0.1,
         "°",
         wheel_enabled,
         events,
@@ -196,7 +196,7 @@ fn render_smooth_curve_panel(
         "Min. Distanz:",
         state.min_distance,
         SMOOTH_CURVE_MIN_DISTANCE_LIMITS.range(),
-        0.25,
+        0.1,
         " m",
         wheel_enabled,
         events,
@@ -290,7 +290,7 @@ fn render_bypass_panel(
         "Versatz:",
         state.offset,
         BYPASS_OFFSET_LIMITS.range(),
-        0.25,
+        0.1,
         " m",
         wheel_enabled,
         events,
@@ -302,7 +302,7 @@ fn render_bypass_panel(
         "Basisabstand:",
         state.base_spacing,
         BYPASS_BASE_SPACING_LIMITS.range(),
-        0.25,
+        0.1,
         " m",
         wheel_enabled,
         events,
@@ -482,11 +482,11 @@ fn render_segment_config(
         let response = ui.add(
             egui::DragValue::new(&mut max_segment_length)
                 .range(range.clone())
-                .speed(0.25)
+                .speed(0.1)
                 .suffix(" m"),
         );
         if response.changed()
-            | apply_wheel_step_adaptive(
+            | apply_wheel_step_default_enabled(
                 ui,
                 &response,
                 &mut max_segment_length,
@@ -547,11 +547,11 @@ fn render_segment_distance_only(
         let response = ui.add(
             egui::DragValue::new(&mut max_segment_length)
                 .range(range.clone())
-                .speed(0.25)
+                .speed(0.1)
                 .suffix(" m"),
         );
         if response.changed()
-            | apply_wheel_step_adaptive(
+            | apply_wheel_step_default_enabled(
                 ui,
                 &response,
                 &mut max_segment_length,
@@ -695,7 +695,7 @@ fn render_parking_f32(
         label,
         current,
         range,
-        0.25,
+        0.1,
         suffix,
         wheel_enabled,
         events,
@@ -725,7 +725,7 @@ fn render_drag_f32(
                 .suffix(suffix),
         );
         if response.changed()
-            | apply_wheel_step_adaptive(ui, &response, &mut value, range, wheel_enabled)
+            | apply_wheel_step_default_enabled(ui, &response, &mut value, range, wheel_enabled)
         {
             push_action(events, map_action(value));
         }
@@ -779,7 +779,13 @@ fn render_slider_f32(
             egui::Slider::new(&mut value, range.clone()).suffix(suffix),
         );
         if response.changed()
-            | apply_wheel_step_adaptive(ui, &response, &mut value, range, wheel_enabled && enabled)
+            | apply_wheel_step_default_enabled(
+                ui,
+                &response,
+                &mut value,
+                range,
+                wheel_enabled && enabled,
+            )
         {
             push_action(events, map_action(value));
         }

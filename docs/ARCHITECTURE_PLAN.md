@@ -141,11 +141,11 @@ graph BT
 - `edit_panel.rs` — Kontextabhaengiges Edit-Panel fuer Gruppen-Edit, Streckenteilung und aktives Route-Tool
 - `properties.rs` — Properties-Panel
   - intern modularisiert über `properties/`-Submodule (u. a. Selektoren und Distanzen-Panel)
-- `options_dialog.rs` — Optionen-Dialog (Farben, Größen, Zoom)
+- `options_dialog/` — Optionen-Dialog (modales Fenster plus thematische `sections/*`)
 - `tool_preview.rs` — Tool-Preview-Overlay (Route-Tool-Vorschau im Viewport)
 - `dialogs.rs` — Datei-Dialoge und modale Fenster
 
-Numerische Mausrad-Interaktion fuer Route-Tool- und Analysis-Panels bleibt bewusst im UI-Layer: `render_edit_panel()` beziehungsweise `edit_panel/route_tool_panel.rs` reichen nur das boolesche Gate `wheel_enabled` weiter; Scroll-Auswertung, Modifier-Semantik (`Alt` x10, `Ctrl` x0.1 fuer Float, `Ctrl` ohne Effekt bei `usize`) und Wertanpassung werden zentral in `ui::common` gekapselt.
+Numerische Mausrad-Interaktion bleibt bewusst im UI-Layer: `ui::common` kapselt Scroll-Auswertung, Modifier-Semantik und Wertanpassung fuer Numeric-Widgets. Route-Tool- und Analysis-Panels reichen weiterhin nur das boolesche Gate `wheel_enabled` weiter; Komma-Float-Felder im Options-Dialog nutzen ueber `apply_wheel_step_default()` repo-weit den Default-Schritt `0.1`, waehrend Felder mit bewusst groberen Prozent-/Grad- oder ganzzahligen Pixel-Schritten ihre expliziten Schrittweiten behalten. Gehoverte Numeric-Widgets konsumieren Raw-/Smooth-Scroll-Impulse bereits in `wheel_dir()`, damit umgebende ScrollAreas kein Scroll-Through zeigen.
 
 **Darf**
 
@@ -558,7 +558,7 @@ src/
     drag.rs             # Drag-Operationen
     context_menu.rs     # Rechtsklick-Kontextmenü
     dialogs.rs          # Datei-Dialoge
-    options_dialog.rs   # Optionen-Dialog
+    options_dialog/     # Optionen-Dialog
     tool_preview.rs     # Tool-Preview-Overlay
 ```
 

@@ -9,8 +9,7 @@ pub(crate) const WHEEL_THRESHOLD: f32 = 0.5;
 /// Standard-Schrittweite fuer Mausrad-Anpassungen von Float-Werten.
 pub(crate) const DEFAULT_FLOAT_WHEEL_STEP: f32 = 0.1;
 
-const MEDIUM_FLOAT_WHEEL_STEP: f32 = 0.01;
-const FINE_FLOAT_WHEEL_STEP: f32 = 0.001;
+const SCROLL_CAPTURE_EPSILON: f32 = 0.000_001;
 const ALT_WHEEL_MULTIPLIER_F32: f32 = 10.0;
 const CTRL_WHEEL_MULTIPLIER_F32: f32 = 0.1;
 const ALT_WHEEL_MULTIPLIER_USIZE: usize = 10;
@@ -42,14 +41,18 @@ fn wheel_direction_from_deltas(raw: f32, _smooth: f32) -> f32 {
     }
 }
 
+fn should_capture_hovered_scroll(raw: f32, smooth: f32) -> bool {
+    raw.abs() > SCROLL_CAPTURE_EPSILON || smooth.abs() > SCROLL_CAPTURE_EPSILON
+}
+
 /// Ermittelt die Scroll-Richtung fuer ein gehovertes Widget und konsumiert das Event.
 ///
 /// Gibt `+1.0` (hoch), `-1.0` (runter) oder `0.0` (nicht gehovert / kein Scroll)
 /// zurueck. Fuer diskrete Numerik-Anpassungen wird bewusst nur
 /// `raw_scroll_delta` ausgewertet, damit ein physischer Wheel-Notch genau
-/// einen Schritt ausloest (kein Mehrfach-Feuern durch Smoothing).
-/// Nur wenn ein wirksamer Scroll-Impuls erkannt wurde, wird das Event nullgestellt,
-/// damit umgebende Scroll-Areas nicht gleichzeitig reagieren.
+/// einen Schritt ausloest (kein Mehrfach-Feuern durch Smoothing). Solange ein
+/// Numeric-Widget gehovert ist, werden Wheel-Events mit Raw- oder Smooth-Delta
+/// konsumiert, damit umgebende Scroll-Areas nicht gleichzeitig reagieren.
 pub(crate) fn wheel_dir(ui: &egui::Ui, response: &egui::Response) -> f32 {
     if !response.hovered() {
         return 0.0;
@@ -57,7 +60,7 @@ pub(crate) fn wheel_dir(ui: &egui::Ui, response: &egui::Response) -> f32 {
 
     let (raw, smooth) = ui.input(|i| (i.raw_scroll_delta.y, i.smooth_scroll_delta.y));
     let direction = wheel_direction_from_deltas(raw, smooth);
-    if direction != 0.0 {
+    if should_capture_hovered_scroll(raw, smooth) {
         ui.input_mut(|i| {
             i.raw_scroll_delta.y = 0.0;
             i.smooth_scroll_delta.y = 0.0;
@@ -94,41 +97,6 @@ pub(crate) fn apply_wheel_step(
     *value != old
 }
 
-/// Liefert eine adaptive Mausrad-Schrittweite fuer Float-Werte.
-///
-/// Standard ist `0.1`; bei kleinen Werten wird feiner auf `0.01` bzw. `0.001`
-/// reduziert.
-pub(crate) fn adaptive_float_wheel_step(value: f32) -> f32 {
-    let abs = value.abs();
-    if abs < 0.1 {
-        FINE_FLOAT_WHEEL_STEP
-    } else if abs < 1.0 {
-        MEDIUM_FLOAT_WHEEL_STEP
-    } else {
-        DEFAULT_FLOAT_WHEEL_STEP
-    }
-}
-
-/// Wendet adaptives Mausrad-Scrolling auf einen Float-Wert an.
-///
-/// Die Schrittweite wird ueber `adaptive_float_wheel_step()` bestimmt.
-/// Modifier wirken auf den adaptiven Basisschritt (`Alt` x10, `Ctrl` x0.1).
-/// Ist `wheel_enabled` `false`, wird keine Aenderung vorgenommen.
-pub(crate) fn apply_wheel_step_adaptive(
-    ui: &egui::Ui,
-    response: &egui::Response,
-    value: &mut f32,
-    range: std::ops::RangeInclusive<f32>,
-    wheel_enabled: bool,
-) -> bool {
-    if !wheel_enabled {
-        return false;
-    }
-
-    let step = adaptive_float_wheel_step(*value);
-    apply_wheel_step(ui, response, value, step, range)
-}
-
 /// Wendet Mausrad-Scrolling mit Ganzzahl-Schritten auf einen `usize`-Wert an.
 ///
 /// Bei Scroll-Impuls wird der Wert um genau `1` erhoeht oder verringert,
@@ -161,6 +129,31 @@ pub(crate) fn apply_wheel_step_usize(
     *value = (*value).clamp(*range.start(), *range.end());
 
     *value != old
+}
+
+/// Wendet Mausrad-Scrolling mit der Standard-Schrittweite (`0.1`) auf einen Float an.
+pub(crate) fn apply_wheel_step_default(
+    ui: &egui::Ui,
+    response: &egui::Response,
+    value: &mut f32,
+    range: std::ops::RangeInclusive<f32>,
+) -> bool {
+    apply_wheel_step(ui, response, value, DEFAULT_FLOAT_WHEEL_STEP, range)
+}
+
+/// Wendet den Float-Standardschritt (`0.1`) nur an, wenn Wheel-Anpassung aktiv ist.
+pub(crate) fn apply_wheel_step_default_enabled(
+    ui: &egui::Ui,
+    response: &egui::Response,
+    value: &mut f32,
+    range: std::ops::RangeInclusive<f32>,
+    wheel_enabled: bool,
+) -> bool {
+    if !wheel_enabled {
+        return false;
+    }
+
+    apply_wheel_step_default(ui, response, value, range)
 }
 
 /// Baut den zentralen Availability-Kontext fuer alle Route-Tool-Surfaces.
@@ -217,11 +210,17 @@ mod tests {
     }
 
     #[test]
-    fn adaptive_float_wheel_step_uses_expected_bands() {
-        assert_eq!(adaptive_float_wheel_step(2.0), DEFAULT_FLOAT_WHEEL_STEP);
-        assert_eq!(adaptive_float_wheel_step(0.5), MEDIUM_FLOAT_WHEEL_STEP);
-        assert_eq!(adaptive_float_wheel_step(0.05), FINE_FLOAT_WHEEL_STEP);
-        assert_eq!(adaptive_float_wheel_step(-0.05), FINE_FLOAT_WHEEL_STEP);
+    fn hovered_scroll_capture_detects_raw_and_smooth_deltas() {
+        assert!(should_capture_hovered_scroll(0.1, 0.0));
+        assert!(should_capture_hovered_scroll(0.0, 0.1));
+        assert!(should_capture_hovered_scroll(0.1, 0.1));
+    }
+
+    #[test]
+    fn hovered_scroll_capture_ignores_zero_or_tiny_noise() {
+        assert!(!should_capture_hovered_scroll(0.0, 0.0));
+        assert!(!should_capture_hovered_scroll(0.000_000_1, 0.0));
+        assert!(!should_capture_hovered_scroll(0.0, -0.000_000_1));
     }
 
     #[test]
@@ -243,21 +242,6 @@ mod tests {
         assert_f32_approx_eq(
             effective_float_wheel_step(base_step, modifiers(true, true)),
             0.1,
-        );
-    }
-
-    #[test]
-    fn adaptive_float_step_combines_with_modifiers() {
-        let adaptive_base = adaptive_float_wheel_step(0.05);
-        assert_eq!(adaptive_base, FINE_FLOAT_WHEEL_STEP);
-
-        assert_f32_approx_eq(
-            effective_float_wheel_step(adaptive_base, modifiers(true, false)),
-            0.01,
-        );
-        assert_f32_approx_eq(
-            effective_float_wheel_step(adaptive_base, modifiers(false, true)),
-            0.0001,
         );
     }
 
