@@ -3,6 +3,7 @@
 use anyhow::{Context, Result};
 use image::{DynamicImage, GenericImageView, ImageReader};
 use std::io::{BufReader, Cursor, Read};
+use std::sync::Arc;
 
 use super::WorldBounds;
 
@@ -21,7 +22,7 @@ pub struct ZipImageEntry {
 /// Background-Map fuer Map-Hintergrund-Rendering
 pub struct BackgroundMap {
     /// Bilddaten (nach Center-Crop)
-    image_data: DynamicImage,
+    image_data: Arc<DynamicImage>,
     /// Weltkoordinaten-Bereich
     world_bounds: WorldBounds,
     /// Opacity (0.0 = transparent, 1.0 = opak)
@@ -108,7 +109,12 @@ impl BackgroundMap {
 
     /// Gibt die Bilddaten zurueck
     pub fn image_data(&self) -> &DynamicImage {
-        &self.image_data
+        self.image_data.as_ref()
+    }
+
+    /// Gibt die Bilddaten als `Arc` zurueck.
+    pub(crate) fn image_arc(&self) -> Arc<DynamicImage> {
+        Arc::clone(&self.image_data)
     }
 
     /// Gibt die Weltkoordinaten-Begrenzungen zurueck
@@ -179,7 +185,7 @@ impl BackgroundMap {
         );
 
         Ok(Self {
-            image_data: image,
+            image_data: Arc::new(image),
             world_bounds,
             opacity: 1.0,
         })
@@ -307,7 +313,7 @@ mod tests {
     #[test]
     fn test_opacity_clamping() {
         let mut map = BackgroundMap {
-            image_data: DynamicImage::new_rgb8(1, 1),
+            image_data: Arc::new(DynamicImage::new_rgb8(1, 1)),
             world_bounds: WorldBounds::from_map_size(1.0),
             opacity: 1.0,
         };
