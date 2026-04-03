@@ -101,7 +101,7 @@ graph BT
 **Verantwortung**
 
 - Startet `EditorApp` aus `runtime.rs` heraus und bindet eframe/wgpu an die Layer-Architektur an
-- Sammelt pro Frame Panel-, Dialog-, Viewport- und Overlay-Events und reicht sie als `AppIntent` an `AppController` weiter
+- Sammelt pro Frame Panel-, Dialog-, Viewport- und Overlay-Events als `Vec<AppIntent>`, verarbeitet schalenlokale Events by-value und reicht nur die verbleibenden Intents an `AppController` weiter
 - Registriert den Render-Callback und verwaltet nur fensterlokalen Integrationszustand (`render::Renderer`, `ui::InputState`, Cursor-/Icon-Caches)
 
 **Darf**
@@ -165,7 +165,8 @@ graph BT
 - Use-Cases (Load/Save, Kamera, Selektion, Heightmap, Tools)
 - Aufbau von `RenderScene` aus Domain + ViewState
 - Schmale Read-only-Fassade fuer UI und Integrationsschale: app-eigene Typen plus bewusst ausgewaehlte Core-/Shared-Typen wie `ConnectionDirection`, `ConnectionPriority`, `RoadMap`, `Camera2D`, `RenderQuality`, `ZipImageEntry`
-- Kanonischer RouteTool-Katalog (`tools/catalog.rs`) als Single Source of Truth fuer `RouteToolId`, `RouteToolGroup`, `RouteToolBackingMode`, Surface-Sichtbarkeit und Aktivierungs-Voraussetzungen
+- Kanonischer RouteTool-Katalog (`tools/catalog.rs`) als Single Source of Truth fuer `RouteToolId`, `RouteToolGroup`, `RouteToolBackingMode`, `RouteToolIconKey`, Surface-Sichtbarkeit und Aktivierungs-Voraussetzungen
+- Konsolidierte Asset-Leseflaeche im `AppState`: `farmland_polygons_arc()`, `farmland_grid_arc()` und `background_image_arc()` kapseln die kanonischen Tool-/Host-Zugriffe; `view.background_map` bleibt Primaerquelle fuer Hintergrundbilder, `background_image` nur Kompatibilitaets-Fallback
 - Separater Tool-Editing-Layer (`tool_editing/*`) fuer persistente Tool-Snapshots, Rehydrierung sowie Cancel/Undo im destruktiven Tool-Edit-Flow
 
 **Abgrenzung**
@@ -306,10 +307,16 @@ pub struct AppState {
   pub ui: UiState,
   pub selection: SelectionState,
   pub editor: EditorToolState,
+  pub clipboard: Clipboard,
   pub command_log: CommandLog,
   pub history: EditHistory,
   pub options: EditorOptions,
   pub show_options_dialog: bool,
+  pub group_registry: GroupRegistry,
+  pub farmland_polygons: Option<Arc<Vec<FieldPolygon>>>,
+  pub farmland_grid: Option<Arc<FarmlandGrid>>,
+  pub background_image: Option<Arc<DynamicImage>>,
+  pub tool_edit_store: ToolEditStore,
   pub should_exit: bool,
 }
 ```
@@ -356,6 +363,8 @@ impl Renderer {
   );
 }
 ```
+
+`render_scene::build()` baut den render-seitigen `RenderMap`-Snapshot nur bei geaenderter `RoadMap::render_cache_key()` neu auf und legt ihn in `AppState::render_map_cache` ab. Jeder Rebuild protokolliert `nodes`, `connections`, `markers` und `approx_bytes`, damit Performance-Reports neben Laufzeiten auch die Snapshot-Groesse desselben Datensatzes dokumentieren koennen.
 
 ## Event- und Render-Fluss
 

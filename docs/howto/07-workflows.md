@@ -5,9 +5,10 @@
 ## Workflow 1: Kurs oeffnen und Arbeitsumgebung vorbereiten
 
 1. **Datei oeffnen** mit **`Ctrl+O`**.
-2. Automatische Erkennung fuer Heightmap, Uebersichtskarte oder passendes Map-ZIP pruefen.
-3. Falls noetig zusaetzlich eine Hintergrundkarte ueber **Ansicht -> Hintergrund laden...** laden.
-4. Im linken Panel Richtung und Strassenart fuer neue Verbindungen voreinstellen.
+2. Im Dialog **Nach dem Laden erkannt** pruefen, ob Heightmap und Hintergrundbild automatisch gesetzt wurden.
+3. Wenn ein passender Map-Mod-ZIP angeboten wird, **Uebersichtskarte generieren** waehlen, Layer einstellen und die erzeugte Karte bei Bedarf als `overview.png` speichern.
+4. Falls noetig zusaetzlich eine Hintergrundkarte ueber **Ansicht -> Hintergrund laden...** laden.
+5. Im linken Panel Richtung und Strassenart fuer neue Verbindungen voreinstellen.
 
 > **Tipp:** Analyse-Tools zeigen schon jetzt sichtbar an, ob noch Farmland-Daten oder eine Hintergrundkarte fehlen.
 
@@ -66,7 +67,7 @@
 4. Fuer eine Mittellinie zwischen zwei Feldseiten **Feldweg erkennen** waehlen.
 5. Die Vorschau pruefen und mit **`Enter`** uebernehmen.
 
-> **Tipp:** **Feld erkennen** erzeugt spaeter wieder oeffenbare Tool-Gruppen. **Feldweg erkennen** erzeugt ein normales Ergebnis ohne spaeteren Tool-Edit.
+> **Tipp:** Wenn Sie eine neu generierte Uebersichtskarte spaeter wiederverwenden wollen, bestaetigen Sie danach den Dialog zum Speichern als `overview.png`. **Feld erkennen** erzeugt spaeter wieder oeffenbare Tool-Gruppen. **Feldweg erkennen** erzeugt ein normales Ergebnis ohne spaeteren Tool-Edit.
 
 ---
 
