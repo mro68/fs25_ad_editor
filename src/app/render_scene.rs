@@ -12,6 +12,7 @@ use crate::shared::{
 };
 use indexmap::IndexSet;
 use std::collections::HashMap;
+use std::mem::size_of;
 use std::sync::{Arc, OnceLock};
 
 /// Gibt einen Arc auf eine leere, statisch initialisierte `IndexSet<u64>` zurueck.
@@ -115,6 +116,13 @@ fn build_render_map_snapshot(road_map: &RoadMap) -> RenderMap {
     RenderMap::new(nodes, connections, markers)
 }
 
+fn estimate_render_snapshot_bytes(snapshot: &RenderMap) -> usize {
+    let node_bytes = snapshot.node_count() * size_of::<RenderNode>();
+    let connection_bytes = snapshot.connection_count() * size_of::<RenderConnection>();
+    let marker_bytes = snapshot.marker_count() * size_of::<RenderMarker>();
+    node_bytes + connection_bytes + marker_bytes
+}
+
 fn render_map_snapshot(state: &AppState) -> Option<Arc<RenderMap>> {
     let road_map = state.road_map.as_deref()?;
     let (instance_id, revision) = road_map.render_cache_key();
@@ -128,6 +136,13 @@ fn render_map_snapshot(state: &AppState) -> Option<Arc<RenderMap>> {
         }
         _ => {
             let snapshot = Arc::new(build_render_map_snapshot(road_map));
+            log::debug!(
+                "RenderMap-Snapshot neu aufgebaut: nodes={}, connections={}, markers={}, approx_bytes={}",
+                snapshot.node_count(),
+                snapshot.connection_count(),
+                snapshot.marker_count(),
+                estimate_render_snapshot_bytes(snapshot.as_ref())
+            );
             *cache = Some((instance_id, revision, Arc::clone(&snapshot)));
             Some(snapshot)
         }
@@ -224,6 +239,15 @@ mod tests {
         let mut state = AppState::new();
         state.road_map = Some(Arc::new(make_map()));
         state
+    }
+
+    #[test]
+    fn build_render_scene_without_map_is_stable() {
+        let state = AppState::new();
+        let scene = super::build(&state, [1280.0, 720.0]);
+
+        assert!(!scene.has_map());
+        assert!(!scene.has_background());
     }
 
     #[test]
