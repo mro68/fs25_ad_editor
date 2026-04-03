@@ -258,10 +258,7 @@ pub fn render_menu(ctx: &egui::Context, state: &AppState) -> Vec<AppIntent> {
             });
 
             ui.menu_button(t(lang, I18nKey::MenuExtras), |ui| {
-                let has_farmland = state
-                    .farmland_polygons
-                    .as_ref()
-                    .is_some_and(|p| !p.is_empty());
+                let has_farmland = state.farmland_polygons_arc().is_some_and(|p| !p.is_empty());
                 if ui
                     .add_enabled(
                         has_farmland,
