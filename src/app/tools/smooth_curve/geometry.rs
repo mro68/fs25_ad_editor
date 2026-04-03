@@ -11,22 +11,22 @@ use crate::core::{ConnectionDirection, ConnectionPriority, RoadMap};
 use glam::Vec2;
 
 /// Eingabe-Parameter fuer den Geglättete-Kurve-Solver.
-#[derive(Debug, Clone)]
-pub struct SmoothCurveInput {
+#[derive(Debug, Clone, Copy)]
+pub struct SmoothCurveInput<'a> {
     /// Startposition der Route
     pub start: Vec2,
     /// Endposition der Route
     pub end: Vec2,
     /// Vom User gesetzte Zwischen-Kontrollpunkte (inkl. ggf. manuell verschobene Steuerpunkte)
-    pub control_nodes: Vec<Vec2>,
+    pub control_nodes: &'a [Vec2],
     /// Maximaler Abstand zwischen aufeinanderfolgenden Nodes (Meter)
     pub max_segment_length_m: f32,
     /// Maximale Richtungsaenderung pro Segment (Grad)
     pub max_direction_change_deg: f32,
     /// Richtungsvektoren bestehender Verbindungen am Startpunkt
-    pub start_neighbor_directions: Vec<Vec2>,
+    pub start_neighbor_directions: &'a [Vec2],
     /// Richtungsvektoren bestehender Verbindungen am Endpunkt
-    pub end_neighbor_directions: Vec<Vec2>,
+    pub end_neighbor_directions: &'a [Vec2],
     /// Minimaldistanz: Nodes die naeher beieinander liegen werden gefiltert (Meter)
     pub min_distance: f32,
 }
@@ -49,7 +49,7 @@ pub struct SolverResult {
 /// 2. Winkel-Constraints einhaelt (Chaikin-Corner-Cutting)
 /// 3. Glatte Uebergaenge zu bestehenden Verbindungen sicherstellt (Steerer-Nodes)
 /// 4. Gleichmaessig abgetastete Punkte mit ≤ max_segment_length Abstand liefert
-pub fn solve_route(input: &SmoothCurveInput) -> SolverResult {
+pub fn solve_route(input: &SmoothCurveInput<'_>) -> SolverResult {
     let max_angle_rad = input.max_direction_change_deg.to_radians();
     let total_dist = input.start.distance(input.end);
 
@@ -60,7 +60,7 @@ pub fn solve_route(input: &SmoothCurveInput) -> SolverResult {
     let approach_steerer = compute_approach_steerer(
         input.start,
         forward_dir,
-        &input.start_neighbor_directions,
+        input.start_neighbor_directions,
         max_angle_rad,
         input.max_segment_length_m,
         total_dist,
@@ -72,7 +72,7 @@ pub fn solve_route(input: &SmoothCurveInput) -> SolverResult {
     let departure_steerer = compute_departure_steerer(
         input.end,
         forward_to_end,
-        &input.end_neighbor_directions,
+        input.end_neighbor_directions,
         max_angle_rad,
         input.max_segment_length_m,
         total_dist,
@@ -84,7 +84,7 @@ pub fn solve_route(input: &SmoothCurveInput) -> SolverResult {
     if let Some(s) = approach_steerer {
         waypoints.push(s);
     }
-    waypoints.extend_from_slice(&input.control_nodes);
+    waypoints.extend_from_slice(input.control_nodes);
     if let Some(e) = departure_steerer {
         waypoints.push(e);
     }
@@ -333,11 +333,11 @@ pub(crate) fn build_result(p: &BuildResultParams, road_map: &RoadMap) -> Option<
     let input = SmoothCurveInput {
         start: p.start.position(),
         end: p.end.position(),
-        control_nodes: p.control_nodes.to_vec(),
+        control_nodes: p.control_nodes,
         max_segment_length_m: p.max_segment_length,
         max_direction_change_deg: p.max_angle_deg,
-        start_neighbor_directions: p.start_neighbor_dirs.to_vec(),
-        end_neighbor_directions: p.end_neighbor_dirs.to_vec(),
+        start_neighbor_directions: p.start_neighbor_dirs,
+        end_neighbor_directions: p.end_neighbor_dirs,
         min_distance: p.min_distance,
     };
 
