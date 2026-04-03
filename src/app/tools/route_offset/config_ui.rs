@@ -52,6 +52,10 @@ impl RouteOffsetTool {
             }
         };
 
+        if changed {
+            self.invalidate_preview_cache();
+        }
+
         RouteToolPanelEffect {
             changed,
             needs_recreate: false,

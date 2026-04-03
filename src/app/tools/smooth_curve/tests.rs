@@ -8,11 +8,11 @@ fn gerade_strecke_ohne_constraints() {
     let input = SmoothCurveInput {
         start: Vec2::new(0.0, 0.0),
         end: Vec2::new(30.0, 0.0),
-        control_nodes: vec![],
+        control_nodes: &[],
         max_segment_length_m: 6.0,
         max_direction_change_deg: 45.0,
-        start_neighbor_directions: vec![],
-        end_neighbor_directions: vec![],
+        start_neighbor_directions: &[],
+        end_neighbor_directions: &[],
         min_distance: 0.0,
     };
     let result = solve_route(&input);
@@ -33,11 +33,11 @@ fn strecke_mit_kontrollpunkt() {
     let input = SmoothCurveInput {
         start: Vec2::new(0.0, 0.0),
         end: Vec2::new(30.0, 0.0),
-        control_nodes: vec![Vec2::new(15.0, 10.0)],
+        control_nodes: &[Vec2::new(15.0, 10.0)],
         max_segment_length_m: 6.0,
         max_direction_change_deg: 45.0,
-        start_neighbor_directions: vec![],
-        end_neighbor_directions: vec![],
+        start_neighbor_directions: &[],
+        end_neighbor_directions: &[],
         min_distance: 0.0,
     };
     let result = solve_route(&input);
@@ -52,11 +52,11 @@ fn max_segment_laenge_eingehalten() {
     let input = SmoothCurveInput {
         start: Vec2::new(0.0, 0.0),
         end: Vec2::new(60.0, 0.0),
-        control_nodes: vec![],
+        control_nodes: &[],
         max_segment_length_m: 5.0,
         max_direction_change_deg: 90.0,
-        start_neighbor_directions: vec![],
-        end_neighbor_directions: vec![],
+        start_neighbor_directions: &[],
+        end_neighbor_directions: &[],
         min_distance: 0.0,
     };
     let result = solve_route(&input);
@@ -72,11 +72,11 @@ fn steerer_wird_bei_scharfem_winkel_eingefuegt() {
     let input = SmoothCurveInput {
         start: Vec2::new(0.0, 0.0),
         end: Vec2::new(30.0, 0.0),
-        control_nodes: vec![],
+        control_nodes: &[],
         max_segment_length_m: 6.0,
         max_direction_change_deg: 30.0,
-        start_neighbor_directions: vec![Vec2::new(0.0, -1.0)], // Nachbar nach unten
-        end_neighbor_directions: vec![],
+        start_neighbor_directions: &[Vec2::new(0.0, -1.0)], // Nachbar nach unten
+        end_neighbor_directions: &[],
         min_distance: 0.0,
     };
     let result = solve_route(&input);
@@ -94,8 +94,8 @@ fn steerer_wird_bei_scharfem_winkel_eingefuegt() {
     );
     // Mehr Punkte als ohne Steerer
     let input_ohne = SmoothCurveInput {
-        start_neighbor_directions: vec![],
-        ..input.clone()
+        start_neighbor_directions: &[],
+        ..input
     };
     let result_ohne = solve_route(&input_ohne);
     assert!(
@@ -109,11 +109,11 @@ fn kurze_strecke_liefert_mindestens_2_punkte() {
     let input = SmoothCurveInput {
         start: Vec2::new(0.0, 0.0),
         end: Vec2::new(1.0, 0.0),
-        control_nodes: vec![],
+        control_nodes: &[],
         max_segment_length_m: 6.0,
         max_direction_change_deg: 45.0,
-        start_neighbor_directions: vec![],
-        end_neighbor_directions: vec![],
+        start_neighbor_directions: &[],
+        end_neighbor_directions: &[],
         min_distance: 0.0,
     };
     let result = solve_route(&input);
@@ -125,11 +125,11 @@ fn identische_start_end_position() {
     let input = SmoothCurveInput {
         start: Vec2::new(10.0, 10.0),
         end: Vec2::new(10.0, 10.0),
-        control_nodes: vec![],
+        control_nodes: &[],
         max_segment_length_m: 6.0,
         max_direction_change_deg: 45.0,
-        start_neighbor_directions: vec![],
-        end_neighbor_directions: vec![],
+        start_neighbor_directions: &[],
+        end_neighbor_directions: &[],
         min_distance: 0.0,
     };
     let result = solve_route(&input);
@@ -189,11 +189,11 @@ fn solver_result_enthaelt_steuerpunkte() {
     let input = SmoothCurveInput {
         start: Vec2::new(0.0, 0.0),
         end: Vec2::new(20.0, 0.0),
-        control_nodes: vec![],
+        control_nodes: &[],
         max_segment_length_m: 5.0,
         max_direction_change_deg: 30.0,
-        start_neighbor_directions: vec![Vec2::new(0.0, -1.0)],
-        end_neighbor_directions: vec![Vec2::new(0.0, 1.0)],
+        start_neighbor_directions: &[Vec2::new(0.0, -1.0)],
+        end_neighbor_directions: &[Vec2::new(0.0, 1.0)],
         min_distance: 0.0,
     };
     let result = solve_route(&input);
