@@ -481,16 +481,17 @@ pub(crate) const DEFAULT_FLOAT_WHEEL_STEP: f32 = 0.1;
 
 /// Liefert fuer ein gehovertes Widget die Scroll-Richtung und konsumiert das Event.
 ///
-/// Die Richtung wird zuerst aus `raw_scroll_delta` und bei Bedarf aus
-/// `smooth_scroll_delta` bestimmt. Konsumiert wird nur bei wirksamem Impuls,
-/// damit umgebende ScrollAreas nicht bei reinem Rauschen blockiert werden.
+/// Fuer diskrete Numerik-Anpassungen wird nur `raw_scroll_delta` ausgewertet,
+/// damit ein Wheel-Notch genau einen Schritt ausloest. Konsumiert wird nur bei
+/// wirksamem Impuls, damit umgebende ScrollAreas nicht bei reinem Rauschen
+/// blockiert werden.
 pub(crate) fn wheel_dir(ui: &egui::Ui, response: &egui::Response) -> f32;
 
 /// Wendet Mausrad-Scrolling auf einen numerischen Wert an.
 ///
 /// Wenn die Response gehovert ist und ein Scroll-Event vorliegt,
 /// wird `value` um `step` in Scroll-Richtung veraendert und auf `range` geclampt.
-/// `Shift` vergroessert die Schrittweite (x10), `Ctrl` reduziert sie (x0.1).
+/// `Alt` vergroessert die Schrittweite (x10), `Ctrl` reduziert sie (x0.1).
 /// Gibt `true` zurueck wenn sich der Wert geaendert hat.
 pub(crate) fn apply_wheel_step(
     ui: &egui::Ui,
@@ -513,7 +514,7 @@ pub(crate) fn apply_wheel_step(
   ) -> bool;
 
   /// Wendet Mausrad-Scrolling mit Ganzzahl-Schritten auf einen `usize`-Wert an.
-  /// `Shift` vergroessert den Schritt (x10), `Ctrl` wird bei Ganzzahlen ignoriert.
+  /// `Alt` vergroessert den Schritt (x10), `Ctrl` wird bei Ganzzahlen ignoriert.
   pub(crate) fn apply_wheel_step_usize(
     ui: &egui::Ui,
     response: &egui::Response,
@@ -523,9 +524,9 @@ pub(crate) fn apply_wheel_step(
   ) -> bool;
 ```
 
-  `wheel_dir()` bleibt der gemeinsame Low-Level-Helfer fuer Widgets, die Mausrad-Impulse selbst in diskrete Aktionen umsetzen muessen, etwa die Distanz-/Node-Felder in `properties/distances.rs` und `edit_panel/streckenteilung_panel.rs`.
+  `wheel_dir()` bleibt der gemeinsame Low-Level-Helfer fuer Widgets, die Mausrad-Impulse selbst in diskrete Aktionen umsetzen muessen. Die Distanz-/Node-Felder in `properties/distances.rs` und `edit_panel/streckenteilung_panel.rs` verwenden inzwischen die Wrapper `apply_wheel_step()` und `apply_wheel_step_usize()`, damit Raw-Notch- und Modifier-Semantik zentral in `ui::common` gebuendelt bleiben.
 
-  `apply_wheel_step_adaptive()` und `apply_wheel_step_usize()` werden in numerischen Route-Tool-Unterpanels inklusive `analysis_panel.rs` eingesetzt: Float-Werte arbeiten mit konsistenten adaptiven Schritten (`0.1`, `0.01`, `0.001`) plus Modifiern (`Shift` x10, `Ctrl` x0.1). Ganzzahlen nutzen `±1` als Basisschritt; mit `Shift` wird auf `±10` skaliert, `Ctrl` reduziert Ganzzahl-Schritte nicht. `edit_panel/route_tool_panel.rs` leitet dafuer einmalig `wheel_enabled = distance_wheel_step_m > 0.0` an alle Unterrenderer weiter.
+  `apply_wheel_step_adaptive()` und `apply_wheel_step_usize()` werden in numerischen Route-Tool-Unterpanels inklusive `analysis_panel.rs` eingesetzt: Float-Werte arbeiten mit konsistenten adaptiven Schritten (`0.1`, `0.01`, `0.001`) plus Modifiern (`Alt` x10, `Ctrl` x0.1). Ganzzahlen nutzen `±1` als Basisschritt; mit `Alt` wird auf `±10` skaliert, `Ctrl` reduziert Ganzzahl-Schritte nicht. `edit_panel/route_tool_panel.rs` leitet dafuer einmalig `wheel_enabled = distance_wheel_step_m > 0.0` an alle Unterrenderer weiter.
 
 **Verwendung:**
 
