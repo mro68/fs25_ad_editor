@@ -9,6 +9,20 @@ use image::GenericImageView;
 use std::path::Path;
 use std::sync::Arc;
 
+fn apply_background_map(state: &mut AppState, bg_map: BackgroundMap) {
+    let image_arc = bg_map.image_arc();
+    state.view.background_map = Some(Arc::new(bg_map));
+    state.view.background_scale = 1.0;
+    state.view.background_dirty = true;
+    state.background_image = Some(image_arc);
+}
+
+fn clear_background_assets(state: &mut AppState) {
+    state.view.background_map = None;
+    state.view.background_dirty = true;
+    state.background_image = None;
+}
+
 /// Berechnet den JSON-Pfad fuer Farmland-Polygone parallel zur Bilddatei.
 ///
 /// Ersetzt die Dateiendung durch `.json` (z.B. `overview.png` → `overview.json`).
@@ -48,11 +62,7 @@ pub fn load_background_map(
     );
 
     // Speichere in State
-    let image_arc = Arc::new(bg_map.image_data().clone());
-    state.view.background_map = Some(Arc::new(bg_map));
-    state.view.background_scale = 1.0;
-    state.view.background_dirty = true;
-    state.background_image = Some(image_arc);
+    apply_background_map(state, bg_map);
 
     // Farmland-Polygone aus begleitender JSON-Datei laden (falls vorhanden)
     load_farmland_json(state, &path);
@@ -85,8 +95,7 @@ pub fn scale_background(state: &mut AppState, factor: f32) {
 
 /// Entfernt die Background-Map.
 pub fn clear_background_map(state: &mut AppState) {
-    state.view.background_map = None;
-    state.view.background_dirty = true;
+    clear_background_assets(state);
     log::info!("Background-Map entfernt");
 }
 
@@ -145,11 +154,7 @@ pub fn load_background_from_zip(
         bg_map.world_bounds()
     );
 
-    let image_arc = Arc::new(bg_map.image_data().clone());
-    state.view.background_map = Some(Arc::new(bg_map));
-    state.view.background_scale = 1.0;
-    state.view.background_dirty = true;
-    state.background_image = Some(image_arc);
+    apply_background_map(state, bg_map);
 
     // ZIP-Browser schliessen (falls offen)
     state.ui.zip_browser = None;
@@ -274,12 +279,8 @@ pub fn generate_overview_with_options(state: &mut AppState) -> Result<()> {
         state.farmland_grid = None;
     }
 
-    let bg_map = BackgroundMap::from_image(overview.image.clone(), &zip_path, None)?;
-
-    state.background_image = Some(Arc::new(overview.image));
-    state.view.background_map = Some(Arc::new(bg_map));
-    state.view.background_scale = 1.0;
-    state.view.background_dirty = true;
+    let bg_map = BackgroundMap::from_image(overview.image, &zip_path, None)?;
+    apply_background_map(state, bg_map);
 
     // Dialog schliessen
     state.ui.overview_options_dialog.visible = false;
