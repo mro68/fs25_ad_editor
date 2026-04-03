@@ -11,14 +11,14 @@ pub(crate) const DEFAULT_FLOAT_WHEEL_STEP: f32 = 0.1;
 
 const MEDIUM_FLOAT_WHEEL_STEP: f32 = 0.01;
 const FINE_FLOAT_WHEEL_STEP: f32 = 0.001;
-const SHIFT_WHEEL_MULTIPLIER_F32: f32 = 10.0;
+const ALT_WHEEL_MULTIPLIER_F32: f32 = 10.0;
 const CTRL_WHEEL_MULTIPLIER_F32: f32 = 0.1;
-const SHIFT_WHEEL_MULTIPLIER_USIZE: usize = 10;
+const ALT_WHEEL_MULTIPLIER_USIZE: usize = 10;
 
 fn effective_float_wheel_step(step: f32, modifiers: egui::Modifiers) -> f32 {
     let mut effective_step = step;
-    if modifiers.shift {
-        effective_step *= SHIFT_WHEEL_MULTIPLIER_F32;
+    if modifiers.alt {
+        effective_step *= ALT_WHEEL_MULTIPLIER_F32;
     }
     if modifiers.ctrl {
         effective_step *= CTRL_WHEEL_MULTIPLIER_F32;
@@ -27,18 +27,16 @@ fn effective_float_wheel_step(step: f32, modifiers: egui::Modifiers) -> f32 {
 }
 
 fn effective_usize_wheel_step(step: usize, modifiers: egui::Modifiers) -> usize {
-    if modifiers.shift {
-        step.saturating_mul(SHIFT_WHEEL_MULTIPLIER_USIZE)
+    if modifiers.alt {
+        step.saturating_mul(ALT_WHEEL_MULTIPLIER_USIZE)
     } else {
         step
     }
 }
 
-fn wheel_direction_from_deltas(raw: f32, smooth: f32) -> f32 {
+fn wheel_direction_from_deltas(raw: f32, _smooth: f32) -> f32 {
     if raw.abs() >= WHEEL_THRESHOLD {
         raw.signum()
-    } else if smooth.abs() >= WHEEL_THRESHOLD {
-        smooth.signum()
     } else {
         0.0
     }
@@ -47,8 +45,9 @@ fn wheel_direction_from_deltas(raw: f32, smooth: f32) -> f32 {
 /// Ermittelt die Scroll-Richtung fuer ein gehovertes Widget und konsumiert das Event.
 ///
 /// Gibt `+1.0` (hoch), `-1.0` (runter) oder `0.0` (nicht gehovert / kein Scroll)
-/// zurueck. Die Richtung wird zuerst aus `raw_scroll_delta` und bei Bedarf aus
-/// `smooth_scroll_delta` abgeleitet.
+/// zurueck. Fuer diskrete Numerik-Anpassungen wird bewusst nur
+/// `raw_scroll_delta` ausgewertet, damit ein physischer Wheel-Notch genau
+/// einen Schritt ausloest (kein Mehrfach-Feuern durch Smoothing).
 /// Nur wenn ein wirksamer Scroll-Impuls erkannt wurde, wird das Event nullgestellt,
 /// damit umgebende Scroll-Areas nicht gleichzeitig reagieren.
 pub(crate) fn wheel_dir(ui: &egui::Ui, response: &egui::Response) -> f32 {
@@ -72,7 +71,7 @@ pub(crate) fn wheel_dir(ui: &egui::Ui, response: &egui::Response) -> f32 {
 ///
 /// Wenn die Response gehovert ist und ein Scroll-Event vorliegt,
 /// wird `value` um `step` in Scroll-Richtung geaendert und auf `range` geclampt.
-/// `Shift` vergroessert die Schrittweite um Faktor 10, `Ctrl` reduziert sie auf 1/10.
+/// `Alt` vergroessert die Schrittweite um Faktor 10, `Ctrl` reduziert sie auf 1/10.
 /// Das Scroll-Event wird konsumiert (nullgestellt), damit uebergeordnete ScrollAreas
 /// nicht gleichzeitig scrollen.
 /// Gibt `true` zurueck wenn sich der Wert geaendert hat.
@@ -113,7 +112,7 @@ pub(crate) fn adaptive_float_wheel_step(value: f32) -> f32 {
 /// Wendet adaptives Mausrad-Scrolling auf einen Float-Wert an.
 ///
 /// Die Schrittweite wird ueber `adaptive_float_wheel_step()` bestimmt.
-/// Modifier wirken auf den adaptiven Basisschritt (`Shift` x10, `Ctrl` x0.1).
+/// Modifier wirken auf den adaptiven Basisschritt (`Alt` x10, `Ctrl` x0.1).
 /// Ist `wheel_enabled` `false`, wird keine Aenderung vorgenommen.
 pub(crate) fn apply_wheel_step_adaptive(
     ui: &egui::Ui,
@@ -133,7 +132,7 @@ pub(crate) fn apply_wheel_step_adaptive(
 /// Wendet Mausrad-Scrolling mit Ganzzahl-Schritten auf einen `usize`-Wert an.
 ///
 /// Bei Scroll-Impuls wird der Wert um genau `1` erhoeht oder verringert,
-/// anschliessend auf `range` geclampt. `Shift` vergroessert den Schritt auf `10`;
+/// anschliessend auf `range` geclampt. `Alt` vergroessert den Schritt auf `10`;
 /// `Ctrl` wird bei Ganzzahlen bewusst ignoriert. Ist `wheel_enabled` `false`, passiert nichts.
 pub(crate) fn apply_wheel_step_usize(
     ui: &egui::Ui,
@@ -187,9 +186,9 @@ pub(crate) fn route_tool_availability_context(state: &AppState) -> RouteToolAvai
 mod tests {
     use super::*;
 
-    fn modifiers(shift: bool, ctrl: bool) -> egui::Modifiers {
+    fn modifiers(alt: bool, ctrl: bool) -> egui::Modifiers {
         egui::Modifiers {
-            shift,
+            alt,
             ctrl,
             ..egui::Modifiers::default()
         }
@@ -206,9 +205,9 @@ mod tests {
     }
 
     #[test]
-    fn wheel_direction_falls_back_to_smooth_when_raw_is_noise() {
-        assert_eq!(wheel_direction_from_deltas(0.2, 0.8), 1.0);
-        assert_eq!(wheel_direction_from_deltas(-0.2, -0.8), -1.0);
+    fn wheel_direction_ignores_smooth_delta_for_discrete_notches() {
+        assert_eq!(wheel_direction_from_deltas(0.2, 2.0), 0.0);
+        assert_eq!(wheel_direction_from_deltas(-0.2, -2.0), 0.0);
     }
 
     #[test]
@@ -226,7 +225,7 @@ mod tests {
     }
 
     #[test]
-    fn float_wheel_step_applies_shift_and_ctrl_modifiers() {
+    fn float_wheel_step_applies_alt_and_ctrl_modifiers() {
         let base_step = 0.1;
 
         assert_f32_approx_eq(
@@ -263,7 +262,7 @@ mod tests {
     }
 
     #[test]
-    fn usize_wheel_step_ignores_ctrl_but_scales_with_shift() {
+    fn usize_wheel_step_ignores_ctrl_but_scales_with_alt() {
         assert_eq!(effective_usize_wheel_step(1, modifiers(false, false)), 1);
         assert_eq!(effective_usize_wheel_step(1, modifiers(false, true)), 1);
         assert_eq!(effective_usize_wheel_step(1, modifiers(true, false)), 10);

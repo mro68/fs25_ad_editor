@@ -145,7 +145,7 @@ graph BT
 - `tool_preview.rs` — Tool-Preview-Overlay (Route-Tool-Vorschau im Viewport)
 - `dialogs.rs` — Datei-Dialoge und modale Fenster
 
-Numerische Mausrad-Interaktion fuer Route-Tool- und Analysis-Panels bleibt bewusst im UI-Layer: `render_edit_panel()` beziehungsweise `edit_panel/route_tool_panel.rs` reichen nur das boolesche Gate `wheel_enabled` weiter; Scroll-Auswertung, Modifier-Semantik (`Shift` x10, `Ctrl` x0.1 fuer Float, `Ctrl` ohne Effekt bei `usize`) und Wertanpassung werden zentral in `ui::common` gekapselt.
+Numerische Mausrad-Interaktion fuer Route-Tool- und Analysis-Panels bleibt bewusst im UI-Layer: `render_edit_panel()` beziehungsweise `edit_panel/route_tool_panel.rs` reichen nur das boolesche Gate `wheel_enabled` weiter; Scroll-Auswertung, Modifier-Semantik (`Alt` x10, `Ctrl` x0.1 fuer Float, `Ctrl` ohne Effekt bei `usize`) und Wertanpassung werden zentral in `ui::common` gekapselt.
 
 **Darf**
 
