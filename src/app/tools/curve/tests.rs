@@ -1,5 +1,7 @@
 use super::super::common::angle_to_compass;
-use super::super::{RouteTool, ToolAction, ToolAnchor};
+use super::super::{
+    RouteToolCore, RouteToolDrag, RouteToolPanelBridge, RouteToolRecreate, ToolAction, ToolAnchor,
+};
 use super::geometry::{
     approx_length, compute_curve_positions, compute_tangent_cp, cubic_bezier,
     project_onto_tangent_line, quadratic_bezier, solve_cps_from_apex_both_tangents,

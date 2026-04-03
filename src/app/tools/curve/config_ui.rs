@@ -1,7 +1,7 @@
 //! Egui-freie Panel-Bruecke und Tangenten-Helfer fuer das Bézier-Kurven-Tool.
 
 use super::super::common::tangent_options;
-use super::super::RouteTool;
+use super::super::RouteToolCore;
 use super::geometry::{approx_length, cubic_bezier, quadratic_bezier};
 use super::state::{CurveDegree, CurveTool, Phase};
 use crate::app::tool_contract::TangentSource;

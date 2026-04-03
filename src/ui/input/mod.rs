@@ -103,6 +103,9 @@ impl InputState {
     /// `tangent_data` enthaelt optionale Tangenten-Menuedaten vom aktiven Route-Tool
     /// (nur bei kubischer Kurve in Control-Phase mit Nachbarn).
     ///
+    /// `route_tool_segment_shortcuts_active` schaltet die Pfeiltasten von Kamera-Pan
+    /// auf Segment-Shortcuts um, sobald das aktive Tool diese Capability aktuell anbietet.
+    ///
     /// `clipboard_has_data` zeigt an, ob die Zwischenablage Nodes enthaelt (fuer Paste-Precondition).
     pub fn collect_viewport_events(
         &mut self,
@@ -114,6 +117,7 @@ impl InputState {
         selected_node_ids: &IndexSet<u64>,
         active_tool: EditorTool,
         route_tool_is_drawing: bool,
+        route_tool_segment_shortcuts_active: bool,
         options: &EditorOptions,
         command_palette_open: bool,
         default_direction: ConnectionDirection,
@@ -152,6 +156,7 @@ impl InputState {
             selected_node_ids,
             active_tool,
             route_tool_is_drawing,
+            route_tool_segment_shortcuts_active,
             distanzen_state.active,
             clipboard_has_data,
             command_palette_open,

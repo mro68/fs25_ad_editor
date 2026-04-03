@@ -71,18 +71,16 @@ pub fn set_node_flag(state: &mut AppState, node_id: u64, flag: NodeFlag) {
 /// Aktualisiert die Standard-Richtung fuer neue Verbindungen.
 pub fn set_default_direction(state: &mut AppState, direction: ConnectionDirection) {
     state.editor.default_direction = direction;
-    if let Some(tool) = state.editor.tool_manager.active_tool_mut() {
-        tool.set_direction(direction);
-    }
+    let host_context = super::route_tool::build_host_context(state);
+    state.editor.tool_manager.sync_active_host(&host_context);
     log::info!("Standard-Verbindungsrichtung: {:?}", direction);
 }
 
 /// Aktualisiert die Standard-Prioritaet fuer neue Verbindungen.
 pub fn set_default_priority(state: &mut AppState, priority: ConnectionPriority) {
     state.editor.default_priority = priority;
-    if let Some(tool) = state.editor.tool_manager.active_tool_mut() {
-        tool.set_priority(priority);
-    }
+    let host_context = super::route_tool::build_host_context(state);
+    state.editor.tool_manager.sync_active_host(&host_context);
     log::info!("Standard-Strassenart: {:?}", priority);
 }
 

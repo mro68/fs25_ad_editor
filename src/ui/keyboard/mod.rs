@@ -47,6 +47,7 @@ pub(super) fn collect_keyboard_intents(
     selected_node_ids: &IndexSet<u64>,
     active_tool: EditorTool,
     route_tool_is_drawing: bool,
+    route_tool_segment_shortcuts_active: bool,
     distanzen_active: bool,
     clipboard_has_data: bool,
     command_palette_open: bool,
@@ -307,9 +308,8 @@ pub(super) fn collect_keyboard_intents(
         });
     }
 
-    // Arrow Keys fuer Route-Tool-Konfiguration (nur wenn Route-Tool aktiv und zeichnet)
-    if active_tool == EditorTool::Route
-        && route_tool_is_drawing
+    // Arrow Keys fuer Route-Tool-Konfiguration nur waehrend aktiver Segment-Capability.
+    if route_tool_segment_shortcuts_active
         && !modifiers.command
         && !modifiers.shift
         && !modifiers.alt
@@ -327,7 +327,7 @@ pub(super) fn collect_keyboard_intents(
             events.push(AppIntent::DecreaseRouteToolSegmentLength);
         }
     } else if !modifiers.command && !modifiers.shift && !modifiers.alt {
-        // Pfeiltasten fuer Kamera-Pan (außer im Route-Tool beim Zeichnen)
+        // Pfeiltasten fuer Kamera-Pan (außer bei aktiven Segment-Shortcuts)
         const PAN_STEP: f32 = 100.0;
         if key_up_pressed {
             events.push(AppIntent::CameraPan {

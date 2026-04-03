@@ -1,7 +1,11 @@
 //! RouteTool-Implementierung fuer das ParkingTool.
 
 use crate::app::group_registry::{GroupBase, GroupKind, GroupRecord};
-use crate::app::tools::{RouteToolId, ToolAction, ToolAnchor, ToolPreview, ToolResult};
+use crate::app::tools::common::sync_tool_host;
+use crate::app::tools::{
+    RouteTool, RouteToolCore, RouteToolHostSync, RouteToolId, RouteToolPanelBridge,
+    RouteToolRotate, ToolAction, ToolAnchor, ToolHostContext, ToolPreview, ToolResult,
+};
 use crate::app::ui_contract::{RouteToolConfigState, RouteToolPanelAction, RouteToolPanelEffect};
 use crate::core::RoadMap;
 use glam::Vec2;
@@ -9,27 +13,29 @@ use glam::Vec2;
 use super::geometry;
 use super::state::{ParkingPhase, ParkingTool};
 
-impl crate::app::tools::RouteTool for ParkingTool {
-    fn name(&self) -> &str {
-        "Parkplatz"
-    }
-
-    fn icon(&self) -> &str {
-        "\u{1f17f}" // 🅿
-    }
-
-    fn description(&self) -> &str {
-        "Erzeugt ein Parkplatz-Layout mit Wendekreis"
-    }
-
+impl RouteToolPanelBridge for ParkingTool {
     fn status_text(&self) -> &str {
         match self.phase {
             ParkingPhase::Idle => "Klicken zum Platzieren — Alt+Mausrad zum Drehen",
-            ParkingPhase::Configuring => "Layout konfigurieren — Bestätigen oder Abbrechen",
+            ParkingPhase::Configuring => "Layout konfigurieren — Bestaetigen oder Abbrechen",
             ParkingPhase::Adjusting => "Klicken zum Fixieren — Alt+Mausrad zum Drehen",
         }
     }
 
+    fn panel_state(&self) -> RouteToolConfigState {
+        RouteToolConfigState::Parking(self.panel_state())
+    }
+
+    fn apply_panel_action(&mut self, action: RouteToolPanelAction) -> RouteToolPanelEffect {
+        let RouteToolPanelAction::Parking(action) = action else {
+            return RouteToolPanelEffect::default();
+        };
+
+        self.apply_panel_action(action)
+    }
+}
+
+impl RouteToolCore for ParkingTool {
     fn on_click(&mut self, pos: Vec2, _road_map: &RoadMap, _ctrl: bool) -> ToolAction {
         match self.phase {
             ParkingPhase::Idle => {
@@ -38,27 +44,13 @@ impl crate::app::tools::RouteTool for ParkingTool {
                 ToolAction::Continue
             }
             ParkingPhase::Configuring => {
-                // Viewport-Klick waehrend Config → Repositionierung starten
                 self.phase = ParkingPhase::Adjusting;
                 ToolAction::Continue
             }
             ParkingPhase::Adjusting => {
-                // Erneuter Klick → Position fixieren, zurueck zu Configuring
                 self.origin = Some(pos);
                 self.phase = ParkingPhase::Configuring;
                 ToolAction::Continue
-            }
-        }
-    }
-
-    fn on_scroll_rotate(&mut self, delta: f32) {
-        // Nur in Idle oder Adjusting rotierbar (in Configuring ist alles fixiert)
-        if matches!(self.phase, ParkingPhase::Idle | ParkingPhase::Adjusting) {
-            let step = self.rotation_step_deg.to_radians();
-            if delta > 0.0 {
-                self.angle += step;
-            } else {
-                self.angle -= step;
             }
         }
     }
@@ -83,20 +75,7 @@ impl crate::app::tools::RouteTool for ParkingTool {
         geometry::build_preview(&layout)
     }
 
-    fn panel_state(&self) -> RouteToolConfigState {
-        RouteToolConfigState::Parking(self.panel_state())
-    }
-
-    fn apply_panel_action(&mut self, action: RouteToolPanelAction) -> RouteToolPanelEffect {
-        let RouteToolPanelAction::Parking(action) = action else {
-            return RouteToolPanelEffect::default();
-        };
-
-        self.apply_panel_action(action)
-    }
-
     fn execute(&self, _road_map: &RoadMap) -> Option<ToolResult> {
-        // Nur in Configuring-Phase ausfuehrbar (verhindert Execute mit veralteter Position)
         if self.phase != ParkingPhase::Configuring {
             return None;
         }
@@ -127,16 +106,44 @@ impl crate::app::tools::RouteTool for ParkingTool {
             ParkingPhase::Configuring | ParkingPhase::Adjusting
         )
     }
+}
 
-    // ── Lifecycle-Delegation ─────────────────────────────────────────────────
+impl RouteToolHostSync for ParkingTool {
+    fn sync_host(&mut self, context: &ToolHostContext) {
+        sync_tool_host(
+            &mut self.direction,
+            &mut self.priority,
+            &mut self.lifecycle,
+            context,
+        );
+    }
+}
 
-    crate::impl_lifecycle_delegation_no_seg!();
+impl RouteToolRotate for ParkingTool {
+    fn on_scroll_rotate(&mut self, delta: f32) {
+        if matches!(self.phase, ParkingPhase::Idle | ParkingPhase::Adjusting) {
+            let step = self.rotation_step_deg.to_radians();
+            if delta > 0.0 {
+                self.angle += step;
+            } else {
+                self.angle -= step;
+            }
+        }
+    }
+}
 
-    /// Erstellt einen `GroupRecord` fuer die Registry aus dem aktuellen Tool-Zustand.
+impl RouteTool for ParkingTool {
+    fn as_rotate(&self) -> Option<&dyn RouteToolRotate> {
+        Some(self)
+    }
+
+    fn as_rotate_mut(&mut self) -> Option<&mut dyn RouteToolRotate> {
+        Some(self)
+    }
+
     fn make_group_record(&self, id: u64, node_ids: &[u64]) -> Option<GroupRecord> {
         let origin = self.origin?;
         let angle = self.angle;
-        // n7 (Index 6) ist die Einfahrt, n8 (letzter Index) die Ausfahrt
         let entry_node_id = node_ids.get(6).copied();
         let exit_node_id = node_ids.last().copied();
         Some(GroupRecord {
@@ -145,8 +152,8 @@ impl crate::app::tools::RouteTool for ParkingTool {
             node_ids: node_ids.to_vec(),
             start_anchor: ToolAnchor::NewPosition(origin),
             end_anchor: ToolAnchor::NewPosition(origin),
-            original_positions: Vec::new(), // wird im Handler befuellt
-            marker_node_ids: Vec::new(),    // wird im Handler befuellt
+            original_positions: Vec::new(),
+            marker_node_ids: Vec::new(),
             locked: true,
             entry_node_id,
             exit_node_id,
@@ -163,7 +170,6 @@ impl crate::app::tools::RouteTool for ParkingTool {
         })
     }
 
-    /// Laedt einen gespeicherten `GroupRecord` zur nachtraeglichen Bearbeitung.
     fn load_for_edit(&mut self, _record: &GroupRecord, kind: &GroupKind) {
         let GroupKind::Parking {
             origin,

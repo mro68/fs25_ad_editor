@@ -1,7 +1,7 @@
 //! Egui-freie Panel-Bruecke fuer das Catmull-Rom-Spline-Tool.
 
 use super::super::common::tangent_options;
-use super::super::RouteTool;
+use super::super::RouteToolCore;
 use super::SplineTool;
 use crate::app::tool_contract::TangentSource;
 use crate::app::ui_contract::{

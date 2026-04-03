@@ -1,8 +1,10 @@
-//! Lifecycle-Methoden des CurveTool (on_click, preview, execute, reset, etc.).
+//! Lifecycle-Methoden des CurveTool.
 
 use super::super::{
-    common::{linear_connections, populate_neighbors},
-    RouteTool, RouteToolId, ToolAction, ToolPreview, ToolResult,
+    common::{linear_connections, populate_neighbors, record_applied_tool_state, sync_tool_host},
+    RouteTool, RouteToolCore, RouteToolDrag, RouteToolHostSync, RouteToolId, RouteToolPanelBridge,
+    RouteToolRecreate, RouteToolSegmentAdjustments, RouteToolTangent, ToolAction, ToolHostContext,
+    ToolPreview, ToolResult,
 };
 use super::geometry::{build_tool_result, cubic_bezier, CurveParams};
 use super::state::{CurveDegree, CurvePreviewCacheKey, CurveTool, Phase};
@@ -14,25 +16,7 @@ use crate::app::ui_contract::{
 use crate::core::RoadMap;
 use glam::Vec2;
 
-impl RouteTool for CurveTool {
-    fn name(&self) -> &str {
-        self.tool_name
-    }
-
-    fn icon(&self) -> &str {
-        match self.degree {
-            CurveDegree::Quadratic => "⌒",
-            CurveDegree::Cubic => "〜",
-        }
-    }
-
-    fn description(&self) -> &str {
-        match self.degree {
-            CurveDegree::Quadratic => "Zeichnet eine quadratische Bézier-Kurve (1 Steuerpunkt)",
-            CurveDegree::Cubic => "Zeichnet eine kubische Bézier-Kurve (2 Steuerpunkte)",
-        }
-    }
-
+impl RouteToolPanelBridge for CurveTool {
     fn status_text(&self) -> &str {
         match self.phase {
             Phase::Start => "Startpunkt klicken",
@@ -60,11 +44,24 @@ impl RouteTool for CurveTool {
         }
     }
 
+    fn panel_state(&self) -> RouteToolConfigState {
+        RouteToolConfigState::Curve(self.panel_state())
+    }
+
+    fn apply_panel_action(&mut self, action: RouteToolPanelAction) -> RouteToolPanelEffect {
+        let RouteToolPanelAction::Curve(action) = action else {
+            return RouteToolPanelEffect::default();
+        };
+
+        self.apply_panel_action(action)
+    }
+}
+
+impl RouteToolCore for CurveTool {
     fn on_click(&mut self, pos: Vec2, road_map: &RoadMap, _ctrl: bool) -> ToolAction {
         self.invalidate_preview_cache();
         match self.phase {
             Phase::Start => {
-                // Verkettung: letzten Endpunkt als Start verwenden
                 if let Some(last_end) = self.lifecycle.chaining_start_anchor() {
                     self.lifecycle.prepare_for_chaining();
                     self.last_start_anchor = None;
@@ -78,7 +75,6 @@ impl RouteTool for CurveTool {
                     self.end = Some(end_anchor);
                     self.tangents.reset_tangents();
                     self.phase = Phase::Control;
-                    // Auto-Tangente + beide CPs + Apex initialisieren
                     if self.degree == CurveDegree::Cubic {
                         self.auto_suggest_start_tangent();
                         self.auto_suggest_end_tangent();
@@ -103,7 +99,6 @@ impl RouteTool for CurveTool {
                 self.tangents.tangent_end = TangentSource::None;
                 self.end = Some(end_anchor);
                 self.phase = Phase::Control;
-                // Auto-Tangente + beide CPs + Apex initialisieren
                 if self.degree == CurveDegree::Cubic {
                     self.auto_suggest_start_tangent();
                     self.auto_suggest_end_tangent();
@@ -172,13 +167,11 @@ impl RouteTool for CurveTool {
                 let connections = linear_connections(positions.len());
                 let styles = vec![(self.direction, self.priority); connections.len()];
 
-                // Steuerpunkte als zusaetzliche Vorschau-Nodes
                 let mut nodes = positions;
                 nodes.push(cp1);
                 if self.degree == CurveDegree::Cubic {
                     let cp2 = cp2.unwrap_or_else(|| self.control_point2.unwrap_or(cursor_pos));
                     nodes.push(cp2);
-                    // Virtueller Scheitelpunkt B(0.5) als draggbares Handle
                     let apex = self
                         .virtual_apex
                         .unwrap_or_else(|| cubic_bezier(start_pos, cp1, cp2, end_pos, 0.5));
@@ -196,18 +189,6 @@ impl RouteTool for CurveTool {
         }
     }
 
-    fn panel_state(&self) -> RouteToolConfigState {
-        RouteToolConfigState::Curve(self.panel_state())
-    }
-
-    fn apply_panel_action(&mut self, action: RouteToolPanelAction) -> RouteToolPanelEffect {
-        let RouteToolPanelAction::Curve(action) = action else {
-            return RouteToolPanelEffect::default();
-        };
-
-        self.apply_panel_action(action)
-    }
-
     fn execute(&self, road_map: &RoadMap) -> Option<ToolResult> {
         let start = self.start.as_ref()?;
         let end = self.end.as_ref()?;
@@ -222,11 +203,6 @@ impl RouteTool for CurveTool {
         build_tool_result(start, end, &params, road_map)
     }
 
-    /// Setzt das Tool vollstaendig zurueck (inkl. Tangenten und Phase).
-    ///
-    /// Im Gegensatz zu StraightLine/Spline werden hier auch Tangenten
-    /// komplett zurueckgesetzt, da Control Points die primaere Steuerung sind.
-    /// `lifecycle.last_created_ids` und `last_*_anchor` bleiben erhalten.
     fn reset(&mut self) {
         self.invalidate_preview_cache();
         self.start = None;
@@ -245,14 +221,21 @@ impl RouteTool for CurveTool {
     fn has_pending_input(&self) -> bool {
         self.phase != Phase::Start
     }
+}
 
-    crate::impl_lifecycle_delegation!();
-
-    fn current_end_anchor(&self) -> Option<super::super::ToolAnchor> {
-        self.end.or(self.lifecycle.last_end_anchor)
+impl RouteToolHostSync for CurveTool {
+    fn sync_host(&mut self, context: &ToolHostContext) {
+        sync_tool_host(
+            &mut self.direction,
+            &mut self.priority,
+            &mut self.lifecycle,
+            context,
+        );
     }
+}
 
-    fn save_anchors_for_recreate(&mut self, _road_map: &RoadMap) {
+impl RouteToolRecreate for CurveTool {
+    fn on_applied(&mut self, ids: &[u64], _road_map: &RoadMap) {
         if self.start.is_some() {
             self.last_start_anchor = self.start;
         }
@@ -263,6 +246,24 @@ impl RouteTool for CurveTool {
             self.last_control_point2 = self.control_point2;
         }
         self.tangents.save_for_recreate();
+        let end_anchor = self.end.or(self.lifecycle.last_end_anchor);
+        record_applied_tool_state(&mut self.lifecycle, ids, end_anchor);
+    }
+
+    fn last_created_ids(&self) -> &[u64] {
+        &self.lifecycle.last_created_ids
+    }
+
+    fn last_end_anchor(&self) -> Option<super::super::ToolAnchor> {
+        self.lifecycle.last_end_anchor
+    }
+
+    fn needs_recreate(&self) -> bool {
+        self.lifecycle.recreate_needed
+    }
+
+    fn clear_recreate_flag(&mut self) {
+        self.lifecycle.recreate_needed = false;
     }
 
     fn execute_from_anchors(&self, road_map: &RoadMap) -> Option<ToolResult> {
@@ -278,7 +279,9 @@ impl RouteTool for CurveTool {
         };
         build_tool_result(start, end, &params, road_map)
     }
+}
 
+impl RouteToolDrag for CurveTool {
     fn drag_targets(&self) -> Vec<Vec2> {
         super::drag::drag_targets(self)
     }
@@ -294,13 +297,71 @@ impl RouteTool for CurveTool {
     fn on_drag_end(&mut self, road_map: &RoadMap) {
         super::drag::on_drag_end(self, road_map);
     }
+}
 
+impl RouteToolTangent for CurveTool {
     fn tangent_menu_data(&self) -> Option<TangentMenuData> {
         self.build_tangent_menu_data()
     }
 
     fn apply_tangent_selection(&mut self, start: TangentSource, end: TangentSource) {
         self.apply_tangent_from_menu(start, end);
+    }
+}
+
+impl RouteToolSegmentAdjustments for CurveTool {
+    fn increase_node_count(&mut self) {
+        self.seg.increase_node_count();
+        self.lifecycle.recreate_needed = true;
+    }
+
+    fn decrease_node_count(&mut self) {
+        self.seg.decrease_node_count();
+        self.lifecycle.recreate_needed = true;
+    }
+
+    fn increase_segment_length(&mut self) {
+        self.seg.increase_segment_length();
+        self.lifecycle.recreate_needed = true;
+    }
+
+    fn decrease_segment_length(&mut self) {
+        self.seg.decrease_segment_length();
+        self.lifecycle.recreate_needed = true;
+    }
+}
+
+impl RouteTool for CurveTool {
+    fn as_recreate(&self) -> Option<&dyn RouteToolRecreate> {
+        Some(self)
+    }
+
+    fn as_recreate_mut(&mut self) -> Option<&mut dyn RouteToolRecreate> {
+        Some(self)
+    }
+
+    fn as_drag(&self) -> Option<&dyn RouteToolDrag> {
+        Some(self)
+    }
+
+    fn as_drag_mut(&mut self) -> Option<&mut dyn RouteToolDrag> {
+        Some(self)
+    }
+
+    fn as_tangent(&self) -> Option<&dyn RouteToolTangent> {
+        Some(self)
+    }
+
+    fn as_tangent_mut(&mut self) -> Option<&mut dyn RouteToolTangent> {
+        Some(self)
+    }
+
+    fn as_segment_adjustments(&self) -> Option<&dyn RouteToolSegmentAdjustments> {
+        Some(self)
+    }
+
+    fn as_segment_adjustments_mut(&mut self) -> Option<&mut dyn RouteToolSegmentAdjustments> {
+        Some(self)
     }
 
     fn make_group_record(&self, id: u64, node_ids: &[u64]) -> Option<GroupRecord> {

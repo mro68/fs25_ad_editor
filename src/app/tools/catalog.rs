@@ -95,6 +95,10 @@ pub struct RouteToolDescriptor {
     pub id: RouteToolId,
     /// Kanonischer Anzeigename des Tools.
     pub name: &'static str,
+    /// Legacy-Icon fuer textbasierte Toollisten und Tests.
+    pub legacy_icon: &'static str,
+    /// Kurzbeschreibung des Tools.
+    pub description: &'static str,
     /// Anzeige-Gruppe ueber alle Surfaces.
     pub group: RouteToolGroup,
     /// Surfaces, auf denen das Tool sichtbar ist.
@@ -210,6 +214,8 @@ pub const ROUTE_TOOL_CATALOG: [RouteToolDescriptor; 11] = [
     RouteToolDescriptor {
         id: RouteToolId::Straight,
         name: "Gerade Strecke",
+        legacy_icon: "━",
+        description: "Zeichnet eine gerade Linie zwischen zwei Punkten mit Zwischen-Nodes",
         group: RouteToolGroup::Basics,
         visible_on: &ALL_ROUTE_TOOL_SURFACES,
         requirements: &REQUIREMENTS_NONE,
@@ -219,6 +225,8 @@ pub const ROUTE_TOOL_CATALOG: [RouteToolDescriptor; 11] = [
     RouteToolDescriptor {
         id: RouteToolId::CurveQuad,
         name: "Bézier Grad 2",
+        legacy_icon: "⌒",
+        description: "Zeichnet eine quadratische Bézier-Kurve mit einem Steuerpunkt",
         group: RouteToolGroup::Basics,
         visible_on: &ALL_ROUTE_TOOL_SURFACES,
         requirements: &REQUIREMENTS_NONE,
@@ -228,6 +236,8 @@ pub const ROUTE_TOOL_CATALOG: [RouteToolDescriptor; 11] = [
     RouteToolDescriptor {
         id: RouteToolId::CurveCubic,
         name: "Bézier Grad 3",
+        legacy_icon: "〜",
+        description: "Zeichnet eine kubische Bézier-Kurve mit zwei Steuerpunkten",
         group: RouteToolGroup::Basics,
         visible_on: &ALL_ROUTE_TOOL_SURFACES,
         requirements: &REQUIREMENTS_NONE,
@@ -237,6 +247,8 @@ pub const ROUTE_TOOL_CATALOG: [RouteToolDescriptor; 11] = [
     RouteToolDescriptor {
         id: RouteToolId::Spline,
         name: "Spline",
+        legacy_icon: "〰",
+        description: "Zeichnet einen Catmull-Rom-Spline durch alle geklickten Punkte",
         group: RouteToolGroup::Basics,
         visible_on: &ALL_ROUTE_TOOL_SURFACES,
         requirements: &REQUIREMENTS_NONE,
@@ -246,6 +258,8 @@ pub const ROUTE_TOOL_CATALOG: [RouteToolDescriptor; 11] = [
     RouteToolDescriptor {
         id: RouteToolId::Bypass,
         name: "Ausweichstrecke",
+        legacy_icon: "⤴",
+        description: "Generiert eine parallele Ausweichstrecke zur selektierten Kette",
         group: RouteToolGroup::Section,
         visible_on: &ALL_ROUTE_TOOL_SURFACES,
         requirements: &REQUIREMENT_ORDERED_CHAIN,
@@ -255,6 +269,9 @@ pub const ROUTE_TOOL_CATALOG: [RouteToolDescriptor; 11] = [
     RouteToolDescriptor {
         id: RouteToolId::SmoothCurve,
         name: "Geglättete Kurve",
+        legacy_icon: "⊿",
+        description:
+            "Erzeugt eine winkelgeglaettete Route mit automatischen Tangenten-Uebergaengen",
         group: RouteToolGroup::Basics,
         visible_on: &ALL_ROUTE_TOOL_SURFACES,
         requirements: &REQUIREMENTS_NONE,
@@ -264,6 +281,8 @@ pub const ROUTE_TOOL_CATALOG: [RouteToolDescriptor; 11] = [
     RouteToolDescriptor {
         id: RouteToolId::Parking,
         name: "Parkplatz",
+        legacy_icon: "\u{1f17f}",
+        description: "Erzeugt ein Parkplatz-Layout mit Wendekreis",
         group: RouteToolGroup::Section,
         visible_on: &ALL_ROUTE_TOOL_SURFACES,
         requirements: &REQUIREMENTS_NONE,
@@ -273,6 +292,8 @@ pub const ROUTE_TOOL_CATALOG: [RouteToolDescriptor; 11] = [
     RouteToolDescriptor {
         id: RouteToolId::FieldBoundary,
         name: "Feld erkennen",
+        legacy_icon: "\u{1f33e}",
+        description: "Erzeugt eine Route entlang der erkannten Feldgrenze",
         group: RouteToolGroup::Analysis,
         visible_on: &ALL_ROUTE_TOOL_SURFACES,
         requirements: &REQUIREMENT_FARMLAND,
@@ -282,6 +303,8 @@ pub const ROUTE_TOOL_CATALOG: [RouteToolDescriptor; 11] = [
     RouteToolDescriptor {
         id: RouteToolId::FieldPath,
         name: "Feldweg",
+        legacy_icon: "\u{1f6e4}",
+        description: "Berechnet Mittellinien zwischen Farmland-Grenzen",
         group: RouteToolGroup::Analysis,
         visible_on: &ALL_ROUTE_TOOL_SURFACES,
         requirements: &REQUIREMENT_FARMLAND,
@@ -291,6 +314,8 @@ pub const ROUTE_TOOL_CATALOG: [RouteToolDescriptor; 11] = [
     RouteToolDescriptor {
         id: RouteToolId::RouteOffset,
         name: "Strecke versetzen",
+        legacy_icon: "⇶",
+        description: "Verschiebt eine selektierte Kette parallel nach links und/oder rechts",
         group: RouteToolGroup::Section,
         visible_on: &ALL_ROUTE_TOOL_SURFACES,
         requirements: &REQUIREMENT_ORDERED_CHAIN,
@@ -300,6 +325,8 @@ pub const ROUTE_TOOL_CATALOG: [RouteToolDescriptor; 11] = [
     RouteToolDescriptor {
         id: RouteToolId::ColorPath,
         name: "Farb-Pfad",
+        legacy_icon: "🎨",
+        description: "Erkennt Wege anhand der Farbe im Hintergrundbild",
         group: RouteToolGroup::Analysis,
         visible_on: &ALL_ROUTE_TOOL_SURFACES,
         requirements: &REQUIREMENT_BACKGROUND,

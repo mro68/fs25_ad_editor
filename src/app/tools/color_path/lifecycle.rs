@@ -5,7 +5,11 @@
 use image::GenericImageView;
 use std::sync::Arc;
 
-use crate::app::tools::{ToolAction, ToolPreview, ToolResult};
+use crate::app::tools::common::sync_tool_host;
+use crate::app::tools::{
+    RouteTool, RouteToolCore, RouteToolHostSync, RouteToolLassoInput, RouteToolPanelBridge,
+    ToolAction, ToolHostContext, ToolPreview, ToolResult,
+};
 use crate::app::ui_contract::{RouteToolConfigState, RouteToolPanelAction, RouteToolPanelEffect};
 use crate::core::{FarmlandGrid, RoadMap};
 use glam::Vec2;
@@ -78,21 +82,54 @@ impl ColorPathTool {
 
         self.phase = ColorPathPhase::Preview;
     }
+
+    /// Setzt das Hintergrundbild fuer die Sampling-Pipeline.
+    pub(crate) fn set_background_map_image(&mut self, image: Option<Arc<image::DynamicImage>>) {
+        let previous_image_id = self
+            .background_image
+            .as_ref()
+            .map(|current| Arc::as_ptr(current) as usize);
+        let previous_map_size_bits = self.map_size.to_bits();
+
+        if let Some(ref img) = image {
+            let (w, h) = img.dimensions();
+            let img_map_size = w.min(h) as f32;
+            if self.map_size == 2048.0 || (self.map_size - img_map_size).abs() > 1.0 {
+                log::info!(
+                    "ColorPathTool: map_size aus Bild abgeleitet: {} (war {})",
+                    img_map_size,
+                    self.map_size
+                );
+                self.map_size = img_map_size;
+            }
+        }
+        self.background_image = image;
+
+        let current_image_id = self
+            .background_image
+            .as_ref()
+            .map(|current| Arc::as_ptr(current) as usize);
+        let context_changed = previous_image_id != current_image_id
+            || previous_map_size_bits != self.map_size.to_bits();
+        if context_changed {
+            self.cache.rgb_image = None;
+            self.on_sampling_context_changed();
+        }
+    }
+
+    /// Leitet optionale Farmland-Grid-Infos in die Sampling-Pipeline weiter.
+    pub(crate) fn set_farmland_grid(&mut self, grid: Option<Arc<FarmlandGrid>>) {
+        if let Some(g) = &grid {
+            let previous_map_size_bits = self.map_size.to_bits();
+            self.map_size = g.map_size;
+            if previous_map_size_bits != self.map_size.to_bits() {
+                self.on_sampling_context_changed();
+            }
+        }
+    }
 }
 
-impl crate::app::tools::RouteTool for ColorPathTool {
-    fn name(&self) -> &str {
-        "Farb-Pfad"
-    }
-
-    fn icon(&self) -> &str {
-        "🎨"
-    }
-
-    fn description(&self) -> &str {
-        "Wege anhand der Farbe im Hintergrundbild erkennen"
-    }
-
+impl RouteToolPanelBridge for ColorPathTool {
     fn status_text(&self) -> &str {
         match self.phase {
             ColorPathPhase::Idle => "Alt+Lasso fuer Farbsample",
@@ -101,6 +138,20 @@ impl crate::app::tools::RouteTool for ColorPathTool {
         }
     }
 
+    fn panel_state(&self) -> RouteToolConfigState {
+        RouteToolConfigState::ColorPath(self.panel_state())
+    }
+
+    fn apply_panel_action(&mut self, action: RouteToolPanelAction) -> RouteToolPanelEffect {
+        let RouteToolPanelAction::ColorPath(action) = action else {
+            return RouteToolPanelEffect::default();
+        };
+
+        self.apply_panel_action(action)
+    }
+}
+
+impl RouteToolCore for ColorPathTool {
     fn on_click(&mut self, _pos: Vec2, _road_map: &RoadMap, _ctrl: bool) -> ToolAction {
         match self.phase {
             ColorPathPhase::Idle => {
@@ -109,6 +160,62 @@ impl crate::app::tools::RouteTool for ColorPathTool {
             }
             ColorPathPhase::Sampling | ColorPathPhase::Preview => ToolAction::Continue,
         }
+    }
+
+    fn preview(&self, _cursor_pos: Vec2, _road_map: &RoadMap) -> ToolPreview {
+        match self.phase {
+            ColorPathPhase::Idle => ToolPreview::default(),
+            ColorPathPhase::Sampling => self.build_sampling_preview(),
+            ColorPathPhase::Preview => self.build_network_preview(),
+        }
+    }
+
+    fn execute(&self, road_map: &RoadMap) -> Option<ToolResult> {
+        if self.phase != ColorPathPhase::Preview {
+            return None;
+        }
+
+        self.execute_result(road_map)
+    }
+
+    fn reset(&mut self) {
+        self.phase = ColorPathPhase::Idle;
+        self.sampling = super::state::SamplingInput::default();
+        self.matching = super::state::MatchingSpec::default();
+        self.sampling_preview = None;
+        self.preview_data = None;
+        self.cache = super::state::ColorPathCacheState::default();
+    }
+
+    fn is_ready(&self) -> bool {
+        self.phase == ColorPathPhase::Preview
+            && self
+                .preview_data
+                .as_ref()
+                .is_some_and(|preview| !preview.prepared_segments.is_empty())
+    }
+
+    fn has_pending_input(&self) -> bool {
+        self.phase != ColorPathPhase::Idle
+    }
+}
+
+impl RouteToolHostSync for ColorPathTool {
+    fn sync_host(&mut self, context: &ToolHostContext) {
+        sync_tool_host(
+            &mut self.direction,
+            &mut self.priority,
+            &mut self.lifecycle,
+            context,
+        );
+        self.set_background_map_image(context.background_image.clone());
+        self.set_farmland_grid(context.farmland_grid.clone());
+    }
+}
+
+impl RouteToolLassoInput for ColorPathTool {
+    fn is_lasso_input_active(&self) -> bool {
+        self.phase == ColorPathPhase::Sampling
     }
 
     fn on_lasso_completed(&mut self, polygon: Vec<Vec2>) -> ToolAction {
@@ -148,104 +255,16 @@ impl crate::app::tools::RouteTool for ColorPathTool {
         );
         ToolAction::Continue
     }
+}
 
-    fn needs_lasso_input(&self) -> bool {
-        self.phase == ColorPathPhase::Sampling
+impl RouteTool for ColorPathTool {
+    fn as_lasso_input(&self) -> Option<&dyn RouteToolLassoInput> {
+        Some(self)
     }
 
-    fn preview(&self, _cursor_pos: Vec2, _road_map: &RoadMap) -> ToolPreview {
-        match self.phase {
-            ColorPathPhase::Idle => ToolPreview::default(),
-            ColorPathPhase::Sampling => self.build_sampling_preview(),
-            ColorPathPhase::Preview => self.build_network_preview(),
-        }
+    fn as_lasso_input_mut(&mut self) -> Option<&mut dyn RouteToolLassoInput> {
+        Some(self)
     }
-
-    fn execute(&self, road_map: &RoadMap) -> Option<ToolResult> {
-        if self.phase != ColorPathPhase::Preview {
-            return None;
-        }
-
-        self.execute_result(road_map)
-    }
-
-    fn panel_state(&self) -> RouteToolConfigState {
-        RouteToolConfigState::ColorPath(self.panel_state())
-    }
-
-    fn apply_panel_action(&mut self, action: RouteToolPanelAction) -> RouteToolPanelEffect {
-        let RouteToolPanelAction::ColorPath(action) = action else {
-            return RouteToolPanelEffect::default();
-        };
-
-        self.apply_panel_action(action)
-    }
-
-    fn reset(&mut self) {
-        self.phase = ColorPathPhase::Idle;
-        self.sampling = super::state::SamplingInput::default();
-        self.matching = super::state::MatchingSpec::default();
-        self.sampling_preview = None;
-        self.preview_data = None;
-        self.cache = super::state::ColorPathCacheState::default();
-    }
-
-    fn is_ready(&self) -> bool {
-        self.phase == ColorPathPhase::Preview
-            && self
-                .preview_data
-                .as_ref()
-                .is_some_and(|preview| !preview.prepared_segments.is_empty())
-    }
-
-    fn has_pending_input(&self) -> bool {
-        self.phase != ColorPathPhase::Idle
-    }
-
-    fn set_background_map_image(&mut self, image: Option<Arc<image::DynamicImage>>) {
-        let previous_image_id = self
-            .background_image
-            .as_ref()
-            .map(|current| Arc::as_ptr(current) as usize);
-        let previous_map_size_bits = self.map_size.to_bits();
-
-        if let Some(ref img) = image {
-            let (w, h) = img.dimensions();
-            let img_map_size = w.min(h) as f32;
-            if self.map_size == 2048.0 || (self.map_size - img_map_size).abs() > 1.0 {
-                log::info!(
-                    "ColorPathTool: map_size aus Bild abgeleitet: {} (war {})",
-                    img_map_size,
-                    self.map_size
-                );
-                self.map_size = img_map_size;
-            }
-        }
-        self.background_image = image;
-
-        let current_image_id = self
-            .background_image
-            .as_ref()
-            .map(|current| Arc::as_ptr(current) as usize);
-        let context_changed = previous_image_id != current_image_id
-            || previous_map_size_bits != self.map_size.to_bits();
-        if context_changed {
-            self.cache.rgb_image = None;
-            self.on_sampling_context_changed();
-        }
-    }
-
-    fn set_farmland_grid(&mut self, grid: Option<Arc<FarmlandGrid>>) {
-        if let Some(g) = &grid {
-            let previous_map_size_bits = self.map_size.to_bits();
-            self.map_size = g.map_size;
-            if previous_map_size_bits != self.map_size.to_bits() {
-                self.on_sampling_context_changed();
-            }
-        }
-    }
-
-    crate::impl_lifecycle_delegation_no_seg!();
 }
 
 #[cfg(test)]
@@ -260,7 +279,7 @@ mod tests {
     use crate::app::tools::color_path::state::{
         ColorPathMask, ExistingConnectionMode, PreparedSegment, PreviewData,
     };
-    use crate::app::tools::RouteTool;
+    use crate::app::tools::RouteToolCore;
     use crate::core::{ConnectionDirection, ConnectionPriority, MapNode, NodeFlag};
     use image::{DynamicImage, Rgb, RgbImage};
 

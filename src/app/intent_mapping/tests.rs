@@ -63,3 +63,22 @@ fn route_tool_panel_action_requested_maps_to_panel_action_command() {
         }
     ));
 }
+
+#[test]
+fn route_tool_shortcut_intents_map_to_adjustment_commands() {
+    let state = AppState::new();
+
+    let commands = map_intent_to_commands(&state, AppIntent::IncreaseRouteToolNodeCount);
+    assert_eq!(commands.len(), 1);
+    assert!(matches!(
+        commands[0],
+        AppCommand::IncreaseRouteToolNodeCount
+    ));
+
+    let commands = map_intent_to_commands(&state, AppIntent::DecreaseRouteToolSegmentLength);
+    assert_eq!(commands.len(), 1);
+    assert!(matches!(
+        commands[0],
+        AppCommand::DecreaseRouteToolSegmentLength
+    ));
+}

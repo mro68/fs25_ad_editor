@@ -3,7 +3,7 @@
 use super::compute_bypass_positions;
 use super::BypassTool;
 use crate::app::group_registry::GroupKind;
-use crate::app::tools::RouteTool;
+use crate::app::tools::{RouteTool, RouteToolCore, RouteToolRecreate};
 use crate::core::{ConnectionDirection, ConnectionPriority, RoadMap};
 use glam::Vec2;
 
@@ -182,7 +182,7 @@ fn test_execute_ohne_kette_liefert_none() {
 #[test]
 fn test_set_snap_radius_wird_gespeichert() {
     let mut tool = BypassTool::new();
-    tool.set_snap_radius(7.5);
+    tool.lifecycle.snap_radius = 7.5;
     assert_eq!(tool.lifecycle.snap_radius, 7.5);
 }
 
@@ -190,7 +190,7 @@ fn test_set_snap_radius_wird_gespeichert() {
 #[test]
 fn test_snap_radius_bleibt_nach_reset() {
     let mut tool = BypassTool::new();
-    tool.set_snap_radius(5.0);
+    tool.lifecycle.snap_radius = 5.0;
     tool.load_chain(vec![Vec2::ZERO, Vec2::new(10.0, 0.0)], 1, 2);
     tool.reset();
     assert_eq!(
