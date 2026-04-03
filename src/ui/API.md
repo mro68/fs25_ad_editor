@@ -353,6 +353,8 @@ pub fn render_edit_panel(
 
 Die Route-Tool-Konfiguration arbeitet hier bewusst nur noch ueber den egui-freien App-Vertrag `RouteToolPanelState`; konkrete Widget-Aenderungen emittieren `AppIntent::RouteToolPanelActionRequested { action }`, waehrend der breite `ToolManager` im Application-Layer gekapselt bleibt.
 
+`distance_wheel_step_m` wird intern an `edit_panel/route_tool_panel.rs` durchgereicht. Dort wird nur das boolesche Gate `wheel_enabled = distance_wheel_step_m > 0.0` abgeleitet; die eigentliche Widget-Logik fuer numerische Route-Tool- und Analysis-Felder bleibt in `ui::common::{apply_wheel_step_adaptive, apply_wheel_step_usize}`.
+
 Im Gruppen-Bearbeitungsmodus enthält das Panel:
 - Checkbox für `options.show_all_group_boundaries` (Sichtbarkeit aller Boundary-Icons)
 - ComboBox „Einfahrt" und „Ausfahrt" — emittiert `AppIntent::SetGroupBoundaryNodes` bei Änderung
@@ -474,13 +476,21 @@ Kleine, wiederverwendbare Helfer fuer egui-Widgets. Werden von mehreren UI-Modul
 /// Schwellenwert fuer Scroll-Events – unterdrückt Rauschen bei kleinen Scroll-Bewegungen.
 pub(crate) const WHEEL_THRESHOLD: f32 = 0.5;
 
+/// Standard-Schrittweite fuer Mausrad-Anpassungen von Float-Werten.
+pub(crate) const DEFAULT_FLOAT_WHEEL_STEP: f32 = 0.1;
+
 /// Liefert fuer ein gehovertes Widget die Scroll-Richtung und konsumiert das Event.
+///
+/// Die Richtung wird zuerst aus `raw_scroll_delta` und bei Bedarf aus
+/// `smooth_scroll_delta` bestimmt. Konsumiert wird nur bei wirksamem Impuls,
+/// damit umgebende ScrollAreas nicht bei reinem Rauschen blockiert werden.
 pub(crate) fn wheel_dir(ui: &egui::Ui, response: &egui::Response) -> f32;
 
 /// Wendet Mausrad-Scrolling auf einen numerischen Wert an.
 ///
 /// Wenn die Response gehovert ist und ein Scroll-Event vorliegt,
 /// wird `value` um `step` in Scroll-Richtung veraendert und auf `range` geclampt.
+/// `Shift` vergroessert die Schrittweite (x10), `Ctrl` reduziert sie (x0.1).
 /// Gibt `true` zurueck wenn sich der Wert geaendert hat.
 pub(crate) fn apply_wheel_step(
     ui: &egui::Ui,
@@ -489,9 +499,33 @@ pub(crate) fn apply_wheel_step(
     step: f32,
     range: std::ops::RangeInclusive<f32>,
 ) -> bool
+
+  /// Liefert eine adaptive Mausrad-Schrittweite fuer Float-Werte.
+  pub(crate) fn adaptive_float_wheel_step(value: f32) -> f32;
+
+  /// Wendet adaptives Mausrad-Scrolling auf einen Float-Wert an.
+  pub(crate) fn apply_wheel_step_adaptive(
+    ui: &egui::Ui,
+    response: &egui::Response,
+    value: &mut f32,
+    range: std::ops::RangeInclusive<f32>,
+    wheel_enabled: bool,
+  ) -> bool;
+
+  /// Wendet Mausrad-Scrolling mit Ganzzahl-Schritten auf einen `usize`-Wert an.
+  /// `Shift` vergroessert den Schritt (x10), `Ctrl` wird bei Ganzzahlen ignoriert.
+  pub(crate) fn apply_wheel_step_usize(
+    ui: &egui::Ui,
+    response: &egui::Response,
+    value: &mut usize,
+    range: std::ops::RangeInclusive<usize>,
+    wheel_enabled: bool,
+  ) -> bool;
 ```
 
-`wheel_dir()` ist der gemeinsame Low-Level-Helfer fuer Widgets, die Mausrad-Impulse selbst in diskrete Aktionen umsetzen muessen, etwa die Distanz-/Node-Felder in `properties/distances.rs` und `edit_panel/streckenteilung_panel.rs`.
+  `wheel_dir()` bleibt der gemeinsame Low-Level-Helfer fuer Widgets, die Mausrad-Impulse selbst in diskrete Aktionen umsetzen muessen, etwa die Distanz-/Node-Felder in `properties/distances.rs` und `edit_panel/streckenteilung_panel.rs`.
+
+  `apply_wheel_step_adaptive()` und `apply_wheel_step_usize()` werden in numerischen Route-Tool-Unterpanels inklusive `analysis_panel.rs` eingesetzt: Float-Werte arbeiten mit konsistenten adaptiven Schritten (`0.1`, `0.01`, `0.001`) plus Modifiern (`Shift` x10, `Ctrl` x0.1). Ganzzahlen nutzen `±1` als Basisschritt; mit `Shift` wird auf `±10` skaliert, `Ctrl` reduziert Ganzzahl-Schritte nicht. `edit_panel/route_tool_panel.rs` leitet dafuer einmalig `wheel_enabled = distance_wheel_step_m > 0.0` an alle Unterrenderer weiter.
 
 **Verwendung:**
 

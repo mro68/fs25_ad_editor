@@ -131,6 +131,7 @@ graph BT
   - `keyboard.rs` — Tastatur-Shortcuts (Delete, Escape, Ctrl+A, W/G/B/A/R/Z/K fuer Floating-Menues)
   - `drag.rs` — Drag-Operationen (Pan, Move, Rect-/Lasso-Selektion)
   - `context_menu.rs` — Rechtsklick-Kontextmenü
+- `common.rs` — Widgetnahe UI-Helfer fuer numerische Eingaben, Mausrad-Impulse und den zentralen Route-Tool-Availability-Kontext
 - `menu.rs` — Top-Menü-Leiste
 - `status.rs` — Statusleiste
 - `defaults_panel.rs` — Linke Sidebar mit Long-Press-Gruppen (Werkzeuge, RouteTool-Gruppen `Basics/Section/Analysis`, Defaults, Hintergrund; 64px breit)
@@ -143,6 +144,8 @@ graph BT
 - `options_dialog.rs` — Optionen-Dialog (Farben, Größen, Zoom)
 - `tool_preview.rs` — Tool-Preview-Overlay (Route-Tool-Vorschau im Viewport)
 - `dialogs.rs` — Datei-Dialoge und modale Fenster
+
+Numerische Mausrad-Interaktion fuer Route-Tool- und Analysis-Panels bleibt bewusst im UI-Layer: `render_edit_panel()` beziehungsweise `edit_panel/route_tool_panel.rs` reichen nur das boolesche Gate `wheel_enabled` weiter; Scroll-Auswertung, Modifier-Semantik (`Shift` x10, `Ctrl` x0.1 fuer Float, `Ctrl` ohne Effekt bei `usize`) und Wertanpassung werden zentral in `ui::common` gekapselt.
 
 **Darf**
 

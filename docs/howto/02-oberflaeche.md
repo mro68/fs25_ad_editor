@@ -169,9 +169,9 @@ Jeder Shortcut oeffnet ein kleines Menue an der Mausposition:
 | **Mausrad hoch / runter** | Auf Mausposition hinein- oder herauszoomen |
 | **Alt+Mausrad im Select-Tool** | Aktuelle Selektion in 5-Grad-Schritten rotieren |
 | **Alt+Mausrad im Route-Tool** | Route-Tool-Vorschau drehen, z. B. Parkplatz |
-| **Mausrad auf Zahleneingaben** | Wert in Scroll-Richtung anpassen |
+| **Mausrad auf Zahleneingaben** | Wert in Scroll-Richtung anpassen; **Shift** vergroessert den Schritt (x10), **Ctrl** verkleinert ihn bei Float-Feldern (x0.1), bei Ganzzahlen bleibt der Basisschritt erhalten; umgebende Scroll-Bereiche bewegen sich dabei nicht gleichzeitig |
 
-> **Tipp:** Fast alle Distanz-, Winkel- und Mengenfelder reagieren direkt auf das Mausrad, sobald der Cursor darueber steht.
+> **Tipp:** Das gilt besonders im Route-Tool- und Analyse-Panel: Distanz-, Winkel- und Mengenfelder folgen dem Mausrad direkt unter dem Cursor.
 
 ### Kontextmenue
 
