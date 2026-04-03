@@ -1,210 +1,206 @@
-//! Sidebar-Konfiguration fuer das ColorPathTool.
+//! Egui-freie Panel-Bruecke fuer das ColorPathTool.
 
 use super::state::{ColorPathPhase, ColorPathTool, ExistingConnectionMode};
+use crate::app::ui_contract::{
+    ColorPathPanelAction, ColorPathPanelPhase, ColorPathPanelState, ColorPathPreviewStats,
+    ExistingConnectionModeChoice, RouteToolPanelEffect,
+};
 
-/// Rendert die ColorPathTool-Konfiguration im Properties-Panel.
-///
-/// Gibt `true` zurueck wenn sich Einstellungen geaendert haben (Neuzeichnung noetig).
-pub(super) fn render_config_view(
-    tool: &mut ColorPathTool,
-    ui: &mut egui::Ui,
-    _distance_wheel_step_m: f32,
-) -> bool {
-    let mut changed = false;
-
-    ui.label("Farb-Pfad-Erkennung");
-    ui.separator();
-
-    // ── Status-Text ──────────────────────────────────────────────────────────
-    let status = match tool.phase {
-        ColorPathPhase::Idle => "Alt+Lasso fuer Farbsample",
-        ColorPathPhase::Sampling => "Berechnen fuer Wegenetz",
-        ColorPathPhase::Preview => "Enter zum Einfuegen, Reset zum Zuruecksetzen",
-    };
-    ui.colored_label(egui::Color32::LIGHT_BLUE, status);
-    ui.separator();
-
-    // ── Phase-Aktionen ────────────────────────────────────────────────────────
-    match tool.phase {
-        ColorPathPhase::Idle => {
-            if ui.button("Starten \u{2192}").clicked() {
-                tool.phase = ColorPathPhase::Sampling;
-                changed = true;
-            }
-        }
-        ColorPathPhase::Sampling => {
-            // Farbinfos anzeigen
-            let sample_count = tool.sampling.sampled_colors.len();
-            if let Some(avg) = tool.sampling.avg_color {
-                let color = egui::Color32::from_rgb(avg[0], avg[1], avg[2]);
-                ui.horizontal(|ui| {
-                    ui.label(format!("Samples: {sample_count}  Ø-Farbe:"));
-                    // Farbvorschau-Quadrat (Mittelwert)
-                    let (rect, _) =
-                        ui.allocate_exact_size(egui::Vec2::splat(16.0), egui::Sense::hover());
-                    ui.painter().rect_filled(rect, 2.0, color);
-                });
-                let palette_size = tool.matching.palette.len();
-                let palette_label = if tool.config.exact_color_match {
-                    "Exakte Farben"
-                } else {
-                    "Palette"
-                };
-                ui.label(format!("{palette_label}: {palette_size} Farben"));
-                // Palette-Vorschau: kleine Quadrate fuer jeden Eintrag (max. 20)
-                ui.horizontal_wrapped(|ui| {
-                    for &c in tool.matching.palette.iter().take(20) {
-                        let pc = egui::Color32::from_rgb(c[0], c[1], c[2]);
-                        let (rect, _) =
-                            ui.allocate_exact_size(egui::Vec2::splat(10.0), egui::Sense::hover());
-                        ui.painter().rect_filled(rect, 1.0, pc);
-                    }
-                });
-            } else {
-                ui.label(format!("Samples: {sample_count}"));
-                ui.colored_label(egui::Color32::GRAY, "Alt+Drag zum Sampeln von Farben");
-            }
-
-            ui.separator();
-
-            if ui
-                .add_enabled(
-                    !tool.sampling.sampled_colors.is_empty(),
-                    egui::Button::new("Berechnen \u{2192}"),
-                )
-                .on_disabled_hover_text("Zuerst Farben sampeln (Alt+Lasso)")
-                .clicked()
-            {
-                tool.compute_pipeline();
-                changed = true;
-            }
-        }
-        ColorPathPhase::Preview => {
-            let (junction_count, open_end_count, segment_count) = tool.preview_stats();
-            let node_count = tool.preview_node_count();
-            ui.label(format!(
-                "Kreuzungen: {junction_count}  Offene Enden: {open_end_count}"
-            ));
-            ui.label(format!(
-                "Segmente: {segment_count}  Preview-Nodes: {node_count}"
-            ));
-
-            ui.separator();
-
-            ui.horizontal(|ui| {
-                let has_prepared_segments = tool
+impl ColorPathTool {
+    /// Liefert den egui-freien Panelzustand des ColorPathTools.
+    pub(super) fn panel_state(&self) -> ColorPathPanelState {
+        let preview_stats = if self.phase == ColorPathPhase::Preview {
+            let (junction_count, open_end_count, segment_count) = self.preview_stats();
+            Some(ColorPathPreviewStats {
+                junction_count,
+                open_end_count,
+                segment_count,
+                node_count: self.preview_node_count(),
+                can_accept: self
                     .preview_data
                     .as_ref()
-                    .is_some_and(|preview| !preview.prepared_segments.is_empty());
-                if ui
-                    .add_enabled(
-                        has_prepared_segments,
-                        egui::Button::new("\u{2713} Uebernehmen"),
-                    )
-                    .on_disabled_hover_text("Keine Nodes zum Einfuegen")
-                    .clicked()
+                    .is_some_and(|preview| !preview.prepared_segments.is_empty()),
+            })
+        } else {
+            None
+        };
+
+        ColorPathPanelState {
+            phase: panel_phase(self.phase),
+            sample_count: self.sampling.sampled_colors.len(),
+            avg_color: self.sampling.avg_color,
+            palette_label: if self.config.exact_color_match {
+                "Exakte Farben".to_owned()
+            } else {
+                "Palette".to_owned()
+            },
+            palette_colors: self.matching.palette.clone(),
+            can_compute: !self.sampling.sampled_colors.is_empty(),
+            preview_stats,
+            exact_color_match: self.config.exact_color_match,
+            color_tolerance: self.config.color_tolerance,
+            node_spacing: self.config.node_spacing,
+            simplify_tolerance: self.config.simplify_tolerance,
+            noise_filter: self.config.noise_filter,
+            existing_connection_mode: mode_choice(self.config.existing_connection_mode),
+        }
+    }
+
+    /// Wendet eine semantische Panel-Aktion auf das ColorPathTool an.
+    pub(super) fn apply_panel_action(
+        &mut self,
+        action: ColorPathPanelAction,
+    ) -> RouteToolPanelEffect {
+        let changed = match action {
+            ColorPathPanelAction::StartSampling => {
+                if self.phase == ColorPathPhase::Idle {
+                    self.phase = ColorPathPhase::Sampling;
+                    true
+                } else {
+                    false
+                }
+            }
+            ColorPathPanelAction::ComputePreview => {
+                if self.phase == ColorPathPhase::Sampling
+                    && !self.sampling.sampled_colors.is_empty()
                 {
-                    use crate::app::tools::RouteTool;
-                    // ReadyToExecute wird ueber die normale Enter-Bestaetigung ausgeloest;
-                    // hier nur visuelles Feedback — Execute laeuft ueber den Controller-Flow
-                    let _ = tool.is_ready(); // Trigger fuer spaeteren Dispatch
-                    changed = true;
+                    self.compute_pipeline();
+                    true
+                } else {
+                    false
                 }
-
-                if ui.button("\u{2190} Zurueck").clicked() {
-                    tool.phase = ColorPathPhase::Sampling;
-                    tool.clear_preview_pipeline();
-                    changed = true;
+            }
+            ColorPathPanelAction::BackToSampling => {
+                if self.phase == ColorPathPhase::Preview {
+                    self.phase = ColorPathPhase::Sampling;
+                    self.clear_preview_pipeline();
+                    true
+                } else {
+                    false
                 }
-            });
-        }
-    }
-
-    ui.separator();
-
-    // ── Reset-Button ─────────────────────────────────────────────────────────
-    if ui.button("Reset").clicked() {
-        use crate::app::tools::RouteTool;
-        tool.reset();
-        changed = true;
-    }
-
-    ui.separator();
-
-    // ── Konfigurations-Slider ─────────────────────────────────────────────────
-    ui.label("Einstellungen:");
-
-    if ui
-        .checkbox(&mut tool.config.exact_color_match, "Exaktmodus")
-        .changed()
-    {
-        tool.on_matching_config_changed();
-        changed = true;
-    }
-
-    ui.horizontal(|ui| {
-        ui.label("Farbtoleranz:");
-        let response = ui.add_enabled(
-            !tool.config.exact_color_match,
-            egui::Slider::new(&mut tool.config.color_tolerance, 1.0..=80.0).suffix(""),
-        );
-        if response.changed() {
-            tool.on_matching_config_changed();
-            changed = true;
-        }
-    });
-
-    ui.horizontal(|ui| {
-        ui.label("Knotenabstand:");
-        if ui
-            .add(egui::Slider::new(&mut tool.config.node_spacing, 1.0..=50.0).suffix(" m"))
-            .changed()
-        {
-            tool.on_preview_geometry_config_changed();
-            changed = true;
-        }
-    });
-
-    ui.horizontal(|ui| {
-        ui.label("Vereinfachung:");
-        if ui
-            .add(egui::Slider::new(&mut tool.config.simplify_tolerance, 0.0..=20.0).suffix(" m"))
-            .changed()
-        {
-            tool.on_preview_geometry_config_changed();
-            changed = true;
-        }
-    });
-
-    ui.separator();
-
-    if ui
-        .checkbox(&mut tool.config.noise_filter, "Rauschfilter")
-        .changed()
-    {
-        tool.on_preview_core_config_changed();
-        changed = true;
-    }
-
-    ui.horizontal(|ui| {
-        ui.label("Bestandsanschluss:");
-        egui::ComboBox::from_id_salt("color_path_existing_connection_mode")
-            .selected_text(tool.config.existing_connection_mode.label())
-            .show_ui(ui, |ui| {
-                for mode in ExistingConnectionMode::ALL {
-                    if ui
-                        .selectable_value(
-                            &mut tool.config.existing_connection_mode,
-                            mode,
-                            mode.label(),
-                        )
-                        .changed()
-                    {
-                        changed = true;
-                    }
+            }
+            ColorPathPanelAction::Reset => {
+                let had_pending = self.phase != ColorPathPhase::Idle
+                    || !self.sampling.lasso_regions.is_empty()
+                    || !self.sampling.sampled_colors.is_empty()
+                    || self.preview_data.is_some()
+                    || self.sampling_preview.is_some();
+                self.phase = ColorPathPhase::Idle;
+                self.sampling = super::state::SamplingInput::default();
+                self.matching = super::state::MatchingSpec::default();
+                self.sampling_preview = None;
+                self.preview_data = None;
+                self.cache = super::state::ColorPathCacheState::default();
+                had_pending
+            }
+            ColorPathPanelAction::SetExactColorMatch(value) => {
+                if set_bool(&mut self.config.exact_color_match, value) {
+                    self.on_matching_config_changed();
+                    true
+                } else {
+                    false
                 }
-            });
-    });
+            }
+            ColorPathPanelAction::SetColorTolerance(value) => {
+                if set_f32(&mut self.config.color_tolerance, value.clamp(1.0, 80.0)) {
+                    self.on_matching_config_changed();
+                    true
+                } else {
+                    false
+                }
+            }
+            ColorPathPanelAction::SetNodeSpacing(value) => {
+                if set_f32(&mut self.config.node_spacing, value.clamp(1.0, 50.0)) {
+                    self.on_preview_geometry_config_changed();
+                    true
+                } else {
+                    false
+                }
+            }
+            ColorPathPanelAction::SetSimplifyTolerance(value) => {
+                if set_f32(&mut self.config.simplify_tolerance, value.clamp(0.0, 20.0)) {
+                    self.on_preview_geometry_config_changed();
+                    true
+                } else {
+                    false
+                }
+            }
+            ColorPathPanelAction::SetNoiseFilter(value) => {
+                if set_bool(&mut self.config.noise_filter, value) {
+                    self.on_preview_core_config_changed();
+                    true
+                } else {
+                    false
+                }
+            }
+            ColorPathPanelAction::SetExistingConnectionMode(choice) => {
+                set_existing_connection_mode(&mut self.config.existing_connection_mode, choice)
+            }
+        };
 
-    changed
+        RouteToolPanelEffect {
+            changed,
+            needs_recreate: false,
+            next_action: None,
+        }
+    }
+}
+
+fn panel_phase(phase: ColorPathPhase) -> ColorPathPanelPhase {
+    match phase {
+        ColorPathPhase::Idle => ColorPathPanelPhase::Idle,
+        ColorPathPhase::Sampling => ColorPathPanelPhase::Sampling,
+        ColorPathPhase::Preview => ColorPathPanelPhase::Preview,
+    }
+}
+
+fn mode_choice(mode: ExistingConnectionMode) -> ExistingConnectionModeChoice {
+    match mode {
+        ExistingConnectionMode::Never => ExistingConnectionModeChoice::Never,
+        ExistingConnectionMode::OpenEnds => ExistingConnectionModeChoice::OpenEnds,
+        ExistingConnectionMode::OpenEndsAndJunctions => {
+            ExistingConnectionModeChoice::OpenEndsAndJunctions
+        }
+    }
+}
+
+fn mode_from_choice(choice: ExistingConnectionModeChoice) -> ExistingConnectionMode {
+    match choice {
+        ExistingConnectionModeChoice::Never => ExistingConnectionMode::Never,
+        ExistingConnectionModeChoice::OpenEnds => ExistingConnectionMode::OpenEnds,
+        ExistingConnectionModeChoice::OpenEndsAndJunctions => {
+            ExistingConnectionMode::OpenEndsAndJunctions
+        }
+    }
+}
+
+fn set_f32(target: &mut f32, value: f32) -> bool {
+    if (*target - value).abs() < f32::EPSILON {
+        false
+    } else {
+        *target = value;
+        true
+    }
+}
+
+fn set_bool(target: &mut bool, value: bool) -> bool {
+    if *target == value {
+        false
+    } else {
+        *target = value;
+        true
+    }
+}
+
+fn set_existing_connection_mode(
+    target: &mut ExistingConnectionMode,
+    choice: ExistingConnectionModeChoice,
+) -> bool {
+    let value = mode_from_choice(choice);
+    if *target == value {
+        false
+    } else {
+        *target = value;
+        true
+    }
 }

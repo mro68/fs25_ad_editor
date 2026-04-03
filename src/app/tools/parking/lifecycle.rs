@@ -2,6 +2,7 @@
 
 use crate::app::group_registry::{GroupBase, GroupKind, GroupRecord};
 use crate::app::tools::{RouteToolId, ToolAction, ToolAnchor, ToolPreview, ToolResult};
+use crate::app::ui_contract::{RouteToolConfigState, RouteToolPanelAction, RouteToolPanelEffect};
 use crate::core::RoadMap;
 use glam::Vec2;
 
@@ -82,8 +83,16 @@ impl crate::app::tools::RouteTool for ParkingTool {
         geometry::build_preview(&layout)
     }
 
-    fn render_config(&mut self, ui: &mut egui::Ui, distance_wheel_step_m: f32) -> bool {
-        self.render_config_view(ui, distance_wheel_step_m)
+    fn panel_state(&self) -> RouteToolConfigState {
+        RouteToolConfigState::Parking(self.panel_state())
+    }
+
+    fn apply_panel_action(&mut self, action: RouteToolPanelAction) -> RouteToolPanelEffect {
+        let RouteToolPanelAction::Parking(action) = action else {
+            return RouteToolPanelEffect::default();
+        };
+
+        self.apply_panel_action(action)
     }
 
     fn execute(&self, _road_map: &RoadMap) -> Option<ToolResult> {

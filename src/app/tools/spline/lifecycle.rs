@@ -7,7 +7,9 @@ use super::super::{
 use super::state::SplineTool;
 use crate::app::group_registry::{GroupBase, GroupKind, GroupRecord};
 use crate::app::tool_contract::TangentSource;
-use crate::app::ui_contract::TangentMenuData;
+use crate::app::ui_contract::{
+    RouteToolConfigState, RouteToolPanelAction, RouteToolPanelEffect, TangentMenuData,
+};
 use crate::core::RoadMap;
 use glam::Vec2;
 
@@ -92,8 +94,16 @@ impl RouteTool for SplineTool {
         }
     }
 
-    fn render_config(&mut self, ui: &mut egui::Ui, distance_wheel_step_m: f32) -> bool {
-        self.render_config_view(ui, distance_wheel_step_m)
+    fn panel_state(&self) -> RouteToolConfigState {
+        RouteToolConfigState::Spline(self.panel_state())
+    }
+
+    fn apply_panel_action(&mut self, action: RouteToolPanelAction) -> RouteToolPanelEffect {
+        let RouteToolPanelAction::Spline(action) = action else {
+            return RouteToolPanelEffect::default();
+        };
+
+        self.apply_panel_action(action)
     }
 
     fn execute(&self, road_map: &RoadMap) -> Option<ToolResult> {

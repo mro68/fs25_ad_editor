@@ -4,7 +4,7 @@
 
 Das `app`-Modul verwaltet den globalen State, verarbeitet `AppIntent`s zentral ueber den `AppController`, mappt diese auf `AppCommand`s und baut die `RenderScene` fuer das Rendering.
 
-**Hinweis:** `Camera2D` lebt im `core`-Modul (reiner Geometrie-Typ). `app` re-exportiert `Camera2D`, `ConnectionDirection`, `ConnectionPriority`, `RoadMap`, `RouteToolId`, `ToolAnchor`, `TangentSource`, `TangentMenuData`, `TangentOptionData`, `compute_ring` und andere zentrale Typen aus `core`, `tool_contract`, `ui_contract` und `tools`. Zusaetzliche UI-Fassaden wie `RouteToolPanelAdapter` und `RouteToolViewportData` liegen bewusst nur unter `app::ui_contract`, damit der Root-Export schlank bleibt.
+**Hinweis:** `Camera2D` lebt im `core`-Modul (reiner Geometrie-Typ). `app` re-exportiert `Camera2D`, `ConnectionDirection`, `ConnectionPriority`, `RoadMap`, `RouteToolId`, `ToolAnchor`, `TangentSource`, `TangentMenuData`, `TangentOptionData`, `compute_ring` und andere zentrale Typen aus `core`, `tool_contract`, `ui_contract` und `tools`. Route-Tool-Panels laufen bewusst ueber egui-freie DTOs wie `RouteToolPanelState`, `RouteToolConfigState`, `RouteToolPanelAction` und `RouteToolViewportData` in `app::ui_contract`, damit der Root-Export schlank bleibt.
 
 Die eframe-Integrationsschale unter `src/editor_app/*` gehoert bewusst nicht zum `app`-Layer. Ihre kanonische Dokumentation steht in `../editor_app/API.md`, damit `app/API.md` nur den Application-Layer beschreibt.
 
@@ -17,7 +17,7 @@ Die eframe-Integrationsschale unter `src/editor_app/*` gehoert bewusst nicht zum
 ## Tool-Vertraege
 
 - `tool_contract.rs` — semantische Route-Tool-Vertraege wie `RouteToolId`, `ToolAnchor` und `TangentSource`
-- `ui_contract.rs` — UI-taugliche Read-DTOs und schmale App-Fassaden wie `TangentMenuData`, `TangentOptionData`, `RouteToolPanelAdapter`, `RouteToolPanelData` und `RouteToolViewportData`
+- `ui_contract.rs` — egui-freie UI-Vertraege wie `TangentMenuData`, `TangentOptionData`, `RouteToolPanelState`, `RouteToolConfigState`, `RouteToolPanelAction`, `RouteToolPanelEffect` und `RouteToolViewportData`
 
 ## Haupttypen
 
@@ -282,7 +282,7 @@ pub struct RouteToolSelectionMemory {
 **EditorToolState-Methoden:**
 
 - `remember_route_tool(group, tool_id)` — merkt die letzte Route-Tool-Wahl pro Gruppe
-- `route_tool_panel_adapter() -> Option<RouteToolPanelAdapter<'_>>` — liefert die schmale UI-Fassade fuer das Floating-Route-Tool-Panel im Route-Modus
+- `route_tool_panel_state() -> Option<RouteToolPanelState>` — liefert den egui-freien Panelzustand fuer das Floating-Route-Tool-Panel im Route-Modus
 - `route_tool_viewport_data() -> RouteToolViewportData` — liefert Drag-Ziele, Tangenten-Menuedaten und Lasso-Bedarf als Read-DTO fuer den Viewport
 - `route_tool_preview(cursor_world, road_map) -> Option<ToolPreview>` — berechnet die Preview-Geometrie des aktiven Route-Tools app-seitig, sodass die UI keinen `ToolManager` direkt lesen muss
 

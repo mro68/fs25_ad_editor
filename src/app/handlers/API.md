@@ -525,7 +525,7 @@ delegieren an `use_cases::camera` und haben keine Wirkung wenn keine RoadMap gel
 
 ### `route_tool` — Route-Tool-Operationen
 
-Verarbeitet Klicks, Drags und Konfigurationsänderungen für die Route-Tools (Gerade, Kurve, Spline, Bypass, Constraint).
+Verarbeitet Klicks, Drags und semantische Panel-Aktionen fuer die Route-Tools (Gerade, Kurve, Spline, Bypass, Analyse-Tools).
 
 **Funktionen:**
 
@@ -543,10 +543,10 @@ pub fn cancel(state: &mut AppState)
 `execute`: Erstellt die Strecke (Enter). `cancel`: Bricht das Tool ab (Escape).
 
 ```rust
-pub fn select(state: &mut AppState, index: usize)
+pub fn select(state: &mut AppState, tool_id: RouteToolId)
 pub fn select_with_anchors(
     state: &mut AppState,
-    index: usize,
+    tool_id: RouteToolId,
     start_node_id: u64,
     end_node_id: u64,
 )
@@ -559,6 +559,12 @@ pub fn recreate(state: &mut AppState)
 ```
 
 Löscht die letzte erstellte Strecke und erstellt sie mit den aktuellen Tool-Parametern neu. Wird automatisch aufgerufen, wenn sich Konfiguration ändert und `needs_recreate()` true ist.
+
+```rust
+pub fn apply_panel_action(state: &mut AppState, action: RouteToolPanelAction)
+```
+
+Wendet eine semantische Panel-Aktion aus dem Floating-Panel auf das aktive Tool an. Falls das Tool `RouteToolPanelEffect { needs_recreate: true, .. }` meldet, wird die letzte erzeugte Strecke automatisch neu aufgebaut.
 
 ```rust
 pub fn apply_tangent(state: &mut AppState, start: TangentSource, end: TangentSource)

@@ -2,7 +2,9 @@
 
 use crate::app::group_registry::{GroupKind, GroupRecord};
 use crate::app::tool_contract::TangentSource;
-use crate::app::ui_contract::TangentMenuData;
+use crate::app::ui_contract::{
+    RouteToolConfigState, RouteToolPanelAction, RouteToolPanelEffect, TangentMenuData,
+};
 use crate::core::{ConnectionDirection, ConnectionPriority, RoadMap};
 use glam::Vec2;
 
@@ -38,12 +40,13 @@ pub trait RouteTool {
     /// Preview-Geometrie fuer die aktuelle Mausposition berechnen.
     fn preview(&self, cursor_pos: Vec2, road_map: &RoadMap) -> ToolPreview;
 
-    /// Tool-spezifische Konfiguration im Properties-Panel rendern.
-    ///
-    /// `distance_wheel_step_m` steuert die Schrittweite fuer Mausrad-Aenderungen
-    /// an Distanz-Feldern (z.B. Min.-Abstand).
-    /// Gibt `true` zurueck wenn sich Einstellungen geaendert haben.
-    fn render_config(&mut self, ui: &mut egui::Ui, distance_wheel_step_m: f32) -> bool;
+    /// Liefert den egui-freien Panelzustand des Tools.
+    fn panel_state(&self) -> RouteToolConfigState;
+
+    /// Wendet eine semantische Panel-Aktion auf das Tool an.
+    fn apply_panel_action(&mut self, _action: RouteToolPanelAction) -> RouteToolPanelEffect {
+        RouteToolPanelEffect::default()
+    }
 
     /// Ergebnis erzeugen (Nodes + Connections als reine Daten).
     fn execute(&self, road_map: &RoadMap) -> Option<ToolResult>;

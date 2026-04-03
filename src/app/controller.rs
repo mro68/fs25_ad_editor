@@ -222,6 +222,9 @@ impl AppController {
                 end_node_id,
             ),
             AppCommand::RouteToolRecreate => handlers::route_tool::recreate(state),
+            AppCommand::RouteToolPanelAction { action } => {
+                handlers::route_tool::apply_panel_action(state, action)
+            }
             AppCommand::RouteToolApplyTangent { start, end } => {
                 handlers::route_tool::apply_tangent(state, start, end)
             }

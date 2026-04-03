@@ -7,6 +7,7 @@ mod selection;
 use crate::app::state::EditorTool;
 use crate::app::tool_contract::TangentSource;
 use crate::app::tools::{RouteToolId, ToolAction};
+use crate::app::ui_contract::{RouteToolPanelAction, RouteToolPanelFollowUp};
 use crate::app::AppState;
 
 /// Verarbeitet einen Viewport-Klick im Route-Tool.
@@ -95,6 +96,24 @@ pub fn select_with_anchors(
 /// Loescht die letzte Strecke und erstellt sie mit neuen Parametern neu.
 pub fn recreate(state: &mut AppState) {
     apply::recreate(state);
+}
+
+/// Wendet eine semantische Panel-Aktion an und fuehrt Folgefluesse aus.
+pub fn apply_panel_action(state: &mut AppState, action: RouteToolPanelAction) {
+    let effect = if let Some(tool) = state.editor.tool_manager.active_tool_mut() {
+        tool.apply_panel_action(action)
+    } else {
+        return;
+    };
+
+    if effect.needs_recreate {
+        apply::recreate(state);
+    }
+
+    match effect.next_action {
+        Some(RouteToolPanelFollowUp::ReadyToExecute) => apply::execute_and_apply(state),
+        Some(RouteToolPanelFollowUp::Continue | RouteToolPanelFollowUp::UpdatePreview) | None => {}
+    }
 }
 
 /// Wendet die vom User gewaehlten Tangenten an und triggert ggf. eine Neuberechnung.

@@ -106,7 +106,7 @@ Das `RouteTool`-Trait definiert **11 Pflichtmethoden + ~20 optionale mit Default
 | `on_click()` | Pflicht | ✅ Einheitlich | `→ ToolAction` |
 | `preview()` | Pflicht | ✅ Einheitlich | `→ ToolPreview` |
 | `execute()` | Pflicht | ✅ Weitgehend vereinheitlicht | Default-Felder werden in `assemble_tool_result()` sowie FieldBoundary/RouteOffset/Parking ueber `ToolResultBuilder` kanonisiert |
-| `render_config()` | Pflicht | ✅ Domain-bedingt | UI-Diversität ist akzeptabel |
+| `panel_state()` / `apply_panel_action()` | Pflicht/Default | ✅ Entkoppelt | Tools liefern nur noch semantische Panel-Daten; egui bleibt im UI-Layer |
 | `reset()` | Pflicht | ✅ Einheitlich | Alle setzen State zurück |
 | `is_ready()` | Pflicht | ✅ Einheitlich | Boolean-Check |
 
@@ -496,7 +496,8 @@ Nächster Frame: RenderScene wird aus RoadMap neu gebaut ← Render-Layer
 │                        UI Layer                                 │
 │  ┌──────────────┐  ┌──────────────────┐  ┌──────────────────┐ │
 │  │ tool_panel.rs │  │ tool_preview.rs  │  │ context_menu.rs  │ │
-│  │  render_config│  │  paint_preview() │  │                  │ │
+│  │ panel_state/  │  │  paint_preview() │  │                  │ │
+│  │ panel_action  │  │                  │  │                  │ │
 │  └──────┬───────┘  └────────┬─────────┘  └──────────────────┘ │
 │         │ AppIntent          │ ToolPreview                      │
 ├─────────┼───────────────────┼──────────────────────────────────┤

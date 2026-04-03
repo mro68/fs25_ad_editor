@@ -1,3 +1,4 @@
+use crate::app::ui_contract::{ParkingPanelAction, RouteToolPanelAction};
 use crate::app::{AppCommand, AppIntent, AppState, ConnectionDirection};
 
 use super::map_intent_to_commands;
@@ -39,6 +40,26 @@ fn set_default_direction_requested_maps_to_command() {
         commands[0],
         AppCommand::SetDefaultDirection {
             direction: ConnectionDirection::Dual
+        }
+    ));
+}
+
+#[test]
+fn route_tool_panel_action_requested_maps_to_panel_action_command() {
+    let state = AppState::new();
+
+    let commands = map_intent_to_commands(
+        &state,
+        AppIntent::RouteToolPanelActionRequested {
+            action: RouteToolPanelAction::Parking(ParkingPanelAction::SetNumRows(7)),
+        },
+    );
+
+    assert_eq!(commands.len(), 1);
+    assert!(matches!(
+        commands[0],
+        AppCommand::RouteToolPanelAction {
+            action: RouteToolPanelAction::Parking(ParkingPanelAction::SetNumRows(7))
         }
     ));
 }

@@ -5,6 +5,7 @@ use super::state::RouteOffsetTool;
 use crate::app::group_registry::{GroupBase, GroupKind, GroupRecord};
 use crate::app::tools::common::{ToolLifecycleState, ToolResultBuilder};
 use crate::app::tools::{RouteTool, RouteToolId, ToolAction, ToolAnchor, ToolPreview, ToolResult};
+use crate::app::ui_contract::{RouteToolConfigState, RouteToolPanelAction, RouteToolPanelEffect};
 use crate::core::{ConnectionDirection, ConnectionPriority, NodeFlag, RoadMap};
 use glam::Vec2;
 
@@ -95,8 +96,16 @@ impl RouteTool for RouteOffsetTool {
         }
     }
 
-    fn render_config(&mut self, ui: &mut egui::Ui, distance_wheel_step_m: f32) -> bool {
-        self.render_config_view(ui, distance_wheel_step_m)
+    fn panel_state(&self) -> RouteToolConfigState {
+        RouteToolConfigState::RouteOffset(self.panel_state())
+    }
+
+    fn apply_panel_action(&mut self, action: RouteToolPanelAction) -> RouteToolPanelEffect {
+        let RouteToolPanelAction::RouteOffset(action) = action else {
+            return RouteToolPanelEffect::default();
+        };
+
+        self.apply_panel_action(action)
     }
 
     fn execute(&self, _road_map: &RoadMap) -> Option<ToolResult> {

@@ -71,7 +71,7 @@ impl EditorApp {
             ValueAdjustInputMode::DragHorizontal => 0.0,
             ValueAdjustInputMode::MouseWheel => self.state.options.mouse_wheel_distance_step_m,
         };
-        let route_tool_panel = self.state.editor.route_tool_panel_adapter();
+        let route_tool_panel = self.state.editor.route_tool_panel_state();
         egui::SidePanel::right("right_sidebar")
             .resizable(true)
             .default_width(200.0)

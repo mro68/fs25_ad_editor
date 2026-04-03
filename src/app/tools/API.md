@@ -44,7 +44,7 @@ Schnittstelle fuer alle Route-Tools (Linie, Kurve, …). Tools sind zustandsbeha
 - `status_text() → &str` — Statustext fuer Properties-Panel
 - `on_click(pos, road_map, ctrl) → ToolAction` — Viewport-Klick verarbeiten
 - `preview(cursor_pos, road_map) → ToolPreview` — Preview-Geometrie berechnen
-- `render_config(ui, distance_wheel_step_m) → bool` — Tool-Konfiguration im Properties-Panel (inkl. Mausrad-Schrittweite fuer Distanz-Felder)
+- `panel_state() → RouteToolConfigState` — egui-freien Panelzustand des aktiven Tools liefern
 - `execute(road_map) → Option<ToolResult>` — Ergebnis erzeugen
 - `reset()` — Tool-Zustand zuruecksetzen
 - `is_ready() → bool` — Bereit zur Ausfuehrung?
@@ -52,6 +52,7 @@ Schnittstelle fuer alle Route-Tools (Linie, Kurve, …). Tools sind zustandsbeha
 **Optionale Methoden (Default-Implementierung):**
 
 - `has_pending_input() → bool` — Hat das Tool angefangene Eingaben? (fuer stufenweise Escape-Logik)
+- `apply_panel_action(action) → RouteToolPanelEffect` — semantische Panel-Aktion anwenden; UI sendet keine `egui::Ui`-Callbacks mehr ins Tool
 - `on_scroll_rotate(&mut self, delta: f32)` — Scroll-basierte Rotation verarbeiten (z.B. ParkingTool-Winkel-Steuerung)
 - `set_direction(dir)` / `set_priority(prio)` — Editor-Defaults uebernehmen
 - `set_snap_radius(radius)` — Snap-Radius fuer Node-Snapping setzen
@@ -180,7 +181,7 @@ Bézier-Kurve wahlweise Grad 2 (quadratisch, 1 Steuerpunkt) oder Grad 3 (kubisch
 
 Konstruktoren: `CurveTool::new()` (Grad 2), `CurveTool::new_cubic()` (Grad 3).
 
-Modulstruktur: `state.rs` (Enums, Struct, Ctors), `lifecycle.rs` (RouteTool-Impl), `drag.rs` (Drag-Logik), `config_ui.rs` (egui-Panel), `geometry.rs` (Bézier-Mathe), `tests.rs`
+Modulstruktur: `state.rs` (Enums, Struct, Ctors), `lifecycle.rs` (RouteTool-Impl), `drag.rs` (Drag-Logik), `config_ui.rs` (semantische Panel-Bruecke), `geometry.rs` (Bézier-Mathe), `tests.rs`
 
 **Cubic-Extras (Grad 3):**
 
@@ -278,7 +279,7 @@ Parkplatz-Layout-Generator: Erstellt einen Wendekreis mit Parkreihen in einem ko
 - `build_parking_result(layout) → ToolResult` — Modulintern: konvertiert das Layout via `ToolResultBuilder`; befuellt `markers` und laesst `external_connections` sowie `nodes_to_remove` kanonisch leer
 - `build_preview(layout) → ToolPreview` — Modulintern: Vorschau-Geometrie inkl. Verbindungsstilen und Labels
 
-Modulstruktur: `state.rs` (Struct + Config), `lifecycle.rs` (RouteTool-Impl + Lifecycle-Delegation), `config_ui.rs` (egui-Panel), `geometry/{mod,layout,blueprint,conversion}.rs` (Layout-Mathe), `tests.rs` (7 Unit-Tests)
+Modulstruktur: `state.rs` (Struct + Config), `lifecycle.rs` (RouteTool-Impl + Lifecycle-Delegation), `config_ui.rs` (semantische Panel-Bruecke), `geometry/{mod,layout,blueprint,conversion}.rs` (Layout-Mathe), `tests.rs` (7 Unit-Tests)
 
 ### `FieldBoundaryTool`
 
@@ -369,7 +370,7 @@ Das Mapping `RingNodeKind` → `NodeFlag`:
 
 **Gruppen-Record:** `GroupKind::FieldBoundary { field_id, node_spacing, offset, straighten_tolerance, corner_angle_threshold, corner_rounding_radius, base }` unter `RouteToolId::FieldBoundary`
 
-Modulstruktur: `mod.rs` (Re-Exporte), `state.rs` (Struct, Phasen-Enum, Default), `lifecycle.rs` (RouteTool-Impl, Ring-Berechnung), `config_ui.rs` (egui-Panel), `geometry.rs` (RingNodeKind, detect_corners, round_corner, resample_ring_with_corners)
+Modulstruktur: `mod.rs` (Re-Exporte), `state.rs` (Struct, Phasen-Enum, Default), `lifecycle.rs` (RouteTool-Impl, Ring-Berechnung), `config_ui.rs` (semantische Panel-Bruecke), `geometry.rs` (RingNodeKind, detect_corners, round_corner, resample_ring_with_corners)
 
 ### `RouteOffsetTool`
 
@@ -423,7 +424,7 @@ Die finale Ausgabe wird ueber `ToolResultBuilder` aufgebaut: interne Offset-Kett
 
 **Gruppen-Record:** `GroupKind::RouteOffset { chain_positions, chain_start_id, chain_end_id, offset_left, offset_right, keep_original, base_spacing, base }` unter `RouteToolId::RouteOffset`
 
-Modulstruktur: `mod.rs` (Re-Exporte), `state.rs` (Struct + OffsetConfig), `lifecycle.rs` (RouteTool-Impl), `geometry.rs` (compute_offset_positions), `config_ui.rs` (egui-Panel), `tests.rs`
+Modulstruktur: `mod.rs` (Re-Exporte), `state.rs` (Struct + OffsetConfig), `lifecycle.rs` (RouteTool-Impl), `geometry.rs` (compute_offset_positions), `config_ui.rs` (semantische Panel-Bruecke), `tests.rs`
 
 ---
 
@@ -491,7 +492,7 @@ pub struct FieldPathTool {
 
 Im `Boundaries`-Modus sucht `find_nearest_boundary_segment()` das nächste Polygon-Kanten-Segment innerhalb von `BOUNDARY_SNAP_THRESHOLD = 20 m` und gibt es als Zwei-Punkt-Polyline zurück.
 
-Modulstruktur: `mod.rs` (Re-Export), `state.rs` (Structs, Enums, Felder), `lifecycle.rs` (RouteTool-Impl, compute_centerline), `config_ui.rs` (egui-Panel)
+Modulstruktur: `mod.rs` (Re-Export), `state.rs` (Structs, Enums, Felder), `lifecycle.rs` (RouteTool-Impl, compute_centerline), `config_ui.rs` (semantische Panel-Bruecke)
 
 ---
 
@@ -611,7 +612,7 @@ pub struct ColorPathTool {
 
 **Gruppen-Record:** ColorPathTool speichert keinen `GroupRecord` (keine nachträgliche Bearbeitung).
 
-Modulstruktur: `mod.rs` (Re-Export + Benchmark-Fassade), `state.rs` (Stage-Artefakte, Phasen-Enum, Config, Default), `lifecycle.rs` (Phasenwechsel + RouteTool-Adapter), `pipeline.rs` (Stages B-F), `preview.rs` (Preview-/Execute-Aufbereitung mit `PreparedSegment` als gemeinsamer Wahrheit), `config_ui.rs` (egui-Panel), `sampling.rs` (Farb-Sampling + Masken-Erstellung), `skeleton.rs` (Skelett-Extraktion + Graph-Aufbau)
+Modulstruktur: `mod.rs` (Re-Export + Benchmark-Fassade), `state.rs` (Stage-Artefakte, Phasen-Enum, Config, Default), `lifecycle.rs` (Phasenwechsel + RouteTool-Adapter), `pipeline.rs` (Stages B-F), `preview.rs` (Preview-/Execute-Aufbereitung mit `PreparedSegment` als gemeinsamer Wahrheit), `config_ui.rs` (semantische Panel-Bruecke), `sampling.rs` (Farb-Sampling + Masken-Erstellung), `skeleton.rs` (Skelett-Extraktion + Graph-Aufbau)
 
 ---
 
@@ -646,7 +647,7 @@ Parallele Ausweichstrecke einer selektierten Kette mit S-förmigen An-/Abfahrten
 
 - `compute_bypass_positions(chain, offset, base_spacing) → Option<(Vec<Vec2>, f32)>` — Berechnet Bypass-Positionen und Uebergangslaenge (fuer Benchmarks + Tests)
 
-Modulstruktur: `state.rs` (Struct + Config), `lifecycle.rs` (RouteTool-Impl + Lifecycle-Delegation), `config_ui.rs` (egui-Panel), `geometry.rs` (Bypass-Mathe), `tests.rs` (15 Unit-Tests)
+Modulstruktur: `state.rs` (Struct + Config), `lifecycle.rs` (RouteTool-Impl + Lifecycle-Delegation), `config_ui.rs` (semantische Panel-Bruecke), `geometry.rs` (Bypass-Mathe), `tests.rs` (15 Unit-Tests)
 
 ---
 

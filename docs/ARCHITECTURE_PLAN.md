@@ -610,7 +610,7 @@ stateDiagram-v2
   Inactive --> Start: on_click(pos)
   Start --> End: on_click(pos)
   End --> Control: on_click(pos)
-  Control --> Control: preview(cursor_pos)\nrender_config(ui)
+  Control --> Control: preview(cursor_pos)\npanel_state()/apply_panel_action()
   Control --> Executing: Enter/execute()
   Executing --> [*]: Done
   Control --> [*]: Escape/reset()
@@ -727,7 +727,7 @@ Nach node-mutierenden Operationen wird dirty-Flag gesetzt; Rebuild erfolgt lazy 
 - `preview()` liefert **reine Geometrie** (`Vec<Vec2>` + Index-basierte Verbindungen)
 - Keine Farben, Texturen oder Render-Hints im `ToolPreview`-Output
 - Die Konvertierung zu visuellen Elementen erfolgt im UI-Layer (`src/ui/tool_preview.rs`)
-- Tools kennen weder `egui::Color32` noch `egui::Painter` (ausser in `render_config()` fuer UI-Panels)
+- Tools kennen weder `egui::Color32`, `egui::Painter` noch `egui::Ui`; das Floating-Panel liest `RouteToolPanelState` und sendet `RouteToolPanelAction` ueber den App-Intent-Flow zurueck
 
 ### Gruppen-Editierbarkeit
 
