@@ -21,7 +21,7 @@ pub struct SpatialMatch {
 pub struct SpatialIndex {
     tree: ImmutableKdTree<f64, 2>,
     node_ids: Vec<u64>,
-    positions: HashMap<u64, Vec2>,
+    positions: Vec<Vec2>,
 }
 
 impl SpatialIndex {
@@ -30,7 +30,7 @@ impl SpatialIndex {
         Self {
             tree: ImmutableKdTree::new_from_slice(&[]),
             node_ids: Vec::new(),
-            positions: HashMap::new(),
+            positions: Vec::new(),
         }
     }
 
@@ -39,21 +39,17 @@ impl SpatialIndex {
         let mut node_ids: Vec<u64> = nodes.keys().copied().collect();
         node_ids.sort_unstable();
 
-        let entries: Vec<[f64; 2]> = node_ids
+        let positions: Vec<Vec2> = node_ids
             .iter()
-            .filter_map(|id| {
-                nodes
-                    .get(id)
-                    .map(|node| [node.position.x as f64, node.position.y as f64])
-            })
+            .filter_map(|id| nodes.get(id).map(|node| node.position))
+            .collect();
+
+        let entries: Vec<[f64; 2]> = positions
+            .iter()
+            .map(|position| [position.x as f64, position.y as f64])
             .collect();
 
         let tree: ImmutableKdTree<f64, 2> = entries.as_slice().into();
-
-        let positions = nodes
-            .iter()
-            .map(|(id, node)| (*id, node.position))
-            .collect();
 
         Self {
             tree,
@@ -140,11 +136,12 @@ impl SpatialIndex {
             .tree
             .within::<SquaredEuclidean>(&[center_x, center_y], radius_sq)
         {
-            if let Some(&node_id) = self.node_ids.get(entry.item as usize) {
-                if let Some(pos) = self.positions.get(&node_id) {
-                    if pos.x >= min.x && pos.x <= max.x && pos.y >= min.y && pos.y <= max.y {
-                        out.push(node_id);
-                    }
+            let index = entry.item as usize;
+            if let (Some(&node_id), Some(pos)) =
+                (self.node_ids.get(index), self.positions.get(index))
+            {
+                if pos.x >= min.x && pos.x <= max.x && pos.y >= min.y && pos.y <= max.y {
+                    out.push(node_id);
                 }
             }
         }
@@ -191,6 +188,36 @@ mod tests {
         ids.sort_unstable();
 
         assert_eq!(ids, vec![1, 3]);
+    }
+
+    #[test]
+    fn rect_query_into_clears_and_reuses_scratch_buffer() {
+        let index = SpatialIndex::from_nodes(&sample_nodes());
+        let mut scratch = vec![999, 1000, 1001];
+
+        index.within_rect_into(Vec2::new(-1.0, -1.0), Vec2::new(5.0, 3.5), &mut scratch);
+        scratch.sort_unstable();
+        assert_eq!(scratch, vec![1, 3]);
+
+        index.within_rect_into(
+            Vec2::new(100.0, 100.0),
+            Vec2::new(110.0, 110.0),
+            &mut scratch,
+        );
+        assert!(scratch.is_empty());
+    }
+
+    #[test]
+    fn rect_query_into_matches_allocating_variant() {
+        let index = SpatialIndex::from_nodes(&sample_nodes());
+        let mut scratch = Vec::new();
+
+        index.within_rect_into(Vec2::new(-1.0, -1.0), Vec2::new(10.5, 0.1), &mut scratch);
+        let mut from_allocating = index.within_rect(Vec2::new(-1.0, -1.0), Vec2::new(10.5, 0.1));
+
+        scratch.sort_unstable();
+        from_allocating.sort_unstable();
+        assert_eq!(scratch, from_allocating);
     }
 
     #[test]
