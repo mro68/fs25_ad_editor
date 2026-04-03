@@ -82,7 +82,7 @@ pub(crate) struct RenderMarker {
 struct RenderSpatialIndex {
     tree: ImmutableKdTree<f64, 2>,
     node_ids: Vec<u64>,
-    positions: HashMap<u64, Vec2>,
+    positions: Vec<Vec2>,
 }
 
 impl RenderSpatialIndex {
@@ -90,7 +90,7 @@ impl RenderSpatialIndex {
         Self {
             tree: ImmutableKdTree::new_from_slice(&[]),
             node_ids: Vec::new(),
-            positions: HashMap::new(),
+            positions: Vec::new(),
         }
     }
 
@@ -102,21 +102,17 @@ impl RenderSpatialIndex {
         let mut node_ids: Vec<u64> = nodes.keys().copied().collect();
         node_ids.sort_unstable();
 
-        let entries: Vec<[f64; 2]> = node_ids
+        let positions: Vec<Vec2> = node_ids
             .iter()
-            .filter_map(|id| {
-                nodes
-                    .get(id)
-                    .map(|node| [node.position.x as f64, node.position.y as f64])
-            })
+            .filter_map(|id| nodes.get(id).map(|node| node.position))
+            .collect();
+
+        let entries: Vec<[f64; 2]> = positions
+            .iter()
+            .map(|position| [position.x as f64, position.y as f64])
             .collect();
 
         let tree: ImmutableKdTree<f64, 2> = entries.as_slice().into();
-        let positions = nodes
-            .iter()
-            .map(|(id, node)| (*id, node.position))
-            .collect();
-
         Self {
             tree,
             node_ids,
@@ -140,11 +136,12 @@ impl RenderSpatialIndex {
             .tree
             .within::<SquaredEuclidean>(&[center_x, center_y], radius_sq)
         {
-            if let Some(&node_id) = self.node_ids.get(entry.item as usize) {
-                if let Some(pos) = self.positions.get(&node_id) {
-                    if pos.x >= min.x && pos.x <= max.x && pos.y >= min.y && pos.y <= max.y {
-                        out.push(node_id);
-                    }
+            let index = entry.item as usize;
+            if let (Some(&node_id), Some(pos)) =
+                (self.node_ids.get(index), self.positions.get(index))
+            {
+                if pos.x >= min.x && pos.x <= max.x && pos.y >= min.y && pos.y <= max.y {
+                    out.push(node_id);
                 }
             }
         }
@@ -197,6 +194,10 @@ impl RenderMap {
 
     pub(crate) fn marker_count(&self) -> usize {
         self.markers.len()
+    }
+
+    pub(crate) fn connection_count(&self) -> usize {
+        self.connections.len()
     }
 }
 
