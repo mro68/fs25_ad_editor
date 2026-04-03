@@ -7,8 +7,8 @@
 //! Strecken nachtraeglich bearbeitet werden koennen.
 
 use crate::app::compute_ring;
-use crate::app::group_registry::{GroupBase, GroupKind, GroupRecord};
-use crate::app::{AppState, RouteToolId, ToolAnchor};
+use crate::app::tool_editing::{register_persisted_group, RouteToolEditPayload, ToolRouteBase};
+use crate::app::{AppState, RouteToolId};
 use crate::core::{Connection, ConnectionDirection, ConnectionPriority, MapNode, NodeFlag};
 use glam::Vec2;
 use std::sync::Arc;
@@ -171,42 +171,31 @@ pub fn trace_all_fields(
         return;
     }
 
-    // Pro Feld einen GroupRecord anlegen, damit die Strecken bearbeitbar bleiben
+    // Pro Feld einen GroupRecord plus Tool-Edit-Payload anlegen, damit die Strecken bearbeitbar bleiben
     {
-        let road_map_ref = state.road_map.as_deref().expect("road_map vorhanden");
         for (field_id, node_ids) in &field_segments {
-            let record_id = state.group_registry.next_id();
-            let original_positions: Vec<Vec2> = node_ids
-                .iter()
-                .filter_map(|id| road_map_ref.node(*id).map(|n| n.position))
-                .collect();
-            let record = GroupRecord {
-                id: record_id,
-                tool_id: Some(RouteToolId::FieldBoundary),
-                node_ids: node_ids.clone(),
-                start_anchor: ToolAnchor::NewPosition(Vec2::ZERO),
-                end_anchor: ToolAnchor::NewPosition(Vec2::ZERO),
-                original_positions,
-                marker_node_ids: Vec::new(),
-                locked: true,
-                entry_node_id: None,
-                exit_node_id: None,
-                kind: GroupKind::FieldBoundary {
-                    field_id: *field_id,
-                    node_spacing: spacing,
-                    offset,
-                    straighten_tolerance: tolerance,
-                    corner_angle_threshold: corner_angle,
-                    corner_rounding_radius,
-                    corner_rounding_max_angle_deg,
-                    base: GroupBase {
-                        direction,
-                        priority,
-                        max_segment_length: 0.0,
-                    },
+            let payload = RouteToolEditPayload::FieldBoundary {
+                field_id: *field_id,
+                node_spacing: spacing,
+                offset,
+                straighten_tolerance: tolerance,
+                corner_angle_threshold: corner_angle,
+                corner_rounding_radius,
+                corner_rounding_max_angle_deg,
+                base: ToolRouteBase {
+                    direction,
+                    priority,
+                    max_segment_length: 0.0,
                 },
             };
-            state.group_registry.register(record);
+            let _ = register_persisted_group(
+                state,
+                None,
+                RouteToolId::FieldBoundary,
+                payload,
+                node_ids,
+                Vec::new(),
+            );
         }
         log::debug!(
             "Segment-Registry: {} Feld-Segmente registriert",

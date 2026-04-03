@@ -6,8 +6,8 @@ pub(crate) mod selectors;
 use indexmap::IndexSet;
 
 use crate::app::{
-    group_registry::GroupRegistry, AppIntent, Connection, ConnectionDirection, ConnectionPriority,
-    NodeFlag, RoadMap,
+    group_registry::GroupRegistry, tool_editing::ToolEditStore, tools::route_tool_descriptor,
+    AppIntent, Connection, ConnectionDirection, ConnectionPriority, NodeFlag, RoadMap,
 };
 use distances::render_distance_panel;
 use selectors::{render_direction_icon_selector, render_priority_icon_selector};
@@ -24,6 +24,7 @@ pub fn render_properties_content(
     default_priority: ConnectionPriority,
     distance_wheel_step_m: f32,
     group_registry: Option<&GroupRegistry>,
+    tool_edit_store: Option<&ToolEditStore>,
     distance_state: &mut crate::app::state::DistanzenState,
 ) -> Vec<AppIntent> {
     let mut events = Vec::new();
@@ -38,6 +39,7 @@ pub fn render_properties_content(
             default_direction,
             default_priority,
             group_registry,
+            tool_edit_store,
             &mut events,
         );
     }
@@ -69,6 +71,7 @@ fn render_selection_info(
     default_direction: ConnectionDirection,
     default_priority: ConnectionPriority,
     group_registry: Option<&GroupRegistry>,
+    tool_edit_store: Option<&ToolEditStore>,
     events: &mut Vec<AppIntent>,
 ) {
     match selected.len() {
@@ -86,7 +89,7 @@ fn render_selection_info(
         }
     }
 
-    render_segment_edit_buttons(ui, selected, group_registry, events);
+    render_segment_edit_buttons(ui, selected, group_registry, tool_edit_store, events);
 }
 
 /// Zeigt Einzelnode-Info: Position, Flag, Marker-Optionen.
@@ -243,6 +246,7 @@ fn render_segment_edit_buttons(
     ui: &mut egui::Ui,
     selected: &IndexSet<u64>,
     group_registry: Option<&GroupRegistry>,
+    tool_edit_store: Option<&ToolEditStore>,
     events: &mut Vec<AppIntent>,
 ) {
     let Some(registry) = group_registry else {
@@ -256,18 +260,10 @@ fn render_segment_edit_buttons(
     ui.separator();
     ui.label("Gruppe bearbeiten:");
     for record in matching {
-        let label = match &record.kind {
-            crate::app::group_registry::GroupKind::Straight { .. } => "✏ Gerade Strecke",
-            crate::app::group_registry::GroupKind::CurveQuad { .. } => "✏ Kurve Grad 2",
-            crate::app::group_registry::GroupKind::CurveCubic { .. } => "✏ Kurve Grad 3",
-            crate::app::group_registry::GroupKind::Spline { .. } => "✏ Spline",
-            crate::app::group_registry::GroupKind::SmoothCurve { .. } => "✏ Geglättete Kurve",
-            crate::app::group_registry::GroupKind::Bypass { .. } => "✏ Ausweichstrecke",
-            crate::app::group_registry::GroupKind::Parking { .. } => "✏ Parkplatz",
-            crate::app::group_registry::GroupKind::FieldBoundary { .. } => "✏ Feld erkennen",
-            crate::app::group_registry::GroupKind::RouteOffset { .. } => "✏ Strecke versetzen",
-            crate::app::group_registry::GroupKind::Manual { .. } => "✏ Manuelle Gruppe",
-        };
+        let label = tool_edit_store
+            .and_then(|store| store.tool_id_for(record.id))
+            .map(|tool_id| format!("✏ {}", route_tool_descriptor(tool_id).name))
+            .unwrap_or_else(|| "✏ Manuelle Gruppe".to_string());
         if ui.button(label).clicked() {
             events.push(AppIntent::GroupEditStartRequested {
                 record_id: record.id,

@@ -346,6 +346,7 @@ pub fn render_edit_panel(
   panel_pos: Option<egui::Pos2>,
   group_editing: Option<&GroupEditState>,
   group_record: Option<&GroupRecord>,
+  tool_edit_store: Option<&ToolEditStore>,
   options: &mut EditorOptions,
 ) -> Vec<AppIntent>
 ```
@@ -355,7 +356,7 @@ Die Route-Tool-Konfiguration arbeitet hier bewusst nur noch ueber den egui-freie
 Im Gruppen-Bearbeitungsmodus enthält das Panel:
 - Checkbox für `options.show_all_group_boundaries` (Sichtbarkeit aller Boundary-Icons)
 - ComboBox „Einfahrt" und „Ausfahrt" — emittiert `AppIntent::SetGroupBoundaryNodes` bei Änderung
-- Button „🔧 Tool bearbeiten" — nur sichtbar wenn `group_record.is_tool_editable()`; `Manual`-Gruppen sowie `Ephemeral`-Tools wie `FieldPath`/`ColorPath` bieten bewusst keinen Tool-Edit an; emittiert `AppIntent::GroupEditToolRequested { record_id }` → wechselt atomar in den destruktiven Tool-Edit-Modus
+- Button „🔧 Tool bearbeiten" — nur sichtbar wenn `tool_edit_store.contains(record.id)`; manuelle Gruppen, ephemere Tools (`FieldPath`/`ColorPath`) und Gruppen mit invalidiertem Snapshot bieten bewusst keinen Tool-Edit an; emittiert `AppIntent::GroupEditToolRequested { record_id }` → wechselt atomar in den destruktiven Tool-Edit-Modus
 
 ---
 

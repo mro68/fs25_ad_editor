@@ -1,4 +1,5 @@
 use crate::app::state::GroupEditState;
+use crate::app::tool_editing::ToolEditStore;
 use crate::app::{AppIntent, GroupRecord, RoadMap};
 use crate::shared::EditorOptions;
 
@@ -8,6 +9,7 @@ pub(super) fn render_group_edit_panel(
     ctx: &egui::Context,
     edit_state: &GroupEditState,
     group_record: Option<&GroupRecord>,
+    tool_edit_store: Option<&ToolEditStore>,
     road_map: Option<&RoadMap>,
     panel_pos: Option<egui::Pos2>,
     options: &mut EditorOptions,
@@ -35,7 +37,9 @@ pub(super) fn render_group_edit_panel(
             }
         });
         if let Some(rec) = group_record {
-            if rec.is_tool_editable() && ui.button("🔧 Tool bearbeiten").clicked() {
+            if tool_edit_store.is_some_and(|store| store.contains(rec.id))
+                && ui.button("🔧 Tool bearbeiten").clicked()
+            {
                 events.push(AppIntent::GroupEditToolRequested {
                     record_id: edit_state.record_id,
                 });

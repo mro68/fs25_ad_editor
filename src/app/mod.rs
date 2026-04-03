@@ -19,6 +19,8 @@ pub mod render_scene;
 pub mod state;
 /// App-weiter Vertrag fuer Route-Tool-Identitaeten und Ankerdaten.
 pub mod tool_contract;
+/// Separater Persistenz- und Session-Layer fuer tool-editierbare Gruppen.
+pub(crate) mod tool_editing;
 /// Trait-basiertes Route-Tool-System fuer erweiterbare Strecken-Werkzeuge.
 pub mod tools;
 /// App-weite Read-Vertraege fuer UI-nahe Route-Tool-Daten.
@@ -36,9 +38,7 @@ pub use crate::shared::RenderQuality;
 pub use command_log::CommandLog;
 pub use controller::AppController;
 pub use events::{AppCommand, AppIntent};
-pub use group_registry::{
-    BoundaryDirection, BoundaryInfo, GroupBase, GroupKind, GroupRecord, GroupRegistry,
-};
+pub use group_registry::{BoundaryDirection, BoundaryInfo, GroupRecord, GroupRegistry};
 pub use render_scene::build as build_render_scene;
 pub use state::{
     AppState, Clipboard, EditorTool, EditorToolState, FloatingMenuKind, FloatingMenuState,

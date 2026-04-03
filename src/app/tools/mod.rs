@@ -39,8 +39,8 @@ pub mod straight_line;
 
 pub use crate::app::tool_contract::{RouteToolId, ToolAnchor};
 pub use capabilities::{
-    OrderedNodeChain, RouteToolChainInput, RouteToolDrag, RouteToolLassoInput, RouteToolRecreate,
-    RouteToolRotate, RouteToolSegmentAdjustments, RouteToolTangent,
+    OrderedNodeChain, RouteToolChainInput, RouteToolDrag, RouteToolGroupEdit, RouteToolLassoInput,
+    RouteToolRecreate, RouteToolRotate, RouteToolSegmentAdjustments, RouteToolTangent,
 };
 pub use catalog::{
     resolve_route_tool_entries, route_tool_catalog, route_tool_defaults_tooltip_key,

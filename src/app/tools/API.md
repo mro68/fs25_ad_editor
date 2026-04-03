@@ -49,7 +49,7 @@ Phase 3 teilt den frueher breiten Allzweck-Vertrag in drei feste Basisvertraege 
 **Umbrella-Vertrag:**
 
 - `RouteTool: RouteToolCore + RouteToolPanelBridge + RouteToolHostSync`
-- enthaelt nur noch Capability-Discovery (`as_recreate()`, `as_drag()`, `as_tangent()`, `as_rotate()`, `as_segment_adjustments()`, `as_chain_input()`, `as_lasso_input()`) sowie die vorlaeufig verbliebenen Registry-/Edit-Hooks `make_group_record()` und `load_for_edit()`
+- enthaelt nur noch Capability-Discovery (`as_recreate()`, `as_drag()`, `as_tangent()`, `as_rotate()`, `as_segment_adjustments()`, `as_chain_input()`, `as_lasso_input()`, `as_group_edit()`)
 
 **Additive Capabilities:**
 
@@ -60,6 +60,7 @@ Phase 3 teilt den frueher breiten Allzweck-Vertrag in drei feste Basisvertraege 
 - `RouteToolSegmentAdjustments` — `increase_node_count`, `decrease_node_count`, `increase_segment_length`, `decrease_segment_length`
 - `RouteToolChainInput` — `load_chain(OrderedNodeChain)`
 - `RouteToolLassoInput` — `is_lasso_input_active`, `on_lasso_completed`
+- `RouteToolGroupEdit` — `build_edit_payload`, `restore_edit_payload`
 
 **Host-Kontext:**
 
@@ -105,23 +106,20 @@ Optionales Verhalten wird nicht mehr ueber No-Op-Methoden auf `RouteTool` modell
 - Alt+Scroll-Rotation geht ueber `active_rotate_mut()`, Segment-Shortcuts nur bei vorhandener Capability ueber `active_segment_adjustments_mut()`
 - Recreate- und Chaining-Flows gehen ueber `active_recreate()` bzw. `active_chain_input()`
 - Alt+Lasso fuer Analyse-Tools wird ueber `active_lasso_input()` und `is_lasso_input_active()` geroutet
-- GroupRegistry-/Edit-Hooks bleiben vorerst auf `RouteTool`, bis die naechste Entkopplungswelle sie separat isoliert
+- Persistierbare Tools exponieren ihren Edit-Snapshot ueber `active_group_edit()` bzw. `active_group_edit_mut()`
 
-**Registry-Erweiterungen** (fuer `GroupRegistry`, siehe [`../use_cases/API.md`](../use_cases/API.md)):
+**Tool-Edit-Erweiterung** (fuer den separaten Tool-Editing-Layer, siehe [`../API.md#tooleditstore-routetooleditpayload-und-activetooleditsession`](../API.md#tooleditstore-routetooleditpayload-und-activetooleditsession)):
 
 ```rust
-// Wird nach execute() + apply_tool_result() aufgerufen:
-fn make_group_record(&self, id: u64, node_ids: &[u64]) -> Option<GroupRecord>;
-
-// Wird in edit_segment() aufgerufen um das Tool wiederherzustellen:
-fn load_for_edit(&mut self, record: &GroupRecord, kind: &GroupKind);
+fn build_edit_payload(&self) -> Option<RouteToolEditPayload>;
+fn restore_edit_payload(&mut self, payload: &RouteToolEditPayload);
 ```
 
 ---
 
-## `GroupBase` und `GroupKind` (Group-Registry)
+## `RouteToolEditPayload` (Tool-Editing)
 
-Documentation moved to [`../API.md#groupbase--groupkind`](../API.md#groupbase--groupkind). Kurz: Alle Gruppen speichern ihre grundlegenden Parameter (Richtung, Priorität, Max-Abstand) in `GroupBase` ab, was Tool-Typ und Editing-Flow vereinheitlicht.
+Die kanonische Beschreibung des separaten Persistenz-/Edit-Vertrags liegt in [`../API.md#tooleditstore-routetooleditpayload-und-activetooleditsession`](../API.md#tooleditstore-routetooleditpayload-und-activetooleditsession). Kurz: group-backed editierbare Tools bauen ihren Snapshot ausserhalb der Registry als `RouteToolEditPayload`; das neutrale `GroupRecord` speichert nur Gruppenmitgliedschaft, Marker-Cleanup und Boundary-Metadaten.
 
 ---
 
@@ -240,10 +238,10 @@ Parkplatz-Layout-Generator: Erstellt einen Wendekreis mit Parkreihen in einem ko
 - Enthaelt gemeinsamen `ToolLifecycleState` fuer Snap-Radius, letzte erstellte Node-IDs, Recreate-Flag
 - Methoden: `set_snap_radius()`, `last_created_ids()`, `last_end_anchor()`, `needs_recreate()`, `clear_recreate_flag()`, `set_last_created()`
 
-**Group-Registry:**
+**Tool-Edit:**
 
-- Ueberschreibt die `RouteTool`-Hooks `make_group_record()` und `load_for_edit()`
-- Speichert Layout-Parameter fuer nachtraegliche Bearbeitung
+- Implementiert `RouteToolGroupEdit`
+- Liefert/stellt den Layout-Snapshot ueber `build_edit_payload()` und `restore_edit_payload()` wieder her
 
 **Geometrie-/Konvertierungspfad:**
 
@@ -340,7 +338,7 @@ Das Mapping `RingNodeKind` → `NodeFlag`:
 - `round_corner(prev, corner, next, radius, spacing) -> Vec<Vec2>` — Kreisbogen zwischen Tangentenpunkten einer konvexen Ecke. Konkave Ecken (Cross-Product ≤ 0) werden unverändert zurückgegeben. Tangentenpunkte begrenzt auf 40% der Kantenlaenge.
 - `resample_ring_with_corners(simplified, corner_indices, spacing, rounding_radius) -> Vec<(Vec2, RingNodeKind)>` — Resampled den Ring segmentweise mit Ecken als festen Ankern
 
-**Gruppen-Record:** `GroupKind::FieldBoundary { field_id, node_spacing, offset, straighten_tolerance, corner_angle_threshold, corner_rounding_radius, base }` unter `RouteToolId::FieldBoundary`
+**Edit-Payload:** `RouteToolEditPayload::FieldBoundary { field_id, node_spacing, offset, straighten_tolerance, corner_angle_threshold, corner_rounding_radius, corner_rounding_max_angle_deg, base }` fuer `RouteToolId::FieldBoundary`
 
 Modulstruktur: `mod.rs` (Re-Exporte), `state.rs` (Struct, Phasen-Enum, Default), `lifecycle.rs` (RouteTool-Impl, Ring-Berechnung), `config_ui.rs` (semantische Panel-Bruecke), `geometry.rs` (RingNodeKind, detect_corners, round_corner, resample_ring_with_corners)
 
@@ -394,7 +392,7 @@ Die finale Ausgabe wird ueber `ToolResultBuilder` aufgebaut: interne Offset-Kett
 - `RouteOffsetTool`
 - `compute_offset_positions()` — Hotpath-Helfer fuer Benchmarks/Tests
 
-**Gruppen-Record:** `GroupKind::RouteOffset { chain_positions, chain_start_id, chain_end_id, offset_left, offset_right, keep_original, base_spacing, base }` unter `RouteToolId::RouteOffset`
+**Edit-Payload:** `RouteToolEditPayload::RouteOffset { chain_positions, chain_start_id, chain_end_id, offset_left, offset_right, keep_original, base_spacing, base }` fuer `RouteToolId::RouteOffset`
 
 Modulstruktur: `mod.rs` (Re-Exporte), `state.rs` (Struct + OffsetConfig), `lifecycle.rs` (RouteTool-Impl), `geometry.rs` (compute_offset_positions), `config_ui.rs` (semantische Panel-Bruecke), `tests.rs`
 

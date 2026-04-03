@@ -5,9 +5,7 @@ use fs25_auto_drive_editor::app::ui_contract::{
     BypassPanelAction, ParkingPanelAction, RouteOffsetPanelAction, RouteToolConfigState,
     RouteToolPanelAction, SmoothCurvePanelAction,
 };
-use fs25_auto_drive_editor::app::{
-    AppController, AppIntent, AppState, EditorTool, GroupBase, GroupKind, GroupRecord, ToolAnchor,
-};
+use fs25_auto_drive_editor::app::{AppController, AppIntent, AppState, EditorTool, GroupRecord};
 use fs25_auto_drive_editor::core::{
     Connection, ConnectionDirection, ConnectionPriority, MapNode, NodeFlag, RoadMap,
 };
@@ -108,20 +106,10 @@ fn current_cubic_tangents(state: &AppState) -> (TangentSource, TangentSource) {
     (menu.current_start, menu.current_end)
 }
 
-fn make_manual_group_record(id: u64, tool_id: Option<RouteToolId>) -> GroupRecord {
+fn make_manual_group_record(id: u64) -> GroupRecord {
     GroupRecord {
         id,
-        tool_id,
         node_ids: vec![1, 2],
-        start_anchor: ToolAnchor::ExistingNode(1, glam::Vec2::new(0.0, 0.0)),
-        end_anchor: ToolAnchor::ExistingNode(2, glam::Vec2::new(10.0, 0.0)),
-        kind: GroupKind::Manual {
-            base: GroupBase {
-                direction: ConnectionDirection::Regular,
-                priority: ConnectionPriority::Regular,
-                max_segment_length: 10.0,
-            },
-        },
         original_positions: vec![glam::Vec2::new(0.0, 0.0), glam::Vec2::new(10.0, 0.0)],
         marker_node_ids: Vec::new(),
         locked: false,
@@ -136,6 +124,50 @@ fn current_route_tool_config(state: &AppState) -> RouteToolConfigState {
         .route_tool_panel_state()
         .and_then(|panel| panel.config_state)
         .expect("Aktives Route-Tool muss Panel-Konfiguration liefern")
+}
+
+fn make_tool_editable_straight_state() -> (AppState, u64) {
+    let mut map = RoadMap::new(3);
+    map.add_node(MapNode::new(
+        1,
+        glam::Vec2::new(0.0, 0.0),
+        NodeFlag::Regular,
+    ));
+    map.add_node(MapNode::new(
+        2,
+        glam::Vec2::new(30.0, 0.0),
+        NodeFlag::Regular,
+    ));
+    map.ensure_spatial_index();
+
+    let mut state = AppState::new();
+    state.road_map = Some(Arc::new(map));
+    state.view.viewport_size = [1280.0, 720.0];
+
+    handlers::route_tool::select_with_anchors(&mut state, RouteToolId::Straight, 1, 2);
+
+    let record_id = state
+        .group_registry
+        .records()
+        .next()
+        .expect("Gerade Strecke muss einen persistierten GroupRecord anlegen")
+        .id;
+
+    assert!(
+        !state
+            .group_registry
+            .get(record_id)
+            .expect("GroupRecord muss vorhanden sein")
+            .node_ids
+            .is_empty(),
+        "Persistierte Gerade muss innere Nodes besitzen"
+    );
+    assert!(
+        state.tool_edit_store.get(record_id).is_some(),
+        "Persistierte Gerade muss einen Tool-Edit-Snapshot besitzen"
+    );
+
+    (state, record_id)
 }
 
 #[test]
@@ -202,10 +234,9 @@ fn group_edit_tool_requested_bricht_fuer_nicht_editierbare_tools_ohne_nebeneffek
     let mut controller = AppController::new();
     let mut state = make_test_map();
     let record_id = state.group_registry.next_id();
-    state.group_registry.register(make_manual_group_record(
-        record_id,
-        Some(RouteToolId::ColorPath),
-    ));
+    state
+        .group_registry
+        .register(make_manual_group_record(record_id));
 
     controller
         .handle_intent(&mut state, AppIntent::GroupEditStartRequested { record_id })
@@ -236,8 +267,125 @@ fn group_edit_tool_requested_bricht_fuer_nicht_editierbare_tools_ohne_nebeneffek
         before_active_route_id
     );
     assert!(state.selection.selected_node_ids.is_empty());
-    assert_eq!(state.tool_editing_record_id, None);
-    assert!(state.tool_editing_record_backup.is_none());
+    assert!(state.active_tool_edit_session.is_none());
+    assert!(state.tool_edit_store.get(record_id).is_none());
+}
+
+#[test]
+fn route_tool_cancel_restores_registry_and_store_after_active_tool_edit() {
+    let mut controller = AppController::new();
+    let (mut state, record_id) = make_tool_editable_straight_state();
+    let original_node_count = state.road_map.as_ref().unwrap().node_count();
+    let original_record = state
+        .group_registry
+        .get(record_id)
+        .expect("Persistierter Record muss vor Tool-Edit existieren")
+        .clone();
+
+    controller
+        .handle_intent(&mut state, AppIntent::EditGroupRequested { record_id })
+        .expect("EditGroupRequested sollte den Tool-Edit starten");
+
+    assert!(state.active_tool_edit_session.is_some());
+    assert!(state.group_registry.get(record_id).is_none());
+    assert!(state.tool_edit_store.get(record_id).is_none());
+    assert!(state.road_map.as_ref().unwrap().node_count() < original_node_count);
+
+    controller
+        .handle_intent(&mut state, AppIntent::RouteToolCancelled)
+        .expect("RouteToolCancelled sollte den Tool-Edit sauber abbrechen");
+
+    assert!(state.active_tool_edit_session.is_none());
+    assert_eq!(state.editor.active_tool, EditorTool::Select);
+    assert_eq!(
+        state.road_map.as_ref().unwrap().node_count(),
+        original_node_count
+    );
+
+    let restored_record = state
+        .group_registry
+        .get(record_id)
+        .expect("GroupRecord muss nach Cancel wiederhergestellt sein");
+    assert_eq!(restored_record.node_ids, original_record.node_ids);
+    assert_eq!(restored_record.locked, original_record.locked);
+    assert!(state.tool_edit_store.get(record_id).is_some());
+}
+
+#[test]
+fn undo_requested_restores_active_tool_edit_without_transient_redo_state() {
+    let mut controller = AppController::new();
+    let (mut state, record_id) = make_tool_editable_straight_state();
+    let original_node_count = state.road_map.as_ref().unwrap().node_count();
+
+    controller
+        .handle_intent(&mut state, AppIntent::EditGroupRequested { record_id })
+        .expect("EditGroupRequested sollte den Tool-Edit starten");
+
+    assert!(state.active_tool_edit_session.is_some());
+    assert!(state.group_registry.get(record_id).is_none());
+
+    controller
+        .handle_intent(&mut state, AppIntent::UndoRequested)
+        .expect("UndoRequested muss aktiven Tool-Edit ueber Restore abbrechen");
+
+    assert!(state.active_tool_edit_session.is_none());
+    assert_eq!(state.editor.active_tool, EditorTool::Select);
+    assert_eq!(
+        state.road_map.as_ref().unwrap().node_count(),
+        original_node_count
+    );
+    assert!(state.group_registry.get(record_id).is_some());
+    assert!(state.tool_edit_store.get(record_id).is_some());
+    assert!(
+        !state.can_redo(),
+        "Transienter Tool-Edit darf keinen redo-faehigen Zwischenzustand hinterlassen"
+    );
+}
+
+#[test]
+fn group_edit_to_tool_edit_cancel_restores_locked_group_state() {
+    let mut controller = AppController::new();
+    let (mut state, record_id) = make_tool_editable_straight_state();
+
+    assert!(
+        state.group_registry.is_locked(record_id),
+        "Persistierte Tool-Gruppen muessen initial gesperrt sein"
+    );
+
+    controller
+        .handle_intent(&mut state, AppIntent::GroupEditStartRequested { record_id })
+        .expect("GroupEditStartRequested sollte den Gruppen-Edit starten");
+
+    assert!(state.group_editing.is_some());
+    assert!(
+        !state.group_registry.is_locked(record_id),
+        "Aktiver Gruppen-Edit muss die Gruppe temporaer entsperren"
+    );
+
+    controller
+        .handle_intent(&mut state, AppIntent::GroupEditToolRequested { record_id })
+        .expect("GroupEditToolRequested sollte in den Tool-Edit wechseln");
+
+    assert!(state.group_editing.is_none());
+    assert!(state.active_tool_edit_session.is_some());
+    assert!(state.group_registry.get(record_id).is_none());
+    assert!(
+        state
+            .active_tool_edit_session
+            .as_ref()
+            .expect("Tool-Edit-Session muss aktiv sein")
+            .group_record_backup
+            .locked,
+        "Backup fuer Tool-Edit muss den urspruenglichen Lock-Zustand behalten"
+    );
+
+    controller
+        .handle_intent(&mut state, AppIntent::RouteToolCancelled)
+        .expect("RouteToolCancelled sollte den Tool-Edit abbrechen");
+
+    assert!(state.group_registry.is_locked(record_id));
+    assert!(state.tool_edit_store.get(record_id).is_some());
+    assert!(state.group_registry.get(record_id).is_some());
 }
 
 #[test]

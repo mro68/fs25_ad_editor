@@ -2,14 +2,14 @@
 
 use super::super::{
     common::{linear_connections, populate_neighbors, record_applied_tool_state, sync_tool_host},
-    RouteTool, RouteToolCore, RouteToolDrag, RouteToolHostSync, RouteToolId, RouteToolPanelBridge,
-    RouteToolRecreate, RouteToolSegmentAdjustments, RouteToolTangent, ToolAction, ToolHostContext,
-    ToolPreview, ToolResult,
+    RouteTool, RouteToolCore, RouteToolDrag, RouteToolGroupEdit, RouteToolHostSync,
+    RouteToolPanelBridge, RouteToolRecreate, RouteToolSegmentAdjustments, RouteToolTangent,
+    ToolAction, ToolHostContext, ToolPreview, ToolResult,
 };
 use super::geometry::{build_tool_result, cubic_bezier, CurveParams};
 use super::state::{CurveDegree, CurvePreviewCacheKey, CurveTool, Phase};
-use crate::app::group_registry::{GroupBase, GroupKind, GroupRecord};
 use crate::app::tool_contract::TangentSource;
+use crate::app::tool_editing::{RouteToolEditPayload, ToolEditAnchors, ToolRouteBase};
 use crate::app::ui_contract::{
     RouteToolConfigState, RouteToolPanelAction, RouteToolPanelEffect, TangentMenuData,
 };
@@ -364,70 +364,70 @@ impl RouteTool for CurveTool {
         Some(self)
     }
 
-    fn make_group_record(&self, id: u64, node_ids: &[u64]) -> Option<GroupRecord> {
+    fn as_group_edit(&self) -> Option<&dyn RouteToolGroupEdit> {
+        Some(self)
+    }
+
+    fn as_group_edit_mut(&mut self) -> Option<&mut dyn RouteToolGroupEdit> {
+        Some(self)
+    }
+}
+
+impl RouteToolGroupEdit for CurveTool {
+    fn build_edit_payload(&self) -> Option<RouteToolEditPayload> {
         let start = self.last_start_anchor?;
         let end = self.lifecycle.last_end_anchor?;
         let cp1 = self.last_control_point1?;
-        let kind = match self.degree {
-            CurveDegree::Quadratic => GroupKind::CurveQuad {
+        let anchors = ToolEditAnchors { start, end };
+        match self.degree {
+            CurveDegree::Quadratic => Some(RouteToolEditPayload::CurveQuad {
+                anchors,
                 cp1,
-                base: GroupBase {
+                base: ToolRouteBase {
                     direction: self.direction,
                     priority: self.priority,
                     max_segment_length: self.seg.max_segment_length,
                 },
-            },
+            }),
             CurveDegree::Cubic => {
                 let cp2 = self.last_control_point2.unwrap_or(cp1);
-                GroupKind::CurveCubic {
+                Some(RouteToolEditPayload::CurveCubic {
+                    anchors,
                     cp1,
                     cp2,
                     tangent_start: self.tangents.last_tangent_start,
                     tangent_end: self.tangents.last_tangent_end,
-                    base: GroupBase {
+                    base: ToolRouteBase {
                         direction: self.direction,
                         priority: self.priority,
                         max_segment_length: self.seg.max_segment_length,
                     },
-                }
+                })
             }
-        };
-        Some(GroupRecord {
-            id,
-            tool_id: Some(match self.degree {
-                CurveDegree::Quadratic => RouteToolId::CurveQuad,
-                CurveDegree::Cubic => RouteToolId::CurveCubic,
-            }),
-            node_ids: node_ids.to_vec(),
-            start_anchor: start,
-            end_anchor: end,
-            original_positions: Vec::new(), // wird im Handler befüllt
-            marker_node_ids: Vec::new(),
-            locked: true,
-            entry_node_id: None,
-            exit_node_id: None,
-            kind,
-        })
+        }
     }
 
-    fn load_for_edit(&mut self, record: &GroupRecord, kind: &GroupKind) {
-        self.start = Some(record.start_anchor);
-        self.end = Some(record.end_anchor);
-        match kind {
-            GroupKind::CurveQuad { cp1, base } => {
+    fn restore_edit_payload(&mut self, payload: &RouteToolEditPayload) {
+        match payload {
+            RouteToolEditPayload::CurveQuad { anchors, cp1, base } => {
+                self.start = Some(anchors.start);
+                self.end = Some(anchors.end);
                 self.control_point1 = Some(*cp1);
                 self.control_point2 = None;
                 self.direction = base.direction;
                 self.priority = base.priority;
                 self.seg.max_segment_length = base.max_segment_length;
             }
-            GroupKind::CurveCubic {
+            RouteToolEditPayload::CurveCubic {
+                anchors,
                 cp1,
                 cp2,
                 tangent_start,
                 tangent_end,
                 base,
             } => {
+                self.start = Some(anchors.start);
+                self.end = Some(anchors.end);
                 self.control_point1 = Some(*cp1);
                 self.control_point2 = Some(*cp2);
                 self.tangents.tangent_start = *tangent_start;

@@ -2,8 +2,8 @@
 
 use super::geometry::{build_parking_result, build_preview, generate_parking_layout};
 use super::state::{ParkingConfig, ParkingPhase, ParkingTool, RampSide};
-use crate::app::group_registry::GroupKind;
-use crate::app::tools::{RouteTool, RouteToolCore, RouteToolRotate};
+use crate::app::tool_editing::RouteToolEditPayload;
+use crate::app::tools::{RouteToolCore, RouteToolGroupEdit, RouteToolRotate};
 use crate::core::{ConnectionDirection, ConnectionPriority};
 use glam::Vec2;
 
@@ -675,8 +675,8 @@ fn test_build_parking_result_sets_regular_flags_and_empty_external_connections()
 
 // ─── GroupRecord-Tests ──────────────────────────────────────────────────────
 
-/// Roundtrip: make_group_record erstellt den korrekten Record,
-/// load_for_edit stellt alle Felder exakt wieder her.
+/// Roundtrip: build_edit_payload erstellt den korrekten Snapshot,
+/// restore_edit_payload stellt alle Felder exakt wieder her.
 #[test]
 fn parking_segment_record_roundtrip() {
     let mut tool = ParkingTool::new();
@@ -688,18 +688,18 @@ fn parking_segment_record_roundtrip() {
     tool.direction = ConnectionDirection::Regular;
     tool.priority = ConnectionPriority::SubPriority;
 
-    let record = tool.make_group_record(99, &[200, 201, 202]);
-    assert!(record.is_some(), "Record muss vorhanden sein");
-    let record = record.unwrap();
+    let payload = tool.build_edit_payload();
+    assert!(payload.is_some(), "Payload muss vorhanden sein");
+    let payload = payload.unwrap();
 
-    let GroupKind::Parking {
+    let RouteToolEditPayload::Parking {
         origin,
         angle,
         ref config,
         ref base,
-    } = record.kind
+    } = payload
     else {
-        panic!("Erwartetes GroupKind::Parking, bekam etwas anderes");
+        panic!("Erwartete RouteToolEditPayload::Parking, bekam etwas anderes");
     };
     assert_eq!(
         origin,
@@ -720,9 +720,9 @@ fn parking_segment_record_roundtrip() {
         "priority im base"
     );
 
-    // Roundtrip: neues Tool, load_for_edit
+    // Roundtrip: neues Tool, restore_edit_payload
     let mut tool2 = ParkingTool::new();
-    tool2.load_for_edit(&record, &record.kind);
+    tool2.restore_edit_payload(&payload);
 
     assert_eq!(
         tool2.origin,
@@ -752,14 +752,14 @@ fn parking_segment_record_roundtrip() {
     );
 }
 
-/// Ohne gesetzten Origin muss make_group_record None liefern.
+/// Ohne gesetzten Origin muss build_edit_payload None liefern.
 #[test]
 fn parking_segment_record_none_ohne_origin() {
     let tool = ParkingTool::new();
-    let record = tool.make_group_record(0, &[]);
+    let record = tool.build_edit_payload();
     assert!(
         record.is_none(),
-        "Ohne origin muss make_group_record None liefern"
+        "Ohne origin muss build_edit_payload None liefern"
     );
 }
 

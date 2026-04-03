@@ -185,26 +185,22 @@ Handhabt Bearbeitung von Nodes, Verbindungen und Marker. Integriert Segment-Clea
 **Funktionen:**
 
 ```rust
-pub fn edit_segment(
-    state: &mut AppState,
-    record_id: u64,
-    kind: GroupKind,
-    node_ids_to_delete: &[u64],
-) -> anyhow::Result<()>
+pub fn edit_group(state: &mut AppState, record_id: u64)
 ```
 
-Bearbeitet ein zuvor erstelltes Segment. Fuehrt folgende Schritte aus:
+Startet den destruktiven Tool-Edit fuer eine persistierte Tool-Gruppe. Fuehrt folgende Schritte aus:
 
-1. **Marker-Cleanup:** Entfernt `MapMarker` von den zu loeschenden Nodes (aus `record.marker_node_ids`)
-2. **Node-Loeschung:** Loescht die alten Segment-Nodes aus der RoadMap
-3. **Tool-Reload:** Laedt das passende Route-Tool mit den gespeicherten Parametern (via `load_for_edit()`)
-4. **Neu-Ausfuehrung:** Tool wird neu mit den User-Aenderungen ausfuehrt (neue Node-IDs generiert)
+1. **Lookup:** Laedt neutralen `GroupRecord` und passenden `ToolEditRecord` aus Registry bzw. `ToolEditStore`
+2. **Marker-Cleanup:** Entfernt Marker der Gruppe anhand von `record.marker_node_ids`
+3. **Node-Loeschung:** Loescht nur die inneren Tool-Nodes; ExistingNode-Anker aus dem Payload bleiben erhalten
+4. **Tool-Rehydrierung:** Aktiviert das zugehoerige Route-Tool und stellt dessen Zustand via `RouteToolGroupEdit::restore_edit_payload()` wieder her
+5. **Session-Backup:** Legt `ActiveToolEditSession` fuer Cancel/Undo an
 
-**Group-Registry-Integration:**
+**Tool-Editing-Integration:**
 
-- Nutzt `GroupRecord` (fuer Marker-Cleanup und Tool-Parameter)
-- Lokalisiert via `group_registry.get(record_id)`
-- Marker-Cleanup ist **kritisch:** Unvollstaendiges Cleanup verwaist BrainCells im GroupRecord
+- Registry bleibt tool-neutral; tool-spezifische Parameter kommen aus `state.tool_edit_store`
+- Cancel laeuft spaeter ueber `tool_editing::cancel_active_edit()` und stellt Registry plus Payload-Store wieder her
+- Manuelle Gruppen sowie ephemere Tools besitzen keinen Tool-Edit-Snapshot und koennen diesen Flow deshalb nicht nutzen
 
 ```rust
 pub fn delete_nodes_by_ids(state: &mut AppState, node_ids: &[u64])

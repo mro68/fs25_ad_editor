@@ -5,13 +5,13 @@ use super::super::{
         linear_connections, populate_neighbors, record_applied_tool_state, sync_tool_host,
         tangent_options,
     },
-    RouteTool, RouteToolCore, RouteToolHostSync, RouteToolId, RouteToolPanelBridge,
+    RouteTool, RouteToolCore, RouteToolGroupEdit, RouteToolHostSync, RouteToolPanelBridge,
     RouteToolRecreate, RouteToolSegmentAdjustments, RouteToolTangent, ToolAction, ToolHostContext,
     ToolPreview, ToolResult,
 };
 use super::state::SplineTool;
-use crate::app::group_registry::{GroupBase, GroupKind, GroupRecord};
 use crate::app::tool_contract::TangentSource;
+use crate::app::tool_editing::{RouteToolEditPayload, ToolRouteBase};
 use crate::app::ui_contract::{
     RouteToolConfigState, RouteToolPanelAction, RouteToolPanelEffect, TangentMenuData,
 };
@@ -269,43 +269,39 @@ impl RouteTool for SplineTool {
         Some(self)
     }
 
-    fn make_group_record(&self, id: u64, node_ids: &[u64]) -> Option<GroupRecord> {
+    fn as_group_edit(&self) -> Option<&dyn RouteToolGroupEdit> {
+        Some(self)
+    }
+
+    fn as_group_edit_mut(&mut self) -> Option<&mut dyn RouteToolGroupEdit> {
+        Some(self)
+    }
+}
+
+impl RouteToolGroupEdit for SplineTool {
+    fn build_edit_payload(&self) -> Option<RouteToolEditPayload> {
         if self.last_anchors.len() < 2 {
             return None;
         }
-        let start = *self.last_anchors.first()?;
-        let end = *self.last_anchors.last()?;
-        Some(GroupRecord {
-            id,
-            tool_id: Some(RouteToolId::Spline),
-            node_ids: node_ids.to_vec(),
-            start_anchor: start,
-            end_anchor: end,
-            original_positions: Vec::new(), // wird im Handler befüllt
-            marker_node_ids: Vec::new(),
-            locked: true,
-            entry_node_id: None,
-            exit_node_id: None,
-            kind: GroupKind::Spline {
-                anchors: self.last_anchors.clone(),
-                tangent_start: self.tangents.last_tangent_start,
-                tangent_end: self.tangents.last_tangent_end,
-                base: GroupBase {
-                    direction: self.direction,
-                    priority: self.priority,
-                    max_segment_length: self.seg.max_segment_length,
-                },
+        Some(RouteToolEditPayload::Spline {
+            anchors: self.last_anchors.clone(),
+            tangent_start: self.tangents.last_tangent_start,
+            tangent_end: self.tangents.last_tangent_end,
+            base: ToolRouteBase {
+                direction: self.direction,
+                priority: self.priority,
+                max_segment_length: self.seg.max_segment_length,
             },
         })
     }
 
-    fn load_for_edit(&mut self, _record: &GroupRecord, kind: &GroupKind) {
-        let GroupKind::Spline {
+    fn restore_edit_payload(&mut self, payload: &RouteToolEditPayload) {
+        let RouteToolEditPayload::Spline {
             anchors,
             tangent_start,
             tangent_end,
             base,
-        } = kind
+        } = payload
         else {
             return;
         };
