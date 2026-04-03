@@ -73,9 +73,13 @@ pub(crate) struct ViewportContext<'a> {
 }
 ```
 
-Wird von `input/mod.rs` befuellt: `tool_needs_lasso = active_tool.needs_lasso_input()`.
-Ist `true`, behandelt `drag_primary.rs` einen Alt+Drag als `DragSelectionMode::ToolLasso`
-statt als normale Lasso-Selektion.
+Wird aus `EditorToolState::route_tool_viewport_data()` befuellt. Das App-Layer liest dafuer die
+Lasso-Capability des aktiven Tools ueber den `ToolManager` und setzt `needs_lasso_input`, wenn
+`RouteToolLassoInput::is_lasso_input_active()` aktiv ist. Ist der Wert `true`, behandelt
+`drag_primary.rs` einen Alt+Drag als `DragSelectionMode::ToolLasso` statt als normale Lasso-Selektion.
+Fuer Tastatur-Shortcuts setzt das App-Layer zusaetzlich `segment_shortcuts_active`, sobald das
+aktive Tool Eingaben haelt und `RouteToolSegmentAdjustments` bereitstellt; nur dann werden
+Pfeiltasten in `keyboard.rs` als Node-/Segment-Shortcuts statt als Kamera-Pan geroutet.
 
 ## Funktionen
 ---
@@ -380,7 +384,7 @@ let route_tool_view = editor_state.route_tool_viewport_data();
 let intents = input.collect_viewport_events(
     ui, &response, viewport_size,
     &camera, road_map.as_deref(), &selected_node_ids,
-    active_tool, route_tool_is_drawing,
+    active_tool, route_tool_is_drawing, route_tool_view.segment_shortcuts_active,
   &options, command_palette_open, default_direction, default_priority,
   &route_tool_view.drag_targets,
   &mut distanzen_state,
@@ -398,6 +402,7 @@ let intents = input.collect_viewport_events(
   - `Ctrl+V` → Paste-Vorschau starten
   - `Ctrl+O` → Datei öffnen
   - `Ctrl+S` → Datei speichern
+  - Pfeiltasten → Kamera-Pan; waehrend aktiver `RouteToolSegmentAdjustments` stattdessen Node-/Segment-Shortcuts
   - `T` (ohne Modifier) → Floating-Menu Tools
   - `G` (ohne Modifier) → Floating-Menu Grundbefehle (Basics)
   - `B` (ohne Modifier) → Floating-Menu Abschnittswerkzeuge (SectionTools)

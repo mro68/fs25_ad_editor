@@ -1,6 +1,6 @@
 //! Lifecycle-Zustand und Segment-Konfiguration fuer Route-Tools.
 
-use super::super::ToolAnchor;
+use super::super::{ToolAnchor, ToolHostContext};
 use super::geometry::{
     node_count_from_length, segment_length_from_count,
     snap_with_neighbors as geom_snap_with_neighbors,
@@ -9,7 +9,7 @@ use crate::app::tools::snap_to_node;
 use crate::app::ui_contract::{
     SegmentConfigPanelAction, SegmentConfigPanelState, SegmentPanelMode,
 };
-use crate::core::{ConnectedNeighbor, RoadMap};
+use crate::core::{ConnectedNeighbor, ConnectionDirection, ConnectionPriority, RoadMap};
 
 /// Welcher Wert wurde zuletzt vom User geaendert?
 ///
@@ -110,6 +110,28 @@ impl ToolLifecycleState {
     ) -> (ToolAnchor, Vec<ConnectedNeighbor>) {
         geom_snap_with_neighbors(pos, road_map, self.snap_radius)
     }
+}
+
+/// Synchronisiert gemeinsame Host-Defaults in ein Tool.
+pub fn sync_tool_host(
+    direction: &mut ConnectionDirection,
+    priority: &mut ConnectionPriority,
+    lifecycle: &mut ToolLifecycleState,
+    context: &ToolHostContext,
+) {
+    *direction = context.direction;
+    *priority = context.priority;
+    lifecycle.snap_radius = context.snap_radius;
+}
+
+/// Speichert die zuletzt erzeugten IDs und den End-Anker eines Tools.
+pub fn record_applied_tool_state(
+    lifecycle: &mut ToolLifecycleState,
+    ids: &[u64],
+    end_anchor: Option<ToolAnchor>,
+) {
+    lifecycle.last_end_anchor = end_anchor;
+    lifecycle.save_created_ids(ids);
 }
 
 /// Macro fuer die 7 identischen Lifecycle-Delegationsmethoden aller Route-Tools.

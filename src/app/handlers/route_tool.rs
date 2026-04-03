@@ -6,9 +6,20 @@ mod selection;
 
 use crate::app::state::EditorTool;
 use crate::app::tool_contract::TangentSource;
-use crate::app::tools::{RouteToolId, ToolAction};
+use crate::app::tools::{RouteToolId, ToolAction, ToolHostContext};
 use crate::app::ui_contract::{RouteToolPanelAction, RouteToolPanelFollowUp};
 use crate::app::AppState;
+
+pub(super) fn build_host_context(state: &AppState) -> ToolHostContext {
+    ToolHostContext {
+        direction: state.editor.default_direction,
+        priority: state.editor.default_priority,
+        snap_radius: state.options.snap_radius(),
+        farmland_data: state.farmland_polygons.clone(),
+        farmland_grid: state.farmland_grid.clone(),
+        background_image: state.background_image.clone(),
+    }
+}
 
 /// Verarbeitet einen Viewport-Klick im Route-Tool.
 pub fn click(state: &mut AppState, world_pos: glam::Vec2, ctrl: bool) {
@@ -33,7 +44,7 @@ pub fn click(state: &mut AppState, world_pos: glam::Vec2, ctrl: bool) {
 /// das aktive Tool `needs_lasso_input()` meldet.
 pub fn lasso_completed(state: &mut AppState, polygon: Vec<glam::Vec2>) {
     let action = {
-        let Some(tool) = state.editor.tool_manager.active_tool_mut() else {
+        let Some(tool) = state.editor.tool_manager.active_lasso_input_mut() else {
             return;
         };
         tool.on_lasso_completed(polygon)

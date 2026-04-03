@@ -1,6 +1,11 @@
-//! Lifecycle-Methoden des StraightLineTool (RouteTool-Implementierung).
+//! Lifecycle-Methoden des StraightLineTool.
 
-use super::super::{RouteTool, RouteToolId, ToolAction, ToolPreview, ToolResult};
+use super::super::{
+    common::{record_applied_tool_state, sync_tool_host},
+    RouteTool, RouteToolCore, RouteToolHostSync, RouteToolId, RouteToolPanelBridge,
+    RouteToolRecreate, RouteToolSegmentAdjustments, ToolAction, ToolHostContext, ToolPreview,
+    ToolResult,
+};
 use super::geometry::{build_result, compute_line_positions};
 use super::state::StraightLineTool;
 use crate::app::group_registry::{GroupBase, GroupKind, GroupRecord};
@@ -8,19 +13,7 @@ use crate::app::ui_contract::{RouteToolConfigState, RouteToolPanelAction, RouteT
 use crate::core::RoadMap;
 use glam::Vec2;
 
-impl RouteTool for StraightLineTool {
-    fn name(&self) -> &str {
-        "Gerade Strecke"
-    }
-
-    fn icon(&self) -> &str {
-        "━"
-    }
-
-    fn description(&self) -> &str {
-        "Zeichnet eine gerade Linie zwischen zwei Punkten mit Zwischen-Nodes"
-    }
-
+impl RouteToolPanelBridge for StraightLineTool {
     fn status_text(&self) -> &str {
         match (&self.start, &self.end) {
             (None, _) => "Startpunkt klicken",
@@ -29,11 +22,24 @@ impl RouteTool for StraightLineTool {
         }
     }
 
+    fn panel_state(&self) -> RouteToolConfigState {
+        RouteToolConfigState::Straight(self.panel_state())
+    }
+
+    fn apply_panel_action(&mut self, action: RouteToolPanelAction) -> RouteToolPanelEffect {
+        let RouteToolPanelAction::Straight(action) = action else {
+            return RouteToolPanelEffect::default();
+        };
+
+        self.apply_panel_action(action)
+    }
+}
+
+impl RouteToolCore for StraightLineTool {
     fn on_click(&mut self, pos: Vec2, road_map: &RoadMap, _ctrl: bool) -> ToolAction {
         let anchor = self.lifecycle.snap_at(pos, road_map);
 
         if self.start.is_none() {
-            // Verkettung: letzten Endpunkt als Start verwenden
             if let Some(last_end) = self.lifecycle.chaining_start_anchor() {
                 self.lifecycle.prepare_for_chaining();
                 self.last_start_anchor = None;
@@ -60,27 +66,11 @@ impl RouteTool for StraightLineTool {
 
         let end_pos = match &self.end {
             Some(anchor) => anchor.position(),
-            None => {
-                // Preview zur aktuellen Mausposition
-                let snapped = self.lifecycle.snap_at(cursor_pos, road_map);
-                snapped.position()
-            }
+            None => self.lifecycle.snap_at(cursor_pos, road_map).position(),
         };
 
         let positions = compute_line_positions(start_pos, end_pos, self.seg.max_segment_length);
         ToolPreview::from_polyline(positions, self.direction, self.priority)
-    }
-
-    fn panel_state(&self) -> RouteToolConfigState {
-        RouteToolConfigState::Straight(self.panel_state())
-    }
-
-    fn apply_panel_action(&mut self, action: RouteToolPanelAction) -> RouteToolPanelEffect {
-        let RouteToolPanelAction::Straight(action) = action else {
-            return RouteToolPanelEffect::default();
-        };
-
-        self.apply_panel_action(action)
     }
 
     fn execute(&self, road_map: &RoadMap) -> Option<ToolResult> {
@@ -96,10 +86,6 @@ impl RouteTool for StraightLineTool {
         )
     }
 
-    /// Setzt das Tool auf den Anfangszustand zurueck.
-    ///
-    /// Loescht nur Start/End. `lifecycle.last_created_ids` und `last_*_anchor`
-    /// bleiben erhalten fuer Verkettung und Nachbearbeitung.
     fn reset(&mut self) {
         self.start = None;
         self.end = None;
@@ -112,19 +98,42 @@ impl RouteTool for StraightLineTool {
     fn has_pending_input(&self) -> bool {
         self.start.is_some()
     }
+}
 
-    crate::impl_lifecycle_delegation!();
-
-    fn current_end_anchor(&self) -> Option<super::super::ToolAnchor> {
-        self.end.or(self.lifecycle.last_end_anchor)
+impl RouteToolHostSync for StraightLineTool {
+    fn sync_host(&mut self, context: &ToolHostContext) {
+        sync_tool_host(
+            &mut self.direction,
+            &mut self.priority,
+            &mut self.lifecycle,
+            context,
+        );
     }
+}
 
-    fn save_anchors_for_recreate(&mut self, _road_map: &RoadMap) {
-        // Anker nur ueberschreiben wenn aktuelle start/end gesetzt sind.
-        // Beim Recreate sind start/end None — Anker bleiben erhalten.
+impl RouteToolRecreate for StraightLineTool {
+    fn on_applied(&mut self, ids: &[u64], _road_map: &RoadMap) {
         if self.start.is_some() {
             self.last_start_anchor = self.start;
         }
+        let end_anchor = self.end.or(self.lifecycle.last_end_anchor);
+        record_applied_tool_state(&mut self.lifecycle, ids, end_anchor);
+    }
+
+    fn last_created_ids(&self) -> &[u64] {
+        &self.lifecycle.last_created_ids
+    }
+
+    fn last_end_anchor(&self) -> Option<super::super::ToolAnchor> {
+        self.lifecycle.last_end_anchor
+    }
+
+    fn needs_recreate(&self) -> bool {
+        self.lifecycle.recreate_needed
+    }
+
+    fn clear_recreate_flag(&mut self) {
+        self.lifecycle.recreate_needed = false;
     }
 
     fn execute_from_anchors(&self, road_map: &RoadMap) -> Option<ToolResult> {
@@ -138,6 +147,46 @@ impl RouteTool for StraightLineTool {
             self.priority,
             road_map,
         )
+    }
+}
+
+impl RouteToolSegmentAdjustments for StraightLineTool {
+    fn increase_node_count(&mut self) {
+        self.seg.increase_node_count();
+        self.lifecycle.recreate_needed = true;
+    }
+
+    fn decrease_node_count(&mut self) {
+        self.seg.decrease_node_count();
+        self.lifecycle.recreate_needed = true;
+    }
+
+    fn increase_segment_length(&mut self) {
+        self.seg.increase_segment_length();
+        self.lifecycle.recreate_needed = true;
+    }
+
+    fn decrease_segment_length(&mut self) {
+        self.seg.decrease_segment_length();
+        self.lifecycle.recreate_needed = true;
+    }
+}
+
+impl RouteTool for StraightLineTool {
+    fn as_recreate(&self) -> Option<&dyn RouteToolRecreate> {
+        Some(self)
+    }
+
+    fn as_recreate_mut(&mut self) -> Option<&mut dyn RouteToolRecreate> {
+        Some(self)
+    }
+
+    fn as_segment_adjustments(&self) -> Option<&dyn RouteToolSegmentAdjustments> {
+        Some(self)
+    }
+
+    fn as_segment_adjustments_mut(&mut self) -> Option<&mut dyn RouteToolSegmentAdjustments> {
+        Some(self)
     }
 
     fn make_group_record(&self, id: u64, node_ids: &[u64]) -> Option<GroupRecord> {

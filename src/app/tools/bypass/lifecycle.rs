@@ -1,29 +1,32 @@
-//! `RouteTool`-Implementierung fuer das Ausweichstrecken-Tool.
+//! Route-Tool-Implementierung fuer das Ausweichstrecken-Tool.
 
 use std::borrow::Cow;
 
 use super::geometry::compute_bypass_positions;
 use super::state::BypassTool;
 use crate::app::group_registry::{GroupBase, GroupKind, GroupRecord};
-use crate::app::tools::common::assemble_tool_result;
-use crate::app::tools::{RouteTool, RouteToolId, ToolAction, ToolAnchor, ToolPreview, ToolResult};
+use crate::app::tools::common::{assemble_tool_result, record_applied_tool_state, sync_tool_host};
+use crate::app::tools::{
+    OrderedNodeChain, RouteTool, RouteToolChainInput, RouteToolCore, RouteToolHostSync,
+    RouteToolId, RouteToolPanelBridge, RouteToolRecreate, ToolAction, ToolAnchor, ToolHostContext,
+    ToolPreview, ToolResult,
+};
 use crate::app::ui_contract::{RouteToolConfigState, RouteToolPanelAction, RouteToolPanelEffect};
-use crate::core::{ConnectionDirection, ConnectionPriority, RoadMap};
+use crate::core::RoadMap;
 use glam::Vec2;
 
-impl RouteTool for BypassTool {
-    fn name(&self) -> &str {
-        "Ausweichstrecke"
+impl BypassTool {
+    pub(crate) fn load_chain(&mut self, positions: Vec<Vec2>, start_id: u64, end_id: u64) {
+        self.chain_positions = positions;
+        self.chain_start_id = start_id;
+        self.chain_end_id = end_id;
+        self.cached_positions = None;
+        self.cached_connections = None;
+        self.d_blend = 0.0;
     }
+}
 
-    fn icon(&self) -> &str {
-        "⤴"
-    }
-
-    fn description(&self) -> &str {
-        "Generiert eine parallele Ausweichstrecke zur selektierten Kette mit S-foermigen Uebergaengen"
-    }
-
+impl RouteToolPanelBridge for BypassTool {
     fn status_text(&self) -> &str {
         if self.has_chain() {
             "Bereit — Enter zum Ausfuehren, Escape zum Abbrechen"
@@ -32,7 +35,20 @@ impl RouteTool for BypassTool {
         }
     }
 
-    /// Klicks im Viewport werden ignoriert — die Kette kommt aus der Selektion.
+    fn panel_state(&self) -> RouteToolConfigState {
+        RouteToolConfigState::Bypass(self.panel_state())
+    }
+
+    fn apply_panel_action(&mut self, action: RouteToolPanelAction) -> RouteToolPanelEffect {
+        let RouteToolPanelAction::Bypass(action) = action else {
+            return RouteToolPanelEffect::default();
+        };
+
+        self.apply_panel_action(action)
+    }
+}
+
+impl RouteToolCore for BypassTool {
     fn on_click(&mut self, _pos: Vec2, _road_map: &RoadMap, _ctrl: bool) -> ToolAction {
         ToolAction::Continue
     }
@@ -42,8 +58,6 @@ impl RouteTool for BypassTool {
             return ToolPreview::default();
         }
 
-        // Cache-Hit: Referenz ausleihen (kein Clone) — Cow::Borrowed vermeidet
-        // die per-Frame Vec-Allokation bei unveraendertem Cache.
         let positions: Cow<'_, [Vec2]> = if let Some(cached) = &self.cached_positions {
             Cow::Borrowed(cached.as_slice())
         } else {
@@ -55,7 +69,6 @@ impl RouteTool for BypassTool {
             Cow::Owned(new_pts)
         };
 
-        // Vollstaendige Preview-Sequenz: chain_start + bypass_nodes + chain_end
         let chain_start = *self
             .chain_positions
             .first()
@@ -87,18 +100,6 @@ impl RouteTool for BypassTool {
         }
     }
 
-    fn panel_state(&self) -> RouteToolConfigState {
-        RouteToolConfigState::Bypass(self.panel_state())
-    }
-
-    fn apply_panel_action(&mut self, action: RouteToolPanelAction) -> RouteToolPanelEffect {
-        let RouteToolPanelAction::Bypass(action) = action else {
-            return RouteToolPanelEffect::default();
-        };
-
-        self.apply_panel_action(action)
-    }
-
     fn execute(&self, road_map: &RoadMap) -> Option<ToolResult> {
         if !self.has_chain() {
             return None;
@@ -116,7 +117,6 @@ impl RouteTool for BypassTool {
             .last()
             .expect("invariant: chain_positions ist nicht-leer nach load_chain()");
 
-        // Vollstaendige Positions-Sequenz: start + neue Nodes + end
         let mut all_positions = Vec::with_capacity(new_positions.len() + 2);
         all_positions.push(chain_start_pos);
         all_positions.extend_from_slice(&new_positions);
@@ -132,7 +132,6 @@ impl RouteTool for BypassTool {
         ))
     }
 
-    /// Loescht die geladene Kette, den Cache und den Lifecycle-Zustand.
     fn reset(&mut self) {
         self.chain_positions.clear();
         self.cached_positions = None;
@@ -149,44 +148,29 @@ impl RouteTool for BypassTool {
     fn has_pending_input(&self) -> bool {
         self.has_chain()
     }
+}
 
-    // ── Chain-Input ──────────────────────────────────────────────────────────
-
-    fn needs_chain_input(&self) -> bool {
-        true
+impl RouteToolHostSync for BypassTool {
+    fn sync_host(&mut self, context: &ToolHostContext) {
+        sync_tool_host(
+            &mut self.direction,
+            &mut self.priority,
+            &mut self.lifecycle,
+            context,
+        );
     }
+}
 
-    /// Laedt die geordnete Kette aus der Selektion.
-    fn load_chain(&mut self, positions: Vec<Vec2>, start_id: u64, end_id: u64) {
-        self.chain_positions = positions;
-        self.chain_start_id = start_id;
-        self.chain_end_id = end_id;
-        self.cached_positions = None;
-        self.cached_connections = None;
-        self.d_blend = 0.0;
-    }
-
-    // ── Editor-Defaults ──────────────────────────────────────────────────────
-
-    fn set_direction(&mut self, dir: ConnectionDirection) {
-        self.direction = dir;
-    }
-
-    fn set_priority(&mut self, prio: ConnectionPriority) {
-        self.priority = prio;
-    }
-
-    // ── Lifecycle-Delegation (manuell, da kein SegmentConfig) ────
-
-    fn set_snap_radius(&mut self, radius: f32) {
-        self.lifecycle.snap_radius = radius;
+impl RouteToolRecreate for BypassTool {
+    fn on_applied(&mut self, ids: &[u64], _road_map: &RoadMap) {
+        record_applied_tool_state(&mut self.lifecycle, ids, None);
     }
 
     fn last_created_ids(&self) -> &[u64] {
         &self.lifecycle.last_created_ids
     }
 
-    fn last_end_anchor(&self) -> Option<crate::app::tools::ToolAnchor> {
+    fn last_end_anchor(&self) -> Option<ToolAnchor> {
         self.lifecycle.last_end_anchor
     }
 
@@ -198,11 +182,34 @@ impl RouteTool for BypassTool {
         self.lifecycle.recreate_needed = false;
     }
 
-    fn set_last_created(&mut self, ids: &[u64], _road_map: &RoadMap) {
-        self.lifecycle.save_created_ids(ids);
+    fn execute_from_anchors(&self, road_map: &RoadMap) -> Option<ToolResult> {
+        self.execute(road_map)
+    }
+}
+
+impl RouteToolChainInput for BypassTool {
+    fn load_chain(&mut self, chain: OrderedNodeChain) {
+        self.load_chain(chain.positions, chain.start_id, chain.end_id);
+    }
+}
+
+impl RouteTool for BypassTool {
+    fn as_recreate(&self) -> Option<&dyn RouteToolRecreate> {
+        Some(self)
     }
 
-    /// Erstellt einen `GroupRecord` fuer die Registry aus dem aktuellen Tool-Zustand.
+    fn as_recreate_mut(&mut self) -> Option<&mut dyn RouteToolRecreate> {
+        Some(self)
+    }
+
+    fn as_chain_input(&self) -> Option<&dyn RouteToolChainInput> {
+        Some(self)
+    }
+
+    fn as_chain_input_mut(&mut self) -> Option<&mut dyn RouteToolChainInput> {
+        Some(self)
+    }
+
     fn make_group_record(&self, id: u64, node_ids: &[u64]) -> Option<GroupRecord> {
         if !self.has_chain() {
             return None;
@@ -215,7 +222,7 @@ impl RouteTool for BypassTool {
             node_ids: node_ids.to_vec(),
             start_anchor: ToolAnchor::ExistingNode(self.chain_start_id, start_pos),
             end_anchor: ToolAnchor::ExistingNode(self.chain_end_id, end_pos),
-            original_positions: Vec::new(), // wird im Handler befuellt
+            original_positions: Vec::new(),
             marker_node_ids: Vec::new(),
             locked: true,
             entry_node_id: None,
@@ -235,7 +242,6 @@ impl RouteTool for BypassTool {
         })
     }
 
-    /// Laedt einen gespeicherten `GroupRecord` zur nachtraeglichen Bearbeitung.
     fn load_for_edit(&mut self, _record: &GroupRecord, kind: &GroupKind) {
         let GroupKind::Bypass {
             chain_positions,

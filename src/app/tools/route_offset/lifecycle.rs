@@ -1,27 +1,38 @@
-//! `RouteTool`-Implementierung fuer das Strecken-Versatz-Tool.
+//! Route-Tool-Implementierung fuer das Strecken-Versatz-Tool.
 
 use super::geometry::compute_offset_positions;
 use super::state::RouteOffsetTool;
 use crate::app::group_registry::{GroupBase, GroupKind, GroupRecord};
-use crate::app::tools::common::{ToolLifecycleState, ToolResultBuilder};
-use crate::app::tools::{RouteTool, RouteToolId, ToolAction, ToolAnchor, ToolPreview, ToolResult};
+use crate::app::tools::common::{
+    record_applied_tool_state, sync_tool_host, ToolLifecycleState, ToolResultBuilder,
+};
+use crate::app::tools::{
+    OrderedNodeChain, RouteTool, RouteToolChainInput, RouteToolCore, RouteToolHostSync,
+    RouteToolId, RouteToolPanelBridge, RouteToolRecreate, ToolAction, ToolAnchor, ToolHostContext,
+    ToolPreview, ToolResult,
+};
 use crate::app::ui_contract::{RouteToolConfigState, RouteToolPanelAction, RouteToolPanelEffect};
 use crate::core::{ConnectionDirection, ConnectionPriority, NodeFlag, RoadMap};
 use glam::Vec2;
 
-impl RouteTool for RouteOffsetTool {
-    fn name(&self) -> &str {
-        "Strecke versetzen"
+impl RouteOffsetTool {
+    pub(crate) fn load_chain(&mut self, positions: Vec<Vec2>, start_id: u64, end_id: u64) {
+        let inferred: Vec<u64> = if positions.len() >= 3
+            && end_id > start_id
+            && (end_id - start_id) == (positions.len() as u64 - 1)
+        {
+            (start_id + 1..end_id).collect()
+        } else {
+            Vec::new()
+        };
+        self.chain_positions = positions;
+        self.chain_start_id = start_id;
+        self.chain_end_id = end_id;
+        self.chain_inner_ids = inferred;
     }
+}
 
-    fn icon(&self) -> &str {
-        "⇶"
-    }
-
-    fn description(&self) -> &str {
-        "Verschiebt die selektierte Kette parallel nach links und/oder rechts ohne S-Kurven-Uebergaenge"
-    }
-
+impl RouteToolPanelBridge for RouteOffsetTool {
     fn status_text(&self) -> &str {
         if self.has_chain() {
             "Bereit — Enter zum Ausfuehren, Escape zum Abbrechen"
@@ -30,7 +41,20 @@ impl RouteTool for RouteOffsetTool {
         }
     }
 
-    /// Klicks im Viewport werden ignoriert — die Kette kommt aus der Selektion.
+    fn panel_state(&self) -> RouteToolConfigState {
+        RouteToolConfigState::RouteOffset(self.panel_state())
+    }
+
+    fn apply_panel_action(&mut self, action: RouteToolPanelAction) -> RouteToolPanelEffect {
+        let RouteToolPanelAction::RouteOffset(action) = action else {
+            return RouteToolPanelEffect::default();
+        };
+
+        self.apply_panel_action(action)
+    }
+}
+
+impl RouteToolCore for RouteOffsetTool {
     fn on_click(&mut self, _pos: Vec2, _road_map: &RoadMap, _ctrl: bool) -> ToolAction {
         ToolAction::Continue
     }
@@ -44,7 +68,6 @@ impl RouteTool for RouteOffsetTool {
         let mut connections: Vec<(usize, usize)> = Vec::new();
         let mut styles: Vec<(ConnectionDirection, ConnectionPriority)> = Vec::new();
 
-        // Original-Kette immer anzeigen
         let orig_start = nodes.len();
         nodes.extend_from_slice(&self.chain_positions);
         for i in 0..self.chain_positions.len().saturating_sub(1) {
@@ -52,7 +75,6 @@ impl RouteTool for RouteOffsetTool {
             styles.push((self.direction, self.priority));
         }
 
-        // Links-Versatz (positiver Offset)
         if self.config.left_enabled {
             if let Some(pts) = compute_offset_positions(
                 &self.chain_positions,
@@ -68,7 +90,6 @@ impl RouteTool for RouteOffsetTool {
             }
         }
 
-        // Rechts-Versatz (negativer Offset)
         if self.config.right_enabled {
             if let Some(pts) = compute_offset_positions(
                 &self.chain_positions,
@@ -96,18 +117,6 @@ impl RouteTool for RouteOffsetTool {
         }
     }
 
-    fn panel_state(&self) -> RouteToolConfigState {
-        RouteToolConfigState::RouteOffset(self.panel_state())
-    }
-
-    fn apply_panel_action(&mut self, action: RouteToolPanelAction) -> RouteToolPanelEffect {
-        let RouteToolPanelAction::RouteOffset(action) = action else {
-            return RouteToolPanelEffect::default();
-        };
-
-        self.apply_panel_action(action)
-    }
-
     fn execute(&self, _road_map: &RoadMap) -> Option<ToolResult> {
         if !self.has_chain() {
             return None;
@@ -127,7 +136,6 @@ impl RouteTool for RouteOffsetTool {
             ConnectionPriority,
         )> = Vec::new();
 
-        // Hilfsfunktion: eine Offset-Seite einbauen (offset > 0 = links, < 0 = rechts)
         let mut add_side = |offset: f32| {
             let Some(pts) =
                 compute_offset_positions(&self.chain_positions, offset, self.config.base_spacing)
@@ -138,13 +146,11 @@ impl RouteTool for RouteOffsetTool {
             for &p in &pts {
                 new_nodes.push((p, NodeFlag::Regular));
             }
-            // Interne Ketten-Verbindungen
             for i in 0..pts.len().saturating_sub(1) {
                 internal_connections.push((base + i, base + i + 1, self.direction, self.priority));
             }
             let first = base;
             let last = base + pts.len() - 1;
-            // Laterale Verbindung: chain_start → offset_start
             external_connections.push((
                 first,
                 self.chain_start_id,
@@ -152,7 +158,6 @@ impl RouteTool for RouteOffsetTool {
                 self.direction,
                 self.priority,
             ));
-            // Laterale Verbindung: offset_end → chain_end
             external_connections.push((
                 last,
                 self.chain_end_id,
@@ -173,8 +178,6 @@ impl RouteTool for RouteOffsetTool {
             return None;
         }
 
-        // Original-Kette entfernen wenn gewuenscht (nur innere Nodes, nicht Start/Ende,
-        // da diese als laterale Anker benoetigt werden).
         let nodes_to_remove = if !self.config.keep_original {
             self.chain_inner_ids.clone()
         } else {
@@ -205,12 +208,71 @@ impl RouteTool for RouteOffsetTool {
     fn has_pending_input(&self) -> bool {
         self.has_chain()
     }
+}
 
-    // ── Lifecycle-Delegation ─────────────────────────────────────────────────
+impl RouteToolHostSync for RouteOffsetTool {
+    fn sync_host(&mut self, context: &ToolHostContext) {
+        sync_tool_host(
+            &mut self.direction,
+            &mut self.priority,
+            &mut self.lifecycle,
+            context,
+        );
+    }
+}
 
-    crate::impl_lifecycle_delegation_no_seg!();
+impl RouteToolRecreate for RouteOffsetTool {
+    fn on_applied(&mut self, ids: &[u64], _road_map: &RoadMap) {
+        record_applied_tool_state(&mut self.lifecycle, ids, None);
+    }
 
-    // ── GroupRegistry-Delegation ───────────────────────────────────────────
+    fn last_created_ids(&self) -> &[u64] {
+        &self.lifecycle.last_created_ids
+    }
+
+    fn last_end_anchor(&self) -> Option<ToolAnchor> {
+        self.lifecycle.last_end_anchor
+    }
+
+    fn needs_recreate(&self) -> bool {
+        self.lifecycle.recreate_needed
+    }
+
+    fn clear_recreate_flag(&mut self) {
+        self.lifecycle.recreate_needed = false;
+    }
+
+    fn execute_from_anchors(&self, road_map: &RoadMap) -> Option<ToolResult> {
+        self.execute(road_map)
+    }
+}
+
+impl RouteToolChainInput for RouteOffsetTool {
+    fn load_chain(&mut self, chain: OrderedNodeChain) {
+        let inner_ids = chain.inner_ids;
+        self.load_chain(chain.positions, chain.start_id, chain.end_id);
+        if !inner_ids.is_empty() {
+            self.chain_inner_ids = inner_ids;
+        }
+    }
+}
+
+impl RouteTool for RouteOffsetTool {
+    fn as_recreate(&self) -> Option<&dyn RouteToolRecreate> {
+        Some(self)
+    }
+
+    fn as_recreate_mut(&mut self) -> Option<&mut dyn RouteToolRecreate> {
+        Some(self)
+    }
+
+    fn as_chain_input(&self) -> Option<&dyn RouteToolChainInput> {
+        Some(self)
+    }
+
+    fn as_chain_input_mut(&mut self) -> Option<&mut dyn RouteToolChainInput> {
+        Some(self)
+    }
 
     fn make_group_record(&self, id: u64, node_ids: &[u64]) -> Option<GroupRecord> {
         if !self.has_chain() {
@@ -224,7 +286,7 @@ impl RouteTool for RouteOffsetTool {
             node_ids: node_ids.to_vec(),
             start_anchor: ToolAnchor::ExistingNode(self.chain_start_id, start_pos),
             end_anchor: ToolAnchor::ExistingNode(self.chain_end_id, end_pos),
-            original_positions: Vec::new(), // wird vom Handler befuellt
+            original_positions: Vec::new(),
             marker_node_ids: Vec::new(),
             locked: true,
             entry_node_id: None,
@@ -281,36 +343,5 @@ impl RouteTool for RouteOffsetTool {
         self.config.base_spacing = *base_spacing;
         self.direction = base.direction;
         self.priority = base.priority;
-    }
-
-    // ── ChainInput-Delegation ────────────────────────────────────────────────
-
-    fn needs_chain_input(&self) -> bool {
-        true
-    }
-
-    /// Laedt die geordnete Kette aus der Selektion.
-    ///
-    /// Versucht zusaetzlich die inneren Node-IDs sequenziell zu inferieren
-    /// (gilt wenn `end_id - start_id + 1 == positions.len()`).
-    /// Fuer produktionsreife ID-Vergabe ruft der Handler danach `set_chain_inner_ids` auf.
-    fn load_chain(&mut self, positions: Vec<Vec2>, start_id: u64, end_id: u64) {
-        // Sequenzielle Inferenz: funktioniert fuer frisch erstellte Ketten mit aufsteigenden IDs
-        let inferred: Vec<u64> = if positions.len() >= 3
-            && end_id > start_id
-            && (end_id - start_id) == (positions.len() as u64 - 1)
-        {
-            (start_id + 1..end_id).collect()
-        } else {
-            Vec::new()
-        };
-        self.chain_positions = positions;
-        self.chain_start_id = start_id;
-        self.chain_end_id = end_id;
-        self.chain_inner_ids = inferred;
-    }
-
-    fn set_chain_inner_ids(&mut self, ids: Vec<u64>) {
-        self.chain_inner_ids = ids;
     }
 }

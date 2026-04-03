@@ -283,7 +283,7 @@ pub struct RouteToolSelectionMemory {
 
 - `remember_route_tool(group, tool_id)` — merkt die letzte Route-Tool-Wahl pro Gruppe
 - `route_tool_panel_state() -> Option<RouteToolPanelState>` — liefert den egui-freien Panelzustand fuer das Floating-Route-Tool-Panel im Route-Modus
-- `route_tool_viewport_data() -> RouteToolViewportData` — liefert Drag-Ziele, Tangenten-Menuedaten und Lasso-Bedarf als Read-DTO fuer den Viewport
+- `route_tool_viewport_data() -> RouteToolViewportData` — liefert Drag-Ziele, Tangenten-Menuedaten, Lasso-Bedarf und den aktiven Segment-Shortcut-Gate als Read-DTO fuer den Viewport
 - `route_tool_preview(cursor_world, road_map) -> Option<ToolPreview>` — berechnet die Preview-Geometrie des aktiven Route-Tools app-seitig, sodass die UI keinen `ToolManager` direkt lesen muss
 
 **Methoden:**
@@ -1100,7 +1100,7 @@ Alle Tool-Typen, Traits und gemeinsame Infrastruktur sind in [`tools/API.md`](to
 
 - **`ToolPreview::from_polyline(positions, direction, priority) → Self`** — gemeinsamer Konstruktor; verbindet `positions` linear und weist jeder Verbindung denselben Stil zu. Wird von `StraightLineTool`, `CurveTool`, `SmoothCurveTool` und anderen genutzt. (→ `tools/API.md`)
 
-- **`impl_lifecycle_delegation_no_seg!()`** — Makro in `tools/common/lifecycle.rs`; implementiert automatisch `set_direction`, `set_priority`, `set_snap_radius`, `last_created_ids`, `last_end_anchor`, `needs_recreate`, `clear_recreate_flag` und `set_last_created` fuer Tools ohne `SegmentConfig` (`BypassTool`, `ParkingTool`, `FieldBoundaryTool`, `RouteOffsetTool`). (→ `tools/API.md`)
+- **Route-Tool-Vertrag gesplittet** — `RouteToolCore`, `RouteToolPanelBridge` und `RouteToolHostSync` bilden jetzt den festen Basisvertrag; Recreate, Drag, Tangenten, Adjustments, Chain-Input und Lasso laufen ueber additive Capability-Traits und ToolManager-Discovery. (→ `tools/API.md`)
 
 ---
 

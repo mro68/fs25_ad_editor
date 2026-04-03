@@ -224,6 +224,7 @@ impl EditorApp {
 
         let route_tool_view = self.state.editor.route_tool_viewport_data();
         let route_tool_is_drawing = route_tool_view.has_pending_input;
+        let route_tool_segment_shortcuts_active = route_tool_view.segment_shortcuts_active;
         let default_direction = self.state.editor.default_direction;
         let default_priority = self.state.editor.default_priority;
 
@@ -237,6 +238,7 @@ impl EditorApp {
                 &self.state.selection.selected_node_ids,
                 self.state.editor.active_tool,
                 route_tool_is_drawing,
+                route_tool_segment_shortcuts_active,
                 &self.state.options,
                 command_palette_open,
                 default_direction,

@@ -22,6 +22,8 @@ pub(crate) use geometry::local_perp;
 pub(crate) use geometry::{
     linear_connections, parallel_offset, populate_neighbors, tangent_options,
 };
-pub(crate) use lifecycle::{SegmentConfig, ToolLifecycleState};
+pub(crate) use lifecycle::{
+    record_applied_tool_state, sync_tool_host, SegmentConfig, ToolLifecycleState,
+};
 pub(crate) use result::ToolResultBuilder;
 pub(crate) use tangent::TangentState;

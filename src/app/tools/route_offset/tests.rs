@@ -1,7 +1,7 @@
 //! Unit-Tests fuer das Strecken-Versatz-Tool.
 
 use super::state::RouteOffsetTool;
-use crate::app::tools::RouteTool;
+use crate::app::tools::RouteToolCore;
 use crate::core::RoadMap;
 use glam::Vec2;
 

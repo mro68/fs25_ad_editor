@@ -1,4 +1,4 @@
-use super::super::{RouteTool, ToolAction, ToolAnchor};
+use super::super::{RouteToolCore, RouteToolRecreate, ToolAction, ToolAnchor};
 use super::geometry::compute_line_positions;
 use super::state::StraightLineTool;
 use crate::core::{MapNode, NodeFlag, RoadMap};

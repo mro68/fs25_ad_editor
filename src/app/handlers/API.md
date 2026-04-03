@@ -71,7 +71,8 @@ Verarbeitet einen Viewport-Klick im aktiven Route-Tool. Wenn das Tool `ToolActio
 pub fn rotate(state: &mut AppState, delta: f32)
 ```
 
-Uebertraegt Scroll-basierte Rotation auf das aktive Route-Tool via `on_scroll_rotate()` callback. Wird typischerweise nur von ParkingTool verwendet (Alt+Scroll).
+Uebertraegt Scroll-basierte Rotation auf das aktive Route-Tool via `RouteToolRotate`. Wird typischerweise nur von ParkingTool verwendet (Alt+Scroll). Node-Count- und Segmentlaengen-Shortcuts laufen separat ueber `RouteToolSegmentAdjustments`.
+Shortcut-Aufrufe ohne Route-Modus oder ohne passende Segment-Capability werden defensiv verworfen und nur als Debug-Log erfasst.
 
 ```rust
 pub fn execute(state: &mut AppState)
@@ -92,13 +93,18 @@ pub fn cancel(state: &mut AppState)
 Bricht das aktive Route-Tool ab (Escape).
 
 ```rust
-pub fn select(state: &mut AppState, index: usize)
+pub fn select(state: &mut AppState, tool_id: RouteToolId)
 ```
 
-Aktiviert ein Route-Tool per Index. Initialisiert Tool-Parameter (Richtung, Prioritaet, Snap-Radius) aus EditorToolState und laedt optional eine vorhandene Selektion als Kette (fuer Chain-basierte Tools wie BypassTool).
+Aktiviert ein Route-Tool per stabiler Tool-ID. Initialisiert Tool-Parameter (Richtung, Prioritaet, Snap-Radius) aus EditorToolState, synchronisiert den `ToolHostContext` ins aktive Tool und laedt optional eine vorhandene Selektion als Kette (fuer Chain-basierte Tools wie BypassTool).
 
 ```rust
-pub fn select_with_anchors(state: &mut AppState, tool_index: usize, node_id_1: u64, node_id_2: u64)
+pub fn select_with_anchors(
+    state: &mut AppState,
+    tool_id: RouteToolId,
+    start_node_id: u64,
+    end_node_id: u64,
+)
 ```
 
 Aktiviert Tool und setzt Start/End-Anker aus zwei selektierten Nodes. Simuliert zwei `on_click()`-Aufrufe; bei StraightLine => sofortige Ausfuehrung, bei Curves => Phase::Control fuer Steuerpunkt-Platzierung.

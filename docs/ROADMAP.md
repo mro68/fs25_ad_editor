@@ -504,13 +504,14 @@
 **Errungenschaften seit letztem Update (Strukturelles Audit 2026-03-05):**
 - ✅ RouteTool-UI harmonisiert: `defaults_panel`, `floating_menu`, Hauptmenue und Command-Palette nutzen den kanonischen Tool-Katalog mit `RouteToolId`, `RouteToolGroup::{Basics, Section, Analysis}` und Disabled-Reason-Aufloesung
 - ✅ Analyse-Tools voll integriert: neue Analysis-Gruppe in Sidebar/Floating-Menue, neue Icons fuer `FieldPath`/`ColorPath`, i18n-Labels + Disabled-Tooltips synchronisiert
-- ✅ RouteTool-Vertrag vereinfacht: ungenutzte Capability-Traits entfernt, optionale Hooks liegen direkt auf `RouteTool`
+- ✅ RouteTool-Vertrag aufgespalten: fester Basisvertrag (`RouteToolCore`, `RouteToolPanelBridge`, `RouteToolHostSync`) plus additive Capability-Traits und `ToolManager`-Discovery
 - ✅ Tool-Edit-Guard vereinheitlicht: Gruppen-Edit-Panel nutzt `GroupRecord::is_tool_editable()` statt impliziter Tool-Index-Heuristik
-- ✅ Regression-Netz erweitert: Katalog-Invarianten + Controller-Flow fuer `SelectRouteToolRequested { tool_id: RouteToolId::ColorPath }`
+- ✅ Regression-Netz erweitert: Katalog-Invarianten + Controller-Flow fuer `SelectRouteToolRequested { tool_id: RouteToolId::ColorPath }` sowie gezielte Capability-Discovery-Tests fuer Tangent/Drag/Chain/Lasso/HostSync
 - ✅ Hotpath-Bench erweitert: `tool_preview_hotpath_bench` misst jetzt auch `compute_offset_positions`, Centerline-Hotpaths und die ColorPath-Kernpipeline
 - ✅ Doku-/Guardrail-Sync: `app/API.md`, `ui/API.md`, `app/tools/API.md`, `ARCHITECTURE_PLAN.md` und `check_api_docs_sync.sh` auf katalogbasierten RouteTool-Stand aktualisiert
 - ✅ Modul-Splits ohne API-Bruch: `app/handlers/route_tool.rs` und `ui/edit_panel.rs` intern in Submodule zerlegt, um Ausfuehrungs-/Panel-Logik klarer zu trennen
 - ✅ Route-Tool-Panel entkoppelt: App-/Tool-Vertraege liefern jetzt `RouteToolPanelState`/`RouteToolPanelAction` statt `egui`-Callbacks; das Floating-Panel rendert rein im UI-Layer
+- ✅ Tool-Kern-Remediation Phase 3: Host-Sync, Recreate, Drag, Tangenten, Chain-Input und Lasso sind wieder explizite Capabilities; Rotations- und Segment-Shortcuts sind zusaetzlich in `RouteToolRotate` und `RouteToolSegmentAdjustments` getrennt, damit keine No-Op-Fallen im Parking-/Segment-Shortcut-Pfad bleiben
 
 - **Vorherige Errungenschaften (gleicher Audit-Block):**
 - ✅ Parking-Geometrie modulbereichert: `parking/geometry.rs` → `parking/geometry/{mod,layout,blueprint,conversion}.rs`

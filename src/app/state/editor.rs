@@ -127,11 +127,25 @@ impl EditorToolState {
         }
 
         if let Some(tool) = self.tool_manager.active_tool() {
+            let has_pending_input = tool.has_pending_input();
+
             RouteToolViewportData {
-                drag_targets: tool.drag_targets(),
-                has_pending_input: tool.has_pending_input(),
-                tangent_menu_data: tool.tangent_menu_data(),
-                needs_lasso_input: tool.needs_lasso_input(),
+                drag_targets: self
+                    .tool_manager
+                    .active_drag()
+                    .map(|tool| tool.drag_targets())
+                    .unwrap_or_default(),
+                has_pending_input,
+                segment_shortcuts_active: has_pending_input
+                    && self.tool_manager.active_segment_adjustments().is_some(),
+                tangent_menu_data: self
+                    .tool_manager
+                    .active_tangent()
+                    .and_then(|tool| tool.tangent_menu_data()),
+                needs_lasso_input: self
+                    .tool_manager
+                    .active_lasso_input()
+                    .is_some_and(|tool| tool.is_lasso_input_active()),
             }
         } else {
             RouteToolViewportData::default()
@@ -202,5 +216,38 @@ mod tests {
             RouteToolViewportData::default()
         );
         assert!(state.route_tool_preview(cursor_world, &road_map).is_none());
+    }
+
+    #[test]
+    fn route_viewport_data_only_activates_segment_shortcuts_for_matching_capability() {
+        let road_map = RoadMap::default();
+        let mut state = EditorToolState::new();
+
+        state.active_tool = EditorTool::Route;
+        state.tool_manager.set_active_by_id(RouteToolId::Parking);
+
+        let action = state
+            .tool_manager
+            .active_tool_mut()
+            .expect("Parking-Tool muss fuer den Shortcut-Test aktiv sein")
+            .on_click(Vec2::new(5.0, 5.0), &road_map, false);
+        assert_eq!(action, ToolAction::Continue);
+
+        let parking_view = state.route_tool_viewport_data();
+        assert!(parking_view.has_pending_input);
+        assert!(!parking_view.segment_shortcuts_active);
+
+        state.tool_manager.set_active_by_id(RouteToolId::Straight);
+
+        let action = state
+            .tool_manager
+            .active_tool_mut()
+            .expect("Straight-Tool muss fuer den Shortcut-Test aktiv sein")
+            .on_click(Vec2::ZERO, &road_map, false);
+        assert_eq!(action, ToolAction::Continue);
+
+        let straight_view = state.route_tool_viewport_data();
+        assert!(straight_view.has_pending_input);
+        assert!(straight_view.segment_shortcuts_active);
     }
 }

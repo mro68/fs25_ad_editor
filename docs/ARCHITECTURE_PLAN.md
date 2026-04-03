@@ -440,7 +440,10 @@ src/
       dialog.rs         # Dialog-State und Anwendungssteuerung
       history.rs        # Undo/Redo
     tools/
-      mod.rs            # RouteTool-Trait + ToolManager + snap_to_node()
+      mod.rs            # Re-Exporte fuer Tool-Vertraege, Capabilities, Katalog und snap_to_node()
+      manager.rs        # ToolManager + Capability-Discovery
+      contracts/        # RouteToolCore, RouteToolPanelBridge, RouteToolHostSync
+      capabilities/     # Recreate, Drag, Tangent, Adjustments, ChainInput, LassoInput
       common/           # Gemeinsame Tool-Infrastruktur (alle Submodule privat)
         mod.rs          # Re-Exporte
         geometry.rs     # angle_to_compass, populate_neighbors
@@ -604,6 +607,10 @@ src/
 
 ### Tool-Lifecycle (RouteTool-Pattern)
 
+- Der feste Tool-Kern besteht aus `RouteToolCore`, `RouteToolPanelBridge` und `RouteToolHostSync`.
+- Optionale Verhaltensweisen werden ueber additive Capability-Traits modelliert und vom `ToolManager` per Discovery angesprochen.
+- `handlers/route_tool.rs`, `state/editor.rs` und die UI lesen keine No-Op-Hooks mehr direkt vom Umbrella-Trait, sondern fragen gezielt Drag-, Tangent-, Recreate-, Chain- oder Lasso-Capabilities ab.
+
 ```mermaid
 stateDiagram-v2
   [*] --> Inactive
@@ -619,7 +626,7 @@ stateDiagram-v2
 #### Analyse-Tool-Stages
 
 - `ColorPathTool` trennt intern sieben Stages: A Sampling-Input, B Matching-Spezifikation, C Pixel-Maske + Sampling-Vorschau, D Maskenaufbereitung, E Skeleton-/Netzextraktion, F Preview-Aufbereitung und G Execute-Konvertierung.
-- `lifecycle.rs` bleibt dabei auf Orchestrierung, Phase-Wechsel und den `RouteTool`-Adapter beschraenkt; die Stage-Logik lebt in `pipeline.rs` und `preview.rs`.
+- `lifecycle.rs` bleibt dabei auf Orchestrierung, Phase-Wechsel und die Implementierung der jeweiligen Basisvertraege/Capabilities beschraenkt; die Stage-Logik lebt in `pipeline.rs` und `preview.rs`.
 - Preview und Execute teilen `PreparedSegment` als gemeinsame Wahrheit; es gibt bewusst keine Dirty-Bits, keine Cache-Ketten und keine gestaffelte Invalidation.
 
 ### Command-Intent-Flow

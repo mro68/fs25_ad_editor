@@ -1,5 +1,5 @@
 use crate::app::state::EditorTool;
-use crate::app::tools::{route_tool_descriptor, RouteToolId, ToolAction};
+use crate::app::tools::{route_tool_descriptor, OrderedNodeChain, RouteToolId, ToolAction};
 use crate::app::AppState;
 
 /// Aktiviert ein Route-Tool per stabiler Tool-ID.
@@ -9,18 +9,8 @@ pub(super) fn select(state: &mut AppState, tool_id: RouteToolId) {
     state.editor.remember_route_tool(descriptor.group, tool_id);
     state.editor.active_tool = EditorTool::Route;
     state.editor.connect_source_node = None;
-    let dir = state.editor.default_direction;
-    let prio = state.editor.default_priority;
-    let snap_r = state.options.snap_radius();
-    let farmland = state.farmland_polygons.clone();
-    if let Some(tool) = state.editor.tool_manager.active_tool_mut() {
-        tool.set_direction(dir);
-        tool.set_priority(prio);
-        tool.set_snap_radius(snap_r);
-        tool.set_farmland_data(farmland);
-        tool.set_farmland_grid(state.farmland_grid.clone());
-        tool.set_background_map_image(state.background_image.clone());
-    }
+    let host_context = super::build_host_context(state);
+    state.editor.tool_manager.sync_active_host(&host_context);
 
     init_chain_if_needed(state);
 
@@ -30,12 +20,7 @@ pub(super) fn select(state: &mut AppState, tool_id: RouteToolId) {
 /// Laedt die aktuelle Selektion als geordnete Kette in das aktive Tool,
 /// falls dieses `needs_chain_input()` zurueckgibt.
 pub(super) fn init_chain_if_needed(state: &mut AppState) {
-    let needs_chain = state
-        .editor
-        .tool_manager
-        .active_tool()
-        .is_some_and(|t| t.needs_chain_input());
-    if !needs_chain {
+    if state.editor.tool_manager.active_chain_input().is_none() {
         return;
     }
 
@@ -64,20 +49,27 @@ pub(super) fn init_chain_if_needed(state: &mut AppState) {
         .last()
         .expect("invariant: ordered_ids ist nicht-leer nach positions.len()<2-Guard");
 
-    if let Some(tool) = state.editor.tool_manager.active_tool_mut() {
-        tool.load_chain(positions, start_id, end_id);
-        let n = ordered_ids.len();
-        if n > 2 {
-            let inner_ids: Vec<u64> = ordered_ids[1..n - 1].to_vec();
-            tool.set_chain_inner_ids(inner_ids);
-        }
-        log::info!(
-            "Route-Tool Kette geladen: {} Nodes ({} → {})",
-            ordered_ids.len(),
+    let inner_ids = if ordered_ids.len() > 2 {
+        ordered_ids[1..ordered_ids.len() - 1].to_vec()
+    } else {
+        Vec::new()
+    };
+
+    state
+        .editor
+        .tool_manager
+        .load_active_chain(OrderedNodeChain {
+            positions,
             start_id,
-            end_id
-        );
-    }
+            end_id,
+            inner_ids,
+        });
+    log::info!(
+        "Route-Tool Kette geladen: {} Nodes ({} → {})",
+        ordered_ids.len(),
+        start_id,
+        end_id
+    );
 }
 
 /// Aktiviert ein Route-Tool und setzt Start/End-Anker aus zwei selektierten Nodes.

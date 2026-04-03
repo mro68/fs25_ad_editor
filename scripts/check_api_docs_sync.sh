@@ -103,8 +103,12 @@ check_no_match 'Arc<HashSet<u64>>|&HashSet<u64>' 'IndexSet statt HashSet in API.
 # Alte RouteTool-Dokuvertraege aus frueheren Versionen.
 check_no_match 'render_context_menu\(response\)' 'RouteTool nutzt TangentMenuData statt render_context_menu(response)' src/app/tools/API.md
 
-# RouteTool-Doku muss den direkten Default-Methoden-Vertrag beschreiben.
-check_no_match 'RouteToolDrag|RouteToolTangent|RouteToolRegistry|RouteToolChainInput' 'RouteTool-Doku nutzt direkte Hooks statt alter Capability-Traits' src/app/tools/API.md
+# RouteTool-Doku muss den gesplitteten Basisvertrag plus Capabilities beschreiben.
+check_has_literal 'RouteToolCore' 'RouteTool-Doku beschreibt den festen Kernvertrag' src/app/tools/API.md
+check_has_literal 'RouteToolPanelBridge' 'RouteTool-Doku beschreibt die Panel-Bruecke' src/app/tools/API.md
+check_has_literal 'RouteToolHostSync' 'RouteTool-Doku beschreibt den Host-Sync-Vertrag' src/app/tools/API.md
+check_has_literal 'RouteToolDrag' 'RouteTool-Doku dokumentiert Drag als Capability' src/app/tools/API.md
+check_has_literal 'RouteToolChainInput' 'RouteTool-Doku dokumentiert Chain-Input als Capability' src/app/tools/API.md
 
 # Index-basierte RouteTool-Doku wurde durch stabile RouteToolId-Contracts ersetzt.
 check_no_match 'SelectRouteToolRequested \{ index: usize \}|RouteToolWithAnchorsRequested \{ index: usize \}|SelectRouteTool \{ index: usize \}|RouteToolWithAnchors \{ index: usize \}|last_basic_command_index|last_smooth_curve_index|last_section_tool_index' 'App-API dokumentiert RouteToolId und RouteToolSelectionMemory statt alter Index-Felder' src/app/API.md

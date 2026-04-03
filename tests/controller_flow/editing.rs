@@ -99,13 +99,11 @@ fn make_curve_anchor_map() -> AppState {
 }
 
 fn current_cubic_tangents(state: &AppState) -> (TangentSource, TangentSource) {
-    let tool = state
+    let menu = state
         .editor
         .tool_manager
-        .active_tool()
-        .expect("Route-Tool muss aktiv sein");
-    let menu = tool
-        .tangent_menu_data()
+        .active_tangent()
+        .and_then(|tool| tool.tangent_menu_data())
         .expect("Tangenten-Menue muss in Control-Phase verfuegbar sein");
     (menu.current_start, menu.current_end)
 }
