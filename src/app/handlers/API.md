@@ -70,62 +70,6 @@ Schliesst verschiedene Dialog-Boxen und räumt deren State auf.
 
 ---
 
-### `route_tool` — Route-Tool-Operationen (Linie, Kurve, Spline)
-
-Handelt Viewport-Interaktionen und Ausfuehrung von Route-Tools.
-
-**Funktionen:**
-
-```rust
-pub fn click(state: &mut AppState, world_pos: glam::Vec2, ctrl: bool)
-```
-
-Verarbeitet einen Viewport-Klick im aktiven Route-Tool. Wenn das Tool `ToolAction::ReadyToExecute` zurueckgibt, wird sofort `execute_and_apply()` aufgerufen.
-
-```rust
-pub fn rotate(state: &mut AppState, delta: f32)
-```
-
-Uebertraegt Scroll-basierte Rotation auf das aktive Route-Tool via `RouteToolRotate`. Wird typischerweise nur von ParkingTool verwendet (Alt+Scroll). Node-Count- und Segmentlaengen-Shortcuts laufen separat ueber `RouteToolSegmentAdjustments`.
-Shortcut-Aufrufe ohne Route-Modus oder ohne passende Segment-Capability werden defensiv verworfen und nur als Debug-Log erfasst.
-
-```rust
-pub fn execute(state: &mut AppState)
-```
-
-Fuehrt das aktive Route-Tool aus (Enter-Bestaetigung). Erstellt Nodes + Connections, speichert Undo-Snapshot und registriert Gruppen-Record fuer nachtraegliche Bearbeitung.
-
-**Group-Registry-Integration:**
-
-- Nach Tool-Ausfuehrung werden die `original_positions` aus der RoadMap gesammelt
-- Gruppen-Record wird mit allen Tool-Parametern registriert
-- Ermoeglicht spaeteres Editieren: `EditGroup { record_id }` laedt das Tool mit gespeicherten Parametern neu
-
-```rust
-pub fn cancel(state: &mut AppState)
-```
-
-Bricht das aktive Route-Tool ab (Escape).
-
-```rust
-pub fn select(state: &mut AppState, tool_id: RouteToolId)
-```
-
-Aktiviert ein Route-Tool per stabiler Tool-ID. Initialisiert Tool-Parameter (Richtung, Prioritaet, Snap-Radius) aus EditorToolState, synchronisiert den `ToolHostContext` ins aktive Tool und laedt optional eine vorhandene Selektion als Kette (fuer Chain-basierte Tools wie BypassTool).
-
-```rust
-pub fn select_with_anchors(
-    state: &mut AppState,
-    tool_id: RouteToolId,
-    start_node_id: u64,
-    end_node_id: u64,
-)
-```
-
-Aktiviert Tool und setzt Start/End-Anker aus zwei selektierten Nodes. Simuliert zwei `on_click()`-Aufrufe; bei StraightLine => sofortige Ausfuehrung, bei Curves => Phase::Control fuer Steuerpunkt-Platzierung.
-
----
-
 ### `file_io` — Datei-Operationen
 
 Zentralisiert alle Datei-I/O-Operationen: Laden, Speichern, Heightmap, Background-Map, Overview-Generierung.
@@ -169,86 +113,6 @@ pub fn deduplicate(state: &mut AppState)
 ```
 
 Führt die Duplikat-Bereinigung auf der geladenen Road Map aus.
-
----
-
-### `editing` — Node- und Connection-Bearbeitung
-
-Handhabt Bearbeitung von Nodes, Verbindungen und Marker. Integriert Segment-Cleanup bei Edits.
-
-**Funktionen:**
-
-```rust
-pub fn edit_group(state: &mut AppState, record_id: u64)
-```
-
-Startet den destruktiven Tool-Edit fuer eine persistierte Tool-Gruppe. Fuehrt folgende Schritte aus:
-
-1. **Lookup:** Laedt neutralen `GroupRecord` und passenden `ToolEditRecord` aus Registry bzw. `ToolEditStore`
-2. **Marker-Cleanup:** Entfernt Marker der Gruppe anhand von `record.marker_node_ids`
-3. **Node-Loeschung:** Loescht nur die inneren Tool-Nodes; ExistingNode-Anker aus dem Payload bleiben erhalten
-4. **Tool-Rehydrierung:** Aktiviert das zugehoerige Route-Tool und stellt dessen Zustand via `RouteToolGroupEdit::restore_edit_payload()` wieder her
-5. **Session-Backup:** Legt `ActiveToolEditSession` fuer Cancel/Undo an
-
-**Tool-Editing-Integration:**
-
-- Registry bleibt tool-neutral; tool-spezifische Parameter kommen aus `state.tool_edit_store`
-- Cancel laeuft spaeter ueber `tool_editing::cancel_active_edit()` und stellt Registry plus Payload-Store wieder her
-- Manuelle Gruppen sowie ephemere Tools besitzen keinen Tool-Edit-Snapshot und koennen diesen Flow deshalb nicht nutzen
-
-```rust
-pub fn delete_nodes_by_ids(state: &mut AppState, node_ids: &[u64])
-```
-
-Loescht Nodes aus der Road Map. Aktualisiert alle Verbindungen automatisch.
-
-```rust
-pub fn add_node(state: &mut AppState, pos: glam::Vec2, after_node: Option<u64>) -> u64
-```
-
-Fuegt einen neuen Node hinzu. Optional splittet neuer Node eine Verbindung `after_node → next`.
-
-```rust
-pub fn set_node_position(state: &mut AppState, node_id: u64, new_pos: glam::Vec2)
-```
-
-Verschiebt einen Node (mit Spatial-Index-Update).
-
-```rust
-pub fn set_node_flag(state: &mut AppState, node_id: u64, flag: NodeFlag)
-```
-
-Setzt das Flag eines vorhandenen Nodes (z.B. `Regular`, `SubPrio`) inklusive Undo-Snapshot ueber den Editing-Use-Case.
-
-```rust
-pub fn create_connection(
-    state: &mut AppState,
-    start_id: u64,
-    end_id: u64,
-    direction: ConnectionDirection,
-    priority: ConnectionPriority,
-)
-```
-
-Erzeugt eine neue Verbindung zwischen zwei Nodes.
-
-```rust
-pub fn delete_connection(state: &mut AppState, start_id: u64, end_id: u64)
-```
-
-Loescht eine Verbindung.
-
-```rust
-pub fn set_node_marker(state: &mut AppState, node_id: u64, name: String, group: String)
-```
-
-Setzt/Aktualisiert einen Marker auf einem Node.
-
-```rust
-pub fn clear_node_marker(state: &mut AppState, node_id: u64)
-```
-
-Entfernt einen Marker vom Node.
 
 ---
 
@@ -395,6 +259,12 @@ pub fn set_connection_priority(
 Ändert Eigenschaften existierender Verbindungen.
 
 ```rust
+pub fn set_node_flag(state: &mut AppState, node_id: u64, flag: NodeFlag)
+```
+
+Setzt das Flag eines vorhandenen Nodes ueber den zugehoerigen Editing-Use-Case und erstellt dabei den passenden Undo-Snapshot.
+
+```rust
 pub fn set_default_direction(state: &mut AppState, direction: ConnectionDirection)
 pub fn set_default_priority(state: &mut AppState, priority: ConnectionPriority)
 ```
@@ -409,7 +279,7 @@ pub fn set_all_priorities_between_selected(state: &mut AppState, priority: Conne
 pub fn connect_selected(state: &mut AppState)
 ```
 
-Bulk-Operationen auf Verbindungen zwischen selektierten Nodes. `connect_selected()` verbindet zwei selektierte Nodes bidirektional.
+Bulk-Operationen auf Verbindungen zwischen selektierten Nodes. `connect_selected()` verbindet genau zwei selektierte Nodes mit den aktuell gesetzten Standardwerten fuer Richtung und Prioritaet.
 
 ```rust
 pub fn create_marker(state: &mut AppState, node_id: u64, name: &str, group: &str)
@@ -426,7 +296,7 @@ pub fn open_marker_dialog(state: &mut AppState, node_id: u64, is_new: bool)
 Öffnet den Dialog zum Erstellen/Bearbeiten von Markern.
 
 ```rust
-pub fn edit_segment(state: &mut AppState, record_id: u64)
+pub fn edit_group(state: &mut AppState, record_id: u64)
 ```
 
 Lädt ein gespeichertes Segment zur nachträglichen Bearbeitung. Löscht die zugehörigen Nodes, aktiviert das passende Route-Tool und befüllt es mit den gespeicherten Parametern.
@@ -438,18 +308,42 @@ pub fn resample_path(state: &mut AppState)
 Verteilt die selektierten Nodes gleichmäßig entlang eines Catmull-Rom-Splines.
 
 ```rust
-pub fn trace_all_fields(state: &mut AppState)
+pub fn trace_all_fields(
+    state: &mut AppState,
+    spacing: f32,
+    offset: f32,
+    tolerance: f32,
+    corner_angle: Option<f32>,
+    corner_rounding_radius: Option<f32>,
+    corner_rounding_max_angle_deg: Option<f32>,
+)
 ```
 
 Zeichnet alle geladenen Farmland-Polygone als Wegpunkt-Ring nach (Batch-Operation).
-Alle Polygone werden in einem einzigen Undo-Schritt zusammengefasst.
-Gibt fruehzeitig zurueck wenn keine Polygone geladen oder keine RoadMap vorhanden.
+Alle Polygone werden in einem einzigen Undo-Schritt zusammengefasst. Die Parameter entsprechen den aktuellen FieldBoundary-Einstellungen fuer Abstand, Versatz, Begradigung, Ecken-Erkennung und optionale Eckenverrundung. Gibt fruehzeitig zurueck wenn keine Polygone geladen oder keine RoadMap vorhanden.
 
 ```rust
 pub fn streckenteilung_aktivieren(state: &mut AppState)
 ```
 
 Aktiviert die Streckenteilungs-Vorschau für die selektierten Nodes (min. 2 erforderlich).
+
+```rust
+pub fn copy_selection(state: &mut AppState)
+pub fn start_paste_preview(state: &mut AppState)
+pub fn update_paste_preview(state: &mut AppState, world_pos: glam::Vec2)
+pub fn confirm_paste(state: &mut AppState)
+pub fn cancel_paste_preview(state: &mut AppState)
+```
+
+Copy/Paste-Flow fuer die aktuelle Selektion. `copy_selection()` uebernimmt selektierte Nodes, interne Verbindungen und Marker in die Zwischenablage; `start_paste_preview()` und `update_paste_preview()` steuern die nicht-destruktive Vorschau; `confirm_paste()` fuegt die Daten mit remappten IDs ein und selektiert die neuen Nodes; `cancel_paste_preview()` verwirft nur die Vorschau.
+
+```rust
+pub fn import_curseplay_file(state: &mut AppState, path: &str)
+pub fn export_curseplay_file(state: &AppState, path: &str)
+```
+
+Importiert bzw. exportiert Curseplay-`<customField>`-Dateien ueber die zugehoerigen Editing-Use-Cases.
 
 ---
 
@@ -533,6 +427,12 @@ pub fn click(state: &mut AppState, world_pos: glam::Vec2, ctrl: bool)
 Registriert einen Viewport-Klick beim aktiven Tool (mit optionalem `ctrl`-Modifier).
 
 ```rust
+pub fn lasso_completed(state: &mut AppState, polygon: Vec<glam::Vec2>)
+```
+
+Leitet ein abgeschlossenes Tool-Lasso an das aktive Route-Tool weiter. Wenn dessen Lasso-Capability danach `ToolAction::ReadyToExecute` meldet, wird die Strecke sofort ausgefuehrt.
+
+```rust
 pub fn execute(state: &mut AppState)
 pub fn cancel(state: &mut AppState)
 ```
@@ -541,6 +441,7 @@ pub fn cancel(state: &mut AppState)
 
 ```rust
 pub fn select(state: &mut AppState, tool_id: RouteToolId)
+pub fn init_chain_if_needed(state: &mut AppState)
 pub fn select_with_anchors(
     state: &mut AppState,
     tool_id: RouteToolId,
@@ -549,7 +450,7 @@ pub fn select_with_anchors(
 )
 ```
 
-Wechselt das aktive Tool. Mit `select_with_anchors` wird das Tool mit vordefiniertem Start/End aktiviert (simuliert zwei Klicks mit bekannten Node-Positionen). Bei StraightLine aktiviert dies sofort die Erstellung; bei Curves wird der Control-Punkt-Editor aktiviert.
+Wechselt das aktive Tool. `init_chain_if_needed()` uebernimmt nach der Aktivierung eine vorhandene Selektion als geordnete Kette, wenn das Tool Chain-Input benoetigt. Mit `select_with_anchors` wird das Tool mit vordefiniertem Start/End aktiviert (simuliert zwei Klicks mit bekannten Node-Positionen). Bei StraightLine aktiviert dies sofort die Erstellung; bei Curves wird der Control-Punkt-Editor aktiviert.
 
 ```rust
 pub fn recreate(state: &mut AppState)
@@ -576,6 +477,12 @@ pub fn drag_end(state: &mut AppState)
 ```
 
 Drag-Lifecycle für Kontrollpunkt-Anpassung während der Tool-Ausführung.
+
+```rust
+pub fn rotate(state: &mut AppState, delta: f32)
+```
+
+Leitet Alt+Scroll-Rotation an die Rotations-Capability des aktiven Route-Tools weiter. Node-Count- und Segmentlaengen-Shortcuts bleiben davon getrennt.
 
 ```rust
 pub fn increase_node_count(state: &mut AppState)
@@ -619,6 +526,12 @@ pub fn remove_selected_from_groups(state: &mut AppState)
 ```
 
 Entfernt alle selektierten Nodes aus ihren zugehörigen Gruppen. Nodes und Verbindungen in der RoadMap bleiben unveraendert. Gruppen mit weniger als 2 verbleibenden Nodes werden automatisch aufgeloest (`GroupRegistry::remove_nodes_from_record()`). Ist keine Selektion aktiv oder kein Node Mitglied einer Gruppe, wird nichts getan. Erstellt einen Undo-Snapshot vor dem Mutieren.
+
+```rust
+pub fn group_selection(state: &mut AppState)
+```
+
+Erzeugt aus der aktuellen Selektion einen neuen tool-neutralen `GroupRecord`, sofern die selektierten Nodes einen zusammenhaengenden Subgraphen bilden. Ist die Selektion leer oder nicht zusammenhaengend, wird der Aufruf ohne Mutation beendet.
 
 ```rust
 pub fn set_boundary_nodes(state: &mut AppState, record_id: u64, entry: Option<u64>, exit: Option<u64>)
@@ -734,6 +647,5 @@ Handler geben typischerweise `anyhow::Result<()>` zurück für I/O-Operationen:
 
 - `file_io::*` — Datei-Fehler
 - `view::load_background_map()` — Bild-Fehler
-- `route_tool::create_route()` — Ungültige Route
 
 Der Controller in [`controller.rs`](../controller.rs) fängt Fehler ab und loggt sie.
