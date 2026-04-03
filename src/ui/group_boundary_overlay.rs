@@ -13,15 +13,28 @@ use crate::app::{BoundaryDirection, Camera2D, GroupRegistry, RoadMap};
 const ICON_SIZE_PX: u32 = 32;
 
 /// Rasterisiert ein SVG zu einem `ColorImage` mit der angegebenen Pixelgroesse.
-fn rasterize_svg_to_color_image(svg_bytes: &[u8], size: u32) -> ColorImage {
+fn rasterize_svg_to_color_image(svg_bytes: &[u8], size: u32) -> Option<ColorImage> {
     use resvg::{tiny_skia, usvg};
-    let svg_str = std::str::from_utf8(svg_bytes).expect("SVG-Bytes sind kein valides UTF-8");
+    let svg_str = match std::str::from_utf8(svg_bytes) {
+        Ok(value) => value,
+        Err(error) => {
+            log::warn!("Boundary-Icon-SVG ist kein valides UTF-8: {}", error);
+            return None;
+        }
+    };
     let options = usvg::Options::default();
-    let tree = usvg::Tree::from_str(svg_str, &options)
-        .expect("Gruppen-Icon-SVG konnte nicht geparst werden");
+    let tree = match usvg::Tree::from_str(svg_str, &options) {
+        Ok(value) => value,
+        Err(error) => {
+            log::warn!("Gruppen-Icon-SVG konnte nicht geparst werden: {}", error);
+            return None;
+        }
+    };
 
-    let mut pixmap = tiny_skia::Pixmap::new(size, size)
-        .expect("Pixmap fuer Gruppen-Icon konnte nicht erstellt werden");
+    let Some(mut pixmap) = tiny_skia::Pixmap::new(size, size) else {
+        log::warn!("Pixmap fuer Gruppen-Icon konnte nicht erstellt werden");
+        return None;
+    };
 
     let svg_size = tree.size();
     let scale_x = size as f32 / svg_size.width();
@@ -40,6 +53,20 @@ fn rasterize_svg_to_color_image(svg_bytes: &[u8], size: u32) -> ColorImage {
         }
     }
 
+    Some(ColorImage::from_rgba_unmultiplied(
+        [size as usize, size as usize],
+        &rgba,
+    ))
+}
+
+fn fallback_color_image(size: u32, rgb: [u8; 3]) -> ColorImage {
+    let mut rgba = vec![0_u8; (size as usize) * (size as usize) * 4];
+    for pixel in rgba.chunks_exact_mut(4) {
+        pixel[0] = rgb[0];
+        pixel[1] = rgb[1];
+        pixel[2] = rgb[2];
+        pixel[3] = 220;
+    }
     ColorImage::from_rgba_unmultiplied([size as usize, size as usize], &rgba)
 }
 
@@ -62,9 +89,12 @@ impl GroupBoundaryIcons {
         let exit_bytes = include_bytes!("../../assets/icons/group_exit.svg");
         let bidi_bytes = include_bytes!("../../assets/icons/group_bidirectional.svg");
 
-        let entry_img = rasterize_svg_to_color_image(entry_bytes, ICON_SIZE_PX);
-        let exit_img = rasterize_svg_to_color_image(exit_bytes, ICON_SIZE_PX);
-        let bidi_img = rasterize_svg_to_color_image(bidi_bytes, ICON_SIZE_PX);
+        let entry_img = rasterize_svg_to_color_image(entry_bytes, ICON_SIZE_PX)
+            .unwrap_or_else(|| fallback_color_image(ICON_SIZE_PX, [255, 162, 0]));
+        let exit_img = rasterize_svg_to_color_image(exit_bytes, ICON_SIZE_PX)
+            .unwrap_or_else(|| fallback_color_image(ICON_SIZE_PX, [225, 90, 90]));
+        let bidi_img = rasterize_svg_to_color_image(bidi_bytes, ICON_SIZE_PX)
+            .unwrap_or_else(|| fallback_color_image(ICON_SIZE_PX, [90, 170, 255]));
 
         Self {
             entry: ctx.load_texture("group_entry_icon", entry_img, TextureOptions::LINEAR),
