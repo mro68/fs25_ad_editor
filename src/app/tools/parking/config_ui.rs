@@ -30,13 +30,13 @@ impl ParkingTool {
             marker_group: self.config.marker_group.clone(),
             rotation_step_deg: self.rotation_step_deg,
             angle_deg: self.origin.map(|_| self.angle.to_degrees()),
-            hint_text: self.origin.and_then(|_| match self.phase {
-                ParkingPhase::Idle => Some("Alt+Mausrad zum Drehen".to_owned()),
+            hint_text: self.origin.map(|_| match self.phase {
+                ParkingPhase::Idle => "Alt+Mausrad zum Drehen".to_owned(),
                 ParkingPhase::Configuring => {
-                    Some("Position fixiert — Viewport-Klick zum Verschieben".to_owned())
+                    "Position fixiert — Viewport-Klick zum Verschieben".to_owned()
                 }
                 ParkingPhase::Adjusting => {
-                    Some("Klicken zum Fixieren — Alt+Mausrad zum Drehen".to_owned())
+                    "Klicken zum Fixieren — Alt+Mausrad zum Drehen".to_owned()
                 }
             }),
         }

@@ -8,6 +8,36 @@ use crate::app::{
 };
 use indexmap::IndexSet;
 
+#[derive(Clone, Copy)]
+pub(super) struct KeyboardContext {
+    active_tool: EditorTool,
+    route_tool_is_drawing: bool,
+    route_tool_segment_shortcuts_active: bool,
+    distanzen_active: bool,
+    clipboard_has_data: bool,
+    command_palette_open: bool,
+}
+
+impl KeyboardContext {
+    pub(super) fn new(
+        active_tool: EditorTool,
+        route_tool_is_drawing: bool,
+        route_tool_segment_shortcuts_active: bool,
+        distanzen_active: bool,
+        clipboard_has_data: bool,
+        command_palette_open: bool,
+    ) -> Self {
+        Self {
+            active_tool,
+            route_tool_is_drawing,
+            route_tool_segment_shortcuts_active,
+            distanzen_active,
+            clipboard_has_data,
+            command_palette_open,
+        }
+    }
+}
+
 fn collect_escape_intents(
     selected_node_ids: &IndexSet<u64>,
     active_tool: EditorTool,
@@ -45,13 +75,17 @@ fn collect_escape_intents(
 pub(super) fn collect_keyboard_intents(
     ui: &egui::Ui,
     selected_node_ids: &IndexSet<u64>,
-    active_tool: EditorTool,
-    route_tool_is_drawing: bool,
-    route_tool_segment_shortcuts_active: bool,
-    distanzen_active: bool,
-    clipboard_has_data: bool,
-    command_palette_open: bool,
+    context: KeyboardContext,
 ) -> Vec<AppIntent> {
+    let KeyboardContext {
+        active_tool,
+        route_tool_is_drawing,
+        route_tool_segment_shortcuts_active,
+        distanzen_active,
+        clipboard_has_data,
+        command_palette_open,
+    } = context;
+
     // Solange die Command Palette offen ist, verarbeitet ausschliesslich die Palette Tastatureingaben.
     if command_palette_open {
         return vec![];

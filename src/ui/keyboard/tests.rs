@@ -20,12 +20,7 @@ fn collect_with_key_event_and_modifiers(
             events = collect_keyboard_intents(
                 ui,
                 &selected,
-                EditorTool::Select,
-                false,
-                false,
-                false,
-                false,
-                false,
+                KeyboardContext::new(EditorTool::Select, false, false, false, false, false),
             );
         });
     });
@@ -76,12 +71,14 @@ fn collect_with_route_tool_state(
             events = collect_keyboard_intents(
                 ui,
                 &selected,
-                active_tool,
-                route_tool_is_drawing,
-                route_tool_segment_shortcuts_active,
-                false,
-                false,
-                false,
+                KeyboardContext::new(
+                    active_tool,
+                    route_tool_is_drawing,
+                    route_tool_segment_shortcuts_active,
+                    false,
+                    false,
+                    false,
+                ),
             );
         });
     });
@@ -108,12 +105,7 @@ fn collect_with_key_event_text_input_focus(
             events = collect_keyboard_intents(
                 ui,
                 &selected,
-                active_tool,
-                false,
-                false,
-                false,
-                false,
-                false,
+                KeyboardContext::new(active_tool, false, false, false, false, false),
             );
         });
     });
