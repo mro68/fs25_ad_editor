@@ -13,10 +13,10 @@ pub mod handlers;
 /// Undo/Redo-History mit Arc-basierten Snapshots (Copy-on-Write).
 pub mod history;
 mod intent_mapping;
-/// Builder fuer Render-Szenen aus dem AppState.
-pub mod render_scene;
 /// Builder fuer explizite Render-Assets aus dem AppState.
 pub mod render_assets;
+/// Builder fuer Render-Szenen aus dem AppState.
+pub mod render_scene;
 /// Application State — zentrale Datenhaltung (View, Editor, Selektion, Dialoge).
 pub mod state;
 /// App-weiter Vertrag fuer Route-Tool-Identitaeten und Ankerdaten.

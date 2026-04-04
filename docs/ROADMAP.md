@@ -197,6 +197,7 @@
   - [x] Neue host-neutrale Crate `fs25_auto_drive_render_wgpu` fuer den wgpu-Kern eingefuehrt
   - [x] `fs25_auto_drive_frontend_egui::render` auf Host-Adapter ueber dem Render-Core reduziert
   - [x] Flutter-Bridge um read-only Render-Zugaenge (`build_render_scene`, `build_render_assets`, `build_render_frame`) erweitert
+  - [x] `EngineRenderFrameSnapshot` als gekoppelter Read-only Render-Output fuer Bridge-Hosts eingefuehrt
 - [x] DDS-Import fuer Map-Hintergruende
   - [x] Texture-Loader implementieren (PNG, JPG, DDS)
   - [x] Background-Quad-Renderer

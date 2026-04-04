@@ -174,14 +174,23 @@ mod tests {
         let mut fp2 = fp1.clone();
 
         fp2.selected_revision += 1;
-        assert_ne!(fp1, fp2, "selected_revision muss in den Vergleich einfliessen");
+        assert_ne!(
+            fp1, fp2,
+            "selected_revision muss in den Vergleich einfliessen"
+        );
 
         fp2 = fp1.clone();
         fp2.hidden_revision += 1;
-        assert_ne!(fp1, fp2, "hidden_revision muss in den Vergleich einfliessen");
+        assert_ne!(
+            fp1, fp2,
+            "hidden_revision muss in den Vergleich einfliessen"
+        );
 
         fp2 = fp1.clone();
         fp2.dimmed_revision += 1;
-        assert_ne!(fp1, fp2, "dimmed_revision muss in den Vergleich einfliessen");
+        assert_ne!(
+            fp1, fp2,
+            "dimmed_revision muss in den Vergleich einfliessen"
+        );
     }
 }

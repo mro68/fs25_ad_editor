@@ -11,7 +11,7 @@ Sie konsumiert die host-neutrale Engine, re-exportiert deren `app`-, `core`-, `s
 | Modul | Verantwortung |
 |---|---|
 | `editor_app` | eframe-Integrationsschale; Laufzeittypen wie `EditorApp` bleiben bewusst crate-intern |
-| `render` | egui-Host-Adapter, Background-Upload-Bruecke und egui-Render-Callback |
+| `render` | egui-Host-Adapter, revisionsbasierte Background-Upload-Bruecke und egui-Render-Callback |
 | `ui` | Menues, Panels, Dialoge, Viewport-Input und Overlays |
 | `app`, `core`, `shared`, `xml` | Re-Exports aus `fs25_auto_drive_engine` fuer stabile Importpfade |
 
@@ -20,6 +20,7 @@ Sie konsumiert die host-neutrale Engine, re-exportiert deren `app`-, `core`-, `s
 | Typ | Zweck |
 |---|---|
 | `render::Renderer` | Egui-Host-Adapter fuer den host-neutralen GPU-Renderer-Kern |
+| `render::RendererTargetConfig` | Re-exportierte Target-Konfiguration fuer Farbformat und MSAA des Render-Core |
 | `render::BackgroundWorldBounds` | Weltkoordinatenvertrag fuer Background-Uploads |
 | `render::WgpuRenderCallback` | egui/wgpu-Bruecke fuer den benutzerdefinierten Render-Pass |
 | `render::WgpuRenderData` | Trager des `RenderScene`-Snapshots pro Frame |
@@ -51,7 +52,9 @@ flowchart LR
 	EDITOR --> UI[ui::*]
 	EDITOR --> CTRL[app::AppController]
 	CTRL --> SCENE[shared::RenderScene]
+	CTRL --> ASSETS[shared::RenderAssetsSnapshot]
 	SCENE --> RENDER[render::Renderer Adapter]
+	ASSETS --> RENDER
 	RENDER --> CORE[fs25_auto_drive_render_wgpu::Renderer]
 ```
 

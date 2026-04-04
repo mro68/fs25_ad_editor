@@ -14,9 +14,9 @@ pub use fs25_auto_drive_engine::shared::{RenderQuality, RenderScene};
 
 pub(crate) use background_renderer::BackgroundRenderer;
 pub(crate) use connection_renderer::ConnectionRenderer;
+use fs25_auto_drive_engine::shared::EditorOptions;
 pub(crate) use marker_renderer::MarkerRenderer;
 pub(crate) use node_renderer::NodeRenderer;
-use fs25_auto_drive_engine::shared::EditorOptions;
 use types::RenderContext;
 
 /// Zielkonfiguration des Render-Targets.
@@ -149,7 +149,8 @@ impl Renderer {
                 .render(&ctx, render_pass, render_map, scene.render_quality());
 
             // 3. Render Connections (darueber)
-            self.connection_renderer.render(&ctx, render_pass, render_map);
+            self.connection_renderer
+                .render(&ctx, render_pass, render_map);
 
             // 4. Render Nodes (zuoberst)
             self.node_renderer.render(

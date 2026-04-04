@@ -2,74 +2,78 @@
 
 ## Ueberblick
 
-Das `render`-Modul im egui-Frontend ist seit dem Renderer-Split nur noch ein Host-Adapter.
-Die eigentliche GPU-Implementierung liegt in `fs25_auto_drive_render_wgpu`; dieses Modul
-kapselt die egui-spezifische Callback-Integration und reicht Aufrufe an den host-neutralen
-Renderer-Kern weiter.
+Das `render`-Modul ist der egui-spezifische Host-Adapter ueber dem host-neutralen Kern aus `fs25_auto_drive_render_wgpu`. Seine oeffentliche Surface bleibt bewusst klein: ein duenner `Renderer`, die re-exportierten Kern-Vertraege (`RendererTargetConfig`, `BackgroundWorldBounds`, `RenderScene`, `RenderQuality`) sowie der egui-Callback (`WgpuRenderCallback`, `WgpuRenderData`).
+
+Das Modul baut keine Render-Snapshots selbst. `EditorApp` liefert pro Frame `RenderScene` und synchronisiert langlebige Assets ueber `AppController::build_render_assets()` revisionsbasiert in den Host-Adapter hinein.
 
 ## Module
 
-- `mod.rs` — duenne Adapter-Fassade (`Renderer`) ueber `fs25_auto_drive_render_wgpu::Renderer`
-- `callback.rs` — egui-spezifischer `CallbackTrait`-Adapter (`WgpuRenderCallback`)
+| Modul | Verantwortung |
+|---|---|
+| `mod.rs` | `Renderer` als egui-Host-Adapter plus Re-Exports der Kern-Vertraege |
+| `callback.rs` | `WgpuRenderCallback` und `WgpuRenderData` fuer `egui_wgpu::CallbackTrait` |
 
-## Haupttypen
+## Oeffentliche Typen
 
-### `Renderer`
+| Typ | Zweck |
+|---|---|
+| `Renderer` | Duenner egui-Host-Adapter ueber `fs25_auto_drive_render_wgpu::Renderer` |
+| `RendererTargetConfig` | Re-exportierte Target-Konfiguration fuer Farbformat und MSAA des Render-Core |
+| `BackgroundWorldBounds` | Re-exportierter Upload-Vertrag fuer das Hintergrund-Quad im Render-Core |
+| `RenderScene` | Re-exportierter per-frame Render-Vertrag aus der Engine |
+| `RenderQuality` | Re-exportierte Qualitaetsstufe fuer Anti-Aliasing |
+| `WgpuRenderData` | Per-Frame-Traeger fuer den `RenderScene`-Snapshot |
+| `WgpuRenderCallback` | egui/wgpu-Glue, der den Host-Adapter in den Paint-Callback einhaengt |
 
-Egui-Host-Adapter auf den host-neutralen Renderer-Kern.
+## Oeffentliche Methoden
 
-```rust
-pub struct Renderer { /* intern: core renderer */ }
-```
+| Signatur | Zweck |
+|---|---|
+| `Renderer::new(render_state)` | Erstellt den Host-Adapter aus `egui_wgpu::RenderState` und leitet `target_format` an `RendererTargetConfig` weiter |
+| `Renderer::render_scene(device, queue, render_pass, scene)` | Delegiert das eigentliche Zeichnen an den host-neutralen Kern |
+| `Renderer::set_background(device, queue, image, world_bounds, scale)` | Laedt oder aktualisiert das Background-Asset im Render-Core |
+| `Renderer::clear_background()` | Entfernt das aktuell hochgeladene Background-Asset |
 
-**Methoden:**
-
-```rust
-let renderer = Renderer::new(render_state);
-renderer.render_scene(device, queue, render_pass, &scene);
-renderer.set_background(device, queue, image, world_bounds, scale);
-renderer.clear_background();
-```
-
-- `new(render_state)` liest `target_format` aus dem egui-Host und baut daraus
-  `RendererTargetConfig` fuer den Core-Renderer.
-- `render_scene(...)` delegiert 1:1 an den Core-Renderer.
-- `set_background(...)` und `clear_background()` bleiben als stabile Adapter-API erhalten.
-
-### `WgpuRenderCallback` / `WgpuRenderData`
-
-Egui-Integration fuer den Paint-Lifecycle.
+## Beispiel
 
 ```rust
-pub struct WgpuRenderData {
-    pub scene: RenderScene,
-}
+use std::sync::{Arc, Mutex};
 
-pub struct WgpuRenderCallback {
-    pub renderer: Arc<Mutex<Renderer>>,
-    pub render_data: WgpuRenderData,
-    pub device: wgpu::Device,
-    pub queue: wgpu::Queue,
-}
+let renderer = Arc::new(Mutex::new(render::Renderer::new(render_state)));
+let render_data = render::WgpuRenderData {
+    scene: controller.build_render_scene(&state, [viewport_w, viewport_h]),
+};
+
+let callback = egui_wgpu::Callback::new_paint_callback(
+    rect,
+    render::WgpuRenderCallback {
+        renderer: renderer.clone(),
+        render_data,
+        device: render_state.device.clone(),
+        queue: render_state.queue.clone(),
+    },
+);
+
+ui.painter().add(callback);
 ```
 
-`WgpuRenderCallback` implementiert `egui_wgpu::CallbackTrait` und ruft im
-`paint()`-Pfad den Adapter-Renderer auf.
+## Datenfluss
 
-## Re-Exports
+```mermaid
+flowchart LR
+  EDITOR[editor_app::EditorApp] --> CTRL[AppController]
+  CTRL --> SCENE[RenderScene]
+  CTRL --> ASSETS[RenderAssetsSnapshot]
+  SCENE --> DATA[WgpuRenderData]
+  DATA --> CALLBACK[WgpuRenderCallback]
+  CALLBACK --> HOST[render::Renderer]
+  ASSETS --> SYNC[sync_background_upload()]
+  SYNC --> HOST
+  HOST --> CORE[fs25_auto_drive_render_wgpu::Renderer]
+```
 
-Das Modul re-exportiert weiterhin die zentralen Render-Typen:
+## Integrationsnotizen
 
-- `RenderScene`
-- `RenderQuality`
-- `BackgroundWorldBounds`
-- `RendererTargetConfig`
-
-Damit bleiben bestehende Call-Sites im egui-Frontend und in Root-Reexports stabil,
-waehrend die Render-Kernlogik in der neuen Crate lebt.
-
-## Design-Prinzipien
-
-1. Egui-spezifischer Code bleibt lokal (`CallbackTrait`, Paint-Lifecycle)
-2. GPU-Logik liegt nur im host-neutralen Core (`fs25_auto_drive_render_wgpu`)
-3. Adapter-Schicht bleibt klein und ohne eigene Render-Hotpath-Logik
+- `render::Renderer` enthaelt keine eigene Fachlogik; der GPU-Kern bleibt in `fs25_auto_drive_render_wgpu`.
+- `sync_background_upload()` lebt bewusst in `editor_app`, weil dort `Device`, `Queue` und die letzten Host-Revisionen bereits vorliegen.
+- Die Engine beschreibt Background-Bounds im Domain-System als `RenderBackgroundWorldBounds { min_x, max_x, min_z, max_z }`. Der egui-Host-Adapter mappt diese beim Upload auf `BackgroundWorldBounds { min_x, max_x, min_y, max_y }`, weil der Render-Core auf einer 2D-X/Y-Ebene arbeitet.

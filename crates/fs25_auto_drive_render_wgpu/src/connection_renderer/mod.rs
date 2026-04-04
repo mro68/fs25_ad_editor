@@ -37,7 +37,6 @@ impl ConnectionRenderer {
         shader: &wgpu::ShaderModule,
         target_config: RendererTargetConfig,
     ) -> Self {
-
         let uniform_buffer = device.create_buffer(&wgpu::BufferDescriptor {
             label: Some("Connection Uniform Buffer"),
             size: std::mem::size_of::<Uniforms>() as u64,

@@ -9,8 +9,8 @@ pub mod geometry;
 pub mod i18n;
 /// Konfigurationsoptionen (EditorOptions, RenderQuality, Farben, Kamera-Parameter).
 pub mod options;
-mod render_quality;
 mod render_assets;
+mod render_quality;
 mod render_scene;
 /// Spline-Geometrie-Hilfsfunktionen (Catmull-Rom, Arc-Length-Resampling).
 pub mod spline_geometry;
@@ -22,11 +22,11 @@ pub use options::OverviewLayerOptions;
 pub use options::SelectionStyle;
 pub use options::ValueAdjustInputMode;
 pub use options::{SNAP_SCALE_PERCENT, TERRAIN_HEIGHT_SCALE};
-pub use render_quality::RenderQuality;
 pub use render_assets::{
     RenderAssetSnapshot, RenderAssetsSnapshot, RenderBackgroundAssetSnapshot,
     RenderBackgroundWorldBounds,
 };
+pub use render_quality::RenderQuality;
 pub use render_scene::RenderScene;
 pub use render_scene::{
     RenderCamera, RenderConnection, RenderConnectionDirection, RenderConnectionPriority, RenderMap,
