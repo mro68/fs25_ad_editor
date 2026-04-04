@@ -185,6 +185,12 @@
   - [x] `render_edit_panel()` erhält neuen Parameter `group_record: Option<&GroupRecord>`
 
 ## Phase 5: Advanced Features
+- [x] Dual-Frontend-Crate-Split
+  - [x] Root-Package als Fassade + nativer Launcher stabil gehalten
+  - [x] `fs25_auto_drive_engine` fuer `app/core/shared/xml` angelegt
+  - [x] `fs25_auto_drive_frontend_egui` fuer `ui/editor_app/runtime/render` angelegt
+  - [x] `fs25_auto_drive_frontend_flutter_bridge` als Session-/DTO-Seam angelegt
+  - [x] Build-, Guardrail- und API-Doku-Skripte auf Workspace-Crates umgestellt
 - [x] DDS-Import fuer Map-Hintergruende
   - [x] Texture-Loader implementieren (PNG, JPG, DDS)
   - [x] Background-Quad-Renderer

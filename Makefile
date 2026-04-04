@@ -9,6 +9,7 @@
 #   make clean            – Binaries-Ordner aufraeumen
 
 BIN_NAME    := FS25-AutoDrive-Editor
+ROOT_PKG    := FS25-AutoDrive-Editor
 TARGET_DIR  := /tmp/fs25_ad_editor_target
 OUT_DIR     := binaries
 WIN_TARGET  := x86_64-pc-windows-msvc
@@ -22,7 +23,7 @@ WIN_DBG_PDB := $(OUT_DIR)/$(BIN_NAME)_x64_windows_dbg.pdb
 
 .PHONY: all release debug linux windows \
         linux-release linux-debug windows-release windows-debug \
-	check-layers check-doc-contracts ci-check clean
+	check-layers check-doc-contracts fmt clippy test test-workspace ci-check clean
 
 # Default: nur Release
 release: linux-release windows-release
@@ -37,7 +38,7 @@ linux: linux-release linux-debug
 windows: windows-release windows-debug
 
 linux-release:
-	cargo build --release
+	cargo build --release -p $(ROOT_PKG) --bin $(BIN_NAME)
 	@mkdir -p $(OUT_DIR)
 	cp $(TARGET_DIR)/release/$(BIN_NAME) $(LINUX_REL)
 	strip $(LINUX_REL)
@@ -45,21 +46,21 @@ linux-release:
 	@echo "✓ $(LINUX_REL)"
 
 linux-debug:
-	cargo build
+	cargo build -p $(ROOT_PKG) --bin $(BIN_NAME)
 	@mkdir -p $(OUT_DIR)
 	cp $(TARGET_DIR)/debug/$(BIN_NAME) $(LINUX_DBG)
 	@ls -lh $(LINUX_DBG)
 	@echo "✓ $(LINUX_DBG)"
 
 windows-release:
-	cargo xwin build --release --target $(WIN_TARGET)
+	cargo xwin build --release --target $(WIN_TARGET) -p $(ROOT_PKG) --bin $(BIN_NAME)
 	@mkdir -p $(OUT_DIR)
 	cp $(TARGET_DIR)/$(WIN_TARGET)/release/$(BIN_NAME).exe $(WIN_REL)
 	@ls -lh $(WIN_REL)
 	@echo "✓ $(WIN_REL)"
 
 windows-debug:
-	cargo xwin build --target $(WIN_TARGET)
+	cargo xwin build --target $(WIN_TARGET) -p $(ROOT_PKG) --bin $(BIN_NAME)
 	@mkdir -p $(OUT_DIR)
 	cp $(TARGET_DIR)/$(WIN_TARGET)/debug/$(BIN_NAME).exe $(WIN_DBG)
 	@if [ -f "$(TARGET_DIR)/$(WIN_TARGET)/debug/$(BIN_NAME).pdb" ]; then \
@@ -80,4 +81,20 @@ check-layers:
 check-doc-contracts:
 	@./scripts/check_api_docs_sync.sh
 
-ci-check: check-layers check-doc-contracts
+fmt:
+	cargo fmt --all -- --check
+
+clippy:
+	cargo clippy --workspace --all-targets -- -D warnings
+
+test:
+	cargo test --workspace
+
+test-workspace: test
+
+ci-check:
+	@$(MAKE) check-layers
+	@$(MAKE) check-doc-contracts
+	@$(MAKE) fmt
+	@$(MAKE) clippy
+	@$(MAKE) test

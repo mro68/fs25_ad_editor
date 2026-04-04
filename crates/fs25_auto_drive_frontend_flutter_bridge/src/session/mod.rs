@@ -1,9 +1,7 @@
 use anyhow::Result;
 use fs25_auto_drive_engine::app::{AppController, AppIntent, AppState};
 
-use crate::dto::{
-    EngineSelectionSnapshot, EngineSessionSnapshot, EngineViewportSnapshot,
-};
+use crate::dto::{EngineSelectionSnapshot, EngineSessionSnapshot, EngineViewportSnapshot};
 
 /// Kleine Session-Fassade ueber der host-neutralen Engine.
 ///
@@ -40,7 +38,13 @@ impl FlutterBridgeSession {
             show_command_palette: self.state.ui.show_command_palette,
             show_options_dialog: self.state.show_options_dialog,
             selection: EngineSelectionSnapshot {
-                selected_node_ids: self.state.selection.selected_node_ids.iter().copied().collect(),
+                selected_node_ids: self
+                    .state
+                    .selection
+                    .selected_node_ids
+                    .iter()
+                    .copied()
+                    .collect(),
             },
             viewport: EngineViewportSnapshot {
                 camera_position: [

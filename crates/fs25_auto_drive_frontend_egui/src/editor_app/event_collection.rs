@@ -1,9 +1,9 @@
 //! Event-Sammlung fuer Panels, Dialoge und Viewport.
 
-use eframe::egui;
 use crate::app::{AppIntent, EditorTool};
 use crate::shared::EditorOptions;
 use crate::ui;
+use eframe::egui;
 use glam::Vec2;
 
 use super::EditorApp;

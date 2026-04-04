@@ -6,10 +6,11 @@ Neuimplementierung des AutoDrive Course Editors in Rust mit egui + wgpu. Hochper
 
 ## Architektur
 
-- **Core:** Datenmodelle (RoadMap, MapNode), XML-IO, Algorithmen
-- **Render:** wgpu-Pipeline mit Instancing, Culling, Viewport-Management
-- **App:** Controller + `AppIntent`/`AppCommand`-Flow, Use-Cases, State-Management
-- **UI:** egui-Interface, emittiert nur `AppIntent` (keine direkten Domain-Mutationen)
+- **Root-Package (`FS25-AutoDrive-Editor`):** Kompat-Fassade (`src/lib.rs`) + nativer Launcher (`src/main.rs`)
+- **Engine (`crates/fs25_auto_drive_engine`):** `app`, `core`, `shared`, `xml`
+- **Egui-Frontend (`crates/fs25_auto_drive_frontend_egui`):** `ui`, `editor_app`, `runtime`, `render`
+- **Flutter-Bridge (`crates/fs25_auto_drive_frontend_flutter_bridge`):** Session-/DTO-Seams ohne Flutter-SDK
+- **Overview-Crate (`crates/fs25_map_overview`):** Terrain-, Farmland- und Overview-Generierung
 
 ## Event- und Mutationsfluss
 
@@ -19,6 +20,7 @@ Neuimplementierung des AutoDrive Course Editors in Rust mit egui + wgpu. Hochper
 - Mutationen laufen zentral gegen `AppState`
 - Renderer bekommt pro Frame ausschliesslich `RenderScene`
 - `RenderScene` transportiert nur Render-Snapshots; Core-Typen duerfen nicht nach `src/render/*` durchgereicht werden
+- `fs25_auto_drive_frontend_flutter_bridge` darf nur von `fs25_auto_drive_engine` abhaengen
 
 ## Technologie-Stack
 
@@ -83,6 +85,6 @@ Neuimplementierung des AutoDrive Course Editors in Rust mit egui + wgpu. Hochper
 Dokumentation wird **im selben Commit** wie der Code geaendert — nie spaeter:
 
 - **Docstrings (`///`):** Jede oeffentliche Funktion/Struct/Enum braucht einen deutschen Docstring. Bei Signaturnaenderungen sofort anpassen.
-- **`src/*/API.md`:** Je ein `API.md` pro Layer (`app/`, `core/`, `render/`, `shared/`, `xml/`). Aenderungen an der oeffentlichen API → `API.md` sofort nachfuehren.
+- **`crates/*/src/*/API.md`:** Je ein `API.md` pro Layer/Crate-Bereich (`app/`, `core/`, `render/`, `shared/`, `ui/`, `xml/`, `editor_app/`). Aenderungen an der oeffentlichen API → `API.md` sofort nachfuehren.
 - **`docs/ROADMAP.md`:** Fertige Items als `[x]` markieren, neue Todos eintragen.
 - **`.windsurf/rules/`:** Neue Architektur-Entscheidungen, Layer-Grenzen oder Pattern-Aenderungen hier dokumentieren.

@@ -1,9 +1,9 @@
 //! Hilfsmethoden fuer Floating-Menue, Background-Upload und Repaint.
 
-use eframe::egui;
-use eframe::egui_wgpu;
 use crate::app::state::{FloatingMenuKind, FloatingMenuState};
 use crate::render;
+use eframe::egui;
+use eframe::egui_wgpu;
 
 use super::EditorApp;
 
