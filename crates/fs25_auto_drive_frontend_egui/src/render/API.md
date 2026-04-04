@@ -1,4 +1,4 @@
-# Render API Documentation
+# API des render-Moduls
 
 ## Ueberblick
 
@@ -99,7 +99,9 @@ Interner Renderer fuer Nodes (Wegpunkte) mit GPU-Instancing.
 - GPU-Instancing fuer 100k+ Nodes
 - Shader-basierte kreisfoermige Darstellung via Distance Field
 - Adaptives Anti-Aliasing (Low/Medium/High via `RenderQuality`)
-- Selektierte Nodes werden 1.8× groesser dargestellt- **Zoom-Kompensation:** Node-Größe wird via `EditorOptions::zoom_compensation(zoom)` skaliert — verhindert, dass Nodes beim Herauszoomen unsichtbar werden- Farb-Coding nach NodeFlag:
+- Selektierte Nodes werden 1.8× groesser dargestellt
+- **Zoom-Kompensation:** Node-Groesse wird via `EditorOptions::zoom_compensation(zoom)` skaliert — verhindert, dass Nodes beim Herauszoomen unsichtbar werden
+- Farb-Coding nach NodeFlag:
   - Cyan `[0.0, 0.8, 1.0]`: Regular
   - Gelb `[1.0, 1.0, 0.0]`: SubPrio
   - Magenta `[1.0, 0.0, 1.0]`: Selected

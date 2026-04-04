@@ -90,7 +90,8 @@ eframe::run_native(
 
 ```mermaid
 flowchart LR
-  MAIN[main.rs] --> RUNTIME[runtime::run()]
+    MAIN[src/main.rs] --> ENTRY[fs25_auto_drive_frontend_egui::run_native()]
+    ENTRY --> RUNTIME[runtime::run_native()]
   RUNTIME --> EDITOR[editor_app::EditorApp]
   EDITOR --> UI[ui::*]
   UI --> INTENTS[AppIntent]

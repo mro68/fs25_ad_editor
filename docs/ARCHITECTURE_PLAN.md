@@ -427,142 +427,34 @@ Verbindliche Regeln:
 
 ```text
 src/
-  main.rs             # Binary-Einstieg; ruft runtime::run()
-  runtime.rs          # eframe-Bootstrap und EditorApp-Erzeugung
-  editor_app/
-    mod.rs            # EditorApp + eframe::App::update(); duenne Integrationsschale
-    event_collection.rs # Panels, Dialoge und Viewport-Input zu AppIntents buendeln
-    helpers.rs        # Render-Callback, Floating-Menue, Background-Upload, Repaint-Gating
-    overlays.rs       # Tool-, Clipboard-, Distanz- und Gruppen-Overlays
-  app/
-    mod.rs              # Schmale Re-Exports fuer AppState/Controller + stabile UI-Lesetypen
-    controller.rs       # AppController: duenne Fassade fuer Intent-Loop + Command-Logging
-    controller/
-      by_feature/       # Feature-Slices fuer Command-Dispatch (file_io, view, selection, editing, ...)
-    events/
-      mod.rs            # Re-Exports fuer AppIntent & AppCommand
-      feature.rs        # Interne AppEventFeature-Klassifikation fuer Intent/Command-Schnitt
-      intent.rs         # AppIntent + interne Feature-Zuordnung
-      command.rs        # AppCommand + interne Feature-Zuordnung
-    state.rs            # AppState, ViewState, SelectionState, UiState, MarkerDialogState, DedupDialogState
-    render_scene.rs     # RenderScene-Builder
-    command_log.rs      # Command-Log für Debugging
-    history.rs          # Undo/Redo-History
-    intent_mapping.rs   # duenne Fassade fuer Intent → Command Mapping
-    intent_mapping/
-      by_feature/       # Feature-Slices fuer reines Intent-Mapping
-    handlers/           # Feature-Handler für Command-Verarbeitung
-      mod.rs
-      file_io.rs        # Datei-Operationen (Öffnen, Speichern, Heightmap)
-      view.rs           # Kamera, Viewport, Background-Map
-      selection.rs       # Selektions-Operationen
-      editing.rs        # Node/Connection-Editing, Marker
-      route_tool.rs     # Route-Tool-Operationen
-      dialog.rs         # Dialog-State und Anwendungssteuerung
-      history.rs        # Undo/Redo
-    tools/
-      mod.rs            # Re-Exporte fuer Tool-Vertraege, Capabilities, Katalog und snap_to_node()
-      manager.rs        # ToolManager + Capability-Discovery
-      contracts/        # RouteToolCore, RouteToolPanelBridge, RouteToolHostSync
-      capabilities/     # Recreate, Drag, Tangent, Adjustments, ChainInput, LassoInput
-      common/           # Gemeinsame Tool-Infrastruktur (alle Submodule privat)
-        mod.rs          # Re-Exporte
-        geometry.rs     # angle_to_compass, populate_neighbors
+  lib.rs              # Root-Fassade: re-exportiert engine::{app,core,shared,xml} sowie frontend_egui::{render,ui}
+  main.rs             # Nativer Launcher; ruft fs25_auto_drive_frontend_egui::run_native()
 
-      Die Root-Dateien `controller.rs` und `intent_mapping.rs` bleiben damit stabil fuer Call-Sites und Dokumentation, waehrend die eigentlichen Match-Bloecke featureweise in `by_feature/*` liegen. `AppIntent` und `AppCommand` teilen sich dafuer intern die nicht-oeffentliche Klassifikation `AppEventFeature`.
-        tangent.rs      # TangentSource, TangentState, render_tangent_combo
-        lifecycle.rs    # ToolLifecycleState, SegmentConfig, LastEdited
-        builder.rs      # assemble_tool_result
-      curve/
-        mod.rs          # Bézier-Kurven-Tool (Grad 2 + 3) — Einstiegspunkt
-        state.rs        # CurveTool Struct, Enums, Konstruktor
-        lifecycle.rs    # RouteTool-Implementierung
-        drag.rs         # Drag-Logik (Steuerpunkt-Verschiebung)
-        config_ui.rs    # egui-Konfigurationspanel
-        geometry.rs     # Bézier-Mathe (Interpolation, Tangenten)
-        tests.rs        # Unit-Tests
-      spline/
-        mod.rs          # Catmull-Rom-Spline-Tool — Einstiegspunkt
-        state.rs        # SplineTool Struct, Konstruktor
-        lifecycle.rs    # RouteTool-Implementierung
-        config_ui.rs    # egui-Konfigurationspanel
-        geometry.rs     # Spline-Geometrie (Arc-Length-Resampling)
-        tests.rs        # Unit-Tests
-      straight_line/
-        mod.rs          # Gerade-Linie-Tool — Einstiegspunkt
-        state.rs        # StraightLineTool Struct, Konstruktor
-        lifecycle.rs    # RouteTool-Implementierung
-        config_ui.rs    # egui-Konfigurationspanel
-        geometry.rs     # Linien-Geometrie
-        tests.rs        # Unit-Tests
-    use_cases/
-      mod.rs
-      file_io.rs        # Load, Save, Heightmap-Warnung, Dateipfad-Handling
-      heightmap.rs      # Heightmap-Laden und Konfiguration
-      viewport.rs       # Viewport-Resize
-      camera.rs         # Kamera-Reset, Zoom, Pan
-      background_map.rs # Background-Map laden/konfigurieren
-      selection/        # Selektions-Use-Cases (Pick, Rect, Lasso, Segment, Move)
-      editing/          # Editing-Use-Cases (Connect, Delete, Direction, Priority, Marker, Route-Tool)
-  core/
-    mod.rs
-    camera.rs           # Camera2D + pick_radius_world()
-    centerline.rs       # Oeffentliche Fassade fuer Mittellinien-Berechnung
-    centerline/
-      polygon.rs        # Polygon-basierte Centerline ohne Raster-Grid
-      segment.rs        # Segment-basierte Centerline ohne Raster-Grid
-      voronoi.rs        # VoronoiGrid + Multi-Source-BFS auf Farmland-Rastern
-      extract.rs        # Korridor- und Boundary-Extraktion aus Rasterdaten
-      helpers.rs        # Gemeinsame Raster- und Geometrie-Helfer
-      tests.rs          # Unit-Tests fuer die interne Aufteilung
-    node.rs             # MapNode, NodeFlag
-    connection.rs       # Connection, ConnectionDirection, ConnectionPriority
-    road_map.rs         # RoadMap (HashMap-basiert, lazy Spatial-Index-Rebuild)
-    road_map/
-      dedup.rs          # Duplikat-Erkennung und -Bereinigung
-      tests.rs          # Unit-Tests für RoadMap
-    spatial.rs          # SpatialIndex (kiddo KD-Tree)
-    heightmap.rs        # Heightmap + bikubische Interpolation
-    map_marker.rs       # MapMarker
-    meta.rs             # AutoDriveMeta
-  xml/
-    mod.rs
-    parser.rs           # parse_autodrive_config()
-    parser/
-      tests.rs          # Unit-Tests für Parser
-    writer.rs           # write_autodrive_config()
-  render/
-    mod.rs
-    node_renderer.rs    # GPU-Instanced Nodes
-    connection_renderer.rs  # Verbindungslinien + Pfeile
-    background_renderer.rs  # Background-Map-Quad mit Texture
-    marker_renderer.rs  # GPU-Instanced Map-Marker (Pin-Symbole)
-    texture.rs          # Texture-Erstellung aus DynamicImage
-    callback.rs         # wgpu Render-Callback für egui
-    types.rs            # GPU-Typen, RenderContext, Konstanten
-    shaders.wgsl        # WGSL Shader (Node, Connection, Background, Marker)
-  shared/
-    mod.rs
-    render_scene.rs     # RenderScene (Übergabevertrag App → Render)
-    render_quality.rs   # RenderQuality Enum
-    options.rs          # Zentrale Konfigurationskonstanten + EditorOptions
-    i18n/               # Mehrsprachigkeits-System (Language, I18nKey, t())
-  ui/
-    mod.rs
-    menu.rs             # Top-Menü
-    status.rs           # Statusleiste
-    toolbar.rs          # Werkzeugleiste
-    properties.rs       # Properties-Panel
-    input.rs            # Input-Orchestrator
-    keyboard.rs         # Tastatur-Shortcuts
-    drag.rs             # Drag-Operationen
-    context_menu.rs     # Rechtsklick-Kontextmenü
-    dialogs.rs          # Datei-Dialoge
-    options_dialog/     # Optionen-Dialog
-    tool_preview.rs     # Tool-Preview-Overlay
+crates/
+  fs25_auto_drive_engine/
+    src/
+      lib.rs          # Host-neutrale Crate-Wurzel
+      app/            # Controller, State, Handlers, Use-Cases, Tool-Vertraege und Tool-Implementierungen
+      core/           # Domain-Typen, Spatial-Index, BackgroundMap, Farmland und Heightmap
+      shared/         # RenderScene, RenderQuality, EditorOptions, i18n und neutrale Geometrie
+      xml/            # AutoDrive- und Curseplay-Import/Export
+  fs25_auto_drive_frontend_egui/
+    src/
+      lib.rs          # Desktop-Frontend-Wurzel; re-exportiert Engine-Module fuer Kompatibilitaet
+      runtime.rs      # eframe-Bootstrap und run_native()
+      editor_app/     # eframe-Integrationsschale, Event-Sammlung, Overlays, Render-Callback
+      render/         # wgpu-Renderer, Background-Upload, egui-Callback
+      ui/             # egui-Panels, Dialoge, Input und Overlays
+  fs25_auto_drive_frontend_flutter_bridge/
+    src/
+      lib.rs          # Flutter-Bridge-Wurzel
+      session/        # FlutterBridgeSession als Rust-seitige Session-Fassade
+      dto/            # Serialisierbare Session-, Selection- und Viewport-Snapshots
+  fs25_map_overview/
+    src/              # Terrain-, Farmland-, POI- und Hillshade-Generierung fuer Uebersichtskarten
 ```
 
-**Hinweis:** `Camera2D` lebt in `core/camera.rs` (reiner Geometrie-Typ). `app` re-exportiert ihn als Teil der stabilen UI-Leseflaeche; Tool-Vertraege bleiben in expliziten `app::*`-Submodulen.
+**Hinweis:** `Camera2D` lebt in `crates/fs25_auto_drive_engine/src/core/camera.rs` (reiner Geometrie-Typ). `app` re-exportiert ihn als Teil der stabilen UI-Leseflaeche; Tool-Vertraege bleiben in expliziten `app::*`-Submodulen. Das Root-Package selbst bleibt eine duenne Kompat-Fassade ohne eigene Fachlogik.
 
 ## Umsetzungsphasen
 
@@ -613,7 +505,7 @@ src/
 ## Definition of Done
 
 - Keine Domain-Mutationslogik in `ui`.
-- `main.rs` und `runtime.rs` enthalten nur Bootstrap/Wiring; `src/editor_app/*` bleibt die duenne eframe-Integrationsschale.
+- `src/main.rs` und `crates/fs25_auto_drive_frontend_egui/src/runtime.rs` enthalten nur Bootstrap/Wiring; `crates/fs25_auto_drive_frontend_egui/src/editor_app/*` bleibt die duenne eframe-Integrationsschale.
 - Alle User-Interaktionen laufen über `AppIntent`.
 - Renderer arbeitet ohne direkten Domain-Zugriff.
 - XML-Funktionalität ist unabhängig von UI/Render testbar.
@@ -747,16 +639,16 @@ Nach node-mutierenden Operationen wird dirty-Flag gesetzt; Rebuild erfolgt lazy 
 
 ### Verbotene Abhaengigkeiten
 
-- Tools (`src/app/tools/`) duerfen **niemals** auf `src/render/`, `wgpu` oder `RenderScene` zugreifen
+- Tools (`crates/fs25_auto_drive_engine/src/app/tools/`) duerfen **niemals** auf `crates/fs25_auto_drive_frontend_egui/src/render/`, `wgpu` oder `RenderScene` zugreifen
 - Tools erhalten ausschliesslich `&RoadMap` (read-only) als Domain-Kontext
 - Keine GPU-spezifischen Typen (Vertex-Buffer, Shader, Pipelines) in Tool-Code
-- Kein Zugriff auf `AppState` — der Handler (`src/app/handlers/route_tool.rs`) vermittelt
+- Kein Zugriff auf `AppState` — der Handler (`crates/fs25_auto_drive_engine/src/app/handlers/route_tool.rs`) vermittelt
 
 ### Preview-Vertrag
 
 - `preview()` liefert **reine Geometrie** (`Vec<Vec2>` + Index-basierte Verbindungen)
 - Keine Farben, Texturen oder Render-Hints im `ToolPreview`-Output
-- Die Konvertierung zu visuellen Elementen erfolgt im UI-Layer (`src/ui/tool_preview.rs`)
+- Die Konvertierung zu visuellen Elementen erfolgt im UI-Layer (`crates/fs25_auto_drive_frontend_egui/src/ui/tool_preview.rs`)
 - Tools kennen weder `egui::Color32`, `egui::Painter` noch `egui::Ui`; das Floating-Panel liest `RouteToolPanelState` und sendet `RouteToolPanelAction` ueber den App-Intent-Flow zurueck
 
 ### Gruppen-Editierbarkeit

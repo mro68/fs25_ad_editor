@@ -1,4 +1,4 @@
-# Shared API Documentation
+# API des shared-Moduls
 
 ## Ueberblick
 

@@ -1,4 +1,4 @@
-# Core API Documentation
+# API des core-Moduls
 
 ## Ueberblick
 
