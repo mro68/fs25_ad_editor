@@ -1,5 +1,6 @@
 use anyhow::Result;
 use fs25_auto_drive_engine::app::{AppController, AppIntent, AppState, EditorTool};
+use fs25_auto_drive_engine::shared::{RenderAssetsSnapshot, RenderScene};
 
 use crate::dto::{
     EngineActiveTool, EngineSelectionSnapshot, EngineSessionSnapshot, EngineViewportSnapshot,
@@ -31,6 +32,14 @@ fn build_snapshot(state: &AppState) -> EngineSessionSnapshot {
             zoom: state.view.camera.zoom,
         },
     }
+}
+
+/// Gekoppelter Render-Snapshot fuer Hosts ohne direkte State-Inspektion.
+pub struct EngineRenderFrameSnapshot {
+    /// Per-frame Render-Vertrag mit Kamera-, Sichtbarkeits- und Geometriedaten.
+    pub scene: RenderScene,
+    /// Langlebige Render-Assets inklusive Revisionen.
+    pub assets: RenderAssetsSnapshot,
 }
 
 /// Kleine Session-Fassade ueber der host-neutralen Engine.
@@ -83,7 +92,27 @@ impl FlutterBridgeSession {
         self.snapshot().clone()
     }
 
-    /// Gibt read-only Zugriff auf den zugrundeliegenden App-State.
+    /// Baut den aktuellen per-frame Render-Vertrag fuer den angegebenen Viewport.
+    pub fn build_render_scene(&self, viewport_size: [f32; 2]) -> RenderScene {
+        self.controller.build_render_scene(&self.state, viewport_size)
+    }
+
+    /// Baut den aktuellen Render-Asset-Snapshot.
+    pub fn build_render_assets(&self) -> RenderAssetsSnapshot {
+        self.controller.build_render_assets(&self.state)
+    }
+
+    /// Baut einen gekoppelten Render-Snapshot aus Szene und Assets.
+    pub fn build_render_frame(&self, viewport_size: [f32; 2]) -> EngineRenderFrameSnapshot {
+        EngineRenderFrameSnapshot {
+            scene: self.build_render_scene(viewport_size),
+            assets: self.build_render_assets(),
+        }
+    }
+
+    /// Gibt read-only Zugriff auf den zugrundeliegenden App-State als Escape-Hatch.
+    ///
+    /// Bevorzugt sollten Hosts die expliziten Render-/Snapshot-Methoden nutzen.
     pub fn state(&self) -> &AppState {
         &self.state
     }
@@ -148,5 +177,20 @@ mod tests {
 
         let snapshot = session.snapshot();
         assert_eq!(snapshot.active_tool, EngineActiveTool::Route);
+    }
+
+    #[test]
+    fn render_accessors_expose_scene_and_assets_without_state_leaks() {
+        let session = FlutterBridgeSession::new();
+
+        let scene = session.build_render_scene([800.0, 600.0]);
+        let assets = session.build_render_assets();
+        let frame = session.build_render_frame([320.0, 240.0]);
+
+        assert!(!scene.has_map());
+        assert_eq!(assets.background_asset_revision(), 0);
+        assert!(assets.background().is_none());
+        assert_eq!(frame.scene.viewport_size(), [320.0, 240.0]);
+        assert_eq!(frame.assets.background_transform_revision(), 0);
     }
 }
