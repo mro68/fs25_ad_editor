@@ -2,7 +2,7 @@
 
 ## Ueberblick
 
-`fs25_auto_drive_frontend_egui` kapselt den nativen Desktop-Host des Editors. Die Crate enthaelt den render-spezifischen wgpu-/egui-Stack, die komplette egui-Oberflaeche, die eframe-Integrationsschale und den nativen Launcher.
+`fs25_auto_drive_frontend_egui` kapselt den nativen Desktop-Host des Editors. Die Crate enthaelt die komplette egui-Oberflaeche, die eframe-Integrationsschale, den nativen Launcher und einen duennen render-seitigen Host-Adapter ueber `fs25_auto_drive_render_wgpu`.
 
 Sie konsumiert die host-neutrale Engine, re-exportiert deren `app`-, `core`-, `shared`- und `xml`-Module fuer bestehende Frontend-Pfade und stellt mit `run_native()` den nativen Einstieg bereit.
 
@@ -11,7 +11,7 @@ Sie konsumiert die host-neutrale Engine, re-exportiert deren `app`-, `core`-, `s
 | Modul | Verantwortung |
 |---|---|
 | `editor_app` | eframe-Integrationsschale; Laufzeittypen wie `EditorApp` bleiben bewusst crate-intern |
-| `render` | wgpu-Renderer, Background-Upload und egui-Render-Callback |
+| `render` | egui-Host-Adapter, Background-Upload-Bruecke und egui-Render-Callback |
 | `ui` | Menues, Panels, Dialoge, Viewport-Input und Overlays |
 | `app`, `core`, `shared`, `xml` | Re-Exports aus `fs25_auto_drive_engine` fuer stabile Importpfade |
 
@@ -19,7 +19,7 @@ Sie konsumiert die host-neutrale Engine, re-exportiert deren `app`-, `core`-, `s
 
 | Typ | Zweck |
 |---|---|
-| `render::Renderer` | GPU-Renderer fuer `RenderScene`-Snapshots |
+| `render::Renderer` | Egui-Host-Adapter fuer den host-neutralen GPU-Renderer-Kern |
 | `render::BackgroundWorldBounds` | Weltkoordinatenvertrag fuer Background-Uploads |
 | `render::WgpuRenderCallback` | egui/wgpu-Bruecke fuer den benutzerdefinierten Render-Pass |
 | `render::WgpuRenderData` | Trager des `RenderScene`-Snapshots pro Frame |
@@ -51,7 +51,8 @@ flowchart LR
 	EDITOR --> UI[ui::*]
 	EDITOR --> CTRL[app::AppController]
 	CTRL --> SCENE[shared::RenderScene]
-	SCENE --> RENDER[render::Renderer]
+	SCENE --> RENDER[render::Renderer Adapter]
+	RENDER --> CORE[fs25_auto_drive_render_wgpu::Renderer]
 ```
 
 ## Kompatibilitaet
