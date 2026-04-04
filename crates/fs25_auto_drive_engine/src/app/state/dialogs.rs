@@ -1,4 +1,5 @@
 use crate::app::tools::RouteToolGroup;
+use crate::app::ui_contract::DialogRequest;
 use crate::shared::OverviewLayerOptions;
 use fs25_map_overview::FieldDetectionSource;
 use glam::Vec2;
@@ -286,18 +287,12 @@ pub struct ZipBrowserState {
 /// UI-bezogener Anwendungszustand
 #[derive(Default)]
 pub struct UiState {
-    /// Ob der Open-Datei-Dialog geoeffnet werden soll
-    pub show_file_dialog: bool,
-    /// Ob der Save-Datei-Dialog geoeffnet werden soll
-    pub show_save_file_dialog: bool,
-    /// Ob der Heightmap-Auswahl-Dialog geoeffnet werden soll
-    pub show_heightmap_dialog: bool,
-    /// Ob der Background-Map-Auswahl-Dialog geoeffnet werden soll
-    pub show_background_map_dialog: bool,
-    /// Ob der Uebersichtskarten-ZIP-Auswahl-Dialog geoeffnet werden soll
-    pub show_overview_dialog: bool,
+    /// Ausstehende host-native Dialog-Anforderungen (Datei-/Pfad-Dialoge).
+    pub dialog_requests: Vec<DialogRequest>,
     /// Ob die Command-Palette angezeigt werden soll
     pub show_command_palette: bool,
+    /// Ob der Optionen-Dialog angezeigt wird.
+    pub show_options_dialog: bool,
     /// Optionales schwebendes Menue an der Mausposition.
     pub floating_menu: Option<FloatingMenuState>,
     /// Ob die Heightmap-Warnung angezeigt werden soll
@@ -332,22 +327,15 @@ pub struct UiState {
     pub group_settings_popup: GroupSettingsPopupState,
     /// Bestaetigungsdialog zum Aufloesen einer Gruppe.
     pub confirm_dissolve_group_id: Option<u64>,
-    /// Ob der Curseplay-Import-Dateidialog geoeffnet werden soll
-    pub show_curseplay_import_dialog: bool,
-    /// Ob der Curseplay-Export-Dateidialog geoeffnet werden soll
-    pub show_curseplay_export_dialog: bool,
 }
 
 impl UiState {
     /// Erstellt den Standard-UI-Zustand (alle Dialoge geschlossen).
     pub fn new() -> Self {
         Self {
-            show_file_dialog: false,
-            show_save_file_dialog: false,
-            show_heightmap_dialog: false,
-            show_background_map_dialog: false,
-            show_overview_dialog: false,
+            dialog_requests: Vec::new(),
             show_command_palette: false,
+            show_options_dialog: false,
             floating_menu: None,
             show_heightmap_warning: false,
             heightmap_warning_confirmed: false,
@@ -365,8 +353,16 @@ impl UiState {
             trace_all_fields_dialog: TraceAllFieldsDialogState::default(),
             group_settings_popup: GroupSettingsPopupState::default(),
             confirm_dissolve_group_id: None,
-            show_curseplay_import_dialog: false,
-            show_curseplay_export_dialog: false,
         }
+    }
+
+    /// Wartet eine neue host-native Dialog-Anforderung ein.
+    pub fn request_dialog(&mut self, request: DialogRequest) {
+        self.dialog_requests.push(request);
+    }
+
+    /// Entnimmt alle aktuell ausstehenden Dialog-Anforderungen.
+    pub fn take_dialog_requests(&mut self) -> Vec<DialogRequest> {
+        std::mem::take(&mut self.dialog_requests)
     }
 }

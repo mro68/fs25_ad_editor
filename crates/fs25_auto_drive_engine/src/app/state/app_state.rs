@@ -70,8 +70,6 @@ pub struct AppState {
     pub options: EditorOptions,
     /// Geteilte Arc-Variante der Optionen fuer RenderScene-Build (O(1) Clone pro Frame)
     options_arc: Arc<EditorOptions>,
-    /// Ob der Options-Dialog angezeigt wird
-    pub show_options_dialog: bool,
     /// In-Session-Registry aller erstellten Segmente (fuer nachtraegliche Bearbeitung)
     pub group_registry: GroupRegistry,
     /// Signalisiert dem Host (eframe), die Anwendung kontrolliert zu beenden
@@ -124,7 +122,6 @@ impl AppState {
             history: crate::app::history::EditHistory::new_with_capacity(200),
             options,
             options_arc,
-            show_options_dialog: false,
             group_registry: GroupRegistry::new(),
             should_exit: false,
             farmland_polygons: None,

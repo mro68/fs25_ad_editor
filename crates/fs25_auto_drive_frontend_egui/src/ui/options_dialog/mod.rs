@@ -2,7 +2,7 @@
 
 mod sections;
 
-use crate::app::AppIntent;
+use crate::app::ui_contract::{OptionsPanelAction, PanelAction};
 use crate::shared::{t, EditorOptions, I18nKey, Language};
 
 /// Navigationsbereiche im Optionen-Dialog.
@@ -130,7 +130,7 @@ pub fn show_options_dialog(
     ctx: &egui::Context,
     show: bool,
     options: &EditorOptions,
-) -> Vec<AppIntent> {
+) -> Vec<PanelAction> {
     let mut events = Vec::new();
 
     if !show {
@@ -215,10 +215,10 @@ pub fn show_options_dialog(
 
             ui.horizontal(|ui| {
                 if ui.button(t(lang, I18nKey::DialogDefaults)).clicked() {
-                    events.push(AppIntent::ResetOptionsRequested);
+                    events.push(PanelAction::Options(OptionsPanelAction::ResetToDefaults));
                 }
                 if ui.button(t(lang, I18nKey::DialogClose)).clicked() {
-                    events.push(AppIntent::CloseOptionsDialogRequested);
+                    events.push(PanelAction::Options(OptionsPanelAction::Close));
                 }
             });
         });
@@ -229,9 +229,7 @@ pub fn show_options_dialog(
 
     // Aenderungen sofort anwenden (Live-Preview)
     if changed {
-        events.push(AppIntent::OptionsChanged {
-            options: Box::new(opts),
-        });
+        events.push(PanelAction::Options(OptionsPanelAction::Apply(opts)));
     }
 
     events

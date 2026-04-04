@@ -4,6 +4,9 @@ mod by_feature;
 
 use super::render_assets;
 use super::render_scene;
+use super::ui_contract::{
+    CommandPalettePanelState, HostUiSnapshot, OptionsPanelState, PanelState,
+};
 use super::{AppCommand, AppIntent, AppState};
 use crate::shared::{RenderAssetsSnapshot, RenderScene};
 
@@ -50,5 +53,28 @@ impl AppController {
     /// Baut den host-neutralen Render-Asset-Snapshot aus dem aktuellen AppState.
     pub fn build_render_assets(&self, state: &AppState) -> RenderAssetsSnapshot {
         render_assets::build(state)
+    }
+
+    /// Baut den host-neutralen UI-Snapshot fuer Dialoge und Tool-Fenster.
+    pub fn build_host_ui_snapshot(&self, state: &AppState) -> HostUiSnapshot {
+        let mut panels = Vec::new();
+
+        panels.push(PanelState::CommandPalette(CommandPalettePanelState {
+            visible: state.ui.show_command_palette,
+        }));
+
+        panels.push(PanelState::Options(OptionsPanelState {
+            visible: state.ui.show_options_dialog,
+            options: state.options.clone(),
+        }));
+
+        if let Some(route_tool_panel) = state.editor.route_tool_panel_state() {
+            panels.push(PanelState::RouteTool(route_tool_panel));
+        }
+
+        HostUiSnapshot {
+            panels,
+            dialog_requests: state.ui.dialog_requests.clone(),
+        }
     }
 }

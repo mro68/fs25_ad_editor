@@ -351,7 +351,7 @@ pub fn render_edit_panel(
 ) -> Vec<AppIntent>
 ```
 
-Die Route-Tool-Konfiguration arbeitet hier bewusst nur noch ueber den egui-freien App-Vertrag `RouteToolPanelState`; konkrete Widget-Aenderungen emittieren `AppIntent::RouteToolPanelActionRequested { action }`, waehrend der breite `ToolManager` im Application-Layer gekapselt bleibt.
+Die Route-Tool-Konfiguration arbeitet hier bewusst nur noch ueber den egui-freien App-Vertrag `RouteToolPanelState`; konkrete Widget-Aenderungen laufen semantisch als `PanelAction` und werden zentral ueber `panel_action_to_intent()` in `AppIntent` uebersetzt. Der breite `ToolManager` bleibt dabei im Application-Layer gekapselt.
 
 `distance_wheel_step_m` wird intern an `edit_panel/route_tool_panel.rs` durchgereicht. Dort wird nur das boolesche Gate `wheel_enabled = distance_wheel_step_m > 0.0` abgeleitet; die eigentliche Widget-Logik fuer numerische Route-Tool- und Analysis-Felder bleibt in `ui::common::{apply_wheel_step_default_enabled, apply_wheel_step_usize}`.
 
@@ -550,11 +550,13 @@ Wird in den Float-Section-Renderern unter `options_dialog/sections/*.rs` fuer di
 
 ### `handle_file_dialogs`
 
-Verarbeitet ausstehende Datei-Dialoge (Open, Save, Heightmap).
+Verarbeitet ausstehende host-native Datei-Dialog-Requests und liefert semantische Dialog-Ergebnisse.
 
 ```rust
-pub fn handle_file_dialogs(ui_state: &mut UiState) -> Vec<AppIntent>
+pub fn handle_file_dialogs(dialog_requests: Vec<DialogRequest>) -> Vec<DialogResult>
 ```
+
+Die zentrale Uebersetzung nach `AppIntent` erfolgt im Editor-Host ueber `dialog_result_to_intent()`.
 
 ---
 
@@ -600,7 +602,7 @@ pub fn show_options_dialog(
   ctx: &egui::Context,
   show: bool,
   options: &EditorOptions,
-) -> Vec<AppIntent>
+) -> Vec<PanelAction>
 ```
 
 ---

@@ -1,12 +1,15 @@
 //! Use-Case-Funktionen fuer Dateiaktionen.
 //! Alle Dateisystem-Operationen (I/O) sind hier zentralisiert.
 
+use crate::app::ui_contract::{DialogRequest, DialogRequestKind};
 use crate::app::AppState;
 use std::sync::Arc;
 
 /// Oeffnet den Open-Datei-Dialog ueber UI-State.
 pub fn request_open_file(state: &mut AppState) {
-    state.ui.show_file_dialog = true;
+    state
+        .ui
+        .request_dialog(DialogRequest::pick_path(DialogRequestKind::OpenFile));
 }
 
 /// Laedt die ausgewaehlte Datei in den AppState.
@@ -80,7 +83,17 @@ pub fn deduplicate_loaded_roadmap(state: &mut AppState) {
 
 /// Oeffnet den Save-Datei-Dialog ueber UI-State.
 pub fn request_save_file(state: &mut AppState) {
-    state.ui.show_save_file_dialog = true;
+    let default_name = state
+        .ui
+        .current_file_path
+        .as_ref()
+        .and_then(|path| std::path::Path::new(path).file_name())
+        .and_then(|name| name.to_str())
+        .unwrap_or("AutoDrive_config.xml")
+        .to_owned();
+    state
+        .ui
+        .request_dialog(DialogRequest::save_path_with_name(default_name));
 }
 
 /// Speichert die aktuelle Datei (wenn Pfad bekannt) oder oeffnet Dialog.
