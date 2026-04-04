@@ -203,6 +203,10 @@
   - [x] `HostBridgeSession` als kanonische toolkit-freie Session-Fassade in `fs25_auto_drive_host_bridge`
   - [x] Explizite Action-/Snapshot-DTOs (`HostSessionAction`, `HostSessionSnapshot`, `HostDialog*`)
   - [x] Read-Seams fuer `HostUiSnapshot`, `ViewportOverlaySnapshot` und Render-Frame in der Core-Bridge gebuendelt
+- [x] Egui-Adapter-Surface fuer die Unified Host Bridge vorbereitet
+  - [x] Neues Modul `fs25_auto_drive_frontend_egui::host_bridge_adapter` als duenne Mapping-Schicht
+  - [x] Explizites Mapping eines stabilen Intent-Subsets auf `HostSessionAction`
+  - [x] Bestehender `editor_app`-Flow bleibt unveraendert, Migration dadurch schrittweise moeglich
 - [x] DDS-Import fuer Map-Hintergruende
   - [x] Texture-Loader implementieren (PNG, JPG, DDS)
   - [x] Background-Quad-Renderer

@@ -1755,6 +1755,7 @@ dependencies = [
  "egui_extras",
  "env_logger",
  "fs25_auto_drive_engine",
+ "fs25_auto_drive_host_bridge",
  "fs25_auto_drive_render_wgpu",
  "fs25_map_overview",
  "glam",
