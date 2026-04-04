@@ -4,8 +4,7 @@
 //! Bestehende Namen bleiben als Alias auf `fs25_auto_drive_host_bridge` erhalten.
 
 pub use fs25_auto_drive_host_bridge::{
-    HostBridgeSession as FlutterBridgeSession,
-    HostRenderFrameSnapshot as EngineRenderFrameSnapshot,
+    HostBridgeSession as FlutterBridgeSession, HostRenderFrameSnapshot as EngineRenderFrameSnapshot,
 };
 
 #[cfg(test)]
