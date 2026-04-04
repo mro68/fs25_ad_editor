@@ -20,7 +20,7 @@ Die eframe-Integrationsschale gehoert bewusst nicht zum `app`-Layer. Ihre kanoni
 
 - `tool_contract.rs` — semantische Route-Tool-Vertraege wie `RouteToolId`, `ToolAnchor` und `TangentSource`
 - `ui_contract.rs` — egui-freie UI-Vertraege wie `TangentMenuData`, `TangentOptionData`, `RouteToolPanelState`, `RouteToolConfigState`, `RouteToolPanelAction`, `RouteToolPanelEffect` und `RouteToolViewportData`
-- `ui_contract/host_ui.rs` — host-neutrale UI-Vertraege fuer Dialoge und Tool-Fenster (`PanelState`, `PanelAction`, `DialogRequest`, `DialogResult`, `HostUiSnapshot`)
+- `ui_contract/host_ui.rs` — host-neutrale UI-Vertraege fuer Dialoge und Tool-Fenster (`PanelState`, `PanelAction`, `DialogRequest`, `DialogResult`, `HostUiSnapshot`); grosse Optionen-Payloads werden in `OptionsPanelAction::Apply(Box<EditorOptions>)` bewusst indirekt gehalten, damit die Action-Enums kompakt bleiben
 - `ui_contract/viewport_overlay.rs` — host-neutrale Overlay-Vertraege (`ViewportOverlaySnapshot`, Clipboard-/Polyline-/Group-Overlay-DTOs)
 
 Die Route-Tool-Panel-DTOs werden intern ueber `ui_contract/route_tool_panel/{common,curve_family,generator_family,analysis_family}.rs` gepflegt. Die Top-Level-Dateien `ui_contract.rs` und `ui_contract/route_tool_panel.rs` bleiben dabei stabile Re-Export-Fassaden fuer UI und Intent-Mapping.
