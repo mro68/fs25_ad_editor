@@ -1,4 +1,4 @@
-# App API Documentation
+# API des app-Moduls
 
 ## Ueberblick
 
@@ -1078,6 +1078,6 @@ Zusätzlich baut `render_scene::build()` einen render-seitigen `RenderMap`-Snaps
 
 ## `editor_app` (Integrationsschale)
 
-Die eframe-Integrationsschale gehoert bewusst nicht zur `app`-API. Die kanonische Dokumentation fuer `EditorApp`, Event-Sammlung, Overlay-Anbindung und Viewport-Rendering steht in [`../editor_app/API.md`](../editor_app/API.md).
+Die eframe-Integrationsschale gehoert bewusst nicht zur `app`-API. Die kanonische Dokumentation fuer `EditorApp`, Event-Sammlung, Overlay-Anbindung und Viewport-Rendering steht in [`../../../../crates/fs25_auto_drive_frontend_egui/src/editor_app/API.md`](../../../../crates/fs25_auto_drive_frontend_egui/src/editor_app/API.md).
 
 `app/API.md` dokumentiert nur den eigentlichen Application-Layer: `AppController`, `AppState`, Intents/Commands, Handler, Use-Cases und Tool-Vertraege.
