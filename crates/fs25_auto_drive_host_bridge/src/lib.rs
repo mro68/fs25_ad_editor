@@ -6,7 +6,7 @@ pub mod dto;
 pub mod session;
 
 pub use dto::{
-	HostActiveTool, HostDialogRequest, HostDialogRequestKind, HostDialogResult,
-	HostSelectionSnapshot, HostSessionAction, HostSessionSnapshot, HostViewportSnapshot,
+    HostActiveTool, HostDialogRequest, HostDialogRequestKind, HostDialogResult,
+    HostSelectionSnapshot, HostSessionAction, HostSessionSnapshot, HostViewportSnapshot,
 };
 pub use session::{HostBridgeSession, HostRenderFrameSnapshot};

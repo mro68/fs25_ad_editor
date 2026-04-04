@@ -12,7 +12,7 @@ Dieser Plan trennt fachliche Verantwortlichkeiten in Workspace-Crates mit klaren
 - Host-Bridge-Core (`crates/fs25_auto_drive_host_bridge/src/*`): toolkit-freie gemeinsame Session-/Action-/Snapshot-Seam ueber der Engine
 - Render-Core (`crates/fs25_auto_drive_render_wgpu/src/*`): host-neutraler wgpu-Renderer-Kern
 - Egui-Frontend (`crates/fs25_auto_drive_frontend_egui/src/{ui,editor_app,runtime,render,host_bridge_adapter}`): Desktop-Host, egui-UI, Render-Adapter und duenne Unified-Bridge-Mapping-Helfer
-- Flutter-Bridge (`crates/fs25_auto_drive_frontend_flutter_bridge/src/{session,dto}`): bestehende Session-/DTO-Seams als Extraktionsbasis fuer den finalen Adapter-Zuschnitt
+- Flutter-Bridge (`crates/fs25_auto_drive_frontend_flutter_bridge/src/{session,dto}`): duenne Adapter-/Kompat-Schicht mit Alias-Surface ueber der Host-Bridge
 - Overview-Crate (`crates/fs25_map_overview/src/*`): Karten-/Farmland-Generierung
 
 Kernfluss: **Input -> AppIntent -> AppController -> AppCommand -> AppState/Domain -> RenderScene + RenderAssetsSnapshot + HostUiSnapshot + ViewportOverlaySnapshot -> Host-Adapter -> Renderer-Core**.
@@ -544,9 +544,9 @@ crates/
       ui/             # egui-Panels, Dialoge, Input und Overlays
   fs25_auto_drive_frontend_flutter_bridge/
     src/
-      lib.rs          # Flutter-Bridge-Wurzel (Kompat-/Migrationsschicht)
-      session/        # Bestehende FlutterBridgeSession (wird auf Host-Bridge umgestellt)
-      dto/            # Bestehende Engine*-DTOs (werden auf Host-Bridge-Vertraege gemappt)
+      lib.rs          # Flutter-Adapter-/Kompat-Wurzel ueber der Host-Bridge
+      session/        # Alias-Surface fuer FlutterBridgeSession/RenderFrame
+      dto/            # Alias-Surface fuer Engine*-DTO-Namen
   fs25_map_overview/
     src/              # Terrain-, Farmland-, POI- und Hillshade-Generierung fuer Uebersichtskarten
 ```

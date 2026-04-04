@@ -395,4 +395,4 @@ pub struct HostRenderFrameSnapshot {
 - Die Bridge mappt `HostSessionAction` intern auf `AppIntent`, ohne generischen Intent-Dispatch oder direkten `AppState`-Escape-Hatch
 - Host-native Datei-/Pfad-Dialoge laufen ueber `take_dialog_requests()` und `submit_dialog_result(...)` als explizite Bridge-Seam
 - `HostRenderFrameSnapshot` koppelt den per-Frame-Render-Vertrag (`RenderScene`) mit den langlebigen Render-Assets fuer read-only Hosts
-- Die bisherige Flutter-Bridge bleibt waehrend der Migration als Kompat-Surface bestehen und wird schrittweise auf diese kanonischen Host-Bridge-Vertraege umgestellt
+- Die Flutter-Bridge ist als duenne Alias-/Kompat-Surface ueber `fs25_auto_drive_host_bridge` umgesetzt und fuehrt die bisherigen `Engine*`-Namen ohne eigene Session-Logik weiter

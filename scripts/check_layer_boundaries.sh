@@ -4,7 +4,7 @@
 # Regeln (Crate-/Layer-Richtungen):
 #   fs25_auto_drive_host_bridge             → fs25_auto_drive_engine
 #   fs25_auto_drive_frontend_egui              → fs25_auto_drive_engine + fs25_auto_drive_host_bridge + fs25_auto_drive_render_wgpu
-#   fs25_auto_drive_frontend_flutter_bridge    → fs25_auto_drive_engine
+#   fs25_auto_drive_frontend_flutter_bridge    → fs25_auto_drive_host_bridge
 #   fs25_auto_drive_render_wgpu                → fs25_auto_drive_engine::shared
 #   fs25_auto_drive_engine kennt keine Frontend-Crates
 #   render bleibt innerhalb der egui-Frontend-Crate ein Host-Adapter
@@ -177,10 +177,10 @@ if [ -n "$UI_STATE_ASSIGN_VIOLATIONS" ]; then
     VIOLATIONS=$((VIOLATIONS + 1))
 fi
 
-# Regel 10: Flutter-Bridge darf keine Frontend-Crates oder UI-Toolkits kennen
-BRIDGE_FRONTEND_VIOLATIONS=$(grep -rnE 'fs25_auto_drive_frontend_egui|crate::ui|crate::render|crate::editor_app|egui::|eframe::' "$BRIDGE_DIR" --include='*.rs' 2>/dev/null || true)
+# Regel 10: Flutter-Bridge darf keine Frontend-Crates, UI-Toolkits oder direkte Engine-Imports kennen
+BRIDGE_FRONTEND_VIOLATIONS=$(grep -rnE 'fs25_auto_drive_frontend_egui|fs25_auto_drive_engine::|crate::ui|crate::render|crate::editor_app|egui::|eframe::' "$BRIDGE_DIR" --include='*.rs' 2>/dev/null || true)
 if [ -n "$BRIDGE_FRONTEND_VIOLATIONS" ]; then
-    echo "FEHLER: Flutter-Bridge importiert Frontend-Module oder UI-Toolkits:"
+    echo "FEHLER: Flutter-Bridge importiert Frontend-Module, direkte Engine-Symbolpfade oder UI-Toolkits:"
     echo "$BRIDGE_FRONTEND_VIOLATIONS"
     VIOLATIONS=$((VIOLATIONS + 1))
 fi
