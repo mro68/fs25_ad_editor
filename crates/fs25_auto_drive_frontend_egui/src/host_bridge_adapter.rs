@@ -6,9 +6,7 @@
 //! direkt ueber `AppController` verarbeitet werden.
 
 use anyhow::Result;
-use fs25_auto_drive_host_bridge::{
-    HostActiveTool, HostBridgeSession, HostSessionAction,
-};
+use fs25_auto_drive_host_bridge::{HostActiveTool, HostBridgeSession, HostSessionAction};
 
 use crate::app::{AppIntent, EditorTool};
 

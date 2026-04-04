@@ -1771,9 +1771,7 @@ dependencies = [
 name = "fs25_auto_drive_frontend_flutter_bridge"
 version = "1.7.0"
 dependencies = [
- "anyhow",
- "fs25_auto_drive_engine",
- "serde",
+ "fs25_auto_drive_host_bridge",
 ]
 
 [[package]]

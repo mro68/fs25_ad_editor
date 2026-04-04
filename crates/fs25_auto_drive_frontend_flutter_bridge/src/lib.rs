@@ -1,8 +1,8 @@
-//! Flutter-Bridge-Seams fuer den FS25 AutoDrive Editor.
+//! Flutter-Adapter-/Kompat-Seams fuer den FS25 AutoDrive Editor.
 
-/// Serialisierbare DTOs fuer Host-/Frontend-Snapshots.
+/// Kompat-DTOs als Alias-Namen ueber der kanonischen Host-Bridge.
 pub mod dto;
-/// Session-Fassade ueber der Engine ohne Flutter-SDK-Kopplung.
+/// Kompat-Session-Alias ueber der kanonischen Host-Bridge.
 pub mod session;
 
 pub use dto::{

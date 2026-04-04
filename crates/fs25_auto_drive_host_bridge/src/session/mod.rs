@@ -76,11 +76,9 @@ fn map_dialog_result(result: HostDialogResult) -> DialogResult {
 fn action_to_intent(action: HostSessionAction) -> Option<AppIntent> {
     match action {
         HostSessionAction::ToggleCommandPalette => Some(AppIntent::CommandPaletteToggled),
-        HostSessionAction::SetEditorTool { tool } => {
-            Some(AppIntent::SetEditorToolRequested {
-                tool: map_editor_tool(tool),
-            })
-        }
+        HostSessionAction::SetEditorTool { tool } => Some(AppIntent::SetEditorToolRequested {
+            tool: map_editor_tool(tool),
+        }),
         HostSessionAction::OpenOptionsDialog => Some(AppIntent::OpenOptionsDialogRequested),
         HostSessionAction::CloseOptionsDialog => Some(AppIntent::CloseOptionsDialogRequested),
         HostSessionAction::Undo => Some(AppIntent::UndoRequested),
@@ -223,7 +221,8 @@ impl HostBridgeSession {
 
     /// Baut den aktuellen per-frame Render-Vertrag fuer den angegebenen Viewport.
     pub fn build_render_scene(&self, viewport_size: [f32; 2]) -> RenderScene {
-        self.controller.build_render_scene(&self.state, viewport_size)
+        self.controller
+            .build_render_scene(&self.state, viewport_size)
     }
 
     /// Baut den aktuellen Render-Asset-Snapshot.

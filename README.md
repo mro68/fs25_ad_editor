@@ -98,7 +98,7 @@ Ausfuehrliche Anleitung: [docs/howto/index.md](docs/howto/index.md)
 | `fs25_auto_drive_host_bridge` | Toolkit-freie Host-Bridge-Core-Crate ueber der Engine |
 | `fs25_auto_drive_render_wgpu` | Host-neutraler wgpu-Renderer-Kern |
 | `fs25_auto_drive_frontend_egui` | Desktop-Frontend (`ui`, `editor_app`, `runtime`, `render` als Host-Adapter) |
-| `fs25_auto_drive_frontend_flutter_bridge` | Bestehende Flutter-Session-/DTO-Seams (Migration zur Adapter-Schicht in Arbeit) |
+| `fs25_auto_drive_frontend_flutter_bridge` | Flutter-seitige Adapter-/Kompat-Schicht ueber `fs25_auto_drive_host_bridge` |
 | `fs25_map_overview` | Overview-, Terrain- und Farmland-Generierung |
 
 Die Root-Crate `fs25_auto_drive_editor` bleibt als Kompat-Fassade erhalten und re-exportiert die kanonischen Engine-Module weiterhin fuer Tests, Benches und bestehende Rust-Imports.

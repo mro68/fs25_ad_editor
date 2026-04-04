@@ -207,6 +207,10 @@
   - [x] Neues Modul `fs25_auto_drive_frontend_egui::host_bridge_adapter` als duenne Mapping-Schicht
   - [x] Explizites Mapping eines stabilen Intent-Subsets auf `HostSessionAction`
   - [x] Bestehender `editor_app`-Flow bleibt unveraendert, Migration dadurch schrittweise moeglich
+- [x] Flutter-Adapter-Surface fuer die Unified Host Bridge umgesetzt
+  - [x] `fs25_auto_drive_frontend_flutter_bridge` auf `fs25_auto_drive_host_bridge` umgestellt
+  - [x] Bestehende `Engine*`-Typnamen als Kompat-Aliase ueber `Host*`-Vertraege erhalten
+  - [x] Eigene Session-/Controller-Logik aus der Flutter-Crate entfernt (duenne Alias-Surface)
 - [x] DDS-Import fuer Map-Hintergruende
   - [x] Texture-Loader implementieren (PNG, JPG, DDS)
   - [x] Background-Quad-Renderer
