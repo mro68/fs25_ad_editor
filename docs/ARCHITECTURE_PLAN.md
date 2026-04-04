@@ -1,7 +1,7 @@
 # Architektur-Plan (Soll-Zustand)
 
 Stand: 2026-04-04  
-Status: Workspace-Split umgesetzt — Root-Fassade, Engine-Crate, render_wgpu-Core-Crate, egui-Host-Adapter und Flutter-Bridge-Seams sind angelegt; weitere Host-/Bridge-Remediationsphasen bleiben offen
+Status: Workspace-Split umgesetzt — Root-Fassade, Engine-Crate, render_wgpu-Core-Crate und egui-Host-Adapter sind stabil; die gemeinsame Host-Bridge-Core-Crate ist als Scaffold angelegt, die Host-Adapter-Migration bleibt in Arbeit
 
 ## Zielbild
 
@@ -9,9 +9,10 @@ Dieser Plan trennt fachliche Verantwortlichkeiten in Workspace-Crates mit klaren
 
 - Root-Package (`src/lib.rs`, `src/main.rs`): Re-Export-Fassade und nativer Launcher
 - Engine (`crates/fs25_auto_drive_engine/src/{app,core,shared,xml}`): host-neutrale Fachlogik
+- Host-Bridge-Core (`crates/fs25_auto_drive_host_bridge/src/*`): toolkit-freie gemeinsame Session-/Action-/Snapshot-Seam ueber der Engine
 - Render-Core (`crates/fs25_auto_drive_render_wgpu/src/*`): host-neutraler wgpu-Renderer-Kern
 - Egui-Frontend (`crates/fs25_auto_drive_frontend_egui/src/{ui,editor_app,runtime,render}`): Desktop-Host, egui-UI und Render-Adapter
-- Flutter-Bridge (`crates/fs25_auto_drive_frontend_flutter_bridge/src/{session,dto}`): kleine Session-, DTO- und Render-Frame-Seams ohne Flutter-SDK-Kopplung
+- Flutter-Bridge (`crates/fs25_auto_drive_frontend_flutter_bridge/src/*`): duenne Flutter-Adapter-/Kompat-Schicht ueber der Host-Bridge
 - Overview-Crate (`crates/fs25_map_overview/src/*`): Karten-/Farmland-Generierung
 
 Kernfluss: **Input -> AppIntent -> AppController -> AppCommand -> AppState/Domain -> RenderScene + RenderAssetsSnapshot + HostUiSnapshot + ViewportOverlaySnapshot -> Host-Adapter -> Renderer-Core**.
@@ -523,6 +524,9 @@ crates/
       core/           # Domain-Typen, Spatial-Index, BackgroundMap, Farmland und Heightmap
       shared/         # RenderScene, RenderQuality, EditorOptions, i18n und neutrale Geometrie
       xml/            # AutoDrive- und Curseplay-Import/Export
+  fs25_auto_drive_host_bridge/
+    src/
+      lib.rs          # Toolkit-freie kanonische Host-Bridge-Core-Surface
   fs25_auto_drive_render_wgpu/
     src/
       lib.rs          # Host-neutraler wgpu-Renderer-Kern
@@ -537,9 +541,7 @@ crates/
       ui/             # egui-Panels, Dialoge, Input und Overlays
   fs25_auto_drive_frontend_flutter_bridge/
     src/
-      lib.rs          # Flutter-Bridge-Wurzel
-      session/        # FlutterBridgeSession als Rust-seitige Session-Fassade
-      dto/            # Serialisierbare Session-, Selection- und Viewport-Snapshots
+      lib.rs          # Flutter-Adapter/Kompat-Wurzel fuer die gemeinsame Host-Bridge
   fs25_map_overview/
     src/              # Terrain-, Farmland-, POI- und Hillshade-Generierung fuer Uebersichtskarten
 ```
