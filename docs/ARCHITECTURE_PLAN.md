@@ -398,6 +398,30 @@ pub struct EngineRenderFrameSnapshot {
   pub assets: RenderAssetsSnapshot,
 }
 
+pub struct HostUiSnapshot {
+  pub panels: Vec<PanelState>,
+  pub dialog_requests: Vec<DialogRequest>,
+}
+
+pub struct ViewportOverlaySnapshot {
+  pub route_tool_preview: Option<ToolPreview>,
+  pub clipboard_preview: Option<ClipboardOverlaySnapshot>,
+  pub distance_preview: Option<PolylineOverlaySnapshot>,
+  pub group_locks: Vec<GroupLockOverlaySnapshot>,
+  pub group_boundaries: Vec<GroupBoundaryOverlaySnapshot>,
+  pub show_no_file_hint: bool,
+}
+
+pub enum EngineSessionAction {
+  ToggleCommandPalette,
+  SetEditorTool { tool: EngineActiveTool },
+  OpenOptionsDialog,
+  CloseOptionsDialog,
+  Undo,
+  Redo,
+  SubmitDialogResult { result: EngineDialogResult },
+}
+
 // enthaelt intern:
 // - RenderMap-Snapshot (Nodes, Connections, Marker, KD-Index)
 // - RenderCamera-Snapshot
@@ -416,6 +440,8 @@ impl fs25_auto_drive_render_wgpu::Renderer {
   pub fn clear_background(&mut self);
 }
 ```
+
+`HostUiSnapshot` und `ViewportOverlaySnapshot` sind die host-neutralen Read-Modelle fuer Panels/Dialoge bzw. Viewport-Overlays. Egui konsumiert beide Modelle read-only und mappt `PanelAction`, `DialogResult` sowie Overlay-Klicks zentral auf `AppIntent`. Die Flutter-Bridge bleibt parallel auf explizite `EngineSessionAction`-Mutationen (inkl. Undo/Redo/Dialog-Result), gecachte `EngineSessionSnapshot`-/`EngineRenderFrameSnapshot`-Abfragen sowie den host-neutralen Dialog-Lifecycle (`take_dialog_requests()`/`submit_dialog_result(...)`) begrenzt; generischer `AppIntent`-Dispatch und `AppState`-Escape-Hatches bleiben ausserhalb der oeffentlichen Bridge-Surface.
 
 `render_scene::build()` baut den render-seitigen `RenderMap`-Snapshot nur bei geaenderter `RoadMap::render_cache_key()` neu auf und legt ihn in `AppState::render_map_cache` ab. Jeder Rebuild protokolliert `nodes`, `connections`, `markers` und `approx_bytes`, damit Performance-Reports neben Laufzeiten auch die Snapshot-Groesse desselben Datensatzes dokumentieren koennen. `render_assets::build()` liefert parallel den host-neutralen Asset-Snapshot; Hintergrund-Sync laeuft ueber `background_asset_revision`/`background_transform_revision` statt Dirty-Flags. `build_viewport_overlay_snapshot()` liefert parallel den host-neutralen Overlay-Read-Modell-Snapshot fuer UI/Bridge-Hosts. Die egui-Integrationsschale vergleicht Asset-Revisionen gegen ihre letzten Upload-Staende und rendert Overlays ausschliesslich aus dem Snapshot; die Flutter-Bridge kann alternativ `EngineRenderFrameSnapshot` als gekoppelten read-only Render-Output liefern.
 
