@@ -44,6 +44,8 @@ pub fn record_selection_if_changed(
         let snap = Snapshot {
             road_map: state.road_map.clone(),
             selection: old_selection,
+            group_registry: state.group_registry.clone(),
+            tool_edit_store: state.tool_edit_store.clone(),
         };
         state.history.record_snapshot(snap);
     }

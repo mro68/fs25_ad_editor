@@ -2,7 +2,7 @@ use fs25_auto_drive_editor::app::handlers;
 use fs25_auto_drive_editor::app::tool_contract::{RouteToolId, TangentSource};
 use fs25_auto_drive_editor::app::ui_contract::{
     BypassPanelAction, ParkingPanelAction, RouteOffsetPanelAction, RouteToolConfigState,
-    RouteToolPanelAction, SmoothCurvePanelAction,
+    RouteToolPanelAction, SegmentConfigPanelAction, SmoothCurvePanelAction, StraightPanelAction,
 };
 use fs25_auto_drive_editor::app::{AppController, AppIntent, AppState, EditorTool, GroupRecord};
 use fs25_auto_drive_editor::core::{
@@ -307,6 +307,95 @@ fn route_tool_cancel_restores_registry_and_store_after_active_tool_edit() {
         .expect("GroupRecord muss nach Cancel wiederhergestellt sein");
     assert_eq!(restored_record.node_ids, original_record.node_ids);
     assert_eq!(restored_record.locked, original_record.locked);
+    assert!(state.tool_edit_store.get(record_id).is_some());
+}
+
+#[test]
+fn undo_redo_of_group_backed_execute_restores_registry_and_tool_store() {
+    let mut controller = AppController::new();
+    let (mut state, record_id) = make_tool_editable_straight_state();
+    let original_node_count = state.road_map.as_ref().unwrap().node_count();
+
+    assert!(state.group_registry.get(record_id).is_some());
+    assert!(state.tool_edit_store.get(record_id).is_some());
+
+    controller
+        .handle_intent(&mut state, AppIntent::UndoRequested)
+        .expect("UndoRequested sollte den erzeugten Straight-Record rueckgaengig machen");
+
+    assert!(state.group_registry.get(record_id).is_none());
+    assert!(state.tool_edit_store.get(record_id).is_none());
+    assert!(
+        state.road_map.as_ref().unwrap().node_count() < original_node_count,
+        "Undo muss die erzeugte Gruppen-Geometrie entfernen"
+    );
+
+    controller
+        .handle_intent(&mut state, AppIntent::RedoRequested)
+        .expect("RedoRequested sollte den Straight-Record wiederherstellen");
+
+    assert!(state.group_registry.get(record_id).is_some());
+    assert!(state.tool_edit_store.get(record_id).is_some());
+    assert_eq!(
+        state.road_map.as_ref().unwrap().node_count(),
+        original_node_count
+    );
+}
+
+#[test]
+fn undo_redo_of_group_backed_recreate_restores_registry_and_tool_store() {
+    let mut controller = AppController::new();
+    let (mut state, record_id) = make_tool_editable_straight_state();
+    let original_record = state
+        .group_registry
+        .get(record_id)
+        .expect("Persistierter Record muss vorhanden sein")
+        .clone();
+
+    controller
+        .handle_intent(&mut state, AppIntent::EditGroupRequested { record_id })
+        .expect("EditGroupRequested sollte den Tool-Edit starten");
+
+    controller
+        .handle_intent(
+            &mut state,
+            AppIntent::RouteToolPanelActionRequested {
+                action: RouteToolPanelAction::Straight(StraightPanelAction::Segment(
+                    SegmentConfigPanelAction::SetNodeCount(5),
+                )),
+            },
+        )
+        .expect("Straight-Recreate ueber Panel-Aktion sollte funktionieren");
+
+    let recreated_record = state
+        .group_registry
+        .get(record_id)
+        .expect("Recreate muss den Record wieder persistieren")
+        .clone();
+    assert!(state.active_tool_edit_session.is_none());
+    assert!(state.tool_edit_store.get(record_id).is_some());
+    assert_ne!(recreated_record.node_ids, original_record.node_ids);
+
+    controller
+        .handle_intent(&mut state, AppIntent::UndoRequested)
+        .expect("UndoRequested sollte den Recreate-Zustand rueckgaengig machen");
+
+    let undone_record = state
+        .group_registry
+        .get(record_id)
+        .expect("Undo muss den urspruenglichen Record wiederherstellen");
+    assert_eq!(undone_record.node_ids, original_record.node_ids);
+    assert!(state.tool_edit_store.get(record_id).is_some());
+
+    controller
+        .handle_intent(&mut state, AppIntent::RedoRequested)
+        .expect("RedoRequested sollte den Recreate-Zustand wiederherstellen");
+
+    let redone_record = state
+        .group_registry
+        .get(record_id)
+        .expect("Redo muss den recreate-ten Record wiederherstellen");
+    assert_eq!(redone_record.node_ids, recreated_record.node_ids);
     assert!(state.tool_edit_store.get(record_id).is_some());
 }
 
