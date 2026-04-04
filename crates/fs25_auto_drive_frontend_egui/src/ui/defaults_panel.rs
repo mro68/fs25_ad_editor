@@ -131,17 +131,17 @@ pub fn render_route_defaults_panel(ctx: &egui::Context, state: &AppState) -> Vec
     );
     let tools_items = [
         tool_item(
-            egui::include_image!("../../assets/icons/icon_select_node.svg"),
+            egui::include_image!("../../../../assets/icons/icon_select_node.svg"),
             t(lang, I18nKey::LpToolSelect),
             EditorTool::Select,
         ),
         tool_item(
-            egui::include_image!("../../assets/icons/icon_connect.svg"),
+            egui::include_image!("../../../../assets/icons/icon_connect.svg"),
             t(lang, I18nKey::LpToolConnect),
             EditorTool::Connect,
         ),
         tool_item(
-            egui::include_image!("../../assets/icons/icon_add_node.svg"),
+            egui::include_image!("../../../../assets/icons/icon_add_node.svg"),
             t(lang, I18nKey::LpToolAddNode),
             EditorTool::AddNode,
         ),
@@ -153,17 +153,17 @@ pub fn render_route_defaults_panel(ctx: &egui::Context, state: &AppState) -> Vec
 
     let direction_items = [
         value_item(
-            egui::include_image!("../../assets/icons/icon_direction_regular.svg"),
+            egui::include_image!("../../../../assets/icons/icon_direction_regular.svg"),
             t(lang, I18nKey::LpDirectionRegular),
             ConnectionDirection::Regular,
         ),
         value_item(
-            egui::include_image!("../../assets/icons/icon_direction_dual.svg"),
+            egui::include_image!("../../../../assets/icons/icon_direction_dual.svg"),
             t(lang, I18nKey::LpDirectionDual),
             ConnectionDirection::Dual,
         ),
         value_item(
-            egui::include_image!("../../assets/icons/icon_direction_reverse.svg"),
+            egui::include_image!("../../../../assets/icons/icon_direction_reverse.svg"),
             t(lang, I18nKey::LpDirectionReverse),
             ConnectionDirection::Reverse,
         ),
@@ -171,12 +171,12 @@ pub fn render_route_defaults_panel(ctx: &egui::Context, state: &AppState) -> Vec
 
     let priority_items = [
         value_item(
-            egui::include_image!("../../assets/icons/icon_priority_main.svg"),
+            egui::include_image!("../../../../assets/icons/icon_priority_main.svg"),
             t(lang, I18nKey::LpPriorityMain),
             ConnectionPriority::Regular,
         ),
         value_item(
-            egui::include_image!("../../assets/icons/icon_priority_side.svg"),
+            egui::include_image!("../../../../assets/icons/icon_priority_side.svg"),
             t(lang, I18nKey::LpPrioritySub),
             ConnectionPriority::SubPriority,
         ),
@@ -369,22 +369,22 @@ pub fn render_route_defaults_panel(ctx: &egui::Context, state: &AppState) -> Vec
 
             let zoom_items = [
                 value_item(
-                    egui::include_image!("../../assets/icons/icon_zoom_in.svg"),
+                    egui::include_image!("../../../../assets/icons/icon_zoom_in.svg"),
                     t(lang, I18nKey::ZoomInHelp),
                     ZoomAction::ZoomIn,
                 ),
                 value_item(
-                    egui::include_image!("../../assets/icons/icon_zoom_out.svg"),
+                    egui::include_image!("../../../../assets/icons/icon_zoom_out.svg"),
                     t(lang, I18nKey::ZoomOutHelp),
                     ZoomAction::ZoomOut,
                 ),
                 value_item(
-                    egui::include_image!("../../assets/icons/icon_zoom_full_map.svg"),
+                    egui::include_image!("../../../../assets/icons/icon_zoom_full_map.svg"),
                     t(lang, I18nKey::ZoomFullMapHelp),
                     ZoomAction::FullMap,
                 ),
                 LongPressItem {
-                    icon: egui::include_image!("../../assets/icons/icon_zoom_selection.svg"),
+                    icon: egui::include_image!("../../../../assets/icons/icon_zoom_selection.svg"),
                     tooltip: t(lang, I18nKey::ZoomToSelectionHelp),
                     value: ZoomAction::Selection,
                     enabled: has_selection,
@@ -421,9 +421,9 @@ pub fn render_route_defaults_panel(ctx: &egui::Context, state: &AppState) -> Vec
                 egui::CollapsingHeader::new(t(lang, I18nKey::SidebarBackground)).show(ui, |ui| {
                     let visible = state.view.background_visible;
                     let toggle_icon = if visible {
-                        egui::include_image!("../../assets/icons/icon_visible.svg")
+                        egui::include_image!("../../../../assets/icons/icon_visible.svg")
                     } else {
-                        egui::include_image!("../../assets/icons/icon_hidden.svg")
+                        egui::include_image!("../../../../assets/icons/icon_hidden.svg")
                     };
                     let toggle_img = svg_icon(toggle_icon, ICON_SIZE).tint(if visible {
                         active_icon_color

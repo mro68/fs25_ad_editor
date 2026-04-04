@@ -1,8 +1,9 @@
 //! Event-Sammlung fuer Panels, Dialoge und Viewport.
 
 use eframe::egui;
-use fs25_auto_drive_editor::app::{AppIntent, EditorTool};
-use fs25_auto_drive_editor::ui;
+use crate::app::{AppIntent, EditorTool};
+use crate::shared::EditorOptions;
+use crate::ui;
 use glam::Vec2;
 
 use super::EditorApp;
@@ -271,14 +272,14 @@ impl EditorApp {
     }
 }
 
-fn numeric_distance_wheel_step(options: &fs25_auto_drive_editor::shared::EditorOptions) -> f32 {
+fn numeric_distance_wheel_step(options: &EditorOptions) -> f32 {
     options.mouse_wheel_distance_step_m.max(0.0)
 }
 
 #[cfg(test)]
 mod tests {
     use super::numeric_distance_wheel_step;
-    use fs25_auto_drive_editor::shared::{EditorOptions, ValueAdjustInputMode};
+    use crate::shared::{EditorOptions, ValueAdjustInputMode};
 
     fn options_with(mode: ValueAdjustInputMode, step: f32) -> EditorOptions {
         EditorOptions {

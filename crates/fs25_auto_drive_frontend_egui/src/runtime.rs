@@ -4,7 +4,7 @@ use crate::editor_app::EditorApp;
 use eframe::egui;
 
 /// Startet die Anwendung inkl. Logger und eframe-Window.
-pub(crate) fn run() -> Result<(), eframe::Error> {
+pub fn run_native() -> Result<(), eframe::Error> {
     init_logger();
 
     log::info!(
