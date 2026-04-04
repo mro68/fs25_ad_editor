@@ -4,7 +4,6 @@
 //! aufgebaut werden sollen. Der per-frame Vertrag `RenderScene` bleibt davon
 //! getrennt und beschreibt nur die aktuelle Szene.
 
-use crate::core::WorldBounds;
 use image::DynamicImage;
 use std::sync::Arc;
 
@@ -22,13 +21,13 @@ pub struct RenderBackgroundWorldBounds {
 }
 
 impl RenderBackgroundWorldBounds {
-    /// Erstellt einen render-neutralen Bounds-Snapshot aus Domain-Bounds.
-    pub fn from_world_bounds(bounds: &WorldBounds) -> Self {
+    /// Erstellt render-neutrale Bounds aus expliziten Komponenten.
+    pub fn new(min_x: f32, max_x: f32, min_z: f32, max_z: f32) -> Self {
         Self {
-            min_x: bounds.min_x,
-            max_x: bounds.max_x,
-            min_z: bounds.min_z,
-            max_z: bounds.max_z,
+            min_x,
+            max_x,
+            min_z,
+            max_z,
         }
     }
 }

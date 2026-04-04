@@ -1,7 +1,7 @@
 # Architektur-Plan (Soll-Zustand)
 
 Stand: 2026-04-04  
-Status: Workspace-Split umgesetzt — Root-Fassade, Engine-Crate, egui-Frontend-Crate und Flutter-Bridge-Seams sind angelegt; weitere Host-/Bridge-Remediationsphasen bleiben offen
+Status: Workspace-Split umgesetzt — Root-Fassade, Engine-Crate, render_wgpu-Core-Crate, egui-Host-Adapter und Flutter-Bridge-Seams sind angelegt; weitere Host-/Bridge-Remediationsphasen bleiben offen
 
 ## Zielbild
 
@@ -9,13 +9,14 @@ Dieser Plan trennt fachliche Verantwortlichkeiten in Workspace-Crates mit klaren
 
 - Root-Package (`src/lib.rs`, `src/main.rs`): Re-Export-Fassade und nativer Launcher
 - Engine (`crates/fs25_auto_drive_engine/src/{app,core,shared,xml}`): host-neutrale Fachlogik
-- Egui-Frontend (`crates/fs25_auto_drive_frontend_egui/src/{ui,editor_app,runtime,render}`): Desktop-Host, egui-UI und Renderer
+- Render-Core (`crates/fs25_auto_drive_render_wgpu/src/*`): host-neutraler wgpu-Renderer-Kern
+- Egui-Frontend (`crates/fs25_auto_drive_frontend_egui/src/{ui,editor_app,runtime,render}`): Desktop-Host, egui-UI und Render-Adapter
 - Flutter-Bridge (`crates/fs25_auto_drive_frontend_flutter_bridge/src/{session,dto}`): kleine Session- und Snapshot-Seams ohne Flutter-SDK-Kopplung
 - Overview-Crate (`crates/fs25_map_overview/src/*`): Karten-/Farmland-Generierung
 
-Kernfluss: **Input -> AppIntent -> AppController -> AppCommand -> AppState/Domain -> RenderScene -> Renderer**.
+Kernfluss: **Input -> AppIntent -> AppController -> AppCommand -> AppState/Domain -> RenderScene + RenderAssetsSnapshot -> Host-Adapter -> Renderer-Core**.
 
-Die Integrationsschale ist bewusst kein zusaetzlicher Fach-Layer. Sie koordiniert `ui`, `app` und `render`, enthaelt aber keine eigenen Use-Cases oder Domain-Logik.
+Die Integrationsschale ist bewusst kein zusaetzlicher Fach-Layer. Sie koordiniert `ui`, `app` und den Host-Adapter in `render`, enthaelt aber keine eigenen Use-Cases oder Domain-Logik.
 
 ## Systemübersicht
 
@@ -33,6 +34,7 @@ flowchart LR
     CTRL[AppController]
     STATE[AppState]
     SCENEB[RenderSceneBuilder]
+    ASSETB[RenderAssetsBuilder]
   end
 
   subgraph CORE[Domain Layer]
@@ -45,7 +47,8 @@ flowchart LR
 
   subgraph INFRA[Infrastructure]
     XML[xml::parser / xml::writer]
-    RENDER[render::Renderer]
+    RENDER_HOST[frontend_egui::render::Renderer]
+    RENDER_CORE[render_wgpu::Renderer]
   end
 
   MENU --> EVENTS
@@ -57,7 +60,10 @@ flowchart LR
   CTRL --> CORE
   CORE --> CTRL
   CTRL --> SCENEB
-  SCENEB --> RENDER
+  CTRL --> ASSETB
+  SCENEB --> RENDER_HOST
+  ASSETB --> RENDER_HOST
+  RENDER_HOST --> RENDER_CORE
 
   XML --> CORE
   CORE --> XML
@@ -73,7 +79,8 @@ graph BT
     XML["xml\n(Persistence)"]
     APP["app\n(Application)"]
     UI["ui\n(Presentation)"]
-    RENDER["render\n(Rendering)"]
+    RENDER_HOST["render (egui)\n(Host-Adapter)"]
+    RENDER_CORE["render_wgpu\n(Render-Core)"]
     SHARED["shared\n(Cross-Layer)"]
 
     XML  --> CORE
@@ -81,13 +88,18 @@ graph BT
     APP  --> XML
     APP  --> SHARED
     UI   --> APP
-    RENDER --> SHARED
+    RENDER_HOST --> SHARED
+    RENDER_HOST --> RENDER_CORE
+    RENDER_CORE --> SHARED
 
     CORE  -.->|verboten| UI
-    CORE  -.->|verboten| RENDER
+    CORE  -.->|verboten| RENDER_HOST
+    CORE  -.->|verboten| RENDER_CORE
     APP   -.->|verboten| UI
-    APP   -.->|verboten| RENDER
-    RENDER -.->|verboten| CORE
+    APP   -.->|verboten| RENDER_CORE
+    RENDER_CORE -.->|verboten| CORE
+    RENDER_CORE -.->|verboten| APP
+    RENDER_CORE -.->|verboten| UI
     XML   -.->|verboten| APP
 ```
 
@@ -97,7 +109,7 @@ graph BT
 
 **Verantwortung**
 
-- Startet `EditorApp` aus `runtime.rs` heraus und bindet eframe/wgpu an die Layer-Architektur an
+- Startet `EditorApp` aus `runtime.rs` heraus und bindet eframe/wgpu ueber den egui-Host-Adapter an den render_wgpu-Kern an
 - Sammelt pro Frame Panel-, Dialog-, Viewport- und Overlay-Events als `Vec<AppIntent>`, verarbeitet schalenlokale Events by-value und reicht nur die verbleibenden Intents an `AppController` weiter
 - Registriert den Render-Callback und verwaltet nur fensterlokalen Integrationszustand (`render::Renderer`, `ui::InputState`, Cursor-/Icon-Caches)
 
@@ -165,6 +177,7 @@ Numerische Mausrad-Interaktion bleibt bewusst im UI-Layer: `ui::common` kapselt 
 - Schlanke Event-Fassaden in `events/intent.rs` und `events/command.rs`; die kanonischen Enum-Definitionen liegen in `events/*/definition.rs`, damit Root-Dateien als stabile Einstiegspunkte klein bleiben
 - Use-Cases (Load/Save, Kamera, Selektion, Heightmap, Tools)
 - Aufbau von `RenderScene` aus Domain + ViewState
+- Aufbau von `RenderAssetsSnapshot` als expliziter Asset-Vertrag fuer Host-Adapter
 - Schmale Read-only-Fassade fuer UI und Integrationsschale: app-eigene Typen plus bewusst ausgewaehlte Core-/Shared-Typen wie `ConnectionDirection`, `ConnectionPriority`, `RoadMap`, `Camera2D`, `RenderQuality`, `ZipImageEntry`
 - Kanonischer RouteTool-Katalog (`tools/catalog.rs`) als Single Source of Truth fuer `RouteToolId`, `RouteToolGroup`, `RouteToolBackingMode`, `RouteToolIconKey`, Surface-Sichtbarkeit und Aktivierungs-Voraussetzungen
 - Egui-freier Route-Tool-Panel-Vertrag als stabile Fassade in `ui_contract.rs` und `ui_contract/route_tool_panel.rs`; die eigentlichen DTO-Familien liegen intern in `route_tool_panel/common.rs`, `curve_family.rs`, `generator_family.rs` und `analysis_family.rs`
@@ -230,13 +243,27 @@ Numerische Mausrad-Interaktion bleibt bewusst im UI-Layer: `ui::common` kapselt 
 - UI- oder Kamera-Entscheidungen treffen
 - Renderlogik enthalten
 
-### Rendering Layer (`crates/fs25_auto_drive_frontend_egui/src/render/*`)
+### Rendering Core Layer (`crates/fs25_auto_drive_render_wgpu/src/*`)
 
 **Verantwortung**
 
 - GPU-Ressourcen, Batching, Draw-Calls, Culling
 - Darstellung auf Basis von `RenderScene`
-- **Shader-Deduplication:** `shaders.wgsl` wird einmal in `Renderer::new()` geladen und an alle Sub-Renderer weitergegeben
+- Host-neutrale API via raw `wgpu` (`RendererTargetConfig`, `Renderer::render_scene`, `set_background`, `clear_background`)
+
+**Darf nicht**
+
+- App-, UI- oder XML-Layer importieren
+- eframe/egui-spezifische Typen kennen
+- Domain mutieren
+
+### Rendering Host Layer (`crates/fs25_auto_drive_frontend_egui/src/render/*`)
+
+**Verantwortung**
+
+- Egui-Callback und Fenster-Glue (`WgpuRenderCallback`)
+- Adaptiert Hostzustand (`egui_wgpu::RenderState`) auf `fs25_auto_drive_render_wgpu::Renderer`
+- Fuehrt Asset-Sync ueber `RenderAssetsSnapshot` und Revisionszaehler aus
 
 **Darf nicht**
 
@@ -300,6 +327,7 @@ impl AppController {
   pub fn handle_intent(&mut self, state: &mut AppState, intent: AppIntent) -> anyhow::Result<()>;
   pub fn handle_command(&mut self, state: &mut AppState, command: AppCommand) -> anyhow::Result<()>;
   pub fn build_render_scene(&self, state: &AppState, viewport_size: [f32; 2]) -> RenderScene;
+  pub fn build_render_assets(&self, state: &AppState) -> RenderAssetsSnapshot;
 }
 ```
 
@@ -332,7 +360,8 @@ pub struct ViewState {
   pub background_map: Option<Arc<BackgroundMap>>,
   pub background_visible: bool,
   pub background_scale: f32,
-  pub background_dirty: bool,  // Signalisiert GPU-Upload erforderlich
+  pub background_asset_revision: u64,
+  pub background_transform_revision: u64,
 }
 ```
 
@@ -350,24 +379,30 @@ pub struct RenderScene {
   // private Felder
 }
 
+pub struct RenderAssetsSnapshot {
+  // private Felder
+}
+
 // enthaelt intern:
 // - RenderMap-Snapshot (Nodes, Connections, Marker, KD-Index)
 // - RenderCamera-Snapshot
 // - Selection-/Hidden-/Dimmed-Mengen
 // - RenderQuality, Optionen und Hintergrundstatus
 
-impl Renderer {
+impl fs25_auto_drive_render_wgpu::Renderer {
   pub fn render_scene(
     &mut self,
     device: &wgpu::Device,
     queue: &wgpu::Queue,
-    render_pass: &mut wgpu::RenderPass<'static>,
+    render_pass: &mut wgpu::RenderPass<'_>,
     scene: &RenderScene,
   );
+  pub fn set_background(&mut self, device: &wgpu::Device, queue: &wgpu::Queue, image: &image::DynamicImage, world_bounds: BackgroundWorldBounds, scale: f32);
+  pub fn clear_background(&mut self);
 }
 ```
 
-`render_scene::build()` baut den render-seitigen `RenderMap`-Snapshot nur bei geaenderter `RoadMap::render_cache_key()` neu auf und legt ihn in `AppState::render_map_cache` ab. Jeder Rebuild protokolliert `nodes`, `connections`, `markers` und `approx_bytes`, damit Performance-Reports neben Laufzeiten auch die Snapshot-Groesse desselben Datensatzes dokumentieren koennen.
+`render_scene::build()` baut den render-seitigen `RenderMap`-Snapshot nur bei geaenderter `RoadMap::render_cache_key()` neu auf und legt ihn in `AppState::render_map_cache` ab. Jeder Rebuild protokolliert `nodes`, `connections`, `markers` und `approx_bytes`, damit Performance-Reports neben Laufzeiten auch die Snapshot-Groesse desselben Datensatzes dokumentieren koennen. `render_assets::build()` liefert parallel den host-neutralen Asset-Snapshot; Hintergrund-Sync laeuft ueber `background_asset_revision`/`background_transform_revision` statt Dirty-Flags.
 
 ## Event- und Render-Fluss
 
@@ -379,7 +414,9 @@ sequenceDiagram
   participant State as AppState
   participant Core as core::RoadMap
   participant Scene as RenderSceneBuilder
-  participant Render as render::Renderer
+  participant Assets as RenderAssetsBuilder
+  participant RenderHost as frontend_egui::render::Renderer
+  participant RenderCore as render_wgpu::Renderer
 
   User->>UI: Click / Drag / Scroll
   UI->>Ctrl: AppIntent
@@ -389,8 +426,11 @@ sequenceDiagram
   Ctrl->>Core: Fachoperation (optional)
   Core-->>Ctrl: aktualisierte Daten
   Ctrl->>Scene: RenderScene bauen
-  Scene-->>Render: RenderScene
-  Render-->>User: Frame
+  Ctrl->>Assets: RenderAssetsSnapshot bauen
+  Scene-->>RenderHost: RenderScene
+  Assets-->>RenderHost: RenderAssetsSnapshot
+  RenderHost->>RenderCore: render_scene / set_background
+  RenderCore-->>User: Frame
 ```
 
 ## Abhängigkeitsregeln
@@ -401,14 +441,18 @@ flowchart LR
   APP --> CORE
   APP --> XML
   APP --> SHARED
-  RENDER --> SHARED
+  RENDER_HOST --> SHARED
+  RENDER_HOST --> RENDER_CORE
+  RENDER_CORE --> SHARED
   XML --> CORE
 
   CORE -.x.-> UI
-  CORE -.x.-> RENDER
-  RENDER -.x.-> CORE
+  CORE -.x.-> RENDER_HOST
+  CORE -.x.-> RENDER_CORE
+  RENDER_CORE -.x.-> CORE
+  RENDER_CORE -.x.-> APP
   XML -.x.-> APP
-  RENDER -.x.-> UI
+  RENDER_CORE -.x.-> UI
   UI -.x.-> XML
 ```
 
@@ -416,12 +460,12 @@ Verbindliche Regeln:
 
 1. UI spricht nur mit `app` (`AppIntent` + read-only State) und `shared` (z.B. `EditorOptions`). **Kein direkter `core`-Import.**
 2. Domain (`core`) kennt keine Infrastruktur (UI/Render/XML-Details).
-3. Renderer konsumiert nur `RenderScene` plus render-eigene Upload-Vertraege und importiert keine Core-Typen.
+3. Renderer-Core konsumiert nur `RenderScene` plus render-eigene Upload-Vertraege und importiert keine Core-Typen.
 4. XML bleibt technisch; fachliche Entscheidungen liegen in `core`/`app`.
 5. `AppState` enthält keine I/O-Logik; Dateisystem- und Options-Persistenz liegen in Use-Cases bzw. der Integrationsschale, nicht im State oder in `shared`.
-6. Renderer darf keine UI-Typen importieren. **Ausnahme:** `render/callback.rs` implementiert `egui_wgpu::CallbackTrait` — das ist die wgpu-Brücke zwischen egui und dem Rendering-System, kein semantischer UI-Import.
+6. Der render_wgpu-Core darf keine UI-Typen importieren. **Ausnahme:** `crates/fs25_auto_drive_frontend_egui/src/render/callback.rs` implementiert als Host-Glue `egui_wgpu::CallbackTrait`.
 7. `app/mod.rs` bleibt eine schmale Lese-Fassade: app-eigene Typen plus bewusst ausgewaehlte Core-/Shared-Typen fuer UI und Integrationsschale; Tool-Vertraege und tool-spezifische Helfer werden nicht mehr ueber `app` root-reexportiert.
-8. `shared`-Modul enthält nur neutrale Typen und Utilities, die von mehreren Layern genutzt werden (`RenderScene`, `RenderQuality`, `EditorOptions`, `i18n`, Geometrie-Helfer). Egui-Eingabe-Helfer leben in `ui`, Runtime-/Pfad-Policy in `app` bzw. `editor_app`. Importrichtung: `UI → shared`, `App → shared`, `Render → shared` (alle erlaubt).
+8. `shared`-Modul enthält nur neutrale Typen und Utilities, die von mehreren Layern genutzt werden (`RenderScene`, `RenderAssetsSnapshot`, `RenderQuality`, `EditorOptions`, `i18n`, Geometrie-Helfer). Egui-Eingabe-Helfer leben in `ui`, Runtime-/Pfad-Policy in `app` bzw. `editor_app`. Importrichtung: `UI → shared`, `App → shared`, `Render-Host/Core → shared` (alle erlaubt).
 
 ## Aktuelle Modulstruktur
 
@@ -438,12 +482,17 @@ crates/
       core/           # Domain-Typen, Spatial-Index, BackgroundMap, Farmland und Heightmap
       shared/         # RenderScene, RenderQuality, EditorOptions, i18n und neutrale Geometrie
       xml/            # AutoDrive- und Curseplay-Import/Export
+  fs25_auto_drive_render_wgpu/
+    src/
+      lib.rs          # Host-neutraler wgpu-Renderer-Kern
+      connection_renderer/, node_renderer.rs, marker_renderer.rs, background_renderer.rs
+      shaders.wgsl    # Gemeinsame Shader fuer alle Sub-Renderer
   fs25_auto_drive_frontend_egui/
     src/
       lib.rs          # Desktop-Frontend-Wurzel; re-exportiert Engine-Module fuer Kompatibilitaet
       runtime.rs      # eframe-Bootstrap und run_native()
       editor_app/     # eframe-Integrationsschale, Event-Sammlung, Overlays, Render-Callback
-      render/         # wgpu-Renderer, Background-Upload, egui-Callback
+      render/         # Host-Adapter + egui-Callback ueber fs25_auto_drive_render_wgpu
       ui/             # egui-Panels, Dialoge, Input und Overlays
   fs25_auto_drive_frontend_flutter_bridge/
     src/
@@ -501,6 +550,14 @@ crates/
 - Route-Tool-Intents: `RouteToolClicked`, `RouteToolExecuteRequested`, `RouteToolCancelled`, `SelectRouteToolRequested`, `RouteToolConfigChanged`, `RouteToolWithAnchorsRequested`, `RouteToolTangentSelected`, `RouteToolLassoCompleted`, `RouteToolRecreateRequested`
 - Duplikat-Erkennung: `DeduplicateConfirmed`, `DeduplicateCancelled`
 - Optionen-Dialog: `OpenOptionsDialogRequested`, `CloseOptionsDialogRequested`, `OptionsChanged`, `ResetOptionsRequested`
+
+### Phase 7: Renderer-Seam fuer Multi-Host ✅
+
+- `RenderAssetsSnapshot` als expliziter Asset-Vertrag ergaenzt
+- Background-Dirty-Flag durch monotone Asset-/Transform-Revisionen ersetzt
+- `fs25_auto_drive_render_wgpu` als host-neutralen Renderer-Core extrahiert
+- egui-`render` auf Host-Adapter reduziert (Callback bleibt host-spezifisch)
+- Flutter-Bridge exponiert read-only `build_render_scene()`/`build_render_assets()`/`build_render_frame()`
 
 ## Definition of Done
 
@@ -639,7 +696,7 @@ Nach node-mutierenden Operationen wird dirty-Flag gesetzt; Rebuild erfolgt lazy 
 
 ### Verbotene Abhaengigkeiten
 
-- Tools (`crates/fs25_auto_drive_engine/src/app/tools/`) duerfen **niemals** auf `crates/fs25_auto_drive_frontend_egui/src/render/`, `wgpu` oder `RenderScene` zugreifen
+- Tools (`crates/fs25_auto_drive_engine/src/app/tools/`) duerfen **niemals** auf `crates/fs25_auto_drive_frontend_egui/src/render/`, `crates/fs25_auto_drive_render_wgpu/src/`, `wgpu`, `RenderScene` oder `RenderAssetsSnapshot` zugreifen
 - Tools erhalten ausschliesslich `&RoadMap` (read-only) als Domain-Kontext
 - Keine GPU-spezifischen Typen (Vertex-Buffer, Shader, Pipelines) in Tool-Code
 - Kein Zugriff auf `AppState` — der Handler (`crates/fs25_auto_drive_engine/src/app/handlers/route_tool.rs`) vermittelt

@@ -56,6 +56,17 @@ pub struct RenderAssetsSnapshot { /* private Felder */ }
 pub enum RenderAssetSnapshot {
     Background(RenderBackgroundAssetSnapshot),
 }
+
+pub struct RenderBackgroundWorldBounds {
+    pub min_x: f32,
+    pub max_x: f32,
+    pub min_z: f32,
+    pub max_z: f32,
+}
+
+impl RenderBackgroundWorldBounds {
+    pub fn new(min_x: f32, max_x: f32, min_z: f32, max_z: f32) -> Self;
+}
 ```
 
 `RenderAssetsSnapshot` transportiert derzeit den Background-Asset-Snapshot inklusive Arc-Bild, Welt-Bounds, Scale und monotonen Revisionen fuer Asset- und Transform-Aenderungen. Hosts koennen damit Upload/Update/Clear lokal steuern, ohne GPU-Zustand in `AppState` zurueckzuschreiben.

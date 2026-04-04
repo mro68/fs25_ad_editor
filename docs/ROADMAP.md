@@ -191,6 +191,12 @@
   - [x] `fs25_auto_drive_frontend_egui` fuer `ui/editor_app/runtime/render` angelegt
   - [x] `fs25_auto_drive_frontend_flutter_bridge` als Session-/DTO-Seam angelegt
   - [x] Build-, Guardrail- und API-Doku-Skripte auf Workspace-Crates umgestellt
+- [x] Renderer-Seam fuer Multi-Host vorbereitet (egui + Flutter)
+  - [x] `RenderAssetsSnapshot` als expliziter Asset-Vertrag neben `RenderScene` eingefuehrt
+  - [x] `ViewState.background_dirty` durch `background_asset_revision` und `background_transform_revision` ersetzt
+  - [x] Neue host-neutrale Crate `fs25_auto_drive_render_wgpu` fuer den wgpu-Kern eingefuehrt
+  - [x] `fs25_auto_drive_frontend_egui::render` auf Host-Adapter ueber dem Render-Core reduziert
+  - [x] Flutter-Bridge um read-only Render-Zugaenge (`build_render_scene`, `build_render_assets`, `build_render_frame`) erweitert
 - [x] DDS-Import fuer Map-Hintergruende
   - [x] Texture-Loader implementieren (PNG, JPG, DDS)
   - [x] Background-Quad-Renderer
@@ -656,7 +662,7 @@
 - ✅ COW-Undo: `Snapshot` nutzt `Arc<RoadMap>` statt Deep-Clone — O(1) statt O(n) pro Undo-Schritt
 - ✅ Shader-Deduplication: `shaders.wgsl` wird einmal in `Renderer::new()` geladen, an alle 4 Sub-Renderer weitergegeben
 - ✅ `center_on_road_map` aus `file_io.rs` in `use_cases/camera.rs` extrahiert (Separation of Concerns)
-- ✅ `background_dirty: bool` in `ViewState` ersetzt fragiles Arc-Pointer-Tracking in `main.rs`
+- ✅ Background-Sync ueber explizite Asset-/Transform-Revisionen statt Dirty-Flag; Host-Upload nutzt `RenderAssetsSnapshot`
 - ✅ `MarkerDialogConfirmed`: `is_new: bool` in Intent kodiert — Controller-Mapping ohne State-Abhaengigkeit
 - ✅ `connections_iter()` + `invert_connection()` als neue oeffentliche RoadMap-API hinzugefuegt
 - ✅ Alle 29 Tests gruen nach dem Refactoring
