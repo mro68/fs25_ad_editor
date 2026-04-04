@@ -229,9 +229,7 @@ pub fn show_options_dialog(
 
     // Aenderungen sofort anwenden (Live-Preview)
     if changed {
-        events.push(PanelAction::Options(OptionsPanelAction::Apply(Box::new(
-            opts,
-        ))));
+        events.push(PanelAction::Options(OptionsPanelAction::Apply(Box::new(opts))));
     }
 
     events

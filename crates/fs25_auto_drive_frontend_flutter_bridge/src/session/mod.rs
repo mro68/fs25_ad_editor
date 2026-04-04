@@ -1,8 +1,8 @@
 use anyhow::Result;
+use fs25_auto_drive_engine::app::{AppController, AppIntent, AppState, EditorTool};
 use fs25_auto_drive_engine::app::ui_contract::{
     dialog_result_to_intent, DialogRequest, DialogRequestKind, DialogResult,
 };
-use fs25_auto_drive_engine::app::{AppController, AppIntent, AppState, EditorTool};
 use fs25_auto_drive_engine::shared::{RenderAssetsSnapshot, RenderScene};
 
 use crate::dto::{
@@ -265,7 +265,9 @@ impl Default for FlutterBridgeSession {
 mod tests {
     use fs25_auto_drive_engine::app::AppIntent;
 
-    use crate::dto::{EngineActiveTool, EngineDialogRequestKind, EngineSessionAction};
+    use crate::dto::{
+        EngineActiveTool, EngineDialogRequestKind, EngineSessionAction,
+    };
 
     use super::FlutterBridgeSession;
 
