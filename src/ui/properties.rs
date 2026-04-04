@@ -6,8 +6,8 @@ pub(crate) mod selectors;
 use indexmap::IndexSet;
 
 use crate::app::{
-    group_registry::GroupRegistry, tool_editing::ToolEditStore, tools::route_tool_descriptor,
-    AppIntent, Connection, ConnectionDirection, ConnectionPriority, NodeFlag, RoadMap,
+    group_registry::GroupRegistry, tools::route_tool_descriptor, AppIntent, Connection,
+    ConnectionDirection, ConnectionPriority, NodeFlag, RoadMap, ToolEditStore,
 };
 use distances::render_distance_panel;
 use selectors::{render_direction_icon_selector, render_priority_icon_selector};

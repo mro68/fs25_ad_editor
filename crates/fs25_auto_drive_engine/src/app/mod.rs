@@ -46,6 +46,7 @@ pub use state::{
     GroupEditState, GroupSettingsPopupState, PostLoadDialogState, SelectionState, UiState,
     ViewState,
 };
+pub use tool_editing::ToolEditStore;
 pub use tools::field_boundary::compute_ring;
 
 /// Ordnet die interne Ring-Klassifikation des FieldBoundary-Tools auf persistierbare Node-Flags ab.

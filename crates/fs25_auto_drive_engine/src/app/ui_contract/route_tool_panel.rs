@@ -24,7 +24,7 @@ pub use generator_family::{
     ParkingRampSideChoice, SmoothCurvePanelAction, SmoothCurvePanelState, SmoothCurveSteererState,
     StraightPanelAction, StraightPanelState,
 };
-pub(crate) use limits::{
+pub use limits::{
     BYPASS_BASE_SPACING_LIMITS, BYPASS_OFFSET_LIMITS, PARKING_BAY_LENGTH_LIMITS,
     PARKING_ENTRY_EXIT_T_LIMITS, PARKING_MAX_NODE_DISTANCE_LIMITS, PARKING_NUM_ROWS_LIMITS,
     PARKING_RAMP_LENGTH_LIMITS, PARKING_ROTATION_STEP_LIMITS, PARKING_ROW_SPACING_LIMITS,

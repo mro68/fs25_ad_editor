@@ -1734,7 +1734,9 @@ dependencies = [
  "kiddo",
  "log",
  "quick-xml 0.39.2",
+ "regex",
  "serde",
+ "serde_json",
  "toml",
  "zip 8.3.1",
 ]
