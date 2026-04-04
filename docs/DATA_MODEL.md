@@ -358,6 +358,26 @@ pub struct HostViewportSnapshot {
     pub zoom: f32,
 }
 
+pub enum HostDialogRequestKind {
+    OpenFile,
+    SaveFile,
+    Heightmap,
+    BackgroundMap,
+    OverviewZip,
+    CurseplayImport,
+    CurseplayExport,
+}
+
+pub struct HostDialogRequest {
+    pub kind: HostDialogRequestKind,
+    pub suggested_file_name: Option<String>,
+}
+
+pub enum HostDialogResult {
+    Cancelled { kind: HostDialogRequestKind },
+    PathSelected { kind: HostDialogRequestKind, path: String },
+}
+
 pub enum HostSessionAction {
     ToggleCommandPalette,
     SetEditorTool { tool: HostActiveTool },
@@ -391,8 +411,24 @@ pub struct HostRenderFrameSnapshot {
 
 - `HostSessionAction` bildet die kanonische explizite Mutationsoberflaeche der gemeinsamen Bridge-Core-Crate
 - `HostSessionSnapshot` fasst host-relevanten Session-Zustand zusammen, inklusive Undo/Redo-Verfuegbarkeit und Anzahl ausstehender Dialog-Anfragen
+- `HostDialogRequestKind`, `HostDialogRequest` und `HostDialogResult` bilden den expliziten host-neutralen Dialog-Lifecycle fuer Datei-, Heightmap-, Overview- und Curseplay-Operationen
 - `snapshot()` arbeitet ueber einen Dirty-Cache und baut den Snapshot nur nach erfolgreichen Session-Mutationen neu auf
 - Die Bridge mappt `HostSessionAction` intern auf `AppIntent`, ohne generischen Intent-Dispatch oder direkten `AppState`-Escape-Hatch
 - Host-native Datei-/Pfad-Dialoge laufen ueber `take_dialog_requests()` und `submit_dialog_result(...)` als explizite Bridge-Seam
+- `build_viewport_overlay_snapshot()` benoetigt mutablen Zugriff, weil beim Snapshot-Aufbau Boundary-Caches im `AppState` vorgewaermt werden koennen
 - `HostRenderFrameSnapshot` koppelt den per-Frame-Render-Vertrag (`RenderScene`) mit den langlebigen Render-Assets fuer read-only Hosts
 - Die Flutter-Bridge ist als duenne Alias-/Kompat-Surface ueber `fs25_auto_drive_host_bridge` umgesetzt und fuehrt die bisherigen `Engine*`-Namen ohne eigene Session-Logik weiter
+
+### Flutter-Kompat-Aliase
+
+```rust
+pub use fs25_auto_drive_host_bridge::{
+    HostBridgeSession as FlutterBridgeSession,
+    HostRenderFrameSnapshot as EngineRenderFrameSnapshot,
+    HostSessionAction as EngineSessionAction,
+    HostSessionSnapshot as EngineSessionSnapshot,
+};
+```
+
+- Die Flutter-Crate stabilisiert bestehende Namen, ohne eine zweite Session- oder DTO-Implementierung zu pflegen.
+- `Engine*`-Namen bleiben fuer Host-/FFI-Call-Sites erhalten, waehrend die kanonische Semantik in `Host*`-Vertraegen lebt.
