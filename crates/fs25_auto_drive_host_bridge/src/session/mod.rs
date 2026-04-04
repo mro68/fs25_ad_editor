@@ -248,6 +248,9 @@ impl HostBridgeSession {
     }
 
     /// Baut den host-neutralen Overlay-Snapshot fuer den aktuellen Viewport.
+    ///
+    /// Die Methode benoetigt mutablen Zugriff, weil der App-Layer beim Aufbau
+    /// bei Bedarf Overlay- und Boundary-Caches im `AppState` aufwaermt.
     pub fn build_viewport_overlay_snapshot(
         &mut self,
         cursor_world: Option<Vec2>,

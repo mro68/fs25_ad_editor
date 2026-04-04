@@ -8,14 +8,14 @@ Sie konsumiert die host-neutrale Engine, re-exportiert deren `app`-, `core`-, `s
 
 Die Integrationsschale liest Panels/Dialoge ueber `HostUiSnapshot` und Viewport-Overlays ueber `ViewportOverlaySnapshot`. Egui-spezifisches Rendering und Input-Mapping bleiben damit im Host, waehrend `PanelAction`, `DialogResult` und Overlay-Klicks zentral wieder in `AppIntent` uebersetzt werden.
 
-Fuer die schrittweise Unified-Bridge-Migration stellt die Crate zusaetzlich ein kleines `host_bridge_adapter`-Modul bereit, das einen bewusst schmalen Teil bestehender `AppIntent`s auf die explizite `HostSessionAction`-Surface mappt.
+Die gemeinsame Host-Bridge ist in dieser Crate noch eine Migrations-Seam, nicht der primaere Desktop-Laufzeitpfad. `editor_app` bleibt die produktive eframe-Integrationsschale; das oeffentliche `host_bridge_adapter`-Modul kapselt bewusst nur das stabilisierte Intent-Subset, das bereits auf die explizite `HostSessionAction`-Surface abbildbar ist.
 
 ## Oeffentliche Module
 
 | Modul | Verantwortung |
 |---|---|
 | `editor_app` | eframe-Integrationsschale; sammelt Panels/Dialoge ueber `HostUiSnapshot`, rendert Overlays aus `ViewportOverlaySnapshot` und haelt Laufzeittypen wie `EditorApp` crate-intern |
-| `host_bridge_adapter` | Duenner egui-Adapter fuer die gemeinsame Host-Bridge (`AppIntent` → `HostSessionAction`) |
+| `host_bridge_adapter` | Duenner egui-Adapter fuer die gemeinsame Host-Bridge (`AppIntent` → `HostSessionAction`); deckt bewusst nur das bereits stabilisierte Intent-Subset ab |
 | `render` | egui-Host-Adapter, revisionsbasierte Background-Upload-Bruecke und egui-Render-Callback |
 | `ui` | Menues, Panels, Dialoge, Viewport-Input und egui-spezifisches Painting der host-neutralen Overlay-Snapshots |
 | `app`, `core`, `shared`, `xml` | Re-Exports aus `fs25_auto_drive_engine` fuer stabile Importpfade |
@@ -74,4 +74,5 @@ flowchart LR
 ## Kompatibilitaet
 
 - Das Root-Package re-exportiert `render` und `ui` weiterhin.
+- `editor_app` bleibt der produktive Desktop-Flow; `host_bridge_adapter` ist die schmale Unified-Bridge-Migrationsseam, nicht der alleinige Host-Einstieg.
 - Die kanonischen Moduldetails stehen in `src/editor_app/API.md`, `src/render/API.md` und `src/ui/API.md`.
