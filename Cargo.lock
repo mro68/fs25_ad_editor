@@ -1765,6 +1765,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "fs25_auto_drive_frontend_flutter_bridge"
+version = "1.7.0"
+dependencies = [
+ "anyhow",
+ "fs25_auto_drive_engine",
+ "serde",
+]
+
+[[package]]
 name = "fs25_map_overview"
 version = "0.2.1"
 dependencies = [
