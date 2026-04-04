@@ -113,7 +113,7 @@ impl BackgroundMap {
     }
 
     /// Gibt die Bilddaten als `Arc` zurueck.
-    pub(crate) fn image_arc(&self) -> Arc<DynamicImage> {
+    pub fn image_arc(&self) -> Arc<DynamicImage> {
         Arc::clone(&self.image_data)
     }
 
@@ -142,7 +142,7 @@ impl BackgroundMap {
     /// Gemeinsame Logik fuer `load_from_file()`, `load_from_zip()` und
     /// `generate_overview_from_zip()`. Fuehrt optionalen Center-Crop durch,
     /// berechnet WorldBounds und loggt Dimensionen.
-    pub(crate) fn from_image(
+    pub fn from_image(
         image: DynamicImage,
         source_label: &str,
         crop_size: Option<u32>,

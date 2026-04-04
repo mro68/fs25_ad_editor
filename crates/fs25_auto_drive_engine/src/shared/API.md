@@ -28,7 +28,7 @@ impl RenderScene {
 }
 ```
 
-Intern kapselt `RenderScene` einen crate-internen `RenderMap`-Snapshot mit bereits fuer das Rendering vorbereiteten Nodes, Verbindungen, Marker-Positionen und einem immutable KD-Index fuer Viewport-Culling. Die App cached diesen Snapshot ueber eine render-relevante RoadMap-Revision, damit der Hotpath weiterhin ohne per-frame Domain-Kopie auskommt.
+`RenderScene` kapselt einen oeffentlichen `RenderMap`-Snapshot mit bereits fuer das Rendering vorbereiteten Nodes, Verbindungen, Marker-Positionen und einem immutable KD-Index fuer Viewport-Culling. Die App cached diesen Snapshot ueber eine render-relevante RoadMap-Revision, damit Renderer- und Frontend-Crates denselben host-neutralen Vertrag konsumieren koennen, ohne per-frame Domain-Kopien zu erzeugen.
 
 Zusatzdaten pro Frame:
 
