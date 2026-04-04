@@ -1,18 +1,19 @@
 use crate::app::tool_contract::TangentSource;
 use crate::app::ui_contract::{
-    BypassPanelAction, BypassPanelState, ColorPathPanelAction, ColorPathPanelPhase,
-    ColorPathPanelState, CurveDegreeChoice, CurvePanelAction, CurvePanelState,
+    panel_action_to_intent, BypassPanelAction, BypassPanelState, ColorPathPanelAction,
+    ColorPathPanelPhase, ColorPathPanelState, CurveDegreeChoice, CurvePanelAction, CurvePanelState,
     CurveTangentsPanelState, ExistingConnectionModeChoice, FieldBoundaryPanelAction,
     FieldBoundaryPanelState, FieldPathModeChoice, FieldPathPanelAction, FieldPathPanelPhase,
-    FieldPathPanelState, FieldPathSelectionSummary, ParkingPanelAction, ParkingPanelState,
-    ParkingRampSideChoice, RouteOffsetPanelAction, RouteOffsetPanelState, RouteToolConfigState,
-    RouteToolPanelAction, RouteToolPanelState, SegmentConfigPanelAction, SegmentConfigPanelState,
-    SmoothCurvePanelAction, SmoothCurvePanelState, SplinePanelAction, SplinePanelState,
-    StraightPanelAction, StraightPanelState, TangentSelectionState, BYPASS_BASE_SPACING_LIMITS,
-    BYPASS_OFFSET_LIMITS, PARKING_BAY_LENGTH_LIMITS, PARKING_ENTRY_EXIT_T_LIMITS,
-    PARKING_MAX_NODE_DISTANCE_LIMITS, PARKING_NUM_ROWS_LIMITS, PARKING_RAMP_LENGTH_LIMITS,
-    PARKING_ROTATION_STEP_LIMITS, PARKING_ROW_SPACING_LIMITS, ROUTE_OFFSET_BASE_SPACING_LIMITS,
-    ROUTE_OFFSET_DISTANCE_LIMITS, SMOOTH_CURVE_MAX_ANGLE_LIMITS, SMOOTH_CURVE_MIN_DISTANCE_LIMITS,
+    FieldPathPanelState, FieldPathSelectionSummary, PanelAction, ParkingPanelAction,
+    ParkingPanelState, ParkingRampSideChoice, RouteOffsetPanelAction, RouteOffsetPanelState,
+    RouteToolConfigState, RouteToolPanelAction, RouteToolPanelState, SegmentConfigPanelAction,
+    SegmentConfigPanelState, SmoothCurvePanelAction, SmoothCurvePanelState, SplinePanelAction,
+    SplinePanelState, StraightPanelAction, StraightPanelState, TangentSelectionState,
+    BYPASS_BASE_SPACING_LIMITS, BYPASS_OFFSET_LIMITS, PARKING_BAY_LENGTH_LIMITS,
+    PARKING_ENTRY_EXIT_T_LIMITS, PARKING_MAX_NODE_DISTANCE_LIMITS, PARKING_NUM_ROWS_LIMITS,
+    PARKING_RAMP_LENGTH_LIMITS, PARKING_ROTATION_STEP_LIMITS, PARKING_ROW_SPACING_LIMITS,
+    ROUTE_OFFSET_BASE_SPACING_LIMITS, ROUTE_OFFSET_DISTANCE_LIMITS, SMOOTH_CURVE_MAX_ANGLE_LIMITS,
+    SMOOTH_CURVE_MIN_DISTANCE_LIMITS,
 };
 use crate::app::{AppIntent, ConnectionDirection, ConnectionPriority};
 use crate::ui::common::{apply_wheel_step_default_enabled, apply_wheel_step_usize};
@@ -66,18 +67,24 @@ pub(super) fn render_route_tool_panel(
         let mut selected_dir = default_direction;
         render_direction_icon_selector(ui, &mut selected_dir, "route_tool_floating");
         if selected_dir != default_direction {
-            events.push(AppIntent::SetDefaultDirectionRequested {
-                direction: selected_dir,
-            });
+            push_panel_action(
+                events,
+                PanelAction::SetDefaultDirection {
+                    direction: selected_dir,
+                },
+            );
         }
 
         ui.add_space(4.0);
         let mut selected_prio = default_priority;
         render_priority_icon_selector(ui, &mut selected_prio, "route_tool_floating");
         if selected_prio != default_priority {
-            events.push(AppIntent::SetDefaultPriorityRequested {
-                priority: selected_prio,
-            });
+            push_panel_action(
+                events,
+                PanelAction::SetDefaultPriority {
+                    priority: selected_prio,
+                },
+            );
         }
 
         ui.add_space(6.0);
@@ -94,10 +101,10 @@ pub(super) fn render_route_tool_panel(
                 .add_enabled(route_tool.can_execute, egui::Button::new("✓ Ausfuehren"))
                 .clicked()
             {
-                events.push(AppIntent::RouteToolExecuteRequested);
+                push_panel_action(events, PanelAction::RouteToolExecute);
             }
             if ui.button("✕ Abbrechen").clicked() {
-                events.push(AppIntent::RouteToolCancelled);
+                push_panel_action(events, PanelAction::RouteToolCancel);
             }
         });
     });
@@ -572,7 +579,11 @@ fn render_color_swatch(ui: &mut egui::Ui, color: [u8; 3], size: f32, rounding: f
 }
 
 fn push_action(events: &mut Vec<AppIntent>, action: RouteToolPanelAction) {
-    events.push(AppIntent::RouteToolPanelActionRequested { action });
+    push_panel_action(events, PanelAction::RouteTool(action));
+}
+
+fn push_panel_action(events: &mut Vec<AppIntent>, action: PanelAction) {
+    events.push(panel_action_to_intent(action));
 }
 
 fn tangent_selection_label(selection: &TangentSelectionState) -> String {

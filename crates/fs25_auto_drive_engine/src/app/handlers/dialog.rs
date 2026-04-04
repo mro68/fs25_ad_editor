@@ -1,5 +1,6 @@
 //! Handler fuer Dialog-State und Anwendungssteuerung.
 
+use crate::app::ui_contract::{DialogRequest, DialogRequestKind};
 use crate::app::use_cases;
 use crate::app::AppState;
 use crate::shared::EditorOptions;
@@ -33,12 +34,16 @@ pub fn close_trace_all_fields_dialog(state: &mut AppState) {
 
 /// Oeffnet den Curseplay-Import-Dateidialog.
 pub fn request_curseplay_import_dialog(state: &mut AppState) {
-    state.ui.show_curseplay_import_dialog = true;
+    state
+        .ui
+        .request_dialog(DialogRequest::pick_path(DialogRequestKind::CurseplayImport));
 }
 
 /// Oeffnet den Curseplay-Export-Dateidialog.
 pub fn request_curseplay_export_dialog(state: &mut AppState) {
-    state.ui.show_curseplay_export_dialog = true;
+    state
+        .ui
+        .request_dialog(DialogRequest::pick_path(DialogRequestKind::CurseplayExport));
 }
 
 /// Schliesst die Heightmap-Warnung.
@@ -54,12 +59,12 @@ pub fn close_marker_dialog(state: &mut AppState) {
 
 /// Oeffnet den Optionen-Dialog.
 pub fn open_options_dialog(state: &mut AppState) {
-    state.show_options_dialog = true;
+    state.ui.show_options_dialog = true;
 }
 
 /// Schliesst den Optionen-Dialog.
 pub fn close_options_dialog(state: &mut AppState) {
-    state.show_options_dialog = false;
+    state.ui.show_options_dialog = false;
 }
 
 /// Uebernimmt neue Optionen und persistiert sie in der Konfigurationsdatei.
@@ -94,7 +99,9 @@ pub fn close_zip_browser(state: &mut AppState) {
 
 /// Oeffnet den Uebersichtskarten-ZIP-Auswahl-Dialog.
 pub fn request_overview_dialog(state: &mut AppState) {
-    state.ui.show_overview_dialog = true;
+    state
+        .ui
+        .request_dialog(DialogRequest::pick_path(DialogRequestKind::OverviewZip));
 }
 
 /// Oeffnet den Uebersichtskarten-Options-Dialog mit dem gewaehlten ZIP-Pfad.
@@ -102,7 +109,6 @@ pub fn request_overview_dialog(state: &mut AppState) {
 /// Prueft welche Savegame-Dateien im Elternordner der aktuell geladenen
 /// Config-Datei vorhanden sind und befuellt die verfuegbaren Quellen.
 pub fn open_overview_options_dialog(state: &mut AppState, zip_path: String) {
-    state.ui.show_overview_dialog = false;
     state.ui.overview_options_dialog.visible = true;
     state.ui.overview_options_dialog.zip_path = zip_path;
     state.ui.overview_options_dialog.layers = state.options.overview_layers.clone();

@@ -1,8 +1,9 @@
 use fs25_auto_drive_editor::app::handlers;
 use fs25_auto_drive_editor::app::tool_contract::{RouteToolId, TangentSource};
 use fs25_auto_drive_editor::app::ui_contract::{
-    BypassPanelAction, ParkingPanelAction, RouteOffsetPanelAction, RouteToolConfigState,
-    RouteToolPanelAction, SegmentConfigPanelAction, SmoothCurvePanelAction, StraightPanelAction,
+    BypassPanelAction, DialogRequestKind, ParkingPanelAction, RouteOffsetPanelAction,
+    RouteToolConfigState, RouteToolPanelAction, SegmentConfigPanelAction, SmoothCurvePanelAction,
+    StraightPanelAction,
 };
 use fs25_auto_drive_editor::app::{AppController, AppIntent, AppState, EditorTool, GroupRecord};
 use fs25_auto_drive_editor::core::{
@@ -681,12 +682,11 @@ fn trace_all_fields_dialog_requested_and_cancelled_toggle_visibility() {
 }
 
 #[test]
-fn curseplay_dialog_requests_toggle_import_and_export_flags() {
+fn curseplay_dialog_requests_are_enqueued_for_host_dialogs() {
     let mut controller = AppController::new();
     let mut state = AppState::new();
 
-    assert!(!state.ui.show_curseplay_import_dialog);
-    assert!(!state.ui.show_curseplay_export_dialog);
+    assert!(state.ui.dialog_requests.is_empty());
 
     controller
         .handle_intent(&mut state, AppIntent::CurseplayImportRequested)
@@ -695,8 +695,19 @@ fn curseplay_dialog_requests_toggle_import_and_export_flags() {
         .handle_intent(&mut state, AppIntent::CurseplayExportRequested)
         .expect("CurseplayExportRequested sollte den Export-Dialog oeffnen");
 
-    assert!(state.ui.show_curseplay_import_dialog);
-    assert!(state.ui.show_curseplay_export_dialog);
+    let kinds: Vec<_> = state
+        .ui
+        .take_dialog_requests()
+        .into_iter()
+        .map(|request| request.kind())
+        .collect();
+    assert_eq!(
+        kinds,
+        vec![
+            DialogRequestKind::CurseplayImport,
+            DialogRequestKind::CurseplayExport,
+        ]
+    );
 }
 
 #[test]

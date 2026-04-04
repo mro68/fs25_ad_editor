@@ -14,7 +14,7 @@ Dieser Plan trennt fachliche Verantwortlichkeiten in Workspace-Crates mit klaren
 - Flutter-Bridge (`crates/fs25_auto_drive_frontend_flutter_bridge/src/{session,dto}`): kleine Session-, DTO- und Render-Frame-Seams ohne Flutter-SDK-Kopplung
 - Overview-Crate (`crates/fs25_map_overview/src/*`): Karten-/Farmland-Generierung
 
-Kernfluss: **Input -> AppIntent -> AppController -> AppCommand -> AppState/Domain -> RenderScene + RenderAssetsSnapshot -> Host-Adapter -> Renderer-Core**.
+Kernfluss: **Input -> AppIntent -> AppController -> AppCommand -> AppState/Domain -> RenderScene + RenderAssetsSnapshot + HostUiSnapshot + ViewportOverlaySnapshot -> Host-Adapter -> Renderer-Core**.
 
 Die Integrationsschale ist bewusst kein zusaetzlicher Fach-Layer. Sie koordiniert `ui`, `app` und den Host-Adapter in `render`, enthaelt aber keine eigenen Use-Cases oder Domain-Logik.
 
@@ -178,9 +178,13 @@ Numerische Mausrad-Interaktion bleibt bewusst im UI-Layer: `ui::common` kapselt 
 - Use-Cases (Load/Save, Kamera, Selektion, Heightmap, Tools)
 - Aufbau von `RenderScene` aus Domain + ViewState
 - Aufbau von `RenderAssetsSnapshot` als expliziter Asset-Vertrag fuer Host-Adapter
+- Aufbau von `HostUiSnapshot` als semantischer Fenster-/Dialog-Vertrag (`PanelState`, `PanelAction`, `DialogRequest`, `DialogResult`)
+- Aufbau von `ViewportOverlaySnapshot` als host-neutraler Overlay-Vertrag fuer Tool-/Clipboard-/Gruppen-Overlays
 - Schmale Read-only-Fassade fuer UI und Integrationsschale: app-eigene Typen plus bewusst ausgewaehlte Core-/Shared-Typen wie `ConnectionDirection`, `ConnectionPriority`, `RoadMap`, `Camera2D`, `RenderQuality`, `ZipImageEntry`
 - Kanonischer RouteTool-Katalog (`tools/catalog.rs`) als Single Source of Truth fuer `RouteToolId`, `RouteToolGroup`, `RouteToolBackingMode`, `RouteToolIconKey`, Surface-Sichtbarkeit und Aktivierungs-Voraussetzungen
 - Egui-freier Route-Tool-Panel-Vertrag als stabile Fassade in `ui_contract.rs` und `ui_contract/route_tool_panel.rs`; die eigentlichen DTO-Familien liegen intern in `route_tool_panel/common.rs`, `curve_family.rs`, `generator_family.rs` und `analysis_family.rs`
+- Host-neutrale Dialog-/Fenster-Vertraege in `ui_contract/host_ui.rs`; Datei-/Pfad-Dialoge laufen als `DialogRequest`-Queue in `UiState` statt als verteilte `show_*`-Flags
+- Host-neutrale Overlay-Vertraege in `ui_contract/viewport_overlay.rs`; Overlay-Ableitung (Route-Preview, Clipboard, Distanzen, Segment-Locks, Group-Boundaries) laeuft zentral im App-Layer statt im Painter
 - Konsolidierte Asset-Leseflaeche im `AppState`: `farmland_polygons_arc()`, `farmland_grid_arc()` und `background_image_arc()` kapseln die kanonischen Tool-/Host-Zugriffe; `view.background_map` bleibt Primaerquelle fuer Hintergrundbilder, `background_image` nur Kompatibilitaets-Fallback
 - Separater Tool-Editing-Layer (`tool_editing/*`) fuer persistente Tool-Snapshots, Rehydrierung sowie Cancel/Undo im destruktiven Tool-Edit-Flow
 - Undo/Redo-Snapshots sichern neben `road_map` und `selection` auch `group_registry` und `tool_edit_store`; laufende `ActiveToolEditSession`s bleiben transiente Orchestrierungsdaten ausserhalb des Snapshot-Formats
@@ -329,6 +333,8 @@ impl AppController {
   pub fn handle_command(&mut self, state: &mut AppState, command: AppCommand) -> anyhow::Result<()>;
   pub fn build_render_scene(&self, state: &AppState, viewport_size: [f32; 2]) -> RenderScene;
   pub fn build_render_assets(&self, state: &AppState) -> RenderAssetsSnapshot;
+  pub fn build_host_ui_snapshot(&self, state: &AppState) -> HostUiSnapshot;
+  pub fn build_viewport_overlay_snapshot(&self, state: &mut AppState, cursor_world: Option<Vec2>) -> ViewportOverlaySnapshot;
 }
 ```
 
@@ -343,7 +349,6 @@ pub struct AppState {
   pub command_log: CommandLog,
   pub history: EditHistory,
   pub options: EditorOptions,
-  pub show_options_dialog: bool,
   pub group_registry: GroupRegistry,
   pub farmland_polygons: Option<Arc<Vec<FieldPolygon>>>,
   pub farmland_grid: Option<Arc<FarmlandGrid>>,
@@ -393,6 +398,30 @@ pub struct EngineRenderFrameSnapshot {
   pub assets: RenderAssetsSnapshot,
 }
 
+pub struct HostUiSnapshot {
+  pub panels: Vec<PanelState>,
+  pub dialog_requests: Vec<DialogRequest>,
+}
+
+pub struct ViewportOverlaySnapshot {
+  pub route_tool_preview: Option<ToolPreview>,
+  pub clipboard_preview: Option<ClipboardOverlaySnapshot>,
+  pub distance_preview: Option<PolylineOverlaySnapshot>,
+  pub group_locks: Vec<GroupLockOverlaySnapshot>,
+  pub group_boundaries: Vec<GroupBoundaryOverlaySnapshot>,
+  pub show_no_file_hint: bool,
+}
+
+pub enum EngineSessionAction {
+  ToggleCommandPalette,
+  SetEditorTool { tool: EngineActiveTool },
+  OpenOptionsDialog,
+  CloseOptionsDialog,
+  Undo,
+  Redo,
+  SubmitDialogResult { result: EngineDialogResult },
+}
+
 // enthaelt intern:
 // - RenderMap-Snapshot (Nodes, Connections, Marker, KD-Index)
 // - RenderCamera-Snapshot
@@ -412,7 +441,9 @@ impl fs25_auto_drive_render_wgpu::Renderer {
 }
 ```
 
-`render_scene::build()` baut den render-seitigen `RenderMap`-Snapshot nur bei geaenderter `RoadMap::render_cache_key()` neu auf und legt ihn in `AppState::render_map_cache` ab. Jeder Rebuild protokolliert `nodes`, `connections`, `markers` und `approx_bytes`, damit Performance-Reports neben Laufzeiten auch die Snapshot-Groesse desselben Datensatzes dokumentieren koennen. `render_assets::build()` liefert parallel den host-neutralen Asset-Snapshot; Hintergrund-Sync laeuft ueber `background_asset_revision`/`background_transform_revision` statt Dirty-Flags. Die egui-Integrationsschale vergleicht diese Revisionen gegen ihre letzten Upload-Staende; die Flutter-Bridge kann alternativ `EngineRenderFrameSnapshot` als gekoppelten read-only Render-Output liefern.
+`HostUiSnapshot` und `ViewportOverlaySnapshot` sind die host-neutralen Read-Modelle fuer Panels/Dialoge bzw. Viewport-Overlays. Egui konsumiert beide Modelle read-only und mappt `PanelAction`, `DialogResult` sowie Overlay-Klicks zentral auf `AppIntent`. Die Flutter-Bridge bleibt parallel auf explizite `EngineSessionAction`-Mutationen (inkl. Undo/Redo/Dialog-Result), gecachte `EngineSessionSnapshot`-/`EngineRenderFrameSnapshot`-Abfragen sowie den host-neutralen Dialog-Lifecycle (`take_dialog_requests()`/`submit_dialog_result(...)`) begrenzt; generischer `AppIntent`-Dispatch und `AppState`-Escape-Hatches bleiben ausserhalb der oeffentlichen Bridge-Surface.
+
+`render_scene::build()` baut den render-seitigen `RenderMap`-Snapshot nur bei geaenderter `RoadMap::render_cache_key()` neu auf und legt ihn in `AppState::render_map_cache` ab. Jeder Rebuild protokolliert `nodes`, `connections`, `markers` und `approx_bytes`, damit Performance-Reports neben Laufzeiten auch die Snapshot-Groesse desselben Datensatzes dokumentieren koennen. `render_assets::build()` liefert parallel den host-neutralen Asset-Snapshot; Hintergrund-Sync laeuft ueber `background_asset_revision`/`background_transform_revision` statt Dirty-Flags. `build_viewport_overlay_snapshot()` liefert parallel den host-neutralen Overlay-Read-Modell-Snapshot fuer UI/Bridge-Hosts. Die egui-Integrationsschale vergleicht Asset-Revisionen gegen ihre letzten Upload-Staende und rendert Overlays ausschliesslich aus dem Snapshot; die Flutter-Bridge kann alternativ `EngineRenderFrameSnapshot` als gekoppelten read-only Render-Output liefern.
 
 ## Event- und Render-Fluss
 
@@ -567,7 +598,7 @@ crates/
 - Background-Dirty-Flag durch monotone Asset-/Transform-Revisionen ersetzt
 - `fs25_auto_drive_render_wgpu` als host-neutralen Renderer-Core extrahiert
 - egui-`render` auf Host-Adapter reduziert (Callback bleibt host-spezifisch)
-- Flutter-Bridge exponiert read-only `build_render_scene()`/`build_render_assets()`/`build_render_frame()`; letzteres liefert `EngineRenderFrameSnapshot`
+- Flutter-Bridge exponiert read-only `build_render_scene()`/`build_render_assets()`/`build_render_frame()` plus explizite `EngineSessionAction`-Mutationen via `apply_action()`; generischer `AppIntent`-Dispatch und `AppState`-Escape-Hatches bleiben ausserhalb der oeffentlichen Bridge-API
 
 ## Definition of Done
 

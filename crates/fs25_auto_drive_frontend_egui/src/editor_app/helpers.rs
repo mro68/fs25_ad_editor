@@ -108,7 +108,7 @@ impl EditorApp {
             || self.state.ui.floating_menu.is_some()
             || self.state.ui.show_heightmap_warning
             || self.state.ui.marker_dialog.visible
-            || self.state.show_options_dialog
+            || self.state.ui.show_options_dialog
         {
             ctx.request_repaint();
         }

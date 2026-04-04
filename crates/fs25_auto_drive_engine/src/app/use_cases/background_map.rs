@@ -1,6 +1,7 @@
 //! Use-Case-Funktionen fuer Background-Map-Verwaltung.
 
 use crate::app::state::ZipBrowserState;
+use crate::app::ui_contract::{DialogRequest, DialogRequestKind};
 use crate::app::AppState;
 use crate::core::{self, BackgroundMap, FarmlandGrid, FieldPolygon};
 use anyhow::Result;
@@ -47,7 +48,9 @@ fn json_path_for(image_path: &str) -> String {
 
 /// Oeffnet den Background-Map-Auswahl-Dialog.
 pub fn request_background_map_dialog(state: &mut AppState) {
-    state.ui.show_background_map_dialog = true;
+    state
+        .ui
+        .request_dialog(DialogRequest::pick_path(DialogRequestKind::BackgroundMap));
 }
 
 /// Laedt eine Background-Map von einem Dateipfad.

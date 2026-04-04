@@ -56,5 +56,6 @@ pub use options_dialog::show_options_dialog;
 pub use properties::render_properties_content;
 pub use status::render_status_bar;
 pub use tool_preview::{
-    paint_clipboard_preview, paint_preview, paint_preview_polyline, render_tool_preview,
+    paint_clipboard_preview, paint_clipboard_snapshot_preview, paint_preview,
+    paint_preview_polyline, render_tool_preview,
 };
