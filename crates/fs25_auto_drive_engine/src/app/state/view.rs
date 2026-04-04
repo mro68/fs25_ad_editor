@@ -17,8 +17,10 @@ pub struct ViewState {
     pub background_visible: bool,
     /// Skalierungsfaktor fuer Background-Map-Ausdehnung (1.0 = Original)
     pub background_scale: f32,
-    /// Signalisiert, dass die Background-Map neu in den GPU-Renderer hochgeladen werden muss
-    pub background_dirty: bool,
+    /// Monotone Revision fuer Bildinhalt/Existenz des Background-Assets.
+    pub background_asset_revision: u64,
+    /// Monotone Revision fuer Platzierung/Skalierung des Background-Assets.
+    pub background_transform_revision: u64,
 }
 
 impl ViewState {
@@ -31,7 +33,19 @@ impl ViewState {
             background_map: None,
             background_visible: true,
             background_scale: 1.0,
-            background_dirty: false,
+            background_asset_revision: 0,
+            background_transform_revision: 0,
         }
+    }
+
+    /// Markiert, dass sich Bildinhalt oder Existenz des Background-Assets geaendert haben.
+    pub fn mark_background_asset_changed(&mut self) {
+        self.background_asset_revision = self.background_asset_revision.saturating_add(1);
+        self.mark_background_transform_changed();
+    }
+
+    /// Markiert, dass sich Bounds oder Skalierung des Background-Assets geaendert haben.
+    pub fn mark_background_transform_changed(&mut self) {
+        self.background_transform_revision = self.background_transform_revision.saturating_add(1);
     }
 }

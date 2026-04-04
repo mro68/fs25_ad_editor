@@ -12,19 +12,20 @@ Das Root-Package `fs25_auto_drive_editor` re-exportiert die wichtigsten Einstieg
 |---|---|
 | `app` | `AppController`, `AppState`, Intents, Commands, Handler, Use-Cases und Tool-Vertraege |
 | `core` | `RoadMap`, Nodes, Connections, Kamera, Spatial-Index, BackgroundMap, Farmland und Heightmap |
-| `shared` | `RenderScene`, `RenderQuality`, `EditorOptions`, i18n und weitere neutrale DTOs |
+| `shared` | `RenderScene`, `RenderAssetsSnapshot`, `RenderQuality`, `EditorOptions`, i18n und weitere neutrale DTOs |
 | `xml` | AutoDrive- und Curseplay-Import/Export |
 
 ## Wichtige oeffentliche Typen
 
 | Typ | Zweck |
 |---|---|
-| `AppController` | Zentrale Intent-Verarbeitung und Render-Scene-Aufbau |
+| `AppController` | Zentrale Intent-Verarbeitung sowie Aufbau von `RenderScene` und `RenderAssetsSnapshot` |
 | `AppState` | Globaler Engine-Zustand fuer Karte, Auswahl, View und Dialoge |
 | `AppIntent` | UI-/Host-seitige Absicht als Eingang des Application-Layers |
 | `AppCommand` | Interne, featureweise dispatchte Mutationsbefehle |
 | `RoadMap` | HashMap-basiertes Strassennetz samt Spatial-Index |
-| `RenderScene` | Host-neutraler Render-Snapshot fuer Frontends und Renderer |
+| `RenderScene` | Host-neutraler per-frame Render-Snapshot fuer Frontends und Renderer |
+| `RenderAssetsSnapshot` | Host-neutraler Asset-Snapshot fuer langlebige Renderdaten (z. B. Background) |
 
 ## Oeffentliche Funktionen und Re-Exports
 
@@ -60,6 +61,7 @@ flowchart LR
 	app --> xml
 	xml --> core
 	app --> RenderScene[shared::RenderScene]
+	app --> RenderAssets[shared::RenderAssetsSnapshot]
 ```
 
 ## Weiterfuehrende API-Doku

@@ -20,6 +20,10 @@ pub(crate) struct EditorApp {
     /// Gecachte Cursor-Weltposition fuer Tool-Preview
     /// (bleibt erhalten wenn Maus den Viewport verlaesst).
     last_cursor_world: Option<glam::Vec2>,
+    /// Letzte vom Host synchronisierte Background-Asset-Revision.
+    last_background_asset_revision: u64,
+    /// Letzte vom Host synchronisierte Background-Transform-Revision.
+    last_background_transform_revision: u64,
     /// Gecachte egui-Textur-Handles fuer Gruppen-Boundary-Icons (lazy initialisiert).
     group_boundary_icons: Option<ui::GroupBoundaryIcons>,
 }
@@ -43,6 +47,8 @@ impl EditorApp {
             queue: render_state.queue.clone(),
             input: ui::InputState::new(),
             last_cursor_world: None,
+            last_background_asset_revision: 0,
+            last_background_transform_revision: 0,
             group_boundary_icons: None,
         }
     }

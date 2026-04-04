@@ -2,9 +2,10 @@
 
 mod by_feature;
 
+use super::render_assets;
 use super::render_scene;
 use super::{AppCommand, AppIntent, AppState};
-use crate::shared::RenderScene;
+use crate::shared::{RenderAssetsSnapshot, RenderScene};
 
 /// Orchestriert UI-Events und Use-Cases auf den AppState.
 #[derive(Default)]
@@ -44,5 +45,10 @@ impl AppController {
     /// Baut die Render-Szene aus dem aktuellen AppState.
     pub fn build_render_scene(&self, state: &AppState, viewport_size: [f32; 2]) -> RenderScene {
         render_scene::build(state, viewport_size)
+    }
+
+    /// Baut den host-neutralen Render-Asset-Snapshot aus dem aktuellen AppState.
+    pub fn build_render_assets(&self, state: &AppState) -> RenderAssetsSnapshot {
+        render_assets::build(state)
     }
 }

@@ -13,13 +13,16 @@ fn apply_background_map(state: &mut AppState, bg_map: BackgroundMap) {
     let image_arc = bg_map.image_arc();
     state.view.background_map = Some(Arc::new(bg_map));
     state.view.background_scale = 1.0;
-    state.view.background_dirty = true;
+    state.view.mark_background_asset_changed();
     state.background_image = Some(image_arc);
 }
 
 fn clear_background_assets(state: &mut AppState) {
+    let had_background = state.view.background_map.is_some() || state.background_image.is_some();
     state.view.background_map = None;
-    state.view.background_dirty = true;
+    if had_background {
+        state.view.mark_background_asset_changed();
+    }
     state.background_image = None;
 }
 
@@ -99,8 +102,15 @@ pub fn toggle_background_visibility(state: &mut AppState) {
 /// Multipliziert den aktuellen Skalierungsfaktor mit `factor`.
 /// Begrenzt auf den Bereich 0.125 bis 8.0.
 pub fn scale_background(state: &mut AppState, factor: f32) {
-    state.view.background_scale = (state.view.background_scale * factor).clamp(0.125, 8.0);
-    state.view.background_dirty = true;
+    let next_scale = (state.view.background_scale * factor).clamp(0.125, 8.0);
+    if (next_scale - state.view.background_scale).abs() <= f32::EPSILON {
+        return;
+    }
+
+    state.view.background_scale = next_scale;
+    if state.view.background_map.is_some() {
+        state.view.mark_background_transform_changed();
+    }
     log::info!("Background-Scale: {:.3}", state.view.background_scale);
 }
 

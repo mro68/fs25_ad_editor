@@ -55,34 +55,50 @@ impl EditorApp {
     }
 
     pub(super) fn sync_background_upload(&mut self) {
-        if !self.state.view.background_dirty {
+        let assets = self.controller.build_render_assets(&self.state);
+        let asset_revision = assets.background_asset_revision();
+        let transform_revision = assets.background_transform_revision();
+
+        if asset_revision == self.last_background_asset_revision
+            && transform_revision == self.last_background_transform_revision
+        {
             return;
         }
-        self.state.view.background_dirty = false;
 
         let Ok(mut renderer) = self.renderer.lock() else {
             log::error!("Renderer-Lock fehlgeschlagen (Mutex vergiftet)");
             return;
         };
-        if let Some(bg_map) = self.state.view.background_map.as_deref() {
-            let bounds = bg_map.world_bounds();
+
+        if let Some(background) = assets.background() {
             renderer.set_background(
                 &self.device,
                 &self.queue,
-                bg_map.image_data(),
+                background.image.as_ref(),
                 render::BackgroundWorldBounds {
-                    min_x: bounds.min_x,
-                    max_x: bounds.max_x,
-                    min_y: bounds.min_z,
-                    max_y: bounds.max_z,
+                    min_x: background.world_bounds.min_x,
+                    max_x: background.world_bounds.max_x,
+                    min_y: background.world_bounds.min_z,
+                    max_y: background.world_bounds.max_z,
                 },
-                self.state.view.background_scale,
+                background.scale,
             );
-            log::info!("Background-Map in Renderer hochgeladen");
+            log::info!(
+                "Background-Map in Renderer synchronisiert (asset_rev={}, transform_rev={})",
+                background.asset_revision,
+                background.transform_revision
+            );
         } else {
             renderer.clear_background();
-            log::info!("Background-Map aus Renderer entfernt");
+            log::info!(
+                "Background-Map aus Renderer entfernt (asset_rev={}, transform_rev={})",
+                asset_revision,
+                transform_revision
+            );
         }
+
+        self.last_background_asset_revision = asset_revision;
+        self.last_background_transform_revision = transform_revision;
     }
 
     pub(super) fn maybe_request_repaint(&self, ctx: &egui::Context, has_meaningful_events: bool) {
