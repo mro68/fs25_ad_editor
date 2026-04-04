@@ -13,7 +13,11 @@ pub(super) fn execute_and_apply(state: &mut AppState) {
 
     if let Some(result) = result {
         let marker_indices: Vec<usize> = result.markers.iter().map(|(idx, _, _)| *idx).collect();
-        let ids = use_cases::editing::apply_tool_result(state, result);
+        let ids = if state.active_tool_edit_session.is_some() {
+            use_cases::editing::apply_tool_result_no_snapshot(state, result)
+        } else {
+            use_cases::editing::apply_tool_result(state, result)
+        };
 
         if let (Some(tool), Some(rm)) = (
             state.editor.tool_manager.active_recreate_mut(),
@@ -43,7 +47,9 @@ pub(super) fn recreate(state: &mut AppState) {
         None => return,
     };
 
-    state.record_undo_snapshot();
+    if state.active_tool_edit_session.is_none() {
+        state.record_undo_snapshot();
+    }
     use_cases::editing::delete_nodes_by_ids(state, &old_ids);
 
     let result = match (
