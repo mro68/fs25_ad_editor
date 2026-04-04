@@ -5,5 +5,7 @@ pub mod dto;
 /// Session-Fassade ueber der Engine ohne Flutter-SDK-Kopplung.
 pub mod session;
 
-pub use dto::{EngineSelectionSnapshot, EngineSessionSnapshot, EngineViewportSnapshot};
+pub use dto::{
+    EngineActiveTool, EngineSelectionSnapshot, EngineSessionSnapshot, EngineViewportSnapshot,
+};
 pub use session::FlutterBridgeSession;
