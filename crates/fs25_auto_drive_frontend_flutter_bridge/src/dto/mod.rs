@@ -1,5 +1,19 @@
 use serde::{Deserialize, Serialize};
 
+/// Stabiler Tool-Identifier fuer Host-Snapshots.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum EngineActiveTool {
+    /// Standard: Nodes selektieren und verschieben.
+    Select,
+    /// Verbindungen zwischen Nodes erstellen.
+    Connect,
+    /// Neue Nodes auf der Karte platzieren.
+    AddNode,
+    /// Route-Tools (Linie, Parkplatz, Kurve, …).
+    Route,
+}
+
 /// Serialisierbarer Snapshot der aktuellen Auswahl.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct EngineSelectionSnapshot {
@@ -25,8 +39,8 @@ pub struct EngineSessionSnapshot {
     pub node_count: usize,
     /// Anzahl der Verbindungen der geladenen Karte.
     pub connection_count: usize,
-    /// Name des aktiven Editor-Tools als stabile Textdarstellung.
-    pub active_tool: String,
+    /// Aktives Editor-Tool als stabiler, expliziter Identifier.
+    pub active_tool: EngineActiveTool,
     /// Letzte Statusmeldung der Session.
     pub status_message: Option<String>,
     /// Ob die Command-Palette sichtbar ist.
