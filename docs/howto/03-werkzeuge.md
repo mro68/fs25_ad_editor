@@ -96,6 +96,7 @@ Setzt neue Wegpunkte direkt in die Karte.
 **Tipps:**
 - Wenn eine Heightmap geladen ist, wird die Hoehe beim Anlegen mitberuecksichtigt.
 - Add Node eignet sich gut fuer kleine manuelle Korrekturen zwischen Tool-Ergebnissen.
+- Wenn noch keine AutoDrive-Karte geladen ist, erscheint eine Statusmeldung statt eines stillen Fehlschlags.
 
 ---
 

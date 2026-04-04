@@ -1,5 +1,7 @@
 //! Undo/Redo-History mit Arc-basierten Snapshots (Copy-on-Write).
 
+use super::group_registry::GroupRegistry;
+use super::tool_editing::ToolEditStore;
 use super::SelectionState;
 use crate::core::RoadMap;
 use std::collections::VecDeque;
@@ -17,6 +19,10 @@ pub struct Snapshot {
     pub road_map: Option<Arc<RoadMap>>,
     /// Selektionszustand zum Zeitpunkt des Snapshots
     pub selection: SelectionState,
+    /// Persistierte Gruppen-Registry zum Zeitpunkt des Snapshots.
+    pub group_registry: GroupRegistry,
+    /// Tool-spezifischer Persistenz-Store fuer group-backed Tools.
+    pub tool_edit_store: ToolEditStore,
 }
 
 impl Snapshot {
@@ -25,6 +31,8 @@ impl Snapshot {
         Self {
             road_map: state.road_map.clone(), // O(1): nur Arc-Ref-Count erhoehen
             selection: state.selection.clone(),
+            group_registry: state.group_registry.clone(),
+            tool_edit_store: state.tool_edit_store.clone(),
         }
     }
 
@@ -37,7 +45,11 @@ impl Snapshot {
         let fresh_gen = state.selection.generation.max(self.selection.generation) + 1;
         state.road_map = self.road_map;
         state.selection = self.selection;
+        state.group_registry = self.group_registry;
+        state.tool_edit_store = self.tool_edit_store;
         state.selection.generation = fresh_gen;
+        state.dimmed_ids_cache.replace(None);
+        state.render_map_cache.replace(None);
     }
 }
 

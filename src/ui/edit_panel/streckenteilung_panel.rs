@@ -1,6 +1,6 @@
 use crate::app::state::DistanzenState;
 use crate::app::{AppIntent, RoadMap};
-use crate::ui::common::wheel_dir;
+use crate::ui::common::{apply_wheel_step, apply_wheel_step_usize};
 use indexmap::IndexSet;
 use std::hash::{Hash, Hasher};
 
@@ -108,14 +108,18 @@ pub fn render_streckenteilung_controls(
         ui.label("Abstand:");
         let response = ui.add(
             egui::DragValue::new(&mut distanzen_state.distance)
-                .speed(0.5)
+                .speed(0.1)
                 .range(1.0..=25.0)
                 .suffix(" m"),
         );
-        let wheel_dir = wheel_dir(ui, &response);
-        if distance_wheel_step_m > 0.0 && wheel_dir != 0.0 {
-            distanzen_state.distance =
-                (distanzen_state.distance + wheel_dir * distance_wheel_step_m).clamp(1.0, 25.0);
+        if distance_wheel_step_m > 0.0 {
+            let _ = apply_wheel_step(
+                ui,
+                &response,
+                &mut distanzen_state.distance,
+                distance_wheel_step_m,
+                1.0..=25.0,
+            );
         }
     });
     if (distanzen_state.distance - prev_distance).abs() > f32::EPSILON {
@@ -131,12 +135,15 @@ pub fn render_streckenteilung_controls(
                 .speed(1.0)
                 .range(2..=10000),
         );
-        let wheel_dir = wheel_dir(ui, &response);
-        if distance_wheel_step_m > 0.0 && wheel_dir > 0.0 {
-            distanzen_state.count = distanzen_state.count.saturating_add(1).min(10_000);
-        } else if distance_wheel_step_m > 0.0 && wheel_dir < 0.0 {
-            distanzen_state.count = distanzen_state.count.saturating_sub(1).max(2);
-        }
+        let mut count = distanzen_state.count as usize;
+        let _ = apply_wheel_step_usize(
+            ui,
+            &response,
+            &mut count,
+            2..=10_000,
+            distance_wheel_step_m > 0.0,
+        );
+        distanzen_state.count = count as u32;
     });
     if distanzen_state.count != prev_count {
         distanzen_state.by_count = true;

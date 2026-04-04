@@ -60,7 +60,7 @@ Seit Phase 7 schneiden `controller.rs` und `intent_mapping.rs` die Control-Plane
 - `select_group_by_nearest_node(state, world_pos, max_distance, additive)` — Selektiert per Doppelklick alle Nodes der Gruppe, zu der der getroffene Node gehoert; `additive = true` fuegt die Gruppenselektion zur bestehenden Selektion hinzu
 - `select_nodes_in_rect(state, corner_a, corner_b, additive)` — Rechteckselektion (Shift + Drag)
 - `select_nodes_in_lasso(state, polygon, additive)` — Lasso-Selektion (Alt + Drag)
-- `move_selected_nodes(state, delta_world)` — Alle selektierten Nodes gemeinsam verschieben
+- `move_selected_nodes(state, delta_world)` — Alle selektierten Nodes gemeinsam verschieben; gesperrte Gruppen werden ueber `GroupRegistry::expand_locked_selection()` mitgezogen, `original_positions` betroffener Locks werden aktualisiert, der Spatial-Index wird dabei bewusst noch nicht rebuilt und muss ueber den Move-Lifecycle separat abgeschlossen werden
 - `rotate_selected_nodes(state, angle_rad)` — Alle selektierten Nodes um ihr gemeinsames Zentrum rotieren (Spatial-Index **nicht** rebuilt — muss separat per `EndRotateSelectedNodes` angestossen werden)
 - `clear_selection(state)` — Selektion explizit loeschen
 
@@ -74,7 +74,7 @@ Seit Phase 7 schneiden `controller.rs` und `intent_mapping.rs` die Control-Plane
 
 ## `use_cases::editing`
 
-- `add_node_at_position(state, world_pos) -> AddNodeResult` — Neuen Node einfuegen oder existierenden selektieren
+- `add_node_at_position(state, world_pos) -> AddNodeResult` — Neuen Node einfuegen oder existierenden selektieren; der Rueckgabewert ist Teil des Workflow-Vertrags, damit Handler No-Map-, Snap- und Create-Faelle explizit surfacen koennen
 
 ```rust
 pub enum AddNodeResult {
@@ -133,7 +133,7 @@ pub enum AddNodeResult {
 - `clear_background_map(state)` — Background-Map entfernen
 - `browse_zip_background(state, path) -> anyhow::Result<()>` — ZIP-Archiv nach Bilddateien durchsuchen; bei einem Treffer wird direkt geladen
 - `load_background_from_zip(state, zip_path, entry_name, crop_size) -> anyhow::Result<()>` — Einzelne Bilddatei aus ZIP als Background laden
-- `generate_overview_with_options(state) -> anyhow::Result<()>` — Uebersichtskarte aus Map-Mod-ZIP generieren (Layer-Optionen aus Dialog-State), Einstellungen persistent speichern
+- `generate_overview_with_options(state) -> anyhow::Result<()>` — Uebersichtskarte aus Map-Mod-ZIP generieren (Layer-Optionen aus Dialog-State), Einstellungen persistent speichern; Persistenzfehler werden per `log::warn!` und `state.ui.status_message` sichtbar gemacht, die Generierung selbst laeuft weiter
 - `save_background_as_overview(state, path) -> anyhow::Result<()>` — Aktuelle Background-Map als overview.jpg speichern (JPEG Qualitaet 90), Farmland-Polygone als `.json` daneben
 - `load_farmland_json(state, image_path)` — Laedt Farmland-Polygone aus einer `.json`-Datei neben der Bilddatei (z.B. `overview.json` neben `overview.jpg`); lautlos keine-Op wenn Datei fehlt
 
@@ -145,6 +145,7 @@ Die Registry ist seit Phase 4 tool-neutral; tool-spezifische Persistenz liegt se
 
 - **`GroupRegistry`** speichert nur neutrale Gruppendaten (`GroupRecord` mit `id`, `node_ids`, `original_positions`, `marker_node_ids`, `locked`, `entry_node_id`, `exit_node_id`).
 - **`ToolEditStore`** haelt `ToolEditRecord { group_id, tool_id, payload }` fuer group-backed editierbare Tools.
+- **Undo/Redo-Vertrag:** `Snapshot` in `app/history.rs` sichert `road_map`, `selection`, `group_registry` und `tool_edit_store`; laufende `ActiveToolEditSession`s bleiben bewusst transient und werden bei Cancel-/Restore-Flows separat aus Backups rekonstruiert.
 - **Invalidierung:** Beim manuellen Loeschen oder Resampling von Nodes liefert `invalidate_by_node_ids(...)` die entfernten Record-IDs zurueck; die Caller entfernen damit die passenden Tool-Payloads aus `state.tool_edit_store`.
 
 ### Bearbeitungs-Flow (`GroupEditToolRequested` / `EditGroup`)

@@ -78,6 +78,8 @@ impl EditorApp {
                 }
                 intent => {
                     if let Err(e) = self.controller.handle_intent(&mut self.state, intent) {
+                        self.state.ui.status_message =
+                            Some(format!("Aktion fehlgeschlagen: {}", e));
                         log::error!("Event handling failed: {:#}", e);
                     }
                 }

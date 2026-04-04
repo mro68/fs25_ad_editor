@@ -131,6 +131,7 @@ graph BT
   - `keyboard.rs` — Tastatur-Shortcuts (Delete, Escape, Ctrl+A, W/G/B/A/R/Z/K fuer Floating-Menues)
   - `drag.rs` — Drag-Operationen (Pan, Move, Rect-/Lasso-Selektion)
   - `context_menu.rs` — Rechtsklick-Kontextmenü
+- `common.rs` — Widgetnahe UI-Helfer fuer numerische Eingaben, Mausrad-Impulse und den zentralen Route-Tool-Availability-Kontext
 - `menu.rs` — Top-Menü-Leiste
 - `status.rs` — Statusleiste
 - `defaults_panel.rs` — Linke Sidebar mit Long-Press-Gruppen (Werkzeuge, RouteTool-Gruppen `Basics/Section/Analysis`, Defaults, Hintergrund; 64px breit)
@@ -140,9 +141,11 @@ graph BT
 - `edit_panel.rs` — Kontextabhaengiges Edit-Panel fuer Gruppen-Edit, Streckenteilung und aktives Route-Tool
 - `properties.rs` — Properties-Panel
   - intern modularisiert über `properties/`-Submodule (u. a. Selektoren und Distanzen-Panel)
-- `options_dialog.rs` — Optionen-Dialog (Farben, Größen, Zoom)
+- `options_dialog/` — Optionen-Dialog (modales Fenster plus thematische `sections/*`)
 - `tool_preview.rs` — Tool-Preview-Overlay (Route-Tool-Vorschau im Viewport)
 - `dialogs.rs` — Datei-Dialoge und modale Fenster
+
+Numerische Mausrad-Interaktion bleibt bewusst im UI-Layer: `ui::common` kapselt Scroll-Auswertung, Modifier-Semantik und Wertanpassung fuer Numeric-Widgets. Route-Tool- und Analysis-Panels reichen weiterhin nur das boolesche Gate `wheel_enabled` weiter; Komma-Float-Felder im Options-Dialog nutzen ueber `apply_wheel_step_default()` repo-weit den Default-Schritt `0.1`, waehrend Felder mit bewusst groberen Prozent-/Grad- oder ganzzahligen Pixel-Schritten ihre expliziten Schrittweiten behalten. Gehoverte Numeric-Widgets konsumieren Raw-/Smooth-Scroll-Impulse bereits in `wheel_dir()`, damit umgebende ScrollAreas kein Scroll-Through zeigen.
 
 **Darf**
 
@@ -162,12 +165,15 @@ graph BT
 **Verantwortung**
 
 - Zentrale Event-Verarbeitung (`AppController`)
+- Schlanke Event-Fassaden in `events/intent.rs` und `events/command.rs`; die kanonischen Enum-Definitionen liegen in `events/*/definition.rs`, damit Root-Dateien als stabile Einstiegspunkte klein bleiben
 - Use-Cases (Load/Save, Kamera, Selektion, Heightmap, Tools)
 - Aufbau von `RenderScene` aus Domain + ViewState
 - Schmale Read-only-Fassade fuer UI und Integrationsschale: app-eigene Typen plus bewusst ausgewaehlte Core-/Shared-Typen wie `ConnectionDirection`, `ConnectionPriority`, `RoadMap`, `Camera2D`, `RenderQuality`, `ZipImageEntry`
 - Kanonischer RouteTool-Katalog (`tools/catalog.rs`) als Single Source of Truth fuer `RouteToolId`, `RouteToolGroup`, `RouteToolBackingMode`, `RouteToolIconKey`, Surface-Sichtbarkeit und Aktivierungs-Voraussetzungen
+- Egui-freier Route-Tool-Panel-Vertrag als stabile Fassade in `ui_contract.rs` und `ui_contract/route_tool_panel.rs`; die eigentlichen DTO-Familien liegen intern in `route_tool_panel/common.rs`, `curve_family.rs`, `generator_family.rs` und `analysis_family.rs`
 - Konsolidierte Asset-Leseflaeche im `AppState`: `farmland_polygons_arc()`, `farmland_grid_arc()` und `background_image_arc()` kapseln die kanonischen Tool-/Host-Zugriffe; `view.background_map` bleibt Primaerquelle fuer Hintergrundbilder, `background_image` nur Kompatibilitaets-Fallback
 - Separater Tool-Editing-Layer (`tool_editing/*`) fuer persistente Tool-Snapshots, Rehydrierung sowie Cancel/Undo im destruktiven Tool-Edit-Flow
+- Undo/Redo-Snapshots sichern neben `road_map` und `selection` auch `group_registry` und `tool_edit_store`; laufende `ActiveToolEditSession`s bleiben transiente Orchestrierungsdaten ausserhalb des Snapshot-Formats
 
 **Abgrenzung**
 
@@ -555,7 +561,7 @@ src/
     drag.rs             # Drag-Operationen
     context_menu.rs     # Rechtsklick-Kontextmenü
     dialogs.rs          # Datei-Dialoge
-    options_dialog.rs   # Optionen-Dialog
+    options_dialog/     # Optionen-Dialog
     tool_preview.rs     # Tool-Preview-Overlay
 ```
 
@@ -763,7 +769,7 @@ Nach node-mutierenden Operationen wird dirty-Flag gesetzt; Rebuild erfolgt lazy 
 - `GroupRegistry` bleibt tool-neutral; Tool-Edit wird ueber `ToolEditStore` + `RouteToolId` freigeschaltet, nicht ueber Felder im `GroupRecord`
 - Alle Pflicht-Surfaces lesen Route-Tools ueber `resolve_route_tool_entries()`; deaktivierte Tools bleiben sichtbar und tragen ihren Disabled-Grund
 - `GroupRecord.locked` verhindert versehentliche Mutation
-- Undo-Snapshot wird vor jeder Mutation automatisch erstellt (`apply_tool_result`)
+- Undo-Snapshot wird vor jeder Mutation automatisch erstellt (`apply_tool_result`); fuer Tool-Edit/Undo umfasst der Snapshot-Vertrag auch `GroupRegistry` und `ToolEditStore`, waehrend transiente Edit-Sessions getrennt behandelt werden
 
 ### ToolResult-Aufbau
 

@@ -59,15 +59,15 @@ pub fn select_group_nodes(
 
 /// Selektiert Nodes innerhalb eines Rechtecks.
 pub fn select_in_rect(state: &mut AppState, min: glam::Vec2, max: glam::Vec2, additive: bool) {
-    use_cases::selection::select_nodes_in_rect(state, min, max, additive);
     let (old_selected, old_anchor) = helpers::capture_selection_snapshot(state);
+    use_cases::selection::select_nodes_in_rect(state, min, max, additive);
     helpers::record_selection_if_changed(state, old_selected, old_anchor);
 }
 
 /// Selektiert Nodes innerhalb eines Lasso-Polygons.
 pub fn select_in_lasso(state: &mut AppState, polygon: &[glam::Vec2], additive: bool) {
-    use_cases::selection::select_nodes_in_lasso(state, polygon, additive);
     let (old_selected, old_anchor) = helpers::capture_selection_snapshot(state);
+    use_cases::selection::select_nodes_in_lasso(state, polygon, additive);
     helpers::record_selection_if_changed(state, old_selected, old_anchor);
 }
 
@@ -79,6 +79,14 @@ pub fn move_selected(state: &mut AppState, delta_world: glam::Vec2) {
 /// Startet einen Move-Lifecycle (nimmt Undo-Snapshot auf).
 pub fn begin_move(state: &mut AppState) {
     state.record_undo_snapshot();
+}
+
+/// Beendet den Move-Lifecycle und stoesst den Spatial-Index-Rebuild an.
+pub fn end_move(state: &mut AppState) {
+    if let Some(road_map) = state.road_map.as_mut() {
+        let road_map_mut = Arc::make_mut(road_map);
+        road_map_mut.rebuild_spatial_index();
+    }
 }
 
 /// Startet einen Rotation-Lifecycle (nimmt Undo-Snapshot auf).

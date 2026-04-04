@@ -15,7 +15,7 @@ Das `ui`-Modul enthält egui-UI-Komponenten (Menüs, Statusbar, Input-Handling, 
 - `defaults_panel.rs` — Linke Sidebar im Gruppen-Layout (Long-Press fuer Werkzeuge, RouteTool-Gruppen `Basics/Section/Analysis`, Defaults, Hintergrund)
 - `command_palette.rs` — Command Palette Overlay (Suche + katalogbasierte Intent-Auswahl; deaktivierte Route-Tools bleiben sichtbar und tragen ihren Disabled-Grund)
 - `properties.rs` — Properties-Panel (Detailanzeige selektierter Nodes)
-- `options_dialog/` — Optionen-Dialog für Laufzeit-Einstellungen (`mod.rs`, `sections.rs`)
+- `options_dialog/` — Optionen-Dialog fuer Laufzeit-Einstellungen (`mod.rs`, `sections/*.rs`)
 - `edit_panel.rs` — Schwebendes Edit-Panel; intern aufgeteilt in `edit_panel/group_panel.rs`, `edit_panel/route_tool_panel.rs` mit `route_tool_panel/curve_panel.rs` und `route_tool_panel/analysis_panel.rs`, sowie `edit_panel/streckenteilung_panel.rs`
 - `tool_preview.rs` — Tool-Preview-Overlay (Route-Tool-Vorschau im Viewport)
 - `input/` — Viewport-Input-Orchestrator (phasenbasierte Submodule)
@@ -353,6 +353,8 @@ pub fn render_edit_panel(
 
 Die Route-Tool-Konfiguration arbeitet hier bewusst nur noch ueber den egui-freien App-Vertrag `RouteToolPanelState`; konkrete Widget-Aenderungen emittieren `AppIntent::RouteToolPanelActionRequested { action }`, waehrend der breite `ToolManager` im Application-Layer gekapselt bleibt.
 
+`distance_wheel_step_m` wird intern an `edit_panel/route_tool_panel.rs` durchgereicht. Dort wird nur das boolesche Gate `wheel_enabled = distance_wheel_step_m > 0.0` abgeleitet; die eigentliche Widget-Logik fuer numerische Route-Tool- und Analysis-Felder bleibt in `ui::common::{apply_wheel_step_default_enabled, apply_wheel_step_usize}`.
+
 Im Gruppen-Bearbeitungsmodus enthält das Panel:
 - Checkbox für `options.show_all_group_boundaries` (Sichtbarkeit aller Boundary-Icons)
 - ComboBox „Einfahrt" und „Ausfahrt" — emittiert `AppIntent::SetGroupBoundaryNodes` bei Änderung
@@ -474,13 +476,22 @@ Kleine, wiederverwendbare Helfer fuer egui-Widgets. Werden von mehreren UI-Modul
 /// Schwellenwert fuer Scroll-Events – unterdrückt Rauschen bei kleinen Scroll-Bewegungen.
 pub(crate) const WHEEL_THRESHOLD: f32 = 0.5;
 
+/// Standard-Schrittweite fuer Mausrad-Anpassungen von Float-Werten.
+pub(crate) const DEFAULT_FLOAT_WHEEL_STEP: f32 = 0.1;
+
 /// Liefert fuer ein gehovertes Widget die Scroll-Richtung und konsumiert das Event.
+///
+/// Fuer diskrete Numerik-Anpassungen wird nur `raw_scroll_delta` ausgewertet,
+/// damit ein Wheel-Notch genau einen Schritt ausloest. Solange ein
+/// gehovertes Numeric-Widget Raw- oder Smooth-Scroll empfängt, wird das
+/// Scroll-Event konsumiert, damit umgebende ScrollAreas nicht parallel scrollen.
 pub(crate) fn wheel_dir(ui: &egui::Ui, response: &egui::Response) -> f32;
 
 /// Wendet Mausrad-Scrolling auf einen numerischen Wert an.
 ///
 /// Wenn die Response gehovert ist und ein Scroll-Event vorliegt,
 /// wird `value` um `step` in Scroll-Richtung veraendert und auf `range` geclampt.
+/// `Alt` vergroessert die Schrittweite (x10), `Ctrl` reduziert sie (x0.1).
 /// Gibt `true` zurueck wenn sich der Wert geaendert hat.
 pub(crate) fn apply_wheel_step(
     ui: &egui::Ui,
@@ -489,20 +500,51 @@ pub(crate) fn apply_wheel_step(
     step: f32,
     range: std::ops::RangeInclusive<f32>,
 ) -> bool
+
+/// Wendet Mausrad-Scrolling mit Standard-Schrittweite `0.1` auf einen Float-Wert an.
+pub(crate) fn apply_wheel_step_default(
+  ui: &egui::Ui,
+  response: &egui::Response,
+  value: &mut f32,
+  range: std::ops::RangeInclusive<f32>,
+) -> bool
+
+  /// Wendet den Float-Standardschritt (`0.1`) nur bei aktivem Wheel-Gate an.
+  pub(crate) fn apply_wheel_step_default_enabled(
+    ui: &egui::Ui,
+    response: &egui::Response,
+    value: &mut f32,
+    range: std::ops::RangeInclusive<f32>,
+    wheel_enabled: bool,
+  ) -> bool;
+
+  /// Wendet Mausrad-Scrolling mit Ganzzahl-Schritten auf einen `usize`-Wert an.
+  /// `Alt` vergroessert den Schritt (x10), `Ctrl` wird bei Ganzzahlen ignoriert.
+  pub(crate) fn apply_wheel_step_usize(
+    ui: &egui::Ui,
+    response: &egui::Response,
+    value: &mut usize,
+    range: std::ops::RangeInclusive<usize>,
+    wheel_enabled: bool,
+  ) -> bool;
 ```
 
-`wheel_dir()` ist der gemeinsame Low-Level-Helfer fuer Widgets, die Mausrad-Impulse selbst in diskrete Aktionen umsetzen muessen, etwa die Distanz-/Node-Felder in `properties/distances.rs` und `edit_panel/streckenteilung_panel.rs`.
+  `wheel_dir()` bleibt der gemeinsame Low-Level-Helfer fuer Widgets, die Mausrad-Impulse selbst in diskrete Aktionen umsetzen muessen. Richtung und Schritt werden weiterhin nur aus `raw_scroll_delta` abgeleitet, die Event-Konsumierung erfolgt bei gehoverten Numeric-Widgets aber bereits bei jedem wirksamen Raw-/Smooth-Scroll-Impuls, damit umgebende ScrollAreas keine Scroll-Through-Effekte zeigen.
+
+  `apply_wheel_step_default_enabled()` und `apply_wheel_step_usize()` werden in numerischen Route-Tool-Unterpanels inklusive `analysis_panel.rs` eingesetzt: Float-Werte arbeiten durchgaengig mit dem Standardschritt `0.1` plus Modifiern (`Alt` x10, `Ctrl` x0.1). Ganzzahlen nutzen `±1` als Basisschritt; mit `Alt` wird auf `±10` skaliert, `Ctrl` reduziert Ganzzahl-Schritte nicht. `edit_panel/route_tool_panel.rs` leitet dafuer einmalig `wheel_enabled = distance_wheel_step_m > 0.0` an alle Unterrenderer weiter.
+
+  Im Options-Dialog verwenden Komma-Float-Felder jetzt zentral `apply_wheel_step_default()` mit Standard-Schritt `0.1`. Bewusste Ausnahmen bleiben nur fuer Felder mit groberen Prozent-/Grad- oder ganzzahligen Pixel-Schritten bestehen.
 
 **Verwendung:**
 
 ```rust
-use crate::ui::common::apply_wheel_step;
+use crate::ui::common::apply_wheel_step_default;
 
 let r = ui.add(egui::DragValue::new(&mut opts.node_size_world));
-r.changed() | apply_wheel_step(ui, &r, &mut opts.node_size_world, 0.1, 0.1..=5.0);
+r.changed() | apply_wheel_step_default(ui, &r, &mut opts.node_size_world, 0.1..=5.0);
 ```
 
-Wird in `options_dialog/sections.rs` fuer alle 25 numerischen Options-Felder verwendet.
+Wird in den Float-Section-Renderern unter `options_dialog/sections/*.rs` fuer die Komma-Float-Felder des Options-Dialogs verwendet; Felder mit bewusst groberen Schrittweiten bleiben bei expliziten `apply_wheel_step()`-Aufrufen.
 
 ---
 
