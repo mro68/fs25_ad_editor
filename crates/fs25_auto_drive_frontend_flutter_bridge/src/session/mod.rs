@@ -23,7 +23,7 @@ fn build_snapshot(state: &AppState) -> EngineSessionSnapshot {
         active_tool: map_active_tool(state.editor.active_tool),
         status_message: state.ui.status_message.clone(),
         show_command_palette: state.ui.show_command_palette,
-        show_options_dialog: state.show_options_dialog,
+        show_options_dialog: state.ui.show_options_dialog,
         selection: EngineSelectionSnapshot {
             selected_node_ids: state.selection.selected_node_ids.iter().copied().collect(),
         },

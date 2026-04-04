@@ -1,10 +1,13 @@
 //! Use-Case-Funktionen fuer Heightmap-Verwaltung.
 
+use crate::app::ui_contract::{DialogRequest, DialogRequestKind};
 use crate::app::AppState;
 
 /// Oeffnet den Heightmap-Auswahl-Dialog.
 pub fn request_heightmap_dialog(state: &mut AppState) {
-    state.ui.show_heightmap_dialog = true;
+    state
+        .ui
+        .request_dialog(DialogRequest::pick_path(DialogRequestKind::Heightmap));
 }
 
 /// Entfernt die ausgewaehlte Heightmap.

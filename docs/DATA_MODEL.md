@@ -206,7 +206,6 @@ pub struct AppState {
     pub command_log: CommandLog,
     pub history: EditHistory,
     pub options: EditorOptions,
-    pub show_options_dialog: bool,
     pub group_registry: GroupRegistry,
     pub should_exit: bool,
 }
@@ -214,6 +213,8 @@ pub struct AppState {
 
 - Zentraler Laufzeitzustand fuer Controller/Handler/UI
 - `road_map` und `selection.selected_node_ids` sind `Arc`-basiert fuer guenstige Frame-Uebergaben
+- Dialog- und Tool-Fenster laufen semantisch ueber `UiState` plus `HostUiSnapshot`
+- Host-native Datei-/Pfad-Dialoge werden als `DialogRequest`-Queue in `UiState` gehalten
 
 ### SelectionState
 

@@ -535,6 +535,7 @@
 - ✅ Modul-Splits ohne API-Bruch: `app/handlers/route_tool.rs` und `ui/edit_panel.rs` intern in Submodule zerlegt, um Ausfuehrungs-/Panel-Logik klarer zu trennen
 - ✅ Route-Tool-Panel entkoppelt: App-/Tool-Vertraege liefern jetzt `RouteToolPanelState`/`RouteToolPanelAction` statt `egui`-Callbacks; das Floating-Panel rendert rein im UI-Layer
 - ✅ Tool-Kern-Remediation Phase 3: Host-Sync, Recreate, Drag, Tangenten, Chain-Input und Lasso sind wieder explizite Capabilities; Rotations- und Segment-Shortcuts sind zusaetzlich in `RouteToolRotate` und `RouteToolSegmentAdjustments` getrennt, damit keine No-Op-Fallen im Parking-/Segment-Shortcut-Pfad bleiben
+- ✅ Host-UI-Contracts Follow-up (2026-04-04, Schritt 1): Dialoge und Tool-Einstellungsfenster laufen ueber den einheitlichen Engine-Vertrag `PanelState`/`PanelAction`/`DialogRequest`/`DialogResult`; `AppController::build_host_ui_snapshot()` liefert die host-neutrale Surface, egui mappt `PanelAction`/`DialogResult` zentral auf `AppIntent`
 
 - **Vorherige Errungenschaften (gleicher Audit-Block):**
 - ✅ Parking-Geometrie modulbereichert: `parking/geometry.rs` → `parking/geometry/{mod,layout,blueprint,conversion}.rs`
