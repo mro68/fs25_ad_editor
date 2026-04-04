@@ -189,7 +189,9 @@ impl NodeRenderer {
         let new_fp = {
             let mut fp = RenderFingerprint::from_context(ctx, render_map);
             fp.dimmed_ptr = ctx.dimmed_node_ids as *const IndexSet<u64> as usize;
+            fp.dimmed_revision = ctx.dimmed_node_ids_revision;
             fp.selected_ptr = selected_node_ids as *const IndexSet<u64> as usize;
+            fp.selected_revision = ctx.selected_node_ids_revision;
             fp.quality = render_quality as u8;
             fp
         };

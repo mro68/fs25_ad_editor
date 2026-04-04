@@ -226,15 +226,30 @@ impl RenderCamera {
 
 #[derive(Clone)]
 pub struct RenderSceneFrameData {
+    /// Kamera des aktuellen Frames.
     pub camera: RenderCamera,
+    /// Viewport-Groesse in Pixeln [width, height].
     pub viewport_size: [f32; 2],
+    /// Render-Qualitaetsstufe des Frames.
     pub render_quality: RenderQuality,
+    /// Selektionsmenge fuer Highlighting.
     pub selected_node_ids: Arc<IndexSet<u64>>,
+    /// Monotone Revision der Selektionsmenge.
+    pub selected_node_ids_revision: u64,
+    /// Gibt an, ob ein Background-Asset vorhanden ist.
     pub has_background: bool,
+    /// Gibt an, ob der Background in diesem Frame sichtbar ist.
     pub background_visible: bool,
+    /// Editor-Optionen des Frames.
     pub options: Arc<EditorOptions>,
+    /// Hidden-Node-Menge fuer den Frame.
     pub hidden_node_ids: Arc<IndexSet<u64>>,
+    /// Monotone Revision der Hidden-Node-Menge.
+    pub hidden_node_ids_revision: u64,
+    /// Gedimmte Node-Menge fuer den Frame.
     pub dimmed_node_ids: Arc<IndexSet<u64>>,
+    /// Monotone Revision der Dimmed-Node-Menge.
+    pub dimmed_node_ids_revision: u64,
 }
 
 /// Read-only Daten fuer einen Render-Frame.
@@ -245,11 +260,14 @@ pub struct RenderScene {
     viewport_size: [f32; 2],
     render_quality: RenderQuality,
     selected_node_ids: Arc<IndexSet<u64>>,
+    selected_node_ids_revision: u64,
     has_background: bool,
     background_visible: bool,
     options: Arc<EditorOptions>,
     hidden_node_ids: Arc<IndexSet<u64>>,
+    hidden_node_ids_revision: u64,
     dimmed_node_ids: Arc<IndexSet<u64>>,
+    dimmed_node_ids_revision: u64,
 }
 
 impl RenderScene {
@@ -260,11 +278,14 @@ impl RenderScene {
             viewport_size: frame.viewport_size,
             render_quality: frame.render_quality,
             selected_node_ids: frame.selected_node_ids,
+            selected_node_ids_revision: frame.selected_node_ids_revision,
             has_background: frame.has_background,
             background_visible: frame.background_visible,
             options: frame.options,
             hidden_node_ids: frame.hidden_node_ids,
+            hidden_node_ids_revision: frame.hidden_node_ids_revision,
             dimmed_node_ids: frame.dimmed_node_ids,
+            dimmed_node_ids_revision: frame.dimmed_node_ids_revision,
         }
     }
 
@@ -298,6 +319,11 @@ impl RenderScene {
         self.selected_node_ids.as_ref()
     }
 
+    /// Monotone Revision der Selektionsmenge fuer Fingerprint-Invalidierung.
+    pub fn selected_node_ids_revision(&self) -> u64 {
+        self.selected_node_ids_revision
+    }
+
     pub fn background_visible(&self) -> bool {
         self.background_visible
     }
@@ -310,7 +336,17 @@ impl RenderScene {
         self.hidden_node_ids.as_ref()
     }
 
+    /// Monotone Revision der Hidden-Node-Menge fuer Fingerprint-Invalidierung.
+    pub fn hidden_node_ids_revision(&self) -> u64 {
+        self.hidden_node_ids_revision
+    }
+
     pub fn dimmed_node_ids(&self) -> &IndexSet<u64> {
         self.dimmed_node_ids.as_ref()
+    }
+
+    /// Monotone Revision der Dimmed-Node-Menge fuer Fingerprint-Invalidierung.
+    pub fn dimmed_node_ids_revision(&self) -> u64 {
+        self.dimmed_node_ids_revision
     }
 }

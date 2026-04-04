@@ -36,6 +36,8 @@ Zusatzdaten pro Frame:
 - `selected_node_ids` fuer Selection-Highlighting
 - `hidden_node_ids` fuer temporales Ausblenden von Nodes ohne Domain-Mutation
 - `dimmed_node_ids` fuer halbdurchsichtige Segment-Nodes
+- monotone Revisions-Token fuer `selected/hidden/dimmed`, damit Render-Fingerprints
+    auch in-place-Mutationen sicher invalidieren koennen
 - `options` als `Arc<EditorOptions>` fuer O(1)-Clones im Build-Pfad
 - `has_background` + `background_visible` fuer den Hintergrund-Renderpfad
 
@@ -43,6 +45,9 @@ Zusatzdaten pro Frame:
 
 - `has_map() -> bool` — Prueft ob ein RenderMap-Snapshot vorhanden ist
 - `has_background() -> bool` — Prueft ob fuer den Frame ein Hintergrundbild aktiv ist
+- `selected_node_ids_revision() -> u64` — Monotone Revision der Selektionsmenge
+- `hidden_node_ids_revision() -> u64` — Monotone Revision der Hidden-Menge
+- `dimmed_node_ids_revision() -> u64` — Monotone Revision der Dimmed-Menge
 
 ---
 
@@ -57,6 +62,14 @@ pub enum RenderAssetSnapshot {
     Background(RenderBackgroundAssetSnapshot),
 }
 
+pub struct RenderBackgroundAssetSnapshot {
+    pub image: Arc<DynamicImage>,
+    pub world_bounds: RenderBackgroundWorldBounds,
+    pub scale: f32,
+    pub asset_revision: u64,
+    pub transform_revision: u64,
+}
+
 pub struct RenderBackgroundWorldBounds {
     pub min_x: f32,
     pub max_x: f32,
@@ -69,14 +82,29 @@ impl RenderBackgroundWorldBounds {
 }
 ```
 
-`RenderAssetsSnapshot` transportiert derzeit den Background-Asset-Snapshot inklusive Arc-Bild, Welt-Bounds, Scale und monotonen Revisionen fuer Asset- und Transform-Aenderungen. Hosts koennen damit Upload/Update/Clear lokal steuern, ohne GPU-Zustand in `AppState` zurueckzuschreiben.
+`RenderAssetsSnapshot` transportiert derzeit den Background-Asset-Snapshot inklusive Arc-Bild, Welt-Bounds, Scale und monotonen Revisionen fuer Asset- und Transform-Aenderungen. `RenderBackgroundWorldBounds` bleibt dabei im Domain-System X/Z; Host-Adapter duerfen `min_z`/`max_z` vor dem Upload auf ihre 2D-Y-Achse mappen. Hosts koennen damit Upload/Update/Clear lokal steuern, ohne GPU-Zustand in `AppState` zurueckzuschreiben.
 
 **Methoden:**
 
+- `RenderBackgroundWorldBounds::new(min_x, max_x, min_z, max_z) -> Self` — Expliziter Konstruktor fuer host-neutrale Bounds
+- `RenderAssetSnapshot::background(snapshot) -> RenderAssetSnapshot` — Komfort-Konstruktor fuer das Background-Asset
+- `RenderAssetSnapshot::as_background() -> Option<&RenderBackgroundAssetSnapshot>` — Typisierter Zugriff auf die Background-Variante
+- `RenderAssetsSnapshot::new(asset_rev, transform_rev, assets) -> Self` — Baut den kompletten Asset-Snapshot samt globaler Revisionen
 - `background_asset_revision() -> u64` — Revision fuer Bildinhalt/Existenz
 - `background_transform_revision() -> u64` — Revision fuer Bounds/Skalierung
 - `assets() -> &[RenderAssetSnapshot]` — Alle enthaltenen Assets
 - `background() -> Option<&RenderBackgroundAssetSnapshot>` — Direkter Zugriff auf das Background-Asset
+
+**Beispiel (Host-Sync):**
+
+```rust
+let assets = controller.build_render_assets(&state);
+
+if let Some(background) = assets.background() {
+    assert_eq!(background.asset_revision, assets.background_asset_revision());
+    assert_eq!(background.transform_revision, assets.background_transform_revision());
+}
+```
 
 ---
 

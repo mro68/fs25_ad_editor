@@ -178,14 +178,17 @@ fn render_map_snapshot(state: &AppState) -> Option<Arc<RenderMap>> {
 pub fn build(state: &AppState, viewport_size: [f32; 2]) -> RenderScene {
     // Arc einmal klonen — wiederverwendet fuer selected_node_ids UND hidden_node_ids
     let selected_arc = state.selection.selected_node_ids.clone();
+    let selected_revision = state.selection.generation;
 
     // Wenn Distanzen-Vorschau aktiv + hide_original → selektierte Nodes ausblenden.
     // Statt nochmals zu klonen verwenden wir den gleichen Arc (billiger O(1)-Clone).
-    let hidden_node_ids = if state.ui.distanzen.should_hide_original() {
+    let hide_original = state.ui.distanzen.should_hide_original();
+    let hidden_node_ids = if hide_original {
         Arc::clone(&selected_arc)
     } else {
         empty_hidden_ids()
     };
+    let hidden_revision = if hide_original { selected_revision } else { 0 };
 
     // Gedimmte Nodes: alle anderen Nodes des Segments wenn 1 Segment-Node selektiert.
     // Cache-Hit wenn weder Selektion noch Registry seit dem letzten Build geaendert haben.
@@ -202,6 +205,9 @@ pub fn build(state: &AppState, viewport_size: [f32; 2]) -> RenderScene {
             }
         }
     };
+    let dimmed_revision = selected_revision
+        .rotate_left(1)
+        .wrapping_add(state.group_registry.dimmed_generation);
 
     RenderScene::new(
         render_map_snapshot(state),
@@ -210,11 +216,14 @@ pub fn build(state: &AppState, viewport_size: [f32; 2]) -> RenderScene {
             viewport_size,
             render_quality: state.view.render_quality,
             selected_node_ids: selected_arc,
+            selected_node_ids_revision: selected_revision,
             has_background: state.view.background_map.is_some(),
             background_visible: state.view.background_visible,
             options: state.options_arc(),
             hidden_node_ids,
+            hidden_node_ids_revision: hidden_revision,
             dimmed_node_ids,
+            dimmed_node_ids_revision: dimmed_revision,
         },
     )
 }
@@ -318,5 +327,41 @@ mod tests {
         let second = render_map_snapshot(&state).expect("Snapshot vorhanden");
         assert!(!Arc::ptr_eq(&first, &second));
         assert_eq!(second.marker_count(), 1);
+    }
+
+    #[test]
+    fn build_render_scene_increments_selection_revision_after_selection_mutation() {
+        let mut state = make_state();
+
+        let first = super::build(&state, [1280.0, 720.0]);
+        state.selection.ids_mut().insert(1);
+        let second = super::build(&state, [1280.0, 720.0]);
+
+        assert!(
+            second.selected_node_ids_revision() > first.selected_node_ids_revision(),
+            "Selektions-Revision muss nach Mutation steigen"
+        );
+    }
+
+    #[test]
+    fn build_render_scene_tracks_hidden_revision_when_hide_original_is_active() {
+        let mut state = make_state();
+        state.ui.distanzen.active = true;
+        state.ui.distanzen.hide_original = true;
+
+        let first = super::build(&state, [1280.0, 720.0]);
+        assert_eq!(first.hidden_node_ids_revision(), 0);
+
+        state.selection.ids_mut().insert(1);
+        let second = super::build(&state, [1280.0, 720.0]);
+
+        assert!(
+            second.hidden_node_ids_revision() > first.hidden_node_ids_revision(),
+            "Hidden-Revision muss der Selektion folgen solange hide_original aktiv ist"
+        );
+
+        state.ui.distanzen.active = false;
+        let third = super::build(&state, [1280.0, 720.0]);
+        assert_eq!(third.hidden_node_ids_revision(), 0);
     }
 }
