@@ -37,7 +37,6 @@ impl NodeRenderer {
         shader: &wgpu::ShaderModule,
         target_config: RendererTargetConfig,
     ) -> Self {
-
         // Uniform-Buffer erstellen
         let uniform_buffer = device.create_buffer(&wgpu::BufferDescriptor {
             label: Some("Uniform Buffer"),

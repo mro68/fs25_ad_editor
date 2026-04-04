@@ -16,18 +16,20 @@ pub fn build(state: &AppState) -> RenderAssetsSnapshot {
 
     if let Some(background) = state.view.background_map.as_deref() {
         let world_bounds = background.world_bounds();
-        assets.push(RenderAssetSnapshot::background(RenderBackgroundAssetSnapshot {
-            image: background.image_arc(),
-            world_bounds: RenderBackgroundWorldBounds::new(
-                world_bounds.min_x,
-                world_bounds.max_x,
-                world_bounds.min_z,
-                world_bounds.max_z,
-            ),
-            scale: state.view.background_scale,
-            asset_revision: state.view.background_asset_revision,
-            transform_revision: state.view.background_transform_revision,
-        }));
+        assets.push(RenderAssetSnapshot::background(
+            RenderBackgroundAssetSnapshot {
+                image: background.image_arc(),
+                world_bounds: RenderBackgroundWorldBounds::new(
+                    world_bounds.min_x,
+                    world_bounds.max_x,
+                    world_bounds.min_z,
+                    world_bounds.max_z,
+                ),
+                scale: state.view.background_scale,
+                asset_revision: state.view.background_asset_revision,
+                transform_revision: state.view.background_transform_revision,
+            },
+        ));
     }
 
     RenderAssetsSnapshot::new(
@@ -68,9 +70,7 @@ mod tests {
         state.view.background_transform_revision = 3;
 
         let snapshot = build(&state);
-        let background = snapshot
-            .background()
-            .expect("Background-Snapshot erwartet");
+        let background = snapshot.background().expect("Background-Snapshot erwartet");
 
         assert_eq!(snapshot.background_asset_revision(), 2);
         assert_eq!(snapshot.background_transform_revision(), 3);

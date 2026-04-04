@@ -12,7 +12,7 @@ Das Root-Package `fs25_auto_drive_editor` re-exportiert die wichtigsten Einstieg
 |---|---|
 | `app` | `AppController`, `AppState`, Intents, Commands, Handler, Use-Cases und Tool-Vertraege |
 | `core` | `RoadMap`, Nodes, Connections, Kamera, Spatial-Index, BackgroundMap, Farmland und Heightmap |
-| `shared` | `RenderScene`, `RenderAssetsSnapshot`, `RenderQuality`, `EditorOptions`, i18n und weitere neutrale DTOs |
+| `shared` | `RenderScene`, `RenderAssetsSnapshot`, `RenderAssetSnapshot`, `RenderBackgroundWorldBounds`, `RenderQuality`, `EditorOptions`, i18n und weitere neutrale DTOs |
 | `xml` | AutoDrive- und Curseplay-Import/Export |
 
 ## Wichtige oeffentliche Typen
@@ -26,6 +26,7 @@ Das Root-Package `fs25_auto_drive_editor` re-exportiert die wichtigsten Einstieg
 | `RoadMap` | HashMap-basiertes Strassennetz samt Spatial-Index |
 | `RenderScene` | Host-neutraler per-frame Render-Snapshot fuer Frontends und Renderer |
 | `RenderAssetsSnapshot` | Host-neutraler Asset-Snapshot fuer langlebige Renderdaten (z. B. Background) |
+| `RenderAssetSnapshot` | Einzelnes langlebiges Render-Asset innerhalb des Host-Vertrags |
 
 ## Oeffentliche Funktionen und Re-Exports
 

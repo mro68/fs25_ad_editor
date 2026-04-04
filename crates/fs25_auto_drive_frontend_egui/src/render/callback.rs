@@ -4,21 +4,21 @@ use super::Renderer;
 use crate::shared::RenderScene;
 use std::sync::{Arc, Mutex};
 
-/// Render-Daten fuer den wgpu Callback
+/// Per-Frame-Daten fuer den egui/wgpu-Callback.
 pub struct WgpuRenderData {
-    /// Die Render-Szene fuer diesen Frame
+    /// Read-only Render-Szene fuer diesen Paint-Callback.
     pub scene: RenderScene,
 }
 
-/// Custom wgpu Render Callback – kapselt die Renderer-Interaktion fuer egui
+/// egui-Callback, der den Host-Adapter in den benutzerdefinierten Render-Pass einhaengt.
 pub struct WgpuRenderCallback {
-    /// Geteilter Renderer-Zustand (thread-safe)
+    /// Geteilter Host-Adapter-Zustand.
     pub renderer: Arc<Mutex<Renderer>>,
-    /// Render-Daten fuer diesen Frame
+    /// Per-Frame-Daten fuer diesen Callback-Aufruf.
     pub render_data: WgpuRenderData,
-    /// wgpu Device fuer GPU-Ressourcen
+    /// wgpu-Device fuer GPU-Ressourcen.
     pub device: eframe::wgpu::Device,
-    /// wgpu Queue fuer GPU-Befehle
+    /// wgpu-Queue fuer GPU-Befehle.
     pub queue: eframe::wgpu::Queue,
 }
 

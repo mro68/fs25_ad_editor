@@ -35,6 +35,10 @@ fn build_snapshot(state: &AppState) -> EngineSessionSnapshot {
 }
 
 /// Gekoppelter Render-Snapshot fuer Hosts ohne direkte State-Inspektion.
+///
+/// Hosts koennen damit den per-frame Render-Vertrag und die langlebigen
+/// Render-Assets als konsistentes read-only Paar abrufen, ohne `AppState`
+/// direkt auszulesen.
 pub struct EngineRenderFrameSnapshot {
     /// Per-frame Render-Vertrag mit Kamera-, Sichtbarkeits- und Geometriedaten.
     pub scene: RenderScene,
@@ -94,7 +98,8 @@ impl FlutterBridgeSession {
 
     /// Baut den aktuellen per-frame Render-Vertrag fuer den angegebenen Viewport.
     pub fn build_render_scene(&self, viewport_size: [f32; 2]) -> RenderScene {
-        self.controller.build_render_scene(&self.state, viewport_size)
+        self.controller
+            .build_render_scene(&self.state, viewport_size)
     }
 
     /// Baut den aktuellen Render-Asset-Snapshot.
@@ -103,6 +108,10 @@ impl FlutterBridgeSession {
     }
 
     /// Baut einen gekoppelten Render-Snapshot aus Szene und Assets.
+    ///
+    /// Diese Hilfsmethode ist fuer Hosts gedacht, die pro Tick genau einen
+    /// read-only Render-Output benoetigen und Szene/Assets nicht separat pollen
+    /// wollen.
     pub fn build_render_frame(&self, viewport_size: [f32; 2]) -> EngineRenderFrameSnapshot {
         EngineRenderFrameSnapshot {
             scene: self.build_render_scene(viewport_size),

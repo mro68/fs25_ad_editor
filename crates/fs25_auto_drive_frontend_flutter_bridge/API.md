@@ -47,7 +47,11 @@ let mut session = FlutterBridgeSession::new();
 session.dispatch(AppIntent::CommandPaletteToggled)?;
 
 let snapshot = session.snapshot();
+let frame = session.build_render_frame([1280.0, 720.0]);
+
 assert!(snapshot.show_command_palette);
+assert_eq!(frame.scene.viewport_size(), [1280.0, 720.0]);
+assert_eq!(frame.assets.background_asset_revision(), 0);
 ```
 
 ## Datenfluss
@@ -58,11 +62,15 @@ flowchart LR
 	SESSION --> CTRL[AppController]
 	CTRL --> STATE[AppState]
 	STATE --> SNAP[EngineSessionSnapshot]
+	SESSION --> FRAME[EngineRenderFrameSnapshot]
 	CTRL --> RENDER_SCENE[RenderScene]
 	CTRL --> RENDER_ASSETS[RenderAssetsSnapshot]
+	FRAME --> HOST
+	FRAME --> RENDER_SCENE
+	FRAME --> RENDER_ASSETS
 	SNAP --> HOST
-	RENDER_SCENE --> HOST
-	RENDER_ASSETS --> HOST
+	RENDER_SCENE -. alternativ separat .-> HOST
+	RENDER_ASSETS -. alternativ separat .-> HOST
 ```
 
 ## Scope-Cut

@@ -8,6 +8,10 @@ use image::DynamicImage;
 use std::sync::Arc;
 
 /// Weltkoordinaten-Bereich eines Background-Assets.
+///
+/// Die Engine beschreibt Hintergruende weiterhin im Domain-Koordinatensystem
+/// X/Z. Host-Adapter koennen `min_z`/`max_z` bei Bedarf auf ihre 2D-Y-Achse
+/// abbilden, bevor sie das Asset in einen Render-Core hochladen.
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct RenderBackgroundWorldBounds {
     /// Linke Kante in Weltkoordinaten.
@@ -32,7 +36,11 @@ impl RenderBackgroundWorldBounds {
     }
 }
 
-/// Snapshot eines Background-Assets fuer den Renderer.
+/// Snapshot eines Background-Assets fuer Renderer-Hosts.
+///
+/// Der Snapshot enthaelt nur read-only Daten und keinerlei GPU-Zustand. Hosts
+/// entscheiden lokal, ob sie aus den Revisionen ein Upload, Update oder Clear
+/// ableiten.
 #[derive(Debug, Clone)]
 pub struct RenderBackgroundAssetSnapshot {
     /// Hintergrundbild als geteiltes Arc-Asset.
@@ -48,6 +56,9 @@ pub struct RenderBackgroundAssetSnapshot {
 }
 
 /// Einzelner Render-Asset-Snapshot.
+///
+/// Der Enum ist absichtlich offen fuer zusaetzliche langlebige Assets. Aktuell
+/// existiert nur die Background-Variante.
 #[derive(Debug, Clone)]
 pub enum RenderAssetSnapshot {
     /// Background-Asset inklusive Bild, Bounds und Revisionen.
@@ -69,6 +80,9 @@ impl RenderAssetSnapshot {
 }
 
 /// Sammlung aller expliziten Render-Assets fuer einen Host.
+///
+/// Hosts koennen die globalen Revisionen mit lokalem Upload-Zustand
+/// vergleichen, ohne Render-Ressourcen in den `AppState` zurueckzuschreiben.
 #[derive(Debug, Clone, Default)]
 pub struct RenderAssetsSnapshot {
     background_asset_revision: u64,

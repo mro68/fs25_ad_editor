@@ -98,7 +98,6 @@ impl MarkerRenderer {
         shader: &wgpu::ShaderModule,
         target_config: RendererTargetConfig,
     ) -> Self {
-
         // Pin-Icon-SVG laden, rasterisieren und als wgpu-Textur erstellen
         let svg_str = include_str!("../../../assets/icons/icon_map_pin.svg");
         let img = rasterize_svg(svg_str, MARKER_OUTLINE_WIDTH);

@@ -11,7 +11,7 @@ Dieser Plan trennt fachliche Verantwortlichkeiten in Workspace-Crates mit klaren
 - Engine (`crates/fs25_auto_drive_engine/src/{app,core,shared,xml}`): host-neutrale Fachlogik
 - Render-Core (`crates/fs25_auto_drive_render_wgpu/src/*`): host-neutraler wgpu-Renderer-Kern
 - Egui-Frontend (`crates/fs25_auto_drive_frontend_egui/src/{ui,editor_app,runtime,render}`): Desktop-Host, egui-UI und Render-Adapter
-- Flutter-Bridge (`crates/fs25_auto_drive_frontend_flutter_bridge/src/{session,dto}`): kleine Session- und Snapshot-Seams ohne Flutter-SDK-Kopplung
+- Flutter-Bridge (`crates/fs25_auto_drive_frontend_flutter_bridge/src/{session,dto}`): kleine Session-, DTO- und Render-Frame-Seams ohne Flutter-SDK-Kopplung
 - Overview-Crate (`crates/fs25_map_overview/src/*`): Karten-/Farmland-Generierung
 
 Kernfluss: **Input -> AppIntent -> AppController -> AppCommand -> AppState/Domain -> RenderScene + RenderAssetsSnapshot -> Host-Adapter -> Renderer-Core**.
@@ -264,6 +264,7 @@ Numerische Mausrad-Interaktion bleibt bewusst im UI-Layer: `ui::common` kapselt 
 - Egui-Callback und Fenster-Glue (`WgpuRenderCallback`)
 - Adaptiert Hostzustand (`egui_wgpu::RenderState`) auf `fs25_auto_drive_render_wgpu::Renderer`
 - Fuehrt Asset-Sync ueber `RenderAssetsSnapshot` und Revisionszaehler aus
+- Mappt Engine-Bounds (`min_x/max_x/min_z/max_z`) beim Background-Upload auf den 2D-Render-Core (`min_x/max_x/min_y/max_y`)
 
 **Darf nicht**
 
@@ -383,6 +384,15 @@ pub struct RenderAssetsSnapshot {
   // private Felder
 }
 
+pub enum RenderAssetSnapshot {
+  Background(RenderBackgroundAssetSnapshot),
+}
+
+pub struct EngineRenderFrameSnapshot {
+  pub scene: RenderScene,
+  pub assets: RenderAssetsSnapshot,
+}
+
 // enthaelt intern:
 // - RenderMap-Snapshot (Nodes, Connections, Marker, KD-Index)
 // - RenderCamera-Snapshot
@@ -402,7 +412,7 @@ impl fs25_auto_drive_render_wgpu::Renderer {
 }
 ```
 
-`render_scene::build()` baut den render-seitigen `RenderMap`-Snapshot nur bei geaenderter `RoadMap::render_cache_key()` neu auf und legt ihn in `AppState::render_map_cache` ab. Jeder Rebuild protokolliert `nodes`, `connections`, `markers` und `approx_bytes`, damit Performance-Reports neben Laufzeiten auch die Snapshot-Groesse desselben Datensatzes dokumentieren koennen. `render_assets::build()` liefert parallel den host-neutralen Asset-Snapshot; Hintergrund-Sync laeuft ueber `background_asset_revision`/`background_transform_revision` statt Dirty-Flags.
+`render_scene::build()` baut den render-seitigen `RenderMap`-Snapshot nur bei geaenderter `RoadMap::render_cache_key()` neu auf und legt ihn in `AppState::render_map_cache` ab. Jeder Rebuild protokolliert `nodes`, `connections`, `markers` und `approx_bytes`, damit Performance-Reports neben Laufzeiten auch die Snapshot-Groesse desselben Datensatzes dokumentieren koennen. `render_assets::build()` liefert parallel den host-neutralen Asset-Snapshot; Hintergrund-Sync laeuft ueber `background_asset_revision`/`background_transform_revision` statt Dirty-Flags. Die egui-Integrationsschale vergleicht diese Revisionen gegen ihre letzten Upload-Staende; die Flutter-Bridge kann alternativ `EngineRenderFrameSnapshot` als gekoppelten read-only Render-Output liefern.
 
 ## Event- und Render-Fluss
 
@@ -557,7 +567,7 @@ crates/
 - Background-Dirty-Flag durch monotone Asset-/Transform-Revisionen ersetzt
 - `fs25_auto_drive_render_wgpu` als host-neutralen Renderer-Core extrahiert
 - egui-`render` auf Host-Adapter reduziert (Callback bleibt host-spezifisch)
-- Flutter-Bridge exponiert read-only `build_render_scene()`/`build_render_assets()`/`build_render_frame()`
+- Flutter-Bridge exponiert read-only `build_render_scene()`/`build_render_assets()`/`build_render_frame()`; letzteres liefert `EngineRenderFrameSnapshot`
 
 ## Definition of Done
 

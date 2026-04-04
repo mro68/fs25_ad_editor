@@ -120,7 +120,6 @@ impl BackgroundRenderer {
         shader: &wgpu::ShaderModule,
         target_config: RendererTargetConfig,
     ) -> Self {
-
         // Uniform-Buffer erstellen
         let uniform_buffer = device.create_buffer(&wgpu::BufferDescriptor {
             label: Some("Background Uniform Buffer"),
