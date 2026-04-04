@@ -17,7 +17,6 @@ mod intent_mapping;
 pub mod render_assets;
 /// Builder fuer Render-Szenen aus dem AppState.
 pub mod render_scene;
-mod viewport_overlay;
 /// Application State — zentrale Datenhaltung (View, Editor, Selektion, Dialoge).
 pub mod state;
 /// App-weiter Vertrag fuer Route-Tool-Identitaeten und Ankerdaten.
@@ -30,6 +29,7 @@ pub mod tools;
 pub mod ui_contract;
 /// Mutierende Use-Case-Funktionen fuer alle Editing-Operationen.
 pub mod use_cases;
+mod viewport_overlay;
 
 use self::tools::field_boundary::geometry::RingNodeKind;
 

@@ -3,9 +3,9 @@
 use eframe::egui;
 use glam::Vec2;
 
-use crate::app::ui_contract::ClipboardOverlaySnapshot;
 use crate::app::state::Clipboard;
 use crate::app::tools::ToolPreview;
+use crate::app::ui_contract::ClipboardOverlaySnapshot;
 use crate::app::{Camera2D, ConnectionDirection, ConnectionPriority};
 use crate::shared::EditorOptions;
 
