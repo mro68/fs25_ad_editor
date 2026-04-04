@@ -1,0 +1,20 @@
+[package]
+name = "fs25_auto_drive_engine"
+version = "1.7.0"
+edition = "2021"
+
+[lib]
+path = "src/lib.rs"
+
+[dependencies]
+anyhow = "1.0.102"
+fs25_map_overview = { path = "../fs25_map_overview" }
+glam = { version = "0.32.1", features = ["serde"] }
+image = { version = "0.25", features = ["dds", "png", "jpeg"] }
+indexmap = "2"
+kiddo = "5.3.0"
+log = "0.4"
+quick-xml = "0.39.2"
+serde = { version = "1", features = ["derive"] }
+toml = "0.9.8"
+zip = { version = "8.3.0", default-features = false, features = ["deflate"] }

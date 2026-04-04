@@ -142,7 +142,12 @@ impl RoadMap {
         self.mark_render_dirty();
     }
 
-    pub(crate) fn render_cache_key(&self) -> (u64, u64) {
+    /// Liefert den render-relevanten Cache-Schluessel der Karte.
+    ///
+    /// Der Schluessel kombiniert eine stabile Instanz-ID mit einer Revision,
+    /// die bei renderrelevanten Mutationen erhoeht wird. Frontends koennen damit
+    /// gecachte Render-Snapshots invalidieren, ohne Core-Typen vergleichen zu muessen.
+    pub fn render_cache_key(&self) -> (u64, u64) {
         (self.render_instance_id, self.render_revision)
     }
 

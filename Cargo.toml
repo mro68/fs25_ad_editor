@@ -1,5 +1,5 @@
 [workspace]
-members = [".", "crates/fs25_map_overview"]
+members = [".", "crates/fs25_auto_drive_engine", "crates/fs25_map_overview"]
 
 [package]
 name = "FS25-AutoDrive-Editor"
@@ -31,6 +31,8 @@ name = "tool_preview_hotpath_bench"
 harness = false
 
 [dependencies]
+fs25_auto_drive_engine = { path = "crates/fs25_auto_drive_engine" }
+
 # UI Framework
 egui = "0.33.3"
 eframe = { version = "0.33.3", default-features = true, features = [

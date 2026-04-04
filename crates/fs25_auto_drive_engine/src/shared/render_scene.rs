@@ -12,7 +12,7 @@ use std::sync::Arc;
 
 /// Render-seitige Klassifikation eines Nodes.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub(crate) enum RenderNodeKind {
+pub enum RenderNodeKind {
     /// Standard-Node ohne besondere Warn- oder Subprio-Faerbung.
     Regular,
     /// Subpriorisierter Node.
@@ -23,7 +23,7 @@ pub(crate) enum RenderNodeKind {
 
 /// Render-seitige Node-Daten ohne Domain-Abhaengigkeit.
 #[derive(Debug, Clone, Copy)]
-pub(crate) struct RenderNode {
+pub struct RenderNode {
     /// Stabile Node-ID fuer Auswahl- und Sichtbarkeitsmengen.
     pub id: u64,
     /// Weltposition des Nodes.
@@ -36,7 +36,7 @@ pub(crate) struct RenderNode {
 
 /// Render-seitige Richtungsklassifikation einer Verbindung.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub(crate) enum RenderConnectionDirection {
+pub enum RenderConnectionDirection {
     /// Pfeil in Start-zu-Ende-Richtung.
     Regular,
     /// Bidirektionale Verbindung ohne Pfeil.
@@ -47,7 +47,7 @@ pub(crate) enum RenderConnectionDirection {
 
 /// Render-seitige Prioritaetsklassifikation einer Verbindung.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub(crate) enum RenderConnectionPriority {
+pub enum RenderConnectionPriority {
     /// Normale Verbindung.
     Regular,
     /// Subpriorisierte Verbindung.
@@ -56,7 +56,7 @@ pub(crate) enum RenderConnectionPriority {
 
 /// Render-seitige Verbindung mit bereits aufgeloester Geometrie.
 #[derive(Debug, Clone, Copy)]
-pub(crate) struct RenderConnection {
+pub struct RenderConnection {
     /// Start-Node-ID fuer Hidden-Filtering.
     pub start_id: u64,
     /// End-Node-ID fuer Hidden-Filtering.
@@ -73,7 +73,7 @@ pub(crate) struct RenderConnection {
 
 /// Render-seitige Marker-Daten mit bereits aufgeloester Position.
 #[derive(Debug, Clone, Copy)]
-pub(crate) struct RenderMarker {
+pub struct RenderMarker {
     /// Weltposition des Markers.
     pub position: Vec2,
 }
@@ -150,7 +150,7 @@ impl RenderSpatialIndex {
 
 /// Render-spezifischer Snapshot einer Karte.
 #[derive(Debug)]
-pub(crate) struct RenderMap {
+pub struct RenderMap {
     nodes: HashMap<u64, RenderNode>,
     connections: Vec<RenderConnection>,
     markers: Vec<RenderMarker>,
@@ -158,7 +158,7 @@ pub(crate) struct RenderMap {
 }
 
 impl RenderMap {
-    pub(crate) fn new(
+    pub fn new(
         nodes: HashMap<u64, RenderNode>,
         connections: Vec<RenderConnection>,
         markers: Vec<RenderMarker>,
@@ -172,38 +172,38 @@ impl RenderMap {
         }
     }
 
-    pub(crate) fn node(&self, node_id: &u64) -> Option<&RenderNode> {
+    pub fn node(&self, node_id: &u64) -> Option<&RenderNode> {
         self.nodes.get(node_id)
     }
 
-    pub(crate) fn nodes_within_rect_into(&self, min: Vec2, max: Vec2, out: &mut Vec<u64>) {
+    pub fn nodes_within_rect_into(&self, min: Vec2, max: Vec2, out: &mut Vec<u64>) {
         self.spatial_index.within_rect_into(min, max, out);
     }
 
-    pub(crate) fn connections(&self) -> &[RenderConnection] {
+    pub fn connections(&self) -> &[RenderConnection] {
         &self.connections
     }
 
-    pub(crate) fn markers(&self) -> &[RenderMarker] {
+    pub fn markers(&self) -> &[RenderMarker] {
         &self.markers
     }
 
-    pub(crate) fn node_count(&self) -> usize {
+    pub fn node_count(&self) -> usize {
         self.nodes.len()
     }
 
-    pub(crate) fn marker_count(&self) -> usize {
+    pub fn marker_count(&self) -> usize {
         self.markers.len()
     }
 
-    pub(crate) fn connection_count(&self) -> usize {
+    pub fn connection_count(&self) -> usize {
         self.connections.len()
     }
 }
 
 /// Render-seitige Kameradaten ohne Core-Abhaengigkeit.
 #[derive(Debug, Clone, Copy)]
-pub(crate) struct RenderCamera {
+pub struct RenderCamera {
     /// Kameraposition in Weltkoordinaten.
     pub position: Vec2,
     /// Zoom-Faktor des Frames.
@@ -211,21 +211,21 @@ pub(crate) struct RenderCamera {
 }
 
 impl RenderCamera {
-    pub(crate) fn new(position: Vec2, zoom: f32) -> Self {
+    pub fn new(position: Vec2, zoom: f32) -> Self {
         Self { position, zoom }
     }
 
-    pub(crate) fn view_matrix(&self) -> Mat3 {
+    pub fn view_matrix(&self) -> Mat3 {
         Mat3::from_translation(-self.position)
     }
 
-    pub(crate) fn world_per_pixel(&self, viewport_height: f32) -> f32 {
+    pub fn world_per_pixel(&self, viewport_height: f32) -> f32 {
         2.0 * CAMERA_BASE_WORLD_EXTENT / (self.zoom * viewport_height.max(1.0))
     }
 }
 
 #[derive(Clone)]
-pub(crate) struct RenderSceneFrameData {
+pub struct RenderSceneFrameData {
     pub camera: RenderCamera,
     pub viewport_size: [f32; 2],
     pub render_quality: RenderQuality,
@@ -253,7 +253,7 @@ pub struct RenderScene {
 }
 
 impl RenderScene {
-    pub(crate) fn new(map: Option<Arc<RenderMap>>, frame: RenderSceneFrameData) -> Self {
+    pub fn new(map: Option<Arc<RenderMap>>, frame: RenderSceneFrameData) -> Self {
         Self {
             map,
             camera: frame.camera,
@@ -278,39 +278,39 @@ impl RenderScene {
         self.has_background
     }
 
-    pub(crate) fn map(&self) -> Option<&RenderMap> {
+    pub fn map(&self) -> Option<&RenderMap> {
         self.map.as_deref()
     }
 
-    pub(crate) fn camera(&self) -> &RenderCamera {
+    pub fn camera(&self) -> &RenderCamera {
         &self.camera
     }
 
-    pub(crate) fn viewport_size(&self) -> [f32; 2] {
+    pub fn viewport_size(&self) -> [f32; 2] {
         self.viewport_size
     }
 
-    pub(crate) fn render_quality(&self) -> RenderQuality {
+    pub fn render_quality(&self) -> RenderQuality {
         self.render_quality
     }
 
-    pub(crate) fn selected_node_ids(&self) -> &IndexSet<u64> {
+    pub fn selected_node_ids(&self) -> &IndexSet<u64> {
         self.selected_node_ids.as_ref()
     }
 
-    pub(crate) fn background_visible(&self) -> bool {
+    pub fn background_visible(&self) -> bool {
         self.background_visible
     }
 
-    pub(crate) fn options(&self) -> &EditorOptions {
+    pub fn options(&self) -> &EditorOptions {
         self.options.as_ref()
     }
 
-    pub(crate) fn hidden_node_ids(&self) -> &IndexSet<u64> {
+    pub fn hidden_node_ids(&self) -> &IndexSet<u64> {
         self.hidden_node_ids.as_ref()
     }
 
-    pub(crate) fn dimmed_node_ids(&self) -> &IndexSet<u64> {
+    pub fn dimmed_node_ids(&self) -> &IndexSet<u64> {
         self.dimmed_node_ids.as_ref()
     }
 }
