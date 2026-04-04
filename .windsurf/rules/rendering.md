@@ -12,9 +12,11 @@ Fluessiges Rendering von 100k+ Punkten und Verbindungen auf der GPU.
 
 ## Render-Vertrag
 
-- `src/render/*` konsumiert ausschliesslich `RenderScene` aus `shared` und render-eigene Upload-Daten.
-- Core-Typen wie `RoadMap`, `Camera2D`, `BackgroundMap` oder `WorldBounds` duerfen nicht im Render-Layer auftauchen.
+- `crates/fs25_auto_drive_render_wgpu/src/*` konsumiert ausschliesslich `RenderScene` aus `shared` und render-eigene Upload-Daten.
+- Core-Typen wie `RoadMap`, `Camera2D`, `BackgroundMap` oder `WorldBounds` duerfen nicht im Render-Core auftauchen.
 - App baut einen gecachten `RenderMap`-Snapshot (Nodes, Connections, Marker, KD-Index); der Render-Hotpath arbeitet nur auf diesem Snapshot.
+- App liefert Assets getrennt als `RenderAssetsSnapshot`; Hintergrund-Sync nutzt `background_asset_revision` und `background_transform_revision`.
+- `crates/fs25_auto_drive_frontend_egui/src/render/*` bleibt Host-Adapter (Callback + Glue) ueber dem Render-Core.
 
 ## wgpu Pipeline
 
@@ -57,10 +59,10 @@ struct Uniforms {
 
 ## Integration in egui
 
-- Verwende `egui::PaintCallback` fuer Custom-Rendering
+- Verwende `egui::PaintCallback` im Host-Adapter fuer Custom-Rendering
 - Render-Zyklus:
   1. egui zeichnet UI-Elemente
-  2. PaintCallback ruft wgpu-Renderer auf
+  2. PaintCallback ruft den egui-Host-Adapter auf
   3. wgpu rendert in dieselbe Render-Target
 
 ## Shader-Logik (WGSL)

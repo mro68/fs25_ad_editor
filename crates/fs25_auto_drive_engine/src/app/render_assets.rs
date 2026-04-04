@@ -15,9 +15,15 @@ pub fn build(state: &AppState) -> RenderAssetsSnapshot {
     let mut assets = Vec::with_capacity(1);
 
     if let Some(background) = state.view.background_map.as_deref() {
+        let world_bounds = background.world_bounds();
         assets.push(RenderAssetSnapshot::background(RenderBackgroundAssetSnapshot {
             image: background.image_arc(),
-            world_bounds: RenderBackgroundWorldBounds::from_world_bounds(background.world_bounds()),
+            world_bounds: RenderBackgroundWorldBounds::new(
+                world_bounds.min_x,
+                world_bounds.max_x,
+                world_bounds.min_z,
+                world_bounds.max_z,
+            ),
             scale: state.view.background_scale,
             asset_revision: state.view.background_asset_revision,
             transform_revision: state.view.background_transform_revision,

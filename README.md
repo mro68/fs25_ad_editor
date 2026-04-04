@@ -95,7 +95,8 @@ Ausfuehrliche Anleitung: [docs/howto/index.md](docs/howto/index.md)
 |-------|---------|
 | `FS25-AutoDrive-Editor` | Root-Fassade und nativer Launcher |
 | `fs25_auto_drive_engine` | Host-neutrale Engine (`app`, `core`, `shared`, `xml`) |
-| `fs25_auto_drive_frontend_egui` | Desktop-Frontend (`ui`, `editor_app`, `runtime`, `render`) |
+| `fs25_auto_drive_render_wgpu` | Host-neutraler wgpu-Renderer-Kern |
+| `fs25_auto_drive_frontend_egui` | Desktop-Frontend (`ui`, `editor_app`, `runtime`, `render` als Host-Adapter) |
 | `fs25_auto_drive_frontend_flutter_bridge` | Kleine Session-/DTO-Seams fuer spaetere Flutter-Anbindung |
 | `fs25_map_overview` | Overview-, Terrain- und Farmland-Generierung |
 

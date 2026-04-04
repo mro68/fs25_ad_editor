@@ -2,10 +2,11 @@
 # CI-Check: Architektur-Guardrails fuer die Workspace-Crates.
 #
 # Regeln (Crate-/Layer-Richtungen):
-#   fs25_auto_drive_frontend_egui              → fs25_auto_drive_engine
+#   fs25_auto_drive_frontend_egui              → fs25_auto_drive_engine + fs25_auto_drive_render_wgpu
 #   fs25_auto_drive_frontend_flutter_bridge    → fs25_auto_drive_engine
+#   fs25_auto_drive_render_wgpu                → fs25_auto_drive_engine::shared
 #   fs25_auto_drive_engine kennt keine Frontend-Crates
-#   render bleibt innerhalb der egui-Frontend-Crate auf shared beschraenkt
+#   render bleibt innerhalb der egui-Frontend-Crate ein Host-Adapter
 #   ui bleibt innerhalb der egui-Frontend-Crate auf app/shared beschraenkt
 #   use_cases duerfen nicht tools-interne Submodule importieren
 
@@ -18,6 +19,7 @@ VIOLATIONS=0
 ENGINE_DIR="crates/fs25_auto_drive_engine/src"
 EGUI_DIR="crates/fs25_auto_drive_frontend_egui/src"
 BRIDGE_DIR="crates/fs25_auto_drive_frontend_flutter_bridge/src"
+RENDER_WGPU_DIR="crates/fs25_auto_drive_render_wgpu/src"
 
 echo "=== Architektur-Check: Layer-Grenzen ==="
 
@@ -100,24 +102,24 @@ find_forbidden_use_imports() {
     done < <(rg --files -0 --glob '*.rs' "$scope_dir" 2>/dev/null || true)
 }
 
-# Regel 1: Engine-App darf keine Frontend-Module kennen
-APP_FRONTEND_VIOLATIONS=$(grep -rnE 'crate::ui|crate::render|crate::editor_app|fs25_auto_drive_frontend_egui|fs25_auto_drive_frontend_flutter_bridge' "$ENGINE_DIR/app" --include='*.rs' 2>/dev/null || true)
+# Regel 1: Engine-App darf keine Frontend- oder Render-Host-Module kennen
+APP_FRONTEND_VIOLATIONS=$(grep -rnE 'crate::ui|crate::render|crate::editor_app|fs25_auto_drive_frontend_egui|fs25_auto_drive_frontend_flutter_bridge|fs25_auto_drive_render_wgpu' "$ENGINE_DIR/app" --include='*.rs' 2>/dev/null || true)
 if [ -n "$APP_FRONTEND_VIOLATIONS" ]; then
     echo "FEHLER: Engine-App importiert aus Frontend-Modulen oder Frontend-Crates:"
     echo "$APP_FRONTEND_VIOLATIONS"
     VIOLATIONS=$((VIOLATIONS + 1))
 fi
 
-# Regel 2: Engine-Core darf nicht nach oben oder in Frontends greifen
-CORE_UPPER_VIOLATIONS=$(grep -rnE 'crate::app|crate::ui|crate::render|crate::editor_app|fs25_auto_drive_frontend_egui|fs25_auto_drive_frontend_flutter_bridge' "$ENGINE_DIR/core" --include='*.rs' 2>/dev/null || true)
+# Regel 2: Engine-Core darf nicht nach oben, in Frontends oder in den Render-Host greifen
+CORE_UPPER_VIOLATIONS=$(grep -rnE 'crate::app|crate::ui|crate::render|crate::editor_app|fs25_auto_drive_frontend_egui|fs25_auto_drive_frontend_flutter_bridge|fs25_auto_drive_render_wgpu' "$ENGINE_DIR/core" --include='*.rs' 2>/dev/null || true)
 if [ -n "$CORE_UPPER_VIOLATIONS" ]; then
     echo "FEHLER: Engine-Core importiert aus hoeheren Layern oder Frontend-Crates:"
     echo "$CORE_UPPER_VIOLATIONS"
     VIOLATIONS=$((VIOLATIONS + 1))
 fi
 
-# Regel 3: Engine-XML darf nicht nach oben oder in Frontends greifen
-XML_UPPER_VIOLATIONS=$(grep -rnE 'crate::app|crate::ui|crate::render|crate::editor_app|fs25_auto_drive_frontend_egui|fs25_auto_drive_frontend_flutter_bridge' "$ENGINE_DIR/xml" --include='*.rs' 2>/dev/null || true)
+# Regel 3: Engine-XML darf nicht nach oben, in Frontends oder in den Render-Host greifen
+XML_UPPER_VIOLATIONS=$(grep -rnE 'crate::app|crate::ui|crate::render|crate::editor_app|fs25_auto_drive_frontend_egui|fs25_auto_drive_frontend_flutter_bridge|fs25_auto_drive_render_wgpu' "$ENGINE_DIR/xml" --include='*.rs' 2>/dev/null || true)
 if [ -n "$XML_UPPER_VIOLATIONS" ]; then
     echo "FEHLER: Engine-XML importiert aus hoeheren Layern oder Frontend-Crates:"
     echo "$XML_UPPER_VIOLATIONS"
@@ -181,7 +183,15 @@ if [ -n "$BRIDGE_FRONTEND_VIOLATIONS" ]; then
     VIOLATIONS=$((VIOLATIONS + 1))
 fi
 
-# Regel 11: Frontend-Crates duerfen nicht gegenseitig oder ueber Root importieren
+# Regel 11: Render-wgpu-Core darf keine App/Core/XML- oder Host-UI-Abhaengigkeiten haben
+RENDER_WGPU_LAYER_VIOLATIONS=$(grep -rnE 'fs25_auto_drive_engine::app|fs25_auto_drive_engine::core|fs25_auto_drive_engine::xml|fs25_auto_drive_frontend_egui|fs25_auto_drive_frontend_flutter_bridge|fs25_auto_drive_editor::|egui::|eframe::|egui_wgpu::|crate::app|crate::core|crate::xml' "$RENDER_WGPU_DIR" --include='*.rs' 2>/dev/null || true)
+if [ -n "$RENDER_WGPU_LAYER_VIOLATIONS" ]; then
+    echo "FEHLER: Render-wgpu-Core importiert verbotene Layer oder Host-Toolkits:"
+    echo "$RENDER_WGPU_LAYER_VIOLATIONS"
+    VIOLATIONS=$((VIOLATIONS + 1))
+fi
+
+# Regel 12: Frontend-Crates duerfen nicht gegenseitig oder ueber Root importieren
 EGUI_ROOT_VIOLATIONS=$(grep -rn 'fs25_auto_drive_editor::' "$EGUI_DIR" --include='*.rs' 2>/dev/null || true)
 if [ -n "$EGUI_ROOT_VIOLATIONS" ]; then
     echo "FEHLER: Egui-Frontend importiert ueber die Root-Fassade statt direkt ueber lokale Re-Exports:"

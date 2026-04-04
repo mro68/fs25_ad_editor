@@ -8,7 +8,8 @@ Neuimplementierung des AutoDrive Course Editors in Rust mit egui + wgpu. Hochper
 
 - **Root-Package (`FS25-AutoDrive-Editor`):** Kompat-Fassade (`src/lib.rs`) + nativer Launcher (`src/main.rs`)
 - **Engine (`crates/fs25_auto_drive_engine`):** `app`, `core`, `shared`, `xml`
-- **Egui-Frontend (`crates/fs25_auto_drive_frontend_egui`):** `ui`, `editor_app`, `runtime`, `render`
+- **Render-Core (`crates/fs25_auto_drive_render_wgpu`):** host-neutraler wgpu-Kern (`Renderer`, Sub-Renderer, Shader)
+- **Egui-Frontend (`crates/fs25_auto_drive_frontend_egui`):** `ui`, `editor_app`, `runtime`, `render` als Host-Adapter
 - **Flutter-Bridge (`crates/fs25_auto_drive_frontend_flutter_bridge`):** Session-/DTO-Seams ohne Flutter-SDK
 - **Overview-Crate (`crates/fs25_map_overview`):** Terrain-, Farmland- und Overview-Generierung
 
@@ -18,8 +19,9 @@ Neuimplementierung des AutoDrive Course Editors in Rust mit egui + wgpu. Hochper
 - `AppController` mappt auf `AppCommand`
 - Commands werden ueber Use-Cases ausgefuehrt
 - Mutationen laufen zentral gegen `AppState`
-- Renderer bekommt pro Frame ausschliesslich `RenderScene`
-- `RenderScene` transportiert nur Render-Snapshots; Core-Typen duerfen nicht nach `src/render/*` durchgereicht werden
+- Renderer bekommt pro Frame `RenderScene` plus Asset-Sync ueber `RenderAssetsSnapshot`
+- `RenderScene` transportiert nur Render-Snapshots; Core-Typen duerfen nicht nach `crates/fs25_auto_drive_render_wgpu/src/*` durchgereicht werden
+- Hintergrund-Uploads laufen ueber `background_asset_revision` / `background_transform_revision` statt Dirty-Flag
 - `fs25_auto_drive_frontend_flutter_bridge` darf nur von `fs25_auto_drive_engine` abhaengen
 
 ## Technologie-Stack
