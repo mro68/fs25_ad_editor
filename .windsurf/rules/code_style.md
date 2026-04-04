@@ -39,11 +39,12 @@ for (source_id, target_ids) in connections {
 
 ## Struktur
 
-- `src/app/` - AppController, Intents/Commands, Use-Cases, AppState
-- `src/core/` - Datenmodelle und Business-Logik
-- `src/xml/` - XML-Parsing und Serialization
-- `src/render/` - wgpu Rendering-Pipeline
-- `src/ui/` - egui Interface-Code
+- `crates/fs25_auto_drive_engine/src/app/` - AppController, Intents/Commands, Use-Cases, AppState
+- `crates/fs25_auto_drive_engine/src/core/` - Datenmodelle und Business-Logik
+- `crates/fs25_auto_drive_engine/src/xml/` - XML-Parsing und Serialization
+- `crates/fs25_auto_drive_render_wgpu/src/` - host-neutrale wgpu Rendering-Pipeline
+- `crates/fs25_auto_drive_frontend_egui/src/render/` - Host-Adapter + egui Callback
+- `crates/fs25_auto_drive_frontend_egui/src/ui/` - egui Interface-Code
 
 ## Tests
 

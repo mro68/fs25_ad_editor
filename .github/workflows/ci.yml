@@ -47,13 +47,13 @@ jobs:
         run: cargo fmt --all -- --check
 
       - name: Clippy
-        run: cargo clippy --all-targets -- -D warnings
+        run: cargo clippy --workspace --all-targets -- -D warnings
 
       - name: Build
-        run: cargo build --release
+        run: cargo build --workspace --release
 
       - name: Cleanup release artifacts
         run: cargo clean --release
 
       - name: Test
-        run: cargo test
+        run: cargo test --workspace

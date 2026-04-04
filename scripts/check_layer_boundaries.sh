@@ -1,15 +1,14 @@
 #!/usr/bin/env bash
-# CI-Check: Architektur-Guardrails fuer Schichtentrennung.
+# CI-Check: Architektur-Guardrails fuer die Workspace-Crates.
 #
-# Regeln (Importrichtungen):
-#   UI       → App → Core (niemals crate::core direkt)
-#   UI       darf nicht crate::xml oder crate::render importieren
-#   Render   → Shared (niemals crate::app, crate::ui oder Core via Root-Re-Export)
-#   Core     darf nicht UI/Render/App importieren
-#   Shared   darf keine Core-Typen direkt oder ueber Crate-Root-Re-Exports importieren
-#   XML      darf nicht App/UI/Render importieren
+# Regeln (Crate-/Layer-Richtungen):
+#   fs25_auto_drive_frontend_egui              → fs25_auto_drive_engine + fs25_auto_drive_render_wgpu
+#   fs25_auto_drive_frontend_flutter_bridge    → fs25_auto_drive_engine
+#   fs25_auto_drive_render_wgpu                → fs25_auto_drive_engine::shared
+#   fs25_auto_drive_engine kennt keine Frontend-Crates
+#   render bleibt innerhalb der egui-Frontend-Crate ein Host-Adapter
+#   ui bleibt innerhalb der egui-Frontend-Crate auf app/shared beschraenkt
 #   use_cases duerfen nicht tools-interne Submodule importieren
-#   make check-layers   (wenn in Makefile eingebunden)
 
 set -euo pipefail
 
@@ -17,8 +16,10 @@ ROOT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT_DIR"
 
 VIOLATIONS=0
-CORE_ROOT_EXPORTS='AutoDriveMeta|BackgroundMap|Camera2D|Connection|ConnectionDirection|ConnectionPriority|MapMarker|MapNode|NodeFlag|RoadMap|SpatialIndex|SpatialMatch|WorldBounds'
-ROOT_CORE_PATTERN="crate::(${CORE_ROOT_EXPORTS})(::|[^[:alnum:]_]|$)"
+ENGINE_DIR="crates/fs25_auto_drive_engine/src"
+EGUI_DIR="crates/fs25_auto_drive_frontend_egui/src"
+BRIDGE_DIR="crates/fs25_auto_drive_frontend_flutter_bridge/src"
+RENDER_WGPU_DIR="crates/fs25_auto_drive_render_wgpu/src"
 
 echo "=== Architektur-Check: Layer-Grenzen ==="
 
@@ -101,99 +102,100 @@ find_forbidden_use_imports() {
     done < <(rg --files -0 --glob '*.rs' "$scope_dir" 2>/dev/null || true)
 }
 
-# Regel 1: UI darf nicht direkt auf Core zugreifen
-UI_CORE_VIOLATIONS=$(grep -rn 'crate::core' src/ui/ --include='*.rs' 2>/dev/null || true)
-if [ -n "$UI_CORE_VIOLATIONS" ]; then
-    echo "FEHLER: UI importiert direkt aus core (muss ueber app re-exports gehen):"
-    echo "$UI_CORE_VIOLATIONS"
+# Regel 1: Engine-App darf keine Frontend- oder Render-Host-Module kennen
+APP_FRONTEND_VIOLATIONS=$(grep -rnE 'crate::ui|crate::render|crate::editor_app|fs25_auto_drive_frontend_egui|fs25_auto_drive_frontend_flutter_bridge|fs25_auto_drive_render_wgpu' "$ENGINE_DIR/app" --include='*.rs' 2>/dev/null || true)
+if [ -n "$APP_FRONTEND_VIOLATIONS" ]; then
+    echo "FEHLER: Engine-App importiert aus Frontend-Modulen oder Frontend-Crates:"
+    echo "$APP_FRONTEND_VIOLATIONS"
     VIOLATIONS=$((VIOLATIONS + 1))
 fi
 
-# Regel 2: Core darf nicht auf UI/Render/App zugreifen
-CORE_UI_VIOLATIONS=$(grep -rn 'crate::ui\|crate::render\|crate::app' src/core/ --include='*.rs' 2>/dev/null || true)
-if [ -n "$CORE_UI_VIOLATIONS" ]; then
-    echo "FEHLER: Core importiert aus UI/Render/App:"
-    echo "$CORE_UI_VIOLATIONS"
+# Regel 2: Engine-Core darf nicht nach oben, in Frontends oder in den Render-Host greifen
+CORE_UPPER_VIOLATIONS=$(grep -rnE 'crate::app|crate::ui|crate::render|crate::editor_app|fs25_auto_drive_frontend_egui|fs25_auto_drive_frontend_flutter_bridge|fs25_auto_drive_render_wgpu' "$ENGINE_DIR/core" --include='*.rs' 2>/dev/null || true)
+if [ -n "$CORE_UPPER_VIOLATIONS" ]; then
+    echo "FEHLER: Engine-Core importiert aus hoeheren Layern oder Frontend-Crates:"
+    echo "$CORE_UPPER_VIOLATIONS"
     VIOLATIONS=$((VIOLATIONS + 1))
 fi
 
-# Regel 2a: App darf nicht auf UI zugreifen
-# Es werden nur explizite Rust-Importe geprueft, damit Kommentare und Dokumentation
-# keine False Positives erzeugen.
-APP_UI_VIOLATIONS=$(find_forbidden_use_imports src/app ui)
-if [ -n "$APP_UI_VIOLATIONS" ]; then
-    echo "FEHLER: App importiert aus UI (Application darf Presentation nicht kennen):"
-    echo "$APP_UI_VIOLATIONS"
-    VIOLATIONS=$((VIOLATIONS + 1))
-fi
-
-# Regel 2b: App darf nicht auf Render zugreifen
-# Gleiches Vorgehen wie bei UI: nur explizite use-Importe statt Freitext-Matches.
-APP_RENDER_VIOLATIONS=$(find_forbidden_use_imports src/app render)
-if [ -n "$APP_RENDER_VIOLATIONS" ]; then
-    echo "FEHLER: App importiert aus Render (Application darf Rendering nicht kennen):"
-    echo "$APP_RENDER_VIOLATIONS"
-    VIOLATIONS=$((VIOLATIONS + 1))
-fi
-
-# Regel 3: Render darf nicht auf UI/App/Core zugreifen
-# Der Check prueft explizit auch Root-Re-Exports wie `crate::RoadMap`, damit
-# Layer-Verletzungen nicht mehr durch das Crate-Root maskiert werden.
-RENDER_VIOLATIONS=$(grep -rnE "crate::ui|crate::app|crate::core|${ROOT_CORE_PATTERN}" src/render/ --include='*.rs' 2>/dev/null || true)
-if [ -n "$RENDER_VIOLATIONS" ]; then
-    echo "FEHLER: Render importiert aus UI/App/Core oder ueber Root-Re-Exports aus Core:"
-    echo "$RENDER_VIOLATIONS"
-    VIOLATIONS=$((VIOLATIONS + 1))
-fi
-
-# Regel 4: UI darf nicht auf XML/Render zugreifen
-UI_OTHER_VIOLATIONS=$(grep -rn 'crate::xml\|crate::render' src/ui/ --include='*.rs' 2>/dev/null || true)
-if [ -n "$UI_OTHER_VIOLATIONS" ]; then
-    echo "FEHLER: UI importiert direkt aus XML/Render:"
-    echo "$UI_OTHER_VIOLATIONS"
-    VIOLATIONS=$((VIOLATIONS + 1))
-fi
-
-# Regel 5: UI darf keine vollstaendige mutable AppState-Referenz annehmen
-UI_MUT_APPSTATE_VIOLATIONS=$(grep -rn '&mut[[:space:]]\+AppState' src/ui/ --include='*.rs' 2>/dev/null || true)
-if [ -n "$UI_MUT_APPSTATE_VIOLATIONS" ]; then
-    echo "FEHLER: UI nutzt &mut AppState (Intent/Command-Boundary verletzt):"
-    echo "$UI_MUT_APPSTATE_VIOLATIONS"
-    VIOLATIONS=$((VIOLATIONS + 1))
-fi
-
-# Regel 6: UI darf keine direkten state.* Feldzuweisungen durchfuehren
-UI_STATE_ASSIGN_VIOLATIONS=$(grep -rn '\bstate\.[A-Za-z0-9_\.]*[[:space:]]*=' src/ui/ --include='*.rs' 2>/dev/null | grep -v '// layer-ok' || true)
-if [ -n "$UI_STATE_ASSIGN_VIOLATIONS" ]; then
-    echo "FEHLER: UI enthaelt direkte state.* Zuweisungen (statt Intent/Command):"
-    echo "$UI_STATE_ASSIGN_VIOLATIONS"
-    VIOLATIONS=$((VIOLATIONS + 1))
-fi
-
-# Regel 7: XML darf nicht auf App/UI/Render zugreifen
-XML_UPPER_VIOLATIONS=$(grep -rn 'crate::app\|crate::ui\|crate::render' src/xml/ --include='*.rs' 2>/dev/null || true)
+# Regel 3: Engine-XML darf nicht nach oben, in Frontends oder in den Render-Host greifen
+XML_UPPER_VIOLATIONS=$(grep -rnE 'crate::app|crate::ui|crate::render|crate::editor_app|fs25_auto_drive_frontend_egui|fs25_auto_drive_frontend_flutter_bridge|fs25_auto_drive_render_wgpu' "$ENGINE_DIR/xml" --include='*.rs' 2>/dev/null || true)
 if [ -n "$XML_UPPER_VIOLATIONS" ]; then
-    echo "FEHLER: XML importiert aus App/UI/Render (Schichtenverletzung nach oben):"
+    echo "FEHLER: Engine-XML importiert aus hoeheren Layern oder Frontend-Crates:"
     echo "$XML_UPPER_VIOLATIONS"
     VIOLATIONS=$((VIOLATIONS + 1))
 fi
 
-# Regel 8: use_cases duerfen nicht aus tool-internen Submodulen importieren
-# (Ausnahme: crate::app::tools direkt fuer ToolResult/oeffentliche Typen ist OK;
-#  verboten ist der Import tool-interner Geometrie/Logic wie tools::spline::geometry)
-USE_CASES_TOOLS_VIOLATIONS=$(grep -rn 'crate::app::tools::' src/app/use_cases/ --include='*.rs' 2>/dev/null \
+# Regel 4: Engine-Shared darf keine Core-Typen direkt importieren
+SHARED_CORE_VIOLATIONS=$(grep -rn 'crate::core' "$ENGINE_DIR/shared" --include='*.rs' 2>/dev/null || true)
+if [ -n "$SHARED_CORE_VIOLATIONS" ]; then
+    echo "FEHLER: Engine-Shared importiert aus Core:"
+    echo "$SHARED_CORE_VIOLATIONS"
+    VIOLATIONS=$((VIOLATIONS + 1))
+fi
+
+# Regel 5: Engine-use_cases duerfen nicht aus tools-internen Submodulen importieren
+USE_CASES_TOOLS_VIOLATIONS=$(grep -rn 'crate::app::tools::' "$ENGINE_DIR/app/use_cases" --include='*.rs' 2>/dev/null \
     | grep -v 'crate::app::tools::ToolResult\|apply_tool_result' || true)
 if [ -n "$USE_CASES_TOOLS_VIOLATIONS" ]; then
-    echo "FEHLER: use_cases importiert aus tools-internen Submodulen (gemeinsame Logik muss in shared liegen):"
+    echo "FEHLER: Engine-use_cases importieren aus tools-internen Submodulen:"
     echo "$USE_CASES_TOOLS_VIOLATIONS"
     VIOLATIONS=$((VIOLATIONS + 1))
 fi
 
-# Regel 9: shared darf keine Core-Typen importieren — weder direkt noch ueber Root-Re-Exports
-SHARED_CORE_VIOLATIONS=$(grep -rnE "crate::core|${ROOT_CORE_PATTERN}" src/shared/ --include='*.rs' 2>/dev/null || true)
-if [ -n "$SHARED_CORE_VIOLATIONS" ]; then
-    echo "FEHLER: shared importiert aus Core oder ueber Root-Re-Exports aus Core:"
-    echo "$SHARED_CORE_VIOLATIONS"
+# Regel 6: Egui-Render darf nicht auf UI/App/Core/XML oder Root-Fassade zugreifen
+RENDER_VIOLATIONS=$(grep -rnE 'crate::ui|crate::editor_app|crate::app|crate::core|crate::xml|fs25_auto_drive_editor::' "$EGUI_DIR/render" --include='*.rs' 2>/dev/null || true)
+if [ -n "$RENDER_VIOLATIONS" ]; then
+    echo "FEHLER: Egui-Render importiert aus verbotenen Layern oder der Root-Fassade:"
+    echo "$RENDER_VIOLATIONS"
+    VIOLATIONS=$((VIOLATIONS + 1))
+fi
+
+# Regel 7: Egui-UI darf nicht direkt auf XML, Render oder Core zugreifen
+UI_OTHER_VIOLATIONS=$(grep -rnE 'crate::xml|crate::render|crate::core|fs25_auto_drive_editor::' "$EGUI_DIR/ui" --include='*.rs' 2>/dev/null || true)
+if [ -n "$UI_OTHER_VIOLATIONS" ]; then
+    echo "FEHLER: Egui-UI importiert direkt aus XML/Render/Core oder der Root-Fassade:"
+    echo "$UI_OTHER_VIOLATIONS"
+    VIOLATIONS=$((VIOLATIONS + 1))
+fi
+
+# Regel 8: Egui-UI darf keine vollstaendige mutable AppState-Referenz annehmen
+UI_MUT_APPSTATE_VIOLATIONS=$(grep -rn '&mut[[:space:]]\+AppState' "$EGUI_DIR/ui" --include='*.rs' 2>/dev/null || true)
+if [ -n "$UI_MUT_APPSTATE_VIOLATIONS" ]; then
+    echo "FEHLER: Egui-UI nutzt &mut AppState (Intent/Command-Boundary verletzt):"
+    echo "$UI_MUT_APPSTATE_VIOLATIONS"
+    VIOLATIONS=$((VIOLATIONS + 1))
+fi
+
+# Regel 9: Egui-UI darf keine direkten state.* Feldzuweisungen durchfuehren
+UI_STATE_ASSIGN_VIOLATIONS=$(grep -rn '\bstate\.[A-Za-z0-9_\.]*[[:space:]]*=' "$EGUI_DIR/ui" --include='*.rs' 2>/dev/null | grep -v '// layer-ok' || true)
+if [ -n "$UI_STATE_ASSIGN_VIOLATIONS" ]; then
+    echo "FEHLER: Egui-UI enthaelt direkte state.* Zuweisungen (statt Intent/Command):"
+    echo "$UI_STATE_ASSIGN_VIOLATIONS"
+    VIOLATIONS=$((VIOLATIONS + 1))
+fi
+
+# Regel 10: Flutter-Bridge darf keine Frontend-Crates oder UI-Toolkits kennen
+BRIDGE_FRONTEND_VIOLATIONS=$(grep -rnE 'fs25_auto_drive_frontend_egui|crate::ui|crate::render|crate::editor_app|egui::|eframe::' "$BRIDGE_DIR" --include='*.rs' 2>/dev/null || true)
+if [ -n "$BRIDGE_FRONTEND_VIOLATIONS" ]; then
+    echo "FEHLER: Flutter-Bridge importiert Frontend-Module oder UI-Toolkits:"
+    echo "$BRIDGE_FRONTEND_VIOLATIONS"
+    VIOLATIONS=$((VIOLATIONS + 1))
+fi
+
+# Regel 11: Render-wgpu-Core darf keine App/Core/XML- oder Host-UI-Abhaengigkeiten haben
+RENDER_WGPU_LAYER_VIOLATIONS=$(grep -rnE 'fs25_auto_drive_engine::app|fs25_auto_drive_engine::core|fs25_auto_drive_engine::xml|fs25_auto_drive_frontend_egui|fs25_auto_drive_frontend_flutter_bridge|fs25_auto_drive_editor::|egui::|eframe::|egui_wgpu::|crate::app|crate::core|crate::xml' "$RENDER_WGPU_DIR" --include='*.rs' 2>/dev/null || true)
+if [ -n "$RENDER_WGPU_LAYER_VIOLATIONS" ]; then
+    echo "FEHLER: Render-wgpu-Core importiert verbotene Layer oder Host-Toolkits:"
+    echo "$RENDER_WGPU_LAYER_VIOLATIONS"
+    VIOLATIONS=$((VIOLATIONS + 1))
+fi
+
+# Regel 12: Frontend-Crates duerfen nicht gegenseitig oder ueber Root importieren
+EGUI_ROOT_VIOLATIONS=$(grep -rn 'fs25_auto_drive_editor::' "$EGUI_DIR" --include='*.rs' 2>/dev/null || true)
+if [ -n "$EGUI_ROOT_VIOLATIONS" ]; then
+    echo "FEHLER: Egui-Frontend importiert ueber die Root-Fassade statt direkt ueber lokale Re-Exports:"
+    echo "$EGUI_ROOT_VIOLATIONS"
     VIOLATIONS=$((VIOLATIONS + 1))
 fi
 

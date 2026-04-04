@@ -15,6 +15,8 @@ dependencies = [
  "egui-wgpu",
  "egui_extras",
  "env_logger",
+ "fs25_auto_drive_engine",
+ "fs25_auto_drive_frontend_egui",
  "fs25_map_overview",
  "glam",
  "image",
@@ -1719,6 +1721,72 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "cb4cb245038516f5f85277875cdaa4f7d2c9a0fa0468de06ed190163b1581fcf"
 dependencies = [
  "percent-encoding",
+]
+
+[[package]]
+name = "fs25_auto_drive_engine"
+version = "1.7.0"
+dependencies = [
+ "anyhow",
+ "approx",
+ "fs25_map_overview",
+ "glam",
+ "image",
+ "indexmap",
+ "kiddo",
+ "log",
+ "quick-xml 0.39.2",
+ "regex",
+ "serde",
+ "serde_json",
+ "toml",
+ "zip 8.3.1",
+]
+
+[[package]]
+name = "fs25_auto_drive_frontend_egui"
+version = "1.7.0"
+dependencies = [
+ "anyhow",
+ "bytemuck",
+ "eframe",
+ "egui",
+ "egui-wgpu",
+ "egui_extras",
+ "env_logger",
+ "fs25_auto_drive_engine",
+ "fs25_auto_drive_render_wgpu",
+ "fs25_map_overview",
+ "glam",
+ "image",
+ "indexmap",
+ "log",
+ "resvg 0.47.0",
+ "rfd",
+ "wgpu",
+]
+
+[[package]]
+name = "fs25_auto_drive_frontend_flutter_bridge"
+version = "1.7.0"
+dependencies = [
+ "anyhow",
+ "fs25_auto_drive_engine",
+ "serde",
+]
+
+[[package]]
+name = "fs25_auto_drive_render_wgpu"
+version = "1.7.0"
+dependencies = [
+ "bytemuck",
+ "fs25_auto_drive_engine",
+ "glam",
+ "image",
+ "indexmap",
+ "log",
+ "resvg 0.47.0",
+ "wgpu",
 ]
 
 [[package]]
