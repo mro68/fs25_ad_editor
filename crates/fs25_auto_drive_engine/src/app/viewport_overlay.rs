@@ -49,7 +49,12 @@ fn build_clipboard_preview(state: &AppState) -> Option<ClipboardOverlaySnapshot>
 
     let offset = paste_pos - state.clipboard.center;
 
-    let marker_ids: HashSet<u64> = state.clipboard.markers.iter().map(|marker| marker.id).collect();
+    let marker_ids: HashSet<u64> = state
+        .clipboard
+        .markers
+        .iter()
+        .map(|marker| marker.id)
+        .collect();
     let mut id_to_index: HashMap<u64, usize> = HashMap::with_capacity(state.clipboard.nodes.len());
     let mut nodes = Vec::with_capacity(state.clipboard.nodes.len());
 
@@ -89,7 +94,10 @@ fn build_distance_preview(state: &AppState) -> Option<PolylineOverlaySnapshot> {
     })
 }
 
-fn build_group_lock_overlays(state: &AppState, road_map: &RoadMap) -> Vec<GroupLockOverlaySnapshot> {
+fn build_group_lock_overlays(
+    state: &AppState,
+    road_map: &RoadMap,
+) -> Vec<GroupLockOverlaySnapshot> {
     if state.group_registry.is_empty() || state.selection.selected_node_ids.is_empty() {
         return Vec::new();
     }
@@ -232,24 +240,25 @@ mod tests {
     fn build_exposes_clipboard_preview_nodes_and_connections() {
         let mut state = AppState::new();
         state.clipboard.center = Vec2::new(10.0, 10.0);
-        state.clipboard.nodes.push(MapNode::new(
-            1,
-            Vec2::new(8.0, 10.0),
-            NodeFlag::Regular,
-        ));
-        state.clipboard.nodes.push(MapNode::new(
-            2,
-            Vec2::new(12.0, 10.0),
-            NodeFlag::Regular,
-        ));
-        state.clipboard.connections.push(crate::app::Connection::new(
-            1,
-            2,
-            crate::app::ConnectionDirection::Regular,
-            crate::app::ConnectionPriority::Regular,
-            Vec2::new(8.0, 10.0),
-            Vec2::new(12.0, 10.0),
-        ));
+        state
+            .clipboard
+            .nodes
+            .push(MapNode::new(1, Vec2::new(8.0, 10.0), NodeFlag::Regular));
+        state
+            .clipboard
+            .nodes
+            .push(MapNode::new(2, Vec2::new(12.0, 10.0), NodeFlag::Regular));
+        state
+            .clipboard
+            .connections
+            .push(crate::app::Connection::new(
+                1,
+                2,
+                crate::app::ConnectionDirection::Regular,
+                crate::app::ConnectionPriority::Regular,
+                Vec2::new(8.0, 10.0),
+                Vec2::new(12.0, 10.0),
+            ));
         state.paste_preview_pos = Some(Vec2::new(20.0, 20.0));
 
         let snapshot = build(&mut state, None);
