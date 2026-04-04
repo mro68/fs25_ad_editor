@@ -1,10 +1,10 @@
 //! FS25 AutoDrive Editor Library.
 //! Core-Funktionalitaet als Library exportiert fuer Tests und Wiederverwendung.
 
-pub mod app;
 pub mod render;
 pub mod ui;
 
+pub use fs25_auto_drive_engine::app;
 pub use fs25_auto_drive_engine::core;
 pub use fs25_auto_drive_engine::shared;
 pub use fs25_auto_drive_engine::xml;

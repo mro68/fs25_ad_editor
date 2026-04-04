@@ -1,5 +1,5 @@
 use crate::app::state::GroupEditState;
-use crate::app::tool_editing::ToolEditStore;
+use crate::app::ToolEditStore;
 use crate::app::{AppIntent, GroupRecord, RoadMap};
 use crate::shared::EditorOptions;
 

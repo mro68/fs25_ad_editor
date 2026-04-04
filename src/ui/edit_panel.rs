@@ -9,7 +9,7 @@ mod streckenteilung_panel;
 
 use crate::app::state::DistanzenState;
 use crate::app::state::GroupEditState;
-use crate::app::tool_editing::ToolEditStore;
+use crate::app::ToolEditStore;
 use crate::app::ui_contract::RouteToolPanelState;
 use crate::app::{
     AppIntent, ConnectionDirection, ConnectionPriority, EditorTool, GroupRecord, RoadMap,

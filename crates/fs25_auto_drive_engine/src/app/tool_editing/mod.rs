@@ -10,4 +10,5 @@ pub(crate) use service::{
     begin_edit, cancel_active_edit, persist_after_apply, register_persisted_group,
 };
 pub(crate) use session::ActiveToolEditSession;
-pub(crate) use store::{ToolEditRecord, ToolEditStore};
+pub use store::ToolEditStore;
+pub(crate) use store::ToolEditRecord;
