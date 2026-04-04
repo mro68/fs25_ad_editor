@@ -54,7 +54,7 @@ Rechts werden Eigenschaften und modale Bearbeitungsflaechen angezeigt:
 | **Route-Tool-Panel** | Sobald ein Route-Tool aktiv ist |
 | **Gruppen-Bearbeitung** | Wenn eine Gruppe im Bearbeitungsmodus geoeffnet ist |
 
-Das schwebende Route-Tool-Panel zeigt Status, Richtung, Strassenart, tool-spezifische Konfiguration sowie **Ausfuehren** und **Abbrechen**.
+Das schwebende Route-Tool-Panel nutzt fuer alle Route-Tool-Familien denselben Aufbau: oben Status, Richtung und Strassenart, darunter die tool-spezifische Konfiguration und am Ende **Ausfuehren** sowie **Abbrechen**.
 
 ### Gemeinsamer Route-Tool-Katalog
 
