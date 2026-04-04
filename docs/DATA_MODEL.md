@@ -203,17 +203,29 @@ pub struct AppState {
     pub ui: UiState,
     pub selection: SelectionState,
     pub editor: EditorToolState,
+    pub clipboard: Clipboard,
+    pub paste_preview_pos: Option<Vec2>,
     pub command_log: CommandLog,
     pub history: EditHistory,
     pub options: EditorOptions,
-    pub show_options_dialog: bool,
     pub group_registry: GroupRegistry,
+    pub farmland_polygons: Option<Arc<Vec<FieldPolygon>>>,
+    pub farmland_grid: Option<Arc<FarmlandGrid>>,
+    pub background_image: Option<Arc<DynamicImage>>,
+    pub group_editing: Option<GroupEditState>,
+    pub tool_edit_store: ToolEditStore,
+    pub active_tool_edit_session: Option<ActiveToolEditSession>,
     pub should_exit: bool,
+    // private: options_arc, dimmed_ids_cache, render_map_cache
 }
 ```
 
 - Zentraler Laufzeitzustand fuer Controller/Handler/UI
 - `road_map` und `selection.selected_node_ids` sind `Arc`-basiert fuer guenstige Frame-Uebergaben
+- Clipboard-, Paste-Preview- und Tool-Edit-Zustand bleiben im App-Layer und werden von dort in Read-Modelle fuer Hosts ueberfuehrt
+- Dialog- und Tool-Fenster laufen semantisch ueber `UiState` plus `HostUiSnapshot`
+- Host-native Datei-/Pfad-Dialoge werden als `DialogRequest`-Queue in `UiState` gehalten
+- Viewport-Overlays laufen host-neutral ueber `ViewportOverlaySnapshot` (Route-Preview, Clipboard-, Distanzen-, Segment- und Boundary-Overlays)
 
 ### SelectionState
 
@@ -221,11 +233,13 @@ pub struct AppState {
 pub struct SelectionState {
     pub selected_node_ids: Arc<IndexSet<u64>>,  // Arc fuer O(1)-Clone (Copy-on-Write)
     pub selection_anchor_node_id: Option<u64>,  // Anker fuer Pfad-Selektion
+    pub generation: u64,                        // Cache-Invalidierung fuer Read-Modelle
 }
 ```
 
 - **CoW-Pattern:** `Arc::make_mut` bei Mutation → klont IndexSet nur wenn mehrere Referenzen existieren
 - Wird als `Arc` in `RenderScene` geteilt (kein Deep-Clone pro Frame)
+- `generation` invalidiert abgeleitete Caches wie gedimmte Gruppenmengen, ohne dass Hosts diese Details kennen muessen
 
 ### EditHistory / Snapshot
 
@@ -293,9 +307,91 @@ pub struct EditorToolState {
     pub connect_source_node: Option<u64>,
     pub default_direction: ConnectionDirection,
     pub default_priority: ConnectionPriority,
+    pub route_tool_memory: RouteToolSelectionMemory,
     pub tool_manager: ToolManager,
 }
 ```
 
 - `ToolManager` verwaltet alle registrierten Route-Tools (Straight, Curve2/3, Spline, Bypass, Constraint)
+- `route_tool_memory` merkt pro Route-Tool-Gruppe das zuletzt verwendete Werkzeug fuer Menues und Re-Entry-Flows
 - `active_tool` bestimmt welches Editor-Werkzeug gerade aktiv ist
+
+### Host-UI- und Overlay-Snapshots
+
+```rust
+pub struct HostUiSnapshot {
+    pub panels: Vec<PanelState>,
+    pub dialog_requests: Vec<DialogRequest>,
+}
+
+pub enum PanelState {
+    RouteTool(RouteToolPanelState),
+    Options(OptionsPanelState),
+    CommandPalette(CommandPalettePanelState),
+}
+
+pub struct ViewportOverlaySnapshot {
+    pub route_tool_preview: Option<ToolPreview>,
+    pub clipboard_preview: Option<ClipboardOverlaySnapshot>,
+    pub distance_preview: Option<PolylineOverlaySnapshot>,
+    pub group_locks: Vec<GroupLockOverlaySnapshot>,
+    pub group_boundaries: Vec<GroupBoundaryOverlaySnapshot>,
+    pub show_no_file_hint: bool,
+}
+```
+
+- `HostUiSnapshot` ist das per-Frame-Read-Modell fuer sichtbare Panels und ausstehende Host-Dialoge
+- `ViewportOverlaySnapshot` kapselt alle Viewport-Overlays als host-neutrale DTOs; egui rendert nur noch aus diesen Snapshots statt direkt aus `RoadMap`/`GroupRegistry`
+- `ClipboardOverlaySnapshot`, `GroupLockOverlaySnapshot` und `GroupBoundaryOverlaySnapshot` trennen Datengewinnung im App-Layer vom Painting im Host
+
+---
+
+## Flutter-Bridge DTOs
+
+```rust
+pub struct EngineSelectionSnapshot {
+    pub selected_node_ids: Vec<u64>,
+}
+
+pub struct EngineViewportSnapshot {
+    pub camera_position: [f32; 2],
+    pub zoom: f32,
+}
+
+pub enum EngineSessionAction {
+    ToggleCommandPalette,
+    SetEditorTool { tool: EngineActiveTool },
+    OpenOptionsDialog,
+    CloseOptionsDialog,
+    Undo,
+    Redo,
+    SubmitDialogResult { result: EngineDialogResult },
+}
+
+pub struct EngineSessionSnapshot {
+    pub has_map: bool,
+    pub node_count: usize,
+    pub connection_count: usize,
+    pub active_tool: EngineActiveTool,
+    pub status_message: Option<String>,
+    pub show_command_palette: bool,
+    pub show_options_dialog: bool,
+    pub can_undo: bool,
+    pub can_redo: bool,
+    pub pending_dialog_request_count: usize,
+    pub selection: EngineSelectionSnapshot,
+    pub viewport: EngineViewportSnapshot,
+}
+
+pub struct EngineRenderFrameSnapshot {
+    pub scene: RenderScene,
+    pub assets: RenderAssetsSnapshot,
+}
+```
+
+- `EngineSessionAction` bildet eine explizite, stabile Mutationsoberflaeche fuer Host-Frontends
+- `EngineSessionSnapshot` fasst host-relevanten Session-Zustand zusammen, inklusive Undo/Redo-Verfuegbarkeit und Anzahl ausstehender Dialog-Anfragen
+- `snapshot()` arbeitet ueber einen Dirty-Cache und baut den Snapshot nur nach erfolgreichen Session-Mutationen neu auf
+- Die Bridge mappt `EngineSessionAction` intern auf `AppIntent`, ohne generischen Intent-Dispatch oder direkten `AppState`-Escape-Hatch
+- Host-native Datei-/Pfad-Dialoge laufen ueber `take_dialog_requests()` und `submit_dialog_result(...)` als explizite Bridge-Seam
+- `EngineRenderFrameSnapshot` koppelt den per-Frame-Render-Vertrag (`RenderScene`) mit den langlebigen Render-Assets fuer read-only Hosts

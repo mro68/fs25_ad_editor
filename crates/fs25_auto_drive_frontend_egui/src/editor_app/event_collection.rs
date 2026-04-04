@@ -1,5 +1,6 @@
 //! Event-Sammlung fuer Panels, Dialoge und Viewport.
 
+use crate::app::ui_contract::{dialog_result_to_intent, panel_action_to_intent, HostUiSnapshot};
 use crate::app::{AppIntent, EditorTool};
 use crate::shared::EditorOptions;
 use crate::ui;
@@ -12,11 +13,14 @@ impl EditorApp {
     /// Sammelt alle UI- und Viewport-Events des aktuellen Frames.
     pub(super) fn collect_ui_events(&mut self, ctx: &egui::Context) -> Vec<AppIntent> {
         let mut events = Vec::new();
+        let host_ui_snapshot = self.controller.build_host_ui_snapshot(&self.state);
 
         // Panels und Dialoge
-        events.extend(self.collect_panel_events(ctx));
-        events.extend(self.collect_dialog_events(ctx));
-        let mut show_command_palette = self.state.ui.show_command_palette;
+        events.extend(self.collect_panel_events(ctx, &host_ui_snapshot));
+        events.extend(self.collect_dialog_events(ctx, &host_ui_snapshot));
+        let mut show_command_palette = host_ui_snapshot
+            .command_palette_state()
+            .is_some_and(|state| state.visible);
         events.extend(ui::command_palette::render_command_palette(
             ctx,
             &mut show_command_palette,
@@ -48,7 +52,11 @@ impl EditorApp {
     }
 
     /// Sammelt Events aus Menue, Toolbar und Properties-Panel.
-    fn collect_panel_events(&mut self, ctx: &egui::Context) -> Vec<AppIntent> {
+    fn collect_panel_events(
+        &mut self,
+        ctx: &egui::Context,
+        host_ui_snapshot: &HostUiSnapshot,
+    ) -> Vec<AppIntent> {
         let mut events = Vec::new();
 
         ui::render_status_bar(ctx, &self.state);
@@ -68,7 +76,7 @@ impl EditorApp {
         let default_priority = self.state.editor.default_priority;
         let active_tool = self.state.editor.active_tool;
         let distance_wheel_step_m = numeric_distance_wheel_step(&self.state.options);
-        let route_tool_panel = self.state.editor.route_tool_panel_state();
+        let route_tool_panel = host_ui_snapshot.route_tool_panel_state().cloned();
         egui::SidePanel::right("right_sidebar")
             .resizable(true)
             .default_width(200.0)
@@ -135,10 +143,19 @@ impl EditorApp {
     }
 
     /// Sammelt Events aus allen offenen Dialogen.
-    fn collect_dialog_events(&mut self, ctx: &egui::Context) -> Vec<AppIntent> {
+    fn collect_dialog_events(
+        &mut self,
+        ctx: &egui::Context,
+        host_ui_snapshot: &HostUiSnapshot,
+    ) -> Vec<AppIntent> {
         let mut events = Vec::new();
 
-        events.extend(ui::handle_file_dialogs(&mut self.state.ui));
+        let dialog_results = ui::handle_file_dialogs(self.state.ui.take_dialog_requests());
+        events.extend(
+            dialog_results
+                .into_iter()
+                .filter_map(dialog_result_to_intent),
+        );
         events.extend(ui::show_heightmap_warning(
             ctx,
             self.state.ui.show_heightmap_warning,
@@ -167,11 +184,14 @@ impl EditorApp {
             &mut self.state.ui.group_settings_popup,
             &mut self.state.options,
         ));
-        events.extend(ui::show_options_dialog(
-            ctx,
-            self.state.show_options_dialog,
-            &self.state.options,
-        ));
+        if let Some(options_panel_state) = host_ui_snapshot.options_panel_state() {
+            let panel_actions = ui::show_options_dialog(
+                ctx,
+                options_panel_state.visible,
+                &options_panel_state.options,
+            );
+            events.extend(panel_actions.into_iter().map(panel_action_to_intent));
+        }
 
         events
     }

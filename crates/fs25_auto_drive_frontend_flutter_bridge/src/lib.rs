@@ -6,6 +6,7 @@ pub mod dto;
 pub mod session;
 
 pub use dto::{
-    EngineActiveTool, EngineSelectionSnapshot, EngineSessionSnapshot, EngineViewportSnapshot,
+    EngineActiveTool, EngineDialogRequest, EngineDialogRequestKind, EngineDialogResult,
+    EngineSelectionSnapshot, EngineSessionAction, EngineSessionSnapshot, EngineViewportSnapshot,
 };
 pub use session::{EngineRenderFrameSnapshot, FlutterBridgeSession};

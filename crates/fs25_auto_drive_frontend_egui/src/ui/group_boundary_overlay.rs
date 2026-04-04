@@ -1,14 +1,13 @@
 //! Gruppen-Boundary-Overlay: Zeichnet Ein-/Ausfahrt-Icons ueber Boundary-Nodes einer Gruppe.
 //!
-//! Fuer jeden selektierten Node wird geprueft, ob er zu einer Gruppe gehoert.
-//! Pro Gruppe werden die Boundary-Nodes (Nodes mit externen Verbindungen) mit
+//! Pro Gruppe werden vorberechnete Boundary-Nodes mit
 //! Richtungs-Icons markiert: Eingang, Ausgang oder bidirektional.
 
 use eframe::egui::{self, ColorImage, TextureHandle, TextureOptions};
 use glam::Vec2;
-use indexmap::IndexSet;
 
-use crate::app::{BoundaryDirection, Camera2D, GroupRegistry, RoadMap};
+use crate::app::ui_contract::GroupBoundaryOverlaySnapshot;
+use crate::app::{BoundaryDirection, Camera2D};
 
 const ICON_SIZE_PX: u32 = 32;
 
@@ -119,7 +118,7 @@ impl GroupBoundaryIcons {
 
 /// Zeichnet Boundary-Icons unterhalb der Nodes aller selektierten Gruppen.
 ///
-/// Fuer jede selektierte Gruppe werden alle gecachten Boundary-Nodes mit
+/// Fuer jede selektierte Gruppe werden alle vorberechneten Boundary-Nodes mit
 /// dem passenden Icon (Eingang/Ausgang/Bidirektional) beschriftet. Das Icon wird
 /// **unterhalb** des Nodes platziert, sodass es nicht mit dem Lock-Icon (oberhalb)
 /// kollidiert.
@@ -129,27 +128,20 @@ impl GroupBoundaryIcons {
 /// - `rect`: Viewport-Rechteck in Screen-Koordinaten
 /// - `camera`: Kamera fuer Welt→Screen-Transformation
 /// - `viewport_size`: Viewport-Abmessungen (Pixel)
-/// - `registry`: Gruppen-Registry mit allen gespeicherten Gruppen
-/// - `road_map`: RoadMap fuer Node-Positionen
-/// - `selected_node_ids`: Aktuell selektierte Node-IDs
+/// - `overlays`: Vorbereitete Boundary-Overlays aus dem App-Layer
 /// - `icons`: Gecachte Textur-Handles fuer die Icon-Typen
 /// - `icon_size_px`: Groesse des Icons in Pixeln
-/// - `show_all`: true = Icons fuer alle Boundary-Nodes; false = nur Nodes mit Verbindungen
-///   zu Nodes ausserhalb JEDER registrierten Gruppe
 #[allow(clippy::too_many_arguments)]
 pub fn render_group_boundary_overlays(
     painter: &egui::Painter,
     rect: egui::Rect,
     camera: &Camera2D,
     viewport_size: Vec2,
-    registry: &GroupRegistry,
-    road_map: &RoadMap,
-    selected_node_ids: &IndexSet<u64>,
+    overlays: &[GroupBoundaryOverlaySnapshot],
     icons: &GroupBoundaryIcons,
     icon_size_px: f32,
-    show_all: bool,
 ) {
-    if selected_node_ids.is_empty() {
+    if overlays.is_empty() {
         return;
     }
 
@@ -158,67 +150,19 @@ pub fn render_group_boundary_overlays(
     let icon_offset_y = icon_size + 12.0;
     let half = icon_size * 0.5;
 
-    // Alle Gruppen finden, die mindestens einen selektierten Node enthalten
-    let records = registry.find_by_node_ids(selected_node_ids);
-
-    for record in records {
-        if !registry.is_group_valid(record, road_map) {
-            continue;
-        }
-
-        // Explizite Entry/Exit-Icons (immer anzeigen wenn gesetzt)
-        if let Some(entry_id) = record.entry_node_id {
-            render_single_icon(
-                painter,
-                rect,
-                camera,
-                viewport_size,
-                road_map,
-                icons,
-                entry_id,
-                BoundaryDirection::Entry,
-                icon_size,
-                icon_offset_y,
-                half,
-            );
-        }
-        if let Some(exit_id) = record.exit_node_id {
-            render_single_icon(
-                painter,
-                rect,
-                camera,
-                viewport_size,
-                road_map,
-                icons,
-                exit_id,
-                BoundaryDirection::Exit,
-                icon_size,
-                icon_offset_y,
-                half,
-            );
-        }
-
-        // show_all: Zusaetzlich alle auto-erkannten Boundary-Nodes anzeigen (Debug/Analyse)
-        if show_all {
-            let Some(boundary_infos) = registry.boundary_cache_for(record.id) else {
-                continue;
-            };
-            for bi in boundary_infos {
-                render_single_icon(
-                    painter,
-                    rect,
-                    camera,
-                    viewport_size,
-                    road_map,
-                    icons,
-                    bi.node_id,
-                    bi.direction,
-                    icon_size,
-                    icon_offset_y,
-                    half,
-                );
-            }
-        }
+    for overlay in overlays {
+        render_single_icon(
+            painter,
+            rect,
+            camera,
+            viewport_size,
+            icons,
+            overlay.world_pos,
+            overlay.direction,
+            icon_size,
+            icon_offset_y,
+            half,
+        );
     }
 }
 
@@ -232,19 +176,14 @@ fn render_single_icon(
     rect: egui::Rect,
     camera: &Camera2D,
     viewport_size: Vec2,
-    road_map: &RoadMap,
     icons: &GroupBoundaryIcons,
-    node_id: u64,
+    world_pos: Vec2,
     direction: BoundaryDirection,
     icon_size: f32,
     icon_offset_y: f32,
     half: f32,
 ) {
-    let Some(node) = road_map.node(node_id) else {
-        return;
-    };
-
-    let screen_local = camera.world_to_screen(node.position, viewport_size);
+    let screen_local = camera.world_to_screen(world_pos, viewport_size);
     let center = egui::pos2(
         rect.min.x + screen_local.x,
         rect.min.y + screen_local.y + icon_offset_y,

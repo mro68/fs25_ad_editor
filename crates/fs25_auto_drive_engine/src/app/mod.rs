@@ -29,6 +29,7 @@ pub mod tools;
 pub mod ui_contract;
 /// Mutierende Use-Case-Funktionen fuer alle Editing-Operationen.
 pub mod use_cases;
+mod viewport_overlay;
 
 use self::tools::field_boundary::geometry::RingNodeKind;
 
