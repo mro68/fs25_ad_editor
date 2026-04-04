@@ -34,8 +34,6 @@ pub fn move_selected_nodes(state: &mut AppState, delta_world: glam::Vec2) {
     let moved_any = road_map_mut.translate_nodes(&move_ids_vec, delta_world);
 
     if moved_any {
-        road_map_mut.rebuild_spatial_index();
-
         // IDs der betroffenen locked Segments sammeln (Borrow endet vor update-Loop)
         let locked_segment_ids: Vec<u64> = state
             .group_registry
@@ -107,7 +105,7 @@ mod tests {
     }
 
     #[test]
-    fn move_selected_nodes_updates_spatial_index() {
+    fn move_selected_nodes_defers_spatial_index_update() {
         let mut map = RoadMap::new(3);
         map.add_node(MapNode::new(
             1,
@@ -124,27 +122,25 @@ mod tests {
         move_selected_nodes(&mut state, glam::Vec2::new(100.0, 100.0));
 
         let road_map = state.road_map.as_ref().unwrap();
-        // Spatial-Index muss die neue Position finden
-        let hit = road_map.nearest_node(glam::Vec2::new(100.0, 100.0));
-        assert!(
-            hit.is_some(),
-            "Spatial-Index muss Node an neuer Position finden"
-        );
-        let hit = hit.unwrap();
-        assert_eq!(hit.node_id, 1);
-        assert!(
-            hit.distance < 1.0,
-            "Node muss nahe (100,100) sein, war {}",
-            hit.distance
+        assert_eq!(
+            road_map.node(1).expect("node 1 vorhanden").position,
+            glam::Vec2::new(100.0, 100.0)
         );
 
-        // An der alten Position darf der Node nicht mehr nahe sein
-        let old_hit = road_map.nearest_node(glam::Vec2::new(0.0, 0.0));
-        assert!(old_hit.is_some());
-        assert!(
-            old_hit.unwrap().distance > 50.0,
-            "Spatial-Index darf Node nicht mehr an alter Position (0,0) finden"
-        );
+        let stale_query =
+            std::panic::catch_unwind(|| road_map.nearest_node(glam::Vec2::new(100.0, 100.0)));
+
+        if cfg!(debug_assertions) {
+            assert!(
+                stale_query.is_err(),
+                "Vor EndMove muss ein veralteter Spatial-Index in Debug-Builds auffallen"
+            );
+        } else {
+            let hit = stale_query
+                .expect("Release-Build darf stale Queries ohne Panic ausfuehren")
+                .expect("Spatial-Index muss weiterhin einen Treffer liefern");
+            assert_eq!(hit.node_id, 1);
+        }
     }
 
     #[test]

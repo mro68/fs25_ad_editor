@@ -409,6 +409,50 @@ fn test_select_nodes_in_rect_requested_selects_nodes_in_rectangle() {
 }
 
 #[test]
+fn test_select_nodes_in_rect_is_undoable() {
+    let mut controller = AppController::new();
+    let mut state = AppState::new();
+
+    let mut map = RoadMap::new(3);
+    map.add_node(MapNode::new(
+        1,
+        glam::Vec2::new(0.0, 0.0),
+        NodeFlag::Regular,
+    ));
+    map.add_node(MapNode::new(
+        2,
+        glam::Vec2::new(10.0, 0.0),
+        NodeFlag::Regular,
+    ));
+    map.add_node(MapNode::new(
+        3,
+        glam::Vec2::new(30.0, 0.0),
+        NodeFlag::Regular,
+    ));
+    map.ensure_spatial_index();
+    state.road_map = Some(Arc::new(map));
+    state.selection.ids_mut().insert(3);
+
+    controller
+        .handle_intent(
+            &mut state,
+            AppIntent::SelectNodesInRectRequested {
+                min: glam::Vec2::new(-1.0, -1.0),
+                max: glam::Vec2::new(15.0, 1.0),
+                additive: false,
+            },
+        )
+        .expect("Rechteckselektion sollte funktionieren");
+
+    controller
+        .handle_intent(&mut state, AppIntent::UndoRequested)
+        .expect("Undo fuer Rechteckselektion sollte funktionieren");
+
+    assert_eq!(state.selection.selected_node_ids.len(), 1);
+    assert!(state.selection.selected_node_ids.contains(&3));
+}
+
+#[test]
 fn test_ctrl_additive_pick_does_not_select_intermediate_path_nodes() {
     let mut controller = AppController::new();
     let mut state = AppState::new();
@@ -519,6 +563,106 @@ fn test_select_nodes_in_lasso_requested_selects_nodes_in_polygon() {
     assert!(state.selection.selected_node_ids.contains(&1));
     assert!(state.selection.selected_node_ids.contains(&2));
     assert!(!state.selection.selected_node_ids.contains(&3));
+}
+
+#[test]
+fn test_select_nodes_in_lasso_is_undoable() {
+    let mut controller = AppController::new();
+    let mut state = AppState::new();
+
+    let mut map = RoadMap::new(3);
+    map.add_node(MapNode::new(
+        1,
+        glam::Vec2::new(0.0, 0.0),
+        NodeFlag::Regular,
+    ));
+    map.add_node(MapNode::new(
+        2,
+        glam::Vec2::new(10.0, 0.0),
+        NodeFlag::Regular,
+    ));
+    map.add_node(MapNode::new(
+        3,
+        glam::Vec2::new(30.0, 0.0),
+        NodeFlag::Regular,
+    ));
+    map.ensure_spatial_index();
+    state.road_map = Some(Arc::new(map));
+    state.selection.ids_mut().insert(3);
+
+    controller
+        .handle_intent(
+            &mut state,
+            AppIntent::SelectNodesInLassoRequested {
+                polygon: vec![
+                    glam::Vec2::new(-1.0, -1.0),
+                    glam::Vec2::new(15.0, -1.0),
+                    glam::Vec2::new(15.0, 1.0),
+                    glam::Vec2::new(-1.0, 1.0),
+                ],
+                additive: false,
+            },
+        )
+        .expect("Lasso-Selektion sollte funktionieren");
+
+    controller
+        .handle_intent(&mut state, AppIntent::UndoRequested)
+        .expect("Undo fuer Lasso-Selektion sollte funktionieren");
+
+    assert_eq!(state.selection.selected_node_ids.len(), 1);
+    assert!(state.selection.selected_node_ids.contains(&3));
+}
+
+#[test]
+fn test_end_move_rebuilds_spatial_index_after_drag() {
+    let mut controller = AppController::new();
+    let mut state = AppState::new();
+
+    let mut map = RoadMap::new(2);
+    map.add_node(MapNode::new(
+        1,
+        glam::Vec2::new(0.0, 0.0),
+        NodeFlag::Regular,
+    ));
+    map.ensure_spatial_index();
+    state.road_map = Some(Arc::new(map));
+    state.selection.ids_mut().insert(1);
+
+    controller
+        .handle_intent(&mut state, AppIntent::BeginMoveSelectedNodesRequested)
+        .expect("BeginMoveSelectedNodesRequested sollte funktionieren");
+    controller
+        .handle_intent(
+            &mut state,
+            AppIntent::MoveSelectedNodesRequested {
+                delta_world: glam::Vec2::new(100.0, 100.0),
+            },
+        )
+        .expect("MoveSelectedNodesRequested sollte funktionieren");
+
+    let road_map_before_end = state.road_map.as_ref().expect("RoadMap vorhanden");
+    let stale_query = std::panic::catch_unwind(|| {
+        road_map_before_end.nearest_node(glam::Vec2::new(100.0, 100.0))
+    });
+    assert!(
+        stale_query.is_err(),
+        "Vor EndMove muessen Spatial-Queries den veralteten Index explizit erkennen"
+    );
+
+    controller
+        .handle_intent(&mut state, AppIntent::EndMoveSelectedNodesRequested)
+        .expect("EndMoveSelectedNodesRequested sollte funktionieren");
+
+    let road_map_after_end = state.road_map.as_ref().expect("RoadMap vorhanden");
+    let updated_hit = road_map_after_end
+        .nearest_node(glam::Vec2::new(100.0, 100.0))
+        .expect("Spatial-Index muss nach EndMove aktualisiert sein");
+    assert_eq!(updated_hit.node_id, 1);
+    assert!(
+        updated_hit.distance < 1.0,
+        "Nach EndMove muss der Spatial-Index die neue Position finden, war {}",
+        updated_hit.distance
+    );
 }
 
 #[test]

@@ -63,7 +63,10 @@ pub(super) fn handle(state: &mut AppState, command: AppCommand) -> anyhow::Resul
             handlers::selection::begin_move(state);
             Ok(())
         }
-        AppCommand::EndMoveSelectedNodes => Ok(()),
+        AppCommand::EndMoveSelectedNodes => {
+            handlers::selection::end_move(state);
+            Ok(())
+        }
         AppCommand::BeginRotateSelectedNodes => {
             handlers::selection::begin_rotate(state);
             Ok(())
