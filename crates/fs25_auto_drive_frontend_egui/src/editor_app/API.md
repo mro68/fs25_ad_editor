@@ -13,7 +13,7 @@ Die API ist bewusst `pub(crate)` und nur fuer das Binary relevant. Die kanonisch
 | `mod.rs` | `EditorApp`, Konstruktion, `eframe::App::update()` und Intent-Weitergabe |
 | `event_collection.rs` | Panels/Dialoge ueber `HostUiSnapshot` abfragen, `PanelAction`/`DialogResult` in `AppIntent` mappen und Viewport-Input buendeln |
 | `helpers.rs` | Render-Callback, Floating-Menue-Toggle, Background-Upload und Repaint-Steuerung |
-| `overlays.rs` | Tool-, Clipboard-, Distanzen- und Gruppen-Overlays zeichnen; Overlay-Klicks als `AppIntent` zurueckgeben |
+| `overlays.rs` | Holt `ViewportOverlaySnapshot` ueber den Controller, zeichnet Tool-/Clipboard-/Distanzen-/Gruppen-Overlays und mappt Overlay-Klicks auf `AppIntent` |
 
 ## Integrationsrelevante Typen
 
@@ -60,7 +60,7 @@ Die `update()`-Implementierung bildet den Frame-Zyklus der Integrationsschale:
 | `fn process_events(&mut self, ctx: &egui::Context, events: Vec<AppIntent>)` | Behandelt die gesammelten Intents by-value, verarbeitet schalenlokale Events in-place und delegiert den Rest ohne zusaetzliche Clone-Kaskade an den Controller |
 | `fn collect_ui_events(&mut self, ctx: &egui::Context) -> Vec<AppIntent>` | Baut zuerst `AppController::build_host_ui_snapshot()`, rendert darauf basierend Panels/Dialoge und buendelt alles als `Vec<AppIntent>` |
 | `fn render_viewport(&mut self, ui: &egui::Ui, rect: egui::Rect, viewport_size: [f32; 2])` | Baut `RenderScene` und registriert den egui/wgpu-Render-Callback |
-| `fn render_overlays(&mut self, ui: &egui::Ui, rect: egui::Rect, response: &egui::Response, viewport_size: [f32; 2]) -> Vec<AppIntent>` | Zeichnet Overlays ueber dem Viewport und mappt Overlay-Interaktionen auf `AppIntent`s |
+| `fn render_overlays(&mut self, ui: &egui::Ui, rect: egui::Rect, response: &egui::Response, viewport_size: [f32; 2]) -> Vec<AppIntent>` | Baut `AppController::build_viewport_overlay_snapshot(...)`, zeichnet daraus Overlays und mappt Overlay-Interaktionen auf `AppIntent`s |
 | `fn toggle_floating_menu(&mut self, ctx: &egui::Context, kind: FloatingMenuKind)` | Oeffnet oder schliesst das kontextbezogene Floating-Menue an der aktuellen Mausposition |
 | `fn sync_background_upload(&mut self)` | Synchronisiert Background-Upload/Clear revisionsbasiert ueber `AppController::build_render_assets()` |
 | `fn maybe_request_repaint(&self, ctx: &egui::Context, has_meaningful_events: bool)` | Vermeidet unnoetige Idle-Repaints und haelt aktive UI-Zustaende fluessig |

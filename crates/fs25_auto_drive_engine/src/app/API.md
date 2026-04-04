@@ -21,6 +21,7 @@ Die eframe-Integrationsschale gehoert bewusst nicht zum `app`-Layer. Ihre kanoni
 - `tool_contract.rs` — semantische Route-Tool-Vertraege wie `RouteToolId`, `ToolAnchor` und `TangentSource`
 - `ui_contract.rs` — egui-freie UI-Vertraege wie `TangentMenuData`, `TangentOptionData`, `RouteToolPanelState`, `RouteToolConfigState`, `RouteToolPanelAction`, `RouteToolPanelEffect` und `RouteToolViewportData`
 - `ui_contract/host_ui.rs` — host-neutrale UI-Vertraege fuer Dialoge und Tool-Fenster (`PanelState`, `PanelAction`, `DialogRequest`, `DialogResult`, `HostUiSnapshot`)
+- `ui_contract/viewport_overlay.rs` — host-neutrale Overlay-Vertraege (`ViewportOverlaySnapshot`, Clipboard-/Polyline-/Group-Overlay-DTOs)
 
 Die Route-Tool-Panel-DTOs werden intern ueber `ui_contract/route_tool_panel/{common,curve_family,generator_family,analysis_family}.rs` gepflegt. Die Top-Level-Dateien `ui_contract.rs` und `ui_contract/route_tool_panel.rs` bleiben dabei stabile Re-Export-Fassaden fuer UI und Intent-Mapping.
 
@@ -44,6 +45,7 @@ controller.handle_intent(&mut state, AppIntent::ZoomInRequested)?;
 let scene = controller.build_render_scene(&state, [width, height]);
 let assets = controller.build_render_assets(&state);
 let ui_snapshot = controller.build_host_ui_snapshot(&state);
+let overlay_snapshot = controller.build_viewport_overlay_snapshot(&mut state, None);
 ```
 
 **Features:**
@@ -53,6 +55,7 @@ let ui_snapshot = controller.build_host_ui_snapshot(&state);
 - Baut den expliziten per-frame Render-Vertrag (`RenderScene`)
 - Baut den expliziten Asset-Vertrag (`RenderAssetsSnapshot`)
 - Baut den host-neutralen Fenster-/Dialog-Snapshot (`HostUiSnapshot`)
+- Baut den host-neutralen Viewport-Overlay-Snapshot (`ViewportOverlaySnapshot`)
 
 ```rust
 impl AppController {
@@ -61,6 +64,7 @@ impl AppController {
     pub fn build_render_scene(&self, state: &AppState, viewport_size: [f32; 2]) -> RenderScene;
     pub fn build_render_assets(&self, state: &AppState) -> RenderAssetsSnapshot;
     pub fn build_host_ui_snapshot(&self, state: &AppState) -> HostUiSnapshot;
+    pub fn build_viewport_overlay_snapshot(&self, state: &mut AppState, cursor_world: Option<Vec2>) -> ViewportOverlaySnapshot;
 }
 ```
 
@@ -193,6 +197,46 @@ impl UiState {
     pub fn request_dialog(&mut self, request: DialogRequest);
     pub fn take_dialog_requests(&mut self) -> Vec<DialogRequest>;
 }
+
+pub struct ViewportOverlaySnapshot {
+    pub route_tool_preview: Option<ToolPreview>,
+    pub clipboard_preview: Option<ClipboardOverlaySnapshot>,
+    pub distance_preview: Option<PolylineOverlaySnapshot>,
+    pub group_locks: Vec<GroupLockOverlaySnapshot>,
+    pub group_boundaries: Vec<GroupBoundaryOverlaySnapshot>,
+    pub show_no_file_hint: bool,
+}
+
+pub struct ClipboardOverlaySnapshot {
+    pub nodes: Vec<ClipboardPreviewNode>,
+    pub connections: Vec<(usize, usize)>,
+    pub opacity: f32,
+}
+
+pub struct ClipboardPreviewNode {
+    pub world_pos: Vec2,
+    pub has_marker: bool,
+}
+
+pub struct PolylineOverlaySnapshot {
+    pub points: Vec<Vec2>,
+}
+
+pub struct GroupLockOverlaySnapshot {
+    pub segment_id: u64,
+    pub world_pos: Vec2,
+    pub locked: bool,
+}
+
+pub struct GroupBoundaryOverlaySnapshot {
+    pub segment_id: u64,
+    pub node_id: u64,
+    pub world_pos: Vec2,
+    pub direction: BoundaryDirection,
+}
+
+- `ViewportOverlaySnapshot` trennt Overlay-Daten strikt vom Host-Painting und wird frameweise ueber `AppController::build_viewport_overlay_snapshot(...)` bereitgestellt
+- `build_viewport_overlay_snapshot(...)` darf intern Boundary-Caches waermen und nimmt deshalb `&mut AppState`
 
 pub struct FloatingMenuState {
     pub kind: FloatingMenuKind,

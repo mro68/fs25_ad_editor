@@ -3,6 +3,7 @@
 use eframe::egui;
 use glam::Vec2;
 
+use crate::app::ui_contract::ClipboardOverlaySnapshot;
 use crate::app::state::Clipboard;
 use crate::app::tools::ToolPreview;
 use crate::app::{Camera2D, ConnectionDirection, ConnectionPriority};
@@ -298,6 +299,51 @@ pub fn paint_clipboard_preview(
         let sp = camera.world_to_screen(world_pos, viewport_size);
         let screen_pos = egui::pos2(rect.min.x + sp.x, rect.min.y + sp.y);
         let color = if clipboard.markers.iter().any(|m| m.id == node.id) {
+            marker_color
+        } else {
+            node_color
+        };
+        painter.circle_filled(screen_pos, 4.0, color);
+    }
+}
+
+/// Zeichnet eine host-neutrale Clipboard-Vorschau aus einem Overlay-Snapshot.
+pub fn paint_clipboard_snapshot_preview(
+    painter: &egui::Painter,
+    rect: egui::Rect,
+    camera: &Camera2D,
+    viewport_size: Vec2,
+    preview: &ClipboardOverlaySnapshot,
+) {
+    if preview.nodes.is_empty() {
+        return;
+    }
+
+    let alpha = (preview.opacity.clamp(0.0, 1.0) * 255.0) as u8;
+    let node_color = egui::Color32::from_rgba_unmultiplied(100, 200, 255, alpha);
+    let conn_color =
+        egui::Color32::from_rgba_unmultiplied(100, 200, 255, (alpha as u16 * 3 / 4) as u8);
+    let marker_color = egui::Color32::from_rgba_unmultiplied(255, 200, 50, alpha);
+
+    for &(start_idx, end_idx) in &preview.connections {
+        let Some(start_node) = preview.nodes.get(start_idx) else {
+            continue;
+        };
+        let Some(end_node) = preview.nodes.get(end_idx) else {
+            continue;
+        };
+
+        let sa = camera.world_to_screen(start_node.world_pos, viewport_size);
+        let sb = camera.world_to_screen(end_node.world_pos, viewport_size);
+        let from = egui::pos2(rect.min.x + sa.x, rect.min.y + sa.y);
+        let to = egui::pos2(rect.min.x + sb.x, rect.min.y + sb.y);
+        painter.line_segment([from, to], egui::Stroke::new(2.0, conn_color));
+    }
+
+    for node in &preview.nodes {
+        let sp = camera.world_to_screen(node.world_pos, viewport_size);
+        let screen_pos = egui::pos2(rect.min.x + sp.x, rect.min.y + sp.y);
+        let color = if node.has_marker {
             marker_color
         } else {
             node_color
