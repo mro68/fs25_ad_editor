@@ -62,7 +62,7 @@ Die `update()`-Implementierung bildet den Frame-Zyklus der Integrationsschale:
 | `fn render_viewport(&mut self, ui: &egui::Ui, rect: egui::Rect, viewport_size: [f32; 2])` | Baut `RenderScene` und registriert den egui/wgpu-Render-Callback |
 | `fn render_overlays(&mut self, ui: &egui::Ui, rect: egui::Rect, response: &egui::Response, viewport_size: [f32; 2]) -> Vec<AppIntent>` | Zeichnet Overlays ueber dem Viewport und mappt Overlay-Interaktionen auf `AppIntent`s |
 | `fn toggle_floating_menu(&mut self, ctx: &egui::Context, kind: FloatingMenuKind)` | Oeffnet oder schliesst das kontextbezogene Floating-Menue an der aktuellen Mausposition |
-| `fn sync_background_upload(&mut self)` | Synchronisiert die Background-Textur nur bei gesetztem Dirty-Flag mit dem Renderer |
+| `fn sync_background_upload(&mut self)` | Synchronisiert Background-Upload/Clear revisionsbasiert ueber `AppController::build_render_assets()` |
 | `fn maybe_request_repaint(&self, ctx: &egui::Context, has_meaningful_events: bool)` | Vermeidet unnoetige Idle-Repaints und haelt aktive UI-Zustaende fluessig |
 
 ## Beispiel
@@ -97,8 +97,10 @@ flowchart LR
   UI --> INTENTS[AppIntent]
   INTENTS --> CTRL[AppController]
   CTRL --> STATE[AppState]
-  CTRL --> SCENE[RenderScene]
-  SCENE --> RENDER[render::Renderer]
+    CTRL --> SCENE[RenderScene]
+    CTRL --> ASSETS[RenderAssetsSnapshot]
+    SCENE --> RENDER[render::Renderer]
+    ASSETS --> RENDER
 ```
 
 ## Abgrenzung

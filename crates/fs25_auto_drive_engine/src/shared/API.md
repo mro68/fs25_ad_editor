@@ -2,11 +2,12 @@
 
 ## Ueberblick
 
-Das `shared`-Modul enthaelt neutrale, layer-uebergreifende Typen, die zwischen `app` (Produzent) und `render` (Konsument) geteilt werden, um direkte Abhaengigkeiten zwischen diesen Schichten zu vermeiden. Der wichtigste Vertrag in diesem Bereich ist `RenderScene`: Die App baut daraus read-only Render-Snapshots, der Render-Layer konsumiert nur diese Snapshots und kennt weder `RoadMap` noch `Camera2D` direkt. UI-spezifische Eingabe-Helfer und Runtime-/Dateisystem-Policy gehoeren bewusst nicht mehr in diese Schicht.
+Das `shared`-Modul enthaelt neutrale, layer-uebergreifende Typen, die zwischen `app` (Produzent) und `render` (Konsument) geteilt werden, um direkte Abhaengigkeiten zwischen diesen Schichten zu vermeiden. Die wichtigsten Vertraege in diesem Bereich sind `RenderScene` (per-frame) und `RenderAssetsSnapshot` (langlebige Render-Assets): Die App baut daraus read-only Snapshots, der Render-Layer konsumiert nur diese Snapshots und kennt weder `RoadMap` noch `Camera2D` direkt. UI-spezifische Eingabe-Helfer und Runtime-/Dateisystem-Policy gehoeren bewusst nicht mehr in diese Schicht.
 
 ## Module
 
 - `render_scene.rs` — `RenderScene` Uebergabevertrag App → Render
+- `render_assets.rs` — `RenderAssetsSnapshot` fuer langlebige Host-Assets (z. B. Background)
 - `render_quality.rs` — `RenderQuality` Enum (Low/Medium/High)
 - `options/` — Zentrale Konfigurationskonstanten + `EditorOptions` (Laufzeit-Optionen), aufgeteilt in `camera.rs`, `render.rs`, `tools.rs`, `editor.rs`
 - `geometry.rs` — Layer-uebergreifende Geometrie-Hilfsfunktionen (`angle_deviation()` fuer Winkelabweichungs-Berechnung)
@@ -42,6 +43,29 @@ Zusatzdaten pro Frame:
 
 - `has_map() -> bool` — Prueft ob ein RenderMap-Snapshot vorhanden ist
 - `has_background() -> bool` — Prueft ob fuer den Frame ein Hintergrundbild aktiv ist
+
+---
+
+### `RenderAssetsSnapshot`
+
+Expliziter, read-only Asset-Vertrag fuer host-lokale Upload-Synchronisation.
+
+```rust
+pub struct RenderAssetsSnapshot { /* private Felder */ }
+
+pub enum RenderAssetSnapshot {
+    Background(RenderBackgroundAssetSnapshot),
+}
+```
+
+`RenderAssetsSnapshot` transportiert derzeit den Background-Asset-Snapshot inklusive Arc-Bild, Welt-Bounds, Scale und monotonen Revisionen fuer Asset- und Transform-Aenderungen. Hosts koennen damit Upload/Update/Clear lokal steuern, ohne GPU-Zustand in `AppState` zurueckzuschreiben.
+
+**Methoden:**
+
+- `background_asset_revision() -> u64` — Revision fuer Bildinhalt/Existenz
+- `background_transform_revision() -> u64` — Revision fuer Bounds/Skalierung
+- `assets() -> &[RenderAssetSnapshot]` — Alle enthaltenen Assets
+- `background() -> Option<&RenderBackgroundAssetSnapshot>` — Direkter Zugriff auf das Background-Asset
 
 ---
 
@@ -160,8 +184,8 @@ use crate::shared::angle_deviation;
 
 1. **Entkopplung:** `shared` verhindert direkte Abhaengigkeiten zwischen `app` und `render`
 2. **Single Source of Truth:** Alle Rendering-Konstanten in `options.rs` zentralisiert
-3. **Immutable Contract:** `RenderScene` ist read-only (Clone, keine Mutation)
-4. **Snapshot statt Domain:** Der Render-Vertrag transportiert keine Core-Typen wie `RoadMap` oder `Camera2D`
+3. **Immutable Contracts:** `RenderScene` und `RenderAssetsSnapshot` sind read-only (Clone, keine Mutation)
+4. **Snapshot statt Domain:** Render-Vertraege transportieren keine Core-Typen wie `RoadMap` oder `Camera2D`
 
 ---
 

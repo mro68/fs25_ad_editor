@@ -2,7 +2,7 @@
 
 ## Ueberblick
 
-Das `app`-Modul verwaltet den globalen State, verarbeitet `AppIntent`s zentral ueber den `AppController`, mappt diese auf `AppCommand`s und baut die `RenderScene` fuer das Rendering.
+Das `app`-Modul verwaltet den globalen State, verarbeitet `AppIntent`s zentral ueber den `AppController`, mappt diese auf `AppCommand`s und baut sowohl die per-frame `RenderScene` als auch den expliziten `RenderAssetsSnapshot`-Vertrag fuer Renderer-Hosts.
 
 Die Laufzeit-Persistenz fuer `EditorOptions` liegt bewusst im Application-Layer unter `app::use_cases::options`; `shared::EditorOptions` bleibt damit ein neutrales Daten- und Validierungsmodell ohne Dateisystem- oder Pfad-Policy.
 
@@ -41,13 +41,15 @@ let mut state = AppState::new();
 
 controller.handle_intent(&mut state, AppIntent::ZoomInRequested)?;
 let scene = controller.build_render_scene(&state, [width, height]);
+let assets = controller.build_render_assets(&state);
 ```
 
 **Features:**
 - Verarbeitet UI- und Input-Intents gegen `AppState`
 - Mappt Intents auf Commands ueber gemeinsame Feature-Slices (`intent_mapping.rs` + `intent_mapping/by_feature/*`)
 - Dispatcht Commands ueber dieselben Feature-Slices (`controller/by_feature/*`) an Feature-Handler (`handlers/`)
-- Baut den expliziten Render-Vertrag (`RenderScene`)
+- Baut den expliziten per-frame Render-Vertrag (`RenderScene`)
+- Baut den expliziten Asset-Vertrag (`RenderAssetsSnapshot`)
 
 **Interner Zuschnitt:**
 - `events::AppEventFeature` taggt `AppIntent` und `AppCommand` intern in dieselben acht Bereiche: `file_io`, `view`, `selection`, `editing`, `route_tool`, `group`, `dialog`, `history`
@@ -273,7 +275,8 @@ pub struct ViewState {
     pub background_map: Option<Arc<BackgroundMap>>,
     pub background_visible: bool,
     pub background_scale: f32,      // Skalierungsfaktor (1.0 = Original)
-    pub background_dirty: bool,  // GPU-Upload-Signal
+    pub background_asset_revision: u64,     // Monotone Asset-Revision (Bildinhalt/Existenz)
+    pub background_transform_revision: u64, // Monotone Transform-Revision (Scale/Bounds)
 }
 
 pub struct EditorToolState {
@@ -964,10 +967,12 @@ flowchart TD
     H_DLG -->|"UiState / Dialog-Flags"| STATE
 
     CTRL -->|"build_render_scene()"| SCENE[RenderScene]
+    CTRL -->|"build_render_assets()"| ASSETS[RenderAssetsSnapshot]
     SCENE -->|GPU-Draw-Calls| GPU([Renderer / wgpu])
+    ASSETS -->|Asset-Sync| GPU
 ```
 
-*Ablauf:* UI emittiert `AppIntent` → `AppController` uebersetzt via `map_intent_to_commands()` in `Vec<AppCommand>` → Handler-Module mutieren `AppState` via Use-Cases → `build_render_scene()` serialisiert den State in den `RenderScene`-Vertrag → Renderer zeichnet.
+*Ablauf:* UI emittiert `AppIntent` → `AppController` uebersetzt via `map_intent_to_commands()` in `Vec<AppCommand>` → Handler-Module mutieren `AppState` via Use-Cases → `build_render_scene()` serialisiert den State in den `RenderScene`-Vertrag und `build_render_assets()` liefert langlebige Asset-Daten inkl. Revisionen → Renderer zeichnet und synchronisiert Uploads host-lokal.
 
 Intern schneiden `events::AppEventFeature`, `intent_mapping/by_feature/*` und `controller/by_feature/*` diesen Ablauf in dieselben acht Feature-Slices. Dadurch bleiben die oeffentlichen Einstiegspunkte stabil, waehrend die Control-Plane nicht mehr in einem einzigen monolithischen Match-Block gepflegt wird.
 
@@ -984,6 +989,7 @@ for intent in intents {
 }
 
 let scene = controller.build_render_scene(&state, [viewport_w, viewport_h]);
+let assets = controller.build_render_assets(&state);
 ```
 
 ### Pan-Delta-Umrechnung
@@ -1000,7 +1006,7 @@ AppIntent::CameraPan { delta: Vec2::new(-dx * wpp, -dy * wpp) }
 1. **Single Source of Truth:** `AppState` haelt die Laufzeitdaten (kein I/O)
 2. **Intent Boundary:** UI emittiert primaer `AppIntent`; reine UI-/Tool-Konfiguration im `AppState` kann gezielt direkt aktualisiert werden
 3. **Command Execution:** `AppController` mappt Intents auf Commands und fuehrt diese aus
-4. **Render Contract:** Ausgabe an Renderer erfolgt nur ueber `RenderScene`
+4. **Render Contracts:** Ausgabe an Renderer erfolgt ueber `RenderScene` (Frame) plus `RenderAssetsSnapshot` (langlebige Assets)
 5. **I/O in Use-Cases:** Dateisystem-Operationen sind in `use_cases::file_io` zentralisiert
 6. **Re-Exports:** `app` re-exportiert nur die stabile Leseoberflaeche fuer UI und Integrationsschale (z. B. `Camera2D`, `RoadMap`, `ConnectionDirection`, `ConnectionPriority`, `RenderQuality`, `ZipImageEntry`), app-eigene State-/Controller-Typen sowie die gezielte App-Bruecke `compute_ring`; Tool-Vertraege und Tangenten-/Panel-DTOs werden explizit ueber `app::tool_contract` und `app::ui_contract` importiert, und die Crate-Wurzel bleibt bewusst duenn
 
@@ -1073,6 +1079,18 @@ sind, werden in die Dimm-Menge aufgenommen (50% Opacity im Renderer). Ergebnis w
 Cache-Invalidierung erfolgt wenn sich `SelectionState::generation` oder `GroupRegistry::dimmed_generation` aendert.
 
 Zusätzlich baut `render_scene::build()` einen render-seitigen `RenderMap`-Snapshot der aktuellen `RoadMap`. Dieser Snapshot enthaelt nur Renderdaten (Nodes, Verbindungen, Marker-Positionen, immutable KD-Index) und wird ueber `AppState::render_map_cache` gecacht. Die Invalidierung erfolgt ueber die interne `RoadMap::render_cache_key()`-Revision, sodass der Renderer keinen Core-Typenvertrag mehr benoetigt.
+
+---
+
+### `render_assets::build()`
+
+Baut den expliziten `RenderAssetsSnapshot` aus dem aktuellen `AppState`.
+
+```rust
+pub fn build(state: &AppState) -> RenderAssetsSnapshot
+```
+
+Der Asset-Snapshot enthaelt aktuell den Background-Asset-Vertrag inklusive Arc-Bild, World-Bounds, Scale sowie monotone Asset-/Transform-Revisionen. Hosts koennen damit Upload- und Clear-Vorgaenge ohne `background_dirty`-Rueckkopplung in den Engine-State synchronisieren.
 
 ---
 

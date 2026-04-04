@@ -15,6 +15,8 @@ pub mod history;
 mod intent_mapping;
 /// Builder fuer Render-Szenen aus dem AppState.
 pub mod render_scene;
+/// Builder fuer explizite Render-Assets aus dem AppState.
+pub mod render_assets;
 /// Application State — zentrale Datenhaltung (View, Editor, Selektion, Dialoge).
 pub mod state;
 /// App-weiter Vertrag fuer Route-Tool-Identitaeten und Ankerdaten.
@@ -40,6 +42,7 @@ pub use command_log::CommandLog;
 pub use controller::AppController;
 pub use events::{AppCommand, AppIntent};
 pub use group_registry::{BoundaryDirection, BoundaryInfo, GroupRecord, GroupRegistry};
+pub use render_assets::build as build_render_assets;
 pub use render_scene::build as build_render_scene;
 pub use state::{
     AppState, Clipboard, EditorTool, EditorToolState, FloatingMenuKind, FloatingMenuState,
