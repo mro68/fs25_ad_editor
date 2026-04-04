@@ -74,7 +74,8 @@ fn handle_dialog_request(request: DialogRequest) -> DialogResult {
         }
     };
 
-    selected_path.map_or(DialogResult::Cancelled { kind }, |path| {
-        DialogResult::PathSelected { kind, path }
-    })
+    selected_path.map_or(
+        DialogResult::Cancelled { kind },
+        |path| DialogResult::PathSelected { kind, path },
+    )
 }

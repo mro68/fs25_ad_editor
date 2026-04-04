@@ -301,3 +301,19 @@ pub struct EditorToolState {
 
 - `ToolManager` verwaltet alle registrierten Route-Tools (Straight, Curve2/3, Spline, Bypass, Constraint)
 - `active_tool` bestimmt welches Editor-Werkzeug gerade aktiv ist
+
+---
+
+## Flutter-Bridge DTOs
+
+```rust
+pub enum EngineSessionAction {
+    ToggleCommandPalette,
+    SetEditorTool { tool: EngineActiveTool },
+    OpenOptionsDialog,
+    CloseOptionsDialog,
+}
+```
+
+- `EngineSessionAction` bildet eine explizite, stabile Mutationsoberflaeche fuer Host-Frontends
+- Die Bridge mappt diese Aktionen intern auf `AppIntent`, ohne generischen Intent-Dispatch oder direkten `AppState`-Escape-Hatch

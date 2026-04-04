@@ -244,7 +244,7 @@ pub fn panel_action_to_intent(action: PanelAction) -> AppIntent {
 #[cfg(test)]
 mod tests {
     use crate::app::ui_contract::{
-        dialog_result_to_intent, panel_action_to_intent, DialogRequestKind, OptionsPanelAction,
+        panel_action_to_intent, dialog_result_to_intent, DialogRequestKind, OptionsPanelAction,
         PanelAction, ParkingPanelAction, RouteOffsetPanelAction, RouteToolPanelAction,
     };
     use crate::app::AppIntent;
@@ -307,8 +307,7 @@ mod tests {
 
     #[test]
     fn route_tool_tangent_action_stays_untouched() {
-        let action =
-            RouteToolPanelAction::RouteOffset(RouteOffsetPanelAction::SetLeftEnabled(true));
+        let action = RouteToolPanelAction::RouteOffset(RouteOffsetPanelAction::SetLeftEnabled(true));
         let intent = panel_action_to_intent(PanelAction::RouteTool(action.clone()));
 
         assert!(matches!(

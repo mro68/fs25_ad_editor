@@ -14,6 +14,23 @@ pub enum EngineActiveTool {
     Route,
 }
 
+/// Explizite Host-Aktionen fuer die Bridge-Session.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(tag = "kind", rename_all = "snake_case")]
+pub enum EngineSessionAction {
+    /// Schaltet die Command-Palette um.
+    ToggleCommandPalette,
+    /// Wechselt das aktive Editor-Tool.
+    SetEditorTool {
+        /// Ziel-Tool als stabiler Bridge-Identifier.
+        tool: EngineActiveTool,
+    },
+    /// Oeffnet den Optionen-Dialog.
+    OpenOptionsDialog,
+    /// Schliesst den Optionen-Dialog.
+    CloseOptionsDialog,
+}
+
 /// Serialisierbarer Snapshot der aktuellen Auswahl.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct EngineSelectionSnapshot {
