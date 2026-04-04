@@ -210,7 +210,7 @@ pub enum PanelAction {
 #[derive(Debug, Clone)]
 pub enum OptionsPanelAction {
     /// Geaenderte Optionen uebernehmen.
-    Apply(EditorOptions),
+    Apply(Box<EditorOptions>),
     /// Optionen auf Standardwerte zuruecksetzen.
     ResetToDefaults,
     /// Optionen-Panel schliessen.
@@ -229,9 +229,9 @@ pub fn panel_action_to_intent(action: PanelAction) -> AppIntent {
         PanelAction::RouteTool(action) => AppIntent::RouteToolPanelActionRequested { action },
         PanelAction::RouteToolExecute => AppIntent::RouteToolExecuteRequested,
         PanelAction::RouteToolCancel => AppIntent::RouteToolCancelled,
-        PanelAction::Options(OptionsPanelAction::Apply(options)) => AppIntent::OptionsChanged {
-            options: Box::new(options),
-        },
+        PanelAction::Options(OptionsPanelAction::Apply(options)) => {
+            AppIntent::OptionsChanged { options }
+        }
         PanelAction::Options(OptionsPanelAction::ResetToDefaults) => {
             AppIntent::ResetOptionsRequested
         }
@@ -244,7 +244,7 @@ pub fn panel_action_to_intent(action: PanelAction) -> AppIntent {
 #[cfg(test)]
 mod tests {
     use crate::app::ui_contract::{
-        dialog_result_to_intent, panel_action_to_intent, DialogRequestKind, OptionsPanelAction,
+        panel_action_to_intent, dialog_result_to_intent, DialogRequestKind, OptionsPanelAction,
         PanelAction, ParkingPanelAction, RouteOffsetPanelAction, RouteToolPanelAction,
     };
     use crate::app::AppIntent;
@@ -307,8 +307,7 @@ mod tests {
 
     #[test]
     fn route_tool_tangent_action_stays_untouched() {
-        let action =
-            RouteToolPanelAction::RouteOffset(RouteOffsetPanelAction::SetLeftEnabled(true));
+        let action = RouteToolPanelAction::RouteOffset(RouteOffsetPanelAction::SetLeftEnabled(true));
         let intent = panel_action_to_intent(PanelAction::RouteTool(action.clone()));
 
         assert!(matches!(
