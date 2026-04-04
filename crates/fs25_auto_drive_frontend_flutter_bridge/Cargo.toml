@@ -1,0 +1,12 @@
+[package]
+name = "fs25_auto_drive_frontend_flutter_bridge"
+version = "1.7.0"
+edition = "2021"
+
+[lib]
+path = "src/lib.rs"
+
+[dependencies]
+anyhow = "1.0.102"
+fs25_auto_drive_engine = { path = "../fs25_auto_drive_engine" }
+serde = { version = "1", features = ["derive"] }
