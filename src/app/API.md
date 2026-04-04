@@ -180,7 +180,7 @@ pub struct UiState {
 
 pub struct FloatingMenuState {
     pub kind: FloatingMenuKind,
-    pub pos: egui::Pos2,
+    pub pos: Vec2,
 }
 
 pub enum FloatingMenuKind {

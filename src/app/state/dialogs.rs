@@ -1,6 +1,7 @@
 use crate::app::tools::RouteToolGroup;
 use crate::shared::OverviewLayerOptions;
 use fs25_map_overview::FieldDetectionSource;
+use glam::Vec2;
 use std::path::PathBuf;
 
 /// Zustand eines schwebenden Kontextmenues.
@@ -8,8 +9,8 @@ use std::path::PathBuf;
 pub struct FloatingMenuState {
     /// Art des aktuell geoeffneten Menues.
     pub kind: FloatingMenuKind,
-    /// Bildschirmposition des Menues.
-    pub pos: egui::Pos2,
+    /// Bildschirmposition des Menues in Host-Pixelkoordinaten.
+    pub pos: Vec2,
 }
 
 /// Typ des schwebenden Kontextmenues.

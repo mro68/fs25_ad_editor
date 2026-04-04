@@ -40,11 +40,17 @@ impl EditorApp {
                 self.state.ui.floating_menu = None;
             } else {
                 let pos = ctx.input(|i| i.pointer.hover_pos().or(i.pointer.latest_pos()));
-                self.state.ui.floating_menu = pos.map(|p| FloatingMenuState { kind, pos: p });
+                self.state.ui.floating_menu = pos.map(|p| FloatingMenuState {
+                    kind,
+                    pos: glam::vec2(p.x, p.y),
+                });
             }
         } else {
             let pos = ctx.input(|i| i.pointer.hover_pos().or(i.pointer.latest_pos()));
-            self.state.ui.floating_menu = pos.map(|p| FloatingMenuState { kind, pos: p });
+            self.state.ui.floating_menu = pos.map(|p| FloatingMenuState {
+                kind,
+                pos: glam::vec2(p.x, p.y),
+            });
         }
     }
 

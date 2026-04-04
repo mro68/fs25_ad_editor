@@ -70,10 +70,11 @@ pub fn render_floating_menu(ctx: &egui::Context, state: &AppState) -> (Vec<AppIn
         inactive: icon_color,
         active: active_icon_color,
     };
+    let menu_pos = egui::pos2(menu.pos.x, menu.pos.y);
 
     let area_response = egui::Area::new(egui::Id::new(("floating_menu", menu.kind)))
         .order(egui::Order::Foreground)
-        .fixed_pos(menu.pos)
+        .fixed_pos(menu_pos)
         .show(ctx, |ui| {
             egui::Frame::popup(ui.style()).show(ui, |ui| {
                 ui.horizontal_wrapped(|ui| match menu.kind {
