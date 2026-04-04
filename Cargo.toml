@@ -1,5 +1,5 @@
 [workspace]
-members = [".", "crates/fs25_auto_drive_engine", "crates/fs25_map_overview"]
+members = [".", "crates/fs25_auto_drive_engine", "crates/fs25_auto_drive_frontend_egui", "crates/fs25_map_overview"]
 
 [package]
 name = "FS25-AutoDrive-Editor"
@@ -32,6 +32,7 @@ harness = false
 
 [dependencies]
 fs25_auto_drive_engine = { path = "crates/fs25_auto_drive_engine" }
+fs25_auto_drive_frontend_egui = { path = "crates/fs25_auto_drive_frontend_egui" }
 
 # UI Framework
 egui = "0.33.3"

@@ -97,7 +97,7 @@ impl MarkerRenderer {
         let queue = &render_state.queue;
 
         // Pin-Icon-SVG laden, rasterisieren und als wgpu-Textur erstellen
-        let svg_str = include_str!("../../assets/icons/icon_map_pin.svg");
+        let svg_str = include_str!("../../../../assets/icons/icon_map_pin.svg");
         let img = rasterize_svg(svg_str, MARKER_OUTLINE_WIDTH);
         let (texture, sampler) =
             super::texture::create_texture_from_image(device, queue, &img, "Marker Pin Texture");
@@ -268,7 +268,7 @@ impl MarkerRenderer {
         if (self.last_outline_width - outline_width).abs() < 1e-5 {
             return;
         }
-        let svg_str = include_str!("../../assets/icons/icon_map_pin.svg");
+        let svg_str = include_str!("../../../../assets/icons/icon_map_pin.svg");
         let img = rasterize_svg(svg_str, outline_width);
         let (texture, _) =
             super::texture::create_texture_from_image(device, queue, &img, "Marker Pin Texture");
