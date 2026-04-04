@@ -8,4 +8,4 @@ pub mod session;
 pub use dto::{
     EngineActiveTool, EngineSelectionSnapshot, EngineSessionSnapshot, EngineViewportSnapshot,
 };
-pub use session::FlutterBridgeSession;
+pub use session::{EngineRenderFrameSnapshot, FlutterBridgeSession};

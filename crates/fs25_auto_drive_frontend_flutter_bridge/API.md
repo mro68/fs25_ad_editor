@@ -17,7 +17,8 @@ Sie bleibt absichtlich klein: Ziel ist eine stabile Session- und DTO-Seam, an di
 
 | Typ | Zweck |
 |---|---|
-| `FlutterBridgeSession` | Host-nahe Session-Fassade mit Intent-Dispatch und Snapshot-Ausgabe |
+| `FlutterBridgeSession` | Host-nahe Session-Fassade mit Intent-Dispatch, Session-Snapshot und Render-Zugriff |
+| `EngineRenderFrameSnapshot` | Gekoppelter Render-Snapshot (`RenderScene` + `RenderAssetsSnapshot`) |
 | `EngineActiveTool` | Stabiler Tool-Identifier fuer `EngineSessionSnapshot.active_tool` |
 | `EngineSessionSnapshot` | Serialisierbare Zustandszusammenfassung fuer Hosts |
 | `EngineSelectionSnapshot` | Serialisierbare Auswahl als Liste selektierter Node-IDs |
@@ -31,7 +32,10 @@ Sie bleibt absichtlich klein: Ziel ist eine stabile Session- und DTO-Seam, an di
 | `pub fn dispatch(&mut self, intent: AppIntent) -> Result<()>` | Wendet einen bestehenden Engine-Intent auf die Session an |
 | `pub fn snapshot(&mut self) -> &EngineSessionSnapshot` | Liefert einen gecachten Referenz-Snapshot fuer allokationsarmes Polling |
 | `pub fn snapshot_owned(&mut self) -> EngineSessionSnapshot` | Liefert eine besitzende Snapshot-Kopie fuer entkoppelte Verarbeitung |
-| `pub fn state(&self) -> &AppState` | Gibt read-only Zugriff auf den zugrundeliegenden Engine-State |
+| `pub fn build_render_scene(&self, viewport_size: [f32; 2]) -> RenderScene` | Liefert den per-frame Render-Vertrag fuer den angegebenen Viewport |
+| `pub fn build_render_assets(&self) -> RenderAssetsSnapshot` | Liefert den expliziten Asset-Snapshot inklusive Revisionen |
+| `pub fn build_render_frame(&self, viewport_size: [f32; 2]) -> EngineRenderFrameSnapshot` | Liefert Szene und Assets als gekoppelten read-only Render-Snapshot |
+| `pub fn state(&self) -> &AppState` | Read-only Escape-Hatch; bevorzugt sollten Snapshot-Methoden genutzt werden |
 
 ## Beispiel
 
@@ -54,10 +58,14 @@ flowchart LR
 	SESSION --> CTRL[AppController]
 	CTRL --> STATE[AppState]
 	STATE --> SNAP[EngineSessionSnapshot]
+	CTRL --> RENDER_SCENE[RenderScene]
+	CTRL --> RENDER_ASSETS[RenderAssetsSnapshot]
 	SNAP --> HOST
+	RENDER_SCENE --> HOST
+	RENDER_ASSETS --> HOST
 ```
 
 ## Scope-Cut
 
-- Diese Crate stellt nur Rust-seitige Session- und DTO-Seams bereit.
+- Diese Crate stellt Rust-seitige Session- und Render-Seams bereit.
 - Transport, Method-Channel, `flutter_rust_bridge` oder andere SDK-Details folgen spaeter.
