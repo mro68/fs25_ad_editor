@@ -1775,6 +1775,20 @@ dependencies = [
 ]
 
 [[package]]
+name = "fs25_auto_drive_render_wgpu"
+version = "1.7.0"
+dependencies = [
+ "bytemuck",
+ "fs25_auto_drive_engine",
+ "glam",
+ "image",
+ "indexmap",
+ "log",
+ "resvg 0.47.0",
+ "wgpu",
+]
+
+[[package]]
 name = "fs25_map_overview"
 version = "0.2.1"
 dependencies = [
