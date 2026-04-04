@@ -1,5 +1,5 @@
 use crate::shared::{t, EditorOptions, I18nKey, Language};
-use crate::ui::common::apply_wheel_step;
+use crate::ui::common::{apply_wheel_step, apply_wheel_step_default};
 
 /// Rendert die LOD/Mindestgroessen-Einstellungen (Pixel-Untergrenzen + Node-Decimation).
 pub fn render_lod(ui: &mut egui::Ui, opts: &mut EditorOptions, lang: Language) -> bool {
@@ -10,36 +10,36 @@ pub fn render_lod(ui: &mut egui::Ui, opts: &mut EditorOptions, lang: Language) -
         let r = ui
             .add(
                 egui::Slider::new(&mut opts.min_node_size_px, 0.0..=20.0)
-                    .step_by(0.5)
+                    .step_by(0.1)
                     .fixed_decimals(1),
             )
             .on_hover_text(t(lang, I18nKey::OptLodNodesHelp));
         changed |=
-            r.changed() | apply_wheel_step(ui, &r, &mut opts.min_node_size_px, 1.0, 0.0..=20.0);
+            r.changed() | apply_wheel_step_default(ui, &r, &mut opts.min_node_size_px, 0.0..=20.0);
     });
     ui.horizontal(|ui| {
         ui.label(t(lang, I18nKey::OptLodConnections));
         let r = ui
             .add(
                 egui::Slider::new(&mut opts.min_connection_width_px, 0.0..=10.0)
-                    .step_by(0.5)
+                    .step_by(0.1)
                     .fixed_decimals(1),
             )
             .on_hover_text(t(lang, I18nKey::OptLodConnectionsHelp));
         changed |= r.changed()
-            | apply_wheel_step(ui, &r, &mut opts.min_connection_width_px, 0.5, 0.0..=10.0);
+            | apply_wheel_step_default(ui, &r, &mut opts.min_connection_width_px, 0.0..=10.0);
     });
     ui.horizontal(|ui| {
         ui.label(t(lang, I18nKey::OptLodArrows));
         let r = ui
             .add(
                 egui::Slider::new(&mut opts.min_arrow_size_px, 0.0..=20.0)
-                    .step_by(0.5)
+                    .step_by(0.1)
                     .fixed_decimals(1),
             )
             .on_hover_text(t(lang, I18nKey::OptLodArrowsHelp));
         changed |=
-            r.changed() | apply_wheel_step(ui, &r, &mut opts.min_arrow_size_px, 1.0, 0.0..=20.0);
+            r.changed() | apply_wheel_step_default(ui, &r, &mut opts.min_arrow_size_px, 0.0..=20.0);
     });
     ui.horizontal(|ui| {
         ui.label(t(lang, I18nKey::OptLodMarkers));

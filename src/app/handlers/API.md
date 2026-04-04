@@ -187,12 +187,15 @@ Bulk-Selektionen: Alle Nodes, Selektion aufheben, Selektion invertieren.
 ```rust
 pub fn begin_move(state: &mut AppState)
 pub fn move_selected(state: &mut AppState, delta_world: glam::Vec2)
+pub fn end_move(state: &mut AppState)
 pub fn begin_rotate(state: &mut AppState)
 pub fn rotate_selected(state: &mut AppState, delta_angle: f32)
 pub fn end_rotate(state: &mut AppState)
 ```
 
-Move-Lifecycle: `begin_move()` zeichnet einen Undo-Snapshot auf, `move_selected()` verschiebt die selektierten Nodes um das Delta.
+Rechteck- und Lasso-Selektion verhalten sich beim Undo jetzt wie Pick- und Segment-Selektion: Der Handler nimmt den alten Selektionszustand vor der Mutation auf und schreibt nur dann einen Snapshot, wenn sich die Auswahl tatsaechlich geaendert hat.
+
+Move-Lifecycle: `begin_move()` zeichnet genau einen Undo-Snapshot zu Drag-Beginn auf, `move_selected()` verschiebt die selektierten Nodes um das Delta ohne pro Tick den Spatial-Index neu aufzubauen, `end_move()` stoesst den Rebuild einmalig am Drag-Ende an.
 
 Rotation-Lifecycle: `begin_rotate()` zeichnet einen Undo-Snapshot auf, `rotate_selected()` rotiert die selektierten Nodes um ihr Zentrum (kein Spatial-Rebuild), `end_rotate()` stößt den Spatial-Index-Rebuild ein.
 
@@ -214,7 +217,7 @@ Wechselt das aktive Editor-Werkzeug und setzt das `connect_source_node` zurück.
 pub fn add_node(state: &mut AppState, world_pos: glam::Vec2)
 ```
 
-Fügt einen neuen Node an der Position hinzu (oder selektiert einen bestehenden, falls die Position darin fällt).
+Fuegt einen neuen Node an der Position hinzu (oder selektiert einen bestehenden, falls die Position darin faellt) und verarbeitet das `AddNodeResult` explizit. `NoMap` wird als `status_message` sichtbar gemacht, `SelectedExisting` und `Created` werden bewusst geloggt statt still verworfen.
 
 ```rust
 pub fn delete_selected(state: &mut AppState)

@@ -14,7 +14,19 @@ pub fn set_editor_tool(state: &mut AppState, tool: crate::app::state::EditorTool
 /// Fuegt einen neuen Node an der uebergebenen Weltposition hinzu.
 /// Trifft der Klick einen existierenden Node, wird dieser nur selektiert.
 pub fn add_node(state: &mut AppState, world_pos: glam::Vec2) {
-    let _ = use_cases::editing::add_node_at_position(state, world_pos);
+    match use_cases::editing::add_node_at_position(state, world_pos) {
+        use_cases::editing::AddNodeResult::NoMap => {
+            state.ui.status_message = Some("Kein Node hinzufuegbar: keine RoadMap geladen".into());
+        }
+        use_cases::editing::AddNodeResult::SelectedExisting(node_id) => {
+            state.ui.status_message = None;
+            log::info!("AddNode: Existierenden Node {} selektiert", node_id);
+        }
+        use_cases::editing::AddNodeResult::Created(node_id) => {
+            state.ui.status_message = None;
+            log::debug!("AddNode: Neuen Node {} erstellt", node_id);
+        }
+    }
 }
 
 /// Loescht alle aktuell selektierten Nodes.

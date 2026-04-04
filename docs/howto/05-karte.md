@@ -96,6 +96,8 @@ Wenn bereits eine AutoDrive-XML geoeffnet ist, fragt der Editor anschliessend, o
 
 Diese `overview.png` wird beim naechsten Oeffnen derselben XML automatisch als Hintergrund verwendet.
 
+Die Layer-Auswahl aus dem Dialog wird fuer spaetere Generierungen als Standard gemerkt. Falls dieses Speichern fehlschlaegt, zeigt der Editor eine Warnung in der Statusleiste an. Die bereits erzeugte Uebersichtskarte bleibt dabei erhalten und kann weiterhin genutzt oder als `overview.png` gespeichert werden.
+
 ---
 
 ## Automatische Erkennung (Post-Load)
@@ -113,6 +115,7 @@ Nach dem Laden einer AutoDrive-XML prueft der Editor automatisch:
 
 - Der Dialog **Nach dem Laden erkannt** fasst automatisch geladene Heightmap, Hintergrundbild und passende ZIP-Treffer zusammen.
 - Oben in der Statusleiste erscheinen kurze Meldungen wie „Hintergrundkarte geladen" oder „3 Flags bereinigt"
+- Auch Persistenzwarnungen, zum Beispiel beim Merken der Uebersichts-Layer-Voreinstellungen, werden dort sichtbar eingeblendet statt still verworfen.
 
 ---
 

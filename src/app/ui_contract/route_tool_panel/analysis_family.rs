@@ -1,0 +1,273 @@
+use crate::core::{ConnectionDirection, ConnectionPriority};
+
+/// Panelzustand des Strecken-Versatz-Tools.
+#[derive(Debug, Clone, PartialEq)]
+pub struct RouteOffsetPanelState {
+    /// Gibt an, ob eine gueltige Kette geladen ist.
+    pub has_chain: bool,
+    /// Meldung fuer den Fall ohne geladene Kette.
+    pub empty_message: Option<String>,
+    /// Links-Versatz aktiv?
+    pub left_enabled: bool,
+    /// Distanz des Links-Versatzes.
+    pub left_distance: f32,
+    /// Rechts-Versatz aktiv?
+    pub right_enabled: bool,
+    /// Distanz des Rechts-Versatzes.
+    pub right_distance: f32,
+    /// Maximaler Abstand zwischen neuen Nodes.
+    pub base_spacing: f32,
+    /// Original-Kette beibehalten?
+    pub keep_original: bool,
+    /// Anzahl Nodes der geladenen Kette.
+    pub chain_node_count: usize,
+}
+
+/// Panel-Aktion des Strecken-Versatz-Tools.
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub enum RouteOffsetPanelAction {
+    /// Links-Versatz aktivieren/deaktivieren.
+    SetLeftEnabled(bool),
+    /// Distanz des Links-Versatzes setzen.
+    SetLeftDistance(f32),
+    /// Rechts-Versatz aktivieren/deaktivieren.
+    SetRightEnabled(bool),
+    /// Distanz des Rechts-Versatzes setzen.
+    SetRightDistance(f32),
+    /// Maximalen Node-Abstand setzen.
+    SetBaseSpacing(f32),
+    /// Original-Kette beibehalten setzen.
+    SetKeepOriginal(bool),
+}
+
+/// Panelzustand des Feldgrenz-Tools.
+#[derive(Debug, Clone, PartialEq)]
+pub struct FieldBoundaryPanelState {
+    /// ID des aktuell gewaehlten Feldes.
+    pub selected_field_id: Option<u32>,
+    /// Meldung fuer den Fall ohne Auswahl.
+    pub empty_selection_text: Option<String>,
+    /// Abstand zwischen erzeugten Nodes.
+    pub node_spacing: f32,
+    /// Versatz in Metern.
+    pub offset: f32,
+    /// Toleranz fuer Douglas-Peucker.
+    pub straighten_tolerance: f32,
+    /// Ecken-Erkennung aktiv?
+    pub corner_detection_enabled: bool,
+    /// Winkel-Schwellwert fuer Ecken-Erkennung.
+    pub corner_angle_threshold_deg: f32,
+    /// Eckenverrundung aktiv?
+    pub corner_rounding_enabled: bool,
+    /// Radius der Eckenverrundung.
+    pub corner_rounding_radius: f32,
+    /// Maximale Winkelabweichung beim Verrunden.
+    pub corner_rounding_max_angle_deg: f32,
+    /// Verbindungsrichtung der erzeugten Route.
+    pub direction: ConnectionDirection,
+    /// Strassenart der erzeugten Route.
+    pub priority: ConnectionPriority,
+    /// Optionaler Bedienhinweis.
+    pub hint_text: Option<String>,
+}
+
+/// Panel-Aktion des Feldgrenz-Tools.
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub enum FieldBoundaryPanelAction {
+    /// Node-Abstand setzen.
+    SetNodeSpacing(f32),
+    /// Versatz setzen.
+    SetOffset(f32),
+    /// Begradigungs-Toleranz setzen.
+    SetStraightenTolerance(f32),
+    /// Ecken-Erkennung aktivieren/deaktivieren.
+    SetCornerDetectionEnabled(bool),
+    /// Winkel-Schwellwert setzen.
+    SetCornerAngleThresholdDeg(f32),
+    /// Eckenverrundung aktivieren/deaktivieren.
+    SetCornerRoundingEnabled(bool),
+    /// Verrundungsradius setzen.
+    SetCornerRoundingRadius(f32),
+    /// Maximale Winkelabweichung beim Verrunden setzen.
+    SetCornerRoundingMaxAngleDeg(f32),
+    /// Verbindungsrichtung setzen.
+    SetDirection(ConnectionDirection),
+    /// Strassenart setzen.
+    SetPriority(ConnectionPriority),
+}
+
+/// Auswahlmodus des Feldweg-Panels.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum FieldPathModeChoice {
+    /// Ganze Felder pro Seite waehlen.
+    Fields,
+    /// Feldgrenz-Segmente pro Seite waehlen.
+    Boundaries,
+}
+
+/// Phase des Feldweg-Panels.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum FieldPathPanelPhase {
+    /// Startzustand.
+    Idle,
+    /// Seite 1 wird gesammelt.
+    SelectingSide1,
+    /// Seite 2 wird gesammelt.
+    SelectingSide2,
+    /// Berechnete Vorschau liegt vor.
+    Preview,
+}
+
+/// Zusammenfassung einer Feldweg-Seite im Panel.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct FieldPathSelectionSummary {
+    /// Titel der Seite.
+    pub title: String,
+    /// Zusammenfassender Text fuer Auswahl oder Leerzustand.
+    pub text: String,
+    /// Gibt an, ob die Seite aktuell leer ist.
+    pub is_empty: bool,
+}
+
+/// Panelzustand des Feldweg-Tools.
+#[derive(Debug, Clone, PartialEq)]
+pub struct FieldPathPanelState {
+    /// Aktueller Auswahlmodus.
+    pub mode: FieldPathModeChoice,
+    /// Aktuelle Panel-Phase.
+    pub phase: FieldPathPanelPhase,
+    /// Zusammenfassung fuer Seite 1.
+    pub side1: FieldPathSelectionSummary,
+    /// Zusammenfassung fuer Seite 2, sobald diese relevant ist.
+    pub side2: Option<FieldPathSelectionSummary>,
+    /// Gibt an, ob der Wechsel zu Seite 2 moeglich ist.
+    pub can_advance_to_side2: bool,
+    /// Gibt an, ob eine Berechnung moeglich ist.
+    pub can_compute: bool,
+    /// Optionaler Preview-Status.
+    pub preview_message: Option<String>,
+    /// Abstand zwischen erzeugten Nodes.
+    pub node_spacing: f32,
+    /// Douglas-Peucker-Toleranz.
+    pub simplify_tolerance: f32,
+    /// Anschluss an bestehende Nodes aktiv?
+    pub connect_to_existing: bool,
+}
+
+/// Panel-Aktion des Feldweg-Tools.
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub enum FieldPathPanelAction {
+    /// Modus setzen.
+    SetMode(FieldPathModeChoice),
+    /// Selektion von Seite 1 starten.
+    Start,
+    /// Zu Seite 2 wechseln.
+    AdvanceToSide2,
+    /// Mittellinie berechnen.
+    Compute,
+    /// Zurueck zu Seite 1 wechseln.
+    BackToSide1,
+    /// Zurueck zu Seite 2 wechseln.
+    BackToSide2,
+    /// Tool zurücksetzen.
+    Reset,
+    /// Node-Abstand setzen.
+    SetNodeSpacing(f32),
+    /// Vereinfachungs-Toleranz setzen.
+    SetSimplifyTolerance(f32),
+    /// Anschluss an bestehende Nodes setzen.
+    SetConnectToExisting(bool),
+}
+
+/// Panel-Phase des Farb-Pfad-Tools.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum ColorPathPanelPhase {
+    /// Warten auf Start.
+    Idle,
+    /// Farben werden gesammelt.
+    Sampling,
+    /// Extrahiertes Wegenetz liegt als Vorschau vor.
+    Preview,
+}
+
+/// Anschlussmodus des Farb-Pfad-Tools.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum ExistingConnectionModeChoice {
+    /// Nie anschliessen.
+    Never,
+    /// Nur offene Enden anschliessen.
+    OpenEnds,
+    /// Offene Enden und Junctions anschliessen.
+    OpenEndsAndJunctions,
+}
+
+/// Kennzahlen der ColorPath-Vorschau.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct ColorPathPreviewStats {
+    /// Anzahl Junctions im Netz.
+    pub junction_count: usize,
+    /// Anzahl offener Enden im Netz.
+    pub open_end_count: usize,
+    /// Anzahl Segmente im Netz.
+    pub segment_count: usize,
+    /// Anzahl Vorschau-Nodes ueber alle PreparedSegments.
+    pub node_count: usize,
+    /// Gibt an, ob eine Uebernahme moeglich ist.
+    pub can_accept: bool,
+}
+
+/// Panelzustand des Farb-Pfad-Tools.
+#[derive(Debug, Clone, PartialEq)]
+pub struct ColorPathPanelState {
+    /// Aktuelle Panel-Phase.
+    pub phase: ColorPathPanelPhase,
+    /// Anzahl gesampelter Farben.
+    pub sample_count: usize,
+    /// Mittelwert der gesampelten Farbe, falls vorhanden.
+    pub avg_color: Option<[u8; 3]>,
+    /// Label fuer die aktuell aktive Farbmenge.
+    pub palette_label: String,
+    /// Farbpalette fuer Matching und Preview.
+    pub palette_colors: Vec<[u8; 3]>,
+    /// Gibt an, ob die Pipeline aus dem aktuellen Sampling gestartet werden kann.
+    pub can_compute: bool,
+    /// Kennzahlen der Vorschau, falls vorhanden.
+    pub preview_stats: Option<ColorPathPreviewStats>,
+    /// Exaktmodus aktiv?
+    pub exact_color_match: bool,
+    /// Farbtoleranz fuer unscharfes Matching.
+    pub color_tolerance: f32,
+    /// Node-Abstand fuer PreparedSegments.
+    pub node_spacing: f32,
+    /// Vereinfachungs-Toleranz fuer PreparedSegments.
+    pub simplify_tolerance: f32,
+    /// Rauschfilter aktiv?
+    pub noise_filter: bool,
+    /// Anschlussmodus an bestehende Nodes.
+    pub existing_connection_mode: ExistingConnectionModeChoice,
+}
+
+/// Panel-Aktion des Farb-Pfad-Tools.
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub enum ColorPathPanelAction {
+    /// Sampling starten.
+    StartSampling,
+    /// Pipeline aus dem aktuellen Sampling berechnen.
+    ComputePreview,
+    /// Von der Preview zurueck in das Sampling wechseln.
+    BackToSampling,
+    /// Tool zurücksetzen.
+    Reset,
+    /// Exaktmodus setzen.
+    SetExactColorMatch(bool),
+    /// Farbtoleranz setzen.
+    SetColorTolerance(f32),
+    /// Node-Abstand setzen.
+    SetNodeSpacing(f32),
+    /// Vereinfachungs-Toleranz setzen.
+    SetSimplifyTolerance(f32),
+    /// Rauschfilter setzen.
+    SetNoiseFilter(bool),
+    /// Anschlussmodus setzen.
+    SetExistingConnectionMode(ExistingConnectionModeChoice),
+}

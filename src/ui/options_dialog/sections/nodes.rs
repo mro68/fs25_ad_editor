@@ -1,5 +1,5 @@
 use crate::shared::{t, EditorOptions, I18nKey, Language};
-use crate::ui::common::apply_wheel_step;
+use crate::ui::common::{apply_wheel_step, apply_wheel_step_default};
 
 /// Rendert die Node-Darstellungseinstellungen (Groesse, Farben, Hitbox).
 pub fn render_nodes(ui: &mut egui::Ui, opts: &mut EditorOptions, lang: Language) -> bool {
@@ -9,10 +9,10 @@ pub fn render_nodes(ui: &mut egui::Ui, opts: &mut EditorOptions, lang: Language)
         let r = ui.add(
             egui::DragValue::new(&mut opts.node_size_world)
                 .range(0.1..=5.0)
-                .speed(0.01),
+                .speed(0.1),
         );
         changed |=
-            r.changed() | apply_wheel_step(ui, &r, &mut opts.node_size_world, 0.1, 0.1..=5.0);
+            r.changed() | apply_wheel_step_default(ui, &r, &mut opts.node_size_world, 0.1..=5.0);
         r.on_hover_text(t(lang, I18nKey::OptNodeSizeWorldHelp));
     });
     changed |= super::color_edit(

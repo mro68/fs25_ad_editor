@@ -40,10 +40,10 @@ pub fn show_trace_all_fields_dialog(ctx: &egui::Context, ui_state: &mut UiState)
                     let r = ui.add(
                         egui::DragValue::new(&mut dlg.spacing)
                             .range(1.0..=100.0)
-                            .speed(0.5)
+                            .speed(0.1)
                             .suffix(" m"),
                     );
-                    apply_wheel_step(ui, &r, &mut dlg.spacing, 1.0, 1.0..=100.0);
+                    apply_wheel_step(ui, &r, &mut dlg.spacing, 0.1, 1.0..=100.0);
                     ui.end_row();
 
                     // Versatz
@@ -52,10 +52,10 @@ pub fn show_trace_all_fields_dialog(ctx: &egui::Context, ui_state: &mut UiState)
                     let r = ui.add(
                         egui::DragValue::new(&mut dlg.offset)
                             .range(-50.0..=50.0)
-                            .speed(0.5)
+                            .speed(0.1)
                             .suffix(" m"),
                     );
-                    apply_wheel_step(ui, &r, &mut dlg.offset, 0.5, -50.0..=50.0);
+                    apply_wheel_step(ui, &r, &mut dlg.offset, 0.1, -50.0..=50.0);
                     ui.end_row();
 
                     // Begradigung
@@ -64,7 +64,7 @@ pub fn show_trace_all_fields_dialog(ctx: &egui::Context, ui_state: &mut UiState)
                     let r = ui.add(
                         egui::DragValue::new(&mut dlg.tolerance)
                             .range(0.0..=20.0)
-                            .speed(0.25)
+                            .speed(0.1)
                             .suffix(" m"),
                     );
                     apply_wheel_step(ui, &r, &mut dlg.tolerance, 0.1, 0.0..=20.0);
@@ -83,10 +83,10 @@ pub fn show_trace_all_fields_dialog(ctx: &egui::Context, ui_state: &mut UiState)
                         let r = ui.add(
                             egui::DragValue::new(&mut dlg.corner_angle_threshold_deg)
                                 .range(10.0..=170.0)
-                                .speed(1.0)
+                                .speed(0.1)
                                 .suffix("\u{b0}"),
                         );
-                        apply_wheel_step(ui, &r, &mut dlg.corner_angle_threshold_deg, 5.0, 10.0..=170.0);
+                        apply_wheel_step(ui, &r, &mut dlg.corner_angle_threshold_deg, 0.1, 10.0..=170.0);
                         ui.end_row();
 
                         // Eckenverrundung
@@ -102,10 +102,10 @@ pub fn show_trace_all_fields_dialog(ctx: &egui::Context, ui_state: &mut UiState)
                             let r = ui.add(
                                 egui::DragValue::new(&mut dlg.corner_rounding_radius)
                                     .range(1.0..=50.0)
-                                    .speed(0.5)
+                                    .speed(0.1)
                                     .suffix(" m"),
                             );
-                            apply_wheel_step(ui, &r, &mut dlg.corner_rounding_radius, 0.5, 1.0..=50.0);
+                            apply_wheel_step(ui, &r, &mut dlg.corner_rounding_radius, 0.1, 1.0..=50.0);
                             ui.end_row();
 
                             // Max. Winkelabweichung (nur sichtbar wenn Verrundung aktiv)
@@ -114,10 +114,10 @@ pub fn show_trace_all_fields_dialog(ctx: &egui::Context, ui_state: &mut UiState)
                             let r = ui.add(
                                 egui::DragValue::new(&mut dlg.corner_rounding_max_angle_deg)
                                     .range(1.0..=45.0)
-                                    .speed(0.5)
+                                    .speed(0.1)
                                     .suffix("°"),
                             );
-                            apply_wheel_step(ui, &r, &mut dlg.corner_rounding_max_angle_deg, 1.0, 1.0..=45.0);
+                            apply_wheel_step(ui, &r, &mut dlg.corner_rounding_max_angle_deg, 0.1, 1.0..=45.0);
                             ui.end_row();
                         }
                     }

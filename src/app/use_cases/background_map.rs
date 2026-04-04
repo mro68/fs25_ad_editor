@@ -23,6 +23,17 @@ fn clear_background_assets(state: &mut AppState) {
     state.background_image = None;
 }
 
+fn persist_overview_layer_defaults(state: &mut AppState) {
+    if let Err(error) = super::options::save_editor_options(&state.options) {
+        let message = format!(
+            "Uebersichts-Layer konnten nicht gespeichert werden: {}",
+            error
+        );
+        log::warn!("{}", message);
+        state.ui.status_message = Some(message);
+    }
+}
+
 /// Berechnet den JSON-Pfad fuer Farmland-Polygone parallel zur Bilddatei.
 ///
 /// Ersetzt die Dateiendung durch `.json` (z.B. `overview.png` → `overview.json`).
@@ -183,7 +194,7 @@ pub fn generate_overview_with_options(state: &mut AppState) -> Result<()> {
     // Layer-Optionen persistent speichern
     state.options.overview_layers = layers.clone();
     state.refresh_options_arc();
-    let _ = super::options::save_editor_options(&state.options);
+    persist_overview_layer_defaults(state);
 
     let options = fs25_map_overview::OverviewOptions {
         hillshade: layers.hillshade,
@@ -378,5 +389,29 @@ pub fn load_farmland_json(state: &mut AppState, image_path: &str) {
             Err(e) => log::warn!("Farmland-JSON konnte nicht deserialisiert werden: {}", e),
         },
         Err(e) => log::warn!("Farmland-JSON konnte nicht gelesen werden: {}", e),
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::persist_overview_layer_defaults;
+    use crate::app::AppState;
+
+    #[test]
+    fn persist_overview_layer_defaults_surfaces_save_errors() {
+        let mut state = AppState::new();
+        state.options.camera_zoom_min = state.options.camera_zoom_max;
+
+        persist_overview_layer_defaults(&mut state);
+
+        let message = state
+            .ui
+            .status_message
+            .as_deref()
+            .expect("Persistenzfehler muss sichtbar gemacht werden");
+        assert!(
+            message.contains("Uebersichts-Layer konnten nicht gespeichert werden"),
+            "Unerwartete Statusmeldung: {message}"
+        );
     }
 }

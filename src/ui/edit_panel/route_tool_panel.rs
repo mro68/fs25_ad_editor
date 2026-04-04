@@ -15,24 +15,33 @@ use crate::app::ui_contract::{
     ROUTE_OFFSET_DISTANCE_LIMITS, SMOOTH_CURVE_MAX_ANGLE_LIMITS, SMOOTH_CURVE_MIN_DISTANCE_LIMITS,
 };
 use crate::app::{AppIntent, ConnectionDirection, ConnectionPriority};
+use crate::ui::common::{apply_wheel_step_default_enabled, apply_wheel_step_usize};
 use crate::ui::properties::selectors::{
     render_direction_icon_selector, render_priority_icon_selector,
 };
 
 mod analysis_panel;
 mod curve_panel;
+mod generator_panel;
 
-/// Route-Tool-Panel: Tool-Konfiguration plus Ausfuehren/Abbrechen.
+/// Rendert das Route-Tool-Panel mit Tool-Konfiguration sowie Ausfuehren/Abbrechen.
+///
+/// Ein positiver `distance_wheel_step_m` aktiviert Mausrad-Anpassungen in den
+/// numerischen Unterpanels. Die konkrete Scroll-Auswertung bleibt in
+/// `ui::common`, damit Route-Tool- und Analysis-Widgets dieselbe Wheel-Logik
+/// verwenden.
 #[allow(clippy::too_many_arguments)]
 pub(super) fn render_route_tool_panel(
     ctx: &egui::Context,
     route_tool: RouteToolPanelState,
     default_direction: ConnectionDirection,
     default_priority: ConnectionPriority,
-    _distance_wheel_step_m: f32,
+    distance_wheel_step_m: f32,
     panel_pos: Option<egui::Pos2>,
     events: &mut Vec<AppIntent>,
 ) {
+    let wheel_enabled = distance_wheel_step_m > 0.0;
+
     let mut window = egui::Window::new("📐 Route-Tool")
         .collapsible(false)
         .resizable(false)
@@ -74,7 +83,7 @@ pub(super) fn render_route_tool_panel(
         ui.add_space(6.0);
 
         if let Some(config_state) = route_tool.config_state.as_ref() {
-            render_route_tool_config(ui, config_state, events);
+            render_route_tool_config(ui, config_state, wheel_enabled, events);
         } else {
             ui.small("Kein Route-Tool aktiv.");
         }
@@ -97,354 +106,135 @@ pub(super) fn render_route_tool_panel(
 fn render_route_tool_config(
     ui: &mut egui::Ui,
     config_state: &RouteToolConfigState,
+    wheel_enabled: bool,
     events: &mut Vec<AppIntent>,
 ) {
     match config_state {
-        RouteToolConfigState::Straight(state) => render_straight_panel(ui, state, events),
-        RouteToolConfigState::Curve(state) => render_curve_panel(ui, state, events),
-        RouteToolConfigState::Spline(state) => render_spline_panel(ui, state, events),
-        RouteToolConfigState::SmoothCurve(state) => render_smooth_curve_panel(ui, state, events),
-        RouteToolConfigState::Bypass(state) => render_bypass_panel(ui, state, events),
-        RouteToolConfigState::Parking(state) => render_parking_panel(ui, state, events),
-        RouteToolConfigState::FieldBoundary(state) => {
-            render_field_boundary_panel(ui, state, events)
+        RouteToolConfigState::Straight(state) => {
+            render_straight_panel(ui, state, wheel_enabled, events)
         }
-        RouteToolConfigState::FieldPath(state) => render_field_path_panel(ui, state, events),
-        RouteToolConfigState::RouteOffset(state) => render_route_offset_panel(ui, state, events),
-        RouteToolConfigState::ColorPath(state) => render_color_path_panel(ui, state, events),
+        RouteToolConfigState::Curve(state) => render_curve_panel(ui, state, wheel_enabled, events),
+        RouteToolConfigState::Spline(state) => {
+            render_spline_panel(ui, state, wheel_enabled, events)
+        }
+        RouteToolConfigState::SmoothCurve(state) => {
+            render_smooth_curve_panel(ui, state, wheel_enabled, events)
+        }
+        RouteToolConfigState::Bypass(state) => {
+            render_bypass_panel(ui, state, wheel_enabled, events)
+        }
+        RouteToolConfigState::Parking(state) => {
+            render_parking_panel(ui, state, wheel_enabled, events)
+        }
+        RouteToolConfigState::FieldBoundary(state) => {
+            render_field_boundary_panel(ui, state, wheel_enabled, events)
+        }
+        RouteToolConfigState::FieldPath(state) => {
+            render_field_path_panel(ui, state, wheel_enabled, events)
+        }
+        RouteToolConfigState::RouteOffset(state) => {
+            render_route_offset_panel(ui, state, wheel_enabled, events)
+        }
+        RouteToolConfigState::ColorPath(state) => {
+            render_color_path_panel(ui, state, wheel_enabled, events)
+        }
     }
 }
 
 fn render_straight_panel(
     ui: &mut egui::Ui,
     state: &StraightPanelState,
+    wheel_enabled: bool,
     events: &mut Vec<AppIntent>,
 ) {
-    render_segment_config(ui, &state.segment, events, |action| {
-        RouteToolPanelAction::Straight(StraightPanelAction::Segment(action))
-    });
+    generator_panel::render_straight_panel(ui, state, wheel_enabled, events);
 }
 
-fn render_curve_panel(ui: &mut egui::Ui, state: &CurvePanelState, events: &mut Vec<AppIntent>) {
-    curve_panel::render_curve_panel(ui, state, events);
+fn render_curve_panel(
+    ui: &mut egui::Ui,
+    state: &CurvePanelState,
+    wheel_enabled: bool,
+    events: &mut Vec<AppIntent>,
+) {
+    curve_panel::render_curve_panel(ui, state, wheel_enabled, events);
 }
 
-fn render_spline_panel(ui: &mut egui::Ui, state: &SplinePanelState, events: &mut Vec<AppIntent>) {
-    curve_panel::render_spline_panel(ui, state, events);
+fn render_spline_panel(
+    ui: &mut egui::Ui,
+    state: &SplinePanelState,
+    wheel_enabled: bool,
+    events: &mut Vec<AppIntent>,
+) {
+    curve_panel::render_spline_panel(ui, state, wheel_enabled, events);
 }
 
 fn render_smooth_curve_panel(
     ui: &mut egui::Ui,
     state: &SmoothCurvePanelState,
+    wheel_enabled: bool,
     events: &mut Vec<AppIntent>,
 ) {
-    let mut max_angle_deg = state.max_angle_deg;
-    ui.horizontal(|ui| {
-        ui.label("Max. Winkel:");
-        if ui
-            .add(
-                egui::DragValue::new(&mut max_angle_deg)
-                    .range(SMOOTH_CURVE_MAX_ANGLE_LIMITS.range())
-                    .speed(1.0)
-                    .suffix("°"),
-            )
-            .changed()
-        {
-            push_action(
-                events,
-                RouteToolPanelAction::SmoothCurve(SmoothCurvePanelAction::SetMaxAngleDeg(
-                    max_angle_deg,
-                )),
-            );
-        }
-    });
-
-    render_segment_distance_only(ui, &state.segment, events, |value| {
-        RouteToolPanelAction::SmoothCurve(SmoothCurvePanelAction::SetMaxSegmentLength(value))
-    });
-
-    let mut min_distance = state.min_distance;
-    ui.horizontal(|ui| {
-        ui.label("Min. Distanz:");
-        if ui
-            .add(
-                egui::DragValue::new(&mut min_distance)
-                    .range(SMOOTH_CURVE_MIN_DISTANCE_LIMITS.range())
-                    .speed(0.25)
-                    .suffix(" m"),
-            )
-            .changed()
-        {
-            push_action(
-                events,
-                RouteToolPanelAction::SmoothCurve(SmoothCurvePanelAction::SetMinDistance(
-                    min_distance,
-                )),
-            );
-        }
-    });
-
-    if let Some(approach) = state.approach_steerer.as_ref() {
-        ui.horizontal(|ui| {
-            ui.label(format!(
-                "Approach: {}{}",
-                format_vec2(approach.position),
-                if approach.is_manual { " (manuell)" } else { "" }
-            ));
-            if approach.is_manual && ui.button("Reset").clicked() {
-                push_action(
-                    events,
-                    RouteToolPanelAction::SmoothCurve(SmoothCurvePanelAction::ResetApproachSteerer),
-                );
-            }
-        });
-    }
-
-    if let Some(departure) = state.departure_steerer.as_ref() {
-        ui.horizontal(|ui| {
-            ui.label(format!(
-                "Departure: {}{}",
-                format_vec2(departure.position),
-                if departure.is_manual {
-                    " (manuell)"
-                } else {
-                    ""
-                }
-            ));
-            if departure.is_manual && ui.button("Reset").clicked() {
-                push_action(
-                    events,
-                    RouteToolPanelAction::SmoothCurve(
-                        SmoothCurvePanelAction::ResetDepartureSteerer,
-                    ),
-                );
-            }
-        });
-    }
-
-    if !state.control_nodes.is_empty() {
-        ui.separator();
-        ui.label("Kontrollpunkte:");
-        for (index, position) in state.control_nodes.iter().enumerate() {
-            ui.horizontal(|ui| {
-                ui.label(format!("#{} {}", index + 1, format_vec2(*position)));
-                if ui.button("Entfernen").clicked() {
-                    push_action(
-                        events,
-                        RouteToolPanelAction::SmoothCurve(
-                            SmoothCurvePanelAction::RemoveControlNode { index },
-                        ),
-                    );
-                }
-            });
-        }
-    }
-
-    if let Some(preview_node_count) = state.preview_node_count {
-        ui.separator();
-        ui.label(format!("Preview-Nodes: {preview_node_count}"));
-    }
+    generator_panel::render_smooth_curve_panel(ui, state, wheel_enabled, events);
 }
 
-fn render_bypass_panel(ui: &mut egui::Ui, state: &BypassPanelState, events: &mut Vec<AppIntent>) {
-    if let Some(message) = state.empty_message.as_deref() {
-        ui.colored_label(egui::Color32::GRAY, message);
-        return;
-    }
-
-    ui.label(format!("Kette: {} Nodes", state.chain_node_count));
-    if let Some(new_node_count) = state.new_node_count {
-        ui.label(format!("Neue Nodes: {new_node_count}"));
-    }
-    if let Some(transition_length_m) = state.transition_length_m {
-        ui.label(format!("Uebergang: {:.1} m", transition_length_m));
-    }
-    ui.label(format!("Seite: {}", state.side_label));
-
-    let mut offset = state.offset;
-    ui.horizontal(|ui| {
-        ui.label("Versatz:");
-        if ui
-            .add(
-                egui::DragValue::new(&mut offset)
-                    .range(BYPASS_OFFSET_LIMITS.range())
-                    .speed(0.25)
-                    .suffix(" m"),
-            )
-            .changed()
-        {
-            push_action(
-                events,
-                RouteToolPanelAction::Bypass(BypassPanelAction::SetOffset(offset)),
-            );
-        }
-    });
-
-    let mut base_spacing = state.base_spacing;
-    ui.horizontal(|ui| {
-        ui.label("Basisabstand:");
-        if ui
-            .add(
-                egui::DragValue::new(&mut base_spacing)
-                    .range(BYPASS_BASE_SPACING_LIMITS.range())
-                    .speed(0.25)
-                    .suffix(" m"),
-            )
-            .changed()
-        {
-            push_action(
-                events,
-                RouteToolPanelAction::Bypass(BypassPanelAction::SetBaseSpacing(base_spacing)),
-            );
-        }
-    });
+fn render_bypass_panel(
+    ui: &mut egui::Ui,
+    state: &BypassPanelState,
+    wheel_enabled: bool,
+    events: &mut Vec<AppIntent>,
+) {
+    generator_panel::render_bypass_panel(ui, state, wheel_enabled, events);
 }
 
-fn render_parking_panel(ui: &mut egui::Ui, state: &ParkingPanelState, events: &mut Vec<AppIntent>) {
-    let mut num_rows = state.num_rows;
-    ui.horizontal(|ui| {
-        ui.label("Reihen:");
-        if ui
-            .add(
-                egui::DragValue::new(&mut num_rows)
-                    .range(PARKING_NUM_ROWS_LIMITS.range())
-                    .speed(1.0),
-            )
-            .changed()
-        {
-            push_action(
-                events,
-                RouteToolPanelAction::Parking(ParkingPanelAction::SetNumRows(num_rows)),
-            );
-        }
-    });
-
-    render_parking_f32(
-        ui,
-        "Reihenabstand:",
-        state.row_spacing,
-        PARKING_ROW_SPACING_LIMITS.range(),
-        " m",
-        events,
-        |value| RouteToolPanelAction::Parking(ParkingPanelAction::SetRowSpacing(value)),
-    );
-    render_parking_f32(
-        ui,
-        "Reihenlaenge:",
-        state.bay_length,
-        PARKING_BAY_LENGTH_LIMITS.range(),
-        " m",
-        events,
-        |value| RouteToolPanelAction::Parking(ParkingPanelAction::SetBayLength(value)),
-    );
-    render_parking_f32(
-        ui,
-        "Max. Node-Abstand:",
-        state.max_node_distance,
-        PARKING_MAX_NODE_DISTANCE_LIMITS.range(),
-        " m",
-        events,
-        |value| RouteToolPanelAction::Parking(ParkingPanelAction::SetMaxNodeDistance(value)),
-    );
-    render_parking_f32(
-        ui,
-        "Einfahrt t:",
-        state.entry_t,
-        PARKING_ENTRY_EXIT_T_LIMITS.range(),
-        "",
-        events,
-        |value| RouteToolPanelAction::Parking(ParkingPanelAction::SetEntryT(value)),
-    );
-    render_parking_f32(
-        ui,
-        "Ausfahrt t:",
-        state.exit_t,
-        PARKING_ENTRY_EXIT_T_LIMITS.range(),
-        "",
-        events,
-        |value| RouteToolPanelAction::Parking(ParkingPanelAction::SetExitT(value)),
-    );
-    render_parking_f32(
-        ui,
-        "Rampenlaenge:",
-        state.ramp_length,
-        PARKING_RAMP_LENGTH_LIMITS.range(),
-        " m",
-        events,
-        |value| RouteToolPanelAction::Parking(ParkingPanelAction::SetRampLength(value)),
-    );
-
-    render_parking_side_selector(ui, "Einfahrt:", state.entry_side, events, |value| {
-        RouteToolPanelAction::Parking(ParkingPanelAction::SetEntrySide(value))
-    });
-    render_parking_side_selector(ui, "Ausfahrt:", state.exit_side, events, |value| {
-        RouteToolPanelAction::Parking(ParkingPanelAction::SetExitSide(value))
-    });
-
-    let mut marker_group = state.marker_group.clone();
-    ui.horizontal(|ui| {
-        ui.label("Marker-Gruppe:");
-        if ui.text_edit_singleline(&mut marker_group).changed() {
-            push_action(
-                events,
-                RouteToolPanelAction::Parking(ParkingPanelAction::SetMarkerGroup(marker_group)),
-            );
-        }
-    });
-
-    render_parking_f32(
-        ui,
-        "Drehschritt:",
-        state.rotation_step_deg,
-        PARKING_ROTATION_STEP_LIMITS.range(),
-        "°",
-        events,
-        |value| RouteToolPanelAction::Parking(ParkingPanelAction::SetRotationStepDeg(value)),
-    );
-
-    if let Some(angle_deg) = state.angle_deg {
-        ui.label(format!("Winkel: {:.1}°", angle_deg));
-    }
-    if let Some(hint_text) = state.hint_text.as_deref() {
-        ui.small(hint_text);
-    }
+fn render_parking_panel(
+    ui: &mut egui::Ui,
+    state: &ParkingPanelState,
+    wheel_enabled: bool,
+    events: &mut Vec<AppIntent>,
+) {
+    generator_panel::render_parking_panel(ui, state, wheel_enabled, events);
 }
 
 fn render_field_boundary_panel(
     ui: &mut egui::Ui,
     state: &FieldBoundaryPanelState,
+    wheel_enabled: bool,
     events: &mut Vec<AppIntent>,
 ) {
-    analysis_panel::render_field_boundary_panel(ui, state, events);
+    analysis_panel::render_field_boundary_panel(ui, state, wheel_enabled, events);
 }
 
 fn render_field_path_panel(
     ui: &mut egui::Ui,
     state: &FieldPathPanelState,
+    wheel_enabled: bool,
     events: &mut Vec<AppIntent>,
 ) {
-    analysis_panel::render_field_path_panel(ui, state, events);
+    analysis_panel::render_field_path_panel(ui, state, wheel_enabled, events);
 }
 
 fn render_route_offset_panel(
     ui: &mut egui::Ui,
     state: &RouteOffsetPanelState,
+    wheel_enabled: bool,
     events: &mut Vec<AppIntent>,
 ) {
-    analysis_panel::render_route_offset_panel(ui, state, events);
+    analysis_panel::render_route_offset_panel(ui, state, wheel_enabled, events);
 }
 
 fn render_color_path_panel(
     ui: &mut egui::Ui,
     state: &ColorPathPanelState,
+    wheel_enabled: bool,
     events: &mut Vec<AppIntent>,
 ) {
-    analysis_panel::render_color_path_panel(ui, state, events);
+    analysis_panel::render_color_path_panel(ui, state, wheel_enabled, events);
 }
 
 fn render_segment_config(
     ui: &mut egui::Ui,
     state: &SegmentConfigPanelState,
+    wheel_enabled: bool,
     events: &mut Vec<AppIntent>,
     map_action: impl Fn(SegmentConfigPanelAction) -> RouteToolPanelAction,
 ) {
@@ -458,14 +248,21 @@ fn render_segment_config(
     let max_segment_length_limit = state.max_segment_length_max;
     ui.horizontal(|ui| {
         ui.label("Max. Segmentlaenge:");
-        if ui
-            .add(
-                egui::DragValue::new(&mut max_segment_length)
-                    .range(min_segment_length..=max_segment_length_limit)
-                    .speed(0.25)
-                    .suffix(" m"),
+        let range = min_segment_length..=max_segment_length_limit;
+        let response = ui.add(
+            egui::DragValue::new(&mut max_segment_length)
+                .range(range.clone())
+                .speed(0.1)
+                .suffix(" m"),
+        );
+        if response.changed()
+            | apply_wheel_step_default_enabled(
+                ui,
+                &response,
+                &mut max_segment_length,
+                range,
+                wheel_enabled,
             )
-            .changed()
         {
             push_action(
                 events,
@@ -482,13 +279,14 @@ fn render_segment_config(
             ui.label("Node-Anzahl:");
             let min = state.node_count_min.unwrap_or(2);
             let max = state.node_count_max.unwrap_or(node_count.max(2));
-            if ui
-                .add(
-                    egui::DragValue::new(&mut node_count)
-                        .range(min..=max)
-                        .speed(1.0),
-                )
-                .changed()
+            let range = min..=max;
+            let response = ui.add(
+                egui::DragValue::new(&mut node_count)
+                    .range(range.clone())
+                    .speed(1.0),
+            );
+            if response.changed()
+                | apply_wheel_step_usize(ui, &response, &mut node_count, range, wheel_enabled)
             {
                 push_action(
                     events,
@@ -502,6 +300,7 @@ fn render_segment_config(
 fn render_segment_distance_only(
     ui: &mut egui::Ui,
     state: &SegmentConfigPanelState,
+    wheel_enabled: bool,
     events: &mut Vec<AppIntent>,
     map_action: impl Fn(f32) -> RouteToolPanelAction,
 ) {
@@ -514,14 +313,21 @@ fn render_segment_distance_only(
     let max_segment_length_limit = state.max_segment_length_max;
     ui.horizontal(|ui| {
         ui.label("Max. Segmentlaenge:");
-        if ui
-            .add(
-                egui::DragValue::new(&mut max_segment_length)
-                    .range(min_segment_length..=max_segment_length_limit)
-                    .speed(0.25)
-                    .suffix(" m"),
+        let range = min_segment_length..=max_segment_length_limit;
+        let response = ui.add(
+            egui::DragValue::new(&mut max_segment_length)
+                .range(range.clone())
+                .speed(0.1)
+                .suffix(" m"),
+        );
+        if response.changed()
+            | apply_wheel_step_default_enabled(
+                ui,
+                &response,
+                &mut max_segment_length,
+                range,
+                wheel_enabled,
             )
-            .changed()
         {
             push_action(events, map_action(max_segment_length));
         }
@@ -643,52 +449,113 @@ fn render_parking_side_selector(
     });
 }
 
+#[allow(clippy::too_many_arguments)]
 fn render_parking_f32(
     ui: &mut egui::Ui,
     label: &str,
     current: f32,
     range: std::ops::RangeInclusive<f32>,
+    wheel_enabled: bool,
     suffix: &str,
+    events: &mut Vec<AppIntent>,
+    map_action: impl Fn(f32) -> RouteToolPanelAction,
+) {
+    render_drag_f32(
+        ui,
+        label,
+        current,
+        range,
+        0.1,
+        suffix,
+        wheel_enabled,
+        events,
+        map_action,
+    );
+}
+
+#[allow(clippy::too_many_arguments)]
+fn render_drag_f32(
+    ui: &mut egui::Ui,
+    label: &str,
+    current: f32,
+    range: std::ops::RangeInclusive<f32>,
+    speed: f64,
+    suffix: &str,
+    wheel_enabled: bool,
     events: &mut Vec<AppIntent>,
     map_action: impl Fn(f32) -> RouteToolPanelAction,
 ) {
     ui.horizontal(|ui| {
         ui.label(label);
         let mut value = current;
-        if ui
-            .add(
-                egui::DragValue::new(&mut value)
-                    .range(range)
-                    .speed(0.25)
-                    .suffix(suffix),
-            )
-            .changed()
+        let response = ui.add(
+            egui::DragValue::new(&mut value)
+                .range(range.clone())
+                .speed(speed)
+                .suffix(suffix),
+        );
+        if response.changed()
+            | apply_wheel_step_default_enabled(ui, &response, &mut value, range, wheel_enabled)
         {
             push_action(events, map_action(value));
         }
     });
 }
 
-fn render_drag_f32(
+#[allow(clippy::too_many_arguments)]
+fn render_drag_usize(
+    ui: &mut egui::Ui,
+    label: &str,
+    current: usize,
+    range: std::ops::RangeInclusive<usize>,
+    speed: f64,
+    wheel_enabled: bool,
+    events: &mut Vec<AppIntent>,
+    map_action: impl Fn(usize) -> RouteToolPanelAction,
+) {
+    ui.horizontal(|ui| {
+        ui.label(label);
+        let mut value = current;
+        let response = ui.add(
+            egui::DragValue::new(&mut value)
+                .range(range.clone())
+                .speed(speed),
+        );
+        if response.changed()
+            | apply_wheel_step_usize(ui, &response, &mut value, range, wheel_enabled)
+        {
+            push_action(events, map_action(value));
+        }
+    });
+}
+
+#[allow(clippy::too_many_arguments)]
+fn render_slider_f32(
     ui: &mut egui::Ui,
     label: &str,
     current: f32,
     range: std::ops::RangeInclusive<f32>,
     suffix: &str,
+    enabled: bool,
+    wheel_enabled: bool,
     events: &mut Vec<AppIntent>,
     map_action: impl Fn(f32) -> RouteToolPanelAction,
 ) {
     ui.horizontal(|ui| {
         ui.label(label);
         let mut value = current;
-        if ui
-            .add(
-                egui::DragValue::new(&mut value)
-                    .range(range)
-                    .speed(0.25)
-                    .suffix(suffix),
+        let response = ui.add_enabled(
+            enabled,
+            egui::Slider::new(&mut value, range.clone()).suffix(suffix),
+        );
+        if response.changed()
+            | apply_wheel_step_default_enabled(
+                ui,
+                &response,
+                &mut value,
+                range,
+                wheel_enabled && enabled,
             )
-            .changed()
         {
             push_action(events, map_action(value));
         }

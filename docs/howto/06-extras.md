@@ -101,6 +101,15 @@ Einstellung ueber **Ansicht -> Render-Qualitaet**.
 | **Grid-Snap** | Aus | An Grid-Schnittpunkte snappen |
 | **Grid-Groesse** | 10 m | Rasterweite bei aktiviertem Grid-Snap |
 
+### Eingabe-Optionen
+
+| Option | Standardwert | Beschreibung |
+|--------|-------------|--------------|
+| **Wertaenderung** | Mausrad hoch/runter | Bevorzugte Bedienung fuer Zahleneingaben. Auch bei umgestellter Primaerbedienung reagieren Zahleneingaben unter dem Mauszeiger weiterhin auf das Mausrad. |
+| **Mausrad-Schritt Distanz** | 0,1 m | Basisschritt fuer Distanz-Eingaben pro Mausrad-Tick. **Alt** vergroessert den Schritt, **Ctrl** verkleinert ihn bei Float-Feldern. |
+
+> **Tipp:** Im Optionsdialog reagieren Zahleneingaben mit Nachkommastellen standardmaessig in 0,1er-Schritten auf das Mausrad. Solange der Mauszeiger ueber einem Zahlenfeld steht, scrollt die Dialogliste nicht gleichzeitig mit.
+
 ### Kurven-Optionen
 
 | Option | Standardwert | Beschreibung |

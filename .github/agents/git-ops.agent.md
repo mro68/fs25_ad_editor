@@ -2,11 +2,16 @@
 name: git-ops
 description: "Spezialist fuer Git-Workflows im fs25_auto_drive_editor. Aufrufen bei Branching, Commit/Amend, Rebase, Cherry-Pick, Push/Force-Push, Divergenz-Analyse, PR-Vorbereitung und sicherer Historienpflege."
 tools:
-  - execute
-  - read
+  - execute/getTerminalOutput
+  - execute/awaitTerminal
+  - execute/runInTerminal
+  - read/readFile
   - 'github/*'
-  - edit
+  - edit/createFile
+  - edit/editFiles
+  - edit/rename
   - vscode/askQuestions
+
 model: "GPT-5.4"
 ---
 

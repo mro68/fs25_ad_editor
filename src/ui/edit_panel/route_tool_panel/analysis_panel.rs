@@ -2,9 +2,14 @@
 
 use super::*;
 
+/// Rendert die Konfiguration fuer das FieldBoundary-Tool.
+///
+/// `wheel_enabled` steuert, ob numerische Widgets ihre Mausrad-Helfer aus
+/// `ui::common` anwenden.
 pub(super) fn render_field_boundary_panel(
     ui: &mut egui::Ui,
     state: &FieldBoundaryPanelState,
+    wheel_enabled: bool,
     events: &mut Vec<AppIntent>,
 ) {
     if let Some(field_id) = state.selected_field_id {
@@ -19,7 +24,9 @@ pub(super) fn render_field_boundary_panel(
         "Node-Abstand:",
         state.node_spacing,
         1.0..=50.0,
+        0.1,
         " m",
+        wheel_enabled,
         events,
         |value| {
             RouteToolPanelAction::FieldBoundary(FieldBoundaryPanelAction::SetNodeSpacing(value))
@@ -30,7 +37,9 @@ pub(super) fn render_field_boundary_panel(
         "Versatz:",
         state.offset,
         -20.0..=20.0,
+        0.1,
         " m",
+        wheel_enabled,
         events,
         |value| RouteToolPanelAction::FieldBoundary(FieldBoundaryPanelAction::SetOffset(value)),
     );
@@ -39,7 +48,9 @@ pub(super) fn render_field_boundary_panel(
         "Begradigen:",
         state.straighten_tolerance,
         0.0..=10.0,
+        0.1,
         " m",
+        wheel_enabled,
         events,
         |value| {
             RouteToolPanelAction::FieldBoundary(FieldBoundaryPanelAction::SetStraightenTolerance(
@@ -67,7 +78,9 @@ pub(super) fn render_field_boundary_panel(
             "Winkel-Schwelle:",
             state.corner_angle_threshold_deg,
             10.0..=170.0,
+            0.1,
             "°",
+            wheel_enabled,
             events,
             |value| {
                 RouteToolPanelAction::FieldBoundary(
@@ -95,7 +108,9 @@ pub(super) fn render_field_boundary_panel(
                 "Radius:",
                 state.corner_rounding_radius,
                 1.0..=50.0,
+                0.1,
                 " m",
+                wheel_enabled,
                 events,
                 |value| {
                     RouteToolPanelAction::FieldBoundary(
@@ -108,7 +123,9 @@ pub(super) fn render_field_boundary_panel(
                 "Max. Winkelabw.:",
                 state.corner_rounding_max_angle_deg,
                 1.0..=45.0,
+                0.1,
                 "°",
+                wheel_enabled,
                 events,
                 |value| {
                     RouteToolPanelAction::FieldBoundary(
@@ -131,9 +148,14 @@ pub(super) fn render_field_boundary_panel(
     }
 }
 
+/// Rendert die Konfiguration fuer das FieldPath-Tool.
+///
+/// `wheel_enabled` steuert, ob numerische Widgets ihre Mausrad-Helfer aus
+/// `ui::common` anwenden.
 pub(super) fn render_field_path_panel(
     ui: &mut egui::Ui,
     state: &FieldPathPanelState,
+    wheel_enabled: bool,
     events: &mut Vec<AppIntent>,
 ) {
     ui.horizontal(|ui| {
@@ -227,7 +249,9 @@ pub(super) fn render_field_path_panel(
         "Knotenabstand:",
         state.node_spacing,
         1.0..=50.0,
+        0.1,
         " m",
+        wheel_enabled,
         events,
         |value| RouteToolPanelAction::FieldPath(FieldPathPanelAction::SetNodeSpacing(value)),
     );
@@ -236,7 +260,9 @@ pub(super) fn render_field_path_panel(
         "Vereinfachung:",
         state.simplify_tolerance,
         0.0..=20.0,
+        0.1,
         " m",
+        wheel_enabled,
         events,
         |value| RouteToolPanelAction::FieldPath(FieldPathPanelAction::SetSimplifyTolerance(value)),
     );
@@ -265,9 +291,14 @@ pub(super) fn render_field_path_panel(
     }
 }
 
+/// Rendert die Konfiguration fuer das RouteOffset-Tool.
+///
+/// `wheel_enabled` steuert, ob numerische Widgets ihre Mausrad-Helfer aus
+/// `ui::common` anwenden.
 pub(super) fn render_route_offset_panel(
     ui: &mut egui::Ui,
     state: &RouteOffsetPanelState,
+    wheel_enabled: bool,
     events: &mut Vec<AppIntent>,
 ) {
     if let Some(message) = state.empty_message.as_deref() {
@@ -292,7 +323,9 @@ pub(super) fn render_route_offset_panel(
         "Links-Abstand:",
         state.left_distance,
         ROUTE_OFFSET_DISTANCE_LIMITS.range(),
+        0.1,
         " m",
+        wheel_enabled,
         events,
         |value| RouteToolPanelAction::RouteOffset(RouteOffsetPanelAction::SetLeftDistance(value)),
     );
@@ -314,7 +347,9 @@ pub(super) fn render_route_offset_panel(
         "Rechts-Abstand:",
         state.right_distance,
         ROUTE_OFFSET_DISTANCE_LIMITS.range(),
+        0.1,
         " m",
+        wheel_enabled,
         events,
         |value| RouteToolPanelAction::RouteOffset(RouteOffsetPanelAction::SetRightDistance(value)),
     );
@@ -323,7 +358,9 @@ pub(super) fn render_route_offset_panel(
         "Basisabstand:",
         state.base_spacing,
         ROUTE_OFFSET_BASE_SPACING_LIMITS.range(),
+        0.1,
         " m",
+        wheel_enabled,
         events,
         |value| RouteToolPanelAction::RouteOffset(RouteOffsetPanelAction::SetBaseSpacing(value)),
     );
@@ -342,9 +379,14 @@ pub(super) fn render_route_offset_panel(
     }
 }
 
+/// Rendert die Konfiguration fuer das ColorPath-Tool.
+///
+/// `wheel_enabled` steuert, ob numerische Widgets ihre Mausrad-Helfer aus
+/// `ui::common` anwenden.
 pub(super) fn render_color_path_panel(
     ui: &mut egui::Ui,
     state: &ColorPathPanelState,
+    wheel_enabled: bool,
     events: &mut Vec<AppIntent>,
 ) {
     let status = match state.phase {
@@ -423,52 +465,41 @@ pub(super) fn render_color_path_panel(
         );
     }
 
-    ui.horizontal(|ui| {
-        ui.label("Farbtoleranz:");
-        let mut color_tolerance = state.color_tolerance;
-        let response = ui.add_enabled(
-            !state.exact_color_match,
-            egui::Slider::new(&mut color_tolerance, 1.0..=80.0),
-        );
-        if response.changed() {
-            push_action(
-                events,
-                RouteToolPanelAction::ColorPath(ColorPathPanelAction::SetColorTolerance(
-                    color_tolerance,
-                )),
-            );
-        }
-    });
+    render_slider_f32(
+        ui,
+        "Farbtoleranz:",
+        state.color_tolerance,
+        1.0..=80.0,
+        "",
+        !state.exact_color_match,
+        wheel_enabled,
+        events,
+        |value| RouteToolPanelAction::ColorPath(ColorPathPanelAction::SetColorTolerance(value)),
+    );
 
-    ui.horizontal(|ui| {
-        ui.label("Knotenabstand:");
-        let mut node_spacing = state.node_spacing;
-        if ui
-            .add(egui::Slider::new(&mut node_spacing, 1.0..=50.0).suffix(" m"))
-            .changed()
-        {
-            push_action(
-                events,
-                RouteToolPanelAction::ColorPath(ColorPathPanelAction::SetNodeSpacing(node_spacing)),
-            );
-        }
-    });
+    render_slider_f32(
+        ui,
+        "Knotenabstand:",
+        state.node_spacing,
+        1.0..=50.0,
+        " m",
+        true,
+        wheel_enabled,
+        events,
+        |value| RouteToolPanelAction::ColorPath(ColorPathPanelAction::SetNodeSpacing(value)),
+    );
 
-    ui.horizontal(|ui| {
-        ui.label("Vereinfachung:");
-        let mut simplify_tolerance = state.simplify_tolerance;
-        if ui
-            .add(egui::Slider::new(&mut simplify_tolerance, 0.0..=20.0).suffix(" m"))
-            .changed()
-        {
-            push_action(
-                events,
-                RouteToolPanelAction::ColorPath(ColorPathPanelAction::SetSimplifyTolerance(
-                    simplify_tolerance,
-                )),
-            );
-        }
-    });
+    render_slider_f32(
+        ui,
+        "Vereinfachung:",
+        state.simplify_tolerance,
+        0.0..=20.0,
+        " m",
+        true,
+        wheel_enabled,
+        events,
+        |value| RouteToolPanelAction::ColorPath(ColorPathPanelAction::SetSimplifyTolerance(value)),
+    );
 
     let mut noise_filter = state.noise_filter;
     if ui.checkbox(&mut noise_filter, "Rauschfilter").changed() {

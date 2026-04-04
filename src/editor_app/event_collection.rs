@@ -2,7 +2,6 @@
 
 use eframe::egui;
 use fs25_auto_drive_editor::app::{AppIntent, EditorTool};
-use fs25_auto_drive_editor::shared::ValueAdjustInputMode;
 use fs25_auto_drive_editor::ui;
 use glam::Vec2;
 
@@ -67,10 +66,7 @@ impl EditorApp {
         let default_direction = self.state.editor.default_direction;
         let default_priority = self.state.editor.default_priority;
         let active_tool = self.state.editor.active_tool;
-        let distance_wheel_step_m = match self.state.options.value_adjust_input_mode {
-            ValueAdjustInputMode::DragHorizontal => 0.0,
-            ValueAdjustInputMode::MouseWheel => self.state.options.mouse_wheel_distance_step_m,
-        };
+        let distance_wheel_step_m = numeric_distance_wheel_step(&self.state.options);
         let route_tool_panel = self.state.editor.route_tool_panel_state();
         egui::SidePanel::right("right_sidebar")
             .resizable(true)
@@ -272,5 +268,38 @@ impl EditorApp {
         }
 
         events
+    }
+}
+
+fn numeric_distance_wheel_step(options: &fs25_auto_drive_editor::shared::EditorOptions) -> f32 {
+    options.mouse_wheel_distance_step_m.max(0.0)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::numeric_distance_wheel_step;
+    use fs25_auto_drive_editor::shared::{EditorOptions, ValueAdjustInputMode};
+
+    fn options_with(mode: ValueAdjustInputMode, step: f32) -> EditorOptions {
+        EditorOptions {
+            value_adjust_input_mode: mode,
+            mouse_wheel_distance_step_m: step,
+            ..EditorOptions::default()
+        }
+    }
+
+    #[test]
+    fn numeric_distance_wheel_step_is_independent_from_input_mode() {
+        let drag_options = options_with(ValueAdjustInputMode::DragHorizontal, 0.25);
+        let wheel_options = options_with(ValueAdjustInputMode::MouseWheel, 0.25);
+
+        assert_eq!(numeric_distance_wheel_step(&drag_options), 0.25);
+        assert_eq!(numeric_distance_wheel_step(&wheel_options), 0.25);
+    }
+
+    #[test]
+    fn numeric_distance_wheel_step_clamps_negative_values() {
+        let options = options_with(ValueAdjustInputMode::DragHorizontal, -0.25);
+        assert_eq!(numeric_distance_wheel_step(&options), 0.0);
     }
 }
