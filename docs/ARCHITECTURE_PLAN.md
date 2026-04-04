@@ -1,7 +1,7 @@
 # Architektur-Plan (Soll-Zustand)
 
 Stand: 2026-04-04  
-Status: Workspace-Split umgesetzt — Root-Fassade, Engine-Crate, render_wgpu-Core-Crate und egui-Host-Adapter sind stabil; die gemeinsame Host-Bridge-Core-Crate ist als Scaffold angelegt, die Host-Adapter-Migration bleibt in Arbeit
+Status: Workspace-Split umgesetzt — Root-Fassade, Engine-Crate, render_wgpu-Core-Crate und egui-Host-Adapter sind stabil; die gemeinsame Host-Bridge-Core-Crate ist als kanonische Session-/Action-/Snapshot-Surface ueber der Engine eingefuehrt, die Host-Adapter-Migration bleibt in Arbeit
 
 ## Zielbild
 
@@ -12,7 +12,7 @@ Dieser Plan trennt fachliche Verantwortlichkeiten in Workspace-Crates mit klaren
 - Host-Bridge-Core (`crates/fs25_auto_drive_host_bridge/src/*`): toolkit-freie gemeinsame Session-/Action-/Snapshot-Seam ueber der Engine
 - Render-Core (`crates/fs25_auto_drive_render_wgpu/src/*`): host-neutraler wgpu-Renderer-Kern
 - Egui-Frontend (`crates/fs25_auto_drive_frontend_egui/src/{ui,editor_app,runtime,render}`): Desktop-Host, egui-UI und Render-Adapter
-- Flutter-Bridge (`crates/fs25_auto_drive_frontend_flutter_bridge/src/*`): duenne Flutter-Adapter-/Kompat-Schicht ueber der Host-Bridge
+- Flutter-Bridge (`crates/fs25_auto_drive_frontend_flutter_bridge/src/{session,dto}`): bestehende Session-/DTO-Seams als Extraktionsbasis fuer den finalen Adapter-Zuschnitt
 - Overview-Crate (`crates/fs25_map_overview/src/*`): Karten-/Farmland-Generierung
 
 Kernfluss: **Input -> AppIntent -> AppController -> AppCommand -> AppState/Domain -> RenderScene + RenderAssetsSnapshot + HostUiSnapshot + ViewportOverlaySnapshot -> Host-Adapter -> Renderer-Core**.
@@ -527,6 +527,8 @@ crates/
   fs25_auto_drive_host_bridge/
     src/
       lib.rs          # Toolkit-freie kanonische Host-Bridge-Core-Surface
+      session/        # HostBridgeSession als kanonische Session-Fassade
+      dto/            # HostSessionAction, HostSessionSnapshot, HostDialog*-DTOs
   fs25_auto_drive_render_wgpu/
     src/
       lib.rs          # Host-neutraler wgpu-Renderer-Kern
@@ -541,7 +543,9 @@ crates/
       ui/             # egui-Panels, Dialoge, Input und Overlays
   fs25_auto_drive_frontend_flutter_bridge/
     src/
-      lib.rs          # Flutter-Adapter/Kompat-Wurzel fuer die gemeinsame Host-Bridge
+      lib.rs          # Flutter-Bridge-Wurzel (Kompat-/Migrationsschicht)
+      session/        # Bestehende FlutterBridgeSession (wird auf Host-Bridge umgestellt)
+      dto/            # Bestehende Engine*-DTOs (werden auf Host-Bridge-Vertraege gemappt)
   fs25_map_overview/
     src/              # Terrain-, Farmland-, POI- und Hillshade-Generierung fuer Uebersichtskarten
 ```

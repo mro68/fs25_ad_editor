@@ -199,6 +199,10 @@
   - [x] `fs25_auto_drive_frontend_egui::render` auf Host-Adapter ueber dem Render-Core reduziert
   - [x] Flutter-Bridge um read-only Render-Zugaenge (`build_render_scene`, `build_render_assets`, `build_render_frame`) erweitert
   - [x] `EngineRenderFrameSnapshot` als gekoppelter Read-only Render-Output fuer Bridge-Hosts eingefuehrt
+- [x] Gemeinsame Host-Bridge-Contracts ueber der Engine eingefuehrt
+  - [x] `HostBridgeSession` als kanonische toolkit-freie Session-Fassade in `fs25_auto_drive_host_bridge`
+  - [x] Explizite Action-/Snapshot-DTOs (`HostSessionAction`, `HostSessionSnapshot`, `HostDialog*`)
+  - [x] Read-Seams fuer `HostUiSnapshot`, `ViewportOverlaySnapshot` und Render-Frame in der Core-Bridge gebuendelt
 - [x] DDS-Import fuer Map-Hintergruende
   - [x] Texture-Loader implementieren (PNG, JPG, DDS)
   - [x] Background-Quad-Renderer

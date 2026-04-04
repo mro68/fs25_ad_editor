@@ -346,52 +346,53 @@ pub struct ViewportOverlaySnapshot {
 
 ---
 
-## Flutter-Bridge DTOs
+## Host-Bridge-Core DTOs
 
 ```rust
-pub struct EngineSelectionSnapshot {
+pub struct HostSelectionSnapshot {
     pub selected_node_ids: Vec<u64>,
 }
 
-pub struct EngineViewportSnapshot {
+pub struct HostViewportSnapshot {
     pub camera_position: [f32; 2],
     pub zoom: f32,
 }
 
-pub enum EngineSessionAction {
+pub enum HostSessionAction {
     ToggleCommandPalette,
-    SetEditorTool { tool: EngineActiveTool },
+    SetEditorTool { tool: HostActiveTool },
     OpenOptionsDialog,
     CloseOptionsDialog,
     Undo,
     Redo,
-    SubmitDialogResult { result: EngineDialogResult },
+    SubmitDialogResult { result: HostDialogResult },
 }
 
-pub struct EngineSessionSnapshot {
+pub struct HostSessionSnapshot {
     pub has_map: bool,
     pub node_count: usize,
     pub connection_count: usize,
-    pub active_tool: EngineActiveTool,
+    pub active_tool: HostActiveTool,
     pub status_message: Option<String>,
     pub show_command_palette: bool,
     pub show_options_dialog: bool,
     pub can_undo: bool,
     pub can_redo: bool,
     pub pending_dialog_request_count: usize,
-    pub selection: EngineSelectionSnapshot,
-    pub viewport: EngineViewportSnapshot,
+    pub selection: HostSelectionSnapshot,
+    pub viewport: HostViewportSnapshot,
 }
 
-pub struct EngineRenderFrameSnapshot {
+pub struct HostRenderFrameSnapshot {
     pub scene: RenderScene,
     pub assets: RenderAssetsSnapshot,
 }
 ```
 
-- `EngineSessionAction` bildet eine explizite, stabile Mutationsoberflaeche fuer Host-Frontends
-- `EngineSessionSnapshot` fasst host-relevanten Session-Zustand zusammen, inklusive Undo/Redo-Verfuegbarkeit und Anzahl ausstehender Dialog-Anfragen
+- `HostSessionAction` bildet die kanonische explizite Mutationsoberflaeche der gemeinsamen Bridge-Core-Crate
+- `HostSessionSnapshot` fasst host-relevanten Session-Zustand zusammen, inklusive Undo/Redo-Verfuegbarkeit und Anzahl ausstehender Dialog-Anfragen
 - `snapshot()` arbeitet ueber einen Dirty-Cache und baut den Snapshot nur nach erfolgreichen Session-Mutationen neu auf
-- Die Bridge mappt `EngineSessionAction` intern auf `AppIntent`, ohne generischen Intent-Dispatch oder direkten `AppState`-Escape-Hatch
+- Die Bridge mappt `HostSessionAction` intern auf `AppIntent`, ohne generischen Intent-Dispatch oder direkten `AppState`-Escape-Hatch
 - Host-native Datei-/Pfad-Dialoge laufen ueber `take_dialog_requests()` und `submit_dialog_result(...)` als explizite Bridge-Seam
-- `EngineRenderFrameSnapshot` koppelt den per-Frame-Render-Vertrag (`RenderScene`) mit den langlebigen Render-Assets fuer read-only Hosts
+- `HostRenderFrameSnapshot` koppelt den per-Frame-Render-Vertrag (`RenderScene`) mit den langlebigen Render-Assets fuer read-only Hosts
+- Die bisherige Flutter-Bridge bleibt waehrend der Migration als Kompat-Surface bestehen und wird schrittweise auf diese kanonischen Host-Bridge-Vertraege umgestellt

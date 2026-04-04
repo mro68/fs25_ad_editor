@@ -1,8 +1,12 @@
 //! Toolkit-freie Host-Bridge-Core-Crate fuer den FS25 AutoDrive Editor.
 
-/// Marker fuer die kanonische Host-Bridge-Core-Crate.
-///
-/// Die konkrete Session-, Action- und Snapshot-Surface wird in den
-/// Folge-Commits auf diesem Branch eingefuehrt.
-#[derive(Debug, Default, Clone, Copy, PartialEq, Eq)]
-pub struct HostBridgeScaffold;
+/// Serialisierbare Session-, Action- und Dialog-DTOs der Host-Bridge.
+pub mod dto;
+/// Kanonische Session-Fassade ueber `AppController` und `AppState`.
+pub mod session;
+
+pub use dto::{
+	HostActiveTool, HostDialogRequest, HostDialogRequestKind, HostDialogResult,
+	HostSelectionSnapshot, HostSessionAction, HostSessionSnapshot, HostViewportSnapshot,
+};
+pub use session::{HostBridgeSession, HostRenderFrameSnapshot};
