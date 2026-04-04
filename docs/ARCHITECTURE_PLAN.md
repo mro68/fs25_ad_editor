@@ -572,7 +572,7 @@ crates/
 - Background-Dirty-Flag durch monotone Asset-/Transform-Revisionen ersetzt
 - `fs25_auto_drive_render_wgpu` als host-neutralen Renderer-Core extrahiert
 - egui-`render` auf Host-Adapter reduziert (Callback bleibt host-spezifisch)
-- Flutter-Bridge exponiert read-only `build_render_scene()`/`build_render_assets()`/`build_render_frame()`; letzteres liefert `EngineRenderFrameSnapshot`
+- Flutter-Bridge exponiert read-only `build_render_scene()`/`build_render_assets()`/`build_render_frame()` plus explizite `EngineSessionAction`-Mutationen via `apply_action()`; generischer `AppIntent`-Dispatch und `AppState`-Escape-Hatches bleiben ausserhalb der oeffentlichen Bridge-API
 
 ## Definition of Done
 

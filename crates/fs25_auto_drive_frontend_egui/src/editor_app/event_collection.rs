@@ -1,7 +1,7 @@
 //! Event-Sammlung fuer Panels, Dialoge und Viewport.
 
-use crate::app::ui_contract::{dialog_result_to_intent, panel_action_to_intent, HostUiSnapshot};
 use crate::app::{AppIntent, EditorTool};
+use crate::app::ui_contract::{dialog_result_to_intent, panel_action_to_intent, HostUiSnapshot};
 use crate::shared::EditorOptions;
 use crate::ui;
 use eframe::egui;
@@ -151,11 +151,7 @@ impl EditorApp {
         let mut events = Vec::new();
 
         let dialog_results = ui::handle_file_dialogs(self.state.ui.take_dialog_requests());
-        events.extend(
-            dialog_results
-                .into_iter()
-                .filter_map(dialog_result_to_intent),
-        );
+        events.extend(dialog_results.into_iter().filter_map(dialog_result_to_intent));
         events.extend(ui::show_heightmap_warning(
             ctx,
             self.state.ui.show_heightmap_warning,
@@ -185,11 +181,8 @@ impl EditorApp {
             &mut self.state.options,
         ));
         if let Some(options_panel_state) = host_ui_snapshot.options_panel_state() {
-            let panel_actions = ui::show_options_dialog(
-                ctx,
-                options_panel_state.visible,
-                &options_panel_state.options,
-            );
+            let panel_actions =
+                ui::show_options_dialog(ctx, options_panel_state.visible, &options_panel_state.options);
             events.extend(panel_actions.into_iter().map(panel_action_to_intent));
         }
 
