@@ -1,8 +1,8 @@
 //! Overlay-Rendering fuer Gruppen, Boundaries, Vorschau und Distanzen.
 
 use eframe::egui;
-use fs25_auto_drive_editor::app::{AppIntent, EditorTool};
-use fs25_auto_drive_editor::ui;
+use crate::app::{AppIntent, EditorTool};
+use crate::ui;
 use glam::Vec2;
 
 use super::EditorApp;

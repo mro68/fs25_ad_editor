@@ -57,14 +57,11 @@ pub const BYPASS_BASE_SPACING_LIMITS: FloatInputLimits = FloatInputLimits::new(1
 /// Eingabegrenzen fuer die Distanz des Route-Offset-Tools.
 pub const ROUTE_OFFSET_DISTANCE_LIMITS: FloatInputLimits = FloatInputLimits::new(0.5, 200.0);
 /// Eingabegrenzen fuer die Basisschrittweite des Route-Offset-Tools.
-pub const ROUTE_OFFSET_BASE_SPACING_LIMITS: FloatInputLimits =
-    FloatInputLimits::new(1.0, 50.0);
+pub const ROUTE_OFFSET_BASE_SPACING_LIMITS: FloatInputLimits = FloatInputLimits::new(1.0, 50.0);
 /// Eingabegrenzen fuer den maximalen Lenkwinkel der geglaetteten Kurve.
-pub const SMOOTH_CURVE_MAX_ANGLE_LIMITS: FloatInputLimits =
-    FloatInputLimits::new(5.0, 135.0);
+pub const SMOOTH_CURVE_MAX_ANGLE_LIMITS: FloatInputLimits = FloatInputLimits::new(5.0, 135.0);
 /// Eingabegrenzen fuer den Minimalabstand der geglaetteten Kurve.
-pub const SMOOTH_CURVE_MIN_DISTANCE_LIMITS: FloatInputLimits =
-    FloatInputLimits::new(0.5, 20.0);
+pub const SMOOTH_CURVE_MIN_DISTANCE_LIMITS: FloatInputLimits = FloatInputLimits::new(0.5, 20.0);
 /// Eingabegrenzen fuer die Anzahl von Parkplatzreihen.
 pub const PARKING_NUM_ROWS_LIMITS: UsizeInputLimits = UsizeInputLimits::new(1, 10);
 /// Eingabegrenzen fuer den Reihenabstand beim Parkplatz-Tool.
@@ -72,8 +69,7 @@ pub const PARKING_ROW_SPACING_LIMITS: FloatInputLimits = FloatInputLimits::new(4
 /// Eingabegrenzen fuer die Parkbuchtlaenge.
 pub const PARKING_BAY_LENGTH_LIMITS: FloatInputLimits = FloatInputLimits::new(10.0, 100.0);
 /// Eingabegrenzen fuer den maximalen Node-Abstand im Parkplatz-Tool.
-pub const PARKING_MAX_NODE_DISTANCE_LIMITS: FloatInputLimits =
-    FloatInputLimits::new(2.0, 20.0);
+pub const PARKING_MAX_NODE_DISTANCE_LIMITS: FloatInputLimits = FloatInputLimits::new(2.0, 20.0);
 /// Eingabegrenzen fuer die Ein-/Ausfahrtsparameter der Parkplatz-Rampen.
 pub const PARKING_ENTRY_EXIT_T_LIMITS: FloatInputLimits = FloatInputLimits::new(0.0, 1.0);
 /// Eingabegrenzen fuer die Rampenlaenge des Parkplatz-Tools.

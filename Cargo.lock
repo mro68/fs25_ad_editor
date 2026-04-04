@@ -1746,16 +1746,21 @@ dependencies = [
 name = "fs25_auto_drive_frontend_egui"
 version = "1.7.0"
 dependencies = [
+ "anyhow",
  "bytemuck",
  "eframe",
  "egui",
  "egui-wgpu",
+ "egui_extras",
+ "env_logger",
  "fs25_auto_drive_engine",
+ "fs25_map_overview",
  "glam",
  "image",
  "indexmap",
  "log",
  "resvg 0.47.0",
+ "rfd",
  "wgpu",
 ]
 

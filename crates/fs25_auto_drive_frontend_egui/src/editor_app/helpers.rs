@@ -2,8 +2,8 @@
 
 use eframe::egui;
 use eframe::egui_wgpu;
-use fs25_auto_drive_editor::app::state::{FloatingMenuKind, FloatingMenuState};
-use fs25_auto_drive_editor::render;
+use crate::app::state::{FloatingMenuKind, FloatingMenuState};
+use crate::render;
 
 use super::EditorApp;
 

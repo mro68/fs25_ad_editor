@@ -81,7 +81,7 @@ pub fn render_floating_menu(ctx: &egui::Context, state: &AppState) -> (Vec<AppIn
                     FloatingMenuKind::Tools => {
                         if tool_icon_button(
                             ui,
-                            egui::include_image!("../../assets/icons/icon_select_node.svg"),
+                            egui::include_image!("../../../../assets/icons/icon_select_node.svg"),
                             IconButtonConfig {
                                 tooltip: t(lang, I18nKey::FloatingToolSelect),
                                 is_active: active_tool == EditorTool::Select,
@@ -97,7 +97,7 @@ pub fn render_floating_menu(ctx: &egui::Context, state: &AppState) -> (Vec<AppIn
 
                         if tool_icon_button(
                             ui,
-                            egui::include_image!("../../assets/icons/icon_connect.svg"),
+                            egui::include_image!("../../../../assets/icons/icon_connect.svg"),
                             IconButtonConfig {
                                 tooltip: t(lang, I18nKey::FloatingToolConnect),
                                 is_active: active_tool == EditorTool::Connect,
@@ -113,7 +113,7 @@ pub fn render_floating_menu(ctx: &egui::Context, state: &AppState) -> (Vec<AppIn
 
                         if tool_icon_button(
                             ui,
-                            egui::include_image!("../../assets/icons/icon_add_node.svg"),
+                            egui::include_image!("../../../../assets/icons/icon_add_node.svg"),
                             IconButtonConfig {
                                 tooltip: t(lang, I18nKey::FloatingToolAddNode),
                                 is_active: active_tool == EditorTool::AddNode,
@@ -158,19 +158,19 @@ pub fn render_floating_menu(ctx: &egui::Context, state: &AppState) -> (Vec<AppIn
                             (
                                 ConnectionDirection::Regular,
                                 egui::include_image!(
-                                    "../../assets/icons/icon_direction_regular.svg"
+                                    "../../../../assets/icons/icon_direction_regular.svg"
                                 ),
                                 t(lang, I18nKey::FloatingDirectionRegular),
                             ),
                             (
                                 ConnectionDirection::Dual,
-                                egui::include_image!("../../assets/icons/icon_direction_dual.svg"),
+                                egui::include_image!("../../../../assets/icons/icon_direction_dual.svg"),
                                 t(lang, I18nKey::FloatingDirectionDual),
                             ),
                             (
                                 ConnectionDirection::Reverse,
                                 egui::include_image!(
-                                    "../../assets/icons/icon_direction_reverse.svg"
+                                    "../../../../assets/icons/icon_direction_reverse.svg"
                                 ),
                                 t(lang, I18nKey::FloatingDirectionReverse),
                             ),
@@ -192,12 +192,12 @@ pub fn render_floating_menu(ctx: &egui::Context, state: &AppState) -> (Vec<AppIn
                         for (priority, icon, tooltip) in [
                             (
                                 ConnectionPriority::Regular,
-                                egui::include_image!("../../assets/icons/icon_priority_main.svg"),
+                                egui::include_image!("../../../../assets/icons/icon_priority_main.svg"),
                                 t(lang, I18nKey::FloatingPriorityMain),
                             ),
                             (
                                 ConnectionPriority::SubPriority,
-                                egui::include_image!("../../assets/icons/icon_priority_side.svg"),
+                                egui::include_image!("../../../../assets/icons/icon_priority_side.svg"),
                                 t(lang, I18nKey::FloatingPrioritySub),
                             ),
                         ] {
@@ -219,7 +219,7 @@ pub fn render_floating_menu(ctx: &egui::Context, state: &AppState) -> (Vec<AppIn
                     FloatingMenuKind::Zoom => {
                         if tool_icon_button(
                             ui,
-                            egui::include_image!("../../assets/icons/icon_zoom_full_map.svg"),
+                            egui::include_image!("../../../../assets/icons/icon_zoom_full_map.svg"),
                             IconButtonConfig {
                                 tooltip: t(lang, I18nKey::FloatingZoomFullMap),
                                 is_active: false,
@@ -232,7 +232,7 @@ pub fn render_floating_menu(ctx: &egui::Context, state: &AppState) -> (Vec<AppIn
                         }
                         if tool_icon_button(
                             ui,
-                            egui::include_image!("../../assets/icons/icon_zoom_selection.svg"),
+                            egui::include_image!("../../../../assets/icons/icon_zoom_selection.svg"),
                             IconButtonConfig {
                                 tooltip: t(lang, I18nKey::FloatingZoomSelection),
                                 is_active: false,

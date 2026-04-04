@@ -85,9 +85,9 @@ impl GroupBoundaryIcons {
     ///
     /// Soll einmal pro App-Lifetime aufgerufen werden (lazily beim ersten `update()`).
     pub fn load(ctx: &egui::Context) -> Self {
-        let entry_bytes = include_bytes!("../../assets/icons/group_entry.svg");
-        let exit_bytes = include_bytes!("../../assets/icons/group_exit.svg");
-        let bidi_bytes = include_bytes!("../../assets/icons/group_bidirectional.svg");
+        let entry_bytes = include_bytes!("../../../../assets/icons/group_entry.svg");
+        let exit_bytes = include_bytes!("../../../../assets/icons/group_exit.svg");
+        let bidi_bytes = include_bytes!("../../../../assets/icons/group_bidirectional.svg");
 
         let entry_img = rasterize_svg_to_color_image(entry_bytes, ICON_SIZE_PX)
             .unwrap_or_else(|| fallback_color_image(ICON_SIZE_PX, [255, 162, 0]));
