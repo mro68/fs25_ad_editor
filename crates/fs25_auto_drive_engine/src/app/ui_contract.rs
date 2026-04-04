@@ -2,6 +2,7 @@
 
 mod host_ui;
 mod route_tool_panel;
+mod viewport_overlay;
 
 use crate::app::tool_contract::TangentSource;
 use glam::Vec2;
@@ -29,6 +30,10 @@ pub use host_ui::{
     dialog_result_to_intent, panel_action_to_intent, CommandPalettePanelState, DialogRequest,
     DialogRequestKind, DialogResult, HostUiSnapshot, OptionsPanelAction, OptionsPanelState,
     PanelAction, PanelState,
+};
+pub use viewport_overlay::{
+    ClipboardOverlaySnapshot, ClipboardPreviewNode, GroupBoundaryOverlaySnapshot,
+    GroupLockOverlaySnapshot, PolylineOverlaySnapshot, ViewportOverlaySnapshot,
 };
 
 /// Eine waehlbare Tangenten-Option mit bereits aufbereitetem UI-Label.

@@ -44,8 +44,8 @@ Das `ui`-Modul enthält egui-UI-Komponenten (Menüs, Statusbar, Input-Handling, 
   - `post_load_dialog.rs` — Post-Load-Dialog (Auto-Erkennung von Heightmap/ZIP/Overview)
   - `save_overview_dialog.rs` — Dialog: Hintergrundbild als overview.jpg speichern
   - `confirm_dissolve_dialog.rs` — Bestätigungsdialog vor dem Auflösen einer Segment-Gruppe
-- `group_overlay.rs` — Segment-Rahmen und Lock-Icons als egui-Overlay (`GroupOverlayEvent`, `render_group_overlays()`)
-- `group_boundary_overlay.rs` — Boundary-Icons (Eingang/Ausgang/Bidirektional) ueber Nodes mit externen Verbindungen (`GroupBoundaryIcons`, `render_group_boundary_overlays()`)
+- `group_overlay.rs` — Segment-Lock-Icons aus host-neutralen Overlay-Snapshots (`GroupOverlayEvent`, `render_group_overlays()`)
+- `group_boundary_overlay.rs` — Boundary-Icons (Eingang/Ausgang/Bidirektional) aus host-neutralen Overlay-Snapshots (`GroupBoundaryIcons`, `render_group_boundary_overlays()`)
 - `drag.rs` — Drag-Selektion-Overlay und `DragSelection`-Typen
 
 ### `DragSelectionMode`
@@ -139,16 +139,14 @@ Wird von `render_group_overlays()` zurueckgegeben und in den Intent-Flow als
 
 ### `render_group_overlays`
 
-Zeichnet Segment-Rahmen (AABB) und Lock-Icons als egui-Overlay ueber den Viewport.
+Zeichnet Segment-Lock-Icons als egui-Overlay ueber den Viewport.
 ```rust
 pub fn render_group_overlays(
   painter: &egui::Painter,
   rect: egui::Rect,
   camera: &Camera2D,
   viewport_size: Vec2,
-  registry: &GroupRegistry,
-  road_map: &RoadMap,
-  selected_node_ids: &IndexSet<u64>,
+  overlays: &[GroupLockOverlaySnapshot],
   clicked_pos: Option<egui::Pos2>,
   ctrl_held: bool,
   icon_size_px: f32,
@@ -157,8 +155,8 @@ pub fn render_group_overlays(
 
 **Verhalten:**
 
-- Iteriert ueber selektierte Nodes und dedupliziert Segment-IDs
-- Zeichnet pro Segment ein Lock-Icon ueber dem ersten selektierten Node
+- Rendert ausschliesslich vorberechnete `GroupLockOverlaySnapshot`-Daten
+- Zeichnet pro Overlay ein Lock-Icon an der uebergebenen Weltposition
 - `Ctrl` + Klick auf das Icon erzeugt `GroupOverlayEvent::Dissolved`
 - Die Icon-Größe entspricht `segment_lock_icon_size_px` in `EditorOptions`
 - Normaler Klick auf das Icon erzeugt `GroupOverlayEvent::LockToggled`
@@ -195,11 +193,7 @@ pub fn load(ctx: &egui::Context) -> Self
 
 ### `render_group_boundary_overlays`
 
-Zeichnet Boundary-Icons unterhalb der Nodes aller selektierten Gruppen.
-
-Icons werden **ausschliesslich** gerendert wenn `record.entry_node_id` bzw. `record.exit_node_id` explizit gesetzt sind — keine automatische Zuweisung mehr. Bei `show_all=true` werden zusaetzlich alle gecachten `BoundaryInfo`-Eintraege aus dem Connection-Analyse-Cache gerendert (Debug-Ansicht).
-
-Iteriert ueber ALLE Gruppen selektierter Nodes via `find_by_node_ids()` (nicht nur die erste).
+Zeichnet Boundary-Icons unterhalb der uebergebenen Overlay-Positionen.
 
 ```rust
 pub fn render_group_boundary_overlays(
@@ -207,12 +201,9 @@ pub fn render_group_boundary_overlays(
     rect: egui::Rect,
     camera: &Camera2D,
     viewport_size: Vec2,
-    registry: &GroupRegistry,
-    road_map: &RoadMap,
-    selected_node_ids: &IndexSet<u64>,
+  overlays: &[GroupBoundaryOverlaySnapshot],
     icons: &GroupBoundaryIcons,
     icon_size_px: f32,
-    show_all: bool,
 )
 ```
 
@@ -221,19 +212,14 @@ pub fn render_group_boundary_overlays(
 - `rect` — Viewport-Rechteck in Screen-Koordinaten
 - `camera` — Kamera fuer Welt→Screen-Transformation
 - `viewport_size` — Viewport-Abmessungen in Pixeln
-- `registry` — Gruppen-Registry mit gecachten BoundaryInfos
-- `road_map` — RoadMap fuer Node-Positionen
-- `selected_node_ids` — Aktuell selektierte Node-IDs
+- `overlays` — Host-neutral vorberechnete Boundary-Daten (`GroupBoundaryOverlaySnapshot`)
 - `icons` — Gecachte Textur-Handles (via `GroupBoundaryIcons::load()`)
 - `icon_size_px` — Icon-Groesse in Pixeln (Minimum: 8 px)
-- `show_all` — `false` = nur Nodes mit explizit gesetzter Entry/Exit-ID; `true` = zusaetzlich alle BoundaryInfos aus dem Connection-Cache (Debug-Ansicht)
 
 **Icon-Zuordnung:**
 - `BoundaryDirection::Bidirectional` → Bidirektional-Icon
 - `BoundaryDirection::Entry` → Eingang-Icon
 - `BoundaryDirection::Exit` → Ausgang-Icon
-
-**Voraussetzung:** `registry.warm_boundary_cache(road_map)` muss vor dem Aufruf erfolgt sein.
 
 ---
 
@@ -634,6 +620,21 @@ pub fn paint_clipboard_preview(
 )
 ```
 
+### `paint_clipboard_snapshot_preview`
+
+Zeichnet dieselbe Clipboard-Vorschau aus dem host-neutralen Overlay-Vertrag
+(`ClipboardOverlaySnapshot`) statt direkt aus `AppState.clipboard`.
+
+```rust
+pub fn paint_clipboard_snapshot_preview(
+  painter: &egui::Painter,
+  rect: egui::Rect,
+  camera: &Camera2D,
+  viewport_size: Vec2,
+  preview: &ClipboardOverlaySnapshot,
+)
+```
+
 ---
 
 ### `paint_preview` und `paint_preview_polyline`
@@ -904,7 +905,7 @@ Wird von `render_group_overlays()` zurueckgegeben und in den Intent-Flow als
 
 ### `render_group_overlays`
 
-Zeichnet Segment-Rahmen (AABB) und Lock-Icons als egui-Overlay ueber den Viewport.
+Zeichnet Segment-Lock-Icons als egui-Overlay ueber den Viewport.
 
 ```rust
 pub fn render_group_overlays(
@@ -912,9 +913,7 @@ pub fn render_group_overlays(
     rect: egui::Rect,
     camera: &Camera2D,
     viewport_size: Vec2,
-    registry: &GroupRegistry,
-    road_map: &RoadMap,
-    selected_node_ids: &IndexSet<u64>,
+  overlays: &[GroupLockOverlaySnapshot],
     clicked_pos: Option<egui::Pos2>,
     ctrl_held: bool,
     icon_size_px: f32,
@@ -923,8 +922,8 @@ pub fn render_group_overlays(
 
 **Verhalten:**
 
-- Iteriert ueber selektierte Nodes und dedupliziert Segment-IDs
-- Zeichnet pro Segment ein Lock-Icon ueber dem ersten selektierten Node
+- Rendert ausschliesslich vorberechnete `GroupLockOverlaySnapshot`-Daten
+- Zeichnet pro Overlay ein Lock-Icon an der uebergebenen Weltposition
 - `Ctrl` + Klick auf das Icon erzeugt `GroupOverlayEvent::Dissolved`
 - Die Icon-Größe basiert auf `EditorOptions::segment_lock_icon_size_px`
 - Normaler Klick auf das Icon erzeugt `GroupOverlayEvent::LockToggled`

@@ -4,10 +4,13 @@ mod by_feature;
 
 use super::render_assets;
 use super::render_scene;
+use super::viewport_overlay;
 use super::ui_contract::{
     CommandPalettePanelState, HostUiSnapshot, OptionsPanelState, PanelState,
+    ViewportOverlaySnapshot,
 };
 use super::{AppCommand, AppIntent, AppState};
+use glam::Vec2;
 use crate::shared::{RenderAssetsSnapshot, RenderScene};
 
 /// Orchestriert UI-Events und Use-Cases auf den AppState.
@@ -76,5 +79,14 @@ impl AppController {
             panels,
             dialog_requests: state.ui.dialog_requests.clone(),
         }
+    }
+
+    /// Baut den host-neutralen Overlay-Snapshot fuer den Viewport.
+    pub fn build_viewport_overlay_snapshot(
+        &self,
+        state: &mut AppState,
+        cursor_world: Option<Vec2>,
+    ) -> ViewportOverlaySnapshot {
+        viewport_overlay::build(state, cursor_world)
     }
 }

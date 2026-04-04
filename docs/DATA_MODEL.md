@@ -215,6 +215,7 @@ pub struct AppState {
 - `road_map` und `selection.selected_node_ids` sind `Arc`-basiert fuer guenstige Frame-Uebergaben
 - Dialog- und Tool-Fenster laufen semantisch ueber `UiState` plus `HostUiSnapshot`
 - Host-native Datei-/Pfad-Dialoge werden als `DialogRequest`-Queue in `UiState` gehalten
+- Viewport-Overlays laufen host-neutral ueber `ViewportOverlaySnapshot` (Route-Preview, Clipboard-, Distanzen-, Segment- und Boundary-Overlays)
 
 ### SelectionState
 
