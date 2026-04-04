@@ -1,24 +1,22 @@
 # Architektur-Plan (Soll-Zustand)
 
-Stand: 2026-04-03  
-Status: Weitgehend umgesetzt — Render/shared-Vertrag, Tool-UI-Grenze, Capability-Split, Registry/Katalog/Edit-Flow und Shared-Neutralisierung sind technisch entkoppelt; spaetere Remediationsphasen bleiben offen
+Stand: 2026-04-04  
+Status: Workspace-Split umgesetzt — Root-Fassade, Engine-Crate, render_wgpu-Core-Crate, egui-Host-Adapter und Flutter-Bridge-Seams sind angelegt; weitere Host-/Bridge-Remediationsphasen bleiben offen
 
 ## Zielbild
 
-Dieser Plan trennt fachliche Verantwortlichkeiten in fuenf Schichten plus ein geteiltes Shared-Modul. Davor sitzt eine duenne Integrationsschale fuer den Binary-Start und eframe/wgpu:
+Dieser Plan trennt fachliche Verantwortlichkeiten in Workspace-Crates mit klaren Layern. Das Root-Package bleibt bewusst als duenne Kompat-Fassade und Launcher erhalten:
 
-- Integrationsschale (`src/editor_app/*`, `src/runtime.rs`, `src/main.rs`): Start, Frame-Zyklus und Anbindung zwischen UI, Application und Renderer
+- Root-Package (`src/lib.rs`, `src/main.rs`): Re-Export-Fassade und nativer Launcher
+- Engine (`crates/fs25_auto_drive_engine/src/{app,core,shared,xml}`): host-neutrale Fachlogik
+- Render-Core (`crates/fs25_auto_drive_render_wgpu/src/*`): host-neutraler wgpu-Renderer-Kern
+- Egui-Frontend (`crates/fs25_auto_drive_frontend_egui/src/{ui,editor_app,runtime,render}`): Desktop-Host, egui-UI und Render-Adapter
+- Flutter-Bridge (`crates/fs25_auto_drive_frontend_flutter_bridge/src/{session,dto}`): kleine Session-, DTO- und Render-Frame-Seams ohne Flutter-SDK-Kopplung
+- Overview-Crate (`crates/fs25_map_overview/src/*`): Karten-/Farmland-Generierung
 
-- UI (`src/ui/*`): Darstellung + Intent-Erzeugung
-- Application (`src/app/*`): Event-Verarbeitung + Orchestrierung + Use-Cases
-- Domain (`src/core/*`): Datenmodell + Fachlogik
-- Persistence (`src/xml/*`): XML-Mapping und I/O
-- Rendering (`src/render/*`): GPU-Darstellung aus vorbereiteten Renderdaten
-- Shared (`src/shared/*`): Neutrale, schichtuebergreifende Vertraege und Utilities (u. a. RenderScene, RenderQuality, EditorOptions, i18n) ohne egui- oder Dateisystem-Policy
+Kernfluss: **Input -> AppIntent -> AppController -> AppCommand -> AppState/Domain -> RenderScene + RenderAssetsSnapshot -> Host-Adapter -> Renderer-Core**.
 
-Kernfluss: **Input -> AppIntent -> AppController -> AppCommand -> AppState/Domain -> RenderScene -> Renderer**.
-
-Die Integrationsschale ist bewusst kein zusaetzlicher Fach-Layer. Sie koordiniert `ui`, `app` und `render`, enthaelt aber keine eigenen Use-Cases oder Domain-Logik.
+Die Integrationsschale ist bewusst kein zusaetzlicher Fach-Layer. Sie koordiniert `ui`, `app` und den Host-Adapter in `render`, enthaelt aber keine eigenen Use-Cases oder Domain-Logik.
 
 ## Systemübersicht
 
@@ -36,6 +34,7 @@ flowchart LR
     CTRL[AppController]
     STATE[AppState]
     SCENEB[RenderSceneBuilder]
+    ASSETB[RenderAssetsBuilder]
   end
 
   subgraph CORE[Domain Layer]
@@ -48,7 +47,8 @@ flowchart LR
 
   subgraph INFRA[Infrastructure]
     XML[xml::parser / xml::writer]
-    RENDER[render::Renderer]
+    RENDER_HOST[frontend_egui::render::Renderer]
+    RENDER_CORE[render_wgpu::Renderer]
   end
 
   MENU --> EVENTS
@@ -60,7 +60,10 @@ flowchart LR
   CTRL --> CORE
   CORE --> CTRL
   CTRL --> SCENEB
-  SCENEB --> RENDER
+  CTRL --> ASSETB
+  SCENEB --> RENDER_HOST
+  ASSETB --> RENDER_HOST
+  RENDER_HOST --> RENDER_CORE
 
   XML --> CORE
   CORE --> XML
@@ -76,7 +79,8 @@ graph BT
     XML["xml\n(Persistence)"]
     APP["app\n(Application)"]
     UI["ui\n(Presentation)"]
-    RENDER["render\n(Rendering)"]
+    RENDER_HOST["render (egui)\n(Host-Adapter)"]
+    RENDER_CORE["render_wgpu\n(Render-Core)"]
     SHARED["shared\n(Cross-Layer)"]
 
     XML  --> CORE
@@ -84,23 +88,28 @@ graph BT
     APP  --> XML
     APP  --> SHARED
     UI   --> APP
-    RENDER --> SHARED
+    RENDER_HOST --> SHARED
+    RENDER_HOST --> RENDER_CORE
+    RENDER_CORE --> SHARED
 
     CORE  -.->|verboten| UI
-    CORE  -.->|verboten| RENDER
+    CORE  -.->|verboten| RENDER_HOST
+    CORE  -.->|verboten| RENDER_CORE
     APP   -.->|verboten| UI
-    APP   -.->|verboten| RENDER
-    RENDER -.->|verboten| CORE
+    APP   -.->|verboten| RENDER_CORE
+    RENDER_CORE -.->|verboten| CORE
+    RENDER_CORE -.->|verboten| APP
+    RENDER_CORE -.->|verboten| UI
     XML   -.->|verboten| APP
 ```
 
 > **Regel:** Pfeile zeigen "darf importieren". Gestrichelt = explizit verboten (CI-geprüft via `scripts/check_layer_boundaries.sh`).
 
-### Integrationsschale (`src/editor_app/*`, `src/runtime.rs`, `src/main.rs`)
+### Integrationsschale (`crates/fs25_auto_drive_frontend_egui/src/editor_app/*`, `crates/fs25_auto_drive_frontend_egui/src/runtime.rs`, `src/main.rs`)
 
 **Verantwortung**
 
-- Startet `EditorApp` aus `runtime.rs` heraus und bindet eframe/wgpu an die Layer-Architektur an
+- Startet `EditorApp` aus `runtime.rs` heraus und bindet eframe/wgpu ueber den egui-Host-Adapter an den render_wgpu-Kern an
 - Sammelt pro Frame Panel-, Dialog-, Viewport- und Overlay-Events als `Vec<AppIntent>`, verarbeitet schalenlokale Events by-value und reicht nur die verbleibenden Intents an `AppController` weiter
 - Registriert den Render-Callback und verwaltet nur fensterlokalen Integrationszustand (`render::Renderer`, `ui::InputState`, Cursor-/Icon-Caches)
 
@@ -116,9 +125,9 @@ graph BT
 
 **API-Hinweis**
 
-- Kanonische Doku: [`../src/editor_app/API.md`](../src/editor_app/API.md)
+- Kanonische Doku: [`../crates/fs25_auto_drive_frontend_egui/src/editor_app/API.md`](../crates/fs25_auto_drive_frontend_egui/src/editor_app/API.md)
 
-### UI Layer (`src/ui/*`)
+### UI Layer (`crates/fs25_auto_drive_frontend_egui/src/ui/*`)
 
 **Verantwortung**
 
@@ -160,7 +169,7 @@ Numerische Mausrad-Interaktion bleibt bewusst im UI-Layer: `ui::common` kapselt 
 - XML lesen/schreiben
 - Renderer direkt steuern
 
-### Application Layer (`src/app/*`)
+### Application Layer (`crates/fs25_auto_drive_engine/src/app/*`)
 
 **Verantwortung**
 
@@ -168,6 +177,7 @@ Numerische Mausrad-Interaktion bleibt bewusst im UI-Layer: `ui::common` kapselt 
 - Schlanke Event-Fassaden in `events/intent.rs` und `events/command.rs`; die kanonischen Enum-Definitionen liegen in `events/*/definition.rs`, damit Root-Dateien als stabile Einstiegspunkte klein bleiben
 - Use-Cases (Load/Save, Kamera, Selektion, Heightmap, Tools)
 - Aufbau von `RenderScene` aus Domain + ViewState
+- Aufbau von `RenderAssetsSnapshot` als expliziter Asset-Vertrag fuer Host-Adapter
 - Schmale Read-only-Fassade fuer UI und Integrationsschale: app-eigene Typen plus bewusst ausgewaehlte Core-/Shared-Typen wie `ConnectionDirection`, `ConnectionPriority`, `RoadMap`, `Camera2D`, `RenderQuality`, `ZipImageEntry`
 - Kanonischer RouteTool-Katalog (`tools/catalog.rs`) als Single Source of Truth fuer `RouteToolId`, `RouteToolGroup`, `RouteToolBackingMode`, `RouteToolIconKey`, Surface-Sichtbarkeit und Aktivierungs-Voraussetzungen
 - Egui-freier Route-Tool-Panel-Vertrag als stabile Fassade in `ui_contract.rs` und `ui_contract/route_tool_panel.rs`; die eigentlichen DTO-Familien liegen intern in `route_tool_panel/common.rs`, `curve_family.rs`, `generator_family.rs` und `analysis_family.rs`
@@ -177,7 +187,7 @@ Numerische Mausrad-Interaktion bleibt bewusst im UI-Layer: `ui::common` kapselt 
 
 **Abgrenzung**
 
-- `src/editor_app/*` gehoert nicht zum Application-Layer. Die Integrationsschale kapselt nur eframe-Frame-Zyklus, Event-Sammlung und Overlay-Anbindung und delegiert fachliche Mutationen an `AppController`.
+- `crates/fs25_auto_drive_frontend_egui/src/editor_app/*` gehoert nicht zum Application-Layer. Die Integrationsschale kapselt nur eframe-Frame-Zyklus, Event-Sammlung und Overlay-Anbindung und delegiert fachliche Mutationen an `AppController`.
 
 **Use-Case-Module:**
 
@@ -207,7 +217,7 @@ Numerische Mausrad-Interaktion bleibt bewusst im UI-Layer: `ui::common` kapselt 
 - XML-Use-Cases ausführen
 - Renderer nur über `RenderScene` beliefern
 
-### Domain/Core Layer (`src/core/*`)
+### Domain/Core Layer (`crates/fs25_auto_drive_engine/src/core/*`)
 
 **Verantwortung**
 
@@ -221,7 +231,7 @@ Numerische Mausrad-Interaktion bleibt bewusst im UI-Layer: `ui::common` kapselt 
 - wgpu/Renderer-Typen kennen
 - Dateidialoge oder direkte I/O enthalten
 
-### Persistence Layer (`src/xml/*`)
+### Persistence Layer (`crates/fs25_auto_drive_engine/src/xml/*`)
 
 **Verantwortung**
 
@@ -233,13 +243,28 @@ Numerische Mausrad-Interaktion bleibt bewusst im UI-Layer: `ui::common` kapselt 
 - UI- oder Kamera-Entscheidungen treffen
 - Renderlogik enthalten
 
-### Rendering Layer (`src/render/*`)
+### Rendering Core Layer (`crates/fs25_auto_drive_render_wgpu/src/*`)
 
 **Verantwortung**
 
 - GPU-Ressourcen, Batching, Draw-Calls, Culling
 - Darstellung auf Basis von `RenderScene`
-- **Shader-Deduplication:** `shaders.wgsl` wird einmal in `Renderer::new()` geladen und an alle Sub-Renderer weitergegeben
+- Host-neutrale API via raw `wgpu` (`RendererTargetConfig`, `Renderer::render_scene`, `set_background`, `clear_background`)
+
+**Darf nicht**
+
+- App-, UI- oder XML-Layer importieren
+- eframe/egui-spezifische Typen kennen
+- Domain mutieren
+
+### Rendering Host Layer (`crates/fs25_auto_drive_frontend_egui/src/render/*`)
+
+**Verantwortung**
+
+- Egui-Callback und Fenster-Glue (`WgpuRenderCallback`)
+- Adaptiert Hostzustand (`egui_wgpu::RenderState`) auf `fs25_auto_drive_render_wgpu::Renderer`
+- Fuehrt Asset-Sync ueber `RenderAssetsSnapshot` und Revisionszaehler aus
+- Mappt Engine-Bounds (`min_x/max_x/min_z/max_z`) beim Background-Upload auf den 2D-Render-Core (`min_x/max_x/min_y/max_y`)
 
 **Darf nicht**
 
@@ -303,6 +328,7 @@ impl AppController {
   pub fn handle_intent(&mut self, state: &mut AppState, intent: AppIntent) -> anyhow::Result<()>;
   pub fn handle_command(&mut self, state: &mut AppState, command: AppCommand) -> anyhow::Result<()>;
   pub fn build_render_scene(&self, state: &AppState, viewport_size: [f32; 2]) -> RenderScene;
+  pub fn build_render_assets(&self, state: &AppState) -> RenderAssetsSnapshot;
 }
 ```
 
@@ -335,7 +361,8 @@ pub struct ViewState {
   pub background_map: Option<Arc<BackgroundMap>>,
   pub background_visible: bool,
   pub background_scale: f32,
-  pub background_dirty: bool,  // Signalisiert GPU-Upload erforderlich
+  pub background_asset_revision: u64,
+  pub background_transform_revision: u64,
 }
 ```
 
@@ -353,24 +380,39 @@ pub struct RenderScene {
   // private Felder
 }
 
+pub struct RenderAssetsSnapshot {
+  // private Felder
+}
+
+pub enum RenderAssetSnapshot {
+  Background(RenderBackgroundAssetSnapshot),
+}
+
+pub struct EngineRenderFrameSnapshot {
+  pub scene: RenderScene,
+  pub assets: RenderAssetsSnapshot,
+}
+
 // enthaelt intern:
 // - RenderMap-Snapshot (Nodes, Connections, Marker, KD-Index)
 // - RenderCamera-Snapshot
 // - Selection-/Hidden-/Dimmed-Mengen
 // - RenderQuality, Optionen und Hintergrundstatus
 
-impl Renderer {
+impl fs25_auto_drive_render_wgpu::Renderer {
   pub fn render_scene(
     &mut self,
     device: &wgpu::Device,
     queue: &wgpu::Queue,
-    render_pass: &mut wgpu::RenderPass<'static>,
+    render_pass: &mut wgpu::RenderPass<'_>,
     scene: &RenderScene,
   );
+  pub fn set_background(&mut self, device: &wgpu::Device, queue: &wgpu::Queue, image: &image::DynamicImage, world_bounds: BackgroundWorldBounds, scale: f32);
+  pub fn clear_background(&mut self);
 }
 ```
 
-`render_scene::build()` baut den render-seitigen `RenderMap`-Snapshot nur bei geaenderter `RoadMap::render_cache_key()` neu auf und legt ihn in `AppState::render_map_cache` ab. Jeder Rebuild protokolliert `nodes`, `connections`, `markers` und `approx_bytes`, damit Performance-Reports neben Laufzeiten auch die Snapshot-Groesse desselben Datensatzes dokumentieren koennen.
+`render_scene::build()` baut den render-seitigen `RenderMap`-Snapshot nur bei geaenderter `RoadMap::render_cache_key()` neu auf und legt ihn in `AppState::render_map_cache` ab. Jeder Rebuild protokolliert `nodes`, `connections`, `markers` und `approx_bytes`, damit Performance-Reports neben Laufzeiten auch die Snapshot-Groesse desselben Datensatzes dokumentieren koennen. `render_assets::build()` liefert parallel den host-neutralen Asset-Snapshot; Hintergrund-Sync laeuft ueber `background_asset_revision`/`background_transform_revision` statt Dirty-Flags. Die egui-Integrationsschale vergleicht diese Revisionen gegen ihre letzten Upload-Staende; die Flutter-Bridge kann alternativ `EngineRenderFrameSnapshot` als gekoppelten read-only Render-Output liefern.
 
 ## Event- und Render-Fluss
 
@@ -382,7 +424,9 @@ sequenceDiagram
   participant State as AppState
   participant Core as core::RoadMap
   participant Scene as RenderSceneBuilder
-  participant Render as render::Renderer
+  participant Assets as RenderAssetsBuilder
+  participant RenderHost as frontend_egui::render::Renderer
+  participant RenderCore as render_wgpu::Renderer
 
   User->>UI: Click / Drag / Scroll
   UI->>Ctrl: AppIntent
@@ -392,8 +436,11 @@ sequenceDiagram
   Ctrl->>Core: Fachoperation (optional)
   Core-->>Ctrl: aktualisierte Daten
   Ctrl->>Scene: RenderScene bauen
-  Scene-->>Render: RenderScene
-  Render-->>User: Frame
+  Ctrl->>Assets: RenderAssetsSnapshot bauen
+  Scene-->>RenderHost: RenderScene
+  Assets-->>RenderHost: RenderAssetsSnapshot
+  RenderHost->>RenderCore: render_scene / set_background
+  RenderCore-->>User: Frame
 ```
 
 ## Abhängigkeitsregeln
@@ -404,14 +451,18 @@ flowchart LR
   APP --> CORE
   APP --> XML
   APP --> SHARED
-  RENDER --> SHARED
+  RENDER_HOST --> SHARED
+  RENDER_HOST --> RENDER_CORE
+  RENDER_CORE --> SHARED
   XML --> CORE
 
   CORE -.x.-> UI
-  CORE -.x.-> RENDER
-  RENDER -.x.-> CORE
+  CORE -.x.-> RENDER_HOST
+  CORE -.x.-> RENDER_CORE
+  RENDER_CORE -.x.-> CORE
+  RENDER_CORE -.x.-> APP
   XML -.x.-> APP
-  RENDER -.x.-> UI
+  RENDER_CORE -.x.-> UI
   UI -.x.-> XML
 ```
 
@@ -419,153 +470,50 @@ Verbindliche Regeln:
 
 1. UI spricht nur mit `app` (`AppIntent` + read-only State) und `shared` (z.B. `EditorOptions`). **Kein direkter `core`-Import.**
 2. Domain (`core`) kennt keine Infrastruktur (UI/Render/XML-Details).
-3. Renderer konsumiert nur `RenderScene` plus render-eigene Upload-Vertraege und importiert keine Core-Typen.
+3. Renderer-Core konsumiert nur `RenderScene` plus render-eigene Upload-Vertraege und importiert keine Core-Typen.
 4. XML bleibt technisch; fachliche Entscheidungen liegen in `core`/`app`.
 5. `AppState` enthält keine I/O-Logik; Dateisystem- und Options-Persistenz liegen in Use-Cases bzw. der Integrationsschale, nicht im State oder in `shared`.
-6. Renderer darf keine UI-Typen importieren. **Ausnahme:** `render/callback.rs` implementiert `egui_wgpu::CallbackTrait` — das ist die wgpu-Brücke zwischen egui und dem Rendering-System, kein semantischer UI-Import.
+6. Der render_wgpu-Core darf keine UI-Typen importieren. **Ausnahme:** `crates/fs25_auto_drive_frontend_egui/src/render/callback.rs` implementiert als Host-Glue `egui_wgpu::CallbackTrait`.
 7. `app/mod.rs` bleibt eine schmale Lese-Fassade: app-eigene Typen plus bewusst ausgewaehlte Core-/Shared-Typen fuer UI und Integrationsschale; Tool-Vertraege und tool-spezifische Helfer werden nicht mehr ueber `app` root-reexportiert.
-8. `shared`-Modul enthält nur neutrale Typen und Utilities, die von mehreren Layern genutzt werden (`RenderScene`, `RenderQuality`, `EditorOptions`, `i18n`, Geometrie-Helfer). Egui-Eingabe-Helfer leben in `ui`, Runtime-/Pfad-Policy in `app` bzw. `editor_app`. Importrichtung: `UI → shared`, `App → shared`, `Render → shared` (alle erlaubt).
+8. `shared`-Modul enthält nur neutrale Typen und Utilities, die von mehreren Layern genutzt werden (`RenderScene`, `RenderAssetsSnapshot`, `RenderQuality`, `EditorOptions`, `i18n`, Geometrie-Helfer). Egui-Eingabe-Helfer leben in `ui`, Runtime-/Pfad-Policy in `app` bzw. `editor_app`. Importrichtung: `UI → shared`, `App → shared`, `Render-Host/Core → shared` (alle erlaubt).
 
 ## Aktuelle Modulstruktur
 
 ```text
 src/
-  main.rs             # Binary-Einstieg; ruft runtime::run()
-  runtime.rs          # eframe-Bootstrap und EditorApp-Erzeugung
-  editor_app/
-    mod.rs            # EditorApp + eframe::App::update(); duenne Integrationsschale
-    event_collection.rs # Panels, Dialoge und Viewport-Input zu AppIntents buendeln
-    helpers.rs        # Render-Callback, Floating-Menue, Background-Upload, Repaint-Gating
-    overlays.rs       # Tool-, Clipboard-, Distanz- und Gruppen-Overlays
-  app/
-    mod.rs              # Schmale Re-Exports fuer AppState/Controller + stabile UI-Lesetypen
-    controller.rs       # AppController: duenne Fassade fuer Intent-Loop + Command-Logging
-    controller/
-      by_feature/       # Feature-Slices fuer Command-Dispatch (file_io, view, selection, editing, ...)
-    events/
-      mod.rs            # Re-Exports fuer AppIntent & AppCommand
-      feature.rs        # Interne AppEventFeature-Klassifikation fuer Intent/Command-Schnitt
-      intent.rs         # AppIntent + interne Feature-Zuordnung
-      command.rs        # AppCommand + interne Feature-Zuordnung
-    state.rs            # AppState, ViewState, SelectionState, UiState, MarkerDialogState, DedupDialogState
-    render_scene.rs     # RenderScene-Builder
-    command_log.rs      # Command-Log für Debugging
-    history.rs          # Undo/Redo-History
-    intent_mapping.rs   # duenne Fassade fuer Intent → Command Mapping
-    intent_mapping/
-      by_feature/       # Feature-Slices fuer reines Intent-Mapping
-    handlers/           # Feature-Handler für Command-Verarbeitung
-      mod.rs
-      file_io.rs        # Datei-Operationen (Öffnen, Speichern, Heightmap)
-      view.rs           # Kamera, Viewport, Background-Map
-      selection.rs       # Selektions-Operationen
-      editing.rs        # Node/Connection-Editing, Marker
-      route_tool.rs     # Route-Tool-Operationen
-      dialog.rs         # Dialog-State und Anwendungssteuerung
-      history.rs        # Undo/Redo
-    tools/
-      mod.rs            # Re-Exporte fuer Tool-Vertraege, Capabilities, Katalog und snap_to_node()
-      manager.rs        # ToolManager + Capability-Discovery
-      contracts/        # RouteToolCore, RouteToolPanelBridge, RouteToolHostSync
-      capabilities/     # Recreate, Drag, Tangent, Adjustments, ChainInput, LassoInput
-      common/           # Gemeinsame Tool-Infrastruktur (alle Submodule privat)
-        mod.rs          # Re-Exporte
-        geometry.rs     # angle_to_compass, populate_neighbors
+  lib.rs              # Root-Fassade: re-exportiert engine::{app,core,shared,xml} sowie frontend_egui::{render,ui}
+  main.rs             # Nativer Launcher; ruft fs25_auto_drive_frontend_egui::run_native()
 
-      Die Root-Dateien `controller.rs` und `intent_mapping.rs` bleiben damit stabil fuer Call-Sites und Dokumentation, waehrend die eigentlichen Match-Bloecke featureweise in `by_feature/*` liegen. `AppIntent` und `AppCommand` teilen sich dafuer intern die nicht-oeffentliche Klassifikation `AppEventFeature`.
-        tangent.rs      # TangentSource, TangentState, render_tangent_combo
-        lifecycle.rs    # ToolLifecycleState, SegmentConfig, LastEdited
-        builder.rs      # assemble_tool_result
-      curve/
-        mod.rs          # Bézier-Kurven-Tool (Grad 2 + 3) — Einstiegspunkt
-        state.rs        # CurveTool Struct, Enums, Konstruktor
-        lifecycle.rs    # RouteTool-Implementierung
-        drag.rs         # Drag-Logik (Steuerpunkt-Verschiebung)
-        config_ui.rs    # egui-Konfigurationspanel
-        geometry.rs     # Bézier-Mathe (Interpolation, Tangenten)
-        tests.rs        # Unit-Tests
-      spline/
-        mod.rs          # Catmull-Rom-Spline-Tool — Einstiegspunkt
-        state.rs        # SplineTool Struct, Konstruktor
-        lifecycle.rs    # RouteTool-Implementierung
-        config_ui.rs    # egui-Konfigurationspanel
-        geometry.rs     # Spline-Geometrie (Arc-Length-Resampling)
-        tests.rs        # Unit-Tests
-      straight_line/
-        mod.rs          # Gerade-Linie-Tool — Einstiegspunkt
-        state.rs        # StraightLineTool Struct, Konstruktor
-        lifecycle.rs    # RouteTool-Implementierung
-        config_ui.rs    # egui-Konfigurationspanel
-        geometry.rs     # Linien-Geometrie
-        tests.rs        # Unit-Tests
-    use_cases/
-      mod.rs
-      file_io.rs        # Load, Save, Heightmap-Warnung, Dateipfad-Handling
-      heightmap.rs      # Heightmap-Laden und Konfiguration
-      viewport.rs       # Viewport-Resize
-      camera.rs         # Kamera-Reset, Zoom, Pan
-      background_map.rs # Background-Map laden/konfigurieren
-      selection/        # Selektions-Use-Cases (Pick, Rect, Lasso, Segment, Move)
-      editing/          # Editing-Use-Cases (Connect, Delete, Direction, Priority, Marker, Route-Tool)
-  core/
-    mod.rs
-    camera.rs           # Camera2D + pick_radius_world()
-    centerline.rs       # Oeffentliche Fassade fuer Mittellinien-Berechnung
-    centerline/
-      polygon.rs        # Polygon-basierte Centerline ohne Raster-Grid
-      segment.rs        # Segment-basierte Centerline ohne Raster-Grid
-      voronoi.rs        # VoronoiGrid + Multi-Source-BFS auf Farmland-Rastern
-      extract.rs        # Korridor- und Boundary-Extraktion aus Rasterdaten
-      helpers.rs        # Gemeinsame Raster- und Geometrie-Helfer
-      tests.rs          # Unit-Tests fuer die interne Aufteilung
-    node.rs             # MapNode, NodeFlag
-    connection.rs       # Connection, ConnectionDirection, ConnectionPriority
-    road_map.rs         # RoadMap (HashMap-basiert, lazy Spatial-Index-Rebuild)
-    road_map/
-      dedup.rs          # Duplikat-Erkennung und -Bereinigung
-      tests.rs          # Unit-Tests für RoadMap
-    spatial.rs          # SpatialIndex (kiddo KD-Tree)
-    heightmap.rs        # Heightmap + bikubische Interpolation
-    map_marker.rs       # MapMarker
-    meta.rs             # AutoDriveMeta
-  xml/
-    mod.rs
-    parser.rs           # parse_autodrive_config()
-    parser/
-      tests.rs          # Unit-Tests für Parser
-    writer.rs           # write_autodrive_config()
-  render/
-    mod.rs
-    node_renderer.rs    # GPU-Instanced Nodes
-    connection_renderer.rs  # Verbindungslinien + Pfeile
-    background_renderer.rs  # Background-Map-Quad mit Texture
-    marker_renderer.rs  # GPU-Instanced Map-Marker (Pin-Symbole)
-    texture.rs          # Texture-Erstellung aus DynamicImage
-    callback.rs         # wgpu Render-Callback für egui
-    types.rs            # GPU-Typen, RenderContext, Konstanten
-    shaders.wgsl        # WGSL Shader (Node, Connection, Background, Marker)
-  shared/
-    mod.rs
-    render_scene.rs     # RenderScene (Übergabevertrag App → Render)
-    render_quality.rs   # RenderQuality Enum
-    options.rs          # Zentrale Konfigurationskonstanten + EditorOptions
-    i18n/               # Mehrsprachigkeits-System (Language, I18nKey, t())
-  ui/
-    mod.rs
-    menu.rs             # Top-Menü
-    status.rs           # Statusleiste
-    toolbar.rs          # Werkzeugleiste
-    properties.rs       # Properties-Panel
-    input.rs            # Input-Orchestrator
-    keyboard.rs         # Tastatur-Shortcuts
-    drag.rs             # Drag-Operationen
-    context_menu.rs     # Rechtsklick-Kontextmenü
-    dialogs.rs          # Datei-Dialoge
-    options_dialog/     # Optionen-Dialog
-    tool_preview.rs     # Tool-Preview-Overlay
+crates/
+  fs25_auto_drive_engine/
+    src/
+      lib.rs          # Host-neutrale Crate-Wurzel
+      app/            # Controller, State, Handlers, Use-Cases, Tool-Vertraege und Tool-Implementierungen
+      core/           # Domain-Typen, Spatial-Index, BackgroundMap, Farmland und Heightmap
+      shared/         # RenderScene, RenderQuality, EditorOptions, i18n und neutrale Geometrie
+      xml/            # AutoDrive- und Curseplay-Import/Export
+  fs25_auto_drive_render_wgpu/
+    src/
+      lib.rs          # Host-neutraler wgpu-Renderer-Kern
+      connection_renderer/, node_renderer.rs, marker_renderer.rs, background_renderer.rs
+      shaders.wgsl    # Gemeinsame Shader fuer alle Sub-Renderer
+  fs25_auto_drive_frontend_egui/
+    src/
+      lib.rs          # Desktop-Frontend-Wurzel; re-exportiert Engine-Module fuer Kompatibilitaet
+      runtime.rs      # eframe-Bootstrap und run_native()
+      editor_app/     # eframe-Integrationsschale, Event-Sammlung, Overlays, Render-Callback
+      render/         # Host-Adapter + egui-Callback ueber fs25_auto_drive_render_wgpu
+      ui/             # egui-Panels, Dialoge, Input und Overlays
+  fs25_auto_drive_frontend_flutter_bridge/
+    src/
+      lib.rs          # Flutter-Bridge-Wurzel
+      session/        # FlutterBridgeSession als Rust-seitige Session-Fassade
+      dto/            # Serialisierbare Session-, Selection- und Viewport-Snapshots
+  fs25_map_overview/
+    src/              # Terrain-, Farmland-, POI- und Hillshade-Generierung fuer Uebersichtskarten
 ```
 
-**Hinweis:** `Camera2D` lebt in `core/camera.rs` (reiner Geometrie-Typ). `app` re-exportiert ihn als Teil der stabilen UI-Leseflaeche; Tool-Vertraege bleiben in expliziten `app::*`-Submodulen.
+**Hinweis:** `Camera2D` lebt in `crates/fs25_auto_drive_engine/src/core/camera.rs` (reiner Geometrie-Typ). `app` re-exportiert ihn als Teil der stabilen UI-Leseflaeche; Tool-Vertraege bleiben in expliziten `app::*`-Submodulen. Das Root-Package selbst bleibt eine duenne Kompat-Fassade ohne eigene Fachlogik.
 
 ## Umsetzungsphasen
 
@@ -613,10 +561,18 @@ src/
 - Duplikat-Erkennung: `DeduplicateConfirmed`, `DeduplicateCancelled`
 - Optionen-Dialog: `OpenOptionsDialogRequested`, `CloseOptionsDialogRequested`, `OptionsChanged`, `ResetOptionsRequested`
 
+### Phase 7: Renderer-Seam fuer Multi-Host ✅
+
+- `RenderAssetsSnapshot` als expliziter Asset-Vertrag ergaenzt
+- Background-Dirty-Flag durch monotone Asset-/Transform-Revisionen ersetzt
+- `fs25_auto_drive_render_wgpu` als host-neutralen Renderer-Core extrahiert
+- egui-`render` auf Host-Adapter reduziert (Callback bleibt host-spezifisch)
+- Flutter-Bridge exponiert read-only `build_render_scene()`/`build_render_assets()`/`build_render_frame()`; letzteres liefert `EngineRenderFrameSnapshot`
+
 ## Definition of Done
 
 - Keine Domain-Mutationslogik in `ui`.
-- `main.rs` und `runtime.rs` enthalten nur Bootstrap/Wiring; `src/editor_app/*` bleibt die duenne eframe-Integrationsschale.
+- `src/main.rs` und `crates/fs25_auto_drive_frontend_egui/src/runtime.rs` enthalten nur Bootstrap/Wiring; `crates/fs25_auto_drive_frontend_egui/src/editor_app/*` bleibt die duenne eframe-Integrationsschale.
 - Alle User-Interaktionen laufen über `AppIntent`.
 - Renderer arbeitet ohne direkten Domain-Zugriff.
 - XML-Funktionalität ist unabhängig von UI/Render testbar.
@@ -750,16 +706,16 @@ Nach node-mutierenden Operationen wird dirty-Flag gesetzt; Rebuild erfolgt lazy 
 
 ### Verbotene Abhaengigkeiten
 
-- Tools (`src/app/tools/`) duerfen **niemals** auf `src/render/`, `wgpu` oder `RenderScene` zugreifen
+- Tools (`crates/fs25_auto_drive_engine/src/app/tools/`) duerfen **niemals** auf `crates/fs25_auto_drive_frontend_egui/src/render/`, `crates/fs25_auto_drive_render_wgpu/src/`, `wgpu`, `RenderScene` oder `RenderAssetsSnapshot` zugreifen
 - Tools erhalten ausschliesslich `&RoadMap` (read-only) als Domain-Kontext
 - Keine GPU-spezifischen Typen (Vertex-Buffer, Shader, Pipelines) in Tool-Code
-- Kein Zugriff auf `AppState` — der Handler (`src/app/handlers/route_tool.rs`) vermittelt
+- Kein Zugriff auf `AppState` — der Handler (`crates/fs25_auto_drive_engine/src/app/handlers/route_tool.rs`) vermittelt
 
 ### Preview-Vertrag
 
 - `preview()` liefert **reine Geometrie** (`Vec<Vec2>` + Index-basierte Verbindungen)
 - Keine Farben, Texturen oder Render-Hints im `ToolPreview`-Output
-- Die Konvertierung zu visuellen Elementen erfolgt im UI-Layer (`src/ui/tool_preview.rs`)
+- Die Konvertierung zu visuellen Elementen erfolgt im UI-Layer (`crates/fs25_auto_drive_frontend_egui/src/ui/tool_preview.rs`)
 - Tools kennen weder `egui::Color32`, `egui::Painter` noch `egui::Ui`; das Floating-Panel liest `RouteToolPanelState` und sendet `RouteToolPanelAction` ueber den App-Intent-Flow zurueck
 
 ### Gruppen-Editierbarkeit

@@ -1,0 +1,31 @@
+[package]
+name = "fs25_auto_drive_frontend_egui"
+version = "1.7.0"
+edition = "2021"
+
+[lib]
+path = "src/lib.rs"
+
+[dependencies]
+anyhow = "1.0.102"
+bytemuck = { version = "1.14", features = ["derive"] }
+eframe = { version = "0.33.3", default-features = true, features = [
+    "default_fonts",
+    "glow",
+    "persistence",
+    "wgpu",
+] }
+egui = "0.33.3"
+egui_extras = { version = "0.33.3", features = ["all_loaders"] }
+egui-wgpu = "0.33.3"
+env_logger = "0.11.9"
+fs25_auto_drive_engine = { path = "../fs25_auto_drive_engine" }
+fs25_auto_drive_render_wgpu = { path = "../fs25_auto_drive_render_wgpu" }
+fs25_map_overview = { path = "../fs25_map_overview" }
+glam = { version = "0.32.1", features = ["serde"] }
+image = { version = "0.25", features = ["dds", "png", "jpeg"] }
+indexmap = "2"
+log = "0.4"
+resvg = "0.47.0"
+rfd = "0.17.2"
+wgpu = "27.0.1"
