@@ -24,8 +24,14 @@ pub(crate) struct RenderContext<'a> {
     pub options: &'a EditorOptions,
     /// Node-IDs, die in diesem Frame ausgeblendet werden sollen
     pub hidden_node_ids: &'a indexmap::IndexSet<u64>,
+    /// Monotone Revision der Hidden-Node-Menge
+    pub hidden_node_ids_revision: u64,
     /// Node-IDs, die mit 50% Opacity gerendert werden sollen (gedimmte Segment-Nodes)
     pub dimmed_node_ids: &'a indexmap::IndexSet<u64>,
+    /// Monotone Revision der Dimmed-Node-Menge
+    pub dimmed_node_ids_revision: u64,
+    /// Monotone Revision der Selektionsmenge
+    pub selected_node_ids_revision: u64,
 }
 
 /// Vertex fuer ein Quad (2D-Rechteck)

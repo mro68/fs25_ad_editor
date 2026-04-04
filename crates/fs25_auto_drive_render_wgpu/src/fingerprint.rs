@@ -5,12 +5,12 @@
 //! und mit dem gespeicherten verglichen. Bei Uebereinstimmung kann der CPU-seitige
 //! Buffer-Aufbau und der GPU-Upload uebersprungen werden — der Draw-Call laeuft weiterhin.
 //!
-//! # Pointer-Vergleiche
+//! # Pointer + Revision
 //!
-//! Fuer Arc-Inhalte (RenderMap, EditorOptions, IndexSets) wird die stabile Adresse der
-//! Arc-internen Daten (`Arc::as_ptr()` bzw. `&*arc as *const T`) als usize verglichen.
-//! Da diese Typen ausschliesslich als neues Arc ersetzt werden (Copy-on-Write-Semantik),
-//! zeigt ein veraenderter Pointer zuverlaessig auf geaenderte Inhalte.
+//! Fuer Arc-Inhalte (RenderMap, EditorOptions, IndexSets) wird weiterhin die Adresse der
+//! Arc-internen Daten als schneller Vergleich genutzt. Fuer Selection/Hidden/Dimmed werden
+//! zusaetzlich monotone Revisionszaehler aus `RenderScene` verglichen. Dadurch werden auch
+//! in-place-Mutationen sicher invalidiert, selbst wenn Pointer stabil bleiben.
 //!
 //! # Float-Vergleiche
 //!
@@ -35,10 +35,16 @@ pub(crate) struct RenderFingerprint {
     pub options_ptr: usize,
     /// Pointer-Adresse der HiddenNodeIds-Daten.
     pub hidden_ptr: usize,
+    /// Monotone Revision der HiddenNodeIds.
+    pub hidden_revision: u64,
     /// Pointer-Adresse der DimmedNodeIds-Daten (0 = nicht verwendet).
     pub dimmed_ptr: usize,
+    /// Monotone Revision der DimmedNodeIds.
+    pub dimmed_revision: u64,
     /// Pointer-Adresse der SelectedNodeIds-Daten (0 = nicht verwendet).
     pub selected_ptr: usize,
+    /// Monotone Revision der SelectedNodeIds.
+    pub selected_revision: u64,
     /// Kamera-Position X als IEEE-754-Bit-Muster.
     pub camera_x: u32,
     /// Kamera-Position Y als IEEE-754-Bit-Muster.
@@ -63,8 +69,11 @@ impl RenderFingerprint {
             render_map_ptr: render_map as *const RenderMap as usize,
             options_ptr: ctx.options as *const EditorOptions as usize,
             hidden_ptr: ctx.hidden_node_ids as *const IndexSet<u64> as usize,
+            hidden_revision: ctx.hidden_node_ids_revision,
             dimmed_ptr: 0,
+            dimmed_revision: 0,
             selected_ptr: 0,
+            selected_revision: 0,
             camera_x: ctx.camera.position.x.to_bits(),
             camera_y: ctx.camera.position.y.to_bits(),
             camera_zoom: ctx.camera.zoom.to_bits(),
@@ -85,8 +94,11 @@ mod tests {
             render_map_ptr: ptr,
             options_ptr: 0x2000,
             hidden_ptr: 0x3000,
+            hidden_revision: 1,
             dimmed_ptr: 0,
+            dimmed_revision: 2,
             selected_ptr: 0,
+            selected_revision: 3,
             camera_x: cam_x.to_bits(),
             camera_y: cam_y.to_bits(),
             camera_zoom: zoom.to_bits(),
@@ -153,5 +165,23 @@ mod tests {
         fp1.quality = 0;
         fp2.quality = 1;
         assert_ne!(fp1, fp2);
+    }
+
+    #[test]
+    fn revisionsfelder_werden_im_vergleich_beruecksichtigt() {
+        // In-place-Mutationen muessen ueber monotone Revisionen erkannt werden.
+        let fp1 = make_fp(0x1000, 0.0, 0.0, 1.0);
+        let mut fp2 = fp1.clone();
+
+        fp2.selected_revision += 1;
+        assert_ne!(fp1, fp2, "selected_revision muss in den Vergleich einfliessen");
+
+        fp2 = fp1.clone();
+        fp2.hidden_revision += 1;
+        assert_ne!(fp1, fp2, "hidden_revision muss in den Vergleich einfliessen");
+
+        fp2 = fp1.clone();
+        fp2.dimmed_revision += 1;
+        assert_ne!(fp1, fp2, "dimmed_revision muss in den Vergleich einfliessen");
     }
 }

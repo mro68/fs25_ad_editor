@@ -20,6 +20,9 @@ use fs25_auto_drive_engine::shared::EditorOptions;
 use types::RenderContext;
 
 /// Zielkonfiguration des Render-Targets.
+///
+/// Der Host liefert damit das Farbformat und den gewuenschten MSAA-Count des
+/// aktuellen Targets an den host-neutralen Render-Core weiter.
 #[derive(Debug, Clone, Copy)]
 pub struct RendererTargetConfig {
     /// Farbformat des Render-Targets.
@@ -70,7 +73,8 @@ fn compute_background_opacity(zoom: f32, opts: &EditorOptions) -> f32 {
 /// Haupt-Renderer fuer AutoDrive-Daten.
 ///
 /// Dieser Renderer ist host-neutral und arbeitet nur mit raw `wgpu` plus
-/// dem engine-seitigen Render-Vertrag `RenderScene`.
+/// dem engine-seitigen Render-Vertrag `RenderScene`. Langlebige Assets wie der
+/// Hintergrund werden ueber explizite Upload-Methoden separat synchronisiert.
 pub struct Renderer {
     background_renderer: BackgroundRenderer,
     connection_renderer: ConnectionRenderer,
@@ -120,7 +124,10 @@ impl Renderer {
             viewport_size: scene.viewport_size(),
             options: scene.options(),
             hidden_node_ids: scene.hidden_node_ids(),
+            hidden_node_ids_revision: scene.hidden_node_ids_revision(),
             dimmed_node_ids: scene.dimmed_node_ids(),
+            dimmed_node_ids_revision: scene.dimmed_node_ids_revision(),
+            selected_node_ids_revision: scene.selected_node_ids_revision(),
         };
 
         // 1. Render Background zuerst (falls vorhanden)
@@ -156,6 +163,10 @@ impl Renderer {
     }
 
     /// Setzt das Hintergrundbild fuer den Renderer.
+    ///
+    /// `world_bounds` liegt im 2D-Koordinatensystem des Render-Core (`x/y`).
+    /// Host-Adapter koennen Engine-seitige X/Z-Bounds vor dem Aufruf auf diese
+    /// Achsen umlegen.
     pub fn set_background(
         &mut self,
         device: &wgpu::Device,
