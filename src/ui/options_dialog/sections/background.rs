@@ -32,8 +32,8 @@ pub fn render_background(ui: &mut egui::Ui, opts: &mut EditorOptions, lang: Lang
                 .range(0.1..=50.0)
                 .speed(0.1),
         );
-        changed |=
-            r.changed() | apply_wheel_step_default(ui, &r, &mut opts.bg_fade_start_zoom, 0.1..=50.0);
+        changed |= r.changed()
+            | apply_wheel_step_default(ui, &r, &mut opts.bg_fade_start_zoom, 0.1..=50.0);
         r.on_hover_text(t(lang, I18nKey::OptBgFadeStartZoomHelp));
     });
     changed

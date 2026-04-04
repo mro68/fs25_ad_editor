@@ -24,7 +24,7 @@ mod analysis_panel;
 mod curve_panel;
 
 /// Rendert das Route-Tool-Panel mit Tool-Konfiguration sowie Ausfuehren/Abbrechen.
-/// 
+///
 /// Ein positiver `distance_wheel_step_m` aktiviert Mausrad-Anpassungen in den
 /// numerischen Unterpanels. Die konkrete Scroll-Auswertung bleibt in
 /// `ui::common`, damit Route-Tool- und Analysis-Widgets dieselbe Wheel-Logik
@@ -112,17 +112,19 @@ fn render_route_tool_config(
         RouteToolConfigState::Straight(state) => {
             render_straight_panel(ui, state, wheel_enabled, events)
         }
-        RouteToolConfigState::Curve(state) => {
-            render_curve_panel(ui, state, wheel_enabled, events)
-        }
+        RouteToolConfigState::Curve(state) => render_curve_panel(ui, state, wheel_enabled, events),
         RouteToolConfigState::Spline(state) => {
             render_spline_panel(ui, state, wheel_enabled, events)
         }
         RouteToolConfigState::SmoothCurve(state) => {
             render_smooth_curve_panel(ui, state, wheel_enabled, events)
         }
-        RouteToolConfigState::Bypass(state) => render_bypass_panel(ui, state, wheel_enabled, events),
-        RouteToolConfigState::Parking(state) => render_parking_panel(ui, state, wheel_enabled, events),
+        RouteToolConfigState::Bypass(state) => {
+            render_bypass_panel(ui, state, wheel_enabled, events)
+        }
+        RouteToolConfigState::Parking(state) => {
+            render_parking_panel(ui, state, wheel_enabled, events)
+        }
         RouteToolConfigState::FieldBoundary(state) => {
             render_field_boundary_panel(ui, state, wheel_enabled, events)
         }
@@ -772,8 +774,10 @@ fn render_slider_f32(
     ui.horizontal(|ui| {
         ui.label(label);
         let mut value = current;
-        let response =
-            ui.add_enabled(enabled, egui::Slider::new(&mut value, range.clone()).suffix(suffix));
+        let response = ui.add_enabled(
+            enabled,
+            egui::Slider::new(&mut value, range.clone()).suffix(suffix),
+        );
         if response.changed()
             | apply_wheel_step_default_enabled(
                 ui,
