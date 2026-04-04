@@ -3,7 +3,7 @@
 #
 # Regeln (Crate-/Layer-Richtungen):
 #   fs25_auto_drive_host_bridge             → fs25_auto_drive_engine
-#   fs25_auto_drive_frontend_egui              → fs25_auto_drive_engine + fs25_auto_drive_render_wgpu
+#   fs25_auto_drive_frontend_egui              → fs25_auto_drive_engine + fs25_auto_drive_host_bridge + fs25_auto_drive_render_wgpu
 #   fs25_auto_drive_frontend_flutter_bridge    → fs25_auto_drive_engine
 #   fs25_auto_drive_render_wgpu                → fs25_auto_drive_engine::shared
 #   fs25_auto_drive_engine kennt keine Frontend-Crates

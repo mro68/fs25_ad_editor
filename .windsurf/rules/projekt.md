@@ -10,7 +10,7 @@ Neuimplementierung des AutoDrive Course Editors in Rust mit egui + wgpu. Hochper
 - **Engine (`crates/fs25_auto_drive_engine`):** `app`, `core`, `shared`, `xml`
 - **Host-Bridge-Core (`crates/fs25_auto_drive_host_bridge`):** toolkit-freie gemeinsame Session-/Action-/Snapshot-Seam ueber der Engine
 - **Render-Core (`crates/fs25_auto_drive_render_wgpu`):** host-neutraler wgpu-Kern (`Renderer`, Sub-Renderer, Shader)
-- **Egui-Frontend (`crates/fs25_auto_drive_frontend_egui`):** `ui`, `editor_app`, `runtime`, `render` als Host-Adapter
+- **Egui-Frontend (`crates/fs25_auto_drive_frontend_egui`):** `ui`, `editor_app`, `runtime`, `render` als Host-Adapter plus duenne `host_bridge_adapter`-Mapping-Schicht
 - **Flutter-Bridge (`crates/fs25_auto_drive_frontend_flutter_bridge`):** Flutter-seitige Adapter-/Kompat-Schicht ohne Flutter-SDK-Kopplung in der Rust-Core-Lage
 - **Overview-Crate (`crates/fs25_map_overview`):** Terrain-, Farmland- und Overview-Generierung
 

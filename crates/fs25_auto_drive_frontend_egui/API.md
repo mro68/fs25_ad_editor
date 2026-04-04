@@ -8,11 +8,14 @@ Sie konsumiert die host-neutrale Engine, re-exportiert deren `app`-, `core`-, `s
 
 Die Integrationsschale liest Panels/Dialoge ueber `HostUiSnapshot` und Viewport-Overlays ueber `ViewportOverlaySnapshot`. Egui-spezifisches Rendering und Input-Mapping bleiben damit im Host, waehrend `PanelAction`, `DialogResult` und Overlay-Klicks zentral wieder in `AppIntent` uebersetzt werden.
 
+Fuer die schrittweise Unified-Bridge-Migration stellt die Crate zusaetzlich ein kleines `host_bridge_adapter`-Modul bereit, das einen bewusst schmalen Teil bestehender `AppIntent`s auf die explizite `HostSessionAction`-Surface mappt.
+
 ## Oeffentliche Module
 
 | Modul | Verantwortung |
 |---|---|
 | `editor_app` | eframe-Integrationsschale; sammelt Panels/Dialoge ueber `HostUiSnapshot`, rendert Overlays aus `ViewportOverlaySnapshot` und haelt Laufzeittypen wie `EditorApp` crate-intern |
+| `host_bridge_adapter` | Duenner egui-Adapter fuer die gemeinsame Host-Bridge (`AppIntent` → `HostSessionAction`) |
 | `render` | egui-Host-Adapter, revisionsbasierte Background-Upload-Bruecke und egui-Render-Callback |
 | `ui` | Menues, Panels, Dialoge, Viewport-Input und egui-spezifisches Painting der host-neutralen Overlay-Snapshots |
 | `app`, `core`, `shared`, `xml` | Re-Exports aus `fs25_auto_drive_engine` fuer stabile Importpfade |
@@ -36,6 +39,8 @@ Die Integrationsschale liest Panels/Dialoge ueber `HostUiSnapshot` und Viewport-
 | Signatur | Zweck |
 |---|---|
 | `pub fn run_native() -> Result<(), eframe::Error>` | Startet Logger, eframe-Fenster und `EditorApp` |
+| `pub fn host_bridge_adapter::map_intent_to_host_action(intent: &AppIntent) -> Option<HostSessionAction>` | Mappt einen explizit unterstuetzten egui-Intent auf die gemeinsame Host-Bridge-Action-Surface |
+| `pub fn host_bridge_adapter::apply_mapped_intent(session: &mut HostBridgeSession, intent: &AppIntent) -> Result<bool>` | Wendet einen gemappten Intent direkt auf eine `HostBridgeSession` an und signalisiert, ob ein Mapping existierte |
 | `pub use fs25_auto_drive_engine::{app, core, shared, xml};` | Re-exportiert die host-neutrale Engine-Surface |
 
 ## Beispiel
