@@ -1778,6 +1778,12 @@ dependencies = [
 [[package]]
 name = "fs25_auto_drive_host_bridge"
 version = "1.7.0"
+dependencies = [
+ "anyhow",
+ "fs25_auto_drive_engine",
+ "glam",
+ "serde",
+]
 
 [[package]]
 name = "fs25_auto_drive_render_wgpu"
