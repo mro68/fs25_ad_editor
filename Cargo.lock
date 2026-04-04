@@ -1728,6 +1728,7 @@ name = "fs25_auto_drive_engine"
 version = "1.7.0"
 dependencies = [
  "anyhow",
+ "approx",
  "fs25_map_overview",
  "glam",
  "image",

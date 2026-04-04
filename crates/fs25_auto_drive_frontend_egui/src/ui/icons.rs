@@ -25,12 +25,18 @@ pub fn route_tool_icon(tool_id: RouteToolId) -> ImageSource<'static> {
         RouteToolIconKey::CurveCubic => {
             egui::include_image!("../../../../assets/icons/icon_bezier_cubic.svg")
         }
-        RouteToolIconKey::Spline => egui::include_image!("../../../../assets/icons/icon_spline.svg"),
-        RouteToolIconKey::Bypass => egui::include_image!("../../../../assets/icons/icon_bypass.svg"),
+        RouteToolIconKey::Spline => {
+            egui::include_image!("../../../../assets/icons/icon_spline.svg")
+        }
+        RouteToolIconKey::Bypass => {
+            egui::include_image!("../../../../assets/icons/icon_bypass.svg")
+        }
         RouteToolIconKey::SmoothCurve => {
             egui::include_image!("../../../../assets/icons/icon_smooth_curve.svg")
         }
-        RouteToolIconKey::Parking => egui::include_image!("../../../../assets/icons/icon_parking.svg"),
+        RouteToolIconKey::Parking => {
+            egui::include_image!("../../../../assets/icons/icon_parking.svg")
+        }
         RouteToolIconKey::FieldBoundary => {
             egui::include_image!("../../../../assets/icons/icon_field_boundary.svg")
         }

@@ -50,10 +50,15 @@ sudo apt install libxcb-render0-dev libxcb-shape0-dev libxcb-xfixes0-dev \
 
 ```bash
 # Release-Build
-cargo build --release
+cargo build --release -p FS25-AutoDrive-Editor --bin FS25-AutoDrive-Editor
 
 # Starten
-cargo run --release
+cargo run --release -p FS25-AutoDrive-Editor --bin FS25-AutoDrive-Editor
+
+# Gesamten Workspace pruefen
+cargo fmt --all -- --check
+cargo clippy --workspace --all-targets -- -D warnings
+cargo test --workspace
 ```
 
 ### Cross-Compile (Linux → Windows)
@@ -86,14 +91,15 @@ Ausfuehrliche Anleitung: [docs/howto/index.md](docs/howto/index.md)
 
 ## Architektur
 
-| Layer | Verzeichnis | Aufgabe |
-|-------|-------------|---------|
-| UI | `src/ui/` | Darstellung + AppIntent-Erzeugung |
-| Application | `src/app/` | Controller, Use-Cases, State |
-| Domain | `src/core/` | Fachmodell: RoadMap, Node, Connection |
-| Persistence | `src/xml/` | AutoDrive XML Parser/Writer |
-| Rendering | `src/render/` | wgpu GPU-Pipeline, Culling, Instancing |
-| Shared | `src/shared/` | RenderScene, RenderQuality (cross-layer) |
+| Crate | Aufgabe |
+|-------|---------|
+| `FS25-AutoDrive-Editor` | Root-Fassade und nativer Launcher |
+| `fs25_auto_drive_engine` | Host-neutrale Engine (`app`, `core`, `shared`, `xml`) |
+| `fs25_auto_drive_frontend_egui` | Desktop-Frontend (`ui`, `editor_app`, `runtime`, `render`) |
+| `fs25_auto_drive_frontend_flutter_bridge` | Kleine Session-/DTO-Seams fuer spaetere Flutter-Anbindung |
+| `fs25_map_overview` | Overview-, Terrain- und Farmland-Generierung |
+
+Die Root-Crate `fs25_auto_drive_editor` bleibt als Kompat-Fassade erhalten und re-exportiert die kanonischen Engine-Module weiterhin fuer Tests, Benches und bestehende Rust-Imports.
 
 Detaillierte Beschreibung: [docs/ARCHITECTURE_PLAN.md](docs/ARCHITECTURE_PLAN.md)
 

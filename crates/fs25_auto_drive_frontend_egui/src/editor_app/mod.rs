@@ -4,10 +4,10 @@ mod event_collection;
 mod helpers;
 mod overlays;
 
-use eframe::egui;
-use eframe::egui_wgpu;
 use crate::app::{use_cases, AppController, AppIntent, AppState};
 use crate::{render, ui};
+use eframe::egui;
+use eframe::egui_wgpu;
 
 /// Haupt-Anwendungsstruktur.
 pub(crate) struct EditorApp {

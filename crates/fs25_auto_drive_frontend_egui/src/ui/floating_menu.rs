@@ -164,7 +164,9 @@ pub fn render_floating_menu(ctx: &egui::Context, state: &AppState) -> (Vec<AppIn
                             ),
                             (
                                 ConnectionDirection::Dual,
-                                egui::include_image!("../../../../assets/icons/icon_direction_dual.svg"),
+                                egui::include_image!(
+                                    "../../../../assets/icons/icon_direction_dual.svg"
+                                ),
                                 t(lang, I18nKey::FloatingDirectionDual),
                             ),
                             (
@@ -192,12 +194,16 @@ pub fn render_floating_menu(ctx: &egui::Context, state: &AppState) -> (Vec<AppIn
                         for (priority, icon, tooltip) in [
                             (
                                 ConnectionPriority::Regular,
-                                egui::include_image!("../../../../assets/icons/icon_priority_main.svg"),
+                                egui::include_image!(
+                                    "../../../../assets/icons/icon_priority_main.svg"
+                                ),
                                 t(lang, I18nKey::FloatingPriorityMain),
                             ),
                             (
                                 ConnectionPriority::SubPriority,
-                                egui::include_image!("../../../../assets/icons/icon_priority_side.svg"),
+                                egui::include_image!(
+                                    "../../../../assets/icons/icon_priority_side.svg"
+                                ),
                                 t(lang, I18nKey::FloatingPrioritySub),
                             ),
                         ] {
@@ -232,7 +238,9 @@ pub fn render_floating_menu(ctx: &egui::Context, state: &AppState) -> (Vec<AppIn
                         }
                         if tool_icon_button(
                             ui,
-                            egui::include_image!("../../../../assets/icons/icon_zoom_selection.svg"),
+                            egui::include_image!(
+                                "../../../../assets/icons/icon_zoom_selection.svg"
+                            ),
                             IconButtonConfig {
                                 tooltip: t(lang, I18nKey::FloatingZoomSelection),
                                 is_active: false,

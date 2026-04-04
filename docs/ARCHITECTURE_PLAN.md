@@ -1,20 +1,17 @@
 # Architektur-Plan (Soll-Zustand)
 
-Stand: 2026-04-03  
-Status: Weitgehend umgesetzt — Render/shared-Vertrag, Tool-UI-Grenze, Capability-Split, Registry/Katalog/Edit-Flow und Shared-Neutralisierung sind technisch entkoppelt; spaetere Remediationsphasen bleiben offen
+Stand: 2026-04-04  
+Status: Workspace-Split umgesetzt — Root-Fassade, Engine-Crate, egui-Frontend-Crate und Flutter-Bridge-Seams sind angelegt; weitere Host-/Bridge-Remediationsphasen bleiben offen
 
 ## Zielbild
 
-Dieser Plan trennt fachliche Verantwortlichkeiten in fuenf Schichten plus ein geteiltes Shared-Modul. Davor sitzt eine duenne Integrationsschale fuer den Binary-Start und eframe/wgpu:
+Dieser Plan trennt fachliche Verantwortlichkeiten in Workspace-Crates mit klaren Layern. Das Root-Package bleibt bewusst als duenne Kompat-Fassade und Launcher erhalten:
 
-- Integrationsschale (`src/editor_app/*`, `src/runtime.rs`, `src/main.rs`): Start, Frame-Zyklus und Anbindung zwischen UI, Application und Renderer
-
-- UI (`src/ui/*`): Darstellung + Intent-Erzeugung
-- Application (`src/app/*`): Event-Verarbeitung + Orchestrierung + Use-Cases
-- Domain (`src/core/*`): Datenmodell + Fachlogik
-- Persistence (`src/xml/*`): XML-Mapping und I/O
-- Rendering (`src/render/*`): GPU-Darstellung aus vorbereiteten Renderdaten
-- Shared (`src/shared/*`): Neutrale, schichtuebergreifende Vertraege und Utilities (u. a. RenderScene, RenderQuality, EditorOptions, i18n) ohne egui- oder Dateisystem-Policy
+- Root-Package (`src/lib.rs`, `src/main.rs`): Re-Export-Fassade und nativer Launcher
+- Engine (`crates/fs25_auto_drive_engine/src/{app,core,shared,xml}`): host-neutrale Fachlogik
+- Egui-Frontend (`crates/fs25_auto_drive_frontend_egui/src/{ui,editor_app,runtime,render}`): Desktop-Host, egui-UI und Renderer
+- Flutter-Bridge (`crates/fs25_auto_drive_frontend_flutter_bridge/src/{session,dto}`): kleine Session- und Snapshot-Seams ohne Flutter-SDK-Kopplung
+- Overview-Crate (`crates/fs25_map_overview/src/*`): Karten-/Farmland-Generierung
 
 Kernfluss: **Input -> AppIntent -> AppController -> AppCommand -> AppState/Domain -> RenderScene -> Renderer**.
 
@@ -96,7 +93,7 @@ graph BT
 
 > **Regel:** Pfeile zeigen "darf importieren". Gestrichelt = explizit verboten (CI-geprüft via `scripts/check_layer_boundaries.sh`).
 
-### Integrationsschale (`src/editor_app/*`, `src/runtime.rs`, `src/main.rs`)
+### Integrationsschale (`crates/fs25_auto_drive_frontend_egui/src/editor_app/*`, `crates/fs25_auto_drive_frontend_egui/src/runtime.rs`, `src/main.rs`)
 
 **Verantwortung**
 
@@ -116,9 +113,9 @@ graph BT
 
 **API-Hinweis**
 
-- Kanonische Doku: [`../src/editor_app/API.md`](../src/editor_app/API.md)
+- Kanonische Doku: [`../crates/fs25_auto_drive_frontend_egui/src/editor_app/API.md`](../crates/fs25_auto_drive_frontend_egui/src/editor_app/API.md)
 
-### UI Layer (`src/ui/*`)
+### UI Layer (`crates/fs25_auto_drive_frontend_egui/src/ui/*`)
 
 **Verantwortung**
 
@@ -160,7 +157,7 @@ Numerische Mausrad-Interaktion bleibt bewusst im UI-Layer: `ui::common` kapselt 
 - XML lesen/schreiben
 - Renderer direkt steuern
 
-### Application Layer (`src/app/*`)
+### Application Layer (`crates/fs25_auto_drive_engine/src/app/*`)
 
 **Verantwortung**
 
@@ -177,7 +174,7 @@ Numerische Mausrad-Interaktion bleibt bewusst im UI-Layer: `ui::common` kapselt 
 
 **Abgrenzung**
 
-- `src/editor_app/*` gehoert nicht zum Application-Layer. Die Integrationsschale kapselt nur eframe-Frame-Zyklus, Event-Sammlung und Overlay-Anbindung und delegiert fachliche Mutationen an `AppController`.
+- `crates/fs25_auto_drive_frontend_egui/src/editor_app/*` gehoert nicht zum Application-Layer. Die Integrationsschale kapselt nur eframe-Frame-Zyklus, Event-Sammlung und Overlay-Anbindung und delegiert fachliche Mutationen an `AppController`.
 
 **Use-Case-Module:**
 
@@ -207,7 +204,7 @@ Numerische Mausrad-Interaktion bleibt bewusst im UI-Layer: `ui::common` kapselt 
 - XML-Use-Cases ausführen
 - Renderer nur über `RenderScene` beliefern
 
-### Domain/Core Layer (`src/core/*`)
+### Domain/Core Layer (`crates/fs25_auto_drive_engine/src/core/*`)
 
 **Verantwortung**
 
@@ -221,7 +218,7 @@ Numerische Mausrad-Interaktion bleibt bewusst im UI-Layer: `ui::common` kapselt 
 - wgpu/Renderer-Typen kennen
 - Dateidialoge oder direkte I/O enthalten
 
-### Persistence Layer (`src/xml/*`)
+### Persistence Layer (`crates/fs25_auto_drive_engine/src/xml/*`)
 
 **Verantwortung**
 
@@ -233,7 +230,7 @@ Numerische Mausrad-Interaktion bleibt bewusst im UI-Layer: `ui::common` kapselt 
 - UI- oder Kamera-Entscheidungen treffen
 - Renderlogik enthalten
 
-### Rendering Layer (`src/render/*`)
+### Rendering Layer (`crates/fs25_auto_drive_frontend_egui/src/render/*`)
 
 **Verantwortung**
 
