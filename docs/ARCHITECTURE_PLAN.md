@@ -165,12 +165,15 @@ Numerische Mausrad-Interaktion bleibt bewusst im UI-Layer: `ui::common` kapselt 
 **Verantwortung**
 
 - Zentrale Event-Verarbeitung (`AppController`)
+- Schlanke Event-Fassaden in `events/intent.rs` und `events/command.rs`; die kanonischen Enum-Definitionen liegen in `events/*/definition.rs`, damit Root-Dateien als stabile Einstiegspunkte klein bleiben
 - Use-Cases (Load/Save, Kamera, Selektion, Heightmap, Tools)
 - Aufbau von `RenderScene` aus Domain + ViewState
 - Schmale Read-only-Fassade fuer UI und Integrationsschale: app-eigene Typen plus bewusst ausgewaehlte Core-/Shared-Typen wie `ConnectionDirection`, `ConnectionPriority`, `RoadMap`, `Camera2D`, `RenderQuality`, `ZipImageEntry`
 - Kanonischer RouteTool-Katalog (`tools/catalog.rs`) als Single Source of Truth fuer `RouteToolId`, `RouteToolGroup`, `RouteToolBackingMode`, `RouteToolIconKey`, Surface-Sichtbarkeit und Aktivierungs-Voraussetzungen
+- Egui-freier Route-Tool-Panel-Vertrag als stabile Fassade in `ui_contract.rs` und `ui_contract/route_tool_panel.rs`; die eigentlichen DTO-Familien liegen intern in `route_tool_panel/common.rs`, `curve_family.rs`, `generator_family.rs` und `analysis_family.rs`
 - Konsolidierte Asset-Leseflaeche im `AppState`: `farmland_polygons_arc()`, `farmland_grid_arc()` und `background_image_arc()` kapseln die kanonischen Tool-/Host-Zugriffe; `view.background_map` bleibt Primaerquelle fuer Hintergrundbilder, `background_image` nur Kompatibilitaets-Fallback
 - Separater Tool-Editing-Layer (`tool_editing/*`) fuer persistente Tool-Snapshots, Rehydrierung sowie Cancel/Undo im destruktiven Tool-Edit-Flow
+- Undo/Redo-Snapshots sichern neben `road_map` und `selection` auch `group_registry` und `tool_edit_store`; laufende `ActiveToolEditSession`s bleiben transiente Orchestrierungsdaten ausserhalb des Snapshot-Formats
 
 **Abgrenzung**
 
@@ -766,7 +769,7 @@ Nach node-mutierenden Operationen wird dirty-Flag gesetzt; Rebuild erfolgt lazy 
 - `GroupRegistry` bleibt tool-neutral; Tool-Edit wird ueber `ToolEditStore` + `RouteToolId` freigeschaltet, nicht ueber Felder im `GroupRecord`
 - Alle Pflicht-Surfaces lesen Route-Tools ueber `resolve_route_tool_entries()`; deaktivierte Tools bleiben sichtbar und tragen ihren Disabled-Grund
 - `GroupRecord.locked` verhindert versehentliche Mutation
-- Undo-Snapshot wird vor jeder Mutation automatisch erstellt (`apply_tool_result`)
+- Undo-Snapshot wird vor jeder Mutation automatisch erstellt (`apply_tool_result`); fuer Tool-Edit/Undo umfasst der Snapshot-Vertrag auch `GroupRegistry` und `ToolEditStore`, waehrend transiente Edit-Sessions getrennt behandelt werden
 
 ### ToolResult-Aufbau
 

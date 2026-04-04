@@ -21,6 +21,8 @@ Die eframe-Integrationsschale unter `src/editor_app/*` gehoert bewusst nicht zum
 - `tool_contract.rs` — semantische Route-Tool-Vertraege wie `RouteToolId`, `ToolAnchor` und `TangentSource`
 - `ui_contract.rs` — egui-freie UI-Vertraege wie `TangentMenuData`, `TangentOptionData`, `RouteToolPanelState`, `RouteToolConfigState`, `RouteToolPanelAction`, `RouteToolPanelEffect` und `RouteToolViewportData`
 
+Die Route-Tool-Panel-DTOs werden intern ueber `ui_contract/route_tool_panel/{common,curve_family,generator_family,analysis_family}.rs` gepflegt. Die Top-Level-Dateien `ui_contract.rs` und `ui_contract/route_tool_panel.rs` bleiben dabei stabile Re-Export-Fassaden fuer UI und Intent-Mapping.
+
 ## Haupttypen
 
 ### `AppController`
@@ -405,6 +407,7 @@ pub struct ActiveToolEditSession {
 
 - `FieldPath` und `ColorPath` bleiben `Ephemeral` und erzeugen bewusst keinen `ToolEditRecord`.
 - Nicht-destruktiver Gruppen-Edit (`group_editing`) und destruktiver Tool-Edit (`active_tool_edit_session`) sind getrennte Flows.
+- Undo-/Redo-Snapshots umfassen `road_map`, `selection`, `group_registry` und `tool_edit_store`; `active_tool_edit_session` bleibt bewusst ausserhalb des Snapshot-Formats und wird nur fuer transiente Restore-/Cancel-Flows genutzt.
 
 ---
 
@@ -506,9 +509,11 @@ if let Some(record) = group_registry.find_first_by_node_id(clicked_node_id) {
 
 `AppIntent` beschreibt Eingaben aus UI/System. `AppCommand` beschreibt mutierende Schritte am State.
 
-Kanonische Definitionen liegen in:
+Oeffentliche Einstiegspunkte liegen in:
 - `src/app/events/intent.rs`
 - `src/app/events/command.rs`
+
+Die Root-Dateien sind bewusst schlanke Fassaden; die vollstaendigen Enum-Definitionen liegen in `src/app/events/intent/definition.rs` bzw. `src/app/events/command/definition.rs`. Beide Enums klassifizieren ihre Varianten intern ueber `AppEventFeature`, damit `intent_mapping/by_feature/*` und `controller/by_feature/*` denselben Featureschnitt verwenden.
 
 Die folgenden Bloecke spiegeln die aktuell verwendeten Varianten (gekuerzt um Feldkommentare).
 

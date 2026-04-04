@@ -27,9 +27,15 @@ Alle Selektionsmodi koennen mit **Ctrl** kombiniert werden, um die bestehende Se
 
 > **Hinweis:** Nach einem Doppelklick kann das Popup **Gruppen-Einstellungen** erscheinen. Dort lassen sich **Bei Kreuzung stoppen** und **Max. Winkel** fuer die Abschnitts-Selektion anpassen.
 
+Selektionsaenderungen koennen ebenfalls per Undo/Redo zurueckgenommen werden. Das gilt fuer Klick-Selektion, Rechteck, Lasso, Gruppen-/Abschnitts-Selektion, **Alles selektieren** und **Selektion aufheben**.
+
 ### Selektion verschieben
 
 Bei Drag auf einem bereits selektierten Node werden **alle selektierten Nodes gemeinsam verschoben**. Ein Undo-Snapshot wird automatisch beim Start des Drag erstellt.
+
+Ein kompletter Drag zaehlt als genau ein Undo-Schritt. Der Verschiebevorgang gilt erst beim Loslassen der Maus als abgeschlossen.
+
+Wenn ein selektierter Node zu einer gesperrten Gruppe gehoert, bewegt der Editor die zugehoerigen gesperrten Gruppen-Nodes gemeinsam mit.
 
 ---
 
@@ -176,7 +182,7 @@ Marker werden als **Pin-Symbole** dargestellt:
 
 ## Undo / Redo
 
-Alle destruktiven Operationen erzeugen automatisch einen Undo-Snapshot:
+Undo und Redo stellen nicht nur Nodes und Verbindungen wieder her, sondern auch Selektion, Gruppen-Zuordnung und den gespeicherten Bearbeitungszustand gruppenfaehiger Route-Tools.
 
 | Shortcut | Aktion |
 |----------|--------|
@@ -187,10 +193,12 @@ Auch ueber **Edit → Undo / Redo** im Menue verfuegbar (mit Anzeige ob verfuegb
 
 **Operationen mit Undo-Support:**
 
+- Selektion aendern oder leeren, auch per Rechteck und Lasso
 - Nodes hinzufuegen / loeschen
-- Nodes verschieben
+- Nodes verschieben, jeweils als zusammenhaengender Drag-Schritt
 - Verbindungen erstellen / entfernen / aendern
 - Marker erstellen / bearbeiten / loeschen
+- Gruppenbasierte Route-Tool-Ergebnisse und deren spaetere Wiederherstellung ueber **Tool bearbeiten**
 - Bulk-Operationen (Richtung, Prioritaet, Invertierung, Trennen)
 
 ---

@@ -11,6 +11,7 @@
 5. Im linken Panel Richtung und Strassenart fuer neue Verbindungen voreinstellen.
 
 > **Tipp:** Analyse-Tools zeigen schon jetzt sichtbar an, ob noch Farmland-Daten oder eine Hintergrundkarte fehlen.
+> **Tipp:** Wenn nach der Uebersichtskarten-Generierung eine Warnung in der Statusleiste erscheint, betrifft das haeufig nur das Merken der Layer-Voreinstellungen. Die erzeugte Karte kann trotzdem bereits geladen und nutzbar sein.
 
 ---
 
@@ -108,6 +109,15 @@
 5. Mit **`Ctrl+S`** speichern und die Datei in FS25 testen.
 
 > **Wichtig:** Der Editor remappt IDs beim Speichern automatisch auf eine lueckenlose Reihenfolge. Manuelle XML-Korrekturen sind dafuer nicht noetig.
+
+## Workflow 9: Selektion oder Verschieben rueckgaengig machen
+
+1. Nodes per Klick, Rechteck, Lasso oder Doppelklick selektieren.
+2. Falls noetig die Selektion per Drag verschieben.
+3. Mit **`Ctrl+Z`** die letzte Selektions- oder Verschiebeaktion rueckgaengig machen.
+4. Mit **`Ctrl+Y`** oder **`Shift+Ctrl+Z`** den Schritt wiederherstellen.
+
+> **Tipp:** Ein kompletter Drag zaehlt als ein einzelner Undo-Schritt. Rechteck- und Lasso-Selektion lassen sich genauso rueckgaengig machen wie Klick-Selektionen.
 
 ---
 
