@@ -188,6 +188,7 @@
 - [x] Dual-Frontend-Crate-Split
   - [x] Root-Package als Fassade + nativer Launcher stabil gehalten
   - [x] `fs25_auto_drive_engine` fuer `app/core/shared/xml` angelegt
+  - [x] `fs25_auto_drive_host_bridge` als kanonisches toolkit-freies Bridge-Core-Scaffold angelegt
   - [x] `fs25_auto_drive_frontend_egui` fuer `ui/editor_app/runtime/render` angelegt
   - [x] `fs25_auto_drive_frontend_flutter_bridge` als Session-/DTO-Seam angelegt
   - [x] Build-, Guardrail- und API-Doku-Skripte auf Workspace-Crates umgestellt

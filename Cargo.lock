@@ -1776,6 +1776,10 @@ dependencies = [
 ]
 
 [[package]]
+name = "fs25_auto_drive_host_bridge"
+version = "1.7.0"
+
+[[package]]
 name = "fs25_auto_drive_render_wgpu"
 version = "1.7.0"
 dependencies = [
