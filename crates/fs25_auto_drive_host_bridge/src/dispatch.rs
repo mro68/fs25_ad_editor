@@ -1,19 +1,31 @@
 use anyhow::Result;
 use fs25_auto_drive_engine::app::ui_contract::{
-    dialog_result_to_intent, DialogRequest, DialogRequestKind, DialogResult,
+    dialog_result_to_intent, DialogRequest, DialogRequestKind, DialogResult, HostUiSnapshot,
+    ViewportOverlaySnapshot,
 };
 use fs25_auto_drive_engine::app::{AppController, AppIntent, AppState, EditorTool};
+use fs25_auto_drive_engine::shared::{RenderAssetsSnapshot, RenderScene};
+use glam::Vec2;
 
 use crate::dto::{
     HostActiveTool, HostDialogRequest, HostDialogRequestKind, HostDialogResult, HostSessionAction,
 };
 
-fn map_editor_tool(tool: HostActiveTool) -> EditorTool {
+fn map_host_active_tool(tool: HostActiveTool) -> EditorTool {
     match tool {
         HostActiveTool::Select => EditorTool::Select,
         HostActiveTool::Connect => EditorTool::Connect,
         HostActiveTool::AddNode => EditorTool::AddNode,
         HostActiveTool::Route => EditorTool::Route,
+    }
+}
+
+fn map_editor_tool(tool: EditorTool) -> HostActiveTool {
+    match tool {
+        EditorTool::Select => HostActiveTool::Select,
+        EditorTool::Connect => HostActiveTool::Connect,
+        EditorTool::AddNode => HostActiveTool::AddNode,
+        EditorTool::Route => HostActiveTool::Route,
     }
 }
 
@@ -76,6 +88,40 @@ pub fn take_host_dialog_requests(
         .collect()
 }
 
+/// Mappt einen stabilen Engine-Intent auf eine explizite Host-Action.
+///
+/// Rueckgabewert `None` bedeutet, dass der Intent nicht zur stabilen,
+/// niederfrequenten Host-Action-Surface gehoert.
+pub fn map_intent_to_host_action(intent: &AppIntent) -> Option<HostSessionAction> {
+    match intent {
+        AppIntent::OpenFileRequested => Some(HostSessionAction::OpenFile),
+        AppIntent::SaveRequested => Some(HostSessionAction::Save),
+        AppIntent::SaveAsRequested => Some(HostSessionAction::SaveAs),
+        AppIntent::HeightmapSelectionRequested => {
+            Some(HostSessionAction::RequestHeightmapSelection)
+        }
+        AppIntent::BackgroundMapSelectionRequested => {
+            Some(HostSessionAction::RequestBackgroundMapSelection)
+        }
+        AppIntent::GenerateOverviewRequested => Some(HostSessionAction::GenerateOverview),
+        AppIntent::CurseplayImportRequested => Some(HostSessionAction::CurseplayImport),
+        AppIntent::CurseplayExportRequested => Some(HostSessionAction::CurseplayExport),
+        AppIntent::ResetCameraRequested => Some(HostSessionAction::ResetCamera),
+        AppIntent::ZoomToFitRequested => Some(HostSessionAction::ZoomToFit),
+        AppIntent::ZoomToSelectionBoundsRequested => Some(HostSessionAction::ZoomToSelectionBounds),
+        AppIntent::ExitRequested => Some(HostSessionAction::Exit),
+        AppIntent::CommandPaletteToggled => Some(HostSessionAction::ToggleCommandPalette),
+        AppIntent::SetEditorToolRequested { tool } => Some(HostSessionAction::SetEditorTool {
+            tool: map_editor_tool(*tool),
+        }),
+        AppIntent::OpenOptionsDialogRequested => Some(HostSessionAction::OpenOptionsDialog),
+        AppIntent::CloseOptionsDialogRequested => Some(HostSessionAction::CloseOptionsDialog),
+        AppIntent::UndoRequested => Some(HostSessionAction::Undo),
+        AppIntent::RedoRequested => Some(HostSessionAction::Redo),
+        _ => None,
+    }
+}
+
 /// Uebersetzt eine explizite Host-Action in einen stabilen Engine-Intent.
 ///
 /// Gibt `None` zurueck, wenn die Action keinen direkten Intent erzeugt
@@ -100,7 +146,7 @@ pub fn map_host_action_to_intent(action: HostSessionAction) -> Option<AppIntent>
         HostSessionAction::Exit => Some(AppIntent::ExitRequested),
         HostSessionAction::ToggleCommandPalette => Some(AppIntent::CommandPaletteToggled),
         HostSessionAction::SetEditorTool { tool } => Some(AppIntent::SetEditorToolRequested {
-            tool: map_editor_tool(tool),
+            tool: map_host_active_tool(tool),
         }),
         HostSessionAction::OpenOptionsDialog => Some(AppIntent::OpenOptionsDialogRequested),
         HostSessionAction::CloseOptionsDialog => Some(AppIntent::CloseOptionsDialogRequested),
@@ -130,13 +176,66 @@ pub fn apply_host_action(
     Ok(true)
 }
 
+/// Wendet einen stabil gemappten Engine-Intent ueber die Host-Bridge-Seam an.
+///
+/// Rueckgabe:
+/// - `Ok(true)`: Der Intent wurde auf eine Host-Action gemappt und verarbeitet.
+/// - `Ok(false)`: Der Intent gehoert nicht zur stabilen Host-Action-Surface.
+pub fn apply_mapped_intent(
+    controller: &mut AppController,
+    state: &mut AppState,
+    intent: &AppIntent,
+) -> Result<bool> {
+    let Some(action) = map_intent_to_host_action(intent) else {
+        return Ok(false);
+    };
+
+    apply_host_action(controller, state, action)
+}
+
+/// Baut den host-neutralen Panel-Snapshot fuer Hosts mit lokalem Controller/State.
+pub fn build_host_ui_snapshot(controller: &AppController, state: &AppState) -> HostUiSnapshot {
+    controller.build_host_ui_snapshot(state)
+}
+
+/// Baut den host-neutralen Viewport-Overlay-Snapshot fuer lokale Host-Adapter.
+///
+/// Die mutable State-Referenz bleibt noetig, weil beim Aufbau Caches im
+/// `AppState` aufgewaermt werden koennen.
+pub fn build_viewport_overlay_snapshot(
+    controller: &AppController,
+    state: &mut AppState,
+    cursor_world: Option<Vec2>,
+) -> ViewportOverlaySnapshot {
+    controller.build_viewport_overlay_snapshot(state, cursor_world)
+}
+
+/// Baut den per-frame Render-Vertrag fuer lokale Host-Adapter.
+pub fn build_render_scene(
+    controller: &AppController,
+    state: &AppState,
+    viewport_size: [f32; 2],
+) -> RenderScene {
+    controller.build_render_scene(state, viewport_size)
+}
+
+/// Baut den langlebigen Render-Asset-Snapshot fuer lokale Host-Adapter.
+pub fn build_render_assets(controller: &AppController, state: &AppState) -> RenderAssetsSnapshot {
+    controller.build_render_assets(state)
+}
+
 #[cfg(test)]
 mod tests {
     use fs25_auto_drive_engine::app::{AppController, AppIntent, AppState};
+    use glam::Vec2;
 
-    use crate::dto::{HostDialogRequestKind, HostDialogResult, HostSessionAction};
+    use crate::dto::{HostActiveTool, HostDialogRequestKind, HostDialogResult, HostSessionAction};
 
-    use super::{apply_host_action, map_host_action_to_intent, take_host_dialog_requests};
+    use super::{
+        apply_host_action, apply_mapped_intent, build_host_ui_snapshot, build_render_assets,
+        build_render_scene, build_viewport_overlay_snapshot, map_host_action_to_intent,
+        map_intent_to_host_action, take_host_dialog_requests,
+    };
 
     #[test]
     fn take_host_dialog_requests_maps_and_drains_engine_queue() {
@@ -274,5 +373,145 @@ mod tests {
             curseplay_export_intent,
             Some(AppIntent::CurseplayExportPathSelected { path }) if path == "/tmp/customField.xml"
         ));
+    }
+
+    #[test]
+    fn map_intent_to_host_action_covers_stable_bridge_intents() {
+        let cases = vec![
+            (AppIntent::OpenFileRequested, HostSessionAction::OpenFile),
+            (AppIntent::SaveRequested, HostSessionAction::Save),
+            (AppIntent::SaveAsRequested, HostSessionAction::SaveAs),
+            (
+                AppIntent::HeightmapSelectionRequested,
+                HostSessionAction::RequestHeightmapSelection,
+            ),
+            (
+                AppIntent::BackgroundMapSelectionRequested,
+                HostSessionAction::RequestBackgroundMapSelection,
+            ),
+            (
+                AppIntent::GenerateOverviewRequested,
+                HostSessionAction::GenerateOverview,
+            ),
+            (
+                AppIntent::CurseplayImportRequested,
+                HostSessionAction::CurseplayImport,
+            ),
+            (
+                AppIntent::CurseplayExportRequested,
+                HostSessionAction::CurseplayExport,
+            ),
+            (
+                AppIntent::ResetCameraRequested,
+                HostSessionAction::ResetCamera,
+            ),
+            (AppIntent::ZoomToFitRequested, HostSessionAction::ZoomToFit),
+            (
+                AppIntent::ZoomToSelectionBoundsRequested,
+                HostSessionAction::ZoomToSelectionBounds,
+            ),
+            (AppIntent::ExitRequested, HostSessionAction::Exit),
+            (
+                AppIntent::CommandPaletteToggled,
+                HostSessionAction::ToggleCommandPalette,
+            ),
+            (
+                AppIntent::SetEditorToolRequested {
+                    tool: fs25_auto_drive_engine::app::EditorTool::Route,
+                },
+                HostSessionAction::SetEditorTool {
+                    tool: HostActiveTool::Route,
+                },
+            ),
+            (
+                AppIntent::OpenOptionsDialogRequested,
+                HostSessionAction::OpenOptionsDialog,
+            ),
+            (
+                AppIntent::CloseOptionsDialogRequested,
+                HostSessionAction::CloseOptionsDialog,
+            ),
+            (AppIntent::UndoRequested, HostSessionAction::Undo),
+            (AppIntent::RedoRequested, HostSessionAction::Redo),
+        ];
+
+        for (intent, expected_action) in cases {
+            assert_eq!(map_intent_to_host_action(&intent), Some(expected_action));
+        }
+    }
+
+    #[test]
+    fn map_intent_to_host_action_keeps_high_frequency_intents_unmapped() {
+        let cases = vec![
+            AppIntent::ViewportResized {
+                size: [1920.0, 1080.0],
+            },
+            AppIntent::CameraPan {
+                delta: Vec2::new(3.0, -2.0),
+            },
+            AppIntent::CameraZoom {
+                factor: 1.1,
+                focus_world: Some(Vec2::ZERO),
+            },
+            AppIntent::NodePickRequested {
+                world_pos: Vec2::new(5.0, 6.0),
+                additive: false,
+                extend_path: false,
+            },
+            AppIntent::RouteToolClicked {
+                world_pos: Vec2::new(1.0, 2.0),
+                ctrl: false,
+            },
+        ];
+
+        for intent in cases {
+            assert!(map_intent_to_host_action(&intent).is_none());
+        }
+    }
+
+    #[test]
+    fn apply_mapped_intent_dispatches_open_file_request() {
+        let mut controller = AppController::new();
+        let mut state = AppState::new();
+
+        let handled =
+            apply_mapped_intent(&mut controller, &mut state, &AppIntent::OpenFileRequested)
+                .expect("OpenFileRequested muss ueber die Bridge-Seam verarbeitet werden");
+
+        assert!(handled);
+        assert_eq!(state.ui.dialog_requests.len(), 1);
+    }
+
+    #[test]
+    fn apply_mapped_intent_returns_false_for_unmapped_intents() {
+        let mut controller = AppController::new();
+        let mut state = AppState::new();
+
+        let handled = apply_mapped_intent(
+            &mut controller,
+            &mut state,
+            &AppIntent::ViewportResized {
+                size: [640.0, 480.0],
+            },
+        )
+        .expect("Unmapped Intent darf keinen Fehler ausloesen");
+
+        assert!(!handled);
+    }
+
+    #[test]
+    fn read_helpers_delegate_to_controller_read_seams() {
+        let controller = AppController::new();
+        let mut state = AppState::new();
+
+        let host_ui = build_host_ui_snapshot(&controller, &state);
+        let overlay = build_viewport_overlay_snapshot(&controller, &mut state, None);
+        let scene = build_render_scene(&controller, &state, [640.0, 480.0]);
+        let assets = build_render_assets(&controller, &state);
+
+        assert!(host_ui.command_palette_state().is_some());
+        assert!(overlay.route_tool_preview.is_none());
+        assert_eq!(scene.viewport_size(), [640.0, 480.0]);
+        assert_eq!(assets.background_asset_revision(), 0);
     }
 }
