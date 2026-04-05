@@ -150,7 +150,8 @@ impl EditorApp {
     ) -> Vec<AppIntent> {
         let mut events = Vec::new();
 
-        let dialog_results = ui::handle_file_dialogs(self.state.ui.take_dialog_requests());
+        let dialog_results =
+            ui::handle_file_dialogs(self.controller.take_dialog_requests(&mut self.state));
         events.extend(
             dialog_results
                 .into_iter()

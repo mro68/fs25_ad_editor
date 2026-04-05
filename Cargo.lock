@@ -1755,6 +1755,7 @@ dependencies = [
  "egui_extras",
  "env_logger",
  "fs25_auto_drive_engine",
+ "fs25_auto_drive_host_bridge",
  "fs25_auto_drive_render_wgpu",
  "fs25_map_overview",
  "glam",
@@ -1770,8 +1771,16 @@ dependencies = [
 name = "fs25_auto_drive_frontend_flutter_bridge"
 version = "1.7.0"
 dependencies = [
+ "fs25_auto_drive_host_bridge",
+]
+
+[[package]]
+name = "fs25_auto_drive_host_bridge"
+version = "1.7.0"
+dependencies = [
  "anyhow",
  "fs25_auto_drive_engine",
+ "glam",
  "serde",
 ]
 
