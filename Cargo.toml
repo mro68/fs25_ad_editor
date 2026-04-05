@@ -4,7 +4,6 @@ members = [
     "crates/fs25_auto_drive_engine",
     "crates/fs25_auto_drive_host_bridge",
     "crates/fs25_auto_drive_frontend_egui",
-    "crates/fs25_auto_drive_frontend_flutter_bridge",
     "crates/fs25_auto_drive_render_wgpu",
     "crates/fs25_map_overview",
 ]

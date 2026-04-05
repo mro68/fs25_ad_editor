@@ -539,10 +539,10 @@ Wird in den Float-Section-Renderern unter `options_dialog/sections/*.rs` fuer di
 Verarbeitet ausstehende host-native Datei-Dialog-Requests und liefert semantische Dialog-Ergebnisse.
 
 ```rust
-pub fn handle_file_dialogs(dialog_requests: Vec<DialogRequest>) -> Vec<DialogResult>
+pub fn handle_file_dialogs(dialog_requests: Vec<HostDialogRequest>) -> Vec<HostDialogResult>
 ```
 
-Die zentrale Uebersetzung nach `AppIntent` erfolgt im Editor-Host ueber `dialog_result_to_intent()`.
+Die zentrale Rueckfuehrung erfolgt im Editor-Host ueber die Host-Bridge-Seam: `HostDialogResult` wird als `HostSessionAction::SubmitDialogResult` in den gemeinsamen Dispatch-Pfad gegeben.
 
 ---
 
