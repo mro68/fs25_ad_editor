@@ -10,7 +10,7 @@ Die Integrationsschale liest Panels ueber `HostUiSnapshot`, konsumiert Datei-/Pf
 
 Die gemeinsame Host-Bridge ist in dieser Crate die kanonische Dispatch- und Read-Seam fuer stabile, niederfrequente Host-Aktionen und bridge-owned Read-Modelle. `editor_app` bleibt die produktive eframe-Integrationsschale: lokale Spezialfaelle bleiben lokal, bridge-faehige Intents laufen ueber `fs25_auto_drive_host_bridge::apply_mapped_intent(...)` (optional via `host_bridge_adapter`-Kompat-Reexport), hochfrequente Viewport-/Tool-Intents bleiben im Legacy-Fallback ueber `AppController`.
 
-`HostBridgeSession` bleibt dabei verbindlich die kanonische Session-Surface fuer egui und Flutter. Der freie Dialogpfad ueber `take_host_dialog_requests(...)` ist bewusst nur ein enger Adapter-Hilfspfad fuer den aktuellen Konsolidierungsslice des bestehenden `editor_app`-Hosts, keine zweite vollwertige Session-API.
+`HostBridgeSession` bleibt dabei verbindlich die kanonische Session-Surface fuer den egui-Host sowie direkte Flutter-/FFI-Consumer. Der freie Dialogpfad ueber `take_host_dialog_requests(...)` ist bewusst nur ein enger Adapter-Hilfspfad fuer den aktuellen Konsolidierungsslice des bestehenden `editor_app`-Hosts, keine zweite vollwertige Session-API.
 
 ## Kompatibilitaet (Stand: 2026-04-05)
 

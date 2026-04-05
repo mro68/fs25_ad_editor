@@ -102,7 +102,7 @@ Ausfuehrliche Anleitung: [docs/howto/index.md](docs/howto/index.md)
 
 Die Root-Crate `fs25_auto_drive_editor` bleibt als Kompat-Fassade erhalten und re-exportiert die kanonischen Engine-Module weiterhin fuer Tests, Benches und bestehende Rust-Imports.
 
-Flutter-/FFI-Consumer nutzen direkt `fs25_auto_drive_host_bridge`; bestehende `Engine*`-/`FlutterBridgeSession`-Namen stehen dort als Kompat-Aliase bereit.
+Direkte Flutter-/FFI-Consumer nutzen `fs25_auto_drive_host_bridge` ohne separate Zwischen-Crate; bestehende `Engine*`-/`FlutterBridgeSession`-Namen stehen dort weiterhin als Kompat-Aliase bereit.
 
 Detaillierte Beschreibung: [docs/ARCHITECTURE_PLAN.md](docs/ARCHITECTURE_PLAN.md)
 

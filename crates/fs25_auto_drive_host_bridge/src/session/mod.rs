@@ -52,10 +52,10 @@ pub struct HostRenderFrameSnapshot {
     pub assets: RenderAssetsSnapshot,
 }
 
-/// Kompatibilitaetsalias fuer bestehende Flutter-nahe Session-Importe.
+/// Kompatibilitaetsalias fuer bestehende direkte Flutter-/FFI-Session-Importe.
 pub type FlutterBridgeSession = HostBridgeSession;
 
-/// Kompatibilitaetsalias fuer bestehende Flutter-nahe Render-Importe.
+/// Kompatibilitaetsalias fuer bestehende direkte Flutter-/FFI-Render-Importe.
 pub type EngineRenderFrameSnapshot = HostRenderFrameSnapshot;
 
 /// Kleine Session-Fassade ueber der host-neutralen Engine.
@@ -235,7 +235,7 @@ mod tests {
         HostSessionAction,
     };
 
-    use super::{FlutterBridgeSession, HostBridgeSession};
+    use super::{EngineRenderFrameSnapshot, FlutterBridgeSession, HostBridgeSession};
 
     fn apply_test_intent(session: &mut HostBridgeSession, intent: AppIntent) {
         session
@@ -389,5 +389,15 @@ mod tests {
             .expect("ToggleCommandPalette muss ueber den Alias funktionieren");
 
         assert!(session.snapshot().show_command_palette);
+    }
+
+    #[test]
+    fn engine_render_frame_snapshot_alias_keeps_render_contract() {
+        let session = HostBridgeSession::new();
+
+        let frame: EngineRenderFrameSnapshot = session.build_render_frame([512.0, 256.0]);
+
+        assert_eq!(frame.scene.viewport_size(), [512.0, 256.0]);
+        assert_eq!(frame.assets.background_asset_revision(), 0);
     }
 }

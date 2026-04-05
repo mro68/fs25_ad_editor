@@ -1,7 +1,7 @@
 # Architektur-Plan (Soll-Zustand)
 
 Stand: 2026-04-05  
-Status: Workspace-Split umgesetzt — Root-Fassade, Engine-Crate, render_wgpu-Core-Crate und egui-Host-Adapter sind stabil; die gemeinsame Rust-Host-Dispatch-Seam ist produktiv, `HostBridgeSession` ist als kanonische Session-Surface fuer egui und Flutter festgeschrieben, der egui-Dialog-Lifecycle ist auf die Host-Bridge-Seam konsolidiert, die lokale Action-Mapping-Doppelpflege wurde entfernt und bridge-owned Read-/Dispatch-Seams laufen kanonisch ueber `fs25_auto_drive_host_bridge`; die fruehere Flutter-Kompat-Crate wurde entfernt, Kompat-Aliase liegen direkt in der Host-Bridge
+Status: Workspace-Split umgesetzt — Root-Fassade, Engine-Crate, render_wgpu-Core-Crate und egui-Host-Adapter sind stabil; die gemeinsame Rust-Host-Dispatch-Seam ist produktiv, `HostBridgeSession` ist als kanonische Session-Surface fuer den egui-Host sowie direkte Flutter-/FFI-Consumer festgeschrieben, der egui-Dialog-Lifecycle ist auf die Host-Bridge-Seam konsolidiert, die lokale Action-Mapping-Doppelpflege wurde entfernt und bridge-owned Read-/Dispatch-Seams laufen kanonisch ueber `fs25_auto_drive_host_bridge`; die fruehere Flutter-Kompat-Crate wurde entfernt, Kompat-Aliase liegen direkt in der Host-Bridge
 
 Aktuelle Integrationskette: Workspace auf Rust 2024, egui-Host auf `eframe/egui/egui-wgpu 0.34.1`, Render-Core auf `wgpu 29.0.*`.
 
@@ -20,7 +20,7 @@ Kernfluss: **Input -> AppIntent -> AppController -> AppCommand -> AppState/Domai
 
 ## Session-Surface-Vertrag (Host-Bridge)
 
-`fs25_auto_drive_host_bridge::HostBridgeSession` ist die kanonische Session-Surface fuer egui und Flutter.
+`fs25_auto_drive_host_bridge::HostBridgeSession` ist die kanonische Session-Surface fuer den egui-Host sowie direkte Flutter-/FFI-Consumer.
 
 Verbleibende egui-Zugriffe werden verbindlich in drei Klassen aufgeteilt:
 
@@ -481,9 +481,9 @@ impl fs25_auto_drive_render_wgpu::Renderer {
 }
 ```
 
-`HostUiSnapshot` und `ViewportOverlaySnapshot` sind die host-neutralen Read-Modelle fuer Panels bzw. Viewport-Overlays. Egui konsumiert beide Modelle read-only und mappt `PanelAction` sowie Overlay-Klicks zentral auf `AppIntent`. Die kanonische Host-Bridge kapselt Mutationen als `HostSessionAction`, liefert `HostSessionSnapshot` sowie `HostRenderFrameSnapshot` und definiert den host-neutralen Dialog-Lifecycle ueber `take_dialog_requests()`/`submit_dialog_result(...)`. Egui konsumiert die Dialog-Requests ueber `take_host_dialog_requests(...)` und fuehrt Ergebnisse ueber `HostSessionAction::SubmitDialogResult` in denselben Dispatch-Pfad zurueck. Die Flutter-Bridge re-exportiert dieselbe Surface zusaetzlich als `EngineSessionAction`, `EngineSessionSnapshot` und `EngineRenderFrameSnapshot`, ist als alias-only Uebergangsschicht eingefroren und fuehrt keine eigene Session-Logik, keinen generischen `AppIntent`-Dispatch und keine `AppState`-Escape-Hatches ein.
+`HostUiSnapshot` und `ViewportOverlaySnapshot` sind die host-neutralen Read-Modelle fuer Panels bzw. Viewport-Overlays. Egui konsumiert beide Modelle read-only und mappt `PanelAction` sowie Overlay-Klicks zentral auf `AppIntent`. Die kanonische Host-Bridge kapselt Mutationen als `HostSessionAction`, liefert `HostSessionSnapshot` sowie `HostRenderFrameSnapshot` und definiert den host-neutralen Dialog-Lifecycle ueber `take_dialog_requests()`/`submit_dialog_result(...)`. Egui konsumiert die Dialog-Requests ueber `take_host_dialog_requests(...)` und fuehrt Ergebnisse ueber `HostSessionAction::SubmitDialogResult` in denselben Dispatch-Pfad zurueck. Direkte Flutter-/FFI-Consumer importieren dieselbe Surface ueber die in `fs25_auto_drive_host_bridge` bereitgestellten Kompat-Aliase `EngineSessionAction`, `EngineSessionSnapshot` und `EngineRenderFrameSnapshot`; eine separate Flutter-Kompat-Crate existiert nicht mehr.
 
-`render_scene::build()` baut den render-seitigen `RenderMap`-Snapshot nur bei geaenderter `RoadMap::render_cache_key()` neu auf und legt ihn in `AppState::render_map_cache` ab. Jeder Rebuild protokolliert `nodes`, `connections`, `markers` und `approx_bytes`, damit Performance-Reports neben Laufzeiten auch die Snapshot-Groesse desselben Datensatzes dokumentieren koennen. `render_assets::build()` liefert parallel den host-neutralen Asset-Snapshot; Hintergrund-Sync laeuft ueber `background_asset_revision`/`background_transform_revision` statt Dirty-Flags. `build_viewport_overlay_snapshot()` liefert parallel den host-neutralen Overlay-Read-Modell-Snapshot fuer UI/Bridge-Hosts und waermt bei Bedarf Boundary-Caches im `AppState` auf. Die egui-Integrationsschale vergleicht Asset-Revisionen gegen ihre letzten Upload-Staende und rendert Overlays ausschliesslich aus dem Snapshot; die Flutter-Bridge kann alternativ denselben gekoppelten read-only Render-Output unter dem Alias `EngineRenderFrameSnapshot` liefern.
+`render_scene::build()` baut den render-seitigen `RenderMap`-Snapshot nur bei geaenderter `RoadMap::render_cache_key()` neu auf und legt ihn in `AppState::render_map_cache` ab. Jeder Rebuild protokolliert `nodes`, `connections`, `markers` und `approx_bytes`, damit Performance-Reports neben Laufzeiten auch die Snapshot-Groesse desselben Datensatzes dokumentieren koennen. `render_assets::build()` liefert parallel den host-neutralen Asset-Snapshot; Hintergrund-Sync laeuft ueber `background_asset_revision`/`background_transform_revision` statt Dirty-Flags. `build_viewport_overlay_snapshot()` liefert parallel den host-neutralen Overlay-Read-Modell-Snapshot fuer UI/Bridge-Hosts und waermt bei Bedarf Boundary-Caches im `AppState` auf. Die egui-Integrationsschale vergleicht Asset-Revisionen gegen ihre letzten Upload-Staende und rendert Overlays ausschliesslich aus dem Snapshot; direkte Flutter-/FFI-Consumer koennen denselben gekoppelten read-only Render-Output ueber den Alias `EngineRenderFrameSnapshot` abrufen.
 
 ## Event- und Render-Fluss
 

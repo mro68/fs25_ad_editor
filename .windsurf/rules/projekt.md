@@ -23,11 +23,11 @@ Neuimplementierung des AutoDrive Course Editors in Rust mit egui + wgpu. Hochper
 - `RenderScene` transportiert nur Render-Snapshots; Core-Typen duerfen nicht nach `crates/fs25_auto_drive_render_wgpu/src/*` durchgereicht werden
 - Hintergrund-Uploads laufen ueber `background_asset_revision` / `background_transform_revision` statt Dirty-Flag
 - `fs25_auto_drive_host_bridge` darf nur von `fs25_auto_drive_engine` abhaengen
-- Flutter-/FFI-Consumer nutzen direkt `fs25_auto_drive_host_bridge` inklusive `Engine*`-/`FlutterBridgeSession`-Kompat-Aliasen
+- Direkte Flutter-/FFI-Consumer nutzen `fs25_auto_drive_host_bridge` inklusive `Engine*`-/`FlutterBridgeSession`-Kompat-Aliasen; eine separate Flutter-Bridge-Crate existiert nicht mehr
 
 ## Verbindlicher Host-Bridge-Session-Vertrag
 
-- `HostBridgeSession` ist die kanonische Session-Surface fuer egui und Flutter.
+- `HostBridgeSession` ist die kanonische Session-Surface fuer den egui-Host sowie direkte Flutter-/FFI-Consumer.
 - Verbleibende egui-Zugriffe werden in drei Klassen gefuehrt:
 	- `bridge-owned`: stabil ueber `HostSessionAction`/`HostSessionSnapshot`/`HostUiSnapshot`/`ViewportOverlaySnapshot`.
 	- `bridge-gap`: fuer stabile Host-Aktionen und bridge-owned Read-Seams aktuell geschlossen.
