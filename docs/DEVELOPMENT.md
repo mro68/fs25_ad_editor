@@ -77,6 +77,7 @@ struct RoadMap {
 - Edition-2024-Risiken vorab stabilisiert:
     - Engine: Match-Ergonomics in Parser, if-let-Rescope in Undo/Redo/History
     - Frontend: Drop-Scopes in Render-Callback/Editor-Dispatch/Kontextmenue
+- Upgrade-Hinweis fuer egui 0.34.1: Diskrete Wheel-Logik liest rohe `MouseWheel`-Events aus `InputState.raw.events`, weil das bisherige Feld `raw_scroll_delta` in dieser Form nicht mehr die kanonische Integrationsstelle ist.
 
 ### Verifikation
 

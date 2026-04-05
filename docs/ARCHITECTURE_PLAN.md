@@ -3,6 +3,8 @@
 Stand: 2026-04-05  
 Status: Workspace-Split umgesetzt — Root-Fassade, Engine-Crate, render_wgpu-Core-Crate und egui-Host-Adapter sind stabil; die gemeinsame Rust-Host-Dispatch-Seam und die kanonische Dialog-Drain-Seam sind produktiv verdrahtet, die Flutter-Crate bleibt als eingefrorene Alias-/Kompat-Surface bestehen
 
+Aktuelle Integrationskette: Workspace auf Rust 2024, egui-Host auf `eframe/egui/egui-wgpu 0.34.1`, Render-Core auf `wgpu 29.0.*`.
+
 ## Zielbild
 
 Dieser Plan trennt fachliche Verantwortlichkeiten in Workspace-Crates mit klaren Layern. Das Root-Package bleibt bewusst als duenne Kompat-Fassade und Launcher erhalten:

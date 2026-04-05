@@ -18,7 +18,7 @@ fn append_or_set(target: &mut Option<String>, text: &str) {
     }
 }
 
-/// Parsed eine AutoDrive-Config aus einem XML-String
+/// Parst eine AutoDrive-Konfiguration aus einem XML-String.
 pub fn parse_autodrive_config(xml_content: &str) -> Result<RoadMap> {
     let mut reader = Reader::from_str(xml_content);
     reader.config_mut().trim_text(false);

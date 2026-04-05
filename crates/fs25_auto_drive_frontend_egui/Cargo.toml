@@ -9,11 +9,14 @@ path = "src/lib.rs"
 [dependencies]
 anyhow = "1.0.102"
 bytemuck = { version = "1.14", features = ["derive"] }
-eframe = { version = "0.34.1", default-features = true, features = [
+eframe = { version = "0.34.1", default-features = false, features = [
+    "accesskit",
     "default_fonts",
-    "glow",
     "persistence",
+    "wayland",
     "wgpu",
+    "web_screen_reader",
+    "x11",
 ] }
 egui = "0.34.1"
 egui_extras = { version = "0.34.1", features = ["all_loaders"] }
