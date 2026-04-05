@@ -203,6 +203,7 @@
   - [x] `HostBridgeSession` als kanonische toolkit-freie Session-Fassade in `fs25_auto_drive_host_bridge`
   - [x] Explizite Action-/Snapshot-DTOs (`HostSessionAction`, `HostSessionSnapshot`, `HostDialog*`)
   - [x] Read-Seams fuer `HostUiSnapshot`, `ViewportOverlaySnapshot` und Render-Frame in der Core-Bridge gebuendelt
+  - [x] Host-native Datei-/Pfad-Dialoge auf die kanonische Drain-Seam `AppController::take_dialog_requests(...)` / `HostBridgeSession::take_dialog_requests()` konsolidiert
 - [x] Egui-Adapter-Surface fuer die Unified Host Bridge verbreitert und produktiv verdrahtet (2026-04-05)
   - [x] `host_bridge_adapter` mappt stabile, niederfrequente Host-Aktionen (Datei-/Dialog-Anforderungen, Kamera-Shortcuts, Historie, Toolwechsel, Exit) auf `HostSessionAction`
   - [x] `editor_app::process_events` nutzt die gemeinsame Rust-Host-Dispatch-Seam (`local -> bridge -> fallback`)

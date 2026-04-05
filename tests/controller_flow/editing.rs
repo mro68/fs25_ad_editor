@@ -2,8 +2,8 @@ use fs25_auto_drive_editor::app::handlers;
 use fs25_auto_drive_editor::app::tool_contract::{RouteToolId, TangentSource};
 use fs25_auto_drive_editor::app::ui_contract::{
     BypassPanelAction, DialogRequestKind, ParkingPanelAction, RouteOffsetPanelAction,
-    RouteToolConfigState, RouteToolPanelAction, SegmentConfigPanelAction, SmoothCurvePanelAction,
-    StraightPanelAction,
+    RouteToolConfigState, RouteToolPanelAction, SegmentConfigPanelAction,
+    SmoothCurvePanelAction, StraightPanelAction,
 };
 use fs25_auto_drive_editor::app::{AppController, AppIntent, AppState, EditorTool, GroupRecord};
 use fs25_auto_drive_editor::core::{
@@ -695,9 +695,8 @@ fn curseplay_dialog_requests_are_enqueued_for_host_dialogs() {
         .handle_intent(&mut state, AppIntent::CurseplayExportRequested)
         .expect("CurseplayExportRequested sollte den Export-Dialog oeffnen");
 
-    let kinds: Vec<_> = state
-        .ui
-        .take_dialog_requests()
+    let kinds: Vec<_> = controller
+        .take_dialog_requests(&mut state)
         .into_iter()
         .map(|request| request.kind())
         .collect();

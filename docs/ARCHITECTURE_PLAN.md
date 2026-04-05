@@ -1,7 +1,7 @@
 # Architektur-Plan (Soll-Zustand)
 
-Stand: 2026-04-04  
-Status: Workspace-Split umgesetzt — Root-Fassade, Engine-Crate, render_wgpu-Core-Crate und egui-Host-Adapter sind stabil; die gemeinsame Host-Bridge-Core-Crate ist als kanonische Session-/Action-/Snapshot-Surface ueber der Engine eingefuehrt, die Host-Adapter-Migration bleibt in Arbeit
+Stand: 2026-04-05  
+Status: Workspace-Split umgesetzt — Root-Fassade, Engine-Crate, render_wgpu-Core-Crate und egui-Host-Adapter sind stabil; die gemeinsame Rust-Host-Dispatch-Seam und die kanonische Dialog-Drain-Seam sind produktiv verdrahtet, die Flutter-Crate bleibt als eingefrorene Alias-/Kompat-Surface bestehen
 
 ## Zielbild
 
@@ -617,7 +617,7 @@ crates/
 - Background-Dirty-Flag durch monotone Asset-/Transform-Revisionen ersetzt
 - `fs25_auto_drive_render_wgpu` als host-neutralen Renderer-Core extrahiert
 - egui-`render` auf Host-Adapter reduziert (Callback bleibt host-spezifisch)
-- `fs25_auto_drive_frontend_flutter_bridge` haengt nur noch von `fs25_auto_drive_host_bridge` ab und re-exportiert dessen Session-/DTO-Surface als `FlutterBridgeSession`, `EngineSessionAction`, `EngineSessionSnapshot` und `EngineRenderFrameSnapshot`; die Crate ist als alias-only Uebergangsschicht eingefroren und erhaelt keine neue Logik
+- `fs25_auto_drive_frontend_flutter_bridge` haengt nur noch von `fs25_auto_drive_host_bridge` ab und re-exportiert dessen Session-/DTO-Surface als `FlutterBridgeSession`, `EngineSessionAction`, `EngineSessionSnapshot` und `EngineRenderFrameSnapshot`; als Alias auf `HostBridgeSession` behaelt die Surface auch `build_host_ui_snapshot()` und `build_viewport_overlay_snapshot()`, die Crate bleibt dabei als alias-only Uebergangsschicht eingefroren und erhaelt keine neue Logik
 
 Geplante spaetere Entfernung (separater Breaking-Change-Track, nicht Teil dieses Follow-ups):
 1. Keine internen Rust-Consumer fuer `Engine*`-/`Flutter*`-Aliasnamen mehr.

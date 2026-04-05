@@ -181,12 +181,57 @@ mod tests {
         let mut controller = AppController::new();
         let mut state = AppState::new();
 
-        let handled =
-            apply_mapped_intent(&mut controller, &mut state, &AppIntent::OpenFileRequested)
-                .expect("OpenFileRequested muss ueber die Bridge-Seam verarbeitet werden");
+        let handled = apply_mapped_intent(
+            &mut controller,
+            &mut state,
+            &AppIntent::OpenFileRequested,
+        )
+        .expect("OpenFileRequested muss ueber die Bridge-Seam verarbeitet werden");
 
         assert!(handled);
         assert_eq!(state.ui.dialog_requests.len(), 1);
+    }
+
+    #[test]
+    fn apply_mapped_intent_supports_set_editor_tool_path() {
+        let mut controller = AppController::new();
+        let mut state = AppState::new();
+
+        let handled = apply_mapped_intent(
+            &mut controller,
+            &mut state,
+            &AppIntent::SetEditorToolRequested {
+                tool: EditorTool::Route,
+            },
+        )
+        .expect("SetEditorToolRequested muss ueber die Bridge-Seam verarbeitet werden");
+
+        assert!(handled);
+        assert_eq!(state.editor.active_tool, EditorTool::Route);
+    }
+
+    #[test]
+    fn apply_mapped_intent_supports_options_dialog_visibility_path() {
+        let mut controller = AppController::new();
+        let mut state = AppState::new();
+
+        let opened = apply_mapped_intent(
+            &mut controller,
+            &mut state,
+            &AppIntent::OpenOptionsDialogRequested,
+        )
+        .expect("OpenOptionsDialogRequested muss ueber die Bridge-Seam verarbeitet werden");
+        assert!(opened);
+        assert!(state.ui.show_options_dialog);
+
+        let closed = apply_mapped_intent(
+            &mut controller,
+            &mut state,
+            &AppIntent::CloseOptionsDialogRequested,
+        )
+        .expect("CloseOptionsDialogRequested muss ueber die Bridge-Seam verarbeitet werden");
+        assert!(closed);
+        assert!(!state.ui.show_options_dialog);
     }
 
     #[test]

@@ -100,9 +100,12 @@ impl HostBridgeSession {
     }
 
     /// Wendet eine explizite Host-Aktion auf die Session an.
+    ///
+    /// Die Methode delegiert auf die gemeinsame Rust-Host-Dispatch-Seam in
+    /// `crate::dispatch::apply_host_action(...)` und markiert den Snapshot-
+    /// Cache nur nach erfolgreich verarbeiteten Aktionen als dirty.
     pub fn apply_action(&mut self, action: HostSessionAction) -> Result<()> {
-        let handled =
-            crate::dispatch::apply_host_action(&mut self.controller, &mut self.state, action)?;
+        let handled = crate::dispatch::apply_host_action(&mut self.controller, &mut self.state, action)?;
         if handled {
             self.snapshot_dirty = true;
         }
@@ -140,6 +143,9 @@ impl HostBridgeSession {
     }
 
     /// Entnimmt alle aktuell ausstehenden Dialog-Anforderungen als Bridge-DTOs.
+    ///
+    /// Dies ist die kanonische oeffentliche Dialog-Drain-Seam der Bridge fuer
+    /// Hosts ohne direkten Zugriff auf `AppController` und `AppState`.
     pub fn take_dialog_requests(&mut self) -> Vec<HostDialogRequest> {
         let requests = self.controller.take_dialog_requests(&mut self.state);
         if !requests.is_empty() {
@@ -149,6 +155,9 @@ impl HostBridgeSession {
     }
 
     /// Reicht ein host-seitiges Dialog-Ergebnis an die Engine weiter.
+    ///
+    /// Dies ist das semantische Gegenstueck zur Dialog-Drain-Seam
+    /// `take_dialog_requests()`.
     pub fn submit_dialog_result(&mut self, result: HostDialogResult) -> Result<()> {
         self.apply_action(HostSessionAction::SubmitDialogResult { result })
     }
@@ -194,7 +203,10 @@ impl HostBridgeSession {
         }
     }
 
-    /// Baut den host-neutralen Host-UI-Snapshot (Panels).
+    /// Baut den host-neutralen Host-UI-Snapshot fuer sichtbare Panels.
+    ///
+    /// Host-native Datei- und Pfaddialoge laufen bewusst nicht ueber diesen
+    /// Snapshot, sondern separat ueber `take_dialog_requests()`.
     pub fn build_host_ui_snapshot(&self) -> HostUiSnapshot {
         self.controller.build_host_ui_snapshot(&self.state)
     }
@@ -231,7 +243,9 @@ impl Default for HostBridgeSession {
 mod tests {
     use fs25_auto_drive_engine::app::AppIntent;
 
-    use crate::dto::{HostActiveTool, HostDialogRequestKind, HostSessionAction};
+    use crate::dto::{
+        HostActiveTool, HostDialogRequestKind, HostDialogResult, HostSessionAction,
+    };
 
     use super::HostBridgeSession;
 
@@ -323,6 +337,31 @@ mod tests {
         assert_eq!(requests[0].kind, HostDialogRequestKind::CurseplayImport);
         assert_eq!(requests[1].kind, HostDialogRequestKind::CurseplayExport);
         assert_eq!(session.snapshot().pending_dialog_request_count, 0);
+    }
+
+    #[test]
+    fn submit_dialog_result_roundtrips_heightmap_path_selected_into_state() {
+        let mut session = HostBridgeSession::new();
+
+        session
+            .apply_action(HostSessionAction::RequestHeightmapSelection)
+            .expect("RequestHeightmapSelection muss einen Host-Dialog anfordern");
+        assert_eq!(session.snapshot().pending_dialog_request_count, 1);
+
+        let requests = session.take_dialog_requests();
+        assert_eq!(requests.len(), 1);
+        assert_eq!(requests[0].kind, HostDialogRequestKind::Heightmap);
+        assert_eq!(session.snapshot().pending_dialog_request_count, 0);
+
+        let selected_path = "/tmp/test_heightmap.png".to_string();
+        session
+            .submit_dialog_result(HostDialogResult::PathSelected {
+                kind: HostDialogRequestKind::Heightmap,
+                path: selected_path.clone(),
+            })
+            .expect("PathSelected muss ueber die gemeinsame Dispatch-Seam verarbeitet werden");
+
+        assert_eq!(session.state.ui.heightmap_path, Some(selected_path));
     }
 
     #[test]
