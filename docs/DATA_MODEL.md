@@ -231,7 +231,7 @@ pub struct AppState {
 
 ### Session-Surface-Ownership (Stand 2026-04-05)
 
-- **Kanonisch:** `fs25_auto_drive_host_bridge::HostBridgeSession` ist die gemeinsame Session-Surface fuer egui und Flutter.
+- **Kanonisch:** `fs25_auto_drive_host_bridge::HostBridgeSession` ist die gemeinsame Session-Surface fuer den egui-Host sowie direkte Flutter-/FFI-Consumer.
 - **bridge-owned:** Explizite Action-/Snapshot-Seams (`HostSessionAction`, `HostSessionSnapshot`, `HostUiSnapshot`, `ViewportOverlaySnapshot`, Render-Read-Seams, Mapping in beide Richtungen und Host-Dialog-Lifecycle) sind host-uebergreifend stabil.
 - **bridge-gap:** Fuer stabile Host-Aktionen und bridge-owned Read-Seams aktuell geschlossen; `host_bridge_adapter` ist nur noch eine Kompat-Surface mit Reexports auf die kanonische Host-Bridge-Seam.
 - **host-local:** eframe-/egui-Runtime, Input- und Render-Glue bleiben bewusst host-spezifisch ausserhalb der Bridge.
@@ -462,9 +462,9 @@ pub struct HostRenderFrameSnapshot {
 - Host-Adapter mit eigenem `AppController`/`AppState` koennen Dialog-Requests ueber `take_host_dialog_requests(...)` als schmalen Adapter-Hilfspfad auf denselben `HostDialogRequest`-Vertrag mappen
 - `build_viewport_overlay_snapshot()` benoetigt mutablen Zugriff, weil beim Snapshot-Aufbau Boundary-Caches im `AppState` vorgewaermt werden koennen
 - `HostRenderFrameSnapshot` koppelt den per-Frame-Render-Vertrag (`RenderScene`) mit den langlebigen Render-Assets fuer read-only Hosts
-- `fs25_auto_drive_host_bridge` fuehrt die bisherigen `Engine*`-Namen sowie `FlutterBridgeSession` direkt als Kompat-Aliase; die Flutter-Bridge ist dadurch nur noch eine eingefrorene Reexport-Surface ohne eigene Session-Logik
+- `fs25_auto_drive_host_bridge` fuehrt die bisherigen `Engine*`-Namen sowie `FlutterBridgeSession` direkt als Kompat-Aliase; eine separate Flutter-Kompat-Crate wird dafuer nicht mehr benoetigt
 
-### Flutter-Kompat-Aliase
+### Legacy-Kompat-Aliase fuer Flutter-/FFI-Call-Sites
 
 ```rust
 pub use fs25_auto_drive_host_bridge::{
@@ -475,7 +475,7 @@ pub use fs25_auto_drive_host_bridge::{
 };
 ```
 
-- Die Host-Bridge stabilisiert bestehende Namen, ohne eine zweite Session- oder DTO-Implementierung zu pflegen.
+- Direkte Flutter-/FFI-Hosts importieren diese Namen unmittelbar aus `fs25_auto_drive_host_bridge`; eine zweite Session- oder DTO-Implementierung wird dafuer nicht mehr gepflegt.
 - `FlutterBridgeSession` erbt als Alias die komplette oeffentliche `HostBridgeSession`-Methodenoberflaeche, inklusive `build_host_ui_snapshot()` und `build_viewport_overlay_snapshot()`.
 - Die Rueckgabetypen dieser Read-Seams bleiben bewusst die kanonischen Engine-DTOs `HostUiSnapshot` und `ViewportOverlaySnapshot`; eine zweite Alias-Familie wird dafuer nicht mehr eingefuehrt.
 - `Engine*`-Namen bleiben fuer Host-/FFI-Call-Sites erhalten, waehrend die kanonische Semantik in `Host*`-Vertraegen lebt.

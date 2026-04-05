@@ -10,6 +10,25 @@ use eframe::egui;
 use eframe::egui_wgpu;
 use fs25_auto_drive_host_bridge::apply_mapped_intent;
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum IntentDispatchRoute {
+    Bridge,
+    LocalFallback,
+}
+
+fn dispatch_intent_with_bridge_fallback(
+    controller: &mut AppController,
+    state: &mut AppState,
+    intent: AppIntent,
+) -> anyhow::Result<IntentDispatchRoute> {
+    if apply_mapped_intent(controller, state, &intent)? {
+        return Ok(IntentDispatchRoute::Bridge);
+    }
+
+    controller.handle_intent(state, intent)?;
+    Ok(IntentDispatchRoute::LocalFallback)
+}
+
 /// Haupt-Anwendungsstruktur.
 pub(crate) struct EditorApp {
     state: AppState,
@@ -86,24 +105,11 @@ impl EditorApp {
                     self.toggle_floating_menu(ctx, kind);
                 }
                 intent => {
-                    let bridge_result =
-                        apply_mapped_intent(&mut self.controller, &mut self.state, &intent);
-                    let handled_by_bridge = match bridge_result {
-                        Ok(handled) => handled,
-                        Err(e) => {
-                            self.state.ui.status_message =
-                                Some(format!("Aktion fehlgeschlagen: {}", e));
-                            log::error!("Bridge dispatch failed: {:#}", e);
-                            continue;
-                        }
-                    };
-
-                    if handled_by_bridge {
-                        continue;
-                    }
-
-                    let intent_result = self.controller.handle_intent(&mut self.state, intent);
-                    if let Err(e) = intent_result {
+                    if let Err(e) = dispatch_intent_with_bridge_fallback(
+                        &mut self.controller,
+                        &mut self.state,
+                        intent,
+                    ) {
                         self.state.ui.status_message =
                             Some(format!("Aktion fehlgeschlagen: {}", e));
                         log::error!("Event handling failed: {:#}", e);
@@ -111,5 +117,47 @@ impl EditorApp {
                 }
             }
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::app::{AppController, AppIntent, AppState};
+
+    use super::{dispatch_intent_with_bridge_fallback, IntentDispatchRoute};
+
+    #[test]
+    fn dispatch_prefers_bridge_for_mapped_intents() {
+        let mut controller = AppController::new();
+        let mut state = AppState::new();
+
+        let route = dispatch_intent_with_bridge_fallback(
+            &mut controller,
+            &mut state,
+            AppIntent::OpenFileRequested,
+        )
+        .expect("OpenFileRequested muss ueber die Bridge-Seam laufen");
+
+        assert_eq!(route, IntentDispatchRoute::Bridge);
+        assert_eq!(state.ui.dialog_requests.len(), 1);
+    }
+
+    #[test]
+    fn dispatch_falls_back_to_local_controller_for_unmapped_intents() {
+        let mut controller = AppController::new();
+        let mut state = AppState::new();
+
+        let route = dispatch_intent_with_bridge_fallback(
+            &mut controller,
+            &mut state,
+            AppIntent::ViewportResized {
+                size: [640.0, 480.0],
+            },
+        )
+        .expect("Unmapped Intent muss ueber den lokalen Fallback verarbeitet werden");
+
+        assert_eq!(route, IntentDispatchRoute::LocalFallback);
+        assert_eq!(state.view.viewport_size, [640.0, 480.0]);
+        assert!(state.ui.dialog_requests.is_empty());
     }
 }

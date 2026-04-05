@@ -2,9 +2,9 @@
 
 ## Ueberblick
 
-`fs25_auto_drive_host_bridge` ist die kanonische, toolkit-freie Host-Bridge ueber `fs25_auto_drive_engine`. Die Crate kapselt `AppController` und `AppState` in `HostBridgeSession` und buendelt damit die gemeinsame Session-Surface fuer mehrere Hosts wie egui, Flutter oder spaetere FFI-/Transport-Adapter.
+`fs25_auto_drive_host_bridge` ist die kanonische, toolkit-freie Host-Bridge ueber `fs25_auto_drive_engine`. Die Crate kapselt `AppController` und `AppState` in `HostBridgeSession` und buendelt damit die gemeinsame Session-Surface fuer den egui-Host, direkte Flutter-/FFI-Consumer und spaetere Transport-Adapter.
 
-`HostBridgeSession` ist verbindlich die kanonische Session-Surface fuer egui und Flutter. Host-spezifische Adapter duerfen neue host-neutrale Session-Seams nicht mehr direkt auf `AppController`/`AppState` aufbauen, sondern ausschliesslich ueber diese Bridge-Surface.
+`HostBridgeSession` ist verbindlich die kanonische Session-Surface fuer den egui-Host sowie direkte Flutter-/FFI-Consumer. Host-spezifische Adapter duerfen neue host-neutrale Session-Seams nicht mehr direkt auf `AppController`/`AppState` aufbauen, sondern ausschliesslich ueber diese Bridge-Surface.
 
 Fuer bestehende Flutter-/FFI-Call-Sites stellt die Crate die bisherigen `Engine*`-Typnamen und den Session-Namen `FlutterBridgeSession` direkt als Kompatibilitaets-Aliase bereit. Damit koennen externe Consumer direkt auf `fs25_auto_drive_host_bridge` wechseln, ohne im selben Schritt alle Symbolnamen umzubenennen.
 
@@ -19,7 +19,7 @@ Die konsolidierte Host-Dialog-Seam bildet die interne Engine-Queue `DialogReques
 ## Session-Grenze (Stand 2026-04-05)
 
 - **bridge-owned:** Explizite Action-/Snapshot-Seams (`HostSessionAction`, `HostSessionSnapshot`, `HostUiSnapshot`, `ViewportOverlaySnapshot`, Render-Read-Seams) und beide Mapping-Richtungen (`AppIntent` <-> `HostSessionAction`) sind zentral in der Host-Bridge verfuegbar.
-- **bridge-gap:** Host-Adapter koennen in Uebergangsphasen noch lokale Integrationslogik parallel zur kanonischen Bridge-Dispatch-Seam pflegen.
+- **bridge-gap:** Fuer stabile Host-Aktionen und bridge-owned Read-Seams aktuell geschlossen; lokale Host-Glue-Logik bleibt nur fuer bewusst host-local/high-frequency Pfade ausserhalb der Bridge.
 - **host-local:** eframe-/egui- und Render-Glue bleiben bewusst ausserhalb der Bridge.
 
 ## Oeffentliche Module

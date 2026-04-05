@@ -179,3 +179,100 @@ pub type EngineViewportSnapshot = HostViewportSnapshot;
 
 /// Kompatibilitaetsalias fuer bestehende Flutter-/FFI-Call-Sites.
 pub type EngineSessionSnapshot = HostSessionSnapshot;
+
+#[cfg(test)]
+mod tests {
+    use serde_json::json;
+
+    use super::{
+        EngineActiveTool, EngineDialogRequestKind, EngineDialogResult, EngineSessionAction,
+        EngineSessionSnapshot, HostActiveTool, HostDialogResult, HostSelectionSnapshot,
+        HostSessionAction, HostSessionSnapshot, HostViewportSnapshot,
+    };
+
+    #[test]
+    fn engine_session_action_alias_uses_stable_host_json_contract() {
+        let action = EngineSessionAction::SetEditorTool {
+            tool: EngineActiveTool::Route,
+        };
+
+        let payload = serde_json::to_value(&action)
+            .expect("SetEditorTool muss als stabiles Host-JSON serialisierbar sein");
+        assert_eq!(
+            payload,
+            json!({ "kind": "set_editor_tool", "tool": "route" })
+        );
+
+        let parsed: HostSessionAction = serde_json::from_value(payload)
+            .expect("Alias-JSON muss in den kanonischen Host-Typ zuruecklesbar sein");
+        assert_eq!(
+            parsed,
+            HostSessionAction::SetEditorTool {
+                tool: HostActiveTool::Route,
+            }
+        );
+    }
+
+    #[test]
+    fn engine_dialog_result_alias_roundtrips_with_host_json_shape() {
+        let result = EngineDialogResult::PathSelected {
+            kind: EngineDialogRequestKind::BackgroundMap,
+            path: "/tmp/overview.zip".to_string(),
+        };
+
+        let payload = serde_json::to_value(&result)
+            .expect("Dialog-Ergebnis muss als stabiles Host-JSON serialisierbar sein");
+        assert_eq!(
+            payload,
+            json!({
+                "status": "path_selected",
+                "kind": "background_map",
+                "path": "/tmp/overview.zip"
+            })
+        );
+
+        let parsed: HostDialogResult = serde_json::from_value(payload)
+            .expect("Alias-Dialog-JSON muss in den kanonischen Host-Typ zuruecklesbar sein");
+        assert_eq!(
+            parsed,
+            HostDialogResult::PathSelected {
+                kind: EngineDialogRequestKind::BackgroundMap,
+                path: "/tmp/overview.zip".to_string(),
+            }
+        );
+    }
+
+    #[test]
+    fn engine_session_snapshot_alias_roundtrips_without_schema_drift() {
+        let host_snapshot = HostSessionSnapshot {
+            has_map: true,
+            node_count: 7,
+            connection_count: 9,
+            active_tool: HostActiveTool::Connect,
+            status_message: Some("bereit".to_string()),
+            show_command_palette: true,
+            show_options_dialog: false,
+            can_undo: true,
+            can_redo: false,
+            pending_dialog_request_count: 2,
+            selection: HostSelectionSnapshot {
+                selected_node_ids: vec![11, 42],
+            },
+            viewport: HostViewportSnapshot {
+                camera_position: [12.5, -8.0],
+                zoom: 1.25,
+            },
+        };
+
+        let payload = serde_json::to_value(&host_snapshot)
+            .expect("HostSnapshot muss fuer den Alias-Contract serialisierbar sein");
+
+        let alias_snapshot: EngineSessionSnapshot = serde_json::from_value(payload.clone())
+            .expect("EngineSessionSnapshot-Alias muss kanonisches Host-JSON lesen koennen");
+        let canonical_snapshot: HostSessionSnapshot = serde_json::from_value(payload)
+            .expect("HostSessionSnapshot muss das gleiche JSON lesen koennen");
+
+        assert_eq!(alias_snapshot, host_snapshot);
+        assert_eq!(canonical_snapshot, host_snapshot);
+    }
+}

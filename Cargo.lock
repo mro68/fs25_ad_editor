@@ -1762,6 +1762,7 @@ dependencies = [
  "fs25_auto_drive_engine",
  "glam",
  "serde",
+ "serde_json",
 ]
 
 [[package]]
