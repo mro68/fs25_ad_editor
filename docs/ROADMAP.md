@@ -213,8 +213,10 @@
   - [x] Host-Dialog-Seam konsolidiert: `take_host_dialog_requests(...)` mappt Engine-`DialogRequest` auf `HostDialogRequest` als schmalen Adapter-Hilfspfad fuer bestehende Hosts mit lokalem Controller/State; Rueckgaben laufen ueber `HostSessionAction::SubmitDialogResult` bzw. `HostBridgeSession::submit_dialog_result(...)`, waehrend `HostBridgeSession` die kanonische Session-Surface bleibt
   - [x] Egui-Dialog-Lifecycle auf die kanonische Host-Dialog-Seam (`HostDialogRequest` / `HostDialogResult` via `take_host_dialog_requests(...)` + `HostSessionAction::SubmitDialogResult`) umgestellt
 - [x] Egui-Adapter-Surface fuer die Unified Host Bridge verbreitert und produktiv verdrahtet (2026-04-05)
-  - [x] `host_bridge_adapter` mappt stabile, niederfrequente Host-Aktionen (Datei-/Dialog-Anforderungen, Kamera-Shortcuts, Historie, Toolwechsel, Exit) auf `HostSessionAction`
-  - [x] `editor_app::process_events` nutzt die gemeinsame Rust-Host-Dispatch-Seam (`local -> bridge -> fallback`)
+  - [x] Kanonisches Mapping fuer stabile, niederfrequente Host-Aktionen (`AppIntent` -> `HostSessionAction`) in `fs25_auto_drive_host_bridge::dispatch` zentralisiert
+  - [x] `editor_app::process_events` nutzt den kanonischen Bridge-Dispatch `fs25_auto_drive_host_bridge::apply_mapped_intent(...)` (`local -> bridge -> fallback`)
+  - [x] Bridge-owned Read-Seams in egui auf Host-Bridge-Helfer umgehaengt (`build_host_ui_snapshot`, `build_viewport_overlay_snapshot`, `build_render_scene`, `build_render_assets`)
+  - [x] `host_bridge_adapter` auf reine Kompat-Surface (Reexports) reduziert; keine lokale Mapping-Doppelpflege mehr
   - [x] Hochfrequente Viewport-/Tool-/Drag-Interaktionen bleiben bewusst ungemappt und laufen weiter ueber den direkten Controller-Fallback
   - [x] Adapter-Testabdeckung deutlich verbreitert (positive und negative Mapping-Faelle plus Dispatch-Tests)
 - [x] Flutter-Adapter-Surface fuer die Unified Host Bridge umgesetzt

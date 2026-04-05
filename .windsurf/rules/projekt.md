@@ -10,7 +10,7 @@ Neuimplementierung des AutoDrive Course Editors in Rust mit egui + wgpu. Hochper
 - **Engine (`crates/fs25_auto_drive_engine`):** `app`, `core`, `shared`, `xml`
 - **Host-Bridge-Core (`crates/fs25_auto_drive_host_bridge`):** toolkit-freie gemeinsame Session-/Action-/Snapshot-Seam ueber der Engine
 - **Render-Core (`crates/fs25_auto_drive_render_wgpu`):** host-neutraler wgpu-Kern (`Renderer`, Sub-Renderer, Shader)
-- **Egui-Frontend (`crates/fs25_auto_drive_frontend_egui`):** `ui`, `editor_app`, `runtime`, `render` als Host-Adapter plus duenne `host_bridge_adapter`-Mapping-Schicht
+- **Egui-Frontend (`crates/fs25_auto_drive_frontend_egui`):** `ui`, `editor_app`, `runtime`, `render` als Host-Adapter plus duenne `host_bridge_adapter`-Kompat-Surface (Reexports auf die kanonische Host-Bridge-Seam)
 - **Flutter-Bridge (`crates/fs25_auto_drive_frontend_flutter_bridge`):** eingefrorene Alias-/Kompat-Schicht ueber der kanonischen Host-Bridge (keine eigene Session-Logik)
 - **Overview-Crate (`crates/fs25_map_overview`):** Terrain-, Farmland- und Overview-Generierung
 
@@ -31,10 +31,10 @@ Neuimplementierung des AutoDrive Course Editors in Rust mit egui + wgpu. Hochper
 - `HostBridgeSession` ist die kanonische Session-Surface fuer egui und Flutter.
 - Verbleibende egui-Zugriffe werden in drei Klassen gefuehrt:
 	- `bridge-owned`: stabil ueber `HostSessionAction`/`HostSessionSnapshot`/`HostUiSnapshot`/`ViewportOverlaySnapshot`.
-	- `bridge-gap`: fachlich host-neutral, aber noch nicht auf die Host-Bridge-Seam gezogen.
+	- `bridge-gap`: fuer stabile Host-Aktionen und bridge-owned Read-Seams aktuell geschlossen.
 	- `host-local`: dauerhaft host-spezifische Runtime-/Rendering-/Input-Zustaende.
 - Datei-/Pfad-Dialog-Lifecycle in egui ist auf die Host-Seam konsolidiert (`take_host_dialog_requests(...)` + `HostSessionAction::SubmitDialogResult`).
-- Aktueller `bridge-gap`: lokale `AppIntent`-zu-`HostSessionAction`-Zuordnung in `host_bridge_adapter` als Doppelpflege zur kanonischen Reverse-Zuordnung in der Host-Bridge-Dispatch-Seam.
+- `host_bridge_adapter` enthaelt keine eigene Mapping-Logik mehr; Mapping und Dispatch liegen kanonisch in `fs25_auto_drive_host_bridge::dispatch`.
 - Keine neuen Escape-Hatches direkt auf `AppState`/`AppController` fuer neue host-neutrale Fluesse.
 
 ## Technologie-Stack

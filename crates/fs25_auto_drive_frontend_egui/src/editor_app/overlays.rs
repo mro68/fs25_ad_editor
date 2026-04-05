@@ -3,6 +3,7 @@
 use crate::app::{AppIntent, EditorTool};
 use crate::ui;
 use eframe::egui;
+use fs25_auto_drive_host_bridge::build_viewport_overlay_snapshot;
 use glam::Vec2;
 
 use super::EditorApp;
@@ -32,9 +33,11 @@ impl EditorApp {
             );
         }
 
-        let overlay_snapshot = self
-            .controller
-            .build_viewport_overlay_snapshot(&mut self.state, self.last_cursor_world);
+        let overlay_snapshot = build_viewport_overlay_snapshot(
+            &self.controller,
+            &mut self.state,
+            self.last_cursor_world,
+        );
 
         // ── Tool-Preview-Overlay ─────────────
         if let Some(preview) = overlay_snapshot.route_tool_preview.as_ref() {
