@@ -213,6 +213,10 @@
   - [x] Crate-Abhaengigkeit auf `fs25_auto_drive_host_bridge` reduziert; keine direkte Engine-Abhaengigkeit mehr
   - [x] Bestehende `Engine*`-Typnamen als Kompat-Aliase ueber `Host*`-Vertraege erhalten
   - [x] Eigene Session-/Controller-Logik aus der Flutter-Crate entfernt (duenne Alias-Surface)
+- [x] Flutter-Bridge als transitional alias surface eingefroren (2026-04-05)
+  - [x] Keine neue Logik mehr in `fs25_auto_drive_frontend_flutter_bridge`; Erweiterungen nur in `fs25_auto_drive_host_bridge`
+  - [x] Entscheidung bewusst ohne sofortige Crate-Loeschung (kein ungeplanter API-Break)
+  - [x] Exit-Kriterien fuer spaetere Entfernung dokumentiert (Konsumenten-Migration + Doku-Sync)
 - [x] DDS-Import fuer Map-Hintergruende
   - [x] Texture-Loader implementieren (PNG, JPG, DDS)
   - [x] Background-Quad-Renderer

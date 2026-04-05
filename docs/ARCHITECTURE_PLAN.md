@@ -12,7 +12,7 @@ Dieser Plan trennt fachliche Verantwortlichkeiten in Workspace-Crates mit klaren
 - Host-Bridge-Core (`crates/fs25_auto_drive_host_bridge/src/*`): toolkit-freie gemeinsame Session-/Action-/Snapshot-Seam ueber der Engine
 - Render-Core (`crates/fs25_auto_drive_render_wgpu/src/*`): host-neutraler wgpu-Renderer-Kern
 - Egui-Frontend (`crates/fs25_auto_drive_frontend_egui/src/{ui,editor_app,runtime,render,host_bridge_adapter}`): Desktop-Host, egui-UI, Render-Adapter und Bridge-Dispatch-Seam fuer stabile Host-Aktionen
-- Flutter-Bridge (`crates/fs25_auto_drive_frontend_flutter_bridge/src/{session,dto}`): duenne Adapter-/Kompat-Schicht mit Alias-Surface ueber der Host-Bridge
+- Flutter-Bridge (`crates/fs25_auto_drive_frontend_flutter_bridge/src/{session,dto}`): eingefrorene Alias-/Kompat-Schicht ueber der Host-Bridge (keine neue Logik)
 - Overview-Crate (`crates/fs25_map_overview/src/*`): Karten-/Farmland-Generierung
 
 Kernfluss: **Input -> AppIntent -> AppController -> AppCommand -> AppState/Domain -> RenderScene + RenderAssetsSnapshot + HostUiSnapshot + ViewportOverlaySnapshot -> Host-Adapter -> Renderer-Core**.
@@ -454,7 +454,7 @@ impl fs25_auto_drive_render_wgpu::Renderer {
 }
 ```
 
-`HostUiSnapshot` und `ViewportOverlaySnapshot` sind die host-neutralen Read-Modelle fuer Panels bzw. Viewport-Overlays. Egui konsumiert beide Modelle read-only und mappt `PanelAction`, `DialogResult` sowie Overlay-Klicks zentral auf `AppIntent`. Die kanonische Dialog-Queue wird host-uebergreifend ueber `take_dialog_requests()`/`submit_dialog_result(...)` (Bridge) und intern ueber `AppController::take_dialog_requests(...)` gedraint. Die kanonische Host-Bridge kapselt Mutationen als `HostSessionAction` und liefert `HostSessionSnapshot` sowie `HostRenderFrameSnapshot`. Die Flutter-Bridge re-exportiert dieselbe Surface zusaetzlich als `EngineSessionAction`, `EngineSessionSnapshot` und `EngineRenderFrameSnapshot`, ohne eigene Session-Logik, generischen `AppIntent`-Dispatch oder `AppState`-Escape-Hatches einzufuehren.
+`HostUiSnapshot` und `ViewportOverlaySnapshot` sind die host-neutralen Read-Modelle fuer Panels bzw. Viewport-Overlays. Egui konsumiert beide Modelle read-only und mappt `PanelAction`, `DialogResult` sowie Overlay-Klicks zentral auf `AppIntent`. Die kanonische Dialog-Queue wird host-uebergreifend ueber `take_dialog_requests()`/`submit_dialog_result(...)` (Bridge) und intern ueber `AppController::take_dialog_requests(...)` gedraint. Die kanonische Host-Bridge kapselt Mutationen als `HostSessionAction` und liefert `HostSessionSnapshot` sowie `HostRenderFrameSnapshot`. Die Flutter-Bridge re-exportiert dieselbe Surface zusaetzlich als `EngineSessionAction`, `EngineSessionSnapshot` und `EngineRenderFrameSnapshot`, ist als alias-only Uebergangsschicht eingefroren und fuehrt keine eigene Session-Logik, keinen generischen `AppIntent`-Dispatch und keine `AppState`-Escape-Hatches ein.
 
 `render_scene::build()` baut den render-seitigen `RenderMap`-Snapshot nur bei geaenderter `RoadMap::render_cache_key()` neu auf und legt ihn in `AppState::render_map_cache` ab. Jeder Rebuild protokolliert `nodes`, `connections`, `markers` und `approx_bytes`, damit Performance-Reports neben Laufzeiten auch die Snapshot-Groesse desselben Datensatzes dokumentieren koennen. `render_assets::build()` liefert parallel den host-neutralen Asset-Snapshot; Hintergrund-Sync laeuft ueber `background_asset_revision`/`background_transform_revision` statt Dirty-Flags. `build_viewport_overlay_snapshot()` liefert parallel den host-neutralen Overlay-Read-Modell-Snapshot fuer UI/Bridge-Hosts und waermt bei Bedarf Boundary-Caches im `AppState` auf. Die egui-Integrationsschale vergleicht Asset-Revisionen gegen ihre letzten Upload-Staende und rendert Overlays ausschliesslich aus dem Snapshot; die Flutter-Bridge kann alternativ denselben gekoppelten read-only Render-Output unter dem Alias `EngineRenderFrameSnapshot` liefern.
 
@@ -617,7 +617,12 @@ crates/
 - Background-Dirty-Flag durch monotone Asset-/Transform-Revisionen ersetzt
 - `fs25_auto_drive_render_wgpu` als host-neutralen Renderer-Core extrahiert
 - egui-`render` auf Host-Adapter reduziert (Callback bleibt host-spezifisch)
-- `fs25_auto_drive_frontend_flutter_bridge` haengt nur noch von `fs25_auto_drive_host_bridge` ab und re-exportiert dessen Session-/DTO-Surface als `FlutterBridgeSession`, `EngineSessionAction`, `EngineSessionSnapshot` und `EngineRenderFrameSnapshot`; generischer `AppIntent`-Dispatch und `AppState`-Escape-Hatches bleiben ausserhalb der oeffentlichen Bridge-API
+- `fs25_auto_drive_frontend_flutter_bridge` haengt nur noch von `fs25_auto_drive_host_bridge` ab und re-exportiert dessen Session-/DTO-Surface als `FlutterBridgeSession`, `EngineSessionAction`, `EngineSessionSnapshot` und `EngineRenderFrameSnapshot`; die Crate ist als alias-only Uebergangsschicht eingefroren und erhaelt keine neue Logik
+
+Geplante spaetere Entfernung (separater Breaking-Change-Track, nicht Teil dieses Follow-ups):
+1. Keine internen Rust-Consumer fuer `Engine*`-/`Flutter*`-Aliasnamen mehr.
+2. Externe Flutter-/FFI-Consumer migriert oder explizit als Breaking Change kommuniziert.
+3. Doku-Sync fuer `ARCHITECTURE_PLAN`, `DATA_MODEL`, `ROADMAP` und betroffene `API.md` abgeschlossen.
 
 ## Definition of Done
 
