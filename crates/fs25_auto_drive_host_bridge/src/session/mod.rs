@@ -140,7 +140,7 @@ impl HostBridgeSession {
 
     /// Entnimmt alle aktuell ausstehenden Dialog-Anforderungen als Bridge-DTOs.
     pub fn take_dialog_requests(&mut self) -> Vec<HostDialogRequest> {
-        let requests = self.state.ui.take_dialog_requests();
+        let requests = self.controller.take_dialog_requests(&mut self.state);
         if !requests.is_empty() {
             self.snapshot_dirty = true;
         }
@@ -193,7 +193,7 @@ impl HostBridgeSession {
         }
     }
 
-    /// Baut den host-neutralen Host-UI-Snapshot (Panels + Dialog-Anforderungen).
+    /// Baut den host-neutralen Host-UI-Snapshot (Panels).
     pub fn build_host_ui_snapshot(&self) -> HostUiSnapshot {
         self.controller.build_host_ui_snapshot(&self.state)
     }

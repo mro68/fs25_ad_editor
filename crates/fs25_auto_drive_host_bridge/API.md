@@ -4,7 +4,7 @@
 
 `fs25_auto_drive_host_bridge` ist die kanonische, toolkit-freie Host-Bridge ueber `fs25_auto_drive_engine`. Die Crate kapselt `AppController` und `AppState` in `HostBridgeSession` und buendelt damit die gemeinsame Session-Surface fuer mehrere Hosts wie egui, Flutter oder spaetere FFI-/Transport-Adapter.
 
-Die Bridge exponiert Mutationen ausschliesslich ueber explizite `HostSessionAction`-DTOs. Fuer read-only Hosts liefert sie kleine Session-Snapshots, host-neutrale Panel-/Dialog-Read-Modelle, Viewport-Overlay-Snapshots sowie gekoppelten Render-Output aus `RenderScene` und `RenderAssetsSnapshot`.
+Die Bridge exponiert Mutationen ausschliesslich ueber explizite `HostSessionAction`-DTOs. Fuer read-only Hosts liefert sie kleine Session-Snapshots, host-neutrale Panel-Read-Modelle, Viewport-Overlay-Snapshots sowie gekoppelten Render-Output aus `RenderScene` und `RenderAssetsSnapshot`.
 
 Die Crate bleibt absichtlich host-neutral: keine eframe/egui-Runtime, keine Flutter-FFI und keine wgpu-RenderPass-Lifecycle-Logik.
 
@@ -34,7 +34,7 @@ Die Crate bleibt absichtlich host-neutral: keine eframe/egui-Runtime, keine Flut
 | `HostSelectionSnapshot` / `HostViewportSnapshot` | Read-only Detail-Snapshots fuer Auswahl und Kamera |
 | `HostDialogRequestKind` / `HostDialogRequest` / `HostDialogResult` | Semantische Host-Dialoganforderungen und Rueckmeldungen |
 | `HostActiveTool` | Stabiler Tool-Identifier fuer Snapshot- und Action-Vertrag |
-| `HostUiSnapshot` / `ViewportOverlaySnapshot` | Host-neutrale Read-Modelle fuer Panels/Dialoge bzw. Viewport-Overlays, die die Session direkt aus der Engine weiterreicht |
+| `HostUiSnapshot` / `ViewportOverlaySnapshot` | Host-neutrale Read-Modelle fuer Panels bzw. Viewport-Overlays, die die Session direkt aus der Engine weiterreicht |
 
 ## Oeffentliche Methoden
 
@@ -54,7 +54,7 @@ Die Crate bleibt absichtlich host-neutral: keine eframe/egui-Runtime, keine Flut
 | `pub fn build_render_scene(&self, viewport_size: [f32; 2]) -> RenderScene` | Liefert den per-frame Render-Vertrag |
 | `pub fn build_render_assets(&self) -> RenderAssetsSnapshot` | Liefert den langlebigen Asset-Snapshot |
 | `pub fn build_render_frame(&self, viewport_size: [f32; 2]) -> HostRenderFrameSnapshot` | Liefert Szene und Assets als gekoppelten read-only Render-Output |
-| `pub fn build_host_ui_snapshot(&self) -> HostUiSnapshot` | Liefert host-neutrale Panel- und Dialogdaten |
+| `pub fn build_host_ui_snapshot(&self) -> HostUiSnapshot` | Liefert host-neutrale Paneldaten |
 | `pub fn build_viewport_overlay_snapshot(&mut self, cursor_world: Option<Vec2>) -> ViewportOverlaySnapshot` | Liefert host-neutrale Viewport-Overlay-Daten; `&mut self` bleibt absichtlich noetig, weil der App-Layer dabei Overlay- und Boundary-Caches aufwaermt |
 
 ## Beispiel
@@ -102,5 +102,5 @@ flowchart LR
 
 - `snapshot()` arbeitet ueber einen Dirty-Cache und baut `HostSessionSnapshot` nur nach erfolgreichen Mutationen oder entnommenen Dialog-Requests neu auf.
 - `HostBridgeSession::apply_action(...)` delegiert intern an dieselbe `dispatch`-Seam, die auch nicht-Session-basierte Rust-Hosts nutzen koennen.
-- `take_dialog_requests()` und `submit_dialog_result(...)` bilden die einzige oeffentliche Dialog-Seam der Bridge.
+- `take_dialog_requests()` und `submit_dialog_result(...)` bilden die einzige oeffentliche Dialog-Seam der Bridge; intern delegiert `take_dialog_requests()` auf `AppController::take_dialog_requests(...)`.
 - `fs25_auto_drive_frontend_flutter_bridge` re-exportiert diese Surface als `FlutterBridgeSession` bzw. `Engine*`-Aliase; `fs25_auto_drive_frontend_egui` mappt ueber `host_bridge_adapter` aktuell nur ein bewusst kleines Intent-Subset.

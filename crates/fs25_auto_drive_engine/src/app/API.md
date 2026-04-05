@@ -20,7 +20,7 @@ Die eframe-Integrationsschale gehoert bewusst nicht zum `app`-Layer. Ihre kanoni
 
 - `tool_contract.rs` — semantische Route-Tool-Vertraege wie `RouteToolId`, `ToolAnchor` und `TangentSource`
 - `ui_contract.rs` — egui-freie UI-Vertraege wie `TangentMenuData`, `TangentOptionData`, `RouteToolPanelState`, `RouteToolConfigState`, `RouteToolPanelAction`, `RouteToolPanelEffect` und `RouteToolViewportData`
-- `ui_contract/host_ui.rs` — host-neutrale UI-Vertraege fuer Dialoge und Tool-Fenster (`PanelState`, `PanelAction`, `DialogRequest`, `DialogResult`, `HostUiSnapshot`); grosse Optionen-Payloads werden in `OptionsPanelAction::Apply(Box<EditorOptions>)` bewusst indirekt gehalten, damit die Action-Enums kompakt bleiben
+- `ui_contract/host_ui.rs` — host-neutrale UI-Vertraege fuer Tool-Fenster und den semantischen Dialog-Lifecycle (`PanelState`, `PanelAction`, `DialogRequest`, `DialogResult`, `HostUiSnapshot`); grosse Optionen-Payloads werden in `OptionsPanelAction::Apply(Box<EditorOptions>)` bewusst indirekt gehalten, damit die Action-Enums kompakt bleiben
 - `ui_contract/viewport_overlay.rs` — host-neutrale Overlay-Vertraege (`ViewportOverlaySnapshot`, Clipboard-/Polyline-/Group-Overlay-DTOs)
 
 Die Route-Tool-Panel-DTOs werden intern ueber `ui_contract/route_tool_panel/{common,curve_family,generator_family,analysis_family}.rs` gepflegt. Die Top-Level-Dateien `ui_contract.rs` und `ui_contract/route_tool_panel.rs` bleiben dabei stabile Re-Export-Fassaden fuer UI und Intent-Mapping.
@@ -45,6 +45,7 @@ controller.handle_intent(&mut state, AppIntent::ZoomInRequested)?;
 let scene = controller.build_render_scene(&state, [width, height]);
 let assets = controller.build_render_assets(&state);
 let ui_snapshot = controller.build_host_ui_snapshot(&state);
+let pending_dialogs = controller.take_dialog_requests(&mut state);
 let overlay_snapshot = controller.build_viewport_overlay_snapshot(&mut state, None);
 ```
 
@@ -54,7 +55,8 @@ let overlay_snapshot = controller.build_viewport_overlay_snapshot(&mut state, No
 - Dispatcht Commands ueber dieselben Feature-Slices (`controller/by_feature/*`) an Feature-Handler (`handlers/`)
 - Baut den expliziten per-frame Render-Vertrag (`RenderScene`)
 - Baut den expliziten Asset-Vertrag (`RenderAssetsSnapshot`)
-- Baut den host-neutralen Fenster-/Dialog-Snapshot (`HostUiSnapshot`)
+- Baut den host-neutralen Fenster-/Panel-Snapshot (`HostUiSnapshot`)
+- Entnimmt host-native Dialog-Anforderungen ueber die kanonische Drain-Seam
 - Baut den host-neutralen Viewport-Overlay-Snapshot (`ViewportOverlaySnapshot`)
 
 ```rust
@@ -64,6 +66,7 @@ impl AppController {
     pub fn build_render_scene(&self, state: &AppState, viewport_size: [f32; 2]) -> RenderScene;
     pub fn build_render_assets(&self, state: &AppState) -> RenderAssetsSnapshot;
     pub fn build_host_ui_snapshot(&self, state: &AppState) -> HostUiSnapshot;
+    pub fn take_dialog_requests(&self, state: &mut AppState) -> Vec<DialogRequest>;
     pub fn build_viewport_overlay_snapshot(&self, state: &mut AppState, cursor_world: Option<Vec2>) -> ViewportOverlaySnapshot;
 }
 ```

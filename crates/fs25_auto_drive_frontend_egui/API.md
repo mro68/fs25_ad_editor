@@ -6,7 +6,7 @@
 
 Sie konsumiert die host-neutrale Engine, re-exportiert deren `app`-, `core`-, `shared`- und `xml`-Module fuer bestehende Frontend-Pfade und stellt mit `run_native()` den nativen Einstieg bereit.
 
-Die Integrationsschale liest Panels/Dialoge ueber `HostUiSnapshot` und Viewport-Overlays ueber `ViewportOverlaySnapshot`. Egui-spezifisches Rendering und Input-Mapping bleiben damit im Host, waehrend `PanelAction`, `DialogResult` und Overlay-Klicks zentral wieder in `AppIntent` uebersetzt werden.
+Die Integrationsschale liest Panels ueber `HostUiSnapshot`, drainet Datei-/Pfaddialoge kanonisch ueber `AppController::take_dialog_requests(...)` und verarbeitet Viewport-Overlays ueber `ViewportOverlaySnapshot`. Egui-spezifisches Rendering und Input-Mapping bleiben damit im Host, waehrend `PanelAction`, `DialogResult` und Overlay-Klicks zentral wieder in `AppIntent` uebersetzt werden.
 
 Die gemeinsame Host-Bridge ist in dieser Crate noch eine Migrations-Seam, nicht der primaere Desktop-Laufzeitpfad. `editor_app` bleibt die produktive eframe-Integrationsschale; das oeffentliche `host_bridge_adapter`-Modul kapselt bewusst nur das stabilisierte Intent-Subset, das bereits auf die explizite `HostSessionAction`-Surface abbildbar ist.
 
@@ -14,7 +14,7 @@ Die gemeinsame Host-Bridge ist in dieser Crate noch eine Migrations-Seam, nicht 
 
 | Modul | Verantwortung |
 |---|---|
-| `editor_app` | eframe-Integrationsschale; sammelt Panels/Dialoge ueber `HostUiSnapshot`, rendert Overlays aus `ViewportOverlaySnapshot` und haelt Laufzeittypen wie `EditorApp` crate-intern |
+| `editor_app` | eframe-Integrationsschale; sammelt Panels ueber `HostUiSnapshot`, drainet Dialoge ueber die Controller-Seam und rendert Overlays aus `ViewportOverlaySnapshot` |
 | `host_bridge_adapter` | Duenner egui-Adapter fuer die gemeinsame Host-Bridge (`AppIntent` → `HostSessionAction`); deckt bewusst nur das bereits stabilisierte Intent-Subset ab |
 | `render` | egui-Host-Adapter, revisionsbasierte Background-Upload-Bruecke und egui-Render-Callback |
 | `ui` | Menues, Panels, Dialoge, Viewport-Input und egui-spezifisches Painting der host-neutralen Overlay-Snapshots |
@@ -31,7 +31,7 @@ Die gemeinsame Host-Bridge ist in dieser Crate noch eine Migrations-Seam, nicht 
 | `render::WgpuRenderData` | Trager des `RenderScene`-Snapshots pro Frame |
 | `ui::InputState` | Persistenter Viewport-Inputzustand pro Fenster |
 | `ui::GroupOverlayEvent` | Rueckkanal fuer Gruppen-Overlay-Interaktionen |
-| `app::ui_contract::HostUiSnapshot` | Host-neutraler Panel-/Dialog-Snapshot, den `editor_app` pro Frame konsumiert |
+| `app::ui_contract::HostUiSnapshot` | Host-neutraler Panel-Snapshot, den `editor_app` pro Frame konsumiert |
 | `app::ui_contract::ViewportOverlaySnapshot` | Host-neutraler Overlay-Snapshot fuer Tool-, Clipboard-, Distanzen- und Gruppen-Overlays |
 
 ## Oeffentliche Funktionen und Re-Exports
