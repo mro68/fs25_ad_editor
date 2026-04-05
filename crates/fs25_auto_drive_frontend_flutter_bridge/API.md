@@ -6,6 +6,20 @@
 
 Eigene Session-, Controller- oder DTO-Logik enthaelt die Crate bewusst nicht mehr. Die kanonische Semantik lebt in `fs25_auto_drive_host_bridge`; diese Crate stabilisiert nur Namen und Paketgrenze fuer einen spaeteren Flutter-Transport-Layer.
 
+## Architekturentscheidung (2026-04-05)
+
+`fs25_auto_drive_frontend_flutter_bridge` ist als **uebergangsweise Alias-/Kompat-Surface eingefroren**.
+
+- Keine neue Logik in dieser Crate aufbauen.
+- Neue Session-/Dispatch-/DTO-Erweiterungen ausschliesslich in `fs25_auto_drive_host_bridge` umsetzen.
+- Diese Crate darf nur stabile Alias-Namen und Kompat-Re-Exports enthalten.
+
+Geplanter spaeterer Entfernungszeitpunkt (nicht Teil dieses Follow-ups):
+
+1. Es existieren keine internen Rust-Consumer mehr, die die `Engine*`-/`Flutter*`-Aliasnamen benoetigen.
+2. Externe Flutter-/FFI-Consumer sind migriert oder explizit als Breaking Change kommuniziert.
+3. `ARCHITECTURE_PLAN`, `DATA_MODEL`, `ROADMAP` und betroffene `API.md`-Dateien sind fuer die Entfernung synchronisiert.
+
 ## Oeffentliche Module
 
 | Modul | Verantwortung |

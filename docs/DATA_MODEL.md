@@ -429,7 +429,7 @@ pub struct HostRenderFrameSnapshot {
 - Host-native Datei-/Pfad-Dialoge laufen ueber `take_dialog_requests()` und `submit_dialog_result(...)` als explizite Bridge-Seam
 - `build_viewport_overlay_snapshot()` benoetigt mutablen Zugriff, weil beim Snapshot-Aufbau Boundary-Caches im `AppState` vorgewaermt werden koennen
 - `HostRenderFrameSnapshot` koppelt den per-Frame-Render-Vertrag (`RenderScene`) mit den langlebigen Render-Assets fuer read-only Hosts
-- Die Flutter-Bridge ist als duenne Alias-/Kompat-Surface ueber `fs25_auto_drive_host_bridge` umgesetzt und fuehrt die bisherigen `Engine*`-Namen ohne eigene Session-Logik weiter
+- Die Flutter-Bridge ist als eingefrorene Alias-/Kompat-Surface ueber `fs25_auto_drive_host_bridge` umgesetzt und fuehrt die bisherigen `Engine*`-Namen ohne eigene Session-Logik weiter
 
 ### Flutter-Kompat-Aliase
 
@@ -444,3 +444,5 @@ pub use fs25_auto_drive_host_bridge::{
 
 - Die Flutter-Crate stabilisiert bestehende Namen, ohne eine zweite Session- oder DTO-Implementierung zu pflegen.
 - `Engine*`-Namen bleiben fuer Host-/FFI-Call-Sites erhalten, waehrend die kanonische Semantik in `Host*`-Vertraegen lebt.
+- Architekturentscheidung (2026-04-05): keine neue Logik in `fs25_auto_drive_frontend_flutter_bridge`; neue Erweiterungen nur in `fs25_auto_drive_host_bridge`.
+- Geplante spaetere Entfernung erfolgt nur als eigener Breaking-Change-Track nach Konsumenten-Migration und vollstaendigem Doku-Sync.
