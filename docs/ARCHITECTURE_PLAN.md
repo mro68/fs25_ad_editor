@@ -1,7 +1,7 @@
 # Architektur-Plan (Soll-Zustand)
 
 Stand: 2026-04-05  
-Status: Workspace-Split umgesetzt — Root-Fassade, Engine-Crate, render_wgpu-Core-Crate und egui-Host-Adapter sind stabil; die gemeinsame Rust-Host-Dispatch-Seam ist produktiv, `HostBridgeSession` ist als kanonische Session-Surface fuer egui und Flutter festgeschrieben, der egui-Dialog-Lifecycle ist auf die Host-Bridge-Seam konsolidiert, die lokale Action-Mapping-Doppelpflege wurde entfernt und bridge-owned Read-/Dispatch-Seams laufen kanonisch ueber `fs25_auto_drive_host_bridge`, die Flutter-Crate bleibt als eingefrorene Alias-/Kompat-Surface bestehen
+Status: Workspace-Split umgesetzt — Root-Fassade, Engine-Crate, render_wgpu-Core-Crate und egui-Host-Adapter sind stabil; die gemeinsame Rust-Host-Dispatch-Seam ist produktiv, `HostBridgeSession` ist als kanonische Session-Surface fuer egui und Flutter festgeschrieben, der egui-Dialog-Lifecycle ist auf die Host-Bridge-Seam konsolidiert, die lokale Action-Mapping-Doppelpflege wurde entfernt und bridge-owned Read-/Dispatch-Seams laufen kanonisch ueber `fs25_auto_drive_host_bridge`; die fruehere Flutter-Kompat-Crate wurde entfernt, Kompat-Aliase liegen direkt in der Host-Bridge
 
 Aktuelle Integrationskette: Workspace auf Rust 2024, egui-Host auf `eframe/egui/egui-wgpu 0.34.1`, Render-Core auf `wgpu 29.0.*`.
 
@@ -14,7 +14,6 @@ Dieser Plan trennt fachliche Verantwortlichkeiten in Workspace-Crates mit klaren
 - Host-Bridge-Core (`crates/fs25_auto_drive_host_bridge/src/*`): toolkit-freie gemeinsame Session-/Action-/Snapshot-Seam ueber der Engine
 - Render-Core (`crates/fs25_auto_drive_render_wgpu/src/*`): host-neutraler wgpu-Renderer-Kern
 - Egui-Frontend (`crates/fs25_auto_drive_frontend_egui/src/{ui,editor_app,runtime,render,host_bridge_adapter}`): Desktop-Host, egui-UI, Render-Adapter und Kompat-Surface auf die kanonische Host-Bridge-Dispatch-Seam
-- Flutter-Bridge (`crates/fs25_auto_drive_frontend_flutter_bridge/src/{session,dto}`): eingefrorene Alias-/Kompat-Schicht ueber der Host-Bridge (keine neue Logik)
 - Overview-Crate (`crates/fs25_map_overview/src/*`): Karten-/Farmland-Generierung
 
 Kernfluss: **Input -> AppIntent -> AppController -> AppCommand -> AppState/Domain -> RenderScene + RenderAssetsSnapshot + HostUiSnapshot + ViewportOverlaySnapshot -> Host-Adapter -> Renderer-Core**.
@@ -582,11 +581,6 @@ crates/
       host_bridge_adapter.rs # Kompat-Surface (Reexports) fuer kanonisches Mapping/Dispatch der Host-Bridge
       render/         # Host-Adapter + egui-Callback ueber fs25_auto_drive_render_wgpu
       ui/             # egui-Panels, Dialoge, Input und Overlays
-  fs25_auto_drive_frontend_flutter_bridge/
-    src/
-      lib.rs          # Flutter-Adapter-/Kompat-Wurzel ueber der Host-Bridge
-      session/        # Alias-Surface fuer FlutterBridgeSession/RenderFrame
-      dto/            # Alias-Surface fuer Engine*-DTO-Namen
   fs25_map_overview/
     src/              # Terrain-, Farmland-, POI- und Hillshade-Generierung fuer Uebersichtskarten
 ```
@@ -645,12 +639,7 @@ crates/
 - Background-Dirty-Flag durch monotone Asset-/Transform-Revisionen ersetzt
 - `fs25_auto_drive_render_wgpu` als host-neutralen Renderer-Core extrahiert
 - egui-`render` auf Host-Adapter reduziert (Callback bleibt host-spezifisch)
-- `fs25_auto_drive_frontend_flutter_bridge` haengt nur noch von `fs25_auto_drive_host_bridge` ab und re-exportiert dessen Session-/DTO-Surface als `FlutterBridgeSession`, `EngineSessionAction`, `EngineSessionSnapshot` und `EngineRenderFrameSnapshot`; als Alias auf `HostBridgeSession` behaelt die Surface auch `build_host_ui_snapshot()` und `build_viewport_overlay_snapshot()`, die Crate bleibt dabei als alias-only Uebergangsschicht eingefroren und erhaelt keine neue Logik
-
-Geplante spaetere Entfernung (separater Breaking-Change-Track, nicht Teil dieses Follow-ups):
-1. Keine internen Rust-Consumer fuer `Engine*`-/`Flutter*`-Aliasnamen mehr.
-2. Externe Flutter-/FFI-Consumer migriert oder explizit als Breaking Change kommuniziert.
-3. Doku-Sync fuer `ARCHITECTURE_PLAN`, `DATA_MODEL`, `ROADMAP` und betroffene `API.md` abgeschlossen.
+- `fs25_auto_drive_host_bridge` stellt `Engine*`-/`FlutterBridgeSession`-Kompat-Aliase direkt bereit; die fruehere Flutter-Kompat-Crate wurde aus dem Workspace entfernt
 
 ## Definition of Done
 

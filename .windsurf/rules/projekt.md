@@ -11,7 +11,6 @@ Neuimplementierung des AutoDrive Course Editors in Rust mit egui + wgpu. Hochper
 - **Host-Bridge-Core (`crates/fs25_auto_drive_host_bridge`):** toolkit-freie gemeinsame Session-/Action-/Snapshot-Seam ueber der Engine
 - **Render-Core (`crates/fs25_auto_drive_render_wgpu`):** host-neutraler wgpu-Kern (`Renderer`, Sub-Renderer, Shader)
 - **Egui-Frontend (`crates/fs25_auto_drive_frontend_egui`):** `ui`, `editor_app`, `runtime`, `render` als Host-Adapter plus duenne `host_bridge_adapter`-Kompat-Surface (Reexports auf die kanonische Host-Bridge-Seam)
-- **Flutter-Bridge (`crates/fs25_auto_drive_frontend_flutter_bridge`):** eingefrorene Alias-/Kompat-Schicht ueber der kanonischen Host-Bridge (keine eigene Session-Logik)
 - **Overview-Crate (`crates/fs25_map_overview`):** Terrain-, Farmland- und Overview-Generierung
 
 ## Event- und Mutationsfluss
@@ -24,7 +23,7 @@ Neuimplementierung des AutoDrive Course Editors in Rust mit egui + wgpu. Hochper
 - `RenderScene` transportiert nur Render-Snapshots; Core-Typen duerfen nicht nach `crates/fs25_auto_drive_render_wgpu/src/*` durchgereicht werden
 - Hintergrund-Uploads laufen ueber `background_asset_revision` / `background_transform_revision` statt Dirty-Flag
 - `fs25_auto_drive_host_bridge` darf nur von `fs25_auto_drive_engine` abhaengen
-- `fs25_auto_drive_frontend_flutter_bridge` ist ein duennes Adapter-/Kompat-Layer ueber `fs25_auto_drive_host_bridge`
+- Flutter-/FFI-Consumer nutzen direkt `fs25_auto_drive_host_bridge` inklusive `Engine*`-/`FlutterBridgeSession`-Kompat-Aliasen
 
 ## Verbindlicher Host-Bridge-Session-Vertrag
 

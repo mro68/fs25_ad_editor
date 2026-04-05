@@ -1755,13 +1755,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "fs25_auto_drive_frontend_flutter_bridge"
-version = "1.7.0"
-dependencies = [
- "fs25_auto_drive_host_bridge",
-]
-
-[[package]]
 name = "fs25_auto_drive_host_bridge"
 version = "1.7.0"
 dependencies = [
