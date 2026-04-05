@@ -56,23 +56,25 @@ impl EditorApp {
 }
 
 impl eframe::App for EditorApp {
-    fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
+    fn ui(&mut self, ui: &mut egui::Ui, _frame: &mut eframe::Frame) {
+        let ctx = ui.ctx().clone();
+
         if self.state.should_exit {
             ctx.send_viewport_cmd(egui::ViewportCommand::Close);
             return;
         }
 
-        let events = self.collect_ui_events(ctx);
+        let events = self.collect_ui_events(&ctx);
 
         let has_meaningful_events = events
             .iter()
             .any(|e| !matches!(e, AppIntent::ViewportResized { .. }));
 
-        self.process_events(ctx, events);
+        self.process_events(&ctx, events);
 
         self.sync_background_upload();
 
-        self.maybe_request_repaint(ctx, has_meaningful_events);
+        self.maybe_request_repaint(&ctx, has_meaningful_events);
     }
 }
 
