@@ -1,14 +1,14 @@
 //! Egui-spezifische Adapter-Helfer fuer die gemeinsame Host-Bridge.
 //!
-//! Dieses Modul mappt einen bewusst kleinen Teil bestehender `AppIntent`s auf
-//! die explizite Action-Surface der kanonischen `HostBridgeSession`.
+//! Dieses Modul mappt stabile, niederfrequente `AppIntent`s auf die explizite
+//! Action-Surface der kanonischen Host-Bridge.
 //! Nicht gemappte Intents bleiben im bisherigen egui-Flow und koennen weiterhin
 //! direkt ueber `AppController` verarbeitet werden.
 
 use anyhow::Result;
-use fs25_auto_drive_host_bridge::{HostActiveTool, HostBridgeSession, HostSessionAction};
+use fs25_auto_drive_host_bridge::{apply_host_action, HostActiveTool, HostSessionAction};
 
-use crate::app::{AppIntent, EditorTool};
+use crate::app::{AppController, AppIntent, AppState, EditorTool};
 
 fn map_active_tool(tool: EditorTool) -> HostActiveTool {
     match tool {
@@ -26,6 +26,22 @@ fn map_active_tool(tool: EditorTool) -> HostActiveTool {
 /// Controller-Flow verarbeitet werden soll.
 pub fn map_intent_to_host_action(intent: &AppIntent) -> Option<HostSessionAction> {
     match intent {
+        AppIntent::OpenFileRequested => Some(HostSessionAction::OpenFile),
+        AppIntent::SaveRequested => Some(HostSessionAction::Save),
+        AppIntent::SaveAsRequested => Some(HostSessionAction::SaveAs),
+        AppIntent::HeightmapSelectionRequested => {
+            Some(HostSessionAction::RequestHeightmapSelection)
+        }
+        AppIntent::BackgroundMapSelectionRequested => {
+            Some(HostSessionAction::RequestBackgroundMapSelection)
+        }
+        AppIntent::GenerateOverviewRequested => Some(HostSessionAction::GenerateOverview),
+        AppIntent::CurseplayImportRequested => Some(HostSessionAction::CurseplayImport),
+        AppIntent::CurseplayExportRequested => Some(HostSessionAction::CurseplayExport),
+        AppIntent::ResetCameraRequested => Some(HostSessionAction::ResetCamera),
+        AppIntent::ZoomToFitRequested => Some(HostSessionAction::ZoomToFit),
+        AppIntent::ZoomToSelectionBoundsRequested => Some(HostSessionAction::ZoomToSelectionBounds),
+        AppIntent::ExitRequested => Some(HostSessionAction::Exit),
         AppIntent::CommandPaletteToggled => Some(HostSessionAction::ToggleCommandPalette),
         AppIntent::SetEditorToolRequested { tool } => Some(HostSessionAction::SetEditorTool {
             tool: map_active_tool(*tool),
@@ -38,58 +54,171 @@ pub fn map_intent_to_host_action(intent: &AppIntent) -> Option<HostSessionAction
     }
 }
 
-/// Wendet einen gemappten Intent direkt auf eine `HostBridgeSession` an.
+/// Wendet einen gemappten Intent auf Controller und State an.
 ///
 /// Gibt `Ok(true)` zurueck, wenn der Intent gemappt und angewendet wurde.
 /// `Ok(false)` bedeutet, dass kein Mapping existiert.
-pub fn apply_mapped_intent(session: &mut HostBridgeSession, intent: &AppIntent) -> Result<bool> {
+pub fn apply_mapped_intent(
+    controller: &mut AppController,
+    state: &mut AppState,
+    intent: &AppIntent,
+) -> Result<bool> {
     let Some(action) = map_intent_to_host_action(intent) else {
         return Ok(false);
     };
 
-    session.apply_action(action)?;
-    Ok(true)
+    apply_host_action(controller, state, action)
 }
 
 #[cfg(test)]
 mod tests {
-    use fs25_auto_drive_host_bridge::HostSessionAction;
+    use fs25_auto_drive_host_bridge::{HostActiveTool, HostSessionAction};
+    use glam::Vec2;
 
-    use crate::app::{AppIntent, EditorTool};
+    use crate::app::{AppController, AppIntent, AppState, EditorTool};
 
-    use super::map_intent_to_host_action;
+    use super::{apply_mapped_intent, map_intent_to_host_action};
 
     #[test]
-    fn maps_command_palette_toggle_to_host_action() {
-        let intent = AppIntent::CommandPaletteToggled;
-        let action = map_intent_to_host_action(&intent);
+    fn maps_stable_host_intents_to_expected_actions() {
+        let cases = vec![
+            (AppIntent::OpenFileRequested, HostSessionAction::OpenFile),
+            (AppIntent::SaveRequested, HostSessionAction::Save),
+            (AppIntent::SaveAsRequested, HostSessionAction::SaveAs),
+            (
+                AppIntent::HeightmapSelectionRequested,
+                HostSessionAction::RequestHeightmapSelection,
+            ),
+            (
+                AppIntent::BackgroundMapSelectionRequested,
+                HostSessionAction::RequestBackgroundMapSelection,
+            ),
+            (
+                AppIntent::GenerateOverviewRequested,
+                HostSessionAction::GenerateOverview,
+            ),
+            (
+                AppIntent::CurseplayImportRequested,
+                HostSessionAction::CurseplayImport,
+            ),
+            (
+                AppIntent::CurseplayExportRequested,
+                HostSessionAction::CurseplayExport,
+            ),
+            (
+                AppIntent::ResetCameraRequested,
+                HostSessionAction::ResetCamera,
+            ),
+            (AppIntent::ZoomToFitRequested, HostSessionAction::ZoomToFit),
+            (
+                AppIntent::ZoomToSelectionBoundsRequested,
+                HostSessionAction::ZoomToSelectionBounds,
+            ),
+            (AppIntent::ExitRequested, HostSessionAction::Exit),
+            (
+                AppIntent::CommandPaletteToggled,
+                HostSessionAction::ToggleCommandPalette,
+            ),
+            (
+                AppIntent::SetEditorToolRequested {
+                    tool: EditorTool::Route,
+                },
+                HostSessionAction::SetEditorTool {
+                    tool: HostActiveTool::Route,
+                },
+            ),
+            (
+                AppIntent::OpenOptionsDialogRequested,
+                HostSessionAction::OpenOptionsDialog,
+            ),
+            (
+                AppIntent::CloseOptionsDialogRequested,
+                HostSessionAction::CloseOptionsDialog,
+            ),
+            (AppIntent::UndoRequested, HostSessionAction::Undo),
+            (AppIntent::RedoRequested, HostSessionAction::Redo),
+        ];
 
-        assert!(matches!(
-            action,
-            Some(HostSessionAction::ToggleCommandPalette)
-        ));
+        for (intent, expected_action) in cases {
+            assert_eq!(map_intent_to_host_action(&intent), Some(expected_action));
+        }
     }
 
     #[test]
-    fn maps_set_editor_tool_to_host_action() {
-        let intent = AppIntent::SetEditorToolRequested {
-            tool: EditorTool::Route,
-        };
-        let action = map_intent_to_host_action(&intent);
+    fn leaves_high_frequency_and_tool_intents_unmapped() {
+        let unmapped = vec![
+            AppIntent::ViewportResized {
+                size: [1920.0, 1080.0],
+            },
+            AppIntent::CameraPan {
+                delta: Vec2::new(2.0, -1.0),
+            },
+            AppIntent::CameraZoom {
+                factor: 1.1,
+                focus_world: Some(Vec2::ZERO),
+            },
+            AppIntent::NodePickRequested {
+                world_pos: Vec2::new(5.0, 10.0),
+                additive: false,
+                extend_path: false,
+            },
+            AppIntent::RouteToolClicked {
+                world_pos: Vec2::new(3.0, 4.0),
+                ctrl: false,
+            },
+            AppIntent::MoveSelectedNodesRequested {
+                delta_world: Vec2::new(1.0, 1.0),
+            },
+        ];
 
-        assert!(matches!(
-            action,
-            Some(HostSessionAction::SetEditorTool {
-                tool: fs25_auto_drive_host_bridge::HostActiveTool::Route
-            })
-        ));
+        for intent in unmapped {
+            assert!(map_intent_to_host_action(&intent).is_none());
+        }
     }
 
     #[test]
-    fn leaves_unmapped_intents_for_existing_controller_flow() {
-        let intent = AppIntent::OpenFileRequested;
-        let action = map_intent_to_host_action(&intent);
+    fn apply_mapped_intent_dispatches_action_through_shared_host_seam() {
+        let mut controller = AppController::new();
+        let mut state = AppState::new();
 
-        assert!(action.is_none());
+        let handled = apply_mapped_intent(
+            &mut controller,
+            &mut state,
+            &AppIntent::OpenFileRequested,
+        )
+        .expect("OpenFileRequested muss ueber die Bridge-Seam verarbeitet werden");
+
+        assert!(handled);
+        assert_eq!(state.ui.dialog_requests.len(), 1);
+    }
+
+    #[test]
+    fn apply_mapped_intent_returns_false_for_unmapped_intent() {
+        let mut controller = AppController::new();
+        let mut state = AppState::new();
+
+        let handled = apply_mapped_intent(
+            &mut controller,
+            &mut state,
+            &AppIntent::ViewportResized {
+                size: [640.0, 480.0],
+            },
+        )
+        .expect("Unmapped Intent darf keinen Fehler ausloesen");
+
+        assert!(!handled);
+        assert!(state.ui.dialog_requests.is_empty());
+    }
+
+    #[test]
+    fn apply_mapped_intent_supports_exit_path() {
+        let mut controller = AppController::new();
+        let mut state = AppState::new();
+
+        let handled = apply_mapped_intent(&mut controller, &mut state, &AppIntent::ExitRequested)
+            .expect("ExitRequested muss ueber die Bridge-Seam verarbeitet werden");
+
+        assert!(handled);
+        assert!(state.should_exit);
     }
 }

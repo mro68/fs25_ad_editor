@@ -203,11 +203,11 @@
   - [x] `HostBridgeSession` als kanonische toolkit-freie Session-Fassade in `fs25_auto_drive_host_bridge`
   - [x] Explizite Action-/Snapshot-DTOs (`HostSessionAction`, `HostSessionSnapshot`, `HostDialog*`)
   - [x] Read-Seams fuer `HostUiSnapshot`, `ViewportOverlaySnapshot` und Render-Frame in der Core-Bridge gebuendelt
-- [x] Egui-Adapter-Surface fuer die Unified Host Bridge vorbereitet
-  - [x] Neues Modul `fs25_auto_drive_frontend_egui::host_bridge_adapter` als duenne Mapping-Schicht
-  - [x] Explizites Mapping eines stabilen Intent-Subsets auf `HostSessionAction`
-  - [x] `editor_app` bleibt produktiver Desktop-Flow; `host_bridge_adapter` bleibt bewusst auf das stabile Intent-Subset begrenzt
-  - [x] Bestehender `editor_app`-Flow bleibt unveraendert, Migration dadurch schrittweise moeglich
+- [x] Egui-Adapter-Surface fuer die Unified Host Bridge verbreitert und produktiv verdrahtet (2026-04-05)
+  - [x] `host_bridge_adapter` mappt stabile, niederfrequente Host-Aktionen (Datei-/Dialog-Anforderungen, Kamera-Shortcuts, Historie, Toolwechsel, Exit) auf `HostSessionAction`
+  - [x] `editor_app::process_events` nutzt die gemeinsame Rust-Host-Dispatch-Seam (`local -> bridge -> fallback`)
+  - [x] Hochfrequente Viewport-/Tool-/Drag-Interaktionen bleiben bewusst ungemappt und laufen weiter ueber den direkten Controller-Fallback
+  - [x] Adapter-Testabdeckung deutlich verbreitert (positive und negative Mapping-Faelle plus Dispatch-Tests)
 - [x] Flutter-Adapter-Surface fuer die Unified Host Bridge umgesetzt
   - [x] `fs25_auto_drive_frontend_flutter_bridge` auf `fs25_auto_drive_host_bridge` umgestellt
   - [x] Crate-Abhaengigkeit auf `fs25_auto_drive_host_bridge` reduziert; keine direkte Engine-Abhaengigkeit mehr
