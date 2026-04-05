@@ -209,7 +209,8 @@
   - [x] `HostBridgeSession` als kanonische toolkit-freie Session-Fassade in `fs25_auto_drive_host_bridge`
   - [x] Explizite Action-/Snapshot-DTOs (`HostSessionAction`, `HostSessionSnapshot`, `HostDialog*`)
   - [x] Read-Seams fuer `HostUiSnapshot`, `ViewportOverlaySnapshot` und Render-Frame in der Core-Bridge gebuendelt
-  - [x] Host-native Datei-/Pfad-Dialoge auf die kanonische Drain-Seam `AppController::take_dialog_requests(...)` / `HostBridgeSession::take_dialog_requests()` konsolidiert
+  - [x] Session-Ownership vertraglich geklaert: `HostBridgeSession` ist die kanonische Session-Surface fuer egui und Flutter; verbleibende egui-Zugriffe sind in `bridge-owned` / `bridge-gap` / `host-local` klassifiziert
+  - [ ] Egui-Dialog-Lifecycle auf die kanonische Host-Dialog-Seam (`HostDialogRequest` / `HostDialogResult` via `take_dialog_requests()` + `submit_dialog_result(...)`) umstellen
 - [x] Egui-Adapter-Surface fuer die Unified Host Bridge verbreitert und produktiv verdrahtet (2026-04-05)
   - [x] `host_bridge_adapter` mappt stabile, niederfrequente Host-Aktionen (Datei-/Dialog-Anforderungen, Kamera-Shortcuts, Historie, Toolwechsel, Exit) auf `HostSessionAction`
   - [x] `editor_app::process_events` nutzt die gemeinsame Rust-Host-Dispatch-Seam (`local -> bridge -> fallback`)
@@ -561,10 +562,10 @@
 - ✅ Modul-Splits ohne API-Bruch: `app/handlers/route_tool.rs` und `ui/edit_panel.rs` intern in Submodule zerlegt, um Ausfuehrungs-/Panel-Logik klarer zu trennen
 - ✅ Route-Tool-Panel entkoppelt: App-/Tool-Vertraege liefern jetzt `RouteToolPanelState`/`RouteToolPanelAction` statt `egui`-Callbacks; das Floating-Panel rendert rein im UI-Layer
 - ✅ Tool-Kern-Remediation Phase 3: Host-Sync, Recreate, Drag, Tangenten, Chain-Input und Lasso sind wieder explizite Capabilities; Rotations- und Segment-Shortcuts sind zusaetzlich in `RouteToolRotate` und `RouteToolSegmentAdjustments` getrennt, damit keine No-Op-Fallen im Parking-/Segment-Shortcut-Pfad bleiben
-- ✅ Host-UI-Contracts Follow-up (2026-04-04, Schritt 1): Dialoge und Tool-Einstellungsfenster laufen ueber den einheitlichen Engine-Vertrag `PanelState`/`PanelAction`/`DialogRequest`/`DialogResult`; `AppController::build_host_ui_snapshot()` liefert die host-neutrale Surface, egui mappt `PanelAction`/`DialogResult` zentral auf `AppIntent`
+- ✅ Host-UI-Contracts Follow-up (2026-04-04, Schritt 1): Tool-Einstellungsfenster laufen ueber den einheitlichen Engine-Vertrag `PanelState`/`PanelAction`; `AppController::build_host_ui_snapshot()` liefert die host-neutrale Surface, egui mappt `PanelAction` zentral auf `AppIntent`. Datei-/Pfad-Dialoge bleiben in diesem Schritt noch als dokumentierter `bridge-gap` im direkten egui-Dialogpfad.
 - ✅ Host-UI-Contracts Follow-up (2026-04-04, Schritt 2): Overlay-Daten sind als `ViewportOverlaySnapshot` in den Engine-Layer gewandert; `ClipboardOverlaySnapshot`, `GroupLockOverlaySnapshot` und `GroupBoundaryOverlaySnapshot` kapseln die Preview-/Gruppen-Daten host-neutral, und egui rendert Tool-/Clipboard-/Distanzen-/Gruppen-Overlays nur noch aus Snapshot-Daten statt direkter Registry-/RoadMap-Ableitung
 - ✅ Host-UI-Contracts Follow-up (2026-04-04, Schritt 3): Flutter-Bridge nutzt jetzt eine explizite `EngineSessionAction`-Fassade (`apply_action` + Komfort-Methoden) statt generischem `AppIntent`-Dispatch; `snapshot()` bleibt gecacht bis zur naechsten erfolgreichen Mutation, `build_render_frame()` liefert den gekoppelten read-only Render-Output und der oeffentliche `AppState`-Escape-Hatch ist entfernt
-- ✅ Host-UI-Contracts Follow-up (2026-04-04, Schritt 4): Bridge-Action-Surface um `Undo`/`Redo` erweitert, `EngineSessionSnapshot` um `can_undo`/`can_redo`/`pending_dialog_request_count` ergaenzt und der host-neutrale Dialog-Lifecycle ueber `take_dialog_requests()` + `submit_dialog_result(...)` konsistent gemacht
+- ✅ Host-UI-Contracts Follow-up (2026-04-04, Schritt 4): Bridge-Action-Surface um `Undo`/`Redo` erweitert, `EngineSessionSnapshot` um `can_undo`/`can_redo`/`pending_dialog_request_count` ergaenzt und der host-neutrale Dialog-Lifecycle in der Host-Bridge-Seam (`take_dialog_requests()` + `submit_dialog_result(...)`) produktiv bereitgestellt
 
 - **Vorherige Errungenschaften (gleicher Audit-Block):**
 - ✅ Parking-Geometrie modulbereichert: `parking/geometry.rs` → `parking/geometry/{mod,layout,blueprint,conversion}.rs`

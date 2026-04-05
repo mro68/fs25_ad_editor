@@ -225,8 +225,16 @@ pub struct AppState {
 - Clipboard-, Paste-Preview- und Tool-Edit-Zustand bleiben im App-Layer und werden von dort in Read-Modelle fuer Hosts ueberfuehrt
 - Dialog- und Tool-Fenster laufen semantisch ueber `UiState` plus `HostUiSnapshot`
 - Host-native Datei-/Pfad-Dialoge werden als `DialogRequest`-Queue in `UiState` gehalten
-- Die Queue wird kanonisch ueber `AppController::take_dialog_requests(...)` bzw. in der Bridge ueber `take_dialog_requests()` gedraint
+- Die Queue wird intern ueber `AppController::take_dialog_requests(...)` gedraint; die kanonische Host-Seam bleibt `HostBridgeSession::take_dialog_requests()` / `submit_dialog_result(...)`
 - Viewport-Overlays laufen host-neutral ueber `ViewportOverlaySnapshot` (Route-Preview, Clipboard-, Distanzen-, Segment- und Boundary-Overlays)
+
+### Session-Surface-Ownership (Stand 2026-04-05)
+
+- **Kanonisch:** `fs25_auto_drive_host_bridge::HostBridgeSession` ist die gemeinsame Session-Surface fuer egui und Flutter.
+- **bridge-owned:** Explizite Action-/Snapshot-Seams (`HostSessionAction`, `HostSessionSnapshot`, `HostUiSnapshot`, `ViewportOverlaySnapshot`, Render-Read-Seams) sind host-uebergreifend stabil.
+- **bridge-gap:** Der egui-Datei-/Pfad-Dialog-Lifecycle drainet aktuell noch direkt `AppController::take_dialog_requests(...)` und verarbeitet Engine-Dialog-DTOs lokal.
+- **host-local:** eframe-/egui-Runtime, Input- und Render-Glue bleiben bewusst host-spezifisch ausserhalb der Bridge.
+- **Leitplanke:** Keine neuen direkten Escape-Hatches auf `AppController`/`AppState` fuer neue host-neutrale Fluesse.
 
 ### SelectionState
 
@@ -426,7 +434,8 @@ pub struct HostRenderFrameSnapshot {
 - `HostDialogRequestKind`, `HostDialogRequest` und `HostDialogResult` bilden den expliziten host-neutralen Dialog-Lifecycle fuer Datei-, Heightmap-, Overview- und Curseplay-Operationen
 - `snapshot()` arbeitet ueber einen Dirty-Cache und baut den Snapshot nur nach erfolgreichen Session-Mutationen neu auf
 - Die Bridge mappt `HostSessionAction` intern auf `AppIntent`, ohne generischen Intent-Dispatch oder direkten `AppState`-Escape-Hatch
-- Host-native Datei-/Pfad-Dialoge laufen ueber `take_dialog_requests()` und `submit_dialog_result(...)` als explizite Bridge-Seam
+- Host-native Datei-/Pfad-Dialoge laufen kanonisch ueber `take_dialog_requests()` und `submit_dialog_result(...)` als explizite Bridge-Seam
+- Der direkte egui-Dialog-Drain ueber `AppController::take_dialog_requests(...)` bleibt bis zur produktiven Umstellung ein dokumentierter `bridge-gap`
 - `build_viewport_overlay_snapshot()` benoetigt mutablen Zugriff, weil beim Snapshot-Aufbau Boundary-Caches im `AppState` vorgewaermt werden koennen
 - `HostRenderFrameSnapshot` koppelt den per-Frame-Render-Vertrag (`RenderScene`) mit den langlebigen Render-Assets fuer read-only Hosts
 - Die Flutter-Bridge ist als eingefrorene Alias-/Kompat-Surface ueber `fs25_auto_drive_host_bridge` umgesetzt und fuehrt die bisherigen `Engine*`-Namen ohne eigene Session-Logik weiter; `FlutterBridgeSession` bleibt dabei ein direkter Alias auf die kanonische Session-Fassade

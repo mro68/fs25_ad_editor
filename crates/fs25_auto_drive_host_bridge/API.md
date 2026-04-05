@@ -4,9 +4,17 @@
 
 `fs25_auto_drive_host_bridge` ist die kanonische, toolkit-freie Host-Bridge ueber `fs25_auto_drive_engine`. Die Crate kapselt `AppController` und `AppState` in `HostBridgeSession` und buendelt damit die gemeinsame Session-Surface fuer mehrere Hosts wie egui, Flutter oder spaetere FFI-/Transport-Adapter.
 
+`HostBridgeSession` ist verbindlich die kanonische Session-Surface fuer egui und Flutter. Host-spezifische Adapter duerfen neue host-neutrale Session-Seams nicht mehr direkt auf `AppController`/`AppState` aufbauen, sondern ausschliesslich ueber diese Bridge-Surface.
+
 Die Bridge exponiert Mutationen ausschliesslich ueber explizite `HostSessionAction`-DTOs. Die Action-Surface deckt stabile, niederfrequente Host-Aktionen ab (Datei-/Dialog-Anforderungen, Kamera-/Viewport-Shortcuts, Historie, Optionen, Toolwechsel, Exit), nicht jedoch hochfrequente Viewport- oder Tool-Drag-Interaktionen. Fuer read-only Hosts liefert sie kleine Session-Snapshots, host-neutrale Panel-Read-Modelle, Viewport-Overlay-Snapshots sowie gekoppelten Render-Output aus `RenderScene` und `RenderAssetsSnapshot`.
 
 Die Crate bleibt absichtlich host-neutral: keine eframe/egui-Runtime, keine Flutter-FFI und keine wgpu-RenderPass-Lifecycle-Logik.
+
+## Session-Grenze (Stand 2026-04-05)
+
+- **bridge-owned:** Explizite Action-/Snapshot-Seams (`HostSessionAction`, `HostSessionSnapshot`, `HostUiSnapshot`, `ViewportOverlaySnapshot`, Render-Read-Seams) sind host-uebergreifend produktiv.
+- **bridge-gap:** Der egui-Datei-/Pfad-Dialog-Lifecycle drainet aktuell noch direkt ueber `AppController::take_dialog_requests(...)`.
+- **host-local:** eframe-/egui- und Render-Glue bleiben bewusst ausserhalb der Bridge.
 
 ## Oeffentliche Module
 
@@ -104,3 +112,4 @@ flowchart LR
 - `HostBridgeSession::apply_action(...)` delegiert intern an dieselbe `dispatch`-Seam, die auch nicht-Session-basierte Rust-Hosts nutzen koennen.
 - `take_dialog_requests()` und `submit_dialog_result(...)` bilden die einzige oeffentliche Dialog-Seam der Bridge; intern delegiert `take_dialog_requests()` auf `AppController::take_dialog_requests(...)`.
 - `fs25_auto_drive_frontend_flutter_bridge` re-exportiert diese Surface als `FlutterBridgeSession` bzw. `Engine*`-Aliase; `fs25_auto_drive_frontend_egui` nutzt `host_bridge_adapter` fuer stabile, niederfrequente Host-Aktionen und laesst hochfrequente Viewport-/Tool-Interaktionen im direkten Controller-Fallback.
+- Der egui-Datei-/Pfad-Dialogpfad ist bis zur produktiven Umstellung als expliziter `bridge-gap` dokumentiert; die Ziel-Seam bleibt `take_dialog_requests()` plus `submit_dialog_result(...)` auf Bridge-DTO-Ebene.

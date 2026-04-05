@@ -544,6 +544,8 @@ pub fn handle_file_dialogs(dialog_requests: Vec<DialogRequest>) -> Vec<DialogRes
 
 Die zentrale Uebersetzung nach `AppIntent` erfolgt im Editor-Host ueber `dialog_result_to_intent()`.
 
+Hinweis: Dieser Pfad ist aktuell als dokumentierter `bridge-gap` klassifiziert. Die kanonische Ziel-Seam ist die Verarbeitung ueber `HostDialogRequest` / `HostDialogResult` mit Rueckgabe via `HostSessionAction::SubmitDialogResult`.
+
 ---
 
 ### `show_heightmap_warning`
