@@ -63,6 +63,36 @@ struct RoadMap {
 - Grow-only Buffer-Reuse in Node/Connection-Renderer (keine per-frame Neuallokation)
 - CPU-Viewport-Culling vor GPU-Upload (Nodes + Connections)
 
+## Edition-/Dependency-Upgrade (Stand: 2026-04-05)
+
+### Umgesetzte Punkte
+
+- Rust-Edition im gesamten Workspace auf 2024 umgestellt.
+- Render-Core (`fs25_auto_drive_render_wgpu`) auf `wgpu 29.0.*` migriert.
+- egui-Frontend (`fs25_auto_drive_frontend_egui`) auf `eframe/egui/egui-wgpu 0.34.1` migriert.
+- Low-Risk-Dependencies angehoben:
+    - `toml` auf `1.1.2`
+    - `env_logger` auf `0.11.10`
+    - `indexmap` auf `2.13.1`
+- Edition-2024-Risiken vorab stabilisiert:
+    - Engine: Match-Ergonomics in Parser, if-let-Rescope in Undo/Redo/History
+    - Frontend: Drop-Scopes in Render-Callback/Editor-Dispatch/Kontextmenue
+
+### Verifikation
+
+- `cargo fmt --all -- --check` erfolgreich.
+- `cargo check -p fs25_auto_drive_engine --all-targets` erfolgreich.
+- `cargo test -p fs25_auto_drive_engine --lib` erfolgreich.
+- `cargo check -p fs25_auto_drive_render_wgpu --all-targets` erfolgreich.
+- `cargo check -p fs25_auto_drive_frontend_egui --all-targets` erfolgreich.
+- `cargo check --workspace --all-targets` erfolgreich.
+
+### Bekannte Restpunkte
+
+- Im Frontend bestehen nach dem 0.34.1-Upgrade weiterhin Deprecation-Warnungen
+    (Panel-Aliase, `show`, `wants_keyboard_input`, Test-`Context::run`).
+    Diese sind aktuell nicht funktional blockierend.
+
 ## Naechste Schritte (Stand: 2026-02-28)
 
 ### Erledigte Schritte

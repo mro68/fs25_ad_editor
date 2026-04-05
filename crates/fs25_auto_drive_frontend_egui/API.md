@@ -10,6 +10,13 @@ Die Integrationsschale liest Panels ueber `HostUiSnapshot`, drainet Datei-/Pfadd
 
 Die gemeinsame Host-Bridge ist in dieser Crate eine gezielte Dispatch-Seam fuer stabile, niederfrequente Host-Aktionen. `editor_app` bleibt die produktive eframe-Integrationsschale: lokale Spezialfaelle bleiben lokal, bridge-faehige Intents laufen ueber `host_bridge_adapter`, hochfrequente Viewport-/Tool-Intents bleiben im Legacy-Fallback ueber `AppController`.
 
+## Kompatibilitaet (Stand: 2026-04-05)
+
+- Rust-Edition: `2024`
+- UI-Stack: `eframe/egui/egui-wgpu 0.34.1`
+- Render-Seam: kompatibel zum Render-Core auf `wgpu 29.0.*`
+- Scroll-Input: rohe Wheel-Impulse werden aus `MouseWheel`-Events aggregiert (statt des entfernten Feldes `raw_scroll_delta`).
+
 ## Oeffentliche Module
 
 | Modul | Verantwortung |

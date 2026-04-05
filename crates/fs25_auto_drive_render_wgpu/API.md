@@ -6,6 +6,12 @@
 
 Die Crate ist bewusst klein an der Oberflaeche und gross im Inneren: Hosts reichen nur `RendererTargetConfig`, `RenderScene` und optionale Background-Uploads hinein; Batching, Culling, Draw-Reihenfolge und GPU-Ressourcen bleiben vollstaendig innerhalb des Kerns.
 
+## Kompatibilitaet (Stand: 2026-04-05)
+
+- Rust-Edition: `2024`
+- GPU-Backend: `wgpu 29.0.*`
+- Pipeline-Layouts nutzen die aktuellen `wgpu`-29-Deskriptoren (`bind_group_layouts` mit `Option`, `immediate_size`, `multiview_mask`).
+
 ## Komponenten
 
 | Komponente | Verantwortung |
