@@ -2,8 +2,8 @@ use fs25_auto_drive_editor::app::handlers;
 use fs25_auto_drive_editor::app::tool_contract::{RouteToolId, TangentSource};
 use fs25_auto_drive_editor::app::ui_contract::{
     BypassPanelAction, DialogRequestKind, ParkingPanelAction, RouteOffsetPanelAction,
-    RouteToolConfigState, RouteToolPanelAction, SegmentConfigPanelAction,
-    SmoothCurvePanelAction, StraightPanelAction,
+    RouteToolConfigState, RouteToolPanelAction, SegmentConfigPanelAction, SmoothCurvePanelAction,
+    StraightPanelAction,
 };
 use fs25_auto_drive_editor::app::{AppController, AppIntent, AppState, EditorTool, GroupRecord};
 use fs25_auto_drive_editor::core::{
