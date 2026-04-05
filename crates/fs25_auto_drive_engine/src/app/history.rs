@@ -97,28 +97,30 @@ impl EditHistory {
     /// Nimmt den obersten Undo-Eintrag und gibt den wiederherzustellenden Snapshot zurueck.
     /// Schiebt `current` auf den Redo-Stack.
     pub fn pop_undo_with_current(&mut self, current: Snapshot) -> Option<Snapshot> {
-        if let Some(prev) = self.undo_stack.pop_back() {
-            if self.redo_stack.len() >= self.max_depth {
-                self.redo_stack.pop_front();
+        match self.undo_stack.pop_back() {
+            Some(prev) => {
+                if self.redo_stack.len() >= self.max_depth {
+                    self.redo_stack.pop_front();
+                }
+                self.redo_stack.push_back(current);
+                Some(prev)
             }
-            self.redo_stack.push_back(current);
-            Some(prev)
-        } else {
-            None
+            None => None,
         }
     }
 
     /// Nimmt den obersten Redo-Eintrag und gibt den wiederherzustellenden Snapshot zurueck.
     /// Schiebt `current` auf den Undo-Stack.
     pub fn pop_redo_with_current(&mut self, current: Snapshot) -> Option<Snapshot> {
-        if let Some(next) = self.redo_stack.pop_back() {
-            if self.undo_stack.len() >= self.max_depth {
-                self.undo_stack.pop_front();
+        match self.redo_stack.pop_back() {
+            Some(next) => {
+                if self.undo_stack.len() >= self.max_depth {
+                    self.undo_stack.pop_front();
+                }
+                self.undo_stack.push_back(current);
+                Some(next)
             }
-            self.undo_stack.push_back(current);
-            Some(next)
-        } else {
-            None
+            None => None,
         }
     }
 
