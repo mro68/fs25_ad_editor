@@ -105,7 +105,8 @@ impl HostBridgeSession {
     /// `crate::dispatch::apply_host_action(...)` und markiert den Snapshot-
     /// Cache nur nach erfolgreich verarbeiteten Aktionen als dirty.
     pub fn apply_action(&mut self, action: HostSessionAction) -> Result<()> {
-        let handled = crate::dispatch::apply_host_action(&mut self.controller, &mut self.state, action)?;
+        let handled =
+            crate::dispatch::apply_host_action(&mut self.controller, &mut self.state, action)?;
         if handled {
             self.snapshot_dirty = true;
         }
@@ -243,9 +244,7 @@ impl Default for HostBridgeSession {
 mod tests {
     use fs25_auto_drive_engine::app::AppIntent;
 
-    use crate::dto::{
-        HostActiveTool, HostDialogRequestKind, HostDialogResult, HostSessionAction,
-    };
+    use crate::dto::{HostActiveTool, HostDialogRequestKind, HostDialogResult, HostSessionAction};
 
     use super::HostBridgeSession;
 
