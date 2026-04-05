@@ -2,7 +2,7 @@
 
 # 1. Nur den Namen des aktuellen Ordners extrahieren (z.B. "mein-projekt")
 PROJECT_NAME=$(basename "$PWD")
-TMP_TARGET="/tmp/${PROJECT_NAME}_target"
+TMP_TARGET="/tmp/.zram/${PROJECT_NAME}_target"
 
 # Sicherheits-Check: Sind wir im richtigen Projekt-Verzeichnis?
 if [ ! -f "Cargo.toml" ] && [ ! -f "pubspec.yaml" ]; then
