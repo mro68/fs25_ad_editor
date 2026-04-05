@@ -26,8 +26,8 @@ impl AppController {
     /// Verarbeitet einen Intent ueber Intent->Command Mapping.
     ///
     /// Diese Methode ist das Engine-Ende der gemeinsamen Rust-Host-Dispatch-
-    /// Seam: Host-Adapter wie `fs25_auto_drive_host_bridge` oder der egui-
-    /// `host_bridge_adapter` speisen hier nur bereits gemappte `AppIntent`s ein.
+    /// Seam: Aeussere Host-Adapter speisen hier nur bereits gemappte
+    /// `AppIntent`s ein.
     pub fn handle_intent(&mut self, state: &mut AppState, intent: AppIntent) -> anyhow::Result<()> {
         let commands = self.map_intent_to_commands(state, intent);
         for command in commands {
