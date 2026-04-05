@@ -477,7 +477,6 @@ pub use fs25_auto_drive_host_bridge::{
 
 - Die Host-Bridge stabilisiert bestehende Namen, ohne eine zweite Session- oder DTO-Implementierung zu pflegen.
 - `FlutterBridgeSession` erbt als Alias die komplette oeffentliche `HostBridgeSession`-Methodenoberflaeche, inklusive `build_host_ui_snapshot()` und `build_viewport_overlay_snapshot()`.
-- Die Rueckgabetypen dieser Read-Seams bleiben bewusst die kanonischen Engine-DTOs `HostUiSnapshot` und `ViewportOverlaySnapshot`; die Flutter-Crate fuehrt dafuer keine zweite Alias-Familie ein.
+- Die Rueckgabetypen dieser Read-Seams bleiben bewusst die kanonischen Engine-DTOs `HostUiSnapshot` und `ViewportOverlaySnapshot`; eine zweite Alias-Familie wird dafuer nicht mehr eingefuehrt.
 - `Engine*`-Namen bleiben fuer Host-/FFI-Call-Sites erhalten, waehrend die kanonische Semantik in `Host*`-Vertraegen lebt.
-- Architekturentscheidung (2026-04-05): keine neue Logik in `fs25_auto_drive_frontend_flutter_bridge`; neue Erweiterungen nur in `fs25_auto_drive_host_bridge`.
-- Geplante spaetere Entfernung erfolgt nur als eigener Breaking-Change-Track nach Konsumenten-Migration und vollstaendigem Doku-Sync.
+- Architekturentscheidung (2026-04-05): Erweiterungen nur in `fs25_auto_drive_host_bridge`; die fruehere Flutter-Kompat-Crate ist entfernt.
