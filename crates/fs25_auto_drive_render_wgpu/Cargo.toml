@@ -11,7 +11,7 @@ bytemuck = { version = "1.14", features = ["derive"] }
 fs25_auto_drive_engine = { path = "../fs25_auto_drive_engine" }
 glam = { version = "0.32.1", features = ["serde"] }
 image = { version = "0.25", features = ["dds", "png", "jpeg"] }
-indexmap = "2"
+indexmap = "2.13.1"
 log = "0.4"
 resvg = "0.47.0"
 wgpu = "27.0.1"
