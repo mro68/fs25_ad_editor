@@ -11,7 +11,7 @@ Die API ist bewusst `pub(crate)` und nur fuer das Binary relevant. Die kanonisch
 | Submodul | Verantwortung |
 |---|---|
 | `mod.rs` | `EditorApp`, Konstruktion, `eframe::App::update()` und Intent-Weitergabe |
-| `event_collection.rs` | Panels/Dialoge ueber `HostUiSnapshot` abfragen, `PanelAction`/`DialogResult` in `AppIntent` mappen und Viewport-Input buendeln |
+| `event_collection.rs` | Panels ueber `HostUiSnapshot` lesen, Datei-/Pfad-Dialoge ueber `AppController::take_dialog_requests()` drainen, `PanelAction`/`DialogResult` in `AppIntent` mappen und Viewport-Input buendeln |
 | `helpers.rs` | Render-Callback, Floating-Menue-Toggle, Background-Upload und Repaint-Steuerung |
 | `overlays.rs` | Holt `ViewportOverlaySnapshot` ueber den Controller, zeichnet Tool-/Clipboard-/Distanzen-/Gruppen-Overlays und mappt Overlay-Klicks auf `AppIntent` |
 
@@ -58,7 +58,7 @@ Die `update()`-Implementierung bildet den Frame-Zyklus der Integrationsschale:
 | `pub(crate) fn new(render_state: &egui_wgpu::RenderState) -> Self` | Laedt `EditorOptions` ueber `app::use_cases::options::load_editor_options()`, initialisiert `AppState`, `AppController`, `render::Renderer` und `ui::InputState` |
 | `fn update(&mut self, ctx: &egui::Context, frame: &mut eframe::Frame)` | Zentraler eframe-Frame-Zyklus der Integrationsschale |
 | `fn process_events(&mut self, ctx: &egui::Context, events: Vec<AppIntent>)` | Behandelt die gesammelten Intents by-value, verarbeitet schalenlokale Events in-place und delegiert den Rest ohne zusaetzliche Clone-Kaskade an den Controller |
-| `fn collect_ui_events(&mut self, ctx: &egui::Context) -> Vec<AppIntent>` | Baut zuerst `AppController::build_host_ui_snapshot()`, rendert darauf basierend Panels/Dialoge und buendelt alles als `Vec<AppIntent>` |
+| `fn collect_ui_events(&mut self, ctx: &egui::Context) -> Vec<AppIntent>` | Baut zuerst `AppController::build_host_ui_snapshot()` fuer Panels und drainet Dialog-Anforderungen kanonisch ueber `AppController::take_dialog_requests(&mut state)` |
 | `fn render_viewport(&mut self, ui: &egui::Ui, rect: egui::Rect, viewport_size: [f32; 2])` | Baut `RenderScene` und registriert den egui/wgpu-Render-Callback |
 | `fn render_overlays(&mut self, ui: &egui::Ui, rect: egui::Rect, response: &egui::Response, viewport_size: [f32; 2]) -> Vec<AppIntent>` | Baut `AppController::build_viewport_overlay_snapshot(...)`, zeichnet daraus Overlays und mappt Overlay-Interaktionen auf `AppIntent`s |
 | `fn toggle_floating_menu(&mut self, ctx: &egui::Context, kind: FloatingMenuKind)` | Oeffnet oder schliesst das kontextbezogene Floating-Menue an der aktuellen Mausposition |

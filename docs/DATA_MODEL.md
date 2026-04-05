@@ -225,6 +225,7 @@ pub struct AppState {
 - Clipboard-, Paste-Preview- und Tool-Edit-Zustand bleiben im App-Layer und werden von dort in Read-Modelle fuer Hosts ueberfuehrt
 - Dialog- und Tool-Fenster laufen semantisch ueber `UiState` plus `HostUiSnapshot`
 - Host-native Datei-/Pfad-Dialoge werden als `DialogRequest`-Queue in `UiState` gehalten
+- Die Queue wird kanonisch ueber `AppController::take_dialog_requests(...)` bzw. in der Bridge ueber `take_dialog_requests()` gedraint
 - Viewport-Overlays laufen host-neutral ueber `ViewportOverlaySnapshot` (Route-Preview, Clipboard-, Distanzen-, Segment- und Boundary-Overlays)
 
 ### SelectionState
@@ -321,7 +322,6 @@ pub struct EditorToolState {
 ```rust
 pub struct HostUiSnapshot {
     pub panels: Vec<PanelState>,
-    pub dialog_requests: Vec<DialogRequest>,
 }
 
 pub enum PanelState {
@@ -340,7 +340,7 @@ pub struct ViewportOverlaySnapshot {
 }
 ```
 
-- `HostUiSnapshot` ist das per-Frame-Read-Modell fuer sichtbare Panels und ausstehende Host-Dialoge
+- `HostUiSnapshot` ist das per-Frame-Read-Modell fuer sichtbare Panels
 - `ViewportOverlaySnapshot` kapselt alle Viewport-Overlays als host-neutrale DTOs; egui rendert nur noch aus diesen Snapshots statt direkt aus `RoadMap`/`GroupRegistry`
 - `ClipboardOverlaySnapshot`, `GroupLockOverlaySnapshot` und `GroupBoundaryOverlaySnapshot` trennen Datengewinnung im App-Layer vom Painting im Host
 
