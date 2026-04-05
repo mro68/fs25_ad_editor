@@ -93,7 +93,7 @@ pub(super) fn collect_keyboard_intents(
 
     // Guard: Shortcuts unterdruecken wenn ein Widget Keyboard-Input haben moechte.
     // Ctrl+K und Escape bleiben erlaubt.
-    if ui.ctx().wants_keyboard_input() {
+    if ui.ctx().egui_wants_keyboard_input() {
         let (ctrl_or_cmd_k_pressed, key_escape_pressed) = ui.input(|i| {
             let ctrl_or_cmd_k_pressed = i.events.iter().any(|event| {
                 matches!(

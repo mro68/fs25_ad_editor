@@ -54,10 +54,16 @@ fn render_route_tool_group_menu(
 
 /// Rendert die Menue-Leiste
 pub fn render_menu(ctx: &egui::Context, state: &AppState) -> Vec<AppIntent> {
+    let mut top_ui = crate::ui::common::create_top_level_ui(ctx, "menu_bar_top_level");
+    render_menu_inside(&mut top_ui, state)
+}
+
+/// Rendert die Menue-Leiste innerhalb eines bestehenden Top-Level-UIs.
+pub(crate) fn render_menu_inside(ui_root: &mut egui::Ui, state: &AppState) -> Vec<AppIntent> {
     let mut events = Vec::new();
     let lang = state.options.language;
 
-    egui::TopBottomPanel::top("menu_bar").show(ctx, |ui| {
+    egui::Panel::top("menu_bar").show_inside(ui_root, |ui| {
         egui::MenuBar::new().ui(ui, |ui| {
             ui.menu_button(t(lang, I18nKey::MenuFile), |ui| {
                 if ui.button(t(lang, I18nKey::MenuOpen)).clicked() {

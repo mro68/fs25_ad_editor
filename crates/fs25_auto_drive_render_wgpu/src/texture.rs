@@ -15,7 +15,7 @@ pub(crate) fn create_sampler(
         address_mode_w: wgpu::AddressMode::ClampToEdge,
         mag_filter: filter_mode,
         min_filter: filter_mode,
-        mipmap_filter: wgpu::FilterMode::Nearest,
+        mipmap_filter: wgpu::MipmapFilterMode::Nearest,
         ..Default::default()
     })
 }

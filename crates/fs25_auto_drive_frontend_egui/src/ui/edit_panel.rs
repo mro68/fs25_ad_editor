@@ -74,18 +74,18 @@ pub fn render_edit_panel(
     }
 
     // Route-Tool Edit-Modus (immer wenn Tool aktiv)
-    if active_tool == EditorTool::Route {
-        if let Some(route_tool) = route_tool {
-            route_tool_panel::render_route_tool_panel(
-                ctx,
-                route_tool,
-                default_direction,
-                default_priority,
-                distance_wheel_step_m,
-                panel_pos,
-                &mut events,
-            );
-        }
+    if active_tool == EditorTool::Route
+        && let Some(route_tool) = route_tool
+    {
+        route_tool_panel::render_route_tool_panel(
+            ctx,
+            route_tool,
+            default_direction,
+            default_priority,
+            distance_wheel_step_m,
+            panel_pos,
+            &mut events,
+        );
     }
 
     events

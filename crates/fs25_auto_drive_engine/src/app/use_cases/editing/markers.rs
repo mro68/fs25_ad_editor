@@ -13,11 +13,11 @@ pub fn open_marker_dialog(state: &mut AppState, node_id: u64, is_new: bool) {
     if is_new {
         state.ui.marker_dialog.name = format!("Marker {}", node_id);
         state.ui.marker_dialog.group = "All".to_string();
-    } else if let Some(rm) = state.road_map.as_ref() {
-        if let Some(marker) = rm.find_marker_by_node_id(node_id) {
-            state.ui.marker_dialog.name = marker.name.clone();
-            state.ui.marker_dialog.group = marker.group.clone();
-        }
+    } else if let Some(rm) = state.road_map.as_ref()
+        && let Some(marker) = rm.find_marker_by_node_id(node_id)
+    {
+        state.ui.marker_dialog.name = marker.name.clone();
+        state.ui.marker_dialog.group = marker.group.clone();
     }
 }
 

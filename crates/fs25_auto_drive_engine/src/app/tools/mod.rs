@@ -64,12 +64,11 @@ use glam::Vec2;
 /// Gibt `ToolAnchor::ExistingNode` zurueck wenn ein Node in Reichweite ist,
 /// sonst `ToolAnchor::NewPosition` mit der Original-Position.
 pub fn snap_to_node(pos: Vec2, road_map: &RoadMap, snap_radius: f32) -> ToolAnchor {
-    if let Some(hit) = road_map.nearest_node(pos) {
-        if hit.distance <= snap_radius {
-            if let Some(node) = road_map.node(hit.node_id) {
-                return ToolAnchor::ExistingNode(hit.node_id, node.position);
-            }
-        }
+    if let Some(hit) = road_map.nearest_node(pos)
+        && hit.distance <= snap_radius
+        && let Some(node) = road_map.node(hit.node_id)
+    {
+        return ToolAnchor::ExistingNode(hit.node_id, node.position);
     }
     ToolAnchor::NewPosition(pos)
 }

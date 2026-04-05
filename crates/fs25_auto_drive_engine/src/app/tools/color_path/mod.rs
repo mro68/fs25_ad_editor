@@ -31,10 +31,10 @@ fn cached_rgb_image_for_stats(image: &image::DynamicImage) -> Arc<image::RgbImag
 
     COLOR_PATH_STATS_RGB_CACHE.with(|cache| {
         let mut cache = cache.borrow_mut();
-        if let Some(entry) = cache.as_ref() {
-            if entry.image_id == image_id {
-                return Arc::clone(&entry.rgb_image);
-            }
+        if let Some(entry) = cache.as_ref()
+            && entry.image_id == image_id
+        {
+            return Arc::clone(&entry.rgb_image);
         }
 
         let rgb_image = Arc::new(image.to_rgb8());

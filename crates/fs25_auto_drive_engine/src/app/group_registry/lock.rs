@@ -32,12 +32,11 @@ impl GroupRegistry {
         for &nid in selected_nodes {
             if let Some(record_ids) = self.node_to_records.get(&nid) {
                 for &rid in record_ids {
-                    if processed_segments.insert(rid) {
-                        if let Some(record) = self.records.get(&rid) {
-                            if record.locked {
-                                expanded.extend(record.node_ids.iter().copied());
-                            }
-                        }
+                    if processed_segments.insert(rid)
+                        && let Some(record) = self.records.get(&rid)
+                        && record.locked
+                    {
+                        expanded.extend(record.node_ids.iter().copied());
                     }
                 }
             }

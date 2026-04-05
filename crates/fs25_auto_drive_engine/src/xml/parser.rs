@@ -13,12 +13,12 @@ use waypoints::build_nodes_and_connections;
 /// Haengt Text an eine `Option<String>` an (oder initialisiert sie).
 fn append_or_set(target: &mut Option<String>, text: &str) {
     match target {
-        Some(ref mut s) => s.push_str(text),
+        Some(s) => s.push_str(text),
         None => *target = Some(text.to_string()),
     }
 }
 
-/// Parsed eine AutoDrive-Config aus einem XML-String
+/// Parst eine AutoDrive-Konfiguration aus einem XML-String.
 pub fn parse_autodrive_config(xml_content: &str) -> Result<RoadMap> {
     let mut reader = Reader::from_str(xml_content);
     reader.config_mut().trim_text(false);

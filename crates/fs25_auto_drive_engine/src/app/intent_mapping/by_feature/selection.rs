@@ -14,11 +14,11 @@ fn map_node_pick(
     let mut max_distance = base_max_distance;
     if let Some(rm) = state.road_map.as_ref() {
         for id in state.selection.selected_node_ids.iter() {
-            if let Some(node) = rm.node(*id) {
-                if (node.position - world_pos).length() <= increased_max_distance {
-                    max_distance = increased_max_distance;
-                    break;
-                }
+            if let Some(node) = rm.node(*id)
+                && (node.position - world_pos).length() <= increased_max_distance
+            {
+                max_distance = increased_max_distance;
+                break;
             }
         }
     }
@@ -34,26 +34,23 @@ fn map_node_pick(
 fn map_segment_pick(state: &AppState, world_pos: glam::Vec2, additive: bool) -> Vec<AppCommand> {
     let max_distance = state.options.hitbox_radius();
 
-    if let Some(rm) = state.road_map.as_deref() {
-        if let Some(hit) = rm
+    if let Some(rm) = state.road_map.as_deref()
+        && let Some(hit) = rm
             .nearest_node(world_pos)
             .filter(|h| h.distance <= max_distance)
-        {
-            if state
-                .group_registry
-                .find_first_by_node_id(hit.node_id)
-                .is_some()
-            {
-                return vec![
-                    AppCommand::SelectGroupByNearestNode {
-                        world_pos,
-                        max_distance,
-                        additive,
-                    },
-                    AppCommand::OpenGroupSettingsPopup { world_pos },
-                ];
-            }
-        }
+        && state
+            .group_registry
+            .find_first_by_node_id(hit.node_id)
+            .is_some()
+    {
+        return vec![
+            AppCommand::SelectGroupByNearestNode {
+                world_pos,
+                max_distance,
+                additive,
+            },
+            AppCommand::OpenGroupSettingsPopup { world_pos },
+        ];
     }
 
     vec![

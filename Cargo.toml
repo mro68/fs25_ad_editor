@@ -12,7 +12,7 @@ members = [
 [package]
 name = "FS25-AutoDrive-Editor"
 version = "1.7.0"
-edition = "2021"
+edition = "2024"
 authors = ["mro68"]
 description = "GPU-beschleunigter Editor fuer AutoDrive-Kurse in Farming Simulator 25"
 repository = "https://github.com/mro68/fs25_ad_editor"
@@ -42,55 +42,8 @@ harness = false
 fs25_auto_drive_engine = { path = "crates/fs25_auto_drive_engine" }
 fs25_auto_drive_frontend_egui = { path = "crates/fs25_auto_drive_frontend_egui" }
 
-# UI Framework
-egui = "0.33.3"
-eframe = { version = "0.33.3", default-features = true, features = [
-    "default_fonts",
-    "glow",
-    "persistence",
-    "wgpu",
-] }
-egui_extras = { version = "0.33.3", features = ["all_loaders"] }
-egui-wgpu = "0.33.3"
-
-# Rendering
-wgpu = "27.0.1"                                        # Muss mit eframe/egui-wgpu kompatibel sein
-bytemuck = { version = "1.14", features = ["derive"] }
-glam = { version = "0.32.1", features = ["serde"] }
-
-# XML Processing
-quick-xml = "0.39.2"
-
-# Spatial Index
-kiddo = "5.3.0"
-
-# Image Processing
-image = { version = "0.25", features = ["dds", "png", "jpeg"] }
-resvg = "0.47.0"
-
-# ZIP-Archiv-Support
-zip = { version = "8.3.0", default-features = false, features = ["deflate"] }
-
-# Overview-Map-Generator (Terrain, Hillshade, Farmlands, POIs)
-fs25_map_overview = { path = "crates/fs25_map_overview" }
-
-# Serialization
-serde = { version = "1", features = ["derive"] }
-serde_json = "1"
-toml = "0.9.8"
-
-# Geordnete HashSet fuer deterministische Selektionsreihenfolge
-indexmap = "2"
-
-# Regex fuer Fuzzy-Matching (z.B. ZIP-Suche nach Map-Name)
-regex = "1"
-
-# Utility
-anyhow = "1.0.102"
-log = "0.4"
-env_logger = "0.11.9"
-rfd = "0.17.2"
-
 [dev-dependencies]
 approx = "0.5"
 criterion = { version = "0.8.2", features = ["html_reports"] }
+glam = { version = "0.32.1", features = ["serde"] }
+image = { version = "0.25", features = ["dds", "png", "jpeg"] }

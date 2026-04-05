@@ -253,10 +253,8 @@ impl InputState {
                         | AppIntent::RouteToolWithAnchorsRequested { .. }
                 )
             });
-            if has_edit_intent {
-                if let Some(snapshot) = &self.context_menu_snapshot {
-                    self.edit_panel_pos = snapshot.screen_pos.map(|p| [p.x, p.y]);
-                }
+            if has_edit_intent && let Some(snapshot) = &self.context_menu_snapshot {
+                self.edit_panel_pos = snapshot.screen_pos.map(|p| [p.x, p.y]);
             }
         }
 

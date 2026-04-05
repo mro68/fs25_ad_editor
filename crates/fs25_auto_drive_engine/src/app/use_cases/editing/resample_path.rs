@@ -206,12 +206,12 @@ pub fn resample_selected_path(state: &mut AppState) {
         let node = MapNode::new(id, pos, NodeFlag::Regular);
         road_map.add_node(node);
 
-        if let Some(p_id) = prev_id {
-            if let Some(p_node) = road_map.node(p_id) {
-                let p_pos = p_node.position;
-                let conn = Connection::new(p_id, id, direction, priority, p_pos, pos);
-                road_map.add_connection(conn);
-            }
+        if let Some(p_id) = prev_id
+            && let Some(p_node) = road_map.node(p_id)
+        {
+            let p_pos = p_node.position;
+            let conn = Connection::new(p_id, id, direction, priority, p_pos, pos);
+            road_map.add_connection(conn);
         }
 
         prev_id = Some(id);

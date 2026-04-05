@@ -118,6 +118,15 @@ fn render_long_press_with_memory<T: Clone + PartialEq>(
 
 /// Rendert die linke Sidebar mit Tool-Auswahl, Route-Tools und Defaults.
 pub fn render_route_defaults_panel(ctx: &egui::Context, state: &AppState) -> Vec<AppIntent> {
+    let mut top_ui = crate::ui::common::create_top_level_ui(ctx, "route_defaults_panel_top_level");
+    render_route_defaults_panel_inside(&mut top_ui, state)
+}
+
+/// Rendert die linke Sidebar innerhalb eines bestehenden Top-Level-UIs.
+pub(crate) fn render_route_defaults_panel_inside(
+    ui_root: &mut egui::Ui,
+    state: &AppState,
+) -> Vec<AppIntent> {
     let mut events = Vec::new();
     let lang = state.options.language;
     let active_tool = state.editor.active_tool;
@@ -218,10 +227,10 @@ pub fn render_route_defaults_panel(ctx: &egui::Context, state: &AppState) -> Vec
         items: &priority_items,
     };
 
-    egui::SidePanel::left("route_defaults_panel")
+    egui::Panel::left("route_defaults_panel")
         .resizable(false)
-        .default_width(80.0)
-        .show(ctx, |ui| {
+        .default_size(80.0)
+        .show_inside(ui_root, |ui| {
             ui.label(
                 egui::RichText::new(t(lang, I18nKey::SidebarTools))
                     .small()
@@ -363,7 +372,8 @@ pub fn render_route_defaults_panel(ctx: &egui::Context, state: &AppState) -> Vec
             // Zoom-Aktion via LongPressGroup (4 Items)
             let has_selection = state.selection.selected_node_ids.len() >= 2;
             let zoom_action_key = egui::Id::new("sidebar_last_zoom_action");
-            let last_zoom_action = ctx
+            let last_zoom_action = ui
+                .ctx()
                 .data_mut(|d| d.get_temp::<ZoomAction>(zoom_action_key))
                 .unwrap_or(ZoomAction::FullMap);
 
@@ -405,7 +415,8 @@ pub fn render_route_defaults_panel(ctx: &egui::Context, state: &AppState) -> Vec
                 &last_zoom_action,
                 false,
             ) {
-                ctx.data_mut(|d| d.insert_temp(zoom_action_key, action));
+                ui.ctx()
+                    .data_mut(|d| d.insert_temp(zoom_action_key, action));
                 match action {
                     ZoomAction::ZoomIn => events.push(AppIntent::ZoomInRequested),
                     ZoomAction::ZoomOut => events.push(AppIntent::ZoomOutRequested),

@@ -1,0 +1,18 @@
+{
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "label": "Mein Start-Script",
+            "type": "shell",
+            "command": "./.tmp_target.sh",
+            "runOptions": {
+                "runOn": "folderOpen"
+            },
+            "presentation": {
+                "reveal": "always",
+                "panel": "new",
+                "close": true
+            }
+        }
+    ]
+}

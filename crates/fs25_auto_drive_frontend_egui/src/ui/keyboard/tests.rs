@@ -15,14 +15,12 @@ fn collect_with_key_event_and_modifiers(
     raw_input.events.push(event);
 
     let mut events = Vec::new();
-    let _ = ctx.run(raw_input, |ctx| {
-        egui::CentralPanel::default().show(ctx, |ui| {
-            events = collect_keyboard_intents(
-                ui,
-                &selected,
-                KeyboardContext::new(EditorTool::Select, false, false, false, false, false),
-            );
-        });
+    let _ = ctx.run_ui(raw_input, |ui| {
+        events = collect_keyboard_intents(
+            ui,
+            &selected,
+            KeyboardContext::new(EditorTool::Select, false, false, false, false, false),
+        );
     });
 
     events
@@ -66,21 +64,19 @@ fn collect_with_route_tool_state(
     raw_input.events.push(event);
 
     let mut events = Vec::new();
-    let _ = ctx.run(raw_input, |ctx| {
-        egui::CentralPanel::default().show(ctx, |ui| {
-            events = collect_keyboard_intents(
-                ui,
-                &selected,
-                KeyboardContext::new(
-                    active_tool,
-                    route_tool_is_drawing,
-                    route_tool_segment_shortcuts_active,
-                    false,
-                    false,
-                    false,
-                ),
-            );
-        });
+    let _ = ctx.run_ui(raw_input, |ui| {
+        events = collect_keyboard_intents(
+            ui,
+            &selected,
+            KeyboardContext::new(
+                active_tool,
+                route_tool_is_drawing,
+                route_tool_segment_shortcuts_active,
+                false,
+                false,
+                false,
+            ),
+        );
     });
 
     events
@@ -96,18 +92,16 @@ fn collect_with_key_event_text_input_focus(
     raw_input.events.push(event);
 
     let mut events = Vec::new();
-    let _ = ctx.run(raw_input, |ctx| {
-        egui::CentralPanel::default().show(ctx, |ui| {
-            let mut text = String::new();
-            let response = ui.text_edit_singleline(&mut text);
-            ui.memory_mut(|m| m.request_focus(response.id));
+    let _ = ctx.run_ui(raw_input, |ui| {
+        let mut text = String::new();
+        let response = ui.text_edit_singleline(&mut text);
+        ui.memory_mut(|m| m.request_focus(response.id));
 
-            events = collect_keyboard_intents(
-                ui,
-                &selected,
-                KeyboardContext::new(active_tool, false, false, false, false, false),
-            );
-        });
+        events = collect_keyboard_intents(
+            ui,
+            &selected,
+            KeyboardContext::new(active_tool, false, false, false, false, false),
+        );
     });
 
     events
