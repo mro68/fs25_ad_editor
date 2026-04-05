@@ -225,8 +225,39 @@ pub struct AppState {
 - Clipboard-, Paste-Preview- und Tool-Edit-Zustand bleiben im App-Layer und werden von dort in Read-Modelle fuer Hosts ueberfuehrt
 - Dialog- und Tool-Fenster laufen semantisch ueber `UiState` plus `HostUiSnapshot`
 - Host-native Datei-/Pfad-Dialoge werden als `DialogRequest`-Queue in `UiState` gehalten
-- Die Queue wird kanonisch ueber `AppController::take_dialog_requests(...)` bzw. in der Bridge ueber `take_dialog_requests()` gedraint
+- Die Queue wird intern ueber `AppController::take_dialog_requests(...)` gedraint; die kanonische Host-Seam bleibt `HostBridgeSession::take_dialog_requests()` / `submit_dialog_result(...)`
+- `take_host_dialog_requests(...)` ist der schmale Adapter-Hilfspfad fuer Hosts mit eigenem `AppController`/`AppState`; der egui-Host nutzt genau diesen Pfad, waehrend `HostBridgeSession` die kanonische Session-Surface bleibt
 - Viewport-Overlays laufen host-neutral ueber `ViewportOverlaySnapshot` (Route-Preview, Clipboard-, Distanzen-, Segment- und Boundary-Overlays)
+
+### Session-Surface-Ownership (Stand 2026-04-05)
+
+- **Kanonisch:** `fs25_auto_drive_host_bridge::HostBridgeSession` ist die gemeinsame Session-Surface fuer den egui-Host sowie direkte Flutter-/FFI-Consumer.
+- **bridge-owned:** Explizite Action-/Snapshot-Seams (`HostSessionAction`, `HostSessionSnapshot`, `HostUiSnapshot`, `ViewportOverlaySnapshot`, Render-Read-Seams, Mapping in beide Richtungen und Host-Dialog-Lifecycle) sind host-uebergreifend stabil.
+- **bridge-gap:** Fuer stabile Host-Aktionen und bridge-owned Read-Seams aktuell geschlossen; `host_bridge_adapter` ist nur noch eine Kompat-Surface mit Reexports auf die kanonische Host-Bridge-Seam.
+- **host-local:** eframe-/egui-Runtime, Input- und Render-Glue bleiben bewusst host-spezifisch ausserhalb der Bridge.
+- **Leitplanke:** Keine neuen direkten Escape-Hatches auf `AppController`/`AppState` fuer neue host-neutrale Fluesse.
+
+### Host-Dialog-Datenfluss
+
+Der Datei-/Pfad-Dialogpfad verwendet zwei bewusst getrennte, aber 1:1 korrelierte Typfamilien:
+
+- **Engine-intern:** `DialogRequestKind`, `DialogRequest`, `DialogResult`
+- **Host-stabil:** `HostDialogRequestKind`, `HostDialogRequest`, `HostDialogResult`
+
+Die Engine besitzt die Queue in `UiState`. `AppController::take_dialog_requests(...)` drainet sie in Engine-Typen; die Host-Bridge mappt diese anschliessend verlustfrei in die host-stabilen DTOs. Rueckmeldungen laufen spiegelbildlich ueber `HostDialogResult` zurueck und werden erst in der Bridge wieder auf `DialogResult` bzw. den zugehoerigen `AppIntent` zurueckgefuehrt.
+
+```mermaid
+flowchart LR
+    UISTATE[UiState.dialog_requests\nVec<DialogRequest>] --> CTRL[AppController::take_dialog_requests(...)]
+    CTRL --> ENGINE_REQ[DialogRequest]
+    ENGINE_REQ --> MAP_OUT[host_bridge::take_host_dialog_requests(...)]
+    MAP_OUT --> HOST_REQ[HostDialogRequest]
+    HOST_REQ --> HOST[egui / Flutter / anderer Host]
+    HOST --> HOST_RES[HostDialogResult]
+    HOST_RES --> MAP_BACK[HostSessionAction::SubmitDialogResult\noder HostBridgeSession::submit_dialog_result(...)]
+    MAP_BACK --> ENGINE_RES[DialogResult]
+    ENGINE_RES --> INTENT[AppIntent]
+```
 
 ### SelectionState
 
@@ -426,25 +457,26 @@ pub struct HostRenderFrameSnapshot {
 - `HostDialogRequestKind`, `HostDialogRequest` und `HostDialogResult` bilden den expliziten host-neutralen Dialog-Lifecycle fuer Datei-, Heightmap-, Overview- und Curseplay-Operationen
 - `snapshot()` arbeitet ueber einen Dirty-Cache und baut den Snapshot nur nach erfolgreichen Session-Mutationen neu auf
 - Die Bridge mappt `HostSessionAction` intern auf `AppIntent`, ohne generischen Intent-Dispatch oder direkten `AppState`-Escape-Hatch
-- Host-native Datei-/Pfad-Dialoge laufen ueber `take_dialog_requests()` und `submit_dialog_result(...)` als explizite Bridge-Seam
+- Die Bridge stellt beide Mapping-Richtungen (`AppIntent <-> HostSessionAction`) zentral in `dispatch` bereit; egui nutzt diese kanonische Source of Truth direkt
+- Host-native Datei-/Pfad-Dialoge laufen kanonisch ueber `take_dialog_requests()` und `submit_dialog_result(...)` als explizite Bridge-Seam
+- Host-Adapter mit eigenem `AppController`/`AppState` koennen Dialog-Requests ueber `take_host_dialog_requests(...)` als schmalen Adapter-Hilfspfad auf denselben `HostDialogRequest`-Vertrag mappen
 - `build_viewport_overlay_snapshot()` benoetigt mutablen Zugriff, weil beim Snapshot-Aufbau Boundary-Caches im `AppState` vorgewaermt werden koennen
 - `HostRenderFrameSnapshot` koppelt den per-Frame-Render-Vertrag (`RenderScene`) mit den langlebigen Render-Assets fuer read-only Hosts
-- Die Flutter-Bridge ist als eingefrorene Alias-/Kompat-Surface ueber `fs25_auto_drive_host_bridge` umgesetzt und fuehrt die bisherigen `Engine*`-Namen ohne eigene Session-Logik weiter; `FlutterBridgeSession` bleibt dabei ein direkter Alias auf die kanonische Session-Fassade
+- `fs25_auto_drive_host_bridge` fuehrt die bisherigen `Engine*`-Namen sowie `FlutterBridgeSession` direkt als Kompat-Aliase; eine separate Flutter-Kompat-Crate wird dafuer nicht mehr benoetigt
 
-### Flutter-Kompat-Aliase
+### Legacy-Kompat-Aliase fuer Flutter-/FFI-Call-Sites
 
 ```rust
 pub use fs25_auto_drive_host_bridge::{
-    HostBridgeSession as FlutterBridgeSession,
-    HostRenderFrameSnapshot as EngineRenderFrameSnapshot,
-    HostSessionAction as EngineSessionAction,
-    HostSessionSnapshot as EngineSessionSnapshot,
+    EngineRenderFrameSnapshot,
+    EngineSessionAction,
+    EngineSessionSnapshot,
+    FlutterBridgeSession,
 };
 ```
 
-- Die Flutter-Crate stabilisiert bestehende Namen, ohne eine zweite Session- oder DTO-Implementierung zu pflegen.
+- Direkte Flutter-/FFI-Hosts importieren diese Namen unmittelbar aus `fs25_auto_drive_host_bridge`; eine zweite Session- oder DTO-Implementierung wird dafuer nicht mehr gepflegt.
 - `FlutterBridgeSession` erbt als Alias die komplette oeffentliche `HostBridgeSession`-Methodenoberflaeche, inklusive `build_host_ui_snapshot()` und `build_viewport_overlay_snapshot()`.
-- Die Rueckgabetypen dieser Read-Seams bleiben bewusst die kanonischen Engine-DTOs `HostUiSnapshot` und `ViewportOverlaySnapshot`; die Flutter-Crate fuehrt dafuer keine zweite Alias-Familie ein.
+- Die Rueckgabetypen dieser Read-Seams bleiben bewusst die kanonischen Engine-DTOs `HostUiSnapshot` und `ViewportOverlaySnapshot`; eine zweite Alias-Familie wird dafuer nicht mehr eingefuehrt.
 - `Engine*`-Namen bleiben fuer Host-/FFI-Call-Sites erhalten, waehrend die kanonische Semantik in `Host*`-Vertraegen lebt.
-- Architekturentscheidung (2026-04-05): keine neue Logik in `fs25_auto_drive_frontend_flutter_bridge`; neue Erweiterungen nur in `fs25_auto_drive_host_bridge`.
-- Geplante spaetere Entfernung erfolgt nur als eigener Breaking-Change-Track nach Konsumenten-Migration und vollstaendigem Doku-Sync.
+- Architekturentscheidung (2026-04-05): Erweiterungen nur in `fs25_auto_drive_host_bridge`; die fruehere Flutter-Kompat-Crate ist entfernt.

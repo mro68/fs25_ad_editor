@@ -29,7 +29,7 @@ Die Route-Tool-Panel-DTOs werden intern ueber `ui_contract/route_tool_panel/{com
 
 ### `AppController`
 
-Zentrale Intent-Verarbeitung, Command-Dispatch an Feature-Handler und Render-Scene-Aufbau. Die gemeinsame Rust-Host-Dispatch-Seam endet bewusst hier: `fs25_auto_drive_host_bridge::apply_host_action(...)` und der egui-`host_bridge_adapter` speisen nur explizit gemappte Host-Aktionen als `AppIntent` in `handle_intent(...)` ein.
+Zentrale Intent-Verarbeitung, Command-Dispatch an Feature-Handler und Render-Scene-Aufbau. Die gemeinsame Rust-Host-Dispatch-Seam endet bewusst hier: `fs25_auto_drive_host_bridge::{apply_host_action(...), apply_mapped_intent(...)}` speisen nur explizit gemappte Host-Aktionen als `AppIntent` in `handle_intent(...)` ein.
 
 ```rust
 pub struct AppController;

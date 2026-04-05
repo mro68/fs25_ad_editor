@@ -1,14 +1,12 @@
 use anyhow::Result;
-use fs25_auto_drive_engine::app::ui_contract::{
-    DialogRequest, DialogRequestKind, HostUiSnapshot, ViewportOverlaySnapshot,
-};
+use fs25_auto_drive_engine::app::ui_contract::{HostUiSnapshot, ViewportOverlaySnapshot};
 use fs25_auto_drive_engine::app::{AppController, AppState, EditorTool};
 use fs25_auto_drive_engine::shared::{RenderAssetsSnapshot, RenderScene};
 use glam::Vec2;
 
 use crate::dto::{
-    HostActiveTool, HostDialogRequest, HostDialogRequestKind, HostDialogResult,
-    HostSelectionSnapshot, HostSessionAction, HostSessionSnapshot, HostViewportSnapshot,
+    HostActiveTool, HostDialogRequest, HostDialogResult, HostSelectionSnapshot, HostSessionAction,
+    HostSessionSnapshot, HostViewportSnapshot,
 };
 
 fn map_active_tool(tool: EditorTool) -> HostActiveTool {
@@ -17,25 +15,6 @@ fn map_active_tool(tool: EditorTool) -> HostActiveTool {
         EditorTool::Connect => HostActiveTool::Connect,
         EditorTool::AddNode => HostActiveTool::AddNode,
         EditorTool::Route => HostActiveTool::Route,
-    }
-}
-
-fn map_dialog_request_kind(kind: DialogRequestKind) -> HostDialogRequestKind {
-    match kind {
-        DialogRequestKind::OpenFile => HostDialogRequestKind::OpenFile,
-        DialogRequestKind::SaveFile => HostDialogRequestKind::SaveFile,
-        DialogRequestKind::Heightmap => HostDialogRequestKind::Heightmap,
-        DialogRequestKind::BackgroundMap => HostDialogRequestKind::BackgroundMap,
-        DialogRequestKind::OverviewZip => HostDialogRequestKind::OverviewZip,
-        DialogRequestKind::CurseplayImport => HostDialogRequestKind::CurseplayImport,
-        DialogRequestKind::CurseplayExport => HostDialogRequestKind::CurseplayExport,
-    }
-}
-
-fn map_dialog_request(request: DialogRequest) -> HostDialogRequest {
-    HostDialogRequest {
-        kind: map_dialog_request_kind(request.kind()),
-        suggested_file_name: request.suggested_file_name().map(str::to_owned),
     }
 }
 
@@ -72,6 +51,12 @@ pub struct HostRenderFrameSnapshot {
     /// Langlebige Render-Assets inklusive Revisionen.
     pub assets: RenderAssetsSnapshot,
 }
+
+/// Kompatibilitaetsalias fuer bestehende direkte Flutter-/FFI-Session-Importe.
+pub type FlutterBridgeSession = HostBridgeSession;
+
+/// Kompatibilitaetsalias fuer bestehende direkte Flutter-/FFI-Render-Importe.
+pub type EngineRenderFrameSnapshot = HostRenderFrameSnapshot;
 
 /// Kleine Session-Fassade ueber der host-neutralen Engine.
 ///
@@ -148,11 +133,12 @@ impl HostBridgeSession {
     /// Dies ist die kanonische oeffentliche Dialog-Drain-Seam der Bridge fuer
     /// Hosts ohne direkten Zugriff auf `AppController` und `AppState`.
     pub fn take_dialog_requests(&mut self) -> Vec<HostDialogRequest> {
-        let requests = self.controller.take_dialog_requests(&mut self.state);
+        let requests =
+            crate::dispatch::take_host_dialog_requests(&self.controller, &mut self.state);
         if !requests.is_empty() {
             self.snapshot_dirty = true;
         }
-        requests.into_iter().map(map_dialog_request).collect()
+        requests
     }
 
     /// Reicht ein host-seitiges Dialog-Ergebnis an die Engine weiter.
@@ -244,9 +230,12 @@ impl Default for HostBridgeSession {
 mod tests {
     use fs25_auto_drive_engine::app::AppIntent;
 
-    use crate::dto::{HostActiveTool, HostDialogRequestKind, HostDialogResult, HostSessionAction};
+    use crate::dto::{
+        EngineSessionAction, HostActiveTool, HostDialogRequestKind, HostDialogResult,
+        HostSessionAction,
+    };
 
-    use super::HostBridgeSession;
+    use super::{EngineRenderFrameSnapshot, FlutterBridgeSession, HostBridgeSession};
 
     fn apply_test_intent(session: &mut HostBridgeSession, intent: AppIntent) {
         session
@@ -389,5 +378,26 @@ mod tests {
         let overlay = session.build_viewport_overlay_snapshot(None);
         assert!(overlay.route_tool_preview.is_none());
         assert!(overlay.group_boundaries.is_empty());
+    }
+
+    #[test]
+    fn flutter_session_alias_exposes_host_bridge_session_behavior() {
+        let mut session = FlutterBridgeSession::new();
+
+        session
+            .apply_action(EngineSessionAction::ToggleCommandPalette)
+            .expect("ToggleCommandPalette muss ueber den Alias funktionieren");
+
+        assert!(session.snapshot().show_command_palette);
+    }
+
+    #[test]
+    fn engine_render_frame_snapshot_alias_keeps_render_contract() {
+        let session = HostBridgeSession::new();
+
+        let frame: EngineRenderFrameSnapshot = session.build_render_frame([512.0, 256.0]);
+
+        assert_eq!(frame.scene.viewport_size(), [512.0, 256.0]);
+        assert_eq!(frame.assets.background_asset_revision(), 0);
     }
 }
