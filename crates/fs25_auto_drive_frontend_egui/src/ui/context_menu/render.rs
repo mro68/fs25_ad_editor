@@ -35,16 +35,18 @@ pub(super) fn render_validated_entries(
                     command_icon(*id, options, default_direction, default_priority)
                 {
                     if is_direction_or_priority(*id) {
-                        ui.add(egui::Button::image(
+                        let response = ui.add(egui::Button::image(
                             icon.fit_to_exact_size(CM_CHOICE_ICON_SIZE),
-                        ))
-                        .on_hover_text(direction_or_priority_tooltip(*id))
-                        .clicked()
+                        ));
+                        let response = response.on_hover_text(direction_or_priority_tooltip(*id));
+                        response.clicked()
                     } else {
-                        ui.add(egui::Button::image_and_text(icon, label)).clicked()
+                        let response = ui.add(egui::Button::image_and_text(icon, label));
+                        response.clicked()
                     }
                 } else {
-                    ui.button(label).clicked()
+                    let response = ui.button(label);
+                    response.clicked()
                 };
                 if clicked {
                     events.push(*intent.clone());
