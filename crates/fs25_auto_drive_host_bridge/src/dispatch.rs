@@ -43,6 +43,22 @@ fn map_dialog_result(result: HostDialogResult) -> DialogResult {
 /// (z. B. ein abgebrochenes Dialog-Ergebnis).
 pub fn map_host_action_to_intent(action: HostSessionAction) -> Option<AppIntent> {
     match action {
+        HostSessionAction::OpenFile => Some(AppIntent::OpenFileRequested),
+        HostSessionAction::Save => Some(AppIntent::SaveRequested),
+        HostSessionAction::SaveAs => Some(AppIntent::SaveAsRequested),
+        HostSessionAction::RequestHeightmapSelection => {
+            Some(AppIntent::HeightmapSelectionRequested)
+        }
+        HostSessionAction::RequestBackgroundMapSelection => {
+            Some(AppIntent::BackgroundMapSelectionRequested)
+        }
+        HostSessionAction::GenerateOverview => Some(AppIntent::GenerateOverviewRequested),
+        HostSessionAction::CurseplayImport => Some(AppIntent::CurseplayImportRequested),
+        HostSessionAction::CurseplayExport => Some(AppIntent::CurseplayExportRequested),
+        HostSessionAction::ResetCamera => Some(AppIntent::ResetCameraRequested),
+        HostSessionAction::ZoomToFit => Some(AppIntent::ZoomToFitRequested),
+        HostSessionAction::ZoomToSelectionBounds => Some(AppIntent::ZoomToSelectionBoundsRequested),
+        HostSessionAction::Exit => Some(AppIntent::ExitRequested),
         HostSessionAction::ToggleCommandPalette => Some(AppIntent::CommandPaletteToggled),
         HostSessionAction::SetEditorTool { tool } => Some(AppIntent::SetEditorToolRequested {
             tool: map_editor_tool(tool),

@@ -7,9 +7,9 @@ pub mod dto;
 /// Kanonische Session-Fassade ueber `AppController` und `AppState`.
 pub mod session;
 
-pub use dto::{
-	   HostActiveTool, HostDialogRequest, HostDialogRequestKind, HostDialogResult,
-	   HostSelectionSnapshot, HostSessionAction, HostSessionSnapshot, HostViewportSnapshot,
-};
 pub use dispatch::{apply_host_action, map_host_action_to_intent};
+pub use dto::{
+    HostActiveTool, HostDialogRequest, HostDialogRequestKind, HostDialogResult,
+    HostSelectionSnapshot, HostSessionAction, HostSessionSnapshot, HostViewportSnapshot,
+};
 pub use session::{HostBridgeSession, HostRenderFrameSnapshot};

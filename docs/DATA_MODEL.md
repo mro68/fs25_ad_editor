@@ -379,6 +379,18 @@ pub enum HostDialogResult {
 }
 
 pub enum HostSessionAction {
+    OpenFile,
+    Save,
+    SaveAs,
+    RequestHeightmapSelection,
+    RequestBackgroundMapSelection,
+    GenerateOverview,
+    CurseplayImport,
+    CurseplayExport,
+    ResetCamera,
+    ZoomToFit,
+    ZoomToSelectionBounds,
+    Exit,
     ToggleCommandPalette,
     SetEditorTool { tool: HostActiveTool },
     OpenOptionsDialog,
@@ -409,7 +421,7 @@ pub struct HostRenderFrameSnapshot {
 }
 ```
 
-- `HostSessionAction` bildet die kanonische explizite Mutationsoberflaeche der gemeinsamen Bridge-Core-Crate
+- `HostSessionAction` bildet die kanonische explizite Mutationsoberflaeche der gemeinsamen Bridge-Core-Crate fuer stabile, niederfrequente Host-Aktionen
 - `HostSessionSnapshot` fasst host-relevanten Session-Zustand zusammen, inklusive Undo/Redo-Verfuegbarkeit und Anzahl ausstehender Dialog-Anfragen
 - `HostDialogRequestKind`, `HostDialogRequest` und `HostDialogResult` bilden den expliziten host-neutralen Dialog-Lifecycle fuer Datei-, Heightmap-, Overview- und Curseplay-Operationen
 - `snapshot()` arbeitet ueber einen Dirty-Cache und baut den Snapshot nur nach erfolgreichen Session-Mutationen neu auf

@@ -101,7 +101,8 @@ impl HostBridgeSession {
 
     /// Wendet eine explizite Host-Aktion auf die Session an.
     pub fn apply_action(&mut self, action: HostSessionAction) -> Result<()> {
-        let handled = crate::dispatch::apply_host_action(&mut self.controller, &mut self.state, action)?;
+        let handled =
+            crate::dispatch::apply_host_action(&mut self.controller, &mut self.state, action)?;
         if handled {
             self.snapshot_dirty = true;
         }

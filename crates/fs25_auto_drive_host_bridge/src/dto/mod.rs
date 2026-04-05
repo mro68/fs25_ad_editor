@@ -65,6 +65,30 @@ pub enum HostDialogResult {
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(tag = "kind", rename_all = "snake_case")]
 pub enum HostSessionAction {
+    /// Fordert den Host auf, einen Open-File-Dialog zu starten.
+    OpenFile,
+    /// Fordert Speichern unter dem aktuellen Pfad an.
+    Save,
+    /// Fordert einen Save-As-Dialog an.
+    SaveAs,
+    /// Fordert einen Heightmap-Auswahldialog an.
+    RequestHeightmapSelection,
+    /// Fordert einen Background-Map-Auswahldialog an.
+    RequestBackgroundMapSelection,
+    /// Fordert den ZIP-Auswahldialog fuer die Overview-Generierung an.
+    GenerateOverview,
+    /// Fordert einen Curseplay-Import-Dialog an.
+    CurseplayImport,
+    /// Fordert einen Curseplay-Export-Dialog an.
+    CurseplayExport,
+    /// Setzt die Kamera auf den Standardzustand zurueck.
+    ResetCamera,
+    /// Passt den Viewport auf die komplette Karte ein.
+    ZoomToFit,
+    /// Passt den Viewport auf die aktuelle Selektion ein.
+    ZoomToSelectionBounds,
+    /// Beendet die Anwendung.
+    Exit,
     /// Schaltet die Command-Palette um.
     ToggleCommandPalette,
     /// Wechselt das aktive Editor-Tool.

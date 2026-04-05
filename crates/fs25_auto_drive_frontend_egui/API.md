@@ -8,14 +8,14 @@ Sie konsumiert die host-neutrale Engine, re-exportiert deren `app`-, `core`-, `s
 
 Die Integrationsschale liest Panels ueber `HostUiSnapshot`, drainet Datei-/Pfaddialoge kanonisch ueber `AppController::take_dialog_requests(...)` und verarbeitet Viewport-Overlays ueber `ViewportOverlaySnapshot`. Egui-spezifisches Rendering und Input-Mapping bleiben damit im Host, waehrend `PanelAction`, `DialogResult` und Overlay-Klicks zentral wieder in `AppIntent` uebersetzt werden.
 
-Die gemeinsame Host-Bridge ist in dieser Crate noch eine Migrations-Seam, nicht der primaere Desktop-Laufzeitpfad. `editor_app` bleibt die produktive eframe-Integrationsschale; das oeffentliche `host_bridge_adapter`-Modul kapselt bewusst nur das stabilisierte Intent-Subset, das bereits auf die explizite `HostSessionAction`-Surface abbildbar ist.
+Die gemeinsame Host-Bridge ist in dieser Crate eine gezielte Dispatch-Seam fuer stabile, niederfrequente Host-Aktionen. `editor_app` bleibt die produktive eframe-Integrationsschale: lokale Spezialfaelle bleiben lokal, bridge-faehige Intents laufen ueber `host_bridge_adapter`, hochfrequente Viewport-/Tool-Intents bleiben im Legacy-Fallback ueber `AppController`.
 
 ## Oeffentliche Module
 
 | Modul | Verantwortung |
 |---|---|
 | `editor_app` | eframe-Integrationsschale; sammelt Panels ueber `HostUiSnapshot`, drainet Dialoge ueber die Controller-Seam und rendert Overlays aus `ViewportOverlaySnapshot` |
-| `host_bridge_adapter` | Duenner egui-Adapter fuer die gemeinsame Host-Bridge (`AppIntent` → `HostSessionAction`); deckt bewusst nur das bereits stabilisierte Intent-Subset ab |
+| `host_bridge_adapter` | Duenner egui-Adapter fuer die gemeinsame Host-Bridge (`AppIntent` → `HostSessionAction`) mit Fokus auf stabile, niederfrequente Host-Aktionen |
 | `render` | egui-Host-Adapter, revisionsbasierte Background-Upload-Bruecke und egui-Render-Callback |
 | `ui` | Menues, Panels, Dialoge, Viewport-Input und egui-spezifisches Painting der host-neutralen Overlay-Snapshots |
 | `app`, `core`, `shared`, `xml` | Re-Exports aus `fs25_auto_drive_engine` fuer stabile Importpfade |
@@ -40,7 +40,7 @@ Die gemeinsame Host-Bridge ist in dieser Crate noch eine Migrations-Seam, nicht 
 |---|---|
 | `pub fn run_native() -> Result<(), eframe::Error>` | Startet Logger, eframe-Fenster und `EditorApp` |
 | `pub fn host_bridge_adapter::map_intent_to_host_action(intent: &AppIntent) -> Option<HostSessionAction>` | Mappt einen explizit unterstuetzten egui-Intent auf die gemeinsame Host-Bridge-Action-Surface |
-| `pub fn host_bridge_adapter::apply_mapped_intent(session: &mut HostBridgeSession, intent: &AppIntent) -> Result<bool>` | Wendet einen gemappten Intent direkt auf eine `HostBridgeSession` an und signalisiert, ob ein Mapping existierte |
+| `pub fn host_bridge_adapter::apply_mapped_intent(controller: &mut AppController, state: &mut AppState, intent: &AppIntent) -> Result<bool>` | Wendet einen gemappten Intent ueber die gemeinsame Host-Dispatch-Seam direkt auf den produktiven egui-Controller/State an |
 | `pub use fs25_auto_drive_engine::{app, core, shared, xml};` | Re-exportiert die host-neutrale Engine-Surface |
 
 ## Beispiel
@@ -74,5 +74,5 @@ flowchart LR
 ## Kompatibilitaet
 
 - Das Root-Package re-exportiert `render` und `ui` weiterhin.
-- `editor_app` bleibt der produktive Desktop-Flow; `host_bridge_adapter` ist die schmale Unified-Bridge-Migrationsseam, nicht der alleinige Host-Einstieg.
+- `editor_app` bleibt der produktive Desktop-Flow; `host_bridge_adapter` deckt bewusst nur stabile Host-Aktionen ab und ersetzt keine hochfrequenten Viewport-/Tool-Interaktionen.
 - Die kanonischen Moduldetails stehen in `src/editor_app/API.md`, `src/render/API.md` und `src/ui/API.md`.

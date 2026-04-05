@@ -11,7 +11,7 @@ Dieser Plan trennt fachliche Verantwortlichkeiten in Workspace-Crates mit klaren
 - Engine (`crates/fs25_auto_drive_engine/src/{app,core,shared,xml}`): host-neutrale Fachlogik
 - Host-Bridge-Core (`crates/fs25_auto_drive_host_bridge/src/*`): toolkit-freie gemeinsame Session-/Action-/Snapshot-Seam ueber der Engine
 - Render-Core (`crates/fs25_auto_drive_render_wgpu/src/*`): host-neutraler wgpu-Renderer-Kern
-- Egui-Frontend (`crates/fs25_auto_drive_frontend_egui/src/{ui,editor_app,runtime,render,host_bridge_adapter}`): Desktop-Host, egui-UI, Render-Adapter und duenne Unified-Bridge-Mapping-Helfer
+- Egui-Frontend (`crates/fs25_auto_drive_frontend_egui/src/{ui,editor_app,runtime,render,host_bridge_adapter}`): Desktop-Host, egui-UI, Render-Adapter und Bridge-Dispatch-Seam fuer stabile Host-Aktionen
 - Flutter-Bridge (`crates/fs25_auto_drive_frontend_flutter_bridge/src/{session,dto}`): duenne Adapter-/Kompat-Schicht mit Alias-Surface ueber der Host-Bridge
 - Overview-Crate (`crates/fs25_map_overview/src/*`): Karten-/Farmland-Generierung
 
@@ -111,7 +111,7 @@ graph BT
 **Verantwortung**
 
 - Startet `EditorApp` aus `runtime.rs` heraus und bindet eframe/wgpu ueber den egui-Host-Adapter an den render_wgpu-Kern an
-- Sammelt pro Frame Panel-, Dialog-, Viewport- und Overlay-Events als `Vec<AppIntent>`, verarbeitet schalenlokale Events by-value und reicht nur die verbleibenden Intents an `AppController` weiter
+- Sammelt pro Frame Panel-, Dialog-, Viewport- und Overlay-Events als `Vec<AppIntent>`, verarbeitet schalenlokale Events by-value, dispatcht stabile Host-Aktionen ueber die gemeinsame Bridge-Seam und reicht nur verbleibende Intents an `AppController` weiter
 - Registriert den Render-Callback und verwaltet nur fensterlokalen Integrationszustand (`render::Renderer`, `ui::InputState`, Cursor-/Icon-Caches)
 
 **Darf**
@@ -414,6 +414,18 @@ pub struct ViewportOverlaySnapshot {
 }
 
 pub enum HostSessionAction {
+  OpenFile,
+  Save,
+  SaveAs,
+  RequestHeightmapSelection,
+  RequestBackgroundMapSelection,
+  GenerateOverview,
+  CurseplayImport,
+  CurseplayExport,
+  ResetCamera,
+  ZoomToFit,
+  ZoomToSelectionBounds,
+  Exit,
   ToggleCommandPalette,
   SetEditorTool { tool: HostActiveTool },
   OpenOptionsDialog,
@@ -539,7 +551,7 @@ crates/
       lib.rs          # Desktop-Frontend-Wurzel; re-exportiert Engine-Module fuer Kompatibilitaet
       runtime.rs      # eframe-Bootstrap und run_native()
       editor_app/     # eframe-Integrationsschale, Event-Sammlung, Overlays, Render-Callback
-      host_bridge_adapter.rs # duenne AppIntent -> HostSessionAction-Mapping-Helfer fuer die Migration
+      host_bridge_adapter.rs # AppIntent -> HostSessionAction fuer stabile Host-Aktionen (lokal -> bridge -> fallback)
       render/         # Host-Adapter + egui-Callback ueber fs25_auto_drive_render_wgpu
       ui/             # egui-Panels, Dialoge, Input und Overlays
   fs25_auto_drive_frontend_flutter_bridge/
