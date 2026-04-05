@@ -185,6 +185,12 @@
   - [x] `render_edit_panel()` erhält neuen Parameter `group_record: Option<&GroupRecord>`
 
 ## Phase 5: Advanced Features
+- [x] Edition- und Dependency-Upgrade (2026-04-05, Branch `refactor/edition-deps-upgrade`)
+  - [x] Alle Workspace-Crates auf Rust 2024 umgestellt
+  - [x] `fs25_auto_drive_render_wgpu` auf `wgpu 29.0.*` migriert
+  - [x] `fs25_auto_drive_frontend_egui` auf `eframe/egui/egui-wgpu 0.34.1` migriert
+  - [x] Low-Risk-Abhaengigkeiten angehoben (`toml 1.1.2`, `env_logger 0.11.10`, `indexmap 2.13.1`)
+  - [x] Edition-2024-Drop-Scopes in Engine-History/Parser und Frontend-Render-Callback stabilisiert
 - [x] Dual-Frontend-Crate-Split
   - [x] Root-Package als Fassade + nativer Launcher stabil gehalten
   - [x] `fs25_auto_drive_engine` fuer `app/core/shared/xml` angelegt
