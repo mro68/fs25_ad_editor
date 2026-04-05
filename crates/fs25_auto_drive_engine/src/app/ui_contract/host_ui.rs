@@ -117,13 +117,14 @@ pub fn dialog_result_to_intent(result: DialogResult) -> Option<AppIntent> {
     }
 }
 
-/// Sichtbarer Host-UI-Snapshot fuer Tool-Fenster und Dialog-Requests.
+/// Sichtbarer Host-UI-Snapshot fuer Tool-Fenster und andere Panels.
+///
+/// Host-native Datei- und Pfaddialoge gehoeren bewusst nicht in diesen
+/// Snapshot, sondern laufen separat ueber die kanonische Dialog-Drain-Seam.
 #[derive(Debug, Clone)]
 pub struct HostUiSnapshot {
     /// Alle semantischen Fenster/Panels dieses Frames.
     pub panels: Vec<PanelState>,
-    /// Offene Host-Dialog-Anforderungen.
-    pub dialog_requests: Vec<DialogRequest>,
 }
 
 impl HostUiSnapshot {

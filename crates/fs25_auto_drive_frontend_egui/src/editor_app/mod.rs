@@ -5,6 +5,7 @@ mod helpers;
 mod overlays;
 
 use crate::app::{use_cases, AppController, AppIntent, AppState};
+use crate::host_bridge_adapter;
 use crate::{render, ui};
 use eframe::egui;
 use eframe::egui_wgpu;
@@ -83,6 +84,24 @@ impl EditorApp {
                     self.toggle_floating_menu(ctx, kind);
                 }
                 intent => {
+                    let handled_by_bridge = match host_bridge_adapter::apply_mapped_intent(
+                        &mut self.controller,
+                        &mut self.state,
+                        &intent,
+                    ) {
+                        Ok(handled) => handled,
+                        Err(e) => {
+                            self.state.ui.status_message =
+                                Some(format!("Aktion fehlgeschlagen: {}", e));
+                            log::error!("Bridge dispatch failed: {:#}", e);
+                            continue;
+                        }
+                    };
+
+                    if handled_by_bridge {
+                        continue;
+                    }
+
                     if let Err(e) = self.controller.handle_intent(&mut self.state, intent) {
                         self.state.ui.status_message =
                             Some(format!("Aktion fehlgeschlagen: {}", e));

@@ -7,6 +7,4 @@ edition = "2021"
 path = "src/lib.rs"
 
 [dependencies]
-anyhow = "1.0.102"
-fs25_auto_drive_engine = { path = "../fs25_auto_drive_engine" }
-serde = { version = "1", features = ["derive"] }
+fs25_auto_drive_host_bridge = { path = "../fs25_auto_drive_host_bridge" }

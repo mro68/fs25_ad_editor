@@ -2,41 +2,59 @@
 
 ## Ueberblick
 
-`fs25_auto_drive_frontend_flutter_bridge` definiert die kleine Rust-seitige Andockstelle fuer ein spaeteres Flutter-Frontend. Die Crate haengt nur von `fs25_auto_drive_engine` ab und erzwingt bewusst noch kein FFI-, Method-Channel- oder Flutter-SDK.
+`fs25_auto_drive_frontend_flutter_bridge` ist die Flutter-nahe Kompatibilitaets-Crate ueber `fs25_auto_drive_host_bridge`. Sie haengt nur noch von der gemeinsamen Host-Bridge ab und exportiert die bisherigen `Engine*`-Namen als Alias-Surface weiter, damit bestehende Rust- oder FFI-Call-Sites waehrend der Unified-Bridge-Migration stabil bleiben.
 
-Sie bleibt absichtlich klein: Ziel ist eine stabile Session- und DTO-Seam, an die ein spaeteres Host- oder Transport-Layer andocken kann, ohne die Engine an ein bestimmtes Frontend-Toolkit zu koppeln.
+Eigene Session-, Controller- oder DTO-Logik enthaelt die Crate bewusst nicht mehr. Die kanonische Semantik lebt in `fs25_auto_drive_host_bridge`; diese Crate stabilisiert nur Namen und Paketgrenze fuer einen spaeteren Flutter-Transport-Layer.
+
+Da `FlutterBridgeSession` ein direkter Alias auf `HostBridgeSession` bleibt, stehen auch die host-neutralen Read-Seams fuer Panels und Viewport-Overlays unveraendert zur Verfuegung. Die Rueckgabetypen bleiben dabei bewusst die kanonischen Engine-DTOs `HostUiSnapshot` und `ViewportOverlaySnapshot` statt einer zweiten Flutter-spezifischen Alias-Familie.
+
+## Architekturentscheidung (2026-04-05)
+
+`fs25_auto_drive_frontend_flutter_bridge` ist als **uebergangsweise Alias-/Kompat-Surface eingefroren**.
+
+- Keine neue Logik in dieser Crate aufbauen.
+- Neue Session-/Dispatch-/DTO-Erweiterungen ausschliesslich in `fs25_auto_drive_host_bridge` umsetzen.
+- Diese Crate darf nur stabile Alias-Namen und Kompat-Re-Exports enthalten.
+
+Geplanter spaeterer Entfernungszeitpunkt (nicht Teil dieses Follow-ups):
+
+1. Es existieren keine internen Rust-Consumer mehr, die die `Engine*`-/`Flutter*`-Aliasnamen benoetigen.
+2. Externe Flutter-/FFI-Consumer sind migriert oder explizit als Breaking Change kommuniziert.
+3. `ARCHITECTURE_PLAN`, `DATA_MODEL`, `ROADMAP` und betroffene `API.md`-Dateien sind fuer die Entfernung synchronisiert.
 
 ## Oeffentliche Module
 
 | Modul | Verantwortung |
 |---|---|
-| `session` | `FlutterBridgeSession` als Rust-seitige Session-Fassade ueber `AppController` und `AppState` |
-| `dto` | Serialisierbare Snapshots fuer Auswahl, Viewport und Session-Zusammenfassung |
+| `session` | Alias-Surface fuer `FlutterBridgeSession` und `EngineRenderFrameSnapshot` ueber der kanonischen Host-Bridge |
+| `dto` | Alias-Surface fuer die bestehenden `Engine*`-DTO-Namen ueber den `Host*`-Vertraegen |
 
 ## Wichtige oeffentliche Typen
 
-| Typ | Zweck |
-|---|---|
-| `FlutterBridgeSession` | Host-nahe Session-Fassade mit expliziten Actions, Session-Snapshot und Render-Zugriff |
-| `EngineRenderFrameSnapshot` | Gekoppelter Render-Snapshot (`RenderScene` + `RenderAssetsSnapshot`) |
-| `EngineActiveTool` | Stabiler Tool-Identifier fuer `EngineSessionSnapshot.active_tool` |
-| `EngineDialogRequestKind` | Stabile semantische Art einer Dialog-Anforderung |
-| `EngineDialogRequest` | Serialisierbare Host-Dialog-Anforderung inklusive Save-Dateinamenvorschlag |
-| `EngineDialogResult` | Serialisierbare Host-Rueckmeldung zu einer Dialog-Anforderung |
-| `EngineSessionAction` | Expliziter Action-Vertrag fuer Host-seitige Mutationen |
-| `EngineSessionSnapshot` | Serialisierbare Zustandszusammenfassung inkl. Undo/Redo-Verfuegbarkeit und Anzahl ausstehender Dialoge |
-| `EngineSelectionSnapshot` | Serialisierbare Auswahl als Liste selektierter Node-IDs |
-| `EngineViewportSnapshot` | Serialisierte Kameraposition und Zoomstufe |
+| Typ | Alias auf | Zweck |
+|---|---|---|
+| `FlutterBridgeSession` | `HostBridgeSession` | Bestehender Flutter-Name fuer die kanonische Session-Fassade |
+| `EngineRenderFrameSnapshot` | `HostRenderFrameSnapshot` | Gekoppelter Render-Snapshot (`RenderScene` + `RenderAssetsSnapshot`) |
+| `EngineSessionAction` | `HostSessionAction` | Expliziter Action-Vertrag fuer Host-seitige Mutationen |
+| `EngineSessionSnapshot` | `HostSessionSnapshot` | Serialisierbare Zustandszusammenfassung fuer Polling-Hosts |
+| `EngineSelectionSnapshot` | `HostSelectionSnapshot` | Serialisierbare Auswahl als Liste selektierter Node-IDs |
+| `EngineViewportSnapshot` | `HostViewportSnapshot` | Serialisierte Kameraposition und Zoomstufe |
+| `EngineDialogRequestKind` / `EngineDialogRequest` / `EngineDialogResult` | `HostDialogRequestKind` / `HostDialogRequest` / `HostDialogResult` | Semantische Host-Dialoganforderungen und Rueckmeldungen |
+| `EngineActiveTool` | `HostActiveTool` | Stabiler Tool-Identifier fuer Snapshot- und Action-Vertrag |
+
+Die Session-Methoden `build_host_ui_snapshot()` und `build_viewport_overlay_snapshot()` geben weiterhin die kanonischen Engine-Typen `HostUiSnapshot` bzw. `ViewportOverlaySnapshot` zurueck; die Flutter-Crate fuehrt dafuer bewusst keine zweiten Alias-Typen ein.
 
 ## Oeffentliche Methoden
 
+Die Session-API ist identisch zur kanonischen Host-Bridge; sichtbar bleiben jedoch die bisherigen Flutter-Namen.
+
 | Signatur | Zweck |
 |---|---|
-| `pub fn new() -> Self` | Erstellt eine leere Bridge-Session mit neuem `AppController` und `AppState` |
+| `pub fn new() -> Self` | Erstellt eine leere Bridge-Session |
 | `pub fn apply_action(&mut self, action: EngineSessionAction) -> Result<()>` | Wendet eine explizite Bridge-Action auf die Session an |
 | `pub fn toggle_command_palette(&mut self) -> Result<()>` | Komfort-Action zum Umschalten der Command-Palette |
 | `pub fn set_editor_tool(&mut self, tool: EngineActiveTool) -> Result<()>` | Komfort-Action zum Setzen des aktiven Editor-Tools |
-| `pub fn set_options_dialog_visible(&mut self, visible: bool) -> Result<()>` | Oeffnet/schliesst den Optionen-Dialog explizit |
+| `pub fn set_options_dialog_visible(&mut self, visible: bool) -> Result<()>` | Oeffnet oder schliesst den Optionen-Dialog explizit |
 | `pub fn undo(&mut self) -> Result<()>` | Fuehrt einen Undo-Schritt ueber die explizite Action-Surface aus |
 | `pub fn redo(&mut self) -> Result<()>` | Fuehrt einen Redo-Schritt ueber die explizite Action-Surface aus |
 | `pub fn take_dialog_requests(&mut self) -> Vec<EngineDialogRequest>` | Entnimmt ausstehende Host-Dialog-Anforderungen ohne direkten State-Zugriff |
@@ -46,13 +64,13 @@ Sie bleibt absichtlich klein: Ziel ist eine stabile Session- und DTO-Seam, an di
 | `pub fn build_render_scene(&self, viewport_size: [f32; 2]) -> RenderScene` | Liefert den per-frame Render-Vertrag fuer den angegebenen Viewport |
 | `pub fn build_render_assets(&self) -> RenderAssetsSnapshot` | Liefert den expliziten Asset-Snapshot inklusive Revisionen |
 | `pub fn build_render_frame(&self, viewport_size: [f32; 2]) -> EngineRenderFrameSnapshot` | Liefert Szene und Assets als gekoppelten read-only Render-Snapshot |
+| `pub fn build_host_ui_snapshot(&self) -> HostUiSnapshot` | Liefert host-neutrale Paneldaten direkt aus der kanonischen Engine-Surface |
+| `pub fn build_viewport_overlay_snapshot(&mut self, cursor_world: Option<Vec2>) -> ViewportOverlaySnapshot` | Liefert host-neutrale Overlay-Daten; `&mut self` bleibt noetig, weil der App-Layer dabei Boundary-Caches aufwaermen kann |
 
 ## Beispiel
 
 ```rust
-use fs25_auto_drive_frontend_flutter_bridge::{
-	EngineSessionAction, FlutterBridgeSession,
-};
+use fs25_auto_drive_frontend_flutter_bridge::{EngineSessionAction, FlutterBridgeSession};
 
 let mut session = FlutterBridgeSession::new();
 session.apply_action(EngineSessionAction::ToggleCommandPalette)?;
@@ -71,25 +89,28 @@ assert_eq!(frame.assets.background_asset_revision(), 0);
 
 ```mermaid
 flowchart LR
-	HOST[Flutter Host / FFI-Layer] --> SESSION[FlutterBridgeSession]
-	SESSION --> CTRL[AppController]
-	CTRL --> STATE[AppState]
-	STATE --> SNAP[EngineSessionSnapshot]
-	SESSION --> FRAME[EngineRenderFrameSnapshot]
-	CTRL --> RENDER_SCENE[RenderScene]
-	CTRL --> RENDER_ASSETS[RenderAssetsSnapshot]
-	FRAME --> HOST
-	FRAME --> RENDER_SCENE
-	FRAME --> RENDER_ASSETS
-	SNAP --> HOST
-	RENDER_SCENE -. alternativ separat .-> HOST
-	RENDER_ASSETS -. alternativ separat .-> HOST
+    HOST[Flutter Host / FFI-Layer] --> ALIAS_SESSION[FlutterBridgeSession]
+    HOST --> ALIAS_ACTION[EngineSessionAction]
+    ALIAS_SESSION -. Alias auf .-> CANON_SESSION[HostBridgeSession]
+    ALIAS_ACTION -. Alias auf .-> CANON_ACTION[HostSessionAction]
+    CANON_ACTION --> CANON_SESSION
+    CANON_SESSION --> CTRL[AppController]
+    CTRL --> STATE[AppState]
+    STATE --> SNAP[EngineSessionSnapshot / Alias]
+    CANON_SESSION --> FRAME[EngineRenderFrameSnapshot / Alias]
+    CANON_SESSION --> HOSTUI[HostUiSnapshot]
+    CANON_SESSION --> OVERLAY[ViewportOverlaySnapshot]
+    FRAME --> HOST
+    SNAP --> HOST
+    HOSTUI --> HOST
+    OVERLAY --> HOST
 ```
 
 ## Scope-Cut
 
-- Diese Crate stellt Rust-seitige Session- und Render-Seams bereit.
-- Undo/Redo und Dialog-Rueckmeldungen laufen ueber explizite Bridge-Aktionen statt rohem Intent-Dispatch.
+- Diese Crate enthaelt keine eigene Session-, Controller- oder DTO-Logik mehr.
+- Die bisherigen `Engine*`-Namen bleiben als reine Kompatibilitaets-Aliase ueber den `Host*`-Vertraegen erhalten.
 - Host-native Datei-/Pfad-Dialoge laufen ueber `take_dialog_requests()` und `submit_dialog_result(...)`.
-- Die Bridge exponiert absichtlich keine generische `AppIntent`-Dispatch- oder `AppState`-Escape-Hatch-Surface.
+- Host-neutrale Panel- und Overlay-Read-Seams bleiben direkt auf `HostBridgeSession` verankert; die Flutter-Crate fuehrt dafuer bewusst keine separaten `EngineUi*`- oder `EngineOverlay*`-DTOs ein.
+- Generischer `AppIntent`-Dispatch, direkter `AppState`-Zugriff und Engine-spezifische Escape-Hatches bleiben ausserhalb der oeffentlichen Flutter-Bridge-API.
 - Transport, Method-Channel, `flutter_rust_bridge` oder andere SDK-Details folgen spaeter.

@@ -188,6 +188,7 @@
 - [x] Dual-Frontend-Crate-Split
   - [x] Root-Package als Fassade + nativer Launcher stabil gehalten
   - [x] `fs25_auto_drive_engine` fuer `app/core/shared/xml` angelegt
+  - [x] `fs25_auto_drive_host_bridge` als kanonisches toolkit-freies Bridge-Core-Scaffold angelegt
   - [x] `fs25_auto_drive_frontend_egui` fuer `ui/editor_app/runtime/render` angelegt
   - [x] `fs25_auto_drive_frontend_flutter_bridge` als Session-/DTO-Seam angelegt
   - [x] Build-, Guardrail- und API-Doku-Skripte auf Workspace-Crates umgestellt
@@ -198,6 +199,25 @@
   - [x] `fs25_auto_drive_frontend_egui::render` auf Host-Adapter ueber dem Render-Core reduziert
   - [x] Flutter-Bridge um read-only Render-Zugaenge (`build_render_scene`, `build_render_assets`, `build_render_frame`) erweitert
   - [x] `EngineRenderFrameSnapshot` als gekoppelter Read-only Render-Output fuer Bridge-Hosts eingefuehrt
+- [x] Gemeinsame Host-Bridge-Contracts ueber der Engine eingefuehrt
+  - [x] `HostBridgeSession` als kanonische toolkit-freie Session-Fassade in `fs25_auto_drive_host_bridge`
+  - [x] Explizite Action-/Snapshot-DTOs (`HostSessionAction`, `HostSessionSnapshot`, `HostDialog*`)
+  - [x] Read-Seams fuer `HostUiSnapshot`, `ViewportOverlaySnapshot` und Render-Frame in der Core-Bridge gebuendelt
+  - [x] Host-native Datei-/Pfad-Dialoge auf die kanonische Drain-Seam `AppController::take_dialog_requests(...)` / `HostBridgeSession::take_dialog_requests()` konsolidiert
+- [x] Egui-Adapter-Surface fuer die Unified Host Bridge verbreitert und produktiv verdrahtet (2026-04-05)
+  - [x] `host_bridge_adapter` mappt stabile, niederfrequente Host-Aktionen (Datei-/Dialog-Anforderungen, Kamera-Shortcuts, Historie, Toolwechsel, Exit) auf `HostSessionAction`
+  - [x] `editor_app::process_events` nutzt die gemeinsame Rust-Host-Dispatch-Seam (`local -> bridge -> fallback`)
+  - [x] Hochfrequente Viewport-/Tool-/Drag-Interaktionen bleiben bewusst ungemappt und laufen weiter ueber den direkten Controller-Fallback
+  - [x] Adapter-Testabdeckung deutlich verbreitert (positive und negative Mapping-Faelle plus Dispatch-Tests)
+- [x] Flutter-Adapter-Surface fuer die Unified Host Bridge umgesetzt
+  - [x] `fs25_auto_drive_frontend_flutter_bridge` auf `fs25_auto_drive_host_bridge` umgestellt
+  - [x] Crate-Abhaengigkeit auf `fs25_auto_drive_host_bridge` reduziert; keine direkte Engine-Abhaengigkeit mehr
+  - [x] Bestehende `Engine*`-Typnamen als Kompat-Aliase ueber `Host*`-Vertraege erhalten
+  - [x] Eigene Session-/Controller-Logik aus der Flutter-Crate entfernt (duenne Alias-Surface)
+- [x] Flutter-Bridge als transitional alias surface eingefroren (2026-04-05)
+  - [x] Keine neue Logik mehr in `fs25_auto_drive_frontend_flutter_bridge`; Erweiterungen nur in `fs25_auto_drive_host_bridge`
+  - [x] Entscheidung bewusst ohne sofortige Crate-Loeschung (kein ungeplanter API-Break)
+  - [x] Exit-Kriterien fuer spaetere Entfernung dokumentiert (Konsumenten-Migration + Doku-Sync)
 - [x] DDS-Import fuer Map-Hintergruende
   - [x] Texture-Loader implementieren (PNG, JPG, DDS)
   - [x] Background-Quad-Renderer

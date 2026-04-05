@@ -225,6 +225,7 @@ pub struct AppState {
 - Clipboard-, Paste-Preview- und Tool-Edit-Zustand bleiben im App-Layer und werden von dort in Read-Modelle fuer Hosts ueberfuehrt
 - Dialog- und Tool-Fenster laufen semantisch ueber `UiState` plus `HostUiSnapshot`
 - Host-native Datei-/Pfad-Dialoge werden als `DialogRequest`-Queue in `UiState` gehalten
+- Die Queue wird kanonisch ueber `AppController::take_dialog_requests(...)` bzw. in der Bridge ueber `take_dialog_requests()` gedraint
 - Viewport-Overlays laufen host-neutral ueber `ViewportOverlaySnapshot` (Route-Preview, Clipboard-, Distanzen-, Segment- und Boundary-Overlays)
 
 ### SelectionState
@@ -321,7 +322,6 @@ pub struct EditorToolState {
 ```rust
 pub struct HostUiSnapshot {
     pub panels: Vec<PanelState>,
-    pub dialog_requests: Vec<DialogRequest>,
 }
 
 pub enum PanelState {
@@ -340,58 +340,111 @@ pub struct ViewportOverlaySnapshot {
 }
 ```
 
-- `HostUiSnapshot` ist das per-Frame-Read-Modell fuer sichtbare Panels und ausstehende Host-Dialoge
+- `HostUiSnapshot` ist das per-Frame-Read-Modell fuer sichtbare Panels
 - `ViewportOverlaySnapshot` kapselt alle Viewport-Overlays als host-neutrale DTOs; egui rendert nur noch aus diesen Snapshots statt direkt aus `RoadMap`/`GroupRegistry`
 - `ClipboardOverlaySnapshot`, `GroupLockOverlaySnapshot` und `GroupBoundaryOverlaySnapshot` trennen Datengewinnung im App-Layer vom Painting im Host
 
 ---
 
-## Flutter-Bridge DTOs
+## Host-Bridge-Core DTOs
 
 ```rust
-pub struct EngineSelectionSnapshot {
+pub struct HostSelectionSnapshot {
     pub selected_node_ids: Vec<u64>,
 }
 
-pub struct EngineViewportSnapshot {
+pub struct HostViewportSnapshot {
     pub camera_position: [f32; 2],
     pub zoom: f32,
 }
 
-pub enum EngineSessionAction {
+pub enum HostDialogRequestKind {
+    OpenFile,
+    SaveFile,
+    Heightmap,
+    BackgroundMap,
+    OverviewZip,
+    CurseplayImport,
+    CurseplayExport,
+}
+
+pub struct HostDialogRequest {
+    pub kind: HostDialogRequestKind,
+    pub suggested_file_name: Option<String>,
+}
+
+pub enum HostDialogResult {
+    Cancelled { kind: HostDialogRequestKind },
+    PathSelected { kind: HostDialogRequestKind, path: String },
+}
+
+pub enum HostSessionAction {
+    OpenFile,
+    Save,
+    SaveAs,
+    RequestHeightmapSelection,
+    RequestBackgroundMapSelection,
+    GenerateOverview,
+    CurseplayImport,
+    CurseplayExport,
+    ResetCamera,
+    ZoomToFit,
+    ZoomToSelectionBounds,
+    Exit,
     ToggleCommandPalette,
-    SetEditorTool { tool: EngineActiveTool },
+    SetEditorTool { tool: HostActiveTool },
     OpenOptionsDialog,
     CloseOptionsDialog,
     Undo,
     Redo,
-    SubmitDialogResult { result: EngineDialogResult },
+    SubmitDialogResult { result: HostDialogResult },
 }
 
-pub struct EngineSessionSnapshot {
+pub struct HostSessionSnapshot {
     pub has_map: bool,
     pub node_count: usize,
     pub connection_count: usize,
-    pub active_tool: EngineActiveTool,
+    pub active_tool: HostActiveTool,
     pub status_message: Option<String>,
     pub show_command_palette: bool,
     pub show_options_dialog: bool,
     pub can_undo: bool,
     pub can_redo: bool,
     pub pending_dialog_request_count: usize,
-    pub selection: EngineSelectionSnapshot,
-    pub viewport: EngineViewportSnapshot,
+    pub selection: HostSelectionSnapshot,
+    pub viewport: HostViewportSnapshot,
 }
 
-pub struct EngineRenderFrameSnapshot {
+pub struct HostRenderFrameSnapshot {
     pub scene: RenderScene,
     pub assets: RenderAssetsSnapshot,
 }
 ```
 
-- `EngineSessionAction` bildet eine explizite, stabile Mutationsoberflaeche fuer Host-Frontends
-- `EngineSessionSnapshot` fasst host-relevanten Session-Zustand zusammen, inklusive Undo/Redo-Verfuegbarkeit und Anzahl ausstehender Dialog-Anfragen
+- `HostSessionAction` bildet die kanonische explizite Mutationsoberflaeche der gemeinsamen Bridge-Core-Crate fuer stabile, niederfrequente Host-Aktionen
+- `HostSessionSnapshot` fasst host-relevanten Session-Zustand zusammen, inklusive Undo/Redo-Verfuegbarkeit und Anzahl ausstehender Dialog-Anfragen
+- `HostDialogRequestKind`, `HostDialogRequest` und `HostDialogResult` bilden den expliziten host-neutralen Dialog-Lifecycle fuer Datei-, Heightmap-, Overview- und Curseplay-Operationen
 - `snapshot()` arbeitet ueber einen Dirty-Cache und baut den Snapshot nur nach erfolgreichen Session-Mutationen neu auf
-- Die Bridge mappt `EngineSessionAction` intern auf `AppIntent`, ohne generischen Intent-Dispatch oder direkten `AppState`-Escape-Hatch
+- Die Bridge mappt `HostSessionAction` intern auf `AppIntent`, ohne generischen Intent-Dispatch oder direkten `AppState`-Escape-Hatch
 - Host-native Datei-/Pfad-Dialoge laufen ueber `take_dialog_requests()` und `submit_dialog_result(...)` als explizite Bridge-Seam
-- `EngineRenderFrameSnapshot` koppelt den per-Frame-Render-Vertrag (`RenderScene`) mit den langlebigen Render-Assets fuer read-only Hosts
+- `build_viewport_overlay_snapshot()` benoetigt mutablen Zugriff, weil beim Snapshot-Aufbau Boundary-Caches im `AppState` vorgewaermt werden koennen
+- `HostRenderFrameSnapshot` koppelt den per-Frame-Render-Vertrag (`RenderScene`) mit den langlebigen Render-Assets fuer read-only Hosts
+- Die Flutter-Bridge ist als eingefrorene Alias-/Kompat-Surface ueber `fs25_auto_drive_host_bridge` umgesetzt und fuehrt die bisherigen `Engine*`-Namen ohne eigene Session-Logik weiter; `FlutterBridgeSession` bleibt dabei ein direkter Alias auf die kanonische Session-Fassade
+
+### Flutter-Kompat-Aliase
+
+```rust
+pub use fs25_auto_drive_host_bridge::{
+    HostBridgeSession as FlutterBridgeSession,
+    HostRenderFrameSnapshot as EngineRenderFrameSnapshot,
+    HostSessionAction as EngineSessionAction,
+    HostSessionSnapshot as EngineSessionSnapshot,
+};
+```
+
+- Die Flutter-Crate stabilisiert bestehende Namen, ohne eine zweite Session- oder DTO-Implementierung zu pflegen.
+- `FlutterBridgeSession` erbt als Alias die komplette oeffentliche `HostBridgeSession`-Methodenoberflaeche, inklusive `build_host_ui_snapshot()` und `build_viewport_overlay_snapshot()`.
+- Die Rueckgabetypen dieser Read-Seams bleiben bewusst die kanonischen Engine-DTOs `HostUiSnapshot` und `ViewportOverlaySnapshot`; die Flutter-Crate fuehrt dafuer keine zweite Alias-Familie ein.
+- `Engine*`-Namen bleiben fuer Host-/FFI-Call-Sites erhalten, waehrend die kanonische Semantik in `Host*`-Vertraegen lebt.
+- Architekturentscheidung (2026-04-05): keine neue Logik in `fs25_auto_drive_frontend_flutter_bridge`; neue Erweiterungen nur in `fs25_auto_drive_host_bridge`.
+- Geplante spaetere Entfernung erfolgt nur als eigener Breaking-Change-Track nach Konsumenten-Migration und vollstaendigem Doku-Sync.
