@@ -208,10 +208,10 @@ pub fn extract_pois(xml_data: &[u8], map_size: u32) -> Vec<Poi> {
                         }
                     }
 
-                    if let Some(pos_str) = position {
-                        if let Some(poi) = parse_poi(&pos_str, &filename, map_size) {
-                            pois.push(poi);
-                        }
+                    if let Some(pos_str) = position
+                        && let Some(poi) = parse_poi(&pos_str, &filename, map_size)
+                    {
+                        pois.push(poi);
                     }
                 }
             }

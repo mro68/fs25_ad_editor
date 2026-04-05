@@ -191,17 +191,17 @@ pub fn generate_overview(
     }
 
     // 6. POIs
-    if options.pois {
-        if let Some(placeables_path) = &map_info.placeables_path {
-            if let Some(xml_data) = files.get(placeables_path.as_str()) {
-                let pois = composite::extract_pois(xml_data, map_size);
-                if !pois.is_empty() {
-                    composite::draw_pois_with_labels(&mut image, &pois);
-                    log::info!("{} POIs gezeichnet", pois.len());
-                }
-            } else {
-                log::info!("placeables.xml nicht gefunden: {}", placeables_path);
+    if options.pois
+        && let Some(placeables_path) = &map_info.placeables_path
+    {
+        if let Some(xml_data) = files.get(placeables_path.as_str()) {
+            let pois = composite::extract_pois(xml_data, map_size);
+            if !pois.is_empty() {
+                composite::draw_pois_with_labels(&mut image, &pois);
+                log::info!("{} POIs gezeichnet", pois.len());
             }
+        } else {
+            log::info!("placeables.xml nicht gefunden: {}", placeables_path);
         }
     }
 
