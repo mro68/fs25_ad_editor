@@ -31,13 +31,13 @@ pub fn show_post_load_dialog(ctx: &egui::Context, ui_state: &mut UiState) -> Vec
                                 .color(egui::Color32::from_rgb(100, 200, 100)),
                         );
                     });
-                    if let Some(ref hm_path) = ui_state.post_load_dialog.heightmap_path {
-                        if let Some(filename) = std::path::Path::new(hm_path).file_name() {
-                            ui.label(
-                                egui::RichText::new(format!("   {}", filename.to_string_lossy()))
-                                    .weak(),
-                            );
-                        }
+                    if let Some(ref hm_path) = ui_state.post_load_dialog.heightmap_path
+                        && let Some(filename) = std::path::Path::new(hm_path).file_name()
+                    {
+                        ui.label(
+                            egui::RichText::new(format!("   {}", filename.to_string_lossy()))
+                                .weak(),
+                        );
                     }
                     ui.add_space(8.0);
                 }
@@ -92,14 +92,12 @@ pub fn show_post_load_dialog(ctx: &egui::Context, ui_state: &mut UiState) -> Vec
                         let selected_idx = ui_state.post_load_dialog.selected_zip_index;
                         if let Some(zip_path) =
                             ui_state.post_load_dialog.matching_zips.get(selected_idx)
+                            && let Some(zip_str) = zip_path.to_str()
+                            && ui.button("Uebersichtskarte generieren").clicked()
                         {
-                            if let Some(zip_str) = zip_path.to_str() {
-                                if ui.button("Uebersichtskarte generieren").clicked() {
-                                    events.push(AppIntent::PostLoadGenerateOverview {
-                                        zip_path: zip_str.to_string(),
-                                    });
-                                }
-                            }
+                            events.push(AppIntent::PostLoadGenerateOverview {
+                                zip_path: zip_str.to_string(),
+                            });
                         }
                     }
                     if ui.button("Schliessen").clicked() {

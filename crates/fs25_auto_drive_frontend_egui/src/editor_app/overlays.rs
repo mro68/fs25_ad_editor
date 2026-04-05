@@ -20,16 +20,16 @@ impl EditorApp {
         let mut overlay_events: Vec<AppIntent> = Vec::new();
         let vp = Vec2::new(viewport_size[0], viewport_size[1]);
 
-        if self.state.editor.active_tool == EditorTool::Route {
-            if let Some(hover_pos) = response.hover_pos() {
-                let local = hover_pos - rect.min;
-                self.last_cursor_world = Some(
-                    self.state
-                        .view
-                        .camera
-                        .screen_to_world(Vec2::new(local.x, local.y), vp),
-                );
-            }
+        if self.state.editor.active_tool == EditorTool::Route
+            && let Some(hover_pos) = response.hover_pos()
+        {
+            let local = hover_pos - rect.min;
+            self.last_cursor_world = Some(
+                self.state
+                    .view
+                    .camera
+                    .screen_to_world(Vec2::new(local.x, local.y), vp),
+            );
         }
 
         let overlay_snapshot = self
