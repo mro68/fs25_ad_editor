@@ -9,15 +9,15 @@ path = "src/lib.rs"
 [dependencies]
 anyhow = "1.0.102"
 bytemuck = { version = "1.14", features = ["derive"] }
-eframe = { version = "0.33.3", default-features = true, features = [
+eframe = { version = "0.34.1", default-features = true, features = [
     "default_fonts",
     "glow",
     "persistence",
     "wgpu",
 ] }
-egui = "0.33.3"
-egui_extras = { version = "0.33.3", features = ["all_loaders"] }
-egui-wgpu = "0.33.3"
+egui = "0.34.1"
+egui_extras = { version = "0.34.1", features = ["all_loaders"] }
+egui-wgpu = "0.34.1"
 env_logger = "0.11.10"
 fs25_auto_drive_engine = { path = "../fs25_auto_drive_engine" }
 fs25_auto_drive_host_bridge = { path = "../fs25_auto_drive_host_bridge" }
