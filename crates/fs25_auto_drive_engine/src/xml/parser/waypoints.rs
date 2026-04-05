@@ -46,10 +46,10 @@ pub(super) fn build_nodes_and_connections(
         bail!("Laengen der Waypoint-Listen stimmen nicht ueberein");
     }
 
-    if let Some(ref ys) = ys {
-        if ys.len() != expected_len {
-            bail!("Laenge der y-Liste stimmt nicht ueberein");
-        }
+    if let Some(ref ys) = ys
+        && ys.len() != expected_len
+    {
+        bail!("Laenge der y-Liste stimmt nicht ueberein");
     }
 
     // Phase 1: Nodes aufbauen

@@ -44,11 +44,11 @@ fn run_post_load_detection(state: &mut AppState, xml_path: &str) {
         .map(String::from);
 
     // Heightmap lautlos setzen (non-destructive)
-    if let Some(ref hm_path) = result.heightmap_path {
-        if let Some(hm_str) = hm_path.to_str() {
-            state.ui.heightmap_path = Some(hm_str.to_string());
-            log::info!("Heightmap auto-detected: {}", hm_str);
-        }
+    if let Some(ref hm_path) = result.heightmap_path
+        && let Some(hm_str) = hm_path.to_str()
+    {
+        state.ui.heightmap_path = Some(hm_str.to_string());
+        log::info!("Heightmap auto-detected: {}", hm_str);
     }
 
     // Hintergrundbild automatisch laden (overview.jpg oder overview.png)

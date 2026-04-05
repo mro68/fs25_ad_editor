@@ -34,15 +34,15 @@ impl GroupRegistry {
         let Some(record) = self.records.get_mut(&record_id) else {
             return false;
         };
-        if let Some(eid) = entry {
-            if !record.node_ids.contains(&eid) {
-                return false;
-            }
+        if let Some(eid) = entry
+            && !record.node_ids.contains(&eid)
+        {
+            return false;
         }
-        if let Some(eid) = exit {
-            if !record.node_ids.contains(&eid) {
-                return false;
-            }
+        if let Some(eid) = exit
+            && !record.node_ids.contains(&eid)
+        {
+            return false;
         }
         record.entry_node_id = entry;
         record.exit_node_id = exit;

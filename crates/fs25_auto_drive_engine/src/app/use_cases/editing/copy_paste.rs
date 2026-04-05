@@ -41,10 +41,10 @@ pub fn copy_selected_to_clipboard(state: &mut AppState) {
     let mut connections: Vec<Connection> = Vec::new();
     for &id in selected_ids.iter() {
         for nb in road_map.outgoing_neighbors(id) {
-            if selected_set.contains(&nb) {
-                if let Some(c) = road_map.find_connection(id, nb) {
-                    connections.push(c.clone());
-                }
+            if selected_set.contains(&nb)
+                && let Some(c) = road_map.find_connection(id, nb)
+            {
+                connections.push(c.clone());
             }
         }
     }

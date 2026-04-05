@@ -151,32 +151,32 @@ fn build_group_boundary_overlays(
             continue;
         }
 
-        if let Some(entry_node_id) = record.entry_node_id {
-            if let Some(node) = road_map.node(entry_node_id) {
-                push_unique_boundary_overlay(
-                    &mut overlays,
-                    GroupBoundaryOverlaySnapshot {
-                        segment_id: record.id,
-                        node_id: entry_node_id,
-                        world_pos: node.position,
-                        direction: crate::app::BoundaryDirection::Entry,
-                    },
-                );
-            }
+        if let Some(entry_node_id) = record.entry_node_id
+            && let Some(node) = road_map.node(entry_node_id)
+        {
+            push_unique_boundary_overlay(
+                &mut overlays,
+                GroupBoundaryOverlaySnapshot {
+                    segment_id: record.id,
+                    node_id: entry_node_id,
+                    world_pos: node.position,
+                    direction: crate::app::BoundaryDirection::Entry,
+                },
+            );
         }
 
-        if let Some(exit_node_id) = record.exit_node_id {
-            if let Some(node) = road_map.node(exit_node_id) {
-                push_unique_boundary_overlay(
-                    &mut overlays,
-                    GroupBoundaryOverlaySnapshot {
-                        segment_id: record.id,
-                        node_id: exit_node_id,
-                        world_pos: node.position,
-                        direction: crate::app::BoundaryDirection::Exit,
-                    },
-                );
-            }
+        if let Some(exit_node_id) = record.exit_node_id
+            && let Some(node) = road_map.node(exit_node_id)
+        {
+            push_unique_boundary_overlay(
+                &mut overlays,
+                GroupBoundaryOverlaySnapshot {
+                    segment_id: record.id,
+                    node_id: exit_node_id,
+                    world_pos: node.position,
+                    direction: crate::app::BoundaryDirection::Exit,
+                },
+            );
         }
 
         if !show_all {
