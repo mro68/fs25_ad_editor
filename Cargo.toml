@@ -12,7 +12,7 @@ members = [
 [package]
 name = "FS25-AutoDrive-Editor"
 version = "1.7.0"
-edition = "2021"
+edition = "2024"
 authors = ["mro68"]
 description = "GPU-beschleunigter Editor fuer AutoDrive-Kurse in Farming Simulator 25"
 repository = "https://github.com/mro68/fs25_ad_editor"

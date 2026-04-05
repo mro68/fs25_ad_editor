@@ -1,7 +1,7 @@
 [package]
 name = "fs25_auto_drive_frontend_egui"
 version = "1.7.0"
-edition = "2021"
+edition = "2024"
 
 [lib]
 path = "src/lib.rs"
