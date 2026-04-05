@@ -1,14 +1,14 @@
 use anyhow::Result;
 use fs25_auto_drive_engine::app::ui_contract::{
-    DialogRequest, DialogRequestKind, HostUiSnapshot, ViewportOverlaySnapshot,
+    HostUiSnapshot, ViewportOverlaySnapshot,
 };
 use fs25_auto_drive_engine::app::{AppController, AppState, EditorTool};
 use fs25_auto_drive_engine::shared::{RenderAssetsSnapshot, RenderScene};
 use glam::Vec2;
 
 use crate::dto::{
-    HostActiveTool, HostDialogRequest, HostDialogRequestKind, HostDialogResult,
-    HostSelectionSnapshot, HostSessionAction, HostSessionSnapshot, HostViewportSnapshot,
+    HostActiveTool, HostDialogRequest, HostDialogResult, HostSelectionSnapshot,
+    HostSessionAction, HostSessionSnapshot, HostViewportSnapshot,
 };
 
 fn map_active_tool(tool: EditorTool) -> HostActiveTool {
@@ -17,25 +17,6 @@ fn map_active_tool(tool: EditorTool) -> HostActiveTool {
         EditorTool::Connect => HostActiveTool::Connect,
         EditorTool::AddNode => HostActiveTool::AddNode,
         EditorTool::Route => HostActiveTool::Route,
-    }
-}
-
-fn map_dialog_request_kind(kind: DialogRequestKind) -> HostDialogRequestKind {
-    match kind {
-        DialogRequestKind::OpenFile => HostDialogRequestKind::OpenFile,
-        DialogRequestKind::SaveFile => HostDialogRequestKind::SaveFile,
-        DialogRequestKind::Heightmap => HostDialogRequestKind::Heightmap,
-        DialogRequestKind::BackgroundMap => HostDialogRequestKind::BackgroundMap,
-        DialogRequestKind::OverviewZip => HostDialogRequestKind::OverviewZip,
-        DialogRequestKind::CurseplayImport => HostDialogRequestKind::CurseplayImport,
-        DialogRequestKind::CurseplayExport => HostDialogRequestKind::CurseplayExport,
-    }
-}
-
-fn map_dialog_request(request: DialogRequest) -> HostDialogRequest {
-    HostDialogRequest {
-        kind: map_dialog_request_kind(request.kind()),
-        suggested_file_name: request.suggested_file_name().map(str::to_owned),
     }
 }
 
@@ -148,11 +129,12 @@ impl HostBridgeSession {
     /// Dies ist die kanonische oeffentliche Dialog-Drain-Seam der Bridge fuer
     /// Hosts ohne direkten Zugriff auf `AppController` und `AppState`.
     pub fn take_dialog_requests(&mut self) -> Vec<HostDialogRequest> {
-        let requests = self.controller.take_dialog_requests(&mut self.state);
+        let requests =
+            crate::dispatch::take_host_dialog_requests(&self.controller, &mut self.state);
         if !requests.is_empty() {
             self.snapshot_dirty = true;
         }
-        requests.into_iter().map(map_dialog_request).collect()
+        requests
     }
 
     /// Reicht ein host-seitiges Dialog-Ergebnis an die Engine weiter.

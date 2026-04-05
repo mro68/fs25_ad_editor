@@ -13,7 +13,7 @@ Die Crate bleibt absichtlich host-neutral: keine eframe/egui-Runtime, keine Flut
 ## Session-Grenze (Stand 2026-04-05)
 
 - **bridge-owned:** Explizite Action-/Snapshot-Seams (`HostSessionAction`, `HostSessionSnapshot`, `HostUiSnapshot`, `ViewportOverlaySnapshot`, Render-Read-Seams) sind host-uebergreifend produktiv.
-- **bridge-gap:** Der egui-Datei-/Pfad-Dialog-Lifecycle drainet aktuell noch direkt ueber `AppController::take_dialog_requests(...)`.
+- **bridge-gap:** Host-Adapter koennen in Uebergangsphasen noch lokale Integrationslogik parallel zur kanonischen Bridge-Dispatch-Seam pflegen.
 - **host-local:** eframe-/egui- und Render-Glue bleiben bewusst ausserhalb der Bridge.
 
 ## Oeffentliche Module
@@ -30,6 +30,7 @@ Die Crate bleibt absichtlich host-neutral: keine eframe/egui-Runtime, keine Flut
 |---|---|
 | `pub fn map_host_action_to_intent(action: HostSessionAction) -> Option<AppIntent>` | Uebersetzt eine Host-Action in einen stabilen Engine-Intent |
 | `pub fn apply_host_action(controller: &mut AppController, state: &mut AppState, action: HostSessionAction) -> Result<bool>` | Wendet die gemeinsame Dispatch-Seam direkt auf einen bestehenden Rust-Host-State an |
+| `pub fn take_host_dialog_requests(controller: &AppController, state: &mut AppState) -> Vec<HostDialogRequest>` | Entnimmt ausstehende Dialog-Anforderungen aus bestehendem Controller/State und mappt sie auf den kanonischen Host-Dialog-DTO-Vertrag |
 
 ## Wichtige oeffentliche Typen
 
@@ -110,6 +111,6 @@ flowchart LR
 
 - `snapshot()` arbeitet ueber einen Dirty-Cache und baut `HostSessionSnapshot` nur nach erfolgreichen Mutationen oder entnommenen Dialog-Requests neu auf.
 - `HostBridgeSession::apply_action(...)` delegiert intern an dieselbe `dispatch`-Seam, die auch nicht-Session-basierte Rust-Hosts nutzen koennen.
-- `take_dialog_requests()` und `submit_dialog_result(...)` bilden die einzige oeffentliche Dialog-Seam der Bridge; intern delegiert `take_dialog_requests()` auf `AppController::take_dialog_requests(...)`.
+- `take_dialog_requests()` und `submit_dialog_result(...)` bilden die kanonische Dialog-Seam der Session-API. Fuer Adapter mit eigenem `AppController`/`AppState` steht dieselbe Mapping-Logik zusaetzlich ueber `take_host_dialog_requests(...)` bereit.
 - `fs25_auto_drive_frontend_flutter_bridge` re-exportiert diese Surface als `FlutterBridgeSession` bzw. `Engine*`-Aliase; `fs25_auto_drive_frontend_egui` nutzt `host_bridge_adapter` fuer stabile, niederfrequente Host-Aktionen und laesst hochfrequente Viewport-/Tool-Interaktionen im direkten Controller-Fallback.
-- Der egui-Datei-/Pfad-Dialogpfad ist bis zur produktiven Umstellung als expliziter `bridge-gap` dokumentiert; die Ziel-Seam bleibt `take_dialog_requests()` plus `submit_dialog_result(...)` auf Bridge-DTO-Ebene.
+- Host-Adapter mit eigenem `AppController`/`AppState` koennen den Datei-/Pfad-Dialogpfad ueber `take_host_dialog_requests(...)` und `HostSessionAction::SubmitDialogResult` auf denselben Bridge-DTO-/Dispatch-Vertrag konsolidieren.
