@@ -4,14 +4,14 @@ mod by_feature;
 
 use super::render_assets;
 use super::render_scene;
+use super::viewport_overlay;
 use super::ui_contract::{
     CommandPalettePanelState, DialogRequest, HostUiSnapshot, OptionsPanelState, PanelState,
     ViewportOverlaySnapshot,
 };
-use super::viewport_overlay;
 use super::{AppCommand, AppIntent, AppState};
-use crate::shared::{RenderAssetsSnapshot, RenderScene};
 use glam::Vec2;
+use crate::shared::{RenderAssetsSnapshot, RenderScene};
 
 /// Orchestriert UI-Events und Use-Cases auf den AppState.
 #[derive(Default)]
@@ -24,6 +24,10 @@ impl AppController {
     }
 
     /// Verarbeitet einen Intent ueber Intent->Command Mapping.
+    ///
+    /// Diese Methode ist das Engine-Ende der gemeinsamen Rust-Host-Dispatch-
+    /// Seam: Host-Adapter wie `fs25_auto_drive_host_bridge` oder der egui-
+    /// `host_bridge_adapter` speisen hier nur bereits gemappte `AppIntent`s ein.
     pub fn handle_intent(&mut self, state: &mut AppState, intent: AppIntent) -> anyhow::Result<()> {
         let commands = self.map_intent_to_commands(state, intent);
         for command in commands {
@@ -58,7 +62,10 @@ impl AppController {
         render_assets::build(state)
     }
 
-    /// Baut den host-neutralen UI-Snapshot fuer Tool-Fenster.
+    /// Baut den host-neutralen UI-Snapshot fuer sichtbare Panels.
+    ///
+    /// Datei- und Pfaddialoge sind bewusst nicht Teil dieses Snapshots und
+    /// laufen separat ueber `take_dialog_requests()`.
     pub fn build_host_ui_snapshot(&self, state: &AppState) -> HostUiSnapshot {
         let mut panels = Vec::new();
 
@@ -81,7 +88,8 @@ impl AppController {
     /// Entnimmt alle aktuell ausstehenden host-nativen Dialog-Anforderungen.
     ///
     /// Diese Drain-Seam ist die kanonische Quelle fuer Datei-/Pfaddialoge
-    /// ueber alle Hosts hinweg.
+    /// ueber alle Hosts hinweg. Host-Adapter sollen diese Methode statt eines
+    /// direkten Zugriffs auf `UiState::take_dialog_requests()` verwenden.
     pub fn take_dialog_requests(&self, state: &mut AppState) -> Vec<DialogRequest> {
         state.ui.take_dialog_requests()
     }

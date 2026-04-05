@@ -4,7 +4,7 @@
 
 `fs25_auto_drive_engine` kapselt die host-neutrale Fachlogik des Editors. Die Crate enthaelt Application-, Domain-, Shared- und Persistence-Layer, kennt aber kein `egui`, `eframe` oder anderes Frontend-Toolkit.
 
-Der Application-Layer liefert neben `RenderScene` und `RenderAssetsSnapshot` inzwischen auch die expliziten Read-Modelle `HostUiSnapshot` und `ViewportOverlaySnapshot`. Panels/Dialoge sowie Viewport-Overlays koennen dadurch host-neutral aus der Engine gelesen werden, ohne `AppState` oder egui-spezifische Painter-Details nach aussen zu leaken.
+Der Application-Layer liefert neben `RenderScene` und `RenderAssetsSnapshot` inzwischen auch die expliziten Read-Modelle `HostUiSnapshot` und `ViewportOverlaySnapshot`. Sichtbare Panels und Viewport-Overlays koennen dadurch host-neutral aus der Engine gelesen werden, ohne `AppState` oder egui-spezifische Painter-Details nach aussen zu leaken. Datei- und Pfaddialoge laufen bewusst nicht ueber `HostUiSnapshot`, sondern getrennt ueber die kanonische Drain-Seam `AppController::take_dialog_requests(...)`.
 
 Das Root-Package `fs25_auto_drive_editor` re-exportiert die wichtigsten Einstiegspunkte dieser Crate weiter, damit bestehende Tests, Benches und Rust-Konsumenten stabil bleiben.
 
@@ -21,7 +21,7 @@ Das Root-Package `fs25_auto_drive_editor` re-exportiert die wichtigsten Einstieg
 
 | Typ | Zweck |
 |---|---|
-| `AppController` | Zentrale Intent-Verarbeitung sowie Aufbau von `RenderScene`, `RenderAssetsSnapshot`, `HostUiSnapshot` und `ViewportOverlaySnapshot` |
+| `AppController` | Zentrale Intent-Verarbeitung sowie Aufbau von `RenderScene`, `RenderAssetsSnapshot`, `HostUiSnapshot`, `ViewportOverlaySnapshot` und der kanonischen Dialog-Drain-Seam |
 | `AppState` | Globaler Engine-Zustand fuer Karte, Auswahl, View und Dialoge |
 | `AppIntent` | UI-/Host-seitige Absicht als Eingang des Application-Layers |
 | `AppCommand` | Interne, featureweise dispatchte Mutationsbefehle |
@@ -29,7 +29,7 @@ Das Root-Package `fs25_auto_drive_editor` re-exportiert die wichtigsten Einstieg
 | `RenderScene` | Host-neutraler per-frame Render-Snapshot fuer Frontends und Renderer |
 | `RenderAssetsSnapshot` | Host-neutraler Asset-Snapshot fuer langlebige Renderdaten (z. B. Background) |
 | `RenderAssetSnapshot` | Einzelnes langlebiges Render-Asset innerhalb des Host-Vertrags |
-| `HostUiSnapshot` | Host-neutrales Read-Modell fuer sichtbare Panels und ausstehende Dialog-Anfragen |
+| `HostUiSnapshot` | Host-neutrales Read-Modell fuer sichtbare Panels |
 | `ViewportOverlaySnapshot` | Host-neutrales Read-Modell fuer Tool-, Clipboard-, Distanzen- und Gruppen-Overlays |
 
 ## Oeffentliche Funktionen und Re-Exports

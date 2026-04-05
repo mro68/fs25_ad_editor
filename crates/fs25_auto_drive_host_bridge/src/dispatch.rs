@@ -1,7 +1,5 @@
 use anyhow::Result;
-use fs25_auto_drive_engine::app::ui_contract::{
-    dialog_result_to_intent, DialogRequestKind, DialogResult,
-};
+use fs25_auto_drive_engine::app::ui_contract::{dialog_result_to_intent, DialogRequestKind, DialogResult};
 use fs25_auto_drive_engine::app::{AppController, AppIntent, AppState, EditorTool};
 
 use crate::dto::{HostActiveTool, HostDialogRequestKind, HostDialogResult, HostSessionAction};
@@ -75,7 +73,7 @@ pub fn map_host_action_to_intent(action: HostSessionAction) -> Option<AppIntent>
     }
 }
 
-/// Wendet eine Host-Action auf den uebergebenen Controller/State an.
+/// Wendet die gemeinsame Rust-Host-Dispatch-Seam auf Controller und State an.
 ///
 /// Rueckgabe:
 /// - `Ok(true)`: Es wurde ein Intent erzeugt und erfolgreich verarbeitet.
@@ -135,5 +133,27 @@ mod tests {
 
         assert!(!handled);
         assert!(state.ui.dialog_requests.is_empty());
+    }
+
+    #[test]
+    fn apply_host_action_dispatches_dialog_path_selected_into_state() {
+        let mut controller = AppController::new();
+        let mut state = AppState::new();
+        let selected_path = "/tmp/test_heightmap.png".to_string();
+
+        let handled = apply_host_action(
+            &mut controller,
+            &mut state,
+            HostSessionAction::SubmitDialogResult {
+                result: HostDialogResult::PathSelected {
+                    kind: HostDialogRequestKind::Heightmap,
+                    path: selected_path.clone(),
+                },
+            },
+        )
+        .expect("PathSelected muss einen Intent erzeugen und verarbeitet werden");
+
+        assert!(handled);
+        assert_eq!(state.ui.heightmap_path, Some(selected_path));
     }
 }

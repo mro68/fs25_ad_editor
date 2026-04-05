@@ -6,6 +6,8 @@
 
 Eigene Session-, Controller- oder DTO-Logik enthaelt die Crate bewusst nicht mehr. Die kanonische Semantik lebt in `fs25_auto_drive_host_bridge`; diese Crate stabilisiert nur Namen und Paketgrenze fuer einen spaeteren Flutter-Transport-Layer.
 
+Da `FlutterBridgeSession` ein direkter Alias auf `HostBridgeSession` bleibt, stehen auch die host-neutralen Read-Seams fuer Panels und Viewport-Overlays unveraendert zur Verfuegung. Die Rueckgabetypen bleiben dabei bewusst die kanonischen Engine-DTOs `HostUiSnapshot` und `ViewportOverlaySnapshot` statt einer zweiten Flutter-spezifischen Alias-Familie.
+
 ## Architekturentscheidung (2026-04-05)
 
 `fs25_auto_drive_frontend_flutter_bridge` ist als **uebergangsweise Alias-/Kompat-Surface eingefroren**.
@@ -40,6 +42,8 @@ Geplanter spaeterer Entfernungszeitpunkt (nicht Teil dieses Follow-ups):
 | `EngineDialogRequestKind` / `EngineDialogRequest` / `EngineDialogResult` | `HostDialogRequestKind` / `HostDialogRequest` / `HostDialogResult` | Semantische Host-Dialoganforderungen und Rueckmeldungen |
 | `EngineActiveTool` | `HostActiveTool` | Stabiler Tool-Identifier fuer Snapshot- und Action-Vertrag |
 
+Die Session-Methoden `build_host_ui_snapshot()` und `build_viewport_overlay_snapshot()` geben weiterhin die kanonischen Engine-Typen `HostUiSnapshot` bzw. `ViewportOverlaySnapshot` zurueck; die Flutter-Crate fuehrt dafuer bewusst keine zweiten Alias-Typen ein.
+
 ## Oeffentliche Methoden
 
 Die Session-API ist identisch zur kanonischen Host-Bridge; sichtbar bleiben jedoch die bisherigen Flutter-Namen.
@@ -60,6 +64,8 @@ Die Session-API ist identisch zur kanonischen Host-Bridge; sichtbar bleiben jedo
 | `pub fn build_render_scene(&self, viewport_size: [f32; 2]) -> RenderScene` | Liefert den per-frame Render-Vertrag fuer den angegebenen Viewport |
 | `pub fn build_render_assets(&self) -> RenderAssetsSnapshot` | Liefert den expliziten Asset-Snapshot inklusive Revisionen |
 | `pub fn build_render_frame(&self, viewport_size: [f32; 2]) -> EngineRenderFrameSnapshot` | Liefert Szene und Assets als gekoppelten read-only Render-Snapshot |
+| `pub fn build_host_ui_snapshot(&self) -> HostUiSnapshot` | Liefert host-neutrale Paneldaten direkt aus der kanonischen Engine-Surface |
+| `pub fn build_viewport_overlay_snapshot(&mut self, cursor_world: Option<Vec2>) -> ViewportOverlaySnapshot` | Liefert host-neutrale Overlay-Daten; `&mut self` bleibt noetig, weil der App-Layer dabei Boundary-Caches aufwaermen kann |
 
 ## Beispiel
 
@@ -92,8 +98,12 @@ flowchart LR
     CTRL --> STATE[AppState]
     STATE --> SNAP[EngineSessionSnapshot / Alias]
     CANON_SESSION --> FRAME[EngineRenderFrameSnapshot / Alias]
+    CANON_SESSION --> HOSTUI[HostUiSnapshot]
+    CANON_SESSION --> OVERLAY[ViewportOverlaySnapshot]
     FRAME --> HOST
     SNAP --> HOST
+    HOSTUI --> HOST
+    OVERLAY --> HOST
 ```
 
 ## Scope-Cut
@@ -101,5 +111,6 @@ flowchart LR
 - Diese Crate enthaelt keine eigene Session-, Controller- oder DTO-Logik mehr.
 - Die bisherigen `Engine*`-Namen bleiben als reine Kompatibilitaets-Aliase ueber den `Host*`-Vertraegen erhalten.
 - Host-native Datei-/Pfad-Dialoge laufen ueber `take_dialog_requests()` und `submit_dialog_result(...)`.
+- Host-neutrale Panel- und Overlay-Read-Seams bleiben direkt auf `HostBridgeSession` verankert; die Flutter-Crate fuehrt dafuer bewusst keine separaten `EngineUi*`- oder `EngineOverlay*`-DTOs ein.
 - Generischer `AppIntent`-Dispatch, direkter `AppState`-Zugriff und Engine-spezifische Escape-Hatches bleiben ausserhalb der oeffentlichen Flutter-Bridge-API.
 - Transport, Method-Channel, `flutter_rust_bridge` oder andere SDK-Details folgen spaeter.

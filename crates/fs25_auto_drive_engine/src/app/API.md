@@ -29,7 +29,7 @@ Die Route-Tool-Panel-DTOs werden intern ueber `ui_contract/route_tool_panel/{com
 
 ### `AppController`
 
-Zentrale Intent-Verarbeitung, Command-Dispatch an Feature-Handler und Render-Scene-Aufbau.
+Zentrale Intent-Verarbeitung, Command-Dispatch an Feature-Handler und Render-Scene-Aufbau. Die gemeinsame Rust-Host-Dispatch-Seam endet bewusst hier: `fs25_auto_drive_host_bridge::apply_host_action(...)` und der egui-`host_bridge_adapter` speisen nur explizit gemappte Host-Aktionen als `AppIntent` in `handle_intent(...)` ein.
 
 ```rust
 pub struct AppController;
@@ -51,6 +51,7 @@ let overlay_snapshot = controller.build_viewport_overlay_snapshot(&mut state, No
 
 **Features:**
 - Verarbeitet UI- und Input-Intents gegen `AppState`
+- Bildet den Engine-Endpunkt der gemeinsamen Rust-Host-Dispatch-Seam fuer Bridge- und egui-Hosts
 - Mappt Intents auf Commands ueber gemeinsame Feature-Slices (`intent_mapping.rs` + `intent_mapping/by_feature/*`)
 - Dispatcht Commands ueber dieselben Feature-Slices (`controller/by_feature/*`) an Feature-Handler (`handlers/`)
 - Baut den expliziten per-frame Render-Vertrag (`RenderScene`)
@@ -200,6 +201,8 @@ impl UiState {
     pub fn request_dialog(&mut self, request: DialogRequest);
     pub fn take_dialog_requests(&mut self) -> Vec<DialogRequest>;
 }
+
+- `UiState::take_dialog_requests()` bleibt das interne Queue-Primitiv; Host-Adapter sollen die kanonische Controller-Seam `AppController::take_dialog_requests(...)` nutzen.
 
 pub struct ViewportOverlaySnapshot {
     pub route_tool_preview: Option<ToolPreview>,
