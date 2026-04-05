@@ -1,10 +1,13 @@
 //! Event-Sammlung fuer Panels, Dialoge und Viewport.
 
-use crate::app::ui_contract::{dialog_result_to_intent, panel_action_to_intent, HostUiSnapshot};
+use crate::app::ui_contract::{panel_action_to_intent, HostUiSnapshot};
 use crate::app::{AppIntent, EditorTool};
 use crate::shared::EditorOptions;
 use crate::ui;
 use eframe::egui;
+use fs25_auto_drive_host_bridge::{
+    map_host_action_to_intent, take_host_dialog_requests, HostSessionAction,
+};
 use glam::Vec2;
 
 use super::EditorApp;
@@ -156,12 +159,10 @@ impl EditorApp {
         let mut events = Vec::new();
 
         let dialog_results =
-            ui::handle_file_dialogs(self.controller.take_dialog_requests(&mut self.state));
-        events.extend(
-            dialog_results
-                .into_iter()
-                .filter_map(dialog_result_to_intent),
-        );
+            ui::handle_file_dialogs(take_host_dialog_requests(&self.controller, &mut self.state));
+        events.extend(dialog_results.into_iter().filter_map(|result| {
+            map_host_action_to_intent(HostSessionAction::SubmitDialogResult { result })
+        }));
         events.extend(ui::show_heightmap_warning(
             ctx,
             self.state.ui.show_heightmap_warning,

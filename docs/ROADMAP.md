@@ -210,7 +210,7 @@
   - [x] Explizite Action-/Snapshot-DTOs (`HostSessionAction`, `HostSessionSnapshot`, `HostDialog*`)
   - [x] Read-Seams fuer `HostUiSnapshot`, `ViewportOverlaySnapshot` und Render-Frame in der Core-Bridge gebuendelt
   - [x] Session-Ownership vertraglich geklaert: `HostBridgeSession` ist die kanonische Session-Surface fuer egui und Flutter; verbleibende egui-Zugriffe sind in `bridge-owned` / `bridge-gap` / `host-local` klassifiziert
-  - [ ] Egui-Dialog-Lifecycle auf die kanonische Host-Dialog-Seam (`HostDialogRequest` / `HostDialogResult` via `take_dialog_requests()` + `submit_dialog_result(...)`) umstellen
+  - [x] Egui-Dialog-Lifecycle auf die kanonische Host-Dialog-Seam (`HostDialogRequest` / `HostDialogResult` via `take_host_dialog_requests(...)` + `HostSessionAction::SubmitDialogResult`) umgestellt
 - [x] Egui-Adapter-Surface fuer die Unified Host Bridge verbreitert und produktiv verdrahtet (2026-04-05)
   - [x] `host_bridge_adapter` mappt stabile, niederfrequente Host-Aktionen (Datei-/Dialog-Anforderungen, Kamera-Shortcuts, Historie, Toolwechsel, Exit) auf `HostSessionAction`
   - [x] `editor_app::process_events` nutzt die gemeinsame Rust-Host-Dispatch-Seam (`local -> bridge -> fallback`)
@@ -566,6 +566,7 @@
 - ✅ Host-UI-Contracts Follow-up (2026-04-04, Schritt 2): Overlay-Daten sind als `ViewportOverlaySnapshot` in den Engine-Layer gewandert; `ClipboardOverlaySnapshot`, `GroupLockOverlaySnapshot` und `GroupBoundaryOverlaySnapshot` kapseln die Preview-/Gruppen-Daten host-neutral, und egui rendert Tool-/Clipboard-/Distanzen-/Gruppen-Overlays nur noch aus Snapshot-Daten statt direkter Registry-/RoadMap-Ableitung
 - ✅ Host-UI-Contracts Follow-up (2026-04-04, Schritt 3): Flutter-Bridge nutzt jetzt eine explizite `EngineSessionAction`-Fassade (`apply_action` + Komfort-Methoden) statt generischem `AppIntent`-Dispatch; `snapshot()` bleibt gecacht bis zur naechsten erfolgreichen Mutation, `build_render_frame()` liefert den gekoppelten read-only Render-Output und der oeffentliche `AppState`-Escape-Hatch ist entfernt
 - ✅ Host-UI-Contracts Follow-up (2026-04-04, Schritt 4): Bridge-Action-Surface um `Undo`/`Redo` erweitert, `EngineSessionSnapshot` um `can_undo`/`can_redo`/`pending_dialog_request_count` ergaenzt und der host-neutrale Dialog-Lifecycle in der Host-Bridge-Seam (`take_dialog_requests()` + `submit_dialog_result(...)`) produktiv bereitgestellt
+- ✅ Host-UI-Contracts Follow-up (2026-04-05, Schritt 5): egui konsumiert Datei-/Pfad-Dialog-Requests jetzt ueber `take_host_dialog_requests(...)` als `HostDialogRequest`; `HostDialogResult` wird ueber `HostSessionAction::SubmitDialogResult` in denselben Bridge-Dispatch-Pfad zurueckgefuehrt. Der direkte Engine-Dialog-DTO-Pfad im egui-Dialogfluss ist entfernt.
 
 - **Vorherige Errungenschaften (gleicher Audit-Block):**
 - ✅ Parking-Geometrie modulbereichert: `parking/geometry.rs` → `parking/geometry/{mod,layout,blueprint,conversion}.rs`

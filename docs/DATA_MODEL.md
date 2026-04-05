@@ -231,8 +231,8 @@ pub struct AppState {
 ### Session-Surface-Ownership (Stand 2026-04-05)
 
 - **Kanonisch:** `fs25_auto_drive_host_bridge::HostBridgeSession` ist die gemeinsame Session-Surface fuer egui und Flutter.
-- **bridge-owned:** Explizite Action-/Snapshot-Seams (`HostSessionAction`, `HostSessionSnapshot`, `HostUiSnapshot`, `ViewportOverlaySnapshot`, Render-Read-Seams) sind host-uebergreifend stabil.
-- **bridge-gap:** Der egui-Datei-/Pfad-Dialog-Lifecycle drainet aktuell noch direkt `AppController::take_dialog_requests(...)` und verarbeitet Engine-Dialog-DTOs lokal.
+- **bridge-owned:** Explizite Action-/Snapshot-Seams (`HostSessionAction`, `HostSessionSnapshot`, `HostUiSnapshot`, `ViewportOverlaySnapshot`, Render-Read-Seams und Host-Dialog-Lifecycle) sind host-uebergreifend stabil.
+- **bridge-gap:** Die lokale `AppIntent`-zu-`HostSessionAction`-Zuordnung im egui-Adapter wird parallel zur kanonischen Reverse-Zuordnung in der Host-Bridge-Dispatch-Seam gepflegt.
 - **host-local:** eframe-/egui-Runtime, Input- und Render-Glue bleiben bewusst host-spezifisch ausserhalb der Bridge.
 - **Leitplanke:** Keine neuen direkten Escape-Hatches auf `AppController`/`AppState` fuer neue host-neutrale Fluesse.
 
@@ -435,7 +435,7 @@ pub struct HostRenderFrameSnapshot {
 - `snapshot()` arbeitet ueber einen Dirty-Cache und baut den Snapshot nur nach erfolgreichen Session-Mutationen neu auf
 - Die Bridge mappt `HostSessionAction` intern auf `AppIntent`, ohne generischen Intent-Dispatch oder direkten `AppState`-Escape-Hatch
 - Host-native Datei-/Pfad-Dialoge laufen kanonisch ueber `take_dialog_requests()` und `submit_dialog_result(...)` als explizite Bridge-Seam
-- Der direkte egui-Dialog-Drain ueber `AppController::take_dialog_requests(...)` bleibt bis zur produktiven Umstellung ein dokumentierter `bridge-gap`
+- Host-Adapter mit eigenem `AppController`/`AppState` koennen Dialog-Requests ueber `take_host_dialog_requests(...)` auf denselben `HostDialogRequest`-Vertrag mappen
 - `build_viewport_overlay_snapshot()` benoetigt mutablen Zugriff, weil beim Snapshot-Aufbau Boundary-Caches im `AppState` vorgewaermt werden koennen
 - `HostRenderFrameSnapshot` koppelt den per-Frame-Render-Vertrag (`RenderScene`) mit den langlebigen Render-Assets fuer read-only Hosts
 - Die Flutter-Bridge ist als eingefrorene Alias-/Kompat-Surface ueber `fs25_auto_drive_host_bridge` umgesetzt und fuehrt die bisherigen `Engine*`-Namen ohne eigene Session-Logik weiter; `FlutterBridgeSession` bleibt dabei ein direkter Alias auf die kanonische Session-Fassade
