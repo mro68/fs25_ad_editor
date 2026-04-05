@@ -14,9 +14,10 @@ impl EditorApp {
     pub(super) fn collect_ui_events(&mut self, ctx: &egui::Context) -> Vec<AppIntent> {
         let mut events = Vec::new();
         let host_ui_snapshot = self.controller.build_host_ui_snapshot(&self.state);
+        let mut top_ui = ui::common::create_top_level_ui(ctx, "editor_app_top_level_panels");
 
         // Panels und Dialoge
-        events.extend(self.collect_panel_events(ctx, &host_ui_snapshot));
+        events.extend(self.collect_panel_events(ctx, &host_ui_snapshot, &mut top_ui));
         events.extend(self.collect_dialog_events(ctx, &host_ui_snapshot));
         let mut show_command_palette = host_ui_snapshot
             .command_palette_state()
@@ -31,7 +32,7 @@ impl EditorApp {
         // Zentraler Viewport (Rendering + Input + Overlays)
         egui::CentralPanel::default()
             .frame(egui::Frame::NONE)
-            .show(ctx, |ui| {
+            .show_inside(&mut top_ui, |ui| {
                 let (rect, response) =
                     ui.allocate_exact_size(ui.available_size(), egui::Sense::click_and_drag());
                 let viewport_size = [rect.width(), rect.height()];
@@ -56,18 +57,22 @@ impl EditorApp {
         &mut self,
         ctx: &egui::Context,
         host_ui_snapshot: &HostUiSnapshot,
+        top_ui: &mut egui::Ui,
     ) -> Vec<AppIntent> {
         let mut events = Vec::new();
 
-        ui::render_status_bar(ctx, &self.state);
-        events.extend(ui::render_menu(ctx, &self.state));
+        ui::status::render_status_bar_inside(top_ui, &self.state);
+        events.extend(ui::menu::render_menu_inside(top_ui, &self.state));
         let (floating_events, should_close_floating_menu) =
             ui::render_floating_menu(ctx, &self.state);
         if should_close_floating_menu {
             self.state.ui.floating_menu = None;
         }
         events.extend(floating_events);
-        events.extend(ui::render_route_defaults_panel(ctx, &self.state));
+        events.extend(ui::defaults_panel::render_route_defaults_panel_inside(
+            top_ui,
+            &self.state,
+        ));
 
         // Rechte Sidebar: Marker + Eigenschaften untereinander, einklappbar
         // (muss vor CentralPanel aufgerufen werden)
@@ -77,11 +82,11 @@ impl EditorApp {
         let active_tool = self.state.editor.active_tool;
         let distance_wheel_step_m = numeric_distance_wheel_step(&self.state.options);
         let route_tool_panel = host_ui_snapshot.route_tool_panel_state().cloned();
-        egui::SidePanel::right("right_sidebar")
+        egui::Panel::right("right_sidebar")
             .resizable(true)
-            .default_width(200.0)
-            .min_width(160.0)
-            .show(ctx, |ui| {
+            .default_size(200.0)
+            .min_size(160.0)
+            .show_inside(top_ui, |ui| {
                 egui::ScrollArea::vertical().show(ui, |ui| {
                     egui::CollapsingHeader::new("Marker")
                         .default_open(true)

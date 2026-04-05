@@ -69,14 +69,13 @@ pub(super) fn render_group_edit_panel(
                 events.push(AppIntent::GroupEditCancelRequested);
             }
         });
-        if let Some(rec) = group_record {
-            if tool_edit_store.is_some_and(|store| store.contains(rec.id))
-                && ui.button("🔧 Tool bearbeiten").clicked()
-            {
-                events.push(AppIntent::GroupEditToolRequested {
-                    record_id: edit_state.record_id,
-                });
-            }
+        if let Some(rec) = group_record
+            && tool_edit_store.is_some_and(|store| store.contains(rec.id))
+            && ui.button("🔧 Tool bearbeiten").clicked()
+        {
+            events.push(AppIntent::GroupEditToolRequested {
+                record_id: edit_state.record_id,
+            });
         }
         if ui.input(|i| i.key_pressed(egui::Key::Enter)) {
             events.push(AppIntent::GroupEditApplyRequested);

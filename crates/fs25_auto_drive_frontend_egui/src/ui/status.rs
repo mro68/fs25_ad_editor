@@ -5,9 +5,15 @@ use crate::shared::{t, I18nKey};
 
 /// Rendert die Status-Bar
 pub fn render_status_bar(ctx: &egui::Context, state: &AppState) {
+    let mut top_ui = crate::ui::common::create_top_level_ui(ctx, "status_bar_top_level");
+    render_status_bar_inside(&mut top_ui, state);
+}
+
+/// Rendert die Status-Bar innerhalb eines bestehenden Top-Level-UIs.
+pub(crate) fn render_status_bar_inside(ui_root: &mut egui::Ui, state: &AppState) {
     let lang = state.options.language;
 
-    egui::TopBottomPanel::bottom("status_bar").show(ctx, |ui| {
+    egui::Panel::bottom("status_bar").show_inside(ui_root, |ui| {
         ui.horizontal(|ui| {
             if let Some(road_map) = &state.road_map {
                 ui.label(format!(
@@ -106,7 +112,7 @@ pub fn render_status_bar(ctx: &egui::Context, state: &AppState) {
                 ui.label(format!(
                     "{}: {:.0}",
                     t(lang, I18nKey::StatusFps),
-                    ctx.input(|i| 1.0 / i.stable_dt)
+                    ui.ctx().input(|i| 1.0 / i.stable_dt)
                 ));
             });
         });

@@ -84,19 +84,19 @@ pub fn render_group_overlays(
             egui::Color32::WHITE,
         );
 
-        if let Some(click) = clicked_pos {
-            if bg_rect.expand(4.0).contains(click) {
-                let ev = if ctrl_held {
-                    GroupOverlayEvent::Dissolved {
-                        segment_id: overlay.segment_id,
-                    }
-                } else {
-                    GroupOverlayEvent::LockToggled {
-                        segment_id: overlay.segment_id,
-                    }
-                };
-                events.push(ev);
-            }
+        if let Some(click) = clicked_pos
+            && bg_rect.expand(4.0).contains(click)
+        {
+            let ev = if ctrl_held {
+                GroupOverlayEvent::Dissolved {
+                    segment_id: overlay.segment_id,
+                }
+            } else {
+                GroupOverlayEvent::LockToggled {
+                    segment_id: overlay.segment_id,
+                }
+            };
+            events.push(ev);
         }
     }
 

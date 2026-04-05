@@ -14,6 +14,19 @@ const ALT_WHEEL_MULTIPLIER_F32: f32 = 10.0;
 const CTRL_WHEEL_MULTIPLIER_F32: f32 = 0.1;
 const ALT_WHEEL_MULTIPLIER_USIZE: usize = 10;
 
+/// Erstellt ein Top-Level-`Ui`, in dem Panels via `show_inside()` gerendert werden koennen.
+pub(crate) fn create_top_level_ui(ctx: &egui::Context, id_source: &'static str) -> egui::Ui {
+    let mut top_ui = egui::Ui::new(
+        ctx.clone(),
+        egui::Id::new((ctx.viewport_id(), id_source)),
+        egui::UiBuilder::new()
+            .layer_id(egui::LayerId::background())
+            .max_rect(ctx.content_rect()),
+    );
+    top_ui.set_clip_rect(ctx.content_rect());
+    top_ui
+}
+
 fn effective_float_wheel_step(step: f32, modifiers: egui::Modifiers) -> f32 {
     let mut effective_step = step;
     if modifiers.alt {

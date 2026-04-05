@@ -86,15 +86,13 @@ pub fn show_zip_browser(ctx: &egui::Context, ui_state: &mut UiState) -> Vec<AppI
                 if ui
                     .add_enabled(can_confirm, egui::Button::new("Uebernehmen"))
                     .clicked()
+                    && let Some(idx) = browser.selected
+                    && let Some(entry) = browser.entries.get(idx)
                 {
-                    if let Some(idx) = browser.selected {
-                        if let Some(entry) = browser.entries.get(idx) {
-                            events.push(AppIntent::ZipBackgroundFileSelected {
-                                zip_path: browser.zip_path.clone(),
-                                entry_name: entry.name.clone(),
-                            });
-                        }
-                    }
+                    events.push(AppIntent::ZipBackgroundFileSelected {
+                        zip_path: browser.zip_path.clone(),
+                        entry_name: entry.name.clone(),
+                    });
                 }
                 if ui.button("Abbrechen").clicked() {
                     events.push(AppIntent::ZipBrowserCancelled);

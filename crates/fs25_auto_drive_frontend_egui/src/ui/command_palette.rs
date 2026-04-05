@@ -325,23 +325,22 @@ pub fn render_command_palette(
         trigger_selected = true;
     }
 
-    if trigger_selected {
-        if let Some(intent) =
+    if trigger_selected
+        && let Some(intent) =
             selected_catalog_intent(&catalog, &filtered_indices, palette_state.selected_index)
-        {
-            intents.push(intent);
-            window_open = false;
-        }
+    {
+        intents.push(intent);
+        window_open = false;
     }
 
     if escape_pressed || ctrl_k_pressed {
         window_open = false;
     }
 
-    if let (Some(rect), Some(pointer_pos)) = (window_rect, pointer_click) {
-        if !rect.contains(pointer_pos) {
-            window_open = false;
-        }
+    if let (Some(rect), Some(pointer_pos)) = (window_rect, pointer_click)
+        && !rect.contains(pointer_pos)
+    {
+        window_open = false;
     }
 
     if window_open {
