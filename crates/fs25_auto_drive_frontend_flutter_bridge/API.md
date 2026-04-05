@@ -4,6 +4,8 @@
 
 `fs25_auto_drive_frontend_flutter_bridge` ist die Flutter-nahe Kompatibilitaets-Crate ueber `fs25_auto_drive_host_bridge`. Sie haengt nur noch von der gemeinsamen Host-Bridge ab und exportiert die bisherigen `Engine*`-Namen als Alias-Surface weiter, damit bestehende Rust- oder FFI-Call-Sites waehrend der Unified-Bridge-Migration stabil bleiben.
 
+`HostBridgeSession` ist dabei die einzige kanonische Session-Surface fuer egui und Flutter; die Flutter-Crate stellt bewusst nur Alias-Namen bereit und baut keine zweite Session-Implementierung auf.
+
 Eigene Session-, Controller- oder DTO-Logik enthaelt die Crate bewusst nicht mehr. Die kanonische Semantik lebt in `fs25_auto_drive_host_bridge`; diese Crate stabilisiert nur Namen und Paketgrenze fuer einen spaeteren Flutter-Transport-Layer.
 
 Da `FlutterBridgeSession` ein direkter Alias auf `HostBridgeSession` bleibt, stehen auch die host-neutralen Read-Seams fuer Panels und Viewport-Overlays unveraendert zur Verfuegung. Die Rueckgabetypen bleiben dabei bewusst die kanonischen Engine-DTOs `HostUiSnapshot` und `ViewportOverlaySnapshot` statt einer zweiten Flutter-spezifischen Alias-Familie.
