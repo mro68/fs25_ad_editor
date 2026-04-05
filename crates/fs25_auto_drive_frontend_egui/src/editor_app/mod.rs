@@ -84,11 +84,12 @@ impl EditorApp {
                     self.toggle_floating_menu(ctx, kind);
                 }
                 intent => {
-                    let handled_by_bridge = match host_bridge_adapter::apply_mapped_intent(
+                    let bridge_result = host_bridge_adapter::apply_mapped_intent(
                         &mut self.controller,
                         &mut self.state,
                         &intent,
-                    ) {
+                    );
+                    let handled_by_bridge = match bridge_result {
                         Ok(handled) => handled,
                         Err(e) => {
                             self.state.ui.status_message =
@@ -102,7 +103,8 @@ impl EditorApp {
                         continue;
                     }
 
-                    if let Err(e) = self.controller.handle_intent(&mut self.state, intent) {
+                    let intent_result = self.controller.handle_intent(&mut self.state, intent);
+                    if let Err(e) = intent_result {
                         self.state.ui.status_message =
                             Some(format!("Aktion fehlgeschlagen: {}", e));
                         log::error!("Event handling failed: {:#}", e);

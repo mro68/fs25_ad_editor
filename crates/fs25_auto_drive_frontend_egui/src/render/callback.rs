@@ -40,15 +40,18 @@ impl eframe::egui_wgpu::CallbackTrait for WgpuRenderCallback {
         render_pass: &mut eframe::wgpu::RenderPass<'static>,
         _callback_resources: &'b eframe::egui_wgpu::CallbackResources,
     ) {
-        if let Ok(mut renderer) = self.renderer.lock() {
-            renderer.render_scene(
-                &self.device,
-                &self.queue,
-                render_pass,
-                &self.render_data.scene,
-            );
-        } else {
-            log::error!("Failed to lock renderer");
+        match self.renderer.lock() {
+            Ok(mut renderer) => {
+                renderer.render_scene(
+                    &self.device,
+                    &self.queue,
+                    render_pass,
+                    &self.render_data.scene,
+                );
+            }
+            Err(_) => {
+                log::error!("Failed to lock renderer");
+            }
         }
     }
 }
