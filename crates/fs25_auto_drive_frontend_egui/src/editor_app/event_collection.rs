@@ -6,11 +6,20 @@ use crate::shared::EditorOptions;
 use crate::ui;
 use eframe::egui;
 use fs25_auto_drive_host_bridge::{
-    map_host_action_to_intent, take_host_dialog_requests, HostSessionAction,
+    map_host_action_to_intent, take_host_dialog_requests, HostDialogResult, HostSessionAction,
 };
 use glam::Vec2;
 
 use super::EditorApp;
+
+fn map_dialog_results_to_intents(dialog_results: Vec<HostDialogResult>) -> Vec<AppIntent> {
+    dialog_results
+        .into_iter()
+        .filter_map(|result| {
+            map_host_action_to_intent(HostSessionAction::SubmitDialogResult { result })
+        })
+        .collect()
+}
 
 impl EditorApp {
     /// Sammelt alle UI- und Viewport-Events des aktuellen Frames.
@@ -160,9 +169,7 @@ impl EditorApp {
 
         let dialog_results =
             ui::handle_file_dialogs(take_host_dialog_requests(&self.controller, &mut self.state));
-        events.extend(dialog_results.into_iter().filter_map(|result| {
-            map_host_action_to_intent(HostSessionAction::SubmitDialogResult { result })
-        }));
+        events.extend(map_dialog_results_to_intents(dialog_results));
         events.extend(ui::show_heightmap_warning(
             ctx,
             self.state.ui.show_heightmap_warning,
@@ -305,7 +312,10 @@ fn numeric_distance_wheel_step(options: &EditorOptions) -> f32 {
 
 #[cfg(test)]
 mod tests {
-    use super::numeric_distance_wheel_step;
+    use fs25_auto_drive_host_bridge::{HostDialogRequestKind, HostDialogResult};
+
+    use super::{map_dialog_results_to_intents, numeric_distance_wheel_step};
+    use crate::app::AppIntent;
     use crate::shared::{EditorOptions, ValueAdjustInputMode};
 
     fn options_with(mode: ValueAdjustInputMode, step: f32) -> EditorOptions {
@@ -329,5 +339,52 @@ mod tests {
     fn numeric_distance_wheel_step_clamps_negative_values() {
         let options = options_with(ValueAdjustInputMode::DragHorizontal, -0.25);
         assert_eq!(numeric_distance_wheel_step(&options), 0.0);
+    }
+
+    #[test]
+    fn map_dialog_results_to_intents_routes_save_file_and_curseplay_export_results() {
+        let intents = map_dialog_results_to_intents(vec![
+            HostDialogResult::PathSelected {
+                kind: HostDialogRequestKind::SaveFile,
+                path: "/tmp/savegame.xml".to_string(),
+            },
+            HostDialogResult::PathSelected {
+                kind: HostDialogRequestKind::CurseplayExport,
+                path: "/tmp/customField.xml".to_string(),
+            },
+        ]);
+
+        assert_eq!(intents.len(), 2);
+        assert!(matches!(
+            &intents[0],
+            AppIntent::SaveFilePathSelected { path } if path == "/tmp/savegame.xml"
+        ));
+        assert!(matches!(
+            &intents[1],
+            AppIntent::CurseplayExportPathSelected { path } if path == "/tmp/customField.xml"
+        ));
+    }
+
+    #[test]
+    fn map_dialog_results_to_intents_routes_background_zip_selection_to_zip_browse() {
+        let intents = map_dialog_results_to_intents(vec![HostDialogResult::PathSelected {
+            kind: HostDialogRequestKind::BackgroundMap,
+            path: "/tmp/background_map.ZIP".to_string(),
+        }]);
+
+        assert_eq!(intents.len(), 1);
+        assert!(matches!(
+            &intents[0],
+            AppIntent::ZipBackgroundBrowseRequested { path } if path == "/tmp/background_map.ZIP"
+        ));
+    }
+
+    #[test]
+    fn map_dialog_results_to_intents_drops_cancelled_results() {
+        let intents = map_dialog_results_to_intents(vec![HostDialogResult::Cancelled {
+            kind: HostDialogRequestKind::SaveFile,
+        }]);
+
+        assert!(intents.is_empty());
     }
 }

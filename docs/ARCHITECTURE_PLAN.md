@@ -33,6 +33,19 @@ Aktueller `bridge-gap` (Stand 2026-04-05): Die lokale Action-Mapping-Tabelle in 
 
 Die Integrationsschale ist bewusst kein zusaetzlicher Fach-Layer. Sie koordiniert `ui`, `app` und den Host-Adapter in `render`, enthaelt aber keine eigenen Use-Cases oder Domain-Logik.
 
+### Host-Dialog-Seam
+
+Der Datei-/Pfad-Dialogpfad ist ueber alle Rust-Hosts hinweg auf einen gemeinsamen Vertrag konsolidiert:
+
+1. Die Engine haelt ausstehende Dialoge intern als `DialogRequest`-Queue in `UiState`.
+2. `AppController::take_dialog_requests(...)` ist die einzige Engine-Drain-Seam fuer diese Queue.
+3. `fs25_auto_drive_host_bridge::take_host_dialog_requests(...)` mappt die internen Engine-Typen verlustfrei auf `HostDialogRequest`-DTOs fuer Host-Adapter mit eigenem Controller/State.
+4. Host-seitige Antworten fliessen ueber `HostDialogResult` und `HostSessionAction::SubmitDialogResult` bzw. `HostBridgeSession::submit_dialog_result(...)` zurueck in `DialogResult -> AppIntent`.
+
+`take_host_dialog_requests(...)` ist dabei bewusst kein zweiter Session-Vertrag, sondern ein enger Adapter-Hilfspfad fuer bestehende Hosts mit lokalem Controller/State. Die kanonische Session-Surface und Zielrichtung fuer neue host-neutrale Fluesse bleibt `HostBridgeSession`.
+
+Leitplanke: Neue host-neutrale Dialogfluesse duerfen keine parallelen host-spezifischen DTO-Familien oder Direktzugriffe auf `UiState::take_dialog_requests()` einfuehren.
+
 ## Systemübersicht
 
 ```mermaid
@@ -199,7 +212,7 @@ Numerische Mausrad-Interaktion bleibt bewusst im UI-Layer: `ui::common` kapselt 
 - Schmale Read-only-Fassade fuer UI und Integrationsschale: app-eigene Typen plus bewusst ausgewaehlte Core-/Shared-Typen wie `ConnectionDirection`, `ConnectionPriority`, `RoadMap`, `Camera2D`, `RenderQuality`, `ZipImageEntry`
 - Kanonischer RouteTool-Katalog (`tools/catalog.rs`) als Single Source of Truth fuer `RouteToolId`, `RouteToolGroup`, `RouteToolBackingMode`, `RouteToolIconKey`, Surface-Sichtbarkeit und Aktivierungs-Voraussetzungen
 - Egui-freier Route-Tool-Panel-Vertrag als stabile Fassade in `ui_contract.rs` und `ui_contract/route_tool_panel.rs`; die eigentlichen DTO-Familien liegen intern in `route_tool_panel/common.rs`, `curve_family.rs`, `generator_family.rs` und `analysis_family.rs`
-- Host-neutrale Dialog-/Fenster-Vertraege in `ui_contract/host_ui.rs`; die Queue liegt in `UiState` und wird intern ueber `AppController::take_dialog_requests(...)` gedraint. Die kanonische Host-Seam fuer Hosts bleibt `HostBridgeSession::take_dialog_requests()` / `submit_dialog_result(...)`; Host-Adapter mit eigenem Controller/State nutzen dafuer `take_host_dialog_requests(...)`.
+- Host-neutrale Dialog-/Fenster-Vertraege in `ui_contract/host_ui.rs`; die Queue liegt in `UiState` und wird intern ueber `AppController::take_dialog_requests(...)` gedraint. Die kanonische Host-Seam fuer Hosts bleibt `HostBridgeSession::take_dialog_requests()` / `submit_dialog_result(...)`; Host-Adapter mit eigenem Controller/State nutzen dafuer `take_host_dialog_requests(...)` nur als schmalen Adapter-Hilfspfad.
 - Host-neutrale Overlay-Vertraege in `ui_contract/viewport_overlay.rs`; Overlay-Ableitung (Route-Preview, Clipboard, Distanzen, Segment-Locks, Group-Boundaries) laeuft zentral im App-Layer statt im Painter
 - Konsolidierte Asset-Leseflaeche im `AppState`: `farmland_polygons_arc()`, `farmland_grid_arc()` und `background_image_arc()` kapseln die kanonischen Tool-/Host-Zugriffe; `view.background_map` bleibt Primaerquelle fuer Hintergrundbilder, `background_image` nur Kompatibilitaets-Fallback
 - Separater Tool-Editing-Layer (`tool_editing/*`) fuer persistente Tool-Snapshots, Rehydrierung sowie Cancel/Undo im destruktiven Tool-Edit-Flow

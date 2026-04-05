@@ -210,6 +210,7 @@
   - [x] Explizite Action-/Snapshot-DTOs (`HostSessionAction`, `HostSessionSnapshot`, `HostDialog*`)
   - [x] Read-Seams fuer `HostUiSnapshot`, `ViewportOverlaySnapshot` und Render-Frame in der Core-Bridge gebuendelt
   - [x] Session-Ownership vertraglich geklaert: `HostBridgeSession` ist die kanonische Session-Surface fuer egui und Flutter; verbleibende egui-Zugriffe sind in `bridge-owned` / `bridge-gap` / `host-local` klassifiziert
+  - [x] Host-Dialog-Seam konsolidiert: `take_host_dialog_requests(...)` mappt Engine-`DialogRequest` auf `HostDialogRequest` als schmalen Adapter-Hilfspfad fuer bestehende Hosts mit lokalem Controller/State; Rueckgaben laufen ueber `HostSessionAction::SubmitDialogResult` bzw. `HostBridgeSession::submit_dialog_result(...)`, waehrend `HostBridgeSession` die kanonische Session-Surface bleibt
   - [x] Egui-Dialog-Lifecycle auf die kanonische Host-Dialog-Seam (`HostDialogRequest` / `HostDialogResult` via `take_host_dialog_requests(...)` + `HostSessionAction::SubmitDialogResult`) umgestellt
 - [x] Egui-Adapter-Surface fuer die Unified Host Bridge verbreitert und produktiv verdrahtet (2026-04-05)
   - [x] `host_bridge_adapter` mappt stabile, niederfrequente Host-Aktionen (Datei-/Dialog-Anforderungen, Kamera-Shortcuts, Historie, Toolwechsel, Exit) auf `HostSessionAction`

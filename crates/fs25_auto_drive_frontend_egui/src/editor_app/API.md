@@ -4,7 +4,7 @@
 
 Das `editor_app`-Modul ist die duenne Integrationsschale zwischen dem Binary-Start (`main.rs`/`runtime.rs`) und den fachlichen Layern aus `ui`, `app` und `render`. Es besitzt keinen eigenen Fach-Use-Case: Domain-Mutationen laufen weiterhin ausschliesslich ueber `AppController`, waehrend `EditorApp` nur den eframe-Frame-Zyklus, die Event-Sammlung, das Viewport-Rendering und die Overlay-Anbindung koordiniert. Das Laden der Editor-Optionen erfolgt beim Start ueber `app::use_cases::options`, damit die Runtime-/Dateisystem-Policy nicht in `shared` lebt.
 
-`HostBridgeSession` ist die kanonische Session-Surface fuer egui und Flutter. Der Datei-/Pfad-Dialogpfad im `editor_app` konsumiert Requests ueber `take_host_dialog_requests(...)` als `HostDialogRequest` und fuehrt Ergebnisse ueber `HostSessionAction::SubmitDialogResult` in den gemeinsamen Dispatch-Pfad zurueck.
+`HostBridgeSession` ist die kanonische Session-Surface fuer egui und Flutter. Der Datei-/Pfad-Dialogpfad im `editor_app` konsumiert Requests ueber `take_host_dialog_requests(...)` als `HostDialogRequest` und fuehrt Ergebnisse ueber `HostSessionAction::SubmitDialogResult` in den gemeinsamen Dispatch-Pfad zurueck. Dieser freie Dialogpfad ist bewusst nur ein enger Adapter-Hilfspfad fuer den aktuellen Konsolidierungsslice des bestehenden egui-Hosts, keine zweite Session-Fassade.
 
 Die API ist bewusst `pub(crate)` und nur fuer das Binary relevant. Die kanonische Dokumentation liegt hier, damit `src/app/API.md` ausschliesslich den Application-Layer beschreibt und nicht gleichzeitig die eframe-Integrationsschale als zweite Wahrheitsquelle pflegen muss.
 
