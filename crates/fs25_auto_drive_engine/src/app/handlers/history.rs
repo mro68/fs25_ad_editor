@@ -31,31 +31,36 @@ pub fn undo(state: &mut AppState) {
 }
 
 pub(crate) fn restore_last_snapshot_without_redo(state: &mut AppState) -> bool {
-    if let Some(prev) = state.history.pop_undo_discard_current() {
-        prev.apply_to(state);
-        true
-    } else {
-        false
+    match state.history.pop_undo_discard_current() {
+        Some(prev) => {
+            prev.apply_to(state);
+            true
+        }
+        None => false,
     }
 }
 
 /// Fuehrt einen Redo-Schritt aus, falls vorhanden.
 pub fn redo(state: &mut AppState) {
     let current = Snapshot::from_state(state);
-    if let Some(next) = state.history.pop_redo_with_current(current) {
-        next.apply_to(state);
-        log::info!("Redo ausgefuehrt");
-    } else {
-        log::debug!("Redo: nichts zu tun");
+    match state.history.pop_redo_with_current(current) {
+        Some(next) => {
+            next.apply_to(state);
+            log::info!("Redo ausgefuehrt");
+        }
+        None => {
+            log::debug!("Redo: nichts zu tun");
+        }
     }
 }
 
 fn apply_undo_with_redo(state: &mut AppState) -> bool {
     let current = Snapshot::from_state(state);
-    if let Some(prev) = state.history.pop_undo_with_current(current) {
-        prev.apply_to(state);
-        true
-    } else {
-        false
+    match state.history.pop_undo_with_current(current) {
+        Some(prev) => {
+            prev.apply_to(state);
+            true
+        }
+        None => false,
     }
 }

@@ -13,7 +13,7 @@ use waypoints::build_nodes_and_connections;
 /// Haengt Text an eine `Option<String>` an (oder initialisiert sie).
 fn append_or_set(target: &mut Option<String>, text: &str) {
     match target {
-        Some(ref mut s) => s.push_str(text),
+        Some(s) => s.push_str(text),
         None => *target = Some(text.to_string()),
     }
 }
