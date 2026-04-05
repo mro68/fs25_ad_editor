@@ -359,29 +359,22 @@ impl RouteToolCore for FieldPathTool {
 
         let mut external_connections = Vec::new();
         if self.config.connect_to_existing {
-            if let Some(&start_pos) = self.resampled_nodes.first() {
-                if let Some(hit) = road_map.nearest_node(start_pos) {
-                    external_connections.push((
-                        0,
-                        hit.node_id,
-                        true,
-                        self.direction,
-                        self.priority,
-                    ));
-                }
+            if let Some(&start_pos) = self.resampled_nodes.first()
+                && let Some(hit) = road_map.nearest_node(start_pos)
+            {
+                external_connections.push((0, hit.node_id, true, self.direction, self.priority));
             }
-            if n >= 2 {
-                if let Some(&end_pos) = self.resampled_nodes.last() {
-                    if let Some(hit) = road_map.nearest_node(end_pos) {
-                        external_connections.push((
-                            n - 1,
-                            hit.node_id,
-                            false,
-                            self.direction,
-                            self.priority,
-                        ));
-                    }
-                }
+            if n >= 2
+                && let Some(&end_pos) = self.resampled_nodes.last()
+                && let Some(hit) = road_map.nearest_node(end_pos)
+            {
+                external_connections.push((
+                    n - 1,
+                    hit.node_id,
+                    false,
+                    self.direction,
+                    self.priority,
+                ));
             }
         }
 

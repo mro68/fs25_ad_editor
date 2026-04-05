@@ -44,16 +44,16 @@ impl RouteToolCore for SplineTool {
     fn on_click(&mut self, pos: Vec2, road_map: &RoadMap, _ctrl: bool) -> ToolAction {
         let (anchor, _neighbors) = self.lifecycle.snap_with_neighbors(pos, road_map);
 
-        if self.anchors.is_empty() {
-            if let Some(last_end) = self.lifecycle.chaining_start_anchor() {
-                self.lifecycle.prepare_for_chaining();
-                self.last_anchors.clear();
-                self.tangents.reset_tangents();
-                self.anchors.push(last_end);
-                self.anchors.push(anchor);
-                self.sync_derived();
-                return ToolAction::UpdatePreview;
-            }
+        if self.anchors.is_empty()
+            && let Some(last_end) = self.lifecycle.chaining_start_anchor()
+        {
+            self.lifecycle.prepare_for_chaining();
+            self.last_anchors.clear();
+            self.tangents.reset_tangents();
+            self.anchors.push(last_end);
+            self.anchors.push(anchor);
+            self.sync_derived();
+            return ToolAction::UpdatePreview;
         }
 
         self.anchors.push(anchor);

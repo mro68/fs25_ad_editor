@@ -78,10 +78,10 @@ pub fn write_autodrive_config(
             list.insert(end_id);
         }
 
-        if connection.direction != ConnectionDirection::Reverse {
-            if let Some(list) = incoming.get_mut(&end_id) {
-                list.insert(start_id);
-            }
+        if connection.direction != ConnectionDirection::Reverse
+            && let Some(list) = incoming.get_mut(&end_id)
+        {
+            list.insert(start_id);
         }
 
         if connection.direction == ConnectionDirection::Dual {

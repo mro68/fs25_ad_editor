@@ -133,16 +133,16 @@ impl RouteToolCore for SmoothCurveTool {
 
         // Kontrollpunkte inkl. manuell verschobener Steuerpunkte zusammenbauen
         let mut solver_control = Vec::new();
-        if self.approach_manual {
-            if let Some(ap) = self.approach_steerer {
-                solver_control.push(ap);
-            }
+        if self.approach_manual
+            && let Some(ap) = self.approach_steerer
+        {
+            solver_control.push(ap);
         }
         solver_control.extend_from_slice(&self.control_nodes);
-        if self.departure_manual {
-            if let Some(dp) = self.departure_steerer {
-                solver_control.push(dp);
-            }
+        if self.departure_manual
+            && let Some(dp) = self.departure_steerer
+        {
+            solver_control.push(dp);
         }
 
         build_result(

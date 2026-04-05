@@ -36,10 +36,10 @@ pub fn zoom_towards(state: &mut AppState, factor: f32, focus_world: Option<glam:
 
 /// Zentriert die Kamera auf einen vorhandenen Node, ohne den Zoom zu veraendern.
 pub fn center_on_node(state: &mut AppState, node_id: u64) {
-    if let Some(rm) = state.road_map.as_deref() {
-        if let Some(node) = rm.node(node_id) {
-            state.view.camera.look_at(node.position);
-        }
+    if let Some(rm) = state.road_map.as_deref()
+        && let Some(node) = rm.node(node_id)
+    {
+        state.view.camera.look_at(node.position);
     }
 }
 

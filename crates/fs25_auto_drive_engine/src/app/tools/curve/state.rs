@@ -388,10 +388,10 @@ impl CurveTool {
 
     /// Liefert gecachte Kurvenpositionen oder berechnet sie neu.
     pub(crate) fn preview_positions_for(&self, key: CurvePreviewCacheKey) -> Vec<Vec2> {
-        if let Some(cache) = self.preview_cache.borrow().as_ref() {
-            if cache.key == key {
-                return cache.positions.clone();
-            }
+        if let Some(cache) = self.preview_cache.borrow().as_ref()
+            && cache.key == key
+        {
+            return cache.positions.clone();
         }
 
         let positions = match key.degree {
