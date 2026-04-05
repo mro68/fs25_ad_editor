@@ -14,4 +14,4 @@ image = { version = "0.25", features = ["dds", "png", "jpeg"] }
 indexmap = "2.13.1"
 log = "0.4"
 resvg = "0.47.0"
-wgpu = "27.0.1"
+wgpu = "29.0"
