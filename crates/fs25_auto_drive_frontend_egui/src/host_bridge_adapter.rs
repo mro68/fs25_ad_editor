@@ -181,9 +181,12 @@ mod tests {
         let mut controller = AppController::new();
         let mut state = AppState::new();
 
-        let handled =
-            apply_mapped_intent(&mut controller, &mut state, &AppIntent::OpenFileRequested)
-                .expect("OpenFileRequested muss ueber die Bridge-Seam verarbeitet werden");
+        let handled = apply_mapped_intent(
+            &mut controller,
+            &mut state,
+            &AppIntent::OpenFileRequested,
+        )
+        .expect("OpenFileRequested muss ueber die Bridge-Seam verarbeitet werden");
 
         assert!(handled);
         assert_eq!(state.ui.dialog_requests.len(), 1);
