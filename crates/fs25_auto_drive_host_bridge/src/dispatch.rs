@@ -136,7 +136,7 @@ mod tests {
 
     use crate::dto::{HostDialogRequestKind, HostDialogResult, HostSessionAction};
 
-    use super::{apply_host_action, take_host_dialog_requests};
+    use super::{apply_host_action, map_host_action_to_intent, take_host_dialog_requests};
 
     #[test]
     fn take_host_dialog_requests_maps_and_drains_engine_queue() {
@@ -157,6 +157,28 @@ mod tests {
 
         let drained = take_host_dialog_requests(&controller, &mut state);
         assert!(drained.is_empty());
+    }
+
+    #[test]
+    fn take_host_dialog_requests_covers_save_background_and_curseplay_export_requests() {
+        let mut controller = AppController::new();
+        let mut state = AppState::new();
+
+        controller
+            .handle_intent(&mut state, AppIntent::SaveAsRequested)
+            .expect("SaveAsRequested muss Dialog-Anforderung erzeugen");
+        controller
+            .handle_intent(&mut state, AppIntent::BackgroundMapSelectionRequested)
+            .expect("BackgroundMapSelectionRequested muss Dialog-Anforderung erzeugen");
+        controller
+            .handle_intent(&mut state, AppIntent::CurseplayExportRequested)
+            .expect("CurseplayExportRequested muss Dialog-Anforderung erzeugen");
+
+        let requests = take_host_dialog_requests(&controller, &mut state);
+        assert_eq!(requests.len(), 3);
+        assert_eq!(requests[0].kind, HostDialogRequestKind::SaveFile);
+        assert_eq!(requests[1].kind, HostDialogRequestKind::BackgroundMap);
+        assert_eq!(requests[2].kind, HostDialogRequestKind::CurseplayExport);
     }
 
     #[test]
@@ -215,5 +237,42 @@ mod tests {
 
         assert!(handled);
         assert_eq!(state.ui.heightmap_path, Some(selected_path));
+    }
+
+    #[test]
+    fn map_host_action_to_intent_covers_new_dialog_result_branches() {
+        let save_intent = map_host_action_to_intent(HostSessionAction::SubmitDialogResult {
+            result: HostDialogResult::PathSelected {
+                kind: HostDialogRequestKind::SaveFile,
+                path: "/tmp/savegame.xml".to_string(),
+            },
+        });
+        let background_zip_intent =
+            map_host_action_to_intent(HostSessionAction::SubmitDialogResult {
+                result: HostDialogResult::PathSelected {
+                    kind: HostDialogRequestKind::BackgroundMap,
+                    path: "/tmp/map_overview.zip".to_string(),
+                },
+            });
+        let curseplay_export_intent =
+            map_host_action_to_intent(HostSessionAction::SubmitDialogResult {
+                result: HostDialogResult::PathSelected {
+                    kind: HostDialogRequestKind::CurseplayExport,
+                    path: "/tmp/customField.xml".to_string(),
+                },
+            });
+
+        assert!(matches!(
+            save_intent,
+            Some(AppIntent::SaveFilePathSelected { path }) if path == "/tmp/savegame.xml"
+        ));
+        assert!(matches!(
+            background_zip_intent,
+            Some(AppIntent::ZipBackgroundBrowseRequested { path }) if path == "/tmp/map_overview.zip"
+        ));
+        assert!(matches!(
+            curseplay_export_intent,
+            Some(AppIntent::CurseplayExportPathSelected { path }) if path == "/tmp/customField.xml"
+        ));
     }
 }

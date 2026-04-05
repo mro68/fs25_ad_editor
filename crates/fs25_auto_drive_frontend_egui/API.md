@@ -6,11 +6,11 @@
 
 Sie konsumiert die host-neutrale Engine, re-exportiert deren `app`-, `core`-, `shared`- und `xml`-Module fuer bestehende Frontend-Pfade und stellt mit `run_native()` den nativen Einstieg bereit.
 
-Die Integrationsschale liest Panels ueber `HostUiSnapshot`, konsumiert Datei-/Pfaddialog-Requests ueber `take_host_dialog_requests(...)` als `HostDialogRequest` und verarbeitet Viewport-Overlays ueber `ViewportOverlaySnapshot`. Dialog-Ergebnisse werden ueber `HostSessionAction::SubmitDialogResult` in dieselbe Host-Bridge-Dispatch-Seam zurueckgefuehrt, waehrend `PanelAction` und Overlay-Klicks zentral in `AppIntent` uebersetzt werden.
+Die Integrationsschale liest Panels ueber `HostUiSnapshot`, konsumiert Datei-/Pfaddialog-Requests ueber `take_host_dialog_requests(...)` als `HostDialogRequest` und verarbeitet Viewport-Overlays ueber `ViewportOverlaySnapshot`. Dialog-Ergebnisse werden ueber `HostSessionAction::SubmitDialogResult` in dieselbe Host-Bridge-Dispatch-Seam zurueckgefuehrt, waehrend `PanelAction` und Overlay-Klicks zentral in `AppIntent` uebersetzt werden. Die egui-Crate fuehrt dafuer keine zweite Dialog-DTO-Familie ein, sondern nutzt den kanonischen Host-Bridge-Vertrag direkt.
 
 Die gemeinsame Host-Bridge ist in dieser Crate eine gezielte Dispatch-Seam fuer stabile, niederfrequente Host-Aktionen. `editor_app` bleibt die produktive eframe-Integrationsschale: lokale Spezialfaelle bleiben lokal, bridge-faehige Intents laufen ueber `host_bridge_adapter`, hochfrequente Viewport-/Tool-Intents bleiben im Legacy-Fallback ueber `AppController`.
 
-`HostBridgeSession` bleibt dabei verbindlich die kanonische Session-Surface fuer egui und Flutter.
+`HostBridgeSession` bleibt dabei verbindlich die kanonische Session-Surface fuer egui und Flutter. Der freie Dialogpfad ueber `take_host_dialog_requests(...)` ist bewusst nur ein enger Adapter-Hilfspfad fuer den aktuellen Konsolidierungsslice des bestehenden `editor_app`-Hosts, keine zweite vollwertige Session-API.
 
 ## Kompatibilitaet (Stand: 2026-04-05)
 
@@ -23,7 +23,7 @@ Die gemeinsame Host-Bridge ist in dieser Crate eine gezielte Dispatch-Seam fuer 
 
 | Modul | Verantwortung |
 |---|---|
-| `editor_app` | eframe-Integrationsschale; sammelt Panels ueber `HostUiSnapshot`, drainet Dialoge ueber die Controller-Seam und rendert Overlays aus `ViewportOverlaySnapshot` |
+| `editor_app` | eframe-Integrationsschale; sammelt Panels ueber `HostUiSnapshot`, drainet Dialoge ueber `take_host_dialog_requests(...)` als `HostDialogRequest` und rendert Overlays aus `ViewportOverlaySnapshot` |
 | `host_bridge_adapter` | Duenner egui-Adapter fuer die gemeinsame Host-Bridge (`AppIntent` → `HostSessionAction`) mit Fokus auf stabile, niederfrequente Host-Aktionen |
 | `render` | egui-Host-Adapter, revisionsbasierte Background-Upload-Bruecke und egui-Render-Callback |
 | `ui` | Menues, Panels, Dialoge, Viewport-Input und egui-spezifisches Painting der host-neutralen Overlay-Snapshots |
@@ -31,7 +31,7 @@ Die gemeinsame Host-Bridge ist in dieser Crate eine gezielte Dispatch-Seam fuer 
 
 ## Session-Grenze (Stand 2026-04-05)
 
-- **bridge-owned:** `host_bridge_adapter` fuer stabile, niederfrequente Host-Aktionen, host-neutrale Read-Modelle (`HostUiSnapshot`, `ViewportOverlaySnapshot`, Render-Snapshots) und der Datei-/Pfad-Dialog-Lifecycle ueber `HostDialogRequest`/`HostDialogResult`.
+- **bridge-owned:** `host_bridge_adapter` fuer stabile, niederfrequente Host-Aktionen, host-neutrale Read-Modelle (`HostUiSnapshot`, `ViewportOverlaySnapshot`, Render-Snapshots) und der Datei-/Pfad-Dialog-Lifecycle ueber `HostDialogRequest`/`HostDialogResult` ohne egui-spezifische Parallel-DTOs.
 - **bridge-gap:** Lokale `AppIntent`-zu-`HostSessionAction`-Zuordnung in `host_bridge_adapter` als Doppelpflege zur kanonischen Reverse-Zuordnung in `fs25_auto_drive_host_bridge::dispatch`.
 - **host-local:** eframe-Lifecycle, egui-Widget-State, Input-Orchestrierung, Render-Callback und Upload-Glue.
 - **Leitplanke:** Keine neuen host-neutralen Fluesse direkt auf `AppController`/`AppState` aufbauen.
@@ -91,5 +91,5 @@ flowchart LR
 
 - Das Root-Package re-exportiert `render` und `ui` weiterhin.
 - `editor_app` bleibt der produktive Desktop-Flow; `host_bridge_adapter` deckt bewusst nur stabile Host-Aktionen ab und ersetzt keine hochfrequenten Viewport-/Tool-Interaktionen.
-- Der Datei-/Pfad-Dialogpfad in egui laeuft ueber die kanonische Host-Dialog-Seam (`take_host_dialog_requests(...)` + `HostSessionAction::SubmitDialogResult`).
+- Der Datei-/Pfad-Dialogpfad in egui laeuft ueber die kanonische Host-Dialog-Seam (`take_host_dialog_requests(...)` + `HostSessionAction::SubmitDialogResult`). `take_host_dialog_requests(...)` bleibt dabei ein schmaler Adapter-Hilfspfad fuer den bestehenden egui-Host mit lokalem Controller/State.
 - Die kanonischen Moduldetails stehen in `src/editor_app/API.md`, `src/render/API.md` und `src/ui/API.md`.

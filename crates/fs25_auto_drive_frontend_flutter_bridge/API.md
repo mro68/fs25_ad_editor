@@ -10,6 +10,8 @@ Eigene Session-, Controller- oder DTO-Logik enthaelt die Crate bewusst nicht meh
 
 Da `FlutterBridgeSession` ein direkter Alias auf `HostBridgeSession` bleibt, stehen auch die host-neutralen Read-Seams fuer Panels und Viewport-Overlays unveraendert zur Verfuegung. Die Rueckgabetypen bleiben dabei bewusst die kanonischen Engine-DTOs `HostUiSnapshot` und `ViewportOverlaySnapshot` statt einer zweiten Flutter-spezifischen Alias-Familie.
 
+Dasselbe gilt fuer den Datei-/Pfad-Dialogpfad: `EngineDialogRequest` und `EngineDialogResult` bleiben reine Aliasnamen auf `HostDialogRequest` und `HostDialogResult`. Die Flutter-Crate fuehrt bewusst keine zweite Dialog-Seam ein.
+
 ## Architekturentscheidung (2026-04-05)
 
 `fs25_auto_drive_frontend_flutter_bridge` ist als **uebergangsweise Alias-/Kompat-Surface eingefroren**.
@@ -113,6 +115,7 @@ flowchart LR
 - Diese Crate enthaelt keine eigene Session-, Controller- oder DTO-Logik mehr.
 - Die bisherigen `Engine*`-Namen bleiben als reine Kompatibilitaets-Aliase ueber den `Host*`-Vertraegen erhalten.
 - Host-native Datei-/Pfad-Dialoge laufen ueber `take_dialog_requests()` und `submit_dialog_result(...)`.
+- Der Dialogpfad bleibt 1:1 an die kanonische Host-Bridge gebunden; es gibt keine Flutter-spezifische Parallel-Mapping-Schicht fuer Dialoge.
 - Host-neutrale Panel- und Overlay-Read-Seams bleiben direkt auf `HostBridgeSession` verankert; die Flutter-Crate fuehrt dafuer bewusst keine separaten `EngineUi*`- oder `EngineOverlay*`-DTOs ein.
 - Generischer `AppIntent`-Dispatch, direkter `AppState`-Zugriff und Engine-spezifische Escape-Hatches bleiben ausserhalb der oeffentlichen Flutter-Bridge-API.
 - Transport, Method-Channel, `flutter_rust_bridge` oder andere SDK-Details folgen spaeter.
