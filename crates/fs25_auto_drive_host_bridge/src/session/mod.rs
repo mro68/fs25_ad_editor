@@ -52,6 +52,12 @@ pub struct HostRenderFrameSnapshot {
     pub assets: RenderAssetsSnapshot,
 }
 
+/// Kompatibilitaetsalias fuer bestehende Flutter-nahe Session-Importe.
+pub type FlutterBridgeSession = HostBridgeSession;
+
+/// Kompatibilitaetsalias fuer bestehende Flutter-nahe Render-Importe.
+pub type EngineRenderFrameSnapshot = HostRenderFrameSnapshot;
+
 /// Kleine Session-Fassade ueber der host-neutralen Engine.
 ///
 /// Die Bridge kapselt `AppController` und `AppState`, bleibt aber absichtlich
@@ -224,9 +230,12 @@ impl Default for HostBridgeSession {
 mod tests {
     use fs25_auto_drive_engine::app::AppIntent;
 
-    use crate::dto::{HostActiveTool, HostDialogRequestKind, HostDialogResult, HostSessionAction};
+    use crate::dto::{
+        EngineSessionAction, HostActiveTool, HostDialogRequestKind, HostDialogResult,
+        HostSessionAction,
+    };
 
-    use super::HostBridgeSession;
+    use super::{FlutterBridgeSession, HostBridgeSession};
 
     fn apply_test_intent(session: &mut HostBridgeSession, intent: AppIntent) {
         session
@@ -369,5 +378,16 @@ mod tests {
         let overlay = session.build_viewport_overlay_snapshot(None);
         assert!(overlay.route_tool_preview.is_none());
         assert!(overlay.group_boundaries.is_empty());
+    }
+
+    #[test]
+    fn flutter_session_alias_exposes_host_bridge_session_behavior() {
+        let mut session = FlutterBridgeSession::new();
+
+        session
+            .apply_action(EngineSessionAction::ToggleCommandPalette)
+            .expect("ToggleCommandPalette muss ueber den Alias funktionieren");
+
+        assert!(session.snapshot().show_command_palette);
     }
 }

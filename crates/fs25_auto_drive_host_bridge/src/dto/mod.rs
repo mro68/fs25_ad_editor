@@ -155,3 +155,27 @@ pub struct HostSessionSnapshot {
     /// Read-only Snapshot des aktuellen Viewports.
     pub viewport: HostViewportSnapshot,
 }
+
+/// Kompatibilitaetsalias fuer bestehende Flutter-/FFI-Call-Sites.
+pub type EngineActiveTool = HostActiveTool;
+
+/// Kompatibilitaetsalias fuer bestehende Flutter-/FFI-Call-Sites.
+pub type EngineDialogRequestKind = HostDialogRequestKind;
+
+/// Kompatibilitaetsalias fuer bestehende Flutter-/FFI-Call-Sites.
+pub type EngineDialogRequest = HostDialogRequest;
+
+/// Kompatibilitaetsalias fuer bestehende Flutter-/FFI-Call-Sites.
+pub type EngineDialogResult = HostDialogResult;
+
+/// Kompatibilitaetsalias fuer bestehende Flutter-/FFI-Call-Sites.
+pub type EngineSessionAction = HostSessionAction;
+
+/// Kompatibilitaetsalias fuer bestehende Flutter-/FFI-Call-Sites.
+pub type EngineSelectionSnapshot = HostSelectionSnapshot;
+
+/// Kompatibilitaetsalias fuer bestehende Flutter-/FFI-Call-Sites.
+pub type EngineViewportSnapshot = HostViewportSnapshot;
+
+/// Kompatibilitaetsalias fuer bestehende Flutter-/FFI-Call-Sites.
+pub type EngineSessionSnapshot = HostSessionSnapshot;
