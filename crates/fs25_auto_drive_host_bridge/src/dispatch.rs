@@ -1,10 +1,12 @@
 use anyhow::Result;
 use fs25_auto_drive_engine::app::ui_contract::{
-    dialog_result_to_intent, DialogRequestKind, DialogResult,
+    dialog_result_to_intent, DialogRequest, DialogRequestKind, DialogResult,
 };
 use fs25_auto_drive_engine::app::{AppController, AppIntent, AppState, EditorTool};
 
-use crate::dto::{HostActiveTool, HostDialogRequestKind, HostDialogResult, HostSessionAction};
+use crate::dto::{
+    HostActiveTool, HostDialogRequest, HostDialogRequestKind, HostDialogResult, HostSessionAction,
+};
 
 fn map_editor_tool(tool: HostActiveTool) -> EditorTool {
     match tool {
@@ -12,6 +14,25 @@ fn map_editor_tool(tool: HostActiveTool) -> EditorTool {
         HostActiveTool::Connect => EditorTool::Connect,
         HostActiveTool::AddNode => EditorTool::AddNode,
         HostActiveTool::Route => EditorTool::Route,
+    }
+}
+
+fn map_engine_dialog_request_kind(kind: DialogRequestKind) -> HostDialogRequestKind {
+    match kind {
+        DialogRequestKind::OpenFile => HostDialogRequestKind::OpenFile,
+        DialogRequestKind::SaveFile => HostDialogRequestKind::SaveFile,
+        DialogRequestKind::Heightmap => HostDialogRequestKind::Heightmap,
+        DialogRequestKind::BackgroundMap => HostDialogRequestKind::BackgroundMap,
+        DialogRequestKind::OverviewZip => HostDialogRequestKind::OverviewZip,
+        DialogRequestKind::CurseplayImport => HostDialogRequestKind::CurseplayImport,
+        DialogRequestKind::CurseplayExport => HostDialogRequestKind::CurseplayExport,
+    }
+}
+
+fn map_engine_dialog_request(request: DialogRequest) -> HostDialogRequest {
+    HostDialogRequest {
+        kind: map_engine_dialog_request_kind(request.kind()),
+        suggested_file_name: request.suggested_file_name().map(str::to_owned),
     }
 }
 
@@ -37,6 +58,22 @@ fn map_dialog_result(result: HostDialogResult) -> DialogResult {
             path,
         },
     }
+}
+
+/// Entnimmt ausstehende Dialog-Anforderungen als Host-Bridge-DTOs.
+///
+/// Diese Funktion ist fuer Host-Adapter gedacht, die weiterhin einen eigenen
+/// `AppController`/`AppState` besitzen, den Dialog-Lifecycle aber bereits ueber
+/// die kanonischen `HostDialogRequest`-DTOs konsolidieren wollen.
+pub fn take_host_dialog_requests(
+    controller: &AppController,
+    state: &mut AppState,
+) -> Vec<HostDialogRequest> {
+    controller
+        .take_dialog_requests(state)
+        .into_iter()
+        .map(map_engine_dialog_request)
+        .collect()
 }
 
 /// Uebersetzt eine explizite Host-Action in einen stabilen Engine-Intent.
@@ -95,11 +132,32 @@ pub fn apply_host_action(
 
 #[cfg(test)]
 mod tests {
-    use fs25_auto_drive_engine::app::{AppController, AppState};
+    use fs25_auto_drive_engine::app::{AppController, AppIntent, AppState};
 
     use crate::dto::{HostDialogRequestKind, HostDialogResult, HostSessionAction};
 
-    use super::apply_host_action;
+    use super::{apply_host_action, take_host_dialog_requests};
+
+    #[test]
+    fn take_host_dialog_requests_maps_and_drains_engine_queue() {
+        let mut controller = AppController::new();
+        let mut state = AppState::new();
+
+        controller
+            .handle_intent(&mut state, AppIntent::OpenFileRequested)
+            .expect("OpenFileRequested muss Dialog-Anforderung erzeugen");
+        controller
+            .handle_intent(&mut state, AppIntent::HeightmapSelectionRequested)
+            .expect("HeightmapSelectionRequested muss Dialog-Anforderung erzeugen");
+
+        let requests = take_host_dialog_requests(&controller, &mut state);
+        assert_eq!(requests.len(), 2);
+        assert_eq!(requests[0].kind, HostDialogRequestKind::OpenFile);
+        assert_eq!(requests[1].kind, HostDialogRequestKind::Heightmap);
+
+        let drained = take_host_dialog_requests(&controller, &mut state);
+        assert!(drained.is_empty());
+    }
 
     #[test]
     fn apply_host_action_dispatches_mapped_action() {
