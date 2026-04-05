@@ -115,17 +115,17 @@ pub fn open_overview_options_dialog(state: &mut AppState, zip_path: String) {
 
     // Verfuegbare Quellen bestimmen
     let mut available = vec![FieldDetectionSource::FromZip];
-    if let Some(xml_path) = state.ui.current_file_path.as_ref() {
-        if let Some(savegame_dir) = Path::new(xml_path.as_str()).parent() {
-            if savegame_dir.join("infoLayer_fieldType.grle").is_file() {
-                available.push(FieldDetectionSource::FieldTypeGrle);
-            }
-            if savegame_dir.join("densityMap_ground.gdm").is_file() {
-                available.push(FieldDetectionSource::GroundGdm);
-            }
-            if savegame_dir.join("densityMap_fruits.gdm").is_file() {
-                available.push(FieldDetectionSource::FruitsGdm);
-            }
+    if let Some(xml_path) = state.ui.current_file_path.as_ref()
+        && let Some(savegame_dir) = Path::new(xml_path.as_str()).parent()
+    {
+        if savegame_dir.join("infoLayer_fieldType.grle").is_file() {
+            available.push(FieldDetectionSource::FieldTypeGrle);
+        }
+        if savegame_dir.join("densityMap_ground.gdm").is_file() {
+            available.push(FieldDetectionSource::GroundGdm);
+        }
+        if savegame_dir.join("densityMap_fruits.gdm").is_file() {
+            available.push(FieldDetectionSource::FruitsGdm);
         }
     }
     // Aktuelle Auswahl auf verfuegbare Quelle korrigieren

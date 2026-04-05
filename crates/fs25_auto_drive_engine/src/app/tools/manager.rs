@@ -73,10 +73,10 @@ impl ToolManager {
 
     fn set_active_slot(&mut self, index: usize) {
         if index < self.tools.len() {
-            if let Some(old) = self.active_index {
-                if old != index {
-                    self.tools[old].tool.reset();
-                }
+            if let Some(old) = self.active_index
+                && old != index
+            {
+                self.tools[old].tool.reset();
             }
             self.active_index = Some(index);
         }

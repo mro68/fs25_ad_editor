@@ -64,11 +64,11 @@ pub(crate) fn on_drag_start(
 
     candidates.sort_by(|a, b| a.1.partial_cmp(&b.1).unwrap_or(std::cmp::Ordering::Equal));
 
-    if let Some((target, dist)) = candidates.first() {
-        if *dist <= pick_radius {
-            tool.dragging = Some(*target);
-            return true;
-        }
+    if let Some((target, dist)) = candidates.first()
+        && *dist <= pick_radius
+    {
+        tool.dragging = Some(*target);
+        return true;
     }
     false
 }

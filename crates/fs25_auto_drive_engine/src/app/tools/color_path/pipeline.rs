@@ -163,10 +163,10 @@ impl ColorPathTool {
     fn cached_rgb_image(&mut self) -> Option<Arc<image::RgbImage>> {
         let background_image_id = self.background_image_id()?;
 
-        if let Some(cached) = self.cache.rgb_image.as_ref() {
-            if cached.background_image_id == background_image_id {
-                return Some(Arc::clone(&cached.image));
-            }
+        if let Some(cached) = self.cache.rgb_image.as_ref()
+            && cached.background_image_id == background_image_id
+        {
+            return Some(Arc::clone(&cached.image));
         }
 
         let image = self.background_image.as_ref()?;
@@ -250,11 +250,11 @@ impl ColorPathTool {
             if !self.ensure_preview_core() {
                 return false;
             }
-        } else if let Some(preview_core_key) = self.preview_core_cache_key() {
-            if self.cache.preview_core_key != Some(preview_core_key) && !self.ensure_preview_core()
-            {
-                return false;
-            }
+        } else if let Some(preview_core_key) = self.preview_core_cache_key()
+            && self.cache.preview_core_key != Some(preview_core_key)
+            && !self.ensure_preview_core()
+        {
+            return false;
         }
 
         let Some(key) = self.prepared_segments_cache_key() else {

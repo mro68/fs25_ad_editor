@@ -586,11 +586,11 @@ impl RoadMap {
                 NodeFlag::SubPrio
             };
 
-            if let Some(node) = self.nodes.get_mut(&nid) {
-                if node.flag != new_flag {
-                    node.flag = new_flag;
-                    changed = true;
-                }
+            if let Some(node) = self.nodes.get_mut(&nid)
+                && node.flag != new_flag
+            {
+                node.flag = new_flag;
+                changed = true;
             }
         }
 

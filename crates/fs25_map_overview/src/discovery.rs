@@ -213,10 +213,10 @@ fn find_data_dir(files: &HashMap<String, Vec<u8>>, config_dir: &str, mod_root: &
     // Versuch 3: Suche nach Dateien wie dem.png oder *_weight.png
     for path in files.keys() {
         let lower = path.to_ascii_lowercase();
-        if lower.ends_with("/dem.png") || lower.ends_with("_weight.png") {
-            if let Some(dir) = Path::new(path).parent() {
-                return dir.to_string_lossy().to_string();
-            }
+        if (lower.ends_with("/dem.png") || lower.ends_with("_weight.png"))
+            && let Some(dir) = Path::new(path).parent()
+        {
+            return dir.to_string_lossy().to_string();
         }
     }
 
@@ -235,14 +235,14 @@ fn find_file<'a>(
     let target_lower = target_basename.to_ascii_lowercase();
     let mut best: Option<(String, &'a [u8])> = None;
     for (path, content) in files {
-        if let Some(name) = Path::new(path).file_name() {
-            if name.to_string_lossy().to_ascii_lowercase() == target_lower {
-                let dominated = best
-                    .as_ref()
-                    .is_some_and(|(prev, _)| path.len() < prev.len());
-                if best.is_none() || dominated {
-                    best = Some((path.clone(), content.as_slice()));
-                }
+        if let Some(name) = Path::new(path).file_name()
+            && name.to_string_lossy().to_ascii_lowercase() == target_lower
+        {
+            let dominated = best
+                .as_ref()
+                .is_some_and(|(prev, _)| path.len() < prev.len());
+            if best.is_none() || dominated {
+                best = Some((path.clone(), content.as_slice()));
             }
         }
     }

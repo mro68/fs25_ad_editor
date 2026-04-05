@@ -12,10 +12,10 @@ impl GroupRegistry {
         for &nid in node_ids {
             if let Some(record_ids) = self.node_to_records.get(&nid) {
                 for &rid in record_ids {
-                    if seen_ids.insert(rid) {
-                        if let Some(record) = self.records.get(&rid) {
-                            result.push(record);
-                        }
+                    if seen_ids.insert(rid)
+                        && let Some(record) = self.records.get(&rid)
+                    {
+                        result.push(record);
                     }
                 }
             }

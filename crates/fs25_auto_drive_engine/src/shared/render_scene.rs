@@ -139,10 +139,12 @@ impl RenderSpatialIndex {
             let index = entry.item as usize;
             if let (Some(&node_id), Some(pos)) =
                 (self.node_ids.get(index), self.positions.get(index))
+                && pos.x >= min.x
+                && pos.x <= max.x
+                && pos.y >= min.y
+                && pos.y <= max.y
             {
-                if pos.x >= min.x && pos.x <= max.x && pos.y >= min.y && pos.y <= max.y {
-                    out.push(node_id);
-                }
+                out.push(node_id);
             }
         }
     }

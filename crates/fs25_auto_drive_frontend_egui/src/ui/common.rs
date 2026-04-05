@@ -14,6 +14,19 @@ const ALT_WHEEL_MULTIPLIER_F32: f32 = 10.0;
 const CTRL_WHEEL_MULTIPLIER_F32: f32 = 0.1;
 const ALT_WHEEL_MULTIPLIER_USIZE: usize = 10;
 
+/// Erstellt ein Top-Level-`Ui`, in dem Panels via `show_inside()` gerendert werden koennen.
+pub(crate) fn create_top_level_ui(ctx: &egui::Context, id_source: &'static str) -> egui::Ui {
+    let mut top_ui = egui::Ui::new(
+        ctx.clone(),
+        egui::Id::new((ctx.viewport_id(), id_source)),
+        egui::UiBuilder::new()
+            .layer_id(egui::LayerId::background())
+            .max_rect(ctx.content_rect()),
+    );
+    top_ui.set_clip_rect(ctx.content_rect());
+    top_ui
+}
+
 fn effective_float_wheel_step(step: f32, modifiers: egui::Modifiers) -> f32 {
     let mut effective_step = step;
     if modifiers.alt {
@@ -45,11 +58,23 @@ fn should_capture_hovered_scroll(raw: f32, smooth: f32) -> bool {
     raw.abs() > SCROLL_CAPTURE_EPSILON || smooth.abs() > SCROLL_CAPTURE_EPSILON
 }
 
+fn raw_scroll_delta_y(input: &egui::InputState) -> f32 {
+    input
+        .raw
+        .events
+        .iter()
+        .filter_map(|event| match event {
+            egui::Event::MouseWheel { delta, .. } => Some(delta.y),
+            _ => None,
+        })
+        .sum()
+}
+
 /// Ermittelt die Scroll-Richtung fuer ein gehovertes Widget und konsumiert das Event.
 ///
 /// Gibt `+1.0` (hoch), `-1.0` (runter) oder `0.0` (nicht gehovert / kein Scroll)
 /// zurueck. Fuer diskrete Numerik-Anpassungen wird bewusst nur
-/// `raw_scroll_delta` ausgewertet, damit ein physischer Wheel-Notch genau
+/// der rohe `MouseWheel`-Eventstrom ausgewertet, damit ein physischer Wheel-Notch genau
 /// einen Schritt ausloest (kein Mehrfach-Feuern durch Smoothing). Solange ein
 /// Numeric-Widget gehovert ist, werden Wheel-Events mit Raw- oder Smooth-Delta
 /// konsumiert, damit umgebende Scroll-Areas nicht gleichzeitig reagieren.
@@ -58,11 +83,13 @@ pub(crate) fn wheel_dir(ui: &egui::Ui, response: &egui::Response) -> f32 {
         return 0.0;
     }
 
-    let (raw, smooth) = ui.input(|i| (i.raw_scroll_delta.y, i.smooth_scroll_delta.y));
+    let (raw, smooth) = ui.input(|i| (raw_scroll_delta_y(i), i.smooth_scroll_delta.y));
     let direction = wheel_direction_from_deltas(raw, smooth);
     if should_capture_hovered_scroll(raw, smooth) {
         ui.input_mut(|i| {
-            i.raw_scroll_delta.y = 0.0;
+            i.raw
+                .events
+                .retain(|event| !matches!(event, egui::Event::MouseWheel { .. }));
             i.smooth_scroll_delta.y = 0.0;
         });
     }

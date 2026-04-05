@@ -74,17 +74,17 @@ pub fn add_node_at_position(state: &mut AppState, world_pos: Vec2) -> AddNodeRes
     // Pruefe ob ein existierender Node direkt getroffen wurde → nur selektieren
     // Hitbox ist auf die visuelle Node-Groesse begrenzt (nicht snap_radius),
     // damit zwischen eng platzierten Nodes noch neue Nodes gesetzt werden koennen.
-    if let Some(hit) = road_map_ref.nearest_node(world_pos) {
-        if hit.distance <= state.options.hitbox_radius() {
-            state.selection.ids_mut().clear();
-            state.selection.ids_mut().insert(hit.node_id);
-            state.selection.selection_anchor_node_id = Some(hit.node_id);
-            log::info!(
-                "AddNode: Existierender Node {} selektiert (Snap)",
-                hit.node_id
-            );
-            return AddNodeResult::SelectedExisting(hit.node_id);
-        }
+    if let Some(hit) = road_map_ref.nearest_node(world_pos)
+        && hit.distance <= state.options.hitbox_radius()
+    {
+        state.selection.ids_mut().clear();
+        state.selection.ids_mut().insert(hit.node_id);
+        state.selection.selection_anchor_node_id = Some(hit.node_id);
+        log::info!(
+            "AddNode: Existierender Node {} selektiert (Snap)",
+            hit.node_id
+        );
+        return AddNodeResult::SelectedExisting(hit.node_id);
     }
 
     // Merke aktuell selektierten Node fuer Auto-Connect
@@ -150,24 +150,23 @@ pub fn add_node_at_position(state: &mut AppState, world_pos: Vec2) -> AddNodeRes
         );
     } else {
         // Normaler Auto-Connect: Vom selektierten Node zum neuen Node verbinden
-        if let Some(from_id) = connect_from {
-            if road_map.contains_node(from_id) {
-                let start_pos = road_map
-                    .node_position(from_id)
-                    .expect("Start-Node vorhanden");
-                let end_pos = world_pos;
-                let conn =
-                    Connection::new(from_id, new_id, direction, priority, start_pos, end_pos);
-                road_map.add_connection(conn);
-                road_map.recalculate_node_flags(&[from_id, new_id]);
-                log::info!(
-                    "Auto-Connect: {}→{} ({:?}, {:?})",
-                    from_id,
-                    new_id,
-                    direction,
-                    priority
-                );
-            }
+        if let Some(from_id) = connect_from
+            && road_map.contains_node(from_id)
+        {
+            let start_pos = road_map
+                .node_position(from_id)
+                .expect("Start-Node vorhanden");
+            let end_pos = world_pos;
+            let conn = Connection::new(from_id, new_id, direction, priority, start_pos, end_pos);
+            road_map.add_connection(conn);
+            road_map.recalculate_node_flags(&[from_id, new_id]);
+            log::info!(
+                "Auto-Connect: {}→{} ({:?}, {:?})",
+                from_id,
+                new_id,
+                direction,
+                priority
+            );
         }
     }
 

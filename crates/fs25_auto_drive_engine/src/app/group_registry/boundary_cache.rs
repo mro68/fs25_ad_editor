@@ -139,25 +139,25 @@ impl GroupRegistry {
             // auch wenn dort aktuell keine externe Verbindung mehr existiert.
             let existing_ids: HashSet<u64> = infos.iter().map(|bi| bi.node_id).collect();
 
-            if let Some(entry_id) = record.entry_node_id {
-                if !existing_ids.contains(&entry_id) {
-                    infos.push(BoundaryInfo {
-                        node_id: entry_id,
-                        has_external_connection: false,
-                        direction: BoundaryDirection::Entry,
-                        max_external_angle_deviation: None, // None = immer Icon anzeigen
-                    });
-                }
+            if let Some(entry_id) = record.entry_node_id
+                && !existing_ids.contains(&entry_id)
+            {
+                infos.push(BoundaryInfo {
+                    node_id: entry_id,
+                    has_external_connection: false,
+                    direction: BoundaryDirection::Entry,
+                    max_external_angle_deviation: None, // None = immer Icon anzeigen
+                });
             }
-            if let Some(exit_id) = record.exit_node_id {
-                if !existing_ids.contains(&exit_id) {
-                    infos.push(BoundaryInfo {
-                        node_id: exit_id,
-                        has_external_connection: false,
-                        direction: BoundaryDirection::Exit,
-                        max_external_angle_deviation: None,
-                    });
-                }
+            if let Some(exit_id) = record.exit_node_id
+                && !existing_ids.contains(&exit_id)
+            {
+                infos.push(BoundaryInfo {
+                    node_id: exit_id,
+                    has_external_connection: false,
+                    direction: BoundaryDirection::Exit,
+                    max_external_angle_deviation: None,
+                });
             }
             self.boundary_cache.insert(rid, infos);
         }

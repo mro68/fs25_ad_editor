@@ -7,6 +7,29 @@ use crate::app::AppIntent;
 /// Diskrete Drehschrittweite pro Scroll-Tick fuer die Gruppen-Rotation (Grad).
 const GROUP_ROTATION_STEP_DEG: f32 = 5.0;
 
+fn raw_scroll_delta_from_events(events: &[egui::Event]) -> f32 {
+    events
+        .iter()
+        .filter_map(|event| match event {
+            egui::Event::MouseWheel { delta, .. } => Some(delta.y),
+            _ => None,
+        })
+        .sum()
+}
+
+fn raw_scroll_delta_y(ui: &egui::Ui) -> f32 {
+    ui.input(|i| raw_scroll_delta_from_events(&i.raw.events))
+}
+
+fn consume_scroll(ui: &egui::Ui) {
+    ui.input_mut(|i| {
+        i.raw
+            .events
+            .retain(|event| !matches!(event, egui::Event::MouseWheel { .. }));
+        i.smooth_scroll_delta.y = 0.0;
+    });
+}
+
 impl InputState {
     /// Verarbeitet Scroll-Zoom auf die aktuelle Mausposition.
     pub(crate) fn handle_scroll_zoom(
@@ -33,9 +56,9 @@ impl InputState {
         }
 
         let modifiers = ctx.ui.input(|i| i.modifiers);
-        // Alt+Scroll-Rotation: raw_scroll_delta verwenden (kein Smoothing → 1× pro Tick statt ~13×)
+        // Alt+Scroll-Rotation: rohe MouseWheel-Events verwenden (kein Smoothing → 1× pro Tick statt ~13×)
         // Normaler Zoom: smooth_scroll_delta bleibt unveraendert
-        let raw_scroll = ctx.ui.input(|i| i.raw_scroll_delta.y);
+        let raw_scroll = raw_scroll_delta_y(ctx.ui);
         let scroll = ctx.ui.input(|i| i.smooth_scroll_delta.y);
 
         // Gruppen-Rotation beenden wenn Alt losgelassen wurde oder Bedingungen nicht mehr gelten.
@@ -52,16 +75,13 @@ impl InputState {
         }
 
         // Alt+Scroll + Select-Tool + aktive Selektion → Gruppen-Rotation
-        // raw_scroll_delta statt smooth: verhindert 13× Feuern pro Mausrad-Tick
+        // Rohe MouseWheel-Events statt smooth: verhindert 13× Feuern pro Mausrad-Tick
         if modifiers.alt
             && ctx.active_tool == EditorTool::Select
             && !ctx.selected_node_ids.is_empty()
         {
             if raw_scroll.abs() >= 0.5 {
-                ctx.ui.input_mut(|i| {
-                    i.raw_scroll_delta.y = 0.0;
-                    i.smooth_scroll_delta.y = 0.0;
-                });
+                consume_scroll(ctx.ui);
                 if !self.rotation_active {
                     self.rotation_active = true;
                     events.push(AppIntent::BeginRotateSelectedNodesRequested);
@@ -75,13 +95,10 @@ impl InputState {
         }
 
         // Alt+Scroll → Route-Tool-Rotation statt Zoom
-        // raw_scroll_delta statt smooth: verhindert Mehrfach-Feuern pro Tick
+        // Rohe MouseWheel-Events statt smooth: verhindert Mehrfach-Feuern pro Tick
         if modifiers.alt && ctx.active_tool == EditorTool::Route {
             if raw_scroll.abs() >= 0.5 {
-                ctx.ui.input_mut(|i| {
-                    i.raw_scroll_delta.y = 0.0;
-                    i.smooth_scroll_delta.y = 0.0;
-                });
+                consume_scroll(ctx.ui);
                 events.push(AppIntent::RouteToolScrollRotated {
                     delta: raw_scroll.signum(),
                 });
@@ -111,5 +128,47 @@ impl InputState {
             self.rotation_active = false;
             events.push(AppIntent::EndRotateSelectedNodesRequested);
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::raw_scroll_delta_from_events;
+
+    #[test]
+    fn raw_scroll_delta_from_events_aggregates_mouse_wheel_notches() {
+        let events = vec![
+            egui::Event::MouseWheel {
+                unit: egui::MouseWheelUnit::Line,
+                delta: egui::vec2(0.0, 1.0),
+                modifiers: egui::Modifiers::ALT,
+                phase: egui::TouchPhase::Move,
+            },
+            egui::Event::PointerMoved(egui::pos2(12.0, 24.0)),
+            egui::Event::MouseWheel {
+                unit: egui::MouseWheelUnit::Line,
+                delta: egui::vec2(0.0, -0.25),
+                modifiers: egui::Modifiers::NONE,
+                phase: egui::TouchPhase::Move,
+            },
+        ];
+
+        assert!((raw_scroll_delta_from_events(&events) - 0.75).abs() < f32::EPSILON);
+    }
+
+    #[test]
+    fn raw_scroll_delta_from_events_ignores_non_wheel_events() {
+        let events = vec![
+            egui::Event::PointerMoved(egui::pos2(1.0, 2.0)),
+            egui::Event::Key {
+                key: egui::Key::A,
+                physical_key: None,
+                pressed: true,
+                repeat: false,
+                modifiers: egui::Modifiers::ALT,
+            },
+        ];
+
+        assert_eq!(raw_scroll_delta_from_events(&events), 0.0);
     }
 }

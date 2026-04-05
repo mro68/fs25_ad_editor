@@ -56,23 +56,25 @@ impl EditorApp {
 }
 
 impl eframe::App for EditorApp {
-    fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
+    fn ui(&mut self, ui: &mut egui::Ui, _frame: &mut eframe::Frame) {
+        let ctx = ui.ctx().clone();
+
         if self.state.should_exit {
             ctx.send_viewport_cmd(egui::ViewportCommand::Close);
             return;
         }
 
-        let events = self.collect_ui_events(ctx);
+        let events = self.collect_ui_events(&ctx);
 
         let has_meaningful_events = events
             .iter()
             .any(|e| !matches!(e, AppIntent::ViewportResized { .. }));
 
-        self.process_events(ctx, events);
+        self.process_events(&ctx, events);
 
         self.sync_background_upload();
 
-        self.maybe_request_repaint(ctx, has_meaningful_events);
+        self.maybe_request_repaint(&ctx, has_meaningful_events);
     }
 }
 
@@ -84,11 +86,12 @@ impl EditorApp {
                     self.toggle_floating_menu(ctx, kind);
                 }
                 intent => {
-                    let handled_by_bridge = match host_bridge_adapter::apply_mapped_intent(
+                    let bridge_result = host_bridge_adapter::apply_mapped_intent(
                         &mut self.controller,
                         &mut self.state,
                         &intent,
-                    ) {
+                    );
+                    let handled_by_bridge = match bridge_result {
                         Ok(handled) => handled,
                         Err(e) => {
                             self.state.ui.status_message =
@@ -102,7 +105,8 @@ impl EditorApp {
                         continue;
                     }
 
-                    if let Err(e) = self.controller.handle_intent(&mut self.state, intent) {
+                    let intent_result = self.controller.handle_intent(&mut self.state, intent);
+                    if let Err(e) = intent_result {
                         self.state.ui.status_message =
                             Some(format!("Aktion fehlgeschlagen: {}", e));
                         log::error!("Event handling failed: {:#}", e);
