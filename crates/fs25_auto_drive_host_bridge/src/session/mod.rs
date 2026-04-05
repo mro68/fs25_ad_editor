@@ -1,14 +1,12 @@
 use anyhow::Result;
-use fs25_auto_drive_engine::app::ui_contract::{
-    HostUiSnapshot, ViewportOverlaySnapshot,
-};
+use fs25_auto_drive_engine::app::ui_contract::{HostUiSnapshot, ViewportOverlaySnapshot};
 use fs25_auto_drive_engine::app::{AppController, AppState, EditorTool};
 use fs25_auto_drive_engine::shared::{RenderAssetsSnapshot, RenderScene};
 use glam::Vec2;
 
 use crate::dto::{
-    HostActiveTool, HostDialogRequest, HostDialogResult, HostSelectionSnapshot,
-    HostSessionAction, HostSessionSnapshot, HostViewportSnapshot,
+    HostActiveTool, HostDialogRequest, HostDialogResult, HostSelectionSnapshot, HostSessionAction,
+    HostSessionSnapshot, HostViewportSnapshot,
 };
 
 fn map_active_tool(tool: EditorTool) -> HostActiveTool {

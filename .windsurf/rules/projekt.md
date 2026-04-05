@@ -33,7 +33,8 @@ Neuimplementierung des AutoDrive Course Editors in Rust mit egui + wgpu. Hochper
 	- `bridge-owned`: stabil ueber `HostSessionAction`/`HostSessionSnapshot`/`HostUiSnapshot`/`ViewportOverlaySnapshot`.
 	- `bridge-gap`: fachlich host-neutral, aber noch nicht auf die Host-Bridge-Seam gezogen.
 	- `host-local`: dauerhaft host-spezifische Runtime-/Rendering-/Input-Zustaende.
-- Aktueller `bridge-gap`: Datei-/Pfad-Dialog-Lifecycle in egui (direkter Drain ueber `AppController::take_dialog_requests(...)`).
+- Datei-/Pfad-Dialog-Lifecycle in egui ist auf die Host-Seam konsolidiert (`take_host_dialog_requests(...)` + `HostSessionAction::SubmitDialogResult`).
+- Aktueller `bridge-gap`: lokale `AppIntent`-zu-`HostSessionAction`-Zuordnung in `host_bridge_adapter` als Doppelpflege zur kanonischen Reverse-Zuordnung in der Host-Bridge-Dispatch-Seam.
 - Keine neuen Escape-Hatches direkt auf `AppState`/`AppController` fuer neue host-neutrale Fluesse.
 
 ## Technologie-Stack

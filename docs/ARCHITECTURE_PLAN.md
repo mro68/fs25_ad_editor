@@ -1,7 +1,7 @@
 # Architektur-Plan (Soll-Zustand)
 
 Stand: 2026-04-05  
-Status: Workspace-Split umgesetzt — Root-Fassade, Engine-Crate, render_wgpu-Core-Crate und egui-Host-Adapter sind stabil; die gemeinsame Rust-Host-Dispatch-Seam ist produktiv, `HostBridgeSession` ist als kanonische Session-Surface fuer egui und Flutter festgeschrieben, der egui-Dialog-Lifecycle ist als `bridge-gap` zur Host-Bridge-Seam klassifiziert, die Flutter-Crate bleibt als eingefrorene Alias-/Kompat-Surface bestehen
+Status: Workspace-Split umgesetzt — Root-Fassade, Engine-Crate, render_wgpu-Core-Crate und egui-Host-Adapter sind stabil; die gemeinsame Rust-Host-Dispatch-Seam ist produktiv, `HostBridgeSession` ist als kanonische Session-Surface fuer egui und Flutter festgeschrieben, der egui-Dialog-Lifecycle ist auf die Host-Bridge-Seam konsolidiert, verbleibender `bridge-gap` ist die lokale Action-Mapping-Doppelpflege im egui-Adapter, die Flutter-Crate bleibt als eingefrorene Alias-/Kompat-Surface bestehen
 
 Aktuelle Integrationskette: Workspace auf Rust 2024, egui-Host auf `eframe/egui/egui-wgpu 0.34.1`, Render-Core auf `wgpu 29.0.*`.
 
@@ -25,11 +25,11 @@ Kernfluss: **Input -> AppIntent -> AppController -> AppCommand -> AppState/Domai
 
 Verbleibende egui-Zugriffe werden verbindlich in drei Klassen aufgeteilt:
 
-- **bridge-owned:** Stabil ueber die gemeinsame Host-Bridge-Seam abgebildet (explizite `HostSessionAction`, `HostSessionSnapshot`, `HostUiSnapshot`, `ViewportOverlaySnapshot`, Render-Read-Seams).
-- **bridge-gap:** Fachlich host-neutral, aber in egui noch nicht ueber die kanonische Host-Bridge-Seam verdrahtet.
+- **bridge-owned:** Stabil ueber die gemeinsame Host-Bridge-Seam abgebildet (explizite `HostSessionAction`, `HostSessionSnapshot`, `HostUiSnapshot`, `ViewportOverlaySnapshot`, Render-Read-Seams und Host-Dialog-Lifecycle).
+- **bridge-gap:** Fachlich host-neutral, aber in egui noch nicht vollstaendig zentralisiert (aktuell die Action-Mapping-Doppelpflege `AppIntent -> HostSessionAction` lokal versus `HostSessionAction -> AppIntent` in der Bridge-Dispatch-Seam).
 - **host-local:** Dauerhaft host-spezifische Runtime-/Rendering-/Input-Details (eframe-Lifecycle, egui-Widget-State, wgpu-Callback-Glue), die bewusst nicht in die Bridge gehoeren.
 
-Aktueller `bridge-gap` (Stand 2026-04-05): Der Datei-/Pfad-Dialog-Lifecycle in egui drainet noch direkt `AppController::take_dialog_requests(...)` und verarbeitet Engine-Dialog-DTOs lokal. Die kanonische Ziel-Seam bleibt `HostBridgeSession::take_dialog_requests()` plus `HostBridgeSession::submit_dialog_result(...)`.
+Aktueller `bridge-gap` (Stand 2026-04-05): Die lokale Action-Mapping-Tabelle in `host_bridge_adapter` wird parallel zur kanonischen Reverse-Zuordnung in `fs25_auto_drive_host_bridge::dispatch` gepflegt. Der Datei-/Pfad-Dialog-Lifecycle selbst laeuft bereits ueber die Host-Dialog-Seam.
 
 Die Integrationsschale ist bewusst kein zusaetzlicher Fach-Layer. Sie koordiniert `ui`, `app` und den Host-Adapter in `render`, enthaelt aber keine eigenen Use-Cases oder Domain-Logik.
 
@@ -126,7 +126,7 @@ graph BT
 
 - Startet `EditorApp` aus `runtime.rs` heraus und bindet eframe/wgpu ueber den egui-Host-Adapter an den render_wgpu-Kern an
 - Sammelt pro Frame Panel-, Dialog-, Viewport- und Overlay-Events als `Vec<AppIntent>`, verarbeitet schalenlokale Events by-value, dispatcht stabile Host-Aktionen ueber die gemeinsame Bridge-Seam und reicht nur verbleibende Intents an `AppController` weiter
-- Hält den Datei-/Pfad-Dialog-Lifecycle bis zur Seam-Konsolidierung als expliziten `bridge-gap` eng begrenzt
+- Fuehrt den Datei-/Pfad-Dialog-Lifecycle ueber Host-Dialog-DTOs (`HostDialogRequest`/`HostDialogResult`) in denselben Bridge-Dispatch-Pfad zurueck
 - Registriert den Render-Callback und verwaltet nur fensterlokalen Integrationszustand (`render::Renderer`, `ui::InputState`, Cursor-/Icon-Caches)
 
 **Darf**
@@ -199,7 +199,7 @@ Numerische Mausrad-Interaktion bleibt bewusst im UI-Layer: `ui::common` kapselt 
 - Schmale Read-only-Fassade fuer UI und Integrationsschale: app-eigene Typen plus bewusst ausgewaehlte Core-/Shared-Typen wie `ConnectionDirection`, `ConnectionPriority`, `RoadMap`, `Camera2D`, `RenderQuality`, `ZipImageEntry`
 - Kanonischer RouteTool-Katalog (`tools/catalog.rs`) als Single Source of Truth fuer `RouteToolId`, `RouteToolGroup`, `RouteToolBackingMode`, `RouteToolIconKey`, Surface-Sichtbarkeit und Aktivierungs-Voraussetzungen
 - Egui-freier Route-Tool-Panel-Vertrag als stabile Fassade in `ui_contract.rs` und `ui_contract/route_tool_panel.rs`; die eigentlichen DTO-Familien liegen intern in `route_tool_panel/common.rs`, `curve_family.rs`, `generator_family.rs` und `analysis_family.rs`
-- Host-neutrale Dialog-/Fenster-Vertraege in `ui_contract/host_ui.rs`; die Queue liegt in `UiState` und wird intern ueber `AppController::take_dialog_requests(...)` gedraint. Die kanonische Host-Seam fuer Hosts bleibt `HostBridgeSession::take_dialog_requests()` / `submit_dialog_result(...)`; direkter egui-Drain ist ein dokumentierter `bridge-gap`.
+- Host-neutrale Dialog-/Fenster-Vertraege in `ui_contract/host_ui.rs`; die Queue liegt in `UiState` und wird intern ueber `AppController::take_dialog_requests(...)` gedraint. Die kanonische Host-Seam fuer Hosts bleibt `HostBridgeSession::take_dialog_requests()` / `submit_dialog_result(...)`; Host-Adapter mit eigenem Controller/State nutzen dafuer `take_host_dialog_requests(...)`.
 - Host-neutrale Overlay-Vertraege in `ui_contract/viewport_overlay.rs`; Overlay-Ableitung (Route-Preview, Clipboard, Distanzen, Segment-Locks, Group-Boundaries) laeuft zentral im App-Layer statt im Painter
 - Konsolidierte Asset-Leseflaeche im `AppState`: `farmland_polygons_arc()`, `farmland_grid_arc()` und `background_image_arc()` kapseln die kanonischen Tool-/Host-Zugriffe; `view.background_map` bleibt Primaerquelle fuer Hintergrundbilder, `background_image` nur Kompatibilitaets-Fallback
 - Separater Tool-Editing-Layer (`tool_editing/*`) fuer persistente Tool-Snapshots, Rehydrierung sowie Cancel/Undo im destruktiven Tool-Edit-Flow
@@ -469,7 +469,7 @@ impl fs25_auto_drive_render_wgpu::Renderer {
 }
 ```
 
-`HostUiSnapshot` und `ViewportOverlaySnapshot` sind die host-neutralen Read-Modelle fuer Panels bzw. Viewport-Overlays. Egui konsumiert beide Modelle read-only und mappt `PanelAction` sowie Overlay-Klicks zentral auf `AppIntent`. Die kanonische Host-Bridge kapselt Mutationen als `HostSessionAction`, liefert `HostSessionSnapshot` sowie `HostRenderFrameSnapshot` und definiert den host-neutralen Dialog-Lifecycle ueber `take_dialog_requests()`/`submit_dialog_result(...)`. Die Flutter-Bridge re-exportiert dieselbe Surface zusaetzlich als `EngineSessionAction`, `EngineSessionSnapshot` und `EngineRenderFrameSnapshot`, ist als alias-only Uebergangsschicht eingefroren und fuehrt keine eigene Session-Logik, keinen generischen `AppIntent`-Dispatch und keine `AppState`-Escape-Hatches ein. Der direkte egui-Dialog-Drain bleibt bis zur produktiven Umstellung ein expliziter `bridge-gap`.
+`HostUiSnapshot` und `ViewportOverlaySnapshot` sind die host-neutralen Read-Modelle fuer Panels bzw. Viewport-Overlays. Egui konsumiert beide Modelle read-only und mappt `PanelAction` sowie Overlay-Klicks zentral auf `AppIntent`. Die kanonische Host-Bridge kapselt Mutationen als `HostSessionAction`, liefert `HostSessionSnapshot` sowie `HostRenderFrameSnapshot` und definiert den host-neutralen Dialog-Lifecycle ueber `take_dialog_requests()`/`submit_dialog_result(...)`. Egui konsumiert die Dialog-Requests ueber `take_host_dialog_requests(...)` und fuehrt Ergebnisse ueber `HostSessionAction::SubmitDialogResult` in denselben Dispatch-Pfad zurueck. Die Flutter-Bridge re-exportiert dieselbe Surface zusaetzlich als `EngineSessionAction`, `EngineSessionSnapshot` und `EngineRenderFrameSnapshot`, ist als alias-only Uebergangsschicht eingefroren und fuehrt keine eigene Session-Logik, keinen generischen `AppIntent`-Dispatch und keine `AppState`-Escape-Hatches ein.
 
 `render_scene::build()` baut den render-seitigen `RenderMap`-Snapshot nur bei geaenderter `RoadMap::render_cache_key()` neu auf und legt ihn in `AppState::render_map_cache` ab. Jeder Rebuild protokolliert `nodes`, `connections`, `markers` und `approx_bytes`, damit Performance-Reports neben Laufzeiten auch die Snapshot-Groesse desselben Datensatzes dokumentieren koennen. `render_assets::build()` liefert parallel den host-neutralen Asset-Snapshot; Hintergrund-Sync laeuft ueber `background_asset_revision`/`background_transform_revision` statt Dirty-Flags. `build_viewport_overlay_snapshot()` liefert parallel den host-neutralen Overlay-Read-Modell-Snapshot fuer UI/Bridge-Hosts und waermt bei Bedarf Boundary-Caches im `AppState` auf. Die egui-Integrationsschale vergleicht Asset-Revisionen gegen ihre letzten Upload-Staende und rendert Overlays ausschliesslich aus dem Snapshot; die Flutter-Bridge kann alternativ denselben gekoppelten read-only Render-Output unter dem Alias `EngineRenderFrameSnapshot` liefern.
 
