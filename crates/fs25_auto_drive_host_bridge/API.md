@@ -12,8 +12,16 @@ Die Crate bleibt absichtlich host-neutral: keine eframe/egui-Runtime, keine Flut
 
 | Modul | Verantwortung |
 |---|---|
+| `dispatch` | Wiederverwendbare Rust-Host-Dispatch-Seam (`HostSessionAction` -> `AppIntent`) ueber `AppController` und `AppState` |
 | `session` | `HostBridgeSession` als kanonische Session-Fassade ueber der Engine |
 | `dto` | Serialisierbare Host-Actions, Dialog-DTOs und Session-Snapshots |
+
+## Oeffentliche Dispatch-Funktionen
+
+| Signatur | Zweck |
+|---|---|
+| `pub fn map_host_action_to_intent(action: HostSessionAction) -> Option<AppIntent>` | Uebersetzt eine Host-Action in einen stabilen Engine-Intent |
+| `pub fn apply_host_action(controller: &mut AppController, state: &mut AppState, action: HostSessionAction) -> Result<bool>` | Wendet die gemeinsame Dispatch-Seam direkt auf einen bestehenden Rust-Host-State an |
 
 ## Wichtige oeffentliche Typen
 
@@ -93,5 +101,6 @@ flowchart LR
 ## Hinweise
 
 - `snapshot()` arbeitet ueber einen Dirty-Cache und baut `HostSessionSnapshot` nur nach erfolgreichen Mutationen oder entnommenen Dialog-Requests neu auf.
+- `HostBridgeSession::apply_action(...)` delegiert intern an dieselbe `dispatch`-Seam, die auch nicht-Session-basierte Rust-Hosts nutzen koennen.
 - `take_dialog_requests()` und `submit_dialog_result(...)` bilden die einzige oeffentliche Dialog-Seam der Bridge.
 - `fs25_auto_drive_frontend_flutter_bridge` re-exportiert diese Surface als `FlutterBridgeSession` bzw. `Engine*`-Aliase; `fs25_auto_drive_frontend_egui` mappt ueber `host_bridge_adapter` aktuell nur ein bewusst kleines Intent-Subset.

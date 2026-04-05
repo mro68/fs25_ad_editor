@@ -1,9 +1,8 @@
 use anyhow::Result;
 use fs25_auto_drive_engine::app::ui_contract::{
-    dialog_result_to_intent, DialogRequest, DialogRequestKind, DialogResult, HostUiSnapshot,
-    ViewportOverlaySnapshot,
+    DialogRequest, DialogRequestKind, HostUiSnapshot, ViewportOverlaySnapshot,
 };
-use fs25_auto_drive_engine::app::{AppController, AppIntent, AppState, EditorTool};
+use fs25_auto_drive_engine::app::{AppController, AppState, EditorTool};
 use fs25_auto_drive_engine::shared::{RenderAssetsSnapshot, RenderScene};
 use glam::Vec2;
 
@@ -21,15 +20,6 @@ fn map_active_tool(tool: EditorTool) -> HostActiveTool {
     }
 }
 
-fn map_editor_tool(tool: HostActiveTool) -> EditorTool {
-    match tool {
-        HostActiveTool::Select => EditorTool::Select,
-        HostActiveTool::Connect => EditorTool::Connect,
-        HostActiveTool::AddNode => EditorTool::AddNode,
-        HostActiveTool::Route => EditorTool::Route,
-    }
-}
-
 fn map_dialog_request_kind(kind: DialogRequestKind) -> HostDialogRequestKind {
     match kind {
         DialogRequestKind::OpenFile => HostDialogRequestKind::OpenFile,
@@ -42,50 +32,10 @@ fn map_dialog_request_kind(kind: DialogRequestKind) -> HostDialogRequestKind {
     }
 }
 
-fn map_host_dialog_request_kind(kind: HostDialogRequestKind) -> DialogRequestKind {
-    match kind {
-        HostDialogRequestKind::OpenFile => DialogRequestKind::OpenFile,
-        HostDialogRequestKind::SaveFile => DialogRequestKind::SaveFile,
-        HostDialogRequestKind::Heightmap => DialogRequestKind::Heightmap,
-        HostDialogRequestKind::BackgroundMap => DialogRequestKind::BackgroundMap,
-        HostDialogRequestKind::OverviewZip => DialogRequestKind::OverviewZip,
-        HostDialogRequestKind::CurseplayImport => DialogRequestKind::CurseplayImport,
-        HostDialogRequestKind::CurseplayExport => DialogRequestKind::CurseplayExport,
-    }
-}
-
 fn map_dialog_request(request: DialogRequest) -> HostDialogRequest {
     HostDialogRequest {
         kind: map_dialog_request_kind(request.kind()),
         suggested_file_name: request.suggested_file_name().map(str::to_owned),
-    }
-}
-
-fn map_dialog_result(result: HostDialogResult) -> DialogResult {
-    match result {
-        HostDialogResult::Cancelled { kind } => DialogResult::Cancelled {
-            kind: map_host_dialog_request_kind(kind),
-        },
-        HostDialogResult::PathSelected { kind, path } => DialogResult::PathSelected {
-            kind: map_host_dialog_request_kind(kind),
-            path,
-        },
-    }
-}
-
-fn action_to_intent(action: HostSessionAction) -> Option<AppIntent> {
-    match action {
-        HostSessionAction::ToggleCommandPalette => Some(AppIntent::CommandPaletteToggled),
-        HostSessionAction::SetEditorTool { tool } => Some(AppIntent::SetEditorToolRequested {
-            tool: map_editor_tool(tool),
-        }),
-        HostSessionAction::OpenOptionsDialog => Some(AppIntent::OpenOptionsDialogRequested),
-        HostSessionAction::CloseOptionsDialog => Some(AppIntent::CloseOptionsDialogRequested),
-        HostSessionAction::Undo => Some(AppIntent::UndoRequested),
-        HostSessionAction::Redo => Some(AppIntent::RedoRequested),
-        HostSessionAction::SubmitDialogResult { result } => {
-            dialog_result_to_intent(map_dialog_result(result))
-        }
     }
 }
 
@@ -151,8 +101,9 @@ impl HostBridgeSession {
 
     /// Wendet eine explizite Host-Aktion auf die Session an.
     pub fn apply_action(&mut self, action: HostSessionAction) -> Result<()> {
-        if let Some(intent) = action_to_intent(action) {
-            self.apply_intent(intent)?;
+        let handled = crate::dispatch::apply_host_action(&mut self.controller, &mut self.state, action)?;
+        if handled {
+            self.snapshot_dirty = true;
         }
         Ok(())
     }
@@ -267,12 +218,6 @@ impl HostBridgeSession {
         self.snapshot_cache = build_snapshot(&self.state);
         self.snapshot_dirty = false;
     }
-
-    fn apply_intent(&mut self, intent: AppIntent) -> Result<()> {
-        self.controller.handle_intent(&mut self.state, intent)?;
-        self.snapshot_dirty = true;
-        Ok(())
-    }
 }
 
 impl Default for HostBridgeSession {
@@ -288,6 +233,14 @@ mod tests {
     use crate::dto::{HostActiveTool, HostDialogRequestKind, HostSessionAction};
 
     use super::HostBridgeSession;
+
+    fn apply_test_intent(session: &mut HostBridgeSession, intent: AppIntent) {
+        session
+            .controller
+            .handle_intent(&mut session.state, intent)
+            .expect("Test-Intent muss verarbeitet werden");
+        session.snapshot_dirty = true;
+    }
 
     #[test]
     fn new_session_exposes_empty_snapshot() {
@@ -359,12 +312,8 @@ mod tests {
     fn take_dialog_requests_drains_pending_queue_for_host_polling() {
         let mut session = HostBridgeSession::new();
 
-        session
-            .apply_intent(AppIntent::CurseplayImportRequested)
-            .expect("CurseplayImportRequested muss Dialog anfordern");
-        session
-            .apply_intent(AppIntent::CurseplayExportRequested)
-            .expect("CurseplayExportRequested muss Dialog anfordern");
+        apply_test_intent(&mut session, AppIntent::CurseplayImportRequested);
+        apply_test_intent(&mut session, AppIntent::CurseplayExportRequested);
 
         assert_eq!(session.snapshot().pending_dialog_request_count, 2);
 
