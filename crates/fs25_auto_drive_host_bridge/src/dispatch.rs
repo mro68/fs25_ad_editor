@@ -1,7 +1,5 @@
 use anyhow::Result;
-use fs25_auto_drive_engine::app::ui_contract::{
-    dialog_result_to_intent, DialogRequestKind, DialogResult,
-};
+use fs25_auto_drive_engine::app::ui_contract::{dialog_result_to_intent, DialogRequestKind, DialogResult};
 use fs25_auto_drive_engine::app::{AppController, AppIntent, AppState, EditorTool};
 
 use crate::dto::{HostActiveTool, HostDialogRequestKind, HostDialogResult, HostSessionAction};
