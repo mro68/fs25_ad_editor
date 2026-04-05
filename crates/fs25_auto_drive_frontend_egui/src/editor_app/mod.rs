@@ -5,10 +5,10 @@ mod helpers;
 mod overlays;
 
 use crate::app::{use_cases, AppController, AppIntent, AppState};
-use crate::host_bridge_adapter;
 use crate::{render, ui};
 use eframe::egui;
 use eframe::egui_wgpu;
+use fs25_auto_drive_host_bridge::apply_mapped_intent;
 
 /// Haupt-Anwendungsstruktur.
 pub(crate) struct EditorApp {
@@ -86,11 +86,8 @@ impl EditorApp {
                     self.toggle_floating_menu(ctx, kind);
                 }
                 intent => {
-                    let bridge_result = host_bridge_adapter::apply_mapped_intent(
-                        &mut self.controller,
-                        &mut self.state,
-                        &intent,
-                    );
+                    let bridge_result =
+                        apply_mapped_intent(&mut self.controller, &mut self.state, &intent);
                     let handled_by_bridge = match bridge_result {
                         Ok(handled) => handled,
                         Err(e) => {

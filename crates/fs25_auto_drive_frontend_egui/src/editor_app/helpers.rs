@@ -4,6 +4,7 @@ use crate::app::state::{FloatingMenuKind, FloatingMenuState};
 use crate::render;
 use eframe::egui;
 use eframe::egui_wgpu;
+use fs25_auto_drive_host_bridge::{build_render_assets, build_render_scene};
 
 use super::EditorApp;
 
@@ -16,9 +17,7 @@ impl EditorApp {
         viewport_size: [f32; 2],
     ) {
         let render_data = render::WgpuRenderData {
-            scene: self
-                .controller
-                .build_render_scene(&self.state, viewport_size),
+            scene: build_render_scene(&self.controller, &self.state, viewport_size),
         };
 
         let callback = egui_wgpu::Callback::new_paint_callback(
@@ -55,7 +54,7 @@ impl EditorApp {
     }
 
     pub(super) fn sync_background_upload(&mut self) {
-        let assets = self.controller.build_render_assets(&self.state);
+        let assets = build_render_assets(&self.controller, &self.state);
         let asset_revision = assets.background_asset_revision();
         let transform_revision = assets.background_transform_revision();
 

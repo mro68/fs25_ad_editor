@@ -6,7 +6,8 @@ use crate::shared::EditorOptions;
 use crate::ui;
 use eframe::egui;
 use fs25_auto_drive_host_bridge::{
-    map_host_action_to_intent, take_host_dialog_requests, HostDialogResult, HostSessionAction,
+    build_host_ui_snapshot, map_host_action_to_intent, take_host_dialog_requests, HostDialogResult,
+    HostSessionAction,
 };
 use glam::Vec2;
 
@@ -25,7 +26,7 @@ impl EditorApp {
     /// Sammelt alle UI- und Viewport-Events des aktuellen Frames.
     pub(super) fn collect_ui_events(&mut self, ctx: &egui::Context) -> Vec<AppIntent> {
         let mut events = Vec::new();
-        let host_ui_snapshot = self.controller.build_host_ui_snapshot(&self.state);
+        let host_ui_snapshot = build_host_ui_snapshot(&self.controller, &self.state);
         let mut top_ui = ui::common::create_top_level_ui(ctx, "editor_app_top_level_panels");
 
         // Panels und Dialoge

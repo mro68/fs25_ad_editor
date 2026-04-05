@@ -1,7 +1,7 @@
 # Architektur-Plan (Soll-Zustand)
 
 Stand: 2026-04-05  
-Status: Workspace-Split umgesetzt — Root-Fassade, Engine-Crate, render_wgpu-Core-Crate und egui-Host-Adapter sind stabil; die gemeinsame Rust-Host-Dispatch-Seam ist produktiv, `HostBridgeSession` ist als kanonische Session-Surface fuer egui und Flutter festgeschrieben, der egui-Dialog-Lifecycle ist auf die Host-Bridge-Seam konsolidiert, verbleibender `bridge-gap` ist die lokale Action-Mapping-Doppelpflege im egui-Adapter, die Flutter-Crate bleibt als eingefrorene Alias-/Kompat-Surface bestehen
+Status: Workspace-Split umgesetzt — Root-Fassade, Engine-Crate, render_wgpu-Core-Crate und egui-Host-Adapter sind stabil; die gemeinsame Rust-Host-Dispatch-Seam ist produktiv, `HostBridgeSession` ist als kanonische Session-Surface fuer egui und Flutter festgeschrieben, der egui-Dialog-Lifecycle ist auf die Host-Bridge-Seam konsolidiert, die lokale Action-Mapping-Doppelpflege wurde entfernt und bridge-owned Read-/Dispatch-Seams laufen kanonisch ueber `fs25_auto_drive_host_bridge`, die Flutter-Crate bleibt als eingefrorene Alias-/Kompat-Surface bestehen
 
 Aktuelle Integrationskette: Workspace auf Rust 2024, egui-Host auf `eframe/egui/egui-wgpu 0.34.1`, Render-Core auf `wgpu 29.0.*`.
 
@@ -13,7 +13,7 @@ Dieser Plan trennt fachliche Verantwortlichkeiten in Workspace-Crates mit klaren
 - Engine (`crates/fs25_auto_drive_engine/src/{app,core,shared,xml}`): host-neutrale Fachlogik
 - Host-Bridge-Core (`crates/fs25_auto_drive_host_bridge/src/*`): toolkit-freie gemeinsame Session-/Action-/Snapshot-Seam ueber der Engine
 - Render-Core (`crates/fs25_auto_drive_render_wgpu/src/*`): host-neutraler wgpu-Renderer-Kern
-- Egui-Frontend (`crates/fs25_auto_drive_frontend_egui/src/{ui,editor_app,runtime,render,host_bridge_adapter}`): Desktop-Host, egui-UI, Render-Adapter und Bridge-Dispatch-Seam fuer stabile Host-Aktionen
+- Egui-Frontend (`crates/fs25_auto_drive_frontend_egui/src/{ui,editor_app,runtime,render,host_bridge_adapter}`): Desktop-Host, egui-UI, Render-Adapter und Kompat-Surface auf die kanonische Host-Bridge-Dispatch-Seam
 - Flutter-Bridge (`crates/fs25_auto_drive_frontend_flutter_bridge/src/{session,dto}`): eingefrorene Alias-/Kompat-Schicht ueber der Host-Bridge (keine neue Logik)
 - Overview-Crate (`crates/fs25_map_overview/src/*`): Karten-/Farmland-Generierung
 
@@ -25,11 +25,11 @@ Kernfluss: **Input -> AppIntent -> AppController -> AppCommand -> AppState/Domai
 
 Verbleibende egui-Zugriffe werden verbindlich in drei Klassen aufgeteilt:
 
-- **bridge-owned:** Stabil ueber die gemeinsame Host-Bridge-Seam abgebildet (explizite `HostSessionAction`, `HostSessionSnapshot`, `HostUiSnapshot`, `ViewportOverlaySnapshot`, Render-Read-Seams und Host-Dialog-Lifecycle).
-- **bridge-gap:** Fachlich host-neutral, aber in egui noch nicht vollstaendig zentralisiert (aktuell die Action-Mapping-Doppelpflege `AppIntent -> HostSessionAction` lokal versus `HostSessionAction -> AppIntent` in der Bridge-Dispatch-Seam).
+- **bridge-owned:** Stabil ueber die gemeinsame Host-Bridge-Seam abgebildet (explizite `HostSessionAction`, `HostSessionSnapshot`, `HostUiSnapshot`, `ViewportOverlaySnapshot`, Render-Read-Seams, Mapping in beide Richtungen und Host-Dialog-Lifecycle).
+- **bridge-gap:** Fuer stabile Host-Aktionen und bridge-owned Read-Seams aktuell geschlossen; verbleibende direkte Controller-Aufrufe in egui sind bewusst host-local/high-frequency.
 - **host-local:** Dauerhaft host-spezifische Runtime-/Rendering-/Input-Details (eframe-Lifecycle, egui-Widget-State, wgpu-Callback-Glue), die bewusst nicht in die Bridge gehoeren.
 
-Aktueller `bridge-gap` (Stand 2026-04-05): Die lokale Action-Mapping-Tabelle in `host_bridge_adapter` wird parallel zur kanonischen Reverse-Zuordnung in `fs25_auto_drive_host_bridge::dispatch` gepflegt. Der Datei-/Pfad-Dialog-Lifecycle selbst laeuft bereits ueber die Host-Dialog-Seam.
+Aktueller `bridge-gap` (Stand 2026-04-05): Kein offener fachlicher Gap fuer stabile Host-Aktionen oder bridge-owned Read-Seams. `host_bridge_adapter` ist nur noch eine Kompat-Surface mit Reexports auf die kanonische Host-Bridge-Mapping-Seam.
 
 Die Integrationsschale ist bewusst kein zusaetzlicher Fach-Layer. Sie koordiniert `ui`, `app` und den Host-Adapter in `render`, enthaelt aber keine eigenen Use-Cases oder Domain-Logik.
 
@@ -579,7 +579,7 @@ crates/
       lib.rs          # Desktop-Frontend-Wurzel; re-exportiert Engine-Module fuer Kompatibilitaet
       runtime.rs      # eframe-Bootstrap und run_native()
       editor_app/     # eframe-Integrationsschale, Event-Sammlung, Overlays, Render-Callback
-      host_bridge_adapter.rs # AppIntent -> HostSessionAction fuer stabile Host-Aktionen (lokal -> bridge -> fallback)
+      host_bridge_adapter.rs # Kompat-Surface (Reexports) fuer kanonisches Mapping/Dispatch der Host-Bridge
       render/         # Host-Adapter + egui-Callback ueber fs25_auto_drive_render_wgpu
       ui/             # egui-Panels, Dialoge, Input und Overlays
   fs25_auto_drive_frontend_flutter_bridge/
