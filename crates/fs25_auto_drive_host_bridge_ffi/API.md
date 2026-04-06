@@ -6,6 +6,16 @@
 
 Technikentscheidung fuer Slice 0: JSON ueber eine kleine C-ABI mit `char*`-Payloads. Das ist heute baubar, direkt per `dart:ffi` nutzbar und vermeidet in dieser Runde den Overhead eines zusaetzlichen Codegen-Stacks wie `flutter_rust_bridge`.
 
+Seit Slice 1 des portablen Native-Canvas-Pfads enthaelt die Crate zusaetzlich einen duenneren binaeren Pixelpfad: Ein opaquer Canvas-Handle baut pro Renderaufruf ueber die bestehende `HostBridgeSession` einen gekoppelten `RenderScene`/`RenderAssetsSnapshot`-Frame, rendert ihn im host-neutralen Render-Core in ein Offscreen-Target und kopiert das letzte RGBA-Bild in einen vom Host allozierten Buffer.
+
+## ABI-Typen
+
+| Typ | Zweck |
+|---|---|
+| `*mut HostBridgeSession` | Opaquer Session-Handle fuer die kanonische Host-Bridge-Surface |
+| `*mut HostBridgeNativeCanvas` | Opaquer nativer Offscreen-Canvas mit eigener wgpu-Runtime |
+| `Fs25adRgbaFrameInfo` | Explizite Frame-Metadaten (`width`, `height`, `bytes_per_row`, Pixel-/Alpha-Modus, `byte_len`) |
+
 ## Exportierte Funktionen
 
 | Symbol | Zweck |
@@ -19,6 +29,12 @@ Technikentscheidung fuer Slice 0: JSON ueber eine kleine C-ABI mit `char*`-Paylo
 | `fs25ad_host_bridge_session_viewport_geometry_json(session, width, height) -> *mut c_char` | Liefert `HostViewportGeometrySnapshot` als UTF-8-JSON |
 | `fs25ad_host_bridge_last_error_message() -> *mut c_char` | Liefert die letzte thread-lokale Fehlernachricht als UTF-8-String |
 | `fs25ad_host_bridge_string_free(value)` | Gibt von der Bibliothek allozierten UTF-8-String-Speicher frei |
+| `fs25ad_host_bridge_canvas_new(width, height) -> *mut HostBridgeNativeCanvas` | Erstellt einen nativen Offscreen-Canvas fuer RGBA-Frames |
+| `fs25ad_host_bridge_canvas_dispose(canvas)` | Gibt einen nativen Canvas-Handle frei |
+| `fs25ad_host_bridge_canvas_resize(canvas, width, height) -> bool` | Realloziert den nativen Canvas auf eine neue Zielgroesse |
+| `fs25ad_host_bridge_canvas_render_rgba(session, canvas) -> bool` | Baut ueber die bestehende Session den aktuellen Render-Frame und rendert ihn als RGBA |
+| `fs25ad_host_bridge_canvas_last_frame_info(canvas, out_info) -> bool` | Liefert Metadaten des zuletzt erfolgreich gerenderten RGBA-Frames |
+| `fs25ad_host_bridge_canvas_copy_last_frame_rgba(canvas, dst, dst_len) -> bool` | Kopiert den zuletzt gerenderten RGBA-Frame in einen Host-Buffer |
 
 ## Transportvertrag
 
@@ -29,13 +45,106 @@ Technikentscheidung fuer Slice 0: JSON ueber eine kleine C-ABI mit `char*`-Paylo
 - Fehler laufen minimal ueber `bool`/`null` plus `fs25ad_host_bridge_last_error_message()`.
 - Der Geometry-Read-Pfad ist bewusst read-only und Slice-0-klein: Nodes, Connections, Marker sowie Kamera-/Viewport-Metadaten.
 
-## Bewusste Nicht-Ziele von Slice 0
+## Native-Canvas-ABI (Slice 1)
+
+- Canvas-Handles sind opaque Pointer und halten nur wgpu-Runtime plus den letzten gerenderten Frame.
+- `fs25ad_host_bridge_canvas_render_rgba(...)` nutzt pro Aufruf ausschliesslich den bestehenden Read-Seam `HostBridgeSession::build_render_frame(...)`.
+- Es gibt keinen zweiten Session-Vertrag und keinen Flutter-spezifischen Parallelpfad.
+- `fs25ad_host_bridge_canvas_new(...)` und `fs25ad_host_bridge_canvas_resize(...)` schlagen kontrolliert fehl, wenn Breite/Hoehe `0` sind, Device-Limits ueberschreiten oder interne Groessenberechnungen ueberlaufen wuerden.
+- `Fs25adRgbaFrameInfo.bytes_per_row` ist immer dicht gepackt: `width * 4`.
+- `Fs25adRgbaFrameInfo.pixel_format = 1` bedeutet `RGBA8 sRGB`.
+- `Fs25adRgbaFrameInfo.alpha_mode = 1` bedeutet `premultiplied alpha`.
+- Der Host besitzt den Zielbuffer; `copy_last_frame_rgba` alloziert keine Rust-Puffer ueber FFI.
+- Zeilenreihenfolge ist `top-to-bottom`.
+- Blocking-Readback-Fehler und Timeouts werden als normaler ABI-Fehler (`false` plus `last_error_message`) an den Host propagiert.
+
+## Beispiel
+
+```rust
+use std::ffi::c_void;
+
+#[repr(C)]
+struct Fs25adRgbaFrameInfo {
+	width: u32,
+	height: u32,
+	bytes_per_row: u32,
+	pixel_format: u32,
+	alpha_mode: u32,
+	byte_len: usize,
+}
+
+unsafe extern "C" {
+	fn fs25ad_host_bridge_session_new() -> *mut c_void;
+	fn fs25ad_host_bridge_session_dispose(session: *mut c_void);
+
+	fn fs25ad_host_bridge_canvas_new(width: u32, height: u32) -> *mut c_void;
+	fn fs25ad_host_bridge_canvas_dispose(canvas: *mut c_void);
+	fn fs25ad_host_bridge_canvas_render_rgba(session: *mut c_void, canvas: *mut c_void) -> bool;
+	fn fs25ad_host_bridge_canvas_last_frame_info(
+		canvas: *mut c_void,
+		out_info: *mut Fs25adRgbaFrameInfo,
+	) -> bool;
+	fn fs25ad_host_bridge_canvas_copy_last_frame_rgba(
+		canvas: *mut c_void,
+		dst: *mut u8,
+		dst_len: usize,
+	) -> bool;
+}
+
+unsafe {
+	let session = fs25ad_host_bridge_session_new();
+	let canvas = fs25ad_host_bridge_canvas_new(640, 360);
+
+	assert!(fs25ad_host_bridge_canvas_render_rgba(session, canvas));
+
+	let mut info = Fs25adRgbaFrameInfo {
+		width: 0,
+		height: 0,
+		bytes_per_row: 0,
+		pixel_format: 0,
+		alpha_mode: 0,
+		byte_len: 0,
+	};
+	assert!(fs25ad_host_bridge_canvas_last_frame_info(canvas, &mut info));
+
+	let mut pixels = vec![0_u8; info.byte_len];
+	assert!(fs25ad_host_bridge_canvas_copy_last_frame_rgba(
+		canvas,
+		pixels.as_mut_ptr(),
+		pixels.len(),
+	));
+
+	fs25ad_host_bridge_canvas_dispose(canvas);
+	fs25ad_host_bridge_session_dispose(session);
+}
+```
+
+## Datenfluss
+
+```mermaid
+flowchart LR
+	HOST[FFI-Host] --> SESSION[HostBridgeSession]
+	HOST --> CANVAS[HostBridgeNativeCanvas]
+	SESSION --> FRAME[build_render_frame]
+	FRAME --> SCENE[RenderScene]
+	FRAME --> ASSETS[RenderAssetsSnapshot]
+	CANVAS --> RUNTIME[CanvasRuntime]
+	SCENE --> RUNTIME
+	ASSETS --> RUNTIME
+	RUNTIME --> INFO[Fs25adRgbaFrameInfo]
+	RUNTIME --> PIXELS[RGBA-Buffer-Copy]
+	INFO --> HOST
+	PIXELS --> HOST
+```
+
+## Bewusste Nicht-Ziele der FFI-Slices
 
 - Kein Flutter-only Parallelvertrag neben `HostBridgeSession` und den kanonischen Host-DTOs.
 - Keine neue C-ABI-Funktion fuer den ersten Viewport-Input-Slice; der bestehende JSON-Action-Entry-Point bleibt verbindlich.
 - Kein Route-Tool-, Lasso-, Doppelklick-, Rotations- oder Touch-Viewportvertrag ueber diese C-ABI in diesem Slice.
 - Kein Codegen- oder Binding-Stack als Produktivvoraussetzung fuer den ersten Host-Slice.
 - Kein finales Multi-Plattform-Packaging; Linux ist bewusst der erste produktive Transportpfad.
+- Keine Shared-Texture-, Streaming- oder Async-Pixelpfade in Slice 1.
 
 ## Build-Artefakt
 

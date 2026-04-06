@@ -224,6 +224,13 @@
   - [x] Crate-Abhaengigkeit auf `fs25_auto_drive_host_bridge` reduziert; keine direkte Engine-Abhaengigkeit mehr
   - [x] Bestehende `Engine*`-Typnamen als Kompat-Aliase ueber `Host*`-Vertraege erhalten
   - [x] Eigene Session-/Controller-Logik aus der Flutter-Crate entfernt (duenne Alias-Surface)
+- [x] Portabler Native-Canvas Slice 1 (2026-04-06)
+  - [x] Gemeinsame Offscreen-Canvas-Runtime in `fs25_auto_drive_render_wgpu` mit blocking RGBA-Readback
+  - [x] Revisionsbasierter Background-Sync ueber `RenderAssetsSnapshot` in derselben Runtime
+  - [x] Duenner FFI-Canvas-Adapter ueber `HostBridgeSession::build_render_frame(...)`
+  - [x] Expliziter ABI-Vertrag fuer `RGBA8 sRGB`, `bytes_per_row = width * 4` und `premultiplied alpha`
+  - [ ] Folge-Slice: egui-Host auf gemeinsame Canvas-Runtime umstellen
+  - [ ] Folge-Slice: Shared-Texture-/Async-/Streaming-Pfade evaluieren
 - [x] Flutter-Bridge als transitional alias surface eingefroren (2026-04-05)
   - [x] Keine neue Logik mehr in `fs25_auto_drive_frontend_flutter_bridge`; Erweiterungen nur in `fs25_auto_drive_host_bridge`
   - [x] Kompat-Aliase (`Engine*`, `FlutterBridgeSession`) direkt in `fs25_auto_drive_host_bridge` etabliert

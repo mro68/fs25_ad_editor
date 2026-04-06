@@ -18,6 +18,7 @@ cd "$ROOT_DIR"
 VIOLATIONS=0
 ENGINE_DIR="crates/fs25_auto_drive_engine/src"
 HOST_BRIDGE_DIR="crates/fs25_auto_drive_host_bridge/src"
+HOST_BRIDGE_FFI_DIR="crates/fs25_auto_drive_host_bridge_ffi/src"
 EGUI_DIR="crates/fs25_auto_drive_frontend_egui/src"
 RENDER_WGPU_DIR="crates/fs25_auto_drive_render_wgpu/src"
 
@@ -196,6 +197,14 @@ EGUI_ROOT_VIOLATIONS=$(grep -rn 'fs25_auto_drive_editor::' "$EGUI_DIR" --include
 if [ -n "$EGUI_ROOT_VIOLATIONS" ]; then
     echo "FEHLER: Egui-Frontend importiert ueber die Root-Fassade statt direkt ueber lokale Re-Exports:"
     echo "$EGUI_ROOT_VIOLATIONS"
+    VIOLATIONS=$((VIOLATIONS + 1))
+fi
+
+# Regel 13: Host-Bridge-FFI darf nur ueber Host-Bridge und Render-Core adaptieren
+HOST_BRIDGE_FFI_LAYER_VIOLATIONS=$(grep -rnE 'fs25_auto_drive_engine|fs25_auto_drive_frontend_egui|fs25_auto_drive_editor::|crate::ui|crate::render|crate::editor_app|egui::|eframe::' "$HOST_BRIDGE_FFI_DIR" --include='*.rs' 2>/dev/null || true)
+if [ -n "$HOST_BRIDGE_FFI_LAYER_VIOLATIONS" ]; then
+    echo "FEHLER: Host-Bridge-FFI importiert verbotene Layer oder Host-Toolkits direkt:"
+    echo "$HOST_BRIDGE_FFI_LAYER_VIOLATIONS"
     VIOLATIONS=$((VIOLATIONS + 1))
 fi
 

@@ -1,5 +1,7 @@
 //! C-ABI-Transport ueber der kanonischen Host-Bridge-Session.
 
+mod canvas;
+
 use anyhow::{anyhow, Context, Result};
 use fs25_auto_drive_host_bridge::{
     HostBridgeSession, HostDialogRequest, HostDialogResult, HostSessionAction, HostSessionSnapshot,
