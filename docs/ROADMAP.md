@@ -244,7 +244,8 @@
   - [x] ABI-Version auf `2` belassen und separaten Shared-Texture-Vertrag ueber `FS25AD_HOST_BRIDGE_SHARED_TEXTURE_*` auf `3` festgezogen
   - [x] RenderFrame-Seam (`HostBridgeSession::build_render_frame`) unveraendert beibehalten
   - [x] egui-Onscreen-Host explizit unveraendert gelassen (direkter `RenderPass`-Pfad)
-  - [ ] Folge-Slice: Host-Consumer (Flutter/C++) auf opaque Shared-Texture-Runtime-Handles verdrahten
+  - [x] Additiver Texture-Registration-v4-Vertrag neben v3 eingefroren (2026-04-06): gemeinsame Capability-Negotiation + Frame-Metadaten + Lifecycle, plattformspezifische Payload-Familien fuer Windows/Linux/Android, explizites Capability-Gating ohne Pixelbuffer-Fallback
+  - [ ] Folge-Slice: Produktive v4-Backend-Landung fuer Windows/Linux/Android plus zusaetzliche native Host-Pfade im Consumer-Host (Flutter/C++); aktuell hart blockiert durch den normalen `wgpu::Device::create_texture`-Pfad ohne Export-/External-Memory-Felder und durch fehlenden nativen Host-Import/Surface-Code fuer DXGI, DMA-BUF und Android-Surface-Ziele
 - [x] Flutter-Bridge als transitional alias surface eingefroren (2026-04-05)
   - [x] Keine neue Logik mehr in `fs25_auto_drive_frontend_flutter_bridge`; Erweiterungen nur in `fs25_auto_drive_host_bridge`
   - [x] Kompat-Aliase (`Engine*`, `FlutterBridgeSession`) direkt in `fs25_auto_drive_host_bridge` etabliert

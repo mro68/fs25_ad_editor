@@ -1,6 +1,7 @@
 //! C-ABI-Transport ueber der kanonischen Host-Bridge-Session.
 
 mod shared_texture_v2;
+mod texture_registration_v4;
 
 use anyhow::{anyhow, Context, Result};
 use fs25_auto_drive_host_bridge::{

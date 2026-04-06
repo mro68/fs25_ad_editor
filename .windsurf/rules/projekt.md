@@ -35,6 +35,8 @@ Neuimplementierung des AutoDrive Course Editors in Rust mit egui + wgpu. Hochper
 - Datei-/Pfad-Dialog-Lifecycle in egui ist auf die Host-Seam konsolidiert (`take_host_dialog_requests(...)` + `HostSessionAction::SubmitDialogResult`).
 - `host_bridge_adapter` enthaelt keine eigene Mapping-Logik mehr; Mapping und Dispatch liegen kanonisch in `fs25_auto_drive_host_bridge::dispatch`.
 - Keine neuen Escape-Hatches direkt auf `AppState`/`AppController` fuer neue host-neutrale Fluesse.
+- Shared-Texture-v3 bleibt als opaque same-process Runtime-Vertrag bestehen; Texture-Registration-v4 laeuft additiv mit eigener Capability-Negotiation und plattformspezifischen Payload-Familien fuer Windows/Linux/Android.
+- Plattform-/Interop-Typen fuer Texture-Registration duerfen nur in `crates/fs25_auto_drive_render_wgpu` und `crates/fs25_auto_drive_host_bridge_ffi` liegen.
 
 ## Technologie-Stack
 
