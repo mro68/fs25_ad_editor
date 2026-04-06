@@ -234,8 +234,17 @@
   - [x] Stabiler C-Header `crates/fs25_auto_drive_host_bridge_ffi/include/fs25ad_host_bridge.h` fuer Session-, Canvas- und FrameInfo-Symbole
   - [x] Laufzeit-Handshake ueber `fs25ad_host_bridge_abi_version()` und `fs25ad_host_bridge_canvas_contract_version()`
   - [x] Canvas-Verbrauchertests fuer Header-/Layout-Kontrakt erweitert
-  - [ ] Folge-Slice: egui-Host auf gemeinsame Canvas-Runtime umstellen
-  - [ ] Folge-Slice: Shared-Texture-/Async-/Streaming-Pfade evaluieren
+  - [x] Nachfolge durch Shared-Texture-Hard-Cut mit Vertragsversion 3 abgeschlossen; Canvas-v1 ist historisch
+- [x] Shared-Texture Hard-Cut (2026-04-06)
+  - [x] Transportneutralen Export-Kern in `fs25_auto_drive_render_wgpu` herausgezogen (`export_core.rs`)
+  - [x] `SharedTextureRuntime` mit explizitem Acquire/Release-Lifecycle eingefuehrt
+  - [x] Shared-Texture-Vertrag auf Version `3` angehoben und als opaque Runtime-Vertrag im selben Prozessraum dokumentiert
+  - [x] FFI-Adapter auf den Shared-Texture-Transport umgestellt (`shared_texture_v2`-Implementierung; `new/resize/render/acquire/release`)
+  - [x] Pixelbuffer-v1 (`canvas.rs`, `canvas_*`, `Fs25adRgbaFrameInfo`) atomar entfernt
+  - [x] ABI-Version auf `2` belassen und separaten Shared-Texture-Vertrag ueber `FS25AD_HOST_BRIDGE_SHARED_TEXTURE_*` auf `3` festgezogen
+  - [x] RenderFrame-Seam (`HostBridgeSession::build_render_frame`) unveraendert beibehalten
+  - [x] egui-Onscreen-Host explizit unveraendert gelassen (direkter `RenderPass`-Pfad)
+  - [ ] Folge-Slice: Host-Consumer (Flutter/C++) auf opaque Shared-Texture-Runtime-Handles verdrahten
 - [x] Flutter-Bridge als transitional alias surface eingefroren (2026-04-05)
   - [x] Keine neue Logik mehr in `fs25_auto_drive_frontend_flutter_bridge`; Erweiterungen nur in `fs25_auto_drive_host_bridge`
   - [x] Kompat-Aliase (`Engine*`, `FlutterBridgeSession`) direkt in `fs25_auto_drive_host_bridge` etabliert

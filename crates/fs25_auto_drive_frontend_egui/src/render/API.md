@@ -81,4 +81,4 @@ flowchart LR
 - `render::Renderer` enthaelt keine eigene Fachlogik; der GPU-Kern bleibt in `fs25_auto_drive_render_wgpu`.
 - `sync_background_upload()` lebt bewusst in `editor_app`, weil dort `Device`, `Queue`, die letzten Host-Revisionen und die Assets des bereits aufgebauten RenderFrames bereits vorliegen.
 - Die Engine beschreibt Background-Bounds im Domain-System als `RenderBackgroundWorldBounds { min_x, max_x, min_z, max_z }`. Der egui-Host-Adapter mappt diese beim Upload auf `BackgroundWorldBounds { min_x, max_x, min_y, max_y }`, weil der Render-Core auf einer 2D-X/Y-Ebene arbeitet.
-- Das egui-Onscreen-Rendering nutzt bewusst weder RGBA-Readback noch `CanvasRuntime`; es bleibt ein direkter `RenderScene`-Paint-Callback ueber `egui_wgpu`.
+- Das egui-Onscreen-Rendering nutzt bewusst nicht den Shared-Texture-Transport (`SharedTextureRuntime`); es bleibt ein direkter `RenderScene`-Paint-Callback ueber `egui_wgpu` auf Basis des gekoppelten RenderFrame-Seams.

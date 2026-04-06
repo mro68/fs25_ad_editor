@@ -1,6 +1,6 @@
 //! C-ABI-Transport ueber der kanonischen Host-Bridge-Session.
 
-mod canvas;
+mod shared_texture_v2;
 
 use anyhow::{anyhow, Context, Result};
 use fs25_auto_drive_host_bridge::{
@@ -9,12 +9,34 @@ use fs25_auto_drive_host_bridge::{
 };
 use std::cell::RefCell;
 use std::ffi::{c_char, CStr, CString};
+use std::sync::Mutex;
 
 thread_local! {
     static LAST_ERROR: RefCell<Option<String>> = const { RefCell::new(None) };
 }
 
-const FS25AD_HOST_BRIDGE_ABI_VERSION: u32 = 1;
+const FS25AD_HOST_BRIDGE_ABI_VERSION: u32 = 2;
+
+/// Opaquer Session-Handle mit serialisiertem Zugriff auf die kanonische Session.
+pub struct HostBridgeSessionHandle {
+    session: Mutex<HostBridgeSession>,
+}
+
+impl HostBridgeSessionHandle {
+    fn new() -> Self {
+        Self {
+            session: Mutex::new(HostBridgeSession::new()),
+        }
+    }
+
+    fn with_lock<T>(&self, f: impl FnOnce(&mut HostBridgeSession) -> Result<T>) -> Result<T> {
+        let mut guard = self
+            .session
+            .lock()
+            .map_err(|_| anyhow!("HostBridgeSession lock poisoned"))?;
+        f(&mut guard)
+    }
+}
 
 fn clear_last_error() {
     LAST_ERROR.with(|slot| {
@@ -57,15 +79,15 @@ where
 }
 
 fn with_session_mut<T>(
-    session: *mut HostBridgeSession,
+    session: *mut HostBridgeSessionHandle,
     f: impl FnOnce(&mut HostBridgeSession) -> Result<T>,
 ) -> Result<T> {
     if session.is_null() {
         return Err(anyhow!("HostBridgeSession pointer must not be null"));
     }
 
-    let session = unsafe { &mut *session };
-    f(session)
+    let session = unsafe { &*session };
+    session.with_lock(f)
 }
 
 /// Liefert die ABI-Version des nativen Host-Bridge-Vertrags.
@@ -101,15 +123,15 @@ pub extern "C" fn fs25ad_host_bridge_string_free(value: *mut c_char) {
 
 /// Erstellt eine neue Bridge-Session.
 #[unsafe(no_mangle)]
-pub extern "C" fn fs25ad_host_bridge_session_new() -> *mut HostBridgeSession {
+pub extern "C" fn fs25ad_host_bridge_session_new() -> *mut HostBridgeSessionHandle {
     clear_last_error();
-    Box::into_raw(Box::new(HostBridgeSession::new()))
+    Box::into_raw(Box::new(HostBridgeSessionHandle::new()))
 }
 
 /// Gibt eine zuvor erstellte Bridge-Session frei.
 #[allow(clippy::not_unsafe_ptr_arg_deref)]
 #[unsafe(no_mangle)]
-pub extern "C" fn fs25ad_host_bridge_session_dispose(session: *mut HostBridgeSession) {
+pub extern "C" fn fs25ad_host_bridge_session_dispose(session: *mut HostBridgeSessionHandle) {
     clear_last_error();
     if session.is_null() {
         return;
@@ -123,7 +145,7 @@ pub extern "C" fn fs25ad_host_bridge_session_dispose(session: *mut HostBridgeSes
 /// Serialisiert den aktuellen Session-Snapshot als UTF-8-JSON.
 #[unsafe(no_mangle)]
 pub extern "C" fn fs25ad_host_bridge_session_snapshot_json(
-    session: *mut HostBridgeSession,
+    session: *mut HostBridgeSessionHandle,
 ) -> *mut c_char {
     clear_last_error();
 
@@ -142,7 +164,7 @@ pub extern "C" fn fs25ad_host_bridge_session_snapshot_json(
 /// Wendet eine kanonische `HostSessionAction` an, uebergeben als UTF-8-JSON.
 #[unsafe(no_mangle)]
 pub extern "C" fn fs25ad_host_bridge_session_apply_action_json(
-    session: *mut HostBridgeSession,
+    session: *mut HostBridgeSessionHandle,
     action_json: *const c_char,
 ) -> bool {
     clear_last_error();
@@ -162,7 +184,7 @@ pub extern "C" fn fs25ad_host_bridge_session_apply_action_json(
 /// Entnimmt alle aktuell ausstehenden Dialog-Anforderungen als UTF-8-JSON-Array.
 #[unsafe(no_mangle)]
 pub extern "C" fn fs25ad_host_bridge_session_take_dialog_requests_json(
-    session: *mut HostBridgeSession,
+    session: *mut HostBridgeSessionHandle,
 ) -> *mut c_char {
     clear_last_error();
 
@@ -181,7 +203,7 @@ pub extern "C" fn fs25ad_host_bridge_session_take_dialog_requests_json(
 /// Reicht ein `HostDialogResult` als UTF-8-JSON in die Session zurueck.
 #[unsafe(no_mangle)]
 pub extern "C" fn fs25ad_host_bridge_session_submit_dialog_result_json(
-    session: *mut HostBridgeSession,
+    session: *mut HostBridgeSessionHandle,
     result_json: *const c_char,
 ) -> bool {
     clear_last_error();
@@ -201,7 +223,7 @@ pub extern "C" fn fs25ad_host_bridge_session_submit_dialog_result_json(
 /// Baut einen minimalen Viewport-Geometry-Snapshot als UTF-8-JSON.
 #[unsafe(no_mangle)]
 pub extern "C" fn fs25ad_host_bridge_session_viewport_geometry_json(
-    session: *mut HostBridgeSession,
+    session: *mut HostBridgeSessionHandle,
     viewport_width: f32,
     viewport_height: f32,
 ) -> *mut c_char {
@@ -254,7 +276,7 @@ mod tests {
             fs25ad_host_bridge_abi_version(),
             FS25AD_HOST_BRIDGE_ABI_VERSION
         );
-        assert_eq!(fs25ad_host_bridge_abi_version(), 1);
+        assert_eq!(fs25ad_host_bridge_abi_version(), 2);
     }
 
     #[test]

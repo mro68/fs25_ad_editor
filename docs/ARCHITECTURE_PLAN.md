@@ -1,7 +1,7 @@
 # Architektur-Plan (Soll-Zustand)
 
 Stand: 2026-04-06  
-Status: Workspace-Split umgesetzt — Root-Fassade, Engine-Crate, render_wgpu-Core-Crate und egui-Host-Adapter sind stabil; die gemeinsame Rust-Host-Dispatch-Seam ist produktiv, `HostBridgeSession` ist als kanonische Session-Surface fuer den egui-Host sowie direkte Flutter-/FFI-Consumer festgeschrieben, der egui-Dialog-Lifecycle ist auf die Host-Bridge-Seam konsolidiert, die lokale Action-Mapping-Doppelpflege wurde entfernt und bridge-owned Read-/Dispatch-Seams laufen kanonisch ueber `fs25_auto_drive_host_bridge`; die fruehere Flutter-Kompat-Crate wurde entfernt, Kompat-Aliase liegen direkt in der Host-Bridge, `fs25_auto_drive_host_bridge_ffi` bildet den Linux-first-C-ABI-Adapter fuer Slice 0, Slice 1 erweitert diese FFI-Surface um einen nativen Offscreen-Canvas-Pfad mit caller-owned RGBA-Buffer-Copy, und der egui-Onscreen-Host konsumiert denselben gekoppelten RenderFrame-Seam jetzt ebenfalls ohne separaten spaeten Asset-Read.
+Status: Workspace-Split umgesetzt — Root-Fassade, Engine-Crate, render_wgpu-Core-Crate und egui-Host-Adapter sind stabil; die gemeinsame Rust-Host-Dispatch-Seam ist produktiv, `HostBridgeSession` ist als kanonische Session-Surface fuer den egui-Host sowie direkte Flutter-/FFI-Consumer festgeschrieben, der egui-Dialog-Lifecycle ist auf die Host-Bridge-Seam konsolidiert, die lokale Action-Mapping-Doppelpflege wurde entfernt und bridge-owned Read-/Dispatch-Seams laufen kanonisch ueber `fs25_auto_drive_host_bridge`; die fruehere Flutter-Kompat-Crate wurde entfernt, Kompat-Aliase liegen direkt in der Host-Bridge, `fs25_auto_drive_host_bridge_ffi` bildet den Linux-first-C-ABI-Adapter fuer Slice 0, der fruehere RGBA-Canvas-v1-Pfad wurde per Hard-Cut entfernt und durch Shared-Texture als einzigen nativen Rendertransport ersetzt, der opaque Runtime-Vertrag ist auf Version 3 angehoben, und der egui-Onscreen-Host konsumiert denselben gekoppelten RenderFrame-Seam weiterhin ohne separaten spaeten Asset-Read.
 
 Aktuelle Integrationskette: Workspace auf Rust 2024, egui-Host auf `eframe/egui/egui-wgpu 0.34.1`, Render-Core auf `wgpu 29.0.*`.
 
@@ -12,7 +12,7 @@ Dieser Plan trennt fachliche Verantwortlichkeiten in Workspace-Crates mit klaren
 - Root-Package (`src/lib.rs`, `src/main.rs`): Re-Export-Fassade und nativer Launcher
 - Engine (`crates/fs25_auto_drive_engine/src/{app,core,shared,xml}`): host-neutrale Fachlogik
 - Host-Bridge-Core (`crates/fs25_auto_drive_host_bridge/src/*`): toolkit-freie gemeinsame Session-/Action-/Snapshot-Seam ueber der Engine
-- Host-Bridge-FFI (`crates/fs25_auto_drive_host_bridge_ffi/src/*`): duenner Linux-first-C-ABI-Transportadapter ueber der kanonischen Host-Bridge, inkl. nativer Canvas-Huelle fuer Offscreen-RGBA-Frames
+- Host-Bridge-FFI (`crates/fs25_auto_drive_host_bridge_ffi/src/*`): duenner Linux-first-C-ABI-Transportadapter ueber der kanonischen Host-Bridge, inkl. Shared-Texture-Lifecycle als einzigem nativen Rendertransport ohne Pixelbuffer-Fallback
 - Render-Core (`crates/fs25_auto_drive_render_wgpu/src/*`): host-neutraler wgpu-Renderer-Kern
 - Egui-Frontend (`crates/fs25_auto_drive_frontend_egui/src/{ui,editor_app,runtime,render,host_bridge_adapter}`): Desktop-Host, egui-UI, Render-Adapter und Kompat-Surface auf die kanonische Host-Bridge-Dispatch-Seam
 - Overview-Crate (`crates/fs25_map_overview/src/*`): Karten-/Farmland-Generierung
@@ -35,22 +35,22 @@ Aktueller `bridge-gap` (Stand 2026-04-05): Kein offener fachlicher Gap fuer stab
 
 - `crates/fs25_auto_drive_host_bridge_ffi` ist der duenne Linux-first-C-ABI-Adapter ueber `HostBridgeSession`.
 - Der Adapter serialisiert ausschliesslich kanonische Host-DTOs als JSON ueber `char*`-Payloads und fuehrt keine zweite Flutter-spezifische Session-Surface ein.
-- Native C/C++-Hosts konsumieren die Surface ueber den stabilen Header `crates/fs25_auto_drive_host_bridge_ffi/include/fs25ad_host_bridge.h` und pruefen die Laufzeitversionen (`fs25ad_host_bridge_abi_version`, `fs25ad_host_bridge_canvas_contract_version`) gegen die Header-Makros.
+- Native C/C++-Hosts konsumieren die Surface ueber den stabilen Header `crates/fs25_auto_drive_host_bridge_ffi/include/fs25ad_host_bridge.h` und pruefen die Laufzeitversionen (`fs25ad_host_bridge_abi_version`, `fs25ad_host_bridge_shared_texture_contract_version`) gegen die Header-Makros.
 - Der erste schreibende Viewport-Input-Slice bleibt auf der bestehenden Action-Surface: `SubmitViewportInput` laeuft ohne neues C-ABI-Symbol ueber den vorhandenen JSON-Entry-Point.
 - Bewusste Nicht-Ziele dieses Slice: kein ueber Resize/Tap/Drag/Scroll hinausgehender Viewport-Vertrag, kein write-heavy Editing ueber dieselbe C-ABI und kein Multi-Plattform-Packaging im selben Landungsschnitt.
 
 Die Integrationsschale ist bewusst kein zusaetzlicher Fach-Layer. Sie koordiniert `ui`, `app` und den Host-Adapter in `render`, enthaelt aber keine eigenen Use-Cases oder Domain-Logik.
 
-### Native-Canvas-Pfad (Slice 1)
+### Shared-Texture-Pfad (Hard-Cut)
 
-- `fs25_auto_drive_render_wgpu::CanvasRuntime` kapselt Offscreen-Target, revisionsbasierten Background-Sync, Draw und blocking RGBA-Readback zentral im Render-Core.
-- `fs25_auto_drive_host_bridge_ffi` nutzt diese Runtime nur als duenner Adapter: pro Aufruf wird ueber die bestehende Session-Surface `HostBridgeSession::build_render_frame([width, height])` gelesen, gerendert und in einen caller-owned Host-Buffer kopiert.
-- Lokale Rust-Hosts mit eigenem `AppController`/`AppState` nutzen fuer denselben logischen Read-Seam den freien Host-Bridge-Helper `build_render_frame(&controller, &state, [width, height])`.
-- Der Pixelvertrag ist bewusst klein und explizit: `RGBA8 sRGB`, `bytes_per_row = width * 4`, top-down, `premultiplied alpha`.
-- Session-Ownership bleibt hostseitig: Dart/C++-Hosts halten den Session-Lifecycle, der Canvas-Pfad arbeitet ausschliesslich mit geborgten Session-/Canvas-Pointern.
-- Kein zweiter Session- oder DTO-Vertrag: Die Control-Plane bleibt `HostSessionAction`/`HostSessionSnapshot`, der Pixelpfad ist rein binaer.
-- Slice 1 ist kein Shared-Texture- oder Streaming-Design. Solche Folgepfade duerfen den kanonischen Read-Seam nicht aufbrechen, sondern muessen auf derselben `RenderScene`/`RenderAssetsSnapshot`-Kette aufsetzen.
-- Der egui-Onscreen-Pfad bleibt bewusst ausserhalb von `CanvasRuntime` und RGBA-Readback. Er liest denselben gekoppelten RenderFrame-Seam, nutzt lokal aber nur den `RenderScene`-Teil fuer den `egui_wgpu`-Paint-Callback und wiederverwendet die zugehoerigen Assets fuer den revisionsbasierten Background-Sync im selben Frame.
+- `fs25_auto_drive_render_wgpu::SharedTextureRuntime` kapselt Offscreen-Target, revisionsbasierten Background-Sync und den expliziten Acquire/Release-Lifecycle zentral im Render-Core.
+- `fs25_auto_drive_host_bridge_ffi` nutzt diese Runtime nur als duenner Adapter: pro Aufruf wird ueber die bestehende Session-Surface `HostBridgeSession::build_render_frame([width, height])` gelesen und in die Shared-Texture gerendert.
+- Der FFI-Vertrag liefert Frame-Metadaten (`Fs25adSharedTextureFrameInfo`) plus Native-Handle-Metadaten (`Fs25adSharedTextureNativeHandle`) ohne CPU-Pixelcopy.
+- Der separate Shared-Texture-Vertrag ist auf Version 3 angehoben und dokumentiert opaque Runtime-Pointerwerte fuer denselben Prozessraum statt backend-nativer Vulkan-/Metal-/DX-Interop-Handles.
+- Die allgemeine FFI-ABI bleibt Version 2; der alte `canvas_*`-Vertrag ist vollstaendig entfernt.
+- Session-Ownership bleibt hostseitig: Dart/C++-Hosts halten den Session-Lifecycle, der Shared-Texture-Pfad arbeitet ausschliesslich mit geborgten Session-/Texture-Pointern.
+- Kein zweiter Session- oder DTO-Vertrag: Die Control-Plane bleibt `HostSessionAction`/`HostSessionSnapshot`, der Rendertransport bleibt rein unterhalb des RenderFrame-Seams.
+- Der egui-Onscreen-Pfad bleibt bewusst ausserhalb von `SharedTextureRuntime` und rendert weiterhin direkt per `RenderPass` ueber `egui_wgpu`.
 
 ### Host-Dialog-Seam
 
@@ -113,7 +113,7 @@ flowchart LR
   SCENEB --> RENDER_HOST
   ASSETB --> RENDER_HOST
   RENDER_HOST --> RENDER_CORE
-  SCENEB --> HOST_FFI[host_bridge_ffi::Canvas]
+  SCENEB --> HOST_FFI[host_bridge_ffi::HostBridgeSharedTexture]
   ASSETB --> HOST_FFI
   HOST_FFI --> RENDER_CORE
 
@@ -170,11 +170,11 @@ graph BT
 
 > **Regel:** Pfeile zeigen "darf importieren". Gestrichelt = explizit verboten (CI-geprüft via `scripts/check_layer_boundaries.sh`).
 
-Ergaenzende Guardrails fuer den portablen Native-Canvas-Pfad:
+Ergaenzende Guardrails fuer den Shared-Texture-Pfad:
 
 - `fs25_auto_drive_host_bridge` bleibt toolkit- und render-frei; die Session-Bridge darf keine `wgpu`-, `egui`- oder `eframe`-Abhaengigkeiten einziehen.
 - `fs25_auto_drive_host_bridge_ffi` adaptiert ausschliesslich `fs25_auto_drive_host_bridge` und `fs25_auto_drive_render_wgpu`; direkte Engine-, Frontend- oder Root-Fassaden-Imports bleiben verboten.
-- Der Native-Canvas-Pfad ist damit bewusst zweistufig: Control-Plane ueber die kanonische Session-Bridge, Pixelpfad ueber den Render-Core.
+- Der Shared-Texture-Pfad ist damit bewusst zweistufig: Control-Plane ueber die kanonische Session-Bridge, Texture-Transport ueber den Render-Core.
 
 ### Integrationsschale (`crates/fs25_auto_drive_frontend_egui/src/editor_app/*`, `crates/fs25_auto_drive_frontend_egui/src/runtime.rs`, `src/main.rs`)
 
@@ -184,7 +184,7 @@ Ergaenzende Guardrails fuer den portablen Native-Canvas-Pfad:
 - Sammelt pro Frame Panel-, Dialog-, Viewport- und Overlay-Events als `Vec<AppIntent>`, verarbeitet schalenlokale Events by-value, dispatcht stabile Host-Aktionen ueber die gemeinsame Bridge-Seam und reicht nur verbleibende Intents an `AppController` weiter
 - Fuehrt den Datei-/Pfad-Dialog-Lifecycle ueber Host-Dialog-DTOs (`HostDialogRequest`/`HostDialogResult`) in denselben Bridge-Dispatch-Pfad zurueck
 - Registriert den Render-Callback und verwaltet nur fensterlokalen Integrationszustand (`render::Renderer`, `ui::InputState`, Cursor-/Icon-Caches)
-- Liest fuer das Onscreen-Rendering einen gekoppelten RenderFrame ueber die Host-Bridge und vermeidet so divergierende spaete Asset-Reads gegenueber dem nativen Canvas-Kern
+- Liest fuer das Onscreen-Rendering einen gekoppelten RenderFrame ueber die Host-Bridge und vermeidet so divergierende spaete Asset-Reads gegenueber dem Shared-Texture-Kern
 
 **Darf**
 
