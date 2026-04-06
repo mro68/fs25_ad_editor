@@ -44,6 +44,8 @@ pub(crate) struct EditorApp {
     last_background_asset_revision: u64,
     /// Letzte vom Host synchronisierte Background-Transform-Revision.
     last_background_transform_revision: u64,
+    /// Render-Assets des im aktuellen egui-Frame aufgebauten gekoppelten RenderFrames.
+    pending_render_assets: Option<crate::shared::RenderAssetsSnapshot>,
     /// Gecachte egui-Textur-Handles fuer Gruppen-Boundary-Icons (lazy initialisiert).
     group_boundary_icons: Option<ui::GroupBoundaryIcons>,
 }
@@ -69,6 +71,7 @@ impl EditorApp {
             last_cursor_world: None,
             last_background_asset_revision: 0,
             last_background_transform_revision: 0,
+            pending_render_assets: None,
             group_boundary_icons: None,
         }
     }
@@ -82,6 +85,8 @@ impl eframe::App for EditorApp {
             ctx.send_viewport_cmd(egui::ViewportCommand::Close);
             return;
         }
+
+        self.pending_render_assets = None;
 
         let events = self.collect_ui_events(&ctx);
 

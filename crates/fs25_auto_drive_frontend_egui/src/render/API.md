@@ -4,7 +4,7 @@
 
 Das `render`-Modul ist der egui-spezifische Host-Adapter ueber dem host-neutralen Kern aus `fs25_auto_drive_render_wgpu`. Seine oeffentliche Surface bleibt bewusst klein: ein duenner `Renderer`, die re-exportierten Kern-Vertraege (`RendererTargetConfig`, `BackgroundWorldBounds`, `RenderScene`, `RenderQuality`) sowie der egui-Callback (`WgpuRenderCallback`, `WgpuRenderData`).
 
-Das Modul baut keine Render-Snapshots selbst. `EditorApp` liefert pro Frame `RenderScene` und synchronisiert langlebige Assets ueber `AppController::build_render_assets()` revisionsbasiert in den Host-Adapter hinein.
+Das Modul baut keine Render-Snapshots selbst. `EditorApp` liest pro Frame einen gekoppelten `HostRenderFrameSnapshot` ueber `fs25_auto_drive_host_bridge::build_render_frame(...)`, uebergibt dessen `RenderScene` an den egui-Callback und synchronisiert dessen langlebige Assets revisionsbasiert im selben Frame in den Host-Adapter hinein.
 
 ## Module
 
@@ -22,7 +22,7 @@ Das Modul baut keine Render-Snapshots selbst. `EditorApp` liefert pro Frame `Ren
 | `BackgroundWorldBounds` | Re-exportierter Upload-Vertrag fuer das Hintergrund-Quad im Render-Core |
 | `RenderScene` | Re-exportierter per-frame Render-Vertrag aus der Engine |
 | `RenderQuality` | Re-exportierte Qualitaetsstufe fuer Anti-Aliasing |
-| `WgpuRenderData` | Per-Frame-Traeger fuer den `RenderScene`-Snapshot |
+| `WgpuRenderData` | Per-Frame-Traeger fuer den `RenderScene`-Teil eines gekoppelten RenderFrames |
 | `WgpuRenderCallback` | egui/wgpu-Glue, der den Host-Adapter in den Paint-Callback einhaengt |
 
 ## Oeffentliche Methoden
@@ -40,9 +40,12 @@ Das Modul baut keine Render-Snapshots selbst. `EditorApp` liefert pro Frame `Ren
 use std::sync::{Arc, Mutex};
 
 let renderer = Arc::new(Mutex::new(render::Renderer::new(render_state)));
-let render_data = render::WgpuRenderData {
-    scene: controller.build_render_scene(&state, [viewport_w, viewport_h]),
-};
+let frame = fs25_auto_drive_host_bridge::build_render_frame(
+    &controller,
+    &state,
+    [viewport_w, viewport_h],
+);
+let render_data = render::WgpuRenderData { scene: frame.scene };
 
 let callback = egui_wgpu::Callback::new_paint_callback(
     rect,
@@ -61,10 +64,11 @@ ui.painter().add(callback);
 
 ```mermaid
 flowchart LR
-  EDITOR[editor_app::EditorApp] --> CTRL[AppController]
-  CTRL --> SCENE[RenderScene]
-  CTRL --> ASSETS[RenderAssetsSnapshot]
-  SCENE --> DATA[WgpuRenderData]
+    EDITOR[editor_app::EditorApp] --> CTRL[AppController]
+    CTRL --> FRAME[HostRenderFrameSnapshot]
+    FRAME --> SCENE[RenderScene]
+    FRAME --> ASSETS[RenderAssetsSnapshot]
+    SCENE --> DATA[WgpuRenderData]
   DATA --> CALLBACK[WgpuRenderCallback]
   CALLBACK --> HOST[render::Renderer]
   ASSETS --> SYNC[sync_background_upload()]
@@ -75,5 +79,6 @@ flowchart LR
 ## Integrationsnotizen
 
 - `render::Renderer` enthaelt keine eigene Fachlogik; der GPU-Kern bleibt in `fs25_auto_drive_render_wgpu`.
-- `sync_background_upload()` lebt bewusst in `editor_app`, weil dort `Device`, `Queue` und die letzten Host-Revisionen bereits vorliegen.
+- `sync_background_upload()` lebt bewusst in `editor_app`, weil dort `Device`, `Queue`, die letzten Host-Revisionen und die Assets des bereits aufgebauten RenderFrames bereits vorliegen.
 - Die Engine beschreibt Background-Bounds im Domain-System als `RenderBackgroundWorldBounds { min_x, max_x, min_z, max_z }`. Der egui-Host-Adapter mappt diese beim Upload auf `BackgroundWorldBounds { min_x, max_x, min_y, max_y }`, weil der Render-Core auf einer 2D-X/Y-Ebene arbeitet.
+- Das egui-Onscreen-Rendering nutzt bewusst weder RGBA-Readback noch `CanvasRuntime`; es bleibt ein direkter `RenderScene`-Paint-Callback ueber `egui_wgpu`.

@@ -1,7 +1,7 @@
 # Architektur-Plan (Soll-Zustand)
 
 Stand: 2026-04-06  
-Status: Workspace-Split umgesetzt — Root-Fassade, Engine-Crate, render_wgpu-Core-Crate und egui-Host-Adapter sind stabil; die gemeinsame Rust-Host-Dispatch-Seam ist produktiv, `HostBridgeSession` ist als kanonische Session-Surface fuer den egui-Host sowie direkte Flutter-/FFI-Consumer festgeschrieben, der egui-Dialog-Lifecycle ist auf die Host-Bridge-Seam konsolidiert, die lokale Action-Mapping-Doppelpflege wurde entfernt und bridge-owned Read-/Dispatch-Seams laufen kanonisch ueber `fs25_auto_drive_host_bridge`; die fruehere Flutter-Kompat-Crate wurde entfernt, Kompat-Aliase liegen direkt in der Host-Bridge, `fs25_auto_drive_host_bridge_ffi` bildet den Linux-first-C-ABI-Adapter fuer Slice 0, und Slice 1 erweitert diese FFI-Surface um einen nativen Offscreen-Canvas-Pfad mit caller-owned RGBA-Buffer-Copy
+Status: Workspace-Split umgesetzt — Root-Fassade, Engine-Crate, render_wgpu-Core-Crate und egui-Host-Adapter sind stabil; die gemeinsame Rust-Host-Dispatch-Seam ist produktiv, `HostBridgeSession` ist als kanonische Session-Surface fuer den egui-Host sowie direkte Flutter-/FFI-Consumer festgeschrieben, der egui-Dialog-Lifecycle ist auf die Host-Bridge-Seam konsolidiert, die lokale Action-Mapping-Doppelpflege wurde entfernt und bridge-owned Read-/Dispatch-Seams laufen kanonisch ueber `fs25_auto_drive_host_bridge`; die fruehere Flutter-Kompat-Crate wurde entfernt, Kompat-Aliase liegen direkt in der Host-Bridge, `fs25_auto_drive_host_bridge_ffi` bildet den Linux-first-C-ABI-Adapter fuer Slice 0, Slice 1 erweitert diese FFI-Surface um einen nativen Offscreen-Canvas-Pfad mit caller-owned RGBA-Buffer-Copy, und der egui-Onscreen-Host konsumiert denselben gekoppelten RenderFrame-Seam jetzt ebenfalls ohne separaten spaeten Asset-Read.
 
 Aktuelle Integrationskette: Workspace auf Rust 2024, egui-Host auf `eframe/egui/egui-wgpu 0.34.1`, Render-Core auf `wgpu 29.0.*`.
 
@@ -45,10 +45,12 @@ Die Integrationsschale ist bewusst kein zusaetzlicher Fach-Layer. Sie koordinier
 
 - `fs25_auto_drive_render_wgpu::CanvasRuntime` kapselt Offscreen-Target, revisionsbasierten Background-Sync, Draw und blocking RGBA-Readback zentral im Render-Core.
 - `fs25_auto_drive_host_bridge_ffi` nutzt diese Runtime nur als duenner Adapter: pro Aufruf wird ueber die bestehende Session-Surface `HostBridgeSession::build_render_frame([width, height])` gelesen, gerendert und in einen caller-owned Host-Buffer kopiert.
+- Lokale Rust-Hosts mit eigenem `AppController`/`AppState` nutzen fuer denselben logischen Read-Seam den freien Host-Bridge-Helper `build_render_frame(&controller, &state, [width, height])`.
 - Der Pixelvertrag ist bewusst klein und explizit: `RGBA8 sRGB`, `bytes_per_row = width * 4`, top-down, `premultiplied alpha`.
 - Session-Ownership bleibt hostseitig: Dart/C++-Hosts halten den Session-Lifecycle, der Canvas-Pfad arbeitet ausschliesslich mit geborgten Session-/Canvas-Pointern.
 - Kein zweiter Session- oder DTO-Vertrag: Die Control-Plane bleibt `HostSessionAction`/`HostSessionSnapshot`, der Pixelpfad ist rein binaer.
 - Slice 1 ist kein Shared-Texture- oder Streaming-Design. Solche Folgepfade duerfen den kanonischen Read-Seam nicht aufbrechen, sondern muessen auf derselben `RenderScene`/`RenderAssetsSnapshot`-Kette aufsetzen.
+- Der egui-Onscreen-Pfad bleibt bewusst ausserhalb von `CanvasRuntime` und RGBA-Readback. Er liest denselben gekoppelten RenderFrame-Seam, nutzt lokal aber nur den `RenderScene`-Teil fuer den `egui_wgpu`-Paint-Callback und wiederverwendet die zugehoerigen Assets fuer den revisionsbasierten Background-Sync im selben Frame.
 
 ### Host-Dialog-Seam
 
@@ -182,6 +184,7 @@ Ergaenzende Guardrails fuer den portablen Native-Canvas-Pfad:
 - Sammelt pro Frame Panel-, Dialog-, Viewport- und Overlay-Events als `Vec<AppIntent>`, verarbeitet schalenlokale Events by-value, dispatcht stabile Host-Aktionen ueber die gemeinsame Bridge-Seam und reicht nur verbleibende Intents an `AppController` weiter
 - Fuehrt den Datei-/Pfad-Dialog-Lifecycle ueber Host-Dialog-DTOs (`HostDialogRequest`/`HostDialogResult`) in denselben Bridge-Dispatch-Pfad zurueck
 - Registriert den Render-Callback und verwaltet nur fensterlokalen Integrationszustand (`render::Renderer`, `ui::InputState`, Cursor-/Icon-Caches)
+- Liest fuer das Onscreen-Rendering einen gekoppelten RenderFrame ueber die Host-Bridge und vermeidet so divergierende spaete Asset-Reads gegenueber dem nativen Canvas-Kern
 
 **Darf**
 
