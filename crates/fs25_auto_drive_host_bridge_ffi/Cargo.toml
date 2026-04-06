@@ -1,0 +1,14 @@
+[package]
+name = "fs25_auto_drive_host_bridge_ffi"
+version = "1.7.0"
+edition = "2024"
+
+[lib]
+path = "src/lib.rs"
+crate-type = ["cdylib", "rlib"]
+
+[dependencies]
+anyhow = "1.0.102"
+fs25_auto_drive_host_bridge = { path = "../fs25_auto_drive_host_bridge" }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
