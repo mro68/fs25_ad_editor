@@ -288,10 +288,11 @@ pub extern "C" fn fs25ad_host_bridge_canvas_copy_last_frame_rgba(
 #[cfg(test)]
 mod tests {
     use super::{
-        fs25ad_host_bridge_canvas_copy_last_frame_rgba, fs25ad_host_bridge_canvas_dispose,
-        fs25ad_host_bridge_canvas_last_frame_info, fs25ad_host_bridge_canvas_new,
-        fs25ad_host_bridge_canvas_render_rgba, fs25ad_host_bridge_canvas_resize,
-        Fs25adRgbaFrameInfo,
+        fs25ad_host_bridge_canvas_contract_version, fs25ad_host_bridge_canvas_copy_last_frame_rgba,
+        fs25ad_host_bridge_canvas_dispose, fs25ad_host_bridge_canvas_last_frame_info,
+        fs25ad_host_bridge_canvas_new, fs25ad_host_bridge_canvas_render_rgba,
+        fs25ad_host_bridge_canvas_resize, Fs25adRgbaFrameInfo, FS25AD_ALPHA_MODE_PREMULTIPLIED,
+        FS25AD_CANVAS_CONTRACT_VERSION, FS25AD_PIXEL_FORMAT_RGBA8_SRGB,
     };
     use crate::{
         fs25ad_host_bridge_last_error_message, fs25ad_host_bridge_session_dispose,
@@ -308,6 +309,15 @@ mod tests {
             .to_string();
         fs25ad_host_bridge_string_free(ptr);
         value
+    }
+
+    #[test]
+    fn ffi_canvas_reports_stable_contract_version() {
+        assert_eq!(
+            fs25ad_host_bridge_canvas_contract_version(),
+            FS25AD_CANVAS_CONTRACT_VERSION
+        );
+        assert_eq!(fs25ad_host_bridge_canvas_contract_version(), 1);
     }
 
     #[test]
@@ -342,6 +352,45 @@ mod tests {
             pixels.len()
         ));
         assert!(pixels.iter().all(|byte| *byte == 0));
+
+        fs25ad_host_bridge_canvas_dispose(canvas);
+        fs25ad_host_bridge_session_dispose(session);
+    }
+
+    #[test]
+    fn ffi_canvas_frame_info_matches_consumer_layout_contract() {
+        let session = fs25ad_host_bridge_session_new();
+        assert!(!session.is_null());
+
+        let canvas = fs25ad_host_bridge_canvas_new(9, 5);
+        assert!(!canvas.is_null());
+        assert!(fs25ad_host_bridge_canvas_render_rgba(session, canvas));
+
+        let mut info = Fs25adRgbaFrameInfo {
+            width: 0,
+            height: 0,
+            bytes_per_row: 0,
+            pixel_format: 0,
+            alpha_mode: 0,
+            byte_len: 0,
+        };
+        assert!(fs25ad_host_bridge_canvas_last_frame_info(canvas, &mut info));
+
+        let expected_byte_len = usize::try_from(info.bytes_per_row)
+            .expect("bytes_per_row must fit into usize")
+            * usize::try_from(info.height).expect("height must fit into usize");
+        assert_eq!(info.pixel_format, FS25AD_PIXEL_FORMAT_RGBA8_SRGB);
+        assert_eq!(info.alpha_mode, FS25AD_ALPHA_MODE_PREMULTIPLIED);
+        assert_eq!(info.byte_len, expected_byte_len);
+
+        let mut pixels = vec![17_u8; info.byte_len + 4];
+        assert!(fs25ad_host_bridge_canvas_copy_last_frame_rgba(
+            canvas,
+            pixels.as_mut_ptr(),
+            pixels.len()
+        ));
+        assert!(pixels[..info.byte_len].iter().all(|byte| *byte == 0));
+        assert!(pixels[info.byte_len..].iter().all(|byte| *byte == 17));
 
         fs25ad_host_bridge_canvas_dispose(canvas);
         fs25ad_host_bridge_session_dispose(session);
