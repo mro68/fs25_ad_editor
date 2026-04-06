@@ -332,8 +332,8 @@ mod tests {
         let updated_geometry_json = read_and_free_string(
             fs25ad_host_bridge_session_viewport_geometry_json(session, 1024.0, 768.0),
         );
-        let updated_geometry: HostViewportGeometrySnapshot = serde_json::from_str(&updated_geometry_json)
-            .expect("updated geometry JSON must parse");
+        let updated_geometry: HostViewportGeometrySnapshot =
+            serde_json::from_str(&updated_geometry_json).expect("updated geometry JSON must parse");
         assert_eq!(updated_geometry.viewport_size, [1024.0, 768.0]);
         assert!(updated_geometry.zoom > 1.0);
 
