@@ -228,6 +228,8 @@
   - [x] Gemeinsame Offscreen-Canvas-Runtime in `fs25_auto_drive_render_wgpu` mit blocking RGBA-Readback
   - [x] Revisionsbasierter Background-Sync ueber `RenderAssetsSnapshot` in derselben Runtime
   - [x] Duenner FFI-Canvas-Adapter ueber `HostBridgeSession::build_render_frame(...)`
+  - [x] Freier Host-Bridge-Read-Helper `build_render_frame(&controller, &state, viewport)` fuer lokale Rust-Hosts ohne Session-Ownership-Migration
+  - [x] egui-Onscreen-Glue auf denselben gekoppelten RenderFrame-Seam umgestellt; separater spaeter Asset-Read im egui-Pfad entfernt
   - [x] Expliziter ABI-Vertrag fuer `RGBA8 sRGB`, `bytes_per_row = width * 4` und `premultiplied alpha`
   - [x] Stabiler C-Header `crates/fs25_auto_drive_host_bridge_ffi/include/fs25ad_host_bridge.h` fuer Session-, Canvas- und FrameInfo-Symbole
   - [x] Laufzeit-Handshake ueber `fs25ad_host_bridge_abi_version()` und `fs25ad_host_bridge_canvas_contract_version()`
