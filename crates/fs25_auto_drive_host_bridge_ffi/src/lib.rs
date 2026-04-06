@@ -5,8 +5,8 @@ mod texture_registration_v4;
 
 use anyhow::{anyhow, Context, Result};
 use fs25_auto_drive_host_bridge::{
-    HostBridgeSession, HostDialogRequest, HostDialogResult, HostSessionAction, HostSessionSnapshot,
-    HostViewportGeometrySnapshot,
+    HostBridgeSession, HostChromeSnapshot, HostDialogRequest, HostDialogResult, HostSessionAction,
+    HostSessionSnapshot, HostViewportGeometrySnapshot,
 };
 use std::cell::RefCell;
 use std::ffi::{c_char, CStr, CString};
@@ -16,7 +16,7 @@ thread_local! {
     static LAST_ERROR: RefCell<Option<String>> = const { RefCell::new(None) };
 }
 
-const FS25AD_HOST_BRIDGE_ABI_VERSION: u32 = 2;
+const FS25AD_HOST_BRIDGE_ABI_VERSION: u32 = 3;
 
 /// Opaquer Session-Handle mit serialisiertem Zugriff auf die kanonische Session.
 pub struct HostBridgeSessionHandle {
@@ -162,6 +162,25 @@ pub extern "C" fn fs25ad_host_bridge_session_snapshot_json(
     }
 }
 
+/// Serialisiert den host-neutralen Chrome-Snapshot als UTF-8-JSON.
+#[unsafe(no_mangle)]
+pub extern "C" fn fs25ad_host_bridge_session_chrome_snapshot_json(
+    session: *mut HostBridgeSessionHandle,
+) -> *mut c_char {
+    clear_last_error();
+
+    match with_session_mut(session, |session| {
+        let snapshot: HostChromeSnapshot = session.build_host_chrome_snapshot();
+        serialize_json(&snapshot)
+    }) {
+        Ok(payload) => payload,
+        Err(error) => {
+            set_last_error(error.to_string());
+            std::ptr::null_mut()
+        }
+    }
+}
+
 /// Wendet eine kanonische `HostSessionAction` an, uebergeben als UTF-8-JSON.
 #[unsafe(no_mangle)]
 pub extern "C" fn fs25ad_host_bridge_session_apply_action_json(
@@ -247,7 +266,8 @@ pub extern "C" fn fs25ad_host_bridge_session_viewport_geometry_json(
 mod tests {
     use super::{
         fs25ad_host_bridge_abi_version, fs25ad_host_bridge_last_error_message,
-        fs25ad_host_bridge_session_apply_action_json, fs25ad_host_bridge_session_dispose,
+        fs25ad_host_bridge_session_apply_action_json,
+        fs25ad_host_bridge_session_chrome_snapshot_json, fs25ad_host_bridge_session_dispose,
         fs25ad_host_bridge_session_new, fs25ad_host_bridge_session_snapshot_json,
         fs25ad_host_bridge_session_submit_dialog_result_json,
         fs25ad_host_bridge_session_take_dialog_requests_json,
@@ -277,7 +297,7 @@ mod tests {
             fs25ad_host_bridge_abi_version(),
             FS25AD_HOST_BRIDGE_ABI_VERSION
         );
-        assert_eq!(fs25ad_host_bridge_abi_version(), 2);
+        assert_eq!(fs25ad_host_bridge_abi_version(), 3);
     }
 
     #[test]
@@ -299,6 +319,13 @@ mod tests {
         let snapshot: HostSessionSnapshot =
             serde_json::from_str(&snapshot_json).expect("snapshot JSON must parse");
         assert!(snapshot.show_command_palette);
+
+        let chrome_snapshot_json =
+            read_and_free_string(fs25ad_host_bridge_session_chrome_snapshot_json(session));
+        let chrome_snapshot: fs25_auto_drive_host_bridge::HostChromeSnapshot =
+            serde_json::from_str(&chrome_snapshot_json).expect("chrome snapshot JSON must parse");
+        assert!(chrome_snapshot.show_command_palette);
+        assert_eq!(chrome_snapshot.status_message, None);
 
         let request_action_json = CString::new(
             serde_json::to_string(&HostSessionAction::RequestHeightmapSelection)
@@ -353,7 +380,7 @@ mod tests {
                         },
                         HostViewportInputEvent::Tap {
                             button: HostPointerButton::Primary,
-                            tap_kind: HostTapKind::Single,
+                            tap_kind: HostTapKind::Double,
                             screen_pos: [512.0, 384.0],
                             modifiers: HostInputModifiers::default(),
                         },

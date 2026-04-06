@@ -9,7 +9,7 @@
 extern "C" {
 #endif
 
-#define FS25AD_HOST_BRIDGE_ABI_VERSION 2u
+#define FS25AD_HOST_BRIDGE_ABI_VERSION 3u
 #define FS25AD_HOST_BRIDGE_SHARED_TEXTURE_CONTRACT_VERSION 3u
 #define FS25AD_HOST_BRIDGE_TEXTURE_REGISTRATION_V4_CONTRACT_VERSION 4u
 
@@ -143,6 +143,7 @@ Fs25adHostBridgeSession *fs25ad_host_bridge_session_new(void);
 void fs25ad_host_bridge_session_dispose(Fs25adHostBridgeSession *session);
 
 char *fs25ad_host_bridge_session_snapshot_json(Fs25adHostBridgeSession *session);
+char *fs25ad_host_bridge_session_chrome_snapshot_json(Fs25adHostBridgeSession *session);
 bool fs25ad_host_bridge_session_apply_action_json(
     Fs25adHostBridgeSession *session,
     const char *action_json);

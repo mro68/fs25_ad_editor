@@ -6,8 +6,8 @@ use glam::Vec2;
 
 use crate::dispatch::HostViewportInputState;
 use crate::dto::{
-    HostActiveTool, HostDialogRequest, HostDialogResult, HostSelectionSnapshot, HostSessionAction,
-    HostSessionSnapshot, HostViewportGeometrySnapshot, HostViewportSnapshot,
+    HostActiveTool, HostChromeSnapshot, HostDialogRequest, HostDialogResult, HostSelectionSnapshot,
+    HostSessionAction, HostSessionSnapshot, HostViewportGeometrySnapshot, HostViewportSnapshot,
 };
 
 fn map_active_tool(tool: EditorTool) -> HostActiveTool {
@@ -217,6 +217,11 @@ impl HostBridgeSession {
         self.controller.build_host_ui_snapshot(&self.state)
     }
 
+    /// Baut den host-neutralen Chrome-Snapshot fuer Menues, Defaults und Status.
+    pub fn build_host_chrome_snapshot(&self) -> HostChromeSnapshot {
+        crate::dispatch::build_host_chrome_snapshot(&self.state)
+    }
+
     /// Baut den host-neutralen Overlay-Snapshot fuer den aktuellen Viewport.
     ///
     /// Die Methode benoetigt mutablen Zugriff, weil der App-Layer beim Aufbau
@@ -247,7 +252,9 @@ impl Default for HostBridgeSession {
 
 #[cfg(test)]
 mod tests {
-    use fs25_auto_drive_engine::app::{AppIntent, MapNode, NodeFlag, RoadMap};
+    use fs25_auto_drive_engine::app::{
+        AppIntent, Connection, ConnectionDirection, ConnectionPriority, MapNode, NodeFlag, RoadMap,
+    };
     use glam::Vec2;
     use std::sync::Arc;
 
@@ -275,6 +282,31 @@ mod tests {
         map
     }
 
+    fn viewport_connected_path_map() -> RoadMap {
+        let mut map = RoadMap::new(3);
+        map.add_node(MapNode::new(1, Vec2::new(0.0, 0.0), NodeFlag::Regular));
+        map.add_node(MapNode::new(2, Vec2::new(10.0, 0.0), NodeFlag::Regular));
+        map.add_node(MapNode::new(3, Vec2::new(20.0, 0.0), NodeFlag::Regular));
+        map.add_connection(Connection::new(
+            1,
+            2,
+            ConnectionDirection::Regular,
+            ConnectionPriority::Regular,
+            Vec2::new(0.0, 0.0),
+            Vec2::new(10.0, 0.0),
+        ));
+        map.add_connection(Connection::new(
+            2,
+            3,
+            ConnectionDirection::Regular,
+            ConnectionPriority::Regular,
+            Vec2::new(10.0, 0.0),
+            Vec2::new(20.0, 0.0),
+        ));
+        map.ensure_spatial_index();
+        map
+    }
+
     fn resize_event(size_px: [f32; 2]) -> HostViewportInputEvent {
         HostViewportInputEvent::Resize { size_px }
     }
@@ -285,6 +317,19 @@ mod tests {
             tap_kind: HostTapKind::Single,
             screen_pos,
             modifiers: HostInputModifiers::default(),
+        }
+    }
+
+    fn double_tap_event(screen_pos: [f32; 2], additive: bool) -> HostViewportInputEvent {
+        HostViewportInputEvent::Tap {
+            button: HostPointerButton::Primary,
+            tap_kind: HostTapKind::Double,
+            screen_pos,
+            modifiers: HostInputModifiers {
+                shift: false,
+                alt: false,
+                command: additive,
+            },
         }
     }
 
@@ -425,8 +470,11 @@ mod tests {
         let mut session = HostBridgeSession::new();
 
         let host_ui = session.build_host_ui_snapshot();
+        let chrome = session.build_host_chrome_snapshot();
         assert!(host_ui.command_palette_state().is_some());
         assert!(host_ui.options_panel_state().is_some());
+        assert!(!chrome.has_map);
+        assert_eq!(chrome.active_tool, HostActiveTool::Select);
 
         let overlay = session.build_viewport_overlay_snapshot(None);
         assert!(overlay.route_tool_preview.is_none());
@@ -599,6 +647,83 @@ mod tests {
 
         assert!(node_after.x > node_before.x);
         assert!(session.state.can_undo());
+    }
+
+    #[test]
+    fn viewport_input_alt_drag_selects_lasso_polygon_via_bridge_contract() {
+        let mut session = HostBridgeSession::new();
+        session.state.road_map = Some(Arc::new(viewport_connected_path_map()));
+        session.state.view.viewport_size = [800.0, 600.0];
+
+        let node1_screen = screen_for_world(&session, Vec2::new(0.0, 0.0));
+        let node2_screen = screen_for_world(&session, Vec2::new(10.0, 0.0));
+        let start = [node1_screen[0] - 20.0, node1_screen[1] - 20.0];
+        let mid = [node2_screen[0] + 20.0, node1_screen[1] - 20.0];
+        let end = [node2_screen[0] + 20.0, node1_screen[1] + 20.0];
+        let close = [node1_screen[0] - 20.0, node1_screen[1] + 20.0];
+
+        session
+            .apply_action(HostSessionAction::SubmitViewportInput {
+                batch: HostViewportInputBatch {
+                    events: vec![
+                        resize_event([800.0, 600.0]),
+                        HostViewportInputEvent::DragStart {
+                            button: HostPointerButton::Primary,
+                            screen_pos: start,
+                            modifiers: HostInputModifiers {
+                                shift: false,
+                                alt: true,
+                                command: false,
+                            },
+                        },
+                        HostViewportInputEvent::DragUpdate {
+                            button: HostPointerButton::Primary,
+                            screen_pos: mid,
+                            delta_px: [mid[0] - start[0], mid[1] - start[1]],
+                        },
+                        HostViewportInputEvent::DragUpdate {
+                            button: HostPointerButton::Primary,
+                            screen_pos: end,
+                            delta_px: [end[0] - mid[0], end[1] - mid[1]],
+                        },
+                        HostViewportInputEvent::DragEnd {
+                            button: HostPointerButton::Primary,
+                            screen_pos: Some(close),
+                        },
+                    ],
+                },
+            })
+            .expect("Alt-Drag-Lasso muss ueber die Bridge verarbeitet werden");
+
+        assert_eq!(session.state.selection.selected_node_ids.len(), 3);
+        assert!(session.state.selection.selected_node_ids.contains(&1));
+        assert!(session.state.selection.selected_node_ids.contains(&2));
+        assert!(session.state.selection.selected_node_ids.contains(&3));
+    }
+
+    #[test]
+    fn viewport_input_double_tap_selects_segment_via_bridge_contract() {
+        let mut session = HostBridgeSession::new();
+        session.state.road_map = Some(Arc::new(viewport_connected_path_map()));
+        session.state.view.viewport_size = [800.0, 600.0];
+
+        let node2_screen = screen_for_world(&session, Vec2::new(10.0, 0.0));
+
+        session
+            .apply_action(HostSessionAction::SubmitViewportInput {
+                batch: HostViewportInputBatch {
+                    events: vec![
+                        resize_event([800.0, 600.0]),
+                        double_tap_event(node2_screen, false),
+                    ],
+                },
+            })
+            .expect("Double-Tap muss ueber die Bridge verarbeitet werden");
+
+        assert_eq!(session.state.selection.selected_node_ids.len(), 3);
+        assert!(session.state.selection.selected_node_ids.contains(&1));
+        assert!(session.state.selection.selected_node_ids.contains(&2));
+        assert!(session.state.selection.selected_node_ids.contains(&3));
     }
 
     #[test]
