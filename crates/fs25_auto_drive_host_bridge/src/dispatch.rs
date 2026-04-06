@@ -11,12 +11,11 @@ use fs25_auto_drive_engine::shared::{
 use glam::Vec2;
 
 use crate::dto::{
-    HostActiveTool, HostDialogRequest, HostDialogRequestKind, HostDialogResult,
-    HostInputModifiers, HostPointerButton, HostSessionAction, HostTapKind,
-    HostViewportConnectionDirection, HostViewportConnectionPriority,
-    HostViewportConnectionSnapshot, HostViewportGeometrySnapshot, HostViewportInputBatch,
-    HostViewportInputEvent, HostViewportMarkerSnapshot, HostViewportNodeKind,
-    HostViewportNodeSnapshot,
+    HostActiveTool, HostDialogRequest, HostDialogRequestKind, HostDialogResult, HostInputModifiers,
+    HostPointerButton, HostSessionAction, HostTapKind, HostViewportConnectionDirection,
+    HostViewportConnectionPriority, HostViewportConnectionSnapshot, HostViewportGeometrySnapshot,
+    HostViewportInputBatch, HostViewportInputEvent, HostViewportMarkerSnapshot,
+    HostViewportNodeKind, HostViewportNodeSnapshot,
 };
 
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -136,7 +135,11 @@ fn apply_primary_tap(
             Ok(true)
         }
         EditorTool::Connect => {
-            apply_intent(controller, state, AppIntent::ConnectToolNodeClicked { world_pos })?;
+            apply_intent(
+                controller,
+                state,
+                AppIntent::ConnectToolNodeClicked { world_pos },
+            )?;
             Ok(true)
         }
         EditorTool::Route => Ok(false),
@@ -193,7 +196,11 @@ fn start_primary_drag(
                 )?;
             }
 
-            apply_intent(controller, state, AppIntent::BeginMoveSelectedNodesRequested)?;
+            apply_intent(
+                controller,
+                state,
+                AppIntent::BeginMoveSelectedNodesRequested,
+            )?;
             input_state.active_drag = Some(HostViewportDragState {
                 button: HostPointerButton::Primary,
                 latest_screen: screen_pos,
@@ -221,7 +228,11 @@ fn apply_viewport_input_event(
         HostViewportInputEvent::Resize { size_px } => {
             validate_resize_size(size_px)?;
             input_state.remember_viewport_size(size_px);
-            apply_intent(controller, state, AppIntent::ViewportResized { size: size_px })?;
+            apply_intent(
+                controller,
+                state,
+                AppIntent::ViewportResized { size: size_px },
+            )?;
             Ok(true)
         }
         HostViewportInputEvent::Tap {
@@ -271,7 +282,8 @@ fn apply_viewport_input_event(
 
             match active_drag.kind {
                 HostViewportDragKind::CameraPan => {
-                    let delta_world = delta_px_to_world(&state.view.camera, viewport_size, delta_px)?;
+                    let delta_world =
+                        delta_px_to_world(&state.view.camera, viewport_size, delta_px)?;
                     apply_intent(
                         controller,
                         state,
@@ -286,7 +298,8 @@ fn apply_viewport_input_event(
                         return Ok(false);
                     }
 
-                    let delta_world = delta_px_to_world(&state.view.camera, viewport_size, delta_px)?;
+                    let delta_world =
+                        delta_px_to_world(&state.view.camera, viewport_size, delta_px)?;
                     apply_intent(
                         controller,
                         state,
@@ -356,12 +369,17 @@ fn apply_viewport_input_event(
                 1.0 / state.options.camera_scroll_zoom_step
             };
             let focus_world = screen_pos
-                .map(|screen_pos| screen_pos_to_world(&state.view.camera, viewport_size, screen_pos))
+                .map(|screen_pos| {
+                    screen_pos_to_world(&state.view.camera, viewport_size, screen_pos)
+                })
                 .transpose()?;
             apply_intent(
                 controller,
                 state,
-                AppIntent::CameraZoom { factor, focus_world },
+                AppIntent::CameraZoom {
+                    factor,
+                    focus_world,
+                },
             )?;
             Ok(true)
         }

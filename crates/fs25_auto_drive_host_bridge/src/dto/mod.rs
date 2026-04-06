@@ -416,8 +416,8 @@ mod tests {
         HostActiveTool, HostDialogResult, HostInputModifiers, HostPointerButton,
         HostSelectionSnapshot, HostSessionAction, HostSessionSnapshot, HostTapKind,
         HostViewportConnectionDirection, HostViewportConnectionPriority,
-        HostViewportConnectionSnapshot, HostViewportGeometrySnapshot, HostViewportMarkerSnapshot,
-        HostViewportInputBatch, HostViewportInputEvent, HostViewportNodeKind,
+        HostViewportConnectionSnapshot, HostViewportGeometrySnapshot, HostViewportInputBatch,
+        HostViewportInputEvent, HostViewportMarkerSnapshot, HostViewportNodeKind,
         HostViewportNodeSnapshot, HostViewportSnapshot,
     };
 
@@ -575,8 +575,8 @@ mod tests {
             })
         );
 
-        let parsed: HostViewportInputBatch = serde_json::from_value(payload)
-            .expect("Viewport-Input-Batch muss wieder lesbar sein");
+        let parsed: HostViewportInputBatch =
+            serde_json::from_value(payload).expect("Viewport-Input-Batch muss wieder lesbar sein");
         assert_eq!(parsed, batch);
     }
 

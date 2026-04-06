@@ -4,11 +4,11 @@ use fs25_auto_drive_engine::app::{AppController, AppState, EditorTool};
 use fs25_auto_drive_engine::shared::{RenderAssetsSnapshot, RenderScene};
 use glam::Vec2;
 
+use crate::dispatch::HostViewportInputState;
 use crate::dto::{
     HostActiveTool, HostDialogRequest, HostDialogResult, HostSelectionSnapshot, HostSessionAction,
     HostSessionSnapshot, HostViewportGeometrySnapshot, HostViewportSnapshot,
 };
-use crate::dispatch::HostViewportInputState;
 
 fn map_active_tool(tool: EditorTool) -> HostActiveTool {
     match tool {
@@ -290,10 +290,11 @@ mod tests {
 
     fn screen_for_world(session: &HostBridgeSession, world_pos: Vec2) -> [f32; 2] {
         let viewport = session.state.view.viewport_size;
-        let screen = session.state.view.camera.world_to_screen(
-            world_pos,
-            Vec2::new(viewport[0], viewport[1]),
-        );
+        let screen = session
+            .state
+            .view
+            .camera
+            .world_to_screen(world_pos, Vec2::new(viewport[0], viewport[1]));
         [screen.x, screen.y]
     }
 
@@ -540,7 +541,10 @@ mod tests {
                         HostViewportInputEvent::DragUpdate {
                             button: HostPointerButton::Primary,
                             screen_pos: rect_end,
-                            delta_px: [rect_end[0] - node1_screen[0], rect_end[1] - node1_screen[1]],
+                            delta_px: [
+                                rect_end[0] - node1_screen[0],
+                                rect_end[1] - node1_screen[1],
+                            ],
                         },
                         HostViewportInputEvent::DragEnd {
                             button: HostPointerButton::Primary,
