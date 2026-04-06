@@ -17,6 +17,7 @@ use crate::dto::{
     HostViewportInputBatch, HostViewportInputEvent, HostViewportMarkerSnapshot,
     HostViewportNodeKind, HostViewportNodeSnapshot,
 };
+use crate::session::HostRenderFrameSnapshot;
 
 #[derive(Debug, Clone, Copy, PartialEq)]
 enum HostViewportDragKind {
@@ -751,6 +752,18 @@ pub fn build_render_assets(controller: &AppController, state: &AppState) -> Rend
     controller.build_render_assets(state)
 }
 
+/// Baut Szene und Assets als gekoppelten read-only Render-Frame fuer lokale Hosts.
+pub fn build_render_frame(
+    controller: &AppController,
+    state: &AppState,
+    viewport_size: [f32; 2],
+) -> HostRenderFrameSnapshot {
+    HostRenderFrameSnapshot {
+        scene: build_render_scene(controller, state, viewport_size),
+        assets: build_render_assets(controller, state),
+    }
+}
+
 /// Baut einen minimalen, serialisierbaren Viewport-Geometry-Snapshot fuer Hosts.
 pub fn build_viewport_geometry_snapshot(
     controller: &AppController,
@@ -777,8 +790,9 @@ mod tests {
 
     use super::{
         apply_host_action, apply_mapped_intent, build_host_ui_snapshot, build_render_assets,
-        build_render_scene, build_viewport_geometry_snapshot, build_viewport_overlay_snapshot,
-        map_host_action_to_intent, map_intent_to_host_action, take_host_dialog_requests,
+        build_render_frame, build_render_scene, build_viewport_geometry_snapshot,
+        build_viewport_overlay_snapshot, map_host_action_to_intent, map_intent_to_host_action,
+        take_host_dialog_requests,
     };
 
     fn geometry_test_map() -> RoadMap {
@@ -940,6 +954,21 @@ mod tests {
         assert_eq!(snapshot.markers[0].position, [0.0, 0.0]);
         assert!(snapshot.world_per_pixel.is_finite());
         assert!(snapshot.world_per_pixel > 0.0);
+    }
+
+    #[test]
+    fn build_render_frame_couples_scene_and_assets_for_local_hosts() {
+        let controller = AppController::new();
+        let mut state = AppState::new();
+        state.road_map = Some(Arc::new(geometry_test_map()));
+
+        let frame = build_render_frame(&controller, &state, [640.0, 320.0]);
+
+        assert!(frame.scene.has_map());
+        assert_eq!(frame.scene.viewport_size(), [640.0, 320.0]);
+        assert_eq!(frame.assets.background_asset_revision(), 0);
+        assert_eq!(frame.assets.background_transform_revision(), 0);
+        assert!(frame.assets.background().is_none());
     }
 
     #[test]
