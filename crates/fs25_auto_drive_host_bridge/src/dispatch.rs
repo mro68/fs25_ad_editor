@@ -1,9 +1,16 @@
 use anyhow::{anyhow, bail, Result};
+use fs25_auto_drive_engine::app::tool_contract::RouteToolId;
+use fs25_auto_drive_engine::app::tools::{
+    resolve_route_tool_entries, RouteToolAvailabilityContext, RouteToolDisabledReason,
+    RouteToolGroup, RouteToolIconKey, RouteToolSurface,
+};
 use fs25_auto_drive_engine::app::ui_contract::{
     dialog_result_to_intent, DialogRequest, DialogRequestKind, DialogResult, HostUiSnapshot,
     ViewportOverlaySnapshot,
 };
-use fs25_auto_drive_engine::app::{AppController, AppIntent, AppState, EditorTool};
+use fs25_auto_drive_engine::app::{
+    AppController, AppIntent, AppState, ConnectionDirection, ConnectionPriority, EditorTool,
+};
 use fs25_auto_drive_engine::shared::{
     RenderAssetsSnapshot, RenderConnectionDirection, RenderConnectionPriority, RenderNodeKind,
     RenderScene,
@@ -11,15 +18,18 @@ use fs25_auto_drive_engine::shared::{
 use glam::Vec2;
 
 use crate::dto::{
-    HostActiveTool, HostDialogRequest, HostDialogRequestKind, HostDialogResult, HostInputModifiers,
-    HostPointerButton, HostSessionAction, HostTapKind, HostViewportConnectionDirection,
+    HostActiveTool, HostChromeSnapshot, HostDefaultConnectionDirection,
+    HostDefaultConnectionPriority, HostDialogRequest, HostDialogRequestKind, HostDialogResult,
+    HostInputModifiers, HostPointerButton, HostRouteToolDisabledReason, HostRouteToolEntrySnapshot,
+    HostRouteToolGroup, HostRouteToolIconKey, HostRouteToolId, HostRouteToolSelectionSnapshot,
+    HostRouteToolSurface, HostSessionAction, HostTapKind, HostViewportConnectionDirection,
     HostViewportConnectionPriority, HostViewportConnectionSnapshot, HostViewportGeometrySnapshot,
     HostViewportInputBatch, HostViewportInputEvent, HostViewportMarkerSnapshot,
     HostViewportNodeKind, HostViewportNodeSnapshot,
 };
 use crate::session::HostRenderFrameSnapshot;
 
-#[derive(Debug, Clone, Copy, PartialEq)]
+#[derive(Debug, Clone, PartialEq)]
 enum HostViewportDragKind {
     CameraPan,
     SelectionMove,
@@ -27,9 +37,13 @@ enum HostViewportDragKind {
         start_screen: [f32; 2],
         additive: bool,
     },
+    LassoSelection {
+        additive: bool,
+        points_screen: Vec<[f32; 2]>,
+    },
 }
 
-#[derive(Debug, Clone, Copy, PartialEq)]
+#[derive(Debug, Clone, PartialEq)]
 struct HostViewportDragState {
     button: HostPointerButton,
     latest_screen: [f32; 2],
@@ -147,6 +161,38 @@ fn apply_primary_tap(
     }
 }
 
+fn apply_primary_double_tap(
+    controller: &mut AppController,
+    state: &mut AppState,
+    viewport_size: [f32; 2],
+    screen_pos: [f32; 2],
+    modifiers: HostInputModifiers,
+) -> Result<bool> {
+    let world_pos = screen_pos_to_world(&state.view.camera, viewport_size, screen_pos)?;
+    apply_intent(
+        controller,
+        state,
+        AppIntent::NodeSegmentBetweenIntersectionsRequested {
+            world_pos,
+            additive: modifiers.command,
+        },
+    )?;
+    Ok(true)
+}
+
+fn push_lasso_point(points_screen: &mut Vec<[f32; 2]>, screen_pos: [f32; 2]) {
+    let min_distance_sq = 3.0 * 3.0;
+    let should_push = points_screen.last().is_none_or(|last| {
+        let dx = last[0] - screen_pos[0];
+        let dy = last[1] - screen_pos[1];
+        (dx * dx) + (dy * dy) >= min_distance_sq
+    });
+
+    if should_push {
+        points_screen.push(screen_pos);
+    }
+}
+
 fn start_primary_drag(
     controller: &mut AppController,
     state: &mut AppState,
@@ -155,8 +201,17 @@ fn start_primary_drag(
     modifiers: HostInputModifiers,
 ) -> Result<bool> {
     if modifiers.alt {
-        input_state.active_drag = None;
-        return Ok(false);
+        let mut points_screen = Vec::with_capacity(16);
+        push_lasso_point(&mut points_screen, screen_pos);
+        input_state.active_drag = Some(HostViewportDragState {
+            button: HostPointerButton::Primary,
+            latest_screen: screen_pos,
+            kind: HostViewportDragKind::LassoSelection {
+                additive: modifiers.command,
+                points_screen,
+            },
+        });
+        return Ok(true);
     }
 
     if state.editor.active_tool == EditorTool::Select && modifiers.shift {
@@ -238,7 +293,7 @@ fn apply_viewport_input_event(
         }
         HostViewportInputEvent::Tap {
             button,
-            tap_kind: HostTapKind::Single,
+            tap_kind,
             screen_pos,
             modifiers,
         } => {
@@ -247,7 +302,18 @@ fn apply_viewport_input_event(
             }
 
             let viewport_size = input_state.effective_viewport_size(state);
-            apply_primary_tap(controller, state, viewport_size, screen_pos, modifiers)
+            match tap_kind {
+                HostTapKind::Single => {
+                    apply_primary_tap(controller, state, viewport_size, screen_pos, modifiers)
+                }
+                HostTapKind::Double => apply_primary_double_tap(
+                    controller,
+                    state,
+                    viewport_size,
+                    screen_pos,
+                    modifiers,
+                ),
+            }
         }
         HostViewportInputEvent::DragStart {
             button,
@@ -281,7 +347,7 @@ fn apply_viewport_input_event(
 
             active_drag.latest_screen = screen_pos;
 
-            match active_drag.kind {
+            match &mut active_drag.kind {
                 HostViewportDragKind::CameraPan => {
                     let delta_world =
                         delta_px_to_world(&state.view.camera, viewport_size, delta_px)?;
@@ -309,6 +375,10 @@ fn apply_viewport_input_event(
                     Ok(true)
                 }
                 HostViewportDragKind::RectSelection { .. } => Ok(true),
+                HostViewportDragKind::LassoSelection { points_screen, .. } => {
+                    push_lasso_point(points_screen, screen_pos);
+                    Ok(true)
+                }
             }
         }
         HostViewportInputEvent::DragEnd { button, screen_pos } => {
@@ -339,6 +409,26 @@ fn apply_viewport_input_event(
                         controller,
                         state,
                         AppIntent::SelectNodesInRectRequested { min, max, additive },
+                    )?;
+                    Ok(true)
+                }
+                HostViewportDragKind::LassoSelection {
+                    additive,
+                    mut points_screen,
+                } => {
+                    push_lasso_point(&mut points_screen, final_screen);
+                    if points_screen.len() < 3 {
+                        return Ok(false);
+                    }
+
+                    let polygon = points_screen
+                        .into_iter()
+                        .map(|point| screen_pos_to_world(&state.view.camera, viewport_size, point))
+                        .collect::<Result<Vec<_>>>()?;
+                    apply_intent(
+                        controller,
+                        state,
+                        AppIntent::SelectNodesInLassoRequested { polygon, additive },
                     )?;
                     Ok(true)
                 }
@@ -541,6 +631,140 @@ fn map_editor_tool(tool: EditorTool) -> HostActiveTool {
     }
 }
 
+fn map_connection_direction(direction: ConnectionDirection) -> HostDefaultConnectionDirection {
+    match direction {
+        ConnectionDirection::Regular => HostDefaultConnectionDirection::Regular,
+        ConnectionDirection::Dual => HostDefaultConnectionDirection::Dual,
+        ConnectionDirection::Reverse => HostDefaultConnectionDirection::Reverse,
+    }
+}
+
+fn map_connection_priority(priority: ConnectionPriority) -> HostDefaultConnectionPriority {
+    match priority {
+        ConnectionPriority::Regular => HostDefaultConnectionPriority::Regular,
+        ConnectionPriority::SubPriority => HostDefaultConnectionPriority::SubPriority,
+    }
+}
+
+fn map_route_tool_id(tool_id: RouteToolId) -> HostRouteToolId {
+    match tool_id {
+        RouteToolId::Straight => HostRouteToolId::Straight,
+        RouteToolId::CurveQuad => HostRouteToolId::CurveQuad,
+        RouteToolId::CurveCubic => HostRouteToolId::CurveCubic,
+        RouteToolId::Spline => HostRouteToolId::Spline,
+        RouteToolId::Bypass => HostRouteToolId::Bypass,
+        RouteToolId::SmoothCurve => HostRouteToolId::SmoothCurve,
+        RouteToolId::Parking => HostRouteToolId::Parking,
+        RouteToolId::FieldBoundary => HostRouteToolId::FieldBoundary,
+        RouteToolId::FieldPath => HostRouteToolId::FieldPath,
+        RouteToolId::RouteOffset => HostRouteToolId::RouteOffset,
+        RouteToolId::ColorPath => HostRouteToolId::ColorPath,
+    }
+}
+
+fn map_route_tool_group(group: RouteToolGroup) -> HostRouteToolGroup {
+    match group {
+        RouteToolGroup::Basics => HostRouteToolGroup::Basics,
+        RouteToolGroup::Section => HostRouteToolGroup::Section,
+        RouteToolGroup::Analysis => HostRouteToolGroup::Analysis,
+    }
+}
+
+fn map_route_tool_surface(surface: RouteToolSurface) -> HostRouteToolSurface {
+    match surface {
+        RouteToolSurface::FloatingMenu => HostRouteToolSurface::FloatingMenu,
+        RouteToolSurface::DefaultsPanel => HostRouteToolSurface::DefaultsPanel,
+        RouteToolSurface::MainMenu => HostRouteToolSurface::MainMenu,
+        RouteToolSurface::CommandPalette => HostRouteToolSurface::CommandPalette,
+    }
+}
+
+fn map_route_tool_icon_key(icon_key: RouteToolIconKey) -> HostRouteToolIconKey {
+    match icon_key {
+        RouteToolIconKey::Straight => HostRouteToolIconKey::Straight,
+        RouteToolIconKey::CurveQuad => HostRouteToolIconKey::CurveQuad,
+        RouteToolIconKey::CurveCubic => HostRouteToolIconKey::CurveCubic,
+        RouteToolIconKey::Spline => HostRouteToolIconKey::Spline,
+        RouteToolIconKey::Bypass => HostRouteToolIconKey::Bypass,
+        RouteToolIconKey::SmoothCurve => HostRouteToolIconKey::SmoothCurve,
+        RouteToolIconKey::Parking => HostRouteToolIconKey::Parking,
+        RouteToolIconKey::FieldBoundary => HostRouteToolIconKey::FieldBoundary,
+        RouteToolIconKey::FieldPath => HostRouteToolIconKey::FieldPath,
+        RouteToolIconKey::RouteOffset => HostRouteToolIconKey::RouteOffset,
+        RouteToolIconKey::ColorPath => HostRouteToolIconKey::ColorPath,
+    }
+}
+
+fn map_route_tool_disabled_reason(reason: RouteToolDisabledReason) -> HostRouteToolDisabledReason {
+    match reason {
+        RouteToolDisabledReason::MissingFarmland => HostRouteToolDisabledReason::MissingFarmland,
+        RouteToolDisabledReason::MissingBackground => {
+            HostRouteToolDisabledReason::MissingBackground
+        }
+        RouteToolDisabledReason::MissingOrderedChain => {
+            HostRouteToolDisabledReason::MissingOrderedChain
+        }
+    }
+}
+
+fn route_tool_availability_context(state: &AppState) -> RouteToolAvailabilityContext {
+    let has_farmland = state
+        .farmland_polygons_arc()
+        .is_some_and(|polygons| !polygons.is_empty());
+    let has_background = state.has_background_image();
+    let has_ordered_chain = state.road_map.as_deref().is_some_and(|road_map| {
+        road_map
+            .ordered_chain_nodes(&state.selection.selected_node_ids)
+            .is_some()
+    });
+
+    RouteToolAvailabilityContext {
+        has_farmland,
+        has_background,
+        has_ordered_chain,
+    }
+}
+
+fn build_route_tool_entries_snapshot(state: &AppState) -> Vec<HostRouteToolEntrySnapshot> {
+    let availability = route_tool_availability_context(state);
+    let mut entries = Vec::new();
+
+    for surface in [
+        RouteToolSurface::MainMenu,
+        RouteToolSurface::DefaultsPanel,
+        RouteToolSurface::FloatingMenu,
+        RouteToolSurface::CommandPalette,
+    ] {
+        for group in [
+            RouteToolGroup::Basics,
+            RouteToolGroup::Section,
+            RouteToolGroup::Analysis,
+        ] {
+            for entry in resolve_route_tool_entries(surface, group, availability) {
+                entries.push(HostRouteToolEntrySnapshot {
+                    surface: map_route_tool_surface(surface),
+                    group: map_route_tool_group(group),
+                    tool: map_route_tool_id(entry.descriptor.id),
+                    slot: entry.slot,
+                    icon_key: map_route_tool_icon_key(entry.descriptor.icon_key),
+                    enabled: entry.enabled,
+                    disabled_reason: entry.disabled_reason.map(map_route_tool_disabled_reason),
+                });
+            }
+        }
+    }
+
+    entries
+}
+
+fn build_route_tool_selection_snapshot(state: &AppState) -> HostRouteToolSelectionSnapshot {
+    HostRouteToolSelectionSnapshot {
+        basics: map_route_tool_id(state.editor.route_tool_memory.basics),
+        section: map_route_tool_id(state.editor.route_tool_memory.section),
+        analysis: map_route_tool_id(state.editor.route_tool_memory.analysis),
+    }
+}
+
 fn map_engine_dialog_request_kind(kind: DialogRequestKind) -> HostDialogRequestKind {
     match kind {
         DialogRequestKind::OpenFile => HostDialogRequestKind::OpenFile,
@@ -726,6 +950,27 @@ pub fn build_host_ui_snapshot(controller: &AppController, state: &AppState) -> H
     controller.build_host_ui_snapshot(state)
 }
 
+/// Baut den host-neutralen Chrome-Snapshot fuer Menues, Defaults und Status.
+pub fn build_host_chrome_snapshot(state: &AppState) -> HostChromeSnapshot {
+    HostChromeSnapshot {
+        status_message: state.ui.status_message.clone(),
+        show_command_palette: state.ui.show_command_palette,
+        show_options_dialog: state.ui.show_options_dialog,
+        has_map: state.road_map.is_some(),
+        has_selection: !state.selection.selected_node_ids.is_empty(),
+        has_clipboard: !state.clipboard.nodes.is_empty(),
+        can_undo: state.can_undo(),
+        can_redo: state.can_redo(),
+        active_tool: map_editor_tool(state.editor.active_tool),
+        active_route_tool: state.active_route_tool_id().map(map_route_tool_id),
+        default_direction: map_connection_direction(state.editor.default_direction),
+        default_priority: map_connection_priority(state.editor.default_priority),
+        route_tool_memory: build_route_tool_selection_snapshot(state),
+        options: state.options.clone(),
+        route_tool_entries: build_route_tool_entries_snapshot(state),
+    }
+}
+
 /// Baut den host-neutralen Viewport-Overlay-Snapshot fuer lokale Host-Adapter.
 ///
 /// Die mutable State-Referenz bleibt noetig, weil beim Aufbau Caches im
@@ -784,15 +1029,17 @@ mod tests {
     use std::sync::Arc;
 
     use crate::dto::{
-        HostActiveTool, HostDialogRequestKind, HostDialogResult, HostSessionAction,
+        HostActiveTool, HostDefaultConnectionDirection, HostDefaultConnectionPriority,
+        HostDialogRequestKind, HostDialogResult, HostRouteToolDisabledReason, HostRouteToolGroup,
+        HostRouteToolIconKey, HostRouteToolId, HostRouteToolSurface, HostSessionAction,
         HostViewportConnectionDirection, HostViewportConnectionPriority, HostViewportNodeKind,
     };
 
     use super::{
-        apply_host_action, apply_mapped_intent, build_host_ui_snapshot, build_render_assets,
-        build_render_frame, build_render_scene, build_viewport_geometry_snapshot,
-        build_viewport_overlay_snapshot, map_host_action_to_intent, map_intent_to_host_action,
-        take_host_dialog_requests,
+        apply_host_action, apply_mapped_intent, build_host_chrome_snapshot, build_host_ui_snapshot,
+        build_render_assets, build_render_frame, build_render_scene,
+        build_viewport_geometry_snapshot, build_viewport_overlay_snapshot,
+        map_host_action_to_intent, map_intent_to_host_action, take_host_dialog_requests,
     };
 
     fn geometry_test_map() -> RoadMap {
@@ -1146,5 +1393,62 @@ mod tests {
         assert!(overlay.route_tool_preview.is_none());
         assert_eq!(scene.viewport_size(), [640.0, 480.0]);
         assert_eq!(assets.background_asset_revision(), 0);
+    }
+
+    #[test]
+    fn build_host_chrome_snapshot_exposes_status_defaults_and_route_tool_entries() {
+        let mut state = AppState::new();
+        state.ui.status_message = Some("bereit".to_string());
+        state.ui.show_command_palette = true;
+        state.editor.active_tool = fs25_auto_drive_engine::app::EditorTool::Route;
+        state
+            .editor
+            .tool_manager
+            .set_active_by_id(fs25_auto_drive_engine::app::tool_contract::RouteToolId::CurveCubic);
+        state.editor.default_direction = ConnectionDirection::Dual;
+        state.editor.default_priority = ConnectionPriority::SubPriority;
+
+        let chrome = build_host_chrome_snapshot(&state);
+
+        assert_eq!(chrome.status_message.as_deref(), Some("bereit"));
+        assert!(chrome.show_command_palette);
+        assert_eq!(chrome.active_tool, HostActiveTool::Route);
+        assert_eq!(chrome.active_route_tool, Some(HostRouteToolId::CurveCubic));
+        assert_eq!(
+            chrome.default_direction,
+            HostDefaultConnectionDirection::Dual
+        );
+        assert_eq!(
+            chrome.default_priority,
+            HostDefaultConnectionPriority::SubPriority
+        );
+
+        let defaults_entry = chrome
+            .route_tool_entries
+            .iter()
+            .find(|entry| {
+                entry.surface == HostRouteToolSurface::DefaultsPanel
+                    && entry.group == HostRouteToolGroup::Basics
+                    && entry.tool == HostRouteToolId::CurveCubic
+            })
+            .expect("Defaults-Panel muss Cubic-Tool-Eintrag enthalten");
+        assert!(defaults_entry.enabled);
+        assert_eq!(defaults_entry.icon_key, HostRouteToolIconKey::CurveCubic);
+        assert!(defaults_entry.disabled_reason.is_none());
+
+        let disabled_analysis_entry = chrome
+            .route_tool_entries
+            .iter()
+            .find(|entry| {
+                entry.surface == HostRouteToolSurface::MainMenu
+                    && entry.group == HostRouteToolGroup::Analysis
+                    && entry.tool == HostRouteToolId::FieldBoundary
+            })
+            .expect("MainMenu muss Analysis-Eintrag enthalten");
+        assert!(!disabled_analysis_entry.enabled);
+        assert_eq!(
+            disabled_analysis_entry.disabled_reason,
+            Some(HostRouteToolDisabledReason::MissingFarmland)
+        );
     }
 }

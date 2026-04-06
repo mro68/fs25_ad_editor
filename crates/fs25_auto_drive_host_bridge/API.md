@@ -10,7 +10,7 @@ Fuer bestehende Flutter-/FFI-Call-Sites stellt die Crate die bisherigen `Engine*
 
 Der aktuell produktive Flutter-Pfad konsumiert diese Kanonik ueber den Linux-first-C-ABI-Adapter `fs25_auto_drive_host_bridge_ffi`. Dieser Transportadapter fuehrt bewusst keine zweite Session- oder DTO-Surface ein, sondern serialisiert nur die bereits hier definierten Host-Vertraege.
 
-Die Bridge exponiert Mutationen ausschliesslich ueber explizite `HostSessionAction`-DTOs. Die Action-Surface deckt stabile Host-Aktionen ab (Datei-/Dialog-Anforderungen, Kamera-/Viewport-Shortcuts, Historie, Optionen, Toolwechsel, Exit) und seit dem ersten schreibenden Viewport-Slice genau eine kleine screen-space-basierte Input-Familie fuer `Resize`, Kamera-`Pan`/`Zoom`, `Select` per Tap, `Shift`-Rect, Move-Drag sowie `AddNode`-/`Connect`-Klicks. Route-Tool-Interaktionen, Lasso, Doppelklick, Rotations- und Touch-Gesten bleiben bewusst ausserhalb dieses Slices. Fuer read-only Hosts liefert die Crate weiterhin kleine Session-Snapshots, host-neutrale Panel-Read-Modelle, Viewport-Overlay-Snapshots, einen minimalen serialisierbaren Viewport-Geometry-Snapshot sowie gekoppelten Render-Output aus `RenderScene` und `RenderAssetsSnapshot`. Dieser gekoppelte RenderFrame ist jetzt sowohl ueber `HostBridgeSession::build_render_frame(...)` als auch ueber den freien Dispatch-Helper `build_render_frame(...)` fuer lokale Rust-Hosts verfuegbar.
+Die Bridge exponiert Mutationen ausschliesslich ueber explizite `HostSessionAction`-DTOs. Die Action-Surface deckt stabile Host-Aktionen ab (Datei-/Dialog-Anforderungen, Kamera-/Viewport-Shortcuts, Historie, Optionen, Toolwechsel, Exit) und seit dem ersten schreibenden Viewport-Slice genau eine kleine screen-space-basierte Input-Familie fuer `Resize`, Kamera-`Pan`/`Zoom`, `Select` per Single-Tap, Segment-/Gruppen-Selektion per Double-Tap, `Shift`-Rect, normales `Alt`-Lasso, Move-Drag sowie `AddNode`-/`Connect`-Klicks. Route-Tool-spezifische Drag-/Lasso-Pfade, Rotations- und Touch-Gesten bleiben bewusst ausserhalb dieses Slices. Fuer read-only Hosts liefert die Crate weiterhin kleine Session-Snapshots, host-neutrale Panel-Read-Modelle, Viewport-Overlay-Snapshots, einen minimalen serialisierbaren Viewport-Geometry-Snapshot sowie gekoppelten Render-Output aus `RenderScene` und `RenderAssetsSnapshot`. Dieser gekoppelte RenderFrame ist jetzt sowohl ueber `HostBridgeSession::build_render_frame(...)` als auch ueber den freien Dispatch-Helper `build_render_frame(...)` fuer lokale Rust-Hosts verfuegbar.
 
 Der konsolidierte Host-Dialog-Vertrag deckt neben `open_file` und `save_file` auch `heightmap` und `background_map` ab. Ob ein Host dafuer einen nativen Picker oder einen lokalen Fallback nutzt, bleibt explizit host-local; der Bridge-Vertrag aendert sich dafuer nicht.
 
@@ -20,17 +20,19 @@ Die konsolidierte Host-Dialog-Seam bildet die interne Engine-Queue `DialogReques
 
 `take_host_dialog_requests(...)` ist dabei bewusst keine zweite Session-API, sondern ein enger Adapter-Hilfspfad fuer den aktuellen Konsolidierungsslice: Er ueberbrueckt bestehende Host-Integrationen mit lokalem Controller/State, waehrend `HostBridgeSession` die kanonische Session-Surface und Zielrichtung bleibt.
 
-## Session-Grenze (Stand 2026-04-05)
+Mit `HostChromeSnapshot` existiert zusaetzlich ein expliziter host-neutraler Read-Seam fuer Menues, Defaults, Status und Route-Tool-Metadaten. Egui konsumiert diesen Snapshot lokal; der FFI-Adapter spiegelt dieselbe Surface additiv ueber `fs25ad_host_bridge_session_chrome_snapshot_json(...)`.
 
-- **bridge-owned:** Explizite Action-/Snapshot-Seams (`HostSessionAction`, `HostSessionSnapshot`, `HostUiSnapshot`, `ViewportOverlaySnapshot`, Render-Read-Seams inklusive gekoppeltem `build_render_frame(...)`) und die neue stateful Viewport-Input-Familie (`HostViewportInputBatch`) liegen zentral in der Host-Bridge.
-- **bridge-gap:** Fuer stabile Host-Aktionen, bridge-owned Read-Seams und den ersten schreibenden Viewport-Slice aktuell geschlossen; lokale Host-Glue-Logik bleibt nur fuer bewusst spaetere/out-of-scope Pfade ausserhalb der Bridge.
-- **host-local:** eframe-/egui- und Render-Glue bleiben bewusst ausserhalb der Bridge; ebenso out-of-scope bleiben Route-Tool-Viewportflows, Lasso, Doppelklick, Rotations- und Touch-Gesten.
+## Session-Grenze (Stand 2026-04-06)
+
+- **bridge-owned:** Explizite Action-/Snapshot-Seams (`HostSessionAction`, `HostSessionSnapshot`, `HostUiSnapshot`, `HostChromeSnapshot`, `ViewportOverlaySnapshot`, Render-Read-Seams inklusive gekoppeltem `build_render_frame(...)`) und die stateful Viewport-Input-Familie (`HostViewportInputBatch`, `HostViewportInputState`) liegen zentral in der Host-Bridge.
+- **bridge-gap:** Fuer stabile Host-Aktionen, bridge-owned Read-Seams und den kanonischen Viewport-Gesture-Slice aktuell geschlossen; lokale Host-Glue-Logik bleibt nur fuer bewusst spaetere/out-of-scope Pfade ausserhalb der Bridge.
+- **host-local:** eframe-/egui- und Render-Glue bleiben bewusst ausserhalb der Bridge; ebenso out-of-scope bleiben Route-Tool-Viewportflows inklusive Tool-Lasso, Rotations- und Touch-Gesten.
 
 ## Bewusste Nicht-Ziele fuer Slice 0
 
 - Kein zweiter Flutter-spezifischer Session- oder DTO-Vertrag neben `HostBridgeSession`.
 - Keine zweite, Flutter-spezifische Viewport-Input-Surface neben `HostSessionAction::SubmitViewportInput`.
-- Kein Route-Tool-, Lasso-, Doppelklick-, Rotations- oder Touch-Viewportvertrag in diesem Slice.
+- Kein Route-Tool-spezifischer Lasso-/Drag-, Rotations- oder Touch-Viewportvertrag in diesem Slice.
 - Keine toolkit-spezifische Runtime-, Packaging- oder Loader-Logik in dieser Core-Crate.
 
 ## Oeffentliche Module
@@ -53,6 +55,7 @@ Die konsolidierte Host-Dialog-Seam bildet die interne Engine-Queue `DialogReques
 | `pub fn apply_viewport_input_batch(controller: &mut AppController, state: &mut AppState, input_state: &mut HostViewportInputState, batch: HostViewportInputBatch) -> Result<bool>` | Interpretiert den kleinen screen-space Viewport-Input-Vertrag bridge-owned auf bestehende Engine-Intents |
 | `pub fn take_host_dialog_requests(controller: &AppController, state: &mut AppState) -> Vec<HostDialogRequest>` | Enger Adapter-Hilfspfad fuer Hosts mit lokalem Controller/State; entnimmt ausstehende Dialog-Anforderungen und mappt sie auf den kanonischen Host-Dialog-DTO-Vertrag |
 | `pub fn build_host_ui_snapshot(controller: &AppController, state: &AppState) -> HostUiSnapshot` | Baut den host-neutralen Panel-Snapshot fuer Hosts mit lokalem Controller/State |
+| `pub fn build_host_chrome_snapshot(state: &AppState) -> HostChromeSnapshot` | Baut den host-neutralen Chrome-Snapshot fuer Menues, Defaults, Status und Route-Tool-Metadaten |
 | `pub fn build_viewport_overlay_snapshot(controller: &AppController, state: &mut AppState, cursor_world: Option<Vec2>) -> ViewportOverlaySnapshot` | Baut den host-neutralen Overlay-Snapshot fuer lokale Host-Adapter |
 | `pub fn build_render_scene(controller: &AppController, state: &AppState, viewport_size: [f32; 2]) -> RenderScene` | Baut den per-frame Render-Vertrag fuer lokale Host-Adapter |
 | `pub fn build_render_frame(controller: &AppController, state: &AppState, viewport_size: [f32; 2]) -> HostRenderFrameSnapshot` | Baut Szene und Assets als gekoppelten read-only RenderFrame fuer lokale Rust-Hosts |
@@ -74,6 +77,9 @@ Die konsolidierte Host-Dialog-Seam bildet die interne Engine-Queue `DialogReques
 | `EngineSessionAction` | Kompatibilitaetsalias auf `HostSessionAction` |
 | `HostSessionSnapshot` | Kleine serialisierbare Session-Zusammenfassung fuer Polling-Hosts |
 | `EngineSessionSnapshot` | Kompatibilitaetsalias auf `HostSessionSnapshot` |
+| `HostChromeSnapshot` | Host-neutrales Read-Modell fuer Menues, Defaults, Status und Route-Tool-Availability |
+| `HostRouteToolEntrySnapshot` / `HostRouteToolSelectionSnapshot` | Serialisierbare Route-Tool-Metadaten fuer Surface, Gruppe, Icon-Key, Availability und Gruppen-Memory |
+| `HostDefaultConnectionDirection` / `HostDefaultConnectionPriority` | Stabile Default-Enums fuer Verbindungsrichtung und Prioritaet im Chrome-Snapshot |
 | `HostSelectionSnapshot` / `HostViewportSnapshot` | Read-only Detail-Snapshots fuer Auswahl und Kamera |
 | `HostViewportGeometrySnapshot` | Minimaler, serialisierbarer Viewport-Geometry-Snapshot fuer Nodes, Connections, Marker und Kamera-/Viewport-Metadaten |
 | `EngineSelectionSnapshot` / `EngineViewportSnapshot` | Kompatibilitaets-Aliase auf die kanonischen Host-Snapshots |
@@ -104,6 +110,7 @@ Die konsolidierte Host-Dialog-Seam bildet die interne Engine-Queue `DialogReques
 | `pub fn build_render_frame(&self, viewport_size: [f32; 2]) -> HostRenderFrameSnapshot` | Liefert Szene und Assets als gekoppelten read-only Render-Output |
 | `pub fn build_viewport_geometry_snapshot(&self, viewport_size: [f32; 2]) -> HostViewportGeometrySnapshot` | Liefert einen kleinen, serialisierbaren Geometry-Snapshot fuer Transport-Adapter |
 | `pub fn build_host_ui_snapshot(&self) -> HostUiSnapshot` | Liefert host-neutrale Paneldaten |
+| `pub fn build_host_chrome_snapshot(&self) -> HostChromeSnapshot` | Liefert host-neutrale Chrome-Daten fuer Menues, Defaults und Status |
 | `pub fn build_viewport_overlay_snapshot(&mut self, cursor_world: Option<Vec2>) -> ViewportOverlaySnapshot` | Liefert host-neutrale Viewport-Overlay-Daten; `&mut self` bleibt absichtlich noetig, weil der App-Layer dabei Overlay- und Boundary-Caches aufwaermt |
 
 ## Beispiel
@@ -166,11 +173,11 @@ flowchart LR
 
 - `snapshot()` arbeitet ueber einen Dirty-Cache und baut `HostSessionSnapshot` nur nach erfolgreichen Mutationen oder entnommenen Dialog-Requests neu auf.
 - `HostBridgeSession::apply_action(...)` delegiert intern an dieselbe `dispatch`-Seam, die auch nicht-Session-basierte Rust-Hosts nutzen koennen.
-- `HostSessionAction::SubmitViewportInput` bleibt die einzige neue write-heavy Action-Familie auf der bestehenden JSON-Surface. Der Vertrag ist bewusst klein und screen-space-basiert: `Resize`, `Tap`, `DragStart`/`DragUpdate`/`DragEnd` und `Scroll`.
+- `HostSessionAction::SubmitViewportInput` bleibt die einzige neue write-heavy Action-Familie auf der bestehenden JSON-Surface. Der Vertrag ist bewusst klein und screen-space-basiert: `Resize`, `Tap` (Single/Double), `DragStart`/`DragUpdate`/`DragEnd` fuer Pan/Move/Rect/Select-Lasso und `Scroll`.
 - Stateful Viewport-Input benoetigt `HostViewportInputState`. `HostBridgeSession` besitzt diesen Zustand intern; lokale Rust-Hosts verwenden dafuer `apply_host_action_with_viewport_input_state(...)` oder `apply_viewport_input_batch(...)`.
 - `take_dialog_requests()` und `submit_dialog_result(...)` bilden die kanonische Dialog-Seam der Session-API. Fuer Adapter mit eigenem `AppController`/`AppState` steht dieselbe Mapping-Logik zusaetzlich ueber `take_host_dialog_requests(...)` als schmaler Adapter-Hilfspfad bereit.
 - Die Mapping-Seam fuer stabile, niederfrequente Host-Aktionen liegt zentral in `dispatch` (`map_intent_to_host_action`, `map_host_action_to_intent`, `apply_mapped_intent`, `apply_host_action`).
 - `apply_host_action(...)` bleibt absichtlich stateless. Fuer `SubmitViewportInput` liefert diese Hilfsfunktion daher einen Fehler statt stiller Semantik-Drift; stateful Input laeuft ueber `HostBridgeSession` oder die dedizierte Dispatch-Hilfe mit `HostViewportInputState`.
 - Die bridge-owned Read-Seams fuer lokale Controller/State-Hosts sind zentral in `dispatch` verfuegbar (`build_host_ui_snapshot`, `build_viewport_overlay_snapshot`, `build_render_scene`, `build_render_frame`, `build_viewport_geometry_snapshot`, `build_render_assets`).
-- Der serialisierbare Geometry-Snapshot bleibt bewusst klein und read-only: Nodes, Connections, Marker sowie Kamera-/Viewport-Metadaten. Der neue Write-Slice ist gezielt auf den ersten Viewport-Input begrenzt und zieht keine Route-Tool- oder Touch-Vertraege mit.
+- Der serialisierbare Geometry-Snapshot bleibt bewusst klein und read-only: Nodes, Connections, Marker sowie Kamera-/Viewport-Metadaten. Der neue Write-Slice ist gezielt auf den stabilen Viewport-Input begrenzt und zieht keine Route-Tool-spezifischen oder Touch-Vertraege mit.
 - Host-Adapter mit eigenem `AppController`/`AppState` koennen den Datei-/Pfad-Dialogpfad ueber `take_host_dialog_requests(...)` und `HostSessionAction::SubmitDialogResult` auf denselben Bridge-DTO-/Dispatch-Vertrag konsolidieren.
