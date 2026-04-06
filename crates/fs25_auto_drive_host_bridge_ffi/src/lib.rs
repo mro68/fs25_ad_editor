@@ -14,6 +14,8 @@ thread_local! {
     static LAST_ERROR: RefCell<Option<String>> = const { RefCell::new(None) };
 }
 
+const FS25AD_HOST_BRIDGE_ABI_VERSION: u32 = 1;
+
 fn clear_last_error() {
     LAST_ERROR.with(|slot| {
         *slot.borrow_mut() = None;
@@ -66,6 +68,12 @@ fn with_session_mut<T>(
     f(session)
 }
 
+/// Liefert die ABI-Version des nativen Host-Bridge-Vertrags.
+#[unsafe(no_mangle)]
+pub extern "C" fn fs25ad_host_bridge_abi_version() -> u32 {
+    FS25AD_HOST_BRIDGE_ABI_VERSION
+}
+
 /// Gibt die letzte Fehlernachricht dieses Threads als neu allokierten UTF-8-String zurueck.
 #[unsafe(no_mangle)]
 pub extern "C" fn fs25ad_host_bridge_last_error_message() -> *mut c_char {
@@ -79,6 +87,7 @@ pub extern "C" fn fs25ad_host_bridge_last_error_message() -> *mut c_char {
 }
 
 /// Gibt einen durch diese Bibliothek allozierten UTF-8-String frei.
+#[allow(clippy::not_unsafe_ptr_arg_deref)]
 #[unsafe(no_mangle)]
 pub extern "C" fn fs25ad_host_bridge_string_free(value: *mut c_char) {
     if value.is_null() {
@@ -98,6 +107,7 @@ pub extern "C" fn fs25ad_host_bridge_session_new() -> *mut HostBridgeSession {
 }
 
 /// Gibt eine zuvor erstellte Bridge-Session frei.
+#[allow(clippy::not_unsafe_ptr_arg_deref)]
 #[unsafe(no_mangle)]
 pub extern "C" fn fs25ad_host_bridge_session_dispose(session: *mut HostBridgeSession) {
     clear_last_error();

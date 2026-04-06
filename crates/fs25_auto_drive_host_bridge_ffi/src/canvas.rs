@@ -5,6 +5,7 @@ use anyhow::{anyhow, Result};
 use fs25_auto_drive_host_bridge::HostBridgeSession;
 use fs25_auto_drive_render_wgpu::{CanvasAlphaMode, CanvasFrame, CanvasPixelFormat, CanvasRuntime};
 
+const FS25AD_CANVAS_CONTRACT_VERSION: u32 = 1;
 const FS25AD_PIXEL_FORMAT_RGBA8_SRGB: u32 = 1;
 const FS25AD_ALPHA_MODE_PREMULTIPLIED: u32 = 1;
 
@@ -129,6 +130,12 @@ fn with_canvas<T>(
     f(canvas)
 }
 
+/// Liefert die Version des nativen Canvas-Vertrags.
+#[unsafe(no_mangle)]
+pub extern "C" fn fs25ad_host_bridge_canvas_contract_version() -> u32 {
+    FS25AD_CANVAS_CONTRACT_VERSION
+}
+
 /// Erstellt einen nativen Offscreen-Canvas fuer RGBA-Frames.
 #[unsafe(no_mangle)]
 pub extern "C" fn fs25ad_host_bridge_canvas_new(
@@ -147,6 +154,7 @@ pub extern "C" fn fs25ad_host_bridge_canvas_new(
 }
 
 /// Gibt einen zuvor erstellten nativen Canvas-Handle frei.
+#[allow(clippy::not_unsafe_ptr_arg_deref)]
 #[unsafe(no_mangle)]
 pub extern "C" fn fs25ad_host_bridge_canvas_dispose(canvas: *mut HostBridgeNativeCanvas) {
     clear_last_error();
@@ -197,6 +205,7 @@ pub extern "C" fn fs25ad_host_bridge_canvas_render_rgba(
 }
 
 /// Liefert Metadaten des zuletzt erfolgreich gerenderten RGBA-Frames.
+#[allow(clippy::not_unsafe_ptr_arg_deref)]
 #[unsafe(no_mangle)]
 pub extern "C" fn fs25ad_host_bridge_canvas_last_frame_info(
     canvas: *const HostBridgeNativeCanvas,
@@ -237,6 +246,7 @@ pub extern "C" fn fs25ad_host_bridge_canvas_last_frame_info(
 }
 
 /// Kopiert den zuletzt erfolgreich gerenderten RGBA-Frame in einen Host-Buffer.
+#[allow(clippy::not_unsafe_ptr_arg_deref)]
 #[unsafe(no_mangle)]
 pub extern "C" fn fs25ad_host_bridge_canvas_copy_last_frame_rgba(
     canvas: *const HostBridgeNativeCanvas,
