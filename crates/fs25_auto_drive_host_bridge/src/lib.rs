@@ -11,9 +11,10 @@ pub mod session;
 
 pub use dispatch::{
     apply_host_action, apply_host_action_with_viewport_input_state, apply_mapped_intent,
-    apply_viewport_input_batch, build_host_ui_snapshot, build_render_assets, build_render_scene,
-    build_viewport_geometry_snapshot, build_viewport_overlay_snapshot, map_host_action_to_intent,
-    map_intent_to_host_action, take_host_dialog_requests, HostViewportInputState,
+    apply_viewport_input_batch, build_host_ui_snapshot, build_render_assets, build_render_frame,
+    build_render_scene, build_viewport_geometry_snapshot, build_viewport_overlay_snapshot,
+    map_host_action_to_intent, map_intent_to_host_action, take_host_dialog_requests,
+    HostViewportInputState,
 };
 pub use dto::{
     EngineActiveTool, EngineDialogRequest, EngineDialogRequestKind, EngineDialogResult,
