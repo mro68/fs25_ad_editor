@@ -14,6 +14,8 @@ thread_local! {
     static LAST_ERROR: RefCell<Option<String>> = const { RefCell::new(None) };
 }
 
+const FS25AD_HOST_BRIDGE_ABI_VERSION: u32 = 1;
+
 fn clear_last_error() {
     LAST_ERROR.with(|slot| {
         *slot.borrow_mut() = None;
@@ -66,6 +68,12 @@ fn with_session_mut<T>(
     f(session)
 }
 
+/// Liefert die ABI-Version des nativen Host-Bridge-Vertrags.
+#[unsafe(no_mangle)]
+pub extern "C" fn fs25ad_host_bridge_abi_version() -> u32 {
+    FS25AD_HOST_BRIDGE_ABI_VERSION
+}
+
 /// Gibt die letzte Fehlernachricht dieses Threads als neu allokierten UTF-8-String zurueck.
 #[unsafe(no_mangle)]
 pub extern "C" fn fs25ad_host_bridge_last_error_message() -> *mut c_char {
@@ -79,6 +87,7 @@ pub extern "C" fn fs25ad_host_bridge_last_error_message() -> *mut c_char {
 }
 
 /// Gibt einen durch diese Bibliothek allozierten UTF-8-String frei.
+#[allow(clippy::not_unsafe_ptr_arg_deref)]
 #[unsafe(no_mangle)]
 pub extern "C" fn fs25ad_host_bridge_string_free(value: *mut c_char) {
     if value.is_null() {
@@ -98,6 +107,7 @@ pub extern "C" fn fs25ad_host_bridge_session_new() -> *mut HostBridgeSession {
 }
 
 /// Gibt eine zuvor erstellte Bridge-Session frei.
+#[allow(clippy::not_unsafe_ptr_arg_deref)]
 #[unsafe(no_mangle)]
 pub extern "C" fn fs25ad_host_bridge_session_dispose(session: *mut HostBridgeSession) {
     clear_last_error();
@@ -213,12 +223,13 @@ pub extern "C" fn fs25ad_host_bridge_session_viewport_geometry_json(
 #[cfg(test)]
 mod tests {
     use super::{
-        fs25ad_host_bridge_last_error_message, fs25ad_host_bridge_session_apply_action_json,
-        fs25ad_host_bridge_session_dispose, fs25ad_host_bridge_session_new,
-        fs25ad_host_bridge_session_snapshot_json,
+        fs25ad_host_bridge_abi_version, fs25ad_host_bridge_last_error_message,
+        fs25ad_host_bridge_session_apply_action_json, fs25ad_host_bridge_session_dispose,
+        fs25ad_host_bridge_session_new, fs25ad_host_bridge_session_snapshot_json,
         fs25ad_host_bridge_session_submit_dialog_result_json,
         fs25ad_host_bridge_session_take_dialog_requests_json,
         fs25ad_host_bridge_session_viewport_geometry_json, fs25ad_host_bridge_string_free,
+        FS25AD_HOST_BRIDGE_ABI_VERSION,
     };
     use fs25_auto_drive_host_bridge::{
         HostDialogRequest, HostDialogRequestKind, HostDialogResult, HostInputModifiers,
@@ -235,6 +246,15 @@ mod tests {
             .to_string();
         fs25ad_host_bridge_string_free(ptr);
         value
+    }
+
+    #[test]
+    fn ffi_transport_reports_stable_abi_version() {
+        assert_eq!(
+            fs25ad_host_bridge_abi_version(),
+            FS25AD_HOST_BRIDGE_ABI_VERSION
+        );
+        assert_eq!(fs25ad_host_bridge_abi_version(), 1);
     }
 
     #[test]
