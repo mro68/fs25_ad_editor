@@ -4,6 +4,7 @@ use crate::app::tool_contract::RouteToolId;
 use crate::app::tools::{route_tool_descriptor, RouteToolIconKey};
 use crate::app::{AppState, ConnectionDirection, ConnectionPriority};
 use egui::{Image, ImageSource, Vec2};
+use fs25_auto_drive_host_bridge::HostRouteToolIconKey;
 
 /// Standard-Icon-Groesse fuer Tool-Buttons.
 pub const ICON_SIZE: f32 = 40.0;
@@ -15,7 +16,11 @@ pub fn svg_icon(source: ImageSource<'_>, size: f32) -> Image<'_> {
 
 /// Liefert die `ImageSource` fuer ein Route-Tool anhand seiner stabilen ID.
 pub fn route_tool_icon(tool_id: RouteToolId) -> ImageSource<'static> {
-    match route_tool_descriptor(tool_id).icon_key {
+    route_tool_icon_from_key(route_tool_descriptor(tool_id).icon_key)
+}
+
+fn route_tool_icon_from_key(icon_key: RouteToolIconKey) -> ImageSource<'static> {
+    match icon_key {
         RouteToolIconKey::Straight => {
             egui::include_image!("../../../../assets/icons/icon_straight_line.svg")
         }
@@ -49,6 +54,29 @@ pub fn route_tool_icon(tool_id: RouteToolId) -> ImageSource<'static> {
         RouteToolIconKey::ColorPath => {
             egui::include_image!("../../../../assets/icons/icon_color_path.svg")
         }
+    }
+}
+
+/// Liefert die `ImageSource` fuer einen host-neutralen Route-Tool-Icon-Key.
+pub fn host_route_tool_icon(icon_key: HostRouteToolIconKey) -> ImageSource<'static> {
+    match icon_key {
+        HostRouteToolIconKey::Straight => route_tool_icon_from_key(RouteToolIconKey::Straight),
+        HostRouteToolIconKey::CurveQuad => route_tool_icon_from_key(RouteToolIconKey::CurveQuad),
+        HostRouteToolIconKey::CurveCubic => route_tool_icon_from_key(RouteToolIconKey::CurveCubic),
+        HostRouteToolIconKey::Spline => route_tool_icon_from_key(RouteToolIconKey::Spline),
+        HostRouteToolIconKey::Bypass => route_tool_icon_from_key(RouteToolIconKey::Bypass),
+        HostRouteToolIconKey::SmoothCurve => {
+            route_tool_icon_from_key(RouteToolIconKey::SmoothCurve)
+        }
+        HostRouteToolIconKey::Parking => route_tool_icon_from_key(RouteToolIconKey::Parking),
+        HostRouteToolIconKey::FieldBoundary => {
+            route_tool_icon_from_key(RouteToolIconKey::FieldBoundary)
+        }
+        HostRouteToolIconKey::FieldPath => route_tool_icon_from_key(RouteToolIconKey::FieldPath),
+        HostRouteToolIconKey::RouteOffset => {
+            route_tool_icon_from_key(RouteToolIconKey::RouteOffset)
+        }
+        HostRouteToolIconKey::ColorPath => route_tool_icon_from_key(RouteToolIconKey::ColorPath),
     }
 }
 

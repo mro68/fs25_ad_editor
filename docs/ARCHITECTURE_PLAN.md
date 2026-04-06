@@ -1,7 +1,7 @@
 # Architektur-Plan (Soll-Zustand)
 
 Stand: 2026-04-06  
-Status: Workspace-Split umgesetzt — Root-Fassade, Engine-Crate, render_wgpu-Core-Crate und egui-Host-Adapter sind stabil; die gemeinsame Rust-Host-Dispatch-Seam ist produktiv, `HostBridgeSession` ist als kanonische Session-Surface fuer den egui-Host sowie direkte Flutter-/FFI-Consumer festgeschrieben, der egui-Dialog-Lifecycle ist auf die Host-Bridge-Seam konsolidiert, die lokale Action-Mapping-Doppelpflege wurde entfernt und bridge-owned Read-/Dispatch-Seams laufen kanonisch ueber `fs25_auto_drive_host_bridge`; die fruehere Flutter-Kompat-Crate wurde entfernt, Kompat-Aliase liegen direkt in der Host-Bridge, `fs25_auto_drive_host_bridge_ffi` bildet den Linux-first-C-ABI-Adapter fuer Slice 0, der fruehere RGBA-Canvas-v1-Pfad wurde per Hard-Cut entfernt und durch Shared-Texture als einzigen nativen Rendertransport ersetzt, der opaque Runtime-Vertrag ist auf Version 3 angehoben, und der additive Texture-Registration-v4-Vertrag ist als eigene Capability-/Lifecycle-Seam mit plattformspezifischen Payload-Familien fuer Windows, Linux und Android eingefroren (aktuell explizit capability-gated ohne produktiven Backend- oder nativen Host-Pfad).
+Status: Workspace-Split umgesetzt — Root-Fassade, Engine-Crate, render_wgpu-Core-Crate und egui-Host-Adapter sind stabil; die gemeinsame Rust-Host-Dispatch-Seam ist produktiv, `HostBridgeSession` ist als kanonische Session-Surface fuer den egui-Host sowie direkte Flutter-/FFI-Consumer festgeschrieben, der egui-Dialog-Lifecycle ist auf die Host-Bridge-Seam konsolidiert, die lokale Action-Mapping-Doppelpflege wurde entfernt und bridge-owned Read-/Dispatch-Seams laufen kanonisch ueber `fs25_auto_drive_host_bridge`, inklusive `HostChromeSnapshot` sowie der stateful Viewport-Gesture-Seam fuer Single-/Double-Tap, Rect und normales Select-Lasso; Route-Tool-spezifische Lasso-Pfade bleiben bewusst host-local. Die fruehere Flutter-Kompat-Crate wurde entfernt, Kompat-Aliase liegen direkt in der Host-Bridge, `fs25_auto_drive_host_bridge_ffi` bildet den Linux-first-C-ABI-Adapter fuer Slice 0, der allgemeine C-ABI-Vertrag ist auf Version 3 angehoben, der fruehere RGBA-Canvas-v1-Pfad wurde per Hard-Cut entfernt und durch Shared-Texture als einzigen nativen Rendertransport ersetzt, der opaque Runtime-Vertrag bleibt auf Version 3, und der additive Texture-Registration-v4-Vertrag ist als eigene Capability-/Lifecycle-Seam mit plattformspezifischen Payload-Familien fuer Windows, Linux und Android eingefroren (aktuell explizit capability-gated ohne produktiven Backend- oder nativen Host-Pfad).
 
 Aktuelle Integrationskette: Workspace auf Rust 2024, egui-Host auf `eframe/egui/egui-wgpu 0.34.1`, Render-Core auf `wgpu 29.0.*`.
 
@@ -25,18 +25,19 @@ Kernfluss: **Input -> AppIntent -> AppController -> AppCommand -> AppState/Domai
 
 Verbleibende egui-Zugriffe werden verbindlich in drei Klassen aufgeteilt:
 
-- **bridge-owned:** Stabil ueber die gemeinsame Host-Bridge-Seam abgebildet (explizite `HostSessionAction`, `HostSessionSnapshot`, `HostUiSnapshot`, `ViewportOverlaySnapshot`, Render-Read-Seams, Mapping in beide Richtungen und Host-Dialog-Lifecycle).
-- **bridge-gap:** Fuer stabile Host-Aktionen und bridge-owned Read-Seams aktuell geschlossen; verbleibende direkte Controller-Aufrufe in egui sind bewusst host-local/high-frequency.
-- **host-local:** Dauerhaft host-spezifische Runtime-/Rendering-/Input-Details (eframe-Lifecycle, egui-Widget-State, wgpu-Callback-Glue), die bewusst nicht in die Bridge gehoeren.
+- **bridge-owned:** Stabil ueber die gemeinsame Host-Bridge-Seam abgebildet (explizite `HostSessionAction`, `HostSessionSnapshot`, `HostUiSnapshot`, `HostChromeSnapshot`, `ViewportOverlaySnapshot`, `HostViewportInputBatch`, Render-Read-Seams, Mapping in beide Richtungen und Host-Dialog-Lifecycle).
+- **bridge-gap:** Fuer stabile Host-Aktionen, bridge-owned Read-Seams und die kanonische Viewport-Gesture-Seam aktuell geschlossen; verbleibende direkte Controller-Aufrufe in egui sind bewusst host-local/high-frequency.
+- **host-local:** Dauerhaft host-spezifische Runtime-/Rendering-/Input-Details (eframe-Lifecycle, egui-Widget-State, wgpu-Callback-Glue) sowie tool-spezifische Polygon-/Rotations-/Touch-Semantik wie Route-Tool-Lasso.
 
-Aktueller `bridge-gap` (Stand 2026-04-05): Kein offener fachlicher Gap fuer stabile Host-Aktionen oder bridge-owned Read-Seams. `host_bridge_adapter` ist nur noch eine Kompat-Surface mit Reexports auf die kanonische Host-Bridge-Mapping-Seam.
+Aktueller `bridge-gap` (Stand 2026-04-06): Kein offener fachlicher Gap fuer stabile Host-Aktionen, bridge-owned Read-Seams oder die kanonische Viewport-Gesture-Seam. `host_bridge_adapter` ist nur noch eine Kompat-Surface mit Reexports auf die kanonische Host-Bridge-Mapping-Seam.
 
 ### Flutter-/FFI-Transportadapter (Slice 0)
 
 - `crates/fs25_auto_drive_host_bridge_ffi` ist der duenne Linux-first-C-ABI-Adapter ueber `HostBridgeSession`.
 - Der Adapter serialisiert ausschliesslich kanonische Host-DTOs als JSON ueber `char*`-Payloads und fuehrt keine zweite Flutter-spezifische Session-Surface ein.
+- Der additive Read-Seam `fs25ad_host_bridge_session_chrome_snapshot_json(...)` spiegelt `HostChromeSnapshot` 1:1 fuer native Hosts; seit diesem Export ist die allgemeine C-ABI auf Version 3 angehoben.
 - Native C/C++-Hosts konsumieren die Surface ueber den stabilen Header `crates/fs25_auto_drive_host_bridge_ffi/include/fs25ad_host_bridge.h` und pruefen die Laufzeitversionen (`fs25ad_host_bridge_abi_version`, `fs25ad_host_bridge_shared_texture_contract_version`) gegen die Header-Makros.
-- Der erste schreibende Viewport-Input-Slice bleibt auf der bestehenden Action-Surface: `SubmitViewportInput` laeuft ohne neues C-ABI-Symbol ueber den vorhandenen JSON-Entry-Point.
+- Der erste schreibende Viewport-Input-Slice bleibt auf der bestehenden Action-Surface: `SubmitViewportInput` laeuft ohne neues C-ABI-Symbol ueber den vorhandenen JSON-Entry-Point und deckt Resize, Single-/Double-Tap, Pan/Move, Shift-Rect, normales Select-Lasso und Scroll-Zoom ab; Route-Tool-Lasso bleibt bewusst host-local.
 - Bewusste Nicht-Ziele dieses Slice: kein ueber Resize/Tap/Drag/Scroll hinausgehender Viewport-Vertrag, kein write-heavy Editing ueber dieselbe C-ABI und kein Multi-Plattform-Packaging im selben Landungsschnitt.
 
 Die Integrationsschale ist bewusst kein zusaetzlicher Fach-Layer. Sie koordiniert `ui`, `app` und den Host-Adapter in `render`, enthaelt aber keine eigenen Use-Cases oder Domain-Logik.
@@ -50,7 +51,7 @@ Die Integrationsschale ist bewusst kein zusaetzlicher Fach-Layer. Sie koordinier
 - Additiv dazu existiert `Texture-Registration-v4` als separater Vertrag mit gemeinsamer Capability-Negotiation, gemeinsamen Frame-Metadaten und gemeinsamem Lifecycle bei gleichzeitig getrennten Payload-Familien fuer Windows, Linux (DMA-BUF) und Android (Surface-Attach).
 - Der v4-Pfad ist in dieser Stufe bewusst capability-gated: Plattformzeilen melden explizit `NotYetImplemented` oder `Unsupported`; es gibt keinen stillen Pixelbuffer- oder v3-Reinterpretations-Fallback.
 - Echte externe Host-Registration bleibt zweistufig: Neben backend-nativem Export-/Attach-Code im Render-Stack braucht jeder Ziel-Host einen nativen Import-/Surface-Pfad fuer DXGI, DMA-BUF oder Android-Surface-Ziele. Dieser zweite Host-Pfad liegt bewusst ausserhalb des aktuellen Rust-Repos.
-- Die allgemeine FFI-ABI bleibt Version 2; der alte `canvas_*`-Vertrag ist vollstaendig entfernt.
+- Die allgemeine FFI-ABI ist seit dem additiven Chrome-Snapshot-Export auf Version 3 angehoben; der alte `canvas_*`-Vertrag ist vollstaendig entfernt.
 - Session-Ownership bleibt hostseitig: Dart/C++-Hosts halten den Session-Lifecycle, der Shared-Texture-Pfad arbeitet ausschliesslich mit geborgten Session-/Texture-Pointern.
 - Kein zweiter Session- oder DTO-Vertrag: Die Control-Plane bleibt `HostSessionAction`/`HostSessionSnapshot`, der Rendertransport bleibt rein unterhalb des RenderFrame-Seams.
 - Der egui-Onscreen-Pfad bleibt bewusst ausserhalb von `SharedTextureRuntime` und rendert weiterhin direkt per `RenderPass` ueber `egui_wgpu`.

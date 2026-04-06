@@ -8,11 +8,11 @@ Sie konsumiert die host-neutrale Engine, re-exportiert deren `app`-, `core`-, `s
 
 Die Integrationsschale liest Panels ueber `HostUiSnapshot`, konsumiert Datei-/Pfaddialog-Requests ueber `take_host_dialog_requests(...)` als `HostDialogRequest` und verarbeitet Viewport-Overlays ueber `ViewportOverlaySnapshot`. Dialog-Ergebnisse werden ueber `HostSessionAction::SubmitDialogResult` in dieselbe Host-Bridge-Dispatch-Seam zurueckgefuehrt, waehrend `PanelAction` und Overlay-Klicks zentral in `AppIntent` uebersetzt werden. Die egui-Crate fuehrt dafuer keine zweite Dialog-DTO-Familie ein, sondern nutzt den kanonischen Host-Bridge-Vertrag direkt.
 
-Die gemeinsame Host-Bridge ist in dieser Crate die kanonische Dispatch- und Read-Seam fuer stabile, niederfrequente Host-Aktionen und bridge-owned Read-Modelle. `editor_app` bleibt die produktive eframe-Integrationsschale: lokale Spezialfaelle bleiben lokal, bridge-faehige Intents laufen ueber `fs25_auto_drive_host_bridge::apply_mapped_intent(...)` (optional via `host_bridge_adapter`-Kompat-Reexport), hochfrequente Viewport-/Tool-Intents bleiben im Legacy-Fallback ueber `AppController`. Das Onscreen-Rendering liest Szene und Assets dabei ueber denselben gekoppelten `build_render_frame(...)`-Seam wie der Shared-Texture-Transportpfad; egui nutzt davon nur die Szene fuer den Paint-Callback und wiederverwendet die Assets im selben Frame fuer den revisionsbasierten Background-Sync.
+Die gemeinsame Host-Bridge ist in dieser Crate die kanonische Dispatch- und Read-Seam fuer stabile Host-Aktionen und bridge-owned Read-Modelle. `editor_app` bleibt die produktive eframe-Integrationsschale: lokale Spezialfaelle bleiben lokal, bridge-faehige Intents laufen ueber `fs25_auto_drive_host_bridge::apply_mapped_intent(...)` (optional via `host_bridge_adapter`-Kompat-Reexport). Fuer den schreibenden Viewport-Slice werden bridge-faehige Gesten als `HostSessionAction::SubmitViewportInput` gesammelt und stateful ueber `apply_host_action_with_viewport_input_state(...)` verarbeitet; dazu gehoeren jetzt auch normales Select-Lasso per `Alt+Drag` und die Double-Click-Segment/Gruppen-Selektion. Bewusst lokale Spezialfaelle (z. B. Route-Tool-spezifische Drag-/Alt-Pfade wie Tool-Lasso) bleiben im Legacy-Fallback ueber `AppController`. Das Onscreen-Rendering liest Szene und Assets dabei ueber denselben gekoppelten `build_render_frame(...)`-Seam wie der Shared-Texture-Transportpfad; egui nutzt davon nur die Szene fuer den Paint-Callback und wiederverwendet die Assets im selben Frame fuer den revisionsbasierten Background-Sync.
 
 `HostBridgeSession` bleibt dabei verbindlich die kanonische Session-Surface fuer den egui-Host sowie direkte Flutter-/FFI-Consumer. Der freie Dialogpfad ueber `take_host_dialog_requests(...)` ist bewusst nur ein enger Adapter-Hilfspfad fuer den aktuellen Konsolidierungsslice des bestehenden `editor_app`-Hosts, keine zweite vollwertige Session-API.
 
-## Kompatibilitaet (Stand: 2026-04-05)
+## Kompatibilitaet (Stand: 2026-04-06)
 
 - Rust-Edition: `2024`
 - UI-Stack: `eframe/egui/egui-wgpu 0.34.1`
@@ -26,14 +26,14 @@ Die gemeinsame Host-Bridge ist in dieser Crate die kanonische Dispatch- und Read
 | `editor_app` | eframe-Integrationsschale; sammelt Panels ueber `HostUiSnapshot`, drainet Dialoge ueber `take_host_dialog_requests(...)` als `HostDialogRequest`, liest gekoppelte RenderFrames ueber `build_render_frame(...)` und rendert Overlays aus `ViewportOverlaySnapshot` |
 | `host_bridge_adapter` | Duenne Kompat-Surface mit Reexports auf die kanonische Host-Bridge-Mapping-Seam (`map_intent_to_host_action`, `apply_mapped_intent`) |
 | `render` | egui-Host-Adapter, revisionsbasierte Background-Upload-Bruecke und egui-Render-Callback ueber die von `editor_app` gelieferten RenderFrame-Daten |
-| `ui` | Menues, Panels, Dialoge, Viewport-Input und egui-spezifisches Painting der host-neutralen Overlay-Snapshots |
+| `ui` | Menues, Panels, Dialoge, Viewport-Input und egui-spezifisches Painting der host-neutralen Overlay-Snapshots; Chrome-nahe Menues/Sidebars lesen Route-Tool-/Default-Metadaten ueber `HostChromeSnapshot` |
 | `app`, `core`, `shared`, `xml` | Re-Exports aus `fs25_auto_drive_engine` fuer stabile Importpfade |
 
-## Session-Grenze (Stand 2026-04-05)
+## Session-Grenze (Stand 2026-04-06)
 
-- **bridge-owned:** Mapping/Dispatch fuer stabile Host-Aktionen (`map_intent_to_host_action`, `apply_mapped_intent`), host-neutrale Read-Modelle (`HostUiSnapshot`, `ViewportOverlaySnapshot`, gekoppelter RenderFrame-Seam) und der Datei-/Pfad-Dialog-Lifecycle ueber `HostDialogRequest`/`HostDialogResult` laufen ueber `fs25_auto_drive_host_bridge`.
+- **bridge-owned:** Mapping/Dispatch fuer stabile Host-Aktionen (`map_intent_to_host_action`, `apply_mapped_intent`), host-neutrale Read-Modelle (`HostUiSnapshot`, `HostChromeSnapshot`, `ViewportOverlaySnapshot`, gekoppelter RenderFrame-Seam), der stateful Gesture-Pfad ueber `HostSessionAction::SubmitViewportInput` / `HostViewportInputState` und der Datei-/Pfad-Dialog-Lifecycle ueber `HostDialogRequest`/`HostDialogResult` laufen ueber `fs25_auto_drive_host_bridge`.
 - **bridge-gap:** Fuer stabile Host-Aktionen und bridge-owned Reads aktuell geschlossen; verbleibende direkte Controller-Aufrufe sind bewusst host-local/high-frequency.
-- **host-local:** eframe-Lifecycle, egui-Widget-State, Input-Orchestrierung, Render-Callback und Upload-Glue.
+- **host-local:** eframe-Lifecycle, egui-Widget-State, Input-Orchestrierung, Render-Callback, Upload-Glue und bewusst lokale Tool-Spezialfaelle wie Route-Tool-Lasso.
 - **Leitplanke:** Keine neuen host-neutralen Fluesse direkt auf `AppController`/`AppState` aufbauen.
 
 ## Wichtige oeffentliche Typen

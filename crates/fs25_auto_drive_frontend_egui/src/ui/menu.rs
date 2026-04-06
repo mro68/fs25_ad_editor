@@ -1,13 +1,13 @@
 //! Top-Menue (File, Edit, View, etc.).
 
 use crate::app::tool_contract::RouteToolId;
-use crate::app::tools::{
-    resolve_route_tool_entries, route_tool_disabled_reason_key, route_tool_group_label_key,
-    route_tool_label_key, RouteToolGroup, RouteToolSurface,
-};
+use crate::app::tools::{route_tool_group_label_key, route_tool_label_key, RouteToolGroup};
 use crate::app::{AppIntent, AppState, RenderQuality};
 use crate::shared::{t, I18nKey};
-use crate::ui::common::route_tool_availability_context;
+use crate::ui::common::{
+    host_route_tool_disabled_reason_key, host_route_tool_entries_for, host_route_tool_to_engine,
+};
+use fs25_auto_drive_host_bridge::{HostChromeSnapshot, HostRouteToolGroup, HostRouteToolSurface};
 
 fn push_route_tool_selection(events: &mut Vec<AppIntent>, tool_id: RouteToolId) {
     events.push(AppIntent::SelectRouteToolRequested { tool_id });
@@ -16,27 +16,36 @@ fn push_route_tool_selection(events: &mut Vec<AppIntent>, tool_id: RouteToolId) 
 fn render_route_tool_group_menu(
     ui: &mut egui::Ui,
     state: &AppState,
+    host_chrome_snapshot: &HostChromeSnapshot,
     events: &mut Vec<AppIntent>,
-    group: RouteToolGroup,
+    group: HostRouteToolGroup,
 ) {
     let lang = state.options.language;
-    let availability = route_tool_availability_context(state);
     let active_route_id = state.active_route_tool_id();
 
-    ui.menu_button(t(lang, route_tool_group_label_key(group)), |ui| {
-        for entry in resolve_route_tool_entries(RouteToolSurface::MainMenu, group, availability) {
+    let group_label_key = match group {
+        HostRouteToolGroup::Basics => route_tool_group_label_key(RouteToolGroup::Basics),
+        HostRouteToolGroup::Section => route_tool_group_label_key(RouteToolGroup::Section),
+        HostRouteToolGroup::Analysis => route_tool_group_label_key(RouteToolGroup::Analysis),
+    };
+
+    ui.menu_button(t(lang, group_label_key), |ui| {
+        for entry in
+            host_route_tool_entries_for(host_chrome_snapshot, HostRouteToolSurface::MainMenu, group)
+        {
+            let engine_tool_id = host_route_tool_to_engine(entry.tool);
             let response = ui.add_enabled(
                 entry.enabled,
-                egui::Button::new(t(lang, route_tool_label_key(entry.descriptor.id)))
-                    .selected(active_route_id == Some(entry.descriptor.id)),
+                egui::Button::new(t(lang, route_tool_label_key(engine_tool_id)))
+                    .selected(active_route_id == Some(engine_tool_id)),
             );
 
             let response = if entry.enabled {
-                response.on_hover_text(t(lang, route_tool_label_key(entry.descriptor.id)))
+                response.on_hover_text(t(lang, route_tool_label_key(engine_tool_id)))
             } else {
                 response.on_disabled_hover_text(t(
                     lang,
-                    route_tool_disabled_reason_key(
+                    host_route_tool_disabled_reason_key(
                         entry
                             .disabled_reason
                             .expect("disabled route tool menu entry requires reason"),
@@ -45,7 +54,7 @@ fn render_route_tool_group_menu(
             };
 
             if response.clicked() {
-                push_route_tool_selection(events, entry.descriptor.id);
+                push_route_tool_selection(events, engine_tool_id);
                 ui.close();
             }
         }
@@ -53,13 +62,21 @@ fn render_route_tool_group_menu(
 }
 
 /// Rendert die Menue-Leiste
-pub fn render_menu(ctx: &egui::Context, state: &AppState) -> Vec<AppIntent> {
+pub fn render_menu(
+    ctx: &egui::Context,
+    state: &AppState,
+    host_chrome_snapshot: &HostChromeSnapshot,
+) -> Vec<AppIntent> {
     let mut top_ui = crate::ui::common::create_top_level_ui(ctx, "menu_bar_top_level");
-    render_menu_inside(&mut top_ui, state)
+    render_menu_inside(&mut top_ui, state, host_chrome_snapshot)
 }
 
 /// Rendert die Menue-Leiste innerhalb eines bestehenden Top-Level-UIs.
-pub(crate) fn render_menu_inside(ui_root: &mut egui::Ui, state: &AppState) -> Vec<AppIntent> {
+pub(crate) fn render_menu_inside(
+    ui_root: &mut egui::Ui,
+    state: &AppState,
+    host_chrome_snapshot: &HostChromeSnapshot,
+) -> Vec<AppIntent> {
     let mut events = Vec::new();
     let lang = state.options.language;
 
@@ -73,7 +90,7 @@ pub(crate) fn render_menu_inside(ui_root: &mut egui::Ui, state: &AppState) -> Ve
 
                 ui.separator();
 
-                let has_file = state.road_map.is_some();
+                let has_file = host_chrome_snapshot.has_map;
 
                 if ui
                     .add_enabled(has_file, egui::Button::new(t(lang, I18nKey::MenuSave)))
@@ -129,8 +146,8 @@ pub(crate) fn render_menu_inside(ui_root: &mut egui::Ui, state: &AppState) -> Ve
 
             // Edit menu: Undo / Redo / Optionen
             ui.menu_button(t(lang, I18nKey::MenuEdit), |ui| {
-                let can_undo = state.can_undo();
-                let can_redo = state.can_redo();
+                let can_undo = host_chrome_snapshot.can_undo;
+                let can_redo = host_chrome_snapshot.can_redo;
 
                 if ui
                     .add_enabled(can_undo, egui::Button::new(t(lang, I18nKey::MenuUndo)))
@@ -151,8 +168,8 @@ pub(crate) fn render_menu_inside(ui_root: &mut egui::Ui, state: &AppState) -> Ve
                 ui.separator();
 
                 // Copy / Paste
-                let has_selection = !state.selection.selected_node_ids.is_empty();
-                let has_clipboard = !state.clipboard.nodes.is_empty();
+                let has_selection = host_chrome_snapshot.has_selection;
+                let has_clipboard = host_chrome_snapshot.has_clipboard;
 
                 if ui
                     .add_enabled(has_selection, egui::Button::new(t(lang, I18nKey::MenuCopy)))
@@ -182,9 +199,27 @@ pub(crate) fn render_menu_inside(ui_root: &mut egui::Ui, state: &AppState) -> Ve
             });
 
             ui.menu_button(t(lang, I18nKey::MenuRouteTools), |ui| {
-                render_route_tool_group_menu(ui, state, &mut events, RouteToolGroup::Basics);
-                render_route_tool_group_menu(ui, state, &mut events, RouteToolGroup::Section);
-                render_route_tool_group_menu(ui, state, &mut events, RouteToolGroup::Analysis);
+                render_route_tool_group_menu(
+                    ui,
+                    state,
+                    host_chrome_snapshot,
+                    &mut events,
+                    HostRouteToolGroup::Basics,
+                );
+                render_route_tool_group_menu(
+                    ui,
+                    state,
+                    host_chrome_snapshot,
+                    &mut events,
+                    HostRouteToolGroup::Section,
+                );
+                render_route_tool_group_menu(
+                    ui,
+                    state,
+                    host_chrome_snapshot,
+                    &mut events,
+                    HostRouteToolGroup::Analysis,
+                );
             });
 
             ui.menu_button(t(lang, I18nKey::MenuView), |ui| {
@@ -280,7 +315,7 @@ pub(crate) fn render_menu_inside(ui_root: &mut egui::Ui, state: &AppState) -> Ve
 
                 ui.separator();
 
-                let has_file = state.road_map.is_some();
+                let has_file = host_chrome_snapshot.has_map;
                 if ui
                     .add_enabled(
                         has_file,
@@ -292,7 +327,7 @@ pub(crate) fn render_menu_inside(ui_root: &mut egui::Ui, state: &AppState) -> Ve
                     ui.close();
                 }
 
-                let has_selection = !state.selection.selected_node_ids.is_empty();
+                let has_selection = host_chrome_snapshot.has_selection;
                 if ui
                     .add_enabled(
                         has_selection,

@@ -8,12 +8,32 @@ use crate::app::{use_cases, AppController, AppIntent, AppState};
 use crate::{render, ui};
 use eframe::egui;
 use eframe::egui_wgpu;
-use fs25_auto_drive_host_bridge::apply_mapped_intent;
+use fs25_auto_drive_host_bridge::{
+    apply_host_action_with_viewport_input_state, apply_mapped_intent, HostSessionAction,
+    HostViewportInputEvent, HostViewportInputState,
+};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 enum IntentDispatchRoute {
     Bridge,
     LocalFallback,
+}
+
+#[derive(Debug, Clone)]
+pub(super) enum CollectedEvent {
+    Intent(AppIntent),
+    HostAction(HostSessionAction),
+}
+
+fn is_meaningful_event(event: &CollectedEvent) -> bool {
+    match event {
+        CollectedEvent::Intent(intent) => !matches!(intent, AppIntent::ViewportResized { .. }),
+        CollectedEvent::HostAction(HostSessionAction::SubmitViewportInput { batch }) => batch
+            .events
+            .iter()
+            .any(|event| !matches!(event, HostViewportInputEvent::Resize { .. })),
+        CollectedEvent::HostAction(_) => true,
+    }
 }
 
 fn dispatch_intent_with_bridge_fallback(
@@ -37,6 +57,8 @@ pub(crate) struct EditorApp {
     device: eframe::wgpu::Device,
     queue: eframe::wgpu::Queue,
     input: ui::InputState,
+    /// Bridge-owned Lifecycle-Zustand fuer stateful Viewport-Gesten.
+    viewport_input_state: HostViewportInputState,
     /// Gecachte Cursor-Weltposition fuer Tool-Preview
     /// (bleibt erhalten wenn Maus den Viewport verlaesst).
     last_cursor_world: Option<glam::Vec2>,
@@ -68,6 +90,7 @@ impl EditorApp {
             device: render_state.device.clone(),
             queue: render_state.queue.clone(),
             input: ui::InputState::new(),
+            viewport_input_state: HostViewportInputState::default(),
             last_cursor_world: None,
             last_background_asset_revision: 0,
             last_background_transform_revision: 0,
@@ -90,9 +113,7 @@ impl eframe::App for EditorApp {
 
         let events = self.collect_ui_events(&ctx);
 
-        let has_meaningful_events = events
-            .iter()
-            .any(|e| !matches!(e, AppIntent::ViewportResized { .. }));
+        let has_meaningful_events = events.iter().any(is_meaningful_event);
 
         self.process_events(&ctx, events);
 
@@ -103,13 +124,25 @@ impl eframe::App for EditorApp {
 }
 
 impl EditorApp {
-    fn process_events(&mut self, ctx: &egui::Context, events: Vec<AppIntent>) {
+    fn process_events(&mut self, ctx: &egui::Context, events: Vec<CollectedEvent>) {
         for event in events {
             match event {
-                AppIntent::ToggleFloatingMenu { kind } => {
+                CollectedEvent::HostAction(action) => {
+                    if let Err(e) = apply_host_action_with_viewport_input_state(
+                        &mut self.controller,
+                        &mut self.state,
+                        &mut self.viewport_input_state,
+                        action,
+                    ) {
+                        self.state.ui.status_message =
+                            Some(format!("Aktion fehlgeschlagen: {}", e));
+                        log::error!("Host action handling failed: {:#}", e);
+                    }
+                }
+                CollectedEvent::Intent(AppIntent::ToggleFloatingMenu { kind }) => {
                     self.toggle_floating_menu(ctx, kind);
                 }
-                intent => {
+                CollectedEvent::Intent(intent) => {
                     if let Err(e) = dispatch_intent_with_bridge_fallback(
                         &mut self.controller,
                         &mut self.state,

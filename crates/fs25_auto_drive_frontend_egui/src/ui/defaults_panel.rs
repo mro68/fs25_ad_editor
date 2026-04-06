@@ -2,18 +2,22 @@
 
 use crate::app::tool_contract::RouteToolId;
 use crate::app::tools::{
-    resolve_route_tool_entries, route_tool_defaults_tooltip_key, route_tool_descriptor,
-    route_tool_disabled_reason_key, route_tool_group_label_key, RouteToolGroup, RouteToolSurface,
+    route_tool_defaults_tooltip_key, route_tool_group_label_key, RouteToolGroup,
 };
 use crate::app::{AppIntent, AppState, ConnectionDirection, ConnectionPriority, EditorTool};
 use crate::shared::{t, I18nKey};
-use crate::ui::common::route_tool_availability_context;
+use crate::ui::common::{
+    host_active_tool_to_editor, host_default_direction_to_engine, host_default_priority_to_engine,
+    host_memory_tool_for_group, host_route_tool_disabled_reason_key, host_route_tool_entries_for,
+    host_route_tool_to_engine,
+};
 use crate::ui::icons::{
-    accent_icon_color, function_icon_color, route_tool_icon, svg_icon, ICON_SIZE,
+    accent_icon_color, function_icon_color, host_route_tool_icon, svg_icon, ICON_SIZE,
 };
 use crate::ui::long_press::{
     render_long_press_button, LongPressGroup, LongPressItem, LongPressState,
 };
+use fs25_auto_drive_host_bridge::{HostChromeSnapshot, HostRouteToolGroup, HostRouteToolSurface};
 
 /// Zoom-Aktion fuer den LongPress-Button in der Zoom-Sektion.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -64,29 +68,35 @@ fn value_item<T: Clone>(
 }
 
 fn route_tool_items_for_group(
-    state: &AppState,
+    chrome: &HostChromeSnapshot,
     lang: crate::shared::Language,
-    group: RouteToolGroup,
-) -> Vec<LongPressItem<RouteToolId>> {
-    let availability = route_tool_availability_context(state);
-    resolve_route_tool_entries(RouteToolSurface::DefaultsPanel, group, availability)
-        .into_iter()
+    group: HostRouteToolGroup,
+) -> Vec<LongPressItem<fs25_auto_drive_host_bridge::HostRouteToolId>> {
+    host_route_tool_entries_for(chrome, HostRouteToolSurface::DefaultsPanel, group)
         .map(|entry| LongPressItem {
-            icon: route_tool_icon(entry.descriptor.id),
-            tooltip: t(lang, route_tool_defaults_tooltip_key(entry.descriptor.id)),
-            value: entry.descriptor.id,
+            icon: host_route_tool_icon(entry.icon_key),
+            tooltip: t(
+                lang,
+                route_tool_defaults_tooltip_key(host_route_tool_to_engine(entry.tool)),
+            ),
+            value: entry.tool,
             enabled: entry.enabled,
             disabled_tooltip: entry
                 .disabled_reason
-                .map(|reason| t(lang, route_tool_disabled_reason_key(reason))),
+                .map(|reason| t(lang, host_route_tool_disabled_reason_key(reason))),
         })
         .collect()
 }
 
-fn is_route_group_active(active_route_id: Option<RouteToolId>, group: RouteToolGroup) -> bool {
-    active_route_id
-        .map(|tool_id| route_tool_descriptor(tool_id).group == group)
-        .unwrap_or(false)
+fn is_route_group_active(
+    chrome: &HostChromeSnapshot,
+    active_route_id: Option<fs25_auto_drive_host_bridge::HostRouteToolId>,
+    group: HostRouteToolGroup,
+) -> bool {
+    active_route_id.is_some_and(|tool_id| {
+        host_route_tool_entries_for(chrome, HostRouteToolSurface::DefaultsPanel, group)
+            .any(|entry| entry.tool == tool_id)
+    })
 }
 
 fn render_long_press_with_memory<T: Clone + PartialEq>(
@@ -117,23 +127,28 @@ fn render_long_press_with_memory<T: Clone + PartialEq>(
 }
 
 /// Rendert die linke Sidebar mit Tool-Auswahl, Route-Tools und Defaults.
-pub fn render_route_defaults_panel(ctx: &egui::Context, state: &AppState) -> Vec<AppIntent> {
+pub fn render_route_defaults_panel(
+    ctx: &egui::Context,
+    state: &AppState,
+    host_chrome_snapshot: &HostChromeSnapshot,
+) -> Vec<AppIntent> {
     let mut top_ui = crate::ui::common::create_top_level_ui(ctx, "route_defaults_panel_top_level");
-    render_route_defaults_panel_inside(&mut top_ui, state)
+    render_route_defaults_panel_inside(&mut top_ui, state, host_chrome_snapshot)
 }
 
 /// Rendert die linke Sidebar innerhalb eines bestehenden Top-Level-UIs.
 pub(crate) fn render_route_defaults_panel_inside(
     ui_root: &mut egui::Ui,
     state: &AppState,
+    host_chrome_snapshot: &HostChromeSnapshot,
 ) -> Vec<AppIntent> {
     let mut events = Vec::new();
     let lang = state.options.language;
-    let active_tool = state.editor.active_tool;
+    let active_tool = host_active_tool_to_editor(host_chrome_snapshot.active_tool);
     let icon_color = function_icon_color(state);
     let active_icon_color = accent_icon_color(state);
 
-    let active_route_id: Option<RouteToolId> = state.active_route_tool_id();
+    let active_route_id = host_chrome_snapshot.active_route_tool;
     let is_werkzeug_active = matches!(
         active_tool,
         EditorTool::Select | EditorTool::Connect | EditorTool::AddNode
@@ -156,9 +171,12 @@ pub(crate) fn render_route_defaults_panel_inside(
         ),
     ];
 
-    let basic_items = route_tool_items_for_group(state, lang, RouteToolGroup::Basics);
-    let section_items = route_tool_items_for_group(state, lang, RouteToolGroup::Section);
-    let analysis_items = route_tool_items_for_group(state, lang, RouteToolGroup::Analysis);
+    let basic_items =
+        route_tool_items_for_group(host_chrome_snapshot, lang, HostRouteToolGroup::Basics);
+    let section_items =
+        route_tool_items_for_group(host_chrome_snapshot, lang, HostRouteToolGroup::Section);
+    let analysis_items =
+        route_tool_items_for_group(host_chrome_snapshot, lang, HostRouteToolGroup::Analysis);
 
     let direction_items = [
         value_item(
@@ -256,19 +274,23 @@ pub(crate) fn render_route_defaults_panel_inside(
                     .small()
                     .weak(),
             );
-            let basic_tool = state
-                .editor
-                .route_tool_memory
-                .selected_for(RouteToolGroup::Basics);
+            let basic_tool = host_memory_tool_for_group(
+                host_chrome_snapshot.route_tool_memory,
+                HostRouteToolGroup::Basics,
+            );
             if let Some(tool_id) = render_long_press_with_memory(
                 ui,
                 icon_color,
                 active_icon_color,
                 &basic_commands_group,
                 &basic_tool,
-                is_route_group_active(active_route_id, RouteToolGroup::Basics),
+                is_route_group_active(
+                    host_chrome_snapshot,
+                    active_route_id,
+                    HostRouteToolGroup::Basics,
+                ),
             ) {
-                push_route_tool_selection(&mut events, tool_id);
+                push_route_tool_selection(&mut events, host_route_tool_to_engine(tool_id));
             }
 
             ui.add_space(6.0);
@@ -280,19 +302,23 @@ pub(crate) fn render_route_defaults_panel_inside(
                     .small()
                     .weak(),
             );
-            let section_tool = state
-                .editor
-                .route_tool_memory
-                .selected_for(RouteToolGroup::Section);
+            let section_tool = host_memory_tool_for_group(
+                host_chrome_snapshot.route_tool_memory,
+                HostRouteToolGroup::Section,
+            );
             if let Some(tool_id) = render_long_press_with_memory(
                 ui,
                 icon_color,
                 active_icon_color,
                 &section_tools_group,
                 &section_tool,
-                is_route_group_active(active_route_id, RouteToolGroup::Section),
+                is_route_group_active(
+                    host_chrome_snapshot,
+                    active_route_id,
+                    HostRouteToolGroup::Section,
+                ),
             ) {
-                push_route_tool_selection(&mut events, tool_id);
+                push_route_tool_selection(&mut events, host_route_tool_to_engine(tool_id));
             }
 
             ui.add_space(6.0);
@@ -304,19 +330,23 @@ pub(crate) fn render_route_defaults_panel_inside(
                     .small()
                     .weak(),
             );
-            let analysis_tool = state
-                .editor
-                .route_tool_memory
-                .selected_for(RouteToolGroup::Analysis);
+            let analysis_tool = host_memory_tool_for_group(
+                host_chrome_snapshot.route_tool_memory,
+                HostRouteToolGroup::Analysis,
+            );
             if let Some(tool_id) = render_long_press_with_memory(
                 ui,
                 icon_color,
                 active_icon_color,
                 &analysis_tools_group,
                 &analysis_tool,
-                is_route_group_active(active_route_id, RouteToolGroup::Analysis),
+                is_route_group_active(
+                    host_chrome_snapshot,
+                    active_route_id,
+                    HostRouteToolGroup::Analysis,
+                ),
             ) {
-                push_route_tool_selection(&mut events, tool_id);
+                push_route_tool_selection(&mut events, host_route_tool_to_engine(tool_id));
             }
 
             ui.add_space(6.0);
@@ -333,7 +363,7 @@ pub(crate) fn render_route_defaults_panel_inside(
                 icon_color,
                 active_icon_color,
                 &direction_group,
-                &state.editor.default_direction,
+                &host_default_direction_to_engine(host_chrome_snapshot.default_direction),
                 false,
             ) {
                 events.push(AppIntent::SetDefaultDirectionRequested { direction });
@@ -353,7 +383,7 @@ pub(crate) fn render_route_defaults_panel_inside(
                 icon_color,
                 active_icon_color,
                 &priority_group,
-                &state.editor.default_priority,
+                &host_default_priority_to_engine(host_chrome_snapshot.default_priority),
                 false,
             ) {
                 events.push(AppIntent::SetDefaultPriorityRequested { priority });
@@ -370,7 +400,7 @@ pub(crate) fn render_route_defaults_panel_inside(
             );
 
             // Zoom-Aktion via LongPressGroup (4 Items)
-            let has_selection = state.selection.selected_node_ids.len() >= 2;
+            let has_selection = host_chrome_snapshot.has_selection;
             let zoom_action_key = egui::Id::new("sidebar_last_zoom_action");
             let last_zoom_action = ui
                 .ctx()

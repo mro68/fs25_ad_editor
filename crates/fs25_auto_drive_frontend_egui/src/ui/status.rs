@@ -2,16 +2,27 @@
 
 use crate::app::{AppState, EditorTool};
 use crate::shared::{t, I18nKey};
+use crate::ui::common::host_active_tool_to_editor;
+use fs25_auto_drive_host_bridge::HostChromeSnapshot;
 
 /// Rendert die Status-Bar
-pub fn render_status_bar(ctx: &egui::Context, state: &AppState) {
+pub fn render_status_bar(
+    ctx: &egui::Context,
+    state: &AppState,
+    host_chrome_snapshot: &HostChromeSnapshot,
+) {
     let mut top_ui = crate::ui::common::create_top_level_ui(ctx, "status_bar_top_level");
-    render_status_bar_inside(&mut top_ui, state);
+    render_status_bar_inside(&mut top_ui, state, host_chrome_snapshot);
 }
 
 /// Rendert die Status-Bar innerhalb eines bestehenden Top-Level-UIs.
-pub(crate) fn render_status_bar_inside(ui_root: &mut egui::Ui, state: &AppState) {
-    let lang = state.options.language;
+pub(crate) fn render_status_bar_inside(
+    ui_root: &mut egui::Ui,
+    state: &AppState,
+    host_chrome_snapshot: &HostChromeSnapshot,
+) {
+    let lang = host_chrome_snapshot.options.language;
+    let active_tool = host_active_tool_to_editor(host_chrome_snapshot.active_tool);
 
     egui::Panel::bottom("status_bar").show_inside(ui_root, |ui| {
         ui.horizontal(|ui| {
@@ -93,7 +104,7 @@ pub(crate) fn render_status_bar_inside(ui_root: &mut egui::Ui, state: &AppState)
             ui.separator();
 
             // Aktives Werkzeug
-            let tool_name = match state.editor.active_tool {
+            let tool_name = match active_tool {
                 EditorTool::Select => t(lang, I18nKey::ToolNameSelect),
                 EditorTool::Connect => t(lang, I18nKey::ToolNameConnect),
                 EditorTool::AddNode => t(lang, I18nKey::ToolNameAddNode),
@@ -102,7 +113,7 @@ pub(crate) fn render_status_bar_inside(ui_root: &mut egui::Ui, state: &AppState)
             ui.label(format!("{}: {}", t(lang, I18nKey::StatusTool), tool_name));
 
             // Statusnachricht (z.B. Duplikat-Bereinigung)
-            if let Some(ref msg) = state.ui.status_message {
+            if let Some(ref msg) = host_chrome_snapshot.status_message {
                 ui.separator();
                 ui.label(egui::RichText::new(format!("⚠ {}", msg)).color(egui::Color32::YELLOW));
             }
