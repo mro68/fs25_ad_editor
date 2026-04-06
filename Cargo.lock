@@ -1766,6 +1766,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "fs25_auto_drive_host_bridge_ffi"
+version = "1.7.0"
+dependencies = [
+ "anyhow",
+ "fs25_auto_drive_host_bridge",
+ "serde",
+ "serde_json",
+]
+
+[[package]]
 name = "fs25_auto_drive_render_wgpu"
 version = "1.7.0"
 dependencies = [

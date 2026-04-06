@@ -178,6 +178,10 @@ impl RenderMap {
         self.nodes.get(node_id)
     }
 
+    pub fn nodes(&self) -> impl Iterator<Item = &RenderNode> {
+        self.nodes.values()
+    }
+
     pub fn nodes_within_rect_into(&self, min: Vec2, max: Vec2, out: &mut Vec<u64>) {
         self.spatial_index.within_rect_into(min, max, out);
     }

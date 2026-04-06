@@ -1,7 +1,7 @@
 # Architektur-Plan (Soll-Zustand)
 
 Stand: 2026-04-05  
-Status: Workspace-Split umgesetzt — Root-Fassade, Engine-Crate, render_wgpu-Core-Crate und egui-Host-Adapter sind stabil; die gemeinsame Rust-Host-Dispatch-Seam ist produktiv, `HostBridgeSession` ist als kanonische Session-Surface fuer den egui-Host sowie direkte Flutter-/FFI-Consumer festgeschrieben, der egui-Dialog-Lifecycle ist auf die Host-Bridge-Seam konsolidiert, die lokale Action-Mapping-Doppelpflege wurde entfernt und bridge-owned Read-/Dispatch-Seams laufen kanonisch ueber `fs25_auto_drive_host_bridge`; die fruehere Flutter-Kompat-Crate wurde entfernt, Kompat-Aliase liegen direkt in der Host-Bridge
+Status: Workspace-Split umgesetzt — Root-Fassade, Engine-Crate, render_wgpu-Core-Crate und egui-Host-Adapter sind stabil; die gemeinsame Rust-Host-Dispatch-Seam ist produktiv, `HostBridgeSession` ist als kanonische Session-Surface fuer den egui-Host sowie direkte Flutter-/FFI-Consumer festgeschrieben, der egui-Dialog-Lifecycle ist auf die Host-Bridge-Seam konsolidiert, die lokale Action-Mapping-Doppelpflege wurde entfernt und bridge-owned Read-/Dispatch-Seams laufen kanonisch ueber `fs25_auto_drive_host_bridge`; die fruehere Flutter-Kompat-Crate wurde entfernt, Kompat-Aliase liegen direkt in der Host-Bridge, und `fs25_auto_drive_host_bridge_ffi` bildet den Linux-first-C-ABI-Adapter fuer Slice 0
 
 Aktuelle Integrationskette: Workspace auf Rust 2024, egui-Host auf `eframe/egui/egui-wgpu 0.34.1`, Render-Core auf `wgpu 29.0.*`.
 
@@ -12,6 +12,7 @@ Dieser Plan trennt fachliche Verantwortlichkeiten in Workspace-Crates mit klaren
 - Root-Package (`src/lib.rs`, `src/main.rs`): Re-Export-Fassade und nativer Launcher
 - Engine (`crates/fs25_auto_drive_engine/src/{app,core,shared,xml}`): host-neutrale Fachlogik
 - Host-Bridge-Core (`crates/fs25_auto_drive_host_bridge/src/*`): toolkit-freie gemeinsame Session-/Action-/Snapshot-Seam ueber der Engine
+- Host-Bridge-FFI (`crates/fs25_auto_drive_host_bridge_ffi/src/*`): duenner Linux-first-C-ABI-Transportadapter ueber der kanonischen Host-Bridge
 - Render-Core (`crates/fs25_auto_drive_render_wgpu/src/*`): host-neutraler wgpu-Renderer-Kern
 - Egui-Frontend (`crates/fs25_auto_drive_frontend_egui/src/{ui,editor_app,runtime,render,host_bridge_adapter}`): Desktop-Host, egui-UI, Render-Adapter und Kompat-Surface auf die kanonische Host-Bridge-Dispatch-Seam
 - Overview-Crate (`crates/fs25_map_overview/src/*`): Karten-/Farmland-Generierung
@@ -30,6 +31,13 @@ Verbleibende egui-Zugriffe werden verbindlich in drei Klassen aufgeteilt:
 
 Aktueller `bridge-gap` (Stand 2026-04-05): Kein offener fachlicher Gap fuer stabile Host-Aktionen oder bridge-owned Read-Seams. `host_bridge_adapter` ist nur noch eine Kompat-Surface mit Reexports auf die kanonische Host-Bridge-Mapping-Seam.
 
+### Flutter-/FFI-Transportadapter (Slice 0)
+
+- `crates/fs25_auto_drive_host_bridge_ffi` ist der duenne Linux-first-C-ABI-Adapter ueber `HostBridgeSession`.
+- Der Adapter serialisiert ausschliesslich kanonische Host-DTOs als JSON ueber `char*`-Payloads und fuehrt keine zweite Flutter-spezifische Session-Surface ein.
+- Der erste schreibende Viewport-Input-Slice bleibt auf der bestehenden Action-Surface: `SubmitViewportInput` laeuft ohne neues C-ABI-Symbol ueber den vorhandenen JSON-Entry-Point.
+- Bewusste Nicht-Ziele dieses Slice: kein ueber Resize/Tap/Drag/Scroll hinausgehender Viewport-Vertrag, kein write-heavy Editing ueber dieselbe C-ABI und kein Multi-Plattform-Packaging im selben Landungsschnitt.
+
 Die Integrationsschale ist bewusst kein zusaetzlicher Fach-Layer. Sie koordiniert `ui`, `app` und den Host-Adapter in `render`, enthaelt aber keine eigenen Use-Cases oder Domain-Logik.
 
 ### Host-Dialog-Seam
@@ -42,6 +50,8 @@ Der Datei-/Pfad-Dialogpfad ist ueber alle Rust-Hosts hinweg auf einen gemeinsame
 4. Host-seitige Antworten fliessen ueber `HostDialogResult` und `HostSessionAction::SubmitDialogResult` bzw. `HostBridgeSession::submit_dialog_result(...)` zurueck in `DialogResult -> AppIntent`.
 
 `take_host_dialog_requests(...)` ist dabei bewusst kein zweiter Session-Vertrag, sondern ein enger Adapter-Hilfspfad fuer bestehende Hosts mit lokalem Controller/State. Die kanonische Session-Surface und Zielrichtung fuer neue host-neutrale Fluesse bleibt `HostBridgeSession`.
+
+Der Dialog-Vertrag deckt dabei explizit auch `heightmap` und `background_map` ab. Ob ein Host diese Requests ueber native Picker oder ueber einen host-lokalen Fallback bedient, bleibt oberhalb der Rust-Bridge und aendert weder DTOs noch C-ABI.
 
 Leitplanke: Neue host-neutrale Dialogfluesse duerfen keine parallelen host-spezifischen DTO-Familien oder Direktzugriffe auf `UiState::take_dialog_requests()` einfuehren.
 
@@ -654,6 +664,8 @@ crates/
 - Kein vollständiger Renderer-Rewrite in einem Schritt
 - Kein Big-Bang-Umbau aller Tools
 - Kein Wechsel des Dateiformats
+- Kein zweiter Flutter-/FFI-Fachvertrag neben `HostBridgeSession`
+- Kein Multi-Plattform-Packaging im selben Slice wie der Linux-first-C-ABI-Basisschnitt
 
 ---
 

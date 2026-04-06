@@ -10,15 +10,24 @@ pub mod dto;
 pub mod session;
 
 pub use dispatch::{
-    apply_host_action, apply_mapped_intent, build_host_ui_snapshot, build_render_assets,
-    build_render_scene, build_viewport_overlay_snapshot, map_host_action_to_intent,
-    map_intent_to_host_action, take_host_dialog_requests,
+    apply_host_action, apply_host_action_with_viewport_input_state, apply_mapped_intent,
+    apply_viewport_input_batch, build_host_ui_snapshot, build_render_assets,
+    build_render_scene, build_viewport_geometry_snapshot, build_viewport_overlay_snapshot,
+    map_host_action_to_intent, map_intent_to_host_action, take_host_dialog_requests,
+    HostViewportInputState,
 };
 pub use dto::{
     EngineActiveTool, EngineDialogRequest, EngineDialogRequestKind, EngineDialogResult,
-    EngineSelectionSnapshot, EngineSessionAction, EngineSessionSnapshot, EngineViewportSnapshot,
+    EngineInputModifiers, EnginePointerButton, EngineSelectionSnapshot, EngineSessionAction,
+    EngineSessionSnapshot, EngineTapKind, EngineViewportGeometrySnapshot,
+    EngineViewportInputBatch, EngineViewportInputEvent, EngineViewportSnapshot,
     HostActiveTool, HostDialogRequest, HostDialogRequestKind, HostDialogResult,
-    HostSelectionSnapshot, HostSessionAction, HostSessionSnapshot, HostViewportSnapshot,
+    HostInputModifiers, HostPointerButton, HostSelectionSnapshot, HostSessionAction,
+    HostSessionSnapshot, HostTapKind, HostViewportConnectionDirection,
+    HostViewportConnectionPriority, HostViewportConnectionSnapshot,
+    HostViewportGeometrySnapshot, HostViewportInputBatch, HostViewportInputEvent,
+    HostViewportMarkerSnapshot, HostViewportNodeKind, HostViewportNodeSnapshot,
+    HostViewportSnapshot,
 };
 pub use session::{
     EngineRenderFrameSnapshot, FlutterBridgeSession, HostBridgeSession, HostRenderFrameSnapshot,
