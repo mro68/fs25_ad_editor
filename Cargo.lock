@@ -1771,8 +1771,11 @@ version = "1.7.0"
 dependencies = [
  "anyhow",
  "fs25_auto_drive_host_bridge",
+ "fs25_auto_drive_render_wgpu",
+ "pollster",
  "serde",
  "serde_json",
+ "wgpu",
 ]
 
 [[package]]
@@ -1785,6 +1788,7 @@ dependencies = [
  "image",
  "indexmap",
  "log",
+ "pollster",
  "resvg 0.47.0",
  "wgpu",
 ]

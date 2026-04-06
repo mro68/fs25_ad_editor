@@ -1,6 +1,7 @@
 //! Host-neutraler wgpu-Renderer-Kern fuer den FS25 AutoDrive Editor.
 
 mod background_renderer;
+mod canvas;
 mod connection_renderer;
 mod fingerprint;
 mod marker_renderer;
@@ -9,6 +10,9 @@ mod texture;
 mod types;
 
 pub use background_renderer::BackgroundWorldBounds;
+pub use canvas::{
+    CanvasAlphaMode, CanvasError, CanvasFrame, CanvasFrameInfo, CanvasPixelFormat, CanvasRuntime,
+};
 pub use fs25_auto_drive_engine::shared;
 pub use fs25_auto_drive_engine::shared::{RenderQuality, RenderScene};
 

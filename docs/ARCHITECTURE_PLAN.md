@@ -1,7 +1,7 @@
 # Architektur-Plan (Soll-Zustand)
 
-Stand: 2026-04-05  
-Status: Workspace-Split umgesetzt — Root-Fassade, Engine-Crate, render_wgpu-Core-Crate und egui-Host-Adapter sind stabil; die gemeinsame Rust-Host-Dispatch-Seam ist produktiv, `HostBridgeSession` ist als kanonische Session-Surface fuer den egui-Host sowie direkte Flutter-/FFI-Consumer festgeschrieben, der egui-Dialog-Lifecycle ist auf die Host-Bridge-Seam konsolidiert, die lokale Action-Mapping-Doppelpflege wurde entfernt und bridge-owned Read-/Dispatch-Seams laufen kanonisch ueber `fs25_auto_drive_host_bridge`; die fruehere Flutter-Kompat-Crate wurde entfernt, Kompat-Aliase liegen direkt in der Host-Bridge, und `fs25_auto_drive_host_bridge_ffi` bildet den Linux-first-C-ABI-Adapter fuer Slice 0
+Stand: 2026-04-06  
+Status: Workspace-Split umgesetzt — Root-Fassade, Engine-Crate, render_wgpu-Core-Crate und egui-Host-Adapter sind stabil; die gemeinsame Rust-Host-Dispatch-Seam ist produktiv, `HostBridgeSession` ist als kanonische Session-Surface fuer den egui-Host sowie direkte Flutter-/FFI-Consumer festgeschrieben, der egui-Dialog-Lifecycle ist auf die Host-Bridge-Seam konsolidiert, die lokale Action-Mapping-Doppelpflege wurde entfernt und bridge-owned Read-/Dispatch-Seams laufen kanonisch ueber `fs25_auto_drive_host_bridge`; die fruehere Flutter-Kompat-Crate wurde entfernt, Kompat-Aliase liegen direkt in der Host-Bridge, `fs25_auto_drive_host_bridge_ffi` bildet den Linux-first-C-ABI-Adapter fuer Slice 0, und Slice 1 erweitert diese FFI-Surface um einen nativen Offscreen-Canvas-Pfad mit caller-owned RGBA-Buffer-Copy
 
 Aktuelle Integrationskette: Workspace auf Rust 2024, egui-Host auf `eframe/egui/egui-wgpu 0.34.1`, Render-Core auf `wgpu 29.0.*`.
 
@@ -12,7 +12,7 @@ Dieser Plan trennt fachliche Verantwortlichkeiten in Workspace-Crates mit klaren
 - Root-Package (`src/lib.rs`, `src/main.rs`): Re-Export-Fassade und nativer Launcher
 - Engine (`crates/fs25_auto_drive_engine/src/{app,core,shared,xml}`): host-neutrale Fachlogik
 - Host-Bridge-Core (`crates/fs25_auto_drive_host_bridge/src/*`): toolkit-freie gemeinsame Session-/Action-/Snapshot-Seam ueber der Engine
-- Host-Bridge-FFI (`crates/fs25_auto_drive_host_bridge_ffi/src/*`): duenner Linux-first-C-ABI-Transportadapter ueber der kanonischen Host-Bridge
+- Host-Bridge-FFI (`crates/fs25_auto_drive_host_bridge_ffi/src/*`): duenner Linux-first-C-ABI-Transportadapter ueber der kanonischen Host-Bridge, inkl. nativer Canvas-Huelle fuer Offscreen-RGBA-Frames
 - Render-Core (`crates/fs25_auto_drive_render_wgpu/src/*`): host-neutraler wgpu-Renderer-Kern
 - Egui-Frontend (`crates/fs25_auto_drive_frontend_egui/src/{ui,editor_app,runtime,render,host_bridge_adapter}`): Desktop-Host, egui-UI, Render-Adapter und Kompat-Surface auf die kanonische Host-Bridge-Dispatch-Seam
 - Overview-Crate (`crates/fs25_map_overview/src/*`): Karten-/Farmland-Generierung
@@ -39,6 +39,14 @@ Aktueller `bridge-gap` (Stand 2026-04-05): Kein offener fachlicher Gap fuer stab
 - Bewusste Nicht-Ziele dieses Slice: kein ueber Resize/Tap/Drag/Scroll hinausgehender Viewport-Vertrag, kein write-heavy Editing ueber dieselbe C-ABI und kein Multi-Plattform-Packaging im selben Landungsschnitt.
 
 Die Integrationsschale ist bewusst kein zusaetzlicher Fach-Layer. Sie koordiniert `ui`, `app` und den Host-Adapter in `render`, enthaelt aber keine eigenen Use-Cases oder Domain-Logik.
+
+### Native-Canvas-Pfad (Slice 1)
+
+- `fs25_auto_drive_render_wgpu::CanvasRuntime` kapselt Offscreen-Target, revisionsbasierten Background-Sync, Draw und blocking RGBA-Readback zentral im Render-Core.
+- `fs25_auto_drive_host_bridge_ffi` nutzt diese Runtime nur als duenner Adapter: pro Aufruf wird ueber die bestehende Session-Surface `HostBridgeSession::build_render_frame([width, height])` gelesen, gerendert und in einen caller-owned Host-Buffer kopiert.
+- Der Pixelvertrag ist bewusst klein und explizit: `RGBA8 sRGB`, `bytes_per_row = width * 4`, top-down, `premultiplied alpha`.
+- Kein zweiter Session- oder DTO-Vertrag: Die Control-Plane bleibt `HostSessionAction`/`HostSessionSnapshot`, der Pixelpfad ist rein binaer.
+- Slice 1 ist kein Shared-Texture- oder Streaming-Design. Solche Folgepfade duerfen den kanonischen Read-Seam nicht aufbrechen, sondern muessen auf derselben `RenderScene`/`RenderAssetsSnapshot`-Kette aufsetzen.
 
 ### Host-Dialog-Seam
 
@@ -101,6 +109,9 @@ flowchart LR
   SCENEB --> RENDER_HOST
   ASSETB --> RENDER_HOST
   RENDER_HOST --> RENDER_CORE
+  SCENEB --> HOST_FFI[host_bridge_ffi::Canvas]
+  ASSETB --> HOST_FFI
+  HOST_FFI --> RENDER_CORE
 
   XML --> CORE
   CORE --> XML
@@ -112,6 +123,8 @@ flowchart LR
 
 ```mermaid
 graph BT
+  HOST_BRIDGE_FFI["host_bridge_ffi\n(C-ABI-Adapter)"]
+  HOST_BRIDGE["host_bridge\n(Session-Bridge)"]
     CORE["core\n(Domain)"]
     XML["xml\n(Persistence)"]
     APP["app\n(Application)"]
@@ -120,15 +133,26 @@ graph BT
     RENDER_CORE["render_wgpu\n(Render-Core)"]
     SHARED["shared\n(Cross-Layer)"]
 
+    HOST_BRIDGE_FFI --> HOST_BRIDGE
+    HOST_BRIDGE_FFI --> RENDER_CORE
+    HOST_BRIDGE --> APP
+    HOST_BRIDGE --> SHARED
     XML  --> CORE
     APP  --> CORE
     APP  --> XML
     APP  --> SHARED
     UI   --> APP
+    UI   --> SHARED
     RENDER_HOST --> SHARED
     RENDER_HOST --> RENDER_CORE
     RENDER_CORE --> SHARED
 
+    HOST_BRIDGE_FFI -.->|verboten| APP
+    HOST_BRIDGE_FFI -.->|verboten| CORE
+    HOST_BRIDGE_FFI -.->|verboten| XML
+    HOST_BRIDGE_FFI -.->|verboten| UI
+    HOST_BRIDGE -.->|verboten| RENDER_CORE
+    HOST_BRIDGE -.->|verboten| UI
     CORE  -.->|verboten| UI
     CORE  -.->|verboten| RENDER_HOST
     CORE  -.->|verboten| RENDER_CORE
@@ -141,6 +165,12 @@ graph BT
 ```
 
 > **Regel:** Pfeile zeigen "darf importieren". Gestrichelt = explizit verboten (CI-geprüft via `scripts/check_layer_boundaries.sh`).
+
+Ergaenzende Guardrails fuer den portablen Native-Canvas-Pfad:
+
+- `fs25_auto_drive_host_bridge` bleibt toolkit- und render-frei; die Session-Bridge darf keine `wgpu`-, `egui`- oder `eframe`-Abhaengigkeiten einziehen.
+- `fs25_auto_drive_host_bridge_ffi` adaptiert ausschliesslich `fs25_auto_drive_host_bridge` und `fs25_auto_drive_render_wgpu`; direkte Engine-, Frontend- oder Root-Fassaden-Imports bleiben verboten.
+- Der Native-Canvas-Pfad ist damit bewusst zweistufig: Control-Plane ueber die kanonische Session-Bridge, Pixelpfad ueber den Render-Core.
 
 ### Integrationsschale (`crates/fs25_auto_drive_frontend_egui/src/editor_app/*`, `crates/fs25_auto_drive_frontend_egui/src/runtime.rs`, `src/main.rs`)
 

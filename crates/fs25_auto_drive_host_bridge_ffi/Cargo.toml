@@ -10,5 +10,8 @@ crate-type = ["cdylib", "rlib"]
 [dependencies]
 anyhow = "1.0.102"
 fs25_auto_drive_host_bridge = { path = "../fs25_auto_drive_host_bridge" }
+fs25_auto_drive_render_wgpu = { path = "../fs25_auto_drive_render_wgpu" }
+pollster = "0.4"
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
+wgpu = "29.0"
