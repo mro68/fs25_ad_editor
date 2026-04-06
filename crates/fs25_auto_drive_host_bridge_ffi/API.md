@@ -8,10 +8,14 @@ Technikentscheidung fuer Slice 0: JSON ueber eine kleine C-ABI mit `char*`-Paylo
 
 Seit Slice 1 des portablen Native-Canvas-Pfads enthaelt die Crate zusaetzlich einen duenneren binaeren Pixelpfad: Ein opaquer Canvas-Handle baut pro Renderaufruf ueber die bestehende `HostBridgeSession` einen gekoppelten `RenderScene`/`RenderAssetsSnapshot`-Frame, rendert ihn im host-neutralen Render-Core in ein Offscreen-Target und kopiert das letzte RGBA-Bild in einen vom Host allozierten Buffer.
 
+Fuer native C/C++-Hosts liegt der stabile Vertragsheader unter `include/fs25ad_host_bridge.h`. Der Header ist die kanonische Symbolflaeche fuer Session-, Canvas- und FrameInfo-Typen.
+
 ## ABI-Typen
 
 | Typ | Zweck |
 |---|---|
+| `FS25AD_HOST_BRIDGE_ABI_VERSION` | Explizite ABI-Version des FFI-Vertrags (`1`) |
+| `FS25AD_HOST_BRIDGE_CANVAS_CONTRACT_VERSION` | Explizite Version des Canvas-Vertrags (`1`) |
 | `*mut HostBridgeSession` | Opaquer Session-Handle fuer die kanonische Host-Bridge-Surface |
 | `*mut HostBridgeNativeCanvas` | Opaquer nativer Offscreen-Canvas mit eigener wgpu-Runtime |
 | `Fs25adRgbaFrameInfo` | Explizite Frame-Metadaten (`width`, `height`, `bytes_per_row`, Pixel-/Alpha-Modus, `byte_len`) |
@@ -20,6 +24,8 @@ Seit Slice 1 des portablen Native-Canvas-Pfads enthaelt die Crate zusaetzlich ei
 
 | Symbol | Zweck |
 |---|---|
+| `fs25ad_host_bridge_abi_version() -> u32` | Liefert die ABI-Version des nativen Host-Bridge-Vertrags |
+| `fs25ad_host_bridge_canvas_contract_version() -> u32` | Liefert die Version des nativen Canvas-Vertrags |
 | `fs25ad_host_bridge_session_new() -> *mut HostBridgeSession` | Erstellt eine neue kanonische Bridge-Session |
 | `fs25ad_host_bridge_session_dispose(session)` | Gibt eine Session frei |
 | `fs25ad_host_bridge_session_snapshot_json(session) -> *mut c_char` | Liefert `HostSessionSnapshot` als UTF-8-JSON |
@@ -39,6 +45,7 @@ Seit Slice 1 des portablen Native-Canvas-Pfads enthaelt die Crate zusaetzlich ei
 ## Transportvertrag
 
 - Session-Handles sind opaque Pointer auf die kanonische `HostBridgeSession`.
+- Native Hosts pruefen beim Start mindestens `fs25ad_host_bridge_abi_version()` und fuer den Pixelpfad zusaetzlich `fs25ad_host_bridge_canvas_contract_version()` gegen die Header-Makros.
 - Alle JSON-Payloads verwenden exakt die bereits in `fs25_auto_drive_host_bridge` definierten DTOs.
 - Dialog-Requests fuer `open_file`, `save_file`, `heightmap` und `background_map` bleiben reine Host-DTOs; nativer Picker oder Host-Fallback werden oberhalb dieser C-ABI entschieden.
 - Schreibender Viewport-Input (`Resize`, Pointer-Drags/Taps, Scroll-Zoom) wird ohne neues ABI-Symbol als `HostSessionAction::SubmitViewportInput` ueber `fs25ad_host_bridge_session_apply_action_json(...)` transportiert.
@@ -54,9 +61,26 @@ Seit Slice 1 des portablen Native-Canvas-Pfads enthaelt die Crate zusaetzlich ei
 - `Fs25adRgbaFrameInfo.bytes_per_row` ist immer dicht gepackt: `width * 4`.
 - `Fs25adRgbaFrameInfo.pixel_format = 1` bedeutet `RGBA8 sRGB`.
 - `Fs25adRgbaFrameInfo.alpha_mode = 1` bedeutet `premultiplied alpha`.
+- Die festen Werte fuer ABI-Version, Canvas-Contract-Version, Pixel-Format und Alpha-Modus sind sowohl als Header-Makros als auch als Laufzeit-Symbole verfuegbar.
 - Der Host besitzt den Zielbuffer; `copy_last_frame_rgba` alloziert keine Rust-Puffer ueber FFI.
 - Zeilenreihenfolge ist `top-to-bottom`.
 - Blocking-Readback-Fehler und Timeouts werden als normaler ABI-Fehler (`false` plus `last_error_message`) an den Host propagiert.
+
+## Header-Handshake-Beispiel (C)
+
+```c
+#include "fs25ad_host_bridge.h"
+
+bool fs25ad_contract_ok(void) {
+	if (fs25ad_host_bridge_abi_version() != FS25AD_HOST_BRIDGE_ABI_VERSION) {
+		return false;
+	}
+	if (fs25ad_host_bridge_canvas_contract_version() != FS25AD_HOST_BRIDGE_CANVAS_CONTRACT_VERSION) {
+		return false;
+	}
+	return true;
+}
+```
 
 ## Beispiel
 

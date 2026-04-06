@@ -35,6 +35,7 @@ Aktueller `bridge-gap` (Stand 2026-04-05): Kein offener fachlicher Gap fuer stab
 
 - `crates/fs25_auto_drive_host_bridge_ffi` ist der duenne Linux-first-C-ABI-Adapter ueber `HostBridgeSession`.
 - Der Adapter serialisiert ausschliesslich kanonische Host-DTOs als JSON ueber `char*`-Payloads und fuehrt keine zweite Flutter-spezifische Session-Surface ein.
+- Native C/C++-Hosts konsumieren die Surface ueber den stabilen Header `crates/fs25_auto_drive_host_bridge_ffi/include/fs25ad_host_bridge.h` und pruefen die Laufzeitversionen (`fs25ad_host_bridge_abi_version`, `fs25ad_host_bridge_canvas_contract_version`) gegen die Header-Makros.
 - Der erste schreibende Viewport-Input-Slice bleibt auf der bestehenden Action-Surface: `SubmitViewportInput` laeuft ohne neues C-ABI-Symbol ueber den vorhandenen JSON-Entry-Point.
 - Bewusste Nicht-Ziele dieses Slice: kein ueber Resize/Tap/Drag/Scroll hinausgehender Viewport-Vertrag, kein write-heavy Editing ueber dieselbe C-ABI und kein Multi-Plattform-Packaging im selben Landungsschnitt.
 
@@ -45,6 +46,7 @@ Die Integrationsschale ist bewusst kein zusaetzlicher Fach-Layer. Sie koordinier
 - `fs25_auto_drive_render_wgpu::CanvasRuntime` kapselt Offscreen-Target, revisionsbasierten Background-Sync, Draw und blocking RGBA-Readback zentral im Render-Core.
 - `fs25_auto_drive_host_bridge_ffi` nutzt diese Runtime nur als duenner Adapter: pro Aufruf wird ueber die bestehende Session-Surface `HostBridgeSession::build_render_frame([width, height])` gelesen, gerendert und in einen caller-owned Host-Buffer kopiert.
 - Der Pixelvertrag ist bewusst klein und explizit: `RGBA8 sRGB`, `bytes_per_row = width * 4`, top-down, `premultiplied alpha`.
+- Session-Ownership bleibt hostseitig: Dart/C++-Hosts halten den Session-Lifecycle, der Canvas-Pfad arbeitet ausschliesslich mit geborgten Session-/Canvas-Pointern.
 - Kein zweiter Session- oder DTO-Vertrag: Die Control-Plane bleibt `HostSessionAction`/`HostSessionSnapshot`, der Pixelpfad ist rein binaer.
 - Slice 1 ist kein Shared-Texture- oder Streaming-Design. Solche Folgepfade duerfen den kanonischen Read-Seam nicht aufbrechen, sondern muessen auf derselben `RenderScene`/`RenderAssetsSnapshot`-Kette aufsetzen.
 

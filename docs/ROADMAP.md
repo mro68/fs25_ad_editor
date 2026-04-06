@@ -229,6 +229,9 @@
   - [x] Revisionsbasierter Background-Sync ueber `RenderAssetsSnapshot` in derselben Runtime
   - [x] Duenner FFI-Canvas-Adapter ueber `HostBridgeSession::build_render_frame(...)`
   - [x] Expliziter ABI-Vertrag fuer `RGBA8 sRGB`, `bytes_per_row = width * 4` und `premultiplied alpha`
+  - [x] Stabiler C-Header `crates/fs25_auto_drive_host_bridge_ffi/include/fs25ad_host_bridge.h` fuer Session-, Canvas- und FrameInfo-Symbole
+  - [x] Laufzeit-Handshake ueber `fs25ad_host_bridge_abi_version()` und `fs25ad_host_bridge_canvas_contract_version()`
+  - [x] Canvas-Verbrauchertests fuer Header-/Layout-Kontrakt erweitert
   - [ ] Folge-Slice: egui-Host auf gemeinsame Canvas-Runtime umstellen
   - [ ] Folge-Slice: Shared-Texture-/Async-/Streaming-Pfade evaluieren
 - [x] Flutter-Bridge als transitional alias surface eingefroren (2026-04-05)
