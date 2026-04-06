@@ -1,12 +1,12 @@
 //! Command Palette Overlay mit Suchfeld und Tastatur-Navigation.
 
-use crate::app::tools::{
-    resolve_route_tool_entries, route_tool_disabled_reason_key, route_tool_label_key,
-    RouteToolSurface,
-};
+use crate::app::tools::route_tool_label_key;
 use crate::app::{AppIntent, AppState, EditorTool};
 use crate::shared::{t, I18nKey, Language};
-use crate::ui::common::route_tool_availability_context;
+use crate::ui::common::{
+    host_route_tool_disabled_reason_key, host_route_tool_entries_for, host_route_tool_to_engine,
+};
+use fs25_auto_drive_host_bridge::{HostChromeSnapshot, HostRouteToolGroup, HostRouteToolSurface};
 
 #[derive(Clone)]
 struct PaletteEntry {
@@ -50,7 +50,7 @@ fn selected_catalog_intent(
 }
 
 /// Baut den Command-Katalog aus statischen Befehlen und allen katalogsichtbaren Route-Tools.
-fn build_catalog(lang: Language, state: &AppState) -> Vec<PaletteEntry> {
+fn build_catalog(lang: Language, host_chrome_snapshot: &HostChromeSnapshot) -> Vec<PaletteEntry> {
     let mut catalog = vec![
         palette_entry(
             t(lang, I18nKey::PaletteOpenFile).to_owned(),
@@ -121,29 +121,30 @@ fn build_catalog(lang: Language, state: &AppState) -> Vec<PaletteEntry> {
     ];
 
     let prefix = t(lang, I18nKey::PaletteRouteToolPrefix);
-    let availability = route_tool_availability_context(state);
     for entry in [
-        crate::app::tools::RouteToolGroup::Basics,
-        crate::app::tools::RouteToolGroup::Section,
-        crate::app::tools::RouteToolGroup::Analysis,
+        HostRouteToolGroup::Basics,
+        HostRouteToolGroup::Section,
+        HostRouteToolGroup::Analysis,
     ]
     .into_iter()
     .flat_map(|group| {
-        resolve_route_tool_entries(RouteToolSurface::CommandPalette, group, availability)
+        host_route_tool_entries_for(
+            host_chrome_snapshot,
+            HostRouteToolSurface::CommandPalette,
+            group,
+        )
     }) {
+        let engine_tool = host_route_tool_to_engine(entry.tool);
         catalog.push(PaletteEntry {
-            label: format!(
-                "{prefix} {}",
-                t(lang, route_tool_label_key(entry.descriptor.id))
-            ),
+            label: format!("{prefix} {}", t(lang, route_tool_label_key(engine_tool))),
             shortcut: String::new(),
             intent: AppIntent::SelectRouteToolRequested {
-                tool_id: entry.descriptor.id,
+                tool_id: engine_tool,
             },
             enabled: entry.enabled,
             disabled_reason: entry
                 .disabled_reason
-                .map(|reason| t(lang, route_tool_disabled_reason_key(reason)).to_owned()),
+                .map(|reason| t(lang, host_route_tool_disabled_reason_key(reason)).to_owned()),
         });
     }
 
@@ -158,7 +159,8 @@ fn build_catalog(lang: Language, state: &AppState) -> Vec<PaletteEntry> {
 pub fn render_command_palette(
     ctx: &egui::Context,
     show: &mut bool,
-    state: &AppState,
+    _state: &AppState,
+    host_chrome_snapshot: &HostChromeSnapshot,
 ) -> Vec<AppIntent> {
     if !*show {
         return Vec::new();
@@ -167,11 +169,11 @@ pub fn render_command_palette(
     let mut intents = Vec::new();
     let mut window_open = *show;
     let state_id = egui::Id::new("command_palette_state");
-    let lang = state.options.language;
+    let lang = host_chrome_snapshot.options.language;
 
     let mut palette_state =
         ctx.data_mut(|d| d.get_temp_mut_or_default::<PaletteState>(state_id).clone());
-    let catalog = build_catalog(lang, state);
+    let catalog = build_catalog(lang, host_chrome_snapshot);
     let needle = palette_state.search_text.to_lowercase();
     let filtered_indices: Vec<usize> = catalog
         .iter()
@@ -378,7 +380,8 @@ mod tests {
     #[test]
     fn command_palette_zeigt_route_tools_trotz_disabled_state() {
         let state = AppState::new();
-        let catalog = build_catalog(state.options.language, &state);
+        let chrome = fs25_auto_drive_host_bridge::build_host_chrome_snapshot(&state);
+        let catalog = build_catalog(state.options.language, &chrome);
 
         for tool_id in RouteToolId::ALL {
             route_tool_entry(&catalog, tool_id);
@@ -425,7 +428,8 @@ mod tests {
     #[test]
     fn command_palette_blockiert_enter_auf_disabled_route_tools() {
         let state = AppState::new();
-        let catalog = build_catalog(state.options.language, &state);
+        let chrome = fs25_auto_drive_host_bridge::build_host_chrome_snapshot(&state);
+        let catalog = build_catalog(state.options.language, &chrome);
         let (disabled_idx, _) = route_tool_entry(&catalog, RouteToolId::Bypass);
         let (enabled_idx, _) = route_tool_entry(&catalog, RouteToolId::Straight);
 

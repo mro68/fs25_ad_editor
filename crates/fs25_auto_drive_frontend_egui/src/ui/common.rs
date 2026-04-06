@@ -1,7 +1,13 @@
 //! Gemeinsame UI-Hilfsfunktionen.
 
-use crate::app::tools::RouteToolAvailabilityContext;
-use crate::app::AppState;
+use crate::app::tool_contract::RouteToolId;
+use crate::app::{ConnectionDirection, ConnectionPriority, EditorTool};
+use crate::shared::I18nKey;
+use fs25_auto_drive_host_bridge::{
+    HostActiveTool, HostChromeSnapshot, HostDefaultConnectionDirection,
+    HostDefaultConnectionPriority, HostRouteToolDisabledReason, HostRouteToolEntrySnapshot,
+    HostRouteToolGroup, HostRouteToolId, HostRouteToolSelectionSnapshot, HostRouteToolSurface,
+};
 
 /// Schwellenwert fuer Scroll-Events – unterdrückt Rauschen bei kleinen Scroll-Bewegungen.
 pub(crate) const WHEEL_THRESHOLD: f32 = 0.5;
@@ -183,22 +189,84 @@ pub(crate) fn apply_wheel_step_default_enabled(
     apply_wheel_step_default(ui, response, value, range)
 }
 
-/// Baut den zentralen Availability-Kontext fuer alle Route-Tool-Surfaces.
-pub(crate) fn route_tool_availability_context(state: &AppState) -> RouteToolAvailabilityContext {
-    let has_farmland = state
-        .farmland_polygons_arc()
-        .is_some_and(|polygons| !polygons.is_empty());
-    let has_background = state.has_background_image();
-    let has_ordered_chain = state.road_map.as_deref().is_some_and(|road_map| {
-        road_map
-            .ordered_chain_nodes(&state.selection.selected_node_ids)
-            .is_some()
-    });
+/// Konvertiert eine host-neutrale Route-Tool-ID in die Engine-ID fuer AppIntents.
+pub(crate) fn host_route_tool_to_engine(tool: HostRouteToolId) -> RouteToolId {
+    match tool {
+        HostRouteToolId::Straight => RouteToolId::Straight,
+        HostRouteToolId::CurveQuad => RouteToolId::CurveQuad,
+        HostRouteToolId::CurveCubic => RouteToolId::CurveCubic,
+        HostRouteToolId::Spline => RouteToolId::Spline,
+        HostRouteToolId::Bypass => RouteToolId::Bypass,
+        HostRouteToolId::SmoothCurve => RouteToolId::SmoothCurve,
+        HostRouteToolId::Parking => RouteToolId::Parking,
+        HostRouteToolId::FieldBoundary => RouteToolId::FieldBoundary,
+        HostRouteToolId::FieldPath => RouteToolId::FieldPath,
+        HostRouteToolId::RouteOffset => RouteToolId::RouteOffset,
+        HostRouteToolId::ColorPath => RouteToolId::ColorPath,
+    }
+}
 
-    RouteToolAvailabilityContext {
-        has_farmland,
-        has_background,
-        has_ordered_chain,
+/// Konvertiert ein host-neutrales Tool in das lokale Editor-Tool.
+pub(crate) fn host_active_tool_to_editor(tool: HostActiveTool) -> EditorTool {
+    match tool {
+        HostActiveTool::Select => EditorTool::Select,
+        HostActiveTool::Connect => EditorTool::Connect,
+        HostActiveTool::AddNode => EditorTool::AddNode,
+        HostActiveTool::Route => EditorTool::Route,
+    }
+}
+
+/// Konvertiert die host-neutrale Default-Richtung in den Engine-Typ.
+pub(crate) fn host_default_direction_to_engine(
+    direction: HostDefaultConnectionDirection,
+) -> ConnectionDirection {
+    match direction {
+        HostDefaultConnectionDirection::Regular => ConnectionDirection::Regular,
+        HostDefaultConnectionDirection::Dual => ConnectionDirection::Dual,
+        HostDefaultConnectionDirection::Reverse => ConnectionDirection::Reverse,
+    }
+}
+
+/// Konvertiert die host-neutrale Default-Prioritaet in den Engine-Typ.
+pub(crate) fn host_default_priority_to_engine(
+    priority: HostDefaultConnectionPriority,
+) -> ConnectionPriority {
+    match priority {
+        HostDefaultConnectionPriority::Regular => ConnectionPriority::Regular,
+        HostDefaultConnectionPriority::SubPriority => ConnectionPriority::SubPriority,
+    }
+}
+
+/// Liefert den i18n-Key fuer einen host-neutralen Disabled-Grund.
+pub(crate) fn host_route_tool_disabled_reason_key(reason: HostRouteToolDisabledReason) -> I18nKey {
+    match reason {
+        HostRouteToolDisabledReason::MissingFarmland => I18nKey::RouteToolNeedFarmland,
+        HostRouteToolDisabledReason::MissingBackground => I18nKey::RouteToolNeedBackground,
+        HostRouteToolDisabledReason::MissingOrderedChain => I18nKey::RouteToolNeedOrderedChain,
+    }
+}
+
+/// Filtert host-neutrale Route-Tool-Eintraege nach Surface und Gruppe.
+pub(crate) fn host_route_tool_entries_for<'a>(
+    chrome: &'a HostChromeSnapshot,
+    surface: HostRouteToolSurface,
+    group: HostRouteToolGroup,
+) -> impl Iterator<Item = &'a HostRouteToolEntrySnapshot> + 'a {
+    chrome
+        .route_tool_entries
+        .iter()
+        .filter(move |entry| entry.surface == surface && entry.group == group)
+}
+
+/// Liefert die zuletzt gewaehlte host-neutrale Tool-ID je Gruppe.
+pub(crate) fn host_memory_tool_for_group(
+    memory: HostRouteToolSelectionSnapshot,
+    group: HostRouteToolGroup,
+) -> HostRouteToolId {
+    match group {
+        HostRouteToolGroup::Basics => memory.basics,
+        HostRouteToolGroup::Section => memory.section,
+        HostRouteToolGroup::Analysis => memory.analysis,
     }
 }
 

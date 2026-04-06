@@ -1,8 +1,12 @@
 //! Drag-Start/-Ende: Selektion-Move, Kamera-Pan, Route-Tool-Drag, Rect/Lasso-Selektion.
 
 use super::super::drag::DragSelectionMode;
-use super::{screen_pos_to_world, DragSelection, InputState, PrimaryDragMode, ViewportContext};
+use super::{
+    host_modifiers, host_pointer_button, screen_pos_to_world, to_viewport_screen_pos,
+    DragSelection, InputState, PrimaryDragMode, ViewportContext,
+};
 use crate::app::{AppIntent, EditorTool};
+use fs25_auto_drive_host_bridge::HostViewportInputEvent;
 
 impl InputState {
     /// Erkennt Drag-Beginn und bestimmt den Drag-Modus (Pan, Move, Selektion, Route-Tool).
@@ -10,8 +14,22 @@ impl InputState {
         &mut self,
         ctx: &ViewportContext,
         modifiers: egui::Modifiers,
-        events: &mut Vec<AppIntent>,
+        local_intents: &mut Vec<AppIntent>,
+        host_events: &mut Vec<HostViewportInputEvent>,
     ) {
+        for button in [egui::PointerButton::Middle, egui::PointerButton::Secondary] {
+            if ctx.response.drag_started_by(button)
+                && let Some(pointer_pos) = ctx.response.interact_pointer_pos()
+                && let Some(host_button) = host_pointer_button(button)
+            {
+                host_events.push(HostViewportInputEvent::DragStart {
+                    button: host_button,
+                    screen_pos: to_viewport_screen_pos(pointer_pos, ctx.response),
+                    modifiers: host_modifiers(modifiers),
+                });
+            }
+        }
+
         if !ctx.response.drag_started_by(egui::PointerButton::Primary) {
             return;
         }
@@ -33,18 +51,27 @@ impl InputState {
 
                 self.drag_selection = Some(DragSelection {
                     mode,
-                    additive: modifiers.command,
                     start_screen: pointer_pos,
                     points_screen: vec![pointer_pos],
                 });
                 self.primary_drag_mode = PrimaryDragMode::None;
+
+                if mode == DragSelectionMode::Rect || mode == DragSelectionMode::Lasso {
+                    host_events.push(HostViewportInputEvent::DragStart {
+                        button: fs25_auto_drive_host_bridge::HostPointerButton::Primary,
+                        screen_pos: to_viewport_screen_pos(pointer_pos, ctx.response),
+                        modifiers: host_modifiers(modifiers),
+                    });
+                    self.primary_drag_via_bridge = true;
+                } else {
+                    self.primary_drag_via_bridge = false;
+                }
             }
             return;
         }
 
-        // Kein Shift/Alt: Selektion + Move-Drag oder Kamera-Pan
+        // Kein Shift/Alt: Bridge-Seam entscheidet zwischen Move-Drag und Kamera-Pan.
         let base_max_distance = ctx.options.hitbox_radius();
-        let move_max_distance = base_max_distance * ctx.options.selection_size_multiplier();
 
         // Route-Tool Drag-Target Hit-Test (hat Vorrang vor Node-Move)
         let press_pos = ctx.ui.input(|i| i.pointer.press_origin());
@@ -68,39 +95,21 @@ impl InputState {
         };
 
         if let Some(world_pos) = route_drag_hit {
-            events.push(AppIntent::RouteToolDragStarted { world_pos });
+            local_intents.push(AppIntent::RouteToolDragStarted { world_pos });
             self.primary_drag_mode = PrimaryDragMode::RouteToolPointDrag;
-        } else {
-            // press_origin() liefert die exakte Klickposition (vor Drag-Schwelle),
-            // interact_pointer_pos() hingegen die Position *nach* Drag-Erkennung
-            // (offset um ~6px), was zu asymmetrischen Hitboxen fuehren kann.
-            let hit_info = press_pos.and_then(|pointer_pos| {
-                let world_pos =
-                    screen_pos_to_world(pointer_pos, ctx.response, ctx.viewport_size, ctx.camera);
-                ctx.road_map
-                    .and_then(|rm| rm.nearest_node(world_pos))
-                    .filter(|hit| hit.distance <= move_max_distance)
-                    .map(|hit| (hit.node_id, world_pos))
+            self.primary_drag_via_bridge = false;
+        } else if let Some(pointer_pos) = press_pos.or_else(|| ctx.response.interact_pointer_pos())
+        {
+            host_events.push(HostViewportInputEvent::DragStart {
+                button: fs25_auto_drive_host_bridge::HostPointerButton::Primary,
+                screen_pos: to_viewport_screen_pos(pointer_pos, ctx.response),
+                modifiers: host_modifiers(modifiers),
             });
-
-            if let Some((hit_node_id, world_pos)) = hit_info {
-                let already_selected = ctx.selected_node_ids.contains(&hit_node_id);
-
-                if !already_selected {
-                    let extend_path = modifiers.shift;
-                    let additive = modifiers.command || extend_path;
-                    events.push(AppIntent::NodePickRequested {
-                        world_pos,
-                        additive,
-                        extend_path,
-                    });
-                }
-
-                events.push(AppIntent::BeginMoveSelectedNodesRequested);
-                self.primary_drag_mode = PrimaryDragMode::SelectionMove;
-            } else {
-                self.primary_drag_mode = PrimaryDragMode::CameraPan;
-            }
+            self.primary_drag_via_bridge = true;
+            self.primary_drag_mode = PrimaryDragMode::None;
+        } else {
+            self.primary_drag_via_bridge = false;
+            self.primary_drag_mode = PrimaryDragMode::None;
         }
     }
 
@@ -129,55 +138,36 @@ impl InputState {
     }
 
     /// Beendet einen Drag und emittiert die resultierenden Intents (Selektion, Move-Ende, etc.).
-    pub(crate) fn handle_drag_end(&mut self, ctx: &ViewportContext, events: &mut Vec<AppIntent>) {
+    pub(crate) fn handle_drag_end(
+        &mut self,
+        ctx: &ViewportContext,
+        local_intents: &mut Vec<AppIntent>,
+        host_events: &mut Vec<HostViewportInputEvent>,
+    ) {
         if !ctx.response.drag_stopped_by(egui::PointerButton::Primary) {
+            for button in [egui::PointerButton::Middle, egui::PointerButton::Secondary] {
+                if ctx.response.drag_stopped_by(button)
+                    && let Some(host_button) = host_pointer_button(button)
+                {
+                    host_events.push(HostViewportInputEvent::DragEnd {
+                        button: host_button,
+                        screen_pos: ctx
+                            .response
+                            .interact_pointer_pos()
+                            .map(|pos| to_viewport_screen_pos(pos, ctx.response)),
+                    });
+                }
+            }
             return;
         }
 
         if let Some(selection) = self.drag_selection.take() {
             match selection.mode {
                 DragSelectionMode::Rect => {
-                    if selection.points_screen.len() >= 2 {
-                        let a = screen_pos_to_world(
-                            selection.start_screen,
-                            ctx.response,
-                            ctx.viewport_size,
-                            ctx.camera,
-                        );
-                        let b = screen_pos_to_world(
-                            selection.points_screen[selection.points_screen.len() - 1],
-                            ctx.response,
-                            ctx.viewport_size,
-                            ctx.camera,
-                        );
-
-                        events.push(AppIntent::SelectNodesInRectRequested {
-                            min: a,
-                            max: b,
-                            additive: selection.additive,
-                        });
-                    }
+                    // Rechteck-Selektion laeuft ueber den stateful Bridge-Drag-Lifecycle.
                 }
                 DragSelectionMode::Lasso => {
-                    if selection.points_screen.len() >= 3 {
-                        let polygon = selection
-                            .points_screen
-                            .into_iter()
-                            .map(|point| {
-                                screen_pos_to_world(
-                                    point,
-                                    ctx.response,
-                                    ctx.viewport_size,
-                                    ctx.camera,
-                                )
-                            })
-                            .collect::<Vec<_>>();
-
-                        events.push(AppIntent::SelectNodesInLassoRequested {
-                            polygon,
-                            additive: selection.additive,
-                        });
-                    }
+                    // Normales Node-Lasso laeuft ueber den stateful Bridge-Drag-Lifecycle.
                 }
                 DragSelectionMode::ToolLasso => {
                     if selection.points_screen.len() >= 3 {
@@ -194,18 +184,25 @@ impl InputState {
                             })
                             .collect::<Vec<_>>();
 
-                        events.push(AppIntent::RouteToolLassoCompleted { polygon });
+                        local_intents.push(AppIntent::RouteToolLassoCompleted { polygon });
                     }
                 }
             }
         }
 
-        if self.primary_drag_mode == PrimaryDragMode::SelectionMove {
-            events.push(AppIntent::EndMoveSelectedNodesRequested);
-        } else if self.primary_drag_mode == PrimaryDragMode::RouteToolPointDrag {
-            events.push(AppIntent::RouteToolDragEnded);
+        if self.primary_drag_mode == PrimaryDragMode::RouteToolPointDrag {
+            local_intents.push(AppIntent::RouteToolDragEnded);
+        } else if self.primary_drag_via_bridge {
+            host_events.push(HostViewportInputEvent::DragEnd {
+                button: fs25_auto_drive_host_bridge::HostPointerButton::Primary,
+                screen_pos: ctx
+                    .response
+                    .interact_pointer_pos()
+                    .map(|pos| to_viewport_screen_pos(pos, ctx.response)),
+            });
         }
 
         self.primary_drag_mode = PrimaryDragMode::None;
+        self.primary_drag_via_bridge = false;
     }
 }

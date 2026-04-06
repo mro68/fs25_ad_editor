@@ -6,14 +6,14 @@ Das `ui`-Modul enthält egui-UI-Komponenten (Menüs, Statusbar, Input-Handling, 
 
 ## Module
 
-- `common.rs` — Gemeinsame UI-Hilfsfunktionen (Scroll-Helfer, Availability-Kontext)
+- `common.rs` — Gemeinsame UI-Hilfsfunktionen (Scroll-Helfer, HostChromeSnapshot-Mapping fuer Tool-/Default-/Route-Metadaten)
 - `menu.rs` — Top-Menü-Leiste
 - `status.rs` — Statusleiste
 - `floating_menu.rs` — Schwebende Kontextmenues fuer Werkzeug- und RouteTool-Gruppen (Toggle via `T/G/B/A/R/Z`)
-- `icons.rs` — Gemeinsame Icon-Konstanten/Helfer (`ICON_SIZE`, `svg_icon`, `route_tool_icon`); `route_tool_icon()` loest Route-Tool-Symbole katalogbasiert ueber `RouteToolDescriptor.icon_key` auf
+- `icons.rs` — Gemeinsame Icon-Konstanten/Helfer (`ICON_SIZE`, `svg_icon`, `route_tool_icon`, `host_route_tool_icon`); host-neutrale Icon-Keys werden ueber `HostRouteToolIconKey` aufgeloest
 - `long_press.rs` — Wiederverwendbares Long-Press-Dropdown-Widget (`LongPressState`, `LongPressGroup`, `render_long_press_button`)
-- `defaults_panel.rs` — Linke Sidebar im Gruppen-Layout (Long-Press fuer Werkzeuge, RouteTool-Gruppen `Basics/Section/Analysis`, Defaults, Hintergrund)
-- `command_palette.rs` — Command Palette Overlay (Suche + katalogbasierte Intent-Auswahl; deaktivierte Route-Tools bleiben sichtbar und tragen ihren Disabled-Grund)
+- `defaults_panel.rs` — Linke Sidebar im Gruppen-Layout; Route-Tool-Entries, Tool-Memory und Defaults kommen aus `HostChromeSnapshot`
+- `command_palette.rs` — Command Palette Overlay (Suche + HostChromeSnapshot-basierte Route-Tool-Auswahl; deaktivierte Route-Tools bleiben sichtbar und tragen ihren Disabled-Grund)
 - `properties.rs` — Properties-Panel (Detailanzeige selektierter Nodes)
 - `options_dialog/` — Optionen-Dialog fuer Laufzeit-Einstellungen (`mod.rs`, `sections/*.rs`)
 - `edit_panel.rs` — Schwebendes Edit-Panel; intern aufgeteilt in `edit_panel/group_panel.rs`, `edit_panel/route_tool_panel.rs` mit `route_tool_panel/curve_panel.rs` und `route_tool_panel/analysis_panel.rs`, sowie `edit_panel/streckenteilung_panel.rs`
@@ -232,6 +232,7 @@ Die Menue-Art wird ueber `UiState.floating_menu.kind` gesteuert.
 pub fn render_floating_menu(
   ctx: &egui::Context,
   state: &AppState,
+  host_chrome_snapshot: &HostChromeSnapshot,
 ) -> (Vec<AppIntent>, bool)
 ```
 
@@ -247,7 +248,7 @@ Unterstuetzte Menues:
 Verhalten:
 
 - Aktive Auswahl wird mit Akzentfarbe hervorgehoben
-- RouteTool-Eintraege kommen aus dem kanonischen Katalog und koennen mit Disabled-Tooltip gerendert werden
+- RouteTool-Eintraege kommen aus `HostChromeSnapshot.route_tool_entries` (Surface `FloatingMenu`) und koennen mit Disabled-Tooltip gerendert werden
 - Item-Klick emittiert passende Intents und schliesst das Menue
 - Klick ausserhalb schliesst das Menue
 
@@ -298,7 +299,11 @@ pub fn render_properties_panel(
 Rendert die untere Statusleiste (read-only).
 
 ```rust
-pub fn render_status_bar(ctx: &egui::Context, state: &AppState)
+pub fn render_status_bar(
+  ctx: &egui::Context,
+  state: &AppState,
+  host_chrome_snapshot: &HostChromeSnapshot,
+)
 ```
 
 **Angezeigte Informationen:**
@@ -308,6 +313,7 @@ pub fn render_status_bar(ctx: &egui::Context, state: &AppState)
 - Zoom und Kamera-Position
 - Heightmap-Status (Dateiname oder "None")
 - Selektierte Nodes (Anzahl + Beispiel-ID)
+- Aktives Werkzeug und Statusmeldung aus `HostChromeSnapshot`
 - FPS (rechts-aligned)
 
 ---
@@ -405,7 +411,7 @@ let intents = input.collect_viewport_events(
   - Links-Drag → Kamera-Pan oder Selektion-Move
   - Links-Drag nahe Route-Tool-Punkt → Steuerpunkt-Drag (`RouteToolDragStarted/Updated/Ended`)
   - Shift+Drag → Rechteck-Selektion
-  - Shift+Alt+Drag → Lasso-Selektion
+  - Alt+Drag → Lasso-Selektion
   - Mittel/Rechts-Drag → Kamera-Pan
 
 - **`context_menu`:** Rechtsklick-Kontextmenü mit validiertem Command-System (CommandId + Preconditions → nur gültige Einträge). SVG-Icons werden aus `assets/` gerendert und über `EditorOptions` sowie die aktuell gewählte Standard-Richtung/-Priorität eingefärbt. Streckenteilung-Widget wird nur angezeigt wenn `RoadMap::is_resampleable_chain()` für die aktuelle Selektion `true` liefert (zusammenhängende Kette, Kreuzungen nur an Endpunkten).
@@ -446,11 +452,13 @@ Alle Commands werden durch ein Precondition-System gefiltert: Nur Commands deren
 - **Doppelklick:** Segment-Selektion zwischen Kreuzungen
 - **Links-Drag:** Kamera-Pan, Selektion-Move, oder Route-Tool-Steuerpunkt-Drag
 - **Shift+Drag:** Rechteck-Selektion
-- **Shift+Alt+Drag:** Lasso-Selektion
+- **Alt+Drag:** Lasso-Selektion
 - **Mittel/Rechts-Drag:** Kamera-Pan
 - **Scroll:** Zoom
 - **Alt+Scroll** (Select-Tool + aktive Selektion): Gruppen-Rotation (5° pro Tick, Lifecycle: `BeginRotateSelectedNodesRequested` → `RotateSelectedNodesRequested` → `EndRotateSelectedNodesRequested`)
 - **Rechtsklick:** Kontextmenü
+
+Der stateful Bridge-Pfad ueber `HostSessionAction::SubmitViewportInput` deckt dabei jetzt `Linksklick`, `Doppelklick`, `Shift+Drag`, normales `Alt+Drag`, Pan/Move sowie Scroll-Zoom ab. Route-Tool-spezifische Alt-/Lasso-Pfade bleiben bewusst lokal, weil die Bridge keine Tool-spezifische Polygon-Semantik transportiert.
 
 ---
 

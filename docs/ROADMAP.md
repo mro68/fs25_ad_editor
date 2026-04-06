@@ -219,6 +219,12 @@
   - [x] `host_bridge_adapter` auf reine Kompat-Surface (Reexports) reduziert; keine lokale Mapping-Doppelpflege mehr
   - [x] Hochfrequente Viewport-/Tool-/Drag-Interaktionen bleiben bewusst ungemappt und laufen weiter ueber den direkten Controller-Fallback
   - [x] Adapter-Testabdeckung deutlich verbreitert (positive und negative Mapping-Faelle plus Dispatch-Tests)
+- [x] Bridge-Entkopplungs-Slice fuer egui-Chrome + Viewport-Gesten + FFI-Mirror gelandet (2026-04-06, Branch `feat/rust-egui-render-frame-slice`)
+  - [x] Egui-Viewport sammelt bridge-faehige Gesten als `HostSessionAction::SubmitViewportInput` und verarbeitet sie stateful ueber `HostViewportInputState`
+  - [x] Normales Select-Lasso (`Alt+Drag`) und Select-Doppelklick-Segmentbildung als kanonische `SubmitViewportInput`-Semantik nachgezogen; Route-Tool-Lasso bleibt bewusst host-local
+  - [x] Host-neutrales `HostChromeSnapshot`-Read-Modell fuer Menues/Defaults/Status eingefuehrt (inkl. Route-Tool-Availability, Icon-Key und Disabled-Reason)
+  - [x] Erste UI-Surfaces auf Snapshot-Daten umgestellt (`menu`, `defaults_panel`, `floating_menu`, `command_palette`, `status`)
+  - [x] Additiver FFI-Export `fs25ad_host_bridge_session_chrome_snapshot_json(...)` + C-Header-Declaration auf derselben kanonischen Surface; FFI-ABI anschliessend sauber auf Version `3` angehoben
 - [x] Flutter-Adapter-Surface fuer die Unified Host Bridge umgesetzt
   - [x] `fs25_auto_drive_frontend_flutter_bridge` auf `fs25_auto_drive_host_bridge` umgestellt
   - [x] Crate-Abhaengigkeit auf `fs25_auto_drive_host_bridge` reduziert; keine direkte Engine-Abhaengigkeit mehr
@@ -241,7 +247,7 @@
   - [x] Shared-Texture-Vertrag auf Version `3` angehoben und als opaque Runtime-Vertrag im selben Prozessraum dokumentiert
   - [x] FFI-Adapter auf den Shared-Texture-Transport umgestellt (`shared_texture_v2`-Implementierung; `new/resize/render/acquire/release`)
   - [x] Pixelbuffer-v1 (`canvas.rs`, `canvas_*`, `Fs25adRgbaFrameInfo`) atomar entfernt
-  - [x] ABI-Version auf `2` belassen und separaten Shared-Texture-Vertrag ueber `FS25AD_HOST_BRIDGE_SHARED_TEXTURE_*` auf `3` festgezogen
+  - [x] Shared-Texture-Hard-Cut hielt die allgemeine FFI-ABI damals noch auf `2`; der spaetere Chrome-JSON-Export hat die allgemeine ABI inzwischen auf `3` angehoben, der separate Shared-Texture-Vertrag bleibt bei `3`
   - [x] RenderFrame-Seam (`HostBridgeSession::build_render_frame`) unveraendert beibehalten
   - [x] egui-Onscreen-Host explizit unveraendert gelassen (direkter `RenderPass`-Pfad)
   - [x] Additiver Texture-Registration-v4-Vertrag neben v3 eingefroren (2026-04-06): gemeinsame Capability-Negotiation + Frame-Metadaten + Lifecycle, plattformspezifische Payload-Familien fuer Windows/Linux/Android, explizites Capability-Gating ohne Pixelbuffer-Fallback
