@@ -187,6 +187,7 @@ impl HostBridgeSession {
         )?;
         if handled {
             self.snapshot_dirty = true;
+            self.sync_chrome_from_engine();
         }
         Ok(())
     }
@@ -199,6 +200,7 @@ impl HostBridgeSession {
     pub fn apply_intent(&mut self, intent: AppIntent) -> Result<()> {
         self.controller.handle_intent(&mut self.state, intent)?;
         self.snapshot_dirty = true;
+        self.sync_chrome_from_engine();
         Ok(())
     }
 
@@ -312,7 +314,8 @@ impl HostBridgeSession {
 
     /// Schliesst das host-lokale Floating-Menue explizit.
     pub fn clear_floating_menu(&mut self) {
-        self.state.ui.floating_menu = None;
+        self.chrome_state.floating_menu = None;
+        self.chrome_state.mark_dirty();
         self.snapshot_dirty = true;
     }
 
@@ -321,12 +324,13 @@ impl HostBridgeSession {
     /// `pointer_pos` beschreibt die aktuelle Pointer-Position in Host-Pixeln.
     /// Ist keine Position verfuegbar, wird bei Aktivierung kein Menue geoeffnet.
     pub fn toggle_floating_menu(&mut self, kind: FloatingMenuKind, pointer_pos: Option<Vec2>) {
-        let next_menu = match self.state.ui.floating_menu {
+        let next_menu = match self.chrome_state.floating_menu {
             Some(existing) if existing.kind == kind => None,
             Some(_) | None => pointer_pos.map(|pos| FloatingMenuState { kind, pos }),
         };
 
-        self.state.ui.floating_menu = next_menu;
+        self.chrome_state.floating_menu = next_menu;
+        self.chrome_state.mark_dirty();
         self.snapshot_dirty = true;
     }
 
@@ -449,8 +453,14 @@ impl HostBridgeSession {
     }
 
     /// Baut den host-neutralen Chrome-Snapshot fuer Menues, Defaults und Status.
+    ///
+    /// Die Felder `show_command_palette` und `show_options_dialog` stammen aus
+    /// `chrome_state`, das per Drain nach jedem Engine-Intent synchronisiert wird.
     pub fn build_host_chrome_snapshot(&self) -> HostChromeSnapshot {
-        crate::dispatch::build_host_chrome_snapshot(&self.state)
+        let mut snapshot = crate::dispatch::build_host_chrome_snapshot(&self.state);
+        snapshot.show_command_palette = self.chrome_state.show_command_palette;
+        snapshot.show_options_dialog = self.chrome_state.show_options_dialog;
+        snapshot
     }
 
     /// Baut den host-neutralen Route-Tool-Viewport-Snapshot.
@@ -477,6 +487,23 @@ impl HostBridgeSession {
 
         self.snapshot_cache = build_snapshot(&self.state);
         self.snapshot_dirty = false;
+    }
+
+    /// Spiegelt Engine-UI-Request-Flags in den host-lokalen Chrome-State.
+    ///
+    /// Wird nach jedem `apply_action()`/`apply_intent()` aufgerufen, damit
+    /// `chrome_state` immer die aktuellen Engine-Werte fuer `show_command_palette`
+    /// und `show_options_dialog` enthaelt.
+    fn sync_chrome_from_engine(&mut self) {
+        let show_cmd = self.state.ui.show_command_palette;
+        let show_opts = self.state.ui.show_options_dialog;
+        if self.chrome_state.show_command_palette != show_cmd
+            || self.chrome_state.show_options_dialog != show_opts
+        {
+            self.chrome_state.show_command_palette = show_cmd;
+            self.chrome_state.show_options_dialog = show_opts;
+            self.chrome_state.mark_dirty();
+        }
     }
 }
 

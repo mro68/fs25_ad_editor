@@ -97,13 +97,14 @@ impl EditorApp {
 
     pub(super) fn maybe_request_repaint(&self, ctx: &egui::Context, has_meaningful_events: bool) {
         let state = self.session.app_state();
+        let chrome = self.session.chrome_state();
         if has_meaningful_events
             || ctx.input(|i| i.pointer.is_moving())
-            || state.ui.show_command_palette
-            || state.ui.floating_menu.is_some()
+            || chrome.show_command_palette
+            || chrome.floating_menu.is_some()
             || state.ui.show_heightmap_warning
             || state.ui.marker_dialog.visible
-            || state.ui.show_options_dialog
+            || chrome.show_options_dialog
         {
             ctx.request_repaint();
         }
