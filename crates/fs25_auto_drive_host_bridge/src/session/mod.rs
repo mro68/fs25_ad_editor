@@ -10,6 +10,9 @@ use fs25_auto_drive_engine::shared::{EditorOptions, RenderAssetsSnapshot, Render
 use glam::Vec2;
 use indexmap::IndexSet;
 
+mod chrome_state;
+pub use chrome_state::HostLocalDialogState;
+
 use crate::dispatch::HostViewportInputState;
 use crate::dto::{
     HostActiveTool, HostChromeSnapshot, HostDialogRequest, HostDialogResult,
@@ -150,6 +153,8 @@ pub struct HostBridgeSession {
     viewport_input_state: HostViewportInputState,
     snapshot_cache: HostSessionSnapshot,
     snapshot_dirty: bool,
+    /// Host-lokaler Chrome- und Dialog-Sichtbarkeitszustand.
+    chrome_state: HostLocalDialogState,
 }
 
 impl HostBridgeSession {
@@ -164,6 +169,7 @@ impl HostBridgeSession {
             viewport_input_state: HostViewportInputState::default(),
             snapshot_cache,
             snapshot_dirty: false,
+            chrome_state: HostLocalDialogState::new(),
         }
     }
 
@@ -221,6 +227,20 @@ impl HostBridgeSession {
     /// die in `HostSessionSnapshot` gespiegelt werden.
     pub fn mark_snapshot_dirty(&mut self) {
         self.snapshot_dirty = true;
+    }
+
+    /// Liefert eine read-only Referenz auf den host-lokalen Chrome-/Dialog-Zustand.
+    pub fn chrome_state(&self) -> &HostLocalDialogState {
+        &self.chrome_state
+    }
+
+    /// Liefert eine mutable Referenz auf den host-lokalen Chrome-/Dialog-Zustand.
+    ///
+    /// Aenderungen ueber diesen Accessor setzen automatisch `chrome_dirty` im
+    /// `HostLocalDialogState`. Der Session-Snapshot wird *nicht* automatisch
+    /// als dirty markiert — bei Bedarf `mark_snapshot_dirty()` aufrufen.
+    pub fn chrome_state_mut(&mut self) -> &mut HostLocalDialogState {
+        &mut self.chrome_state
     }
 
     /// Liefert den schmalen Properties-/Edit-Panel-Zugriff.
