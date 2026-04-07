@@ -21,9 +21,7 @@ fn render_route_tool_group_menu(
     group: HostRouteToolGroup,
 ) {
     let lang = host_chrome_snapshot.options.language;
-    let active_route_id = host_chrome_snapshot
-        .active_route_tool
-        .map(crate::ui::common::host_route_tool_to_engine);
+    let active_route_id = host_chrome_snapshot.active_route_tool.map(crate::ui::common::host_route_tool_to_engine);
 
     let group_label_key = match group {
         HostRouteToolGroup::Basics => route_tool_group_label_key(RouteToolGroup::Basics),
@@ -41,6 +39,7 @@ fn render_route_tool_group_menu(
                 egui::Button::new(t(lang, route_tool_label_key(engine_tool_id)))
                     .selected(active_route_id == Some(engine_tool_id)),
             );
+
 
             let response = if entry.enabled {
                 response.on_hover_text(t(lang, route_tool_label_key(engine_tool_id)))

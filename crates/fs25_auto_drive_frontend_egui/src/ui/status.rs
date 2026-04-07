@@ -6,7 +6,10 @@ use crate::ui::common::host_active_tool_to_editor;
 use fs25_auto_drive_host_bridge::HostChromeSnapshot;
 
 /// Rendert die Status-Bar
-pub fn render_status_bar(ctx: &egui::Context, host_chrome_snapshot: &HostChromeSnapshot) {
+pub fn render_status_bar(
+    ctx: &egui::Context,
+    host_chrome_snapshot: &HostChromeSnapshot,
+) {
     let mut top_ui = crate::ui::common::create_top_level_ui(ctx, "status_bar_top_level");
     render_status_bar_inside(&mut top_ui, host_chrome_snapshot);
 }
@@ -120,3 +123,4 @@ pub(crate) fn render_status_bar_inside(
         });
     });
 }
+
