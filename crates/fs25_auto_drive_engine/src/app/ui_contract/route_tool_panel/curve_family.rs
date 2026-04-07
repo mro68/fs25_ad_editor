@@ -13,11 +13,18 @@ pub enum CurveDegreeChoice {
     Cubic,
 }
 
+/// Semantischer Hinweis fuer die Tangenten-Sektion im Kurven-Tool.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum TangentHelpHint {
+    /// Start- und Endpunkt noch nicht gesetzt; Tangenten koennen noch nicht gewaehlt werden.
+    SetStartEnd,
+}
+
 /// Panelzustand der Tangenten-Sektion im Kurven-Tool.
 #[derive(Debug, Clone, PartialEq)]
 pub struct CurveTangentsPanelState {
-    /// Optionaler Hinweistext fuer die Sektion.
-    pub help_text: Option<String>,
+    /// Optionaler semantischer Hinweis fuer die Sektion.
+    pub help_hint: Option<TangentHelpHint>,
     /// Auswahl fuer die Start-Tangente.
     pub start: TangentSelectionState,
     /// Auswahl fuer die End-Tangente.

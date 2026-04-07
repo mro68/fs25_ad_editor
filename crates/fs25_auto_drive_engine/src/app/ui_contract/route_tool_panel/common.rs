@@ -85,13 +85,22 @@ pub enum SegmentConfigPanelAction {
     SetNodeCount(usize),
 }
 
+/// Semantischer Grund fuer die Anzeige der Leer-/Standard-Option einer Tangenten-Auswahl.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum TangentNoneReason {
+    /// Keine Verbindung am Snap-Punkt vorhanden.
+    NoConnection,
+    /// Verbindungen vorhanden, aber keine Tangente ausgewaehlt.
+    NoTangent,
+    /// Standard-Tangente (z.B. Catmull-Rom-Spline).
+    UseDefault,
+}
+
 /// Auswahlzustand fuer eine einzelne Tangenten-Auswahl.
 #[derive(Debug, Clone, PartialEq)]
 pub struct TangentSelectionState {
-    /// Anzeigename der Auswahl.
-    pub label: String,
-    /// Label fuer die manuelle/fehlende Auswahl.
-    pub none_label: String,
+    /// Semantischer Grund fuer die Null-/Standard-Option.
+    pub none_reason: TangentNoneReason,
     /// Aktuell gewaehlte Tangente.
     pub current: TangentSource,
     /// Verfuegbare Verbindungsoptionen ohne die `None`-Variante.

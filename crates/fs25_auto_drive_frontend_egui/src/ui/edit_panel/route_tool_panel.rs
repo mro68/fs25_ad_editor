@@ -8,12 +8,12 @@ use crate::app::ui_contract::{
     ParkingPanelState, ParkingRampSideChoice, RouteOffsetPanelAction, RouteOffsetPanelState,
     RouteToolConfigState, RouteToolPanelAction, RouteToolPanelState, SegmentConfigPanelAction,
     SegmentConfigPanelState, SmoothCurvePanelAction, SmoothCurvePanelState, SplinePanelAction,
-    SplinePanelState, StraightPanelAction, StraightPanelState, TangentSelectionState,
-    BYPASS_BASE_SPACING_LIMITS, BYPASS_OFFSET_LIMITS, PARKING_BAY_LENGTH_LIMITS,
-    PARKING_ENTRY_EXIT_T_LIMITS, PARKING_MAX_NODE_DISTANCE_LIMITS, PARKING_NUM_ROWS_LIMITS,
-    PARKING_RAMP_LENGTH_LIMITS, PARKING_ROTATION_STEP_LIMITS, PARKING_ROW_SPACING_LIMITS,
-    ROUTE_OFFSET_BASE_SPACING_LIMITS, ROUTE_OFFSET_DISTANCE_LIMITS, SMOOTH_CURVE_MAX_ANGLE_LIMITS,
-    SMOOTH_CURVE_MIN_DISTANCE_LIMITS,
+    SplinePanelState, StraightPanelAction, StraightPanelState, TangentHelpHint, TangentNoneReason,
+    TangentSelectionState, BYPASS_BASE_SPACING_LIMITS, BYPASS_OFFSET_LIMITS,
+    PARKING_BAY_LENGTH_LIMITS, PARKING_ENTRY_EXIT_T_LIMITS, PARKING_MAX_NODE_DISTANCE_LIMITS,
+    PARKING_NUM_ROWS_LIMITS, PARKING_RAMP_LENGTH_LIMITS, PARKING_ROTATION_STEP_LIMITS,
+    PARKING_ROW_SPACING_LIMITS, ROUTE_OFFSET_BASE_SPACING_LIMITS, ROUTE_OFFSET_DISTANCE_LIMITS,
+    SMOOTH_CURVE_MAX_ANGLE_LIMITS, SMOOTH_CURVE_MIN_DISTANCE_LIMITS,
 };
 use crate::app::{AppIntent, ConnectionDirection, ConnectionPriority};
 use crate::ui::common::{apply_wheel_step_default_enabled, apply_wheel_step_usize};
@@ -343,21 +343,22 @@ fn render_segment_distance_only(
 
 fn render_tangent_selection(
     ui: &mut egui::Ui,
+    label: &str,
     selection: &TangentSelectionState,
     events: &mut Vec<AppIntent>,
     map_action: impl Fn(TangentSource) -> RouteToolPanelAction,
 ) {
     let selected_text = tangent_selection_label(selection);
     ui.horizontal(|ui| {
-        ui.label(&selection.label);
+        ui.label(label);
         ui.add_enabled_ui(selection.enabled, |ui| {
-            egui::ComboBox::from_id_salt(("tangent_selection", selection.label.as_str()))
+            egui::ComboBox::from_id_salt(("tangent_selection", label))
                 .selected_text(selected_text)
                 .show_ui(ui, |ui| {
                     if ui
                         .selectable_label(
                             selection.current == TangentSource::None,
-                            &selection.none_label,
+                            tangent_none_reason_label(selection.none_reason),
                         )
                         .clicked()
                     {
@@ -588,14 +589,22 @@ fn push_panel_action(events: &mut Vec<AppIntent>, action: PanelAction) {
 
 fn tangent_selection_label(selection: &TangentSelectionState) -> String {
     if selection.current == TangentSource::None {
-        selection.none_label.clone()
+        tangent_none_reason_label(selection.none_reason).to_owned()
     } else {
         selection
             .options
             .iter()
             .find(|option| option.source == selection.current)
             .map(|option| option.label.clone())
-            .unwrap_or_else(|| selection.none_label.clone())
+            .unwrap_or_else(|| tangent_none_reason_label(selection.none_reason).to_owned())
+    }
+}
+
+fn tangent_none_reason_label(reason: TangentNoneReason) -> &'static str {
+    match reason {
+        TangentNoneReason::NoConnection => "Keine Verbindung",
+        TangentNoneReason::NoTangent => "Keine Tangente",
+        TangentNoneReason::UseDefault => "Standard",
     }
 }
 

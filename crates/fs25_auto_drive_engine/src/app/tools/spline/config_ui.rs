@@ -6,7 +6,7 @@ use super::SplineTool;
 use crate::app::tool_contract::TangentSource;
 use crate::app::ui_contract::{
     RouteToolPanelEffect, SegmentConfigPanelAction, SplinePanelAction, SplinePanelState,
-    TangentOptionData, TangentSelectionState,
+    TangentNoneReason, TangentOptionData, TangentSelectionState,
 };
 
 impl SplineTool {
@@ -28,7 +28,6 @@ impl SplineTool {
             start_tangent: adjusting
                 .then(|| {
                     tangent_selection_state(
-                        "Tangente Start:",
                         self.tangents.tangent_start,
                         &self.tangents.start_neighbors,
                     )
@@ -37,7 +36,6 @@ impl SplineTool {
             end_tangent: adjusting
                 .then(|| {
                     tangent_selection_state(
-                        "Tangente Ende:",
                         self.tangents.tangent_end,
                         &self.tangents.end_neighbors,
                     )
@@ -118,13 +116,11 @@ impl SplineTool {
 }
 
 fn tangent_selection_state(
-    label: &str,
     current: TangentSource,
     neighbors: &[crate::core::ConnectedNeighbor],
 ) -> TangentSelectionState {
     TangentSelectionState {
-        label: label.to_owned(),
-        none_label: "Standard".to_owned(),
+        none_reason: TangentNoneReason::UseDefault,
         current,
         options: tangent_options(neighbors)
             .into_iter()
