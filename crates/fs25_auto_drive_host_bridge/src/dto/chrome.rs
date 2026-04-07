@@ -1,6 +1,6 @@
 //! Chrome-Snapshot-DTOs fuer host-neutrale Menues und Panels.
 
-use fs25_auto_drive_engine::shared::EditorOptions;
+use fs25_auto_drive_engine::shared::{EditorOptions, RenderQuality};
 use serde::{Deserialize, Serialize};
 
 use super::actions::HostActiveTool;
@@ -60,4 +60,14 @@ pub struct HostChromeSnapshot {
     pub selection_count: usize,
     /// Beispiel-ID eines selektierten Nodes (None wenn keine Selektion).
     pub selection_example_id: Option<u64>,
+    /// Ob eine Hintergrundkarte geladen ist.
+    pub background_map_loaded: bool,
+    /// Aktuelle Render-Qualitaetsstufe.
+    pub render_quality: RenderQuality,
+    /// Ob Farmland-Polygone vorhanden sind (fuer Extras-Menu-Eintraege).
+    pub has_farmland: bool,
+    /// Ob der Hintergrund aktuell sichtbar ist.
+    pub background_visible: bool,
+    /// Aktueller Skalierungsfaktor des Hintergrunds.
+    pub background_scale: f32,
 }

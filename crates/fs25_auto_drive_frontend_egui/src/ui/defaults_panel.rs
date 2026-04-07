@@ -145,8 +145,8 @@ pub(crate) fn render_route_defaults_panel_inside(
     let mut events = Vec::new();
     let lang = state.options.language;
     let active_tool = host_active_tool_to_editor(host_chrome_snapshot.active_tool);
-    let icon_color = function_icon_color(state);
-    let active_icon_color = accent_icon_color(state);
+    let icon_color = function_icon_color(host_chrome_snapshot);
+    let active_icon_color = accent_icon_color(host_chrome_snapshot);
 
     let active_route_id = host_chrome_snapshot.active_route_tool;
     let is_werkzeug_active = matches!(
