@@ -9,11 +9,11 @@
 //! sondern separat im Tool-Editing-Layer gehalten.
 //!
 //! # Modulstruktur
-//! - [`types`]: Tool-neutrale Datentypen (`BoundaryInfo`, `GroupRecord`)
-//! - [`query`]: Lookup- und Query-Methoden
-//! - [`lock`]: Lock- und Edit-Guard-Methoden
-//! - [`mutation`]: Mutierende Methoden
-//! - [`boundary_cache`]: Boundary-Cache-Logik
+//! - `types.rs`: Tool-neutrale Datentypen (`BoundaryInfo`, `GroupRecord`)
+//! - `query.rs`: Lookup- und Query-Methoden
+//! - `lock.rs`: Lock- und Edit-Guard-Methoden
+//! - `mutation.rs`: Mutierende Methoden
+//! - `boundary_cache.rs`: Boundary-Cache-Logik
 //! - Dieses Modul: [`GroupRegistry`] mit CRUD-Kernoperationen
 
 mod types;
