@@ -4,9 +4,7 @@ use crate::app::ui_contract::{panel_action_to_intent, HostUiSnapshot};
 use crate::app::AppIntent;
 use crate::ui;
 use eframe::egui;
-use fs25_auto_drive_host_bridge::{
-    map_host_action_to_intent, HostDialogResult, HostSessionAction,
-};
+use fs25_auto_drive_host_bridge::{map_host_action_to_intent, HostDialogResult, HostSessionAction};
 
 use super::EditorApp;
 

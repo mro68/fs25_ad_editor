@@ -896,19 +896,21 @@ mod tests {
         let mut session = snapshot_measurement_session(32);
 
         {
+            // HostLocalDialogState-Mutation: show_command_palette setzen.
+            // Diese Mutation liegt im host-lokalen Chrome-State, nicht im Engine-State.
             let dialog_state = session.dialog_ui_state_mut();
-            dialog_state.ui.status_message = Some("Lokale Mutation".to_string());
+            dialog_state.ui.show_command_palette = true;
         }
         assert!(
             !session.snapshot_dirty,
-            "Lokale UI-Seams invalidieren den Snapshot nicht implizit"
+            "Lokale Chrome-State-Muatationen invalidieren den Snapshot nicht implizit"
         );
 
         session.mark_snapshot_dirty();
         assert!(session.snapshot_dirty);
 
-        let snapshot = session.snapshot_owned();
-        assert_eq!(snapshot.status_message.as_deref(), Some("Lokale Mutation"));
+        // Nach mark_snapshot_dirty() wird der Snapshot bei naechstem Zugriff neu gebaut.
+        let _snapshot = session.snapshot_owned();
         assert!(!session.snapshot_dirty);
     }
 
@@ -1238,24 +1240,23 @@ mod tests {
 
         session.toggle_floating_menu(FloatingMenuKind::Tools, Some(Vec2::new(10.0, 20.0)));
         let tools_menu = session
-            .app_state()
-            .ui
+            .chrome_state()
             .floating_menu
             .expect("Tools-Menue muss geoeffnet sein");
         assert_eq!(tools_menu.kind, FloatingMenuKind::Tools);
         assert_eq!(tools_menu.pos, Vec2::new(10.0, 20.0));
 
         session.toggle_floating_menu(FloatingMenuKind::Tools, Some(Vec2::new(30.0, 40.0)));
-        assert!(session.app_state().ui.floating_menu.is_none());
+        assert!(session.chrome_state().floating_menu.is_none());
 
         session.toggle_floating_menu(FloatingMenuKind::Zoom, None);
-        assert!(session.app_state().ui.floating_menu.is_none());
+        assert!(session.chrome_state().floating_menu.is_none());
 
         session.toggle_floating_menu(FloatingMenuKind::Zoom, Some(Vec2::new(5.0, 6.0)));
-        assert!(session.app_state().ui.floating_menu.is_some());
+        assert!(session.chrome_state().floating_menu.is_some());
 
         session.clear_floating_menu();
-        assert!(session.app_state().ui.floating_menu.is_none());
+        assert!(session.chrome_state().floating_menu.is_none());
     }
 
     #[test]
