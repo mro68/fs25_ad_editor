@@ -35,10 +35,7 @@ impl SplineTool {
                 .filter(|state| !state.options.is_empty()),
             end_tangent: adjusting
                 .then(|| {
-                    tangent_selection_state(
-                        self.tangents.tangent_end,
-                        &self.tangents.end_neighbors,
-                    )
+                    tangent_selection_state(self.tangents.tangent_end, &self.tangents.end_neighbors)
                 })
                 .filter(|state| !state.options.is_empty()),
             segment: self.seg.panel_state(

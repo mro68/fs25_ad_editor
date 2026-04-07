@@ -284,9 +284,13 @@ pub struct ZipBrowserState {
     pub filter_overview: bool,
 }
 
-/// UI-bezogener Anwendungszustand
+/// UI-bezogener Anwendungszustand der Engine.
+///
+/// Enthält fachliche Felder (Dialog-Queues, Dateipfade, Status, Workflow-Flags)
+/// sowie Sichtbarkeits-Requests für Chrome-Dialoge (werden von der HostBridge
+/// per Drain in `HostLocalDialogState` gespiegelt).
 #[derive(Default)]
-pub struct UiState {
+pub struct EngineUiState {
     /// Ausstehende host-native Dialog-Anforderungen (Datei-/Pfad-Dialoge).
     pub dialog_requests: Vec<DialogRequest>,
     /// Ob die Command-Palette angezeigt werden soll
@@ -329,7 +333,10 @@ pub struct UiState {
     pub confirm_dissolve_group_id: Option<u64>,
 }
 
-impl UiState {
+/// Rückwärtskompatibilitäts-Alias: `UiState` → `EngineUiState`.
+pub type UiState = EngineUiState;
+
+impl EngineUiState {
     /// Erstellt den Standard-UI-Zustand (alle Dialoge geschlossen).
     pub fn new() -> Self {
         Self {
