@@ -31,6 +31,7 @@ pub use limits::{
     ROUTE_OFFSET_BASE_SPACING_LIMITS, ROUTE_OFFSET_DISTANCE_LIMITS, SMOOTH_CURVE_MAX_ANGLE_LIMITS,
     SMOOTH_CURVE_MIN_DISTANCE_LIMITS,
 };
+use serde::{Deserialize, Serialize};
 
 /// Tool-spezifischer Read-Zustand fuer das Panel.
 #[derive(Debug, Clone, PartialEq)]
@@ -58,7 +59,8 @@ pub enum RouteToolConfigState {
 }
 
 /// Semantische Panel-Aktion fuer das aktive Route-Tool.
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(tag = "kind", content = "value", rename_all = "snake_case")]
 pub enum RouteToolPanelAction {
     /// Panel-Aktion fuer das Gerade-Strecke-Tool.
     Straight(StraightPanelAction),

@@ -5,8 +5,9 @@ mod texture_registration_v4;
 
 use anyhow::{anyhow, Context, Result};
 use fs25_auto_drive_host_bridge::{
-    HostBridgeSession, HostChromeSnapshot, HostDialogRequest, HostDialogResult, HostSessionAction,
-    HostSessionSnapshot, HostViewportGeometrySnapshot,
+    HostBridgeSession, HostChromeSnapshot, HostDialogRequest, HostDialogResult,
+    HostRouteToolViewportSnapshot, HostSessionAction, HostSessionSnapshot,
+    HostViewportGeometrySnapshot,
 };
 use std::cell::RefCell;
 use std::ffi::{c_char, CStr, CString};
@@ -16,7 +17,7 @@ thread_local! {
     static LAST_ERROR: RefCell<Option<String>> = const { RefCell::new(None) };
 }
 
-const FS25AD_HOST_BRIDGE_ABI_VERSION: u32 = 3;
+const FS25AD_HOST_BRIDGE_ABI_VERSION: u32 = 4;
 
 /// Opaquer Session-Handle mit serialisiertem Zugriff auf die kanonische Session.
 pub struct HostBridgeSessionHandle {
@@ -181,6 +182,25 @@ pub extern "C" fn fs25ad_host_bridge_session_chrome_snapshot_json(
     }
 }
 
+/// Serialisiert den Route-Tool-Viewport-Snapshot als UTF-8-JSON.
+#[unsafe(no_mangle)]
+pub extern "C" fn fs25ad_host_bridge_session_route_tool_viewport_json(
+    session: *mut HostBridgeSessionHandle,
+) -> *mut c_char {
+    clear_last_error();
+
+    match with_session_mut(session, |session| {
+        let snapshot: HostRouteToolViewportSnapshot = session.build_route_tool_viewport_snapshot();
+        serialize_json(&snapshot)
+    }) {
+        Ok(payload) => payload,
+        Err(error) => {
+            set_last_error(error.to_string());
+            std::ptr::null_mut()
+        }
+    }
+}
+
 /// Wendet eine kanonische `HostSessionAction` an, uebergeben als UTF-8-JSON.
 #[unsafe(no_mangle)]
 pub extern "C" fn fs25ad_host_bridge_session_apply_action_json(
@@ -268,16 +288,18 @@ mod tests {
         fs25ad_host_bridge_abi_version, fs25ad_host_bridge_last_error_message,
         fs25ad_host_bridge_session_apply_action_json,
         fs25ad_host_bridge_session_chrome_snapshot_json, fs25ad_host_bridge_session_dispose,
-        fs25ad_host_bridge_session_new, fs25ad_host_bridge_session_snapshot_json,
+        fs25ad_host_bridge_session_new, fs25ad_host_bridge_session_route_tool_viewport_json,
+        fs25ad_host_bridge_session_snapshot_json,
         fs25ad_host_bridge_session_submit_dialog_result_json,
         fs25ad_host_bridge_session_take_dialog_requests_json,
         fs25ad_host_bridge_session_viewport_geometry_json, fs25ad_host_bridge_string_free,
         FS25AD_HOST_BRIDGE_ABI_VERSION,
     };
     use fs25_auto_drive_host_bridge::{
-        HostDialogRequest, HostDialogRequestKind, HostDialogResult, HostInputModifiers,
-        HostPointerButton, HostSessionAction, HostSessionSnapshot, HostTapKind,
-        HostViewportGeometrySnapshot, HostViewportInputBatch, HostViewportInputEvent,
+        HostActiveTool, HostDialogRequest, HostDialogRequestKind, HostDialogResult,
+        HostInputModifiers, HostPointerButton, HostRouteToolAction, HostRouteToolId,
+        HostRouteToolViewportSnapshot, HostSessionAction, HostSessionSnapshot, HostTangentSource,
+        HostTapKind, HostViewportGeometrySnapshot, HostViewportInputBatch, HostViewportInputEvent,
     };
     use std::ffi::{CStr, CString};
 
@@ -291,13 +313,26 @@ mod tests {
         value
     }
 
+    fn apply_action_json(session: *mut super::HostBridgeSessionHandle, action: HostSessionAction) {
+        let action_json =
+            CString::new(serde_json::to_string(&action).expect("action JSON must serialize"))
+                .expect("CString must build");
+
+        if fs25ad_host_bridge_session_apply_action_json(session, action_json.as_ptr()) {
+            return;
+        }
+
+        let error = read_and_free_string(fs25ad_host_bridge_last_error_message());
+        panic!("HostSessionAction failed unexpectedly: {error}");
+    }
+
     #[test]
     fn ffi_transport_reports_stable_abi_version() {
         assert_eq!(
             fs25ad_host_bridge_abi_version(),
             FS25AD_HOST_BRIDGE_ABI_VERSION
         );
-        assert_eq!(fs25ad_host_bridge_abi_version(), 3);
+        assert_eq!(fs25ad_host_bridge_abi_version(), 4);
     }
 
     #[test]
@@ -326,6 +361,14 @@ mod tests {
             serde_json::from_str(&chrome_snapshot_json).expect("chrome snapshot JSON must parse");
         assert!(chrome_snapshot.show_command_palette);
         assert_eq!(chrome_snapshot.status_message, None);
+
+        let route_tool_viewport_json =
+            read_and_free_string(fs25ad_host_bridge_session_route_tool_viewport_json(session));
+        let route_tool_viewport: HostRouteToolViewportSnapshot =
+            serde_json::from_str(&route_tool_viewport_json)
+                .expect("route tool viewport JSON must parse");
+        assert!(!route_tool_viewport.has_pending_input);
+        assert!(route_tool_viewport.drag_targets.is_empty());
 
         let request_action_json = CString::new(
             serde_json::to_string(&HostSessionAction::RequestHeightmapSelection)
@@ -425,6 +468,154 @@ mod tests {
 
         let error = read_and_free_string(fs25ad_host_bridge_last_error_message());
         assert!(error.contains("HostSessionAction"));
+
+        fs25ad_host_bridge_session_dispose(session);
+    }
+
+    #[test]
+    fn ffi_route_tool_write_actions_cover_anchors_click_drag_lasso_and_related_json_paths() {
+        let session = fs25ad_host_bridge_session_new();
+        assert!(!session.is_null());
+
+        apply_action_json(session, HostSessionAction::OpenFile);
+
+        let requests_json = read_and_free_string(
+            fs25ad_host_bridge_session_take_dialog_requests_json(session),
+        );
+        let requests: Vec<HostDialogRequest> =
+            serde_json::from_str(&requests_json).expect("dialog request JSON must parse");
+        assert!(!requests.is_empty());
+        assert_eq!(requests[0].kind, HostDialogRequestKind::OpenFile);
+
+        let test_map_path = format!(
+            "{}/../../ad_sample_data/AutoDrive_config-test.xml",
+            env!("CARGO_MANIFEST_DIR")
+        );
+        let open_result_json = CString::new(
+            serde_json::to_string(&HostDialogResult::PathSelected {
+                kind: HostDialogRequestKind::OpenFile,
+                path: test_map_path,
+            })
+            .expect("dialog result JSON must serialize"),
+        )
+        .expect("CString must build");
+        assert!(fs25ad_host_bridge_session_submit_dialog_result_json(
+            session,
+            open_result_json.as_ptr()
+        ));
+
+        let geometry_json = read_and_free_string(
+            fs25ad_host_bridge_session_viewport_geometry_json(session, 1024.0, 768.0),
+        );
+        let geometry: HostViewportGeometrySnapshot =
+            serde_json::from_str(&geometry_json).expect("geometry JSON must parse");
+        assert!(geometry.nodes.len() >= 2);
+
+        let start_id = geometry.nodes[0].id;
+        let end_id = geometry.nodes[1].id;
+        let start_pos = geometry.nodes[0].position;
+        let end_pos = geometry.nodes[1].position;
+
+        apply_action_json(
+            session,
+            HostSessionAction::SetEditorTool {
+                tool: HostActiveTool::Route,
+            },
+        );
+
+        apply_action_json(
+            session,
+            HostSessionAction::RouteTool {
+                action: HostRouteToolAction::SelectToolWithAnchors {
+                    tool: HostRouteToolId::CurveCubic,
+                    start_node_id: start_id,
+                    end_node_id: end_id,
+                },
+            },
+        );
+
+        apply_action_json(
+            session,
+            HostSessionAction::RouteTool {
+                action: HostRouteToolAction::Click {
+                    world_pos: start_pos,
+                    ctrl: false,
+                },
+            },
+        );
+        apply_action_json(
+            session,
+            HostSessionAction::RouteTool {
+                action: HostRouteToolAction::DragStart {
+                    world_pos: start_pos,
+                },
+            },
+        );
+        apply_action_json(
+            session,
+            HostSessionAction::RouteTool {
+                action: HostRouteToolAction::DragUpdate {
+                    world_pos: [
+                        (start_pos[0] + end_pos[0]) * 0.5,
+                        (start_pos[1] + end_pos[1]) * 0.5,
+                    ],
+                },
+            },
+        );
+        apply_action_json(
+            session,
+            HostSessionAction::RouteTool {
+                action: HostRouteToolAction::DragEnd,
+            },
+        );
+
+        apply_action_json(
+            session,
+            HostSessionAction::RouteTool {
+                action: HostRouteToolAction::LassoCompleted {
+                    polygon: vec![
+                        start_pos,
+                        [end_pos[0], start_pos[1]],
+                        end_pos,
+                        [start_pos[0], end_pos[1]],
+                    ],
+                },
+            },
+        );
+
+        apply_action_json(
+            session,
+            HostSessionAction::RouteTool {
+                action: HostRouteToolAction::ApplyTangent {
+                    start: HostTangentSource::None,
+                    end: HostTangentSource::None,
+                },
+            },
+        );
+        apply_action_json(
+            session,
+            HostSessionAction::RouteTool {
+                action: HostRouteToolAction::ScrollRotate { delta: 1.0 },
+            },
+        );
+        apply_action_json(
+            session,
+            HostSessionAction::RouteTool {
+                action: HostRouteToolAction::IncreaseNodeCount,
+            },
+        );
+        apply_action_json(
+            session,
+            HostSessionAction::RouteTool {
+                action: HostRouteToolAction::DecreaseSegmentLength,
+            },
+        );
+
+        let viewport_json =
+            read_and_free_string(fs25ad_host_bridge_session_route_tool_viewport_json(session));
+        let viewport_snapshot: HostRouteToolViewportSnapshot =
+            serde_json::from_str(&viewport_json).expect("route tool viewport JSON must parse");
+        assert!(viewport_snapshot.has_pending_input);
 
         fs25ad_host_bridge_session_dispose(session);
     }

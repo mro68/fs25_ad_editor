@@ -2,7 +2,7 @@
 
 ## Ueberblick
 
-`fs25_auto_drive_host_bridge_ffi` ist der duenner Linux-first-Transportadapter ueber der kanonischen `HostBridgeSession`. Die Crate fuehrt keine zweite fachliche Surface ein: Mutationen laufen weiter ueber `HostSessionAction`, Dialoge ueber `HostDialogRequest`/`HostDialogResult`, Session-Polling ueber `HostSessionSnapshot` und der minimale Viewport-Read-Pfad ueber `HostViewportGeometrySnapshot`.
+`fs25_auto_drive_host_bridge_ffi` ist der duenner Linux-first-Transportadapter ueber der kanonischen `HostBridgeSession`. Die Crate fuehrt keine zweite fachliche Surface ein: Mutationen laufen weiter ueber `HostSessionAction` (inklusive expliziter Route-Tool-Action-Familie), Dialoge ueber `HostDialogRequest`/`HostDialogResult`, Session-Polling ueber `HostSessionSnapshot`, Chrome-Polling ueber `HostChromeSnapshot` und Route-Tool-Viewport-Polling ueber `HostRouteToolViewportSnapshot`.
 
 Seit dem Hard-Cut ist der RGBA-Pixelbuffer-v1 entfernt. Der einzige native Render-Transportpfad ist jetzt Shared-Texture mit explizitem Acquire/Release-Lifecycle.
 
@@ -18,7 +18,7 @@ Fuer native C/C++-Hosts liegt der stabile Vertragsheader unter `include/fs25ad_h
 
 | Typ | Zweck |
 |---|---|
-| `FS25AD_HOST_BRIDGE_ABI_VERSION` | Explizite ABI-Version des FFI-Vertrags (`3`) |
+| `FS25AD_HOST_BRIDGE_ABI_VERSION` | Explizite ABI-Version des FFI-Vertrags (`4`) |
 | `FS25AD_HOST_BRIDGE_SHARED_TEXTURE_CONTRACT_VERSION` | Explizite Version des opaque Shared-Texture-Vertrags (`3`) |
 | `FS25AD_HOST_BRIDGE_TEXTURE_REGISTRATION_V4_CONTRACT_VERSION` | Explizite Version des additiven Texture-Registration-v4-Vertrags (`4`) |
 | `*mut HostBridgeSession` | Opaquer Session-Handle fuer die kanonische Host-Bridge-Surface |
@@ -44,6 +44,7 @@ Fuer native C/C++-Hosts liegt der stabile Vertragsheader unter `include/fs25ad_h
 | `fs25ad_host_bridge_session_dispose(session)` | Gibt eine Session frei |
 | `fs25ad_host_bridge_session_snapshot_json(session) -> *mut c_char` | Liefert `HostSessionSnapshot` als UTF-8-JSON |
 | `fs25ad_host_bridge_session_chrome_snapshot_json(session) -> *mut c_char` | Liefert `HostChromeSnapshot` als UTF-8-JSON |
+| `fs25ad_host_bridge_session_route_tool_viewport_json(session) -> *mut c_char` | Liefert `HostRouteToolViewportSnapshot` als UTF-8-JSON |
 | `fs25ad_host_bridge_session_apply_action_json(session, action_json) -> bool` | Liest `HostSessionAction` aus UTF-8-JSON und mutiert die Session |
 | `fs25ad_host_bridge_session_take_dialog_requests_json(session) -> *mut c_char` | Liefert ein JSON-Array aus `HostDialogRequest` und drainet die Queue |
 | `fs25ad_host_bridge_session_submit_dialog_result_json(session, result_json) -> bool` | Liest `HostDialogResult` aus UTF-8-JSON und fuehrt ihn in die Session zurueck |
@@ -75,10 +76,11 @@ Fuer native C/C++-Hosts liegt der stabile Vertragsheader unter `include/fs25ad_h
 - Session-Handles sind opaque Pointer auf die kanonische `HostBridgeSession`.
 - Native Hosts pruefen beim Start mindestens `fs25ad_host_bridge_abi_version()` und fuer den Rendertransport zusaetzlich `fs25ad_host_bridge_shared_texture_contract_version()` gegen die Header-Makros.
 - Fuer den additiven v4-Pfad pruefen Hosts zusaetzlich `fs25ad_host_bridge_texture_registration_v4_contract_version()`.
-- Die allgemeine C-ABI ist seit dem additiven Export `fs25ad_host_bridge_session_chrome_snapshot_json(...)` ueber `FS25AD_HOST_BRIDGE_ABI_VERSION = 3` versioniert; der native Shared-Texture-Transport bleibt separat ueber `FS25AD_HOST_BRIDGE_SHARED_TEXTURE_CONTRACT_VERSION = 3` versioniert.
+- Die allgemeine C-ABI ist seit dem additiven Export `fs25ad_host_bridge_session_route_tool_viewport_json(...)` ueber `FS25AD_HOST_BRIDGE_ABI_VERSION = 4` versioniert; der native Shared-Texture-Transport bleibt separat ueber `FS25AD_HOST_BRIDGE_SHARED_TEXTURE_CONTRACT_VERSION = 3` versioniert.
 - `v4` ist additive Interop-Surface neben `v3`; `v3` wird nicht still umgedeutet.
 - Alle JSON-Payloads verwenden exakt die bereits in `fs25_auto_drive_host_bridge` definierten DTOs.
-- Schreibender Viewport-Input (`Resize`, Single-/Double-Taps, Pan/Move/Rect/Select-Lasso per Drag, Scroll-Zoom) wird weiterhin ohne neues Symbol als `HostSessionAction::SubmitViewportInput` ueber `fs25ad_host_bridge_session_apply_action_json(...)` transportiert. Route-Tool-Lasso bleibt dabei bewusst host-local und laeuft nicht ueber diese JSON-Surface.
+- Schreibender Viewport-Input (`Resize`, Single-/Double-Taps, Pan/Move/Rect/Select-Lasso per Drag, Scroll-Zoom) wird weiterhin ohne neues Symbol als `HostSessionAction::SubmitViewportInput` ueber `fs25ad_host_bridge_session_apply_action_json(...)` transportiert.
+- Route-Tool-Write-Pfade werden explizit als `HostSessionAction::RouteTool` ueber dieselbe JSON-Action-Surface transportiert (nicht ueber den generischen Viewport-Input-Vertrag).
 - Shared-Texture-Rendering nutzt pro Aufruf ausschliesslich den bestehenden Read-Seam `HostBridgeSession::build_render_frame(...)`.
 - Zugriffe auf Session- und Shared-Texture-Handle sind intern serialisiert (Mutex je Handle).
 - Fehler laufen minimal ueber `bool`/`null` plus `fs25ad_host_bridge_last_error_message()`.

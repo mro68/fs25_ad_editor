@@ -1,13 +1,20 @@
 use anyhow::Result;
+use fs25_auto_drive_engine::app::state::DistanzenState;
 use fs25_auto_drive_engine::app::ui_contract::{HostUiSnapshot, ViewportOverlaySnapshot};
-use fs25_auto_drive_engine::app::{AppController, AppState, EditorTool};
-use fs25_auto_drive_engine::shared::{RenderAssetsSnapshot, RenderScene};
+use fs25_auto_drive_engine::app::{
+    AppController, AppIntent, AppState, Camera2D, ConnectionDirection, ConnectionPriority,
+    EditorTool, FloatingMenuKind, FloatingMenuState, GroupEditState, GroupRegistry, RoadMap,
+    ToolEditStore, UiState,
+};
+use fs25_auto_drive_engine::shared::{EditorOptions, RenderAssetsSnapshot, RenderScene};
 use glam::Vec2;
+use indexmap::IndexSet;
 
 use crate::dispatch::HostViewportInputState;
 use crate::dto::{
-    HostActiveTool, HostChromeSnapshot, HostDialogRequest, HostDialogResult, HostSelectionSnapshot,
-    HostSessionAction, HostSessionSnapshot, HostViewportGeometrySnapshot, HostViewportSnapshot,
+    HostActiveTool, HostChromeSnapshot, HostDialogRequest, HostDialogResult,
+    HostRouteToolViewportSnapshot, HostSelectionSnapshot, HostSessionAction, HostSessionSnapshot,
+    HostViewportGeometrySnapshot, HostViewportSnapshot,
 };
 
 fn map_active_tool(tool: EditorTool) -> HostActiveTool {
@@ -51,6 +58,79 @@ pub struct HostRenderFrameSnapshot {
     pub scene: RenderScene,
     /// Langlebige Render-Assets inklusive Revisionen.
     pub assets: RenderAssetsSnapshot,
+}
+
+/// Schmaler State-Zugriff fuer Properties- und Edit-Panel im Host.
+///
+/// Die Struktur liefert genau die aktuell benoetigten Read-/Write-Felder,
+/// ohne den kompletten `AppState` als mutable Escape-Hatch freizugeben.
+pub struct HostPanelPropertiesState<'a> {
+    /// Aktuelle Karte (falls geladen).
+    pub road_map: Option<&'a RoadMap>,
+    /// Aktuelle Selektion der Node-IDs.
+    pub selected_node_ids: &'a IndexSet<u64>,
+    /// Standardrichtung fuer neue Verbindungen.
+    pub default_direction: ConnectionDirection,
+    /// Standardprioritaet fuer neue Verbindungen.
+    pub default_priority: ConnectionPriority,
+    /// Aktives Editor-Werkzeug.
+    pub active_tool: EditorTool,
+    /// Registry fuer Segment-/Gruppeninformationen.
+    pub group_registry: &'a GroupRegistry,
+    /// Store fuer tool-spezifische Edit-Payloads.
+    pub tool_edit_store: &'a ToolEditStore,
+    /// Aktiver Gruppen-Edit-State (falls vorhanden).
+    pub group_editing: Option<&'a GroupEditState>,
+    /// Lokaler Distanz-Dialogzustand fuer Properties/Edit-Panel.
+    pub distanzen: &'a mut DistanzenState,
+    /// Laufzeit-Optionen (werden im Edit-Panel lokal editiert).
+    pub options: &'a mut EditorOptions,
+}
+
+/// Schmaler Dialogzugriff fuer host-lokale Modalfenster.
+///
+/// Hosts koennen damit Dialog-UI mutieren, ohne direkten Vollzugriff auf den
+/// gesamten `AppState` zu erhalten.
+pub struct HostDialogUiState<'a> {
+    /// Aktuelle Karte (falls geladen).
+    pub road_map: Option<&'a RoadMap>,
+    /// Lokaler UI-Dialogzustand.
+    pub ui: &'a mut UiState,
+    /// Laufzeit-Optionen fuer dialogspezifische Einstellungen.
+    pub options: &'a mut EditorOptions,
+}
+
+/// Schmaler Viewport-Input-Zugriff fuer Host-Event-Sammler.
+///
+/// Kombiniert die benoetigten read-only Viewport-Daten mit dem lokal
+/// mutierbaren Distanzzustand.
+pub struct HostViewportInputContext<'a> {
+    /// Ob eine Paste-Vorschau aktiv ist.
+    pub paste_preview_active: bool,
+    /// Aktuelle Kamera des Viewports.
+    pub camera: &'a Camera2D,
+    /// Aktuelle Karte (falls geladen).
+    pub road_map: Option<&'a RoadMap>,
+    /// Aktuelle Selektion der Node-IDs.
+    pub selected_node_ids: &'a IndexSet<u64>,
+    /// Aktives Editor-Werkzeug.
+    pub active_tool: EditorTool,
+    /// Standardrichtung fuer neue Verbindungen.
+    pub default_direction: ConnectionDirection,
+    /// Standardprioritaet fuer neue Verbindungen.
+    pub default_priority: ConnectionPriority,
+    /// Laufzeitoptionen fuer Input-/Kontextmenue-Guards.
+    pub options: &'a EditorOptions,
+    /// Ob Clipboard-Daten zum Einfuegen vorhanden sind.
+    pub clipboard_has_nodes: bool,
+    /// Ob Farmland-Polygone fuer feldbezogene Aktionen verfuegbar sind.
+    pub farmland_available: bool,
+    /// Ob eine Gruppenbearbeitung aktiv ist.
+    pub group_editing_active: bool,
+    /// Registry fuer gruppenbezogene Kontextmenue-Optionen.
+    pub group_registry: &'a GroupRegistry,
+    /// Lokaler Distanzzustand (wird ueber Maus/Shortcuts mutiert).
+    pub distanzen: &'a mut DistanzenState,
 }
 
 /// Kompatibilitaetsalias fuer bestehende direkte Flutter-/FFI-Session-Importe.
@@ -103,6 +183,121 @@ impl HostBridgeSession {
             self.snapshot_dirty = true;
         }
         Ok(())
+    }
+
+    /// Verarbeitet einen `AppIntent` direkt ueber den App-Controller.
+    ///
+    /// Diese Methode bleibt als Uebergangs-Seam fuer Hosts, die bereits auf
+    /// Session-Ownership umgestellt sind, aber noch nicht alle Schreibpfade auf
+    /// `HostSessionAction` umgehangen haben.
+    pub fn apply_intent(&mut self, intent: AppIntent) -> Result<()> {
+        self.controller.handle_intent(&mut self.state, intent)?;
+        self.snapshot_dirty = true;
+        Ok(())
+    }
+
+    /// Liefert eine read-only Referenz auf den aktuellen `AppState`.
+    ///
+    /// Diese API ist als temporaere Read-Seam fuer den Ownership-Flip gedacht,
+    /// bis alle host-neutralen Snapshots konsumiert werden.
+    pub fn app_state(&self) -> &AppState {
+        &self.state
+    }
+
+    /// Liefert eine mutable Referenz auf den aktuellen `AppState`.
+    ///
+    /// Mutationen ueber diese Uebergangs-Seam markieren den Session-Snapshot als
+    /// dirty. Fachliche Mutationen sollen langfristig ueber `apply_action(...)`
+    /// laufen.
+    pub fn app_state_mut(&mut self) -> &mut AppState {
+        self.snapshot_dirty = true;
+        &mut self.state
+    }
+
+    /// Liefert den schmalen Properties-/Edit-Panel-Zugriff.
+    ///
+    /// Diese Seams kapseln die verbleibenden host-lokalen UI-Mutationen
+    /// (`distanzen`, `options`) bei gleichzeitig read-only Zugriff auf
+    /// Selektions-/Gruppen-/Karteninformationen.
+    pub fn panel_properties_state_mut(&mut self) -> HostPanelPropertiesState<'_> {
+        self.snapshot_dirty = true;
+        let state = &mut self.state;
+
+        HostPanelPropertiesState {
+            road_map: state.road_map.as_deref(),
+            selected_node_ids: &state.selection.selected_node_ids,
+            default_direction: state.editor.default_direction,
+            default_priority: state.editor.default_priority,
+            active_tool: state.editor.active_tool,
+            group_registry: &state.group_registry,
+            tool_edit_store: &state.tool_edit_store,
+            group_editing: state.group_editing.as_ref(),
+            distanzen: &mut state.ui.distanzen,
+            options: &mut state.options,
+        }
+    }
+
+    /// Liefert den schmalen Dialogzugriff fuer host-lokale Modalfenster.
+    pub fn dialog_ui_state_mut(&mut self) -> HostDialogUiState<'_> {
+        self.snapshot_dirty = true;
+        let state = &mut self.state;
+
+        HostDialogUiState {
+            road_map: state.road_map.as_deref(),
+            ui: &mut state.ui,
+            options: &mut state.options,
+        }
+    }
+
+    /// Liefert den schmalen Viewport-Input-Zugriff fuer Host-Event-Sammler.
+    pub fn viewport_input_context_mut(&mut self) -> HostViewportInputContext<'_> {
+        self.snapshot_dirty = true;
+        let state = &mut self.state;
+        let farmland_available = state
+            .farmland_polygons_arc()
+            .is_some_and(|polygons| !polygons.is_empty());
+
+        HostViewportInputContext {
+            paste_preview_active: state.paste_preview_pos.is_some(),
+            camera: &state.view.camera,
+            road_map: state.road_map.as_deref(),
+            selected_node_ids: &state.selection.selected_node_ids,
+            active_tool: state.editor.active_tool,
+            default_direction: state.editor.default_direction,
+            default_priority: state.editor.default_priority,
+            options: &state.options,
+            clipboard_has_nodes: !state.clipboard.nodes.is_empty(),
+            farmland_available,
+            group_editing_active: state.group_editing.is_some(),
+            group_registry: &state.group_registry,
+            distanzen: &mut state.ui.distanzen,
+        }
+    }
+
+    /// Schliesst das host-lokale Floating-Menue explizit.
+    pub fn clear_floating_menu(&mut self) {
+        self.state.ui.floating_menu = None;
+        self.snapshot_dirty = true;
+    }
+
+    /// Schaltet das host-lokale Floating-Menue fuer den angegebenen Menue-Typ um.
+    ///
+    /// `pointer_pos` beschreibt die aktuelle Pointer-Position in Host-Pixeln.
+    /// Ist keine Position verfuegbar, wird bei Aktivierung kein Menue geoeffnet.
+    pub fn toggle_floating_menu(&mut self, kind: FloatingMenuKind, pointer_pos: Option<Vec2>) {
+        let next_menu = match self.state.ui.floating_menu {
+            Some(existing) if existing.kind == kind => None,
+            Some(_) | None => pointer_pos.map(|pos| FloatingMenuState { kind, pos }),
+        };
+
+        self.state.ui.floating_menu = next_menu;
+        self.snapshot_dirty = true;
+    }
+
+    /// Setzt die aktuelle Statusmeldung explizit.
+    pub fn set_status_message(&mut self, message: Option<String>) {
+        self.state.ui.status_message = message;
+        self.snapshot_dirty = true;
     }
 
     /// Schaltet die Command-Palette um.
@@ -222,6 +417,11 @@ impl HostBridgeSession {
         crate::dispatch::build_host_chrome_snapshot(&self.state)
     }
 
+    /// Baut den host-neutralen Route-Tool-Viewport-Snapshot.
+    pub fn build_route_tool_viewport_snapshot(&self) -> HostRouteToolViewportSnapshot {
+        crate::dispatch::build_route_tool_viewport_snapshot(&self.state)
+    }
+
     /// Baut den host-neutralen Overlay-Snapshot fuer den aktuellen Viewport.
     ///
     /// Die Methode benoetigt mutablen Zugriff, weil der App-Layer beim Aufbau
@@ -253,7 +453,8 @@ impl Default for HostBridgeSession {
 #[cfg(test)]
 mod tests {
     use fs25_auto_drive_engine::app::{
-        AppIntent, Connection, ConnectionDirection, ConnectionPriority, MapNode, NodeFlag, RoadMap,
+        AppIntent, Connection, ConnectionDirection, ConnectionPriority, FloatingMenuKind, MapNode,
+        NodeFlag, RoadMap,
     };
     use glam::Vec2;
     use std::sync::Arc;
@@ -741,6 +942,32 @@ mod tests {
         assert!(error
             .to_string()
             .contains("viewport input requires a positive finite viewport size"));
+    }
+
+    #[test]
+    fn floating_menu_seams_toggle_and_clear_without_full_state_escape() {
+        let mut session = HostBridgeSession::new();
+
+        session.toggle_floating_menu(FloatingMenuKind::Tools, Some(Vec2::new(10.0, 20.0)));
+        let tools_menu = session
+            .app_state()
+            .ui
+            .floating_menu
+            .expect("Tools-Menue muss geoeffnet sein");
+        assert_eq!(tools_menu.kind, FloatingMenuKind::Tools);
+        assert_eq!(tools_menu.pos, Vec2::new(10.0, 20.0));
+
+        session.toggle_floating_menu(FloatingMenuKind::Tools, Some(Vec2::new(30.0, 40.0)));
+        assert!(session.app_state().ui.floating_menu.is_none());
+
+        session.toggle_floating_menu(FloatingMenuKind::Zoom, None);
+        assert!(session.app_state().ui.floating_menu.is_none());
+
+        session.toggle_floating_menu(FloatingMenuKind::Zoom, Some(Vec2::new(5.0, 6.0)));
+        assert!(session.app_state().ui.floating_menu.is_some());
+
+        session.clear_floating_menu();
+        assert!(session.app_state().ui.floating_menu.is_none());
     }
 
     #[test]

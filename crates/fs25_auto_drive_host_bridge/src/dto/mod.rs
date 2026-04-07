@@ -1,3 +1,4 @@
+use fs25_auto_drive_engine::app::ui_contract::RouteToolPanelAction;
 use fs25_auto_drive_engine::shared::EditorOptions;
 use serde::{Deserialize, Serialize};
 
@@ -160,6 +161,96 @@ pub enum HostViewportInputEvent {
     },
 }
 
+/// Host-neutrale Tangentenquelle fuer Route-Tool-Aktionen und Read-Snapshots.
+#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
+#[serde(tag = "kind", rename_all = "snake_case")]
+pub enum HostTangentSource {
+    /// Kein Tangenten-Vorschlag.
+    None,
+    /// Tangente aus bestehender Verbindung.
+    Connection {
+        /// ID des Nachbar-Nodes der Verbindung.
+        neighbor_id: u64,
+        /// Winkel der Verbindung in Radiant.
+        angle: f32,
+    },
+}
+
+/// Explizite Route-Tool-Action-Familie auf der kanonischen Session-Surface.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(tag = "kind", rename_all = "snake_case")]
+pub enum HostRouteToolAction {
+    /// Route-Tool ueber stabile Tool-ID auswaehlen.
+    SelectTool {
+        /// Ziel-Tool.
+        tool: HostRouteToolId,
+    },
+    /// Route-Tool mit vordefinierten Start-/Endankern aktivieren.
+    SelectToolWithAnchors {
+        /// Ziel-Tool.
+        tool: HostRouteToolId,
+        /// Start-Node-ID.
+        start_node_id: u64,
+        /// End-Node-ID.
+        end_node_id: u64,
+    },
+    /// Semantische Route-Tool-Panel-Aktion.
+    PanelAction {
+        /// Panel-Aktion des aktiven Route-Tools.
+        action: RouteToolPanelAction,
+    },
+    /// Route-Tool-Ausfuehrung anfordern.
+    Execute,
+    /// Route-Tool abbrechen.
+    Cancel,
+    /// Route-Tool mit aktueller Konfiguration neu berechnen.
+    Recreate,
+    /// Tangenten-Auswahl fuer Start/Ende setzen.
+    ApplyTangent {
+        /// Start-Tangente.
+        start: HostTangentSource,
+        /// End-Tangente.
+        end: HostTangentSource,
+    },
+    /// Klick im Route-Tool-Viewport.
+    Click {
+        /// Weltposition des Klicks.
+        world_pos: [f32; 2],
+        /// Plattformneutraler Command-Modifizierer (`Ctrl`/`Cmd`).
+        ctrl: bool,
+    },
+    /// Tool-Lasso als geschlossenes Polygon abschliessen.
+    LassoCompleted {
+        /// Polygonpunkte in Weltkoordinaten.
+        polygon: Vec<[f32; 2]>,
+    },
+    /// Drag auf Route-Tool-Steuerpunkt starten.
+    DragStart {
+        /// Weltposition des Starts.
+        world_pos: [f32; 2],
+    },
+    /// Drag auf Route-Tool-Steuerpunkt aktualisieren.
+    DragUpdate {
+        /// Weltposition des Updates.
+        world_pos: [f32; 2],
+    },
+    /// Drag auf Route-Tool-Steuerpunkt beenden.
+    DragEnd,
+    /// Route-Tool-Rotation via Alt+Scroll.
+    ScrollRotate {
+        /// Rotationsdelta.
+        delta: f32,
+    },
+    /// Node-Anzahl im aktiven Route-Tool erhoehen.
+    IncreaseNodeCount,
+    /// Node-Anzahl im aktiven Route-Tool verringern.
+    DecreaseNodeCount,
+    /// Segmentlaenge im aktiven Route-Tool erhoehen.
+    IncreaseSegmentLength,
+    /// Segmentlaenge im aktiven Route-Tool verringern.
+    DecreaseSegmentLength,
+}
+
 /// Explizite Host-Aktionen fuer die gemeinsame Bridge-Session.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(tag = "kind", rename_all = "snake_case")]
@@ -195,6 +286,28 @@ pub enum HostSessionAction {
         /// Ziel-Tool als stabiler Bridge-Identifier.
         tool: HostActiveTool,
     },
+    /// Fuehrt eine explizite Route-Tool-Aktion aus.
+    RouteTool {
+        /// Semantische Route-Tool-Aktion.
+        action: HostRouteToolAction,
+    },
+    /// Setzt die Default-Richtung fuer neue Verbindungen.
+    SetDefaultDirection {
+        /// Neue Standardrichtung.
+        direction: HostDefaultConnectionDirection,
+    },
+    /// Setzt die Default-Prioritaet fuer neue Verbindungen.
+    SetDefaultPriority {
+        /// Neue Standard-Prioritaet.
+        priority: HostDefaultConnectionPriority,
+    },
+    /// Uebernimmt geaenderte Editor-Optionen.
+    ApplyOptions {
+        /// Vollstaendige Optionen-Payload.
+        options: Box<EditorOptions>,
+    },
+    /// Setzt die Editor-Optionen auf Standardwerte zurueck.
+    ResetOptions,
     /// Oeffnet den Optionen-Dialog.
     OpenOptionsDialog,
     /// Schliesst den Optionen-Dialog.
@@ -512,6 +625,43 @@ pub struct HostRouteToolSelectionSnapshot {
     pub analysis: HostRouteToolId,
 }
 
+/// Eine Tangentenoption fuer host-neutrale Route-Tool-Snapshots.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct HostTangentOptionSnapshot {
+    /// Semantische Tangentenquelle.
+    pub source: HostTangentSource,
+    /// Fertig aufbereitetes Label fuer Menues/Listen.
+    pub label: String,
+}
+
+/// Host-neutraler Tangenten-Menuezustand fuer Route-Tool-Kontextmenues.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct HostTangentMenuSnapshot {
+    /// Verfuegbare Start-Tangenten.
+    pub start_options: Vec<HostTangentOptionSnapshot>,
+    /// Verfuegbare End-Tangenten.
+    pub end_options: Vec<HostTangentOptionSnapshot>,
+    /// Aktuell gewaehlte Start-Tangente.
+    pub current_start: HostTangentSource,
+    /// Aktuell gewaehlte End-Tangente.
+    pub current_end: HostTangentSource,
+}
+
+/// Host-neutraler Read-Snapshot fuer Route-Tool-Viewport-Eingaben.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct HostRouteToolViewportSnapshot {
+    /// Drag-Ziele des aktiven Route-Tools in Weltkoordinaten.
+    pub drag_targets: Vec<[f32; 2]>,
+    /// Gibt an, ob das Tool bereits Eingaben gesammelt hat.
+    pub has_pending_input: bool,
+    /// Gibt an, ob Segment-Shortcuts aktiv sind.
+    pub segment_shortcuts_active: bool,
+    /// Optionale Tangenten-Menue-Daten fuer Kontextmenues.
+    pub tangent_menu_data: Option<HostTangentMenuSnapshot>,
+    /// Gibt an, ob Alt+Drag als Tool-Lasso geroutet werden muss.
+    pub needs_lasso_input: bool,
+}
+
 /// Host-neutraler Read-Snapshot fuer Chrome-nahe Menues und Panels.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct HostChromeSnapshot {
@@ -596,7 +746,13 @@ pub type EngineDefaultConnectionDirection = HostDefaultConnectionDirection;
 pub type EngineDefaultConnectionPriority = HostDefaultConnectionPriority;
 
 /// Kompatibilitaetsalias fuer bestehende Flutter-/FFI-Call-Sites.
+pub type EngineTangentSource = HostTangentSource;
+
+/// Kompatibilitaetsalias fuer bestehende Flutter-/FFI-Call-Sites.
 pub type EngineRouteToolId = HostRouteToolId;
+
+/// Kompatibilitaetsalias fuer bestehende Flutter-/FFI-Call-Sites.
+pub type EngineRouteToolAction = HostRouteToolAction;
 
 /// Kompatibilitaetsalias fuer bestehende Flutter-/FFI-Call-Sites.
 pub type EngineRouteToolGroup = HostRouteToolGroup;
@@ -617,23 +773,35 @@ pub type EngineRouteToolEntrySnapshot = HostRouteToolEntrySnapshot;
 pub type EngineRouteToolSelectionSnapshot = HostRouteToolSelectionSnapshot;
 
 /// Kompatibilitaetsalias fuer bestehende Flutter-/FFI-Call-Sites.
+pub type EngineTangentOptionSnapshot = HostTangentOptionSnapshot;
+
+/// Kompatibilitaetsalias fuer bestehende Flutter-/FFI-Call-Sites.
+pub type EngineTangentMenuSnapshot = HostTangentMenuSnapshot;
+
+/// Kompatibilitaetsalias fuer bestehende Flutter-/FFI-Call-Sites.
+pub type EngineRouteToolViewportSnapshot = HostRouteToolViewportSnapshot;
+
+/// Kompatibilitaetsalias fuer bestehende Flutter-/FFI-Call-Sites.
 pub type EngineChromeSnapshot = HostChromeSnapshot;
 
 #[cfg(test)]
 mod tests {
+    use fs25_auto_drive_engine::app::ui_contract::{BypassPanelAction, RouteToolPanelAction};
     use fs25_auto_drive_engine::shared::EditorOptions;
     use serde_json::json;
 
     use super::{
         EngineActiveTool, EngineChromeSnapshot, EngineDialogRequestKind, EngineDialogResult,
-        EngineInputModifiers, EnginePointerButton, EngineSessionAction, EngineSessionSnapshot,
-        EngineTapKind, EngineViewportGeometrySnapshot, EngineViewportInputBatch,
-        EngineViewportInputEvent, HostActiveTool, HostChromeSnapshot,
+        EngineInputModifiers, EnginePointerButton, EngineRouteToolAction,
+        EngineRouteToolViewportSnapshot, EngineSessionAction, EngineSessionSnapshot,
+        EngineTangentSource, EngineTapKind, EngineViewportGeometrySnapshot,
+        EngineViewportInputBatch, EngineViewportInputEvent, HostActiveTool, HostChromeSnapshot,
         HostDefaultConnectionDirection, HostDefaultConnectionPriority, HostDialogResult,
-        HostInputModifiers, HostPointerButton, HostRouteToolDisabledReason,
+        HostInputModifiers, HostPointerButton, HostRouteToolAction, HostRouteToolDisabledReason,
         HostRouteToolEntrySnapshot, HostRouteToolGroup, HostRouteToolIconKey, HostRouteToolId,
-        HostRouteToolSelectionSnapshot, HostRouteToolSurface, HostSelectionSnapshot,
-        HostSessionAction, HostSessionSnapshot, HostTapKind, HostViewportConnectionDirection,
+        HostRouteToolSelectionSnapshot, HostRouteToolSurface, HostRouteToolViewportSnapshot,
+        HostSelectionSnapshot, HostSessionAction, HostSessionSnapshot, HostTangentMenuSnapshot,
+        HostTangentOptionSnapshot, HostTangentSource, HostTapKind, HostViewportConnectionDirection,
         HostViewportConnectionPriority, HostViewportConnectionSnapshot,
         HostViewportGeometrySnapshot, HostViewportInputBatch, HostViewportInputEvent,
         HostViewportMarkerSnapshot, HostViewportNodeKind, HostViewportNodeSnapshot,
@@ -659,6 +827,99 @@ mod tests {
             parsed,
             HostSessionAction::SetEditorTool {
                 tool: HostActiveTool::Route,
+            }
+        );
+    }
+
+    #[test]
+    fn engine_route_tool_action_alias_roundtrips_with_panel_and_world_payloads() {
+        let action = EngineSessionAction::RouteTool {
+            action: EngineRouteToolAction::PanelAction {
+                action: RouteToolPanelAction::Bypass(BypassPanelAction::SetOffset(3.5)),
+            },
+        };
+
+        let payload = serde_json::to_value(&action)
+            .expect("Route-Tool-Aktion muss als stabiles Host-JSON serialisierbar sein");
+        assert_eq!(payload.get("kind"), Some(&json!("route_tool")));
+
+        let parsed: HostSessionAction = serde_json::from_value(payload)
+            .expect("Route-Tool-Aktions-JSON muss in den kanonischen Host-Typ zuruecklesbar sein");
+        assert_eq!(
+            parsed,
+            HostSessionAction::RouteTool {
+                action: HostRouteToolAction::PanelAction {
+                    action: RouteToolPanelAction::Bypass(BypassPanelAction::SetOffset(3.5)),
+                },
+            }
+        );
+    }
+
+    #[test]
+    fn route_tool_viewport_snapshot_alias_roundtrips_without_schema_drift() {
+        let host_snapshot = HostRouteToolViewportSnapshot {
+            drag_targets: vec![[1.0, 2.0], [3.0, 4.0]],
+            has_pending_input: true,
+            segment_shortcuts_active: true,
+            tangent_menu_data: Some(HostTangentMenuSnapshot {
+                start_options: vec![HostTangentOptionSnapshot {
+                    source: HostTangentSource::Connection {
+                        neighbor_id: 42,
+                        angle: 1.5,
+                    },
+                    label: "Node #42".to_string(),
+                }],
+                end_options: vec![HostTangentOptionSnapshot {
+                    source: HostTangentSource::None,
+                    label: "Manuell".to_string(),
+                }],
+                current_start: HostTangentSource::Connection {
+                    neighbor_id: 42,
+                    angle: 1.5,
+                },
+                current_end: HostTangentSource::None,
+            }),
+            needs_lasso_input: false,
+        };
+
+        let payload = serde_json::to_value(&host_snapshot)
+            .expect("Route-Tool-Viewport-Snapshot muss serialisierbar sein");
+
+        let alias_snapshot: EngineRouteToolViewportSnapshot =
+            serde_json::from_value(payload.clone())
+                .expect("Engine-Viewport-Alias muss kanonisches Host-JSON lesen koennen");
+        let canonical_snapshot: HostRouteToolViewportSnapshot = serde_json::from_value(payload)
+            .expect("Host-Viewport-Snapshot muss das gleiche JSON lesen koennen");
+
+        assert_eq!(alias_snapshot, host_snapshot);
+        assert_eq!(canonical_snapshot, host_snapshot);
+    }
+
+    #[test]
+    fn tangent_source_alias_roundtrips_with_stable_json_shape() {
+        let source = EngineTangentSource::Connection {
+            neighbor_id: 7,
+            angle: -0.75,
+        };
+
+        let payload = serde_json::to_value(source)
+            .expect("TangentSource muss als stabiles Host-JSON serialisierbar sein");
+        assert_eq!(
+            payload,
+            json!({
+                "kind": "connection",
+                "neighbor_id": 7,
+                "angle": -0.75
+            })
+        );
+
+        let parsed: HostTangentSource = serde_json::from_value(payload)
+            .expect("TangentSource-JSON muss in den kanonischen Host-Typ zuruecklesbar sein");
+        assert_eq!(
+            parsed,
+            HostTangentSource::Connection {
+                neighbor_id: 7,
+                angle: -0.75,
             }
         );
     }

@@ -1,12 +1,12 @@
 use anyhow::{anyhow, bail, Result};
-use fs25_auto_drive_engine::app::tool_contract::RouteToolId;
+use fs25_auto_drive_engine::app::tool_contract::{RouteToolId, TangentSource};
 use fs25_auto_drive_engine::app::tools::{
     resolve_route_tool_entries, RouteToolAvailabilityContext, RouteToolDisabledReason,
     RouteToolGroup, RouteToolIconKey, RouteToolSurface,
 };
 use fs25_auto_drive_engine::app::ui_contract::{
     dialog_result_to_intent, DialogRequest, DialogRequestKind, DialogResult, HostUiSnapshot,
-    ViewportOverlaySnapshot,
+    RouteToolViewportData, TangentMenuData, TangentOptionData, ViewportOverlaySnapshot,
 };
 use fs25_auto_drive_engine::app::{
     AppController, AppIntent, AppState, ConnectionDirection, ConnectionPriority, EditorTool,
@@ -20,12 +20,14 @@ use glam::Vec2;
 use crate::dto::{
     HostActiveTool, HostChromeSnapshot, HostDefaultConnectionDirection,
     HostDefaultConnectionPriority, HostDialogRequest, HostDialogRequestKind, HostDialogResult,
-    HostInputModifiers, HostPointerButton, HostRouteToolDisabledReason, HostRouteToolEntrySnapshot,
-    HostRouteToolGroup, HostRouteToolIconKey, HostRouteToolId, HostRouteToolSelectionSnapshot,
-    HostRouteToolSurface, HostSessionAction, HostTapKind, HostViewportConnectionDirection,
-    HostViewportConnectionPriority, HostViewportConnectionSnapshot, HostViewportGeometrySnapshot,
-    HostViewportInputBatch, HostViewportInputEvent, HostViewportMarkerSnapshot,
-    HostViewportNodeKind, HostViewportNodeSnapshot,
+    HostInputModifiers, HostPointerButton, HostRouteToolAction, HostRouteToolDisabledReason,
+    HostRouteToolEntrySnapshot, HostRouteToolGroup, HostRouteToolIconKey, HostRouteToolId,
+    HostRouteToolSelectionSnapshot, HostRouteToolSurface, HostRouteToolViewportSnapshot,
+    HostSessionAction, HostTangentMenuSnapshot, HostTangentOptionSnapshot, HostTangentSource,
+    HostTapKind, HostViewportConnectionDirection, HostViewportConnectionPriority,
+    HostViewportConnectionSnapshot, HostViewportGeometrySnapshot, HostViewportInputBatch,
+    HostViewportInputEvent, HostViewportMarkerSnapshot, HostViewportNodeKind,
+    HostViewportNodeSnapshot,
 };
 use crate::session::HostRenderFrameSnapshot;
 
@@ -639,10 +641,25 @@ fn map_connection_direction(direction: ConnectionDirection) -> HostDefaultConnec
     }
 }
 
+fn map_host_connection_direction(direction: HostDefaultConnectionDirection) -> ConnectionDirection {
+    match direction {
+        HostDefaultConnectionDirection::Regular => ConnectionDirection::Regular,
+        HostDefaultConnectionDirection::Dual => ConnectionDirection::Dual,
+        HostDefaultConnectionDirection::Reverse => ConnectionDirection::Reverse,
+    }
+}
+
 fn map_connection_priority(priority: ConnectionPriority) -> HostDefaultConnectionPriority {
     match priority {
         ConnectionPriority::Regular => HostDefaultConnectionPriority::Regular,
         ConnectionPriority::SubPriority => HostDefaultConnectionPriority::SubPriority,
+    }
+}
+
+fn map_host_connection_priority(priority: HostDefaultConnectionPriority) -> ConnectionPriority {
+    match priority {
+        HostDefaultConnectionPriority::Regular => ConnectionPriority::Regular,
+        HostDefaultConnectionPriority::SubPriority => ConnectionPriority::SubPriority,
     }
 }
 
@@ -659,6 +676,89 @@ fn map_route_tool_id(tool_id: RouteToolId) -> HostRouteToolId {
         RouteToolId::FieldPath => HostRouteToolId::FieldPath,
         RouteToolId::RouteOffset => HostRouteToolId::RouteOffset,
         RouteToolId::ColorPath => HostRouteToolId::ColorPath,
+    }
+}
+
+fn map_host_route_tool_id(tool_id: HostRouteToolId) -> RouteToolId {
+    match tool_id {
+        HostRouteToolId::Straight => RouteToolId::Straight,
+        HostRouteToolId::CurveQuad => RouteToolId::CurveQuad,
+        HostRouteToolId::CurveCubic => RouteToolId::CurveCubic,
+        HostRouteToolId::Spline => RouteToolId::Spline,
+        HostRouteToolId::Bypass => RouteToolId::Bypass,
+        HostRouteToolId::SmoothCurve => RouteToolId::SmoothCurve,
+        HostRouteToolId::Parking => RouteToolId::Parking,
+        HostRouteToolId::FieldBoundary => RouteToolId::FieldBoundary,
+        HostRouteToolId::FieldPath => RouteToolId::FieldPath,
+        HostRouteToolId::RouteOffset => RouteToolId::RouteOffset,
+        HostRouteToolId::ColorPath => RouteToolId::ColorPath,
+    }
+}
+
+fn map_tangent_source(source: TangentSource) -> HostTangentSource {
+    match source {
+        TangentSource::None => HostTangentSource::None,
+        TangentSource::Connection { neighbor_id, angle } => {
+            HostTangentSource::Connection { neighbor_id, angle }
+        }
+    }
+}
+
+fn map_host_tangent_source(source: HostTangentSource) -> TangentSource {
+    match source {
+        HostTangentSource::None => TangentSource::None,
+        HostTangentSource::Connection { neighbor_id, angle } => {
+            TangentSource::Connection { neighbor_id, angle }
+        }
+    }
+}
+
+fn map_route_tool_action_to_intent(action: HostRouteToolAction) -> AppIntent {
+    match action {
+        HostRouteToolAction::SelectTool { tool } => AppIntent::SelectRouteToolRequested {
+            tool_id: map_host_route_tool_id(tool),
+        },
+        HostRouteToolAction::SelectToolWithAnchors {
+            tool,
+            start_node_id,
+            end_node_id,
+        } => AppIntent::RouteToolWithAnchorsRequested {
+            tool_id: map_host_route_tool_id(tool),
+            start_node_id,
+            end_node_id,
+        },
+        HostRouteToolAction::PanelAction { action } => {
+            AppIntent::RouteToolPanelActionRequested { action }
+        }
+        HostRouteToolAction::Execute => AppIntent::RouteToolExecuteRequested,
+        HostRouteToolAction::Cancel => AppIntent::RouteToolCancelled,
+        HostRouteToolAction::Recreate => AppIntent::RouteToolRecreateRequested,
+        HostRouteToolAction::ApplyTangent { start, end } => AppIntent::RouteToolTangentSelected {
+            start: map_host_tangent_source(start),
+            end: map_host_tangent_source(end),
+        },
+        HostRouteToolAction::Click { world_pos, ctrl } => AppIntent::RouteToolClicked {
+            world_pos: Vec2::new(world_pos[0], world_pos[1]),
+            ctrl,
+        },
+        HostRouteToolAction::LassoCompleted { polygon } => AppIntent::RouteToolLassoCompleted {
+            polygon: polygon
+                .into_iter()
+                .map(|point| Vec2::new(point[0], point[1]))
+                .collect(),
+        },
+        HostRouteToolAction::DragStart { world_pos } => AppIntent::RouteToolDragStarted {
+            world_pos: Vec2::new(world_pos[0], world_pos[1]),
+        },
+        HostRouteToolAction::DragUpdate { world_pos } => AppIntent::RouteToolDragUpdated {
+            world_pos: Vec2::new(world_pos[0], world_pos[1]),
+        },
+        HostRouteToolAction::DragEnd => AppIntent::RouteToolDragEnded,
+        HostRouteToolAction::ScrollRotate { delta } => AppIntent::RouteToolScrollRotated { delta },
+        HostRouteToolAction::IncreaseNodeCount => AppIntent::IncreaseRouteToolNodeCount,
+        HostRouteToolAction::DecreaseNodeCount => AppIntent::DecreaseRouteToolNodeCount,
+        HostRouteToolAction::IncreaseSegmentLength => AppIntent::IncreaseRouteToolSegmentLength,
+        HostRouteToolAction::DecreaseSegmentLength => AppIntent::DecreaseRouteToolSegmentLength,
     }
 }
 
@@ -765,6 +865,44 @@ fn build_route_tool_selection_snapshot(state: &AppState) -> HostRouteToolSelecti
     }
 }
 
+fn map_tangent_option_data(option: TangentOptionData) -> HostTangentOptionSnapshot {
+    HostTangentOptionSnapshot {
+        source: map_tangent_source(option.source),
+        label: option.label,
+    }
+}
+
+fn map_tangent_menu_data(menu: TangentMenuData) -> HostTangentMenuSnapshot {
+    HostTangentMenuSnapshot {
+        start_options: menu
+            .start_options
+            .into_iter()
+            .map(map_tangent_option_data)
+            .collect(),
+        end_options: menu
+            .end_options
+            .into_iter()
+            .map(map_tangent_option_data)
+            .collect(),
+        current_start: map_tangent_source(menu.current_start),
+        current_end: map_tangent_source(menu.current_end),
+    }
+}
+
+fn map_route_tool_viewport_data(data: RouteToolViewportData) -> HostRouteToolViewportSnapshot {
+    HostRouteToolViewportSnapshot {
+        drag_targets: data
+            .drag_targets
+            .into_iter()
+            .map(|point| [point.x, point.y])
+            .collect(),
+        has_pending_input: data.has_pending_input,
+        segment_shortcuts_active: data.segment_shortcuts_active,
+        tangent_menu_data: data.tangent_menu_data.map(map_tangent_menu_data),
+        needs_lasso_input: data.needs_lasso_input,
+    }
+}
+
 fn map_engine_dialog_request_kind(kind: DialogRequestKind) -> HostDialogRequestKind {
     match kind {
         DialogRequestKind::OpenFile => HostDialogRequestKind::OpenFile,
@@ -850,6 +988,97 @@ pub fn map_intent_to_host_action(intent: &AppIntent) -> Option<HostSessionAction
         AppIntent::SetEditorToolRequested { tool } => Some(HostSessionAction::SetEditorTool {
             tool: map_editor_tool(*tool),
         }),
+        AppIntent::SetDefaultDirectionRequested { direction } => {
+            Some(HostSessionAction::SetDefaultDirection {
+                direction: map_connection_direction(*direction),
+            })
+        }
+        AppIntent::SetDefaultPriorityRequested { priority } => {
+            Some(HostSessionAction::SetDefaultPriority {
+                priority: map_connection_priority(*priority),
+            })
+        }
+        AppIntent::OptionsChanged { options } => Some(HostSessionAction::ApplyOptions {
+            options: options.clone(),
+        }),
+        AppIntent::ResetOptionsRequested => Some(HostSessionAction::ResetOptions),
+        AppIntent::SelectRouteToolRequested { tool_id } => Some(HostSessionAction::RouteTool {
+            action: HostRouteToolAction::SelectTool {
+                tool: map_route_tool_id(*tool_id),
+            },
+        }),
+        AppIntent::RouteToolWithAnchorsRequested {
+            tool_id,
+            start_node_id,
+            end_node_id,
+        } => Some(HostSessionAction::RouteTool {
+            action: HostRouteToolAction::SelectToolWithAnchors {
+                tool: map_route_tool_id(*tool_id),
+                start_node_id: *start_node_id,
+                end_node_id: *end_node_id,
+            },
+        }),
+        AppIntent::RouteToolPanelActionRequested { action } => Some(HostSessionAction::RouteTool {
+            action: HostRouteToolAction::PanelAction {
+                action: action.clone(),
+            },
+        }),
+        AppIntent::RouteToolExecuteRequested => Some(HostSessionAction::RouteTool {
+            action: HostRouteToolAction::Execute,
+        }),
+        AppIntent::RouteToolCancelled => Some(HostSessionAction::RouteTool {
+            action: HostRouteToolAction::Cancel,
+        }),
+        AppIntent::RouteToolConfigChanged | AppIntent::RouteToolRecreateRequested => {
+            Some(HostSessionAction::RouteTool {
+                action: HostRouteToolAction::Recreate,
+            })
+        }
+        AppIntent::RouteToolTangentSelected { start, end } => Some(HostSessionAction::RouteTool {
+            action: HostRouteToolAction::ApplyTangent {
+                start: map_tangent_source(*start),
+                end: map_tangent_source(*end),
+            },
+        }),
+        AppIntent::RouteToolClicked { world_pos, ctrl } => Some(HostSessionAction::RouteTool {
+            action: HostRouteToolAction::Click {
+                world_pos: [world_pos.x, world_pos.y],
+                ctrl: *ctrl,
+            },
+        }),
+        AppIntent::RouteToolLassoCompleted { polygon } => Some(HostSessionAction::RouteTool {
+            action: HostRouteToolAction::LassoCompleted {
+                polygon: polygon.iter().map(|point| [point.x, point.y]).collect(),
+            },
+        }),
+        AppIntent::RouteToolDragStarted { world_pos } => Some(HostSessionAction::RouteTool {
+            action: HostRouteToolAction::DragStart {
+                world_pos: [world_pos.x, world_pos.y],
+            },
+        }),
+        AppIntent::RouteToolDragUpdated { world_pos } => Some(HostSessionAction::RouteTool {
+            action: HostRouteToolAction::DragUpdate {
+                world_pos: [world_pos.x, world_pos.y],
+            },
+        }),
+        AppIntent::RouteToolDragEnded => Some(HostSessionAction::RouteTool {
+            action: HostRouteToolAction::DragEnd,
+        }),
+        AppIntent::RouteToolScrollRotated { delta } => Some(HostSessionAction::RouteTool {
+            action: HostRouteToolAction::ScrollRotate { delta: *delta },
+        }),
+        AppIntent::IncreaseRouteToolNodeCount => Some(HostSessionAction::RouteTool {
+            action: HostRouteToolAction::IncreaseNodeCount,
+        }),
+        AppIntent::DecreaseRouteToolNodeCount => Some(HostSessionAction::RouteTool {
+            action: HostRouteToolAction::DecreaseNodeCount,
+        }),
+        AppIntent::IncreaseRouteToolSegmentLength => Some(HostSessionAction::RouteTool {
+            action: HostRouteToolAction::IncreaseSegmentLength,
+        }),
+        AppIntent::DecreaseRouteToolSegmentLength => Some(HostSessionAction::RouteTool {
+            action: HostRouteToolAction::DecreaseSegmentLength,
+        }),
         AppIntent::OpenOptionsDialogRequested => Some(HostSessionAction::OpenOptionsDialog),
         AppIntent::CloseOptionsDialogRequested => Some(HostSessionAction::CloseOptionsDialog),
         AppIntent::UndoRequested => Some(HostSessionAction::Undo),
@@ -884,6 +1113,19 @@ pub fn map_host_action_to_intent(action: HostSessionAction) -> Option<AppIntent>
         HostSessionAction::SetEditorTool { tool } => Some(AppIntent::SetEditorToolRequested {
             tool: map_host_active_tool(tool),
         }),
+        HostSessionAction::RouteTool { action } => Some(map_route_tool_action_to_intent(action)),
+        HostSessionAction::SetDefaultDirection { direction } => {
+            Some(AppIntent::SetDefaultDirectionRequested {
+                direction: map_host_connection_direction(direction),
+            })
+        }
+        HostSessionAction::SetDefaultPriority { priority } => {
+            Some(AppIntent::SetDefaultPriorityRequested {
+                priority: map_host_connection_priority(priority),
+            })
+        }
+        HostSessionAction::ApplyOptions { options } => Some(AppIntent::OptionsChanged { options }),
+        HostSessionAction::ResetOptions => Some(AppIntent::ResetOptionsRequested),
         HostSessionAction::OpenOptionsDialog => Some(AppIntent::OpenOptionsDialogRequested),
         HostSessionAction::CloseOptionsDialog => Some(AppIntent::CloseOptionsDialogRequested),
         HostSessionAction::Undo => Some(AppIntent::UndoRequested),
@@ -971,6 +1213,11 @@ pub fn build_host_chrome_snapshot(state: &AppState) -> HostChromeSnapshot {
     }
 }
 
+/// Baut den host-neutralen Route-Tool-Viewport-Snapshot fuer lokale Host-Adapter.
+pub fn build_route_tool_viewport_snapshot(state: &AppState) -> HostRouteToolViewportSnapshot {
+    map_route_tool_viewport_data(state.editor.route_tool_viewport_data())
+}
+
 /// Baut den host-neutralen Viewport-Overlay-Snapshot fuer lokale Host-Adapter.
 ///
 /// Die mutable State-Referenz bleibt noetig, weil beim Aufbau Caches im
@@ -1021,6 +1268,7 @@ pub fn build_viewport_geometry_snapshot(
 
 #[cfg(test)]
 mod tests {
+    use fs25_auto_drive_engine::app::ui_contract::{BypassPanelAction, RouteToolPanelAction};
     use fs25_auto_drive_engine::app::{AppController, AppIntent, AppState};
     use fs25_auto_drive_engine::core::{
         Connection, ConnectionDirection, ConnectionPriority, MapMarker, MapNode, NodeFlag, RoadMap,
@@ -1030,16 +1278,18 @@ mod tests {
 
     use crate::dto::{
         HostActiveTool, HostDefaultConnectionDirection, HostDefaultConnectionPriority,
-        HostDialogRequestKind, HostDialogResult, HostRouteToolDisabledReason, HostRouteToolGroup,
-        HostRouteToolIconKey, HostRouteToolId, HostRouteToolSurface, HostSessionAction,
-        HostViewportConnectionDirection, HostViewportConnectionPriority, HostViewportNodeKind,
+        HostDialogRequestKind, HostDialogResult, HostRouteToolAction, HostRouteToolDisabledReason,
+        HostRouteToolGroup, HostRouteToolIconKey, HostRouteToolId, HostRouteToolSurface,
+        HostSessionAction, HostTangentSource, HostViewportConnectionDirection,
+        HostViewportConnectionPriority, HostViewportNodeKind,
     };
 
     use super::{
         apply_host_action, apply_mapped_intent, build_host_chrome_snapshot, build_host_ui_snapshot,
         build_render_assets, build_render_frame, build_render_scene,
-        build_viewport_geometry_snapshot, build_viewport_overlay_snapshot,
-        map_host_action_to_intent, map_intent_to_host_action, take_host_dialog_requests,
+        build_route_tool_viewport_snapshot, build_viewport_geometry_snapshot,
+        build_viewport_overlay_snapshot, map_host_action_to_intent, map_intent_to_host_action,
+        take_host_dialog_requests,
     };
 
     fn geometry_test_map() -> RoadMap {
@@ -1256,6 +1506,38 @@ mod tests {
     }
 
     #[test]
+    fn map_host_action_to_intent_covers_route_tool_and_chrome_writes() {
+        let route_intent = map_host_action_to_intent(HostSessionAction::RouteTool {
+            action: HostRouteToolAction::ScrollRotate { delta: -1.0 },
+        });
+        let default_direction_intent =
+            map_host_action_to_intent(HostSessionAction::SetDefaultDirection {
+                direction: HostDefaultConnectionDirection::Reverse,
+            });
+        let default_priority_intent =
+            map_host_action_to_intent(HostSessionAction::SetDefaultPriority {
+                priority: HostDefaultConnectionPriority::SubPriority,
+            });
+
+        assert!(matches!(
+            route_intent,
+            Some(AppIntent::RouteToolScrollRotated { delta }) if (delta + 1.0).abs() < f32::EPSILON
+        ));
+        assert!(matches!(
+            default_direction_intent,
+            Some(AppIntent::SetDefaultDirectionRequested {
+                direction: ConnectionDirection::Reverse
+            })
+        ));
+        assert!(matches!(
+            default_priority_intent,
+            Some(AppIntent::SetDefaultPriorityRequested {
+                priority: ConnectionPriority::SubPriority
+            })
+        ));
+    }
+
+    #[test]
     fn map_intent_to_host_action_covers_stable_bridge_intents() {
         let cases = vec![
             (AppIntent::OpenFileRequested, HostSessionAction::OpenFile),
@@ -1304,6 +1586,78 @@ mod tests {
                 },
             ),
             (
+                AppIntent::SetDefaultDirectionRequested {
+                    direction: ConnectionDirection::Reverse,
+                },
+                HostSessionAction::SetDefaultDirection {
+                    direction: HostDefaultConnectionDirection::Reverse,
+                },
+            ),
+            (
+                AppIntent::SetDefaultPriorityRequested {
+                    priority: ConnectionPriority::SubPriority,
+                },
+                HostSessionAction::SetDefaultPriority {
+                    priority: HostDefaultConnectionPriority::SubPriority,
+                },
+            ),
+            (
+                AppIntent::OptionsChanged {
+                    options: Box::new(fs25_auto_drive_engine::shared::EditorOptions::default()),
+                },
+                HostSessionAction::ApplyOptions {
+                    options: Box::new(fs25_auto_drive_engine::shared::EditorOptions::default()),
+                },
+            ),
+            (
+                AppIntent::ResetOptionsRequested,
+                HostSessionAction::ResetOptions,
+            ),
+            (
+                AppIntent::SelectRouteToolRequested {
+                    tool_id: fs25_auto_drive_engine::app::tool_contract::RouteToolId::CurveCubic,
+                },
+                HostSessionAction::RouteTool {
+                    action: HostRouteToolAction::SelectTool {
+                        tool: HostRouteToolId::CurveCubic,
+                    },
+                },
+            ),
+            (
+                AppIntent::RouteToolPanelActionRequested {
+                    action: RouteToolPanelAction::Bypass(BypassPanelAction::SetOffset(2.5)),
+                },
+                HostSessionAction::RouteTool {
+                    action: HostRouteToolAction::PanelAction {
+                        action: RouteToolPanelAction::Bypass(BypassPanelAction::SetOffset(2.5)),
+                    },
+                },
+            ),
+            (
+                AppIntent::RouteToolTangentSelected {
+                    start: fs25_auto_drive_engine::app::tool_contract::TangentSource::Connection {
+                        neighbor_id: 7,
+                        angle: 0.5,
+                    },
+                    end: fs25_auto_drive_engine::app::tool_contract::TangentSource::None,
+                },
+                HostSessionAction::RouteTool {
+                    action: HostRouteToolAction::ApplyTangent {
+                        start: HostTangentSource::Connection {
+                            neighbor_id: 7,
+                            angle: 0.5,
+                        },
+                        end: HostTangentSource::None,
+                    },
+                },
+            ),
+            (
+                AppIntent::RouteToolScrollRotated { delta: 1.0 },
+                HostSessionAction::RouteTool {
+                    action: HostRouteToolAction::ScrollRotate { delta: 1.0 },
+                },
+            ),
+            (
                 AppIntent::OpenOptionsDialogRequested,
                 HostSessionAction::OpenOptionsDialog,
             ),
@@ -1338,9 +1692,8 @@ mod tests {
                 additive: false,
                 extend_path: false,
             },
-            AppIntent::RouteToolClicked {
-                world_pos: Vec2::new(1.0, 2.0),
-                ctrl: false,
+            AppIntent::AddNodeRequested {
+                world_pos: Vec2::new(9.0, 1.0),
             },
         ];
 
@@ -1393,6 +1746,32 @@ mod tests {
         assert!(overlay.route_tool_preview.is_none());
         assert_eq!(scene.viewport_size(), [640.0, 480.0]);
         assert_eq!(assets.background_asset_revision(), 0);
+    }
+
+    #[test]
+    fn build_route_tool_viewport_snapshot_exposes_straight_tool_flags() {
+        let road_map = RoadMap::default();
+        let mut state = AppState::new();
+
+        state.editor.active_tool = fs25_auto_drive_engine::app::EditorTool::Route;
+        state
+            .editor
+            .tool_manager
+            .set_active_by_id(fs25_auto_drive_engine::app::tool_contract::RouteToolId::Straight);
+        state
+            .editor
+            .tool_manager
+            .active_tool_mut()
+            .expect("Straight-Tool muss fuer den Snapshot-Test aktiv sein")
+            .on_click(Vec2::new(0.0, 0.0), &road_map, false);
+
+        let snapshot = build_route_tool_viewport_snapshot(&state);
+
+        assert!(snapshot.has_pending_input);
+        assert!(snapshot.drag_targets.is_empty());
+        assert!(snapshot.segment_shortcuts_active);
+        assert!(snapshot.tangent_menu_data.is_none());
+        assert!(!snapshot.needs_lasso_input);
     }
 
     #[test]

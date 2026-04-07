@@ -17,7 +17,7 @@ use crate::shared::i18n::Language;
 use serde::{Deserialize, Serialize};
 
 /// Alle zur Laufzeit aenderbaren Editor-Optionen.
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct EditorOptions {
     // Nodes
     pub node_size_world: f32,
