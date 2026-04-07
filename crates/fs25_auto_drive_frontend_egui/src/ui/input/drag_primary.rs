@@ -72,6 +72,7 @@ impl InputState {
 
         // Kein Shift/Alt: Bridge-Seam entscheidet zwischen Move-Drag und Kamera-Pan.
         let base_max_distance = ctx.options.hitbox_radius();
+        let base_max_distance_sq = base_max_distance * base_max_distance;
 
         // Route-Tool Drag-Target Hit-Test (hat Vorrang vor Node-Move)
         let press_pos = ctx.ui.input(|i| i.pointer.press_origin());
@@ -80,10 +81,11 @@ impl InputState {
             press_pos.and_then(|pointer_pos| {
                 let world_pos =
                     screen_pos_to_world(pointer_pos, ctx.response, ctx.viewport_size, ctx.camera);
-                let hit = ctx
-                    .drag_targets
-                    .iter()
-                    .any(|t| t.distance(world_pos) <= base_max_distance);
+                let hit = ctx.drag_targets.iter().any(|target| {
+                    let dx = target[0] - world_pos.x;
+                    let dy = target[1] - world_pos.y;
+                    (dx * dx) + (dy * dy) <= base_max_distance_sq
+                });
                 if hit {
                     Some(world_pos)
                 } else {

@@ -2,7 +2,7 @@
 
 ## Überblick
 
-Das `ui`-Modul enthält egui-UI-Komponenten (Menüs, Statusbar, Input-Handling, Dialoge). Interaktionen emittieren primär `AppIntent`s; direkte Mutation von Fachzustand wird vermieden.
+Das `ui`-Modul enthält egui-UI-Komponenten (Menüs, Statusbar, Input-Handling, Dialoge). Interaktionen emittieren primär `AppIntent`s; direkte Mutation von Fachzustand wird vermieden. Chrome-nahe Menues lesen `HostChromeSnapshot`, waehrend route-tool-spezifische Viewport-Hinweise vom `editor_app` aus `HostRouteToolViewportSnapshot` in UI-Parameter wie `drag_targets`, `tangent_data` und `tool_needs_lasso` ueberfuehrt werden.
 
 ## Module
 
@@ -73,7 +73,7 @@ pub(crate) struct ViewportContext<'a> {
 }
 ```
 
-Wird aus `EditorToolState::route_tool_viewport_data()` befuellt. Das App-Layer liest dafuer die
+Wird im egui-Host aus `HostBridgeSession::build_route_tool_viewport_snapshot()` abgeleitet. Das App-Layer liest dafuer die
 Lasso-Capability des aktiven Tools ueber den `ToolManager` und setzt `needs_lasso_input`, wenn
 `RouteToolLassoInput::is_lasso_input_active()` aktiv ist. Ist der Wert `true`, behandelt
 `drag_primary.rs` einen Alt+Drag als `DragSelectionMode::ToolLasso` statt als normale Lasso-Selektion.
@@ -373,17 +373,26 @@ pub struct InputState {
 let mut input = InputState::new();
 
 // Read-DTO fuer alle Route-Tool-spezifischen Viewport-Daten
-let route_tool_view = editor_state.route_tool_viewport_data();
+let route_tool_view = session.build_route_tool_viewport_snapshot();
+
+// Ableitungen aus dem host-neutralen Snapshot fuer die egui-UI
+let drag_targets = /* aus route_tool_view.drag_targets abgeleitet */;
+let tangent_data = /* aus route_tool_view.tangent_menu_data nach TangentMenuData gemappt */;
 
 // Sammelt Viewport-Events aus egui-Input
 let intents = input.collect_viewport_events(
     ui, &response, viewport_size,
     &camera, road_map.as_deref(), &selected_node_ids,
-    active_tool, route_tool_is_drawing, route_tool_view.segment_shortcuts_active,
+    active_tool, route_tool_view.has_pending_input, route_tool_view.segment_shortcuts_active,
   &options, command_palette_open, default_direction, default_priority,
-  &route_tool_view.drag_targets,
+  &drag_targets,
   &mut distanzen_state,
-  route_tool_view.tangent_menu_data,
+  tangent_data,
+  clipboard_has_data,
+  farmland_polygons_loaded,
+  group_editing_active,
+  group_registry,
+  route_tool_view.needs_lasso_input,
 );
 ```
 
@@ -458,7 +467,7 @@ Alle Commands werden durch ein Precondition-System gefiltert: Nur Commands deren
 - **Alt+Scroll** (Select-Tool + aktive Selektion): Gruppen-Rotation (5° pro Tick, Lifecycle: `BeginRotateSelectedNodesRequested` → `RotateSelectedNodesRequested` → `EndRotateSelectedNodesRequested`)
 - **Rechtsklick:** Kontextmenü
 
-Der stateful Bridge-Pfad ueber `HostSessionAction::SubmitViewportInput` deckt dabei jetzt `Linksklick`, `Doppelklick`, `Shift+Drag`, normales `Alt+Drag`, Pan/Move sowie Scroll-Zoom ab. Route-Tool-spezifische Alt-/Lasso-Pfade bleiben bewusst lokal, weil die Bridge keine Tool-spezifische Polygon-Semantik transportiert.
+Der stateful Bridge-Pfad ueber `HostSessionAction::SubmitViewportInput` deckt dabei jetzt `Linksklick`, `Doppelklick`, `Shift+Drag`, normales `Alt+Drag`, Pan/Move sowie Scroll-Zoom ab. Route-Tool-spezifische Klick-, Drag-, Tangenten-, Rotate- und Tool-Lasso-Pfade werden separat ueber die explizite Session-Familie `HostSessionAction::RouteTool` transportiert; `SubmitViewportInput` bleibt bewusst tool-agnostisch.
 
 ---
 

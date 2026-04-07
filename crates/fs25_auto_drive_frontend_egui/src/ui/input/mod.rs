@@ -14,15 +14,14 @@ mod zoom;
 use super::context_menu;
 use super::drag::{draw_drag_selection_overlay, DragSelection};
 use super::keyboard;
-use crate::app::ui_contract::TangentMenuData;
 use crate::app::{
     AppIntent, Camera2D, ConnectionDirection, ConnectionPriority, EditorTool, GroupRegistry,
     RoadMap,
 };
 use crate::shared::EditorOptions;
 use fs25_auto_drive_host_bridge::{
-    HostInputModifiers, HostPointerButton, HostTapKind, HostViewportInputBatch,
-    HostViewportInputEvent,
+    HostInputModifiers, HostPointerButton, HostTangentMenuSnapshot, HostTapKind,
+    HostViewportInputBatch, HostViewportInputEvent,
 };
 use indexmap::IndexSet;
 
@@ -53,7 +52,7 @@ pub(crate) struct ViewportContext<'a> {
     pub selected_node_ids: &'a IndexSet<u64>,
     pub active_tool: EditorTool,
     pub options: &'a EditorOptions,
-    pub drag_targets: &'a [glam::Vec2],
+    pub drag_targets: &'a [[f32; 2]],
     /// Gibt an, ob das aktive Route-Tool Alt+Drag als Lasso-Eingabe benoetigt.
     pub tool_needs_lasso: bool,
 }
@@ -135,9 +134,9 @@ impl InputState {
         command_palette_open: bool,
         default_direction: ConnectionDirection,
         default_priority: ConnectionPriority,
-        drag_targets: &[glam::Vec2],
+        drag_targets: &[[f32; 2]],
         distanzen_state: &mut crate::app::state::DistanzenState,
-        tangent_data: Option<TangentMenuData>,
+        tangent_data: Option<HostTangentMenuSnapshot>,
         clipboard_has_data: bool,
         farmland_polygons_loaded: bool,
         group_editing_active: bool,
