@@ -17,8 +17,6 @@ pub(crate) enum DragSelectionMode {
 pub(crate) struct DragSelection {
     /// Aktiver Selektions-Modus (Rect oder Lasso)
     pub mode: DragSelectionMode,
-    /// Additive Selektion (Shift gedrueckt) – erweitert statt zu ersetzen
-    pub additive: bool,
     /// Startposition der Drag-Aktion in Screen-Koordinaten
     pub start_screen: egui::Pos2,
     /// Gesammelte Punkte der Drag-Aktion in Screen-Koordinaten

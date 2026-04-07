@@ -1,9 +1,11 @@
 use crate::app::tool_contract::TangentSource;
+use serde::{Deserialize, Serialize};
 
 use super::{SegmentConfigPanelAction, SegmentConfigPanelState, TangentSelectionState};
 
 /// Auswahlliste fuer den Kurvengrad.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
 pub enum CurveDegreeChoice {
     /// Quadratische Bézier-Kurve.
     Quadratic,
@@ -34,7 +36,8 @@ pub struct CurvePanelState {
 }
 
 /// Panel-Aktion des Bézier-Kurven-Tools.
-#[derive(Debug, Clone, Copy, PartialEq)]
+#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
+#[serde(tag = "kind", content = "value", rename_all = "snake_case")]
 pub enum CurvePanelAction {
     /// Kurvengrad setzen.
     SetDegree(CurveDegreeChoice),
@@ -60,7 +63,8 @@ pub struct SplinePanelState {
 }
 
 /// Panel-Aktion des Catmull-Rom-Spline-Tools.
-#[derive(Debug, Clone, Copy, PartialEq)]
+#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
+#[serde(tag = "kind", content = "value", rename_all = "snake_case")]
 pub enum SplinePanelAction {
     /// Start-Tangente setzen.
     SetTangentStart(TangentSource),

@@ -1,8 +1,9 @@
 //! Scroll-Zoom auf Mausposition.
 
-use super::{screen_pos_to_world, InputState, ViewportContext};
+use super::{host_modifiers, to_viewport_screen_pos, InputState, ViewportContext};
 use crate::app::state::EditorTool;
 use crate::app::AppIntent;
+use fs25_auto_drive_host_bridge::HostViewportInputEvent;
 
 /// Diskrete Drehschrittweite pro Scroll-Tick fuer die Gruppen-Rotation (Grad).
 const GROUP_ROTATION_STEP_DEG: f32 = 5.0;
@@ -35,11 +36,12 @@ impl InputState {
     pub(crate) fn handle_scroll_zoom(
         &mut self,
         ctx: &ViewportContext,
-        events: &mut Vec<AppIntent>,
+        local_intents: &mut Vec<AppIntent>,
+        host_events: &mut Vec<HostViewportInputEvent>,
     ) {
         if !ctx.response.hovered() {
             // Viewport verlassen → Rotation zwingend beenden
-            self.end_group_rotation_if_active(events);
+            self.end_group_rotation_if_active(local_intents);
             return;
         }
 
@@ -50,7 +52,7 @@ impl InputState {
             let top_layer = ctx.ui.ctx().layer_id_at(pos);
             // Background-Layer = Viewport; alles andere (Window, Tooltip, Popup) → kein Zoom
             if top_layer.is_some_and(|l| l.order != egui::Order::Background) {
-                self.end_group_rotation_if_active(events);
+                self.end_group_rotation_if_active(local_intents);
                 return;
             }
         }
@@ -69,7 +71,7 @@ impl InputState {
                 && !ctx.selected_node_ids.is_empty();
             if !conditions_met {
                 self.rotation_active = false;
-                events.push(AppIntent::EndRotateSelectedNodesRequested);
+                local_intents.push(AppIntent::EndRotateSelectedNodesRequested);
                 // Kein return: normaler Scroll kann danach noch folgen
             }
         }
@@ -84,10 +86,10 @@ impl InputState {
                 consume_scroll(ctx.ui);
                 if !self.rotation_active {
                     self.rotation_active = true;
-                    events.push(AppIntent::BeginRotateSelectedNodesRequested);
+                    local_intents.push(AppIntent::BeginRotateSelectedNodesRequested);
                 }
                 let step_rad = GROUP_ROTATION_STEP_DEG.to_radians();
-                events.push(AppIntent::RotateSelectedNodesRequested {
+                local_intents.push(AppIntent::RotateSelectedNodesRequested {
                     delta_angle: raw_scroll.signum() * step_rad,
                 });
             }
@@ -99,34 +101,33 @@ impl InputState {
         if modifiers.alt && ctx.active_tool == EditorTool::Route {
             if raw_scroll.abs() >= 0.5 {
                 consume_scroll(ctx.ui);
-                events.push(AppIntent::RouteToolScrollRotated {
+                local_intents.push(AppIntent::RouteToolScrollRotated {
                     delta: raw_scroll.signum(),
                 });
             }
             return;
         }
 
-        if scroll == 0.0 {
+        if scroll == 0.0 && raw_scroll == 0.0 {
             return;
         }
 
-        let step = ctx.options.camera_scroll_zoom_step;
-        let factor = if scroll > 0.0 { step } else { 1.0 / step };
-        let focus_world = ctx
-            .response
-            .hover_pos()
-            .map(|pos| screen_pos_to_world(pos, ctx.response, ctx.viewport_size, ctx.camera));
-        events.push(AppIntent::CameraZoom {
-            factor,
-            focus_world,
+        host_events.push(HostViewportInputEvent::Scroll {
+            screen_pos: ctx
+                .response
+                .hover_pos()
+                .map(|pos| to_viewport_screen_pos(pos, ctx.response)),
+            smooth_delta_y: scroll,
+            raw_delta_y: raw_scroll,
+            modifiers: host_modifiers(modifiers),
         });
     }
 
     /// Beendet die Gruppen-Rotation falls aktiv und sendet das End-Intent.
-    fn end_group_rotation_if_active(&mut self, events: &mut Vec<AppIntent>) {
+    fn end_group_rotation_if_active(&mut self, local_intents: &mut Vec<AppIntent>) {
         if self.rotation_active {
             self.rotation_active = false;
-            events.push(AppIntent::EndRotateSelectedNodesRequested);
+            local_intents.push(AppIntent::EndRotateSelectedNodesRequested);
         }
     }
 }

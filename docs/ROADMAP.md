@@ -219,6 +219,23 @@
   - [x] `host_bridge_adapter` auf reine Kompat-Surface (Reexports) reduziert; keine lokale Mapping-Doppelpflege mehr
   - [x] Hochfrequente Viewport-/Tool-/Drag-Interaktionen bleiben bewusst ungemappt und laufen weiter ueber den direkten Controller-Fallback
   - [x] Adapter-Testabdeckung deutlich verbreitert (positive und negative Mapping-Faelle plus Dispatch-Tests)
+- [x] Bridge-Entkopplungs-Slice fuer egui-Chrome + Viewport-Gesten + FFI-Mirror gelandet (2026-04-06, Branch `feat/rust-egui-render-frame-slice`)
+  - [x] Egui-Viewport sammelt bridge-faehige Gesten als `HostSessionAction::SubmitViewportInput` und verarbeitet sie stateful ueber `HostViewportInputState`
+  - [x] Normales Select-Lasso (`Alt+Drag`) und Select-Doppelklick-Segmentbildung als kanonische `SubmitViewportInput`-Semantik nachgezogen; Route-Tool-Lasso bleibt bewusst host-local
+  - [x] Host-neutrales `HostChromeSnapshot`-Read-Modell fuer Menues/Defaults/Status eingefuehrt (inkl. Route-Tool-Availability, Icon-Key und Disabled-Reason)
+  - [x] Erste UI-Surfaces auf Snapshot-Daten umgestellt (`menu`, `defaults_panel`, `floating_menu`, `command_palette`, `status`)
+  - [x] Additiver FFI-Export `fs25ad_host_bridge_session_chrome_snapshot_json(...)` + C-Header-Declaration auf derselben kanonischen Surface; FFI-ABI anschliessend sauber auf Version `3` angehoben
+- [x] Egui-Session-Ownership-Flip + Route-Tool-Action-Familie auf kanonischer Bridge-Surface abgeschlossen (2026-04-07)
+  - [x] `EditorApp` besitzt `HostBridgeSession` als einzige Session-Quelle; lokale `AppState`-/`AppController`-Ownership entfernt
+  - [x] Route-Tool-Schreibpfade als explizite `HostSessionAction::RouteTool`-Familie modelliert (inkl. Tangente, Drag/Lasso/Rotate, Segment-/Node-Anpassungen)
+  - [x] Ownership-Flip-Haertung: kanonisierte Route-Tool-/Chrome-Intents duerfen im `editor_app` nicht mehr still in den lokalen `apply_intent`-Fallback fallen
+  - [x] Dedizierter Route-Tool-Viewport-Read-Seam (`HostRouteToolViewportSnapshot`) fuer Host-Consumer eingefuehrt
+  - [x] Route-Tool-Viewport-Hotpath entschlackt: egui verarbeitet `drag_targets` und `tangent_menu_data` direkt als Host-DTOs statt per-frame Host->Engine-Re-Mapping
+  - [x] Letzter Ownership-Flip-Restblocker in der egui-Event-Sammlung geschlossen: nicht serialisierte UI-/Dialog-/Properties-/Viewport-Pfade laufen ueber schmale Session-Seams (`panel_properties_state_mut`, `dialog_ui_state_mut`, `viewport_input_context_mut`, `toggle_floating_menu`) statt direkter `app_state_mut()`-Bypaesse
+  - [x] Produktiver egui-Pfad hat keinen direkten mutablen `AppState`-Bypass mehr; `app_state_mut()` bleibt nur als Uebergangs-/Kompat-Seam der Host-Bridge fuer lokale Rust-Hosts und Tests sichtbar
+  - [x] FFI-Mirror additiv erweitert: `fs25ad_host_bridge_session_route_tool_viewport_json(...)`, C-Header-Sync und allgemeine FFI-ABI auf `4` angehoben
+  - [x] FFI-Write-Tests fuer Route-Tool-JSON-Pfade nachgezogen (`SelectToolWithAnchors`, `Click`, `DragStart/Update/End`, `LassoCompleted` sowie verwandte Route-Tool-Aktionen)
+  - [x] Doku-Sync: `crates/fs25_auto_drive_frontend_egui/API.md`, `src/editor_app/API.md`, `src/ui/API.md` und `docs/ARCHITECTURE_PLAN.md` auf session-owned egui-Host, `HostRouteToolViewportSnapshot` und FFI-ABI `4` aktualisiert
 - [x] Flutter-Adapter-Surface fuer die Unified Host Bridge umgesetzt
   - [x] `fs25_auto_drive_frontend_flutter_bridge` auf `fs25_auto_drive_host_bridge` umgestellt
   - [x] Crate-Abhaengigkeit auf `fs25_auto_drive_host_bridge` reduziert; keine direkte Engine-Abhaengigkeit mehr
@@ -228,12 +245,24 @@
   - [x] Gemeinsame Offscreen-Canvas-Runtime in `fs25_auto_drive_render_wgpu` mit blocking RGBA-Readback
   - [x] Revisionsbasierter Background-Sync ueber `RenderAssetsSnapshot` in derselben Runtime
   - [x] Duenner FFI-Canvas-Adapter ueber `HostBridgeSession::build_render_frame(...)`
+  - [x] Freier Host-Bridge-Read-Helper `build_render_frame(&controller, &state, viewport)` fuer lokale Rust-Hosts ohne Session-Ownership-Migration
+  - [x] egui-Onscreen-Glue auf denselben gekoppelten RenderFrame-Seam umgestellt; separater spaeter Asset-Read im egui-Pfad entfernt
   - [x] Expliziter ABI-Vertrag fuer `RGBA8 sRGB`, `bytes_per_row = width * 4` und `premultiplied alpha`
   - [x] Stabiler C-Header `crates/fs25_auto_drive_host_bridge_ffi/include/fs25ad_host_bridge.h` fuer Session-, Canvas- und FrameInfo-Symbole
   - [x] Laufzeit-Handshake ueber `fs25ad_host_bridge_abi_version()` und `fs25ad_host_bridge_canvas_contract_version()`
   - [x] Canvas-Verbrauchertests fuer Header-/Layout-Kontrakt erweitert
-  - [ ] Folge-Slice: egui-Host auf gemeinsame Canvas-Runtime umstellen
-  - [ ] Folge-Slice: Shared-Texture-/Async-/Streaming-Pfade evaluieren
+  - [x] Nachfolge durch Shared-Texture-Hard-Cut mit Vertragsversion 3 abgeschlossen; Canvas-v1 ist historisch
+- [x] Shared-Texture Hard-Cut (2026-04-06)
+  - [x] Transportneutralen Export-Kern in `fs25_auto_drive_render_wgpu` herausgezogen (`export_core.rs`)
+  - [x] `SharedTextureRuntime` mit explizitem Acquire/Release-Lifecycle eingefuehrt
+  - [x] Shared-Texture-Vertrag auf Version `3` angehoben und als opaque Runtime-Vertrag im selben Prozessraum dokumentiert
+  - [x] FFI-Adapter auf den Shared-Texture-Transport umgestellt (`shared_texture_v2`-Implementierung; `new/resize/render/acquire/release`)
+  - [x] Pixelbuffer-v1 (`canvas.rs`, `canvas_*`, `Fs25adRgbaFrameInfo`) atomar entfernt
+  - [x] Shared-Texture-Hard-Cut hielt die allgemeine FFI-ABI damals noch auf `2`; der spaetere Chrome-JSON-Export hat die allgemeine ABI inzwischen auf `3` angehoben, der separate Shared-Texture-Vertrag bleibt bei `3`
+  - [x] RenderFrame-Seam (`HostBridgeSession::build_render_frame`) unveraendert beibehalten
+  - [x] egui-Onscreen-Host explizit unveraendert gelassen (direkter `RenderPass`-Pfad)
+  - [x] Additiver Texture-Registration-v4-Vertrag neben v3 eingefroren (2026-04-06): gemeinsame Capability-Negotiation + Frame-Metadaten + Lifecycle, plattformspezifische Payload-Familien fuer Windows/Linux/Android, explizites Capability-Gating ohne Pixelbuffer-Fallback
+  - [ ] Folge-Slice: Produktive v4-Backend-Landung fuer Windows/Linux/Android plus zusaetzliche native Host-Pfade im Consumer-Host (Flutter/C++); aktuell hart blockiert durch den normalen `wgpu::Device::create_texture`-Pfad ohne Export-/External-Memory-Felder und durch fehlenden nativen Host-Import/Surface-Code fuer DXGI, DMA-BUF und Android-Surface-Ziele
 - [x] Flutter-Bridge als transitional alias surface eingefroren (2026-04-05)
   - [x] Keine neue Logik mehr in `fs25_auto_drive_frontend_flutter_bridge`; Erweiterungen nur in `fs25_auto_drive_host_bridge`
   - [x] Kompat-Aliase (`Engine*`, `FlutterBridgeSession`) direkt in `fs25_auto_drive_host_bridge` etabliert
@@ -581,7 +610,7 @@
 - ✅ Tool-Kern-Remediation Phase 3: Host-Sync, Recreate, Drag, Tangenten, Chain-Input und Lasso sind wieder explizite Capabilities; Rotations- und Segment-Shortcuts sind zusaetzlich in `RouteToolRotate` und `RouteToolSegmentAdjustments` getrennt, damit keine No-Op-Fallen im Parking-/Segment-Shortcut-Pfad bleiben
 - ✅ Host-UI-Contracts Follow-up (2026-04-04, Schritt 1): Tool-Einstellungsfenster laufen ueber den einheitlichen Engine-Vertrag `PanelState`/`PanelAction`; `AppController::build_host_ui_snapshot()` liefert die host-neutrale Surface, egui mappt `PanelAction` zentral auf `AppIntent`. Datei-/Pfad-Dialoge bleiben in diesem Schritt noch als dokumentierter `bridge-gap` im direkten egui-Dialogpfad.
 - ✅ Host-UI-Contracts Follow-up (2026-04-04, Schritt 2): Overlay-Daten sind als `ViewportOverlaySnapshot` in den Engine-Layer gewandert; `ClipboardOverlaySnapshot`, `GroupLockOverlaySnapshot` und `GroupBoundaryOverlaySnapshot` kapseln die Preview-/Gruppen-Daten host-neutral, und egui rendert Tool-/Clipboard-/Distanzen-/Gruppen-Overlays nur noch aus Snapshot-Daten statt direkter Registry-/RoadMap-Ableitung
-- ✅ Host-UI-Contracts Follow-up (2026-04-04, Schritt 3): Die gemeinsame Host-Bridge stellt fuer direkte Flutter-/FFI-Consumer jetzt eine explizite `EngineSessionAction`-Fassade (`apply_action` + Komfort-Methoden) statt generischem `AppIntent`-Dispatch bereit; `snapshot()` bleibt gecacht bis zur naechsten erfolgreichen Mutation, `build_render_frame()` liefert den gekoppelten read-only Render-Output und der oeffentliche `AppState`-Escape-Hatch ist entfernt
+- ✅ Host-UI-Contracts Follow-up (2026-04-04, Schritt 3): Die gemeinsame Host-Bridge stellt fuer direkte Flutter-/FFI-Consumer jetzt eine explizite `EngineSessionAction`-Fassade (`apply_action` + Komfort-Methoden) statt generischem `AppIntent`-Dispatch bereit; `snapshot()` bleibt gecacht bis zur naechsten erfolgreichen Mutation, `build_render_frame()` liefert den gekoppelten read-only Render-Output und der oeffentliche `AppState`-Escape-Hatch war in diesem Schritt entfernt. Fuer den spaeteren egui-Session-Ownership-Flip wurden die temporaeren Seams `app_state()`/`app_state_mut()` zwar wieder eingefuehrt; im produktiven egui-Pfad laufen mutierende UI-Local-Zugriffe inzwischen aber ueber die schmalen Session-Seams.
 - ✅ Host-UI-Contracts Follow-up (2026-04-04, Schritt 4): Bridge-Action-Surface um `Undo`/`Redo` erweitert, `EngineSessionSnapshot` um `can_undo`/`can_redo`/`pending_dialog_request_count` ergaenzt und der host-neutrale Dialog-Lifecycle in der Host-Bridge-Seam (`take_dialog_requests()` + `submit_dialog_result(...)`) produktiv bereitgestellt
 - ✅ Host-UI-Contracts Follow-up (2026-04-05, Schritt 5): egui konsumiert Datei-/Pfad-Dialog-Requests jetzt ueber `take_host_dialog_requests(...)` als `HostDialogRequest`; `HostDialogResult` wird ueber `HostSessionAction::SubmitDialogResult` in denselben Bridge-Dispatch-Pfad zurueckgefuehrt. Der direkte Engine-Dialog-DTO-Pfad im egui-Dialogfluss ist entfernt.
 

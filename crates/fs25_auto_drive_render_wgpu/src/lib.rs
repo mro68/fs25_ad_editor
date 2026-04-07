@@ -1,20 +1,33 @@
 //! Host-neutraler wgpu-Renderer-Kern fuer den FS25 AutoDrive Editor.
 
 mod background_renderer;
-mod canvas;
 mod connection_renderer;
+mod export_core;
 mod fingerprint;
 mod marker_renderer;
 mod node_renderer;
+mod shared_texture;
 mod texture;
+mod texture_registration;
 mod types;
 
 pub use background_renderer::BackgroundWorldBounds;
-pub use canvas::{
-    CanvasAlphaMode, CanvasError, CanvasFrame, CanvasFrameInfo, CanvasPixelFormat, CanvasRuntime,
-};
 pub use fs25_auto_drive_engine::shared;
 pub use fs25_auto_drive_engine::shared::{RenderQuality, RenderScene};
+pub use shared_texture::{
+    SharedTextureAlphaMode, SharedTextureError, SharedTextureFrame, SharedTextureNativeHandle,
+    SharedTexturePixelFormat, SharedTextureRuntime,
+};
+pub use texture_registration::{
+    query_texture_registration_v4_capabilities, AndroidAttachmentKind, AndroidSurfaceDescriptor,
+    LinuxDmabufDescriptor, LinuxDmabufPlane, TextureRegistrationAlphaMode,
+    TextureRegistrationAvailability, TextureRegistrationCapabilities,
+    TextureRegistrationFrameMetadata, TextureRegistrationLifecycle,
+    TextureRegistrationLifecycleError, TextureRegistrationLifecycleState, TextureRegistrationModel,
+    TextureRegistrationPayloadFamily, TextureRegistrationPixelFormat, TextureRegistrationPlatform,
+    TextureRegistrationPlatformCapabilities, WindowsDescriptor, WindowsDescriptorKind,
+    MAX_LINUX_DMABUF_PLANES, TEXTURE_REGISTRATION_V4_CONTRACT_VERSION,
+};
 
 pub(crate) use background_renderer::BackgroundRenderer;
 pub(crate) use connection_renderer::ConnectionRenderer;
