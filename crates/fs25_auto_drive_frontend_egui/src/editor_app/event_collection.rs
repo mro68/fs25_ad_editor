@@ -70,7 +70,6 @@ impl EditorApp {
 
         events
     }
-
 }
 
 #[cfg(test)]

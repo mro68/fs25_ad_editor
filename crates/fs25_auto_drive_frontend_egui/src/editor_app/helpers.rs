@@ -112,7 +112,7 @@ impl EditorApp {
 
 #[cfg(test)]
 mod tests {
-    use crate::app::{AppController, AppState};
+    use crate::app::AppState;
     use crate::core::{
         Connection, ConnectionDirection, ConnectionPriority, MapNode, NodeFlag, RoadMap,
     };
@@ -140,13 +140,12 @@ mod tests {
 
     #[test]
     fn split_render_frame_for_egui_keeps_background_sync_assets_coupled_to_scene() {
-        let controller = AppController::new();
         let mut state = AppState::new();
         state.road_map = Some(Arc::new(regression_test_map()));
         state.view.background_asset_revision = 7;
         state.view.background_transform_revision = 11;
 
-        let frame = build_render_frame(&controller, &state, [512.0, 256.0]);
+        let frame = build_render_frame(&state, [512.0, 256.0]);
         let expected_asset_revision = frame.assets.background_asset_revision();
         let expected_transform_revision = frame.assets.background_transform_revision();
 
