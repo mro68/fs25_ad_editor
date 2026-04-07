@@ -4,10 +4,12 @@ use crate::app::ui_contract::{
     ColorPathPanelPhase, ColorPathPanelState, CurveDegreeChoice, CurvePanelAction, CurvePanelState,
     CurveTangentsPanelState, ExistingConnectionModeChoice, FieldBoundaryPanelAction,
     FieldBoundaryPanelState, FieldPathModeChoice, FieldPathPanelAction, FieldPathPanelPhase,
-    FieldPathPanelState, FieldPathSelectionSummary, PanelAction, ParkingPanelAction,
+    FieldPathPanelState, FieldPathPreviewStatus, FieldPathSelectionSummary, PanelAction,
+    ParkingPanelAction,
     ParkingPanelState, ParkingRampSideChoice, RouteOffsetPanelAction, RouteOffsetPanelState,
     RouteToolConfigState, RouteToolPanelAction, RouteToolPanelState, SegmentConfigPanelAction,
-    SegmentConfigPanelState, SmoothCurvePanelAction, SmoothCurvePanelState, SplinePanelAction,
+    SegmentConfigPanelState, SegmentLengthKind, SmoothCurvePanelAction, SmoothCurvePanelState,
+    SplinePanelAction,
     SplinePanelState, StraightPanelAction, StraightPanelState, TangentHelpHint, TangentNoneReason,
     TangentSelectionState, BYPASS_BASE_SPACING_LIMITS, BYPASS_OFFSET_LIMITS,
     PARKING_BAY_LENGTH_LIMITS, PARKING_ENTRY_EXIT_T_LIMITS, PARKING_MAX_NODE_DISTANCE_LIMITS,
@@ -245,7 +247,7 @@ fn render_segment_config(
     events: &mut Vec<AppIntent>,
     map_action: impl Fn(SegmentConfigPanelAction) -> RouteToolPanelAction,
 ) {
-    ui.label(&state.length_label);
+    ui.label(segment_length_kind_label(state.length_kind));
     if let Some(length_m) = state.length_m {
         ui.small(format!("Laenge: {:.1} m", length_m));
     }
@@ -311,7 +313,7 @@ fn render_segment_distance_only(
     events: &mut Vec<AppIntent>,
     map_action: impl Fn(f32) -> RouteToolPanelAction,
 ) {
-    ui.label(&state.length_label);
+    ui.label(segment_length_kind_label(state.length_kind));
     if let Some(length_m) = state.length_m {
         ui.small(format!("Laenge: {:.1} m", length_m));
     }
@@ -605,6 +607,15 @@ fn tangent_none_reason_label(reason: TangentNoneReason) -> &'static str {
         TangentNoneReason::NoConnection => "Keine Verbindung",
         TangentNoneReason::NoTangent => "Keine Tangente",
         TangentNoneReason::UseDefault => "Standard",
+    }
+}
+
+fn segment_length_kind_label(kind: SegmentLengthKind) -> &'static str {
+    match kind {
+        SegmentLengthKind::StraightLine => "Streckenlaenge",
+        SegmentLengthKind::Curve => "Kurvenlaenge",
+        SegmentLengthKind::CatmullRomSpline => "Spline-Laenge",
+        SegmentLengthKind::SmoothRoute => "Routenlaenge",
     }
 }
 

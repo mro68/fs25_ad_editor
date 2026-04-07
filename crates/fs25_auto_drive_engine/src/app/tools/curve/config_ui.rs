@@ -7,8 +7,8 @@ use super::state::{CurveDegree, CurveTool, Phase};
 use crate::app::tool_contract::TangentSource;
 use crate::app::ui_contract::{
     CurveDegreeChoice, CurvePanelAction, CurvePanelState, CurveTangentsPanelState,
-    RouteToolPanelEffect, SegmentConfigPanelAction, TangentHelpHint, TangentMenuData,
-    TangentNoneReason, TangentOptionData, TangentSelectionState,
+    RouteToolPanelEffect, SegmentConfigPanelAction, SegmentLengthKind, TangentHelpHint,
+    TangentMenuData, TangentNoneReason, TangentOptionData, TangentSelectionState,
 };
 
 impl CurveTool {
@@ -77,7 +77,7 @@ impl CurveTool {
             tangents,
             segment: self
                 .seg
-                .panel_state(adjusting, self.is_ready(), length, "Kurvenlaenge", true),
+                .panel_state(adjusting, self.is_ready(), length, SegmentLengthKind::Curve, true),
         }
     }
 

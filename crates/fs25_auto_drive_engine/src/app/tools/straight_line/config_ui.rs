@@ -2,7 +2,8 @@
 
 use super::state::StraightLineTool;
 use crate::app::ui_contract::{
-    RouteToolPanelEffect, SegmentConfigPanelAction, StraightPanelAction, StraightPanelState,
+    RouteToolPanelEffect, SegmentConfigPanelAction, SegmentLengthKind, StraightPanelAction,
+    StraightPanelState,
 };
 
 impl StraightLineTool {
@@ -25,7 +26,7 @@ impl StraightLineTool {
                 adjusting,
                 self.start.is_some() && self.end.is_some(),
                 length,
-                "Streckenlaenge",
+                SegmentLengthKind::StraightLine,
                 true,
             ),
         }

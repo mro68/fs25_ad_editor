@@ -3,7 +3,7 @@
 use super::state::{FieldPathMode, FieldPathPhase, FieldPathTool};
 use crate::app::ui_contract::{
     FieldPathModeChoice, FieldPathPanelAction, FieldPathPanelPhase, FieldPathPanelState,
-    FieldPathSelectionSummary, RouteToolPanelEffect,
+    FieldPathPreviewStatus, FieldPathSelectionSummary, RouteToolPanelEffect,
 };
 
 impl FieldPathTool {
@@ -20,13 +20,13 @@ impl FieldPathTool {
             .then(|| self.selection_summary(false)),
             can_advance_to_side2: self.can_advance_to_side2(),
             can_compute: self.can_compute(),
-            preview_message: match self.phase {
+            preview_status: match self.phase {
                 FieldPathPhase::Preview if self.resampled_nodes.is_empty() => {
-                    Some("Keine Mittellinie gefunden — Seiten anpassen".to_owned())
+                    Some(FieldPathPreviewStatus::NoMiddleLine)
                 }
-                FieldPathPhase::Preview => {
-                    Some(format!("{} Nodes generiert", self.resampled_nodes.len()))
-                }
+                FieldPathPhase::Preview => Some(FieldPathPreviewStatus::Generated {
+                    node_count: self.resampled_nodes.len(),
+                }),
                 _ => None,
             },
             node_spacing: self.config.node_spacing,

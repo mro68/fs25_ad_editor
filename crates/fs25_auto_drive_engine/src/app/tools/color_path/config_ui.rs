@@ -29,11 +29,6 @@ impl ColorPathTool {
             phase: panel_phase(self.phase),
             sample_count: self.sampling.sampled_colors.len(),
             avg_color: self.sampling.avg_color,
-            palette_label: if self.config.exact_color_match {
-                "Exakte Farben".to_owned()
-            } else {
-                "Palette".to_owned()
-            },
             palette_colors: self.matching.palette.clone(),
             can_compute: !self.sampling.sampled_colors.is_empty(),
             preview_stats,

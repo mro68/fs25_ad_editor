@@ -11,8 +11,6 @@ impl RouteOffsetTool {
     pub(super) fn panel_state(&self) -> RouteOffsetPanelState {
         RouteOffsetPanelState {
             has_chain: self.has_chain(),
-            empty_message: (!self.has_chain())
-                .then_some("Kette selektieren und Route-Tool neu aktivieren.".to_owned()),
             left_enabled: self.config.left_enabled,
             left_distance: self.config.left_distance,
             right_enabled: self.config.right_enabled,

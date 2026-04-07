@@ -52,13 +52,26 @@ pub enum SegmentPanelMode {
     Adjusting,
 }
 
+/// Semantische Art der Streckenlaengen-Angabe im Segment-Panel.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum SegmentLengthKind {
+    /// Gerade Strecke zwischen zwei Punkten.
+    StraightLine,
+    /// Bézier-Kurve.
+    Curve,
+    /// Catmull-Rom-Spline.
+    CatmullRomSpline,
+    /// Geglaettete Route.
+    SmoothRoute,
+}
+
 /// Read-Zustand fuer das gemeinsame Segment-Panel mehrerer Tools.
 #[derive(Debug, Clone, PartialEq)]
 pub struct SegmentConfigPanelState {
     /// Aktueller Anzeigemodus.
     pub mode: SegmentPanelMode,
-    /// Label fuer die aktuelle Streckenlaenge.
-    pub length_label: String,
+    /// Semantische Art der dargestellten Strecke.
+    pub length_kind: SegmentLengthKind,
     /// Aktuelle Laenge in Metern; `None` im Default-Modus.
     pub length_m: Option<f32>,
     /// Aktueller minimaler Segment-Abstand.
