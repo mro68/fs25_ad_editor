@@ -5,8 +5,8 @@ use super::super::RouteToolCore;
 use super::SplineTool;
 use crate::app::tool_contract::TangentSource;
 use crate::app::ui_contract::{
-    RouteToolPanelEffect, SegmentConfigPanelAction, SplinePanelAction, SplinePanelState,
-    TangentNoneReason, TangentOptionData, TangentSelectionState,
+    RouteToolPanelEffect, SegmentConfigPanelAction, SegmentLengthKind, SplinePanelAction,
+    SplinePanelState, TangentNoneReason, TangentOptionData, TangentSelectionState,
 };
 
 impl SplineTool {
@@ -45,7 +45,7 @@ impl SplineTool {
                 adjusting,
                 self.is_ready(),
                 length,
-                "Spline-Laenge",
+                SegmentLengthKind::CatmullRomSpline,
                 true,
             ),
         }

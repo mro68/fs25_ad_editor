@@ -9,11 +9,13 @@ pub use analysis_family::{
     ColorPathPanelAction, ColorPathPanelPhase, ColorPathPanelState, ColorPathPreviewStats,
     ExistingConnectionModeChoice, FieldBoundaryPanelAction, FieldBoundaryPanelState,
     FieldPathModeChoice, FieldPathPanelAction, FieldPathPanelPhase, FieldPathPanelState,
-    FieldPathSelectionSummary, RouteOffsetPanelAction, RouteOffsetPanelState,
+    FieldPathPreviewStatus, FieldPathSelectionSummary, RouteOffsetPanelAction,
+    RouteOffsetPanelState,
 };
 pub use common::{
     RouteToolPanelEffect, RouteToolPanelFollowUp, RouteToolPanelState, SegmentConfigPanelAction,
-    SegmentConfigPanelState, SegmentPanelMode, TangentNoneReason, TangentSelectionState,
+    SegmentConfigPanelState, SegmentLengthKind, SegmentPanelMode, TangentNoneReason,
+    TangentSelectionState,
 };
 pub use curve_family::{
     CurveDegreeChoice, CurvePanelAction, CurvePanelState, CurveTangentsPanelState,

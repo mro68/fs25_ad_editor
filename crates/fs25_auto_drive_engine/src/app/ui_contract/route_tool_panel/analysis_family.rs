@@ -6,8 +6,6 @@ use serde::{Deserialize, Serialize};
 pub struct RouteOffsetPanelState {
     /// Gibt an, ob eine gueltige Kette geladen ist.
     pub has_chain: bool,
-    /// Meldung fuer den Fall ohne geladene Kette.
-    pub empty_message: Option<String>,
     /// Links-Versatz aktiv?
     pub left_enabled: bool,
     /// Distanz des Links-Versatzes.
@@ -47,8 +45,6 @@ pub enum RouteOffsetPanelAction {
 pub struct FieldBoundaryPanelState {
     /// ID des aktuell gewaehlten Feldes.
     pub selected_field_id: Option<u32>,
-    /// Meldung fuer den Fall ohne Auswahl.
-    pub empty_selection_text: Option<String>,
     /// Abstand zwischen erzeugten Nodes.
     pub node_spacing: f32,
     /// Versatz in Metern.
@@ -69,8 +65,8 @@ pub struct FieldBoundaryPanelState {
     pub direction: ConnectionDirection,
     /// Strassenart der erzeugten Route.
     pub priority: ConnectionPriority,
-    /// Optionaler Bedienhinweis.
-    pub hint_text: Option<String>,
+    /// Zeigt Hinweis: weiterer Klick waehlt anderes Feld.
+    pub show_select_hint: bool,
 }
 
 /// Panel-Aktion des Feldgrenz-Tools.
@@ -133,6 +129,15 @@ pub struct FieldPathSelectionSummary {
     pub is_empty: bool,
 }
 
+/// Semantischer Vorschau-Status im Feldweg-Tool.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum FieldPathPreviewStatus {
+    /// Keine Mittellinie gefunden; Seiten anpassen.
+    NoMiddleLine,
+    /// Vorschau erfolgreich generiert.
+    Generated { node_count: usize },
+}
+
 /// Panelzustand des Feldweg-Tools.
 #[derive(Debug, Clone, PartialEq)]
 pub struct FieldPathPanelState {
@@ -148,8 +153,8 @@ pub struct FieldPathPanelState {
     pub can_advance_to_side2: bool,
     /// Gibt an, ob eine Berechnung moeglich ist.
     pub can_compute: bool,
-    /// Optionaler Preview-Status.
-    pub preview_message: Option<String>,
+    /// Semantischer Vorschau-Status, falls eine Vorschau vorliegt.
+    pub preview_status: Option<FieldPathPreviewStatus>,
     /// Abstand zwischen erzeugten Nodes.
     pub node_spacing: f32,
     /// Douglas-Peucker-Toleranz.
@@ -231,8 +236,6 @@ pub struct ColorPathPanelState {
     pub sample_count: usize,
     /// Mittelwert der gesampelten Farbe, falls vorhanden.
     pub avg_color: Option<[u8; 3]>,
-    /// Label fuer die aktuell aktive Farbmenge.
-    pub palette_label: String,
     /// Farbpalette fuer Matching und Preview.
     pub palette_colors: Vec<[u8; 3]>,
     /// Gibt an, ob die Pipeline aus dem aktuellen Sampling gestartet werden kann.

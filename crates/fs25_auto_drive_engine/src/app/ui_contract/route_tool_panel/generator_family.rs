@@ -138,14 +138,10 @@ pub enum ParkingPanelAction {
 pub struct BypassPanelState {
     /// Gibt an, ob eine gueltige Kette geladen ist.
     pub has_chain: bool,
-    /// Meldung fuer den Fall ohne geladene Kette.
-    pub empty_message: Option<String>,
     /// Seitlicher Versatz.
     pub offset: f32,
     /// Grundabstand zwischen Nodes.
     pub base_spacing: f32,
-    /// Textliche Seitenbeschreibung des aktuellen Offsets.
-    pub side_label: String,
     /// Anzahl neu erzeugter Zwischen-Nodes in der Preview.
     pub new_node_count: Option<usize>,
     /// Anzahl Nodes der geladenen Kette.
