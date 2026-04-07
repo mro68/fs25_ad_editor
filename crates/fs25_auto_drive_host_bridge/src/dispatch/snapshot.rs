@@ -135,12 +135,7 @@ pub fn build_host_chrome_snapshot(state: &AppState) -> HostChromeSnapshot {
         })
         .unwrap_or((0, 0, 0, None));
     let selection_count = state.selection.selected_node_ids.len();
-    let selection_example_id = state
-        .selection
-        .selected_node_ids
-        .iter()
-        .next()
-        .copied();
+    let selection_example_id = state.selection.selected_node_ids.iter().next().copied();
     HostChromeSnapshot {
         status_message: state.ui.status_message.clone(),
         show_command_palette: state.ui.show_command_palette,
