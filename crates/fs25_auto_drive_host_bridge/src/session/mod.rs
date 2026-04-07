@@ -215,9 +215,14 @@ impl HostBridgeSession {
 
     /// Liefert eine mutable Referenz auf den aktuellen `AppState`.
     ///
-    /// Mutationen ueber diese Uebergangs-Seam markieren den Session-Snapshot als
-    /// dirty. Fachliche Mutationen sollen langfristig ueber `apply_action(...)`
-    /// laufen.
+    /// **Veraltet:** Alle fachlichen Mutationen sollen ueber `apply_action(...)`,
+    /// `apply_intent(...)` oder die schmalen Seams (`panel_properties_state_mut()`,
+    /// `dialog_ui_state_mut()`, `viewport_input_context_mut()`) laufen.
+    /// Diese Methode wird entfernt, sobald keine Aufrufer mehr existieren.
+    #[deprecated(
+        since = "0.0.0",
+        note = "Nutze apply_action(), apply_intent() oder schmale Seams statt direkter AppState-Mutation."
+    )]
     pub fn app_state_mut(&mut self) -> &mut AppState {
         self.snapshot_dirty = true;
         &mut self.state
