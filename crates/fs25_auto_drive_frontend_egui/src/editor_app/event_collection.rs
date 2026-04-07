@@ -6,8 +6,8 @@ use crate::shared::EditorOptions;
 use crate::ui;
 use eframe::egui;
 use fs25_auto_drive_host_bridge::{
-    build_host_chrome_snapshot, build_host_ui_snapshot, map_host_action_to_intent,
-    take_host_dialog_requests, HostChromeSnapshot, HostDialogResult, HostSessionAction,
+    map_host_action_to_intent, map_intent_to_host_action, HostChromeSnapshot, HostDialogResult,
+    HostRouteToolViewportSnapshot, HostSessionAction,
 };
 use glam::Vec2;
 
@@ -22,12 +22,20 @@ fn map_dialog_results_to_intents(dialog_results: Vec<HostDialogResult>) -> Vec<A
         .collect()
 }
 
+fn map_intent_to_collected_event(intent: AppIntent) -> CollectedEvent {
+    if let Some(action) = map_intent_to_host_action(&intent) {
+        CollectedEvent::HostAction(action)
+    } else {
+        CollectedEvent::Intent(intent)
+    }
+}
+
 impl EditorApp {
     /// Sammelt alle UI- und Viewport-Events des aktuellen Frames.
     pub(super) fn collect_ui_events(&mut self, ctx: &egui::Context) -> Vec<CollectedEvent> {
         let mut events = Vec::new();
-        let host_ui_snapshot = build_host_ui_snapshot(&self.controller, &self.state);
-        let host_chrome_snapshot = build_host_chrome_snapshot(&self.state);
+        let host_ui_snapshot = self.session.build_host_ui_snapshot();
+        let host_chrome_snapshot = self.session.build_host_chrome_snapshot();
         let mut top_ui = ui::common::create_top_level_ui(ctx, "editor_app_top_level_panels");
 
         // Panels und Dialoge
@@ -40,7 +48,7 @@ impl EditorApp {
         events.extend(
             self.collect_dialog_events(ctx, &host_ui_snapshot)
                 .into_iter()
-                .map(CollectedEvent::Intent),
+                .map(map_intent_to_collected_event),
         );
         let mut show_command_palette = host_ui_snapshot
             .command_palette_state()
@@ -49,13 +57,17 @@ impl EditorApp {
             ui::command_palette::render_command_palette(
                 ctx,
                 &mut show_command_palette,
-                &self.state,
+                self.session.app_state(),
                 &host_chrome_snapshot,
             )
             .into_iter()
-            .map(CollectedEvent::Intent),
+            .map(map_intent_to_collected_event),
         );
-        self.state.ui.show_command_palette = show_command_palette;
+        if show_command_palette != host_chrome_snapshot.show_command_palette {
+            events.push(CollectedEvent::HostAction(
+                HostSessionAction::ToggleCommandPalette,
+            ));
+        }
 
         // Zentraler Viewport (Rendering + Input + Overlays)
         egui::CentralPanel::default()
@@ -64,7 +76,7 @@ impl EditorApp {
                 let (rect, response) =
                     ui.allocate_exact_size(ui.available_size(), egui::Sense::click_and_drag());
                 let viewport_size = [rect.width(), rect.height()];
-                let command_palette_open = self.state.ui.show_command_palette;
+                let command_palette_open = host_chrome_snapshot.show_command_palette;
 
                 events.extend(self.collect_viewport_events(
                     ui,
@@ -74,7 +86,11 @@ impl EditorApp {
                 ));
                 self.render_viewport(ui, rect, viewport_size);
                 let overlay_intents = self.render_overlays(ui, rect, &response, viewport_size);
-                events.extend(overlay_intents.into_iter().map(CollectedEvent::Intent));
+                events.extend(
+                    overlay_intents
+                        .into_iter()
+                        .map(map_intent_to_collected_event),
+                );
             });
 
         events
@@ -89,37 +105,43 @@ impl EditorApp {
         top_ui: &mut egui::Ui,
     ) -> Vec<CollectedEvent> {
         let mut events = Vec::new();
+        let should_close_floating_menu = {
+            let state = self.session.app_state();
 
-        ui::status::render_status_bar_inside(top_ui, &self.state, host_chrome_snapshot);
-        events.extend(
-            ui::menu::render_menu_inside(top_ui, &self.state, host_chrome_snapshot)
+            ui::status::render_status_bar_inside(top_ui, state, host_chrome_snapshot);
+            events.extend(
+                ui::menu::render_menu_inside(top_ui, state, host_chrome_snapshot)
+                    .into_iter()
+                    .map(map_intent_to_collected_event),
+            );
+            let (floating_events, should_close) =
+                ui::render_floating_menu(ctx, state, host_chrome_snapshot);
+            events.extend(
+                floating_events
+                    .into_iter()
+                    .map(map_intent_to_collected_event),
+            );
+            events.extend(
+                ui::defaults_panel::render_route_defaults_panel_inside(
+                    top_ui,
+                    state,
+                    host_chrome_snapshot,
+                )
                 .into_iter()
-                .map(CollectedEvent::Intent),
-        );
-        let (floating_events, should_close_floating_menu) =
-            ui::render_floating_menu(ctx, &self.state, host_chrome_snapshot);
+                .map(map_intent_to_collected_event),
+            );
+            should_close
+        };
         if should_close_floating_menu {
-            self.state.ui.floating_menu = None;
+            self.session.clear_floating_menu();
         }
-        events.extend(floating_events.into_iter().map(CollectedEvent::Intent));
-        events.extend(
-            ui::defaults_panel::render_route_defaults_panel_inside(
-                top_ui,
-                &self.state,
-                host_chrome_snapshot,
-            )
-            .into_iter()
-            .map(CollectedEvent::Intent),
-        );
+
+        let route_tool_panel = host_ui_snapshot.route_tool_panel_state().cloned();
+        let panel_state = self.session.panel_properties_state_mut();
+        let distance_wheel_step_m = numeric_distance_wheel_step(panel_state.options);
 
         // Rechte Sidebar: Marker + Eigenschaften untereinander, einklappbar
         // (muss vor CentralPanel aufgerufen werden)
-        let road_map_for_properties = self.state.road_map.clone();
-        let default_direction = self.state.editor.default_direction;
-        let default_priority = self.state.editor.default_priority;
-        let active_tool = self.state.editor.active_tool;
-        let distance_wheel_step_m = numeric_distance_wheel_step(&self.state.options);
-        let route_tool_panel = host_ui_snapshot.route_tool_panel_state().cloned();
         egui::Panel::right("right_sidebar")
             .resizable(true)
             .default_size(200.0)
@@ -130,9 +152,9 @@ impl EditorApp {
                         .default_open(true)
                         .show(ui, |ui| {
                             events.extend(
-                                ui::render_marker_content(ui, self.state.road_map.as_deref())
+                                ui::render_marker_content(ui, panel_state.road_map)
                                     .into_iter()
-                                    .map(CollectedEvent::Intent),
+                                    .map(map_intent_to_collected_event),
                             );
                         });
 
@@ -144,17 +166,17 @@ impl EditorApp {
                             events.extend(
                                 ui::render_properties_content(
                                     ui,
-                                    road_map_for_properties.as_deref(),
-                                    &self.state.selection.selected_node_ids,
-                                    default_direction,
-                                    default_priority,
+                                    panel_state.road_map,
+                                    panel_state.selected_node_ids,
+                                    panel_state.default_direction,
+                                    panel_state.default_priority,
                                     distance_wheel_step_m,
-                                    Some(&self.state.group_registry),
-                                    Some(&self.state.tool_edit_store),
-                                    &mut self.state.ui.distanzen,
+                                    Some(panel_state.group_registry),
+                                    Some(panel_state.tool_edit_store),
+                                    panel_state.distanzen,
                                 )
                                 .into_iter()
-                                .map(CollectedEvent::Intent),
+                                .map(map_intent_to_collected_event),
                             );
                         });
                 });
@@ -165,30 +187,28 @@ impl EditorApp {
             .input
             .edit_panel_pos
             .map(|p| egui::Pos2::new(p[0], p[1]));
-        let group_record = if let Some(es) = self.state.group_editing.as_ref() {
-            self.state.group_registry.get(es.record_id)
-        } else {
-            None
-        };
+        let group_record = panel_state
+            .group_editing
+            .and_then(|edit_state| panel_state.group_registry.get(edit_state.record_id));
         events.extend(
             ui::render_edit_panel(
                 ctx,
-                self.state.road_map.as_deref(),
-                &self.state.selection.selected_node_ids,
-                &mut self.state.ui.distanzen,
-                default_direction,
-                default_priority,
+                panel_state.road_map,
+                panel_state.selected_node_ids,
+                panel_state.distanzen,
+                panel_state.default_direction,
+                panel_state.default_priority,
                 distance_wheel_step_m,
-                active_tool,
+                panel_state.active_tool,
                 route_tool_panel,
                 panel_pos,
-                self.state.group_editing.as_ref(),
+                panel_state.group_editing,
                 group_record,
-                Some(&self.state.tool_edit_store),
-                &mut self.state.options,
+                Some(panel_state.tool_edit_store),
+                panel_state.options,
             )
             .into_iter()
-            .map(CollectedEvent::Intent),
+            .map(map_intent_to_collected_event),
         );
 
         events
@@ -202,36 +222,36 @@ impl EditorApp {
     ) -> Vec<AppIntent> {
         let mut events = Vec::new();
 
-        let dialog_results =
-            ui::handle_file_dialogs(take_host_dialog_requests(&self.controller, &mut self.state));
+        let dialog_results = ui::handle_file_dialogs(self.session.take_dialog_requests());
         events.extend(map_dialog_results_to_intents(dialog_results));
+        let dialog_state = self.session.dialog_ui_state_mut();
         events.extend(ui::show_heightmap_warning(
             ctx,
-            self.state.ui.show_heightmap_warning,
+            dialog_state.ui.show_heightmap_warning,
         ));
         events.extend(ui::show_marker_dialog(
             ctx,
-            &mut self.state.ui,
-            self.state.road_map.as_deref(),
+            dialog_state.ui,
+            dialog_state.road_map,
         ));
-        events.extend(ui::show_dedup_dialog(ctx, &self.state.ui));
+        events.extend(ui::show_dedup_dialog(ctx, dialog_state.ui));
         events.extend(ui::show_confirm_dissolve_dialog(
             ctx,
-            &mut self.state.ui.confirm_dissolve_group_id,
-            self.state.options.language,
+            &mut dialog_state.ui.confirm_dissolve_group_id,
+            dialog_state.options.language,
         ));
-        events.extend(ui::show_zip_browser(ctx, &mut self.state.ui));
+        events.extend(ui::show_zip_browser(ctx, dialog_state.ui));
         events.extend(ui::show_overview_options_dialog(
             ctx,
-            &mut self.state.ui.overview_options_dialog,
+            &mut dialog_state.ui.overview_options_dialog,
         ));
-        events.extend(ui::show_post_load_dialog(ctx, &mut self.state.ui));
-        events.extend(ui::show_save_overview_dialog(ctx, &mut self.state.ui));
-        events.extend(ui::show_trace_all_fields_dialog(ctx, &mut self.state.ui));
+        events.extend(ui::show_post_load_dialog(ctx, dialog_state.ui));
+        events.extend(ui::show_save_overview_dialog(ctx, dialog_state.ui));
+        events.extend(ui::show_trace_all_fields_dialog(ctx, dialog_state.ui));
         events.extend(ui::show_group_settings_popup(
             ctx,
-            &mut self.state.ui.group_settings_popup,
-            &mut self.state.options,
+            &mut dialog_state.ui.group_settings_popup,
+            dialog_state.options,
         ));
         if let Some(options_panel_state) = host_ui_snapshot.options_panel_state() {
             let panel_actions = ui::show_options_dialog(
@@ -254,9 +274,17 @@ impl EditorApp {
         command_palette_open: bool,
     ) -> Vec<CollectedEvent> {
         let mut events = Vec::new();
+        let HostRouteToolViewportSnapshot {
+            drag_targets,
+            has_pending_input: route_tool_is_drawing,
+            segment_shortcuts_active: route_tool_segment_shortcuts_active,
+            tangent_menu_data,
+            needs_lasso_input,
+        } = self.session.build_route_tool_viewport_snapshot();
+        let viewport_state = self.session.viewport_input_context_mut();
 
         // ── Paste-Vorschau hat Prioritaet: normale Klicks unterdruecken ──────
-        if self.state.paste_preview_pos.is_some() {
+        if viewport_state.paste_preview_active {
             events.push(CollectedEvent::HostAction(
                 HostSessionAction::SubmitViewportInput {
                     batch: fs25_auto_drive_host_bridge::HostViewportInputBatch {
@@ -273,24 +301,24 @@ impl EditorApp {
             if let Some(hover_screen) = response.hover_pos() {
                 let local = hover_screen - response.rect.min;
                 let vp = Vec2::new(viewport_size[0], viewport_size[1]);
-                let world_pos = self
-                    .state
-                    .view
+                let world_pos = viewport_state
                     .camera
                     .screen_to_world(Vec2::new(local.x, local.y), vp);
-                events.push(CollectedEvent::Intent(AppIntent::PastePreviewMoved {
-                    world_pos,
-                }));
+                events.push(map_intent_to_collected_event(
+                    AppIntent::PastePreviewMoved { world_pos },
+                ));
             }
 
             // Linksklick → Einfuegen bestaetigen
             if response.clicked() {
-                events.push(CollectedEvent::Intent(AppIntent::PasteConfirmRequested));
+                events.push(map_intent_to_collected_event(
+                    AppIntent::PasteConfirmRequested,
+                ));
             }
 
             // Esc → Vorschau abbrechen
             if ui.input(|i| i.key_pressed(egui::Key::Escape)) {
-                events.push(CollectedEvent::Intent(AppIntent::PasteCancelled));
+                events.push(map_intent_to_collected_event(AppIntent::PasteCancelled));
             }
 
             // Cursor als Fadenkreuz anzeigen
@@ -300,44 +328,34 @@ impl EditorApp {
         }
         // ─────────────────────────────────────────────────────────────────────
 
-        let route_tool_view = self.state.editor.route_tool_viewport_data();
-        let route_tool_is_drawing = route_tool_view.has_pending_input;
-        let route_tool_segment_shortcuts_active = route_tool_view.segment_shortcuts_active;
-        let default_direction = self.state.editor.default_direction;
-        let default_priority = self.state.editor.default_priority;
-        let farmland_available = self
-            .state
-            .farmland_polygons_arc()
-            .is_some_and(|p| !p.is_empty());
-
         let viewport_events = self.input.collect_viewport_events(
             ui,
             response,
             viewport_size,
-            &self.state.view.camera,
-            self.state.road_map.as_deref(),
-            &self.state.selection.selected_node_ids,
-            self.state.editor.active_tool,
+            viewport_state.camera,
+            viewport_state.road_map,
+            viewport_state.selected_node_ids,
+            viewport_state.active_tool,
             route_tool_is_drawing,
             route_tool_segment_shortcuts_active,
-            &self.state.options,
+            viewport_state.options,
             command_palette_open,
-            default_direction,
-            default_priority,
-            &route_tool_view.drag_targets,
-            &mut self.state.ui.distanzen,
-            route_tool_view.tangent_menu_data,
-            !self.state.clipboard.nodes.is_empty(),
-            farmland_available,
-            self.state.group_editing.is_some(),
-            Some(&self.state.group_registry),
-            route_tool_view.needs_lasso_input,
+            viewport_state.default_direction,
+            viewport_state.default_priority,
+            &drag_targets,
+            viewport_state.distanzen,
+            tangent_menu_data,
+            viewport_state.clipboard_has_nodes,
+            viewport_state.farmland_available,
+            viewport_state.group_editing_active,
+            Some(viewport_state.group_registry),
+            needs_lasso_input,
         );
         events.extend(
             viewport_events
                 .intents
                 .into_iter()
-                .map(CollectedEvent::Intent),
+                .map(map_intent_to_collected_event),
         );
         if let Some(host_batch) = viewport_events.host_input_batch {
             events.push(CollectedEvent::HostAction(
@@ -347,7 +365,7 @@ impl EditorApp {
 
         // Mauszeiger im Viewport je nach aktivem Werkzeug anpassen
         if response.hovered() {
-            match self.state.editor.active_tool {
+            match viewport_state.active_tool {
                 EditorTool::AddNode => {
                     ui.ctx().set_cursor_icon(egui::CursorIcon::Crosshair);
                 }

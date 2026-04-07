@@ -1,10 +1,10 @@
 //! Hilfsmethoden fuer Floating-Menue, Background-Upload und Repaint.
 
-use crate::app::state::{FloatingMenuKind, FloatingMenuState};
+use crate::app::state::FloatingMenuKind;
 use crate::render;
 use eframe::egui;
 use eframe::egui_wgpu;
-use fs25_auto_drive_host_bridge::{build_render_frame, HostRenderFrameSnapshot};
+use fs25_auto_drive_host_bridge::HostRenderFrameSnapshot;
 
 use super::EditorApp;
 
@@ -22,7 +22,7 @@ impl EditorApp {
         rect: egui::Rect,
         viewport_size: [f32; 2],
     ) {
-        let frame = build_render_frame(&self.controller, &self.state, viewport_size);
+        let frame = self.session.build_render_frame(viewport_size);
         let (render_data, assets) = split_render_frame_for_egui(frame);
         self.pending_render_assets = Some(assets);
 
@@ -40,23 +40,10 @@ impl EditorApp {
     }
 
     pub(super) fn toggle_floating_menu(&mut self, ctx: &egui::Context, kind: FloatingMenuKind) {
-        if let Some(existing) = self.state.ui.floating_menu {
-            if existing.kind == kind {
-                self.state.ui.floating_menu = None;
-            } else {
-                let pos = ctx.input(|i| i.pointer.hover_pos().or(i.pointer.latest_pos()));
-                self.state.ui.floating_menu = pos.map(|p| FloatingMenuState {
-                    kind,
-                    pos: glam::vec2(p.x, p.y),
-                });
-            }
-        } else {
-            let pos = ctx.input(|i| i.pointer.hover_pos().or(i.pointer.latest_pos()));
-            self.state.ui.floating_menu = pos.map(|p| FloatingMenuState {
-                kind,
-                pos: glam::vec2(p.x, p.y),
-            });
-        }
+        let pointer_pos = ctx
+            .input(|i| i.pointer.hover_pos().or(i.pointer.latest_pos()))
+            .map(|p| glam::vec2(p.x, p.y));
+        self.session.toggle_floating_menu(kind, pointer_pos);
     }
 
     pub(super) fn sync_background_upload(&mut self) {
@@ -109,13 +96,14 @@ impl EditorApp {
     }
 
     pub(super) fn maybe_request_repaint(&self, ctx: &egui::Context, has_meaningful_events: bool) {
+        let state = self.session.app_state();
         if has_meaningful_events
             || ctx.input(|i| i.pointer.is_moving())
-            || self.state.ui.show_command_palette
-            || self.state.ui.floating_menu.is_some()
-            || self.state.ui.show_heightmap_warning
-            || self.state.ui.marker_dialog.visible
-            || self.state.ui.show_options_dialog
+            || state.ui.show_command_palette
+            || state.ui.floating_menu.is_some()
+            || state.ui.show_heightmap_warning
+            || state.ui.marker_dialog.visible
+            || state.ui.show_options_dialog
         {
             ctx.request_repaint();
         }
