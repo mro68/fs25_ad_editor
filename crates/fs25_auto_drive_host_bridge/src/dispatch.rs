@@ -581,4 +581,60 @@ mod tests {
             Some(HostRouteToolDisabledReason::MissingFarmland)
         );
     }
+
+    /// Prüft, dass build_host_chrome_snapshot bei unveraendertem State identische
+    /// Schlüsselfelder liefert (Grundlage für zukünftiges Frame-Caching).
+    #[test]
+    fn build_host_chrome_snapshot_is_idempotent_for_unchanged_state() {
+        let mut state = AppState::new();
+        state.ui.status_message = Some("bereit".to_string());
+        state.editor.default_direction = ConnectionDirection::Dual;
+
+        let first = build_host_chrome_snapshot(&state);
+        let second = build_host_chrome_snapshot(&state);
+
+        assert_eq!(
+            first.status_message, second.status_message,
+            "status_message muss stabil sein"
+        );
+        assert_eq!(
+            first.active_tool, second.active_tool,
+            "active_tool muss stabil sein"
+        );
+        assert_eq!(
+            first.default_direction, second.default_direction,
+            "default_direction muss stabil sein"
+        );
+        assert_eq!(
+            first.route_tool_entries.len(),
+            second.route_tool_entries.len(),
+            "route_tool_entries-Laenge muss stabil sein"
+        );
+        assert_eq!(
+            first.options, second.options,
+            "EditorOptions müssen stabil sein"
+        );
+    }
+
+    /// Prüft, dass build_host_chrome_snapshot die aktuellen EditorOptions korrekt
+    /// überträgt — insbesondere angepasste Werte statt Default-Werte.
+    #[test]
+    fn build_host_chrome_snapshot_propagates_non_default_options() {
+        let mut state = AppState::new();
+        state.options.node_size_world = 99.0;
+        state.options.snap_scale_percent = 42.0;
+
+        let chrome = build_host_chrome_snapshot(&state);
+
+        assert!(
+            (chrome.options.node_size_world - 99.0).abs() < f32::EPSILON,
+            "node_size_world muss korrekt übertragen werden, war: {}",
+            chrome.options.node_size_world
+        );
+        assert!(
+            (chrome.options.snap_scale_percent - 42.0).abs() < f32::EPSILON,
+            "snap_scale_percent muss korrekt übertragen werden, war: {}",
+            chrome.options.snap_scale_percent
+        );
+    }
 }
