@@ -2,7 +2,9 @@
 
 use crate::app::state::FloatingMenuKind;
 use crate::app::tools::route_tool_label_key;
-use crate::app::{AppIntent, AppState, ConnectionDirection, ConnectionPriority, EditorTool};
+use crate::app::{
+    AppIntent, AppState, ConnectionDirection, ConnectionPriority, EditorTool, FloatingMenuState,
+};
 use crate::shared::{t, I18nKey};
 use crate::ui::common::{
     host_active_tool_to_editor, host_route_tool_disabled_reason_key, host_route_tool_entries_for,
@@ -57,10 +59,11 @@ impl IconButtonConfig {
 /// Der boolesche Rueckgabewert signalisiert, ob das Menue geschlossen werden soll.
 pub fn render_floating_menu(
     ctx: &egui::Context,
+    floating_menu: Option<FloatingMenuState>,
     state: &AppState,
     host_chrome_snapshot: &HostChromeSnapshot,
 ) -> (Vec<AppIntent>, bool) {
-    let Some(menu) = state.ui.floating_menu else {
+    let Some(menu) = floating_menu else {
         return (vec![], false);
     };
 
