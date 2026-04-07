@@ -5,6 +5,7 @@ mod event_collection;
 mod helpers;
 mod overlays;
 mod panel_collector;
+mod viewport_collector;
 
 use crate::app::{use_cases, AppIntent};
 use crate::{render, ui};
