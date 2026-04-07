@@ -12,8 +12,8 @@ tools:
   - edit/rename
   - vscode/askQuestions
 
-#model: "Claude Sonnet 4.6"
-model: "GPT-5.4"
+model: "Claude Sonnet 4.6"
+#model: "GPT-5.4"
 ---
 
 # Rolle
