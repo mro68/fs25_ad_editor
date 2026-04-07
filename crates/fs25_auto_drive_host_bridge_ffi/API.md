@@ -4,6 +4,8 @@
 
 `fs25_auto_drive_host_bridge_ffi` ist der duenner Linux-first-Transportadapter ueber der kanonischen `HostBridgeSession`. Die Crate fuehrt keine zweite fachliche Surface ein: Mutationen laufen weiter ueber `HostSessionAction` (inklusive expliziter Route-Tool-Action-Familie), Dialoge ueber `HostDialogRequest`/`HostDialogResult`, Session-Polling ueber `HostSessionSnapshot`, Chrome-Polling ueber `HostChromeSnapshot` und Route-Tool-Viewport-Polling ueber `HostRouteToolViewportSnapshot`.
 
+Seit der FFI-Haertungswelle sind alle pointer-konsumierenden Exporte in Rust explizit als `unsafe extern "C"` markiert. Panic-Isolation und thread-lokale Fehlerweitergabe haerten dabei dieselbe kanonische Surface, ohne eine zweite FFI-seitige DTO- oder Session-Familie einzufuehren.
+
 Seit dem Hard-Cut ist der RGBA-Pixelbuffer-v1 entfernt. Der einzige native Render-Transportpfad ist jetzt Shared-Texture mit explizitem Acquire/Release-Lifecycle.
 
 Der Rendertransport ist separat ueber `FS25AD_HOST_BRIDGE_SHARED_TEXTURE_CONTRACT_VERSION = 3` versioniert. Die exportierten Native-Handle-Werte sind explizit opaque Runtime-Pointer fuer denselben Prozessraum und keine backend-nativen Vulkan-/Metal-/DX-Interop-Handles.
@@ -74,6 +76,8 @@ Fuer native C/C++-Hosts liegt der stabile Vertragsheader unter `include/fs25ad_h
 ## Transportvertrag
 
 - Session-Handles sind opaque Pointer auf die kanonische `HostBridgeSession`.
+- **Unsafe-Kontrakt:** Versionsabfragen, `_new`-Funktionen und `fs25ad_host_bridge_last_error_message()` bleiben sichere `extern "C"`-Entry-Points ohne fremde Input-Pointer. Alle uebrigen Funktionen mit dereferenzierten Fremd-Pointern sind als `pub unsafe extern "C" fn` deklariert. Rust-Aufrufer muss sicherstellen, dass Pointer aus dem jeweiligen `_new`-Call stammen und noch nicht freigegeben wurden.
+- **Panic-Schutz:** Alle pointer-konsumierenden Exporte sind intern durch `ffi_guard_bool!`/`ffi_guard_ptr!` (`std::panic::catch_unwind`) geschützt. Ein interner Rust-Panic wird als `false`/`null` zurückgegeben; keinesfalls wird der Panic über die FFI-Grenze propagiert (UB).
 - Native Hosts pruefen beim Start mindestens `fs25ad_host_bridge_abi_version()` und fuer den Rendertransport zusaetzlich `fs25ad_host_bridge_shared_texture_contract_version()` gegen die Header-Makros.
 - Fuer den additiven v4-Pfad pruefen Hosts zusaetzlich `fs25ad_host_bridge_texture_registration_v4_contract_version()`.
 - Die allgemeine C-ABI ist seit dem additiven Export `fs25ad_host_bridge_session_route_tool_viewport_json(...)` ueber `FS25AD_HOST_BRIDGE_ABI_VERSION = 4` versioniert; der native Shared-Texture-Transport bleibt separat ueber `FS25AD_HOST_BRIDGE_SHARED_TEXTURE_CONTRACT_VERSION = 3` versioniert.

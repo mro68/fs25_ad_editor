@@ -177,6 +177,24 @@ fn with_shared_texture_mut<T>(
     texture.with_lock(f)
 }
 
+/// Hilfsmakro: bool-FFI-Aufruf mit Panic-Isolation.
+macro_rules! ffi_guard_bool {
+    ($body:expr) => {{
+        clear_last_error();
+        match std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| $body)) {
+            Ok(Ok(())) => true,
+            Ok(Err(e)) => {
+                set_last_error(e.to_string());
+                false
+            }
+            Err(_) => {
+                set_last_error("internal panic in FFI call");
+                false
+            }
+        }
+    }};
+}
+
 /// Liefert die Version des aktuellen Shared-Texture-Vertrags.
 #[unsafe(no_mangle)]
 pub extern "C" fn fs25ad_host_bridge_shared_texture_contract_version() -> u32 {
@@ -184,28 +202,31 @@ pub extern "C" fn fs25ad_host_bridge_shared_texture_contract_version() -> u32 {
 }
 
 /// Liefert die Runtime-Capabilities des Shared-Texture-Pfads.
-#[allow(clippy::not_unsafe_ptr_arg_deref)]
+///
+/// # Safety
+///
+/// `out_capabilities` muss ein gueltiger, nicht-null Zeiger auf eine initialisierbare
+/// `Fs25adSharedTextureCapabilities`-Struktur sein.
 #[unsafe(no_mangle)]
-pub extern "C" fn fs25ad_host_bridge_shared_texture_capabilities(
+pub unsafe extern "C" fn fs25ad_host_bridge_shared_texture_capabilities(
     out_capabilities: *mut Fs25adSharedTextureCapabilities,
 ) -> bool {
-    clear_last_error();
-
-    if out_capabilities.is_null() {
-        set_last_error("Fs25adSharedTextureCapabilities pointer must not be null");
-        return false;
-    }
-
-    unsafe {
-        *out_capabilities = Fs25adSharedTextureCapabilities {
-            pixel_format: FS25AD_SHARED_TEXTURE_PIXEL_FORMAT_RGBA8_SRGB,
-            alpha_mode: FS25AD_SHARED_TEXTURE_ALPHA_MODE_PREMULTIPLIED,
-            native_handle_kind: FS25AD_SHARED_TEXTURE_NATIVE_HANDLE_KIND_OPAQUE_RUNTIME_POINTERS,
-            requires_explicit_release: 1,
-        };
-    }
-
-    true
+    ffi_guard_bool! {{
+        if out_capabilities.is_null() {
+            return Err(anyhow::anyhow!("Fs25adSharedTextureCapabilities pointer must not be null"));
+        }
+        // SAFETY: Aufrufer garantiert gueltigen nicht-null Zeiger.
+        unsafe {
+            *out_capabilities = Fs25adSharedTextureCapabilities {
+                pixel_format: FS25AD_SHARED_TEXTURE_PIXEL_FORMAT_RGBA8_SRGB,
+                alpha_mode: FS25AD_SHARED_TEXTURE_ALPHA_MODE_PREMULTIPLIED,
+                native_handle_kind:
+                    FS25AD_SHARED_TEXTURE_NATIVE_HANDLE_KIND_OPAQUE_RUNTIME_POINTERS,
+                requires_explicit_release: 1,
+            };
+        }
+        Ok(())
+    }}
 }
 
 /// Erstellt einen nativen Shared-Texture-Handle.
@@ -226,115 +247,112 @@ pub extern "C" fn fs25ad_host_bridge_shared_texture_new(
 }
 
 /// Gibt einen zuvor erstellten Shared-Texture-Handle frei.
-#[allow(clippy::not_unsafe_ptr_arg_deref)]
+///
+/// # Safety
+///
+/// `texture` muss ein durch `fs25ad_host_bridge_shared_texture_new` erzeugter Zeiger sein oder `null`.
+/// Nach dem Aufruf ist der Zeiger ungueltig.
 #[unsafe(no_mangle)]
-pub extern "C" fn fs25ad_host_bridge_shared_texture_dispose(texture: *mut HostBridgeSharedTexture) {
+pub unsafe extern "C" fn fs25ad_host_bridge_shared_texture_dispose(
+    texture: *mut HostBridgeSharedTexture,
+) {
     clear_last_error();
     if texture.is_null() {
         return;
     }
-
-    unsafe {
-        drop(Box::from_raw(texture));
-    }
+    // SAFETY: Aufrufer garantiert durch _new allokierten Zeiger.
+    unsafe { drop(Box::from_raw(texture)) };
 }
 
 /// Aendert die Zielgroesse eines Shared-Texture-Handles.
+///
+/// # Safety
+///
+/// `texture` muss ein gueltiger, durch `fs25ad_host_bridge_shared_texture_new` erzeugter Zeiger sein.
 #[unsafe(no_mangle)]
-pub extern "C" fn fs25ad_host_bridge_shared_texture_resize(
+pub unsafe extern "C" fn fs25ad_host_bridge_shared_texture_resize(
     texture: *mut HostBridgeSharedTexture,
     width: u32,
     height: u32,
 ) -> bool {
-    clear_last_error();
-
-    match with_shared_texture_mut(texture, |texture| texture.resize(width, height)) {
-        Ok(()) => true,
-        Err(error) => {
-            set_last_error(error.to_string());
-            false
-        }
+    ffi_guard_bool! {
+        with_shared_texture_mut(texture, |texture| texture.resize(width, height))
     }
 }
 
 /// Rendert den aktuellen Session-Frame in die Shared-Texture.
+///
+/// # Safety
+///
+/// `session` und `texture` muessen gueltige, durch die jeweiligen `_new`-Funktionen
+/// erzeugte Zeiger sein.
 #[unsafe(no_mangle)]
-pub extern "C" fn fs25ad_host_bridge_shared_texture_render(
+pub unsafe extern "C" fn fs25ad_host_bridge_shared_texture_render(
     session: *mut HostBridgeSessionHandle,
     texture: *mut HostBridgeSharedTexture,
 ) -> bool {
-    clear_last_error();
-
-    match with_session_mut(session, |session| {
-        with_shared_texture_mut(texture, |texture| texture.render(session))
-    }) {
-        Ok(()) => true,
-        Err(error) => {
-            set_last_error(error.to_string());
-            false
-        }
+    ffi_guard_bool! {
+        with_session_mut(session, |session| {
+            with_shared_texture_mut(texture, |texture| texture.render(session))
+        })
     }
 }
 
 /// Leased den zuletzt gerenderten Shared-Texture-Frame inklusive nativer Handles.
-#[allow(clippy::not_unsafe_ptr_arg_deref)]
+///
+/// # Safety
+///
+/// `texture` muss ein gueltiger Zeiger sein. `out_frame_info` und `out_native_handle`
+/// muessen gueltige, nicht-null Zeiger auf initialisierbare Strukturen sein.
 #[unsafe(no_mangle)]
-pub extern "C" fn fs25ad_host_bridge_shared_texture_acquire(
+pub unsafe extern "C" fn fs25ad_host_bridge_shared_texture_acquire(
     texture: *mut HostBridgeSharedTexture,
     out_frame_info: *mut Fs25adSharedTextureFrameInfo,
     out_native_handle: *mut Fs25adSharedTextureNativeHandle,
 ) -> bool {
-    clear_last_error();
-
-    if out_frame_info.is_null() {
-        set_last_error("Fs25adSharedTextureFrameInfo pointer must not be null");
-        return false;
-    }
-    if out_native_handle.is_null() {
-        set_last_error("Fs25adSharedTextureNativeHandle pointer must not be null");
-        return false;
-    }
-
-    match with_shared_texture_mut(texture, |texture| texture.acquire()) {
-        Ok((frame, native_handle)) => {
-            unsafe {
-                *out_frame_info = Fs25adSharedTextureFrameInfo {
-                    width: frame.width,
-                    height: frame.height,
-                    pixel_format: pixel_format_abi(frame.pixel_format),
-                    alpha_mode: alpha_mode_abi(frame.alpha_mode),
-                    texture_id: frame.texture_id,
-                    texture_generation: frame.texture_generation,
-                    frame_token: frame.frame_token,
-                };
-                *out_native_handle = Fs25adSharedTextureNativeHandle {
-                    texture_ptr: native_handle.texture_ptr,
-                    texture_view_ptr: native_handle.texture_view_ptr,
-                };
-            }
-            true
+    ffi_guard_bool! {{
+        if out_frame_info.is_null() {
+            return Err(anyhow::anyhow!("Fs25adSharedTextureFrameInfo pointer must not be null"));
         }
-        Err(error) => {
-            set_last_error(error.to_string());
-            false
+        if out_native_handle.is_null() {
+            return Err(anyhow::anyhow!(
+                "Fs25adSharedTextureNativeHandle pointer must not be null"
+            ));
         }
-    }
+        let (frame, native_handle) =
+            with_shared_texture_mut(texture, |texture| texture.acquire())?;
+        // SAFETY: Aufrufer hat nicht-null Zeiger garantiert.
+        unsafe {
+            *out_frame_info = Fs25adSharedTextureFrameInfo {
+                width: frame.width,
+                height: frame.height,
+                pixel_format: pixel_format_abi(frame.pixel_format),
+                alpha_mode: alpha_mode_abi(frame.alpha_mode),
+                texture_id: frame.texture_id,
+                texture_generation: frame.texture_generation,
+                frame_token: frame.frame_token,
+            };
+            *out_native_handle = Fs25adSharedTextureNativeHandle {
+                texture_ptr: native_handle.texture_ptr,
+                texture_view_ptr: native_handle.texture_view_ptr,
+            };
+        }
+        Ok(())
+    }}
 }
 
 /// Gibt einen zuvor geleasten Shared-Texture-Frame wieder frei.
+///
+/// # Safety
+///
+/// `texture` muss ein gueltiger, durch `fs25ad_host_bridge_shared_texture_new` erzeugter Zeiger sein.
 #[unsafe(no_mangle)]
-pub extern "C" fn fs25ad_host_bridge_shared_texture_release(
+pub unsafe extern "C" fn fs25ad_host_bridge_shared_texture_release(
     texture: *mut HostBridgeSharedTexture,
     frame_token: u64,
 ) -> bool {
-    clear_last_error();
-
-    match with_shared_texture_mut(texture, |texture| texture.release(frame_token)) {
-        Ok(()) => true,
-        Err(error) => {
-            set_last_error(error.to_string());
-            false
-        }
+    ffi_guard_bool! {
+        with_shared_texture_mut(texture, |texture| texture.release(frame_token))
     }
 }
 
@@ -357,6 +375,39 @@ mod tests {
     };
     use std::ffi::CStr;
 
+    // Sicherheits-Wrapper fuer unsafe FFI-Funktionen im Testkontext.
+    fn string_free(ptr: *mut std::ffi::c_char) {
+        unsafe { fs25ad_host_bridge_string_free(ptr) }
+    }
+    fn session_dispose(s: *mut super::HostBridgeSessionHandle) {
+        unsafe { fs25ad_host_bridge_session_dispose(s) }
+    }
+    fn shared_texture_capabilities(out: *mut Fs25adSharedTextureCapabilities) -> bool {
+        unsafe { fs25ad_host_bridge_shared_texture_capabilities(out) }
+    }
+    fn shared_texture_dispose(t: *mut super::HostBridgeSharedTexture) {
+        unsafe { fs25ad_host_bridge_shared_texture_dispose(t) }
+    }
+    fn shared_texture_resize(t: *mut super::HostBridgeSharedTexture, w: u32, h: u32) -> bool {
+        unsafe { fs25ad_host_bridge_shared_texture_resize(t, w, h) }
+    }
+    fn shared_texture_render(
+        s: *mut super::HostBridgeSessionHandle,
+        t: *mut super::HostBridgeSharedTexture,
+    ) -> bool {
+        unsafe { fs25ad_host_bridge_shared_texture_render(s, t) }
+    }
+    fn shared_texture_acquire(
+        t: *mut super::HostBridgeSharedTexture,
+        fi: *mut Fs25adSharedTextureFrameInfo,
+        nh: *mut Fs25adSharedTextureNativeHandle,
+    ) -> bool {
+        unsafe { fs25ad_host_bridge_shared_texture_acquire(t, fi, nh) }
+    }
+    fn shared_texture_release(t: *mut super::HostBridgeSharedTexture, ft: u64) -> bool {
+        unsafe { fs25ad_host_bridge_shared_texture_release(t, ft) }
+    }
+
     fn read_and_free_error() -> String {
         let ptr = fs25ad_host_bridge_last_error_message();
         assert!(!ptr.is_null());
@@ -364,7 +415,7 @@ mod tests {
             .to_str()
             .expect("error string must be valid UTF-8")
             .to_string();
-        fs25ad_host_bridge_string_free(ptr);
+        string_free(ptr);
         value
     }
 
@@ -382,9 +433,7 @@ mod tests {
             native_handle_kind: 0,
             requires_explicit_release: 0,
         };
-        assert!(fs25ad_host_bridge_shared_texture_capabilities(
-            &mut capabilities
-        ));
+        assert!(shared_texture_capabilities(&mut capabilities));
         assert_eq!(
             capabilities.pixel_format,
             FS25AD_SHARED_TEXTURE_PIXEL_FORMAT_RGBA8_SRGB
@@ -408,7 +457,7 @@ mod tests {
         let texture = fs25ad_host_bridge_shared_texture_new(8, 6);
         assert!(!texture.is_null());
 
-        assert!(fs25ad_host_bridge_shared_texture_render(session, texture));
+        assert!(shared_texture_render(session, texture));
 
         let mut frame_info = Fs25adSharedTextureFrameInfo {
             width: 0,
@@ -423,7 +472,7 @@ mod tests {
             texture_ptr: 0,
             texture_view_ptr: 0,
         };
-        assert!(fs25ad_host_bridge_shared_texture_acquire(
+        assert!(shared_texture_acquire(
             texture,
             &mut frame_info,
             &mut native_handle,
@@ -445,13 +494,10 @@ mod tests {
         assert!(native_handle.texture_ptr > 0);
         assert!(native_handle.texture_view_ptr > 0);
 
-        assert!(fs25ad_host_bridge_shared_texture_release(
-            texture,
-            frame_info.frame_token
-        ));
+        assert!(shared_texture_release(texture, frame_info.frame_token));
 
-        fs25ad_host_bridge_shared_texture_dispose(texture);
-        fs25ad_host_bridge_session_dispose(session);
+        shared_texture_dispose(texture);
+        session_dispose(session);
     }
 
     #[test]
@@ -462,7 +508,7 @@ mod tests {
         let texture = fs25ad_host_bridge_shared_texture_new(8, 6);
         assert!(!texture.is_null());
 
-        assert!(fs25ad_host_bridge_shared_texture_render(session, texture));
+        assert!(shared_texture_render(session, texture));
 
         let mut frame_info = Fs25adSharedTextureFrameInfo {
             width: 0,
@@ -477,24 +523,21 @@ mod tests {
             texture_ptr: 0,
             texture_view_ptr: 0,
         };
-        assert!(fs25ad_host_bridge_shared_texture_acquire(
+        assert!(shared_texture_acquire(
             texture,
             &mut frame_info,
             &mut native_handle,
         ));
 
-        assert!(!fs25ad_host_bridge_shared_texture_render(session, texture));
+        assert!(!shared_texture_render(session, texture));
         let error = read_and_free_error();
         assert!(error.contains("currently acquired"));
 
-        assert!(fs25ad_host_bridge_shared_texture_release(
-            texture,
-            frame_info.frame_token
-        ));
-        assert!(fs25ad_host_bridge_shared_texture_render(session, texture));
+        assert!(shared_texture_release(texture, frame_info.frame_token));
+        assert!(shared_texture_render(session, texture));
 
-        fs25ad_host_bridge_shared_texture_dispose(texture);
-        fs25ad_host_bridge_session_dispose(session);
+        shared_texture_dispose(texture);
+        session_dispose(session);
     }
 
     #[test]
@@ -516,14 +559,14 @@ mod tests {
             texture_view_ptr: 0,
         };
 
-        assert!(!fs25ad_host_bridge_shared_texture_acquire(
+        assert!(!shared_texture_acquire(
             texture,
             &mut frame_info,
             &mut native_handle,
         ));
         assert!(read_and_free_error().contains("no rendered frame yet"));
 
-        fs25ad_host_bridge_shared_texture_dispose(texture);
+        shared_texture_dispose(texture);
     }
 
     #[test]
@@ -533,7 +576,7 @@ mod tests {
 
         let texture = fs25ad_host_bridge_shared_texture_new(8, 6);
         assert!(!texture.is_null());
-        assert!(fs25ad_host_bridge_shared_texture_render(session, texture));
+        assert!(shared_texture_render(session, texture));
 
         let mut first_frame = Fs25adSharedTextureFrameInfo {
             width: 0,
@@ -548,7 +591,7 @@ mod tests {
             texture_ptr: 0,
             texture_view_ptr: 0,
         };
-        assert!(fs25ad_host_bridge_shared_texture_acquire(
+        assert!(shared_texture_acquire(
             texture,
             &mut first_frame,
             &mut first_handle,
@@ -567,20 +610,17 @@ mod tests {
             texture_ptr: 0,
             texture_view_ptr: 0,
         };
-        assert!(!fs25ad_host_bridge_shared_texture_acquire(
+        assert!(!shared_texture_acquire(
             texture,
             &mut second_frame,
             &mut second_handle,
         ));
         assert!(read_and_free_error().contains("already acquired"));
 
-        assert!(fs25ad_host_bridge_shared_texture_release(
-            texture,
-            first_frame.frame_token,
-        ));
+        assert!(shared_texture_release(texture, first_frame.frame_token,));
 
-        fs25ad_host_bridge_shared_texture_dispose(texture);
-        fs25ad_host_bridge_session_dispose(session);
+        shared_texture_dispose(texture);
+        session_dispose(session);
     }
 
     #[test]
@@ -590,7 +630,7 @@ mod tests {
 
         let texture = fs25ad_host_bridge_shared_texture_new(8, 6);
         assert!(!texture.is_null());
-        assert!(fs25ad_host_bridge_shared_texture_render(session, texture));
+        assert!(shared_texture_render(session, texture));
 
         let mut frame_info = Fs25adSharedTextureFrameInfo {
             width: 0,
@@ -605,22 +645,19 @@ mod tests {
             texture_ptr: 0,
             texture_view_ptr: 0,
         };
-        assert!(fs25ad_host_bridge_shared_texture_acquire(
+        assert!(shared_texture_acquire(
             texture,
             &mut frame_info,
             &mut native_handle,
         ));
 
-        assert!(!fs25ad_host_bridge_shared_texture_resize(texture, 10, 8));
+        assert!(!shared_texture_resize(texture, 10, 8));
         assert!(read_and_free_error().contains("currently acquired"));
 
-        assert!(fs25ad_host_bridge_shared_texture_release(
-            texture,
-            frame_info.frame_token,
-        ));
+        assert!(shared_texture_release(texture, frame_info.frame_token,));
 
-        fs25ad_host_bridge_shared_texture_dispose(texture);
-        fs25ad_host_bridge_session_dispose(session);
+        shared_texture_dispose(texture);
+        session_dispose(session);
     }
 
     #[test]
@@ -630,7 +667,7 @@ mod tests {
 
         let texture = fs25ad_host_bridge_shared_texture_new(8, 6);
         assert!(!texture.is_null());
-        assert!(fs25ad_host_bridge_shared_texture_render(session, texture));
+        assert!(shared_texture_render(session, texture));
 
         let mut frame_info = Fs25adSharedTextureFrameInfo {
             width: 0,
@@ -645,25 +682,19 @@ mod tests {
             texture_ptr: 0,
             texture_view_ptr: 0,
         };
-        assert!(fs25ad_host_bridge_shared_texture_acquire(
+        assert!(shared_texture_acquire(
             texture,
             &mut frame_info,
             &mut native_handle,
         ));
 
-        assert!(!fs25ad_host_bridge_shared_texture_release(
-            texture,
-            frame_info.frame_token + 1,
-        ));
+        assert!(!shared_texture_release(texture, frame_info.frame_token + 1,));
         assert!(read_and_free_error().contains("token mismatch"));
 
-        assert!(fs25ad_host_bridge_shared_texture_release(
-            texture,
-            frame_info.frame_token,
-        ));
+        assert!(shared_texture_release(texture, frame_info.frame_token,));
 
-        fs25ad_host_bridge_shared_texture_dispose(texture);
-        fs25ad_host_bridge_session_dispose(session);
+        shared_texture_dispose(texture);
+        session_dispose(session);
     }
 
     #[test]
@@ -674,9 +705,7 @@ mod tests {
             native_handle_kind: 0,
             requires_explicit_release: 0,
         };
-        assert!(!fs25ad_host_bridge_shared_texture_capabilities(
-            std::ptr::null_mut()
-        ));
+        assert!(!shared_texture_capabilities(std::ptr::null_mut()));
         assert!(read_and_free_error().contains("Fs25adSharedTextureCapabilities pointer"));
 
         let texture = fs25ad_host_bridge_shared_texture_new(0, 4);
@@ -689,26 +718,16 @@ mod tests {
         let session = fs25ad_host_bridge_session_new();
         assert!(!session.is_null());
 
-        assert!(!fs25ad_host_bridge_shared_texture_render(
-            std::ptr::null_mut(),
-            texture,
-        ));
+        assert!(!shared_texture_render(std::ptr::null_mut(), texture,));
         assert!(read_and_free_error().contains("HostBridgeSession pointer"));
 
-        assert!(!fs25ad_host_bridge_shared_texture_render(
-            session,
-            std::ptr::null_mut(),
-        ));
+        assert!(!shared_texture_render(session, std::ptr::null_mut(),));
         assert!(read_and_free_error().contains("HostBridgeSharedTexture pointer"));
 
-        assert!(!fs25ad_host_bridge_shared_texture_resize(
-            std::ptr::null_mut(),
-            4,
-            4,
-        ));
+        assert!(!shared_texture_resize(std::ptr::null_mut(), 4, 4,));
         assert!(read_and_free_error().contains("HostBridgeSharedTexture pointer"));
 
-        assert!(!fs25ad_host_bridge_shared_texture_resize(texture, 0, 4));
+        assert!(!shared_texture_resize(texture, 0, 4));
         assert!(read_and_free_error().contains("must be positive"));
 
         let mut frame_info = Fs25adSharedTextureFrameInfo {
@@ -724,40 +743,37 @@ mod tests {
             texture_ptr: 0,
             texture_view_ptr: 0,
         };
-        assert!(!fs25ad_host_bridge_shared_texture_acquire(
+        assert!(!shared_texture_acquire(
             std::ptr::null_mut(),
             &mut frame_info,
             &mut native_handle,
         ));
         assert!(read_and_free_error().contains("HostBridgeSharedTexture pointer"));
 
-        assert!(!fs25ad_host_bridge_shared_texture_acquire(
+        assert!(!shared_texture_acquire(
             texture,
             std::ptr::null_mut(),
             &mut native_handle,
         ));
         assert!(read_and_free_error().contains("Fs25adSharedTextureFrameInfo pointer"));
 
-        assert!(!fs25ad_host_bridge_shared_texture_acquire(
+        assert!(!shared_texture_acquire(
             texture,
             &mut frame_info,
             std::ptr::null_mut(),
         ));
         assert!(read_and_free_error().contains("Fs25adSharedTextureNativeHandle pointer"));
 
-        assert!(!fs25ad_host_bridge_shared_texture_release(texture, 1));
+        assert!(!shared_texture_release(texture, 1));
         assert!(read_and_free_error().contains("is not acquired"));
 
-        assert!(!fs25ad_host_bridge_shared_texture_release(
-            std::ptr::null_mut(),
-            1,
-        ));
+        assert!(!shared_texture_release(std::ptr::null_mut(), 1,));
         assert!(read_and_free_error().contains("HostBridgeSharedTexture pointer"));
 
-        fs25ad_host_bridge_shared_texture_dispose(std::ptr::null_mut());
+        shared_texture_dispose(std::ptr::null_mut());
 
-        fs25ad_host_bridge_shared_texture_dispose(texture);
-        fs25ad_host_bridge_session_dispose(session);
+        shared_texture_dispose(texture);
+        session_dispose(session);
 
         assert!(capabilities.requires_explicit_release == 0);
     }
