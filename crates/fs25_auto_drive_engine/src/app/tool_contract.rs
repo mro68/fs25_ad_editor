@@ -1,9 +1,11 @@
 //! App-weiter Vertrag fuer Route-Tool-Identitaeten, Anker- und Tangentendaten.
 
 use glam::Vec2;
+use serde::{Deserialize, Serialize};
 
 /// Stabile Identitaet eines Route-Tools.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
 pub enum RouteToolId {
     /// Gerade Strecke.
     Straight,
@@ -68,7 +70,8 @@ impl ToolAnchor {
 ///
 /// Wird von Curve- und Spline-Tool verwendet, um Kontroll- oder Phantom-Punkte
 /// tangential an einer bestehenden Verbindung auszurichten.
-#[derive(Debug, Clone, Copy, PartialEq)]
+#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
+#[serde(tag = "kind", rename_all = "snake_case")]
 pub enum TangentSource {
     /// Kein Tangenten-Vorschlag — Punkt wird manuell gesetzt.
     None,

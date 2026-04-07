@@ -1,5 +1,6 @@
 use crate::app::tool_contract::{RouteToolId, TangentSource};
 use crate::app::ui_contract::TangentOptionData;
+use serde::{Deserialize, Serialize};
 
 use super::RouteToolConfigState;
 
@@ -75,7 +76,8 @@ pub struct SegmentConfigPanelState {
 }
 
 /// Semantische Aktion fuer die gemeinsame Segment-Konfiguration.
-#[derive(Debug, Clone, Copy, PartialEq)]
+#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
+#[serde(tag = "kind", content = "value", rename_all = "snake_case")]
 pub enum SegmentConfigPanelAction {
     /// Minimalen Segment-Abstand setzen.
     SetMaxSegmentLength(f32),
