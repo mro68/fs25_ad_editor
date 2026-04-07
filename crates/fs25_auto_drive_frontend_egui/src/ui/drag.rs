@@ -38,6 +38,28 @@ impl DragSelection {
     }
 }
 
+fn draw_lasso_polygon(
+    painter: &egui::Painter,
+    points_screen: &[egui::Pos2],
+    fill: egui::Color32,
+    stroke: egui::Stroke,
+) {
+    if points_screen.len() < 2 {
+        return;
+    }
+
+    if points_screen.len() >= 3 {
+        painter.add(egui::epaint::PathShape::convex_polygon(
+            points_screen.to_vec(),
+            fill,
+            stroke,
+        ));
+        return;
+    }
+
+    painter.add(egui::Shape::line(points_screen.to_vec(), stroke));
+}
+
 /// Zeichnet das Drag-Selektion-Overlay (Rect oder Lasso).
 pub(super) fn draw_drag_selection_overlay(
     selection: Option<&DragSelection>,
@@ -81,38 +103,13 @@ pub(super) fn draw_drag_selection_overlay(
             painter.rect_stroke(rect, 0.0, stroke, egui::StrokeKind::Inside);
         }
         DragSelectionMode::Lasso => {
-            if selection.points_screen.len() < 2 {
-                return;
-            }
-
-            let mut polygon = selection.points_screen.clone();
-            if polygon.len() >= 3 {
-                painter.add(egui::Shape::convex_polygon(polygon.clone(), fill, stroke));
-                polygon.push(polygon[0]);
-            }
-
-            painter.add(egui::Shape::line(polygon, stroke));
+            draw_lasso_polygon(&painter, &selection.points_screen, fill, stroke);
         }
         DragSelectionMode::ToolLasso => {
-            if selection.points_screen.len() < 2 {
-                return;
-            }
-
             // Tool-Lasso in Orange darstellen (unterscheidet sich vom normalen Lasso)
             let tool_stroke = egui::Stroke::new(1.5, egui::Color32::from_rgb(255, 165, 0));
             let tool_fill = egui::Color32::from_rgba_unmultiplied(255, 165, 0, 30);
-
-            let mut polygon = selection.points_screen.clone();
-            if polygon.len() >= 3 {
-                painter.add(egui::Shape::convex_polygon(
-                    polygon.clone(),
-                    tool_fill,
-                    tool_stroke,
-                ));
-                polygon.push(polygon[0]);
-            }
-
-            painter.add(egui::Shape::line(polygon, tool_stroke));
+            draw_lasso_polygon(&painter, &selection.points_screen, tool_fill, tool_stroke);
         }
     }
 }
