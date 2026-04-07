@@ -13,6 +13,8 @@ pub mod handlers;
 /// Undo/Redo-History mit Arc-basierten Snapshots (Copy-on-Write).
 pub mod history;
 mod intent_mapping;
+/// Zustandsbasierte Projektionsfunktionen fuer host-neutrale Snapshots.
+pub mod projections;
 /// Builder fuer explizite Render-Assets aus dem AppState.
 pub mod render_assets;
 /// Builder fuer Render-Szenen aus dem AppState.
