@@ -57,7 +57,6 @@ impl EditorApp {
             ui::command_palette::render_command_palette(
                 ctx,
                 &mut show_command_palette,
-                self.session.app_state(),
                 &host_chrome_snapshot,
             )
             .into_iter()
