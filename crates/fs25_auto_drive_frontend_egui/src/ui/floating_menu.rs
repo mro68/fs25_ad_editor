@@ -2,7 +2,9 @@
 
 use crate::app::state::FloatingMenuKind;
 use crate::app::tools::route_tool_label_key;
-use crate::app::{AppIntent, ConnectionDirection, ConnectionPriority, EditorTool, FloatingMenuState};
+use crate::app::{
+    AppIntent, ConnectionDirection, ConnectionPriority, EditorTool, FloatingMenuState,
+};
 use crate::shared::{t, I18nKey};
 use crate::ui::common::{
     host_active_tool_to_editor, host_route_tool_disabled_reason_key, host_route_tool_entries_for,
