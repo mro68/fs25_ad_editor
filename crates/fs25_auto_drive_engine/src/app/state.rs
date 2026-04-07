@@ -8,9 +8,9 @@ mod view;
 
 pub use app_state::{AppState, Clipboard, GroupEditState};
 pub use dialogs::{
-    DedupDialogState, DistanzenState, FloatingMenuKind, FloatingMenuState, GroupSettingsPopupState,
-    MarkerDialogState, OverviewOptionsDialogState, PostLoadDialogState, SaveOverviewDialogState,
-    UiState, ZipBrowserState,
+    DedupDialogState, DistanzenState, EngineUiState, FloatingMenuKind, FloatingMenuState,
+    GroupSettingsPopupState, MarkerDialogState, OverviewOptionsDialogState, PostLoadDialogState,
+    SaveOverviewDialogState, UiState, ZipBrowserState,
 };
 pub use editor::{EditorTool, EditorToolState};
 pub use selection::SelectionState;

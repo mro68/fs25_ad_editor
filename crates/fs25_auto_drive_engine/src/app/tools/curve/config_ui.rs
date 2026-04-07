@@ -75,9 +75,13 @@ impl CurveTool {
                 CurveDegree::Cubic => CurveDegreeChoice::Cubic,
             },
             tangents,
-            segment: self
-                .seg
-                .panel_state(adjusting, self.is_ready(), length, SegmentLengthKind::Curve, true),
+            segment: self.seg.panel_state(
+                adjusting,
+                self.is_ready(),
+                length,
+                SegmentLengthKind::Curve,
+                true,
+            ),
         }
     }
 
