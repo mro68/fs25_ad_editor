@@ -1,786 +1,95 @@
-use fs25_auto_drive_engine::app::ui_contract::RouteToolPanelAction;
-use fs25_auto_drive_engine::shared::EditorOptions;
-use serde::{Deserialize, Serialize};
+//! Stabile, host-neutrale DTO-Schicht der fs25_auto_drive_host_bridge.
+//!
+//! Intern in thematische Submodule aufgeteilt; alle oeffentlichen Items bleiben
+//! direkt ueber `crate::dto::*` erreichbar.
 
-/// Stabiler Tool-Identifier fuer Host-Snapshots.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
-#[serde(rename_all = "snake_case")]
-pub enum HostActiveTool {
-    /// Standard: Nodes selektieren und verschieben.
-    Select,
-    /// Verbindungen zwischen Nodes erstellen.
-    Connect,
-    /// Neue Nodes auf der Karte platzieren.
-    AddNode,
-    /// Route-Tools (Linie, Parkplatz, Kurve, ...).
-    Route,
-}
+mod actions;
+mod chrome;
+mod dialogs;
+mod input;
+mod route_tool;
+mod viewport;
 
-/// Stabile Art eines Host-Datei-/Pfad-Dialogs fuer die Bridge.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
-#[serde(rename_all = "snake_case")]
-pub enum HostDialogRequestKind {
-    /// AutoDrive-XML laden.
-    OpenFile,
-    /// AutoDrive-XML speichern.
-    SaveFile,
-    /// Heightmap-Bild auswaehlen.
-    Heightmap,
-    /// Hintergrundbild oder ZIP auswaehlen.
-    BackgroundMap,
-    /// Map-Mod-ZIP fuer Overview-Generierung auswaehlen.
-    OverviewZip,
-    /// Curseplay-Datei importieren.
-    CurseplayImport,
-    /// Curseplay-Datei exportieren.
-    CurseplayExport,
-}
+// ─────────────────────────────── Re-Exports ──────────────────────────────────
 
-/// Serialisierbare Dialog-Anforderung fuer Hosts ohne direkten Engine-State-Zugriff.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-pub struct HostDialogRequest {
-    /// Semantische Bedeutung der Anfrage.
-    pub kind: HostDialogRequestKind,
-    /// Optionaler Dateiname fuer Save-Dialoge.
-    pub suggested_file_name: Option<String>,
-}
+pub use actions::{HostActiveTool, HostRouteToolAction, HostSessionAction, HostTangentSource};
+pub use chrome::HostChromeSnapshot;
+pub use dialogs::{HostDialogRequest, HostDialogRequestKind, HostDialogResult};
+pub use input::{
+    HostInputModifiers, HostPointerButton, HostTapKind, HostViewportInputBatch,
+    HostViewportInputEvent,
+};
+pub use route_tool::{
+    HostDefaultConnectionDirection, HostDefaultConnectionPriority, HostRouteToolDisabledReason,
+    HostRouteToolEntrySnapshot, HostRouteToolGroup, HostRouteToolIconKey, HostRouteToolId,
+    HostRouteToolSelectionSnapshot, HostRouteToolSurface, HostRouteToolViewportSnapshot,
+    HostTangentMenuSnapshot, HostTangentOptionSnapshot,
+};
+pub use viewport::{
+    HostSelectionSnapshot, HostSessionSnapshot, HostViewportConnectionDirection,
+    HostViewportConnectionPriority, HostViewportConnectionSnapshot, HostViewportGeometrySnapshot,
+    HostViewportMarkerSnapshot, HostViewportNodeKind, HostViewportNodeSnapshot,
+    HostViewportSnapshot,
+};
 
-/// Serialisierbare Rueckmeldung eines Hosts zu einer Dialog-Anforderung.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-#[serde(tag = "status", rename_all = "snake_case")]
-pub enum HostDialogResult {
-    /// Host-Dialog wurde ohne Auswahl geschlossen.
-    Cancelled {
-        /// Semantische Art der beantworteten Anfrage.
-        kind: HostDialogRequestKind,
-    },
-    /// Host hat einen Pfad ausgewaehlt.
-    PathSelected {
-        /// Semantische Art der beantworteten Anfrage.
-        kind: HostDialogRequestKind,
-        /// Gewaehlter Pfad.
-        path: String,
-    },
-}
-
-/// Stabile Pointer-Button-Klassifikation fuer den Viewport-Input-Vertrag.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
-#[serde(rename_all = "snake_case")]
-pub enum HostPointerButton {
-    /// Primaere Pointer-Taste.
-    Primary,
-    /// Mittlere Pointer-Taste.
-    Middle,
-    /// Sekundaere Pointer-Taste.
-    Secondary,
-}
-
-/// Stabile Tap-Klassifikation fuer den Viewport-Input-Vertrag.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
-#[serde(rename_all = "snake_case")]
-pub enum HostTapKind {
-    /// Einfacher Tap bzw. einzelner Klick.
-    Single,
-    /// Doppelter Tap bzw. Doppelklick.
-    Double,
-}
-
-/// Host-neutrale Modifiers fuer Viewport-Input.
-#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Serialize, Deserialize)]
-pub struct HostInputModifiers {
-    /// Shift-Modifizierer.
-    pub shift: bool,
-    /// Alt-/Option-Modifizierer.
-    pub alt: bool,
-    /// Plattformneutraler Command-Modifizierer (`Ctrl` bzw. `Cmd`).
-    pub command: bool,
-}
-
-/// Batch von host-neutralen Viewport-Input-Events fuer die kanonische Session-Surface.
-#[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
-pub struct HostViewportInputBatch {
-    /// In Reihenfolge empfangene Viewport-Input-Events.
-    pub events: Vec<HostViewportInputEvent>,
-}
-
-/// Kleines host-neutrales Viewport-Input-Event fuer die Bridge-Surface.
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-#[serde(tag = "kind", rename_all = "snake_case")]
-pub enum HostViewportInputEvent {
-    /// Aktualisiert die bekannte Viewport-Groesse der Session.
-    Resize {
-        /// Neue Viewport-Groesse in Pixeln [width, height].
-        size_px: [f32; 2],
-    },
-    /// Einzelner Tap bzw. Klick an Bildschirmposition.
-    Tap {
-        /// Verwendeter Pointer-Button.
-        button: HostPointerButton,
-        /// Art des Taps.
-        tap_kind: HostTapKind,
-        /// Bildschirmposition in Pixeln relativ zum Viewport.
-        screen_pos: [f32; 2],
-        /// Aktive Modifiers zum Zeitpunkt des Taps.
-        modifiers: HostInputModifiers,
-    },
-    /// Start eines Drags an Bildschirmposition.
-    DragStart {
-        /// Verwendeter Pointer-Button.
-        button: HostPointerButton,
-        /// Bildschirmposition in Pixeln relativ zum Viewport.
-        screen_pos: [f32; 2],
-        /// Aktive Modifiers zum Zeitpunkt des Starts.
-        modifiers: HostInputModifiers,
-    },
-    /// Delta-Update eines laufenden Drags.
-    DragUpdate {
-        /// Verwendeter Pointer-Button.
-        button: HostPointerButton,
-        /// Aktuelle Bildschirmposition in Pixeln relativ zum Viewport.
-        screen_pos: [f32; 2],
-        /// Delta in Bildschirm-Pixeln seit dem letzten Update.
-        delta_px: [f32; 2],
-    },
-    /// Ende eines laufenden Drags.
-    DragEnd {
-        /// Verwendeter Pointer-Button.
-        button: HostPointerButton,
-        /// Optionale finale Bildschirmposition relativ zum Viewport.
-        screen_pos: Option<[f32; 2]>,
-    },
-    /// Scroll-Ereignis an optionaler Bildschirmposition.
-    Scroll {
-        /// Optionale Bildschirmposition in Pixeln relativ zum Viewport.
-        screen_pos: Option<[f32; 2]>,
-        /// Geglaettete Scroll-Differenz fuer Zoom-Interpretation.
-        smooth_delta_y: f32,
-        /// Rohes Scroll-Delta fuer spaetere Tick-basierte Erweiterungen.
-        raw_delta_y: f32,
-        /// Aktive Modifiers zum Zeitpunkt des Scrollens.
-        modifiers: HostInputModifiers,
-    },
-}
-
-/// Host-neutrale Tangentenquelle fuer Route-Tool-Aktionen und Read-Snapshots.
-#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
-#[serde(tag = "kind", rename_all = "snake_case")]
-pub enum HostTangentSource {
-    /// Kein Tangenten-Vorschlag.
-    None,
-    /// Tangente aus bestehender Verbindung.
-    Connection {
-        /// ID des Nachbar-Nodes der Verbindung.
-        neighbor_id: u64,
-        /// Winkel der Verbindung in Radiant.
-        angle: f32,
-    },
-}
-
-/// Explizite Route-Tool-Action-Familie auf der kanonischen Session-Surface.
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-#[serde(tag = "kind", rename_all = "snake_case")]
-pub enum HostRouteToolAction {
-    /// Route-Tool ueber stabile Tool-ID auswaehlen.
-    SelectTool {
-        /// Ziel-Tool.
-        tool: HostRouteToolId,
-    },
-    /// Route-Tool mit vordefinierten Start-/Endankern aktivieren.
-    SelectToolWithAnchors {
-        /// Ziel-Tool.
-        tool: HostRouteToolId,
-        /// Start-Node-ID.
-        start_node_id: u64,
-        /// End-Node-ID.
-        end_node_id: u64,
-    },
-    /// Semantische Route-Tool-Panel-Aktion.
-    PanelAction {
-        /// Panel-Aktion des aktiven Route-Tools.
-        action: RouteToolPanelAction,
-    },
-    /// Route-Tool-Ausfuehrung anfordern.
-    Execute,
-    /// Route-Tool abbrechen.
-    Cancel,
-    /// Route-Tool mit aktueller Konfiguration neu berechnen.
-    Recreate,
-    /// Tangenten-Auswahl fuer Start/Ende setzen.
-    ApplyTangent {
-        /// Start-Tangente.
-        start: HostTangentSource,
-        /// End-Tangente.
-        end: HostTangentSource,
-    },
-    /// Klick im Route-Tool-Viewport.
-    Click {
-        /// Weltposition des Klicks.
-        world_pos: [f32; 2],
-        /// Plattformneutraler Command-Modifizierer (`Ctrl`/`Cmd`).
-        ctrl: bool,
-    },
-    /// Tool-Lasso als geschlossenes Polygon abschliessen.
-    LassoCompleted {
-        /// Polygonpunkte in Weltkoordinaten.
-        polygon: Vec<[f32; 2]>,
-    },
-    /// Drag auf Route-Tool-Steuerpunkt starten.
-    DragStart {
-        /// Weltposition des Starts.
-        world_pos: [f32; 2],
-    },
-    /// Drag auf Route-Tool-Steuerpunkt aktualisieren.
-    DragUpdate {
-        /// Weltposition des Updates.
-        world_pos: [f32; 2],
-    },
-    /// Drag auf Route-Tool-Steuerpunkt beenden.
-    DragEnd,
-    /// Route-Tool-Rotation via Alt+Scroll.
-    ScrollRotate {
-        /// Rotationsdelta.
-        delta: f32,
-    },
-    /// Node-Anzahl im aktiven Route-Tool erhoehen.
-    IncreaseNodeCount,
-    /// Node-Anzahl im aktiven Route-Tool verringern.
-    DecreaseNodeCount,
-    /// Segmentlaenge im aktiven Route-Tool erhoehen.
-    IncreaseSegmentLength,
-    /// Segmentlaenge im aktiven Route-Tool verringern.
-    DecreaseSegmentLength,
-}
-
-/// Explizite Host-Aktionen fuer die gemeinsame Bridge-Session.
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-#[serde(tag = "kind", rename_all = "snake_case")]
-pub enum HostSessionAction {
-    /// Fordert den Host auf, einen Open-File-Dialog zu starten.
-    OpenFile,
-    /// Fordert Speichern unter dem aktuellen Pfad an.
-    Save,
-    /// Fordert einen Save-As-Dialog an.
-    SaveAs,
-    /// Fordert einen Heightmap-Auswahldialog an.
-    RequestHeightmapSelection,
-    /// Fordert einen Background-Map-Auswahldialog an.
-    RequestBackgroundMapSelection,
-    /// Fordert den ZIP-Auswahldialog fuer die Overview-Generierung an.
-    GenerateOverview,
-    /// Fordert einen Curseplay-Import-Dialog an.
-    CurseplayImport,
-    /// Fordert einen Curseplay-Export-Dialog an.
-    CurseplayExport,
-    /// Setzt die Kamera auf den Standardzustand zurueck.
-    ResetCamera,
-    /// Passt den Viewport auf die komplette Karte ein.
-    ZoomToFit,
-    /// Passt den Viewport auf die aktuelle Selektion ein.
-    ZoomToSelectionBounds,
-    /// Beendet die Anwendung.
-    Exit,
-    /// Schaltet die Command-Palette um.
-    ToggleCommandPalette,
-    /// Wechselt das aktive Editor-Tool.
-    SetEditorTool {
-        /// Ziel-Tool als stabiler Bridge-Identifier.
-        tool: HostActiveTool,
-    },
-    /// Fuehrt eine explizite Route-Tool-Aktion aus.
-    RouteTool {
-        /// Semantische Route-Tool-Aktion.
-        action: HostRouteToolAction,
-    },
-    /// Setzt die Default-Richtung fuer neue Verbindungen.
-    SetDefaultDirection {
-        /// Neue Standardrichtung.
-        direction: HostDefaultConnectionDirection,
-    },
-    /// Setzt die Default-Prioritaet fuer neue Verbindungen.
-    SetDefaultPriority {
-        /// Neue Standard-Prioritaet.
-        priority: HostDefaultConnectionPriority,
-    },
-    /// Uebernimmt geaenderte Editor-Optionen.
-    ApplyOptions {
-        /// Vollstaendige Optionen-Payload.
-        options: Box<EditorOptions>,
-    },
-    /// Setzt die Editor-Optionen auf Standardwerte zurueck.
-    ResetOptions,
-    /// Oeffnet den Optionen-Dialog.
-    OpenOptionsDialog,
-    /// Schliesst den Optionen-Dialog.
-    CloseOptionsDialog,
-    /// Fuehrt den letzten Undo-faehigen Schritt rueckgaengig aus.
-    Undo,
-    /// Stellt den letzten Undo-Schritt wieder her.
-    Redo,
-    /// Reicht einen Batch aus host-neutralen Viewport-Input-Events in die Session.
-    SubmitViewportInput {
-        /// Sequenzieller Batch von Resize-, Pointer- und Scroll-Events.
-        batch: HostViewportInputBatch,
-    },
-    /// Uebergibt ein host-seitiges Dialog-Ergebnis an die Engine.
-    SubmitDialogResult {
-        /// Semantisches Ergebnis einer zuvor angeforderten Dialog-Interaktion.
-        result: HostDialogResult,
-    },
-}
-
-/// Serialisierbarer Snapshot der aktuellen Auswahl.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-pub struct HostSelectionSnapshot {
-    /// Aktuell selektierte Node-IDs in stabiler Reihenfolge.
-    pub selected_node_ids: Vec<u64>,
-}
-
-/// Serialisierbarer Snapshot des aktuellen Viewports.
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-pub struct HostViewportSnapshot {
-    /// Kameraposition in Weltkoordinaten.
-    pub camera_position: [f32; 2],
-    /// Zoom-Faktor des aktuellen Frames.
-    pub zoom: f32,
-}
-
-/// Stabile Render-Klassifikation eines Nodes fuer host-neutrale Geometry-Snapshots.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
-#[serde(rename_all = "snake_case")]
-pub enum HostViewportNodeKind {
-    /// Standard-Node ohne besondere Warn- oder Subprio-Faerbung.
-    Regular,
-    /// Subpriorisierter Node.
-    SubPrio,
-    /// Warn-Node.
-    Warning,
-}
-
-/// Stabile Richtungsklassifikation einer Verbindung fuer Geometry-Snapshots.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
-#[serde(rename_all = "snake_case")]
-pub enum HostViewportConnectionDirection {
-    /// Pfeil in Start-zu-Ende-Richtung.
-    Regular,
-    /// Bidirektionale Verbindung ohne Pfeil.
-    Dual,
-    /// Pfeil entgegengesetzt zur Start-zu-Ende-Geometrie.
-    Reverse,
-}
-
-/// Stabile Prioritaetsklassifikation einer Verbindung fuer Geometry-Snapshots.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
-#[serde(rename_all = "snake_case")]
-pub enum HostViewportConnectionPriority {
-    /// Normale Verbindung.
-    Regular,
-    /// Subpriorisierte Verbindung.
-    SubPriority,
-}
-
-/// Host-neutraler Node-Eintrag fuer einen minimalen Viewport-Geometry-Snapshot.
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-pub struct HostViewportNodeSnapshot {
-    /// Stabile Node-ID.
-    pub id: u64,
-    /// Weltposition des Nodes.
-    pub position: [f32; 2],
-    /// Render-Klassifikation fuer die host-seitige Darstellung.
-    pub kind: HostViewportNodeKind,
-    /// Gibt an, ob der Node auch bei Decimation sichtbar bleiben soll.
-    pub preserve_when_decimating: bool,
-    /// Ob der Node aktuell selektiert ist.
-    pub selected: bool,
-    /// Ob der Node aktuell ausgeblendet ist.
-    pub hidden: bool,
-    /// Ob der Node aktuell gedimmt ist.
-    pub dimmed: bool,
-}
-
-/// Host-neutrale Verbindung fuer einen minimalen Viewport-Geometry-Snapshot.
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-pub struct HostViewportConnectionSnapshot {
-    /// Start-Node-ID.
-    pub start_id: u64,
-    /// End-Node-ID.
-    pub end_id: u64,
-    /// Weltposition des Startpunkts.
-    pub start_position: [f32; 2],
-    /// Weltposition des Endpunkts.
-    pub end_position: [f32; 2],
-    /// Richtungsklassifikation der Verbindung.
-    pub direction: HostViewportConnectionDirection,
-    /// Prioritaetsklassifikation der Verbindung.
-    pub priority: HostViewportConnectionPriority,
-    /// Ob die Verbindung ueber Hidden-Nodes aktuell ausgeblendet ist.
-    pub hidden: bool,
-    /// Ob die Verbindung ueber gedimmte Nodes aktuell gedimmt ist.
-    pub dimmed: bool,
-}
-
-/// Host-neutraler Marker-Eintrag fuer einen minimalen Viewport-Geometry-Snapshot.
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-pub struct HostViewportMarkerSnapshot {
-    /// Weltposition des Markers.
-    pub position: [f32; 2],
-}
-
-/// Minimaler, serialisierbarer Viewport-Geometry-Snapshot fuer Transport-Adapter.
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-pub struct HostViewportGeometrySnapshot {
-    /// Ob aktuell eine Karte im Render-Snapshot vorhanden ist.
-    pub has_map: bool,
-    /// Viewport-Groesse in Pixeln [width, height].
-    pub viewport_size: [f32; 2],
-    /// Kameraposition in Weltkoordinaten.
-    pub camera_position: [f32; 2],
-    /// Zoom-Faktor des Frames.
-    pub zoom: f32,
-    /// Welt-Einheiten pro Pixel im aktuellen Frame.
-    pub world_per_pixel: f32,
-    /// Gibt an, ob fuer den Frame ein Hintergrund-Asset vorhanden ist.
-    pub has_background: bool,
-    /// Gibt an, ob der Hintergrund in diesem Frame sichtbar ist.
-    pub background_visible: bool,
-    /// Read-only Node-Snapshot fuer den aktuellen Frame.
-    pub nodes: Vec<HostViewportNodeSnapshot>,
-    /// Read-only Verbindungs-Snapshot fuer den aktuellen Frame.
-    pub connections: Vec<HostViewportConnectionSnapshot>,
-    /// Read-only Marker-Snapshot fuer den aktuellen Frame.
-    pub markers: Vec<HostViewportMarkerSnapshot>,
-}
-
-/// Kleine, serialisierbare Session-Zusammenfassung fuer Host-Frontends.
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-pub struct HostSessionSnapshot {
-    /// Ob aktuell eine Karte geladen ist.
-    pub has_map: bool,
-    /// Anzahl der Nodes der geladenen Karte.
-    pub node_count: usize,
-    /// Anzahl der Verbindungen der geladenen Karte.
-    pub connection_count: usize,
-    /// Aktives Editor-Tool als stabiler, expliziter Identifier.
-    pub active_tool: HostActiveTool,
-    /// Letzte Statusmeldung der Session.
-    pub status_message: Option<String>,
-    /// Ob die Command-Palette sichtbar ist.
-    pub show_command_palette: bool,
-    /// Ob der Options-Dialog sichtbar ist.
-    pub show_options_dialog: bool,
-    /// Gibt an, ob ein Undo-Schritt verfuegbar ist.
-    pub can_undo: bool,
-    /// Gibt an, ob ein Redo-Schritt verfuegbar ist.
-    pub can_redo: bool,
-    /// Anzahl aktuell ausstehender Dialog-Anforderungen.
-    pub pending_dialog_request_count: usize,
-    /// Read-only Snapshot der aktuellen Auswahl.
-    pub selection: HostSelectionSnapshot,
-    /// Read-only Snapshot des aktuellen Viewports.
-    pub viewport: HostViewportSnapshot,
-}
-
-/// Host-neutrale Richtung fuer Verbindungs-Defaults im Chrome-Snapshot.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
-#[serde(rename_all = "snake_case")]
-pub enum HostDefaultConnectionDirection {
-    /// Standardrichtung Start -> Ende.
-    Regular,
-    /// Bidirektionaler Standard.
-    Dual,
-    /// Umgekehrte Standardrichtung Ende -> Start.
-    Reverse,
-}
-
-/// Host-neutrale Prioritaet fuer Verbindungs-Defaults im Chrome-Snapshot.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
-#[serde(rename_all = "snake_case")]
-pub enum HostDefaultConnectionPriority {
-    /// Normale Verbindung.
-    Regular,
-    /// Subpriorisierte Verbindung.
-    SubPriority,
-}
-
-/// Stabile Route-Tool-ID fuer host-neutrale Chrome-Snapshots.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
-#[serde(rename_all = "snake_case")]
-pub enum HostRouteToolId {
-    /// Gerade Strecke.
-    Straight,
-    /// Quadratische Bézier-Kurve.
-    CurveQuad,
-    /// Kubische Bézier-Kurve.
-    CurveCubic,
-    /// Catmull-Rom-Spline.
-    Spline,
-    /// Ausweichstrecke.
-    Bypass,
-    /// Geglaettete Kurve.
-    SmoothCurve,
-    /// Parkplatz-Generator.
-    Parking,
-    /// Feldgrenzen-Analyse.
-    FieldBoundary,
-    /// Feldweg-Analyse.
-    FieldPath,
-    /// Strecken-Versatz.
-    RouteOffset,
-    /// Farb-Pfad-Analyse.
-    ColorPath,
-}
-
-/// Stabile Route-Tool-Gruppe fuer host-neutrale Chrome-Snapshots.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
-#[serde(rename_all = "snake_case")]
-pub enum HostRouteToolGroup {
-    /// Grundlegende Streckenwerkzeuge.
-    Basics,
-    /// Abschnitts- und Generator-Werkzeuge.
-    Section,
-    /// Analyse-Werkzeuge.
-    Analysis,
-}
-
-/// Stabile Route-Tool-Surface fuer host-neutrale Chrome-Snapshots.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
-#[serde(rename_all = "snake_case")]
-pub enum HostRouteToolSurface {
-    /// Schwebendes Floating-Menue.
-    FloatingMenu,
-    /// Defaults-Panel in der Sidebar.
-    DefaultsPanel,
-    /// Hauptmenue.
-    MainMenu,
-    /// Command Palette.
-    CommandPalette,
-}
-
-/// Stabile Icon-Klassifikation fuer Route-Tool-Eintraege.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
-#[serde(rename_all = "snake_case")]
-pub enum HostRouteToolIconKey {
-    /// Icon fuer Gerade Strecke.
-    Straight,
-    /// Icon fuer Bézier Grad 2.
-    CurveQuad,
-    /// Icon fuer Bézier Grad 3.
-    CurveCubic,
-    /// Icon fuer Spline.
-    Spline,
-    /// Icon fuer Ausweichstrecke.
-    Bypass,
-    /// Icon fuer Geglaettete Kurve.
-    SmoothCurve,
-    /// Icon fuer Parkplatz.
-    Parking,
-    /// Icon fuer Feldgrenze.
-    FieldBoundary,
-    /// Icon fuer Feldweg.
-    FieldPath,
-    /// Icon fuer Streckenversatz.
-    RouteOffset,
-    /// Icon fuer Farbpfad.
-    ColorPath,
-}
-
-/// Stabile Deaktivierungsgruende fuer Route-Tool-Eintraege.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
-#[serde(rename_all = "snake_case")]
-pub enum HostRouteToolDisabledReason {
-    /// Farmland-Daten fehlen.
-    MissingFarmland,
-    /// Hintergrundbild fehlt.
-    MissingBackground,
-    /// Geordnete Ketten-Selektion fehlt.
-    MissingOrderedChain,
-}
-
-/// Host-neutraler Route-Tool-Eintrag fuer Menues und Panels.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-pub struct HostRouteToolEntrySnapshot {
-    /// Surface, fuer die der Eintrag aufgeloest wurde.
-    pub surface: HostRouteToolSurface,
-    /// Anzeigegruppe des Eintrags.
-    pub group: HostRouteToolGroup,
-    /// Stabile Tool-ID.
-    pub tool: HostRouteToolId,
-    /// Kanonischer Slot des Tools im Katalog.
-    pub slot: usize,
-    /// Stabile Icon-Klassifikation des Eintrags.
-    pub icon_key: HostRouteToolIconKey,
-    /// Gibt an, ob der Eintrag aktuell aktivierbar ist.
-    pub enabled: bool,
-    /// Optionaler Deaktivierungsgrund.
-    pub disabled_reason: Option<HostRouteToolDisabledReason>,
-}
-
-/// Zuletzt gewaehlte Route-Tools je Gruppe.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
-pub struct HostRouteToolSelectionSnapshot {
-    /// Zuletzt gewaehltes Tool in der Gruppe `Basics`.
-    pub basics: HostRouteToolId,
-    /// Zuletzt gewaehltes Tool in der Gruppe `Section`.
-    pub section: HostRouteToolId,
-    /// Zuletzt gewaehltes Tool in der Gruppe `Analysis`.
-    pub analysis: HostRouteToolId,
-}
-
-/// Eine Tangentenoption fuer host-neutrale Route-Tool-Snapshots.
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-pub struct HostTangentOptionSnapshot {
-    /// Semantische Tangentenquelle.
-    pub source: HostTangentSource,
-    /// Fertig aufbereitetes Label fuer Menues/Listen.
-    pub label: String,
-}
-
-/// Host-neutraler Tangenten-Menuezustand fuer Route-Tool-Kontextmenues.
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-pub struct HostTangentMenuSnapshot {
-    /// Verfuegbare Start-Tangenten.
-    pub start_options: Vec<HostTangentOptionSnapshot>,
-    /// Verfuegbare End-Tangenten.
-    pub end_options: Vec<HostTangentOptionSnapshot>,
-    /// Aktuell gewaehlte Start-Tangente.
-    pub current_start: HostTangentSource,
-    /// Aktuell gewaehlte End-Tangente.
-    pub current_end: HostTangentSource,
-}
-
-/// Host-neutraler Read-Snapshot fuer Route-Tool-Viewport-Eingaben.
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-pub struct HostRouteToolViewportSnapshot {
-    /// Drag-Ziele des aktiven Route-Tools in Weltkoordinaten.
-    pub drag_targets: Vec<[f32; 2]>,
-    /// Gibt an, ob das Tool bereits Eingaben gesammelt hat.
-    pub has_pending_input: bool,
-    /// Gibt an, ob Segment-Shortcuts aktiv sind.
-    pub segment_shortcuts_active: bool,
-    /// Optionale Tangenten-Menue-Daten fuer Kontextmenues.
-    pub tangent_menu_data: Option<HostTangentMenuSnapshot>,
-    /// Gibt an, ob Alt+Drag als Tool-Lasso geroutet werden muss.
-    pub needs_lasso_input: bool,
-}
-
-/// Host-neutraler Read-Snapshot fuer Chrome-nahe Menues und Panels.
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct HostChromeSnapshot {
-    /// Letzte Statusmeldung der Session.
-    pub status_message: Option<String>,
-    /// Ob die Command-Palette sichtbar ist.
-    pub show_command_palette: bool,
-    /// Ob der Optionen-Dialog sichtbar ist.
-    pub show_options_dialog: bool,
-    /// Ob aktuell eine Karte geladen ist.
-    pub has_map: bool,
-    /// Ob aktuell mindestens ein Node selektiert ist.
-    pub has_selection: bool,
-    /// Ob die Zwischenablage Node-Daten enthaelt.
-    pub has_clipboard: bool,
-    /// Gibt an, ob ein Undo-Schritt verfuegbar ist.
-    pub can_undo: bool,
-    /// Gibt an, ob ein Redo-Schritt verfuegbar ist.
-    pub can_redo: bool,
-    /// Aktives Editor-Tool als stabiler Identifier.
-    pub active_tool: HostActiveTool,
-    /// Aktives Route-Tool im Route-Modus.
-    pub active_route_tool: Option<HostRouteToolId>,
-    /// Aktuelle Verbindungs-Default-Richtung.
-    pub default_direction: HostDefaultConnectionDirection,
-    /// Aktuelle Verbindungs-Default-Prioritaet.
-    pub default_priority: HostDefaultConnectionPriority,
-    /// Zuletzt gewaehlte Route-Tools je Gruppe.
-    pub route_tool_memory: HostRouteToolSelectionSnapshot,
-    /// Vollstaendige Laufzeitoptionen fuer host-neutrale Panels.
-    pub options: EditorOptions,
-    /// Aufgeloeste Route-Tool-Eintraege fuer Menues und Panels.
-    pub route_tool_entries: Vec<HostRouteToolEntrySnapshot>,
-}
+// ───────────────────────── Kompatibilitaetsaliase ────────────────────────────
 
 /// Kompatibilitaetsalias fuer bestehende Flutter-/FFI-Call-Sites.
 pub type EngineActiveTool = HostActiveTool;
-
 /// Kompatibilitaetsalias fuer bestehende Flutter-/FFI-Call-Sites.
 pub type EngineDialogRequestKind = HostDialogRequestKind;
-
 /// Kompatibilitaetsalias fuer bestehende Flutter-/FFI-Call-Sites.
 pub type EngineDialogRequest = HostDialogRequest;
-
 /// Kompatibilitaetsalias fuer bestehende Flutter-/FFI-Call-Sites.
 pub type EngineDialogResult = HostDialogResult;
-
 /// Kompatibilitaetsalias fuer bestehende Flutter-/FFI-Call-Sites.
 pub type EnginePointerButton = HostPointerButton;
-
 /// Kompatibilitaetsalias fuer bestehende Flutter-/FFI-Call-Sites.
 pub type EngineTapKind = HostTapKind;
-
 /// Kompatibilitaetsalias fuer bestehende Flutter-/FFI-Call-Sites.
 pub type EngineInputModifiers = HostInputModifiers;
-
 /// Kompatibilitaetsalias fuer bestehende Flutter-/FFI-Call-Sites.
 pub type EngineViewportInputBatch = HostViewportInputBatch;
-
 /// Kompatibilitaetsalias fuer bestehende Flutter-/FFI-Call-Sites.
 pub type EngineViewportInputEvent = HostViewportInputEvent;
-
 /// Kompatibilitaetsalias fuer bestehende Flutter-/FFI-Call-Sites.
 pub type EngineSessionAction = HostSessionAction;
-
 /// Kompatibilitaetsalias fuer bestehende Flutter-/FFI-Call-Sites.
 pub type EngineSelectionSnapshot = HostSelectionSnapshot;
-
 /// Kompatibilitaetsalias fuer bestehende Flutter-/FFI-Call-Sites.
 pub type EngineViewportSnapshot = HostViewportSnapshot;
-
 /// Kompatibilitaetsalias fuer bestehende Flutter-/FFI-Call-Sites.
 pub type EngineViewportGeometrySnapshot = HostViewportGeometrySnapshot;
-
 /// Kompatibilitaetsalias fuer bestehende Flutter-/FFI-Call-Sites.
 pub type EngineSessionSnapshot = HostSessionSnapshot;
-
 /// Kompatibilitaetsalias fuer bestehende Flutter-/FFI-Call-Sites.
 pub type EngineDefaultConnectionDirection = HostDefaultConnectionDirection;
-
 /// Kompatibilitaetsalias fuer bestehende Flutter-/FFI-Call-Sites.
 pub type EngineDefaultConnectionPriority = HostDefaultConnectionPriority;
-
 /// Kompatibilitaetsalias fuer bestehende Flutter-/FFI-Call-Sites.
 pub type EngineTangentSource = HostTangentSource;
-
 /// Kompatibilitaetsalias fuer bestehende Flutter-/FFI-Call-Sites.
 pub type EngineRouteToolId = HostRouteToolId;
-
 /// Kompatibilitaetsalias fuer bestehende Flutter-/FFI-Call-Sites.
 pub type EngineRouteToolAction = HostRouteToolAction;
-
 /// Kompatibilitaetsalias fuer bestehende Flutter-/FFI-Call-Sites.
 pub type EngineRouteToolGroup = HostRouteToolGroup;
-
 /// Kompatibilitaetsalias fuer bestehende Flutter-/FFI-Call-Sites.
 pub type EngineRouteToolSurface = HostRouteToolSurface;
-
 /// Kompatibilitaetsalias fuer bestehende Flutter-/FFI-Call-Sites.
 pub type EngineRouteToolIconKey = HostRouteToolIconKey;
-
 /// Kompatibilitaetsalias fuer bestehende Flutter-/FFI-Call-Sites.
 pub type EngineRouteToolDisabledReason = HostRouteToolDisabledReason;
-
 /// Kompatibilitaetsalias fuer bestehende Flutter-/FFI-Call-Sites.
 pub type EngineRouteToolEntrySnapshot = HostRouteToolEntrySnapshot;
-
 /// Kompatibilitaetsalias fuer bestehende Flutter-/FFI-Call-Sites.
 pub type EngineRouteToolSelectionSnapshot = HostRouteToolSelectionSnapshot;
-
 /// Kompatibilitaetsalias fuer bestehende Flutter-/FFI-Call-Sites.
 pub type EngineTangentOptionSnapshot = HostTangentOptionSnapshot;
-
 /// Kompatibilitaetsalias fuer bestehende Flutter-/FFI-Call-Sites.
 pub type EngineTangentMenuSnapshot = HostTangentMenuSnapshot;
-
 /// Kompatibilitaetsalias fuer bestehende Flutter-/FFI-Call-Sites.
 pub type EngineRouteToolViewportSnapshot = HostRouteToolViewportSnapshot;
-
 /// Kompatibilitaetsalias fuer bestehende Flutter-/FFI-Call-Sites.
 pub type EngineChromeSnapshot = HostChromeSnapshot;
 
