@@ -464,3 +464,138 @@ fn try_extract_polygons_from_files(
         (Vec::new(), map_info.map_size, map_info.map_size, None)
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use image::{DynamicImage, GrayImage, ImageFormat};
+    use std::io::{Cursor, Write};
+    use std::path::{Path, PathBuf};
+    use std::time::{SystemTime, UNIX_EPOCH};
+
+    struct TempDirGuard {
+        path: PathBuf,
+    }
+
+    impl TempDirGuard {
+        fn new(prefix: &str) -> Self {
+            let timestamp = SystemTime::now()
+                .duration_since(UNIX_EPOCH)
+                .expect("Systemzeit muss nach Unix-Epoche liegen")
+                .as_nanos();
+            let path = std::env::temp_dir().join(format!(
+                "fs25_map_overview_{}_{}_{}",
+                prefix,
+                std::process::id(),
+                timestamp
+            ));
+            std::fs::create_dir_all(&path).expect("Temp-Verzeichnis muss erstellt werden");
+            Self { path }
+        }
+
+        fn path(&self) -> &Path {
+            &self.path
+        }
+    }
+
+    impl Drop for TempDirGuard {
+        fn drop(&mut self) {
+            let _ = std::fs::remove_dir_all(&self.path);
+        }
+    }
+
+    fn rgba_png_bytes(width: u32, height: u32, rgba: [u8; 4]) -> Vec<u8> {
+        let image = DynamicImage::ImageRgba8(image::RgbaImage::from_pixel(
+            width,
+            height,
+            image::Rgba(rgba),
+        ));
+        let mut cursor = Cursor::new(Vec::new());
+        image
+            .write_to(&mut cursor, ImageFormat::Png)
+            .expect("PNG muss erzeugt werden");
+        cursor.into_inner()
+    }
+
+    fn luma_png_bytes(width: u32, height: u32, pixels: Vec<u8>) -> Vec<u8> {
+        let image = GrayImage::from_raw(width, height, pixels)
+            .expect("Graustufenbild muss die erwarteten Dimensionen haben");
+        let mut cursor = Cursor::new(Vec::new());
+        DynamicImage::ImageLuma8(image)
+            .write_to(&mut cursor, ImageFormat::Png)
+            .expect("Graustufen-PNG muss erzeugt werden");
+        cursor.into_inner()
+    }
+
+    fn write_zip(path: &Path, entries: Vec<(&str, Vec<u8>)>) {
+        let file = std::fs::File::create(path).expect("ZIP-Datei muss erstellt werden");
+        let mut writer = zip::ZipWriter::new(file);
+
+        for (name, bytes) in entries {
+            writer
+                .start_file(name, zip::write::SimpleFileOptions::default())
+                .expect("ZIP-Eintrag muss angelegt werden");
+            writer
+                .write_all(&bytes)
+                .expect("ZIP-Eintrag muss geschrieben werden");
+        }
+
+        writer.finish().expect("ZIP muss finalisiert werden");
+    }
+
+    #[test]
+    fn generate_overview_result_from_zip_reads_nested_archive_entries() {
+        let temp_dir = TempDirGuard::new("nested_zip");
+        let zip_path = temp_dir.path().join("test_map.zip");
+
+        write_zip(
+            &zip_path,
+            vec![
+                (
+                    "TestMap/modDesc.xml",
+                    br#"<?xml version="1.0" encoding="utf-8"?>
+<modDesc>
+  <title><en>Test Map</en></title>
+    <map configFilename="maps/config/map.xml" />
+</modDesc>"#
+                        .to_vec(),
+                ),
+                (
+                    "TestMap/maps/config/map.xml",
+                    br#"<?xml version="1.0" encoding="utf-8"?>
+<map width="32" height="32" />"#
+                        .to_vec(),
+                ),
+                (
+                    "TestMap/maps/data/dem.png",
+                    rgba_png_bytes(1, 1, [0, 0, 0, 255]),
+                ),
+                (
+                    "TestMap/maps/data/infoLayer_farmlands.png",
+                    luma_png_bytes(2, 2, vec![0, 1, 1, 0]),
+                ),
+            ],
+        );
+
+        let options = OverviewOptions {
+            hillshade: false,
+            farmlands: false,
+            farmland_ids: false,
+            pois: false,
+            legend: false,
+        };
+
+        let result = generate_overview_result_from_zip(
+            zip_path.to_str().expect("Temp-ZIP-Pfad muss UTF-8 sein"),
+            &options,
+        )
+        .expect("Overview aus Test-ZIP muss erzeugt werden");
+
+        assert_eq!(result.image.width(), 32);
+        assert_eq!(result.image.height(), 32);
+        assert_eq!(result.map_size, 32.0);
+        assert_eq!(result.grle_width, 2);
+        assert_eq!(result.grle_height, 2);
+        assert_eq!(result.farmland_ids, Some(vec![0, 1, 1, 0]));
+    }
+}

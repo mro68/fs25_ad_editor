@@ -92,6 +92,42 @@ fn with_session_mut<T>(
     session.with_lock(f)
 }
 
+/// Hilfsmakro: Wraps einen bool-FFI-Aufruf mit Panic-Isolation und Last-Error-Behandlung.
+macro_rules! ffi_guard_bool {
+    ($body:expr) => {{
+        clear_last_error();
+        match std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| $body)) {
+            Ok(Ok(())) => true,
+            Ok(Err(e)) => {
+                set_last_error(e.to_string());
+                false
+            }
+            Err(_) => {
+                set_last_error("internal panic in FFI call");
+                false
+            }
+        }
+    }};
+}
+
+/// Hilfsmakro: Wraps einen ptr-rueckgebenden FFI-Aufruf mit Panic-Isolation und Last-Error-Behandlung.
+macro_rules! ffi_guard_ptr {
+    ($body:expr) => {{
+        clear_last_error();
+        match std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| $body)) {
+            Ok(Ok(ptr)) => ptr,
+            Ok(Err(e)) => {
+                set_last_error(e.to_string());
+                std::ptr::null_mut()
+            }
+            Err(_) => {
+                set_last_error("internal panic in FFI call");
+                std::ptr::null_mut()
+            }
+        }
+    }};
+}
+
 /// Liefert die ABI-Version des nativen Host-Bridge-Vertrags.
 #[unsafe(no_mangle)]
 pub extern "C" fn fs25ad_host_bridge_abi_version() -> u32 {
@@ -111,16 +147,18 @@ pub extern "C" fn fs25ad_host_bridge_last_error_message() -> *mut c_char {
 }
 
 /// Gibt einen durch diese Bibliothek allozierten UTF-8-String frei.
-#[allow(clippy::not_unsafe_ptr_arg_deref)]
+///
+/// # Safety
+///
+/// `value` muss ein durch diese Bibliothek allokierter Zeiger sein oder `null`.
+/// Nach dem Aufruf ist der Zeiger ungueltig. Doppeltes Freigeben ist undefiniertes Verhalten.
 #[unsafe(no_mangle)]
-pub extern "C" fn fs25ad_host_bridge_string_free(value: *mut c_char) {
+pub unsafe extern "C" fn fs25ad_host_bridge_string_free(value: *mut c_char) {
     if value.is_null() {
         return;
     }
-
-    unsafe {
-        drop(CString::from_raw(value));
-    }
+    // SAFETY: Aufrufer garantiert, dass `value` durch diese Bibliothek allokiert wurde.
+    unsafe { drop(CString::from_raw(value)) };
 }
 
 /// Erstellt eine neue Bridge-Session.
@@ -131,154 +169,146 @@ pub extern "C" fn fs25ad_host_bridge_session_new() -> *mut HostBridgeSessionHand
 }
 
 /// Gibt eine zuvor erstellte Bridge-Session frei.
-#[allow(clippy::not_unsafe_ptr_arg_deref)]
+///
+/// # Safety
+///
+/// `session` muss ein durch `fs25ad_host_bridge_session_new` rueckgegebener Zeiger sein oder `null`.
+/// Nach dem Aufruf ist der Zeiger ungueltig. Doppeltes Freigeben ist undefiniertes Verhalten.
 #[unsafe(no_mangle)]
-pub extern "C" fn fs25ad_host_bridge_session_dispose(session: *mut HostBridgeSessionHandle) {
+pub unsafe extern "C" fn fs25ad_host_bridge_session_dispose(session: *mut HostBridgeSessionHandle) {
     clear_last_error();
     if session.is_null() {
         return;
     }
-
-    unsafe {
-        drop(Box::from_raw(session));
-    }
+    // SAFETY: Aufrufer garantiert, dass `session` durch `session_new` allokiert wurde.
+    unsafe { drop(Box::from_raw(session)) };
 }
 
 /// Serialisiert den aktuellen Session-Snapshot als UTF-8-JSON.
+///
+/// # Safety
+///
+/// `session` muss ein gueltiger, durch `fs25ad_host_bridge_session_new` erzeugter Zeiger sein.
+/// Der rueckgegebene String muss mit `fs25ad_host_bridge_string_free` freigegeben werden.
 #[unsafe(no_mangle)]
-pub extern "C" fn fs25ad_host_bridge_session_snapshot_json(
+pub unsafe extern "C" fn fs25ad_host_bridge_session_snapshot_json(
     session: *mut HostBridgeSessionHandle,
 ) -> *mut c_char {
-    clear_last_error();
-
-    match with_session_mut(session, |session| {
-        let snapshot: HostSessionSnapshot = session.snapshot_owned();
-        serialize_json(&snapshot)
-    }) {
-        Ok(payload) => payload,
-        Err(error) => {
-            set_last_error(error.to_string());
-            std::ptr::null_mut()
-        }
+    ffi_guard_ptr! {
+        with_session_mut(session, |session| {
+            let snapshot: HostSessionSnapshot = session.snapshot_owned();
+            serialize_json(&snapshot)
+        })
     }
 }
 
 /// Serialisiert den host-neutralen Chrome-Snapshot als UTF-8-JSON.
+///
+/// # Safety
+///
+/// `session` muss ein gueltiger, durch `fs25ad_host_bridge_session_new` erzeugter Zeiger sein.
+/// Der rueckgegebene String muss mit `fs25ad_host_bridge_string_free` freigegeben werden.
 #[unsafe(no_mangle)]
-pub extern "C" fn fs25ad_host_bridge_session_chrome_snapshot_json(
+pub unsafe extern "C" fn fs25ad_host_bridge_session_chrome_snapshot_json(
     session: *mut HostBridgeSessionHandle,
 ) -> *mut c_char {
-    clear_last_error();
-
-    match with_session_mut(session, |session| {
-        let snapshot: HostChromeSnapshot = session.build_host_chrome_snapshot();
-        serialize_json(&snapshot)
-    }) {
-        Ok(payload) => payload,
-        Err(error) => {
-            set_last_error(error.to_string());
-            std::ptr::null_mut()
-        }
+    ffi_guard_ptr! {
+        with_session_mut(session, |session| {
+            let snapshot: HostChromeSnapshot = session.build_host_chrome_snapshot();
+            serialize_json(&snapshot)
+        })
     }
 }
 
 /// Serialisiert den Route-Tool-Viewport-Snapshot als UTF-8-JSON.
+///
+/// # Safety
+///
+/// `session` muss ein gueltiger, durch `fs25ad_host_bridge_session_new` erzeugter Zeiger sein.
+/// Der rueckgegebene String muss mit `fs25ad_host_bridge_string_free` freigegeben werden.
 #[unsafe(no_mangle)]
-pub extern "C" fn fs25ad_host_bridge_session_route_tool_viewport_json(
+pub unsafe extern "C" fn fs25ad_host_bridge_session_route_tool_viewport_json(
     session: *mut HostBridgeSessionHandle,
 ) -> *mut c_char {
-    clear_last_error();
-
-    match with_session_mut(session, |session| {
-        let snapshot: HostRouteToolViewportSnapshot = session.build_route_tool_viewport_snapshot();
-        serialize_json(&snapshot)
-    }) {
-        Ok(payload) => payload,
-        Err(error) => {
-            set_last_error(error.to_string());
-            std::ptr::null_mut()
-        }
+    ffi_guard_ptr! {
+        with_session_mut(session, |session| {
+            let snapshot: HostRouteToolViewportSnapshot =
+                session.build_route_tool_viewport_snapshot();
+            serialize_json(&snapshot)
+        })
     }
 }
 
 /// Wendet eine kanonische `HostSessionAction` an, uebergeben als UTF-8-JSON.
+///
+/// # Safety
+///
+/// `session` muss ein gueltiger, durch `fs25ad_host_bridge_session_new` erzeugter Zeiger sein.
+/// `action_json` muss ein gueltiger, null-terminierter UTF-8-String oder `null` sein.
 #[unsafe(no_mangle)]
-pub extern "C" fn fs25ad_host_bridge_session_apply_action_json(
+pub unsafe extern "C" fn fs25ad_host_bridge_session_apply_action_json(
     session: *mut HostBridgeSessionHandle,
     action_json: *const c_char,
 ) -> bool {
-    clear_last_error();
-
-    match (|| {
+    ffi_guard_bool! {{
         let action: HostSessionAction = read_json_arg(action_json, "HostSessionAction")?;
         with_session_mut(session, |session| session.apply_action(action))
-    })() {
-        Ok(()) => true,
-        Err(error) => {
-            set_last_error(error.to_string());
-            false
-        }
-    }
+    }}
 }
 
 /// Entnimmt alle aktuell ausstehenden Dialog-Anforderungen als UTF-8-JSON-Array.
+///
+/// # Safety
+///
+/// `session` muss ein gueltiger, durch `fs25ad_host_bridge_session_new` erzeugter Zeiger sein.
+/// Der rueckgegebene String muss mit `fs25ad_host_bridge_string_free` freigegeben werden.
 #[unsafe(no_mangle)]
-pub extern "C" fn fs25ad_host_bridge_session_take_dialog_requests_json(
+pub unsafe extern "C" fn fs25ad_host_bridge_session_take_dialog_requests_json(
     session: *mut HostBridgeSessionHandle,
 ) -> *mut c_char {
-    clear_last_error();
-
-    match with_session_mut(session, |session| {
-        let requests: Vec<HostDialogRequest> = session.take_dialog_requests();
-        serialize_json(&requests)
-    }) {
-        Ok(payload) => payload,
-        Err(error) => {
-            set_last_error(error.to_string());
-            std::ptr::null_mut()
-        }
+    ffi_guard_ptr! {
+        with_session_mut(session, |session| {
+            let requests: Vec<HostDialogRequest> = session.take_dialog_requests();
+            serialize_json(&requests)
+        })
     }
 }
 
 /// Reicht ein `HostDialogResult` als UTF-8-JSON in die Session zurueck.
+///
+/// # Safety
+///
+/// `session` muss ein gueltiger, durch `fs25ad_host_bridge_session_new` erzeugter Zeiger sein.
+/// `result_json` muss ein gueltiger, null-terminierter UTF-8-String oder `null` sein.
 #[unsafe(no_mangle)]
-pub extern "C" fn fs25ad_host_bridge_session_submit_dialog_result_json(
+pub unsafe extern "C" fn fs25ad_host_bridge_session_submit_dialog_result_json(
     session: *mut HostBridgeSessionHandle,
     result_json: *const c_char,
 ) -> bool {
-    clear_last_error();
-
-    match (|| {
+    ffi_guard_bool! {{
         let result: HostDialogResult = read_json_arg(result_json, "HostDialogResult")?;
         with_session_mut(session, |session| session.submit_dialog_result(result))
-    })() {
-        Ok(()) => true,
-        Err(error) => {
-            set_last_error(error.to_string());
-            false
-        }
-    }
+    }}
 }
 
 /// Baut einen minimalen Viewport-Geometry-Snapshot als UTF-8-JSON.
+///
+/// # Safety
+///
+/// `session` muss ein gueltiger, durch `fs25ad_host_bridge_session_new` erzeugter Zeiger sein.
+/// Der rueckgegebene String muss mit `fs25ad_host_bridge_string_free` freigegeben werden.
 #[unsafe(no_mangle)]
-pub extern "C" fn fs25ad_host_bridge_session_viewport_geometry_json(
+pub unsafe extern "C" fn fs25ad_host_bridge_session_viewport_geometry_json(
     session: *mut HostBridgeSessionHandle,
     viewport_width: f32,
     viewport_height: f32,
 ) -> *mut c_char {
-    clear_last_error();
-
-    match with_session_mut(session, |session| {
-        let snapshot: HostViewportGeometrySnapshot =
-            session.build_viewport_geometry_snapshot([viewport_width, viewport_height]);
-        serialize_json(&snapshot)
-    }) {
-        Ok(payload) => payload,
-        Err(error) => {
-            set_last_error(error.to_string());
-            std::ptr::null_mut()
-        }
+    ffi_guard_ptr! {
+        with_session_mut(session, |session| {
+            let snapshot: HostViewportGeometrySnapshot =
+                session.build_viewport_geometry_snapshot([viewport_width, viewport_height]);
+            serialize_json(&snapshot)
+        })
     }
 }
 
@@ -303,13 +333,58 @@ mod tests {
     };
     use std::ffi::{CStr, CString};
 
+    // Sicherheits-Wrapper fuer unsafe FFI-Funktionen im Testkontext.
+    fn string_free(ptr: *mut std::ffi::c_char) {
+        unsafe { fs25ad_host_bridge_string_free(ptr) }
+    }
+    fn session_dispose(s: *mut super::HostBridgeSessionHandle) {
+        unsafe { fs25ad_host_bridge_session_dispose(s) }
+    }
+    fn session_snapshot_json(s: *mut super::HostBridgeSessionHandle) -> *mut std::ffi::c_char {
+        unsafe { fs25ad_host_bridge_session_snapshot_json(s) }
+    }
+    fn session_chrome_snapshot_json(
+        s: *mut super::HostBridgeSessionHandle,
+    ) -> *mut std::ffi::c_char {
+        unsafe { fs25ad_host_bridge_session_chrome_snapshot_json(s) }
+    }
+    fn session_route_tool_viewport_json(
+        s: *mut super::HostBridgeSessionHandle,
+    ) -> *mut std::ffi::c_char {
+        unsafe { fs25ad_host_bridge_session_route_tool_viewport_json(s) }
+    }
+    fn session_apply_action_json(
+        s: *mut super::HostBridgeSessionHandle,
+        j: *const std::ffi::c_char,
+    ) -> bool {
+        unsafe { fs25ad_host_bridge_session_apply_action_json(s, j) }
+    }
+    fn session_take_dialog_requests_json(
+        s: *mut super::HostBridgeSessionHandle,
+    ) -> *mut std::ffi::c_char {
+        unsafe { fs25ad_host_bridge_session_take_dialog_requests_json(s) }
+    }
+    fn session_submit_dialog_result_json(
+        s: *mut super::HostBridgeSessionHandle,
+        j: *const std::ffi::c_char,
+    ) -> bool {
+        unsafe { fs25ad_host_bridge_session_submit_dialog_result_json(s, j) }
+    }
+    fn session_viewport_geometry_json(
+        s: *mut super::HostBridgeSessionHandle,
+        w: f32,
+        h: f32,
+    ) -> *mut std::ffi::c_char {
+        unsafe { fs25ad_host_bridge_session_viewport_geometry_json(s, w, h) }
+    }
+
     fn read_and_free_string(ptr: *mut std::ffi::c_char) -> String {
         assert!(!ptr.is_null());
         let value = unsafe { CStr::from_ptr(ptr) }
             .to_str()
             .expect("FFI string must be valid UTF-8")
             .to_string();
-        fs25ad_host_bridge_string_free(ptr);
+        string_free(ptr);
         value
     }
 
@@ -318,7 +393,7 @@ mod tests {
             CString::new(serde_json::to_string(&action).expect("action JSON must serialize"))
                 .expect("CString must build");
 
-        if fs25ad_host_bridge_session_apply_action_json(session, action_json.as_ptr()) {
+        if session_apply_action_json(session, action_json.as_ptr()) {
             return;
         }
 
@@ -345,25 +420,21 @@ mod tests {
                 .expect("action JSON must serialize"),
         )
         .expect("CString must build");
-        assert!(fs25ad_host_bridge_session_apply_action_json(
-            session,
-            action_json.as_ptr()
-        ));
+        assert!(session_apply_action_json(session, action_json.as_ptr()));
 
-        let snapshot_json = read_and_free_string(fs25ad_host_bridge_session_snapshot_json(session));
+        let snapshot_json = read_and_free_string(session_snapshot_json(session));
         let snapshot: HostSessionSnapshot =
             serde_json::from_str(&snapshot_json).expect("snapshot JSON must parse");
         assert!(snapshot.show_command_palette);
 
-        let chrome_snapshot_json =
-            read_and_free_string(fs25ad_host_bridge_session_chrome_snapshot_json(session));
+        let chrome_snapshot_json = read_and_free_string(session_chrome_snapshot_json(session));
         let chrome_snapshot: fs25_auto_drive_host_bridge::HostChromeSnapshot =
             serde_json::from_str(&chrome_snapshot_json).expect("chrome snapshot JSON must parse");
         assert!(chrome_snapshot.show_command_palette);
         assert_eq!(chrome_snapshot.status_message, None);
 
         let route_tool_viewport_json =
-            read_and_free_string(fs25ad_host_bridge_session_route_tool_viewport_json(session));
+            read_and_free_string(session_route_tool_viewport_json(session));
         let route_tool_viewport: HostRouteToolViewportSnapshot =
             serde_json::from_str(&route_tool_viewport_json)
                 .expect("route tool viewport JSON must parse");
@@ -375,14 +446,12 @@ mod tests {
                 .expect("dialog action JSON must serialize"),
         )
         .expect("CString must build");
-        assert!(fs25ad_host_bridge_session_apply_action_json(
+        assert!(session_apply_action_json(
             session,
             request_action_json.as_ptr()
         ));
 
-        let requests_json = read_and_free_string(
-            fs25ad_host_bridge_session_take_dialog_requests_json(session),
-        );
+        let requests_json = read_and_free_string(session_take_dialog_requests_json(session));
         let requests: Vec<HostDialogRequest> =
             serde_json::from_str(&requests_json).expect("dialog request JSON must parse");
         assert_eq!(requests.len(), 1);
@@ -396,14 +465,13 @@ mod tests {
             .expect("dialog result JSON must serialize"),
         )
         .expect("CString must build");
-        assert!(fs25ad_host_bridge_session_submit_dialog_result_json(
+        assert!(session_submit_dialog_result_json(
             session,
             result_json.as_ptr()
         ));
 
-        let geometry_json = read_and_free_string(
-            fs25ad_host_bridge_session_viewport_geometry_json(session, 800.0, 600.0),
-        );
+        let geometry_json =
+            read_and_free_string(session_viewport_geometry_json(session, 800.0, 600.0));
         let geometry: HostViewportGeometrySnapshot =
             serde_json::from_str(&geometry_json).expect("geometry JSON must parse");
         assert_eq!(geometry.viewport_size, [800.0, 600.0]);
@@ -433,26 +501,24 @@ mod tests {
             .expect("viewport input JSON must serialize"),
         )
         .expect("CString must build");
-        assert!(fs25ad_host_bridge_session_apply_action_json(
+        assert!(session_apply_action_json(
             session,
             viewport_input_json.as_ptr()
         ));
 
-        let viewport_snapshot_json =
-            read_and_free_string(fs25ad_host_bridge_session_snapshot_json(session));
+        let viewport_snapshot_json = read_and_free_string(session_snapshot_json(session));
         let viewport_snapshot: HostSessionSnapshot = serde_json::from_str(&viewport_snapshot_json)
             .expect("snapshot JSON after viewport input must parse");
         assert!(viewport_snapshot.viewport.zoom > 1.0);
 
-        let updated_geometry_json = read_and_free_string(
-            fs25ad_host_bridge_session_viewport_geometry_json(session, 1024.0, 768.0),
-        );
+        let updated_geometry_json =
+            read_and_free_string(session_viewport_geometry_json(session, 1024.0, 768.0));
         let updated_geometry: HostViewportGeometrySnapshot =
             serde_json::from_str(&updated_geometry_json).expect("updated geometry JSON must parse");
         assert_eq!(updated_geometry.viewport_size, [1024.0, 768.0]);
         assert!(updated_geometry.zoom > 1.0);
 
-        fs25ad_host_bridge_session_dispose(session);
+        session_dispose(session);
     }
 
     #[test]
@@ -461,15 +527,65 @@ mod tests {
         assert!(!session.is_null());
 
         let invalid_json = CString::new("{not valid json}").expect("CString must build");
-        assert!(!fs25ad_host_bridge_session_apply_action_json(
-            session,
-            invalid_json.as_ptr()
-        ));
+        assert!(!session_apply_action_json(session, invalid_json.as_ptr()));
 
         let error = read_and_free_string(fs25ad_host_bridge_last_error_message());
         assert!(error.contains("HostSessionAction"));
 
-        fs25ad_host_bridge_session_dispose(session);
+        session_dispose(session);
+    }
+
+    #[test]
+    fn ffi_transport_rejects_null_session_and_payload_pointers() {
+        assert!(session_snapshot_json(std::ptr::null_mut()).is_null());
+        assert!(
+            read_and_free_string(fs25ad_host_bridge_last_error_message())
+                .contains("HostBridgeSession pointer")
+        );
+
+        assert!(session_chrome_snapshot_json(std::ptr::null_mut()).is_null());
+        assert!(
+            read_and_free_string(fs25ad_host_bridge_last_error_message())
+                .contains("HostBridgeSession pointer")
+        );
+
+        assert!(session_route_tool_viewport_json(std::ptr::null_mut()).is_null());
+        assert!(
+            read_and_free_string(fs25ad_host_bridge_last_error_message())
+                .contains("HostBridgeSession pointer")
+        );
+
+        assert!(session_take_dialog_requests_json(std::ptr::null_mut()).is_null());
+        assert!(
+            read_and_free_string(fs25ad_host_bridge_last_error_message())
+                .contains("HostBridgeSession pointer")
+        );
+
+        assert!(session_viewport_geometry_json(std::ptr::null_mut(), 320.0, 200.0).is_null());
+        assert!(
+            read_and_free_string(fs25ad_host_bridge_last_error_message())
+                .contains("HostBridgeSession pointer")
+        );
+
+        let session = fs25ad_host_bridge_session_new();
+        assert!(!session.is_null());
+
+        assert!(!session_apply_action_json(session, std::ptr::null()));
+        assert!(
+            read_and_free_string(fs25ad_host_bridge_last_error_message())
+                .contains("HostSessionAction JSON pointer must not be null")
+        );
+
+        assert!(!session_submit_dialog_result_json(
+            session,
+            std::ptr::null()
+        ));
+        assert!(
+            read_and_free_string(fs25ad_host_bridge_last_error_message())
+                .contains("HostDialogResult JSON pointer must not be null")
+        );
+
+        session_dispose(session);
     }
 
     #[test]
@@ -479,9 +595,7 @@ mod tests {
 
         apply_action_json(session, HostSessionAction::OpenFile);
 
-        let requests_json = read_and_free_string(
-            fs25ad_host_bridge_session_take_dialog_requests_json(session),
-        );
+        let requests_json = read_and_free_string(session_take_dialog_requests_json(session));
         let requests: Vec<HostDialogRequest> =
             serde_json::from_str(&requests_json).expect("dialog request JSON must parse");
         assert!(!requests.is_empty());
@@ -499,14 +613,13 @@ mod tests {
             .expect("dialog result JSON must serialize"),
         )
         .expect("CString must build");
-        assert!(fs25ad_host_bridge_session_submit_dialog_result_json(
+        assert!(session_submit_dialog_result_json(
             session,
             open_result_json.as_ptr()
         ));
 
-        let geometry_json = read_and_free_string(
-            fs25ad_host_bridge_session_viewport_geometry_json(session, 1024.0, 768.0),
-        );
+        let geometry_json =
+            read_and_free_string(session_viewport_geometry_json(session, 1024.0, 768.0));
         let geometry: HostViewportGeometrySnapshot =
             serde_json::from_str(&geometry_json).expect("geometry JSON must parse");
         assert!(geometry.nodes.len() >= 2);
@@ -611,12 +724,11 @@ mod tests {
             },
         );
 
-        let viewport_json =
-            read_and_free_string(fs25ad_host_bridge_session_route_tool_viewport_json(session));
+        let viewport_json = read_and_free_string(session_route_tool_viewport_json(session));
         let viewport_snapshot: HostRouteToolViewportSnapshot =
             serde_json::from_str(&viewport_json).expect("route tool viewport JSON must parse");
         assert!(viewport_snapshot.has_pending_input);
 
-        fs25ad_host_bridge_session_dispose(session);
+        session_dispose(session);
     }
 }

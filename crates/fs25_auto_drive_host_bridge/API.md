@@ -10,7 +10,9 @@ Fuer bestehende Flutter-/FFI-Call-Sites stellt die Crate die bisherigen `Engine*
 
 Der aktuell produktive Flutter-Pfad konsumiert diese Kanonik ueber den Linux-first-C-ABI-Adapter `fs25_auto_drive_host_bridge_ffi`. Dieser Transportadapter fuehrt bewusst keine zweite Session- oder DTO-Surface ein, sondern serialisiert nur die bereits hier definierten Host-Vertraege.
 
-Die Bridge exponiert Mutationen ausschliesslich ueber explizite `HostSessionAction`-DTOs. Die Action-Surface deckt stabile Host-Aktionen ab (Datei-/Dialog-Anforderungen, Kamera-/Viewport-Shortcuts, Historie, Optionen, Toolwechsel, Exit), den screen-space-basierten Viewport-Input-Slice via `SubmitViewportInput` sowie eine explizite Route-Tool-Action-Familie `HostRouteToolAction` (Toolwahl, Panel-Aktionen, Execute/Cancel/Recreate, Tangenten, Drag/Lasso/Rotate und Segment-/Node-Anpassungen). Fuer read-only Hosts liefert die Crate weiterhin kleine Session-Snapshots, host-neutrale Panel-Read-Modelle, Viewport-Overlay-Snapshots, einen minimalen serialisierbaren Viewport-Geometry-Snapshot, einen dedizierten Route-Tool-Viewport-Snapshot sowie gekoppelten Render-Output aus `RenderScene` und `RenderAssetsSnapshot`. Zusaetzlich bietet die Session fuer Rust-Hosts schmale UI-Local-Seams (`HostPanelPropertiesState`, `HostDialogUiState`, `HostViewportInputContext`) fuer nicht serialisierte Dialog-/Properties-/Viewport-Zustaende; der produktive egui-Host nutzt diese Pfade inzwischen statt direkter `app_state_mut()`-Bypaesse. Die Uebergangs-Seams `app_state()` und `app_state_mut()` bleiben damit nur noch fuer lokale Rust-Hosts, Tests und bewusst noch nicht kanonisierte Restpfade sichtbar. Dieser gekoppelte RenderFrame ist jetzt sowohl ueber `HostBridgeSession::build_render_frame(...)` als auch ueber den freien Dispatch-Helper `build_render_frame(...)` fuer lokale Rust-Hosts verfuegbar.
+Die oeffentlichen Module `dispatch` und `dto` bleiben dabei stabile Fassaden. Seit der Audit-Remediation ist ihre interne Implementierung in thematische Untermodule aufgeteilt, ohne dass sich die Re-Export-Surface fuer Rust-, egui- oder FFI-Consumer geaendert hat.
+
+Die Bridge exponiert Mutationen ausschliesslich ueber explizite `HostSessionAction`-DTOs. Die Action-Surface deckt stabile Host-Aktionen ab (Datei-/Dialog-Anforderungen, Kamera-/Viewport-Shortcuts, Historie, Optionen, Toolwechsel, Exit), den screen-space-basierten Viewport-Input-Slice via `SubmitViewportInput` sowie eine explizite Route-Tool-Action-Familie `HostRouteToolAction` (Toolwahl, Panel-Aktionen, Execute/Cancel/Recreate, Tangenten, Drag/Lasso/Rotate und Segment-/Node-Anpassungen). Fuer read-only Hosts liefert die Crate weiterhin kleine Session-Snapshots, host-neutrale Panel-Read-Modelle, Viewport-Overlay-Snapshots, einen minimalen serialisierbaren Viewport-Geometry-Snapshot, einen dedizierten Route-Tool-Viewport-Snapshot sowie gekoppelten Render-Output aus `RenderScene` und `RenderAssetsSnapshot`. Zusaetzlich bietet die Session fuer Rust-Hosts schmale UI-Local-Seams (`HostPanelPropertiesState`, `HostDialogUiState`, `HostViewportInputContext`) fuer nicht serialisierte Dialog-/Properties-/Viewport-Zustaende; diese lokalen Seams invalidieren den kleinen `HostSessionSnapshot` nicht automatisch. Wenn ein Rust-Host darueber ausnahmsweise Felder mutiert, die in `HostSessionSnapshot` gespiegelt werden, muss er `HostBridgeSession::mark_snapshot_dirty()` explizit aufrufen. Die Uebergangs-Seams `app_state()` und `app_state_mut()` bleiben damit nur noch fuer lokale Rust-Hosts, Tests und bewusst noch nicht kanonisierte Restpfade sichtbar. Dieser gekoppelte RenderFrame ist jetzt sowohl ueber `HostBridgeSession::build_render_frame(...)` als auch ueber den freien Dispatch-Helper `build_render_frame(...)` fuer lokale Rust-Hosts verfuegbar.
 
 Der konsolidierte Host-Dialog-Vertrag deckt neben `open_file` und `save_file` auch `heightmap` und `background_map` ab. Ob ein Host dafuer einen nativen Picker oder einen lokalen Fallback nutzt, bleibt explizit host-local; der Bridge-Vertrag aendert sich dafuer nicht.
 
@@ -39,9 +41,9 @@ Mit `HostChromeSnapshot` existiert zusaetzlich ein expliziter host-neutraler Rea
 
 | Modul | Verantwortung |
 |---|---|
-| `dispatch` | Wiederverwendbare Rust-Host-Dispatch-Seam (`HostSessionAction` <-> `AppIntent`) und bridge-owned Read-Helper-Seams fuer lokale Controller/State-Hosts |
+| `dispatch` | Wiederverwendbare Rust-Host-Dispatch-Seam (`HostSessionAction` <-> `AppIntent`) und bridge-owned Read-Helper-Seams fuer lokale Controller/State-Hosts; bleibt als stabile Fassade intern in `actions`, `mappings`, `snapshot` und `viewport_input` aufgeteilt |
 | `session` | `HostBridgeSession` als kanonische Session-Fassade ueber der Engine |
-| `dto` | Serialisierbare Host-Actions, Dialog-DTOs, Session-Snapshots plus `Engine*`-Kompatibilitaets-Aliase |
+| `dto` | Serialisierbare Host-Actions, Dialog-DTOs, Session-Snapshots plus `Engine*`-Kompatibilitaets-Aliase; bleibt als stabile Fassade intern in `actions`, `dialogs`, `input`, `route_tool`, `viewport` und `chrome` aufgeteilt |
 
 ## Oeffentliche Dispatch-Funktionen
 
@@ -106,9 +108,10 @@ Mit `HostChromeSnapshot` existiert zusaetzlich ein expliziter host-neutraler Rea
 | `pub fn apply_intent(&mut self, intent: AppIntent) -> Result<()>` | Uebergangs-Seam fuer noch nicht migrierte Intent-Call-Sites |
 | `pub fn app_state(&self) -> &AppState` | Temporaere Read-Seam fuer den Session-Ownership-Flip |
 | `pub fn app_state_mut(&mut self) -> &mut AppState` | Temporaere Kompat-Seam fuer lokale Rust-Hosts und Tests; der produktive egui-Host nutzt stattdessen schmale Session-Seams |
-| `pub fn panel_properties_state_mut(&mut self) -> HostPanelPropertiesState<'_>` | Liefert den schmalen Rust-Host-Seam fuer Properties/Edit-Panel-Zugriffe |
-| `pub fn dialog_ui_state_mut(&mut self) -> HostDialogUiState<'_>` | Liefert den schmalen Rust-Host-Seam fuer host-lokale Dialogzustands-Mutationen |
-| `pub fn viewport_input_context_mut(&mut self) -> HostViewportInputContext<'_>` | Liefert den schmalen Rust-Host-Seam fuer Viewport-Input-Sammler |
+| `pub fn mark_snapshot_dirty(&mut self)` | Invalidiert den gecachten `HostSessionSnapshot` explizit nach snapshot-relevanten lokalen Mutationen |
+| `pub fn panel_properties_state_mut(&mut self) -> HostPanelPropertiesState<'_>` | Liefert den schmalen Rust-Host-Seam fuer Properties/Edit-Panel-Zugriffe; der Zugriff bleibt Snapshot-transparent |
+| `pub fn dialog_ui_state_mut(&mut self) -> HostDialogUiState<'_>` | Liefert den schmalen Rust-Host-Seam fuer host-lokale Dialogzustands-Mutationen; snapshot-relevante Aenderungen muessen anschliessend explizit invalidiert werden |
+| `pub fn viewport_input_context_mut(&mut self) -> HostViewportInputContext<'_>` | Liefert den schmalen Rust-Host-Seam fuer Viewport-Input-Sammler; der Zugriff bleibt Snapshot-transparent |
 | `pub fn clear_floating_menu(&mut self)` | Schliesst das host-lokale Floating-Menue explizit |
 | `pub fn toggle_floating_menu(&mut self, kind: FloatingMenuKind, pointer_pos: Option<Vec2>)` | Schaltet das host-lokale Floating-Menue an einer optionalen Pointer-Position um |
 | `pub fn set_status_message(&mut self, message: Option<String>)` | Setzt die aktuelle Statusmeldung explizit |
@@ -188,12 +191,12 @@ flowchart LR
 
 ## Hinweise
 
-- `snapshot()` arbeitet ueber einen Dirty-Cache und baut `HostSessionSnapshot` nur nach erfolgreichen Mutationen oder entnommenen Dialog-Requests neu auf.
+- `snapshot()` arbeitet ueber einen Dirty-Cache und baut `HostSessionSnapshot` nur nach erfolgreichen Mutationen, expliziter Invalidation oder entnommenen Dialog-Requests neu auf.
 - `HostBridgeSession::apply_action(...)` delegiert intern an dieselbe `dispatch`-Seam, die auch nicht-Session-basierte Rust-Hosts nutzen koennen.
 - `HostSessionAction` umfasst zwei Schreibfamilien: den kleinen screen-space-basierten Viewport-Input-Slice (`SubmitViewportInput`) sowie die explizite Route-Tool-Familie (`RouteTool`).
 - Stateful Viewport-Input benoetigt `HostViewportInputState`. `HostBridgeSession` besitzt diesen Zustand intern; lokale Rust-Hosts verwenden dafuer `apply_host_action_with_viewport_input_state(...)` oder `apply_viewport_input_batch(...)`.
 - Route-Tool-Write-Pfade laufen bewusst nicht ueber `SubmitViewportInput`, sondern ausschliesslich ueber `HostSessionAction::RouteTool`.
-- Die schmalen UI-Local-Seams (`HostPanelPropertiesState`, `HostDialogUiState`, `HostViewportInputContext`) sind bewusst Rust-Host-intern und nicht als serialisierbare FFI-DTO-Surface gedacht.
+- Die schmalen UI-Local-Seams (`HostPanelPropertiesState`, `HostDialogUiState`, `HostViewportInputContext`) sind bewusst Rust-Host-intern und nicht als serialisierbare FFI-DTO-Surface gedacht. Der Zugriff bleibt fuer lokale `distanzen`-/`options`-/Dialog-States Snapshot-transparent; snapshot-relevante Escape-Hatch-Mutationen muessen explizit ueber `mark_snapshot_dirty()` invalidiert werden.
 - Der produktive egui-Host nutzt fuer nicht serialisierte UI-Local-Zustaende die schmalen Session-Seams; `app_state_mut()` bleibt nur als kompatible Uebergangs-Seam fuer lokale Rust-Hosts und Tests bestehen.
 - `take_dialog_requests()` und `submit_dialog_result(...)` bilden die kanonische Dialog-Seam der Session-API. Fuer Adapter mit eigenem `AppController`/`AppState` steht dieselbe Mapping-Logik zusaetzlich ueber `take_host_dialog_requests(...)` als schmaler Adapter-Hilfspfad bereit.
 - Die Mapping-Seam fuer stabile, niederfrequente Host-Aktionen liegt zentral in `dispatch` (`map_intent_to_host_action`, `map_host_action_to_intent`, `apply_mapped_intent`, `apply_host_action`).

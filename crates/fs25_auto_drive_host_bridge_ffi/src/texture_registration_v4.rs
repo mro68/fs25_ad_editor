@@ -296,6 +296,24 @@ fn fail_not_implemented(function_name: &str) -> Result<()> {
     ))
 }
 
+/// Hilfsmakro: bool-FFI-Aufruf mit Panic-Isolation.
+macro_rules! ffi_guard_bool {
+    ($body:expr) => {{
+        clear_last_error();
+        match std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| $body)) {
+            Ok(Ok(())) => true,
+            Ok(Err(e)) => {
+                set_last_error(e.to_string());
+                false
+            }
+            Err(_) => {
+                set_last_error("internal panic in FFI call");
+                false
+            }
+        }
+    }};
+}
+
 /// Liefert die Version des additiven Texture-Registration-v4-Vertrags.
 #[unsafe(no_mangle)]
 pub extern "C" fn fs25ad_host_bridge_texture_registration_v4_contract_version() -> u32 {
@@ -303,32 +321,36 @@ pub extern "C" fn fs25ad_host_bridge_texture_registration_v4_contract_version() 
 }
 
 /// Liefert die Runtime-Capabilities des additiven Texture-Registration-v4-Pfads.
-#[allow(clippy::not_unsafe_ptr_arg_deref)]
+///
+/// # Safety
+///
+/// `out_capabilities` muss ein gueltiger, nicht-null Zeiger auf eine initialisierbare
+/// `Fs25adTextureRegistrationV4Capabilities`-Struktur sein.
 #[unsafe(no_mangle)]
-pub extern "C" fn fs25ad_host_bridge_texture_registration_v4_capabilities(
+pub unsafe extern "C" fn fs25ad_host_bridge_texture_registration_v4_capabilities(
     out_capabilities: *mut Fs25adTextureRegistrationV4Capabilities,
 ) -> bool {
-    clear_last_error();
-
-    if out_capabilities.is_null() {
-        set_last_error("Fs25adTextureRegistrationV4Capabilities pointer must not be null");
-        return false;
-    }
-
-    let capabilities = query_texture_registration_v4_capabilities();
-    unsafe {
-        *out_capabilities = Fs25adTextureRegistrationV4Capabilities {
-            contract_version: capabilities.contract_version,
-            pixel_format: pixel_format_abi(capabilities.pixel_format),
-            alpha_mode: alpha_mode_abi(capabilities.alpha_mode),
-            requires_explicit_release: u32::from(capabilities.requires_explicit_release),
-            windows: platform_capability_to_abi(capabilities.windows),
-            linux: platform_capability_to_abi(capabilities.linux),
-            android: platform_capability_to_abi(capabilities.android),
-        };
-    }
-
-    true
+    ffi_guard_bool! {{
+        if out_capabilities.is_null() {
+            return Err(anyhow::anyhow!(
+                "Fs25adTextureRegistrationV4Capabilities pointer must not be null"
+            ));
+        }
+        let capabilities = query_texture_registration_v4_capabilities();
+        // SAFETY: Aufrufer hat nicht-null Zeiger garantiert.
+        unsafe {
+            *out_capabilities = Fs25adTextureRegistrationV4Capabilities {
+                contract_version: capabilities.contract_version,
+                pixel_format: pixel_format_abi(capabilities.pixel_format),
+                alpha_mode: alpha_mode_abi(capabilities.alpha_mode),
+                requires_explicit_release: u32::from(capabilities.requires_explicit_release),
+                windows: platform_capability_to_abi(capabilities.windows),
+                linux: platform_capability_to_abi(capabilities.linux),
+                android: platform_capability_to_abi(capabilities.android),
+            };
+        }
+        Ok(())
+    }}
 }
 
 /// Erstellt einen v4-Texture-Registration-Handle fuer eine Zielplattform.
@@ -375,228 +397,201 @@ pub extern "C" fn fs25ad_host_bridge_texture_registration_v4_new(
 }
 
 /// Gibt einen zuvor erstellten v4-Texture-Registration-Handle frei.
-#[allow(clippy::not_unsafe_ptr_arg_deref)]
+///
+/// # Safety
+///
+/// `texture` muss ein durch `fs25ad_host_bridge_texture_registration_v4_new` erzeugter
+/// Zeiger sein oder `null`. Nach dem Aufruf ist der Zeiger ungueltig.
 #[unsafe(no_mangle)]
-pub extern "C" fn fs25ad_host_bridge_texture_registration_v4_dispose(
+pub unsafe extern "C" fn fs25ad_host_bridge_texture_registration_v4_dispose(
     texture: *mut HostBridgeTextureRegistrationV4,
 ) {
     clear_last_error();
     if texture.is_null() {
         return;
     }
-
-    unsafe {
-        drop(Box::from_raw(texture));
-    }
+    // SAFETY: Aufrufer garantiert durch _new allokierten Zeiger.
+    unsafe { drop(Box::from_raw(texture)) };
 }
 
 /// Aendert die Zielgroesse eines v4-Texture-Registration-Handles.
+///
+/// # Safety
+///
+/// `texture` muss ein gueltiger, durch `fs25ad_host_bridge_texture_registration_v4_new`
+/// erzeugter Zeiger sein.
 #[unsafe(no_mangle)]
-pub extern "C" fn fs25ad_host_bridge_texture_registration_v4_resize(
+pub unsafe extern "C" fn fs25ad_host_bridge_texture_registration_v4_resize(
     texture: *mut HostBridgeTextureRegistrationV4,
     width: u32,
     height: u32,
 ) -> bool {
-    clear_last_error();
-
-    match (|| {
+    ffi_guard_bool! {{
         ensure_texture_pointer(texture)?;
         if width == 0 || height == 0 {
             return Err(anyhow!(
                 "texture registration v4 size must be positive, got {width}x{height}"
             ));
         }
-
         fail_not_implemented("fs25ad_host_bridge_texture_registration_v4_resize")
-    })() {
-        Ok(()) => true,
-        Err(error) => {
-            set_last_error(error.to_string());
-            false
-        }
-    }
+    }}
 }
 
 /// Rendert den aktuellen Session-Frame fuer einen v4-Texture-Registration-Handle.
+///
+/// # Safety
+///
+/// `session` und `texture` muessen gueltige, durch die jeweiligen `_new`-Funktionen
+/// erzeugte Zeiger sein.
 #[unsafe(no_mangle)]
-pub extern "C" fn fs25ad_host_bridge_texture_registration_v4_render(
+pub unsafe extern "C" fn fs25ad_host_bridge_texture_registration_v4_render(
     session: *mut HostBridgeSessionHandle,
     texture: *mut HostBridgeTextureRegistrationV4,
 ) -> bool {
-    clear_last_error();
-
-    match (|| {
+    ffi_guard_bool! {{
         ensure_session_pointer(session)?;
         ensure_texture_pointer(texture)?;
         fail_not_implemented("fs25ad_host_bridge_texture_registration_v4_render")
-    })() {
-        Ok(()) => true,
-        Err(error) => {
-            set_last_error(error.to_string());
-            false
-        }
-    }
+    }}
 }
 
 /// Leased den zuletzt gerenderten v4-Frame und liefert gemeinsame Metadaten.
-#[allow(clippy::not_unsafe_ptr_arg_deref)]
+///
+/// # Safety
+///
+/// `texture` muss ein gueltiger Zeiger sein. `out_frame_info` muss ein gueltiger,
+/// nicht-null Zeiger auf eine initialisierbare Struktur sein.
 #[unsafe(no_mangle)]
-pub extern "C" fn fs25ad_host_bridge_texture_registration_v4_acquire(
+pub unsafe extern "C" fn fs25ad_host_bridge_texture_registration_v4_acquire(
     texture: *mut HostBridgeTextureRegistrationV4,
     out_frame_info: *mut Fs25adTextureRegistrationV4FrameInfo,
 ) -> bool {
-    clear_last_error();
-
-    if out_frame_info.is_null() {
-        set_last_error("Fs25adTextureRegistrationV4FrameInfo pointer must not be null");
-        return false;
-    }
-
-    match (|| {
+    ffi_guard_bool! {{
+        if out_frame_info.is_null() {
+            return Err(anyhow::anyhow!(
+                "Fs25adTextureRegistrationV4FrameInfo pointer must not be null"
+            ));
+        }
         ensure_texture_pointer(texture)?;
         fail_not_implemented("fs25ad_host_bridge_texture_registration_v4_acquire")
-    })() {
-        Ok(()) => true,
-        Err(error) => {
-            set_last_error(error.to_string());
-            false
-        }
-    }
+    }}
 }
 
 /// Gibt einen zuvor geleasten v4-Frame wieder frei.
+///
+/// # Safety
+///
+/// `texture` muss ein gueltiger, durch `fs25ad_host_bridge_texture_registration_v4_new`
+/// erzeugter Zeiger sein.
 #[unsafe(no_mangle)]
-pub extern "C" fn fs25ad_host_bridge_texture_registration_v4_release(
+pub unsafe extern "C" fn fs25ad_host_bridge_texture_registration_v4_release(
     texture: *mut HostBridgeTextureRegistrationV4,
     _frame_token: u64,
 ) -> bool {
-    clear_last_error();
-
-    match (|| {
+    ffi_guard_bool! {{
         ensure_texture_pointer(texture)?;
         fail_not_implemented("fs25ad_host_bridge_texture_registration_v4_release")
-    })() {
-        Ok(()) => true,
-        Err(error) => {
-            set_last_error(error.to_string());
-            false
-        }
-    }
+    }}
 }
 
 /// Liefert den Windows-Descriptor fuer den aktiven v4-Frame-Lease.
-#[allow(clippy::not_unsafe_ptr_arg_deref)]
+///
+/// # Safety
+///
+/// `texture` muss ein gueltiger Zeiger sein. `out_descriptor` muss ein gueltiger,
+/// nicht-null Zeiger sein.
 #[unsafe(no_mangle)]
-pub extern "C" fn fs25ad_host_bridge_texture_registration_v4_get_windows_descriptor(
+pub unsafe extern "C" fn fs25ad_host_bridge_texture_registration_v4_get_windows_descriptor(
     texture: *mut HostBridgeTextureRegistrationV4,
     _frame_token: u64,
     out_descriptor: *mut Fs25adTextureRegistrationV4WindowsDescriptor,
 ) -> bool {
-    clear_last_error();
-
-    if out_descriptor.is_null() {
-        set_last_error("Fs25adTextureRegistrationV4WindowsDescriptor pointer must not be null");
-        return false;
-    }
-
-    match (|| {
+    ffi_guard_bool! {{
+        if out_descriptor.is_null() {
+            return Err(anyhow::anyhow!(
+                "Fs25adTextureRegistrationV4WindowsDescriptor pointer must not be null"
+            ));
+        }
         ensure_texture_pointer(texture)?;
-
-        // Beide Descriptor-Subkinds bleiben ABI-stabil reserviert, auch solange
-        // der produktive Backend-Pfad noch nicht implementiert ist.
         let _supported_descriptor_kinds = [
             FS25AD_TEXTURE_REGISTRATION_V4_WINDOWS_DESCRIPTOR_DXGI_SHARED_HANDLE,
             FS25AD_TEXTURE_REGISTRATION_V4_WINDOWS_DESCRIPTOR_D3D11_TEXTURE2D,
         ];
-
-        fail_not_implemented("fs25ad_host_bridge_texture_registration_v4_get_windows_descriptor")
-    })() {
-        Ok(()) => true,
-        Err(error) => {
-            set_last_error(error.to_string());
-            false
-        }
-    }
+        fail_not_implemented(
+            "fs25ad_host_bridge_texture_registration_v4_get_windows_descriptor",
+        )
+    }}
 }
 
 /// Liefert den Linux-DMA-BUF-Descriptor fuer den aktiven v4-Frame-Lease.
-#[allow(clippy::not_unsafe_ptr_arg_deref)]
+///
+/// # Safety
+///
+/// `texture` muss ein gueltiger Zeiger sein. `out_descriptor` muss ein gueltiger,
+/// nicht-null Zeiger sein.
 #[unsafe(no_mangle)]
-pub extern "C" fn fs25ad_host_bridge_texture_registration_v4_get_linux_dmabuf_descriptor(
+pub unsafe extern "C" fn fs25ad_host_bridge_texture_registration_v4_get_linux_dmabuf_descriptor(
     texture: *mut HostBridgeTextureRegistrationV4,
     _frame_token: u64,
     out_descriptor: *mut Fs25adTextureRegistrationV4LinuxDmabufDescriptor,
 ) -> bool {
-    clear_last_error();
-
-    if out_descriptor.is_null() {
-        set_last_error("Fs25adTextureRegistrationV4LinuxDmabufDescriptor pointer must not be null");
-        return false;
-    }
-
-    match (|| {
+    ffi_guard_bool! {{
+        if out_descriptor.is_null() {
+            return Err(anyhow::anyhow!(
+                "Fs25adTextureRegistrationV4LinuxDmabufDescriptor pointer must not be null"
+            ));
+        }
         ensure_texture_pointer(texture)?;
         fail_not_implemented(
             "fs25ad_host_bridge_texture_registration_v4_get_linux_dmabuf_descriptor",
         )
-    })() {
-        Ok(()) => true,
-        Err(error) => {
-            set_last_error(error.to_string());
-            false
-        }
-    }
+    }}
 }
 
 /// Liefert den Android-Surface-Descriptor fuer den aktiven v4-Frame-Lease.
-#[allow(clippy::not_unsafe_ptr_arg_deref)]
+///
+/// # Safety
+///
+/// `texture` muss ein gueltiger Zeiger sein. `out_descriptor` muss ein gueltiger,
+/// nicht-null Zeiger sein.
 #[unsafe(no_mangle)]
-pub extern "C" fn fs25ad_host_bridge_texture_registration_v4_get_android_surface_descriptor(
+pub unsafe extern "C" fn fs25ad_host_bridge_texture_registration_v4_get_android_surface_descriptor(
     texture: *mut HostBridgeTextureRegistrationV4,
     _frame_token: u64,
     out_descriptor: *mut Fs25adTextureRegistrationV4AndroidSurfaceDescriptor,
 ) -> bool {
-    clear_last_error();
-
-    if out_descriptor.is_null() {
-        set_last_error(
-            "Fs25adTextureRegistrationV4AndroidSurfaceDescriptor pointer must not be null",
-        );
-        return false;
-    }
-
-    match (|| {
+    ffi_guard_bool! {{
+        if out_descriptor.is_null() {
+            return Err(anyhow::anyhow!(
+                "Fs25adTextureRegistrationV4AndroidSurfaceDescriptor pointer must not be null"
+            ));
+        }
         ensure_texture_pointer(texture)?;
         fail_not_implemented(
             "fs25ad_host_bridge_texture_registration_v4_get_android_surface_descriptor",
         )
-    })() {
-        Ok(()) => true,
-        Err(error) => {
-            set_last_error(error.to_string());
-            false
-        }
-    }
+    }}
 }
 
 /// Haengt fuer Android den hostseitigen Surface-Descriptor an den v4-Handle.
+///
+/// # Safety
+///
+/// `texture` muss ein gueltiger Zeiger sein. `surface_descriptor` muss ein gueltiger,
+/// nicht-null Zeiger auf einen gueltigen Descriptor sein.
 #[unsafe(no_mangle)]
-pub extern "C" fn fs25ad_host_bridge_texture_registration_v4_attach_android_surface(
+pub unsafe extern "C" fn fs25ad_host_bridge_texture_registration_v4_attach_android_surface(
     texture: *mut HostBridgeTextureRegistrationV4,
     surface_descriptor: *const Fs25adTextureRegistrationV4AndroidSurfaceDescriptor,
 ) -> bool {
-    clear_last_error();
-
-    if surface_descriptor.is_null() {
-        set_last_error(
-            "Fs25adTextureRegistrationV4AndroidSurfaceDescriptor pointer must not be null",
-        );
-        return false;
-    }
-
-    match (|| {
+    ffi_guard_bool! {{
+        if surface_descriptor.is_null() {
+            return Err(anyhow::anyhow!(
+                "Fs25adTextureRegistrationV4AndroidSurfaceDescriptor pointer must not be null"
+            ));
+        }
         ensure_texture_pointer(texture)?;
-
+        // SAFETY: Aufrufer garantiert gueltigen nicht-null Descriptor-Zeiger.
         let descriptor = unsafe { &*surface_descriptor };
         let _attachment_kind = android_attachment_kind_from_abi(descriptor.attachment_kind)?;
         if descriptor.native_window_ptr == 0 {
@@ -604,34 +599,28 @@ pub extern "C" fn fs25ad_host_bridge_texture_registration_v4_attach_android_surf
                 "android surface descriptor native_window_ptr must not be null"
             ));
         }
-
-        fail_not_implemented("fs25ad_host_bridge_texture_registration_v4_attach_android_surface")
-    })() {
-        Ok(()) => true,
-        Err(error) => {
-            set_last_error(error.to_string());
-            false
-        }
-    }
+        fail_not_implemented(
+            "fs25ad_host_bridge_texture_registration_v4_attach_android_surface",
+        )
+    }}
 }
 
 /// Trennt fuer Android den zuvor attached Surface-Descriptor wieder.
+///
+/// # Safety
+///
+/// `texture` muss ein gueltiger, durch `fs25ad_host_bridge_texture_registration_v4_new`
+/// erzeugter Zeiger sein.
 #[unsafe(no_mangle)]
-pub extern "C" fn fs25ad_host_bridge_texture_registration_v4_detach_android_surface(
+pub unsafe extern "C" fn fs25ad_host_bridge_texture_registration_v4_detach_android_surface(
     texture: *mut HostBridgeTextureRegistrationV4,
 ) -> bool {
-    clear_last_error();
-
-    match (|| {
+    ffi_guard_bool! {{
         ensure_texture_pointer(texture)?;
-        fail_not_implemented("fs25ad_host_bridge_texture_registration_v4_detach_android_surface")
-    })() {
-        Ok(()) => true,
-        Err(error) => {
-            set_last_error(error.to_string());
-            false
-        }
-    }
+        fail_not_implemented(
+            "fs25ad_host_bridge_texture_registration_v4_detach_android_surface",
+        )
+    }}
 }
 
 #[cfg(test)]
@@ -646,7 +635,6 @@ mod tests {
         fs25ad_host_bridge_texture_registration_v4_get_android_surface_descriptor,
         fs25ad_host_bridge_texture_registration_v4_get_linux_dmabuf_descriptor,
         fs25ad_host_bridge_texture_registration_v4_get_windows_descriptor,
-        fs25ad_host_bridge_texture_registration_v4_new,
         fs25ad_host_bridge_texture_registration_v4_release,
         fs25ad_host_bridge_texture_registration_v4_render,
         fs25ad_host_bridge_texture_registration_v4_resize,
@@ -681,6 +669,76 @@ mod tests {
     use fs25_auto_drive_render_wgpu::AndroidAttachmentKind;
     use std::ffi::CStr;
 
+    // Sicherheits-Wrapper fuer unsafe FFI-Funktionen im Testkontext.
+    fn string_free(ptr: *mut std::ffi::c_char) {
+        unsafe { fs25ad_host_bridge_string_free(ptr) }
+    }
+    fn session_dispose(s: *mut super::HostBridgeSessionHandle) {
+        unsafe { fs25ad_host_bridge_session_dispose(s) }
+    }
+    fn reg_capabilities(out: *mut Fs25adTextureRegistrationV4Capabilities) -> bool {
+        unsafe { fs25ad_host_bridge_texture_registration_v4_capabilities(out) }
+    }
+    fn reg_new(platform: u32, w: u32, h: u32) -> *mut super::HostBridgeTextureRegistrationV4 {
+        // _new ist sicher (kein Zeiger-Deref als Input)
+        super::fs25ad_host_bridge_texture_registration_v4_new(platform, w, h)
+    }
+    fn reg_dispose(t: *mut super::HostBridgeTextureRegistrationV4) {
+        unsafe { fs25ad_host_bridge_texture_registration_v4_dispose(t) }
+    }
+    fn reg_resize(t: *mut super::HostBridgeTextureRegistrationV4, w: u32, h: u32) -> bool {
+        unsafe { fs25ad_host_bridge_texture_registration_v4_resize(t, w, h) }
+    }
+    fn reg_render(
+        s: *mut super::HostBridgeSessionHandle,
+        t: *mut super::HostBridgeTextureRegistrationV4,
+    ) -> bool {
+        unsafe { fs25ad_host_bridge_texture_registration_v4_render(s, t) }
+    }
+    fn reg_acquire(
+        t: *mut super::HostBridgeTextureRegistrationV4,
+        fi: *mut Fs25adTextureRegistrationV4FrameInfo,
+    ) -> bool {
+        unsafe { fs25ad_host_bridge_texture_registration_v4_acquire(t, fi) }
+    }
+    fn reg_release(t: *mut super::HostBridgeTextureRegistrationV4, ft: u64) -> bool {
+        unsafe { fs25ad_host_bridge_texture_registration_v4_release(t, ft) }
+    }
+    fn get_windows_descriptor(
+        t: *mut super::HostBridgeTextureRegistrationV4,
+        ft: u64,
+        out: *mut Fs25adTextureRegistrationV4WindowsDescriptor,
+    ) -> bool {
+        unsafe { fs25ad_host_bridge_texture_registration_v4_get_windows_descriptor(t, ft, out) }
+    }
+    fn get_linux_dmabuf_descriptor(
+        t: *mut super::HostBridgeTextureRegistrationV4,
+        ft: u64,
+        out: *mut Fs25adTextureRegistrationV4LinuxDmabufDescriptor,
+    ) -> bool {
+        unsafe {
+            fs25ad_host_bridge_texture_registration_v4_get_linux_dmabuf_descriptor(t, ft, out)
+        }
+    }
+    fn get_android_surface_descriptor(
+        t: *mut super::HostBridgeTextureRegistrationV4,
+        ft: u64,
+        out: *mut Fs25adTextureRegistrationV4AndroidSurfaceDescriptor,
+    ) -> bool {
+        unsafe {
+            fs25ad_host_bridge_texture_registration_v4_get_android_surface_descriptor(t, ft, out)
+        }
+    }
+    fn attach_android_surface(
+        t: *mut super::HostBridgeTextureRegistrationV4,
+        desc: *const Fs25adTextureRegistrationV4AndroidSurfaceDescriptor,
+    ) -> bool {
+        unsafe { fs25ad_host_bridge_texture_registration_v4_attach_android_surface(t, desc) }
+    }
+    fn detach_android_surface(t: *mut super::HostBridgeTextureRegistrationV4) -> bool {
+        unsafe { fs25ad_host_bridge_texture_registration_v4_detach_android_surface(t) }
+    }
+
     fn read_and_free_error() -> String {
         let ptr = fs25ad_host_bridge_last_error_message();
         assert!(!ptr.is_null());
@@ -688,7 +746,7 @@ mod tests {
             .to_str()
             .expect("error string must be valid UTF-8")
             .to_string();
-        fs25ad_host_bridge_string_free(ptr);
+        string_free(ptr);
         value
     }
 
@@ -722,9 +780,7 @@ mod tests {
             android: empty_platform_capability(),
         };
 
-        assert!(fs25ad_host_bridge_texture_registration_v4_capabilities(
-            &mut capabilities,
-        ));
+        assert!(reg_capabilities(&mut capabilities));
         assert_eq!(
             capabilities.contract_version,
             FS25AD_TEXTURE_REGISTRATION_V4_CONTRACT_VERSION
@@ -817,11 +873,7 @@ mod tests {
 
     #[test]
     fn ffi_v4_new_reports_explicit_platform_blockers() {
-        let windows = fs25ad_host_bridge_texture_registration_v4_new(
-            FS25AD_TEXTURE_REGISTRATION_V4_PLATFORM_WINDOWS,
-            8,
-            6,
-        );
+        let windows = reg_new(FS25AD_TEXTURE_REGISTRATION_V4_PLATFORM_WINDOWS, 8, 6);
         assert!(windows.is_null());
         let windows_error = read_and_free_error();
         if cfg!(target_os = "windows") {
@@ -830,11 +882,7 @@ mod tests {
             assert!(windows_error.contains("unsupported"));
         }
 
-        let linux = fs25ad_host_bridge_texture_registration_v4_new(
-            FS25AD_TEXTURE_REGISTRATION_V4_PLATFORM_LINUX,
-            8,
-            6,
-        );
+        let linux = reg_new(FS25AD_TEXTURE_REGISTRATION_V4_PLATFORM_LINUX, 8, 6);
         assert!(linux.is_null());
         let linux_error = read_and_free_error();
         if cfg!(target_os = "linux") {
@@ -843,11 +891,7 @@ mod tests {
             assert!(linux_error.contains("unsupported"));
         }
 
-        let android = fs25ad_host_bridge_texture_registration_v4_new(
-            FS25AD_TEXTURE_REGISTRATION_V4_PLATFORM_ANDROID,
-            8,
-            6,
-        );
+        let android = reg_new(FS25AD_TEXTURE_REGISTRATION_V4_PLATFORM_ANDROID, 8, 6);
         assert!(android.is_null());
         let android_error = read_and_free_error();
         if cfg!(target_os = "android") {
@@ -856,23 +900,17 @@ mod tests {
             assert!(android_error.contains("unsupported"));
         }
 
-        let invalid_platform = fs25ad_host_bridge_texture_registration_v4_new(99, 8, 6);
+        let invalid_platform = reg_new(99, 8, 6);
         assert!(invalid_platform.is_null());
         assert!(read_and_free_error().contains("unknown texture registration v4 platform"));
     }
 
     #[test]
     fn ffi_v4_rejects_invalid_calls_and_null_pointers() {
-        assert!(!fs25ad_host_bridge_texture_registration_v4_capabilities(
-            std::ptr::null_mut(),
-        ));
+        assert!(!reg_capabilities(std::ptr::null_mut()));
         assert!(read_and_free_error().contains("Fs25adTextureRegistrationV4Capabilities pointer"));
 
-        assert!(!fs25ad_host_bridge_texture_registration_v4_resize(
-            std::ptr::null_mut(),
-            8,
-            6,
-        ));
+        assert!(!reg_resize(std::ptr::null_mut(), 8, 6));
         assert!(read_and_free_error().contains("HostBridgeTextureRegistrationV4 pointer"));
 
         let mut frame = Fs25adTextureRegistrationV4FrameInfo {
@@ -885,22 +923,13 @@ mod tests {
             frame_token: 0,
         };
 
-        assert!(!fs25ad_host_bridge_texture_registration_v4_acquire(
-            std::ptr::null_mut(),
-            &mut frame,
-        ));
+        assert!(!reg_acquire(std::ptr::null_mut(), &mut frame));
         assert!(read_and_free_error().contains("HostBridgeTextureRegistrationV4 pointer"));
 
-        assert!(!fs25ad_host_bridge_texture_registration_v4_acquire(
-            std::ptr::null_mut(),
-            std::ptr::null_mut(),
-        ));
+        assert!(!reg_acquire(std::ptr::null_mut(), std::ptr::null_mut()));
         assert!(read_and_free_error().contains("Fs25adTextureRegistrationV4FrameInfo pointer"));
 
-        assert!(!fs25ad_host_bridge_texture_registration_v4_release(
-            std::ptr::null_mut(),
-            1,
-        ));
+        assert!(!reg_release(std::ptr::null_mut(), 1));
         assert!(read_and_free_error().contains("HostBridgeTextureRegistrationV4 pointer"));
 
         let mut windows = Fs25adTextureRegistrationV4WindowsDescriptor {
@@ -909,13 +938,11 @@ mod tests {
             d3d11_texture_ptr: 0,
             d3d11_device_ptr: 0,
         };
-        assert!(
-            !fs25ad_host_bridge_texture_registration_v4_get_windows_descriptor(
-                std::ptr::null_mut(),
-                1,
-                &mut windows,
-            )
-        );
+        assert!(!get_windows_descriptor(
+            std::ptr::null_mut(),
+            1,
+            &mut windows
+        ));
         assert!(read_and_free_error().contains("HostBridgeTextureRegistrationV4 pointer"));
 
         let mut linux = Fs25adTextureRegistrationV4LinuxDmabufDescriptor {
@@ -929,13 +956,11 @@ mod tests {
                 stride_bytes: 0,
             }; 4],
         };
-        assert!(
-            !fs25ad_host_bridge_texture_registration_v4_get_linux_dmabuf_descriptor(
-                std::ptr::null_mut(),
-                1,
-                &mut linux,
-            )
-        );
+        assert!(!get_linux_dmabuf_descriptor(
+            std::ptr::null_mut(),
+            1,
+            &mut linux
+        ));
         assert!(read_and_free_error().contains("HostBridgeTextureRegistrationV4 pointer"));
 
         let mut android = Fs25adTextureRegistrationV4AndroidSurfaceDescriptor {
@@ -943,40 +968,27 @@ mod tests {
             native_window_ptr: 0,
             surface_handle_ptr: 0,
         };
-        assert!(
-            !fs25ad_host_bridge_texture_registration_v4_get_android_surface_descriptor(
-                std::ptr::null_mut(),
-                1,
-                &mut android,
-            )
-        );
+        assert!(!get_android_surface_descriptor(
+            std::ptr::null_mut(),
+            1,
+            &mut android
+        ));
         assert!(read_and_free_error().contains("HostBridgeTextureRegistrationV4 pointer"));
 
-        assert!(
-            !fs25ad_host_bridge_texture_registration_v4_attach_android_surface(
-                std::ptr::null_mut(),
-                &android,
-            )
-        );
+        assert!(!attach_android_surface(std::ptr::null_mut(), &android));
         assert!(read_and_free_error().contains("HostBridgeTextureRegistrationV4 pointer"));
 
-        assert!(
-            !fs25ad_host_bridge_texture_registration_v4_attach_android_surface(
-                std::ptr::null_mut(),
-                std::ptr::null(),
-            )
-        );
+        assert!(!attach_android_surface(
+            std::ptr::null_mut(),
+            std::ptr::null()
+        ));
         assert!(read_and_free_error()
             .contains("Fs25adTextureRegistrationV4AndroidSurfaceDescriptor pointer"));
 
-        assert!(
-            !fs25ad_host_bridge_texture_registration_v4_detach_android_surface(
-                std::ptr::null_mut(),
-            )
-        );
+        assert!(!detach_android_surface(std::ptr::null_mut()));
         assert!(read_and_free_error().contains("HostBridgeTextureRegistrationV4 pointer"));
 
-        fs25ad_host_bridge_texture_registration_v4_dispose(std::ptr::null_mut());
+        reg_dispose(std::ptr::null_mut());
     }
 
     #[test]
@@ -1007,15 +1019,10 @@ mod tests {
             native_window_ptr: 0,
             surface_handle_ptr: 0x22,
         };
-        assert!(
-            !fs25ad_host_bridge_texture_registration_v4_attach_android_surface(
-                registration,
-                &invalid_android,
-            )
-        );
+        assert!(!attach_android_surface(registration, &invalid_android));
         assert!(read_and_free_error().contains("native_window_ptr"));
 
-        fs25ad_host_bridge_texture_registration_v4_dispose(registration);
+        reg_dispose(registration);
     }
 
     #[test]
@@ -1028,13 +1035,7 @@ mod tests {
             d3d11_texture_ptr: 0,
             d3d11_device_ptr: 0,
         };
-        assert!(
-            !fs25ad_host_bridge_texture_registration_v4_get_windows_descriptor(
-                registration,
-                1,
-                &mut windows,
-            )
-        );
+        assert!(!get_windows_descriptor(registration, 1, &mut windows));
         assert!(read_and_free_error().contains("not implemented"));
 
         let android = Fs25adTextureRegistrationV4AndroidSurfaceDescriptor {
@@ -1042,29 +1043,20 @@ mod tests {
             native_window_ptr: 0x11,
             surface_handle_ptr: 0x22,
         };
-        assert!(
-            !fs25ad_host_bridge_texture_registration_v4_attach_android_surface(
-                registration,
-                &android,
-            )
-        );
+        assert!(!attach_android_surface(registration, &android));
         assert!(read_and_free_error().contains("not implemented"));
 
-        assert!(!fs25ad_host_bridge_texture_registration_v4_detach_android_surface(registration,));
+        assert!(!detach_android_surface(registration));
         assert!(read_and_free_error().contains("not implemented"));
 
-        fs25ad_host_bridge_texture_registration_v4_dispose(registration);
+        reg_dispose(registration);
     }
 
     #[test]
     fn ffi_v4_valid_handle_reports_not_implemented_for_remaining_lifecycle_calls() {
         let registration = make_dummy_registration();
 
-        assert!(!fs25ad_host_bridge_texture_registration_v4_resize(
-            registration,
-            8,
-            6,
-        ));
+        assert!(!reg_resize(registration, 8, 6));
         assert!(read_and_free_error().contains("not implemented"));
 
         let mut frame = Fs25adTextureRegistrationV4FrameInfo {
@@ -1076,19 +1068,13 @@ mod tests {
             texture_generation: 0,
             frame_token: 0,
         };
-        assert!(!fs25ad_host_bridge_texture_registration_v4_acquire(
-            registration,
-            &mut frame,
-        ));
+        assert!(!reg_acquire(registration, &mut frame));
         assert!(read_and_free_error().contains("not implemented"));
 
-        assert!(!fs25ad_host_bridge_texture_registration_v4_release(
-            registration,
-            1,
-        ));
+        assert!(!reg_release(registration, 1));
         assert!(read_and_free_error().contains("not implemented"));
 
-        fs25ad_host_bridge_texture_registration_v4_dispose(registration);
+        reg_dispose(registration);
     }
 
     #[test]
@@ -1106,13 +1092,7 @@ mod tests {
                 stride_bytes: 0,
             }; 4],
         };
-        assert!(
-            !fs25ad_host_bridge_texture_registration_v4_get_linux_dmabuf_descriptor(
-                registration,
-                1,
-                &mut linux,
-            )
-        );
+        assert!(!get_linux_dmabuf_descriptor(registration, 1, &mut linux));
         assert!(read_and_free_error().contains("not implemented"));
 
         let mut android = Fs25adTextureRegistrationV4AndroidSurfaceDescriptor {
@@ -1120,38 +1100,30 @@ mod tests {
             native_window_ptr: 0x11,
             surface_handle_ptr: 0,
         };
-        assert!(
-            !fs25ad_host_bridge_texture_registration_v4_get_android_surface_descriptor(
-                registration,
-                1,
-                &mut android,
-            )
-        );
+        assert!(!get_android_surface_descriptor(
+            registration,
+            1,
+            &mut android
+        ));
         assert!(read_and_free_error().contains("not implemented"));
 
-        fs25ad_host_bridge_texture_registration_v4_dispose(registration);
+        reg_dispose(registration);
     }
 
     #[test]
     fn ffi_v4_render_requires_session_pointer_before_runtime_guard() {
         let registration = make_dummy_registration();
 
-        assert!(!fs25ad_host_bridge_texture_registration_v4_render(
-            std::ptr::null_mut(),
-            registration,
-        ));
+        assert!(!reg_render(std::ptr::null_mut(), registration));
         assert!(read_and_free_error().contains("HostBridgeSession pointer"));
 
         let session = fs25ad_host_bridge_session_new();
         assert!(!session.is_null());
 
-        assert!(!fs25ad_host_bridge_texture_registration_v4_render(
-            session,
-            registration,
-        ));
+        assert!(!reg_render(session, registration));
         assert!(read_and_free_error().contains("not implemented"));
 
-        fs25ad_host_bridge_texture_registration_v4_dispose(registration);
-        fs25ad_host_bridge_session_dispose(session);
+        reg_dispose(registration);
+        session_dispose(session);
     }
 }

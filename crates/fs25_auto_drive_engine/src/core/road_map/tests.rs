@@ -778,3 +778,83 @@ fn test_adjacency_after_remove_connections_between() {
     assert_eq!(map.degree(1), 0);
     assert_eq!(map.degree(2), 0);
 }
+
+// ─── remove_nodes_batch ───────────────────────────────────────────────────
+
+/// remove_nodes_batch entfernt mehrere Nodes und Verbindungen in einem einzigen
+/// Connection-Scan (Batch-Delete-Invariante).
+#[test]
+fn remove_nodes_batch_cleans_connections_in_single_pass() {
+    let mut map = RoadMap::new(3);
+    for id in 1u64..=4 {
+        map.add_node(MapNode::new(
+            id,
+            Vec2::new(id as f32 * 10.0, 0.0),
+            NodeFlag::Regular,
+        ));
+    }
+    map.add_connection(make_adj_conn(1, 2, 0.0, 0.0, 10.0, 0.0));
+    map.add_connection(make_adj_conn(2, 3, 10.0, 0.0, 20.0, 0.0));
+    map.add_connection(make_adj_conn(3, 4, 20.0, 0.0, 30.0, 0.0));
+
+    let to_delete: std::collections::HashSet<u64> = [2u64, 3].into_iter().collect();
+    let removed = map.remove_nodes_batch(&to_delete);
+
+    assert_eq!(removed.len(), 2, "Beide Nodes muessen entfernt sein");
+    assert_eq!(map.node_count(), 2, "Nur Nodes 1 und 4 bleiben");
+    assert!(!map.contains_node(2));
+    assert!(!map.contains_node(3));
+    assert!(map.contains_node(1));
+    assert!(map.contains_node(4));
+    assert_eq!(
+        map.connection_count(),
+        0,
+        "Alle Verbindungen mit geloeschten Nodes muessen entfernt werden"
+    );
+    // Adjacency muss sauber sein
+    assert_eq!(map.neighbors(1).len(), 0, "Node 1 hat keine Nachbarn mehr");
+    assert_eq!(map.neighbors(4).len(), 0, "Node 4 hat keine Nachbarn mehr");
+}
+
+/// remove_nodes_batch ist ein No-op fuer leere Eingabe.
+#[test]
+fn remove_nodes_batch_is_noop_for_empty_set() {
+    let mut map = RoadMap::new(3);
+    map.add_node(MapNode::new(1, Vec2::new(0.0, 0.0), NodeFlag::Regular));
+    map.add_node(MapNode::new(2, Vec2::new(10.0, 0.0), NodeFlag::Regular));
+    map.add_connection(make_adj_conn(1, 2, 0.0, 0.0, 10.0, 0.0));
+
+    let empty: std::collections::HashSet<u64> = std::collections::HashSet::new();
+    let removed = map.remove_nodes_batch(&empty);
+
+    assert!(removed.is_empty());
+    assert_eq!(map.node_count(), 2);
+    assert_eq!(map.connection_count(), 1);
+}
+
+/// remove_nodes_batch belaesst alle Verbindungen zwischen nicht-geloeschten Nodes.
+#[test]
+fn remove_nodes_batch_preserves_unrelated_connections() {
+    let mut map = RoadMap::new(3);
+    for id in 1u64..=5 {
+        map.add_node(MapNode::new(
+            id,
+            Vec2::new(id as f32 * 10.0, 0.0),
+            NodeFlag::Regular,
+        ));
+    }
+    // Kette 1→2→3→4→5; Node 3 wird geloescht
+    for (s, e) in [(1u64, 2), (2, 3), (3, 4), (4, 5)] {
+        map.add_connection(make_adj_conn(s, e, 0.0, 0.0, 0.0, 0.0));
+    }
+
+    let to_delete: std::collections::HashSet<u64> = [3u64].into_iter().collect();
+    map.remove_nodes_batch(&to_delete);
+
+    // Verbindungen zwischen verbleibenden Nodes bleiben erhalten
+    assert!(map.has_connection(1, 2), "1→2 muss bleiben");
+    assert!(map.has_connection(4, 5), "4→5 muss bleiben");
+    // Verbindungen zum geloeschten Node sind weg
+    assert!(!map.has_connection(2, 3), "2→3 muss weg sein");
+    assert!(!map.has_connection(3, 4), "3→4 muss weg sein");
+}

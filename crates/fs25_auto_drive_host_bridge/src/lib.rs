@@ -42,3 +42,37 @@ pub use session::{
     EngineRenderFrameSnapshot, FlutterBridgeSession, HostBridgeSession, HostDialogUiState,
     HostPanelPropertiesState, HostRenderFrameSnapshot, HostViewportInputContext,
 };
+
+#[cfg(test)]
+mod tests {
+    use fs25_auto_drive_engine::app::{AppController, AppState};
+
+    use super::{
+        apply_host_action, EngineSessionAction, FlutterBridgeSession, HostSessionAction,
+        HostViewportInputState,
+    };
+
+    #[test]
+    fn crate_root_reexports_keep_dispatch_and_session_surface_stable() {
+        let mut controller = AppController::new();
+        let mut state = AppState::new();
+
+        let handled = apply_host_action(
+            &mut controller,
+            &mut state,
+            HostSessionAction::ToggleCommandPalette,
+        )
+        .expect("crate-root apply_host_action muss ueber Re-Export verfuegbar bleiben");
+
+        assert!(handled);
+        assert!(state.ui.show_command_palette);
+
+        let mut session = FlutterBridgeSession::new();
+        session
+            .apply_action(EngineSessionAction::ToggleCommandPalette)
+            .expect("FlutterBridgeSession-Alias muss ueber den Crate-Root funktionieren");
+        assert!(session.snapshot().show_command_palette);
+
+        let _ = std::any::type_name::<HostViewportInputState>();
+    }
+}
