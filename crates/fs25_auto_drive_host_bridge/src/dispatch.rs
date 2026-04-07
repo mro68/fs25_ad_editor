@@ -172,14 +172,13 @@ mod tests {
 
     #[test]
     fn build_viewport_geometry_snapshot_exposes_minimal_geometry_transport() {
-        let controller = AppController::new();
         let mut state = AppState::new();
         state.road_map = Some(Arc::new(geometry_test_map()));
         state.view.camera.position = Vec2::new(3.0, -4.0);
         state.view.camera.zoom = 2.0;
         state.selection.ids_mut().insert(2);
 
-        let snapshot = build_viewport_geometry_snapshot(&controller, &state, [640.0, 320.0]);
+        let snapshot = build_viewport_geometry_snapshot(&state, [640.0, 320.0]);
 
         assert!(snapshot.has_map);
         assert_eq!(snapshot.viewport_size, [640.0, 320.0]);
@@ -209,11 +208,10 @@ mod tests {
 
     #[test]
     fn build_render_frame_couples_scene_and_assets_for_local_hosts() {
-        let controller = AppController::new();
         let mut state = AppState::new();
         state.road_map = Some(Arc::new(geometry_test_map()));
 
-        let frame = build_render_frame(&controller, &state, [640.0, 320.0]);
+        let frame = build_render_frame(&state, [640.0, 320.0]);
 
         assert!(frame.scene.has_map());
         assert_eq!(frame.scene.viewport_size(), [640.0, 320.0]);
@@ -488,13 +486,12 @@ mod tests {
 
     #[test]
     fn read_helpers_delegate_to_controller_read_seams() {
-        let controller = AppController::new();
         let mut state = AppState::new();
 
-        let host_ui = build_host_ui_snapshot(&controller, &state);
-        let overlay = build_viewport_overlay_snapshot(&controller, &mut state, None);
-        let scene = build_render_scene(&controller, &state, [640.0, 480.0]);
-        let assets = build_render_assets(&controller, &state);
+        let host_ui = build_host_ui_snapshot(&state);
+        let overlay = build_viewport_overlay_snapshot(&mut state, None);
+        let scene = build_render_scene(&state, [640.0, 480.0]);
+        let assets = build_render_assets(&state);
 
         assert!(host_ui.command_palette_state().is_some());
         assert!(overlay.route_tool_preview.is_none());

@@ -1,4 +1,5 @@
 use anyhow::Result;
+use fs25_auto_drive_engine::app::projections as engine_projections;
 use fs25_auto_drive_engine::app::state::DistanzenState;
 use fs25_auto_drive_engine::app::ui_contract::{HostUiSnapshot, ViewportOverlaySnapshot};
 use fs25_auto_drive_engine::app::{
@@ -401,13 +402,12 @@ impl HostBridgeSession {
 
     /// Baut den aktuellen per-frame Render-Vertrag fuer den angegebenen Viewport.
     pub fn build_render_scene(&self, viewport_size: [f32; 2]) -> RenderScene {
-        self.controller
-            .build_render_scene(&self.state, viewport_size)
+        engine_projections::build_render_scene(&self.state, viewport_size)
     }
 
     /// Baut den aktuellen Render-Asset-Snapshot.
     pub fn build_render_assets(&self) -> RenderAssetsSnapshot {
-        self.controller.build_render_assets(&self.state)
+        engine_projections::build_render_assets(&self.state)
     }
 
     /// Baut einen gekoppelten Render-Snapshot aus Szene und Assets.
@@ -428,7 +428,6 @@ impl HostBridgeSession {
         viewport_size: [f32; 2],
     ) -> HostViewportGeometrySnapshot {
         crate::dispatch::build_viewport_geometry_snapshot(
-            &self.controller,
             &self.state,
             viewport_size,
         )
@@ -439,7 +438,7 @@ impl HostBridgeSession {
     /// Host-native Datei- und Pfaddialoge laufen bewusst nicht ueber diesen
     /// Snapshot, sondern separat ueber `take_dialog_requests()`.
     pub fn build_host_ui_snapshot(&self) -> HostUiSnapshot {
-        self.controller.build_host_ui_snapshot(&self.state)
+        engine_projections::build_host_ui_snapshot(&self.state)
     }
 
     /// Baut den host-neutralen Chrome-Snapshot fuer Menues, Defaults und Status.
@@ -466,8 +465,7 @@ impl HostBridgeSession {
         &mut self,
         cursor_world: Option<Vec2>,
     ) -> ViewportOverlaySnapshot {
-        self.controller
-            .build_viewport_overlay_snapshot(&mut self.state, cursor_world)
+        engine_projections::build_viewport_overlay_snapshot(&mut self.state, cursor_world)
     }
 
     fn rebuild_snapshot_if_dirty(&mut self) {
