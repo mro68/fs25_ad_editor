@@ -452,6 +452,9 @@ impl Default for HostBridgeSession {
 
 #[cfg(test)]
 mod tests {
+    use std::hint::black_box;
+    use std::time::Instant;
+
     use fs25_auto_drive_engine::app::{
         AppIntent, Connection, ConnectionDirection, ConnectionPriority, FloatingMenuKind, MapNode,
         NodeFlag, RoadMap,
@@ -506,6 +509,23 @@ mod tests {
         ));
         map.ensure_spatial_index();
         map
+    }
+
+    fn snapshot_measurement_session(selected_count: usize) -> HostBridgeSession {
+        let mut session = HostBridgeSession::new();
+        let mut map = RoadMap::new(3);
+
+        for id in 1..=selected_count as u64 {
+            let x = id as f32;
+            map.add_node(MapNode::new(id, Vec2::new(x, x * 0.25), NodeFlag::Regular));
+            session.state.selection.ids_mut().insert(id);
+        }
+
+        session.state.road_map = Some(Arc::new(map));
+        session.state.view.viewport_size = [1280.0, 720.0];
+        session.snapshot_dirty = true;
+        let _ = session.snapshot();
+        session
     }
 
     fn resize_event(size_px: [f32; 2]) -> HostViewportInputEvent {
@@ -680,6 +700,42 @@ mod tests {
         let overlay = session.build_viewport_overlay_snapshot(None);
         assert!(overlay.route_tool_preview.is_none());
         assert!(overlay.group_boundaries.is_empty());
+    }
+
+    #[test]
+    fn read_only_host_snapshots_do_not_mark_session_snapshot_dirty() {
+        let session = snapshot_measurement_session(32);
+
+        let _ = session.build_host_ui_snapshot();
+        let _ = session.build_host_chrome_snapshot();
+        let _ = session.build_route_tool_viewport_snapshot();
+        let _ = session.build_viewport_geometry_snapshot([640.0, 480.0]);
+
+        assert!(
+            !session.snapshot_dirty,
+            "Read-only Snapshot-Builder duerfen den Session-Cache nicht dirty markieren"
+        );
+    }
+
+    #[test]
+    fn snapshot_measurement_clean_poll_reports_zero_rebuild_candidates() {
+        let mut session = snapshot_measurement_session(1024);
+        let iterations = 256usize;
+        let start = Instant::now();
+        let mut rebuild_candidates = 0usize;
+
+        for _ in 0..iterations {
+            rebuild_candidates += usize::from(session.snapshot_dirty);
+            black_box(session.snapshot_owned());
+        }
+
+        let elapsed_us_per_iter = start.elapsed().as_secs_f64() * 1_000_000.0 / iterations as f64;
+        eprintln!(
+            "snapshot_measurement_clean_poll selected_nodes=1024 iterations={iterations} rebuild_candidates={rebuild_candidates} elapsed_us_per_iter={elapsed_us_per_iter:.3}"
+        );
+
+        assert_eq!(rebuild_candidates, 0);
+        assert!(!session.snapshot_dirty);
     }
 
     #[test]
