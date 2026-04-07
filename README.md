@@ -2,7 +2,7 @@
 
 Hochperformanter Editor fuer [AutoDrive](https://github.com/Stephan-S/FS25_AutoDrive)-Kurse in Farming Simulator 25, geschrieben in Rust.
 
-![Rust](https://img.shields.io/badge/Rust-2021-orange?logo=rust)
+![Rust](https://img.shields.io/badge/Rust-2024-orange?logo=rust)
 ![Platform](https://img.shields.io/badge/platform-Linux%20%7C%20Windows-blue)
 ![License](https://img.shields.io/badge/license-GPL--3.0-green)
 
@@ -37,7 +37,7 @@ Fertige Binaries findest du unter [Releases](https://github.com/mro68/fs25_ad_ed
 
 ### Voraussetzungen
 
-- [Rust](https://rustup.rs/) (Edition 2021)
+- [Rust](https://rustup.rs/) (stabile Toolchain, Workspace auf Edition 2024)
 - Linux: GPU-Treiber mit Vulkan-Support
 
 ```bash
@@ -96,6 +96,7 @@ Ausfuehrliche Anleitung: [docs/howto/index.md](docs/howto/index.md)
 | `FS25-AutoDrive-Editor` | Root-Fassade und nativer Launcher |
 | `fs25_auto_drive_engine` | Host-neutrale Engine (`app`, `core`, `shared`, `xml`) |
 | `fs25_auto_drive_host_bridge` | Toolkit-freie Host-Bridge-Core-Crate ueber der Engine |
+| `fs25_auto_drive_host_bridge_ffi` | Linux-first-C-ABI-Adapter ueber `HostBridgeSession` und den nativen Shared-Texture-/v4-Transportpfaden |
 | `fs25_auto_drive_render_wgpu` | Host-neutraler wgpu-Renderer-Kern |
 | `fs25_auto_drive_frontend_egui` | Desktop-Frontend (`ui`, `editor_app`, `runtime`, `render` als Host-Adapter) |
 | `fs25_map_overview` | Overview-, Terrain- und Farmland-Generierung |
@@ -103,6 +104,8 @@ Ausfuehrliche Anleitung: [docs/howto/index.md](docs/howto/index.md)
 Die Root-Crate `fs25_auto_drive_editor` bleibt als Kompat-Fassade erhalten und re-exportiert die kanonischen Engine-Module weiterhin fuer Tests, Benches und bestehende Rust-Imports.
 
 Direkte Flutter-/FFI-Consumer nutzen `fs25_auto_drive_host_bridge` ohne separate Zwischen-Crate; bestehende `Engine*`-/`FlutterBridgeSession`-Namen stehen dort weiterhin als Kompat-Aliase bereit.
+
+Native C/C++- oder Flutter-FFI-Hosts konsumieren die stabile Session-/Render-Surface ueber `fs25_auto_drive_host_bridge_ffi` und den Header `crates/fs25_auto_drive_host_bridge_ffi/include/fs25ad_host_bridge.h`.
 
 Detaillierte Beschreibung: [docs/ARCHITECTURE_PLAN.md](docs/ARCHITECTURE_PLAN.md)
 
@@ -112,6 +115,8 @@ Detaillierte Beschreibung: [docs/ARCHITECTURE_PLAN.md](docs/ARCHITECTURE_PLAN.md
 cargo test            # Tests
 cargo clippy          # Linter
 cargo fmt             # Formatierung
+./scripts/check_layer_boundaries.sh  # Layer- und Architektur-Guardrails
+./scripts/check_api_docs_sync.sh     # API-/Doku-Sync-Guardrails
 cargo bench           # Benchmarks
 ```
 

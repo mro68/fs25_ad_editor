@@ -271,6 +271,12 @@
   - [x] `crates/fs25_auto_drive_frontend_flutter_bridge` geloescht
   - [x] Workspace-Mitgliedschaft und Guardrails (`scripts/check_layer_boundaries.sh`) bereinigt
   - [x] Root- und Architektur-Dokus (`README`, `ARCHITECTURE_PLAN`, `DATA_MODEL`, `.windsurf/rules/projekt.md`) auf Host-Bridge-only Zustand synchronisiert
+- [x] Phase-2-Audit-Remediation fuer Host-Bridge, FFI und Delete-Hotpaths abgeschlossen (2026-04-07, Branch `feat/phase2-audit-remediation`)
+  - [x] AP1: `fs25_auto_drive_host_bridge::dispatch` und `dto` intern in thematische Submodule zerlegt; oeffentliche Re-Export-Surface stabil gehalten
+  - [x] AP2: Pointer-konsumierende FFI-Exporte als `unsafe extern "C"` gehaertet und ueber `catch_unwind` plus thread-lokales Last-Error-Handling vereinheitlicht
+  - [x] AP3: Batch-Delete-Kernpfad in `RoadMap` eingefuehrt und Editing-/Recreate-Caller auf einen einzelnen Connection-Scan migriert
+  - [x] AP4: Snapshot-Dirty-Tracking Welle 1 als Mess-/Guardrail-Slice ohne Produktionsverhaltensaenderung abgeschlossen; read-mostly-Churn reproduzierbar belegt
+  - [x] AP5: Lokale UI-Seams der `HostBridgeSession` snapshot-transparent gemacht; explizite Invalidation laeuft ueber `mark_snapshot_dirty()`
 - [x] DDS-Import fuer Map-Hintergruende
   - [x] Texture-Loader implementieren (PNG, JPG, DDS)
   - [x] Background-Quad-Renderer
