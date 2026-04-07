@@ -42,4 +42,22 @@ pub struct HostChromeSnapshot {
     pub options: EditorOptions,
     /// Aufgeloeste Route-Tool-Eintraege fuer Menues und Panels.
     pub route_tool_entries: Vec<HostRouteToolEntrySnapshot>,
+    /// Anzahl der Nodes in der geladenen Karte (0 wenn keine Karte).
+    pub node_count: usize,
+    /// Anzahl der Verbindungen in der geladenen Karte (0 wenn keine Karte).
+    pub connection_count: usize,
+    /// Anzahl der Marker in der geladenen Karte (0 wenn keine Karte).
+    pub marker_count: usize,
+    /// Name der geladenen Karte (None wenn keine Karte oder kein Name).
+    pub map_name: Option<String>,
+    /// Aktueller Kamera-Zoom-Faktor.
+    pub camera_zoom: f32,
+    /// Aktuelle Kamera-Position in Weltkoordinaten.
+    pub camera_position: [f32; 2],
+    /// Pfad zur geladenen Heightmap (None wenn keine geladen).
+    pub heightmap_path: Option<String>,
+    /// Anzahl der selektierten Nodes.
+    pub selection_count: usize,
+    /// Beispiel-ID eines selektierten Nodes (None wenn keine Selektion).
+    pub selection_example_id: Option<u64>,
 }

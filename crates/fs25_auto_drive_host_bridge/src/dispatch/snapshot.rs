@@ -122,6 +122,25 @@ pub fn build_host_ui_snapshot(
 
 /// Baut den host-neutralen Chrome-Snapshot fuer Menues, Defaults und Status.
 pub fn build_host_chrome_snapshot(state: &AppState) -> HostChromeSnapshot {
+    let (node_count, connection_count, marker_count, map_name) = state
+        .road_map
+        .as_ref()
+        .map(|rm| {
+            (
+                rm.node_count(),
+                rm.connection_count(),
+                rm.marker_count(),
+                rm.map_name.clone(),
+            )
+        })
+        .unwrap_or((0, 0, 0, None));
+    let selection_count = state.selection.selected_node_ids.len();
+    let selection_example_id = state
+        .selection
+        .selected_node_ids
+        .iter()
+        .next()
+        .copied();
     HostChromeSnapshot {
         status_message: state.ui.status_message.clone(),
         show_command_palette: state.ui.show_command_palette,
@@ -138,6 +157,15 @@ pub fn build_host_chrome_snapshot(state: &AppState) -> HostChromeSnapshot {
         route_tool_memory: build_route_tool_selection_snapshot(state),
         options: state.options.clone(),
         route_tool_entries: build_route_tool_entries_snapshot(state),
+        node_count,
+        connection_count,
+        marker_count,
+        map_name,
+        camera_zoom: state.view.camera.zoom,
+        camera_position: [state.view.camera.position.x, state.view.camera.position.y],
+        heightmap_path: state.ui.heightmap_path.clone(),
+        selection_count,
+        selection_example_id,
     }
 }
 
