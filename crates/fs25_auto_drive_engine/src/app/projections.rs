@@ -82,6 +82,8 @@ mod tests {
         let mut state = AppState::new();
         state.options.node_size_world = 77.5;
         state.options.snap_scale_percent = 33.0;
+        // options_arc wird nur durch set_options()/refresh_options_arc() aktualisiert.
+        state.refresh_options_arc();
         state.ui.show_options_dialog = true;
 
         let snapshot = build_host_ui_snapshot(&state);
