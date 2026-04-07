@@ -28,7 +28,7 @@ pub enum FloatingMenuKind {
 }
 
 /// Zustand des Marker-Bearbeiten-Dialogs
-#[derive(Default)]
+#[derive(Default, Clone)]
 pub struct MarkerDialogState {
     /// Ob der Dialog sichtbar ist
     pub visible: bool,
@@ -56,7 +56,7 @@ impl MarkerDialogState {
 }
 
 /// Zustand des Duplikat-Bestaetigungsdialogs
-#[derive(Default)]
+#[derive(Default, Clone)]
 pub struct DedupDialogState {
     /// Ob der Dialog sichtbar ist
     pub visible: bool,
@@ -78,7 +78,7 @@ impl DedupDialogState {
 }
 
 /// Zustand des Uebersichtskarten-Options-Dialogs
-#[derive(Default)]
+#[derive(Default, Clone)]
 pub struct OverviewOptionsDialogState {
     /// Ob der Dialog sichtbar ist
     pub visible: bool,
@@ -106,7 +106,7 @@ impl OverviewOptionsDialogState {
 }
 
 /// Zustand des Post-Load-Dialogs (automatische Erkennung nach XML-Laden).
-#[derive(Default)]
+#[derive(Default, Clone)]
 pub struct PostLoadDialogState {
     /// Ob der Dialog sichtbar ist
     pub visible: bool,
@@ -140,7 +140,7 @@ impl PostLoadDialogState {
 }
 
 /// Dialog-State fuer "Als overview.png speichern"-Abfrage nach ZIP-Extraktion.
-#[derive(Default)]
+#[derive(Default, Clone)]
 pub struct SaveOverviewDialogState {
     /// Ob der Dialog sichtbar ist
     pub visible: bool,

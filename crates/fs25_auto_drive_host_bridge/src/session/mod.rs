@@ -4,7 +4,7 @@ use fs25_auto_drive_engine::app::ui_contract::{HostUiSnapshot, ViewportOverlaySn
 use fs25_auto_drive_engine::app::{
     AppController, AppIntent, AppState, Camera2D, ConnectionDirection, ConnectionPriority,
     EditorTool, FloatingMenuKind, FloatingMenuState, GroupEditState, GroupRegistry, RoadMap,
-    ToolEditStore, UiState,
+    ToolEditStore,
 };
 use fs25_auto_drive_engine::shared::{EditorOptions, RenderAssetsSnapshot, RenderScene};
 use glam::Vec2;
@@ -93,12 +93,13 @@ pub struct HostPanelPropertiesState<'a> {
 /// Schmaler Dialogzugriff fuer host-lokale Modalfenster.
 ///
 /// Hosts koennen damit Dialog-UI mutieren, ohne direkten Vollzugriff auf den
-/// gesamten `AppState` zu erhalten.
+/// gesamten `AppState` zu erhalten. Das `ui`-Feld zeigt auf den
+/// host-lokalen `HostLocalDialogState`, nicht mehr auf den Engine-`UiState`.
 pub struct HostDialogUiState<'a> {
     /// Aktuelle Karte (falls geladen).
     pub road_map: Option<&'a RoadMap>,
-    /// Lokaler UI-Dialogzustand.
-    pub ui: &'a mut UiState,
+    /// Host-lokaler Dialog- und Chrome-Sichtbarkeitszustand.
+    pub ui: &'a mut HostLocalDialogState,
     /// Laufzeit-Optionen fuer dialogspezifische Einstellungen.
     pub options: &'a mut EditorOptions,
 }
@@ -271,17 +272,16 @@ impl HostBridgeSession {
 
     /// Liefert den schmalen Dialogzugriff fuer host-lokale Modalfenster.
     ///
-    /// Der Zugriff invalidiert den Session-Snapshot nicht automatisch. Falls
-    /// ein Rust-Host ueber diesen Escape-Hatch Felder aendert, die in
-    /// `HostSessionSnapshot` sichtbar sind, muss danach explizit
-    /// `mark_snapshot_dirty()` aufgerufen werden.
+    /// Das `ui`-Feld zeigt nun auf `chrome_state` (statt `state.ui`), sodass
+    /// Dialog-Mutationen durch das Frontend direkt im host-lokalen State landen.
+    /// Der Accessor invalidiert den Session-Snapshot nicht automatisch; falls
+    /// Snapshot-relevante Felder geaendert werden, muss __mark_snapshot_dirty()__
+    /// explizit aufgerufen werden.
     pub fn dialog_ui_state_mut(&mut self) -> HostDialogUiState<'_> {
-        let state = &mut self.state;
-
         HostDialogUiState {
-            road_map: state.road_map.as_deref(),
-            ui: &mut state.ui,
-            options: &mut state.options,
+            road_map: self.state.road_map.as_deref(),
+            ui: &mut self.chrome_state,
+            options: &mut self.state.options,
         }
     }
 
@@ -492,16 +492,116 @@ impl HostBridgeSession {
     /// Spiegelt Engine-UI-Request-Flags in den host-lokalen Chrome-State.
     ///
     /// Wird nach jedem `apply_action()`/`apply_intent()` aufgerufen, damit
-    /// `chrome_state` immer die aktuellen Engine-Werte fuer `show_command_palette`
-    /// und `show_options_dialog` enthaelt.
+    /// `chrome_state` immer die aktuellen Engine-Werte fuer sichtbarkeits-relevante
+    /// Felder enthaelt. Fuer Dialoge mit nutzer-mutierbaren Daten wird ein
+    /// Transition-basiertes Sync verwendet: Beim Oeffen werden Daten kopiert,
+    /// waehrend der Dialog offen ist wird der `chrome_state` NICHT ueberschrieben.
     fn sync_chrome_from_engine(&mut self) {
-        let show_cmd = self.state.ui.show_command_palette;
-        let show_opts = self.state.ui.show_options_dialog;
-        if self.chrome_state.show_command_palette != show_cmd
-            || self.chrome_state.show_options_dialog != show_opts
+        let ui = &self.state.ui;
+
+        // Einfache Spiegel-Felder (keine Nutzer-Mutation im Frontend)
+        let new_cmd = ui.show_command_palette;
+        let new_opts = ui.show_options_dialog;
+        let new_hwarn = ui.show_heightmap_warning;
+        let new_hwconf = ui.heightmap_warning_confirmed;
+        let new_diss = ui.confirm_dissolve_group_id;
+
+        let mut dirty = false;
+
+        if self.chrome_state.show_command_palette != new_cmd {
+            self.chrome_state.show_command_palette = new_cmd;
+            dirty = true;
+        }
+        if self.chrome_state.show_options_dialog != new_opts {
+            self.chrome_state.show_options_dialog = new_opts;
+            dirty = true;
+        }
+        if self.chrome_state.show_heightmap_warning != new_hwarn {
+            self.chrome_state.show_heightmap_warning = new_hwarn;
+            dirty = true;
+        }
+        if self.chrome_state.heightmap_warning_confirmed != new_hwconf {
+            self.chrome_state.heightmap_warning_confirmed = new_hwconf;
+            dirty = true;
+        }
+        if self.chrome_state.confirm_dissolve_group_id != new_diss {
+            self.chrome_state.confirm_dissolve_group_id = new_diss;
+            dirty = true;
+        }
+
+        // Dedup-Dialog: read-only im Frontend → immer spiegeln
+        if self.chrome_state.dedup_dialog.visible != ui.dedup_dialog.visible
+            || self.chrome_state.dedup_dialog.duplicate_count != ui.dedup_dialog.duplicate_count
+            || self.chrome_state.dedup_dialog.group_count != ui.dedup_dialog.group_count
         {
-            self.chrome_state.show_command_palette = show_cmd;
-            self.chrome_state.show_options_dialog = show_opts;
+            self.chrome_state.dedup_dialog = ui.dedup_dialog.clone();
+            dirty = true;
+        }
+
+        // Save-Overview-Dialog: kein mutierbares Nutzerfeld → immer spiegeln
+        if self.chrome_state.save_overview_dialog.visible != ui.save_overview_dialog.visible {
+            self.chrome_state.save_overview_dialog = ui.save_overview_dialog.clone();
+            dirty = true;
+        }
+
+        // Group-Settings-Popup: einfacher Trigger − beim Oeffen/Schliessen spiegeln
+        if self.chrome_state.group_settings_popup.visible != ui.group_settings_popup.visible {
+            self.chrome_state.group_settings_popup = ui.group_settings_popup.clone();
+            dirty = true;
+        }
+
+        // Dialoge mit Nutzer-mutierbaren Feldern: nur beim Oeffen (Transition false→true)
+        // kopieren; waehrend offen NICHT ueberschreiben.
+        if ui.marker_dialog.visible && !self.chrome_state.marker_dialog.visible {
+            self.chrome_state.marker_dialog = ui.marker_dialog.clone();
+            dirty = true;
+        } else if !ui.marker_dialog.visible && self.chrome_state.marker_dialog.visible {
+            self.chrome_state.marker_dialog.visible = false;
+            dirty = true;
+        }
+
+        if ui.trace_all_fields_dialog.visible && !self.chrome_state.trace_all_fields_dialog.visible
+        {
+            self.chrome_state.trace_all_fields_dialog = ui.trace_all_fields_dialog.clone();
+            dirty = true;
+        } else if !ui.trace_all_fields_dialog.visible
+            && self.chrome_state.trace_all_fields_dialog.visible
+        {
+            self.chrome_state.trace_all_fields_dialog.visible = false;
+            dirty = true;
+        }
+
+        if ui.overview_options_dialog.visible && !self.chrome_state.overview_options_dialog.visible
+        {
+            self.chrome_state.overview_options_dialog = ui.overview_options_dialog.clone();
+            dirty = true;
+        } else if !ui.overview_options_dialog.visible
+            && self.chrome_state.overview_options_dialog.visible
+        {
+            self.chrome_state.overview_options_dialog.visible = false;
+            dirty = true;
+        }
+
+        if ui.post_load_dialog.visible && !self.chrome_state.post_load_dialog.visible {
+            self.chrome_state.post_load_dialog = ui.post_load_dialog.clone();
+            dirty = true;
+        } else if !ui.post_load_dialog.visible && self.chrome_state.post_load_dialog.visible {
+            self.chrome_state.post_load_dialog.visible = false;
+            dirty = true;
+        }
+
+        // ZIP-Browser: Option<ZipBrowserState> — beim Oeffnen kopieren
+        let engine_zip_open = ui.zip_browser.is_some();
+        let chrome_zip_open = self.chrome_state.zip_browser.is_some();
+        if engine_zip_open && !chrome_zip_open {
+            self.chrome_state.zip_browser = ui.zip_browser.clone();
+            dirty = true;
+        } else if !engine_zip_open && chrome_zip_open {
+            self.chrome_state.zip_browser = None;
+            dirty = true;
+        }
+
+        if dirty {
             self.chrome_state.mark_dirty();
         }
     }

@@ -40,7 +40,8 @@ pub use dto::{
 };
 pub use session::{
     EngineRenderFrameSnapshot, FlutterBridgeSession, HostBridgeSession, HostDialogUiState,
-    HostPanelPropertiesState, HostRenderFrameSnapshot, HostViewportInputContext,
+    HostLocalDialogState, HostPanelPropertiesState, HostRenderFrameSnapshot,
+    HostViewportInputContext,
 };
 
 #[cfg(test)]

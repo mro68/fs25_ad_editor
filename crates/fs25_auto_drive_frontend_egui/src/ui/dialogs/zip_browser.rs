@@ -1,4 +1,5 @@
-use crate::app::{AppIntent, UiState, ZipImageEntry};
+use crate::app::{AppIntent, ZipImageEntry};
+use fs25_auto_drive_host_bridge::HostLocalDialogState;
 
 /// Formatiert eine Dateigroesse menschenlesbar (KB, MB, GB).
 fn format_file_size(bytes: u64) -> String {
@@ -17,7 +18,7 @@ fn format_file_size(bytes: u64) -> String {
 }
 
 /// Zeigt den ZIP-Browser-Dialog zur Auswahl einer Bilddatei aus einem ZIP-Archiv.
-pub fn show_zip_browser(ctx: &egui::Context, ui_state: &mut UiState) -> Vec<AppIntent> {
+pub fn show_zip_browser(ctx: &egui::Context, ui_state: &mut HostLocalDialogState) -> Vec<AppIntent> {
     let mut events = Vec::new();
 
     let Some(browser) = &mut ui_state.zip_browser else {
