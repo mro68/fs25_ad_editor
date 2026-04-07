@@ -60,7 +60,8 @@ impl EditorApp {
                     command_palette_open,
                 ));
                 self.render_viewport(ui, rect, viewport_size);
-                let overlay_intents = self.render_overlays(ui, rect, &response, viewport_size);
+                let overlay_intents =
+                    self.render_overlays(ui, rect, &response, viewport_size, &host_chrome_snapshot);
                 events.extend(
                     overlay_intents
                         .into_iter()
@@ -70,6 +71,7 @@ impl EditorApp {
 
         events
     }
+
 }
 
 #[cfg(test)]

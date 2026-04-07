@@ -1,5 +1,7 @@
 //! Host-neutrale Vertraege fuer Dialoge und Tool-Fenster.
 
+use std::sync::Arc;
+
 use crate::app::{AppIntent, ConnectionDirection, ConnectionPriority};
 use crate::shared::EditorOptions;
 
@@ -169,8 +171,8 @@ pub enum PanelState {
 pub struct OptionsPanelState {
     /// Sichtbarkeit des Panels.
     pub visible: bool,
-    /// Aktuelle Editor-Optionen.
-    pub options: EditorOptions,
+    /// Aktuelle Editor-Optionen (Arc fuer zero-copy Weitergabe).
+    pub options: Arc<EditorOptions>,
 }
 
 /// Read-only Zustand der Command-Palette.

@@ -35,7 +35,7 @@ pub fn build_host_ui_snapshot(state: &AppState) -> HostUiSnapshot {
 
     panels.push(PanelState::Options(OptionsPanelState {
         visible: state.ui.show_options_dialog,
-        options: state.options.clone(),
+        options: state.options_arc(),
     }));
 
     if let Some(route_tool_panel) = state.editor.route_tool_panel_state() {
@@ -54,4 +54,52 @@ pub fn build_viewport_overlay_snapshot(
     cursor_world: Option<Vec2>,
 ) -> ViewportOverlaySnapshot {
     viewport_overlay::build(state, cursor_world)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::build_host_ui_snapshot;
+    use crate::app::AppState;
+
+    /// Prüft, dass build_host_ui_snapshot die Command-Palette-Sichtbarkeit korrekt spiegelt.
+    #[test]
+    fn build_host_ui_snapshot_reflects_command_palette_visibility() {
+        let mut state = AppState::new();
+        state.ui.show_command_palette = true;
+
+        let snapshot = build_host_ui_snapshot(&state);
+
+        let cp_state = snapshot
+            .command_palette_state()
+            .expect("CommandPalette-Panel muss im Snapshot enthalten sein");
+        assert!(cp_state.visible, "show_command_palette=true muss im Snapshot sichtbar sein");
+    }
+
+    /// Prüft, dass build_host_ui_snapshot die aktuellen EditorOptions korrekt
+    /// in den OptionsPanelState überträgt.
+    #[test]
+    fn build_host_ui_snapshot_options_panel_carries_current_options() {
+        let mut state = AppState::new();
+        state.options.node_size_world = 77.5;
+        state.options.snap_scale_percent = 33.0;
+        state.ui.show_options_dialog = true;
+
+        let snapshot = build_host_ui_snapshot(&state);
+
+        let opts_panel = snapshot
+            .options_panel_state()
+            .expect("OptionsPanelState muss im Snapshot vorhanden sein");
+        assert!(
+            opts_panel.visible,
+            "show_options_dialog=true muss im Panel sichtbar sein"
+        );
+        assert!(
+            (opts_panel.options.node_size_world - 77.5).abs() < f32::EPSILON,
+            "node_size_world muss korrekt übertragen werden"
+        );
+        assert!(
+            (opts_panel.options.snap_scale_percent - 33.0).abs() < f32::EPSILON,
+            "snap_scale_percent muss korrekt übertragen werden"
+        );
+    }
 }
