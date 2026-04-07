@@ -2,9 +2,11 @@
 
 use crate::app::tool_contract::RouteToolId;
 use crate::app::tools::{route_tool_descriptor, RouteToolIconKey};
-use crate::app::{AppState, ConnectionDirection, ConnectionPriority};
 use egui::{Image, ImageSource, Vec2};
-use fs25_auto_drive_host_bridge::HostRouteToolIconKey;
+use fs25_auto_drive_host_bridge::{
+    HostChromeSnapshot, HostDefaultConnectionDirection, HostDefaultConnectionPriority,
+    HostRouteToolIconKey,
+};
 
 /// Standard-Icon-Groesse fuer Tool-Buttons.
 pub const ICON_SIZE: f32 = 40.0;
@@ -91,18 +93,28 @@ pub(crate) fn color32_from_rgba(color: [f32; 4]) -> egui::Color32 {
 }
 
 /// Liefert die Standardfarbe fuer Funktions-Icons anhand der Default-Prioritaet.
-pub(crate) fn function_icon_color(state: &AppState) -> egui::Color32 {
-    match state.editor.default_priority {
-        ConnectionPriority::Regular => color32_from_rgba(state.options.connection_color_regular),
-        ConnectionPriority::SubPriority => color32_from_rgba(state.options.node_color_subprio),
+pub(crate) fn function_icon_color(chrome: &HostChromeSnapshot) -> egui::Color32 {
+    match chrome.default_priority {
+        HostDefaultConnectionPriority::Regular => {
+            color32_from_rgba(chrome.options.connection_color_regular)
+        }
+        HostDefaultConnectionPriority::SubPriority => {
+            color32_from_rgba(chrome.options.node_color_subprio)
+        }
     }
 }
 
 /// Liefert die Akzentfarbe fuer aktive Icons anhand der Default-Richtung.
-pub(crate) fn accent_icon_color(state: &AppState) -> egui::Color32 {
-    match state.editor.default_direction {
-        ConnectionDirection::Regular => color32_from_rgba(state.options.connection_color_regular),
-        ConnectionDirection::Dual => color32_from_rgba(state.options.connection_color_dual),
-        ConnectionDirection::Reverse => color32_from_rgba(state.options.connection_color_reverse),
+pub(crate) fn accent_icon_color(chrome: &HostChromeSnapshot) -> egui::Color32 {
+    match chrome.default_direction {
+        HostDefaultConnectionDirection::Regular => {
+            color32_from_rgba(chrome.options.connection_color_regular)
+        }
+        HostDefaultConnectionDirection::Dual => {
+            color32_from_rgba(chrome.options.connection_color_dual)
+        }
+        HostDefaultConnectionDirection::Reverse => {
+            color32_from_rgba(chrome.options.connection_color_reverse)
+        }
     }
 }

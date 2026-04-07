@@ -2,11 +2,12 @@
 
 use crate::app::tool_contract::RouteToolId;
 use crate::app::tools::{route_tool_group_label_key, route_tool_label_key, RouteToolGroup};
-use crate::app::{AppIntent, AppState, RenderQuality};
+use crate::app::AppIntent;
 use crate::shared::{t, I18nKey};
 use crate::ui::common::{
     host_route_tool_disabled_reason_key, host_route_tool_entries_for, host_route_tool_to_engine,
 };
+use fs25_auto_drive_engine::shared::RenderQuality;
 use fs25_auto_drive_host_bridge::{HostChromeSnapshot, HostRouteToolGroup, HostRouteToolSurface};
 
 fn push_route_tool_selection(events: &mut Vec<AppIntent>, tool_id: RouteToolId) {
@@ -15,13 +16,12 @@ fn push_route_tool_selection(events: &mut Vec<AppIntent>, tool_id: RouteToolId) 
 
 fn render_route_tool_group_menu(
     ui: &mut egui::Ui,
-    state: &AppState,
     host_chrome_snapshot: &HostChromeSnapshot,
     events: &mut Vec<AppIntent>,
     group: HostRouteToolGroup,
 ) {
-    let lang = state.options.language;
-    let active_route_id = state.active_route_tool_id();
+    let lang = host_chrome_snapshot.options.language;
+    let active_route_id = host_chrome_snapshot.active_route_tool.map(crate::ui::common::host_route_tool_to_engine);
 
     let group_label_key = match group {
         HostRouteToolGroup::Basics => route_tool_group_label_key(RouteToolGroup::Basics),
@@ -39,6 +39,7 @@ fn render_route_tool_group_menu(
                 egui::Button::new(t(lang, route_tool_label_key(engine_tool_id)))
                     .selected(active_route_id == Some(engine_tool_id)),
             );
+
 
             let response = if entry.enabled {
                 response.on_hover_text(t(lang, route_tool_label_key(engine_tool_id)))
@@ -64,21 +65,19 @@ fn render_route_tool_group_menu(
 /// Rendert die Menue-Leiste
 pub fn render_menu(
     ctx: &egui::Context,
-    state: &AppState,
     host_chrome_snapshot: &HostChromeSnapshot,
 ) -> Vec<AppIntent> {
     let mut top_ui = crate::ui::common::create_top_level_ui(ctx, "menu_bar_top_level");
-    render_menu_inside(&mut top_ui, state, host_chrome_snapshot)
+    render_menu_inside(&mut top_ui, host_chrome_snapshot)
 }
 
 /// Rendert die Menue-Leiste innerhalb eines bestehenden Top-Level-UIs.
 pub(crate) fn render_menu_inside(
     ui_root: &mut egui::Ui,
-    state: &AppState,
     host_chrome_snapshot: &HostChromeSnapshot,
 ) -> Vec<AppIntent> {
     let mut events = Vec::new();
-    let lang = state.options.language;
+    let lang = host_chrome_snapshot.options.language;
 
     egui::Panel::top("menu_bar").show_inside(ui_root, |ui| {
         egui::MenuBar::new().ui(ui, |ui| {
@@ -111,7 +110,7 @@ pub(crate) fn render_menu_inside(
                 ui.separator();
 
                 // Heightmap-Option
-                let heightmap_label = if state.ui.heightmap_path.is_some() {
+                let heightmap_label = if host_chrome_snapshot.heightmap_path.is_some() {
                     t(lang, I18nKey::MenuChangeHeightmap)
                 } else {
                     t(lang, I18nKey::MenuSelectHeightmap)
@@ -122,7 +121,7 @@ pub(crate) fn render_menu_inside(
                     ui.close();
                 }
 
-                if state.ui.heightmap_path.is_some()
+                if host_chrome_snapshot.heightmap_path.is_some()
                     && ui.button(t(lang, I18nKey::MenuClearHeightmap)).clicked()
                 {
                     events.push(AppIntent::HeightmapCleared);
@@ -201,21 +200,18 @@ pub(crate) fn render_menu_inside(
             ui.menu_button(t(lang, I18nKey::MenuRouteTools), |ui| {
                 render_route_tool_group_menu(
                     ui,
-                    state,
                     host_chrome_snapshot,
                     &mut events,
                     HostRouteToolGroup::Basics,
                 );
                 render_route_tool_group_menu(
                     ui,
-                    state,
                     host_chrome_snapshot,
                     &mut events,
                     HostRouteToolGroup::Section,
                 );
                 render_route_tool_group_menu(
                     ui,
-                    state,
                     host_chrome_snapshot,
                     &mut events,
                     HostRouteToolGroup::Analysis,
@@ -241,7 +237,7 @@ pub(crate) fn render_menu_inside(
                 ui.separator();
 
                 // Background-Map-Option
-                let background_label = if state.view.background_map.is_some() {
+                let background_label = if host_chrome_snapshot.background_map_loaded {
                     t(lang, I18nKey::MenuChangeBackground)
                 } else {
                     t(lang, I18nKey::MenuLoadBackground)
@@ -255,7 +251,7 @@ pub(crate) fn render_menu_inside(
                 ui.separator();
 
                 ui.menu_button(t(lang, I18nKey::MenuRenderQuality), |ui| {
-                    let quality = state.view.render_quality;
+                    let quality = host_chrome_snapshot.render_quality;
 
                     if ui
                         .selectable_label(
@@ -299,7 +295,7 @@ pub(crate) fn render_menu_inside(
             });
 
             ui.menu_button(t(lang, I18nKey::MenuExtras), |ui| {
-                let has_farmland = state.farmland_polygons_arc().is_some_and(|p| !p.is_empty());
+                let has_farmland = host_chrome_snapshot.has_farmland;
                 if ui
                     .add_enabled(
                         has_farmland,

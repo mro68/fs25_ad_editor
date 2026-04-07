@@ -110,12 +110,12 @@ impl EditorApp {
 
             ui::status::render_status_bar_inside(top_ui, host_chrome_snapshot);
             events.extend(
-                ui::menu::render_menu_inside(top_ui, state, host_chrome_snapshot)
+                ui::menu::render_menu_inside(top_ui, host_chrome_snapshot)
                     .into_iter()
                     .map(map_intent_to_collected_event),
             );
             let (floating_events, should_close) =
-                ui::render_floating_menu(ctx, self.session.chrome_state().floating_menu, state, host_chrome_snapshot);
+                ui::render_floating_menu(ctx, self.session.chrome_state().floating_menu, host_chrome_snapshot);
             events.extend(
                 floating_events
                     .into_iter()

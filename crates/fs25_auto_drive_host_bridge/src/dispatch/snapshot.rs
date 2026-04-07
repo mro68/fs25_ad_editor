@@ -166,6 +166,11 @@ pub fn build_host_chrome_snapshot(state: &AppState) -> HostChromeSnapshot {
         heightmap_path: state.ui.heightmap_path.clone(),
         selection_count,
         selection_example_id,
+        background_map_loaded: state.view.background_map.is_some(),
+        render_quality: state.view.render_quality,
+        has_farmland: state.has_farmland_polygons(),
+        background_visible: state.view.background_visible,
+        background_scale: state.view.background_scale,
     }
 }
 
