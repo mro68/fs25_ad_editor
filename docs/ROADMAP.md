@@ -236,6 +236,8 @@
   - [x] FFI-Mirror additiv erweitert: `fs25ad_host_bridge_session_route_tool_viewport_json(...)`, C-Header-Sync und allgemeine FFI-ABI auf `4` angehoben
   - [x] FFI-Write-Tests fuer Route-Tool-JSON-Pfade nachgezogen (`SelectToolWithAnchors`, `Click`, `DragStart/Update/End`, `LassoCompleted` sowie verwandte Route-Tool-Aktionen)
   - [x] Doku-Sync: `crates/fs25_auto_drive_frontend_egui/API.md`, `src/editor_app/API.md`, `src/ui/API.md` und `docs/ARCHITECTURE_PLAN.md` auf session-owned egui-Host, `HostRouteToolViewportSnapshot` und FFI-ABI `4` aktualisiert
+  - [x] UI-/Backend-Entflechtung in sechs Phasen abgeschlossen: semantische Tool-Labels, Split `EngineUiState`/`HostLocalDialogState`, gehaertete `HostBridgeSession` ohne oeffentliches `app_state_mut()`, `HostChromeSnapshot`-basierte ViewModels, modulare Event-Collector und freie `app::projections`
+  - [x] Begleitende Hotpath-Fixes abgeschlossen: `render_overlays(..., &HostChromeSnapshot)` vermeidet doppelte Chrome-Builds, `OptionsPanelState.options` bleibt per `Arc<EditorOptions>` allokationsarm
 - [x] Flutter-Adapter-Surface fuer die Unified Host Bridge umgesetzt
   - [x] `fs25_auto_drive_frontend_flutter_bridge` auf `fs25_auto_drive_host_bridge` umgestellt
   - [x] Crate-Abhaengigkeit auf `fs25_auto_drive_host_bridge` reduziert; keine direkte Engine-Abhaengigkeit mehr

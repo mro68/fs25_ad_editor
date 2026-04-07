@@ -4,7 +4,7 @@
 
 `fs25_auto_drive_engine` kapselt die host-neutrale Fachlogik des Editors. Die Crate enthaelt Application-, Domain-, Shared- und Persistence-Layer, kennt aber kein `egui`, `eframe` oder anderes Frontend-Toolkit.
 
-Der Application-Layer liefert neben `RenderScene` und `RenderAssetsSnapshot` inzwischen auch die expliziten Read-Modelle `HostUiSnapshot` und `ViewportOverlaySnapshot`. Sichtbare Panels und Viewport-Overlays koennen dadurch host-neutral aus der Engine gelesen werden, ohne `AppState` oder egui-spezifische Painter-Details nach aussen zu leaken. Datei- und Pfaddialoge laufen bewusst nicht ueber `HostUiSnapshot`, sondern getrennt ueber die kanonische Drain-Seam `AppController::take_dialog_requests(...)`.
+Der Application-Layer trennt Mutationen und Read-Projektionen jetzt explizit. `AppController` verarbeitet `AppIntent` und `AppCommand` sowie die kanonische Dialog-Drain-Seam, waehrend `app::projections` `RenderScene`, `RenderAssetsSnapshot`, `HostUiSnapshot` und `ViewportOverlaySnapshot` direkt aus `&AppState` beziehungsweise `&mut AppState` aufbaut. Sichtbare Panels und Viewport-Overlays koennen dadurch host-neutral aus der Engine gelesen werden, ohne Controller-Instanzen oder egui-spezifische Painter-Details nach aussen zu leaken. Datei- und Pfaddialoge laufen bewusst nicht ueber `HostUiSnapshot`, sondern getrennt ueber `AppController::take_dialog_requests(...)`.
 
 Das Root-Package `fs25_auto_drive_editor` re-exportiert die wichtigsten Einstiegspunkte dieser Crate weiter, damit bestehende Tests, Benches und Rust-Konsumenten stabil bleiben.
 
@@ -26,8 +26,9 @@ Das Root-Package `fs25_auto_drive_editor` re-exportiert die wichtigsten Einstieg
 
 | Typ | Zweck |
 |---|---|
-| `AppController` | Zentrale Intent-Verarbeitung sowie Aufbau von `RenderScene`, `RenderAssetsSnapshot`, `HostUiSnapshot`, `ViewportOverlaySnapshot` und der kanonischen Dialog-Drain-Seam |
+| `AppController` | Zentrale Intent-/Command-Verarbeitung und kanonische Dialog-Drain-Seam des Application-Layers |
 | `AppState` | Globaler Engine-Zustand fuer Karte, Auswahl, View und Dialoge |
+| `EngineUiState` | Engine-seitiger UI-Zustand mit Dialog-Queue, Dateipfaden, Status und Workflow-Flags |
 | `AppIntent` | UI-/Host-seitige Absicht als Eingang des Application-Layers |
 | `AppCommand` | Interne, featureweise dispatchte Mutationsbefehle |
 | `RoadMap` | HashMap-basiertes Strassennetz samt Spatial-Index |
@@ -42,6 +43,10 @@ Das Root-Package `fs25_auto_drive_editor` re-exportiert die wichtigsten Einstieg
 | Signatur | Zweck |
 |---|---|
 | `pub use app::{AppCommand, AppController, AppIntent, AppState};` | Schlanke Root-Fassade fuer Hosts, Tests und Benches |
+| `pub fn app::projections::build_render_scene(state: &AppState, viewport_size: [f32; 2]) -> RenderScene` | Baut den per-frame Render-Vertrag als freie host-neutrale Projektion |
+| `pub fn app::projections::build_render_assets(state: &AppState) -> RenderAssetsSnapshot` | Baut den langlebigen Asset-Snapshot als freie host-neutrale Projektion |
+| `pub fn app::projections::build_host_ui_snapshot(state: &AppState) -> HostUiSnapshot` | Baut den host-neutralen Panel-Snapshot ohne Controller-Instanz |
+| `pub fn app::projections::build_viewport_overlay_snapshot(state: &mut AppState, cursor_world: Option<Vec2>) -> ViewportOverlaySnapshot` | Baut den host-neutralen Overlay-Snapshot; `&mut AppState` bleibt fuer Cache-Aufwaermung noetig |
 | `pub fn parse_autodrive_config(xml_content: &str) -> Result<RoadMap>` | Liest eine AutoDrive-XML in das Domain-Modell ein |
 | `pub fn write_autodrive_config(road_map: &RoadMap, heightmap: Option<&Heightmap>, terrain_height_scale: f32) -> Result<String>` | Schreibt eine `RoadMap` wieder ins AutoDrive-XML-Format |
 
@@ -60,6 +65,7 @@ let mut state = AppState::new();
 state.road_map = Some(std::sync::Arc::new(road_map));
 
 controller.handle_intent(&mut state, AppIntent::ResetCameraRequested)?;
+let ui_snapshot = fs25_auto_drive_engine::app::projections::build_host_ui_snapshot(&state);
 ```
 
 ## Layer-Zuschnitt

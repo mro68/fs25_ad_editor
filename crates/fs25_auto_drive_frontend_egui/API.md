@@ -10,6 +10,8 @@ Der Ownership-Flip ist fuer den Desktop-Host abgeschlossen: `editor_app::EditorA
 
 Die gemeinsame Host-Bridge ist in dieser Crate die kanonische Dispatch- und Read-Seam fuer stabile Host-Aktionen und bridge-owned Read-Modelle. Generische Viewport-Gesten laufen als `HostSessionAction::SubmitViewportInput`, waehrend Route-Tool-Schreibpfade explizit als `HostSessionAction::RouteTool` modelliert bleiben. Die UI emittiert weiterhin `AppIntent`s; `editor_app` mappt bridge-faehige Intents zentral auf dieselbe Session-Surface und faellt nur fuer bewusst noch ungemappte, nicht-kanonische Restfaelle auf `HostBridgeSession::apply_intent(...)` zurueck.
 
+Chrome-nahe ViewModels und Panels lesen ihre Metadaten inzwischen konsequent ueber `HostChromeSnapshot`. Modale egui-Dialoge und Popup-States arbeiten fuer host-lokale Sichtbarkeit und transienten Widget-Zustand ueber `HostLocalDialogState` statt ueber mutierende Direktzugriffe auf den Engine-`AppState`.
+
 Das Onscreen-Rendering liest Szene und Assets ueber denselben gekoppelten `build_render_frame(...)`-Seam wie der Shared-Texture-Transportpfad; egui nutzt davon nur die Szene fuer den Paint-Callback und wiederverwendet die Assets im selben Frame fuer den revisionsbasierten Background-Sync.
 
 ## Kompatibilitaet (Stand: 2026-04-07)
@@ -26,7 +28,7 @@ Das Onscreen-Rendering liest Szene und Assets ueber denselben gekoppelten `build
 | `editor_app` | eframe-Integrationsschale; besitzt die einzige `HostBridgeSession`, liest `HostUiSnapshot`/`HostChromeSnapshot`/`HostRouteToolViewportSnapshot`, drainet Dialoge ueber `HostBridgeSession::take_dialog_requests()`, liest gekoppelte RenderFrames ueber `build_render_frame(...)` und rendert Overlays aus `ViewportOverlaySnapshot` |
 | `host_bridge_adapter` | Duenne Kompat-Surface mit Reexports auf die kanonische Host-Bridge-Mapping-Seam (`map_intent_to_host_action`, `apply_mapped_intent`) |
 | `render` | egui-Host-Adapter, revisionsbasierte Background-Upload-Bruecke und egui-Render-Callback ueber die von `editor_app` gelieferten RenderFrame-Daten |
-| `ui` | Menues, Panels, Dialoge, Viewport-Input und egui-spezifisches Painting der host-neutralen Overlay-Snapshots; Chrome-nahe Menues/Sidebars lesen Route-Tool-/Default-Metadaten ueber `HostChromeSnapshot`, route-tool-spezifische Viewport-Hinweise kommen ueber den von `editor_app` abgeleiteten `HostRouteToolViewportSnapshot`-Pfad |
+| `ui` | Menues, Panels, Dialoge, Viewport-Input und egui-spezifisches Painting der host-neutralen Overlay-Snapshots; Chrome-nahe Menues/Sidebars lesen Route-Tool-/Default-Metadaten ueber `HostChromeSnapshot`, Dialog-Widgets nutzen fuer host-lokale Sichtbarkeit `HostLocalDialogState`, route-tool-spezifische Viewport-Hinweise kommen ueber den von `editor_app` abgeleiteten `HostRouteToolViewportSnapshot`-Pfad |
 | `app`, `core`, `shared`, `xml` | Re-Exports aus `fs25_auto_drive_engine` fuer stabile Importpfade |
 
 ## Session-Grenze (Stand 2026-04-07)
