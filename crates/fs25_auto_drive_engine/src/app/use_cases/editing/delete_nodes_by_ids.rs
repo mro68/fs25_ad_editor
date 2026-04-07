@@ -12,22 +12,20 @@ use std::sync::Arc;
 /// Fuehrt die Kern-Schritte aus:
 /// 1. Nachbar-Nodes sammeln, deren Flags sich aendern koennten
 /// 2. Optional: Marker der zu loeschenden Nodes entfernen (Cascade Delete)
-/// 3. Nodes entfernen
+/// 3. Batch-Delete aller Nodes (ein einziger Connection-Scan)
 /// 4. Flags der verbleibenden Nachbarn neu berechnen
 /// 5. Spatial-Index aktualisieren
 pub(crate) fn delete_nodes_internal(road_map: &mut RoadMap, ids: &[u64], remove_markers: bool) {
-    // HashSet fuer O(1)-Lookup statt O(n) Vec::contains
     let id_set: std::collections::HashSet<u64> = ids.iter().copied().collect();
 
-    // Nachbar-Nodes sammeln, deren Flags sich aendern koennten
-    let mut affected_neighbors: Vec<u64> = Vec::new();
-    for &id in ids {
-        for &(nb, _) in road_map.neighbors(id) {
-            if !id_set.contains(&nb) {
-                affected_neighbors.push(nb);
-            }
-        }
-    }
+    // Nachbar-Nodes BEVOR Deletion sammeln (fuer Flag-Neuberechnung nach Batch)
+    let mut affected_neighbors: Vec<u64> = ids
+        .iter()
+        .flat_map(|&id| road_map.neighbors(id).iter().map(|&(nb, _)| nb))
+        .filter(|nb| !id_set.contains(nb))
+        .collect();
+    affected_neighbors.sort_unstable();
+    affected_neighbors.dedup();
 
     // Marker der zu loeschenden Nodes entfernen (Cascade Delete)
     if remove_markers {
@@ -42,9 +40,8 @@ pub(crate) fn delete_nodes_internal(road_map: &mut RoadMap, ids: &[u64], remove_
         }
     }
 
-    for &id in ids {
-        road_map.remove_node(id);
-    }
+    // Batch-Delete: ein einziger Connection-Scan fuer alle IDs
+    road_map.remove_nodes_batch(&id_set);
 
     // Flags der verbleibenden Nachbar-Nodes neu berechnen
     if !affected_neighbors.is_empty() {
@@ -55,7 +52,7 @@ pub(crate) fn delete_nodes_internal(road_map: &mut RoadMap, ids: &[u64], remove_
     road_map.ensure_spatial_index();
 }
 
-/// Loescht die angegebenen Nodes und deren Connections.
+/// Loescht die angegebenen Nodes und deren Connections ueber den batch-faehigen Core-Loeschpfad.
 /// Erstellt KEINEN Undo-Snapshot (Caller verantwortlich).
 pub fn delete_nodes_by_ids(state: &mut AppState, ids: &[u64]) {
     if ids.is_empty() {
