@@ -11,7 +11,7 @@ license = "GPL-3.0"
 image = { version = "0.25", features = ["png", "jpeg"] }
 
 # ZIP-Archiv-Support
-zip = { version = "2", default-features = false, features = ["deflate"] }
+zip = { version = "8.3.0", default-features = false, features = ["deflate"] }
 
 # XML-Parsing (modDesc.xml, placeables.xml)
 quick-xml = "0.39.2"
