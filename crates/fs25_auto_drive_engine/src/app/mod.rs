@@ -49,7 +49,7 @@ pub use state::{
     AppState, Clipboard, DedupDialogState, EditorTool, EditorToolState, EngineUiState,
     FloatingMenuKind, FloatingMenuState, GroupEditState, GroupSettingsPopupState,
     MarkerDialogState, OverviewOptionsDialogState, PostLoadDialogState, SaveOverviewDialogState,
-    SelectionState, TraceAllFieldsDialogState, UiState, ViewState, ZipBrowserState,
+    SelectionState, TraceAllFieldsDialogState, ViewState, ZipBrowserState,
 };
 pub use tool_editing::ToolEditStore;
 pub use tools::field_boundary::compute_ring;
