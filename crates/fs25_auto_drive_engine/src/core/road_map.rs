@@ -219,6 +219,54 @@ impl RoadMap {
         removed
     }
 
+    /// Entfernt eine Menge von Nodes und alle zugehoerigen Verbindungen in einem Batch-Scan.
+    ///
+    /// Gegenueber wiederholten [`remove_node`]-Aufrufen reduziert diese Methode den
+    /// Connection-Scan von `O(k × |connections|)` auf `O(|connections|)` — relevant
+    /// bei Bulk-Delete-Operationen mit vielen Nodes.
+    ///
+    /// Gibt alle entfernten Nodes zurueck. Nodes, deren ID nicht in der Map vorhanden
+    /// ist, werden stillschweigend uebersprungen.
+    pub(crate) fn remove_nodes_batch(
+        &mut self,
+        node_ids: &std::collections::HashSet<u64>,
+    ) -> Vec<MapNode> {
+        if node_ids.is_empty() {
+            return Vec::new();
+        }
+
+        let removed: Vec<MapNode> = node_ids
+            .iter()
+            .filter_map(|&id| self.nodes.remove(&id))
+            .collect();
+
+        if removed.is_empty() {
+            return removed;
+        }
+
+        // Adjacency-Eintraege aller betroffenen Nachbarn bereinigen (ein Durchlauf)
+        for &id in node_ids {
+            if let Some(neighbors) = self.adjacency.remove(&id) {
+                for (nb, _) in neighbors {
+                    if !node_ids.contains(&nb)
+                        && let Some(adj) = self.adjacency.get_mut(&nb)
+                    {
+                        adj.retain(|&(neighbor_id, _)| neighbor_id != id);
+                    }
+                }
+            }
+        }
+
+        // Verbindungen einmalig bereinigen — O(|connections|) statt O(k × |connections|)
+        self.connections
+            .retain(|(s, e), _| !node_ids.contains(s) && !node_ids.contains(e));
+
+        self.spatial_dirty = true;
+        self.mark_render_dirty();
+
+        removed
+    }
+
     /// Aktualisiert die Position eines Nodes und baut bei Bedarf Geometrie/Index neu auf
     pub fn update_node_position(&mut self, node_id: u64, new_position: Vec2) -> bool {
         let Some(node) = self.nodes.get_mut(&node_id) else {

@@ -407,8 +407,73 @@ pub fn load_farmland_json(state: &mut AppState, image_path: &str) {
 
 #[cfg(test)]
 mod tests {
-    use super::persist_overview_layer_defaults;
+    use super::{browse_zip_background, load_background_from_zip, persist_overview_layer_defaults};
+    use crate::app::state::ZipBrowserState;
     use crate::app::AppState;
+    use image::{DynamicImage, ImageFormat};
+    use std::io::{Cursor, Write};
+    use std::path::{Path, PathBuf};
+    use std::time::{SystemTime, UNIX_EPOCH};
+
+    struct TempDirGuard {
+        path: PathBuf,
+    }
+
+    impl TempDirGuard {
+        fn new(prefix: &str) -> Self {
+            let timestamp = SystemTime::now()
+                .duration_since(UNIX_EPOCH)
+                .expect("Systemzeit muss nach Unix-Epoche liegen")
+                .as_nanos();
+            let path = std::env::temp_dir().join(format!(
+                "fs25_auto_drive_engine_{}_{}_{}",
+                prefix,
+                std::process::id(),
+                timestamp
+            ));
+            std::fs::create_dir_all(&path).expect("Temp-Verzeichnis muss erstellt werden");
+            Self { path }
+        }
+
+        fn path(&self) -> &Path {
+            &self.path
+        }
+    }
+
+    impl Drop for TempDirGuard {
+        fn drop(&mut self) {
+            let _ = std::fs::remove_dir_all(&self.path);
+        }
+    }
+
+    fn rgba_png_bytes(width: u32, height: u32, rgba: [u8; 4]) -> Vec<u8> {
+        let image = DynamicImage::ImageRgba8(image::RgbaImage::from_pixel(
+            width,
+            height,
+            image::Rgba(rgba),
+        ));
+        let mut cursor = Cursor::new(Vec::new());
+        image
+            .write_to(&mut cursor, ImageFormat::Png)
+            .expect("PNG muss erzeugt werden");
+        cursor.into_inner()
+    }
+
+    fn write_zip(path: &Path, entries: Vec<(&str, Vec<u8>)>) {
+        let file = std::fs::File::create(path).expect("ZIP-Datei muss erstellt werden");
+        let mut writer = zip::ZipWriter::new(file);
+
+        for (name, bytes) in entries {
+            writer
+                .start_file(name, zip::write::SimpleFileOptions::default())
+                .expect("ZIP-Eintrag muss angelegt werden");
+            writer
+                .write_all(&bytes)
+                .expect("ZIP-Eintrag muss geschrieben werden");
+        }
+
+        writer.finish().expect("ZIP muss finalisiert werden");
+    }
 
     #[test]
     fn persist_overview_layer_defaults_surfaces_save_errors() {
@@ -425,6 +490,108 @@ mod tests {
         assert!(
             message.contains("Uebersichts-Layer konnten nicht gespeichert werden"),
             "Unerwartete Statusmeldung: {message}"
+        );
+    }
+
+    #[test]
+    fn browse_zip_background_loads_single_image_without_dialog() {
+        let temp_dir = TempDirGuard::new("zip_single");
+        let zip_path = temp_dir.path().join("single_background.zip");
+        let zip_path_string = zip_path.to_string_lossy().into_owned();
+
+        write_zip(
+            &zip_path,
+            vec![(
+                "maps/overview.png",
+                rgba_png_bytes(6, 4, [32, 96, 160, 255]),
+            )],
+        );
+
+        let mut state = AppState::new();
+        browse_zip_background(&mut state, zip_path_string)
+            .expect("Single-Image-ZIP muss direkt geladen werden");
+
+        assert!(state.ui.zip_browser.is_none());
+        assert!(state.background_image.is_some());
+        let background = state
+            .view
+            .background_map
+            .as_ref()
+            .expect("Background-Map muss geladen sein");
+        assert_eq!(background.dimensions(), (6, 4));
+    }
+
+    #[test]
+    fn browse_zip_background_opens_browser_for_multiple_images() {
+        let temp_dir = TempDirGuard::new("zip_browser");
+        let zip_path = temp_dir.path().join("multi_background.zip");
+        let zip_path_string = zip_path.to_string_lossy().into_owned();
+
+        write_zip(
+            &zip_path,
+            vec![
+                ("maps/detail.png", vec![1; 8]),
+                ("maps/overview.png", vec![2; 64]),
+                ("maps/readme.txt", vec![3; 128]),
+            ],
+        );
+
+        let mut state = AppState::new();
+        browse_zip_background(&mut state, zip_path_string.clone())
+            .expect("Multi-Image-ZIP muss den Browser oeffnen");
+
+        let browser = state
+            .ui
+            .zip_browser
+            .as_ref()
+            .expect("ZIP-Browser muss geoeffnet werden");
+        assert_eq!(browser.zip_path, zip_path_string);
+        assert_eq!(browser.entries.len(), 2);
+        assert_eq!(browser.entries[0].name, "maps/overview.png");
+        assert_eq!(browser.entries[1].name, "maps/detail.png");
+        assert!(browser.filter_overview);
+        assert!(state.view.background_map.is_none());
+        assert!(state.background_image.is_none());
+    }
+
+    #[test]
+    fn load_background_from_zip_applies_crop_and_clears_browser() {
+        let temp_dir = TempDirGuard::new("zip_crop");
+        let zip_path = temp_dir.path().join("cropped_background.zip");
+        let zip_path_string = zip_path.to_string_lossy().into_owned();
+
+        write_zip(
+            &zip_path,
+            vec![("maps/detail.png", rgba_png_bytes(6, 4, [8, 24, 48, 255]))],
+        );
+
+        let mut state = AppState::new();
+        state.ui.zip_browser = Some(ZipBrowserState {
+            zip_path: zip_path_string.clone(),
+            entries: Vec::new(),
+            selected: Some(0),
+            filter_overview: false,
+        });
+
+        load_background_from_zip(
+            &mut state,
+            zip_path_string,
+            "maps/detail.png".to_string(),
+            Some(2),
+        )
+        .expect("ZIP-Bild muss mit Crop geladen werden");
+
+        assert!(state.ui.zip_browser.is_none());
+        assert_eq!(state.view.background_asset_revision, 1);
+        let background = state
+            .view
+            .background_map
+            .as_ref()
+            .expect("Background-Map muss geladen sein");
+        assert_eq!(background.dimensions(), (2, 2));
+        assert_eq!(
+            state.background_image.as_ref().map(|image| image.width()),
+            Some(2)
         );
     }
 }

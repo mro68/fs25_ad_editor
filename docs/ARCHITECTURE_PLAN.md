@@ -31,6 +31,8 @@ Verbleibende egui-Zugriffe werden verbindlich in drei Klassen aufgeteilt:
 
 Aktueller `bridge-gap` (Stand 2026-04-07): Kein offener fachlicher Gap fuer stabile Host-Aktionen, bridge-owned Read-Seams oder die kanonische Viewport-Gesture-Seam. Der produktive egui-Host nutzt fuer nicht serialisierte UI-Local-Zustaende schmale Session-Seams statt direkter `app_state_mut()`-Bypaesse; `host_bridge_adapter` ist nur noch eine Kompat-Surface mit Reexports auf die kanonische Host-Bridge-Mapping-Seam.
 
+Nicht serialisierte lokale Session-Seams (`HostPanelPropertiesState`, `HostDialogUiState`, `HostViewportInputContext`) bleiben bewusst snapshot-transparent. Wenn ein Rust-Host darueber ausnahmsweise Felder mutiert, die in `HostSessionSnapshot` gespiegelt werden, muss er `HostBridgeSession::mark_snapshot_dirty()` explizit aufrufen.
+
 ### Flutter-/FFI-Transportadapter (Slice 0)
 
 - `crates/fs25_auto_drive_host_bridge_ffi` ist der duenne Linux-first-C-ABI-Adapter ueber `HostBridgeSession`.

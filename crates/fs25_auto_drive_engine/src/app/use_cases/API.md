@@ -84,7 +84,7 @@ pub enum AddNodeResult {
 }
 ```
 
-- `delete_selected_nodes(state)` — Selektierte Nodes + betroffene Connections loeschen
+- `delete_selected_nodes(state)` — Selektierte Nodes + betroffene Connections loeschen; nutzt intern denselben batch-faehigen Delete-Kernpfad wie die ID-basierte Tool-Neuberechnung, damit Bulk-Loeschungen nur einen Connection-Scan benoetigen
 - `connect_tool_pick_node(state, world_pos, max_distance)` — Connect-Tool: Source/Target-Node auswaehlen
 - `add_connection(state, from_id, to_id, direction, priority)` — Verbindung erstellen
 - `remove_connection_between(state, node_a, node_b)` — Alle Verbindungen zwischen zwei Nodes entfernen
@@ -95,9 +95,9 @@ pub enum AddNodeResult {
 - `remove_all_connections_between_selected(state)` — Bulk: Alle Verbindungen zwischen Selektion trennen
 - `invert_all_connections_between_selected(state)` — Bulk: Richtung invertieren (start↔end)
 - `set_all_connections_priority_between_selected(state, priority)` — Bulk: Prioritaet aendern
-- `apply_tool_result(state, result) -> Vec<u64>` — Wendet ein `ToolResult` auf den AppState an (mit Undo-Snapshot): erstellt Nodes + Connections und setzt die Selektion; Persistenz in `GroupRegistry`/`ToolEditStore` passiert anschliessend separat im Route-Tool-Handler ueber `tool_editing::persist_after_apply()`
-- `apply_tool_result_no_snapshot(state, result) -> Vec<u64>` — Wie `apply_tool_result`, aber ohne Undo-Snapshot (fuer Neuberechnung)
-- `delete_nodes_by_ids(state, ids)` — Loescht Nodes mit den angegebenen IDs + zugehoerige Connections; invalidiert betroffene Eintraege in `state.group_registry` und entfernt die passenden Payloads aus `state.tool_edit_store`
+- `apply_tool_result(state, result) -> Vec<u64>` — Wendet ein `ToolResult` auf den AppState an (mit Undo-Snapshot): erstellt Nodes + Connections und setzt die Selektion; falls `result.nodes_to_remove` gefuellt ist, werden diese Original-Nodes vor dem Neuaufbau ueber denselben Batch-Delete-Pfad entfernt; Persistenz in `GroupRegistry`/`ToolEditStore` passiert anschliessend separat im Route-Tool-Handler ueber `tool_editing::persist_after_apply()`
+- `apply_tool_result_no_snapshot(state, result) -> Vec<u64>` — Wie `apply_tool_result`, aber ohne Undo-Snapshot (fuer Neuberechnung); `result.nodes_to_remove` laeuft auch hier ueber den batch-faehigen Delete-Kernpfad vor dem Neuaufbau
+- `delete_nodes_by_ids(state, ids)` — Loescht Nodes mit den angegebenen IDs + zugehoerige Connections ueber den batch-faehigen Core-Loeschpfad; invalidiert betroffene Eintraege in `state.group_registry` und entfernt die passenden Payloads aus `state.tool_edit_store`
 - `resample_selected_path(state)` — Selektierte Nodes-Kette per Catmull-Rom-Spline gleichmaessig neu verteilen; Konfiguration aus `state.ui.distanzen`
 - `trace_all_fields(state, spacing, offset, tolerance, corner_angle, corner_rounding_radius, corner_rounding_max_angle_deg)` — Zeichnet alle geladenen Farmland-Polygone als Wegpunkt-Ring nach (Batch-Operation). Nutzt die uebergebenen Feldgrenzen-Parameter fuer Abstand, Versatz, Begradigung, Ecken-Erkennung und optionale Eckenverrundung; alle Polygone werden in einem einzigen Undo-Schritt zusammengefasst, Spatial-Index-Rebuild und Flag-Berechnung erfolgen nur einmal am Ende.
 - `copy_selected_to_clipboard(state)` — Kopiert die aktuelle Selektion inklusive interner Verbindungen und Marker in die Zwischenablage und speichert das geometrische Zentrum als Paste-Referenz

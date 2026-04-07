@@ -214,13 +214,23 @@ impl HostBridgeSession {
         &mut self.state
     }
 
+    /// Invalidiert den gecachten `HostSessionSnapshot` explizit.
+    ///
+    /// Rust-Hosts nutzen diese Hilfsmethode nach lokalen Mutationen ueber
+    /// schmale UI-Seams, falls dabei ausnahmsweise Felder veraendert wurden,
+    /// die in `HostSessionSnapshot` gespiegelt werden.
+    pub fn mark_snapshot_dirty(&mut self) {
+        self.snapshot_dirty = true;
+    }
+
     /// Liefert den schmalen Properties-/Edit-Panel-Zugriff.
     ///
     /// Diese Seams kapseln die verbleibenden host-lokalen UI-Mutationen
     /// (`distanzen`, `options`) bei gleichzeitig read-only Zugriff auf
-    /// Selektions-/Gruppen-/Karteninformationen.
+    /// Selektions-/Gruppen-/Karteninformationen. Der Zugriff bleibt bewusst
+    /// Snapshot-transparent, weil diese lokalen Felder nicht Teil des kleinen
+    /// `HostSessionSnapshot` sind.
     pub fn panel_properties_state_mut(&mut self) -> HostPanelPropertiesState<'_> {
-        self.snapshot_dirty = true;
         let state = &mut self.state;
 
         HostPanelPropertiesState {
@@ -238,8 +248,12 @@ impl HostBridgeSession {
     }
 
     /// Liefert den schmalen Dialogzugriff fuer host-lokale Modalfenster.
+    ///
+    /// Der Zugriff invalidiert den Session-Snapshot nicht automatisch. Falls
+    /// ein Rust-Host ueber diesen Escape-Hatch Felder aendert, die in
+    /// `HostSessionSnapshot` sichtbar sind, muss danach explizit
+    /// `mark_snapshot_dirty()` aufgerufen werden.
     pub fn dialog_ui_state_mut(&mut self) -> HostDialogUiState<'_> {
-        self.snapshot_dirty = true;
         let state = &mut self.state;
 
         HostDialogUiState {
@@ -250,8 +264,10 @@ impl HostBridgeSession {
     }
 
     /// Liefert den schmalen Viewport-Input-Zugriff fuer Host-Event-Sammler.
+    ///
+    /// Der Zugriff bleibt bewusst Snapshot-transparent, weil der lokale
+    /// Distanzzustand nicht im kleinen `HostSessionSnapshot` gespiegelt wird.
     pub fn viewport_input_context_mut(&mut self) -> HostViewportInputContext<'_> {
-        self.snapshot_dirty = true;
         let state = &mut self.state;
         let farmland_available = state
             .farmland_polygons_arc()
@@ -452,6 +468,9 @@ impl Default for HostBridgeSession {
 
 #[cfg(test)]
 mod tests {
+    use std::hint::black_box;
+    use std::time::Instant;
+
     use fs25_auto_drive_engine::app::{
         AppIntent, Connection, ConnectionDirection, ConnectionPriority, FloatingMenuKind, MapNode,
         NodeFlag, RoadMap,
@@ -506,6 +525,23 @@ mod tests {
         ));
         map.ensure_spatial_index();
         map
+    }
+
+    fn snapshot_measurement_session(selected_count: usize) -> HostBridgeSession {
+        let mut session = HostBridgeSession::new();
+        let mut map = RoadMap::new(3);
+
+        for id in 1..=selected_count as u64 {
+            let x = id as f32;
+            map.add_node(MapNode::new(id, Vec2::new(x, x * 0.25), NodeFlag::Regular));
+            session.state.selection.ids_mut().insert(id);
+        }
+
+        session.state.road_map = Some(Arc::new(map));
+        session.state.view.viewport_size = [1280.0, 720.0];
+        session.snapshot_dirty = true;
+        let _ = session.snapshot();
+        session
     }
 
     fn resize_event(size_px: [f32; 2]) -> HostViewportInputEvent {
@@ -680,6 +716,123 @@ mod tests {
         let overlay = session.build_viewport_overlay_snapshot(None);
         assert!(overlay.route_tool_preview.is_none());
         assert!(overlay.group_boundaries.is_empty());
+    }
+
+    #[test]
+    fn read_only_host_snapshots_do_not_mark_session_snapshot_dirty() {
+        let session = snapshot_measurement_session(32);
+
+        let _ = session.build_host_ui_snapshot();
+        let _ = session.build_host_chrome_snapshot();
+        let _ = session.build_route_tool_viewport_snapshot();
+        let _ = session.build_viewport_geometry_snapshot([640.0, 480.0]);
+
+        assert!(
+            !session.snapshot_dirty,
+            "Read-only Snapshot-Builder duerfen den Session-Cache nicht dirty markieren"
+        );
+    }
+
+    #[test]
+    fn local_ui_seams_do_not_mark_snapshot_dirty_for_local_state_reads() {
+        let mut session = snapshot_measurement_session(32);
+
+        {
+            let panel_state = session.panel_properties_state_mut();
+            assert_eq!(panel_state.selected_node_ids.len(), 32);
+        }
+        assert!(!session.snapshot_dirty);
+
+        {
+            let dialog_state = session.dialog_ui_state_mut();
+            assert!(!dialog_state.ui.show_options_dialog);
+        }
+        assert!(!session.snapshot_dirty);
+
+        {
+            let viewport_state = session.viewport_input_context_mut();
+            assert_eq!(viewport_state.selected_node_ids.len(), 32);
+        }
+        assert!(!session.snapshot_dirty);
+    }
+
+    #[test]
+    fn explicit_snapshot_invalidation_keeps_local_ui_mutation_visible() {
+        let mut session = snapshot_measurement_session(32);
+
+        {
+            let dialog_state = session.dialog_ui_state_mut();
+            dialog_state.ui.status_message = Some("Lokale Mutation".to_string());
+        }
+        assert!(
+            !session.snapshot_dirty,
+            "Lokale UI-Seams invalidieren den Snapshot nicht implizit"
+        );
+
+        session.mark_snapshot_dirty();
+        assert!(session.snapshot_dirty);
+
+        let snapshot = session.snapshot_owned();
+        assert_eq!(snapshot.status_message.as_deref(), Some("Lokale Mutation"));
+        assert!(!session.snapshot_dirty);
+    }
+
+    #[test]
+    fn snapshot_measurement_clean_poll_reports_zero_rebuild_candidates() {
+        let mut session = snapshot_measurement_session(1024);
+        let iterations = 256usize;
+        let start = Instant::now();
+        let mut rebuild_candidates = 0usize;
+
+        for _ in 0..iterations {
+            rebuild_candidates += usize::from(session.snapshot_dirty);
+            black_box(session.snapshot_owned());
+        }
+
+        let elapsed_us_per_iter = start.elapsed().as_secs_f64() * 1_000_000.0 / iterations as f64;
+        eprintln!(
+            "snapshot_measurement_clean_poll selected_nodes=1024 iterations={iterations} rebuild_candidates={rebuild_candidates} elapsed_us_per_iter={elapsed_us_per_iter:.3}"
+        );
+
+        assert_eq!(rebuild_candidates, 0);
+        assert!(!session.snapshot_dirty);
+    }
+
+    #[test]
+    fn snapshot_measurement_read_mostly_flow_reports_zero_rebuild_candidates() {
+        let mut session = snapshot_measurement_session(1024);
+        let iterations = 256usize;
+        let start = Instant::now();
+        let mut rebuild_candidates = 0usize;
+
+        for _ in 0..iterations {
+            black_box(session.build_host_ui_snapshot());
+            black_box(session.build_host_chrome_snapshot());
+
+            {
+                let panel_state = session.panel_properties_state_mut();
+                black_box(panel_state.selected_node_ids.len());
+            }
+            {
+                let dialog_state = session.dialog_ui_state_mut();
+                black_box(dialog_state.ui.show_options_dialog);
+            }
+            {
+                let viewport_state = session.viewport_input_context_mut();
+                black_box(viewport_state.selected_node_ids.len());
+            }
+
+            rebuild_candidates += usize::from(session.snapshot_dirty);
+            black_box(session.snapshot_owned());
+        }
+
+        let elapsed_us_per_iter = start.elapsed().as_secs_f64() * 1_000_000.0 / iterations as f64;
+        eprintln!(
+            "snapshot_measurement_read_mostly selected_nodes=1024 iterations={iterations} rebuild_candidates={rebuild_candidates} elapsed_us_per_iter={elapsed_us_per_iter:.3}"
+        );
+
+        assert_eq!(rebuild_candidates, 0);
+        assert!(!session.snapshot_dirty);
     }
 
     #[test]
