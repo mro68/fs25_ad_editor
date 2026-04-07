@@ -3,6 +3,7 @@
 mod event_collection;
 mod helpers;
 mod overlays;
+mod panel_collector;
 
 use crate::app::{use_cases, AppIntent};
 use crate::{render, ui};
@@ -11,6 +12,14 @@ use eframe::egui_wgpu;
 use fs25_auto_drive_host_bridge::{
     map_intent_to_host_action, HostBridgeSession, HostSessionAction, HostViewportInputEvent,
 };
+
+fn map_intent_to_collected_event(intent: AppIntent) -> CollectedEvent {
+    if let Some(action) = map_intent_to_host_action(&intent) {
+        CollectedEvent::HostAction(action)
+    } else {
+        CollectedEvent::Intent(intent)
+    }
+}
 
 #[derive(Debug, Clone)]
 pub(super) enum CollectedEvent {
