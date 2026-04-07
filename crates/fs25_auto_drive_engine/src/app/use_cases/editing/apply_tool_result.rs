@@ -248,7 +248,7 @@ mod tests {
         assert!(road_map.has_connection(new_ids[1], 20));
         assert_eq!(road_map.connection_count(), 3);
         assert!(road_map.connections_iter().all(|connection| {
-            !matches!(connection.start_id, 1 | 2 | 3) && !matches!(connection.end_id, 1 | 2 | 3)
+            !matches!(connection.start_id, 1..=3) && !matches!(connection.end_id, 1..=3)
         }));
 
         let selected_ids: Vec<u64> = state.selection.selected_node_ids.iter().copied().collect();
