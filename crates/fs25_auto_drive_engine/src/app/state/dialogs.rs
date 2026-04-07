@@ -333,9 +333,6 @@ pub struct EngineUiState {
     pub confirm_dissolve_group_id: Option<u64>,
 }
 
-/// Rückwärtskompatibilitäts-Alias: `UiState` → `EngineUiState`.
-pub type UiState = EngineUiState;
-
 impl EngineUiState {
     /// Erstellt den Standard-UI-Zustand (alle Dialoge geschlossen).
     pub fn new() -> Self {

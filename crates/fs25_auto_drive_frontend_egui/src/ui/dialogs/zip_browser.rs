@@ -18,7 +18,10 @@ fn format_file_size(bytes: u64) -> String {
 }
 
 /// Zeigt den ZIP-Browser-Dialog zur Auswahl einer Bilddatei aus einem ZIP-Archiv.
-pub fn show_zip_browser(ctx: &egui::Context, ui_state: &mut HostLocalDialogState) -> Vec<AppIntent> {
+pub fn show_zip_browser(
+    ctx: &egui::Context,
+    ui_state: &mut HostLocalDialogState,
+) -> Vec<AppIntent> {
     let mut events = Vec::new();
 
     let Some(browser) = &mut ui_state.zip_browser else {

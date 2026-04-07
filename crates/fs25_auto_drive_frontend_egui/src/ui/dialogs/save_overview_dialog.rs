@@ -4,7 +4,10 @@ use crate::app::AppIntent;
 use fs25_auto_drive_host_bridge::HostLocalDialogState;
 
 /// Zeigt den Dialog "Als overview.png speichern?" nach ZIP-Extraktion.
-pub fn show_save_overview_dialog(ctx: &egui::Context, ui_state: &mut HostLocalDialogState) -> Vec<AppIntent> {
+pub fn show_save_overview_dialog(
+    ctx: &egui::Context,
+    ui_state: &mut HostLocalDialogState,
+) -> Vec<AppIntent> {
     let mut events = Vec::new();
 
     if !ui_state.save_overview_dialog.visible {
