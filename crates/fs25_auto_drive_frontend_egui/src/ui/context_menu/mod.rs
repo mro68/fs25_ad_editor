@@ -14,10 +14,10 @@ mod icons;
 mod render;
 mod tangent_ui;
 
-use crate::app::ui_contract::TangentMenuData;
 use crate::app::{AppIntent, ConnectionDirection, ConnectionPriority, GroupRegistry, RoadMap};
 use crate::shared::EditorOptions;
 use commands::{validate_entries, IntentContext, MenuCatalog, PreconditionContext};
+use fs25_auto_drive_host_bridge::HostTangentMenuSnapshot;
 use indexmap::IndexSet;
 use render::render_validated_entries;
 use tangent_ui::{render_node_info_submenu, render_tangent_selection};
@@ -40,7 +40,7 @@ pub enum MenuVariant {
     /// Route-Tool aktiv mit pending input, optional mit Tangenten-Auswahl
     RouteToolActive {
         /// Tangenten-Menüdaten (nur bei kubischer Kurve mit Nachbarn)
-        tangent_data: Option<TangentMenuData>,
+        tangent_data: Option<HostTangentMenuSnapshot>,
     },
 }
 
@@ -68,7 +68,7 @@ pub fn determine_menu_variant(
     selected_node_ids: &IndexSet<u64>,
     focused_node_id: Option<u64>,
     route_tool_has_input: bool,
-    tangent_data: Option<TangentMenuData>,
+    tangent_data: Option<HostTangentMenuSnapshot>,
 ) -> MenuVariant {
     // Route-Tool hat Priorität (nur wenn kein Node fokussiert)
     if route_tool_has_input && focused_node_id.is_none() {

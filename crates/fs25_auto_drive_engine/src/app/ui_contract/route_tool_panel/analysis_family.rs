@@ -1,4 +1,5 @@
 use crate::core::{ConnectionDirection, ConnectionPriority};
+use serde::{Deserialize, Serialize};
 
 /// Panelzustand des Strecken-Versatz-Tools.
 #[derive(Debug, Clone, PartialEq)]
@@ -24,7 +25,8 @@ pub struct RouteOffsetPanelState {
 }
 
 /// Panel-Aktion des Strecken-Versatz-Tools.
-#[derive(Debug, Clone, Copy, PartialEq)]
+#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
+#[serde(tag = "kind", content = "value", rename_all = "snake_case")]
 pub enum RouteOffsetPanelAction {
     /// Links-Versatz aktivieren/deaktivieren.
     SetLeftEnabled(bool),
@@ -72,7 +74,8 @@ pub struct FieldBoundaryPanelState {
 }
 
 /// Panel-Aktion des Feldgrenz-Tools.
-#[derive(Debug, Clone, Copy, PartialEq)]
+#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
+#[serde(tag = "kind", content = "value", rename_all = "snake_case")]
 pub enum FieldBoundaryPanelAction {
     /// Node-Abstand setzen.
     SetNodeSpacing(f32),
@@ -97,7 +100,8 @@ pub enum FieldBoundaryPanelAction {
 }
 
 /// Auswahlmodus des Feldweg-Panels.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
 pub enum FieldPathModeChoice {
     /// Ganze Felder pro Seite waehlen.
     Fields,
@@ -155,7 +159,8 @@ pub struct FieldPathPanelState {
 }
 
 /// Panel-Aktion des Feldweg-Tools.
-#[derive(Debug, Clone, Copy, PartialEq)]
+#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
+#[serde(tag = "kind", content = "value", rename_all = "snake_case")]
 pub enum FieldPathPanelAction {
     /// Modus setzen.
     SetMode(FieldPathModeChoice),
@@ -191,7 +196,8 @@ pub enum ColorPathPanelPhase {
 }
 
 /// Anschlussmodus des Farb-Pfad-Tools.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
 pub enum ExistingConnectionModeChoice {
     /// Nie anschliessen.
     Never,
@@ -248,7 +254,8 @@ pub struct ColorPathPanelState {
 }
 
 /// Panel-Aktion des Farb-Pfad-Tools.
-#[derive(Debug, Clone, Copy, PartialEq)]
+#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
+#[serde(tag = "kind", content = "value", rename_all = "snake_case")]
 pub enum ColorPathPanelAction {
     /// Sampling starten.
     StartSampling,

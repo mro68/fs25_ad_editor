@@ -1761,6 +1761,7 @@ dependencies = [
  "anyhow",
  "fs25_auto_drive_engine",
  "glam",
+ "indexmap",
  "serde",
  "serde_json",
 ]

@@ -14,12 +14,15 @@ mod zoom;
 use super::context_menu;
 use super::drag::{draw_drag_selection_overlay, DragSelection};
 use super::keyboard;
-use crate::app::ui_contract::TangentMenuData;
 use crate::app::{
     AppIntent, Camera2D, ConnectionDirection, ConnectionPriority, EditorTool, GroupRegistry,
     RoadMap,
 };
 use crate::shared::EditorOptions;
+use fs25_auto_drive_host_bridge::{
+    HostInputModifiers, HostPointerButton, HostTangentMenuSnapshot, HostTapKind,
+    HostViewportInputBatch, HostViewportInputEvent,
+};
 use indexmap::IndexSet;
 
 /// Modus des primaeren (Links-)Drags im Viewport.
@@ -27,10 +30,17 @@ use indexmap::IndexSet;
 pub(crate) enum PrimaryDragMode {
     #[default]
     None,
-    SelectionMove,
-    CameraPan,
     /// Drag eines Route-Tool-Steuerpunkts (Anker/CP)
     RouteToolPointDrag,
+}
+
+/// Ergebnis eines Viewport-Input-Sammeldurchlaufs.
+#[derive(Debug, Default)]
+pub struct ViewportInputEvents {
+    /// Lokale Intents fuer nicht-bridge-faehige Gesten.
+    pub intents: Vec<AppIntent>,
+    /// Optionaler Batch bridge-faehiger Viewport-Input-Events.
+    pub host_input_batch: Option<HostViewportInputBatch>,
 }
 
 /// Buendelt die gemeinsamen Parameter fuer Viewport-Event-Verarbeitung.
@@ -39,11 +49,10 @@ pub(crate) struct ViewportContext<'a> {
     pub response: &'a egui::Response,
     pub viewport_size: [f32; 2],
     pub camera: &'a Camera2D,
-    pub road_map: Option<&'a RoadMap>,
     pub selected_node_ids: &'a IndexSet<u64>,
     pub active_tool: EditorTool,
     pub options: &'a EditorOptions,
-    pub drag_targets: &'a [glam::Vec2],
+    pub drag_targets: &'a [[f32; 2]],
     /// Gibt an, ob das aktive Route-Tool Alt+Drag als Lasso-Eingabe benoetigt.
     pub tool_needs_lasso: bool,
 }
@@ -68,6 +77,8 @@ struct ContextMenuSnapshot {
 #[derive(Default)]
 pub struct InputState {
     pub(crate) primary_drag_mode: PrimaryDragMode,
+    /// Gibt an, ob der aktuelle Primaer-Drag ueber die Bridge-Seam laeuft.
+    pub(crate) primary_drag_via_bridge: bool,
     pub(crate) drag_selection: Option<DragSelection>,
     /// Snapshot des Menue-Zustands, gueltig solange das Popup offen ist.
     /// Wird beim Rechtsklick gesetzt und erst geleert, wenn egui das Popup schliesst.
@@ -84,6 +95,7 @@ impl InputState {
     pub fn new() -> Self {
         Self {
             primary_drag_mode: PrimaryDragMode::None,
+            primary_drag_via_bridge: false,
             drag_selection: None,
             context_menu_snapshot: None,
             edit_panel_pos: None,
@@ -122,21 +134,20 @@ impl InputState {
         command_palette_open: bool,
         default_direction: ConnectionDirection,
         default_priority: ConnectionPriority,
-        drag_targets: &[glam::Vec2],
+        drag_targets: &[[f32; 2]],
         distanzen_state: &mut crate::app::state::DistanzenState,
-        tangent_data: Option<TangentMenuData>,
+        tangent_data: Option<HostTangentMenuSnapshot>,
         clipboard_has_data: bool,
         farmland_polygons_loaded: bool,
         group_editing_active: bool,
         group_registry: Option<&GroupRegistry>,
         tool_needs_lasso: bool,
-    ) -> Vec<AppIntent> {
+    ) -> ViewportInputEvents {
         let ctx = ViewportContext {
             ui,
             response,
             viewport_size,
             camera,
-            road_map,
             selected_node_ids,
             active_tool,
             options,
@@ -144,14 +155,15 @@ impl InputState {
             tool_needs_lasso,
         };
 
-        let mut events = Vec::new();
+        let mut local_intents = Vec::new();
+        let mut host_events = Vec::new();
 
-        events.push(AppIntent::ViewportResized {
-            size: viewport_size,
+        host_events.push(HostViewportInputEvent::Resize {
+            size_px: viewport_size,
         });
 
         // Keyboard-Shortcuts (ausgelagert in keyboard.rs)
-        events.extend(keyboard::collect_keyboard_intents(
+        local_intents.extend(keyboard::collect_keyboard_intents(
             ui,
             selected_node_ids,
             keyboard::KeyboardContext::new(
@@ -166,11 +178,11 @@ impl InputState {
 
         let modifiers = ui.input(|i| i.modifiers);
 
-        self.handle_drag_start(&ctx, modifiers, &mut events);
+        self.handle_drag_start(&ctx, modifiers, &mut local_intents, &mut host_events);
         self.handle_drag_update(&ctx);
-        self.handle_drag_end(&ctx, &mut events);
-        self.handle_clicks(&ctx, modifiers, &mut events);
-        self.handle_pointer_delta(&ctx, &mut events);
+        self.handle_drag_end(&ctx, &mut local_intents, &mut host_events);
+        self.handle_clicks(&ctx, modifiers, &mut local_intents, &mut host_events);
+        self.handle_pointer_delta(&ctx, &mut local_intents, &mut host_events);
 
         // Drag-Selektion Overlay (ausgelagert in drag.rs)
         draw_drag_selection_overlay(self.drag_selection.as_ref(), ui, response);
@@ -227,7 +239,7 @@ impl InputState {
             (v, selected_node_ids)
         };
 
-        let events_before = events.len();
+        let events_before = local_intents.len();
         let menu_is_open = context_menu::render_context_menu(
             response,
             road_map,
@@ -241,12 +253,12 @@ impl InputState {
             default_priority,
             &variant,
             group_registry,
-            &mut events,
+            &mut local_intents,
         );
 
         // CM hat neuen edit-mode-Intent emittiert → Panel-Position speichern
-        if events.len() > events_before {
-            let has_edit_intent = events[events_before..].iter().any(|e| {
+        if local_intents.len() > events_before {
+            let has_edit_intent = local_intents[events_before..].iter().any(|e| {
                 matches!(
                     e,
                     AppIntent::StreckenteilungAktivieren
@@ -263,9 +275,51 @@ impl InputState {
             self.context_menu_snapshot = None;
         }
 
-        self.handle_scroll_zoom(&ctx, &mut events);
+        self.handle_scroll_zoom(&ctx, &mut local_intents, &mut host_events);
 
-        events
+        ViewportInputEvents {
+            intents: local_intents,
+            host_input_batch: if host_events.is_empty() {
+                None
+            } else {
+                Some(HostViewportInputBatch {
+                    events: host_events,
+                })
+            },
+        }
+    }
+}
+
+pub(crate) fn host_modifiers(modifiers: egui::Modifiers) -> HostInputModifiers {
+    HostInputModifiers {
+        shift: modifiers.shift,
+        alt: modifiers.alt,
+        command: modifiers.command || modifiers.ctrl,
+    }
+}
+
+pub(crate) fn to_viewport_screen_pos(
+    pointer_pos: egui::Pos2,
+    response: &egui::Response,
+) -> [f32; 2] {
+    let local = pointer_pos - response.rect.min;
+    [local.x, local.y]
+}
+
+pub(crate) fn host_pointer_button(button: egui::PointerButton) -> Option<HostPointerButton> {
+    match button {
+        egui::PointerButton::Primary => Some(HostPointerButton::Primary),
+        egui::PointerButton::Middle => Some(HostPointerButton::Middle),
+        egui::PointerButton::Secondary => Some(HostPointerButton::Secondary),
+        _ => None,
+    }
+}
+
+pub(crate) fn host_tap_kind(is_double: bool) -> HostTapKind {
+    if is_double {
+        HostTapKind::Double
+    } else {
+        HostTapKind::Single
     }
 }
 

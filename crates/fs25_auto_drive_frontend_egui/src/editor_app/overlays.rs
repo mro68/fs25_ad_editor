@@ -1,9 +1,9 @@
 //! Overlay-Rendering fuer Gruppen, Boundaries, Vorschau und Distanzen.
 
-use crate::app::{AppIntent, EditorTool};
+use crate::app::{AppIntent, Camera2D};
 use crate::ui;
 use eframe::egui;
-use fs25_auto_drive_host_bridge::build_viewport_overlay_snapshot;
+use fs25_auto_drive_host_bridge::HostActiveTool;
 use glam::Vec2;
 
 use super::EditorApp;
@@ -20,24 +20,27 @@ impl EditorApp {
     ) -> Vec<AppIntent> {
         let mut overlay_events: Vec<AppIntent> = Vec::new();
         let vp = Vec2::new(viewport_size[0], viewport_size[1]);
+        let session_snapshot = self.session.snapshot_owned();
+        let chrome_snapshot = self.session.build_host_chrome_snapshot();
+        let camera = Camera2D {
+            position: Vec2::new(
+                session_snapshot.viewport.camera_position[0],
+                session_snapshot.viewport.camera_position[1],
+            ),
+            zoom: session_snapshot.viewport.zoom,
+        };
 
-        if self.state.editor.active_tool == EditorTool::Route
+        if chrome_snapshot.active_tool == HostActiveTool::Route
             && let Some(hover_pos) = response.hover_pos()
         {
             let local = hover_pos - rect.min;
-            self.last_cursor_world = Some(
-                self.state
-                    .view
-                    .camera
-                    .screen_to_world(Vec2::new(local.x, local.y), vp),
-            );
+            let cursor_world = camera.screen_to_world(Vec2::new(local.x, local.y), vp);
+            self.last_cursor_world = Some(cursor_world);
         }
 
-        let overlay_snapshot = build_viewport_overlay_snapshot(
-            &self.controller,
-            &mut self.state,
-            self.last_cursor_world,
-        );
+        let overlay_snapshot = self
+            .session
+            .build_viewport_overlay_snapshot(self.last_cursor_world);
 
         // ── Tool-Preview-Overlay ─────────────
         if let Some(preview) = overlay_snapshot.route_tool_preview.as_ref() {
@@ -45,10 +48,10 @@ impl EditorApp {
             let ctx = ui::tool_preview::ToolPreviewContext {
                 painter: &painter,
                 rect,
-                camera: &self.state.view.camera,
+                camera: &camera,
                 viewport_size: vp,
                 preview,
-                options: &self.state.options,
+                options: &chrome_snapshot.options,
             };
 
             ui::render_tool_preview(&ctx);
@@ -56,13 +59,7 @@ impl EditorApp {
 
         // ── Paste-Vorschau-Overlay ──────────────
         if let Some(preview) = overlay_snapshot.clipboard_preview.as_ref() {
-            ui::paint_clipboard_snapshot_preview(
-                &ui.painter_at(rect),
-                rect,
-                &self.state.view.camera,
-                vp,
-                preview,
-            );
+            ui::paint_clipboard_snapshot_preview(&ui.painter_at(rect), rect, &camera, vp, preview);
         }
 
         // ── Distanzen-Vorschau-Overlay ──────────
@@ -70,7 +67,7 @@ impl EditorApp {
             ui::paint_preview_polyline(
                 &ui.painter_at(rect),
                 rect,
-                &self.state.view.camera,
+                &camera,
                 vp,
                 &distance_preview.points,
             );
@@ -89,12 +86,12 @@ impl EditorApp {
             let group_overlay_events = ui::render_group_overlays(
                 &painter,
                 rect,
-                &self.state.view.camera,
+                &camera,
                 vp,
                 &overlay_snapshot.group_locks,
                 clicked_pos,
                 ctrl_held,
-                self.state.options.segment_lock_icon_size_px,
+                chrome_snapshot.options.segment_lock_icon_size_px,
             );
             for ev in group_overlay_events {
                 match ev {
@@ -119,11 +116,11 @@ impl EditorApp {
                 ui::render_group_boundary_overlays(
                     &painter,
                     rect,
-                    &self.state.view.camera,
+                    &camera,
                     vp,
                     &overlay_snapshot.group_boundaries,
                     icons,
-                    self.state.options.segment_lock_icon_size_px,
+                    chrome_snapshot.options.segment_lock_icon_size_px,
                 );
             }
         }

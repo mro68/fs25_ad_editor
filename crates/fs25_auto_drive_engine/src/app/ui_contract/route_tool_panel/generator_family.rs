@@ -1,4 +1,5 @@
 use glam::Vec2;
+use serde::{Deserialize, Serialize};
 
 use super::{SegmentConfigPanelAction, SegmentConfigPanelState};
 
@@ -10,7 +11,8 @@ pub struct StraightPanelState {
 }
 
 /// Panel-Aktion des Gerade-Strecke-Tools.
-#[derive(Debug, Clone, Copy, PartialEq)]
+#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
+#[serde(tag = "kind", content = "value", rename_all = "snake_case")]
 pub enum StraightPanelAction {
     /// Gemeinsame Segment-Konfiguration aendern.
     Segment(SegmentConfigPanelAction),
@@ -45,7 +47,8 @@ pub struct SmoothCurvePanelState {
 }
 
 /// Panel-Aktion des Geglaettete-Kurve-Tools.
-#[derive(Debug, Clone, Copy, PartialEq)]
+#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
+#[serde(tag = "kind", content = "value", rename_all = "snake_case")]
 pub enum SmoothCurvePanelAction {
     /// Maximalen Winkel setzen.
     SetMaxAngleDeg(f32),
@@ -62,7 +65,8 @@ pub enum SmoothCurvePanelAction {
 }
 
 /// Seitenwahl fuer Ein-/Ausfahrt des Parkplatz-Tools.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
 pub enum ParkingRampSideChoice {
     /// Linke Seite aus Marker-Sicht.
     Left,
@@ -102,7 +106,8 @@ pub struct ParkingPanelState {
 }
 
 /// Panel-Aktion des Parkplatz-Tools.
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(tag = "kind", content = "value", rename_all = "snake_case")]
 pub enum ParkingPanelAction {
     /// Anzahl der Reihen setzen.
     SetNumRows(usize),
@@ -150,7 +155,8 @@ pub struct BypassPanelState {
 }
 
 /// Panel-Aktion des Ausweichstrecken-Tools.
-#[derive(Debug, Clone, Copy, PartialEq)]
+#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
+#[serde(tag = "kind", content = "value", rename_all = "snake_case")]
 pub enum BypassPanelAction {
     /// Versatz setzen.
     SetOffset(f32),

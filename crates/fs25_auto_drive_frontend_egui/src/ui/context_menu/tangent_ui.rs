@@ -1,7 +1,17 @@
 //! Tangenten-Auswahl und Node-Info-Submenu für das Kontextmenü.
 
-use crate::app::ui_contract::TangentMenuData;
+use crate::app::tool_contract::TangentSource;
 use crate::app::{AppIntent, RoadMap};
+use fs25_auto_drive_host_bridge::{HostTangentMenuSnapshot, HostTangentSource};
+
+fn map_host_tangent_source_to_engine(source: HostTangentSource) -> TangentSource {
+    match source {
+        HostTangentSource::None => TangentSource::None,
+        HostTangentSource::Connection { neighbor_id, angle } => {
+            TangentSource::Connection { neighbor_id, angle }
+        }
+    }
+}
 
 /// Info-Submenu für einen Node (öffnet bei Hover, zeigt Details).
 pub(super) fn render_node_info_submenu(ui: &mut egui::Ui, node_id: u64, road_map: &RoadMap) {
@@ -32,7 +42,7 @@ pub(super) fn render_node_info_submenu(ui: &mut egui::Ui, node_id: u64, road_map
 /// Tangenten-Auswahl für Route-Tool (ComboBox, nicht als Command).
 pub(super) fn render_tangent_selection(
     ui: &mut egui::Ui,
-    data: &TangentMenuData,
+    data: &HostTangentMenuSnapshot,
     events: &mut Vec<AppIntent>,
 ) {
     let has_start = !data.start_options.is_empty();
@@ -51,8 +61,8 @@ pub(super) fn render_tangent_selection(
             let is_sel = option.source == data.current_start;
             if ui.selectable_label(is_sel, &option.label).clicked() {
                 events.push(AppIntent::RouteToolTangentSelected {
-                    start: option.source,
-                    end: data.current_end,
+                    start: map_host_tangent_source_to_engine(option.source),
+                    end: map_host_tangent_source_to_engine(data.current_end),
                 });
                 ui.close();
             }
@@ -69,8 +79,8 @@ pub(super) fn render_tangent_selection(
             let is_sel = option.source == data.current_end;
             if ui.selectable_label(is_sel, &option.label).clicked() {
                 events.push(AppIntent::RouteToolTangentSelected {
-                    start: data.current_start,
-                    end: option.source,
+                    start: map_host_tangent_source_to_engine(data.current_start),
+                    end: map_host_tangent_source_to_engine(option.source),
                 });
                 ui.close();
             }
