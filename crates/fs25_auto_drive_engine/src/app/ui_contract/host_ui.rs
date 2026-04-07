@@ -133,7 +133,7 @@ impl HostUiSnapshot {
     /// Liefert den Route-Tool-Panelzustand, falls sichtbar.
     pub fn route_tool_panel_state(&self) -> Option<&RouteToolPanelState> {
         self.panels.iter().find_map(|panel| match panel {
-            PanelState::RouteTool(state) => Some(state),
+            PanelState::RouteTool(state) => Some(state.as_ref()),
             _ => None,
         })
     }
@@ -159,7 +159,7 @@ impl HostUiSnapshot {
 #[derive(Debug, Clone)]
 pub enum PanelState {
     /// Route-Tool-Konfigurationsfenster.
-    RouteTool(RouteToolPanelState),
+    RouteTool(Box<RouteToolPanelState>),
     /// Optionen-Dialog als host-neutrales Panel.
     Options(OptionsPanelState),
     /// Command-Palette-Zustand.

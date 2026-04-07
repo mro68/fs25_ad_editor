@@ -39,7 +39,7 @@ pub fn build_host_ui_snapshot(state: &AppState) -> HostUiSnapshot {
     }));
 
     if let Some(route_tool_panel) = state.editor.route_tool_panel_state() {
-        panels.push(PanelState::RouteTool(route_tool_panel));
+        panels.push(PanelState::RouteTool(Box::new(route_tool_panel)));
     }
 
     HostUiSnapshot { panels }
