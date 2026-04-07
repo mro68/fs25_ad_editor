@@ -105,8 +105,6 @@ impl EditorApp {
     ) -> Vec<CollectedEvent> {
         let mut events = Vec::new();
         let should_close_floating_menu = {
-            let state = self.session.app_state();
-
             ui::status::render_status_bar_inside(top_ui, host_chrome_snapshot);
             events.extend(
                 ui::menu::render_menu_inside(top_ui, host_chrome_snapshot)
@@ -123,7 +121,6 @@ impl EditorApp {
             events.extend(
                 ui::defaults_panel::render_route_defaults_panel_inside(
                     top_ui,
-                    state,
                     host_chrome_snapshot,
                 )
                 .into_iter()
