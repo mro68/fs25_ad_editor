@@ -72,7 +72,10 @@ mod tests {
         let cp_state = snapshot
             .command_palette_state()
             .expect("CommandPalette-Panel muss im Snapshot enthalten sein");
-        assert!(cp_state.visible, "show_command_palette=true muss im Snapshot sichtbar sein");
+        assert!(
+            cp_state.visible,
+            "show_command_palette=true muss im Snapshot sichtbar sein"
+        );
     }
 
     /// Prüft, dass build_host_ui_snapshot die aktuellen EditorOptions korrekt
