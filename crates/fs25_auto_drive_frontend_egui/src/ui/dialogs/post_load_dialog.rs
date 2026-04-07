@@ -1,13 +1,14 @@
 //! Post-Load-Dialog: zeigt automatisch erkannte Heightmap und passende Map-Mod-ZIPs.
 
-use crate::app::{AppIntent, UiState};
+use crate::app::AppIntent;
+use fs25_auto_drive_host_bridge::HostLocalDialogState;
 
 /// Zeigt den Post-Load-Dialog nach dem Laden einer XML-Datei.
 ///
 /// Informiert den Benutzer ueber automatisch erkannte Heightmap und bietet
 /// die Moeglichkeit, eine Uebersichtskarte aus einem passenden Map-Mod-ZIP
 /// zu generieren.
-pub fn show_post_load_dialog(ctx: &egui::Context, ui_state: &mut UiState) -> Vec<AppIntent> {
+pub fn show_post_load_dialog(ctx: &egui::Context, ui_state: &mut HostLocalDialogState) -> Vec<AppIntent> {
     let mut events = Vec::new();
 
     if !ui_state.post_load_dialog.visible {
