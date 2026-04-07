@@ -1,5 +1,6 @@
 //! Haupt-App und Event-Loop-Integration fuer den Editor.
 
+mod dialog_collector;
 mod event_collection;
 mod helpers;
 mod overlays;
