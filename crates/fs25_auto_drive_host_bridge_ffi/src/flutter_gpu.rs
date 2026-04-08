@@ -17,6 +17,7 @@
 //! Alle Funktionen sind `extern "C"` und koennen von C/Dart aufgerufen werden.
 //! Der Aufrufer ist fuer korrekte Pointer-Gueltigkeit und Lebensdauer verantwortlich.
 
+use crate::flutter_api::FlutterSessionHandle;
 use crate::{clear_last_error, set_last_error};
 use anyhow::{anyhow, Result};
 use fs25_auto_drive_host_bridge::HostBridgeSession;
@@ -24,7 +25,7 @@ use fs25_auto_drive_render_wgpu::{
     external_texture::vulkan_linux::VulkanDmaBufTexture, ExternalTextureExport,
     SharedTextureRuntime,
 };
-use std::sync::Mutex;
+use std::sync::{Arc, Mutex};
 
 /// Interner GPU-Runtime-Zustand fuer Flutter-Integration.
 ///
@@ -39,11 +40,23 @@ pub struct GpuRuntimeHandle {
     runtime: SharedTextureRuntime,
     external_texture: VulkanDmaBufTexture,
     size: [u32; 2],
-    session: Mutex<HostBridgeSession>,
+    session: Arc<Mutex<HostBridgeSession>>,
 }
 
 impl GpuRuntimeHandle {
     fn new(width: u32, height: u32) -> Result<Self> {
+        Self::new_with_session(
+            Arc::new(Mutex::new(HostBridgeSession::new())),
+            width,
+            height,
+        )
+    }
+
+    fn new_with_session(
+        session: Arc<Mutex<HostBridgeSession>>,
+        width: u32,
+        height: u32,
+    ) -> Result<Self> {
         let instance = fs25_auto_drive_render_wgpu::create_vulkan_instance();
         // HINWEIS: pollster::block_on blockiert den aufrufenden Thread fuer die gesamte
         // GPU-Adapter-Initialisierung. Dies ist einmaliger Init-Code (nicht pro Frame).
@@ -79,7 +92,7 @@ impl GpuRuntimeHandle {
             runtime,
             external_texture,
             size: [width, height],
-            session: Mutex::new(HostBridgeSession::new()),
+            session,
         })
     }
 }
@@ -116,6 +129,34 @@ pub extern "C" fn fs25ad_gpu_runtime_new(width: u32, height: u32) -> *mut GpuRun
             std::ptr::null_mut()
         }
     }
+}
+
+/// Erzeugt einen GPU-Runtime-Handle, der dieselbe Session wie die Flutter-Control-Plane teilt.
+///
+/// Gibt einen opaques Handle zurueck der mit `fs25ad_gpu_runtime_dispose` freizugeben ist.
+/// Gibt bei Fehler `NULL` zurueck; Fehlertext via `fs25ad_host_bridge_last_error_message`.
+///
+/// # Safety
+/// `session_handle` muss auf einen gueltigen `FlutterSessionHandle` zeigen.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn fs25ad_gpu_runtime_new_with_session(
+    session_handle: *const FlutterSessionHandle,
+    width: u32,
+    height: u32,
+) -> *mut GpuRuntimeHandle {
+    ffi_guard_ptr!({
+        if session_handle.is_null() {
+            return Err(anyhow!(
+                "fs25ad_gpu_runtime_new_with_session: session_handle must not be null"
+            ));
+        }
+
+        // SAFETY: Der Aufrufer garantiert einen gueltigen FlutterSessionHandle-Pointer
+        // mit ausreichender Lifetime fuer das Klonen des internen Arc-Owners.
+        let shared_session = unsafe { (&*session_handle).session_arc() };
+        GpuRuntimeHandle::new_with_session(shared_session, width, height)
+            .map(|handle| Box::into_raw(Box::new(handle)))
+    })
 }
 
 /// Rendert den naechsten Frame direkt in die exportierbare Vulkan-Texture.
@@ -229,6 +270,15 @@ mod tests {
     fn test_resize_rejects_null_handle() {
         let result = fs25ad_gpu_runtime_resize(std::ptr::null_mut(), 640, 480);
         assert!(!result, "Null-Pointer muss false zurueckgeben");
+    }
+
+    /// Prueft, dass fs25ad_gpu_runtime_new_with_session mit Null-Session null zurueckgibt.
+    #[test]
+    fn test_new_with_session_rejects_null_handle() {
+        // SAFETY: Testaufruf mit Null-Session-Pointer; die Funktion muss den Pointer vor jeder
+        // weiteren Nutzung validieren und NULL zurueckgeben.
+        let handle = unsafe { fs25ad_gpu_runtime_new_with_session(std::ptr::null(), 640, 480) };
+        assert!(handle.is_null(), "Null-Session muss NULL zurueckgeben");
     }
 
     /// Prueft, dass fs25ad_gpu_runtime_export_texture mit Null-Handle false zurueckgibt.
