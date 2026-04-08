@@ -63,10 +63,8 @@ impl VulkanDmaBufTexture {
         let raw_instance = hal_device.shared_instance().raw_instance();
         let physical_device = hal_device.raw_physical_device();
 
-        let mut external_image_info =
-            vk::ExternalMemoryImageCreateInfo::default().handle_types(
-                vk::ExternalMemoryHandleTypeFlags::DMA_BUF_EXT,
-            );
+        let mut external_image_info = vk::ExternalMemoryImageCreateInfo::default()
+            .handle_types(vk::ExternalMemoryHandleTypeFlags::DMA_BUF_EXT);
         let image_create_info = vk::ImageCreateInfo::default()
             .image_type(vk::ImageType::TYPE_2D)
             .format(export_vk_format()?)
@@ -91,10 +89,12 @@ impl VulkanDmaBufTexture {
 
         // SAFETY: `image_create_info` referenziert nur lokale Builder-Daten, die bis zum
         // Vulkan-Aufruf leben. Das Device stammt direkt aus dem zugehoerigen HAL-Backend.
-        let image = unsafe { raw_device.create_image(&image_create_info, None) }
-            .map_err(|error| ExternalTextureError::CreationFailed(format!(
-                "VkImage fuer DMA-BUF-Export konnte nicht erzeugt werden: {error}"
-            )))?;
+        let image =
+            unsafe { raw_device.create_image(&image_create_info, None) }.map_err(|error| {
+                ExternalTextureError::CreationFailed(format!(
+                    "VkImage fuer DMA-BUF-Export konnte nicht erzeugt werden: {error}"
+                ))
+            })?;
 
         // SAFETY: Das Image wurde unmittelbar zuvor auf demselben Device erzeugt.
         let memory_requirements = unsafe { raw_device.get_image_memory_requirements(image) };
@@ -114,10 +114,8 @@ impl VulkanDmaBufTexture {
             }
         };
 
-        let mut export_allocate_info =
-            vk::ExportMemoryAllocateInfo::default().handle_types(
-                vk::ExternalMemoryHandleTypeFlags::DMA_BUF_EXT,
-            );
+        let mut export_allocate_info = vk::ExportMemoryAllocateInfo::default()
+            .handle_types(vk::ExternalMemoryHandleTypeFlags::DMA_BUF_EXT);
         let mut dedicated_allocate_info = vk::MemoryDedicatedAllocateInfo::default().image(image);
         let memory_allocate_info = vk::MemoryAllocateInfo::default()
             .allocation_size(memory_requirements.size)
@@ -375,9 +373,8 @@ fn find_memory_type_index(
 ) -> Option<u32> {
     // SAFETY: `physical_device` stammt aus demselben Vulkan-Instance-Objekt; der Aufruf liest nur
     // statische Memory-Properties des Adapters.
-    let memory_properties = unsafe {
-        raw_instance.get_physical_device_memory_properties(physical_device)
-    };
+    let memory_properties =
+        unsafe { raw_instance.get_physical_device_memory_properties(physical_device) };
 
     memory_properties
         .memory_types_as_slice()
@@ -413,7 +410,10 @@ fn query_drm_modifier(
     image: vk::Image,
     enabled_extensions: &[&'static CStr],
 ) -> u64 {
-    if !has_extension(enabled_extensions, ash::ext::image_drm_format_modifier::NAME) {
+    if !has_extension(
+        enabled_extensions,
+        ash::ext::image_drm_format_modifier::NAME,
+    ) {
         return DRM_FORMAT_MOD_INVALID;
     }
 
@@ -423,10 +423,8 @@ fn query_drm_modifier(
     // SAFETY: Das Image wurde auf diesem Device erzeugt; die Query liest nur Metadaten aus dem
     // Treiber und veraendert weder Image noch Allocation.
     match unsafe {
-        drm_modifier_loader.get_image_drm_format_modifier_properties(
-            image,
-            &mut modifier_properties,
-        )
+        drm_modifier_loader
+            .get_image_drm_format_modifier_properties(image, &mut modifier_properties)
     } {
         Ok(()) => modifier_properties.drm_format_modifier,
         Err(_) => DRM_FORMAT_MOD_INVALID,
@@ -537,7 +535,10 @@ mod tests {
             }
         };
 
-        assert_ne!(first_fd, second_fd, "Jeder Export muss einen neuen FD liefern");
+        assert_ne!(
+            first_fd, second_fd,
+            "Jeder Export muss einen neuen FD liefern"
+        );
 
         // SAFETY: Beide FDs wurden ueber `export_descriptor()` an den Test uebertragen und werden
         // genau einmal in `OwnedFd` ueberfuehrt, damit sie am Testende geschlossen werden.
