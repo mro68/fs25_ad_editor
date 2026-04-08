@@ -1,7 +1,7 @@
 use crate::app::ui_contract::DialogRequest;
 use crate::shared::{
-    DedupDialogState, DistanzenState, FloatingMenuState, GroupSettingsPopupState,
-    MarkerDialogState, OverviewOptionsDialogState, PostLoadDialogState, SaveOverviewDialogState,
+    DedupDialogState, DistanzenState, GroupSettingsPopupState, MarkerDialogState,
+    OverviewOptionsDialogState, PostLoadDialogState, SaveOverviewDialogState,
     TraceAllFieldsDialogState,
 };
 
@@ -20,21 +20,13 @@ pub struct ZipBrowserState {
 
 /// UI-bezogener Anwendungszustand der Engine.
 ///
-/// Enthält fachliche Felder (Dialog-Queues, Dateipfade, Status, Workflow-Flags)
-/// sowie Sichtbarkeits-Requests für Chrome-Dialoge (werden von der HostBridge
-/// per Drain in `HostLocalDialogState` gespiegelt).
+/// Enthaelt fachliche Felder (Dialog-Queues, Dateipfade, Status, Workflow-Flags)
+/// sowie Chrome-Sichtbarkeits-Requests fuer Chrome-Dialoge (werden von der
+/// HostBridge per `drain_engine_requests()` verarbeitet).
 #[derive(Default)]
 pub struct EngineUiState {
-    /// Ausstehende host-native Dialog-Anforderungen (Datei-/Pfad-Dialoge).
+    /// Ausstehende Dialog-Anforderungen (Datei-/Pfad-Dialoge und Chrome-Requests).
     pub dialog_requests: Vec<DialogRequest>,
-    /// Ob die Command-Palette angezeigt werden soll
-    pub show_command_palette: bool,
-    /// Ob der Optionen-Dialog angezeigt wird.
-    pub show_options_dialog: bool,
-    /// Optionales schwebendes Menue an der Mausposition.
-    pub floating_menu: Option<FloatingMenuState>,
-    /// Ob die Heightmap-Warnung angezeigt werden soll
-    pub show_heightmap_warning: bool,
     /// Ob die Heightmap-Warnung fuer diese Save-Operation bereits bestaetigt wurde
     pub heightmap_warning_confirmed: bool,
     /// Pfad fuer Save-Operation nach Heightmap-Warnung
@@ -63,8 +55,6 @@ pub struct EngineUiState {
     pub trace_all_fields_dialog: TraceAllFieldsDialogState,
     /// Segment-Einstellungs-Popup (erscheint nach Doppelklick auf Segment-Node)
     pub group_settings_popup: GroupSettingsPopupState,
-    /// Bestaetigungsdialog zum Aufloesen einer Gruppe.
-    pub confirm_dissolve_group_id: Option<u64>,
 }
 
 impl EngineUiState {
@@ -72,10 +62,6 @@ impl EngineUiState {
     pub fn new() -> Self {
         Self {
             dialog_requests: Vec::new(),
-            show_command_palette: false,
-            show_options_dialog: false,
-            floating_menu: None,
-            show_heightmap_warning: false,
             heightmap_warning_confirmed: false,
             pending_save_path: None,
             current_file_path: None,
@@ -90,7 +76,6 @@ impl EngineUiState {
             distanzen: DistanzenState::default(),
             trace_all_fields_dialog: TraceAllFieldsDialogState::default(),
             group_settings_popup: GroupSettingsPopupState::default(),
-            confirm_dissolve_group_id: None,
         }
     }
 

@@ -1,7 +1,9 @@
 use anyhow::Result;
 use fs25_auto_drive_engine::app::projections as engine_projections;
 use fs25_auto_drive_engine::app::state::DistanzenState;
-use fs25_auto_drive_engine::app::ui_contract::{HostUiSnapshot, ViewportOverlaySnapshot};
+use fs25_auto_drive_engine::app::ui_contract::{
+    DialogRequest, HostUiSnapshot, PanelState, ViewportOverlaySnapshot,
+};
 use fs25_auto_drive_engine::app::{
     AppController, AppIntent, AppState, Camera2D, ConnectionDirection, ConnectionPriority,
     EditorTool, FloatingMenuKind, FloatingMenuState, GroupEditState, GroupRegistry, RoadMap,
@@ -30,15 +32,15 @@ fn map_active_tool(tool: EditorTool) -> HostActiveTool {
     }
 }
 
-fn build_snapshot(state: &AppState) -> HostSessionSnapshot {
+fn build_snapshot(state: &AppState, chrome: &HostLocalDialogState) -> HostSessionSnapshot {
     HostSessionSnapshot {
         has_map: state.road_map.is_some(),
         node_count: state.node_count(),
         connection_count: state.connection_count(),
         active_tool: map_active_tool(state.editor.active_tool),
         status_message: state.ui.status_message.clone(),
-        show_command_palette: state.ui.show_command_palette,
-        show_options_dialog: state.ui.show_options_dialog,
+        show_command_palette: chrome.show_command_palette,
+        show_options_dialog: chrome.show_options_dialog,
         can_undo: state.can_undo(),
         can_redo: state.can_redo(),
         pending_dialog_request_count: state.ui.dialog_requests.len(),
@@ -157,13 +159,16 @@ pub struct HostBridgeSession {
     snapshot_dirty: bool,
     /// Host-lokaler Chrome- und Dialog-Sichtbarkeitszustand.
     chrome_state: HostLocalDialogState,
+    /// Puffer fuer PickPath-Requests, die aus dem Engine-Queue gefiltert wurden.
+    pending_dialog_requests: Vec<HostDialogRequest>,
 }
 
 impl HostBridgeSession {
     /// Erstellt eine neue Host-Bridge-Session mit leerem Engine-State.
     pub fn new() -> Self {
         let state = AppState::new();
-        let snapshot_cache = build_snapshot(&state);
+        let chrome = HostLocalDialogState::new();
+        let snapshot_cache = build_snapshot(&state, &chrome);
 
         Self {
             controller: AppController::new(),
@@ -171,7 +176,8 @@ impl HostBridgeSession {
             viewport_input_state: HostViewportInputState::default(),
             snapshot_cache,
             snapshot_dirty: false,
-            chrome_state: HostLocalDialogState::new(),
+            chrome_state: chrome,
+            pending_dialog_requests: Vec::new(),
         }
     }
 
@@ -189,6 +195,7 @@ impl HostBridgeSession {
         )?;
         if handled {
             self.snapshot_dirty = true;
+            self.drain_engine_requests();
             self.sync_chrome_from_engine();
         }
         Ok(())
@@ -202,6 +209,7 @@ impl HostBridgeSession {
     pub fn apply_intent(&mut self, intent: AppIntent) -> Result<()> {
         self.controller.handle_intent(&mut self.state, intent)?;
         self.snapshot_dirty = true;
+        self.drain_engine_requests();
         self.sync_chrome_from_engine();
         Ok(())
     }
@@ -365,9 +373,10 @@ impl HostBridgeSession {
     ///
     /// Dies ist die kanonische oeffentliche Dialog-Drain-Seam der Bridge fuer
     /// Hosts ohne direkten Zugriff auf `AppController` und `AppState`.
+    /// Chrome-Sichtbarkeits-Requests werden hier NICHT zurueckgegeben — sie
+    /// werden durch `drain_engine_requests()` direkt in `chrome_state` verarbeitet.
     pub fn take_dialog_requests(&mut self) -> Vec<HostDialogRequest> {
-        let requests =
-            crate::dispatch::take_host_dialog_requests(&self.controller, &mut self.state);
+        let requests = std::mem::take(&mut self.pending_dialog_requests);
         if !requests.is_empty() {
             self.snapshot_dirty = true;
         }
@@ -427,21 +436,39 @@ impl HostBridgeSession {
         &self,
         viewport_size: [f32; 2],
     ) -> HostViewportGeometrySnapshot {
-        crate::dispatch::build_viewport_geometry_snapshot(&self.state, viewport_size)
+        crate::dispatch::build_viewport_geometry_snapshot(
+            &self.state,
+            viewport_size,
+        )
     }
 
     /// Baut den host-neutralen Host-UI-Snapshot fuer sichtbare Panels.
     ///
     /// Host-native Datei- und Pfaddialoge laufen bewusst nicht ueber diesen
     /// Snapshot, sondern separat ueber `take_dialog_requests()`.
+    /// Die Panel-Sichtbarkeit (`show_command_palette`, `show_options_dialog`)
+    /// stammt aus dem `chrome_state` und wird hier eingefuegt.
     pub fn build_host_ui_snapshot(&self) -> HostUiSnapshot {
-        engine_projections::build_host_ui_snapshot(&self.state)
+        let mut snapshot = engine_projections::build_host_ui_snapshot(&self.state);
+        for panel in &mut snapshot.panels {
+            match panel {
+                PanelState::CommandPalette(state) => {
+                    state.visible = self.chrome_state.show_command_palette;
+                }
+                PanelState::Options(state) => {
+                    state.visible = self.chrome_state.show_options_dialog;
+                }
+                _ => {}
+            }
+        }
+        snapshot
     }
 
     /// Baut den host-neutralen Chrome-Snapshot fuer Menues, Defaults und Status.
     ///
     /// Die Felder `show_command_palette` und `show_options_dialog` stammen aus
-    /// `chrome_state`, das per Drain nach jedem Engine-Intent synchronisiert wird.
+    /// `chrome_state`, das per `drain_engine_requests()` nach jedem Engine-Intent
+    /// aktualisiert wird.
     pub fn build_host_chrome_snapshot(&self) -> HostChromeSnapshot {
         let mut snapshot = crate::dispatch::build_host_chrome_snapshot(&self.state);
         snapshot.show_command_palette = self.chrome_state.show_command_palette;
@@ -470,49 +497,77 @@ impl HostBridgeSession {
             return;
         }
 
-        self.snapshot_cache = build_snapshot(&self.state);
+        self.snapshot_cache = build_snapshot(&self.state, &self.chrome_state);
         self.snapshot_dirty = false;
     }
 
-    /// Spiegelt Engine-UI-Request-Flags in den host-lokalen Chrome-State.
+    /// Verarbeitet ausstehende Engine-Requests: Chrome-Varianten werden in
+    /// `chrome_state` ausgefuehrt, `PickPath`-Varianten in `pending_dialog_requests`
+    /// gepuffert (fuer spaeteres `take_dialog_requests()`).
+    fn drain_engine_requests(&mut self) {
+        let requests = self.controller.take_dialog_requests(&mut self.state);
+        let mut chrome_dirty = false;
+        for req in requests {
+            match req {
+                DialogRequest::ToggleCommandPalette => {
+                    self.chrome_state.show_command_palette =
+                        !self.chrome_state.show_command_palette;
+                    chrome_dirty = true;
+                }
+                DialogRequest::OpenOptionsDialog => {
+                    self.chrome_state.show_options_dialog = true;
+                    chrome_dirty = true;
+                }
+                DialogRequest::CloseOptionsDialog => {
+                    self.chrome_state.show_options_dialog = false;
+                    chrome_dirty = true;
+                }
+                DialogRequest::ShowHeightmapWarning => {
+                    self.chrome_state.show_heightmap_warning = true;
+                    chrome_dirty = true;
+                }
+                DialogRequest::DismissHeightmapWarning => {
+                    self.chrome_state.show_heightmap_warning = false;
+                    chrome_dirty = true;
+                }
+                DialogRequest::ShowDissolveGroupConfirm(id) => {
+                    self.chrome_state.confirm_dissolve_group_id = Some(id);
+                    chrome_dirty = true;
+                }
+                DialogRequest::PickPath {
+                    kind,
+                    suggested_file_name,
+                } => {
+                    self.pending_dialog_requests
+                        .push(crate::dispatch::map_engine_dialog_request(
+                            DialogRequest::PickPath {
+                                kind,
+                                suggested_file_name,
+                            },
+                        ));
+                }
+            }
+        }
+        if chrome_dirty {
+            self.chrome_state.mark_dirty();
+            self.snapshot_dirty = true;
+        }
+    }
+
+    /// Spiegelt Engine-UI-Daten-Dialoge in den host-lokalen Chrome-State.
     ///
-    /// Wird nach jedem `apply_action()`/`apply_intent()` aufgerufen, damit
-    /// `chrome_state` immer die aktuellen Engine-Werte fuer sichtbarkeits-relevante
-    /// Felder enthaelt. Fuer Dialoge mit nutzer-mutierbaren Daten wird ein
-    /// Transition-basiertes Sync verwendet: Beim Oeffen werden Daten kopiert,
-    /// waehrend der Dialog offen ist wird der `chrome_state` NICHT ueberschrieben.
+    /// Wird nach jedem `apply_action()`/`apply_intent()` (nach `drain_engine_requests()`)
+    /// aufgerufen. Sichtbarkeits-Flags (show_command_palette etc.) werden hier
+    /// NICHT mehr gespiegelt -- sie werden per `drain_engine_requests()` aus
+    /// `DialogRequest`-Varianten in `chrome_state` gesetzt.
+    /// Fuer Dialoge mit nutzer-mutierbaren Daten wird ein Transition-basiertes
+    /// Sync verwendet: Beim Oeffen werden Daten kopiert, waehrend der Dialog
+    /// offen ist wird die `chrome_state`-Kopie NICHT ueberschrieben.
     fn sync_chrome_from_engine(&mut self) {
         let ui = &self.state.ui;
 
-        // Einfache Spiegel-Felder (keine Nutzer-Mutation im Frontend)
-        let new_cmd = ui.show_command_palette;
-        let new_opts = ui.show_options_dialog;
-        let new_hwarn = ui.show_heightmap_warning;
-        let new_hwconf = ui.heightmap_warning_confirmed;
-        let new_diss = ui.confirm_dissolve_group_id;
-
         let mut dirty = false;
 
-        if self.chrome_state.show_command_palette != new_cmd {
-            self.chrome_state.show_command_palette = new_cmd;
-            dirty = true;
-        }
-        if self.chrome_state.show_options_dialog != new_opts {
-            self.chrome_state.show_options_dialog = new_opts;
-            dirty = true;
-        }
-        if self.chrome_state.show_heightmap_warning != new_hwarn {
-            self.chrome_state.show_heightmap_warning = new_hwarn;
-            dirty = true;
-        }
-        if self.chrome_state.heightmap_warning_confirmed != new_hwconf {
-            self.chrome_state.heightmap_warning_confirmed = new_hwconf;
-            dirty = true;
-        }
-        if self.chrome_state.confirm_dissolve_group_id != new_diss {
-            self.chrome_state.confirm_dissolve_group_id = new_diss;
-            dirty = true;
-        }
 
         // Dedup-Dialog: read-only im Frontend → immer spiegeln
         if self.chrome_state.dedup_dialog.visible != ui.dedup_dialog.visible

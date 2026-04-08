@@ -317,13 +317,15 @@ pub(super) fn map_engine_dialog_request_kind(kind: DialogRequestKind) -> HostDia
     }
 }
 
-pub(super) fn map_engine_dialog_request(request: DialogRequest) -> HostDialogRequest {
+pub(crate) fn map_engine_dialog_request(request: DialogRequest) -> HostDialogRequest {
     let DialogRequest::PickPath {
         kind,
         suggested_file_name,
     } = request
     else {
-        unreachable!("map_engine_dialog_request darf nur fuer PickPath-Anfragen aufgerufen werden")
+        unreachable!(
+            "map_engine_dialog_request darf nur fuer PickPath-Anfragen aufgerufen werden"
+        )
     };
     HostDialogRequest {
         kind: map_engine_dialog_request_kind(kind),
