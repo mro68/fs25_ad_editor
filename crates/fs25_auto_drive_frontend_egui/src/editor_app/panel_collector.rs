@@ -52,6 +52,7 @@ impl EditorApp {
         let route_tool_panel = host_ui_snapshot.route_tool_panel_state().cloned();
         let panel_state = self.session.panel_properties_state_mut();
         let distance_wheel_step_m = numeric_distance_wheel_step(panel_state.options);
+        let lang = panel_state.options.language;
 
         // Rechte Sidebar: Marker + Eigenschaften untereinander, einklappbar
         // (muss vor CentralPanel aufgerufen werden)
@@ -119,6 +120,7 @@ impl EditorApp {
                 group_record,
                 Some(panel_state.tool_edit_store),
                 panel_state.options,
+                lang,
             )
             .into_iter()
             .map(map_intent_to_collected_event),

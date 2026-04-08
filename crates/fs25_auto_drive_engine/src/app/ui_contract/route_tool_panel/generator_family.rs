@@ -2,6 +2,7 @@ use glam::Vec2;
 use serde::{Deserialize, Serialize};
 
 use super::{SegmentConfigPanelAction, SegmentConfigPanelState};
+use crate::shared::I18nKey;
 
 /// Panelzustand des Gerade-Strecke-Tools.
 #[derive(Debug, Clone, PartialEq)]
@@ -101,8 +102,8 @@ pub struct ParkingPanelState {
     pub rotation_step_deg: f32,
     /// Aktueller Rotationswinkel in Grad.
     pub angle_deg: Option<f32>,
-    /// Optionaler Bedienhinweis.
-    pub hint_text: Option<String>,
+    /// Optionaler Bedienhinweis (I18n-Schluessel).
+    pub hint_text: Option<I18nKey>,
 }
 
 /// Panel-Aktion des Parkplatz-Tools.

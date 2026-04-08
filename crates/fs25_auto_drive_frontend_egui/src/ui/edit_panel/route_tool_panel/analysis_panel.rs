@@ -15,10 +15,7 @@ pub(super) fn render_field_boundary_panel(
     if let Some(field_id) = state.selected_field_id {
         ui.label(format!("Feld #{field_id}"));
     } else {
-        ui.colored_label(
-            egui::Color32::GRAY,
-            "Kein Feld ausgewaehlt — in ein Feld klicken",
-        );
+        ui.colored_label(egui::Color32::GRAY, "Kein Feld ausgewaehlt — in ein Feld klicken");
     }
 
     ui.separator();
@@ -159,6 +156,7 @@ pub(super) fn render_field_path_panel(
     ui: &mut egui::Ui,
     state: &FieldPathPanelState,
     wheel_enabled: bool,
+    lang: Language,
     events: &mut Vec<AppIntent>,
 ) {
     ui.horizontal(|ui| {
@@ -187,11 +185,11 @@ pub(super) fn render_field_path_panel(
     });
 
     ui.separator();
-    render_field_path_selection_summary(ui, &state.side1);
+    render_field_path_selection_summary(ui, &state.side1, lang);
 
     if let Some(side2) = state.side2.as_ref() {
         ui.separator();
-        render_field_path_selection_summary(ui, side2);
+        render_field_path_selection_summary(ui, side2, lang);
     }
 
     ui.separator();
@@ -313,10 +311,7 @@ pub(super) fn render_route_offset_panel(
     events: &mut Vec<AppIntent>,
 ) {
     if !state.has_chain {
-        ui.colored_label(
-            egui::Color32::GRAY,
-            "Kette selektieren und Route-Tool neu aktivieren.",
-        );
+        ui.colored_label(egui::Color32::GRAY, "Kette selektieren und Route-Tool neu aktivieren.");
         return;
     }
 
@@ -556,11 +551,7 @@ pub(super) fn render_color_path_sampling_info(ui: &mut egui::Ui, state: &ColorPa
         });
         ui.label(format!(
             "{}: {} Farben",
-            if state.exact_color_match {
-                "Exakte Farben"
-            } else {
-                "Palette"
-            },
+            if state.exact_color_match { "Exakte Farben" } else { "Palette" },
             state.palette_colors.len()
         ));
         ui.horizontal_wrapped(|ui| {
