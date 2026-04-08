@@ -268,7 +268,7 @@ Low-Level C-FFI fuer den GPU-Hot-Path auf Linux/Vulkan.
 
 ### Typ: `GpuRuntimeHandle`
 
-Interner GPU-Runtime-Zustand: haelt `wgpu::Instance`, `Adapter`, `Device`, `Queue`, `SharedTextureRuntime`, `VulkanDmaBufTexture` und eine interne `HostBridgeSession`. Der Renderer-Zustand schreibt pro Frame direkt in die exportierbare Vulkan-TextureView.
+Interner GPU-Runtime-Zustand: haelt `wgpu::Instance`, `Adapter`, `Device`, `Queue`, `SharedTextureRuntime`, `VulkanDmaBufTexture` und einen `Arc<Mutex<HostBridgeSession>>`. Der Renderer-Zustand schreibt pro Frame direkt in die exportierbare Vulkan-TextureView.
 
 ### Lebenszyklus
 
@@ -280,11 +280,21 @@ fs25ad_gpu_runtime_new()
   → fs25ad_gpu_runtime_dispose()    // am Ende
 ```
 
+Alternativ fuer den integrierten Flutter-Pfad:
+
+```text
+flutter_session_new()
+	→ fs25ad_gpu_runtime_new_with_session(session, width, height)
+	→ flutter_session_apply_action(...)
+	→ fs25ad_gpu_runtime_render(runtime)
+```
+
 ### C-FFI-Funktionen
 
 | Symbol | Zweck |
 |---|---|
 | `fs25ad_gpu_runtime_new(width, height) -> *mut GpuRuntimeHandle` | Erzeugt GPU-Runtime mit Vulkan-Backend. NULL bei Fehler |
+| `fs25ad_gpu_runtime_new_with_session(session_handle, width, height) -> *mut GpuRuntimeHandle` | Erzeugt GPU-Runtime mit geteilter `HostBridgeSession` aus der Flutter-Control-Plane |
 | `fs25ad_gpu_runtime_render(handle) -> bool` | Rendert den aktuellen Frame direkt in die exportierbare Vulkan-Texture |
 | `fs25ad_gpu_runtime_export_texture(handle, out_fd) -> bool` | Exportiert den DMA-BUF File-Descriptor (unsafe) |
 | `fs25ad_gpu_runtime_resize(handle, width, height) -> bool` | Passt die Render-Target-Groesse an |
@@ -297,6 +307,7 @@ C-kompatible Repr des plattformspezifischen Texture-Deskriptors fuer den Export 
 ### Status
 
 - GPU-Runtime-Erzeugung (Vulkan-Instanz, Device, Queue) funktional
+- Session-Sharing zwischen `FlutterSessionHandle` und `GpuRuntimeHandle` ueber `Arc<Mutex<HostBridgeSession>>` additiv verfuegbar
 - Rendern direkt in die exportierbare Vulkan-Texture funktional
 - DMA-BUF-Export ueber Vulkan External Memory (`vkGetMemoryFdKHR`) funktional
 - Panic-Isolation ueber `ffi_guard_bool!` / `catch_unwind`

@@ -69,7 +69,7 @@ Die Flutter-Backend-Library erweitert die bestehende Host-Bridge-FFI- und Render
 - **Kein neuer Layer:** Flutter-Code lebt ausschliesslich in `fs25_auto_drive_host_bridge_ffi` (Control-Plane + GPU-FFI) und `fs25_auto_drive_render_wgpu` (Texture-Export). Keine neue Crate.
 - **Feature-Gating:** Alle Flutter-spezifischen Pfade sind hinter `flutter` bzw. `flutter-linux` Feature-Flags versteckt. Ohne aktives Feature aendert sich am Build nichts.
 - **Control-Plane:** `FlutterSessionHandle` (Arc<Mutex<HostBridgeSession>>) nutzt dieselbe kanonische Session-Surface wie C-ABI und egui. Kein zweiter Session-Vertrag.
-- **GPU-Pfad:** `GpuRuntimeHandle` in `flutter_gpu.rs` erzeugt eine eigene Vulkan-exklusive wgpu-Instanz via `create_vulkan_instance()` und haelt Device/Queue/Renderer/ExternalTexture als opaken C-FFI-Handle.
+- **GPU-Pfad:** `GpuRuntimeHandle` in `flutter_gpu.rs` erzeugt eine eigene Vulkan-exklusive wgpu-Instanz via `create_vulkan_instance()` und haelt Device/Queue/Renderer/ExternalTexture als opaken C-FFI-Handle. Fuer den integrierten Flutter-Pfad kann derselbe Handle additiv ueber `fs25ad_gpu_runtime_new_with_session(...)` denselben `Arc<Mutex<HostBridgeSession>>` wie `FlutterSessionHandle` nutzen, damit Control-Plane und Render-Pfad auf derselben kanonischen Session arbeiten.
 - **Texture-Export:** `ExternalTextureExport` Trait in `render_wgpu::external_texture` definiert den plattformspezifischen Zero-Copy-Export. `VulkanDmaBufTexture` implementiert den Linux/Vulkan-Pfad (aktuell Texture-Erzeugung funktional, DMA-BUF-FD-Export als TODO).
 - **DRY:** `RenderExportCore::issue_render_pass()` als gemeinsame Render-Infrastruktur fuer Shared-Texture und Flutter-External-Texture extrahiert.
 
