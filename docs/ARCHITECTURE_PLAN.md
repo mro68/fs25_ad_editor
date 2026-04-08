@@ -68,14 +68,15 @@ Die Flutter-Backend-Library erweitert die bestehende Host-Bridge-FFI- und Render
 
 - **Kein neuer Layer:** Flutter-Code lebt ausschliesslich in `fs25_auto_drive_host_bridge_ffi` (Control-Plane + GPU-FFI) und `fs25_auto_drive_render_wgpu` (Texture-Export). Keine neue Crate.
 - **Feature-Gating:** Alle Flutter-spezifischen Pfade sind hinter `flutter` bzw. `flutter-linux` Feature-Flags versteckt. Ohne aktives Feature aendert sich am Build nichts.
-- **Control-Plane:** `FlutterSessionHandle` (Arc<Mutex<HostBridgeSession>>) nutzt dieselbe kanonische Session-Surface wie C-ABI und egui. Kein zweiter Session-Vertrag.
-- **GPU-Pfad:** `GpuRuntimeHandle` in `flutter_gpu.rs` erzeugt eine eigene Vulkan-exklusive wgpu-Instanz via `create_vulkan_instance()` und haelt Device/Queue/Renderer/ExternalTexture als opaken C-FFI-Handle. Fuer den integrierten Flutter-Pfad kann derselbe Handle additiv ueber `fs25ad_gpu_runtime_new_with_session(...)` denselben `Arc<Mutex<HostBridgeSession>>` wie `FlutterSessionHandle` nutzen, damit Control-Plane und Render-Pfad auf derselben kanonischen Session arbeiten.
-- **Texture-Export:** `ExternalTextureExport` Trait in `render_wgpu::external_texture` definiert den plattformspezifischen Zero-Copy-Export. `VulkanDmaBufTexture` implementiert den Linux/Vulkan-Pfad (aktuell Texture-Erzeugung funktional, DMA-BUF-FD-Export als TODO).
+- **Control-Plane:** `FlutterSessionHandle` (Arc<Mutex<HostBridgeSession>>) nutzt dieselbe kanonische Session-Surface wie C-ABI und egui. Kein zweiter Session-Vertrag. Die Control-Plane exponiert neben Session-Snapshot und Action-Surface auch `flutter_session_is_dirty()`, `flutter_session_ui_snapshot_json()`, `flutter_session_chrome_snapshot_json()` und `flutter_session_viewport_overlay_json()` als typsichere High-Level-Funktionen.
+- **Session-Sharing:** `GpuRuntimeHandle` kann ueber `new_with_session(...)` denselben `Arc<Mutex<HostBridgeSession>>` wie `FlutterSessionHandle` teilen. Damit arbeiten Control-Plane und Render-Pfad auf derselben kanonischen Session; die C-FFI-Variante `fs25ad_gpu_runtime_new_with_session(...)` exponiert diesen geteilten Besitz fuer native Hosts.
+- **Dirty-Tracking:** `HostBridgeSession::is_dirty()` delegiert an den Engine-`AppState`-Dokumentschluessel (`current_document_cache_key` vs. `saved_document_cache_key`). Der Snapshot-Vertrag (`HostSessionSnapshot.is_dirty`) spiegelt denselben Zustand fuer Polling-Hosts. Aenderungen an `HostSessionAction`-Varianten (`DeleteSelected`, `SelectAll`, `ClearSelection`, `CopySelection`, `PasteStart`, `PasteConfirm`, `PasteCancel`) mappen bidirektional auf stabile Engine-Intents und aktualisieren den Dokumentschluessel implizit.
+- **GPU-Pfad:** `GpuRuntimeHandle` in `flutter_gpu.rs` erzeugt eine eigene Vulkan-exklusive wgpu-Instanz via `create_vulkan_instance()` und haelt Device/Queue/Renderer/ExternalTexture als opaken C-FFI-Handle.
+- **Texture-Export:** `ExternalTextureExport` Trait in `render_wgpu::external_texture` definiert den plattformspezifischen Zero-Copy-Export. `VulkanDmaBufTexture` implementiert den Linux/Vulkan-Pfad mit produktivem DMA-BUF-FD-Export ueber `vkGetMemoryFdKHR`; der Stride wird per `vkGetImageSubresourceLayout` aus dem Vulkan-Image gelesen (Fallback: `width * 4` ohne `VK_EXT_image_drm_format_modifier`). `export_texture()` liefert den `Fs25adTextureRegistrationV4LinuxDmabufDescriptor` als v4-Vertrag.
 - **DRY:** `RenderExportCore::issue_render_pass()` als gemeinsame Render-Infrastruktur fuer Shared-Texture und Flutter-External-Texture extrahiert.
 
-**Offene Blocker (Phase 3+4):**
+**Offene Blocker (Phase 4):**
 
-- `export_descriptor()` in `VulkanDmaBufTexture` gibt aktuell `ExportFailed` zurueck — erfordert VkImage mit `VK_EXTERNAL_MEMORY_HANDLE_TYPE_DMA_BUF_BIT_EXT` und `vkGetMemoryFdKHR`
 - `flutter_rust_bridge`-Codegen ist als Stub vorbereitet, erfordert Dart-SDK im Build-System
 - Flutter-seitiges Texture-Plugin fuer DMA-BUF-Import fehlt
 
