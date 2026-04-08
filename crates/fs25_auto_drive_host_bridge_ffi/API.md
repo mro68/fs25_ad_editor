@@ -8,6 +8,8 @@ Seit der FFI-Haertungswelle sind alle pointer-konsumierenden Exporte in Rust exp
 
 Seit dem Hard-Cut ist der RGBA-Pixelbuffer-v1 entfernt. Der einzige native Render-Transportpfad ist jetzt Shared-Texture mit explizitem Acquire/Release-Lifecycle.
 
+Unter den Feature-Flags `flutter` und `flutter-linux` exportiert die Crate zusaetzlich eine Flutter Control-Plane API (typsichere High-Level-Funktionen fuer `flutter_rust_bridge`-Codegen) sowie einen Low-Level C-FFI GPU-Runtime-Stack fuer Linux/Vulkan mit DMA-BUF-Texture-Export.
+
 Der Rendertransport ist separat ueber `FS25AD_HOST_BRIDGE_SHARED_TEXTURE_CONTRACT_VERSION = 3` versioniert. Die exportierten Native-Handle-Werte sind explizit opaque Runtime-Pointer fuer denselben Prozessraum und keine backend-nativen Vulkan-/Metal-/DX-Interop-Handles.
 
 Additiv dazu exportiert die Crate jetzt den separaten `Texture-Registration-v4`-Vertrag (`FS25AD_HOST_BRIDGE_TEXTURE_REGISTRATION_V4_CONTRACT_VERSION = 4`). `v3` bleibt unveraendert fuer bestehende opaque Runtime-Pointer-Consumer; `v4` fuehrt gemeinsame Capability-Negotiation und gemeinsame Frame-Metadaten ein, trennt Payload-Familien aber plattformspezifisch fuer Windows, Linux und Android.
@@ -230,6 +232,78 @@ flowchart LR
 - Keine zweite Session-/Action-/Render-DTO-Familie in `fs25_auto_drive_host_bridge`.
 - Kein Pixelbuffer-/RGBA-Copy-Kompatpfad.
 - Kein Umbau des egui-Onscreen-Hosts auf Shared-Texture-Transport; egui bleibt auf dem RenderFrame-Seam mit lokalem `RenderPass`-Glue.
+
+## Feature-Flags
+
+| Feature | Zweck |
+|---|---|
+| `flutter` | Aktiviert `flutter_rust_bridge` als Dependency und das Modul `flutter_api.rs` mit typsicheren Dart-Bindings |
+| `flutter-linux` | Impliziert `flutter`. Aktiviert `fs25_auto_drive_render_wgpu/flutter-linux` und das Modul `flutter_gpu.rs` mit C-FFI GPU-Runtime fuer Linux/Vulkan |
+
+## Flutter Control-Plane API (`flutter_api.rs`, Feature `flutter`)
+
+Typsichere High-Level-Funktionen fuer die Dart-seitige Session-Steuerung via `flutter_rust_bridge`.
+
+### Typ: `FlutterSessionHandle`
+
+Opaquer Session-Handle mit `Arc<Mutex<HostBridgeSession>>` fuer thread-sicheren Zugriff aus Darts Isolate-Modell.
+
+### Funktionen
+
+| Signatur | Zweck |
+|---|---|
+| `flutter_session_new() -> Box<FlutterSessionHandle>` | Erzeugt eine neue Flutter-Session |
+| `flutter_session_dispose(handle: Box<FlutterSessionHandle>)` | Gibt die Session frei |
+| `flutter_session_apply_action(handle, action_json: String) -> Result<()>` | Wendet eine JSON-serialisierte `HostSessionAction` an |
+| `flutter_session_snapshot_json(handle) -> Result<String>` | Liefert den `HostSessionSnapshot` als JSON |
+| `flutter_session_viewport_geometry_json(handle, width, height) -> Result<String>` | Liefert den `HostViewportGeometrySnapshot` als JSON |
+
+### Codegen-Status
+
+`flutter_rust_bridge`-Annotationen (`#[frb]`) sind als TODO markiert. Das `build.rs` enthaelt einen Codegen-Stub der aktiviert wird sobald Dart-SDK im Build-System verfuegbar ist.
+
+## Flutter GPU-Runtime (`flutter_gpu.rs`, Feature `flutter-linux`)
+
+Low-Level C-FFI fuer den GPU-Hot-Path auf Linux/Vulkan.
+
+### Typ: `GpuRuntimeHandle`
+
+Interner GPU-Runtime-Zustand: haelt `wgpu::Instance`, `Adapter`, `Device`, `Queue`, `SharedTextureRuntime`, `VulkanDmaBufTexture` und eine interne `HostBridgeSession`.
+
+### Lebenszyklus
+
+```text
+fs25ad_gpu_runtime_new()
+  → fs25ad_gpu_runtime_resize()      // optional bei Groessenaenderung
+  → fs25ad_gpu_runtime_render()      // pro Frame
+  → fs25ad_gpu_runtime_export_texture() // pro Frame nach render
+  → fs25ad_gpu_runtime_dispose()    // am Ende
+```
+
+### C-FFI-Funktionen
+
+| Symbol | Zweck |
+|---|---|
+| `fs25ad_gpu_runtime_new(width, height) -> *mut GpuRuntimeHandle` | Erzeugt GPU-Runtime mit Vulkan-Backend. NULL bei Fehler |
+| `fs25ad_gpu_runtime_render(handle) -> bool` | Rendert den aktuellen Frame in die Shared-Texture |
+| `fs25ad_gpu_runtime_export_texture(handle, out_fd) -> bool` | Exportiert den DMA-BUF File-Descriptor (unsafe) |
+| `fs25ad_gpu_runtime_resize(handle, width, height) -> bool` | Passt die Render-Target-Groesse an |
+| `fs25ad_gpu_runtime_dispose(handle)` | Gibt den GPU-Runtime-Handle frei (unsafe) |
+
+### C-Repr: `FfiPlatformTextureDescriptor`
+
+C-kompatible Repr des plattformspezifischen Texture-Deskriptors fuer den Export an Flutter.
+
+### Status
+
+- GPU-Runtime-Erzeugung (Vulkan-Instanz, Device, Queue) funktional
+- Render-zu-Shared-Texture funktional
+- DMA-BUF-Export gibt aktuell `ExportFailed` zurueck (TODO: Vulkan External Memory)
+- Panic-Isolation ueber `ffi_guard_bool!` / `catch_unwind`
+
+### `SharedTextureRuntime::new_for_flutter()` (Feature `flutter-linux`)
+
+Konstruktor in `shared_texture_v2.rs` der eine explizit Vulkan-exklusive wgpu-Instanz via `create_vulkan_instance()` nutzt, um GPU-Sharing mit Flutter/Impeller zu ermoeglichen.
 
 ## Build-Artefakt
 

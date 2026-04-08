@@ -539,7 +539,37 @@
     - [x] Makefile-Integration (`make ci-check`)
     - [ ] GitHub Actions Workflow
 
-## Phase 7: Optional / Future
+## Phase 7: Flutter-Integration
+- [x] **Flutter-Backend Phase 0: Crate-Infrastruktur (2026-04-08, Branch `feat/flutter-backend-phase012`)**
+  - [x] Feature-Flag `flutter` in `fs25_auto_drive_host_bridge_ffi` fuer `flutter_rust_bridge`-Dependency
+  - [x] Feature-Flag `flutter-linux` in `fs25_auto_drive_host_bridge_ffi` (impliziert `flutter`, aktiviert `render_wgpu/flutter-linux`)
+  - [x] Feature-Flag `flutter-linux` in `fs25_auto_drive_render_wgpu` (aktiviert `ash` + `wgpu/vulkan`)
+  - [x] `build.rs` Codegen-Stub fuer `flutter_rust_bridge` (aktiviert unter `flutter`-Feature)
+- [x] **Flutter-Backend Phase 1: Control-Plane API (2026-04-08)**
+  - [x] `flutter_api.rs`: `FlutterSessionHandle` (Arc<Mutex<HostBridgeSession>>)
+  - [x] `flutter_session_new()`, `flutter_session_dispose()`, `flutter_session_apply_action()`
+  - [x] `flutter_session_snapshot_json()`, `flutter_session_viewport_geometry_json()`
+  - [x] Unit-Tests fuer Session-Lifecycle, JSON-Validation, Snapshot-Roundtrip
+- [x] **Flutter-Backend Phase 2: GPU-Export-Stack Linux (2026-04-08)**
+  - [x] `create_vulkan_instance()` in `render_wgpu` — Vulkan-exklusive wgpu-Instanz
+  - [x] `external_texture/` Modul mit `ExternalTextureExport` Trait, `PlatformTextureDescriptor`, `ExternalTextureError`
+  - [x] `VulkanDmaBufTexture` — Linux/Vulkan-Implementierung (Texture-Erzeugung funktional, DMA-BUF-Export TODO)
+  - [x] `RenderExportCore::render_scene_to_view()` — Rendering in externe TextureView (feature-gated)
+  - [x] `issue_render_pass()` als gemeinsame Render-Infrastruktur extrahiert (DRY)
+  - [x] `flutter_gpu.rs`: `GpuRuntimeHandle` mit C-FFI-Lifecycle (`new/render/export/resize/dispose`)
+  - [x] `SharedTextureRuntime::new_for_flutter()` — Konstruktor mit Vulkan-Instanz
+  - [x] Panic-Isolation ueber `ffi_guard_bool!` / `catch_unwind` fuer alle FFI-Funktionen
+- [ ] **Flutter-Backend Phase 3: DMA-BUF-Export (geplant)**
+  - [ ] `VulkanDmaBufTexture::export_descriptor()` produktiv machen (VkImage mit VK_EXTERNAL_MEMORY_HANDLE_TYPE_DMA_BUF_BIT_EXT)
+  - [ ] `vkGetMemoryFdKHR` fuer File-Descriptor-Export
+  - [ ] `RenderExportCore::render_scene_to_view()` mit `flutter_gpu.rs` vollstaendig verdrahten
+- [ ] **Flutter-Backend Phase 4: Flutter-App-Integration (geplant)**
+  - [ ] `flutter_rust_bridge` Codegen vollstaendig integrieren (frb-Annotationen + Dart-SDK im Build)
+  - [ ] Flutter-seitiges Texture-Plugin fuer DMA-BUF-Import
+  - [ ] Dart-Bindings fuer Session-Control-Plane
+  - [ ] End-to-End Rendering-Pipeline: Dart → Rust → GPU → DMA-BUF → Flutter/Impeller
+
+## Phase 8: Optional / Future
 - [ ] Web-Version (WASM)
   - [ ] wgpu WebGL/WebGPU Backend
   - [ ] Browser-File-Access

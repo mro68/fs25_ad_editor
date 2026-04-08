@@ -60,6 +60,27 @@ Die Integrationsschale ist bewusst kein zusaetzlicher Fach-Layer. Sie koordinier
 - Kein zweiter Session- oder DTO-Vertrag: Die Control-Plane bleibt `HostSessionAction`/`HostSessionSnapshot`, der Rendertransport bleibt rein unterhalb des RenderFrame-Seams.
 - Der egui-Onscreen-Pfad bleibt bewusst ausserhalb von `SharedTextureRuntime` und rendert weiterhin direkt per `RenderPass` ueber `egui_wgpu`.
 
+### Flutter-Backend-Integration (Phase 0+1+2)
+
+Die Flutter-Backend-Library erweitert die bestehende Host-Bridge-FFI- und Render-Architektur um feature-gated Flutter-spezifische Pfade, ohne die bestehenden C-ABI- oder egui-Vertraege zu veraendern.
+
+**Architektur-Entscheidungen:**
+
+- **Kein neuer Layer:** Flutter-Code lebt ausschliesslich in `fs25_auto_drive_host_bridge_ffi` (Control-Plane + GPU-FFI) und `fs25_auto_drive_render_wgpu` (Texture-Export). Keine neue Crate.
+- **Feature-Gating:** Alle Flutter-spezifischen Pfade sind hinter `flutter` bzw. `flutter-linux` Feature-Flags versteckt. Ohne aktives Feature aendert sich am Build nichts.
+- **Control-Plane:** `FlutterSessionHandle` (Arc<Mutex<HostBridgeSession>>) nutzt dieselbe kanonische Session-Surface wie C-ABI und egui. Kein zweiter Session-Vertrag.
+- **GPU-Pfad:** `GpuRuntimeHandle` in `flutter_gpu.rs` erzeugt eine eigene Vulkan-exklusive wgpu-Instanz via `create_vulkan_instance()` und haelt Device/Queue/Renderer/ExternalTexture als opaken C-FFI-Handle.
+- **Texture-Export:** `ExternalTextureExport` Trait in `render_wgpu::external_texture` definiert den plattformspezifischen Zero-Copy-Export. `VulkanDmaBufTexture` implementiert den Linux/Vulkan-Pfad (aktuell Texture-Erzeugung funktional, DMA-BUF-FD-Export als TODO).
+- **DRY:** `RenderExportCore::issue_render_pass()` als gemeinsame Render-Infrastruktur fuer Shared-Texture und Flutter-External-Texture extrahiert.
+
+**Offene Blocker (Phase 3+4):**
+
+- `export_descriptor()` in `VulkanDmaBufTexture` gibt aktuell `ExportFailed` zurueck — erfordert VkImage mit `VK_EXTERNAL_MEMORY_HANDLE_TYPE_DMA_BUF_BIT_EXT` und `vkGetMemoryFdKHR`
+- `flutter_rust_bridge`-Codegen ist als Stub vorbereitet, erfordert Dart-SDK im Build-System
+- Flutter-seitiges Texture-Plugin fuer DMA-BUF-Import fehlt
+
+Detaillierte API-Dokumentation: [`crates/fs25_auto_drive_render_wgpu/API.md`](../crates/fs25_auto_drive_render_wgpu/API.md) und [`crates/fs25_auto_drive_host_bridge_ffi/API.md`](../crates/fs25_auto_drive_host_bridge_ffi/API.md).
+
 ### Host-Dialog-Seam
 
 Der Datei-/Pfad-Dialogpfad ist ueber alle Rust-Hosts hinweg auf einen gemeinsamen Vertrag konsolidiert:
