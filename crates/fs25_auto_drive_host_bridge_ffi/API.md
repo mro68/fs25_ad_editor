@@ -262,6 +262,13 @@ Opaquer Session-Handle mit `Arc<Mutex<HostBridgeSession>>` fuer thread-sicheren 
 | `flutter_session_viewport_overlay_json(handle, cursor_world_x, cursor_world_y) -> Result<String>` | Liefert den host-neutralen `ViewportOverlaySnapshot` als JSON |
 | `flutter_session_viewport_geometry_json(handle, width, height) -> Result<String>` | Liefert den `HostViewportGeometrySnapshot` als JSON |
 
+### Zusaetzliche C-ABI-Wrapper
+
+| Symbol | Zweck |
+|---|---|
+| `fs25ad_flutter_session_new() -> *mut FlutterSessionHandle` | Erzeugt einen opaken C-ABI-Handle fuer dieselbe Flutter-Session-Implementierung |
+| `fs25ad_flutter_session_dispose(handle)` | Gibt einen zuvor ueber `fs25ad_flutter_session_new` erzeugten C-ABI-Handle frei |
+
 ### Codegen-Status
 
 `flutter_rust_bridge`-Annotationen (`#[frb]`) sind als TODO markiert. Das `build.rs` enthaelt einen Codegen-Stub der aktiviert wird sobald Dart-SDK im Build-System verfuegbar ist.
@@ -287,9 +294,9 @@ fs25ad_gpu_runtime_new()
 Alternativ fuer den integrierten Flutter-Pfad:
 
 ```text
-flutter_session_new()
+fs25ad_flutter_session_new()
 	→ fs25ad_gpu_runtime_new_with_session(session, width, height)
-	→ flutter_session_apply_action(...)
+	→ flutter_session_apply_action(...) / fs25ad_host_bridge_* / sonstige Session-Mutationen
 	→ fs25ad_gpu_runtime_render(runtime)
 ```
 
