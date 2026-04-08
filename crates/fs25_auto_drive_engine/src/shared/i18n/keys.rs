@@ -673,4 +673,20 @@ pub enum I18nKey {
     ConfirmDissolveOk,
     /// Bestätigungsdialog: Abbrechen-Button
     ConfirmDissolveCancel,
+
+    // === ParkingTool-Hinweise ===
+    /// Hinweis: Alt+Mausrad zum Drehen
+    ParkingHintRotate,
+    /// Hinweis: Position fixiert
+    ParkingHintFixed,
+    /// Hinweis: Klicken zum Fixieren
+    ParkingHintAdjusting,
+
+    // === FieldPath-Tool ===
+    /// Bezeichnung "Seite 1"
+    FieldPathSide1,
+    /// Bezeichnung "Seite 2"
+    FieldPathSide2,
+    /// Hinweis: Keine Felder ausgewaehlt
+    FieldPathNoFieldsSelected,
 }

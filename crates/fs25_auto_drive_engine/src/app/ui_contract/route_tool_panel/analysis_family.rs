@@ -1,4 +1,5 @@
 use crate::core::{ConnectionDirection, ConnectionPriority};
+use crate::shared::I18nKey;
 use serde::{Deserialize, Serialize};
 
 /// Panelzustand des Strecken-Versatz-Tools.
@@ -121,10 +122,12 @@ pub enum FieldPathPanelPhase {
 /// Zusammenfassung einer Feldweg-Seite im Panel.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct FieldPathSelectionSummary {
-    /// Titel der Seite.
-    pub title: String,
-    /// Zusammenfassender Text fuer Auswahl oder Leerzustand.
+    /// Titel der Seite (I18n-Schluessel).
+    pub title: I18nKey,
+    /// Zusammenfassender Text fuer dynamische Inhalte (Felder-Liste, Segmentanzahl).
     pub text: String,
+    /// Statischer Leer-Hinweis als I18n-Schluessel (gesetzt wenn `is_empty` und kein dynamischer Text).
+    pub empty_hint: Option<I18nKey>,
     /// Gibt an, ob die Seite aktuell leer ist.
     pub is_empty: bool,
 }

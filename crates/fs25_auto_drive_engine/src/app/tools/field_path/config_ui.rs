@@ -5,6 +5,7 @@ use crate::app::ui_contract::{
     FieldPathModeChoice, FieldPathPanelAction, FieldPathPanelPhase, FieldPathPanelState,
     FieldPathPreviewStatus, FieldPathSelectionSummary, RouteToolPanelEffect,
 };
+use crate::shared::I18nKey;
 
 impl FieldPathTool {
     /// Liefert den egui-freien Panelzustand des FieldPathTools.
@@ -128,7 +129,11 @@ impl FieldPathTool {
     }
 
     fn selection_summary(&self, side1: bool) -> FieldPathSelectionSummary {
-        let title = if side1 { "Seite 1" } else { "Seite 2" }.to_owned();
+        let title = if side1 {
+            I18nKey::FieldPathSide1
+        } else {
+            I18nKey::FieldPathSide2
+        };
 
         match self.mode {
             FieldPathMode::Fields => {
@@ -140,7 +145,8 @@ impl FieldPathTool {
                 if ids.is_empty() {
                     FieldPathSelectionSummary {
                         title,
-                        text: "Keine Felder ausgewaehlt".to_owned(),
+                        text: String::new(),
+                        empty_hint: Some(I18nKey::FieldPathNoFieldsSelected),
                         is_empty: true,
                     }
                 } else {
@@ -148,6 +154,7 @@ impl FieldPathTool {
                     FieldPathSelectionSummary {
                         title,
                         text: format!("Felder: {}", labels.join(", ")),
+                        empty_hint: None,
                         is_empty: false,
                     }
                 }
@@ -161,6 +168,7 @@ impl FieldPathTool {
                 FieldPathSelectionSummary {
                     title,
                     text: format!("Segmente: {count}"),
+                    empty_hint: None,
                     is_empty: count == 0,
                 }
             }

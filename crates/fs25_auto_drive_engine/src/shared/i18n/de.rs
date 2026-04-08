@@ -321,5 +321,11 @@ pub(super) fn translate(key: I18nKey) -> &'static str {
         I18nKey::RouteToolNeedFarmland => "Farmland-Daten zuerst laden",
         I18nKey::RouteToolNeedBackground => "Hintergrundkarte zuerst laden",
         I18nKey::RouteToolNeedOrderedChain => "Geordnete Node-Kette selektieren",
+        I18nKey::ParkingHintRotate => "Alt+Mausrad zum Drehen",
+        I18nKey::ParkingHintFixed => "Position fixiert \u{2014} Viewport-Klick zum Verschieben",
+        I18nKey::ParkingHintAdjusting => "Klicken zum Fixieren \u{2014} Alt+Mausrad zum Drehen",
+        I18nKey::FieldPathSide1 => "Seite 1",
+        I18nKey::FieldPathSide2 => "Seite 2",
+        I18nKey::FieldPathNoFieldsSelected => "Keine Felder ausgewaehlt",
     }
 }
