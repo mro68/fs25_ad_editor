@@ -318,9 +318,18 @@ pub(super) fn map_engine_dialog_request_kind(kind: DialogRequestKind) -> HostDia
 }
 
 pub(super) fn map_engine_dialog_request(request: DialogRequest) -> HostDialogRequest {
+    let DialogRequest::PickPath {
+        kind,
+        suggested_file_name,
+    } = request
+    else {
+        unreachable!(
+            "map_engine_dialog_request darf nur fuer PickPath-Anfragen aufgerufen werden"
+        )
+    };
     HostDialogRequest {
-        kind: map_engine_dialog_request_kind(request.kind()),
-        suggested_file_name: request.suggested_file_name().map(str::to_owned),
+        kind: map_engine_dialog_request_kind(kind),
+        suggested_file_name,
     }
 }
 
@@ -532,6 +541,10 @@ pub fn map_host_action_to_intent(action: HostSessionAction) -> Option<AppIntent>
 /// Diese Funktion ist fuer Host-Adapter gedacht, die weiterhin einen eigenen
 /// `AppController`/`AppState` besitzen, den Dialog-Lifecycle aber bereits ueber
 /// die kanonischen `HostDialogRequest`-DTOs konsolidieren wollen.
+///
+/// Chrome-Sichtbarkeits-Requests (`ToggleCommandPalette` etc.) werden hier
+/// herausgefiltert und NICHT zurueckgegeben — sie sind fuer die
+/// `HostBridgeSession::drain_engine_requests()`-Seam bestimmt.
 pub fn take_host_dialog_requests(
     controller: &fs25_auto_drive_engine::app::AppController,
     state: &mut AppState,
@@ -539,6 +552,7 @@ pub fn take_host_dialog_requests(
     controller
         .take_dialog_requests(state)
         .into_iter()
+        .filter(|r| !r.is_chrome_request())
         .map(map_engine_dialog_request)
         .collect()
 }
