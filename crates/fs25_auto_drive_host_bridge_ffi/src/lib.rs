@@ -1,11 +1,48 @@
 //! C-ABI-Transport ueber der kanonischen Host-Bridge-Session.
 
-#[cfg(feature = "flutter")]
-pub mod flutter_api;
-#[cfg(all(feature = "flutter-linux", target_os = "linux"))]
-pub mod flutter_gpu;
 mod shared_texture_v2;
 mod texture_registration_v4;
+#[cfg(feature = "flutter")]
+pub mod flutter_api;
+
+/// Hilfsmakro: Wraps einen bool-FFI-Aufruf mit Panic-Isolation und Last-Error-Behandlung.
+macro_rules! ffi_guard_bool {
+    ($body:expr) => {{
+        clear_last_error();
+        match std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| $body)) {
+            Ok(Ok(())) => true,
+            Ok(Err(e)) => {
+                set_last_error(e.to_string());
+                false
+            }
+            Err(_) => {
+                set_last_error("internal panic in FFI call");
+                false
+            }
+        }
+    }};
+}
+
+/// Hilfsmakro: Wraps einen ptr-rueckgebenden FFI-Aufruf mit Panic-Isolation und Last-Error-Behandlung.
+macro_rules! ffi_guard_ptr {
+    ($body:expr) => {{
+        clear_last_error();
+        match std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| $body)) {
+            Ok(Ok(ptr)) => ptr,
+            Ok(Err(e)) => {
+                set_last_error(e.to_string());
+                std::ptr::null_mut()
+            }
+            Err(_) => {
+                set_last_error("internal panic in FFI call");
+                std::ptr::null_mut()
+            }
+        }
+    }};
+}
+
+#[cfg(all(feature = "flutter-linux", target_os = "linux"))]
+pub mod flutter_gpu;
 
 use anyhow::{anyhow, Context, Result};
 use fs25_auto_drive_host_bridge::{
@@ -94,42 +131,6 @@ fn with_session_mut<T>(
 
     let session = unsafe { &*session };
     session.with_lock(f)
-}
-
-/// Hilfsmakro: Wraps einen bool-FFI-Aufruf mit Panic-Isolation und Last-Error-Behandlung.
-macro_rules! ffi_guard_bool {
-    ($body:expr) => {{
-        clear_last_error();
-        match std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| $body)) {
-            Ok(Ok(())) => true,
-            Ok(Err(e)) => {
-                set_last_error(e.to_string());
-                false
-            }
-            Err(_) => {
-                set_last_error("internal panic in FFI call");
-                false
-            }
-        }
-    }};
-}
-
-/// Hilfsmakro: Wraps einen ptr-rueckgebenden FFI-Aufruf mit Panic-Isolation und Last-Error-Behandlung.
-macro_rules! ffi_guard_ptr {
-    ($body:expr) => {{
-        clear_last_error();
-        match std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| $body)) {
-            Ok(Ok(ptr)) => ptr,
-            Ok(Err(e)) => {
-                set_last_error(e.to_string());
-                std::ptr::null_mut()
-            }
-            Err(_) => {
-                set_last_error("internal panic in FFI call");
-                std::ptr::null_mut()
-            }
-        }
-    }};
 }
 
 /// Liefert die ABI-Version des nativen Host-Bridge-Vertrags.

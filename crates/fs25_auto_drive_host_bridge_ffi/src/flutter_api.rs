@@ -93,9 +93,42 @@ pub fn flutter_session_viewport_geometry_json(
     viewport_width: f32,
     viewport_height: f32,
 ) -> Result<String> {
-    let snapshot = handle
-        .with_session(|s| s.build_viewport_geometry_snapshot([viewport_width, viewport_height]))?;
+    let snapshot = handle.with_session(|s| {
+        s.build_viewport_geometry_snapshot([viewport_width, viewport_height])
+    })?;
     serde_json::to_string(&snapshot).map_err(|e| {
         anyhow::anyhow!("flutter_session_viewport_geometry_json: Serialisierungsfehler: {e}")
     })
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// Prueft, dass FlutterSessionHandle erzeugt und freigegeben werden kann.
+    #[test]
+    fn test_flutter_session_lifecycle() {
+        let handle = flutter_session_new();
+        flutter_session_dispose(handle);
+    }
+
+    /// Prueft, dass ungueliges JSON einen Fehler zurueckgibt (kein Panic).
+    #[test]
+    fn test_flutter_session_apply_action_rejects_invalid_json() {
+        let handle = flutter_session_new();
+        let result = flutter_session_apply_action(&handle, "not json".to_string());
+        assert!(result.is_err(), "Ungueltiges JSON muss Err zurueckgeben");
+        flutter_session_dispose(handle);
+    }
+
+    /// Prueft, dass snapshot_json einen validen JSON-String liefert.
+    #[test]
+    fn test_flutter_session_snapshot_json_roundtrip() {
+        let handle = flutter_session_new();
+        let json = flutter_session_snapshot_json(&handle)
+            .expect("Snapshot-Serialisierung muss gelingen");
+        assert!(!json.is_empty());
+        assert!(json.starts_with('{'), "Snapshot muss JSON-Objekt sein");
+        flutter_session_dispose(handle);
+    }
 }
