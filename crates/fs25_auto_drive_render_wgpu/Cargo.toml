@@ -6,6 +6,10 @@ edition = "2024"
 [lib]
 path = "src/lib.rs"
 
+[features]
+## Aktiviert Vulkan-HAL-Zugriff und plattformspezifischen DMA-BUF-Export für Flutter/Linux.
+flutter-linux = ["dep:ash", "wgpu/vulkan"]
+
 [dependencies]
 bytemuck = { version = "1.14", features = ["derive"] }
 fs25_auto_drive_engine = { path = "../fs25_auto_drive_engine" }
@@ -14,7 +18,11 @@ image = { version = "0.25", features = ["dds", "png", "jpeg"] }
 indexmap = "2.13.1"
 log = "0.4"
 resvg = "0.47.0"
+thiserror = "2"
 wgpu = "29.0"
+
+## Direkter Vulkan-Zugriff für DMA-BUF-Export — nur aktiv unter flutter-linux.
+ash = { version = "0.38", optional = true }
 
 [dev-dependencies]
 pollster = "0.4"
