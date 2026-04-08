@@ -562,7 +562,7 @@
 - [ ] **Flutter-Backend Phase 3: DMA-BUF-Export (geplant)**
   - [x] `VulkanDmaBufTexture::export_descriptor()` produktiv machen (VkImage mit VK_EXTERNAL_MEMORY_HANDLE_TYPE_DMA_BUF_BIT_EXT)
   - [x] `vkGetMemoryFdKHR` fuer File-Descriptor-Export
-  - [ ] `RenderExportCore::render_scene_to_view()` mit `flutter_gpu.rs` vollstaendig verdrahten
+  - [x] `RenderExportCore::render_scene_to_view()` mit `flutter_gpu.rs` vollstaendig verdrahten
 - [ ] **Flutter-Backend Phase 4: Flutter-App-Integration (geplant)**
   - [ ] `flutter_rust_bridge` Codegen vollstaendig integrieren (frb-Annotationen + Dart-SDK im Build)
   - [ ] Flutter-seitiges Texture-Plugin fuer DMA-BUF-Import

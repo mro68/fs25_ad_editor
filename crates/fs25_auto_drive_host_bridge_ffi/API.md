@@ -268,7 +268,7 @@ Low-Level C-FFI fuer den GPU-Hot-Path auf Linux/Vulkan.
 
 ### Typ: `GpuRuntimeHandle`
 
-Interner GPU-Runtime-Zustand: haelt `wgpu::Instance`, `Adapter`, `Device`, `Queue`, `SharedTextureRuntime`, `VulkanDmaBufTexture` und eine interne `HostBridgeSession`.
+Interner GPU-Runtime-Zustand: haelt `wgpu::Instance`, `Adapter`, `Device`, `Queue`, `SharedTextureRuntime`, `VulkanDmaBufTexture` und eine interne `HostBridgeSession`. Der Renderer-Zustand schreibt pro Frame direkt in die exportierbare Vulkan-TextureView.
 
 ### Lebenszyklus
 
@@ -285,7 +285,7 @@ fs25ad_gpu_runtime_new()
 | Symbol | Zweck |
 |---|---|
 | `fs25ad_gpu_runtime_new(width, height) -> *mut GpuRuntimeHandle` | Erzeugt GPU-Runtime mit Vulkan-Backend. NULL bei Fehler |
-| `fs25ad_gpu_runtime_render(handle) -> bool` | Rendert den aktuellen Frame in die Shared-Texture |
+| `fs25ad_gpu_runtime_render(handle) -> bool` | Rendert den aktuellen Frame direkt in die exportierbare Vulkan-Texture |
 | `fs25ad_gpu_runtime_export_texture(handle, out_fd) -> bool` | Exportiert den DMA-BUF File-Descriptor (unsafe) |
 | `fs25ad_gpu_runtime_resize(handle, width, height) -> bool` | Passt die Render-Target-Groesse an |
 | `fs25ad_gpu_runtime_dispose(handle)` | Gibt den GPU-Runtime-Handle frei (unsafe) |
@@ -297,8 +297,8 @@ C-kompatible Repr des plattformspezifischen Texture-Deskriptors fuer den Export 
 ### Status
 
 - GPU-Runtime-Erzeugung (Vulkan-Instanz, Device, Queue) funktional
-- Render-zu-Shared-Texture funktional
-- DMA-BUF-Export gibt aktuell `ExportFailed` zurueck (TODO: Vulkan External Memory)
+- Rendern direkt in die exportierbare Vulkan-Texture funktional
+- DMA-BUF-Export ueber Vulkan External Memory (`vkGetMemoryFdKHR`) funktional
 - Panic-Isolation ueber `ffi_guard_bool!` / `catch_unwind`
 
 ### `SharedTextureRuntime::new_for_flutter()` (Feature `flutter-linux`)
