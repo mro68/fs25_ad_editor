@@ -179,6 +179,64 @@ impl RenderExportCore {
         &self.color_view
     }
 
+    /// Rendert die Szene in eine extern bereitgestellte TextureView (Flutter-Integration).
+    ///
+    /// Im Gegensatz zu [`render_scene`](Self::render_scene) schreibt diese Methode nicht in
+    /// die interne Farb-Texture, sondern in einen uebergebenen externen Render-Target.
+    /// Hintergrund-Assets werden dabei regulaer synchronisiert.
+    ///
+    /// # Fehler
+    /// Gibt [`ExportCoreError`] zurueck wenn Viewport-Groesse oder Target-Groesse nicht uebereinstimmen.
+    #[cfg(feature = "flutter-linux")]
+    pub(crate) fn render_scene_to_view(
+        &mut self,
+        device: &wgpu::Device,
+        queue: &wgpu::Queue,
+        scene: &RenderScene,
+        assets: &RenderAssetsSnapshot,
+        external_view: &wgpu::TextureView,
+    ) -> Result<(), ExportCoreError> {
+        let expected_viewport = [self.layout.size()[0] as f32, self.layout.size()[1] as f32];
+        if scene.viewport_size() != expected_viewport {
+            return Err(ExportCoreError::ViewportSizeMismatch {
+                expected: self.layout.size(),
+                actual: scene.viewport_size(),
+            });
+        }
+
+        self.sync_background_asset(device, queue, assets);
+
+        let mut encoder = device.create_command_encoder(&wgpu::CommandEncoderDescriptor {
+            label: Some("Flutter External Texture Export Encoder"),
+        });
+
+        {
+            let mut render_pass = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
+                label: Some("Flutter External Texture Export Pass"),
+                color_attachments: &[Some(wgpu::RenderPassColorAttachment {
+                    view: external_view,
+                    depth_slice: None,
+                    resolve_target: None,
+                    ops: wgpu::Operations {
+                        load: wgpu::LoadOp::Clear(wgpu::Color::TRANSPARENT),
+                        store: wgpu::StoreOp::Store,
+                    },
+                })],
+                depth_stencil_attachment: None,
+                occlusion_query_set: None,
+                timestamp_writes: None,
+                multiview_mask: None,
+            });
+
+            self.renderer
+                .render_scene(device, queue, &mut render_pass, scene);
+        }
+
+        queue.submit(Some(encoder.finish()));
+
+        Ok(())
+    }
+
     #[cfg(test)]
     pub(crate) fn background_revisions(&self) -> (u64, u64) {
         (
