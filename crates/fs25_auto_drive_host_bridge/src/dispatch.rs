@@ -13,6 +13,7 @@ pub use actions::{
 pub use mappings::{
     map_host_action_to_intent, map_intent_to_host_action, take_host_dialog_requests,
 };
+pub(crate) use mappings::map_engine_dialog_request;
 pub use snapshot::{
     build_host_chrome_snapshot, build_host_ui_snapshot, build_render_assets, build_render_frame,
     build_render_scene, build_route_tool_viewport_snapshot, build_viewport_geometry_snapshot,
@@ -125,7 +126,14 @@ mod tests {
         .expect("ToggleCommandPalette muss verarbeitet werden");
 
         assert!(handled);
-        assert!(state.ui.show_command_palette);
+        assert!(
+            state
+                .ui
+                .dialog_requests
+                .iter()
+                .any(|r| matches!(r, fs25_auto_drive_engine::app::ui_contract::DialogRequest::ToggleCommandPalette)),
+            "ToggleCommandPalette muss in dialog_requests stehen"
+        );
     }
 
     #[test]
@@ -593,27 +601,11 @@ mod tests {
         let first = build_host_chrome_snapshot(&state);
         let second = build_host_chrome_snapshot(&state);
 
-        assert_eq!(
-            first.status_message, second.status_message,
-            "status_message muss stabil sein"
-        );
-        assert_eq!(
-            first.active_tool, second.active_tool,
-            "active_tool muss stabil sein"
-        );
-        assert_eq!(
-            first.default_direction, second.default_direction,
-            "default_direction muss stabil sein"
-        );
-        assert_eq!(
-            first.route_tool_entries.len(),
-            second.route_tool_entries.len(),
-            "route_tool_entries-Laenge muss stabil sein"
-        );
-        assert_eq!(
-            first.options, second.options,
-            "EditorOptions müssen stabil sein"
-        );
+        assert_eq!(first.status_message, second.status_message, "status_message muss stabil sein");
+        assert_eq!(first.active_tool, second.active_tool, "active_tool muss stabil sein");
+        assert_eq!(first.default_direction, second.default_direction, "default_direction muss stabil sein");
+        assert_eq!(first.route_tool_entries.len(), second.route_tool_entries.len(), "route_tool_entries-Laenge muss stabil sein");
+        assert_eq!(first.options, second.options, "EditorOptions müssen stabil sein");
     }
 
     /// Prüft, dass build_host_chrome_snapshot die aktuellen EditorOptions korrekt

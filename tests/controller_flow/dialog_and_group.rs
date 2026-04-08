@@ -1,4 +1,5 @@
 use fs25_auto_drive_editor::app::{AppController, AppIntent, AppState, GroupRecord};
+use fs25_auto_drive_editor::app::ui_contract::DialogRequest;
 
 fn make_manual_group_record(id: u64) -> GroupRecord {
     GroupRecord {
@@ -17,17 +18,35 @@ fn command_palette_toggled_flips_visibility() {
     let mut controller = AppController::new();
     let mut state = AppState::new();
 
-    assert!(!state.ui.show_command_palette);
+    // Vor dem ersten Toggle: keine DialogRequest-Eintraege
+    assert!(state.ui.dialog_requests.is_empty());
 
     controller
         .handle_intent(&mut state, AppIntent::CommandPaletteToggled)
         .expect("CommandPaletteToggled sollte die Palette oeffnen");
-    assert!(state.ui.show_command_palette);
+    assert!(
+        state
+            .ui
+            .dialog_requests
+            .iter()
+            .any(|r| matches!(r, DialogRequest::ToggleCommandPalette)),
+        "ToggleCommandPalette muss in dialog_requests stehen"
+    );
 
+    // Zweiter Toggle: nochmals in Queue
     controller
         .handle_intent(&mut state, AppIntent::CommandPaletteToggled)
         .expect("CommandPaletteToggled sollte die Palette wieder schliessen");
-    assert!(!state.ui.show_command_palette);
+    assert_eq!(
+        state
+            .ui
+            .dialog_requests
+            .iter()
+            .filter(|r| matches!(r, DialogRequest::ToggleCommandPalette))
+            .count(),
+        2,
+        "Zweiter Toggle muss zweiten ToggleCommandPalette-Request erzeugen"
+    );
 }
 
 #[test]
@@ -48,7 +67,14 @@ fn dissolve_group_requested_opens_confirm_dialog_without_mutating_registry() {
         )
         .expect("DissolveGroupRequested sollte den Confirm-Dialog oeffnen");
 
-    assert_eq!(state.ui.confirm_dissolve_group_id, Some(record_id));
+    assert!(
+        state
+            .ui
+            .dialog_requests
+            .iter()
+            .any(|r| matches!(r, DialogRequest::ShowDissolveGroupConfirm(id) if *id == record_id)),
+        "ShowDissolveGroupConfirm muss in dialog_requests stehen"
+    );
     assert!(state.group_registry.get(record_id).is_some());
 }
 

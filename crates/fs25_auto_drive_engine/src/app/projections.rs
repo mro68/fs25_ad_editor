@@ -26,15 +26,20 @@ pub fn build_render_assets(state: &AppState) -> RenderAssetsSnapshot {
 ///
 /// Datei- und Pfaddialoge sind bewusst nicht Teil dieses Snapshots und
 /// laufen separat ueber `take_dialog_requests()`.
+///
+/// **Hinweis:** Die Sichtbarkeit von `CommandPalette` und `Options` ist hier
+/// immer `false`. Die tatsaechliche Sichtbarkeit stammt aus dem
+/// `HostLocalDialogState` (chrome_state) in der `HostBridgeSession` und wird
+/// beim Bau des Snapshots auf Bridge-Ebene eingefuegt.
 pub fn build_host_ui_snapshot(state: &AppState) -> HostUiSnapshot {
     let mut panels = Vec::new();
 
     panels.push(PanelState::CommandPalette(CommandPalettePanelState {
-        visible: state.ui.show_command_palette,
+        visible: false,
     }));
 
     panels.push(PanelState::Options(OptionsPanelState {
-        visible: state.ui.show_options_dialog,
+        visible: false,
         options: state.options_arc(),
     }));
 
@@ -61,11 +66,12 @@ mod tests {
     use super::build_host_ui_snapshot;
     use crate::app::AppState;
 
-    /// Prüft, dass build_host_ui_snapshot die Command-Palette-Sichtbarkeit korrekt spiegelt.
+    /// Prüft, dass build_host_ui_snapshot immer das CommandPalette-Panel enthält.
+    ///
+    /// Die tatsaechliche Sichtbarkeit wird auf Bridge-Ebene aus `chrome_state` eingesetzt.
     #[test]
-    fn build_host_ui_snapshot_reflects_command_palette_visibility() {
-        let mut state = AppState::new();
-        state.ui.show_command_palette = true;
+    fn build_host_ui_snapshot_contains_command_palette_panel() {
+        let state = AppState::new();
 
         let snapshot = build_host_ui_snapshot(&state);
 
@@ -73,8 +79,8 @@ mod tests {
             .command_palette_state()
             .expect("CommandPalette-Panel muss im Snapshot enthalten sein");
         assert!(
-            cp_state.visible,
-            "show_command_palette=true muss im Snapshot sichtbar sein"
+            !cp_state.visible,
+            "engine-seitig ist visible immer false (Bridge setzt chrome_state)"
         );
     }
 
@@ -87,7 +93,6 @@ mod tests {
         state.options.snap_scale_percent = 33.0;
         // options_arc wird nur durch set_options()/refresh_options_arc() aktualisiert.
         state.refresh_options_arc();
-        state.ui.show_options_dialog = true;
 
         let snapshot = build_host_ui_snapshot(&state);
 
@@ -95,8 +100,8 @@ mod tests {
             .options_panel_state()
             .expect("OptionsPanelState muss im Snapshot vorhanden sein");
         assert!(
-            opts_panel.visible,
-            "show_options_dialog=true muss im Panel sichtbar sein"
+            !opts_panel.visible,
+            "engine-seitig ist visible immer false (Bridge setzt chrome_state)"
         );
         assert!(
             (opts_panel.options.node_size_world - 77.5).abs() < f32::EPSILON,
