@@ -1,23 +1,12 @@
 //! Kanonischer Tool-Katalog fuer alle Route-Tools.
 
 use crate::app::tool_contract::RouteToolId;
-use crate::shared::I18nKey;
+use crate::shared::{I18nKey, RouteToolGroup};
 
 use super::{
     bypass, color_path, curve, field_boundary, field_path, parking, route_offset, smooth_curve,
     spline, straight_line, RouteTool,
 };
-
-/// Gemeinsame Anzeige-Gruppe eines Route-Tools.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-pub enum RouteToolGroup {
-    /// Grundlegende Streckenwerkzeuge.
-    Basics,
-    /// Abschnitts- und Generator-Werkzeuge.
-    Section,
-    /// Analyse-Werkzeuge.
-    Analysis,
-}
 
 /// UI-Surface fuer Route-Tool-Eintraege.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
