@@ -14,23 +14,30 @@
 
 use anyhow::Result;
 use fs25_auto_drive_host_bridge::{HostBridgeSession, HostSessionAction};
-use std::cell::RefCell;
+use std::sync::{Arc, Mutex};
 
 /// Opaquer Session-Handle fuer die Flutter Control-Plane.
 ///
-/// Der Handle kapselt eine `HostBridgeSession` hinter einem `RefCell` fuer
-/// Innen-Mutabilitaet im single-threaded FFI-Modell. Dart greift ueber
-/// flutter_rust_bridge seriell zu — Cross-Thread-Sharing ist nicht vorgesehen.
-/// Dart-seitig wird dieser Handle als opaker Zeiger (via flutter_rust_bridge
-/// `RustOpaque`) verwaltet.
+/// Der Handle kapselt eine `HostBridgeSession` hinter `Arc<Mutex<...>>`, damit
+/// Flutter-Control-Plane und weitere Runtime-Adapter denselben Session-Besitz
+/// thread-sicher teilen koennen. Dart-seitig wird dieser Handle als opaker
+/// Zeiger (via flutter_rust_bridge `RustOpaque`) verwaltet.
 pub struct FlutterSessionHandle {
-    session: RefCell<HostBridgeSession>,
+    session: Arc<Mutex<HostBridgeSession>>,
 }
 
 impl FlutterSessionHandle {
     fn with_session<T>(&self, f: impl FnOnce(&mut HostBridgeSession) -> T) -> Result<T> {
-        let mut guard = self.session.borrow_mut();
+        let mut guard = self
+            .session
+            .lock()
+            .map_err(|_| anyhow::anyhow!("flutter session lock poisoned"))?;
         Ok(f(&mut guard))
+    }
+
+    #[allow(dead_code)]
+    pub(crate) fn session_arc(&self) -> Arc<Mutex<HostBridgeSession>> {
+        Arc::clone(&self.session)
     }
 }
 
@@ -40,14 +47,14 @@ impl FlutterSessionHandle {
 /// benoetigt wird. Dart ist verantwortlich `flutter_session_dispose` aufzurufen.
 pub fn flutter_session_new() -> Box<FlutterSessionHandle> {
     Box::new(FlutterSessionHandle {
-        session: RefCell::new(HostBridgeSession::new()),
+        session: Arc::new(Mutex::new(HostBridgeSession::new())),
     })
 }
 
 /// Gibt eine Flutter-Session frei.
 ///
 /// Nach diesem Aufruf darf `handle` nicht mehr verwendet werden.
-pub fn flutter_session_dispose(_handle: FlutterSessionHandle) {
+pub fn flutter_session_dispose(_handle: Box<FlutterSessionHandle>) {
     // Handle wird durch Drop freigegeben
 }
 
@@ -104,7 +111,7 @@ mod tests {
     #[test]
     fn test_flutter_session_lifecycle() {
         let handle = flutter_session_new();
-        flutter_session_dispose(*handle);
+        flutter_session_dispose(handle);
     }
 
     /// Prueft, dass ungueliges JSON einen Fehler zurueckgibt (kein Panic).
@@ -113,7 +120,7 @@ mod tests {
         let handle = flutter_session_new();
         let result = flutter_session_apply_action(&handle, "not json".to_string());
         assert!(result.is_err(), "Ungueltiges JSON muss Err zurueckgeben");
-        flutter_session_dispose(*handle);
+        flutter_session_dispose(handle);
     }
 
     /// Prueft, dass snapshot_json einen validen JSON-String liefert.
@@ -124,6 +131,6 @@ mod tests {
             flutter_session_snapshot_json(&handle).expect("Snapshot-Serialisierung muss gelingen");
         assert!(!json.is_empty());
         assert!(json.starts_with('{'), "Snapshot muss JSON-Objekt sein");
-        flutter_session_dispose(*handle);
+        flutter_session_dispose(handle);
     }
 }
