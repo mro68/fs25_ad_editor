@@ -32,7 +32,11 @@ fn map_active_tool(tool: EditorTool) -> HostActiveTool {
     }
 }
 
-fn build_snapshot(state: &AppState, chrome: &HostLocalDialogState) -> HostSessionSnapshot {
+fn build_snapshot(
+    state: &AppState,
+    chrome: &HostLocalDialogState,
+    pending_dialog_request_count: usize,
+) -> HostSessionSnapshot {
     HostSessionSnapshot {
         has_map: state.road_map.is_some(),
         node_count: state.node_count(),
@@ -43,7 +47,7 @@ fn build_snapshot(state: &AppState, chrome: &HostLocalDialogState) -> HostSessio
         show_options_dialog: chrome.show_options_dialog,
         can_undo: state.can_undo(),
         can_redo: state.can_redo(),
-        pending_dialog_request_count: state.ui.dialog_requests.len(),
+        pending_dialog_request_count,
         selection: HostSelectionSnapshot {
             selected_node_ids: state.selection.selected_node_ids.iter().copied().collect(),
         },
@@ -168,7 +172,7 @@ impl HostBridgeSession {
     pub fn new() -> Self {
         let state = AppState::new();
         let chrome = HostLocalDialogState::new();
-        let snapshot_cache = build_snapshot(&state, &chrome);
+        let snapshot_cache = build_snapshot(&state, &chrome, 0);
 
         Self {
             controller: AppController::new(),
@@ -436,7 +440,10 @@ impl HostBridgeSession {
         &self,
         viewport_size: [f32; 2],
     ) -> HostViewportGeometrySnapshot {
-        crate::dispatch::build_viewport_geometry_snapshot(&self.state, viewport_size)
+        crate::dispatch::build_viewport_geometry_snapshot(
+            &self.state,
+            viewport_size,
+        )
     }
 
     /// Baut den host-neutralen Host-UI-Snapshot fuer sichtbare Panels.
@@ -494,7 +501,8 @@ impl HostBridgeSession {
             return;
         }
 
-        self.snapshot_cache = build_snapshot(&self.state, &self.chrome_state);
+        self.snapshot_cache =
+            build_snapshot(&self.state, &self.chrome_state, self.pending_dialog_requests.len());
         self.snapshot_dirty = false;
     }
 
@@ -551,19 +559,28 @@ impl HostBridgeSession {
         }
     }
 
-    /// Spiegelt Engine-UI-Daten-Dialoge in den host-lokalen Chrome-State.
+    /// Spiegelt Engine-UI-Request-Flags in den host-lokalen Chrome-State.
     ///
-    /// Wird nach jedem `apply_action()`/`apply_intent()` (nach `drain_engine_requests()`)
-    /// aufgerufen. Sichtbarkeits-Flags (show_command_palette etc.) werden hier
-    /// NICHT mehr gespiegelt -- sie werden per `drain_engine_requests()` aus
-    /// `DialogRequest`-Varianten in `chrome_state` gesetzt.
-    /// Fuer Dialoge mit nutzer-mutierbaren Daten wird ein Transition-basiertes
-    /// Sync verwendet: Beim Oeffen werden Daten kopiert, waehrend der Dialog
-    /// offen ist wird die `chrome_state`-Kopie NICHT ueberschrieben.
+    /// Wird nach jedem `apply_action()`/`apply_intent()` aufgerufen, damit
+    /// `chrome_state` immer die aktuellen Engine-Werte fuer sichtbarkeits-relevante
+    /// Felder enthaelt. Fuer Dialoge mit nutzer-mutierbaren Daten wird ein
+    /// Transition-basiertes Sync verwendet: Beim Oeffen werden Daten kopiert,
+    /// waehrend der Dialog offen ist wird der `chrome_state` NICHT ueberschrieben.
     fn sync_chrome_from_engine(&mut self) {
         let ui = &self.state.ui;
 
+        // show_command_palette, show_options_dialog, show_heightmap_warning und
+        // confirm_dissolve_group_id werden nach dem Drain-Refactoring nicht mehr als
+        // Flags in EngineUiState gehalten, sondern als DialogRequest-Events emittiert
+        // und bereits in drain_engine_requests() direkt in chrome_state verarbeitet.
+        let new_hwconf = ui.heightmap_warning_confirmed;
+
         let mut dirty = false;
+
+        if self.chrome_state.heightmap_warning_confirmed != new_hwconf {
+            self.chrome_state.heightmap_warning_confirmed = new_hwconf;
+            dirty = true;
+        }
 
         // Dedup-Dialog: read-only im Frontend → immer spiegeln
         if self.chrome_state.dedup_dialog.visible != ui.dedup_dialog.visible
