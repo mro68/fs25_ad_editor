@@ -85,6 +85,11 @@ pub struct AppState {
     /// Gecachtes Hintergrundbild fuer farbbasierte Tool-Analysen.
     /// `None` solange kein Overview geladen wurde.
     pub background_image: Option<Arc<image::DynamicImage>>,
+    /// Zuletzt geladener oder erfolgreich gespeicherter Dokumentschluessel.
+    ///
+    /// Der Wert basiert auf `RoadMap::render_cache_key()` und unterscheidet damit
+    /// nur echte Kartenmutationen von UI- oder Auswahlzustand.
+    saved_document_cache_key: Option<(u64, u64)>,
     /// Aktive Gruppen-Bearbeitung (None = Normal-Modus, Some = Edit-Modus aktiv)
     pub group_editing: Option<GroupEditState>,
     /// Separater Store fuer tool-spezifische Edit-Payloads.
@@ -127,6 +132,7 @@ impl AppState {
             farmland_polygons: None,
             farmland_grid: None,
             background_image: None,
+            saved_document_cache_key: None,
             group_editing: None,
             tool_edit_store: ToolEditStore::new(),
             active_tool_edit_session: None,
@@ -203,6 +209,11 @@ impl AppState {
         self.history.can_redo()
     }
 
+    /// Gibt zurueck, ob die geladene Karte seit dem letzten Load/Save veraendert wurde.
+    pub fn is_dirty(&self) -> bool {
+        self.current_document_cache_key() != self.saved_document_cache_key
+    }
+
     /// Erstellt einen Undo-Snapshot des aktuellen Zustands.
     /// Reduziert Boilerplate in mutierenden Use-Cases.
     pub fn record_undo_snapshot(&mut self) {
@@ -225,10 +236,58 @@ impl AppState {
     pub fn refresh_options_arc(&mut self) {
         self.options_arc = Arc::new(self.options.clone());
     }
+
+    fn current_document_cache_key(&self) -> Option<(u64, u64)> {
+        self.road_map
+            .as_ref()
+            .map(|road_map| road_map.render_cache_key())
+    }
+
+    pub(crate) fn mark_document_saved(&mut self) {
+        self.saved_document_cache_key = self.current_document_cache_key();
+    }
+
+    pub(crate) fn reset_document_tracking(&mut self) {
+        self.history.clear();
+        self.saved_document_cache_key = self.current_document_cache_key();
+    }
 }
 
 impl Default for AppState {
     fn default() -> Self {
         Self::new()
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::AppState;
+    use crate::core::{MapNode, NodeFlag, RoadMap};
+    use glam::Vec2;
+    use std::sync::Arc;
+
+    #[test]
+    fn dirty_tracking_compares_current_map_against_saved_baseline() {
+        let mut state = AppState::new();
+
+        let mut road_map = RoadMap::new(3);
+        road_map.add_node(MapNode::new(1, Vec2::new(0.0, 0.0), NodeFlag::Regular));
+        state.road_map = Some(Arc::new(road_map));
+
+        state.mark_document_saved();
+        assert!(!state.is_dirty());
+
+        Arc::make_mut(
+            state
+                .road_map
+                .as_mut()
+                .expect("Testkarte muss vorhanden sein"),
+        )
+        .add_node(MapNode::new(2, Vec2::new(10.0, 0.0), NodeFlag::Regular));
+
+        assert!(state.is_dirty());
+
+        state.mark_document_saved();
+        assert!(!state.is_dirty());
     }
 }

@@ -131,6 +131,8 @@ pub struct HostViewportGeometrySnapshot {
 pub struct HostSessionSnapshot {
     /// Ob aktuell eine Karte geladen ist.
     pub has_map: bool,
+    /// Ob die geladene Karte seit dem letzten erfolgreichen Load/Save veraendert wurde.
+    pub is_dirty: bool,
     /// Anzahl der Nodes der geladenen Karte.
     pub node_count: usize,
     /// Anzahl der Verbindungen der geladenen Karte.
