@@ -3,6 +3,7 @@
 mod background_renderer;
 mod connection_renderer;
 mod export_core;
+pub mod external_texture;
 mod fingerprint;
 mod marker_renderer;
 mod node_renderer;
@@ -31,8 +32,23 @@ pub use texture_registration::{
 
 pub(crate) use background_renderer::BackgroundRenderer;
 pub(crate) use connection_renderer::ConnectionRenderer;
+pub use external_texture::{
+    ExternalTextureError, ExternalTextureExport, PlatformTextureDescriptor,
+};
 use fs25_auto_drive_engine::shared::EditorOptions;
 pub(crate) use marker_renderer::MarkerRenderer;
+
+/// Erzeugt eine wgpu-Instanz mit explizitem Vulkan-Backend fuer die Flutter-Linux-Integration.
+///
+/// Diese Funktion ist die bevorzugte Einstiegsfunktion fuer den Flutter-GPU-Export-Stack.
+/// Die regulaere egui-Integration erstellt ihre eigene Instanz separat und ist nicht betroffen.
+#[cfg(feature = "flutter-linux")]
+pub fn create_vulkan_instance() -> wgpu::Instance {
+    wgpu::Instance::new(&wgpu::InstanceDescriptor {
+        backends: wgpu::Backends::VULKAN,
+        ..Default::default()
+    })
+}
 pub(crate) use node_renderer::NodeRenderer;
 use types::RenderContext;
 
