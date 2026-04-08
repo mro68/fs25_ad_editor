@@ -692,6 +692,8 @@ mod tests {
             .handle_intent(&mut session.state, intent)
             .expect("Test-Intent muss verarbeitet werden");
         session.snapshot_dirty = true;
+        session.drain_engine_requests();
+        session.sync_chrome_from_engine();
     }
 
     fn viewport_test_map() -> RoadMap {
