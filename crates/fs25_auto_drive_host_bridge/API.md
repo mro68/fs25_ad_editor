@@ -87,7 +87,7 @@ Mit `HostChromeSnapshot` existiert zusaetzlich ein expliziter host-neutraler Rea
 | `HostPointerButton` / `HostTapKind` / `HostInputModifiers` | Stabile Transport-DTOs fuer Pointer-Buttons, Tap-Art und Modifiers |
 | `HostViewportInputState` | Kleiner bridge-owned Drag-/Resize-Zustand fuer Session oder lokale Rust-Hosts |
 | `EngineSessionAction` | Kompatibilitaetsalias auf `HostSessionAction` |
-| `HostSessionSnapshot` | Kleine serialisierbare Session-Zusammenfassung fuer Polling-Hosts |
+| `HostSessionSnapshot` | Kleine serialisierbare Session-Zusammenfassung fuer Polling-Hosts inklusive `is_dirty` relativ zum letzten Load/Save |
 | `EngineSessionSnapshot` | Kompatibilitaetsalias auf `HostSessionSnapshot` |
 | `HostChromeSnapshot` | Host-neutrales Read-Modell fuer Menues, Defaults, Status und Route-Tool-Availability |
 | `HostLocalDialogState` | Host-lokaler mutierbarer Chrome-/Dialogzustand; ersetzt einen separaten oeffentlichen `ChromeState`-Typ |
@@ -115,6 +115,7 @@ Mit `HostChromeSnapshot` existiert zusaetzlich ein expliziter host-neutraler Rea
 | `pub fn apply_action(&mut self, action: HostSessionAction) -> Result<()>` | Wendet eine explizite Host-Aktion an |
 | `pub fn apply_intent(&mut self, intent: AppIntent) -> Result<()>` | Uebergangs-Seam fuer noch nicht migrierte Intent-Call-Sites |
 | `pub fn app_state(&self) -> &AppState` | Temporaere Read-Seam fuer den Session-Ownership-Flip |
+| `pub fn is_dirty(&self) -> bool` | Liefert den semantischen Dirty-Zustand relativ zum letzten erfolgreichen Load/Save |
 | `pub fn mark_snapshot_dirty(&mut self)` | Invalidiert den gecachten `HostSessionSnapshot` explizit nach snapshot-relevanten lokalen Mutationen |
 | `pub fn chrome_state(&self) -> &HostLocalDialogState` | Liefert eine read-only Referenz auf den host-lokalen Chrome-/Dialogzustand |
 | `pub fn chrome_state_mut(&mut self) -> &mut HostLocalDialogState` | Liefert den mutierbaren host-lokalen Chrome-/Dialogzustand; bei snapshot-relevanten Aenderungen anschliessend `mark_snapshot_dirty()` aufrufen |

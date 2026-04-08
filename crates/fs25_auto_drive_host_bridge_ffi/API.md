@@ -255,6 +255,7 @@ Opaquer Session-Handle mit `Arc<Mutex<HostBridgeSession>>` fuer thread-sicheren 
 | `flutter_session_new() -> Box<FlutterSessionHandle>` | Erzeugt eine neue Flutter-Session |
 | `flutter_session_dispose(handle: Box<FlutterSessionHandle>)` | Gibt die Session frei |
 | `flutter_session_apply_action(handle, action_json: String) -> Result<()>` | Wendet eine JSON-serialisierte `HostSessionAction` an |
+| `flutter_session_is_dirty(handle) -> Result<bool>` | Liefert den semantischen Dirty-Zustand relativ zum letzten erfolgreichen Load/Save |
 | `flutter_session_snapshot_json(handle) -> Result<String>` | Liefert den `HostSessionSnapshot` als JSON |
 | `flutter_session_ui_snapshot_json(handle) -> Result<String>` | Liefert den host-neutralen `HostUiSnapshot` als JSON |
 | `flutter_session_chrome_snapshot_json(handle) -> Result<String>` | Liefert den `HostChromeSnapshot` als JSON |

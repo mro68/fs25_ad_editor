@@ -49,6 +49,7 @@ pub fn load_selected_file(state: &mut AppState, path: String) -> anyhow::Result<
     super::camera::center_on_road_map(state, &road_map);
 
     state.road_map = Some(Arc::new(road_map));
+    state.reset_document_tracking();
     Ok(())
 }
 
@@ -100,6 +101,7 @@ pub fn request_save_file(state: &mut AppState) {
 pub fn save_current_file(state: &mut AppState) -> anyhow::Result<()> {
     if let Some(path) = state.ui.current_file_path.clone() {
         write_roadmap_to_file(state, &path)?;
+        state.mark_document_saved();
         log::info!("File saved successfully");
         Ok(())
     } else {
@@ -113,6 +115,7 @@ pub fn save_current_file(state: &mut AppState) -> anyhow::Result<()> {
 pub fn save_file_as(state: &mut AppState, path: String) -> anyhow::Result<()> {
     write_roadmap_to_file(state, &path)?;
     state.ui.current_file_path = Some(path.clone());
+    state.mark_document_saved();
     log::info!("File saved as: {}", path);
     Ok(())
 }
@@ -207,4 +210,68 @@ pub fn confirm_and_save(state: &mut AppState) -> anyhow::Result<()> {
     }
     state.ui.heightmap_warning_confirmed = false;
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use std::fs;
+    use std::path::PathBuf;
+    use std::time::{SystemTime, UNIX_EPOCH};
+
+    use glam::Vec2;
+
+    use super::{load_selected_file, save_file_as};
+    use crate::app::use_cases::editing::{add_node_at_position, AddNodeResult};
+    use crate::app::AppState;
+
+    fn unique_temp_xml_path(label: &str) -> PathBuf {
+        let timestamp = SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .expect("Systemzeit darf nicht vor Unix-Epoche liegen")
+            .as_nanos();
+        std::env::temp_dir().join(format!(
+            "fs25_ad_editor_{label}_{}_{}.xml",
+            std::process::id(),
+            timestamp
+        ))
+    }
+
+    #[test]
+    fn load_save_and_reload_keep_dirty_baseline_consistent() {
+        let sample_path = PathBuf::from(concat!(
+            env!("CARGO_MANIFEST_DIR"),
+            "/../../ad_sample_data/AutoDrive_config-test.xml"
+        ));
+        let input_path = unique_temp_xml_path("dirty_input");
+        let output_path = unique_temp_xml_path("dirty_output");
+
+        let sample_xml = fs::read_to_string(&sample_path)
+            .expect("Beispiel-XML fuer Dirty-Tracking-Test muss lesbar sein");
+        fs::write(&input_path, sample_xml)
+            .expect("Temporare Test-XML fuer Dirty-Tracking muss schreibbar sein");
+
+        let mut state = AppState::new();
+
+        load_selected_file(&mut state, input_path.to_string_lossy().into_owned())
+            .expect("Beispiel-XML muss ladbar sein");
+        assert!(!state.is_dirty());
+        assert!(!state.can_undo());
+
+        let add_result = add_node_at_position(&mut state, Vec2::new(123_456.0, 654_321.0));
+        assert!(matches!(add_result, AddNodeResult::Created(_)));
+        assert!(state.is_dirty());
+        assert!(state.can_undo());
+
+        save_file_as(&mut state, output_path.to_string_lossy().into_owned())
+            .expect("Speichern unter neuem Pfad muss gelingen");
+        assert!(!state.is_dirty());
+
+        load_selected_file(&mut state, input_path.to_string_lossy().into_owned())
+            .expect("Reload der Test-XML muss gelingen");
+        assert!(!state.is_dirty());
+        assert!(!state.can_undo());
+
+        let _ = fs::remove_file(&input_path);
+        let _ = fs::remove_file(&output_path);
+    }
 }

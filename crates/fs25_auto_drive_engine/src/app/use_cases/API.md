@@ -24,11 +24,11 @@ Seit Phase 7 schneiden `controller.rs` und `intent_mapping.rs` die Control-Plane
 ## `use_cases::file_io`
 
 - `request_open_file(state)` — Open-Dialog triggern
-- `load_selected_file(state, path)` — XML laden, Duplikate zaehlen, Kamera zentrieren und Dateipfad im State setzen; die Post-Load-Detection laeuft anschliessend im File-I/O-Handler
+- `load_selected_file(state, path)` — XML laden, Duplikate zaehlen, Kamera zentrieren und Dateipfad im State setzen; setzt Dirty-Baseline und Undo/Redo-History auf das geladene Dokument zurueck; die Post-Load-Detection laeuft anschliessend im File-I/O-Handler
 - `deduplicate_loaded_roadmap(state)` — Fuehrt die Duplikat-Bereinigung auf der geladenen RoadMap aus und aktualisiert Status-/Dialog-State
 - `request_save_file(state)` — Save-Dialog triggern
-- `save_current_file(state)` — Unter aktuellem Pfad speichern
-- `save_file_as(state, path)` — Unter neuem Pfad speichern
+- `save_current_file(state)` — Unter aktuellem Pfad speichern und den aktuellen Kartenstand als saubere Save-Baseline markieren
+- `save_file_as(state, path)` — Unter neuem Pfad speichern und den aktuellen Kartenstand als saubere Save-Baseline markieren
 - `save_with_heightmap_check(state, path)` — Speichern mit Heightmap-Pruefung (zeigt Warnung wenn noetig)
 - `confirm_and_save(state)` — Speichern nach Bestaetigung der Heightmap-Warnung
 

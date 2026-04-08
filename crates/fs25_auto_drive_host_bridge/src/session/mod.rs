@@ -39,6 +39,7 @@ fn build_snapshot(
 ) -> HostSessionSnapshot {
     HostSessionSnapshot {
         has_map: state.road_map.is_some(),
+        is_dirty: state.is_dirty(),
         node_count: state.node_count(),
         connection_count: state.connection_count(),
         active_tool: map_active_tool(state.editor.active_tool),
@@ -224,6 +225,11 @@ impl HostBridgeSession {
     /// bis alle host-neutralen Snapshots konsumiert werden.
     pub fn app_state(&self) -> &AppState {
         &self.state
+    }
+
+    /// Gibt zurueck, ob die geladene Karte seit dem letzten Load/Save veraendert wurde.
+    pub fn is_dirty(&self) -> bool {
+        self.state.is_dirty()
     }
 
     /// Invalidiert den gecachten `HostSessionSnapshot` explizit.
@@ -669,6 +675,7 @@ impl Default for HostBridgeSession {
 #[cfg(test)]
 mod tests {
     use std::hint::black_box;
+    use std::path::PathBuf;
     use std::time::Instant;
 
     use fs25_auto_drive_engine::app::{
@@ -918,6 +925,42 @@ mod tests {
         let overlay = session.build_viewport_overlay_snapshot(None);
         assert!(overlay.route_tool_preview.is_none());
         assert!(overlay.group_boundaries.is_empty());
+    }
+
+    #[test]
+    fn session_dirty_state_surfaces_via_snapshot() {
+        let mut session = HostBridgeSession::new();
+        let sample_path = PathBuf::from(concat!(
+            env!("CARGO_MANIFEST_DIR"),
+            "/../../ad_sample_data/AutoDrive_config-test.xml"
+        ));
+
+        fs25_auto_drive_engine::app::use_cases::file_io::load_selected_file(
+            &mut session.state,
+            sample_path.to_string_lossy().into_owned(),
+        )
+        .expect("Beispiel-XML muss fuer Dirty-Tracking ladbar sein");
+
+        session.snapshot_dirty = true;
+        assert!(!session.is_dirty());
+        assert!(!session.snapshot().is_dirty);
+
+        Arc::make_mut(
+            session
+                .state
+                .road_map
+                .as_mut()
+                .expect("RoadMap muss nach dem Laden vorhanden sein"),
+        )
+        .add_node(MapNode::new(
+            999_999,
+            Vec2::new(1.0, 1.0),
+            NodeFlag::Regular,
+        ));
+
+        session.snapshot_dirty = true;
+        assert!(session.is_dirty());
+        assert!(session.snapshot().is_dirty);
     }
 
     #[test]

@@ -268,6 +268,7 @@ mod tests {
     fn engine_session_snapshot_alias_roundtrips_without_schema_drift() {
         let host_snapshot = HostSessionSnapshot {
             has_map: true,
+            is_dirty: false,
             node_count: 7,
             connection_count: 9,
             active_tool: HostActiveTool::Connect,

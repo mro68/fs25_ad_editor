@@ -400,6 +400,7 @@ let nodes = state.node_count();
 let connections = state.connection_count();
 let can_undo = state.can_undo();
 let can_redo = state.can_redo();
+let dirty = state.is_dirty();
 
 // Komfort-Accessor fuer die geladene RoadMap (vermeidet .as_ref().unwrap() in Use-Cases)
 if let Some(rm) = state.road_map_ref() { /* rm: &RoadMap */ }
@@ -415,6 +416,7 @@ state.record_undo_snapshot();
 - `road_map_ref() -> Option<&RoadMap>` — Kurzform fuer `road_map.as_deref()`
 - `options_arc() -> Arc<EditorOptions>` — Liefert den gecachten Arc (zero-copy pro Frame)
 - `set_options(opts: EditorOptions)` — Setzt `options` und aktualisiert `options_arc` atomar
+- `is_dirty() -> bool` — Vergleicht den aktuellen `RoadMap`-Dokumentschluessel mit der zuletzt geladenen/gespeicherten Save-Baseline
 - `record_undo_snapshot()` — Erstellt Snapshot via `Snapshot::from_state()` und schreibt in `history`
 
 ---

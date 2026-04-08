@@ -86,6 +86,11 @@ pub fn flutter_session_snapshot_json(handle: &FlutterSessionHandle) -> Result<St
         .map_err(|e| anyhow::anyhow!("flutter_session_snapshot_json: Serialisierungsfehler: {e}"))
 }
 
+/// Gibt zurueck, ob die geladene Karte seit dem letzten Load/Save veraendert wurde.
+pub fn flutter_session_is_dirty(handle: &FlutterSessionHandle) -> Result<bool> {
+    handle.with_session(|s| s.is_dirty())
+}
+
 /// Gibt den aktuellen host-neutralen UI-Snapshot als JSON-String zurueck.
 ///
 /// Der Snapshot enthaelt Route-Tool-Panels, Optionen und weitere host-neutrale
@@ -172,6 +177,16 @@ mod tests {
             flutter_session_snapshot_json(&handle).expect("Snapshot-Serialisierung muss gelingen");
         assert!(!json.is_empty());
         assert!(json.starts_with('{'), "Snapshot muss JSON-Objekt sein");
+        flutter_session_dispose(handle);
+    }
+
+    /// Prueft, dass neue Sessions als nicht dirty gemeldet werden.
+    #[test]
+    fn test_flutter_session_is_dirty_is_false_for_fresh_session() {
+        let handle = flutter_session_new();
+        let dirty = flutter_session_is_dirty(&handle)
+            .expect("Dirty-Abfrage fuer frische Session muss gelingen");
+        assert!(!dirty);
         flutter_session_dispose(handle);
     }
 
