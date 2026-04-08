@@ -26,6 +26,24 @@ struct HostBridgeSharedTextureState {
 impl HostBridgeSharedTextureState {
     fn new(width: u32, height: u32) -> Result<Self> {
         let instance = wgpu::Instance::default();
+        Self::new_with_instance(instance, width, height)
+    }
+
+    /// Erzeugt den State mit einer explizit bereitgestellten wgpu-Instanz.
+    ///
+    /// Wird von der Flutter-Linux-Integration genutzt um eine Vulkan-exklusive
+    /// Instanz zu erzwingen und GPU-Sharing mit Impeller zu ermoeglichen.
+    ///
+    /// TODO(flutter-wiring): Wird aufgerufen sobald der Flutter-GPU-Pfad vollstaendig
+    /// mit `flutter_gpu.rs` verbunden ist.
+    #[cfg(feature = "flutter-linux")]
+    #[allow(dead_code)]
+    fn new_for_flutter(width: u32, height: u32) -> Result<Self> {
+        let instance = fs25_auto_drive_render_wgpu::create_vulkan_instance();
+        Self::new_with_instance(instance, width, height)
+    }
+
+    fn new_with_instance(instance: wgpu::Instance, width: u32, height: u32) -> Result<Self> {
         let adapter = pollster::block_on(instance.request_adapter(&wgpu::RequestAdapterOptions {
             power_preference: wgpu::PowerPreference::LowPower,
             compatible_surface: None,

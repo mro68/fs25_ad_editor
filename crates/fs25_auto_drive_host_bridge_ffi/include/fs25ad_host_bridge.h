@@ -49,6 +49,8 @@ typedef struct Fs25adHostBridgeSession Fs25adHostBridgeSession;
 typedef struct Fs25adHostBridgeSharedTexture Fs25adHostBridgeSharedTexture;
 typedef struct Fs25adHostBridgeTextureRegistrationV4
     Fs25adHostBridgeTextureRegistrationV4;
+typedef struct Fs25adFlutterSessionHandle Fs25adFlutterSessionHandle;
+typedef struct Fs25adGpuRuntimeHandle Fs25adGpuRuntimeHandle;
 
 typedef struct Fs25adSharedTextureCapabilities {
     uint32_t pixel_format;
@@ -218,6 +220,26 @@ bool fs25ad_host_bridge_texture_registration_v4_attach_android_surface(
     const Fs25adTextureRegistrationV4AndroidSurfaceDescriptor *surface_descriptor);
 bool fs25ad_host_bridge_texture_registration_v4_detach_android_surface(
     Fs25adHostBridgeTextureRegistrationV4 *texture);
+
+/* Flutter GPU Runtime (feature: flutter-linux) */
+
+Fs25adFlutterSessionHandle *fs25ad_flutter_session_new(void);
+void fs25ad_flutter_session_dispose(Fs25adFlutterSessionHandle *session);
+
+Fs25adGpuRuntimeHandle *fs25ad_gpu_runtime_new(uint32_t width, uint32_t height);
+Fs25adGpuRuntimeHandle *fs25ad_gpu_runtime_new_with_session(
+    const Fs25adFlutterSessionHandle *session,
+    uint32_t width,
+    uint32_t height);
+bool fs25ad_gpu_runtime_render(Fs25adGpuRuntimeHandle *handle);
+bool fs25ad_gpu_runtime_export_texture(
+    Fs25adGpuRuntimeHandle *handle,
+    Fs25adTextureRegistrationV4LinuxDmabufDescriptor *out_descriptor);
+bool fs25ad_gpu_runtime_resize(
+    Fs25adGpuRuntimeHandle *handle,
+    uint32_t width,
+    uint32_t height);
+void fs25ad_gpu_runtime_dispose(Fs25adGpuRuntimeHandle *handle);
 
 #ifdef __cplusplus
 }

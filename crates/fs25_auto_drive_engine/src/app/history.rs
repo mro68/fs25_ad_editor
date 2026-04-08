@@ -94,6 +94,11 @@ impl EditHistory {
         !self.redo_stack.is_empty()
     }
 
+    pub(crate) fn clear(&mut self) {
+        self.undo_stack.clear();
+        self.redo_stack.clear();
+    }
+
     /// Nimmt den obersten Undo-Eintrag und gibt den wiederherzustellenden Snapshot zurueck.
     /// Schiebt `current` auf den Redo-Stack.
     pub fn pop_undo_with_current(&mut self, current: Snapshot) -> Option<Snapshot> {

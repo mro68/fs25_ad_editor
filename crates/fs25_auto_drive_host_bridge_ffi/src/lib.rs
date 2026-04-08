@@ -1,7 +1,51 @@
 //! C-ABI-Transport ueber der kanonischen Host-Bridge-Session.
 
+#[cfg(feature = "flutter")]
+mod api;
+#[cfg(feature = "flutter")]
+pub mod flutter_api;
+mod frb_generated;
 mod shared_texture_v2;
 mod texture_registration_v4;
+
+/// Hilfsmakro: Wraps einen bool-FFI-Aufruf mit Panic-Isolation und Last-Error-Behandlung.
+macro_rules! ffi_guard_bool {
+    ($body:expr) => {{
+        clear_last_error();
+        match std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| $body)) {
+            Ok(Ok(())) => true,
+            Ok(Err(e)) => {
+                set_last_error(e.to_string());
+                false
+            }
+            Err(_) => {
+                set_last_error("internal panic in FFI call");
+                false
+            }
+        }
+    }};
+}
+
+/// Hilfsmakro: Wraps einen ptr-rueckgebenden FFI-Aufruf mit Panic-Isolation und Last-Error-Behandlung.
+macro_rules! ffi_guard_ptr {
+    ($body:expr) => {{
+        clear_last_error();
+        match std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| $body)) {
+            Ok(Ok(ptr)) => ptr,
+            Ok(Err(e)) => {
+                set_last_error(e.to_string());
+                std::ptr::null_mut()
+            }
+            Err(_) => {
+                set_last_error("internal panic in FFI call");
+                std::ptr::null_mut()
+            }
+        }
+    }};
+}
+
+#[cfg(all(feature = "flutter-linux", target_os = "linux"))]
+pub mod flutter_gpu;
 
 use anyhow::{anyhow, Context, Result};
 use fs25_auto_drive_host_bridge::{
@@ -92,42 +136,6 @@ fn with_session_mut<T>(
     session.with_lock(f)
 }
 
-/// Hilfsmakro: Wraps einen bool-FFI-Aufruf mit Panic-Isolation und Last-Error-Behandlung.
-macro_rules! ffi_guard_bool {
-    ($body:expr) => {{
-        clear_last_error();
-        match std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| $body)) {
-            Ok(Ok(())) => true,
-            Ok(Err(e)) => {
-                set_last_error(e.to_string());
-                false
-            }
-            Err(_) => {
-                set_last_error("internal panic in FFI call");
-                false
-            }
-        }
-    }};
-}
-
-/// Hilfsmakro: Wraps einen ptr-rueckgebenden FFI-Aufruf mit Panic-Isolation und Last-Error-Behandlung.
-macro_rules! ffi_guard_ptr {
-    ($body:expr) => {{
-        clear_last_error();
-        match std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| $body)) {
-            Ok(Ok(ptr)) => ptr,
-            Ok(Err(e)) => {
-                set_last_error(e.to_string());
-                std::ptr::null_mut()
-            }
-            Err(_) => {
-                set_last_error("internal panic in FFI call");
-                std::ptr::null_mut()
-            }
-        }
-    }};
-}
-
 /// Liefert die ABI-Version des nativen Host-Bridge-Vertrags.
 #[unsafe(no_mangle)]
 pub extern "C" fn fs25ad_host_bridge_abi_version() -> u32 {
@@ -166,6 +174,38 @@ pub unsafe extern "C" fn fs25ad_host_bridge_string_free(value: *mut c_char) {
 pub extern "C" fn fs25ad_host_bridge_session_new() -> *mut HostBridgeSessionHandle {
     clear_last_error();
     Box::into_raw(Box::new(HostBridgeSessionHandle::new()))
+}
+
+/// Erstellt eine neue Flutter-Session als C-ABI-Handle.
+#[cfg(feature = "flutter")]
+#[unsafe(no_mangle)]
+pub extern "C" fn fs25ad_flutter_session_new() -> *mut flutter_api::FlutterSessionHandle {
+    ffi_guard_ptr! {{
+        Result::<*mut flutter_api::FlutterSessionHandle>::Ok(Box::into_raw(
+            flutter_api::flutter_session_new(),
+        ))
+    }}
+}
+
+/// Gibt einen zuvor erstellten Flutter-Session-Handle frei.
+///
+/// # Safety
+///
+/// `session` muss ein durch `fs25ad_flutter_session_new` erzeugter Zeiger sein oder `null`.
+/// Nach dem Aufruf ist der Zeiger ungueltig. Doppeltes Freigeben ist undefiniertes Verhalten.
+#[cfg(feature = "flutter")]
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn fs25ad_flutter_session_dispose(
+    session: *mut flutter_api::FlutterSessionHandle,
+) {
+    clear_last_error();
+    if session.is_null() {
+        return;
+    }
+
+    // SAFETY: Aufrufer garantiert, dass `session` durch `fs25ad_flutter_session_new`
+    // alloziert wurde und hier exklusiv freigegeben werden darf.
+    unsafe { flutter_api::flutter_session_dispose(*Box::from_raw(session)) };
 }
 
 /// Gibt eine zuvor erstellte Bridge-Session frei.
@@ -378,6 +418,11 @@ mod tests {
         unsafe { fs25ad_host_bridge_session_viewport_geometry_json(s, w, h) }
     }
 
+    #[cfg(feature = "flutter")]
+    fn flutter_session_dispose(session: *mut super::flutter_api::FlutterSessionHandle) {
+        unsafe { super::fs25ad_flutter_session_dispose(session) }
+    }
+
     fn read_and_free_string(ptr: *mut std::ffi::c_char) -> String {
         assert!(!ptr.is_null());
         let value = unsafe { CStr::from_ptr(ptr) }
@@ -408,6 +453,17 @@ mod tests {
             FS25AD_HOST_BRIDGE_ABI_VERSION
         );
         assert_eq!(fs25ad_host_bridge_abi_version(), 4);
+    }
+
+    #[cfg(feature = "flutter")]
+    #[test]
+    fn ffi_flutter_session_lifecycle_roundtrip() {
+        let session = super::fs25ad_flutter_session_new();
+        assert!(
+            !session.is_null(),
+            "Flutter-Session-FFI muss einen gueltigen Handle liefern"
+        );
+        flutter_session_dispose(session);
     }
 
     #[test]

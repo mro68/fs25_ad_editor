@@ -203,6 +203,27 @@ impl SharedTextureRuntime {
         Ok(frame)
     }
 
+    /// Rendert Szene plus Assets in eine extern bereitgestellte `TextureView`.
+    ///
+    /// Diese Methode nutzt denselben Renderer- und Background-Sync-Zustand wie
+    /// [`render_frame`](Self::render_frame), schreibt aber nicht in die interne
+    /// Shared-Texture. Der Acquire/Release-Lifecycle der internen Shared-Texture
+    /// bleibt dabei unveraendert.
+    #[cfg(feature = "flutter-linux")]
+    pub fn render_to_view(
+        &mut self,
+        device: &wgpu::Device,
+        queue: &wgpu::Queue,
+        scene: &RenderScene,
+        assets: &RenderAssetsSnapshot,
+        target_view: &wgpu::TextureView,
+    ) -> Result<(), SharedTextureError> {
+        self.ensure_not_acquired()?;
+        self.core
+            .render_scene_to_view(device, queue, scene, assets, target_view)
+            .map_err(Self::map_core_error)
+    }
+
     /// Leased den zuletzt gerenderten Frame fuer den Host.
     pub fn acquire_frame(&mut self) -> Result<SharedTextureFrame, SharedTextureError> {
         if let Some(frame_token) = self.acquired_frame_token {

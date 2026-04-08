@@ -135,35 +135,14 @@ impl RenderExportCore {
         }
 
         self.sync_background_asset(device, queue, assets);
-
-        let mut encoder = device.create_command_encoder(&wgpu::CommandEncoderDescriptor {
-            label: Some("SharedTexture Export Encoder"),
-        });
-
-        {
-            let mut render_pass = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
-                label: Some("SharedTexture Export Pass"),
-                color_attachments: &[Some(wgpu::RenderPassColorAttachment {
-                    view: &self.color_view,
-                    depth_slice: None,
-                    resolve_target: None,
-                    ops: wgpu::Operations {
-                        load: wgpu::LoadOp::Clear(wgpu::Color::TRANSPARENT),
-                        store: wgpu::StoreOp::Store,
-                    },
-                })],
-                depth_stencil_attachment: None,
-                occlusion_query_set: None,
-                timestamp_writes: None,
-                multiview_mask: None,
-            });
-
-            self.renderer
-                .render_scene(device, queue, &mut render_pass, scene);
-        }
-
-        queue.submit(Some(encoder.finish()));
-
+        Self::issue_render_pass(
+            &mut self.renderer,
+            device,
+            queue,
+            scene,
+            &self.color_view,
+            "SharedTexture Export Pass",
+        );
         Ok(())
     }
 
@@ -177,6 +156,83 @@ impl RenderExportCore {
 
     pub(crate) fn texture_view(&self) -> &wgpu::TextureView {
         &self.color_view
+    }
+
+    /// Rendert die Szene in eine extern bereitgestellte TextureView (Flutter-Integration).
+    ///
+    /// Im Gegensatz zu [`render_scene`](Self::render_scene) schreibt diese Methode nicht in
+    /// die interne Farb-Texture, sondern in einen uebergebenen externen Render-Target.
+    /// Hintergrund-Assets werden dabei regulaer synchronisiert.
+    ///
+    /// # Fehler
+    /// Gibt [`ExportCoreError`] zurueck wenn Viewport-Groesse oder Target-Groesse nicht uebereinstimmen.
+    ///
+    /// TODO(flutter-wiring): Wird aufgerufen sobald der Flutter-GPU-Pfad vollstaendig
+    /// mit `flutter_gpu.rs` verbunden ist.
+    #[cfg(feature = "flutter-linux")]
+    #[allow(dead_code)]
+    pub(crate) fn render_scene_to_view(
+        &mut self,
+        device: &wgpu::Device,
+        queue: &wgpu::Queue,
+        scene: &RenderScene,
+        assets: &RenderAssetsSnapshot,
+        external_view: &wgpu::TextureView,
+    ) -> Result<(), ExportCoreError> {
+        let expected_viewport = [self.layout.size()[0] as f32, self.layout.size()[1] as f32];
+        if scene.viewport_size() != expected_viewport {
+            return Err(ExportCoreError::ViewportSizeMismatch {
+                expected: self.layout.size(),
+                actual: scene.viewport_size(),
+            });
+        }
+
+        self.sync_background_asset(device, queue, assets);
+        Self::issue_render_pass(
+            &mut self.renderer,
+            device,
+            queue,
+            scene,
+            external_view,
+            "Flutter External Texture Export Pass",
+        );
+        Ok(())
+    }
+
+    /// Erstellt einen Render-Pass und submittet den Command-Encoder.
+    ///
+    /// Gemeinsame Render-Infrastruktur fuer [`render_scene`](Self::render_scene) und
+    /// [`render_scene_to_view`](Self::render_scene_to_view).
+    fn issue_render_pass(
+        renderer: &mut Renderer,
+        device: &wgpu::Device,
+        queue: &wgpu::Queue,
+        scene: &RenderScene,
+        target_view: &wgpu::TextureView,
+        label: &str,
+    ) {
+        let mut encoder =
+            device.create_command_encoder(&wgpu::CommandEncoderDescriptor { label: Some(label) });
+        {
+            let mut render_pass = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
+                label: Some(label),
+                color_attachments: &[Some(wgpu::RenderPassColorAttachment {
+                    view: target_view,
+                    depth_slice: None,
+                    resolve_target: None,
+                    ops: wgpu::Operations {
+                        load: wgpu::LoadOp::Clear(wgpu::Color::TRANSPARENT),
+                        store: wgpu::StoreOp::Store,
+                    },
+                })],
+                depth_stencil_attachment: None,
+                occlusion_query_set: None,
+                timestamp_writes: None,
+                multiview_mask: None,
+            });
+            renderer.render_scene(device, queue, &mut render_pass, scene);
+        }
+        queue.submit(Some(encoder.finish()));
     }
 
     #[cfg(test)]
