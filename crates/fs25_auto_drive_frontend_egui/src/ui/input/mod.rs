@@ -46,6 +46,8 @@ pub struct ViewportInputEvents {
 mod tests {
     use super::*;
     use crate::app::state::DistanzenState;
+    use crate::app::{Camera2D, ConnectionDirection, ConnectionPriority, EditorTool};
+    use crate::shared::EditorOptions;
     use fs25_auto_drive_host_bridge::{HostPointerButton, HostViewportInputEvent};
     use indexmap::IndexSet;
 
