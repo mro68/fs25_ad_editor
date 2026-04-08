@@ -4,7 +4,7 @@
 //! plattformspezifischen Deskriptor [`PlatformTextureDescriptor`].
 //! Konkrete Implementierungen leben in den plattformspezifischen Submodulen.
 
-#[cfg(target_os = "linux")]
+#[cfg(all(target_os = "linux", feature = "flutter-linux"))]
 pub mod vulkan_linux;
 
 /// Stub-Modul fuer zukuenftige Android-Plattformstuetze.
@@ -80,8 +80,9 @@ pub trait ExternalTextureExport {
     /// # Eigentuemer-Semantik
     /// Der zurueckgegebene [`PlatformTextureDescriptor`] (inklusive eines enthaltenen `fd`
     /// bei [`PlatformTextureDescriptor::LinuxDmaBuf`]) wird an den **Aufrufer uebertragen**.
-    /// Der Aufrufer ist verantwortlich fuer `close(fd)` nach der Nutzung. Die Implementierung
-    /// haelt nach diesem Aufruf keine weitere Referenz auf den fd.
+    /// Der Aufrufer ist verantwortlich fuer `close(fd)` nach der Nutzung. Implementierungen
+    /// duerfen intern einen separaten, nicht an den Aufrufer uebertragenen Dateideskriptor
+    /// behalten, um spaetere Exportaufrufe erneut bedienen zu koennen.
     ///
     /// # Fehler
     /// Gibt [`ExternalTextureError`] zurueck wenn der Export fehlschlaegt.
