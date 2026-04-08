@@ -24,7 +24,7 @@ Der v4-Vertrag ist bewusst nur der additive Transport- und Lifecycle-Slice. Echt
 | `export_core.rs` | Interner, transportneutraler Export-Kern (Target-Guards, Background-Sync, Offscreen-Renderpass, `render_scene_to_view()` fuer Flutter) |
 | `shared_texture.rs` | Shared-Texture-Runtime mit Frame-Lifecycle und opaque Runtime-Handle-Metadaten |
 | `external_texture/` | Plattformspezifischer GPU-Texture-Export fuer Flutter-Integration (`ExternalTextureExport` Trait, `PlatformTextureDescriptor`, `ExternalTextureError`) |
-| `external_texture/vulkan_linux.rs` | Linux/Vulkan-Implementierung: `VulkanDmaBufTexture` (DMA-BUF-Export, aktuell TODO) |
+| `external_texture/vulkan_linux.rs` | Linux/Vulkan-Implementierung: `VulkanDmaBufTexture` mit Vulkan-External-Memory und DMA-BUF-FD-Export (cfg-gated: `flutter-linux` + `linux`) |
 | `external_texture/vulkan_android.rs` | Stub fuer zukuenftige Android-Plattformstuetze |
 | `external_texture/dx12_windows.rs` | Stub fuer zukuenftige Windows-Plattformstuetze |
 | `texture_registration/*` | Additiver `v4`-Vertrag (Capabilities, Lifecycle-State-Machine, plattformspezifische Payload-Familien) |
@@ -64,7 +64,7 @@ Der v4-Vertrag ist bewusst nur der additive Transport- und Lifecycle-Slice. Echt
 | `ExternalTextureExport` | Trait fuer plattformspezifischen GPU-Texture-Export an Flutter (create, export, resize, texture_view) |
 | `PlatformTextureDescriptor` | Enum mit plattformspezifischen Texture-Metadaten (aktuell: `LinuxDmaBuf`-Variante) |
 | `ExternalTextureError` | Fehler beim Texture-Export (`ExtensionNotAvailable`, `CreationFailed`, `ExportFailed`, `PlatformNotSupported`) |
-| `VulkanDmaBufTexture` | Linux/Vulkan-Implementierung von `ExternalTextureExport` via DMA-BUF (cfg-gated: `target_os = "linux"`) |
+| `VulkanDmaBufTexture` | Linux/Vulkan-Implementierung von `ExternalTextureExport` via Vulkan-External-Memory und DMA-BUF (cfg-gated: `flutter-linux` + `linux`) |
 
 ## Oeffentliche Re-Exports
 
@@ -81,6 +81,7 @@ Der v4-Vertrag ist bewusst nur der additive Transport- und Lifecycle-Slice. Echt
 | `SharedTextureRuntime::new(device, queue, size)` | Erstellt eine Offscreen-Shared-Texture-Runtime |
 | `SharedTextureRuntime::resize(device, size)` | Realloziert das Offscreen-Ziel bei Groessenaenderung |
 | `SharedTextureRuntime::render_frame(device, queue, scene, assets)` | Synchronisiert Assets revisionsbasiert und rendert den Frame in die Shared-Texture |
+| `SharedTextureRuntime::render_to_view(device, queue, scene, assets, target_view)` | Rendert Szene und Assets in eine extern bereitgestellte `TextureView` (cfg-gated: `flutter-linux`) |
 | `SharedTextureRuntime::acquire_frame()` | Leased den zuletzt gerenderten Frame fuer den Host |
 | `SharedTextureRuntime::release_frame(frame_token)` | Gibt den aktiven Frame-Lease wieder frei |
 | `SharedTextureRuntime::frame()` | Liefert die Metadaten des zuletzt gerenderten Frames ohne Lease-Aenderung |
@@ -169,7 +170,7 @@ flowchart LR
 
 | Feature | Zweck |
 |---|---|
-| `flutter-linux` | Aktiviert `ash` (Vulkan HAL) und `wgpu/vulkan`. Schaltet `create_vulkan_instance()`, das `external_texture/vulkan_linux`-Modul und `RenderExportCore::render_scene_to_view()` frei. |
+| `flutter-linux` | Aktiviert `ash` (Vulkan HAL) und `wgpu/vulkan`. Schaltet `create_vulkan_instance()`, das `external_texture/vulkan_linux`-Modul, `RenderExportCore::render_scene_to_view()` und `SharedTextureRuntime::render_to_view()` frei. |
 
 ## Flutter-Texture-Export (`external_texture/`)
 
@@ -194,9 +195,9 @@ Plattformspezifische Metadaten fuer den Flutter-Host-Import:
 
 ### Struct: `VulkanDmaBufTexture` (Linux)
 
-Implementiert `ExternalTextureExport` fuer Linux/Vulkan. Erzeugt eine wgpu-Texture und bereitet den DMA-BUF-Export vor.
+Implementiert `ExternalTextureExport` fuer Linux/Vulkan. Erzeugt ein explizit exportfaehiges Vulkan-Image samt dedizierter `VkDeviceMemory`-Allocation, exportiert einen persistenten DMA-BUF-FD ueber `vkGetMemoryFdKHR` und wrappt das Ergebnis anschliessend als `wgpu::Texture` fuer den Renderpfad.
 
-**Status:** Texture-Erzeugung funktional; `export_descriptor()` gibt aktuell `ExternalTextureError::ExportFailed` zurueck (TODO: VkImage mit `VK_EXTERNAL_MEMORY_HANDLE_TYPE_DMA_BUF_BIT_EXT` + `vkGetMemoryFdKHR`).
+**Status:** Produktiver Vulkan-HAL-Pfad fuer `VK_EXTERNAL_MEMORY_HANDLE_TYPE_DMA_BUF_BIT_EXT`; Modifier-Query faellt ohne aktivierte `VK_EXT_image_drm_format_modifier` auf `DRM_FORMAT_MOD_INVALID` zurueck, der Stride aktuell auf `0`.
 
 ### Hilfsfunktionen (vulkan_linux)
 

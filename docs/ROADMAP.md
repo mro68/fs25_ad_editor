@@ -553,15 +553,15 @@
 - [x] **Flutter-Backend Phase 2: GPU-Export-Stack Linux (2026-04-08)**
   - [x] `create_vulkan_instance()` in `render_wgpu` — Vulkan-exklusive wgpu-Instanz
   - [x] `external_texture/` Modul mit `ExternalTextureExport` Trait, `PlatformTextureDescriptor`, `ExternalTextureError`
-  - [x] `VulkanDmaBufTexture` — Linux/Vulkan-Implementierung (Texture-Erzeugung funktional, DMA-BUF-Export TODO)
+  - [x] `VulkanDmaBufTexture` — Linux/Vulkan-Implementierung mit Vulkan-External-Memory und DMA-BUF-FD-Export
   - [x] `RenderExportCore::render_scene_to_view()` — Rendering in externe TextureView (feature-gated)
   - [x] `issue_render_pass()` als gemeinsame Render-Infrastruktur extrahiert (DRY)
   - [x] `flutter_gpu.rs`: `GpuRuntimeHandle` mit C-FFI-Lifecycle (`new/render/export/resize/dispose`)
   - [x] `SharedTextureRuntime::new_for_flutter()` — Konstruktor mit Vulkan-Instanz
   - [x] Panic-Isolation ueber `ffi_guard_bool!` / `catch_unwind` fuer alle FFI-Funktionen
 - [ ] **Flutter-Backend Phase 3: DMA-BUF-Export (geplant)**
-  - [ ] `VulkanDmaBufTexture::export_descriptor()` produktiv machen (VkImage mit VK_EXTERNAL_MEMORY_HANDLE_TYPE_DMA_BUF_BIT_EXT)
-  - [ ] `vkGetMemoryFdKHR` fuer File-Descriptor-Export
+  - [x] `VulkanDmaBufTexture::export_descriptor()` produktiv machen (VkImage mit VK_EXTERNAL_MEMORY_HANDLE_TYPE_DMA_BUF_BIT_EXT)
+  - [x] `vkGetMemoryFdKHR` fuer File-Descriptor-Export
   - [ ] `RenderExportCore::render_scene_to_view()` mit `flutter_gpu.rs` vollstaendig verdrahten
 - [ ] **Flutter-Backend Phase 4: Flutter-App-Integration (geplant)**
   - [ ] `flutter_rust_bridge` Codegen vollstaendig integrieren (frb-Annotationen + Dart-SDK im Build)
