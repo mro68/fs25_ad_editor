@@ -59,12 +59,12 @@ pub fn close_marker_dialog(state: &mut AppState) {
 
 /// Oeffnet den Optionen-Dialog.
 pub fn open_options_dialog(state: &mut AppState) {
-    state.ui.show_options_dialog = true;
+    state.ui.request_dialog(DialogRequest::OpenOptionsDialog);
 }
 
 /// Schliesst den Optionen-Dialog.
 pub fn close_options_dialog(state: &mut AppState) {
-    state.ui.show_options_dialog = false;
+    state.ui.request_dialog(DialogRequest::CloseOptionsDialog);
 }
 
 /// Uebernimmt neue Optionen und persistiert sie in der Konfigurationsdatei.
@@ -83,7 +83,7 @@ pub fn reset_options(state: &mut AppState) -> anyhow::Result<()> {
 
 /// Schaltet die Sichtbarkeit der Command-Palette um.
 pub fn toggle_command_palette(state: &mut AppState) {
-    state.ui.show_command_palette = !state.ui.show_command_palette;
+    state.ui.request_dialog(DialogRequest::ToggleCommandPalette);
 }
 
 /// Schliesst den Duplikat-Dialog und entfernt die Statusmeldung.
