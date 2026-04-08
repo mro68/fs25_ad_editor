@@ -5,8 +5,8 @@
 //! HAL-Zugriff (VK_KHR_external_memory_fd, vkGetMemoryFdKHR) ist als TODO
 //! markiert bis die Flutter-Seite fuer Tests verfuegbar ist.
 
-use super::{ExternalTextureError, ExternalTextureExport, PlatformTextureDescriptor};
 use crate::export_core::{EXPORT_COLOR_FORMAT, EXPORT_SAMPLE_COUNT};
+use super::{ExternalTextureError, ExternalTextureExport, PlatformTextureDescriptor};
 
 /// Vulkan-basierte Texture fuer den Zero-Copy-Export an Flutter/Impeller via DMA-BUF.
 ///
@@ -117,4 +117,80 @@ pub fn dmabuf_texture_width(t: &VulkanDmaBufTexture) -> u32 {
 /// Gibt die Hoehe der exportierbaren Texture zurueck.
 pub fn dmabuf_texture_height(t: &VulkanDmaBufTexture) -> u32 {
     t.height
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn create_test_gpu() -> Option<(wgpu::Instance, wgpu::Adapter, wgpu::Device, wgpu::Queue)> {
+        let instance = wgpu::Instance::default();
+        let adapter = pollster::block_on(instance.request_adapter(&wgpu::RequestAdapterOptions {
+            power_preference: wgpu::PowerPreference::LowPower,
+            compatible_surface: None,
+            force_fallback_adapter: false,
+        }))
+        .ok()?;
+        let (device, queue) = pollster::block_on(adapter.request_device(&wgpu::DeviceDescriptor {
+            label: Some("VulkanDmaBufTexture Test Device"),
+            required_features: wgpu::Features::empty(),
+            required_limits: wgpu::Limits::downlevel_defaults(),
+            experimental_features: Default::default(),
+            memory_hints: wgpu::MemoryHints::Performance,
+            trace: wgpu::Trace::Off,
+        }))
+        .ok()?;
+        Some((instance, adapter, device, queue))
+    }
+
+    /// Prueft, dass eine Nullbreite korrekt abgelehnt wird.
+    #[test]
+    fn test_create_exportable_texture_rejects_zero_width() {
+        let Some((_inst, _adp, device, _queue)) = create_test_gpu() else {
+            return;
+        };
+        let result = VulkanDmaBufTexture::create_exportable_texture(&device, 0, 64);
+        assert!(result.is_err(), "Breite 0 muss CreationFailed zurueckgeben");
+    }
+
+    /// Prueft, dass eine Nullhoehe korrekt abgelehnt wird.
+    #[test]
+    fn test_create_exportable_texture_rejects_zero_height() {
+        let Some((_inst, _adp, device, _queue)) = create_test_gpu() else {
+            return;
+        };
+        let result = VulkanDmaBufTexture::create_exportable_texture(&device, 64, 0);
+        assert!(result.is_err(), "Hoehe 0 muss CreationFailed zurueckgeben");
+    }
+
+    /// Prueft, dass export_descriptor den erwarteten TODO-Fehler zurueckgibt.
+    #[test]
+    fn test_export_descriptor_returns_not_implemented() {
+        let Some((_inst, _adp, device, _queue)) = create_test_gpu() else {
+            return;
+        };
+        let texture = VulkanDmaBufTexture::create_exportable_texture(&device, 16, 16)
+            .expect("Texture-Erzeugung fuer Testgroesse muss gelingen");
+        let result = texture.export_descriptor();
+        assert!(
+            result.is_err(),
+            "DMA-BUF-Export muss Err zurueckgeben (TODO flutter-linux-dmabuf)"
+        );
+    }
+
+    /// Prueft, dass resize() die Dimensionen korrekt aktualisiert.
+    #[test]
+    fn test_resize_updates_dimensions() {
+        let Some((_inst, _adp, device, _queue)) = create_test_gpu() else {
+            return;
+        };
+        let mut texture = VulkanDmaBufTexture::create_exportable_texture(&device, 16, 16)
+            .expect("Initiale Texture-Erzeugung muss gelingen");
+        assert_eq!(dmabuf_texture_width(&texture), 16);
+        assert_eq!(dmabuf_texture_height(&texture), 16);
+
+        texture.resize(&device, 32, 64).expect("Resize muss gelingen");
+        assert_eq!(dmabuf_texture_width(&texture), 32);
+        assert_eq!(dmabuf_texture_height(&texture), 64);
+    }
 }

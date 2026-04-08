@@ -26,29 +26,13 @@ use fs25_auto_drive_render_wgpu::{
 };
 use std::sync::Mutex;
 
-/// Hilfsmakro: bool-FFI-Aufruf mit Panic-Isolation (lokal fuer flutter_gpu).
-macro_rules! ffi_guard_bool {
-    ($body:expr) => {{
-        clear_last_error();
-        match std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| $body)) {
-            Ok(Ok(())) => true,
-            Ok(Err(e)) => {
-                set_last_error(e.to_string());
-                false
-            }
-            Err(_) => {
-                set_last_error("internal panic in FFI call");
-                false
-            }
-        }
-    }};
-}
-
 /// Interner GPU-Runtime-Zustand fuer Flutter-Integration.
 ///
 /// Kapselt wgpu-Device/Queue, den Renderer und die exportierbare Texture.
 pub struct GpuRuntimeHandle {
+    /// Gehalten damit die Instanz nicht vorzeitig gedroppt wird (Device wuerde orphan).
     _instance: wgpu::Instance,
+    /// Gehalten damit Adapter und Device synchron leben.
     _adapter: wgpu::Adapter,
     device: wgpu::Device,
     queue: wgpu::Queue,
@@ -61,6 +45,11 @@ pub struct GpuRuntimeHandle {
 impl GpuRuntimeHandle {
     fn new(width: u32, height: u32) -> Result<Self> {
         let instance = fs25_auto_drive_render_wgpu::create_vulkan_instance();
+        // HINWEIS: pollster::block_on blockiert den aufrufenden Thread fuer die gesamte
+        // GPU-Adapter-Initialisierung. Dies ist einmaliger Init-Code (nicht pro Frame).
+        // Empfehlung: fs25ad_gpu_runtime_new() ausschliesslich von einem dedizierten
+        // Worker-Thread aufrufen, niemals vom Flutter-Platform-Thread.
+        // TODO(flutter-async): Async-Konstruktor oder Thread-Spawn in GpuRuntimeHandle::new().
         let adapter = pollster::block_on(instance.request_adapter(&wgpu::RequestAdapterOptions {
             power_preference: wgpu::PowerPreference::HighPerformance,
             compatible_surface: None,
@@ -114,9 +103,7 @@ fn with_runtime<T>(
 #[unsafe(no_mangle)]
 pub extern "C" fn fs25ad_gpu_runtime_new(width: u32, height: u32) -> *mut GpuRuntimeHandle {
     clear_last_error();
-    match std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
-        GpuRuntimeHandle::new(width, height)
-    })) {
+    match std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| GpuRuntimeHandle::new(width, height))) {
         Ok(Ok(handle)) => Box::into_raw(Box::new(handle)),
         Ok(Err(e)) => {
             set_last_error(e.to_string());
@@ -136,11 +123,15 @@ pub extern "C" fn fs25ad_gpu_runtime_new(width: u32, height: u32) -> *mut GpuRun
 pub extern "C" fn fs25ad_gpu_runtime_render(handle: *mut GpuRuntimeHandle) -> bool {
     ffi_guard_bool!({
         with_runtime(handle, |rt| {
-            let session = rt
-                .session
-                .lock()
-                .map_err(|_| anyhow!("GPU runtime session lock poisoned"))?;
-            let frame = session.build_render_frame([rt.size[0] as f32, rt.size[1] as f32]);
+            // Lock nur fuer build_render_frame halten, danach sofort freigeben.
+            // GPU-Submit laeuft lock-frei, damit Flutter-Isolate-Aufrufe nicht blockieren.
+            let frame = {
+                let session = rt
+                    .session
+                    .lock()
+                    .map_err(|_| anyhow!("GPU runtime session lock poisoned"))?;
+                session.build_render_frame([rt.size[0] as f32, rt.size[1] as f32])
+            }; // Lock wird hier freigegeben
             rt.runtime
                 .render_frame(&rt.device, &rt.queue, &frame.scene, &frame.assets)?;
             Ok(())
@@ -210,5 +201,43 @@ pub unsafe extern "C" fn fs25ad_gpu_runtime_dispose(handle: *mut GpuRuntimeHandl
     if !handle.is_null() {
         // SAFETY: handle wurde via Box::into_raw erzeugt und ist hier der Eigentuemer.
         let _ = unsafe { Box::from_raw(handle) };
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// Prueft, dass fs25ad_gpu_runtime_render mit Null-Pointer false zurueckgibt.
+    #[test]
+    fn test_render_rejects_null_handle() {
+        let result = fs25ad_gpu_runtime_render(std::ptr::null_mut());
+        assert!(!result, "Null-Pointer muss false zurueckgeben");
+    }
+
+    /// Prueft, dass fs25ad_gpu_runtime_resize mit Null-Pointer false zurueckgibt.
+    #[test]
+    fn test_resize_rejects_null_handle() {
+        let result = fs25ad_gpu_runtime_resize(std::ptr::null_mut(), 640, 480);
+        assert!(!result, "Null-Pointer muss false zurueckgeben");
+    }
+
+    /// Prueft, dass fs25ad_gpu_runtime_export_texture mit Null-Handle false zurueckgibt.
+    #[test]
+    fn test_export_texture_rejects_null_handle() {
+        let mut fd: i32 = 0;
+        // SAFETY: Testaufruf mit Null-Handle; out_fd ist gueltig.
+        let result = unsafe { fs25ad_gpu_runtime_export_texture(std::ptr::null_mut(), &mut fd) };
+        assert!(!result, "Null-Handle muss false zurueckgeben");
+    }
+
+    /// Prueft, dass fs25ad_gpu_runtime_export_texture mit out_fd=null false zurueckgibt.
+    #[test]
+    fn test_export_texture_rejects_null_out_fd() {
+        // Null-Handle + Null-out_fd: set_last_error wird ausgefuehrt, kein Panic.
+        // SAFETY: Testaufruf mit Null-out_fd; beide Null-Checks werden geprueft.
+        let result =
+            unsafe { fs25ad_gpu_runtime_export_texture(std::ptr::null_mut(), std::ptr::null_mut()) };
+        assert!(!result, "Null out_fd muss false zurueckgeben");
     }
 }

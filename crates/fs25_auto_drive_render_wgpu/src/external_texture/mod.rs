@@ -77,6 +77,12 @@ pub trait ExternalTextureExport {
 
     /// Exportiert den plattformnativen Handle fuer Flutter.
     ///
+    /// # Eigentuemer-Semantik
+    /// Der zurueckgegebene [`PlatformTextureDescriptor`] (inklusive eines enthaltenen `fd`
+    /// bei [`PlatformTextureDescriptor::LinuxDmaBuf`]) wird an den **Aufrufer uebertragen**.
+    /// Der Aufrufer ist verantwortlich fuer `close(fd)` nach der Nutzung. Die Implementierung
+    /// haelt nach diesem Aufruf keine weitere Referenz auf den fd.
+    ///
     /// # Fehler
     /// Gibt [`ExternalTextureError`] zurueck wenn der Export fehlschlaegt.
     fn export_descriptor(&self) -> Result<PlatformTextureDescriptor, ExternalTextureError>;
