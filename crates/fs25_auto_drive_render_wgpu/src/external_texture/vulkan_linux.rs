@@ -22,6 +22,7 @@ const DRM_FORMAT_MOD_INVALID: u64 = fourcc_mod_code_none(DRM_FORMAT_RESERVED);
 struct CreatedTexture {
     texture: wgpu::Texture,
     dma_buf_fd: OwnedFd,
+    stride: u32,
     modifier: u64,
 }
 
@@ -63,8 +64,10 @@ impl VulkanDmaBufTexture {
         let raw_instance = hal_device.shared_instance().raw_instance();
         let physical_device = hal_device.raw_physical_device();
 
-        let mut external_image_info = vk::ExternalMemoryImageCreateInfo::default()
-            .handle_types(vk::ExternalMemoryHandleTypeFlags::DMA_BUF_EXT);
+        let mut external_image_info =
+            vk::ExternalMemoryImageCreateInfo::default().handle_types(
+                vk::ExternalMemoryHandleTypeFlags::DMA_BUF_EXT,
+            );
         let image_create_info = vk::ImageCreateInfo::default()
             .image_type(vk::ImageType::TYPE_2D)
             .format(export_vk_format()?)
@@ -89,12 +92,10 @@ impl VulkanDmaBufTexture {
 
         // SAFETY: `image_create_info` referenziert nur lokale Builder-Daten, die bis zum
         // Vulkan-Aufruf leben. Das Device stammt direkt aus dem zugehoerigen HAL-Backend.
-        let image =
-            unsafe { raw_device.create_image(&image_create_info, None) }.map_err(|error| {
-                ExternalTextureError::CreationFailed(format!(
-                    "VkImage fuer DMA-BUF-Export konnte nicht erzeugt werden: {error}"
-                ))
-            })?;
+        let image = unsafe { raw_device.create_image(&image_create_info, None) }
+            .map_err(|error| ExternalTextureError::CreationFailed(format!(
+                "VkImage fuer DMA-BUF-Export konnte nicht erzeugt werden: {error}"
+            )))?;
 
         // SAFETY: Das Image wurde unmittelbar zuvor auf demselben Device erzeugt.
         let memory_requirements = unsafe { raw_device.get_image_memory_requirements(image) };
@@ -114,8 +115,10 @@ impl VulkanDmaBufTexture {
             }
         };
 
-        let mut export_allocate_info = vk::ExportMemoryAllocateInfo::default()
-            .handle_types(vk::ExternalMemoryHandleTypeFlags::DMA_BUF_EXT);
+        let mut export_allocate_info =
+            vk::ExportMemoryAllocateInfo::default().handle_types(
+                vk::ExternalMemoryHandleTypeFlags::DMA_BUF_EXT,
+            );
         let mut dedicated_allocate_info = vk::MemoryDedicatedAllocateInfo::default().image(image);
         let memory_allocate_info = vk::MemoryAllocateInfo::default()
             .allocation_size(memory_requirements.size)
@@ -170,6 +173,13 @@ impl VulkanDmaBufTexture {
             image,
             hal_device.enabled_device_extensions(),
         );
+        let stride = query_dmabuf_stride(
+            raw_device,
+            image,
+            width,
+            modifier,
+            hal_device.enabled_device_extensions(),
+        )?;
 
         // SAFETY: `image` und `memory` wurden auf genau diesem HAL-Device erzeugt und respektieren
         // den uebergebenen HAL-Deskriptor. Mit `TextureMemory::Dedicated` uebernimmt wgpu-hal den
@@ -191,6 +201,7 @@ impl VulkanDmaBufTexture {
         Ok(CreatedTexture {
             texture,
             dma_buf_fd,
+            stride,
             modifier,
         })
     }
@@ -205,6 +216,7 @@ impl ExternalTextureExport for VulkanDmaBufTexture {
         let CreatedTexture {
             texture,
             dma_buf_fd,
+            stride,
             modifier,
         } = Self::create_texture(device, width, height)?;
         let view = texture.create_view(&wgpu::TextureViewDescriptor::default());
@@ -215,7 +227,7 @@ impl ExternalTextureExport for VulkanDmaBufTexture {
             dma_buf_fd,
             width,
             height,
-            stride: 0,
+            stride,
             modifier,
             drm_format: export_drm_format()?,
         })
@@ -373,8 +385,9 @@ fn find_memory_type_index(
 ) -> Option<u32> {
     // SAFETY: `physical_device` stammt aus demselben Vulkan-Instance-Objekt; der Aufruf liest nur
     // statische Memory-Properties des Adapters.
-    let memory_properties =
-        unsafe { raw_instance.get_physical_device_memory_properties(physical_device) };
+    let memory_properties = unsafe {
+        raw_instance.get_physical_device_memory_properties(physical_device)
+    };
 
     memory_properties
         .memory_types_as_slice()
@@ -410,10 +423,7 @@ fn query_drm_modifier(
     image: vk::Image,
     enabled_extensions: &[&'static CStr],
 ) -> u64 {
-    if !has_extension(
-        enabled_extensions,
-        ash::ext::image_drm_format_modifier::NAME,
-    ) {
+    if !has_extension(enabled_extensions, ash::ext::image_drm_format_modifier::NAME) {
         return DRM_FORMAT_MOD_INVALID;
     }
 
@@ -423,12 +433,68 @@ fn query_drm_modifier(
     // SAFETY: Das Image wurde auf diesem Device erzeugt; die Query liest nur Metadaten aus dem
     // Treiber und veraendert weder Image noch Allocation.
     match unsafe {
-        drm_modifier_loader
-            .get_image_drm_format_modifier_properties(image, &mut modifier_properties)
+        drm_modifier_loader.get_image_drm_format_modifier_properties(
+            image,
+            &mut modifier_properties,
+        )
     } {
         Ok(()) => modifier_properties.drm_format_modifier,
         Err(_) => DRM_FORMAT_MOD_INVALID,
     }
+}
+
+fn query_dmabuf_stride(
+    raw_device: &ash::Device,
+    image: vk::Image,
+    width: u32,
+    modifier: u64,
+    enabled_extensions: &[&'static CStr],
+) -> Result<u32, ExternalTextureError> {
+    if !has_extension(enabled_extensions, ash::ext::image_drm_format_modifier::NAME) {
+        // TODO(flutter-linux): Den konservativen RGBA8-Fallback entfernen, sobald fuer
+        // OPTIMAL-Tiling ohne DRM-Modifier ein treiberverlaesslicher Layout-Pfad existiert.
+        return fallback_dmabuf_stride(width);
+    }
+
+    if modifier == DRM_FORMAT_MOD_INVALID {
+        return Err(ExternalTextureError::CreationFailed(
+            "VK_EXT_image_drm_format_modifier ist aktiv, aber der DRM-Modifier der Export-Texture konnte nicht abgefragt werden".into(),
+        ));
+    }
+
+    query_subresource_row_pitch(raw_device, image, vk::ImageAspectFlags::MEMORY_PLANE_0_EXT)
+        .or_else(|| query_subresource_row_pitch(raw_device, image, vk::ImageAspectFlags::COLOR))
+        .ok_or_else(|| {
+            ExternalTextureError::CreationFailed(format!(
+                "DMA-BUF-Stride konnte fuer DRM-Modifier 0x{modifier:016x} nicht aus Vulkan abgefragt werden"
+            ))
+        })
+}
+
+fn query_subresource_row_pitch(
+    raw_device: &ash::Device,
+    image: vk::Image,
+    aspect_mask: vk::ImageAspectFlags,
+) -> Option<u32> {
+    let subresource = vk::ImageSubresource::default()
+        .aspect_mask(aspect_mask)
+        .mip_level(0)
+        .array_layer(0);
+
+    // SAFETY: Das Image wurde auf diesem Device erzeugt; der Aufruf liest nur das vom Treiber
+    // verwaltete Subresource-Layout fuer Mip 0 / Layer 0 der Export-Texture aus.
+    let layout = unsafe { raw_device.get_image_subresource_layout(image, subresource) };
+    u32::try_from(layout.row_pitch)
+        .ok()
+        .filter(|row_pitch| *row_pitch > 0)
+}
+
+fn fallback_dmabuf_stride(width: u32) -> Result<u32, ExternalTextureError> {
+    width.checked_mul(4).ok_or_else(|| {
+        ExternalTextureError::CreationFailed(format!(
+            "Konservativer DMA-BUF-Stride fuer Breite {width} passt nicht in u32"
+        ))
+    })
 }
 
 const fn fourcc_code(a: u8, b: u8, c: u8, d: u8) -> u32 {
@@ -529,16 +595,16 @@ mod tests {
                 assert_eq!(height, 16);
                 assert_eq!(second_width, 16);
                 assert_eq!(second_height, 16);
-                assert_eq!(stride, 0);
+                assert!(
+                    stride >= 16 * 4,
+                    "Stride muss mindestens der RGBA8-Zeilenbreite entsprechen"
+                );
                 assert_eq!(format, DRM_FORMAT_ABGR8888);
                 (first_fd, second_fd)
             }
         };
 
-        assert_ne!(
-            first_fd, second_fd,
-            "Jeder Export muss einen neuen FD liefern"
-        );
+        assert_ne!(first_fd, second_fd, "Jeder Export muss einen neuen FD liefern");
 
         // SAFETY: Beide FDs wurden ueber `export_descriptor()` an den Test uebertragen und werden
         // genau einmal in `OwnedFd` ueberfuehrt, damit sie am Testende geschlossen werden.

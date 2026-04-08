@@ -197,7 +197,7 @@ Plattformspezifische Metadaten fuer den Flutter-Host-Import:
 
 Implementiert `ExternalTextureExport` fuer Linux/Vulkan. Erzeugt ein explizit exportfaehiges Vulkan-Image samt dedizierter `VkDeviceMemory`-Allocation, exportiert einen persistenten DMA-BUF-FD ueber `vkGetMemoryFdKHR` und wrappt das Ergebnis anschliessend als `wgpu::Texture` fuer den Renderpfad.
 
-**Status:** Produktiver Vulkan-HAL-Pfad fuer `VK_EXTERNAL_MEMORY_HANDLE_TYPE_DMA_BUF_BIT_EXT`; Modifier-Query faellt ohne aktivierte `VK_EXT_image_drm_format_modifier` auf `DRM_FORMAT_MOD_INVALID` zurueck, der Stride aktuell auf `0`.
+**Status:** Produktiver Vulkan-HAL-Pfad fuer `VK_EXTERNAL_MEMORY_HANDLE_TYPE_DMA_BUF_BIT_EXT`; bei aktivierter `VK_EXT_image_drm_format_modifier` wird der Stride per `vkGetImageSubresourceLayout` aus dem Vulkan-Image gelesen, ohne diese Extension faellt der Pfad fuer `Rgba8UnormSrgb` konservativ auf `width * 4` zurueck und markiert den Modifier weiterhin als `DRM_FORMAT_MOD_INVALID`.
 
 ### Hilfsfunktionen (vulkan_linux)
 
