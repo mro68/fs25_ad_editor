@@ -7,8 +7,8 @@ use super::state::{CurveDegree, CurveTool, Phase};
 use crate::app::tool_contract::TangentSource;
 use crate::app::ui_contract::{
     CurveDegreeChoice, CurvePanelAction, CurvePanelState, CurveTangentsPanelState,
-    RouteToolPanelEffect, SegmentConfigPanelAction, TangentMenuData, TangentOptionData,
-    TangentSelectionState,
+    RouteToolPanelEffect, SegmentConfigPanelAction, SegmentLengthKind, TangentHelpHint,
+    TangentMenuData, TangentNoneReason, TangentOptionData, TangentSelectionState,
 };
 
 impl CurveTool {
@@ -21,30 +21,27 @@ impl CurveTool {
         let tangents = if self.degree == CurveDegree::Cubic {
             let in_control = self.phase == Phase::Control;
             let can_edit_tangents = in_control || adjusting;
-            let start_none_label = if self.tangents.start_neighbors.is_empty() {
-                "Keine Start-Verbindung"
+            let start_none_reason = if self.tangents.start_neighbors.is_empty() {
+                TangentNoneReason::NoConnection
             } else {
-                "Keine Start-Tangente"
+                TangentNoneReason::NoTangent
             };
-            let end_none_label = if self.tangents.end_neighbors.is_empty() {
-                "Keine End-Verbindung"
+            let end_none_reason = if self.tangents.end_neighbors.is_empty() {
+                TangentNoneReason::NoConnection
             } else {
-                "Keine End-Tangente"
+                TangentNoneReason::NoTangent
             };
 
             Some(CurveTangentsPanelState {
-                help_text: (!can_edit_tangents)
-                    .then_some("Start- und Endpunkt setzen, um Tangenten auszuwaehlen.".to_owned()),
+                help_hint: (!can_edit_tangents).then_some(TangentHelpHint::SetStartEnd),
                 start: TangentSelectionState {
-                    label: "Start-Tangente".to_owned(),
-                    none_label: start_none_label.to_owned(),
+                    none_reason: start_none_reason,
                     current: self.tangents.tangent_start,
                     options: neighbor_options(&self.tangents.start_neighbors),
                     enabled: can_edit_tangents,
                 },
                 end: TangentSelectionState {
-                    label: "End-Tangente".to_owned(),
-                    none_label: end_none_label.to_owned(),
+                    none_reason: end_none_reason,
                     current: self.tangents.tangent_end,
                     options: neighbor_options(&self.tangents.end_neighbors),
                     enabled: can_edit_tangents,
@@ -78,9 +75,13 @@ impl CurveTool {
                 CurveDegree::Cubic => CurveDegreeChoice::Cubic,
             },
             tangents,
-            segment: self
-                .seg
-                .panel_state(adjusting, self.is_ready(), length, "Kurvenlaenge", true),
+            segment: self.seg.panel_state(
+                adjusting,
+                self.is_ready(),
+                length,
+                SegmentLengthKind::Curve,
+                true,
+            ),
         }
     }
 

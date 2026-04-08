@@ -1,11 +1,12 @@
-use crate::app::{AppIntent, UiState};
+use crate::app::AppIntent;
+use fs25_auto_drive_host_bridge::HostLocalDialogState;
 
 /// Zeigt den Duplikat-Bestaetigungsdialog.
 ///
 /// Wird nach dem Laden einer XML-Datei angezeigt, wenn duplizierte Nodes
 /// erkannt wurden. Der Benutzer kann waehlen, ob die Bereinigung durchgefuehrt
 /// werden soll.
-pub fn show_dedup_dialog(ctx: &egui::Context, ui_state: &UiState) -> Vec<AppIntent> {
+pub fn show_dedup_dialog(ctx: &egui::Context, ui_state: &HostLocalDialogState) -> Vec<AppIntent> {
     let mut events = Vec::new();
 
     if !ui_state.dedup_dialog.visible {

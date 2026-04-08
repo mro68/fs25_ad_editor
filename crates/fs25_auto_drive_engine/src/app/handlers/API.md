@@ -626,7 +626,7 @@ UI-Event (Klick)
   → snap_to_node() + use_cases::selection::select_nearest_node()
   → record_selection_if_changed() — Undo-Snapshot falls Selektion sich ändern
   → AppState.selection aktualisiert
-  → controller.build_render_scene() nutzt die neue Selection
+    → app::projections::build_render_scene() nutzt die neue Selection
   → Rendering
 ```
 

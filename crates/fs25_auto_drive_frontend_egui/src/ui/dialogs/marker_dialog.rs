@@ -1,10 +1,11 @@
-use crate::app::{AppIntent, RoadMap, UiState};
+use crate::app::{AppIntent, RoadMap};
+use fs25_auto_drive_host_bridge::HostLocalDialogState;
 use std::collections::BTreeSet;
 
 /// Zeigt den Marker-Bearbeiten-Dialog als modales Fenster.
 pub fn show_marker_dialog(
     ctx: &egui::Context,
-    ui_state: &mut UiState,
+    ui_state: &mut HostLocalDialogState,
     road_map: Option<&RoadMap>,
 ) -> Vec<AppIntent> {
     let mut events = Vec::new();

@@ -52,13 +52,26 @@ pub enum SegmentPanelMode {
     Adjusting,
 }
 
+/// Semantische Art der Streckenlaengen-Angabe im Segment-Panel.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum SegmentLengthKind {
+    /// Gerade Strecke zwischen zwei Punkten.
+    StraightLine,
+    /// Bézier-Kurve.
+    Curve,
+    /// Catmull-Rom-Spline.
+    CatmullRomSpline,
+    /// Geglaettete Route.
+    SmoothRoute,
+}
+
 /// Read-Zustand fuer das gemeinsame Segment-Panel mehrerer Tools.
 #[derive(Debug, Clone, PartialEq)]
 pub struct SegmentConfigPanelState {
     /// Aktueller Anzeigemodus.
     pub mode: SegmentPanelMode,
-    /// Label fuer die aktuelle Streckenlaenge.
-    pub length_label: String,
+    /// Semantische Art der dargestellten Strecke.
+    pub length_kind: SegmentLengthKind,
     /// Aktuelle Laenge in Metern; `None` im Default-Modus.
     pub length_m: Option<f32>,
     /// Aktueller minimaler Segment-Abstand.
@@ -85,13 +98,22 @@ pub enum SegmentConfigPanelAction {
     SetNodeCount(usize),
 }
 
+/// Semantischer Grund fuer die Anzeige der Leer-/Standard-Option einer Tangenten-Auswahl.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum TangentNoneReason {
+    /// Keine Verbindung am Snap-Punkt vorhanden.
+    NoConnection,
+    /// Verbindungen vorhanden, aber keine Tangente ausgewaehlt.
+    NoTangent,
+    /// Standard-Tangente (z.B. Catmull-Rom-Spline).
+    UseDefault,
+}
+
 /// Auswahlzustand fuer eine einzelne Tangenten-Auswahl.
 #[derive(Debug, Clone, PartialEq)]
 pub struct TangentSelectionState {
-    /// Anzeigename der Auswahl.
-    pub label: String,
-    /// Label fuer die manuelle/fehlende Auswahl.
-    pub none_label: String,
+    /// Semantischer Grund fuer die Null-/Standard-Option.
+    pub none_reason: TangentNoneReason,
     /// Aktuell gewaehlte Tangente.
     pub current: TangentSource,
     /// Verfuegbare Verbindungsoptionen ohne die `None`-Variante.

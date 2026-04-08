@@ -54,16 +54,22 @@ pub(super) fn render_curve_tangents(
     state: &CurveTangentsPanelState,
     events: &mut Vec<AppIntent>,
 ) {
-    if let Some(help_text) = state.help_text.as_deref() {
-        ui.small(help_text);
+    if let Some(hint) = state.help_hint {
+        ui.small(tangent_help_hint_label(hint));
     }
 
-    render_tangent_selection(ui, &state.start, events, |value| {
+    render_tangent_selection(ui, "Start-Tangente", &state.start, events, |value| {
         RouteToolPanelAction::Curve(CurvePanelAction::SetTangentStart(value))
     });
-    render_tangent_selection(ui, &state.end, events, |value| {
+    render_tangent_selection(ui, "End-Tangente", &state.end, events, |value| {
         RouteToolPanelAction::Curve(CurvePanelAction::SetTangentEnd(value))
     });
+}
+
+fn tangent_help_hint_label(hint: TangentHelpHint) -> &'static str {
+    match hint {
+        TangentHelpHint::SetStartEnd => "Start- und Endpunkt setzen, um Tangenten auswaehlen.",
+    }
 }
 
 /// Rendert den Spline-Konfigurationsbereich im Route-Tool-Panel.
@@ -82,13 +88,13 @@ pub(super) fn render_spline_panel(
 
     if let Some(start_tangent) = state.start_tangent.as_ref() {
         ui.separator();
-        render_tangent_selection(ui, start_tangent, events, |value| {
+        render_tangent_selection(ui, "Tangente Start:", start_tangent, events, |value| {
             RouteToolPanelAction::Spline(SplinePanelAction::SetTangentStart(value))
         });
     }
 
     if let Some(end_tangent) = state.end_tangent.as_ref() {
-        render_tangent_selection(ui, end_tangent, events, |value| {
+        render_tangent_selection(ui, "Tangente Ende:", end_tangent, events, |value| {
             RouteToolPanelAction::Spline(SplinePanelAction::SetTangentEnd(value))
         });
     }

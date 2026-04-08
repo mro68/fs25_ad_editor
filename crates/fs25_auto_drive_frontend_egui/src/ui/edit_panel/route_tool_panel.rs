@@ -4,11 +4,12 @@ use crate::app::ui_contract::{
     ColorPathPanelPhase, ColorPathPanelState, CurveDegreeChoice, CurvePanelAction, CurvePanelState,
     CurveTangentsPanelState, ExistingConnectionModeChoice, FieldBoundaryPanelAction,
     FieldBoundaryPanelState, FieldPathModeChoice, FieldPathPanelAction, FieldPathPanelPhase,
-    FieldPathPanelState, FieldPathSelectionSummary, PanelAction, ParkingPanelAction,
-    ParkingPanelState, ParkingRampSideChoice, RouteOffsetPanelAction, RouteOffsetPanelState,
-    RouteToolConfigState, RouteToolPanelAction, RouteToolPanelState, SegmentConfigPanelAction,
-    SegmentConfigPanelState, SmoothCurvePanelAction, SmoothCurvePanelState, SplinePanelAction,
-    SplinePanelState, StraightPanelAction, StraightPanelState, TangentSelectionState,
+    FieldPathPanelState, FieldPathPreviewStatus, FieldPathSelectionSummary, PanelAction,
+    ParkingPanelAction, ParkingPanelState, ParkingRampSideChoice, RouteOffsetPanelAction,
+    RouteOffsetPanelState, RouteToolConfigState, RouteToolPanelAction, RouteToolPanelState,
+    SegmentConfigPanelAction, SegmentConfigPanelState, SegmentLengthKind, SmoothCurvePanelAction,
+    SmoothCurvePanelState, SplinePanelAction, SplinePanelState, StraightPanelAction,
+    StraightPanelState, TangentHelpHint, TangentNoneReason, TangentSelectionState,
     BYPASS_BASE_SPACING_LIMITS, BYPASS_OFFSET_LIMITS, PARKING_BAY_LENGTH_LIMITS,
     PARKING_ENTRY_EXIT_T_LIMITS, PARKING_MAX_NODE_DISTANCE_LIMITS, PARKING_NUM_ROWS_LIMITS,
     PARKING_RAMP_LENGTH_LIMITS, PARKING_ROTATION_STEP_LIMITS, PARKING_ROW_SPACING_LIMITS,
@@ -16,6 +17,7 @@ use crate::app::ui_contract::{
     SMOOTH_CURVE_MIN_DISTANCE_LIMITS,
 };
 use crate::app::{AppIntent, ConnectionDirection, ConnectionPriority};
+use crate::shared::{t, Language};
 use crate::ui::common::{apply_wheel_step_default_enabled, apply_wheel_step_usize};
 use crate::ui::properties::selectors::{
     render_direction_icon_selector, render_priority_icon_selector,
@@ -39,6 +41,7 @@ pub(super) fn render_route_tool_panel(
     default_priority: ConnectionPriority,
     distance_wheel_step_m: f32,
     panel_pos: Option<egui::Pos2>,
+    lang: Language,
     events: &mut Vec<AppIntent>,
 ) {
     let wheel_enabled = distance_wheel_step_m > 0.0;
@@ -90,7 +93,7 @@ pub(super) fn render_route_tool_panel(
         ui.add_space(6.0);
 
         if let Some(config_state) = route_tool.config_state.as_ref() {
-            render_route_tool_config(ui, config_state, wheel_enabled, events);
+            render_route_tool_config(ui, config_state, wheel_enabled, lang, events);
         } else {
             ui.small("Kein Route-Tool aktiv.");
         }
@@ -114,6 +117,7 @@ fn render_route_tool_config(
     ui: &mut egui::Ui,
     config_state: &RouteToolConfigState,
     wheel_enabled: bool,
+    lang: Language,
     events: &mut Vec<AppIntent>,
 ) {
     match config_state {
@@ -131,13 +135,13 @@ fn render_route_tool_config(
             render_bypass_panel(ui, state, wheel_enabled, events)
         }
         RouteToolConfigState::Parking(state) => {
-            render_parking_panel(ui, state, wheel_enabled, events)
+            render_parking_panel(ui, state, wheel_enabled, lang, events)
         }
         RouteToolConfigState::FieldBoundary(state) => {
             render_field_boundary_panel(ui, state, wheel_enabled, events)
         }
         RouteToolConfigState::FieldPath(state) => {
-            render_field_path_panel(ui, state, wheel_enabled, events)
+            render_field_path_panel(ui, state, wheel_enabled, lang, events)
         }
         RouteToolConfigState::RouteOffset(state) => {
             render_route_offset_panel(ui, state, wheel_enabled, events)
@@ -197,9 +201,10 @@ fn render_parking_panel(
     ui: &mut egui::Ui,
     state: &ParkingPanelState,
     wheel_enabled: bool,
+    lang: Language,
     events: &mut Vec<AppIntent>,
 ) {
-    generator_panel::render_parking_panel(ui, state, wheel_enabled, events);
+    generator_panel::render_parking_panel(ui, state, wheel_enabled, lang, events);
 }
 
 fn render_field_boundary_panel(
@@ -215,9 +220,10 @@ fn render_field_path_panel(
     ui: &mut egui::Ui,
     state: &FieldPathPanelState,
     wheel_enabled: bool,
+    lang: Language,
     events: &mut Vec<AppIntent>,
 ) {
-    analysis_panel::render_field_path_panel(ui, state, wheel_enabled, events);
+    analysis_panel::render_field_path_panel(ui, state, wheel_enabled, lang, events);
 }
 
 fn render_route_offset_panel(
@@ -245,7 +251,7 @@ fn render_segment_config(
     events: &mut Vec<AppIntent>,
     map_action: impl Fn(SegmentConfigPanelAction) -> RouteToolPanelAction,
 ) {
-    ui.label(&state.length_label);
+    ui.label(segment_length_kind_label(state.length_kind));
     if let Some(length_m) = state.length_m {
         ui.small(format!("Laenge: {:.1} m", length_m));
     }
@@ -311,7 +317,7 @@ fn render_segment_distance_only(
     events: &mut Vec<AppIntent>,
     map_action: impl Fn(f32) -> RouteToolPanelAction,
 ) {
-    ui.label(&state.length_label);
+    ui.label(segment_length_kind_label(state.length_kind));
     if let Some(length_m) = state.length_m {
         ui.small(format!("Laenge: {:.1} m", length_m));
     }
@@ -343,21 +349,22 @@ fn render_segment_distance_only(
 
 fn render_tangent_selection(
     ui: &mut egui::Ui,
+    label: &str,
     selection: &TangentSelectionState,
     events: &mut Vec<AppIntent>,
     map_action: impl Fn(TangentSource) -> RouteToolPanelAction,
 ) {
     let selected_text = tangent_selection_label(selection);
     ui.horizontal(|ui| {
-        ui.label(&selection.label);
+        ui.label(label);
         ui.add_enabled_ui(selection.enabled, |ui| {
-            egui::ComboBox::from_id_salt(("tangent_selection", selection.label.as_str()))
+            egui::ComboBox::from_id_salt(("tangent_selection", label))
                 .selected_text(selected_text)
                 .show_ui(ui, |ui| {
                     if ui
                         .selectable_label(
                             selection.current == TangentSource::None,
-                            &selection.none_label,
+                            tangent_none_reason_label(selection.none_reason),
                         )
                         .clicked()
                     {
@@ -376,10 +383,18 @@ fn render_tangent_selection(
     });
 }
 
-fn render_field_path_selection_summary(ui: &mut egui::Ui, summary: &FieldPathSelectionSummary) {
-    ui.label(format!("── {} ──", summary.title));
+fn render_field_path_selection_summary(
+    ui: &mut egui::Ui,
+    summary: &FieldPathSelectionSummary,
+    lang: Language,
+) {
+    ui.label(format!("── {} ──", t(lang, summary.title)));
     if summary.is_empty {
-        ui.colored_label(egui::Color32::GRAY, &summary.text);
+        let label = summary
+            .empty_hint
+            .map(|k| t(lang, k))
+            .unwrap_or(summary.text.as_str());
+        ui.colored_label(egui::Color32::GRAY, label);
     } else {
         ui.label(&summary.text);
     }
@@ -588,14 +603,31 @@ fn push_panel_action(events: &mut Vec<AppIntent>, action: PanelAction) {
 
 fn tangent_selection_label(selection: &TangentSelectionState) -> String {
     if selection.current == TangentSource::None {
-        selection.none_label.clone()
+        tangent_none_reason_label(selection.none_reason).to_owned()
     } else {
         selection
             .options
             .iter()
             .find(|option| option.source == selection.current)
             .map(|option| option.label.clone())
-            .unwrap_or_else(|| selection.none_label.clone())
+            .unwrap_or_else(|| tangent_none_reason_label(selection.none_reason).to_owned())
+    }
+}
+
+fn tangent_none_reason_label(reason: TangentNoneReason) -> &'static str {
+    match reason {
+        TangentNoneReason::NoConnection => "Keine Verbindung",
+        TangentNoneReason::NoTangent => "Keine Tangente",
+        TangentNoneReason::UseDefault => "Standard",
+    }
+}
+
+fn segment_length_kind_label(kind: SegmentLengthKind) -> &'static str {
+    match kind {
+        SegmentLengthKind::StraightLine => "Streckenlaenge",
+        SegmentLengthKind::Curve => "Kurvenlaenge",
+        SegmentLengthKind::CatmullRomSpline => "Spline-Laenge",
+        SegmentLengthKind::SmoothRoute => "Routenlaenge",
     }
 }
 

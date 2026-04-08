@@ -14,7 +14,7 @@ use crate::app::ToolEditStore;
 use crate::app::{
     AppIntent, ConnectionDirection, ConnectionPriority, EditorTool, GroupRecord, RoadMap,
 };
-use crate::shared::EditorOptions;
+use crate::shared::{EditorOptions, Language};
 use indexmap::IndexSet;
 
 pub use streckenteilung_panel::render_streckenteilung_controls;
@@ -39,6 +39,7 @@ pub fn render_edit_panel(
     group_record: Option<&GroupRecord>,
     tool_edit_store: Option<&ToolEditStore>,
     options: &mut EditorOptions,
+    lang: Language,
 ) -> Vec<AppIntent> {
     let mut events = Vec::new();
 
@@ -84,6 +85,7 @@ pub fn render_edit_panel(
             default_priority,
             distance_wheel_step_m,
             panel_pos,
+            lang,
             &mut events,
         );
     }

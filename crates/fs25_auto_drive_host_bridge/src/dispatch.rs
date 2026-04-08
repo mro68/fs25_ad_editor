@@ -10,6 +10,7 @@ mod viewport_input;
 pub use actions::{
     apply_host_action, apply_host_action_with_viewport_input_state, apply_mapped_intent,
 };
+pub(crate) use mappings::map_engine_dialog_request;
 pub use mappings::{
     map_host_action_to_intent, map_intent_to_host_action, take_host_dialog_requests,
 };
@@ -125,7 +126,13 @@ mod tests {
         .expect("ToggleCommandPalette muss verarbeitet werden");
 
         assert!(handled);
-        assert!(state.ui.show_command_palette);
+        assert!(
+            state.ui.dialog_requests.iter().any(|r| matches!(
+                r,
+                fs25_auto_drive_engine::app::ui_contract::DialogRequest::ToggleCommandPalette
+            )),
+            "ToggleCommandPalette muss in dialog_requests stehen"
+        );
     }
 
     #[test]
@@ -172,14 +179,13 @@ mod tests {
 
     #[test]
     fn build_viewport_geometry_snapshot_exposes_minimal_geometry_transport() {
-        let controller = AppController::new();
         let mut state = AppState::new();
         state.road_map = Some(Arc::new(geometry_test_map()));
         state.view.camera.position = Vec2::new(3.0, -4.0);
         state.view.camera.zoom = 2.0;
         state.selection.ids_mut().insert(2);
 
-        let snapshot = build_viewport_geometry_snapshot(&controller, &state, [640.0, 320.0]);
+        let snapshot = build_viewport_geometry_snapshot(&state, [640.0, 320.0]);
 
         assert!(snapshot.has_map);
         assert_eq!(snapshot.viewport_size, [640.0, 320.0]);
@@ -209,11 +215,10 @@ mod tests {
 
     #[test]
     fn build_render_frame_couples_scene_and_assets_for_local_hosts() {
-        let controller = AppController::new();
         let mut state = AppState::new();
         state.road_map = Some(Arc::new(geometry_test_map()));
 
-        let frame = build_render_frame(&controller, &state, [640.0, 320.0]);
+        let frame = build_render_frame(&state, [640.0, 320.0]);
 
         assert!(frame.scene.has_map());
         assert_eq!(frame.scene.viewport_size(), [640.0, 320.0]);
@@ -488,13 +493,12 @@ mod tests {
 
     #[test]
     fn read_helpers_delegate_to_controller_read_seams() {
-        let controller = AppController::new();
         let mut state = AppState::new();
 
-        let host_ui = build_host_ui_snapshot(&controller, &state);
-        let overlay = build_viewport_overlay_snapshot(&controller, &mut state, None);
-        let scene = build_render_scene(&controller, &state, [640.0, 480.0]);
-        let assets = build_render_assets(&controller, &state);
+        let host_ui = build_host_ui_snapshot(&state);
+        let overlay = build_viewport_overlay_snapshot(&mut state, None);
+        let scene = build_render_scene(&state, [640.0, 480.0]);
+        let assets = build_render_assets(&state);
 
         assert!(host_ui.command_palette_state().is_some());
         assert!(overlay.route_tool_preview.is_none());
@@ -532,7 +536,6 @@ mod tests {
     fn build_host_chrome_snapshot_exposes_status_defaults_and_route_tool_entries() {
         let mut state = AppState::new();
         state.ui.status_message = Some("bereit".to_string());
-        state.ui.show_command_palette = true;
         state.editor.active_tool = fs25_auto_drive_engine::app::EditorTool::Route;
         state
             .editor
@@ -544,7 +547,8 @@ mod tests {
         let chrome = build_host_chrome_snapshot(&state);
 
         assert_eq!(chrome.status_message.as_deref(), Some("bereit"));
-        assert!(chrome.show_command_palette);
+        // show_command_palette stammt aus HostLocalDialogState (Session-Schicht), die freie Funktion liefert immer false
+        assert!(!chrome.show_command_palette);
         assert_eq!(chrome.active_tool, HostActiveTool::Route);
         assert_eq!(chrome.active_route_tool, Some(HostRouteToolId::CurveCubic));
         assert_eq!(
@@ -582,6 +586,62 @@ mod tests {
         assert_eq!(
             disabled_analysis_entry.disabled_reason,
             Some(HostRouteToolDisabledReason::MissingFarmland)
+        );
+    }
+
+    /// Prüft, dass build_host_chrome_snapshot bei unveraendertem State identische
+    /// Schlüsselfelder liefert (Grundlage für zukünftiges Frame-Caching).
+    #[test]
+    fn build_host_chrome_snapshot_is_idempotent_for_unchanged_state() {
+        let mut state = AppState::new();
+        state.ui.status_message = Some("bereit".to_string());
+        state.editor.default_direction = ConnectionDirection::Dual;
+
+        let first = build_host_chrome_snapshot(&state);
+        let second = build_host_chrome_snapshot(&state);
+
+        assert_eq!(
+            first.status_message, second.status_message,
+            "status_message muss stabil sein"
+        );
+        assert_eq!(
+            first.active_tool, second.active_tool,
+            "active_tool muss stabil sein"
+        );
+        assert_eq!(
+            first.default_direction, second.default_direction,
+            "default_direction muss stabil sein"
+        );
+        assert_eq!(
+            first.route_tool_entries.len(),
+            second.route_tool_entries.len(),
+            "route_tool_entries-Laenge muss stabil sein"
+        );
+        assert_eq!(
+            first.options, second.options,
+            "EditorOptions müssen stabil sein"
+        );
+    }
+
+    /// Prüft, dass build_host_chrome_snapshot die aktuellen EditorOptions korrekt
+    /// überträgt — insbesondere angepasste Werte statt Default-Werte.
+    #[test]
+    fn build_host_chrome_snapshot_propagates_non_default_options() {
+        let mut state = AppState::new();
+        state.options.node_size_world = 99.0;
+        state.options.snap_scale_percent = 42.0;
+
+        let chrome = build_host_chrome_snapshot(&state);
+
+        assert!(
+            (chrome.options.node_size_world - 99.0).abs() < f32::EPSILON,
+            "node_size_world muss korrekt übertragen werden, war: {}",
+            chrome.options.node_size_world
+        );
+        assert!(
+            (chrome.options.snap_scale_percent - 42.0).abs() < f32::EPSILON,
+            "snap_scale_percent muss korrekt übertragen werden, war: {}",
+            chrome.options.snap_scale_percent
         );
     }
 }

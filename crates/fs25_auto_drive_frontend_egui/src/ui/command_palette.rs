@@ -1,7 +1,7 @@
 //! Command Palette Overlay mit Suchfeld und Tastatur-Navigation.
 
 use crate::app::tools::route_tool_label_key;
-use crate::app::{AppIntent, AppState, EditorTool};
+use crate::app::{AppIntent, EditorTool};
 use crate::shared::{t, I18nKey, Language};
 use crate::ui::common::{
     host_route_tool_disabled_reason_key, host_route_tool_entries_for, host_route_tool_to_engine,
@@ -159,7 +159,6 @@ fn build_catalog(lang: Language, host_chrome_snapshot: &HostChromeSnapshot) -> V
 pub fn render_command_palette(
     ctx: &egui::Context,
     show: &mut bool,
-    _state: &AppState,
     host_chrome_snapshot: &HostChromeSnapshot,
 ) -> Vec<AppIntent> {
     if !*show {
@@ -363,6 +362,7 @@ pub fn render_command_palette(
 mod tests {
     use super::*;
     use crate::app::tool_contract::RouteToolId;
+    use crate::app::AppState;
 
     fn route_tool_entry(catalog: &[PaletteEntry], tool_id: RouteToolId) -> (usize, &PaletteEntry) {
         catalog

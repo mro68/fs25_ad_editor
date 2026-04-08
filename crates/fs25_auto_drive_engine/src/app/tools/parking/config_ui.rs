@@ -7,6 +7,7 @@ use crate::app::ui_contract::{
     PARKING_NUM_ROWS_LIMITS, PARKING_RAMP_LENGTH_LIMITS, PARKING_ROTATION_STEP_LIMITS,
     PARKING_ROW_SPACING_LIMITS,
 };
+use crate::shared::I18nKey;
 
 impl ParkingTool {
     /// Liefert den egui-freien Panelzustand des ParkingTools.
@@ -31,13 +32,9 @@ impl ParkingTool {
             rotation_step_deg: self.rotation_step_deg,
             angle_deg: self.origin.map(|_| self.angle.to_degrees()),
             hint_text: self.origin.map(|_| match self.phase {
-                ParkingPhase::Idle => "Alt+Mausrad zum Drehen".to_owned(),
-                ParkingPhase::Configuring => {
-                    "Position fixiert — Viewport-Klick zum Verschieben".to_owned()
-                }
-                ParkingPhase::Adjusting => {
-                    "Klicken zum Fixieren — Alt+Mausrad zum Drehen".to_owned()
-                }
+                ParkingPhase::Idle => I18nKey::ParkingHintRotate,
+                ParkingPhase::Configuring => I18nKey::ParkingHintFixed,
+                ParkingPhase::Adjusting => I18nKey::ParkingHintAdjusting,
             }),
         }
     }

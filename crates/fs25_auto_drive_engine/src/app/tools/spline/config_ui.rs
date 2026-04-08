@@ -5,8 +5,8 @@ use super::super::RouteToolCore;
 use super::SplineTool;
 use crate::app::tool_contract::TangentSource;
 use crate::app::ui_contract::{
-    RouteToolPanelEffect, SegmentConfigPanelAction, SplinePanelAction, SplinePanelState,
-    TangentOptionData, TangentSelectionState,
+    RouteToolPanelEffect, SegmentConfigPanelAction, SegmentLengthKind, SplinePanelAction,
+    SplinePanelState, TangentNoneReason, TangentOptionData, TangentSelectionState,
 };
 
 impl SplineTool {
@@ -28,7 +28,6 @@ impl SplineTool {
             start_tangent: adjusting
                 .then(|| {
                     tangent_selection_state(
-                        "Tangente Start:",
                         self.tangents.tangent_start,
                         &self.tangents.start_neighbors,
                     )
@@ -36,18 +35,14 @@ impl SplineTool {
                 .filter(|state| !state.options.is_empty()),
             end_tangent: adjusting
                 .then(|| {
-                    tangent_selection_state(
-                        "Tangente Ende:",
-                        self.tangents.tangent_end,
-                        &self.tangents.end_neighbors,
-                    )
+                    tangent_selection_state(self.tangents.tangent_end, &self.tangents.end_neighbors)
                 })
                 .filter(|state| !state.options.is_empty()),
             segment: self.seg.panel_state(
                 adjusting,
                 self.is_ready(),
                 length,
-                "Spline-Laenge",
+                SegmentLengthKind::CatmullRomSpline,
                 true,
             ),
         }
@@ -118,13 +113,11 @@ impl SplineTool {
 }
 
 fn tangent_selection_state(
-    label: &str,
     current: TangentSource,
     neighbors: &[crate::core::ConnectedNeighbor],
 ) -> TangentSelectionState {
     TangentSelectionState {
-        label: label.to_owned(),
-        none_label: "Standard".to_owned(),
+        none_reason: TangentNoneReason::UseDefault,
         current,
         options: tangent_options(neighbors)
             .into_iter()

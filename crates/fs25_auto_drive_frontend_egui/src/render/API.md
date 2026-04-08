@@ -4,7 +4,7 @@
 
 Das `render`-Modul ist der egui-spezifische Host-Adapter ueber dem host-neutralen Kern aus `fs25_auto_drive_render_wgpu`. Seine oeffentliche Surface bleibt bewusst klein: ein duenner `Renderer`, die re-exportierten Kern-Vertraege (`RendererTargetConfig`, `BackgroundWorldBounds`, `RenderScene`, `RenderQuality`) sowie der egui-Callback (`WgpuRenderCallback`, `WgpuRenderData`).
 
-Das Modul baut keine Render-Snapshots selbst. `EditorApp` liest pro Frame einen gekoppelten `HostRenderFrameSnapshot` ueber `fs25_auto_drive_host_bridge::build_render_frame(...)`, uebergibt dessen `RenderScene` an den egui-Callback und synchronisiert dessen langlebige Assets revisionsbasiert im selben Frame in den Host-Adapter hinein.
+Das Modul baut keine Render-Snapshots selbst. `EditorApp` liest pro Frame einen gekoppelten `HostRenderFrameSnapshot` ueber `HostBridgeSession::build_render_frame(...)`, uebergibt dessen `RenderScene` an den egui-Callback und synchronisiert dessen langlebige Assets revisionsbasiert im selben Frame in den Host-Adapter hinein. Der freie Helper `fs25_auto_drive_host_bridge::build_render_frame(...)` bleibt nur fuer lokale Rust-Hosts ohne Session-Ownership relevant.
 
 ## Module
 
@@ -40,11 +40,8 @@ Das Modul baut keine Render-Snapshots selbst. `EditorApp` liest pro Frame einen 
 use std::sync::{Arc, Mutex};
 
 let renderer = Arc::new(Mutex::new(render::Renderer::new(render_state)));
-let frame = fs25_auto_drive_host_bridge::build_render_frame(
-    &controller,
-    &state,
-    [viewport_w, viewport_h],
-);
+let mut session = fs25_auto_drive_host_bridge::HostBridgeSession::new();
+let frame = session.build_render_frame([viewport_w, viewport_h]);
 let render_data = render::WgpuRenderData { scene: frame.scene };
 
 let callback = egui_wgpu::Callback::new_paint_callback(
@@ -64,8 +61,8 @@ ui.painter().add(callback);
 
 ```mermaid
 flowchart LR
-    EDITOR[editor_app::EditorApp] --> CTRL[AppController]
-    CTRL --> FRAME[HostRenderFrameSnapshot]
+    EDITOR[editor_app::EditorApp] --> SESSION[HostBridgeSession]
+    SESSION --> FRAME[HostRenderFrameSnapshot]
     FRAME --> SCENE[RenderScene]
     FRAME --> ASSETS[RenderAssetsSnapshot]
     SCENE --> DATA[WgpuRenderData]

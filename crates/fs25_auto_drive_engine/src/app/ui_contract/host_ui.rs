@@ -1,5 +1,7 @@
 //! Host-neutrale Vertraege fuer Dialoge und Tool-Fenster.
 
+use std::sync::Arc;
+
 use crate::app::{AppIntent, ConnectionDirection, ConnectionPriority};
 use crate::shared::EditorOptions;
 
@@ -24,7 +26,7 @@ pub enum DialogRequestKind {
     CurseplayExport,
 }
 
-/// Semantische Host-Anforderung fuer Datei-/Pfad-Dialoge.
+/// Semantische Host-Anforderung: Datei-/Pfad-Dialoge oder Chrome-Sichtbarkeitsaenderungen.
 #[derive(Debug, Clone, PartialEq)]
 pub enum DialogRequest {
     /// Host soll einen Datei-/Pfaddialog oeffnen.
@@ -34,6 +36,18 @@ pub enum DialogRequest {
         /// Optionaler Dateiname fuer Save-Dialoge.
         suggested_file_name: Option<String>,
     },
+    /// Command-Palette umschalten.
+    ToggleCommandPalette,
+    /// Optionen-Dialog oeffnen.
+    OpenOptionsDialog,
+    /// Optionen-Dialog schliessen.
+    CloseOptionsDialog,
+    /// Heightmap-Warnung anzeigen.
+    ShowHeightmapWarning,
+    /// Heightmap-Warnung ausblenden.
+    DismissHeightmapWarning,
+    /// Bestaetigungsdialog fuer Gruppen-Aufloesen anzeigen.
+    ShowDissolveGroupConfirm(u64),
 }
 
 impl DialogRequest {
@@ -53,21 +67,31 @@ impl DialogRequest {
         }
     }
 
-    /// Liefert die semantische Art der Anfrage.
+    /// Liefert die semantische Art der PickPath-Anfrage.
+    ///
+    /// Nur fuer `PickPath`-Varianten definiert. Alle anderen Varianten sind
+    /// Chrome-Requests und haben keine `DialogRequestKind`.
     pub fn kind(&self) -> DialogRequestKind {
         match self {
             Self::PickPath { kind, .. } => *kind,
+            _ => panic!("kind() ist nur fuer PickPath-Anfragen definiert"),
         }
     }
 
-    /// Liefert den optionalen Dateinamenvorschlag.
+    /// Liefert den optionalen Dateinamenvorschlag einer PickPath-Anfrage.
     pub fn suggested_file_name(&self) -> Option<&str> {
         match self {
             Self::PickPath {
                 suggested_file_name,
                 ..
             } => suggested_file_name.as_deref(),
+            _ => None,
         }
+    }
+
+    /// Prueft ob dies eine Chrome-Sichtbarkeits-Anforderung ist (kein Dateidialog).
+    pub fn is_chrome_request(&self) -> bool {
+        !matches!(self, Self::PickPath { .. })
     }
 }
 
@@ -131,7 +155,7 @@ impl HostUiSnapshot {
     /// Liefert den Route-Tool-Panelzustand, falls sichtbar.
     pub fn route_tool_panel_state(&self) -> Option<&RouteToolPanelState> {
         self.panels.iter().find_map(|panel| match panel {
-            PanelState::RouteTool(state) => Some(state),
+            PanelState::RouteTool(state) => Some(state.as_ref()),
             _ => None,
         })
     }
@@ -157,7 +181,7 @@ impl HostUiSnapshot {
 #[derive(Debug, Clone)]
 pub enum PanelState {
     /// Route-Tool-Konfigurationsfenster.
-    RouteTool(RouteToolPanelState),
+    RouteTool(Box<RouteToolPanelState>),
     /// Optionen-Dialog als host-neutrales Panel.
     Options(OptionsPanelState),
     /// Command-Palette-Zustand.
@@ -169,8 +193,8 @@ pub enum PanelState {
 pub struct OptionsPanelState {
     /// Sichtbarkeit des Panels.
     pub visible: bool,
-    /// Aktuelle Editor-Optionen.
-    pub options: EditorOptions,
+    /// Aktuelle Editor-Optionen (Arc fuer zero-copy Weitergabe).
+    pub options: Arc<EditorOptions>,
 }
 
 /// Read-only Zustand der Command-Palette.

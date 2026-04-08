@@ -2,7 +2,7 @@
 
 ## Ueberblick
 
-Das `app`-Modul verwaltet den globalen State, verarbeitet `AppIntent`s zentral ueber den `AppController`, mappt diese auf `AppCommand`s und baut sowohl die per-frame `RenderScene` als auch den expliziten `RenderAssetsSnapshot`-Vertrag fuer Renderer-Hosts.
+Das `app`-Modul verwaltet den globalen State und verarbeitet `AppIntent`s zentral ueber den `AppController`. Die host-neutralen Read-Projektionen fuer `RenderScene`, `RenderAssetsSnapshot`, `HostUiSnapshot` und `ViewportOverlaySnapshot` liegen seit der UI-/Backend-Entflechtung explizit im freien Modul `app::projections` und arbeiten direkt auf `&AppState` beziehungsweise `&mut AppState`.
 
 Die Laufzeit-Persistenz fuer `EditorOptions` liegt bewusst im Application-Layer unter `app::use_cases::options`; `shared::EditorOptions` bleibt damit ein neutrales Daten- und Validierungsmodell ohne Dateisystem- oder Pfad-Policy.
 
@@ -25,11 +25,16 @@ Die eframe-Integrationsschale gehoert bewusst nicht zum `app`-Layer. Ihre kanoni
 
 Die Route-Tool-Panel-DTOs werden intern ueber `ui_contract/route_tool_panel/{common,curve_family,generator_family,analysis_family}.rs` gepflegt. Die Top-Level-Dateien `ui_contract.rs` und `ui_contract/route_tool_panel.rs` bleiben dabei stabile Re-Export-Fassaden fuer UI und Intent-Mapping.
 
+## Projektionsfunktionen
+
+- `projections.rs` — freie host-neutrale Read-Projektionen fuer `RenderScene`, `RenderAssetsSnapshot`, `HostUiSnapshot` und `ViewportOverlaySnapshot`
+- Die frueheren Controller-Build-Methoden (`build_render_scene`, `build_render_assets`, `build_host_ui_snapshot`, `build_viewport_overlay_snapshot`) sind aus `AppController` entfernt und durch diese freien Funktionen ersetzt
+
 ## Haupttypen
 
 ### `AppController`
 
-Zentrale Intent-Verarbeitung, Command-Dispatch an Feature-Handler und Render-Scene-Aufbau. Die gemeinsame Rust-Host-Dispatch-Seam endet bewusst hier: `fs25_auto_drive_host_bridge::{apply_host_action(...), apply_mapped_intent(...)}` speisen nur explizit gemappte Host-Aktionen als `AppIntent` in `handle_intent(...)` ein.
+Zentrale Intent-Verarbeitung, Command-Dispatch an Feature-Handler und kanonische Dialog-Drain-Seam. Die gemeinsame Rust-Host-Dispatch-Seam endet bewusst hier: `fs25_auto_drive_host_bridge::{apply_host_action(...), apply_mapped_intent(...)}` speisen nur explizit gemappte Host-Aktionen als `AppIntent` in `handle_intent(...)` ein.
 
 ```rust
 pub struct AppController;
@@ -42,11 +47,7 @@ let mut controller = AppController::new();
 let mut state = AppState::new();
 
 controller.handle_intent(&mut state, AppIntent::ZoomInRequested)?;
-let scene = controller.build_render_scene(&state, [width, height]);
-let assets = controller.build_render_assets(&state);
-let ui_snapshot = controller.build_host_ui_snapshot(&state);
 let pending_dialogs = controller.take_dialog_requests(&mut state);
-let overlay_snapshot = controller.build_viewport_overlay_snapshot(&mut state, None);
 ```
 
 **Features:**
@@ -54,21 +55,14 @@ let overlay_snapshot = controller.build_viewport_overlay_snapshot(&mut state, No
 - Bildet den Engine-Endpunkt der gemeinsamen Rust-Host-Dispatch-Seam fuer Bridge- und egui-Hosts
 - Mappt Intents auf Commands ueber gemeinsame Feature-Slices (`intent_mapping.rs` + `intent_mapping/by_feature/*`)
 - Dispatcht Commands ueber dieselben Feature-Slices (`controller/by_feature/*`) an Feature-Handler (`handlers/`)
-- Baut den expliziten per-frame Render-Vertrag (`RenderScene`)
-- Baut den expliziten Asset-Vertrag (`RenderAssetsSnapshot`)
-- Baut den host-neutralen Fenster-/Panel-Snapshot (`HostUiSnapshot`)
 - Entnimmt host-native Dialog-Anforderungen ueber die kanonische Drain-Seam
-- Baut den host-neutralen Viewport-Overlay-Snapshot (`ViewportOverlaySnapshot`)
+- Haelt die Mutationsoberflaeche schmal; host-neutrale Read-Projektionen laufen separat ueber `app::projections`
 
 ```rust
 impl AppController {
     pub fn handle_intent(&mut self, state: &mut AppState, intent: AppIntent) -> anyhow::Result<()>;
     pub fn handle_command(&mut self, state: &mut AppState, command: AppCommand) -> anyhow::Result<()>;
-    pub fn build_render_scene(&self, state: &AppState, viewport_size: [f32; 2]) -> RenderScene;
-    pub fn build_render_assets(&self, state: &AppState) -> RenderAssetsSnapshot;
-    pub fn build_host_ui_snapshot(&self, state: &AppState) -> HostUiSnapshot;
     pub fn take_dialog_requests(&self, state: &mut AppState) -> Vec<DialogRequest>;
-    pub fn build_viewport_overlay_snapshot(&self, state: &mut AppState, cursor_world: Option<Vec2>) -> ViewportOverlaySnapshot;
 }
 ```
 
@@ -94,6 +88,34 @@ Uebersetzt einen `AppIntent` in eine Liste von `AppCommand`s. Reine Funktion ohn
 
 ---
 
+### `projections`
+
+Freie host-neutrale Projektionsfunktionen ueber `AppState`. Sie ersetzen die frueheren Controller-Build-Methoden und trennen Read-Model-Aufbau von der mutierenden Control-Plane.
+
+```rust
+pub fn build_render_scene(state: &AppState, viewport_size: [f32; 2]) -> RenderScene;
+pub fn build_render_assets(state: &AppState) -> RenderAssetsSnapshot;
+pub fn build_host_ui_snapshot(state: &AppState) -> HostUiSnapshot;
+pub fn build_viewport_overlay_snapshot(
+    state: &mut AppState,
+    cursor_world: Option<Vec2>,
+) -> ViewportOverlaySnapshot;
+```
+
+**Beispiel:**
+
+```rust
+let scene = crate::app::projections::build_render_scene(&state, [width, height]);
+let assets = crate::app::projections::build_render_assets(&state);
+let ui_snapshot = crate::app::projections::build_host_ui_snapshot(&state);
+let overlay_snapshot = crate::app::projections::build_viewport_overlay_snapshot(&mut state, None);
+```
+
+- `build_viewport_overlay_snapshot(...)` behaelt `&mut AppState`, weil beim Aufbau Boundary- und Overlay-Caches aufgewaermt werden duerfen
+- `build_host_ui_snapshot(...)` enthaelt bewusst keine Datei-/Pfaddialoge; diese laufen weiter ueber `AppController::take_dialog_requests(...)`
+
+---
+
 ### `AppState`
 
 Zentraler Anwendungszustand. Enthaelt keine I/O-Logik — alle Dateisystem-Operationen sind in `use_cases::file_io` zentralisiert.
@@ -102,7 +124,7 @@ Zentraler Anwendungszustand. Enthaelt keine I/O-Logik — alle Dateisystem-Opera
 pub struct AppState {
     pub road_map: Option<Arc<RoadMap>>,
     pub view: ViewState,
-    pub ui: UiState,
+    pub ui: EngineUiState,
     pub selection: SelectionState,
     pub editor: EditorToolState,
     pub clipboard: Clipboard,            // Zwischenablage fuer Copy/Paste
@@ -172,7 +194,7 @@ sel.ids_mut().insert(42);
 - `has_farmland_polygons() → bool` — `true` falls Farmland-Polygone geladen sind
 - `has_background_image() → bool` — `true` falls ein Hintergrundbild verfuegbar ist
 
-pub struct UiState {
+pub struct EngineUiState {
     pub dialog_requests: Vec<DialogRequest>,
     pub show_command_palette: bool,
     pub show_options_dialog: bool,
@@ -191,18 +213,21 @@ pub struct UiState {
     pub save_overview_dialog: SaveOverviewDialogState,
     /// Konfiguration fuer das Distanzen-Neuverteilen-Feature
     pub distanzen: DistanzenState,
+    /// Einstellungen fuer den Dialog "Alle Felder nachzeichnen"
+    pub trace_all_fields_dialog: TraceAllFieldsDialogState,
     /// Gruppen-Einstellungs-Popup (Doppelklick auf Gruppen-Node)
     pub group_settings_popup: GroupSettingsPopupState,
     /// ID der Gruppe, deren Auflösung vom User bestätigt werden soll (`None` = kein Dialog)
     pub confirm_dissolve_group_id: Option<u64>,
 }
 
-impl UiState {
+impl EngineUiState {
     pub fn request_dialog(&mut self, request: DialogRequest);
     pub fn take_dialog_requests(&mut self) -> Vec<DialogRequest>;
 }
 
-- `UiState::take_dialog_requests()` bleibt das interne Queue-Primitiv; Host-Adapter sollen die kanonische Controller-Seam `AppController::take_dialog_requests(...)` nutzen.
+- `EngineUiState` enthaelt nur engine-seitige Dialog-Queues, Dateipfade, Status und Workflow-Flags; host-lokaler Chrome-/Dialogzustand wird in der Host-Bridge ueber `HostLocalDialogState` gehalten und per Drain gespiegelt.
+- `EngineUiState::take_dialog_requests()` bleibt das interne Queue-Primitiv; Host-Adapter sollen die kanonische Controller-Seam `AppController::take_dialog_requests(...)` nutzen.
 
 pub struct ViewportOverlaySnapshot {
     pub route_tool_preview: Option<ToolPreview>,
@@ -241,7 +266,7 @@ pub struct GroupBoundaryOverlaySnapshot {
     pub direction: BoundaryDirection,
 }
 
-- `ViewportOverlaySnapshot` trennt Overlay-Daten strikt vom Host-Painting und wird frameweise ueber `AppController::build_viewport_overlay_snapshot(...)` bereitgestellt
+- `ViewportOverlaySnapshot` trennt Overlay-Daten strikt vom Host-Painting und wird frameweise ueber `app::projections::build_viewport_overlay_snapshot(...)` bereitgestellt
 - `build_viewport_overlay_snapshot(...)` darf intern Boundary-Caches waermen und nimmt deshalb `&mut AppState`
 
 pub struct FloatingMenuState {
@@ -1030,13 +1055,13 @@ flowchart TD
     H_HIST -->|"EditHistory pop/push"| STATE
     H_DLG -->|"UiState / Dialog-Flags"| STATE
 
-    CTRL -->|"build_render_scene()"| SCENE[RenderScene]
-    CTRL -->|"build_render_assets()"| ASSETS[RenderAssetsSnapshot]
+    STATE -->|"app::projections::build_render_scene()"| SCENE[RenderScene]
+    STATE -->|"app::projections::build_render_assets()"| ASSETS[RenderAssetsSnapshot]
     SCENE -->|GPU-Draw-Calls| GPU([Renderer / wgpu])
     ASSETS -->|Asset-Sync| GPU
 ```
 
-*Ablauf:* UI emittiert `AppIntent` → `AppController` uebersetzt via `map_intent_to_commands()` in `Vec<AppCommand>` → Handler-Module mutieren `AppState` via Use-Cases → `build_render_scene()` serialisiert den State in den `RenderScene`-Vertrag und `build_render_assets()` liefert langlebige Asset-Daten inkl. Revisionen → Renderer zeichnet und synchronisiert Uploads host-lokal.
+*Ablauf:* UI emittiert `AppIntent` → `AppController` uebersetzt via `map_intent_to_commands()` in `Vec<AppCommand>` → Handler-Module mutieren `AppState` via Use-Cases → `app::projections::build_render_scene()` serialisiert den State in den `RenderScene`-Vertrag und `app::projections::build_render_assets()` liefert langlebige Asset-Daten inkl. Revisionen → Renderer zeichnet und synchronisiert Uploads host-lokal.
 
 Intern schneiden `events::AppEventFeature`, `intent_mapping/by_feature/*` und `controller/by_feature/*` diesen Ablauf in dieselben acht Feature-Slices. Dadurch bleiben die oeffentlichen Einstiegspunkte stabil, waehrend die Control-Plane nicht mehr in einem einzigen monolithischen Match-Block gepflegt wird.
 
@@ -1052,8 +1077,8 @@ for intent in intents {
     controller.handle_intent(&mut state, intent)?;
 }
 
-let scene = controller.build_render_scene(&state, [viewport_w, viewport_h]);
-let assets = controller.build_render_assets(&state);
+let scene = crate::app::projections::build_render_scene(&state, [viewport_w, viewport_h]);
+let assets = crate::app::projections::build_render_assets(&state);
 ```
 
 ### Pan-Delta-Umrechnung

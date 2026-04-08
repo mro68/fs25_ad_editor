@@ -10,7 +10,7 @@ use indexmap::IndexSet;
 use std::cell::RefCell;
 use std::sync::Arc;
 
-use super::{EditorTool, EditorToolState, SelectionState, UiState, ViewState};
+use super::{EditorTool, EditorToolState, EngineUiState, SelectionState, ViewState};
 
 /// Zwischenablage fuer Nodes, Verbindungen und Marker
 #[derive(Debug, Clone, Default)]
@@ -53,7 +53,7 @@ pub struct AppState {
     /// View-State
     pub view: ViewState,
     /// UI-State
-    pub ui: UiState,
+    pub ui: EngineUiState,
     /// Selection-State
     pub selection: SelectionState,
     /// Editor-Werkzeug-State
@@ -113,7 +113,7 @@ impl AppState {
         Self {
             road_map: None,
             view: ViewState::new(),
-            ui: UiState::new(),
+            ui: EngineUiState::new(),
             selection: SelectionState::new(),
             editor: EditorToolState::new(),
             clipboard: Clipboard::default(),

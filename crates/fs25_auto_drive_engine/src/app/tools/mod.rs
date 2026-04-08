@@ -38,6 +38,7 @@ pub mod spline;
 pub mod straight_line;
 
 pub use crate::app::tool_contract::ToolAnchor;
+pub use crate::shared::RouteToolGroup;
 pub use capabilities::{
     OrderedNodeChain, RouteToolChainInput, RouteToolDrag, RouteToolGroupEdit, RouteToolLassoInput,
     RouteToolRecreate, RouteToolRotate, RouteToolSegmentAdjustments, RouteToolTangent,
@@ -47,8 +48,8 @@ pub use catalog::{
     route_tool_descriptor, route_tool_descriptor_by_slot, route_tool_disabled_reason,
     route_tool_disabled_reason_key, route_tool_group_label_key, route_tool_label_key,
     route_tool_slot, ResolvedRouteToolEntry, RouteToolAvailabilityContext, RouteToolBackingMode,
-    RouteToolDescriptor, RouteToolDisabledReason, RouteToolGroup, RouteToolIconKey,
-    RouteToolRequirement, RouteToolSurface,
+    RouteToolDescriptor, RouteToolDisabledReason, RouteToolIconKey, RouteToolRequirement,
+    RouteToolSurface,
 };
 pub use contracts::{RouteToolCore, RouteToolHostSync, RouteToolPanelBridge, ToolHostContext};
 pub use manager::ToolManager;

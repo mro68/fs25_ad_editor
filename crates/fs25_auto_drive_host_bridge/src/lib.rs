@@ -40,7 +40,8 @@ pub use dto::{
 };
 pub use session::{
     EngineRenderFrameSnapshot, FlutterBridgeSession, HostBridgeSession, HostDialogUiState,
-    HostPanelPropertiesState, HostRenderFrameSnapshot, HostViewportInputContext,
+    HostLocalDialogState, HostPanelPropertiesState, HostRenderFrameSnapshot,
+    HostViewportInputContext,
 };
 
 #[cfg(test)]
@@ -65,7 +66,13 @@ mod tests {
         .expect("crate-root apply_host_action muss ueber Re-Export verfuegbar bleiben");
 
         assert!(handled);
-        assert!(state.ui.show_command_palette);
+        assert!(
+            state.ui.dialog_requests.iter().any(|r| matches!(
+                r,
+                fs25_auto_drive_engine::app::ui_contract::DialogRequest::ToggleCommandPalette
+            )),
+            "ToggleCommandPalette muss in dialog_requests stehen"
+        );
 
         let mut session = FlutterBridgeSession::new();
         session

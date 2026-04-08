@@ -14,8 +14,11 @@ pub(super) fn render_field_boundary_panel(
 ) {
     if let Some(field_id) = state.selected_field_id {
         ui.label(format!("Feld #{field_id}"));
-    } else if let Some(text) = state.empty_selection_text.as_deref() {
-        ui.colored_label(egui::Color32::GRAY, text);
+    } else {
+        ui.colored_label(
+            egui::Color32::GRAY,
+            "Kein Feld ausgewaehlt — in ein Feld klicken",
+        );
     }
 
     ui.separator();
@@ -143,8 +146,8 @@ pub(super) fn render_field_boundary_panel(
         RouteToolPanelAction::FieldBoundary(FieldBoundaryPanelAction::SetPriority(value))
     });
 
-    if let Some(hint_text) = state.hint_text.as_deref() {
-        ui.small(hint_text);
+    if state.show_select_hint {
+        ui.small("Erneuter Klick im Viewport → anderes Feld auswählen");
     }
 }
 
@@ -156,6 +159,7 @@ pub(super) fn render_field_path_panel(
     ui: &mut egui::Ui,
     state: &FieldPathPanelState,
     wheel_enabled: bool,
+    lang: Language,
     events: &mut Vec<AppIntent>,
 ) {
     ui.horizontal(|ui| {
@@ -184,11 +188,11 @@ pub(super) fn render_field_path_panel(
     });
 
     ui.separator();
-    render_field_path_selection_summary(ui, &state.side1);
+    render_field_path_selection_summary(ui, &state.side1, lang);
 
     if let Some(side2) = state.side2.as_ref() {
         ui.separator();
-        render_field_path_selection_summary(ui, side2);
+        render_field_path_selection_summary(ui, side2, lang);
     }
 
     ui.separator();
@@ -230,7 +234,15 @@ pub(super) fn render_field_path_panel(
             }
         }
         FieldPathPanelPhase::Preview => {
-            if let Some(preview_message) = state.preview_message.as_deref() {
+            if let Some(status) = state.preview_status {
+                let preview_message = match status {
+                    FieldPathPreviewStatus::NoMiddleLine => {
+                        "Keine Mittellinie gefunden — Seiten anpassen".to_owned()
+                    }
+                    FieldPathPreviewStatus::Generated { node_count } => {
+                        format!("{node_count} Nodes generiert")
+                    }
+                };
                 ui.label(preview_message);
             }
             if ui.button("← Seite 2 neu waehlen").clicked() {
@@ -301,8 +313,11 @@ pub(super) fn render_route_offset_panel(
     wheel_enabled: bool,
     events: &mut Vec<AppIntent>,
 ) {
-    if let Some(message) = state.empty_message.as_deref() {
-        ui.colored_label(egui::Color32::GRAY, message);
+    if !state.has_chain {
+        ui.colored_label(
+            egui::Color32::GRAY,
+            "Kette selektieren und Route-Tool neu aktivieren.",
+        );
         return;
     }
 
@@ -542,7 +557,11 @@ pub(super) fn render_color_path_sampling_info(ui: &mut egui::Ui, state: &ColorPa
         });
         ui.label(format!(
             "{}: {} Farben",
-            state.palette_label,
+            if state.exact_color_match {
+                "Exakte Farben"
+            } else {
+                "Palette"
+            },
             state.palette_colors.len()
         ));
         ui.horizontal_wrapped(|ui| {

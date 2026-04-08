@@ -7,7 +7,7 @@ use super::geometry::{
 };
 use crate::app::tools::snap_to_node;
 use crate::app::ui_contract::{
-    SegmentConfigPanelAction, SegmentConfigPanelState, SegmentPanelMode,
+    SegmentConfigPanelAction, SegmentConfigPanelState, SegmentLengthKind, SegmentPanelMode,
 };
 use crate::core::{ConnectedNeighbor, ConnectionDirection, ConnectionPriority, RoadMap};
 
@@ -292,7 +292,7 @@ impl SegmentConfig {
         adjusting: bool,
         ready: bool,
         length: f32,
-        label: &str,
+        length_kind: SegmentLengthKind,
         with_node_count: bool,
     ) -> SegmentConfigPanelState {
         let mode = panel_mode(adjusting, ready);
@@ -313,7 +313,7 @@ impl SegmentConfig {
 
         SegmentConfigPanelState {
             mode,
-            length_label: label.to_owned(),
+            length_kind,
             length_m,
             max_segment_length: self.max_segment_length,
             max_segment_length_min: 1.0,

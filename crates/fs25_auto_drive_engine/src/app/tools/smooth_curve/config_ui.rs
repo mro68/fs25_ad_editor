@@ -3,8 +3,9 @@
 use super::super::common::SegmentConfig;
 use super::state::SmoothCurveTool;
 use crate::app::ui_contract::{
-    RouteToolPanelEffect, SegmentConfigPanelAction, SmoothCurvePanelAction, SmoothCurvePanelState,
-    SmoothCurveSteererState, SMOOTH_CURVE_MAX_ANGLE_LIMITS, SMOOTH_CURVE_MIN_DISTANCE_LIMITS,
+    RouteToolPanelEffect, SegmentConfigPanelAction, SegmentLengthKind, SmoothCurvePanelAction,
+    SmoothCurvePanelState, SmoothCurveSteererState, SMOOTH_CURVE_MAX_ANGLE_LIMITS,
+    SMOOTH_CURVE_MIN_DISTANCE_LIMITS,
 };
 
 impl SmoothCurveTool {
@@ -49,7 +50,7 @@ impl SmoothCurveTool {
                 adjusting,
                 self.start.is_some() && self.end.is_some(),
                 length,
-                "Routenlaenge",
+                SegmentLengthKind::SmoothRoute,
                 false,
             ),
             min_distance: self.min_distance,
