@@ -46,6 +46,7 @@ impl FlutterSessionHandle {
 ///
 /// Gibt einen opaques Handle-Pointer zurueck der fuer alle weiteren API-Aufrufe
 /// benoetigt wird. Dart ist verantwortlich `flutter_session_dispose` aufzurufen.
+#[allow(clippy::arc_with_non_send_sync)] // HostBridgeSession ist !Send, aber FFI-Zugriff ist seriell
 pub fn flutter_session_new() -> Box<FlutterSessionHandle> {
     Box::new(FlutterSessionHandle {
         session: Arc::new(Mutex::new(HostBridgeSession::new())),
@@ -55,7 +56,7 @@ pub fn flutter_session_new() -> Box<FlutterSessionHandle> {
 /// Gibt eine Flutter-Session frei.
 ///
 /// Nach diesem Aufruf darf `handle` nicht mehr verwendet werden.
-pub fn flutter_session_dispose(_handle: Box<FlutterSessionHandle>) {
+pub fn flutter_session_dispose(_handle: FlutterSessionHandle) {
     // Handle wird durch Drop freigegeben
 }
 
@@ -157,7 +158,7 @@ mod tests {
     #[test]
     fn test_flutter_session_lifecycle() {
         let handle = flutter_session_new();
-        flutter_session_dispose(handle);
+        flutter_session_dispose(*handle);
     }
 
     /// Prueft, dass ungueliges JSON einen Fehler zurueckgibt (kein Panic).
@@ -166,7 +167,7 @@ mod tests {
         let handle = flutter_session_new();
         let result = flutter_session_apply_action(&handle, "not json".to_string());
         assert!(result.is_err(), "Ungueltiges JSON muss Err zurueckgeben");
-        flutter_session_dispose(handle);
+        flutter_session_dispose(*handle);
     }
 
     /// Prueft, dass snapshot_json einen validen JSON-String liefert.
@@ -177,7 +178,7 @@ mod tests {
             flutter_session_snapshot_json(&handle).expect("Snapshot-Serialisierung muss gelingen");
         assert!(!json.is_empty());
         assert!(json.starts_with('{'), "Snapshot muss JSON-Objekt sein");
-        flutter_session_dispose(handle);
+        flutter_session_dispose(*handle);
     }
 
     /// Prueft, dass neue Sessions als nicht dirty gemeldet werden.
@@ -187,7 +188,7 @@ mod tests {
         let dirty = flutter_session_is_dirty(&handle)
             .expect("Dirty-Abfrage fuer frische Session muss gelingen");
         assert!(!dirty);
-        flutter_session_dispose(handle);
+        flutter_session_dispose(*handle);
     }
 
     /// Prueft, dass ui_snapshot_json ein parsebares JSON-Objekt liefert.
@@ -202,7 +203,7 @@ mod tests {
             value.get("panels").is_some(),
             "UI-Snapshot muss panels enthalten"
         );
-        flutter_session_dispose(handle);
+        flutter_session_dispose(*handle);
     }
 
     /// Prueft, dass chrome_snapshot_json ein parsebares JSON-Objekt liefert.
@@ -217,7 +218,7 @@ mod tests {
             value.get("show_command_palette").is_some(),
             "Chrome-Snapshot muss chrome-Felder enthalten"
         );
-        flutter_session_dispose(handle);
+        flutter_session_dispose(*handle);
     }
 
     /// Prueft, dass viewport_overlay_json ein parsebares JSON-Objekt liefert.
@@ -232,6 +233,6 @@ mod tests {
             value.get("show_no_file_hint").is_some(),
             "Overlay-Snapshot muss Overlay-Felder enthalten"
         );
-        flutter_session_dispose(handle);
+        flutter_session_dispose(*handle);
     }
 }

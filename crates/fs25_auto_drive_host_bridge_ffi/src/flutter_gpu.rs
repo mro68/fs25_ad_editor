@@ -47,6 +47,8 @@ pub struct GpuRuntimeHandle {
 }
 
 impl GpuRuntimeHandle {
+    #[allow(clippy::arc_with_non_send_sync)] // HostBridgeSession ist !Send, aber FFI-Zugriff ist seriell
+    #[allow(clippy::arc_with_non_send_sync)] // HostBridgeSession ist !Send, aber FFI-Zugriff ist seriell
     fn new(width: u32, height: u32) -> Result<Self> {
         Self::new_with_session(
             Arc::new(Mutex::new(HostBridgeSession::new())),
