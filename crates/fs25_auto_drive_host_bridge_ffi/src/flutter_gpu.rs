@@ -28,7 +28,7 @@ use std::sync::Mutex;
 
 /// Interner GPU-Runtime-Zustand fuer Flutter-Integration.
 ///
-/// Kapselt wgpu-Device/Queue, den Renderer und die exportierbare Texture.
+/// Kapselt wgpu-Device/Queue, den Renderer-Zustand und die exportierbare Texture.
 pub struct GpuRuntimeHandle {
     /// Gehalten damit die Instanz nicht vorzeitig gedroppt wird (Device wuerde orphan).
     _instance: wgpu::Instance,
@@ -118,7 +118,7 @@ pub extern "C" fn fs25ad_gpu_runtime_new(width: u32, height: u32) -> *mut GpuRun
     }
 }
 
-/// Rendert den naechsten Frame in die interne Shared-Texture.
+/// Rendert den naechsten Frame direkt in die exportierbare Vulkan-Texture.
 ///
 /// Gibt `true` bei Erfolg zurueck, `false` bei Fehler.
 #[unsafe(no_mangle)]
@@ -134,8 +134,13 @@ pub extern "C" fn fs25ad_gpu_runtime_render(handle: *mut GpuRuntimeHandle) -> bo
                     .map_err(|_| anyhow!("GPU runtime session lock poisoned"))?;
                 session.build_render_frame([rt.size[0] as f32, rt.size[1] as f32])
             }; // Lock wird hier freigegeben
-            rt.runtime
-                .render_frame(&rt.device, &rt.queue, &frame.scene, &frame.assets)?;
+            rt.runtime.render_to_view(
+                &rt.device,
+                &rt.queue,
+                &frame.scene,
+                &frame.assets,
+                rt.external_texture.texture_view(),
+            )?;
             Ok(())
         })
     })
@@ -184,8 +189,10 @@ pub extern "C" fn fs25ad_gpu_runtime_resize(
 ) -> bool {
     ffi_guard_bool!({
         with_runtime(handle, |rt| {
+            let new_external_texture =
+                VulkanDmaBufTexture::create_exportable_texture(&rt.device, width, height)?;
             rt.runtime.resize(&rt.device, [width, height])?;
-            rt.external_texture.resize(&rt.device, width, height)?;
+            rt.external_texture = new_external_texture;
             rt.size = [width, height];
             Ok(())
         })
