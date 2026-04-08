@@ -178,7 +178,7 @@ pub fn save_with_heightmap_check(state: &mut AppState, path: Option<String>) -> 
             && state.road_map.is_some()
         {
             state.ui.pending_save_path = state.ui.current_file_path.clone();
-            state.ui.show_heightmap_warning = true;
+            state.ui.request_dialog(DialogRequest::ShowHeightmapWarning);
         } else {
             save_current_file(state)?;
             state.ui.heightmap_warning_confirmed = false;
@@ -187,7 +187,7 @@ pub fn save_with_heightmap_check(state: &mut AppState, path: Option<String>) -> 
         // Pfad gegeben (Save As oder nach Warnung)
         if state.ui.heightmap_path.is_none() && !state.ui.heightmap_warning_confirmed {
             state.ui.pending_save_path = Some(actual_path);
-            state.ui.show_heightmap_warning = true;
+            state.ui.request_dialog(DialogRequest::ShowHeightmapWarning);
         } else {
             save_file_as(state, actual_path)?;
             state.ui.heightmap_warning_confirmed = false;
