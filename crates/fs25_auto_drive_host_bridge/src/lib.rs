@@ -67,11 +67,10 @@ mod tests {
 
         assert!(handled);
         assert!(
-            state
-                .ui
-                .dialog_requests
-                .iter()
-                .any(|r| matches!(r, fs25_auto_drive_engine::app::ui_contract::DialogRequest::ToggleCommandPalette)),
+            state.ui.dialog_requests.iter().any(|r| matches!(
+                r,
+                fs25_auto_drive_engine::app::ui_contract::DialogRequest::ToggleCommandPalette
+            )),
             "ToggleCommandPalette muss in dialog_requests stehen"
         );
 

@@ -135,12 +135,7 @@ pub fn build_host_chrome_snapshot(state: &AppState) -> HostChromeSnapshot {
         })
         .unwrap_or((0, 0, 0, None));
     let selection_count = state.selection.selected_node_ids.len();
-    let selection_example_id = state
-        .selection
-        .selected_node_ids
-        .iter()
-        .next()
-        .copied();
+    let selection_example_id = state.selection.selected_node_ids.iter().next().copied();
     HostChromeSnapshot {
         status_message: state.ui.status_message.clone(),
         show_command_palette: false,
@@ -191,10 +186,7 @@ pub fn build_viewport_overlay_snapshot(
 }
 
 /// Baut den per-frame Render-Vertrag fuer lokale Host-Adapter.
-pub fn build_render_scene(
-    state: &AppState,
-    viewport_size: [f32; 2],
-) -> RenderScene {
+pub fn build_render_scene(state: &AppState, viewport_size: [f32; 2]) -> RenderScene {
     projections::build_render_scene(state, viewport_size)
 }
 
@@ -204,10 +196,7 @@ pub fn build_render_assets(state: &AppState) -> RenderAssetsSnapshot {
 }
 
 /// Baut Szene und Assets als gekoppelten read-only Render-Frame fuer lokale Hosts.
-pub fn build_render_frame(
-    state: &AppState,
-    viewport_size: [f32; 2],
-) -> HostRenderFrameSnapshot {
+pub fn build_render_frame(state: &AppState, viewport_size: [f32; 2]) -> HostRenderFrameSnapshot {
     HostRenderFrameSnapshot {
         scene: build_render_scene(state, viewport_size),
         assets: build_render_assets(state),
