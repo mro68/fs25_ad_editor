@@ -5,8 +5,8 @@
 //! HAL-Zugriff (VK_KHR_external_memory_fd, vkGetMemoryFdKHR) ist als TODO
 //! markiert bis die Flutter-Seite fuer Tests verfuegbar ist.
 
-use crate::export_core::{EXPORT_COLOR_FORMAT, EXPORT_SAMPLE_COUNT};
 use super::{ExternalTextureError, ExternalTextureExport, PlatformTextureDescriptor};
+use crate::export_core::{EXPORT_COLOR_FORMAT, EXPORT_SAMPLE_COUNT};
 
 /// Vulkan-basierte Texture fuer den Zero-Copy-Export an Flutter/Impeller via DMA-BUF.
 ///
@@ -189,7 +189,9 @@ mod tests {
         assert_eq!(dmabuf_texture_width(&texture), 16);
         assert_eq!(dmabuf_texture_height(&texture), 16);
 
-        texture.resize(&device, 32, 64).expect("Resize muss gelingen");
+        texture
+            .resize(&device, 32, 64)
+            .expect("Resize muss gelingen");
         assert_eq!(dmabuf_texture_width(&texture), 32);
         assert_eq!(dmabuf_texture_height(&texture), 64);
     }

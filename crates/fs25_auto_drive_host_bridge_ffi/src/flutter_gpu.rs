@@ -103,7 +103,9 @@ fn with_runtime<T>(
 #[unsafe(no_mangle)]
 pub extern "C" fn fs25ad_gpu_runtime_new(width: u32, height: u32) -> *mut GpuRuntimeHandle {
     clear_last_error();
-    match std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| GpuRuntimeHandle::new(width, height))) {
+    match std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+        GpuRuntimeHandle::new(width, height)
+    })) {
         Ok(Ok(handle)) => Box::into_raw(Box::new(handle)),
         Ok(Err(e)) => {
             set_last_error(e.to_string());
@@ -236,8 +238,9 @@ mod tests {
     fn test_export_texture_rejects_null_out_fd() {
         // Null-Handle + Null-out_fd: set_last_error wird ausgefuehrt, kein Panic.
         // SAFETY: Testaufruf mit Null-out_fd; beide Null-Checks werden geprueft.
-        let result =
-            unsafe { fs25ad_gpu_runtime_export_texture(std::ptr::null_mut(), std::ptr::null_mut()) };
+        let result = unsafe {
+            fs25ad_gpu_runtime_export_texture(std::ptr::null_mut(), std::ptr::null_mut())
+        };
         assert!(!result, "Null out_fd muss false zurueckgeben");
     }
 }
