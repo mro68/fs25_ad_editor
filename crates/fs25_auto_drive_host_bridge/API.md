@@ -8,7 +8,7 @@
 
 Fuer bestehende Flutter-/FFI-Call-Sites stellt die Crate die bisherigen `Engine*`-Typnamen und den Session-Namen `FlutterBridgeSession` direkt als Kompatibilitaets-Aliase bereit. Damit koennen externe Consumer direkt auf `fs25_auto_drive_host_bridge` wechseln, ohne im selben Schritt alle Symbolnamen umzubenennen.
 
-Der aktuell produktive Flutter-Pfad konsumiert diese Kanonik ueber den Linux-first-C-ABI-Adapter `fs25_auto_drive_host_bridge_ffi`. Dieser Transportadapter fuehrt bewusst keine zweite Session- oder DTO-Surface ein, sondern serialisiert nur die bereits hier definierten Host-Vertraege.
+Der aktuell produktive Flutter-Pfad konsumiert diese Kanonik ueber den Linux-first-C-ABI-Adapter `fs25_auto_drive_host_bridge_ffi`. Dieser Transportadapter fuehrt bewusst keine zweite Session- oder DTO-Surface ein, sondern serialisiert nur die bereits hier definierten Host-Vertraege. Fuer die nicht direkt `serde`-faehigen Read-Modelle `HostUiSnapshot` und `ViewportOverlaySnapshot` stellt die DTO-Fassade zusaetzlich explizite JSON-Helfer bereit, damit Adapter keine impliziten Engine-Imports oder ad-hoc-Snapshot-Mappings benoetigen.
 
 Die oeffentlichen Module `dispatch` und `dto` bleiben dabei stabile Fassaden. Seit der Audit-Remediation ist ihre interne Implementierung in thematische Untermodule aufgeteilt, ohne dass sich die Re-Export-Surface fuer Rust-, egui- oder FFI-Consumer geaendert hat.
 
@@ -43,7 +43,14 @@ Mit `HostChromeSnapshot` existiert zusaetzlich ein expliziter host-neutraler Rea
 |---|---|
 | `dispatch` | Wiederverwendbare Rust-Host-Dispatch-Seam (`HostSessionAction` <-> `AppIntent`) und bridge-owned Read-Helper-Seams fuer lokale Controller/State-Hosts; bleibt als stabile Fassade intern in `actions`, `mappings`, `snapshot` und `viewport_input` aufgeteilt |
 | `session` | `HostBridgeSession` als kanonische Session-Fassade ueber der Engine |
-| `dto` | Serialisierbare Host-Actions, Dialog-DTOs, Session-Snapshots plus `Engine*`-Kompatibilitaets-Aliase; bleibt als stabile Fassade intern in `actions`, `dialogs`, `input`, `route_tool`, `viewport` und `chrome` aufgeteilt |
+| `dto` | Serialisierbare Host-Actions, Dialog-DTOs, Session-Snapshots, explizite JSON-Helfer fuer `HostUiSnapshot`/`ViewportOverlaySnapshot` plus `Engine*`-Kompatibilitaets-Aliase; bleibt als stabile Fassade intern in `actions`, `dialogs`, `input`, `route_tool`, `viewport`, `chrome` und `ui_json` aufgeteilt |
+
+## Oeffentliche DTO-Helfer
+
+| Signatur | Zweck |
+|---|---|
+| `pub fn host_ui_snapshot_json(snapshot: &HostUiSnapshot) -> serde_json::Result<String>` | Serialisiert den host-neutralen UI-Snapshot (`HostUiSnapshot`) als UTF-8-JSON fuer Transport-Adapter |
+| `pub fn viewport_overlay_snapshot_json(snapshot: &ViewportOverlaySnapshot) -> serde_json::Result<String>` | Serialisiert den host-neutralen Viewport-Overlay-Snapshot (`ViewportOverlaySnapshot`) als UTF-8-JSON fuer Transport-Adapter |
 
 ## Oeffentliche Dispatch-Funktionen
 
