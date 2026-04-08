@@ -188,7 +188,8 @@ impl HostBridgeSession {
 
     fn reconcile_host_local_dialog_state_for_intent(&mut self, intent: &AppIntent) {
         if matches!(intent, AppIntent::OverviewOptionsConfirmed) {
-            self.state.ui.overview_options_dialog = self.chrome_state.overview_options_dialog.clone();
+            self.state.ui.overview_options_dialog =
+                self.chrome_state.overview_options_dialog.clone();
         }
     }
 
