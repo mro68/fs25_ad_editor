@@ -1,7 +1,10 @@
 //! C-ABI-Transport ueber der kanonischen Host-Bridge-Session.
 
 #[cfg(feature = "flutter")]
+mod api;
+#[cfg(feature = "flutter")]
 pub mod flutter_api;
+mod frb_generated;
 mod shared_texture_v2;
 mod texture_registration_v4;
 
