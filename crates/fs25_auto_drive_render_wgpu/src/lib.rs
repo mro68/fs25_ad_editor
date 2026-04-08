@@ -44,9 +44,9 @@ pub(crate) use marker_renderer::MarkerRenderer;
 /// Die regulaere egui-Integration erstellt ihre eigene Instanz separat und ist nicht betroffen.
 #[cfg(feature = "flutter-linux")]
 pub fn create_vulkan_instance() -> wgpu::Instance {
-    wgpu::Instance::new(&wgpu::InstanceDescriptor {
+    wgpu::Instance::new(wgpu::InstanceDescriptor {
         backends: wgpu::Backends::VULKAN,
-        ..Default::default()
+        ..wgpu::InstanceDescriptor::new_without_display_handle()
     })
 }
 pub(crate) use node_renderer::NodeRenderer;
