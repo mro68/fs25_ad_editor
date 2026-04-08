@@ -18,12 +18,15 @@
 //! Der Aufrufer ist fuer korrekte Pointer-Gueltigkeit und Lebensdauer verantwortlich.
 
 use crate::flutter_api::FlutterSessionHandle;
+use crate::texture_registration_v4::{
+    Fs25adTextureRegistrationV4LinuxDmabufDescriptor, Fs25adTextureRegistrationV4LinuxDmabufPlane,
+};
 use crate::{clear_last_error, set_last_error};
 use anyhow::{anyhow, Result};
 use fs25_auto_drive_host_bridge::HostBridgeSession;
 use fs25_auto_drive_render_wgpu::{
     external_texture::vulkan_linux::VulkanDmaBufTexture, ExternalTextureExport,
-    SharedTextureRuntime,
+    LinuxDmabufDescriptor, LinuxDmabufPlane, SharedTextureRuntime, MAX_LINUX_DMABUF_PLANES,
 };
 use std::sync::{Arc, Mutex};
 
@@ -109,6 +112,37 @@ fn with_runtime<T>(
     f(runtime)
 }
 
+fn map_linux_dmabuf_descriptor(
+    descriptor: LinuxDmabufDescriptor,
+) -> Fs25adTextureRegistrationV4LinuxDmabufDescriptor {
+    let mut planes = [Fs25adTextureRegistrationV4LinuxDmabufPlane {
+        fd: -1,
+        offset_bytes: 0,
+        stride_bytes: 0,
+    }; MAX_LINUX_DMABUF_PLANES];
+
+    for (index, plane) in descriptor
+        .planes
+        .iter()
+        .take(descriptor.plane_count as usize)
+        .enumerate()
+    {
+        planes[index] = Fs25adTextureRegistrationV4LinuxDmabufPlane {
+            fd: plane.fd,
+            offset_bytes: plane.offset_bytes,
+            stride_bytes: plane.stride_bytes,
+        };
+    }
+
+    Fs25adTextureRegistrationV4LinuxDmabufDescriptor {
+        drm_fourcc: descriptor.drm_fourcc,
+        drm_modifier_hi: (descriptor.drm_modifier >> 32) as u32,
+        drm_modifier_lo: descriptor.drm_modifier as u32,
+        plane_count: descriptor.plane_count,
+        planes,
+    }
+}
+
 /// Erzeugt einen neuen GPU-Runtime-Handle fuer Flutter.
 ///
 /// Gibt einen opaques Handle zurueck der mit `fs25ad_gpu_runtime_dispose` freizugeben ist.
@@ -189,18 +223,19 @@ pub extern "C" fn fs25ad_gpu_runtime_render(handle: *mut GpuRuntimeHandle) -> bo
 
 /// Exportiert den nativen Texture-Deskriptor fuer Flutter/Impeller.
 ///
-/// Schreibt den DMA-BUF File-Descriptor in `out_fd`.
+/// Schreibt den Linux-DMA-BUF-v4-Descriptor in `out_descriptor`.
 /// Gibt `true` bei Erfolg zurueck, `false` bei Fehler.
 ///
 /// # Safety
-/// `out_fd` muss ein gueltiger, nicht-null Zeiger auf ein `i32` sein.
+/// `out_descriptor` muss ein gueltiger, nicht-null Zeiger auf einen
+/// `Fs25adTextureRegistrationV4LinuxDmabufDescriptor` sein.
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn fs25ad_gpu_runtime_export_texture(
     handle: *mut GpuRuntimeHandle,
-    out_fd: *mut i32,
+    out_descriptor: *mut Fs25adTextureRegistrationV4LinuxDmabufDescriptor,
 ) -> bool {
-    if out_fd.is_null() {
-        set_last_error("fs25ad_gpu_runtime_export_texture: out_fd must not be null");
+    if out_descriptor.is_null() {
+        set_last_error("fs25ad_gpu_runtime_export_texture: out_descriptor must not be null");
         return false;
     }
     ffi_guard_bool!({
@@ -208,10 +243,19 @@ pub unsafe extern "C" fn fs25ad_gpu_runtime_export_texture(
             let descriptor = rt.external_texture.export_descriptor()?;
             match descriptor {
                 fs25_auto_drive_render_wgpu::PlatformTextureDescriptor::LinuxDmaBuf {
-                    fd, ..
+                    fd,
+                    stride,
+                    format,
+                    modifier,
+                    ..
                 } => {
-                    // SAFETY: Gueltigkeit von out_fd wurde oben geprueft.
-                    unsafe { *out_fd = fd };
+                    let descriptor = LinuxDmabufDescriptor::single_plane(
+                        format,
+                        modifier,
+                        LinuxDmabufPlane::new(fd, 0, stride),
+                    );
+                    // SAFETY: Gueltigkeit von out_descriptor wurde oben geprueft.
+                    unsafe { *out_descriptor = map_linux_dmabuf_descriptor(descriptor) };
                     Ok(())
                 }
             }
@@ -284,20 +328,52 @@ mod tests {
     /// Prueft, dass fs25ad_gpu_runtime_export_texture mit Null-Handle false zurueckgibt.
     #[test]
     fn test_export_texture_rejects_null_handle() {
-        let mut fd: i32 = 0;
-        // SAFETY: Testaufruf mit Null-Handle; out_fd ist gueltig.
-        let result = unsafe { fs25ad_gpu_runtime_export_texture(std::ptr::null_mut(), &mut fd) };
+        let mut descriptor = Fs25adTextureRegistrationV4LinuxDmabufDescriptor {
+            drm_fourcc: 0,
+            drm_modifier_hi: 0,
+            drm_modifier_lo: 0,
+            plane_count: 0,
+            planes: [Fs25adTextureRegistrationV4LinuxDmabufPlane {
+                fd: -1,
+                offset_bytes: 0,
+                stride_bytes: 0,
+            }; MAX_LINUX_DMABUF_PLANES],
+        };
+        // SAFETY: Testaufruf mit Null-Handle; out_descriptor ist gueltig.
+        let result =
+            unsafe { fs25ad_gpu_runtime_export_texture(std::ptr::null_mut(), &mut descriptor) };
         assert!(!result, "Null-Handle muss false zurueckgeben");
     }
 
-    /// Prueft, dass fs25ad_gpu_runtime_export_texture mit out_fd=null false zurueckgibt.
+    /// Prueft, dass fs25ad_gpu_runtime_export_texture mit out_descriptor=null false zurueckgibt.
     #[test]
-    fn test_export_texture_rejects_null_out_fd() {
-        // Null-Handle + Null-out_fd: set_last_error wird ausgefuehrt, kein Panic.
-        // SAFETY: Testaufruf mit Null-out_fd; beide Null-Checks werden geprueft.
+    fn test_export_texture_rejects_null_out_descriptor() {
+        // Null-Handle + Null-out_descriptor: set_last_error wird ausgefuehrt, kein Panic.
+        // SAFETY: Testaufruf mit Null-out_descriptor; beide Null-Checks werden geprueft.
         let result = unsafe {
             fs25ad_gpu_runtime_export_texture(std::ptr::null_mut(), std::ptr::null_mut())
         };
-        assert!(!result, "Null out_fd muss false zurueckgeben");
+        assert!(!result, "Null out_descriptor muss false zurueckgeben");
+    }
+
+    /// Prueft die Abbildung eines Single-Plane-DMA-BUF-Descriptors auf den v4-ABI-Typ.
+    #[test]
+    fn test_map_linux_dmabuf_descriptor_builds_v4_shape() {
+        let descriptor = LinuxDmabufDescriptor::single_plane(
+            0x3432_4241,
+            0x1122_3344_5566_7788,
+            LinuxDmabufPlane::new(42, 0, 512),
+        );
+
+        let ffi_descriptor = map_linux_dmabuf_descriptor(descriptor);
+
+        assert_eq!(ffi_descriptor.drm_fourcc, 0x3432_4241);
+        assert_eq!(ffi_descriptor.drm_modifier_hi, 0x1122_3344);
+        assert_eq!(ffi_descriptor.drm_modifier_lo, 0x5566_7788);
+        assert_eq!(ffi_descriptor.plane_count, 1);
+        assert_eq!(ffi_descriptor.planes[0].fd, 42);
+        assert_eq!(ffi_descriptor.planes[0].offset_bytes, 0);
+        assert_eq!(ffi_descriptor.planes[0].stride_bytes, 512);
+        assert_eq!(ffi_descriptor.planes[1].fd, -1);
     }
 }

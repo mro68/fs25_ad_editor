@@ -300,20 +300,20 @@ flutter_session_new()
 | `fs25ad_gpu_runtime_new(width, height) -> *mut GpuRuntimeHandle` | Erzeugt GPU-Runtime mit Vulkan-Backend. NULL bei Fehler |
 | `fs25ad_gpu_runtime_new_with_session(session_handle, width, height) -> *mut GpuRuntimeHandle` | Erzeugt GPU-Runtime mit geteilter `HostBridgeSession` aus der Flutter-Control-Plane |
 | `fs25ad_gpu_runtime_render(handle) -> bool` | Rendert den aktuellen Frame direkt in die exportierbare Vulkan-Texture |
-| `fs25ad_gpu_runtime_export_texture(handle, out_fd) -> bool` | Exportiert den DMA-BUF File-Descriptor (unsafe) |
+| `fs25ad_gpu_runtime_export_texture(handle, out_descriptor) -> bool` | Exportiert den Linux-DMA-BUF-v4-Descriptor `Fs25adTextureRegistrationV4LinuxDmabufDescriptor` (unsafe) |
 | `fs25ad_gpu_runtime_resize(handle, width, height) -> bool` | Passt die Render-Target-Groesse an |
 | `fs25ad_gpu_runtime_dispose(handle)` | Gibt den GPU-Runtime-Handle frei (unsafe) |
 
-### C-Repr: `FfiPlatformTextureDescriptor`
+### C-Repr: `Fs25adTextureRegistrationV4LinuxDmabufDescriptor`
 
-C-kompatible Repr des plattformspezifischen Texture-Deskriptors fuer den Export an Flutter.
+C-kompatible Repr des Linux-DMA-BUF-v4-Descriptors fuer den Export an Flutter/Impeller.
 
 ### Status
 
 - GPU-Runtime-Erzeugung (Vulkan-Instanz, Device, Queue) funktional
 - Session-Sharing zwischen `FlutterSessionHandle` und `GpuRuntimeHandle` ueber `Arc<Mutex<HostBridgeSession>>` additiv verfuegbar
 - Rendern direkt in die exportierbare Vulkan-Texture funktional
-- DMA-BUF-Export ueber Vulkan External Memory (`vkGetMemoryFdKHR`) funktional
+- DMA-BUF-Export ueber Vulkan External Memory (`vkGetMemoryFdKHR`) funktional; der FFI-Vertrag liefert den FD jetzt im v4-Linux-DMA-BUF-Descriptor statt als nackten `out_fd`
 - Panic-Isolation ueber `ffi_guard_bool!` / `catch_unwind`
 
 ### `SharedTextureRuntime::new_for_flutter()` (Feature `flutter-linux`)
