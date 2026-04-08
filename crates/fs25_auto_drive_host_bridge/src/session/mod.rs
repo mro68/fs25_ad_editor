@@ -186,6 +186,12 @@ impl HostBridgeSession {
         }
     }
 
+    fn reconcile_host_local_dialog_state_for_intent(&mut self, intent: &AppIntent) {
+        if matches!(intent, AppIntent::OverviewOptionsConfirmed) {
+            self.state.ui.overview_options_dialog = self.chrome_state.overview_options_dialog.clone();
+        }
+    }
+
     /// Wendet eine explizite Host-Aktion auf die Session an.
     ///
     /// Die Methode delegiert auf die gemeinsame Rust-Host-Dispatch-Seam in
@@ -210,8 +216,11 @@ impl HostBridgeSession {
     ///
     /// Diese Methode bleibt als Uebergangs-Seam fuer Hosts, die bereits auf
     /// Session-Ownership umgestellt sind, aber noch nicht alle Schreibpfade auf
-    /// `HostSessionAction` umgehangen haben.
+    /// `HostSessionAction` umgehangen haben. Vor der Verarbeitung werden fuer
+    /// intentsensitive Host-Dialoge die lokalen Draft-Werte in den Engine-State
+    /// zurueckgespiegelt.
     pub fn apply_intent(&mut self, intent: AppIntent) -> Result<()> {
+        self.reconcile_host_local_dialog_state_for_intent(&intent);
         self.controller.handle_intent(&mut self.state, intent)?;
         self.snapshot_dirty = true;
         self.drain_engine_requests();
@@ -682,6 +691,7 @@ mod tests {
         AppIntent, Connection, ConnectionDirection, ConnectionPriority, FloatingMenuKind, MapNode,
         NodeFlag, RoadMap,
     };
+    use fs25_auto_drive_engine::shared::OverviewLayerOptions;
     use glam::Vec2;
     use std::sync::Arc;
 
@@ -1022,6 +1032,44 @@ mod tests {
         // Nach mark_snapshot_dirty() wird der Snapshot bei naechstem Zugriff neu gebaut.
         let _snapshot = session.snapshot_owned();
         assert!(!session.snapshot_dirty);
+    }
+
+    #[test]
+    fn apply_intent_syncs_host_local_overview_options_before_generation() {
+        let mut session = HostBridgeSession::new();
+        let zip_path = "/tmp/host_bridge_overview_sync.zip".to_string();
+        let expected_layers = OverviewLayerOptions {
+            hillshade: false,
+            farmlands: false,
+            farmland_ids: true,
+            pois: true,
+            legend: true,
+        };
+
+        session
+            .apply_intent(AppIntent::GenerateOverviewFromZip {
+                path: zip_path.clone(),
+            })
+            .expect("Overview-Dialog muss geoeffnet werden");
+
+        {
+            let dialog_state = session.dialog_ui_state_mut();
+            dialog_state.ui.overview_options_dialog.layers = expected_layers.clone();
+        }
+
+        let error = session
+            .apply_intent(AppIntent::OverviewOptionsConfirmed)
+            .expect_err("Fehlendes ZIP muss die Generierung scheitern lassen");
+
+        assert!(
+            error.to_string().contains(zip_path.as_str()),
+            "Fehlermeldung soll den konfigurierten ZIP-Pfad referenzieren"
+        );
+        assert_eq!(session.app_state().options.overview_layers, expected_layers);
+        assert_eq!(
+            session.app_state().ui.overview_options_dialog.layers,
+            expected_layers
+        );
     }
 
     #[test]
