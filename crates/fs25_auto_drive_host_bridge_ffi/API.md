@@ -256,6 +256,9 @@ Opaquer Session-Handle mit `Arc<Mutex<HostBridgeSession>>` fuer thread-sicheren 
 | `flutter_session_dispose(handle: Box<FlutterSessionHandle>)` | Gibt die Session frei |
 | `flutter_session_apply_action(handle, action_json: String) -> Result<()>` | Wendet eine JSON-serialisierte `HostSessionAction` an |
 | `flutter_session_snapshot_json(handle) -> Result<String>` | Liefert den `HostSessionSnapshot` als JSON |
+| `flutter_session_ui_snapshot_json(handle) -> Result<String>` | Liefert den host-neutralen `HostUiSnapshot` als JSON |
+| `flutter_session_chrome_snapshot_json(handle) -> Result<String>` | Liefert den `HostChromeSnapshot` als JSON |
+| `flutter_session_viewport_overlay_json(handle, cursor_world_x, cursor_world_y) -> Result<String>` | Liefert den host-neutralen `ViewportOverlaySnapshot` als JSON |
 | `flutter_session_viewport_geometry_json(handle, width, height) -> Result<String>` | Liefert den `HostViewportGeometrySnapshot` als JSON |
 
 ### Codegen-Status

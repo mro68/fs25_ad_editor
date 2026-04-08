@@ -13,6 +13,7 @@
 //! in den Build-Prozess integriert ist.
 
 use anyhow::Result;
+use fs25_auto_drive_host_bridge::dto::{host_ui_snapshot_json, viewport_overlay_snapshot_json};
 use fs25_auto_drive_host_bridge::{HostBridgeSession, HostSessionAction};
 use std::sync::{Arc, Mutex};
 
@@ -85,6 +86,46 @@ pub fn flutter_session_snapshot_json(handle: &FlutterSessionHandle) -> Result<St
         .map_err(|e| anyhow::anyhow!("flutter_session_snapshot_json: Serialisierungsfehler: {e}"))
 }
 
+/// Gibt den aktuellen host-neutralen UI-Snapshot als JSON-String zurueck.
+///
+/// Der Snapshot enthaelt Route-Tool-Panels, Optionen und weitere host-neutrale
+/// Fensterzustaende dieses Frames.
+pub fn flutter_session_ui_snapshot_json(handle: &FlutterSessionHandle) -> Result<String> {
+    let snapshot = handle.with_session(|s| s.build_host_ui_snapshot())?;
+    host_ui_snapshot_json(&snapshot).map_err(|e| {
+        anyhow::anyhow!("flutter_session_ui_snapshot_json: Serialisierungsfehler: {e}")
+    })
+}
+
+/// Gibt den aktuellen host-neutralen Chrome-Snapshot als JSON-String zurueck.
+///
+/// Der Snapshot enthaelt Menue-, Status- und Optionsdaten fuer host-native
+/// Oberflaechen ohne direkte Engine-Abhaengigkeit.
+pub fn flutter_session_chrome_snapshot_json(handle: &FlutterSessionHandle) -> Result<String> {
+    let snapshot = handle.with_session(|s| s.build_host_chrome_snapshot())?;
+    serde_json::to_string(&snapshot).map_err(|e| {
+        anyhow::anyhow!("flutter_session_chrome_snapshot_json: Serialisierungsfehler: {e}")
+    })
+}
+
+/// Gibt den aktuellen host-neutralen Viewport-Overlay-Snapshot als JSON-String zurueck.
+///
+/// `cursor_world_x` und `cursor_world_y` beschreiben die aktuelle Cursor-Position
+/// in Weltkoordinaten und werden fuer tool-abhaengige Overlay-Projektionen
+/// (z. B. Preview/Boundary-Caches) an die Session weitergereicht.
+pub fn flutter_session_viewport_overlay_json(
+    handle: &FlutterSessionHandle,
+    cursor_world_x: f32,
+    cursor_world_y: f32,
+) -> Result<String> {
+    let snapshot = handle.with_session(|s| {
+        s.build_viewport_overlay_snapshot(Some([cursor_world_x, cursor_world_y].into()))
+    })?;
+    viewport_overlay_snapshot_json(&snapshot).map_err(|e| {
+        anyhow::anyhow!("flutter_session_viewport_overlay_json: Serialisierungsfehler: {e}")
+    })
+}
+
 /// Liefert den Viewport-Geometrie-Snapshot als JSON-String.
 ///
 /// Enthaelt alle sichtbaren Nodes, Connections und Markers mit Positionen.
@@ -131,6 +172,51 @@ mod tests {
             flutter_session_snapshot_json(&handle).expect("Snapshot-Serialisierung muss gelingen");
         assert!(!json.is_empty());
         assert!(json.starts_with('{'), "Snapshot muss JSON-Objekt sein");
+        flutter_session_dispose(handle);
+    }
+
+    /// Prueft, dass ui_snapshot_json ein parsebares JSON-Objekt liefert.
+    #[test]
+    fn test_flutter_session_ui_snapshot_json_roundtrip() {
+        let handle = flutter_session_new();
+        let json = flutter_session_ui_snapshot_json(&handle)
+            .expect("UI-Snapshot-Serialisierung muss gelingen");
+        let value: serde_json::Value =
+            serde_json::from_str(&json).expect("UI-Snapshot muss parsebares JSON sein");
+        assert!(
+            value.get("panels").is_some(),
+            "UI-Snapshot muss panels enthalten"
+        );
+        flutter_session_dispose(handle);
+    }
+
+    /// Prueft, dass chrome_snapshot_json ein parsebares JSON-Objekt liefert.
+    #[test]
+    fn test_flutter_session_chrome_snapshot_json_roundtrip() {
+        let handle = flutter_session_new();
+        let json = flutter_session_chrome_snapshot_json(&handle)
+            .expect("Chrome-Snapshot-Serialisierung muss gelingen");
+        let value: serde_json::Value =
+            serde_json::from_str(&json).expect("Chrome-Snapshot muss parsebares JSON sein");
+        assert!(
+            value.get("show_command_palette").is_some(),
+            "Chrome-Snapshot muss chrome-Felder enthalten"
+        );
+        flutter_session_dispose(handle);
+    }
+
+    /// Prueft, dass viewport_overlay_json ein parsebares JSON-Objekt liefert.
+    #[test]
+    fn test_flutter_session_viewport_overlay_json_roundtrip() {
+        let handle = flutter_session_new();
+        let json = flutter_session_viewport_overlay_json(&handle, 0.0, 0.0)
+            .expect("Overlay-Snapshot-Serialisierung muss gelingen");
+        let value: serde_json::Value =
+            serde_json::from_str(&json).expect("Overlay-Snapshot muss parsebares JSON sein");
+        assert!(
+            value.get("show_no_file_hint").is_some(),
+            "Overlay-Snapshot muss Overlay-Felder enthalten"
+        );
         flutter_session_dispose(handle);
     }
 }
