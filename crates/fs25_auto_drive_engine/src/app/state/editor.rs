@@ -1,5 +1,6 @@
 use crate::app::tool_contract::RouteToolId;
-use crate::app::tools::{RouteToolGroup, ToolManager, ToolPreview};
+use crate::app::tools::{ToolManager, ToolPreview};
+use crate::shared::RouteToolGroup;
 use crate::app::ui_contract::{RouteToolPanelState, RouteToolViewportData};
 use crate::core::{ConnectionDirection, ConnectionPriority, RoadMap};
 use glam::Vec2;

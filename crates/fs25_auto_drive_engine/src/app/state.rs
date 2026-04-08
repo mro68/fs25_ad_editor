@@ -7,11 +7,12 @@ mod selection;
 mod view;
 
 pub use app_state::{AppState, Clipboard, GroupEditState};
-pub use dialogs::{
-    DedupDialogState, DistanzenState, EngineUiState, FloatingMenuKind, FloatingMenuState,
-    GroupSettingsPopupState, MarkerDialogState, OverviewOptionsDialogState, PostLoadDialogState,
-    SaveOverviewDialogState, TraceAllFieldsDialogState, ZipBrowserState,
+pub use crate::shared::{
+    DedupDialogState, DistanzenState, FloatingMenuKind, FloatingMenuState, GroupSettingsPopupState,
+    MarkerDialogState, OverviewOptionsDialogState, PostLoadDialogState, SaveOverviewDialogState,
+    TraceAllFieldsDialogState,
 };
+pub use dialogs::{EngineUiState, ZipBrowserState};
 pub use editor::{EditorTool, EditorToolState};
 pub use selection::SelectionState;
 pub use view::ViewState;
