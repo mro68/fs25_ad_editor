@@ -436,10 +436,7 @@ impl HostBridgeSession {
         &self,
         viewport_size: [f32; 2],
     ) -> HostViewportGeometrySnapshot {
-        crate::dispatch::build_viewport_geometry_snapshot(
-            &self.state,
-            viewport_size,
-        )
+        crate::dispatch::build_viewport_geometry_snapshot(&self.state, viewport_size)
     }
 
     /// Baut den host-neutralen Host-UI-Snapshot fuer sichtbare Panels.
@@ -567,7 +564,6 @@ impl HostBridgeSession {
         let ui = &self.state.ui;
 
         let mut dirty = false;
-
 
         // Dedup-Dialog: read-only im Frontend → immer spiegeln
         if self.chrome_state.dedup_dialog.visible != ui.dedup_dialog.visible

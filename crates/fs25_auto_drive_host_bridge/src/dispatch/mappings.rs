@@ -323,9 +323,7 @@ pub(crate) fn map_engine_dialog_request(request: DialogRequest) -> HostDialogReq
         suggested_file_name,
     } = request
     else {
-        unreachable!(
-            "map_engine_dialog_request darf nur fuer PickPath-Anfragen aufgerufen werden"
-        )
+        unreachable!("map_engine_dialog_request darf nur fuer PickPath-Anfragen aufgerufen werden")
     };
     HostDialogRequest {
         kind: map_engine_dialog_request_kind(kind),

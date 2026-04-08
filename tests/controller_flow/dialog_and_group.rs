@@ -1,5 +1,5 @@
-use fs25_auto_drive_editor::app::{AppController, AppIntent, AppState, GroupRecord};
 use fs25_auto_drive_editor::app::ui_contract::DialogRequest;
+use fs25_auto_drive_editor::app::{AppController, AppIntent, AppState, GroupRecord};
 
 fn make_manual_group_record(id: u64) -> GroupRecord {
     GroupRecord {
