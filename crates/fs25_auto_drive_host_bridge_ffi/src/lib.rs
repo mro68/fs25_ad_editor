@@ -202,7 +202,7 @@ pub unsafe extern "C" fn fs25ad_flutter_session_dispose(
 
     // SAFETY: Aufrufer garantiert, dass `session` durch `fs25ad_flutter_session_new`
     // alloziert wurde und hier exklusiv freigegeben werden darf.
-    unsafe { flutter_api::flutter_session_dispose(Box::from_raw(session)) };
+    unsafe { flutter_api::flutter_session_dispose(*Box::from_raw(session)) };
 }
 
 /// Gibt eine zuvor erstellte Bridge-Session frei.
