@@ -527,6 +527,13 @@ pub fn map_host_action_to_intent(action: HostSessionAction) -> Option<AppIntent>
         HostSessionAction::CloseOptionsDialog => Some(AppIntent::CloseOptionsDialogRequested),
         HostSessionAction::Undo => Some(AppIntent::UndoRequested),
         HostSessionAction::Redo => Some(AppIntent::RedoRequested),
+        HostSessionAction::DeleteSelected
+        | HostSessionAction::SelectAll
+        | HostSessionAction::ClearSelection
+        | HostSessionAction::CopySelection
+        | HostSessionAction::PasteStart
+        | HostSessionAction::PasteConfirm
+        | HostSessionAction::PasteCancel => None,
         HostSessionAction::SubmitViewportInput { .. } => None,
         HostSessionAction::SubmitDialogResult { result } => {
             dialog_result_to_intent(map_dialog_result(result))

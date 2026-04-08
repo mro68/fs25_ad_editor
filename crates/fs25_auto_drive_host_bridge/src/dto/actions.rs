@@ -177,6 +177,20 @@ pub enum HostSessionAction {
     Undo,
     /// Stellt den letzten Undo-Schritt wieder her.
     Redo,
+    /// Loescht alle aktuell selektierten Nodes.
+    DeleteSelected,
+    /// Selektiert alle Nodes der aktuellen Karte.
+    SelectAll,
+    /// Hebt die aktuelle Selektion auf.
+    ClearSelection,
+    /// Kopiert die aktuelle Selektion in die Zwischenablage.
+    CopySelection,
+    /// Startet den Paste-Modus mit Vorschau.
+    PasteStart,
+    /// Bestaetigt die Paste-Operation an der aktuellen Position.
+    PasteConfirm,
+    /// Bricht den Paste-Modus ab.
+    PasteCancel,
     /// Reicht einen Batch aus host-neutralen Viewport-Input-Events in die Session.
     SubmitViewportInput {
         /// Sequenzieller Batch von Resize-, Pointer- und Scroll-Events.
