@@ -8,6 +8,7 @@ mod chrome;
 mod dialogs;
 mod input;
 mod route_tool;
+mod ui_json;
 mod viewport;
 
 // ─────────────────────────────── Re-Exports ──────────────────────────────────
@@ -25,6 +26,7 @@ pub use route_tool::{
     HostRouteToolSelectionSnapshot, HostRouteToolSurface, HostRouteToolViewportSnapshot,
     HostTangentMenuSnapshot, HostTangentOptionSnapshot,
 };
+pub use ui_json::{host_ui_snapshot_json, viewport_overlay_snapshot_json};
 pub use viewport::{
     HostSelectionSnapshot, HostSessionSnapshot, HostViewportConnectionDirection,
     HostViewportConnectionPriority, HostViewportConnectionSnapshot, HostViewportGeometrySnapshot,
@@ -266,6 +268,7 @@ mod tests {
     fn engine_session_snapshot_alias_roundtrips_without_schema_drift() {
         let host_snapshot = HostSessionSnapshot {
             has_map: true,
+            is_dirty: false,
             node_count: 7,
             connection_count: 9,
             active_tool: HostActiveTool::Connect,

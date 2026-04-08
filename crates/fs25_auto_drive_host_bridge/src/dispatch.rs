@@ -297,6 +297,38 @@ mod tests {
     }
 
     #[test]
+    fn map_host_action_to_intent_covers_selection_and_clipboard_writes() {
+        assert!(matches!(
+            map_host_action_to_intent(HostSessionAction::DeleteSelected),
+            Some(AppIntent::DeleteSelectedRequested)
+        ));
+        assert!(matches!(
+            map_host_action_to_intent(HostSessionAction::SelectAll),
+            Some(AppIntent::SelectAllRequested)
+        ));
+        assert!(matches!(
+            map_host_action_to_intent(HostSessionAction::ClearSelection),
+            Some(AppIntent::ClearSelectionRequested)
+        ));
+        assert!(matches!(
+            map_host_action_to_intent(HostSessionAction::CopySelection),
+            Some(AppIntent::CopySelectionRequested)
+        ));
+        assert!(matches!(
+            map_host_action_to_intent(HostSessionAction::PasteStart),
+            Some(AppIntent::PasteStartRequested)
+        ));
+        assert!(matches!(
+            map_host_action_to_intent(HostSessionAction::PasteConfirm),
+            Some(AppIntent::PasteConfirmRequested)
+        ));
+        assert!(matches!(
+            map_host_action_to_intent(HostSessionAction::PasteCancel),
+            Some(AppIntent::PasteCancelled)
+        ));
+    }
+
+    #[test]
     fn map_intent_to_host_action_covers_stable_bridge_intents() {
         let cases = vec![
             (AppIntent::OpenFileRequested, HostSessionAction::OpenFile),
@@ -426,6 +458,28 @@ mod tests {
             ),
             (AppIntent::UndoRequested, HostSessionAction::Undo),
             (AppIntent::RedoRequested, HostSessionAction::Redo),
+            (
+                AppIntent::DeleteSelectedRequested,
+                HostSessionAction::DeleteSelected,
+            ),
+            (AppIntent::SelectAllRequested, HostSessionAction::SelectAll),
+            (
+                AppIntent::ClearSelectionRequested,
+                HostSessionAction::ClearSelection,
+            ),
+            (
+                AppIntent::CopySelectionRequested,
+                HostSessionAction::CopySelection,
+            ),
+            (
+                AppIntent::PasteStartRequested,
+                HostSessionAction::PasteStart,
+            ),
+            (
+                AppIntent::PasteConfirmRequested,
+                HostSessionAction::PasteConfirm,
+            ),
+            (AppIntent::PasteCancelled, HostSessionAction::PasteCancel),
         ];
 
         for (intent, expected_action) in cases {

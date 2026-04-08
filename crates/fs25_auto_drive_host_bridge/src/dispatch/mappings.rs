@@ -478,6 +478,13 @@ pub fn map_intent_to_host_action(intent: &AppIntent) -> Option<HostSessionAction
         AppIntent::CloseOptionsDialogRequested => Some(HostSessionAction::CloseOptionsDialog),
         AppIntent::UndoRequested => Some(HostSessionAction::Undo),
         AppIntent::RedoRequested => Some(HostSessionAction::Redo),
+        AppIntent::DeleteSelectedRequested => Some(HostSessionAction::DeleteSelected),
+        AppIntent::SelectAllRequested => Some(HostSessionAction::SelectAll),
+        AppIntent::ClearSelectionRequested => Some(HostSessionAction::ClearSelection),
+        AppIntent::CopySelectionRequested => Some(HostSessionAction::CopySelection),
+        AppIntent::PasteStartRequested => Some(HostSessionAction::PasteStart),
+        AppIntent::PasteConfirmRequested => Some(HostSessionAction::PasteConfirm),
+        AppIntent::PasteCancelled => Some(HostSessionAction::PasteCancel),
         _ => None,
     }
 }
@@ -527,6 +534,13 @@ pub fn map_host_action_to_intent(action: HostSessionAction) -> Option<AppIntent>
         HostSessionAction::CloseOptionsDialog => Some(AppIntent::CloseOptionsDialogRequested),
         HostSessionAction::Undo => Some(AppIntent::UndoRequested),
         HostSessionAction::Redo => Some(AppIntent::RedoRequested),
+        HostSessionAction::DeleteSelected => Some(AppIntent::DeleteSelectedRequested),
+        HostSessionAction::SelectAll => Some(AppIntent::SelectAllRequested),
+        HostSessionAction::ClearSelection => Some(AppIntent::ClearSelectionRequested),
+        HostSessionAction::CopySelection => Some(AppIntent::CopySelectionRequested),
+        HostSessionAction::PasteStart => Some(AppIntent::PasteStartRequested),
+        HostSessionAction::PasteConfirm => Some(AppIntent::PasteConfirmRequested),
+        HostSessionAction::PasteCancel => Some(AppIntent::PasteCancelled),
         HostSessionAction::SubmitViewportInput { .. } => None,
         HostSessionAction::SubmitDialogResult { result } => {
             dialog_result_to_intent(map_dialog_result(result))

@@ -39,6 +39,7 @@ fn build_snapshot(
 ) -> HostSessionSnapshot {
     HostSessionSnapshot {
         has_map: state.road_map.is_some(),
+        is_dirty: state.is_dirty(),
         node_count: state.node_count(),
         connection_count: state.connection_count(),
         active_tool: map_active_tool(state.editor.active_tool),
@@ -185,6 +186,13 @@ impl HostBridgeSession {
         }
     }
 
+    fn reconcile_host_local_dialog_state_for_intent(&mut self, intent: &AppIntent) {
+        if matches!(intent, AppIntent::OverviewOptionsConfirmed) {
+            self.state.ui.overview_options_dialog =
+                self.chrome_state.overview_options_dialog.clone();
+        }
+    }
+
     /// Wendet eine explizite Host-Aktion auf die Session an.
     ///
     /// Die Methode delegiert auf die gemeinsame Rust-Host-Dispatch-Seam in
@@ -209,8 +217,11 @@ impl HostBridgeSession {
     ///
     /// Diese Methode bleibt als Uebergangs-Seam fuer Hosts, die bereits auf
     /// Session-Ownership umgestellt sind, aber noch nicht alle Schreibpfade auf
-    /// `HostSessionAction` umgehangen haben.
+    /// `HostSessionAction` umgehangen haben. Vor der Verarbeitung werden fuer
+    /// intentsensitive Host-Dialoge die lokalen Draft-Werte in den Engine-State
+    /// zurueckgespiegelt.
     pub fn apply_intent(&mut self, intent: AppIntent) -> Result<()> {
+        self.reconcile_host_local_dialog_state_for_intent(&intent);
         self.controller.handle_intent(&mut self.state, intent)?;
         self.snapshot_dirty = true;
         self.drain_engine_requests();
@@ -224,6 +235,11 @@ impl HostBridgeSession {
     /// bis alle host-neutralen Snapshots konsumiert werden.
     pub fn app_state(&self) -> &AppState {
         &self.state
+    }
+
+    /// Gibt zurueck, ob die geladene Karte seit dem letzten Load/Save veraendert wurde.
+    pub fn is_dirty(&self) -> bool {
+        self.state.is_dirty()
     }
 
     /// Invalidiert den gecachten `HostSessionSnapshot` explizit.
@@ -669,12 +685,14 @@ impl Default for HostBridgeSession {
 #[cfg(test)]
 mod tests {
     use std::hint::black_box;
+    use std::path::PathBuf;
     use std::time::Instant;
 
     use fs25_auto_drive_engine::app::{
         AppIntent, Connection, ConnectionDirection, ConnectionPriority, FloatingMenuKind, MapNode,
         NodeFlag, RoadMap,
     };
+    use fs25_auto_drive_engine::shared::OverviewLayerOptions;
     use glam::Vec2;
     use std::sync::Arc;
 
@@ -921,6 +939,42 @@ mod tests {
     }
 
     #[test]
+    fn session_dirty_state_surfaces_via_snapshot() {
+        let mut session = HostBridgeSession::new();
+        let sample_path = PathBuf::from(concat!(
+            env!("CARGO_MANIFEST_DIR"),
+            "/../../ad_sample_data/AutoDrive_config-test.xml"
+        ));
+
+        fs25_auto_drive_engine::app::use_cases::file_io::load_selected_file(
+            &mut session.state,
+            sample_path.to_string_lossy().into_owned(),
+        )
+        .expect("Beispiel-XML muss fuer Dirty-Tracking ladbar sein");
+
+        session.snapshot_dirty = true;
+        assert!(!session.is_dirty());
+        assert!(!session.snapshot().is_dirty);
+
+        Arc::make_mut(
+            session
+                .state
+                .road_map
+                .as_mut()
+                .expect("RoadMap muss nach dem Laden vorhanden sein"),
+        )
+        .add_node(MapNode::new(
+            999_999,
+            Vec2::new(1.0, 1.0),
+            NodeFlag::Regular,
+        ));
+
+        session.snapshot_dirty = true;
+        assert!(session.is_dirty());
+        assert!(session.snapshot().is_dirty);
+    }
+
+    #[test]
     fn read_only_host_snapshots_do_not_mark_session_snapshot_dirty() {
         let session = snapshot_measurement_session(32);
 
@@ -979,6 +1033,44 @@ mod tests {
         // Nach mark_snapshot_dirty() wird der Snapshot bei naechstem Zugriff neu gebaut.
         let _snapshot = session.snapshot_owned();
         assert!(!session.snapshot_dirty);
+    }
+
+    #[test]
+    fn apply_intent_syncs_host_local_overview_options_before_generation() {
+        let mut session = HostBridgeSession::new();
+        let zip_path = "/tmp/host_bridge_overview_sync.zip".to_string();
+        let expected_layers = OverviewLayerOptions {
+            hillshade: false,
+            farmlands: false,
+            farmland_ids: true,
+            pois: true,
+            legend: true,
+        };
+
+        session
+            .apply_intent(AppIntent::GenerateOverviewFromZip {
+                path: zip_path.clone(),
+            })
+            .expect("Overview-Dialog muss geoeffnet werden");
+
+        {
+            let dialog_state = session.dialog_ui_state_mut();
+            dialog_state.ui.overview_options_dialog.layers = expected_layers.clone();
+        }
+
+        let error = session
+            .apply_intent(AppIntent::OverviewOptionsConfirmed)
+            .expect_err("Fehlendes ZIP muss die Generierung scheitern lassen");
+
+        assert!(
+            error.to_string().contains(zip_path.as_str()),
+            "Fehlermeldung soll den konfigurierten ZIP-Pfad referenzieren"
+        );
+        assert_eq!(session.app_state().options.overview_layers, expected_layers);
+        assert_eq!(
+            session.app_state().ui.overview_options_dialog.layers,
+            expected_layers
+        );
     }
 
     #[test]
