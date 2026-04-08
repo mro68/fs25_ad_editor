@@ -20,9 +20,13 @@ Der v4-Vertrag ist bewusst nur der additive Transport- und Lifecycle-Slice. Echt
 
 | Komponente | Verantwortung |
 |---|---|
-| `lib.rs` | Oeffentliche Root-API (`Renderer`, `RendererTargetConfig`, Shared-Texture-Typen) |
-| `export_core.rs` | Interner, transportneutraler Export-Kern (Target-Guards, Background-Sync, Offscreen-Renderpass) |
+| `lib.rs` | Oeffentliche Root-API (`Renderer`, `RendererTargetConfig`, Shared-Texture-Typen, `create_vulkan_instance()`) |
+| `export_core.rs` | Interner, transportneutraler Export-Kern (Target-Guards, Background-Sync, Offscreen-Renderpass, `render_scene_to_view()` fuer Flutter) |
 | `shared_texture.rs` | Shared-Texture-Runtime mit Frame-Lifecycle und opaque Runtime-Handle-Metadaten |
+| `external_texture/` | Plattformspezifischer GPU-Texture-Export fuer Flutter-Integration (`ExternalTextureExport` Trait, `PlatformTextureDescriptor`, `ExternalTextureError`) |
+| `external_texture/vulkan_linux.rs` | Linux/Vulkan-Implementierung: `VulkanDmaBufTexture` (DMA-BUF-Export, aktuell TODO) |
+| `external_texture/vulkan_android.rs` | Stub fuer zukuenftige Android-Plattformstuetze |
+| `external_texture/dx12_windows.rs` | Stub fuer zukuenftige Windows-Plattformstuetze |
 | `texture_registration/*` | Additiver `v4`-Vertrag (Capabilities, Lifecycle-State-Machine, plattformspezifische Payload-Familien) |
 | `background_renderer.rs` | Hintergrund-Quad, Upload und zoomabhaengiges Sampling |
 | `marker_renderer.rs` | Marker-Instancing und Pin-Texturpfad |
@@ -57,6 +61,10 @@ Der v4-Vertrag ist bewusst nur der additive Transport- und Lifecycle-Slice. Echt
 | `BackgroundWorldBounds` | Weltkoordinaten des Background-Quads im 2D-Koordinatensystem des Render-Core (`x/y`) |
 | `RenderScene` | Re-exportierter per-frame Render-Vertrag aus `fs25_auto_drive_engine::shared` |
 | `RenderQuality` | Re-exportierte Qualitaetsstufe des Render-Vertrags |
+| `ExternalTextureExport` | Trait fuer plattformspezifischen GPU-Texture-Export an Flutter (create, export, resize, texture_view) |
+| `PlatformTextureDescriptor` | Enum mit plattformspezifischen Texture-Metadaten (aktuell: `LinuxDmaBuf`-Variante) |
+| `ExternalTextureError` | Fehler beim Texture-Export (`ExtensionNotAvailable`, `CreationFailed`, `ExportFailed`, `PlatformNotSupported`) |
+| `VulkanDmaBufTexture` | Linux/Vulkan-Implementierung von `ExternalTextureExport` via DMA-BUF (cfg-gated: `target_os = "linux"`) |
 
 ## Oeffentliche Re-Exports
 
@@ -83,6 +91,8 @@ Der v4-Vertrag ist bewusst nur der additive Transport- und Lifecycle-Slice. Echt
 | `TextureRegistrationLifecycle::release_frame(frame_token)` | Gibt den aktiven v4-Lease wieder frei |
 | `TextureRegistrationLifecycle::on_resize()` | Invalidiert den letzten v4-Frame nach Resize/Recreate |
 | `TextureRegistrationLifecycle::attach_surface()` / `detach_surface()` | Android-spezifische Attach/Detach-Guards im Host-attached-Modell |
+| `create_vulkan_instance()` | Erzeugt eine wgpu-Instanz mit explizitem Vulkan-Backend fuer Flutter-Linux (cfg-gated: `flutter-linux` + `linux`) |
+| `RenderExportCore::render_scene_to_view(...)` | Rendert die Szene in eine extern bereitgestellte TextureView (Flutter-Integration, cfg-gated: `flutter-linux`) |
 
 ## Shared-Texture-Vertrag
 
@@ -154,3 +164,43 @@ flowchart LR
 - Host-spezifische Adapter (egui-Callback, C-ABI, Flutter-Glue) bleiben in den Host-Crates.
 - `SharedTextureRuntime` ersetzt den frueheren Pixelbuffer-Pfad vollstaendig.
 - Der egui-Onscreen-Pfad bleibt bewusst ein direkter `RenderScene`-Paint-Callback ueber `egui_wgpu` und wird nicht als Shared-Texture-Transport beschrieben.
+
+## Feature-Flags
+
+| Feature | Zweck |
+|---|---|
+| `flutter-linux` | Aktiviert `ash` (Vulkan HAL) und `wgpu/vulkan`. Schaltet `create_vulkan_instance()`, das `external_texture/vulkan_linux`-Modul und `RenderExportCore::render_scene_to_view()` frei. |
+
+## Flutter-Texture-Export (`external_texture/`)
+
+Das Modul `external_texture` definiert den plattformneutralen Trait `ExternalTextureExport` fuer den Zero-Copy-Texture-Export an Flutter/Impeller.
+
+### Trait: `ExternalTextureExport`
+
+```rust
+pub trait ExternalTextureExport {
+    fn create_exportable_texture(device, width, height) -> Result<Self, ExternalTextureError>;
+    fn export_descriptor(&self) -> Result<PlatformTextureDescriptor, ExternalTextureError>;
+    fn texture_view(&self) -> &wgpu::TextureView;
+    fn resize(&mut self, device, width, height) -> Result<(), ExternalTextureError>;
+}
+```
+
+### Enum: `PlatformTextureDescriptor`
+
+Plattformspezifische Metadaten fuer den Flutter-Host-Import:
+
+- `LinuxDmaBuf { fd, width, height, stride, format, modifier }` — DMA-BUF File Descriptor (cfg-gated: `linux`)
+
+### Struct: `VulkanDmaBufTexture` (Linux)
+
+Implementiert `ExternalTextureExport` fuer Linux/Vulkan. Erzeugt eine wgpu-Texture und bereitet den DMA-BUF-Export vor.
+
+**Status:** Texture-Erzeugung funktional; `export_descriptor()` gibt aktuell `ExternalTextureError::ExportFailed` zurueck (TODO: VkImage mit `VK_EXTERNAL_MEMORY_HANDLE_TYPE_DMA_BUF_BIT_EXT` + `vkGetMemoryFdKHR`).
+
+### Hilfsfunktionen (vulkan_linux)
+
+| Signatur | Zweck |
+|---|---|
+| `dmabuf_texture_width(t: &VulkanDmaBufTexture) -> u32` | Gibt die Breite der exportierbaren Texture zurueck |
+| `dmabuf_texture_height(t: &VulkanDmaBufTexture) -> u32` | Gibt die Hoehe der exportierbaren Texture zurueck |
