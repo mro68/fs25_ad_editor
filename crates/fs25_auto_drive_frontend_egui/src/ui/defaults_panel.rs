@@ -4,7 +4,7 @@ use crate::app::tool_contract::RouteToolId;
 use crate::app::tools::{
     route_tool_defaults_tooltip_key, route_tool_group_label_key, RouteToolGroup,
 };
-use crate::app::{AppIntent, AppState, ConnectionDirection, ConnectionPriority, EditorTool};
+use crate::app::{AppIntent, ConnectionDirection, ConnectionPriority, EditorTool};
 use crate::shared::{t, I18nKey};
 use crate::ui::common::{
     host_active_tool_to_editor, host_default_direction_to_engine, host_default_priority_to_engine,
@@ -129,24 +129,22 @@ fn render_long_press_with_memory<T: Clone + PartialEq>(
 /// Rendert die linke Sidebar mit Tool-Auswahl, Route-Tools und Defaults.
 pub fn render_route_defaults_panel(
     ctx: &egui::Context,
-    state: &AppState,
     host_chrome_snapshot: &HostChromeSnapshot,
 ) -> Vec<AppIntent> {
     let mut top_ui = crate::ui::common::create_top_level_ui(ctx, "route_defaults_panel_top_level");
-    render_route_defaults_panel_inside(&mut top_ui, state, host_chrome_snapshot)
+    render_route_defaults_panel_inside(&mut top_ui, host_chrome_snapshot)
 }
 
 /// Rendert die linke Sidebar innerhalb eines bestehenden Top-Level-UIs.
 pub(crate) fn render_route_defaults_panel_inside(
     ui_root: &mut egui::Ui,
-    state: &AppState,
     host_chrome_snapshot: &HostChromeSnapshot,
 ) -> Vec<AppIntent> {
     let mut events = Vec::new();
-    let lang = state.options.language;
+    let lang = host_chrome_snapshot.options.language;
     let active_tool = host_active_tool_to_editor(host_chrome_snapshot.active_tool);
-    let icon_color = function_icon_color(state);
-    let active_icon_color = accent_icon_color(state);
+    let icon_color = function_icon_color(host_chrome_snapshot);
+    let active_icon_color = accent_icon_color(host_chrome_snapshot);
 
     let active_route_id = host_chrome_snapshot.active_route_tool;
     let is_werkzeug_active = matches!(
@@ -458,9 +456,9 @@ pub(crate) fn render_route_defaults_panel_inside(
                 }
             }
 
-            if state.view.background_map.is_some() {
+            if host_chrome_snapshot.background_map_loaded {
                 egui::CollapsingHeader::new(t(lang, I18nKey::SidebarBackground)).show(ui, |ui| {
-                    let visible = state.view.background_visible;
+                    let visible = host_chrome_snapshot.background_visible;
                     let toggle_icon = if visible {
                         egui::include_image!("../../../../assets/icons/icon_visible.svg")
                     } else {
@@ -484,7 +482,7 @@ pub(crate) fn render_route_defaults_panel_inside(
                         events.push(AppIntent::ToggleBackgroundVisibility);
                     }
 
-                    let scale = state.view.background_scale;
+                    let scale = host_chrome_snapshot.background_scale;
                     if ui
                         .button("-")
                         .on_hover_text(t(lang, I18nKey::BackgroundScaleDown))

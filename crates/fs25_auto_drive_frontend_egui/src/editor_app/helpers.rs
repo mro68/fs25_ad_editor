@@ -96,14 +96,14 @@ impl EditorApp {
     }
 
     pub(super) fn maybe_request_repaint(&self, ctx: &egui::Context, has_meaningful_events: bool) {
-        let state = self.session.app_state();
+        let chrome = self.session.chrome_state();
         if has_meaningful_events
             || ctx.input(|i| i.pointer.is_moving())
-            || state.ui.show_command_palette
-            || state.ui.floating_menu.is_some()
-            || state.ui.show_heightmap_warning
-            || state.ui.marker_dialog.visible
-            || state.ui.show_options_dialog
+            || chrome.show_command_palette
+            || chrome.floating_menu.is_some()
+            || chrome.show_heightmap_warning
+            || chrome.marker_dialog.visible
+            || chrome.show_options_dialog
         {
             ctx.request_repaint();
         }
@@ -112,7 +112,7 @@ impl EditorApp {
 
 #[cfg(test)]
 mod tests {
-    use crate::app::{AppController, AppState};
+    use crate::app::AppState;
     use crate::core::{
         Connection, ConnectionDirection, ConnectionPriority, MapNode, NodeFlag, RoadMap,
     };
@@ -140,13 +140,12 @@ mod tests {
 
     #[test]
     fn split_render_frame_for_egui_keeps_background_sync_assets_coupled_to_scene() {
-        let controller = AppController::new();
         let mut state = AppState::new();
         state.road_map = Some(Arc::new(regression_test_map()));
         state.view.background_asset_revision = 7;
         state.view.background_transform_revision = 11;
 
-        let frame = build_render_frame(&controller, &state, [512.0, 256.0]);
+        let frame = build_render_frame(&state, [512.0, 256.0]);
         let expected_asset_revision = frame.assets.background_asset_revision();
         let expected_transform_revision = frame.assets.background_transform_revision();
 

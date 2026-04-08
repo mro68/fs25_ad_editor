@@ -4,15 +4,19 @@
 //! Zeigt Sliders fuer Nodedistanz, Versatz und Begradigung.
 //! Keine Vorschau — nach Bestaetigung wird direkt gezeichnet.
 
-use crate::app::{AppIntent, UiState};
+use crate::app::AppIntent;
 use crate::ui::common::apply_wheel_step;
+use fs25_auto_drive_host_bridge::HostLocalDialogState;
 
 /// Rendert den Einstellungsdialog fuer die Batch-Feld-Nachzeichnung.
 ///
 /// Solange `state.trace_all_fields_dialog.visible` gesetzt ist, wird das Fenster
 /// zentriert angezeigt. Der Dialog mutiert seinen State direkt (Arbeitskopie in
 /// `UiState`), damit die Werte beim naechsten Oeffnen erhalten bleiben.
-pub fn show_trace_all_fields_dialog(ctx: &egui::Context, ui_state: &mut UiState) -> Vec<AppIntent> {
+pub fn show_trace_all_fields_dialog(
+    ctx: &egui::Context,
+    ui_state: &mut HostLocalDialogState,
+) -> Vec<AppIntent> {
     let mut events = Vec::new();
 
     if !ui_state.trace_all_fields_dialog.visible {

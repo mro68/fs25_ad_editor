@@ -13,6 +13,8 @@ pub mod handlers;
 /// Undo/Redo-History mit Arc-basierten Snapshots (Copy-on-Write).
 pub mod history;
 mod intent_mapping;
+/// Zustandsbasierte Projektionsfunktionen fuer host-neutrale Snapshots.
+pub mod projections;
 /// Builder fuer explizite Render-Assets aus dem AppState.
 pub mod render_assets;
 /// Builder fuer Render-Szenen aus dem AppState.
@@ -46,9 +48,10 @@ pub use group_registry::{BoundaryDirection, BoundaryInfo, GroupRecord, GroupRegi
 pub use render_assets::build as build_render_assets;
 pub use render_scene::build as build_render_scene;
 pub use state::{
-    AppState, Clipboard, EditorTool, EditorToolState, FloatingMenuKind, FloatingMenuState,
-    GroupEditState, GroupSettingsPopupState, PostLoadDialogState, SelectionState, UiState,
-    ViewState,
+    AppState, Clipboard, DedupDialogState, EditorTool, EditorToolState, EngineUiState,
+    FloatingMenuKind, FloatingMenuState, GroupEditState, GroupSettingsPopupState,
+    MarkerDialogState, OverviewOptionsDialogState, PostLoadDialogState, SaveOverviewDialogState,
+    SelectionState, TraceAllFieldsDialogState, ViewState, ZipBrowserState,
 };
 pub use tool_editing::ToolEditStore;
 pub use tools::field_boundary::compute_ring;

@@ -12,7 +12,7 @@ Der aktuell produktive Flutter-Pfad konsumiert diese Kanonik ueber den Linux-fir
 
 Die oeffentlichen Module `dispatch` und `dto` bleiben dabei stabile Fassaden. Seit der Audit-Remediation ist ihre interne Implementierung in thematische Untermodule aufgeteilt, ohne dass sich die Re-Export-Surface fuer Rust-, egui- oder FFI-Consumer geaendert hat.
 
-Die Bridge exponiert Mutationen ausschliesslich ueber explizite `HostSessionAction`-DTOs. Die Action-Surface deckt stabile Host-Aktionen ab (Datei-/Dialog-Anforderungen, Kamera-/Viewport-Shortcuts, Historie, Optionen, Toolwechsel, Exit), den screen-space-basierten Viewport-Input-Slice via `SubmitViewportInput` sowie eine explizite Route-Tool-Action-Familie `HostRouteToolAction` (Toolwahl, Panel-Aktionen, Execute/Cancel/Recreate, Tangenten, Drag/Lasso/Rotate und Segment-/Node-Anpassungen). Fuer read-only Hosts liefert die Crate weiterhin kleine Session-Snapshots, host-neutrale Panel-Read-Modelle, Viewport-Overlay-Snapshots, einen minimalen serialisierbaren Viewport-Geometry-Snapshot, einen dedizierten Route-Tool-Viewport-Snapshot sowie gekoppelten Render-Output aus `RenderScene` und `RenderAssetsSnapshot`. Zusaetzlich bietet die Session fuer Rust-Hosts schmale UI-Local-Seams (`HostPanelPropertiesState`, `HostDialogUiState`, `HostViewportInputContext`) fuer nicht serialisierte Dialog-/Properties-/Viewport-Zustaende; diese lokalen Seams invalidieren den kleinen `HostSessionSnapshot` nicht automatisch. Wenn ein Rust-Host darueber ausnahmsweise Felder mutiert, die in `HostSessionSnapshot` gespiegelt werden, muss er `HostBridgeSession::mark_snapshot_dirty()` explizit aufrufen. Die Uebergangs-Seams `app_state()` und `app_state_mut()` bleiben damit nur noch fuer lokale Rust-Hosts, Tests und bewusst noch nicht kanonisierte Restpfade sichtbar. Dieser gekoppelte RenderFrame ist jetzt sowohl ueber `HostBridgeSession::build_render_frame(...)` als auch ueber den freien Dispatch-Helper `build_render_frame(...)` fuer lokale Rust-Hosts verfuegbar.
+Die Bridge exponiert Mutationen ausschliesslich ueber explizite `HostSessionAction`-DTOs. Die Action-Surface deckt stabile Host-Aktionen ab (Datei-/Dialog-Anforderungen, Kamera-/Viewport-Shortcuts, Historie, Optionen, Toolwechsel, Exit), den screen-space-basierten Viewport-Input-Slice via `SubmitViewportInput` sowie eine explizite Route-Tool-Action-Familie `HostRouteToolAction` (Toolwahl, Panel-Aktionen, Execute/Cancel/Recreate, Tangenten, Drag/Lasso/Rotate und Segment-/Node-Anpassungen). Fuer read-only Hosts liefert die Crate weiterhin kleine Session-Snapshots, host-neutrale Panel-Read-Modelle, Viewport-Overlay-Snapshots, einen minimalen serialisierbaren Viewport-Geometry-Snapshot, einen dedizierten Route-Tool-Viewport-Snapshot sowie gekoppelten Render-Output aus `RenderScene` und `RenderAssetsSnapshot`. Zusaetzlich bietet die Session fuer Rust-Hosts schmale UI-Local-Seams (`HostPanelPropertiesState`, `HostDialogUiState`, `HostViewportInputContext`) sowie den expliziten host-lokalen Chrome-/Dialogzustand `HostLocalDialogState`, erreichbar ueber `chrome_state()` und `chrome_state_mut()`. Diese lokalen Seams invalidieren den kleinen `HostSessionSnapshot` nicht automatisch. Wenn ein Rust-Host darueber ausnahmsweise Felder mutiert, die in `HostSessionSnapshot` gespiegelt werden, muss er `HostBridgeSession::mark_snapshot_dirty()` explizit aufrufen. Als temporaere Read-Seam bleibt nur noch `app_state()` sichtbar; `app_state_mut()` ist aus der oeffentlichen API entfernt. Dieser gekoppelte RenderFrame ist jetzt sowohl ueber `HostBridgeSession::build_render_frame(...)` als auch ueber den freien Dispatch-Helper `build_render_frame(...)` fuer lokale Rust-Hosts verfuegbar. Einen separaten oeffentlichen Typ `ChromeState` gibt es nicht mehr; read-only Chrome-Daten laufen ueber `HostChromeSnapshot`, lokale mutierbare Chrome-/Dialog-Flags ueber `HostLocalDialogState`.
 
 Der konsolidierte Host-Dialog-Vertrag deckt neben `open_file` und `save_file` auch `heightmap` und `background_map` ab. Ob ein Host dafuer einen nativen Picker oder einen lokalen Fallback nutzt, bleibt explizit host-local; der Bridge-Vertrag aendert sich dafuer nicht.
 
@@ -24,7 +24,7 @@ Die konsolidierte Host-Dialog-Seam bildet die interne Engine-Queue `DialogReques
 
 Mit `HostChromeSnapshot` existiert zusaetzlich ein expliziter host-neutraler Read-Seam fuer Menues, Defaults, Status und Route-Tool-Metadaten. Egui konsumiert diesen Snapshot lokal; der FFI-Adapter spiegelt dieselbe Surface additiv ueber `fs25ad_host_bridge_session_chrome_snapshot_json(...)`.
 
-## Session-Grenze (Stand 2026-04-06)
+## Session-Grenze (Stand 2026-04-07)
 
 - **bridge-owned:** Explizite Action-/Snapshot-Seams (`HostSessionAction`, `HostRouteToolAction`, `HostSessionSnapshot`, `HostUiSnapshot`, `HostChromeSnapshot`, `HostRouteToolViewportSnapshot`, `ViewportOverlaySnapshot`, Render-Read-Seams inklusive gekoppeltem `build_render_frame(...)`) und die stateful Viewport-Input-Familie (`HostViewportInputBatch`, `HostViewportInputState`) liegen zentral in der Host-Bridge.
 - **bridge-gap:** Fuer stabile Host-Aktionen, bridge-owned Read-Seams und den kanonischen Viewport-Gesture-Slice aktuell geschlossen; lokale Host-Glue-Logik bleibt nur fuer bewusst spaetere/out-of-scope Pfade ausserhalb der Bridge.
@@ -56,14 +56,14 @@ Mit `HostChromeSnapshot` existiert zusaetzlich ein expliziter host-neutraler Rea
 | `pub fn apply_host_action_with_viewport_input_state(controller: &mut AppController, state: &mut AppState, input_state: &mut HostViewportInputState, action: HostSessionAction) -> Result<bool>` | Wendet auch stateful `SubmitViewportInput`-Actions direkt auf einen bestehenden Rust-Host-State an |
 | `pub fn apply_viewport_input_batch(controller: &mut AppController, state: &mut AppState, input_state: &mut HostViewportInputState, batch: HostViewportInputBatch) -> Result<bool>` | Interpretiert den kleinen screen-space Viewport-Input-Vertrag bridge-owned auf bestehende Engine-Intents |
 | `pub fn take_host_dialog_requests(controller: &AppController, state: &mut AppState) -> Vec<HostDialogRequest>` | Enger Adapter-Hilfspfad fuer Hosts mit lokalem Controller/State; entnimmt ausstehende Dialog-Anforderungen und mappt sie auf den kanonischen Host-Dialog-DTO-Vertrag |
-| `pub fn build_host_ui_snapshot(controller: &AppController, state: &AppState) -> HostUiSnapshot` | Baut den host-neutralen Panel-Snapshot fuer Hosts mit lokalem Controller/State |
+| `pub fn build_host_ui_snapshot(state: &AppState) -> HostUiSnapshot` | Baut den host-neutralen Panel-Snapshot fuer Hosts mit lokalem State |
 | `pub fn build_host_chrome_snapshot(state: &AppState) -> HostChromeSnapshot` | Baut den host-neutralen Chrome-Snapshot fuer Menues, Defaults, Status und Route-Tool-Metadaten |
 | `pub fn build_route_tool_viewport_snapshot(state: &AppState) -> HostRouteToolViewportSnapshot` | Baut den host-neutralen Route-Tool-Viewport-Snapshot fuer lokale Host-Adapter |
-| `pub fn build_viewport_overlay_snapshot(controller: &AppController, state: &mut AppState, cursor_world: Option<Vec2>) -> ViewportOverlaySnapshot` | Baut den host-neutralen Overlay-Snapshot fuer lokale Host-Adapter |
-| `pub fn build_render_scene(controller: &AppController, state: &AppState, viewport_size: [f32; 2]) -> RenderScene` | Baut den per-frame Render-Vertrag fuer lokale Host-Adapter |
-| `pub fn build_render_frame(controller: &AppController, state: &AppState, viewport_size: [f32; 2]) -> HostRenderFrameSnapshot` | Baut Szene und Assets als gekoppelten read-only RenderFrame fuer lokale Rust-Hosts |
-| `pub fn build_viewport_geometry_snapshot(controller: &AppController, state: &AppState, viewport_size: [f32; 2]) -> HostViewportGeometrySnapshot` | Baut einen kleinen, serialisierbaren Geometry-Snapshot fuer FFI-/Polling-Hosts |
-| `pub fn build_render_assets(controller: &AppController, state: &AppState) -> RenderAssetsSnapshot` | Baut den langlebigen Render-Asset-Snapshot fuer lokale Host-Adapter |
+| `pub fn build_viewport_overlay_snapshot(state: &mut AppState, cursor_world: Option<Vec2>) -> ViewportOverlaySnapshot` | Baut den host-neutralen Overlay-Snapshot fuer lokale Host-Adapter |
+| `pub fn build_render_scene(state: &AppState, viewport_size: [f32; 2]) -> RenderScene` | Baut den per-frame Render-Vertrag fuer lokale Host-Adapter |
+| `pub fn build_render_frame(state: &AppState, viewport_size: [f32; 2]) -> HostRenderFrameSnapshot` | Baut Szene und Assets als gekoppelten read-only RenderFrame fuer lokale Rust-Hosts |
+| `pub fn build_viewport_geometry_snapshot(state: &AppState, viewport_size: [f32; 2]) -> HostViewportGeometrySnapshot` | Baut einen kleinen, serialisierbaren Geometry-Snapshot fuer FFI-/Polling-Hosts |
+| `pub fn build_render_assets(state: &AppState) -> RenderAssetsSnapshot` | Baut den langlebigen Render-Asset-Snapshot fuer lokale Host-Adapter |
 
 ## Wichtige oeffentliche Typen
 
@@ -83,6 +83,7 @@ Mit `HostChromeSnapshot` existiert zusaetzlich ein expliziter host-neutraler Rea
 | `HostSessionSnapshot` | Kleine serialisierbare Session-Zusammenfassung fuer Polling-Hosts |
 | `EngineSessionSnapshot` | Kompatibilitaetsalias auf `HostSessionSnapshot` |
 | `HostChromeSnapshot` | Host-neutrales Read-Modell fuer Menues, Defaults, Status und Route-Tool-Availability |
+| `HostLocalDialogState` | Host-lokaler mutierbarer Chrome-/Dialogzustand; ersetzt einen separaten oeffentlichen `ChromeState`-Typ |
 | `HostRouteToolEntrySnapshot` / `HostRouteToolSelectionSnapshot` | Serialisierbare Route-Tool-Metadaten fuer Surface, Gruppe, Icon-Key, Availability und Gruppen-Memory |
 | `HostDefaultConnectionDirection` / `HostDefaultConnectionPriority` | Stabile Default-Enums fuer Verbindungsrichtung und Prioritaet im Chrome-Snapshot |
 | `HostSelectionSnapshot` / `HostViewportSnapshot` | Read-only Detail-Snapshots fuer Auswahl und Kamera |
@@ -107,8 +108,9 @@ Mit `HostChromeSnapshot` existiert zusaetzlich ein expliziter host-neutraler Rea
 | `pub fn apply_action(&mut self, action: HostSessionAction) -> Result<()>` | Wendet eine explizite Host-Aktion an |
 | `pub fn apply_intent(&mut self, intent: AppIntent) -> Result<()>` | Uebergangs-Seam fuer noch nicht migrierte Intent-Call-Sites |
 | `pub fn app_state(&self) -> &AppState` | Temporaere Read-Seam fuer den Session-Ownership-Flip |
-| `pub fn app_state_mut(&mut self) -> &mut AppState` | Temporaere Kompat-Seam fuer lokale Rust-Hosts und Tests; der produktive egui-Host nutzt stattdessen schmale Session-Seams |
 | `pub fn mark_snapshot_dirty(&mut self)` | Invalidiert den gecachten `HostSessionSnapshot` explizit nach snapshot-relevanten lokalen Mutationen |
+| `pub fn chrome_state(&self) -> &HostLocalDialogState` | Liefert eine read-only Referenz auf den host-lokalen Chrome-/Dialogzustand |
+| `pub fn chrome_state_mut(&mut self) -> &mut HostLocalDialogState` | Liefert den mutierbaren host-lokalen Chrome-/Dialogzustand; bei snapshot-relevanten Aenderungen anschliessend `mark_snapshot_dirty()` aufrufen |
 | `pub fn panel_properties_state_mut(&mut self) -> HostPanelPropertiesState<'_>` | Liefert den schmalen Rust-Host-Seam fuer Properties/Edit-Panel-Zugriffe; der Zugriff bleibt Snapshot-transparent |
 | `pub fn dialog_ui_state_mut(&mut self) -> HostDialogUiState<'_>` | Liefert den schmalen Rust-Host-Seam fuer host-lokale Dialogzustands-Mutationen; snapshot-relevante Aenderungen muessen anschliessend explizit invalidiert werden |
 | `pub fn viewport_input_context_mut(&mut self) -> HostViewportInputContext<'_>` | Liefert den schmalen Rust-Host-Seam fuer Viewport-Input-Sammler; der Zugriff bleibt Snapshot-transparent |
@@ -157,10 +159,11 @@ flowchart LR
 	SESSION --> CTRL[AppController]
 	CTRL --> STATE[AppState]
 	STATE --> SNAP[HostSessionSnapshot]
-	CTRL --> HOSTUI[HostUiSnapshot]
-	CTRL --> OVERLAY[ViewportOverlaySnapshot]
-	CTRL --> SCENE[RenderScene]
-	CTRL --> ASSETS[RenderAssetsSnapshot]
+	STATE --> PROJ[app::projections]
+	PROJ --> HOSTUI[HostUiSnapshot]
+	PROJ --> OVERLAY[ViewportOverlaySnapshot]
+	PROJ --> SCENE[RenderScene]
+	PROJ --> ASSETS[RenderAssetsSnapshot]
 	SESSION --> FRAME[HostRenderFrameSnapshot]
 	SCENE --> FRAME
 	ASSETS --> FRAME
@@ -196,11 +199,11 @@ flowchart LR
 - `HostSessionAction` umfasst zwei Schreibfamilien: den kleinen screen-space-basierten Viewport-Input-Slice (`SubmitViewportInput`) sowie die explizite Route-Tool-Familie (`RouteTool`).
 - Stateful Viewport-Input benoetigt `HostViewportInputState`. `HostBridgeSession` besitzt diesen Zustand intern; lokale Rust-Hosts verwenden dafuer `apply_host_action_with_viewport_input_state(...)` oder `apply_viewport_input_batch(...)`.
 - Route-Tool-Write-Pfade laufen bewusst nicht ueber `SubmitViewportInput`, sondern ausschliesslich ueber `HostSessionAction::RouteTool`.
-- Die schmalen UI-Local-Seams (`HostPanelPropertiesState`, `HostDialogUiState`, `HostViewportInputContext`) sind bewusst Rust-Host-intern und nicht als serialisierbare FFI-DTO-Surface gedacht. Der Zugriff bleibt fuer lokale `distanzen`-/`options`-/Dialog-States Snapshot-transparent; snapshot-relevante Escape-Hatch-Mutationen muessen explizit ueber `mark_snapshot_dirty()` invalidiert werden.
-- Der produktive egui-Host nutzt fuer nicht serialisierte UI-Local-Zustaende die schmalen Session-Seams; `app_state_mut()` bleibt nur als kompatible Uebergangs-Seam fuer lokale Rust-Hosts und Tests bestehen.
+- Die schmalen UI-Local-Seams (`HostPanelPropertiesState`, `HostDialogUiState`, `HostViewportInputContext`, `HostLocalDialogState`) sind bewusst Rust-Host-intern und nicht als serialisierbare FFI-DTO-Surface gedacht. Der Zugriff bleibt fuer lokale `distanzen`-/`options`-/Dialog-States Snapshot-transparent; snapshot-relevante Escape-Hatch-Mutationen muessen explizit ueber `mark_snapshot_dirty()` invalidiert werden.
+- Der produktive egui-Host nutzt fuer nicht serialisierte UI-Local-Zustaende die schmalen Session-Seams sowie `chrome_state()` beziehungsweise `chrome_state_mut()`. `app_state_mut()` ist aus der oeffentlichen Host-Bridge-API entfernt.
 - `take_dialog_requests()` und `submit_dialog_result(...)` bilden die kanonische Dialog-Seam der Session-API. Fuer Adapter mit eigenem `AppController`/`AppState` steht dieselbe Mapping-Logik zusaetzlich ueber `take_host_dialog_requests(...)` als schmaler Adapter-Hilfspfad bereit.
 - Die Mapping-Seam fuer stabile, niederfrequente Host-Aktionen liegt zentral in `dispatch` (`map_intent_to_host_action`, `map_host_action_to_intent`, `apply_mapped_intent`, `apply_host_action`).
 - `apply_host_action(...)` bleibt absichtlich stateless. Fuer `SubmitViewportInput` liefert diese Hilfsfunktion daher einen Fehler statt stiller Semantik-Drift; stateful Input laeuft ueber `HostBridgeSession` oder die dedizierte Dispatch-Hilfe mit `HostViewportInputState`.
-- Die bridge-owned Read-Seams fuer lokale Controller/State-Hosts sind zentral in `dispatch` verfuegbar (`build_host_ui_snapshot`, `build_host_chrome_snapshot`, `build_route_tool_viewport_snapshot`, `build_viewport_overlay_snapshot`, `build_render_scene`, `build_render_frame`, `build_viewport_geometry_snapshot`, `build_render_assets`).
+- Die bridge-owned Read-Seams fuer lokale State-Hosts sind zentral in `dispatch` verfuegbar (`build_host_ui_snapshot`, `build_host_chrome_snapshot`, `build_route_tool_viewport_snapshot`, `build_viewport_overlay_snapshot`, `build_render_scene`, `build_render_frame`, `build_viewport_geometry_snapshot`, `build_render_assets`) und delegieren fuer Render-, Panel- und Overlay-Projektionen in `fs25_auto_drive_engine::app::projections`.
 - Der serialisierbare Geometry-Snapshot bleibt bewusst klein und read-only: Nodes, Connections, Marker sowie Kamera-/Viewport-Metadaten. Der neue Write-Slice ist gezielt auf den stabilen Viewport-Input begrenzt und zieht keine Route-Tool-spezifischen oder Touch-Vertraege mit.
 - Host-Adapter mit eigenem `AppController`/`AppState` koennen den Datei-/Pfad-Dialogpfad ueber `take_host_dialog_requests(...)` und `HostSessionAction::SubmitDialogResult` auf denselben Bridge-DTO-/Dispatch-Vertrag konsolidieren.

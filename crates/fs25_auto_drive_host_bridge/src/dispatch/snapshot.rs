@@ -1,7 +1,8 @@
 //! Snapshot-Builder-Funktionen fuer host-neutrale Read-Snapshots.
 
+use fs25_auto_drive_engine::app::projections;
 use fs25_auto_drive_engine::app::ui_contract::{RouteToolViewportData, ViewportOverlaySnapshot};
-use fs25_auto_drive_engine::app::{AppController, AppState};
+use fs25_auto_drive_engine::app::AppState;
 use fs25_auto_drive_engine::shared::{RenderAssetsSnapshot, RenderScene};
 use glam::Vec2;
 
@@ -112,20 +113,33 @@ fn map_route_tool_viewport_data(data: RouteToolViewportData) -> HostRouteToolVie
     }
 }
 
-/// Baut den host-neutralen Panel-Snapshot fuer Hosts mit lokalem Controller/State.
+/// Baut den host-neutralen Panel-Snapshot fuer Hosts mit lokalem State.
 pub fn build_host_ui_snapshot(
-    controller: &AppController,
     state: &AppState,
 ) -> fs25_auto_drive_engine::app::ui_contract::HostUiSnapshot {
-    controller.build_host_ui_snapshot(state)
+    projections::build_host_ui_snapshot(state)
 }
 
 /// Baut den host-neutralen Chrome-Snapshot fuer Menues, Defaults und Status.
 pub fn build_host_chrome_snapshot(state: &AppState) -> HostChromeSnapshot {
+    let (node_count, connection_count, marker_count, map_name) = state
+        .road_map
+        .as_ref()
+        .map(|rm| {
+            (
+                rm.node_count(),
+                rm.connection_count(),
+                rm.marker_count(),
+                rm.map_name.clone(),
+            )
+        })
+        .unwrap_or((0, 0, 0, None));
+    let selection_count = state.selection.selected_node_ids.len();
+    let selection_example_id = state.selection.selected_node_ids.iter().next().copied();
     HostChromeSnapshot {
         status_message: state.ui.status_message.clone(),
-        show_command_palette: state.ui.show_command_palette,
-        show_options_dialog: state.ui.show_options_dialog,
+        show_command_palette: false,
+        show_options_dialog: false,
         has_map: state.road_map.is_some(),
         has_selection: !state.selection.selected_node_ids.is_empty(),
         has_clipboard: !state.clipboard.nodes.is_empty(),
@@ -138,6 +152,20 @@ pub fn build_host_chrome_snapshot(state: &AppState) -> HostChromeSnapshot {
         route_tool_memory: build_route_tool_selection_snapshot(state),
         options: state.options.clone(),
         route_tool_entries: build_route_tool_entries_snapshot(state),
+        node_count,
+        connection_count,
+        marker_count,
+        map_name,
+        camera_zoom: state.view.camera.zoom,
+        camera_position: [state.view.camera.position.x, state.view.camera.position.y],
+        heightmap_path: state.ui.heightmap_path.clone(),
+        selection_count,
+        selection_example_id,
+        background_map_loaded: state.view.background_map.is_some(),
+        render_quality: state.view.render_quality,
+        has_farmland: state.has_farmland_polygons(),
+        background_visible: state.view.background_visible,
+        background_scale: state.view.background_scale,
     }
 }
 
@@ -151,45 +179,35 @@ pub fn build_route_tool_viewport_snapshot(state: &AppState) -> HostRouteToolView
 /// Die mutable State-Referenz bleibt noetig, weil beim Aufbau Caches im
 /// `AppState` aufgewaermt werden koennen.
 pub fn build_viewport_overlay_snapshot(
-    controller: &AppController,
     state: &mut AppState,
     cursor_world: Option<Vec2>,
 ) -> ViewportOverlaySnapshot {
-    controller.build_viewport_overlay_snapshot(state, cursor_world)
+    projections::build_viewport_overlay_snapshot(state, cursor_world)
 }
 
 /// Baut den per-frame Render-Vertrag fuer lokale Host-Adapter.
-pub fn build_render_scene(
-    controller: &AppController,
-    state: &AppState,
-    viewport_size: [f32; 2],
-) -> RenderScene {
-    controller.build_render_scene(state, viewport_size)
+pub fn build_render_scene(state: &AppState, viewport_size: [f32; 2]) -> RenderScene {
+    projections::build_render_scene(state, viewport_size)
 }
 
 /// Baut den langlebigen Render-Asset-Snapshot fuer lokale Host-Adapter.
-pub fn build_render_assets(controller: &AppController, state: &AppState) -> RenderAssetsSnapshot {
-    controller.build_render_assets(state)
+pub fn build_render_assets(state: &AppState) -> RenderAssetsSnapshot {
+    projections::build_render_assets(state)
 }
 
 /// Baut Szene und Assets als gekoppelten read-only Render-Frame fuer lokale Hosts.
-pub fn build_render_frame(
-    controller: &AppController,
-    state: &AppState,
-    viewport_size: [f32; 2],
-) -> HostRenderFrameSnapshot {
+pub fn build_render_frame(state: &AppState, viewport_size: [f32; 2]) -> HostRenderFrameSnapshot {
     HostRenderFrameSnapshot {
-        scene: build_render_scene(controller, state, viewport_size),
-        assets: build_render_assets(controller, state),
+        scene: build_render_scene(state, viewport_size),
+        assets: build_render_assets(state),
     }
 }
 
 /// Baut einen minimalen, serialisierbaren Viewport-Geometry-Snapshot fuer Hosts.
 pub fn build_viewport_geometry_snapshot(
-    controller: &AppController,
     state: &AppState,
     viewport_size: [f32; 2],
 ) -> HostViewportGeometrySnapshot {
-    let scene = controller.build_render_scene(state, viewport_size);
+    let scene = projections::build_render_scene(state, viewport_size);
     build_viewport_geometry_snapshot_from_scene(&scene)
 }

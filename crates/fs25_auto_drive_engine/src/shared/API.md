@@ -98,7 +98,7 @@ impl RenderBackgroundWorldBounds {
 **Beispiel (Host-Sync):**
 
 ```rust
-let assets = controller.build_render_assets(&state);
+let assets = fs25_auto_drive_engine::app::projections::build_render_assets(&state);
 
 if let Some(background) = assets.background() {
     assert_eq!(background.asset_revision, assets.background_asset_revision());

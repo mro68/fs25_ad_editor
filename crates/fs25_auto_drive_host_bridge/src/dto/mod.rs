@@ -96,7 +96,7 @@ pub type EngineChromeSnapshot = HostChromeSnapshot;
 #[cfg(test)]
 mod tests {
     use fs25_auto_drive_engine::app::ui_contract::{BypassPanelAction, RouteToolPanelAction};
-    use fs25_auto_drive_engine::shared::EditorOptions;
+    use fs25_auto_drive_engine::shared::{EditorOptions, RenderQuality};
     use serde_json::json;
 
     use super::{
@@ -337,6 +337,20 @@ mod tests {
                     disabled_reason: Some(HostRouteToolDisabledReason::MissingFarmland),
                 },
             ],
+            node_count: 0,
+            connection_count: 0,
+            marker_count: 0,
+            map_name: None,
+            camera_zoom: 1.0,
+            camera_position: [0.0, 0.0],
+            heightmap_path: None,
+            selection_count: 0,
+            selection_example_id: None,
+            background_map_loaded: false,
+            render_quality: RenderQuality::High,
+            has_farmland: false,
+            background_visible: true,
+            background_scale: 1.0,
         };
 
         let payload = serde_json::to_value(&host_snapshot)

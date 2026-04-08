@@ -1,24 +1,19 @@
 //! Status-Bar am unteren Bildschirmrand.
 
-use crate::app::{AppState, EditorTool};
+use crate::app::EditorTool;
 use crate::shared::{t, I18nKey};
 use crate::ui::common::host_active_tool_to_editor;
 use fs25_auto_drive_host_bridge::HostChromeSnapshot;
 
 /// Rendert die Status-Bar
-pub fn render_status_bar(
-    ctx: &egui::Context,
-    state: &AppState,
-    host_chrome_snapshot: &HostChromeSnapshot,
-) {
+pub fn render_status_bar(ctx: &egui::Context, host_chrome_snapshot: &HostChromeSnapshot) {
     let mut top_ui = crate::ui::common::create_top_level_ui(ctx, "status_bar_top_level");
-    render_status_bar_inside(&mut top_ui, state, host_chrome_snapshot);
+    render_status_bar_inside(&mut top_ui, host_chrome_snapshot);
 }
 
 /// Rendert die Status-Bar innerhalb eines bestehenden Top-Level-UIs.
 pub(crate) fn render_status_bar_inside(
     ui_root: &mut egui::Ui,
-    state: &AppState,
     host_chrome_snapshot: &HostChromeSnapshot,
 ) {
     let lang = host_chrome_snapshot.options.language;
@@ -26,20 +21,20 @@ pub(crate) fn render_status_bar_inside(
 
     egui::Panel::bottom("status_bar").show_inside(ui_root, |ui| {
         ui.horizontal(|ui| {
-            if let Some(road_map) = &state.road_map {
+            if host_chrome_snapshot.has_map {
                 ui.label(format!(
                     "{}: {} | {}: {} | {}: {}",
                     t(lang, I18nKey::StatusNodes),
-                    road_map.node_count(),
+                    host_chrome_snapshot.node_count,
                     t(lang, I18nKey::StatusConnections),
-                    road_map.connection_count(),
+                    host_chrome_snapshot.connection_count,
                     t(lang, I18nKey::StatusMarkers),
-                    road_map.marker_count()
+                    host_chrome_snapshot.marker_count
                 ));
 
                 ui.separator();
 
-                if let Some(map_name) = &road_map.map_name {
+                if let Some(ref map_name) = host_chrome_snapshot.map_name {
                     ui.label(format!("{}: {}", t(lang, I18nKey::StatusMap), map_name));
                     ui.separator();
                 }
@@ -52,16 +47,16 @@ pub(crate) fn render_status_bar_inside(
             ui.label(format!(
                 "{}: {:.2}x | {}: ({:.1}, {:.1})",
                 t(lang, I18nKey::StatusZoom),
-                state.view.camera.zoom,
+                host_chrome_snapshot.camera_zoom,
                 t(lang, I18nKey::StatusPosition),
-                state.view.camera.position.x,
-                state.view.camera.position.y
+                host_chrome_snapshot.camera_position[0],
+                host_chrome_snapshot.camera_position[1]
             ));
 
             ui.separator();
 
             // Heightmap-Status
-            if let Some(ref hm_path) = state.ui.heightmap_path {
+            if let Some(ref hm_path) = host_chrome_snapshot.heightmap_path {
                 let filename = std::path::Path::new(hm_path)
                     .file_name()
                     .and_then(|n| n.to_str())
@@ -81,14 +76,10 @@ pub(crate) fn render_status_bar_inside(
 
             ui.separator();
 
-            let selected_count = state.selection.selected_node_ids.len();
+            let selected_count = host_chrome_snapshot.selection_count;
             if selected_count > 0 {
-                let example_id = state
-                    .selection
-                    .selected_node_ids
-                    .iter()
-                    .next()
-                    .copied()
+                let example_id = host_chrome_snapshot
+                    .selection_example_id
                     .unwrap_or_default();
                 ui.label(format!(
                     "{}: {} ({} {})",

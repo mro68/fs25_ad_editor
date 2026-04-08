@@ -11,10 +11,6 @@ impl FieldBoundaryTool {
     pub(super) fn panel_state(&self) -> FieldBoundaryPanelState {
         FieldBoundaryPanelState {
             selected_field_id: self.selected_polygon.as_ref().map(|polygon| polygon.id),
-            empty_selection_text: self
-                .selected_polygon
-                .is_none()
-                .then_some("Kein Feld ausgewaehlt — in ein Feld klicken".to_owned()),
             node_spacing: self.node_spacing,
             offset: self.offset,
             straighten_tolerance: self.straighten_tolerance,
@@ -25,8 +21,7 @@ impl FieldBoundaryTool {
             corner_rounding_max_angle_deg: self.corner_rounding_max_angle_deg,
             direction: self.direction,
             priority: self.priority,
-            hint_text: (self.phase == FieldBoundaryPhase::Configuring)
-                .then_some("Erneuter Klick im Viewport → anderes Feld auswählen".to_owned()),
+            show_select_hint: self.phase == FieldBoundaryPhase::Configuring,
         }
     }
 

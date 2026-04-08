@@ -19,15 +19,8 @@ impl BypassTool {
 
         BypassPanelState {
             has_chain: self.has_chain(),
-            empty_message: (!self.has_chain())
-                .then_some("Kette selektieren und Route-Tool neu aktivieren.".to_owned()),
             offset: self.offset,
             base_spacing: self.base_spacing,
-            side_label: if self.offset >= 0.0 {
-                "Richtung: links".to_owned()
-            } else {
-                "Richtung: rechts".to_owned()
-            },
             new_node_count: preview.as_ref().map(|(positions, _)| positions.len()),
             chain_node_count: self.chain_positions.len(),
             transition_length_m: preview

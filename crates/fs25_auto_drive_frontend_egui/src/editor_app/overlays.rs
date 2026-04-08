@@ -11,17 +11,18 @@ use super::EditorApp;
 impl EditorApp {
     /// Zeichnet Tool-Preview und Distanzen-Overlay ueber den Viewport.
     /// Gibt gesammelte Overlay-Events als `AppIntent`-Vec zurueck.
+    /// `chrome_snapshot` wird vom Aufrufer uebergeben, damit kein doppelter Build pro Frame entsteht.
     pub(super) fn render_overlays(
         &mut self,
         ui: &egui::Ui,
         rect: egui::Rect,
         response: &egui::Response,
         viewport_size: [f32; 2],
+        chrome_snapshot: &fs25_auto_drive_host_bridge::HostChromeSnapshot,
     ) -> Vec<AppIntent> {
         let mut overlay_events: Vec<AppIntent> = Vec::new();
         let vp = Vec2::new(viewport_size[0], viewport_size[1]);
         let session_snapshot = self.session.snapshot_owned();
-        let chrome_snapshot = self.session.build_host_chrome_snapshot();
         let camera = Camera2D {
             position: Vec2::new(
                 session_snapshot.viewport.camera_position[0],

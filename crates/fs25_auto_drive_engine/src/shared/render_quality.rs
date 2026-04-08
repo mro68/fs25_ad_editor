@@ -1,7 +1,9 @@
 //! Render-Qualitaetsstufen fuer Anti-Aliasing (shared zwischen App und Renderer).
 
+use serde::{Deserialize, Serialize};
+
 /// Qualitaetsstufe fuer Render-Anti-Aliasing.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Serialize, Deserialize)]
 pub enum RenderQuality {
     /// Minimales Anti-Aliasing (schnellste Darstellung)
     Low,

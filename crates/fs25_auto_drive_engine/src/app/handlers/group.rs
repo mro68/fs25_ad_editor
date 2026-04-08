@@ -2,6 +2,7 @@
 
 use crate::app::group_registry::GroupRecord;
 use crate::app::state::GroupEditState;
+use crate::app::ui_contract::DialogRequest;
 use crate::app::AppState;
 
 /// Schaltet den Lock-Zustand eines Segments um.
@@ -23,7 +24,9 @@ pub fn dissolve(state: &mut AppState, segment_id: u64) {
 
 /// Oeffnet den Bestaetigungsdialog fuer das Aufloesen eines Segments.
 pub fn open_dissolve_confirm_dialog(state: &mut AppState, segment_id: u64) {
-    state.ui.confirm_dissolve_group_id = Some(segment_id);
+    state
+        .ui
+        .request_dialog(DialogRequest::ShowDissolveGroupConfirm(segment_id));
 }
 
 /// Entfernt alle selektierten Nodes aus ihren Gruppen.

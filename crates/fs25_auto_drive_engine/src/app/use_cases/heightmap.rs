@@ -24,6 +24,8 @@ pub fn set_heightmap(state: &mut AppState, path: String) {
 
 /// Blendet die Heightmap-Warnung aus und setzt den ausstehenden Speicherpfad zurueck.
 pub fn dismiss_heightmap_warning(state: &mut AppState) {
-    state.ui.show_heightmap_warning = false;
+    state
+        .ui
+        .request_dialog(DialogRequest::DismissHeightmapWarning);
     state.ui.pending_save_path = None;
 }

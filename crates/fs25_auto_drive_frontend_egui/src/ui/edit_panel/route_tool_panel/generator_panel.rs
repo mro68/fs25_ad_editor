@@ -113,8 +113,11 @@ pub(super) fn render_bypass_panel(
     wheel_enabled: bool,
     events: &mut Vec<AppIntent>,
 ) {
-    if let Some(message) = state.empty_message.as_deref() {
-        ui.colored_label(egui::Color32::GRAY, message);
+    if !state.has_chain {
+        ui.colored_label(
+            egui::Color32::GRAY,
+            "Kette selektieren und Route-Tool neu aktivieren.",
+        );
         return;
     }
 
@@ -125,7 +128,12 @@ pub(super) fn render_bypass_panel(
     if let Some(transition_length_m) = state.transition_length_m {
         ui.label(format!("Uebergang: {:.1} m", transition_length_m));
     }
-    ui.label(format!("Seite: {}", state.side_label));
+    let side_text = if state.offset >= 0.0 {
+        "links"
+    } else {
+        "rechts"
+    };
+    ui.label(format!("Seite: Richtung: {side_text}"));
 
     render_drag_f32(
         ui,
@@ -156,6 +164,7 @@ pub(super) fn render_parking_panel(
     ui: &mut egui::Ui,
     state: &ParkingPanelState,
     wheel_enabled: bool,
+    lang: Language,
     events: &mut Vec<AppIntent>,
 ) {
     render_drag_usize(
@@ -262,7 +271,7 @@ pub(super) fn render_parking_panel(
     if let Some(angle_deg) = state.angle_deg {
         ui.label(format!("Winkel: {:.1}°", angle_deg));
     }
-    if let Some(hint_text) = state.hint_text.as_deref() {
-        ui.small(hint_text);
+    if let Some(hint_key) = state.hint_text {
+        ui.small(t(lang, hint_key));
     }
 }
