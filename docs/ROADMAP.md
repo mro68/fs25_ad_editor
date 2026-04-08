@@ -549,7 +549,13 @@
   - [x] `flutter_api.rs`: `FlutterSessionHandle` (Arc<Mutex<HostBridgeSession>>)
   - [x] `flutter_session_new()`, `flutter_session_dispose()`, `flutter_session_apply_action()`
   - [x] `flutter_session_snapshot_json()`, `flutter_session_viewport_geometry_json()`
-  - [x] Unit-Tests fuer Session-Lifecycle, JSON-Validation, Snapshot-Roundtrip
+  - [x] `flutter_session_is_dirty()` — Dirty-Flag-Abfrage relativ zum letzten Load/Save
+  - [x] `flutter_session_ui_snapshot_json()` — HostUiSnapshot als JSON
+  - [x] `flutter_session_chrome_snapshot_json()` — HostChromeSnapshot als JSON
+  - [x] `flutter_session_viewport_overlay_json()` — ViewportOverlaySnapshot als JSON
+  - [x] Neue `HostSessionAction`-Varianten: `DeleteSelected`, `SelectAll`, `ClearSelection`, `CopySelection`, `PasteStart`, `PasteConfirm`, `PasteCancel`
+  - [x] Bidirektionale Intent-Action-Mappings fuer Selektions- und Clipboard-Aktionen
+  - [x] Unit-Tests fuer Session-Lifecycle, JSON-Validation, Snapshot-Roundtrip, Dirty-Flag
 - [x] **Flutter-Backend Phase 2: GPU-Export-Stack Linux (2026-04-08)**
   - [x] `create_vulkan_instance()` in `render_wgpu` — Vulkan-exklusive wgpu-Instanz
   - [x] `external_texture/` Modul mit `ExternalTextureExport` Trait, `PlatformTextureDescriptor`, `ExternalTextureError`
@@ -557,6 +563,11 @@
   - [x] `RenderExportCore::render_scene_to_view()` — Rendering in externe TextureView (feature-gated)
   - [x] `issue_render_pass()` als gemeinsame Render-Infrastruktur extrahiert (DRY)
   - [x] `flutter_gpu.rs`: `GpuRuntimeHandle` mit C-FFI-Lifecycle (`new/render/export/resize/dispose`)
+  - [x] `GpuRuntimeHandle::new_with_session()` — Shared Session ueber `Arc<Mutex<HostBridgeSession>>` mit der Control-Plane
+  - [x] `fs25ad_gpu_runtime_new_with_session()` C-FFI-Export fuer geteilten Session-Besitz
+  - [x] `export_texture()` liefert `Fs25adTextureRegistrationV4LinuxDmabufDescriptor` statt nacktem FD
+  - [x] Stride-Abfrage per `vkGetImageSubresourceLayout` im DMA-BUF-Export (vorher hardkodiert 0); Fallback auf `width * 4` ohne `VK_EXT_image_drm_format_modifier`
+  - [x] C-Header `fs25ad_host_bridge.h` erweitert um Flutter-GPU-Runtime-Symbole (`fs25ad_flutter_session_*`, `fs25ad_gpu_runtime_*`)
   - [x] `SharedTextureRuntime::new_for_flutter()` — Konstruktor mit Vulkan-Instanz
   - [x] Panic-Isolation ueber `ffi_guard_bool!` / `catch_unwind` fuer alle FFI-Funktionen
 - [ ] **Flutter-Backend Phase 3: DMA-BUF-Export (geplant)**
