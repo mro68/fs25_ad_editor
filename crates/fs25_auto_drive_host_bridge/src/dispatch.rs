@@ -10,10 +10,10 @@ mod viewport_input;
 pub use actions::{
     apply_host_action, apply_host_action_with_viewport_input_state, apply_mapped_intent,
 };
-pub(crate) use mappings::map_engine_dialog_request;
 pub use mappings::{
     map_host_action_to_intent, map_intent_to_host_action, take_host_dialog_requests,
 };
+pub(crate) use mappings::map_engine_dialog_request;
 pub use snapshot::{
     build_host_chrome_snapshot, build_host_ui_snapshot, build_render_assets, build_render_frame,
     build_render_scene, build_route_tool_viewport_snapshot, build_viewport_geometry_snapshot,
@@ -127,10 +127,11 @@ mod tests {
 
         assert!(handled);
         assert!(
-            state.ui.dialog_requests.iter().any(|r| matches!(
-                r,
-                fs25_auto_drive_engine::app::ui_contract::DialogRequest::ToggleCommandPalette
-            )),
+            state
+                .ui
+                .dialog_requests
+                .iter()
+                .any(|r| matches!(r, fs25_auto_drive_engine::app::ui_contract::DialogRequest::ToggleCommandPalette)),
             "ToggleCommandPalette muss in dialog_requests stehen"
         );
     }
@@ -536,7 +537,6 @@ mod tests {
     fn build_host_chrome_snapshot_exposes_status_defaults_and_route_tool_entries() {
         let mut state = AppState::new();
         state.ui.status_message = Some("bereit".to_string());
-        state.ui.show_command_palette = true;
         state.editor.active_tool = fs25_auto_drive_engine::app::EditorTool::Route;
         state
             .editor
@@ -548,7 +548,8 @@ mod tests {
         let chrome = build_host_chrome_snapshot(&state);
 
         assert_eq!(chrome.status_message.as_deref(), Some("bereit"));
-        assert!(chrome.show_command_palette);
+        // show_command_palette stammt aus HostLocalDialogState (Session-Schicht), die freie Funktion liefert immer false
+        assert!(!chrome.show_command_palette);
         assert_eq!(chrome.active_tool, HostActiveTool::Route);
         assert_eq!(chrome.active_route_tool, Some(HostRouteToolId::CurveCubic));
         assert_eq!(
@@ -600,27 +601,11 @@ mod tests {
         let first = build_host_chrome_snapshot(&state);
         let second = build_host_chrome_snapshot(&state);
 
-        assert_eq!(
-            first.status_message, second.status_message,
-            "status_message muss stabil sein"
-        );
-        assert_eq!(
-            first.active_tool, second.active_tool,
-            "active_tool muss stabil sein"
-        );
-        assert_eq!(
-            first.default_direction, second.default_direction,
-            "default_direction muss stabil sein"
-        );
-        assert_eq!(
-            first.route_tool_entries.len(),
-            second.route_tool_entries.len(),
-            "route_tool_entries-Laenge muss stabil sein"
-        );
-        assert_eq!(
-            first.options, second.options,
-            "EditorOptions müssen stabil sein"
-        );
+        assert_eq!(first.status_message, second.status_message, "status_message muss stabil sein");
+        assert_eq!(first.active_tool, second.active_tool, "active_tool muss stabil sein");
+        assert_eq!(first.default_direction, second.default_direction, "default_direction muss stabil sein");
+        assert_eq!(first.route_tool_entries.len(), second.route_tool_entries.len(), "route_tool_entries-Laenge muss stabil sein");
+        assert_eq!(first.options, second.options, "EditorOptions müssen stabil sein");
     }
 
     /// Prüft, dass build_host_chrome_snapshot die aktuellen EditorOptions korrekt
