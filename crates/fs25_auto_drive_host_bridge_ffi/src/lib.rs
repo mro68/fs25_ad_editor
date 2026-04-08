@@ -1,9 +1,9 @@
 //! C-ABI-Transport ueber der kanonischen Host-Bridge-Session.
 
-mod shared_texture_v2;
-mod texture_registration_v4;
 #[cfg(feature = "flutter")]
 pub mod flutter_api;
+mod shared_texture_v2;
+mod texture_registration_v4;
 
 /// Hilfsmakro: Wraps einen bool-FFI-Aufruf mit Panic-Isolation und Last-Error-Behandlung.
 macro_rules! ffi_guard_bool {

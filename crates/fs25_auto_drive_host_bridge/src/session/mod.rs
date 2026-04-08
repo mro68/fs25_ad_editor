@@ -440,10 +440,7 @@ impl HostBridgeSession {
         &self,
         viewport_size: [f32; 2],
     ) -> HostViewportGeometrySnapshot {
-        crate::dispatch::build_viewport_geometry_snapshot(
-            &self.state,
-            viewport_size,
-        )
+        crate::dispatch::build_viewport_geometry_snapshot(&self.state, viewport_size)
     }
 
     /// Baut den host-neutralen Host-UI-Snapshot fuer sichtbare Panels.
@@ -501,8 +498,11 @@ impl HostBridgeSession {
             return;
         }
 
-        self.snapshot_cache =
-            build_snapshot(&self.state, &self.chrome_state, self.pending_dialog_requests.len());
+        self.snapshot_cache = build_snapshot(
+            &self.state,
+            &self.chrome_state,
+            self.pending_dialog_requests.len(),
+        );
         self.snapshot_dirty = false;
     }
 
