@@ -42,15 +42,21 @@ impl FlutterSessionHandle {
     }
 }
 
+// SAFETY: Zugriff auf die innere HostBridgeSession ist durch Arc<Mutex<...>>
+// serialisiert. RouteTool-Trait-Objekte sind !Send, aber alle Zugriffe gehen
+// durch den Mutex — daher ist FlutterSessionHandle thread-sicher.
+unsafe impl Send for FlutterSessionHandle {}
+unsafe impl Sync for FlutterSessionHandle {}
+
 /// Erzeugt eine neue Flutter-Session.
 ///
 /// Gibt einen opaques Handle-Pointer zurueck der fuer alle weiteren API-Aufrufe
 /// benoetigt wird. Dart ist verantwortlich `flutter_session_dispose` aufzurufen.
 #[allow(clippy::arc_with_non_send_sync)] // HostBridgeSession ist !Send, aber FFI-Zugriff ist seriell
-pub fn flutter_session_new() -> Box<FlutterSessionHandle> {
-    Box::new(FlutterSessionHandle {
+pub fn flutter_session_new() -> FlutterSessionHandle {
+    FlutterSessionHandle {
         session: Arc::new(Mutex::new(HostBridgeSession::new())),
-    })
+    }
 }
 
 /// Gibt eine Flutter-Session frei.
@@ -150,6 +156,31 @@ pub fn flutter_session_viewport_geometry_json(
     })
 }
 
+/// Klont den internen `Arc<Mutex<HostBridgeSession>>` und gibt ihn als rohen Zeiger (i64) zurueck.
+///
+/// Der Aufrufer muss den Rueckgabewert exakt einmal verwenden:
+/// - Entweder an `fs25ad_gpu_runtime_new_with_shared_session_arc` uebergeben (wird konsumiert),
+/// - Oder `flutter_session_release_shared_arc_raw` aufrufen.
+///
+/// Solange der Wert unreleased ist, haelt er eine starke Referenz auf die Session.
+pub fn flutter_session_acquire_shared_arc_raw(handle: &FlutterSessionHandle) -> i64 {
+    let cloned: Arc<Mutex<HostBridgeSession>> = Arc::clone(&handle.session);
+    Arc::into_raw(cloned) as i64
+}
+
+/// Gibt einen via `flutter_session_acquire_shared_arc_raw` geklonten Arc-Zeiger frei.
+///
+/// Nur aufrufen wenn der Wert NICHT bereits an
+/// `fs25ad_gpu_runtime_new_with_shared_session_arc` uebergeben wurde.
+pub fn flutter_session_release_shared_arc_raw(raw: i64) {
+    if raw == 0 {
+        return;
+    }
+    // SAFETY: raw wurde via Arc::into_raw(Arc<Mutex<HostBridgeSession>>) erzeugt
+    // und ist noch nicht freigegeben worden.
+    let _ = unsafe { Arc::from_raw(raw as *const Mutex<HostBridgeSession>) };
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -158,7 +189,7 @@ mod tests {
     #[test]
     fn test_flutter_session_lifecycle() {
         let handle = flutter_session_new();
-        flutter_session_dispose(*handle);
+        flutter_session_dispose(handle);
     }
 
     /// Prueft, dass ungueliges JSON einen Fehler zurueckgibt (kein Panic).
@@ -167,7 +198,7 @@ mod tests {
         let handle = flutter_session_new();
         let result = flutter_session_apply_action(&handle, "not json".to_string());
         assert!(result.is_err(), "Ungueltiges JSON muss Err zurueckgeben");
-        flutter_session_dispose(*handle);
+        flutter_session_dispose(handle);
     }
 
     /// Prueft, dass snapshot_json einen validen JSON-String liefert.
@@ -178,7 +209,7 @@ mod tests {
             flutter_session_snapshot_json(&handle).expect("Snapshot-Serialisierung muss gelingen");
         assert!(!json.is_empty());
         assert!(json.starts_with('{'), "Snapshot muss JSON-Objekt sein");
-        flutter_session_dispose(*handle);
+        flutter_session_dispose(handle);
     }
 
     /// Prueft, dass neue Sessions als nicht dirty gemeldet werden.
@@ -188,7 +219,7 @@ mod tests {
         let dirty = flutter_session_is_dirty(&handle)
             .expect("Dirty-Abfrage fuer frische Session muss gelingen");
         assert!(!dirty);
-        flutter_session_dispose(*handle);
+        flutter_session_dispose(handle);
     }
 
     /// Prueft, dass ui_snapshot_json ein parsebares JSON-Objekt liefert.
@@ -203,7 +234,7 @@ mod tests {
             value.get("panels").is_some(),
             "UI-Snapshot muss panels enthalten"
         );
-        flutter_session_dispose(*handle);
+        flutter_session_dispose(handle);
     }
 
     /// Prueft, dass chrome_snapshot_json ein parsebares JSON-Objekt liefert.
@@ -218,7 +249,7 @@ mod tests {
             value.get("show_command_palette").is_some(),
             "Chrome-Snapshot muss chrome-Felder enthalten"
         );
-        flutter_session_dispose(*handle);
+        flutter_session_dispose(handle);
     }
 
     /// Prueft, dass viewport_overlay_json ein parsebares JSON-Objekt liefert.
@@ -233,6 +264,6 @@ mod tests {
             value.get("show_no_file_hint").is_some(),
             "Overlay-Snapshot muss Overlay-Felder enthalten"
         );
-        flutter_session_dispose(*handle);
+        flutter_session_dispose(handle);
     }
 }

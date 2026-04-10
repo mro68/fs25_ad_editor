@@ -216,11 +216,11 @@ impl SharedTextureRuntime {
         queue: &wgpu::Queue,
         scene: &RenderScene,
         assets: &RenderAssetsSnapshot,
-        target_view: &wgpu::TextureView,
+        target_texture: &wgpu::Texture,
     ) -> Result<(), SharedTextureError> {
         self.ensure_not_acquired()?;
         self.core
-            .render_scene_to_view(device, queue, scene, assets, target_view)
+            .render_scene_to_view(device, queue, scene, assets, target_texture)
             .map_err(Self::map_core_error)
     }
 

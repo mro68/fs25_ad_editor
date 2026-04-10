@@ -5,7 +5,10 @@ use fs25_auto_drive_engine::shared::{RenderAssetsSnapshot, RenderScene};
 use std::fmt;
 
 pub(crate) const EXPORT_COLOR_FORMAT: wgpu::TextureFormat = wgpu::TextureFormat::Rgba8UnormSrgb;
+/// Sample-Count der Export-Zieltexture (DMA-BUF, Readback). Bleibt 1×.
 pub(crate) const EXPORT_SAMPLE_COUNT: u32 = 1;
+/// MSAA-Sample-Count fuer die Render-Pipelines (wie im egui-Frontend: 4×).
+const EXPORT_MSAA_SAMPLES: u32 = 4;
 
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub(crate) enum ExportCoreError {
@@ -73,6 +76,9 @@ pub(crate) struct RenderExportCore {
     layout: ExportTargetLayout,
     color_texture: wgpu::Texture,
     color_view: wgpu::TextureView,
+    /// 4× MSAA-Texture als tatsaechliches Render-Ziel. Wird per Resolve in die 1×-Export-Texture aufgeloest.
+    msaa_texture: wgpu::Texture,
+    msaa_view: wgpu::TextureView,
     last_background_asset_revision: u64,
     last_background_transform_revision: u64,
 }
@@ -87,15 +93,18 @@ impl RenderExportCore {
         let renderer = Renderer::new(
             device,
             queue,
-            RendererTargetConfig::new(EXPORT_COLOR_FORMAT, EXPORT_SAMPLE_COUNT),
+            RendererTargetConfig::new(EXPORT_COLOR_FORMAT, EXPORT_MSAA_SAMPLES),
         );
         let (color_texture, color_view) = create_color_target(device, layout.size());
+        let (msaa_texture, msaa_view) = create_msaa_target(device, layout.size());
 
         Ok(Self {
             renderer,
             layout,
             color_texture,
             color_view,
+            msaa_texture,
+            msaa_view,
             last_background_asset_revision: 0,
             last_background_transform_revision: 0,
         })
@@ -112,9 +121,12 @@ impl RenderExportCore {
         }
 
         let (color_texture, color_view) = create_color_target(device, layout.size());
+        let (msaa_texture, msaa_view) = create_msaa_target(device, layout.size());
         self.layout = layout;
         self.color_texture = color_texture;
         self.color_view = color_view;
+        self.msaa_texture = msaa_texture;
+        self.msaa_view = msaa_view;
 
         Ok(true)
     }
@@ -140,6 +152,7 @@ impl RenderExportCore {
             device,
             queue,
             scene,
+            &self.msaa_view,
             &self.color_view,
             "SharedTexture Export Pass",
         );
@@ -177,7 +190,7 @@ impl RenderExportCore {
         queue: &wgpu::Queue,
         scene: &RenderScene,
         assets: &RenderAssetsSnapshot,
-        external_view: &wgpu::TextureView,
+        external_texture: &wgpu::Texture,
     ) -> Result<(), ExportCoreError> {
         let expected_viewport = [self.layout.size()[0] as f32, self.layout.size()[1] as f32];
         if scene.viewport_size() != expected_viewport {
@@ -188,13 +201,23 @@ impl RenderExportCore {
         }
 
         self.sync_background_asset(device, queue, assets);
+        // MSAA-Resolve in interne OPTIMAL-Texture, dann Copy in die externe
+        // LINEAR-DMA-BUF-Texture. Direkt-Resolve in LINEAR schlaegt auf NVIDIA fehl.
         Self::issue_render_pass(
             &mut self.renderer,
             device,
             queue,
             scene,
-            external_view,
-            "Flutter External Texture Export Pass",
+            &self.msaa_view,
+            &self.color_view,
+            "Flutter MSAA Resolve Pass",
+        );
+        Self::copy_to_external(
+            device,
+            queue,
+            &self.color_texture,
+            external_texture,
+            self.layout.size(),
         );
         Ok(())
     }
@@ -203,12 +226,17 @@ impl RenderExportCore {
     ///
     /// Gemeinsame Render-Infrastruktur fuer [`render_scene`](Self::render_scene) und
     /// [`render_scene_to_view`](Self::render_scene_to_view).
+    /// Erstellt einen MSAA-Render-Pass mit automatischem Resolve in die 1×-Zieltexture.
+    ///
+    /// `msaa_view` ist die 4×-Multisampled-Texture (tatsaechliches Renderziel).
+    /// `resolve_view` ist die 1×-Texture (DMA-BUF oder internes Export-Target).
     fn issue_render_pass(
         renderer: &mut Renderer,
         device: &wgpu::Device,
         queue: &wgpu::Queue,
         scene: &RenderScene,
-        target_view: &wgpu::TextureView,
+        msaa_view: &wgpu::TextureView,
+        resolve_view: &wgpu::TextureView,
         label: &str,
     ) {
         let mut encoder =
@@ -217,12 +245,12 @@ impl RenderExportCore {
             let mut render_pass = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
                 label: Some(label),
                 color_attachments: &[Some(wgpu::RenderPassColorAttachment {
-                    view: target_view,
+                    view: msaa_view,
                     depth_slice: None,
-                    resolve_target: None,
+                    resolve_target: Some(resolve_view),
                     ops: wgpu::Operations {
                         load: wgpu::LoadOp::Clear(wgpu::Color::TRANSPARENT),
-                        store: wgpu::StoreOp::Store,
+                        store: wgpu::StoreOp::Discard,
                     },
                 })],
                 depth_stencil_attachment: None,
@@ -232,6 +260,28 @@ impl RenderExportCore {
             });
             renderer.render_scene(device, queue, &mut render_pass, scene);
         }
+        queue.submit(Some(encoder.finish()));
+    }
+
+    /// Kopiert die interne 1x-Farb-Texture in eine externe Texture (DMA-BUF).
+    ///
+    /// Noetig weil NVIDIA MSAA-Resolve direkt in LINEAR-Tiling nicht korrekt unterstuetzt.
+    #[cfg(feature = "flutter-linux")]
+    fn copy_to_external(
+        device: &wgpu::Device,
+        queue: &wgpu::Queue,
+        src: &wgpu::Texture,
+        dst: &wgpu::Texture,
+        size: [u32; 2],
+    ) {
+        let mut encoder = device.create_command_encoder(&wgpu::CommandEncoderDescriptor {
+            label: Some("Flutter Copy to DMA-BUF"),
+        });
+        encoder.copy_texture_to_texture(
+            src.as_image_copy(),
+            dst.as_image_copy(),
+            texture_extent(size),
+        );
         queue.submit(Some(encoder.finish()));
     }
 
@@ -310,18 +360,37 @@ fn texture_extent(size: [u32; 2]) -> wgpu::Extent3d {
     }
 }
 
+/// Erstellt die 1×-Resolve-/Export-Zieltexture.
 fn create_color_target(
     device: &wgpu::Device,
     size: [u32; 2],
 ) -> (wgpu::Texture, wgpu::TextureView) {
     let texture = device.create_texture(&wgpu::TextureDescriptor {
-        label: Some("SharedTexture Export Target"),
+        label: Some("SharedTexture Export Target (1x resolve)"),
         size: texture_extent(size),
         mip_level_count: 1,
         sample_count: EXPORT_SAMPLE_COUNT,
         dimension: wgpu::TextureDimension::D2,
         format: EXPORT_COLOR_FORMAT,
-        usage: wgpu::TextureUsages::RENDER_ATTACHMENT | wgpu::TextureUsages::TEXTURE_BINDING,
+        usage: wgpu::TextureUsages::RENDER_ATTACHMENT
+            | wgpu::TextureUsages::TEXTURE_BINDING
+            | wgpu::TextureUsages::COPY_SRC,
+        view_formats: &[],
+    });
+    let view = texture.create_view(&wgpu::TextureViewDescriptor::default());
+    (texture, view)
+}
+
+/// Erstellt die 4×-MSAA-Texture als tatsaechliches Renderziel.
+fn create_msaa_target(device: &wgpu::Device, size: [u32; 2]) -> (wgpu::Texture, wgpu::TextureView) {
+    let texture = device.create_texture(&wgpu::TextureDescriptor {
+        label: Some("SharedTexture MSAA Target (4x)"),
+        size: texture_extent(size),
+        mip_level_count: 1,
+        sample_count: EXPORT_MSAA_SAMPLES,
+        dimension: wgpu::TextureDimension::D2,
+        format: EXPORT_COLOR_FORMAT,
+        usage: wgpu::TextureUsages::RENDER_ATTACHMENT,
         view_formats: &[],
     });
     let view = texture.create_view(&wgpu::TextureViewDescriptor::default());

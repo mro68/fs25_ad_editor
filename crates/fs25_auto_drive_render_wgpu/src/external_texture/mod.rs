@@ -91,6 +91,9 @@ pub trait ExternalTextureExport {
     /// Gibt die `wgpu::TextureView` zum Rendern zurueck.
     fn texture_view(&self) -> &wgpu::TextureView;
 
+    /// Gibt die zugrundeliegende `wgpu::Texture` zurueck (fuer Copy-Operationen).
+    fn texture(&self) -> &wgpu::Texture;
+
     /// Passt die Texturgroesse an und erzeugt intern eine neue Texture.
     ///
     /// # Fehler

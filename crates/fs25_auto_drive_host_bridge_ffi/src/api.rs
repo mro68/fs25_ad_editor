@@ -11,7 +11,7 @@ use anyhow::Result;
 pub use crate::flutter_api::FlutterSessionHandle;
 
 /// Erzeugt eine neue Flutter-Session fuer die FRB-Control-Plane.
-pub fn flutter_session_new() -> Box<FlutterSessionHandle> {
+pub fn flutter_session_new() -> FlutterSessionHandle {
     crate::flutter_api::flutter_session_new()
 }
 
@@ -72,4 +72,21 @@ pub fn flutter_session_viewport_geometry_json(
         viewport_width,
         viewport_height,
     )
+}
+
+/// Klont den Arc der Session-Instanz fuer den GPU-Hot-Path.
+///
+/// Gibt einen rohen Zeiger als i64 zurueck. Der Aufrufer muss ihn exakt einmal konsumieren:
+/// Entweder per `fs25ad_gpu_runtime_new_with_shared_session_arc` (konsumiert ihn)
+/// oder per `flutter_session_release_shared_arc_raw` (gibt ihn frei).
+pub fn flutter_session_acquire_shared_arc_raw(handle: &FlutterSessionHandle) -> i64 {
+    crate::flutter_api::flutter_session_acquire_shared_arc_raw(handle)
+}
+
+/// Gibt den geklonten Arc-Zeiger frei.
+///
+/// Nur aufrufen wenn der Wert NICHT an `fs25ad_gpu_runtime_new_with_shared_session_arc`
+/// uebergeben wurde.
+pub fn flutter_session_release_shared_arc_raw(raw: i64) {
+    crate::flutter_api::flutter_session_release_shared_arc_raw(raw)
 }
