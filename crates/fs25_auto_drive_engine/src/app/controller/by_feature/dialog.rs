@@ -48,6 +48,10 @@ pub(super) fn handle(state: &mut AppState, command: AppCommand) -> anyhow::Resul
             handlers::dialog::close_zip_browser(state);
             Ok(())
         }
+        AppCommand::OpenOverviewSourceDialog => {
+            handlers::dialog::open_overview_source_dialog(state);
+            Ok(())
+        }
         AppCommand::RequestOverviewDialog => {
             handlers::dialog::request_overview_dialog(state);
             Ok(())

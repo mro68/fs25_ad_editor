@@ -310,6 +310,7 @@
   - [x] Crate `fs25_map_overview` mit GRLE/GDM-Decoder (vendor grleconvert)
   - [x] Weight-Map-Compositing, Hillshade, Farmland-Grenzen/-IDs, POI-Labels
   - [x] Editor-Integration: Menueeintrag → ZIP-Dialog → Background-Map
+  - [x] Wiederverwendbarer Overview-Source-Dialog fuer Post-Load-Auto-Detection und Datei-Menue mit manueller ZIP-Auswahl
   - [x] Konfigurierbare Layer-Optionen (Hillshade, Farmlands, IDs, POIs, Legende)
   - [x] Persistent gespeicherte Standard-Layer in EditorOptions
   - [x] Auto-Detection: Heightmap und Map-Mod-ZIP nach XML-Laden (Umlaut-tolerantes Fuzzy-Matching)

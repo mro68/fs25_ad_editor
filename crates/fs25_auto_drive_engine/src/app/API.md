@@ -333,10 +333,18 @@ pub struct OverviewOptionsDialogState {
     pub visible: bool,
     pub zip_path: String,
     pub layers: OverviewLayerOptions,
+    pub field_detection_source: FieldDetectionSource,
+    pub available_sources: Vec<FieldDetectionSource>,
+}
+
+pub enum OverviewSourceContext {
+    PostLoadDetected,
+    ManualMenu,
 }
 
 pub struct PostLoadDialogState {
     pub visible: bool,
+    pub context: OverviewSourceContext,
     pub heightmap_set: bool,
     pub heightmap_path: Option<String>,
     pub overview_loaded: bool,
@@ -348,6 +356,7 @@ pub struct PostLoadDialogState {
 pub struct SaveOverviewDialogState {
     pub visible: bool,
     pub target_path: String,
+    pub is_overwrite: bool,
 }
 
 pub struct GroupSettingsPopupState {
@@ -690,12 +699,12 @@ pub enum AppIntent {
 
     // Uebersichtskarte
     GenerateOverviewRequested,
+    OverviewZipBrowseRequested,
     GenerateOverviewFromZip { path: String },
     OverviewOptionsConfirmed,
     OverviewOptionsCancelled,
 
-    // Post-Load-Dialog (Auto-Detection)
-    PostLoadGenerateOverview { zip_path: String },
+    // Overview-Source-Dialog
     PostLoadDialogDismissed,
 
     // Map-Marker
@@ -886,12 +895,13 @@ pub enum AppCommand {
     CloseZipBrowser,
 
     // Uebersichtskarte
+    OpenOverviewSourceDialog,
     RequestOverviewDialog,
     OpenOverviewOptionsDialog { path: String },
     GenerateOverviewWithOptions,
     CloseOverviewOptionsDialog,
 
-    // Post-Load-Dialog
+    // Overview-Source-Dialog
     DismissPostLoadDialog,
 
     // Marker

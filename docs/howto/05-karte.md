@@ -46,6 +46,7 @@ Wenn eine AutoDrive-XML geladen wird, prueft der Editor fuer Hintergrunddaten au
 3. passende Map-Mod-ZIPs im uebergeordneten `mods/`-Verzeichnis, falls eine neue Uebersichtskarte erzeugt werden soll
 
 Wenn etwas gefunden wird, erscheint der Dialog **Nach dem Laden erkannt**. Er bestaetigt automatisch geladene Assets und bietet bei passenden ZIPs direkt die Generierung einer neuen Uebersichtskarte an.
+Falls kein passender ZIP erkannt wurde oder der Workflow manuell gestartet wird, kann derselbe Dialog auch eine ZIP-Datei ueber **ZIP-Datei auswaehlen** oeffnen.
 
 ### Positionierung
 
@@ -76,8 +77,8 @@ Eine installierte FS25-Map-Entpackstruktur mit:
 
 Es gibt zwei Wege:
 
-1. **Datei -> Uebersichtskarte generieren** und eine FS25-Map-ZIP waehlen.
-2. Nach dem Oeffnen einer XML im Dialog **Nach dem Laden erkannt** auf **Uebersichtskarte generieren** klicken, wenn ein passender Mod-ZIP gefunden wurde.
+1. **Datei -> Uebersichtskarte generieren** und im Dialog **ZIP-Datei auswaehlen** eine FS25-Map-ZIP waehlen.
+2. Nach dem Oeffnen einer XML im Dialog **Nach dem Laden erkannt** entweder einen gefundenen Mod-ZIP direkt ueber **Uebersichtskarte generieren** uebernehmen oder ueber **ZIP-Datei auswaehlen** manuell waehlen.
 3. Im Dialog **Uebersichtskarte - Layer-Optionen** die sichtbaren Layer und die Quelle fuer Feldpolygone festlegen.
 
 ### Verarbeitungsschritte
