@@ -1,5 +1,7 @@
-use fs25_auto_drive_editor::app::ui_contract::DialogRequest;
-use fs25_auto_drive_editor::app::{AppController, AppIntent, AppState, GroupRecord};
+use fs25_auto_drive_editor::app::ui_contract::{DialogRequest, DialogRequestKind};
+use fs25_auto_drive_editor::app::{
+    AppController, AppIntent, AppState, GroupRecord, OverviewSourceContext,
+};
 
 fn make_manual_group_record(id: u64) -> GroupRecord {
     GroupRecord {
@@ -97,4 +99,44 @@ fn dissolve_group_confirmed_removes_record() {
         .expect("DissolveGroupConfirmed sollte den Record entfernen");
 
     assert!(state.group_registry.get(record_id).is_none());
+}
+
+#[test]
+fn generate_overview_requested_opens_manual_source_dialog() {
+    let mut controller = AppController::new();
+    let mut state = AppState::new();
+
+    controller
+        .handle_intent(&mut state, AppIntent::GenerateOverviewRequested)
+        .expect("GenerateOverviewRequested sollte den Source-Dialog oeffnen");
+
+    assert!(state.ui.post_load_dialog.visible);
+    assert_eq!(
+        state.ui.post_load_dialog.context,
+        OverviewSourceContext::ManualMenu
+    );
+    assert!(state.ui.post_load_dialog.matching_zips.is_empty());
+    assert!(!state.ui.post_load_dialog.heightmap_set);
+    assert!(!state.ui.post_load_dialog.overview_loaded);
+    assert!(state.ui.post_load_dialog.map_name.is_empty());
+}
+
+#[test]
+fn overview_zip_browse_requested_queues_native_picker() {
+    let mut controller = AppController::new();
+    let mut state = AppState::new();
+
+    controller
+        .handle_intent(&mut state, AppIntent::OverviewZipBrowseRequested)
+        .expect("OverviewZipBrowseRequested sollte den nativen Picker anfordern");
+
+    assert!(state.ui.dialog_requests.iter().any(|request| {
+        matches!(
+            request,
+            DialogRequest::PickPath {
+                kind: DialogRequestKind::OverviewZip,
+                ..
+            }
+        )
+    }));
 }

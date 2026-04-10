@@ -1,5 +1,6 @@
 //! Handler fuer Datei-Operationen (Oeffnen, Speichern, Heightmap).
 
+use super::dialog;
 use crate::app::use_cases;
 use crate::app::AppState;
 use std::path::Path;
@@ -76,13 +77,14 @@ fn run_post_load_detection(state: &mut AppState, xml_path: &str) {
     // Dialog nur anzeigen wenn etwas erkannt wurde
     let has_zips = !result.matching_zips.is_empty();
     if heightmap_set || has_zips || overview_loaded {
-        state.ui.post_load_dialog.visible = true;
-        state.ui.post_load_dialog.heightmap_set = heightmap_set;
-        state.ui.post_load_dialog.heightmap_path = heightmap_display;
-        state.ui.post_load_dialog.overview_loaded = overview_loaded;
-        state.ui.post_load_dialog.matching_zips = result.matching_zips;
-        state.ui.post_load_dialog.selected_zip_index = 0;
-        state.ui.post_load_dialog.map_name = map_name.unwrap_or_default();
+        dialog::open_detected_overview_source_dialog(
+            state,
+            heightmap_set,
+            heightmap_display,
+            overview_loaded,
+            result.matching_zips,
+            map_name.unwrap_or_default(),
+        );
     }
 }
 

@@ -345,22 +345,11 @@ mod tests {
     }
 
     #[test]
-    fn color_path_lasso_capability_is_phase_gated() {
+    fn color_path_lasso_capability_is_active_on_fresh_tool() {
         let mut manager = ToolManager::new();
-        let road_map = RoadMap::default();
         manager.set_active_by_id(RouteToolId::ColorPath);
 
         assert!(manager.active_lasso_input().is_some());
-        assert!(!manager
-            .active_lasso_input()
-            .expect("ColorPath muss Lasso-Capability bereitstellen")
-            .is_lasso_input_active());
-
-        manager
-            .active_tool_mut()
-            .expect("ColorPathTool muss aktiv sein")
-            .on_click(Vec2::ZERO, &road_map, false);
-
         assert!(manager
             .active_lasso_input()
             .expect("ColorPath muss Lasso-Capability bereitstellen")

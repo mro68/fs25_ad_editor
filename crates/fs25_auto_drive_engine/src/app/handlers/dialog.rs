@@ -3,9 +3,9 @@
 use crate::app::ui_contract::{DialogRequest, DialogRequestKind};
 use crate::app::use_cases;
 use crate::app::AppState;
-use crate::shared::EditorOptions;
+use crate::shared::{EditorOptions, OverviewSourceContext, PostLoadDialogState};
 use fs25_map_overview::FieldDetectionSource;
-use std::path::Path;
+use std::path::{Path, PathBuf};
 
 /// Markiert die Anwendung zum Beenden im naechsten Frame.
 pub fn request_exit(state: &mut AppState) {
@@ -97,7 +97,58 @@ pub fn close_zip_browser(state: &mut AppState) {
     state.ui.zip_browser = None;
 }
 
-/// Oeffnet den Uebersichtskarten-ZIP-Auswahl-Dialog.
+fn build_overview_source_dialog_state(
+    context: OverviewSourceContext,
+    heightmap_set: bool,
+    heightmap_path: Option<String>,
+    overview_loaded: bool,
+    matching_zips: Vec<PathBuf>,
+    map_name: String,
+) -> PostLoadDialogState {
+    PostLoadDialogState {
+        visible: true,
+        context,
+        heightmap_set,
+        heightmap_path,
+        overview_loaded,
+        matching_zips,
+        selected_zip_index: 0,
+        map_name,
+    }
+}
+
+/// Oeffnet den wiederverwendbaren Overview-Source-Dialog fuer den Menue-Einstieg.
+pub fn open_overview_source_dialog(state: &mut AppState) {
+    state.ui.post_load_dialog = build_overview_source_dialog_state(
+        OverviewSourceContext::ManualMenu,
+        false,
+        None,
+        false,
+        Vec::new(),
+        String::new(),
+    );
+}
+
+/// Oeffnet den Overview-Source-Dialog mit Auto-Detection-Ergebnissen nach dem Laden.
+pub fn open_detected_overview_source_dialog(
+    state: &mut AppState,
+    heightmap_set: bool,
+    heightmap_path: Option<String>,
+    overview_loaded: bool,
+    matching_zips: Vec<PathBuf>,
+    map_name: String,
+) {
+    state.ui.post_load_dialog = build_overview_source_dialog_state(
+        OverviewSourceContext::PostLoadDetected,
+        heightmap_set,
+        heightmap_path,
+        overview_loaded,
+        matching_zips,
+        map_name,
+    );
+}
+
+/// Oeffnet den nativen Uebersichtskarten-ZIP-Auswahl-Dialog.
 pub fn request_overview_dialog(state: &mut AppState) {
     state
         .ui
@@ -140,7 +191,7 @@ pub fn close_overview_options_dialog(state: &mut AppState) {
     state.ui.overview_options_dialog.visible = false;
 }
 
-/// Schliesst den Post-Load-Dialog (Heightmap/ZIP-Erkennung).
+/// Schliesst den wiederverwendbaren Overview-Source-Dialog.
 pub fn dismiss_post_load_dialog(state: &mut AppState) {
     state.ui.post_load_dialog = Default::default();
 }

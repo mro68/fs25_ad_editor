@@ -36,6 +36,7 @@ Markiert die Anwendung zum Beenden im nächsten Frame. Setzt `.should_exit = tru
 ```rust
 pub fn request_heightmap_dialog(state: &mut AppState)
 pub fn request_background_map_dialog(state: &mut AppState)
+pub fn open_overview_source_dialog(state: &mut AppState)
 pub fn request_overview_dialog(state: &mut AppState)
 pub fn open_trace_all_fields_dialog(state: &mut AppState)
 pub fn close_trace_all_fields_dialog(state: &mut AppState)
@@ -43,7 +44,7 @@ pub fn request_curseplay_import_dialog(state: &mut AppState)
 pub fn request_curseplay_export_dialog(state: &mut AppState)
 ```
 
-Oeffnet die Datei- und Feature-Dialoge fuer Heightmap, Background-Map, Uebersichtskarten-ZIP, Batch-Feldnachzeichnen und Curseplay-Import/Export.
+Oeffnet die Datei- und Feature-Dialoge fuer Heightmap, Background-Map, den wiederverwendbaren Overview-Source-Dialog, den nativen Uebersichtskarten-ZIP-Picker, Batch-Feldnachzeichnen und Curseplay-Import/Export.
 
 ```rust
 pub fn open_options_dialog(state: &mut AppState)
@@ -51,10 +52,18 @@ pub fn close_options_dialog(state: &mut AppState)
 pub fn apply_options(state: &mut AppState, options: EditorOptions) -> anyhow::Result<()>
 pub fn reset_options(state: &mut AppState) -> anyhow::Result<()>
 pub fn toggle_command_palette(state: &mut AppState)
+pub fn open_detected_overview_source_dialog(
+    state: &mut AppState,
+    heightmap_set: bool,
+    heightmap_path: Option<String>,
+    overview_loaded: bool,
+    matching_zips: Vec<PathBuf>,
+    map_name: String,
+)
 pub fn open_overview_options_dialog(state: &mut AppState, zip_path: String)
 ```
 
-Verwaltet app-weite Dialoge und Overlay-Zustaende. `apply_options()` validiert und persistiert neue Optionen; `toggle_command_palette()` schaltet die Palette um; `open_overview_options_dialog()` bereitet den ZIP-basierten Overview-Flow vor.
+Verwaltet app-weite Dialoge und Overlay-Zustaende. `apply_options()` validiert und persistiert neue Optionen; `toggle_command_palette()` schaltet die Palette um; `open_detected_overview_source_dialog()` initialisiert den Source-Dialog fuer den Post-Load-Fall vollstaendig; `open_overview_options_dialog()` bereitet den ZIP-basierten Overview-Flow vor.
 
 ```rust
 pub fn dismiss_heightmap_warning(state: &mut AppState)

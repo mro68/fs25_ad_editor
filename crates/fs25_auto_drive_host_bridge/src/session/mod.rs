@@ -690,7 +690,7 @@ mod tests {
 
     use fs25_auto_drive_engine::app::{
         AppIntent, Connection, ConnectionDirection, ConnectionPriority, FloatingMenuKind, MapNode,
-        NodeFlag, RoadMap,
+        NodeFlag, OverviewSourceContext, RoadMap,
     };
     use fs25_auto_drive_engine::shared::OverviewLayerOptions;
     use glam::Vec2;
@@ -1070,6 +1070,37 @@ mod tests {
         assert_eq!(
             session.app_state().ui.overview_options_dialog.layers,
             expected_layers
+        );
+    }
+
+    #[test]
+    fn generate_overview_from_zip_closes_source_dialog_and_opens_options_dialog() {
+        let mut session = HostBridgeSession::new();
+        let zip_path = "/tmp/host_bridge_overview_source.zip".to_string();
+
+        session
+            .apply_intent(AppIntent::GenerateOverviewRequested)
+            .expect("Source-Dialog muss geoeffnet werden");
+
+        assert!(session.chrome_state.post_load_dialog.visible);
+        assert_eq!(
+            session.chrome_state.post_load_dialog.context,
+            OverviewSourceContext::ManualMenu
+        );
+
+        session
+            .apply_intent(AppIntent::GenerateOverviewFromZip {
+                path: zip_path.clone(),
+            })
+            .expect("ZIP-Auswahl muss den Options-Dialog oeffnen");
+
+        assert!(!session.chrome_state.post_load_dialog.visible);
+        assert!(!session.app_state().ui.post_load_dialog.visible);
+        assert!(session.chrome_state.overview_options_dialog.visible);
+        assert!(session.app_state().ui.overview_options_dialog.visible);
+        assert_eq!(
+            session.app_state().ui.overview_options_dialog.zip_path,
+            zip_path
         );
     }
 

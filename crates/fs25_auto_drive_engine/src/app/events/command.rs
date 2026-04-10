@@ -13,7 +13,7 @@ mod tests {
     #[test]
     fn classifies_dialog_group_and_editing_commands() {
         assert_eq!(
-            AppCommand::OpenTraceAllFieldsDialog.feature(),
+            AppCommand::OpenOverviewSourceDialog.feature(),
             AppEventFeature::Dialog
         );
         assert_eq!(

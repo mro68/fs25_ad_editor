@@ -6,7 +6,7 @@
 
 1. **Datei oeffnen** mit **`Ctrl+O`**.
 2. Im Dialog **Nach dem Laden erkannt** pruefen, ob Heightmap und Hintergrundbild automatisch gesetzt wurden.
-3. Wenn ein passender Map-Mod-ZIP angeboten wird, **Uebersichtskarte generieren** waehlen, Layer einstellen und die erzeugte Karte bei Bedarf als `overview.png` speichern.
+3. Wenn ein passender Map-Mod-ZIP angeboten wird, **Uebersichtskarte generieren** waehlen. Falls kein Treffer passt, im selben Dialog **ZIP-Datei auswaehlen** verwenden, dann Layer einstellen und die erzeugte Karte bei Bedarf als `overview.png` speichern.
 4. Falls noetig zusaetzlich eine Hintergrundkarte ueber **Ansicht -> Hintergrund laden...** laden.
 5. Im linken Panel Richtung und Strassenart fuer neue Verbindungen voreinstellen.
 
