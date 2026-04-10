@@ -252,7 +252,9 @@ pub enum AppCommand {
     },
     /// ZIP-Browser-Dialog schliessen
     CloseZipBrowser,
-    /// Uebersichtskarten-ZIP-Dialog anfordern
+    /// Wiederverwendbaren Overview-Source-Dialog oeffnen
+    OpenOverviewSourceDialog,
+    /// Nativen Uebersichtskarten-ZIP-Dialog anfordern
     RequestOverviewDialog,
     /// Uebersichtskarten-Options-Dialog mit ZIP-Pfad oeffnen
     OpenOverviewOptionsDialog { path: String },
@@ -441,6 +443,7 @@ impl AppCommand {
             | Self::ToggleCommandPalette
             | Self::DismissDeduplicateDialog
             | Self::CloseZipBrowser
+            | Self::OpenOverviewSourceDialog
             | Self::RequestOverviewDialog
             | Self::OpenOverviewOptionsDialog { .. }
             | Self::CloseOverviewOptionsDialog

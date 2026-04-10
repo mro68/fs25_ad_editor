@@ -8,6 +8,16 @@ use fs25_map_overview::FieldDetectionSource;
 use glam::Vec2;
 use std::path::PathBuf;
 
+/// Kontext des wiederverwendbaren Overview-Source-Dialogs.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub enum OverviewSourceContext {
+    /// Dialog wurde nach dem Laden einer XML mit Auto-Detection geoeffnet.
+    PostLoadDetected,
+    /// Dialog wurde manuell ueber das Datei-Menue geoeffnet.
+    #[default]
+    ManualMenu,
+}
+
 /// Zustand des Marker-Bearbeiten-Dialogs
 #[derive(Default, Clone)]
 pub struct MarkerDialogState {
@@ -86,11 +96,17 @@ impl OverviewOptionsDialogState {
     }
 }
 
-/// Zustand des Post-Load-Dialogs (automatische Erkennung nach XML-Laden).
+/// Zustand des wiederverwendbaren Overview-Source-Dialogs.
+///
+/// Der Typ behaelt aus Kompatibilitaetsgruenden seinen historischen Namen,
+/// wird aber sowohl fuer den Post-Load-Fall als auch fuer den manuellen
+/// Einstieg ueber das Datei-Menue verwendet.
 #[derive(Default, Clone)]
 pub struct PostLoadDialogState {
     /// Ob der Dialog sichtbar ist
     pub visible: bool,
+    /// Kontext, aus dem der Dialog geoeffnet wurde
+    pub context: OverviewSourceContext,
     /// Heightmap wurde automatisch gesetzt
     pub heightmap_set: bool,
     /// Pfad zur automatisch gesetzten Heightmap
@@ -106,10 +122,11 @@ pub struct PostLoadDialogState {
 }
 
 impl PostLoadDialogState {
-    /// Erstellt einen geschlossenen Post-Load-Dialog-Zustand.
+    /// Erstellt einen geschlossenen Overview-Source-Dialog-Zustand.
     pub fn new() -> Self {
         Self {
             visible: false,
+            context: OverviewSourceContext::ManualMenu,
             heightmap_set: false,
             heightmap_path: None,
             overview_loaded: false,

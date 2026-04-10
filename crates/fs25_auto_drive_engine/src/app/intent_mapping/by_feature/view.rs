@@ -39,16 +39,14 @@ pub(super) fn map(state: &AppState, intent: AppIntent) -> Vec<AppCommand> {
             crop_size: None,
         }],
         AppIntent::ZipBrowserCancelled => vec![AppCommand::CloseZipBrowser],
-        AppIntent::GenerateOverviewRequested => vec![AppCommand::RequestOverviewDialog],
-        AppIntent::GenerateOverviewFromZip { path } => {
-            vec![AppCommand::OpenOverviewOptionsDialog { path }]
-        }
+        AppIntent::GenerateOverviewRequested => vec![AppCommand::OpenOverviewSourceDialog],
+        AppIntent::OverviewZipBrowseRequested => vec![AppCommand::RequestOverviewDialog],
+        AppIntent::GenerateOverviewFromZip { path } => vec![
+            AppCommand::DismissPostLoadDialog,
+            AppCommand::OpenOverviewOptionsDialog { path },
+        ],
         AppIntent::OverviewOptionsConfirmed => vec![AppCommand::GenerateOverviewWithOptions],
         AppIntent::OverviewOptionsCancelled => vec![AppCommand::CloseOverviewOptionsDialog],
-        AppIntent::PostLoadGenerateOverview { zip_path } => vec![
-            AppCommand::DismissPostLoadDialog,
-            AppCommand::OpenOverviewOptionsDialog { path: zip_path },
-        ],
         AppIntent::PostLoadDialogDismissed => vec![AppCommand::DismissPostLoadDialog],
         AppIntent::SaveBackgroundAsOverviewConfirmed => {
             let path = state.ui.save_overview_dialog.target_path.clone();

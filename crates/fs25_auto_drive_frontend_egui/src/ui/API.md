@@ -41,7 +41,7 @@ Das `ui`-Modul enthält egui-UI-Komponenten (Menüs, Statusbar, Input-Handling, 
   - `marker_dialog.rs` — Marker erstellen/bearbeiten
   - `dedup_dialog.rs` — Duplikat-Bestätigungsdialog
   - `zip_browser.rs` — ZIP-Browser für Background-Map-Auswahl
-  - `post_load_dialog.rs` — Post-Load-Dialog (Auto-Erkennung von Heightmap/ZIP/Overview)
+  - `post_load_dialog.rs` — wiederverwendbarer Overview-Source-Dialog (Post-Load + Datei-Menue)
   - `save_overview_dialog.rs` — Dialog: Hintergrundbild als overview.jpg speichern
   - `confirm_dissolve_dialog.rs` — Bestätigungsdialog vor dem Auflösen einer Segment-Gruppe
 - `group_overlay.rs` — Segment-Lock-Icons aus host-neutralen Overlay-Snapshots (`GroupOverlayEvent`, `render_group_overlays()`)
@@ -828,15 +828,19 @@ pub fn show_zip_browser(ctx: &egui::Context, ui_state: &mut UiState) -> Vec<AppI
 
 ### `show_post_load_dialog`
 
-Zeigt den Post-Load-Dialog nach dem Laden einer XML-Datei. Informiert über automatisch erkannte Heightmap und bietet die Möglichkeit, eine Übersichtskarte aus einem passenden Map-Mod-ZIP zu generieren.
+Zeigt den wiederverwendbaren Overview-Source-Dialog. Im Post-Load-Kontext informiert er ueber automatisch erkannte Heightmap/Hintergrunddaten und passende ZIPs; im Menue-Kontext dient er als Einstieg fuer die manuelle ZIP-Auswahl.
 
 ```rust
-pub fn show_post_load_dialog(ctx: &egui::Context, ui_state: &mut UiState) -> Vec<AppIntent>
+pub fn show_post_load_dialog(
+    ctx: &egui::Context,
+    ui_state: &mut HostLocalDialogState,
+) -> Vec<AppIntent>
 ```
 
 **Emittierte Intents:**
 
-- `AppIntent::PostLoadGenerateOverview { zip_path }` — Benutzer will Übersichtskarte generieren
+- `AppIntent::GenerateOverviewFromZip { path }` — Benutzer uebernimmt ein angebotenes ZIP direkt
+- `AppIntent::OverviewZipBrowseRequested` — Benutzer oeffnet den nativen ZIP-Picker
 - `AppIntent::PostLoadDialogDismissed` — Benutzer schließt den Dialog
 
 **Layout:**
@@ -845,13 +849,18 @@ pub fn show_post_load_dialog(ctx: &egui::Context, ui_state: &mut UiState) -> Vec
 [Titel: "Nach dem Laden erkannt"]
   ✓ Heightmap automatisch geladen
      terrain.heightmap.png
-  Karte: "Höflingen"
+  Karte: "Hoeflingen"
   Passender Map-Mod gefunden:
      📦 FS25_Hoeflingen.zip
-  [Übersichtskarte generieren]  [Schließen]
+  [Uebersichtskarte generieren]  [ZIP-Datei auswaehlen]  [Schliessen]
+
+[Titel: "Uebersichtskarte generieren"]
+  Waehlen Sie eine FS25-Map-Mod-ZIP aus, um die
+  Uebersichtskarte im naechsten Schritt zu konfigurieren.
+  [ZIP-Datei auswaehlen]  [Schliessen]
 ```
 
-Bei mehreren ZIPs werden RadioButtons zur Auswahl angezeigt.
+Bei mehreren ZIPs werden RadioButtons zur Auswahl angezeigt. Im Menue-Kontext bleiben die Auto-Detection-Hinweise verborgen.
 
 ---
 
