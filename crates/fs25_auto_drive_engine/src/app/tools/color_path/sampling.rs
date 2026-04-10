@@ -77,6 +77,26 @@ pub(crate) fn pixel_to_world_f32(
 // Farb-Sampling
 // ---------------------------------------------------------------------------
 
+/// Liest die Farbe an einer Welt-Position aus dem Hintergrundbild.
+pub(crate) fn sample_color_at_world(
+    world_pos: Vec2,
+    image: &DynamicImage,
+    map_size: f32,
+) -> Option<[u8; 3]> {
+    let (img_w, img_h) = (image.width(), image.height());
+    if img_w == 0 || img_h == 0 {
+        return None;
+    }
+
+    let (px, py) = world_to_pixel(world_pos, map_size, img_w, img_h);
+    if px < img_w && py < img_h {
+        let pixel = image.get_pixel(px, py);
+        Some([pixel[0], pixel[1], pixel[2]])
+    } else {
+        None
+    }
+}
+
 /// Sammelt alle Pixelfarben innerhalb eines Lasso-Polygons.
 ///
 /// Berechnet die Bounding-Box des Polygons, prueft fuer jeden Pixel

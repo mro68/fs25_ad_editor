@@ -309,7 +309,7 @@ Leitet ein Wegnetz direkt aus Farbstrukturen der Hintergrundkarte ab.
 **Workflow:**
 1. Eine Hintergrundkarte laden.
 2. **Farb-Pfad erkennen** aktivieren.
-3. Mit **`Alt+Drag`** eine oder mehrere Lasso-Regionen fuer Farbproben zeichnen.
+3. Das Tool startet sofort im Sampling: per Klick einzelne Farben uebernehmen oder mit **`Alt+Drag`** eine oder mehrere Lasso-Regionen fuer Farbproben zeichnen.
 4. Im Tool-Panel die Berechnung starten.
 5. Netzstatistik und Anschlussmodus pruefen.
 6. Mit **`Enter`** das Netz einfuegen.
@@ -323,7 +323,8 @@ Leitet ein Wegnetz direkt aus Farbstrukturen der Hintergrundkarte ab.
 - Anschlussmodus an bestehende Verbindungen.
 
 **Tipps:**
-- Waehlen Sie mehrere Lasso-Regionen, wenn der Zielpfad aus mehreren aehnlichen Farbinseln besteht.
+- Kombinieren Sie Einzelklicks und mehrere Lasso-Regionen, wenn der Zielpfad aus mehreren aehnlichen Farbinseln besteht.
+- Ein Klick in der Preview fuegt weitere Farbproben hinzu und bringt das Tool zurueck in den Sampling-Modus.
 - Das Ergebnis ist nicht ueber **Tool bearbeiten** rekonstruierbar; fuer andere Parameter muss das Sampling erneut gestartet werden.
 
 ---

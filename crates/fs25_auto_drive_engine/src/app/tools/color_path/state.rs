@@ -10,9 +10,9 @@ use std::sync::Arc;
 /// Aktuelle Phase des ColorPathTool.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum ColorPathPhase {
-    /// Warten auf Nutzerinteraktion
+    /// Leerer Grundzustand ohne aktives Sampling.
     Idle,
-    /// User sampelt Farben per Alt+Lasso
+    /// User sampelt Farben per Klick oder Alt+Lasso.
     Sampling,
     /// Teilnetz berechnet, wird als Vorschau angezeigt
     Preview,
@@ -45,11 +45,11 @@ pub(crate) struct PreparedSegment {
 pub(super) struct SamplingInput {
     /// Alle Lasso-Polygone in Weltkoordinaten.
     pub lasso_regions: Vec<Vec<Vec2>>,
-    /// Gesammelte RGB-Farben aus den Lasso-Regionen.
+    /// Gesammelte RGB-Farben aus Klicks und Lasso-Regionen.
     pub sampled_colors: Vec<[u8; 3]>,
     /// Berechneter RGB-Mittelwert aller Samples fuer die UI.
     pub avg_color: Option<[u8; 3]>,
-    /// Weltposition des ersten Lasso-Klickpunkts.
+    /// Weltposition des ersten Sampling-Klicks als Flood-Fill-Seed.
     pub lasso_start_world: Option<Vec2>,
 }
 
@@ -254,7 +254,7 @@ impl Default for ColorPathConfig {
 
 /// Tool zur automatischen Wege-Erkennung anhand der Farbe im Hintergrundbild.
 ///
-/// Der User sampelt per Alt+Lasso Farbwerte, das Tool baut daraus eine
+/// Der User sampelt per Klick oder Alt+Lasso Farbwerte, das Tool baut daraus eine
 /// Binaermaske, skelettiert via Zhang-Suen und erzeugt daraus ein Waypoint-Netz.
 #[derive(Clone)]
 pub struct ColorPathTool {
@@ -295,10 +295,10 @@ impl Default for ColorPathTool {
 }
 
 impl ColorPathTool {
-    /// Erstellt ein neues ColorPathTool mit Standardwerten.
+    /// Erstellt ein neues ColorPathTool mit Standardwerten und aktivem Sampling.
     pub fn new() -> Self {
         Self {
-            phase: ColorPathPhase::Idle,
+            phase: ColorPathPhase::Sampling,
             config: ColorPathConfig::default(),
             sampling: SamplingInput::default(),
             matching: MatchingSpec::default(),
