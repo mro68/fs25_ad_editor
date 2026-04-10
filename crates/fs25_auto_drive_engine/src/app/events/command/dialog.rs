@@ -24,7 +24,9 @@ macro_rules! dialog_command_variants {
         ToggleCommandPalette,
         /// ZIP-Browser-Dialog schliessen
         CloseZipBrowser,
-        /// Uebersichtskarten-ZIP-Dialog anfordern
+        /// Wiederverwendbaren Overview-Source-Dialog oeffnen
+        OpenOverviewSourceDialog,
+        /// Nativen Uebersichtskarten-ZIP-Dialog anfordern
         RequestOverviewDialog,
         /// Uebersichtskarten-Options-Dialog mit ZIP-Pfad oeffnen
         OpenOverviewOptionsDialog { path: String },
@@ -61,6 +63,7 @@ macro_rules! dialog_command_feature_arms {
         | Self::ToggleCommandPalette
         | Self::DismissDeduplicateDialog
         | Self::CloseZipBrowser
+        | Self::OpenOverviewSourceDialog
         | Self::RequestOverviewDialog
         | Self::OpenOverviewOptionsDialog { .. }
         | Self::CloseOverviewOptionsDialog

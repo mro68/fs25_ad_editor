@@ -29,7 +29,7 @@ mod tests {
     #[test]
     fn classifies_view_and_route_tool_intents() {
         assert_eq!(
-            AppIntent::GenerateOverviewRequested.feature(),
+            AppIntent::OverviewZipBrowseRequested.feature(),
             AppEventFeature::View
         );
         assert_eq!(

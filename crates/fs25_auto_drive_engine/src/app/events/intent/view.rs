@@ -39,17 +39,17 @@ macro_rules! view_intent_variants {
         },
         /// ZIP-Browser geschlossen (ohne Auswahl)
         ZipBrowserCancelled,
-        /// Uebersichtskarte aus Map-Mod-ZIP generieren (oeffnet Dateidialog)
+        /// Uebersichtskarten-Source-Dialog oeffnen
         GenerateOverviewRequested,
-        /// ZIP fuer Uebersichtskarte gewaehlt → Options-Dialog anzeigen
+        /// Im Overview-Source-Dialog den nativen ZIP-Picker oeffnen
+        OverviewZipBrowseRequested,
+        /// ZIP fuer Uebersichtskarte gewaehlt → Source-Dialog schliessen und Options-Dialog anzeigen
         GenerateOverviewFromZip { path: String },
         /// Uebersichtskarten-Options-Dialog bestaetigt (generieren)
         OverviewOptionsConfirmed,
         /// Uebersichtskarten-Options-Dialog abgebrochen
         OverviewOptionsCancelled,
-        /// Post-Load-Dialog: Uebersichtskarte generieren (ZIP-Pfad ausgewaehlt)
-        PostLoadGenerateOverview { zip_path: String },
-        /// Post-Load-Dialog: geschlossen ohne Aktion
+        /// Overview-Source-Dialog: geschlossen ohne Aktion
         PostLoadDialogDismissed,
         /// Benutzer hat bestaetigt: Background als overview.png speichern
         SaveBackgroundAsOverviewConfirmed,
@@ -82,10 +82,10 @@ macro_rules! view_intent_feature_arms {
         | Self::ZipBackgroundFileSelected { .. }
         | Self::ZipBrowserCancelled
         | Self::GenerateOverviewRequested
+        | Self::OverviewZipBrowseRequested
         | Self::GenerateOverviewFromZip { .. }
         | Self::OverviewOptionsConfirmed
         | Self::OverviewOptionsCancelled
-        | Self::PostLoadGenerateOverview { .. }
         | Self::PostLoadDialogDismissed
         | Self::SaveBackgroundAsOverviewConfirmed
         | Self::SaveBackgroundAsOverviewDismissed

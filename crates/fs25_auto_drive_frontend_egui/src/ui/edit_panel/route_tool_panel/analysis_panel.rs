@@ -405,7 +405,11 @@ pub(super) fn render_color_path_panel(
     events: &mut Vec<AppIntent>,
 ) {
     let status = match state.phase {
-        ColorPathPanelPhase::Idle => "Alt+Lasso fuer Farbsample",
+        ColorPathPanelPhase::Idle => "Klick oder Alt+Lasso fuer Farbsample",
+        ColorPathPanelPhase::Sampling if state.sample_count == 0 => {
+            // layer-ok
+            "Klick oder Alt+Lasso fuer Farbsample"
+        }
         ColorPathPanelPhase::Sampling => "Berechnen fuer Wegenetz",
         ColorPathPanelPhase::Preview => "Ausfuehren uebernehmen, Reset setzt zurueck",
     };

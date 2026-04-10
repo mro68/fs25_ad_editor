@@ -17,6 +17,29 @@ use glam::Vec2;
 use super::state::{ColorPathPhase, ColorPathTool};
 
 impl ColorPathTool {
+    fn sample_color_from_click(&mut self, pos: Vec2) -> bool {
+        let Some(image) = self.background_image.as_ref() else {
+            log::warn!(
+                "ColorPathTool: Kein Hintergrundbild vorhanden — Klick-Sampling wird ignoriert"
+            );
+            return false;
+        };
+        let Some(color) = super::sampling::sample_color_at_world(pos, image, self.map_size) else {
+            return false;
+        };
+
+        self.sampling.sampled_colors.push(color);
+        if self.sampling.lasso_start_world.is_none() {
+            self.sampling.lasso_start_world = Some(pos);
+        }
+        self.sampling.avg_color = Some(super::sampling::compute_average_color(
+            &self.sampling.sampled_colors,
+        ));
+        self.mark_sampling_input_changed();
+        self.rebuild_sampling_preview();
+        true
+    }
+
     /// Reagiert auf Aenderungen am Farb-Matching.
     pub(super) fn on_matching_config_changed(&mut self) {
         match self.phase {
@@ -132,7 +155,10 @@ impl ColorPathTool {
 impl RouteToolPanelBridge for ColorPathTool {
     fn status_text(&self) -> &str {
         match self.phase {
-            ColorPathPhase::Idle => "Alt+Lasso fuer Farbsample",
+            ColorPathPhase::Idle => "Klick oder Alt+Lasso fuer Farbsample",
+            ColorPathPhase::Sampling if self.sampling.sampled_colors.is_empty() => {
+                "Klick oder Alt+Lasso fuer Farbsample"
+            }
             ColorPathPhase::Sampling => "Berechnen fuer Wegenetz",
             ColorPathPhase::Preview => "Enter zum Einfuegen, Reset zum Zuruecksetzen",
         }
@@ -152,13 +178,23 @@ impl RouteToolPanelBridge for ColorPathTool {
 }
 
 impl RouteToolCore for ColorPathTool {
-    fn on_click(&mut self, _pos: Vec2, _road_map: &RoadMap, _ctrl: bool) -> ToolAction {
+    fn on_click(&mut self, pos: Vec2, _road_map: &RoadMap, _ctrl: bool) -> ToolAction {
         match self.phase {
             ColorPathPhase::Idle => {
                 self.phase = ColorPathPhase::Sampling;
+                let _ = self.sample_color_from_click(pos);
                 ToolAction::Continue
             }
-            ColorPathPhase::Sampling | ColorPathPhase::Preview => ToolAction::Continue,
+            ColorPathPhase::Sampling => {
+                let _ = self.sample_color_from_click(pos);
+                ToolAction::Continue
+            }
+            ColorPathPhase::Preview => {
+                if self.sample_color_from_click(pos) {
+                    self.phase = ColorPathPhase::Sampling;
+                }
+                ToolAction::Continue
+            }
         }
     }
 
@@ -344,6 +380,42 @@ mod tests {
         });
         tool.lifecycle.snap_radius = 1.0;
         tool
+    }
+
+    #[test]
+    fn click_from_idle_samples_first_color_and_enters_sampling() {
+        let image = Arc::new(build_test_image());
+        let road_map = RoadMap::default();
+        let mut tool = ColorPathTool::new();
+        tool.phase = ColorPathPhase::Idle;
+        tool.set_background_map_image(Some(image));
+
+        let click_pos = pixel_to_world(0, 0, tool.map_size, 10, 10);
+        let _ = tool.on_click(click_pos, &road_map, false);
+
+        assert_eq!(tool.phase, ColorPathPhase::Sampling);
+        assert_eq!(tool.sampling.sampled_colors, vec![[200, 0, 0]]);
+        assert_eq!(tool.sampling.avg_color, Some([200, 0, 0]));
+        assert_eq!(tool.sampling.lasso_start_world, Some(click_pos));
+        assert!(tool.sampling_preview.is_some());
+    }
+
+    #[test]
+    fn click_from_preview_adds_color_and_returns_to_sampling() {
+        let image = Arc::new(build_test_image());
+        let road_map = RoadMap::default();
+        let mut tool = build_preview_tool(ExistingConnectionMode::Never);
+        tool.set_background_map_image(Some(image));
+
+        let click_pos = pixel_to_world(9, 0, tool.map_size, 10, 10);
+        let _ = tool.on_click(click_pos, &road_map, false);
+
+        assert_eq!(tool.phase, ColorPathPhase::Sampling);
+        assert_eq!(tool.sampling.sampled_colors, vec![[0, 200, 0]]);
+        assert_eq!(tool.sampling.avg_color, Some([0, 200, 0]));
+        assert_eq!(tool.sampling.lasso_start_world, Some(click_pos));
+        assert!(tool.sampling_preview.is_some());
+        assert!(tool.preview_data.is_none());
     }
 
     #[test]
