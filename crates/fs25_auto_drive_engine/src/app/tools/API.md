@@ -481,9 +481,9 @@ Farb-Pfad-Erkennung: Erkennt zusammenhaengende Teilnetze anhand der Farbe im Hin
 
 **Phasen (`ColorPathPhase`):**
 
-- **`Idle`** — Warten auf Nutzerinteraktion (Klick oder Alt+Lasso startet Sampling)
-- **`Sampling`** — User sammelt Farbproben per Alt+Lasso; Berechnen-Button startet Pipeline
-- **`Preview`** — Teilnetz berechnet und als Vorschau angezeigt; Enter fuegt Nodes ein
+- **`Idle`** — Leerer Grundzustand ohne aktives Sampling, z.B. nach einem expliziten Reset
+- **`Sampling`** — User sammelt Farbproben per Klick oder Alt+Lasso; ein frisches Tool startet bereits in dieser Phase
+- **`Preview`** — Teilnetz berechnet und als Vorschau angezeigt; ein weiterer Klick fuegt neue Farben hinzu und wechselt zurueck nach `Sampling`
 
 **ToolLasso-Mechanismus:**
 
@@ -495,12 +495,13 @@ weitergeleitet, das die Lasso-Capability des aktiven Tools aufruft.
 
 **Interaktionsflow:**
 
-1. Tool aktivieren → Phase::Idle
-2. Alt+Drag zeichnet ein Lasso-Polygon → `on_lasso_completed()` sampelt Farben im Polygon
-3. Mehrere Lasso-Polygone moeglich (Sampling kumulativ)
+1. Tool aktivieren → Phase::Sampling mit sofort aktivem Tool-Lasso
+2. Klick oder Alt+Drag sampelt Farben; der erste Sampling-Punkt setzt zugleich den Flood-Fill-Seed
+3. Mehrere Klicks und Lasso-Polygone sind moeglich (Sampling kumulativ)
 4. Sidebar: Berechnen-Button → `compute_pipeline()` → Phase::Preview
-5. Sidebar: Netz pruefen (Kreuzungen, offene Enden, Segmente) + Anschlussmodus waehlen
-6. Enter / Uebernehmen-Button → `execute()` → Graph in Road Map einfuegen
+5. Preview-Klick fuegt weitere Farben hinzu, baut Stage C neu auf und wechselt zurueck nach `Sampling`
+6. Sidebar: Netz pruefen (Kreuzungen, offene Enden, Segmente) + Anschlussmodus waehlen
+7. Enter / Uebernehmen-Button → `execute()` → Graph in Road Map einfuegen
 
 **Interne Stage-Pipeline (`compute_pipeline()`):**
 
@@ -515,7 +516,7 @@ weitergeleitet, das die Lasso-Capability des aktiven Tools aufruft.
 **Preview/Export:**
 
 - Preview zeigt Kennzahlen fuer Kreuzungen, offene Enden, Segmente und Preview-Nodes
-- Sampling-Preview zeigt nach jeder Lasso-Auswahl alle Randsegmente der Flood-Fill-Maske, nicht nur eine Einzelkontur
+- Sampling-Preview zeigt nach jedem Klick oder jeder Lasso-Auswahl alle Randsegmente der Flood-Fill-Maske, nicht nur eine Einzelkontur
 - Sampling-Preview und Berechnen-Pipeline lesen dieselbe Stage-C-Maskenwahrheit; es gibt keine separaten Preview-Maskenpfade
 - Preview und Export teilen dieselben `PreparedSegment`-Artefakte; Execute legt Junction-/End-Knoten genau einmal an und fuegt pro Segment nur die Zwischenpunkte neu ein
 - Bestandsanschluss nutzt `ToolLifecycleState::snap_at()` und damit den konfigurierten Snap-Radius
