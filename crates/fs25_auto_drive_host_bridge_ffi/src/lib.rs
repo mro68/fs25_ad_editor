@@ -182,7 +182,7 @@ pub extern "C" fn fs25ad_host_bridge_session_new() -> *mut HostBridgeSessionHand
 pub extern "C" fn fs25ad_flutter_session_new() -> *mut flutter_api::FlutterSessionHandle {
     ffi_guard_ptr! {{
         Result::<*mut flutter_api::FlutterSessionHandle>::Ok(Box::into_raw(
-            flutter_api::flutter_session_new(),
+            Box::new(flutter_api::flutter_session_new()),
         ))
     }}
 }

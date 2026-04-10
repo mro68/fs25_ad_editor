@@ -7,17 +7,18 @@ use std::ffi::CStr;
 use std::os::fd::{FromRawFd, IntoRawFd, OwnedFd};
 
 const EXPORT_TEXTURE_LABEL: &str = "VulkanDmaBuf Export Target";
+// LINEAR Tiling: SAMPLED/TEXTURE_BINDING entfernt — mit LINEAR nicht garantiert.
+// Die Export-Texture dient nur als Render-Target (COLOR_ATTACHMENT) + Copy-Source.
 const EXPORT_TEXTURE_USAGE: wgpu::TextureUsages = wgpu::TextureUsages::RENDER_ATTACHMENT
-    .union(wgpu::TextureUsages::TEXTURE_BINDING)
     .union(wgpu::TextureUsages::COPY_SRC)
     .union(wgpu::TextureUsages::COPY_DST);
 const EXPORT_HAL_TEXTURE_USAGE: wgpu::TextureUses = wgpu::TextureUses::COLOR_TARGET
-    .union(wgpu::TextureUses::RESOURCE)
     .union(wgpu::TextureUses::COPY_SRC)
     .union(wgpu::TextureUses::COPY_DST);
 const DRM_FORMAT_RESERVED: u64 = (1_u64 << 56) - 1;
 const DRM_FORMAT_ABGR8888: u32 = fourcc_code(b'A', b'B', b'2', b'4');
 const DRM_FORMAT_MOD_INVALID: u64 = fourcc_mod_code_none(DRM_FORMAT_RESERVED);
+const DRM_FORMAT_MOD_LINEAR: u64 = 0;
 
 struct CreatedTexture {
     texture: wgpu::Texture,
@@ -77,10 +78,12 @@ impl VulkanDmaBufTexture {
             .mip_levels(1)
             .array_layers(1)
             .samples(vk::SampleCountFlags::TYPE_1)
-            .tiling(vk::ImageTiling::OPTIMAL)
+            // LINEAR Tiling: Garantiert kompatiblen Speicher-Layout fuer den
+            // DMA-BUF → EGL → GL Import. OPTIMAL Tiling schlaegt auf NVIDIA
+            // fehl, weil das proprietaere Tile-Layout in GL nicht lesbar ist.
+            .tiling(vk::ImageTiling::LINEAR)
             .usage(
                 vk::ImageUsageFlags::COLOR_ATTACHMENT
-                    | vk::ImageUsageFlags::SAMPLED
                     | vk::ImageUsageFlags::TRANSFER_SRC
                     | vk::ImageUsageFlags::TRANSFER_DST,
             )
@@ -165,12 +168,18 @@ impl VulkanDmaBufTexture {
         // SAFETY: `exported_fd` stammt direkt aus `vkGetMemoryFdKHR` und geht hier in den
         // alleinigen Besitz von `OwnedFd` ueber.
         let dma_buf_fd = unsafe { OwnedFd::from_raw_fd(exported_fd) };
-        let modifier = query_drm_modifier(
+        let mut modifier = query_drm_modifier(
             raw_instance,
             raw_device,
             image,
             hal_device.enabled_device_extensions(),
         );
+        // NVIDIA meldet keinen DRM-Modifier (VK_EXT_image_drm_format_modifier fehlt).
+        // Da wir LINEAR Tiling verwenden, setzen wir explizit DRM_FORMAT_MOD_LINEAR (0),
+        // damit der EGL-Import auf der Flutter-Seite den richtigen Modifier bekommt.
+        if modifier == DRM_FORMAT_MOD_INVALID {
+            modifier = DRM_FORMAT_MOD_LINEAR;
+        }
         let stride = query_dmabuf_stride(
             raw_device,
             image,
@@ -255,6 +264,10 @@ impl ExternalTextureExport for VulkanDmaBufTexture {
     fn texture_view(&self) -> &wgpu::TextureView {
         let _texture_guard = &self.texture;
         &self.view
+    }
+
+    fn texture(&self) -> &wgpu::Texture {
+        &self.texture
     }
 
     fn resize(
@@ -448,28 +461,34 @@ fn query_dmabuf_stride(
     modifier: u64,
     enabled_extensions: &[&'static CStr],
 ) -> Result<u32, ExternalTextureError> {
-    if !has_extension(
+    let has_drm_ext = has_extension(
         enabled_extensions,
         ash::ext::image_drm_format_modifier::NAME,
-    ) {
-        // TODO(flutter-linux): Den konservativen RGBA8-Fallback entfernen, sobald fuer
-        // OPTIMAL-Tiling ohne DRM-Modifier ein treiberverlaesslicher Layout-Pfad existiert.
-        return fallback_dmabuf_stride(width);
-    }
+    );
 
-    if modifier == DRM_FORMAT_MOD_INVALID {
+    if has_drm_ext && modifier == DRM_FORMAT_MOD_INVALID {
         return Err(ExternalTextureError::CreationFailed(
             "VK_EXT_image_drm_format_modifier ist aktiv, aber der DRM-Modifier der Export-Texture konnte nicht abgefragt werden".into(),
         ));
     }
 
-    query_subresource_row_pitch(raw_device, image, vk::ImageAspectFlags::MEMORY_PLANE_0_EXT)
-        .or_else(|| query_subresource_row_pitch(raw_device, image, vk::ImageAspectFlags::COLOR))
-        .ok_or_else(|| {
-            ExternalTextureError::CreationFailed(format!(
-                "DMA-BUF-Stride konnte fuer DRM-Modifier 0x{modifier:016x} nicht aus Vulkan abgefragt werden"
-            ))
-        })
+    // Bevorzugt: MEMORY_PLANE_0_EXT (DRM-Modifier-Extension), dann COLOR (Core Vulkan).
+    // vkGetImageSubresourceLayout mit COLOR funktioniert fuer alle LINEAR-Images und liefert
+    // den tatsaechlichen Row-Pitch inkl. Treiber-Alignment (z.B. NVIDIA paddet auf 256 Bytes).
+    if has_drm_ext {
+        if let Some(pitch) =
+            query_subresource_row_pitch(raw_device, image, vk::ImageAspectFlags::MEMORY_PLANE_0_EXT)
+        {
+            return Ok(pitch);
+        }
+    }
+    if let Some(pitch) = query_subresource_row_pitch(raw_device, image, vk::ImageAspectFlags::COLOR)
+    {
+        return Ok(pitch);
+    }
+
+    // Letzter Fallback: width * bytes_per_pixel (nur wenn Vulkan kein Layout liefert)
+    fallback_dmabuf_stride(width)
 }
 
 fn query_subresource_row_pitch(

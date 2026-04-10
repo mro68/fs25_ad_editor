@@ -22,7 +22,7 @@ use crate::texture_registration_v4::{
     Fs25adTextureRegistrationV4LinuxDmabufDescriptor, Fs25adTextureRegistrationV4LinuxDmabufPlane,
 };
 use crate::{clear_last_error, set_last_error};
-use anyhow::{anyhow, Result};
+use anyhow::{anyhow, Context, Result};
 use fs25_auto_drive_host_bridge::HostBridgeSession;
 use fs25_auto_drive_render_wgpu::{
     external_texture::vulkan_linux::VulkanDmaBufTexture, ExternalTextureExport,
@@ -100,6 +100,17 @@ impl GpuRuntimeHandle {
             session,
         })
     }
+}
+
+fn log_gpu_error(function_name: &str, error: &anyhow::Error) {
+    eprintln!("[FS25][flutter_gpu] {function_name} failed: {error:#}");
+}
+
+fn log_result<T>(function_name: &str, result: Result<T>) -> Result<T> {
+    if let Err(error) = &result {
+        log_gpu_error(function_name, error);
+    }
+    result
 }
 
 fn with_runtime<T>(
@@ -195,31 +206,74 @@ pub unsafe extern "C" fn fs25ad_gpu_runtime_new_with_session(
     })
 }
 
+/// Erstellt einen GPU-Runtime-Handle aus einem rohen Arc-Clone der Control-Plane-Session.
+///
+/// `raw_arc` muss ein via `flutter_session_acquire_shared_arc_raw` erzeugter Zeiger sein.
+/// Er wird durch diesen Aufruf **konsumiert** — sowohl bei Erfolg als auch bei Fehler.
+/// Der Aufrufer darf danach NICHT mehr `flutter_session_release_shared_arc_raw` aufrufen.
+///
+/// Gibt `NULL` bei Fehler zurueck; Fehlertext via `fs25ad_host_bridge_last_error_message`.
+///
+/// # Safety
+/// `raw_arc` muss ein gueltiger, noch nicht freigegebener
+/// `Arc::into_raw(Arc<Mutex<HostBridgeSession>>)`-Zeiger sein.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn fs25ad_gpu_runtime_new_with_shared_session_arc(
+    raw_arc: i64,
+    width: u32,
+    height: u32,
+) -> *mut GpuRuntimeHandle {
+    ffi_guard_ptr!({
+        if raw_arc == 0 {
+            return Err(anyhow!(
+                "fs25ad_gpu_runtime_new_with_shared_session_arc: raw_arc must not be 0"
+            ));
+        }
+        // SAFETY: raw_arc wurde via Arc::into_raw(Arc<Mutex<HostBridgeSession>>) erzeugt.
+        // owned_arc rekonstruiert den Arc und uebernimmt den extra Clone.
+        // Arc::clone gibt der GPU-Runtime eine eigene starke Referenz.
+        // owned_arc wird am Blockende gedroppt — konsumiert den extra Clone.
+        let owned_arc = unsafe { Arc::from_raw(raw_arc as *const Mutex<HostBridgeSession>) };
+        let shared_session = Arc::clone(&owned_arc);
+        GpuRuntimeHandle::new_with_session(shared_session, width, height)
+            .map(|handle| Box::into_raw(Box::new(handle)))
+    })
+}
+
 /// Rendert den naechsten Frame direkt in die exportierbare Vulkan-Texture.
 ///
 /// Gibt `true` bei Erfolg zurueck, `false` bei Fehler.
 #[unsafe(no_mangle)]
 pub extern "C" fn fs25ad_gpu_runtime_render(handle: *mut GpuRuntimeHandle) -> bool {
     ffi_guard_bool!({
-        with_runtime(handle, |rt| {
-            // Lock nur fuer build_render_frame halten, danach sofort freigeben.
-            // GPU-Submit laeuft lock-frei, damit Flutter-Isolate-Aufrufe nicht blockieren.
-            let frame = {
-                let session = rt
-                    .session
-                    .lock()
-                    .map_err(|_| anyhow!("GPU runtime session lock poisoned"))?;
-                session.build_render_frame([rt.size[0] as f32, rt.size[1] as f32])
-            }; // Lock wird hier freigegeben
-            rt.runtime.render_to_view(
-                &rt.device,
-                &rt.queue,
-                &frame.scene,
-                &frame.assets,
-                rt.external_texture.texture_view(),
-            )?;
-            Ok(())
-        })
+        log_result(
+            "fs25ad_gpu_runtime_render",
+            with_runtime(handle, |rt| {
+                // Lock nur fuer build_render_frame halten, danach sofort freigeben.
+                // GPU-Submit laeuft lock-frei, damit Flutter-Isolate-Aufrufe nicht blockieren.
+                let frame = {
+                    let session = rt
+                        .session
+                        .lock()
+                        .map_err(|_| anyhow!("GPU runtime session lock poisoned"))?;
+                    session.build_render_frame([rt.size[0] as f32, rt.size[1] as f32])
+                }; // Lock wird hier freigegeben
+                rt.runtime
+                    .render_to_view(
+                        &rt.device,
+                        &rt.queue,
+                        &frame.scene,
+                        &frame.assets,
+                        rt.external_texture.texture(),
+                    )
+                    .context("Render in exportable Vulkan texture failed")?;
+
+                rt.device
+                    .poll(wgpu::PollType::wait_indefinitely())
+                    .context("Waiting for GPU render completion failed")?;
+                Ok(())
+            }),
+        )
     })
 }
 
@@ -237,31 +291,49 @@ pub unsafe extern "C" fn fs25ad_gpu_runtime_export_texture(
     out_descriptor: *mut Fs25adTextureRegistrationV4LinuxDmabufDescriptor,
 ) -> bool {
     if out_descriptor.is_null() {
-        set_last_error("fs25ad_gpu_runtime_export_texture: out_descriptor must not be null");
+        let message = "fs25ad_gpu_runtime_export_texture: out_descriptor must not be null";
+        eprintln!("[FS25][flutter_gpu] fs25ad_gpu_runtime_export_texture failed: {message}");
+        set_last_error(message);
         return false;
     }
     ffi_guard_bool!({
-        with_runtime(handle, |rt| {
-            let descriptor = rt.external_texture.export_descriptor()?;
-            match descriptor {
-                fs25_auto_drive_render_wgpu::PlatformTextureDescriptor::LinuxDmaBuf {
-                    fd,
-                    stride,
-                    format,
-                    modifier,
-                    ..
-                } => {
-                    let descriptor = LinuxDmabufDescriptor::single_plane(
+        log_result(
+            "fs25ad_gpu_runtime_export_texture",
+            with_runtime(handle, |rt| {
+                let descriptor = rt
+                    .external_texture
+                    .export_descriptor()
+                    .context("Exporting DMA-BUF descriptor failed")?;
+                match descriptor {
+                    fs25_auto_drive_render_wgpu::PlatformTextureDescriptor::LinuxDmaBuf {
+                        fd,
+                        stride,
                         format,
                         modifier,
-                        LinuxDmabufPlane::new(fd, 0, stride),
-                    );
-                    // SAFETY: Gueltigkeit von out_descriptor wurde oben geprueft.
-                    unsafe { *out_descriptor = map_linux_dmabuf_descriptor(descriptor) };
-                    Ok(())
+                        ..
+                    } => {
+                        if fd < 0 {
+                            return Err(anyhow!(
+                                "Exported DMA-BUF descriptor contains invalid file descriptor"
+                            ));
+                        }
+                        if stride == 0 {
+                            return Err(anyhow!(
+                                "Exported DMA-BUF descriptor contains invalid stride"
+                            ));
+                        }
+                        let descriptor = LinuxDmabufDescriptor::single_plane(
+                            format,
+                            modifier,
+                            LinuxDmabufPlane::new(fd, 0, stride),
+                        );
+                        // SAFETY: Gueltigkeit von out_descriptor wurde oben geprueft.
+                        unsafe { *out_descriptor = map_linux_dmabuf_descriptor(descriptor) };
+                        Ok(())
+                    }
                 }
-            }
-        })
+            }),
+        )
     })
 }
 
@@ -275,14 +347,17 @@ pub extern "C" fn fs25ad_gpu_runtime_resize(
     height: u32,
 ) -> bool {
     ffi_guard_bool!({
-        with_runtime(handle, |rt| {
-            let new_external_texture =
-                VulkanDmaBufTexture::create_exportable_texture(&rt.device, width, height)?;
-            rt.runtime.resize(&rt.device, [width, height])?;
-            rt.external_texture = new_external_texture;
-            rt.size = [width, height];
-            Ok(())
-        })
+        log_result(
+            "fs25ad_gpu_runtime_resize",
+            with_runtime(handle, |rt| {
+                let new_external_texture =
+                    VulkanDmaBufTexture::create_exportable_texture(&rt.device, width, height)?;
+                rt.runtime.resize(&rt.device, [width, height])?;
+                rt.external_texture = new_external_texture;
+                rt.size = [width, height];
+                Ok(())
+            }),
+        )
     })
 }
 
