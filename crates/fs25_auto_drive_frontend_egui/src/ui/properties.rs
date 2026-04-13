@@ -3,16 +3,15 @@
 mod distances;
 pub(crate) mod selectors;
 
-use indexmap::IndexSet;
 use fs25_auto_drive_host_bridge::{
-    HostConnectionPairEntry, HostConnectionPairSnapshot,
-    HostDefaultConnectionDirection, HostDefaultConnectionPriority, HostNodeDetails,
-    HostNodeFlag,
+    HostConnectionPairEntry, HostConnectionPairSnapshot, HostDefaultConnectionDirection,
+    HostDefaultConnectionPriority, HostNodeDetails, HostNodeFlag,
 };
+use indexmap::IndexSet;
 
 use crate::app::{
-    group_registry::GroupRegistry, tools::route_tool_descriptor, AppIntent,
-    ConnectionDirection, ConnectionPriority, NodeFlag, RoadMap, ToolEditStore,
+    group_registry::GroupRegistry, tools::route_tool_descriptor, AppIntent, ConnectionDirection,
+    ConnectionPriority, NodeFlag, RoadMap, ToolEditStore,
 };
 use distances::render_distance_panel;
 use selectors::{render_direction_icon_selector, render_priority_icon_selector};

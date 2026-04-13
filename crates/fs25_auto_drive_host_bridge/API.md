@@ -12,7 +12,7 @@ Der aktuell produktive Flutter-Pfad konsumiert diese Kanonik ueber den Linux-fir
 
 Die oeffentlichen Module `dispatch` und `dto` bleiben dabei stabile Fassaden. Seit der Audit-Remediation ist ihre interne Implementierung in thematische Untermodule aufgeteilt, ohne dass sich die Re-Export-Surface fuer Rust-, egui- oder FFI-Consumer geaendert hat.
 
-Die Bridge exponiert Mutationen ausschliesslich ueber explizite `HostSessionAction`-DTOs. Die Action-Surface deckt stabile Host-Aktionen ab (Datei-/Dialog-Anforderungen, Kamera-/Viewport-Shortcuts, Historie, Optionen, Toolwechsel, Exit), Selektions- und Clipboard-Basisaktionen (`DeleteSelected`, `SelectAll`, `ClearSelection`, `CopySelection`, `PasteStart`, `PasteConfirm`, `PasteCancel`), den screen-space-basierten Viewport-Input-Slice via `SubmitViewportInput` sowie eine explizite Route-Tool-Action-Familie `HostRouteToolAction` (Toolwahl, Panel-Aktionen, Execute/Cancel/Recreate, Tangenten, Drag/Lasso/Rotate und Segment-/Node-Anpassungen). Diese Basisaktionen mappen bidirektional auf die stabilen Engine-Intents fuer Loeschen, Selektion und Clipboard; eine bewegte Paste-Vorschau (`PastePreviewMoved`) bleibt bewusst ausserhalb dieses niederfrequenten Host-Vertrags. Fuer read-only Hosts liefert die Crate weiterhin kleine Session-Snapshots, host-neutrale Panel-Read-Modelle, Viewport-Overlay-Snapshots, einen minimalen serialisierbaren Viewport-Geometry-Snapshot, einen dedizierten Route-Tool-Viewport-Snapshot sowie gekoppelten Render-Output aus `RenderScene` und `RenderAssetsSnapshot`. Zusaetzlich bietet die Session fuer Rust-Hosts schmale UI-Local-Seams (`HostPanelPropertiesState`, `HostDialogUiState`, `HostViewportInputContext`) sowie den expliziten host-lokalen Chrome-/Dialogzustand `HostLocalDialogState`, erreichbar ueber `chrome_state()` und `chrome_state_mut()`. Diese lokalen Seams invalidieren den kleinen `HostSessionSnapshot` nicht automatisch. Wenn ein Rust-Host darueber ausnahmsweise Felder mutiert, die in `HostSessionSnapshot` gespiegelt werden, muss er `HostBridgeSession::mark_snapshot_dirty()` explizit aufrufen. Als temporaere Read-Seam bleibt nur noch `app_state()` sichtbar; `app_state_mut()` ist aus der oeffentlichen API entfernt. Dieser gekoppelte RenderFrame ist jetzt sowohl ueber `HostBridgeSession::build_render_frame(...)` als auch ueber den freien Dispatch-Helper `build_render_frame(...)` fuer lokale Rust-Hosts verfuegbar. Einen separaten oeffentlichen Typ `ChromeState` gibt es nicht mehr; read-only Chrome-Daten laufen ueber `HostChromeSnapshot`, lokale mutierbare Chrome-/Dialog-Flags ueber `HostLocalDialogState`.
+Die Bridge exponiert Mutationen ausschliesslich ueber explizite `HostSessionAction`-DTOs. Die Action-Surface deckt stabile Host-Aktionen ab (Datei-/Dialog-Anforderungen, Kamera-/Viewport-Shortcuts, Historie, Optionen, Toolwechsel, Exit), Node-Properties (`QueryNodeDetails`, `SetNodeFlag`), Marker-Management (`CreateMarker`, `UpdateMarker`, `RemoveMarker`), Selektions- und Clipboard-Basisaktionen (`DeleteSelected`, `SelectAll`, `ClearSelection`, `CopySelection`, `PasteStart`, `PasteConfirm`, `PasteCancel`), Connection-Management (`AddConnection`, `RemoveConnectionBetween`, `SetConnectionDirection`, `SetConnectionPriority`, `ConnectSelectedNodes`, `SetAllConnectionsDirectionBetweenSelected`, `InvertAllConnectionsBetweenSelected`, `SetAllConnectionsPriorityBetweenSelected`, `RemoveAllConnectionsBetweenSelected`), den screen-space-basierten Viewport-Input-Slice via `SubmitViewportInput` sowie eine explizite Route-Tool-Action-Familie `HostRouteToolAction` (Toolwahl, Panel-Aktionen, Execute/Cancel/Recreate, Tangenten, Drag/Lasso/Rotate und Segment-/Node-Anpassungen). Diese Basisaktionen mappen bidirektional auf die stabilen Engine-Intents fuer Loeschen, Selektion, Clipboard und Connection-Verwaltung; eine bewegte Paste-Vorschau (`PastePreviewMoved`) bleibt bewusst ausserhalb dieses niederfrequenten Host-Vertrags. Fuer read-only Hosts liefert die Crate weiterhin kleine Session-Snapshots, host-neutrale Panel-Read-Modelle, Viewport-Overlay-Snapshots, einen minimalen serialisierbaren Viewport-Geometry-Snapshot, einen dedizierten Route-Tool-Viewport-Snapshot, einen expliziten Node-Details-Vertrag (`HostNodeDetails`), einen Marker-Management-Snapshot (`HostMarkerListSnapshot`), einen Verbindungspaar-Snapshot (`HostConnectionPairSnapshot`) sowie gekoppelten Render-Output aus `RenderScene` und `RenderAssetsSnapshot`. Zusaetzlich bietet die Session fuer Rust-Hosts schmale UI-Local-Seams (`HostPanelPropertiesState`, `HostDialogUiState`, `HostViewportInputContext`) sowie den expliziten host-lokalen Chrome-/Dialogzustand `HostLocalDialogState`, erreichbar ueber `chrome_state()` und `chrome_state_mut()`. Diese lokalen Seams invalidieren den kleinen `HostSessionSnapshot` nicht automatisch. Wenn ein Rust-Host darueber ausnahmsweise Felder mutiert, die in `HostSessionSnapshot` gespiegelt werden, muss er `HostBridgeSession::mark_snapshot_dirty()` explizit aufrufen. Als temporaere Read-Seam bleibt nur noch `app_state()` sichtbar; `app_state_mut()` ist aus der oeffentlichen API entfernt. Dieser gekoppelte RenderFrame ist jetzt sowohl ueber `HostBridgeSession::build_render_frame(...)` als auch ueber den freien Dispatch-Helper `build_render_frame(...)` fuer lokale Rust-Hosts verfuegbar. Einen separaten oeffentlichen Typ `ChromeState` gibt es nicht mehr; read-only Chrome-Daten laufen ueber `HostChromeSnapshot`, lokale mutierbare Chrome-/Dialog-Flags ueber `HostLocalDialogState`.
 
 Der konsolidierte Host-Dialog-Vertrag deckt neben `open_file` und `save_file` auch `heightmap` und `background_map` ab. Ob ein Host dafuer einen nativen Picker oder einen lokalen Fallback nutzt, bleibt explizit host-local; der Bridge-Vertrag aendert sich dafuer nicht.
 
@@ -43,7 +43,7 @@ Mit `HostChromeSnapshot` existiert zusaetzlich ein expliziter host-neutraler Rea
 |---|---|
 | `dispatch` | Wiederverwendbare Rust-Host-Dispatch-Seam (`HostSessionAction` <-> `AppIntent`) und bridge-owned Read-Helper-Seams fuer lokale Controller/State-Hosts; bleibt als stabile Fassade intern in `actions`, `mappings`, `snapshot` und `viewport_input` aufgeteilt |
 | `session` | `HostBridgeSession` als kanonische Session-Fassade ueber der Engine |
-| `dto` | Serialisierbare Host-Actions, Dialog-DTOs, Session-Snapshots, explizite JSON-Helfer fuer `HostUiSnapshot`/`ViewportOverlaySnapshot` plus `Engine*`-Kompatibilitaets-Aliase; bleibt als stabile Fassade intern in `actions`, `dialogs`, `input`, `route_tool`, `viewport`, `chrome` und `ui_json` aufgeteilt |
+| `dto` | Serialisierbare Host-Actions, Dialog-, Node-Details-, Marker- und Connection-Pair-DTOs, Session-Snapshots, explizite JSON-Helfer fuer `HostUiSnapshot`/`ViewportOverlaySnapshot` plus `Engine*`-Kompatibilitaets-Aliase; bleibt als stabile Fassade intern in `actions`, `connection_pair`, `dialogs`, `input`, `markers`, `node_details`, `route_tool`, `viewport`, `chrome` und `ui_json` aufgeteilt |
 
 ## Oeffentliche DTO-Helfer
 
@@ -82,10 +82,17 @@ Mit `HostChromeSnapshot` existiert zusaetzlich ein expliziter host-neutraler Rea
 | `EngineRenderFrameSnapshot` | Kompatibilitaetsalias auf `HostRenderFrameSnapshot` |
 | `HostSessionAction` | Kanonische Mutationsoberflaeche fuer Host-seitige Eingriffe |
 | `HostRouteToolAction` | Explizite Action-Familie fuer Route-Tool-Schreibpfade auf der Session-Surface |
+| `HostMarkerInfo` / `HostMarkerListSnapshot` | Serialisierbarer Marker-Vertrag fuer Listen, Details und Filter im Flutter-Marker-Panel |
+| `HostNodeDetails` / `HostNodeNeighbor` / `HostNodeMarkerInfo` | Serialisierbarer Node-Properties-Vertrag fuer Flutter-Properties-Ansichten |
+| `HostConnectionPairSnapshot` / `HostConnectionPairEntry` | Serialisierbarer Verbindungspaar-Vertrag: alle Verbindungen zwischen genau zwei Nodes mit Richtung und Prioritaet |
+| `HostNodeFlag` | Vollstaendiger, host-neutraler NodeFlag-Vertrag fuer Anzeige und Bearbeitung |
 | `HostRouteToolId` / `HostTangentSource` | Stabile Route-Tool- und Tangenten-DTOs fuer Action- und Read-Vertrag |
 | `HostViewportInputBatch` / `HostViewportInputEvent` | Kleine screen-space Viewport-Input-Familie fuer Resize, Pointer- und Scroll-Events |
 | `HostPointerButton` / `HostTapKind` / `HostInputModifiers` | Stabile Transport-DTOs fuer Pointer-Buttons, Tap-Art und Modifiers |
 | `HostViewportInputState` | Kleiner bridge-owned Drag-/Resize-Zustand fuer Session oder lokale Rust-Hosts |
+| `EngineMarkerInfo` / `EngineMarkerListSnapshot` | Kompatibilitaets-Aliase auf die kanonischen Marker-DTOs |
+| `EngineNodeDetails` / `EngineNodeFlag` / `EngineNodeNeighbor` / `EngineNodeMarkerInfo` | Kompatibilitaets-Aliase auf die kanonischen Node-Properties-DTOs |
+| `EngineConnectionPairEntry` / `EngineConnectionPairSnapshot` | Kompatibilitaets-Aliase auf die kanonischen Connection-Pair-DTOs |
 | `EngineSessionAction` | Kompatibilitaetsalias auf `HostSessionAction` |
 | `HostSessionSnapshot` | Kleine serialisierbare Session-Zusammenfassung fuer Polling-Hosts inklusive `is_dirty` relativ zum letzten Load/Save |
 | `EngineSessionSnapshot` | Kompatibilitaetsalias auf `HostSessionSnapshot` |
@@ -134,6 +141,14 @@ Mit `HostChromeSnapshot` existiert zusaetzlich ein expliziter host-neutraler Rea
 | `pub fn submit_dialog_result(&mut self, result: HostDialogResult) -> Result<()>` | Gibt ein Host-Dialogergebnis semantisch an die Engine zurueck |
 | `pub fn snapshot(&mut self) -> &HostSessionSnapshot` | Liefert den gecachten Session-Snapshot fuer allokationsarmes Polling |
 | `pub fn snapshot_owned(&mut self) -> HostSessionSnapshot` | Liefert den Snapshot als besitzende Kopie |
+| `pub fn set_inspected_node_id(&mut self, id: Option<u64>)` | Setzt die aktuell fuer den Node-Details-Endpunkt inspizierte Node-ID |
+| `pub fn inspected_node_id(&self) -> Option<u64>` | Liefert die aktuell fuer den Node-Details-Endpunkt inspizierte Node-ID |
+| `pub fn node_details_json(&self) -> Option<String>` | Liefert den aktuell inspizierten Node als `HostNodeDetails`-JSON fuer Flutter |
+| `pub fn node_details(&self, node_id: u64) -> Option<HostNodeDetails>` | Liefert die Details eines Nodes als getypten Rust-Struct ohne JSON-Serialisierung und ohne Seiteneffekt auf `inspected_node_id` |
+| `pub fn marker_list(&self) -> HostMarkerListSnapshot` | Liefert die komplette Markerliste als getypten Rust-Struct |
+| `pub fn connection_pair(&self, node_a: u64, node_b: u64) -> HostConnectionPairSnapshot` | Liefert die Verbindungsdetails zwischen zwei Nodes |
+| `pub fn should_exit(&self) -> bool` | Prueft, ob die Applikation beendet werden soll |
+| `pub fn marker_list_json(&self) -> String` | Liefert alle Marker als `HostMarkerListSnapshot`-JSON fuer Flutter |
 | `pub fn build_render_scene(&self, viewport_size: [f32; 2]) -> RenderScene` | Liefert den per-frame Render-Vertrag |
 | `pub fn build_render_assets(&self) -> RenderAssetsSnapshot` | Liefert den langlebigen Asset-Snapshot |
 | `pub fn build_render_frame(&self, viewport_size: [f32; 2]) -> HostRenderFrameSnapshot` | Liefert Szene und Assets als gekoppelten read-only Render-Output |
@@ -198,6 +213,7 @@ flowchart LR
 | `EngineSelectionSnapshot` | `HostSelectionSnapshot` |
 | `EngineViewportSnapshot` | `HostViewportSnapshot` |
 | `EngineDialogRequestKind` / `EngineDialogRequest` / `EngineDialogResult` | `HostDialogRequestKind` / `HostDialogRequest` / `HostDialogResult` |
+| `EngineConnectionPairEntry` / `EngineConnectionPairSnapshot` | `HostConnectionPairEntry` / `HostConnectionPairSnapshot` |
 | `EngineActiveTool` | `HostActiveTool` |
 
 ## Hinweise
@@ -205,6 +221,9 @@ flowchart LR
 - `snapshot()` arbeitet ueber einen Dirty-Cache und baut `HostSessionSnapshot` nur nach erfolgreichen Mutationen, expliziter Invalidation oder entnommenen Dialog-Requests neu auf.
 - `HostBridgeSession::apply_action(...)` delegiert intern an dieselbe `dispatch`-Seam, die auch nicht-Session-basierte Rust-Hosts nutzen koennen.
 - `HostSessionAction` umfasst zwei Schreibfamilien: den kleinen screen-space-basierten Viewport-Input-Slice (`SubmitViewportInput`) sowie die explizite Route-Tool-Familie (`RouteTool`).
+- `HostSessionAction::QueryNodeDetails` ist bewusst session-lokal: Die Aktion aktualisiert nur den inspizierten Node fuer `node_details_json()` und erzeugt keinen Engine-Intent.
+- Die getypten Read-Methoden `node_details()`, `marker_list()` und `connection_pair()` arbeiten ohne JSON-Serialisierung und ohne Seiteneffekte; `node_details_json()` und `marker_list_json()` nutzen intern dieselben Builder und serialisieren nur zusaetzlich.
+- Die Connection-Management-Actions (`AddConnection`, `RemoveConnectionBetween`, `SetConnectionDirection`, `SetConnectionPriority`, `ConnectSelectedNodes`, `SetAllConnectionsDirectionBetweenSelected`, `InvertAllConnectionsBetweenSelected`, `SetAllConnectionsPriorityBetweenSelected`, `RemoveAllConnectionsBetweenSelected`) mappen bidirektional auf die stabilen Engine-Intents fuer Verbindungsbearbeitung.
 - Stateful Viewport-Input benoetigt `HostViewportInputState`. `HostBridgeSession` besitzt diesen Zustand intern; lokale Rust-Hosts verwenden dafuer `apply_host_action_with_viewport_input_state(...)` oder `apply_viewport_input_batch(...)`.
 - Route-Tool-Write-Pfade laufen bewusst nicht ueber `SubmitViewportInput`, sondern ausschliesslich ueber `HostSessionAction::RouteTool`.
 - Die schmalen UI-Local-Seams (`HostPanelPropertiesState`, `HostDialogUiState`, `HostViewportInputContext`, `HostLocalDialogState`) sind bewusst Rust-Host-intern und nicht als serialisierbare FFI-DTO-Surface gedacht. Der Zugriff bleibt fuer lokale `distanzen`-/`options`-/Dialog-States Snapshot-transparent; snapshot-relevante Escape-Hatch-Mutationen muessen explizit ueber `mark_snapshot_dirty()` invalidiert werden.
