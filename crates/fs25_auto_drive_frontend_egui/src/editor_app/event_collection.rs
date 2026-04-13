@@ -12,6 +12,7 @@ impl EditorApp {
         let mut events = Vec::new();
         let host_ui_snapshot = self.session.build_host_ui_snapshot();
         let host_chrome_snapshot = self.session.build_host_chrome_snapshot();
+        let marker_list = self.session.marker_list();
         let mut top_ui = ui::common::create_top_level_ui(ctx, "editor_app_top_level_panels");
 
         // Panels und Dialoge
@@ -19,10 +20,11 @@ impl EditorApp {
             ctx,
             &host_ui_snapshot,
             &host_chrome_snapshot,
+            &marker_list,
             &mut top_ui,
         ));
         events.extend(
-            self.collect_dialog_events(ctx, &host_ui_snapshot)
+            self.collect_dialog_events(ctx, &host_ui_snapshot, &marker_list)
                 .into_iter()
                 .map(map_intent_to_collected_event),
         );

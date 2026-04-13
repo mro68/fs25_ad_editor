@@ -47,6 +47,15 @@ fn intent_requires_canonical_host_action(intent: &AppIntent) -> bool {
             | AppIntent::SetEditorToolRequested { .. }
             | AppIntent::SetDefaultDirectionRequested { .. }
             | AppIntent::SetDefaultPriorityRequested { .. }
+            | AppIntent::AddConnectionRequested { .. }
+            | AppIntent::RemoveConnectionBetweenRequested { .. }
+            | AppIntent::SetConnectionDirectionRequested { .. }
+            | AppIntent::SetConnectionPriorityRequested { .. }
+            | AppIntent::ConnectSelectedNodesRequested
+            | AppIntent::SetAllConnectionsDirectionBetweenSelectedRequested { .. }
+            | AppIntent::InvertAllConnectionsBetweenSelectedRequested
+            | AppIntent::SetAllConnectionsPriorityBetweenSelectedRequested { .. }
+            | AppIntent::RemoveAllConnectionsBetweenSelectedRequested
             | AppIntent::OptionsChanged { .. }
             | AppIntent::ResetOptionsRequested
             | AppIntent::OpenOptionsDialogRequested
@@ -145,7 +154,7 @@ impl eframe::App for EditorApp {
     fn ui(&mut self, ui: &mut egui::Ui, _frame: &mut eframe::Frame) {
         let ctx = ui.ctx().clone();
 
-        if self.session.app_state().should_exit {
+        if self.session.should_exit() {
             ctx.send_viewport_cmd(egui::ViewportCommand::Close);
             return;
         }
@@ -235,6 +244,17 @@ mod tests {
             &AppIntent::SetDefaultPriorityRequested {
                 priority: crate::app::ConnectionPriority::SubPriority,
             }
+        ));
+        assert!(intent_requires_canonical_host_action(
+            &AppIntent::AddConnectionRequested {
+                from_id: 1,
+                to_id: 2,
+                direction: crate::app::ConnectionDirection::Dual,
+                priority: crate::app::ConnectionPriority::Regular,
+            }
+        ));
+        assert!(intent_requires_canonical_host_action(
+            &AppIntent::RemoveAllConnectionsBetweenSelectedRequested
         ));
         assert!(!intent_requires_canonical_host_action(
             &AppIntent::ViewportResized {

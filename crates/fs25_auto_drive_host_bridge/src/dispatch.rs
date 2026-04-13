@@ -329,6 +329,58 @@ mod tests {
     }
 
     #[test]
+    fn map_connection_actions_and_intents_roundtrip_bidirectionally() {
+        let add_intent = AppIntent::AddConnectionRequested {
+            from_id: 11,
+            to_id: 12,
+            direction: ConnectionDirection::Dual,
+            priority: ConnectionPriority::SubPriority,
+        };
+        let remove_intent = AppIntent::RemoveConnectionBetweenRequested {
+            node_a: 21,
+            node_b: 22,
+        };
+
+        let add_action = map_intent_to_host_action(&add_intent)
+            .expect("AddConnectionRequested muss auf HostSessionAction gemappt werden");
+        let remove_action = map_intent_to_host_action(&remove_intent)
+            .expect("RemoveConnectionBetweenRequested muss auf HostSessionAction gemappt werden");
+
+        assert_eq!(
+            add_action,
+            HostSessionAction::AddConnection {
+                from_id: 11,
+                to_id: 12,
+                direction: HostDefaultConnectionDirection::Dual,
+                priority: HostDefaultConnectionPriority::SubPriority,
+            }
+        );
+        assert_eq!(
+            remove_action,
+            HostSessionAction::RemoveConnectionBetween {
+                node_a: 21,
+                node_b: 22,
+            }
+        );
+        assert!(matches!(
+            map_host_action_to_intent(add_action),
+            Some(AppIntent::AddConnectionRequested {
+                from_id: 11,
+                to_id: 12,
+                direction: ConnectionDirection::Dual,
+                priority: ConnectionPriority::SubPriority,
+            })
+        ));
+        assert!(matches!(
+            map_host_action_to_intent(remove_action),
+            Some(AppIntent::RemoveConnectionBetweenRequested {
+                node_a: 21,
+                node_b: 22,
+            })
+        ));
+    }
+
+    #[test]
     fn map_intent_to_host_action_covers_stable_bridge_intents() {
         let cases = vec![
             (AppIntent::OpenFileRequested, HostSessionAction::OpenFile),
@@ -391,6 +443,82 @@ mod tests {
                 HostSessionAction::SetDefaultPriority {
                     priority: HostDefaultConnectionPriority::SubPriority,
                 },
+            ),
+            (
+                AppIntent::AddConnectionRequested {
+                    from_id: 1,
+                    to_id: 2,
+                    direction: ConnectionDirection::Dual,
+                    priority: ConnectionPriority::SubPriority,
+                },
+                HostSessionAction::AddConnection {
+                    from_id: 1,
+                    to_id: 2,
+                    direction: HostDefaultConnectionDirection::Dual,
+                    priority: HostDefaultConnectionPriority::SubPriority,
+                },
+            ),
+            (
+                AppIntent::RemoveConnectionBetweenRequested {
+                    node_a: 2,
+                    node_b: 3,
+                },
+                HostSessionAction::RemoveConnectionBetween {
+                    node_a: 2,
+                    node_b: 3,
+                },
+            ),
+            (
+                AppIntent::SetConnectionDirectionRequested {
+                    start_id: 3,
+                    end_id: 4,
+                    direction: ConnectionDirection::Reverse,
+                },
+                HostSessionAction::SetConnectionDirection {
+                    start_id: 3,
+                    end_id: 4,
+                    direction: HostDefaultConnectionDirection::Reverse,
+                },
+            ),
+            (
+                AppIntent::SetConnectionPriorityRequested {
+                    start_id: 4,
+                    end_id: 5,
+                    priority: ConnectionPriority::Regular,
+                },
+                HostSessionAction::SetConnectionPriority {
+                    start_id: 4,
+                    end_id: 5,
+                    priority: HostDefaultConnectionPriority::Regular,
+                },
+            ),
+            (
+                AppIntent::SetAllConnectionsDirectionBetweenSelectedRequested {
+                    direction: ConnectionDirection::Dual,
+                },
+                HostSessionAction::SetAllConnectionsDirectionBetweenSelected {
+                    direction: HostDefaultConnectionDirection::Dual,
+                },
+            ),
+            (
+                AppIntent::RemoveAllConnectionsBetweenSelectedRequested,
+                HostSessionAction::RemoveAllConnectionsBetweenSelected,
+            ),
+            (
+                AppIntent::InvertAllConnectionsBetweenSelectedRequested,
+                HostSessionAction::InvertAllConnectionsBetweenSelected,
+            ),
+            (
+                AppIntent::SetAllConnectionsPriorityBetweenSelectedRequested {
+                    priority: ConnectionPriority::SubPriority,
+                },
+                HostSessionAction::SetAllConnectionsPriorityBetweenSelected {
+                    priority: HostDefaultConnectionPriority::SubPriority,
+                },
+            ),
+            (
+                AppIntent::ConnectSelectedNodesRequested,
+                HostSessionAction::ConnectSelectedNodes,
             ),
             (
                 AppIntent::OptionsChanged {
