@@ -93,6 +93,18 @@ pub fn flutter_session_snapshot_json(handle: &FlutterSessionHandle) -> Result<St
         .map_err(|e| anyhow::anyhow!("flutter_session_snapshot_json: Serialisierungsfehler: {e}"))
 }
 
+/// Gibt den aktuell inspizierten Node als JSON-String zurueck.
+pub fn flutter_session_node_details_json(handle: &FlutterSessionHandle) -> Option<String> {
+    handle.with_session(|s| s.node_details_json()).ok().flatten()
+}
+
+/// Gibt die aktuelle Marker-Liste als JSON-String zurueck.
+pub fn flutter_session_marker_list_json(handle: &FlutterSessionHandle) -> String {
+    handle
+        .with_session(|s| s.marker_list_json())
+        .unwrap_or_else(|_| "{\"markers\":[],\"groups\":[]}".to_string())
+}
+
 /// Gibt zurueck, ob die geladene Karte seit dem letzten Load/Save veraendert wurde.
 pub fn flutter_session_is_dirty(handle: &FlutterSessionHandle) -> Result<bool> {
     handle.with_session(|s| s.is_dirty())
