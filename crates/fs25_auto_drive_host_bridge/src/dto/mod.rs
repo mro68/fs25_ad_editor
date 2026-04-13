@@ -5,8 +5,11 @@
 
 mod actions;
 mod chrome;
+mod connection_pair;
 mod dialogs;
 mod input;
+mod markers;
+mod node_details;
 mod route_tool;
 mod ui_json;
 mod viewport;
@@ -15,11 +18,15 @@ mod viewport;
 
 pub use actions::{HostActiveTool, HostRouteToolAction, HostSessionAction, HostTangentSource};
 pub use chrome::HostChromeSnapshot;
+pub use connection_pair::{HostConnectionPairEntry, HostConnectionPairSnapshot};
 pub use dialogs::{HostDialogRequest, HostDialogRequestKind, HostDialogResult};
 pub use input::{
     HostInputModifiers, HostPointerButton, HostTapKind, HostViewportInputBatch,
     HostViewportInputEvent,
 };
+// Marker- und Node-DTOs bleiben direkt ueber `crate::dto::*` erreichbar.
+pub use markers::{HostMarkerInfo, HostMarkerListSnapshot};
+pub use node_details::{HostNodeDetails, HostNodeFlag, HostNodeMarkerInfo, HostNodeNeighbor};
 pub use route_tool::{
     HostDefaultConnectionDirection, HostDefaultConnectionPriority, HostRouteToolDisabledReason,
     HostRouteToolEntrySnapshot, HostRouteToolGroup, HostRouteToolIconKey, HostRouteToolId,
@@ -43,6 +50,10 @@ pub type EngineDialogRequestKind = HostDialogRequestKind;
 /// Kompatibilitaetsalias fuer bestehende Flutter-/FFI-Call-Sites.
 pub type EngineDialogRequest = HostDialogRequest;
 /// Kompatibilitaetsalias fuer bestehende Flutter-/FFI-Call-Sites.
+pub type EngineConnectionPairEntry = HostConnectionPairEntry;
+/// Kompatibilitaetsalias fuer bestehende Flutter-/FFI-Call-Sites.
+pub type EngineConnectionPairSnapshot = HostConnectionPairSnapshot;
+/// Kompatibilitaetsalias fuer bestehende Flutter-/FFI-Call-Sites.
 pub type EngineDialogResult = HostDialogResult;
 /// Kompatibilitaetsalias fuer bestehende Flutter-/FFI-Call-Sites.
 pub type EnginePointerButton = HostPointerButton;
@@ -54,6 +65,18 @@ pub type EngineInputModifiers = HostInputModifiers;
 pub type EngineViewportInputBatch = HostViewportInputBatch;
 /// Kompatibilitaetsalias fuer bestehende Flutter-/FFI-Call-Sites.
 pub type EngineViewportInputEvent = HostViewportInputEvent;
+/// Kompatibilitaetsalias fuer bestehende Flutter-/FFI-Call-Sites.
+pub type EngineMarkerInfo = HostMarkerInfo;
+/// Kompatibilitaetsalias fuer bestehende Flutter-/FFI-Call-Sites.
+pub type EngineMarkerListSnapshot = HostMarkerListSnapshot;
+/// Kompatibilitaetsalias fuer bestehende Flutter-/FFI-Call-Sites.
+pub type EngineNodeDetails = HostNodeDetails;
+/// Kompatibilitaetsalias fuer bestehende Flutter-/FFI-Call-Sites.
+pub type EngineNodeFlag = HostNodeFlag;
+/// Kompatibilitaetsalias fuer bestehende Flutter-/FFI-Call-Sites.
+pub type EngineNodeMarkerInfo = HostNodeMarkerInfo;
+/// Kompatibilitaetsalias fuer bestehende Flutter-/FFI-Call-Sites.
+pub type EngineNodeNeighbor = HostNodeNeighbor;
 /// Kompatibilitaetsalias fuer bestehende Flutter-/FFI-Call-Sites.
 pub type EngineSessionAction = HostSessionAction;
 /// Kompatibilitaetsalias fuer bestehende Flutter-/FFI-Call-Sites.

@@ -6,6 +6,7 @@ use serde::{Deserialize, Serialize};
 
 use super::dialogs::HostDialogResult;
 use super::input::HostViewportInputBatch;
+use super::node_details::HostNodeFlag;
 use super::route_tool::{HostDefaultConnectionDirection, HostDefaultConnectionPriority};
 
 /// Stabiler Tool-Identifier fuer Host-Snapshots.
@@ -162,6 +163,58 @@ pub enum HostSessionAction {
         /// Neue Standard-Prioritaet.
         priority: HostDefaultConnectionPriority,
     },
+    /// Erstellt eine einzelne Verbindung zwischen zwei Nodes.
+    AddConnection {
+        /// Start-Node-ID der Verbindung.
+        from_id: u64,
+        /// Ziel-Node-ID der Verbindung.
+        to_id: u64,
+        /// Richtung der neuen Verbindung.
+        direction: HostDefaultConnectionDirection,
+        /// Prioritaet der neuen Verbindung.
+        priority: HostDefaultConnectionPriority,
+    },
+    /// Entfernt alle Verbindungen zwischen genau zwei Nodes.
+    RemoveConnectionBetween {
+        /// Erste Node-ID des Paares.
+        node_a: u64,
+        /// Zweite Node-ID des Paares.
+        node_b: u64,
+    },
+    /// Aendert die Richtung einer einzelnen Verbindung.
+    SetConnectionDirection {
+        /// Start-Node-ID der Verbindung.
+        start_id: u64,
+        /// End-Node-ID der Verbindung.
+        end_id: u64,
+        /// Neue Richtung der Verbindung.
+        direction: HostDefaultConnectionDirection,
+    },
+    /// Aendert die Prioritaet einer einzelnen Verbindung.
+    SetConnectionPriority {
+        /// Start-Node-ID der Verbindung.
+        start_id: u64,
+        /// End-Node-ID der Verbindung.
+        end_id: u64,
+        /// Neue Prioritaet der Verbindung.
+        priority: HostDefaultConnectionPriority,
+    },
+    /// Verbindet die aktuell selektierten Nodes mit den Standard-Defaults.
+    ConnectSelectedNodes,
+    /// Setzt die Richtung aller Verbindungen zwischen den selektierten Nodes.
+    SetAllConnectionsDirectionBetweenSelected {
+        /// Neue Richtung fuer alle betroffenen Verbindungen.
+        direction: HostDefaultConnectionDirection,
+    },
+    /// Invertiert alle Verbindungen zwischen den selektierten Nodes.
+    InvertAllConnectionsBetweenSelected,
+    /// Setzt die Prioritaet aller Verbindungen zwischen den selektierten Nodes.
+    SetAllConnectionsPriorityBetweenSelected {
+        /// Neue Prioritaet fuer alle betroffenen Verbindungen.
+        priority: HostDefaultConnectionPriority,
+    },
+    /// Entfernt alle Verbindungen zwischen den selektierten Nodes.
+    RemoveAllConnectionsBetweenSelected,
     /// Uebernimmt geaenderte Editor-Optionen.
     ApplyOptions {
         /// Vollstaendige Optionen-Payload.
@@ -177,6 +230,41 @@ pub enum HostSessionAction {
     Undo,
     /// Stellt den letzten Undo-Schritt wieder her.
     Redo,
+    /// Fragt die Detail-Informationen eines einzelnen Nodes fuer Legacy-JSON-Reads ab.
+    QueryNodeDetails {
+        /// ID des abzufragenden Nodes.
+        node_id: u64,
+    },
+    /// Aendert den Node-Flag eines Nodes.
+    SetNodeFlag {
+        /// ID des Nodes.
+        node_id: u64,
+        /// Neuer Flag-Wert.
+        flag: HostNodeFlag,
+    },
+    /// Erstellt einen neuen Marker am angegebenen Node.
+    CreateMarker {
+        /// Node-ID.
+        node_id: u64,
+        /// Name des Markers.
+        name: String,
+        /// Gruppe des Markers.
+        group: String,
+    },
+    /// Aktualisiert Name und Gruppe eines bestehenden Markers.
+    UpdateMarker {
+        /// Node-ID des Markers.
+        node_id: u64,
+        /// Neuer Name.
+        name: String,
+        /// Neue Gruppe.
+        group: String,
+    },
+    /// Entfernt den Marker am angegebenen Node.
+    RemoveMarker {
+        /// Node-ID.
+        node_id: u64,
+    },
     /// Loescht alle aktuell selektierten Nodes.
     DeleteSelected,
     /// Selektiert alle Nodes der aktuellen Karte.
@@ -201,4 +289,110 @@ pub enum HostSessionAction {
         /// Semantisches Ergebnis einer zuvor angeforderten Dialog-Interaktion.
         result: HostDialogResult,
     },
+}
+
+#[cfg(test)]
+mod tests {
+    use serde_json::json;
+
+    use super::HostSessionAction;
+    use crate::dto::{HostDefaultConnectionDirection, HostDefaultConnectionPriority};
+
+    #[test]
+    fn host_session_action_connection_family_roundtrips_json() {
+        let cases = vec![
+            (
+                HostSessionAction::AddConnection {
+                    from_id: 1,
+                    to_id: 2,
+                    direction: HostDefaultConnectionDirection::Dual,
+                    priority: HostDefaultConnectionPriority::SubPriority,
+                },
+                json!({
+                    "kind": "add_connection",
+                    "from_id": 1,
+                    "to_id": 2,
+                    "direction": "dual",
+                    "priority": "sub_priority"
+                }),
+            ),
+            (
+                HostSessionAction::RemoveConnectionBetween {
+                    node_a: 3,
+                    node_b: 4,
+                },
+                json!({
+                    "kind": "remove_connection_between",
+                    "node_a": 3,
+                    "node_b": 4
+                }),
+            ),
+            (
+                HostSessionAction::SetConnectionDirection {
+                    start_id: 5,
+                    end_id: 6,
+                    direction: HostDefaultConnectionDirection::Reverse,
+                },
+                json!({
+                    "kind": "set_connection_direction",
+                    "start_id": 5,
+                    "end_id": 6,
+                    "direction": "reverse"
+                }),
+            ),
+            (
+                HostSessionAction::SetConnectionPriority {
+                    start_id: 7,
+                    end_id: 8,
+                    priority: HostDefaultConnectionPriority::Regular,
+                },
+                json!({
+                    "kind": "set_connection_priority",
+                    "start_id": 7,
+                    "end_id": 8,
+                    "priority": "regular"
+                }),
+            ),
+            (
+                HostSessionAction::ConnectSelectedNodes,
+                json!({ "kind": "connect_selected_nodes" }),
+            ),
+            (
+                HostSessionAction::SetAllConnectionsDirectionBetweenSelected {
+                    direction: HostDefaultConnectionDirection::Regular,
+                },
+                json!({
+                    "kind": "set_all_connections_direction_between_selected",
+                    "direction": "regular"
+                }),
+            ),
+            (
+                HostSessionAction::InvertAllConnectionsBetweenSelected,
+                json!({ "kind": "invert_all_connections_between_selected" }),
+            ),
+            (
+                HostSessionAction::SetAllConnectionsPriorityBetweenSelected {
+                    priority: HostDefaultConnectionPriority::SubPriority,
+                },
+                json!({
+                    "kind": "set_all_connections_priority_between_selected",
+                    "priority": "sub_priority"
+                }),
+            ),
+            (
+                HostSessionAction::RemoveAllConnectionsBetweenSelected,
+                json!({ "kind": "remove_all_connections_between_selected" }),
+            ),
+        ];
+
+        for (action, expected_json) in cases {
+            let payload = serde_json::to_value(&action)
+                .expect("Connection-HostAction muss als JSON serialisierbar sein");
+            assert_eq!(payload, expected_json);
+
+            let parsed: HostSessionAction = serde_json::from_value(payload)
+                .expect("Connection-HostAction muss aus JSON zuruecklesbar sein");
+            assert_eq!(parsed, action);
+        }
+    }
 }

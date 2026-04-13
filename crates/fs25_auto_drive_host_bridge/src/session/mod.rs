@@ -12,15 +12,18 @@ use fs25_auto_drive_engine::app::{
 use fs25_auto_drive_engine::shared::{EditorOptions, RenderAssetsSnapshot, RenderScene};
 use glam::Vec2;
 use indexmap::IndexSet;
+use std::collections::BTreeSet;
 
 mod chrome_state;
 pub use chrome_state::HostLocalDialogState;
 
 use crate::dispatch::HostViewportInputState;
 use crate::dto::{
-    HostActiveTool, HostChromeSnapshot, HostDialogRequest, HostDialogResult,
-    HostRouteToolViewportSnapshot, HostSelectionSnapshot, HostSessionAction, HostSessionSnapshot,
-    HostViewportGeometrySnapshot, HostViewportSnapshot,
+    HostActiveTool, HostChromeSnapshot, HostConnectionPairEntry, HostConnectionPairSnapshot,
+    HostDefaultConnectionDirection, HostDefaultConnectionPriority, HostDialogRequest,
+    HostDialogResult, HostMarkerInfo, HostMarkerListSnapshot, HostNodeDetails, HostNodeFlag,
+    HostNodeMarkerInfo, HostNodeNeighbor, HostRouteToolViewportSnapshot, HostSelectionSnapshot,
+    HostSessionAction, HostSessionSnapshot, HostViewportGeometrySnapshot, HostViewportSnapshot,
 };
 
 fn map_active_tool(tool: EditorTool) -> HostActiveTool {
@@ -29,6 +32,21 @@ fn map_active_tool(tool: EditorTool) -> HostActiveTool {
         EditorTool::Connect => HostActiveTool::Connect,
         EditorTool::AddNode => HostActiveTool::AddNode,
         EditorTool::Route => HostActiveTool::Route,
+    }
+}
+
+fn map_connection_direction(direction: ConnectionDirection) -> HostDefaultConnectionDirection {
+    match direction {
+        ConnectionDirection::Regular => HostDefaultConnectionDirection::Regular,
+        ConnectionDirection::Dual => HostDefaultConnectionDirection::Dual,
+        ConnectionDirection::Reverse => HostDefaultConnectionDirection::Reverse,
+    }
+}
+
+fn map_connection_priority(priority: ConnectionPriority) -> HostDefaultConnectionPriority {
+    match priority {
+        ConnectionPriority::Regular => HostDefaultConnectionPriority::Regular,
+        ConnectionPriority::SubPriority => HostDefaultConnectionPriority::SubPriority,
     }
 }
 
@@ -162,6 +180,7 @@ pub struct HostBridgeSession {
     viewport_input_state: HostViewportInputState,
     snapshot_cache: HostSessionSnapshot,
     snapshot_dirty: bool,
+    inspected_node_id: Option<u64>,
     /// Host-lokaler Chrome- und Dialog-Sichtbarkeitszustand.
     chrome_state: HostLocalDialogState,
     /// Puffer fuer PickPath-Requests, die aus dem Engine-Queue gefiltert wurden.
@@ -181,6 +200,7 @@ impl HostBridgeSession {
             viewport_input_state: HostViewportInputState::default(),
             snapshot_cache,
             snapshot_dirty: false,
+            inspected_node_id: None,
             chrome_state: chrome,
             pending_dialog_requests: Vec::new(),
         }
@@ -199,6 +219,11 @@ impl HostBridgeSession {
     /// `crate::dispatch::apply_host_action(...)` und markiert den Snapshot-
     /// Cache nur nach erfolgreich verarbeiteten Aktionen als dirty.
     pub fn apply_action(&mut self, action: HostSessionAction) -> Result<()> {
+        if let HostSessionAction::QueryNodeDetails { node_id } = action {
+            self.set_inspected_node_id(Some(node_id));
+            return Ok(());
+        }
+
         let handled = crate::dispatch::apply_host_action_with_viewport_input_state(
             &mut self.controller,
             &mut self.state,
@@ -237,9 +262,42 @@ impl HostBridgeSession {
         &self.state
     }
 
+    /// Liefert die Details eines Nodes als getypten Rust-Struct.
+    ///
+    /// Die Methode ist ein reiner Read ohne JSON-Serialisierung und ohne
+    /// Seiteneffekt auf `inspected_node_id`.
+    pub fn node_details(&self, node_id: u64) -> Option<HostNodeDetails> {
+        self.build_node_details_for(node_id)
+    }
+
+    /// Liefert die komplette Markerliste als getypten Rust-Struct.
+    pub fn marker_list(&self) -> HostMarkerListSnapshot {
+        self.build_marker_list_snapshot()
+    }
+
+    /// Liefert die Verbindungsdetails zwischen zwei Nodes.
+    pub fn connection_pair(&self, node_a: u64, node_b: u64) -> HostConnectionPairSnapshot {
+        self.build_connection_pair_snapshot(node_a, node_b)
+    }
+
+    /// Prueft, ob die Applikation beendet werden soll.
+    pub fn should_exit(&self) -> bool {
+        self.app_state().should_exit
+    }
+
     /// Gibt zurueck, ob die geladene Karte seit dem letzten Load/Save veraendert wurde.
     pub fn is_dirty(&self) -> bool {
         self.state.is_dirty()
+    }
+
+    /// Setzt die aktuell fuer das Properties-Panel inspizierte Node-ID.
+    pub fn set_inspected_node_id(&mut self, id: Option<u64>) {
+        self.inspected_node_id = id;
+    }
+
+    /// Liefert die aktuell fuer das Properties-Panel inspizierte Node-ID.
+    pub fn inspected_node_id(&self) -> Option<u64> {
+        self.inspected_node_id
     }
 
     /// Invalidiert den gecachten `HostSessionSnapshot` explizit.
@@ -429,6 +487,20 @@ impl HostBridgeSession {
         self.snapshot().clone()
     }
 
+    /// Serialisiert den aktuell inspizierten Node als JSON fuer Flutter.
+    pub fn node_details_json(&self) -> Option<String> {
+        let snapshot = self
+            .inspected_node_id
+            .and_then(|node_id| self.node_details(node_id))?;
+        serde_json::to_string(&snapshot).ok()
+    }
+
+    /// Serialisiert die aktuelle Marker-Liste als JSON fuer Flutter.
+    pub fn marker_list_json(&self) -> String {
+        serde_json::to_string(&self.marker_list())
+            .unwrap_or_else(|_| "{\"markers\":[],\"groups\":[]}".to_string())
+    }
+
     /// Baut den aktuellen per-frame Render-Vertrag fuer den angegebenen Viewport.
     pub fn build_render_scene(&self, viewport_size: [f32; 2]) -> RenderScene {
         engine_projections::build_render_scene(&self.state, viewport_size)
@@ -507,6 +579,96 @@ impl HostBridgeSession {
         cursor_world: Option<Vec2>,
     ) -> ViewportOverlaySnapshot {
         engine_projections::build_viewport_overlay_snapshot(&mut self.state, cursor_world)
+    }
+
+    fn build_node_details_for(&self, node_id: u64) -> Option<HostNodeDetails> {
+        let road_map = self.state.road_map.as_deref()?;
+        let node = road_map.node(node_id)?;
+
+        Some(HostNodeDetails {
+            id: node.id,
+            position: [node.position.x, node.position.y],
+            flag: HostNodeFlag::from(&node.flag),
+            neighbors: road_map
+                .connected_neighbors(node_id)
+                .into_iter()
+                .map(|neighbor| HostNodeNeighbor {
+                    neighbor_id: neighbor.neighbor_id,
+                    angle: neighbor.angle,
+                    is_outgoing: neighbor.is_outgoing,
+                })
+                .collect(),
+            marker: road_map
+                .find_marker_by_node_id(node_id)
+                .map(|marker| HostNodeMarkerInfo {
+                    name: marker.name.clone(),
+                    group: marker.group.clone(),
+                }),
+        })
+    }
+
+    fn build_marker_list_snapshot(&self) -> HostMarkerListSnapshot {
+        let Some(road_map) = self.state.road_map.as_deref() else {
+            return HostMarkerListSnapshot {
+                markers: Vec::new(),
+                groups: Vec::new(),
+            };
+        };
+
+        let mut groups = BTreeSet::new();
+        let mut markers: Vec<HostMarkerInfo> = road_map
+            .map_markers()
+            .iter()
+            .filter_map(|marker| {
+                let node = road_map.node(marker.id)?;
+                groups.insert(marker.group.clone());
+
+                Some(HostMarkerInfo {
+                    node_id: marker.id,
+                    name: marker.name.clone(),
+                    group: marker.group.clone(),
+                    marker_index: marker.marker_index,
+                    is_debug: marker.is_debug,
+                    position: [node.position.x, node.position.y],
+                })
+            })
+            .collect();
+        markers.sort_by_key(|marker| marker.marker_index);
+
+        HostMarkerListSnapshot {
+            markers,
+            groups: groups.into_iter().collect(),
+        }
+    }
+
+    fn build_connection_pair_snapshot(
+        &self,
+        node_a: u64,
+        node_b: u64,
+    ) -> HostConnectionPairSnapshot {
+        let connections = self
+            .state
+            .road_map
+            .as_deref()
+            .map(|road_map| {
+                road_map
+                    .find_connections_between(node_a, node_b)
+                    .into_iter()
+                    .map(|connection| HostConnectionPairEntry {
+                        start_id: connection.start_id,
+                        end_id: connection.end_id,
+                        direction: map_connection_direction(connection.direction),
+                        priority: map_connection_priority(connection.priority),
+                    })
+                    .collect()
+            })
+            .unwrap_or_default();
+
+        HostConnectionPairSnapshot {
+            node_a,
+            node_b,
+            connections,
+        }
     }
 
     fn rebuild_snapshot_if_dirty(&mut self) {
@@ -689,17 +851,19 @@ mod tests {
     use std::time::Instant;
 
     use fs25_auto_drive_engine::app::{
-        AppIntent, Connection, ConnectionDirection, ConnectionPriority, FloatingMenuKind, MapNode,
-        NodeFlag, OverviewSourceContext, RoadMap,
+        AppIntent, Connection, ConnectionDirection, ConnectionPriority, FloatingMenuKind,
+        MapMarker, MapNode, NodeFlag, OverviewSourceContext, RoadMap,
     };
     use fs25_auto_drive_engine::shared::OverviewLayerOptions;
     use glam::Vec2;
     use std::sync::Arc;
 
     use crate::dto::{
-        EngineSessionAction, HostActiveTool, HostDialogRequestKind, HostDialogResult,
-        HostInputModifiers, HostPointerButton, HostSessionAction, HostTapKind,
-        HostViewportInputBatch, HostViewportInputEvent,
+        EngineSessionAction, HostActiveTool, HostConnectionPairEntry, HostConnectionPairSnapshot,
+        HostDefaultConnectionDirection, HostDefaultConnectionPriority, HostDialogRequestKind,
+        HostDialogResult, HostInputModifiers, HostMarkerListSnapshot, HostNodeDetails,
+        HostPointerButton, HostSessionAction, HostTapKind, HostViewportInputBatch,
+        HostViewportInputEvent,
     };
 
     use super::{EngineRenderFrameSnapshot, FlutterBridgeSession, HostBridgeSession};
@@ -744,6 +908,18 @@ mod tests {
             Vec2::new(20.0, 0.0),
         ));
         map.ensure_spatial_index();
+        map
+    }
+
+    fn node_details_marker_test_map() -> RoadMap {
+        let mut map = viewport_connected_path_map();
+        map.add_map_marker(MapMarker::new(
+            2,
+            "Hof".to_string(),
+            "All".to_string(),
+            3,
+            false,
+        ));
         map
     }
 
@@ -936,6 +1112,170 @@ mod tests {
         let overlay = session.build_viewport_overlay_snapshot(None);
         assert!(overlay.route_tool_preview.is_none());
         assert!(overlay.group_boundaries.is_empty());
+    }
+
+    #[test]
+    fn node_details_read_is_typed_and_side_effect_free() {
+        let mut session = HostBridgeSession::new();
+        session.state.road_map = Some(Arc::new(node_details_marker_test_map()));
+
+        let details = session
+            .node_details(2)
+            .expect("Node-Details muessen fuer vorhandenen Node lesbar sein");
+
+        assert_eq!(details.id, 2);
+        assert_eq!(details.position, [10.0, 0.0]);
+        assert_eq!(details.neighbors.len(), 2);
+        assert!(details
+            .neighbors
+            .iter()
+            .any(|neighbor| { neighbor.neighbor_id == 1 && !neighbor.is_outgoing }));
+        assert!(details
+            .neighbors
+            .iter()
+            .any(|neighbor| { neighbor.neighbor_id == 3 && neighbor.is_outgoing }));
+        assert_eq!(
+            details.marker,
+            Some(crate::dto::HostNodeMarkerInfo {
+                name: "Hof".to_string(),
+                group: "All".to_string(),
+            })
+        );
+        assert_eq!(session.inspected_node_id(), None);
+    }
+
+    #[test]
+    fn node_details_read_returns_none_for_unknown_node_id() {
+        let mut session = HostBridgeSession::new();
+        session.state.road_map = Some(Arc::new(node_details_marker_test_map()));
+
+        assert_eq!(session.node_details(999), None);
+    }
+
+    #[test]
+    fn node_details_json_serializes_current_inspected_node_via_typed_read_seam() {
+        let mut session = HostBridgeSession::new();
+        session.state.road_map = Some(Arc::new(node_details_marker_test_map()));
+        session.set_inspected_node_id(Some(2));
+
+        let expected = session
+            .node_details(2)
+            .expect("Typed Node-Details muessen verfuegbar sein");
+        let payload = session
+            .node_details_json()
+            .expect("JSON-Node-Details muessen fuer inspizierten Node serialisierbar sein");
+        let parsed: HostNodeDetails = serde_json::from_str(&payload)
+            .expect("Node-Details-JSON muss wieder in das DTO lesbar sein");
+
+        assert_eq!(parsed, expected);
+        assert_eq!(session.inspected_node_id(), Some(2));
+    }
+
+    #[test]
+    fn marker_list_typed_read_and_json_share_the_same_snapshot() {
+        let mut session = HostBridgeSession::new();
+        session.state.road_map = Some(Arc::new(node_details_marker_test_map()));
+
+        let snapshot = session.marker_list();
+        let parsed: HostMarkerListSnapshot = serde_json::from_str(&session.marker_list_json())
+            .expect("Marker-List-JSON muss wieder in das DTO lesbar sein");
+
+        assert_eq!(snapshot, parsed);
+        assert_eq!(snapshot.groups, vec!["All".to_string()]);
+        assert_eq!(snapshot.markers.len(), 1);
+        assert_eq!(snapshot.markers[0].node_id, 2);
+        assert_eq!(snapshot.markers[0].name, "Hof");
+    }
+
+    #[test]
+    fn marker_list_read_returns_empty_snapshot_for_empty_road_map() {
+        let mut session = HostBridgeSession::new();
+        session.state.road_map = Some(Arc::new(RoadMap::new(2)));
+
+        let snapshot = session.marker_list();
+
+        assert!(snapshot.markers.is_empty());
+        assert!(snapshot.groups.is_empty());
+    }
+
+    #[test]
+    fn connection_pair_read_returns_bridge_snapshot_for_two_nodes() {
+        let mut session = HostBridgeSession::new();
+        let mut map = RoadMap::new(3);
+        map.add_node(MapNode::new(1, Vec2::new(0.0, 0.0), NodeFlag::Regular));
+        map.add_node(MapNode::new(2, Vec2::new(10.0, 0.0), NodeFlag::Regular));
+        map.add_connection(Connection::new(
+            1,
+            2,
+            ConnectionDirection::Dual,
+            ConnectionPriority::Regular,
+            Vec2::new(0.0, 0.0),
+            Vec2::new(10.0, 0.0),
+        ));
+        map.add_connection(Connection::new(
+            2,
+            1,
+            ConnectionDirection::Reverse,
+            ConnectionPriority::SubPriority,
+            Vec2::new(10.0, 0.0),
+            Vec2::new(0.0, 0.0),
+        ));
+        session.state.road_map = Some(Arc::new(map));
+
+        let snapshot = session.connection_pair(1, 2);
+
+        assert_eq!(
+            snapshot,
+            HostConnectionPairSnapshot {
+                node_a: 1,
+                node_b: 2,
+                connections: vec![
+                    HostConnectionPairEntry {
+                        start_id: 1,
+                        end_id: 2,
+                        direction: HostDefaultConnectionDirection::Dual,
+                        priority: HostDefaultConnectionPriority::Regular,
+                    },
+                    HostConnectionPairEntry {
+                        start_id: 2,
+                        end_id: 1,
+                        direction: HostDefaultConnectionDirection::Reverse,
+                        priority: HostDefaultConnectionPriority::SubPriority,
+                    },
+                ],
+            }
+        );
+    }
+
+    #[test]
+    fn connection_pair_read_returns_empty_connections_for_unconnected_nodes() {
+        let mut session = HostBridgeSession::new();
+        let mut map = RoadMap::new(2);
+        map.add_node(MapNode::new(1, Vec2::new(0.0, 0.0), NodeFlag::Regular));
+        map.add_node(MapNode::new(2, Vec2::new(10.0, 0.0), NodeFlag::Regular));
+        session.state.road_map = Some(Arc::new(map));
+
+        let snapshot = session.connection_pair(1, 2);
+
+        assert_eq!(
+            snapshot,
+            HostConnectionPairSnapshot {
+                node_a: 1,
+                node_b: 2,
+                connections: Vec::new(),
+            }
+        );
+    }
+
+    #[test]
+    fn should_exit_surfaces_explicit_exit_seam() {
+        let mut session = HostBridgeSession::new();
+
+        assert!(!session.should_exit());
+
+        session.state.should_exit = true;
+
+        assert!(session.should_exit());
     }
 
     #[test]

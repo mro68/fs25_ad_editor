@@ -17,7 +17,7 @@ mod tangent_ui;
 use crate::app::{AppIntent, ConnectionDirection, ConnectionPriority, GroupRegistry, RoadMap};
 use crate::shared::EditorOptions;
 use commands::{validate_entries, IntentContext, MenuCatalog, PreconditionContext};
-use fs25_auto_drive_host_bridge::HostTangentMenuSnapshot;
+use fs25_auto_drive_host_bridge::{HostNodeDetails, HostTangentMenuSnapshot};
 use indexmap::IndexSet;
 use render::render_validated_entries;
 use tangent_ui::{render_node_info_submenu, render_tangent_selection};
@@ -110,6 +110,7 @@ pub fn render_context_menu(
     default_priority: ConnectionPriority,
     variant: &MenuVariant,
     group_registry: Option<&GroupRegistry>,
+    focused_node_details: Option<&HostNodeDetails>,
     events: &mut Vec<AppIntent>,
 ) -> bool {
     let Some(rm) = road_map else { return false };
@@ -228,7 +229,7 @@ pub fn render_context_menu(
 
                     // ── Info-Submenu (ganz unten, öffnet bei Hover) ───
                     ui.separator();
-                    render_node_info_submenu(ui, *focused_node_id, rm);
+                    render_node_info_submenu(ui, *focused_node_id, focused_node_details);
                 }
 
                 MenuVariant::RouteToolActive { tangent_data } => {

@@ -14,10 +14,11 @@ Das `ui`-Modul enthält egui-UI-Komponenten (Menüs, Statusbar, Input-Handling, 
 - `long_press.rs` — Wiederverwendbares Long-Press-Dropdown-Widget (`LongPressState`, `LongPressGroup`, `render_long_press_button`)
 - `defaults_panel.rs` — Linke Sidebar im Gruppen-Layout; Route-Tool-Entries, Tool-Memory und Defaults kommen aus `HostChromeSnapshot`
 - `command_palette.rs` — Command Palette Overlay (Suche + HostChromeSnapshot-basierte Route-Tool-Auswahl; deaktivierte Route-Tools bleiben sichtbar und tragen ihren Disabled-Grund)
-- `properties.rs` — Properties-Panel (Detailanzeige selektierter Nodes)
+- `properties.rs` — Properties-Panel; Einzel- und Zwei-Node-Details kommen aus prefetched `HostNodeDetails` bzw. `HostConnectionPairSnapshot`, `RoadMap` bleibt nur fuer das Distanz-Panel
 - `options_dialog/` — Optionen-Dialog fuer Laufzeit-Einstellungen (`mod.rs`, `sections/*.rs`)
 - `edit_panel.rs` — Schwebendes Edit-Panel; intern aufgeteilt in `edit_panel/group_panel.rs`, `edit_panel/route_tool_panel.rs` mit `route_tool_panel/curve_panel.rs` und `route_tool_panel/analysis_panel.rs`, sowie `edit_panel/streckenteilung_panel.rs`
 - `tool_preview.rs` — Tool-Preview-Overlay (Route-Tool-Vorschau im Viewport)
+- `marker_panel.rs` — Rechte Sidebar fuer Map-Marker aus `HostMarkerListSnapshot` (Kamera-Zentrierung bei Klick)
 - `input/` — Viewport-Input-Orchestrator (phasenbasierte Submodule)
   - `clicks.rs` — Klick-Events (Einfach-/Doppel-Klick, Tool-Routing)
   - `drag_primary.rs` — Drag-Start/-Ende (Selektion-Move, Kamera-Pan, Route-Tool-Drag)
@@ -266,9 +267,11 @@ pub fn route_tool_icon(tool_id: RouteToolId) -> ImageSource<'static>;
 
 ---
 
-### `render_properties_panel`
+### `render_properties_content`
 
-Rendert das Properties-Panel mit Detailanzeige selektierter Nodes (IDs, Positionen, Verbindungen).
+Rendert den Inhalt des Properties-Panels mit Detailanzeige selektierter Nodes.
+Einzelnode-Details kommen ueber `HostNodeDetails`, Zwei-Node-Verbindungen ueber
+`HostConnectionPairSnapshot`. `road_map` bleibt nur fuer das Distanz-Panel erhalten.
 
 Zeigt tool- und selektionsabhängig:
 
@@ -280,15 +283,34 @@ Zeigt tool- und selektionsabhängig:
 **Hinweis:** Node-Verhalten-Einstellungen (reconnect_on_delete, split_connection_on_place) sind in `render_options_dialog()` integriert. Route-Tool-Konfiguration wird separat vom `render_edit_panel()` gerendert (DRY-Bereinigung).
 
 ```rust
-pub fn render_properties_panel(
-  ctx: &egui::Context,
+pub fn render_properties_content(
+  ui: &mut egui::Ui,
   road_map: Option<&RoadMap>,
   selected_node_ids: &IndexSet<u64>,
+  node_details: Option<&HostNodeDetails>,
+  connection_pair: Option<&HostConnectionPairSnapshot>,
   default_direction: ConnectionDirection,
   default_priority: ConnectionPriority,
   distance_wheel_step_m: f32,
   group_registry: Option<&GroupRegistry>,
+  tool_edit_store: Option<&ToolEditStore>,
   distance_state: &mut DistanzenState,
+) -> Vec<AppIntent>
+```
+
+---
+
+### `render_marker_content`
+
+Rendert den Marker-Inhalt der rechten Sidebar aus einem prefetched `HostMarkerListSnapshot`.
+Debug-Marker werden weiterhin ausgeblendet; `has_map` trennt den Fall „keine Datei geladen"
+vom Fall „keine Marker vorhanden".
+
+```rust
+pub fn render_marker_content(
+  ui: &mut egui::Ui,
+  marker_list: &HostMarkerListSnapshot,
+  has_map: bool,
 ) -> Vec<AppIntent>
 ```
 
@@ -378,6 +400,7 @@ let route_tool_view = session.build_route_tool_viewport_snapshot();
 // Ableitungen aus dem host-neutralen Snapshot fuer die egui-UI
 let drag_targets = /* aus route_tool_view.drag_targets abgeleitet */;
 let tangent_data = /* aus route_tool_view.tangent_menu_data nach TangentMenuData gemappt */;
+let focused_node_details = /* optional via session.node_details(node_id) prefetched */;
 
 // Sammelt Viewport-Events aus egui-Input
 let intents = input.collect_viewport_events(
@@ -388,6 +411,7 @@ let intents = input.collect_viewport_events(
   &drag_targets,
   &mut distanzen_state,
   tangent_data,
+  focused_node_details.as_ref(),
   clipboard_has_data,
   farmland_polygons_loaded,
   group_editing_active,
@@ -423,7 +447,7 @@ let intents = input.collect_viewport_events(
   - Alt+Drag → Lasso-Selektion
   - Mittel/Rechts-Drag → Kamera-Pan
 
-- **`context_menu`:** Rechtsklick-Kontextmenü mit validiertem Command-System (CommandId + Preconditions → nur gültige Einträge). SVG-Icons werden aus `assets/` gerendert und über `EditorOptions` sowie die aktuell gewählte Standard-Richtung/-Priorität eingefärbt. Streckenteilung-Widget wird nur angezeigt wenn `RoadMap::is_resampleable_chain()` für die aktuelle Selektion `true` liefert (zusammenhängende Kette, Kreuzungen nur an Endpunkten).
+- **`context_menu`:** Rechtsklick-Kontextmenü mit validiertem Command-System (CommandId + Preconditions → nur gültige Einträge). SVG-Icons werden aus `assets/` gerendert und über `EditorOptions` sowie die aktuell gewählte Standard-Richtung/-Priorität eingefärbt. Streckenteilung-Widget wird nur angezeigt wenn `RoadMap::is_resampleable_chain()` für die aktuelle Selektion `true` liefert (zusammenhängende Kette, Kreuzungen nur an Endpunkten). Das reine Info-Submenu eines fokussierten Nodes konsumiert vorab geladene `HostNodeDetails`; Hit-Test, Preconditions und Node-Position bleiben bewusst im `RoadMap`-Pfad.
   - **Segment-Integration:** `group_registry` wird zur Validierung herangezogen. Wenn alle selektierten Nodes zu einem einzigen validen Segment gehoeren → `EditGroup` Command verfuegbar.
 
 ### `render_context_menu`
@@ -437,16 +461,22 @@ pub fn render_context_menu(
     selected_node_ids: &IndexSet<u64>,
     distanzen_active: bool,
     clipboard_has_data: bool,
+  farmland_polygons_loaded: bool,
+  group_editing_active: bool,
     options: &EditorOptions,
     default_direction: ConnectionDirection,
     default_priority: ConnectionPriority,
     variant: &MenuVariant,
     group_registry: Option<&GroupRegistry>,
+  focused_node_details: Option<&HostNodeDetails>,
     events: &mut Vec<AppIntent>,
 ) -> bool
 ```
 
 Alle Commands werden durch ein Precondition-System gefiltert: Nur Commands deren Bedingungen erfuellt sind werden angezeigt.
+
+`focused_node_details` wird ausschliesslich fuer das Info-Submenu eines
+`MenuVariant::NodeFocused` verwendet.
 
 **Segment-Integration:**
 
@@ -764,12 +794,13 @@ pub fn render_route_defaults_panel(
 ### `show_marker_dialog`
 
 Zeigt den Marker-Bearbeiten-Dialog als modales Fenster (Name, Gruppe, bestehende Gruppen).
+Die Gruppenvorschlaege kommen aus `HostMarkerListSnapshot.groups` statt direkt aus `RoadMap`.
 
 ```rust
 pub fn show_marker_dialog(
     ctx: &egui::Context,
-    ui_state: &mut UiState,
-    road_map: Option<&RoadMap>,
+  ui_state: &mut HostLocalDialogState,
+  marker_list: &HostMarkerListSnapshot,
 ) -> Vec<AppIntent>
 ```
 
