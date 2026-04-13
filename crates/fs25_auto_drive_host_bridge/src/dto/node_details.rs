@@ -127,8 +127,8 @@ mod tests {
         ];
 
         for (flag, expected) in cases {
-            let payload = serde_json::to_value(flag)
-                .expect("HostNodeFlag muss als JSON serialisierbar sein");
+            let payload =
+                serde_json::to_value(flag).expect("HostNodeFlag muss als JSON serialisierbar sein");
             assert_eq!(payload, json!(expected));
 
             let parsed: HostNodeFlag = serde_json::from_value(payload)
@@ -143,7 +143,10 @@ mod tests {
 
         let payload = serde_json::to_value(&action)
             .expect("QueryNodeDetails muss als JSON serialisierbar sein");
-        assert_eq!(payload, json!({ "kind": "query_node_details", "node_id": 42 }));
+        assert_eq!(
+            payload,
+            json!({ "kind": "query_node_details", "node_id": 42 })
+        );
 
         let parsed: HostSessionAction = serde_json::from_value(payload)
             .expect("QueryNodeDetails muss aus JSON zuruecklesbar sein");
@@ -157,8 +160,8 @@ mod tests {
             flag: HostNodeFlag::RoundedCorner,
         };
 
-        let payload = serde_json::to_value(&action)
-            .expect("SetNodeFlag muss als JSON serialisierbar sein");
+        let payload =
+            serde_json::to_value(&action).expect("SetNodeFlag muss als JSON serialisierbar sein");
         assert_eq!(
             payload,
             json!({
@@ -168,8 +171,8 @@ mod tests {
             })
         );
 
-        let parsed: HostSessionAction = serde_json::from_value(payload)
-            .expect("SetNodeFlag muss aus JSON zuruecklesbar sein");
+        let parsed: HostSessionAction =
+            serde_json::from_value(payload).expect("SetNodeFlag muss aus JSON zuruecklesbar sein");
         assert_eq!(parsed, action);
     }
 }

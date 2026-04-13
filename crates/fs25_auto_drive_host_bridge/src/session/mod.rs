@@ -19,11 +19,10 @@ pub use chrome_state::HostLocalDialogState;
 
 use crate::dispatch::HostViewportInputState;
 use crate::dto::{
-    HostActiveTool, HostChromeSnapshot, HostDialogRequest, HostDialogResult,
-    HostMarkerInfo, HostMarkerListSnapshot,
-    HostNodeDetails, HostNodeFlag, HostNodeMarkerInfo, HostNodeNeighbor,
-    HostRouteToolViewportSnapshot, HostSelectionSnapshot, HostSessionAction,
-    HostSessionSnapshot, HostViewportGeometrySnapshot, HostViewportSnapshot,
+    HostActiveTool, HostChromeSnapshot, HostDialogRequest, HostDialogResult, HostMarkerInfo,
+    HostMarkerListSnapshot, HostNodeDetails, HostNodeFlag, HostNodeMarkerInfo, HostNodeNeighbor,
+    HostRouteToolViewportSnapshot, HostSelectionSnapshot, HostSessionAction, HostSessionSnapshot,
+    HostViewportGeometrySnapshot, HostViewportSnapshot,
 };
 
 fn map_active_tool(tool: EditorTool) -> HostActiveTool {
@@ -469,7 +468,9 @@ impl HostBridgeSession {
 
     /// Serialisiert den aktuell inspizierten Node als JSON fuer Flutter.
     pub fn node_details_json(&self) -> Option<String> {
-        let snapshot = self.inspected_node_id.and_then(|node_id| self.node_details(node_id))?;
+        let snapshot = self
+            .inspected_node_id
+            .and_then(|node_id| self.node_details(node_id))?;
         serde_json::to_string(&snapshot).ok()
     }
 
@@ -799,8 +800,8 @@ mod tests {
     use std::time::Instant;
 
     use fs25_auto_drive_engine::app::{
-        AppIntent, Connection, ConnectionDirection, ConnectionPriority, FloatingMenuKind, MapNode,
-        MapMarker, NodeFlag, OverviewSourceContext, RoadMap,
+        AppIntent, Connection, ConnectionDirection, ConnectionPriority, FloatingMenuKind,
+        MapMarker, MapNode, NodeFlag, OverviewSourceContext, RoadMap,
     };
     use fs25_auto_drive_engine::shared::OverviewLayerOptions;
     use glam::Vec2;
@@ -1072,12 +1073,14 @@ mod tests {
         assert_eq!(details.id, 2);
         assert_eq!(details.position, [10.0, 0.0]);
         assert_eq!(details.neighbors.len(), 2);
-        assert!(details.neighbors.iter().any(|neighbor| {
-            neighbor.neighbor_id == 1 && !neighbor.is_outgoing
-        }));
-        assert!(details.neighbors.iter().any(|neighbor| {
-            neighbor.neighbor_id == 3 && neighbor.is_outgoing
-        }));
+        assert!(details
+            .neighbors
+            .iter()
+            .any(|neighbor| { neighbor.neighbor_id == 1 && !neighbor.is_outgoing }));
+        assert!(details
+            .neighbors
+            .iter()
+            .any(|neighbor| { neighbor.neighbor_id == 3 && neighbor.is_outgoing }));
         assert_eq!(
             details.marker,
             Some(crate::dto::HostNodeMarkerInfo {
