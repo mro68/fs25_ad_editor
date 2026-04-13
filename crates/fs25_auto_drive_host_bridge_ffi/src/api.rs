@@ -33,6 +33,16 @@ pub fn flutter_session_snapshot_json(handle: &FlutterSessionHandle) -> Result<St
     crate::flutter_api::flutter_session_snapshot_json(handle)
 }
 
+/// Gibt den aktuell inspizierten Node als JSON-String zurueck.
+pub fn flutter_session_node_details_json(handle: &FlutterSessionHandle) -> Option<String> {
+    crate::flutter_api::flutter_session_node_details_json(handle)
+}
+
+/// Gibt die aktuelle Marker-Liste als JSON-String zurueck.
+pub fn flutter_session_marker_list_json(handle: &FlutterSessionHandle) -> String {
+    crate::flutter_api::flutter_session_marker_list_json(handle)
+}
+
 /// Gibt zurueck, ob die geladene Karte seit dem letzten Load/Save veraendert wurde.
 pub fn flutter_session_is_dirty(handle: &FlutterSessionHandle) -> Result<bool> {
     crate::flutter_api::flutter_session_is_dirty(handle)
