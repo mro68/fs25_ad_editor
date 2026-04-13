@@ -5,6 +5,7 @@
 
 mod actions;
 mod chrome;
+mod connection_pair;
 mod dialogs;
 mod input;
 mod markers;
@@ -17,6 +18,7 @@ mod viewport;
 
 pub use actions::{HostActiveTool, HostRouteToolAction, HostSessionAction, HostTangentSource};
 pub use chrome::HostChromeSnapshot;
+pub use connection_pair::{HostConnectionPairEntry, HostConnectionPairSnapshot};
 pub use dialogs::{HostDialogRequest, HostDialogRequestKind, HostDialogResult};
 pub use input::{
     HostInputModifiers, HostPointerButton, HostTapKind, HostViewportInputBatch,
@@ -47,6 +49,10 @@ pub type EngineActiveTool = HostActiveTool;
 pub type EngineDialogRequestKind = HostDialogRequestKind;
 /// Kompatibilitaetsalias fuer bestehende Flutter-/FFI-Call-Sites.
 pub type EngineDialogRequest = HostDialogRequest;
+/// Kompatibilitaetsalias fuer bestehende Flutter-/FFI-Call-Sites.
+pub type EngineConnectionPairEntry = HostConnectionPairEntry;
+/// Kompatibilitaetsalias fuer bestehende Flutter-/FFI-Call-Sites.
+pub type EngineConnectionPairSnapshot = HostConnectionPairSnapshot;
 /// Kompatibilitaetsalias fuer bestehende Flutter-/FFI-Call-Sites.
 pub type EngineDialogResult = HostDialogResult;
 /// Kompatibilitaetsalias fuer bestehende Flutter-/FFI-Call-Sites.

@@ -405,6 +405,58 @@ pub fn map_intent_to_host_action(intent: &AppIntent) -> Option<HostSessionAction
                 priority: map_connection_priority(*priority),
             })
         }
+        AppIntent::AddConnectionRequested {
+            from_id,
+            to_id,
+            direction,
+            priority,
+        } => Some(HostSessionAction::AddConnection {
+            from_id: *from_id,
+            to_id: *to_id,
+            direction: map_connection_direction(*direction),
+            priority: map_connection_priority(*priority),
+        }),
+        AppIntent::RemoveConnectionBetweenRequested { node_a, node_b } => {
+            Some(HostSessionAction::RemoveConnectionBetween {
+                node_a: *node_a,
+                node_b: *node_b,
+            })
+        }
+        AppIntent::SetConnectionDirectionRequested {
+            start_id,
+            end_id,
+            direction,
+        } => Some(HostSessionAction::SetConnectionDirection {
+            start_id: *start_id,
+            end_id: *end_id,
+            direction: map_connection_direction(*direction),
+        }),
+        AppIntent::SetConnectionPriorityRequested {
+            start_id,
+            end_id,
+            priority,
+        } => Some(HostSessionAction::SetConnectionPriority {
+            start_id: *start_id,
+            end_id: *end_id,
+            priority: map_connection_priority(*priority),
+        }),
+        AppIntent::ConnectSelectedNodesRequested => Some(HostSessionAction::ConnectSelectedNodes),
+        AppIntent::SetAllConnectionsDirectionBetweenSelectedRequested { direction } => Some(
+            HostSessionAction::SetAllConnectionsDirectionBetweenSelected {
+                direction: map_connection_direction(*direction),
+            },
+        ),
+        AppIntent::InvertAllConnectionsBetweenSelectedRequested => {
+            Some(HostSessionAction::InvertAllConnectionsBetweenSelected)
+        }
+        AppIntent::SetAllConnectionsPriorityBetweenSelectedRequested { priority } => Some(
+            HostSessionAction::SetAllConnectionsPriorityBetweenSelected {
+                priority: map_connection_priority(*priority),
+            },
+        ),
+        AppIntent::RemoveAllConnectionsBetweenSelectedRequested => {
+            Some(HostSessionAction::RemoveAllConnectionsBetweenSelected)
+        }
         AppIntent::OptionsChanged { options } => Some(HostSessionAction::ApplyOptions {
             options: options.clone(),
         }),
@@ -566,6 +618,55 @@ pub fn map_host_action_to_intent(action: HostSessionAction) -> Option<AppIntent>
             Some(AppIntent::SetDefaultPriorityRequested {
                 priority: map_host_connection_priority(priority),
             })
+        }
+        HostSessionAction::AddConnection {
+            from_id,
+            to_id,
+            direction,
+            priority,
+        } => Some(AppIntent::AddConnectionRequested {
+            from_id,
+            to_id,
+            direction: map_host_connection_direction(direction),
+            priority: map_host_connection_priority(priority),
+        }),
+        HostSessionAction::RemoveConnectionBetween { node_a, node_b } => {
+            Some(AppIntent::RemoveConnectionBetweenRequested { node_a, node_b })
+        }
+        HostSessionAction::SetConnectionDirection {
+            start_id,
+            end_id,
+            direction,
+        } => Some(AppIntent::SetConnectionDirectionRequested {
+            start_id,
+            end_id,
+            direction: map_host_connection_direction(direction),
+        }),
+        HostSessionAction::SetConnectionPriority {
+            start_id,
+            end_id,
+            priority,
+        } => Some(AppIntent::SetConnectionPriorityRequested {
+            start_id,
+            end_id,
+            priority: map_host_connection_priority(priority),
+        }),
+        HostSessionAction::ConnectSelectedNodes => Some(AppIntent::ConnectSelectedNodesRequested),
+        HostSessionAction::SetAllConnectionsDirectionBetweenSelected { direction } => Some(
+            AppIntent::SetAllConnectionsDirectionBetweenSelectedRequested {
+                direction: map_host_connection_direction(direction),
+            },
+        ),
+        HostSessionAction::InvertAllConnectionsBetweenSelected => {
+            Some(AppIntent::InvertAllConnectionsBetweenSelectedRequested)
+        }
+        HostSessionAction::SetAllConnectionsPriorityBetweenSelected { priority } => Some(
+            AppIntent::SetAllConnectionsPriorityBetweenSelectedRequested {
+                priority: map_host_connection_priority(priority),
+            },
+        ),
+        HostSessionAction::RemoveAllConnectionsBetweenSelected => {
+            Some(AppIntent::RemoveAllConnectionsBetweenSelectedRequested)
         }
         HostSessionAction::ApplyOptions { options } => Some(AppIntent::OptionsChanged { options }),
         HostSessionAction::ResetOptions => Some(AppIntent::ResetOptionsRequested),
