@@ -145,7 +145,7 @@ impl eframe::App for EditorApp {
     fn ui(&mut self, ui: &mut egui::Ui, _frame: &mut eframe::Frame) {
         let ctx = ui.ctx().clone();
 
-        if self.session.app_state().should_exit {
+        if self.session.should_exit() {
             ctx.send_viewport_cmd(egui::ViewportCommand::Close);
             return;
         }

@@ -6,6 +6,7 @@ use serde::{Deserialize, Serialize};
 
 use super::dialogs::HostDialogResult;
 use super::input::HostViewportInputBatch;
+use super::node_details::HostNodeFlag;
 use super::route_tool::{HostDefaultConnectionDirection, HostDefaultConnectionPriority};
 
 /// Stabiler Tool-Identifier fuer Host-Snapshots.
@@ -177,6 +178,41 @@ pub enum HostSessionAction {
     Undo,
     /// Stellt den letzten Undo-Schritt wieder her.
     Redo,
+    /// Fragt die Detail-Informationen eines einzelnen Nodes fuer Legacy-JSON-Reads ab.
+    QueryNodeDetails {
+        /// ID des abzufragenden Nodes.
+        node_id: u64,
+    },
+    /// Aendert den Node-Flag eines Nodes.
+    SetNodeFlag {
+        /// ID des Nodes.
+        node_id: u64,
+        /// Neuer Flag-Wert.
+        flag: HostNodeFlag,
+    },
+    /// Erstellt einen neuen Marker am angegebenen Node.
+    CreateMarker {
+        /// Node-ID.
+        node_id: u64,
+        /// Name des Markers.
+        name: String,
+        /// Gruppe des Markers.
+        group: String,
+    },
+    /// Aktualisiert Name und Gruppe eines bestehenden Markers.
+    UpdateMarker {
+        /// Node-ID des Markers.
+        node_id: u64,
+        /// Neuer Name.
+        name: String,
+        /// Neue Gruppe.
+        group: String,
+    },
+    /// Entfernt den Marker am angegebenen Node.
+    RemoveMarker {
+        /// Node-ID.
+        node_id: u64,
+    },
     /// Loescht alle aktuell selektierten Nodes.
     DeleteSelected,
     /// Selektiert alle Nodes der aktuellen Karte.
