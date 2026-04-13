@@ -28,16 +28,13 @@ impl EditorApp {
 
         let dialog_results = ui::handle_file_dialogs(self.session.take_dialog_requests());
         events.extend(map_dialog_results_to_intents(dialog_results));
+        let marker_list = self.session.marker_list();
         let dialog_state = self.session.dialog_ui_state_mut();
         events.extend(ui::show_heightmap_warning(
             ctx,
             dialog_state.ui.show_heightmap_warning,
         ));
-        events.extend(ui::show_marker_dialog(
-            ctx,
-            dialog_state.ui,
-            dialog_state.road_map,
-        ));
+        events.extend(ui::show_marker_dialog(ctx, dialog_state.ui, &marker_list));
         events.extend(ui::show_dedup_dialog(ctx, dialog_state.ui));
         events.extend(ui::show_confirm_dissolve_dialog(
             ctx,

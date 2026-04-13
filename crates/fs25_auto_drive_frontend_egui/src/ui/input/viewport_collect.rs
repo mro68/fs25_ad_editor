@@ -11,7 +11,8 @@ use crate::app::{
 };
 use crate::shared::EditorOptions;
 use fs25_auto_drive_host_bridge::{
-    HostTangentMenuSnapshot, HostViewportInputBatch, HostViewportInputEvent,
+    HostNodeDetails, HostTangentMenuSnapshot, HostViewportInputBatch,
+    HostViewportInputEvent,
 };
 use indexmap::IndexSet;
 
@@ -42,6 +43,9 @@ impl InputState {
     /// `tangent_data` enthaelt optionale Tangenten-Menuedaten vom aktiven Route-Tool
     /// (nur bei kubischer Kurve in Control-Phase mit Nachbarn).
     ///
+    /// `focused_node_details` enthaelt optional vorab geladene Bridge-Details fuer
+    /// das Info-Submenu eines fokussierten Kontextmenue-Nodes.
+    ///
     /// `route_tool_segment_shortcuts_active` schaltet die Pfeiltasten von Kamera-Pan
     /// auf Segment-Shortcuts um, sobald das aktive Tool diese Capability aktuell anbietet.
     ///
@@ -64,6 +68,7 @@ impl InputState {
         drag_targets: &[[f32; 2]],
         distanzen_state: &mut crate::app::state::DistanzenState,
         tangent_data: Option<HostTangentMenuSnapshot>,
+        focused_node_details: Option<&HostNodeDetails>,
         clipboard_has_data: bool,
         farmland_polygons_loaded: bool,
         group_editing_active: bool,
@@ -180,6 +185,7 @@ impl InputState {
             default_priority,
             &variant,
             group_registry,
+            focused_node_details,
             &mut local_intents,
         );
 

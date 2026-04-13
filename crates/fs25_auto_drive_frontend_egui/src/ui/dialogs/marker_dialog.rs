@@ -1,12 +1,11 @@
-use crate::app::{AppIntent, RoadMap};
-use fs25_auto_drive_host_bridge::HostLocalDialogState;
-use std::collections::BTreeSet;
+use crate::app::AppIntent;
+use fs25_auto_drive_host_bridge::{HostLocalDialogState, HostMarkerListSnapshot};
 
 /// Zeigt den Marker-Bearbeiten-Dialog als modales Fenster.
 pub fn show_marker_dialog(
     ctx: &egui::Context,
     ui_state: &mut HostLocalDialogState,
-    road_map: Option<&RoadMap>,
+    marker_list: &HostMarkerListSnapshot,
 ) -> Vec<AppIntent> {
     let mut events = Vec::new();
 
@@ -24,10 +23,6 @@ pub fn show_marker_dialog(
     } else {
         "Marker aendern"
     };
-
-    let existing_groups: BTreeSet<String> = road_map
-        .map(|rm| rm.map_markers().iter().map(|m| m.group.clone()).collect())
-        .unwrap_or_default();
 
     let mut confirmed = false;
     let mut cancelled = false;
@@ -54,12 +49,12 @@ pub fn show_marker_dialog(
                 ui.text_edit_singleline(&mut ui_state.marker_dialog.group);
             });
 
-            if !existing_groups.is_empty() {
+            if !marker_list.groups.is_empty() {
                 ui.add_space(2.0);
                 ui.horizontal_wrapped(|ui| {
                     ui.spacing_mut().item_spacing.x = 4.0;
                     ui.label("Bestehend:");
-                    for group in &existing_groups {
+                    for group in &marker_list.groups {
                         let selected = ui_state.marker_dialog.group == *group;
                         if ui.selectable_label(selected, group).clicked() {
                             ui_state.marker_dialog.group = group.clone();
