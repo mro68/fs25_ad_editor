@@ -19,10 +19,11 @@ pub use chrome_state::HostLocalDialogState;
 
 use crate::dispatch::HostViewportInputState;
 use crate::dto::{
-    HostActiveTool, HostChromeSnapshot, HostDialogRequest, HostDialogResult, HostMarkerInfo,
-    HostMarkerListSnapshot, HostNodeDetails, HostNodeFlag, HostNodeMarkerInfo, HostNodeNeighbor,
-    HostRouteToolViewportSnapshot, HostSelectionSnapshot, HostSessionAction, HostSessionSnapshot,
-    HostViewportGeometrySnapshot, HostViewportSnapshot,
+    HostActiveTool, HostChromeSnapshot, HostConnectionPairEntry, HostConnectionPairSnapshot,
+    HostDefaultConnectionDirection, HostDefaultConnectionPriority, HostDialogRequest,
+    HostDialogResult, HostMarkerInfo, HostMarkerListSnapshot, HostNodeDetails, HostNodeFlag,
+    HostNodeMarkerInfo, HostNodeNeighbor, HostRouteToolViewportSnapshot, HostSelectionSnapshot,
+    HostSessionAction, HostSessionSnapshot, HostViewportGeometrySnapshot, HostViewportSnapshot,
 };
 
 fn map_active_tool(tool: EditorTool) -> HostActiveTool {
@@ -31,6 +32,21 @@ fn map_active_tool(tool: EditorTool) -> HostActiveTool {
         EditorTool::Connect => HostActiveTool::Connect,
         EditorTool::AddNode => HostActiveTool::AddNode,
         EditorTool::Route => HostActiveTool::Route,
+    }
+}
+
+fn map_connection_direction(direction: ConnectionDirection) -> HostDefaultConnectionDirection {
+    match direction {
+        ConnectionDirection::Regular => HostDefaultConnectionDirection::Regular,
+        ConnectionDirection::Dual => HostDefaultConnectionDirection::Dual,
+        ConnectionDirection::Reverse => HostDefaultConnectionDirection::Reverse,
+    }
+}
+
+fn map_connection_priority(priority: ConnectionPriority) -> HostDefaultConnectionPriority {
+    match priority {
+        ConnectionPriority::Regular => HostDefaultConnectionPriority::Regular,
+        ConnectionPriority::SubPriority => HostDefaultConnectionPriority::SubPriority,
     }
 }
 
@@ -257,6 +273,11 @@ impl HostBridgeSession {
     /// Liefert die komplette Markerliste als getypten Rust-Struct.
     pub fn marker_list(&self) -> HostMarkerListSnapshot {
         self.build_marker_list_snapshot()
+    }
+
+    /// Liefert die Verbindungsdetails zwischen zwei Nodes.
+    pub fn connection_pair(&self, node_a: u64, node_b: u64) -> HostConnectionPairSnapshot {
+        self.build_connection_pair_snapshot(node_a, node_b)
     }
 
     /// Prueft, ob die Applikation beendet werden soll.
@@ -620,6 +641,36 @@ impl HostBridgeSession {
         }
     }
 
+    fn build_connection_pair_snapshot(
+        &self,
+        node_a: u64,
+        node_b: u64,
+    ) -> HostConnectionPairSnapshot {
+        let connections = self
+            .state
+            .road_map
+            .as_deref()
+            .map(|road_map| {
+                road_map
+                    .find_connections_between(node_a, node_b)
+                    .into_iter()
+                    .map(|connection| HostConnectionPairEntry {
+                        start_id: connection.start_id,
+                        end_id: connection.end_id,
+                        direction: map_connection_direction(connection.direction),
+                        priority: map_connection_priority(connection.priority),
+                    })
+                    .collect()
+            })
+            .unwrap_or_default();
+
+        HostConnectionPairSnapshot {
+            node_a,
+            node_b,
+            connections,
+        }
+    }
+
     fn rebuild_snapshot_if_dirty(&mut self) {
         if !self.snapshot_dirty {
             return;
@@ -808,9 +859,11 @@ mod tests {
     use std::sync::Arc;
 
     use crate::dto::{
-        EngineSessionAction, HostActiveTool, HostDialogRequestKind, HostDialogResult,
-        HostInputModifiers, HostMarkerListSnapshot, HostNodeDetails, HostPointerButton,
-        HostSessionAction, HostTapKind, HostViewportInputBatch, HostViewportInputEvent,
+        EngineSessionAction, HostActiveTool, HostConnectionPairEntry, HostConnectionPairSnapshot,
+        HostDefaultConnectionDirection, HostDefaultConnectionPriority, HostDialogRequestKind,
+        HostDialogResult, HostInputModifiers, HostMarkerListSnapshot, HostNodeDetails,
+        HostPointerButton, HostSessionAction, HostTapKind, HostViewportInputBatch,
+        HostViewportInputEvent,
     };
 
     use super::{EngineRenderFrameSnapshot, FlutterBridgeSession, HostBridgeSession};
@@ -1124,6 +1177,55 @@ mod tests {
         assert_eq!(snapshot.markers.len(), 1);
         assert_eq!(snapshot.markers[0].node_id, 2);
         assert_eq!(snapshot.markers[0].name, "Hof");
+    }
+
+    #[test]
+    fn connection_pair_read_returns_bridge_snapshot_for_two_nodes() {
+        let mut session = HostBridgeSession::new();
+        let mut map = RoadMap::new(3);
+        map.add_node(MapNode::new(1, Vec2::new(0.0, 0.0), NodeFlag::Regular));
+        map.add_node(MapNode::new(2, Vec2::new(10.0, 0.0), NodeFlag::Regular));
+        map.add_connection(Connection::new(
+            1,
+            2,
+            ConnectionDirection::Dual,
+            ConnectionPriority::Regular,
+            Vec2::new(0.0, 0.0),
+            Vec2::new(10.0, 0.0),
+        ));
+        map.add_connection(Connection::new(
+            2,
+            1,
+            ConnectionDirection::Reverse,
+            ConnectionPriority::SubPriority,
+            Vec2::new(10.0, 0.0),
+            Vec2::new(0.0, 0.0),
+        ));
+        session.state.road_map = Some(Arc::new(map));
+
+        let snapshot = session.connection_pair(1, 2);
+
+        assert_eq!(
+            snapshot,
+            HostConnectionPairSnapshot {
+                node_a: 1,
+                node_b: 2,
+                connections: vec![
+                    HostConnectionPairEntry {
+                        start_id: 1,
+                        end_id: 2,
+                        direction: HostDefaultConnectionDirection::Dual,
+                        priority: HostDefaultConnectionPriority::Regular,
+                    },
+                    HostConnectionPairEntry {
+                        start_id: 2,
+                        end_id: 1,
+                        direction: HostDefaultConnectionDirection::Reverse,
+                        priority: HostDefaultConnectionPriority::SubPriority,
+                    },
+                ],
+            }
+        );
     }
 
     #[test]
