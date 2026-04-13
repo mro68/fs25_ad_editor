@@ -1145,6 +1145,14 @@ mod tests {
     }
 
     #[test]
+    fn node_details_read_returns_none_for_unknown_node_id() {
+        let mut session = HostBridgeSession::new();
+        session.state.road_map = Some(Arc::new(node_details_marker_test_map()));
+
+        assert_eq!(session.node_details(999), None);
+    }
+
+    #[test]
     fn node_details_json_serializes_current_inspected_node_via_typed_read_seam() {
         let mut session = HostBridgeSession::new();
         session.state.road_map = Some(Arc::new(node_details_marker_test_map()));
@@ -1177,6 +1185,17 @@ mod tests {
         assert_eq!(snapshot.markers.len(), 1);
         assert_eq!(snapshot.markers[0].node_id, 2);
         assert_eq!(snapshot.markers[0].name, "Hof");
+    }
+
+    #[test]
+    fn marker_list_read_returns_empty_snapshot_for_empty_road_map() {
+        let mut session = HostBridgeSession::new();
+        session.state.road_map = Some(Arc::new(RoadMap::new(2)));
+
+        let snapshot = session.marker_list();
+
+        assert!(snapshot.markers.is_empty());
+        assert!(snapshot.groups.is_empty());
     }
 
     #[test]
@@ -1224,6 +1243,26 @@ mod tests {
                         priority: HostDefaultConnectionPriority::SubPriority,
                     },
                 ],
+            }
+        );
+    }
+
+    #[test]
+    fn connection_pair_read_returns_empty_connections_for_unconnected_nodes() {
+        let mut session = HostBridgeSession::new();
+        let mut map = RoadMap::new(2);
+        map.add_node(MapNode::new(1, Vec2::new(0.0, 0.0), NodeFlag::Regular));
+        map.add_node(MapNode::new(2, Vec2::new(10.0, 0.0), NodeFlag::Regular));
+        session.state.road_map = Some(Arc::new(map));
+
+        let snapshot = session.connection_pair(1, 2);
+
+        assert_eq!(
+            snapshot,
+            HostConnectionPairSnapshot {
+                node_a: 1,
+                node_b: 2,
+                connections: Vec::new(),
             }
         );
     }

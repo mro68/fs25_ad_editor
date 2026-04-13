@@ -4,7 +4,9 @@ use crate::app::ui_contract::{panel_action_to_intent, HostUiSnapshot};
 use crate::app::AppIntent;
 use crate::ui;
 use eframe::egui;
-use fs25_auto_drive_host_bridge::{map_host_action_to_intent, HostDialogResult, HostSessionAction};
+use fs25_auto_drive_host_bridge::{
+    map_host_action_to_intent, HostDialogResult, HostMarkerListSnapshot, HostSessionAction,
+};
 
 use super::EditorApp;
 
@@ -23,18 +25,18 @@ impl EditorApp {
         &mut self,
         ctx: &egui::Context,
         host_ui_snapshot: &HostUiSnapshot,
+        marker_list: &HostMarkerListSnapshot,
     ) -> Vec<AppIntent> {
         let mut events = Vec::new();
 
         let dialog_results = ui::handle_file_dialogs(self.session.take_dialog_requests());
         events.extend(map_dialog_results_to_intents(dialog_results));
-        let marker_list = self.session.marker_list();
         let dialog_state = self.session.dialog_ui_state_mut();
         events.extend(ui::show_heightmap_warning(
             ctx,
             dialog_state.ui.show_heightmap_warning,
         ));
-        events.extend(ui::show_marker_dialog(ctx, dialog_state.ui, &marker_list));
+        events.extend(ui::show_marker_dialog(ctx, dialog_state.ui, marker_list));
         events.extend(ui::show_dedup_dialog(ctx, dialog_state.ui));
         events.extend(ui::show_confirm_dissolve_dialog(
             ctx,

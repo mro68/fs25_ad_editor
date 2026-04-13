@@ -4,7 +4,7 @@ use crate::app::ui_contract::HostUiSnapshot;
 use crate::shared::EditorOptions;
 use crate::ui;
 use eframe::egui;
-use fs25_auto_drive_host_bridge::HostChromeSnapshot;
+use fs25_auto_drive_host_bridge::{HostChromeSnapshot, HostMarkerListSnapshot};
 
 use super::{map_intent_to_collected_event, CollectedEvent, EditorApp};
 
@@ -15,6 +15,7 @@ impl EditorApp {
         ctx: &egui::Context,
         host_ui_snapshot: &HostUiSnapshot,
         host_chrome_snapshot: &HostChromeSnapshot,
+        marker_list: &HostMarkerListSnapshot,
         top_ui: &mut egui::Ui,
     ) -> Vec<CollectedEvent> {
         let mut events = Vec::new();
@@ -65,7 +66,6 @@ impl EditorApp {
             [node_a, node_b] => Some(self.session.connection_pair(*node_a, *node_b)),
             _ => None,
         };
-        let marker_list = self.session.marker_list();
         let panel_state = self.session.panel_properties_state_mut();
         let distance_wheel_step_m = numeric_distance_wheel_step(panel_state.options);
         let lang = panel_state.options.language;
@@ -84,11 +84,11 @@ impl EditorApp {
                             events.extend(
                                 ui::render_marker_content(
                                     ui,
-                                    &marker_list,
+                                    marker_list,
                                     panel_state.road_map.is_some(),
                                 )
-                                    .into_iter()
-                                    .map(map_intent_to_collected_event),
+                                .into_iter()
+                                .map(map_intent_to_collected_event),
                             );
                         });
 
