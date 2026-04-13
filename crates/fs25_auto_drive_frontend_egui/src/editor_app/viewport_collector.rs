@@ -1,11 +1,64 @@
 //! Event-Sammlung fuer den Viewport (Maus, Drag, Kontextmenue).
 
-use crate::app::{AppIntent, EditorTool};
+use crate::app::{AppIntent, Camera2D, EditorTool, RoadMap};
+use crate::ui::context_menu::{self, MenuVariant};
 use eframe::egui;
 use fs25_auto_drive_host_bridge::{HostRouteToolViewportSnapshot, HostSessionAction};
 use glam::Vec2;
 
 use super::{map_intent_to_collected_event, CollectedEvent, EditorApp};
+
+fn snapshot_focused_node_id(input: &crate::ui::InputState) -> Option<u64> {
+    input
+        .context_menu_snapshot
+        .as_ref()
+        .and_then(|snapshot| match &snapshot.variant {
+            MenuVariant::NodeFocused { focused_node_id } => Some(*focused_node_id),
+            _ => None,
+        })
+}
+
+fn live_secondary_click_focused_node_id(
+    input: &crate::ui::InputState,
+    response: &egui::Response,
+    viewport_size: [f32; 2],
+    camera: &Camera2D,
+    road_map: Option<&RoadMap>,
+    snap_radius: f32,
+) -> Option<u64> {
+    if !response.secondary_clicked() || input.drag_selection.is_some() {
+        return None;
+    }
+
+    let hover_pos = response.hover_pos()?;
+    let local = hover_pos - response.rect.min;
+    let world_pos = camera.screen_to_world(
+        Vec2::new(local.x, local.y),
+        Vec2::new(viewport_size[0], viewport_size[1]),
+    );
+
+    road_map.and_then(|map| context_menu::find_nearest_node_at(world_pos, map, snap_radius))
+}
+
+fn focused_context_menu_node_id(
+    input: &crate::ui::InputState,
+    response: &egui::Response,
+    viewport_size: [f32; 2],
+    camera: &Camera2D,
+    road_map: Option<&RoadMap>,
+    snap_radius: f32,
+) -> Option<u64> {
+    snapshot_focused_node_id(input).or_else(|| {
+        live_secondary_click_focused_node_id(
+            input,
+            response,
+            viewport_size,
+            camera,
+            road_map,
+            snap_radius,
+        )
+    })
+}
 
 impl EditorApp {
     /// Sammelt Input-Events aus dem Viewport (Maus, Drag, Route-Tool-Kontextmenue).
@@ -24,6 +77,19 @@ impl EditorApp {
             tangent_menu_data,
             needs_lasso_input,
         } = self.session.build_route_tool_viewport_snapshot();
+        let focused_node_id = {
+            let app_state = self.session.app_state();
+            focused_context_menu_node_id(
+                &self.input,
+                response,
+                viewport_size,
+                &app_state.view.camera,
+                app_state.road_map.as_deref(),
+                app_state.options.snap_radius(),
+            )
+        };
+        let focused_node_details =
+            focused_node_id.and_then(|node_id| self.session.node_details(node_id));
         let viewport_state = self.session.viewport_input_context_mut();
 
         // ── Paste-Vorschau hat Prioritaet: normale Klicks unterdruecken ──────
@@ -88,6 +154,7 @@ impl EditorApp {
             &drag_targets,
             viewport_state.distanzen,
             tangent_menu_data,
+            focused_node_details.as_ref(),
             viewport_state.clipboard_has_nodes,
             viewport_state.farmland_available,
             viewport_state.group_editing_active,

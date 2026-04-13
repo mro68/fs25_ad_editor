@@ -1,8 +1,8 @@
 //! Tangenten-Auswahl und Node-Info-Submenu für das Kontextmenü.
 
 use crate::app::tool_contract::TangentSource;
-use crate::app::{AppIntent, RoadMap};
-use fs25_auto_drive_host_bridge::{HostTangentMenuSnapshot, HostTangentSource};
+use crate::app::AppIntent;
+use fs25_auto_drive_host_bridge::{HostNodeDetails, HostTangentMenuSnapshot, HostTangentSource};
 
 fn map_host_tangent_source_to_engine(source: HostTangentSource) -> TangentSource {
     match source {
@@ -14,21 +14,33 @@ fn map_host_tangent_source_to_engine(source: HostTangentSource) -> TangentSource
 }
 
 /// Info-Submenu für einen Node (öffnet bei Hover, zeigt Details).
-pub(super) fn render_node_info_submenu(ui: &mut egui::Ui, node_id: u64, road_map: &RoadMap) {
+pub(super) fn render_node_info_submenu(
+    ui: &mut egui::Ui,
+    node_id: u64,
+    node_details: Option<&HostNodeDetails>,
+) {
     ui.menu_button("ℹ Info", |ui| {
-        if let Some(node) = road_map.node(node_id) {
+        if let Some(details) = node_details {
             ui.label(format!("📍 Node {}", node_id));
             ui.label(format!(
                 "Position: ({:.1}, {:.1})",
-                node.position.x, node.position.y
+                details.position[0], details.position[1]
             ));
-            ui.label(format!("Flag: {:?}", node.flag));
+            ui.label(format!("Flag: {:?}", details.flag));
             ui.separator();
-            let out_count = road_map.outgoing_neighbors(node_id).count();
-            let in_count = road_map.incoming_neighbors(node_id).count();
+            let out_count = details
+                .neighbors
+                .iter()
+                .filter(|neighbor| neighbor.is_outgoing)
+                .count();
+            let in_count = details
+                .neighbors
+                .iter()
+                .filter(|neighbor| !neighbor.is_outgoing)
+                .count();
             ui.label(format!("Ausgehend: {}", out_count));
             ui.label(format!("Eingehend: {}", in_count));
-            if let Some(marker) = road_map.find_marker_by_node_id(node_id) {
+            if let Some(marker) = &details.marker {
                 ui.separator();
                 ui.label(format!("🗺 Marker: {}", marker.name));
                 ui.label(format!("Gruppe: {}", marker.group));
