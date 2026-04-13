@@ -75,8 +75,8 @@ mod tests {
             group: "All".to_string(),
         };
 
-        let payload = serde_json::to_value(&action)
-            .expect("CreateMarker muss als JSON serialisierbar sein");
+        let payload =
+            serde_json::to_value(&action).expect("CreateMarker muss als JSON serialisierbar sein");
         assert_eq!(
             payload,
             json!({
@@ -87,8 +87,8 @@ mod tests {
             })
         );
 
-        let parsed: HostSessionAction = serde_json::from_value(payload)
-            .expect("CreateMarker muss aus JSON zuruecklesbar sein");
+        let parsed: HostSessionAction =
+            serde_json::from_value(payload).expect("CreateMarker muss aus JSON zuruecklesbar sein");
         assert_eq!(parsed, action);
     }
 }
