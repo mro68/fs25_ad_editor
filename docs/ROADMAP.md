@@ -238,6 +238,11 @@
   - [x] Doku-Sync: `crates/fs25_auto_drive_frontend_egui/API.md`, `src/editor_app/API.md`, `src/ui/API.md` und `docs/ARCHITECTURE_PLAN.md` auf session-owned egui-Host, `HostRouteToolViewportSnapshot` und FFI-ABI `4` aktualisiert
   - [x] UI-/Backend-Entflechtung in sechs Phasen abgeschlossen: semantische Tool-Labels, Split `EngineUiState`/`HostLocalDialogState`, gehaertete `HostBridgeSession` ohne oeffentliches `app_state_mut()`, `HostChromeSnapshot`-basierte ViewModels, modulare Event-Collector und freie `app::projections`
   - [x] Begleitende Hotpath-Fixes abgeschlossen: `render_overlays(..., &HostChromeSnapshot)` vermeidet doppelte Chrome-Builds, `OptionsPanelState.options` bleibt per `Arc<EditorOptions>` allokationsarm
+- [x] Bridge-Datenfluss-Kanonisierung (2026-04-13, Branch `feature/bridge-dataflow-canonicalize`)
+  - [x] Getypte Session-Read-Seams: `node_details()`, `marker_list()`, `connection_pair()`, `should_exit()` als native Rust-Methoden ohne JSON-Serialisierung
+  - [x] Neues DTO `HostConnectionPairSnapshot`/`HostConnectionPairEntry` fuer Verbindungsdetails zwischen zwei Nodes
+  - [x] 9 neue Connection-Management-Actions: `AddConnection`, `RemoveConnectionBetween`, `SetConnectionDirection`, `SetConnectionPriority`, `ConnectSelectedNodes`, `SetAllConnectionsDirectionBetweenSelected`, `InvertAllConnectionsBetweenSelected`, `SetAllConnectionsPriorityBetweenSelected`, `RemoveAllConnectionsBetweenSelected`
+  - [x] Egui-Properties-Panel und Marker-Panel auf DTO-Prefetch umgestellt (Borrow-Split mit Bridge-DTOs statt direktem RoadMap-Zugriff)
 - [x] Flutter-Adapter-Surface fuer die Unified Host Bridge umgesetzt
   - [x] `fs25_auto_drive_frontend_flutter_bridge` auf `fs25_auto_drive_host_bridge` umgestellt
   - [x] Crate-Abhaengigkeit auf `fs25_auto_drive_host_bridge` reduziert; keine direkte Engine-Abhaengigkeit mehr

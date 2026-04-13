@@ -11,8 +11,7 @@ use crate::app::{
 };
 use crate::shared::EditorOptions;
 use fs25_auto_drive_host_bridge::{
-    HostNodeDetails, HostTangentMenuSnapshot, HostViewportInputBatch,
-    HostViewportInputEvent,
+    HostNodeDetails, HostTangentMenuSnapshot, HostViewportInputBatch, HostViewportInputEvent,
 };
 use indexmap::IndexSet;
 
