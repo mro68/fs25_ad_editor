@@ -269,7 +269,7 @@
   - [x] RenderFrame-Seam (`HostBridgeSession::build_render_frame`) unveraendert beibehalten
   - [x] egui-Onscreen-Host explizit unveraendert gelassen (direkter `RenderPass`-Pfad)
   - [x] Additiver Texture-Registration-v4-Vertrag neben v3 eingefroren (2026-04-06): gemeinsame Capability-Negotiation + Frame-Metadaten + Lifecycle, plattformspezifische Payload-Familien fuer Windows/Linux/Android, explizites Capability-Gating ohne Pixelbuffer-Fallback
-  - [ ] Folge-Slice: Produktive v4-Landung in Host-Bridge-FFI und Consumer-Host (Flutter/C++); Windows/Linux bleiben renderseitig durch den normalen `wgpu::Device::create_texture`-Pfad ohne Export-/External-Memory-Felder blockiert, Android hat im Render-Core jetzt ExportLease plus AHardwareBuffer und braucht als naechsten Schritt noch den nativen Host-/FFI-Importpfad
+  - [ ] Folge-Slice: Produktive v4-Landung in Host-Bridge-FFI und Consumer-Host (Flutter/C++); Windows/Linux bleiben renderseitig durch den normalen `wgpu::Device::create_texture`-Pfad ohne Export-/External-Memory-Felder blockiert, Android hat im Render-Core und im Low-Level-GPU-FFI jetzt ExportLease plus AHardwareBuffer und braucht als naechsten Schritt noch den nativen Consumer-Importpfad
 - [x] Flutter-Bridge als transitional alias surface eingefroren (2026-04-05)
   - [x] Keine neue Logik mehr in `fs25_auto_drive_frontend_flutter_bridge`; Erweiterungen nur in `fs25_auto_drive_host_bridge`
   - [x] Kompat-Aliase (`Engine*`, `FlutterBridgeSession`) direkt in `fs25_auto_drive_host_bridge` etabliert

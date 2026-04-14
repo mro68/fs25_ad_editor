@@ -10,10 +10,9 @@ use crate::{clear_last_error, set_last_error, HostBridgeSessionHandle};
 use anyhow::{anyhow, Result};
 use fs25_auto_drive_render_wgpu::{
     query_texture_registration_v4_capabilities, AndroidAttachmentKind,
-    AndroidHardwareBufferDescriptor,
-    TextureRegistrationAlphaMode, TextureRegistrationAvailability, TextureRegistrationModel,
-    TextureRegistrationPayloadFamily, TextureRegistrationPixelFormat, TextureRegistrationPlatform,
-    TextureRegistrationPlatformCapabilities, MAX_LINUX_DMABUF_PLANES,
+    AndroidHardwareBufferDescriptor, TextureRegistrationAlphaMode, TextureRegistrationAvailability,
+    TextureRegistrationModel, TextureRegistrationPayloadFamily, TextureRegistrationPixelFormat,
+    TextureRegistrationPlatform, TextureRegistrationPlatformCapabilities, MAX_LINUX_DMABUF_PLANES,
     TEXTURE_REGISTRATION_V4_CONTRACT_VERSION,
 };
 
@@ -710,8 +709,8 @@ pub unsafe extern "C" fn fs25ad_host_bridge_texture_registration_v4_detach_andro
 #[cfg(test)]
 mod tests {
     use super::{
-        android_hardware_buffer_descriptor_to_abi,
-        android_attachment_kind_from_abi, fs25ad_host_bridge_texture_registration_v4_acquire,
+        android_attachment_kind_from_abi, android_hardware_buffer_descriptor_to_abi,
+        fs25ad_host_bridge_texture_registration_v4_acquire,
         fs25ad_host_bridge_texture_registration_v4_attach_android_surface,
         fs25ad_host_bridge_texture_registration_v4_capabilities,
         fs25ad_host_bridge_texture_registration_v4_contract_version,
@@ -1120,9 +1119,10 @@ mod tests {
 
     #[test]
     fn ffi_v4_android_hardware_buffer_descriptor_mapping_is_stable() {
-        let descriptor = android_hardware_buffer_descriptor_to_abi(AndroidHardwareBufferDescriptor {
-            hardware_buffer_ptr: 0x44,
-        });
+        let descriptor =
+            android_hardware_buffer_descriptor_to_abi(AndroidHardwareBufferDescriptor {
+                hardware_buffer_ptr: 0x44,
+            });
 
         assert_eq!(descriptor.hardware_buffer_ptr, 0x44);
     }

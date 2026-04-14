@@ -3,14 +3,17 @@
 //! Dieses Modul exportiert Low-Level C-Funktionen fuer den GPU-Hot-Path.
 //! Alle Funktionen sind Panic-isoliert via [`ffi_guard_bool!`] und [`ffi_guard_ptr!`]
 //! aus dem Parent-Modul.
-//! Der aktuelle produktive Descriptor-Exportpfad in dieser Commit-Stufe bleibt Linux/Vulkan.
+//! Der aktuelle produktive Descriptor-Exportpfad liefert plattformspezifisch
+//! Linux-DMA-BUFs oder Android-AHardwareBuffer.
 //!
 //! # Lebenszyklus
 //! ```text
 //! fs25ad_gpu_runtime_new()
 //!   → fs25ad_gpu_runtime_resize()      // optional bei Groessenaenderung
 //!   → fs25ad_gpu_runtime_render()      // pro Frame
-//!   → fs25ad_gpu_runtime_export_texture() // pro Frame nach render
+//!   → fs25ad_gpu_runtime_export_texture() // Linux: pro Frame nach render
+//!     oder
+//!     fs25ad_gpu_runtime_export_android_hardware_buffer() // Android: pro Frame nach render
 //!   → fs25ad_gpu_runtime_dispose()    // am Ende
 //! ```
 //!
@@ -18,32 +21,60 @@
 //! Alle Funktionen sind `extern "C"` und koennen von C/Dart aufgerufen werden.
 //! Der Aufrufer ist fuer korrekte Pointer-Gueltigkeit und Lebensdauer verantwortlich.
 
+#[cfg(all(target_os = "android", feature = "flutter-android"))]
+use crate::texture_registration_v4::Fs25adTextureRegistrationV4AndroidHardwareBufferDescriptor;
 #[cfg(all(target_os = "linux", feature = "flutter-linux"))]
-use crate::{
-    clear_last_error,
-    flutter_api::FlutterSessionHandle,
-    set_last_error,
-    texture_registration_v4::{
-        Fs25adTextureRegistrationV4LinuxDmabufDescriptor,
-        Fs25adTextureRegistrationV4LinuxDmabufPlane,
-    },
+use crate::texture_registration_v4::{
+    Fs25adTextureRegistrationV4LinuxDmabufDescriptor, Fs25adTextureRegistrationV4LinuxDmabufPlane,
 };
-#[cfg(all(target_os = "linux", feature = "flutter-linux"))]
+#[cfg(any(
+    all(target_os = "linux", feature = "flutter-linux"),
+    all(target_os = "android", feature = "flutter-android")
+))]
+use crate::{clear_last_error, flutter_api::FlutterSessionHandle, set_last_error};
+#[cfg(any(
+    all(target_os = "linux", feature = "flutter-linux"),
+    all(target_os = "android", feature = "flutter-android")
+))]
 use anyhow::{anyhow, Context, Result};
-#[cfg(all(target_os = "linux", feature = "flutter-linux"))]
+#[cfg(any(
+    all(target_os = "linux", feature = "flutter-linux"),
+    all(target_os = "android", feature = "flutter-android")
+))]
 use fs25_auto_drive_host_bridge::HostBridgeSession;
+#[cfg(any(
+    all(target_os = "linux", feature = "flutter-linux"),
+    all(target_os = "android", feature = "flutter-android")
+))]
+use fs25_auto_drive_render_wgpu::{
+    create_vulkan_instance, ExternalTextureExport, PlatformTextureDescriptor, SharedTextureRuntime,
+};
 #[cfg(all(target_os = "linux", feature = "flutter-linux"))]
 use fs25_auto_drive_render_wgpu::{
-    external_texture::vulkan_linux::VulkanDmaBufTexture, ExternalTextureExport,
-    LinuxDmabufDescriptor, LinuxDmabufPlane, SharedTextureRuntime, MAX_LINUX_DMABUF_PLANES,
+    LinuxDmabufDescriptor, LinuxDmabufPlane, MAX_LINUX_DMABUF_PLANES,
 };
 #[cfg(all(target_os = "linux", feature = "flutter-linux"))]
-use std::sync::{Arc, Mutex};
+type PlatformExternalTexture =
+    fs25_auto_drive_render_wgpu::external_texture::vulkan_linux::VulkanDmaBufTexture;
+#[cfg(all(target_os = "android", feature = "flutter-android"))]
+type PlatformExternalTexture = fs25_auto_drive_render_wgpu::VulkanAhbTexture;
+#[cfg(any(
+    all(target_os = "linux", feature = "flutter-linux"),
+    all(target_os = "android", feature = "flutter-android")
+))]
+use std::{
+    ptr::NonNull,
+    sync::{Arc, Mutex},
+};
 
 /// Interner GPU-Runtime-Zustand fuer Flutter-Integration.
 ///
-/// Kapselt wgpu-Device/Queue, den Renderer-Zustand und die exportierbare Texture.
-#[cfg(all(target_os = "linux", feature = "flutter-linux"))]
+/// Kapselt wgpu-Device/Queue, den Renderer-Zustand und die exportierbare
+/// plattformspezifische Texture.
+#[cfg(any(
+    all(target_os = "linux", feature = "flutter-linux"),
+    all(target_os = "android", feature = "flutter-android")
+))]
 pub struct GpuRuntimeHandle {
     /// Gehalten damit die Instanz nicht vorzeitig gedroppt wird (Device wuerde orphan).
     _instance: wgpu::Instance,
@@ -52,14 +83,16 @@ pub struct GpuRuntimeHandle {
     device: wgpu::Device,
     queue: wgpu::Queue,
     runtime: SharedTextureRuntime,
-    external_texture: VulkanDmaBufTexture,
+    external_texture: PlatformExternalTexture,
     size: [u32; 2],
     session: Arc<Mutex<HostBridgeSession>>,
 }
 
-#[cfg(all(target_os = "linux", feature = "flutter-linux"))]
+#[cfg(any(
+    all(target_os = "linux", feature = "flutter-linux"),
+    all(target_os = "android", feature = "flutter-android")
+))]
 impl GpuRuntimeHandle {
-    #[allow(clippy::arc_with_non_send_sync)] // HostBridgeSession ist !Send, aber FFI-Zugriff ist seriell
     #[allow(clippy::arc_with_non_send_sync)] // HostBridgeSession ist !Send, aber FFI-Zugriff ist seriell
     fn new(width: u32, height: u32) -> Result<Self> {
         Self::new_with_session(
@@ -74,7 +107,7 @@ impl GpuRuntimeHandle {
         width: u32,
         height: u32,
     ) -> Result<Self> {
-        let instance = fs25_auto_drive_render_wgpu::create_vulkan_instance();
+        let instance = create_vulkan_instance();
         // HINWEIS: pollster::block_on blockiert den aufrufenden Thread fuer die gesamte
         // GPU-Adapter-Initialisierung. Dies ist einmaliger Init-Code (nicht pro Frame).
         // Empfehlung: fs25ad_gpu_runtime_new() ausschliesslich von einem dedizierten
@@ -99,7 +132,7 @@ impl GpuRuntimeHandle {
 
         let runtime = SharedTextureRuntime::new(&device, &queue, [width, height])?;
         let external_texture =
-            VulkanDmaBufTexture::create_exportable_texture(&device, width, height)?;
+            PlatformExternalTexture::create_exportable_texture(&device, width, height)?;
 
         Ok(Self {
             _instance: instance,
@@ -114,12 +147,18 @@ impl GpuRuntimeHandle {
     }
 }
 
-#[cfg(all(target_os = "linux", feature = "flutter-linux"))]
+#[cfg(any(
+    all(target_os = "linux", feature = "flutter-linux"),
+    all(target_os = "android", feature = "flutter-android")
+))]
 fn log_gpu_error(function_name: &str, error: &anyhow::Error) {
     eprintln!("[FS25][flutter_gpu] {function_name} failed: {error:#}");
 }
 
-#[cfg(all(target_os = "linux", feature = "flutter-linux"))]
+#[cfg(any(
+    all(target_os = "linux", feature = "flutter-linux"),
+    all(target_os = "android", feature = "flutter-android")
+))]
 fn log_result<T>(function_name: &str, result: Result<T>) -> Result<T> {
     if let Err(error) = &result {
         log_gpu_error(function_name, error);
@@ -127,7 +166,10 @@ fn log_result<T>(function_name: &str, result: Result<T>) -> Result<T> {
     result
 }
 
-#[cfg(all(target_os = "linux", feature = "flutter-linux"))]
+#[cfg(any(
+    all(target_os = "linux", feature = "flutter-linux"),
+    all(target_os = "android", feature = "flutter-android")
+))]
 fn with_runtime<T>(
     handle: *mut GpuRuntimeHandle,
     f: impl FnOnce(&mut GpuRuntimeHandle) -> Result<T>,
@@ -138,6 +180,24 @@ fn with_runtime<T>(
     // SAFETY: Aufrufer garantiert gueltigen, nicht-aliasenden Pointer mit ausreichender Lifetime.
     let runtime = unsafe { &mut *handle };
     f(runtime)
+}
+
+#[cfg(any(
+    all(target_os = "linux", feature = "flutter-linux"),
+    all(target_os = "android", feature = "flutter-android")
+))]
+fn validate_output_descriptor<T>(
+    function_name: &str,
+    out_descriptor: *mut T,
+) -> Option<NonNull<T>> {
+    let Some(out_descriptor) = NonNull::new(out_descriptor) else {
+        let message = format!("{function_name}: out_descriptor must not be null");
+        eprintln!("[FS25][flutter_gpu] {function_name} failed: {message}");
+        set_last_error(message);
+        return None;
+    };
+
+    Some(out_descriptor)
 }
 
 #[cfg(all(target_os = "linux", feature = "flutter-linux"))]
@@ -176,7 +236,10 @@ fn map_linux_dmabuf_descriptor(
 ///
 /// Gibt einen opaques Handle zurueck der mit `fs25ad_gpu_runtime_dispose` freizugeben ist.
 /// Gibt bei Fehler `NULL` zurueck; Fehlertext via `fs25ad_host_bridge_last_error_message`.
-#[cfg(all(target_os = "linux", feature = "flutter-linux"))]
+#[cfg(any(
+    all(target_os = "linux", feature = "flutter-linux"),
+    all(target_os = "android", feature = "flutter-android")
+))]
 #[unsafe(no_mangle)]
 pub extern "C" fn fs25ad_gpu_runtime_new(width: u32, height: u32) -> *mut GpuRuntimeHandle {
     clear_last_error();
@@ -202,7 +265,10 @@ pub extern "C" fn fs25ad_gpu_runtime_new(width: u32, height: u32) -> *mut GpuRun
 ///
 /// # Safety
 /// `session_handle` muss auf einen gueltigen `FlutterSessionHandle` zeigen.
-#[cfg(all(target_os = "linux", feature = "flutter-linux"))]
+#[cfg(any(
+    all(target_os = "linux", feature = "flutter-linux"),
+    all(target_os = "android", feature = "flutter-android")
+))]
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn fs25ad_gpu_runtime_new_with_session(
     session_handle: *const FlutterSessionHandle,
@@ -235,7 +301,10 @@ pub unsafe extern "C" fn fs25ad_gpu_runtime_new_with_session(
 /// # Safety
 /// `raw_arc` muss ein gueltiger, noch nicht freigegebener
 /// `Arc::into_raw(Arc<Mutex<HostBridgeSession>>)`-Zeiger sein.
-#[cfg(all(target_os = "linux", feature = "flutter-linux"))]
+#[cfg(any(
+    all(target_os = "linux", feature = "flutter-linux"),
+    all(target_os = "android", feature = "flutter-android")
+))]
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn fs25ad_gpu_runtime_new_with_shared_session_arc(
     raw_arc: i64,
@@ -262,7 +331,10 @@ pub unsafe extern "C" fn fs25ad_gpu_runtime_new_with_shared_session_arc(
 /// Rendert den naechsten Frame direkt in die exportierbare Vulkan-Texture.
 ///
 /// Gibt `true` bei Erfolg zurueck, `false` bei Fehler.
-#[cfg(all(target_os = "linux", feature = "flutter-linux"))]
+#[cfg(any(
+    all(target_os = "linux", feature = "flutter-linux"),
+    all(target_os = "android", feature = "flutter-android")
+))]
 #[unsafe(no_mangle)]
 pub extern "C" fn fs25ad_gpu_runtime_render(handle: *mut GpuRuntimeHandle) -> bool {
     ffi_guard_bool!({
@@ -311,12 +383,11 @@ pub unsafe extern "C" fn fs25ad_gpu_runtime_export_texture(
     handle: *mut GpuRuntimeHandle,
     out_descriptor: *mut Fs25adTextureRegistrationV4LinuxDmabufDescriptor,
 ) -> bool {
-    if out_descriptor.is_null() {
-        let message = "fs25ad_gpu_runtime_export_texture: out_descriptor must not be null";
-        eprintln!("[FS25][flutter_gpu] fs25ad_gpu_runtime_export_texture failed: {message}");
-        set_last_error(message);
+    let Some(out_descriptor) =
+        validate_output_descriptor("fs25ad_gpu_runtime_export_texture", out_descriptor)
+    else {
         return false;
-    }
+    };
     ffi_guard_bool!({
         log_result(
             "fs25ad_gpu_runtime_export_texture",
@@ -326,7 +397,7 @@ pub unsafe extern "C" fn fs25ad_gpu_runtime_export_texture(
                     .export_descriptor()
                     .context("Exporting DMA-BUF descriptor failed")?;
                 match descriptor {
-                    fs25_auto_drive_render_wgpu::PlatformTextureDescriptor::LinuxDmaBuf {
+                    PlatformTextureDescriptor::LinuxDmaBuf {
                         fd,
                         stride,
                         format,
@@ -349,7 +420,57 @@ pub unsafe extern "C" fn fs25ad_gpu_runtime_export_texture(
                             LinuxDmabufPlane::new(fd, 0, stride),
                         );
                         // SAFETY: Gueltigkeit von out_descriptor wurde oben geprueft.
-                        unsafe { *out_descriptor = map_linux_dmabuf_descriptor(descriptor) };
+                        unsafe {
+                            *out_descriptor.as_ptr() = map_linux_dmabuf_descriptor(descriptor)
+                        };
+                        Ok(())
+                    }
+                }
+            }),
+        )
+    })
+}
+
+/// Exportiert die aktuelle GPU-Textur als AHardwareBuffer-Descriptor.
+///
+/// Schreibt den Android-AHardwareBuffer-v4-Descriptor in `out_descriptor`.
+/// Gibt `true` bei Erfolg zurueck, `false` bei Fehler.
+///
+/// # Safety
+/// `out_descriptor` muss ein gueltiger, nicht-null Zeiger auf einen
+/// `Fs25adTextureRegistrationV4AndroidHardwareBufferDescriptor` sein.
+#[cfg(all(target_os = "android", feature = "flutter-android"))]
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn fs25ad_gpu_runtime_export_android_hardware_buffer(
+    handle: *mut GpuRuntimeHandle,
+    out_descriptor: *mut Fs25adTextureRegistrationV4AndroidHardwareBufferDescriptor,
+) -> bool {
+    let Some(out_descriptor) = validate_output_descriptor(
+        "fs25ad_gpu_runtime_export_android_hardware_buffer",
+        out_descriptor,
+    ) else {
+        return false;
+    };
+
+    ffi_guard_bool!({
+        log_result(
+            "fs25ad_gpu_runtime_export_android_hardware_buffer",
+            with_runtime(handle, |rt| {
+                let descriptor = rt
+                    .external_texture
+                    .export_descriptor()
+                    .context("Exporting AHardwareBuffer descriptor failed")?;
+                match descriptor {
+                    PlatformTextureDescriptor::AndroidHardwareBuffer {
+                        hardware_buffer_ptr,
+                    } => {
+                        // SAFETY: Gueltigkeit von out_descriptor wurde oben geprueft.
+                        unsafe {
+                            *out_descriptor.as_ptr() =
+                                Fs25adTextureRegistrationV4AndroidHardwareBufferDescriptor {
+                                    hardware_buffer_ptr,
+                                }
+                        };
                         Ok(())
                     }
                 }
@@ -361,7 +482,10 @@ pub unsafe extern "C" fn fs25ad_gpu_runtime_export_texture(
 /// Passt die Groesse des GPU-Runtime-Render-Targets an.
 ///
 /// Gibt `true` bei Erfolg zurueck, `false` bei Fehler.
-#[cfg(all(target_os = "linux", feature = "flutter-linux"))]
+#[cfg(any(
+    all(target_os = "linux", feature = "flutter-linux"),
+    all(target_os = "android", feature = "flutter-android")
+))]
 #[unsafe(no_mangle)]
 pub extern "C" fn fs25ad_gpu_runtime_resize(
     handle: *mut GpuRuntimeHandle,
@@ -373,7 +497,7 @@ pub extern "C" fn fs25ad_gpu_runtime_resize(
             "fs25ad_gpu_runtime_resize",
             with_runtime(handle, |rt| {
                 let new_external_texture =
-                    VulkanDmaBufTexture::create_exportable_texture(&rt.device, width, height)?;
+                    PlatformExternalTexture::create_exportable_texture(&rt.device, width, height)?;
                 rt.runtime.resize(&rt.device, [width, height])?;
                 rt.external_texture = new_external_texture;
                 rt.size = [width, height];
@@ -389,7 +513,10 @@ pub extern "C" fn fs25ad_gpu_runtime_resize(
 ///
 /// # Safety
 /// `handle` muss durch `fs25ad_gpu_runtime_new` alloziert worden sein.
-#[cfg(all(target_os = "linux", feature = "flutter-linux"))]
+#[cfg(any(
+    all(target_os = "linux", feature = "flutter-linux"),
+    all(target_os = "android", feature = "flutter-android")
+))]
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn fs25ad_gpu_runtime_dispose(handle: *mut GpuRuntimeHandle) {
     if !handle.is_null() {
@@ -398,82 +525,131 @@ pub unsafe extern "C" fn fs25ad_gpu_runtime_dispose(handle: *mut GpuRuntimeHandl
     }
 }
 
-#[cfg(all(test, target_os = "linux", feature = "flutter-linux"))]
+#[cfg(test)]
 mod tests {
     use super::*;
 
-    /// Prueft, dass fs25ad_gpu_runtime_render mit Null-Pointer false zurueckgibt.
+    /// Prueft, dass der gemeinsame out_descriptor-Guard Null-Pointer verwirft.
     #[test]
-    fn test_render_rejects_null_handle() {
-        let result = fs25ad_gpu_runtime_render(std::ptr::null_mut());
-        assert!(!result, "Null-Pointer muss false zurueckgeben");
-    }
-
-    /// Prueft, dass fs25ad_gpu_runtime_resize mit Null-Pointer false zurueckgibt.
-    #[test]
-    fn test_resize_rejects_null_handle() {
-        let result = fs25ad_gpu_runtime_resize(std::ptr::null_mut(), 640, 480);
-        assert!(!result, "Null-Pointer muss false zurueckgeben");
-    }
-
-    /// Prueft, dass fs25ad_gpu_runtime_new_with_session mit Null-Session null zurueckgibt.
-    #[test]
-    fn test_new_with_session_rejects_null_handle() {
-        // SAFETY: Testaufruf mit Null-Session-Pointer; die Funktion muss den Pointer vor jeder
-        // weiteren Nutzung validieren und NULL zurueckgeben.
-        let handle = unsafe { fs25ad_gpu_runtime_new_with_session(std::ptr::null(), 640, 480) };
-        assert!(handle.is_null(), "Null-Session muss NULL zurueckgeben");
-    }
-
-    /// Prueft, dass fs25ad_gpu_runtime_export_texture mit Null-Handle false zurueckgibt.
-    #[test]
-    fn test_export_texture_rejects_null_handle() {
-        let mut descriptor = Fs25adTextureRegistrationV4LinuxDmabufDescriptor {
-            drm_fourcc: 0,
-            drm_modifier_hi: 0,
-            drm_modifier_lo: 0,
-            plane_count: 0,
-            planes: [Fs25adTextureRegistrationV4LinuxDmabufPlane {
-                fd: -1,
-                offset_bytes: 0,
-                stride_bytes: 0,
-            }; MAX_LINUX_DMABUF_PLANES],
-        };
-        // SAFETY: Testaufruf mit Null-Handle; out_descriptor ist gueltig.
-        let result =
-            unsafe { fs25ad_gpu_runtime_export_texture(std::ptr::null_mut(), &mut descriptor) };
-        assert!(!result, "Null-Handle muss false zurueckgeben");
-    }
-
-    /// Prueft, dass fs25ad_gpu_runtime_export_texture mit out_descriptor=null false zurueckgibt.
-    #[test]
-    fn test_export_texture_rejects_null_out_descriptor() {
-        // Null-Handle + Null-out_descriptor: set_last_error wird ausgefuehrt, kein Panic.
-        // SAFETY: Testaufruf mit Null-out_descriptor; beide Null-Checks werden geprueft.
-        let result = unsafe {
-            fs25ad_gpu_runtime_export_texture(std::ptr::null_mut(), std::ptr::null_mut())
-        };
-        assert!(!result, "Null out_descriptor muss false zurueckgeben");
-    }
-
-    /// Prueft die Abbildung eines Single-Plane-DMA-BUF-Descriptors auf den v4-ABI-Typ.
-    #[test]
-    fn test_map_linux_dmabuf_descriptor_builds_v4_shape() {
-        let descriptor = LinuxDmabufDescriptor::single_plane(
-            0x3432_4241,
-            0x1122_3344_5566_7788,
-            LinuxDmabufPlane::new(42, 0, 512),
+    fn test_validate_output_descriptor_rejects_null_pointer() {
+        assert!(
+            validate_output_descriptor::<u32>("test_gpu_export", std::ptr::null_mut()).is_none(),
+            "Null out_descriptor muss verworfen werden"
         );
+    }
 
-        let ffi_descriptor = map_linux_dmabuf_descriptor(descriptor);
+    #[cfg(all(target_os = "linux", feature = "flutter-linux"))]
+    mod linux {
+        use super::*;
 
-        assert_eq!(ffi_descriptor.drm_fourcc, 0x3432_4241);
-        assert_eq!(ffi_descriptor.drm_modifier_hi, 0x1122_3344);
-        assert_eq!(ffi_descriptor.drm_modifier_lo, 0x5566_7788);
-        assert_eq!(ffi_descriptor.plane_count, 1);
-        assert_eq!(ffi_descriptor.planes[0].fd, 42);
-        assert_eq!(ffi_descriptor.planes[0].offset_bytes, 0);
-        assert_eq!(ffi_descriptor.planes[0].stride_bytes, 512);
-        assert_eq!(ffi_descriptor.planes[1].fd, -1);
+        /// Prueft, dass fs25ad_gpu_runtime_render mit Null-Pointer false zurueckgibt.
+        #[test]
+        fn test_render_rejects_null_handle() {
+            let result = fs25ad_gpu_runtime_render(std::ptr::null_mut());
+            assert!(!result, "Null-Pointer muss false zurueckgeben");
+        }
+
+        /// Prueft, dass fs25ad_gpu_runtime_resize mit Null-Pointer false zurueckgibt.
+        #[test]
+        fn test_resize_rejects_null_handle() {
+            let result = fs25ad_gpu_runtime_resize(std::ptr::null_mut(), 640, 480);
+            assert!(!result, "Null-Pointer muss false zurueckgeben");
+        }
+
+        /// Prueft, dass fs25ad_gpu_runtime_new_with_session mit Null-Session null zurueckgibt.
+        #[test]
+        fn test_new_with_session_rejects_null_handle() {
+            // SAFETY: Testaufruf mit Null-Session-Pointer; die Funktion muss den Pointer vor jeder
+            // weiteren Nutzung validieren und NULL zurueckgeben.
+            let handle = unsafe { fs25ad_gpu_runtime_new_with_session(std::ptr::null(), 640, 480) };
+            assert!(handle.is_null(), "Null-Session muss NULL zurueckgeben");
+        }
+
+        /// Prueft, dass fs25ad_gpu_runtime_export_texture mit Null-Handle false zurueckgibt.
+        #[test]
+        fn test_export_texture_rejects_null_handle() {
+            let mut descriptor = Fs25adTextureRegistrationV4LinuxDmabufDescriptor {
+                drm_fourcc: 0,
+                drm_modifier_hi: 0,
+                drm_modifier_lo: 0,
+                plane_count: 0,
+                planes: [Fs25adTextureRegistrationV4LinuxDmabufPlane {
+                    fd: -1,
+                    offset_bytes: 0,
+                    stride_bytes: 0,
+                }; MAX_LINUX_DMABUF_PLANES],
+            };
+            // SAFETY: Testaufruf mit Null-Handle; out_descriptor ist gueltig.
+            let result =
+                unsafe { fs25ad_gpu_runtime_export_texture(std::ptr::null_mut(), &mut descriptor) };
+            assert!(!result, "Null-Handle muss false zurueckgeben");
+        }
+
+        /// Prueft, dass fs25ad_gpu_runtime_export_texture mit out_descriptor=null false zurueckgibt.
+        #[test]
+        fn test_export_texture_rejects_null_out_descriptor() {
+            // Null-Handle + Null-out_descriptor: set_last_error wird ausgefuehrt, kein Panic.
+            // SAFETY: Testaufruf mit Null-out_descriptor; beide Null-Checks werden geprueft.
+            let result = unsafe {
+                fs25ad_gpu_runtime_export_texture(std::ptr::null_mut(), std::ptr::null_mut())
+            };
+            assert!(!result, "Null out_descriptor muss false zurueckgeben");
+        }
+
+        /// Prueft die Abbildung eines Single-Plane-DMA-BUF-Descriptors auf den v4-ABI-Typ.
+        #[test]
+        fn test_map_linux_dmabuf_descriptor_builds_v4_shape() {
+            let descriptor = LinuxDmabufDescriptor::single_plane(
+                0x3432_4241,
+                0x1122_3344_5566_7788,
+                LinuxDmabufPlane::new(42, 0, 512),
+            );
+
+            let ffi_descriptor = map_linux_dmabuf_descriptor(descriptor);
+
+            assert_eq!(ffi_descriptor.drm_fourcc, 0x3432_4241);
+            assert_eq!(ffi_descriptor.drm_modifier_hi, 0x1122_3344);
+            assert_eq!(ffi_descriptor.drm_modifier_lo, 0x5566_7788);
+            assert_eq!(ffi_descriptor.plane_count, 1);
+            assert_eq!(ffi_descriptor.planes[0].fd, 42);
+            assert_eq!(ffi_descriptor.planes[0].offset_bytes, 0);
+            assert_eq!(ffi_descriptor.planes[0].stride_bytes, 512);
+            assert_eq!(ffi_descriptor.planes[1].fd, -1);
+        }
+    }
+
+    #[cfg(all(target_os = "android", feature = "flutter-android"))]
+    mod android {
+        use super::*;
+
+        /// Prueft, dass der Android-AHB-Export mit Null-Handle false zurueckgibt.
+        #[test]
+        fn test_export_android_hardware_buffer_rejects_null_handle() {
+            let mut descriptor = Fs25adTextureRegistrationV4AndroidHardwareBufferDescriptor {
+                hardware_buffer_ptr: 0,
+            };
+
+            // SAFETY: Testaufruf mit Null-Handle; out_descriptor ist gueltig.
+            let result = unsafe {
+                fs25ad_gpu_runtime_export_android_hardware_buffer(
+                    std::ptr::null_mut(),
+                    &mut descriptor,
+                )
+            };
+            assert!(!result, "Null-Handle muss false zurueckgeben");
+        }
+
+        /// Prueft, dass der Android-AHB-Export mit Null-out_descriptor false zurueckgibt.
+        #[test]
+        fn test_export_android_hardware_buffer_rejects_null_out_descriptor() {
+            // SAFETY: Testaufruf mit Null-out_descriptor; die Funktion muss den Guard frueh greifen.
+            let result = unsafe {
+                fs25ad_gpu_runtime_export_android_hardware_buffer(
+                    std::ptr::null_mut(),
+                    std::ptr::null_mut(),
+                )
+            };
+            assert!(!result, "Null out_descriptor muss false zurueckgeben");
+        }
     }
 }

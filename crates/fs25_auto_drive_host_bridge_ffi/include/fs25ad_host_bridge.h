@@ -255,7 +255,7 @@ bool fs25ad_host_bridge_texture_registration_v4_attach_android_surface(
 bool fs25ad_host_bridge_texture_registration_v4_detach_android_surface(
     Fs25adHostBridgeTextureRegistrationV4 *texture);
 
-/* Flutter GPU Runtime (feature: flutter-linux) */
+/* Flutter GPU Runtime (feature: flutter-linux / flutter-android) */
 
 Fs25adFlutterSessionHandle *fs25ad_flutter_session_new(void);
 void fs25ad_flutter_session_dispose(Fs25adFlutterSessionHandle *session);
@@ -313,6 +313,10 @@ bool fs25ad_gpu_runtime_render(Fs25adGpuRuntimeHandle *handle);
 bool fs25ad_gpu_runtime_export_texture(
     Fs25adGpuRuntimeHandle *handle,
     Fs25adTextureRegistrationV4LinuxDmabufDescriptor *out_descriptor);
+/* Android AHB Export (nur auf Android verfuegbar) */
+bool fs25ad_gpu_runtime_export_android_hardware_buffer(
+    Fs25adGpuRuntimeHandle *handle,
+    Fs25adTextureRegistrationV4AndroidHardwareBufferDescriptor *out_descriptor);
 bool fs25ad_gpu_runtime_resize(
     Fs25adGpuRuntimeHandle *handle,
     uint32_t width,
