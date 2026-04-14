@@ -242,6 +242,50 @@ bool fs25ad_host_bridge_texture_registration_v4_detach_android_surface(
 
 Fs25adFlutterSessionHandle *fs25ad_flutter_session_new(void);
 void fs25ad_flutter_session_dispose(Fs25adFlutterSessionHandle *session);
+bool fs25ad_flutter_session_apply_action_json(
+    const Fs25adFlutterSessionHandle *session,
+    const char *action_json);
+char *fs25ad_flutter_session_take_dialog_requests_json(
+    const Fs25adFlutterSessionHandle *session);
+bool fs25ad_flutter_session_submit_dialog_result_json(
+    const Fs25adFlutterSessionHandle *session,
+    const char *result_json);
+char *fs25ad_flutter_session_snapshot_json(
+    const Fs25adFlutterSessionHandle *session);
+char *fs25ad_flutter_session_node_details_json(
+    const Fs25adFlutterSessionHandle *session);
+char *fs25ad_flutter_session_marker_list_json(
+    const Fs25adFlutterSessionHandle *session);
+char *fs25ad_flutter_session_route_tool_viewport_json(
+    const Fs25adFlutterSessionHandle *session);
+char *fs25ad_flutter_session_connection_pair_json(
+    const Fs25adFlutterSessionHandle *session,
+    uint64_t node_a,
+    uint64_t node_b);
+int32_t fs25ad_flutter_session_is_dirty(
+    const Fs25adFlutterSessionHandle *session);
+char *fs25ad_flutter_session_ui_snapshot_json(
+    const Fs25adFlutterSessionHandle *session);
+char *fs25ad_flutter_session_chrome_snapshot_json(
+    const Fs25adFlutterSessionHandle *session);
+char *fs25ad_flutter_session_dialog_snapshot_json(
+    const Fs25adFlutterSessionHandle *session);
+char *fs25ad_flutter_session_editing_snapshot_json(
+    const Fs25adFlutterSessionHandle *session);
+char *fs25ad_flutter_session_context_menu_snapshot_json(
+    const Fs25adFlutterSessionHandle *session,
+    int64_t focus_node_id_or_neg1);
+char *fs25ad_flutter_session_viewport_overlay_json(
+    const Fs25adFlutterSessionHandle *session,
+    float cursor_world_x,
+    float cursor_world_y);
+char *fs25ad_flutter_session_viewport_geometry_json(
+    const Fs25adFlutterSessionHandle *session,
+    float viewport_width,
+    float viewport_height);
+int64_t fs25ad_flutter_session_acquire_shared_arc_raw(
+    const Fs25adFlutterSessionHandle *session);
+void fs25ad_flutter_session_release_shared_arc_raw(int64_t raw);
 
 Fs25adGpuRuntimeHandle *fs25ad_gpu_runtime_new(uint32_t width, uint32_t height);
 Fs25adGpuRuntimeHandle *fs25ad_gpu_runtime_new_with_session(
