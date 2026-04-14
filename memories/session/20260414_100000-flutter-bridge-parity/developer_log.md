@@ -135,6 +135,7 @@ Commit 2 fuer Flutter-Bridge-Parity: fehlende `HostSessionAction`-Varianten und 
 ## Zusatznotizen
 
 - `docs/howto/` ist fuer diesen Commit nicht betroffen.
+- Commit erstellt: `cff6eca2a36e4f2c93289208627d77b6c615b880` (`refactor(egui): migrate read-only paths to bridge snapshots`)
 - Unverwandte Arbeitsbaum-Aenderungen in `crates/fs25_auto_drive_host_bridge_ffi/src/flutter_api.rs` und `crates/fs25_auto_drive_render_wgpu/src/external_texture/vulkan_linux.rs` wurden fuer diesen Commit bewusst nicht angefasst.
 - Commit erstellt: `f756a5c` (`feat(host-bridge): add missing HostSessionAction variants for full egui parity`)
 
@@ -310,4 +311,45 @@ Commit 5 fuer Flutter-Bridge-Parity: serialisierbaren `HostContextMenuSnapshot` 
 
 - Die Bridge liefert bewusst eine flache Aktionsliste mit stable IDs plus `enabled`-Flag pro aktueller Menue-Variante; Flutter muss dadurch keine Preconditions nachbauen und kann disabled Actions bei Bedarf lokal ausblenden.
 - Die Variante `RouteToolActive` nutzt weiter den bestehenden `HostRouteToolViewportSnapshot` fuer Tangenten-/Route-Tool-spezifische Zusatzdaten; Commit 5 zieht nur die allgemeine Command-Sichtbarkeit in die Bridge.
+- `docs/howto/` ist fuer diesen Commit nicht betroffen.
+
+---
+
+## Aufgabe
+
+Commit 6 fuer Flutter-Bridge-Parity: egui-Frontend nur in einem klar isolierten Read-Pfad auf die neuen Bridge-Snapshots umstellen, ohne bestehende Write-Seams in denselben Collectors zu vermischen.
+
+## Geaenderte Dateien
+
+- `crates/fs25_auto_drive_frontend_egui/src/editor_app/helpers.rs`
+  - `maybe_request_repaint(...)` liest Command-/Options-Chrome jetzt ueber `build_host_chrome_snapshot()` und Dialog-Sichtbarkeiten ueber `dialog_snapshot()`.
+  - Das Floating-Menue bleibt bewusst auf dem lokalen `chrome_state()`-Read-Seam, weil dafuer aktuell kein typed Snapshot existiert.
+  - Kleine Hilfsfunktion plus Tests fuer den isolierten Repaint-Entscheidungsbaum ergaenzt.
+- `crates/fs25_auto_drive_frontend_egui/src/editor_app/API.md`
+  - Modul-Doku fuer den aktualisierten Repaint-Read-Pfad synchronisiert.
+
+## Bewusst nicht migriert
+
+- `crates/fs25_auto_drive_frontend_egui/src/editor_app/panel_collector.rs`
+  - `panel_properties_state_mut()` wird in derselben Funktion sowohl fuer reine Reads als auch fuer mutierende Panel-States (`distanzen`, `options`) in `render_properties_content(...)` und `render_edit_panel(...)` weitergereicht.
+  - Eine partielle Snapshot-Umstellung wuerde dort zwei parallele Zugriffspfade fuer dieselben Daten einfuehren.
+- `crates/fs25_auto_drive_frontend_egui/src/editor_app/dialog_collector.rs`
+  - `dialog_ui_state_mut()` wird fuer interaktive Drafts und Close-/Cancel-Mutationen mehrerer Dialoge in derselben Funktion verwendet.
+  - Eine partielle Read-Migration auf `dialog_snapshot()` waere dort kein sauberer Schnitt.
+- `crates/fs25_auto_drive_frontend_egui/src/ui/input/viewport_collect.rs`
+  - Das egui-Kontextmenue rendert weiter aus lokalem Rohzustand und eigenem Snapshot-Cache; eine Umstellung auf `HostContextMenuSnapshot` wuerde einen groesseren Umbau des bestehenden Menue-Renderers erfordern.
+
+## Verifikation
+
+- `nocorrect cargo fmt --all`
+  - Erfolgreich.
+- `nocorrect cargo check --all-targets`
+  - Erfolgreich.
+- `nocorrect cargo test`
+  - Erfolgreich.
+- `nocorrect cargo clippy --all-targets -- -D warnings`
+  - Erfolgreich.
+
+## Zusatznotizen
+
 - `docs/howto/` ist fuer diesen Commit nicht betroffen.
