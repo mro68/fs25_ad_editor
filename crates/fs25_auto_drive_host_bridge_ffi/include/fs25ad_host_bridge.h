@@ -31,7 +31,10 @@ extern "C" {
 
 #define FS25AD_HOST_BRIDGE_TEXTURE_REGISTRATION_V4_PAYLOAD_WINDOWS_DESCRIPTOR 1u
 #define FS25AD_HOST_BRIDGE_TEXTURE_REGISTRATION_V4_PAYLOAD_LINUX_DMABUF 2u
+/* Legacy */
 #define FS25AD_HOST_BRIDGE_TEXTURE_REGISTRATION_V4_PAYLOAD_ANDROID_SURFACE_ATTACHMENT 3u
+/* Android AHardwareBuffer ExportLease (Payload-Familie 4) */
+#define FS25AD_HOST_BRIDGE_TEXTURE_REGISTRATION_V4_PAYLOAD_ANDROID_HARDWARE_BUFFER 4u
 
 #define FS25AD_HOST_BRIDGE_TEXTURE_REGISTRATION_V4_AVAILABILITY_SUPPORTED 1u
 #define FS25AD_HOST_BRIDGE_TEXTURE_REGISTRATION_V4_AVAILABILITY_NOT_YET_IMPLEMENTED 2u
@@ -40,7 +43,9 @@ extern "C" {
 #define FS25AD_HOST_BRIDGE_TEXTURE_REGISTRATION_V4_WINDOWS_DESCRIPTOR_DXGI_SHARED_HANDLE 1u
 #define FS25AD_HOST_BRIDGE_TEXTURE_REGISTRATION_V4_WINDOWS_DESCRIPTOR_D3D11_TEXTURE2D 2u
 
+/* Legacy */
 #define FS25AD_HOST_BRIDGE_TEXTURE_REGISTRATION_V4_ANDROID_ATTACHMENT_NATIVE_WINDOW 1u
+/* Legacy */
 #define FS25AD_HOST_BRIDGE_TEXTURE_REGISTRATION_V4_ANDROID_ATTACHMENT_SURFACE_PRODUCER 2u
 
 #define FS25AD_HOST_BRIDGE_TEXTURE_REGISTRATION_V4_MAX_LINUX_DMABUF_PLANES 4u
@@ -127,6 +132,11 @@ typedef struct Fs25adTextureRegistrationV4LinuxDmabufDescriptor {
         planes[FS25AD_HOST_BRIDGE_TEXTURE_REGISTRATION_V4_MAX_LINUX_DMABUF_PLANES];
 } Fs25adTextureRegistrationV4LinuxDmabufDescriptor;
 
+typedef struct Fs25adTextureRegistrationV4AndroidHardwareBufferDescriptor {
+    uintptr_t hardware_buffer_ptr;
+} Fs25adTextureRegistrationV4AndroidHardwareBufferDescriptor;
+
+/* Legacy */
 typedef struct Fs25adTextureRegistrationV4AndroidSurfaceDescriptor {
     uint32_t attachment_kind;
     uintptr_t native_window_ptr;
@@ -228,13 +238,20 @@ bool fs25ad_host_bridge_texture_registration_v4_get_linux_dmabuf_descriptor(
     Fs25adHostBridgeTextureRegistrationV4 *texture,
     uint64_t frame_token,
     Fs25adTextureRegistrationV4LinuxDmabufDescriptor *out_descriptor);
+bool fs25ad_host_bridge_texture_registration_v4_get_android_hardware_buffer_descriptor(
+    Fs25adHostBridgeTextureRegistrationV4 *texture,
+    uint64_t frame_token,
+    Fs25adTextureRegistrationV4AndroidHardwareBufferDescriptor *out_descriptor);
+/* Legacy */
 bool fs25ad_host_bridge_texture_registration_v4_get_android_surface_descriptor(
     Fs25adHostBridgeTextureRegistrationV4 *texture,
     uint64_t frame_token,
     Fs25adTextureRegistrationV4AndroidSurfaceDescriptor *out_descriptor);
+/* Legacy */
 bool fs25ad_host_bridge_texture_registration_v4_attach_android_surface(
     Fs25adHostBridgeTextureRegistrationV4 *texture,
     const Fs25adTextureRegistrationV4AndroidSurfaceDescriptor *surface_descriptor);
+/* Legacy */
 bool fs25ad_host_bridge_texture_registration_v4_detach_android_surface(
     Fs25adHostBridgeTextureRegistrationV4 *texture);
 
