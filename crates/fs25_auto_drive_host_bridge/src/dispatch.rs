@@ -28,6 +28,7 @@ mod tests {
     use fs25_auto_drive_engine::core::{
         Connection, ConnectionDirection, ConnectionPriority, MapMarker, MapNode, NodeFlag, RoadMap,
     };
+    use fs25_auto_drive_engine::shared::RenderQuality;
     use glam::Vec2;
     use std::sync::Arc;
 
@@ -329,6 +330,104 @@ mod tests {
     }
 
     #[test]
+    fn map_host_action_to_intent_covers_egui_parity_gap_actions() {
+        assert!(matches!(
+            map_host_action_to_intent(HostSessionAction::ClearHeightmap),
+            Some(AppIntent::HeightmapCleared)
+        ));
+        assert!(matches!(
+            map_host_action_to_intent(HostSessionAction::BrowseOverviewZip),
+            Some(AppIntent::OverviewZipBrowseRequested)
+        ));
+        assert!(matches!(
+            map_host_action_to_intent(HostSessionAction::GenerateOverviewFromZip {
+                path: "/tmp/overview.zip".to_string(),
+            }),
+            Some(AppIntent::GenerateOverviewFromZip { path }) if path == "/tmp/overview.zip"
+        ));
+        assert!(matches!(
+            map_host_action_to_intent(HostSessionAction::CenterOnNode { node_id: 42 }),
+            Some(AppIntent::CenterOnNodeRequested { node_id: 42 })
+        ));
+        assert!(matches!(
+            map_host_action_to_intent(HostSessionAction::SetRenderQuality {
+                quality: RenderQuality::Medium,
+            }),
+            Some(AppIntent::RenderQualityChanged {
+                quality: RenderQuality::Medium,
+            })
+        ));
+        assert!(matches!(
+            map_host_action_to_intent(HostSessionAction::OpenCreateMarkerDialog { node_id: 7 }),
+            Some(AppIntent::CreateMarkerRequested { node_id: 7 })
+        ));
+        assert!(matches!(
+            map_host_action_to_intent(HostSessionAction::CancelMarkerDialog),
+            Some(AppIntent::MarkerDialogCancelled)
+        ));
+        assert!(matches!(
+            map_host_action_to_intent(HostSessionAction::StartResampleSelection),
+            Some(AppIntent::StreckenteilungAktivieren)
+        ));
+        assert!(matches!(
+            map_host_action_to_intent(HostSessionAction::ApplyCurrentResample),
+            Some(AppIntent::ResamplePathRequested)
+        ));
+        assert!(matches!(
+            map_host_action_to_intent(HostSessionAction::StartGroupEdit { record_id: 9 }),
+            Some(AppIntent::GroupEditStartRequested { record_id: 9 })
+        ));
+        assert!(matches!(
+            map_host_action_to_intent(HostSessionAction::SetGroupBoundaryNodes {
+                record_id: 5,
+                entry_node_id: Some(11),
+                exit_node_id: None,
+            }),
+            Some(AppIntent::SetGroupBoundaryNodes {
+                record_id: 5,
+                entry_node_id: Some(11),
+                exit_node_id: None,
+            })
+        ));
+        assert!(matches!(
+            map_host_action_to_intent(HostSessionAction::RecomputeNodeSegmentSelection {
+                world_pos: [1.0, -2.0],
+                additive: true,
+            }),
+            Some(AppIntent::NodeSegmentBetweenIntersectionsRequested { world_pos, additive })
+                if world_pos == Vec2::new(1.0, -2.0) && additive
+        ));
+        assert!(matches!(
+            map_host_action_to_intent(HostSessionAction::ConfirmDissolveGroup {
+                segment_id: 13,
+            }),
+            Some(AppIntent::DissolveGroupConfirmed { segment_id: 13 })
+        ));
+        assert!(matches!(
+            map_host_action_to_intent(HostSessionAction::ConfirmTraceAllFields {
+                spacing: 4.0,
+                offset: 0.5,
+                tolerance: 1.0,
+                corner_angle: Some(30.0),
+                corner_rounding_radius: Some(2.0),
+                corner_rounding_max_angle_deg: None,
+            }),
+            Some(AppIntent::TraceAllFieldsConfirmed {
+                spacing: 4.0,
+                offset: 0.5,
+                tolerance: 1.0,
+                corner_angle: Some(30.0),
+                corner_rounding_radius: Some(2.0),
+                corner_rounding_max_angle_deg: None,
+            })
+        ));
+        assert!(matches!(
+            map_host_action_to_intent(HostSessionAction::ConfirmDeduplication),
+            Some(AppIntent::DeduplicateConfirmed)
+        ));
+    }
+
+    #[test]
     fn map_connection_actions_and_intents_roundtrip_bidirectionally() {
         let add_intent = AppIntent::AddConnectionRequested {
             from_id: 11,
@@ -608,6 +707,209 @@ mod tests {
                 HostSessionAction::PasteConfirm,
             ),
             (AppIntent::PasteCancelled, HostSessionAction::PasteCancel),
+        ];
+
+        for (intent, expected_action) in cases {
+            assert_eq!(map_intent_to_host_action(&intent), Some(expected_action));
+        }
+    }
+
+    #[test]
+    fn map_intent_to_host_action_covers_missing_egui_parity_intents() {
+        let cases = vec![
+            (AppIntent::HeightmapCleared, HostSessionAction::ClearHeightmap),
+            (
+                AppIntent::HeightmapWarningConfirmed,
+                HostSessionAction::ConfirmHeightmapWarning,
+            ),
+            (
+                AppIntent::HeightmapWarningCancelled,
+                HostSessionAction::CancelHeightmapWarning,
+            ),
+            (
+                AppIntent::OverviewZipBrowseRequested,
+                HostSessionAction::BrowseOverviewZip,
+            ),
+            (
+                AppIntent::GenerateOverviewFromZip {
+                    path: "/tmp/overview.zip".to_string(),
+                },
+                HostSessionAction::GenerateOverviewFromZip {
+                    path: "/tmp/overview.zip".to_string(),
+                },
+            ),
+            (
+                AppIntent::ZipBackgroundFileSelected {
+                    zip_path: "/tmp/background.zip".to_string(),
+                    entry_name: "overview.png".to_string(),
+                },
+                HostSessionAction::SelectZipBackgroundFile {
+                    zip_path: "/tmp/background.zip".to_string(),
+                    entry_name: "overview.png".to_string(),
+                },
+            ),
+            (
+                AppIntent::ZipBrowserCancelled,
+                HostSessionAction::CancelZipBrowser,
+            ),
+            (
+                AppIntent::OverviewOptionsConfirmed,
+                HostSessionAction::ConfirmOverviewOptions,
+            ),
+            (
+                AppIntent::OverviewOptionsCancelled,
+                HostSessionAction::CancelOverviewOptions,
+            ),
+            (
+                AppIntent::PostLoadDialogDismissed,
+                HostSessionAction::DismissPostLoadDialog,
+            ),
+            (
+                AppIntent::SaveBackgroundAsOverviewConfirmed,
+                HostSessionAction::ConfirmSaveBackgroundAsOverview,
+            ),
+            (
+                AppIntent::SaveBackgroundAsOverviewDismissed,
+                HostSessionAction::DismissSaveBackgroundAsOverview,
+            ),
+            (
+                AppIntent::DeduplicateConfirmed,
+                HostSessionAction::ConfirmDeduplication,
+            ),
+            (
+                AppIntent::DeduplicateCancelled,
+                HostSessionAction::CancelDeduplication,
+            ),
+            (AppIntent::ZoomInRequested, HostSessionAction::ZoomIn),
+            (AppIntent::ZoomOutRequested, HostSessionAction::ZoomOut),
+            (
+                AppIntent::CenterOnNodeRequested { node_id: 17 },
+                HostSessionAction::CenterOnNode { node_id: 17 },
+            ),
+            (
+                AppIntent::RenderQualityChanged {
+                    quality: RenderQuality::Low,
+                },
+                HostSessionAction::SetRenderQuality {
+                    quality: RenderQuality::Low,
+                },
+            ),
+            (
+                AppIntent::ToggleBackgroundVisibility,
+                HostSessionAction::ToggleBackgroundVisibility,
+            ),
+            (
+                AppIntent::ScaleBackground { factor: 0.5 },
+                HostSessionAction::ScaleBackground { factor: 0.5 },
+            ),
+            (
+                AppIntent::CreateMarkerRequested { node_id: 21 },
+                HostSessionAction::OpenCreateMarkerDialog { node_id: 21 },
+            ),
+            (
+                AppIntent::EditMarkerRequested { node_id: 22 },
+                HostSessionAction::OpenEditMarkerDialog { node_id: 22 },
+            ),
+            (
+                AppIntent::MarkerDialogCancelled,
+                HostSessionAction::CancelMarkerDialog,
+            ),
+            (
+                AppIntent::InvertSelectionRequested,
+                HostSessionAction::InvertSelection,
+            ),
+            (
+                AppIntent::StreckenteilungAktivieren,
+                HostSessionAction::StartResampleSelection,
+            ),
+            (
+                AppIntent::ResamplePathRequested,
+                HostSessionAction::ApplyCurrentResample,
+            ),
+            (
+                AppIntent::GroupEditStartRequested { record_id: 3 },
+                HostSessionAction::StartGroupEdit { record_id: 3 },
+            ),
+            (
+                AppIntent::GroupEditApplyRequested,
+                HostSessionAction::ApplyGroupEdit,
+            ),
+            (
+                AppIntent::GroupEditCancelRequested,
+                HostSessionAction::CancelGroupEdit,
+            ),
+            (
+                AppIntent::GroupEditToolRequested { record_id: 4 },
+                HostSessionAction::OpenGroupEditTool { record_id: 4 },
+            ),
+            (
+                AppIntent::GroupSelectionAsGroupRequested,
+                HostSessionAction::GroupSelectionAsGroup,
+            ),
+            (
+                AppIntent::RemoveSelectedNodesFromGroupRequested,
+                HostSessionAction::RemoveSelectedNodesFromGroup,
+            ),
+            (
+                AppIntent::SetGroupBoundaryNodes {
+                    record_id: 5,
+                    entry_node_id: Some(10),
+                    exit_node_id: None,
+                },
+                HostSessionAction::SetGroupBoundaryNodes {
+                    record_id: 5,
+                    entry_node_id: Some(10),
+                    exit_node_id: None,
+                },
+            ),
+            (
+                AppIntent::NodeSegmentBetweenIntersectionsRequested {
+                    world_pos: Vec2::new(3.0, 4.0),
+                    additive: true,
+                },
+                HostSessionAction::RecomputeNodeSegmentSelection {
+                    world_pos: [3.0, 4.0],
+                    additive: true,
+                },
+            ),
+            (
+                AppIntent::ToggleGroupLockRequested { segment_id: 6 },
+                HostSessionAction::ToggleGroupLock { segment_id: 6 },
+            ),
+            (
+                AppIntent::DissolveGroupRequested { segment_id: 7 },
+                HostSessionAction::DissolveGroup { segment_id: 7 },
+            ),
+            (
+                AppIntent::DissolveGroupConfirmed { segment_id: 8 },
+                HostSessionAction::ConfirmDissolveGroup { segment_id: 8 },
+            ),
+            (
+                AppIntent::OpenTraceAllFieldsDialogRequested,
+                HostSessionAction::OpenTraceAllFieldsDialog,
+            ),
+            (
+                AppIntent::TraceAllFieldsConfirmed {
+                    spacing: 6.0,
+                    offset: 0.5,
+                    tolerance: 1.5,
+                    corner_angle: Some(25.0),
+                    corner_rounding_radius: None,
+                    corner_rounding_max_angle_deg: Some(45.0),
+                },
+                HostSessionAction::ConfirmTraceAllFields {
+                    spacing: 6.0,
+                    offset: 0.5,
+                    tolerance: 1.5,
+                    corner_angle: Some(25.0),
+                    corner_rounding_radius: None,
+                    corner_rounding_max_angle_deg: Some(45.0),
+                },
+            ),
+            (
+                AppIntent::TraceAllFieldsCancelled,
+                HostSessionAction::CancelTraceAllFields,
+            ),
         ];
 
         for (intent, expected_action) in cases {
