@@ -1,12 +1,9 @@
-//! Android-spezifische Surface-Attachment-Familie fuer Texture-Registration-v4.
+//! Android-spezifische Descriptorfamilien fuer Texture-Registration-v4.
 //!
-//! Der aktuelle Repo-Pfad rendert Offscreen immer in eine interne
-//! `wgpu::Texture`. Fuer produktives Android-v4-Interop reicht das nicht: der
-//! Host muss ein `ANativeWindow`/Surface-Ziel bereitstellen, und der Renderer
-//! muss backend-spezifisch gegen dieses Ziel statt gegen eine interne
-//! Offscreen-Textur rendern. Ohne nativen Host-Code und ohne niedrigeren
-//! Surface-/Swapchain-Pfad im Backend kann dieser Vertrag hier nicht produktiv
-//! eingelost werden.
+//! Der aktive Android-v4-Pfad nutzt inzwischen `ExportLease` mit
+//! `AHardwareBuffer`-Descriptoren. Die fruehere Surface-Attachment-Familie
+//! bleibt zusaetzlich als Legacy-Kompatibilitaet fuer aeltere ABI-Consumer im
+//! Code erhalten.
 
 use super::types::{
     TextureRegistrationAvailability, TextureRegistrationModel, TextureRegistrationPayloadFamily,
@@ -53,18 +50,26 @@ impl AndroidSurfaceDescriptor {
     }
 }
 
+/// Descriptor fuer Android-AHardwareBuffer-Export im ExportLease-Modell.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct AndroidHardwareBufferDescriptor {
+    /// Opaker Pointer auf einen `AHardwareBuffer`, bereits `acquire()`-t.
+    /// Der Empfaenger muss `AHardwareBuffer_release()` aufrufen.
+    pub hardware_buffer_ptr: usize,
+}
+
 /// Liefert die Android-Capabilities fuer den v4-Vertrag.
 pub fn capabilities() -> TextureRegistrationPlatformCapabilities {
     let availability = if cfg!(target_os = "android") {
-        TextureRegistrationAvailability::NotYetImplemented
+        TextureRegistrationAvailability::Supported
     } else {
         TextureRegistrationAvailability::Unsupported
     };
 
     TextureRegistrationPlatformCapabilities::new(
         TextureRegistrationPlatform::Android,
-        TextureRegistrationModel::HostAttachedSurface,
-        TextureRegistrationPayloadFamily::AndroidSurfaceAttachment,
+        TextureRegistrationModel::ExportLease,
+        TextureRegistrationPayloadFamily::AndroidHardwareBuffer,
         availability,
     )
 }

@@ -56,8 +56,9 @@ Der v4-Vertrag ist bewusst nur der additive Transport- und Lifecycle-Slice. Echt
 | `WindowsDescriptor` | Windows-Descriptorfamilie (`DxgiSharedHandle` oder `D3d11Texture2D`) |
 | `LinuxDmabufPlane` | Einzelne DMA-BUF-Plane des Linux-v4-Vertrags |
 | `LinuxDmabufDescriptor` | Linux-DMA-BUF-Descriptorfamilie mit Plane-Liste |
+| `AndroidHardwareBufferDescriptor` | Android-AHardwareBuffer-Descriptorfamilie des aktiven ExportLease-Pfads |
 | `AndroidAttachmentKind` | Untertyp des Android-Host-Attach-Modells |
-| `AndroidSurfaceDescriptor` | Android-Surface-Attachment-Descriptorfamilie |
+| `AndroidSurfaceDescriptor` | Legacy-Android-Surface-Attachment-Descriptorfamilie fuer aeltere Host-Attach-Consumer |
 | `BackgroundWorldBounds` | Weltkoordinaten des Background-Quads im 2D-Koordinatensystem des Render-Core (`x/y`) |
 | `RenderScene` | Re-exportierter per-frame Render-Vertrag aus `fs25_auto_drive_engine::shared` |
 | `RenderQuality` | Re-exportierte Qualitaetsstufe des Render-Vertrags |
@@ -122,13 +123,15 @@ Der v4-Vertrag ist bewusst nur der additive Transport- und Lifecycle-Slice. Echt
 - Plattformspezifische Payload-Familien sind getrennt modelliert:
 	- Windows: `WindowsDescriptor`
 	- Linux: `LinuxDmabufDescriptor`
-	- Android: `AndroidSurfaceDescriptor`
+	- Android: `AndroidHardwareBufferDescriptor` als aktiver ExportLease-Pfad
+- Legacy-Kompatibilitaet: `AndroidSurfaceDescriptor` und `AndroidAttachmentKind` bleiben fuer aeltere Host-Attach-Consumer erhalten, sind aber nicht mehr die aktive Android-Capability-Zeile.
+- Stabile numerische Payload-Werte: `WindowsDescriptor = 1`, `LinuxDmabuf = 2`, `AndroidSurfaceAttachment = 3` (Legacy), `AndroidHardwareBuffer = 4`.
 - Der Vertrag allein macht noch keinen produktiven externen Host-Interop. Dafuer braucht es pro Plattform zusaetzlich native Host-Pfade ausserhalb dieses Render-Core, etwa fuer DXGI-/D3D11-Import, DMA-BUF-Import oder Android-Surface-Lifecycle.
-- Stand dieser Ausbaustufe: Die Plattformpfade sind als `NotYetImplemented` bzw. `Unsupported` explizit capability-gated; es gibt keinen stillen Rueckfall auf Pixelbuffer oder v3-Pointer-Reinterpretation.
+- Stand dieser Ausbaustufe: Windows und Linux bleiben als `NotYetImplemented` bzw. `Unsupported` capability-gated; der Android-Renderpfad meldet auf Android-Targets `Supported` ueber `ExportLease` plus `AndroidHardwareBuffer`, waehrend der Host-/FFI-Importpfad ausserhalb dieser Crate weiter separat landet. Ein stiller Rueckfall auf Pixelbuffer oder v3-Pointer-Reinterpretation existiert nicht.
 - Konkreter Backend-Blocker:
 	- Windows: Der aktuelle Offscreen-Pfad erzeugt regulaere `wgpu::Texture`-Objekte ueber `Device::create_texture`; `wgpu 29` hat dort keine Export-/Shared-Handle-Felder. Der unsichere `as_hal`-Abstieg liefert zwar ein internes `ID3D12Resource`, erzeugt aber weder einen produktiven DXGI-Shared-Handle- oder `ID3D11Texture2D`-Registrationspfad noch den dazugehoerigen nativen Host-Importpfad.
 	- Linux: Derselbe Offscreen-Pfad allokiert keine exportierbare Vulkan-External-Memory; im Repo existiert daher weder DMA-BUF-FD-/Modifier-Export noch ein nativer DMA-BUF-Importpfad fuer diese Descriptoren.
-	- Android: Der Renderer rendert aktuell nur in eine interne Offscreen-Textur. Fuer produktiven v4-Surface-Attach braucht es stattdessen ein hostseitig erzeugtes `ANativeWindow`-/Surface-Ziel, backend-spezifisches Rendern gegen dieses Ziel und einen nativen Host-Surface-Lifecycle.
+	- Android: Der Render-Core exportiert unter Android jetzt produktiv `AHardwareBuffer`-Leases; offen bleiben der darauf abgestimmte Host-/FFI-Descriptorpfad und ein nativer Consumer-Importpfad ausserhalb dieser Crate.
 
 ## Beispiel
 
