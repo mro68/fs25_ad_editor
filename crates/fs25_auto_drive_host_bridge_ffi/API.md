@@ -252,11 +252,17 @@ Opaquer Session-Handle mit `Arc<Mutex<HostBridgeSession>>` fuer thread-sicheren 
 
 | Signatur | Zweck |
 |---|---|
-| `flutter_session_new() -> Box<FlutterSessionHandle>` | Erzeugt eine neue Flutter-Session |
-| `flutter_session_dispose(handle: Box<FlutterSessionHandle>)` | Gibt die Session frei |
+| `flutter_session_new() -> FlutterSessionHandle` | Erzeugt eine neue Flutter-Session |
+| `flutter_session_dispose(handle: FlutterSessionHandle)` | Gibt die Session frei |
 | `flutter_session_apply_action(handle, action_json: String) -> Result<()>` | Wendet eine JSON-serialisierte `HostSessionAction` an |
+| `flutter_session_take_dialog_requests_json(handle) -> Result<String>` | Liefert ein JSON-Array aus `HostDialogRequest` und drainet die Dialog-Queue |
+| `flutter_session_submit_dialog_result_json(handle, result_json: String) -> Result<()>` | Liest `HostDialogResult` aus JSON und fuehrt ihn in die Session zurueck |
 | `flutter_session_is_dirty(handle) -> Result<bool>` | Liefert den semantischen Dirty-Zustand relativ zum letzten erfolgreichen Load/Save |
 | `flutter_session_snapshot_json(handle) -> Result<String>` | Liefert den `HostSessionSnapshot` als JSON |
+| `flutter_session_node_details_json(handle) -> Option<String>` | Liefert den aktuell inspizierten Node als `HostNodeDetails`-JSON |
+| `flutter_session_marker_list_json(handle) -> String` | Liefert alle Marker als `HostMarkerListSnapshot`-JSON |
+| `flutter_session_route_tool_viewport_json(handle) -> Result<String>` | Liefert den `HostRouteToolViewportSnapshot` als JSON |
+| `flutter_session_connection_pair_json(handle, node_a, node_b) -> Result<String>` | Liefert den `HostConnectionPairSnapshot` fuer genau zwei Nodes als JSON |
 | `flutter_session_ui_snapshot_json(handle) -> Result<String>` | Liefert den host-neutralen `HostUiSnapshot` als JSON |
 | `flutter_session_chrome_snapshot_json(handle) -> Result<String>` | Liefert den `HostChromeSnapshot` als JSON |
 | `flutter_session_viewport_overlay_json(handle, cursor_world_x, cursor_world_y) -> Result<String>` | Liefert den host-neutralen `ViewportOverlaySnapshot` als JSON |
