@@ -376,6 +376,10 @@ fs25ad_flutter_session_new()
 
 C-kompatible Repr des Linux-DMA-BUF-v4-Descriptors fuer den Export an Flutter/Impeller.
 
+### C-Repr: `Fs25adTextureRegistrationV4AndroidHardwareBufferDescriptor`
+
+C-kompatible Repr des Android-AHardwareBuffer-v4-Descriptors fuer den Export an Flutter/Impeller. Enthaelt einen opaken `AHardwareBuffer*`-Zeiger, der bereits per `AHardwareBuffer_acquire()` fuer den Empfaenger inkrementiert wurde. Der Empfaenger muss spaeter `AHardwareBuffer_release()` aufrufen.
+
 ### Status
 
 - GPU-Runtime-Erzeugung (Vulkan-Instanz, Device, Queue) funktional
