@@ -1,10 +1,7 @@
 //! C-ABI-Transport ueber der kanonischen Host-Bridge-Session.
 
 #[cfg(feature = "flutter")]
-mod api;
-#[cfg(feature = "flutter")]
 pub mod flutter_api;
-mod frb_generated;
 mod shared_texture_v2;
 mod texture_registration_v4;
 
@@ -47,11 +44,15 @@ macro_rules! ffi_guard_ptr {
 #[cfg(all(feature = "flutter-linux", target_os = "linux"))]
 pub mod flutter_gpu;
 
+#[cfg(feature = "flutter")]
+use crate::flutter_api::FlutterSessionHandle;
 use anyhow::{anyhow, Context, Result};
+use fs25_auto_drive_host_bridge::dto::{host_ui_snapshot_json, viewport_overlay_snapshot_json};
 use fs25_auto_drive_host_bridge::{
-    HostBridgeSession, HostChromeSnapshot, HostDialogRequest, HostDialogResult,
-    HostRouteToolViewportSnapshot, HostSessionAction, HostSessionSnapshot,
-    HostViewportGeometrySnapshot,
+    HostBridgeSession, HostChromeSnapshot, HostConnectionPairSnapshot, HostContextMenuSnapshot,
+    HostDialogRequest, HostDialogResult, HostDialogSnapshot, HostEditingSnapshot,
+    HostOverviewOptionsDialogSnapshot, HostRouteToolViewportSnapshot, HostSessionAction,
+    HostSessionSnapshot, HostUiSnapshot, HostViewportGeometrySnapshot, ViewportOverlaySnapshot,
 };
 use std::cell::RefCell;
 use std::ffi::{c_char, CStr, CString};
@@ -124,6 +125,16 @@ where
     serde_json::from_str(text).with_context(|| format!("failed to parse {type_name} JSON"))
 }
 
+fn decode_focus_node_id(focus_node_id_or_neg1: i64) -> Result<Option<u64>> {
+    if focus_node_id_or_neg1 == -1 {
+        return Ok(None);
+    }
+
+    let node_id = u64::try_from(focus_node_id_or_neg1)
+        .map_err(|_| anyhow!("focus_node_id must be -1 or a non-negative node id"))?;
+    Ok(Some(node_id))
+}
+
 fn with_session_mut<T>(
     session: *mut HostBridgeSessionHandle,
     f: impl FnOnce(&mut HostBridgeSession) -> Result<T>,
@@ -134,6 +145,21 @@ fn with_session_mut<T>(
 
     let session = unsafe { &*session };
     session.with_lock(f)
+}
+
+#[cfg(feature = "flutter")]
+fn with_flutter_session_fallible<T>(
+    session: *const FlutterSessionHandle,
+    f: impl FnOnce(&mut HostBridgeSession) -> Result<T>,
+) -> Result<T> {
+    if session.is_null() {
+        return Err(anyhow!("FlutterSessionHandle pointer must not be null"));
+    }
+
+    let handle = unsafe { &*session };
+    handle
+        .with_session(|session| f(session))
+        .and_then(|result| result)
 }
 
 /// Liefert die ABI-Version des nativen Host-Bridge-Vertrags.
@@ -208,6 +234,418 @@ pub unsafe extern "C" fn fs25ad_flutter_session_dispose(
     unsafe { flutter_api::flutter_session_dispose(*Box::from_raw(session)) };
 }
 
+/// Wendet eine kanonische `HostSessionAction` auf eine Flutter-Session an.
+///
+/// # Safety
+///
+/// `session` muss ein gueltiger, durch `fs25ad_flutter_session_new` erzeugter Zeiger sein.
+/// `action_json` muss ein gueltiger, null-terminierter UTF-8-String oder `null` sein.
+#[cfg(feature = "flutter")]
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn fs25ad_flutter_session_apply_action_json(
+    session: *const FlutterSessionHandle,
+    action_json: *const c_char,
+) -> bool {
+    ffi_guard_bool! {{
+        let action: HostSessionAction = read_json_arg(action_json, "HostSessionAction")?;
+        with_flutter_session_fallible(session, |session| session.apply_action(action))
+    }}
+}
+
+/// Entnimmt alle aktuell ausstehenden Dialog-Anforderungen als UTF-8-JSON-Array.
+///
+/// # Safety
+///
+/// `session` muss ein gueltiger, durch `fs25ad_flutter_session_new` erzeugter Zeiger sein.
+/// Der rueckgegebene String muss mit `fs25ad_host_bridge_string_free` freigegeben werden.
+#[cfg(feature = "flutter")]
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn fs25ad_flutter_session_take_dialog_requests_json(
+    session: *const FlutterSessionHandle,
+) -> *mut c_char {
+    ffi_guard_ptr! {
+        with_flutter_session_fallible(session, |session| {
+            let requests: Vec<HostDialogRequest> = session.take_dialog_requests();
+            serialize_json(&requests)
+        })
+    }
+}
+
+/// Reicht ein `HostDialogResult` als UTF-8-JSON in die Flutter-Session zurueck.
+///
+/// # Safety
+///
+/// `session` muss ein gueltiger, durch `fs25ad_flutter_session_new` erzeugter Zeiger sein.
+/// `result_json` muss ein gueltiger, null-terminierter UTF-8-String oder `null` sein.
+#[cfg(feature = "flutter")]
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn fs25ad_flutter_session_submit_dialog_result_json(
+    session: *const FlutterSessionHandle,
+    result_json: *const c_char,
+) -> bool {
+    ffi_guard_bool! {{
+        let result: HostDialogResult = read_json_arg(result_json, "HostDialogResult")?;
+        with_flutter_session_fallible(session, |session| session.submit_dialog_result(result))
+    }}
+}
+
+/// Aktualisiert den host-lokalen Draft des Overview-Options-Dialogs als UTF-8-JSON.
+///
+/// # Safety
+///
+/// `session` muss ein gueltiger, durch `fs25ad_flutter_session_new` erzeugter Zeiger sein.
+/// `dialog_json` muss ein gueltiger, null-terminierter UTF-8-String oder `null` sein.
+#[cfg(feature = "flutter")]
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn fs25ad_flutter_session_update_overview_options_dialog_json(
+    session: *const FlutterSessionHandle,
+    dialog_json: *const c_char,
+) -> bool {
+    ffi_guard_bool! {{
+        let snapshot: HostOverviewOptionsDialogSnapshot =
+            read_json_arg(dialog_json, "HostOverviewOptionsDialogSnapshot")?;
+        with_flutter_session_fallible(session, |session| {
+            flutter_api::flutter_session_update_overview_options_dialog(session, snapshot)
+        })
+    }}
+}
+
+/// Serialisiert den aktuellen Flutter-Session-Snapshot als UTF-8-JSON.
+///
+/// # Safety
+///
+/// `session` muss ein gueltiger, durch `fs25ad_flutter_session_new` erzeugter Zeiger sein.
+/// Der rueckgegebene String muss mit `fs25ad_host_bridge_string_free` freigegeben werden.
+#[cfg(feature = "flutter")]
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn fs25ad_flutter_session_snapshot_json(
+    session: *const FlutterSessionHandle,
+) -> *mut c_char {
+    ffi_guard_ptr! {
+        with_flutter_session_fallible(session, |session| {
+            let snapshot: HostSessionSnapshot = session.snapshot_owned();
+            serialize_json(&snapshot)
+        })
+    }
+}
+
+/// Serialisiert den aktuell inspizierten Node der Flutter-Session als UTF-8-JSON.
+///
+/// Gibt `null` zurueck, wenn aktuell kein inspizierter Node vorliegt oder die
+/// inspizierte Node-ID in der geladenen Karte nicht existiert. Das ist kein
+/// Fehlerfall und setzt keine Last-Error-Nachricht.
+///
+/// # Safety
+///
+/// `session` muss ein gueltiger, durch `fs25ad_flutter_session_new` erzeugter Zeiger sein.
+/// Der rueckgegebene String muss mit `fs25ad_host_bridge_string_free` freigegeben werden.
+#[cfg(feature = "flutter")]
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn fs25ad_flutter_session_node_details_json(
+    session: *const FlutterSessionHandle,
+) -> *mut c_char {
+    ffi_guard_ptr! {
+        with_flutter_session_fallible(session, |session| {
+            Ok(session
+                .node_details_json()
+                .map_or(std::ptr::null_mut(), into_c_string_ptr))
+        })
+    }
+}
+
+/// Serialisiert die komplette Marker-Liste der Flutter-Session als UTF-8-JSON.
+///
+/// # Safety
+///
+/// `session` muss ein gueltiger, durch `fs25ad_flutter_session_new` erzeugter Zeiger sein.
+/// Der rueckgegebene String muss mit `fs25ad_host_bridge_string_free` freigegeben werden.
+#[cfg(feature = "flutter")]
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn fs25ad_flutter_session_marker_list_json(
+    session: *const FlutterSessionHandle,
+) -> *mut c_char {
+    ffi_guard_ptr! {
+        with_flutter_session_fallible(session, |session| {
+            Ok(into_c_string_ptr(session.marker_list_json()))
+        })
+    }
+}
+
+/// Serialisiert den Route-Tool-Viewport-Snapshot der Flutter-Session als UTF-8-JSON.
+///
+/// # Safety
+///
+/// `session` muss ein gueltiger, durch `fs25ad_flutter_session_new` erzeugter Zeiger sein.
+/// Der rueckgegebene String muss mit `fs25ad_host_bridge_string_free` freigegeben werden.
+#[cfg(feature = "flutter")]
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn fs25ad_flutter_session_route_tool_viewport_json(
+    session: *const FlutterSessionHandle,
+) -> *mut c_char {
+    ffi_guard_ptr! {
+        with_flutter_session_fallible(session, |session| {
+            let snapshot: HostRouteToolViewportSnapshot =
+                session.build_route_tool_viewport_snapshot();
+            serialize_json(&snapshot)
+        })
+    }
+}
+
+/// Serialisiert die Verbindungsdetails zwischen zwei Nodes der Flutter-Session als UTF-8-JSON.
+///
+/// # Safety
+///
+/// `session` muss ein gueltiger, durch `fs25ad_flutter_session_new` erzeugter Zeiger sein.
+/// Der rueckgegebene String muss mit `fs25ad_host_bridge_string_free` freigegeben werden.
+#[cfg(feature = "flutter")]
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn fs25ad_flutter_session_connection_pair_json(
+    session: *const FlutterSessionHandle,
+    node_a: u64,
+    node_b: u64,
+) -> *mut c_char {
+    ffi_guard_ptr! {
+        with_flutter_session_fallible(session, |session| {
+            let snapshot: HostConnectionPairSnapshot = session.connection_pair(node_a, node_b);
+            serialize_json(&snapshot)
+        })
+    }
+}
+
+/// Liefert den Dirty-Status der Flutter-Session als Integer zurueck.
+///
+/// Rueckgabewerte:
+/// - `1`: Session ist dirty
+/// - `0`: Session ist nicht dirty
+/// - `-1`: Fehler; Details koennen ueber `fs25ad_host_bridge_last_error_message()` abgefragt werden
+///
+/// # Safety
+///
+/// `session` muss ein gueltiger, durch `fs25ad_flutter_session_new` erzeugter Zeiger sein.
+#[cfg(feature = "flutter")]
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn fs25ad_flutter_session_is_dirty(
+    session: *const FlutterSessionHandle,
+) -> i32 {
+    clear_last_error();
+    match std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+        with_flutter_session_fallible(session, |session| Ok(session.is_dirty()))
+    })) {
+        Ok(Ok(true)) => 1,
+        Ok(Ok(false)) => 0,
+        Ok(Err(error)) => {
+            set_last_error(error.to_string());
+            -1
+        }
+        Err(_) => {
+            set_last_error("internal panic in FFI call");
+            -1
+        }
+    }
+}
+
+/// Serialisiert den host-neutralen UI-Snapshot der Flutter-Session als UTF-8-JSON.
+///
+/// # Safety
+///
+/// `session` muss ein gueltiger, durch `fs25ad_flutter_session_new` erzeugter Zeiger sein.
+/// Der rueckgegebene String muss mit `fs25ad_host_bridge_string_free` freigegeben werden.
+#[cfg(feature = "flutter")]
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn fs25ad_flutter_session_ui_snapshot_json(
+    session: *const FlutterSessionHandle,
+) -> *mut c_char {
+    ffi_guard_ptr! {
+        with_flutter_session_fallible(session, |session| {
+            let snapshot: HostUiSnapshot = session.build_host_ui_snapshot();
+            let payload = host_ui_snapshot_json(&snapshot).context("JSON serialization failed")?;
+            Ok(into_c_string_ptr(payload))
+        })
+    }
+}
+
+/// Serialisiert den host-neutralen Chrome-Snapshot der Flutter-Session als UTF-8-JSON.
+///
+/// # Safety
+///
+/// `session` muss ein gueltiger, durch `fs25ad_flutter_session_new` erzeugter Zeiger sein.
+/// Der rueckgegebene String muss mit `fs25ad_host_bridge_string_free` freigegeben werden.
+#[cfg(feature = "flutter")]
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn fs25ad_flutter_session_chrome_snapshot_json(
+    session: *const FlutterSessionHandle,
+) -> *mut c_char {
+    ffi_guard_ptr! {
+        with_flutter_session_fallible(session, |session| {
+            let snapshot: HostChromeSnapshot = session.build_host_chrome_snapshot();
+            serialize_json(&snapshot)
+        })
+    }
+}
+
+/// Serialisiert den host-neutralen Dialog-Snapshot der Flutter-Session als UTF-8-JSON.
+///
+/// # Safety
+///
+/// `session` muss ein gueltiger, durch `fs25ad_flutter_session_new` erzeugter Zeiger sein.
+/// Der rueckgegebene String muss mit `fs25ad_host_bridge_string_free` freigegeben werden.
+#[cfg(feature = "flutter")]
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn fs25ad_flutter_session_dialog_snapshot_json(
+    session: *const FlutterSessionHandle,
+) -> *mut c_char {
+    ffi_guard_ptr! {
+        with_flutter_session_fallible(session, |session| {
+            let snapshot: HostDialogSnapshot = session.dialog_snapshot();
+            serialize_json(&snapshot)
+        })
+    }
+}
+
+/// Serialisiert den host-neutralen Editing-Snapshot der Flutter-Session als UTF-8-JSON.
+///
+/// # Safety
+///
+/// `session` muss ein gueltiger, durch `fs25ad_flutter_session_new` erzeugter Zeiger sein.
+/// Der rueckgegebene String muss mit `fs25ad_host_bridge_string_free` freigegeben werden.
+#[cfg(feature = "flutter")]
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn fs25ad_flutter_session_editing_snapshot_json(
+    session: *const FlutterSessionHandle,
+) -> *mut c_char {
+    ffi_guard_ptr! {
+        with_flutter_session_fallible(session, |session| {
+            let snapshot: HostEditingSnapshot = session.editing_snapshot();
+            serialize_json(&snapshot)
+        })
+    }
+}
+
+/// Serialisiert den host-neutralen Kontextmenue-Snapshot der Flutter-Session als UTF-8-JSON.
+///
+/// `focus_node_id_or_neg1` nutzt `-1` als FFI-Sentinel fuer "kein Fokus-Node".
+///
+/// # Safety
+///
+/// `session` muss ein gueltiger, durch `fs25ad_flutter_session_new` erzeugter Zeiger sein.
+/// Der rueckgegebene String muss mit `fs25ad_host_bridge_string_free` freigegeben werden.
+#[cfg(feature = "flutter")]
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn fs25ad_flutter_session_context_menu_snapshot_json(
+    session: *const FlutterSessionHandle,
+    focus_node_id_or_neg1: i64,
+) -> *mut c_char {
+    ffi_guard_ptr! {{
+        let focus_node_id = decode_focus_node_id(focus_node_id_or_neg1)?;
+        with_flutter_session_fallible(session, |session| {
+            let snapshot: HostContextMenuSnapshot = session.context_menu_snapshot(focus_node_id);
+            serialize_json(&snapshot)
+        })
+    }}
+}
+
+/// Serialisiert den host-neutralen Viewport-Overlay-Snapshot der Flutter-Session als UTF-8-JSON.
+///
+/// `cursor_world_x` und `cursor_world_y` beschreiben die aktuelle Cursor-Position
+/// in Weltkoordinaten.
+///
+/// # Safety
+///
+/// `session` muss ein gueltiger, durch `fs25ad_flutter_session_new` erzeugter Zeiger sein.
+/// Der rueckgegebene String muss mit `fs25ad_host_bridge_string_free` freigegeben werden.
+#[cfg(feature = "flutter")]
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn fs25ad_flutter_session_viewport_overlay_json(
+    session: *const FlutterSessionHandle,
+    cursor_world_x: f32,
+    cursor_world_y: f32,
+) -> *mut c_char {
+    ffi_guard_ptr! {
+        with_flutter_session_fallible(session, |session| {
+            let snapshot: ViewportOverlaySnapshot = session
+                .build_viewport_overlay_snapshot(Some([cursor_world_x, cursor_world_y].into()));
+            let payload = viewport_overlay_snapshot_json(&snapshot)
+                .context("JSON serialization failed")?;
+            Ok(into_c_string_ptr(payload))
+        })
+    }
+}
+
+/// Baut einen Viewport-Geometry-Snapshot der Flutter-Session als UTF-8-JSON.
+///
+/// # Safety
+///
+/// `session` muss ein gueltiger, durch `fs25ad_flutter_session_new` erzeugter Zeiger sein.
+/// Der rueckgegebene String muss mit `fs25ad_host_bridge_string_free` freigegeben werden.
+#[cfg(feature = "flutter")]
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn fs25ad_flutter_session_viewport_geometry_json(
+    session: *const FlutterSessionHandle,
+    viewport_width: f32,
+    viewport_height: f32,
+) -> *mut c_char {
+    ffi_guard_ptr! {
+        with_flutter_session_fallible(session, |session| {
+            let snapshot: HostViewportGeometrySnapshot =
+                session.build_viewport_geometry_snapshot([viewport_width, viewport_height]);
+            serialize_json(&snapshot)
+        })
+    }
+}
+
+/// Klont den geteilten Session-Arc der Flutter-Session und gibt ihn als rohen Integer zurueck.
+///
+/// Bei Fehlern wird `0` zurueckgegeben; Details koennen ueber
+/// `fs25ad_host_bridge_last_error_message()` abgefragt werden.
+///
+/// # Safety
+///
+/// `session` muss ein gueltiger, durch `fs25ad_flutter_session_new` erzeugter Zeiger sein.
+#[cfg(feature = "flutter")]
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn fs25ad_flutter_session_acquire_shared_arc_raw(
+    session: *const FlutterSessionHandle,
+) -> i64 {
+    clear_last_error();
+    match std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+        if session.is_null() {
+            return Err(anyhow!("FlutterSessionHandle pointer must not be null"));
+        }
+
+        let handle = unsafe { &*session };
+        Ok(flutter_api::flutter_session_acquire_shared_arc_raw(handle))
+    })) {
+        Ok(Ok(raw)) => raw,
+        Ok(Err(error)) => {
+            set_last_error(error.to_string());
+            0
+        }
+        Err(_) => {
+            set_last_error("internal panic in FFI call");
+            0
+        }
+    }
+}
+
+/// Gibt einen zuvor via `fs25ad_flutter_session_acquire_shared_arc_raw` erhaltenen Arc frei.
+///
+/// # Safety
+///
+/// `raw` muss `0` oder ein durch `fs25ad_flutter_session_acquire_shared_arc_raw`
+/// gelieferter Wert sein, der noch nicht anderweitig konsumiert oder freigegeben wurde.
+#[cfg(feature = "flutter")]
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn fs25ad_flutter_session_release_shared_arc_raw(raw: i64) {
+    clear_last_error();
+    if std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+        flutter_api::flutter_session_release_shared_arc_raw(raw);
+    }))
+    .is_err()
+    {
+        set_last_error("internal panic in FFI call");
+    }
+}
+
 /// Gibt eine zuvor erstellte Bridge-Session frei.
 ///
 /// # Safety
@@ -260,6 +698,172 @@ pub unsafe extern "C" fn fs25ad_host_bridge_session_chrome_snapshot_json(
     }
 }
 
+/// Serialisiert den aktuell inspizierten Node als UTF-8-JSON.
+///
+/// Gibt `null` zurueck, wenn aktuell kein inspizierter Node vorliegt oder die
+/// inspizierte Node-ID in der geladenen Karte nicht existiert. Das ist kein
+/// Fehlerfall und setzt keine Last-Error-Nachricht.
+///
+/// # Safety
+///
+/// `session` muss ein gueltiger, durch `fs25ad_host_bridge_session_new` erzeugter Zeiger sein.
+/// Der rueckgegebene String muss mit `fs25ad_host_bridge_string_free` freigegeben werden.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn fs25ad_host_bridge_session_node_details_json(
+    session: *mut HostBridgeSessionHandle,
+) -> *mut c_char {
+    ffi_guard_ptr! {
+        with_session_mut(session, |session| {
+            Ok(session
+                .node_details_json()
+                .map_or(std::ptr::null_mut(), into_c_string_ptr))
+        })
+    }
+}
+
+/// Serialisiert die komplette Marker-Liste als UTF-8-JSON.
+///
+/// # Safety
+///
+/// `session` muss ein gueltiger, durch `fs25ad_host_bridge_session_new` erzeugter Zeiger sein.
+/// Der rueckgegebene String muss mit `fs25ad_host_bridge_string_free` freigegeben werden.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn fs25ad_host_bridge_session_marker_list_json(
+    session: *mut HostBridgeSessionHandle,
+) -> *mut c_char {
+    ffi_guard_ptr! {
+        with_session_mut(session, |session| Ok(into_c_string_ptr(session.marker_list_json())))
+    }
+}
+
+/// Serialisiert die Verbindungsdetails zwischen zwei Nodes als UTF-8-JSON.
+///
+/// # Safety
+///
+/// `session` muss ein gueltiger, durch `fs25ad_host_bridge_session_new` erzeugter Zeiger sein.
+/// Der rueckgegebene String muss mit `fs25ad_host_bridge_string_free` freigegeben werden.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn fs25ad_host_bridge_session_connection_pair_json(
+    session: *mut HostBridgeSessionHandle,
+    node_a: u64,
+    node_b: u64,
+) -> *mut c_char {
+    ffi_guard_ptr! {
+        with_session_mut(session, |session| {
+            let snapshot: HostConnectionPairSnapshot = session.connection_pair(node_a, node_b);
+            serialize_json(&snapshot)
+        })
+    }
+}
+
+/// Liefert den Dirty-Status der Session als Integer zurueck.
+///
+/// Rueckgabewerte:
+/// - `1`: Session ist dirty
+/// - `0`: Session ist nicht dirty
+/// - `-1`: Fehler; Details koennen ueber `fs25ad_host_bridge_last_error_message()` abgefragt werden
+///
+/// # Safety
+///
+/// `session` muss ein gueltiger, durch `fs25ad_host_bridge_session_new` erzeugter Zeiger sein.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn fs25ad_host_bridge_session_is_dirty(
+    session: *mut HostBridgeSessionHandle,
+) -> i32 {
+    clear_last_error();
+    match std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+        with_session_mut(session, |session| Ok(session.is_dirty()))
+    })) {
+        Ok(Ok(true)) => 1,
+        Ok(Ok(false)) => 0,
+        Ok(Err(e)) => {
+            set_last_error(e.to_string());
+            -1
+        }
+        Err(_) => {
+            set_last_error("internal panic in FFI call");
+            -1
+        }
+    }
+}
+
+/// Serialisiert den host-neutralen UI-Snapshot als UTF-8-JSON.
+///
+/// # Safety
+///
+/// `session` muss ein gueltiger, durch `fs25ad_host_bridge_session_new` erzeugter Zeiger sein.
+/// Der rueckgegebene String muss mit `fs25ad_host_bridge_string_free` freigegeben werden.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn fs25ad_host_bridge_session_ui_snapshot_json(
+    session: *mut HostBridgeSessionHandle,
+) -> *mut c_char {
+    ffi_guard_ptr! {
+        with_session_mut(session, |session| {
+            let snapshot: HostUiSnapshot = session.build_host_ui_snapshot();
+            let payload = host_ui_snapshot_json(&snapshot).context("JSON serialization failed")?;
+            Ok(into_c_string_ptr(payload))
+        })
+    }
+}
+
+/// Serialisiert den host-neutralen Dialog-Snapshot als UTF-8-JSON.
+///
+/// # Safety
+///
+/// `session` muss ein gueltiger, durch `fs25ad_host_bridge_session_new` erzeugter Zeiger sein.
+/// Der rueckgegebene String muss mit `fs25ad_host_bridge_string_free` freigegeben werden.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn fs25ad_host_bridge_session_dialog_snapshot_json(
+    session: *mut HostBridgeSessionHandle,
+) -> *mut c_char {
+    ffi_guard_ptr! {
+        with_session_mut(session, |session| {
+            let snapshot: HostDialogSnapshot = session.dialog_snapshot();
+            serialize_json(&snapshot)
+        })
+    }
+}
+
+/// Serialisiert den host-neutralen Editing-Snapshot als UTF-8-JSON.
+///
+/// # Safety
+///
+/// `session` muss ein gueltiger, durch `fs25ad_host_bridge_session_new` erzeugter Zeiger sein.
+/// Der rueckgegebene String muss mit `fs25ad_host_bridge_string_free` freigegeben werden.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn fs25ad_host_bridge_session_editing_snapshot_json(
+    session: *mut HostBridgeSessionHandle,
+) -> *mut c_char {
+    ffi_guard_ptr! {
+        with_session_mut(session, |session| {
+            let snapshot: HostEditingSnapshot = session.editing_snapshot();
+            serialize_json(&snapshot)
+        })
+    }
+}
+
+/// Serialisiert den host-neutralen Kontextmenue-Snapshot als UTF-8-JSON.
+///
+/// `focus_node_id_or_neg1` nutzt `-1` als FFI-Sentinel fuer "kein Fokus-Node".
+///
+/// # Safety
+///
+/// `session` muss ein gueltiger, durch `fs25ad_host_bridge_session_new` erzeugter Zeiger sein.
+/// Der rueckgegebene String muss mit `fs25ad_host_bridge_string_free` freigegeben werden.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn fs25ad_host_bridge_session_context_menu_snapshot_json(
+    session: *mut HostBridgeSessionHandle,
+    focus_node_id_or_neg1: i64,
+) -> *mut c_char {
+    ffi_guard_ptr! {{
+        let focus_node_id = decode_focus_node_id(focus_node_id_or_neg1)?;
+        with_session_mut(session, |session| {
+            let snapshot: HostContextMenuSnapshot = session.context_menu_snapshot(focus_node_id);
+            serialize_json(&snapshot)
+        })
+    }}
+}
+
 /// Serialisiert den Route-Tool-Viewport-Snapshot als UTF-8-JSON.
 ///
 /// # Safety
@@ -275,6 +879,32 @@ pub unsafe extern "C" fn fs25ad_host_bridge_session_route_tool_viewport_json(
             let snapshot: HostRouteToolViewportSnapshot =
                 session.build_route_tool_viewport_snapshot();
             serialize_json(&snapshot)
+        })
+    }
+}
+
+/// Serialisiert den host-neutralen Viewport-Overlay-Snapshot als UTF-8-JSON.
+///
+/// `cursor_world_x` und `cursor_world_y` beschreiben die aktuelle Cursor-Position
+/// in Weltkoordinaten.
+///
+/// # Safety
+///
+/// `session` muss ein gueltiger, durch `fs25ad_host_bridge_session_new` erzeugter Zeiger sein.
+/// Der rueckgegebene String muss mit `fs25ad_host_bridge_string_free` freigegeben werden.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn fs25ad_host_bridge_session_viewport_overlay_json(
+    session: *mut HostBridgeSessionHandle,
+    cursor_world_x: f32,
+    cursor_world_y: f32,
+) -> *mut c_char {
+    ffi_guard_ptr! {
+        with_session_mut(session, |session| {
+            let snapshot: ViewportOverlaySnapshot = session
+                .build_viewport_overlay_snapshot(Some([cursor_world_x, cursor_world_y].into()));
+            let payload = viewport_overlay_snapshot_json(&snapshot)
+                .context("JSON serialization failed")?;
+            Ok(into_c_string_ptr(payload))
         })
     }
 }
@@ -357,19 +987,29 @@ mod tests {
     use super::{
         fs25ad_host_bridge_abi_version, fs25ad_host_bridge_last_error_message,
         fs25ad_host_bridge_session_apply_action_json,
-        fs25ad_host_bridge_session_chrome_snapshot_json, fs25ad_host_bridge_session_dispose,
-        fs25ad_host_bridge_session_new, fs25ad_host_bridge_session_route_tool_viewport_json,
+        fs25ad_host_bridge_session_chrome_snapshot_json,
+        fs25ad_host_bridge_session_connection_pair_json,
+        fs25ad_host_bridge_session_context_menu_snapshot_json,
+        fs25ad_host_bridge_session_dialog_snapshot_json, fs25ad_host_bridge_session_dispose,
+        fs25ad_host_bridge_session_editing_snapshot_json, fs25ad_host_bridge_session_is_dirty,
+        fs25ad_host_bridge_session_marker_list_json, fs25ad_host_bridge_session_new,
+        fs25ad_host_bridge_session_node_details_json,
+        fs25ad_host_bridge_session_route_tool_viewport_json,
         fs25ad_host_bridge_session_snapshot_json,
         fs25ad_host_bridge_session_submit_dialog_result_json,
         fs25ad_host_bridge_session_take_dialog_requests_json,
-        fs25ad_host_bridge_session_viewport_geometry_json, fs25ad_host_bridge_string_free,
+        fs25ad_host_bridge_session_ui_snapshot_json,
+        fs25ad_host_bridge_session_viewport_geometry_json,
+        fs25ad_host_bridge_session_viewport_overlay_json, fs25ad_host_bridge_string_free,
         FS25AD_HOST_BRIDGE_ABI_VERSION,
     };
     use fs25_auto_drive_host_bridge::{
-        HostActiveTool, HostDialogRequest, HostDialogRequestKind, HostDialogResult,
-        HostInputModifiers, HostPointerButton, HostRouteToolAction, HostRouteToolId,
-        HostRouteToolViewportSnapshot, HostSessionAction, HostSessionSnapshot, HostTangentSource,
-        HostTapKind, HostViewportGeometrySnapshot, HostViewportInputBatch, HostViewportInputEvent,
+        HostActiveTool, HostConnectionPairSnapshot, HostContextMenuSnapshot,
+        HostContextMenuVariant, HostDialogRequest, HostDialogRequestKind, HostDialogResult,
+        HostDialogSnapshot, HostEditingSnapshot, HostInputModifiers, HostMarkerListSnapshot,
+        HostPointerButton, HostRouteToolAction, HostRouteToolId, HostRouteToolViewportSnapshot,
+        HostSessionAction, HostSessionSnapshot, HostTangentSource, HostTapKind,
+        HostViewportGeometrySnapshot, HostViewportInputBatch, HostViewportInputEvent,
     };
     use std::ffi::{CStr, CString};
 
@@ -387,6 +1027,41 @@ mod tests {
         s: *mut super::HostBridgeSessionHandle,
     ) -> *mut std::ffi::c_char {
         unsafe { fs25ad_host_bridge_session_chrome_snapshot_json(s) }
+    }
+    fn session_node_details_json(s: *mut super::HostBridgeSessionHandle) -> *mut std::ffi::c_char {
+        unsafe { fs25ad_host_bridge_session_node_details_json(s) }
+    }
+    fn session_marker_list_json(s: *mut super::HostBridgeSessionHandle) -> *mut std::ffi::c_char {
+        unsafe { fs25ad_host_bridge_session_marker_list_json(s) }
+    }
+    fn session_connection_pair_json(
+        s: *mut super::HostBridgeSessionHandle,
+        node_a: u64,
+        node_b: u64,
+    ) -> *mut std::ffi::c_char {
+        unsafe { fs25ad_host_bridge_session_connection_pair_json(s, node_a, node_b) }
+    }
+    fn session_is_dirty(s: *mut super::HostBridgeSessionHandle) -> i32 {
+        unsafe { fs25ad_host_bridge_session_is_dirty(s) }
+    }
+    fn session_ui_snapshot_json(s: *mut super::HostBridgeSessionHandle) -> *mut std::ffi::c_char {
+        unsafe { fs25ad_host_bridge_session_ui_snapshot_json(s) }
+    }
+    fn session_dialog_snapshot_json(
+        s: *mut super::HostBridgeSessionHandle,
+    ) -> *mut std::ffi::c_char {
+        unsafe { fs25ad_host_bridge_session_dialog_snapshot_json(s) }
+    }
+    fn session_editing_snapshot_json(
+        s: *mut super::HostBridgeSessionHandle,
+    ) -> *mut std::ffi::c_char {
+        unsafe { fs25ad_host_bridge_session_editing_snapshot_json(s) }
+    }
+    fn session_context_menu_snapshot_json(
+        s: *mut super::HostBridgeSessionHandle,
+        focus_node_id_or_neg1: i64,
+    ) -> *mut std::ffi::c_char {
+        unsafe { fs25ad_host_bridge_session_context_menu_snapshot_json(s, focus_node_id_or_neg1) }
     }
     fn session_route_tool_viewport_json(
         s: *mut super::HostBridgeSessionHandle,
@@ -417,10 +1092,162 @@ mod tests {
     ) -> *mut std::ffi::c_char {
         unsafe { fs25ad_host_bridge_session_viewport_geometry_json(s, w, h) }
     }
+    fn session_viewport_overlay_json(
+        s: *mut super::HostBridgeSessionHandle,
+        x: f32,
+        y: f32,
+    ) -> *mut std::ffi::c_char {
+        unsafe { fs25ad_host_bridge_session_viewport_overlay_json(s, x, y) }
+    }
 
     #[cfg(feature = "flutter")]
     fn flutter_session_dispose(session: *mut super::flutter_api::FlutterSessionHandle) {
         unsafe { super::fs25ad_flutter_session_dispose(session) }
+    }
+
+    #[cfg(feature = "flutter")]
+    fn flutter_session_apply_action_json(
+        session: *const super::flutter_api::FlutterSessionHandle,
+        json: *const std::ffi::c_char,
+    ) -> bool {
+        unsafe { super::fs25ad_flutter_session_apply_action_json(session, json) }
+    }
+
+    #[cfg(feature = "flutter")]
+    fn flutter_session_take_dialog_requests_json(
+        session: *const super::flutter_api::FlutterSessionHandle,
+    ) -> *mut std::ffi::c_char {
+        unsafe { super::fs25ad_flutter_session_take_dialog_requests_json(session) }
+    }
+
+    #[cfg(feature = "flutter")]
+    fn flutter_session_submit_dialog_result_json(
+        session: *const super::flutter_api::FlutterSessionHandle,
+        json: *const std::ffi::c_char,
+    ) -> bool {
+        unsafe { super::fs25ad_flutter_session_submit_dialog_result_json(session, json) }
+    }
+
+    #[cfg(feature = "flutter")]
+    fn flutter_session_snapshot_json(
+        session: *const super::flutter_api::FlutterSessionHandle,
+    ) -> *mut std::ffi::c_char {
+        unsafe { super::fs25ad_flutter_session_snapshot_json(session) }
+    }
+
+    #[cfg(feature = "flutter")]
+    fn flutter_session_node_details_json(
+        session: *const super::flutter_api::FlutterSessionHandle,
+    ) -> *mut std::ffi::c_char {
+        unsafe { super::fs25ad_flutter_session_node_details_json(session) }
+    }
+
+    #[cfg(feature = "flutter")]
+    fn flutter_session_marker_list_json(
+        session: *const super::flutter_api::FlutterSessionHandle,
+    ) -> *mut std::ffi::c_char {
+        unsafe { super::fs25ad_flutter_session_marker_list_json(session) }
+    }
+
+    #[cfg(feature = "flutter")]
+    fn flutter_session_route_tool_viewport_json(
+        session: *const super::flutter_api::FlutterSessionHandle,
+    ) -> *mut std::ffi::c_char {
+        unsafe { super::fs25ad_flutter_session_route_tool_viewport_json(session) }
+    }
+
+    #[cfg(feature = "flutter")]
+    fn flutter_session_connection_pair_json(
+        session: *const super::flutter_api::FlutterSessionHandle,
+        node_a: u64,
+        node_b: u64,
+    ) -> *mut std::ffi::c_char {
+        unsafe { super::fs25ad_flutter_session_connection_pair_json(session, node_a, node_b) }
+    }
+
+    #[cfg(feature = "flutter")]
+    fn flutter_session_is_dirty(session: *const super::flutter_api::FlutterSessionHandle) -> i32 {
+        unsafe { super::fs25ad_flutter_session_is_dirty(session) }
+    }
+
+    #[cfg(feature = "flutter")]
+    fn flutter_session_ui_snapshot_json(
+        session: *const super::flutter_api::FlutterSessionHandle,
+    ) -> *mut std::ffi::c_char {
+        unsafe { super::fs25ad_flutter_session_ui_snapshot_json(session) }
+    }
+
+    #[cfg(feature = "flutter")]
+    fn flutter_session_chrome_snapshot_json(
+        session: *const super::flutter_api::FlutterSessionHandle,
+    ) -> *mut std::ffi::c_char {
+        unsafe { super::fs25ad_flutter_session_chrome_snapshot_json(session) }
+    }
+
+    #[cfg(feature = "flutter")]
+    fn flutter_session_dialog_snapshot_json(
+        session: *const super::flutter_api::FlutterSessionHandle,
+    ) -> *mut std::ffi::c_char {
+        unsafe { super::fs25ad_flutter_session_dialog_snapshot_json(session) }
+    }
+
+    #[cfg(feature = "flutter")]
+    fn flutter_session_editing_snapshot_json(
+        session: *const super::flutter_api::FlutterSessionHandle,
+    ) -> *mut std::ffi::c_char {
+        unsafe { super::fs25ad_flutter_session_editing_snapshot_json(session) }
+    }
+
+    #[cfg(feature = "flutter")]
+    fn flutter_session_context_menu_snapshot_json(
+        session: *const super::flutter_api::FlutterSessionHandle,
+        focus_node_id_or_neg1: i64,
+    ) -> *mut std::ffi::c_char {
+        unsafe {
+            super::fs25ad_flutter_session_context_menu_snapshot_json(session, focus_node_id_or_neg1)
+        }
+    }
+
+    #[cfg(feature = "flutter")]
+    fn flutter_session_viewport_overlay_json(
+        session: *const super::flutter_api::FlutterSessionHandle,
+        cursor_world_x: f32,
+        cursor_world_y: f32,
+    ) -> *mut std::ffi::c_char {
+        unsafe {
+            super::fs25ad_flutter_session_viewport_overlay_json(
+                session,
+                cursor_world_x,
+                cursor_world_y,
+            )
+        }
+    }
+
+    #[cfg(feature = "flutter")]
+    fn flutter_session_viewport_geometry_json(
+        session: *const super::flutter_api::FlutterSessionHandle,
+        viewport_width: f32,
+        viewport_height: f32,
+    ) -> *mut std::ffi::c_char {
+        unsafe {
+            super::fs25ad_flutter_session_viewport_geometry_json(
+                session,
+                viewport_width,
+                viewport_height,
+            )
+        }
+    }
+
+    #[cfg(feature = "flutter")]
+    fn flutter_session_acquire_shared_arc_raw(
+        session: *const super::flutter_api::FlutterSessionHandle,
+    ) -> i64 {
+        unsafe { super::fs25ad_flutter_session_acquire_shared_arc_raw(session) }
+    }
+
+    #[cfg(feature = "flutter")]
+    fn flutter_session_release_shared_arc_raw(raw: i64) {
+        unsafe { super::fs25ad_flutter_session_release_shared_arc_raw(raw) }
     }
 
     fn read_and_free_string(ptr: *mut std::ffi::c_char) -> String {
@@ -446,6 +1273,32 @@ mod tests {
         panic!("HostSessionAction failed unexpectedly: {error}");
     }
 
+    #[cfg(feature = "flutter")]
+    fn assert_last_error_contains(expected: &str) {
+        let error = read_and_free_string(fs25ad_host_bridge_last_error_message());
+        assert!(
+            error.contains(expected),
+            "expected last error to contain '{expected}', got '{error}'"
+        );
+    }
+
+    #[cfg(feature = "flutter")]
+    fn apply_action_json_flutter(
+        session: *const super::flutter_api::FlutterSessionHandle,
+        action: HostSessionAction,
+    ) {
+        let action_json =
+            CString::new(serde_json::to_string(&action).expect("action JSON must serialize"))
+                .expect("CString must build");
+
+        if flutter_session_apply_action_json(session, action_json.as_ptr()) {
+            return;
+        }
+
+        let error = read_and_free_string(fs25ad_host_bridge_last_error_message());
+        panic!("Flutter HostSessionAction failed unexpectedly: {error}");
+    }
+
     #[test]
     fn ffi_transport_reports_stable_abi_version() {
         assert_eq!(
@@ -463,6 +1316,146 @@ mod tests {
             !session.is_null(),
             "Flutter-Session-FFI muss einen gueltigen Handle liefern"
         );
+        flutter_session_dispose(session);
+    }
+
+    #[cfg(feature = "flutter")]
+    #[test]
+    fn ffi_flutter_session_roundtrips_apply_action_and_snapshot_reads() {
+        let session = super::fs25ad_flutter_session_new();
+        assert!(!session.is_null());
+
+        apply_action_json_flutter(session, HostSessionAction::ToggleCommandPalette);
+
+        let snapshot_json = read_and_free_string(flutter_session_snapshot_json(session));
+        let snapshot: HostSessionSnapshot =
+            serde_json::from_str(&snapshot_json).expect("flutter snapshot JSON must parse");
+        assert!(snapshot.show_command_palette);
+
+        let chrome_json = read_and_free_string(flutter_session_chrome_snapshot_json(session));
+        let chrome_snapshot: fs25_auto_drive_host_bridge::HostChromeSnapshot =
+            serde_json::from_str(&chrome_json).expect("flutter chrome JSON must parse");
+        assert!(chrome_snapshot.show_command_palette);
+
+        flutter_session_dispose(session);
+    }
+
+    #[cfg(feature = "flutter")]
+    #[test]
+    fn ffi_flutter_session_is_dirty_reports_zero_for_fresh_session() {
+        let session = super::fs25ad_flutter_session_new();
+        assert!(!session.is_null());
+
+        assert_eq!(flutter_session_is_dirty(session), 0);
+
+        flutter_session_dispose(session);
+    }
+
+    #[cfg(feature = "flutter")]
+    #[test]
+    fn ffi_flutter_session_acquire_and_release_shared_arc_raw_roundtrip() {
+        let session = super::fs25ad_flutter_session_new();
+        assert!(!session.is_null());
+
+        let raw = flutter_session_acquire_shared_arc_raw(session);
+        assert_ne!(raw, 0, "shared Arc raw pointer must not be zero");
+
+        flutter_session_release_shared_arc_raw(raw);
+        flutter_session_dispose(session);
+    }
+
+    #[cfg(feature = "flutter")]
+    #[test]
+    fn ffi_flutter_session_rejects_null_pointers() {
+        let action_json = CString::new(
+            serde_json::to_string(&HostSessionAction::ToggleCommandPalette)
+                .expect("action JSON must serialize"),
+        )
+        .expect("CString must build");
+        let result_json = CString::new(
+            serde_json::to_string(&HostDialogResult::PathSelected {
+                kind: HostDialogRequestKind::Heightmap,
+                path: "/tmp/test_heightmap.png".to_string(),
+            })
+            .expect("dialog result JSON must serialize"),
+        )
+        .expect("CString must build");
+
+        assert!(!flutter_session_apply_action_json(
+            std::ptr::null(),
+            action_json.as_ptr(),
+        ));
+        assert_last_error_contains("FlutterSessionHandle pointer");
+
+        assert!(flutter_session_take_dialog_requests_json(std::ptr::null()).is_null());
+        assert_last_error_contains("FlutterSessionHandle pointer");
+
+        assert!(!flutter_session_submit_dialog_result_json(
+            std::ptr::null(),
+            result_json.as_ptr(),
+        ));
+        assert_last_error_contains("FlutterSessionHandle pointer");
+
+        assert!(flutter_session_snapshot_json(std::ptr::null()).is_null());
+        assert_last_error_contains("FlutterSessionHandle pointer");
+
+        assert!(flutter_session_node_details_json(std::ptr::null()).is_null());
+        assert_last_error_contains("FlutterSessionHandle pointer");
+
+        assert!(flutter_session_marker_list_json(std::ptr::null()).is_null());
+        assert_last_error_contains("FlutterSessionHandle pointer");
+
+        assert!(flutter_session_route_tool_viewport_json(std::ptr::null()).is_null());
+        assert_last_error_contains("FlutterSessionHandle pointer");
+
+        assert!(flutter_session_connection_pair_json(std::ptr::null(), 7, 9).is_null());
+        assert_last_error_contains("FlutterSessionHandle pointer");
+
+        assert_eq!(flutter_session_is_dirty(std::ptr::null()), -1);
+        assert_last_error_contains("FlutterSessionHandle pointer");
+
+        assert!(flutter_session_ui_snapshot_json(std::ptr::null()).is_null());
+        assert_last_error_contains("FlutterSessionHandle pointer");
+
+        assert!(flutter_session_chrome_snapshot_json(std::ptr::null()).is_null());
+        assert_last_error_contains("FlutterSessionHandle pointer");
+
+        assert!(flutter_session_dialog_snapshot_json(std::ptr::null()).is_null());
+        assert_last_error_contains("FlutterSessionHandle pointer");
+
+        assert!(flutter_session_editing_snapshot_json(std::ptr::null()).is_null());
+        assert_last_error_contains("FlutterSessionHandle pointer");
+
+        assert!(flutter_session_context_menu_snapshot_json(std::ptr::null(), -1).is_null());
+        assert_last_error_contains("FlutterSessionHandle pointer");
+
+        assert!(flutter_session_viewport_overlay_json(std::ptr::null(), 0.0, 0.0).is_null());
+        assert_last_error_contains("FlutterSessionHandle pointer");
+
+        assert!(flutter_session_viewport_geometry_json(std::ptr::null(), 320.0, 200.0).is_null());
+        assert_last_error_contains("FlutterSessionHandle pointer");
+
+        assert_eq!(flutter_session_acquire_shared_arc_raw(std::ptr::null()), 0);
+        assert_last_error_contains("FlutterSessionHandle pointer");
+
+        let session = super::fs25ad_flutter_session_new();
+        assert!(!session.is_null());
+
+        assert!(!flutter_session_apply_action_json(
+            session,
+            std::ptr::null()
+        ));
+        assert_last_error_contains("HostSessionAction JSON pointer must not be null");
+
+        assert!(!flutter_session_submit_dialog_result_json(
+            session,
+            std::ptr::null(),
+        ));
+        assert_last_error_contains("HostDialogResult JSON pointer must not be null");
+
+        flutter_session_release_shared_arc_raw(0);
+        assert!(fs25ad_host_bridge_last_error_message().is_null());
+
         flutter_session_dispose(session);
     }
 
@@ -592,6 +1585,96 @@ mod tests {
     }
 
     #[test]
+    fn ffi_transport_roundtrips_generic_read_endpoints() {
+        let session = fs25ad_host_bridge_session_new();
+        assert!(!session.is_null());
+
+        assert_eq!(session_is_dirty(session), 0);
+
+        let marker_list_json = read_and_free_string(session_marker_list_json(session));
+        let marker_list: HostMarkerListSnapshot =
+            serde_json::from_str(&marker_list_json).expect("marker list JSON must parse");
+        assert!(marker_list.markers.is_empty());
+        assert!(marker_list.groups.is_empty());
+
+        let connection_pair_json =
+            read_and_free_string(session_connection_pair_json(session, 7, 9));
+        let connection_pair: HostConnectionPairSnapshot =
+            serde_json::from_str(&connection_pair_json).expect("connection pair JSON must parse");
+        assert_eq!(connection_pair.node_a, 7);
+        assert_eq!(connection_pair.node_b, 9);
+        assert!(connection_pair.connections.is_empty());
+
+        let ui_json = read_and_free_string(session_ui_snapshot_json(session));
+        let ui_value: serde_json::Value =
+            serde_json::from_str(&ui_json).expect("ui snapshot JSON must parse");
+        assert!(ui_value.get("panels").is_some());
+
+        let dialog_json = read_and_free_string(session_dialog_snapshot_json(session));
+        let dialog_snapshot: HostDialogSnapshot =
+            serde_json::from_str(&dialog_json).expect("dialog snapshot JSON must parse");
+        assert!(!dialog_snapshot.heightmap_warning.visible);
+
+        let editing_json = read_and_free_string(session_editing_snapshot_json(session));
+        let editing_snapshot: HostEditingSnapshot =
+            serde_json::from_str(&editing_json).expect("editing snapshot JSON must parse");
+        assert!(editing_snapshot.editable_groups.is_empty());
+        assert!(!editing_snapshot.resample.active);
+
+        let context_menu_json =
+            read_and_free_string(session_context_menu_snapshot_json(session, -1));
+        let context_menu_snapshot: HostContextMenuSnapshot =
+            serde_json::from_str(&context_menu_json)
+                .expect("context menu snapshot JSON must parse");
+        assert_eq!(
+            context_menu_snapshot.variant,
+            HostContextMenuVariant::EmptyArea
+        );
+        assert!(context_menu_snapshot.available_actions.is_empty());
+
+        let overlay_json = read_and_free_string(session_viewport_overlay_json(session, 0.0, 0.0));
+        let overlay_value: serde_json::Value =
+            serde_json::from_str(&overlay_json).expect("overlay snapshot JSON must parse");
+        assert!(overlay_value.get("show_no_file_hint").is_some());
+
+        session_dispose(session);
+    }
+
+    #[test]
+    fn ffi_transport_node_details_returns_null_without_error_when_no_node_is_inspected() {
+        let session = fs25ad_host_bridge_session_new();
+        assert!(!session.is_null());
+
+        let action_json = CString::new(
+            serde_json::json!({
+                "kind": "query_node_details",
+                "node_id": 99,
+            })
+            .to_string(),
+        )
+        .expect("CString must build");
+        assert!(session_apply_action_json(session, action_json.as_ptr()));
+
+        assert!(session_node_details_json(session).is_null());
+        assert!(fs25ad_host_bridge_last_error_message().is_null());
+
+        session_dispose(session);
+    }
+
+    #[test]
+    fn ffi_transport_rejects_invalid_context_menu_focus_node_id() {
+        let session = fs25ad_host_bridge_session_new();
+        assert!(!session.is_null());
+
+        assert!(session_context_menu_snapshot_json(session, -2).is_null());
+        assert!(
+            read_and_free_string(fs25ad_host_bridge_last_error_message()).contains("focus_node_id")
+        );
+
+        session_dispose(session);
+    }
+
+    #[test]
     fn ffi_transport_rejects_null_session_and_payload_pointers() {
         assert!(session_snapshot_json(std::ptr::null_mut()).is_null());
         assert!(
@@ -605,7 +1688,61 @@ mod tests {
                 .contains("HostBridgeSession pointer")
         );
 
+        assert!(session_node_details_json(std::ptr::null_mut()).is_null());
+        assert!(
+            read_and_free_string(fs25ad_host_bridge_last_error_message())
+                .contains("HostBridgeSession pointer")
+        );
+
+        assert!(session_marker_list_json(std::ptr::null_mut()).is_null());
+        assert!(
+            read_and_free_string(fs25ad_host_bridge_last_error_message())
+                .contains("HostBridgeSession pointer")
+        );
+
+        assert!(session_connection_pair_json(std::ptr::null_mut(), 1, 2).is_null());
+        assert!(
+            read_and_free_string(fs25ad_host_bridge_last_error_message())
+                .contains("HostBridgeSession pointer")
+        );
+
+        assert_eq!(session_is_dirty(std::ptr::null_mut()), -1);
+        assert!(
+            read_and_free_string(fs25ad_host_bridge_last_error_message())
+                .contains("HostBridgeSession pointer")
+        );
+
+        assert!(session_ui_snapshot_json(std::ptr::null_mut()).is_null());
+        assert!(
+            read_and_free_string(fs25ad_host_bridge_last_error_message())
+                .contains("HostBridgeSession pointer")
+        );
+
+        assert!(session_dialog_snapshot_json(std::ptr::null_mut()).is_null());
+        assert!(
+            read_and_free_string(fs25ad_host_bridge_last_error_message())
+                .contains("HostBridgeSession pointer")
+        );
+
+        assert!(session_editing_snapshot_json(std::ptr::null_mut()).is_null());
+        assert!(
+            read_and_free_string(fs25ad_host_bridge_last_error_message())
+                .contains("HostBridgeSession pointer")
+        );
+
+        assert!(session_context_menu_snapshot_json(std::ptr::null_mut(), -1).is_null());
+        assert!(
+            read_and_free_string(fs25ad_host_bridge_last_error_message())
+                .contains("HostBridgeSession pointer")
+        );
+
         assert!(session_route_tool_viewport_json(std::ptr::null_mut()).is_null());
+        assert!(
+            read_and_free_string(fs25ad_host_bridge_last_error_message())
+                .contains("HostBridgeSession pointer")
+        );
+
+        assert!(session_viewport_overlay_json(std::ptr::null_mut(), 0.0, 0.0).is_null());
         assert!(
             read_and_free_string(fs25ad_host_bridge_last_error_message())
                 .contains("HostBridgeSession pointer")

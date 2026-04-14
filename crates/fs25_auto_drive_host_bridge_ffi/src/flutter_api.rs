@@ -1,20 +1,17 @@
-//! Flutter Control-Plane API — Dart-seitig erreichbare Rust-Funktionen.
+//! Flutter Control-Plane API — sichere Rust-Helfer fuer die direkte C-FFI-Surface.
 //!
 //! Dieses Modul definiert die High-Level-Control-Plane fuer die Flutter-Integration.
-//! Alle Funktionen sind sicher (kein unsafe), typsicher und sollen von
-//! `flutter_rust_bridge`-Codegen zu Dart-Bindings verarbeitet werden.
-//!
-//! # Verwendung
-//! Funktionen werden via `flutter_rust_bridge`-Codegen als Dart-Futures exportiert.
-//! Das Codegen wird durch `build.rs` unter dem `flutter`-Feature ausgeloest.
-//!
-//! # TODO(flutter-codegen)
-//! `#[flutter_rust_bridge::frb]`-Annotationen hinzufuegen sobald das Dart-Codegen
-//! in den Build-Prozess integriert ist.
+//! Alle Funktionen sind sicher (kein unsafe), typsicher und werden von den
+//! `fs25ad_flutter_session_*`-C-FFI-Exporten in `lib.rs` wiederverwendet.
 
 use anyhow::Result;
-use fs25_auto_drive_host_bridge::dto::{host_ui_snapshot_json, viewport_overlay_snapshot_json};
+use fs25_auto_drive_engine::shared::OverviewLayerOptions;
+use fs25_auto_drive_host_bridge::dto::{
+    host_ui_snapshot_json, viewport_overlay_snapshot_json, HostFieldDetectionSource,
+    HostOverviewOptionsDialogSnapshot,
+};
 use fs25_auto_drive_host_bridge::{HostBridgeSession, HostDialogResult, HostSessionAction};
+use fs25_map_overview::FieldDetectionSource;
 use std::sync::{Arc, Mutex};
 
 fn decode_focus_node_id(focus_node_id_or_neg1: i64) -> Result<Option<u64>> {
@@ -35,14 +32,14 @@ fn decode_focus_node_id(focus_node_id_or_neg1: i64) -> Result<Option<u64>> {
 ///
 /// Der Handle kapselt eine `HostBridgeSession` hinter `Arc<Mutex<...>>`, damit
 /// Flutter-Control-Plane und weitere Runtime-Adapter denselben Session-Besitz
-/// thread-sicher teilen koennen. Dart-seitig wird dieser Handle als opaker
-/// Zeiger (via flutter_rust_bridge `RustOpaque`) verwaltet.
+/// thread-sicher teilen koennen. Native Aufrufer verwalten diesen Handle ueber
+/// die direkte C-FFI-Surface als opaken Zeiger.
 pub struct FlutterSessionHandle {
     session: Arc<Mutex<HostBridgeSession>>,
 }
 
 impl FlutterSessionHandle {
-    fn with_session<T>(&self, f: impl FnOnce(&mut HostBridgeSession) -> T) -> Result<T> {
+    pub(crate) fn with_session<T>(&self, f: impl FnOnce(&mut HostBridgeSession) -> T) -> Result<T> {
         let mut guard = self
             .session
             .lock()
@@ -126,6 +123,52 @@ pub fn flutter_session_submit_dialog_result_json(
         anyhow::anyhow!("flutter_session_submit_dialog_result_json: JSON-Fehler: {e}")
     })?;
     handle.with_session(|s| s.submit_dialog_result(result))?
+}
+
+fn map_host_field_detection_source(source: HostFieldDetectionSource) -> FieldDetectionSource {
+    match source {
+        HostFieldDetectionSource::FromZip => FieldDetectionSource::FromZip,
+        HostFieldDetectionSource::FieldTypeGrle => FieldDetectionSource::FieldTypeGrle,
+        HostFieldDetectionSource::GroundGdm => FieldDetectionSource::GroundGdm,
+        HostFieldDetectionSource::FruitsGdm => FieldDetectionSource::FruitsGdm,
+    }
+}
+
+/// Aktualisiert den host-lokalen Draft des Overview-Options-Dialogs.
+///
+/// Flutter-Hosts halten waehrend der Bearbeitung einen lokalen Dialogzustand.
+/// Vor `confirm_overview_options` muss dieser Draft in den host-lokalen
+/// Dialog-State der Session geschrieben werden, damit der Host beim Bestaetigen
+/// die aktuellen Layer- und Feldquellenwerte in den Engine-State uebernehmen kann.
+pub fn flutter_session_update_overview_options_dialog(
+    session: &mut HostBridgeSession,
+    snapshot: HostOverviewOptionsDialogSnapshot,
+) -> Result<()> {
+    {
+        let dialog_state = session.dialog_ui_state_mut();
+        dialog_state.ui.overview_options_dialog.visible = snapshot.visible;
+        dialog_state.ui.overview_options_dialog.zip_path = snapshot.zip_path;
+        dialog_state.ui.overview_options_dialog.layers = OverviewLayerOptions {
+            hillshade: snapshot.layers.hillshade,
+            farmlands: snapshot.layers.farmlands,
+            farmland_ids: snapshot.layers.farmland_ids,
+            pois: snapshot.layers.pois,
+            legend: snapshot.layers.legend,
+        };
+        dialog_state
+            .ui
+            .overview_options_dialog
+            .field_detection_source =
+            map_host_field_detection_source(snapshot.field_detection_source);
+        dialog_state.ui.overview_options_dialog.available_sources = snapshot
+            .available_sources
+            .into_iter()
+            .map(map_host_field_detection_source)
+            .collect();
+    }
+
+    session.mark_snapshot_dirty();
+    Ok(())
 }
 
 /// Gibt den aktuellen Session-Snapshot als JSON-String zurueck.

@@ -8,19 +8,18 @@ path = "src/lib.rs"
 crate-type = ["cdylib", "rlib"]
 
 [features]
-## Aktiviert den Flutter Control-Plane API (flutter_rust_bridge Bindings).
-flutter = ["dep:flutter_rust_bridge"]
+## Aktiviert die Flutter Control-Plane und direkte C-FFI-Surface.
+flutter = []
 ## Aktiviert GPU-Export-Stack für Flutter auf Linux/Vulkan.
 flutter-linux = ["flutter", "fs25_auto_drive_render_wgpu/flutter-linux"]
 
 [dependencies]
 anyhow = "1.0.102"
+fs25_auto_drive_engine = { path = "../fs25_auto_drive_engine" }
 fs25_auto_drive_host_bridge = { path = "../fs25_auto_drive_host_bridge" }
+fs25_map_overview = { path = "../fs25_map_overview" }
 fs25_auto_drive_render_wgpu = { path = "../fs25_auto_drive_render_wgpu" }
 pollster = "0.4"
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 wgpu = "29.0"
-
-## Flutter/Dart <-> Rust Binding-Generator — nur aktiv unter dem flutter-Feature.
-flutter_rust_bridge = { version = "=2.12.0", optional = true }
