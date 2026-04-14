@@ -146,8 +146,25 @@ void fs25ad_host_bridge_session_dispose(Fs25adHostBridgeSession *session);
 
 char *fs25ad_host_bridge_session_snapshot_json(Fs25adHostBridgeSession *session);
 char *fs25ad_host_bridge_session_chrome_snapshot_json(Fs25adHostBridgeSession *session);
+char *fs25ad_host_bridge_session_node_details_json(Fs25adHostBridgeSession *session);
+char *fs25ad_host_bridge_session_marker_list_json(Fs25adHostBridgeSession *session);
+char *fs25ad_host_bridge_session_connection_pair_json(
+    Fs25adHostBridgeSession *session,
+    uint64_t node_a,
+    uint64_t node_b);
+int32_t fs25ad_host_bridge_session_is_dirty(Fs25adHostBridgeSession *session);
+char *fs25ad_host_bridge_session_ui_snapshot_json(Fs25adHostBridgeSession *session);
+char *fs25ad_host_bridge_session_dialog_snapshot_json(Fs25adHostBridgeSession *session);
+char *fs25ad_host_bridge_session_editing_snapshot_json(Fs25adHostBridgeSession *session);
+char *fs25ad_host_bridge_session_context_menu_snapshot_json(
+    Fs25adHostBridgeSession *session,
+    int64_t focus_node_id_or_neg1);
 char *fs25ad_host_bridge_session_route_tool_viewport_json(
     Fs25adHostBridgeSession *session);
+char *fs25ad_host_bridge_session_viewport_overlay_json(
+    Fs25adHostBridgeSession *session,
+    float cursor_world_x,
+    float cursor_world_y);
 bool fs25ad_host_bridge_session_apply_action_json(
     Fs25adHostBridgeSession *session,
     const char *action_json);

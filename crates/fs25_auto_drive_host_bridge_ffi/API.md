@@ -2,7 +2,7 @@
 
 ## Ueberblick
 
-`fs25_auto_drive_host_bridge_ffi` ist der duenner Linux-first-Transportadapter ueber der kanonischen `HostBridgeSession`. Die Crate fuehrt keine zweite fachliche Surface ein: Mutationen laufen weiter ueber `HostSessionAction` (inklusive expliziter Route-Tool-Action-Familie), Dialoge ueber `HostDialogRequest`/`HostDialogResult`, Session-Polling ueber `HostSessionSnapshot`, Chrome-Polling ueber `HostChromeSnapshot`, Dialog-Polling ueber `HostDialogSnapshot`, Editing-Polling ueber `HostEditingSnapshot`, Kontextmenue-Polling ueber `HostContextMenuSnapshot` und Route-Tool-Viewport-Polling ueber `HostRouteToolViewportSnapshot`.
+`fs25_auto_drive_host_bridge_ffi` ist der duenner Linux-first-Transportadapter ueber der kanonischen `HostBridgeSession`. Die Crate fuehrt keine zweite fachliche Surface ein: Mutationen laufen weiter ueber `HostSessionAction` (inklusive expliziter Route-Tool-Action-Familie), Dialoge ueber `HostDialogRequest`/`HostDialogResult`, Session-Polling ueber `HostSessionSnapshot`, Node-Details ueber `HostNodeDetails`, Marker-Listen ueber `HostMarkerListSnapshot`, Connection-Pairs ueber `HostConnectionPairSnapshot`, Dirty-State ueber einen kleinen Integer-Seam, UI-Polling ueber `HostUiSnapshot`, Chrome-Polling ueber `HostChromeSnapshot`, Dialog-Polling ueber `HostDialogSnapshot`, Editing-Polling ueber `HostEditingSnapshot`, Kontextmenue-Polling ueber `HostContextMenuSnapshot`, Route-Tool-Viewport-Polling ueber `HostRouteToolViewportSnapshot` und Overlay-Polling ueber `ViewportOverlaySnapshot`.
 
 Seit der FFI-Haertungswelle sind alle pointer-konsumierenden Exporte in Rust explizit als `unsafe extern "C"` markiert. Panic-Isolation und thread-lokale Fehlerweitergabe haerten dabei dieselbe kanonische Surface, ohne eine zweite FFI-seitige DTO- oder Session-Familie einzufuehren.
 
@@ -48,7 +48,16 @@ Fuer native C/C++-Hosts liegt der stabile Vertragsheader unter `include/fs25ad_h
 | `fs25ad_host_bridge_session_dispose(session)` | Gibt eine Session frei |
 | `fs25ad_host_bridge_session_snapshot_json(session) -> *mut c_char` | Liefert `HostSessionSnapshot` als UTF-8-JSON |
 | `fs25ad_host_bridge_session_chrome_snapshot_json(session) -> *mut c_char` | Liefert `HostChromeSnapshot` als UTF-8-JSON |
+| `fs25ad_host_bridge_session_node_details_json(session) -> *mut c_char` | Liefert den aktuell inspizierten Node als `HostNodeDetails`-JSON oder `NULL`, wenn kein passender Node vorliegt |
+| `fs25ad_host_bridge_session_marker_list_json(session) -> *mut c_char` | Liefert `HostMarkerListSnapshot` als UTF-8-JSON |
+| `fs25ad_host_bridge_session_connection_pair_json(session, node_a, node_b) -> *mut c_char` | Liefert den `HostConnectionPairSnapshot` fuer genau zwei Nodes als UTF-8-JSON |
+| `fs25ad_host_bridge_session_is_dirty(session) -> int32_t` | Liefert den Dirty-Zustand als `1` (dirty), `0` (clean) oder `-1` (Fehler) |
+| `fs25ad_host_bridge_session_ui_snapshot_json(session) -> *mut c_char` | Liefert den host-neutralen `HostUiSnapshot` als UTF-8-JSON |
+| `fs25ad_host_bridge_session_dialog_snapshot_json(session) -> *mut c_char` | Liefert `HostDialogSnapshot` als UTF-8-JSON |
+| `fs25ad_host_bridge_session_editing_snapshot_json(session) -> *mut c_char` | Liefert `HostEditingSnapshot` als UTF-8-JSON |
+| `fs25ad_host_bridge_session_context_menu_snapshot_json(session, focus_node_id_or_neg1) -> *mut c_char` | Liefert `HostContextMenuSnapshot` als UTF-8-JSON; `-1` bedeutet kein Fokus-Node |
 | `fs25ad_host_bridge_session_route_tool_viewport_json(session) -> *mut c_char` | Liefert `HostRouteToolViewportSnapshot` als UTF-8-JSON |
+| `fs25ad_host_bridge_session_viewport_overlay_json(session, cursor_world_x, cursor_world_y) -> *mut c_char` | Liefert den host-neutralen `ViewportOverlaySnapshot` als UTF-8-JSON |
 | `fs25ad_host_bridge_session_apply_action_json(session, action_json) -> bool` | Liest `HostSessionAction` aus UTF-8-JSON und mutiert die Session |
 | `fs25ad_host_bridge_session_take_dialog_requests_json(session) -> *mut c_char` | Liefert ein JSON-Array aus `HostDialogRequest` und drainet die Queue |
 | `fs25ad_host_bridge_session_submit_dialog_result_json(session, result_json) -> bool` | Liest `HostDialogResult` aus UTF-8-JSON und fuehrt ihn in die Session zurueck |
@@ -82,7 +91,7 @@ Fuer native C/C++-Hosts liegt der stabile Vertragsheader unter `include/fs25ad_h
 - **Panic-Schutz:** Alle pointer-konsumierenden Exporte sind intern durch `ffi_guard_bool!`/`ffi_guard_ptr!` (`std::panic::catch_unwind`) geschützt. Ein interner Rust-Panic wird als `false`/`null` zurückgegeben; keinesfalls wird der Panic über die FFI-Grenze propagiert (UB).
 - Native Hosts pruefen beim Start mindestens `fs25ad_host_bridge_abi_version()` und fuer den Rendertransport zusaetzlich `fs25ad_host_bridge_shared_texture_contract_version()` gegen die Header-Makros.
 - Fuer den additiven v4-Pfad pruefen Hosts zusaetzlich `fs25ad_host_bridge_texture_registration_v4_contract_version()`.
-- Die allgemeine C-ABI ist seit dem additiven Export `fs25ad_host_bridge_session_route_tool_viewport_json(...)` ueber `FS25AD_HOST_BRIDGE_ABI_VERSION = 4` versioniert; der native Shared-Texture-Transport bleibt separat ueber `FS25AD_HOST_BRIDGE_SHARED_TEXTURE_CONTRACT_VERSION = 3` versioniert.
+- Die allgemeine C-ABI ist seit dem additiven Export `fs25ad_host_bridge_session_route_tool_viewport_json(...)` ueber `FS25AD_HOST_BRIDGE_ABI_VERSION = 4` versioniert; die spaeter additiv ergaenzten generischen Read-Seams (`node_details`, `marker_list`, `connection_pair`, `is_dirty`, `ui`, `dialog`, `editing`, `context_menu`, `viewport_overlay`) bleiben bewusst ABI-kompatibel und benoetigen keinen Versionssprung. Der native Shared-Texture-Transport bleibt separat ueber `FS25AD_HOST_BRIDGE_SHARED_TEXTURE_CONTRACT_VERSION = 3` versioniert.
 - `v4` ist additive Interop-Surface neben `v3`; `v3` wird nicht still umgedeutet.
 - Alle JSON-Payloads verwenden exakt die bereits in `fs25_auto_drive_host_bridge` definierten DTOs.
 - Schreibender Viewport-Input (`Resize`, Single-/Double-Taps, Pan/Move/Rect/Select-Lasso per Drag, Scroll-Zoom) wird weiterhin ohne neues Symbol als `HostSessionAction::SubmitViewportInput` ueber `fs25ad_host_bridge_session_apply_action_json(...)` transportiert.

@@ -4,6 +4,7 @@
 mod api;
 #[cfg(feature = "flutter")]
 pub mod flutter_api;
+#[cfg(feature = "flutter")]
 mod frb_generated;
 mod shared_texture_v2;
 mod texture_registration_v4;
@@ -48,10 +49,12 @@ macro_rules! ffi_guard_ptr {
 pub mod flutter_gpu;
 
 use anyhow::{anyhow, Context, Result};
+use fs25_auto_drive_host_bridge::dto::{host_ui_snapshot_json, viewport_overlay_snapshot_json};
 use fs25_auto_drive_host_bridge::{
-    HostBridgeSession, HostChromeSnapshot, HostDialogRequest, HostDialogResult,
-    HostRouteToolViewportSnapshot, HostSessionAction, HostSessionSnapshot,
-    HostViewportGeometrySnapshot,
+    HostBridgeSession, HostChromeSnapshot, HostConnectionPairSnapshot, HostContextMenuSnapshot,
+    HostDialogRequest, HostDialogResult, HostDialogSnapshot, HostEditingSnapshot,
+    HostRouteToolViewportSnapshot, HostSessionAction, HostSessionSnapshot, HostUiSnapshot,
+    HostViewportGeometrySnapshot, ViewportOverlaySnapshot,
 };
 use std::cell::RefCell;
 use std::ffi::{c_char, CStr, CString};
@@ -122,6 +125,16 @@ where
             .context("FFI JSON must be valid UTF-8")?
     };
     serde_json::from_str(text).with_context(|| format!("failed to parse {type_name} JSON"))
+}
+
+fn decode_focus_node_id(focus_node_id_or_neg1: i64) -> Result<Option<u64>> {
+    if focus_node_id_or_neg1 == -1 {
+        return Ok(None);
+    }
+
+    let node_id = u64::try_from(focus_node_id_or_neg1)
+        .map_err(|_| anyhow!("focus_node_id must be -1 or a non-negative node id"))?;
+    Ok(Some(node_id))
 }
 
 fn with_session_mut<T>(
@@ -260,6 +273,172 @@ pub unsafe extern "C" fn fs25ad_host_bridge_session_chrome_snapshot_json(
     }
 }
 
+/// Serialisiert den aktuell inspizierten Node als UTF-8-JSON.
+///
+/// Gibt `null` zurueck, wenn aktuell kein inspizierter Node vorliegt oder die
+/// inspizierte Node-ID in der geladenen Karte nicht existiert. Das ist kein
+/// Fehlerfall und setzt keine Last-Error-Nachricht.
+///
+/// # Safety
+///
+/// `session` muss ein gueltiger, durch `fs25ad_host_bridge_session_new` erzeugter Zeiger sein.
+/// Der rueckgegebene String muss mit `fs25ad_host_bridge_string_free` freigegeben werden.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn fs25ad_host_bridge_session_node_details_json(
+    session: *mut HostBridgeSessionHandle,
+) -> *mut c_char {
+    ffi_guard_ptr! {
+        with_session_mut(session, |session| {
+            Ok(session
+                .node_details_json()
+                .map_or(std::ptr::null_mut(), into_c_string_ptr))
+        })
+    }
+}
+
+/// Serialisiert die komplette Marker-Liste als UTF-8-JSON.
+///
+/// # Safety
+///
+/// `session` muss ein gueltiger, durch `fs25ad_host_bridge_session_new` erzeugter Zeiger sein.
+/// Der rueckgegebene String muss mit `fs25ad_host_bridge_string_free` freigegeben werden.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn fs25ad_host_bridge_session_marker_list_json(
+    session: *mut HostBridgeSessionHandle,
+) -> *mut c_char {
+    ffi_guard_ptr! {
+        with_session_mut(session, |session| Ok(into_c_string_ptr(session.marker_list_json())))
+    }
+}
+
+/// Serialisiert die Verbindungsdetails zwischen zwei Nodes als UTF-8-JSON.
+///
+/// # Safety
+///
+/// `session` muss ein gueltiger, durch `fs25ad_host_bridge_session_new` erzeugter Zeiger sein.
+/// Der rueckgegebene String muss mit `fs25ad_host_bridge_string_free` freigegeben werden.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn fs25ad_host_bridge_session_connection_pair_json(
+    session: *mut HostBridgeSessionHandle,
+    node_a: u64,
+    node_b: u64,
+) -> *mut c_char {
+    ffi_guard_ptr! {
+        with_session_mut(session, |session| {
+            let snapshot: HostConnectionPairSnapshot = session.connection_pair(node_a, node_b);
+            serialize_json(&snapshot)
+        })
+    }
+}
+
+/// Liefert den Dirty-Status der Session als Integer zurueck.
+///
+/// Rueckgabewerte:
+/// - `1`: Session ist dirty
+/// - `0`: Session ist nicht dirty
+/// - `-1`: Fehler; Details koennen ueber `fs25ad_host_bridge_last_error_message()` abgefragt werden
+///
+/// # Safety
+///
+/// `session` muss ein gueltiger, durch `fs25ad_host_bridge_session_new` erzeugter Zeiger sein.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn fs25ad_host_bridge_session_is_dirty(
+    session: *mut HostBridgeSessionHandle,
+) -> i32 {
+    clear_last_error();
+    match std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+        with_session_mut(session, |session| Ok(session.is_dirty()))
+    })) {
+        Ok(Ok(true)) => 1,
+        Ok(Ok(false)) => 0,
+        Ok(Err(e)) => {
+            set_last_error(e.to_string());
+            -1
+        }
+        Err(_) => {
+            set_last_error("internal panic in FFI call");
+            -1
+        }
+    }
+}
+
+/// Serialisiert den host-neutralen UI-Snapshot als UTF-8-JSON.
+///
+/// # Safety
+///
+/// `session` muss ein gueltiger, durch `fs25ad_host_bridge_session_new` erzeugter Zeiger sein.
+/// Der rueckgegebene String muss mit `fs25ad_host_bridge_string_free` freigegeben werden.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn fs25ad_host_bridge_session_ui_snapshot_json(
+    session: *mut HostBridgeSessionHandle,
+) -> *mut c_char {
+    ffi_guard_ptr! {
+        with_session_mut(session, |session| {
+            let snapshot: HostUiSnapshot = session.build_host_ui_snapshot();
+            let payload = host_ui_snapshot_json(&snapshot).context("JSON serialization failed")?;
+            Ok(into_c_string_ptr(payload))
+        })
+    }
+}
+
+/// Serialisiert den host-neutralen Dialog-Snapshot als UTF-8-JSON.
+///
+/// # Safety
+///
+/// `session` muss ein gueltiger, durch `fs25ad_host_bridge_session_new` erzeugter Zeiger sein.
+/// Der rueckgegebene String muss mit `fs25ad_host_bridge_string_free` freigegeben werden.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn fs25ad_host_bridge_session_dialog_snapshot_json(
+    session: *mut HostBridgeSessionHandle,
+) -> *mut c_char {
+    ffi_guard_ptr! {
+        with_session_mut(session, |session| {
+            let snapshot: HostDialogSnapshot = session.dialog_snapshot();
+            serialize_json(&snapshot)
+        })
+    }
+}
+
+/// Serialisiert den host-neutralen Editing-Snapshot als UTF-8-JSON.
+///
+/// # Safety
+///
+/// `session` muss ein gueltiger, durch `fs25ad_host_bridge_session_new` erzeugter Zeiger sein.
+/// Der rueckgegebene String muss mit `fs25ad_host_bridge_string_free` freigegeben werden.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn fs25ad_host_bridge_session_editing_snapshot_json(
+    session: *mut HostBridgeSessionHandle,
+) -> *mut c_char {
+    ffi_guard_ptr! {
+        with_session_mut(session, |session| {
+            let snapshot: HostEditingSnapshot = session.editing_snapshot();
+            serialize_json(&snapshot)
+        })
+    }
+}
+
+/// Serialisiert den host-neutralen Kontextmenue-Snapshot als UTF-8-JSON.
+///
+/// `focus_node_id_or_neg1` nutzt `-1` als FFI-Sentinel fuer "kein Fokus-Node".
+///
+/// # Safety
+///
+/// `session` muss ein gueltiger, durch `fs25ad_host_bridge_session_new` erzeugter Zeiger sein.
+/// Der rueckgegebene String muss mit `fs25ad_host_bridge_string_free` freigegeben werden.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn fs25ad_host_bridge_session_context_menu_snapshot_json(
+    session: *mut HostBridgeSessionHandle,
+    focus_node_id_or_neg1: i64,
+) -> *mut c_char {
+    ffi_guard_ptr! {
+        let focus_node_id = decode_focus_node_id(focus_node_id_or_neg1)?;
+        with_session_mut(session, |session| {
+            let snapshot: HostContextMenuSnapshot = session.context_menu_snapshot(focus_node_id);
+            serialize_json(&snapshot)
+        })
+    }
+}
+
 /// Serialisiert den Route-Tool-Viewport-Snapshot als UTF-8-JSON.
 ///
 /// # Safety
@@ -275,6 +454,32 @@ pub unsafe extern "C" fn fs25ad_host_bridge_session_route_tool_viewport_json(
             let snapshot: HostRouteToolViewportSnapshot =
                 session.build_route_tool_viewport_snapshot();
             serialize_json(&snapshot)
+        })
+    }
+}
+
+/// Serialisiert den host-neutralen Viewport-Overlay-Snapshot als UTF-8-JSON.
+///
+/// `cursor_world_x` und `cursor_world_y` beschreiben die aktuelle Cursor-Position
+/// in Weltkoordinaten.
+///
+/// # Safety
+///
+/// `session` muss ein gueltiger, durch `fs25ad_host_bridge_session_new` erzeugter Zeiger sein.
+/// Der rueckgegebene String muss mit `fs25ad_host_bridge_string_free` freigegeben werden.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn fs25ad_host_bridge_session_viewport_overlay_json(
+    session: *mut HostBridgeSessionHandle,
+    cursor_world_x: f32,
+    cursor_world_y: f32,
+) -> *mut c_char {
+    ffi_guard_ptr! {
+        with_session_mut(session, |session| {
+            let snapshot: ViewportOverlaySnapshot = session
+                .build_viewport_overlay_snapshot(Some([cursor_world_x, cursor_world_y].into()));
+            let payload = viewport_overlay_snapshot_json(&snapshot)
+                .context("JSON serialization failed")?;
+            Ok(into_c_string_ptr(payload))
         })
     }
 }
@@ -357,19 +562,29 @@ mod tests {
     use super::{
         fs25ad_host_bridge_abi_version, fs25ad_host_bridge_last_error_message,
         fs25ad_host_bridge_session_apply_action_json,
-        fs25ad_host_bridge_session_chrome_snapshot_json, fs25ad_host_bridge_session_dispose,
-        fs25ad_host_bridge_session_new, fs25ad_host_bridge_session_route_tool_viewport_json,
+        fs25ad_host_bridge_session_chrome_snapshot_json,
+        fs25ad_host_bridge_session_connection_pair_json,
+        fs25ad_host_bridge_session_context_menu_snapshot_json,
+        fs25ad_host_bridge_session_dialog_snapshot_json, fs25ad_host_bridge_session_dispose,
+        fs25ad_host_bridge_session_editing_snapshot_json, fs25ad_host_bridge_session_is_dirty,
+        fs25ad_host_bridge_session_marker_list_json, fs25ad_host_bridge_session_new,
+        fs25ad_host_bridge_session_node_details_json,
+        fs25ad_host_bridge_session_route_tool_viewport_json,
         fs25ad_host_bridge_session_snapshot_json,
         fs25ad_host_bridge_session_submit_dialog_result_json,
         fs25ad_host_bridge_session_take_dialog_requests_json,
-        fs25ad_host_bridge_session_viewport_geometry_json, fs25ad_host_bridge_string_free,
+        fs25ad_host_bridge_session_ui_snapshot_json,
+        fs25ad_host_bridge_session_viewport_geometry_json,
+        fs25ad_host_bridge_session_viewport_overlay_json, fs25ad_host_bridge_string_free,
         FS25AD_HOST_BRIDGE_ABI_VERSION,
     };
     use fs25_auto_drive_host_bridge::{
-        HostActiveTool, HostDialogRequest, HostDialogRequestKind, HostDialogResult,
-        HostInputModifiers, HostPointerButton, HostRouteToolAction, HostRouteToolId,
-        HostRouteToolViewportSnapshot, HostSessionAction, HostSessionSnapshot, HostTangentSource,
-        HostTapKind, HostViewportGeometrySnapshot, HostViewportInputBatch, HostViewportInputEvent,
+        HostActiveTool, HostConnectionPairSnapshot, HostContextMenuSnapshot,
+        HostContextMenuVariant, HostDialogRequest, HostDialogRequestKind, HostDialogResult,
+        HostDialogSnapshot, HostEditingSnapshot, HostInputModifiers, HostMarkerListSnapshot,
+        HostPointerButton, HostRouteToolAction, HostRouteToolId, HostRouteToolViewportSnapshot,
+        HostSessionAction, HostSessionSnapshot, HostTangentSource, HostTapKind,
+        HostViewportGeometrySnapshot, HostViewportInputBatch, HostViewportInputEvent,
     };
     use std::ffi::{CStr, CString};
 
@@ -387,6 +602,41 @@ mod tests {
         s: *mut super::HostBridgeSessionHandle,
     ) -> *mut std::ffi::c_char {
         unsafe { fs25ad_host_bridge_session_chrome_snapshot_json(s) }
+    }
+    fn session_node_details_json(s: *mut super::HostBridgeSessionHandle) -> *mut std::ffi::c_char {
+        unsafe { fs25ad_host_bridge_session_node_details_json(s) }
+    }
+    fn session_marker_list_json(s: *mut super::HostBridgeSessionHandle) -> *mut std::ffi::c_char {
+        unsafe { fs25ad_host_bridge_session_marker_list_json(s) }
+    }
+    fn session_connection_pair_json(
+        s: *mut super::HostBridgeSessionHandle,
+        node_a: u64,
+        node_b: u64,
+    ) -> *mut std::ffi::c_char {
+        unsafe { fs25ad_host_bridge_session_connection_pair_json(s, node_a, node_b) }
+    }
+    fn session_is_dirty(s: *mut super::HostBridgeSessionHandle) -> i32 {
+        unsafe { fs25ad_host_bridge_session_is_dirty(s) }
+    }
+    fn session_ui_snapshot_json(s: *mut super::HostBridgeSessionHandle) -> *mut std::ffi::c_char {
+        unsafe { fs25ad_host_bridge_session_ui_snapshot_json(s) }
+    }
+    fn session_dialog_snapshot_json(
+        s: *mut super::HostBridgeSessionHandle,
+    ) -> *mut std::ffi::c_char {
+        unsafe { fs25ad_host_bridge_session_dialog_snapshot_json(s) }
+    }
+    fn session_editing_snapshot_json(
+        s: *mut super::HostBridgeSessionHandle,
+    ) -> *mut std::ffi::c_char {
+        unsafe { fs25ad_host_bridge_session_editing_snapshot_json(s) }
+    }
+    fn session_context_menu_snapshot_json(
+        s: *mut super::HostBridgeSessionHandle,
+        focus_node_id_or_neg1: i64,
+    ) -> *mut std::ffi::c_char {
+        unsafe { fs25ad_host_bridge_session_context_menu_snapshot_json(s, focus_node_id_or_neg1) }
     }
     fn session_route_tool_viewport_json(
         s: *mut super::HostBridgeSessionHandle,
@@ -416,6 +666,13 @@ mod tests {
         h: f32,
     ) -> *mut std::ffi::c_char {
         unsafe { fs25ad_host_bridge_session_viewport_geometry_json(s, w, h) }
+    }
+    fn session_viewport_overlay_json(
+        s: *mut super::HostBridgeSessionHandle,
+        x: f32,
+        y: f32,
+    ) -> *mut std::ffi::c_char {
+        unsafe { fs25ad_host_bridge_session_viewport_overlay_json(s, x, y) }
     }
 
     #[cfg(feature = "flutter")]
@@ -592,6 +849,96 @@ mod tests {
     }
 
     #[test]
+    fn ffi_transport_roundtrips_generic_read_endpoints() {
+        let session = fs25ad_host_bridge_session_new();
+        assert!(!session.is_null());
+
+        assert_eq!(session_is_dirty(session), 0);
+
+        let marker_list_json = read_and_free_string(session_marker_list_json(session));
+        let marker_list: HostMarkerListSnapshot =
+            serde_json::from_str(&marker_list_json).expect("marker list JSON must parse");
+        assert!(marker_list.markers.is_empty());
+        assert!(marker_list.groups.is_empty());
+
+        let connection_pair_json =
+            read_and_free_string(session_connection_pair_json(session, 7, 9));
+        let connection_pair: HostConnectionPairSnapshot =
+            serde_json::from_str(&connection_pair_json).expect("connection pair JSON must parse");
+        assert_eq!(connection_pair.node_a, 7);
+        assert_eq!(connection_pair.node_b, 9);
+        assert!(connection_pair.connections.is_empty());
+
+        let ui_json = read_and_free_string(session_ui_snapshot_json(session));
+        let ui_value: serde_json::Value =
+            serde_json::from_str(&ui_json).expect("ui snapshot JSON must parse");
+        assert!(ui_value.get("panels").is_some());
+
+        let dialog_json = read_and_free_string(session_dialog_snapshot_json(session));
+        let dialog_snapshot: HostDialogSnapshot =
+            serde_json::from_str(&dialog_json).expect("dialog snapshot JSON must parse");
+        assert!(!dialog_snapshot.heightmap_warning.visible);
+
+        let editing_json = read_and_free_string(session_editing_snapshot_json(session));
+        let editing_snapshot: HostEditingSnapshot =
+            serde_json::from_str(&editing_json).expect("editing snapshot JSON must parse");
+        assert!(editing_snapshot.editable_groups.is_empty());
+        assert!(!editing_snapshot.resample.active);
+
+        let context_menu_json =
+            read_and_free_string(session_context_menu_snapshot_json(session, -1));
+        let context_menu_snapshot: HostContextMenuSnapshot =
+            serde_json::from_str(&context_menu_json)
+                .expect("context menu snapshot JSON must parse");
+        assert_eq!(
+            context_menu_snapshot.variant,
+            HostContextMenuVariant::EmptyArea
+        );
+        assert!(context_menu_snapshot.available_actions.is_empty());
+
+        let overlay_json = read_and_free_string(session_viewport_overlay_json(session, 0.0, 0.0));
+        let overlay_value: serde_json::Value =
+            serde_json::from_str(&overlay_json).expect("overlay snapshot JSON must parse");
+        assert!(overlay_value.get("show_no_file_hint").is_some());
+
+        session_dispose(session);
+    }
+
+    #[test]
+    fn ffi_transport_node_details_returns_null_without_error_when_no_node_is_inspected() {
+        let session = fs25ad_host_bridge_session_new();
+        assert!(!session.is_null());
+
+        let action_json = CString::new(
+            serde_json::json!({
+                "kind": "query_node_details",
+                "node_id": 99,
+            })
+            .to_string(),
+        )
+        .expect("CString must build");
+        assert!(session_apply_action_json(session, action_json.as_ptr()));
+
+        assert!(session_node_details_json(session).is_null());
+        assert!(fs25ad_host_bridge_last_error_message().is_null());
+
+        session_dispose(session);
+    }
+
+    #[test]
+    fn ffi_transport_rejects_invalid_context_menu_focus_node_id() {
+        let session = fs25ad_host_bridge_session_new();
+        assert!(!session.is_null());
+
+        assert!(session_context_menu_snapshot_json(session, -2).is_null());
+        assert!(
+            read_and_free_string(fs25ad_host_bridge_last_error_message()).contains("focus_node_id")
+        );
+
+        session_dispose(session);
+    }
+
+    #[test]
     fn ffi_transport_rejects_null_session_and_payload_pointers() {
         assert!(session_snapshot_json(std::ptr::null_mut()).is_null());
         assert!(
@@ -605,7 +952,61 @@ mod tests {
                 .contains("HostBridgeSession pointer")
         );
 
+        assert!(session_node_details_json(std::ptr::null_mut()).is_null());
+        assert!(
+            read_and_free_string(fs25ad_host_bridge_last_error_message())
+                .contains("HostBridgeSession pointer")
+        );
+
+        assert!(session_marker_list_json(std::ptr::null_mut()).is_null());
+        assert!(
+            read_and_free_string(fs25ad_host_bridge_last_error_message())
+                .contains("HostBridgeSession pointer")
+        );
+
+        assert!(session_connection_pair_json(std::ptr::null_mut(), 1, 2).is_null());
+        assert!(
+            read_and_free_string(fs25ad_host_bridge_last_error_message())
+                .contains("HostBridgeSession pointer")
+        );
+
+        assert_eq!(session_is_dirty(std::ptr::null_mut()), -1);
+        assert!(
+            read_and_free_string(fs25ad_host_bridge_last_error_message())
+                .contains("HostBridgeSession pointer")
+        );
+
+        assert!(session_ui_snapshot_json(std::ptr::null_mut()).is_null());
+        assert!(
+            read_and_free_string(fs25ad_host_bridge_last_error_message())
+                .contains("HostBridgeSession pointer")
+        );
+
+        assert!(session_dialog_snapshot_json(std::ptr::null_mut()).is_null());
+        assert!(
+            read_and_free_string(fs25ad_host_bridge_last_error_message())
+                .contains("HostBridgeSession pointer")
+        );
+
+        assert!(session_editing_snapshot_json(std::ptr::null_mut()).is_null());
+        assert!(
+            read_and_free_string(fs25ad_host_bridge_last_error_message())
+                .contains("HostBridgeSession pointer")
+        );
+
+        assert!(session_context_menu_snapshot_json(std::ptr::null_mut(), -1).is_null());
+        assert!(
+            read_and_free_string(fs25ad_host_bridge_last_error_message())
+                .contains("HostBridgeSession pointer")
+        );
+
         assert!(session_route_tool_viewport_json(std::ptr::null_mut()).is_null());
+        assert!(
+            read_and_free_string(fs25ad_host_bridge_last_error_message())
+                .contains("HostBridgeSession pointer")
+        );
+
+        assert!(session_viewport_overlay_json(std::ptr::null_mut(), 0.0, 0.0).is_null());
         assert!(
             read_and_free_string(fs25ad_host_bridge_last_error_message())
                 .contains("HostBridgeSession pointer")
