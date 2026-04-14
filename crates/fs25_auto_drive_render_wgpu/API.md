@@ -25,7 +25,7 @@ Der v4-Vertrag ist bewusst nur der additive Transport- und Lifecycle-Slice. Echt
 | `shared_texture.rs` | Shared-Texture-Runtime mit Frame-Lifecycle und opaque Runtime-Handle-Metadaten |
 | `external_texture/` | Plattformspezifischer GPU-Texture-Export fuer Flutter-Integration (`ExternalTextureExport` Trait, `PlatformTextureDescriptor`, `ExternalTextureError`) |
 | `external_texture/vulkan_linux.rs` | Linux/Vulkan-Implementierung: `VulkanDmaBufTexture` mit Vulkan-External-Memory und DMA-BUF-FD-Export (cfg-gated: `flutter-linux` + `linux`) |
-| `external_texture/vulkan_android.rs` | Stub fuer zukuenftige Android-Plattformstuetze |
+| `external_texture/vulkan_android.rs` | Stub fuer zukuenftige Android-Plattformstuetze (cfg-gated: `flutter-android` + `android`) |
 | `external_texture/dx12_windows.rs` | Stub fuer zukuenftige Windows-Plattformstuetze |
 | `texture_registration/*` | Additiver `v4`-Vertrag (Capabilities, Lifecycle-State-Machine, plattformspezifische Payload-Familien) |
 | `background_renderer.rs` | Hintergrund-Quad, Upload und zoomabhaengiges Sampling |
@@ -81,7 +81,7 @@ Der v4-Vertrag ist bewusst nur der additive Transport- und Lifecycle-Slice. Echt
 | `SharedTextureRuntime::new(device, queue, size)` | Erstellt eine Offscreen-Shared-Texture-Runtime |
 | `SharedTextureRuntime::resize(device, size)` | Realloziert das Offscreen-Ziel bei Groessenaenderung |
 | `SharedTextureRuntime::render_frame(device, queue, scene, assets)` | Synchronisiert Assets revisionsbasiert und rendert den Frame in die Shared-Texture |
-| `SharedTextureRuntime::render_to_view(device, queue, scene, assets, target_view)` | Rendert Szene und Assets in eine extern bereitgestellte `TextureView` (cfg-gated: `flutter-linux`) |
+| `SharedTextureRuntime::render_to_view(device, queue, scene, assets, target_view)` | Rendert Szene und Assets in eine extern bereitgestellte `TextureView` (cfg-gated: `flutter-linux` oder `flutter-android`) |
 | `SharedTextureRuntime::acquire_frame()` | Leased den zuletzt gerenderten Frame fuer den Host |
 | `SharedTextureRuntime::release_frame(frame_token)` | Gibt den aktiven Frame-Lease wieder frei |
 | `SharedTextureRuntime::frame()` | Liefert die Metadaten des zuletzt gerenderten Frames ohne Lease-Aenderung |
@@ -92,8 +92,8 @@ Der v4-Vertrag ist bewusst nur der additive Transport- und Lifecycle-Slice. Echt
 | `TextureRegistrationLifecycle::release_frame(frame_token)` | Gibt den aktiven v4-Lease wieder frei |
 | `TextureRegistrationLifecycle::on_resize()` | Invalidiert den letzten v4-Frame nach Resize/Recreate |
 | `TextureRegistrationLifecycle::attach_surface()` / `detach_surface()` | Android-spezifische Attach/Detach-Guards im Host-attached-Modell |
-| `create_vulkan_instance()` | Erzeugt eine wgpu-Instanz mit explizitem Vulkan-Backend fuer Flutter-Linux (cfg-gated: `flutter-linux` + `linux`) |
-| `RenderExportCore::render_scene_to_view(...)` | Rendert die Szene in eine extern bereitgestellte TextureView (Flutter-Integration, cfg-gated: `flutter-linux`) |
+| `create_vulkan_instance()` | Erzeugt eine wgpu-Instanz mit explizitem Vulkan-Backend fuer Flutter-Vulkan (cfg-gated: `flutter-linux` + `linux` oder `flutter-android` + `android`) |
+| `RenderExportCore::render_scene_to_view(...)` | Rendert die Szene in eine extern bereitgestellte TextureView (Flutter-Integration, cfg-gated: `flutter-linux` oder `flutter-android`) |
 
 ## Shared-Texture-Vertrag
 
@@ -171,6 +171,7 @@ flowchart LR
 | Feature | Zweck |
 |---|---|
 | `flutter-linux` | Aktiviert `ash` (Vulkan HAL) und `wgpu/vulkan`. Schaltet `create_vulkan_instance()`, das `external_texture/vulkan_linux`-Modul, `RenderExportCore::render_scene_to_view()` und `SharedTextureRuntime::render_to_view()` frei. |
+| `flutter-android` | Aktiviert `ash`, `ndk` (API 26+) und `wgpu/vulkan`. Schaltet die gemeinsamen Vulkan-Guards fuer `create_vulkan_instance()`, `RenderExportCore::render_scene_to_view()` und `SharedTextureRuntime::render_to_view()` frei und exportiert das Android-Stub-Modul `external_texture/vulkan_android` auf `target_os = "android"`. |
 
 ## Flutter-Texture-Export (`external_texture/`)
 

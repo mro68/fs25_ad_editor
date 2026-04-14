@@ -8,7 +8,7 @@
 pub mod vulkan_linux;
 
 /// Stub-Modul fuer zukuenftige Android-Plattformstuetze.
-#[cfg(target_os = "android")]
+#[cfg(all(target_os = "android", feature = "flutter-android"))]
 pub mod vulkan_android;
 
 /// Stub-Modul fuer zukuenftige Windows-Plattformstuetze.

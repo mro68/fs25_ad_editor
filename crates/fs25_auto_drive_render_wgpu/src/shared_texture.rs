@@ -209,7 +209,7 @@ impl SharedTextureRuntime {
     /// [`render_frame`](Self::render_frame), schreibt aber nicht in die interne
     /// Shared-Texture. Der Acquire/Release-Lifecycle der internen Shared-Texture
     /// bleibt dabei unveraendert.
-    #[cfg(feature = "flutter-linux")]
+    #[cfg(any(feature = "flutter-linux", feature = "flutter-android"))]
     pub fn render_to_view(
         &mut self,
         device: &wgpu::Device,
