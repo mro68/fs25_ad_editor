@@ -1,7 +1,7 @@
 //! Stabiler Aktions-Satz fuer die kanonische Session-Surface der Host-Bridge.
 
 use fs25_auto_drive_engine::app::ui_contract::RouteToolPanelAction;
-use fs25_auto_drive_engine::shared::EditorOptions;
+use fs25_auto_drive_engine::shared::{EditorOptions, RenderQuality};
 use serde::{Deserialize, Serialize};
 
 use super::dialogs::HostDialogResult;
@@ -125,18 +125,75 @@ pub enum HostSessionAction {
     SaveAs,
     /// Fordert einen Heightmap-Auswahldialog an.
     RequestHeightmapSelection,
+    /// Entfernt die aktuell geladene Heightmap.
+    ClearHeightmap,
+    /// Bestaetigt die Heightmap-Warnung und setzt den Ladepfad fort.
+    ConfirmHeightmapWarning,
+    /// Bricht die Heightmap-Warnung ohne Folgemutation ab.
+    CancelHeightmapWarning,
     /// Fordert einen Background-Map-Auswahldialog an.
     RequestBackgroundMapSelection,
     /// Fordert den ZIP-Auswahldialog fuer die Overview-Generierung an.
     GenerateOverview,
+    /// Fordert aus dem Overview-Source-Dialog den nativen ZIP-Picker an.
+    BrowseOverviewZip,
+    /// Uebernimmt ein ZIP direkt fuer die Overview-Generierung.
+    GenerateOverviewFromZip {
+        /// Pfad zur gewaehlten ZIP-Datei.
+        path: String,
+    },
+    /// Uebernimmt eine Bilddatei aus dem ZIP-Browser als Background-Map.
+    SelectZipBackgroundFile {
+        /// Pfad zur ZIP-Datei.
+        zip_path: String,
+        /// Name des gewaelten ZIP-Eintrags.
+        entry_name: String,
+    },
+    /// Schliesst den ZIP-Browser ohne Auswahl.
+    CancelZipBrowser,
+    /// Bestaetigt den Overview-Options-Dialog.
+    ConfirmOverviewOptions,
+    /// Bricht den Overview-Options-Dialog ab.
+    CancelOverviewOptions,
+    /// Schliesst den Post-Load-/Overview-Source-Dialog ohne Aktion.
+    DismissPostLoadDialog,
+    /// Bestaetigt das Speichern des Backgrounds als Overview.
+    ConfirmSaveBackgroundAsOverview,
+    /// Lehnt das Speichern des Backgrounds als Overview ab.
+    DismissSaveBackgroundAsOverview,
+    /// Bestaetigt die Duplikat-Bereinigung nach dem Laden.
+    ConfirmDeduplication,
+    /// Lehnt die Duplikat-Bereinigung nach dem Laden ab.
+    CancelDeduplication,
     /// Fordert einen Curseplay-Import-Dialog an.
     CurseplayImport,
     /// Fordert einen Curseplay-Export-Dialog an.
     CurseplayExport,
     /// Setzt die Kamera auf den Standardzustand zurueck.
     ResetCamera,
+    /// Zoomt eine Stufe hinein.
+    ZoomIn,
+    /// Zoomt eine Stufe heraus.
+    ZoomOut,
     /// Passt den Viewport auf die komplette Karte ein.
     ZoomToFit,
+    /// Zentriert die Kamera auf einen bestimmten Node.
+    CenterOnNode {
+        /// ID des Ziel-Nodes.
+        node_id: u64,
+    },
+    /// Aendert die Render-Qualitaetsstufe.
+    SetRenderQuality {
+        /// Ziel-Qualitaet fuer das Rendering.
+        quality: RenderQuality,
+    },
+    /// Schaltet die Sichtbarkeit der Background-Map um.
+    ToggleBackgroundVisibility,
+    /// Skaliert die Background-Map relativ zur aktuellen Groesse.
+    ScaleBackground {
+        /// Relativer Skalierungsfaktor.
+        factor: f32,
+    },
     /// Passt den Viewport auf die aktuelle Selektion ein.
     ZoomToSelectionBounds,
     /// Beendet die Anwendung.
@@ -242,6 +299,18 @@ pub enum HostSessionAction {
         /// Neuer Flag-Wert.
         flag: HostNodeFlag,
     },
+    /// Oeffnet den Marker-Erstellen-Dialog fuer einen Node.
+    OpenCreateMarkerDialog {
+        /// Node-ID.
+        node_id: u64,
+    },
+    /// Oeffnet den Marker-Bearbeiten-Dialog fuer einen Node.
+    OpenEditMarkerDialog {
+        /// Node-ID.
+        node_id: u64,
+    },
+    /// Bricht den aktuell offenen Marker-Dialog ab.
+    CancelMarkerDialog,
     /// Erstellt einen neuen Marker am angegebenen Node.
     CreateMarker {
         /// Node-ID.
@@ -269,8 +338,63 @@ pub enum HostSessionAction {
     DeleteSelected,
     /// Selektiert alle Nodes der aktuellen Karte.
     SelectAll,
+    /// Invertiert die aktuelle Auswahl.
+    InvertSelection,
     /// Hebt die aktuelle Selektion auf.
     ClearSelection,
+    /// Aktiviert das Streckenteilungs-/Resample-Panel.
+    StartResampleSelection,
+    /// Wendet die aktuelle Streckenteilungs-Konfiguration auf die Selektion an.
+    ApplyCurrentResample,
+    /// Startet den nicht-destruktiven Gruppen-Edit-Modus fuer einen Record.
+    StartGroupEdit {
+        /// ID des zu bearbeitenden Gruppen-Records.
+        record_id: u64,
+    },
+    /// Uebernimmt die aktuelle Gruppen-Bearbeitung.
+    ApplyGroupEdit,
+    /// Bricht die aktuelle Gruppen-Bearbeitung ab.
+    CancelGroupEdit,
+    /// Wechselt aus dem Gruppen-Edit in den zugehoerigen Tool-Edit-Modus.
+    OpenGroupEditTool {
+        /// ID des zugehoerigen Gruppen-Records.
+        record_id: u64,
+    },
+    /// Speichert die aktuelle Selektion als neue Gruppe.
+    GroupSelectionAsGroup,
+    /// Entfernt die selektierten Nodes aus ihrer Gruppe.
+    RemoveSelectedNodesFromGroup,
+    /// Setzt Einfahrts-/Ausfahrts-Nodes einer Gruppe.
+    SetGroupBoundaryNodes {
+        /// ID des Gruppen-Records.
+        record_id: u64,
+        /// Node-ID der Einfahrt.
+        entry_node_id: Option<u64>,
+        /// Node-ID der Ausfahrt.
+        exit_node_id: Option<u64>,
+    },
+    /// Selektiert das Segment zwischen Kreuzungen an einer Weltposition neu.
+    RecomputeNodeSegmentSelection {
+        /// Weltposition der Anfrage.
+        world_pos: [f32; 2],
+        /// Erweitert eine bestehende Selektion statt sie zu ersetzen.
+        additive: bool,
+    },
+    /// Schaltet den Lock-Status einer Gruppe um.
+    ToggleGroupLock {
+        /// ID des Segment-/Gruppen-Records.
+        segment_id: u64,
+    },
+    /// Fordert das Aufloesen einer Gruppe an.
+    DissolveGroup {
+        /// ID des Segment-/Gruppen-Records.
+        segment_id: u64,
+    },
+    /// Bestaetigt das Aufloesen einer Gruppe.
+    ConfirmDissolveGroup {
+        /// ID des Segment-/Gruppen-Records.
+        segment_id: u64,
+    },
     /// Kopiert die aktuelle Selektion in die Zwischenablage.
     CopySelection,
     /// Startet den Paste-Modus mit Vorschau.
@@ -279,6 +403,25 @@ pub enum HostSessionAction {
     PasteConfirm,
     /// Bricht den Paste-Modus ab.
     PasteCancel,
+    /// Oeffnet den Dialog fuer das Nachzeichnen aller Felder.
+    OpenTraceAllFieldsDialog,
+    /// Bestaetigt das Nachzeichnen aller Felder mit den aktuellen Dialogwerten.
+    ConfirmTraceAllFields {
+        /// Abstand zwischen Pfadpunkten.
+        spacing: f32,
+        /// Zusatzausdehnung relativ zur Feldkante.
+        offset: f32,
+        /// Toleranz fuer die Erkennung.
+        tolerance: f32,
+        /// Optionaler Eckwinkel fuer Spezialbehandlung.
+        corner_angle: Option<f32>,
+        /// Optionaler Radius fuer das Abrunden von Ecken.
+        corner_rounding_radius: Option<f32>,
+        /// Optionaler Maximalwinkel fuer Eckrundungen.
+        corner_rounding_max_angle_deg: Option<f32>,
+    },
+    /// Bricht den Dialog fuer das Nachzeichnen aller Felder ab.
+    CancelTraceAllFields,
     /// Reicht einen Batch aus host-neutralen Viewport-Input-Events in die Session.
     SubmitViewportInput {
         /// Sequenzieller Batch von Resize-, Pointer- und Scroll-Events.
@@ -293,10 +436,13 @@ pub enum HostSessionAction {
 
 #[cfg(test)]
 mod tests {
+    use fs25_auto_drive_engine::shared::RenderQuality;
     use serde_json::json;
 
     use super::HostSessionAction;
-    use crate::dto::{HostDefaultConnectionDirection, HostDefaultConnectionPriority};
+    use crate::dto::{
+        HostDefaultConnectionDirection, HostDefaultConnectionPriority,
+    };
 
     #[test]
     fn host_session_action_connection_family_roundtrips_json() {
@@ -392,6 +538,135 @@ mod tests {
 
             let parsed: HostSessionAction = serde_json::from_value(payload)
                 .expect("Connection-HostAction muss aus JSON zuruecklesbar sein");
+            assert_eq!(parsed, action);
+        }
+    }
+
+    #[test]
+    fn host_session_action_parity_gap_families_roundtrip_json() {
+        let cases = vec![
+            (
+                HostSessionAction::ClearHeightmap,
+                json!({ "kind": "clear_heightmap" }),
+            ),
+            (
+                HostSessionAction::ConfirmHeightmapWarning,
+                json!({ "kind": "confirm_heightmap_warning" }),
+            ),
+            (
+                HostSessionAction::GenerateOverviewFromZip {
+                    path: "/tmp/source.zip".to_string(),
+                },
+                json!({
+                    "kind": "generate_overview_from_zip",
+                    "path": "/tmp/source.zip"
+                }),
+            ),
+            (
+                HostSessionAction::SelectZipBackgroundFile {
+                    zip_path: "/tmp/background.zip".to_string(),
+                    entry_name: "overview.png".to_string(),
+                },
+                json!({
+                    "kind": "select_zip_background_file",
+                    "zip_path": "/tmp/background.zip",
+                    "entry_name": "overview.png"
+                }),
+            ),
+            (
+                HostSessionAction::ZoomIn,
+                json!({ "kind": "zoom_in" }),
+            ),
+            (
+                HostSessionAction::CenterOnNode { node_id: 42 },
+                json!({ "kind": "center_on_node", "node_id": 42 }),
+            ),
+            (
+                HostSessionAction::SetRenderQuality {
+                    quality: RenderQuality::Medium,
+                },
+                json!({ "kind": "set_render_quality", "quality": "Medium" }),
+            ),
+            (
+                HostSessionAction::ScaleBackground { factor: 2.0 },
+                json!({ "kind": "scale_background", "factor": 2.0 }),
+            ),
+            (
+                HostSessionAction::OpenCreateMarkerDialog { node_id: 7 },
+                json!({ "kind": "open_create_marker_dialog", "node_id": 7 }),
+            ),
+            (
+                HostSessionAction::CancelMarkerDialog,
+                json!({ "kind": "cancel_marker_dialog" }),
+            ),
+            (
+                HostSessionAction::InvertSelection,
+                json!({ "kind": "invert_selection" }),
+            ),
+            (
+                HostSessionAction::StartGroupEdit { record_id: 5 },
+                json!({ "kind": "start_group_edit", "record_id": 5 }),
+            ),
+            (
+                HostSessionAction::SetGroupBoundaryNodes {
+                    record_id: 9,
+                    entry_node_id: Some(1),
+                    exit_node_id: None,
+                },
+                json!({
+                    "kind": "set_group_boundary_nodes",
+                    "record_id": 9,
+                    "entry_node_id": 1,
+                    "exit_node_id": null
+                }),
+            ),
+            (
+                HostSessionAction::RecomputeNodeSegmentSelection {
+                    world_pos: [1.5, -2.5],
+                    additive: true,
+                },
+                json!({
+                    "kind": "recompute_node_segment_selection",
+                    "world_pos": [1.5, -2.5],
+                    "additive": true
+                }),
+            ),
+            (
+                HostSessionAction::ConfirmDissolveGroup { segment_id: 11 },
+                json!({ "kind": "confirm_dissolve_group", "segment_id": 11 }),
+            ),
+            (
+                HostSessionAction::ConfirmTraceAllFields {
+                    spacing: 8.0,
+                    offset: 0.5,
+                    tolerance: 1.25,
+                    corner_angle: Some(30.0),
+                    corner_rounding_radius: None,
+                    corner_rounding_max_angle_deg: Some(75.0),
+                },
+                json!({
+                    "kind": "confirm_trace_all_fields",
+                    "spacing": 8.0,
+                    "offset": 0.5,
+                    "tolerance": 1.25,
+                    "corner_angle": 30.0,
+                    "corner_rounding_radius": null,
+                    "corner_rounding_max_angle_deg": 75.0
+                }),
+            ),
+            (
+                HostSessionAction::ConfirmDeduplication,
+                json!({ "kind": "confirm_deduplication" }),
+            ),
+        ];
+
+        for (action, expected_json) in cases {
+            let payload = serde_json::to_value(&action)
+                .expect("Parity-HostAction muss als JSON serialisierbar sein");
+            assert_eq!(payload, expected_json);
+
+            let parsed: HostSessionAction = serde_json::from_value(payload)
+                .expect("Parity-HostAction muss aus JSON zuruecklesbar sein");
             assert_eq!(parsed, action);
         }
     }

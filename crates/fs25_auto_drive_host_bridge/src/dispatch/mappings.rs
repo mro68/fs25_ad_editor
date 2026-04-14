@@ -16,7 +16,8 @@ use glam::Vec2;
 
 use crate::dto::{
     HostActiveTool, HostDefaultConnectionDirection, HostDefaultConnectionPriority,
-    HostDialogRequest, HostDialogRequestKind, HostDialogResult, HostNodeFlag, HostRouteToolAction,
+    HostDialogRequest, HostDialogRequestKind, HostDialogResult, HostNodeFlag,
+    HostRouteToolAction,
     HostRouteToolDisabledReason, HostRouteToolGroup, HostRouteToolIconKey, HostRouteToolId,
     HostRouteToolSurface, HostSessionAction, HostTangentMenuSnapshot, HostTangentOptionSnapshot,
     HostTangentSource, HostViewportConnectionDirection, HostViewportConnectionPriority,
@@ -381,13 +382,57 @@ pub fn map_intent_to_host_action(intent: &AppIntent) -> Option<HostSessionAction
         AppIntent::HeightmapSelectionRequested => {
             Some(HostSessionAction::RequestHeightmapSelection)
         }
+        AppIntent::HeightmapCleared => Some(HostSessionAction::ClearHeightmap),
+        AppIntent::HeightmapWarningConfirmed => {
+            Some(HostSessionAction::ConfirmHeightmapWarning)
+        }
+        AppIntent::HeightmapWarningCancelled => {
+            Some(HostSessionAction::CancelHeightmapWarning)
+        }
         AppIntent::BackgroundMapSelectionRequested => {
             Some(HostSessionAction::RequestBackgroundMapSelection)
         }
         AppIntent::GenerateOverviewRequested => Some(HostSessionAction::GenerateOverview),
+        AppIntent::OverviewZipBrowseRequested => Some(HostSessionAction::BrowseOverviewZip),
+        AppIntent::GenerateOverviewFromZip { path } => {
+            Some(HostSessionAction::GenerateOverviewFromZip { path: path.clone() })
+        }
+        AppIntent::ZipBackgroundFileSelected {
+            zip_path,
+            entry_name,
+        } => Some(HostSessionAction::SelectZipBackgroundFile {
+            zip_path: zip_path.clone(),
+            entry_name: entry_name.clone(),
+        }),
+        AppIntent::ZipBrowserCancelled => Some(HostSessionAction::CancelZipBrowser),
+        AppIntent::OverviewOptionsConfirmed => Some(HostSessionAction::ConfirmOverviewOptions),
+        AppIntent::OverviewOptionsCancelled => Some(HostSessionAction::CancelOverviewOptions),
+        AppIntent::PostLoadDialogDismissed => Some(HostSessionAction::DismissPostLoadDialog),
+        AppIntent::SaveBackgroundAsOverviewConfirmed => {
+            Some(HostSessionAction::ConfirmSaveBackgroundAsOverview)
+        }
+        AppIntent::SaveBackgroundAsOverviewDismissed => {
+            Some(HostSessionAction::DismissSaveBackgroundAsOverview)
+        }
+        AppIntent::DeduplicateConfirmed => Some(HostSessionAction::ConfirmDeduplication),
+        AppIntent::DeduplicateCancelled => Some(HostSessionAction::CancelDeduplication),
         AppIntent::CurseplayImportRequested => Some(HostSessionAction::CurseplayImport),
         AppIntent::CurseplayExportRequested => Some(HostSessionAction::CurseplayExport),
         AppIntent::ResetCameraRequested => Some(HostSessionAction::ResetCamera),
+        AppIntent::ZoomInRequested => Some(HostSessionAction::ZoomIn),
+        AppIntent::ZoomOutRequested => Some(HostSessionAction::ZoomOut),
+        AppIntent::CenterOnNodeRequested { node_id } => {
+            Some(HostSessionAction::CenterOnNode { node_id: *node_id })
+        }
+        AppIntent::RenderQualityChanged { quality } => {
+            Some(HostSessionAction::SetRenderQuality { quality: *quality })
+        }
+        AppIntent::ToggleBackgroundVisibility => {
+            Some(HostSessionAction::ToggleBackgroundVisibility)
+        }
+        AppIntent::ScaleBackground { factor } => {
+            Some(HostSessionAction::ScaleBackground { factor: *factor })
+        }
         AppIntent::ZoomToFitRequested => Some(HostSessionAction::ZoomToFit),
         AppIntent::ZoomToSelectionBoundsRequested => Some(HostSessionAction::ZoomToSelectionBounds),
         AppIntent::ExitRequested => Some(HostSessionAction::Exit),
@@ -441,19 +486,19 @@ pub fn map_intent_to_host_action(intent: &AppIntent) -> Option<HostSessionAction
             priority: map_connection_priority(*priority),
         }),
         AppIntent::ConnectSelectedNodesRequested => Some(HostSessionAction::ConnectSelectedNodes),
-        AppIntent::SetAllConnectionsDirectionBetweenSelectedRequested { direction } => Some(
-            HostSessionAction::SetAllConnectionsDirectionBetweenSelected {
+        AppIntent::SetAllConnectionsDirectionBetweenSelectedRequested { direction } => {
+            Some(HostSessionAction::SetAllConnectionsDirectionBetweenSelected {
                 direction: map_connection_direction(*direction),
-            },
-        ),
+            })
+        }
         AppIntent::InvertAllConnectionsBetweenSelectedRequested => {
             Some(HostSessionAction::InvertAllConnectionsBetweenSelected)
         }
-        AppIntent::SetAllConnectionsPriorityBetweenSelectedRequested { priority } => Some(
-            HostSessionAction::SetAllConnectionsPriorityBetweenSelected {
+        AppIntent::SetAllConnectionsPriorityBetweenSelectedRequested { priority } => {
+            Some(HostSessionAction::SetAllConnectionsPriorityBetweenSelected {
                 priority: map_connection_priority(*priority),
-            },
-        ),
+            })
+        }
         AppIntent::RemoveAllConnectionsBetweenSelectedRequested => {
             Some(HostSessionAction::RemoveAllConnectionsBetweenSelected)
         }
@@ -548,6 +593,13 @@ pub fn map_intent_to_host_action(intent: &AppIntent) -> Option<HostSessionAction
                 flag: HostNodeFlag::from(flag),
             })
         }
+        AppIntent::CreateMarkerRequested { node_id } => {
+            Some(HostSessionAction::OpenCreateMarkerDialog { node_id: *node_id })
+        }
+        AppIntent::EditMarkerRequested { node_id } => {
+            Some(HostSessionAction::OpenEditMarkerDialog { node_id: *node_id })
+        }
+        AppIntent::MarkerDialogCancelled => Some(HostSessionAction::CancelMarkerDialog),
         AppIntent::RemoveMarkerRequested { node_id } => {
             Some(HostSessionAction::RemoveMarker { node_id: *node_id })
         }
@@ -571,11 +623,82 @@ pub fn map_intent_to_host_action(intent: &AppIntent) -> Option<HostSessionAction
         }),
         AppIntent::DeleteSelectedRequested => Some(HostSessionAction::DeleteSelected),
         AppIntent::SelectAllRequested => Some(HostSessionAction::SelectAll),
+        AppIntent::InvertSelectionRequested => Some(HostSessionAction::InvertSelection),
         AppIntent::ClearSelectionRequested => Some(HostSessionAction::ClearSelection),
+        AppIntent::StreckenteilungAktivieren => Some(HostSessionAction::StartResampleSelection),
+        AppIntent::ResamplePathRequested => Some(HostSessionAction::ApplyCurrentResample),
+        AppIntent::GroupEditStartRequested { record_id } => {
+            Some(HostSessionAction::StartGroupEdit {
+                record_id: *record_id,
+            })
+        }
+        AppIntent::GroupEditApplyRequested => Some(HostSessionAction::ApplyGroupEdit),
+        AppIntent::GroupEditCancelRequested => Some(HostSessionAction::CancelGroupEdit),
+        AppIntent::GroupEditToolRequested { record_id } => {
+            Some(HostSessionAction::OpenGroupEditTool {
+                record_id: *record_id,
+            })
+        }
+        AppIntent::GroupSelectionAsGroupRequested => {
+            Some(HostSessionAction::GroupSelectionAsGroup)
+        }
+        AppIntent::RemoveSelectedNodesFromGroupRequested => {
+            Some(HostSessionAction::RemoveSelectedNodesFromGroup)
+        }
+        AppIntent::SetGroupBoundaryNodes {
+            record_id,
+            entry_node_id,
+            exit_node_id,
+        } => Some(HostSessionAction::SetGroupBoundaryNodes {
+            record_id: *record_id,
+            entry_node_id: *entry_node_id,
+            exit_node_id: *exit_node_id,
+        }),
+        AppIntent::NodeSegmentBetweenIntersectionsRequested {
+            world_pos,
+            additive,
+        } => Some(HostSessionAction::RecomputeNodeSegmentSelection {
+            world_pos: [world_pos.x, world_pos.y],
+            additive: *additive,
+        }),
+        AppIntent::ToggleGroupLockRequested { segment_id } => {
+            Some(HostSessionAction::ToggleGroupLock {
+                segment_id: *segment_id,
+            })
+        }
+        AppIntent::DissolveGroupRequested { segment_id } => {
+            Some(HostSessionAction::DissolveGroup {
+                segment_id: *segment_id,
+            })
+        }
+        AppIntent::DissolveGroupConfirmed { segment_id } => {
+            Some(HostSessionAction::ConfirmDissolveGroup {
+                segment_id: *segment_id,
+            })
+        }
         AppIntent::CopySelectionRequested => Some(HostSessionAction::CopySelection),
         AppIntent::PasteStartRequested => Some(HostSessionAction::PasteStart),
         AppIntent::PasteConfirmRequested => Some(HostSessionAction::PasteConfirm),
         AppIntent::PasteCancelled => Some(HostSessionAction::PasteCancel),
+        AppIntent::OpenTraceAllFieldsDialogRequested => {
+            Some(HostSessionAction::OpenTraceAllFieldsDialog)
+        }
+        AppIntent::TraceAllFieldsConfirmed {
+            spacing,
+            offset,
+            tolerance,
+            corner_angle,
+            corner_rounding_radius,
+            corner_rounding_max_angle_deg,
+        } => Some(HostSessionAction::ConfirmTraceAllFields {
+            spacing: *spacing,
+            offset: *offset,
+            tolerance: *tolerance,
+            corner_angle: *corner_angle,
+            corner_rounding_radius: *corner_rounding_radius,
+            corner_rounding_max_angle_deg: *corner_rounding_max_angle_deg,
+        }),
+        AppIntent::TraceAllFieldsCancelled => Some(HostSessionAction::CancelTraceAllFields),
         _ => None,
     }
 }
@@ -594,14 +717,54 @@ pub fn map_host_action_to_intent(action: HostSessionAction) -> Option<AppIntent>
         HostSessionAction::RequestHeightmapSelection => {
             Some(AppIntent::HeightmapSelectionRequested)
         }
+        HostSessionAction::ClearHeightmap => Some(AppIntent::HeightmapCleared),
+        HostSessionAction::ConfirmHeightmapWarning => Some(AppIntent::HeightmapWarningConfirmed),
+        HostSessionAction::CancelHeightmapWarning => Some(AppIntent::HeightmapWarningCancelled),
         HostSessionAction::RequestBackgroundMapSelection => {
             Some(AppIntent::BackgroundMapSelectionRequested)
         }
         HostSessionAction::GenerateOverview => Some(AppIntent::GenerateOverviewRequested),
+        HostSessionAction::BrowseOverviewZip => Some(AppIntent::OverviewZipBrowseRequested),
+        HostSessionAction::GenerateOverviewFromZip { path } => {
+            Some(AppIntent::GenerateOverviewFromZip { path })
+        }
+        HostSessionAction::SelectZipBackgroundFile {
+            zip_path,
+            entry_name,
+        } => Some(AppIntent::ZipBackgroundFileSelected {
+            zip_path,
+            entry_name,
+        }),
+        HostSessionAction::CancelZipBrowser => Some(AppIntent::ZipBrowserCancelled),
+        HostSessionAction::ConfirmOverviewOptions => Some(AppIntent::OverviewOptionsConfirmed),
+        HostSessionAction::CancelOverviewOptions => Some(AppIntent::OverviewOptionsCancelled),
+        HostSessionAction::DismissPostLoadDialog => Some(AppIntent::PostLoadDialogDismissed),
+        HostSessionAction::ConfirmSaveBackgroundAsOverview => {
+            Some(AppIntent::SaveBackgroundAsOverviewConfirmed)
+        }
+        HostSessionAction::DismissSaveBackgroundAsOverview => {
+            Some(AppIntent::SaveBackgroundAsOverviewDismissed)
+        }
+        HostSessionAction::ConfirmDeduplication => Some(AppIntent::DeduplicateConfirmed),
+        HostSessionAction::CancelDeduplication => Some(AppIntent::DeduplicateCancelled),
         HostSessionAction::CurseplayImport => Some(AppIntent::CurseplayImportRequested),
         HostSessionAction::CurseplayExport => Some(AppIntent::CurseplayExportRequested),
         HostSessionAction::ResetCamera => Some(AppIntent::ResetCameraRequested),
+        HostSessionAction::ZoomIn => Some(AppIntent::ZoomInRequested),
+        HostSessionAction::ZoomOut => Some(AppIntent::ZoomOutRequested),
         HostSessionAction::ZoomToFit => Some(AppIntent::ZoomToFitRequested),
+        HostSessionAction::CenterOnNode { node_id } => {
+            Some(AppIntent::CenterOnNodeRequested { node_id })
+        }
+        HostSessionAction::SetRenderQuality { quality } => {
+            Some(AppIntent::RenderQualityChanged { quality })
+        }
+        HostSessionAction::ToggleBackgroundVisibility => {
+            Some(AppIntent::ToggleBackgroundVisibility)
+        }
+        HostSessionAction::ScaleBackground { factor } => {
+            Some(AppIntent::ScaleBackground { factor })
+        }
         HostSessionAction::ZoomToSelectionBounds => Some(AppIntent::ZoomToSelectionBoundsRequested),
         HostSessionAction::Exit => Some(AppIntent::ExitRequested),
         HostSessionAction::ToggleCommandPalette => Some(AppIntent::CommandPaletteToggled),
@@ -652,19 +815,19 @@ pub fn map_host_action_to_intent(action: HostSessionAction) -> Option<AppIntent>
             priority: map_host_connection_priority(priority),
         }),
         HostSessionAction::ConnectSelectedNodes => Some(AppIntent::ConnectSelectedNodesRequested),
-        HostSessionAction::SetAllConnectionsDirectionBetweenSelected { direction } => Some(
-            AppIntent::SetAllConnectionsDirectionBetweenSelectedRequested {
+        HostSessionAction::SetAllConnectionsDirectionBetweenSelected { direction } => {
+            Some(AppIntent::SetAllConnectionsDirectionBetweenSelectedRequested {
                 direction: map_host_connection_direction(direction),
-            },
-        ),
+            })
+        }
         HostSessionAction::InvertAllConnectionsBetweenSelected => {
             Some(AppIntent::InvertAllConnectionsBetweenSelectedRequested)
         }
-        HostSessionAction::SetAllConnectionsPriorityBetweenSelected { priority } => Some(
-            AppIntent::SetAllConnectionsPriorityBetweenSelectedRequested {
+        HostSessionAction::SetAllConnectionsPriorityBetweenSelected { priority } => {
+            Some(AppIntent::SetAllConnectionsPriorityBetweenSelectedRequested {
                 priority: map_host_connection_priority(priority),
-            },
-        ),
+            })
+        }
         HostSessionAction::RemoveAllConnectionsBetweenSelected => {
             Some(AppIntent::RemoveAllConnectionsBetweenSelectedRequested)
         }
@@ -682,6 +845,13 @@ pub fn map_host_action_to_intent(action: HostSessionAction) -> Option<AppIntent>
                 flag: map_host_node_flag(flag),
             })
         }
+        HostSessionAction::OpenCreateMarkerDialog { node_id } => {
+            Some(AppIntent::CreateMarkerRequested { node_id })
+        }
+        HostSessionAction::OpenEditMarkerDialog { node_id } => {
+            Some(AppIntent::EditMarkerRequested { node_id })
+        }
+        HostSessionAction::CancelMarkerDialog => Some(AppIntent::MarkerDialogCancelled),
         HostSessionAction::CreateMarker {
             node_id,
             name,
@@ -707,11 +877,72 @@ pub fn map_host_action_to_intent(action: HostSessionAction) -> Option<AppIntent>
         }
         HostSessionAction::DeleteSelected => Some(AppIntent::DeleteSelectedRequested),
         HostSessionAction::SelectAll => Some(AppIntent::SelectAllRequested),
+        HostSessionAction::InvertSelection => Some(AppIntent::InvertSelectionRequested),
         HostSessionAction::ClearSelection => Some(AppIntent::ClearSelectionRequested),
+        HostSessionAction::StartResampleSelection => Some(AppIntent::StreckenteilungAktivieren),
+        HostSessionAction::ApplyCurrentResample => Some(AppIntent::ResamplePathRequested),
+        HostSessionAction::StartGroupEdit { record_id } => {
+            Some(AppIntent::GroupEditStartRequested { record_id })
+        }
+        HostSessionAction::ApplyGroupEdit => Some(AppIntent::GroupEditApplyRequested),
+        HostSessionAction::CancelGroupEdit => Some(AppIntent::GroupEditCancelRequested),
+        HostSessionAction::OpenGroupEditTool { record_id } => {
+            Some(AppIntent::GroupEditToolRequested { record_id })
+        }
+        HostSessionAction::GroupSelectionAsGroup => {
+            Some(AppIntent::GroupSelectionAsGroupRequested)
+        }
+        HostSessionAction::RemoveSelectedNodesFromGroup => {
+            Some(AppIntent::RemoveSelectedNodesFromGroupRequested)
+        }
+        HostSessionAction::SetGroupBoundaryNodes {
+            record_id,
+            entry_node_id,
+            exit_node_id,
+        } => Some(AppIntent::SetGroupBoundaryNodes {
+            record_id,
+            entry_node_id,
+            exit_node_id,
+        }),
+        HostSessionAction::RecomputeNodeSegmentSelection {
+            world_pos,
+            additive,
+        } => Some(AppIntent::NodeSegmentBetweenIntersectionsRequested {
+            world_pos: Vec2::new(world_pos[0], world_pos[1]),
+            additive,
+        }),
+        HostSessionAction::ToggleGroupLock { segment_id } => {
+            Some(AppIntent::ToggleGroupLockRequested { segment_id })
+        }
+        HostSessionAction::DissolveGroup { segment_id } => {
+            Some(AppIntent::DissolveGroupRequested { segment_id })
+        }
+        HostSessionAction::ConfirmDissolveGroup { segment_id } => {
+            Some(AppIntent::DissolveGroupConfirmed { segment_id })
+        }
         HostSessionAction::CopySelection => Some(AppIntent::CopySelectionRequested),
         HostSessionAction::PasteStart => Some(AppIntent::PasteStartRequested),
         HostSessionAction::PasteConfirm => Some(AppIntent::PasteConfirmRequested),
         HostSessionAction::PasteCancel => Some(AppIntent::PasteCancelled),
+        HostSessionAction::OpenTraceAllFieldsDialog => {
+            Some(AppIntent::OpenTraceAllFieldsDialogRequested)
+        }
+        HostSessionAction::ConfirmTraceAllFields {
+            spacing,
+            offset,
+            tolerance,
+            corner_angle,
+            corner_rounding_radius,
+            corner_rounding_max_angle_deg,
+        } => Some(AppIntent::TraceAllFieldsConfirmed {
+            spacing,
+            offset,
+            tolerance,
+            corner_angle,
+            corner_rounding_radius,
+            corner_rounding_max_angle_deg,
+        }),
+        HostSessionAction::CancelTraceAllFields => Some(AppIntent::TraceAllFieldsCancelled),
         HostSessionAction::SubmitViewportInput { .. } => None,
         HostSessionAction::SubmitDialogResult { result } => {
             dialog_result_to_intent(map_dialog_result(result))
