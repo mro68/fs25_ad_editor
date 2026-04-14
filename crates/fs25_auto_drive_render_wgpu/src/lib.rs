@@ -1,5 +1,11 @@
 //! Host-neutraler wgpu-Renderer-Kern fuer den FS25 AutoDrive Editor.
 
+#[cfg(all(feature = "flutter-android", not(target_os = "android")))]
+compile_error!("Feature 'flutter-android' erfordert target_os = \"android\"");
+
+#[cfg(all(feature = "flutter-linux", not(target_os = "linux")))]
+compile_error!("Feature 'flutter-linux' erfordert target_os = \"linux\"");
+
 mod background_renderer;
 mod connection_renderer;
 mod export_core;
@@ -38,11 +44,14 @@ pub use external_texture::{
 use fs25_auto_drive_engine::shared::EditorOptions;
 pub(crate) use marker_renderer::MarkerRenderer;
 
-/// Erzeugt eine wgpu-Instanz mit explizitem Vulkan-Backend fuer die Flutter-Linux-Integration.
+/// Erzeugt eine wgpu-Instanz mit explizitem Vulkan-Backend fuer die Flutter-Vulkan-Integration.
 ///
 /// Diese Funktion ist die bevorzugte Einstiegsfunktion fuer den Flutter-GPU-Export-Stack.
 /// Die regulaere egui-Integration erstellt ihre eigene Instanz separat und ist nicht betroffen.
-#[cfg(all(feature = "flutter-linux", target_os = "linux"))]
+#[cfg(any(
+    all(feature = "flutter-linux", target_os = "linux"),
+    all(feature = "flutter-android", target_os = "android")
+))]
 pub fn create_vulkan_instance() -> wgpu::Instance {
     wgpu::Instance::new(wgpu::InstanceDescriptor {
         backends: wgpu::Backends::VULKAN,

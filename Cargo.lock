@@ -1779,6 +1779,7 @@ dependencies = [
  "image",
  "indexmap",
  "log",
+ "ndk",
  "pollster",
  "resvg 0.47.0",
  "thiserror 2.0.18",

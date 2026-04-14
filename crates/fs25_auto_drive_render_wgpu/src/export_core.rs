@@ -182,7 +182,7 @@ impl RenderExportCore {
     ///
     /// TODO(flutter-wiring): Wird aufgerufen sobald der Flutter-GPU-Pfad vollstaendig
     /// mit `flutter_gpu.rs` verbunden ist.
-    #[cfg(feature = "flutter-linux")]
+    #[cfg(any(feature = "flutter-linux", feature = "flutter-android"))]
     #[allow(dead_code)]
     pub(crate) fn render_scene_to_view(
         &mut self,
@@ -202,7 +202,8 @@ impl RenderExportCore {
 
         self.sync_background_asset(device, queue, assets);
         // MSAA-Resolve in interne OPTIMAL-Texture, dann Copy in die externe
-        // LINEAR-DMA-BUF-Texture. Direkt-Resolve in LINEAR schlaegt auf NVIDIA fehl.
+        // Vulkan-Export-Texture. Direkt-Resolve in LINEAR-Tiling schlaegt
+        // im Linux-DMA-BUF-Pfad auf NVIDIA fehl.
         Self::issue_render_pass(
             &mut self.renderer,
             device,
@@ -263,10 +264,11 @@ impl RenderExportCore {
         queue.submit(Some(encoder.finish()));
     }
 
-    /// Kopiert die interne 1x-Farb-Texture in eine externe Texture (DMA-BUF).
+    /// Kopiert die interne 1x-Farb-Texture in eine externe Vulkan-Export-Texture.
     ///
-    /// Noetig weil NVIDIA MSAA-Resolve direkt in LINEAR-Tiling nicht korrekt unterstuetzt.
-    #[cfg(feature = "flutter-linux")]
+    /// Noetig weil NVIDIA MSAA-Resolve direkt in LINEAR-Tiling im Linux-DMA-BUF-Pfad
+    /// nicht korrekt unterstuetzt.
+    #[cfg(any(feature = "flutter-linux", feature = "flutter-android"))]
     fn copy_to_external(
         device: &wgpu::Device,
         queue: &wgpu::Queue,
@@ -275,7 +277,7 @@ impl RenderExportCore {
         size: [u32; 2],
     ) {
         let mut encoder = device.create_command_encoder(&wgpu::CommandEncoderDescriptor {
-            label: Some("Flutter Copy to DMA-BUF"),
+            label: Some("Flutter Copy to External Texture"),
         });
         encoder.copy_texture_to_texture(
             src.as_image_copy(),

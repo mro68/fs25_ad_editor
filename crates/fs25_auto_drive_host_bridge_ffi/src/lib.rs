@@ -41,7 +41,10 @@ macro_rules! ffi_guard_ptr {
     }};
 }
 
-#[cfg(all(feature = "flutter-linux", target_os = "linux"))]
+#[cfg(any(
+    all(feature = "flutter-linux", target_os = "linux"),
+    all(feature = "flutter-android", target_os = "android")
+))]
 pub mod flutter_gpu;
 
 #[cfg(feature = "flutter")]

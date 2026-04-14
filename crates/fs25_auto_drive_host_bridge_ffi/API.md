@@ -8,7 +8,7 @@ Seit der FFI-Haertungswelle sind alle pointer-konsumierenden Exporte in Rust exp
 
 Seit dem Hard-Cut ist der RGBA-Pixelbuffer-v1 entfernt. Der einzige native Render-Transportpfad ist jetzt Shared-Texture mit explizitem Acquire/Release-Lifecycle.
 
-Unter den Feature-Flags `flutter` und `flutter-linux` exportiert die Crate zusaetzlich eine Flutter Control-Plane API. Dazu gehoeren sichere Rust-Helfer in `flutter_api.rs` sowie die direkte `fs25ad_flutter_session_*`-C-FFI-Surface fuer `dart:ffi`/`ffigen`. Daneben bleibt der Low-Level C-FFI GPU-Runtime-Stack fuer Linux/Vulkan mit DMA-BUF-Texture-Export erhalten.
+Unter den Feature-Flags `flutter`, `flutter-linux` und `flutter-android` exportiert die Crate zusaetzlich eine Flutter Control-Plane API. Dazu gehoeren sichere Rust-Helfer in `flutter_api.rs` sowie die direkte `fs25ad_flutter_session_*`-C-FFI-Surface fuer `dart:ffi`/`ffigen`. Daneben bleibt der Low-Level C-FFI GPU-Runtime-Stack fuer Vulkan-basierte Flutter-Texture-Exporte erhalten; der produktive DMA-BUF-Descriptorpfad bleibt in dieser Commit-Stufe Linux-spezifisch.
 
 Der Rendertransport ist separat ueber `FS25AD_HOST_BRIDGE_SHARED_TEXTURE_CONTRACT_VERSION = 3` versioniert. Die exportierten Native-Handle-Werte sind explizit opaque Runtime-Pointer fuer denselben Prozessraum und keine backend-nativen Vulkan-/Metal-/DX-Interop-Handles.
 
@@ -283,6 +283,7 @@ flowchart LR
 |---|---|
 | `flutter` | Aktiviert `flutter_api.rs` und die direkte `fs25ad_flutter_session_*`-C-FFI-Surface fuer Flutter |
 | `flutter-linux` | Impliziert `flutter`. Aktiviert `fs25_auto_drive_render_wgpu/flutter-linux` und das Modul `flutter_gpu.rs` mit C-FFI GPU-Runtime fuer Linux/Vulkan |
+| `flutter-android` | Impliziert `flutter`. Aktiviert `fs25_auto_drive_render_wgpu/flutter-android` und haengt Android in dieselben Vulkan-Guards fuer die Flutter-GPU-Integration ein; der produktive Export-Descriptorpfad folgt in den naechsten Commits |
 
 ## Flutter Control-Plane API (`flutter_api.rs`, Feature `flutter`)
 
@@ -326,9 +327,9 @@ Opaquer Session-Handle mit `Arc<Mutex<HostBridgeSession>>` fuer thread-sicheren 
 
 Die Rust-Seite verwendet keinen separaten Bridge-Codegen mehr. Flutter bindet die nativen Symbole direkt ueber `fs25ad_flutter_session_*` bzw. `dart:ffi`/`ffigen` an.
 
-## Flutter GPU-Runtime (`flutter_gpu.rs`, Feature `flutter-linux`)
+## Flutter GPU-Runtime (`flutter_gpu.rs`, Feature `flutter-linux` / `flutter-android`)
 
-Low-Level C-FFI fuer den GPU-Hot-Path auf Linux/Vulkan.
+Low-Level C-FFI fuer den GPU-Hot-Path auf Vulkan. Der aktuell produktive Descriptor-Export in dieser Commit-Stufe bleibt Linux/DMA-BUF-spezifisch.
 
 ### Typ: `GpuRuntimeHandle`
 
@@ -376,7 +377,7 @@ C-kompatible Repr des Linux-DMA-BUF-v4-Descriptors fuer den Export an Flutter/Im
 - DMA-BUF-Export ueber Vulkan External Memory (`vkGetMemoryFdKHR`) funktional; der FFI-Vertrag liefert den FD jetzt im v4-Linux-DMA-BUF-Descriptor statt als nackten `out_fd`
 - Panic-Isolation ueber `ffi_guard_bool!` / `catch_unwind`
 
-### `SharedTextureRuntime::new_for_flutter()` (Feature `flutter-linux`)
+### `SharedTextureRuntime::new_for_flutter()` (Feature `flutter-linux` / `flutter-android`)
 
 Konstruktor in `shared_texture_v2.rs` der eine explizit Vulkan-exklusive wgpu-Instanz via `create_vulkan_instance()` nutzt, um GPU-Sharing mit Flutter/Impeller zu ermoeglichen.
 

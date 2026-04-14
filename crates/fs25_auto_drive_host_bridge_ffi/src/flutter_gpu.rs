@@ -1,8 +1,9 @@
-//! Raw C-FFI fuer den Flutter GPU-Runtime-Stack (Linux/Vulkan).
+//! Raw C-FFI fuer den Flutter GPU-Runtime-Stack (Vulkan).
 //!
 //! Dieses Modul exportiert Low-Level C-Funktionen fuer den GPU-Hot-Path.
 //! Alle Funktionen sind Panic-isoliert via [`ffi_guard_bool!`] und [`ffi_guard_ptr!`]
 //! aus dem Parent-Modul.
+//! Der aktuelle produktive Descriptor-Exportpfad in dieser Commit-Stufe bleibt Linux/Vulkan.
 //!
 //! # Lebenszyklus
 //! ```text
@@ -17,22 +18,32 @@
 //! Alle Funktionen sind `extern "C"` und koennen von C/Dart aufgerufen werden.
 //! Der Aufrufer ist fuer korrekte Pointer-Gueltigkeit und Lebensdauer verantwortlich.
 
-use crate::flutter_api::FlutterSessionHandle;
-use crate::texture_registration_v4::{
-    Fs25adTextureRegistrationV4LinuxDmabufDescriptor, Fs25adTextureRegistrationV4LinuxDmabufPlane,
+#[cfg(all(target_os = "linux", feature = "flutter-linux"))]
+use crate::{
+    clear_last_error,
+    flutter_api::FlutterSessionHandle,
+    set_last_error,
+    texture_registration_v4::{
+        Fs25adTextureRegistrationV4LinuxDmabufDescriptor,
+        Fs25adTextureRegistrationV4LinuxDmabufPlane,
+    },
 };
-use crate::{clear_last_error, set_last_error};
+#[cfg(all(target_os = "linux", feature = "flutter-linux"))]
 use anyhow::{anyhow, Context, Result};
+#[cfg(all(target_os = "linux", feature = "flutter-linux"))]
 use fs25_auto_drive_host_bridge::HostBridgeSession;
+#[cfg(all(target_os = "linux", feature = "flutter-linux"))]
 use fs25_auto_drive_render_wgpu::{
     external_texture::vulkan_linux::VulkanDmaBufTexture, ExternalTextureExport,
     LinuxDmabufDescriptor, LinuxDmabufPlane, SharedTextureRuntime, MAX_LINUX_DMABUF_PLANES,
 };
+#[cfg(all(target_os = "linux", feature = "flutter-linux"))]
 use std::sync::{Arc, Mutex};
 
 /// Interner GPU-Runtime-Zustand fuer Flutter-Integration.
 ///
 /// Kapselt wgpu-Device/Queue, den Renderer-Zustand und die exportierbare Texture.
+#[cfg(all(target_os = "linux", feature = "flutter-linux"))]
 pub struct GpuRuntimeHandle {
     /// Gehalten damit die Instanz nicht vorzeitig gedroppt wird (Device wuerde orphan).
     _instance: wgpu::Instance,
@@ -46,6 +57,7 @@ pub struct GpuRuntimeHandle {
     session: Arc<Mutex<HostBridgeSession>>,
 }
 
+#[cfg(all(target_os = "linux", feature = "flutter-linux"))]
 impl GpuRuntimeHandle {
     #[allow(clippy::arc_with_non_send_sync)] // HostBridgeSession ist !Send, aber FFI-Zugriff ist seriell
     #[allow(clippy::arc_with_non_send_sync)] // HostBridgeSession ist !Send, aber FFI-Zugriff ist seriell
@@ -102,10 +114,12 @@ impl GpuRuntimeHandle {
     }
 }
 
+#[cfg(all(target_os = "linux", feature = "flutter-linux"))]
 fn log_gpu_error(function_name: &str, error: &anyhow::Error) {
     eprintln!("[FS25][flutter_gpu] {function_name} failed: {error:#}");
 }
 
+#[cfg(all(target_os = "linux", feature = "flutter-linux"))]
 fn log_result<T>(function_name: &str, result: Result<T>) -> Result<T> {
     if let Err(error) = &result {
         log_gpu_error(function_name, error);
@@ -113,6 +127,7 @@ fn log_result<T>(function_name: &str, result: Result<T>) -> Result<T> {
     result
 }
 
+#[cfg(all(target_os = "linux", feature = "flutter-linux"))]
 fn with_runtime<T>(
     handle: *mut GpuRuntimeHandle,
     f: impl FnOnce(&mut GpuRuntimeHandle) -> Result<T>,
@@ -125,6 +140,7 @@ fn with_runtime<T>(
     f(runtime)
 }
 
+#[cfg(all(target_os = "linux", feature = "flutter-linux"))]
 fn map_linux_dmabuf_descriptor(
     descriptor: LinuxDmabufDescriptor,
 ) -> Fs25adTextureRegistrationV4LinuxDmabufDescriptor {
@@ -160,6 +176,7 @@ fn map_linux_dmabuf_descriptor(
 ///
 /// Gibt einen opaques Handle zurueck der mit `fs25ad_gpu_runtime_dispose` freizugeben ist.
 /// Gibt bei Fehler `NULL` zurueck; Fehlertext via `fs25ad_host_bridge_last_error_message`.
+#[cfg(all(target_os = "linux", feature = "flutter-linux"))]
 #[unsafe(no_mangle)]
 pub extern "C" fn fs25ad_gpu_runtime_new(width: u32, height: u32) -> *mut GpuRuntimeHandle {
     clear_last_error();
@@ -185,6 +202,7 @@ pub extern "C" fn fs25ad_gpu_runtime_new(width: u32, height: u32) -> *mut GpuRun
 ///
 /// # Safety
 /// `session_handle` muss auf einen gueltigen `FlutterSessionHandle` zeigen.
+#[cfg(all(target_os = "linux", feature = "flutter-linux"))]
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn fs25ad_gpu_runtime_new_with_session(
     session_handle: *const FlutterSessionHandle,
@@ -217,6 +235,7 @@ pub unsafe extern "C" fn fs25ad_gpu_runtime_new_with_session(
 /// # Safety
 /// `raw_arc` muss ein gueltiger, noch nicht freigegebener
 /// `Arc::into_raw(Arc<Mutex<HostBridgeSession>>)`-Zeiger sein.
+#[cfg(all(target_os = "linux", feature = "flutter-linux"))]
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn fs25ad_gpu_runtime_new_with_shared_session_arc(
     raw_arc: i64,
@@ -243,6 +262,7 @@ pub unsafe extern "C" fn fs25ad_gpu_runtime_new_with_shared_session_arc(
 /// Rendert den naechsten Frame direkt in die exportierbare Vulkan-Texture.
 ///
 /// Gibt `true` bei Erfolg zurueck, `false` bei Fehler.
+#[cfg(all(target_os = "linux", feature = "flutter-linux"))]
 #[unsafe(no_mangle)]
 pub extern "C" fn fs25ad_gpu_runtime_render(handle: *mut GpuRuntimeHandle) -> bool {
     ffi_guard_bool!({
@@ -285,6 +305,7 @@ pub extern "C" fn fs25ad_gpu_runtime_render(handle: *mut GpuRuntimeHandle) -> bo
 /// # Safety
 /// `out_descriptor` muss ein gueltiger, nicht-null Zeiger auf einen
 /// `Fs25adTextureRegistrationV4LinuxDmabufDescriptor` sein.
+#[cfg(all(target_os = "linux", feature = "flutter-linux"))]
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn fs25ad_gpu_runtime_export_texture(
     handle: *mut GpuRuntimeHandle,
@@ -340,6 +361,7 @@ pub unsafe extern "C" fn fs25ad_gpu_runtime_export_texture(
 /// Passt die Groesse des GPU-Runtime-Render-Targets an.
 ///
 /// Gibt `true` bei Erfolg zurueck, `false` bei Fehler.
+#[cfg(all(target_os = "linux", feature = "flutter-linux"))]
 #[unsafe(no_mangle)]
 pub extern "C" fn fs25ad_gpu_runtime_resize(
     handle: *mut GpuRuntimeHandle,
@@ -367,6 +389,7 @@ pub extern "C" fn fs25ad_gpu_runtime_resize(
 ///
 /// # Safety
 /// `handle` muss durch `fs25ad_gpu_runtime_new` alloziert worden sein.
+#[cfg(all(target_os = "linux", feature = "flutter-linux"))]
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn fs25ad_gpu_runtime_dispose(handle: *mut GpuRuntimeHandle) {
     if !handle.is_null() {
@@ -375,7 +398,7 @@ pub unsafe extern "C" fn fs25ad_gpu_runtime_dispose(handle: *mut GpuRuntimeHandl
     }
 }
 
-#[cfg(test)]
+#[cfg(all(test, target_os = "linux", feature = "flutter-linux"))]
 mod tests {
     use super::*;
 

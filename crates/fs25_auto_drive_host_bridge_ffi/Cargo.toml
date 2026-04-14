@@ -12,6 +12,8 @@ crate-type = ["cdylib", "rlib"]
 flutter = []
 ## Aktiviert GPU-Export-Stack für Flutter auf Linux/Vulkan.
 flutter-linux = ["flutter", "fs25_auto_drive_render_wgpu/flutter-linux"]
+## Aktiviert GPU-Export-Stack fuer Flutter auf Android/Vulkan.
+flutter-android = ["flutter", "fs25_auto_drive_render_wgpu/flutter-android"]
 
 [dependencies]
 anyhow = "1.0.102"
