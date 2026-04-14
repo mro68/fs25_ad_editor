@@ -7,7 +7,7 @@
 #[cfg(all(target_os = "linux", feature = "flutter-linux"))]
 pub mod vulkan_linux;
 
-/// Stub-Modul fuer zukuenftige Android-Plattformstuetze.
+/// Android/Vulkan-Implementierung des GPU-Texture-Exports via AHardwareBuffer.
 #[cfg(all(target_os = "android", feature = "flutter-android"))]
 pub mod vulkan_android;
 
@@ -22,7 +22,7 @@ pub mod dx12_windows;
 #[derive(Debug, Clone)]
 pub enum PlatformTextureDescriptor {
     /// Linux: DMA-BUF File Descriptor fuer Vulkan/Impeller-Import.
-    #[cfg(target_os = "linux")]
+    #[cfg(all(target_os = "linux", feature = "flutter-linux"))]
     LinuxDmaBuf {
         /// Exportierter DMA-BUF-Filedescriptor (Eigentuemer ist der Aufrufer).
         fd: i32,
@@ -36,6 +36,14 @@ pub enum PlatformTextureDescriptor {
         format: u32,
         /// DRM-Format-Modifier (z.B. `DRM_FORMAT_MOD_LINEAR`).
         modifier: u64,
+    },
+    /// Android: Opaker AHardwareBuffer-Zeiger fuer Vulkan/EGL-Import.
+    #[cfg(all(target_os = "android", feature = "flutter-android"))]
+    AndroidHardwareBuffer {
+        /// Opaker Pointer auf einen AHardwareBuffer, dessen Referenzzaehler
+        /// durch `AHardwareBuffer_acquire()` fuer den Empfaenger erhoeht wurde.
+        /// Der Empfaenger muss `AHardwareBuffer_release()` aufrufen.
+        hardware_buffer_ptr: usize,
     },
 }
 
@@ -78,11 +86,16 @@ pub trait ExternalTextureExport {
     /// Exportiert den plattformnativen Handle fuer Flutter.
     ///
     /// # Eigentuemer-Semantik
-    /// Der zurueckgegebene [`PlatformTextureDescriptor`] (inklusive eines enthaltenen `fd`
-    /// bei [`PlatformTextureDescriptor::LinuxDmaBuf`]) wird an den **Aufrufer uebertragen**.
-    /// Der Aufrufer ist verantwortlich fuer `close(fd)` nach der Nutzung. Implementierungen
-    /// duerfen intern einen separaten, nicht an den Aufrufer uebertragenen Dateideskriptor
-    /// behalten, um spaetere Exportaufrufe erneut bedienen zu koennen.
+    /// Der zurueckgegebene [`PlatformTextureDescriptor`] wird an den **Aufrufer uebertragen**.
+    ///
+    /// - Linux: Ein enthaltenes `fd` in [`PlatformTextureDescriptor::LinuxDmaBuf`] gehoert dem
+    ///   Aufrufer; er ist fuer `close(fd)` nach der Nutzung verantwortlich. Implementierungen
+    ///   duerfen intern einen separaten, nicht an den Aufrufer uebertragenen Dateideskriptor
+    ///   behalten, um spaetere Exportaufrufe erneut bedienen zu koennen.
+    /// - Android: Ein enthaltenes `hardware_buffer_ptr` in
+    ///   [`PlatformTextureDescriptor::AndroidHardwareBuffer`] referenziert einen bereits per
+    ///   `AHardwareBuffer_acquire()` fuer den Empfaenger inkrementierten Buffer. Der Aufrufer
+    ///   ist fuer das spaetere `AHardwareBuffer_release()` verantwortlich.
     ///
     /// # Fehler
     /// Gibt [`ExternalTextureError`] zurueck wenn der Export fehlschlaegt.

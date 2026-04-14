@@ -25,7 +25,7 @@ Der v4-Vertrag ist bewusst nur der additive Transport- und Lifecycle-Slice. Echt
 | `shared_texture.rs` | Shared-Texture-Runtime mit Frame-Lifecycle und opaque Runtime-Handle-Metadaten |
 | `external_texture/` | Plattformspezifischer GPU-Texture-Export fuer Flutter-Integration (`ExternalTextureExport` Trait, `PlatformTextureDescriptor`, `ExternalTextureError`) |
 | `external_texture/vulkan_linux.rs` | Linux/Vulkan-Implementierung: `VulkanDmaBufTexture` mit Vulkan-External-Memory und DMA-BUF-FD-Export (cfg-gated: `flutter-linux` + `linux`) |
-| `external_texture/vulkan_android.rs` | Stub fuer zukuenftige Android-Plattformstuetze (cfg-gated: `flutter-android` + `android`) |
+| `external_texture/vulkan_android.rs` | Android/Vulkan-Implementierung: `VulkanAhbTexture` mit Vulkan-External-Memory und AHardwareBuffer-Export (cfg-gated: `flutter-android` + `android`) |
 | `external_texture/dx12_windows.rs` | Stub fuer zukuenftige Windows-Plattformstuetze |
 | `texture_registration/*` | Additiver `v4`-Vertrag (Capabilities, Lifecycle-State-Machine, plattformspezifische Payload-Familien) |
 | `background_renderer.rs` | Hintergrund-Quad, Upload und zoomabhaengiges Sampling |
@@ -62,9 +62,10 @@ Der v4-Vertrag ist bewusst nur der additive Transport- und Lifecycle-Slice. Echt
 | `RenderScene` | Re-exportierter per-frame Render-Vertrag aus `fs25_auto_drive_engine::shared` |
 | `RenderQuality` | Re-exportierte Qualitaetsstufe des Render-Vertrags |
 | `ExternalTextureExport` | Trait fuer plattformspezifischen GPU-Texture-Export an Flutter (create, export, resize, texture_view) |
-| `PlatformTextureDescriptor` | Enum mit plattformspezifischen Texture-Metadaten (aktuell: `LinuxDmaBuf`-Variante) |
+| `PlatformTextureDescriptor` | Enum mit plattformspezifischen Texture-Metadaten (`LinuxDmaBuf` unter Linux, `AndroidHardwareBuffer` unter Android) |
 | `ExternalTextureError` | Fehler beim Texture-Export (`ExtensionNotAvailable`, `CreationFailed`, `ExportFailed`, `PlatformNotSupported`) |
 | `VulkanDmaBufTexture` | Linux/Vulkan-Implementierung von `ExternalTextureExport` via Vulkan-External-Memory und DMA-BUF (cfg-gated: `flutter-linux` + `linux`) |
+| `VulkanAhbTexture` | Android/Vulkan-Implementierung von `ExternalTextureExport` via Vulkan-External-Memory und AHardwareBuffer (cfg-gated: `flutter-android` + `android`) |
 
 ## Oeffentliche Re-Exports
 
@@ -171,7 +172,7 @@ flowchart LR
 | Feature | Zweck |
 |---|---|
 | `flutter-linux` | Aktiviert `ash` (Vulkan HAL) und `wgpu/vulkan`. Schaltet `create_vulkan_instance()`, das `external_texture/vulkan_linux`-Modul, `RenderExportCore::render_scene_to_view()` und `SharedTextureRuntime::render_to_view()` frei. |
-| `flutter-android` | Aktiviert `ash`, `ndk` (API 26+) und `wgpu/vulkan`. Schaltet die gemeinsamen Vulkan-Guards fuer `create_vulkan_instance()`, `RenderExportCore::render_scene_to_view()` und `SharedTextureRuntime::render_to_view()` frei und exportiert das Android-Stub-Modul `external_texture/vulkan_android` auf `target_os = "android"`. |
+| `flutter-android` | Aktiviert `ash`, `ndk` (API 26+), `ndk-sys` fuer Raw-AHardwareBuffer-Refcounting und `wgpu/vulkan`. Schaltet die gemeinsamen Vulkan-Guards fuer `create_vulkan_instance()`, `RenderExportCore::render_scene_to_view()` und `SharedTextureRuntime::render_to_view()` frei und exportiert `external_texture/vulkan_android` mit produktivem AHardwareBuffer-Export auf `target_os = "android"`. |
 
 ## Flutter-Texture-Export (`external_texture/`)
 
@@ -192,13 +193,25 @@ pub trait ExternalTextureExport {
 
 Plattformspezifische Metadaten fuer den Flutter-Host-Import:
 
-- `LinuxDmaBuf { fd, width, height, stride, format, modifier }` — DMA-BUF File Descriptor (cfg-gated: `linux`)
+- `LinuxDmaBuf { fd, width, height, stride, format, modifier }` — DMA-BUF File Descriptor (cfg-gated: `flutter-linux` + `linux`)
+- `AndroidHardwareBuffer { hardware_buffer_ptr }` — opaker `AHardwareBuffer*` mit bereits fuer den Empfaenger inkrementierter Referenzzaehlung (cfg-gated: `flutter-android` + `android`)
+
+Eigentuemer-Semantik von `export_descriptor()`:
+
+- Linux: Der Aufrufer uebernimmt den exportierten FD und muss `close(fd)` ausfuehren.
+- Android: Der Aufrufer erhaelt einen zusaetzlich `AHardwareBuffer_acquire()`-ten Zeiger und muss spaeter `AHardwareBuffer_release()` ausfuehren.
 
 ### Struct: `VulkanDmaBufTexture` (Linux)
 
 Implementiert `ExternalTextureExport` fuer Linux/Vulkan. Erzeugt ein explizit exportfaehiges Vulkan-Image samt dedizierter `VkDeviceMemory`-Allocation, exportiert einen persistenten DMA-BUF-FD ueber `vkGetMemoryFdKHR` und wrappt das Ergebnis anschliessend als `wgpu::Texture` fuer den Renderpfad.
 
 **Status:** Produktiver Vulkan-HAL-Pfad fuer `VK_EXTERNAL_MEMORY_HANDLE_TYPE_DMA_BUF_BIT_EXT`; bei aktivierter `VK_EXT_image_drm_format_modifier` wird der Stride per `vkGetImageSubresourceLayout` aus dem Vulkan-Image gelesen, ohne diese Extension faellt der Pfad fuer `Rgba8UnormSrgb` konservativ auf `width * 4` zurueck und markiert den Modifier weiterhin als `DRM_FORMAT_MOD_INVALID`.
+
+### Struct: `VulkanAhbTexture` (Android)
+
+Implementiert `ExternalTextureExport` fuer Android/Vulkan. Erzeugt ein explizit exportfaehiges Vulkan-Image samt dedizierter `VkDeviceMemory`-Allocation, exportiert einen persistent gehaltenen `AHardwareBuffer` ueber `vkGetMemoryAndroidHardwareBufferANDROID` und wrappt das Ergebnis anschliessend als `wgpu::Texture` fuer den Renderpfad.
+
+**Status:** Produktiver Vulkan-HAL-Pfad fuer `VK_ANDROID_external_memory_android_hardware_buffer`; `export_descriptor()` erhoeht vor jeder Rueckgabe den AHardwareBuffer-Refcount fuer den Empfaenger, waehrend die interne persistente Referenz erst im `Drop` von `VulkanAhbTexture` wieder freigegeben wird.
 
 ### Hilfsfunktionen (vulkan_linux)
 
