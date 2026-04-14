@@ -6,6 +6,7 @@
 mod actions;
 mod chrome;
 mod connection_pair;
+mod context_menu;
 mod dialogs;
 mod editing;
 mod input;
@@ -20,6 +21,7 @@ mod viewport;
 pub use actions::{HostActiveTool, HostRouteToolAction, HostSessionAction, HostTangentSource};
 pub use chrome::HostChromeSnapshot;
 pub use connection_pair::{HostConnectionPairEntry, HostConnectionPairSnapshot};
+pub use context_menu::{HostContextMenuAction, HostContextMenuSnapshot, HostContextMenuVariant};
 pub use dialogs::{
     HostConfirmDissolveDialogSnapshot, HostDedupDialogSnapshot, HostDialogRequest,
     HostDialogRequestKind, HostDialogResult, HostDialogSnapshot, HostFieldDetectionSource,
@@ -68,6 +70,12 @@ pub type EngineConnectionPairEntry = HostConnectionPairEntry;
 pub type EngineConnectionPairSnapshot = HostConnectionPairSnapshot;
 /// Kompatibilitaetsalias fuer bestehende Flutter-/FFI-Call-Sites.
 pub type EngineDialogResult = HostDialogResult;
+/// Kompatibilitaetsalias fuer bestehende Flutter-/FFI-Call-Sites.
+pub type EngineContextMenuAction = HostContextMenuAction;
+/// Kompatibilitaetsalias fuer bestehende Flutter-/FFI-Call-Sites.
+pub type EngineContextMenuSnapshot = HostContextMenuSnapshot;
+/// Kompatibilitaetsalias fuer bestehende Flutter-/FFI-Call-Sites.
+pub type EngineContextMenuVariant = HostContextMenuVariant;
 /// Kompatibilitaetsalias fuer bestehende Flutter-/FFI-Call-Sites.
 pub type EngineDialogSnapshot = HostDialogSnapshot;
 /// Kompatibilitaetsalias fuer bestehende Flutter-/FFI-Call-Sites.

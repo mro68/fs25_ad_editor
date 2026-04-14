@@ -253,3 +253,61 @@ Commit 4 fuer Flutter-Bridge-Parity: serialisierbaren `HostEditingSnapshot` fuer
 - Es wurde bewusst **kein** neuer `HostSessionAction::UpdateResampleConfig`-Write-Pfad eingefuehrt, weil der Commit fuer die geforderte Flutter-Paritaet mit einem read-only Snapshot auskommt und damit keinen neuen App-Flow-Slice in der Engine noetig macht.
 - Die Boundary-Kandidaten werden read-only ueber `RoadMap::boundary_nodes(...)` aus dem aktuellen `GroupRecord` abgeleitet; `editing_snapshot()` bleibt dadurch ein reiner `&self`-Read-Seam ohne Cache-Warming-Mutation.
 - `docs/howto/` ist fuer diesen Commit nicht betroffen.
+
+---
+
+## Aufgabe
+
+Commit 5 fuer Flutter-Bridge-Parity: serialisierbaren `HostContextMenuSnapshot` mit zentraler Precondition-Logik in der Host-Bridge einfuehren und ueber die Flutter-Control-Plane als JSON delegieren.
+
+## Geaenderte Dateien
+
+- `crates/fs25_auto_drive_host_bridge/src/dto/context_menu.rs`
+  - Neues DTO-Modul fuer `HostContextMenuSnapshot`, `HostContextMenuAction` und `HostContextMenuVariant` angelegt.
+  - Serde-Roundtrip-Test fuer den kompletten Kontextmenue-Snapshot ergaenzt.
+- `crates/fs25_auto_drive_host_bridge/src/dto/mod.rs`
+  - Neues Kontextmenue-Modul eingebunden.
+  - Host-Re-Exports und `Engine*`-Kompatibilitaets-Aliase fuer die Kontextmenue-DTO-Familie ergaenzt.
+- `crates/fs25_auto_drive_host_bridge/src/lib.rs`
+  - Crate-Root-Re-Exports fuer die neue Kontextmenue-Snapshot-Familie erweitert.
+- `crates/fs25_auto_drive_host_bridge/src/session/context_menu.rs`
+  - Bridge-interne Kontextmenue-Logik neu angelegt.
+  - Menue-Varianten, stabile Action-IDs, lokalisierte Labels und die egui-aequivalenten Preconditions fuer Selektion, Verbindungen, Gruppen, Clipboard und Route-Tool zentralisiert.
+  - Session-Tests fuer enabled/disabled-Status von Actions und Marker-Preconditions ergaenzt.
+- `crates/fs25_auto_drive_host_bridge/src/session/mod.rs`
+  - Neue Session-Methode `context_menu_snapshot(focus_node_id)` hinzugefuegt.
+- `crates/fs25_auto_drive_host_bridge/API.md`
+  - Oeffentliche Host-Bridge-API fuer `HostContextMenuSnapshot` und `HostBridgeSession::context_menu_snapshot()` dokumentiert.
+- `crates/fs25_auto_drive_host_bridge_ffi/src/flutter_api.rs`
+  - Neuer FRB-Delegate `flutter_session_context_menu_snapshot_json(handle, focus_node_id_or_neg1)` hinzugefuegt.
+  - JSON-Roundtrip-Test fuer den Kontextmenue-Snapshot ergaenzt.
+- `crates/fs25_auto_drive_host_bridge_ffi/src/api.rs`
+  - Duenner FRB-Re-Export fuer `flutter_session_context_menu_snapshot_json()` hinzugefuegt.
+- `crates/fs25_auto_drive_host_bridge_ffi/API.md`
+  - Flutter-Control-Plane-Doku um den Kontextmenue-Snapshot-Delegate erweitert.
+- `docs/ROADMAP.md`
+  - Flutter-Backend Phase 1 um den abgeschlossenen Kontextmenue-Snapshot-Slice ergaenzt.
+- `docs/ARCHITECTURE_PLAN.md`
+  - Control-Plane-Beschreibung um die neue Kontextmenue-Snapshot-Surface erweitert.
+
+## Verifikation
+
+- `nocorrect cargo fmt --all`
+  - Erfolgreich.
+- `nocorrect cargo check -p fs25_auto_drive_host_bridge`
+  - Erfolgreich.
+- `nocorrect cargo test -p fs25_auto_drive_host_bridge`
+  - Erfolgreich.
+  - 88 Tests bestanden, 0 fehlgeschlagen.
+- `nocorrect cargo clippy -p fs25_auto_drive_host_bridge -- -D warnings`
+  - Erfolgreich.
+  - Keine Warnungen.
+- `nocorrect cargo check -p fs25_auto_drive_host_bridge_ffi --features flutter-linux`
+  - Erfolgreich.
+  - Nur der bekannte FRB-Codegen-Stub-Hinweis unter aktivem `flutter`-Feature blieb sichtbar.
+
+## Zusatznotizen
+
+- Die Bridge liefert bewusst eine flache Aktionsliste mit stable IDs plus `enabled`-Flag pro aktueller Menue-Variante; Flutter muss dadurch keine Preconditions nachbauen und kann disabled Actions bei Bedarf lokal ausblenden.
+- Die Variante `RouteToolActive` nutzt weiter den bestehenden `HostRouteToolViewportSnapshot` fuer Tangenten-/Route-Tool-spezifische Zusatzdaten; Commit 5 zieht nur die allgemeine Command-Sichtbarkeit in die Bridge.
+- `docs/howto/` ist fuer diesen Commit nicht betroffen.

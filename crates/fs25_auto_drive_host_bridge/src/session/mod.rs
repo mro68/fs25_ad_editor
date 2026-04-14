@@ -16,19 +16,20 @@ use indexmap::IndexSet;
 use std::collections::{BTreeSet, HashMap};
 
 mod chrome_state;
+mod context_menu;
 pub use chrome_state::HostLocalDialogState;
 
 use crate::dispatch::HostViewportInputState;
 use crate::dto::{
     HostActiveTool, HostChromeSnapshot, HostConnectionPairEntry, HostConnectionPairSnapshot,
-    HostDefaultConnectionDirection, HostDefaultConnectionPriority, HostDialogRequest,
-    HostDialogResult, HostDialogSnapshot, HostEditableGroupSummary, HostEditingOptionsSnapshot,
-    HostEditingSnapshot, HostFieldDetectionSource, HostGroupBoundaryCandidateSnapshot,
-    HostGroupEditSnapshot, HostMarkerInfo, HostMarkerListSnapshot, HostNodeDetails, HostNodeFlag,
-    HostNodeMarkerInfo, HostNodeNeighbor, HostOverviewLayersSnapshot, HostOverviewSourceContext,
-    HostResampleEditSnapshot, HostResampleMode, HostRouteToolId, HostRouteToolViewportSnapshot,
-    HostSelectionSnapshot, HostSessionAction, HostSessionSnapshot, HostViewportGeometrySnapshot,
-    HostViewportSnapshot,
+    HostContextMenuSnapshot, HostDefaultConnectionDirection, HostDefaultConnectionPriority,
+    HostDialogRequest, HostDialogResult, HostDialogSnapshot, HostEditableGroupSummary,
+    HostEditingOptionsSnapshot, HostEditingSnapshot, HostFieldDetectionSource,
+    HostGroupBoundaryCandidateSnapshot, HostGroupEditSnapshot, HostMarkerInfo,
+    HostMarkerListSnapshot, HostNodeDetails, HostNodeFlag, HostNodeMarkerInfo, HostNodeNeighbor,
+    HostOverviewLayersSnapshot, HostOverviewSourceContext, HostResampleEditSnapshot,
+    HostResampleMode, HostRouteToolId, HostRouteToolViewportSnapshot, HostSelectionSnapshot,
+    HostSessionAction, HostSessionSnapshot, HostViewportGeometrySnapshot, HostViewportSnapshot,
 };
 
 const MAX_RESAMPLE_CHAIN_NODES: usize = 500;
@@ -823,6 +824,16 @@ impl HostBridgeSession {
     /// Escape-Hatches pollen koennen.
     pub fn editing_snapshot(&self) -> HostEditingSnapshot {
         build_editing_snapshot(&self.state)
+    }
+
+    /// Liefert einen serialisierbaren Snapshot des aktuell relevanten Kontextmenues.
+    ///
+    /// Die Bridge spiegelt damit die egui-Preconditions fuer Kontextmenue-Aktionen
+    /// host-neutral in einer flachen Aktionsliste. `focus_node_id` entspricht dem
+    /// vom Host bereits ermittelten fokussierten Node; `None` bedeutet Klick in den
+    /// leeren Bereich.
+    pub fn context_menu_snapshot(&self, focus_node_id: Option<u64>) -> HostContextMenuSnapshot {
+        context_menu::build_context_menu_snapshot(&self.state, focus_node_id)
     }
 
     /// Serialisiert den aktuell inspizierten Node als JSON fuer Flutter.

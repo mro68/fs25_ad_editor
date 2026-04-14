@@ -17,6 +17,20 @@ use fs25_auto_drive_host_bridge::dto::{host_ui_snapshot_json, viewport_overlay_s
 use fs25_auto_drive_host_bridge::{HostBridgeSession, HostDialogResult, HostSessionAction};
 use std::sync::{Arc, Mutex};
 
+fn decode_focus_node_id(focus_node_id_or_neg1: i64) -> Result<Option<u64>> {
+    if focus_node_id_or_neg1 == -1 {
+        return Ok(None);
+    }
+
+    let node_id = u64::try_from(focus_node_id_or_neg1).map_err(|_| {
+        anyhow::anyhow!(
+            "flutter_session_context_menu_snapshot_json: ungueltige focus_node_id {}",
+            focus_node_id_or_neg1
+        )
+    })?;
+    Ok(Some(node_id))
+}
+
 /// Opaquer Session-Handle fuer die Flutter Control-Plane.
 ///
 /// Der Handle kapselt eine `HostBridgeSession` hinter `Arc<Mutex<...>>`, damit
@@ -210,6 +224,20 @@ pub fn flutter_session_editing_snapshot_json(handle: &FlutterSessionHandle) -> R
     })
 }
 
+/// Gibt den aktuellen host-neutralen Kontextmenue-Snapshot als JSON-String zurueck.
+///
+/// `focus_node_id_or_neg1` nutzt `-1` als FFI-Sentinel fuer "kein Fokus-Node".
+pub fn flutter_session_context_menu_snapshot_json(
+    handle: &FlutterSessionHandle,
+    focus_node_id_or_neg1: i64,
+) -> Result<String> {
+    let focus_node_id = decode_focus_node_id(focus_node_id_or_neg1)?;
+    let snapshot = handle.with_session(|s| s.context_menu_snapshot(focus_node_id))?;
+    serde_json::to_string(&snapshot).map_err(|e| {
+        anyhow::anyhow!("flutter_session_context_menu_snapshot_json: Serialisierungsfehler: {e}")
+    })
+}
+
 /// Gibt den aktuellen host-neutralen Viewport-Overlay-Snapshot als JSON-String zurueck.
 ///
 /// `cursor_world_x` und `cursor_world_y` beschreiben die aktuelle Cursor-Position
@@ -274,9 +302,9 @@ pub fn flutter_session_release_shared_arc_raw(raw: i64) {
 #[cfg(test)]
 mod tests {
     use fs25_auto_drive_host_bridge::{
-        HostConnectionPairSnapshot, HostDialogRequest, HostDialogRequestKind, HostDialogResult,
-        HostDialogSnapshot, HostEditingSnapshot, HostMarkerListSnapshot,
-        HostRouteToolViewportSnapshot, HostSessionAction,
+        HostConnectionPairSnapshot, HostContextMenuSnapshot, HostDialogRequest,
+        HostDialogRequestKind, HostDialogResult, HostDialogSnapshot, HostEditingSnapshot,
+        HostMarkerListSnapshot, HostRouteToolViewportSnapshot, HostSessionAction,
     };
 
     use super::*;
@@ -383,6 +411,25 @@ mod tests {
 
         assert!(snapshot.editable_groups.is_empty());
         assert!(!snapshot.resample.active);
+
+        flutter_session_dispose(handle);
+    }
+
+    /// Prueft, dass context_menu_snapshot_json ein parsebares JSON-Objekt liefert.
+    #[test]
+    fn test_flutter_session_context_menu_snapshot_json_roundtrip() {
+        let handle = flutter_session_new();
+
+        let json = flutter_session_context_menu_snapshot_json(&handle, -1)
+            .expect("Kontextmenue-Snapshot-Serialisierung muss gelingen");
+        let snapshot: HostContextMenuSnapshot =
+            serde_json::from_str(&json).expect("Kontextmenue-Snapshot muss parsebares JSON sein");
+
+        assert_eq!(
+            snapshot.variant,
+            fs25_auto_drive_host_bridge::HostContextMenuVariant::EmptyArea
+        );
+        assert!(snapshot.available_actions.is_empty());
 
         flutter_session_dispose(handle);
     }
