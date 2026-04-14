@@ -269,7 +269,13 @@
   - [x] RenderFrame-Seam (`HostBridgeSession::build_render_frame`) unveraendert beibehalten
   - [x] egui-Onscreen-Host explizit unveraendert gelassen (direkter `RenderPass`-Pfad)
   - [x] Additiver Texture-Registration-v4-Vertrag neben v3 eingefroren (2026-04-06): gemeinsame Capability-Negotiation + Frame-Metadaten + Lifecycle, plattformspezifische Payload-Familien fuer Windows/Linux/Android, explizites Capability-Gating ohne Pixelbuffer-Fallback
-  - [ ] Folge-Slice: Produktive v4-Landung in Host-Bridge-FFI und Consumer-Host (Flutter/C++); Windows/Linux bleiben renderseitig durch den normalen `wgpu::Device::create_texture`-Pfad ohne Export-/External-Memory-Felder blockiert, Android hat im Render-Core und im Low-Level-GPU-FFI jetzt ExportLease plus AHardwareBuffer und braucht als naechsten Schritt noch den nativen Consumer-Importpfad
+  - [🟡] Folge-Slice: Produktive v4-Landung in Host-Bridge-FFI und Consumer-Host (Flutter/C++)
+    - [x] Android AHardwareBuffer ExportLease im Render-Core (`VulkanAhbTexture` in `external_texture/vulkan_android.rs`) und Low-Level-GPU-FFI (`fs25ad_gpu_runtime_export_android_hardware_buffer`) produktiv (2026-04-14)
+    - [x] `PlatformTextureDescriptor::AndroidHardwareBuffer` und `AndroidHardwareBufferDescriptor` im v4-Vertrag
+    - [x] Feature-Flag `flutter-android` aktiviert `ash`, `ndk`, `ndk-sys` und den AHB-Exportpfad
+    - [ ] Nativer Consumer-Importpfad fuer AHardwareBuffer im Flutter-/C++-Host
+    - [ ] Windows: `wgpu 29` hat keine Export-/Shared-Handle-Felder; DXGI-/D3D11-Registration nicht moeglich
+    - [ ] Linux: v4-Host-Bridge-Pfad noch nicht an den bestehenden DMA-BUF-Exportstack verdrahtet
 - [x] Flutter-Bridge als transitional alias surface eingefroren (2026-04-05)
   - [x] Keine neue Logik mehr in `fs25_auto_drive_frontend_flutter_bridge`; Erweiterungen nur in `fs25_auto_drive_host_bridge`
   - [x] Kompat-Aliase (`Engine*`, `FlutterBridgeSession`) direkt in `fs25_auto_drive_host_bridge` etabliert
