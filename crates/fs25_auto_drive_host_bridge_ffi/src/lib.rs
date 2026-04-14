@@ -51,8 +51,8 @@ use fs25_auto_drive_host_bridge::dto::{host_ui_snapshot_json, viewport_overlay_s
 use fs25_auto_drive_host_bridge::{
     HostBridgeSession, HostChromeSnapshot, HostConnectionPairSnapshot, HostContextMenuSnapshot,
     HostDialogRequest, HostDialogResult, HostDialogSnapshot, HostEditingSnapshot,
-    HostRouteToolViewportSnapshot, HostSessionAction, HostSessionSnapshot, HostUiSnapshot,
-    HostViewportGeometrySnapshot, ViewportOverlaySnapshot,
+    HostOverviewOptionsDialogSnapshot, HostRouteToolViewportSnapshot, HostSessionAction,
+    HostSessionSnapshot, HostUiSnapshot, HostViewportGeometrySnapshot, ViewportOverlaySnapshot,
 };
 use std::cell::RefCell;
 use std::ffi::{c_char, CStr, CString};
@@ -286,6 +286,27 @@ pub unsafe extern "C" fn fs25ad_flutter_session_submit_dialog_result_json(
     ffi_guard_bool! {{
         let result: HostDialogResult = read_json_arg(result_json, "HostDialogResult")?;
         with_flutter_session_fallible(session, |session| session.submit_dialog_result(result))
+    }}
+}
+
+/// Aktualisiert den host-lokalen Draft des Overview-Options-Dialogs als UTF-8-JSON.
+///
+/// # Safety
+///
+/// `session` muss ein gueltiger, durch `fs25ad_flutter_session_new` erzeugter Zeiger sein.
+/// `dialog_json` muss ein gueltiger, null-terminierter UTF-8-String oder `null` sein.
+#[cfg(feature = "flutter")]
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn fs25ad_flutter_session_update_overview_options_dialog_json(
+    session: *const FlutterSessionHandle,
+    dialog_json: *const c_char,
+) -> bool {
+    ffi_guard_bool! {{
+        let snapshot: HostOverviewOptionsDialogSnapshot =
+            read_json_arg(dialog_json, "HostOverviewOptionsDialogSnapshot")?;
+        with_flutter_session_fallible(session, |session| {
+            flutter_api::flutter_session_update_overview_options_dialog(session, snapshot)
+        })
     }}
 }
 
