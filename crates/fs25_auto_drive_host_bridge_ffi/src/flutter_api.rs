@@ -1,16 +1,8 @@
-//! Flutter Control-Plane API — Dart-seitig erreichbare Rust-Funktionen.
+//! Flutter Control-Plane API — sichere Rust-Helfer fuer die direkte C-FFI-Surface.
 //!
 //! Dieses Modul definiert die High-Level-Control-Plane fuer die Flutter-Integration.
-//! Alle Funktionen sind sicher (kein unsafe), typsicher und sollen von
-//! `flutter_rust_bridge`-Codegen zu Dart-Bindings verarbeitet werden.
-//!
-//! # Verwendung
-//! Funktionen werden via `flutter_rust_bridge`-Codegen als Dart-Futures exportiert.
-//! Das Codegen wird durch `build.rs` unter dem `flutter`-Feature ausgeloest.
-//!
-//! # TODO(flutter-codegen)
-//! `#[flutter_rust_bridge::frb]`-Annotationen hinzufuegen sobald das Dart-Codegen
-//! in den Build-Prozess integriert ist.
+//! Alle Funktionen sind sicher (kein unsafe), typsicher und werden von den
+//! `fs25ad_flutter_session_*`-C-FFI-Exporten in `lib.rs` wiederverwendet.
 
 use anyhow::Result;
 use fs25_auto_drive_host_bridge::dto::{host_ui_snapshot_json, viewport_overlay_snapshot_json};
@@ -35,8 +27,8 @@ fn decode_focus_node_id(focus_node_id_or_neg1: i64) -> Result<Option<u64>> {
 ///
 /// Der Handle kapselt eine `HostBridgeSession` hinter `Arc<Mutex<...>>`, damit
 /// Flutter-Control-Plane und weitere Runtime-Adapter denselben Session-Besitz
-/// thread-sicher teilen koennen. Dart-seitig wird dieser Handle als opaker
-/// Zeiger (via flutter_rust_bridge `RustOpaque`) verwaltet.
+/// thread-sicher teilen koennen. Native Aufrufer verwalten diesen Handle ueber
+/// die direkte C-FFI-Surface als opaken Zeiger.
 pub struct FlutterSessionHandle {
     session: Arc<Mutex<HostBridgeSession>>,
 }

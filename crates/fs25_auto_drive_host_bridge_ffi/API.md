@@ -8,7 +8,7 @@ Seit der FFI-Haertungswelle sind alle pointer-konsumierenden Exporte in Rust exp
 
 Seit dem Hard-Cut ist der RGBA-Pixelbuffer-v1 entfernt. Der einzige native Render-Transportpfad ist jetzt Shared-Texture mit explizitem Acquire/Release-Lifecycle.
 
-Unter den Feature-Flags `flutter` und `flutter-linux` exportiert die Crate zusaetzlich eine Flutter Control-Plane API. Dazu gehoeren sowohl die bestehenden typsicheren High-Level-Funktionen fuer das bisherige `flutter_rust_bridge`-Codegen als auch eine direkte `fs25ad_flutter_session_*`-C-FFI-Surface fuer `dart:ffi`/`ffigen`. Daneben bleibt der Low-Level C-FFI GPU-Runtime-Stack fuer Linux/Vulkan mit DMA-BUF-Texture-Export erhalten.
+Unter den Feature-Flags `flutter` und `flutter-linux` exportiert die Crate zusaetzlich eine Flutter Control-Plane API. Dazu gehoeren sichere Rust-Helfer in `flutter_api.rs` sowie die direkte `fs25ad_flutter_session_*`-C-FFI-Surface fuer `dart:ffi`/`ffigen`. Daneben bleibt der Low-Level C-FFI GPU-Runtime-Stack fuer Linux/Vulkan mit DMA-BUF-Texture-Export erhalten.
 
 Der Rendertransport ist separat ueber `FS25AD_HOST_BRIDGE_SHARED_TEXTURE_CONTRACT_VERSION = 3` versioniert. Die exportierten Native-Handle-Werte sind explizit opaque Runtime-Pointer fuer denselben Prozessraum und keine backend-nativen Vulkan-/Metal-/DX-Interop-Handles.
 
@@ -141,9 +141,9 @@ Die folgenden Symbole werden nur mit aktivem `flutter`-Feature exportiert und sp
 
 ## Flutter-C-FFI-Vertrag
 
-- `Fs25adFlutterSessionHandle` kapselt denselben kanonischen Session-Besitz wie die FRB-Control-Plane (`Arc<Mutex<HostBridgeSession>>`), fuehrt aber keine zweite DTO- oder Session-Familie ein.
+- `Fs25adFlutterSessionHandle` kapselt denselben kanonischen Session-Besitz wie die sicheren Rust-Helfer in `flutter_api.rs` (`Arc<Mutex<HostBridgeSession>>`), fuehrt aber keine zweite DTO- oder Session-Familie ein.
 - Alle `fs25ad_flutter_session_*`-JSON-Payloads verwenden dieselben `HostSessionAction`-, `HostDialog*`- und Snapshot-DTOs wie die generische Host-Bridge-Surface.
-- Die Flutter-C-FFI-Surface ist additive Paritaetsschicht fuer `dart:ffi`/`ffigen`; das bestehende `flutter_api.rs` bleibt nur noch der typsichere Uebergangsadapter fuer den bisherigen FRB-Codegen.
+- Die Flutter-C-FFI-Surface ist die kanonische Rust-Seite fuer `dart:ffi`/`ffigen`; `flutter_api.rs` bleibt der sichere Rust-Helfer-Layer fuer dieselbe Session-Implementierung.
 - `fs25ad_flutter_session_acquire_shared_arc_raw()` gibt bei Fehlern `0` zurueck; `release_shared_arc_raw(0)` ist ein definierter No-op.
 
 ## Texture-Registration-v4 (additiv)
@@ -281,12 +281,12 @@ flowchart LR
 
 | Feature | Zweck |
 |---|---|
-| `flutter` | Aktiviert `flutter_rust_bridge` als Dependency und das Modul `flutter_api.rs` mit typsicheren Dart-Bindings |
+| `flutter` | Aktiviert `flutter_api.rs` und die direkte `fs25ad_flutter_session_*`-C-FFI-Surface fuer Flutter |
 | `flutter-linux` | Impliziert `flutter`. Aktiviert `fs25_auto_drive_render_wgpu/flutter-linux` und das Modul `flutter_gpu.rs` mit C-FFI GPU-Runtime fuer Linux/Vulkan |
 
 ## Flutter Control-Plane API (`flutter_api.rs`, Feature `flutter`)
 
-Typsichere High-Level-Funktionen fuer die Dart-seitige Session-Steuerung via `flutter_rust_bridge`.
+Typsichere High-Level-Funktionen fuer die Flutter-seitige Session-Steuerung, die von der direkten C-FFI-Surface in `lib.rs` wiederverwendet werden.
 
 ### Typ: `FlutterSessionHandle`
 
@@ -322,9 +322,9 @@ Opaquer Session-Handle mit `Arc<Mutex<HostBridgeSession>>` fuer thread-sicheren 
 | `fs25ad_flutter_session_new() -> *mut FlutterSessionHandle` | Erzeugt einen opaken C-ABI-Handle fuer dieselbe Flutter-Session-Implementierung |
 | `fs25ad_flutter_session_dispose(handle)` | Gibt einen zuvor ueber `fs25ad_flutter_session_new` erzeugten C-ABI-Handle frei |
 
-### Codegen-Status
+### Status
 
-`flutter_rust_bridge`-Annotationen (`#[frb]`) sind als TODO markiert. Das `build.rs` enthaelt einen Codegen-Stub der aktiviert wird sobald Dart-SDK im Build-System verfuegbar ist.
+Die Rust-Seite verwendet keinen separaten Bridge-Codegen mehr. Flutter bindet die nativen Symbole direkt ueber `fs25ad_flutter_session_*` bzw. `dart:ffi`/`ffigen` an.
 
 ## Flutter GPU-Runtime (`flutter_gpu.rs`, Feature `flutter-linux`)
 
