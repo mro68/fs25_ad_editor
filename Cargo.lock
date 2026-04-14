@@ -1940,6 +1940,7 @@ version = "1.7.0"
 dependencies = [
  "anyhow",
  "fs25_auto_drive_engine",
+ "fs25_map_overview",
  "glam",
  "indexmap",
  "serde",

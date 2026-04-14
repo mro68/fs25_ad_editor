@@ -85,6 +85,11 @@ pub fn flutter_session_chrome_snapshot_json(handle: &FlutterSessionHandle) -> Re
     crate::flutter_api::flutter_session_chrome_snapshot_json(handle)
 }
 
+/// Gibt den aktuellen host-neutralen Dialog-Snapshot als JSON-String zurueck.
+pub fn flutter_session_dialog_snapshot_json(handle: &FlutterSessionHandle) -> Result<String> {
+    crate::flutter_api::flutter_session_dialog_snapshot_json(handle)
+}
+
 /// Gibt den aktuellen host-neutralen Viewport-Overlay-Snapshot als JSON-String zurueck.
 pub fn flutter_session_viewport_overlay_json(
     handle: &FlutterSessionHandle,

@@ -21,9 +21,11 @@ use crate::dispatch::HostViewportInputState;
 use crate::dto::{
     HostActiveTool, HostChromeSnapshot, HostConnectionPairEntry, HostConnectionPairSnapshot,
     HostDefaultConnectionDirection, HostDefaultConnectionPriority, HostDialogRequest,
-    HostDialogResult, HostMarkerInfo, HostMarkerListSnapshot, HostNodeDetails, HostNodeFlag,
-    HostNodeMarkerInfo, HostNodeNeighbor, HostRouteToolViewportSnapshot, HostSelectionSnapshot,
-    HostSessionAction, HostSessionSnapshot, HostViewportGeometrySnapshot, HostViewportSnapshot,
+    HostDialogResult, HostDialogSnapshot, HostFieldDetectionSource, HostMarkerInfo,
+    HostMarkerListSnapshot, HostNodeDetails, HostNodeFlag, HostNodeMarkerInfo, HostNodeNeighbor,
+    HostOverviewLayersSnapshot, HostOverviewSourceContext, HostRouteToolViewportSnapshot,
+    HostSelectionSnapshot, HostSessionAction, HostSessionSnapshot, HostViewportGeometrySnapshot,
+    HostViewportSnapshot,
 };
 
 fn map_active_tool(tool: EditorTool) -> HostActiveTool {
@@ -73,6 +75,110 @@ fn build_snapshot(
         viewport: HostViewportSnapshot {
             camera_position: [state.view.camera.position.x, state.view.camera.position.y],
             zoom: state.view.camera.zoom,
+        },
+    }
+}
+
+fn build_dialog_snapshot(state: &AppState, chrome: &HostLocalDialogState) -> HostDialogSnapshot {
+    let zip_browser = chrome.zip_browser.as_ref();
+
+    HostDialogSnapshot {
+        heightmap_warning: crate::dto::HostHeightmapWarningDialogSnapshot {
+            visible: chrome.show_heightmap_warning,
+            confirmed_for_current_save: chrome.heightmap_warning_confirmed,
+        },
+        marker_dialog: crate::dto::HostMarkerDialogSnapshot {
+            visible: chrome.marker_dialog.visible,
+            node_id: chrome.marker_dialog.node_id,
+            name: chrome.marker_dialog.name.clone(),
+            group: chrome.marker_dialog.group.clone(),
+            is_new: chrome.marker_dialog.is_new,
+        },
+        dedup_dialog: crate::dto::HostDedupDialogSnapshot {
+            visible: chrome.dedup_dialog.visible,
+            duplicate_count: chrome.dedup_dialog.duplicate_count,
+            group_count: chrome.dedup_dialog.group_count,
+        },
+        zip_browser: crate::dto::HostZipBrowserSnapshot {
+            visible: zip_browser.is_some(),
+            zip_path: zip_browser
+                .map(|browser| browser.zip_path.clone())
+                .unwrap_or_default(),
+            entries: zip_browser
+                .map(|browser| {
+                    browser
+                        .entries
+                        .iter()
+                        .map(|entry| crate::dto::HostZipImageEntrySnapshot {
+                            name: entry.name.clone(),
+                            size: entry.size,
+                        })
+                        .collect()
+                })
+                .unwrap_or_default(),
+            selected_entry_index: zip_browser.and_then(|browser| browser.selected),
+            filter_overview: zip_browser.is_some_and(|browser| browser.filter_overview),
+        },
+        overview_options_dialog: crate::dto::HostOverviewOptionsDialogSnapshot {
+            visible: chrome.overview_options_dialog.visible,
+            zip_path: chrome.overview_options_dialog.zip_path.clone(),
+            layers: HostOverviewLayersSnapshot::from(&chrome.overview_options_dialog.layers),
+            field_detection_source: HostFieldDetectionSource::from(
+                chrome.overview_options_dialog.field_detection_source,
+            ),
+            available_sources: chrome
+                .overview_options_dialog
+                .available_sources
+                .iter()
+                .copied()
+                .map(HostFieldDetectionSource::from)
+                .collect(),
+        },
+        post_load_dialog: crate::dto::HostPostLoadDialogSnapshot {
+            visible: chrome.post_load_dialog.visible,
+            context: HostOverviewSourceContext::from(chrome.post_load_dialog.context),
+            heightmap_set: chrome.post_load_dialog.heightmap_set,
+            heightmap_path: chrome.post_load_dialog.heightmap_path.clone(),
+            overview_loaded: chrome.post_load_dialog.overview_loaded,
+            matching_zip_paths: chrome
+                .post_load_dialog
+                .matching_zips
+                .iter()
+                .map(|path| path.to_string_lossy().into_owned())
+                .collect(),
+            selected_zip_index: chrome.post_load_dialog.selected_zip_index,
+            map_name: chrome.post_load_dialog.map_name.clone(),
+        },
+        save_overview_dialog: crate::dto::HostSaveOverviewDialogSnapshot {
+            visible: chrome.save_overview_dialog.visible,
+            target_path: chrome.save_overview_dialog.target_path.clone(),
+            is_overwrite: chrome.save_overview_dialog.is_overwrite,
+        },
+        trace_all_fields_dialog: crate::dto::HostTraceAllFieldsDialogSnapshot {
+            visible: chrome.trace_all_fields_dialog.visible,
+            spacing: chrome.trace_all_fields_dialog.spacing,
+            offset: chrome.trace_all_fields_dialog.offset,
+            tolerance: chrome.trace_all_fields_dialog.tolerance,
+            corner_detection_enabled: chrome.trace_all_fields_dialog.corner_detection_enabled,
+            corner_angle_threshold_deg: chrome.trace_all_fields_dialog.corner_angle_threshold_deg,
+            corner_rounding_enabled: chrome.trace_all_fields_dialog.corner_rounding_enabled,
+            corner_rounding_radius: chrome.trace_all_fields_dialog.corner_rounding_radius,
+            corner_rounding_max_angle_deg: chrome
+                .trace_all_fields_dialog
+                .corner_rounding_max_angle_deg,
+        },
+        group_settings_popup: crate::dto::HostGroupSettingsDialogSnapshot {
+            visible: chrome.group_settings_popup.visible,
+            world_pos: [
+                chrome.group_settings_popup.world_pos.x,
+                chrome.group_settings_popup.world_pos.y,
+            ],
+            segment_stop_at_junction: state.options.segment_stop_at_junction,
+            segment_max_angle_deg: state.options.segment_max_angle_deg,
+        },
+        confirm_dissolve_group: crate::dto::HostConfirmDissolveDialogSnapshot {
+            visible: chrome.confirm_dissolve_group_id.is_some(),
+            segment_id: chrome.confirm_dissolve_group_id,
         },
     }
 }
@@ -487,6 +593,18 @@ impl HostBridgeSession {
         self.snapshot().clone()
     }
 
+    /// Liefert einen host-neutralen Snapshot aller egui-Dialogzustaende.
+    ///
+    /// Der Snapshot liest sowohl den host-lokalen `chrome_state` als auch die
+    /// fuer Dialog-Popups relevanten Engine-Optionen. Er ist bewusst von
+    /// `HostSessionSnapshot` getrennt, damit Flutter und spaetere Hosts die
+    /// komplexeren Dialog-Drafts als eigene serialisierbare Surface pollen
+    /// koennen, ohne auf `dialog_ui_state_mut()` oder `chrome_state()`
+    /// angewiesen zu sein.
+    pub fn dialog_snapshot(&self) -> HostDialogSnapshot {
+        build_dialog_snapshot(&self.state, &self.chrome_state)
+    }
+
     /// Serialisiert den aktuell inspizierten Node als JSON fuer Flutter.
     pub fn node_details_json(&self) -> Option<String> {
         let snapshot = self
@@ -852,11 +970,15 @@ mod tests {
 
     use fs25_auto_drive_engine::app::{
         AppIntent, Connection, ConnectionDirection, ConnectionPriority, FloatingMenuKind,
-        MapMarker, MapNode, NodeFlag, OverviewSourceContext, RoadMap,
+        MapMarker, MapNode, NodeFlag, OverviewSourceContext, RoadMap, ZipBrowserState,
     };
+    use fs25_auto_drive_engine::core::ZipImageEntry;
     use fs25_auto_drive_engine::shared::OverviewLayerOptions;
+    use fs25_map_overview::FieldDetectionSource;
     use glam::Vec2;
     use std::sync::Arc;
+
+    use crate::dto::{HostFieldDetectionSource, HostOverviewSourceContext};
 
     use crate::dto::{
         EngineSessionAction, HostActiveTool, HostConnectionPairEntry, HostConnectionPairSnapshot,
@@ -1442,6 +1564,119 @@ mod tests {
             session.app_state().ui.overview_options_dialog.zip_path,
             zip_path
         );
+    }
+
+    #[test]
+    fn dialog_snapshot_reflects_host_local_dialog_state() {
+        let mut session = HostBridgeSession::new();
+
+        {
+            let dialog_state = session.dialog_ui_state_mut();
+            dialog_state.ui.show_heightmap_warning = true;
+            dialog_state.ui.heightmap_warning_confirmed = true;
+            dialog_state.ui.marker_dialog.visible = true;
+            dialog_state.ui.marker_dialog.node_id = Some(17);
+            dialog_state.ui.marker_dialog.name = "Hof".to_string();
+            dialog_state.ui.marker_dialog.group = "All".to_string();
+            dialog_state.ui.marker_dialog.is_new = false;
+            dialog_state.ui.dedup_dialog.visible = true;
+            dialog_state.ui.dedup_dialog.duplicate_count = 3;
+            dialog_state.ui.dedup_dialog.group_count = 2;
+            dialog_state.ui.zip_browser = Some(ZipBrowserState {
+                zip_path: "/tmp/map.zip".to_string(),
+                entries: vec![ZipImageEntry {
+                    name: "overview.png".to_string(),
+                    size: 4096,
+                }],
+                selected: Some(0),
+                filter_overview: true,
+            });
+            dialog_state.ui.overview_options_dialog.visible = true;
+            dialog_state.ui.overview_options_dialog.zip_path = "/tmp/map.zip".to_string();
+            dialog_state.ui.overview_options_dialog.layers = OverviewLayerOptions {
+                hillshade: false,
+                farmlands: true,
+                farmland_ids: true,
+                pois: false,
+                legend: true,
+            };
+            dialog_state
+                .ui
+                .overview_options_dialog
+                .field_detection_source = FieldDetectionSource::GroundGdm;
+            dialog_state.ui.overview_options_dialog.available_sources = vec![
+                FieldDetectionSource::FromZip,
+                FieldDetectionSource::GroundGdm,
+            ];
+            dialog_state.ui.post_load_dialog.visible = true;
+            dialog_state.ui.post_load_dialog.context = OverviewSourceContext::PostLoadDetected;
+            dialog_state.ui.post_load_dialog.heightmap_set = true;
+            dialog_state.ui.post_load_dialog.heightmap_path = Some("/tmp/terrain.png".to_string());
+            dialog_state.ui.post_load_dialog.overview_loaded = true;
+            dialog_state.ui.post_load_dialog.matching_zips = vec![PathBuf::from("/mods/map.zip")];
+            dialog_state.ui.post_load_dialog.selected_zip_index = 0;
+            dialog_state.ui.post_load_dialog.map_name = "Elmcreek".to_string();
+            dialog_state.ui.save_overview_dialog.visible = true;
+            dialog_state.ui.save_overview_dialog.target_path = "/tmp/overview.png".to_string();
+            dialog_state.ui.save_overview_dialog.is_overwrite = true;
+            dialog_state.ui.trace_all_fields_dialog.visible = true;
+            dialog_state.ui.trace_all_fields_dialog.spacing = 12.5;
+            dialog_state.ui.trace_all_fields_dialog.offset = -1.0;
+            dialog_state.ui.trace_all_fields_dialog.tolerance = 0.5;
+            dialog_state
+                .ui
+                .trace_all_fields_dialog
+                .corner_detection_enabled = true;
+            dialog_state
+                .ui
+                .trace_all_fields_dialog
+                .corner_angle_threshold_deg = 95.0;
+            dialog_state
+                .ui
+                .trace_all_fields_dialog
+                .corner_rounding_enabled = true;
+            dialog_state
+                .ui
+                .trace_all_fields_dialog
+                .corner_rounding_radius = 6.0;
+            dialog_state
+                .ui
+                .trace_all_fields_dialog
+                .corner_rounding_max_angle_deg = 18.0;
+            dialog_state.ui.group_settings_popup.visible = true;
+            dialog_state.ui.group_settings_popup.world_pos = Vec2::new(8.0, -4.0);
+            dialog_state.ui.confirm_dissolve_group_id = Some(99);
+            dialog_state.options.segment_stop_at_junction = true;
+            dialog_state.options.segment_max_angle_deg = 42.5;
+        }
+
+        let snapshot = session.dialog_snapshot();
+
+        assert!(snapshot.heightmap_warning.visible);
+        assert!(snapshot.heightmap_warning.confirmed_for_current_save);
+        assert_eq!(snapshot.marker_dialog.node_id, Some(17));
+        assert_eq!(snapshot.marker_dialog.name, "Hof");
+        assert_eq!(snapshot.dedup_dialog.duplicate_count, 3);
+        assert!(snapshot.zip_browser.visible);
+        assert_eq!(snapshot.zip_browser.entries.len(), 1);
+        assert_eq!(snapshot.zip_browser.entries[0].name, "overview.png");
+        assert_eq!(
+            snapshot.overview_options_dialog.field_detection_source,
+            HostFieldDetectionSource::GroundGdm
+        );
+        assert_eq!(
+            snapshot.post_load_dialog.context,
+            HostOverviewSourceContext::PostLoadDetected
+        );
+        assert_eq!(
+            snapshot.post_load_dialog.matching_zip_paths,
+            vec!["/mods/map.zip".to_string()]
+        );
+        assert_eq!(snapshot.group_settings_popup.world_pos, [8.0, -4.0]);
+        assert!(snapshot.group_settings_popup.segment_stop_at_junction);
+        assert_eq!(snapshot.group_settings_popup.segment_max_angle_deg, 42.5);
+        assert_eq!(snapshot.confirm_dissolve_group.segment_id, Some(99));
+        assert!(snapshot.confirm_dissolve_group.visible);
     }
 
     #[test]

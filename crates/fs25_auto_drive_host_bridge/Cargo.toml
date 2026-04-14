@@ -9,6 +9,7 @@ path = "src/lib.rs"
 [dependencies]
 anyhow = "1.0.102"
 fs25_auto_drive_engine = { path = "../fs25_auto_drive_engine" }
+fs25_map_overview = { path = "../fs25_map_overview" }
 glam = { version = "0.32.1", features = ["serde"] }
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"

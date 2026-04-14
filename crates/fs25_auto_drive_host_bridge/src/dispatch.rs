@@ -398,9 +398,7 @@ mod tests {
                 if world_pos == Vec2::new(1.0, -2.0) && additive
         ));
         assert!(matches!(
-            map_host_action_to_intent(HostSessionAction::ConfirmDissolveGroup {
-                segment_id: 13,
-            }),
+            map_host_action_to_intent(HostSessionAction::ConfirmDissolveGroup { segment_id: 13 }),
             Some(AppIntent::DissolveGroupConfirmed { segment_id: 13 })
         ));
         assert!(matches!(
@@ -717,7 +715,10 @@ mod tests {
     #[test]
     fn map_intent_to_host_action_covers_missing_egui_parity_intents() {
         let cases = vec![
-            (AppIntent::HeightmapCleared, HostSessionAction::ClearHeightmap),
+            (
+                AppIntent::HeightmapCleared,
+                HostSessionAction::ClearHeightmap,
+            ),
             (
                 AppIntent::HeightmapWarningConfirmed,
                 HostSessionAction::ConfirmHeightmapWarning,

@@ -19,7 +19,14 @@ mod viewport;
 pub use actions::{HostActiveTool, HostRouteToolAction, HostSessionAction, HostTangentSource};
 pub use chrome::HostChromeSnapshot;
 pub use connection_pair::{HostConnectionPairEntry, HostConnectionPairSnapshot};
-pub use dialogs::{HostDialogRequest, HostDialogRequestKind, HostDialogResult};
+pub use dialogs::{
+    HostConfirmDissolveDialogSnapshot, HostDedupDialogSnapshot, HostDialogRequest,
+    HostDialogRequestKind, HostDialogResult, HostDialogSnapshot, HostFieldDetectionSource,
+    HostGroupSettingsDialogSnapshot, HostHeightmapWarningDialogSnapshot, HostMarkerDialogSnapshot,
+    HostOverviewLayersSnapshot, HostOverviewOptionsDialogSnapshot, HostOverviewSourceContext,
+    HostPostLoadDialogSnapshot, HostSaveOverviewDialogSnapshot, HostTraceAllFieldsDialogSnapshot,
+    HostZipBrowserSnapshot, HostZipImageEntrySnapshot,
+};
 pub use input::{
     HostInputModifiers, HostPointerButton, HostTapKind, HostViewportInputBatch,
     HostViewportInputEvent,
@@ -55,6 +62,36 @@ pub type EngineConnectionPairEntry = HostConnectionPairEntry;
 pub type EngineConnectionPairSnapshot = HostConnectionPairSnapshot;
 /// Kompatibilitaetsalias fuer bestehende Flutter-/FFI-Call-Sites.
 pub type EngineDialogResult = HostDialogResult;
+/// Kompatibilitaetsalias fuer bestehende Flutter-/FFI-Call-Sites.
+pub type EngineDialogSnapshot = HostDialogSnapshot;
+/// Kompatibilitaetsalias fuer bestehende Flutter-/FFI-Call-Sites.
+pub type EngineHeightmapWarningDialogSnapshot = HostHeightmapWarningDialogSnapshot;
+/// Kompatibilitaetsalias fuer bestehende Flutter-/FFI-Call-Sites.
+pub type EngineMarkerDialogSnapshot = HostMarkerDialogSnapshot;
+/// Kompatibilitaetsalias fuer bestehende Flutter-/FFI-Call-Sites.
+pub type EngineDedupDialogSnapshot = HostDedupDialogSnapshot;
+/// Kompatibilitaetsalias fuer bestehende Flutter-/FFI-Call-Sites.
+pub type EngineZipBrowserSnapshot = HostZipBrowserSnapshot;
+/// Kompatibilitaetsalias fuer bestehende Flutter-/FFI-Call-Sites.
+pub type EngineZipImageEntrySnapshot = HostZipImageEntrySnapshot;
+/// Kompatibilitaetsalias fuer bestehende Flutter-/FFI-Call-Sites.
+pub type EngineOverviewOptionsDialogSnapshot = HostOverviewOptionsDialogSnapshot;
+/// Kompatibilitaetsalias fuer bestehende Flutter-/FFI-Call-Sites.
+pub type EngineOverviewLayersSnapshot = HostOverviewLayersSnapshot;
+/// Kompatibilitaetsalias fuer bestehende Flutter-/FFI-Call-Sites.
+pub type EngineFieldDetectionSource = HostFieldDetectionSource;
+/// Kompatibilitaetsalias fuer bestehende Flutter-/FFI-Call-Sites.
+pub type EnginePostLoadDialogSnapshot = HostPostLoadDialogSnapshot;
+/// Kompatibilitaetsalias fuer bestehende Flutter-/FFI-Call-Sites.
+pub type EngineOverviewSourceContext = HostOverviewSourceContext;
+/// Kompatibilitaetsalias fuer bestehende Flutter-/FFI-Call-Sites.
+pub type EngineSaveOverviewDialogSnapshot = HostSaveOverviewDialogSnapshot;
+/// Kompatibilitaetsalias fuer bestehende Flutter-/FFI-Call-Sites.
+pub type EngineTraceAllFieldsDialogSnapshot = HostTraceAllFieldsDialogSnapshot;
+/// Kompatibilitaetsalias fuer bestehende Flutter-/FFI-Call-Sites.
+pub type EngineGroupSettingsDialogSnapshot = HostGroupSettingsDialogSnapshot;
+/// Kompatibilitaetsalias fuer bestehende Flutter-/FFI-Call-Sites.
+pub type EngineConfirmDissolveDialogSnapshot = HostConfirmDissolveDialogSnapshot;
 /// Kompatibilitaetsalias fuer bestehende Flutter-/FFI-Call-Sites.
 pub type EnginePointerButton = HostPointerButton;
 /// Kompatibilitaetsalias fuer bestehende Flutter-/FFI-Call-Sites.

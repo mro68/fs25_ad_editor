@@ -476,11 +476,8 @@ fn query_dmabuf_stride(
     // vkGetImageSubresourceLayout mit COLOR funktioniert fuer alle LINEAR-Images und liefert
     // den tatsaechlichen Row-Pitch inkl. Treiber-Alignment (z.B. NVIDIA paddet auf 256 Bytes).
     if has_drm_ext
-        && let Some(pitch) = query_subresource_row_pitch(
-            raw_device,
-            image,
-            vk::ImageAspectFlags::MEMORY_PLANE_0_EXT,
-        )
+        && let Some(pitch) =
+            query_subresource_row_pitch(raw_device, image, vk::ImageAspectFlags::MEMORY_PLANE_0_EXT)
     {
         return Ok(pitch);
     }
