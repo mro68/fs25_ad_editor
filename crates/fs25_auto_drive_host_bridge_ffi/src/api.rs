@@ -28,6 +28,19 @@ pub fn flutter_session_apply_action(
     crate::flutter_api::flutter_session_apply_action(handle, action_json)
 }
 
+/// Entnimmt alle aktuell ausstehenden Dialog-Anforderungen als JSON-Array.
+pub fn flutter_session_take_dialog_requests_json(handle: &FlutterSessionHandle) -> Result<String> {
+    crate::flutter_api::flutter_session_take_dialog_requests_json(handle)
+}
+
+/// Reicht ein serialisiertes Dialog-Ergebnis an die Session weiter.
+pub fn flutter_session_submit_dialog_result_json(
+    handle: &FlutterSessionHandle,
+    result_json: String,
+) -> Result<()> {
+    crate::flutter_api::flutter_session_submit_dialog_result_json(handle, result_json)
+}
+
 /// Gibt den aktuellen Session-Snapshot als JSON-String zurueck.
 pub fn flutter_session_snapshot_json(handle: &FlutterSessionHandle) -> Result<String> {
     crate::flutter_api::flutter_session_snapshot_json(handle)
@@ -43,6 +56,20 @@ pub fn flutter_session_marker_list_json(handle: &FlutterSessionHandle) -> String
     crate::flutter_api::flutter_session_marker_list_json(handle)
 }
 
+/// Gibt den host-neutralen Route-Tool-Viewport-Snapshot als JSON-String zurueck.
+pub fn flutter_session_route_tool_viewport_json(handle: &FlutterSessionHandle) -> Result<String> {
+    crate::flutter_api::flutter_session_route_tool_viewport_json(handle)
+}
+
+/// Gibt die Verbindungsdetails zwischen zwei Nodes als JSON-String zurueck.
+pub fn flutter_session_connection_pair_json(
+    handle: &FlutterSessionHandle,
+    node_a: u64,
+    node_b: u64,
+) -> Result<String> {
+    crate::flutter_api::flutter_session_connection_pair_json(handle, node_a, node_b)
+}
+
 /// Gibt zurueck, ob die geladene Karte seit dem letzten Load/Save veraendert wurde.
 pub fn flutter_session_is_dirty(handle: &FlutterSessionHandle) -> Result<bool> {
     crate::flutter_api::flutter_session_is_dirty(handle)
@@ -56,6 +83,24 @@ pub fn flutter_session_ui_snapshot_json(handle: &FlutterSessionHandle) -> Result
 /// Gibt den aktuellen host-neutralen Chrome-Snapshot als JSON-String zurueck.
 pub fn flutter_session_chrome_snapshot_json(handle: &FlutterSessionHandle) -> Result<String> {
     crate::flutter_api::flutter_session_chrome_snapshot_json(handle)
+}
+
+/// Gibt den aktuellen host-neutralen Dialog-Snapshot als JSON-String zurueck.
+pub fn flutter_session_dialog_snapshot_json(handle: &FlutterSessionHandle) -> Result<String> {
+    crate::flutter_api::flutter_session_dialog_snapshot_json(handle)
+}
+
+/// Gibt den aktuellen host-neutralen Editing-Snapshot als JSON-String zurueck.
+pub fn flutter_session_editing_snapshot_json(handle: &FlutterSessionHandle) -> Result<String> {
+    crate::flutter_api::flutter_session_editing_snapshot_json(handle)
+}
+
+/// Gibt den aktuellen host-neutralen Kontextmenue-Snapshot als JSON-String zurueck.
+pub fn flutter_session_context_menu_snapshot_json(
+    handle: &FlutterSessionHandle,
+    focus_node_id_or_neg1: i64,
+) -> Result<String> {
+    crate::flutter_api::flutter_session_context_menu_snapshot_json(handle, focus_node_id_or_neg1)
 }
 
 /// Gibt den aktuellen host-neutralen Viewport-Overlay-Snapshot als JSON-String zurueck.

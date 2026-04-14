@@ -558,10 +558,18 @@
   - [x] `flutter_session_is_dirty()` — Dirty-Flag-Abfrage relativ zum letzten Load/Save
   - [x] `flutter_session_ui_snapshot_json()` — HostUiSnapshot als JSON
   - [x] `flutter_session_chrome_snapshot_json()` — HostChromeSnapshot als JSON
+  - [x] `flutter_session_dialog_snapshot_json()` — HostDialogSnapshot als JSON fuer alle egui-Dialoge
+  - [x] `flutter_session_editing_snapshot_json()` — HostEditingSnapshot als JSON fuer Properties-, Group-Edit- und Streckenteilungsdaten
+  - [x] `flutter_session_context_menu_snapshot_json()` — HostContextMenuSnapshot als JSON fuer Kontextmenue-Varianten und zentrale Precondition-Logik
   - [x] `flutter_session_viewport_overlay_json()` — ViewportOverlaySnapshot als JSON
-  - [x] Neue `HostSessionAction`-Varianten: `DeleteSelected`, `SelectAll`, `ClearSelection`, `CopySelection`, `PasteStart`, `PasteConfirm`, `PasteCancel`
-  - [x] Bidirektionale Intent-Action-Mappings fuer Selektions- und Clipboard-Aktionen
+  - [x] FRB-Control-Plane um bestehende Bridge-Seams erweitert: `flutter_session_take_dialog_requests_json()`, `flutter_session_submit_dialog_result_json()`, `flutter_session_route_tool_viewport_json()`, `flutter_session_connection_pair_json()`
+  - [x] ~35 neue `HostSessionAction`-Varianten fuer volle egui-Paritaet: Zoom (ZoomIn/Out/ToFit/ToSelectionBounds, CenterOnNode), View (SetRenderQuality, ToggleBackgroundVisibility, ScaleBackground), Marker (OpenCreateMarkerDialog, OpenEditMarkerDialog, CancelMarkerDialog, CreateMarker, UpdateMarker, RemoveMarker), Selektion/Clipboard (DeleteSelected, SelectAll, InvertSelection, ClearSelection, CopySelection, PasteStart/Confirm/Cancel), Connection-Management (AddConnection, RemoveConnectionBetween, SetConnectionDirection/Priority, ConnectSelectedNodes, SetAll*BetweenSelected, InvertAllConnectionsBetweenSelected, RemoveAllConnectionsBetweenSelected), Group-Edit (StartGroupEdit, ApplyGroupEdit, CancelGroupEdit, OpenGroupEditTool, SetGroupBoundaryNodes, ToggleGroupLock, DissolveGroup, ConfirmDissolveGroup, GroupSelectionAsGroup, RemoveSelectedNodesFromGroup, RecomputeNodeSegmentSelection), Resample (StartResampleSelection, ApplyCurrentResample), Extras (OpenTraceAllFieldsDialog, ConfirmTraceAllFields, CancelTraceAllFields), Datei-/Dialog-Follow-ups (ClearHeightmap, Heightmap-Warnung, ZIP-/Overview-Folgeschritte, Dedup-Bestaetigung, Save-Overview-Bestaetigung)
+  - [x] `HostDialogSnapshot` mit 14 modalen Dialog-DTOs (Heightmap-Warnung, Marker, Dedup, ZIP-Browser, Overview-Options, Post-Load, Save-Overview, Trace-All-Fields, Group-Settings, Confirm-Dissolve) plus `dialog_snapshot()` Session-Methode
+  - [x] `HostEditingSnapshot` mit Group-Edit-, Boundary-Kandidaten-, Resample- und Editing-Options-DTOs plus `editing_snapshot()` Session-Methode
+  - [x] `HostContextMenuSnapshot` mit host-neutraler Precondition-Logik (Variante, Aktionsliste, Enablement) plus `context_menu_snapshot()` Session-Methode und bridge-interner `context_menu.rs`-Auswertung
+  - [x] Bidirektionale Intent-Action-Mappings fuer Selektions-, Clipboard-, Zoom-, Marker-, Group- und Connection-Aktionen
   - [x] Unit-Tests fuer Session-Lifecycle, JSON-Validation, Snapshot-Roundtrip, Dirty-Flag
+  - [x] Egui-Frontend: Read-Only-Pfade (Dialog-, Editing-, Kontextmenue-Daten) auf Bridge-Snapshots migriert; Properties-Panel, Marker-Panel und Kontextmenue konsumieren `HostDialogSnapshot`/`HostEditingSnapshot`/`HostContextMenuSnapshot` statt direktem Engine-State
 - [x] **Flutter-Backend Phase 2: GPU-Export-Stack Linux (2026-04-08)**
   - [x] `create_vulkan_instance()` in `render_wgpu` — Vulkan-exklusive wgpu-Instanz
   - [x] `external_texture/` Modul mit `ExternalTextureExport` Trait, `PlatformTextureDescriptor`, `ExternalTextureError`

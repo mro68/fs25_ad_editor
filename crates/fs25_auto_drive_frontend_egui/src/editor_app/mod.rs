@@ -43,7 +43,27 @@ fn is_meaningful_event(event: &CollectedEvent) -> bool {
 fn intent_requires_canonical_host_action(intent: &AppIntent) -> bool {
     matches!(
         intent,
-        AppIntent::CommandPaletteToggled
+        AppIntent::HeightmapCleared
+            | AppIntent::HeightmapWarningConfirmed
+            | AppIntent::HeightmapWarningCancelled
+            | AppIntent::OverviewZipBrowseRequested
+            | AppIntent::GenerateOverviewFromZip { .. }
+            | AppIntent::ZipBackgroundFileSelected { .. }
+            | AppIntent::ZipBrowserCancelled
+            | AppIntent::OverviewOptionsConfirmed
+            | AppIntent::OverviewOptionsCancelled
+            | AppIntent::PostLoadDialogDismissed
+            | AppIntent::SaveBackgroundAsOverviewConfirmed
+            | AppIntent::SaveBackgroundAsOverviewDismissed
+            | AppIntent::DeduplicateConfirmed
+            | AppIntent::DeduplicateCancelled
+            | AppIntent::ZoomInRequested
+            | AppIntent::ZoomOutRequested
+            | AppIntent::CenterOnNodeRequested { .. }
+            | AppIntent::RenderQualityChanged { .. }
+            | AppIntent::ToggleBackgroundVisibility
+            | AppIntent::ScaleBackground { .. }
+            | AppIntent::CommandPaletteToggled
             | AppIntent::SetEditorToolRequested { .. }
             | AppIntent::SetDefaultDirectionRequested { .. }
             | AppIntent::SetDefaultPriorityRequested { .. }
@@ -62,6 +82,9 @@ fn intent_requires_canonical_host_action(intent: &AppIntent) -> bool {
             | AppIntent::CloseOptionsDialogRequested
             | AppIntent::UndoRequested
             | AppIntent::RedoRequested
+            | AppIntent::CreateMarkerRequested { .. }
+            | AppIntent::EditMarkerRequested { .. }
+            | AppIntent::MarkerDialogCancelled
             | AppIntent::SelectRouteToolRequested { .. }
             | AppIntent::RouteToolWithAnchorsRequested { .. }
             | AppIntent::RouteToolPanelActionRequested { .. }
@@ -80,6 +103,23 @@ fn intent_requires_canonical_host_action(intent: &AppIntent) -> bool {
             | AppIntent::DecreaseRouteToolNodeCount
             | AppIntent::IncreaseRouteToolSegmentLength
             | AppIntent::DecreaseRouteToolSegmentLength
+            | AppIntent::InvertSelectionRequested
+            | AppIntent::StreckenteilungAktivieren
+            | AppIntent::ResamplePathRequested
+            | AppIntent::GroupEditStartRequested { .. }
+            | AppIntent::GroupEditApplyRequested
+            | AppIntent::GroupEditCancelRequested
+            | AppIntent::GroupEditToolRequested { .. }
+            | AppIntent::GroupSelectionAsGroupRequested
+            | AppIntent::RemoveSelectedNodesFromGroupRequested
+            | AppIntent::SetGroupBoundaryNodes { .. }
+            | AppIntent::NodeSegmentBetweenIntersectionsRequested { .. }
+            | AppIntent::ToggleGroupLockRequested { .. }
+            | AppIntent::DissolveGroupRequested { .. }
+            | AppIntent::DissolveGroupConfirmed { .. }
+            | AppIntent::OpenTraceAllFieldsDialogRequested
+            | AppIntent::TraceAllFieldsConfirmed { .. }
+            | AppIntent::TraceAllFieldsCancelled
     )
 }
 
@@ -233,7 +273,7 @@ mod tests {
     }
 
     #[test]
-    fn canonical_route_tool_and_chrome_intents_are_guarded_against_fallback() {
+    fn canonical_route_tool_and_parity_intents_are_guarded_against_fallback() {
         assert!(intent_requires_canonical_host_action(
             &AppIntent::RouteToolClicked {
                 world_pos: glam::Vec2::new(1.0, 2.0),
@@ -255,6 +295,20 @@ mod tests {
         ));
         assert!(intent_requires_canonical_host_action(
             &AppIntent::RemoveAllConnectionsBetweenSelectedRequested
+        ));
+        assert!(intent_requires_canonical_host_action(
+            &AppIntent::CenterOnNodeRequested { node_id: 42 }
+        ));
+        assert!(intent_requires_canonical_host_action(
+            &AppIntent::RenderQualityChanged {
+                quality: fs25_auto_drive_engine::shared::RenderQuality::Medium,
+            }
+        ));
+        assert!(intent_requires_canonical_host_action(
+            &AppIntent::GroupEditStartRequested { record_id: 7 }
+        ));
+        assert!(intent_requires_canonical_host_action(
+            &AppIntent::OpenTraceAllFieldsDialogRequested
         ));
         assert!(!intent_requires_canonical_host_action(
             &AppIntent::ViewportResized {

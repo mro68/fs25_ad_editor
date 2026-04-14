@@ -2,7 +2,7 @@
 
 ## Ueberblick
 
-`fs25_auto_drive_host_bridge_ffi` ist der duenner Linux-first-Transportadapter ueber der kanonischen `HostBridgeSession`. Die Crate fuehrt keine zweite fachliche Surface ein: Mutationen laufen weiter ueber `HostSessionAction` (inklusive expliziter Route-Tool-Action-Familie), Dialoge ueber `HostDialogRequest`/`HostDialogResult`, Session-Polling ueber `HostSessionSnapshot`, Chrome-Polling ueber `HostChromeSnapshot` und Route-Tool-Viewport-Polling ueber `HostRouteToolViewportSnapshot`.
+`fs25_auto_drive_host_bridge_ffi` ist der duenner Linux-first-Transportadapter ueber der kanonischen `HostBridgeSession`. Die Crate fuehrt keine zweite fachliche Surface ein: Mutationen laufen weiter ueber `HostSessionAction` (inklusive expliziter Route-Tool-Action-Familie), Dialoge ueber `HostDialogRequest`/`HostDialogResult`, Session-Polling ueber `HostSessionSnapshot`, Chrome-Polling ueber `HostChromeSnapshot`, Dialog-Polling ueber `HostDialogSnapshot`, Editing-Polling ueber `HostEditingSnapshot`, Kontextmenue-Polling ueber `HostContextMenuSnapshot` und Route-Tool-Viewport-Polling ueber `HostRouteToolViewportSnapshot`.
 
 Seit der FFI-Haertungswelle sind alle pointer-konsumierenden Exporte in Rust explizit als `unsafe extern "C"` markiert. Panic-Isolation und thread-lokale Fehlerweitergabe haerten dabei dieselbe kanonische Surface, ohne eine zweite FFI-seitige DTO- oder Session-Familie einzufuehren.
 
@@ -252,13 +252,22 @@ Opaquer Session-Handle mit `Arc<Mutex<HostBridgeSession>>` fuer thread-sicheren 
 
 | Signatur | Zweck |
 |---|---|
-| `flutter_session_new() -> Box<FlutterSessionHandle>` | Erzeugt eine neue Flutter-Session |
-| `flutter_session_dispose(handle: Box<FlutterSessionHandle>)` | Gibt die Session frei |
+| `flutter_session_new() -> FlutterSessionHandle` | Erzeugt eine neue Flutter-Session |
+| `flutter_session_dispose(handle: FlutterSessionHandle)` | Gibt die Session frei |
 | `flutter_session_apply_action(handle, action_json: String) -> Result<()>` | Wendet eine JSON-serialisierte `HostSessionAction` an |
+| `flutter_session_take_dialog_requests_json(handle) -> Result<String>` | Liefert ein JSON-Array aus `HostDialogRequest` und drainet die Dialog-Queue |
+| `flutter_session_submit_dialog_result_json(handle, result_json: String) -> Result<()>` | Liest `HostDialogResult` aus JSON und fuehrt ihn in die Session zurueck |
 | `flutter_session_is_dirty(handle) -> Result<bool>` | Liefert den semantischen Dirty-Zustand relativ zum letzten erfolgreichen Load/Save |
 | `flutter_session_snapshot_json(handle) -> Result<String>` | Liefert den `HostSessionSnapshot` als JSON |
+| `flutter_session_node_details_json(handle) -> Option<String>` | Liefert den aktuell inspizierten Node als `HostNodeDetails`-JSON |
+| `flutter_session_marker_list_json(handle) -> String` | Liefert alle Marker als `HostMarkerListSnapshot`-JSON |
+| `flutter_session_route_tool_viewport_json(handle) -> Result<String>` | Liefert den `HostRouteToolViewportSnapshot` als JSON |
+| `flutter_session_connection_pair_json(handle, node_a, node_b) -> Result<String>` | Liefert den `HostConnectionPairSnapshot` fuer genau zwei Nodes als JSON |
 | `flutter_session_ui_snapshot_json(handle) -> Result<String>` | Liefert den host-neutralen `HostUiSnapshot` als JSON |
 | `flutter_session_chrome_snapshot_json(handle) -> Result<String>` | Liefert den `HostChromeSnapshot` als JSON |
+| `flutter_session_dialog_snapshot_json(handle) -> Result<String>` | Liefert den `HostDialogSnapshot` als JSON |
+| `flutter_session_editing_snapshot_json(handle) -> Result<String>` | Liefert den `HostEditingSnapshot` als JSON |
+| `flutter_session_context_menu_snapshot_json(handle, focus_node_id_or_neg1) -> Result<String>` | Liefert den `HostContextMenuSnapshot` als JSON; `-1` bedeutet kein Fokus-Node |
 | `flutter_session_viewport_overlay_json(handle, cursor_world_x, cursor_world_y) -> Result<String>` | Liefert den host-neutralen `ViewportOverlaySnapshot` als JSON |
 | `flutter_session_viewport_geometry_json(handle, width, height) -> Result<String>` | Liefert den `HostViewportGeometrySnapshot` als JSON |
 

@@ -475,12 +475,11 @@ fn query_dmabuf_stride(
     // Bevorzugt: MEMORY_PLANE_0_EXT (DRM-Modifier-Extension), dann COLOR (Core Vulkan).
     // vkGetImageSubresourceLayout mit COLOR funktioniert fuer alle LINEAR-Images und liefert
     // den tatsaechlichen Row-Pitch inkl. Treiber-Alignment (z.B. NVIDIA paddet auf 256 Bytes).
-    if has_drm_ext {
-        if let Some(pitch) =
+    if has_drm_ext
+        && let Some(pitch) =
             query_subresource_row_pitch(raw_device, image, vk::ImageAspectFlags::MEMORY_PLANE_0_EXT)
-        {
-            return Ok(pitch);
-        }
+    {
+        return Ok(pitch);
     }
     if let Some(pitch) = query_subresource_row_pitch(raw_device, image, vk::ImageAspectFlags::COLOR)
     {
