@@ -19,7 +19,8 @@ pub use dispatch::{
 };
 pub use dto::{
     EngineActiveTool, EngineChromeSnapshot, EngineConfirmDissolveDialogSnapshot,
-    EngineConnectionPairEntry, EngineConnectionPairSnapshot, EngineDedupDialogSnapshot,
+    EngineConnectionPairEntry, EngineConnectionPairSnapshot, EngineContextMenuAction,
+    EngineContextMenuSnapshot, EngineContextMenuVariant, EngineDedupDialogSnapshot,
     EngineDefaultConnectionDirection, EngineDefaultConnectionPriority, EngineDialogRequest,
     EngineDialogRequestKind, EngineDialogResult, EngineDialogSnapshot, EngineEditableGroupSummary,
     EngineEditingOptionsSnapshot, EngineEditingSnapshot, EngineFieldDetectionSource,
@@ -38,7 +39,8 @@ pub use dto::{
     EngineViewportGeometrySnapshot, EngineViewportInputBatch, EngineViewportInputEvent,
     EngineViewportSnapshot, EngineZipBrowserSnapshot, EngineZipImageEntrySnapshot, HostActiveTool,
     HostChromeSnapshot, HostConfirmDissolveDialogSnapshot, HostConnectionPairEntry,
-    HostConnectionPairSnapshot, HostDedupDialogSnapshot, HostDefaultConnectionDirection,
+    HostConnectionPairSnapshot, HostContextMenuAction, HostContextMenuSnapshot,
+    HostContextMenuVariant, HostDedupDialogSnapshot, HostDefaultConnectionDirection,
     HostDefaultConnectionPriority, HostDialogRequest, HostDialogRequestKind, HostDialogResult,
     HostDialogSnapshot, HostEditableGroupSummary, HostEditingOptionsSnapshot, HostEditingSnapshot,
     HostFieldDetectionSource, HostGroupBoundaryCandidateSnapshot, HostGroupEditSnapshot,

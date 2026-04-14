@@ -95,6 +95,14 @@ pub fn flutter_session_editing_snapshot_json(handle: &FlutterSessionHandle) -> R
     crate::flutter_api::flutter_session_editing_snapshot_json(handle)
 }
 
+/// Gibt den aktuellen host-neutralen Kontextmenue-Snapshot als JSON-String zurueck.
+pub fn flutter_session_context_menu_snapshot_json(
+    handle: &FlutterSessionHandle,
+    focus_node_id_or_neg1: i64,
+) -> Result<String> {
+    crate::flutter_api::flutter_session_context_menu_snapshot_json(handle, focus_node_id_or_neg1)
+}
+
 /// Gibt den aktuellen host-neutralen Viewport-Overlay-Snapshot als JSON-String zurueck.
 pub fn flutter_session_viewport_overlay_json(
     handle: &FlutterSessionHandle,
