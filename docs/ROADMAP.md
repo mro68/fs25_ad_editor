@@ -559,6 +559,7 @@
   - [x] `flutter_session_ui_snapshot_json()` — HostUiSnapshot als JSON
   - [x] `flutter_session_chrome_snapshot_json()` — HostChromeSnapshot als JSON
   - [x] `flutter_session_dialog_snapshot_json()` — HostDialogSnapshot als JSON fuer alle egui-Dialoge
+  - [x] `flutter_session_editing_snapshot_json()` — HostEditingSnapshot als JSON fuer Properties-, Group-Edit- und Streckenteilungsdaten
   - [x] `flutter_session_viewport_overlay_json()` — ViewportOverlaySnapshot als JSON
   - [x] FRB-Control-Plane um bestehende Bridge-Seams erweitert: `flutter_session_take_dialog_requests_json()`, `flutter_session_submit_dialog_result_json()`, `flutter_session_route_tool_viewport_json()`, `flutter_session_connection_pair_json()`
   - [x] Neue `HostSessionAction`-Varianten: `DeleteSelected`, `SelectAll`, `ClearSelection`, `CopySelection`, `PasteStart`, `PasteConfirm`, `PasteCancel`

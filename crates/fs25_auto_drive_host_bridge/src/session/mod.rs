@@ -1,18 +1,19 @@
 use anyhow::Result;
 use fs25_auto_drive_engine::app::projections as engine_projections;
 use fs25_auto_drive_engine::app::state::DistanzenState;
+use fs25_auto_drive_engine::app::tool_contract::RouteToolId;
 use fs25_auto_drive_engine::app::ui_contract::{
     DialogRequest, HostUiSnapshot, PanelState, ViewportOverlaySnapshot,
 };
 use fs25_auto_drive_engine::app::{
     AppController, AppIntent, AppState, Camera2D, ConnectionDirection, ConnectionPriority,
-    EditorTool, FloatingMenuKind, FloatingMenuState, GroupEditState, GroupRegistry, RoadMap,
-    ToolEditStore,
+    EditorTool, FloatingMenuKind, FloatingMenuState, GroupEditState, GroupRecord, GroupRegistry,
+    RoadMap, ToolEditStore,
 };
 use fs25_auto_drive_engine::shared::{EditorOptions, RenderAssetsSnapshot, RenderScene};
 use glam::Vec2;
 use indexmap::IndexSet;
-use std::collections::BTreeSet;
+use std::collections::{BTreeSet, HashMap};
 
 mod chrome_state;
 pub use chrome_state::HostLocalDialogState;
@@ -21,12 +22,16 @@ use crate::dispatch::HostViewportInputState;
 use crate::dto::{
     HostActiveTool, HostChromeSnapshot, HostConnectionPairEntry, HostConnectionPairSnapshot,
     HostDefaultConnectionDirection, HostDefaultConnectionPriority, HostDialogRequest,
-    HostDialogResult, HostDialogSnapshot, HostFieldDetectionSource, HostMarkerInfo,
-    HostMarkerListSnapshot, HostNodeDetails, HostNodeFlag, HostNodeMarkerInfo, HostNodeNeighbor,
-    HostOverviewLayersSnapshot, HostOverviewSourceContext, HostRouteToolViewportSnapshot,
+    HostDialogResult, HostDialogSnapshot, HostEditableGroupSummary, HostEditingOptionsSnapshot,
+    HostEditingSnapshot, HostFieldDetectionSource, HostGroupBoundaryCandidateSnapshot,
+    HostGroupEditSnapshot, HostMarkerInfo, HostMarkerListSnapshot, HostNodeDetails, HostNodeFlag,
+    HostNodeMarkerInfo, HostNodeNeighbor, HostOverviewLayersSnapshot, HostOverviewSourceContext,
+    HostResampleEditSnapshot, HostResampleMode, HostRouteToolId, HostRouteToolViewportSnapshot,
     HostSelectionSnapshot, HostSessionAction, HostSessionSnapshot, HostViewportGeometrySnapshot,
     HostViewportSnapshot,
 };
+
+const MAX_RESAMPLE_CHAIN_NODES: usize = 500;
 
 fn map_active_tool(tool: EditorTool) -> HostActiveTool {
     match tool {
@@ -49,6 +54,22 @@ fn map_connection_priority(priority: ConnectionPriority) -> HostDefaultConnectio
     match priority {
         ConnectionPriority::Regular => HostDefaultConnectionPriority::Regular,
         ConnectionPriority::SubPriority => HostDefaultConnectionPriority::SubPriority,
+    }
+}
+
+fn map_route_tool_id(tool_id: RouteToolId) -> HostRouteToolId {
+    match tool_id {
+        RouteToolId::Straight => HostRouteToolId::Straight,
+        RouteToolId::CurveQuad => HostRouteToolId::CurveQuad,
+        RouteToolId::CurveCubic => HostRouteToolId::CurveCubic,
+        RouteToolId::Spline => HostRouteToolId::Spline,
+        RouteToolId::Bypass => HostRouteToolId::Bypass,
+        RouteToolId::SmoothCurve => HostRouteToolId::SmoothCurve,
+        RouteToolId::Parking => HostRouteToolId::Parking,
+        RouteToolId::FieldBoundary => HostRouteToolId::FieldBoundary,
+        RouteToolId::FieldPath => HostRouteToolId::FieldPath,
+        RouteToolId::RouteOffset => HostRouteToolId::RouteOffset,
+        RouteToolId::ColorPath => HostRouteToolId::ColorPath,
     }
 }
 
@@ -181,6 +202,195 @@ fn build_dialog_snapshot(state: &AppState, chrome: &HostLocalDialogState) -> Hos
             segment_id: chrome.confirm_dissolve_group_id,
         },
     }
+}
+
+fn build_editing_snapshot(state: &AppState) -> HostEditingSnapshot {
+    HostEditingSnapshot {
+        editable_groups: build_editable_group_summaries(state),
+        group_edit: build_group_edit_snapshot(state),
+        resample: build_resample_snapshot(state),
+        options: HostEditingOptionsSnapshot {
+            render_quality: state.view.render_quality,
+            background_visible: state.view.background_visible,
+            background_scale: state.view.background_scale,
+            show_all_group_boundaries: state.options.show_all_group_boundaries,
+            segment_stop_at_junction: state.options.segment_stop_at_junction,
+            segment_max_angle_deg: state.options.segment_max_angle_deg,
+            mouse_wheel_distance_step_m: state.options.mouse_wheel_distance_step_m,
+        },
+    }
+}
+
+fn build_editable_group_summaries(state: &AppState) -> Vec<HostEditableGroupSummary> {
+    let mut groups: Vec<HostEditableGroupSummary> = state
+        .group_registry
+        .find_by_node_ids(&state.selection.selected_node_ids)
+        .into_iter()
+        .map(|record| HostEditableGroupSummary {
+            record_id: record.id,
+            node_count: record.node_ids.len(),
+            locked: record.locked,
+            tool_id: state
+                .tool_edit_store
+                .tool_id_for(record.id)
+                .map(map_route_tool_id),
+            has_tool_edit: state.tool_edit_store.contains(record.id),
+            entry_node_id: record.entry_node_id,
+            exit_node_id: record.exit_node_id,
+        })
+        .collect();
+    groups.sort_by_key(|group| group.record_id);
+    groups
+}
+
+fn build_group_edit_snapshot(state: &AppState) -> Option<HostGroupEditSnapshot> {
+    let edit_state = state.group_editing.as_ref()?;
+    let record = state.group_registry.get(edit_state.record_id);
+
+    Some(HostGroupEditSnapshot {
+        record_id: edit_state.record_id,
+        locked: record.is_some_and(|record| record.locked),
+        was_locked_before_edit: edit_state.was_locked,
+        node_count: record.map_or(0, |record| record.node_ids.len()),
+        tool_id: state
+            .tool_edit_store
+            .tool_id_for(edit_state.record_id)
+            .map(map_route_tool_id),
+        has_tool_edit: state.tool_edit_store.contains(edit_state.record_id),
+        entry_node_id: record.and_then(|record| record.entry_node_id),
+        exit_node_id: record.and_then(|record| record.exit_node_id),
+        boundary_candidates: record
+            .map(|record| build_group_boundary_candidates(record, state.road_map.as_deref()))
+            .unwrap_or_default(),
+    })
+}
+
+fn build_group_boundary_candidates(
+    record: &GroupRecord,
+    road_map: Option<&RoadMap>,
+) -> Vec<HostGroupBoundaryCandidateSnapshot> {
+    let boundary_nodes_by_id: HashMap<u64, fs25_auto_drive_engine::core::BoundaryNode> = road_map
+        .map(|road_map| {
+            let group_ids: IndexSet<u64> = record.node_ids.iter().copied().collect();
+            road_map
+                .boundary_nodes(&group_ids)
+                .into_iter()
+                .map(|boundary| (boundary.node_id, boundary))
+                .collect()
+        })
+        .unwrap_or_default();
+
+    let mut seen = std::collections::HashSet::new();
+    let mut candidates = Vec::with_capacity(record.node_ids.len());
+
+    for &node_id in &record.node_ids {
+        if !seen.insert(node_id) {
+            continue;
+        }
+
+        let boundary = boundary_nodes_by_id.get(&node_id);
+        candidates.push(HostGroupBoundaryCandidateSnapshot {
+            node_id,
+            position: road_map
+                .and_then(|road_map| road_map.node(node_id))
+                .map(|node| [node.position.x, node.position.y]),
+            has_external_incoming: boundary.is_some_and(|boundary| boundary.has_external_incoming),
+            has_external_outgoing: boundary.is_some_and(|boundary| boundary.has_external_outgoing),
+        });
+    }
+
+    for node_id in [record.entry_node_id, record.exit_node_id]
+        .into_iter()
+        .flatten()
+    {
+        if !seen.insert(node_id) {
+            continue;
+        }
+
+        let boundary = boundary_nodes_by_id.get(&node_id);
+        candidates.push(HostGroupBoundaryCandidateSnapshot {
+            node_id,
+            position: road_map
+                .and_then(|road_map| road_map.node(node_id))
+                .map(|node| [node.position.x, node.position.y]),
+            has_external_incoming: boundary.is_some_and(|boundary| boundary.has_external_incoming),
+            has_external_outgoing: boundary.is_some_and(|boundary| boundary.has_external_outgoing),
+        });
+    }
+
+    candidates
+}
+
+fn build_resample_snapshot(state: &AppState) -> HostResampleEditSnapshot {
+    let distanzen = &state.ui.distanzen;
+    let selected_node_count = state.selection.selected_node_ids.len();
+    let mut can_resample_current_selection = false;
+    let mut path_length = 0.0;
+    let mut preview_count = 0usize;
+
+    if let Some(road_map) = state.road_map.as_deref()
+        && let Some((computed_path_length, computed_preview_count)) =
+            compute_resample_chain_metrics(road_map, &state.selection.selected_node_ids, distanzen)
+    {
+        can_resample_current_selection = true;
+        path_length = computed_path_length;
+        if distanzen.active {
+            preview_count = computed_preview_count;
+        }
+    }
+
+    HostResampleEditSnapshot {
+        active: distanzen.active,
+        can_resample_current_selection,
+        selected_node_count,
+        mode: if distanzen.by_count {
+            HostResampleMode::Count
+        } else {
+            HostResampleMode::Distance
+        },
+        distance: distanzen.distance,
+        count: distanzen.count,
+        path_length,
+        hide_original: distanzen.hide_original,
+        preview_count,
+    }
+}
+
+fn compute_resample_chain_metrics(
+    road_map: &RoadMap,
+    selected_node_ids: &IndexSet<u64>,
+    distanzen: &DistanzenState,
+) -> Option<(f32, usize)> {
+    use fs25_auto_drive_engine::shared::spline_geometry::{
+        catmull_rom_chain_with_tangents, polyline_length, resample_by_distance,
+    };
+
+    if !(2..=MAX_RESAMPLE_CHAIN_NODES).contains(&selected_node_ids.len()) {
+        return None;
+    }
+
+    let ordered = road_map.ordered_chain_nodes(selected_node_ids)?;
+    let positions: Vec<Vec2> = ordered
+        .iter()
+        .filter_map(|node_id| road_map.node(*node_id).map(|node| node.position))
+        .collect();
+    if positions.len() < 2 {
+        return None;
+    }
+
+    let dense = catmull_rom_chain_with_tangents(&positions, 16, None, None);
+    let path_length = polyline_length(&dense);
+    let preview_count = if path_length <= f32::EPSILON {
+        positions.len()
+    } else if distanzen.by_count {
+        let count = distanzen.count.max(2) as usize;
+        let step = path_length / (count - 1) as f32;
+        resample_by_distance(&dense, step).len()
+    } else {
+        resample_by_distance(&dense, distanzen.distance.max(0.1)).len()
+    };
+
+    Some((path_length, preview_count))
 }
 
 /// Gekoppelter Render-Snapshot fuer Hosts ohne direkte State-Inspektion.
@@ -605,6 +815,16 @@ impl HostBridgeSession {
         build_dialog_snapshot(&self.state, &self.chrome_state)
     }
 
+    /// Liefert einen serialisierbaren Snapshot fuer Properties-, Group-Edit- und Resample-Daten.
+    ///
+    /// Der Snapshot bildet die aktuell ueber `panel_properties_state_mut()` und
+    /// `viewport_input_context_mut()` gelesenen Editing-Zustaende host-neutral ab,
+    /// damit Flutter und spaetere Hosts dieselben Daten ohne Rust-spezifische
+    /// Escape-Hatches pollen koennen.
+    pub fn editing_snapshot(&self) -> HostEditingSnapshot {
+        build_editing_snapshot(&self.state)
+    }
+
     /// Serialisiert den aktuell inspizierten Node als JSON fuer Flutter.
     pub fn node_details_json(&self) -> Option<String> {
         let snapshot = self
@@ -968,9 +1188,12 @@ mod tests {
     use std::path::PathBuf;
     use std::time::Instant;
 
+    use fs25_auto_drive_engine::app::handlers;
+    use fs25_auto_drive_engine::app::tool_contract::RouteToolId;
     use fs25_auto_drive_engine::app::{
         AppIntent, Connection, ConnectionDirection, ConnectionPriority, FloatingMenuKind,
-        MapMarker, MapNode, NodeFlag, OverviewSourceContext, RoadMap, ZipBrowserState,
+        GroupEditState, GroupRecord, MapMarker, MapNode, NodeFlag, OverviewSourceContext, RoadMap,
+        ZipBrowserState,
     };
     use fs25_auto_drive_engine::core::ZipImageEntry;
     use fs25_auto_drive_engine::shared::OverviewLayerOptions;
@@ -978,7 +1201,9 @@ mod tests {
     use glam::Vec2;
     use std::sync::Arc;
 
-    use crate::dto::{HostFieldDetectionSource, HostOverviewSourceContext};
+    use crate::dto::{
+        HostFieldDetectionSource, HostOverviewSourceContext, HostResampleMode, HostRouteToolId,
+    };
 
     use crate::dto::{
         EngineSessionAction, HostActiveTool, HostConnectionPairEntry, HostConnectionPairSnapshot,
@@ -1043,6 +1268,64 @@ mod tests {
             false,
         ));
         map
+    }
+
+    fn group_boundary_test_map() -> RoadMap {
+        let mut map = RoadMap::new(3);
+        map.add_node(MapNode::new(1, Vec2::new(0.0, 0.0), NodeFlag::Regular));
+        map.add_node(MapNode::new(2, Vec2::new(10.0, 0.0), NodeFlag::Regular));
+        map.add_node(MapNode::new(3, Vec2::new(20.0, 0.0), NodeFlag::Regular));
+        map.add_node(MapNode::new(10, Vec2::new(-10.0, 0.0), NodeFlag::Regular));
+        map.add_node(MapNode::new(11, Vec2::new(30.0, 0.0), NodeFlag::Regular));
+        map.add_connection(Connection::new(
+            1,
+            2,
+            ConnectionDirection::Regular,
+            ConnectionPriority::Regular,
+            Vec2::new(0.0, 0.0),
+            Vec2::new(10.0, 0.0),
+        ));
+        map.add_connection(Connection::new(
+            2,
+            3,
+            ConnectionDirection::Regular,
+            ConnectionPriority::Regular,
+            Vec2::new(10.0, 0.0),
+            Vec2::new(20.0, 0.0),
+        ));
+        map.add_connection(Connection::new(
+            10,
+            1,
+            ConnectionDirection::Regular,
+            ConnectionPriority::Regular,
+            Vec2::new(-10.0, 0.0),
+            Vec2::new(0.0, 0.0),
+        ));
+        map.add_connection(Connection::new(
+            3,
+            11,
+            ConnectionDirection::Regular,
+            ConnectionPriority::Regular,
+            Vec2::new(20.0, 0.0),
+            Vec2::new(30.0, 0.0),
+        ));
+        map.ensure_spatial_index();
+        map
+    }
+
+    fn make_group_record(record_id: u64, node_ids: &[u64], road_map: &RoadMap) -> GroupRecord {
+        GroupRecord {
+            id: record_id,
+            node_ids: node_ids.to_vec(),
+            original_positions: node_ids
+                .iter()
+                .filter_map(|node_id| road_map.node(*node_id).map(|node| node.position))
+                .collect(),
+            marker_node_ids: Vec::new(),
+            locked: false,
+            entry_node_id: Some(1),
+            exit_node_id: Some(3),
+        }
     }
 
     fn snapshot_measurement_session(selected_count: usize) -> HostBridgeSession {
@@ -1442,6 +1725,7 @@ mod tests {
 
         let _ = session.build_host_ui_snapshot();
         let _ = session.build_host_chrome_snapshot();
+        let _ = session.editing_snapshot();
         let _ = session.build_route_tool_viewport_snapshot();
         let _ = session.build_viewport_geometry_snapshot([640.0, 480.0]);
 
@@ -1677,6 +1961,115 @@ mod tests {
         assert_eq!(snapshot.group_settings_popup.segment_max_angle_deg, 42.5);
         assert_eq!(snapshot.confirm_dissolve_group.segment_id, Some(99));
         assert!(snapshot.confirm_dissolve_group.visible);
+    }
+
+    #[test]
+    fn editing_snapshot_reports_resample_metrics_for_connected_chain() {
+        let mut session = HostBridgeSession::new();
+        session.state.road_map = Some(Arc::new(viewport_connected_path_map()));
+        session.state.selection.ids_mut().insert(1);
+        session.state.selection.ids_mut().insert(2);
+        session.state.selection.ids_mut().insert(3);
+        session.state.ui.distanzen.active = true;
+        session.state.ui.distanzen.by_count = true;
+        session.state.ui.distanzen.count = 5;
+        session.state.ui.distanzen.distance = 4.0;
+        session.state.ui.distanzen.hide_original = true;
+
+        let snapshot = session.editing_snapshot();
+
+        assert!(snapshot.resample.active);
+        assert!(snapshot.resample.can_resample_current_selection);
+        assert_eq!(snapshot.resample.selected_node_count, 3);
+        assert_eq!(snapshot.resample.mode, HostResampleMode::Count);
+        assert_eq!(snapshot.resample.count, 5);
+        assert_eq!(snapshot.resample.preview_count, 5);
+        assert!((snapshot.resample.path_length - 20.0).abs() < 0.01);
+    }
+
+    #[test]
+    fn editing_snapshot_reports_group_edit_boundary_candidates() {
+        let mut session = HostBridgeSession::new();
+        let road_map = group_boundary_test_map();
+        let record_id = 42;
+        let record = make_group_record(record_id, &[1, 2, 3], &road_map);
+
+        session.state.road_map = Some(Arc::new(road_map));
+        session.state.group_registry.register(record);
+        session.state.group_editing = Some(GroupEditState {
+            record_id,
+            was_locked: true,
+        });
+
+        let snapshot = session.editing_snapshot();
+        let group_edit = snapshot
+            .group_edit
+            .expect("Group-Edit-Snapshot muss vorhanden sein");
+
+        assert_eq!(group_edit.record_id, record_id);
+        assert!(!group_edit.locked);
+        assert!(group_edit.was_locked_before_edit);
+        assert_eq!(group_edit.entry_node_id, Some(1));
+        assert_eq!(group_edit.exit_node_id, Some(3));
+        assert_eq!(group_edit.boundary_candidates.len(), 3);
+
+        let entry_candidate = group_edit
+            .boundary_candidates
+            .iter()
+            .find(|candidate| candidate.node_id == 1)
+            .expect("Entry-Kandidat muss enthalten sein");
+        assert!(entry_candidate.has_external_incoming);
+        assert!(!entry_candidate.has_external_outgoing);
+
+        let middle_candidate = group_edit
+            .boundary_candidates
+            .iter()
+            .find(|candidate| candidate.node_id == 2)
+            .expect("Mittelknoten muss enthalten sein");
+        assert!(!middle_candidate.has_external_incoming);
+        assert!(!middle_candidate.has_external_outgoing);
+
+        let exit_candidate = group_edit
+            .boundary_candidates
+            .iter()
+            .find(|candidate| candidate.node_id == 3)
+            .expect("Exit-Kandidat muss enthalten sein");
+        assert!(!exit_candidate.has_external_incoming);
+        assert!(exit_candidate.has_external_outgoing);
+    }
+
+    #[test]
+    fn editing_snapshot_reports_tool_editable_groups_for_persisted_route_tool() {
+        let mut session = HostBridgeSession::new();
+        let mut road_map = RoadMap::new(3);
+        road_map.add_node(MapNode::new(1, Vec2::new(0.0, 0.0), NodeFlag::Regular));
+        road_map.add_node(MapNode::new(2, Vec2::new(20.0, 0.0), NodeFlag::Regular));
+        road_map.ensure_spatial_index();
+        session.state.road_map = Some(Arc::new(road_map));
+
+        handlers::route_tool::select_with_anchors(&mut session.state, RouteToolId::Straight, 1, 2);
+
+        let record = session
+            .state
+            .group_registry
+            .records()
+            .next()
+            .expect("Persistierter Straight-Record muss vorhanden sein")
+            .clone();
+        session.state.selection.ids_mut().clear();
+        if let Some(&first_group_node) = record.node_ids.first() {
+            session.state.selection.ids_mut().insert(first_group_node);
+        }
+
+        let snapshot = session.editing_snapshot();
+
+        assert_eq!(snapshot.editable_groups.len(), 1);
+        assert_eq!(snapshot.editable_groups[0].record_id, record.id);
+        assert!(snapshot.editable_groups[0].has_tool_edit);
+        assert_eq!(
+            snapshot.editable_groups[0].tool_id,
+            Some(HostRouteToolId::Straight)
+        );
     }
 
     #[test]

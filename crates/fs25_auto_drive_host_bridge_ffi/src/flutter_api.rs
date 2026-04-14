@@ -202,6 +202,14 @@ pub fn flutter_session_dialog_snapshot_json(handle: &FlutterSessionHandle) -> Re
     })
 }
 
+/// Gibt den aktuellen host-neutralen Editing-Snapshot als JSON-String zurueck.
+pub fn flutter_session_editing_snapshot_json(handle: &FlutterSessionHandle) -> Result<String> {
+    let snapshot = handle.with_session(|s| s.editing_snapshot())?;
+    serde_json::to_string(&snapshot).map_err(|e| {
+        anyhow::anyhow!("flutter_session_editing_snapshot_json: Serialisierungsfehler: {e}")
+    })
+}
+
 /// Gibt den aktuellen host-neutralen Viewport-Overlay-Snapshot als JSON-String zurueck.
 ///
 /// `cursor_world_x` und `cursor_world_y` beschreiben die aktuelle Cursor-Position
@@ -267,8 +275,8 @@ pub fn flutter_session_release_shared_arc_raw(raw: i64) {
 mod tests {
     use fs25_auto_drive_host_bridge::{
         HostConnectionPairSnapshot, HostDialogRequest, HostDialogRequestKind, HostDialogResult,
-        HostDialogSnapshot, HostMarkerListSnapshot, HostRouteToolViewportSnapshot,
-        HostSessionAction,
+        HostDialogSnapshot, HostEditingSnapshot, HostMarkerListSnapshot,
+        HostRouteToolViewportSnapshot, HostSessionAction,
     };
 
     use super::*;
@@ -359,6 +367,22 @@ mod tests {
 
         assert!(snapshot.heightmap_warning.visible);
         assert_eq!(snapshot.confirm_dissolve_group.segment_id, Some(21));
+
+        flutter_session_dispose(handle);
+    }
+
+    /// Prueft, dass editing_snapshot_json ein parsebares JSON-Objekt liefert.
+    #[test]
+    fn test_flutter_session_editing_snapshot_json_roundtrip() {
+        let handle = flutter_session_new();
+
+        let json = flutter_session_editing_snapshot_json(&handle)
+            .expect("Editing-Snapshot-Serialisierung muss gelingen");
+        let snapshot: HostEditingSnapshot =
+            serde_json::from_str(&json).expect("Editing-Snapshot muss parsebares JSON sein");
+
+        assert!(snapshot.editable_groups.is_empty());
+        assert!(!snapshot.resample.active);
 
         flutter_session_dispose(handle);
     }

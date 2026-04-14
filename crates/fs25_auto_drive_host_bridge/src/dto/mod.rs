@@ -7,6 +7,7 @@ mod actions;
 mod chrome;
 mod connection_pair;
 mod dialogs;
+mod editing;
 mod input;
 mod markers;
 mod node_details;
@@ -26,6 +27,11 @@ pub use dialogs::{
     HostOverviewLayersSnapshot, HostOverviewOptionsDialogSnapshot, HostOverviewSourceContext,
     HostPostLoadDialogSnapshot, HostSaveOverviewDialogSnapshot, HostTraceAllFieldsDialogSnapshot,
     HostZipBrowserSnapshot, HostZipImageEntrySnapshot,
+};
+pub use editing::{
+    HostEditableGroupSummary, HostEditingOptionsSnapshot, HostEditingSnapshot,
+    HostGroupBoundaryCandidateSnapshot, HostGroupEditSnapshot, HostResampleEditSnapshot,
+    HostResampleMode,
 };
 pub use input::{
     HostInputModifiers, HostPointerButton, HostTapKind, HostViewportInputBatch,
@@ -64,6 +70,20 @@ pub type EngineConnectionPairSnapshot = HostConnectionPairSnapshot;
 pub type EngineDialogResult = HostDialogResult;
 /// Kompatibilitaetsalias fuer bestehende Flutter-/FFI-Call-Sites.
 pub type EngineDialogSnapshot = HostDialogSnapshot;
+/// Kompatibilitaetsalias fuer bestehende Flutter-/FFI-Call-Sites.
+pub type EngineEditingSnapshot = HostEditingSnapshot;
+/// Kompatibilitaetsalias fuer bestehende Flutter-/FFI-Call-Sites.
+pub type EngineEditingOptionsSnapshot = HostEditingOptionsSnapshot;
+/// Kompatibilitaetsalias fuer bestehende Flutter-/FFI-Call-Sites.
+pub type EngineEditableGroupSummary = HostEditableGroupSummary;
+/// Kompatibilitaetsalias fuer bestehende Flutter-/FFI-Call-Sites.
+pub type EngineGroupEditSnapshot = HostGroupEditSnapshot;
+/// Kompatibilitaetsalias fuer bestehende Flutter-/FFI-Call-Sites.
+pub type EngineGroupBoundaryCandidateSnapshot = HostGroupBoundaryCandidateSnapshot;
+/// Kompatibilitaetsalias fuer bestehende Flutter-/FFI-Call-Sites.
+pub type EngineResampleEditSnapshot = HostResampleEditSnapshot;
+/// Kompatibilitaetsalias fuer bestehende Flutter-/FFI-Call-Sites.
+pub type EngineResampleMode = HostResampleMode;
 /// Kompatibilitaetsalias fuer bestehende Flutter-/FFI-Call-Sites.
 pub type EngineHeightmapWarningDialogSnapshot = HostHeightmapWarningDialogSnapshot;
 /// Kompatibilitaetsalias fuer bestehende Flutter-/FFI-Call-Sites.
