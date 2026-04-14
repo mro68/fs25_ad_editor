@@ -8,7 +8,7 @@ Seit der FFI-Haertungswelle sind alle pointer-konsumierenden Exporte in Rust exp
 
 Seit dem Hard-Cut ist der RGBA-Pixelbuffer-v1 entfernt. Der einzige native Render-Transportpfad ist jetzt Shared-Texture mit explizitem Acquire/Release-Lifecycle.
 
-Unter den Feature-Flags `flutter` und `flutter-linux` exportiert die Crate zusaetzlich eine Flutter Control-Plane API (typsichere High-Level-Funktionen fuer `flutter_rust_bridge`-Codegen) sowie einen Low-Level C-FFI GPU-Runtime-Stack fuer Linux/Vulkan mit DMA-BUF-Texture-Export.
+Unter den Feature-Flags `flutter` und `flutter-linux` exportiert die Crate zusaetzlich eine Flutter Control-Plane API. Dazu gehoeren sowohl die bestehenden typsicheren High-Level-Funktionen fuer das bisherige `flutter_rust_bridge`-Codegen als auch eine direkte `fs25ad_flutter_session_*`-C-FFI-Surface fuer `dart:ffi`/`ffigen`. Daneben bleibt der Low-Level C-FFI GPU-Runtime-Stack fuer Linux/Vulkan mit DMA-BUF-Texture-Export erhalten.
 
 Der Rendertransport ist separat ueber `FS25AD_HOST_BRIDGE_SHARED_TEXTURE_CONTRACT_VERSION = 3` versioniert. Die exportierten Native-Handle-Werte sind explizit opaque Runtime-Pointer fuer denselben Prozessraum und keine backend-nativen Vulkan-/Metal-/DX-Interop-Handles.
 
@@ -26,6 +26,7 @@ Fuer native C/C++-Hosts liegt der stabile Vertragsheader unter `include/fs25ad_h
 | `FS25AD_HOST_BRIDGE_SHARED_TEXTURE_CONTRACT_VERSION` | Explizite Version des opaque Shared-Texture-Vertrags (`3`) |
 | `FS25AD_HOST_BRIDGE_TEXTURE_REGISTRATION_V4_CONTRACT_VERSION` | Explizite Version des additiven Texture-Registration-v4-Vertrags (`4`) |
 | `*mut HostBridgeSession` | Opaquer Session-Handle fuer die kanonische Host-Bridge-Surface |
+| `*mut Fs25adFlutterSessionHandle` | Opaquer Flutter-Session-Handle ueber derselben kanonischen `HostBridgeSession` |
 | `*mut HostBridgeSharedTexture` | Opaquer Shared-Texture-Handle mit eigener wgpu-Runtime |
 | `*mut HostBridgeTextureRegistrationV4` | Opaquer Handle des additiven v4-Lifecycle-Pfads |
 | `Fs25adSharedTextureCapabilities` | Statische Laufzeitfaehigkeiten (Format/Alpha/Native-Handle-Art/Lifecycle-Regel) |
@@ -84,6 +85,33 @@ Fuer native C/C++-Hosts liegt der stabile Vertragsheader unter `include/fs25ad_h
 | `fs25ad_host_bridge_texture_registration_v4_attach_android_surface(texture, surface_descriptor) -> bool` | Attached ein Android-Surface an den v4-Handle |
 | `fs25ad_host_bridge_texture_registration_v4_detach_android_surface(texture) -> bool` | Detacht ein zuvor attached Android-Surface |
 
+### Flutter-Feature-Exporte
+
+Die folgenden Symbole werden nur mit aktivem `flutter`-Feature exportiert und spiegeln die bestehende Flutter-Control-Plane 1:1 als direkte C-ABI fuer `dart:ffi`/`ffigen`:
+
+| Symbol | Zweck |
+|---|---|
+| `fs25ad_flutter_session_new() -> *mut Fs25adFlutterSessionHandle` | Erstellt eine neue Flutter-Session als opaque C-ABI-Handle |
+| `fs25ad_flutter_session_dispose(session)` | Gibt einen Flutter-Session-Handle frei |
+| `fs25ad_flutter_session_apply_action_json(session, action_json) -> bool` | Liest `HostSessionAction` aus UTF-8-JSON und mutiert die Flutter-Session |
+| `fs25ad_flutter_session_take_dialog_requests_json(session) -> *mut c_char` | Liefert ein JSON-Array aus `HostDialogRequest` und drainet die Queue |
+| `fs25ad_flutter_session_submit_dialog_result_json(session, result_json) -> bool` | Liest `HostDialogResult` aus UTF-8-JSON und fuehrt ihn in die Flutter-Session zurueck |
+| `fs25ad_flutter_session_snapshot_json(session) -> *mut c_char` | Liefert `HostSessionSnapshot` als UTF-8-JSON |
+| `fs25ad_flutter_session_node_details_json(session) -> *mut c_char` | Liefert den aktuell inspizierten Node als `HostNodeDetails`-JSON oder `NULL`, wenn kein passender Node vorliegt |
+| `fs25ad_flutter_session_marker_list_json(session) -> *mut c_char` | Liefert `HostMarkerListSnapshot` als UTF-8-JSON |
+| `fs25ad_flutter_session_route_tool_viewport_json(session) -> *mut c_char` | Liefert `HostRouteToolViewportSnapshot` als UTF-8-JSON |
+| `fs25ad_flutter_session_connection_pair_json(session, node_a, node_b) -> *mut c_char` | Liefert den `HostConnectionPairSnapshot` fuer genau zwei Nodes als UTF-8-JSON |
+| `fs25ad_flutter_session_is_dirty(session) -> int32_t` | Liefert den Dirty-Zustand als `1` (dirty), `0` (clean) oder `-1` (Fehler) |
+| `fs25ad_flutter_session_ui_snapshot_json(session) -> *mut c_char` | Liefert den host-neutralen `HostUiSnapshot` als UTF-8-JSON |
+| `fs25ad_flutter_session_chrome_snapshot_json(session) -> *mut c_char` | Liefert `HostChromeSnapshot` als UTF-8-JSON |
+| `fs25ad_flutter_session_dialog_snapshot_json(session) -> *mut c_char` | Liefert `HostDialogSnapshot` als UTF-8-JSON |
+| `fs25ad_flutter_session_editing_snapshot_json(session) -> *mut c_char` | Liefert `HostEditingSnapshot` als UTF-8-JSON |
+| `fs25ad_flutter_session_context_menu_snapshot_json(session, focus_node_id_or_neg1) -> *mut c_char` | Liefert `HostContextMenuSnapshot` als UTF-8-JSON; `-1` bedeutet kein Fokus-Node |
+| `fs25ad_flutter_session_viewport_overlay_json(session, cursor_world_x, cursor_world_y) -> *mut c_char` | Liefert den host-neutralen `ViewportOverlaySnapshot` als UTF-8-JSON |
+| `fs25ad_flutter_session_viewport_geometry_json(session, width, height) -> *mut c_char` | Liefert `HostViewportGeometrySnapshot` als UTF-8-JSON |
+| `fs25ad_flutter_session_acquire_shared_arc_raw(session) -> int64_t` | Klont den geteilten `Arc<Mutex<HostBridgeSession>>` als rohen Integer fuer weitergereichte GPU-FFI-Seams |
+| `fs25ad_flutter_session_release_shared_arc_raw(raw)` | Gibt einen zuvor via `acquire_shared_arc_raw` geklonten Arc frei |
+
 ## Transportvertrag
 
 - Session-Handles sind opaque Pointer auf die kanonische `HostBridgeSession`.
@@ -110,6 +138,13 @@ Fuer native C/C++-Hosts liegt der stabile Vertragsheader unter `include/fs25ad_h
 - Diese Pointer sind keine backend-nativen Vulkan-/Metal-/DX-Interop-Handles und nur im selben Prozessraum gueltig.
 - `dispose` darf nicht parallel zu anderen Aufrufen auf demselben Handle erfolgen; nach `dispose` ist jeder Zugriff ungueltig.
 - Es gibt keinen Pixelbuffer-Fallback und keinen RGBA-Copy-Pfad mehr.
+
+## Flutter-C-FFI-Vertrag
+
+- `Fs25adFlutterSessionHandle` kapselt denselben kanonischen Session-Besitz wie die FRB-Control-Plane (`Arc<Mutex<HostBridgeSession>>`), fuehrt aber keine zweite DTO- oder Session-Familie ein.
+- Alle `fs25ad_flutter_session_*`-JSON-Payloads verwenden dieselben `HostSessionAction`-, `HostDialog*`- und Snapshot-DTOs wie die generische Host-Bridge-Surface.
+- Die Flutter-C-FFI-Surface ist additive Paritaetsschicht fuer `dart:ffi`/`ffigen`; das bestehende `flutter_api.rs` bleibt nur noch der typsichere Uebergangsadapter fuer den bisherigen FRB-Codegen.
+- `fs25ad_flutter_session_acquire_shared_arc_raw()` gibt bei Fehlern `0` zurueck; `release_shared_arc_raw(0)` ist ein definierter No-op.
 
 ## Texture-Registration-v4 (additiv)
 

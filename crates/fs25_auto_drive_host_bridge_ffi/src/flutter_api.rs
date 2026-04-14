@@ -42,7 +42,7 @@ pub struct FlutterSessionHandle {
 }
 
 impl FlutterSessionHandle {
-    fn with_session<T>(&self, f: impl FnOnce(&mut HostBridgeSession) -> T) -> Result<T> {
+    pub(crate) fn with_session<T>(&self, f: impl FnOnce(&mut HostBridgeSession) -> T) -> Result<T> {
         let mut guard = self
             .session
             .lock()

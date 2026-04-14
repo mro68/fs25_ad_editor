@@ -68,7 +68,7 @@ Die Flutter-Backend-Library erweitert die bestehende Host-Bridge-FFI- und Render
 
 - **Kein neuer Layer:** Flutter-Code lebt ausschliesslich in `fs25_auto_drive_host_bridge_ffi` (Control-Plane + GPU-FFI) und `fs25_auto_drive_render_wgpu` (Texture-Export). Keine neue Crate.
 - **Feature-Gating:** Alle Flutter-spezifischen Pfade sind hinter `flutter` bzw. `flutter-linux` Feature-Flags versteckt. Ohne aktives Feature aendert sich am Build nichts.
-- **Control-Plane:** `FlutterSessionHandle` (Arc<Mutex<HostBridgeSession>>) nutzt dieselbe kanonische Session-Surface wie C-ABI und egui. Kein zweiter Session-Vertrag. Die Control-Plane exponiert neben Session-Snapshot und Action-Surface auch `flutter_session_is_dirty()`, `flutter_session_ui_snapshot_json()`, `flutter_session_chrome_snapshot_json()`, `flutter_session_dialog_snapshot_json()`, `flutter_session_editing_snapshot_json()`, `flutter_session_context_menu_snapshot_json()` und `flutter_session_viewport_overlay_json()` als typsichere High-Level-Funktionen.
+- **Control-Plane:** `FlutterSessionHandle` (Arc<Mutex<HostBridgeSession>>) nutzt dieselbe kanonische Session-Surface wie C-ABI und egui. Kein zweiter Session-Vertrag. Die Control-Plane exponiert die bestehenden High-Level-Funktionen in `flutter_api.rs` weiter fuer den Uebergangsadapter, spiegelt dieselben Seams aber additiv auch als direkte `fs25ad_flutter_session_*`-C-FFI-Surface in `lib.rs`, damit Flutter auf `dart:ffi`/`ffigen` ohne neuen Rust-Vertrag umstellen kann.
 - **Session-Sharing:** `GpuRuntimeHandle` kann ueber `new_with_session(...)` denselben `Arc<Mutex<HostBridgeSession>>` wie `FlutterSessionHandle` teilen. Damit arbeiten Control-Plane und Render-Pfad auf derselben kanonischen Session; die C-FFI-Variante `fs25ad_gpu_runtime_new_with_session(...)` exponiert diesen geteilten Besitz fuer native Hosts.
 - **Dirty-Tracking:** `HostBridgeSession::is_dirty()` delegiert an den Engine-`AppState`-Dokumentschluessel (`current_document_cache_key` vs. `saved_document_cache_key`). Der Snapshot-Vertrag (`HostSessionSnapshot.is_dirty`) spiegelt denselben Zustand fuer Polling-Hosts. Aenderungen an `HostSessionAction`-Varianten (`DeleteSelected`, `SelectAll`, `ClearSelection`, `CopySelection`, `PasteStart`, `PasteConfirm`, `PasteCancel`) mappen bidirektional auf stabile Engine-Intents und aktualisieren den Dokumentschluessel implizit.
 - **GPU-Pfad:** `GpuRuntimeHandle` in `flutter_gpu.rs` erzeugt eine eigene Vulkan-exklusive wgpu-Instanz via `create_vulkan_instance()` und haelt Device/Queue/Renderer/ExternalTexture als opaken C-FFI-Handle.
@@ -77,7 +77,7 @@ Die Flutter-Backend-Library erweitert die bestehende Host-Bridge-FFI- und Render
 
 **Offene Blocker (Phase 4):**
 
-- `flutter_rust_bridge`-Codegen ist als Stub vorbereitet, erfordert Dart-SDK im Build-System
+- Das bisherige `flutter_rust_bridge`-Codegen bleibt nur noch Uebergangspfad; die kanonische Removal-Richtung ist jetzt die direkte `fs25ad_flutter_session_*`-C-FFI-Surface fuer `dart:ffi`/`ffigen`
 - Flutter-seitiges Texture-Plugin fuer DMA-BUF-Import fehlt
 
 Detaillierte API-Dokumentation: [`crates/fs25_auto_drive_render_wgpu/API.md`](../crates/fs25_auto_drive_render_wgpu/API.md) und [`crates/fs25_auto_drive_host_bridge_ffi/API.md`](../crates/fs25_auto_drive_host_bridge_ffi/API.md).
