@@ -16,8 +16,7 @@ use glam::Vec2;
 
 use crate::dto::{
     HostActiveTool, HostDefaultConnectionDirection, HostDefaultConnectionPriority,
-    HostDialogRequest, HostDialogRequestKind, HostDialogResult, HostNodeFlag,
-    HostRouteToolAction,
+    HostDialogRequest, HostDialogRequestKind, HostDialogResult, HostNodeFlag, HostRouteToolAction,
     HostRouteToolDisabledReason, HostRouteToolGroup, HostRouteToolIconKey, HostRouteToolId,
     HostRouteToolSurface, HostSessionAction, HostTangentMenuSnapshot, HostTangentOptionSnapshot,
     HostTangentSource, HostViewportConnectionDirection, HostViewportConnectionPriority,
@@ -383,12 +382,8 @@ pub fn map_intent_to_host_action(intent: &AppIntent) -> Option<HostSessionAction
             Some(HostSessionAction::RequestHeightmapSelection)
         }
         AppIntent::HeightmapCleared => Some(HostSessionAction::ClearHeightmap),
-        AppIntent::HeightmapWarningConfirmed => {
-            Some(HostSessionAction::ConfirmHeightmapWarning)
-        }
-        AppIntent::HeightmapWarningCancelled => {
-            Some(HostSessionAction::CancelHeightmapWarning)
-        }
+        AppIntent::HeightmapWarningConfirmed => Some(HostSessionAction::ConfirmHeightmapWarning),
+        AppIntent::HeightmapWarningCancelled => Some(HostSessionAction::CancelHeightmapWarning),
         AppIntent::BackgroundMapSelectionRequested => {
             Some(HostSessionAction::RequestBackgroundMapSelection)
         }
@@ -486,19 +481,19 @@ pub fn map_intent_to_host_action(intent: &AppIntent) -> Option<HostSessionAction
             priority: map_connection_priority(*priority),
         }),
         AppIntent::ConnectSelectedNodesRequested => Some(HostSessionAction::ConnectSelectedNodes),
-        AppIntent::SetAllConnectionsDirectionBetweenSelectedRequested { direction } => {
-            Some(HostSessionAction::SetAllConnectionsDirectionBetweenSelected {
+        AppIntent::SetAllConnectionsDirectionBetweenSelectedRequested { direction } => Some(
+            HostSessionAction::SetAllConnectionsDirectionBetweenSelected {
                 direction: map_connection_direction(*direction),
-            })
-        }
+            },
+        ),
         AppIntent::InvertAllConnectionsBetweenSelectedRequested => {
             Some(HostSessionAction::InvertAllConnectionsBetweenSelected)
         }
-        AppIntent::SetAllConnectionsPriorityBetweenSelectedRequested { priority } => {
-            Some(HostSessionAction::SetAllConnectionsPriorityBetweenSelected {
+        AppIntent::SetAllConnectionsPriorityBetweenSelectedRequested { priority } => Some(
+            HostSessionAction::SetAllConnectionsPriorityBetweenSelected {
                 priority: map_connection_priority(*priority),
-            })
-        }
+            },
+        ),
         AppIntent::RemoveAllConnectionsBetweenSelectedRequested => {
             Some(HostSessionAction::RemoveAllConnectionsBetweenSelected)
         }
@@ -639,9 +634,7 @@ pub fn map_intent_to_host_action(intent: &AppIntent) -> Option<HostSessionAction
                 record_id: *record_id,
             })
         }
-        AppIntent::GroupSelectionAsGroupRequested => {
-            Some(HostSessionAction::GroupSelectionAsGroup)
-        }
+        AppIntent::GroupSelectionAsGroupRequested => Some(HostSessionAction::GroupSelectionAsGroup),
         AppIntent::RemoveSelectedNodesFromGroupRequested => {
             Some(HostSessionAction::RemoveSelectedNodesFromGroup)
         }
@@ -815,19 +808,19 @@ pub fn map_host_action_to_intent(action: HostSessionAction) -> Option<AppIntent>
             priority: map_host_connection_priority(priority),
         }),
         HostSessionAction::ConnectSelectedNodes => Some(AppIntent::ConnectSelectedNodesRequested),
-        HostSessionAction::SetAllConnectionsDirectionBetweenSelected { direction } => {
-            Some(AppIntent::SetAllConnectionsDirectionBetweenSelectedRequested {
+        HostSessionAction::SetAllConnectionsDirectionBetweenSelected { direction } => Some(
+            AppIntent::SetAllConnectionsDirectionBetweenSelectedRequested {
                 direction: map_host_connection_direction(direction),
-            })
-        }
+            },
+        ),
         HostSessionAction::InvertAllConnectionsBetweenSelected => {
             Some(AppIntent::InvertAllConnectionsBetweenSelectedRequested)
         }
-        HostSessionAction::SetAllConnectionsPriorityBetweenSelected { priority } => {
-            Some(AppIntent::SetAllConnectionsPriorityBetweenSelectedRequested {
+        HostSessionAction::SetAllConnectionsPriorityBetweenSelected { priority } => Some(
+            AppIntent::SetAllConnectionsPriorityBetweenSelectedRequested {
                 priority: map_host_connection_priority(priority),
-            })
-        }
+            },
+        ),
         HostSessionAction::RemoveAllConnectionsBetweenSelected => {
             Some(AppIntent::RemoveAllConnectionsBetweenSelectedRequested)
         }
@@ -889,9 +882,7 @@ pub fn map_host_action_to_intent(action: HostSessionAction) -> Option<AppIntent>
         HostSessionAction::OpenGroupEditTool { record_id } => {
             Some(AppIntent::GroupEditToolRequested { record_id })
         }
-        HostSessionAction::GroupSelectionAsGroup => {
-            Some(AppIntent::GroupSelectionAsGroupRequested)
-        }
+        HostSessionAction::GroupSelectionAsGroup => Some(AppIntent::GroupSelectionAsGroupRequested),
         HostSessionAction::RemoveSelectedNodesFromGroup => {
             Some(AppIntent::RemoveSelectedNodesFromGroupRequested)
         }

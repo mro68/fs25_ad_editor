@@ -92,9 +92,7 @@ pub fn flutter_session_apply_action(
 pub fn flutter_session_take_dialog_requests_json(handle: &FlutterSessionHandle) -> Result<String> {
     let requests = handle.with_session(|s| s.take_dialog_requests())?;
     serde_json::to_string(&requests).map_err(|e| {
-        anyhow::anyhow!(
-            "flutter_session_take_dialog_requests_json: Serialisierungsfehler: {e}"
-        )
+        anyhow::anyhow!("flutter_session_take_dialog_requests_json: Serialisierungsfehler: {e}")
     })
 }
 
@@ -130,7 +128,10 @@ pub fn flutter_session_snapshot_json(handle: &FlutterSessionHandle) -> Result<St
 
 /// Gibt den aktuell inspizierten Node als JSON-String zurueck.
 pub fn flutter_session_node_details_json(handle: &FlutterSessionHandle) -> Option<String> {
-    handle.with_session(|s| s.node_details_json()).ok().flatten()
+    handle
+        .with_session(|s| s.node_details_json())
+        .ok()
+        .flatten()
 }
 
 /// Gibt die aktuelle Marker-Liste als JSON-String zurueck.
@@ -147,9 +148,7 @@ pub fn flutter_session_marker_list_json(handle: &FlutterSessionHandle) -> String
 pub fn flutter_session_route_tool_viewport_json(handle: &FlutterSessionHandle) -> Result<String> {
     let snapshot = handle.with_session(|s| s.build_route_tool_viewport_snapshot())?;
     serde_json::to_string(&snapshot).map_err(|e| {
-        anyhow::anyhow!(
-            "flutter_session_route_tool_viewport_json: Serialisierungsfehler: {e}"
-        )
+        anyhow::anyhow!("flutter_session_route_tool_viewport_json: Serialisierungsfehler: {e}")
     })
 }
 
@@ -192,6 +191,14 @@ pub fn flutter_session_chrome_snapshot_json(handle: &FlutterSessionHandle) -> Re
     let snapshot = handle.with_session(|s| s.build_host_chrome_snapshot())?;
     serde_json::to_string(&snapshot).map_err(|e| {
         anyhow::anyhow!("flutter_session_chrome_snapshot_json: Serialisierungsfehler: {e}")
+    })
+}
+
+/// Gibt den aktuellen host-neutralen Dialog-Snapshot als JSON-String zurueck.
+pub fn flutter_session_dialog_snapshot_json(handle: &FlutterSessionHandle) -> Result<String> {
+    let snapshot = handle.with_session(|s| s.dialog_snapshot())?;
+    serde_json::to_string(&snapshot).map_err(|e| {
+        anyhow::anyhow!("flutter_session_dialog_snapshot_json: Serialisierungsfehler: {e}")
     })
 }
 
@@ -260,7 +267,8 @@ pub fn flutter_session_release_shared_arc_raw(raw: i64) {
 mod tests {
     use fs25_auto_drive_host_bridge::{
         HostConnectionPairSnapshot, HostDialogRequest, HostDialogRequestKind, HostDialogResult,
-        HostMarkerListSnapshot, HostRouteToolViewportSnapshot, HostSessionAction,
+        HostDialogSnapshot, HostMarkerListSnapshot, HostRouteToolViewportSnapshot,
+        HostSessionAction,
     };
 
     use super::*;
@@ -332,6 +340,29 @@ mod tests {
         flutter_session_dispose(handle);
     }
 
+    /// Prueft, dass dialog_snapshot_json ein parsebares JSON-Objekt liefert.
+    #[test]
+    fn test_flutter_session_dialog_snapshot_json_roundtrip() {
+        let handle = flutter_session_new();
+        handle
+            .with_session(|session| {
+                let dialog_state = session.dialog_ui_state_mut();
+                dialog_state.ui.show_heightmap_warning = true;
+                dialog_state.ui.confirm_dissolve_group_id = Some(21);
+            })
+            .expect("Lokale Dialog-Mutation fuer den Snapshot-Test muss gelingen");
+
+        let json = flutter_session_dialog_snapshot_json(&handle)
+            .expect("Dialog-Snapshot-Serialisierung muss gelingen");
+        let snapshot: HostDialogSnapshot =
+            serde_json::from_str(&json).expect("Dialog-Snapshot muss parsebares JSON sein");
+
+        assert!(snapshot.heightmap_warning.visible);
+        assert_eq!(snapshot.confirm_dissolve_group.segment_id, Some(21));
+
+        flutter_session_dispose(handle);
+    }
+
     /// Prueft, dass viewport_overlay_json ein parsebares JSON-Objekt liefert.
     #[test]
     fn test_flutter_session_viewport_overlay_json_roundtrip() {
@@ -369,8 +400,8 @@ mod tests {
     fn test_flutter_session_marker_list_json_returns_empty_snapshot() {
         let handle = flutter_session_new();
         let json = flutter_session_marker_list_json(&handle);
-        let snapshot: HostMarkerListSnapshot = serde_json::from_str(&json)
-            .expect("Marker-Liste muss als Snapshot-JSON parsebar sein");
+        let snapshot: HostMarkerListSnapshot =
+            serde_json::from_str(&json).expect("Marker-Liste muss als Snapshot-JSON parsebar sein");
 
         assert!(snapshot.markers.is_empty());
         assert!(snapshot.groups.is_empty());
@@ -390,16 +421,16 @@ mod tests {
 
         let json = flutter_session_take_dialog_requests_json(&handle)
             .expect("Dialog-Request-JSON muss serialisiert werden koennen");
-        let requests: Vec<HostDialogRequest> = serde_json::from_str(&json)
-            .expect("Dialog-Request-JSON muss parsebar sein");
+        let requests: Vec<HostDialogRequest> =
+            serde_json::from_str(&json).expect("Dialog-Request-JSON muss parsebar sein");
 
         assert_eq!(requests.len(), 1);
         assert_eq!(requests[0].kind, HostDialogRequestKind::Heightmap);
 
         let drained_json = flutter_session_take_dialog_requests_json(&handle)
             .expect("Gedrainte Queue muss als leeres JSON-Array serialisierbar sein");
-        let drained: Vec<HostDialogRequest> = serde_json::from_str(&drained_json)
-            .expect("Leeres Dialog-Array muss parsebar sein");
+        let drained: Vec<HostDialogRequest> =
+            serde_json::from_str(&drained_json).expect("Leeres Dialog-Array muss parsebar sein");
         assert!(drained.is_empty());
 
         flutter_session_dispose(handle);
@@ -439,8 +470,8 @@ mod tests {
         let handle = flutter_session_new();
         let json = flutter_session_route_tool_viewport_json(&handle)
             .expect("Route-Tool-Snapshot-Serialisierung muss gelingen");
-        let snapshot: HostRouteToolViewportSnapshot = serde_json::from_str(&json)
-            .expect("Route-Tool-Snapshot muss parsebares JSON sein");
+        let snapshot: HostRouteToolViewportSnapshot =
+            serde_json::from_str(&json).expect("Route-Tool-Snapshot muss parsebares JSON sein");
 
         assert!(!snapshot.has_pending_input);
         assert!(snapshot.drag_targets.is_empty());

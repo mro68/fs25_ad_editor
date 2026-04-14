@@ -440,9 +440,7 @@ mod tests {
     use serde_json::json;
 
     use super::HostSessionAction;
-    use crate::dto::{
-        HostDefaultConnectionDirection, HostDefaultConnectionPriority,
-    };
+    use crate::dto::{HostDefaultConnectionDirection, HostDefaultConnectionPriority};
 
     #[test]
     fn host_session_action_connection_family_roundtrips_json() {
@@ -573,10 +571,7 @@ mod tests {
                     "entry_name": "overview.png"
                 }),
             ),
-            (
-                HostSessionAction::ZoomIn,
-                json!({ "kind": "zoom_in" }),
-            ),
+            (HostSessionAction::ZoomIn, json!({ "kind": "zoom_in" })),
             (
                 HostSessionAction::CenterOnNode { node_id: 42 },
                 json!({ "kind": "center_on_node", "node_id": 42 }),

@@ -2,7 +2,7 @@
 
 ## Ueberblick
 
-`fs25_auto_drive_host_bridge_ffi` ist der duenner Linux-first-Transportadapter ueber der kanonischen `HostBridgeSession`. Die Crate fuehrt keine zweite fachliche Surface ein: Mutationen laufen weiter ueber `HostSessionAction` (inklusive expliziter Route-Tool-Action-Familie), Dialoge ueber `HostDialogRequest`/`HostDialogResult`, Session-Polling ueber `HostSessionSnapshot`, Chrome-Polling ueber `HostChromeSnapshot` und Route-Tool-Viewport-Polling ueber `HostRouteToolViewportSnapshot`.
+`fs25_auto_drive_host_bridge_ffi` ist der duenner Linux-first-Transportadapter ueber der kanonischen `HostBridgeSession`. Die Crate fuehrt keine zweite fachliche Surface ein: Mutationen laufen weiter ueber `HostSessionAction` (inklusive expliziter Route-Tool-Action-Familie), Dialoge ueber `HostDialogRequest`/`HostDialogResult`, Session-Polling ueber `HostSessionSnapshot`, Chrome-Polling ueber `HostChromeSnapshot`, Dialog-Polling ueber `HostDialogSnapshot` und Route-Tool-Viewport-Polling ueber `HostRouteToolViewportSnapshot`.
 
 Seit der FFI-Haertungswelle sind alle pointer-konsumierenden Exporte in Rust explizit als `unsafe extern "C"` markiert. Panic-Isolation und thread-lokale Fehlerweitergabe haerten dabei dieselbe kanonische Surface, ohne eine zweite FFI-seitige DTO- oder Session-Familie einzufuehren.
 
@@ -265,6 +265,7 @@ Opaquer Session-Handle mit `Arc<Mutex<HostBridgeSession>>` fuer thread-sicheren 
 | `flutter_session_connection_pair_json(handle, node_a, node_b) -> Result<String>` | Liefert den `HostConnectionPairSnapshot` fuer genau zwei Nodes als JSON |
 | `flutter_session_ui_snapshot_json(handle) -> Result<String>` | Liefert den host-neutralen `HostUiSnapshot` als JSON |
 | `flutter_session_chrome_snapshot_json(handle) -> Result<String>` | Liefert den `HostChromeSnapshot` als JSON |
+| `flutter_session_dialog_snapshot_json(handle) -> Result<String>` | Liefert den `HostDialogSnapshot` als JSON |
 | `flutter_session_viewport_overlay_json(handle, cursor_world_x, cursor_world_y) -> Result<String>` | Liefert den host-neutralen `ViewportOverlaySnapshot` als JSON |
 | `flutter_session_viewport_geometry_json(handle, width, height) -> Result<String>` | Liefert den `HostViewportGeometrySnapshot` als JSON |
 
