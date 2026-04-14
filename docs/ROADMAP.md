@@ -590,7 +590,8 @@
   - [x] `VulkanDmaBufTexture::export_descriptor()` produktiv machen (VkImage mit VK_EXTERNAL_MEMORY_HANDLE_TYPE_DMA_BUF_BIT_EXT)
   - [x] `vkGetMemoryFdKHR` fuer File-Descriptor-Export
   - [x] `RenderExportCore::render_scene_to_view()` mit `flutter_gpu.rs` vollstaendig verdrahten
-- [ ] **Flutter-Backend Phase 4: Flutter-App-Integration (geplant)**
+- [🟡] **Flutter-Backend Phase 4: Flutter-App-Integration (geplant)**
+  - [x] Rust-seitige C-FFI-Surface komplett: alle Session-/Snapshot-/Dialog-/Editing-/Overlay-Endpunkte als `fs25ad_flutter_session_*` und `fs25ad_host_bridge_session_*` fuer `dart:ffi`/`ffigen` exportiert; `flutter_rust_bridge` wird damit auf der Rust-Seite optional
   - [ ] Flutter-Seite auf direkte `dart:ffi`/`ffigen`-Bindings ueber `fs25ad_flutter_session_*` umstellen und FRB entfernen
   - [ ] Flutter-seitiges Texture-Plugin fuer DMA-BUF-Import
   - [ ] Dart-Bindings fuer Session-Control-Plane
