@@ -14,7 +14,7 @@
 
 use anyhow::Result;
 use fs25_auto_drive_host_bridge::dto::{host_ui_snapshot_json, viewport_overlay_snapshot_json};
-use fs25_auto_drive_host_bridge::{HostBridgeSession, HostSessionAction};
+use fs25_auto_drive_host_bridge::{HostBridgeSession, HostDialogResult, HostSessionAction};
 use std::sync::{Arc, Mutex};
 
 /// Opaquer Session-Handle fuer die Flutter Control-Plane.
@@ -81,6 +81,41 @@ pub fn flutter_session_apply_action(
     handle.with_session(|s| s.apply_action(action))?
 }
 
+/// Entnimmt alle aktuell ausstehenden Dialog-Anforderungen als JSON-Array.
+///
+/// Der Aufruf drainet die interne Queue der Session und liefert ein JSON-Array
+/// aus [`fs25_auto_drive_host_bridge::HostDialogRequest`].
+///
+/// # Fehler
+/// Gibt einen Fehler-String zurueck wenn die Session nicht gelockt werden kann
+/// oder die JSON-Serialisierung fehlschlaegt.
+pub fn flutter_session_take_dialog_requests_json(handle: &FlutterSessionHandle) -> Result<String> {
+    let requests = handle.with_session(|s| s.take_dialog_requests())?;
+    serde_json::to_string(&requests).map_err(|e| {
+        anyhow::anyhow!(
+            "flutter_session_take_dialog_requests_json: Serialisierungsfehler: {e}"
+        )
+    })
+}
+
+/// Reicht ein serialisiertes Dialog-Ergebnis an die Session weiter.
+///
+/// `result_json` muss ein gueltiger JSON-String sein der ein
+/// [`HostDialogResult`] repraesentiert.
+///
+/// # Fehler
+/// Gibt einen Fehler-String zurueck wenn JSON ungueltig oder die Session-
+/// Mutation fehlgeschlagen ist.
+pub fn flutter_session_submit_dialog_result_json(
+    handle: &FlutterSessionHandle,
+    result_json: String,
+) -> Result<()> {
+    let result: HostDialogResult = serde_json::from_str(&result_json).map_err(|e| {
+        anyhow::anyhow!("flutter_session_submit_dialog_result_json: JSON-Fehler: {e}")
+    })?;
+    handle.with_session(|s| s.submit_dialog_result(result))?
+}
+
 /// Gibt den aktuellen Session-Snapshot als JSON-String zurueck.
 ///
 /// Der Snapshot enthaelt Node-Count, Selections, Status-Message etc.
@@ -95,10 +130,7 @@ pub fn flutter_session_snapshot_json(handle: &FlutterSessionHandle) -> Result<St
 
 /// Gibt den aktuell inspizierten Node als JSON-String zurueck.
 pub fn flutter_session_node_details_json(handle: &FlutterSessionHandle) -> Option<String> {
-    handle
-        .with_session(|s| s.node_details_json())
-        .ok()
-        .flatten()
+    handle.with_session(|s| s.node_details_json()).ok().flatten()
 }
 
 /// Gibt die aktuelle Marker-Liste als JSON-String zurueck.
@@ -106,6 +138,34 @@ pub fn flutter_session_marker_list_json(handle: &FlutterSessionHandle) -> String
     handle
         .with_session(|s| s.marker_list_json())
         .unwrap_or_else(|_| "{\"markers\":[],\"groups\":[]}".to_string())
+}
+
+/// Gibt den host-neutralen Route-Tool-Viewport-Snapshot als JSON-String zurueck.
+///
+/// # Fehler
+/// Gibt einen Fehler-String zurueck wenn die JSON-Serialisierung fehlschlaegt.
+pub fn flutter_session_route_tool_viewport_json(handle: &FlutterSessionHandle) -> Result<String> {
+    let snapshot = handle.with_session(|s| s.build_route_tool_viewport_snapshot())?;
+    serde_json::to_string(&snapshot).map_err(|e| {
+        anyhow::anyhow!(
+            "flutter_session_route_tool_viewport_json: Serialisierungsfehler: {e}"
+        )
+    })
+}
+
+/// Gibt die Verbindungsdetails zwischen zwei Nodes als JSON-String zurueck.
+///
+/// # Fehler
+/// Gibt einen Fehler-String zurueck wenn die JSON-Serialisierung fehlschlaegt.
+pub fn flutter_session_connection_pair_json(
+    handle: &FlutterSessionHandle,
+    node_a: u64,
+    node_b: u64,
+) -> Result<String> {
+    let snapshot = handle.with_session(|s| s.connection_pair(node_a, node_b))?;
+    serde_json::to_string(&snapshot).map_err(|e| {
+        anyhow::anyhow!("flutter_session_connection_pair_json: Serialisierungsfehler: {e}")
+    })
 }
 
 /// Gibt zurueck, ob die geladene Karte seit dem letzten Load/Save veraendert wurde.
@@ -198,6 +258,11 @@ pub fn flutter_session_release_shared_arc_raw(raw: i64) {
 
 #[cfg(test)]
 mod tests {
+    use fs25_auto_drive_host_bridge::{
+        HostConnectionPairSnapshot, HostDialogRequest, HostDialogRequestKind, HostDialogResult,
+        HostMarkerListSnapshot, HostRouteToolViewportSnapshot, HostSessionAction,
+    };
+
     use super::*;
 
     /// Prueft, dass FlutterSessionHandle erzeugt und freigegeben werden kann.
@@ -279,6 +344,123 @@ mod tests {
             value.get("show_no_file_hint").is_some(),
             "Overlay-Snapshot muss Overlay-Felder enthalten"
         );
+        flutter_session_dispose(handle);
+    }
+
+    /// Prueft, dass QueryNodeDetails ueber die Flutter-Action-Surface gesetzt werden kann.
+    #[test]
+    fn test_flutter_session_node_details_json_returns_none_without_matching_node() {
+        let handle = flutter_session_new();
+        let action = serde_json::json!({
+            "kind": "query_node_details",
+            "node_id": 99
+        })
+        .to_string();
+
+        flutter_session_apply_action(&handle, action)
+            .expect("QueryNodeDetails muss ueber die Flutter-Surface akzeptiert werden");
+        assert!(flutter_session_node_details_json(&handle).is_none());
+
+        flutter_session_dispose(handle);
+    }
+
+    /// Prueft, dass marker_list_json fuer leere Sessions ein parsebares Snapshot-Objekt liefert.
+    #[test]
+    fn test_flutter_session_marker_list_json_returns_empty_snapshot() {
+        let handle = flutter_session_new();
+        let json = flutter_session_marker_list_json(&handle);
+        let snapshot: HostMarkerListSnapshot = serde_json::from_str(&json)
+            .expect("Marker-Liste muss als Snapshot-JSON parsebar sein");
+
+        assert!(snapshot.markers.is_empty());
+        assert!(snapshot.groups.is_empty());
+
+        flutter_session_dispose(handle);
+    }
+
+    /// Prueft, dass take_dialog_requests_json Dialog-Requests serialisiert und drainet.
+    #[test]
+    fn test_flutter_session_take_dialog_requests_json_roundtrip() {
+        let handle = flutter_session_new();
+        let action_json = serde_json::to_string(&HostSessionAction::RequestHeightmapSelection)
+            .expect("HostSessionAction muss serialisierbar sein");
+
+        flutter_session_apply_action(&handle, action_json)
+            .expect("Heightmap-Dialog-Anforderung muss ueber Flutter funktionieren");
+
+        let json = flutter_session_take_dialog_requests_json(&handle)
+            .expect("Dialog-Request-JSON muss serialisiert werden koennen");
+        let requests: Vec<HostDialogRequest> = serde_json::from_str(&json)
+            .expect("Dialog-Request-JSON muss parsebar sein");
+
+        assert_eq!(requests.len(), 1);
+        assert_eq!(requests[0].kind, HostDialogRequestKind::Heightmap);
+
+        let drained_json = flutter_session_take_dialog_requests_json(&handle)
+            .expect("Gedrainte Queue muss als leeres JSON-Array serialisierbar sein");
+        let drained: Vec<HostDialogRequest> = serde_json::from_str(&drained_json)
+            .expect("Leeres Dialog-Array muss parsebar sein");
+        assert!(drained.is_empty());
+
+        flutter_session_dispose(handle);
+    }
+
+    /// Prueft, dass submit_dialog_result_json gueltiges JSON akzeptiert.
+    #[test]
+    fn test_flutter_session_submit_dialog_result_json_accepts_serialized_result() {
+        let handle = flutter_session_new();
+        let action_json = serde_json::to_string(&HostSessionAction::RequestHeightmapSelection)
+            .expect("HostSessionAction muss serialisierbar sein");
+
+        flutter_session_apply_action(&handle, action_json)
+            .expect("Heightmap-Dialog-Anforderung muss ueber Flutter funktionieren");
+        let _ = flutter_session_take_dialog_requests_json(&handle)
+            .expect("Dialog-Request-Drain muss vor dem Submit funktionieren");
+
+        let result_json = serde_json::to_string(&HostDialogResult::PathSelected {
+            kind: HostDialogRequestKind::Heightmap,
+            path: "/tmp/test_heightmap.png".to_string(),
+        })
+        .expect("HostDialogResult muss serialisierbar sein");
+
+        flutter_session_submit_dialog_result_json(&handle, result_json)
+            .expect("Dialog-Ergebnis muss ueber Flutter akzeptiert werden");
+
+        let snapshot_json = flutter_session_snapshot_json(&handle)
+            .expect("Session-Snapshot muss nach Dialog-Submit weiter verfuegbar sein");
+        assert!(snapshot_json.starts_with('{'));
+
+        flutter_session_dispose(handle);
+    }
+
+    /// Prueft, dass route_tool_viewport_json ein parsebares Snapshot-JSON liefert.
+    #[test]
+    fn test_flutter_session_route_tool_viewport_json_roundtrip() {
+        let handle = flutter_session_new();
+        let json = flutter_session_route_tool_viewport_json(&handle)
+            .expect("Route-Tool-Snapshot-Serialisierung muss gelingen");
+        let snapshot: HostRouteToolViewportSnapshot = serde_json::from_str(&json)
+            .expect("Route-Tool-Snapshot muss parsebares JSON sein");
+
+        assert!(!snapshot.has_pending_input);
+        assert!(snapshot.drag_targets.is_empty());
+
+        flutter_session_dispose(handle);
+    }
+
+    /// Prueft, dass connection_pair_json auch fuer leere Sessions stabil serialisiert.
+    #[test]
+    fn test_flutter_session_connection_pair_json_roundtrip() {
+        let handle = flutter_session_new();
+        let json = flutter_session_connection_pair_json(&handle, 7, 9)
+            .expect("Connection-Pair-Snapshot-Serialisierung muss gelingen");
+        let snapshot: HostConnectionPairSnapshot = serde_json::from_str(&json)
+            .expect("Connection-Pair-Snapshot muss parsebares JSON sein");
+
+        assert_eq!(snapshot.node_a, 7);
+        assert_eq!(snapshot.node_b, 9);
+        assert!(snapshot.connections.is_empty());
+
         flutter_session_dispose(handle);
     }
 }
