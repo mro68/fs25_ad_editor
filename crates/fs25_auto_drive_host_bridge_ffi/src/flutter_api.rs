@@ -5,8 +5,13 @@
 //! `fs25ad_flutter_session_*`-C-FFI-Exporten in `lib.rs` wiederverwendet.
 
 use anyhow::Result;
-use fs25_auto_drive_host_bridge::dto::{host_ui_snapshot_json, viewport_overlay_snapshot_json};
+use fs25_auto_drive_engine::shared::OverviewLayerOptions;
+use fs25_auto_drive_host_bridge::dto::{
+    host_ui_snapshot_json, viewport_overlay_snapshot_json, HostFieldDetectionSource,
+    HostOverviewOptionsDialogSnapshot,
+};
 use fs25_auto_drive_host_bridge::{HostBridgeSession, HostDialogResult, HostSessionAction};
+use fs25_map_overview::FieldDetectionSource;
 use std::sync::{Arc, Mutex};
 
 fn decode_focus_node_id(focus_node_id_or_neg1: i64) -> Result<Option<u64>> {
@@ -118,6 +123,52 @@ pub fn flutter_session_submit_dialog_result_json(
         anyhow::anyhow!("flutter_session_submit_dialog_result_json: JSON-Fehler: {e}")
     })?;
     handle.with_session(|s| s.submit_dialog_result(result))?
+}
+
+fn map_host_field_detection_source(source: HostFieldDetectionSource) -> FieldDetectionSource {
+    match source {
+        HostFieldDetectionSource::FromZip => FieldDetectionSource::FromZip,
+        HostFieldDetectionSource::FieldTypeGrle => FieldDetectionSource::FieldTypeGrle,
+        HostFieldDetectionSource::GroundGdm => FieldDetectionSource::GroundGdm,
+        HostFieldDetectionSource::FruitsGdm => FieldDetectionSource::FruitsGdm,
+    }
+}
+
+/// Aktualisiert den host-lokalen Draft des Overview-Options-Dialogs.
+///
+/// Flutter-Hosts halten waehrend der Bearbeitung einen lokalen Dialogzustand.
+/// Vor `confirm_overview_options` muss dieser Draft in den host-lokalen
+/// Dialog-State der Session geschrieben werden, damit der Host beim Bestaetigen
+/// die aktuellen Layer- und Feldquellenwerte in den Engine-State uebernehmen kann.
+pub fn flutter_session_update_overview_options_dialog(
+    session: &mut HostBridgeSession,
+    snapshot: HostOverviewOptionsDialogSnapshot,
+) -> Result<()> {
+    {
+        let dialog_state = session.dialog_ui_state_mut();
+        dialog_state.ui.overview_options_dialog.visible = snapshot.visible;
+        dialog_state.ui.overview_options_dialog.zip_path = snapshot.zip_path;
+        dialog_state.ui.overview_options_dialog.layers = OverviewLayerOptions {
+            hillshade: snapshot.layers.hillshade,
+            farmlands: snapshot.layers.farmlands,
+            farmland_ids: snapshot.layers.farmland_ids,
+            pois: snapshot.layers.pois,
+            legend: snapshot.layers.legend,
+        };
+        dialog_state
+            .ui
+            .overview_options_dialog
+            .field_detection_source =
+            map_host_field_detection_source(snapshot.field_detection_source);
+        dialog_state.ui.overview_options_dialog.available_sources = snapshot
+            .available_sources
+            .into_iter()
+            .map(map_host_field_detection_source)
+            .collect();
+    }
+
+    session.mark_snapshot_dirty();
+    Ok(())
 }
 
 /// Gibt den aktuellen Session-Snapshot als JSON-String zurueck.

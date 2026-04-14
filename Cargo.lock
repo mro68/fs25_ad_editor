@@ -1758,8 +1758,10 @@ name = "fs25_auto_drive_host_bridge_ffi"
 version = "1.7.0"
 dependencies = [
  "anyhow",
+ "fs25_auto_drive_engine",
  "fs25_auto_drive_host_bridge",
  "fs25_auto_drive_render_wgpu",
+ "fs25_map_overview",
  "pollster",
  "serde",
  "serde_json",
