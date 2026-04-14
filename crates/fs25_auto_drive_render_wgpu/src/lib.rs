@@ -26,14 +26,16 @@ pub use shared_texture::{
     SharedTexturePixelFormat, SharedTextureRuntime,
 };
 pub use texture_registration::{
-    query_texture_registration_v4_capabilities, AndroidAttachmentKind, AndroidSurfaceDescriptor,
-    LinuxDmabufDescriptor, LinuxDmabufPlane, TextureRegistrationAlphaMode,
-    TextureRegistrationAvailability, TextureRegistrationCapabilities,
-    TextureRegistrationFrameMetadata, TextureRegistrationLifecycle,
-    TextureRegistrationLifecycleError, TextureRegistrationLifecycleState, TextureRegistrationModel,
-    TextureRegistrationPayloadFamily, TextureRegistrationPixelFormat, TextureRegistrationPlatform,
-    TextureRegistrationPlatformCapabilities, WindowsDescriptor, WindowsDescriptorKind,
-    MAX_LINUX_DMABUF_PLANES, TEXTURE_REGISTRATION_V4_CONTRACT_VERSION,
+    query_texture_registration_v4_capabilities, AndroidAttachmentKind,
+    AndroidHardwareBufferDescriptor, AndroidSurfaceDescriptor, LinuxDmabufDescriptor,
+    LinuxDmabufPlane, TextureRegistrationAlphaMode, TextureRegistrationAvailability,
+    TextureRegistrationCapabilities, TextureRegistrationFrameMetadata,
+    TextureRegistrationLifecycle, TextureRegistrationLifecycleError,
+    TextureRegistrationLifecycleState, TextureRegistrationModel,
+    TextureRegistrationPayloadFamily, TextureRegistrationPixelFormat,
+    TextureRegistrationPlatform, TextureRegistrationPlatformCapabilities, WindowsDescriptor,
+    WindowsDescriptorKind, MAX_LINUX_DMABUF_PLANES,
+    TEXTURE_REGISTRATION_V4_CONTRACT_VERSION,
 };
 
 pub(crate) use background_renderer::BackgroundRenderer;
