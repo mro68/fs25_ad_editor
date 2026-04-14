@@ -16,6 +16,8 @@ Die Bridge exponiert Mutationen ausschliesslich ueber explizite `HostSessionActi
 
 Fuer Flutter- und FFI-Hosts mit serialisierbarer Dialog-Oberflaeche exponiert die Session zusaetzlich `HostDialogSnapshot` als expliziten Read-Seam fuer alle im egui-Host gerenderten Dialoge und Popups (Heightmap-Warnung, Marker, Dedup, ZIP-Browser, Overview-Dialogs, Save-Overview, Trace-All-Fields, Group-Settings und Confirm-Dissolve). Damit muessen Hosts fuer read-only Dialogdaten nicht mehr auf die lokalen Rust-Seams `dialog_ui_state_mut()` oder `chrome_state()` zugreifen.
 
+Fuer Properties-, Group-Edit- und Streckenteilungsdaten exponiert die Session zusaetzlich `HostEditingSnapshot`. Dieser Read-Seam bildet die heute ueber `panel_properties_state_mut()` und `viewport_input_context_mut()` gelesenen Editing-Zustaende host-neutral ab: selektionsrelevante bearbeitbare Gruppen, aktiver Group-Edit inklusive Boundary-Kandidaten, Resample-/Streckenteilungs-Metriken sowie editing-nahe Laufzeitoptionen.
+
 Der konsolidierte Host-Dialog-Vertrag deckt neben `open_file` und `save_file` auch `heightmap` und `background_map` ab. Ob ein Host dafuer einen nativen Picker oder einen lokalen Fallback nutzt, bleibt explizit host-local; der Bridge-Vertrag aendert sich dafuer nicht.
 
 Die Crate bleibt absichtlich host-neutral: keine eframe/egui-Runtime, keine Flutter-FFI und keine wgpu-RenderPass-Lifecycle-Logik.
@@ -45,7 +47,7 @@ Mit `HostChromeSnapshot` existiert zusaetzlich ein expliziter host-neutraler Rea
 |---|---|
 | `dispatch` | Wiederverwendbare Rust-Host-Dispatch-Seam (`HostSessionAction` <-> `AppIntent`) und bridge-owned Read-Helper-Seams fuer lokale Controller/State-Hosts; bleibt als stabile Fassade intern in `actions`, `mappings`, `snapshot` und `viewport_input` aufgeteilt |
 | `session` | `HostBridgeSession` als kanonische Session-Fassade ueber der Engine |
-| `dto` | Serialisierbare Host-Actions, Dialog-, Node-Details-, Marker- und Connection-Pair-DTOs, Session-Snapshots, explizite JSON-Helfer fuer `HostUiSnapshot`/`ViewportOverlaySnapshot` plus `Engine*`-Kompatibilitaets-Aliase; bleibt als stabile Fassade intern in `actions`, `connection_pair`, `dialogs`, `input`, `markers`, `node_details`, `route_tool`, `viewport`, `chrome` und `ui_json` aufgeteilt |
+| `dto` | Serialisierbare Host-Actions, Dialog-, Editing-, Node-Details-, Marker- und Connection-Pair-DTOs, Session-Snapshots, explizite JSON-Helfer fuer `HostUiSnapshot`/`ViewportOverlaySnapshot` plus `Engine*`-Kompatibilitaets-Aliase; bleibt als stabile Fassade intern in `actions`, `connection_pair`, `dialogs`, `editing`, `input`, `markers`, `node_details`, `route_tool`, `viewport`, `chrome` und `ui_json` aufgeteilt |
 
 ## Oeffentliche DTO-Helfer
 
@@ -100,6 +102,9 @@ Mit `HostChromeSnapshot` existiert zusaetzlich ein expliziter host-neutraler Rea
 | `EngineSessionSnapshot` | Kompatibilitaetsalias auf `HostSessionSnapshot` |
 | `HostChromeSnapshot` | Host-neutrales Read-Modell fuer Menues, Defaults, Status und Route-Tool-Availability |
 | `HostDialogSnapshot` | Host-neutrales Read-Modell fuer alle egui-Dialoge und Popup-aehnlichen Dialog-Drafts |
+| `HostEditingSnapshot` | Host-neutrales Read-Modell fuer Properties-, Group-Edit- und Streckenteilungsdaten |
+| `HostEditableGroupSummary` / `HostGroupEditSnapshot` / `HostGroupBoundaryCandidateSnapshot` | Serialisierbare Group-Edit-DTOs fuer selektionsrelevante Gruppen, aktiven Edit-Zustand und Boundary-Kandidaten |
+| `HostResampleEditSnapshot` / `HostResampleMode` / `HostEditingOptionsSnapshot` | Serialisierbare Streckenteilungs- und editing-nahe Options-DTOs fuer Flutter-/Host-Panels |
 | `HostHeightmapWarningDialogSnapshot` / `HostMarkerDialogSnapshot` / `HostDedupDialogSnapshot` / `HostZipBrowserSnapshot` / `HostOverviewOptionsDialogSnapshot` / `HostPostLoadDialogSnapshot` / `HostSaveOverviewDialogSnapshot` / `HostTraceAllFieldsDialogSnapshot` / `HostGroupSettingsDialogSnapshot` / `HostConfirmDissolveDialogSnapshot` | Serialisierbare Detail-DTOs der einzelnen Dialogarten inklusive Sichtbarkeit und Draft-Daten |
 | `HostLocalDialogState` | Host-lokaler mutierbarer Chrome-/Dialogzustand; ersetzt einen separaten oeffentlichen `ChromeState`-Typ |
 | `HostRouteToolEntrySnapshot` / `HostRouteToolSelectionSnapshot` | Serialisierbare Route-Tool-Metadaten fuer Surface, Gruppe, Icon-Key, Availability und Gruppen-Memory |
@@ -146,6 +151,7 @@ Mit `HostChromeSnapshot` existiert zusaetzlich ein expliziter host-neutraler Rea
 | `pub fn snapshot(&mut self) -> &HostSessionSnapshot` | Liefert den gecachten Session-Snapshot fuer allokationsarmes Polling |
 | `pub fn snapshot_owned(&mut self) -> HostSessionSnapshot` | Liefert den Snapshot als besitzende Kopie |
 | `pub fn dialog_snapshot(&self) -> HostDialogSnapshot` | Liefert einen serialisierbaren Read-Snapshot aller egui-Dialoge und Popup-Drafts |
+| `pub fn editing_snapshot(&self) -> HostEditingSnapshot` | Liefert einen serialisierbaren Read-Snapshot fuer Properties-, Group-Edit- und Streckenteilungsdaten |
 | `pub fn set_inspected_node_id(&mut self, id: Option<u64>)` | Setzt die aktuell fuer den Node-Details-Endpunkt inspizierte Node-ID |
 | `pub fn inspected_node_id(&self) -> Option<u64>` | Liefert die aktuell fuer den Node-Details-Endpunkt inspizierte Node-ID |
 | `pub fn node_details_json(&self) -> Option<String>` | Liefert den aktuell inspizierten Node als `HostNodeDetails`-JSON fuer Flutter |
@@ -231,7 +237,7 @@ flowchart LR
 - Die Connection-Management-Actions (`AddConnection`, `RemoveConnectionBetween`, `SetConnectionDirection`, `SetConnectionPriority`, `ConnectSelectedNodes`, `SetAllConnectionsDirectionBetweenSelected`, `InvertAllConnectionsBetweenSelected`, `SetAllConnectionsPriorityBetweenSelected`, `RemoveAllConnectionsBetweenSelected`) mappen bidirektional auf die stabilen Engine-Intents fuer Verbindungsbearbeitung.
 - Stateful Viewport-Input benoetigt `HostViewportInputState`. `HostBridgeSession` besitzt diesen Zustand intern; lokale Rust-Hosts verwenden dafuer `apply_host_action_with_viewport_input_state(...)` oder `apply_viewport_input_batch(...)`.
 - Route-Tool-Write-Pfade laufen bewusst nicht ueber `SubmitViewportInput`, sondern ausschliesslich ueber `HostSessionAction::RouteTool`.
-- Die schmalen UI-Local-Seams (`HostPanelPropertiesState`, `HostDialogUiState`, `HostViewportInputContext`, `HostLocalDialogState`) sind bewusst Rust-Host-intern und nicht als serialisierbare FFI-DTO-Surface gedacht. Fuer serialisierbare Dialogdaten steht stattdessen `dialog_snapshot()` mit `HostDialogSnapshot` zur Verfuegung. Der Zugriff bleibt fuer lokale `distanzen`-/`options`-/Dialog-States Snapshot-transparent; snapshot-relevante Escape-Hatch-Mutationen muessen explizit ueber `mark_snapshot_dirty()` invalidiert werden.
+- Die schmalen UI-Local-Seams (`HostPanelPropertiesState`, `HostDialogUiState`, `HostViewportInputContext`, `HostLocalDialogState`) sind bewusst Rust-Host-intern und nicht als serialisierbare FFI-DTO-Surface gedacht. Fuer serialisierbare Dialog- und Editing-Daten stehen stattdessen `dialog_snapshot()` mit `HostDialogSnapshot` sowie `editing_snapshot()` mit `HostEditingSnapshot` zur Verfuegung. Der Zugriff bleibt fuer lokale `distanzen`-/`options`-/Dialog-States Snapshot-transparent; snapshot-relevante Escape-Hatch-Mutationen muessen explizit ueber `mark_snapshot_dirty()` invalidiert werden.
 - Der produktive egui-Host nutzt fuer nicht serialisierte UI-Local-Zustaende die schmalen Session-Seams sowie `chrome_state()` beziehungsweise `chrome_state_mut()`. `app_state_mut()` ist aus der oeffentlichen Host-Bridge-API entfernt.
 - `take_dialog_requests()` und `submit_dialog_result(...)` bilden die kanonische Dialog-Seam der Session-API. Fuer Adapter mit eigenem `AppController`/`AppState` steht dieselbe Mapping-Logik zusaetzlich ueber `take_host_dialog_requests(...)` als schmaler Adapter-Hilfspfad bereit.
 - Die Mapping-Seam fuer stabile, niederfrequente Host-Aktionen liegt zentral in `dispatch` (`map_intent_to_host_action`, `map_host_action_to_intent`, `apply_mapped_intent`, `apply_host_action`).

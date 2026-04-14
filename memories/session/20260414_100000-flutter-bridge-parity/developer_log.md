@@ -196,3 +196,60 @@ Commit 3 fuer Flutter-Bridge-Parity: serialisierbaren `HostDialogSnapshot` und d
 - `crates/fs25_auto_drive_host_bridge/src/session/chrome_state.rs` blieb bewusst unveraendert; der Snapshot liest nur daraus.
 - `docs/howto/` ist fuer diesen Commit nicht betroffen.
 - Nach dem Hauptcommit blieb durch die neue Direktabhaengigkeit ein kleiner Lockfile-Sync sowie rustfmt-only Line-Wrapping in einigen betroffenen Dateien offen. Diese werden absichtlich per Folgecommit nachgezogen, statt den gerade erzeugten Hauptcommit zu amendieren.
+
+---
+
+## Aufgabe
+
+Commit 4 fuer Flutter-Bridge-Parity: serialisierbaren `HostEditingSnapshot` fuer Properties-, Group-Edit- und Streckenteilungsdaten einfuehren und ueber die Flutter-Control-Plane als JSON delegieren.
+
+## Geaenderte Dateien
+
+- `crates/fs25_auto_drive_host_bridge/src/dto/editing.rs`
+  - Neues DTO-Modul fuer `HostEditingSnapshot`, `HostEditableGroupSummary`, `HostGroupEditSnapshot`, `HostGroupBoundaryCandidateSnapshot`, `HostResampleEditSnapshot`, `HostResampleMode` und `HostEditingOptionsSnapshot` angelegt.
+  - Serde-Roundtrip-Test fuer den kompletten Editing-Snapshot ergaenzt.
+- `crates/fs25_auto_drive_host_bridge/src/dto/mod.rs`
+  - Neues Editing-Modul eingebunden.
+  - Host-Re-Exports und `Engine*`-Kompatibilitaets-Aliase fuer die Editing-DTO-Familie ergaenzt.
+- `crates/fs25_auto_drive_host_bridge/src/lib.rs`
+  - Crate-Root-Re-Exports fuer die neue Editing-Snapshot-Familie erweitert.
+- `crates/fs25_auto_drive_host_bridge/src/session/mod.rs`
+  - Read-only Builder fuer `HostEditingSnapshot` eingefuehrt.
+  - Snapshot deckt selektionsrelevante bearbeitbare Gruppen, aktiven Group-Edit inklusive Boundary-Kandidaten, Resample-/Streckenteilungs-Metriken und editing-nahe Optionsfelder ab.
+  - Neue Session-Methode `editing_snapshot()` hinzugefuegt.
+  - Session-Tests fuer geordnete Resample-Kette, Boundary-Kandidaten und Tool-Edit-Summary einer persistierten Straight-Gruppe ergaenzt.
+- `crates/fs25_auto_drive_host_bridge/API.md`
+  - Oeffentliche Host-Bridge-API fuer `HostEditingSnapshot`, die neuen DTO-Typen und `HostBridgeSession::editing_snapshot()` dokumentiert.
+- `crates/fs25_auto_drive_host_bridge_ffi/src/flutter_api.rs`
+  - Neuer FRB-Delegate `flutter_session_editing_snapshot_json()` hinzugefuegt.
+  - Roundtrip-Test fuer das JSON des Editing-Snapshots ergaenzt.
+- `crates/fs25_auto_drive_host_bridge_ffi/src/api.rs`
+  - Duenner FRB-Re-Export fuer `flutter_session_editing_snapshot_json()` hinzugefuegt.
+- `crates/fs25_auto_drive_host_bridge_ffi/API.md`
+  - Flutter-Control-Plane-Doku um den Editing-Snapshot-Delegate erweitert.
+- `docs/ROADMAP.md`
+  - Flutter-Backend Phase 1 um den abgeschlossenen Editing-Snapshot-Slice ergaenzt.
+
+## Verifikation
+
+- `nocorrect cargo fmt --all`
+  - Erfolgreich.
+- `nocorrect cargo check -p fs25_auto_drive_host_bridge`
+  - Erfolgreich.
+- `nocorrect cargo test -p fs25_auto_drive_host_bridge`
+  - Erfolgreich.
+  - 85 Tests bestanden, 0 fehlgeschlagen.
+- `nocorrect cargo clippy -p fs25_auto_drive_host_bridge -- -D warnings`
+  - Erfolgreich.
+  - Keine Warnungen.
+- `nocorrect cargo check -p fs25_auto_drive_host_bridge_ffi --features flutter-linux`
+  - Erfolgreich.
+  - Nur der bekannte FRB-Codegen-Stub-Hinweis unter aktivem `flutter`-Feature blieb sichtbar.
+- `git status --short`
+  - Nur die fuer den Commit erwarteten Host-Bridge-/FFI-/Doku-Dateien sowie die neue DTO-Datei waren geaendert.
+
+## Zusatznotizen
+
+- Es wurde bewusst **kein** neuer `HostSessionAction::UpdateResampleConfig`-Write-Pfad eingefuehrt, weil der Commit fuer die geforderte Flutter-Paritaet mit einem read-only Snapshot auskommt und damit keinen neuen App-Flow-Slice in der Engine noetig macht.
+- Die Boundary-Kandidaten werden read-only ueber `RoadMap::boundary_nodes(...)` aus dem aktuellen `GroupRecord` abgeleitet; `editing_snapshot()` bleibt dadurch ein reiner `&self`-Read-Seam ohne Cache-Warming-Mutation.
+- `docs/howto/` ist fuer diesen Commit nicht betroffen.
