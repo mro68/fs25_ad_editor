@@ -41,6 +41,8 @@ pub(crate) use connection_renderer::ConnectionRenderer;
 pub use external_texture::{
     ExternalTextureError, ExternalTextureExport, PlatformTextureDescriptor,
 };
+#[cfg(all(feature = "flutter-android", target_os = "android"))]
+pub use external_texture::vulkan_android::VulkanAhbTexture;
 use fs25_auto_drive_engine::shared::EditorOptions;
 pub(crate) use marker_renderer::MarkerRenderer;
 
