@@ -4,7 +4,9 @@ use crate::app::state::FloatingMenuKind;
 use crate::render;
 use eframe::egui;
 use eframe::egui_wgpu;
-use fs25_auto_drive_host_bridge::HostRenderFrameSnapshot;
+use fs25_auto_drive_host_bridge::{
+    HostChromeSnapshot, HostDialogSnapshot, HostRenderFrameSnapshot,
+};
 
 use super::EditorApp;
 
@@ -12,6 +14,22 @@ fn split_render_frame_for_egui(
     frame: HostRenderFrameSnapshot,
 ) -> (render::WgpuRenderData, crate::shared::RenderAssetsSnapshot) {
     (render::WgpuRenderData { scene: frame.scene }, frame.assets)
+}
+
+fn should_request_repaint(
+    has_meaningful_events: bool,
+    pointer_is_moving: bool,
+    floating_menu_open: bool,
+    chrome_snapshot: &HostChromeSnapshot,
+    dialog_snapshot: &HostDialogSnapshot,
+) -> bool {
+    has_meaningful_events
+        || pointer_is_moving
+        || chrome_snapshot.show_command_palette
+        || floating_menu_open
+        || dialog_snapshot.heightmap_warning.visible
+        || dialog_snapshot.marker_dialog.visible
+        || chrome_snapshot.show_options_dialog
 }
 
 impl EditorApp {
@@ -96,15 +114,18 @@ impl EditorApp {
     }
 
     pub(super) fn maybe_request_repaint(&self, ctx: &egui::Context, has_meaningful_events: bool) {
-        let chrome = self.session.chrome_state();
-        if has_meaningful_events
-            || ctx.input(|i| i.pointer.is_moving())
-            || chrome.show_command_palette
-            || chrome.floating_menu.is_some()
-            || chrome.show_heightmap_warning
-            || chrome.marker_dialog.visible
-            || chrome.show_options_dialog
-        {
+        let chrome_snapshot = self.session.build_host_chrome_snapshot();
+        let dialog_snapshot = self.session.dialog_snapshot();
+        let floating_menu_open = self.session.chrome_state().floating_menu.is_some();
+        let pointer_is_moving = ctx.input(|i| i.pointer.is_moving());
+
+        if should_request_repaint(
+            has_meaningful_events,
+            pointer_is_moving,
+            floating_menu_open,
+            &chrome_snapshot,
+            &dialog_snapshot,
+        ) {
             ctx.request_repaint();
         }
     }
@@ -116,11 +137,11 @@ mod tests {
     use crate::core::{
         Connection, ConnectionDirection, ConnectionPriority, MapNode, NodeFlag, RoadMap,
     };
-    use fs25_auto_drive_host_bridge::build_render_frame;
+    use fs25_auto_drive_host_bridge::{build_render_frame, HostBridgeSession};
     use glam::Vec2;
     use std::sync::Arc;
 
-    use super::split_render_frame_for_egui;
+    use super::{should_request_repaint, split_render_frame_for_egui};
 
     fn regression_test_map() -> RoadMap {
         let mut map = RoadMap::new(2);
@@ -173,5 +194,55 @@ mod tests {
             pending_assets.background_transform_revision(),
             state.view.background_transform_revision
         );
+    }
+
+    #[test]
+    fn should_request_repaint_stays_idle_without_activity() {
+        let session = HostBridgeSession::new();
+        let chrome_snapshot = session.build_host_chrome_snapshot();
+        let dialog_snapshot = session.dialog_snapshot();
+
+        assert!(!should_request_repaint(
+            false,
+            false,
+            false,
+            &chrome_snapshot,
+            &dialog_snapshot,
+        ));
+    }
+
+    #[test]
+    fn should_request_repaint_uses_dialog_snapshot_visibilities() {
+        let mut session = HostBridgeSession::new();
+        {
+            let chrome_state = session.chrome_state_mut();
+            chrome_state.show_heightmap_warning = true;
+        }
+
+        let chrome_snapshot = session.build_host_chrome_snapshot();
+        let dialog_snapshot = session.dialog_snapshot();
+        assert!(should_request_repaint(
+            false,
+            false,
+            false,
+            &chrome_snapshot,
+            &dialog_snapshot,
+        ));
+
+        {
+            let chrome_state = session.chrome_state_mut();
+            chrome_state.show_heightmap_warning = false;
+            chrome_state.marker_dialog.visible = true;
+        }
+
+        let chrome_snapshot = session.build_host_chrome_snapshot();
+        let dialog_snapshot = session.dialog_snapshot();
+        assert!(should_request_repaint(
+            false,
+            false,
+            false,
+            &chrome_snapshot,
+            &dialog_snapshot,
+        ));
     }
 }
