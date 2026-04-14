@@ -547,10 +547,10 @@
 
 ## Phase 7: Flutter-Integration
 - [x] **Flutter-Backend Phase 0: Crate-Infrastruktur (2026-04-08, Branch `feat/flutter-backend-phase012`)**
-  - [x] Feature-Flag `flutter` in `fs25_auto_drive_host_bridge_ffi` fuer `flutter_rust_bridge`-Dependency
+  - [x] Feature-Flag `flutter` in `fs25_auto_drive_host_bridge_ffi` fuer `flutter_api.rs` und die direkte `fs25ad_flutter_session_*`-C-FFI-Surface
   - [x] Feature-Flag `flutter-linux` in `fs25_auto_drive_host_bridge_ffi` (impliziert `flutter`, aktiviert `render_wgpu/flutter-linux`)
   - [x] Feature-Flag `flutter-linux` in `fs25_auto_drive_render_wgpu` (aktiviert `ash` + `wgpu/vulkan`)
-  - [x] `build.rs` Codegen-Stub fuer `flutter_rust_bridge` (aktiviert unter `flutter`-Feature)
+  - [x] Rust-seitiger Bridge-Codegen entfernt; kein `build.rs`-Stub mehr noetig
 - [x] **Flutter-Backend Phase 1: Control-Plane API (2026-04-08)**
   - [x] `flutter_api.rs`: `FlutterSessionHandle` (Arc<Mutex<HostBridgeSession>>)
   - [x] `flutter_session_new()`, `flutter_session_dispose()`, `flutter_session_apply_action()`
@@ -562,7 +562,9 @@
   - [x] `flutter_session_editing_snapshot_json()` — HostEditingSnapshot als JSON fuer Properties-, Group-Edit- und Streckenteilungsdaten
   - [x] `flutter_session_context_menu_snapshot_json()` — HostContextMenuSnapshot als JSON fuer Kontextmenue-Varianten und zentrale Precondition-Logik
   - [x] `flutter_session_viewport_overlay_json()` — ViewportOverlaySnapshot als JSON
-  - [x] FRB-Control-Plane um bestehende Bridge-Seams erweitert: `flutter_session_take_dialog_requests_json()`, `flutter_session_submit_dialog_result_json()`, `flutter_session_route_tool_viewport_json()`, `flutter_session_connection_pair_json()`
+  - [x] Flutter-Control-Plane um bestehende Bridge-Seams erweitert: `flutter_session_take_dialog_requests_json()`, `flutter_session_submit_dialog_result_json()`, `flutter_session_route_tool_viewport_json()`, `flutter_session_connection_pair_json()`
+  - [x] Generische C-FFI-Read-Paritaet fuer dieselben host-neutralen Seams hergestellt: `fs25ad_host_bridge_session_node_details_json()`, `fs25ad_host_bridge_session_marker_list_json()`, `fs25ad_host_bridge_session_connection_pair_json()`, `fs25ad_host_bridge_session_is_dirty()`, `fs25ad_host_bridge_session_ui_snapshot_json()`, `fs25ad_host_bridge_session_dialog_snapshot_json()`, `fs25ad_host_bridge_session_editing_snapshot_json()`, `fs25ad_host_bridge_session_context_menu_snapshot_json()` und `fs25ad_host_bridge_session_viewport_overlay_json()`; Header-, API- und FFI-Tests synchron, ohne ABI-Bump
+  - [x] Direkte Flutter-C-FFI-Paritaet fuer die Rust-seitige Altlast-Entfernung hergestellt: `lib.rs` exportiert die komplette `fs25ad_flutter_session_*`-Surface (Actions/Dialog-Requests, 13 Read-Snapshots, Shared-Arc acquire/release) additiv fuer `dart:ffi`/`ffigen`; Header-, API- und FFI-Tests synchron
   - [x] ~35 neue `HostSessionAction`-Varianten fuer volle egui-Paritaet: Zoom (ZoomIn/Out/ToFit/ToSelectionBounds, CenterOnNode), View (SetRenderQuality, ToggleBackgroundVisibility, ScaleBackground), Marker (OpenCreateMarkerDialog, OpenEditMarkerDialog, CancelMarkerDialog, CreateMarker, UpdateMarker, RemoveMarker), Selektion/Clipboard (DeleteSelected, SelectAll, InvertSelection, ClearSelection, CopySelection, PasteStart/Confirm/Cancel), Connection-Management (AddConnection, RemoveConnectionBetween, SetConnectionDirection/Priority, ConnectSelectedNodes, SetAll*BetweenSelected, InvertAllConnectionsBetweenSelected, RemoveAllConnectionsBetweenSelected), Group-Edit (StartGroupEdit, ApplyGroupEdit, CancelGroupEdit, OpenGroupEditTool, SetGroupBoundaryNodes, ToggleGroupLock, DissolveGroup, ConfirmDissolveGroup, GroupSelectionAsGroup, RemoveSelectedNodesFromGroup, RecomputeNodeSegmentSelection), Resample (StartResampleSelection, ApplyCurrentResample), Extras (OpenTraceAllFieldsDialog, ConfirmTraceAllFields, CancelTraceAllFields), Datei-/Dialog-Follow-ups (ClearHeightmap, Heightmap-Warnung, ZIP-/Overview-Folgeschritte, Dedup-Bestaetigung, Save-Overview-Bestaetigung)
   - [x] `HostDialogSnapshot` mit 14 modalen Dialog-DTOs (Heightmap-Warnung, Marker, Dedup, ZIP-Browser, Overview-Options, Post-Load, Save-Overview, Trace-All-Fields, Group-Settings, Confirm-Dissolve) plus `dialog_snapshot()` Session-Methode
   - [x] `HostEditingSnapshot` mit Group-Edit-, Boundary-Kandidaten-, Resample- und Editing-Options-DTOs plus `editing_snapshot()` Session-Methode
@@ -588,8 +590,10 @@
   - [x] `VulkanDmaBufTexture::export_descriptor()` produktiv machen (VkImage mit VK_EXTERNAL_MEMORY_HANDLE_TYPE_DMA_BUF_BIT_EXT)
   - [x] `vkGetMemoryFdKHR` fuer File-Descriptor-Export
   - [x] `RenderExportCore::render_scene_to_view()` mit `flutter_gpu.rs` vollstaendig verdrahten
-- [ ] **Flutter-Backend Phase 4: Flutter-App-Integration (geplant)**
-  - [ ] `flutter_rust_bridge` Codegen vollstaendig integrieren (frb-Annotationen + Dart-SDK im Build)
+- [🟡] **Flutter-Backend Phase 4: Flutter-App-Integration (geplant)**
+  - [x] Rust-seitige C-FFI-Surface komplett: alle Session-/Snapshot-/Dialog-/Editing-/Overlay-Endpunkte als `fs25ad_flutter_session_*` und `fs25ad_host_bridge_session_*` fuer `dart:ffi`/`ffigen` exportiert
+  - [x] Rust-seitige Bridge-Abhaengigkeit, Delegates und Codegen-Glue entfernt; `flutter` gated nur noch `flutter_api.rs` und die direkte C-FFI-Surface
+  - [ ] Flutter-Seite auf direkte `dart:ffi`/`ffigen`-Bindings ueber `fs25ad_flutter_session_*` umstellen und den bisherigen Bridge-Codegen auch clientseitig entfernen
   - [ ] Flutter-seitiges Texture-Plugin fuer DMA-BUF-Import
   - [ ] Dart-Bindings fuer Session-Control-Plane
   - [ ] End-to-End Rendering-Pipeline: Dart → Rust → GPU → DMA-BUF → Flutter/Impeller
