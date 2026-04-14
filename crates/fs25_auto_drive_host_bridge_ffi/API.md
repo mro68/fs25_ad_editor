@@ -36,7 +36,8 @@ Fuer native C/C++-Hosts liegt der stabile Vertragsheader unter `include/fs25ad_h
 | `Fs25adTextureRegistrationV4FrameInfo` | Gemeinsame v4-Frame-Metadaten |
 | `Fs25adTextureRegistrationV4WindowsDescriptor` | Windows-spezifische Descriptor-Familie |
 | `Fs25adTextureRegistrationV4LinuxDmabufDescriptor` | Linux-spezifische DMA-BUF-Descriptor-Familie |
-| `Fs25adTextureRegistrationV4AndroidSurfaceDescriptor` | Android-spezifische Surface-Attachment-Familie |
+| `Fs25adTextureRegistrationV4AndroidHardwareBufferDescriptor` | Android-spezifische AHardwareBuffer-Descriptor-Familie des aktiven ExportLease-Pfads |
+| `Fs25adTextureRegistrationV4AndroidSurfaceDescriptor` | Legacy-Android-Surface-Attachment-Familie fuer aeltere Consumer |
 
 ## Exportierte Funktionen
 
@@ -81,9 +82,10 @@ Fuer native C/C++-Hosts liegt der stabile Vertragsheader unter `include/fs25ad_h
 | `fs25ad_host_bridge_texture_registration_v4_release(texture, frame_token) -> bool` | Gibt den aktiven v4-Frame-Lease frei |
 | `fs25ad_host_bridge_texture_registration_v4_get_windows_descriptor(texture, frame_token, out_descriptor) -> bool` | Liefert den Windows-Descriptor fuer den aktiven v4-Lease |
 | `fs25ad_host_bridge_texture_registration_v4_get_linux_dmabuf_descriptor(texture, frame_token, out_descriptor) -> bool` | Liefert den Linux-DMA-BUF-Descriptor fuer den aktiven v4-Lease |
-| `fs25ad_host_bridge_texture_registration_v4_get_android_surface_descriptor(texture, frame_token, out_descriptor) -> bool` | Liefert den Android-Surface-Descriptor fuer den aktiven v4-Lease |
-| `fs25ad_host_bridge_texture_registration_v4_attach_android_surface(texture, surface_descriptor) -> bool` | Attached ein Android-Surface an den v4-Handle |
-| `fs25ad_host_bridge_texture_registration_v4_detach_android_surface(texture) -> bool` | Detacht ein zuvor attached Android-Surface |
+| `fs25ad_host_bridge_texture_registration_v4_get_android_hardware_buffer_descriptor(texture, frame_token, out_descriptor) -> bool` | Liefert den Android-AHardwareBuffer-Descriptor fuer den aktiven v4-Lease |
+| `fs25ad_host_bridge_texture_registration_v4_get_android_surface_descriptor(texture, frame_token, out_descriptor) -> bool` | Legacy: Liefert den veralteten Android-Surface-Descriptor fuer Alt-Consumer |
+| `fs25ad_host_bridge_texture_registration_v4_attach_android_surface(texture, surface_descriptor) -> bool` | Legacy: Attached ein veraltetes Android-Surface an den v4-Handle |
+| `fs25ad_host_bridge_texture_registration_v4_detach_android_surface(texture) -> bool` | Legacy: Detacht ein zuvor attached Android-Surface |
 
 ### Flutter-Feature-Exporte
 
@@ -153,13 +155,15 @@ Die folgenden Symbole werden nur mit aktivem `flutter`-Feature exportiert und sp
 - Payload-Familien sind plattformspezifisch getrennt:
 	- Windows: `Fs25adTextureRegistrationV4WindowsDescriptor`
 	- Linux: `Fs25adTextureRegistrationV4LinuxDmabufDescriptor`
-	- Android: `Fs25adTextureRegistrationV4AndroidSurfaceDescriptor`
+	- Android aktiv: `Fs25adTextureRegistrationV4AndroidHardwareBufferDescriptor`
+	- Android legacy: `Fs25adTextureRegistrationV4AndroidSurfaceDescriptor`
 - Echte externe Host-Registration ist nicht allein mit diesem Rust-Repo erledigt. Neben backend-nativer Export-/Attach-Erzeugung im Renderer braucht jeder externe Host einen nativen Import-/Surface-Pfad fuer dieselbe Payload-Familie.
-- Stand dieser Ausbaustufe: Kein produktiver v4-Backend-Pfad in diesem Rust-Repo. Capabilities markieren Plattformpfade explizit als `NotYetImplemented` oder `Unsupported`; Lifecycle-/Payload-Aufrufe melden explizite Fehler statt stiller Fallbacks.
+- Stand dieser Ausbaustufe: Windows und Linux bleiben im v4-Host-Bridge-Pfad `NotYetImplemented` oder `Unsupported`. Android meldet auf Android-Targets bereits `ExportLease` plus `AHardwareBuffer`, aber der v4-Host-Bridge-Lifecycle ist noch nicht an den produktiven Renderer-Export verdrahtet; Lifecycle-/Payload-Aufrufe melden deshalb weiterhin explizite Fehler statt stiller Fallbacks.
+- Die Legacy-Android-Surface-Symbole bleiben exportiert, sind aber veraltet und verweisen neue Consumer auf den AHardwareBuffer-ExportLease-Pfad.
 - Konkreter technischer Blocker im aktuellen Stack:
 	- Windows: Das Repo erzeugt bisher nur regulaere `wgpu::Texture`-Ziele. Der verwendete `wgpu 29`-`TextureDescriptor` enthaelt keine Export-/Shared-Handle-Parameter; ohne backend-spezifische Export-Erzeugung und ohne zusaetzlichen nativen Host-Importpfad fuer DXGI-/D3D11-Registration im Consumer entsteht kein produktiver Flutter-/C++-Interop-Pfad.
-	- Linux: Der Renderpfad erzeugt keine exportierbare Vulkan-External-Memory. Es gibt deshalb in diesem Repo weder DMA-BUF-FD-/Modifier-Export noch einen zusaetzlichen nativen Host-Importpfad fuer DMA-BUF im Consumer.
-	- Android: Das Rust-Repo rendert nur in interne Offscreen-Texturen. Ein echter Android-v4-Pfad braucht ein hostseitig bereitgestelltes `ANativeWindow`/Surface-Ziel und zusaetzlichen nativen Host-Code fuer die Ziel-Lifecycle-Integration im Consumer.
+	- Linux: Der v4-Host-Bridge-Pfad ist noch nicht an den bereits separaten DMA-BUF-Export-Stack verdrahtet; es fehlt weiterhin der native Host-Importpfad fuer DMA-BUF im Consumer.
+	- Android: Der Renderer kann `AHardwareBuffer` exportieren, aber der v4-Host-Bridge-Pfad reicht diese Export-Leases noch nicht bis in den ABI-Getter durch. Zusaetzlich fehlt ein nativer Consumer-Importpfad fuer `AHardwareBuffer` ausserhalb dieser Crate.
 - Es gibt keinen Pixelbuffer-Fallback und keine Reinterpretation von `v3`-Runtime-Pointern als `v4`-Interop-Handles.
 
 ## Header-Handshake-Beispiel (C)

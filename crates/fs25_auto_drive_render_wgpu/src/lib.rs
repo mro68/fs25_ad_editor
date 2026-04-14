@@ -31,20 +31,19 @@ pub use texture_registration::{
     LinuxDmabufPlane, TextureRegistrationAlphaMode, TextureRegistrationAvailability,
     TextureRegistrationCapabilities, TextureRegistrationFrameMetadata,
     TextureRegistrationLifecycle, TextureRegistrationLifecycleError,
-    TextureRegistrationLifecycleState, TextureRegistrationModel,
-    TextureRegistrationPayloadFamily, TextureRegistrationPixelFormat,
-    TextureRegistrationPlatform, TextureRegistrationPlatformCapabilities, WindowsDescriptor,
-    WindowsDescriptorKind, MAX_LINUX_DMABUF_PLANES,
-    TEXTURE_REGISTRATION_V4_CONTRACT_VERSION,
+    TextureRegistrationLifecycleState, TextureRegistrationModel, TextureRegistrationPayloadFamily,
+    TextureRegistrationPixelFormat, TextureRegistrationPlatform,
+    TextureRegistrationPlatformCapabilities, WindowsDescriptor, WindowsDescriptorKind,
+    MAX_LINUX_DMABUF_PLANES, TEXTURE_REGISTRATION_V4_CONTRACT_VERSION,
 };
 
 pub(crate) use background_renderer::BackgroundRenderer;
 pub(crate) use connection_renderer::ConnectionRenderer;
+#[cfg(all(feature = "flutter-android", target_os = "android"))]
+pub use external_texture::vulkan_android::VulkanAhbTexture;
 pub use external_texture::{
     ExternalTextureError, ExternalTextureExport, PlatformTextureDescriptor,
 };
-#[cfg(all(feature = "flutter-android", target_os = "android"))]
-pub use external_texture::vulkan_android::VulkanAhbTexture;
 use fs25_auto_drive_engine::shared::EditorOptions;
 pub(crate) use marker_renderer::MarkerRenderer;
 

@@ -47,9 +47,8 @@ mod tests {
         AndroidHardwareBufferDescriptor, AndroidSurfaceDescriptor, LinuxDmabufDescriptor,
         LinuxDmabufPlane, TextureRegistrationAvailability, TextureRegistrationLifecycle,
         TextureRegistrationLifecycleError, TextureRegistrationLifecycleState,
-        TextureRegistrationModel, TextureRegistrationPayloadFamily,
-        TextureRegistrationPixelFormat, TextureRegistrationPlatform, WindowsDescriptor,
-        WindowsDescriptorKind,
+        TextureRegistrationModel, TextureRegistrationPayloadFamily, TextureRegistrationPixelFormat,
+        TextureRegistrationPlatform, WindowsDescriptor, WindowsDescriptorKind,
         TEXTURE_REGISTRATION_V4_CONTRACT_VERSION,
     };
 
@@ -123,7 +122,10 @@ mod tests {
 
     #[test]
     fn v4_payload_family_numeric_values_keep_android_legacy_and_ahb_distinct() {
-        assert_eq!(TextureRegistrationPayloadFamily::WindowsDescriptor.as_u32(), 1);
+        assert_eq!(
+            TextureRegistrationPayloadFamily::WindowsDescriptor.as_u32(),
+            1
+        );
         assert_eq!(TextureRegistrationPayloadFamily::LinuxDmabuf.as_u32(), 2);
         assert_eq!(
             TextureRegistrationPayloadFamily::AndroidSurfaceAttachment.as_u32(),

@@ -10,6 +10,7 @@ use crate::{clear_last_error, set_last_error, HostBridgeSessionHandle};
 use anyhow::{anyhow, Result};
 use fs25_auto_drive_render_wgpu::{
     query_texture_registration_v4_capabilities, AndroidAttachmentKind,
+    AndroidHardwareBufferDescriptor,
     TextureRegistrationAlphaMode, TextureRegistrationAvailability, TextureRegistrationModel,
     TextureRegistrationPayloadFamily, TextureRegistrationPixelFormat, TextureRegistrationPlatform,
     TextureRegistrationPlatformCapabilities, MAX_LINUX_DMABUF_PLANES,
@@ -32,6 +33,7 @@ const FS25AD_TEXTURE_REGISTRATION_V4_MODEL_HOST_ATTACHED_SURFACE: u32 = 2;
 const FS25AD_TEXTURE_REGISTRATION_V4_PAYLOAD_WINDOWS_DESCRIPTOR: u32 = 1;
 const FS25AD_TEXTURE_REGISTRATION_V4_PAYLOAD_LINUX_DMABUF: u32 = 2;
 const FS25AD_TEXTURE_REGISTRATION_V4_PAYLOAD_ANDROID_SURFACE_ATTACHMENT: u32 = 3;
+const FS25AD_TEXTURE_REGISTRATION_V4_PAYLOAD_ANDROID_HARDWARE_BUFFER: u32 = 4;
 
 const FS25AD_TEXTURE_REGISTRATION_V4_AVAILABILITY_SUPPORTED: u32 = 1;
 const FS25AD_TEXTURE_REGISTRATION_V4_AVAILABILITY_NOT_YET_IMPLEMENTED: u32 = 2;
@@ -43,7 +45,7 @@ const FS25AD_TEXTURE_REGISTRATION_V4_WINDOWS_DESCRIPTOR_D3D11_TEXTURE2D: u32 = 2
 const FS25AD_TEXTURE_REGISTRATION_V4_ANDROID_ATTACHMENT_NATIVE_WINDOW: u32 = 1;
 const FS25AD_TEXTURE_REGISTRATION_V4_ANDROID_ATTACHMENT_SURFACE_PRODUCER: u32 = 2;
 
-const V4_GENERAL_BLOCKER_DETAIL: &str = "current repo path renders into regular wgpu::Texture targets created via Device::create_texture; wgpu 29 TextureDescriptor has no external-memory/export fields, so this build does not produce backend-native interop payloads";
+const V4_GENERAL_BLOCKER_DETAIL: &str = "current host-bridge v4 runtime still uses a placeholder handle and does not plumb backend-native export descriptors from the renderer into the ABI";
 
 /// Opaquer Platzhalter-Handle fuer den additiven v4-Vertrag.
 pub(crate) struct HostBridgeTextureRegistrationV4 {
@@ -56,10 +58,10 @@ fn platform_blocker_detail(platform: TextureRegistrationPlatform) -> &'static st
             "windows blocker: the renderer does not create exportable DXGI/D3D resources and this repo has no native host registration path for DXGI shared handles or ID3D11Texture2D"
         }
         TextureRegistrationPlatform::Linux => {
-            "linux blocker: the renderer does not allocate exportable Vulkan external memory and this repo does not export DMA-BUF fds/modifiers for the render target"
+            "linux blocker: the v4 host-bridge runtime is not yet wired to the renderer's DMA-BUF export path"
         }
         TextureRegistrationPlatform::Android => {
-            "android blocker: the renderer targets an internal offscreen texture instead of a host-provided ANativeWindow/Surface, so a native host-attached surface path is still missing"
+            "android blocker: the v4 host-bridge runtime is not yet wired to the renderer's AHardwareBuffer export-lease path"
         }
     }
 }
@@ -165,6 +167,15 @@ pub struct Fs25adTextureRegistrationV4LinuxDmabufDescriptor {
 
 #[repr(C)]
 #[derive(Clone, Copy)]
+/// C-ABI-Descriptor fuer Android-AHardwareBuffer-Export.
+pub struct Fs25adTextureRegistrationV4AndroidHardwareBufferDescriptor {
+    /// Opaker Pointer auf einen `AHardwareBuffer*`, bereits `AHardwareBuffer_acquire()`-t.
+    /// Der Empfaenger muss `AHardwareBuffer_release()` aufrufen.
+    pub hardware_buffer_ptr: usize,
+}
+
+#[repr(C)]
+#[derive(Clone, Copy)]
 /// Android-Surface-Descriptor des v4-Vertrags.
 pub struct Fs25adTextureRegistrationV4AndroidSurfaceDescriptor {
     /// ABI-Konstante des Untertyps (`1 = NativeWindow`, `2 = SurfaceProducer`).
@@ -213,6 +224,9 @@ fn payload_family_abi(payload_family: TextureRegistrationPayloadFamily) -> u32 {
         }
         TextureRegistrationPayloadFamily::AndroidSurfaceAttachment => {
             FS25AD_TEXTURE_REGISTRATION_V4_PAYLOAD_ANDROID_SURFACE_ATTACHMENT
+        }
+        TextureRegistrationPayloadFamily::AndroidHardwareBuffer => {
+            FS25AD_TEXTURE_REGISTRATION_V4_PAYLOAD_ANDROID_HARDWARE_BUFFER
         }
     }
 }
@@ -272,6 +286,14 @@ fn platform_capability_to_abi(
     }
 }
 
+fn android_hardware_buffer_descriptor_to_abi(
+    descriptor: AndroidHardwareBufferDescriptor,
+) -> Fs25adTextureRegistrationV4AndroidHardwareBufferDescriptor {
+    Fs25adTextureRegistrationV4AndroidHardwareBufferDescriptor {
+        hardware_buffer_ptr: descriptor.hardware_buffer_ptr,
+    }
+}
+
 fn ensure_texture_pointer(texture: *mut HostBridgeTextureRegistrationV4) -> Result<()> {
     if texture.is_null() {
         return Err(anyhow!(
@@ -293,6 +315,25 @@ fn ensure_session_pointer(session: *mut HostBridgeSessionHandle) -> Result<()> {
 fn fail_not_implemented(function_name: &str) -> Result<()> {
     Err(anyhow!(
         "{function_name} is not implemented for texture registration v4 in this build; {V4_GENERAL_BLOCKER_DETAIL}"
+    ))
+}
+
+fn fail_android_hardware_buffer_descriptor_unavailable(frame_token: u64) -> Result<()> {
+    eprintln!(
+        "Android AHardwareBuffer descriptor getter: v4 runtime not yet connected to AHardwareBuffer export (frame_token={frame_token})"
+    );
+    Err(anyhow!(
+        "fs25ad_host_bridge_texture_registration_v4_get_android_hardware_buffer_descriptor is not yet connected to the v4 runtime in this build; {}",
+        platform_blocker_detail(TextureRegistrationPlatform::Android)
+    ))
+}
+
+fn fail_legacy_android_surface_path(function_name: &str) -> Result<()> {
+    eprintln!(
+        "Legacy Android surface path is deprecated; use the export-lease AHardwareBuffer descriptor path instead ({function_name})"
+    );
+    Err(anyhow!(
+        "{function_name} is deprecated for texture registration v4; use the export-lease Android AHardwareBuffer descriptor path instead"
     ))
 }
 
@@ -548,7 +589,44 @@ pub unsafe extern "C" fn fs25ad_host_bridge_texture_registration_v4_get_linux_dm
     }}
 }
 
-/// Liefert den Android-Surface-Descriptor fuer den aktiven v4-Frame-Lease.
+/// Liefert den Android-AHardwareBuffer-Descriptor fuer den aktiven v4-Frame-Lease.
+///
+/// Der ABI-Vertrag ist bereits eingefroren, aber die aktuelle v4-Runtime ist in
+/// diesem Build noch nicht an den produktiven AHardwareBuffer-Exportpfad verdrahtet.
+///
+/// # Safety
+///
+/// `texture` muss ein gueltiger Zeiger sein. `out_descriptor` muss ein gueltiger,
+/// nicht-null Zeiger sein.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn fs25ad_host_bridge_texture_registration_v4_get_android_hardware_buffer_descriptor(
+    texture: *mut HostBridgeTextureRegistrationV4,
+    frame_token: u64,
+    out_descriptor: *mut Fs25adTextureRegistrationV4AndroidHardwareBufferDescriptor,
+) -> bool {
+    ffi_guard_bool! {{
+        if out_descriptor.is_null() {
+            return Err(anyhow::anyhow!(
+                "Fs25adTextureRegistrationV4AndroidHardwareBufferDescriptor pointer must not be null"
+            ));
+        }
+        ensure_texture_pointer(texture)?;
+        // SAFETY: Zeiger wurde oben auf Nicht-Null validiert.
+        unsafe {
+            *out_descriptor = android_hardware_buffer_descriptor_to_abi(
+                AndroidHardwareBufferDescriptor {
+                    hardware_buffer_ptr: 0,
+                },
+            );
+        }
+        fail_android_hardware_buffer_descriptor_unavailable(frame_token)
+    }}
+}
+
+/// Liefert den veralteten Legacy-Android-Surface-Descriptor fuer den aktiven v4-Frame-Lease.
+///
+/// Dieser ABI-Pfad bleibt nur fuer Alt-Consumer exportiert. Neue Consumer sollen
+/// stattdessen den Android-AHardwareBuffer-Descriptorpfad verwenden.
 ///
 /// # Safety
 ///
@@ -567,13 +645,16 @@ pub unsafe extern "C" fn fs25ad_host_bridge_texture_registration_v4_get_android_
             ));
         }
         ensure_texture_pointer(texture)?;
-        fail_not_implemented(
+        fail_legacy_android_surface_path(
             "fs25ad_host_bridge_texture_registration_v4_get_android_surface_descriptor",
         )
     }}
 }
 
-/// Haengt fuer Android den hostseitigen Surface-Descriptor an den v4-Handle.
+/// Haengt fuer Android den veralteten Legacy-Surface-Descriptor an den v4-Handle.
+///
+/// Dieser ABI-Pfad bleibt nur fuer Alt-Consumer exportiert. Neue Consumer sollen
+/// stattdessen den ExportLease-AHardwareBuffer-Pfad verwenden.
 ///
 /// # Safety
 ///
@@ -599,13 +680,16 @@ pub unsafe extern "C" fn fs25ad_host_bridge_texture_registration_v4_attach_andro
                 "android surface descriptor native_window_ptr must not be null"
             ));
         }
-        fail_not_implemented(
+        fail_legacy_android_surface_path(
             "fs25ad_host_bridge_texture_registration_v4_attach_android_surface",
         )
     }}
 }
 
-/// Trennt fuer Android den zuvor attached Surface-Descriptor wieder.
+/// Trennt fuer Android den zuvor attached Legacy-Surface-Descriptor wieder.
+///
+/// Dieser ABI-Pfad bleibt nur fuer Alt-Consumer exportiert. Neue Consumer sollen
+/// stattdessen den ExportLease-AHardwareBuffer-Pfad verwenden.
 ///
 /// # Safety
 ///
@@ -617,7 +701,7 @@ pub unsafe extern "C" fn fs25ad_host_bridge_texture_registration_v4_detach_andro
 ) -> bool {
     ffi_guard_bool! {{
         ensure_texture_pointer(texture)?;
-        fail_not_implemented(
+        fail_legacy_android_surface_path(
             "fs25ad_host_bridge_texture_registration_v4_detach_android_surface",
         )
     }}
@@ -626,18 +710,21 @@ pub unsafe extern "C" fn fs25ad_host_bridge_texture_registration_v4_detach_andro
 #[cfg(test)]
 mod tests {
     use super::{
+        android_hardware_buffer_descriptor_to_abi,
         android_attachment_kind_from_abi, fs25ad_host_bridge_texture_registration_v4_acquire,
         fs25ad_host_bridge_texture_registration_v4_attach_android_surface,
         fs25ad_host_bridge_texture_registration_v4_capabilities,
         fs25ad_host_bridge_texture_registration_v4_contract_version,
         fs25ad_host_bridge_texture_registration_v4_detach_android_surface,
         fs25ad_host_bridge_texture_registration_v4_dispose,
+        fs25ad_host_bridge_texture_registration_v4_get_android_hardware_buffer_descriptor,
         fs25ad_host_bridge_texture_registration_v4_get_android_surface_descriptor,
         fs25ad_host_bridge_texture_registration_v4_get_linux_dmabuf_descriptor,
         fs25ad_host_bridge_texture_registration_v4_get_windows_descriptor,
         fs25ad_host_bridge_texture_registration_v4_release,
         fs25ad_host_bridge_texture_registration_v4_render,
         fs25ad_host_bridge_texture_registration_v4_resize,
+        Fs25adTextureRegistrationV4AndroidHardwareBufferDescriptor,
         Fs25adTextureRegistrationV4AndroidSurfaceDescriptor,
         Fs25adTextureRegistrationV4Capabilities, Fs25adTextureRegistrationV4FrameInfo,
         Fs25adTextureRegistrationV4LinuxDmabufDescriptor,
@@ -648,11 +735,11 @@ mod tests {
         FS25AD_TEXTURE_REGISTRATION_V4_ANDROID_ATTACHMENT_NATIVE_WINDOW,
         FS25AD_TEXTURE_REGISTRATION_V4_ANDROID_ATTACHMENT_SURFACE_PRODUCER,
         FS25AD_TEXTURE_REGISTRATION_V4_AVAILABILITY_NOT_YET_IMPLEMENTED,
+        FS25AD_TEXTURE_REGISTRATION_V4_AVAILABILITY_SUPPORTED,
         FS25AD_TEXTURE_REGISTRATION_V4_AVAILABILITY_UNSUPPORTED,
         FS25AD_TEXTURE_REGISTRATION_V4_CONTRACT_VERSION,
         FS25AD_TEXTURE_REGISTRATION_V4_MODEL_EXPORT_LEASE,
-        FS25AD_TEXTURE_REGISTRATION_V4_MODEL_HOST_ATTACHED_SURFACE,
-        FS25AD_TEXTURE_REGISTRATION_V4_PAYLOAD_ANDROID_SURFACE_ATTACHMENT,
+        FS25AD_TEXTURE_REGISTRATION_V4_PAYLOAD_ANDROID_HARDWARE_BUFFER,
         FS25AD_TEXTURE_REGISTRATION_V4_PAYLOAD_LINUX_DMABUF,
         FS25AD_TEXTURE_REGISTRATION_V4_PAYLOAD_WINDOWS_DESCRIPTOR,
         FS25AD_TEXTURE_REGISTRATION_V4_PIXEL_FORMAT_RGBA8_SRGB,
@@ -666,7 +753,7 @@ mod tests {
         fs25ad_host_bridge_last_error_message, fs25ad_host_bridge_session_dispose,
         fs25ad_host_bridge_session_new, fs25ad_host_bridge_string_free,
     };
-    use fs25_auto_drive_render_wgpu::AndroidAttachmentKind;
+    use fs25_auto_drive_render_wgpu::{AndroidAttachmentKind, AndroidHardwareBufferDescriptor};
     use std::ffi::CStr;
 
     // Sicherheits-Wrapper fuer unsafe FFI-Funktionen im Testkontext.
@@ -718,6 +805,17 @@ mod tests {
     ) -> bool {
         unsafe {
             fs25ad_host_bridge_texture_registration_v4_get_linux_dmabuf_descriptor(t, ft, out)
+        }
+    }
+    fn get_android_hardware_buffer_descriptor(
+        t: *mut super::HostBridgeTextureRegistrationV4,
+        ft: u64,
+        out: *mut Fs25adTextureRegistrationV4AndroidHardwareBufferDescriptor,
+    ) -> bool {
+        unsafe {
+            fs25ad_host_bridge_texture_registration_v4_get_android_hardware_buffer_descriptor(
+                t, ft, out,
+            )
         }
     }
     fn get_android_surface_descriptor(
@@ -827,11 +925,11 @@ mod tests {
         );
         assert_eq!(
             capabilities.android.registration_model,
-            FS25AD_TEXTURE_REGISTRATION_V4_MODEL_HOST_ATTACHED_SURFACE
+            FS25AD_TEXTURE_REGISTRATION_V4_MODEL_EXPORT_LEASE
         );
         assert_eq!(
             capabilities.android.payload_family,
-            FS25AD_TEXTURE_REGISTRATION_V4_PAYLOAD_ANDROID_SURFACE_ATTACHMENT
+            FS25AD_TEXTURE_REGISTRATION_V4_PAYLOAD_ANDROID_HARDWARE_BUFFER
         );
 
         if cfg!(target_os = "windows") {
@@ -861,7 +959,7 @@ mod tests {
         if cfg!(target_os = "android") {
             assert_eq!(
                 capabilities.android.availability,
-                FS25AD_TEXTURE_REGISTRATION_V4_AVAILABILITY_NOT_YET_IMPLEMENTED
+                FS25AD_TEXTURE_REGISTRATION_V4_AVAILABILITY_SUPPORTED
             );
         } else {
             assert_eq!(
@@ -895,7 +993,7 @@ mod tests {
         assert!(android.is_null());
         let android_error = read_and_free_error();
         if cfg!(target_os = "android") {
-            assert!(android_error.contains("not yet implemented"));
+            assert!(android_error.contains("currently not wired"));
         } else {
             assert!(android_error.contains("unsupported"));
         }
@@ -963,6 +1061,16 @@ mod tests {
         ));
         assert!(read_and_free_error().contains("HostBridgeTextureRegistrationV4 pointer"));
 
+        let mut android_ahb = Fs25adTextureRegistrationV4AndroidHardwareBufferDescriptor {
+            hardware_buffer_ptr: 0,
+        };
+        assert!(!get_android_hardware_buffer_descriptor(
+            std::ptr::null_mut(),
+            1,
+            &mut android_ahb
+        ));
+        assert!(read_and_free_error().contains("HostBridgeTextureRegistrationV4 pointer"));
+
         let mut android = Fs25adTextureRegistrationV4AndroidSurfaceDescriptor {
             attachment_kind: FS25AD_TEXTURE_REGISTRATION_V4_ANDROID_ATTACHMENT_SURFACE_PRODUCER,
             native_window_ptr: 0,
@@ -1011,6 +1119,15 @@ mod tests {
     }
 
     #[test]
+    fn ffi_v4_android_hardware_buffer_descriptor_mapping_is_stable() {
+        let descriptor = android_hardware_buffer_descriptor_to_abi(AndroidHardwareBufferDescriptor {
+            hardware_buffer_ptr: 0x44,
+        });
+
+        assert_eq!(descriptor.hardware_buffer_ptr, 0x44);
+    }
+
+    #[test]
     fn ffi_v4_attach_android_surface_validates_native_window_pointer() {
         let registration = make_dummy_registration();
 
@@ -1026,7 +1143,7 @@ mod tests {
     }
 
     #[test]
-    fn ffi_v4_surface_accepts_valid_shape_but_reports_not_implemented() {
+    fn ffi_v4_windows_and_legacy_android_paths_report_expected_errors() {
         let registration = make_dummy_registration();
 
         let mut windows = Fs25adTextureRegistrationV4WindowsDescriptor {
@@ -1043,11 +1160,19 @@ mod tests {
             native_window_ptr: 0x11,
             surface_handle_ptr: 0x22,
         };
+        let mut android_surface = android;
+        assert!(!get_android_surface_descriptor(
+            registration,
+            1,
+            &mut android_surface
+        ));
+        assert!(read_and_free_error().contains("deprecated"));
+
         assert!(!attach_android_surface(registration, &android));
-        assert!(read_and_free_error().contains("not implemented"));
+        assert!(read_and_free_error().contains("deprecated"));
 
         assert!(!detach_android_surface(registration));
-        assert!(read_and_free_error().contains("not implemented"));
+        assert!(read_and_free_error().contains("deprecated"));
 
         reg_dispose(registration);
     }
@@ -1078,7 +1203,7 @@ mod tests {
     }
 
     #[test]
-    fn ffi_v4_valid_handle_reports_not_implemented_for_linux_and_android_payload_getters() {
+    fn ffi_v4_valid_handle_reports_expected_errors_for_linux_and_android_payload_getters() {
         let registration = make_dummy_registration();
 
         let mut linux = Fs25adTextureRegistrationV4LinuxDmabufDescriptor {
@@ -1095,6 +1220,18 @@ mod tests {
         assert!(!get_linux_dmabuf_descriptor(registration, 1, &mut linux));
         assert!(read_and_free_error().contains("not implemented"));
 
+        let mut android_ahb = Fs25adTextureRegistrationV4AndroidHardwareBufferDescriptor {
+            hardware_buffer_ptr: 0,
+        };
+        assert!(!get_android_hardware_buffer_descriptor(
+            registration,
+            1,
+            &mut android_ahb
+        ));
+        let android_ahb_error = read_and_free_error();
+        assert!(android_ahb_error.contains("not yet connected"));
+        assert!(android_ahb_error.contains("AHardwareBuffer"));
+
         let mut android = Fs25adTextureRegistrationV4AndroidSurfaceDescriptor {
             attachment_kind: FS25AD_TEXTURE_REGISTRATION_V4_ANDROID_ATTACHMENT_NATIVE_WINDOW,
             native_window_ptr: 0x11,
@@ -1105,7 +1242,22 @@ mod tests {
             1,
             &mut android
         ));
-        assert!(read_and_free_error().contains("not implemented"));
+        assert!(read_and_free_error().contains("deprecated"));
+
+        reg_dispose(registration);
+    }
+
+    #[test]
+    fn ffi_v4_android_hardware_buffer_getter_rejects_null_output_pointer() {
+        let registration = make_dummy_registration();
+
+        assert!(!get_android_hardware_buffer_descriptor(
+            registration,
+            1,
+            std::ptr::null_mut()
+        ));
+        assert!(read_and_free_error()
+            .contains("Fs25adTextureRegistrationV4AndroidHardwareBufferDescriptor pointer"));
 
         reg_dispose(registration);
     }
