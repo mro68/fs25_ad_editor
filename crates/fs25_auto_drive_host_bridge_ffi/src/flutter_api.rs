@@ -95,7 +95,10 @@ pub fn flutter_session_snapshot_json(handle: &FlutterSessionHandle) -> Result<St
 
 /// Gibt den aktuell inspizierten Node als JSON-String zurueck.
 pub fn flutter_session_node_details_json(handle: &FlutterSessionHandle) -> Option<String> {
-    handle.with_session(|s| s.node_details_json()).ok().flatten()
+    handle
+        .with_session(|s| s.node_details_json())
+        .ok()
+        .flatten()
 }
 
 /// Gibt die aktuelle Marker-Liste als JSON-String zurueck.
