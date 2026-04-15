@@ -212,9 +212,9 @@ Implementiert `ExternalTextureExport` fuer Linux/Vulkan. Erzeugt ein explizit ex
 
 ### Struct: `VulkanAhbTexture` (Android)
 
-Implementiert `ExternalTextureExport` fuer Android/Vulkan. Erzeugt ein explizit exportfaehiges Vulkan-Image samt dedizierter `VkDeviceMemory`-Allocation, exportiert einen persistent gehaltenen `AHardwareBuffer` ueber `vkGetMemoryAndroidHardwareBufferANDROID` und wrappt das Ergebnis anschliessend als `wgpu::Texture` fuer den Renderpfad.
+Implementiert `ExternalTextureExport` fuer Android/Vulkan. Alloziert zuerst einen `AHardwareBuffer`, fragt dessen Vulkan-Properties ueber `vkGetAndroidHardwareBufferPropertiesANDROID` ab, importiert den Buffer anschliessend per `VkImportAndroidHardwareBufferInfoANDROID` in eine dedizierte `VkDeviceMemory`-Allocation fuer das Vulkan-Image und wrappt das Ergebnis danach als `wgpu::Texture` fuer den Renderpfad.
 
-**Status:** Produktiver Vulkan-HAL-Pfad fuer `VK_ANDROID_external_memory_android_hardware_buffer`; `export_descriptor()` erhoeht vor jeder Rueckgabe den AHardwareBuffer-Refcount fuer den Empfaenger, waehrend die interne persistente Referenz erst im `Drop` von `VulkanAhbTexture` wieder freigegeben wird.
+**Status:** Produktiver Vulkan-HAL-Pfad fuer `VK_ANDROID_external_memory_android_hardware_buffer`; der AHardwareBuffer wird AHB-first alloziert und ueber den Vulkan-Importpfad persistent gehalten. `export_descriptor()` erhoeht vor jeder Rueckgabe den AHardwareBuffer-Refcount fuer den Empfaenger, waehrend die interne persistente Referenz erst im `Drop` von `VulkanAhbTexture` wieder freigegeben wird.
 
 ### Hilfsfunktionen (vulkan_linux)
 
