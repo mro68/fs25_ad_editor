@@ -67,6 +67,32 @@ use std::{
     sync::{Arc, Mutex},
 };
 
+#[cfg(all(target_os = "android", feature = "flutter-android"))]
+fn enable_vulkan_device_extension_if_missing(
+    extensions: &mut Vec<&'static std::ffi::CStr>,
+    extension: &'static std::ffi::CStr,
+) {
+    if !extensions.contains(&extension) {
+        extensions.push(extension);
+    }
+}
+
+#[cfg(all(target_os = "android", feature = "flutter-android"))]
+fn khr_external_memory_extension_name() -> &'static std::ffi::CStr {
+    // SAFETY: Das Byte-Array ist statisch und nullterminiert.
+    unsafe { std::ffi::CStr::from_bytes_with_nul_unchecked(b"VK_KHR_external_memory\0") }
+}
+
+#[cfg(all(target_os = "android", feature = "flutter-android"))]
+fn android_external_memory_hardware_buffer_extension_name() -> &'static std::ffi::CStr {
+    // SAFETY: Das Byte-Array ist statisch und nullterminiert.
+    unsafe {
+        std::ffi::CStr::from_bytes_with_nul_unchecked(
+            b"VK_ANDROID_external_memory_android_hardware_buffer\0",
+        )
+    }
+}
+
 /// Interner GPU-Runtime-Zustand fuer Flutter-Integration.
 ///
 /// Kapselt wgpu-Device/Queue, den Renderer-Zustand und die exportierbare
@@ -120,15 +146,41 @@ impl GpuRuntimeHandle {
         }))
         .map_err(|e| anyhow!("Kein Vulkan-Adapter gefunden: {e}"))?;
 
-        let (device, queue) =
-            pollster::block_on(adapter.request_device(&wgpu::DeviceDescriptor {
-                label: Some("fs25ad flutter gpu runtime"),
-                required_features: wgpu::Features::empty(),
-                required_limits: wgpu::Limits::default(),
-                experimental_features: Default::default(),
-                memory_hints: wgpu::MemoryHints::Performance,
-                trace: wgpu::Trace::Off,
-            }))?;
+        let device_desc = wgpu::DeviceDescriptor {
+            label: Some("fs25ad flutter gpu runtime"),
+            required_features: wgpu::Features::empty(),
+            required_limits: wgpu::Limits::default(),
+            experimental_features: Default::default(),
+            memory_hints: wgpu::MemoryHints::Performance,
+            trace: wgpu::Trace::Off,
+        };
+
+        #[cfg(all(target_os = "android", feature = "flutter-android"))]
+        let (device, queue) = unsafe {
+            let hal_adapter = adapter
+                .as_hal::<wgpu::hal::vulkan::Api>()
+                .context("Vulkan-HAL-Adapter fuer Android ist nicht verfuegbar")?;
+            let hal_device = hal_adapter.open_with_callback(
+                device_desc.required_features,
+                &device_desc.required_limits,
+                &device_desc.memory_hints,
+                Some(Box::new(|args| {
+                    enable_vulkan_device_extension_if_missing(
+                        args.extensions,
+                        khr_external_memory_extension_name(),
+                    );
+                    enable_vulkan_device_extension_if_missing(
+                        args.extensions,
+                        android_external_memory_hardware_buffer_extension_name(),
+                    );
+                })),
+            )?;
+
+            adapter.create_device_from_hal::<wgpu::hal::vulkan::Api>(hal_device, &device_desc)?
+        };
+
+        #[cfg(not(all(target_os = "android", feature = "flutter-android")))]
+        let (device, queue) = pollster::block_on(adapter.request_device(&device_desc))?;
 
         let runtime = SharedTextureRuntime::new(&device, &queue, [width, height])?;
         let external_texture =

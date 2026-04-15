@@ -18,6 +18,11 @@ struct CreatedTexture {
     hardware_buffer: *mut ndk_sys::AHardwareBuffer,
 }
 
+struct HardwareBufferProperties {
+    allocation_size: vk::DeviceSize,
+    memory_type_bits: u32,
+}
+
 /// GPU-Textur mit AHardwareBuffer-Export fuer Android Vulkan Zero-Copy.
 ///
 /// Erstellt eine Vulkan-Textur, die ueber
@@ -59,6 +64,15 @@ impl VulkanAhbTexture {
         let raw_device = hal_device.raw_device();
         let raw_instance = hal_device.shared_instance().raw_instance();
         let physical_device = hal_device.raw_physical_device();
+        let hardware_buffer = allocate_hardware_buffer(width, height)?;
+        let hardware_buffer_properties =
+            match query_hardware_buffer_properties(raw_instance, raw_device, hardware_buffer) {
+                Ok(properties) => properties,
+                Err(error) => {
+                    release_hardware_buffer(hardware_buffer);
+                    return Err(error);
+                }
+            };
 
         let mut external_image_info = vk::ExternalMemoryImageCreateInfo::default()
             .handle_types(vk::ExternalMemoryHandleTypeFlags::ANDROID_HARDWARE_BUFFER_ANDROID);
@@ -88,48 +102,47 @@ impl VulkanAhbTexture {
         // Vulkan-Aufruf leben. Das Device stammt direkt aus dem zugehoerigen HAL-Backend.
         let image =
             unsafe { raw_device.create_image(&image_create_info, None) }.map_err(|error| {
+                release_hardware_buffer(hardware_buffer);
                 ExternalTextureError::CreationFailed(format!(
-                    "VkImage fuer AHardwareBuffer-Export konnte nicht erzeugt werden: {error}"
+                    "VkImage fuer importierten AHardwareBuffer konnte nicht erzeugt werden: {error}"
                 ))
             })?;
 
-        // SAFETY: Das Image wurde unmittelbar zuvor auf demselben Device erzeugt.
-        let memory_requirements = unsafe { raw_device.get_image_memory_requirements(image) };
         let memory_type_index = match find_memory_type_index(
             raw_instance,
             physical_device,
-            memory_requirements.memory_type_bits,
+            hardware_buffer_properties.memory_type_bits,
             vk::MemoryPropertyFlags::DEVICE_LOCAL,
         ) {
             Some(index) => index,
             None => {
-                cleanup_image(raw_device, image, None);
+                cleanup_image_and_hardware_buffer(raw_device, image, None, hardware_buffer);
                 return Err(ExternalTextureError::CreationFailed(
-                    "Kein DEVICE_LOCAL-Memory-Type fuer exportierbares Vulkan-Image gefunden"
+                    "Kein DEVICE_LOCAL-Memory-Type fuer den importierten AHardwareBuffer gefunden"
                         .into(),
                 ));
             }
         };
 
-        let mut export_allocate_info = vk::ExportMemoryAllocateInfo::default()
-            .handle_types(vk::ExternalMemoryHandleTypeFlags::ANDROID_HARDWARE_BUFFER_ANDROID);
+        let mut import_hardware_buffer_info =
+            vk::ImportAndroidHardwareBufferInfoANDROID::default().buffer(hardware_buffer.cast());
         let mut dedicated_allocate_info = vk::MemoryDedicatedAllocateInfo::default()
             .image(image)
             .buffer(vk::Buffer::null());
         let memory_allocate_info = vk::MemoryAllocateInfo::default()
-            .allocation_size(memory_requirements.size)
+            .allocation_size(hardware_buffer_properties.allocation_size)
             .memory_type_index(memory_type_index)
             .push_next(&mut dedicated_allocate_info)
-            .push_next(&mut export_allocate_info);
+            .push_next(&mut import_hardware_buffer_info);
 
-        // SAFETY: Die Speicheranforderungen stammen vom gerade erzeugten Image; die Allocation
-        // wird auf demselben Device mit passendem Memory-Type angefordert.
+        // SAFETY: Die Allocation importiert den zuvor allozierten AHardwareBuffer auf demselben
+        // Device. Groesse und Memory-Type stammen direkt aus den Vulkan-AHB-Properties.
         let memory = match unsafe { raw_device.allocate_memory(&memory_allocate_info, None) } {
             Ok(memory) => memory,
             Err(error) => {
-                cleanup_image(raw_device, image, None);
+                cleanup_image_and_hardware_buffer(raw_device, image, None, hardware_buffer);
                 return Err(ExternalTextureError::CreationFailed(format!(
-					"VkDeviceMemory fuer AHardwareBuffer-Image konnte nicht alloziert werden: {error}"
+					"VkDeviceMemory fuer importierten AHardwareBuffer konnte nicht alloziert werden: {error}"
 				)));
             }
         };
@@ -137,19 +150,11 @@ impl VulkanAhbTexture {
         // SAFETY: Image und Memory wurden auf demselben Device erzeugt; Offset 0 ist zulaessig,
         // da die dedizierte Allocation exakt dieses Image backed.
         if let Err(error) = unsafe { raw_device.bind_image_memory(image, memory, 0) } {
-            cleanup_image(raw_device, image, Some(memory));
+            cleanup_image_and_hardware_buffer(raw_device, image, Some(memory), hardware_buffer);
             return Err(ExternalTextureError::CreationFailed(format!(
-                "VkImageMemory-Bind fuer AHardwareBuffer-Image fehlgeschlagen: {error}"
+                "VkImageMemory-Bind fuer importierten AHardwareBuffer fehlgeschlagen: {error}"
             )));
         }
-
-        let hardware_buffer = match export_hardware_buffer(raw_instance, raw_device, memory) {
-            Ok(hardware_buffer) => hardware_buffer,
-            Err(error) => {
-                cleanup_image(raw_device, image, Some(memory));
-                return Err(error);
-            }
-        };
 
         // SAFETY: `image` und `memory` wurden auf genau diesem HAL-Device erzeugt und respektieren
         // den uebergebenen HAL-Deskriptor. Mit `TextureMemory::Dedicated` uebernimmt wgpu-hal den
@@ -355,33 +360,104 @@ fn find_memory_type_index(
         })
 }
 
-fn export_hardware_buffer(
-    raw_instance: &ash::Instance,
-    raw_device: &ash::Device,
-    memory: vk::DeviceMemory,
+fn allocate_hardware_buffer(
+    width: u32,
+    height: u32,
 ) -> Result<*mut ndk_sys::AHardwareBuffer, ExternalTextureError> {
-    let ahb_device = ash::android::external_memory_android_hardware_buffer::Device::new(
-        raw_instance,
-        raw_device,
-    );
-    let ahb_info = vk::MemoryGetAndroidHardwareBufferInfoANDROID::default().memory(memory);
+    let hardware_buffer_desc = ndk_sys::AHardwareBuffer_Desc {
+        width,
+        height,
+        layers: 1,
+        format: ndk_sys::AHardwareBuffer_Format::AHARDWAREBUFFER_FORMAT_R8G8B8A8_UNORM.0,
+        usage: ndk_sys::AHardwareBuffer_UsageFlags::AHARDWAREBUFFER_USAGE_GPU_COLOR_OUTPUT.0
+            | ndk_sys::AHardwareBuffer_UsageFlags::AHARDWAREBUFFER_USAGE_GPU_SAMPLED_IMAGE.0,
+        stride: 0,
+        rfu0: 0,
+        rfu1: 0,
+    };
+    let mut hardware_buffer = std::ptr::null_mut();
 
-    // SAFETY: Das Device-Memory wurde gerade mit exportfaehigem AHB-Handle-Typ alloziert.
-    let hardware_buffer = unsafe { ahb_device.get_memory_android_hardware_buffer(&ahb_info) }
-		.map_err(|error| {
-			ExternalTextureError::CreationFailed(format!(
-				"AHardwareBuffer konnte nicht ueber vkGetMemoryAndroidHardwareBufferANDROID exportiert werden: {error}"
-			))
-		})?
-		.cast::<ndk_sys::AHardwareBuffer>();
-
+    // SAFETY: Der Deskriptor ist vollstaendig initialisiert und `outBuffer` zeigt auf lokalen
+    // Speicher fuer den vom Android-NDK gelieferten AHardwareBuffer-Pointer.
+    let result =
+        unsafe { ndk_sys::AHardwareBuffer_allocate(&hardware_buffer_desc, &mut hardware_buffer) };
+    if result != 0 {
+        return Err(ExternalTextureError::CreationFailed(format!(
+            "AHardwareBuffer konnte nicht alloziert werden: AHardwareBuffer_allocate lieferte Fehlercode {result}"
+        )));
+    }
     if hardware_buffer.is_null() {
         return Err(ExternalTextureError::CreationFailed(
-            "vkGetMemoryAndroidHardwareBufferANDROID lieferte einen Null-Pointer".into(),
+            "AHardwareBuffer_allocate lieferte einen Null-Pointer".into(),
         ));
     }
 
     Ok(hardware_buffer)
+}
+
+fn query_hardware_buffer_properties(
+    raw_instance: &ash::Instance,
+    raw_device: &ash::Device,
+    hardware_buffer: *mut ndk_sys::AHardwareBuffer,
+) -> Result<HardwareBufferProperties, ExternalTextureError> {
+    let ahb_device = ash::android::external_memory_android_hardware_buffer::Device::new(
+        raw_instance,
+        raw_device,
+    );
+    let mut ahb_format_properties = vk::AndroidHardwareBufferFormatPropertiesANDROID::default();
+    let mut ahb_properties =
+        vk::AndroidHardwareBufferPropertiesANDROID::default().push_next(&mut ahb_format_properties);
+
+    // SAFETY: `hardware_buffer` stammt aus `AHardwareBuffer_allocate` und ist bis zum Ende dieses
+    // Aufrufs gueltig. Vulkan liest nur die Metadaten des nativen Buffers aus.
+    unsafe {
+        ahb_device.get_android_hardware_buffer_properties(
+            hardware_buffer.cast(),
+            &mut ahb_properties,
+        )
+    }
+    .map_err(|error| {
+        ExternalTextureError::CreationFailed(format!(
+            "VkAndroidHardwareBufferProperties konnten fuer den AHardwareBuffer nicht abgefragt werden: {error}"
+        ))
+    })?;
+
+    let allocation_size = ahb_properties.allocation_size;
+    let memory_type_bits = ahb_properties.memory_type_bits;
+    let imported_format = ahb_format_properties.format;
+
+    if allocation_size == 0 {
+        return Err(ExternalTextureError::CreationFailed(
+            "VkAndroidHardwareBufferProperties meldeten allocation_size = 0".into(),
+        ));
+    }
+    if memory_type_bits == 0 {
+        return Err(ExternalTextureError::CreationFailed(
+            "VkAndroidHardwareBufferProperties meldeten keine kompatiblen Memory-Types".into(),
+        ));
+    }
+    if !matches!(
+        imported_format,
+        vk::Format::R8G8B8A8_UNORM | vk::Format::R8G8B8A8_SRGB
+    ) {
+        return Err(ExternalTextureError::CreationFailed(format!(
+            "AHardwareBuffer-Format {:?} wird fuer den Vulkan-Importpfad noch nicht unterstuetzt",
+            imported_format
+        )));
+    }
+
+    Ok(HardwareBufferProperties {
+        allocation_size,
+        memory_type_bits,
+    })
+}
+
+fn release_hardware_buffer(hardware_buffer: *mut ndk_sys::AHardwareBuffer) {
+    if !hardware_buffer.is_null() {
+        // SAFETY: Der Aufrufer uebergibt nur AHardwareBuffer-Referenzen, die lokal gehalten oder
+        // frisch alloziert wurden und hier gezielt freigegeben werden sollen.
+        unsafe { ndk_sys::AHardwareBuffer_release(hardware_buffer) };
+    }
 }
 
 fn cleanup_image(raw_device: &ash::Device, image: vk::Image, memory: Option<vk::DeviceMemory>) {
@@ -394,4 +470,14 @@ fn cleanup_image(raw_device: &ash::Device, image: vk::Image, memory: Option<vk::
     // SAFETY: Dieser Cleanup-Pfad laeuft nur fuer lokal erzeugte, noch nicht an wgpu-hal
     // uebergebene Images. `image` gehoert exklusiv diesem Device.
     unsafe { raw_device.destroy_image(image, None) };
+}
+
+fn cleanup_image_and_hardware_buffer(
+    raw_device: &ash::Device,
+    image: vk::Image,
+    memory: Option<vk::DeviceMemory>,
+    hardware_buffer: *mut ndk_sys::AHardwareBuffer,
+) {
+    cleanup_image(raw_device, image, memory);
+    release_hardware_buffer(hardware_buffer);
 }
