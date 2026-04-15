@@ -27,19 +27,21 @@ pub struct PostLoadDetectionResult {
 pub fn detect_post_load(xml_path: &Path, map_name: Option<&str>) -> PostLoadDetectionResult {
     let heightmap_path = find_heightmap_next_to(xml_path);
     let overview_path = find_overview_next_to(xml_path);
-    let matching_zips = map_name.filter(|name| !name.is_empty()).map_or_else(Vec::new, |name| {
-        let mut results = Vec::new();
+    let matching_zips = map_name
+        .filter(|name| !name.is_empty())
+        .map_or_else(Vec::new, |name| {
+            let mut results = Vec::new();
 
-        if let Some(xml_dir) = xml_path.parent() {
-            extend_unique_paths(&mut results, find_matching_zips(xml_dir, name));
-        }
+            if let Some(xml_dir) = xml_path.parent() {
+                extend_unique_paths(&mut results, find_matching_zips(xml_dir, name));
+            }
 
-        if let Some(mods_dir) = resolve_mods_dir(xml_path) {
-            extend_unique_paths(&mut results, find_matching_zips(&mods_dir, name));
-        }
+            if let Some(mods_dir) = resolve_mods_dir(xml_path) {
+                extend_unique_paths(&mut results, find_matching_zips(&mods_dir, name));
+            }
 
-        results
-    });
+            results
+        });
 
     PostLoadDetectionResult {
         heightmap_path,
