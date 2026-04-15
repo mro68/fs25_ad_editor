@@ -68,7 +68,7 @@ Seit Phase 7 schneiden `controller.rs` und `intent_mapping.rs` die Control-Plane
 
 ## `use_cases::auto_detect`
 
-- `detect_post_load(xml_path, map_name) -> PostLoadDetectionResult` — Sucht nach `terrain.heightmap.png` im XML-Verzeichnis und passenden Map-Mod-ZIPs im Mods-Verzeichnis (`../../mods/` relativ zum Savegame). Matching: case-insensitive, Underscores/Spaces als Wildcard, bidirektionale Umlaut-Expansion (ae↔ae, oe↔oe, ue↔ue, ss↔ss).
+- `detect_post_load(xml_path, map_name) -> PostLoadDetectionResult` — Sucht nach `terrain.heightmap.png` im XML-Verzeichnis und passenden Map-Mod-ZIPs zuerst im XML-Verzeichnis, danach zusaetzlich im Mods-Verzeichnis (`../../mods/` relativ zum Savegame). Doppelte Treffer werden entfernt. Matching: case-insensitive, Underscores/Spaces als Wildcard, bidirektionale Umlaut-Expansion (ae↔ae, oe↔oe, ue↔ue, ss↔ss).
 
 ---
 
