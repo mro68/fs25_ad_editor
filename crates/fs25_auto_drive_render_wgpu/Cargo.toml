@@ -9,6 +9,8 @@ path = "src/lib.rs"
 [features]
 ## Aktiviert Vulkan-HAL-Zugriff und plattformspezifischen DMA-BUF-Export für Flutter/Linux.
 flutter-linux = ["dep:ash", "wgpu/vulkan"]
+## Aktiviert Vulkan-HAL-Zugriff und plattformspezifischen AHardwareBuffer-Export fuer Flutter/Android.
+flutter-android = ["dep:ash", "dep:ndk", "dep:ndk-sys", "wgpu/vulkan"]
 
 [dependencies]
 bytemuck = { version = "1.14", features = ["derive"] }
@@ -21,8 +23,12 @@ resvg = "0.47.0"
 thiserror = "2"
 wgpu = "29.0"
 
-## Direkter Vulkan-Zugriff für DMA-BUF-Export — nur aktiv unter flutter-linux.
+## Direkter Vulkan-Zugriff fuer plattformspezifischen Texture-Export — nur aktiv unter Flutter-Vulkan-Features.
 ash = { version = "0.38", optional = true }
+## Android-NDK-Bindings fuer AHardwareBuffer-Interop — nur aktiv unter flutter-android.
+ndk = { version = "0.9", optional = true, features = ["api-level-26"] }
+## Raw-FFI fuer AHardwareBuffer-Refcounting — nur aktiv unter flutter-android.
+ndk-sys = { version = "0.6", optional = true }
 
 [dev-dependencies]
 pollster = "0.4"

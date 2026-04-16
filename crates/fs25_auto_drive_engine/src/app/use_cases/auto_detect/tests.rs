@@ -145,3 +145,47 @@ fn test_detect_post_load_integration() {
 
     let _ = fs::remove_dir_all(&tmp);
 }
+
+#[test]
+fn test_detect_post_load_finds_xml_dir_zips_before_mods() {
+    let tmp = std::env::temp_dir().join("test_auto_detect_xml_dir_priority");
+    let _ = fs::remove_dir_all(&tmp);
+    let savegame = tmp.join("savegame1");
+    let mods = tmp.join("mods");
+    fs::create_dir_all(&savegame).unwrap();
+    fs::create_dir_all(&mods).unwrap();
+
+    let xml_path = savegame.join("AutoDrive_config.xml");
+    let xml_zip = savegame.join("FS25_TestMap_Local.zip");
+    let mods_zip = mods.join("FS25_TestMap_Mod.zip");
+
+    fs::write(&xml_path, b"<xml/>").unwrap();
+    fs::write(&xml_zip, b"").unwrap();
+    fs::write(&mods_zip, b"").unwrap();
+
+    let result = detect_post_load(&xml_path, Some("TestMap"));
+
+    assert_eq!(result.matching_zips, vec![xml_zip, mods_zip]);
+
+    let _ = fs::remove_dir_all(&tmp);
+}
+
+#[test]
+fn test_detect_post_load_dedups_when_xml_dir_equals_mods_dir() {
+    let tmp = std::env::temp_dir().join("test_auto_detect_xml_dir_dedup");
+    let _ = fs::remove_dir_all(&tmp);
+    let mods = tmp.join("mods");
+    fs::create_dir_all(&mods).unwrap();
+
+    let xml_path = mods.join("AutoDrive_config.xml");
+    let zip_path = mods.join("FS25_TestMap.zip");
+
+    fs::write(&xml_path, b"<xml/>").unwrap();
+    fs::write(&zip_path, b"").unwrap();
+
+    let result = detect_post_load(&xml_path, Some("TestMap"));
+
+    assert_eq!(result.matching_zips, vec![zip_path]);
+
+    let _ = fs::remove_dir_all(&tmp);
+}

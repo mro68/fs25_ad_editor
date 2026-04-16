@@ -2,7 +2,8 @@
 //!
 //! Prueft nach dem Laden einer AutoDrive-Config, ob:
 //! 1. Eine `terrain.heightmap.png` im selben Verzeichnis liegt → direkt als Heightmap setzen
-//! 2. Im Mods-Verzeichnis ein passendes ZIP zum `map_name` existiert → Dialog anzeigen
+//! 2. Im XML-Verzeichnis oder im Mods-Verzeichnis ein passendes ZIP zum `map_name` existiert
+//!    → Dialog anzeigen
 
 use regex::Regex;
 use std::path::{Path, PathBuf};
@@ -14,25 +15,46 @@ pub struct PostLoadDetectionResult {
     pub heightmap_path: Option<PathBuf>,
     /// Pfad zu einer gefundenen overview.png im XML-Verzeichnis
     pub overview_path: Option<PathBuf>,
-    /// Passende ZIP-Dateien im Mods-Verzeichnis
+    /// Passende ZIP-Dateien aus XML-Verzeichnis und Mods-Verzeichnis
     pub matching_zips: Vec<PathBuf>,
 }
 
 /// Fuehrt die komplette Auto-Detection durch.
 ///
 /// Sucht nach `terrain.heightmap.png` im XML-Verzeichnis und nach passenden
-/// Map-Mod-ZIPs im Mods-Verzeichnis (basierend auf `map_name`).
+/// Map-Mod-ZIPs zuerst im XML-Verzeichnis und zusaetzlich im Mods-Verzeichnis
+/// (basierend auf `map_name`).
 pub fn detect_post_load(xml_path: &Path, map_name: Option<&str>) -> PostLoadDetectionResult {
     let heightmap_path = find_heightmap_next_to(xml_path);
     let overview_path = find_overview_next_to(xml_path);
-    let matching_zips = match (map_name, resolve_mods_dir(xml_path)) {
-        (Some(name), Some(mods_dir)) if !name.is_empty() => find_matching_zips(&mods_dir, name),
-        _ => Vec::new(),
-    };
+    let matching_zips = map_name
+        .filter(|name| !name.is_empty())
+        .map_or_else(Vec::new, |name| {
+            let mut results = Vec::new();
+
+            if let Some(xml_dir) = xml_path.parent() {
+                extend_unique_paths(&mut results, find_matching_zips(xml_dir, name));
+            }
+
+            if let Some(mods_dir) = resolve_mods_dir(xml_path) {
+                extend_unique_paths(&mut results, find_matching_zips(&mods_dir, name));
+            }
+
+            results
+        });
+
     PostLoadDetectionResult {
         heightmap_path,
         overview_path,
         matching_zips,
+    }
+}
+
+fn extend_unique_paths(results: &mut Vec<PathBuf>, candidates: Vec<PathBuf>) {
+    for candidate in candidates {
+        if !results.contains(&candidate) {
+            results.push(candidate);
+        }
     }
 }
 
@@ -138,12 +160,12 @@ fn truncate_to_two_words(name: &str) -> String {
     parts[..count].join("_")
 }
 
-/// Sucht im Mods-Verzeichnis nach ZIP-Dateien, die zum Map-Namen passen.
+/// Sucht in einem Verzeichnis nach ZIP-Dateien, die zum Map-Namen passen.
 ///
 /// Verwendet nur die ersten zwei Woerter des Map-Namens fuer die Suche.
 /// Matching: case-insensitive, Spaces/Underscores als Wildcard,
 /// bidirektionale Umlaut-Expansion (ae↔ae, oe↔oe, ue↔ue, ss↔ss).
-fn find_matching_zips(mods_dir: &Path, map_name: &str) -> Vec<PathBuf> {
+fn find_matching_zips(search_dir: &Path, map_name: &str) -> Vec<PathBuf> {
     let short_name = truncate_to_two_words(map_name);
     let variants = expand_umlaut_variants(&short_name);
     let patterns: Vec<String> = variants.iter().map(|v| name_to_pattern(v)).collect();
@@ -158,7 +180,7 @@ fn find_matching_zips(mods_dir: &Path, map_name: &str) -> Vec<PathBuf> {
         return Vec::new();
     }
 
-    let Ok(entries) = std::fs::read_dir(mods_dir) else {
+    let Ok(entries) = std::fs::read_dir(search_dir) else {
         return Vec::new();
     };
 

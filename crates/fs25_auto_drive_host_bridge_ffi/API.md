@@ -8,7 +8,7 @@ Seit der FFI-Haertungswelle sind alle pointer-konsumierenden Exporte in Rust exp
 
 Seit dem Hard-Cut ist der RGBA-Pixelbuffer-v1 entfernt. Der einzige native Render-Transportpfad ist jetzt Shared-Texture mit explizitem Acquire/Release-Lifecycle.
 
-Unter den Feature-Flags `flutter` und `flutter-linux` exportiert die Crate zusaetzlich eine Flutter Control-Plane API. Dazu gehoeren sichere Rust-Helfer in `flutter_api.rs` sowie die direkte `fs25ad_flutter_session_*`-C-FFI-Surface fuer `dart:ffi`/`ffigen`. Daneben bleibt der Low-Level C-FFI GPU-Runtime-Stack fuer Linux/Vulkan mit DMA-BUF-Texture-Export erhalten.
+Unter den Feature-Flags `flutter`, `flutter-linux` und `flutter-android` exportiert die Crate zusaetzlich eine Flutter Control-Plane API. Dazu gehoeren sichere Rust-Helfer in `flutter_api.rs` sowie die direkte `fs25ad_flutter_session_*`-C-FFI-Surface fuer `dart:ffi`/`ffigen`. Daneben bleibt der Low-Level C-FFI GPU-Runtime-Stack fuer Vulkan-basierte Flutter-Texture-Exporte erhalten; der produktive Descriptorpfad exportiert dabei auf Linux DMA-BUF und auf Android AHardwareBuffer.
 
 Der Rendertransport ist separat ueber `FS25AD_HOST_BRIDGE_SHARED_TEXTURE_CONTRACT_VERSION = 3` versioniert. Die exportierten Native-Handle-Werte sind explizit opaque Runtime-Pointer fuer denselben Prozessraum und keine backend-nativen Vulkan-/Metal-/DX-Interop-Handles.
 
@@ -36,7 +36,8 @@ Fuer native C/C++-Hosts liegt der stabile Vertragsheader unter `include/fs25ad_h
 | `Fs25adTextureRegistrationV4FrameInfo` | Gemeinsame v4-Frame-Metadaten |
 | `Fs25adTextureRegistrationV4WindowsDescriptor` | Windows-spezifische Descriptor-Familie |
 | `Fs25adTextureRegistrationV4LinuxDmabufDescriptor` | Linux-spezifische DMA-BUF-Descriptor-Familie |
-| `Fs25adTextureRegistrationV4AndroidSurfaceDescriptor` | Android-spezifische Surface-Attachment-Familie |
+| `Fs25adTextureRegistrationV4AndroidHardwareBufferDescriptor` | Android-spezifische AHardwareBuffer-Descriptor-Familie des aktiven ExportLease-Pfads |
+| `Fs25adTextureRegistrationV4AndroidSurfaceDescriptor` | Legacy-Android-Surface-Attachment-Familie fuer aeltere Consumer |
 
 ## Exportierte Funktionen
 
@@ -81,9 +82,10 @@ Fuer native C/C++-Hosts liegt der stabile Vertragsheader unter `include/fs25ad_h
 | `fs25ad_host_bridge_texture_registration_v4_release(texture, frame_token) -> bool` | Gibt den aktiven v4-Frame-Lease frei |
 | `fs25ad_host_bridge_texture_registration_v4_get_windows_descriptor(texture, frame_token, out_descriptor) -> bool` | Liefert den Windows-Descriptor fuer den aktiven v4-Lease |
 | `fs25ad_host_bridge_texture_registration_v4_get_linux_dmabuf_descriptor(texture, frame_token, out_descriptor) -> bool` | Liefert den Linux-DMA-BUF-Descriptor fuer den aktiven v4-Lease |
-| `fs25ad_host_bridge_texture_registration_v4_get_android_surface_descriptor(texture, frame_token, out_descriptor) -> bool` | Liefert den Android-Surface-Descriptor fuer den aktiven v4-Lease |
-| `fs25ad_host_bridge_texture_registration_v4_attach_android_surface(texture, surface_descriptor) -> bool` | Attached ein Android-Surface an den v4-Handle |
-| `fs25ad_host_bridge_texture_registration_v4_detach_android_surface(texture) -> bool` | Detacht ein zuvor attached Android-Surface |
+| `fs25ad_host_bridge_texture_registration_v4_get_android_hardware_buffer_descriptor(texture, frame_token, out_descriptor) -> bool` | Liefert den Android-AHardwareBuffer-Descriptor fuer den aktiven v4-Lease |
+| `fs25ad_host_bridge_texture_registration_v4_get_android_surface_descriptor(texture, frame_token, out_descriptor) -> bool` | Legacy: Liefert den veralteten Android-Surface-Descriptor fuer Alt-Consumer |
+| `fs25ad_host_bridge_texture_registration_v4_attach_android_surface(texture, surface_descriptor) -> bool` | Legacy: Attached ein veraltetes Android-Surface an den v4-Handle |
+| `fs25ad_host_bridge_texture_registration_v4_detach_android_surface(texture) -> bool` | Legacy: Detacht ein zuvor attached Android-Surface |
 
 ### Flutter-Feature-Exporte
 
@@ -153,13 +155,15 @@ Die folgenden Symbole werden nur mit aktivem `flutter`-Feature exportiert und sp
 - Payload-Familien sind plattformspezifisch getrennt:
 	- Windows: `Fs25adTextureRegistrationV4WindowsDescriptor`
 	- Linux: `Fs25adTextureRegistrationV4LinuxDmabufDescriptor`
-	- Android: `Fs25adTextureRegistrationV4AndroidSurfaceDescriptor`
+	- Android aktiv: `Fs25adTextureRegistrationV4AndroidHardwareBufferDescriptor`
+	- Android legacy: `Fs25adTextureRegistrationV4AndroidSurfaceDescriptor`
 - Echte externe Host-Registration ist nicht allein mit diesem Rust-Repo erledigt. Neben backend-nativer Export-/Attach-Erzeugung im Renderer braucht jeder externe Host einen nativen Import-/Surface-Pfad fuer dieselbe Payload-Familie.
-- Stand dieser Ausbaustufe: Kein produktiver v4-Backend-Pfad in diesem Rust-Repo. Capabilities markieren Plattformpfade explizit als `NotYetImplemented` oder `Unsupported`; Lifecycle-/Payload-Aufrufe melden explizite Fehler statt stiller Fallbacks.
+- Stand dieser Ausbaustufe: Windows und Linux bleiben im v4-Host-Bridge-Pfad `NotYetImplemented` oder `Unsupported`. Android meldet auf Android-Targets bereits `ExportLease` plus `AHardwareBuffer`, aber der v4-Host-Bridge-Lifecycle ist noch nicht an den produktiven Renderer-Export verdrahtet; Lifecycle-/Payload-Aufrufe melden deshalb weiterhin explizite Fehler statt stiller Fallbacks.
+- Die Legacy-Android-Surface-Symbole bleiben exportiert, sind aber veraltet und verweisen neue Consumer auf den AHardwareBuffer-ExportLease-Pfad.
 - Konkreter technischer Blocker im aktuellen Stack:
 	- Windows: Das Repo erzeugt bisher nur regulaere `wgpu::Texture`-Ziele. Der verwendete `wgpu 29`-`TextureDescriptor` enthaelt keine Export-/Shared-Handle-Parameter; ohne backend-spezifische Export-Erzeugung und ohne zusaetzlichen nativen Host-Importpfad fuer DXGI-/D3D11-Registration im Consumer entsteht kein produktiver Flutter-/C++-Interop-Pfad.
-	- Linux: Der Renderpfad erzeugt keine exportierbare Vulkan-External-Memory. Es gibt deshalb in diesem Repo weder DMA-BUF-FD-/Modifier-Export noch einen zusaetzlichen nativen Host-Importpfad fuer DMA-BUF im Consumer.
-	- Android: Das Rust-Repo rendert nur in interne Offscreen-Texturen. Ein echter Android-v4-Pfad braucht ein hostseitig bereitgestelltes `ANativeWindow`/Surface-Ziel und zusaetzlichen nativen Host-Code fuer die Ziel-Lifecycle-Integration im Consumer.
+	- Linux: Der v4-Host-Bridge-Pfad ist noch nicht an den bereits separaten DMA-BUF-Export-Stack verdrahtet; es fehlt weiterhin der native Host-Importpfad fuer DMA-BUF im Consumer.
+	- Android: Der Renderer kann `AHardwareBuffer` exportieren, aber der v4-Host-Bridge-Pfad reicht diese Export-Leases noch nicht bis in den ABI-Getter durch. Zusaetzlich fehlt ein nativer Consumer-Importpfad fuer `AHardwareBuffer` ausserhalb dieser Crate.
 - Es gibt keinen Pixelbuffer-Fallback und keine Reinterpretation von `v3`-Runtime-Pointern als `v4`-Interop-Handles.
 
 ## Header-Handshake-Beispiel (C)
@@ -283,6 +287,7 @@ flowchart LR
 |---|---|
 | `flutter` | Aktiviert `flutter_api.rs` und die direkte `fs25ad_flutter_session_*`-C-FFI-Surface fuer Flutter |
 | `flutter-linux` | Impliziert `flutter`. Aktiviert `fs25_auto_drive_render_wgpu/flutter-linux` und das Modul `flutter_gpu.rs` mit C-FFI GPU-Runtime fuer Linux/Vulkan |
+| `flutter-android` | Impliziert `flutter`. Aktiviert `fs25_auto_drive_render_wgpu/flutter-android` und den Android-AHardwareBuffer-Exportpfad im Low-Level-Modul `flutter_gpu.rs` |
 
 ## Flutter Control-Plane API (`flutter_api.rs`, Feature `flutter`)
 
@@ -326,13 +331,13 @@ Opaquer Session-Handle mit `Arc<Mutex<HostBridgeSession>>` fuer thread-sicheren 
 
 Die Rust-Seite verwendet keinen separaten Bridge-Codegen mehr. Flutter bindet die nativen Symbole direkt ueber `fs25ad_flutter_session_*` bzw. `dart:ffi`/`ffigen` an.
 
-## Flutter GPU-Runtime (`flutter_gpu.rs`, Feature `flutter-linux`)
+## Flutter GPU-Runtime (`flutter_gpu.rs`, Feature `flutter-linux` / `flutter-android`)
 
-Low-Level C-FFI fuer den GPU-Hot-Path auf Linux/Vulkan.
+Low-Level C-FFI fuer den GPU-Hot-Path auf Vulkan. Der produktive Descriptor-Export bleibt plattformspezifisch: Linux nutzt DMA-BUF, Android nutzt AHardwareBuffer.
 
 ### Typ: `GpuRuntimeHandle`
 
-Interner GPU-Runtime-Zustand: haelt `wgpu::Instance`, `Adapter`, `Device`, `Queue`, `SharedTextureRuntime`, `VulkanDmaBufTexture` und einen `Arc<Mutex<HostBridgeSession>>`. Der Renderer-Zustand schreibt pro Frame direkt in die exportierbare Vulkan-TextureView.
+Interner GPU-Runtime-Zustand: haelt `wgpu::Instance`, `Adapter`, `Device`, `Queue`, `SharedTextureRuntime`, eine plattformspezifische `PlatformExternalTexture` (`VulkanDmaBufTexture` auf Linux bzw. `VulkanAhbTexture` auf Android) und einen `Arc<Mutex<HostBridgeSession>>`. Der Renderer-Zustand schreibt pro Frame direkt in die exportierbare Vulkan-Texture.
 
 ### Lebenszyklus
 
@@ -340,7 +345,9 @@ Interner GPU-Runtime-Zustand: haelt `wgpu::Instance`, `Adapter`, `Device`, `Queu
 fs25ad_gpu_runtime_new()
   → fs25ad_gpu_runtime_resize()      // optional bei Groessenaenderung
   → fs25ad_gpu_runtime_render()      // pro Frame
-  → fs25ad_gpu_runtime_export_texture() // pro Frame nach render
+	→ fs25ad_gpu_runtime_export_texture() // Linux: pro Frame nach render
+		oder
+		fs25ad_gpu_runtime_export_android_hardware_buffer() // Android: pro Frame nach render
   → fs25ad_gpu_runtime_dispose()    // am Ende
 ```
 
@@ -361,6 +368,7 @@ fs25ad_flutter_session_new()
 | `fs25ad_gpu_runtime_new_with_session(session_handle, width, height) -> *mut GpuRuntimeHandle` | Erzeugt GPU-Runtime mit geteilter `HostBridgeSession` aus der Flutter-Control-Plane |
 | `fs25ad_gpu_runtime_render(handle) -> bool` | Rendert den aktuellen Frame direkt in die exportierbare Vulkan-Texture |
 | `fs25ad_gpu_runtime_export_texture(handle, out_descriptor) -> bool` | Exportiert den Linux-DMA-BUF-v4-Descriptor `Fs25adTextureRegistrationV4LinuxDmabufDescriptor` (unsafe) |
+| `fs25ad_gpu_runtime_export_android_hardware_buffer(handle, out_descriptor) -> bool` | Exportiert den Android-AHardwareBuffer-v4-Descriptor `Fs25adTextureRegistrationV4AndroidHardwareBufferDescriptor` (unsafe, nur auf Android verfuegbar) |
 | `fs25ad_gpu_runtime_resize(handle, width, height) -> bool` | Passt die Render-Target-Groesse an |
 | `fs25ad_gpu_runtime_dispose(handle)` | Gibt den GPU-Runtime-Handle frei (unsafe) |
 
@@ -368,15 +376,20 @@ fs25ad_flutter_session_new()
 
 C-kompatible Repr des Linux-DMA-BUF-v4-Descriptors fuer den Export an Flutter/Impeller.
 
+### C-Repr: `Fs25adTextureRegistrationV4AndroidHardwareBufferDescriptor`
+
+C-kompatible Repr des Android-AHardwareBuffer-v4-Descriptors fuer den Export an Flutter/Impeller. Enthaelt einen opaken `AHardwareBuffer*`-Zeiger, der bereits per `AHardwareBuffer_acquire()` fuer den Empfaenger inkrementiert wurde. Der Empfaenger muss spaeter `AHardwareBuffer_release()` aufrufen.
+
 ### Status
 
 - GPU-Runtime-Erzeugung (Vulkan-Instanz, Device, Queue) funktional
 - Session-Sharing zwischen `FlutterSessionHandle` und `GpuRuntimeHandle` ueber `Arc<Mutex<HostBridgeSession>>` additiv verfuegbar
 - Rendern direkt in die exportierbare Vulkan-Texture funktional
 - DMA-BUF-Export ueber Vulkan External Memory (`vkGetMemoryFdKHR`) funktional; der FFI-Vertrag liefert den FD jetzt im v4-Linux-DMA-BUF-Descriptor statt als nackten `out_fd`
+- Android-AHardwareBuffer-Export ueber den Low-Level-GPU-Runtime-Pfad funktional; der FFI-Vertrag liefert den Pointer im v4-Android-AHardwareBuffer-Descriptor
 - Panic-Isolation ueber `ffi_guard_bool!` / `catch_unwind`
 
-### `SharedTextureRuntime::new_for_flutter()` (Feature `flutter-linux`)
+### `SharedTextureRuntime::new_for_flutter()` (Feature `flutter-linux` / `flutter-android`)
 
 Konstruktor in `shared_texture_v2.rs` der eine explizit Vulkan-exklusive wgpu-Instanz via `create_vulkan_instance()` nutzt, um GPU-Sharing mit Flutter/Impeller zu ermoeglichen.
 
