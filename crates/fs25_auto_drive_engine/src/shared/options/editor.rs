@@ -13,6 +13,7 @@ use super::render::{
 use super::tools::{
     ValueAdjustInputMode, HITBOX_SCALE_PERCENT, MOUSE_WHEEL_DISTANCE_STEP_M, SNAP_SCALE_PERCENT,
 };
+use crate::shared::background_layers::OverviewFieldDetectionSource;
 use crate::shared::i18n::Language;
 use serde::{Deserialize, Serialize};
 
@@ -103,6 +104,9 @@ pub struct EditorOptions {
     // Uebersichtskarte
     #[serde(default)]
     pub overview_layers: OverviewLayerOptions,
+    /// Persistente Standardquelle fuer die Feldpolygon-Erkennung im Overview-Dialog.
+    #[serde(default)]
+    pub overview_field_detection_source: OverviewFieldDetectionSource,
 
     // Zoom-Kompensation
     /// Maximaler Zoom-Kompensationsfaktor (1.0 = deaktiviert, 4.0 = Standard).
@@ -174,6 +178,7 @@ impl Default for EditorOptions {
             segment_lock_icon_size_px: default_segment_lock_icon_size_px(),
             show_all_group_boundaries: false,
             overview_layers: OverviewLayerOptions::default(),
+            overview_field_detection_source: OverviewFieldDetectionSource::default(),
             zoom_compensation_max: DEFAULT_ZOOM_COMPENSATION_MAX,
             min_node_size_px: MIN_NODE_SIZE_PX,
             min_connection_width_px: MIN_CONNECTION_WIDTH_PX,
@@ -391,7 +396,8 @@ mod tests {
     /// Prüft, dass eine alte TOML-Datei ohne neue Felder korrekt mit Defaults geladen wird.
     #[test]
     fn test_deserialize_missing_new_fields_uses_defaults() {
-        // Minimale gueltige TOML ohne marker_outline_width und show_all_group_boundaries
+        // Minimale gueltige TOML ohne marker_outline_width,
+        // show_all_group_boundaries, terrain und overview_field_detection_source.
         let toml_str = r#"
 node_size_world = 1.0
 node_color_default = [0.2, 0.6, 1.0, 1.0]
@@ -412,6 +418,13 @@ marker_outline_color = [0.0, 0.0, 0.0, 1.0]
 camera_zoom_step = 1.15
 camera_scroll_zoom_step = 1.05
 terrain_height_scale = 1.0
+
+[overview_layers]
+hillshade = false
+farmlands = true
+farmland_ids = false
+pois = true
+legend = false
 "#;
         let opts: EditorOptions =
             toml::from_str(toml_str).expect("Deserialisierung fehlgeschlagen");
@@ -425,6 +438,15 @@ terrain_height_scale = 1.0
             MARKER_OUTLINE_WIDTH,
             opts.marker_outline_width
         );
+        assert!(
+            opts.overview_layers.terrain,
+            "overview_layers.terrain muss default true sein"
+        );
+        assert_eq!(
+            opts.overview_field_detection_source,
+            OverviewFieldDetectionSource::ZipGroundGdm,
+            "overview_field_detection_source muss default ZipGroundGdm sein"
+        );
     }
 
     /// Prüft, dass Roundtrip serialize → deserialize die neuen Felder erhält.
@@ -432,6 +454,11 @@ terrain_height_scale = 1.0
     fn test_toml_roundtrip_new_fields() {
         let opts = EditorOptions {
             marker_outline_width: 0.15,
+            overview_layers: OverviewLayerOptions {
+                terrain: false,
+                ..OverviewLayerOptions::default()
+            },
+            overview_field_detection_source: OverviewFieldDetectionSource::FruitsGdm,
             ..EditorOptions::default()
         };
 
@@ -442,6 +469,15 @@ terrain_height_scale = 1.0
         assert!(
             (loaded.marker_outline_width - 0.15).abs() < f32::EPSILON,
             "marker_outline_width muss 0.15 bleiben"
+        );
+        assert!(
+            !loaded.overview_layers.terrain,
+            "overview_layers.terrain muss false bleiben"
+        );
+        assert_eq!(
+            loaded.overview_field_detection_source,
+            OverviewFieldDetectionSource::FruitsGdm,
+            "overview_field_detection_source muss erhalten bleiben"
         );
     }
 }

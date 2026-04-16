@@ -1207,8 +1207,7 @@ mod tests {
         ZipBrowserState,
     };
     use fs25_auto_drive_engine::core::ZipImageEntry;
-    use fs25_auto_drive_engine::shared::OverviewLayerOptions;
-    use fs25_map_overview::FieldDetectionSource;
+    use fs25_auto_drive_engine::shared::{OverviewFieldDetectionSource, OverviewLayerOptions};
     use glam::Vec2;
     use std::sync::Arc;
 
@@ -1797,6 +1796,7 @@ mod tests {
         let mut session = HostBridgeSession::new();
         let zip_path = "/tmp/host_bridge_overview_sync.zip".to_string();
         let expected_layers = OverviewLayerOptions {
+            terrain: false,
             hillshade: false,
             farmlands: false,
             farmland_ids: true,
@@ -1889,6 +1889,7 @@ mod tests {
             dialog_state.ui.overview_options_dialog.visible = true;
             dialog_state.ui.overview_options_dialog.zip_path = "/tmp/map.zip".to_string();
             dialog_state.ui.overview_options_dialog.layers = OverviewLayerOptions {
+                terrain: false,
                 hillshade: false,
                 farmlands: true,
                 farmland_ids: true,
@@ -1898,10 +1899,10 @@ mod tests {
             dialog_state
                 .ui
                 .overview_options_dialog
-                .field_detection_source = FieldDetectionSource::GroundGdm;
+                .field_detection_source = OverviewFieldDetectionSource::ZipGroundGdm;
             dialog_state.ui.overview_options_dialog.available_sources = vec![
-                FieldDetectionSource::FromZip,
-                FieldDetectionSource::GroundGdm,
+                OverviewFieldDetectionSource::FromZip,
+                OverviewFieldDetectionSource::ZipGroundGdm,
             ];
             dialog_state.ui.post_load_dialog.visible = true;
             dialog_state.ui.post_load_dialog.context = OverviewSourceContext::PostLoadDetected;
@@ -1955,9 +1956,10 @@ mod tests {
         assert!(snapshot.zip_browser.visible);
         assert_eq!(snapshot.zip_browser.entries.len(), 1);
         assert_eq!(snapshot.zip_browser.entries[0].name, "overview.png");
+        assert!(!snapshot.overview_options_dialog.layers.terrain);
         assert_eq!(
             snapshot.overview_options_dialog.field_detection_source,
-            HostFieldDetectionSource::GroundGdm
+            HostFieldDetectionSource::ZipGroundGdm
         );
         assert_eq!(
             snapshot.post_load_dialog.context,

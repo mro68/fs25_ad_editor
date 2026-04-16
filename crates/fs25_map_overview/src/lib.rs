@@ -46,8 +46,10 @@ pub use farmland::{
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub enum FieldDetectionSource {
     /// Aus infoLayer_farmlands (Map-ZIP) — bisherige Methode
-    #[default]
     FromZip,
+    /// Aus densityMap_ground.gdm (Map-ZIP)
+    #[default]
+    ZipGroundGdm,
     /// Aus infoLayer_fieldType.grle (Savegame)
     FieldTypeGrle,
     /// Aus densityMap_ground.gdm (Savegame)
@@ -276,6 +278,39 @@ pub fn try_extract_polygons_from_ground_gdm(
             )
         })
         .ok()?;
+    try_extract_polygons_from_ground_gdm_bytes(&data)
+}
+
+/// Versucht Feldpolygone aus `densityMap_ground.gdm` innerhalb eines Map-ZIPs zu lesen.
+pub fn try_extract_polygons_from_zip_ground_gdm(
+    zip_path: &str,
+) -> Option<(Vec<FarmlandPolygon>, u32, u32)> {
+    let files = extract_zip(zip_path)
+        .map_err(|e| {
+            log::warn!(
+                "ZIP-Extraktion fuer Ground-GDM fehlgeschlagen ({}): {}",
+                zip_path,
+                e
+            )
+        })
+        .ok()?;
+    let map_info = discovery::discover_map(&files)
+        .map_err(|e| {
+            log::warn!(
+                "Map-Discovery fuer Ground-GDM fehlgeschlagen ({}): {}",
+                zip_path,
+                e
+            )
+        })
+        .ok()?;
+    let (path, data) = discovery::find_ground_gdm(&files, &map_info.data_dir)?;
+    log::info!("Ground-GDM im ZIP gefunden: {}", path);
+    try_extract_polygons_from_ground_gdm_bytes(data)
+}
+
+fn try_extract_polygons_from_ground_gdm_bytes(
+    data: &[u8],
+) -> Option<(Vec<FarmlandPolygon>, u32, u32)> {
     let img = gdm::decode_gdm(&data)
         .map_err(|e| log::warn!("Ground-GDM Dekodierung fehlgeschlagen: {}", e))
         .ok()?;
@@ -597,5 +632,13 @@ mod tests {
         assert_eq!(result.grle_width, 2);
         assert_eq!(result.grle_height, 2);
         assert_eq!(result.farmland_ids, Some(vec![0, 1, 1, 0]));
+    }
+
+    #[test]
+    fn field_detection_source_defaults_to_zip_ground_gdm() {
+        assert_eq!(
+            FieldDetectionSource::default(),
+            FieldDetectionSource::ZipGroundGdm
+        );
     }
 }

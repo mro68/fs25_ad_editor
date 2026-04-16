@@ -249,6 +249,10 @@ pub enum I18nKey {
     OptBgFadeStartZoomHelp,
 
     // === Options-Dialog: Übersichtskarte ===
+    /// Checkbox: Terrain-Basisbild
+    OptOverviewTerrain,
+    /// Tooltip: Terrain-Basisbild
+    OptOverviewTerrainHelp,
     /// Checkbox: Hillshade-Layer
     OptOverviewHillshade,
     /// Tooltip: Hillshade-Layer

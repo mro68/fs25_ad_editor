@@ -133,9 +133,9 @@ pub enum AddNodeResult {
 - `clear_background_map(state)` — Background-Map entfernen
 - `browse_zip_background(state, path) -> anyhow::Result<()>` — ZIP-Archiv nach Bilddateien durchsuchen; bei einem Treffer wird direkt geladen
 - `load_background_from_zip(state, zip_path, entry_name, crop_size) -> anyhow::Result<()>` — Einzelne Bilddatei aus ZIP als Background laden
-- `generate_overview_with_options(state) -> anyhow::Result<()>` — Uebersichtskarte aus Map-Mod-ZIP generieren (Layer-Optionen aus Dialog-State), Einstellungen persistent speichern; Persistenzfehler werden per `log::warn!` und `state.ui.status_message` sichtbar gemacht, die Generierung selbst laeuft weiter
-- `save_background_as_overview(state, path) -> anyhow::Result<()>` — Aktuelle Background-Map als overview.jpg speichern (JPEG Qualitaet 90), Farmland-Polygone als `.json` daneben
-- `load_farmland_json(state, image_path)` — Laedt Farmland-Polygone aus einer `.json`-Datei neben der Bilddatei (z.B. `overview.json` neben `overview.jpg`); lautlos keine-Op wenn Datei fehlt
+- `generate_overview_with_options(state) -> anyhow::Result<()>` — Uebersichtskarte aus Map-Mod-ZIP generieren (Layer-Optionen und `OverviewFieldDetectionSource` aus dem Dialog-State), `overview_layers` plus `overview_field_detection_source` persistent speichern und ZIP-/Savegame-basierte Feldquellen inkl. `ZipGroundGdm` auswaehlen; Persistenzfehler werden per `log::warn!` und `state.ui.status_message` sichtbar gemacht, die Generierung selbst laeuft weiter
+- `save_background_as_overview(state, path) -> anyhow::Result<()>` — Aktuelle Background-Map als `overview.png` speichern, Farmland-Polygone als `.json` daneben
+- `load_farmland_json(state, image_path)` — Laedt Farmland-Polygone aus einer `.json`-Datei neben der Bilddatei (z.B. `overview.json` neben `overview.png`); lautlos keine-Op wenn Datei fehlt
 
 ---
 

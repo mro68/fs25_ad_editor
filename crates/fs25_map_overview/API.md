@@ -76,6 +76,18 @@ Gibt ein [`OverviewResult`] zurück. Wird vom Editor verwendet, um Polygone für
 
 ---
 
+### `try_extract_polygons_from_zip_ground_gdm`
+
+```rust
+pub fn try_extract_polygons_from_zip_ground_gdm(
+    zip_path: &str,
+) -> Option<(Vec<FarmlandPolygon>, u32, u32)>
+```
+
+Liest `densityMap_ground.gdm` direkt aus einer Map-ZIP, erkennt dafuer zuerst die Kartenstruktur per `discover_map(...)` und extrahiert dann Feldpolygone aus dem Ground-GDM-Raster. Liefert `None`, wenn ZIP, Discovery, Datei-Suche oder Dekodierung fehlschlagen.
+
+---
+
 ## Öffentliche Typen
 
 ### `OverviewResult`
@@ -121,6 +133,24 @@ pub struct OverviewOptions {
 ```
 
 `Default` aktiviert alle Layer.
+
+---
+
+### `FieldDetectionSource`
+
+Enum fuer die Feldquellen, die der Editor fuer die Polygon-Extraktion auswaehlen kann.
+
+```rust
+pub enum FieldDetectionSource {
+    FromZip,
+    ZipGroundGdm,
+    FieldTypeGrle,
+    GroundGdm,
+    FruitsGdm,
+}
+```
+
+`Default` zeigt auf `ZipGroundGdm`.
 
 ---
 
@@ -202,6 +232,7 @@ Parst `modDesc.xml` und die Map-Config-XML.
 pub fn find_weight_maps(files: &HashMap<String, Vec<u8>>, data_dir: &str) -> Vec<(String, Vec<u8>)>
 pub fn find_dem(files: &HashMap<String, Vec<u8>>, data_dir: &str) -> Option<&Vec<u8>>
 pub fn find_farmlands(files: &HashMap<String, Vec<u8>>, data_dir: &str) -> Option<(String, &Vec<u8>)>
+pub fn find_ground_gdm(files: &HashMap<String, Vec<u8>>, data_dir: &str) -> Option<(String, &Vec<u8>)>
 ```
 Lokalisiert spezifische Dateitypen im Mod-ZIP.
 

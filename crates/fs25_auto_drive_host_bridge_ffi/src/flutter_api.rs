@@ -5,13 +5,12 @@
 //! `fs25ad_flutter_session_*`-C-FFI-Exporten in `lib.rs` wiederverwendet.
 
 use anyhow::Result;
-use fs25_auto_drive_engine::shared::OverviewLayerOptions;
+use fs25_auto_drive_engine::shared::{OverviewFieldDetectionSource, OverviewLayerOptions};
 use fs25_auto_drive_host_bridge::dto::{
     host_ui_snapshot_json, viewport_overlay_snapshot_json, HostFieldDetectionSource,
     HostOverviewOptionsDialogSnapshot,
 };
 use fs25_auto_drive_host_bridge::{HostBridgeSession, HostDialogResult, HostSessionAction};
-use fs25_map_overview::FieldDetectionSource;
 use std::sync::{Arc, Mutex};
 
 fn decode_focus_node_id(focus_node_id_or_neg1: i64) -> Result<Option<u64>> {
@@ -125,12 +124,15 @@ pub fn flutter_session_submit_dialog_result_json(
     handle.with_session(|s| s.submit_dialog_result(result))?
 }
 
-fn map_host_field_detection_source(source: HostFieldDetectionSource) -> FieldDetectionSource {
+fn map_host_field_detection_source(
+    source: HostFieldDetectionSource,
+) -> OverviewFieldDetectionSource {
     match source {
-        HostFieldDetectionSource::FromZip => FieldDetectionSource::FromZip,
-        HostFieldDetectionSource::FieldTypeGrle => FieldDetectionSource::FieldTypeGrle,
-        HostFieldDetectionSource::GroundGdm => FieldDetectionSource::GroundGdm,
-        HostFieldDetectionSource::FruitsGdm => FieldDetectionSource::FruitsGdm,
+        HostFieldDetectionSource::FromZip => OverviewFieldDetectionSource::FromZip,
+        HostFieldDetectionSource::ZipGroundGdm => OverviewFieldDetectionSource::ZipGroundGdm,
+        HostFieldDetectionSource::FieldTypeGrle => OverviewFieldDetectionSource::FieldTypeGrle,
+        HostFieldDetectionSource::GroundGdm => OverviewFieldDetectionSource::GroundGdm,
+        HostFieldDetectionSource::FruitsGdm => OverviewFieldDetectionSource::FruitsGdm,
     }
 }
 
@@ -149,6 +151,7 @@ pub fn flutter_session_update_overview_options_dialog(
         dialog_state.ui.overview_options_dialog.visible = snapshot.visible;
         dialog_state.ui.overview_options_dialog.zip_path = snapshot.zip_path;
         dialog_state.ui.overview_options_dialog.layers = OverviewLayerOptions {
+            terrain: snapshot.layers.terrain,
             hillshade: snapshot.layers.hillshade,
             farmlands: snapshot.layers.farmlands,
             farmland_ids: snapshot.layers.farmland_ids,

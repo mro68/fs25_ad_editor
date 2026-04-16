@@ -187,6 +187,8 @@ mod tests {
             I18nKey::OptBgOpacityAtMinZoomHelp,
             I18nKey::OptBgFadeStartZoom,
             I18nKey::OptBgFadeStartZoomHelp,
+            I18nKey::OptOverviewTerrain,
+            I18nKey::OptOverviewTerrainHelp,
             I18nKey::OptOverviewHillshade,
             I18nKey::OptOverviewHillshadeHelp,
             I18nKey::OptOverviewFarmlands,
