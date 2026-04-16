@@ -120,7 +120,7 @@ pub struct PostLoadDialogState {
     pub heightmap_set: bool,
     /// Pfad zur automatisch gesetzten Heightmap
     pub heightmap_path: Option<String>,
-    /// overview.png wurde automatisch als Hintergrund geladen
+    /// Gespeichertes Layer-Bundle oder Legacy-Overview wurde automatisch als Hintergrund geladen.
     pub overview_loaded: bool,
     /// Gefundene passende ZIP-Dateien im Mods-Verzeichnis
     pub matching_zips: Vec<PathBuf>,

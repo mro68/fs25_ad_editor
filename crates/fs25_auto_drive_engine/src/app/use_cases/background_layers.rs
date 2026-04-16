@@ -112,6 +112,40 @@ pub fn compose_background_from_catalog(catalog: &BackgroundLayerCatalog) -> Resu
     )))
 }
 
+/// Laedt einen gespeicherten Layer-Katalog in den State und setzt die CPU-komponierte
+/// Hintergrundkarte als aktives Background-Asset.
+pub(crate) fn load_background_layer_catalog_into_state(
+    state: &mut AppState,
+    files: BackgroundLayerFiles,
+) -> Result<()> {
+    let requested_visible = state.options.overview_layers.clone();
+    let catalog = load_background_layer_catalog(files, &requested_visible)?;
+    let source_label = catalog_source_label(&catalog);
+    let composed_background = compose_background_from_catalog(&catalog)?;
+    let background_map = BackgroundMap::from_image(composed_background, &source_label, None)?;
+
+    apply_background_map_with_scale(state, background_map, 1.0);
+    state.background_layers = Some(catalog);
+    state.pending_overview_bundle = None;
+
+    Ok(())
+}
+
+/// Versucht, im angegebenen Verzeichnis ein gespeichertes Layer-Bundle zu erkennen,
+/// zu laden und als aktiven Hintergrund zu setzen.
+pub(crate) fn try_load_background_layer_bundle_from_directory(
+    state: &mut AppState,
+    dir: &Path,
+) -> Result<bool> {
+    let files = discover_background_layer_files(dir);
+    if files.terrain.is_none() {
+        return Ok(false);
+    }
+
+    load_background_layer_catalog_into_state(state, files)?;
+    Ok(true)
+}
+
 /// Schaltet die Sichtbarkeit eines einzelnen Hintergrund-Layers um und
 /// setzt das Hintergrundbild aus den aktiven Layern neu zusammen.
 pub fn set_background_layer_visibility(
@@ -156,6 +190,15 @@ pub fn set_background_layer_visibility(
 fn discovered_layer_path(dir: &Path, kind: BackgroundLayerKind) -> Option<PathBuf> {
     let path = dir.join(kind.file_name());
     path.is_file().then_some(path)
+}
+
+fn catalog_source_label(catalog: &BackgroundLayerCatalog) -> String {
+    catalog
+        .files
+        .terrain
+        .as_ref()
+        .map(|path| path.to_string_lossy().into_owned())
+        .unwrap_or_else(|| catalog.files.directory.display().to_string())
 }
 
 fn apply_background_map_with_scale(
@@ -237,6 +280,7 @@ mod tests {
     use super::{
         compose_background_from_catalog, discover_background_layer_files,
         load_background_layer_catalog, set_background_layer_visibility,
+        try_load_background_layer_bundle_from_directory,
     };
     use crate::app::AppState;
     use crate::core::BackgroundMap;
@@ -324,6 +368,21 @@ mod tests {
 
         let pixel = composed.to_rgba8().get_pixel(0, 0).0;
         assert_eq!(pixel, [120, 20, 30, 255]);
+    }
+
+    #[test]
+    fn try_load_background_layer_bundle_requires_terrain_base() {
+        let temp_dir = TempDirGuard::new("background_layers_missing_terrain");
+        let hillshade = RgbaImage::from_pixel(2, 2, Rgba([220, 0, 0, 128]));
+        write_png(&temp_dir.path().join("overview_hillshade.png"), &hillshade);
+
+        let mut state = AppState::new();
+        let loaded = try_load_background_layer_bundle_from_directory(&mut state, temp_dir.path())
+            .expect("Discovery ohne Terrain darf nicht fehlschlagen");
+
+        assert!(!loaded);
+        assert!(state.background_layers.is_none());
+        assert!(state.view.background_map.is_none());
     }
 
     #[test]

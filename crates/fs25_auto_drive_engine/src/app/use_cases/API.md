@@ -68,7 +68,7 @@ Seit Phase 7 schneiden `controller.rs` und `intent_mapping.rs` die Control-Plane
 
 ## `use_cases::auto_detect`
 
-- `detect_post_load(xml_path, map_name) -> PostLoadDetectionResult` — Sucht nach `terrain.heightmap.png` im XML-Verzeichnis und passenden Map-Mod-ZIPs zuerst im XML-Verzeichnis, danach zusaetzlich im Mods-Verzeichnis (`../../mods/` relativ zum Savegame). Doppelte Treffer werden entfernt. Matching: case-insensitive, Underscores/Spaces als Wildcard, bidirektionale Umlaut-Expansion (ae↔ae, oe↔oe, ue↔ue, ss↔ss).
+- `detect_post_load(xml_path, map_name) -> PostLoadDetectionResult` — Sucht nach `terrain.heightmap.png`, nach einem gespeicherten Overview-Layer-Bundle mit `overview_terrain.png` als Pflichtbasis im XML-Verzeichnis sowie nach passenden Map-Mod-ZIPs zuerst im XML-Verzeichnis, danach zusaetzlich im Mods-Verzeichnis (`../../mods/` relativ zum Savegame). Ohne Terrain-Basis bleibt das Layer-System inaktiv und der Legacy-Fallback ueber `overview.png` oder `overview.jpg` aktiv. Doppelte ZIP-Treffer werden entfernt. Matching: case-insensitive, Underscores/Spaces als Wildcard, bidirektionale Umlaut-Expansion zwischen ASCII-Form und Umlaut-/Eszett-Varianten.
 
 ---
 
@@ -127,7 +127,7 @@ pub enum AddNodeResult {
 ## `use_cases::background_map`
 
 - `request_background_map_dialog(state)` — Background-Map-Dialog oeffnen
-- `load_background_map(state, path, crop_size) -> anyhow::Result<()>` — Background-Map laden (PNG/JPG/DDS), Fehler werden an den Controller propagiert
+- `load_background_map(state, path, crop_size) -> anyhow::Result<()>` — Background-Map laden (PNG/JPG/DDS), danach im selben Verzeichnis ein gespeichertes Overview-Layer-Bundle mit Terrain-Basis erkennen und bei Erfolg sofort mit den persistierten `overview_layers`-Defaults CPU-seitig neu komponieren; ohne Terrain-Basis bleibt das manuell geladene Bild aktiv
 - `toggle_background_visibility(state)` — Sichtbarkeit umschalten
 - `scale_background(state, factor)` — Skalierungsfaktor relativ anpassen (Multiplikation; Bereich 0.125–8.0)
 - `clear_background_map(state)` — Background-Map entfernen und dabei auch gespeicherten Layer-Katalog sowie ein noch ausstehendes Pending-Overview-Bundle verwerfen
@@ -141,7 +141,7 @@ pub enum AddNodeResult {
 
 ## `use_cases::background_layers`
 
-- `discover_background_layer_files(dir) -> BackgroundLayerFiles` — Sucht im angegebenen Verzeichnis nach den kanonischen Overview-Layer-Dateinamen und sammelt die vorhandenen Pfade
+- `discover_background_layer_files(dir) -> BackgroundLayerFiles` — Sucht im angegebenen Verzeichnis nach den kanonischen Overview-Layer-Dateinamen und sammelt die vorhandenen Pfade; ein aktives gespeichertes Layer-Bundle setzt weiterhin `overview_terrain.png` als Pflichtbasis voraus
 - `load_background_layer_catalog(files, visible) -> anyhow::Result<BackgroundLayerCatalog>` — Laedt die vorhandenen Layer-PNGs, validiert ihre Dimensionen gegen das Terrain-Basisbild und maskiert die Runtime-Sichtbarkeit fuer fehlende optionale Layer
 - `compose_background_from_catalog(catalog) -> anyhow::Result<image::DynamicImage>` — Setzt aus Terrain-Basisbild und den aktuell sichtbaren Overlay-Layern wieder ein kombiniertes Hintergrundbild zusammen; unsichtbares Terrain liefert eine transparente Basis in derselben Bildgroesse
 - `set_background_layer_visibility(state, layer, visible) -> anyhow::Result<()>` — Aktualisiert die Runtime-Sichtbarkeit eines geladenen gespeicherten Hintergrund-Layers, komponiert das Combined-Bild neu, behaelt `background_scale` bei und markiert den Background-Asset-Upload als geaendert

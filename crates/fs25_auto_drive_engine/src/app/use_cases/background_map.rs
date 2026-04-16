@@ -43,6 +43,12 @@ fn persist_overview_defaults(state: &mut AppState) {
     }
 }
 
+fn load_farmland_json_for_overview_dir(state: &mut AppState, dir: &Path) {
+    let overview_path = dir.join("overview.png");
+    let overview_path = overview_path.to_string_lossy().into_owned();
+    load_farmland_json(state, &overview_path);
+}
+
 fn map_overview_field_detection_source(
     source: OverviewFieldDetectionSource,
 ) -> fs25_map_overview::FieldDetectionSource {
@@ -140,8 +146,39 @@ pub fn load_background_map(
     state.background_layers = None;
     state.pending_overview_bundle = None;
 
+    let layer_bundle_loaded = Path::new(&path)
+        .parent()
+        .map(
+            |dir| match super::background_layers::try_load_background_layer_bundle_from_directory(
+                state, dir,
+            ) {
+                Ok(true) => {
+                    log::info!(
+                        "Gespeichertes Background-Layer-Bundle erkannt und aktiviert: {}",
+                        dir.display()
+                    );
+                    true
+                }
+                Ok(false) => false,
+                Err(error) => {
+                    log::warn!(
+                        "Gespeichertes Background-Layer-Bundle konnte nicht geladen werden: {}",
+                        error
+                    );
+                    false
+                }
+            },
+        )
+        .unwrap_or(false);
+
     // Farmland-Polygone aus begleitender JSON-Datei laden (falls vorhanden)
-    load_farmland_json(state, &path);
+    if layer_bundle_loaded {
+        if let Some(dir) = Path::new(&path).parent() {
+            load_farmland_json_for_overview_dir(state, dir);
+        }
+    } else {
+        load_farmland_json(state, &path);
+    }
 
     Ok(())
 }
@@ -557,7 +594,7 @@ pub fn load_farmland_json(state: &mut AppState, image_path: &str) {
 #[cfg(test)]
 mod tests {
     use super::{
-        browse_zip_background, clear_background_map, load_background_from_zip,
+        browse_zip_background, clear_background_map, load_background_from_zip, load_background_map,
         persist_overview_defaults, save_background_as_overview,
     };
     use crate::app::state::{
@@ -786,6 +823,102 @@ mod tests {
             state.background_image.as_ref().map(|image| image.width()),
             Some(2)
         );
+    }
+
+    #[test]
+    fn load_background_map_discovers_layer_bundle_in_same_directory() {
+        let temp_dir = TempDirGuard::new("manual_layer_bundle_load");
+        let overview_path = temp_dir.path().join("overview.png");
+        let overview_path_string = overview_path.to_string_lossy().into_owned();
+
+        std::fs::write(&overview_path, rgba_png_bytes(2, 2, [1, 2, 3, 255]))
+            .expect("Legacy-overview muss geschrieben werden");
+        std::fs::write(
+            temp_dir.path().join("overview_terrain.png"),
+            rgba_png_bytes(2, 2, [20, 40, 60, 255]),
+        )
+        .expect("Terrain-PNG muss geschrieben werden");
+        std::fs::write(
+            temp_dir.path().join("overview_hillshade.png"),
+            rgba_png_bytes(2, 2, [220, 0, 0, 128]),
+        )
+        .expect("Hillshade-PNG muss geschrieben werden");
+
+        let polygons = serde_json::to_string(&vec![FieldPolygon {
+            id: 5,
+            vertices: vec![Vec2::new(0.0, 0.0), Vec2::new(1.0, 1.0)],
+        }])
+        .expect("Farmland-JSON muss serialisierbar sein");
+        std::fs::write(temp_dir.path().join("overview.json"), polygons)
+            .expect("Farmland-JSON muss geschrieben werden");
+
+        let mut state = AppState::new();
+        state.options.overview_layers = OverviewLayerOptions {
+            terrain: true,
+            hillshade: false,
+            farmlands: false,
+            farmland_ids: false,
+            pois: false,
+            legend: false,
+        };
+
+        load_background_map(&mut state, overview_path_string, None)
+            .expect("Manuelles Laden muss Layer-Bundle aktivieren");
+
+        let background = state
+            .view
+            .background_map
+            .as_ref()
+            .expect("Background-Map muss gesetzt sein");
+        assert_eq!(
+            background.image_data().to_rgba8().get_pixel(0, 0).0,
+            [20, 40, 60, 255]
+        );
+
+        let catalog = state
+            .background_layers
+            .as_ref()
+            .expect("Layer-Katalog muss erkannt werden");
+        assert_eq!(catalog.layers.len(), 2);
+        assert!(catalog.visible.terrain);
+        assert!(!catalog.visible.hillshade);
+        assert_eq!(
+            state
+                .farmland_polygons
+                .as_ref()
+                .map(|polygons| polygons.len()),
+            Some(1)
+        );
+    }
+
+    #[test]
+    fn load_background_map_keeps_legacy_overview_without_terrain_base() {
+        let temp_dir = TempDirGuard::new("manual_legacy_background_load");
+        let overview_path = temp_dir.path().join("overview.png");
+        let overview_path_string = overview_path.to_string_lossy().into_owned();
+
+        std::fs::write(&overview_path, rgba_png_bytes(2, 2, [11, 22, 33, 255]))
+            .expect("Legacy-overview muss geschrieben werden");
+        std::fs::write(
+            temp_dir.path().join("overview_hillshade.png"),
+            rgba_png_bytes(2, 2, [220, 0, 0, 128]),
+        )
+        .expect("Overlay-PNG muss geschrieben werden");
+
+        let mut state = AppState::new();
+        load_background_map(&mut state, overview_path_string, None)
+            .expect("Legacy-Overview ohne Terrain muss ladbar bleiben");
+
+        let background = state
+            .view
+            .background_map
+            .as_ref()
+            .expect("Background-Map muss gesetzt sein");
+        assert_eq!(
+            background.image_data().to_rgba8().get_pixel(0, 0).0,
+            [11, 22, 33, 255]
+        );
+        assert!(state.background_layers.is_none());
     }
 
     #[test]

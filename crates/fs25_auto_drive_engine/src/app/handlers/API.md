@@ -96,7 +96,7 @@ pub fn request_save(state: &mut AppState)
 pub fn load(state: &mut AppState, path: String) -> anyhow::Result<()>
 ```
 
-Lädt eine AutoDrive-XML-Datei. Parst die XML, erstellt die `RoadMap`, setzt den Dateipfad und führt automatische Post-Load-Erkennung durch (Heightmap, overview.jpg, Map-Mod-ZIP).
+Lädt eine AutoDrive-XML-Datei. Parst die XML, erstellt die `RoadMap`, setzt den Dateipfad und führt automatische Post-Load-Erkennung durch: Heightmap, gespeichertes Overview-Layer-Bundle mit `overview_terrain.png` als Pflichtbasis, Legacy-`overview.png`/`overview.jpg` sowie passende Map-Mod-ZIPs.
 
 ```rust
 pub fn save(state: &mut AppState, path: Option<String>) -> anyhow::Result<()>

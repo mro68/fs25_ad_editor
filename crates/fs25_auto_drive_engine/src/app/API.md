@@ -225,7 +225,7 @@ sel.ids_mut().insert(42);
 - `has_farmland_polygons() → bool` — `true` falls Farmland-Polygone geladen sind
 - `has_background_image() → bool` — `true` falls ein Hintergrundbild verfuegbar ist
 
-`BackgroundLayerCatalog` haelt die im Savegame-Verzeichnis gefundenen Layer-Dateien samt dekodierten `DynamicImage`s und der aktuellen Runtime-Sichtbarkeit. `PendingOverviewBundle` puffert ein frisches `fs25_map_overview::OverviewLayerBundle` zwischen ZIP-Generierung und bestaetigtem Save, damit erst der Save-Workflow die kanonischen PNG-Dateien plus `overview.json` ausschreibt.
+`BackgroundLayerCatalog` haelt die im Savegame-Verzeichnis gefundenen Layer-Dateien samt dekodierten `DynamicImage`s und der aktuellen Runtime-Sichtbarkeit. Nach XML-Load oder manuellem Hintergrund-Laden wird dieser Katalog automatisch wieder aktiviert, sobald im selben Verzeichnis eine `overview_terrain.png` gefunden wird; ohne Terrain-Basis bleibt das Legacy-Einzelbild aktiv. `PendingOverviewBundle` puffert ein frisches `fs25_map_overview::OverviewLayerBundle` zwischen ZIP-Generierung und bestaetigtem Save, damit erst der Save-Workflow die kanonischen PNG-Dateien plus `overview.json` ausschreibt.
 
 pub struct EngineUiState {
     pub dialog_requests: Vec<DialogRequest>,
@@ -380,6 +380,7 @@ pub struct PostLoadDialogState {
     pub context: OverviewSourceContext,
     pub heightmap_set: bool,
     pub heightmap_path: Option<String>,
+    // true wenn ein gespeichertes Layer-Bundle oder ein Legacy-Overview auto-aktiviert wurde
     pub overview_loaded: bool,
     pub matching_zips: Vec<PathBuf>,
     pub selected_zip_index: usize,
