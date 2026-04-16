@@ -29,6 +29,6 @@ pub(super) fn handle(state: &mut AppState, command: AppCommand) -> anyhow::Resul
             handlers::file_io::deduplicate(state);
             Ok(())
         }
-        other => unreachable!("unerwarteter FileIo-Command: {other:?}"),
+        other => anyhow::bail!("unerwarteter FileIo-Command: {other:?}"),
     }
 }

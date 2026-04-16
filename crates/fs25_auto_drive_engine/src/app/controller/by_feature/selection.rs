@@ -92,6 +92,6 @@ pub(super) fn handle(state: &mut AppState, command: AppCommand) -> anyhow::Resul
             handlers::selection::invert(state);
             Ok(())
         }
-        other => unreachable!("unerwarteter Selection-Command: {other:?}"),
+        other => anyhow::bail!("unerwarteter Selection-Command: {other:?}"),
     }
 }

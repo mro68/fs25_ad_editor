@@ -166,6 +166,6 @@ pub(super) fn handle(state: &mut AppState, command: AppCommand) -> anyhow::Resul
             handlers::editing::export_curseplay_file(state, &path);
             Ok(())
         }
-        other => unreachable!("unerwarteter Editing-Command: {other:?}"),
+        other => anyhow::bail!("unerwarteter Editing-Command: {other:?}"),
     }
 }

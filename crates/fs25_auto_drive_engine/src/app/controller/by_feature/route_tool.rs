@@ -78,6 +78,6 @@ pub(super) fn handle(state: &mut AppState, command: AppCommand) -> anyhow::Resul
             handlers::route_tool::decrease_segment_length(state);
             Ok(())
         }
-        other => unreachable!("unerwarteter RouteTool-Command: {other:?}"),
+        other => anyhow::bail!("unerwarteter RouteTool-Command: {other:?}"),
     }
 }

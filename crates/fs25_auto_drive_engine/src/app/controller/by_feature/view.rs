@@ -77,6 +77,6 @@ pub(super) fn handle(state: &mut AppState, command: AppCommand) -> anyhow::Resul
             handlers::view::zoom_to_selection_bounds(state);
             Ok(())
         }
-        other => unreachable!("unerwarteter View-Command: {other:?}"),
+        other => anyhow::bail!("unerwarteter View-Command: {other:?}"),
     }
 }

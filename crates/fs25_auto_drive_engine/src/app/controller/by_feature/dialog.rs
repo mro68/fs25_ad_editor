@@ -88,6 +88,6 @@ pub(super) fn handle(state: &mut AppState, command: AppCommand) -> anyhow::Resul
             handlers::dialog::request_curseplay_export_dialog(state);
             Ok(())
         }
-        other => unreachable!("unerwarteter Dialog-Command: {other:?}"),
+        other => anyhow::bail!("unerwarteter Dialog-Command: {other:?}"),
     }
 }

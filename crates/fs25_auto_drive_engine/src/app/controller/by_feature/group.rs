@@ -58,6 +58,6 @@ pub(super) fn handle(state: &mut AppState, command: AppCommand) -> anyhow::Resul
             handlers::group::open_settings_popup(state, world_pos);
             Ok(())
         }
-        other => unreachable!("unerwarteter Group-Command: {other:?}"),
+        other => anyhow::bail!("unerwarteter Group-Command: {other:?}"),
     }
 }

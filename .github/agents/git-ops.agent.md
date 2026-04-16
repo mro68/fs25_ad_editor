@@ -11,8 +11,8 @@ tools:
   - edit/editFiles
   - edit/rename
   - vscode/askQuestions
-
-model: "Claude Sonnet 4.6"
+model: Auto (copilot)
+#model: "Claude Sonnet 4.6"
 #model: "GPT-5.4"
 ---
 

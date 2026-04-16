@@ -185,7 +185,9 @@ fn render_single_node_info(
     node_details: Option<&HostNodeDetails>,
     events: &mut Vec<AppIntent>,
 ) {
-    let node_id = *selected.iter().next().unwrap();
+    let Some(node_id) = selected.iter().next().copied() else {
+        return;
+    };
     let Some(details) = node_details else {
         return;
     };
@@ -257,8 +259,9 @@ fn render_two_nodes_info(
     events: &mut Vec<AppIntent>,
 ) {
     let mut iter = selected.iter().copied();
-    let a = iter.next().unwrap();
-    let b = iter.next().unwrap();
+    let (Some(a), Some(b)) = (iter.next(), iter.next()) else {
+        return;
+    };
     ui.label(format!("Nodes: {}, {}", a, b));
     ui.separator();
 
