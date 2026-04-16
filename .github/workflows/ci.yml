@@ -75,6 +75,22 @@ jobs:
       - name: Check formatting
         run: cargo fmt --all -- --check
 
+      - name: Lint hardening (domain + host-bridge, non-test targets)
+        run: >-
+          cargo clippy --no-deps
+          -p fs25_auto_drive_engine
+          -p fs25_auto_drive_host_bridge
+          -p fs25_auto_drive_host_bridge_ffi
+          --lib
+          --
+          -W clippy::unwrap_used
+          -W clippy::expect_used
+          -W clippy::panic
+          -W clippy::todo
+
+      - name: Todo gate (domain + host-bridge, non-test targets)
+        run: ./scripts/check_todo_gate.sh
+
       - name: Clippy
         run: cargo clippy --workspace --all-targets -- -D warnings
 

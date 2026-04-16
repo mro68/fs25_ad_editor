@@ -101,6 +101,7 @@ fn set_last_error(error: impl Into<String>) {
     });
 }
 
+#[allow(clippy::expect_used)]
 fn into_c_string_ptr(value: String) -> *mut c_char {
     CString::new(value)
         .expect("sanitized string must not contain interior NUL bytes")
