@@ -264,6 +264,7 @@ pub fn generate_overview_with_options(state: &mut AppState) -> Result<()> {
     persist_overview_defaults(state);
 
     let options = fs25_map_overview::OverviewOptions {
+        terrain: layers.terrain,
         hillshade: layers.hillshade,
         farmlands: layers.farmlands,
         farmland_ids: layers.farmland_ids,

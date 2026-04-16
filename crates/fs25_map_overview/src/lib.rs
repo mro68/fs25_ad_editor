@@ -25,6 +25,7 @@ pub mod farmland;
 pub mod gdm;
 pub mod grle;
 pub mod hillshade;
+pub mod layer_bundle;
 pub mod palette;
 pub mod terrain;
 pub mod text;
@@ -41,6 +42,7 @@ pub use farmland::{
     extract_farmland_polygons, extract_farmland_polygons_from_ids, extract_field_polygons_by_ccl,
     extract_field_type_polygons_from_ids, FarmlandPolygon,
 };
+pub use layer_bundle::{compose_layers, generate_overview_layer_bundle, OverviewLayerBundle};
 
 /// Quelle fuer die Feldpolygon-Erkennung beim Generieren der Uebersichtskarte.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
@@ -76,6 +78,12 @@ pub struct OverviewResult {
 }
 
 /// Generiert eine Overview-Map aus einem FS25 Map-Mod-ZIP.
+///
+/// Diese Legacy-API liefert weiterhin ein opaques RGB-Bild. Das Feld
+/// `OverviewOptions::terrain` beeinflusst diesen Rueckgabepfad nicht; fuer
+/// separate RGBA-Layer oder transparente Kombinationen ist
+/// [`generate_overview_layer_bundle_from_zip`] bzw. [`generate_overview_result_from_zip`]
+/// zu verwenden.
 ///
 /// # Parameter
 /// - `zip_path`: Pfad zum ZIP-Archiv
@@ -217,6 +225,23 @@ pub fn generate_overview(
     composite::draw_title_bar(&mut image, &map_info.title);
 
     Ok(image)
+}
+
+/// Generiert ein Layer-Bundle aus einem FS25 Map-Mod-ZIP.
+///
+/// Das Bundle enthaelt das opake Terrain-Basisbild, separate transparente
+/// RGBA-Overlays und ein aus den sichtbaren Layern zusammengesetztes
+/// `combined`-Bild.
+pub fn generate_overview_layer_bundle_from_zip(
+    zip_path: &str,
+    options: &OverviewOptions,
+) -> Result<OverviewLayerBundle> {
+    log::info!("Generiere Overview-Layer-Bundle aus ZIP: {}", zip_path);
+
+    let files = extract_zip(zip_path)?;
+    let map_info = discovery::discover_map(&files)?;
+
+    layer_bundle::generate_overview_layer_bundle(&files, &map_info, options)
 }
 
 /// Versucht Feldpolygone aus einer `infoLayer_fieldType.grle`-Datei zu lesen.
@@ -408,32 +433,21 @@ fn extract_zip(zip_path: &str) -> Result<HashMap<String, Vec<u8>>> {
 /// im Pixel-Raum des GRLE-Rasters; der Aufrufer muss sie in Weltkoordinaten
 /// umrechnen (`world = pixel * (map_size / grle_width)`).
 ///
-/// Die bestehenden Optionen steuern weiterhin den Bild-Inhalt (Hillshade,
-/// Farmland-Grenzen usw.). Die Polygon-Extraktion findet unabhaengig statt.
+/// Das Rueckgabebild entspricht dem `combined`-Layer des Bundles und kann
+/// daher Transparenz enthalten. Die Polygon-Extraktion findet unabhaengig
+/// von der Sichtbarkeit einzelner Layer statt.
 pub fn generate_overview_result_from_zip(
     zip_path: &str,
     options: &OverviewOptions,
 ) -> Result<OverviewResult> {
-    log::info!(
-        "Generiere Overview + Farmland-Polygone aus ZIP: {}",
-        zip_path
-    );
-
-    let files = extract_zip(zip_path)?;
-    let map_info = discovery::discover_map(&files)?;
-
-    let rgb_image = generate_overview(&files, &map_info, options)?;
-
-    let (farmland_polygons, grle_width, grle_height, farmland_ids) =
-        try_extract_polygons_from_files(&files, &map_info);
-
+    let bundle = generate_overview_layer_bundle_from_zip(zip_path, options)?;
     Ok(OverviewResult {
-        image: DynamicImage::ImageRgb8(rgb_image),
-        farmland_polygons,
-        grle_width,
-        grle_height,
-        map_size: map_info.map_size as f32,
-        farmland_ids,
+        image: DynamicImage::ImageRgba8(bundle.combined),
+        farmland_polygons: bundle.farmland_polygons,
+        grle_width: bundle.grle_width,
+        grle_height: bundle.grle_height,
+        map_size: bundle.map_size,
+        farmland_ids: bundle.farmland_ids_raw,
     })
 }
 
@@ -441,7 +455,7 @@ pub fn generate_overview_result_from_zip(
 ///
 /// Schlaegt bei fehlenden oder fehlerhaften Daten still fehl (leere Liste, None).
 /// Gibt `(polygons, width, height, raw_ids)` zurueck.
-fn try_extract_polygons_from_files(
+pub(crate) fn try_extract_polygons_from_files(
     files: &HashMap<String, Vec<u8>>,
     map_info: &discovery::MapInfo,
 ) -> (Vec<FarmlandPolygon>, u32, u32, Option<Vec<u8>>) {
@@ -613,6 +627,7 @@ mod tests {
         );
 
         let options = OverviewOptions {
+            terrain: false,
             hillshade: false,
             farmlands: false,
             farmland_ids: false,
@@ -628,6 +643,8 @@ mod tests {
 
         assert_eq!(result.image.width(), 32);
         assert_eq!(result.image.height(), 32);
+        assert!(matches!(result.image, DynamicImage::ImageRgba8(_)));
+        assert_eq!(result.image.to_rgba8().get_pixel(0, 0)[3], 0);
         assert_eq!(result.map_size, 32.0);
         assert_eq!(result.grle_width, 2);
         assert_eq!(result.grle_height, 2);
