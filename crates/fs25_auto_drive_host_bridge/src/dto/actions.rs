@@ -4,6 +4,7 @@ use fs25_auto_drive_engine::app::ui_contract::RouteToolPanelAction;
 use fs25_auto_drive_engine::shared::{EditorOptions, RenderQuality};
 use serde::{Deserialize, Serialize};
 
+use super::chrome::HostBackgroundLayerKind;
 use super::dialogs::HostDialogResult;
 use super::input::HostViewportInputBatch;
 use super::node_details::HostNodeFlag;
@@ -189,6 +190,13 @@ pub enum HostSessionAction {
     },
     /// Schaltet die Sichtbarkeit der Background-Map um.
     ToggleBackgroundVisibility,
+    /// Setzt die Sichtbarkeit eines gespeicherten Hintergrund-Layers.
+    SetBackgroundLayerVisibility {
+        /// Ziel-Layer im host-neutralen DTO-Vertrag.
+        layer: HostBackgroundLayerKind,
+        /// Neuer Sichtbarkeitszustand des Layers.
+        visible: bool,
+    },
     /// Skaliert die Background-Map relativ zur aktuellen Groesse.
     ScaleBackground {
         /// Relativer Skalierungsfaktor.

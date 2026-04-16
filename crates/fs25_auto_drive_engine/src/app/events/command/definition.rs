@@ -3,8 +3,7 @@ use crate::app::state::EditorTool;
 use crate::app::tool_contract::{RouteToolId, TangentSource};
 use crate::app::ui_contract::RouteToolPanelAction;
 use crate::core::{ConnectionDirection, ConnectionPriority, NodeFlag};
-use crate::shared::EditorOptions;
-use crate::shared::RenderQuality;
+use crate::shared::{BackgroundLayerKind, EditorOptions, RenderQuality};
 
 /// Commands sind mutierende Schritte, die zentral ausgefuehrt werden.
 #[derive(Debug, Clone)]
@@ -143,6 +142,11 @@ pub enum AppCommand {
     },
     /// Background-Sichtbarkeit umschalten
     ToggleBackgroundVisibility,
+    /// Sichtbarkeit eines gespeicherten Hintergrund-Layers setzen
+    SetBackgroundLayerVisibility {
+        layer: BackgroundLayerKind,
+        visible: bool,
+    },
     /// Background-Ausdehnung skalieren (Faktor relativ)
     ScaleBackground { factor: f32 },
     /// Heightmap-Warnung schliessen
@@ -351,6 +355,7 @@ impl AppCommand {
             | Self::SetRenderQuality { .. }
             | Self::LoadBackgroundMap { .. }
             | Self::ToggleBackgroundVisibility
+            | Self::SetBackgroundLayerVisibility { .. }
             | Self::ScaleBackground { .. }
             | Self::BrowseZipBackground { .. }
             | Self::LoadBackgroundFromZip { .. }

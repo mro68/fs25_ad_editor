@@ -26,6 +26,9 @@ pub(super) fn map(state: &AppState, intent: AppIntent) -> Vec<AppCommand> {
             vec![AppCommand::LoadBackgroundMap { path, crop_size }]
         }
         AppIntent::ToggleBackgroundVisibility => vec![AppCommand::ToggleBackgroundVisibility],
+        AppIntent::SetBackgroundLayerVisibility { layer, visible } => {
+            vec![AppCommand::SetBackgroundLayerVisibility { layer, visible }]
+        }
         AppIntent::ScaleBackground { factor } => vec![AppCommand::ScaleBackground { factor }],
         AppIntent::ZipBackgroundBrowseRequested { path } => {
             vec![AppCommand::BrowseZipBackground { path }]

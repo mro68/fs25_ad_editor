@@ -1,6 +1,8 @@
 //! Use-Case-Funktionen fuer gespeicherte Overview-Layer-Dateien und CPU-Komposition.
 
 use crate::app::state::{BackgroundLayerCatalog, BackgroundLayerFiles, StoredBackgroundLayer};
+use crate::app::AppState;
+use crate::core::BackgroundMap;
 use crate::shared::{BackgroundLayerKind, OverviewLayerOptions};
 use anyhow::{bail, Context, Result};
 use image::{DynamicImage, GenericImageView, RgbaImage};
@@ -110,9 +112,62 @@ pub fn compose_background_from_catalog(catalog: &BackgroundLayerCatalog) -> Resu
     )))
 }
 
+/// Schaltet die Sichtbarkeit eines einzelnen Hintergrund-Layers um und
+/// setzt das Hintergrundbild aus den aktiven Layern neu zusammen.
+pub fn set_background_layer_visibility(
+    state: &mut AppState,
+    layer: BackgroundLayerKind,
+    visible: bool,
+) -> Result<()> {
+    let background_scale = state.view.background_scale;
+    let (composed_background, source_label) = {
+        let catalog = state
+            .background_layers
+            .as_mut()
+            .context("Keine gespeicherten Hintergrund-Layer geladen")?;
+
+        if !catalog.layers.iter().any(|entry| entry.kind == layer) {
+            bail!("Hintergrund-Layer {} ist nicht geladen", layer);
+        }
+
+        if layer_visibility(&catalog.visible, layer) == visible {
+            return Ok(());
+        }
+
+        set_layer_visibility(&mut catalog.visible, layer, visible);
+        let source_label = format!(
+            "{}:{}",
+            catalog.files.directory.display(),
+            layer.file_name()
+        );
+        (compose_background_from_catalog(catalog)?, source_label)
+    };
+
+    let background_map = BackgroundMap::from_image(composed_background, &source_label, None)?;
+    apply_background_map_with_scale(state, background_map, background_scale);
+    log::info!(
+        "Hintergrund-Layer {}: {}",
+        layer,
+        if visible { "an" } else { "aus" }
+    );
+    Ok(())
+}
+
 fn discovered_layer_path(dir: &Path, kind: BackgroundLayerKind) -> Option<PathBuf> {
     let path = dir.join(kind.file_name());
     path.is_file().then_some(path)
+}
+
+fn apply_background_map_with_scale(
+    state: &mut AppState,
+    background_map: BackgroundMap,
+    scale: f32,
+) {
+    let image_arc = background_map.image_arc();
+    state.view.background_map = Some(Arc::new(background_map));
+    state.view.background_scale = scale;
+    state.view.mark_background_asset_changed();
+    state.background_image = Some(image_arc);
 }
 
 fn load_layer_image(kind: BackgroundLayerKind, path: &Path) -> Result<StoredBackgroundLayer> {
@@ -151,16 +206,45 @@ fn catalog_layer_image(
         .map(|layer| layer.image.as_ref())
 }
 
+fn layer_visibility(visible: &OverviewLayerOptions, layer: BackgroundLayerKind) -> bool {
+    match layer {
+        BackgroundLayerKind::Terrain => visible.terrain,
+        BackgroundLayerKind::Hillshade => visible.hillshade,
+        BackgroundLayerKind::FarmlandBorders => visible.farmlands,
+        BackgroundLayerKind::FarmlandIds => visible.farmland_ids,
+        BackgroundLayerKind::PoiMarkers => visible.pois,
+        BackgroundLayerKind::Legend => visible.legend,
+    }
+}
+
+fn set_layer_visibility(
+    visible: &mut OverviewLayerOptions,
+    layer: BackgroundLayerKind,
+    is_visible: bool,
+) {
+    match layer {
+        BackgroundLayerKind::Terrain => visible.terrain = is_visible,
+        BackgroundLayerKind::Hillshade => visible.hillshade = is_visible,
+        BackgroundLayerKind::FarmlandBorders => visible.farmlands = is_visible,
+        BackgroundLayerKind::FarmlandIds => visible.farmland_ids = is_visible,
+        BackgroundLayerKind::PoiMarkers => visible.pois = is_visible,
+        BackgroundLayerKind::Legend => visible.legend = is_visible,
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::{
         compose_background_from_catalog, discover_background_layer_files,
-        load_background_layer_catalog,
+        load_background_layer_catalog, set_background_layer_visibility,
     };
-    use crate::shared::OverviewLayerOptions;
+    use crate::app::AppState;
+    use crate::core::BackgroundMap;
+    use crate::shared::{BackgroundLayerKind, OverviewLayerOptions};
     use image::{DynamicImage, GenericImageView, ImageFormat, Rgba, RgbaImage};
     use std::io::Cursor;
     use std::path::{Path, PathBuf};
+    use std::sync::Arc;
     use std::time::{SystemTime, UNIX_EPOCH};
 
     struct TempDirGuard {
@@ -240,5 +324,60 @@ mod tests {
 
         let pixel = composed.to_rgba8().get_pixel(0, 0).0;
         assert_eq!(pixel, [120, 20, 30, 255]);
+    }
+
+    #[test]
+    fn set_background_layer_visibility_recomposes_image_and_preserves_scale() {
+        let temp_dir = TempDirGuard::new("background_layers_toggle");
+        let terrain = RgbaImage::from_pixel(2, 2, Rgba([20, 40, 60, 255]));
+        let hillshade = RgbaImage::from_pixel(2, 2, Rgba([220, 0, 0, 128]));
+        write_png(&temp_dir.path().join("overview_terrain.png"), &terrain);
+        write_png(&temp_dir.path().join("overview_hillshade.png"), &hillshade);
+
+        let files = discover_background_layer_files(temp_dir.path());
+        let visible = OverviewLayerOptions {
+            terrain: true,
+            hillshade: true,
+            farmlands: false,
+            farmland_ids: false,
+            pois: false,
+            legend: false,
+        };
+        let catalog = load_background_layer_catalog(files, &visible)
+            .expect("Katalog muss fuer Toggle-Test ladbar sein");
+        let composed =
+            compose_background_from_catalog(&catalog).expect("Ausgangsbild muss komponierbar sein");
+        let background = BackgroundMap::from_image(composed, "toggle-test", None)
+            .expect("Background-Map muss aus Ausgangsbild erzeugbar sein");
+
+        let mut state = AppState::new();
+        state.view.background_map = Some(Arc::new(background));
+        state.background_image = state
+            .view
+            .background_map
+            .as_ref()
+            .map(|background| background.image_arc());
+        state.view.background_scale = 1.75;
+        state.background_layers = Some(catalog);
+
+        set_background_layer_visibility(&mut state, BackgroundLayerKind::Hillshade, false)
+            .expect("Layer-Toggle muss das Bild neu zusammensetzen");
+
+        let catalog = state
+            .background_layers
+            .as_ref()
+            .expect("Layer-Katalog muss im State erhalten bleiben");
+        assert!(!catalog.visible.hillshade);
+        assert_eq!(state.view.background_scale, 1.75);
+        assert_eq!(state.view.background_asset_revision, 1);
+
+        let pixel = state
+            .background_image
+            .as_ref()
+            .expect("Komponiertes Bild muss im State liegen")
+            .to_rgba8()
+            .get_pixel(0, 0)
+            .0;
+        assert_eq!(pixel, [20, 40, 60, 255]);
     }
 }

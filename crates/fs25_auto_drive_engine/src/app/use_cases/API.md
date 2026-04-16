@@ -144,6 +144,7 @@ pub enum AddNodeResult {
 - `discover_background_layer_files(dir) -> BackgroundLayerFiles` — Sucht im angegebenen Verzeichnis nach den kanonischen Overview-Layer-Dateinamen und sammelt die vorhandenen Pfade
 - `load_background_layer_catalog(files, visible) -> anyhow::Result<BackgroundLayerCatalog>` — Laedt die vorhandenen Layer-PNGs, validiert ihre Dimensionen gegen das Terrain-Basisbild und maskiert die Runtime-Sichtbarkeit fuer fehlende optionale Layer
 - `compose_background_from_catalog(catalog) -> anyhow::Result<image::DynamicImage>` — Setzt aus Terrain-Basisbild und den aktuell sichtbaren Overlay-Layern wieder ein kombiniertes Hintergrundbild zusammen; unsichtbares Terrain liefert eine transparente Basis in derselben Bildgroesse
+- `set_background_layer_visibility(state, layer, visible) -> anyhow::Result<()>` — Aktualisiert die Runtime-Sichtbarkeit eines geladenen gespeicherten Hintergrund-Layers, komponiert das Combined-Bild neu, behaelt `background_scale` bei und markiert den Background-Asset-Upload als geaendert
 
 ---
 

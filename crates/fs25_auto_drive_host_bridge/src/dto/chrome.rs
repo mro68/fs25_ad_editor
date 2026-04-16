@@ -9,6 +9,33 @@ use super::route_tool::{
     HostRouteToolId, HostRouteToolSelectionSnapshot,
 };
 
+/// Host-neutraler Layer-Identifier fuer gespeicherte Hintergrund-Layer.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum HostBackgroundLayerKind {
+    /// Opaque Terrain-Basis.
+    Terrain,
+    /// Transparente Hillshade-Schattierung.
+    Hillshade,
+    /// Transparente Farmland-Grenzen.
+    FarmlandBorders,
+    /// Transparente Farmland-ID-Beschriftungen.
+    FarmlandIds,
+    /// Transparente POI-Marker.
+    PoiMarkers,
+    /// Transparente Legende.
+    Legend,
+}
+
+/// Host-neutraler Chrome-Eintrag fuer einen einzelnen Hintergrund-Layer.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct HostBackgroundLayerEntry {
+    /// Stabile Layer-Kennung fuer Host-Menues und Panels.
+    pub kind: HostBackgroundLayerKind,
+    /// Ob der Layer aktuell in die Runtime-Komposition einfliesst.
+    pub visible: bool,
+}
+
 /// Host-neutraler Read-Snapshot fuer Chrome-nahe Menues und Panels.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct HostChromeSnapshot {
@@ -70,4 +97,8 @@ pub struct HostChromeSnapshot {
     pub background_visible: bool,
     /// Aktueller Skalierungsfaktor des Hintergrunds.
     pub background_scale: f32,
+    /// Ob gespeicherte Hintergrund-Layer fuer Einzel-Toggles verfuegbar sind.
+    pub background_layers_available: bool,
+    /// Verfuegbare Hintergrund-Layer in kanonischer Reihenfolge fuer Host-Menues.
+    pub background_layer_entries: Vec<HostBackgroundLayerEntry>,
 }
