@@ -5,7 +5,7 @@ use crate::app::AppState;
 use crate::core::BackgroundMap;
 use crate::shared::{BackgroundLayerKind, OverviewLayerOptions};
 use anyhow::{bail, Context, Result};
-use image::{DynamicImage, GenericImageView, RgbaImage};
+use image::{DynamicImage, Rgba, RgbaImage};
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
@@ -22,7 +22,7 @@ pub fn discover_background_layer_files(dir: &Path) -> BackgroundLayerFiles {
     }
 }
 
-/// Laedt die gefundenen Layer-Dateien und erstellt einen Katalog.
+/// Baut aus den gefundenen Dateien einen metadatenbasierten Runtime-Katalog.
 pub fn load_background_layer_catalog(
     files: BackgroundLayerFiles,
     visible: &OverviewLayerOptions,
@@ -31,10 +31,11 @@ pub fn load_background_layer_catalog(
         .terrain
         .as_ref()
         .context("Gespeicherter Terrain-Layer fehlt")?;
-    let terrain = load_layer_image(BackgroundLayerKind::Terrain, terrain_path)?;
-    let terrain_dimensions = terrain.image.dimensions();
 
-    let mut layers = vec![terrain];
+    let mut layers = vec![StoredBackgroundLayer {
+        kind: BackgroundLayerKind::Terrain,
+        path: terrain_path.clone(),
+    }];
     for (kind, path) in [
         (BackgroundLayerKind::Hillshade, files.hillshade.as_ref()),
         (
@@ -48,13 +49,12 @@ pub fn load_background_layer_catalog(
         (BackgroundLayerKind::PoiMarkers, files.poi_markers.as_ref()),
         (BackgroundLayerKind::Legend, files.legend.as_ref()),
     ] {
-        let Some(path) = path else {
-            continue;
-        };
-
-        let layer = load_layer_image(kind, path)?;
-        validate_dimensions(&layer, terrain_dimensions)?;
-        layers.push(layer);
+        if let Some(path) = path {
+            layers.push(StoredBackgroundLayer {
+                kind,
+                path: path.clone(),
+            });
+        }
     }
 
     let mut runtime_visible = visible.clone();
@@ -72,44 +72,48 @@ pub fn load_background_layer_catalog(
     })
 }
 
-/// Setzt aus den sichtbaren Layern ein kombiniertes Bild zusammen (CPU-Komposition).
+/// Setzt aus den sichtbaren Layern ein kombiniertes Bild zusammen.
+///
+/// Laedt sichtbare PNG-Dateien sequentiell von Platte und blendet sie direkt in
+/// das Ergebnisbild, damit nie alle Layer gleichzeitig dekodiert im RAM liegen.
 pub fn compose_background_from_catalog(catalog: &BackgroundLayerCatalog) -> Result<DynamicImage> {
-    let terrain = catalog_layer_image(catalog, BackgroundLayerKind::Terrain)
+    let terrain_entry = catalog_layer(catalog, BackgroundLayerKind::Terrain)
         .context("Terrain-Layer fuer Komposition fehlt")?;
-    let (width, height) = terrain.dimensions();
-    let base = if catalog.visible.terrain {
-        terrain.to_rgba8()
+    let terrain = load_layer_image(terrain_entry.kind, &terrain_entry.path)?;
+    let terrain_dimensions = terrain.dimensions();
+    let (width, height) = terrain_dimensions;
+    let mut result = if catalog.visible.terrain {
+        terrain
     } else {
         RgbaImage::new(width, height)
     };
 
-    let overlays: Vec<(bool, RgbaImage)> = [
-        (catalog.visible.hillshade, BackgroundLayerKind::Hillshade),
-        (
-            catalog.visible.farmlands,
-            BackgroundLayerKind::FarmlandBorders,
-        ),
-        (
-            catalog.visible.farmland_ids,
-            BackgroundLayerKind::FarmlandIds,
-        ),
-        (catalog.visible.pois, BackgroundLayerKind::PoiMarkers),
-        (catalog.visible.legend, BackgroundLayerKind::Legend),
-    ]
-    .into_iter()
-    .filter_map(|(is_visible, kind)| {
-        catalog_layer_image(catalog, kind).map(|image| (is_visible, image.to_rgba8()))
-    })
-    .collect();
-    let overlay_refs: Vec<(bool, &RgbaImage)> = overlays
-        .iter()
-        .map(|(is_visible, image)| (*is_visible, image))
-        .collect();
+    for kind in [
+        BackgroundLayerKind::Hillshade,
+        BackgroundLayerKind::FarmlandBorders,
+        BackgroundLayerKind::FarmlandIds,
+        BackgroundLayerKind::PoiMarkers,
+        BackgroundLayerKind::Legend,
+    ] {
+        if !layer_visibility(&catalog.visible, kind) {
+            continue;
+        }
 
-    Ok(DynamicImage::ImageRgba8(fs25_map_overview::compose_layers(
-        &base,
-        &overlay_refs,
-    )))
+        let Some(layer) = catalog_layer(catalog, kind) else {
+            continue;
+        };
+
+        let overlay = load_layer_image(layer.kind, &layer.path)?;
+        validate_dimensions(
+            layer.kind,
+            &layer.path,
+            overlay.dimensions(),
+            terrain_dimensions,
+        )?;
+        blend_image(&mut result, &overlay);
+    }
+
+    Ok(DynamicImage::ImageRgba8(result))
 }
 
 /// Laedt einen gespeicherten Layer-Katalog in den State und setzt die CPU-komponierte
@@ -148,19 +152,23 @@ pub(crate) fn try_load_background_layer_bundle_from_directory(
 
 /// Schaltet die Sichtbarkeit eines einzelnen Hintergrund-Layers um und
 /// setzt das Hintergrundbild aus den aktiven Layern neu zusammen.
+///
+/// Die Runtime-Sichtbarkeit wird erst nach erfolgreicher Re-Komposition
+/// in den State uebernommen, damit Katalog und gerendertes Hintergrundbild
+/// auch bei I/O- oder Dimensionsfehlern konsistent bleiben.
 pub fn set_background_layer_visibility(
     state: &mut AppState,
     layer: BackgroundLayerKind,
     visible: bool,
 ) -> Result<()> {
     let background_scale = state.view.background_scale;
-    let (composed_background, source_label) = {
+    let (composed_background, source_label, committed_visible) = {
         let catalog = state
             .background_layers
-            .as_mut()
+            .as_ref()
             .context("Keine gespeicherten Hintergrund-Layer geladen")?;
 
-        if !catalog.layers.iter().any(|entry| entry.kind == layer) {
+        if catalog_layer(catalog, layer).is_none() {
             bail!("Hintergrund-Layer {} ist nicht geladen", layer);
         }
 
@@ -168,21 +176,36 @@ pub fn set_background_layer_visibility(
             return Ok(());
         }
 
-        set_layer_visibility(&mut catalog.visible, layer, visible);
+        let mut recomposed_catalog = catalog.clone();
+        set_layer_visibility(&mut recomposed_catalog.visible, layer, visible);
         let source_label = format!(
             "{}:{}",
-            catalog.files.directory.display(),
+            recomposed_catalog.files.directory.display(),
             layer.file_name()
         );
-        (compose_background_from_catalog(catalog)?, source_label)
+        let composed_background = compose_background_from_catalog(&recomposed_catalog)?;
+        (
+            composed_background,
+            source_label,
+            recomposed_catalog.visible,
+        )
     };
 
     let background_map = BackgroundMap::from_image(composed_background, &source_label, None)?;
     apply_background_map_with_scale(state, background_map, background_scale);
+    state
+        .background_layers
+        .as_mut()
+        .context("Keine gespeicherten Hintergrund-Layer geladen")?
+        .visible = committed_visible.clone();
     log::info!(
         "Hintergrund-Layer {}: {}",
         layer,
-        if visible { "an" } else { "aus" }
+        if layer_visibility(&committed_visible, layer) {
+            "an"
+        } else {
+            "aus"
+        }
     );
     Ok(())
 }
@@ -213,22 +236,28 @@ fn apply_background_map_with_scale(
     state.background_image = Some(image_arc);
 }
 
-fn load_layer_image(kind: BackgroundLayerKind, path: &Path) -> Result<StoredBackgroundLayer> {
-    let image = image::open(path)
-        .with_context(|| format!("Layer-Bild konnte nicht geladen werden: {}", path.display()))?;
-    Ok(StoredBackgroundLayer {
-        kind,
-        path: path.to_path_buf(),
-        image: Arc::new(image),
-    })
+fn load_layer_image(kind: BackgroundLayerKind, path: &Path) -> Result<RgbaImage> {
+    let image = image::open(path).with_context(|| {
+        format!(
+            "Layer-Bild fuer {} konnte nicht geladen werden: {}",
+            kind,
+            path.display()
+        )
+    })?;
+    Ok(image.to_rgba8())
 }
 
-fn validate_dimensions(layer: &StoredBackgroundLayer, expected: (u32, u32)) -> Result<()> {
-    let actual = layer.image.dimensions();
+fn validate_dimensions(
+    kind: BackgroundLayerKind,
+    path: &Path,
+    actual: (u32, u32),
+    expected: (u32, u32),
+) -> Result<()> {
     if actual != expected {
         bail!(
-            "Layer {} hat abweichende Dimensionen: erwartet {}x{}, erhalten {}x{}",
-            layer.path.display(),
+            "Layer {} ({}) hat abweichende Dimensionen: erwartet {}x{}, erhalten {}x{}",
+            kind,
+            path.display(),
             expected.0,
             expected.1,
             actual.0,
@@ -238,15 +267,43 @@ fn validate_dimensions(layer: &StoredBackgroundLayer, expected: (u32, u32)) -> R
     Ok(())
 }
 
-fn catalog_layer_image(
+fn catalog_layer(
     catalog: &BackgroundLayerCatalog,
     kind: BackgroundLayerKind,
-) -> Option<&DynamicImage> {
-    catalog
-        .layers
-        .iter()
-        .find(|layer| layer.kind == kind)
-        .map(|layer| layer.image.as_ref())
+) -> Option<&StoredBackgroundLayer> {
+    catalog.layers.iter().find(|layer| layer.kind == kind)
+}
+
+fn blend_image(base: &mut RgbaImage, overlay: &RgbaImage) {
+    debug_assert_eq!(base.dimensions(), overlay.dimensions());
+
+    for (dst_pixel, src_pixel) in base.pixels_mut().zip(overlay.pixels()) {
+        *dst_pixel = blend_pixel(*dst_pixel, *src_pixel);
+    }
+}
+
+fn blend_pixel(dst: Rgba<u8>, src: Rgba<u8>) -> Rgba<u8> {
+    let src_alpha = src[3] as f32 / 255.0;
+    if src_alpha <= f32::EPSILON {
+        return dst;
+    }
+
+    let dst_alpha = dst[3] as f32 / 255.0;
+    let out_alpha = src_alpha + dst_alpha * (1.0 - src_alpha);
+    if out_alpha <= f32::EPSILON {
+        return Rgba([0, 0, 0, 0]);
+    }
+
+    let mut out = [0u8; 4];
+    for channel in 0..3 {
+        let src_value = src[channel] as f32 / 255.0;
+        let dst_value = dst[channel] as f32 / 255.0;
+        let out_value =
+            (src_value * src_alpha + dst_value * dst_alpha * (1.0 - src_alpha)) / out_alpha;
+        out[channel] = (out_value * 255.0).round().clamp(0.0, 255.0) as u8;
+    }
+    out[3] = (out_alpha * 255.0).round().clamp(0.0, 255.0) as u8;
+    Rgba(out)
 }
 
 fn layer_visibility(visible: &OverviewLayerOptions, layer: BackgroundLayerKind) -> bool {
@@ -355,6 +412,10 @@ mod tests {
             .expect("Katalog muss fuer Terrain + Hillshade ladbar sein");
 
         assert_eq!(catalog.layers.len(), 2);
+        assert_eq!(catalog.layers[0].kind, BackgroundLayerKind::Terrain);
+        assert!(catalog.layers[0].path.ends_with("overview_terrain.png"));
+        assert_eq!(catalog.layers[1].kind, BackgroundLayerKind::Hillshade);
+        assert!(catalog.layers[1].path.ends_with("overview_hillshade.png"));
         assert!(catalog.visible.terrain);
         assert!(catalog.visible.hillshade);
         assert!(!catalog.visible.farmlands);
@@ -427,6 +488,7 @@ mod tests {
             .as_ref()
             .expect("Layer-Katalog muss im State erhalten bleiben");
         assert!(!catalog.visible.hillshade);
+        assert_eq!(catalog.layers.len(), 2);
         assert_eq!(state.view.background_scale, 1.75);
         assert_eq!(state.view.background_asset_revision, 1);
 
@@ -434,6 +496,68 @@ mod tests {
             .background_image
             .as_ref()
             .expect("Komponiertes Bild muss im State liegen")
+            .to_rgba8()
+            .get_pixel(0, 0)
+            .0;
+        assert_eq!(pixel, [20, 40, 60, 255]);
+    }
+
+    #[test]
+    fn set_background_layer_visibility_keeps_state_on_recompose_error() {
+        let temp_dir = TempDirGuard::new("background_layers_toggle_error");
+        let terrain = RgbaImage::from_pixel(2, 2, Rgba([20, 40, 60, 255]));
+        let hillshade = RgbaImage::from_pixel(3, 3, Rgba([220, 0, 0, 128]));
+        write_png(&temp_dir.path().join("overview_terrain.png"), &terrain);
+        write_png(&temp_dir.path().join("overview_hillshade.png"), &hillshade);
+
+        let files = discover_background_layer_files(temp_dir.path());
+        let visible = OverviewLayerOptions {
+            terrain: true,
+            hillshade: false,
+            farmlands: false,
+            farmland_ids: false,
+            pois: false,
+            legend: false,
+        };
+        let catalog = load_background_layer_catalog(files, &visible)
+            .expect("Katalog muss fuer Fehlerpfad-Test ladbar sein");
+        let composed =
+            compose_background_from_catalog(&catalog).expect("Ausgangsbild muss komponierbar sein");
+        let background = BackgroundMap::from_image(composed, "toggle-error-test", None)
+            .expect("Background-Map muss aus Ausgangsbild erzeugbar sein");
+
+        let mut state = AppState::new();
+        state.view.background_map = Some(Arc::new(background));
+        state.background_image = state
+            .view
+            .background_map
+            .as_ref()
+            .map(|background| background.image_arc());
+        state.view.background_scale = 1.75;
+        state.background_layers = Some(catalog);
+
+        let error =
+            set_background_layer_visibility(&mut state, BackgroundLayerKind::Hillshade, true)
+                .expect_err("Dimensionsfehler beim Re-Komponieren muss durchgereicht werden");
+
+        assert!(
+            error.to_string().contains("abweichende Dimensionen"),
+            "Fehler muss den Dimensionskonflikt benennen: {error:#}"
+        );
+
+        let catalog = state
+            .background_layers
+            .as_ref()
+            .expect("Layer-Katalog muss im State erhalten bleiben");
+        assert!(!catalog.visible.hillshade);
+        assert_eq!(catalog.layers.len(), 2);
+        assert_eq!(state.view.background_scale, 1.75);
+        assert_eq!(state.view.background_asset_revision, 0);
+
+        let pixel = state
+            .background_image
+            .as_ref()
+            .expect("Ausgangsbild muss im State erhalten bleiben")
             .to_rgba8()
             .get_pixel(0, 0)
             .0;
