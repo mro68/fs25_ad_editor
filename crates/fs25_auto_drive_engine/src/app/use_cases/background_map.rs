@@ -297,6 +297,8 @@ pub fn load_background_from_zip(
 /// Liest ZIP-Pfad, Layer-Optionen und die gewaehlte Feldpolygon-Quelle aus dem
 /// `OverviewOptionsDialogState`, persistiert die Layer-Einstellungen in den
 /// `EditorOptions` und generiert die Karte mit `fs25_map_overview`.
+/// Die einzelnen Layer-PNGs werden sofort persistiert; im State bleiben danach
+/// nur das Preview-Bild, der Layer-Katalog und ein Pending-Marker aktiv.
 pub fn generate_overview_with_options(state: &mut AppState) -> Result<()> {
     let zip_path = state.ui.overview_options_dialog.zip_path.clone();
     let layers = state.ui.overview_options_dialog.layers.clone();
@@ -403,15 +405,32 @@ pub fn generate_overview_with_options(state: &mut AppState) -> Result<()> {
             .unwrap_or_else(|| Path::new("."))
             .to_path_buf()
     });
+
+    std::fs::create_dir_all(&target_dir).with_context(|| {
+        format!(
+            "Overview-Verzeichnis konnte nicht erstellt werden: {}",
+            target_dir.display()
+        )
+    })?;
+    write_layer_pngs_to_directory(&bundle, &target_dir)?;
+
     let bg_map = BackgroundMap::from_image(
         DynamicImage::ImageRgba8(bundle.combined.clone()),
         &zip_path,
         None,
     )?;
+    drop(bundle);
+
+    let files = super::background_layers::discover_background_layer_files(&target_dir);
+    let catalog = super::background_layers::load_background_layer_catalog(files, &layers)?;
+
     apply_background_map(state, bg_map);
-    state.background_layers = None;
-    state.pending_overview_bundle = Some(PendingOverviewBundle { target_dir, bundle });
-    log::info!("Overview-Layer-Bundle als Pending-Save im State gehalten");
+    state.background_layers = Some(catalog);
+    log::info!(
+        "Layer-PNGs gespeichert und Katalog aktiviert: {}",
+        target_dir.display()
+    );
+    state.pending_overview_bundle = Some(PendingOverviewBundle { target_dir });
 
     // Dialog schliessen
     state.ui.overview_options_dialog.visible = false;
@@ -446,42 +465,21 @@ fn prompt_save_as_overview(state: &mut AppState) {
 }
 
 /// Speichert die aktuelle Background-Map als overview.png (verlustfreies PNG).
+///
+/// Bei einem Pending-Marker sind die kanonischen Layer-Dateien bereits geschrieben.
+/// Der Save-Schritt aktualisiert dann nur noch `overview.png` und `overview.json`.
 pub fn save_background_as_overview(state: &mut AppState, path: String) -> Result<()> {
-    if state.pending_overview_bundle.is_some() {
-        let target_dir = {
-            let pending = state
-                .pending_overview_bundle
-                .as_ref()
-                .expect("Pending-Bundle muss vorhanden sein");
-            let target_dir = Path::new(&path)
-                .parent()
-                .map(|dir| dir.to_path_buf())
-                .unwrap_or_else(|| pending.target_dir.clone());
-            std::fs::create_dir_all(&target_dir).with_context(|| {
-                format!(
-                    "Overview-Verzeichnis konnte nicht erstellt werden: {}",
-                    target_dir.display()
-                )
-            })?;
-            write_pending_overview_bundle(pending, &path, &target_dir)?;
-            target_dir
-        };
-
-        save_farmland_json(state, &path);
-
-        let files = super::background_layers::discover_background_layer_files(&target_dir);
-        let catalog = super::background_layers::load_background_layer_catalog(
-            files,
-            &state.options.overview_layers,
-        )?;
-        state.background_layers = Some(catalog);
-        state.pending_overview_bundle = None;
-
-        log::info!(
-            "Overview-Layer-Bundle gespeichert und als Katalog geladen: {}",
-            target_dir.display()
-        );
-        return Ok(());
+    if let Some(pending) = state.pending_overview_bundle.as_ref() {
+        let target_dir = Path::new(&path)
+            .parent()
+            .map(|dir| dir.to_path_buf())
+            .unwrap_or_else(|| pending.target_dir.clone());
+        std::fs::create_dir_all(&target_dir).with_context(|| {
+            format!(
+                "Overview-Verzeichnis konnte nicht erstellt werden: {}",
+                target_dir.display()
+            )
+        })?;
     }
 
     let bg_map = state
@@ -498,27 +496,31 @@ pub fn save_background_as_overview(state: &mut AppState, path: String) -> Result
     // Farmland-Polygone als JSON parallel zur Bilddatei speichern
     save_farmland_json(state, &path);
 
+    if state.pending_overview_bundle.is_some() {
+        state.pending_overview_bundle = None;
+        log::info!(
+            "Pending-Overview bestaetigt; Layer-Katalog bleibt aktiv: {}",
+            path
+        );
+    }
+
     Ok(())
 }
 
-fn write_pending_overview_bundle(
-    pending: &PendingOverviewBundle,
-    combined_path: &str,
+fn write_layer_pngs_to_directory(
+    bundle: &fs25_map_overview::OverviewLayerBundle,
     target_dir: &Path,
 ) -> Result<()> {
     for (kind, image) in [
-        (BackgroundLayerKind::Terrain, &pending.bundle.terrain),
-        (BackgroundLayerKind::Hillshade, &pending.bundle.hillshade),
+        (BackgroundLayerKind::Terrain, &bundle.terrain),
+        (BackgroundLayerKind::Hillshade, &bundle.hillshade),
         (
             BackgroundLayerKind::FarmlandBorders,
-            &pending.bundle.farmland_borders,
+            &bundle.farmland_borders,
         ),
-        (
-            BackgroundLayerKind::FarmlandIds,
-            &pending.bundle.farmland_ids,
-        ),
-        (BackgroundLayerKind::PoiMarkers, &pending.bundle.poi_markers),
-        (BackgroundLayerKind::Legend, &pending.bundle.legend),
+        (BackgroundLayerKind::FarmlandIds, &bundle.farmland_ids),
+        (BackgroundLayerKind::PoiMarkers, &bundle.poi_markers),
+        (BackgroundLayerKind::Legend, &bundle.legend),
     ] {
         let layer_path = target_dir.join(kind.file_name());
         image.save(&layer_path).with_context(|| {
@@ -528,17 +530,6 @@ fn write_pending_overview_bundle(
             )
         })?;
     }
-
-    pending
-        .bundle
-        .combined
-        .save(combined_path)
-        .with_context(|| {
-            format!(
-                "Kombinierte Overview-Datei konnte nicht gespeichert werden: {}",
-                combined_path
-            )
-        })?;
 
     Ok(())
 }
@@ -594,8 +585,9 @@ pub fn load_farmland_json(state: &mut AppState, image_path: &str) {
 #[cfg(test)]
 mod tests {
     use super::{
-        browse_zip_background, clear_background_map, load_background_from_zip, load_background_map,
-        persist_overview_defaults, save_background_as_overview,
+        browse_zip_background, clear_background_map, generate_overview_with_options,
+        load_background_from_zip, load_background_map, persist_overview_defaults,
+        save_background_as_overview, write_layer_pngs_to_directory,
     };
     use crate::app::state::{
         BackgroundLayerCatalog, BackgroundLayerFiles, PendingOverviewBundle, StoredBackgroundLayer,
@@ -603,7 +595,7 @@ mod tests {
     };
     use crate::app::AppState;
     use crate::core::{BackgroundMap, FieldPolygon};
-    use crate::shared::{BackgroundLayerKind, OverviewLayerOptions};
+    use crate::shared::{BackgroundLayerKind, OverviewFieldDetectionSource, OverviewLayerOptions};
     use glam::Vec2;
     use image::{DynamicImage, GenericImageView, ImageFormat, Rgba, RgbaImage};
     use std::io::{Cursor, Write};
@@ -880,6 +872,10 @@ mod tests {
             .as_ref()
             .expect("Layer-Katalog muss erkannt werden");
         assert_eq!(catalog.layers.len(), 2);
+        assert_eq!(catalog.layers[0].kind, BackgroundLayerKind::Terrain);
+        assert!(catalog.layers[0].path.ends_with("overview_terrain.png"));
+        assert_eq!(catalog.layers[1].kind, BackgroundLayerKind::Hillshade);
+        assert!(catalog.layers[1].path.ends_with("overview_hillshade.png"));
         assert!(catalog.visible.terrain);
         assert!(!catalog.visible.hillshade);
         assert_eq!(
@@ -922,12 +918,14 @@ mod tests {
     }
 
     #[test]
-    fn save_background_as_overview_persists_pending_bundle_and_loads_catalog() {
+    fn save_background_as_overview_persists_pending_preview_and_keeps_catalog() {
         let temp_dir = TempDirGuard::new("overview_bundle_save");
         let target_path = temp_dir.path().join("overview.png");
         let target_path_string = target_path.to_string_lossy().into_owned();
 
         let bundle = sample_overview_bundle();
+        write_layer_pngs_to_directory(&bundle, temp_dir.path())
+            .expect("Layer-PNGs fuer Save-Test muessen geschrieben werden");
         let background = BackgroundMap::from_image(
             DynamicImage::ImageRgba8(bundle.combined.clone()),
             "test-bundle",
@@ -950,17 +948,24 @@ mod tests {
             pois: false,
             legend: false,
         };
+        let files =
+            super::super::background_layers::discover_background_layer_files(temp_dir.path());
+        let catalog = super::super::background_layers::load_background_layer_catalog(
+            files,
+            &state.options.overview_layers,
+        )
+        .expect("Layer-Katalog muss vor Save aktivierbar sein");
+        state.background_layers = Some(catalog);
         state.farmland_polygons = Some(Arc::new(vec![FieldPolygon {
             id: 7,
             vertices: vec![Vec2::new(1.0, 2.0), Vec2::new(3.0, 4.0)],
         }]));
         state.pending_overview_bundle = Some(PendingOverviewBundle {
             target_dir: temp_dir.path().to_path_buf(),
-            bundle,
         });
 
         save_background_as_overview(&mut state, target_path_string)
-            .expect("Pending-Overview-Bundle muss speicherbar sein");
+            .expect("Pending-Overview muss speicherbar sein");
 
         assert!(target_path.is_file());
         assert!(temp_dir.path().join("overview.json").is_file());
@@ -983,24 +988,125 @@ mod tests {
         let catalog = state
             .background_layers
             .as_ref()
-            .expect("Gespeicherter Katalog muss geladen werden");
+            .expect("Aktiver Katalog muss erhalten bleiben");
         assert_eq!(catalog.layers.len(), 6);
         assert!(catalog.visible.terrain);
         assert!(catalog.visible.hillshade);
         assert!(catalog.visible.farmlands);
         assert!(!catalog.visible.farmland_ids);
+        assert!(catalog.layers.iter().all(|layer| layer.path.is_file()));
+        assert_eq!(state.view.background_scale, 1.0);
+    }
 
-        let terrain = catalog
-            .layers
-            .iter()
-            .find(|layer| layer.kind == BackgroundLayerKind::Terrain)
-            .expect("Terrain-Layer muss im Katalog enthalten sein");
-        assert_eq!(terrain.image.dimensions(), (2, 2));
+    #[test]
+    fn generate_overview_with_options_keeps_preview_and_pending_marker_before_save() {
+        let temp_dir = TempDirGuard::new("overview_generate_preview_only");
+        let zip_path = temp_dir.path().join("test_map.zip");
+        let zip_path_string = zip_path.to_string_lossy().into_owned();
+        let xml_path = temp_dir.path().join("AutoDrive_config.xml");
+        let xml_path_string = xml_path.to_string_lossy().into_owned();
+
+        std::fs::write(&xml_path, b"<xml/>").expect("Test-XML muss geschrieben werden");
+        write_zip(
+            &zip_path,
+            vec![
+                (
+                    "TestMap/modDesc.xml",
+                    br#"<?xml version="1.0" encoding="utf-8"?>
+<modDesc>
+  <title><en>Test Map</en></title>
+  <map configFilename="maps/config/map.xml" />
+</modDesc>"#
+                        .to_vec(),
+                ),
+                (
+                    "TestMap/maps/config/map.xml",
+                    br#"<?xml version="1.0" encoding="utf-8"?>
+<map width="32" height="32" />"#
+                        .to_vec(),
+                ),
+                (
+                    "TestMap/maps/data/dem.png",
+                    rgba_png_bytes(1, 1, [0, 0, 0, 255]),
+                ),
+                ("TestMap/maps/data/infoLayer_farmlands.png", {
+                    let image = image::DynamicImage::ImageLuma8(
+                        image::GrayImage::from_vec(2, 2, vec![0, 1, 1, 0])
+                            .expect("GrayImage fuer Test-ZIP muss erzeugbar sein"),
+                    );
+                    let mut cursor = Cursor::new(Vec::new());
+                    image
+                        .write_to(&mut cursor, ImageFormat::Png)
+                        .expect("Farmland-PNG muss erzeugt werden");
+                    cursor.into_inner()
+                }),
+            ],
+        );
+
+        let mut state = AppState::new();
+        state.ui.current_file_path = Some(xml_path_string.clone());
+        state.ui.overview_options_dialog.visible = true;
+        state.ui.overview_options_dialog.zip_path = zip_path_string;
+        state.ui.overview_options_dialog.layers = OverviewLayerOptions {
+            terrain: true,
+            hillshade: true,
+            farmlands: false,
+            farmland_ids: false,
+            pois: false,
+            legend: false,
+        };
+        state.ui.overview_options_dialog.field_detection_source =
+            OverviewFieldDetectionSource::FromZip;
+
+        generate_overview_with_options(&mut state)
+            .expect("Overview-Generierung muss ein Preview-Bild erzeugen");
+
+        let background = state
+            .view
+            .background_map
+            .as_ref()
+            .expect("Preview-Background muss gesetzt sein");
+        assert_eq!(background.dimensions(), (32, 32));
+        let catalog = state
+            .background_layers
+            .as_ref()
+            .expect("Layer-Katalog muss direkt nach der Generierung aktiv sein");
+        assert_eq!(catalog.layers.len(), 6);
+        assert!(catalog.visible.terrain);
+        assert!(catalog.visible.hillshade);
+        assert!(!catalog.visible.farmlands);
+        assert!(!catalog.visible.farmland_ids);
+        assert!(!catalog.visible.pois);
+        assert!(!catalog.visible.legend);
+        for file_name in [
+            "overview_terrain.png",
+            "overview_hillshade.png",
+            "overview_farmland_borders.png",
+            "overview_farmland_ids.png",
+            "overview_poi_markers.png",
+            "overview_legend.png",
+        ] {
+            assert!(
+                temp_dir.path().join(file_name).is_file(),
+                "{} muss direkt nach der Generierung existieren",
+                file_name
+            );
+        }
+        let pending = state
+            .pending_overview_bundle
+            .as_ref()
+            .expect("Pending-Marker muss bis zum Save erhalten bleiben");
+        assert_eq!(pending.target_dir, temp_dir.path().to_path_buf());
+        assert!(state.ui.save_overview_dialog.visible);
+        assert_eq!(
+            state.ui.save_overview_dialog.target_path,
+            temp_dir.path().join("overview.png").to_string_lossy()
+        );
+        assert!(!state.ui.overview_options_dialog.visible);
     }
 
     #[test]
     fn clear_background_map_resets_layer_catalog_and_pending_bundle() {
-        let bundle = sample_overview_bundle();
         let mut state = AppState::new();
         state.background_layers = Some(BackgroundLayerCatalog {
             files: BackgroundLayerFiles {
@@ -1015,17 +1121,11 @@ mod tests {
             layers: vec![StoredBackgroundLayer {
                 kind: BackgroundLayerKind::Terrain,
                 path: PathBuf::from("/tmp/overview/overview_terrain.png"),
-                image: Arc::new(DynamicImage::ImageRgba8(RgbaImage::from_pixel(
-                    1,
-                    1,
-                    Rgba([0, 0, 0, 255]),
-                ))),
             }],
             visible: OverviewLayerOptions::default(),
         });
         state.pending_overview_bundle = Some(PendingOverviewBundle {
             target_dir: PathBuf::from("/tmp/overview"),
-            bundle,
         });
 
         clear_background_map(&mut state);
