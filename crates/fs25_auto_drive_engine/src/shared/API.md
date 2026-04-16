@@ -386,7 +386,7 @@ pub enum Language {
 
 ### `I18nKey`
 
-Enum aller übersetzbaren UI-Schlüssel. Gruppen: Allgemein, Dialog-Chrome, Options-Dialog (Abschnitte, Felder, Tooltips), Menüleiste, Status-Bar, Tool-Namen, Sidebar, Zoom, Hintergrund, Route-Gruppen, Floating-Menus, Kontextmenüs, Command-Palette, LongPress-Tooltips.
+Enum aller übersetzbaren UI-Schlüssel. Gruppen: Allgemein, Dialog-Chrome, Options-Dialog (Abschnitte, Felder, Tooltips, dedizierte Hintergrundkarten-Defaults und Polygon-Quelle), Menüleiste inklusive Hintergrund-Layer-Untermenue, Status-Bar, Tool-Namen, Sidebar, Zoom, Hintergrund, Route-Gruppen, Floating-Menus, Kontextmenüs, Command-Palette, LongPress-Tooltips.
 
 ```rust
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
@@ -396,9 +396,9 @@ pub enum I18nKey {
     // Dialog-Chrome
     DialogClose, DialogDefaults,
     // Options-Dialog: Navigation & Felder
-    OptSectionGeneral, OptSectionNodes, OptSectionTools, OptSectionConnections, OptSectionBehavior,
-    // ... (Opt* — ~95 Keys, vollständig in keys.rs)
-    // Menüleiste (MenuXxx — 29 Keys)
+    OptSectionGeneral, OptSectionNodes, OptSectionTools, OptSectionConnections, OptSectionBehavior, OptSectionOverview,
+    // ... (Opt* — inkl. Hintergrundkarten-Defaults und Polygon-Quelle, vollständig in keys.rs)
+    // Menüleiste (MenuXxx — inkl. Background-Layer-Untermenue)
     // Status-Bar (StatusXxx — 13 Keys)
     // Tool-Namen (ToolNameXxx — 4 Keys)
     // === NEU (Branch feature/zoom-shortcuts-i18n, 79 neue Keys) ===

@@ -2,7 +2,9 @@
 
 use crate::app::state::OverviewOptionsDialogState;
 use crate::app::AppIntent;
-use crate::shared::OverviewFieldDetectionSource;
+use crate::ui::common::{
+    ordered_available_overview_field_detection_sources, overview_field_detection_source_label,
+};
 
 /// Zeigt den Uebersichtskarten-Options-Dialog und gibt erzeugte Events zurueck.
 pub fn show_overview_options_dialog(
@@ -47,16 +49,14 @@ pub fn show_overview_options_dialog(
             ui.label("Feldpolygone – Quelle:");
             ui.add_space(4.0);
 
-            let available = dialog_state.available_sources.clone();
-            for source in &available {
-                let label = match source {
-                    OverviewFieldDetectionSource::FromZip => "infoLayer_farmlands (Map-ZIP)",
-                    OverviewFieldDetectionSource::ZipGroundGdm => "densityMap_ground (Map-ZIP)",
-                    OverviewFieldDetectionSource::FieldTypeGrle => "infoLayer_fieldType (Savegame)",
-                    OverviewFieldDetectionSource::GroundGdm => "densityMap_ground (Savegame)",
-                    OverviewFieldDetectionSource::FruitsGdm => "densityMap_fruits (Savegame)",
-                };
-                ui.radio_value(&mut dialog_state.field_detection_source, *source, label);
+            let available =
+                ordered_available_overview_field_detection_sources(&dialog_state.available_sources);
+            for source in available {
+                ui.radio_value(
+                    &mut dialog_state.field_detection_source,
+                    source,
+                    overview_field_detection_source_label(source),
+                );
             }
 
             ui.separator();
