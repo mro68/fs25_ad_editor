@@ -269,7 +269,13 @@
   - [x] RenderFrame-Seam (`HostBridgeSession::build_render_frame`) unveraendert beibehalten
   - [x] egui-Onscreen-Host explizit unveraendert gelassen (direkter `RenderPass`-Pfad)
   - [x] Additiver Texture-Registration-v4-Vertrag neben v3 eingefroren (2026-04-06): gemeinsame Capability-Negotiation + Frame-Metadaten + Lifecycle, plattformspezifische Payload-Familien fuer Windows/Linux/Android, explizites Capability-Gating ohne Pixelbuffer-Fallback
-  - [ ] Folge-Slice: Produktive v4-Backend-Landung fuer Windows/Linux/Android plus zusaetzliche native Host-Pfade im Consumer-Host (Flutter/C++); aktuell hart blockiert durch den normalen `wgpu::Device::create_texture`-Pfad ohne Export-/External-Memory-Felder und durch fehlenden nativen Host-Import/Surface-Code fuer DXGI, DMA-BUF und Android-Surface-Ziele
+  - [🟡] Folge-Slice: Produktive v4-Landung in Host-Bridge-FFI und Consumer-Host (Flutter/C++)
+    - [x] Android AHardwareBuffer ExportLease im Render-Core (`VulkanAhbTexture` in `external_texture/vulkan_android.rs`) und Low-Level-GPU-FFI (`fs25ad_gpu_runtime_export_android_hardware_buffer`) produktiv (2026-04-14)
+    - [x] `PlatformTextureDescriptor::AndroidHardwareBuffer` und `AndroidHardwareBufferDescriptor` im v4-Vertrag
+    - [x] Feature-Flag `flutter-android` aktiviert `ash`, `ndk`, `ndk-sys` und den AHB-Exportpfad
+    - [ ] Nativer Consumer-Importpfad fuer AHardwareBuffer im Flutter-/C++-Host
+    - [ ] Windows: `wgpu 29` hat keine Export-/Shared-Handle-Felder; DXGI-/D3D11-Registration nicht moeglich
+    - [ ] Linux: v4-Host-Bridge-Pfad noch nicht an den bestehenden DMA-BUF-Exportstack verdrahtet
 - [x] Flutter-Bridge als transitional alias surface eingefroren (2026-04-05)
   - [x] Keine neue Logik mehr in `fs25_auto_drive_frontend_flutter_bridge`; Erweiterungen nur in `fs25_auto_drive_host_bridge`
   - [x] Kompat-Aliase (`Engine*`, `FlutterBridgeSession`) direkt in `fs25_auto_drive_host_bridge` etabliert
@@ -318,7 +324,7 @@
   - [x] Wiederverwendbarer Overview-Source-Dialog fuer Post-Load-Auto-Detection und Datei-Menue mit manueller ZIP-Auswahl
   - [x] Konfigurierbare Layer-Optionen (Hillshade, Farmlands, IDs, POIs, Legende)
   - [x] Persistent gespeicherte Standard-Layer in EditorOptions
-  - [x] Auto-Detection: Heightmap und Map-Mod-ZIP nach XML-Laden (Umlaut-tolerantes Fuzzy-Matching)
+  - [x] Auto-Detection: Heightmap und Map-Mod-ZIP nach XML-Laden aus XML-Verzeichnis oder Mods-Ordner (Umlaut-tolerantes Fuzzy-Matching)
   - [x] overview.jpg: Auto-Load beim XML-Oeffnen, Speichern-Dialog nach ZIP-Extraktion/Generierung
   - [x] Zoom-abhaengige Background-Samplerumschaltung (2026-03-31) — bei starkem Reinzoomen pixelgenaues `Nearest`-Sampling fuer Debugging/ColorPath, sonst lineares Sampling
   - [x] **Alle Felder nachzeichnen (2026-03-06):** `AppIntent::TraceAllFieldsRequested` → `AppCommand::TraceAllFields` → `use_cases::editing::trace_all_fields()` — Batch-Nachzeichnen aller geladenen Farmland-Polygone in einem einzigen Undo-Schritt; Menueä `📍 Alle Felder nachzeichnen` in Extras (aktiviert wenn Farmland-Polygone geladen)

@@ -42,8 +42,22 @@ pub enum TextureRegistrationPayloadFamily {
     WindowsDescriptor,
     /// Linux-DMA-BUF-Descriptorfamilie.
     LinuxDmabuf,
+    /// Android-AHardwareBuffer-Descriptorfamilie im ExportLease-Modell.
+    AndroidHardwareBuffer,
     /// Android-Surface-Attachment-Familie.
     AndroidSurfaceAttachment,
+}
+
+impl TextureRegistrationPayloadFamily {
+    /// Liefert den stabilen numerischen ABI-Wert der Payload-Familie.
+    pub const fn as_u32(self) -> u32 {
+        match self {
+            Self::WindowsDescriptor => 1,
+            Self::LinuxDmabuf => 2,
+            Self::AndroidSurfaceAttachment => 3,
+            Self::AndroidHardwareBuffer => 4,
+        }
+    }
 }
 
 /// Verfuegbarkeitsstatus eines Plattformpfads.

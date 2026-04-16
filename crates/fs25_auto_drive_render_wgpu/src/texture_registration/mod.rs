@@ -10,7 +10,9 @@ mod linux;
 mod types;
 mod windows;
 
-pub use android::{AndroidAttachmentKind, AndroidSurfaceDescriptor};
+pub use android::{
+    AndroidAttachmentKind, AndroidHardwareBufferDescriptor, AndroidSurfaceDescriptor,
+};
 pub use linux::{LinuxDmabufDescriptor, LinuxDmabufPlane, MAX_LINUX_DMABUF_PLANES};
 pub use types::{
     TextureRegistrationAlphaMode, TextureRegistrationAvailability, TextureRegistrationCapabilities,
@@ -42,8 +44,8 @@ pub fn query_texture_registration_v4_capabilities() -> TextureRegistrationCapabi
 mod tests {
     use super::{
         query_texture_registration_v4_capabilities, AndroidAttachmentKind,
-        AndroidSurfaceDescriptor, LinuxDmabufDescriptor, LinuxDmabufPlane,
-        TextureRegistrationAvailability, TextureRegistrationLifecycle,
+        AndroidHardwareBufferDescriptor, AndroidSurfaceDescriptor, LinuxDmabufDescriptor,
+        LinuxDmabufPlane, TextureRegistrationAvailability, TextureRegistrationLifecycle,
         TextureRegistrationLifecycleError, TextureRegistrationLifecycleState,
         TextureRegistrationModel, TextureRegistrationPayloadFamily, TextureRegistrationPixelFormat,
         TextureRegistrationPlatform, WindowsDescriptor, WindowsDescriptorKind,
@@ -79,10 +81,10 @@ mod tests {
         );
 
         let android = capabilities.platform(TextureRegistrationPlatform::Android);
-        assert_eq!(android.model, TextureRegistrationModel::HostAttachedSurface);
+        assert_eq!(android.model, TextureRegistrationModel::ExportLease);
         assert_eq!(
             android.payload_family,
-            TextureRegistrationPayloadFamily::AndroidSurfaceAttachment
+            TextureRegistrationPayloadFamily::AndroidHardwareBuffer
         );
     }
 
@@ -112,10 +114,27 @@ mod tests {
             .platform(TextureRegistrationPlatform::Android)
             .availability;
         if cfg!(target_os = "android") {
-            assert_eq!(android, TextureRegistrationAvailability::NotYetImplemented);
+            assert_eq!(android, TextureRegistrationAvailability::Supported);
         } else {
             assert_eq!(android, TextureRegistrationAvailability::Unsupported);
         }
+    }
+
+    #[test]
+    fn v4_payload_family_numeric_values_keep_android_legacy_and_ahb_distinct() {
+        assert_eq!(
+            TextureRegistrationPayloadFamily::WindowsDescriptor.as_u32(),
+            1
+        );
+        assert_eq!(TextureRegistrationPayloadFamily::LinuxDmabuf.as_u32(), 2);
+        assert_eq!(
+            TextureRegistrationPayloadFamily::AndroidSurfaceAttachment.as_u32(),
+            3
+        );
+        assert_eq!(
+            TextureRegistrationPayloadFamily::AndroidHardwareBuffer.as_u32(),
+            4
+        );
     }
 
     #[test]
@@ -242,5 +261,10 @@ mod tests {
         );
         assert_eq!(android.native_window_ptr, 0x11);
         assert_eq!(android.surface_handle_ptr, 0x22);
+
+        let ahb = AndroidHardwareBufferDescriptor {
+            hardware_buffer_ptr: 0x33,
+        };
+        assert_eq!(ahb.hardware_buffer_ptr, 0x33);
     }
 }

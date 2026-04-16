@@ -1,5 +1,11 @@
 //! Host-neutraler wgpu-Renderer-Kern fuer den FS25 AutoDrive Editor.
 
+#[cfg(all(feature = "flutter-android", not(target_os = "android")))]
+compile_error!("Feature 'flutter-android' erfordert target_os = \"android\"");
+
+#[cfg(all(feature = "flutter-linux", not(target_os = "linux")))]
+compile_error!("Feature 'flutter-linux' erfordert target_os = \"linux\"");
+
 mod background_renderer;
 mod connection_renderer;
 mod export_core;
@@ -20,29 +26,35 @@ pub use shared_texture::{
     SharedTexturePixelFormat, SharedTextureRuntime,
 };
 pub use texture_registration::{
-    query_texture_registration_v4_capabilities, AndroidAttachmentKind, AndroidSurfaceDescriptor,
-    LinuxDmabufDescriptor, LinuxDmabufPlane, TextureRegistrationAlphaMode,
-    TextureRegistrationAvailability, TextureRegistrationCapabilities,
-    TextureRegistrationFrameMetadata, TextureRegistrationLifecycle,
-    TextureRegistrationLifecycleError, TextureRegistrationLifecycleState, TextureRegistrationModel,
-    TextureRegistrationPayloadFamily, TextureRegistrationPixelFormat, TextureRegistrationPlatform,
+    query_texture_registration_v4_capabilities, AndroidAttachmentKind,
+    AndroidHardwareBufferDescriptor, AndroidSurfaceDescriptor, LinuxDmabufDescriptor,
+    LinuxDmabufPlane, TextureRegistrationAlphaMode, TextureRegistrationAvailability,
+    TextureRegistrationCapabilities, TextureRegistrationFrameMetadata,
+    TextureRegistrationLifecycle, TextureRegistrationLifecycleError,
+    TextureRegistrationLifecycleState, TextureRegistrationModel, TextureRegistrationPayloadFamily,
+    TextureRegistrationPixelFormat, TextureRegistrationPlatform,
     TextureRegistrationPlatformCapabilities, WindowsDescriptor, WindowsDescriptorKind,
     MAX_LINUX_DMABUF_PLANES, TEXTURE_REGISTRATION_V4_CONTRACT_VERSION,
 };
 
 pub(crate) use background_renderer::BackgroundRenderer;
 pub(crate) use connection_renderer::ConnectionRenderer;
+#[cfg(all(feature = "flutter-android", target_os = "android"))]
+pub use external_texture::vulkan_android::VulkanAhbTexture;
 pub use external_texture::{
     ExternalTextureError, ExternalTextureExport, PlatformTextureDescriptor,
 };
 use fs25_auto_drive_engine::shared::EditorOptions;
 pub(crate) use marker_renderer::MarkerRenderer;
 
-/// Erzeugt eine wgpu-Instanz mit explizitem Vulkan-Backend fuer die Flutter-Linux-Integration.
+/// Erzeugt eine wgpu-Instanz mit explizitem Vulkan-Backend fuer die Flutter-Vulkan-Integration.
 ///
 /// Diese Funktion ist die bevorzugte Einstiegsfunktion fuer den Flutter-GPU-Export-Stack.
 /// Die regulaere egui-Integration erstellt ihre eigene Instanz separat und ist nicht betroffen.
-#[cfg(all(feature = "flutter-linux", target_os = "linux"))]
+#[cfg(any(
+    all(feature = "flutter-linux", target_os = "linux"),
+    all(feature = "flutter-android", target_os = "android")
+))]
 pub fn create_vulkan_instance() -> wgpu::Instance {
     wgpu::Instance::new(wgpu::InstanceDescriptor {
         backends: wgpu::Backends::VULKAN,

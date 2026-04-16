@@ -13,6 +13,9 @@ Thumbs.db
 # Testdaten (zu gross fuer GitHub)
 ad_sample_data/*.dds
 
+# Lokale Cargo-Config (maschinenspezifische NDK-Pfade)
+.cargo/
+
 # IDE
 *.swp
 *.swo
