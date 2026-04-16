@@ -86,13 +86,15 @@ pub struct AppState {
     /// Gecachtes Hintergrundbild fuer farbbasierte Tool-Analysen.
     /// `None` solange kein Overview geladen wurde.
     pub background_image: Option<Arc<image::DynamicImage>>,
-    /// Geladener Dateikatalog der gespeicherten Overview-Layer-PNGs.
+    /// Geladener Dateikatalog eines bereits gespeicherten Overview-Layer-Bundles.
     ///
-    /// `None` solange kein gespeichertes Layer-Bundle entdeckt oder gespeichert wurde.
+    /// Haelt nur Metadaten, Dateipfade und Runtime-Sichtbarkeit.
+    /// `None` solange kein persistiertes Layer-Bundle entdeckt oder gespeichert wurde.
     pub background_layers: Option<BackgroundLayerCatalog>,
-    /// Noch nicht persistiertes Overview-Layer-Bundle aus der ZIP-Generierung.
+    /// Marker fuer eine noch nicht als `overview.png` bestaetigte ZIP-Generierung.
     ///
-    /// Wird beim bestaetigten Speichern als einzelne PNGs plus `overview.json` ausgeschrieben.
+    /// Die einzelnen Layer-PNGs liegen bereits im Zielverzeichnis auf Platte.
+    /// Beim Speichern werden nur noch `overview.png` und `overview.json` geschrieben.
     pub pending_overview_bundle: Option<PendingOverviewBundle>,
     /// Zuletzt geladener oder erfolgreich gespeicherter Dokumentschluessel.
     ///

@@ -1,17 +1,13 @@
 use crate::shared::{BackgroundLayerKind, OverviewLayerOptions};
-use image::DynamicImage;
 use std::path::PathBuf;
-use std::sync::Arc;
 
-/// Ein gespeicherter Hintergrund-Layer mit Pfad und dekodierten Bilddaten.
+/// Ein gespeicherter Hintergrund-Layer als Metadaten-Eintrag.
 #[derive(Clone)]
 pub struct StoredBackgroundLayer {
     /// Stabile Layer-Kennung fuer Runtime-Logik und Menues.
     pub kind: BackgroundLayerKind,
     /// Dateipfad des gespeicherten PNG-Layers.
     pub path: PathBuf,
-    /// Bereits dekodierte Bilddaten fuer spaetere CPU-Komposition.
-    pub image: Arc<DynamicImage>,
 }
 
 /// Bekannte Layer-Dateipfade im XML-Verzeichnis.
@@ -33,21 +29,23 @@ pub struct BackgroundLayerFiles {
     pub legend: Option<PathBuf>,
 }
 
-/// Runtime-Katalog der geladenen Layer-Bilder mit aktueller Sichtbarkeit.
+/// Runtime-Katalog eines gespeicherten Layer-Bundles mit aktueller Sichtbarkeit.
 #[derive(Clone)]
 pub struct BackgroundLayerCatalog {
     /// Bekannte Dateipfade des gespeicherten Layer-Bundles.
     pub files: BackgroundLayerFiles,
-    /// Dekodierte Bilddaten aller vorhandenen Layer in kanonischer Reihenfolge.
+    /// Metadaten aller vorhandenen Layer in kanonischer Reihenfolge.
+    ///
+    /// Die PNG-Dateien werden bei Bedarf sequenziell von Platte geladen.
     pub layers: Vec<StoredBackgroundLayer>,
-    /// Aktuelle Runtime-Sichtbarkeit fuer die CPU-Komposition.
+    /// Aktuelle Runtime-Sichtbarkeit fuer die On-Demand-CPU-Komposition.
     pub visible: OverviewLayerOptions,
 }
 
-/// Noch nicht persistiertes Overview-Layer-Bundle fuer den naechsten Save-Schritt.
+/// Marker fuer eine noch nicht als `overview.png` gespeicherte Generierung.
+///
+/// Die einzelnen Layer-PNGs liegen bereits im Zielverzeichnis auf Platte.
 pub struct PendingOverviewBundle {
     /// Zielverzeichnis fuer den naechsten Save-Workflow.
     pub target_dir: PathBuf,
-    /// Vollstaendiges Layer-Bundle inklusive Combined-Bild und Metadaten.
-    pub bundle: fs25_map_overview::OverviewLayerBundle,
 }
