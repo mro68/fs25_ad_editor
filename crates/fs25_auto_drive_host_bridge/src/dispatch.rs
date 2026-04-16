@@ -43,10 +43,9 @@ mod tests {
     use crate::dto::{
         HostActiveTool, HostBackgroundLayerKind, HostDefaultConnectionDirection,
         HostDefaultConnectionPriority, HostDialogRequestKind, HostDialogResult,
-        HostRouteToolAction, HostRouteToolDisabledReason, HostRouteToolGroup,
-        HostRouteToolIconKey, HostRouteToolId, HostRouteToolSurface, HostSessionAction,
-        HostTangentSource, HostViewportConnectionDirection, HostViewportConnectionPriority,
-        HostViewportNodeKind,
+        HostRouteToolAction, HostRouteToolDisabledReason, HostRouteToolGroup, HostRouteToolIconKey,
+        HostRouteToolId, HostRouteToolSurface, HostSessionAction, HostTangentSource,
+        HostViewportConnectionDirection, HostViewportConnectionPriority, HostViewportNodeKind,
     };
 
     use super::{
@@ -1107,8 +1106,8 @@ mod tests {
             timestamp
         ));
         fs::create_dir_all(&temp_dir).expect("Temp-Verzeichnis fuer Layer-Test muss existieren");
-        let sample_png = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
-            .join("../../ad_sample_data/parking_plot.png");
+        let sample_png =
+            PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../ad_sample_data/parking_plot.png");
         fs::copy(&sample_png, temp_dir.join("overview_terrain.png"))
             .expect("Terrain-PNG muss aus Testdaten kopierbar sein");
         fs::copy(&sample_png, temp_dir.join("overview_hillshade.png"))

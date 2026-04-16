@@ -2,9 +2,12 @@
 //!
 //! Prueft nach dem Laden einer AutoDrive-Config, ob:
 //! 1. Eine `terrain.heightmap.png` im selben Verzeichnis liegt → direkt als Heightmap setzen
-//! 2. Im XML-Verzeichnis oder im Mods-Verzeichnis ein passendes ZIP zum `map_name` existiert
+//! 2. Ein gespeichertes Overview-Layer-Bundle im XML-Verzeichnis liegt → spaeter bevorzugt laden
+//! 3. Im XML-Verzeichnis oder im Mods-Verzeichnis ein passendes ZIP zum `map_name` existiert
 //!    → Dialog anzeigen
 
+use crate::app::use_cases::background_layers::discover_background_layer_files;
+use crate::app::BackgroundLayerFiles;
 use regex::Regex;
 use std::path::{Path, PathBuf};
 
@@ -13,6 +16,8 @@ use std::path::{Path, PathBuf};
 pub struct PostLoadDetectionResult {
     /// Pfad zur gefundenen Heightmap (falls vorhanden)
     pub heightmap_path: Option<PathBuf>,
+    /// Gefundene gespeicherte Layer-Dateien mit Terrain-Basis im XML-Verzeichnis.
+    pub background_layer_files: Option<BackgroundLayerFiles>,
     /// Pfad zu einer gefundenen overview.png im XML-Verzeichnis
     pub overview_path: Option<PathBuf>,
     /// Passende ZIP-Dateien aus XML-Verzeichnis und Mods-Verzeichnis
@@ -21,11 +26,14 @@ pub struct PostLoadDetectionResult {
 
 /// Fuehrt die komplette Auto-Detection durch.
 ///
-/// Sucht nach `terrain.heightmap.png` im XML-Verzeichnis und nach passenden
+/// Sucht nach `terrain.heightmap.png`, nach einem gespeicherten Overview-Layer-Bundle
+/// (Terrain-Basis plus optionale Overlays) im XML-Verzeichnis und nach passenden
 /// Map-Mod-ZIPs zuerst im XML-Verzeichnis und zusaetzlich im Mods-Verzeichnis
-/// (basierend auf `map_name`).
+/// (basierend auf `map_name`). Ohne `overview_terrain.png` bleibt das Layer-System
+/// fuer diesen Load inaktiv und der Legacy-Fallback ueber `overview.png`/`.jpg` aktiv.
 pub fn detect_post_load(xml_path: &Path, map_name: Option<&str>) -> PostLoadDetectionResult {
     let heightmap_path = find_heightmap_next_to(xml_path);
+    let background_layer_files = xml_path.parent().and_then(detect_background_layer_files);
     let overview_path = find_overview_next_to(xml_path);
     let matching_zips = map_name
         .filter(|name| !name.is_empty())
@@ -45,9 +53,15 @@ pub fn detect_post_load(xml_path: &Path, map_name: Option<&str>) -> PostLoadDete
 
     PostLoadDetectionResult {
         heightmap_path,
+        background_layer_files,
         overview_path,
         matching_zips,
     }
+}
+
+fn detect_background_layer_files(dir: &Path) -> Option<BackgroundLayerFiles> {
+    let files = discover_background_layer_files(dir);
+    files.terrain.is_some().then_some(files)
 }
 
 fn extend_unique_paths(results: &mut Vec<PathBuf>, candidates: Vec<PathBuf>) {
