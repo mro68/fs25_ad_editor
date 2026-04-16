@@ -1887,14 +1887,13 @@ mod tests {
                 .field_detection_source,
             OverviewFieldDetectionSource::GroundGdm
         );
-        assert_eq!(
+        assert!(
             session
                 .app_state()
                 .ui
                 .overview_options_dialog
                 .layers
-                .terrain,
-            true
+                .terrain
         );
 
         let error = session
