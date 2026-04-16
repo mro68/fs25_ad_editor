@@ -54,8 +54,8 @@ use fs25_auto_drive_host_bridge::dto::{host_ui_snapshot_json, viewport_overlay_s
 use fs25_auto_drive_host_bridge::{
     HostBridgeSession, HostChromeSnapshot, HostConnectionPairSnapshot, HostContextMenuSnapshot,
     HostDialogRequest, HostDialogResult, HostDialogSnapshot, HostEditingSnapshot,
-    HostOverviewOptionsDialogSnapshot, HostRouteToolViewportSnapshot, HostSessionAction,
-    HostSessionSnapshot, HostUiSnapshot, HostViewportGeometrySnapshot, ViewportOverlaySnapshot,
+    HostRouteToolViewportSnapshot, HostSessionAction, HostSessionSnapshot, HostUiSnapshot,
+    HostViewportGeometrySnapshot, ViewportOverlaySnapshot,
 };
 use std::cell::RefCell;
 use std::ffi::{c_char, CStr, CString};
@@ -1339,6 +1339,8 @@ mod tests {
         let chrome_snapshot: fs25_auto_drive_host_bridge::HostChromeSnapshot =
             serde_json::from_str(&chrome_json).expect("flutter chrome JSON must parse");
         assert!(chrome_snapshot.show_command_palette);
+        assert!(!chrome_snapshot.background_layers_available);
+        assert!(chrome_snapshot.background_layer_entries.is_empty());
 
         flutter_session_dispose(session);
     }
@@ -1484,6 +1486,8 @@ mod tests {
             serde_json::from_str(&chrome_snapshot_json).expect("chrome snapshot JSON must parse");
         assert!(chrome_snapshot.show_command_palette);
         assert_eq!(chrome_snapshot.status_message, None);
+        assert!(!chrome_snapshot.background_layers_available);
+        assert!(chrome_snapshot.background_layer_entries.is_empty());
 
         let route_tool_viewport_json =
             read_and_free_string(session_route_tool_viewport_json(session));

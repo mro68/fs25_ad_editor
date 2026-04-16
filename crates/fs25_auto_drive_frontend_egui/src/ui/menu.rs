@@ -5,6 +5,7 @@ use crate::app::tools::{route_tool_group_label_key, route_tool_label_key, RouteT
 use crate::app::AppIntent;
 use crate::shared::{t, I18nKey};
 use crate::ui::common::{
+    host_background_layer_label_key, host_background_layer_to_engine,
     host_route_tool_disabled_reason_key, host_route_tool_entries_for, host_route_tool_to_engine,
 };
 use fs25_auto_drive_engine::shared::RenderQuality;
@@ -247,6 +248,28 @@ pub(crate) fn render_menu_inside(
                 if ui.button(background_label).clicked() {
                     events.push(AppIntent::BackgroundMapSelectionRequested);
                     ui.close();
+                }
+
+                if host_chrome_snapshot.background_layers_available {
+                    ui.separator();
+
+                    ui.menu_button(t(lang, I18nKey::MenuBackgroundLayers), |ui| {
+                        for entry in &host_chrome_snapshot.background_layer_entries {
+                            let mut visible = entry.visible;
+                            if ui
+                                .checkbox(
+                                    &mut visible,
+                                    t(lang, host_background_layer_label_key(entry.kind)),
+                                )
+                                .changed()
+                            {
+                                events.push(AppIntent::SetBackgroundLayerVisibility {
+                                    layer: host_background_layer_to_engine(entry.kind),
+                                    visible,
+                                });
+                            }
+                        }
+                    });
                 }
 
                 ui.separator();

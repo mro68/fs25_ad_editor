@@ -73,7 +73,10 @@ pub enum SelectionStyle {
 /// Konfigurierbare Layer-Optionen fuer die Uebersichtskarten-Generierung.
 /// Wird als Teil der `EditorOptions` persistent gespeichert.
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[serde(default)]
 pub struct OverviewLayerOptions {
+    /// Terrain-Basisbild einbeziehen
+    pub terrain: bool,
     /// Hillshade-Schattierung anwenden
     pub hillshade: bool,
     /// Farmland-Grenzen einzeichnen
@@ -89,9 +92,10 @@ pub struct OverviewLayerOptions {
 impl Default for OverviewLayerOptions {
     fn default() -> Self {
         Self {
+            terrain: true,
             hillshade: true,
             farmlands: true,
-            farmland_ids: false,
+            farmland_ids: true,
             pois: false,
             legend: false,
         }

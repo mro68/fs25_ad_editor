@@ -6,7 +6,8 @@
 
 1. **Datei oeffnen** mit **`Ctrl+O`**.
 2. Im Dialog **Nach dem Laden erkannt** pruefen, ob Heightmap und Hintergrundbild automatisch gesetzt wurden.
-3. Wenn ein passender Map-Mod-ZIP angeboten wird, **Uebersichtskarte generieren** waehlen. Falls kein Treffer passt, im selben Dialog **ZIP-Datei auswaehlen** verwenden, dann Layer einstellen und die erzeugte Karte bei Bedarf als `overview.png` speichern.
+3. Wenn ein passender Map-Mod-ZIP angeboten wird, **Uebersichtskarte generieren** waehlen. Falls kein Treffer passt, im selben Dialog **ZIP-Datei auswaehlen** verwenden, dann Layer einstellen und die erzeugte Karte speichern, sobald die Layer-Auswahl verfuegbar sein soll.
+4. Nach dem Speichern als `overview.png` ist das Layer-Menue sofort verfuegbar. Beim naechsten Oeffnen stellt der Editor dasselbe gespeicherte Layer-Bundle bevorzugt mit Ihren Default-Layern wieder her. Ohne `overview_terrain.png` bleibt automatisch nur der Legacy-Fallback ueber `overview.png` oder `overview.jpg` aktiv.
 4. Falls noetig zusaetzlich eine Hintergrundkarte ueber **Ansicht -> Hintergrund laden...** laden.
 5. Im linken Panel Richtung und Strassenart fuer neue Verbindungen voreinstellen.
 
@@ -68,7 +69,7 @@
 4. Fuer eine Mittellinie zwischen zwei Feldseiten **Feldweg erkennen** waehlen.
 5. Die Vorschau pruefen und mit **`Enter`** uebernehmen.
 
-> **Tipp:** Wenn Sie eine neu generierte Uebersichtskarte spaeter wiederverwenden wollen, bestaetigen Sie danach den Dialog zum Speichern als `overview.png`. **Feld erkennen** erzeugt spaeter wieder oeffenbare Tool-Gruppen. **Feldweg erkennen** erzeugt ein normales Ergebnis ohne spaeteren Tool-Edit.
+> **Tipp:** Wenn Sie eine neu generierte Uebersichtskarte spaeter wiederverwenden wollen, bestaetigen Sie danach den Dialog zum Speichern als `overview.png`. Der Editor speichert dann auch die einzelnen Layer-Dateien und `overview.json`, sodass das Layer-Menue sofort und auch beim naechsten XML-Load wieder verfuegbar ist. **Feld erkennen** erzeugt spaeter wieder oeffenbare Tool-Gruppen. **Feldweg erkennen** erzeugt ein normales Ergebnis ohne spaeteren Tool-Edit.
 
 ---
 

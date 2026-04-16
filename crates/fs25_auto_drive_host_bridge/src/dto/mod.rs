@@ -19,7 +19,7 @@ mod viewport;
 // ─────────────────────────────── Re-Exports ──────────────────────────────────
 
 pub use actions::{HostActiveTool, HostRouteToolAction, HostSessionAction, HostTangentSource};
-pub use chrome::HostChromeSnapshot;
+pub use chrome::{HostBackgroundLayerEntry, HostBackgroundLayerKind, HostChromeSnapshot};
 pub use connection_pair::{HostConnectionPairEntry, HostConnectionPairSnapshot};
 pub use context_menu::{HostContextMenuAction, HostContextMenuSnapshot, HostContextMenuVariant};
 pub use dialogs::{
@@ -181,6 +181,10 @@ pub type EngineTangentMenuSnapshot = HostTangentMenuSnapshot;
 /// Kompatibilitaetsalias fuer bestehende Flutter-/FFI-Call-Sites.
 pub type EngineRouteToolViewportSnapshot = HostRouteToolViewportSnapshot;
 /// Kompatibilitaetsalias fuer bestehende Flutter-/FFI-Call-Sites.
+pub type EngineBackgroundLayerKind = HostBackgroundLayerKind;
+/// Kompatibilitaetsalias fuer bestehende Flutter-/FFI-Call-Sites.
+pub type EngineBackgroundLayerEntry = HostBackgroundLayerEntry;
+/// Kompatibilitaetsalias fuer bestehende Flutter-/FFI-Call-Sites.
 pub type EngineChromeSnapshot = HostChromeSnapshot;
 
 #[cfg(test)]
@@ -194,7 +198,8 @@ mod tests {
         EngineInputModifiers, EnginePointerButton, EngineRouteToolAction,
         EngineRouteToolViewportSnapshot, EngineSessionAction, EngineSessionSnapshot,
         EngineTangentSource, EngineTapKind, EngineViewportGeometrySnapshot,
-        EngineViewportInputBatch, EngineViewportInputEvent, HostActiveTool, HostChromeSnapshot,
+        EngineViewportInputBatch, EngineViewportInputEvent, HostActiveTool,
+        HostBackgroundLayerEntry, HostBackgroundLayerKind, HostChromeSnapshot,
         HostDefaultConnectionDirection, HostDefaultConnectionPriority, HostDialogResult,
         HostInputModifiers, HostPointerButton, HostRouteToolAction, HostRouteToolDisabledReason,
         HostRouteToolEntrySnapshot, HostRouteToolGroup, HostRouteToolIconKey, HostRouteToolId,
@@ -226,6 +231,35 @@ mod tests {
             parsed,
             HostSessionAction::SetEditorTool {
                 tool: HostActiveTool::Route,
+            }
+        );
+    }
+
+    #[test]
+    fn engine_session_action_alias_roundtrips_background_layer_visibility() {
+        let action = EngineSessionAction::SetBackgroundLayerVisibility {
+            layer: HostBackgroundLayerKind::Legend,
+            visible: false,
+        };
+
+        let payload = serde_json::to_value(&action)
+            .expect("Background-Layer-Action muss als Host-JSON serialisierbar sein");
+        assert_eq!(
+            payload,
+            json!({
+                "kind": "set_background_layer_visibility",
+                "layer": "legend",
+                "visible": false
+            })
+        );
+
+        let parsed: HostSessionAction = serde_json::from_value(payload)
+            .expect("Alias-JSON muss in den kanonischen Host-Typ zuruecklesbar sein");
+        assert_eq!(
+            parsed,
+            HostSessionAction::SetBackgroundLayerVisibility {
+                layer: HostBackgroundLayerKind::Legend,
+                visible: false,
             }
         );
     }
@@ -442,6 +476,17 @@ mod tests {
             has_farmland: false,
             background_visible: true,
             background_scale: 1.0,
+            background_layers_available: true,
+            background_layer_entries: vec![
+                HostBackgroundLayerEntry {
+                    kind: HostBackgroundLayerKind::Terrain,
+                    visible: true,
+                },
+                HostBackgroundLayerEntry {
+                    kind: HostBackgroundLayerKind::Legend,
+                    visible: false,
+                },
+            ],
         };
 
         let payload = serde_json::to_value(&host_snapshot)
@@ -495,6 +540,17 @@ mod tests {
             .and_then(|options| options.as_object())
             .expect("Optionen muessen als JSON-Objekt serialisiert werden");
         assert_eq!(options.get("language"), Some(&json!("De")));
+        assert_eq!(
+            payload_obj.get("background_layers_available"),
+            Some(&json!(true))
+        );
+        assert_eq!(
+            payload_obj.get("background_layer_entries"),
+            Some(&json!([
+                { "kind": "terrain", "visible": true },
+                { "kind": "legend", "visible": false }
+            ]))
+        );
 
         let alias_snapshot: EngineChromeSnapshot = serde_json::from_value(payload.clone())
             .expect("EngineChromeSnapshot-Alias muss kanonisches Host-JSON lesen koennen");
@@ -502,7 +558,9 @@ mod tests {
             .expect("HostChromeSnapshot muss das gleiche JSON lesen koennen");
 
         assert_eq!(alias_snapshot.route_tool_entries.len(), 2);
+        assert_eq!(alias_snapshot.background_layer_entries.len(), 2);
         assert_eq!(canonical_snapshot.route_tool_entries.len(), 2);
+        assert!(canonical_snapshot.background_layers_available);
         assert!(alias_snapshot.show_command_palette);
         assert_eq!(
             canonical_snapshot.default_direction,

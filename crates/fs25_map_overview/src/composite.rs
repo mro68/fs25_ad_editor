@@ -37,6 +37,8 @@ pub struct FarmlandData {
 /// Optionen fuer die Overview-Generierung.
 #[derive(Debug, Clone, PartialEq)]
 pub struct OverviewOptions {
+    /// Terrain-Basisbild im kombinierten Ergebnis behalten
+    pub terrain: bool,
     /// Hillshade anwenden
     pub hillshade: bool,
     /// Farmland-Grenzen einzeichnen
@@ -52,6 +54,7 @@ pub struct OverviewOptions {
 impl Default for OverviewOptions {
     fn default() -> Self {
         Self {
+            terrain: true,
             hillshade: true,
             farmlands: true,
             farmland_ids: true,

@@ -2,6 +2,8 @@
 
 /// Automatische Erkennung von Heightmap, Overview-Bild und Map-Mod-ZIP nach Laden.
 pub mod auto_detect;
+/// Use-Case-Funktionen fuer gespeicherte Overview-Layer und CPU-Komposition.
+pub mod background_layers;
 /// Use-Cases fuer Background-Map (Laden, Sichtbarkeit, Skalierung, ZIP).
 pub mod background_map;
 /// Use-Case-Funktionen fuer Kamera-Steuerung (Pan, Zoom, Zentrieren).

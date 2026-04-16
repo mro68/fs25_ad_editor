@@ -3,6 +3,8 @@
 //! Enthaelt Typen, die zwischen `app` und `render` geteilt werden,
 //! um direkte Abhaengigkeiten zu vermeiden.
 
+/// Host-neutrale Layer- und Feldquellen-Typen fuer Overview-Hintergruende.
+pub mod background_layers;
 /// Dialog-State-Typen ohne Core/App-Abhaengigkeiten.
 pub mod dialog_state;
 /// Schwebender Kontext-Menue-Zustand (UI-Chrome).
@@ -21,6 +23,7 @@ pub mod spline_geometry;
 /// Gemeinsame Route-Tool-Gruppenklassifikation.
 mod tool_group;
 
+pub use background_layers::{BackgroundLayerKind, OverviewFieldDetectionSource};
 pub use dialog_state::{
     DedupDialogState, DistanzenState, GroupSettingsPopupState, MarkerDialogState,
     OverviewOptionsDialogState, OverviewSourceContext, PostLoadDialogState,

@@ -48,10 +48,11 @@ pub use group_registry::{BoundaryDirection, BoundaryInfo, GroupRecord, GroupRegi
 pub use render_assets::build as build_render_assets;
 pub use render_scene::build as build_render_scene;
 pub use state::{
-    AppState, Clipboard, DedupDialogState, EditorTool, EditorToolState, EngineUiState,
-    FloatingMenuKind, FloatingMenuState, GroupEditState, GroupSettingsPopupState,
-    MarkerDialogState, OverviewOptionsDialogState, OverviewSourceContext, PostLoadDialogState,
-    SaveOverviewDialogState, SelectionState, TraceAllFieldsDialogState, ViewState, ZipBrowserState,
+    AppState, BackgroundLayerCatalog, BackgroundLayerFiles, Clipboard, DedupDialogState,
+    EditorTool, EditorToolState, EngineUiState, FloatingMenuKind, FloatingMenuState,
+    GroupEditState, GroupSettingsPopupState, MarkerDialogState, OverviewOptionsDialogState,
+    OverviewSourceContext, PendingOverviewBundle, PostLoadDialogState, SaveOverviewDialogState,
+    SelectionState, StoredBackgroundLayer, TraceAllFieldsDialogState, ViewState, ZipBrowserState,
 };
 pub use tool_editing::ToolEditStore;
 pub use tools::field_boundary::compute_ring;

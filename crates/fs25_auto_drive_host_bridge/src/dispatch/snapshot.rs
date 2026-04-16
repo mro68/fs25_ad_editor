@@ -3,18 +3,21 @@
 use fs25_auto_drive_engine::app::projections;
 use fs25_auto_drive_engine::app::ui_contract::{RouteToolViewportData, ViewportOverlaySnapshot};
 use fs25_auto_drive_engine::app::AppState;
-use fs25_auto_drive_engine::shared::{RenderAssetsSnapshot, RenderScene};
+use fs25_auto_drive_engine::shared::{
+    BackgroundLayerKind, OverviewLayerOptions, RenderAssetsSnapshot, RenderScene,
+};
 use glam::Vec2;
 
 use crate::dto::{
-    HostChromeSnapshot, HostRouteToolViewportSnapshot, HostViewportConnectionSnapshot,
-    HostViewportGeometrySnapshot, HostViewportMarkerSnapshot, HostViewportNodeSnapshot,
+    HostBackgroundLayerEntry, HostChromeSnapshot, HostRouteToolViewportSnapshot,
+    HostViewportConnectionSnapshot, HostViewportGeometrySnapshot, HostViewportMarkerSnapshot,
+    HostViewportNodeSnapshot,
 };
 use crate::session::HostRenderFrameSnapshot;
 
 use super::mappings::{
     build_route_tool_entries_snapshot, build_route_tool_selection_snapshot,
-    map_connection_direction, map_connection_priority, map_editor_tool,
+    map_background_layer_kind, map_connection_direction, map_connection_priority, map_editor_tool,
     map_render_connection_direction, map_render_connection_priority, map_render_node_kind,
     map_route_tool_id, map_tangent_menu_data,
 };
@@ -113,6 +116,32 @@ fn map_route_tool_viewport_data(data: RouteToolViewportData) -> HostRouteToolVie
     }
 }
 
+fn background_layer_visible(visible: &OverviewLayerOptions, kind: BackgroundLayerKind) -> bool {
+    match kind {
+        BackgroundLayerKind::Terrain => visible.terrain,
+        BackgroundLayerKind::Hillshade => visible.hillshade,
+        BackgroundLayerKind::FarmlandBorders => visible.farmlands,
+        BackgroundLayerKind::FarmlandIds => visible.farmland_ids,
+        BackgroundLayerKind::PoiMarkers => visible.pois,
+        BackgroundLayerKind::Legend => visible.legend,
+    }
+}
+
+fn build_background_layer_entries(state: &AppState) -> Vec<HostBackgroundLayerEntry> {
+    let Some(catalog) = state.background_layers.as_ref() else {
+        return Vec::new();
+    };
+
+    BackgroundLayerKind::ALL
+        .into_iter()
+        .filter(|kind| catalog.layers.iter().any(|entry| entry.kind == *kind))
+        .map(|kind| HostBackgroundLayerEntry {
+            kind: map_background_layer_kind(kind),
+            visible: background_layer_visible(&catalog.visible, kind),
+        })
+        .collect()
+}
+
 /// Baut den host-neutralen Panel-Snapshot fuer Hosts mit lokalem State.
 pub fn build_host_ui_snapshot(
     state: &AppState,
@@ -136,6 +165,7 @@ pub fn build_host_chrome_snapshot(state: &AppState) -> HostChromeSnapshot {
         .unwrap_or((0, 0, 0, None));
     let selection_count = state.selection.selected_node_ids.len();
     let selection_example_id = state.selection.selected_node_ids.iter().next().copied();
+    let background_layer_entries = build_background_layer_entries(state);
     HostChromeSnapshot {
         status_message: state.ui.status_message.clone(),
         show_command_palette: false,
@@ -166,6 +196,8 @@ pub fn build_host_chrome_snapshot(state: &AppState) -> HostChromeSnapshot {
         has_farmland: state.has_farmland_polygons(),
         background_visible: state.view.background_visible,
         background_scale: state.view.background_scale,
+        background_layers_available: state.background_layers.is_some(),
+        background_layer_entries,
     }
 }
 

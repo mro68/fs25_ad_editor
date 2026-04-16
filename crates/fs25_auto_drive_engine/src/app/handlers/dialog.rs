@@ -3,8 +3,9 @@
 use crate::app::ui_contract::{DialogRequest, DialogRequestKind};
 use crate::app::use_cases;
 use crate::app::AppState;
-use crate::shared::{EditorOptions, OverviewSourceContext, PostLoadDialogState};
-use fs25_map_overview::FieldDetectionSource;
+use crate::shared::{
+    EditorOptions, OverviewFieldDetectionSource, OverviewSourceContext, PostLoadDialogState,
+};
 use std::path::{Path, PathBuf};
 
 /// Markiert die Anwendung zum Beenden im naechsten Frame.
@@ -117,6 +118,30 @@ fn build_overview_source_dialog_state(
     }
 }
 
+fn collect_available_overview_field_detection_sources(
+    current_file_path: Option<&str>,
+) -> Vec<OverviewFieldDetectionSource> {
+    let mut available = vec![
+        OverviewFieldDetectionSource::FromZip,
+        OverviewFieldDetectionSource::ZipGroundGdm,
+    ];
+
+    if let Some(savegame_dir) = current_file_path.and_then(|xml_path| Path::new(xml_path).parent())
+    {
+        if savegame_dir.join("infoLayer_fieldType.grle").is_file() {
+            available.push(OverviewFieldDetectionSource::FieldTypeGrle);
+        }
+        if savegame_dir.join("densityMap_ground.gdm").is_file() {
+            available.push(OverviewFieldDetectionSource::GroundGdm);
+        }
+        if savegame_dir.join("densityMap_fruits.gdm").is_file() {
+            available.push(OverviewFieldDetectionSource::FruitsGdm);
+        }
+    }
+
+    available
+}
+
 /// Oeffnet den wiederverwendbaren Overview-Source-Dialog fuer den Menue-Einstieg.
 pub fn open_overview_source_dialog(state: &mut AppState) {
     state.ui.post_load_dialog = build_overview_source_dialog_state(
@@ -157,31 +182,26 @@ pub fn request_overview_dialog(state: &mut AppState) {
 
 /// Oeffnet den Uebersichtskarten-Options-Dialog mit dem gewaehlten ZIP-Pfad.
 ///
-/// Prueft welche Savegame-Dateien im Elternordner der aktuell geladenen
-/// Config-Datei vorhanden sind und befuellt die verfuegbaren Quellen.
+/// Befuellt ZIP- und Savegame-basierte Feldquellen und lädt die persistierten
+/// Standardwerte aus den Editor-Optionen.
 pub fn open_overview_options_dialog(state: &mut AppState, zip_path: String) {
     state.ui.overview_options_dialog.visible = true;
     state.ui.overview_options_dialog.zip_path = zip_path;
     state.ui.overview_options_dialog.layers = state.options.overview_layers.clone();
+    state.ui.overview_options_dialog.field_detection_source =
+        state.options.overview_field_detection_source;
 
-    // Verfuegbare Quellen bestimmen
-    let mut available = vec![FieldDetectionSource::FromZip];
-    if let Some(xml_path) = state.ui.current_file_path.as_ref()
-        && let Some(savegame_dir) = Path::new(xml_path.as_str()).parent()
-    {
-        if savegame_dir.join("infoLayer_fieldType.grle").is_file() {
-            available.push(FieldDetectionSource::FieldTypeGrle);
-        }
-        if savegame_dir.join("densityMap_ground.gdm").is_file() {
-            available.push(FieldDetectionSource::GroundGdm);
-        }
-        if savegame_dir.join("densityMap_fruits.gdm").is_file() {
-            available.push(FieldDetectionSource::FruitsGdm);
-        }
-    }
-    // Aktuelle Auswahl auf verfuegbare Quelle korrigieren
+    let available =
+        collect_available_overview_field_detection_sources(state.ui.current_file_path.as_deref());
     if !available.contains(&state.ui.overview_options_dialog.field_detection_source) {
-        state.ui.overview_options_dialog.field_detection_source = FieldDetectionSource::FromZip;
+        state.ui.overview_options_dialog.field_detection_source =
+            OverviewFieldDetectionSource::default();
+    }
+    if !available.contains(&state.ui.overview_options_dialog.field_detection_source) {
+        state.ui.overview_options_dialog.field_detection_source = available
+            .first()
+            .copied()
+            .unwrap_or_else(OverviewFieldDetectionSource::default);
     }
     state.ui.overview_options_dialog.available_sources = available;
 }

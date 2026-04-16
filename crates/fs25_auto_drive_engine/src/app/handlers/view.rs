@@ -2,7 +2,7 @@
 
 use crate::app::use_cases;
 use crate::app::AppState;
-use crate::shared::RenderQuality;
+use crate::shared::{BackgroundLayerKind, RenderQuality};
 
 /// Setzt die Kamera auf den Standardzustand zurueck.
 pub fn reset_camera(state: &mut AppState) {
@@ -60,6 +60,15 @@ pub fn load_background_map(
 /// Schaltet die Sichtbarkeit der Background-Map um.
 pub fn toggle_background_visibility(state: &mut AppState) {
     use_cases::background_map::toggle_background_visibility(state);
+}
+
+/// Setzt die Sichtbarkeit eines gespeicherten Hintergrund-Layers und komponiert das Bild neu.
+pub fn set_background_layer_visibility(
+    state: &mut AppState,
+    layer: BackgroundLayerKind,
+    visible: bool,
+) -> anyhow::Result<()> {
+    use_cases::background_layers::set_background_layer_visibility(state, layer, visible)
 }
 
 /// Skaliert die Ausdehnung der Background-Map (relativ).

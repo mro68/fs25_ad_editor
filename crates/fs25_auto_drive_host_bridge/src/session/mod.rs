@@ -10,7 +10,10 @@ use fs25_auto_drive_engine::app::{
     EditorTool, FloatingMenuKind, FloatingMenuState, GroupEditState, GroupRecord, GroupRegistry,
     RoadMap, ToolEditStore,
 };
-use fs25_auto_drive_engine::shared::{EditorOptions, RenderAssetsSnapshot, RenderScene};
+use fs25_auto_drive_engine::shared::{
+    EditorOptions, OverviewFieldDetectionSource, OverviewLayerOptions, RenderAssetsSnapshot,
+    RenderScene,
+};
 use glam::Vec2;
 use indexmap::IndexSet;
 use std::collections::{BTreeSet, HashMap};
@@ -27,9 +30,10 @@ use crate::dto::{
     HostEditingOptionsSnapshot, HostEditingSnapshot, HostFieldDetectionSource,
     HostGroupBoundaryCandidateSnapshot, HostGroupEditSnapshot, HostMarkerInfo,
     HostMarkerListSnapshot, HostNodeDetails, HostNodeFlag, HostNodeMarkerInfo, HostNodeNeighbor,
-    HostOverviewLayersSnapshot, HostOverviewSourceContext, HostResampleEditSnapshot,
-    HostResampleMode, HostRouteToolId, HostRouteToolViewportSnapshot, HostSelectionSnapshot,
-    HostSessionAction, HostSessionSnapshot, HostViewportGeometrySnapshot, HostViewportSnapshot,
+    HostOverviewLayersSnapshot, HostOverviewOptionsDialogSnapshot, HostOverviewSourceContext,
+    HostResampleEditSnapshot, HostResampleMode, HostRouteToolId, HostRouteToolViewportSnapshot,
+    HostSelectionSnapshot, HostSessionAction, HostSessionSnapshot, HostViewportGeometrySnapshot,
+    HostViewportSnapshot,
 };
 
 const MAX_RESAMPLE_CHAIN_NODES: usize = 500;
@@ -55,6 +59,29 @@ fn map_connection_priority(priority: ConnectionPriority) -> HostDefaultConnectio
     match priority {
         ConnectionPriority::Regular => HostDefaultConnectionPriority::Regular,
         ConnectionPriority::SubPriority => HostDefaultConnectionPriority::SubPriority,
+    }
+}
+
+fn map_host_field_detection_source_to_engine(
+    source: HostFieldDetectionSource,
+) -> OverviewFieldDetectionSource {
+    match source {
+        HostFieldDetectionSource::FromZip => OverviewFieldDetectionSource::FromZip,
+        HostFieldDetectionSource::ZipGroundGdm => OverviewFieldDetectionSource::ZipGroundGdm,
+        HostFieldDetectionSource::FieldTypeGrle => OverviewFieldDetectionSource::FieldTypeGrle,
+        HostFieldDetectionSource::GroundGdm => OverviewFieldDetectionSource::GroundGdm,
+        HostFieldDetectionSource::FruitsGdm => OverviewFieldDetectionSource::FruitsGdm,
+    }
+}
+
+fn map_host_overview_layers_to_engine(layers: &HostOverviewLayersSnapshot) -> OverviewLayerOptions {
+    OverviewLayerOptions {
+        terrain: layers.terrain,
+        hillshade: layers.hillshade,
+        farmlands: layers.farmlands,
+        farmland_ids: layers.farmland_ids,
+        pois: layers.pois,
+        legend: layers.legend,
     }
 }
 
@@ -679,6 +706,29 @@ impl HostBridgeSession {
         }
     }
 
+    /// Aktualisiert den host-lokalen Draft des Overview-Options-Dialogs aus einem DTO-Snapshot.
+    ///
+    /// Serialisierbare Hosts spiegeln damit lokal editierte Dialogwerte in die
+    /// Session zurueck, bevor sie `OverviewOptionsConfirmed` ausloesen. Der
+    /// Engine-Dialogzustand bleibt bis zur Bestaetigung unveraendert.
+    pub fn update_overview_options_dialog(&mut self, snapshot: HostOverviewOptionsDialogSnapshot) {
+        self.chrome_state.overview_options_dialog.visible = snapshot.visible;
+        self.chrome_state.overview_options_dialog.zip_path = snapshot.zip_path;
+        self.chrome_state.overview_options_dialog.layers =
+            map_host_overview_layers_to_engine(&snapshot.layers);
+        self.chrome_state
+            .overview_options_dialog
+            .field_detection_source =
+            map_host_field_detection_source_to_engine(snapshot.field_detection_source);
+        self.chrome_state.overview_options_dialog.available_sources = snapshot
+            .available_sources
+            .into_iter()
+            .map(map_host_field_detection_source_to_engine)
+            .collect();
+        self.chrome_state.mark_dirty();
+        self.snapshot_dirty = true;
+    }
+
     /// Liefert den schmalen Viewport-Input-Zugriff fuer Host-Event-Sammler.
     ///
     /// Der Zugriff bleibt bewusst Snapshot-transparent, weil der lokale
@@ -1207,13 +1257,13 @@ mod tests {
         ZipBrowserState,
     };
     use fs25_auto_drive_engine::core::ZipImageEntry;
-    use fs25_auto_drive_engine::shared::OverviewLayerOptions;
-    use fs25_map_overview::FieldDetectionSource;
+    use fs25_auto_drive_engine::shared::{OverviewFieldDetectionSource, OverviewLayerOptions};
     use glam::Vec2;
     use std::sync::Arc;
 
     use crate::dto::{
-        HostFieldDetectionSource, HostOverviewSourceContext, HostResampleMode, HostRouteToolId,
+        HostFieldDetectionSource, HostOverviewLayersSnapshot, HostOverviewOptionsDialogSnapshot,
+        HostOverviewSourceContext, HostResampleMode, HostRouteToolId,
     };
 
     use crate::dto::{
@@ -1797,6 +1847,7 @@ mod tests {
         let mut session = HostBridgeSession::new();
         let zip_path = "/tmp/host_bridge_overview_sync.zip".to_string();
         let expected_layers = OverviewLayerOptions {
+            terrain: false,
             hillshade: false,
             farmlands: false,
             farmland_ids: true,
@@ -1810,10 +1861,40 @@ mod tests {
             })
             .expect("Overview-Dialog muss geoeffnet werden");
 
-        {
-            let dialog_state = session.dialog_ui_state_mut();
-            dialog_state.ui.overview_options_dialog.layers = expected_layers.clone();
-        }
+        session.update_overview_options_dialog(HostOverviewOptionsDialogSnapshot {
+            visible: true,
+            zip_path: zip_path.clone(),
+            layers: HostOverviewLayersSnapshot {
+                terrain: expected_layers.terrain,
+                hillshade: expected_layers.hillshade,
+                farmlands: expected_layers.farmlands,
+                farmland_ids: expected_layers.farmland_ids,
+                pois: expected_layers.pois,
+                legend: expected_layers.legend,
+            },
+            field_detection_source: HostFieldDetectionSource::GroundGdm,
+            available_sources: vec![
+                HostFieldDetectionSource::FromZip,
+                HostFieldDetectionSource::GroundGdm,
+            ],
+        });
+
+        assert!(session.chrome_state.chrome_dirty);
+        assert_eq!(
+            session
+                .chrome_state
+                .overview_options_dialog
+                .field_detection_source,
+            OverviewFieldDetectionSource::GroundGdm
+        );
+        assert!(
+            session
+                .app_state()
+                .ui
+                .overview_options_dialog
+                .layers
+                .terrain
+        );
 
         let error = session
             .apply_intent(AppIntent::OverviewOptionsConfirmed)
@@ -1827,6 +1908,18 @@ mod tests {
         assert_eq!(
             session.app_state().ui.overview_options_dialog.layers,
             expected_layers
+        );
+        assert_eq!(
+            session.app_state().options.overview_field_detection_source,
+            OverviewFieldDetectionSource::GroundGdm
+        );
+        assert_eq!(
+            session
+                .app_state()
+                .ui
+                .overview_options_dialog
+                .field_detection_source,
+            OverviewFieldDetectionSource::GroundGdm
         );
     }
 
@@ -1889,6 +1982,7 @@ mod tests {
             dialog_state.ui.overview_options_dialog.visible = true;
             dialog_state.ui.overview_options_dialog.zip_path = "/tmp/map.zip".to_string();
             dialog_state.ui.overview_options_dialog.layers = OverviewLayerOptions {
+                terrain: false,
                 hillshade: false,
                 farmlands: true,
                 farmland_ids: true,
@@ -1898,10 +1992,10 @@ mod tests {
             dialog_state
                 .ui
                 .overview_options_dialog
-                .field_detection_source = FieldDetectionSource::GroundGdm;
+                .field_detection_source = OverviewFieldDetectionSource::ZipGroundGdm;
             dialog_state.ui.overview_options_dialog.available_sources = vec![
-                FieldDetectionSource::FromZip,
-                FieldDetectionSource::GroundGdm,
+                OverviewFieldDetectionSource::FromZip,
+                OverviewFieldDetectionSource::ZipGroundGdm,
             ];
             dialog_state.ui.post_load_dialog.visible = true;
             dialog_state.ui.post_load_dialog.context = OverviewSourceContext::PostLoadDetected;
@@ -1955,9 +2049,10 @@ mod tests {
         assert!(snapshot.zip_browser.visible);
         assert_eq!(snapshot.zip_browser.entries.len(), 1);
         assert_eq!(snapshot.zip_browser.entries[0].name, "overview.png");
+        assert!(!snapshot.overview_options_dialog.layers.terrain);
         assert_eq!(
             snapshot.overview_options_dialog.field_detection_source,
-            HostFieldDetectionSource::GroundGdm
+            HostFieldDetectionSource::ZipGroundGdm
         );
         assert_eq!(
             snapshot.post_load_dialog.context,

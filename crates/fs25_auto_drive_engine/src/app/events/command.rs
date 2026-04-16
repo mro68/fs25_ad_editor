@@ -9,6 +9,7 @@ mod tests {
     use super::AppCommand;
     use crate::app::events::AppEventFeature;
     use crate::app::ui_contract::{ParkingPanelAction, RouteToolPanelAction};
+    use crate::shared::BackgroundLayerKind;
 
     #[test]
     fn classifies_dialog_group_and_editing_commands() {
@@ -27,6 +28,14 @@ mod tests {
     fn classifies_view_and_route_tool_commands() {
         assert_eq!(
             AppCommand::GenerateOverviewWithOptions.feature(),
+            AppEventFeature::View
+        );
+        assert_eq!(
+            AppCommand::SetBackgroundLayerVisibility {
+                layer: BackgroundLayerKind::Legend,
+                visible: false,
+            }
+            .feature(),
             AppEventFeature::View
         );
         assert_eq!(
