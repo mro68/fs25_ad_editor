@@ -1,6 +1,7 @@
 //! Application State — zentrale Datenhaltung.
 
 mod app_state;
+mod background_layers;
 mod dialogs;
 mod editor;
 mod selection;
@@ -12,6 +13,9 @@ pub use crate::shared::{
     SaveOverviewDialogState, TraceAllFieldsDialogState,
 };
 pub use app_state::{AppState, Clipboard, GroupEditState};
+pub use background_layers::{
+    BackgroundLayerCatalog, BackgroundLayerFiles, PendingOverviewBundle, StoredBackgroundLayer,
+};
 pub use dialogs::{EngineUiState, ZipBrowserState};
 pub use editor::{EditorTool, EditorToolState};
 pub use selection::SelectionState;

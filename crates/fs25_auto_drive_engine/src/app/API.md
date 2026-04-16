@@ -147,6 +147,10 @@ pub struct AppState {
     /// Hinweis: Das kanonische Asset lebt in `view.background_map`; dieses Feld
     /// dient als kompatibler Fallback fuer bestehende Tool-Pfade.
     pub background_image: Option<Arc<image::DynamicImage>>,
+    /// Geladener Dateikatalog der gespeicherten Overview-Layer-PNGs.
+    pub background_layers: Option<BackgroundLayerCatalog>,
+    /// Noch nicht persistiertes Overview-Layer-Bundle aus der ZIP-Generierung.
+    pub pending_overview_bundle: Option<PendingOverviewBundle>,
     /// Aktiver Gruppen-Edit-Modus (None = Normal-Modus, Some = nicht-destruktives Editing aktiv).
     pub group_editing: Option<GroupEditState>,
     /// Separater Store fuer tool-spezifische Edit-Payloads gruppenbasierter Route-Tools.
@@ -176,6 +180,33 @@ pub struct Clipboard {
     pub markers: Vec<MapMarker>,    // Kopierte Marker der selektierten Nodes
     pub center: Vec2,               // Geometrisches Zentrum (Offset-Basis beim Paste)
 }
+
+pub struct StoredBackgroundLayer {
+    pub kind: BackgroundLayerKind,
+    pub path: PathBuf,
+    pub image: Arc<image::DynamicImage>,
+}
+
+pub struct BackgroundLayerFiles {
+    pub directory: PathBuf,
+    pub terrain: Option<PathBuf>,
+    pub hillshade: Option<PathBuf>,
+    pub farmland_borders: Option<PathBuf>,
+    pub farmland_ids: Option<PathBuf>,
+    pub poi_markers: Option<PathBuf>,
+    pub legend: Option<PathBuf>,
+}
+
+pub struct BackgroundLayerCatalog {
+    pub files: BackgroundLayerFiles,
+    pub layers: Vec<StoredBackgroundLayer>,
+    pub visible: OverviewLayerOptions,
+}
+
+pub struct PendingOverviewBundle {
+    pub target_dir: PathBuf,
+    pub bundle: fs25_map_overview::OverviewLayerBundle,
+}
 ```
 
 **Methoden:**
@@ -193,6 +224,8 @@ sel.ids_mut().insert(42);
 - `background_image_arc() → Option<Arc<image::DynamicImage>>` — Kanonisches Hintergrundbild (`view.background_map` bevorzugt)
 - `has_farmland_polygons() → bool` — `true` falls Farmland-Polygone geladen sind
 - `has_background_image() → bool` — `true` falls ein Hintergrundbild verfuegbar ist
+
+`BackgroundLayerCatalog` haelt die im Savegame-Verzeichnis gefundenen Layer-Dateien samt dekodierten `DynamicImage`s und der aktuellen Runtime-Sichtbarkeit. `PendingOverviewBundle` puffert ein frisches `fs25_map_overview::OverviewLayerBundle` zwischen ZIP-Generierung und bestaetigtem Save, damit erst der Save-Workflow die kanonischen PNG-Dateien plus `overview.json` ausschreibt.
 
 pub struct EngineUiState {
     pub dialog_requests: Vec<DialogRequest>,
