@@ -45,6 +45,8 @@ pub enum I18nKey {
     OptSectionConnections,
     /// Abschnittstitel "Verhalten"
     OptSectionBehavior,
+    /// Abschnittstitel "Hintergrundkarte"
+    OptSectionOverview,
 
     // === Options-Dialog: Abschnitts-Untertitel ===
     /// Untertitel für den Allgemein-Abschnitt
@@ -57,6 +59,8 @@ pub enum I18nKey {
     OptSubtitleConnections,
     /// Untertitel für den Verhalten-Abschnitt
     OptSubtitleBehavior,
+    /// Untertitel fuer den Hintergrundkarten-Abschnitt
+    OptSubtitleOverview,
 
     // === Options-Dialog: Sprache ===
     /// Bezeichnung für das Sprach-Auswahlfeld
@@ -249,6 +253,10 @@ pub enum I18nKey {
     OptBgFadeStartZoomHelp,
 
     // === Options-Dialog: Übersichtskarte ===
+    /// Unterabschnitt: Standard-Sichtbarkeit
+    OptOverviewDefaultLayers,
+    /// Unterabschnitt: Polygon-Quelle (Standard)
+    OptOverviewPolygonSource,
     /// Checkbox: Terrain-Basisbild
     OptOverviewTerrain,
     /// Tooltip: Terrain-Basisbild
@@ -337,6 +345,20 @@ pub enum I18nKey {
     MenuLoadBackground,
     /// Menüeintrag "Hintergrund ändern…"
     MenuChangeBackground,
+    /// Untermenü "Hintergrund-Layer"
+    MenuBackgroundLayers,
+    /// Menüeintrag: Terrain-Layer
+    MenuBgLayerTerrain,
+    /// Menüeintrag: Hillshade-Layer
+    MenuBgLayerHillshade,
+    /// Menüeintrag: Farmland-Grenzen
+    MenuBgLayerFarmlandBorders,
+    /// Menüeintrag: Farmland-IDs
+    MenuBgLayerFarmlandIds,
+    /// Menüeintrag: POI-Marker
+    MenuBgLayerPoiMarkers,
+    /// Menüeintrag: Legende
+    MenuBgLayerLegend,
     /// Untermenü "Renderqualität"
     MenuRenderQuality,
     /// Qualitätsstufe "Niedrig"
