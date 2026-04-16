@@ -46,7 +46,7 @@ Wenn eine AutoDrive-XML geladen wird, prueft der Editor fuer Hintergrunddaten au
 3. `overview.jpg` als Rueckfall fuer aeltere Setups
 4. passende Map-Mod-ZIPs im uebergeordneten `mods/`-Verzeichnis, falls eine neue Uebersichtskarte erzeugt werden soll
 
-Wenn ein Layer-Bundle gefunden wird, setzt der Editor daraus sofort wieder das Hintergrundbild mit Ihren gespeicherten Standard-Layern zusammen. Fehlende optionale Overlay-Dateien deaktivieren nur die jeweiligen Layer-Eintraege; ohne `overview_terrain.png` bleibt das Layer-System inaktiv und der Editor faellt auf `overview.png` oder `overview.jpg` zurueck.
+Wenn ein Layer-Bundle gefunden wird, setzt der Editor daraus sofort wieder das Hintergrundbild mit Ihren gespeicherten Standard-Layern zusammen. Die sichtbaren PNG-Dateien werden dabei bei Bedarf nacheinander von Platte geladen und direkt in das Ergebnisbild geblendet. Fehlende optionale Overlay-Dateien deaktivieren nur die jeweiligen Layer-Eintraege; ohne `overview_terrain.png` bleibt das Layer-System inaktiv und der Editor faellt auf `overview.png` oder `overview.jpg` zurueck.
 
 Wenn etwas gefunden wird, erscheint der Dialog **Nach dem Laden erkannt**. Er bestaetigt automatisch geladene Assets und bietet bei passenden ZIPs direkt die Generierung einer neuen Uebersichtskarte an.
 Falls kein passender ZIP erkannt wurde oder der Workflow manuell gestartet wird, kann derselbe Dialog auch eine ZIP-Datei ueber **ZIP-Datei auswaehlen** oeffnen.
@@ -96,7 +96,9 @@ Es gibt zwei Wege:
 
 Die generierte Karte wird sofort als aktuelle Hintergrundkarte geladen.
 
-Wenn bereits eine AutoDrive-XML geoeffnet ist, fragt der Editor anschliessend, ob das Bild als `overview.png` im Savegame-/XML-Verzeichnis gespeichert werden soll. Dabei werden zusaetzlich die einzelnen Layer-Dateien (`overview_terrain.png`, `overview_hillshade.png`, `overview_farmland_borders.png`, `overview_farmland_ids.png`, `overview_poi_markers.png`, `overview_legend.png`) sowie `overview.json` abgelegt. Existieren dort bereits Dateien, koennen sie direkt ueberschrieben werden.
+Die Anzeige startet zwar als Preview der frisch generierten Kombi-Karte, das Layer-Menue ist aber sofort verfuegbar: Die einzelnen Layer-Dateien (`overview_terrain.png`, `overview_hillshade.png`, `overview_farmland_borders.png`, `overview_farmland_ids.png`, `overview_poi_markers.png`, `overview_legend.png`) werden direkt waehrend der Generierung im Zielverzeichnis gespeichert und als Layer-Katalog aktiviert.
+
+Wenn bereits eine AutoDrive-XML geoeffnet ist, fragt der Editor anschliessend, ob das aktuelle Bild als `overview.png` im Savegame-/XML-Verzeichnis gespeichert werden soll. In diesem Save-Schritt werden nur noch `overview.png` sowie `overview.json` aktualisiert; die einzelnen Layer-Dateien wurden bereits bei der Generierung geschrieben und das Layer-Menue bleibt waehrenddessen nutzbar. Existieren dort bereits Dateien, koennen sie direkt ueberschrieben werden.
 
 Beim naechsten Oeffnen derselben XML wird bevorzugt das gespeicherte Layer-Bundle wieder aktiviert. Nur ohne Terrain-Basis faellt der Editor auf die kombinierte `overview.png` beziehungsweise `overview.jpg` zurueck.
 

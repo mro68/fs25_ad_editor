@@ -30,7 +30,8 @@ Oeffnet einen Datei-Dialog zur Auswahl einer AutoDrive-XML-Konfigurationsdatei. 
 **Automatische Erkennung:** Nach dem Laden prueft der Editor automatisch:
 
 - Ob eine `terrain.heightmap.png` im selben Verzeichnis liegt → wird direkt als Heightmap gesetzt
-- Ob eine `overview.png` oder `overview.jpg` im selben Verzeichnis liegt → wird direkt als Hintergrund geladen
+- Ob ein gespeichertes Layer-Bundle mit `overview_terrain.png` im selben Verzeichnis liegt → wird bevorzugt als Hintergrund mit Layer-Auswahl geladen
+- Sonst ob eine `overview.png` oder `overview.jpg` im selben Verzeichnis liegt → wird direkt als kombinierter Hintergrund geladen
 - Ob im Mods-Verzeichnis (`../../mods/` relativ zum Savegame) ein passender Map-Mod-ZIP zum Kartennamen existiert → Dialog bietet Uebersichtskarten-Generierung an
 
 Wenn dabei etwas gefunden wird, fasst der Dialog **Nach dem Laden erkannt** die Treffer zusammen.
