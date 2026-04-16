@@ -6,7 +6,7 @@
 //! braucht es zusaetzlich backend-native Export-/Attach-Pfade im Renderer und
 //! native Host-Import-/Surface-Pfade im jeweiligen Flutter-/C++-Consumer.
 
-use crate::{clear_last_error, set_last_error, HostBridgeSessionHandle};
+use crate::{clear_last_error, ffi_guard_bool, set_last_error, HostBridgeSessionHandle};
 use anyhow::{anyhow, Result};
 use fs25_auto_drive_render_wgpu::{
     query_texture_registration_v4_capabilities, AndroidAttachmentKind,
@@ -334,24 +334,6 @@ fn fail_legacy_android_surface_path(function_name: &str) -> Result<()> {
     Err(anyhow!(
         "{function_name} is deprecated for texture registration v4; use the export-lease Android AHardwareBuffer descriptor path instead"
     ))
-}
-
-/// Hilfsmakro: bool-FFI-Aufruf mit Panic-Isolation.
-macro_rules! ffi_guard_bool {
-    ($body:expr) => {{
-        clear_last_error();
-        match std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| $body)) {
-            Ok(Ok(())) => true,
-            Ok(Err(e)) => {
-                set_last_error(e.to_string());
-                false
-            }
-            Err(_) => {
-                set_last_error("internal panic in FFI call");
-                false
-            }
-        }
-    }};
 }
 
 /// Liefert die Version des additiven Texture-Registration-v4-Vertrags.

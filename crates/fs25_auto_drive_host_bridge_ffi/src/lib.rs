@@ -1,45 +1,18 @@
 //! C-ABI-Transport ueber der kanonischen Host-Bridge-Session.
+//!
+//! Die Implementierung ist in thematische Submodule aufgeteilt:
+//! - [`ffi_utils`]: Gemeinsame Hilfsfunktionen (Error-State, JSON, String-Allokation)
+//! - [`session_handle`]: Opaquer Session-Handle und Zugriffs-Wrapper
+//! - [`session_api`]: Kanonische (nicht-Flutter) C-ABI-Exporte
+//! - [`flutter_api`]: Flutter Control-Plane (hinter `feature = "flutter"`)
+//! - [`texture_registration_v4`]: Additiver Texture-v4-Vertrag mit Capability-Stubs
+
+mod ffi_utils;
+pub mod session_api;
+mod session_handle;
 
 #[cfg(feature = "flutter")]
 pub mod flutter_api;
-mod shared_texture_v2;
-mod texture_registration_v4;
-
-/// Hilfsmakro: Wraps einen bool-FFI-Aufruf mit Panic-Isolation und Last-Error-Behandlung.
-macro_rules! ffi_guard_bool {
-    ($body:expr) => {{
-        clear_last_error();
-        match std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| $body)) {
-            Ok(Ok(())) => true,
-            Ok(Err(e)) => {
-                set_last_error(e.to_string());
-                false
-            }
-            Err(_) => {
-                set_last_error("internal panic in FFI call");
-                false
-            }
-        }
-    }};
-}
-
-/// Hilfsmakro: Wraps einen ptr-rueckgebenden FFI-Aufruf mit Panic-Isolation und Last-Error-Behandlung.
-macro_rules! ffi_guard_ptr {
-    ($body:expr) => {{
-        clear_last_error();
-        match std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| $body)) {
-            Ok(Ok(ptr)) => ptr,
-            Ok(Err(e)) => {
-                set_last_error(e.to_string());
-                std::ptr::null_mut()
-            }
-            Err(_) => {
-                set_last_error("internal panic in FFI call");
-                std::ptr::null_mut()
-            }
-        }
-    }};
-}
 
 #[cfg(any(
     all(feature = "flutter-linux", target_os = "linux"),
@@ -47,110 +20,78 @@ macro_rules! ffi_guard_ptr {
 ))]
 pub mod flutter_gpu;
 
+mod shared_texture_v2;
+mod texture_registration_v4;
+
+// Re-Exporte aus ffi_utils in den Crate-Root (fuer shared_texture_v2 und Flutter-Layer).
+pub(crate) use ffi_utils::{clear_last_error, set_last_error};
+
+// Re-Export des Session-Handle-Typs und des Session-Accessors in den Crate-Root.
+pub(crate) use session_handle::with_session_mut;
+pub use session_handle::HostBridgeSessionHandle;
+
+// Re-Exporte aller kanonischen FFI-Symbole aus session_api in den Crate-Root.
+pub use session_api::*;
+
+/// Hilfsmakro: Wraps einen bool-FFI-Aufruf mit Panic-Isolation und Last-Error-Behandlung.
+#[macro_export]
+macro_rules! ffi_guard_bool {
+    ($body:expr) => {{
+        $crate::clear_last_error();
+        match std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| $body)) {
+            Ok(Ok(())) => true,
+            Ok(Err(e)) => {
+                $crate::set_last_error(e.to_string());
+                false
+            }
+            Err(_) => {
+                $crate::set_last_error("internal panic in FFI call");
+                false
+            }
+        }
+    }};
+}
+
+/// Hilfsmakro: Wraps einen ptr-rueckgebenden FFI-Aufruf mit Panic-Isolation und Last-Error-Behandlung.
+#[macro_export]
+macro_rules! ffi_guard_ptr {
+    ($body:expr) => {{
+        $crate::clear_last_error();
+        match std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| $body)) {
+            Ok(Ok(ptr)) => ptr,
+            Ok(Err(e)) => {
+                $crate::set_last_error(e.to_string());
+                std::ptr::null_mut()
+            }
+            Err(_) => {
+                $crate::set_last_error("internal panic in FFI call");
+                std::ptr::null_mut()
+            }
+        }
+    }};
+}
+
+// ---- Flutter-spezifische Importe und Hilfsfunktionen ----------------------------------------
+
 #[cfg(feature = "flutter")]
 use crate::flutter_api::FlutterSessionHandle;
+#[cfg(feature = "flutter")]
 use anyhow::{anyhow, Context, Result};
+#[cfg(feature = "flutter")]
+use fs25_auto_drive_host_bridge::dto::HostOverviewOptionsDialogSnapshot;
+#[cfg(feature = "flutter")]
 use fs25_auto_drive_host_bridge::dto::{host_ui_snapshot_json, viewport_overlay_snapshot_json};
+#[cfg(feature = "flutter")]
 use fs25_auto_drive_host_bridge::{
     HostBridgeSession, HostChromeSnapshot, HostConnectionPairSnapshot, HostContextMenuSnapshot,
     HostDialogRequest, HostDialogResult, HostDialogSnapshot, HostEditingSnapshot,
     HostRouteToolViewportSnapshot, HostSessionAction, HostSessionSnapshot, HostUiSnapshot,
     HostViewportGeometrySnapshot, ViewportOverlaySnapshot,
 };
-use std::cell::RefCell;
-use std::ffi::{c_char, CStr, CString};
-use std::sync::Mutex;
+#[cfg(feature = "flutter")]
+use std::ffi::c_char;
 
-thread_local! {
-    static LAST_ERROR: RefCell<Option<String>> = const { RefCell::new(None) };
-}
-
-const FS25AD_HOST_BRIDGE_ABI_VERSION: u32 = 4;
-
-/// Opaquer Session-Handle mit serialisiertem Zugriff auf die kanonische Session.
-pub struct HostBridgeSessionHandle {
-    session: Mutex<HostBridgeSession>,
-}
-
-impl HostBridgeSessionHandle {
-    fn new() -> Self {
-        Self {
-            session: Mutex::new(HostBridgeSession::new()),
-        }
-    }
-
-    fn with_lock<T>(&self, f: impl FnOnce(&mut HostBridgeSession) -> Result<T>) -> Result<T> {
-        let mut guard = self
-            .session
-            .lock()
-            .map_err(|_| anyhow!("HostBridgeSession lock poisoned"))?;
-        f(&mut guard)
-    }
-}
-
-fn clear_last_error() {
-    LAST_ERROR.with(|slot| {
-        *slot.borrow_mut() = None;
-    });
-}
-
-fn set_last_error(error: impl Into<String>) {
-    let message = error.into().replace('\0', " ");
-    LAST_ERROR.with(|slot| {
-        *slot.borrow_mut() = Some(message);
-    });
-}
-
-#[allow(clippy::expect_used)]
-fn into_c_string_ptr(value: String) -> *mut c_char {
-    CString::new(value)
-        .expect("sanitized string must not contain interior NUL bytes")
-        .into_raw()
-}
-
-fn serialize_json<T: serde::Serialize>(value: &T) -> Result<*mut c_char> {
-    let payload = serde_json::to_string(value).context("JSON serialization failed")?;
-    Ok(into_c_string_ptr(payload))
-}
-
-fn read_json_arg<T>(value: *const c_char, type_name: &str) -> Result<T>
-where
-    T: serde::de::DeserializeOwned,
-{
-    if value.is_null() {
-        return Err(anyhow!("{type_name} JSON pointer must not be null"));
-    }
-
-    let text = unsafe {
-        CStr::from_ptr(value)
-            .to_str()
-            .context("FFI JSON must be valid UTF-8")?
-    };
-    serde_json::from_str(text).with_context(|| format!("failed to parse {type_name} JSON"))
-}
-
-fn decode_focus_node_id(focus_node_id_or_neg1: i64) -> Result<Option<u64>> {
-    if focus_node_id_or_neg1 == -1 {
-        return Ok(None);
-    }
-
-    let node_id = u64::try_from(focus_node_id_or_neg1)
-        .map_err(|_| anyhow!("focus_node_id must be -1 or a non-negative node id"))?;
-    Ok(Some(node_id))
-}
-
-fn with_session_mut<T>(
-    session: *mut HostBridgeSessionHandle,
-    f: impl FnOnce(&mut HostBridgeSession) -> Result<T>,
-) -> Result<T> {
-    if session.is_null() {
-        return Err(anyhow!("HostBridgeSession pointer must not be null"));
-    }
-
-    let session = unsafe { &*session };
-    session.with_lock(f)
-}
-
+/// Validiert einen Flutter-Session-Zeiger und fuhert eine Operation auf der Session aus.
 #[cfg(feature = "flutter")]
 fn with_flutter_session_fallible<T>(
     session: *const FlutterSessionHandle,
@@ -166,45 +107,7 @@ fn with_flutter_session_fallible<T>(
         .and_then(|result| result)
 }
 
-/// Liefert die ABI-Version des nativen Host-Bridge-Vertrags.
-#[unsafe(no_mangle)]
-pub extern "C" fn fs25ad_host_bridge_abi_version() -> u32 {
-    FS25AD_HOST_BRIDGE_ABI_VERSION
-}
-
-/// Gibt die letzte Fehlernachricht dieses Threads als neu allokierten UTF-8-String zurueck.
-#[unsafe(no_mangle)]
-pub extern "C" fn fs25ad_host_bridge_last_error_message() -> *mut c_char {
-    LAST_ERROR.with(|slot| {
-        slot.borrow()
-            .as_ref()
-            .map_or(std::ptr::null_mut(), |message| {
-                into_c_string_ptr(message.clone())
-            })
-    })
-}
-
-/// Gibt einen durch diese Bibliothek allozierten UTF-8-String frei.
-///
-/// # Safety
-///
-/// `value` muss ein durch diese Bibliothek allokierter Zeiger sein oder `null`.
-/// Nach dem Aufruf ist der Zeiger ungueltig. Doppeltes Freigeben ist undefiniertes Verhalten.
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn fs25ad_host_bridge_string_free(value: *mut c_char) {
-    if value.is_null() {
-        return;
-    }
-    // SAFETY: Aufrufer garantiert, dass `value` durch diese Bibliothek allokiert wurde.
-    unsafe { drop(CString::from_raw(value)) };
-}
-
-/// Erstellt eine neue Bridge-Session.
-#[unsafe(no_mangle)]
-pub extern "C" fn fs25ad_host_bridge_session_new() -> *mut HostBridgeSessionHandle {
-    clear_last_error();
-    Box::into_raw(Box::new(HostBridgeSessionHandle::new()))
-}
+// ---- Flutter C-ABI-Exporte ------------------------------------------------------------------
 
 /// Erstellt eine neue Flutter-Session als C-ABI-Handle.
 #[cfg(feature = "flutter")]
@@ -650,341 +553,7 @@ pub unsafe extern "C" fn fs25ad_flutter_session_release_shared_arc_raw(raw: i64)
     }
 }
 
-/// Gibt eine zuvor erstellte Bridge-Session frei.
-///
-/// # Safety
-///
-/// `session` muss ein durch `fs25ad_host_bridge_session_new` rueckgegebener Zeiger sein oder `null`.
-/// Nach dem Aufruf ist der Zeiger ungueltig. Doppeltes Freigeben ist undefiniertes Verhalten.
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn fs25ad_host_bridge_session_dispose(session: *mut HostBridgeSessionHandle) {
-    clear_last_error();
-    if session.is_null() {
-        return;
-    }
-    // SAFETY: Aufrufer garantiert, dass `session` durch `session_new` allokiert wurde.
-    unsafe { drop(Box::from_raw(session)) };
-}
-
-/// Serialisiert den aktuellen Session-Snapshot als UTF-8-JSON.
-///
-/// # Safety
-///
-/// `session` muss ein gueltiger, durch `fs25ad_host_bridge_session_new` erzeugter Zeiger sein.
-/// Der rueckgegebene String muss mit `fs25ad_host_bridge_string_free` freigegeben werden.
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn fs25ad_host_bridge_session_snapshot_json(
-    session: *mut HostBridgeSessionHandle,
-) -> *mut c_char {
-    ffi_guard_ptr! {
-        with_session_mut(session, |session| {
-            let snapshot: HostSessionSnapshot = session.snapshot_owned();
-            serialize_json(&snapshot)
-        })
-    }
-}
-
-/// Serialisiert den host-neutralen Chrome-Snapshot als UTF-8-JSON.
-///
-/// # Safety
-///
-/// `session` muss ein gueltiger, durch `fs25ad_host_bridge_session_new` erzeugter Zeiger sein.
-/// Der rueckgegebene String muss mit `fs25ad_host_bridge_string_free` freigegeben werden.
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn fs25ad_host_bridge_session_chrome_snapshot_json(
-    session: *mut HostBridgeSessionHandle,
-) -> *mut c_char {
-    ffi_guard_ptr! {
-        with_session_mut(session, |session| {
-            let snapshot: HostChromeSnapshot = session.build_host_chrome_snapshot();
-            serialize_json(&snapshot)
-        })
-    }
-}
-
-/// Serialisiert den aktuell inspizierten Node als UTF-8-JSON.
-///
-/// Gibt `null` zurueck, wenn aktuell kein inspizierter Node vorliegt oder die
-/// inspizierte Node-ID in der geladenen Karte nicht existiert. Das ist kein
-/// Fehlerfall und setzt keine Last-Error-Nachricht.
-///
-/// # Safety
-///
-/// `session` muss ein gueltiger, durch `fs25ad_host_bridge_session_new` erzeugter Zeiger sein.
-/// Der rueckgegebene String muss mit `fs25ad_host_bridge_string_free` freigegeben werden.
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn fs25ad_host_bridge_session_node_details_json(
-    session: *mut HostBridgeSessionHandle,
-) -> *mut c_char {
-    ffi_guard_ptr! {
-        with_session_mut(session, |session| {
-            Ok(session
-                .node_details_json()
-                .map_or(std::ptr::null_mut(), into_c_string_ptr))
-        })
-    }
-}
-
-/// Serialisiert die komplette Marker-Liste als UTF-8-JSON.
-///
-/// # Safety
-///
-/// `session` muss ein gueltiger, durch `fs25ad_host_bridge_session_new` erzeugter Zeiger sein.
-/// Der rueckgegebene String muss mit `fs25ad_host_bridge_string_free` freigegeben werden.
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn fs25ad_host_bridge_session_marker_list_json(
-    session: *mut HostBridgeSessionHandle,
-) -> *mut c_char {
-    ffi_guard_ptr! {
-        with_session_mut(session, |session| Ok(into_c_string_ptr(session.marker_list_json())))
-    }
-}
-
-/// Serialisiert die Verbindungsdetails zwischen zwei Nodes als UTF-8-JSON.
-///
-/// # Safety
-///
-/// `session` muss ein gueltiger, durch `fs25ad_host_bridge_session_new` erzeugter Zeiger sein.
-/// Der rueckgegebene String muss mit `fs25ad_host_bridge_string_free` freigegeben werden.
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn fs25ad_host_bridge_session_connection_pair_json(
-    session: *mut HostBridgeSessionHandle,
-    node_a: u64,
-    node_b: u64,
-) -> *mut c_char {
-    ffi_guard_ptr! {
-        with_session_mut(session, |session| {
-            let snapshot: HostConnectionPairSnapshot = session.connection_pair(node_a, node_b);
-            serialize_json(&snapshot)
-        })
-    }
-}
-
-/// Liefert den Dirty-Status der Session als Integer zurueck.
-///
-/// Rueckgabewerte:
-/// - `1`: Session ist dirty
-/// - `0`: Session ist nicht dirty
-/// - `-1`: Fehler; Details koennen ueber `fs25ad_host_bridge_last_error_message()` abgefragt werden
-///
-/// # Safety
-///
-/// `session` muss ein gueltiger, durch `fs25ad_host_bridge_session_new` erzeugter Zeiger sein.
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn fs25ad_host_bridge_session_is_dirty(
-    session: *mut HostBridgeSessionHandle,
-) -> i32 {
-    clear_last_error();
-    match std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
-        with_session_mut(session, |session| Ok(session.is_dirty()))
-    })) {
-        Ok(Ok(true)) => 1,
-        Ok(Ok(false)) => 0,
-        Ok(Err(e)) => {
-            set_last_error(e.to_string());
-            -1
-        }
-        Err(_) => {
-            set_last_error("internal panic in FFI call");
-            -1
-        }
-    }
-}
-
-/// Serialisiert den host-neutralen UI-Snapshot als UTF-8-JSON.
-///
-/// # Safety
-///
-/// `session` muss ein gueltiger, durch `fs25ad_host_bridge_session_new` erzeugter Zeiger sein.
-/// Der rueckgegebene String muss mit `fs25ad_host_bridge_string_free` freigegeben werden.
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn fs25ad_host_bridge_session_ui_snapshot_json(
-    session: *mut HostBridgeSessionHandle,
-) -> *mut c_char {
-    ffi_guard_ptr! {
-        with_session_mut(session, |session| {
-            let snapshot: HostUiSnapshot = session.build_host_ui_snapshot();
-            let payload = host_ui_snapshot_json(&snapshot).context("JSON serialization failed")?;
-            Ok(into_c_string_ptr(payload))
-        })
-    }
-}
-
-/// Serialisiert den host-neutralen Dialog-Snapshot als UTF-8-JSON.
-///
-/// # Safety
-///
-/// `session` muss ein gueltiger, durch `fs25ad_host_bridge_session_new` erzeugter Zeiger sein.
-/// Der rueckgegebene String muss mit `fs25ad_host_bridge_string_free` freigegeben werden.
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn fs25ad_host_bridge_session_dialog_snapshot_json(
-    session: *mut HostBridgeSessionHandle,
-) -> *mut c_char {
-    ffi_guard_ptr! {
-        with_session_mut(session, |session| {
-            let snapshot: HostDialogSnapshot = session.dialog_snapshot();
-            serialize_json(&snapshot)
-        })
-    }
-}
-
-/// Serialisiert den host-neutralen Editing-Snapshot als UTF-8-JSON.
-///
-/// # Safety
-///
-/// `session` muss ein gueltiger, durch `fs25ad_host_bridge_session_new` erzeugter Zeiger sein.
-/// Der rueckgegebene String muss mit `fs25ad_host_bridge_string_free` freigegeben werden.
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn fs25ad_host_bridge_session_editing_snapshot_json(
-    session: *mut HostBridgeSessionHandle,
-) -> *mut c_char {
-    ffi_guard_ptr! {
-        with_session_mut(session, |session| {
-            let snapshot: HostEditingSnapshot = session.editing_snapshot();
-            serialize_json(&snapshot)
-        })
-    }
-}
-
-/// Serialisiert den host-neutralen Kontextmenue-Snapshot als UTF-8-JSON.
-///
-/// `focus_node_id_or_neg1` nutzt `-1` als FFI-Sentinel fuer "kein Fokus-Node".
-///
-/// # Safety
-///
-/// `session` muss ein gueltiger, durch `fs25ad_host_bridge_session_new` erzeugter Zeiger sein.
-/// Der rueckgegebene String muss mit `fs25ad_host_bridge_string_free` freigegeben werden.
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn fs25ad_host_bridge_session_context_menu_snapshot_json(
-    session: *mut HostBridgeSessionHandle,
-    focus_node_id_or_neg1: i64,
-) -> *mut c_char {
-    ffi_guard_ptr! {{
-        let focus_node_id = decode_focus_node_id(focus_node_id_or_neg1)?;
-        with_session_mut(session, |session| {
-            let snapshot: HostContextMenuSnapshot = session.context_menu_snapshot(focus_node_id);
-            serialize_json(&snapshot)
-        })
-    }}
-}
-
-/// Serialisiert den Route-Tool-Viewport-Snapshot als UTF-8-JSON.
-///
-/// # Safety
-///
-/// `session` muss ein gueltiger, durch `fs25ad_host_bridge_session_new` erzeugter Zeiger sein.
-/// Der rueckgegebene String muss mit `fs25ad_host_bridge_string_free` freigegeben werden.
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn fs25ad_host_bridge_session_route_tool_viewport_json(
-    session: *mut HostBridgeSessionHandle,
-) -> *mut c_char {
-    ffi_guard_ptr! {
-        with_session_mut(session, |session| {
-            let snapshot: HostRouteToolViewportSnapshot =
-                session.build_route_tool_viewport_snapshot();
-            serialize_json(&snapshot)
-        })
-    }
-}
-
-/// Serialisiert den host-neutralen Viewport-Overlay-Snapshot als UTF-8-JSON.
-///
-/// `cursor_world_x` und `cursor_world_y` beschreiben die aktuelle Cursor-Position
-/// in Weltkoordinaten.
-///
-/// # Safety
-///
-/// `session` muss ein gueltiger, durch `fs25ad_host_bridge_session_new` erzeugter Zeiger sein.
-/// Der rueckgegebene String muss mit `fs25ad_host_bridge_string_free` freigegeben werden.
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn fs25ad_host_bridge_session_viewport_overlay_json(
-    session: *mut HostBridgeSessionHandle,
-    cursor_world_x: f32,
-    cursor_world_y: f32,
-) -> *mut c_char {
-    ffi_guard_ptr! {
-        with_session_mut(session, |session| {
-            let snapshot: ViewportOverlaySnapshot = session
-                .build_viewport_overlay_snapshot(Some([cursor_world_x, cursor_world_y].into()));
-            let payload = viewport_overlay_snapshot_json(&snapshot)
-                .context("JSON serialization failed")?;
-            Ok(into_c_string_ptr(payload))
-        })
-    }
-}
-
-/// Wendet eine kanonische `HostSessionAction` an, uebergeben als UTF-8-JSON.
-///
-/// # Safety
-///
-/// `session` muss ein gueltiger, durch `fs25ad_host_bridge_session_new` erzeugter Zeiger sein.
-/// `action_json` muss ein gueltiger, null-terminierter UTF-8-String oder `null` sein.
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn fs25ad_host_bridge_session_apply_action_json(
-    session: *mut HostBridgeSessionHandle,
-    action_json: *const c_char,
-) -> bool {
-    ffi_guard_bool! {{
-        let action: HostSessionAction = read_json_arg(action_json, "HostSessionAction")?;
-        with_session_mut(session, |session| session.apply_action(action))
-    }}
-}
-
-/// Entnimmt alle aktuell ausstehenden Dialog-Anforderungen als UTF-8-JSON-Array.
-///
-/// # Safety
-///
-/// `session` muss ein gueltiger, durch `fs25ad_host_bridge_session_new` erzeugter Zeiger sein.
-/// Der rueckgegebene String muss mit `fs25ad_host_bridge_string_free` freigegeben werden.
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn fs25ad_host_bridge_session_take_dialog_requests_json(
-    session: *mut HostBridgeSessionHandle,
-) -> *mut c_char {
-    ffi_guard_ptr! {
-        with_session_mut(session, |session| {
-            let requests: Vec<HostDialogRequest> = session.take_dialog_requests();
-            serialize_json(&requests)
-        })
-    }
-}
-
-/// Reicht ein `HostDialogResult` als UTF-8-JSON in die Session zurueck.
-///
-/// # Safety
-///
-/// `session` muss ein gueltiger, durch `fs25ad_host_bridge_session_new` erzeugter Zeiger sein.
-/// `result_json` muss ein gueltiger, null-terminierter UTF-8-String oder `null` sein.
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn fs25ad_host_bridge_session_submit_dialog_result_json(
-    session: *mut HostBridgeSessionHandle,
-    result_json: *const c_char,
-) -> bool {
-    ffi_guard_bool! {{
-        let result: HostDialogResult = read_json_arg(result_json, "HostDialogResult")?;
-        with_session_mut(session, |session| session.submit_dialog_result(result))
-    }}
-}
-
-/// Baut einen minimalen Viewport-Geometry-Snapshot als UTF-8-JSON.
-///
-/// # Safety
-///
-/// `session` muss ein gueltiger, durch `fs25ad_host_bridge_session_new` erzeugter Zeiger sein.
-/// Der rueckgegebene String muss mit `fs25ad_host_bridge_string_free` freigegeben werden.
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn fs25ad_host_bridge_session_viewport_geometry_json(
-    session: *mut HostBridgeSessionHandle,
-    viewport_width: f32,
-    viewport_height: f32,
-) -> *mut c_char {
-    ffi_guard_ptr! {
-        with_session_mut(session, |session| {
-            let snapshot: HostViewportGeometrySnapshot =
-                session.build_viewport_geometry_snapshot([viewport_width, viewport_height]);
-            serialize_json(&snapshot)
-        })
-    }
-}
+// ---- Tests ----------------------------------------------------------------------------------
 
 #[cfg(test)]
 mod tests {

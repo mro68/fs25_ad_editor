@@ -1,4 +1,3 @@
-
 use fs25_auto_drive_engine::app::ui_contract::{BypassPanelAction, RouteToolPanelAction};
 use fs25_auto_drive_engine::app::use_cases::background_layers::{
     discover_background_layer_files, load_background_layer_catalog,
