@@ -395,10 +395,15 @@ pub fn load_background_map(
     crop_size: Option<u32>,
 ) -> anyhow::Result<()>
 pub fn toggle_background_visibility(state: &mut AppState)
+pub fn set_background_layer_visibility(
+    state: &mut AppState,
+    layer: BackgroundLayerKind,
+    visible: bool,
+) -> anyhow::Result<()>
 pub fn scale_background(state: &mut AppState, factor: f32)
 ```
 
-Background-Map-Handling (Laden, Ein/Aus, Skalierung).
+Background-Map-Handling (Laden, globales Ein/Aus, Layer-spezifische Sichtbarkeit, Skalierung).
 
 ```rust
 pub fn browse_zip_background(state: &mut AppState, path: String) -> anyhow::Result<()>

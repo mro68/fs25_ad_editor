@@ -348,7 +348,7 @@ pub fn flutter_session_release_shared_arc_raw(raw: i64) {
 #[cfg(test)]
 mod tests {
     use fs25_auto_drive_host_bridge::{
-        HostConnectionPairSnapshot, HostContextMenuSnapshot, HostDialogRequest,
+        HostChromeSnapshot, HostConnectionPairSnapshot, HostContextMenuSnapshot, HostDialogRequest,
         HostDialogRequestKind, HostDialogResult, HostDialogSnapshot, HostEditingSnapshot,
         HostMarkerListSnapshot, HostRouteToolViewportSnapshot, HostSessionAction,
     };
@@ -413,12 +413,12 @@ mod tests {
         let handle = flutter_session_new();
         let json = flutter_session_chrome_snapshot_json(&handle)
             .expect("Chrome-Snapshot-Serialisierung muss gelingen");
-        let value: serde_json::Value =
+        let snapshot: HostChromeSnapshot =
             serde_json::from_str(&json).expect("Chrome-Snapshot muss parsebares JSON sein");
-        assert!(
-            value.get("show_command_palette").is_some(),
-            "Chrome-Snapshot muss chrome-Felder enthalten"
-        );
+
+        assert!(!snapshot.show_command_palette);
+        assert!(!snapshot.background_layers_available);
+        assert!(snapshot.background_layer_entries.is_empty());
         flutter_session_dispose(handle);
     }
 

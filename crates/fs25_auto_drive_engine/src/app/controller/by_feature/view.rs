@@ -48,6 +48,9 @@ pub(super) fn handle(state: &mut AppState, command: AppCommand) -> anyhow::Resul
             handlers::view::toggle_background_visibility(state);
             Ok(())
         }
+        AppCommand::SetBackgroundLayerVisibility { layer, visible } => {
+            handlers::view::set_background_layer_visibility(state, layer, visible)
+        }
         AppCommand::ScaleBackground { factor } => {
             handlers::view::scale_background(state, factor);
             Ok(())

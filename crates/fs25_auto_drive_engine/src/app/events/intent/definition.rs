@@ -3,8 +3,7 @@ use crate::app::state::EditorTool;
 use crate::app::tool_contract::{RouteToolId, TangentSource};
 use crate::app::ui_contract::RouteToolPanelAction;
 use crate::core::{ConnectionDirection, ConnectionPriority, NodeFlag};
-use crate::shared::EditorOptions;
-use crate::shared::RenderQuality;
+use crate::shared::{BackgroundLayerKind, EditorOptions, RenderQuality};
 
 /// App-Intent und App-Command Events.
 /// Intents sind Eingaben aus UI/System ohne direkte Mutationslogik.
@@ -94,6 +93,11 @@ pub enum AppIntent {
     },
     /// Background-Sichtbarkeit umschalten
     ToggleBackgroundVisibility,
+    /// Sichtbarkeit eines gespeicherten Hintergrund-Layers setzen
+    SetBackgroundLayerVisibility {
+        layer: BackgroundLayerKind,
+        visible: bool,
+    },
     /// Background-Ausdehnung skalieren (Faktor relativ, z.B. 2.0 = verdoppeln)
     ScaleBackground { factor: f32 },
     /// Undo: Letzte Aktion rueckgaengig machen
@@ -346,6 +350,7 @@ impl AppIntent {
             | Self::BackgroundMapSelectionRequested
             | Self::BackgroundMapSelected { .. }
             | Self::ToggleBackgroundVisibility
+            | Self::SetBackgroundLayerVisibility { .. }
             | Self::ScaleBackground { .. }
             | Self::ZipBackgroundBrowseRequested { .. }
             | Self::ZipBackgroundFileSelected { .. }
