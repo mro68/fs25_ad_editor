@@ -50,8 +50,12 @@ fn map_overview_field_detection_source(
         OverviewFieldDetectionSource::FieldTypeGrle => {
             fs25_map_overview::FieldDetectionSource::FieldTypeGrle
         }
-        OverviewFieldDetectionSource::GroundGdm => fs25_map_overview::FieldDetectionSource::GroundGdm,
-        OverviewFieldDetectionSource::FruitsGdm => fs25_map_overview::FieldDetectionSource::FruitsGdm,
+        OverviewFieldDetectionSource::GroundGdm => {
+            fs25_map_overview::FieldDetectionSource::GroundGdm
+        }
+        OverviewFieldDetectionSource::FruitsGdm => {
+            fs25_map_overview::FieldDetectionSource::FruitsGdm
+        }
     }
 }
 
@@ -280,7 +284,8 @@ pub fn generate_overview_with_options(state: &mut AppState) -> Result<()> {
     });
 
     // Feldpolygone gemaess gewaehlter Quelle extrahieren
-    let extracted = extract_field_polygons_from_source(&zip_path, savegame_dir.as_deref(), field_source);
+    let extracted =
+        extract_field_polygons_from_source(&zip_path, savegame_dir.as_deref(), field_source);
 
     // Rohe Polygone und Rasterdimensionen ermitteln
     let (raw_polygons, grle_w, grle_h) = match extracted {
