@@ -10,17 +10,17 @@ use fs25_auto_drive_engine::app::ui_contract::{
 };
 use fs25_auto_drive_engine::app::{AppIntent, AppState, ConnectionDirection, ConnectionPriority};
 use fs25_auto_drive_engine::shared::{
-    RenderConnectionDirection, RenderConnectionPriority, RenderNodeKind,
+    BackgroundLayerKind, RenderConnectionDirection, RenderConnectionPriority, RenderNodeKind,
 };
 use glam::Vec2;
 
 use crate::dto::{
-    HostActiveTool, HostDefaultConnectionDirection, HostDefaultConnectionPriority,
-    HostDialogRequest, HostDialogRequestKind, HostDialogResult, HostNodeFlag, HostRouteToolAction,
-    HostRouteToolDisabledReason, HostRouteToolGroup, HostRouteToolIconKey, HostRouteToolId,
-    HostRouteToolSurface, HostSessionAction, HostTangentMenuSnapshot, HostTangentOptionSnapshot,
-    HostTangentSource, HostViewportConnectionDirection, HostViewportConnectionPriority,
-    HostViewportNodeKind,
+    HostActiveTool, HostBackgroundLayerKind, HostDefaultConnectionDirection,
+    HostDefaultConnectionPriority, HostDialogRequest, HostDialogRequestKind, HostDialogResult,
+    HostNodeFlag, HostRouteToolAction, HostRouteToolDisabledReason, HostRouteToolGroup,
+    HostRouteToolIconKey, HostRouteToolId, HostRouteToolSurface, HostSessionAction,
+    HostTangentMenuSnapshot, HostTangentOptionSnapshot, HostTangentSource,
+    HostViewportConnectionDirection, HostViewportConnectionPriority, HostViewportNodeKind,
 };
 use fs25_auto_drive_engine::app::EditorTool;
 
@@ -41,6 +41,28 @@ pub(super) fn map_editor_tool(tool: EditorTool) -> HostActiveTool {
         EditorTool::Connect => HostActiveTool::Connect,
         EditorTool::AddNode => HostActiveTool::AddNode,
         EditorTool::Route => HostActiveTool::Route,
+    }
+}
+
+pub(super) fn map_background_layer_kind(kind: BackgroundLayerKind) -> HostBackgroundLayerKind {
+    match kind {
+        BackgroundLayerKind::Terrain => HostBackgroundLayerKind::Terrain,
+        BackgroundLayerKind::Hillshade => HostBackgroundLayerKind::Hillshade,
+        BackgroundLayerKind::FarmlandBorders => HostBackgroundLayerKind::FarmlandBorders,
+        BackgroundLayerKind::FarmlandIds => HostBackgroundLayerKind::FarmlandIds,
+        BackgroundLayerKind::PoiMarkers => HostBackgroundLayerKind::PoiMarkers,
+        BackgroundLayerKind::Legend => HostBackgroundLayerKind::Legend,
+    }
+}
+
+pub(super) fn map_host_background_layer_kind(kind: HostBackgroundLayerKind) -> BackgroundLayerKind {
+    match kind {
+        HostBackgroundLayerKind::Terrain => BackgroundLayerKind::Terrain,
+        HostBackgroundLayerKind::Hillshade => BackgroundLayerKind::Hillshade,
+        HostBackgroundLayerKind::FarmlandBorders => BackgroundLayerKind::FarmlandBorders,
+        HostBackgroundLayerKind::FarmlandIds => BackgroundLayerKind::FarmlandIds,
+        HostBackgroundLayerKind::PoiMarkers => BackgroundLayerKind::PoiMarkers,
+        HostBackgroundLayerKind::Legend => BackgroundLayerKind::Legend,
     }
 }
 
@@ -425,6 +447,12 @@ pub fn map_intent_to_host_action(intent: &AppIntent) -> Option<HostSessionAction
         AppIntent::ToggleBackgroundVisibility => {
             Some(HostSessionAction::ToggleBackgroundVisibility)
         }
+        AppIntent::SetBackgroundLayerVisibility { layer, visible } => {
+            Some(HostSessionAction::SetBackgroundLayerVisibility {
+                layer: map_background_layer_kind(*layer),
+                visible: *visible,
+            })
+        }
         AppIntent::ScaleBackground { factor } => {
             Some(HostSessionAction::ScaleBackground { factor: *factor })
         }
@@ -754,6 +782,12 @@ pub fn map_host_action_to_intent(action: HostSessionAction) -> Option<AppIntent>
         }
         HostSessionAction::ToggleBackgroundVisibility => {
             Some(AppIntent::ToggleBackgroundVisibility)
+        }
+        HostSessionAction::SetBackgroundLayerVisibility { layer, visible } => {
+            Some(AppIntent::SetBackgroundLayerVisibility {
+                layer: map_host_background_layer_kind(layer),
+                visible,
+            })
         }
         HostSessionAction::ScaleBackground { factor } => {
             Some(AppIntent::ScaleBackground { factor })

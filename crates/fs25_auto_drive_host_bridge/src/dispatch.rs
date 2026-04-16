@@ -24,20 +24,28 @@ pub use viewport_input::{apply_viewport_input_batch, HostViewportInputState};
 #[cfg(test)]
 mod tests {
     use fs25_auto_drive_engine::app::ui_contract::{BypassPanelAction, RouteToolPanelAction};
+    use fs25_auto_drive_engine::app::use_cases::background_layers::{
+        discover_background_layer_files, load_background_layer_catalog,
+    };
     use fs25_auto_drive_engine::app::{AppController, AppIntent, AppState};
     use fs25_auto_drive_engine::core::{
         Connection, ConnectionDirection, ConnectionPriority, MapMarker, MapNode, NodeFlag, RoadMap,
     };
-    use fs25_auto_drive_engine::shared::RenderQuality;
+    use fs25_auto_drive_engine::shared::{
+        BackgroundLayerKind, OverviewLayerOptions, RenderQuality,
+    };
     use glam::Vec2;
+    use std::fs;
+    use std::path::PathBuf;
     use std::sync::Arc;
+    use std::time::{SystemTime, UNIX_EPOCH};
 
     use crate::dto::{
-        HostActiveTool, HostDefaultConnectionDirection, HostDefaultConnectionPriority,
-        HostDialogRequestKind, HostDialogResult, HostRouteToolAction, HostRouteToolDisabledReason,
-        HostRouteToolGroup, HostRouteToolIconKey, HostRouteToolId, HostRouteToolSurface,
-        HostSessionAction, HostTangentSource, HostViewportConnectionDirection,
-        HostViewportConnectionPriority, HostViewportNodeKind,
+        HostActiveTool, HostBackgroundLayerKind, HostDefaultConnectionDirection,
+        HostDefaultConnectionPriority, HostDialogRequestKind, HostDialogResult,
+        HostRouteToolAction, HostRouteToolDisabledReason, HostRouteToolGroup, HostRouteToolIconKey,
+        HostRouteToolId, HostRouteToolSurface, HostSessionAction, HostTangentSource,
+        HostViewportConnectionDirection, HostViewportConnectionPriority, HostViewportNodeKind,
     };
 
     use super::{
@@ -800,6 +808,16 @@ mod tests {
                 HostSessionAction::ToggleBackgroundVisibility,
             ),
             (
+                AppIntent::SetBackgroundLayerVisibility {
+                    layer: BackgroundLayerKind::Legend,
+                    visible: false,
+                },
+                HostSessionAction::SetBackgroundLayerVisibility {
+                    layer: HostBackgroundLayerKind::Legend,
+                    visible: false,
+                },
+            ),
+            (
                 AppIntent::ScaleBackground { factor: 0.5 },
                 HostSessionAction::ScaleBackground { factor: 0.5 },
             ),
@@ -1072,6 +1090,60 @@ mod tests {
             disabled_analysis_entry.disabled_reason,
             Some(HostRouteToolDisabledReason::MissingFarmland)
         );
+        assert!(!chrome.background_layers_available);
+        assert!(chrome.background_layer_entries.is_empty());
+    }
+
+    #[test]
+    fn build_host_chrome_snapshot_exposes_background_layer_entries() {
+        let timestamp = SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .expect("Systemzeit muss nach der Unix-Epoche liegen")
+            .as_nanos();
+        let temp_dir = std::env::temp_dir().join(format!(
+            "fs25_host_bridge_background_layers_{}_{}",
+            std::process::id(),
+            timestamp
+        ));
+        fs::create_dir_all(&temp_dir).expect("Temp-Verzeichnis fuer Layer-Test muss existieren");
+        let sample_png =
+            PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../ad_sample_data/parking_plot.png");
+        fs::copy(&sample_png, temp_dir.join("overview_terrain.png"))
+            .expect("Terrain-PNG muss aus Testdaten kopierbar sein");
+        fs::copy(&sample_png, temp_dir.join("overview_hillshade.png"))
+            .expect("Hillshade-PNG muss aus Testdaten kopierbar sein");
+
+        let mut state = AppState::new();
+        let visible = OverviewLayerOptions {
+            terrain: true,
+            hillshade: false,
+            farmlands: false,
+            farmland_ids: false,
+            pois: false,
+            legend: false,
+        };
+        let files = discover_background_layer_files(&temp_dir);
+        state.background_layers = Some(
+            load_background_layer_catalog(files, &visible)
+                .expect("Layer-Katalog fuer Snapshot-Test muss ladbar sein"),
+        );
+
+        let chrome = build_host_chrome_snapshot(&state);
+
+        assert!(chrome.background_layers_available);
+        assert_eq!(
+            chrome
+                .background_layer_entries
+                .iter()
+                .map(|entry| (entry.kind, entry.visible))
+                .collect::<Vec<_>>(),
+            vec![
+                (HostBackgroundLayerKind::Terrain, true),
+                (HostBackgroundLayerKind::Hillshade, false),
+            ]
+        );
+
+        let _ = fs::remove_dir_all(temp_dir);
     }
 
     /// Prüft, dass build_host_chrome_snapshot bei unveraendertem State identische

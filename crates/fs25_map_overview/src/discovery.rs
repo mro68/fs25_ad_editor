@@ -325,6 +325,17 @@ pub fn find_farmlands<'a>(
     None
 }
 
+/// Findet `densityMap_ground.gdm` im data/-Verzeichnis.
+pub fn find_ground_gdm<'a>(
+    files: &'a HashMap<String, Vec<u8>>,
+    data_dir: &str,
+) -> Option<(&'a str, &'a [u8])> {
+    let key = format!("{}/densityMap_ground.gdm", data_dir.trim_end_matches('/'));
+    files
+        .get_key_value(key.as_str())
+        .map(|(path, content)| (path.as_str(), content.as_slice()))
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -339,5 +350,24 @@ mod tests {
     fn test_join_paths() {
         assert_eq!(join_paths("maps", "config/map.xml"), "maps/config/map.xml");
         assert_eq!(join_paths("", "modDesc.xml"), "modDesc.xml");
+    }
+
+    #[test]
+    fn test_find_ground_gdm_uses_data_dir() {
+        let mut files = HashMap::new();
+        files.insert(
+            "MyMap/maps/data/densityMap_ground.gdm".to_string(),
+            vec![1, 2, 3],
+        );
+        files.insert(
+            "MyMap/maps/other/densityMap_ground.gdm".to_string(),
+            vec![9, 9, 9],
+        );
+
+        let found = find_ground_gdm(&files, "MyMap/maps/data")
+            .expect("Ground-GDM im data/-Verzeichnis muss gefunden werden");
+
+        assert_eq!(found.0, "MyMap/maps/data/densityMap_ground.gdm");
+        assert_eq!(found.1, [1, 2, 3]);
     }
 }

@@ -5,13 +5,10 @@
 //! `fs25ad_flutter_session_*`-C-FFI-Exporten in `lib.rs` wiederverwendet.
 
 use anyhow::Result;
-use fs25_auto_drive_engine::shared::OverviewLayerOptions;
 use fs25_auto_drive_host_bridge::dto::{
-    host_ui_snapshot_json, viewport_overlay_snapshot_json, HostFieldDetectionSource,
-    HostOverviewOptionsDialogSnapshot,
+    host_ui_snapshot_json, viewport_overlay_snapshot_json, HostOverviewOptionsDialogSnapshot,
 };
 use fs25_auto_drive_host_bridge::{HostBridgeSession, HostDialogResult, HostSessionAction};
-use fs25_map_overview::FieldDetectionSource;
 use std::sync::{Arc, Mutex};
 
 fn decode_focus_node_id(focus_node_id_or_neg1: i64) -> Result<Option<u64>> {
@@ -125,15 +122,6 @@ pub fn flutter_session_submit_dialog_result_json(
     handle.with_session(|s| s.submit_dialog_result(result))?
 }
 
-fn map_host_field_detection_source(source: HostFieldDetectionSource) -> FieldDetectionSource {
-    match source {
-        HostFieldDetectionSource::FromZip => FieldDetectionSource::FromZip,
-        HostFieldDetectionSource::FieldTypeGrle => FieldDetectionSource::FieldTypeGrle,
-        HostFieldDetectionSource::GroundGdm => FieldDetectionSource::GroundGdm,
-        HostFieldDetectionSource::FruitsGdm => FieldDetectionSource::FruitsGdm,
-    }
-}
-
 /// Aktualisiert den host-lokalen Draft des Overview-Options-Dialogs.
 ///
 /// Flutter-Hosts halten waehrend der Bearbeitung einen lokalen Dialogzustand.
@@ -144,30 +132,7 @@ pub fn flutter_session_update_overview_options_dialog(
     session: &mut HostBridgeSession,
     snapshot: HostOverviewOptionsDialogSnapshot,
 ) -> Result<()> {
-    {
-        let dialog_state = session.dialog_ui_state_mut();
-        dialog_state.ui.overview_options_dialog.visible = snapshot.visible;
-        dialog_state.ui.overview_options_dialog.zip_path = snapshot.zip_path;
-        dialog_state.ui.overview_options_dialog.layers = OverviewLayerOptions {
-            hillshade: snapshot.layers.hillshade,
-            farmlands: snapshot.layers.farmlands,
-            farmland_ids: snapshot.layers.farmland_ids,
-            pois: snapshot.layers.pois,
-            legend: snapshot.layers.legend,
-        };
-        dialog_state
-            .ui
-            .overview_options_dialog
-            .field_detection_source =
-            map_host_field_detection_source(snapshot.field_detection_source);
-        dialog_state.ui.overview_options_dialog.available_sources = snapshot
-            .available_sources
-            .into_iter()
-            .map(map_host_field_detection_source)
-            .collect();
-    }
-
-    session.mark_snapshot_dirty();
+    session.update_overview_options_dialog(snapshot);
     Ok(())
 }
 
@@ -345,7 +310,7 @@ pub fn flutter_session_release_shared_arc_raw(raw: i64) {
 #[cfg(test)]
 mod tests {
     use fs25_auto_drive_host_bridge::{
-        HostConnectionPairSnapshot, HostContextMenuSnapshot, HostDialogRequest,
+        HostChromeSnapshot, HostConnectionPairSnapshot, HostContextMenuSnapshot, HostDialogRequest,
         HostDialogRequestKind, HostDialogResult, HostDialogSnapshot, HostEditingSnapshot,
         HostMarkerListSnapshot, HostRouteToolViewportSnapshot, HostSessionAction,
     };
@@ -410,12 +375,12 @@ mod tests {
         let handle = flutter_session_new();
         let json = flutter_session_chrome_snapshot_json(&handle)
             .expect("Chrome-Snapshot-Serialisierung muss gelingen");
-        let value: serde_json::Value =
+        let snapshot: HostChromeSnapshot =
             serde_json::from_str(&json).expect("Chrome-Snapshot muss parsebares JSON sein");
-        assert!(
-            value.get("show_command_palette").is_some(),
-            "Chrome-Snapshot muss chrome-Felder enthalten"
-        );
+
+        assert!(!snapshot.show_command_palette);
+        assert!(!snapshot.background_layers_available);
+        assert!(snapshot.background_layer_entries.is_empty());
         flutter_session_dispose(handle);
     }
 

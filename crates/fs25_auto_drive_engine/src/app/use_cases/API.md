@@ -6,6 +6,75 @@ Seit Phase 7 schneiden `controller.rs` und `intent_mapping.rs` die Control-Plane
 
 **Zurueck:** [`../API.md`](../API.md)
 
+## Oeffentliche Typen
+
+### `auto_detect::PostLoadDetectionResult`
+
+```rust
+pub struct PostLoadDetectionResult {
+    pub heightmap_path: Option<PathBuf>,
+    pub background_layer_files: Option<BackgroundLayerFiles>,
+    pub overview_path: Option<PathBuf>,
+    pub matching_zips: Vec<PathBuf>,
+}
+```
+
+- `heightmap_path` — gefundene `terrain.heightmap.png` neben der geladenen XML
+- `background_layer_files` — gespeichertes Overview-Layer-Bundle mit `overview_terrain.png` als Pflichtbasis
+- `overview_path` — Legacy-Fallback auf `overview.png` oder `overview.jpg`
+- `matching_zips` — passende Map-Mod-ZIPs aus XML- und Mods-Verzeichnis
+
+### `editing::AddNodeResult`
+
+```rust
+pub enum AddNodeResult {
+    NoMap,
+    SelectedExisting(u64),
+    Created(u64),
+}
+```
+
+- `NoMap` — keine RoadMap geladen, daher keine Mutation
+- `SelectedExisting(id)` — Klick hat einen existierenden Node getroffen; es wurde nur selektiert
+- `Created(id)` — neuer Node wurde angelegt und ggf. automatisch verbunden
+
+## Typischer Flow
+
+```rust
+use fs25_auto_drive_engine::app::{use_cases, AppState};
+use std::path::Path;
+
+let mut state = AppState::new();
+let detection = use_cases::auto_detect::detect_post_load(
+    Path::new("savegame1/AutoDrive_config.xml"),
+    Some("Riverbend Springs"),
+);
+
+if let Some(files) = detection.background_layer_files {
+    let catalog = use_cases::background_layers::load_background_layer_catalog(
+        files,
+        &state.options.overview_layers,
+    )?;
+    let _combined = use_cases::background_layers::compose_background_from_catalog(&catalog)?;
+}
+
+# Ok::<(), anyhow::Error>(())
+```
+
+```mermaid
+flowchart LR
+  Handlers[app/handlers] --> FileIO[file_io]
+  Handlers --> BackgroundMap[background_map]
+  Handlers --> BackgroundLayers[background_layers]
+  Handlers --> SelectionEditing[selection / editing]
+  FileIO --> Camera[camera]
+  FileIO --> AutoDetect[auto_detect]
+  BackgroundMap --> BackgroundLayers
+  BackgroundMap --> AppState[(AppState)]
+  BackgroundLayers --> AppState
+  SelectionEditing --> AppState
+```
+
 ---
 
 ## `use_cases::camera`
@@ -68,7 +137,7 @@ Seit Phase 7 schneiden `controller.rs` und `intent_mapping.rs` die Control-Plane
 
 ## `use_cases::auto_detect`
 
-- `detect_post_load(xml_path, map_name) -> PostLoadDetectionResult` — Sucht nach `terrain.heightmap.png` im XML-Verzeichnis und passenden Map-Mod-ZIPs zuerst im XML-Verzeichnis, danach zusaetzlich im Mods-Verzeichnis (`../../mods/` relativ zum Savegame). Doppelte Treffer werden entfernt. Matching: case-insensitive, Underscores/Spaces als Wildcard, bidirektionale Umlaut-Expansion (ae↔ae, oe↔oe, ue↔ue, ss↔ss).
+- `detect_post_load(xml_path, map_name) -> PostLoadDetectionResult` — Sucht nach `terrain.heightmap.png`, nach einem gespeicherten Overview-Layer-Bundle mit `overview_terrain.png` als Pflichtbasis im XML-Verzeichnis sowie nach passenden Map-Mod-ZIPs zuerst im XML-Verzeichnis, danach zusaetzlich im Mods-Verzeichnis (`../../mods/` relativ zum Savegame). Ohne Terrain-Basis bleibt das Layer-System inaktiv und der Legacy-Fallback ueber `overview.png` oder `overview.jpg` aktiv. Doppelte ZIP-Treffer werden entfernt. Matching: case-insensitive, Underscores/Spaces als Wildcard, bidirektionale Umlaut-Expansion zwischen ASCII-Form und Umlaut-/Eszett-Varianten.
 
 ---
 
@@ -127,15 +196,24 @@ pub enum AddNodeResult {
 ## `use_cases::background_map`
 
 - `request_background_map_dialog(state)` — Background-Map-Dialog oeffnen
-- `load_background_map(state, path, crop_size) -> anyhow::Result<()>` — Background-Map laden (PNG/JPG/DDS), Fehler werden an den Controller propagiert
+- `load_background_map(state, path, crop_size) -> anyhow::Result<()>` — Background-Map laden (PNG/JPG/DDS), ad-hoc Layer-/Pending-State zuruecksetzen und danach im selben Verzeichnis ein gespeichertes Overview-Layer-Bundle mit Terrain-Basis erkennen; bei Erfolg wird das aktive Combined-Bild sofort CPU-seitig aus dem Metadaten-Katalog aufgebaut, ansonsten bleibt das manuell geladene Bild aktiv
 - `toggle_background_visibility(state)` — Sichtbarkeit umschalten
 - `scale_background(state, factor)` — Skalierungsfaktor relativ anpassen (Multiplikation; Bereich 0.125–8.0)
-- `clear_background_map(state)` — Background-Map entfernen
+- `clear_background_map(state)` — Background-Map entfernen und dabei auch gespeicherten Layer-Katalog sowie ein noch ausstehendes Pending-Overview-Bundle verwerfen
 - `browse_zip_background(state, path) -> anyhow::Result<()>` — ZIP-Archiv nach Bilddateien durchsuchen; bei einem Treffer wird direkt geladen
-- `load_background_from_zip(state, zip_path, entry_name, crop_size) -> anyhow::Result<()>` — Einzelne Bilddatei aus ZIP als Background laden
-- `generate_overview_with_options(state) -> anyhow::Result<()>` — Uebersichtskarte aus Map-Mod-ZIP generieren (Layer-Optionen aus Dialog-State), Einstellungen persistent speichern; Persistenzfehler werden per `log::warn!` und `state.ui.status_message` sichtbar gemacht, die Generierung selbst laeuft weiter
-- `save_background_as_overview(state, path) -> anyhow::Result<()>` — Aktuelle Background-Map als overview.jpg speichern (JPEG Qualitaet 90), Farmland-Polygone als `.json` daneben
-- `load_farmland_json(state, image_path)` — Laedt Farmland-Polygone aus einer `.json`-Datei neben der Bilddatei (z.B. `overview.json` neben `overview.jpg`); lautlos keine-Op wenn Datei fehlt
+- `load_background_from_zip(state, zip_path, entry_name, crop_size) -> anyhow::Result<()>` — Einzelne Bilddatei aus ZIP als Background laden; verwirft dabei einen eventuell noch aktiven Layer-Katalog oder ein Pending-Overview-Bundle
+- `generate_overview_with_options(state) -> anyhow::Result<()>` — Uebersichtskarte aus Map-Mod-ZIP generieren (Layer-Optionen und `OverviewFieldDetectionSource` aus dem Dialog-State), `overview_layers` plus `overview_field_detection_source` persistent speichern, ZIP-/Savegame-basierte Feldquellen inkl. `ZipGroundGdm` auswaehlen, `farmland_polygons`/`farmland_grid` im State aktualisieren, die kanonischen Layer-PNGs sofort ins Zielverzeichnis schreiben und direkt danach den metadatenbasierten Layer-Katalog aktivieren; im State bleiben danach das Preview-Bild plus `pending_overview_bundle` als reiner Save-Marker aktiv
+- `save_background_as_overview(state, path) -> anyhow::Result<()>` — Speichert das aktuelle Combined-Bild als `overview.png` und schreibt `overview.json`; bei vorhandenem `pending_overview_bundle` werden keine Layer-PNGs erneut geschrieben, weil sie bereits waehrend der Generierung persistiert wurden, und der aktive Layer-Katalog bleibt unveraendert erhalten
+- `load_farmland_json(state, image_path)` — Laedt Farmland-Polygone aus einer `.json`-Datei neben der Bilddatei (z.B. `overview.json` neben `overview.png`); lautlos keine-Op wenn Datei fehlt
+
+---
+
+## `use_cases::background_layers`
+
+- `discover_background_layer_files(dir) -> BackgroundLayerFiles` — Sucht im angegebenen Verzeichnis nach den kanonischen Overview-Layer-Dateinamen und sammelt die vorhandenen Pfade; ein aktives gespeichertes Layer-Bundle setzt weiterhin `overview_terrain.png` als Pflichtbasis voraus
+- `load_background_layer_catalog(files, visible) -> anyhow::Result<BackgroundLayerCatalog>` — Baut einen metadatenbasierten Katalog aus den vorhandenen Layer-PNGs auf, maskiert die Runtime-Sichtbarkeit fuer fehlende optionale Layer und haelt bewusst nur Dateipfade statt dekodierter Bilddaten im State
+- `compose_background_from_catalog(catalog) -> anyhow::Result<image::DynamicImage>` — Setzt aus Terrain-Basisbild und den aktuell sichtbaren Overlay-Layern wieder ein kombiniertes Hintergrundbild zusammen, indem sichtbare PNG-Dateien sequenziell von Platte geladen und sofort in das Ergebnisbild geblendet werden; wenn der Terrain-Layer ausgeblendet ist, dient eine transparente Basis in derselben Bildgroesse als Ausgangspunkt
+- `set_background_layer_visibility(state, layer, visible) -> anyhow::Result<()>` — Aktualisiert die Runtime-Sichtbarkeit eines geladenen gespeicherten Hintergrund-Layers atomar, komponiert das Combined-Bild neu, behaelt `background_scale` bei und uebernimmt die neue Sichtbarkeit erst nach erfolgreicher Re-Komposition in den State
 
 ---
 

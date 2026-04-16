@@ -2,9 +2,9 @@
 
 use crate::app::tool_contract::RouteToolId;
 use crate::app::{ConnectionDirection, ConnectionPriority, EditorTool};
-use crate::shared::I18nKey;
+use crate::shared::{BackgroundLayerKind, I18nKey, OverviewFieldDetectionSource};
 use fs25_auto_drive_host_bridge::{
-    HostActiveTool, HostChromeSnapshot, HostDefaultConnectionDirection,
+    HostActiveTool, HostBackgroundLayerKind, HostChromeSnapshot, HostDefaultConnectionDirection,
     HostDefaultConnectionPriority, HostRouteToolDisabledReason, HostRouteToolEntrySnapshot,
     HostRouteToolGroup, HostRouteToolId, HostRouteToolSelectionSnapshot, HostRouteToolSurface,
 };
@@ -20,6 +20,14 @@ const ALT_WHEEL_MULTIPLIER_F32: f32 = 10.0;
 const CTRL_WHEEL_MULTIPLIER_F32: f32 = 0.1;
 const ALT_WHEEL_MULTIPLIER_USIZE: usize = 10;
 
+pub(crate) const OVERVIEW_FIELD_DETECTION_SOURCE_ORDER: [OverviewFieldDetectionSource; 5] = [
+    OverviewFieldDetectionSource::ZipGroundGdm,
+    OverviewFieldDetectionSource::FromZip,
+    OverviewFieldDetectionSource::FieldTypeGrle,
+    OverviewFieldDetectionSource::GroundGdm,
+    OverviewFieldDetectionSource::FruitsGdm,
+];
+
 /// Erstellt ein Top-Level-`Ui`, in dem Panels via `show_inside()` gerendert werden koennen.
 pub(crate) fn create_top_level_ui(ctx: &egui::Context, id_source: &'static str) -> egui::Ui {
     let mut top_ui = egui::Ui::new(
@@ -31,6 +39,51 @@ pub(crate) fn create_top_level_ui(ctx: &egui::Context, id_source: &'static str) 
     );
     top_ui.set_clip_rect(ctx.content_rect());
     top_ui
+}
+
+pub(crate) fn host_background_layer_to_engine(
+    kind: HostBackgroundLayerKind,
+) -> BackgroundLayerKind {
+    match kind {
+        HostBackgroundLayerKind::Terrain => BackgroundLayerKind::Terrain,
+        HostBackgroundLayerKind::Hillshade => BackgroundLayerKind::Hillshade,
+        HostBackgroundLayerKind::FarmlandBorders => BackgroundLayerKind::FarmlandBorders,
+        HostBackgroundLayerKind::FarmlandIds => BackgroundLayerKind::FarmlandIds,
+        HostBackgroundLayerKind::PoiMarkers => BackgroundLayerKind::PoiMarkers,
+        HostBackgroundLayerKind::Legend => BackgroundLayerKind::Legend,
+    }
+}
+
+pub(crate) fn host_background_layer_label_key(kind: HostBackgroundLayerKind) -> I18nKey {
+    match kind {
+        HostBackgroundLayerKind::Terrain => I18nKey::MenuBgLayerTerrain,
+        HostBackgroundLayerKind::Hillshade => I18nKey::MenuBgLayerHillshade,
+        HostBackgroundLayerKind::FarmlandBorders => I18nKey::MenuBgLayerFarmlandBorders,
+        HostBackgroundLayerKind::FarmlandIds => I18nKey::MenuBgLayerFarmlandIds,
+        HostBackgroundLayerKind::PoiMarkers => I18nKey::MenuBgLayerPoiMarkers,
+        HostBackgroundLayerKind::Legend => I18nKey::MenuBgLayerLegend,
+    }
+}
+
+pub(crate) fn overview_field_detection_source_label(
+    source: OverviewFieldDetectionSource,
+) -> &'static str {
+    match source {
+        OverviewFieldDetectionSource::ZipGroundGdm => "densityMap_ground (ZIP)",
+        OverviewFieldDetectionSource::FromZip => "infoLayer_farmlands (ZIP)",
+        OverviewFieldDetectionSource::FieldTypeGrle => "infoLayer_fieldType (Savegame)",
+        OverviewFieldDetectionSource::GroundGdm => "densityMap_ground (Savegame)",
+        OverviewFieldDetectionSource::FruitsGdm => "densityMap_fruits (Savegame)",
+    }
+}
+
+pub(crate) fn ordered_available_overview_field_detection_sources(
+    available: &[OverviewFieldDetectionSource],
+) -> Vec<OverviewFieldDetectionSource> {
+    OVERVIEW_FIELD_DETECTION_SOURCE_ORDER
+        .into_iter()
+        .filter(|source| available.contains(source))
+        .collect()
 }
 
 fn effective_float_wheel_step(step: f32, modifiers: egui::Modifiers) -> f32 {
@@ -316,6 +369,52 @@ mod tests {
         assert!(!should_capture_hovered_scroll(0.0, 0.0));
         assert!(!should_capture_hovered_scroll(0.000_000_1, 0.0));
         assert!(!should_capture_hovered_scroll(0.0, -0.000_000_1));
+    }
+
+    #[test]
+    fn host_background_layer_mapping_covers_all_variants() {
+        assert_eq!(
+            host_background_layer_to_engine(HostBackgroundLayerKind::Terrain),
+            BackgroundLayerKind::Terrain
+        );
+        assert_eq!(
+            host_background_layer_to_engine(HostBackgroundLayerKind::Hillshade),
+            BackgroundLayerKind::Hillshade
+        );
+        assert_eq!(
+            host_background_layer_to_engine(HostBackgroundLayerKind::FarmlandBorders),
+            BackgroundLayerKind::FarmlandBorders
+        );
+        assert_eq!(
+            host_background_layer_to_engine(HostBackgroundLayerKind::FarmlandIds),
+            BackgroundLayerKind::FarmlandIds
+        );
+        assert_eq!(
+            host_background_layer_to_engine(HostBackgroundLayerKind::PoiMarkers),
+            BackgroundLayerKind::PoiMarkers
+        );
+        assert_eq!(
+            host_background_layer_to_engine(HostBackgroundLayerKind::Legend),
+            BackgroundLayerKind::Legend
+        );
+    }
+
+    #[test]
+    fn ordered_available_overview_sources_follow_canonical_ui_order() {
+        let ordered = ordered_available_overview_field_detection_sources(&[
+            OverviewFieldDetectionSource::FruitsGdm,
+            OverviewFieldDetectionSource::FromZip,
+            OverviewFieldDetectionSource::ZipGroundGdm,
+        ]);
+
+        assert_eq!(
+            ordered,
+            vec![
+                OverviewFieldDetectionSource::ZipGroundGdm,
+                OverviewFieldDetectionSource::FromZip,
+                OverviewFieldDetectionSource::FruitsGdm,
+            ]
+        );
     }
 
     #[test]

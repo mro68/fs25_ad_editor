@@ -126,6 +126,52 @@ fn test_find_heightmap_next_to() {
 }
 
 #[test]
+fn test_detect_post_load_discovers_background_layers_with_terrain_base() {
+    let tmp = std::env::temp_dir().join("test_auto_detect_background_layers");
+    let _ = fs::remove_dir_all(&tmp);
+    fs::create_dir_all(&tmp).unwrap();
+
+    let xml_path = tmp.join("AutoDrive_config.xml");
+    let terrain_path = tmp.join("overview_terrain.png");
+    let hillshade_path = tmp.join("overview_hillshade.png");
+
+    fs::write(&xml_path, b"<xml/>").unwrap();
+    fs::write(&terrain_path, b"PNG").unwrap();
+    fs::write(&hillshade_path, b"PNG").unwrap();
+
+    let result = detect_post_load(&xml_path, None);
+    let files = result
+        .background_layer_files
+        .expect("Layer-Bundle mit Terrain muss erkannt werden");
+
+    assert_eq!(files.terrain, Some(terrain_path));
+    assert_eq!(files.hillshade, Some(hillshade_path));
+    assert!(files.farmland_borders.is_none());
+
+    let _ = fs::remove_dir_all(&tmp);
+}
+
+#[test]
+fn test_detect_post_load_ignores_overlay_files_without_terrain_base() {
+    let tmp = std::env::temp_dir().join("test_auto_detect_missing_terrain");
+    let _ = fs::remove_dir_all(&tmp);
+    fs::create_dir_all(&tmp).unwrap();
+
+    let xml_path = tmp.join("AutoDrive_config.xml");
+    let overview_path = tmp.join("overview.png");
+    fs::write(&xml_path, b"<xml/>").unwrap();
+    fs::write(tmp.join("overview_hillshade.png"), b"PNG").unwrap();
+    fs::write(&overview_path, b"PNG").unwrap();
+
+    let result = detect_post_load(&xml_path, None);
+
+    assert!(result.background_layer_files.is_none());
+    assert_eq!(result.overview_path, Some(overview_path));
+
+    let _ = fs::remove_dir_all(&tmp);
+}
+
+#[test]
 fn test_detect_post_load_integration() {
     let tmp = std::env::temp_dir().join("test_auto_detect_full");
     let _ = fs::remove_dir_all(&tmp);
@@ -137,10 +183,12 @@ fn test_detect_post_load_integration() {
     let xml_path = savegame.join("AutoDrive_config.xml");
     fs::write(&xml_path, b"<xml/>").unwrap();
     fs::write(savegame.join("terrain.heightmap.png"), b"PNG").unwrap();
+    fs::write(savegame.join("overview_terrain.png"), b"PNG").unwrap();
     fs::write(mods.join("FS25_TestMap.zip"), b"").unwrap();
 
     let result = detect_post_load(&xml_path, Some("TestMap"));
     assert!(result.heightmap_path.is_some());
+    assert!(result.background_layer_files.is_some());
     assert_eq!(result.matching_zips.len(), 1);
 
     let _ = fs::remove_dir_all(&tmp);

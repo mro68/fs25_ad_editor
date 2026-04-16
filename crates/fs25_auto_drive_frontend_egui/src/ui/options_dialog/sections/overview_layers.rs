@@ -1,8 +1,15 @@
 use crate::shared::{t, EditorOptions, I18nKey, Language};
 
-/// Rendert die Uebersichtskarten-Layer-Einstellungen (Hillshade, Farmlands, POIs).
+/// Rendert die Uebersichtskarten-Layer-Einstellungen (Terrain, Hillshade, Farmlands, POIs).
 pub fn render_overview_layers(ui: &mut egui::Ui, opts: &mut EditorOptions, lang: Language) -> bool {
     let mut changed = false;
+    changed |= ui
+        .checkbox(
+            &mut opts.overview_layers.terrain,
+            t(lang, I18nKey::OptOverviewTerrain),
+        )
+        .on_hover_text(t(lang, I18nKey::OptOverviewTerrainHelp))
+        .changed();
     changed |= ui
         .checkbox(
             &mut opts.overview_layers.hillshade,

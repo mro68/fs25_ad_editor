@@ -63,7 +63,7 @@ pub fn open_detected_overview_source_dialog(
 pub fn open_overview_options_dialog(state: &mut AppState, zip_path: String)
 ```
 
-Verwaltet app-weite Dialoge und Overlay-Zustaende. `apply_options()` validiert und persistiert neue Optionen; `toggle_command_palette()` schaltet die Palette um; `open_detected_overview_source_dialog()` initialisiert den Source-Dialog fuer den Post-Load-Fall vollstaendig; `open_overview_options_dialog()` bereitet den ZIP-basierten Overview-Flow vor.
+Verwaltet app-weite Dialoge und Overlay-Zustaende. `apply_options()` validiert und persistiert neue Optionen; `toggle_command_palette()` schaltet die Palette um; `open_detected_overview_source_dialog()` initialisiert den Source-Dialog fuer den Post-Load-Fall vollstaendig; `open_overview_options_dialog()` laedt die persistierten `overview_layers`- und `overview_field_detection_source`-Defaults aus `EditorOptions`, baut ZIP- und Savegame-basierte Feldquellen auf und clamped die Auswahl auf den verfuegbaren Vertrag.
 
 ```rust
 pub fn dismiss_heightmap_warning(state: &mut AppState)
@@ -96,7 +96,7 @@ pub fn request_save(state: &mut AppState)
 pub fn load(state: &mut AppState, path: String) -> anyhow::Result<()>
 ```
 
-Lädt eine AutoDrive-XML-Datei. Parst die XML, erstellt die `RoadMap`, setzt den Dateipfad und führt automatische Post-Load-Erkennung durch (Heightmap, overview.jpg, Map-Mod-ZIP).
+Lädt eine AutoDrive-XML-Datei. Parst die XML, erstellt die `RoadMap`, setzt den Dateipfad und führt automatische Post-Load-Erkennung durch: Heightmap, gespeichertes Overview-Layer-Bundle mit `overview_terrain.png` als Pflichtbasis, Legacy-`overview.png`/`overview.jpg` sowie passende Map-Mod-ZIPs.
 
 ```rust
 pub fn save(state: &mut AppState, path: Option<String>) -> anyhow::Result<()>
@@ -395,10 +395,15 @@ pub fn load_background_map(
     crop_size: Option<u32>,
 ) -> anyhow::Result<()>
 pub fn toggle_background_visibility(state: &mut AppState)
+pub fn set_background_layer_visibility(
+    state: &mut AppState,
+    layer: BackgroundLayerKind,
+    visible: bool,
+) -> anyhow::Result<()>
 pub fn scale_background(state: &mut AppState, factor: f32)
 ```
 
-Background-Map-Handling (Laden, Ein/Aus, Skalierung).
+Background-Map-Handling (Laden, globales Ein/Aus, Layer-spezifische Sichtbarkeit, Skalierung).
 
 ```rust
 pub fn browse_zip_background(state: &mut AppState, path: String) -> anyhow::Result<()>

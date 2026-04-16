@@ -127,33 +127,25 @@ pub struct AppState {
     pub ui: EngineUiState,
     pub selection: SelectionState,
     pub editor: EditorToolState,
-    pub clipboard: Clipboard,            // Zwischenablage fuer Copy/Paste
-    pub paste_preview_pos: Option<Vec2>, // Aktuelle Paste-Vorschau-Position (None = kein aktiver Paste)
+    pub clipboard: Clipboard,
+    pub paste_preview_pos: Option<Vec2>,
     pub command_log: CommandLog,
     pub history: EditHistory,
     pub options: EditorOptions,
-    // options_arc: Arc<EditorOptions>  -- privat; Zugriff via options_arc()
-    pub group_registry: GroupRegistry,   // In-Session-Registry fuer nachtraegliche Bearbeitung
+    // options_arc: Arc<EditorOptions> -- privat; Read-Snapshot fuer RenderScene-Builds
+    pub group_registry: GroupRegistry,
     pub should_exit: bool,
-    /// Geladene Farmland-Polygone fuer das FieldBoundaryTool.
-    /// Wird beim Laden einer Uebersichtskarte befuellt; `None` solange keine Map geladen ist.
     pub farmland_polygons: Option<Arc<Vec<FieldPolygon>>>,
-    /// GRLE-Raster mit Farmland-IDs fuer Pixel-basierte Analysen (z.B. Feldweg-Erkennung).
-    /// `None` solange kein Overview mit GRLE-Daten geladen wurde.
     pub farmland_grid: Option<Arc<FarmlandGrid>>,
-    /// Gecachtes Hintergrundbild fuer farbbasierte Tool-Analysen.
-    /// `None` solange kein Overview geladen wurde.
-    ///
-    /// Hinweis: Das kanonische Asset lebt in `view.background_map`; dieses Feld
-    /// dient als kompatibler Fallback fuer bestehende Tool-Pfade.
     pub background_image: Option<Arc<image::DynamicImage>>,
-    /// Aktiver Gruppen-Edit-Modus (None = Normal-Modus, Some = nicht-destruktives Editing aktiv).
+    pub background_layers: Option<BackgroundLayerCatalog>,
+    pub pending_overview_bundle: Option<PendingOverviewBundle>,
+    // saved_document_cache_key: Option<(u64, u64)> -- privat; Dirty-Baseline via render_cache_key()
     pub group_editing: Option<GroupEditState>,
-    /// Separater Store fuer tool-spezifische Edit-Payloads gruppenbasierter Route-Tools.
     pub tool_edit_store: ToolEditStore,
-    /// Laufende destruktive Tool-Edit-Session inklusive Backups fuer Cancel/Undo.
     pub active_tool_edit_session: Option<ActiveToolEditSession>,
     // dimmed_ids_cache: RefCell<Option<(u64, u64, Arc<IndexSet<u64>>)>> -- intern; Cache fuer compute_dimmed_ids
+    // render_map_cache: RefCell<Option<(u64, u64, Arc<RenderMap>)>> -- intern; render-seitiger Map-Snapshot-Cache
 }
 
 /// Zustand einer aktiven Gruppen-Bearbeitung (nicht-destruktiver Edit-Modus).
@@ -176,6 +168,31 @@ pub struct Clipboard {
     pub markers: Vec<MapMarker>,    // Kopierte Marker der selektierten Nodes
     pub center: Vec2,               // Geometrisches Zentrum (Offset-Basis beim Paste)
 }
+
+pub struct StoredBackgroundLayer {
+    pub kind: BackgroundLayerKind,
+    pub path: PathBuf,
+}
+
+pub struct BackgroundLayerFiles {
+    pub directory: PathBuf,
+    pub terrain: Option<PathBuf>,
+    pub hillshade: Option<PathBuf>,
+    pub farmland_borders: Option<PathBuf>,
+    pub farmland_ids: Option<PathBuf>,
+    pub poi_markers: Option<PathBuf>,
+    pub legend: Option<PathBuf>,
+}
+
+pub struct BackgroundLayerCatalog {
+    pub files: BackgroundLayerFiles,
+    pub layers: Vec<StoredBackgroundLayer>,
+    pub visible: OverviewLayerOptions,
+}
+
+pub struct PendingOverviewBundle {
+    pub target_dir: PathBuf,
+}
 ```
 
 **Methoden:**
@@ -186,6 +203,7 @@ sel.ids_mut().insert(42);
 ```
 
 - `new() → Self`
+- `road_map_ref() → Option<&RoadMap>` — Bevorzugter Read-Zugang auf die geladene Karte ohne `unwrap()` in Use-Cases
 - `ids_mut() → &mut IndexSet<u64>` — Mutable Zugriff via `Arc::make_mut` (Copy-on-Write)
 - `active_route_tool_id() → Option<RouteToolId>` — Aktive Route-Tool-ID im Route-Modus, sonst `None`
 - `farmland_polygons_arc() → Option<Arc<Vec<FieldPolygon>>>` — Arc-Clone der geladenen Farmland-Polygone
@@ -193,13 +211,20 @@ sel.ids_mut().insert(42);
 - `background_image_arc() → Option<Arc<image::DynamicImage>>` — Kanonisches Hintergrundbild (`view.background_map` bevorzugt)
 - `has_farmland_polygons() → bool` — `true` falls Farmland-Polygone geladen sind
 - `has_background_image() → bool` — `true` falls ein Hintergrundbild verfuegbar ist
+- `node_count() → usize` — Anzahl der Nodes fuer Status-/Host-Anzeigen
+- `connection_count() → usize` — Anzahl der Verbindungen fuer Status-/Host-Anzeigen
+- `can_undo() → bool` — Gibt zurueck, ob ein Undo-Schritt verfuegbar ist
+- `can_redo() → bool` — Gibt zurueck, ob ein Redo-Schritt verfuegbar ist
+- `is_dirty() → bool` — Vergleicht den aktuellen `RoadMap::render_cache_key()` mit der letzten Load-/Save-Baseline
+- `record_undo_snapshot()` — Erstellt einen `Snapshot` des aktuellen Zustands fuer mutierende Use-Cases
+- `options_arc() → Arc<EditorOptions>` — Allokationsarmer Read-Snapshot der Optionen fuer Render-/Host-Projektionen
+- `set_options(options)` — Ersetzt `options` und aktualisiert den geteilten Arc-Snapshot atomar
+- `refresh_options_arc()` — Synchronisiert den Arc-Snapshot nach in-place Mutationen an `options`
+
+`background_image` bleibt ein kompatibler Fallback fuer farbbasierte Tool-Pfade; das kanonische Asset lebt in `view.background_map`. `BackgroundLayerCatalog` haelt fuer gespeicherte Overviews nur Dateipfade, Layer-Reihenfolge und Runtime-Sichtbarkeit. Das kombinierte Bild wird bei Bedarf CPU-seitig on-demand ueber `use_cases::background_layers::compose_background_from_catalog(...)` neu aufgebaut, ohne alle Layer dekodiert im State zu halten. `PendingOverviewBundle` markiert nur noch das Zielverzeichnis einer frischen ZIP-Generierung: Die kanonischen Layer-PNGs werden sofort nach der Generierung geschrieben und der Save-Workflow aktualisiert spaeter nur noch das aktuelle `overview.png` plus `overview.json`.
 
 pub struct EngineUiState {
     pub dialog_requests: Vec<DialogRequest>,
-    pub show_command_palette: bool,
-    pub show_options_dialog: bool,
-    pub floating_menu: Option<FloatingMenuState>,
-    pub show_heightmap_warning: bool,
     pub heightmap_warning_confirmed: bool,
     pub pending_save_path: Option<String>,
     pub current_file_path: Option<String>,
@@ -211,22 +236,19 @@ pub struct EngineUiState {
     pub overview_options_dialog: OverviewOptionsDialogState,
     pub post_load_dialog: PostLoadDialogState,
     pub save_overview_dialog: SaveOverviewDialogState,
-    /// Konfiguration fuer das Distanzen-Neuverteilen-Feature
     pub distanzen: DistanzenState,
-    /// Einstellungen fuer den Dialog "Alle Felder nachzeichnen"
     pub trace_all_fields_dialog: TraceAllFieldsDialogState,
-    /// Gruppen-Einstellungs-Popup (Doppelklick auf Gruppen-Node)
     pub group_settings_popup: GroupSettingsPopupState,
-    /// ID der Gruppe, deren Auflösung vom User bestätigt werden soll (`None` = kein Dialog)
-    pub confirm_dissolve_group_id: Option<u64>,
 }
 
 impl EngineUiState {
+    pub fn new() -> Self;
     pub fn request_dialog(&mut self, request: DialogRequest);
     pub fn take_dialog_requests(&mut self) -> Vec<DialogRequest>;
 }
 
 - `EngineUiState` enthaelt nur engine-seitige Dialog-Queues, Dateipfade, Status und Workflow-Flags; host-lokaler Chrome-/Dialogzustand wird in der Host-Bridge ueber `HostLocalDialogState` gehalten und per Drain gespiegelt.
+- Bestatigungen wie Segment-Aufloesung liegen nicht mehr in separaten UI-State-Feldern, sondern werden als `DialogRequest` in `dialog_requests` an den Host uebergeben.
 - `EngineUiState::take_dialog_requests()` bleibt das interne Queue-Primitiv; Host-Adapter sollen die kanonische Controller-Seam `AppController::take_dialog_requests(...)` nutzen.
 
 pub struct ViewportOverlaySnapshot {
@@ -347,6 +369,7 @@ pub struct PostLoadDialogState {
     pub context: OverviewSourceContext,
     pub heightmap_set: bool,
     pub heightmap_path: Option<String>,
+    // true wenn ein gespeichertes Layer-Bundle oder ein Legacy-Overview auto-aktiviert wurde
     pub overview_loaded: bool,
     pub matching_zips: Vec<PathBuf>,
     pub selected_zip_index: usize,
@@ -692,6 +715,7 @@ pub enum AppIntent {
     BackgroundMapSelectionRequested,
     BackgroundMapSelected { path: String, crop_size: Option<u32> },
     ToggleBackgroundVisibility,
+    SetBackgroundLayerVisibility { layer: BackgroundLayerKind, visible: bool },
     ScaleBackground { factor: f32 },
     ZipBackgroundBrowseRequested { path: String },
     ZipBackgroundFileSelected { zip_path: String, entry_name: String },
@@ -889,6 +913,7 @@ pub enum AppCommand {
     DismissHeightmapWarning,
     LoadBackgroundMap { path: String, crop_size: Option<u32> },
     ToggleBackgroundVisibility,
+    SetBackgroundLayerVisibility { layer: BackgroundLayerKind, visible: bool },
     ScaleBackground { factor: f32 },
     BrowseZipBackground { path: String },
     LoadBackgroundFromZip { zip_path: String, entry_name: String, crop_size: Option<u32> },
@@ -982,7 +1007,7 @@ pub enum AppCommand {
     // Gruppen-Lock
     /// Gruppen-Lock umschalten (gesperrt ↔ entsperrt)
     ToggleGroupLock { segment_id: u64 },
-    /// Bestätigungsdialog für Segment-Auflösung öffnen (setzt `UiState::confirm_dissolve_group_id`)
+    /// Bestätigungsdialog für Segment-Auflösung über `DialogRequest::ShowDissolveGroupConfirm(...)` öffnen
     OpenDissolveConfirmDialog { segment_id: u64 },
     /// Segment aufloesen (Gruppen-Record entfernen, Nodes beibehalten)
     DissolveGroup { segment_id: u64 },

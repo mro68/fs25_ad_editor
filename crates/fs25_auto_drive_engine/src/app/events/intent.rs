@@ -9,6 +9,7 @@ mod tests {
     use super::AppIntent;
     use crate::app::events::AppEventFeature;
     use crate::app::ui_contract::{ParkingPanelAction, RouteToolPanelAction};
+    use crate::shared::BackgroundLayerKind;
 
     #[test]
     fn classifies_editing_group_and_dialog_intents() {
@@ -30,6 +31,14 @@ mod tests {
     fn classifies_view_and_route_tool_intents() {
         assert_eq!(
             AppIntent::OverviewZipBrowseRequested.feature(),
+            AppEventFeature::View
+        );
+        assert_eq!(
+            AppIntent::SetBackgroundLayerVisibility {
+                layer: BackgroundLayerKind::Legend,
+                visible: true,
+            }
+            .feature(),
             AppEventFeature::View
         );
         assert_eq!(

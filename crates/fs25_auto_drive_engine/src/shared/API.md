@@ -6,6 +6,7 @@ Das `shared`-Modul enthaelt neutrale, layer-uebergreifende Typen, die zwischen `
 
 ## Module
 
+- `background_layers.rs` — host-neutrale Typen fuer gespeicherte Overview-Hintergrund-Layer (`BackgroundLayerKind`) und persistente Feldquellen (`OverviewFieldDetectionSource`)
 - `render_scene.rs` — `RenderScene` Uebergabevertrag App → Render
 - `render_assets.rs` — `RenderAssetsSnapshot` fuer langlebige Host-Assets (z. B. Background)
 - `render_quality.rs` — `RenderQuality` Enum (Low/Medium/High)
@@ -179,6 +180,7 @@ Wird als Teil der `EditorOptions` persistent in TOML gespeichert.
 
 ```rust
 pub struct OverviewLayerOptions {
+    pub terrain: bool,
     pub hillshade: bool,
     pub farmlands: bool,
     pub farmland_ids: bool,
@@ -187,7 +189,42 @@ pub struct OverviewLayerOptions {
 }
 ```
 
-Der Default setzt alle Layer ausser `legend` auf `true`.
+Der Default setzt `terrain`, `hillshade`, `farmlands` und `farmland_ids` auf `true`; `pois` und `legend` bleiben deaktiviert. Die Struct-Deserialisierung nutzt `Default`, damit fehlende neue Felder in bestehenden TOML-Dateien rueckwaertskompatibel aufgefuellt werden.
+
+### `BackgroundLayerKind`
+
+Host-neutrale Kennung eines gespeicherten Overview-Hintergrund-Layers.
+
+```rust
+pub enum BackgroundLayerKind {
+    Terrain,
+    Hillshade,
+    FarmlandBorders,
+    FarmlandIds,
+    PoiMarkers,
+    Legend,
+}
+```
+
+- `BackgroundLayerKind::ALL` enthaelt alle bekannten Layer in kanonischer Reihenfolge.
+- `file_name()` liefert stabile PNG-Dateinamen wie `overview_terrain.png` oder `overview_farmland_ids.png`.
+- `Display` gibt lesbare UI-Labels fuer Hosts und Menues zurueck.
+
+### `OverviewFieldDetectionSource`
+
+Host-neutrale, persistente Feldquelle fuer Overview-Dialoge und Optionen.
+
+```rust
+pub enum OverviewFieldDetectionSource {
+    FromZip,
+    ZipGroundGdm,
+    FieldTypeGrle,
+    GroundGdm,
+    FruitsGdm,
+}
+```
+
+`ZipGroundGdm` ist der neue Default fuer persistierte Overview-Voreinstellungen. Die App mappt diesen shared-Typ erst im App-Layer auf die fachliche `fs25_map_overview::FieldDetectionSource` zurueck.
 
 ### `SelectionStyle`
 
@@ -298,6 +335,8 @@ pub struct EditorOptions {
     // Uebersichtskarte
     /// Layer-Optionen fuer Uebersichtskarten-Generierung
     pub overview_layers: OverviewLayerOptions,
+    /// Persistente Standardquelle fuer die Feldpolygon-Erkennung im Overview-Dialog
+    pub overview_field_detection_source: OverviewFieldDetectionSource,
     // Zoom-Kompensation
     /// Maximaler Zoom-Kompensationsfaktor (1.0 = deaktiviert, 4.0 = Standard).
     /// Verhindert, dass Nodes und Verbindungen beim Herauszoomen unsichtbar werden.
@@ -347,7 +386,7 @@ pub enum Language {
 
 ### `I18nKey`
 
-Enum aller übersetzbaren UI-Schlüssel. Gruppen: Allgemein, Dialog-Chrome, Options-Dialog (Abschnitte, Felder, Tooltips), Menüleiste, Status-Bar, Tool-Namen, Sidebar, Zoom, Hintergrund, Route-Gruppen, Floating-Menus, Kontextmenüs, Command-Palette, LongPress-Tooltips.
+Enum aller übersetzbaren UI-Schlüssel. Gruppen: Allgemein, Dialog-Chrome, Options-Dialog (Abschnitte, Felder, Tooltips, dedizierte Hintergrundkarten-Defaults und Polygon-Quelle), Menüleiste inklusive Hintergrund-Layer-Untermenue, Status-Bar, Tool-Namen, Sidebar, Zoom, Hintergrund, Route-Gruppen, Floating-Menus, Kontextmenüs, Command-Palette, LongPress-Tooltips.
 
 ```rust
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
@@ -357,9 +396,9 @@ pub enum I18nKey {
     // Dialog-Chrome
     DialogClose, DialogDefaults,
     // Options-Dialog: Navigation & Felder
-    OptSectionGeneral, OptSectionNodes, OptSectionTools, OptSectionConnections, OptSectionBehavior,
-    // ... (Opt* — ~95 Keys, vollständig in keys.rs)
-    // Menüleiste (MenuXxx — 29 Keys)
+    OptSectionGeneral, OptSectionNodes, OptSectionTools, OptSectionConnections, OptSectionBehavior, OptSectionOverview,
+    // ... (Opt* — inkl. Hintergrundkarten-Defaults und Polygon-Quelle, vollständig in keys.rs)
+    // Menüleiste (MenuXxx — inkl. Background-Layer-Untermenue)
     // Status-Bar (StatusXxx — 13 Keys)
     // Tool-Namen (ToolNameXxx — 4 Keys)
     // === NEU (Branch feature/zoom-shortcuts-i18n, 79 neue Keys) ===

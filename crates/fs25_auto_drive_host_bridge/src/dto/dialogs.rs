@@ -1,8 +1,7 @@
 //! Dialog-DTOs fuer die Host-Bridge.
 
 use fs25_auto_drive_engine::app::OverviewSourceContext;
-use fs25_auto_drive_engine::shared::OverviewLayerOptions;
-use fs25_map_overview::FieldDetectionSource;
+use fs25_auto_drive_engine::shared::{OverviewFieldDetectionSource, OverviewLayerOptions};
 use serde::{Deserialize, Serialize};
 
 /// Stabile Art eines Host-Datei-/Pfad-Dialogs fuer die Bridge.
@@ -58,6 +57,8 @@ pub enum HostDialogResult {
 pub enum HostFieldDetectionSource {
     /// Felder aus der Map-ZIP ableiten.
     FromZip,
+    /// Felder aus `densityMap_ground.gdm` innerhalb der Map-ZIP ableiten.
+    ZipGroundGdm,
     /// Felder aus `infoLayer_fieldType.grle` des Savegames ableiten.
     FieldTypeGrle,
     /// Felder aus `densityMap_ground.gdm` des Savegames ableiten.
@@ -66,13 +67,14 @@ pub enum HostFieldDetectionSource {
     FruitsGdm,
 }
 
-impl From<FieldDetectionSource> for HostFieldDetectionSource {
-    fn from(source: FieldDetectionSource) -> Self {
+impl From<OverviewFieldDetectionSource> for HostFieldDetectionSource {
+    fn from(source: OverviewFieldDetectionSource) -> Self {
         match source {
-            FieldDetectionSource::FromZip => Self::FromZip,
-            FieldDetectionSource::FieldTypeGrle => Self::FieldTypeGrle,
-            FieldDetectionSource::GroundGdm => Self::GroundGdm,
-            FieldDetectionSource::FruitsGdm => Self::FruitsGdm,
+            OverviewFieldDetectionSource::FromZip => Self::FromZip,
+            OverviewFieldDetectionSource::ZipGroundGdm => Self::ZipGroundGdm,
+            OverviewFieldDetectionSource::FieldTypeGrle => Self::FieldTypeGrle,
+            OverviewFieldDetectionSource::GroundGdm => Self::GroundGdm,
+            OverviewFieldDetectionSource::FruitsGdm => Self::FruitsGdm,
         }
     }
 }
@@ -99,6 +101,8 @@ impl From<OverviewSourceContext> for HostOverviewSourceContext {
 /// Host-neutrale Layer-Auswahl fuer die Uebersichtskarten-Generierung.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct HostOverviewLayersSnapshot {
+    /// Terrain-Basis aktiv.
+    pub terrain: bool,
     /// Hillshade-Schattierung aktiv.
     pub hillshade: bool,
     /// Farmland-Grenzen aktiv.
@@ -114,6 +118,7 @@ pub struct HostOverviewLayersSnapshot {
 impl From<&OverviewLayerOptions> for HostOverviewLayersSnapshot {
     fn from(layers: &OverviewLayerOptions) -> Self {
         Self {
+            terrain: layers.terrain,
             hillshade: layers.hillshade,
             farmlands: layers.farmlands,
             farmland_ids: layers.farmland_ids,
@@ -345,15 +350,17 @@ mod tests {
                 visible: true,
                 zip_path: "/tmp/map.zip".to_string(),
                 layers: HostOverviewLayersSnapshot {
+                    terrain: true,
                     hillshade: true,
                     farmlands: false,
                     farmland_ids: true,
                     pois: true,
                     legend: false,
                 },
-                field_detection_source: HostFieldDetectionSource::GroundGdm,
+                field_detection_source: HostFieldDetectionSource::ZipGroundGdm,
                 available_sources: vec![
                     HostFieldDetectionSource::FromZip,
+                    HostFieldDetectionSource::ZipGroundGdm,
                     HostFieldDetectionSource::GroundGdm,
                 ],
             },
@@ -400,8 +407,15 @@ mod tests {
         assert_eq!(
             payload
                 .get("overview_options_dialog")
+                .and_then(|value| value.get("layers"))
+                .and_then(|value| value.get("terrain")),
+            Some(&json!(true))
+        );
+        assert_eq!(
+            payload
+                .get("overview_options_dialog")
                 .and_then(|value| value.get("field_detection_source")),
-            Some(&json!("ground_gdm"))
+            Some(&json!("zip_ground_gdm"))
         );
         assert_eq!(
             payload

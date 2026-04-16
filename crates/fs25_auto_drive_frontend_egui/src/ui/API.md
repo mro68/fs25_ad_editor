@@ -628,7 +628,8 @@ pub fn render_command_palette(
 
 ### `show_options_dialog`
 
-Zeigt den Optionen-Dialog als modales Fenster (Farben, Größen, Zoom-Schritte).
+Zeigt den Optionen-Dialog als modales Fenster (Farben, Groessen, Zoom-Schritte und Hintergrundkarten-Defaults).
+Die Navigationsleiste enthaelt eine eigene Sektion `Hintergrundkarte` fuer die Standard-Sichtbarkeit der Overview-Layer und die Default-Polygonquelle.
 
 ```rust
 pub fn show_options_dialog(
@@ -897,7 +898,8 @@ Bei mehreren ZIPs werden RadioButtons zur Auswahl angezeigt. Im Menue-Kontext bl
 
 ### `show_overview_options_dialog`
 
-Zeigt den Layer-Dialog für die Übersichtskarten-Generierung (Hillshade/Farmlands/IDs/POIs/Legende).
+Zeigt den Layer-Dialog fuer die Uebersichtskarten-Generierung (Terrain/Hillshade/Farmlands/IDs/POIs/Legende).
+Verfuegbare Polygon-Quellen werden in der UI-Reihenfolge `densityMap_ground (ZIP)`, `infoLayer_farmlands (ZIP)` und danach die Savegame-Quellen angezeigt.
 
 ```rust
 pub fn show_overview_options_dialog(

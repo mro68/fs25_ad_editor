@@ -13,15 +13,17 @@ enum OptionsSection {
     Tools,
     Connections,
     Behavior,
+    Overview,
 }
 
 impl OptionsSection {
-    const ALL: [Self; 5] = [
+    const ALL: [Self; 6] = [
         Self::General,
         Self::Nodes,
         Self::Tools,
         Self::Connections,
         Self::Behavior,
+        Self::Overview,
     ];
 
     fn title(self, lang: Language) -> &'static str {
@@ -33,6 +35,7 @@ impl OptionsSection {
                 Self::Tools => I18nKey::OptSectionTools,
                 Self::Connections => I18nKey::OptSectionConnections,
                 Self::Behavior => I18nKey::OptSectionBehavior,
+                Self::Overview => I18nKey::OptSectionOverview,
             },
         )
     }
@@ -46,6 +49,7 @@ impl OptionsSection {
                 Self::Tools => I18nKey::OptSubtitleTools,
                 Self::Connections => I18nKey::OptSubtitleConnections,
                 Self::Behavior => I18nKey::OptSubtitleBehavior,
+                Self::Overview => I18nKey::OptSubtitleOverview,
             },
         )
     }
@@ -104,9 +108,6 @@ fn render_selected_section(
                 render_subsection(ui, t(lang, I18nKey::OptSubSectionCopyPaste), None, |ui| {
                     sections::render_copy_paste(ui, opts, lang)
                 });
-            changed |= render_subsection(ui, t(lang, I18nKey::OptSubSectionOverview), None, |ui| {
-                sections::render_overview_layers(ui, opts, lang)
-            });
         }
         OptionsSection::Nodes => {
             changed |= sections::render_nodes(ui, opts, lang);
@@ -119,6 +120,16 @@ fn render_selected_section(
         }
         OptionsSection::Behavior => {
             changed |= sections::render_node_behavior(ui, opts, lang);
+        }
+        OptionsSection::Overview => {
+            changed |=
+                render_subsection(ui, t(lang, I18nKey::OptOverviewDefaultLayers), None, |ui| {
+                    sections::render_overview_layers(ui, opts, lang)
+                });
+            changed |=
+                render_subsection(ui, t(lang, I18nKey::OptOverviewPolygonSource), None, |ui| {
+                    sections::render_overview_source(ui, opts, lang)
+                });
         }
     }
 
