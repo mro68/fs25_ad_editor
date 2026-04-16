@@ -19,10 +19,11 @@ Farmland-Polygone werden zusätzlich extrahiert und dem Aufrufer bereitgestellt 
 
 ```text
 crates/fs25_map_overview/src/
-  lib.rs          # Einstiegspunkte: generate_overview_from_zip, generate_overview_result_from_zip
-  composite/      # Endmontage: Farmland-Grenzen, POIs, Legende
-    mod.rs
-    legend.rs
+    lib.rs          # Einstiegspunkte und ZIP-Wrapper
+    layer_bundle.rs # RGBA-Layer-Bundle und CPU-Komposition
+    composite.rs    # Endmontage: Farmland-Grenzen, POIs, Legende
+    composite/
+        legend.rs
   discovery.rs    # Kartenstruktur-Erkennung aus ZIP (modDesc.xml, Map-Config-XML)
   farmland.rs     # Moore-Neighbor-Boundary-Tracing → FarmlandPolygon
   gdm.rs          # GDM-Dekoder (GIANTS Data Format)
@@ -74,6 +75,37 @@ pub fn generate_overview_result_from_zip(
 Generiert Übersichtsbild **und** extrahiert Farmland-Polygone in einem Schritt.  
 Gibt ein [`OverviewResult`] zurück. Wird vom Editor verwendet, um Polygone für das `FieldBoundaryTool` bereitzustellen.
 
+Das enthaltene Bild entspricht dem kombinierten RGBA-Ergebnis der aktuell sichtbaren Layer und kann daher Transparenz enthalten.
+
+---
+
+### `generate_overview_layer_bundle_from_zip`
+
+```rust
+pub fn generate_overview_layer_bundle_from_zip(
+    zip_path: &str,
+    options: &OverviewOptions,
+) -> Result<OverviewLayerBundle>
+```
+
+Generiert ein vollständiges Layer-Bundle aus einem FS25-Map-ZIP.  
+Liefert das opake Terrain-Basisbild, separate transparente Overlay-PNGs sowie ein `combined`-Bild, das aus den sichtbaren Layern zusammengesetzt ist.
+
+---
+
+### `generate_overview_layer_bundle`
+
+```rust
+pub fn generate_overview_layer_bundle(
+    files: &HashMap<String, Vec<u8>>,
+    map_info: &MapInfo,
+    options: &OverviewOptions,
+) -> Result<OverviewLayerBundle>
+```
+
+Variante fuer bereits extrahierte ZIP-Dateien.  
+Nuetzlich fuer Tests oder Aufrufer, die Discovery und ZIP-IO selbst kontrollieren.
+
 ---
 
 ### `try_extract_polygons_from_zip_ground_gdm`
@@ -96,7 +128,7 @@ Ergebnis von `generate_overview_result_from_zip`.
 
 ```rust
 pub struct OverviewResult {
-    /// Generiertes Übersichtsbild
+    /// Generiertes kombiniertes Übersichtsbild (RGBA möglich)
     pub image: DynamicImage,
     /// Extrahierte Farmland-Polygone im GRLE-Pixel-Koordinatenraum
     pub farmland_polygons: Vec<FarmlandPolygon>,
@@ -120,10 +152,11 @@ pub struct OverviewResult {
 
 ### `OverviewOptions`
 
-Steuert welche Layer in die Übersichtskarte gezeichnet werden.
+Steuert, welche Layer im kombinierten Ergebnis initial sichtbar sind.
 
 ```rust
 pub struct OverviewOptions {
+    pub terrain: bool,        // Terrain-Basisbild im combined-Ergebnis
     pub hillshade: bool,      // 3D-Reliefschattierung aus DEM
     pub farmlands: bool,      // Farmland-Grenzlinien einzeichnen
     pub farmland_ids: bool,   // Farmland-ID-Nummern einzeichnen
@@ -133,6 +166,34 @@ pub struct OverviewOptions {
 ```
 
 `Default` aktiviert alle Layer.
+
+Die Legacy-Funktionen `generate_overview_from_zip()` und `generate_overview()` liefern weiterhin ein opakes RGB-Bild und ignorieren `terrain = false` bewusst, um abwaertskompatibel zu bleiben.
+
+---
+
+### `OverviewLayerBundle`
+
+Ergebnis der Layer-Bundle-Generierung.
+
+```rust
+pub struct OverviewLayerBundle {
+    pub terrain: RgbaImage,
+    pub hillshade: RgbaImage,
+    pub farmland_borders: RgbaImage,
+    pub farmland_ids: RgbaImage,
+    pub poi_markers: RgbaImage,
+    pub legend: RgbaImage,
+    pub combined: RgbaImage,
+    pub farmland_polygons: Vec<FarmlandPolygon>,
+    pub grle_width: u32,
+    pub grle_height: u32,
+    pub map_size: f32,
+    pub farmland_ids_raw: Option<Vec<u8>>,
+}
+```
+
+`terrain` enthaelt das opake Basisbild inklusive Title-Bar.  
+Alle anderen Bildfelder sind transparente RGBA-Overlays und koennen per `compose_layers(...)` wieder zusammengesetzt werden.
 
 ---
 
