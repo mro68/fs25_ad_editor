@@ -10,6 +10,7 @@ use indexmap::IndexSet;
 use std::cell::RefCell;
 use std::sync::Arc;
 
+use super::background_layers::{BackgroundLayerCatalog, PendingOverviewBundle};
 use super::{EditorTool, EditorToolState, EngineUiState, SelectionState, ViewState};
 
 /// Zwischenablage fuer Nodes, Verbindungen und Marker
@@ -85,6 +86,14 @@ pub struct AppState {
     /// Gecachtes Hintergrundbild fuer farbbasierte Tool-Analysen.
     /// `None` solange kein Overview geladen wurde.
     pub background_image: Option<Arc<image::DynamicImage>>,
+    /// Geladener Dateikatalog der gespeicherten Overview-Layer-PNGs.
+    ///
+    /// `None` solange kein gespeichertes Layer-Bundle entdeckt oder gespeichert wurde.
+    pub background_layers: Option<BackgroundLayerCatalog>,
+    /// Noch nicht persistiertes Overview-Layer-Bundle aus der ZIP-Generierung.
+    ///
+    /// Wird beim bestaetigten Speichern als einzelne PNGs plus `overview.json` ausgeschrieben.
+    pub pending_overview_bundle: Option<PendingOverviewBundle>,
     /// Zuletzt geladener oder erfolgreich gespeicherter Dokumentschluessel.
     ///
     /// Der Wert basiert auf `RoadMap::render_cache_key()` und unterscheidet damit
@@ -132,6 +141,8 @@ impl AppState {
             farmland_polygons: None,
             farmland_grid: None,
             background_image: None,
+            background_layers: None,
+            pending_overview_bundle: None,
             saved_document_cache_key: None,
             group_editing: None,
             tool_edit_store: ToolEditStore::new(),

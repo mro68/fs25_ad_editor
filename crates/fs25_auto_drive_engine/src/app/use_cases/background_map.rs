@@ -1,20 +1,24 @@
 //! Use-Case-Funktionen fuer Background-Map-Verwaltung.
 
-use crate::app::state::ZipBrowserState;
+use crate::app::state::{PendingOverviewBundle, ZipBrowserState};
 use crate::app::ui_contract::{DialogRequest, DialogRequestKind};
 use crate::app::AppState;
 use crate::core::{self, BackgroundMap, FarmlandGrid, FieldPolygon};
-use crate::shared::OverviewFieldDetectionSource;
-use anyhow::Result;
+use crate::shared::{BackgroundLayerKind, OverviewFieldDetectionSource};
+use anyhow::{Context, Result};
 use glam::Vec2;
-use image::GenericImageView;
+use image::DynamicImage;
 use std::path::Path;
 use std::sync::Arc;
 
 fn apply_background_map(state: &mut AppState, bg_map: BackgroundMap) {
+    apply_background_map_with_scale(state, bg_map, 1.0);
+}
+
+fn apply_background_map_with_scale(state: &mut AppState, bg_map: BackgroundMap, scale: f32) {
     let image_arc = bg_map.image_arc();
     state.view.background_map = Some(Arc::new(bg_map));
-    state.view.background_scale = 1.0;
+    state.view.background_scale = scale;
     state.view.mark_background_asset_changed();
     state.background_image = Some(image_arc);
 }
@@ -133,6 +137,8 @@ pub fn load_background_map(
 
     // Speichere in State
     apply_background_map(state, bg_map);
+    state.background_layers = None;
+    state.pending_overview_bundle = None;
 
     // Farmland-Polygone aus begleitender JSON-Datei laden (falls vorhanden)
     load_farmland_json(state, &path);
@@ -173,6 +179,8 @@ pub fn scale_background(state: &mut AppState, factor: f32) {
 /// Entfernt die Background-Map.
 pub fn clear_background_map(state: &mut AppState) {
     clear_background_assets(state);
+    state.background_layers = None;
+    state.pending_overview_bundle = None;
     log::info!("Background-Map entfernt");
 }
 
@@ -232,6 +240,8 @@ pub fn load_background_from_zip(
     );
 
     apply_background_map(state, bg_map);
+    state.background_layers = None;
+    state.pending_overview_bundle = None;
 
     // ZIP-Browser schliessen (falls offen)
     state.ui.zip_browser = None;
@@ -272,9 +282,9 @@ pub fn generate_overview_with_options(state: &mut AppState) -> Result<()> {
         legend: layers.legend,
     };
 
-    let overview = fs25_map_overview::generate_overview_result_from_zip(&zip_path, &options)?;
+    let bundle = fs25_map_overview::generate_overview_layer_bundle_from_zip(&zip_path, &options)?;
 
-    let (width, height) = overview.image.dimensions();
+    let (width, height) = bundle.combined.dimensions();
     log::info!("Uebersichtskarte generiert: {}x{} Pixel", width, height);
 
     // Savegame-Verzeichnis (Elternordner der aktuell geladenen Config)
@@ -289,33 +299,45 @@ pub fn generate_overview_with_options(state: &mut AppState) -> Result<()> {
         extract_field_polygons_from_source(&zip_path, savegame_dir.as_deref(), field_source);
 
     // Rohe Polygone und Rasterdimensionen ermitteln
-    let (raw_polygons, grle_w, grle_h) = match extracted {
-        Some((polygons, w, h)) => (polygons, w, h),
-        None => (
-            overview.farmland_polygons,
-            overview.grle_width,
-            overview.grle_height,
-        ),
+    let (field_polygons, grle_w, grle_h) = match extracted {
+        Some((polygons, w, h)) => {
+            let scale_x = bundle.map_size / w.max(1) as f32;
+            let scale_y = bundle.map_size / h.max(1) as f32;
+            let half = bundle.map_size / 2.0;
+            let polygons: Vec<FieldPolygon> = polygons
+                .into_iter()
+                .map(|fp| FieldPolygon {
+                    id: fp.id,
+                    vertices: fp
+                        .vertices
+                        .into_iter()
+                        .map(|(px, py)| Vec2::new(px * scale_x - half, py * scale_y - half))
+                        .collect(),
+                })
+                .collect();
+            (polygons, w, h)
+        }
+        None => {
+            let scale_x = bundle.map_size / bundle.grle_width.max(1) as f32;
+            let scale_y = bundle.map_size / bundle.grle_height.max(1) as f32;
+            let half = bundle.map_size / 2.0;
+            let polygons: Vec<FieldPolygon> = bundle
+                .farmland_polygons
+                .iter()
+                .map(|fp| FieldPolygon {
+                    id: fp.id,
+                    vertices: fp
+                        .vertices
+                        .iter()
+                        .map(|(px, py)| Vec2::new(*px * scale_x - half, *py * scale_y - half))
+                        .collect(),
+                })
+                .collect();
+            (polygons, bundle.grle_width, bundle.grle_height)
+        }
     };
 
-    // Pixel → Weltkoordinaten: world = pixel * (map_size / grle_size) - map_size / 2
-    if !raw_polygons.is_empty() {
-        let scale_x = overview.map_size / grle_w.max(1) as f32;
-        let scale_y = overview.map_size / grle_h.max(1) as f32;
-        let half = overview.map_size / 2.0;
-
-        let field_polygons: Vec<FieldPolygon> = raw_polygons
-            .into_iter()
-            .map(|fp| FieldPolygon {
-                id: fp.id,
-                vertices: fp
-                    .vertices
-                    .into_iter()
-                    .map(|(px, py)| Vec2::new(px * scale_x - half, py * scale_y - half))
-                    .collect(),
-            })
-            .collect();
-
+    if !field_polygons.is_empty() {
         log::info!(
             "Feldpolygone in Weltkoordinaten umgerechnet: {} Felder",
             field_polygons.len()
@@ -326,20 +348,33 @@ pub fn generate_overview_with_options(state: &mut AppState) -> Result<()> {
     }
 
     // FarmlandGrid aus rohen GRLE/PNG-IDs aufbauen (falls vorhanden)
-    if let Some(ids) = overview.farmland_ids {
+    if let Some(ids) = bundle.farmland_ids_raw.clone() {
         state.farmland_grid = Some(Arc::new(FarmlandGrid::new(
             ids,
             grle_w.max(1),
             grle_h.max(1),
-            overview.map_size,
+            bundle.map_size,
         )));
         log::info!("FarmlandGrid gespeichert: {}x{} Pixel", grle_w, grle_h);
     } else {
         state.farmland_grid = None;
     }
 
-    let bg_map = BackgroundMap::from_image(overview.image, &zip_path, None)?;
+    let target_dir = savegame_dir.unwrap_or_else(|| {
+        Path::new(&zip_path)
+            .parent()
+            .unwrap_or_else(|| Path::new("."))
+            .to_path_buf()
+    });
+    let bg_map = BackgroundMap::from_image(
+        DynamicImage::ImageRgba8(bundle.combined.clone()),
+        &zip_path,
+        None,
+    )?;
     apply_background_map(state, bg_map);
+    state.background_layers = None;
+    state.pending_overview_bundle = Some(PendingOverviewBundle { target_dir, bundle });
+    log::info!("Overview-Layer-Bundle als Pending-Save im State gehalten");
 
     // Dialog schliessen
     state.ui.overview_options_dialog.visible = false;
@@ -375,6 +410,43 @@ fn prompt_save_as_overview(state: &mut AppState) {
 
 /// Speichert die aktuelle Background-Map als overview.png (verlustfreies PNG).
 pub fn save_background_as_overview(state: &mut AppState, path: String) -> Result<()> {
+    if state.pending_overview_bundle.is_some() {
+        let target_dir = {
+            let pending = state
+                .pending_overview_bundle
+                .as_ref()
+                .expect("Pending-Bundle muss vorhanden sein");
+            let target_dir = Path::new(&path)
+                .parent()
+                .map(|dir| dir.to_path_buf())
+                .unwrap_or_else(|| pending.target_dir.clone());
+            std::fs::create_dir_all(&target_dir).with_context(|| {
+                format!(
+                    "Overview-Verzeichnis konnte nicht erstellt werden: {}",
+                    target_dir.display()
+                )
+            })?;
+            write_pending_overview_bundle(pending, &path, &target_dir)?;
+            target_dir
+        };
+
+        save_farmland_json(state, &path);
+
+        let files = super::background_layers::discover_background_layer_files(&target_dir);
+        let catalog = super::background_layers::load_background_layer_catalog(
+            files,
+            &state.options.overview_layers,
+        )?;
+        state.background_layers = Some(catalog);
+        state.pending_overview_bundle = None;
+
+        log::info!(
+            "Overview-Layer-Bundle gespeichert und als Katalog geladen: {}",
+            target_dir.display()
+        );
+        return Ok(());
+    }
+
     let bg_map = state
         .view
         .background_map
@@ -388,6 +460,48 @@ pub fn save_background_as_overview(state: &mut AppState, path: String) -> Result
 
     // Farmland-Polygone als JSON parallel zur Bilddatei speichern
     save_farmland_json(state, &path);
+
+    Ok(())
+}
+
+fn write_pending_overview_bundle(
+    pending: &PendingOverviewBundle,
+    combined_path: &str,
+    target_dir: &Path,
+) -> Result<()> {
+    for (kind, image) in [
+        (BackgroundLayerKind::Terrain, &pending.bundle.terrain),
+        (BackgroundLayerKind::Hillshade, &pending.bundle.hillshade),
+        (
+            BackgroundLayerKind::FarmlandBorders,
+            &pending.bundle.farmland_borders,
+        ),
+        (
+            BackgroundLayerKind::FarmlandIds,
+            &pending.bundle.farmland_ids,
+        ),
+        (BackgroundLayerKind::PoiMarkers, &pending.bundle.poi_markers),
+        (BackgroundLayerKind::Legend, &pending.bundle.legend),
+    ] {
+        let layer_path = target_dir.join(kind.file_name());
+        image.save(&layer_path).with_context(|| {
+            format!(
+                "Overview-Layer konnte nicht gespeichert werden: {}",
+                layer_path.display()
+            )
+        })?;
+    }
+
+    pending
+        .bundle
+        .combined
+        .save(combined_path)
+        .with_context(|| {
+            format!(
+                "Kombinierte Overview-Datei konnte nicht gespeichert werden: {}",
+                combined_path
+            )
+        })?;
 
     Ok(())
 }
@@ -442,12 +556,22 @@ pub fn load_farmland_json(state: &mut AppState, image_path: &str) {
 
 #[cfg(test)]
 mod tests {
-    use super::{browse_zip_background, load_background_from_zip, persist_overview_defaults};
-    use crate::app::state::ZipBrowserState;
+    use super::{
+        browse_zip_background, clear_background_map, load_background_from_zip,
+        persist_overview_defaults, save_background_as_overview,
+    };
+    use crate::app::state::{
+        BackgroundLayerCatalog, BackgroundLayerFiles, PendingOverviewBundle, StoredBackgroundLayer,
+        ZipBrowserState,
+    };
     use crate::app::AppState;
-    use image::{DynamicImage, ImageFormat};
+    use crate::core::{BackgroundMap, FieldPolygon};
+    use crate::shared::{BackgroundLayerKind, OverviewLayerOptions};
+    use glam::Vec2;
+    use image::{DynamicImage, GenericImageView, ImageFormat, Rgba, RgbaImage};
     use std::io::{Cursor, Write};
     use std::path::{Path, PathBuf};
+    use std::sync::Arc;
     use std::time::{SystemTime, UNIX_EPOCH};
 
     struct TempDirGuard {
@@ -492,6 +616,40 @@ mod tests {
             .write_to(&mut cursor, ImageFormat::Png)
             .expect("PNG muss erzeugt werden");
         cursor.into_inner()
+    }
+
+    fn sample_overview_bundle() -> fs25_map_overview::OverviewLayerBundle {
+        let terrain = RgbaImage::from_pixel(2, 2, Rgba([20, 40, 60, 255]));
+        let hillshade = RgbaImage::from_pixel(2, 2, Rgba([200, 0, 0, 128]));
+        let farmland_borders = RgbaImage::from_pixel(2, 2, Rgba([0, 200, 0, 96]));
+        let farmland_ids = RgbaImage::from_pixel(2, 2, Rgba([0, 0, 0, 0]));
+        let poi_markers = RgbaImage::from_pixel(2, 2, Rgba([0, 0, 200, 128]));
+        let legend = RgbaImage::from_pixel(2, 2, Rgba([255, 255, 255, 64]));
+        let combined = fs25_map_overview::compose_layers(
+            &terrain,
+            &[
+                (true, &hillshade),
+                (true, &farmland_borders),
+                (false, &farmland_ids),
+                (false, &poi_markers),
+                (false, &legend),
+            ],
+        );
+
+        fs25_map_overview::OverviewLayerBundle {
+            terrain,
+            hillshade,
+            farmland_borders,
+            farmland_ids,
+            poi_markers,
+            legend,
+            combined,
+            farmland_polygons: Vec::new(),
+            grle_width: 2,
+            grle_height: 2,
+            map_size: 2.0,
+            farmland_ids_raw: Some(vec![1, 2, 3, 4]),
+        }
     }
 
     fn write_zip(path: &Path, entries: Vec<(&str, Vec<u8>)>) {
@@ -628,5 +786,118 @@ mod tests {
             state.background_image.as_ref().map(|image| image.width()),
             Some(2)
         );
+    }
+
+    #[test]
+    fn save_background_as_overview_persists_pending_bundle_and_loads_catalog() {
+        let temp_dir = TempDirGuard::new("overview_bundle_save");
+        let target_path = temp_dir.path().join("overview.png");
+        let target_path_string = target_path.to_string_lossy().into_owned();
+
+        let bundle = sample_overview_bundle();
+        let background = BackgroundMap::from_image(
+            DynamicImage::ImageRgba8(bundle.combined.clone()),
+            "test-bundle",
+            None,
+        )
+        .expect("Background-Map muss aus Combined-Bild erstellt werden");
+
+        let mut state = AppState::new();
+        state.view.background_map = Some(Arc::new(background));
+        state.background_image = state
+            .view
+            .background_map
+            .as_ref()
+            .map(|background| background.image_arc());
+        state.options.overview_layers = OverviewLayerOptions {
+            terrain: true,
+            hillshade: true,
+            farmlands: true,
+            farmland_ids: false,
+            pois: false,
+            legend: false,
+        };
+        state.farmland_polygons = Some(Arc::new(vec![FieldPolygon {
+            id: 7,
+            vertices: vec![Vec2::new(1.0, 2.0), Vec2::new(3.0, 4.0)],
+        }]));
+        state.pending_overview_bundle = Some(PendingOverviewBundle {
+            target_dir: temp_dir.path().to_path_buf(),
+            bundle,
+        });
+
+        save_background_as_overview(&mut state, target_path_string)
+            .expect("Pending-Overview-Bundle muss speicherbar sein");
+
+        assert!(target_path.is_file());
+        assert!(temp_dir.path().join("overview.json").is_file());
+        for file_name in [
+            "overview_terrain.png",
+            "overview_hillshade.png",
+            "overview_farmland_borders.png",
+            "overview_farmland_ids.png",
+            "overview_poi_markers.png",
+            "overview_legend.png",
+        ] {
+            assert!(
+                temp_dir.path().join(file_name).is_file(),
+                "{} muss geschrieben werden",
+                file_name
+            );
+        }
+
+        assert!(state.pending_overview_bundle.is_none());
+        let catalog = state
+            .background_layers
+            .as_ref()
+            .expect("Gespeicherter Katalog muss geladen werden");
+        assert_eq!(catalog.layers.len(), 6);
+        assert!(catalog.visible.terrain);
+        assert!(catalog.visible.hillshade);
+        assert!(catalog.visible.farmlands);
+        assert!(!catalog.visible.farmland_ids);
+
+        let terrain = catalog
+            .layers
+            .iter()
+            .find(|layer| layer.kind == BackgroundLayerKind::Terrain)
+            .expect("Terrain-Layer muss im Katalog enthalten sein");
+        assert_eq!(terrain.image.dimensions(), (2, 2));
+    }
+
+    #[test]
+    fn clear_background_map_resets_layer_catalog_and_pending_bundle() {
+        let bundle = sample_overview_bundle();
+        let mut state = AppState::new();
+        state.background_layers = Some(BackgroundLayerCatalog {
+            files: BackgroundLayerFiles {
+                directory: PathBuf::from("/tmp/overview"),
+                terrain: Some(PathBuf::from("/tmp/overview/overview_terrain.png")),
+                hillshade: None,
+                farmland_borders: None,
+                farmland_ids: None,
+                poi_markers: None,
+                legend: None,
+            },
+            layers: vec![StoredBackgroundLayer {
+                kind: BackgroundLayerKind::Terrain,
+                path: PathBuf::from("/tmp/overview/overview_terrain.png"),
+                image: Arc::new(DynamicImage::ImageRgba8(RgbaImage::from_pixel(
+                    1,
+                    1,
+                    Rgba([0, 0, 0, 255]),
+                ))),
+            }],
+            visible: OverviewLayerOptions::default(),
+        });
+        state.pending_overview_bundle = Some(PendingOverviewBundle {
+            target_dir: PathBuf::from("/tmp/overview"),
+            bundle,
+        });
+
+        clear_background_map(&mut state);
+
+        assert!(state.background_layers.is_none());
+        assert!(state.pending_overview_bundle.is_none());
     }
 }

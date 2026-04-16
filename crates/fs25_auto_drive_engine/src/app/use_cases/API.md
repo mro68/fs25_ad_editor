@@ -130,12 +130,20 @@ pub enum AddNodeResult {
 - `load_background_map(state, path, crop_size) -> anyhow::Result<()>` — Background-Map laden (PNG/JPG/DDS), Fehler werden an den Controller propagiert
 - `toggle_background_visibility(state)` — Sichtbarkeit umschalten
 - `scale_background(state, factor)` — Skalierungsfaktor relativ anpassen (Multiplikation; Bereich 0.125–8.0)
-- `clear_background_map(state)` — Background-Map entfernen
+- `clear_background_map(state)` — Background-Map entfernen und dabei auch gespeicherten Layer-Katalog sowie ein noch ausstehendes Pending-Overview-Bundle verwerfen
 - `browse_zip_background(state, path) -> anyhow::Result<()>` — ZIP-Archiv nach Bilddateien durchsuchen; bei einem Treffer wird direkt geladen
-- `load_background_from_zip(state, zip_path, entry_name, crop_size) -> anyhow::Result<()>` — Einzelne Bilddatei aus ZIP als Background laden
-- `generate_overview_with_options(state) -> anyhow::Result<()>` — Uebersichtskarte aus Map-Mod-ZIP generieren (Layer-Optionen und `OverviewFieldDetectionSource` aus dem Dialog-State), `overview_layers` plus `overview_field_detection_source` persistent speichern und ZIP-/Savegame-basierte Feldquellen inkl. `ZipGroundGdm` auswaehlen; Persistenzfehler werden per `log::warn!` und `state.ui.status_message` sichtbar gemacht, die Generierung selbst laeuft weiter
-- `save_background_as_overview(state, path) -> anyhow::Result<()>` — Aktuelle Background-Map als `overview.png` speichern, Farmland-Polygone als `.json` daneben
+- `load_background_from_zip(state, zip_path, entry_name, crop_size) -> anyhow::Result<()>` — Einzelne Bilddatei aus ZIP als Background laden; verwirft dabei einen eventuell noch aktiven Layer-Katalog oder ein Pending-Overview-Bundle
+- `generate_overview_with_options(state) -> anyhow::Result<()>` — Uebersichtskarte aus Map-Mod-ZIP generieren (Layer-Optionen und `OverviewFieldDetectionSource` aus dem Dialog-State), `overview_layers` plus `overview_field_detection_source` persistent speichern, ZIP-/Savegame-basierte Feldquellen inkl. `ZipGroundGdm` auswaehlen und das resultierende `OverviewLayerBundle` zusaetzlich als `pending_overview_bundle` im State halten
+- `save_background_as_overview(state, path) -> anyhow::Result<()>` — Speichert entweder wie bisher nur das aktuelle Combined-Bild oder schreibt bei vorhandenem `pending_overview_bundle` alle kanonischen Layer-PNGs (`overview_terrain.png`, `overview_hillshade.png`, `overview_farmland_borders.png`, `overview_farmland_ids.png`, `overview_poi_markers.png`, `overview_legend.png`) plus Combined-`overview.png` und `overview.json`; danach wird der gespeicherte Layer-Katalog erneut geladen
 - `load_farmland_json(state, image_path)` — Laedt Farmland-Polygone aus einer `.json`-Datei neben der Bilddatei (z.B. `overview.json` neben `overview.png`); lautlos keine-Op wenn Datei fehlt
+
+---
+
+## `use_cases::background_layers`
+
+- `discover_background_layer_files(dir) -> BackgroundLayerFiles` — Sucht im angegebenen Verzeichnis nach den kanonischen Overview-Layer-Dateinamen und sammelt die vorhandenen Pfade
+- `load_background_layer_catalog(files, visible) -> anyhow::Result<BackgroundLayerCatalog>` — Laedt die vorhandenen Layer-PNGs, validiert ihre Dimensionen gegen das Terrain-Basisbild und maskiert die Runtime-Sichtbarkeit fuer fehlende optionale Layer
+- `compose_background_from_catalog(catalog) -> anyhow::Result<image::DynamicImage>` — Setzt aus Terrain-Basisbild und den aktuell sichtbaren Overlay-Layern wieder ein kombiniertes Hintergrundbild zusammen; unsichtbares Terrain liefert eine transparente Basis in derselben Bildgroesse
 
 ---
 
