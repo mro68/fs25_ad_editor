@@ -3,8 +3,8 @@
 //! Enthaelt reine Datenstrukturen fuer UI-Dialoge, die keine Abhaengigkeiten
 //! zu `core/` oder `app/` haben und damit in `shared/` liegen duerfen.
 
+use crate::shared::background_layers::OverviewFieldDetectionSource;
 use crate::shared::OverviewLayerOptions;
-use fs25_map_overview::FieldDetectionSource;
 use glam::Vec2;
 use std::path::PathBuf;
 
@@ -69,7 +69,7 @@ impl DedupDialogState {
 }
 
 /// Zustand des Uebersichtskarten-Options-Dialogs
-#[derive(Default, Clone)]
+#[derive(Clone)]
 pub struct OverviewOptionsDialogState {
     /// Ob der Dialog sichtbar ist
     pub visible: bool,
@@ -78,9 +78,9 @@ pub struct OverviewOptionsDialogState {
     /// Layer-Optionen (Arbeitskopie fuer den Dialog)
     pub layers: OverviewLayerOptions,
     /// Gewaehlte Quelle fuer die Feldpolygon-Erkennung
-    pub field_detection_source: FieldDetectionSource,
+    pub field_detection_source: OverviewFieldDetectionSource,
     /// Verfuegbare Quellen (befuellt beim Oeffnen des Dialogs)
-    pub available_sources: Vec<FieldDetectionSource>,
+    pub available_sources: Vec<OverviewFieldDetectionSource>,
 }
 
 impl OverviewOptionsDialogState {
@@ -90,9 +90,18 @@ impl OverviewOptionsDialogState {
             visible: false,
             zip_path: String::new(),
             layers: OverviewLayerOptions::default(),
-            field_detection_source: FieldDetectionSource::default(),
-            available_sources: vec![FieldDetectionSource::FromZip],
+            field_detection_source: OverviewFieldDetectionSource::default(),
+            available_sources: vec![
+                OverviewFieldDetectionSource::FromZip,
+                OverviewFieldDetectionSource::ZipGroundGdm,
+            ],
         }
+    }
+}
+
+impl Default for OverviewOptionsDialogState {
+    fn default() -> Self {
+        Self::new()
     }
 }
 

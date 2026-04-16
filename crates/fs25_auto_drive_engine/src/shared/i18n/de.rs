@@ -111,6 +111,8 @@ pub(super) fn translate(key: I18nKey) -> &'static str {
         I18nKey::OptBgOpacityAtMinZoomHelp => "Hintergrund-Transparenz beim maximalen Herauszoomen (Ueberblick).",
         I18nKey::OptBgFadeStartZoom => "Fade-out ab Zoom:",
         I18nKey::OptBgFadeStartZoomHelp => "Ab diesem Zoom-Level beginnt die Hintergrundkarte auszublenden.",
+        I18nKey::OptOverviewTerrain => "Terrain (Basisbild)",
+        I18nKey::OptOverviewTerrainHelp => "Opaque Terrain-Basis der Uebersichtskarte anzeigen.",
         I18nKey::OptOverviewHillshade => "Hillshade",
         I18nKey::OptOverviewHillshadeHelp => "Schattierte Gelaendedarstellung fuer die Uebersichtskarte.",
         I18nKey::OptOverviewFarmlands => "Farmland-Grenzen",

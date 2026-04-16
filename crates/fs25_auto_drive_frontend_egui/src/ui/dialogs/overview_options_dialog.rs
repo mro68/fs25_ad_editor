@@ -2,7 +2,7 @@
 
 use crate::app::state::OverviewOptionsDialogState;
 use crate::app::AppIntent;
-use fs25_map_overview::FieldDetectionSource;
+use crate::shared::OverviewFieldDetectionSource;
 
 /// Zeigt den Uebersichtskarten-Options-Dialog und gibt erzeugte Events zurueck.
 pub fn show_overview_options_dialog(
@@ -29,6 +29,7 @@ pub fn show_overview_options_dialog(
             ui.label("Sichtbare Layer:");
             ui.add_space(4.0);
 
+            ui.checkbox(&mut dialog_state.layers.terrain, "Terrain (Basisbild)");
             ui.checkbox(
                 &mut dialog_state.layers.hillshade,
                 "Hillshade (Gelaendeschattierung)",
@@ -49,10 +50,11 @@ pub fn show_overview_options_dialog(
             let available = dialog_state.available_sources.clone();
             for source in &available {
                 let label = match source {
-                    FieldDetectionSource::FromZip => "Aus Map-ZIP",
-                    FieldDetectionSource::FieldTypeGrle => "infoLayer_fieldType (Savegame)",
-                    FieldDetectionSource::GroundGdm => "densityMap_ground (Savegame)",
-                    FieldDetectionSource::FruitsGdm => "densityMap_fruits (Savegame)",
+                    OverviewFieldDetectionSource::FromZip => "infoLayer_farmlands (Map-ZIP)",
+                    OverviewFieldDetectionSource::ZipGroundGdm => "densityMap_ground (Map-ZIP)",
+                    OverviewFieldDetectionSource::FieldTypeGrle => "infoLayer_fieldType (Savegame)",
+                    OverviewFieldDetectionSource::GroundGdm => "densityMap_ground (Savegame)",
+                    OverviewFieldDetectionSource::FruitsGdm => "densityMap_fruits (Savegame)",
                 };
                 ui.radio_value(&mut dialog_state.field_detection_source, *source, label);
             }

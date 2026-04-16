@@ -16,6 +16,8 @@ Die Bridge exponiert Mutationen ausschliesslich ueber explizite `HostSessionActi
 
 Fuer Flutter- und FFI-Hosts mit serialisierbarer Dialog-Oberflaeche exponiert die Session zusaetzlich `HostDialogSnapshot` als expliziten Read-Seam fuer alle im egui-Host gerenderten Dialoge und Popups (Heightmap-Warnung, Marker, Dedup, ZIP-Browser, Overview-Dialogs, Save-Overview, Trace-All-Fields, Group-Settings und Confirm-Dissolve). Damit muessen Hosts fuer read-only Dialogdaten nicht mehr auf die lokalen Rust-Seams `dialog_ui_state_mut()` oder `chrome_state()` zugreifen.
 
+Der Overview-Dialog-Vertrag spiegelt dabei jetzt die persistente Layer- und Quellenbasis fuer das geplante Hintergrund-Layer-System: `HostOverviewLayersSnapshot` enthaelt zusaetzlich das Terrain-Basisflag, und `HostFieldDetectionSource` kennt mit `ZipGroundGdm` eine zweite ZIP-basierte Feldquelle neben `FromZip`.
+
 Fuer Properties-, Group-Edit- und Streckenteilungsdaten exponiert die Session zusaetzlich `HostEditingSnapshot`. Dieser Read-Seam bildet die heute ueber `panel_properties_state_mut()` und `viewport_input_context_mut()` gelesenen Editing-Zustaende host-neutral ab: selektionsrelevante bearbeitbare Gruppen, aktiver Group-Edit inklusive Boundary-Kandidaten, Resample-/Streckenteilungs-Metriken sowie editing-nahe Laufzeitoptionen.
 
 Fuer host-native Kontextmenues exponiert die Session zusaetzlich `HostContextMenuSnapshot`. Dieser Read-Seam spiegelt die egui-Kontextmenue-Variante sowie die dazugehoerigen Aktionen inklusive Enablement zentral in der Bridge, damit Hosts Selektion-, Gruppen-, Clipboard-, Verbindungs- und Route-Tool-Preconditions nicht lokal nachbauen muessen.
@@ -105,6 +107,7 @@ Mit `HostChromeSnapshot` existiert zusaetzlich ein expliziter host-neutraler Rea
 | `HostChromeSnapshot` | Host-neutrales Read-Modell fuer Menues, Defaults, Status und Route-Tool-Availability |
 | `HostContextMenuSnapshot` / `HostContextMenuAction` / `HostContextMenuVariant` | Host-neutrales Read-Modell fuer Kontextmenue-Variante, Aktionsliste und zentrales Enablement |
 | `HostDialogSnapshot` | Host-neutrales Read-Modell fuer alle egui-Dialoge und Popup-aehnlichen Dialog-Drafts |
+| `HostOverviewLayersSnapshot` / `HostFieldDetectionSource` | Serialisierbare Overview-Dialog-DTOs fuer Layer-Sichtbarkeit (inkl. `terrain`) und Feldquellen (inkl. `zip_ground_gdm`) |
 | `HostEditingSnapshot` | Host-neutrales Read-Modell fuer Properties-, Group-Edit- und Streckenteilungsdaten |
 | `HostEditableGroupSummary` / `HostGroupEditSnapshot` / `HostGroupBoundaryCandidateSnapshot` | Serialisierbare Group-Edit-DTOs fuer selektionsrelevante Gruppen, aktiven Edit-Zustand und Boundary-Kandidaten |
 | `HostResampleEditSnapshot` / `HostResampleMode` / `HostEditingOptionsSnapshot` | Serialisierbare Streckenteilungs- und editing-nahe Options-DTOs fuer Flutter-/Host-Panels |

@@ -317,6 +317,10 @@
   - [ ] Marker-Groups
 - [ ] Grid-Overlay & Snap-to-Grid
 - [ ] Minimap-Ansicht
+- [ ] Background-Layer-System fuer Overview-Karten
+  - [x] Host-neutrale Basisvertraege fuer Layer-Dateinamen und persistente Feldquellen (`BackgroundLayerKind`, `OverviewFieldDetectionSource`)
+  - [ ] Layer-Bundle-Export, Dateivertrag und CPU-Komposition fuer gespeicherte Overview-Layer
+  - [ ] Runtime-Toggle und Host-Chrome-Menue fuer Hintergrund-Layer
 - [x] Uebersichtskarte aus Map-Mod-ZIP generieren (Terrain, Farmlands, POIs, Hillshade)
   - [x] Crate `fs25_map_overview` mit GRLE/GDM-Decoder (vendor grleconvert)
   - [x] Weight-Map-Compositing, Hillshade, Farmland-Grenzen/-IDs, POI-Labels

@@ -111,6 +111,8 @@ pub(super) fn translate(key: I18nKey) -> &'static str {
         I18nKey::OptBgOpacityAtMinZoomHelp => "Background transparency at maximum zoom out (overview).",
         I18nKey::OptBgFadeStartZoom => "Fade-out from Zoom:",
         I18nKey::OptBgFadeStartZoomHelp => "From this zoom level the background map starts to fade out.",
+        I18nKey::OptOverviewTerrain => "Terrain (Base Layer)",
+        I18nKey::OptOverviewTerrainHelp => "Show the opaque terrain base of the overview map.",
         I18nKey::OptOverviewHillshade => "Hillshade",
         I18nKey::OptOverviewHillshadeHelp => "Shaded terrain display for the overview map.",
         I18nKey::OptOverviewFarmlands => "Farmland Boundaries",

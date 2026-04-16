@@ -4,6 +4,7 @@ use crate::app::state::ZipBrowserState;
 use crate::app::ui_contract::{DialogRequest, DialogRequestKind};
 use crate::app::AppState;
 use crate::core::{self, BackgroundMap, FarmlandGrid, FieldPolygon};
+use crate::shared::OverviewFieldDetectionSource;
 use anyhow::Result;
 use glam::Vec2;
 use image::GenericImageView;
@@ -27,14 +28,62 @@ fn clear_background_assets(state: &mut AppState) {
     state.background_image = None;
 }
 
-fn persist_overview_layer_defaults(state: &mut AppState) {
+fn persist_overview_defaults(state: &mut AppState) {
     if let Err(error) = super::options::save_editor_options(&state.options) {
         let message = format!(
-            "Uebersichts-Layer konnten nicht gespeichert werden: {}",
+            "Uebersichtskarten-Voreinstellungen konnten nicht gespeichert werden: {}",
             error
         );
         log::warn!("{}", message);
         state.ui.status_message = Some(message);
+    }
+}
+
+fn map_overview_field_detection_source(
+    source: OverviewFieldDetectionSource,
+) -> fs25_map_overview::FieldDetectionSource {
+    match source {
+        OverviewFieldDetectionSource::FromZip => fs25_map_overview::FieldDetectionSource::FromZip,
+        OverviewFieldDetectionSource::ZipGroundGdm => {
+            fs25_map_overview::FieldDetectionSource::ZipGroundGdm
+        }
+        OverviewFieldDetectionSource::FieldTypeGrle => {
+            fs25_map_overview::FieldDetectionSource::FieldTypeGrle
+        }
+        OverviewFieldDetectionSource::GroundGdm => fs25_map_overview::FieldDetectionSource::GroundGdm,
+        OverviewFieldDetectionSource::FruitsGdm => fs25_map_overview::FieldDetectionSource::FruitsGdm,
+    }
+}
+
+fn extract_field_polygons_from_source(
+    zip_path: &str,
+    savegame_dir: Option<&Path>,
+    field_source: OverviewFieldDetectionSource,
+) -> Option<(Vec<fs25_map_overview::FarmlandPolygon>, u32, u32)> {
+    match map_overview_field_detection_source(field_source) {
+        fs25_map_overview::FieldDetectionSource::FromZip => {
+            log::info!("Feldpolygone: Quelle = infoLayer_farmlands (Map-ZIP)");
+            None
+        }
+        fs25_map_overview::FieldDetectionSource::ZipGroundGdm => {
+            log::info!("Feldpolygone: Quelle = densityMap_ground.gdm (Map-ZIP)");
+            fs25_map_overview::try_extract_polygons_from_zip_ground_gdm(zip_path)
+        }
+        fs25_map_overview::FieldDetectionSource::FieldTypeGrle => savegame_dir.and_then(|dir| {
+            let path = dir.join("infoLayer_fieldType.grle");
+            log::info!("Feldpolygone: Quelle = {}", path.display());
+            fs25_map_overview::try_extract_polygons_from_field_type_grle(&path)
+        }),
+        fs25_map_overview::FieldDetectionSource::GroundGdm => savegame_dir.and_then(|dir| {
+            let path = dir.join("densityMap_ground.gdm");
+            log::info!("Feldpolygone: Quelle = {}", path.display());
+            fs25_map_overview::try_extract_polygons_from_ground_gdm(&path)
+        }),
+        fs25_map_overview::FieldDetectionSource::FruitsGdm => savegame_dir.and_then(|dir| {
+            let path = dir.join("densityMap_fruits.gdm");
+            log::info!("Feldpolygone: Quelle = {}", path.display());
+            fs25_map_overview::try_extract_polygons_from_fruits_gdm(&path)
+        }),
     }
 }
 
@@ -206,8 +255,9 @@ pub fn generate_overview_with_options(state: &mut AppState) -> Result<()> {
 
     // Layer-Optionen persistent speichern
     state.options.overview_layers = layers.clone();
+    state.options.overview_field_detection_source = field_source;
     state.refresh_options_arc();
-    persist_overview_layer_defaults(state);
+    persist_overview_defaults(state);
 
     let options = fs25_map_overview::OverviewOptions {
         hillshade: layers.hillshade,
@@ -230,28 +280,7 @@ pub fn generate_overview_with_options(state: &mut AppState) -> Result<()> {
     });
 
     // Feldpolygone gemaess gewaehlter Quelle extrahieren
-    use fs25_map_overview::FieldDetectionSource;
-    let extracted = match field_source {
-        FieldDetectionSource::FromZip => {
-            log::info!("Feldpolygone: Quelle = Map-ZIP");
-            None // Fallback auf overview.farmland_polygons unten
-        }
-        FieldDetectionSource::FieldTypeGrle => savegame_dir.as_deref().and_then(|dir| {
-            let path = dir.join("infoLayer_fieldType.grle");
-            log::info!("Feldpolygone: Quelle = {}", path.display());
-            fs25_map_overview::try_extract_polygons_from_field_type_grle(&path)
-        }),
-        FieldDetectionSource::GroundGdm => savegame_dir.as_deref().and_then(|dir| {
-            let path = dir.join("densityMap_ground.gdm");
-            log::info!("Feldpolygone: Quelle = {}", path.display());
-            fs25_map_overview::try_extract_polygons_from_ground_gdm(&path)
-        }),
-        FieldDetectionSource::FruitsGdm => savegame_dir.as_deref().and_then(|dir| {
-            let path = dir.join("densityMap_fruits.gdm");
-            log::info!("Feldpolygone: Quelle = {}", path.display());
-            fs25_map_overview::try_extract_polygons_from_fruits_gdm(&path)
-        }),
-    };
+    let extracted = extract_field_polygons_from_source(&zip_path, savegame_dir.as_deref(), field_source);
 
     // Rohe Polygone und Rasterdimensionen ermitteln
     let (raw_polygons, grle_w, grle_h) = match extracted {
@@ -407,7 +436,7 @@ pub fn load_farmland_json(state: &mut AppState, image_path: &str) {
 
 #[cfg(test)]
 mod tests {
-    use super::{browse_zip_background, load_background_from_zip, persist_overview_layer_defaults};
+    use super::{browse_zip_background, load_background_from_zip, persist_overview_defaults};
     use crate::app::state::ZipBrowserState;
     use crate::app::AppState;
     use image::{DynamicImage, ImageFormat};
@@ -480,7 +509,7 @@ mod tests {
         let mut state = AppState::new();
         state.options.camera_zoom_min = state.options.camera_zoom_max;
 
-        persist_overview_layer_defaults(&mut state);
+        persist_overview_defaults(&mut state);
 
         let message = state
             .ui
@@ -488,7 +517,7 @@ mod tests {
             .as_deref()
             .expect("Persistenzfehler muss sichtbar gemacht werden");
         assert!(
-            message.contains("Uebersichts-Layer konnten nicht gespeichert werden"),
+            message.contains("Uebersichtskarten-Voreinstellungen konnten nicht gespeichert werden"),
             "Unerwartete Statusmeldung: {message}"
         );
     }

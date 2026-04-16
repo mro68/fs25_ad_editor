@@ -63,7 +63,7 @@ pub fn open_detected_overview_source_dialog(
 pub fn open_overview_options_dialog(state: &mut AppState, zip_path: String)
 ```
 
-Verwaltet app-weite Dialoge und Overlay-Zustaende. `apply_options()` validiert und persistiert neue Optionen; `toggle_command_palette()` schaltet die Palette um; `open_detected_overview_source_dialog()` initialisiert den Source-Dialog fuer den Post-Load-Fall vollstaendig; `open_overview_options_dialog()` bereitet den ZIP-basierten Overview-Flow vor.
+Verwaltet app-weite Dialoge und Overlay-Zustaende. `apply_options()` validiert und persistiert neue Optionen; `toggle_command_palette()` schaltet die Palette um; `open_detected_overview_source_dialog()` initialisiert den Source-Dialog fuer den Post-Load-Fall vollstaendig; `open_overview_options_dialog()` laedt die persistierten `overview_layers`- und `overview_field_detection_source`-Defaults aus `EditorOptions`, baut ZIP- und Savegame-basierte Feldquellen auf und clamped die Auswahl auf den verfuegbaren Vertrag.
 
 ```rust
 pub fn dismiss_heightmap_warning(state: &mut AppState)
