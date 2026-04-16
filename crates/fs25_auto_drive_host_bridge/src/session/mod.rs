@@ -472,6 +472,30 @@ pub struct HostDialogUiState<'a> {
     pub ui: &'a mut HostLocalDialogState,
     /// Laufzeit-Optionen fuer dialogspezifische Einstellungen.
     pub options: &'a mut EditorOptions,
+    snapshot_dirty: &'a mut bool,
+    show_command_palette_before: bool,
+    show_options_dialog_before: bool,
+    chrome_dirty_before: bool,
+}
+
+impl HostDialogUiState<'_> {
+    fn snapshot_relevant_changed(&self) -> bool {
+        self.ui.show_command_palette != self.show_command_palette_before
+            || self.ui.show_options_dialog != self.show_options_dialog_before
+    }
+}
+
+impl Drop for HostDialogUiState<'_> {
+    fn drop(&mut self) {
+        let snapshot_relevant_changed = self.snapshot_relevant_changed();
+        if snapshot_relevant_changed {
+            self.ui.mark_dirty();
+        }
+
+        if snapshot_relevant_changed || (!self.chrome_dirty_before && self.ui.chrome_dirty) {
+            *self.snapshot_dirty = true;
+        }
+    }
 }
 
 /// Schmaler Viewport-Input-Zugriff fuer Host-Event-Sammler.
@@ -660,10 +684,11 @@ impl HostBridgeSession {
 
     /// Liefert eine mutable Referenz auf den host-lokalen Chrome-/Dialog-Zustand.
     ///
-    /// Aenderungen ueber diesen Accessor setzen automatisch `chrome_dirty` im
-    /// `HostLocalDialogState`. Der Session-Snapshot wird *nicht* automatisch
-    /// als dirty markiert — bei Bedarf `mark_snapshot_dirty()` aufrufen.
+    /// Dieser Accessor invalidiert den Session-Snapshot vorsorglich sofort,
+    /// damit auch direkte lokale Mutationen ohne explizites Dirty-Marking keine
+    /// stale Snapshot-Daten hinterlassen.
     pub fn chrome_state_mut(&mut self) -> &mut HostLocalDialogState {
+        self.snapshot_dirty = true;
         &mut self.chrome_state
     }
 
@@ -695,14 +720,22 @@ impl HostBridgeSession {
     ///
     /// Das `ui`-Feld zeigt nun auf `chrome_state` (statt `state.ui`), sodass
     /// Dialog-Mutationen durch das Frontend direkt im host-lokalen State landen.
-    /// Der Accessor invalidiert den Session-Snapshot nicht automatisch; falls
-    /// Snapshot-relevante Felder geaendert werden, muss __mark_snapshot_dirty()__
-    /// explizit aufgerufen werden.
+    /// Beim Drop des Rueckgabe-Guards werden Snapshot-relevante Chrome-Felder
+    /// geprueft; bei Aenderungen wird der Session-Snapshot automatisch als dirty
+    /// markiert.
     pub fn dialog_ui_state_mut(&mut self) -> HostDialogUiState<'_> {
+        let show_command_palette_before = self.chrome_state.show_command_palette;
+        let show_options_dialog_before = self.chrome_state.show_options_dialog;
+        let chrome_dirty_before = self.chrome_state.chrome_dirty;
+
         HostDialogUiState {
             road_map: self.state.road_map.as_deref(),
             ui: &mut self.chrome_state,
             options: &mut self.state.options,
+            snapshot_dirty: &mut self.snapshot_dirty,
+            show_command_palette_before,
+            show_options_dialog_before,
+            chrome_dirty_before,
         }
     }
 
@@ -1820,8 +1853,10 @@ mod tests {
     }
 
     #[test]
-    fn explicit_snapshot_invalidation_keeps_local_ui_mutation_visible() {
+    fn dialog_ui_mutation_marks_snapshot_dirty_without_manual_invalidation() {
         let mut session = snapshot_measurement_session(32);
+        let _ = session.snapshot_owned();
+        assert!(!session.snapshot_dirty);
 
         {
             // HostLocalDialogState-Mutation: show_command_palette setzen.
@@ -1830,15 +1865,31 @@ mod tests {
             dialog_state.ui.show_command_palette = true;
         }
         assert!(
-            !session.snapshot_dirty,
-            "Lokale Chrome-State-Muatationen invalidieren den Snapshot nicht implizit"
+            session.snapshot_dirty,
+            "Snapshot-relevante Dialog-Mutationen muessen den Session-Cache invalidieren"
         );
 
-        session.mark_snapshot_dirty();
-        assert!(session.snapshot_dirty);
+        let snapshot = session.snapshot_owned();
+        assert!(snapshot.show_command_palette);
+        assert!(!session.snapshot_dirty);
+    }
 
-        // Nach mark_snapshot_dirty() wird der Snapshot bei naechstem Zugriff neu gebaut.
-        let _snapshot = session.snapshot_owned();
+    #[test]
+    fn chrome_state_mutation_marks_snapshot_dirty_without_manual_invalidation() {
+        let mut session = snapshot_measurement_session(32);
+        let _ = session.snapshot_owned();
+        assert!(!session.snapshot_dirty);
+
+        {
+            let chrome_state = session.chrome_state_mut();
+            chrome_state.show_options_dialog = true;
+        }
+
+        assert!(
+            session.snapshot_dirty,
+            "chrome_state_mut muss stale Snapshots durch automatische Invalidation verhindern"
+        );
+        assert!(session.snapshot().show_options_dialog);
         assert!(!session.snapshot_dirty);
     }
 

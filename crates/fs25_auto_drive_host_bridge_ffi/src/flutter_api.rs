@@ -309,6 +309,9 @@ pub fn flutter_session_release_shared_arc_raw(raw: i64) {
 
 #[cfg(test)]
 mod tests {
+    use std::sync::Arc;
+    use std::thread;
+
     use fs25_auto_drive_host_bridge::{
         HostChromeSnapshot, HostConnectionPairSnapshot, HostContextMenuSnapshot, HostDialogRequest,
         HostDialogRequestKind, HostDialogResult, HostDialogSnapshot, HostEditingSnapshot,
@@ -317,10 +320,45 @@ mod tests {
 
     use super::*;
 
+    fn assert_send_sync<T: Send + Sync>() {}
+
     /// Prueft, dass FlutterSessionHandle erzeugt und freigegeben werden kann.
     #[test]
     fn test_flutter_session_lifecycle() {
         let handle = flutter_session_new();
+        flutter_session_dispose(handle);
+    }
+
+    /// Prueft die Send/Sync-Invariante fuer den opaken Session-Handle.
+    #[test]
+    fn test_flutter_session_handle_is_send_and_sync() {
+        assert_send_sync::<FlutterSessionHandle>();
+    }
+
+    /// Prueft, dass derselbe Handle thread-uebergreifend serialisiert nutzbar bleibt.
+    #[test]
+    fn test_flutter_session_handle_thread_smoke() {
+        let handle = Arc::new(flutter_session_new());
+        let worker_a = Arc::clone(&handle);
+        let worker_b = Arc::clone(&handle);
+
+        let join_a = thread::spawn(move || {
+            flutter_session_snapshot_json(&worker_a)
+                .expect("Snapshot-JSON muss in Thread A verfuegbar sein")
+        });
+        let join_b = thread::spawn(move || {
+            let action_json = serde_json::to_string(&HostSessionAction::ToggleCommandPalette)
+                .expect("ToggleCommandPalette muss serialisierbar sein");
+            flutter_session_apply_action(&worker_b, action_json)
+                .expect("Action-Apply muss in Thread B funktionieren");
+        });
+
+        let snapshot_json = join_a.join().expect("Thread A darf nicht paniken");
+        join_b.join().expect("Thread B darf nicht paniken");
+        assert!(snapshot_json.starts_with('{'));
+
+        let handle =
+            Arc::try_unwrap(handle).expect("Test darf keine offenen Arc-Referenzen hinterlassen");
         flutter_session_dispose(handle);
     }
 
