@@ -1,6 +1,6 @@
 # fs25_map_overview — API-Dokumentation
 
-Stand: 2026-03-07
+Stand: 2026-04-16
 
 ## Überblick
 
@@ -105,6 +105,17 @@ pub fn generate_overview_layer_bundle(
 
 Variante fuer bereits extrahierte ZIP-Dateien.  
 Nuetzlich fuer Tests oder Aufrufer, die Discovery und ZIP-IO selbst kontrollieren.
+
+---
+
+### `compose_layers`
+
+```rust
+pub fn compose_layers(terrain: &RgbaImage, layers: &[(bool, &RgbaImage)]) -> RgbaImage
+```
+
+Setzt ein opakes Terrain-Basisbild und eine Liste von (Sichtbarkeit, RGBA-Overlay)-Paaren per Alpha-Blending zu einem Gesamtbild zusammen.  
+Nur Layer mit `true` als Sichtbarkeitsflag werden eingerechnet. Wird sowohl bei der Bundle-Generierung als auch bei der spaeter im Editor durchgefuehrten CPU-Re-Komposition genutzt.
 
 ---
 
@@ -293,7 +304,7 @@ Parst `modDesc.xml` und die Map-Config-XML.
 pub fn find_weight_maps(files: &HashMap<String, Vec<u8>>, data_dir: &str) -> Vec<(String, Vec<u8>)>
 pub fn find_dem(files: &HashMap<String, Vec<u8>>, data_dir: &str) -> Option<&Vec<u8>>
 pub fn find_farmlands(files: &HashMap<String, Vec<u8>>, data_dir: &str) -> Option<(String, &Vec<u8>)>
-pub fn find_ground_gdm(files: &HashMap<String, Vec<u8>>, data_dir: &str) -> Option<(String, &Vec<u8>)>
+pub fn find_ground_gdm<'a>(files: &'a HashMap<String, Vec<u8>>, data_dir: &str) -> Option<(&'a str, &'a [u8])>
 ```
 Lokalisiert spezifische Dateitypen im Mod-ZIP.
 
