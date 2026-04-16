@@ -169,7 +169,9 @@ if [ -n "$UI_MUT_APPSTATE_VIOLATIONS" ]; then
 fi
 
 # Regel 9: Egui-UI darf keine direkten state.* Feldzuweisungen durchfuehren
-UI_STATE_ASSIGN_VIOLATIONS=$(grep -rn '\bstate\.[A-Za-z0-9_\.]*[[:space:]]*=' "$EGUI_DIR/ui" --include='*.rs' 2>/dev/null | grep -v '// layer-ok' || true)
+# Vergleiche wie `state.foo == bar` oder Match-Arme `=>` sind keine Mutationen
+# und duerfen hier nicht als Layer-Verstoss auftauchen.
+UI_STATE_ASSIGN_VIOLATIONS=$(grep -rnE '\bstate\.[A-Za-z0-9_\.]*[[:space:]]*=[^=>]' "$EGUI_DIR/ui" --include='*.rs' 2>/dev/null | grep -v '// layer-ok' || true)
 if [ -n "$UI_STATE_ASSIGN_VIOLATIONS" ]; then
     echo "FEHLER: Egui-UI enthaelt direkte state.* Zuweisungen (statt Intent/Command):"
     echo "$UI_STATE_ASSIGN_VIOLATIONS"
