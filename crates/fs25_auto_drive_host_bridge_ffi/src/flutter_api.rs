@@ -5,10 +5,8 @@
 //! `fs25ad_flutter_session_*`-C-FFI-Exporten in `lib.rs` wiederverwendet.
 
 use anyhow::Result;
-use fs25_auto_drive_engine::shared::{OverviewFieldDetectionSource, OverviewLayerOptions};
 use fs25_auto_drive_host_bridge::dto::{
-    host_ui_snapshot_json, viewport_overlay_snapshot_json, HostFieldDetectionSource,
-    HostOverviewOptionsDialogSnapshot,
+    host_ui_snapshot_json, viewport_overlay_snapshot_json, HostOverviewOptionsDialogSnapshot,
 };
 use fs25_auto_drive_host_bridge::{HostBridgeSession, HostDialogResult, HostSessionAction};
 use std::sync::{Arc, Mutex};
@@ -124,18 +122,6 @@ pub fn flutter_session_submit_dialog_result_json(
     handle.with_session(|s| s.submit_dialog_result(result))?
 }
 
-fn map_host_field_detection_source(
-    source: HostFieldDetectionSource,
-) -> OverviewFieldDetectionSource {
-    match source {
-        HostFieldDetectionSource::FromZip => OverviewFieldDetectionSource::FromZip,
-        HostFieldDetectionSource::ZipGroundGdm => OverviewFieldDetectionSource::ZipGroundGdm,
-        HostFieldDetectionSource::FieldTypeGrle => OverviewFieldDetectionSource::FieldTypeGrle,
-        HostFieldDetectionSource::GroundGdm => OverviewFieldDetectionSource::GroundGdm,
-        HostFieldDetectionSource::FruitsGdm => OverviewFieldDetectionSource::FruitsGdm,
-    }
-}
-
 /// Aktualisiert den host-lokalen Draft des Overview-Options-Dialogs.
 ///
 /// Flutter-Hosts halten waehrend der Bearbeitung einen lokalen Dialogzustand.
@@ -146,31 +132,7 @@ pub fn flutter_session_update_overview_options_dialog(
     session: &mut HostBridgeSession,
     snapshot: HostOverviewOptionsDialogSnapshot,
 ) -> Result<()> {
-    {
-        let dialog_state = session.dialog_ui_state_mut();
-        dialog_state.ui.overview_options_dialog.visible = snapshot.visible;
-        dialog_state.ui.overview_options_dialog.zip_path = snapshot.zip_path;
-        dialog_state.ui.overview_options_dialog.layers = OverviewLayerOptions {
-            terrain: snapshot.layers.terrain,
-            hillshade: snapshot.layers.hillshade,
-            farmlands: snapshot.layers.farmlands,
-            farmland_ids: snapshot.layers.farmland_ids,
-            pois: snapshot.layers.pois,
-            legend: snapshot.layers.legend,
-        };
-        dialog_state
-            .ui
-            .overview_options_dialog
-            .field_detection_source =
-            map_host_field_detection_source(snapshot.field_detection_source);
-        dialog_state.ui.overview_options_dialog.available_sources = snapshot
-            .available_sources
-            .into_iter()
-            .map(map_host_field_detection_source)
-            .collect();
-    }
-
-    session.mark_snapshot_dirty();
+    session.update_overview_options_dialog(snapshot);
     Ok(())
 }
 
