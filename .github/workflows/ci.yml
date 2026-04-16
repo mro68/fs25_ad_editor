@@ -11,6 +11,35 @@ env:
   CARGO_TARGET_DIR: target
 
 jobs:
+  security:
+    name: Security Checks
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache cargo dependencies
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+          key: ${{ runner.os }}-cargo-${{ hashFiles('Cargo.lock') }}
+          restore-keys: ${{ runner.os }}-cargo-
+
+      - name: Install cargo-audit and cargo-deny
+        run: |
+          cargo install cargo-audit --locked
+          cargo install cargo-deny --locked
+
+      - name: Run cargo-audit
+        run: cargo audit
+
+      - name: Run cargo-deny
+        run: cargo deny check --config deny.toml advisories bans sources
+
   check:
     name: Check & Test
     runs-on: ubuntu-latest
