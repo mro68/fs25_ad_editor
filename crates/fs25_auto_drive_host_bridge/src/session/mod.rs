@@ -955,7 +955,7 @@ impl HostBridgeSession {
         }
     }
 
-    /// Baut einen minimalen, serialisierbaren Viewport-Geometry-Snapshot.
+    /// Baut einen vollstaendigen, serialisierbaren Viewport-Geometry-Snapshot.
     pub fn build_viewport_geometry_snapshot(
         &self,
         viewport_size: [f32; 2],

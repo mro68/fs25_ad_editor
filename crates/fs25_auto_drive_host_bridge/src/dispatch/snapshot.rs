@@ -22,7 +22,7 @@ use super::mappings::{
     map_route_tool_id, map_tangent_menu_data,
 };
 
-fn build_viewport_geometry_snapshot_from_scene(
+fn build_full_viewport_geometry_snapshot_from_scene(
     scene: &RenderScene,
 ) -> HostViewportGeometrySnapshot {
     let camera = scene.camera();
@@ -235,11 +235,11 @@ pub fn build_render_frame(state: &AppState, viewport_size: [f32; 2]) -> HostRend
     }
 }
 
-/// Baut einen minimalen, serialisierbaren Viewport-Geometry-Snapshot fuer Hosts.
+/// Baut einen vollstaendigen, serialisierbaren Viewport-Geometry-Snapshot fuer Hosts.
 pub fn build_viewport_geometry_snapshot(
     state: &AppState,
     viewport_size: [f32; 2],
 ) -> HostViewportGeometrySnapshot {
     let scene = projections::build_render_scene(state, viewport_size);
-    build_viewport_geometry_snapshot_from_scene(&scene)
+    build_full_viewport_geometry_snapshot_from_scene(&scene)
 }

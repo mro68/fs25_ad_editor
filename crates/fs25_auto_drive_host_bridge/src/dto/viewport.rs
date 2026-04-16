@@ -54,7 +54,7 @@ pub enum HostViewportConnectionPriority {
     SubPriority,
 }
 
-/// Host-neutraler Node-Eintrag fuer einen minimalen Viewport-Geometry-Snapshot.
+/// Host-neutraler Node-Eintrag fuer einen vollstaendigen Viewport-Geometry-Snapshot.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct HostViewportNodeSnapshot {
     /// Stabile Node-ID.
@@ -73,7 +73,7 @@ pub struct HostViewportNodeSnapshot {
     pub dimmed: bool,
 }
 
-/// Host-neutrale Verbindung fuer einen minimalen Viewport-Geometry-Snapshot.
+/// Host-neutrale Verbindung fuer einen vollstaendigen Viewport-Geometry-Snapshot.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct HostViewportConnectionSnapshot {
     /// Start-Node-ID.
@@ -94,14 +94,14 @@ pub struct HostViewportConnectionSnapshot {
     pub dimmed: bool,
 }
 
-/// Host-neutraler Marker-Eintrag fuer einen minimalen Viewport-Geometry-Snapshot.
+/// Host-neutraler Marker-Eintrag fuer einen vollstaendigen Viewport-Geometry-Snapshot.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct HostViewportMarkerSnapshot {
     /// Weltposition des Markers.
     pub position: [f32; 2],
 }
 
-/// Minimaler, serialisierbarer Viewport-Geometry-Snapshot fuer Transport-Adapter.
+/// Vollstaendiger, serialisierbarer Viewport-Geometry-Snapshot fuer Transport-Adapter.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct HostViewportGeometrySnapshot {
     /// Ob aktuell eine Karte im Render-Snapshot vorhanden ist.

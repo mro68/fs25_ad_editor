@@ -79,6 +79,52 @@ mod tests {
         map
     }
 
+    fn geometry_sorting_test_map() -> RoadMap {
+        let mut map = RoadMap::new(3);
+        map.add_node(MapNode::new(3, Vec2::new(20.0, 10.0), NodeFlag::Regular));
+        map.add_node(MapNode::new(1, Vec2::new(0.0, 0.0), NodeFlag::Warning));
+        map.add_node(MapNode::new(2, Vec2::new(10.0, 5.0), NodeFlag::SubPrio));
+        map.add_connection(Connection::new(
+            2,
+            1,
+            ConnectionDirection::Regular,
+            ConnectionPriority::Regular,
+            Vec2::new(10.0, 5.0),
+            Vec2::new(0.0, 0.0),
+        ));
+        map.add_connection(Connection::new(
+            1,
+            3,
+            ConnectionDirection::Reverse,
+            ConnectionPriority::SubPriority,
+            Vec2::new(0.0, 0.0),
+            Vec2::new(20.0, 10.0),
+        ));
+        map.add_map_marker(MapMarker::new(
+            2,
+            "M2".to_string(),
+            "M2".to_string(),
+            3,
+            false,
+        ));
+        map.add_map_marker(MapMarker::new(
+            3,
+            "M3".to_string(),
+            "M3".to_string(),
+            1,
+            false,
+        ));
+        map.add_map_marker(MapMarker::new(
+            1,
+            "M1".to_string(),
+            "M1".to_string(),
+            2,
+            false,
+        ));
+        map.ensure_spatial_index();
+        map
+    }
+
     #[test]
     fn take_host_dialog_requests_maps_and_drains_engine_queue() {
         let mut controller = AppController::new();
@@ -187,7 +233,7 @@ mod tests {
     }
 
     #[test]
-    fn build_viewport_geometry_snapshot_exposes_minimal_geometry_transport() {
+    fn build_viewport_geometry_snapshot_exposes_full_geometry_transport() {
         let mut state = AppState::new();
         state.road_map = Some(Arc::new(geometry_test_map()));
         state.view.camera.position = Vec2::new(3.0, -4.0);
@@ -220,6 +266,45 @@ mod tests {
         assert_eq!(snapshot.markers[0].position, [0.0, 0.0]);
         assert!(snapshot.world_per_pixel.is_finite());
         assert!(snapshot.world_per_pixel > 0.0);
+    }
+
+    #[test]
+    fn build_viewport_geometry_snapshot_sorts_and_keeps_full_geometry_lists() {
+        let mut state = AppState::new();
+        state.road_map = Some(Arc::new(geometry_sorting_test_map()));
+        state.view.camera.position = Vec2::new(10.0, 5.0);
+        state.view.camera.zoom = 2.0;
+
+        let snapshot = build_viewport_geometry_snapshot(&state, [800.0, 600.0]);
+
+        assert_eq!(snapshot.nodes.len(), 3);
+        assert_eq!(snapshot.connections.len(), 2);
+        assert_eq!(snapshot.markers.len(), 3);
+
+        assert_eq!(
+            snapshot
+                .nodes
+                .iter()
+                .map(|node| node.id)
+                .collect::<Vec<_>>(),
+            [1, 2, 3]
+        );
+        assert_eq!(
+            snapshot
+                .connections
+                .iter()
+                .map(|connection| (connection.start_id, connection.end_id))
+                .collect::<Vec<_>>(),
+            [(1, 3), (2, 1)]
+        );
+        assert_eq!(
+            snapshot
+                .markers
+                .iter()
+                .map(|marker| marker.position)
+                .collect::<Vec<_>>(),
+            [[0.0, 0.0], [10.0, 5.0], [20.0, 10.0]]
+        );
     }
 
     #[test]
