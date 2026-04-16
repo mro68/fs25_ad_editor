@@ -336,7 +336,7 @@ pub fn try_extract_polygons_from_zip_ground_gdm(
 fn try_extract_polygons_from_ground_gdm_bytes(
     data: &[u8],
 ) -> Option<(Vec<FarmlandPolygon>, u32, u32)> {
-    let img = gdm::decode_gdm(&data)
+    let img = gdm::decode_gdm(data)
         .map_err(|e| log::warn!("Ground-GDM Dekodierung fehlgeschlagen: {}", e))
         .ok()?;
     let dim = img.dimension;
