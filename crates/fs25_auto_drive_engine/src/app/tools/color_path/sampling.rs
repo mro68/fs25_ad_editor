@@ -212,7 +212,7 @@ pub(crate) fn build_color_palette(raw_colors: &[[u8; 3]], bucket_size: u8) -> Ve
 /// deren Farbe innerhalb der Toleranz eines Palette-Eintrags liegt.
 /// Mit `tolerance = 0.0` entspricht dies exakter RGB-Uebereinstimmung.
 /// Ergibt immer genau einen zusammenhaengenden Bereich.
-#[allow(dead_code)]
+#[cfg_attr(not(test), allow(dead_code))] // Nur in Unit-Tests verwendet
 pub(crate) fn flood_fill_color_mask(
     image: &DynamicImage,
     palette: &[[u8; 3]],
@@ -285,7 +285,7 @@ pub(super) fn flood_fill_color_mask_from_rgb(
 /// `(maske, breite, hoehe)`. Optionale `bounds` (Weltkoords min/max) begrenzen
 /// den berechneten Bereich auf eine Rect-Region.
 /// Die Toleranzprüfung erfolgt als quadratische Distanz (kein sqrt nötig).
-#[allow(dead_code)]
+#[cfg_attr(not(test), allow(dead_code))] // Nur in Unit-Tests verwendet
 pub(crate) fn build_color_mask(
     image: &DynamicImage,
     palette: &[[u8; 3]],

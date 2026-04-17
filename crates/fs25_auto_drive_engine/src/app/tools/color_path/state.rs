@@ -207,7 +207,8 @@ pub(super) struct SamplingPreviewData {
 #[derive(Debug, Clone, Default)]
 pub(super) struct PreviewData {
     /// Stage D: optional entrauschte und geschlossene Arbeitsmaske.
-    #[allow(dead_code)]
+    #[cfg_attr(not(test), allow(dead_code))]
+    // In Produktivpfaden aktuell write-only, in Tests validiert.
     pub prepared_mask: ColorPathMask,
     /// Stage E: extrahiertes Skeleton-/Netz-Artefakt.
     pub network: SkeletonNetwork,
@@ -231,8 +232,10 @@ pub struct ColorPathConfig {
     pub simplify_tolerance: f32,
     /// Rauschfilter aktivieren (Standard: true)
     pub noise_filter: bool,
-    /// Optionaler Erkennungsbereich — None = gesamtes Bild
-    #[allow(dead_code)] // Geplantes Feature: Rect-Begrenzung fuer die Erkennung
+    /// Optionaler Erkennungsbereich — None = gesamtes Bild.
+    /// Geplantes Feature: Rect-Begrenzung fuer die Farberkennung.
+    #[allow(dead_code)]
+    // Geplantes Feature: Bounds-UI und Pipeline-Anschluss folgen in separatem Schritt.
     pub detection_bounds: Option<(Vec2, Vec2)>,
     /// Anschlussmodus fuer bestehende Nodes (Standard: offene Enden)
     pub existing_connection_mode: ExistingConnectionMode,

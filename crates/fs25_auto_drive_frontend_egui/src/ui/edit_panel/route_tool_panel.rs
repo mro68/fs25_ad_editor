@@ -27,24 +27,55 @@ mod analysis_panel;
 mod curve_panel;
 mod generator_panel;
 
+/// Kontext fuer das Rendern des Route-Tool-Panels.
+pub(super) struct RouteToolPanelContext<'a> {
+    default_direction: ConnectionDirection,
+    default_priority: ConnectionPriority,
+    wheel_enabled: bool,
+    panel_pos: Option<egui::Pos2>,
+    lang: Language,
+    events: &'a mut Vec<AppIntent>,
+}
+
+impl<'a> RouteToolPanelContext<'a> {
+    /// Erstellt den Panel-Kontext und leitet den Wheel-Schalter zentral ab.
+    pub(super) fn new(
+        default_direction: ConnectionDirection,
+        default_priority: ConnectionPriority,
+        distance_wheel_step_m: f32,
+        panel_pos: Option<egui::Pos2>,
+        lang: Language,
+        events: &'a mut Vec<AppIntent>,
+    ) -> Self {
+        Self {
+            default_direction,
+            default_priority,
+            wheel_enabled: distance_wheel_step_m > 0.0,
+            panel_pos,
+            lang,
+            events,
+        }
+    }
+}
+
 /// Rendert das Route-Tool-Panel mit Tool-Konfiguration sowie Ausfuehren/Abbrechen.
 ///
-/// Ein positiver `distance_wheel_step_m` aktiviert Mausrad-Anpassungen in den
-/// numerischen Unterpanels. Die konkrete Scroll-Auswertung bleibt in
-/// `ui::common`, damit Route-Tool- und Analysis-Widgets dieselbe Wheel-Logik
-/// verwenden.
-#[allow(clippy::too_many_arguments)]
+/// Die Mausrad-Aktivierung fuer numerische Unterpanels wird im Kontext zentral
+/// vorbereitet. Die konkrete Scroll-Auswertung bleibt in `ui::common`, damit
+/// Route-Tool- und Analysis-Widgets dieselbe Wheel-Logik verwenden.
 pub(super) fn render_route_tool_panel(
     ctx: &egui::Context,
     route_tool: RouteToolPanelState,
-    default_direction: ConnectionDirection,
-    default_priority: ConnectionPriority,
-    distance_wheel_step_m: f32,
-    panel_pos: Option<egui::Pos2>,
-    lang: Language,
-    events: &mut Vec<AppIntent>,
+    context: RouteToolPanelContext<'_>,
 ) {
-    let wheel_enabled = distance_wheel_step_m > 0.0;
+    let RouteToolPanelContext {
+        default_direction,
+        default_priority,
+        wheel_enabled,
+        panel_pos,
+        lang,
+        events,
+    } = context;
 
     let mut window = egui::Window::new("📐 Route-Tool")
         .collapsible(false)

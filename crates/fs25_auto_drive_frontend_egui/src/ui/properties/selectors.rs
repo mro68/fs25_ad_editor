@@ -112,16 +112,6 @@ pub fn render_direction_icon_selector(
     render_direction_icon_selector_inner(ui, selected, false, id_suffix);
 }
 
-/// Rendert einen vertikalen Icon-Selector fuer `ConnectionDirection`.
-#[allow(dead_code)]
-pub fn render_direction_icon_selector_vertical(
-    ui: &mut egui::Ui,
-    selected: &mut ConnectionDirection,
-    id_suffix: &str,
-) {
-    render_direction_icon_selector_inner(ui, selected, true, id_suffix);
-}
-
 /// Rendert einen horizontalen Icon-Selector fuer `ConnectionPriority`.
 pub fn render_priority_icon_selector(
     ui: &mut egui::Ui,
@@ -129,14 +119,4 @@ pub fn render_priority_icon_selector(
     id_suffix: &str,
 ) {
     render_priority_icon_selector_inner(ui, selected, false, id_suffix);
-}
-
-/// Rendert einen vertikalen Icon-Selector fuer `ConnectionPriority`.
-#[allow(dead_code)]
-pub fn render_priority_icon_selector_vertical(
-    ui: &mut egui::Ui,
-    selected: &mut ConnectionPriority,
-    id_suffix: &str,
-) {
-    render_priority_icon_selector_inner(ui, selected, true, id_suffix);
 }
