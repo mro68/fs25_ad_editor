@@ -2,21 +2,24 @@
 
 #[cfg(feature = "flutter")]
 pub mod flutter_api;
+mod helpers;
 mod shared_texture_v2;
+#[cfg(test)]
+mod tests;
 mod texture_registration_v4;
 
 /// Hilfsmakro: Wraps einen bool-FFI-Aufruf mit Panic-Isolation und Last-Error-Behandlung.
 macro_rules! ffi_guard_bool {
     ($body:expr) => {{
-        clear_last_error();
+        helpers::clear_last_error();
         match std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| $body)) {
             Ok(Ok(())) => true,
             Ok(Err(e)) => {
-                set_last_error(e.to_string());
+                helpers::set_last_error(e.to_string());
                 false
             }
             Err(_) => {
-                set_last_error("internal panic in FFI call");
+                helpers::set_last_error("internal panic in FFI call");
                 false
             }
         }
@@ -26,15 +29,15 @@ macro_rules! ffi_guard_bool {
 /// Hilfsmakro: Wraps einen ptr-rueckgebenden FFI-Aufruf mit Panic-Isolation und Last-Error-Behandlung.
 macro_rules! ffi_guard_ptr {
     ($body:expr) => {{
-        clear_last_error();
+        helpers::clear_last_error();
         match std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| $body)) {
             Ok(Ok(ptr)) => ptr,
             Ok(Err(e)) => {
-                set_last_error(e.to_string());
+                helpers::set_last_error(e.to_string());
                 std::ptr::null_mut()
             }
             Err(_) => {
-                set_last_error("internal panic in FFI call");
+                helpers::set_last_error("internal panic in FFI call");
                 std::ptr::null_mut()
             }
         }
@@ -49,121 +52,26 @@ pub mod flutter_gpu;
 
 #[cfg(feature = "flutter")]
 use crate::flutter_api::FlutterSessionHandle;
-use anyhow::{anyhow, Context, Result};
+use anyhow::Context;
 use fs25_auto_drive_host_bridge::dto::{host_ui_snapshot_json, viewport_overlay_snapshot_json};
 use fs25_auto_drive_host_bridge::{
-    HostBridgeSession, HostChromeSnapshot, HostConnectionPairSnapshot, HostContextMenuSnapshot,
-    HostDialogRequest, HostDialogResult, HostDialogSnapshot, HostEditingSnapshot,
-    HostRouteToolViewportSnapshot, HostSessionAction, HostSessionSnapshot, HostUiSnapshot,
-    HostViewportGeometrySnapshot, ViewportOverlaySnapshot,
+    HostChromeSnapshot, HostConnectionPairSnapshot, HostContextMenuSnapshot, HostDialogRequest,
+    HostDialogResult, HostDialogSnapshot, HostEditingSnapshot, HostRouteToolViewportSnapshot,
+    HostSessionAction, HostSessionSnapshot, HostUiSnapshot, HostViewportGeometrySnapshot,
+    ViewportOverlaySnapshot,
 };
-use std::cell::RefCell;
-use std::ffi::{c_char, CStr, CString};
-use std::sync::Mutex;
-
-thread_local! {
-    static LAST_ERROR: RefCell<Option<String>> = const { RefCell::new(None) };
-}
-
-const FS25AD_HOST_BRIDGE_ABI_VERSION: u32 = 4;
-
-/// Opaquer Session-Handle mit serialisiertem Zugriff auf die kanonische Session.
-pub struct HostBridgeSessionHandle {
-    session: Mutex<HostBridgeSession>,
-}
-
-impl HostBridgeSessionHandle {
-    fn new() -> Self {
-        Self {
-            session: Mutex::new(HostBridgeSession::new()),
-        }
-    }
-
-    fn with_lock<T>(&self, f: impl FnOnce(&mut HostBridgeSession) -> Result<T>) -> Result<T> {
-        let mut guard = self
-            .session
-            .lock()
-            .map_err(|_| anyhow!("HostBridgeSession lock poisoned"))?;
-        f(&mut guard)
-    }
-}
-
-fn clear_last_error() {
-    LAST_ERROR.with(|slot| {
-        *slot.borrow_mut() = None;
-    });
-}
-
-fn set_last_error(error: impl Into<String>) {
-    let message = error.into().replace('\0', " ");
-    LAST_ERROR.with(|slot| {
-        *slot.borrow_mut() = Some(message);
-    });
-}
-
-fn into_c_string_ptr(value: String) -> *mut c_char {
-    CString::new(value)
-        .expect("sanitized string must not contain interior NUL bytes")
-        .into_raw()
-}
-
-fn serialize_json<T: serde::Serialize>(value: &T) -> Result<*mut c_char> {
-    let payload = serde_json::to_string(value).context("JSON serialization failed")?;
-    Ok(into_c_string_ptr(payload))
-}
-
-fn read_json_arg<T>(value: *const c_char, type_name: &str) -> Result<T>
-where
-    T: serde::de::DeserializeOwned,
-{
-    if value.is_null() {
-        return Err(anyhow!("{type_name} JSON pointer must not be null"));
-    }
-
-    let text = unsafe {
-        CStr::from_ptr(value)
-            .to_str()
-            .context("FFI JSON must be valid UTF-8")?
-    };
-    serde_json::from_str(text).with_context(|| format!("failed to parse {type_name} JSON"))
-}
-
-fn decode_focus_node_id(focus_node_id_or_neg1: i64) -> Result<Option<u64>> {
-    if focus_node_id_or_neg1 == -1 {
-        return Ok(None);
-    }
-
-    let node_id = u64::try_from(focus_node_id_or_neg1)
-        .map_err(|_| anyhow!("focus_node_id must be -1 or a non-negative node id"))?;
-    Ok(Some(node_id))
-}
-
-fn with_session_mut<T>(
-    session: *mut HostBridgeSessionHandle,
-    f: impl FnOnce(&mut HostBridgeSession) -> Result<T>,
-) -> Result<T> {
-    if session.is_null() {
-        return Err(anyhow!("HostBridgeSession pointer must not be null"));
-    }
-
-    let session = unsafe { &*session };
-    session.with_lock(f)
-}
+use helpers::{
+    clear_last_error, decode_focus_node_id, into_c_string_ptr, read_json_arg, serialize_json,
+    set_last_error, with_session_mut, LAST_ERROR,
+};
+use std::ffi::{c_char, CString};
 
 #[cfg(feature = "flutter")]
-fn with_flutter_session_fallible<T>(
-    session: *const FlutterSessionHandle,
-    f: impl FnOnce(&mut HostBridgeSession) -> Result<T>,
-) -> Result<T> {
-    if session.is_null() {
-        return Err(anyhow!("FlutterSessionHandle pointer must not be null"));
-    }
+use helpers::with_flutter_session_fallible;
 
-    let handle = unsafe { &*session };
-    handle
-        .with_session(|session| f(session))
-        .and_then(|result| result)
-}
+pub use helpers::HostBridgeSessionHandle;
+
+const FS25AD_HOST_BRIDGE_ABI_VERSION: u32 = 4;
 
 /// Liefert die ABI-Version des nativen Host-Bridge-Vertrags.
 #[unsafe(no_mangle)]
