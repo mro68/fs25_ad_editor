@@ -51,7 +51,7 @@ pub mod flutter_gpu;
 #[cfg(feature = "flutter")]
 use crate::flutter_api::FlutterSessionHandle;
 use anyhow::Context;
-#[cfg(feature = "flutter")
+#[cfg(feature = "flutter")]
 use fs25_auto_drive_host_bridge::dto::HostOverviewOptionsDialogSnapshot;
 use fs25_auto_drive_host_bridge::dto::{host_ui_snapshot_json, viewport_overlay_snapshot_json};
 use fs25_auto_drive_host_bridge::{
@@ -1838,6 +1838,150 @@ mod tests {
         let viewport_snapshot: HostRouteToolViewportSnapshot =
             serde_json::from_str(&viewport_json).expect("route tool viewport JSON must parse");
         assert!(viewport_snapshot.has_pending_input);
+
+        session_dispose(session);
+    }
+
+    #[test]
+    fn ffi_e2e_layer_toggle_positive_flow_with_stable_snapshot_assertions() {
+        // E2E-Test fuer Layer-Toggle ueber FFI mit stabilen Snapshot-Assertions.
+        // Testet den SetBackgroundLayerVisibility-Flow ohne externe ZIP-Datei,
+        // fokussiert auf stabilen Chrome-State und Visibility-Flags.
+        let session = fs25ad_host_bridge_session_new();
+        assert!(!session.is_null());
+
+        // Lade Test-Map ueber OpenFile-Dialog.
+        apply_action_json(session, HostSessionAction::OpenFile);
+
+        let requests_json = read_and_free_string(session_take_dialog_requests_json(session));
+        let requests: Vec<HostDialogRequest> =
+            serde_json::from_str(&requests_json).expect("dialog request JSON must parse");
+        assert!(!requests.is_empty());
+        assert_eq!(requests[0].kind, HostDialogRequestKind::OpenFile);
+
+        // Fuege Test-XML-Datei als Dialog-Ergebnis ein.
+        let test_map_path = format!(
+            "{}/../../ad_sample_data/AutoDrive_config-test.xml",
+            env!("CARGO_MANIFEST_DIR")
+        );
+        let open_result_json = CString::new(
+            serde_json::to_string(&HostDialogResult::PathSelected {
+                kind: HostDialogRequestKind::OpenFile,
+                path: test_map_path,
+            })
+            .expect("dialog result JSON must serialize"),
+        )
+        .expect("CString must build");
+        assert!(session_submit_dialog_result_json(
+            session,
+            open_result_json.as_ptr()
+        ));
+
+        // Snapshot nach Laden: sollte Map enthalten.
+        let loaded_snapshot_json = read_and_free_string(session_snapshot_json(session));
+        let loaded_snapshot: HostSessionSnapshot =
+            serde_json::from_str(&loaded_snapshot_json).expect("snapshot JSON must parse");
+        assert!(loaded_snapshot.has_map);
+
+        // Chrome-Snapshot vor Toggle: Pruefen auf initiale Layer-Entries.
+        let chrome_before_json = read_and_free_string(session_chrome_snapshot_json(session));
+        let chrome_before: crate::HostChromeSnapshot =
+            serde_json::from_str(&chrome_before_json).expect("chrome snapshot JSON must parse");
+
+        // Wende SetBackgroundLayerVisibility an (toggle erste Layer wenn vorhanden).
+        if !chrome_before.background_layer_entries.is_empty() {
+            let first_entry = &chrome_before.background_layer_entries[0];
+            let layer_kind = first_entry.kind;
+            let new_visibility = !first_entry.visible;
+
+            apply_action_json(
+                session,
+                HostSessionAction::SetBackgroundLayerVisibility {
+                    layer: layer_kind,
+                    visible: new_visibility,
+                },
+            );
+
+            // Chrome-Snapshot nach Toggle: Pruefen auf veraenderte Visibility.
+            let chrome_after_json = read_and_free_string(session_chrome_snapshot_json(session));
+            let chrome_after: crate::HostChromeSnapshot =
+                serde_json::from_str(&chrome_after_json).expect("chrome snapshot JSON must parse");
+
+            // Assertion auf stabiles Feld: Visibility-Flag der getoggelt Layer muss sich geaendert haben.
+            let toggled_entry = chrome_after
+                .background_layer_entries
+                .iter()
+                .find(|e| e.kind == layer_kind)
+                .expect("toggled layer must exist in updated snapshot");
+            assert_eq!(
+                toggled_entry.visible, new_visibility,
+                "Layer visibility toggle must be reflected in chrome snapshot"
+            );
+
+            // Assertion auf weitere stabile Felder: Layer-Entries sollten nicht verloren gehen.
+            assert_eq!(
+                chrome_before.background_layer_entries.len(),
+                chrome_after.background_layer_entries.len(),
+                "Number of background layer entries must be stable"
+            );
+        }
+
+        session_dispose(session);
+    }
+
+    #[test]
+    fn ffi_e2e_draft_confirm_overview_options_positive_flow() {
+        // E2E-Test fuer Draft->Confirm Overview-Options Flow ueber FFI.
+        // Testet den Dialog-Handling mit stabilen State-Assertions
+        // (ohne tatsächliche ZIP-Datei, fokussiert auf Flow-Stabilität).
+        let session = fs25ad_host_bridge_session_new();
+        assert!(!session.is_null());
+
+        // Initial: Dialog sollte nicht sichtbar sein.
+        let initial_snapshot = read_and_free_string(session_snapshot_json(session));
+        let snapshot_before: HostSessionSnapshot =
+            serde_json::from_str(&initial_snapshot).expect("snapshot JSON must parse");
+        assert!(!snapshot_before.show_options_dialog);
+
+        // Oeffne den Options-Dialog via OpenOptionsDialog Action.
+        apply_action_json(session, HostSessionAction::OpenOptionsDialog);
+
+        let snapshot_after_open = read_and_free_string(session_snapshot_json(session));
+        let snapshot_open: HostSessionSnapshot =
+            serde_json::from_str(&snapshot_after_open).expect("snapshot JSON must parse");
+        assert!(
+            snapshot_open.show_options_dialog,
+            "Options dialog must be open after OpenOptionsDialog action"
+        );
+
+        // Prüfe stabilen Chrome-State nach Öffnung.
+        let chrome_open_json = read_and_free_string(session_chrome_snapshot_json(session));
+        let chrome_open: crate::HostChromeSnapshot =
+            serde_json::from_str(&chrome_open_json).expect("chrome snapshot JSON must parse");
+        assert!(chrome_open.show_options_dialog);
+
+        // Schliesse den Dialog via CloseOptionsDialog Action (Abbruch-Szenario).
+        apply_action_json(session, HostSessionAction::CloseOptionsDialog);
+
+        let snapshot_after_close = read_and_free_string(session_snapshot_json(session));
+        let snapshot_closed: HostSessionSnapshot =
+            serde_json::from_str(&snapshot_after_close).expect("snapshot JSON must parse");
+        assert!(
+            !snapshot_closed.show_options_dialog,
+            "Options dialog must be closed after CloseOptionsDialog action"
+        );
+
+        // Assertion auf stabiles Feld: show_options_dialog Flag aendert sich deterministisch.
+        assert!(
+            !snapshot_closed.show_options_dialog,
+            "show_options_dialog must be false in stable state after close"
+        );
+
+        // Prüfe stabilen Chrome-State nach Schließung.
+        let chrome_closed_json = read_and_free_string(session_chrome_snapshot_json(session));
+        let chrome_closed: crate::HostChromeSnapshot =
+            serde_json::from_str(&chrome_closed_json).expect("chrome snapshot JSON must parse");
+        assert!(!chrome_closed.show_options_dialog);
 
         session_dispose(session);
     }

@@ -924,3 +924,145 @@ fn ffi_route_tool_write_actions_cover_anchors_click_drag_lasso_and_related_json_
 
     session_dispose(session);
 }
+
+#[test]
+fn ffi_e2e_layer_toggle_positive_flow_with_stable_snapshot_assertions() {
+    /// E2E-Test fuer Layer-Toggle ueber FFI mit stabilen Snapshot-Assertions.
+    /// Testet den SetBackgroundLayerVisibility-Flow ohne externe ZIP-Datei,
+    /// fokussiert auf stabilen Chrome-State und Visibility-Flags.
+    let session = fs25ad_host_bridge_session_new();
+    assert!(!session.is_null());
+
+    // Lade Test-Map ueber OpenFile-Dialog.
+    apply_action_json(session, HostSessionAction::OpenFile);
+
+    let requests_json = read_and_free_string(session_take_dialog_requests_json(session));
+    let requests: Vec<HostDialogRequest> =
+        serde_json::from_str(&requests_json).expect("dialog request JSON must parse");
+    assert!(!requests.is_empty());
+    assert_eq!(requests[0].kind, HostDialogRequestKind::OpenFile);
+
+    // Fuege Test-XML-Datei als Dialog-Ergebnis ein.
+    let test_map_path = format!(
+        "{}/../../ad_sample_data/AutoDrive_config-test.xml",
+        env!("CARGO_MANIFEST_DIR")
+    );
+    let open_result_json = CString::new(
+        serde_json::to_string(&HostDialogResult::PathSelected {
+            kind: HostDialogRequestKind::OpenFile,
+            path: test_map_path,
+        })
+        .expect("dialog result JSON must serialize"),
+    )
+    .expect("CString must build");
+    assert!(session_submit_dialog_result_json(
+        session,
+        open_result_json.as_ptr()
+    ));
+
+    // Snapshot nach Laden: sollte Map enthalten.
+    let loaded_snapshot_json = read_and_free_string(session_snapshot_json(session));
+    let loaded_snapshot: HostSessionSnapshot =
+        serde_json::from_str(&loaded_snapshot_json).expect("snapshot JSON must parse");
+    assert!(loaded_snapshot.has_map);
+
+    // Chrome-Snapshot vor Toggle: Pruefen auf initiale Layer-Entries.
+    let chrome_before_json = read_and_free_string(session_chrome_snapshot_json(session));
+    let chrome_before: fs25_auto_drive_host_bridge::HostChromeSnapshot =
+        serde_json::from_str(&chrome_before_json).expect("chrome snapshot JSON must parse");
+    let initial_visibility = chrome_before
+        .background_layer_entries
+        .iter()
+        .map(|entry| (entry.id.clone(), entry.visible))
+        .collect::<Vec<_>>();
+
+    // Wende SetBackgroundLayerVisibility an (toggle erste Layer-ID wenn vorhanden).
+    if !chrome_before.background_layer_entries.is_empty() {
+        let first_entry = &chrome_before.background_layer_entries[0];
+        let layer_id = first_entry.id.clone();
+        let new_visibility = !first_entry.visible;
+
+        apply_action_json(
+            session,
+            HostSessionAction::SetBackgroundLayerVisibility {
+                layer: layer_id.clone(),
+                visible: new_visibility,
+            },
+        );
+
+        // Chrome-Snapshot nach Toggle: Pruefen auf veraenderte Visibility.
+        let chrome_after_json = read_and_free_string(session_chrome_snapshot_json(session));
+        let chrome_after: fs25_auto_drive_host_bridge::HostChromeSnapshot =
+            serde_json::from_str(&chrome_after_json).expect("chrome snapshot JSON must parse");
+
+        // Assertion auf stabiles Feld: Visibility-Flag der getoggelt Layer muss sich geaendert haben.
+        let toggled_entry = chrome_after
+            .background_layer_entries
+            .iter()
+            .find(|e| e.id == layer_id)
+            .expect("toggled layer must exist in updated snapshot");
+        assert_eq!(
+            toggled_entry.visible, new_visibility,
+            "Layer visibility toggle must be reflected in chrome snapshot"
+        );
+
+        // Assertion auf weitere stabile Felder: Layer-Entries sollten nicht verloren gehen.
+        assert_eq!(
+            chrome_before.background_layer_entries.len(),
+            chrome_after.background_layer_entries.len(),
+            "Number of background layer entries must be stable"
+        );
+    }
+
+    session_dispose(session);
+}
+
+#[test]
+fn ffi_e2e_draft_confirm_overview_options_positive_flow() {
+    /// E2E-Test fuer Draft->Confirm Overview-Options Flow ueber FFI.
+    /// Testet update_overview_options_dialog mit ConfirmOverviewOptions
+    /// auf stabilen State-Assertions ohne externe ZIP-Datei.
+    let session = fs25ad_host_bridge_session_new();
+    assert!(!session.is_null());
+
+    // Oeffne den Options-Dialog via OpenOptionsDialog Action.
+    apply_action_json(session, HostSessionAction::OpenOptionsDialog);
+
+    let snapshot_after_open = read_and_free_string(session_snapshot_json(session));
+    let snapshot: HostSessionSnapshot =
+        serde_json::from_str(&snapshot_after_open).expect("snapshot JSON must parse");
+    assert!(
+        snapshot.show_options_dialog,
+        "Options dialog must be open after OpenOptionsDialog action"
+    );
+
+    // Bestaetigung: Dialog ist nun sichtbar, stellt sicheren Zustand dar.
+    let ui_json = read_and_free_string(session_ui_snapshot_json(session));
+    let ui_value: serde_json::Value =
+        serde_json::from_str(&ui_json).expect("ui snapshot JSON must parse");
+    assert!(ui_value.get("panels").is_some());
+
+    // Wende ConfirmOverviewOptions an (ohne zuvor draft-Aenderungen zu machen,
+    // testet damit den Confirm-Flow mit Default-Werten).
+    apply_action_json(session, HostSessionAction::ConfirmOverviewOptions);
+
+    // Snapshot nach Confirm: Dialog sollte geschlossen sein.
+    let snapshot_after_confirm = read_and_free_string(session_snapshot_json(session));
+    let snapshot_confirmed: HostSessionSnapshot =
+        serde_json::from_str(&snapshot_after_confirm).expect("snapshot JSON must parse");
+    assert!(
+        !snapshot_confirmed.show_options_dialog,
+        "Options dialog must be closed after ConfirmOverviewOptions action"
+    );
+
+    // Assertion auf stabiles Feld: show_options_dialog Flag aendert sich deterministisch.
+    // Weitere stabile Assertions auf Chrome/Snapshot-Zustand sind moeglich,
+    // aber hier fokussieren wir auf den kritischen Flow.
+    assert_eq!(
+        snapshot_confirmed.show_options_dialog, false,
+        "show_options_dialog must be false in stable state after confirm"
+    );
+
+    session_dispose(session);
+}
+
