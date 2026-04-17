@@ -2,17 +2,51 @@
 name: git-ops
 description: "Spezialist fuer Git-Workflows im fs25_auto_drive_editor. Aufrufen bei Branching, Commit/Amend, Rebase, Cherry-Pick, Push/Force-Push, Divergenz-Analyse, PR-Vorbereitung und sicherer Historienpflege."
 tools:
-  - execute/getTerminalOutput
-  - execute/awaitTerminal
-  - execute/runInTerminal
+  - vscode/askQuestions 
   - read/readFile
-  - 'github/*'
+  - github/add_comment_to_pending_review
+  - github/add_issue_comment
+  - github/add_reply_to_pull_request_comment
+  - github/create_branch
+  - github/create_or_update_file
+  - github/create_pull_request
+  - github/create_pull_request_with_copilot
+  - github/delete_file
+  - github/get_commit
+  - github/get_file_contents
+  - github/get_label
+  - github/get_latest_release
+  - github/get_me
+  - github/get_release_by_tag
+  - github/get_tag
+  - github/issue_read
+  - github/issue_write
+  - github/list_branches
+  - github/list_commits
+  - github/list_issue_types
+  - github/list_issues
+  - github/list_pull_requests
+  - github/list_releases
+  - github/list_tags
+  - github/merge_pull_request
+  - github/pull_request_read
+  - github/pull_request_review_write
+  - github/push_files
+  - github/search_code
+  - github/search_issues
+  - github/search_pull_requests
+  - github/search_repositories
+  - github/search_users
+  - github/sub_issue_write
+  - github/update_pull_request
+  - github/update_pull_request_branch
   - edit/createFile
   - edit/editFiles
   - edit/rename
-  - vscode/askQuestions
+  - execute/getTerminalOutput
+  - execute/runInTerminal
 
-model: "Claude Sonnet 4.6"
+model: Auto (copilot)
 #model: "GPT-5.4"
 ---
 
@@ -39,7 +73,7 @@ Dokumentiere dort:
 
 - Deine Analyse der Git-Aufgabe
 - Den geplanten Git-Workflow (inkl. Kommando-Sequenz)
-- Die erforderlichen Commit-Punkte mit Beschreibungen (z.B. "Commit 1: fix load_for_edit – Beschreibung: Implementiert Edit-Modus für FieldBoundary")
+- **Die vollständige Commit-Punkt-Liste** (nummeriert CP-01, CP-02, …) mit je: ID, Scope, Beschreibung, betroffene Dateien. Diese Liste muss erstellt und gespeichert sein, **bevor** der `@dirigent` den ersten Developer-Auftrag erteilt. Sie ist bindend für die Reihenfolge der Implementierungszyklen.
 - Alle Sicherheitsüberlegungen und potenziellen Risiken
 - Das Ergebnis der Git-Operationen (Erfolg, Fehler, Divergenzen)
 

@@ -10,6 +10,8 @@ Das `handlers`-Modul gruppiert die Verarbeitung von `AppCommand`s in Feature-ber
 2. Handler rufen Funktionen aus `use_cases/` auf — diese enthalten die Geschäftslogik
 3. Handler selbst sind dünn und koordinieren hauptsächlich Undo-Snapshots und State-Updates
 
+Der Handler-Bereich `editing` ist intern thematisch in `editing/{clipboard_ops,connection_ops,group_ops,marker_ops,node_ops}.rs` aufgeteilt; die oeffentliche Handler-Surface bleibt ueber `editing/mod.rs` unveraendert.
+
 **Modulzugriff:**  
 Die Handler-Module liegen unter [`src/app/handlers`](.) und werden intern vom Controller genutzt:
 

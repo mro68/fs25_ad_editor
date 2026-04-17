@@ -4,7 +4,7 @@ version = 4
 
 [[package]]
 name = "FS25-AutoDrive-Editor"
-version = "1.7.0"
+version = "2.0.0"
 dependencies = [
  "approx",
  "criterion",
@@ -1699,7 +1699,7 @@ dependencies = [
 
 [[package]]
 name = "fs25_auto_drive_engine"
-version = "1.7.0"
+version = "2.0.0"
 dependencies = [
  "anyhow",
  "approx",
@@ -1719,7 +1719,7 @@ dependencies = [
 
 [[package]]
 name = "fs25_auto_drive_frontend_egui"
-version = "1.7.0"
+version = "2.0.0"
 dependencies = [
  "anyhow",
  "bytemuck",
@@ -1742,7 +1742,7 @@ dependencies = [
 
 [[package]]
 name = "fs25_auto_drive_host_bridge"
-version = "1.7.0"
+version = "2.0.0"
 dependencies = [
  "anyhow",
  "fs25_auto_drive_engine",
@@ -1755,7 +1755,7 @@ dependencies = [
 
 [[package]]
 name = "fs25_auto_drive_host_bridge_ffi"
-version = "1.7.0"
+version = "2.0.0"
 dependencies = [
  "anyhow",
  "fs25_auto_drive_engine",
@@ -1770,7 +1770,7 @@ dependencies = [
 
 [[package]]
 name = "fs25_auto_drive_render_wgpu"
-version = "1.7.0"
+version = "2.0.0"
 dependencies = [
  "ash",
  "bytemuck",
@@ -1789,7 +1789,7 @@ dependencies = [
 
 [[package]]
 name = "fs25_map_overview"
-version = "0.2.1"
+version = "2.0.0"
 dependencies = [
  "ab_glyph",
  "anyhow",

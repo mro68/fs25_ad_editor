@@ -3,10 +3,9 @@ use super::*;
 pub(super) fn render_straight_panel(
     ui: &mut egui::Ui,
     state: &StraightPanelState,
-    wheel_enabled: bool,
-    events: &mut Vec<AppIntent>,
+    panel_ctx: &mut RouteToolPanelRenderContext<'_>,
 ) {
-    render_segment_config(ui, &state.segment, wheel_enabled, events, |action| {
+    render_segment_config(ui, &state.segment, panel_ctx, |action| {
         RouteToolPanelAction::Straight(StraightPanelAction::Segment(action))
     });
 }
@@ -14,34 +13,35 @@ pub(super) fn render_straight_panel(
 pub(super) fn render_smooth_curve_panel(
     ui: &mut egui::Ui,
     state: &SmoothCurvePanelState,
-    wheel_enabled: bool,
-    events: &mut Vec<AppIntent>,
+    panel_ctx: &mut RouteToolPanelRenderContext<'_>,
 ) {
     render_drag_f32(
-        ui,
-        "Max. Winkel:",
-        state.max_angle_deg,
-        SMOOTH_CURVE_MAX_ANGLE_LIMITS.range(),
-        0.1,
-        "°",
-        wheel_enabled,
-        events,
+        panel_ctx,
+        DragF32Props {
+            ui,
+            label: "Max. Winkel:",
+            current: state.max_angle_deg,
+            range: SMOOTH_CURVE_MAX_ANGLE_LIMITS.range(),
+            speed: 0.1,
+            suffix: "°",
+        },
         |value| RouteToolPanelAction::SmoothCurve(SmoothCurvePanelAction::SetMaxAngleDeg(value)),
     );
 
-    render_segment_distance_only(ui, &state.segment, wheel_enabled, events, |value| {
+    render_segment_distance_only(ui, &state.segment, panel_ctx, |value| {
         RouteToolPanelAction::SmoothCurve(SmoothCurvePanelAction::SetMaxSegmentLength(value))
     });
 
     render_drag_f32(
-        ui,
-        "Min. Distanz:",
-        state.min_distance,
-        SMOOTH_CURVE_MIN_DISTANCE_LIMITS.range(),
-        0.1,
-        " m",
-        wheel_enabled,
-        events,
+        panel_ctx,
+        DragF32Props {
+            ui,
+            label: "Min. Distanz:",
+            current: state.min_distance,
+            range: SMOOTH_CURVE_MIN_DISTANCE_LIMITS.range(),
+            speed: 0.1,
+            suffix: " m",
+        },
         |value| RouteToolPanelAction::SmoothCurve(SmoothCurvePanelAction::SetMinDistance(value)),
     );
 
@@ -54,7 +54,7 @@ pub(super) fn render_smooth_curve_panel(
             ));
             if approach.is_manual && ui.button("Reset").clicked() {
                 push_action(
-                    events,
+                    panel_ctx.events,
                     RouteToolPanelAction::SmoothCurve(SmoothCurvePanelAction::ResetApproachSteerer),
                 );
             }
@@ -74,7 +74,7 @@ pub(super) fn render_smooth_curve_panel(
             ));
             if departure.is_manual && ui.button("Reset").clicked() {
                 push_action(
-                    events,
+                    panel_ctx.events,
                     RouteToolPanelAction::SmoothCurve(
                         SmoothCurvePanelAction::ResetDepartureSteerer,
                     ),
@@ -91,7 +91,7 @@ pub(super) fn render_smooth_curve_panel(
                 ui.label(format!("#{} {}", index + 1, format_vec2(*position)));
                 if ui.button("Entfernen").clicked() {
                     push_action(
-                        events,
+                        panel_ctx.events,
                         RouteToolPanelAction::SmoothCurve(
                             SmoothCurvePanelAction::RemoveControlNode { index },
                         ),
@@ -110,8 +110,7 @@ pub(super) fn render_smooth_curve_panel(
 pub(super) fn render_bypass_panel(
     ui: &mut egui::Ui,
     state: &BypassPanelState,
-    wheel_enabled: bool,
-    events: &mut Vec<AppIntent>,
+    panel_ctx: &mut RouteToolPanelRenderContext<'_>,
 ) {
     if !state.has_chain {
         ui.colored_label(
@@ -136,26 +135,28 @@ pub(super) fn render_bypass_panel(
     ui.label(format!("Seite: Richtung: {side_text}"));
 
     render_drag_f32(
-        ui,
-        "Versatz:",
-        state.offset,
-        BYPASS_OFFSET_LIMITS.range(),
-        0.1,
-        " m",
-        wheel_enabled,
-        events,
+        panel_ctx,
+        DragF32Props {
+            ui,
+            label: "Versatz:",
+            current: state.offset,
+            range: BYPASS_OFFSET_LIMITS.range(),
+            speed: 0.1,
+            suffix: " m",
+        },
         |value| RouteToolPanelAction::Bypass(BypassPanelAction::SetOffset(value)),
     );
 
     render_drag_f32(
-        ui,
-        "Basisabstand:",
-        state.base_spacing,
-        BYPASS_BASE_SPACING_LIMITS.range(),
-        0.1,
-        " m",
-        wheel_enabled,
-        events,
+        panel_ctx,
+        DragF32Props {
+            ui,
+            label: "Basisabstand:",
+            current: state.base_spacing,
+            range: BYPASS_BASE_SPACING_LIMITS.range(),
+            speed: 0.1,
+            suffix: " m",
+        },
         |value| RouteToolPanelAction::Bypass(BypassPanelAction::SetBaseSpacing(value)),
     );
 }
@@ -163,86 +164,98 @@ pub(super) fn render_bypass_panel(
 pub(super) fn render_parking_panel(
     ui: &mut egui::Ui,
     state: &ParkingPanelState,
-    wheel_enabled: bool,
     lang: Language,
-    events: &mut Vec<AppIntent>,
+    panel_ctx: &mut RouteToolPanelRenderContext<'_>,
 ) {
     render_drag_usize(
-        ui,
-        "Reihen:",
-        state.num_rows,
-        PARKING_NUM_ROWS_LIMITS.range(),
-        1.0,
-        wheel_enabled,
-        events,
+        panel_ctx,
+        DragUsizeProps {
+            ui,
+            label: "Reihen:",
+            current: state.num_rows,
+            range: PARKING_NUM_ROWS_LIMITS.range(),
+            speed: 1.0,
+        },
         |value| RouteToolPanelAction::Parking(ParkingPanelAction::SetNumRows(value)),
     );
 
     render_parking_f32(
-        ui,
-        "Reihenabstand:",
-        state.row_spacing,
-        PARKING_ROW_SPACING_LIMITS.range(),
-        wheel_enabled,
-        " m",
-        events,
+        panel_ctx,
+        DragF32Props {
+            ui,
+            label: "Reihenabstand:",
+            current: state.row_spacing,
+            range: PARKING_ROW_SPACING_LIMITS.range(),
+            speed: 0.1,
+            suffix: " m",
+        },
         |value| RouteToolPanelAction::Parking(ParkingPanelAction::SetRowSpacing(value)),
     );
     render_parking_f32(
-        ui,
-        "Reihenlaenge:",
-        state.bay_length,
-        PARKING_BAY_LENGTH_LIMITS.range(),
-        wheel_enabled,
-        " m",
-        events,
+        panel_ctx,
+        DragF32Props {
+            ui,
+            label: "Reihenlaenge:",
+            current: state.bay_length,
+            range: PARKING_BAY_LENGTH_LIMITS.range(),
+            speed: 0.1,
+            suffix: " m",
+        },
         |value| RouteToolPanelAction::Parking(ParkingPanelAction::SetBayLength(value)),
     );
     render_parking_f32(
-        ui,
-        "Max. Node-Abstand:",
-        state.max_node_distance,
-        PARKING_MAX_NODE_DISTANCE_LIMITS.range(),
-        wheel_enabled,
-        " m",
-        events,
+        panel_ctx,
+        DragF32Props {
+            ui,
+            label: "Max. Node-Abstand:",
+            current: state.max_node_distance,
+            range: PARKING_MAX_NODE_DISTANCE_LIMITS.range(),
+            speed: 0.1,
+            suffix: " m",
+        },
         |value| RouteToolPanelAction::Parking(ParkingPanelAction::SetMaxNodeDistance(value)),
     );
     render_parking_f32(
-        ui,
-        "Einfahrt t:",
-        state.entry_t,
-        PARKING_ENTRY_EXIT_T_LIMITS.range(),
-        wheel_enabled,
-        "",
-        events,
+        panel_ctx,
+        DragF32Props {
+            ui,
+            label: "Einfahrt t:",
+            current: state.entry_t,
+            range: PARKING_ENTRY_EXIT_T_LIMITS.range(),
+            speed: 0.1,
+            suffix: "",
+        },
         |value| RouteToolPanelAction::Parking(ParkingPanelAction::SetEntryT(value)),
     );
     render_parking_f32(
-        ui,
-        "Ausfahrt t:",
-        state.exit_t,
-        PARKING_ENTRY_EXIT_T_LIMITS.range(),
-        wheel_enabled,
-        "",
-        events,
+        panel_ctx,
+        DragF32Props {
+            ui,
+            label: "Ausfahrt t:",
+            current: state.exit_t,
+            range: PARKING_ENTRY_EXIT_T_LIMITS.range(),
+            speed: 0.1,
+            suffix: "",
+        },
         |value| RouteToolPanelAction::Parking(ParkingPanelAction::SetExitT(value)),
     );
     render_parking_f32(
-        ui,
-        "Rampenlaenge:",
-        state.ramp_length,
-        PARKING_RAMP_LENGTH_LIMITS.range(),
-        wheel_enabled,
-        " m",
-        events,
+        panel_ctx,
+        DragF32Props {
+            ui,
+            label: "Rampenlaenge:",
+            current: state.ramp_length,
+            range: PARKING_RAMP_LENGTH_LIMITS.range(),
+            speed: 0.1,
+            suffix: " m",
+        },
         |value| RouteToolPanelAction::Parking(ParkingPanelAction::SetRampLength(value)),
     );
 
-    render_parking_side_selector(ui, "Einfahrt:", state.entry_side, events, |value| {
+    render_parking_side_selector(ui, "Einfahrt:", state.entry_side, panel_ctx, |value| {
         RouteToolPanelAction::Parking(ParkingPanelAction::SetEntrySide(value))
     });
-    render_parking_side_selector(ui, "Ausfahrt:", state.exit_side, events, |value| {
+    render_parking_side_selector(ui, "Ausfahrt:", state.exit_side, panel_ctx, |value| {
         RouteToolPanelAction::Parking(ParkingPanelAction::SetExitSide(value))
     });
 
@@ -251,20 +264,22 @@ pub(super) fn render_parking_panel(
         ui.label("Marker-Gruppe:");
         if ui.text_edit_singleline(&mut marker_group).changed() {
             push_action(
-                events,
+                panel_ctx.events,
                 RouteToolPanelAction::Parking(ParkingPanelAction::SetMarkerGroup(marker_group)),
             );
         }
     });
 
     render_parking_f32(
-        ui,
-        "Drehschritt:",
-        state.rotation_step_deg,
-        PARKING_ROTATION_STEP_LIMITS.range(),
-        wheel_enabled,
-        "°",
-        events,
+        panel_ctx,
+        DragF32Props {
+            ui,
+            label: "Drehschritt:",
+            current: state.rotation_step_deg,
+            range: PARKING_ROTATION_STEP_LIMITS.range(),
+            speed: 0.1,
+            suffix: "°",
+        },
         |value| RouteToolPanelAction::Parking(ParkingPanelAction::SetRotationStepDeg(value)),
     );
 

@@ -9,14 +9,26 @@ members = [
     "crates/fs25_map_overview",
 ]
 
+[workspace.lints.rust]
+unused_lifetimes = "warn"
+unused_attributes = "warn"
+
+[workspace.lints.clippy]
+dbg_macro = "warn"
+todo = "warn"
+unimplemented = "warn"
+
 [package]
 name = "FS25-AutoDrive-Editor"
-version = "1.7.0"
+version = "2.0.0"
 edition = "2024"
 authors = ["mro68"]
 description = "GPU-beschleunigter Editor fuer AutoDrive-Kurse in Farming Simulator 25"
 repository = "https://github.com/mro68/fs25_ad_editor"
 license = "GPL-3.0"
+
+[lints]
+workspace = true
 
 [lib]
 name = "fs25_auto_drive_editor"

@@ -27,24 +27,44 @@ mod analysis_panel;
 mod curve_panel;
 mod generator_panel;
 
+/// Eingabeparameter fuer das Rendern des Route-Tool-Panels.
+pub(super) struct RouteToolPanelProps {
+    pub(super) route_tool: RouteToolPanelState,
+    pub(super) default_direction: ConnectionDirection,
+    pub(super) default_priority: ConnectionPriority,
+    pub(super) distance_wheel_step_m: f32,
+    pub(super) panel_pos: Option<egui::Pos2>,
+    pub(super) lang: Language,
+}
+
+struct RouteToolPanelRenderContext<'a> {
+    wheel_enabled: bool,
+    events: &'a mut Vec<AppIntent>,
+}
+
 /// Rendert das Route-Tool-Panel mit Tool-Konfiguration sowie Ausfuehren/Abbrechen.
 ///
 /// Ein positiver `distance_wheel_step_m` aktiviert Mausrad-Anpassungen in den
 /// numerischen Unterpanels. Die konkrete Scroll-Auswertung bleibt in
 /// `ui::common`, damit Route-Tool- und Analysis-Widgets dieselbe Wheel-Logik
 /// verwenden.
-#[allow(clippy::too_many_arguments)]
 pub(super) fn render_route_tool_panel(
     ctx: &egui::Context,
-    route_tool: RouteToolPanelState,
-    default_direction: ConnectionDirection,
-    default_priority: ConnectionPriority,
-    distance_wheel_step_m: f32,
-    panel_pos: Option<egui::Pos2>,
-    lang: Language,
+    props: RouteToolPanelProps,
     events: &mut Vec<AppIntent>,
 ) {
-    let wheel_enabled = distance_wheel_step_m > 0.0;
+    let RouteToolPanelProps {
+        route_tool,
+        default_direction,
+        default_priority,
+        distance_wheel_step_m,
+        panel_pos,
+        lang,
+    } = props;
+    let mut panel_ctx = RouteToolPanelRenderContext {
+        wheel_enabled: distance_wheel_step_m > 0.0,
+        events,
+    };
 
     let mut window = egui::Window::new("📐 Route-Tool")
         .collapsible(false)
@@ -71,7 +91,7 @@ pub(super) fn render_route_tool_panel(
         render_direction_icon_selector(ui, &mut selected_dir, "route_tool_floating");
         if selected_dir != default_direction {
             push_panel_action(
-                events,
+                panel_ctx.events,
                 PanelAction::SetDefaultDirection {
                     direction: selected_dir,
                 },
@@ -83,7 +103,7 @@ pub(super) fn render_route_tool_panel(
         render_priority_icon_selector(ui, &mut selected_prio, "route_tool_floating");
         if selected_prio != default_priority {
             push_panel_action(
-                events,
+                panel_ctx.events,
                 PanelAction::SetDefaultPriority {
                     priority: selected_prio,
                 },
@@ -93,7 +113,7 @@ pub(super) fn render_route_tool_panel(
         ui.add_space(6.0);
 
         if let Some(config_state) = route_tool.config_state.as_ref() {
-            render_route_tool_config(ui, config_state, wheel_enabled, lang, events);
+            render_route_tool_config(ui, config_state, lang, &mut panel_ctx);
         } else {
             ui.small("Kein Route-Tool aktiv.");
         }
@@ -104,10 +124,10 @@ pub(super) fn render_route_tool_panel(
                 .add_enabled(route_tool.can_execute, egui::Button::new("✓ Ausfuehren"))
                 .clicked()
             {
-                push_panel_action(events, PanelAction::RouteToolExecute);
+                push_panel_action(panel_ctx.events, PanelAction::RouteToolExecute);
             }
             if ui.button("✕ Abbrechen").clicked() {
-                push_panel_action(events, PanelAction::RouteToolCancel);
+                push_panel_action(panel_ctx.events, PanelAction::RouteToolCancel);
             }
         });
     });
@@ -116,139 +136,113 @@ pub(super) fn render_route_tool_panel(
 fn render_route_tool_config(
     ui: &mut egui::Ui,
     config_state: &RouteToolConfigState,
-    wheel_enabled: bool,
     lang: Language,
-    events: &mut Vec<AppIntent>,
+    panel_ctx: &mut RouteToolPanelRenderContext<'_>,
 ) {
     match config_state {
-        RouteToolConfigState::Straight(state) => {
-            render_straight_panel(ui, state, wheel_enabled, events)
-        }
-        RouteToolConfigState::Curve(state) => render_curve_panel(ui, state, wheel_enabled, events),
-        RouteToolConfigState::Spline(state) => {
-            render_spline_panel(ui, state, wheel_enabled, events)
-        }
-        RouteToolConfigState::SmoothCurve(state) => {
-            render_smooth_curve_panel(ui, state, wheel_enabled, events)
-        }
-        RouteToolConfigState::Bypass(state) => {
-            render_bypass_panel(ui, state, wheel_enabled, events)
-        }
-        RouteToolConfigState::Parking(state) => {
-            render_parking_panel(ui, state, wheel_enabled, lang, events)
-        }
+        RouteToolConfigState::Straight(state) => render_straight_panel(ui, state, panel_ctx),
+        RouteToolConfigState::Curve(state) => render_curve_panel(ui, state, panel_ctx),
+        RouteToolConfigState::Spline(state) => render_spline_panel(ui, state, panel_ctx),
+        RouteToolConfigState::SmoothCurve(state) => render_smooth_curve_panel(ui, state, panel_ctx),
+        RouteToolConfigState::Bypass(state) => render_bypass_panel(ui, state, panel_ctx),
+        RouteToolConfigState::Parking(state) => render_parking_panel(ui, state, lang, panel_ctx),
         RouteToolConfigState::FieldBoundary(state) => {
-            render_field_boundary_panel(ui, state, wheel_enabled, events)
+            render_field_boundary_panel(ui, state, panel_ctx)
         }
         RouteToolConfigState::FieldPath(state) => {
-            render_field_path_panel(ui, state, wheel_enabled, lang, events)
+            render_field_path_panel(ui, state, lang, panel_ctx)
         }
-        RouteToolConfigState::RouteOffset(state) => {
-            render_route_offset_panel(ui, state, wheel_enabled, events)
-        }
-        RouteToolConfigState::ColorPath(state) => {
-            render_color_path_panel(ui, state, wheel_enabled, events)
-        }
+        RouteToolConfigState::RouteOffset(state) => render_route_offset_panel(ui, state, panel_ctx),
+        RouteToolConfigState::ColorPath(state) => render_color_path_panel(ui, state, panel_ctx),
     }
 }
 
 fn render_straight_panel(
     ui: &mut egui::Ui,
     state: &StraightPanelState,
-    wheel_enabled: bool,
-    events: &mut Vec<AppIntent>,
+    panel_ctx: &mut RouteToolPanelRenderContext<'_>,
 ) {
-    generator_panel::render_straight_panel(ui, state, wheel_enabled, events);
+    generator_panel::render_straight_panel(ui, state, panel_ctx);
 }
 
 fn render_curve_panel(
     ui: &mut egui::Ui,
     state: &CurvePanelState,
-    wheel_enabled: bool,
-    events: &mut Vec<AppIntent>,
+    panel_ctx: &mut RouteToolPanelRenderContext<'_>,
 ) {
-    curve_panel::render_curve_panel(ui, state, wheel_enabled, events);
+    curve_panel::render_curve_panel(ui, state, panel_ctx);
 }
 
 fn render_spline_panel(
     ui: &mut egui::Ui,
     state: &SplinePanelState,
-    wheel_enabled: bool,
-    events: &mut Vec<AppIntent>,
+    panel_ctx: &mut RouteToolPanelRenderContext<'_>,
 ) {
-    curve_panel::render_spline_panel(ui, state, wheel_enabled, events);
+    curve_panel::render_spline_panel(ui, state, panel_ctx);
 }
 
 fn render_smooth_curve_panel(
     ui: &mut egui::Ui,
     state: &SmoothCurvePanelState,
-    wheel_enabled: bool,
-    events: &mut Vec<AppIntent>,
+    panel_ctx: &mut RouteToolPanelRenderContext<'_>,
 ) {
-    generator_panel::render_smooth_curve_panel(ui, state, wheel_enabled, events);
+    generator_panel::render_smooth_curve_panel(ui, state, panel_ctx);
 }
 
 fn render_bypass_panel(
     ui: &mut egui::Ui,
     state: &BypassPanelState,
-    wheel_enabled: bool,
-    events: &mut Vec<AppIntent>,
+    panel_ctx: &mut RouteToolPanelRenderContext<'_>,
 ) {
-    generator_panel::render_bypass_panel(ui, state, wheel_enabled, events);
+    generator_panel::render_bypass_panel(ui, state, panel_ctx);
 }
 
 fn render_parking_panel(
     ui: &mut egui::Ui,
     state: &ParkingPanelState,
-    wheel_enabled: bool,
     lang: Language,
-    events: &mut Vec<AppIntent>,
+    panel_ctx: &mut RouteToolPanelRenderContext<'_>,
 ) {
-    generator_panel::render_parking_panel(ui, state, wheel_enabled, lang, events);
+    generator_panel::render_parking_panel(ui, state, lang, panel_ctx);
 }
 
 fn render_field_boundary_panel(
     ui: &mut egui::Ui,
     state: &FieldBoundaryPanelState,
-    wheel_enabled: bool,
-    events: &mut Vec<AppIntent>,
+    panel_ctx: &mut RouteToolPanelRenderContext<'_>,
 ) {
-    analysis_panel::render_field_boundary_panel(ui, state, wheel_enabled, events);
+    analysis_panel::render_field_boundary_panel(ui, state, panel_ctx);
 }
 
 fn render_field_path_panel(
     ui: &mut egui::Ui,
     state: &FieldPathPanelState,
-    wheel_enabled: bool,
     lang: Language,
-    events: &mut Vec<AppIntent>,
+    panel_ctx: &mut RouteToolPanelRenderContext<'_>,
 ) {
-    analysis_panel::render_field_path_panel(ui, state, wheel_enabled, lang, events);
+    analysis_panel::render_field_path_panel(ui, state, lang, panel_ctx);
 }
 
 fn render_route_offset_panel(
     ui: &mut egui::Ui,
     state: &RouteOffsetPanelState,
-    wheel_enabled: bool,
-    events: &mut Vec<AppIntent>,
+    panel_ctx: &mut RouteToolPanelRenderContext<'_>,
 ) {
-    analysis_panel::render_route_offset_panel(ui, state, wheel_enabled, events);
+    analysis_panel::render_route_offset_panel(ui, state, panel_ctx);
 }
 
 fn render_color_path_panel(
     ui: &mut egui::Ui,
     state: &ColorPathPanelState,
-    wheel_enabled: bool,
-    events: &mut Vec<AppIntent>,
+    panel_ctx: &mut RouteToolPanelRenderContext<'_>,
 ) {
-    analysis_panel::render_color_path_panel(ui, state, wheel_enabled, events);
+    analysis_panel::render_color_path_panel(ui, state, panel_ctx);
 }
 
 fn render_segment_config(
     ui: &mut egui::Ui,
     state: &SegmentConfigPanelState,
-    wheel_enabled: bool,
-    events: &mut Vec<AppIntent>,
+    panel_ctx: &mut RouteToolPanelRenderContext<'_>,
     map_action: impl Fn(SegmentConfigPanelAction) -> RouteToolPanelAction,
 ) {
     ui.label(segment_length_kind_label(state.length_kind));
@@ -274,11 +268,11 @@ fn render_segment_config(
                 &response,
                 &mut max_segment_length,
                 range,
-                wheel_enabled,
+                panel_ctx.wheel_enabled,
             )
         {
             push_action(
-                events,
+                panel_ctx.events,
                 map_action(SegmentConfigPanelAction::SetMaxSegmentLength(
                     max_segment_length,
                 )),
@@ -299,10 +293,16 @@ fn render_segment_config(
                     .speed(1.0),
             );
             if response.changed()
-                | apply_wheel_step_usize(ui, &response, &mut node_count, range, wheel_enabled)
+                | apply_wheel_step_usize(
+                    ui,
+                    &response,
+                    &mut node_count,
+                    range,
+                    panel_ctx.wheel_enabled,
+                )
             {
                 push_action(
-                    events,
+                    panel_ctx.events,
                     map_action(SegmentConfigPanelAction::SetNodeCount(node_count)),
                 );
             }
@@ -313,8 +313,7 @@ fn render_segment_config(
 fn render_segment_distance_only(
     ui: &mut egui::Ui,
     state: &SegmentConfigPanelState,
-    wheel_enabled: bool,
-    events: &mut Vec<AppIntent>,
+    panel_ctx: &mut RouteToolPanelRenderContext<'_>,
     map_action: impl Fn(f32) -> RouteToolPanelAction,
 ) {
     ui.label(segment_length_kind_label(state.length_kind));
@@ -339,10 +338,10 @@ fn render_segment_distance_only(
                 &response,
                 &mut max_segment_length,
                 range,
-                wheel_enabled,
+                panel_ctx.wheel_enabled,
             )
         {
-            push_action(events, map_action(max_segment_length));
+            push_action(panel_ctx.events, map_action(max_segment_length));
         }
     });
 }
@@ -351,7 +350,7 @@ fn render_tangent_selection(
     ui: &mut egui::Ui,
     label: &str,
     selection: &TangentSelectionState,
-    events: &mut Vec<AppIntent>,
+    panel_ctx: &mut RouteToolPanelRenderContext<'_>,
     map_action: impl Fn(TangentSource) -> RouteToolPanelAction,
 ) {
     let selected_text = tangent_selection_label(selection);
@@ -368,14 +367,14 @@ fn render_tangent_selection(
                         )
                         .clicked()
                     {
-                        push_action(events, map_action(TangentSource::None));
+                        push_action(panel_ctx.events, map_action(TangentSource::None));
                     }
                     for option in &selection.options {
                         if ui
                             .selectable_label(selection.current == option.source, &option.label)
                             .clicked()
                         {
-                            push_action(events, map_action(option.source));
+                            push_action(panel_ctx.events, map_action(option.source));
                         }
                     }
                 });
@@ -403,7 +402,7 @@ fn render_field_path_selection_summary(
 fn render_direction_selector(
     ui: &mut egui::Ui,
     current: ConnectionDirection,
-    events: &mut Vec<AppIntent>,
+    panel_ctx: &mut RouteToolPanelRenderContext<'_>,
     map_action: impl Fn(ConnectionDirection) -> RouteToolPanelAction,
 ) {
     ui.horizontal(|ui| {
@@ -421,7 +420,7 @@ fn render_direction_selector(
                 }
             });
         if value != current {
-            push_action(events, map_action(value));
+            push_action(panel_ctx.events, map_action(value));
         }
     });
 }
@@ -429,7 +428,7 @@ fn render_direction_selector(
 fn render_priority_selector(
     ui: &mut egui::Ui,
     current: ConnectionPriority,
-    events: &mut Vec<AppIntent>,
+    panel_ctx: &mut RouteToolPanelRenderContext<'_>,
     map_action: impl Fn(ConnectionPriority) -> RouteToolPanelAction,
 ) {
     ui.horizontal(|ui| {
@@ -443,7 +442,7 @@ fn render_priority_selector(
                 }
             });
         if value != current {
-            push_action(events, map_action(value));
+            push_action(panel_ctx.events, map_action(value));
         }
     });
 }
@@ -452,7 +451,7 @@ fn render_parking_side_selector(
     ui: &mut egui::Ui,
     label: &str,
     current: ParkingRampSideChoice,
-    events: &mut Vec<AppIntent>,
+    panel_ctx: &mut RouteToolPanelRenderContext<'_>,
     map_action: impl Fn(ParkingRampSideChoice) -> RouteToolPanelAction,
 ) {
     ui.horizontal(|ui| {
@@ -466,120 +465,129 @@ fn render_parking_side_selector(
                 }
             });
         if value != current {
-            push_action(events, map_action(value));
+            push_action(panel_ctx.events, map_action(value));
         }
     });
 }
 
-#[allow(clippy::too_many_arguments)]
 fn render_parking_f32(
-    ui: &mut egui::Ui,
-    label: &str,
-    current: f32,
-    range: std::ops::RangeInclusive<f32>,
-    wheel_enabled: bool,
-    suffix: &str,
-    events: &mut Vec<AppIntent>,
+    panel_ctx: &mut RouteToolPanelRenderContext<'_>,
+    props: DragF32Props<'_>,
     map_action: impl Fn(f32) -> RouteToolPanelAction,
 ) {
     render_drag_f32(
-        ui,
-        label,
-        current,
-        range,
-        0.1,
-        suffix,
-        wheel_enabled,
-        events,
+        panel_ctx,
+        DragF32Props {
+            speed: 0.1,
+            ..props
+        },
         map_action,
     );
 }
 
-#[allow(clippy::too_many_arguments)]
+struct DragF32Props<'a> {
+    ui: &'a mut egui::Ui,
+    label: &'a str,
+    current: f32,
+    range: std::ops::RangeInclusive<f32>,
+    speed: f64,
+    suffix: &'a str,
+}
+
 fn render_drag_f32(
-    ui: &mut egui::Ui,
-    label: &str,
-    current: f32,
-    range: std::ops::RangeInclusive<f32>,
-    speed: f64,
-    suffix: &str,
-    wheel_enabled: bool,
-    events: &mut Vec<AppIntent>,
+    panel_ctx: &mut RouteToolPanelRenderContext<'_>,
+    props: DragF32Props<'_>,
     map_action: impl Fn(f32) -> RouteToolPanelAction,
 ) {
-    ui.horizontal(|ui| {
-        ui.label(label);
-        let mut value = current;
+    props.ui.horizontal(|ui| {
+        ui.label(props.label);
+        let mut value = props.current;
         let response = ui.add(
             egui::DragValue::new(&mut value)
-                .range(range.clone())
-                .speed(speed)
-                .suffix(suffix),
-        );
-        if response.changed()
-            | apply_wheel_step_default_enabled(ui, &response, &mut value, range, wheel_enabled)
-        {
-            push_action(events, map_action(value));
-        }
-    });
-}
-
-#[allow(clippy::too_many_arguments)]
-fn render_drag_usize(
-    ui: &mut egui::Ui,
-    label: &str,
-    current: usize,
-    range: std::ops::RangeInclusive<usize>,
-    speed: f64,
-    wheel_enabled: bool,
-    events: &mut Vec<AppIntent>,
-    map_action: impl Fn(usize) -> RouteToolPanelAction,
-) {
-    ui.horizontal(|ui| {
-        ui.label(label);
-        let mut value = current;
-        let response = ui.add(
-            egui::DragValue::new(&mut value)
-                .range(range.clone())
-                .speed(speed),
-        );
-        if response.changed()
-            | apply_wheel_step_usize(ui, &response, &mut value, range, wheel_enabled)
-        {
-            push_action(events, map_action(value));
-        }
-    });
-}
-
-#[allow(clippy::too_many_arguments)]
-fn render_slider_f32(
-    ui: &mut egui::Ui,
-    label: &str,
-    current: f32,
-    range: std::ops::RangeInclusive<f32>,
-    suffix: &str,
-    enabled: bool,
-    wheel_enabled: bool,
-    events: &mut Vec<AppIntent>,
-    map_action: impl Fn(f32) -> RouteToolPanelAction,
-) {
-    ui.horizontal(|ui| {
-        ui.label(label);
-        let mut value = current;
-        let response = ui.add_enabled(
-            enabled,
-            egui::Slider::new(&mut value, range.clone()).suffix(suffix),
+                .range(props.range.clone())
+                .speed(props.speed)
+                .suffix(props.suffix),
         );
         if response.changed()
             | apply_wheel_step_default_enabled(
                 ui,
                 &response,
                 &mut value,
-                range,
-                wheel_enabled && enabled,
+                props.range,
+                panel_ctx.wheel_enabled,
             )
         {
-            push_action(events, map_action(value));
+            push_action(panel_ctx.events, map_action(value));
+        }
+    });
+}
+
+struct DragUsizeProps<'a> {
+    ui: &'a mut egui::Ui,
+    label: &'a str,
+    current: usize,
+    range: std::ops::RangeInclusive<usize>,
+    speed: f64,
+}
+
+fn render_drag_usize(
+    panel_ctx: &mut RouteToolPanelRenderContext<'_>,
+    props: DragUsizeProps<'_>,
+    map_action: impl Fn(usize) -> RouteToolPanelAction,
+) {
+    props.ui.horizontal(|ui| {
+        ui.label(props.label);
+        let mut value = props.current;
+        let response = ui.add(
+            egui::DragValue::new(&mut value)
+                .range(props.range.clone())
+                .speed(props.speed),
+        );
+        if response.changed()
+            | apply_wheel_step_usize(
+                ui,
+                &response,
+                &mut value,
+                props.range,
+                panel_ctx.wheel_enabled,
+            )
+        {
+            push_action(panel_ctx.events, map_action(value));
+        }
+    });
+}
+
+struct SliderF32Props<'a> {
+    ui: &'a mut egui::Ui,
+    label: &'a str,
+    current: f32,
+    range: std::ops::RangeInclusive<f32>,
+    suffix: &'a str,
+    enabled: bool,
+}
+
+fn render_slider_f32(
+    panel_ctx: &mut RouteToolPanelRenderContext<'_>,
+    props: SliderF32Props<'_>,
+    map_action: impl Fn(f32) -> RouteToolPanelAction,
+) {
+    props.ui.horizontal(|ui| {
+        ui.label(props.label);
+        let mut value = props.current;
+        let response = ui.add_enabled(
+            props.enabled,
+            egui::Slider::new(&mut value, props.range.clone()).suffix(props.suffix),
+        );
+        if response.changed()
+            | apply_wheel_step_default_enabled(
+                ui,
+                &response,
+                &mut value,
+                props.range,
+                panel_ctx.wheel_enabled && props.enabled,
+            )
+        {
+            push_action(panel_ctx.events, map_action(value));
         }
     });
 }

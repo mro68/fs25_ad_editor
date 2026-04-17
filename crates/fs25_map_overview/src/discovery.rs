@@ -131,10 +131,8 @@ fn parse_mod_desc(content: &[u8]) -> Result<(String, String, Option<String>)> {
                     }
                 }
             }
-            Ok(Event::Text(e)) => {
-                if in_title_en {
-                    title = String::from_utf8_lossy(e.as_ref()).to_string();
-                }
+            Ok(Event::Text(e)) if in_title_en => {
+                title = String::from_utf8_lossy(e.as_ref()).to_string();
             }
             Ok(Event::End(e)) => {
                 let name = String::from_utf8_lossy(e.name().as_ref()).to_string();

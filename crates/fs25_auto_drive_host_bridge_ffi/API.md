@@ -4,6 +4,8 @@
 
 `fs25_auto_drive_host_bridge_ffi` ist der duenner Linux-first-Transportadapter ueber der kanonischen `HostBridgeSession`. Die Crate fuehrt keine zweite fachliche Surface ein: Mutationen laufen weiter ueber `HostSessionAction` (inklusive expliziter Route-Tool-Action-Familie und `SetBackgroundLayerVisibility` fuer gespeicherte Overview-Layer), Dialoge ueber `HostDialogRequest`/`HostDialogResult`, Session-Polling ueber `HostSessionSnapshot`, Node-Details ueber `HostNodeDetails`, Marker-Listen ueber `HostMarkerListSnapshot`, Connection-Pairs ueber `HostConnectionPairSnapshot`, Dirty-State ueber einen kleinen Integer-Seam, UI-Polling ueber `HostUiSnapshot`, Chrome-Polling ueber `HostChromeSnapshot`, Dialog-Polling ueber `HostDialogSnapshot`, Editing-Polling ueber `HostEditingSnapshot`, Kontextmenue-Polling ueber `HostContextMenuSnapshot`, Route-Tool-Viewport-Polling ueber `HostRouteToolViewportSnapshot` und Overlay-Polling ueber `ViewportOverlaySnapshot`.
 
+Die interne Struktur ist aufgeraeumt in `lib.rs` (Exporte), `helpers.rs` (gemeinsame FFI-Helfer) und `tests.rs` (Transporttests); die exportierte C-ABI-Surface bleibt dabei unveraendert.
+
 Seit der FFI-Haertungswelle sind alle pointer-konsumierenden Exporte in Rust explizit als `unsafe extern "C"` markiert. Panic-Isolation und thread-lokale Fehlerweitergabe haerten dabei dieselbe kanonische Surface, ohne eine zweite FFI-seitige DTO- oder Session-Familie einzufuehren.
 
 Seit dem Hard-Cut ist der RGBA-Pixelbuffer-v1 entfernt. Der einzige native Render-Transportpfad ist jetzt Shared-Texture mit explizitem Acquire/Release-Lifecycle.

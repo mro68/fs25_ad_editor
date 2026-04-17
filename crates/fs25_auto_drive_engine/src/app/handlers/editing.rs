@@ -1,231 +1,29 @@
 //! Handler fuer Node/Connection-Editing, Marker und Editor-Werkzeug.
 
-use crate::app::use_cases;
-use crate::app::AppState;
-use crate::core::{ConnectionDirection, ConnectionPriority, NodeFlag};
+#[path = "editing/clipboard_ops.rs"]
+mod clipboard_ops;
+#[path = "editing/connection_ops.rs"]
+mod connection_ops;
+#[path = "editing/group_ops.rs"]
+mod group_ops;
+#[path = "editing/marker_ops.rs"]
+mod marker_ops;
+#[path = "editing/node_ops.rs"]
+mod node_ops;
 
-/// Aktiviert ein Editor-Werkzeug und setzt tool-spezifische Zwischenselektion zurueck.
-pub fn set_editor_tool(state: &mut AppState, tool: crate::app::state::EditorTool) {
-    state.editor.active_tool = tool;
-    state.editor.connect_source_node = None;
-    log::info!("Editor-Werkzeug: {:?}", tool);
-}
-
-/// Fuegt einen neuen Node an der uebergebenen Weltposition hinzu.
-/// Trifft der Klick einen existierenden Node, wird dieser nur selektiert.
-pub fn add_node(state: &mut AppState, world_pos: glam::Vec2) {
-    match use_cases::editing::add_node_at_position(state, world_pos) {
-        use_cases::editing::AddNodeResult::NoMap => {
-            state.ui.status_message = Some("Kein Node hinzufuegbar: keine RoadMap geladen".into());
-        }
-        use_cases::editing::AddNodeResult::SelectedExisting(node_id) => {
-            state.ui.status_message = None;
-            log::info!("AddNode: Existierenden Node {} selektiert", node_id);
-        }
-        use_cases::editing::AddNodeResult::Created(node_id) => {
-            state.ui.status_message = None;
-            log::debug!("AddNode: Neuen Node {} erstellt", node_id);
-        }
-    }
-}
-
-/// Loescht alle aktuell selektierten Nodes.
-pub fn delete_selected(state: &mut AppState) {
-    use_cases::editing::delete_selected_nodes(state);
-}
-
-/// Verarbeitet einen Pick fuer das Connect-Tool.
-pub fn connect_tool_pick(state: &mut AppState, world_pos: glam::Vec2, max_distance: f32) {
-    use_cases::editing::connect_tool_pick_node(state, world_pos, max_distance);
-}
-/// Erstellt eine Verbindung zwischen zwei Nodes.
-pub fn add_connection(
-    state: &mut AppState,
-    from_id: u64,
-    to_id: u64,
-    direction: ConnectionDirection,
-    priority: ConnectionPriority,
-) {
-    use_cases::editing::add_connection(state, from_id, to_id, direction, priority);
-}
-
-/// Entfernt Verbindungen zwischen zwei Nodes in beide Richtungen.
-pub fn remove_connection_between(state: &mut AppState, node_a: u64, node_b: u64) {
-    use_cases::editing::remove_connection_between(state, node_a, node_b);
-}
-
-/// Setzt die Richtung einer bestehenden Verbindung.
-pub fn set_connection_direction(
-    state: &mut AppState,
-    start_id: u64,
-    end_id: u64,
-    direction: ConnectionDirection,
-) {
-    use_cases::editing::set_connection_direction(state, start_id, end_id, direction);
-}
-
-/// Setzt die Prioritaet einer bestehenden Verbindung.
-pub fn set_connection_priority(
-    state: &mut AppState,
-    start_id: u64,
-    end_id: u64,
-    priority: ConnectionPriority,
-) {
-    use_cases::editing::set_connection_priority(state, start_id, end_id, priority);
-}
-
-/// Setzt das Flag eines bestehenden Nodes.
-pub fn set_node_flag(state: &mut AppState, node_id: u64, flag: NodeFlag) {
-    use_cases::editing::set_node_flag(state, node_id, flag);
-}
-
-/// Aktualisiert die Standard-Richtung fuer neue Verbindungen.
-pub fn set_default_direction(state: &mut AppState, direction: ConnectionDirection) {
-    state.editor.default_direction = direction;
-    let host_context = super::route_tool::build_host_context(state);
-    state.editor.tool_manager.sync_active_host(&host_context);
-    log::info!("Standard-Verbindungsrichtung: {:?}", direction);
-}
-
-/// Aktualisiert die Standard-Prioritaet fuer neue Verbindungen.
-pub fn set_default_priority(state: &mut AppState, priority: ConnectionPriority) {
-    state.editor.default_priority = priority;
-    let host_context = super::route_tool::build_host_context(state);
-    state.editor.tool_manager.sync_active_host(&host_context);
-    log::info!("Standard-Strassenart: {:?}", priority);
-}
-
-/// Setzt die Richtung aller Verbindungen zwischen selektierten Nodes.
-pub fn set_all_directions_between_selected(state: &mut AppState, direction: ConnectionDirection) {
-    use_cases::editing::set_all_connections_direction_between_selected(state, direction);
-}
-
-/// Entfernt alle Verbindungen zwischen selektierten Nodes.
-pub fn remove_all_between_selected(state: &mut AppState) {
-    use_cases::editing::remove_all_connections_between_selected(state);
-}
-
-/// Invertiert die Richtung aller Verbindungen zwischen selektierten Nodes.
-pub fn invert_all_between_selected(state: &mut AppState) {
-    use_cases::editing::invert_all_connections_between_selected(state);
-}
-
-/// Setzt die Prioritaet aller Verbindungen zwischen selektierten Nodes.
-pub fn set_all_priorities_between_selected(state: &mut AppState, priority: ConnectionPriority) {
-    use_cases::editing::set_all_connections_priority_between_selected(state, priority);
-}
-
-/// Verbindet genau zwei selektierte Nodes mit den aktuellen Standardwerten.
-/// Die Reihenfolge (from → to) entspricht der Klick-Reihenfolge in der IndexSet.
-pub fn connect_selected(state: &mut AppState) {
-    let ids: Vec<u64> = state.selection.selected_node_ids.iter().copied().collect();
-    if ids.len() == 2 {
-        let direction = state.editor.default_direction;
-        let priority = state.editor.default_priority;
-        use_cases::editing::add_connection(state, ids[0], ids[1], direction, priority);
-    }
-}
-
-/// Erstellt einen Map-Marker fuer einen Node.
-pub fn create_marker(state: &mut AppState, node_id: u64, name: &str, group: &str) {
-    use_cases::editing::create_marker(state, node_id, name, group);
-}
-
-/// Entfernt den Map-Marker eines Nodes.
-pub fn remove_marker(state: &mut AppState, node_id: u64) {
-    use_cases::editing::remove_marker(state, node_id);
-}
-
-/// Oeffnet den Marker-Dialog zum Erstellen oder Bearbeiten.
-pub fn open_marker_dialog(state: &mut AppState, node_id: u64, is_new: bool) {
-    use_cases::editing::open_marker_dialog(state, node_id, is_new);
-}
-
-/// Aktualisiert Name/Gruppe eines bestehenden Markers.
-pub fn update_marker(state: &mut AppState, node_id: u64, name: &str, group: &str) {
-    use_cases::editing::update_marker(state, node_id, name, group);
-}
-
-/// Laedt ein gespeichertes Segment zur nachtraeglichen Bearbeitung.
-///
-/// Loescht die zugehoerigen Nodes aus der RoadMap, aktiviert das passende
-/// Route-Tool und befuellt es mit den gespeicherten Parametern.
-pub fn edit_group(state: &mut AppState, record_id: u64) {
-    crate::app::tool_editing::begin_edit(state, record_id);
-}
-
-/// Verteilt die selektierten Nodes gleichmaessig entlang eines Catmull-Rom-Splines.
-pub fn resample_path(state: &mut AppState) {
-    use_cases::editing::resample_selected_path(state);
-}
-
-/// Zeichnet alle erkannten Farmland-Polygone als Wegpunkt-Ring nach (Batch-Operation).
-pub fn trace_all_fields(
-    state: &mut AppState,
-    spacing: f32,
-    offset: f32,
-    tolerance: f32,
-    corner_angle: Option<f32>,
-    corner_rounding_radius: Option<f32>,
-    corner_rounding_max_angle_deg: Option<f32>,
-) {
-    use_cases::editing::trace_all_fields(
-        state,
-        spacing,
-        offset,
-        tolerance,
-        corner_angle,
-        corner_rounding_radius,
-        corner_rounding_max_angle_deg,
-    );
-}
-
-/// Aktiviert die Streckenteilung wenn mindestens 2 Nodes selektiert sind.
-pub fn streckenteilung_aktivieren(state: &mut AppState) {
-    if state.selection.selected_node_ids.len() >= 2 {
-        state.ui.distanzen.active = true;
-        if state.ui.distanzen.distance < 1.0 {
-            state.ui.distanzen.distance = 1.0;
-        }
-        if state.ui.distanzen.count < 2 {
-            state.ui.distanzen.sync_from_distance();
-        }
-    }
-}
-
-// ── Copy/Paste ────────────────────────────────────────────────────────────────
-
-/// Kopiert die Selektion (Nodes, Verbindungen, Marker) in die Zwischenablage.
-pub fn copy_selection(state: &mut AppState) {
-    use_cases::editing::copy_selected_to_clipboard(state);
-}
-
-/// Aktiviert den Einfuegen-Vorschau-Modus.
-pub fn start_paste_preview(state: &mut AppState) {
-    use_cases::editing::start_paste_preview(state);
-}
-
-/// Aktualisiert die Einfuegen-Vorschauposition.
-pub fn update_paste_preview(state: &mut AppState, world_pos: glam::Vec2) {
-    use_cases::editing::update_paste_preview(state, world_pos);
-}
-
-/// Bestaetigt das Einfuegen an der aktuellen Vorschauposition.
-pub fn confirm_paste(state: &mut AppState) {
-    use_cases::editing::confirm_paste(state);
-}
-
-/// Bricht die Einfuegen-Vorschau ab.
-pub fn cancel_paste_preview(state: &mut AppState) {
-    use_cases::editing::cancel_paste_preview(state);
-}
-
-/// Importiert eine Curseplay-XML-Datei und legt Nodes + Ring-Verbindungen an.
-pub fn import_curseplay_file(state: &mut AppState, path: &str) {
-    use_cases::editing::import_curseplay(state, path);
-}
-
-/// Exportiert die selektierten Nodes als Curseplay-XML-Datei.
-pub fn export_curseplay_file(state: &AppState, path: &str) {
-    use_cases::editing::export_curseplay(state, path);
-}
+pub use clipboard_ops::{
+    cancel_paste_preview, confirm_paste, copy_selection, export_curseplay_file,
+    import_curseplay_file, start_paste_preview, update_paste_preview,
+};
+pub use connection_ops::{
+    add_connection, connect_selected, invert_all_between_selected, remove_all_between_selected,
+    remove_connection_between, set_all_directions_between_selected,
+    set_all_priorities_between_selected, set_connection_direction, set_connection_priority,
+    set_default_direction, set_default_priority,
+};
+pub use group_ops::edit_group;
+pub use marker_ops::{create_marker, open_marker_dialog, remove_marker, update_marker};
+pub use node_ops::{
+    add_node, connect_tool_pick, delete_selected, resample_path, set_editor_tool, set_node_flag,
+    streckenteilung_aktivieren, trace_all_fields,
+};
