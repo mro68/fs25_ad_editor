@@ -6,6 +6,9 @@ edition = "2024"
 [lib]
 path = "src/lib.rs"
 
+[lints]
+workspace = true
+
 [features]
 ## Aktiviert Vulkan-HAL-Zugriff und plattformspezifischen DMA-BUF-Export für Flutter/Linux.
 flutter-linux = ["dep:ash", "wgpu/vulkan"]

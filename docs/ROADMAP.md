@@ -186,6 +186,7 @@
 
 ## Phase 5: Advanced Features
 - [x] Governance: Lint-Ausnahmen inventarisiert und mit Abbaupfaden dokumentiert (2026-04-17, report-only)
+- [x] Governance: Workspace-Lints zentralisiert (2026-04-17, zentrale `workspace.lints` + `lints.workspace = true` fuer alle Workspace-Crates)
 - [x] Edition- und Dependency-Upgrade (2026-04-05, Branch `refactor/edition-deps-upgrade`)
   - [x] Alle Workspace-Crates auf Rust 2024 umgestellt
   - [x] `fs25_auto_drive_render_wgpu` auf `wgpu 29.0.*` migriert
