@@ -128,6 +128,8 @@ pub fn flutter_session_submit_dialog_result_json(
 /// Vor `confirm_overview_options` muss dieser Draft in den host-lokalen
 /// Dialog-State der Session geschrieben werden, damit der Host beim Bestaetigen
 /// die aktuellen Layer- und Feldquellenwerte in den Engine-State uebernehmen kann.
+/// Die direkte C-ABI-Surface dazu ist
+/// `fs25ad_flutter_session_update_overview_options_dialog_json`.
 pub fn flutter_session_update_overview_options_dialog(
     session: &mut HostBridgeSession,
     snapshot: HostOverviewOptionsDialogSnapshot,

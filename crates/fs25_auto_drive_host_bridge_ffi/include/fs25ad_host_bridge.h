@@ -267,6 +267,9 @@ char *fs25ad_flutter_session_take_dialog_requests_json(
 bool fs25ad_flutter_session_submit_dialog_result_json(
     const Fs25adFlutterSessionHandle *session,
     const char *result_json);
+bool fs25ad_flutter_session_update_overview_options_dialog_json(
+    const Fs25adFlutterSessionHandle *session,
+    const char *dialog_json);
 char *fs25ad_flutter_session_snapshot_json(
     const Fs25adFlutterSessionHandle *session);
 char *fs25ad_flutter_session_node_details_json(

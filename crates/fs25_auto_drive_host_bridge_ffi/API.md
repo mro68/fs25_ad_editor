@@ -104,6 +104,7 @@ Die folgenden Symbole werden nur mit aktivem `flutter`-Feature exportiert und sp
 | `fs25ad_flutter_session_node_details_json(session) -> *mut c_char` | Liefert den aktuell inspizierten Node als `HostNodeDetails`-JSON oder `NULL`, wenn kein passender Node vorliegt |
 | `fs25ad_flutter_session_marker_list_json(session) -> *mut c_char` | Liefert `HostMarkerListSnapshot` als UTF-8-JSON |
 | `fs25ad_flutter_session_route_tool_viewport_json(session) -> *mut c_char` | Liefert `HostRouteToolViewportSnapshot` als UTF-8-JSON |
+| `fs25ad_flutter_session_update_overview_options_dialog_json(session, dialog_json) -> bool` | Liest `HostOverviewOptionsDialogSnapshot` aus UTF-8-JSON und aktualisiert den host-lokalen Overview-Options-Draft |
 | `fs25ad_flutter_session_connection_pair_json(session, node_a, node_b) -> *mut c_char` | Liefert den `HostConnectionPairSnapshot` fuer genau zwei Nodes als UTF-8-JSON |
 | `fs25ad_flutter_session_is_dirty(session) -> int32_t` | Liefert den Dirty-Zustand als `1` (dirty), `0` (clean) oder `-1` (Fehler) |
 | `fs25ad_flutter_session_ui_snapshot_json(session) -> *mut c_char` | Liefert den host-neutralen `HostUiSnapshot` als UTF-8-JSON |
@@ -312,6 +313,7 @@ Opaquer Session-Handle mit `Arc<Mutex<HostBridgeSession>>` fuer thread-sicheren 
 | `flutter_session_snapshot_json(handle) -> Result<String>` | Liefert den `HostSessionSnapshot` als JSON |
 | `flutter_session_node_details_json(handle) -> Option<String>` | Liefert den aktuell inspizierten Node als `HostNodeDetails`-JSON |
 | `flutter_session_marker_list_json(handle) -> String` | Liefert alle Marker als `HostMarkerListSnapshot`-JSON |
+| `flutter_session_update_overview_options_dialog(session, snapshot) -> Result<()>` | Aktualisiert den host-lokalen Draft fuer den Overview-Options-Dialog vor Confirm |
 | `flutter_session_route_tool_viewport_json(handle) -> Result<String>` | Liefert den `HostRouteToolViewportSnapshot` als JSON |
 | `flutter_session_connection_pair_json(handle, node_a, node_b) -> Result<String>` | Liefert den `HostConnectionPairSnapshot` fuer genau zwei Nodes als JSON |
 | `flutter_session_ui_snapshot_json(handle) -> Result<String>` | Liefert den host-neutralen `HostUiSnapshot` als JSON |
