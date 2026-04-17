@@ -6,6 +6,9 @@ authors = ["mro68"]
 description = "Generiert Overview-Maps aus FS25 Map-Mod-ZIPs (Terrain, Hillshade, Farmlands, POIs)"
 license = "GPL-3.0"
 
+[lints]
+workspace = true
+
 [dependencies]
 # Bildverarbeitung
 image = { version = "0.25", features = ["png", "jpeg"] }

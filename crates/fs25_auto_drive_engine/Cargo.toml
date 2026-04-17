@@ -6,6 +6,9 @@ edition = "2024"
 [lib]
 path = "src/lib.rs"
 
+[lints]
+workspace = true
+
 [dependencies]
 anyhow = "1.0.102"
 fs25_map_overview = { path = "../fs25_map_overview" }
