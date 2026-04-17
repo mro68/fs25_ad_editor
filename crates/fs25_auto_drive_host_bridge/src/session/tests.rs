@@ -677,6 +677,87 @@ fn apply_intent_syncs_host_local_overview_options_before_generation() {
 }
 
 #[test]
+fn apply_action_syncs_host_local_overview_options_before_confirm() {
+    let mut session = HostBridgeSession::new();
+    let zip_path = "/tmp/host_bridge_overview_sync_action.zip".to_string();
+    let expected_layers = OverviewLayerOptions {
+        terrain: false,
+        hillshade: false,
+        farmlands: false,
+        farmland_ids: true,
+        pois: true,
+        legend: true,
+    };
+
+    session
+        .apply_action(HostSessionAction::GenerateOverviewFromZip {
+            path: zip_path.clone(),
+        })
+        .expect("Overview-Dialog muss ueber Host-Action geoeffnet werden");
+
+    session.update_overview_options_dialog(HostOverviewOptionsDialogSnapshot {
+        visible: true,
+        zip_path: zip_path.clone(),
+        layers: HostOverviewLayersSnapshot {
+            terrain: expected_layers.terrain,
+            hillshade: expected_layers.hillshade,
+            farmlands: expected_layers.farmlands,
+            farmland_ids: expected_layers.farmland_ids,
+            pois: expected_layers.pois,
+            legend: expected_layers.legend,
+        },
+        field_detection_source: HostFieldDetectionSource::GroundGdm,
+        available_sources: vec![
+            HostFieldDetectionSource::FromZip,
+            HostFieldDetectionSource::GroundGdm,
+        ],
+    });
+
+    assert!(session.chrome_state.chrome_dirty);
+    assert_eq!(
+        session
+            .chrome_state
+            .overview_options_dialog
+            .field_detection_source,
+        OverviewFieldDetectionSource::GroundGdm
+    );
+    assert!(
+        session
+            .app_state()
+            .ui
+            .overview_options_dialog
+            .layers
+            .terrain
+    );
+
+    let error = session
+        .apply_action(HostSessionAction::ConfirmOverviewOptions)
+        .expect_err("Fehlendes ZIP muss die Generierung ueber Action-Pfad scheitern lassen");
+
+    assert!(
+        error.to_string().contains(zip_path.as_str()),
+        "Fehlermeldung soll den konfigurierten ZIP-Pfad referenzieren"
+    );
+    assert_eq!(session.app_state().options.overview_layers, expected_layers);
+    assert_eq!(
+        session.app_state().ui.overview_options_dialog.layers,
+        expected_layers
+    );
+    assert_eq!(
+        session.app_state().options.overview_field_detection_source,
+        OverviewFieldDetectionSource::GroundGdm
+    );
+    assert_eq!(
+        session
+            .app_state()
+            .ui
+            .overview_options_dialog
+            .field_detection_source,
+        OverviewFieldDetectionSource::GroundGdm
+    );
+}
+
+#[test]
 fn generate_overview_from_zip_closes_source_dialog_and_opens_options_dialog() {
     let mut session = HostBridgeSession::new();
     let zip_path = "/tmp/host_bridge_overview_source.zip".to_string();

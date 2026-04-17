@@ -188,6 +188,8 @@ impl HostBridgeSession {
             return Ok(());
         }
 
+        self.reconcile_host_local_dialog_state_for_action(&action);
+
         let handled = crate::dispatch::apply_host_action_with_viewport_input_state(
             &mut self.controller,
             &mut self.state,
