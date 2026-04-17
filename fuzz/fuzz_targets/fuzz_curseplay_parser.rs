@@ -1,10 +1,10 @@
 #![no_main]
 
-use libfuzzer_sys::fuzz_target;
 use fs25_auto_drive_editor::xml::curseplay::parse_curseplay;
+use libfuzzer_sys::fuzz_target;
 
 /// Fuzz-Target für CursePlay-XML-Parser.
-/// 
+///
 /// Dieser Target überprüft, ob der CursePlay-XML-Parser mit adversarialem Input
 /// robust umgehen kann, ohne zu crashen oder unkontrolliertes Speicherwachstum zu verursachen.
 fuzz_target!(|data: &[u8]| {

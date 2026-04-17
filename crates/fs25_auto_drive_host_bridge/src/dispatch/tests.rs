@@ -108,12 +108,8 @@ impl TempDirGuard {
             .duration_since(UNIX_EPOCH)
             .expect("Systemzeit muss nach der Unix-Epoche liegen")
             .as_nanos();
-        let path = std::env::temp_dir().join(format!(
-            "{}_{}_{}",
-            prefix,
-            std::process::id(),
-            timestamp
-        ));
+        let path =
+            std::env::temp_dir().join(format!("{}_{}_{}", prefix, std::process::id(), timestamp));
         fs::create_dir_all(&path).expect("Temp-Verzeichnis fuer Test muss erstellt werden");
         Self { path }
     }
@@ -1185,18 +1181,24 @@ fn build_host_chrome_snapshot_exposes_status_defaults_and_route_tool_entries() {
 fn build_host_chrome_snapshot_exposes_background_layer_entries() {
     // 1x1 RGBA PNG (valide Testdatei), damit der Test ohne externe Fixtures laeuft.
     const TEST_PNG_1X1_RGBA: &[u8] = &[
-        0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A, 0x00, 0x00, 0x00, 0x0D, 0x49, 0x48,
-        0x44, 0x52, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x08, 0x06, 0x00, 0x00,
-        0x00, 0x1F, 0x15, 0xC4, 0x89, 0x00, 0x00, 0x00, 0x0A, 0x49, 0x44, 0x41, 0x54, 0x78,
-        0x9C, 0x63, 0x60, 0x00, 0x00, 0x00, 0x02, 0x00, 0x01, 0xE5, 0x27, 0xD4, 0xA2, 0x00,
-        0x00, 0x00, 0x00, 0x49, 0x45, 0x4E, 0x44, 0xAE, 0x42, 0x60, 0x82,
+        0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A, 0x00, 0x00, 0x00, 0x0D, 0x49, 0x48, 0x44,
+        0x52, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x08, 0x06, 0x00, 0x00, 0x00, 0x1F,
+        0x15, 0xC4, 0x89, 0x00, 0x00, 0x00, 0x0A, 0x49, 0x44, 0x41, 0x54, 0x78, 0x9C, 0x63, 0x60,
+        0x00, 0x00, 0x00, 0x02, 0x00, 0x01, 0xE5, 0x27, 0xD4, 0xA2, 0x00, 0x00, 0x00, 0x00, 0x49,
+        0x45, 0x4E, 0x44, 0xAE, 0x42, 0x60, 0x82,
     ];
 
     let temp_dir = TempDirGuard::new("fs25_host_bridge_background_layers");
-    fs::write(temp_dir.path().join("overview_terrain.png"), TEST_PNG_1X1_RGBA)
-        .expect("Terrain-PNG fuer Layer-Test muss erzeugt werden");
-    fs::write(temp_dir.path().join("overview_hillshade.png"), TEST_PNG_1X1_RGBA)
-        .expect("Hillshade-PNG fuer Layer-Test muss erzeugt werden");
+    fs::write(
+        temp_dir.path().join("overview_terrain.png"),
+        TEST_PNG_1X1_RGBA,
+    )
+    .expect("Terrain-PNG fuer Layer-Test muss erzeugt werden");
+    fs::write(
+        temp_dir.path().join("overview_hillshade.png"),
+        TEST_PNG_1X1_RGBA,
+    )
+    .expect("Hillshade-PNG fuer Layer-Test muss erzeugt werden");
 
     let mut state = AppState::new();
     let visible = OverviewLayerOptions {
@@ -1227,7 +1229,6 @@ fn build_host_chrome_snapshot_exposes_background_layer_entries() {
             (HostBackgroundLayerKind::Hillshade, false),
         ]
     );
-
 }
 
 /// Prüft, dass build_host_chrome_snapshot bei unveraendertem State identische

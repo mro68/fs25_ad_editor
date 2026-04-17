@@ -1,10 +1,10 @@
 #![no_main]
 
-use libfuzzer_sys::fuzz_target;
 use fs25_auto_drive_editor::xml::parser::parse_autodrive_config;
+use libfuzzer_sys::fuzz_target;
 
 /// Fuzz-Target für AutoDrive-Config XML-Parser.
-/// 
+///
 /// Dieser Target überprüft, ob der XML-Parser mit adversarialem Input
 /// robust umgehen kann, ohne zu crashen oder unkontrolliertes Speicherwachstum zu verursachen.
 fuzz_target!(|data: &[u8]| {
