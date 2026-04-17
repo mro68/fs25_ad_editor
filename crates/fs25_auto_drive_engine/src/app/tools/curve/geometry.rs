@@ -248,11 +248,11 @@ pub fn solve_cps_from_apex_both_tangents(
 
 #[cfg(test)]
 mod proptest_invariants {
-    use proptest::prelude::*;
-    use glam::Vec2;
     use super::*;
+    use glam::Vec2;
+    use proptest::prelude::*;
 
-    /// Bézier-Kurven sollten ihre Endpunkte genau treffen (B(0)=P0, B(1)=P3).
+    // Bézier-Kurven sollten ihre Endpunkte genau treffen (B(0)=P0, B(1)=P3).
     proptest! {
         #[test]
         fn prop_cubic_bezier_endpoints(
@@ -280,7 +280,7 @@ mod proptest_invariants {
         }
     }
 
-    /// Quadratische Bézier-Kurven sollten ihre Endpunkte genau treffen.
+    // Quadratische Bézier-Kurven sollten ihre Endpunkte genau treffen.
     proptest! {
         #[test]
         fn prop_quadratic_bezier_endpoints(
@@ -305,7 +305,7 @@ mod proptest_invariants {
         }
     }
 
-    /// Kurvenlaenge sollte mit höheren Sample-Raten monoton wachsen.
+    // Kurvenlaenge sollte mit hoeheren Sample-Raten monoton wachsen.
     proptest! {
         #[test]
         fn prop_approx_length_monotonic(
@@ -325,9 +325,9 @@ mod proptest_invariants {
 
             let eval_fn = |t: f32| cubic_bezier(p0, p1, p2, p3, t);
 
-            let len_low = approx_length(&eval_fn, 16);
-            let len_med = approx_length(&eval_fn, 64);
-            let len_high = approx_length(&eval_fn, 256);
+            let len_low = approx_length(eval_fn, 16);
+            let len_med = approx_length(eval_fn, 64);
+            let len_high = approx_length(eval_fn, 256);
 
             // Length sollte mit mehr Samples konvergieren
             prop_assert!(len_med >= len_low * 0.99, "Length should increase with more samples");
@@ -335,7 +335,7 @@ mod proptest_invariants {
         }
     }
 
-    /// Kurvenlaenge sollte >= direktem Abstand sein (Dreiecksungleichung).
+    // Kurvenlaenge sollte >= direktem Abstand sein (Dreiecksungleichung).
     proptest! {
         #[test]
         fn prop_approx_length_ge_direct_distance(
@@ -354,7 +354,7 @@ mod proptest_invariants {
             let p3 = Vec2::new(p3x, p3y);
 
             let eval_fn = |t: f32| cubic_bezier(p0, p1, p2, p3, t);
-            let curve_length = approx_length(&eval_fn, 128);
+            let curve_length = approx_length(eval_fn, 128);
             let direct_dist = p0.distance(p3);
 
             // Kurvenlaenge sollte >= direkter Distanz sein
@@ -362,7 +362,7 @@ mod proptest_invariants {
         }
     }
 
-    /// Arc-Length-Parametrisierung sollte Start/End genau treffen.
+    // Arc-Length-Parametrisierung sollte Start/Ende genau treffen.
     proptest! {
         #[test]
         fn prop_compute_curve_positions_endpoints(

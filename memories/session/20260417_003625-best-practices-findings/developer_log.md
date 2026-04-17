@@ -479,7 +479,7 @@ cargo +nightly fuzz run fuzz_xml_parser -- -max_total_time=120
 # Developer Log - Commit 10
 
 Datum: 2026-04-17
-Commit: (wird nach Commit-Erstellung eingetragen)
+Commit: a15224b
 Message: docs(project): governance-dokumente und todo-tracking
 
 ## Geaenderte Dateien
@@ -510,5 +510,40 @@ Message: docs(project): governance-dokumente und todo-tracking
 ## Scope-Hinweise
 - Vorgabe "nur Governance/TODO-Dokumente" eingehalten.
 - Vorhandene unstaged Code-Aenderungen blieben unberuehrt.
+- Kein Push, kein Merge.
+
+---
+
+# Developer Log - Commit 11
+
+Datum: 2026-04-17
+Commit: (wird nach Commit-Erstellung eingetragen)
+Message: test(fix): nachlaufende testanpassungen nach implementierung
+
+## Geaenderte Dateien
+- crates/fs25_auto_drive_host_bridge/src/dispatch/tests.rs
+- crates/fs25_auto_drive_engine/src/app/tools/curve/geometry.rs
+- docs/TOOL_ENCAPSULATION_REPORT.md
+- memories/session/20260417_003625-best-practices-findings/developer_log.md
+
+## Was wurde geaendert
+- Fragilen Dateisystem-Test robust gemacht:
+  - `build_host_chrome_snapshot_exposes_background_layer_entries` erzeugt PNG-Testdaten nun selbst (kein externer Fixture-Pfad).
+  - Cleanup auf RAII umgestellt (`TempDirGuard` mit `Drop`), kein manuelles Best-Effort-Cleanup am Testende.
+- Proptest-Warnungen bereinigt:
+  - `///` vor `proptest!` in `geometry.rs` auf normale `//`-Kommentare umgestellt.
+  - Clippy-Warnungen (`needless_borrows_for_generic_args`) im selben Testmodul behoben.
+- Build-Gate `check-doc-contracts` repariert:
+  - Fehlende erwartete Aussagen in `docs/TOOL_ENCAPSULATION_REPORT.md` exakt ergaenzt (historischer Audit-Status + klarer Verweis auf aktuelle Vertragsquellen).
+
+## Ausgefuehrte Checks
+- `make check-doc-contracts` ✅
+- `nocorrect cargo test -p fs25_auto_drive_host_bridge build_host_chrome_snapshot_exposes_background_layer_entries` ✅
+- `nocorrect cargo test -p fs25_auto_drive_engine prop_approx_length_monotonic` ✅
+- `nocorrect cargo clippy -p fs25_auto_drive_host_bridge -p fs25_auto_drive_engine --all-targets -- -D warnings` ✅
+
+## Scope-Hinweise
+- Optionaler Snapshot-Perf-Bench wurde bewusst nicht aufgenommen (kleiner Test-/Gate-Fix-Commit ohne Performance-Feature-Scope).
+- Selektives Staging nur fuer Commit-11-Dateien.
 - Kein Push, kein Merge.
 
