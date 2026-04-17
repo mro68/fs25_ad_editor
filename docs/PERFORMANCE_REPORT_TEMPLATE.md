@@ -1,5 +1,9 @@
 # Performance Report Template
 
+> **Dokumenttyp:** Ausfuellvorlage (Template)  
+> **Status (heute):** Aktiv als Vorlage; enthaltene Baselines sind historische Referenzdaten mit eigenem Datum.  
+> **Zuletzt geprueft:** 2026-04-17
+
 ## Kontext
 
 - Datum:

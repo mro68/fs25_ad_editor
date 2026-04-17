@@ -258,6 +258,47 @@ Message: refactor(ffi): lib split + v4-stub-isolation
 ## Verbleibende Restarbeit (bewusst ausserhalb Phase 1)
 - `flutter_api.rs` hat eigene `decode_focus_node_id`-Kopie → zukuenftige Deduplizierung.
 - Flutter-Exporte in lib.rs (~500 Zeilen) koennten in Folge-Commit weiter aufgeteilt werden.
+
+---
+
+# Developer Log - Commit 9
+
+Datum: 2026-04-17
+Commit: 0605779
+Message: refactor(engine/frontend): argument-reduction + dead-code cleanup
+
+## Geaenderte Dateien
+- crates/fs25_auto_drive_frontend_egui/src/ui/edit_panel/route_tool_panel.rs
+- crates/fs25_auto_drive_frontend_egui/src/ui/edit_panel.rs
+- crates/fs25_auto_drive_frontend_egui/src/ui/properties/selectors.rs
+- crates/fs25_auto_drive_engine/src/app/tools/color_path/state.rs
+- crates/fs25_auto_drive_engine/src/app/tools/color_path/sampling.rs
+
+## Was wurde geaendert
+- F15 (Argument-Reduktion):
+  - In `route_tool_panel.rs` wurde der Audit-Hotspot `render_route_tool_panel(...)` von einer langen Parameterliste auf ein dediziertes Kontextobjekt (`RouteToolPanelContext`) umgestellt.
+  - Das bisherige `#[allow(clippy::too_many_arguments)]` an dieser Funktion konnte dadurch entfernt werden.
+  - Der Aufrufer in `edit_panel.rs` erstellt den Kontext zentral ueber `RouteToolPanelContext::new(...)`.
+- F16 (Dead-Code-Cleanup):
+  - In `selectors.rs` wurden ungenutzte vertikale Selector-Varianten inklusive `#[allow(dead_code)]` entfernt.
+  - In `color_path/sampling.rs` wurden `dead_code`-Ausnahmen fuer testgenutzte Helper auf `#[cfg_attr(not(test), allow(dead_code))]` eingegrenzt.
+  - In `color_path/state.rs` wurde `prepared_mask` analog enger begrenzt; `detection_bounds` bleibt mit expliziter Begruendung erlaubt, da der geplante Bounds-Flow noch nicht ins UI integriert ist.
+
+## Ausgefuehrte Checks
+- `nocorrect cargo fmt --all` ✅
+- `nocorrect cargo check -p fs25_auto_drive_engine -p fs25_auto_drive_frontend_egui` ✅
+- `nocorrect cargo clippy -p fs25_auto_drive_engine -p fs25_auto_drive_frontend_egui --all-targets -- -D warnings` ❌
+  - Ursache: bestehende, scope-fremde Warnings/Clippy-Fehler in `crates/fs25_auto_drive_engine/src/app/tools/curve/geometry.rs` (bereits vor Commit-9-Scope vorhanden).
+- `nocorrect cargo clippy -p fs25_auto_drive_engine -p fs25_auto_drive_frontend_egui --lib -- -D warnings` ✅
+- `nocorrect cargo test -p fs25_auto_drive_engine -p fs25_auto_drive_frontend_egui --lib` ✅
+
+## Git/Scope-Hinweise
+- Initial wurde versehentlich ein lokaler Fehl-Commit mit bereits vorgemerkten Fremddateien erstellt; dieser wurde ohne Datenverlust via `git reset --mixed HEAD~1` zurueckgenommen.
+- Anschliessend wurde strikt selektiv nur der Commit-9-Scope gestaged und neu committed.
+- Kein Push, kein Merge.
+
+## Howto-Betroffenheit
+- Keine direkte Aenderung an Enduser-Workflows oder Shortcuts; `docs/howto/*` bleibt unveraendert.
 - Tests in lib.rs koennen in eigenes Test-Modul verschoben werden.
 
 ---
@@ -432,4 +473,42 @@ cargo +nightly fuzz run fuzz_xml_parser -- -max_total_time=120
 - F21/F22 (CI Security): cargo-audit/cargo-deny bereits in Commit 2 integriert (prüfe ci.yml)
 - F015 (todo-Gate): `scripts/check_todo_gate.sh` bereits aktiv in Commit 3
 - Spline/Catmull-Rom Proptest: Zusätzliche Geometrie-Tests in Commit 9/10 denkbar
+
+---
+
+# Developer Log - Commit 10
+
+Datum: 2026-04-17
+Commit: (wird nach Commit-Erstellung eingetragen)
+Message: docs(project): governance-dokumente und todo-tracking
+
+## Geaenderte Dateien
+- CONTRIBUTING.md
+- CHANGELOG.md
+- docs/TODO_TRACKING.md
+- docs/ROADMAP.md
+- docs/TOOL_ENCAPSULATION_REPORT.md
+- docs/PERFORMANCE_REPORT_TEMPLATE.md
+- memories/session/20260417_003625-best-practices-findings/developer_log.md
+
+## Was wurde geaendert
+- Governance-Basis eingefuehrt:
+  - Neues Root-Dokument `CONTRIBUTING.md` mit Beitragspfad, Architekturgrenzen, Doku-Sync-Regeln und lokalem Check-Set.
+- Changelog initialisiert:
+  - Neues `CHANGELOG.md` mit `Unreleased`-Bereich und Initialeintrag fuer den Governance/TODO-Commit.
+- TODO-Tracking zentralisiert (Finding F27):
+  - Neues kanonisches Tracking in `docs/TODO_TRACKING.md` inkl. Pflege-Regeln und initialen offenen Punkten fuer F24-F27.
+  - `docs/ROADMAP.md` um eine eindeutige Referenz auf das zentrale TODO-Tracking ergaenzt.
+- Spezialdokumente datiert und status-klar markiert (Finding F26):
+  - `docs/TOOL_ENCAPSULATION_REPORT.md` explizit als historischer Snapshot gekennzeichnet.
+  - `docs/PERFORMANCE_REPORT_TEMPLATE.md` explizit als aktive Vorlage mit historischen Baselines gekennzeichnet.
+
+## Ausgefuehrte Checks
+- Plausibilitaetspruefung der Dokument- und Dateireferenzen (manuell) ✅
+- Selektives Staging ausschliesslich der Commit-10-Dateien ✅
+
+## Scope-Hinweise
+- Vorgabe "nur Governance/TODO-Dokumente" eingehalten.
+- Vorhandene unstaged Code-Aenderungen blieben unberuehrt.
+- Kein Push, kein Merge.
 

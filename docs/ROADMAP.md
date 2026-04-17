@@ -1,5 +1,11 @@
 # Roadmap
 
+## Zentrales TODO-Tracking
+
+- Das kanonische, laufend gepflegte TODO-Tracking liegt in `docs/TODO_TRACKING.md`.
+- Dieses Roadmap-Dokument bleibt der strategische Fortschrittsplan (Phasen, erledigt/offen), nicht die operative Aufgabenliste.
+- Neue operative TODOs und offene Audit-Findings zuerst im zentralen Tracking erfassen und danach optional als zusammenfassenden Punkt in die passende Roadmap-Phase uebernehmen.
+
 ## Phase 1: Foundation ✅
 - [x] Projekt-Setup
 - [x] Core-Datenmodelle (`RoadMap`, `MapNode`, `Connection`)

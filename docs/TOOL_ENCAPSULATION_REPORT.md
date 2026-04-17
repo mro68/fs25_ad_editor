@@ -1,10 +1,12 @@
 # Tool Encapsulation & API Unification — Audit-Report
 
-> **Status:** Historisches Audit-Dokument  
-> Dieser Report dokumentiert einen Analyse-Snapshot vom 2026-03-07. Er ist **nicht** die kanonische Beschreibung des aktuellen Tool-Katalogs oder der aktuell gueltigen Tool-Vertraege. Maßgeblich sind die jeweils aktuellen API-Dokumente und Modul-Docstrings, insbesondere in `src/app/tools/` und den angrenzenden App/UI-Modulen.  
+> **Dokumenttyp:** Historischer Audit-Snapshot  
+> **Status (heute):** Nur Referenz fuer den Audit-Stand vom 2026-03-07, nicht normative Spezifikation.  
+> **Zuletzt als Snapshot bestaetigt:** 2026-04-17  
+> **Normative Quellen:** `src/app/tools/API.md` sowie aktuelle Modul-Docstrings/API-Dokumente der betroffenen Crates.  
 > **Audit-Stand:** 2026-03-07  
 > **Scope:** `src/app/tools/`, `src/app/group_registry/`, `src/app/handlers/route_tool.rs`  
-> **Methodik:** Vollständige Code-Analyse des damaligen Tool-Bestands (9 Tool-Module) + Common-Infrastruktur
+> **Methodik:** Vollstaendige Code-Analyse des damaligen Tool-Bestands (9 Tool-Module) + Common-Infrastruktur
 
 ## Nachtrag 2026-04-01 — F5 ToolResult-Defaults
 
