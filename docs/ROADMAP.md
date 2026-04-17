@@ -187,6 +187,15 @@
 ## Phase 5: Advanced Features
 - [x] Governance: Lint-Ausnahmen inventarisiert und mit Abbaupfaden dokumentiert (2026-04-17, report-only)
 - [x] Governance: Workspace-Lints zentralisiert (2026-04-17, zentrale `workspace.lints` + `lints.workspace = true` fuer alle Workspace-Crates)
+- [x] Refactor/Audit-Massnahmen-Backlog CP-01..CP-08 abgeschlossen (2026-04-17, Branch `refactor/audit-findings`)
+  - [x] CP-01: Guardrail-Report fuer grosse Dateien (`scripts/check_large_files_report.sh`, Make-Target `report-large-files`)
+  - [x] CP-02: Lint-Allow-Inventar und Report-Skript (`docs/LINT_ALLOW_INVENTORY.md`, `scripts/report_lint_allows.sh`)
+  - [x] CP-03: Host-Bridge-Session intern in Submodule aufgeteilt (`lifecycle.rs`, `read_models.rs`, `snapshots.rs`, `tests.rs`)
+  - [x] CP-04: Host-Bridge-FFI intern aufgeteilt (`helpers.rs`, `tests.rs`)
+  - [x] CP-05: Background-Map-Use-Cases in Pipeline-Module aufgeteilt (`background_map/*`)
+  - [x] CP-06: Editing-Handler thematisch aufgeteilt (`handlers/editing/*`)
+  - [x] CP-07: Route-Tool-Panel auf Props/Callbacks-Schnitt umgestellt
+  - [x] CP-08: Workspace-Lints in `Cargo.toml` zentralisiert
 - [x] Edition- und Dependency-Upgrade (2026-04-05, Branch `refactor/edition-deps-upgrade`)
   - [x] Alle Workspace-Crates auf Rust 2024 umgestellt
   - [x] `fs25_auto_drive_render_wgpu` auf `wgpu 29.0.*` migriert
