@@ -35,7 +35,7 @@ mod tests {
     use crate::core::{BackgroundMap, FieldPolygon};
     use crate::shared::{BackgroundLayerKind, OverviewFieldDetectionSource, OverviewLayerOptions};
     use glam::Vec2;
-    use image::{DynamicImage, GenericImageView, ImageFormat, Rgba, RgbaImage};
+    use image::{DynamicImage, ImageFormat, Rgba, RgbaImage};
     use std::io::{Cursor, Write};
     use std::path::{Path, PathBuf};
     use std::sync::Arc;
