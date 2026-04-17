@@ -4,8 +4,6 @@
 pub mod flutter_api;
 mod helpers;
 mod shared_texture_v2;
-#[cfg(test)]
-mod tests;
 mod texture_registration_v4;
 
 /// Hilfsmakro: Wraps einen bool-FFI-Aufruf mit Panic-Isolation und Last-Error-Behandlung.
