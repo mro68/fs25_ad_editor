@@ -80,12 +80,14 @@ pub fn render_edit_panel(
     {
         route_tool_panel::render_route_tool_panel(
             ctx,
-            route_tool,
-            default_direction,
-            default_priority,
-            distance_wheel_step_m,
-            panel_pos,
-            lang,
+            route_tool_panel::RouteToolPanelProps {
+                route_tool,
+                default_direction,
+                default_priority,
+                distance_wheel_step_m,
+                panel_pos,
+                lang,
+            },
             &mut events,
         );
     }
