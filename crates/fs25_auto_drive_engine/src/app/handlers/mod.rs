@@ -6,6 +6,7 @@
 /// Handler fuer Dialog-State und Anwendungssteuerung (Exit, Optionen, Marker).
 pub mod dialog;
 /// Handler fuer Node/Connection-Editing, Marker und Editor-Werkzeug.
+#[path = "editing.rs"]
 pub mod editing;
 /// Handler fuer Datei-Operationen (Oeffnen, Speichern, Heightmap, Dedup).
 pub mod file_io;
