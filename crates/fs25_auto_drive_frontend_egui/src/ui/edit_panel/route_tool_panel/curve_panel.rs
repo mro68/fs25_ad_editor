@@ -9,8 +9,7 @@ use super::*;
 pub(super) fn render_curve_panel(
     ui: &mut egui::Ui,
     state: &CurvePanelState,
-    wheel_enabled: bool,
-    events: &mut Vec<AppIntent>,
+    panel_ctx: &mut RouteToolPanelRenderContext<'_>,
 ) {
     ui.horizontal(|ui| {
         ui.label("Grad:");
@@ -31,7 +30,7 @@ pub(super) fn render_curve_panel(
             });
         if degree != state.degree {
             push_action(
-                events,
+                panel_ctx.events,
                 RouteToolPanelAction::Curve(CurvePanelAction::SetDegree(degree)),
             );
         }
@@ -39,11 +38,11 @@ pub(super) fn render_curve_panel(
 
     if let Some(tangents) = state.tangents.as_ref() {
         ui.separator();
-        render_curve_tangents(ui, tangents, events);
+        render_curve_tangents(ui, tangents, panel_ctx);
     }
 
     ui.separator();
-    render_segment_config(ui, &state.segment, wheel_enabled, events, |action| {
+    render_segment_config(ui, &state.segment, panel_ctx, |action| {
         RouteToolPanelAction::Curve(CurvePanelAction::Segment(action))
     });
 }
@@ -52,16 +51,16 @@ pub(super) fn render_curve_panel(
 pub(super) fn render_curve_tangents(
     ui: &mut egui::Ui,
     state: &CurveTangentsPanelState,
-    events: &mut Vec<AppIntent>,
+    panel_ctx: &mut RouteToolPanelRenderContext<'_>,
 ) {
     if let Some(hint) = state.help_hint {
         ui.small(tangent_help_hint_label(hint));
     }
 
-    render_tangent_selection(ui, "Start-Tangente", &state.start, events, |value| {
+    render_tangent_selection(ui, "Start-Tangente", &state.start, panel_ctx, |value| {
         RouteToolPanelAction::Curve(CurvePanelAction::SetTangentStart(value))
     });
-    render_tangent_selection(ui, "End-Tangente", &state.end, events, |value| {
+    render_tangent_selection(ui, "End-Tangente", &state.end, panel_ctx, |value| {
         RouteToolPanelAction::Curve(CurvePanelAction::SetTangentEnd(value))
     });
 }
@@ -79,8 +78,7 @@ fn tangent_help_hint_label(hint: TangentHelpHint) -> &'static str {
 pub(super) fn render_spline_panel(
     ui: &mut egui::Ui,
     state: &SplinePanelState,
-    wheel_enabled: bool,
-    events: &mut Vec<AppIntent>,
+    panel_ctx: &mut RouteToolPanelRenderContext<'_>,
 ) {
     if let Some(control_point_count) = state.control_point_count {
         ui.label(format!("Kontrollpunkte: {control_point_count}"));
@@ -88,19 +86,19 @@ pub(super) fn render_spline_panel(
 
     if let Some(start_tangent) = state.start_tangent.as_ref() {
         ui.separator();
-        render_tangent_selection(ui, "Tangente Start:", start_tangent, events, |value| {
+        render_tangent_selection(ui, "Tangente Start:", start_tangent, panel_ctx, |value| {
             RouteToolPanelAction::Spline(SplinePanelAction::SetTangentStart(value))
         });
     }
 
     if let Some(end_tangent) = state.end_tangent.as_ref() {
-        render_tangent_selection(ui, "Tangente Ende:", end_tangent, events, |value| {
+        render_tangent_selection(ui, "Tangente Ende:", end_tangent, panel_ctx, |value| {
             RouteToolPanelAction::Spline(SplinePanelAction::SetTangentEnd(value))
         });
     }
 
     ui.separator();
-    render_segment_config(ui, &state.segment, wheel_enabled, events, |action| {
+    render_segment_config(ui, &state.segment, panel_ctx, |action| {
         RouteToolPanelAction::Spline(SplinePanelAction::Segment(action))
     });
 }

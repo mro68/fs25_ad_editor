@@ -1,11 +1,14 @@
 [package]
 name = "fs25_auto_drive_host_bridge_ffi"
-version = "1.7.0"
+version = "2.0.0"
 edition = "2024"
 
 [lib]
 path = "src/lib.rs"
 crate-type = ["cdylib", "rlib"]
+
+[lints]
+workspace = true
 
 [features]
 ## Aktiviert die Flutter Control-Plane und direkte C-FFI-Surface.

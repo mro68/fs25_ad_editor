@@ -9,8 +9,7 @@ use super::*;
 pub(super) fn render_field_boundary_panel(
     ui: &mut egui::Ui,
     state: &FieldBoundaryPanelState,
-    wheel_enabled: bool,
-    events: &mut Vec<AppIntent>,
+    panel_ctx: &mut RouteToolPanelRenderContext<'_>,
 ) {
     if let Some(field_id) = state.selected_field_id {
         ui.label(format!("Feld #{field_id}"));
@@ -23,38 +22,41 @@ pub(super) fn render_field_boundary_panel(
 
     ui.separator();
     render_drag_f32(
-        ui,
-        "Node-Abstand:",
-        state.node_spacing,
-        1.0..=50.0,
-        0.1,
-        " m",
-        wheel_enabled,
-        events,
+        panel_ctx,
+        DragF32Props {
+            ui,
+            label: "Node-Abstand:",
+            current: state.node_spacing,
+            range: 1.0..=50.0,
+            speed: 0.1,
+            suffix: " m",
+        },
         |value| {
             RouteToolPanelAction::FieldBoundary(FieldBoundaryPanelAction::SetNodeSpacing(value))
         },
     );
     render_drag_f32(
-        ui,
-        "Versatz:",
-        state.offset,
-        -20.0..=20.0,
-        0.1,
-        " m",
-        wheel_enabled,
-        events,
+        panel_ctx,
+        DragF32Props {
+            ui,
+            label: "Versatz:",
+            current: state.offset,
+            range: -20.0..=20.0,
+            speed: 0.1,
+            suffix: " m",
+        },
         |value| RouteToolPanelAction::FieldBoundary(FieldBoundaryPanelAction::SetOffset(value)),
     );
     render_drag_f32(
-        ui,
-        "Begradigen:",
-        state.straighten_tolerance,
-        0.0..=10.0,
-        0.1,
-        " m",
-        wheel_enabled,
-        events,
+        panel_ctx,
+        DragF32Props {
+            ui,
+            label: "Begradigen:",
+            current: state.straighten_tolerance,
+            range: 0.0..=10.0,
+            speed: 0.1,
+            suffix: " m",
+        },
         |value| {
             RouteToolPanelAction::FieldBoundary(FieldBoundaryPanelAction::SetStraightenTolerance(
                 value,
@@ -68,7 +70,7 @@ pub(super) fn render_field_boundary_panel(
         .changed()
     {
         push_action(
-            events,
+            panel_ctx.events,
             RouteToolPanelAction::FieldBoundary(
                 FieldBoundaryPanelAction::SetCornerDetectionEnabled(corner_detection_enabled),
             ),
@@ -77,14 +79,15 @@ pub(super) fn render_field_boundary_panel(
 
     if state.corner_detection_enabled {
         render_drag_f32(
-            ui,
-            "Winkel-Schwelle:",
-            state.corner_angle_threshold_deg,
-            10.0..=170.0,
-            0.1,
-            "°",
-            wheel_enabled,
-            events,
+            panel_ctx,
+            DragF32Props {
+                ui,
+                label: "Winkel-Schwelle:",
+                current: state.corner_angle_threshold_deg,
+                range: 10.0..=170.0,
+                speed: 0.1,
+                suffix: "°",
+            },
             |value| {
                 RouteToolPanelAction::FieldBoundary(
                     FieldBoundaryPanelAction::SetCornerAngleThresholdDeg(value),
@@ -98,7 +101,7 @@ pub(super) fn render_field_boundary_panel(
             .changed()
         {
             push_action(
-                events,
+                panel_ctx.events,
                 RouteToolPanelAction::FieldBoundary(
                     FieldBoundaryPanelAction::SetCornerRoundingEnabled(corner_rounding_enabled),
                 ),
@@ -107,14 +110,15 @@ pub(super) fn render_field_boundary_panel(
 
         if state.corner_rounding_enabled {
             render_drag_f32(
-                ui,
-                "Radius:",
-                state.corner_rounding_radius,
-                1.0..=50.0,
-                0.1,
-                " m",
-                wheel_enabled,
-                events,
+                panel_ctx,
+                DragF32Props {
+                    ui,
+                    label: "Radius:",
+                    current: state.corner_rounding_radius,
+                    range: 1.0..=50.0,
+                    speed: 0.1,
+                    suffix: " m",
+                },
                 |value| {
                     RouteToolPanelAction::FieldBoundary(
                         FieldBoundaryPanelAction::SetCornerRoundingRadius(value),
@@ -122,14 +126,15 @@ pub(super) fn render_field_boundary_panel(
                 },
             );
             render_drag_f32(
-                ui,
-                "Max. Winkelabw.:",
-                state.corner_rounding_max_angle_deg,
-                1.0..=45.0,
-                0.1,
-                "°",
-                wheel_enabled,
-                events,
+                panel_ctx,
+                DragF32Props {
+                    ui,
+                    label: "Max. Winkelabw.:",
+                    current: state.corner_rounding_max_angle_deg,
+                    range: 1.0..=45.0,
+                    speed: 0.1,
+                    suffix: "°",
+                },
                 |value| {
                     RouteToolPanelAction::FieldBoundary(
                         FieldBoundaryPanelAction::SetCornerRoundingMaxAngleDeg(value),
@@ -139,10 +144,10 @@ pub(super) fn render_field_boundary_panel(
         }
     }
 
-    render_direction_selector(ui, state.direction, events, |value| {
+    render_direction_selector(ui, state.direction, panel_ctx, |value| {
         RouteToolPanelAction::FieldBoundary(FieldBoundaryPanelAction::SetDirection(value))
     });
-    render_priority_selector(ui, state.priority, events, |value| {
+    render_priority_selector(ui, state.priority, panel_ctx, |value| {
         RouteToolPanelAction::FieldBoundary(FieldBoundaryPanelAction::SetPriority(value))
     });
 
@@ -158,9 +163,8 @@ pub(super) fn render_field_boundary_panel(
 pub(super) fn render_field_path_panel(
     ui: &mut egui::Ui,
     state: &FieldPathPanelState,
-    wheel_enabled: bool,
     lang: Language,
-    events: &mut Vec<AppIntent>,
+    panel_ctx: &mut RouteToolPanelRenderContext<'_>,
 ) {
     ui.horizontal(|ui| {
         ui.label("Modus:");
@@ -181,7 +185,7 @@ pub(super) fn render_field_path_panel(
             });
         if mode != state.mode {
             push_action(
-                events,
+                panel_ctx.events,
                 RouteToolPanelAction::FieldPath(FieldPathPanelAction::SetMode(mode)),
             );
         }
@@ -200,7 +204,7 @@ pub(super) fn render_field_path_panel(
         FieldPathPanelPhase::Idle => {
             if ui.button("Starten →").clicked() {
                 push_action(
-                    events,
+                    panel_ctx.events,
                     RouteToolPanelAction::FieldPath(FieldPathPanelAction::Start),
                 );
             }
@@ -211,7 +215,7 @@ pub(super) fn render_field_path_panel(
                 .clicked()
             {
                 push_action(
-                    events,
+                    panel_ctx.events,
                     RouteToolPanelAction::FieldPath(FieldPathPanelAction::AdvanceToSide2),
                 );
             }
@@ -222,13 +226,13 @@ pub(super) fn render_field_path_panel(
                 .clicked()
             {
                 push_action(
-                    events,
+                    panel_ctx.events,
                     RouteToolPanelAction::FieldPath(FieldPathPanelAction::Compute),
                 );
             }
             if ui.button("← Zurueck").clicked() {
                 push_action(
-                    events,
+                    panel_ctx.events,
                     RouteToolPanelAction::FieldPath(FieldPathPanelAction::BackToSide1),
                 );
             }
@@ -247,7 +251,7 @@ pub(super) fn render_field_path_panel(
             }
             if ui.button("← Seite 2 neu waehlen").clicked() {
                 push_action(
-                    events,
+                    panel_ctx.events,
                     RouteToolPanelAction::FieldPath(FieldPathPanelAction::BackToSide2),
                 );
             }
@@ -257,25 +261,27 @@ pub(super) fn render_field_path_panel(
     ui.separator();
     ui.label("Einstellungen:");
     render_drag_f32(
-        ui,
-        "Knotenabstand:",
-        state.node_spacing,
-        1.0..=50.0,
-        0.1,
-        " m",
-        wheel_enabled,
-        events,
+        panel_ctx,
+        DragF32Props {
+            ui,
+            label: "Knotenabstand:",
+            current: state.node_spacing,
+            range: 1.0..=50.0,
+            speed: 0.1,
+            suffix: " m",
+        },
         |value| RouteToolPanelAction::FieldPath(FieldPathPanelAction::SetNodeSpacing(value)),
     );
     render_drag_f32(
-        ui,
-        "Vereinfachung:",
-        state.simplify_tolerance,
-        0.0..=20.0,
-        0.1,
-        " m",
-        wheel_enabled,
-        events,
+        panel_ctx,
+        DragF32Props {
+            ui,
+            label: "Vereinfachung:",
+            current: state.simplify_tolerance,
+            range: 0.0..=20.0,
+            speed: 0.1,
+            suffix: " m",
+        },
         |value| RouteToolPanelAction::FieldPath(FieldPathPanelAction::SetSimplifyTolerance(value)),
     );
 
@@ -285,7 +291,7 @@ pub(super) fn render_field_path_panel(
         .changed()
     {
         push_action(
-            events,
+            panel_ctx.events,
             RouteToolPanelAction::FieldPath(FieldPathPanelAction::SetConnectToExisting(
                 connect_to_existing,
             )),
@@ -296,7 +302,7 @@ pub(super) fn render_field_path_panel(
         ui.separator();
         if ui.button("Zuruecksetzen").clicked() {
             push_action(
-                events,
+                panel_ctx.events,
                 RouteToolPanelAction::FieldPath(FieldPathPanelAction::Reset),
             );
         }
@@ -310,8 +316,7 @@ pub(super) fn render_field_path_panel(
 pub(super) fn render_route_offset_panel(
     ui: &mut egui::Ui,
     state: &RouteOffsetPanelState,
-    wheel_enabled: bool,
-    events: &mut Vec<AppIntent>,
+    panel_ctx: &mut RouteToolPanelRenderContext<'_>,
 ) {
     if !state.has_chain {
         ui.colored_label(
@@ -329,19 +334,20 @@ pub(super) fn render_route_offset_panel(
         .changed()
     {
         push_action(
-            events,
+            panel_ctx.events,
             RouteToolPanelAction::RouteOffset(RouteOffsetPanelAction::SetLeftEnabled(left_enabled)),
         );
     }
     render_drag_f32(
-        ui,
-        "Links-Abstand:",
-        state.left_distance,
-        ROUTE_OFFSET_DISTANCE_LIMITS.range(),
-        0.1,
-        " m",
-        wheel_enabled,
-        events,
+        panel_ctx,
+        DragF32Props {
+            ui,
+            label: "Links-Abstand:",
+            current: state.left_distance,
+            range: ROUTE_OFFSET_DISTANCE_LIMITS.range(),
+            speed: 0.1,
+            suffix: " m",
+        },
         |value| RouteToolPanelAction::RouteOffset(RouteOffsetPanelAction::SetLeftDistance(value)),
     );
 
@@ -351,32 +357,34 @@ pub(super) fn render_route_offset_panel(
         .changed()
     {
         push_action(
-            events,
+            panel_ctx.events,
             RouteToolPanelAction::RouteOffset(RouteOffsetPanelAction::SetRightEnabled(
                 right_enabled,
             )),
         );
     }
     render_drag_f32(
-        ui,
-        "Rechts-Abstand:",
-        state.right_distance,
-        ROUTE_OFFSET_DISTANCE_LIMITS.range(),
-        0.1,
-        " m",
-        wheel_enabled,
-        events,
+        panel_ctx,
+        DragF32Props {
+            ui,
+            label: "Rechts-Abstand:",
+            current: state.right_distance,
+            range: ROUTE_OFFSET_DISTANCE_LIMITS.range(),
+            speed: 0.1,
+            suffix: " m",
+        },
         |value| RouteToolPanelAction::RouteOffset(RouteOffsetPanelAction::SetRightDistance(value)),
     );
     render_drag_f32(
-        ui,
-        "Basisabstand:",
-        state.base_spacing,
-        ROUTE_OFFSET_BASE_SPACING_LIMITS.range(),
-        0.1,
-        " m",
-        wheel_enabled,
-        events,
+        panel_ctx,
+        DragF32Props {
+            ui,
+            label: "Basisabstand:",
+            current: state.base_spacing,
+            range: ROUTE_OFFSET_BASE_SPACING_LIMITS.range(),
+            speed: 0.1,
+            suffix: " m",
+        },
         |value| RouteToolPanelAction::RouteOffset(RouteOffsetPanelAction::SetBaseSpacing(value)),
     );
 
@@ -386,7 +394,7 @@ pub(super) fn render_route_offset_panel(
         .changed()
     {
         push_action(
-            events,
+            panel_ctx.events,
             RouteToolPanelAction::RouteOffset(RouteOffsetPanelAction::SetKeepOriginal(
                 keep_original,
             )),
@@ -401,8 +409,7 @@ pub(super) fn render_route_offset_panel(
 pub(super) fn render_color_path_panel(
     ui: &mut egui::Ui,
     state: &ColorPathPanelState,
-    wheel_enabled: bool,
-    events: &mut Vec<AppIntent>,
+    panel_ctx: &mut RouteToolPanelRenderContext<'_>,
 ) {
     let status = match state.phase {
         ColorPathPanelPhase::Idle => "Klick oder Alt+Lasso fuer Farbsample",
@@ -420,7 +427,7 @@ pub(super) fn render_color_path_panel(
         ColorPathPanelPhase::Idle => {
             if ui.button("Starten →").clicked() {
                 push_action(
-                    events,
+                    panel_ctx.events,
                     RouteToolPanelAction::ColorPath(ColorPathPanelAction::StartSampling),
                 );
             }
@@ -433,7 +440,7 @@ pub(super) fn render_color_path_panel(
                 .clicked()
             {
                 push_action(
-                    events,
+                    panel_ctx.events,
                     RouteToolPanelAction::ColorPath(ColorPathPanelAction::ComputePreview),
                 );
             }
@@ -456,7 +463,7 @@ pub(super) fn render_color_path_panel(
             ui.separator();
             if ui.button("← Zurueck").clicked() {
                 push_action(
-                    events,
+                    panel_ctx.events,
                     RouteToolPanelAction::ColorPath(ColorPathPanelAction::BackToSampling),
                 );
             }
@@ -466,7 +473,7 @@ pub(super) fn render_color_path_panel(
     ui.separator();
     if ui.button("Reset").clicked() {
         push_action(
-            events,
+            panel_ctx.events,
             RouteToolPanelAction::ColorPath(ColorPathPanelAction::Reset),
         );
     }
@@ -477,7 +484,7 @@ pub(super) fn render_color_path_panel(
     let mut exact_color_match = state.exact_color_match;
     if ui.checkbox(&mut exact_color_match, "Exaktmodus").changed() {
         push_action(
-            events,
+            panel_ctx.events,
             RouteToolPanelAction::ColorPath(ColorPathPanelAction::SetExactColorMatch(
                 exact_color_match,
             )),
@@ -485,45 +492,48 @@ pub(super) fn render_color_path_panel(
     }
 
     render_slider_f32(
-        ui,
-        "Farbtoleranz:",
-        state.color_tolerance,
-        1.0..=80.0,
-        "",
-        !state.exact_color_match,
-        wheel_enabled,
-        events,
+        panel_ctx,
+        SliderF32Props {
+            ui,
+            label: "Farbtoleranz:",
+            current: state.color_tolerance,
+            range: 1.0..=80.0,
+            suffix: "",
+            enabled: !state.exact_color_match,
+        },
         |value| RouteToolPanelAction::ColorPath(ColorPathPanelAction::SetColorTolerance(value)),
     );
 
     render_slider_f32(
-        ui,
-        "Knotenabstand:",
-        state.node_spacing,
-        1.0..=50.0,
-        " m",
-        true,
-        wheel_enabled,
-        events,
+        panel_ctx,
+        SliderF32Props {
+            ui,
+            label: "Knotenabstand:",
+            current: state.node_spacing,
+            range: 1.0..=50.0,
+            suffix: " m",
+            enabled: true,
+        },
         |value| RouteToolPanelAction::ColorPath(ColorPathPanelAction::SetNodeSpacing(value)),
     );
 
     render_slider_f32(
-        ui,
-        "Vereinfachung:",
-        state.simplify_tolerance,
-        0.0..=20.0,
-        " m",
-        true,
-        wheel_enabled,
-        events,
+        panel_ctx,
+        SliderF32Props {
+            ui,
+            label: "Vereinfachung:",
+            current: state.simplify_tolerance,
+            range: 0.0..=20.0,
+            suffix: " m",
+            enabled: true,
+        },
         |value| RouteToolPanelAction::ColorPath(ColorPathPanelAction::SetSimplifyTolerance(value)),
     );
 
     let mut noise_filter = state.noise_filter;
     if ui.checkbox(&mut noise_filter, "Rauschfilter").changed() {
         push_action(
-            events,
+            panel_ctx.events,
             RouteToolPanelAction::ColorPath(ColorPathPanelAction::SetNoiseFilter(noise_filter)),
         );
     }
@@ -544,7 +554,7 @@ pub(super) fn render_color_path_panel(
             });
         if mode != state.existing_connection_mode {
             push_action(
-                events,
+                panel_ctx.events,
                 RouteToolPanelAction::ColorPath(ColorPathPanelAction::SetExistingConnectionMode(
                     mode,
                 )),
