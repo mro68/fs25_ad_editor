@@ -196,6 +196,12 @@
   - [x] CP-06: Editing-Handler thematisch aufgeteilt (`handlers/editing/*`)
   - [x] CP-07: Route-Tool-Panel auf Props/Callbacks-Schnitt umgestellt
   - [x] CP-08: Workspace-Lints in `Cargo.toml` zentralisiert
+- [x] **FFI-Layer-Auswahl und Overview-Dialog-Draft-Sync (2026-04-17)**
+  - [x] CP-01: Reconcile vor `ConfirmOverviewOptions` im Action-Pfad harmonisieren; Session-Regressionstest für Draft->Confirm
+  - [x] CP-02: Fehlende Flutter-Draft-Update-Deklaration im C-Header ergänzen; Export/Header/API-Doku-Parität herstellen
+  - [x] CP-03: Positive E2E-Tests für Layer-Toggle und Draft->Confirm übernehmen; Snapshot-Assertions auf stabile Felder
+  - [x] CP-04: Öffentliche Semantik in host_bridge-Doku nachziehen; ROADMAP-Sync (diesen Punkt)
+  - [x] CP-05: Unnötige direkte FFI-Abhängigkeiten auf engine/map_overview dokumentiert (Layer-Hygiene in `crates/fs25_auto_drive_host_bridge_ffi/API.md`); direkte deps auf diese Crates in `crates/fs25_auto_drive_host_bridge_ffi/Cargo.toml` nicht vorhanden
 - [x] Edition- und Dependency-Upgrade (2026-04-05, Branch `refactor/edition-deps-upgrade`)
   - [x] Alle Workspace-Crates auf Rust 2024 umgestellt
   - [x] `fs25_auto_drive_render_wgpu` auf `wgpu 29.0.*` migriert
