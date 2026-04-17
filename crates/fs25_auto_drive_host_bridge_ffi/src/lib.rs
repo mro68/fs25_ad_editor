@@ -51,6 +51,8 @@ pub mod flutter_gpu;
 #[cfg(feature = "flutter")]
 use crate::flutter_api::FlutterSessionHandle;
 use anyhow::Context;
+#[cfg(feature = "flutter")
+use fs25_auto_drive_host_bridge::dto::HostOverviewOptionsDialogSnapshot;
 use fs25_auto_drive_host_bridge::dto::{host_ui_snapshot_json, viewport_overlay_snapshot_json};
 use fs25_auto_drive_host_bridge::{
     HostChromeSnapshot, HostConnectionPairSnapshot, HostContextMenuSnapshot, HostDialogRequest,
@@ -116,7 +118,7 @@ pub extern "C" fn fs25ad_host_bridge_session_new() -> *mut HostBridgeSessionHand
 #[unsafe(no_mangle)]
 pub extern "C" fn fs25ad_flutter_session_new() -> *mut flutter_api::FlutterSessionHandle {
     ffi_guard_ptr! {{
-        Result::<*mut flutter_api::FlutterSessionHandle>::Ok(Box::into_raw(
+        Ok::<*mut flutter_api::FlutterSessionHandle, anyhow::Error>(Box::into_raw(
             Box::new(flutter_api::flutter_session_new()),
         ))
     }}
@@ -518,11 +520,13 @@ pub unsafe extern "C" fn fs25ad_flutter_session_acquire_shared_arc_raw(
     clear_last_error();
     match std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
         if session.is_null() {
-            return Err(anyhow!("FlutterSessionHandle pointer must not be null"));
+            return Err(anyhow::anyhow!(
+                "FlutterSessionHandle pointer must not be null"
+            ));
         }
 
         let handle = unsafe { &*session };
-        Ok(flutter_api::flutter_session_acquire_shared_arc_raw(handle))
+        Ok::<i64, anyhow::Error>(flutter_api::flutter_session_acquire_shared_arc_raw(handle))
     })) {
         Ok(Ok(raw)) => raw,
         Ok(Err(error)) => {
