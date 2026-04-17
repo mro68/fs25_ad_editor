@@ -215,7 +215,7 @@ pub fn list_images_in_zip(zip_path: &str) -> Result<Vec<ZipImageEntry>> {
     }
 
     // Groessste Dateien zuerst (typisch: overview.dds ist die groesste)
-    image_entries.sort_by(|a, b| b.size.cmp(&a.size));
+    image_entries.sort_by_key(|entry| std::cmp::Reverse(entry.size));
     log::info!(
         "ZIP '{}': {} Bilddateien gefunden",
         zip_path,
