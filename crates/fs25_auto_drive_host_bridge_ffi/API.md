@@ -20,6 +20,10 @@ Der v4-Vertrag ist bewusst nur der additive ABI-/Lifecycle-Slice. Echte externe 
 
 Fuer native C/C++-Hosts liegt der stabile Vertragsheader unter `include/fs25ad_host_bridge.h`.
 
+### Layer-Hygiene
+
+Die FFI-Crate hat **keine direkten** Abhängigkeiten auf `fs25_auto_drive_engine` oder `fs25_map_overview`. Diese Crates sind nur **transitiv** über `fs25_auto_drive_host_bridge` zugänglich. Dies ist eine bewusste Architektur-Entscheidung zur Wahrung klarer Layer-Grenzen: FFI ist eine dünne Transport-Schicht, die auschließlich den Host-Bridge-Vertrag exponiert und nicht direkt die Domain-Crates (Engine/MapOverview) koppelt.
+
 ## ABI-Typen
 
 | Typ | Zweck |
