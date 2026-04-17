@@ -94,12 +94,11 @@ pub(crate) fn on_drag_update(tool: &mut SmoothCurveTool, pos: Vec2) {
             tool.departure_manual = true;
             tool.update_preview();
         }
-        Some(DragTarget::Control(i)) => {
-            if i < tool.control_nodes.len() {
-                tool.control_nodes[i] = pos;
-                tool.update_preview();
-            }
+        Some(DragTarget::Control(i)) if i < tool.control_nodes.len() => {
+            tool.control_nodes[i] = pos;
+            tool.update_preview();
         }
+        Some(DragTarget::Control(_)) => {}
         None => {}
     }
 }
