@@ -12,7 +12,7 @@ tools:
   - edit/rename
   - vscode/askQuestions
 
-model: "Claude Sonnet 4.6"
+model: Auto (copilot)
 #model: "GPT-5.4"
 ---
 
@@ -39,7 +39,7 @@ Dokumentiere dort:
 
 - Deine Analyse der Git-Aufgabe
 - Den geplanten Git-Workflow (inkl. Kommando-Sequenz)
-- Die erforderlichen Commit-Punkte mit Beschreibungen (z.B. "Commit 1: fix load_for_edit – Beschreibung: Implementiert Edit-Modus für FieldBoundary")
+- **Die vollständige Commit-Punkt-Liste** (nummeriert CP-01, CP-02, …) mit je: ID, Scope, Beschreibung, betroffene Dateien. Diese Liste muss erstellt und gespeichert sein, **bevor** der `@dirigent` den ersten Developer-Auftrag erteilt. Sie ist bindend für die Reihenfolge der Implementierungszyklen.
 - Alle Sicherheitsüberlegungen und potenziellen Risiken
 - Das Ergebnis der Git-Operationen (Erfolg, Fehler, Divergenzen)
 
