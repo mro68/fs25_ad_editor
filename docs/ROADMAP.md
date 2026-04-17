@@ -6,6 +6,17 @@
 - Dieses Roadmap-Dokument bleibt der strategische Fortschrittsplan (Phasen, erledigt/offen), nicht die operative Aufgabenliste.
 - Neue operative TODOs und offene Audit-Findings zuerst im zentralen Tracking erfassen und danach optional als zusammenfassenden Punkt in die passende Roadmap-Phase uebernehmen.
 
+## Sync-Update 2026-04-17 (Commits 1-11)
+
+- [x] CI-Security-Basis integriert (`cargo-audit`, `cargo-deny`)
+- [x] CI-Qualitaetsgate gehaertet (`todo!()`-Gate, zusaetzlicher Lint-Hardening-Lauf)
+- [x] Host-Bridge Snapshot-Dirty-Invarianten gehaertet (`chrome_state_mut()` invalidiert sofort, `dialog_ui_state_mut()` invalidiert snapshot-relevante Aenderungen automatisch)
+- [x] Host-Bridge Snapshot-Vertrag korrigiert: `build_viewport_geometry_snapshot(...)`/`HostViewportGeometrySnapshot` als vollstaendiger Geometry-Transport dokumentiert
+- [x] Host-Bridge/FFI modularisiert (Phase-1-Splits) ohne API-/ABI-Bruch
+- [x] Test-Qualitaetsbaseline ausgebaut (Coverage-Job, Proptest-Invarianten, Fuzzing-Baseline)
+- [x] Governance-Basis und zentrales TODO-Tracking eingefuehrt (`CONTRIBUTING.md`, `CHANGELOG.md`, `docs/TODO_TRACKING.md`)
+- [x] Nachlaufende Test-/Doc-Contract-Fixes abgeschlossen (`make check-doc-contracts` gruen)
+
 ## Phase 1: Foundation ✅
 - [x] Projekt-Setup
 - [x] Core-Datenmodelle (`RoadMap`, `MapNode`, `Connection`)

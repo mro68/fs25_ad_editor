@@ -31,7 +31,7 @@ Verbleibende egui-Zugriffe werden verbindlich in drei Klassen aufgeteilt:
 
 Aktueller `bridge-gap` (Stand 2026-04-07): Kein offener fachlicher Gap fuer stabile Host-Aktionen, bridge-owned Read-Seams oder die kanonische Viewport-Gesture-Seam. Der produktive egui-Host nutzt fuer nicht serialisierte UI-Local-Zustaende schmale Session-Seams statt direkter `app_state_mut()`-Bypaesse; `host_bridge_adapter` ist nur noch eine Kompat-Surface mit Reexports auf die kanonische Host-Bridge-Mapping-Seam.
 
-Nicht serialisierte lokale Session-Seams (`HostPanelPropertiesState`, `HostDialogUiState`, `HostViewportInputContext`) bleiben bewusst snapshot-transparent. Wenn ein Rust-Host darueber ausnahmsweise Felder mutiert, die in `HostSessionSnapshot` gespiegelt werden, muss er `HostBridgeSession::mark_snapshot_dirty()` explizit aufrufen.
+Nicht serialisierte lokale Session-Seams bleiben differenziert: `HostPanelPropertiesState` und `HostViewportInputContext` sind bewusst snapshot-transparent; falls darueber ausnahmsweise in `HostSessionSnapshot` gespiegelte Felder mutiert werden, bleibt `HostBridgeSession::mark_snapshot_dirty()` explizit noetig. `chrome_state_mut()` invalidiert den Session-Snapshot vorsorglich sofort und `HostDialogUiState` (`dialog_ui_state_mut()`) invalidiert snapshot-relevante Aenderungen automatisch ueber einen Drop-Guard.
 
 ### Flutter-/FFI-Transportadapter (Slice 0)
 
@@ -42,6 +42,7 @@ Nicht serialisierte lokale Session-Seams (`HostPanelPropertiesState`, `HostDialo
 - Der erste schreibende Viewport-Input-Slice bleibt auf der bestehenden Action-Surface: `SubmitViewportInput` laeuft ohne neues C-ABI-Symbol ueber den vorhandenen JSON-Entry-Point und deckt Resize, Single-/Double-Tap, Pan/Move, Shift-Rect, normales Select-Lasso und Scroll-Zoom ab.
 - Route-Tool-Schreibpfade laufen explizit ueber `HostSessionAction::RouteTool` mit `HostRouteToolAction`; die Familie deckt Toolwahl, Panel-Aktionen, Execute/Cancel/Recreate, Tangenten, Click/Drag/Lasso, Rotate sowie Segment-/Node-Anpassungen ab.
 - `SubmitViewportInput` bleibt bewusst tool-agnostisch; tool-spezifische Polygon- und Route-Tool-Semantik wird nicht in diesen generischen Gesture-Vertrag hineingezogen.
+- `build_viewport_geometry_snapshot(...)` transportiert fuer Polling-/FFI-Hosts bewusst vollstaendige, sortierte Geometry-Listen (Nodes, Connections, Marker) plus Kamera-/Viewport-Metadaten statt eines Minimal-Snapshots.
 - Bewusste Nicht-Ziele dieses Slice: kein ueber Resize/Tap/Drag/Scroll hinausgehender Viewport-Vertrag, kein write-heavy Editing ueber dieselbe C-ABI und kein Multi-Plattform-Packaging im selben Landungsschnitt.
 
 Die Integrationsschale ist bewusst kein zusaetzlicher Fach-Layer. Sie koordiniert `ui`, `app` und den Host-Adapter in `render`, enthaelt aber keine eigenen Use-Cases oder Domain-Logik.

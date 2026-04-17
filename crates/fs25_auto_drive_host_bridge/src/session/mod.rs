@@ -286,8 +286,12 @@ impl HostBridgeSession {
     /// Invalidiert den gecachten `HostSessionSnapshot` explizit.
     ///
     /// Rust-Hosts nutzen diese Hilfsmethode nach lokalen Mutationen ueber
-    /// schmale UI-Seams, falls dabei ausnahmsweise Felder veraendert wurden,
-    /// die in `HostSessionSnapshot` gespiegelt werden.
+    /// snapshot-transparente Seams wie `panel_properties_state_mut()` oder
+    /// `viewport_input_context_mut()`, falls dabei ausnahmsweise Felder
+    /// veraendert wurden, die in `HostSessionSnapshot` gespiegelt werden.
+    /// `chrome_state_mut()` invalidiert bereits direkt und
+    /// `dialog_ui_state_mut()` uebernimmt dies bei snapshot-relevanten
+    /// Aenderungen ueber den Rueckgabe-Guard automatisch.
     pub fn mark_snapshot_dirty(&mut self) {
         self.snapshot_dirty = true;
     }

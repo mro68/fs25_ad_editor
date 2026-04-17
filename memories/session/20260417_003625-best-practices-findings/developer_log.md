@@ -517,7 +517,7 @@ Message: docs(project): governance-dokumente und todo-tracking
 # Developer Log - Commit 11
 
 Datum: 2026-04-17
-Commit: (wird nach Commit-Erstellung eingetragen)
+Commit: 7350542f10868915e89b19b3487a3382a6901a34
 Message: test(fix): nachlaufende testanpassungen nach implementierung
 
 ## Geaenderte Dateien
@@ -545,5 +545,45 @@ Message: test(fix): nachlaufende testanpassungen nach implementierung
 ## Scope-Hinweise
 - Optionaler Snapshot-Perf-Bench wurde bewusst nicht aufgenommen (kleiner Test-/Gate-Fix-Commit ohne Performance-Feature-Scope).
 - Selektives Staging nur fuer Commit-11-Dateien.
+- Kein Push, kein Merge.
+
+---
+
+# Developer Log - Commit 12
+
+Datum: 2026-04-17
+Commit: COMMIT12_HASH_PLACEHOLDER
+Message: docs(sync): docstrings, api.md, roadmap, architecture sync
+
+## Geaenderte Dateien
+- crates/fs25_auto_drive_host_bridge/src/session/mod.rs
+- crates/fs25_auto_drive_host_bridge/API.md
+- docs/ROADMAP.md
+- docs/ARCHITECTURE_PLAN.md
+- .windsurf/rules/projekt.md
+- memories/session/20260417_003625-best-practices-findings/doc_sync_changes.md
+- memories/session/20260417_003625-best-practices-findings/developer_log.md
+
+## Was wurde synchronisiert
+- Docstrings der betroffenen Host-Bridge-Public-API auf aktuelle Snapshot-Invalidierungssemantik gebracht:
+  - `mark_snapshot_dirty()` dokumentiert jetzt explizit den Unterschied zwischen snapshot-transparenten Seams (`panel_properties_state_mut()`, `viewport_input_context_mut()`) und automatisch invalidierenden Seams (`chrome_state_mut()`, `dialog_ui_state_mut()`).
+- `crates/fs25_auto_drive_host_bridge/API.md` auf den aktuellen Stand der Commits 1..11 synchronisiert:
+  - Snapshot-Semantik von `build_viewport_geometry_snapshot(...)`/`HostViewportGeometrySnapshot` auf vollstaendigen Geometry-Transport korrigiert.
+  - Tabelleneintraege fuer `chrome_state_mut()` und `dialog_ui_state_mut()` an die aktuelle Auto-Invalidierung angepasst.
+  - Hinweise zur Dirty-Invaliderung differenziert (auto vs. explizit) dokumentiert.
+- `docs/ARCHITECTURE_PLAN.md` nachgezogen:
+  - Session-Surface-Abschnitt auf differenzierte Snapshot-Invalidierung aktualisiert.
+  - FFI-/Polling-Hinweis auf vollstaendigen, sortierten Geometry-Snapshot ergaenzt.
+- `docs/ROADMAP.md` erweitert:
+  - Neuer Sync-Block `Sync-Update 2026-04-17 (Commits 1-11)` mit abgeschlossenen Punkten aus CI-/Snapshot-/Refactor-/Test-/Governance-Umfang.
+- `.windsurf/rules/projekt.md` aktualisiert:
+  - Verbindlicher Host-Bridge-Vertrag um Full-Geometry-Snapshot und differenzierte Dirty-Invalidierung ergaenzt.
+
+## Validierung
+- `make check-doc-contracts` ✅
+
+## Scope-Hinweise
+- Ausschliesslich Dokumentation/Docstrings geaendert; keine Produktivlogik.
+- Selektives Staging nur Doku-Dateien.
 - Kein Push, kein Merge.
 
