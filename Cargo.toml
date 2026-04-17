@@ -1,5 +1,6 @@
 [workspace]
 members = [
+    "fuzz",
     ".",
     "crates/fs25_auto_drive_engine",
     "crates/fs25_auto_drive_host_bridge",

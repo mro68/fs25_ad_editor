@@ -1,0 +1,28 @@
+[package]
+name = "FS25-AutoDrive-Editor-fuzz"
+version = "0.0.0"
+publish = false
+edition = "2024"
+
+[package.metadata]
+cargo-fuzz = true
+
+[dependencies]
+libfuzzer-sys = "0.4"
+
+[dependencies.FS25-AutoDrive-Editor]
+path = ".."
+
+[[bin]]
+name = "fuzz_xml_parser"
+path = "fuzz_targets/fuzz_xml_parser.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "fuzz_curseplay_parser"
+path = "fuzz_targets/fuzz_curseplay_parser.rs"
+test = false
+doc = false
+bench = false

@@ -245,3 +245,148 @@ pub fn solve_cps_from_apex_both_tangents(
     let t2 = (dir1.x * r.y - dir1.y * r.x) / det;
     Some((p0 + t1 * dir1, p3 + t2 * dir2))
 }
+
+#[cfg(test)]
+mod proptest_invariants {
+    use proptest::prelude::*;
+    use glam::Vec2;
+    use super::*;
+
+    /// Bézier-Kurven sollten ihre Endpunkte genau treffen (B(0)=P0, B(1)=P3).
+    proptest! {
+        #[test]
+        fn prop_cubic_bezier_endpoints(
+            p0x in -1000.0f32..1000.0,
+            p0y in -1000.0f32..1000.0,
+            p1x in -1000.0f32..1000.0,
+            p1y in -1000.0f32..1000.0,
+            p2x in -1000.0f32..1000.0,
+            p2y in -1000.0f32..1000.0,
+            p3x in -1000.0f32..1000.0,
+            p3y in -1000.0f32..1000.0,
+        ) {
+            let p0 = Vec2::new(p0x, p0y);
+            let p1 = Vec2::new(p1x, p1y);
+            let p2 = Vec2::new(p2x, p2y);
+            let p3 = Vec2::new(p3x, p3y);
+
+            // B(0) sollte p0 sein
+            let b0 = cubic_bezier(p0, p1, p2, p3, 0.0);
+            prop_assert!((b0 - p0).length() < 0.0001, "B(0) != P0: {:?} vs {:?}", b0, p0);
+
+            // B(1) sollte p3 sein
+            let b1 = cubic_bezier(p0, p1, p2, p3, 1.0);
+            prop_assert!((b1 - p3).length() < 0.0001, "B(1) != P3: {:?} vs {:?}", b1, p3);
+        }
+    }
+
+    /// Quadratische Bézier-Kurven sollten ihre Endpunkte genau treffen.
+    proptest! {
+        #[test]
+        fn prop_quadratic_bezier_endpoints(
+            p0x in -1000.0f32..1000.0,
+            p0y in -1000.0f32..1000.0,
+            p1x in -1000.0f32..1000.0,
+            p1y in -1000.0f32..1000.0,
+            p2x in -1000.0f32..1000.0,
+            p2y in -1000.0f32..1000.0,
+        ) {
+            let p0 = Vec2::new(p0x, p0y);
+            let p1 = Vec2::new(p1x, p1y);
+            let p2 = Vec2::new(p2x, p2y);
+
+            // B(0) sollte p0 sein
+            let b0 = quadratic_bezier(p0, p1, p2, 0.0);
+            prop_assert!((b0 - p0).length() < 0.0001, "B(0) != P0");
+
+            // B(1) sollte p2 sein
+            let b1 = quadratic_bezier(p0, p1, p2, 1.0);
+            prop_assert!((b1 - p2).length() < 0.0001, "B(1) != P2");
+        }
+    }
+
+    /// Kurvenlaenge sollte mit höheren Sample-Raten monoton wachsen.
+    proptest! {
+        #[test]
+        fn prop_approx_length_monotonic(
+            p0x in -100.0f32..100.0,
+            p0y in -100.0f32..100.0,
+            p1x in -100.0f32..100.0,
+            p1y in -100.0f32..100.0,
+            p2x in -100.0f32..100.0,
+            p2y in -100.0f32..100.0,
+            p3x in -100.0f32..100.0,
+            p3y in -100.0f32..100.0,
+        ) {
+            let p0 = Vec2::new(p0x, p0y);
+            let p1 = Vec2::new(p1x, p1y);
+            let p2 = Vec2::new(p2x, p2y);
+            let p3 = Vec2::new(p3x, p3y);
+
+            let eval_fn = |t: f32| cubic_bezier(p0, p1, p2, p3, t);
+
+            let len_low = approx_length(&eval_fn, 16);
+            let len_med = approx_length(&eval_fn, 64);
+            let len_high = approx_length(&eval_fn, 256);
+
+            // Length sollte mit mehr Samples konvergieren
+            prop_assert!(len_med >= len_low * 0.99, "Length should increase with more samples");
+            prop_assert!(len_high >= len_med * 0.99, "Length should increase with more samples");
+        }
+    }
+
+    /// Kurvenlaenge sollte >= direktem Abstand sein (Dreiecksungleichung).
+    proptest! {
+        #[test]
+        fn prop_approx_length_ge_direct_distance(
+            p0x in -100.0f32..100.0,
+            p0y in -100.0f32..100.0,
+            p1x in -100.0f32..100.0,
+            p1y in -100.0f32..100.0,
+            p2x in -100.0f32..100.0,
+            p2y in -100.0f32..100.0,
+            p3x in -100.0f32..100.0,
+            p3y in -100.0f32..100.0,
+        ) {
+            let p0 = Vec2::new(p0x, p0y);
+            let p1 = Vec2::new(p1x, p1y);
+            let p2 = Vec2::new(p2x, p2y);
+            let p3 = Vec2::new(p3x, p3y);
+
+            let eval_fn = |t: f32| cubic_bezier(p0, p1, p2, p3, t);
+            let curve_length = approx_length(&eval_fn, 128);
+            let direct_dist = p0.distance(p3);
+
+            // Kurvenlaenge sollte >= direkter Distanz sein
+            prop_assert!(curve_length >= direct_dist * 0.99, "Curve length should be >= direct distance");
+        }
+    }
+
+    /// Arc-Length-Parametrisierung sollte Start/End genau treffen.
+    proptest! {
+        #[test]
+        fn prop_compute_curve_positions_endpoints(
+            p0x in -100.0f32..100.0,
+            p0y in -100.0f32..100.0,
+            p1x in -100.0f32..100.0,
+            p1y in -100.0f32..100.0,
+            p2x in -100.0f32..100.0,
+            p2y in -100.0f32..100.0,
+            p3x in -100.0f32..100.0,
+            p3y in -100.0f32..100.0,
+            max_segment in 0.5f32..50.0,
+        ) {
+            let p0 = Vec2::new(p0x, p0y);
+            let p1 = Vec2::new(p1x, p1y);
+            let p2 = Vec2::new(p2x, p2y);
+            let p3 = Vec2::new(p3x, p3y);
+
+            let eval_fn = |t: f32| cubic_bezier(p0, p1, p2, p3, t);
+            let positions = compute_curve_positions(eval_fn, max_segment);
+
+            prop_assert!(positions.len() >= 2, "Should have at least start and end");
+            prop_assert!((positions[0] - p0).length() < 0.01, "First position should be start");
+            prop_assert!((positions[positions.len() - 1] - p3).length() < 0.01, "Last position should be end");
+        }
+    }
+}
