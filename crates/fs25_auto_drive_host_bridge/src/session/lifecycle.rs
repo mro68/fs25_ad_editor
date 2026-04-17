@@ -1,7 +1,18 @@
 use super::HostBridgeSession;
+use crate::dto::HostSessionAction;
 use fs25_auto_drive_engine::app::{ui_contract::DialogRequest, AppIntent};
 
 impl HostBridgeSession {
+    pub(super) fn reconcile_host_local_dialog_state_for_action(
+        &mut self,
+        action: &HostSessionAction,
+    ) {
+        if matches!(action, HostSessionAction::ConfirmOverviewOptions) {
+            self.state.ui.overview_options_dialog =
+                self.chrome_state.overview_options_dialog.clone();
+        }
+    }
+
     pub(super) fn reconcile_host_local_dialog_state_for_intent(&mut self, intent: &AppIntent) {
         if matches!(intent, AppIntent::OverviewOptionsConfirmed) {
             self.state.ui.overview_options_dialog =
