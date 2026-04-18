@@ -138,7 +138,7 @@ cargo fmt --all -- --check && cargo check
 
 # Repo-spezifische Konventionen
 
-- Hauptbranch ist `master` (nicht `main`)
+- Hauptbranch ist `main`
 - PRs sollen per **Merge Commit** gemerged werden (nicht Squash)
 - **Branch-Naming:** `feat/`, `fix/`, `docs/`, `refactor/`, `perf/`, `test/` (z.B. `feat/curve-tangent-alignment`)
 - **Commit-Messages:** Conventional Commits bevorzugt:
