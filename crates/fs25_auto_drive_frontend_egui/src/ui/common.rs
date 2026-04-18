@@ -20,12 +20,11 @@ const ALT_WHEEL_MULTIPLIER_F32: f32 = 10.0;
 const CTRL_WHEEL_MULTIPLIER_F32: f32 = 0.1;
 const ALT_WHEEL_MULTIPLIER_USIZE: usize = 10;
 
-pub(crate) const OVERVIEW_FIELD_DETECTION_SOURCE_ORDER: [OverviewFieldDetectionSource; 5] = [
+pub(crate) const OVERVIEW_FIELD_DETECTION_SOURCE_ORDER: [OverviewFieldDetectionSource; 4] = [
     OverviewFieldDetectionSource::ZipGroundGdm,
     OverviewFieldDetectionSource::FromZip,
     OverviewFieldDetectionSource::FieldTypeGrle,
     OverviewFieldDetectionSource::GroundGdm,
-    OverviewFieldDetectionSource::FruitsGdm,
 ];
 
 /// Erstellt ein Top-Level-`Ui`, in dem Panels via `show_inside()` gerendert werden koennen.
@@ -73,7 +72,6 @@ pub(crate) fn overview_field_detection_source_label(
         OverviewFieldDetectionSource::FromZip => "infoLayer_farmlands (ZIP)",
         OverviewFieldDetectionSource::FieldTypeGrle => "infoLayer_fieldType (Savegame)",
         OverviewFieldDetectionSource::GroundGdm => "densityMap_ground (Savegame)",
-        OverviewFieldDetectionSource::FruitsGdm => "densityMap_fruits (Savegame)",
     }
 }
 
@@ -402,7 +400,7 @@ mod tests {
     #[test]
     fn ordered_available_overview_sources_follow_canonical_ui_order() {
         let ordered = ordered_available_overview_field_detection_sources(&[
-            OverviewFieldDetectionSource::FruitsGdm,
+            OverviewFieldDetectionSource::GroundGdm,
             OverviewFieldDetectionSource::FromZip,
             OverviewFieldDetectionSource::ZipGroundGdm,
         ]);
@@ -412,7 +410,7 @@ mod tests {
             vec![
                 OverviewFieldDetectionSource::ZipGroundGdm,
                 OverviewFieldDetectionSource::FromZip,
-                OverviewFieldDetectionSource::FruitsGdm,
+                OverviewFieldDetectionSource::GroundGdm,
             ]
         );
     }
