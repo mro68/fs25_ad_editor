@@ -9,15 +9,15 @@ mod texture_registration_v4;
 /// Hilfsmakro: Wraps einen bool-FFI-Aufruf mit Panic-Isolation und Last-Error-Behandlung.
 macro_rules! ffi_guard_bool {
     ($body:expr) => {{
-        helpers::clear_last_error();
+        crate::helpers::clear_last_error();
         match std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| $body)) {
             Ok(Ok(())) => true,
             Ok(Err(e)) => {
-                helpers::set_last_error(e.to_string());
+                crate::helpers::set_last_error(e.to_string());
                 false
             }
             Err(_) => {
-                helpers::set_last_error("internal panic in FFI call");
+                crate::helpers::set_last_error("internal panic in FFI call");
                 false
             }
         }
@@ -27,15 +27,15 @@ macro_rules! ffi_guard_bool {
 /// Hilfsmakro: Wraps einen ptr-rueckgebenden FFI-Aufruf mit Panic-Isolation und Last-Error-Behandlung.
 macro_rules! ffi_guard_ptr {
     ($body:expr) => {{
-        helpers::clear_last_error();
+        crate::helpers::clear_last_error();
         match std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| $body)) {
             Ok(Ok(ptr)) => ptr,
             Ok(Err(e)) => {
-                helpers::set_last_error(e.to_string());
+                crate::helpers::set_last_error(e.to_string());
                 std::ptr::null_mut()
             }
             Err(_) => {
-                helpers::set_last_error("internal panic in FFI call");
+                crate::helpers::set_last_error("internal panic in FFI call");
                 std::ptr::null_mut()
             }
         }
