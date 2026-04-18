@@ -25,6 +25,13 @@ struct HostBridgeSharedTextureState {
 
 impl HostBridgeSharedTextureState {
     fn new(width: u32, height: u32) -> Result<Self> {
+        if width == 0 || height == 0 {
+            return Err(anyhow!(
+                "shared texture size must be positive, got {}x{}",
+                width,
+                height
+            ));
+        }
         let instance = wgpu::Instance::default();
         Self::new_with_instance(instance, width, height)
     }
@@ -437,6 +444,31 @@ mod tests {
         value
     }
 
+    fn is_headless_adapter_error(error: &str) -> bool {
+        let lower = error.to_ascii_lowercase();
+        lower.contains("no suitable gpu adapters")
+            || lower.contains("no adapters found")
+            || lower.contains("request adapter")
+            || lower.contains("request_adapter")
+            || lower.contains("parent device is lost")
+            || lower.contains("adapter")
+    }
+
+    fn require_shared_texture_or_skip(
+        width: u32,
+        height: u32,
+    ) -> Option<*mut super::HostBridgeSharedTexture> {
+        let texture = fs25ad_host_bridge_shared_texture_new(width, height);
+        if texture.is_null() {
+            let error = read_and_free_error();
+            if is_headless_adapter_error(&error) {
+                return None;
+            }
+            panic!("shared texture creation failed unexpectedly: {error}");
+        }
+        Some(texture)
+    }
+
     #[test]
     fn ffi_shared_texture_reports_contract_and_capabilities() {
         assert_eq!(
@@ -472,8 +504,10 @@ mod tests {
         let session = fs25ad_host_bridge_session_new();
         assert!(!session.is_null());
 
-        let texture = fs25ad_host_bridge_shared_texture_new(8, 6);
-        assert!(!texture.is_null());
+        let Some(texture) = require_shared_texture_or_skip(8, 6) else {
+            session_dispose(session);
+            return;
+        };
 
         assert!(shared_texture_render(session, texture));
 
@@ -523,8 +557,10 @@ mod tests {
         let session = fs25ad_host_bridge_session_new();
         assert!(!session.is_null());
 
-        let texture = fs25ad_host_bridge_shared_texture_new(8, 6);
-        assert!(!texture.is_null());
+        let Some(texture) = require_shared_texture_or_skip(8, 6) else {
+            session_dispose(session);
+            return;
+        };
 
         assert!(shared_texture_render(session, texture));
 
@@ -560,8 +596,9 @@ mod tests {
 
     #[test]
     fn ffi_shared_texture_rejects_acquire_before_first_render() {
-        let texture = fs25ad_host_bridge_shared_texture_new(8, 6);
-        assert!(!texture.is_null());
+        let Some(texture) = require_shared_texture_or_skip(8, 6) else {
+            return;
+        };
 
         let mut frame_info = Fs25adSharedTextureFrameInfo {
             width: 0,
@@ -592,8 +629,10 @@ mod tests {
         let session = fs25ad_host_bridge_session_new();
         assert!(!session.is_null());
 
-        let texture = fs25ad_host_bridge_shared_texture_new(8, 6);
-        assert!(!texture.is_null());
+        let Some(texture) = require_shared_texture_or_skip(8, 6) else {
+            session_dispose(session);
+            return;
+        };
         assert!(shared_texture_render(session, texture));
 
         let mut first_frame = Fs25adSharedTextureFrameInfo {
@@ -646,8 +685,10 @@ mod tests {
         let session = fs25ad_host_bridge_session_new();
         assert!(!session.is_null());
 
-        let texture = fs25ad_host_bridge_shared_texture_new(8, 6);
-        assert!(!texture.is_null());
+        let Some(texture) = require_shared_texture_or_skip(8, 6) else {
+            session_dispose(session);
+            return;
+        };
         assert!(shared_texture_render(session, texture));
 
         let mut frame_info = Fs25adSharedTextureFrameInfo {
@@ -683,8 +724,10 @@ mod tests {
         let session = fs25ad_host_bridge_session_new();
         assert!(!session.is_null());
 
-        let texture = fs25ad_host_bridge_shared_texture_new(8, 6);
-        assert!(!texture.is_null());
+        let Some(texture) = require_shared_texture_or_skip(8, 6) else {
+            session_dispose(session);
+            return;
+        };
         assert!(shared_texture_render(session, texture));
 
         let mut frame_info = Fs25adSharedTextureFrameInfo {
@@ -730,8 +773,9 @@ mod tests {
         assert!(texture.is_null());
         assert!(read_and_free_error().contains("must be positive"));
 
-        let texture = fs25ad_host_bridge_shared_texture_new(4, 4);
-        assert!(!texture.is_null());
+        let Some(texture) = require_shared_texture_or_skip(4, 4) else {
+            return;
+        };
 
         let session = fs25ad_host_bridge_session_new();
         assert!(!session.is_null());
