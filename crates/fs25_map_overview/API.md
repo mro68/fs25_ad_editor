@@ -1,6 +1,6 @@
 # fs25_map_overview — API-Dokumentation
 
-Stand: 2026-04-16
+Stand: 2026-04-18
 
 ## Überblick
 
@@ -12,6 +12,8 @@ Das Crate `fs25_map_overview` generiert aus einem FS25-Map-Mod-ZIP eine detailli
 - Legende und Titelleiste
 
 Farmland-Polygone werden zusätzlich extrahiert und dem Aufrufer bereitgestellt (für `FieldBoundaryTool`).
+
+Die ZIP-Einstiegspunkte arbeiten mit selektiver Extraktion (nur benötigte Einträge statt Voll-Entpacken) und normalisieren interne ZIP-Pfade (`./`-Praefix, Backslashes), damit auch verschachtelte/uneinheitlich benannte Archive robust verarbeitet werden.
 
 ---
 
@@ -47,6 +49,8 @@ pub fn generate_overview_from_zip(zip_path: &str, options: &OverviewOptions) -> 
 Generiert eine RGB-Übersichtskarte aus einem FS25 Map-Mod-ZIP.  
 Gibt nur das Bild zurück — für Farmland-Polygone `generate_overview_result_from_zip` verwenden.
 
+Technischer Vertrag: Das ZIP wird selektiv gelesen (Discovery + für den Renderpfad benötigte Assets); Entry-Namen werden vor dem Matching normalisiert.
+
 ---
 
 ### `generate_overview`
@@ -77,6 +81,8 @@ Gibt ein [`OverviewResult`] zurück. Wird vom Editor verwendet, um Polygone für
 
 Das enthaltene Bild entspricht dem kombinierten RGBA-Ergebnis der aktuell sichtbaren Layer und kann daher Transparenz enthalten.
 
+Technischer Vertrag: Nutzt intern den selektiven ZIP-Leseweg des Layer-Bundles inkl. Pfad-Normalisierung für robuste Discovery in verschachtelten Archiven.
+
 ---
 
 ### `generate_overview_layer_bundle_from_zip`
@@ -90,6 +96,8 @@ pub fn generate_overview_layer_bundle_from_zip(
 
 Generiert ein vollständiges Layer-Bundle aus einem FS25-Map-ZIP.  
 Liefert das opake Terrain-Basisbild, separate transparente Overlay-PNGs sowie ein `combined`-Bild, das aus den sichtbaren Layern zusammengesetzt ist.
+
+Technischer Vertrag: Liest nur benötigte Discovery-/Layer-Dateien aus dem ZIP und normalisiert Entry-Pfade vor allen Vergleichen.
 
 ---
 
@@ -128,6 +136,8 @@ pub fn try_extract_polygons_from_zip_ground_gdm(
 ```
 
 Liest `densityMap_ground.gdm` direkt aus einer Map-ZIP, erkennt dafuer zuerst die Kartenstruktur per `discover_map(...)` und extrahiert dann Feldpolygone aus dem Ground-GDM-Raster. Liefert `None`, wenn ZIP, Discovery, Datei-Suche oder Dekodierung fehlschlagen.
+
+Technischer Vertrag: Verwendet selektive ZIP-Extraktion (XML + Ground-GDM) und robustes Entry-Matching mit normalisierten Pfaden.
 
 ---
 
