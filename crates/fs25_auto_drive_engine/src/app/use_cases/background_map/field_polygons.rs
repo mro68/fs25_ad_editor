@@ -6,54 +6,29 @@ use crate::shared::OverviewFieldDetectionSource;
 use std::path::Path;
 use std::sync::Arc;
 
-fn map_overview_field_detection_source(
-    source: OverviewFieldDetectionSource,
-) -> fs25_map_overview::FieldDetectionSource {
-    match source {
-        OverviewFieldDetectionSource::FromZip => fs25_map_overview::FieldDetectionSource::FromZip,
-        OverviewFieldDetectionSource::ZipGroundGdm => {
-            fs25_map_overview::FieldDetectionSource::ZipGroundGdm
-        }
-        OverviewFieldDetectionSource::FieldTypeGrle => {
-            fs25_map_overview::FieldDetectionSource::FieldTypeGrle
-        }
-        OverviewFieldDetectionSource::GroundGdm => {
-            fs25_map_overview::FieldDetectionSource::GroundGdm
-        }
-        OverviewFieldDetectionSource::FruitsGdm => {
-            fs25_map_overview::FieldDetectionSource::FruitsGdm
-        }
-    }
-}
-
 pub(super) fn extract_field_polygons_from_source(
     zip_path: &str,
     savegame_dir: Option<&Path>,
     field_source: OverviewFieldDetectionSource,
 ) -> Option<(Vec<fs25_map_overview::FarmlandPolygon>, u32, u32)> {
-    match map_overview_field_detection_source(field_source) {
-        fs25_map_overview::FieldDetectionSource::FromZip => {
+    match field_source {
+        OverviewFieldDetectionSource::FromZip => {
             log::info!("Feldpolygone: Quelle = infoLayer_farmlands (Map-ZIP)");
             None
         }
-        fs25_map_overview::FieldDetectionSource::ZipGroundGdm => {
+        OverviewFieldDetectionSource::ZipGroundGdm => {
             log::info!("Feldpolygone: Quelle = densityMap_ground.gdm (Map-ZIP)");
             fs25_map_overview::try_extract_polygons_from_zip_ground_gdm(zip_path)
         }
-        fs25_map_overview::FieldDetectionSource::FieldTypeGrle => savegame_dir.and_then(|dir| {
+        OverviewFieldDetectionSource::FieldTypeGrle => savegame_dir.and_then(|dir| {
             let path = dir.join("infoLayer_fieldType.grle");
             log::info!("Feldpolygone: Quelle = {}", path.display());
             fs25_map_overview::try_extract_polygons_from_field_type_grle(&path)
         }),
-        fs25_map_overview::FieldDetectionSource::GroundGdm => savegame_dir.and_then(|dir| {
+        OverviewFieldDetectionSource::GroundGdm => savegame_dir.and_then(|dir| {
             let path = dir.join("densityMap_ground.gdm");
             log::info!("Feldpolygone: Quelle = {}", path.display());
             fs25_map_overview::try_extract_polygons_from_ground_gdm(&path)
-        }),
-        fs25_map_overview::FieldDetectionSource::FruitsGdm => savegame_dir.and_then(|dir| {
-            let path = dir.join("densityMap_fruits.gdm");
-            log::info!("Feldpolygone: Quelle = {}", path.display());
-            fs25_map_overview::try_extract_polygons_from_fruits_gdm(&path)
         }),
     }
 }
