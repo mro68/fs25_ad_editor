@@ -59,6 +59,11 @@ impl fmt::Display for BackgroundLayerKind {
 }
 
 /// Host-neutrale Quelle fuer die Feldpolygon-Erkennung der Uebersichtskarte.
+///
+/// Gueltige serialisierte Werte: `from_zip`, `zip_ground_gdm`,
+/// `field_type_grle`, `ground_gdm`.
+/// Der fruehere Wert `fruits_gdm` ist seit Release 2.1.0 nicht mehr Teil
+/// dieses Vertrags.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub enum OverviewFieldDetectionSource {
@@ -71,6 +76,4 @@ pub enum OverviewFieldDetectionSource {
     FieldTypeGrle,
     /// Felder aus `densityMap_ground.gdm` des Savegames ableiten.
     GroundGdm,
-    /// Felder aus `densityMap_fruits.gdm` des Savegames ableiten.
-    FruitsGdm,
 }
