@@ -107,8 +107,7 @@ impl Default for OverviewOptionsDialogState {
 
 /// Zustand des wiederverwendbaren Overview-Source-Dialogs.
 ///
-/// Der Typ behaelt aus Kompatibilitaetsgruenden seinen historischen Namen,
-/// wird aber sowohl fuer den Post-Load-Fall als auch fuer den manuellen
+/// Der Typ wird sowohl fuer den Post-Load-Fall als auch fuer den manuellen
 /// Einstieg ueber das Datei-Menue verwendet.
 #[derive(Default, Clone)]
 pub struct PostLoadDialogState {
@@ -120,7 +119,7 @@ pub struct PostLoadDialogState {
     pub heightmap_set: bool,
     /// Pfad zur automatisch gesetzten Heightmap
     pub heightmap_path: Option<String>,
-    /// Gespeichertes Layer-Bundle oder Legacy-Overview wurde automatisch als Hintergrund geladen.
+    /// Gespeichertes Layer-Bundle oder `overview.png` wurde automatisch als Hintergrund geladen.
     pub overview_loaded: bool,
     /// Gefundene passende ZIP-Dateien im Mods-Verzeichnis
     pub matching_zips: Vec<PathBuf>,

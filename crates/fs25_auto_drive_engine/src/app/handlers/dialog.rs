@@ -134,9 +134,6 @@ fn collect_available_overview_field_detection_sources(
         if savegame_dir.join("densityMap_ground.gdm").is_file() {
             available.push(OverviewFieldDetectionSource::GroundGdm);
         }
-        if savegame_dir.join("densityMap_fruits.gdm").is_file() {
-            available.push(OverviewFieldDetectionSource::FruitsGdm);
-        }
     }
 
     available
