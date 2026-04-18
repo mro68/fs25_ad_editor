@@ -22,6 +22,8 @@ Fuer Flutter- und FFI-Hosts mit serialisierbarer Dialog-Oberflaeche exponiert di
 
 Der Overview-Dialog-Vertrag spiegelt dabei jetzt die persistente Layer- und Quellenbasis fuer das geplante Hintergrund-Layer-System: `HostOverviewLayersSnapshot` enthaelt zusaetzlich das Terrain-Basisflag, und `HostFieldDetectionSource` kennt mit `ZipGroundGdm` eine zweite ZIP-basierte Feldquelle neben `FromZip`.
 
+Seit Release `2.1.0` akzeptiert `HostFieldDetectionSource` nur noch `from_zip`, `zip_ground_gdm`, `field_type_grle` und `ground_gdm`. `fruits_gdm` ist im JSON-Vertrag nicht mehr gueltig.
+
 Fuer Properties-, Group-Edit- und Streckenteilungsdaten exponiert die Session zusaetzlich `HostEditingSnapshot`. Dieser Read-Seam bildet die heute ueber `panel_properties_state_mut()` und `viewport_input_context_mut()` gelesenen Editing-Zustaende host-neutral ab: selektionsrelevante bearbeitbare Gruppen, aktiver Group-Edit inklusive Boundary-Kandidaten, Resample-/Streckenteilungs-Metriken sowie editing-nahe Laufzeitoptionen.
 
 Fuer host-native Kontextmenues exponiert die Session zusaetzlich `HostContextMenuSnapshot`. Dieser Read-Seam spiegelt die egui-Kontextmenue-Variante sowie die dazugehoerigen Aktionen inklusive Enablement zentral in der Bridge, damit Hosts Selektion-, Gruppen-, Clipboard-, Verbindungs- und Route-Tool-Preconditions nicht lokal nachbauen muessen.
@@ -112,7 +114,7 @@ Mit `HostChromeSnapshot` existiert zusaetzlich ein expliziter host-neutraler Rea
 | `HostBackgroundLayerKind` / `HostBackgroundLayerEntry` | Stabile Chrome-DTOs fuer einzelne gespeicherte Hintergrund-Layer und deren Runtime-Sichtbarkeit |
 | `HostContextMenuSnapshot` / `HostContextMenuAction` / `HostContextMenuVariant` | Host-neutrales Read-Modell fuer Kontextmenue-Variante, Aktionsliste und zentrales Enablement |
 | `HostDialogSnapshot` | Host-neutrales Read-Modell fuer alle egui-Dialoge und Popup-aehnlichen Dialog-Drafts |
-| `HostOverviewLayersSnapshot` / `HostFieldDetectionSource` | Serialisierbare Overview-Dialog-DTOs fuer Layer-Sichtbarkeit (inkl. `terrain`) und Feldquellen (inkl. `zip_ground_gdm`) |
+| `HostOverviewLayersSnapshot` / `HostFieldDetectionSource` | Serialisierbare Overview-Dialog-DTOs fuer Layer-Sichtbarkeit (inkl. `terrain`) und Feldquellen (Werte: `from_zip`, `zip_ground_gdm`, `field_type_grle`, `ground_gdm`) |
 | `HostEditingSnapshot` | Host-neutrales Read-Modell fuer Properties-, Group-Edit- und Streckenteilungsdaten |
 | `HostEditableGroupSummary` / `HostGroupEditSnapshot` / `HostGroupBoundaryCandidateSnapshot` | Serialisierbare Group-Edit-DTOs fuer selektionsrelevante Gruppen, aktiven Edit-Zustand und Boundary-Kandidaten |
 | `HostResampleEditSnapshot` / `HostResampleMode` / `HostEditingOptionsSnapshot` | Serialisierbare Streckenteilungs- und editing-nahe Options-DTOs fuer Flutter-/Host-Panels |

@@ -52,6 +52,11 @@ pub enum HostDialogResult {
 }
 
 /// Stabile Feldquellen fuer die Uebersichtskarten-Generierung.
+///
+/// Gueltige JSON-Werte: `from_zip`, `zip_ground_gdm`,
+/// `field_type_grle`, `ground_gdm`.
+/// Der fruehere Wert `fruits_gdm` ist seit Release 2.1.0 nicht mehr
+/// Teil dieses DTO-Vertrags.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub enum HostFieldDetectionSource {
@@ -63,8 +68,6 @@ pub enum HostFieldDetectionSource {
     FieldTypeGrle,
     /// Felder aus `densityMap_ground.gdm` des Savegames ableiten.
     GroundGdm,
-    /// Felder aus `densityMap_fruits.gdm` des Savegames ableiten.
-    FruitsGdm,
 }
 
 impl From<OverviewFieldDetectionSource> for HostFieldDetectionSource {
@@ -74,7 +77,6 @@ impl From<OverviewFieldDetectionSource> for HostFieldDetectionSource {
             OverviewFieldDetectionSource::ZipGroundGdm => Self::ZipGroundGdm,
             OverviewFieldDetectionSource::FieldTypeGrle => Self::FieldTypeGrle,
             OverviewFieldDetectionSource::GroundGdm => Self::GroundGdm,
-            OverviewFieldDetectionSource::FruitsGdm => Self::FruitsGdm,
         }
     }
 }
@@ -428,5 +430,16 @@ mod tests {
             .expect("HostDialogSnapshot muss aus JSON zuruecklesbar sein");
 
         assert_eq!(parsed, snapshot);
+    }
+
+    #[test]
+    fn host_field_detection_source_rejects_removed_fruits_gdm_json_variant() {
+        let error = serde_json::from_value::<HostFieldDetectionSource>(json!("fruits_gdm"))
+            .expect_err("fruits_gdm darf im Host-DTO-Vertrag nicht mehr akzeptiert werden");
+
+        assert!(
+            error.to_string().contains("unknown variant"),
+            "Fehler muss unbekannte Feldquelle als Contract-Break ausweisen"
+        );
     }
 }

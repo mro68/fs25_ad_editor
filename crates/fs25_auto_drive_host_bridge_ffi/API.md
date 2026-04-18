@@ -28,7 +28,7 @@ Die FFI-Crate hat **keine direkten** Abhängigkeiten auf `fs25_auto_drive_engine
 
 | Typ | Zweck |
 |---|---|
-| `FS25AD_HOST_BRIDGE_ABI_VERSION` | Explizite ABI-Version des FFI-Vertrags (`4`) |
+| `FS25AD_HOST_BRIDGE_ABI_VERSION` | Explizite ABI-Version des FFI-Vertrags (`5`) |
 | `FS25AD_HOST_BRIDGE_SHARED_TEXTURE_CONTRACT_VERSION` | Explizite Version des opaque Shared-Texture-Vertrags (`3`) |
 | `FS25AD_HOST_BRIDGE_TEXTURE_REGISTRATION_V4_CONTRACT_VERSION` | Explizite Version des additiven Texture-Registration-v4-Vertrags (`4`) |
 | `*mut HostBridgeSession` | Opaquer Session-Handle fuer die kanonische Host-Bridge-Surface |
@@ -128,7 +128,7 @@ Die folgenden Symbole werden nur mit aktivem `flutter`-Feature exportiert und sp
 - **Panic-Schutz:** Alle pointer-konsumierenden Exporte sind intern durch `ffi_guard_bool!`/`ffi_guard_ptr!` (`std::panic::catch_unwind`) geschützt. Ein interner Rust-Panic wird als `false`/`null` zurückgegeben; keinesfalls wird der Panic über die FFI-Grenze propagiert (UB).
 - Native Hosts pruefen beim Start mindestens `fs25ad_host_bridge_abi_version()` und fuer den Rendertransport zusaetzlich `fs25ad_host_bridge_shared_texture_contract_version()` gegen die Header-Makros.
 - Fuer den additiven v4-Pfad pruefen Hosts zusaetzlich `fs25ad_host_bridge_texture_registration_v4_contract_version()`.
-- Die allgemeine C-ABI ist seit dem additiven Export `fs25ad_host_bridge_session_route_tool_viewport_json(...)` ueber `FS25AD_HOST_BRIDGE_ABI_VERSION = 4` versioniert; die spaeter additiv ergaenzten generischen Read-Seams (`node_details`, `marker_list`, `connection_pair`, `is_dirty`, `ui`, `dialog`, `editing`, `context_menu`, `viewport_overlay`) bleiben bewusst ABI-kompatibel und benoetigen keinen Versionssprung. Der native Shared-Texture-Transport bleibt separat ueber `FS25AD_HOST_BRIDGE_SHARED_TEXTURE_CONTRACT_VERSION = 3` versioniert.
+- Die allgemeine C-ABI ist ueber `FS25AD_HOST_BRIDGE_ABI_VERSION = 5` versioniert. Version 5 ist der explizite Contract-Break von Release `2.1.0`: Der Feldquellenwert `fruits_gdm` ist aus dem FFI-JSON-Vertrag entfernt (u. a. `HostOverviewOptionsDialogSnapshot`). Gueltige Feldquellenwerte sind `from_zip`, `zip_ground_gdm`, `field_type_grle` und `ground_gdm`. Der native Shared-Texture-Transport bleibt separat ueber `FS25AD_HOST_BRIDGE_SHARED_TEXTURE_CONTRACT_VERSION = 3` versioniert.
 - `v4` ist additive Interop-Surface neben `v3`; `v3` wird nicht still umgedeutet.
 - Alle JSON-Payloads verwenden exakt die bereits in `fs25_auto_drive_host_bridge` definierten DTOs; `HostChromeSnapshot` enthaelt damit auch `background_layers_available` plus `background_layer_entries` fuer host-native Layer-Menues.
 - Schreibender Viewport-Input (`Resize`, Single-/Double-Taps, Pan/Move/Rect/Select-Lasso per Drag, Scroll-Zoom) wird weiterhin ohne neues Symbol als `HostSessionAction::SubmitViewportInput` ueber `fs25ad_host_bridge_session_apply_action_json(...)` transportiert.

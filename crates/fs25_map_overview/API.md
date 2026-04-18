@@ -188,7 +188,7 @@ pub struct OverviewOptions {
 
 `Default` aktiviert alle Layer.
 
-Die Legacy-Funktionen `generate_overview_from_zip()` und `generate_overview()` liefern weiterhin ein opakes RGB-Bild und ignorieren `terrain = false` bewusst, um abwaertskompatibel zu bleiben.
+`generate_overview_from_zip()` und `generate_overview()` liefern ein opakes RGB-Bild. Fuer transparente Kombinationen ist das Layer-Bundle (`OverviewLayerBundle`) zu verwenden.
 
 ---
 
@@ -228,11 +228,12 @@ pub enum FieldDetectionSource {
     ZipGroundGdm,
     FieldTypeGrle,
     GroundGdm,
-    FruitsGdm,
 }
 ```
 
 `Default` zeigt auf `ZipGroundGdm`.
+
+Seit Release `2.1.0` sind nur `from_zip`, `zip_ground_gdm`, `field_type_grle` und `ground_gdm` Teil des Feldquellenvertrags; `fruits_gdm` ist entfernt.
 
 ---
 

@@ -71,7 +71,7 @@ use helpers::with_flutter_session_fallible;
 
 pub use helpers::HostBridgeSessionHandle;
 
-const FS25AD_HOST_BRIDGE_ABI_VERSION: u32 = 4;
+const FS25AD_HOST_BRIDGE_ABI_VERSION: u32 = 5;
 
 /// Liefert die ABI-Version des nativen Host-Bridge-Vertrags.
 #[unsafe(no_mangle)]
@@ -924,6 +924,10 @@ mod tests {
         HostSessionAction, HostSessionSnapshot, HostTangentSource, HostTapKind,
         HostViewportGeometrySnapshot, HostViewportInputBatch, HostViewportInputEvent,
     };
+    #[cfg(feature = "flutter")]
+    use fs25_auto_drive_host_bridge::{
+        HostFieldDetectionSource, HostOverviewLayersSnapshot, HostOverviewOptionsDialogSnapshot,
+    };
     use std::ffi::{CStr, CString};
 
     // Sicherheits-Wrapper fuer unsafe FFI-Funktionen im Testkontext.
@@ -1067,6 +1071,14 @@ mod tests {
         session: *const super::flutter_api::FlutterSessionHandle,
     ) -> *mut std::ffi::c_char {
         unsafe { super::fs25ad_flutter_session_route_tool_viewport_json(session) }
+    }
+
+    #[cfg(feature = "flutter")]
+    fn flutter_session_update_overview_options_dialog_json(
+        session: *const super::flutter_api::FlutterSessionHandle,
+        json: *const std::ffi::c_char,
+    ) -> bool {
+        unsafe { super::fs25ad_flutter_session_update_overview_options_dialog_json(session, json) }
     }
 
     #[cfg(feature = "flutter")]
@@ -1218,7 +1230,7 @@ mod tests {
             fs25ad_host_bridge_abi_version(),
             FS25AD_HOST_BRIDGE_ABI_VERSION
         );
-        assert_eq!(fs25ad_host_bridge_abi_version(), 4);
+        assert_eq!(fs25ad_host_bridge_abi_version(), 5);
     }
 
     #[cfg(feature = "flutter")]
@@ -1370,6 +1382,56 @@ mod tests {
 
         flutter_session_release_shared_arc_raw(0);
         assert!(fs25ad_host_bridge_last_error_message().is_null());
+
+        flutter_session_dispose(session);
+    }
+
+    #[cfg(feature = "flutter")]
+    #[test]
+    fn ffi_flutter_overview_options_rejects_removed_fruits_gdm_variant() {
+        let session = super::fs25ad_flutter_session_new();
+        assert!(!session.is_null());
+
+        let mut payload = serde_json::to_value(HostOverviewOptionsDialogSnapshot {
+            visible: true,
+            zip_path: "/tmp/map.zip".to_string(),
+            layers: HostOverviewLayersSnapshot {
+                terrain: true,
+                hillshade: true,
+                farmlands: true,
+                farmland_ids: true,
+                pois: true,
+                legend: true,
+            },
+            field_detection_source: HostFieldDetectionSource::FromZip,
+            available_sources: vec![
+                HostFieldDetectionSource::FromZip,
+                HostFieldDetectionSource::GroundGdm,
+            ],
+        })
+        .expect("overview options payload must serialize");
+
+        payload["field_detection_source"] = serde_json::Value::String("fruits_gdm".to_string());
+
+        let parse_error =
+            serde_json::from_value::<HostOverviewOptionsDialogSnapshot>(payload.clone())
+                .expect_err("fruits_gdm darf im Host-DTO-Vertrag nicht mehr parsebar sein");
+        assert!(
+            parse_error.to_string().contains("unknown variant"),
+            "DTO-Parsefehler muss auf unbekannte Feldquelle hinweisen, war: {parse_error}"
+        );
+
+        let payload_json = CString::new(payload.to_string()).expect("CString must build");
+        assert!(!flutter_session_update_overview_options_dialog_json(
+            session,
+            payload_json.as_ptr(),
+        ));
+
+        let error = read_and_free_string(fs25ad_host_bridge_last_error_message());
+        assert!(
+            error.contains("failed to parse HostOverviewOptionsDialogSnapshot JSON"),
+            "Fehler muss den Contract-Break als Parse-Fehler ausweisen, war: {error}"
+        );
 
         flutter_session_dispose(session);
     }

@@ -49,7 +49,6 @@ pub(super) fn map_host_field_detection_source_to_engine(
         HostFieldDetectionSource::ZipGroundGdm => OverviewFieldDetectionSource::ZipGroundGdm,
         HostFieldDetectionSource::FieldTypeGrle => OverviewFieldDetectionSource::FieldTypeGrle,
         HostFieldDetectionSource::GroundGdm => OverviewFieldDetectionSource::GroundGdm,
-        HostFieldDetectionSource::FruitsGdm => OverviewFieldDetectionSource::FruitsGdm,
     }
 }
 

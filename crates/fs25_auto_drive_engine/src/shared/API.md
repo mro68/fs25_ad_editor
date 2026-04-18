@@ -189,7 +189,7 @@ pub struct OverviewLayerOptions {
 }
 ```
 
-Der Default setzt `terrain`, `hillshade`, `farmlands` und `farmland_ids` auf `true`; `pois` und `legend` bleiben deaktiviert. Die Struct-Deserialisierung nutzt `Default`, damit fehlende neue Felder in bestehenden TOML-Dateien rueckwaertskompatibel aufgefuellt werden.
+Der Default setzt `terrain`, `hillshade`, `farmlands` und `farmland_ids` auf `true`; `pois` und `legend` bleiben deaktiviert. Die Struct-Deserialisierung nutzt `Default`, damit fehlende neue Felder in bestehenden TOML-Dateien mit den definierten Standardwerten initialisiert werden.
 
 ### `BackgroundLayerKind`
 
@@ -220,11 +220,12 @@ pub enum OverviewFieldDetectionSource {
     ZipGroundGdm,
     FieldTypeGrle,
     GroundGdm,
-    FruitsGdm,
 }
 ```
 
 `ZipGroundGdm` ist der neue Default fuer persistierte Overview-Voreinstellungen. Die App mappt diesen shared-Typ erst im App-Layer auf die fachliche `fs25_map_overview::FieldDetectionSource` zurueck.
+
+Seit Release `2.1.0` sind genau diese vier Quellen Teil des Vertrags; `fruits_gdm` ist entfernt.
 
 ### `SelectionStyle`
 
