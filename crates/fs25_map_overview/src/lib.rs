@@ -85,6 +85,11 @@ pub struct OverviewResult {
 /// [`generate_overview_layer_bundle_from_zip`] bzw. [`generate_overview_result_from_zip`]
 /// zu verwenden.
 ///
+/// Das ZIP wird selektiv gelesen: Es werden nur Discovery- und
+/// Overview-relevante Eintraege geladen. ZIP-Pfade werden dabei normalisiert
+/// (`./`-Praefix entfernt, `\\` nach `/`), damit verschachtelte Archive robust
+/// verarbeitet werden.
+///
 /// # Parameter
 /// - `zip_path`: Pfad zum ZIP-Archiv
 /// - `options`: Steuerung welche Layer gezeichnet werden
@@ -94,17 +99,27 @@ pub struct OverviewResult {
 pub fn generate_overview_from_zip(zip_path: &str, options: &OverviewOptions) -> Result<RgbImage> {
     log::info!("Lade Map-Mod-ZIP: {}", zip_path);
 
-    // 1. ZIP entpacken → HashMap<Pfad, Bytes>
-    let files = extract_zip(zip_path)?;
+    // 1. Discovery-relevante XML-Dateien selektiv laden
+    let discovery_files = extract_zip_for_map_discovery(zip_path).with_context(|| {
+        format!(
+            "Selektive Discovery-Extraktion fehlgeschlagen: {}",
+            zip_path
+        )
+    })?;
 
     // 2. Kartenstruktur erkennen
-    let map_info = discovery::discover_map(&files)?;
+    let map_info = discovery::discover_map(&discovery_files)
+        .with_context(|| format!("Map-Discovery fehlgeschlagen: {}", zip_path))?;
     log::info!(
         "Map: '{}', {}x{}",
         map_info.title,
         map_info.map_size,
         map_info.map_size
     );
+
+    // 3. Nur fuer die Overview benoetigte Daten laden
+    let files = extract_zip_for_overview(zip_path, &map_info, options)
+        .with_context(|| format!("Selektive Overview-Extraktion fehlgeschlagen: {}", zip_path))?;
 
     generate_overview(&files, &map_info, options)
 }
@@ -232,14 +247,34 @@ pub fn generate_overview(
 /// Das Bundle enthaelt das opake Terrain-Basisbild, separate transparente
 /// RGBA-Overlays und ein aus den sichtbaren Layern zusammengesetztes
 /// `combined`-Bild.
+///
+/// Das ZIP wird selektiv gelesen; nur die fuer Discovery und Layer-Build
+/// benoetigten Dateien werden extrahiert. ZIP-Pfade werden fuer stabile
+/// Vergleiche normalisiert.
 pub fn generate_overview_layer_bundle_from_zip(
     zip_path: &str,
     options: &OverviewOptions,
 ) -> Result<OverviewLayerBundle> {
     log::info!("Generiere Overview-Layer-Bundle aus ZIP: {}", zip_path);
 
-    let files = extract_zip(zip_path)?;
-    let map_info = discovery::discover_map(&files)?;
+    let discovery_files = extract_zip_for_map_discovery(zip_path).with_context(|| {
+        format!(
+            "Selektive Discovery-Extraktion fuer Layer-Bundle fehlgeschlagen: {}",
+            zip_path
+        )
+    })?;
+    let map_info = discovery::discover_map(&discovery_files).with_context(|| {
+        format!(
+            "Map-Discovery fuer Layer-Bundle fehlgeschlagen: {}",
+            zip_path
+        )
+    })?;
+    let files = extract_zip_for_layer_bundle(zip_path, &map_info).with_context(|| {
+        format!(
+            "Selektive Layer-Bundle-Extraktion fehlgeschlagen: {}",
+            zip_path
+        )
+    })?;
 
     layer_bundle::generate_overview_layer_bundle(&files, &map_info, options)
 }
@@ -307,13 +342,17 @@ pub fn try_extract_polygons_from_ground_gdm(
 }
 
 /// Versucht Feldpolygone aus `densityMap_ground.gdm` innerhalb eines Map-ZIPs zu lesen.
+///
+/// Die ZIP-Datei wird dafuer selektiv gelesen (XML + Ground-GDM) und die
+/// Entry-Pfade werden normalisiert, damit auch Archive mit `./`-Praefix oder
+/// Backslash-Pfaden erkannt werden.
 pub fn try_extract_polygons_from_zip_ground_gdm(
     zip_path: &str,
 ) -> Option<(Vec<FarmlandPolygon>, u32, u32)> {
-    let files = extract_zip(zip_path)
+    let files = extract_zip_for_ground_gdm(zip_path)
         .map_err(|e| {
             log::warn!(
-                "ZIP-Extraktion fuer Ground-GDM fehlgeschlagen ({}): {}",
+                "Selektive ZIP-Extraktion fuer Ground-GDM fehlgeschlagen ({}): {}",
                 zip_path,
                 e
             )
@@ -328,9 +367,44 @@ pub fn try_extract_polygons_from_zip_ground_gdm(
             )
         })
         .ok()?;
-    let (path, data) = discovery::find_ground_gdm(&files, &map_info.data_dir)?;
+    let (path, data) = discovery::find_ground_gdm(&files, &map_info.data_dir)
+        .or_else(|| {
+            let fallback = find_ground_gdm_anywhere(&files);
+            if fallback.is_some() {
+                log::warn!(
+                    "Ground-GDM wurde nicht unter data_dir='{}' gefunden, verwende Fallback-Suche im Archiv",
+                    map_info.data_dir
+                );
+            }
+            fallback
+        })?;
     log::info!("Ground-GDM im ZIP gefunden: {}", path);
     try_extract_polygons_from_ground_gdm_bytes(data)
+}
+
+fn find_ground_gdm_anywhere(files: &HashMap<String, Vec<u8>>) -> Option<(&str, &[u8])> {
+    let mut best_key: Option<&String> = None;
+    for key in files.keys() {
+        let normalized = normalize_zip_path(key);
+        if !normalized
+            .to_ascii_lowercase()
+            .ends_with("/densitymap_ground.gdm")
+            && !normalized.eq_ignore_ascii_case("densityMap_ground.gdm")
+        {
+            continue;
+        }
+
+        let replace_best = best_key.is_none_or(|current| key.len() < current.len());
+        if replace_best {
+            best_key = Some(key);
+        }
+    }
+
+    best_key.and_then(|key| {
+        files
+            .get_key_value(key.as_str())
+            .map(|(path, content)| (path.as_str(), content.as_slice()))
+    })
 }
 
 fn try_extract_polygons_from_ground_gdm_bytes(
@@ -590,6 +664,9 @@ fn normalize_zip_path(path: &str) -> String {
 /// Das Rueckgabebild entspricht dem `combined`-Layer des Bundles und kann
 /// daher Transparenz enthalten. Die Polygon-Extraktion findet unabhaengig
 /// von der Sichtbarkeit einzelner Layer statt.
+///
+/// Der ZIP-Leseweg erfolgt selektiv ueber das Layer-Bundle und nutzt
+/// normalisierte Entry-Pfade fuer robuste Discovery in verschachtelten Archiven.
 pub fn generate_overview_result_from_zip(
     zip_path: &str,
     options: &OverviewOptions,
