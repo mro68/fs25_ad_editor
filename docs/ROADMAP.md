@@ -202,6 +202,10 @@
   - [x] CP-03: Positive E2E-Tests für Layer-Toggle und Draft->Confirm übernehmen; Snapshot-Assertions auf stabile Felder
   - [x] CP-04: Öffentliche Semantik in host_bridge-Doku nachziehen; ROADMAP-Sync (diesen Punkt)
   - [x] CP-05: Unnötige direkte FFI-Abhängigkeiten auf engine/map_overview dokumentiert (Layer-Hygiene in `crates/fs25_auto_drive_host_bridge_ffi/API.md`); direkte deps auf diese Crates in `crates/fs25_auto_drive_host_bridge_ffi/Cargo.toml` nicht vorhanden
+- [x] **Release 2.1.0 Hard Break: Feldquellenvertrag ohne `fruits_gdm` (2026-04-18)**
+  - [x] `OverviewFieldDetectionSource` / `HostFieldDetectionSource` auf vier gueltige Werte festgelegt: `from_zip`, `zip_ground_gdm`, `field_type_grle`, `ground_gdm`
+  - [x] FFI-C-ABI `5` dokumentiert den Contract-Break fuer JSON-Payloads des Overview-Dialogs
+  - [x] API-Dokumentation in Engine (`shared`/`app`), Host-Bridge, Host-Bridge-FFI und `fs25_map_overview` auf den neuen Vertrag synchronisiert
 - [x] Edition- und Dependency-Upgrade (2026-04-05, Branch `refactor/edition-deps-upgrade`)
   - [x] Alle Workspace-Crates auf Rust 2024 umgestellt
   - [x] `fs25_auto_drive_render_wgpu` auf `wgpu 29.0.*` migriert

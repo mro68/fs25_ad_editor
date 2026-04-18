@@ -221,7 +221,7 @@ sel.ids_mut().insert(42);
 - `set_options(options)` — Ersetzt `options` und aktualisiert den geteilten Arc-Snapshot atomar
 - `refresh_options_arc()` — Synchronisiert den Arc-Snapshot nach in-place Mutationen an `options`
 
-`background_image` bleibt ein kompatibler Fallback fuer farbbasierte Tool-Pfade; das kanonische Asset lebt in `view.background_map`. `BackgroundLayerCatalog` haelt fuer gespeicherte Overviews nur Dateipfade, Layer-Reihenfolge und Runtime-Sichtbarkeit. Das kombinierte Bild wird bei Bedarf CPU-seitig on-demand ueber `use_cases::background_layers::compose_background_from_catalog(...)` neu aufgebaut, ohne alle Layer dekodiert im State zu halten. `PendingOverviewBundle` markiert nur noch das Zielverzeichnis einer frischen ZIP-Generierung: Die kanonischen Layer-PNGs werden sofort nach der Generierung geschrieben und der Save-Workflow aktualisiert spaeter nur noch das aktuelle `overview.png` plus `overview.json`.
+`background_image` bleibt ein read-only Abbild fuer farbbasierte Tool-Pfade; das kanonische Asset lebt in `view.background_map`. `BackgroundLayerCatalog` haelt fuer gespeicherte Overviews nur Dateipfade, Layer-Reihenfolge und Runtime-Sichtbarkeit. Das kombinierte Bild wird bei Bedarf CPU-seitig on-demand ueber `use_cases::background_layers::compose_background_from_catalog(...)` neu aufgebaut, ohne alle Layer dekodiert im State zu halten. `PendingOverviewBundle` markiert nur noch das Zielverzeichnis einer frischen ZIP-Generierung: Die kanonischen Layer-PNGs werden sofort nach der Generierung geschrieben und der Save-Workflow aktualisiert spaeter nur noch das aktuelle `overview.png` plus `overview.json`.
 
 pub struct EngineUiState {
     pub dialog_requests: Vec<DialogRequest>,
@@ -355,8 +355,8 @@ pub struct OverviewOptionsDialogState {
     pub visible: bool,
     pub zip_path: String,
     pub layers: OverviewLayerOptions,
-    pub field_detection_source: FieldDetectionSource,
-    pub available_sources: Vec<FieldDetectionSource>,
+    pub field_detection_source: OverviewFieldDetectionSource,
+    pub available_sources: Vec<OverviewFieldDetectionSource>,
 }
 
 pub enum OverviewSourceContext {
@@ -369,7 +369,7 @@ pub struct PostLoadDialogState {
     pub context: OverviewSourceContext,
     pub heightmap_set: bool,
     pub heightmap_path: Option<String>,
-    // true wenn ein gespeichertes Layer-Bundle oder ein Legacy-Overview auto-aktiviert wurde
+    // true wenn ein gespeichertes Layer-Bundle oder ein overview.png auto-aktiviert wurde
     pub overview_loaded: bool,
     pub matching_zips: Vec<PathBuf>,
     pub selected_zip_index: usize,
