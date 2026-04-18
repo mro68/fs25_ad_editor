@@ -32,7 +32,7 @@ pub mod text;
 
 use anyhow::{Context, Result};
 use image::{DynamicImage, RgbImage};
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::io::{BufReader, Read};
 use std::path::Path;
 
@@ -404,26 +404,180 @@ pub fn try_extract_polygons_from_fruits_gdm(
     Some((polygons, dim as u32, dim as u32))
 }
 
-/// Extrahiert alle Dateien aus einem ZIP-Archiv in eine HashMap.
-fn extract_zip(zip_path: &str) -> Result<HashMap<String, Vec<u8>>> {
+/// Extrahiert nur XML-Dateien fuer die Karten-Discovery.
+fn extract_zip_for_map_discovery(zip_path: &str) -> Result<HashMap<String, Vec<u8>>> {
+    extract_zip_with_selector(zip_path, |entry_name| {
+        let lower = normalize_zip_path(entry_name).to_ascii_lowercase();
+        lower.ends_with(".xml")
+            || lower.ends_with("_weight.png")
+            || lower.ends_with("/dem.png")
+            || lower.ends_with("/infolayer_farmlands.grle")
+            || lower.ends_with("/infolayer_farmlands.png")
+            || lower.ends_with("/densitymap_ground.gdm")
+    })
+}
+
+/// Extrahiert nur fuer die Legacy-Overview noetige Dateien.
+fn extract_zip_for_overview(
+    zip_path: &str,
+    map_info: &MapInfo,
+    options: &OverviewOptions,
+) -> Result<HashMap<String, Vec<u8>>> {
+    let data_prefix = format!("{}/", map_info.data_dir.trim_end_matches('/'));
+    let data_prefix_lower = normalize_zip_path(&data_prefix).to_ascii_lowercase();
+    let placeables_path = options
+        .pois
+        .then_some(map_info.placeables_path.as_ref())
+        .flatten()
+        .map(|path| normalize_zip_path(path).to_ascii_lowercase());
+
+    extract_zip_with_selector(zip_path, |entry_name| {
+        let normalized = normalize_zip_path(entry_name);
+        let lower = normalized.to_ascii_lowercase();
+        let in_data_dir = lower.starts_with(&data_prefix_lower);
+
+        if in_data_dir && lower.ends_with("_weight.png") {
+            return true;
+        }
+        if options.hillshade && in_data_dir && lower.ends_with("/dem.png") {
+            return true;
+        }
+        if (options.farmlands || options.farmland_ids)
+            && in_data_dir
+            && (lower.ends_with("/infolayer_farmlands.grle")
+                || lower.ends_with("/infolayer_farmlands.png"))
+        {
+            return true;
+        }
+        if let Some(placeables) = &placeables_path
+            && &lower == placeables
+        {
+            return true;
+        }
+
+        false
+    })
+}
+
+/// Extrahiert Dateien, die fuer das Layer-Bundle benoetigt werden.
+fn extract_zip_for_layer_bundle(
+    zip_path: &str,
+    map_info: &MapInfo,
+) -> Result<HashMap<String, Vec<u8>>> {
+    let data_prefix = format!("{}/", map_info.data_dir.trim_end_matches('/'));
+    let data_prefix_lower = normalize_zip_path(&data_prefix).to_ascii_lowercase();
+    let placeables_path = map_info
+        .placeables_path
+        .as_ref()
+        .map(|path| normalize_zip_path(path).to_ascii_lowercase());
+
+    extract_zip_with_selector(zip_path, |entry_name| {
+        let normalized = normalize_zip_path(entry_name);
+        let lower = normalized.to_ascii_lowercase();
+        let in_data_dir = lower.starts_with(&data_prefix_lower);
+
+        if in_data_dir
+            && (lower.ends_with("_weight.png")
+                || lower.ends_with("/dem.png")
+                || lower.ends_with("/infolayer_farmlands.grle")
+                || lower.ends_with("/infolayer_farmlands.png"))
+        {
+            return true;
+        }
+        if let Some(placeables) = &placeables_path
+            && &lower == placeables
+        {
+            return true;
+        }
+
+        false
+    })
+}
+
+/// Extrahiert fuer Ground-GDM-Polygon-Erkennung nur XML + Ground-GDM.
+fn extract_zip_for_ground_gdm(zip_path: &str) -> Result<HashMap<String, Vec<u8>>> {
+    extract_zip_with_selector(zip_path, |entry_name| {
+        let lower = normalize_zip_path(entry_name).to_ascii_lowercase();
+        lower.ends_with(".xml")
+            || lower.ends_with("/densitymap_ground.gdm")
+            || lower.eq("densitymap_ground.gdm")
+    })
+}
+
+/// Extrahiert nur angeforderte ZIP-Eintraege in eine HashMap.
+///
+/// Pfade werden robust normalisiert (`\\` → `/`, fuehrendes `./` wird entfernt),
+/// damit verschachtelte ZIP-Strukturen konsistent adressiert werden koennen.
+#[allow(dead_code)]
+fn extract_zip_only_paths(
+    zip_path: &str,
+    required_paths: &HashSet<String>,
+) -> Result<HashMap<String, Vec<u8>>> {
+    let required_paths_normalized: HashSet<String> = required_paths
+        .iter()
+        .map(|path| normalize_zip_path(path))
+        .collect();
+    extract_zip_with_selector(zip_path, |entry_name| {
+        required_paths_normalized.contains(&normalize_zip_path(entry_name))
+    })
+}
+
+/// Extrahiert ZIP-Eintraege gemaess eines Selektors in eine HashMap.
+fn extract_zip_with_selector<F>(
+    zip_path: &str,
+    mut should_extract: F,
+) -> Result<HashMap<String, Vec<u8>>>
+where
+    F: FnMut(&str) -> bool,
+{
     let file = std::fs::File::open(zip_path)
         .with_context(|| format!("ZIP-Datei nicht gefunden: {}", zip_path))?;
     let mut archive = zip::ZipArchive::new(BufReader::new(file))
         .with_context(|| format!("Ungueltiges ZIP-Archiv: {}", zip_path))?;
 
     let mut files = HashMap::new();
+    let mut total_bytes: usize = 0;
     for i in 0..archive.len() {
-        let mut entry = archive.by_index(i)?;
-        if entry.is_file() {
-            let name = entry.name().to_string();
-            let mut buffer = Vec::with_capacity(entry.size() as usize);
-            entry.read_to_end(&mut buffer)?;
-            files.insert(name, buffer);
+        let mut entry = archive.by_index(i).with_context(|| {
+            format!(
+                "ZIP-Eintrag konnte nicht geoeffnet werden (Index {} in {}): korruptes Archiv?",
+                i, zip_path
+            )
+        })?;
+        if !entry.is_file() {
+            continue;
         }
+
+        let raw_name = entry.name().to_string();
+        let normalized_name = normalize_zip_path(&raw_name);
+        if !should_extract(&normalized_name) {
+            continue;
+        }
+
+        let mut buffer = Vec::with_capacity(entry.size() as usize);
+        entry.read_to_end(&mut buffer).with_context(|| {
+            format!(
+                "ZIP-Eintrag konnte nicht gelesen werden: {} (Archiv: {})",
+                raw_name, zip_path
+            )
+        })?;
+
+        total_bytes += buffer.len();
+        files.insert(normalized_name, buffer);
     }
 
-    log::info!("ZIP entpackt: {} Dateien", files.len());
+    log::info!(
+        "ZIP entpackt: {} Dateien, {} Bytes (selektiver Kern)",
+        files.len(),
+        total_bytes
+    );
     Ok(files)
+}
+
+/// Normalisiert ZIP-interne Pfade fuer stabile Vergleiche.
+#[allow(dead_code)]
+fn normalize_zip_path(path: &str) -> String {
+    path.replace('\\', "/").trim_start_matches("./").to_string()
 }
 
 /// Generiert eine Overview-Map und extrahiert gleichzeitig Farmland-Polygone.
