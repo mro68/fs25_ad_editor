@@ -458,7 +458,7 @@ legend = false
                 terrain: false,
                 ..OverviewLayerOptions::default()
             },
-            overview_field_detection_source: OverviewFieldDetectionSource::FruitsGdm,
+            overview_field_detection_source: OverviewFieldDetectionSource::GroundGdm,
             ..EditorOptions::default()
         };
 
@@ -476,7 +476,7 @@ legend = false
         );
         assert_eq!(
             loaded.overview_field_detection_source,
-            OverviewFieldDetectionSource::FruitsGdm,
+            OverviewFieldDetectionSource::GroundGdm,
             "overview_field_detection_source muss erhalten bleiben"
         );
     }
