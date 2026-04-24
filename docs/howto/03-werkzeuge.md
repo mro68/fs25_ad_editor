@@ -29,6 +29,7 @@ Alle Route-Tools teilen sich denselben Grundablauf:
 - **`Enter`** oder **Ausfuehren** bestaetigt das aktuelle Tool
 - **`Escape`** oder **Abbrechen** setzt das Tool zurueck
 - Start- und Endpunkte snappen auf bestehende Nodes
+- In der Vorschau werden Knoten mit mehr oder weniger als zwei Verbindungen groesser dargestellt; reine Steuerpunkte bleiben als Diamant sichtbar.
 - **`Pfeil hoch / runter`** aendert waehrend des Zeichnens die Node-Anzahl
 - **`Pfeil links / rechts`** aendert waehrend des Zeichnens die Segmentlaenge
 - Richtung und Strassenart gelten fuer die neu erzeugten Verbindungen
