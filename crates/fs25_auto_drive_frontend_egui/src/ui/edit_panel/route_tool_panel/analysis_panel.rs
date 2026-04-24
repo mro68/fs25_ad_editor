@@ -530,6 +530,19 @@ pub(super) fn render_color_path_panel(
         |value| RouteToolPanelAction::ColorPath(ColorPathPanelAction::SetSimplifyTolerance(value)),
     );
 
+    render_slider_f32(
+        panel_ctx,
+        SliderF32Props {
+            ui,
+            label: "Radius Kreuzung:",
+            current: state.junction_radius,
+            range: 0.0..=100.0,
+            suffix: " m",
+            enabled: true,
+        },
+        |value| RouteToolPanelAction::ColorPath(ColorPathPanelAction::SetJunctionRadius(value)),
+    );
+
     let mut noise_filter = state.noise_filter;
     if ui.checkbox(&mut noise_filter, "Rauschfilter").changed() {
         push_action(
