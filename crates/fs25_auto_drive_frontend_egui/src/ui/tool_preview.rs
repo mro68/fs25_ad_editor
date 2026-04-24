@@ -392,3 +392,48 @@ pub fn paint_clipboard_snapshot_preview(
         painter.circle_filled(screen_pos, 4.0, color);
     }
 }
+#[cfg(test)]
+mod tests {
+    use super::{
+        classify_preview_node, compute_node_degrees, preview_circle_radius, PreviewNodeKind,
+    };
+    #[test]
+    fn degree_classification_counts_connection_endpoints() {
+        let degrees = compute_node_degrees(4, &[(0, 1), (1, 2), (1, 3)]);
+        assert_eq!(degrees, vec![1, 3, 1, 1]);
+    }
+    #[test]
+    fn radius_factor_applies_only_for_degree_not_equal_two() {
+        let normal_radius = 3.5;
+        let factor = 3.0;
+        let degree_two_radius =
+            preview_circle_radius(2, normal_radius, factor).expect("Degree 2 ist ein Kreis");
+        let degree_three_radius =
+            preview_circle_radius(3, normal_radius, factor).expect("Degree 3 ist ein Kreis");
+        assert_eq!(degree_two_radius, 3.5);
+        assert_eq!(degree_three_radius, 10.5);
+    }
+    #[test]
+    fn control_point_regression_degree_zero_is_not_circle() {
+        assert_eq!(classify_preview_node(0), PreviewNodeKind::ControlPoint);
+        assert_eq!(preview_circle_radius(0, 3.5, 3.0), None);
+    }
+    #[test]
+    fn mixed_preview_case_has_control_standard_and_enlarged_nodes() {
+        let degrees = compute_node_degrees(6, &[(0, 1), (1, 2), (2, 3), (2, 4)]);
+        assert_eq!(
+            classify_preview_node(degrees[5]),
+            PreviewNodeKind::ControlPoint
+        );
+        assert_eq!(
+            preview_circle_radius(degrees[1], 3.5, 3.0),
+            Some(3.5),
+            "Degree 2 bleibt bei Standardradius"
+        );
+        assert_eq!(
+            preview_circle_radius(degrees[2], 3.5, 3.0),
+            Some(10.5),
+            "Degree 3 verwendet vergroesserten Radius"
+        );
+    }
+}
