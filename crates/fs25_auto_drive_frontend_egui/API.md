@@ -108,4 +108,5 @@ flowchart LR
 - Route-Tool-Schreibpfade laufen in egui explizit ueber `HostSessionAction::RouteTool`; der generische Viewport-Gesture-Vertrag `SubmitViewportInput` bleibt bewusst tool-agnostisch.
 - Der produktive egui-Pfad nutzt keine direkten `app_state_mut()`-Zugriffe mehr; read-only Checks ueber `app_state()` bleiben lokal auf Exit-/Repaint-Entscheidungen sowie einzelne UI-Reads begrenzt.
 - Das egui-Onscreen-Rendering laeuft bewusst nicht ueber den Shared-Texture-Transport (`SharedTextureRuntime`); es bleibt auf dem gekoppelten `HostRenderFrameSnapshot`-Seam und verwendet lokal nur den `RenderScene`-Teil fuer den Paint-Callback.
+- Tool-Preview-Node-Rendering nutzt degree-basierte Klassifikation: Knoten mit `degree != 2` werden als Kreis mit 3x Durchmesser gezeichnet; isolierte Preview-Knoten (`degree == 0`) bleiben als Control-Point-Diamant dargestellt.
 - Die kanonischen Moduldetails stehen in `src/editor_app/API.md`, `src/render/API.md` und `src/ui/API.md`.

@@ -55,16 +55,7 @@ pub fn paint_preview(
     }
 
     let cp_color = egui::Color32::from_rgba_unmultiplied(255, 160, 0, 220);
-    let mut has_connection = vec![false; preview.nodes.len()];
-
-    for &(a, b) in &preview.connections {
-        if let Some(flag) = has_connection.get_mut(a) {
-            *flag = true;
-        }
-        if let Some(flag) = has_connection.get_mut(b) {
-            *flag = true;
-        }
-    }
+    let node_degree = compute_node_degrees(preview.nodes.len(), &preview.connections);
 
     let thickness_main_px = (options.connection_thickness_world / world_per_pixel).max(1.0);
     let thickness_sub_px = (options.connection_thickness_subprio_world / world_per_pixel).max(1.0);
@@ -97,16 +88,22 @@ pub fn paint_preview(
         }
     }
 
+    let normal_node_radius = 3.5;
+    let non_degree_two_diameter_factor = 3.0;
+
     // Nodes zeichnen
     for (i, &pos) in preview.nodes.iter().enumerate() {
         let sp = camera.world_to_screen(pos, viewport_size);
         let screen_pos = egui::pos2(rect.min.x + sp.x, rect.min.y + sp.y);
 
-        let is_control = !has_connection[i];
-        if is_control {
+        let degree = node_degree[i];
+        if classify_preview_node(degree) == PreviewNodeKind::ControlPoint {
             paint_diamond(painter, screen_pos, 5.0, cp_color);
         } else {
-            painter.circle_filled(screen_pos, 3.5, preview_node_color(options));
+            let node_radius =
+                preview_circle_radius(degree, normal_node_radius, non_degree_two_diameter_factor)
+                    .expect("Knoten mit Degree > 0 muessen einen Kreis-Radius liefern");
+            painter.circle_filled(screen_pos, node_radius, preview_node_color(options));
         }
     }
 
@@ -124,6 +121,50 @@ pub fn paint_preview(
                 label_color,
             );
         }
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum PreviewNodeKind {
+    ControlPoint,
+    Circle,
+}
+
+fn compute_node_degrees(node_count: usize, connections: &[(usize, usize)]) -> Vec<u16> {
+    let mut node_degree = vec![0u16; node_count];
+
+    for &(a, b) in connections {
+        if let Some(degree) = node_degree.get_mut(a) {
+            *degree = degree.saturating_add(1);
+        }
+        if let Some(degree) = node_degree.get_mut(b) {
+            *degree = degree.saturating_add(1);
+        }
+    }
+
+    node_degree
+}
+
+fn classify_preview_node(degree: u16) -> PreviewNodeKind {
+    if degree == 0 {
+        PreviewNodeKind::ControlPoint
+    } else {
+        PreviewNodeKind::Circle
+    }
+}
+
+fn preview_circle_radius(
+    degree: u16,
+    normal_node_radius: f32,
+    non_degree_two_diameter_factor: f32,
+) -> Option<f32> {
+    match classify_preview_node(degree) {
+        PreviewNodeKind::ControlPoint => None,
+        PreviewNodeKind::Circle => Some(if degree != 2 {
+            normal_node_radius * non_degree_two_diameter_factor
+        } else {
+            normal_node_radius
+        }),
     }
 }
 
@@ -349,5 +390,50 @@ pub fn paint_clipboard_snapshot_preview(
             node_color
         };
         painter.circle_filled(screen_pos, 4.0, color);
+    }
+}
+#[cfg(test)]
+mod tests {
+    use super::{
+        classify_preview_node, compute_node_degrees, preview_circle_radius, PreviewNodeKind,
+    };
+    #[test]
+    fn degree_classification_counts_connection_endpoints() {
+        let degrees = compute_node_degrees(4, &[(0, 1), (1, 2), (1, 3)]);
+        assert_eq!(degrees, vec![1, 3, 1, 1]);
+    }
+    #[test]
+    fn radius_factor_applies_only_for_degree_not_equal_two() {
+        let normal_radius = 3.5;
+        let factor = 3.0;
+        let degree_two_radius =
+            preview_circle_radius(2, normal_radius, factor).expect("Degree 2 ist ein Kreis");
+        let degree_three_radius =
+            preview_circle_radius(3, normal_radius, factor).expect("Degree 3 ist ein Kreis");
+        assert_eq!(degree_two_radius, 3.5);
+        assert_eq!(degree_three_radius, 10.5);
+    }
+    #[test]
+    fn control_point_regression_degree_zero_is_not_circle() {
+        assert_eq!(classify_preview_node(0), PreviewNodeKind::ControlPoint);
+        assert_eq!(preview_circle_radius(0, 3.5, 3.0), None);
+    }
+    #[test]
+    fn mixed_preview_case_has_control_standard_and_enlarged_nodes() {
+        let degrees = compute_node_degrees(6, &[(0, 1), (1, 2), (2, 3), (2, 4)]);
+        assert_eq!(
+            classify_preview_node(degrees[5]),
+            PreviewNodeKind::ControlPoint
+        );
+        assert_eq!(
+            preview_circle_radius(degrees[1], 3.5, 3.0),
+            Some(3.5),
+            "Degree 2 bleibt bei Standardradius"
+        );
+        assert_eq!(
+            preview_circle_radius(degrees[2], 3.5, 3.0),
+            Some(10.5),
+            "Degree 3 verwendet vergroesserten Radius"
+        );
     }
 }
