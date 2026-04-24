@@ -318,16 +318,17 @@ Leitet ein Wegnetz direkt aus Farbstrukturen der Hintergrundkarte ab.
 **Konfiguration:**
 - Exakter Farbvergleich oder Toleranz-Modus.
 - Farb-Toleranz.
-- Node-Abstand.
+- Knotenabstand fuer die finale Punktverteilung entlang der erkannten Strecke.
 - Vereinfachungs-Toleranz.
-- Radius Kreuzung (in Metern): kuerzt Segmentenden im Umkreis von Kreuzungen.
+- Radius Kreuzung (in Metern): kuerzt Segmentenden nur fuer die Kreuzungsbegradigung und das Junction-Trim im Umkreis von Kreuzungen.
 - Rauschfilter.
 - Anschlussmodus an bestehende Verbindungen.
 
 **Tipps:**
 - Kombinieren Sie Einzelklicks und mehrere Lasso-Regionen, wenn der Zielpfad aus mehreren aehnlichen Farbinseln besteht.
 - Ein Klick in der Preview fuegt weitere Farbproben hinzu und bringt das Tool zurueck in den Sampling-Modus.
-- Mit Radius `0` bleibt das erkannte Netz unverkuerzt; groessere Werte trennen Kreuzungsbereiche klarer auf.
+- Mit Radius `0` bleibt das erkannte Netz an Kreuzungen unverkuerzt; groessere Werte trennen Kreuzungsbereiche klarer auf.
+- Die finalen Streckenlaengen und Abstaende der eingefuegten Nodes richten sich weiterhin nach Knotenabstand, nicht nach Radius Kreuzung.
 - Das Ergebnis ist nicht ueber **Tool bearbeiten** rekonstruierbar; fuer andere Parameter muss das Sampling erneut gestartet werden.
 
 ---

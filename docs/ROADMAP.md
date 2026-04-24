@@ -568,7 +568,7 @@
   - [x] Netzmodus-Erweiterung (2026-03-31) — Preview zeigt Kreuzungen/offene Enden/Segmente; Export legt Junction-/End-Knoten einmalig an und nutzt Snap-basierten Bestandsanschluss (`Never` / `OpenEnds` / `OpenEndsAndJunctions`)
   - [x] Sampling-Preview zeigt nach jeder Lasso-Auswahl alle Randsegmente des erkannten Flood-Fill-Bereichs (inkl. Innenkanten/Loecher), nicht nur eine Einzelkontur
   - [x] F7a Stage-Split (2026-04-01) — interne Pipeline in Sampling-Input, Matching, Pixel-Maske, Maskenaufbereitung, Skeleton, Preview-Aufbereitung und Execute getrennt; `lifecycle.rs` auf Orchestrierung reduziert; Preview und Execute teilen `PreparedSegment` als gemeinsame Wahrheit
-  - [x] Junction-Radius-Trim (2026-04-24, Branch `feat/colorpath-junction-radius`) — ColorPath-Panel und Host-UI-JSON um `junction_radius` erweitert; Stage-F kuerzt Segmentenden an Junctions radiusbasiert mit Fallback auf direkte Endpunktverbindung
+  - [x] Junction-Radius-Trim (2026-04-24, Branch `feat/colorpath-junction-radius`) — ColorPath-Panel und Host-UI-JSON um `junction_radius` erweitert; Stage-F nutzt den Radius ausschliesslich fuer Junction-Trim/Kreuzungsbegradigung und verteilt die finale Segmentgeometrie danach weiter ueber `node_spacing` (inkl. Fallback auf direkte Endpunktverbindung)
   - [x] I18n-Key `MenuColorPath` (DE: „🎨 Farb-Pfad erkennen", EN: „🎨 Detect Color Path")
   - [x] Menüeintrag in Extras
 
