@@ -344,20 +344,23 @@ fn prepare_segments(
         }
 
         let simplified = simplify_polyline(&segment.polyline, simplify_tolerance);
-        let resampled_nodes = resample_by_distance(&simplified, node_spacing);
         let Some(trimmed_nodes) =
-            trim_segment_near_junctions(network, segment, &resampled_nodes, junction_radius)
+            trim_segment_near_junctions(network, segment, &simplified, junction_radius)
         else {
             continue;
         };
         if trimmed_nodes.len() < 2 {
             continue;
         }
+        let resampled_nodes = resample_by_distance(&trimmed_nodes, node_spacing);
+        if resampled_nodes.len() < 2 {
+            continue;
+        }
 
         prepared_segments.push(PreparedSegment {
             start_node: segment.start_node,
             end_node: segment.end_node,
-            resampled_nodes: trimmed_nodes,
+            resampled_nodes,
         });
     }
 
