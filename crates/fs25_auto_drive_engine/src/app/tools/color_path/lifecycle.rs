@@ -310,7 +310,7 @@ mod tests {
     use super::*;
     use crate::app::tools::color_path::sampling::pixel_to_world;
     use crate::app::tools::color_path::skeleton::{
-        SkeletonGraphNode, SkeletonGraphNodeKind, SkeletonNetwork,
+        SkeletonGraphNode, SkeletonGraphNodeKind, SkeletonGraphSegment, SkeletonNetwork,
     };
     use crate::app::tools::color_path::state::{
         ColorPathMask, ExistingConnectionMode, PreparedSegment, PreviewData,
@@ -500,5 +500,73 @@ mod tests {
             sampling_preview_revision
         );
         assert!(tool.sampling_preview.is_some());
+    }
+
+    #[test]
+    fn preview_geometry_change_keeps_preview_phase_and_updates_execute_consistently() {
+        let mut tool = ColorPathTool::new();
+        tool.phase = ColorPathPhase::Preview;
+        tool.direction = ConnectionDirection::Regular;
+        tool.priority = ConnectionPriority::Regular;
+        tool.config.existing_connection_mode = ExistingConnectionMode::Never;
+        tool.config.simplify_tolerance = 0.0;
+        tool.config.node_spacing = 1.0;
+        tool.config.junction_radius = 0.0;
+        tool.cache.preview_core_revision = 11;
+
+        tool.preview_data = Some(PreviewData {
+            prepared_mask: ColorPathMask::default(),
+            network: SkeletonNetwork {
+                nodes: vec![
+                    SkeletonGraphNode {
+                        kind: SkeletonGraphNodeKind::Junction,
+                        pixel_position: Vec2::new(0.0, 0.0),
+                        world_position: Vec2::new(0.0, 0.0),
+                    },
+                    SkeletonGraphNode {
+                        kind: SkeletonGraphNodeKind::Junction,
+                        pixel_position: Vec2::new(10.0, 0.0),
+                        world_position: Vec2::new(10.0, 0.0),
+                    },
+                ],
+                segments: vec![SkeletonGraphSegment {
+                    start_node: 0,
+                    end_node: 1,
+                    polyline: vec![
+                        Vec2::new(0.0, 0.0),
+                        Vec2::new(1.0, 0.0),
+                        Vec2::new(2.0, 0.0),
+                        Vec2::new(3.0, 0.0),
+                        Vec2::new(7.0, 0.0),
+                        Vec2::new(8.0, 0.0),
+                        Vec2::new(9.0, 0.0),
+                        Vec2::new(10.0, 0.0),
+                    ],
+                }],
+            },
+            prepared_segments: Vec::new(),
+        });
+
+        tool.rebuild_prepared_segments();
+        let road_map = RoadMap::new(3);
+        let before_execute = tool
+            .execute(&road_map)
+            .expect("Preview mit Segmenten sollte ausfuehrbar sein");
+        let before_edges = before_execute.internal_connections.len();
+        let before_prepared_revision = tool.cache.prepared_segments_revision;
+        let preview_core_revision = tool.cache.preview_core_revision;
+
+        tool.config.junction_radius = 2.5;
+        tool.on_preview_geometry_config_changed();
+
+        let after_execute = tool
+            .execute(&road_map)
+            .expect("Getrimmte Preview sollte weiterhin ausfuehrbar sein");
+        let after_edges = after_execute.internal_connections.len();
+
+        assert_eq!(tool.phase, ColorPathPhase::Preview);
+        assert_eq!(tool.cache.preview_core_revision, preview_core_revision);
+        assert!(tool.cache.prepared_segments_revision > before_prepared_revision);
+        assert!(after_edges < before_edges);
     }
 }
