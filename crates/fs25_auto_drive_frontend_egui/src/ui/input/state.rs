@@ -43,6 +43,9 @@ pub struct InputState {
     /// Zeigt an, ob gerade eine Gruppen-Rotation per Alt+Mausrad laeuft.
     /// Wird benutzt um Begin/End-Lifecycle Intents korrekt zu emittieren.
     pub(crate) rotation_active: bool,
+    /// Unterdrueckt egui-Smoothing-Folgeframes nach einem diskreten Wheel-Notch,
+    /// damit ein physischer Raster-Schritt genau einen Zoomschritt ausloest.
+    pub(crate) suppress_smoothed_scroll_zoom: bool,
 }
 
 impl InputState {
@@ -55,6 +58,7 @@ impl InputState {
             context_menu_snapshot: None,
             edit_panel_pos: None,
             rotation_active: false,
+            suppress_smoothed_scroll_zoom: false,
         }
     }
 }

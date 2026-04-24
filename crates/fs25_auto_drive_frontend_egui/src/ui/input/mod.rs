@@ -94,6 +94,37 @@ mod tests {
         )
     }
 
+    fn mouse_wheel_input(
+        pos: egui::Pos2,
+        delta_y: f32,
+        unit: egui::MouseWheelUnit,
+        modifiers: egui::Modifiers,
+    ) -> egui::RawInput {
+        frame_input(
+            vec![
+                egui::Event::PointerMoved(pos),
+                egui::Event::MouseWheel {
+                    unit,
+                    delta: egui::vec2(0.0, delta_y),
+                    modifiers,
+                    phase: egui::TouchPhase::Move,
+                },
+            ],
+            modifiers,
+        )
+    }
+
+    fn hover_viewport(ctx: &egui::Context, input_state: &mut InputState) {
+        collect_frame(
+            ctx,
+            input_state,
+            pointer_move_input(DRAG_START_POS, egui::Modifiers::NONE),
+            EditorTool::Select,
+            false,
+            false,
+        );
+    }
+
     fn collect_frame(
         ctx: &egui::Context,
         input_state: &mut InputState,
@@ -188,6 +219,17 @@ mod tests {
         has_primary_drag_start(events)
             || has_primary_drag_update(events)
             || has_primary_drag_end(events)
+    }
+
+    fn scroll_event_deltas(events: &[HostViewportInputEvent]) -> Option<(f32, f32)> {
+        events.iter().find_map(|event| match event {
+            HostViewportInputEvent::Scroll {
+                smooth_delta_y,
+                raw_delta_y,
+                ..
+            } => Some((*smooth_delta_y, *raw_delta_y)),
+            _ => None,
+        })
     }
 
     /// Prüft, dass Shift-Drag weiterhin als Rechteck-Selektion über den Bridge-Drag-Lifecycle läuft.
@@ -421,5 +463,67 @@ mod tests {
         }));
         assert!(input_state.drag_selection.is_none());
         assert!(!input_state.primary_drag_via_bridge);
+    }
+
+    #[test]
+    fn test_discrete_mouse_wheel_zoom_emits_one_raw_step_without_followup_frames() {
+        let ctx = egui::Context::default();
+        let mut input_state = InputState::default();
+
+        hover_viewport(&ctx, &mut input_state);
+
+        let wheel_frame = collect_frame(
+            &ctx,
+            &mut input_state,
+            mouse_wheel_input(
+                DRAG_START_POS,
+                1.0,
+                egui::MouseWheelUnit::Line,
+                egui::Modifiers::NONE,
+            ),
+            EditorTool::Select,
+            false,
+            false,
+        );
+        assert_eq!(
+            scroll_event_deltas(&wheel_frame.host_events),
+            Some((0.0, 1.0))
+        );
+
+        let follow_up = collect_frame(
+            &ctx,
+            &mut input_state,
+            pointer_move_input(DRAG_START_POS, egui::Modifiers::NONE),
+            EditorTool::Select,
+            false,
+            false,
+        );
+        assert_eq!(scroll_event_deltas(&follow_up.host_events), None);
+    }
+
+    #[test]
+    fn test_small_point_scroll_zoom_keeps_smoothed_trackpad_path() {
+        let ctx = egui::Context::default();
+        let mut input_state = InputState::default();
+
+        hover_viewport(&ctx, &mut input_state);
+
+        let frame = collect_frame(
+            &ctx,
+            &mut input_state,
+            mouse_wheel_input(
+                DRAG_START_POS,
+                2.0,
+                egui::MouseWheelUnit::Point,
+                egui::Modifiers::NONE,
+            ),
+            EditorTool::Select,
+            false,
+            false,
+        );
+        let (smooth_delta_y, raw_delta_y) =
+            scroll_event_deltas(&frame.host_events).expect("Scroll-Event erwartet");
+        assert!(smooth_delta_y > 0.0);
+        assert!((raw_delta_y - 2.0).abs() < f32::EPSILON);
     }
 }

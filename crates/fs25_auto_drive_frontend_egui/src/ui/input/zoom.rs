@@ -7,6 +7,9 @@ use fs25_auto_drive_host_bridge::HostViewportInputEvent;
 
 /// Diskrete Drehschrittweite pro Scroll-Tick fuer die Gruppen-Rotation (Grad).
 const GROUP_ROTATION_STEP_DEG: f32 = 5.0;
+/// Spiegelt eguis Heuristik: kleine Point-Deltas verhalten sich wie Trackpad-Scroll,
+/// grosse Point-Deltas wie diskrete Mausrad-Raster.
+const DISCRETE_POINT_SCROLL_THRESHOLD: f32 = 8.0;
 
 fn raw_scroll_delta_from_events(events: &[egui::Event]) -> f32 {
     events
@@ -18,8 +21,33 @@ fn raw_scroll_delta_from_events(events: &[egui::Event]) -> f32 {
         .sum()
 }
 
+fn discrete_scroll_delta_from_events(events: &[egui::Event]) -> f32 {
+    events
+        .iter()
+        .filter_map(|event| match event {
+            egui::Event::MouseWheel { unit, delta, .. }
+                if is_discrete_scroll_event(*unit, *delta) =>
+            {
+                Some(delta.y)
+            }
+            _ => None,
+        })
+        .sum()
+}
+
+fn is_discrete_scroll_event(unit: egui::MouseWheelUnit, delta: egui::Vec2) -> bool {
+    match unit {
+        egui::MouseWheelUnit::Line | egui::MouseWheelUnit::Page => true,
+        egui::MouseWheelUnit::Point => delta.length() >= DISCRETE_POINT_SCROLL_THRESHOLD,
+    }
+}
+
 fn raw_scroll_delta_y(ui: &egui::Ui) -> f32 {
     ui.input(|i| raw_scroll_delta_from_events(&i.raw.events))
+}
+
+fn discrete_scroll_delta_y(ui: &egui::Ui) -> f32 {
+    ui.input(|i| discrete_scroll_delta_from_events(&i.raw.events))
 }
 
 fn consume_scroll(ui: &egui::Ui) {
@@ -59,9 +87,14 @@ impl InputState {
 
         let modifiers = ctx.ui.input(|i| i.modifiers);
         // Alt+Scroll-Rotation: rohe MouseWheel-Events verwenden (kein Smoothing → 1× pro Tick statt ~13×)
-        // Normaler Zoom: smooth_scroll_delta bleibt unveraendert
+        // Normaler Zoom: diskrete Wheel-Notches ebenfalls roh behandeln; glattes Trackpad-Scroll bleibt smooth.
         let raw_scroll = raw_scroll_delta_y(ctx.ui);
+        let discrete_scroll = discrete_scroll_delta_y(ctx.ui);
         let scroll = ctx.ui.input(|i| i.smooth_scroll_delta.y);
+
+        if self.suppress_smoothed_scroll_zoom && !ctx.ui.input(|i| i.is_scrolling()) {
+            self.suppress_smoothed_scroll_zoom = false;
+        }
 
         // Gruppen-Rotation beenden wenn Alt losgelassen wurde oder Bedingungen nicht mehr gelten.
         // Wichtig: NICHT bei scroll==0, damit kein falsches Begin/End zwischen Scroll-Ticks entsteht.
@@ -108,7 +141,18 @@ impl InputState {
             return;
         }
 
-        if scroll == 0.0 && raw_scroll == 0.0 {
+        let (smooth_zoom_scroll, raw_zoom_scroll) = if discrete_scroll.abs() >= 0.5 {
+            // Ein diskreter Mausrad-Notch soll exakt einen Zoomschritt ausloesen.
+            // Deshalb ignorieren wir eguis geglaettete Folgeframes bis das Scrollen komplett auslaeuft.
+            self.suppress_smoothed_scroll_zoom = true;
+            (0.0, discrete_scroll)
+        } else if self.suppress_smoothed_scroll_zoom {
+            (0.0, 0.0)
+        } else {
+            (scroll, raw_scroll)
+        };
+
+        if smooth_zoom_scroll == 0.0 && raw_zoom_scroll == 0.0 {
             return;
         }
 
@@ -117,8 +161,8 @@ impl InputState {
                 .response
                 .hover_pos()
                 .map(|pos| to_viewport_screen_pos(pos, ctx.response)),
-            smooth_delta_y: scroll,
-            raw_delta_y: raw_scroll,
+            smooth_delta_y: smooth_zoom_scroll,
+            raw_delta_y: raw_zoom_scroll,
             modifiers: host_modifiers(modifiers),
         });
     }
@@ -134,7 +178,7 @@ impl InputState {
 
 #[cfg(test)]
 mod tests {
-    use super::raw_scroll_delta_from_events;
+    use super::{discrete_scroll_delta_from_events, raw_scroll_delta_from_events};
 
     #[test]
     fn raw_scroll_delta_from_events_aggregates_mouse_wheel_notches() {
@@ -171,5 +215,29 @@ mod tests {
         ];
 
         assert_eq!(raw_scroll_delta_from_events(&events), 0.0);
+    }
+
+    #[test]
+    fn discrete_scroll_delta_from_events_ignores_small_point_scroll() {
+        let events = vec![egui::Event::MouseWheel {
+            unit: egui::MouseWheelUnit::Point,
+            delta: egui::vec2(0.0, 2.0),
+            modifiers: egui::Modifiers::NONE,
+            phase: egui::TouchPhase::Move,
+        }];
+
+        assert_eq!(discrete_scroll_delta_from_events(&events), 0.0);
+    }
+
+    #[test]
+    fn discrete_scroll_delta_from_events_keeps_line_notches() {
+        let events = vec![egui::Event::MouseWheel {
+            unit: egui::MouseWheelUnit::Line,
+            delta: egui::vec2(0.0, 1.0),
+            modifiers: egui::Modifiers::NONE,
+            phase: egui::TouchPhase::Move,
+        }];
+
+        assert_eq!(discrete_scroll_delta_from_events(&events), 1.0);
     }
 }

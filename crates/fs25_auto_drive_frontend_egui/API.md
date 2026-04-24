@@ -19,7 +19,7 @@ Das Onscreen-Rendering liest Szene und Assets ueber denselben gekoppelten `build
 - Rust-Edition: `2024`
 - UI-Stack: `eframe/egui/egui-wgpu 0.34.1`
 - Render-Seam: kompatibel zum Render-Core auf `wgpu 29.0.*`
-- Scroll-Input: rohe Wheel-Impulse werden aus `MouseWheel`-Events aggregiert (statt des entfernten Feldes `raw_scroll_delta`).
+- Scroll-Input: rohe Wheel-Impulse werden aus `MouseWheel`-Events aggregiert (statt des entfernten Feldes `raw_scroll_delta`); diskrete Mausrad-Notches fuer Viewport-Zoom/Alt-Rotation laufen ueber den rohen Eventstrom, waehrend glattes Trackpad-Scroll weiterhin den geglaetteten egui-Pfad nutzt.
 
 ## Oeffentliche Module
 
