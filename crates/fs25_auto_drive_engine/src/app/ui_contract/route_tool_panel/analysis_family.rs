@@ -253,6 +253,8 @@ pub struct ColorPathPanelState {
     pub node_spacing: f32,
     /// Vereinfachungs-Toleranz fuer PreparedSegments.
     pub simplify_tolerance: f32,
+    /// Radius in Metern, der um Junctions beim Aufbereiten ausgespart wird.
+    pub junction_radius: f32,
     /// Rauschfilter aktiv?
     pub noise_filter: bool,
     /// Anschlussmodus an bestehende Nodes.
@@ -279,6 +281,8 @@ pub enum ColorPathPanelAction {
     SetNodeSpacing(f32),
     /// Vereinfachungs-Toleranz setzen.
     SetSimplifyTolerance(f32),
+    /// Radius um Junctions setzen.
+    SetJunctionRadius(f32),
     /// Rauschfilter setzen.
     SetNoiseFilter(bool),
     /// Anschlussmodus setzen.
