@@ -563,10 +563,34 @@ mod tests {
             .execute(&road_map)
             .expect("Getrimmte Preview sollte weiterhin ausfuehrbar sein");
         let after_edges = after_execute.internal_connections.len();
+        let max_after_edge_length = after_execute
+            .internal_connections
+            .iter()
+            .map(|&(from, to, _, _)| {
+                let start = after_execute
+                    .new_nodes
+                    .get(from)
+                    .expect("Startknoten der Kante muss existieren")
+                    .0;
+                let end = after_execute
+                    .new_nodes
+                    .get(to)
+                    .expect("Endknoten der Kante muss existieren")
+                    .0;
+                start.distance(end)
+            })
+            .fold(0.0_f32, f32::max);
 
         assert_eq!(tool.phase, ColorPathPhase::Preview);
         assert_eq!(tool.cache.preview_core_revision, preview_core_revision);
         assert!(tool.cache.prepared_segments_revision > before_prepared_revision);
-        assert!(after_edges < before_edges);
+        assert_eq!(
+            after_edges, before_edges,
+            "Junction-Radius wirkt nur auf Kreuzungsbegradigung; finale Kantenanzahl folgt node_spacing"
+        );
+        assert!(
+            max_after_edge_length <= tool.config.node_spacing + 1e-4,
+            "Finale Geometrie muss nach Begradigung auf node_spacing resampled sein"
+        );
     }
 }
