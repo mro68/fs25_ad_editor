@@ -6,7 +6,7 @@
 
 Der Application-Layer trennt Mutationen und Read-Projektionen jetzt explizit. `AppController` verarbeitet `AppIntent` und `AppCommand` sowie die kanonische Dialog-Drain-Seam, waehrend `app::projections` `RenderScene`, `RenderAssetsSnapshot`, `HostUiSnapshot` und `ViewportOverlaySnapshot` direkt aus `&AppState` beziehungsweise `&mut AppState` aufbaut. Sichtbare Panels und Viewport-Overlays koennen dadurch host-neutral aus der Engine gelesen werden, ohne Controller-Instanzen oder egui-spezifische Painter-Details nach aussen zu leaken. Datei- und Pfaddialoge laufen bewusst nicht ueber `HostUiSnapshot`, sondern getrennt ueber `AppController::take_dialog_requests(...)`.
 
-Im Route-Tool-UI-Contract des Application-Layers fuehrt das Analyse-Tool `ColorPath` zusaetzlich den Parameter `junction_radius` (Meter). Der Wert wird ueber `ColorPathPanelState.junction_radius` gelesen und per `ColorPathPanelAction::SetJunctionRadius(f32)` (Clamp `0.0..=100.0`) gesetzt; in der Stage-F-Preview-Pipeline werden damit Segmentenden an Junctions radiusbasiert getrimmt.
+Im Route-Tool-UI-Contract des Application-Layers fuehrt das Analyse-Tool `ColorPath` zusaetzlich den Parameter `junction_radius` (Meter). Der Wert wird ueber `ColorPathPanelState.junction_radius` gelesen und per `ColorPathPanelAction::SetJunctionRadius(f32)` (Clamp `0.0..=100.0`) gesetzt; in der Stage-F-Preview-Pipeline steuert er ausschliesslich das radiusbasierte Junction-Trim, waehrend die finale Punktverteilung der `PreparedSegment`s weiterhin `node_spacing` folgt.
 
 Das Root-Package `fs25_auto_drive_editor` re-exportiert die wichtigsten Einstiegspunkte dieser Crate weiter, damit bestehende Tests, Benches und Rust-Konsumenten stabil bleiben.
 

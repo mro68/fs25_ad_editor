@@ -510,7 +510,7 @@ weitergeleitet, das die Lasso-Capability des aktiven Tools aufruft.
 3. **Stage C: Pixel-Maske + Sampling-Vorschau** — `flood_fill_color_mask()` erzeugt die Flood-Fill-Maske; `SamplingPreviewData` haelt dieselbe Maske plus Boundary-Segmente fuer die Sampling-Preview
 4. **Stage D: Maskenaufbereitung** — `prepare_mask_for_skeleton()` wendet optional Opening + Closing an und erzeugt die vorbereitete Arbeitsmaske
 5. **Stage E: Skeleton-/Netzextraktion** — `extract_network_from_mask()` fuehrt Zhang-Suen, Komponentenbildung, Junction-Clustering, Segment-Trace und Medial-Axis-Korrektur auf der vorbereiteten Maske aus
-6. **Stage F: Preview-Aufbereitung** — `simplify_polyline()` + `resample_by_distance()` erzeugen `PreparedSegment`-Ketten; bei gesetztem `junction_radius` trimmt `trim_segment_near_junctions()` Segment-Innenpunkte im Radius um Junction-Enden; `PreviewData` haelt Netz + PreparedSegments als gemeinsame Wahrheit fuer Preview und Execute
+6. **Stage F: Preview-Aufbereitung** — `simplify_polyline()` vereinfacht die Segment-Polylinien; bei gesetztem `junction_radius` trimmt `trim_segment_near_junctions()` danach Junction-nahe Innenpunkte, bevor `resample_by_distance()` die finale `PreparedSegment`-Kette erneut nach `node_spacing` verteilt; `PreviewData` haelt Netz + PreparedSegments als gemeinsame Wahrheit fuer Preview und Execute
 7. **Stage G: Execute-Konvertierung** — `execute_result()` baut aus `PreviewData.network` und denselben `PreparedSegment`s das `ToolResult` inklusive optionaler Bestandsanschluesse
 
 **Preview/Export:**
@@ -527,7 +527,7 @@ weitergeleitet, das die Lasso-Capability des aktiven Tools aufruft.
 - `color_tolerance: f32` — Farb-Toleranz im unscharfen Modus (euklidischer RGB-Abstand; Standard: 25.0, Bereich: 1–80)
 - `node_spacing: f32` — Abstand zwischen generierten Nodes in Metern (Standard: 5.0, Bereich: 1–50)
 - `simplify_tolerance: f32` — Douglas-Peucker-Toleranz in Metern (Standard: 1.0, Bereich: 0–20)
-- `junction_radius: f32` — Radius in Metern, der bei Junction-Segmenten um Start/Ende ausgespart wird (Standard: 0.0, Bereich: 0–100)
+- `junction_radius: f32` — Radius in Metern fuer die Kreuzungsbegradigung an Junction-Segmenten; die finale Punktverteilung bleibt trotz Trim `node_spacing`-getrieben (Standard: 0.0, Bereich: 0–100)
 - `noise_filter: bool` — Morphologischen Rauschfilter aktivieren (Standard: true)
 - `existing_connection_mode: ExistingConnectionMode` — Bestandsanschluss: `Never`, `OpenEnds`, `OpenEndsAndJunctions` (Standard: `OpenEnds`)
 - `detection_bounds: Option<(Vec2, Vec2)>` — Begrenzt Farberkennung auf eine Rect-Region (geplant)

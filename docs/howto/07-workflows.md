@@ -78,10 +78,12 @@
 1. Eine passende Hintergrundkarte laden.
 2. **Farb-Pfad erkennen** ueber **`A`** oder die Command Palette aktivieren.
 3. Mit **`Alt+Drag`** eine oder mehrere Lasso-Regionen fuer Farbproben zeichnen.
-4. Im Tool-Panel Berechnung, Toleranz, **Radius Kreuzung** und Anschlussmodus einstellen.
+4. Im Tool-Panel Berechnung, Toleranz, **Knotenabstand**, **Radius Kreuzung** und Anschlussmodus einstellen.
 5. Netzstatistik pruefen und mit **`Enter`** bestaetigen.
 
 > **Tipp:** Das Tool bleibt im Katalog sichtbar, auch wenn noch keine Hintergrundkarte geladen ist. So sehen Sie sofort, warum es gerade nicht aktivierbar ist.
+
+> **Hinweis:** **Radius Kreuzung** beeinflusst nur die Kreuzungsbegradigung beziehungsweise das Trim an Junctions. Die finalen Streckenlaengen und der Abstand der erzeugten Nodes bleiben an **Knotenabstand** gekoppelt.
 
 ---
 

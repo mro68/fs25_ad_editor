@@ -249,11 +249,11 @@ pub struct ColorPathPanelState {
     pub exact_color_match: bool,
     /// Farbtoleranz fuer unscharfes Matching.
     pub color_tolerance: f32,
-    /// Node-Abstand fuer PreparedSegments.
+    /// Node-Abstand fuer die finale Punktverteilung der PreparedSegments.
     pub node_spacing: f32,
     /// Vereinfachungs-Toleranz fuer PreparedSegments.
     pub simplify_tolerance: f32,
-    /// Radius in Metern, der um Junctions beim Aufbereiten ausgespart wird.
+    /// Radius in Metern fuer die Kreuzungsbegradigung beim Junction-Trim.
     pub junction_radius: f32,
     /// Rauschfilter aktiv?
     pub noise_filter: bool,
@@ -281,7 +281,7 @@ pub enum ColorPathPanelAction {
     SetNodeSpacing(f32),
     /// Vereinfachungs-Toleranz setzen.
     SetSimplifyTolerance(f32),
-    /// Radius um Junctions setzen.
+    /// Radius fuer Junction-Trim und Kreuzungsbegradigung setzen.
     SetJunctionRadius(f32),
     /// Rauschfilter setzen.
     SetNoiseFilter(bool),
