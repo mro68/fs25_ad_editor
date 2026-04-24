@@ -243,6 +243,7 @@ fn color_path_panel_state_to_value(state: &ColorPathPanelState) -> Value {
         "color_tolerance": state.color_tolerance,
         "node_spacing": state.node_spacing,
         "simplify_tolerance": state.simplify_tolerance,
+        "junction_radius": state.junction_radius,
         "noise_filter": state.noise_filter,
         "existing_connection_mode": state.existing_connection_mode,
     })

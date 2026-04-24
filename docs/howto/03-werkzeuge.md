@@ -320,12 +320,14 @@ Leitet ein Wegnetz direkt aus Farbstrukturen der Hintergrundkarte ab.
 - Farb-Toleranz.
 - Node-Abstand.
 - Vereinfachungs-Toleranz.
+- Radius Kreuzung (in Metern): kuerzt Segmentenden im Umkreis von Kreuzungen.
 - Rauschfilter.
 - Anschlussmodus an bestehende Verbindungen.
 
 **Tipps:**
 - Kombinieren Sie Einzelklicks und mehrere Lasso-Regionen, wenn der Zielpfad aus mehreren aehnlichen Farbinseln besteht.
 - Ein Klick in der Preview fuegt weitere Farbproben hinzu und bringt das Tool zurueck in den Sampling-Modus.
+- Mit Radius `0` bleibt das erkannte Netz unverkuerzt; groessere Werte trennen Kreuzungsbereiche klarer auf.
 - Das Ergebnis ist nicht ueber **Tool bearbeiten** rekonstruierbar; fuer andere Parameter muss das Sampling erneut gestartet werden.
 
 ---

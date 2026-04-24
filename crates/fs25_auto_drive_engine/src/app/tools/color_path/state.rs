@@ -122,6 +122,8 @@ pub(super) struct PreparedSegmentsCacheKey {
     pub simplify_tolerance_bits: u32,
     /// Node-Abstand als Bitmuster.
     pub node_spacing_bits: u32,
+    /// Kreuzungs-Radius als Bitmuster.
+    pub junction_radius_bits: u32,
 }
 
 /// Lazy gecachte RGB-Sicht auf das Hintergrundbild.
@@ -229,6 +231,8 @@ pub struct ColorPathConfig {
     pub node_spacing: f32,
     /// Toleranz fuer Douglas-Peucker-Vereinfachung in Metern (Standard: 1.0, Bereich: 0–20)
     pub simplify_tolerance: f32,
+    /// Radius in Metern, der in Stage F rund um Junctions ausgespart wird (Standard: 0.0, Bereich: 0–100)
+    pub junction_radius: f32,
     /// Rauschfilter aktivieren (Standard: true)
     pub noise_filter: bool,
     /// Optionaler Erkennungsbereich — None = gesamtes Bild
@@ -245,6 +249,7 @@ impl Default for ColorPathConfig {
             color_tolerance: 25.0,
             node_spacing: 5.0,
             simplify_tolerance: 1.0,
+            junction_radius: 0.0,
             noise_filter: true,
             detection_bounds: None,
             existing_connection_mode: ExistingConnectionMode::OpenEnds,

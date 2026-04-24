@@ -557,7 +557,7 @@
   - [x] `OverviewResult.farmland_ids: Option<Vec<u8>>` — rohes ID-Raster fuer Feldweg-Erkennung
 
 - [x] **ColorPathTool — Farb-Pfad-Erkennung (2026-03-30, Branch `feat/color-path-tool`)**
-  - [x] `src/app/tools/color_path/` — `ColorPathTool` (Slot 10), `ColorPathPhase` (Idle/Sampling/Preview), `ColorPathConfig` (exact_color_match, color_tolerance, node_spacing, simplify_tolerance, noise_filter, existing_connection_mode)
+  - [x] `src/app/tools/color_path/` — `ColorPathTool` (Slot 10), `ColorPathPhase` (Idle/Sampling/Preview), `ColorPathConfig` (exact_color_match, color_tolerance, node_spacing, simplify_tolerance, junction_radius, noise_filter, existing_connection_mode)
   - [x] `RouteTool::needs_lasso_input()` + `RouteTool::on_lasso_completed()` — neue Default-Methoden im Trait fuer Alt+Drag-Lasso-Routing
   - [x] `DragSelectionMode::ToolLasso` in `src/ui/drag.rs` — neuer Modus fuer Tool-gesteuertes Lasso statt Node-Selektion
   - [x] `ViewportContext.tool_needs_lasso: bool` in `src/ui/input/mod.rs` — aktiviert ToolLasso-Routing
@@ -568,6 +568,7 @@
   - [x] Netzmodus-Erweiterung (2026-03-31) — Preview zeigt Kreuzungen/offene Enden/Segmente; Export legt Junction-/End-Knoten einmalig an und nutzt Snap-basierten Bestandsanschluss (`Never` / `OpenEnds` / `OpenEndsAndJunctions`)
   - [x] Sampling-Preview zeigt nach jeder Lasso-Auswahl alle Randsegmente des erkannten Flood-Fill-Bereichs (inkl. Innenkanten/Loecher), nicht nur eine Einzelkontur
   - [x] F7a Stage-Split (2026-04-01) — interne Pipeline in Sampling-Input, Matching, Pixel-Maske, Maskenaufbereitung, Skeleton, Preview-Aufbereitung und Execute getrennt; `lifecycle.rs` auf Orchestrierung reduziert; Preview und Execute teilen `PreparedSegment` als gemeinsame Wahrheit
+  - [x] Junction-Radius-Trim (2026-04-24, Branch `feat/colorpath-junction-radius`) — ColorPath-Panel und Host-UI-JSON um `junction_radius` erweitert; Stage-F kuerzt Segmentenden an Junctions radiusbasiert mit Fallback auf direkte Endpunktverbindung
   - [x] I18n-Key `MenuColorPath` (DE: „🎨 Farb-Pfad erkennen", EN: „🎨 Detect Color Path")
   - [x] Menüeintrag in Extras
 

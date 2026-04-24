@@ -36,6 +36,7 @@ impl ColorPathTool {
             color_tolerance: self.config.color_tolerance,
             node_spacing: self.config.node_spacing,
             simplify_tolerance: self.config.simplify_tolerance,
+            junction_radius: self.config.junction_radius,
             noise_filter: self.config.noise_filter,
             existing_connection_mode: mode_choice(self.config.existing_connection_mode),
         }
@@ -114,6 +115,14 @@ impl ColorPathTool {
             }
             ColorPathPanelAction::SetSimplifyTolerance(value) => {
                 if set_f32(&mut self.config.simplify_tolerance, value.clamp(0.0, 20.0)) {
+                    self.on_preview_geometry_config_changed();
+                    true
+                } else {
+                    false
+                }
+            }
+            ColorPathPanelAction::SetJunctionRadius(value) => {
+                if set_f32(&mut self.config.junction_radius, value.clamp(0.0, 100.0)) {
                     self.on_preview_geometry_config_changed();
                     true
                 } else {

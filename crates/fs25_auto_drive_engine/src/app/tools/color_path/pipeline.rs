@@ -151,6 +151,7 @@ impl ColorPathTool {
             preview_core_revision: self.cache.preview_core_revision,
             simplify_tolerance_bits: self.config.simplify_tolerance.to_bits(),
             node_spacing_bits: self.config.node_spacing.to_bits(),
+            junction_radius_bits: self.config.junction_radius.to_bits(),
         })
     }
 
@@ -278,6 +279,7 @@ impl ColorPathTool {
             &preview_data.network,
             self.config.simplify_tolerance,
             self.config.node_spacing,
+            self.config.junction_radius,
         );
 
         log::info!(
@@ -332,24 +334,111 @@ fn prepare_segments(
     network: &super::skeleton::SkeletonNetwork,
     simplify_tolerance: f32,
     node_spacing: f32,
+    junction_radius: f32,
 ) -> Vec<PreparedSegment> {
     let mut prepared_segments = Vec::with_capacity(network.segments.len());
 
     for segment in &network.segments {
+        if segment.start_node == segment.end_node {
+            continue;
+        }
+
         let simplified = simplify_polyline(&segment.polyline, simplify_tolerance);
         let resampled_nodes = resample_by_distance(&simplified, node_spacing);
-        if resampled_nodes.len() < 2 {
+        let Some(trimmed_nodes) =
+            trim_segment_near_junctions(network, segment, &resampled_nodes, junction_radius)
+        else {
+            continue;
+        };
+        if trimmed_nodes.len() < 2 {
             continue;
         }
 
         prepared_segments.push(PreparedSegment {
             start_node: segment.start_node,
             end_node: segment.end_node,
-            resampled_nodes,
+            resampled_nodes: trimmed_nodes,
         });
     }
 
     prepared_segments
+}
+
+fn trim_segment_near_junctions(
+    network: &super::skeleton::SkeletonNetwork,
+    segment: &super::skeleton::SkeletonGraphSegment,
+    nodes: &[glam::Vec2],
+    junction_radius: f32,
+) -> Option<Vec<glam::Vec2>> {
+    if nodes.len() < 2 {
+        return None;
+    }
+
+    let mut trimmed = nodes.to_vec();
+    if junction_radius > 0.0 {
+        if is_junction_node(network, segment.start_node) {
+            trim_from_start(&mut trimmed, junction_radius);
+        }
+        if is_junction_node(network, segment.end_node) {
+            trim_from_end(&mut trimmed, junction_radius);
+        }
+    }
+
+    compact_consecutive_duplicates(&mut trimmed);
+    let first = *trimmed.first()?;
+    let last = *trimmed.last()?;
+    if first.distance_squared(last) <= f32::EPSILON {
+        return None;
+    }
+
+    Some(trimmed)
+}
+
+fn is_junction_node(network: &super::skeleton::SkeletonNetwork, node_index: usize) -> bool {
+    network
+        .nodes
+        .get(node_index)
+        .is_some_and(|node| node.kind == super::skeleton::SkeletonGraphNodeKind::Junction)
+}
+
+fn trim_from_start(nodes: &mut Vec<glam::Vec2>, radius: f32) {
+    if nodes.len() < 3 {
+        return;
+    }
+
+    let anchor = nodes[0];
+    let first_outside = (1..nodes.len() - 1)
+        .find(|&idx| nodes[idx].distance(anchor) > radius)
+        .unwrap_or(nodes.len() - 1);
+
+    if first_outside > 1 {
+        nodes.drain(1..first_outside);
+    }
+}
+
+fn trim_from_end(nodes: &mut Vec<glam::Vec2>, radius: f32) {
+    if nodes.len() < 3 {
+        return;
+    }
+
+    let anchor = *nodes.last().expect("Segmentende fehlt");
+    let last_outside = (1..nodes.len() - 1)
+        .rev()
+        .find(|&idx| nodes[idx].distance(anchor) > radius)
+        .unwrap_or(0);
+
+    let keep_until = if last_outside == 0 {
+        1
+    } else {
+        last_outside + 1
+    };
+    if keep_until < nodes.len() - 1 {
+        nodes.drain(keep_until..nodes.len() - 1);
+    }
+}
+
+fn compact_consecutive_duplicates(nodes: &mut Vec<glam::Vec2>) {
+    nodes.dedup_by(|a, b| a.distance_squared(*b) <= f32::EPSILON);
 }
 
 #[cfg(test)]
@@ -515,6 +604,227 @@ mod tests {
         );
         assert!(tool.cache.preview_core_revision > preview_core_revision);
         assert!(tool.cache.prepared_segments_revision > prepared_segments_revision);
+    }
+
+    #[test]
+    fn junction_radius_change_rebuilds_prepared_segments_only() {
+        let image = build_test_image();
+        let mut tool = ColorPathTool::new();
+        tool.background_image = Some(Arc::new(image));
+        tool.map_size = 10.0;
+        tool.sampling.sampled_colors = vec![[200, 0, 0]];
+        tool.sampling.lasso_start_world = Some(pixel_to_world(0, 0, tool.map_size, 10, 10));
+        tool.mark_sampling_input_changed();
+
+        assert!(tool.rebuild_preview_pipeline());
+
+        let sampling_preview_revision = tool.cache.sampling_preview_revision;
+        let preview_core_revision = tool.cache.preview_core_revision;
+        let prepared_segments_revision = tool.cache.prepared_segments_revision;
+
+        tool.config.junction_radius = 8.0;
+        tool.rebuild_prepared_segments();
+
+        assert_eq!(
+            tool.cache.sampling_preview_revision,
+            sampling_preview_revision
+        );
+        assert_eq!(tool.cache.preview_core_revision, preview_core_revision);
+        assert!(tool.cache.prepared_segments_revision > prepared_segments_revision);
+    }
+
+    fn network_with_segment(
+        start_kind: super::super::skeleton::SkeletonGraphNodeKind,
+        end_kind: super::super::skeleton::SkeletonGraphNodeKind,
+        polyline: Vec<Vec2>,
+    ) -> super::super::skeleton::SkeletonNetwork {
+        super::super::skeleton::SkeletonNetwork {
+            nodes: vec![
+                super::super::skeleton::SkeletonGraphNode {
+                    kind: start_kind,
+                    pixel_position: Vec2::new(0.0, 0.0),
+                    world_position: *polyline.first().expect("Polyline ohne Startpunkt"),
+                },
+                super::super::skeleton::SkeletonGraphNode {
+                    kind: end_kind,
+                    pixel_position: Vec2::new(0.0, 0.0),
+                    world_position: *polyline.last().expect("Polyline ohne Endpunkt"),
+                },
+            ],
+            segments: vec![super::super::skeleton::SkeletonGraphSegment {
+                start_node: 0,
+                end_node: 1,
+                polyline,
+            }],
+        }
+    }
+
+    #[test]
+    fn junction_radius_trims_start_points_inside_radius() {
+        let polyline = vec![
+            Vec2::new(0.0, 0.0),
+            Vec2::new(1.0, 0.0),
+            Vec2::new(2.0, 0.0),
+            Vec2::new(3.0, 0.0),
+            Vec2::new(10.0, 0.0),
+        ];
+        let network = network_with_segment(
+            super::super::skeleton::SkeletonGraphNodeKind::Junction,
+            super::super::skeleton::SkeletonGraphNodeKind::OpenEnd,
+            polyline,
+        );
+
+        let prepared = prepare_segments(&network, 0.0, 1.0, 2.5);
+
+        assert_eq!(prepared.len(), 1);
+        assert_eq!(prepared[0].resampled_nodes[0], Vec2::new(0.0, 0.0));
+        assert_eq!(prepared[0].resampled_nodes[1], Vec2::new(3.0, 0.0));
+        assert_eq!(
+            *prepared[0]
+                .resampled_nodes
+                .last()
+                .expect("Endpunkt muss vorhanden sein"),
+            Vec2::new(10.0, 0.0)
+        );
+    }
+
+    #[test]
+    fn junction_radius_zero_does_not_trim_junction_segments() {
+        let polyline = vec![
+            Vec2::new(0.0, 0.0),
+            Vec2::new(1.0, 0.0),
+            Vec2::new(2.0, 0.0),
+            Vec2::new(3.0, 0.0),
+            Vec2::new(10.0, 0.0),
+        ];
+        let junction_network = network_with_segment(
+            super::super::skeleton::SkeletonGraphNodeKind::Junction,
+            super::super::skeleton::SkeletonGraphNodeKind::Junction,
+            polyline.clone(),
+        );
+        let open_end_network = network_with_segment(
+            super::super::skeleton::SkeletonGraphNodeKind::OpenEnd,
+            super::super::skeleton::SkeletonGraphNodeKind::OpenEnd,
+            polyline,
+        );
+
+        let prepared_junction = prepare_segments(&junction_network, 0.0, 1.0, 0.0);
+        let prepared_open_end = prepare_segments(&open_end_network, 0.0, 1.0, 0.0);
+
+        assert_eq!(prepared_junction.len(), 1);
+        assert_eq!(prepared_open_end.len(), 1);
+        assert_eq!(
+            prepared_junction[0].resampled_nodes,
+            prepared_open_end[0].resampled_nodes
+        );
+    }
+
+    #[test]
+    fn junction_radius_fallback_keeps_direct_connection_when_no_outside_point_exists() {
+        let polyline = vec![
+            Vec2::new(0.0, 0.0),
+            Vec2::new(0.5, 0.0),
+            Vec2::new(1.0, 0.0),
+        ];
+        let network = network_with_segment(
+            super::super::skeleton::SkeletonGraphNodeKind::Junction,
+            super::super::skeleton::SkeletonGraphNodeKind::OpenEnd,
+            polyline,
+        );
+
+        let prepared = prepare_segments(&network, 0.0, 1.0, 10.0);
+
+        assert_eq!(prepared.len(), 1);
+        assert_eq!(prepared[0].resampled_nodes.len(), 2);
+        assert_eq!(prepared[0].resampled_nodes[0], Vec2::new(0.0, 0.0));
+        assert_eq!(prepared[0].resampled_nodes[1], Vec2::new(1.0, 0.0));
+    }
+
+    #[test]
+    fn junction_radius_trims_end_points_inside_radius_for_single_sided_junction() {
+        let polyline = vec![
+            Vec2::new(0.0, 0.0),
+            Vec2::new(7.0, 0.0),
+            Vec2::new(8.0, 0.0),
+            Vec2::new(9.0, 0.0),
+            Vec2::new(10.0, 0.0),
+        ];
+        let network = network_with_segment(
+            super::super::skeleton::SkeletonGraphNodeKind::OpenEnd,
+            super::super::skeleton::SkeletonGraphNodeKind::Junction,
+            polyline,
+        );
+
+        let prepared = prepare_segments(&network, 0.0, 1.0, 2.5);
+
+        assert_eq!(prepared.len(), 1);
+        let nodes = &prepared[0].resampled_nodes;
+        assert_eq!(nodes[0], Vec2::new(0.0, 0.0));
+        assert_eq!(
+            *nodes.last().expect("Endpunkt muss vorhanden sein"),
+            Vec2::new(10.0, 0.0)
+        );
+        assert!(
+            nodes[nodes.len() - 2].distance(*nodes.last().expect("Endpunkt muss vorhanden sein"))
+                > 2.5
+        );
+    }
+
+    #[test]
+    fn junction_radius_trims_both_ends_for_junction_to_junction_segments() {
+        let polyline = vec![
+            Vec2::new(0.0, 0.0),
+            Vec2::new(1.0, 0.0),
+            Vec2::new(3.0, 0.0),
+            Vec2::new(7.0, 0.0),
+            Vec2::new(9.0, 0.0),
+            Vec2::new(10.0, 0.0),
+        ];
+        let network = network_with_segment(
+            super::super::skeleton::SkeletonGraphNodeKind::Junction,
+            super::super::skeleton::SkeletonGraphNodeKind::Junction,
+            polyline,
+        );
+
+        let prepared = prepare_segments(&network, 0.0, 1.0, 2.5);
+
+        assert_eq!(prepared.len(), 1);
+        let nodes = &prepared[0].resampled_nodes;
+        assert!(nodes.len() >= 3);
+        assert_eq!(nodes[0], Vec2::new(0.0, 0.0));
+        assert_eq!(
+            *nodes.last().expect("Endpunkt muss vorhanden sein"),
+            Vec2::new(10.0, 0.0)
+        );
+
+        // Erster Innenpunkt muss ausserhalb des Radius um die Start-Junction liegen.
+        assert!(nodes[1].distance(nodes[0]) > 2.5);
+        // Letzter Innenpunkt muss ausserhalb des Radius um die End-Junction liegen.
+        assert!(
+            nodes[nodes.len() - 2].distance(*nodes.last().expect("Endpunkt muss vorhanden sein"))
+                > 2.5
+        );
+    }
+
+    #[test]
+    fn junction_radius_large_with_two_junctions_falls_back_to_direct_segment() {
+        let polyline = vec![
+            Vec2::new(0.0, 0.0),
+            Vec2::new(0.5, 0.0),
+            Vec2::new(1.0, 0.0),
+        ];
+        let network = network_with_segment(
+            super::super::skeleton::SkeletonGraphNodeKind::Junction,
+            super::super::skeleton::SkeletonGraphNodeKind::Junction,
+            polyline,
+        );
+
+        let prepared = prepare_segments(&network, 0.0, 1.0, 10.0);
+
+        assert_eq!(prepared.len(), 1);
+        assert_eq!(prepared[0].resampled_nodes.len(), 2);
+        assert_eq!(prepared[0].resampled_nodes[0], Vec2::new(0.0, 0.0));
+        assert_eq!(prepared[0].resampled_nodes[1], Vec2::new(1.0, 0.0));
     }
 
     #[test]
