@@ -9,7 +9,7 @@ pub const TERRAIN_HEIGHT_SCALE: f32 = 255.0;
 pub const SELECTION_SIZE_FACTOR: f32 = 175.0;
 
 /// Standard-Node-Groesse in Welteinheiten.
-pub const NODE_SIZE_WORLD: f32 = 1.0000001;
+pub const NODE_SIZE_WORLD: f32 = 1.5000002;
 /// Standard-Farbe normaler Nodes (RGBA: Blau).
 pub const NODE_COLOR_DEFAULT: [f32; 4] = [0.11764706, 1.0, 0.0, 1.0];
 /// Farbe fuer Sub-Prioritaets-Nodes (RGBA: Gelborange).
@@ -20,9 +20,9 @@ pub const NODE_COLOR_SELECTED: [f32; 4] = [1.0, 0.0, 0.8235294, 1.0];
 pub const NODE_COLOR_WARNING: [f32; 4] = [1.0, 0.0, 0.0, 1.0];
 
 /// Linienstaerke normaler Verbindungen in Welteinheiten.
-pub const CONNECTION_THICKNESS_WORLD: f32 = 0.1;
+pub const CONNECTION_THICKNESS_WORLD: f32 = 0.3;
 /// Linienstaerke fuer Sub-Prioritaets-Verbindungen.
-pub const CONNECTION_THICKNESS_SUBPRIO_WORLD: f32 = 0.05;
+pub const CONNECTION_THICKNESS_SUBPRIO_WORLD: f32 = 0.15;
 /// Pfeil-Laenge in Welteinheiten.
 pub const ARROW_LENGTH_WORLD: f32 = 1.0;
 /// Pfeil-Breite in Welteinheiten.
@@ -35,7 +35,7 @@ pub const CONNECTION_COLOR_DUAL: [f32; 4] = [0.8901961, 1.0, 0.39607844, 1.0];
 pub const CONNECTION_COLOR_REVERSE: [f32; 4] = [1.0, 0.5, 0.1, 1.0];
 
 /// Marker-Groesse in Welteinheiten.
-pub const MARKER_SIZE_WORLD: f32 = 5.6;
+pub const MARKER_SIZE_WORLD: f32 = 5.0000005;
 
 /// Standard-Maximum fuer den Zoom-Kompensationsfaktor.
 ///
@@ -93,7 +93,7 @@ impl Default for OverviewLayerOptions {
     fn default() -> Self {
         Self {
             terrain: true,
-            hillshade: true,
+            hillshade: false,
             farmlands: true,
             farmland_ids: true,
             pois: false,

@@ -132,33 +132,33 @@ Zentral gesammelte Konfigurationswerte, gegliedert nach Bereich:
 | Kamera | `CAMERA_BASE_WORLD_EXTENT` | 2048.0 | Sichtbare Welt-Halbbreite bei Zoom 1.0 (Referenz-Duplikat, kanonisch in `Camera2D`) |
 | Kamera | `CAMERA_ZOOM_MIN` / `MAX` | 0.75 / 200.0 | Zoom-Grenzen (konfigurierbarer Default) |
 | Kamera | `CAMERA_ZOOM_STEP` | 1.1 | Zoom-Schritt bei Menue-Buttons / Shortcuts |
-| Kamera | `CAMERA_SCROLL_ZOOM_STEP` | 1.025 | Zoom-Schritt bei Mausrad-Scroll |
-| Selektion | `SELECTION_SIZE_FACTOR` | 125.0 | Vergroesserung selektierter Nodes in % (100..=200) |
-| Nodes | `NODE_SIZE_WORLD` | 0.5 | Feste Node-Groesse in Welt-Einheiten |
-| Nodes | `NODE_COLOR_DEFAULT` | `[0.0, 0.298, 1.0, 1.0]` | Blau (Regular) |
-| Nodes | `NODE_COLOR_SUBPRIO` | `[1.0, 0.733, 0.0, 1.0]` | Gelborange (SubPrio) |
-| Nodes | `NODE_COLOR_SELECTED` | `[0.843, 0.0, 1.0, 1.0]` | Violett (Selektiert) |
+| Kamera | `CAMERA_SCROLL_ZOOM_STEP` | 1.045 | Zoom-Schritt bei Mausrad-Scroll |
+| Selektion | `SELECTION_SIZE_FACTOR` | 175.0 | Vergroesserung selektierter Nodes in % (100..=200) |
+| Nodes | `NODE_SIZE_WORLD` | 1.5000002 | Feste Node-Groesse in Welt-Einheiten |
+| Nodes | `NODE_COLOR_DEFAULT` | `[0.118, 1.0, 0.0, 1.0]` | Gruen (Regular) |
+| Nodes | `NODE_COLOR_SUBPRIO` | `[0.0, 0.749, 1.0, 1.0]` | Cyan (SubPrio) |
+| Nodes | `NODE_COLOR_SELECTED` | `[1.0, 0.0, 0.824, 1.0]` | Magenta (Selektiert) |
 | Nodes | `NODE_COLOR_WARNING` | `[1.0, 0.0, 0.0, 1.0]` | Rot (Warning) |
-| Nodes | `MIN_NODE_SIZE_PX` | 3.0 | Mindestgroesse in Pixeln beim Herauszoomen (0 = deaktiviert) |
-| Connections | `CONNECTION_THICKNESS_WORLD` | 0.1 | Hauptstrassen-Linienbreite |
-| Connections | `CONNECTION_THICKNESS_SUBPRIO_WORLD` | 0.05 | Nebenstrassen-Linienbreite |
+| Nodes | `MIN_NODE_SIZE_PX` | 4.0 | Mindestgroesse in Pixeln beim Herauszoomen (0 = deaktiviert) |
+| Connections | `CONNECTION_THICKNESS_WORLD` | 0.3 | Hauptstrassen-Linienbreite |
+| Connections | `CONNECTION_THICKNESS_SUBPRIO_WORLD` | 0.15 | Nebenstrassen-Linienbreite |
 | Connections | `ARROW_LENGTH_WORLD` / `ARROW_WIDTH_WORLD` | 1.0 / 0.5 | Pfeilgeometrie |
-| Connections | `MIN_CONNECTION_WIDTH_PX` | 1.5 | Mindestbreite in Pixeln beim Herauszoomen |
-| Connections | `MIN_ARROW_SIZE_PX` | 4.0 | Mindestpfeil-Groesse in Pixeln |
+| Connections | `MIN_CONNECTION_WIDTH_PX` | 1.0 | Mindestbreite in Pixeln beim Herauszoomen |
+| Connections | `MIN_ARROW_SIZE_PX` | 3.0 | Mindestpfeil-Groesse in Pixeln |
 | Connections | `CONNECTION_COLOR_REGULAR` | `[0.0, 0.694, 1.0, 1.0]` | Blau (Einrichtung) |
 | Connections | `CONNECTION_COLOR_DUAL` | `[0.890, 1.0, 0.396, 1.0]` | Hellgruen (Bidirektional) |
 | Connections | `CONNECTION_COLOR_REVERSE` | `[1.0, 0.5, 0.1, 1.0]` | Orange (Rueckwaerts) |
-| Marker | `MARKER_SIZE_WORLD` | 2.6 | Pin-Hoehe in Welt-Einheiten |
-| Marker | `MARKER_COLOR` | `[0.0, 0.467, 0.102, 1.0]` | Dunkelgruen |
+| Marker | `MARKER_SIZE_WORLD` | 5.0000005 | Pin-Hoehe in Welt-Einheiten |
+| Marker | `MARKER_COLOR` | `[1.0, 0.494, 0.0, 1.0]` | Orange |
 | Marker | `MARKER_OUTLINE_COLOR` | `[1.0, 0.643, 0.0, 1.0]` | Goldgelb |
-| Marker | `MARKER_OUTLINE_WIDTH` | 0.08 | Standard-Umrissstärke (Anteil am Radius, 0.01–0.3) |
-| Marker | `MIN_MARKER_SIZE_PX` | 8.0 | Mindestgroesse in Pixeln |
-| Decimation | `NODE_DECIMATION_SPACING_PX` | 6.0 | Mindestabstand (px) fuer Grid-Decimation |
+| Marker | `MARKER_OUTLINE_WIDTH` | 0.2 | Standard-Umrissstärke (Anteil am Radius, 0.01–0.3) |
+| Marker | `MIN_MARKER_SIZE_PX` | 10.0 | Mindestgroesse in Pixeln |
+| Decimation | `NODE_DECIMATION_SPACING_PX` | 10.0 | Mindestabstand (px) fuer Grid-Decimation |
 | Tools | `SNAP_SCALE_PERCENT` | 100.0 | Snap-Radius in % der Node-Groesse |
 | Tools | `HITBOX_SCALE_PERCENT` | 100.0 | Standard-Hitbox-Skalierung in % der Node-Groesse |
 | Tools | `MOUSE_WHEEL_DISTANCE_STEP_M` | 0.1 | Schrittweite (m) fuer Distanz-Felder bei Mausrad |
 | Terrain | `TERRAIN_HEIGHT_SCALE` | 255.0 | Hoehenskala fuer Heightmap-Export |
-| Zoom-Kompensation | `DEFAULT_ZOOM_COMPENSATION_MAX` | 4.0 | Standard-Maximum fuer den Zoom-Kompensationsfaktor (1.0 = deaktiviert) |
+| Zoom-Kompensation | `DEFAULT_ZOOM_COMPENSATION_MAX` | 5.0 | Standard-Maximum fuer den Zoom-Kompensationsfaktor (1.0 = deaktiviert) |
 
 ### `ValueAdjustInputMode`
 
@@ -189,7 +189,7 @@ pub struct OverviewLayerOptions {
 }
 ```
 
-Der Default setzt `terrain`, `hillshade`, `farmlands` und `farmland_ids` auf `true`; `pois` und `legend` bleiben deaktiviert. Die Struct-Deserialisierung nutzt `Default`, damit fehlende neue Felder in bestehenden TOML-Dateien mit den definierten Standardwerten initialisiert werden.
+Der Default setzt `terrain`, `farmlands` und `farmland_ids` auf `true`; `hillshade`, `pois` und `legend` bleiben deaktiviert. Die Struct-Deserialisierung nutzt `Default`, damit fehlende neue Felder in bestehenden TOML-Dateien mit den definierten Standardwerten initialisiert werden.
 
 ### `BackgroundLayerKind`
 
