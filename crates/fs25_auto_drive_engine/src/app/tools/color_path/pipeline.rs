@@ -662,6 +662,24 @@ mod tests {
         }
     }
 
+    fn assert_resampled_spacing(nodes: &[Vec2], node_spacing: f32) {
+        assert!(
+            nodes.len() >= 2,
+            "Resample muss mindestens Start und Ende enthalten"
+        );
+        for pair in nodes.windows(2) {
+            let distance = pair[0].distance(pair[1]);
+            assert!(
+                distance > 0.0,
+                "Aufeinanderfolgende Punkte duerfen nicht identisch sein"
+            );
+            assert!(
+                distance <= node_spacing + 1e-4,
+                "Abstand {distance} verletzt node_spacing {node_spacing}"
+            );
+        }
+    }
+
     #[test]
     fn junction_radius_trims_start_points_inside_radius() {
         let polyline = vec![
@@ -677,11 +695,25 @@ mod tests {
             polyline,
         );
 
+        let trimmed = trim_segment_near_junctions(
+            &network,
+            &network.segments[0],
+            &network.segments[0].polyline,
+            2.5,
+        )
+        .expect("Getrimmtes Segment sollte gueltig bleiben");
+
+        assert_eq!(trimmed[0], Vec2::new(0.0, 0.0));
+        assert_eq!(trimmed[1], Vec2::new(3.0, 0.0));
+        assert_eq!(
+            *trimmed.last().expect("Endpunkt muss vorhanden sein"),
+            Vec2::new(10.0, 0.0)
+        );
+
         let prepared = prepare_segments(&network, 0.0, 1.0, 2.5);
 
         assert_eq!(prepared.len(), 1);
         assert_eq!(prepared[0].resampled_nodes[0], Vec2::new(0.0, 0.0));
-        assert_eq!(prepared[0].resampled_nodes[1], Vec2::new(3.0, 0.0));
         assert_eq!(
             *prepared[0]
                 .resampled_nodes
@@ -689,6 +721,7 @@ mod tests {
                 .expect("Endpunkt muss vorhanden sein"),
             Vec2::new(10.0, 0.0)
         );
+        assert_resampled_spacing(&prepared[0].resampled_nodes, 1.0);
     }
 
     #[test]
@@ -758,6 +791,21 @@ mod tests {
             polyline,
         );
 
+        let trimmed = trim_segment_near_junctions(
+            &network,
+            &network.segments[0],
+            &network.segments[0].polyline,
+            2.5,
+        )
+        .expect("Getrimmtes Segment sollte gueltig bleiben");
+
+        assert_eq!(trimmed[0], Vec2::new(0.0, 0.0));
+        assert_eq!(
+            *trimmed.last().expect("Endpunkt muss vorhanden sein"),
+            Vec2::new(10.0, 0.0)
+        );
+        assert_eq!(trimmed[trimmed.len() - 2], Vec2::new(7.0, 0.0));
+
         let prepared = prepare_segments(&network, 0.0, 1.0, 2.5);
 
         assert_eq!(prepared.len(), 1);
@@ -767,10 +815,7 @@ mod tests {
             *nodes.last().expect("Endpunkt muss vorhanden sein"),
             Vec2::new(10.0, 0.0)
         );
-        assert!(
-            nodes[nodes.len() - 2].distance(*nodes.last().expect("Endpunkt muss vorhanden sein"))
-                > 2.5
-        );
+        assert_resampled_spacing(nodes, 1.0);
     }
 
     #[test]
@@ -789,24 +834,34 @@ mod tests {
             polyline,
         );
 
+        let trimmed = trim_segment_near_junctions(
+            &network,
+            &network.segments[0],
+            &network.segments[0].polyline,
+            2.5,
+        )
+        .expect("Getrimmtes Segment sollte gueltig bleiben");
+
+        assert_eq!(
+            trimmed,
+            vec![
+                Vec2::new(0.0, 0.0),
+                Vec2::new(3.0, 0.0),
+                Vec2::new(7.0, 0.0),
+                Vec2::new(10.0, 0.0),
+            ]
+        );
+
         let prepared = prepare_segments(&network, 0.0, 1.0, 2.5);
 
         assert_eq!(prepared.len(), 1);
         let nodes = &prepared[0].resampled_nodes;
-        assert!(nodes.len() >= 3);
         assert_eq!(nodes[0], Vec2::new(0.0, 0.0));
         assert_eq!(
             *nodes.last().expect("Endpunkt muss vorhanden sein"),
             Vec2::new(10.0, 0.0)
         );
-
-        // Erster Innenpunkt muss ausserhalb des Radius um die Start-Junction liegen.
-        assert!(nodes[1].distance(nodes[0]) > 2.5);
-        // Letzter Innenpunkt muss ausserhalb des Radius um die End-Junction liegen.
-        assert!(
-            nodes[nodes.len() - 2].distance(*nodes.last().expect("Endpunkt muss vorhanden sein"))
-                > 2.5
-        );
+        assert_resampled_spacing(nodes, 1.0);
     }
 
     #[test]
