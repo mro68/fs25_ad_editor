@@ -404,33 +404,35 @@ pub(super) fn render_route_offset_panel(
 
 /// Rendert die Konfiguration fuer das ColorPath-Tool.
 ///
-/// `wheel_enabled` steuert, ob numerische Widgets ihre Mausrad-Helfer aus
-/// `ui::common` anwenden.
+/// Single-Step-Modell (CP-07): Phase-Header zeigt nur noch `Idle`, `Sampling`
+/// oder `Editor`; die Buttonleiste reduziert sich auf `Reset`, `Berechnen`
+/// und `Uebernehmen`. Geometrie- und Matching-Slider wirken in `Editing`
+/// live ueber das Backend.
+#[allow(deprecated)] // Legacy Wizard-Phasen-Aliase werden defensiv noch entgegengenommen.
 pub(super) fn render_color_path_panel(
     ui: &mut egui::Ui,
     state: &ColorPathPanelState,
     panel_ctx: &mut RouteToolPanelRenderContext<'_>,
 ) {
-    // Aktuelle Phasen-Anzeige als Kopfzeile des Wizards.
+    // Phasen-Anzeige (auf Idle/Sampling/Editor verdichtet).
     ui.colored_label(
         egui::Color32::LIGHT_BLUE,
         format!("Phase: {}", color_path_phase_label(state.phase)),
     );
     ui.separator();
 
+    // Effektive Phase: Legacy-FFI-Aliase werden auf Editor abgebildet.
+    let effective_phase = collapse_color_path_phase(state.phase);
+
     // Phasen-spezifischer Info-Block.
-    #[allow(deprecated)]
-    match state.phase {
-        ColorPathPanelPhase::Idle => {
+    match effective_phase {
+        ColorPathUiPhase::Idle => {
             ui.label("Klick oder Alt+Lasso fuer Farbsample");
         }
-        ColorPathPanelPhase::Sampling => {
+        ColorPathUiPhase::Sampling => {
             render_color_path_sampling_info(ui, state);
         }
-        ColorPathPanelPhase::CenterlinePreview
-        | ColorPathPanelPhase::JunctionEdit
-        | ColorPathPanelPhase::Finalize
-        | ColorPathPanelPhase::Preview => {
+        ColorPathUiPhase::Editor => {
             if let Some(stats) = state.preview_stats {
                 ui.label(format!(
                     "Kreuzungen: {}  Offene Enden: {}",
@@ -440,7 +442,7 @@ pub(super) fn render_color_path_panel(
                     "Segmente: {}  Preview-Nodes: {}",
                     stats.segment_count, stats.node_count
                 ));
-                if state.phase == ColorPathPanelPhase::Finalize && !state.can_accept {
+                if !state.can_accept {
                     ui.small("Keine Nodes zum Einfuegen vorhanden.");
                 }
             }
@@ -449,57 +451,46 @@ pub(super) fn render_color_path_panel(
 
     ui.separator();
 
-    // Idle verlaesst das Tool ausschliesslich ueber `StartSampling`, weil die
-    // Engine `NextPhase` in Idle nicht akzeptiert. Alle anderen Phasen nutzen
-    // die Wizard-Navigation aus `NextPhase`/`PrevPhase`/`Reset`/`Accept`.
-    if state.phase == ColorPathPanelPhase::Idle {
-        if ui.button("Starten →").clicked() {
-            push_action(
-                panel_ctx.events,
-                RouteToolPanelAction::ColorPath(ColorPathPanelAction::StartSampling),
-            );
-        }
+    // Buttonleiste: Reset (immer), Berechnen (Sampling), Uebernehmen (Editor).
+    ui.horizontal(|ui| {
         if ui.button("Reset").clicked() {
             push_action(
                 panel_ctx.events,
                 RouteToolPanelAction::ColorPath(ColorPathPanelAction::Reset),
             );
         }
-    } else {
-        ui.horizontal(|ui| {
-            if ui
-                .add_enabled(state.can_back, egui::Button::new("← Zurueck"))
-                .clicked()
-            {
-                push_action(
-                    panel_ctx.events,
-                    RouteToolPanelAction::ColorPath(ColorPathPanelAction::PrevPhase),
-                );
+        match effective_phase {
+            ColorPathUiPhase::Idle => {
+                // In Idle ist weder Berechnen noch Uebernehmen sinnvoll —
+                // der erste Klick ins Bild startet das Sampling automatisch.
+                ui.add_enabled(false, egui::Button::new("Berechnen"));
             }
-            if ui
-                .add_enabled(state.can_next, egui::Button::new("Weiter →"))
-                .clicked()
-            {
-                push_action(
-                    panel_ctx.events,
-                    RouteToolPanelAction::ColorPath(ColorPathPanelAction::NextPhase),
-                );
+            ColorPathUiPhase::Sampling => {
+                if ui
+                    .add_enabled(state.can_compute, egui::Button::new("Berechnen"))
+                    .clicked()
+                {
+                    push_action(
+                        panel_ctx.events,
+                        RouteToolPanelAction::ColorPath(ColorPathPanelAction::Compute),
+                    );
+                }
             }
-            if ui.button("Reset").clicked() {
-                push_action(
-                    panel_ctx.events,
-                    RouteToolPanelAction::ColorPath(ColorPathPanelAction::Reset),
-                );
+            ColorPathUiPhase::Editor => {
+                if ui
+                    .add_enabled(state.can_accept, egui::Button::new("Uebernehmen"))
+                    .clicked()
+                {
+                    push_action(
+                        panel_ctx.events,
+                        RouteToolPanelAction::ColorPath(ColorPathPanelAction::Accept),
+                    );
+                }
             }
-            // "Uebernehmen" erscheint nur in `Finalize`, sobald ein uebernahmefaehiges
-            // Netz vorliegt (engine-seitig an `can_accept` gebunden).
-            if state.can_accept && ui.button("Uebernehmen").clicked() {
-                push_action(
-                    panel_ctx.events,
-                    RouteToolPanelAction::ColorPath(ColorPathPanelAction::Accept),
-                );
-            }
-        });
+        }
+    });
+    if matches!(effective_phase, ColorPathUiPhase::Editor) {
+        ui.small("Bereits berechnet — Reset fuer neuen Lauf");
     }
 
     ui.separator();
@@ -600,17 +591,41 @@ pub(super) fn render_color_path_panel(
     });
 }
 
-/// Liefert den deutschen Anzeige-Namen der aktuellen ColorPath-Wizard-Phase.
+/// Liefert den deutschen Anzeige-Namen der aktuellen ColorPath-Phase.
+///
+/// Single-Step-Modell: nur `Idle`, `Sampling` und `Editor` sind gueltig.
+/// Legacy-FFI-Aliase werden defensiv ebenfalls auf `Editor` abgebildet.
 fn color_path_phase_label(phase: ColorPathPanelPhase) -> &'static str {
+    match collapse_color_path_phase(phase) {
+        ColorPathUiPhase::Idle => "Idle",
+        ColorPathUiPhase::Sampling => "Sampling",
+        ColorPathUiPhase::Editor => "Editor",
+    }
+}
+
+/// UI-seitig reduzierte ColorPath-Phase fuer das Single-Step-Panel.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum ColorPathUiPhase {
+    Idle,
+    Sampling,
+    Editor,
+}
+
+/// Bildet die DTO-Phase auf die drei UI-Phasen ab.
+///
+/// Legacy-Aliase (`CenterlinePreview`, `JunctionEdit`, `Finalize`, `Preview`)
+/// werden defensiv auf `Editor` gemappt, damit alte FFI-Hosts nicht in einen
+/// undefinierten UI-Zustand fallen.
+fn collapse_color_path_phase(phase: ColorPathPanelPhase) -> ColorPathUiPhase {
     #[allow(deprecated)]
     match phase {
-        ColorPathPanelPhase::Idle => "Idle",
-        ColorPathPanelPhase::Sampling => "Sampling",
-        ColorPathPanelPhase::CenterlinePreview => "Mittellinien-Vorschau",
-        ColorPathPanelPhase::JunctionEdit => "Kreuzungen bearbeiten",
-        ColorPathPanelPhase::Finalize => "Feinglaettung",
-        // Legacy-Alias alter FFI-Hosts; wird wie die finale Phase beschriftet.
-        ColorPathPanelPhase::Preview => "Fertig",
+        ColorPathPanelPhase::Idle => ColorPathUiPhase::Idle,
+        ColorPathPanelPhase::Sampling => ColorPathUiPhase::Sampling,
+        ColorPathPanelPhase::Editing
+        | ColorPathPanelPhase::CenterlinePreview
+        | ColorPathPanelPhase::JunctionEdit
+        | ColorPathPanelPhase::Finalize
+        | ColorPathPanelPhase::Preview => ColorPathUiPhase::Editor,
     }
 }
 
