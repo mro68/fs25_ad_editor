@@ -231,6 +231,11 @@ fn route_offset_panel_state_to_value(state: &RouteOffsetPanelState) -> Value {
 }
 
 fn color_path_panel_state_to_value(state: &ColorPathPanelState) -> Value {
+    // CP-05: Die Legacy-Flags can_next/can_back sind `#[deprecated]`, werden
+    // aber bis CP-06 von der Engine noch befuellt; der DTO-Snapshot reicht sie
+    // unveraendert an Hosts weiter, damit aeltere Adapter nicht brechen.
+    #[allow(deprecated)]
+    let (can_next, can_back) = (state.can_next, state.can_back);
     json!({
         "kind": "color_path",
         "phase": color_path_panel_phase_to_str(state.phase),
@@ -238,8 +243,8 @@ fn color_path_panel_state_to_value(state: &ColorPathPanelState) -> Value {
         "avg_color": state.avg_color,
         "palette_colors": state.palette_colors,
         "can_compute": state.can_compute,
-        "can_next": state.can_next,
-        "can_back": state.can_back,
+        "can_next": can_next,
+        "can_back": can_back,
         "can_accept": state.can_accept,
         "preview_stats": state.preview_stats.map(color_path_preview_stats_to_value),
         "exact_color_match": state.exact_color_match,
@@ -477,18 +482,38 @@ fn field_path_preview_status_to_value(value: FieldPathPreviewStatus) -> Value {
 }
 
 fn color_path_panel_phase_to_str(value: ColorPathPanelPhase) -> &'static str {
-    // Kompat-Hinweis: CP-04 erweitert die Phase additiv. Die Legacy-Variante
-    // `Preview` wird vom Engine-Layer nicht mehr emittiert, bleibt aber in
-    // diesem Mapping erreichbar, damit aeltere Hosts/Adapter, die den Zustand
-    // noch per Hand bauen, weiter serialisierbar bleiben (-> CP-11 entfernt).
+    // CP-05 (Single-Step-Wizard): Die Engine emittiert kanonisch nur noch
+    // `"idle"`/`"sampling"`/`"editing"`. Die Legacy-Wizard-Phasen
+    // `Preview`/`CenterlinePreview`/`JunctionEdit`/`Finalize` werden auf
+    // `"editing"` gefaltet, damit bestehende Hosts/Snapshots weiter
+    // konsistent gelesen werden koennen. CP-11 entfernt die Legacy-Varianten.
     #[allow(deprecated)]
     match value {
         ColorPathPanelPhase::Idle => "idle",
         ColorPathPanelPhase::Sampling => "sampling",
-        ColorPathPanelPhase::CenterlinePreview => "centerline_preview",
-        ColorPathPanelPhase::JunctionEdit => "junction_edit",
-        ColorPathPanelPhase::Finalize => "finalize",
-        ColorPathPanelPhase::Preview => "preview",
+        ColorPathPanelPhase::Editing
+        | ColorPathPanelPhase::CenterlinePreview
+        | ColorPathPanelPhase::JunctionEdit
+        | ColorPathPanelPhase::Finalize
+        | ColorPathPanelPhase::Preview => "editing",
+    }
+}
+
+/// Liefert die kanonische [`ColorPathPanelPhase`] fuer einen DTO-Phase-String.
+///
+/// Akzeptiert kanonisch `"idle"`, `"sampling"`, `"editing"` sowie zusaetzlich
+/// die Legacy-Strings `"preview"`, `"centerline_preview"`, `"junction_edit"`
+/// und `"finalize"` aus dem alten Wizard-Modell und mappt sie auf
+/// [`ColorPathPanelPhase::Editing`].
+#[allow(dead_code)] // CP-06 nutzt den Helfer fuer Host-Eingangs-Deserialisierung.
+pub(crate) fn color_path_panel_phase_from_str(value: &str) -> Option<ColorPathPanelPhase> {
+    match value {
+        "idle" => Some(ColorPathPanelPhase::Idle),
+        "sampling" => Some(ColorPathPanelPhase::Sampling),
+        "editing" | "preview" | "centerline_preview" | "junction_edit" | "finalize" => {
+            Some(ColorPathPanelPhase::Editing)
+        }
+        _ => None,
     }
 }
 
@@ -660,5 +685,134 @@ mod tests {
         );
         assert_eq!(value["group_boundaries"][0]["direction"], "exit");
         assert_eq!(value["show_no_file_hint"], true);
+    }
+
+    // ------------------------------------------------------------------
+    // CP-05 — DTO-Tests fuer kanonisches Single-Step-Editing.
+    // ------------------------------------------------------------------
+
+    use fs25_auto_drive_engine::app::ui_contract::{
+        ColorPathPanelAction, ColorPathPanelPhase, ColorPathPanelState,
+        ExistingConnectionModeChoice,
+    };
+
+    use super::color_path_panel_phase_from_str;
+
+    fn make_color_path_state(phase: ColorPathPanelPhase) -> ColorPathPanelState {
+        #[allow(deprecated)] // can_next/can_back sind Legacy-Felder bis CP-06.
+        ColorPathPanelState {
+            phase,
+            sample_count: 0,
+            avg_color: None,
+            palette_colors: Vec::new(),
+            can_compute: false,
+            can_next: false,
+            can_back: false,
+            can_accept: false,
+            preview_stats: None,
+            exact_color_match: false,
+            color_tolerance: 1.0,
+            node_spacing: 1.0,
+            simplify_tolerance: 0.0,
+            junction_radius: 0.0,
+            noise_filter: false,
+            existing_connection_mode: ExistingConnectionModeChoice::Never,
+        }
+    }
+
+    #[test]
+    fn color_path_panel_phase_emits_editing_for_canonical_phase() {
+        let value = super::color_path_panel_state_to_value(&make_color_path_state(
+            ColorPathPanelPhase::Editing,
+        ));
+        assert_eq!(value["phase"], "editing");
+    }
+
+    #[test]
+    fn color_path_panel_phase_emits_editing_for_legacy_wizard_phases() {
+        // Bis CP-06 emittiert die Engine noch `Finalize`/`CenterlinePreview`/...
+        // Der DTO-Layer muss alle Editing-Stufen auf den kanonischen
+        // `"editing"`-String falten.
+        #[allow(deprecated)]
+        let legacy = [
+            ColorPathPanelPhase::Preview,
+            ColorPathPanelPhase::CenterlinePreview,
+            ColorPathPanelPhase::JunctionEdit,
+            ColorPathPanelPhase::Finalize,
+        ];
+        for phase in legacy {
+            let value = super::color_path_panel_state_to_value(&make_color_path_state(phase));
+            assert_eq!(
+                value["phase"], "editing",
+                "Legacy-Phase {phase:?} muss auf 'editing' gefaltet werden",
+            );
+        }
+    }
+
+    #[test]
+    fn color_path_panel_phase_emits_idle_and_sampling_unchanged() {
+        for (phase, expected) in [
+            (ColorPathPanelPhase::Idle, "idle"),
+            (ColorPathPanelPhase::Sampling, "sampling"),
+        ] {
+            let value = super::color_path_panel_state_to_value(&make_color_path_state(phase));
+            assert_eq!(value["phase"], expected);
+        }
+    }
+
+    #[test]
+    fn color_path_panel_phase_from_str_accepts_canonical_and_legacy() {
+        assert_eq!(
+            color_path_panel_phase_from_str("idle"),
+            Some(ColorPathPanelPhase::Idle)
+        );
+        assert_eq!(
+            color_path_panel_phase_from_str("sampling"),
+            Some(ColorPathPanelPhase::Sampling)
+        );
+        assert_eq!(
+            color_path_panel_phase_from_str("editing"),
+            Some(ColorPathPanelPhase::Editing)
+        );
+        for legacy in ["preview", "centerline_preview", "junction_edit", "finalize"] {
+            assert_eq!(
+                color_path_panel_phase_from_str(legacy),
+                Some(ColorPathPanelPhase::Editing),
+                "Legacy-String {legacy:?} muss auf Editing gemappt werden",
+            );
+        }
+        assert_eq!(color_path_panel_phase_from_str("garbage"), None);
+    }
+
+    #[test]
+    fn color_path_panel_action_compute_roundtrips_canonical_tag() {
+        let json = serde_json::to_string(&ColorPathPanelAction::Compute)
+            .expect("Compute muss serialisierbar sein");
+        let value: Value = serde_json::from_str(&json).expect("JSON muss parsebar sein");
+        assert_eq!(value["kind"], "compute");
+
+        let parsed: ColorPathPanelAction = serde_json::from_str(&json)
+            .expect("Roundtrip-Deserialisierung muss gelingen");
+        assert_eq!(parsed, ColorPathPanelAction::Compute);
+    }
+
+    #[test]
+    fn color_path_panel_action_legacy_tags_still_deserialize() {
+        // CP-05: Legacy-Tags bleiben deserialisierbar. Engine-Mapping auf
+        // Compute/Reset erfolgt in CP-06; hier wird nur der Wire-Kontrakt
+        // verifiziert.
+        #[allow(deprecated)]
+        let cases: &[(&str, ColorPathPanelAction)] = &[
+            ("compute_preview", ColorPathPanelAction::ComputePreview),
+            ("back_to_sampling", ColorPathPanelAction::BackToSampling),
+            ("next_phase", ColorPathPanelAction::NextPhase),
+            ("prev_phase", ColorPathPanelAction::PrevPhase),
+        ];
+        for (tag, expected) in cases {
+            let json = format!(r#"{{"kind":"{tag}"}}"#);
+            let parsed: ColorPathPanelAction = serde_json::from_str(&json)
+                .unwrap_or_else(|err| panic!("Legacy-Tag {tag:?} muss parsebar bleiben: {err}"));
+            assert_eq!(parsed, *expected);
+        }
     }
 }

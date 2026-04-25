@@ -194,32 +194,37 @@ pub enum FieldPathPanelAction {
 
 /// Panel-Phase des Farb-Pfad-Tools.
 ///
-/// Seit CP-04 loest der dreistufige Wizard-Fluss
-/// `CenterlinePreview` → `JunctionEdit` → `Finalize` die alte Sammel-Phase
-/// `Preview` ab. Die Legacy-Variante bleibt additiv erhalten, um bestehende
-/// FFI-Hosts nicht zu brechen, wird aber vom Engine-Layer nicht mehr
-/// emittiert und per `#[deprecated]` zur Migration markiert. CP-11 entfernt
-/// sie endgueltig, sobald die Hosts umgezogen sind.
+/// Seit CP-05 ist der ColorPath-Wizard ein Single-Step-Modell mit den drei
+/// kanonischen Phasen [`Idle`](Self::Idle), [`Sampling`](Self::Sampling) und
+/// [`Editing`](Self::Editing). Die legacy Wizard-Phasen `Preview`,
+/// `CenterlinePreview`, `JunctionEdit` und `Finalize` bleiben additiv
+/// erhalten, sind aber `#[deprecated]` markiert: die Engine setzt sie nicht
+/// mehr und der DTO-Layer faltet sie auf den kanonischen `"editing"`-String,
+/// damit aeltere Hosts/Snapshots weiter geparst werden koennen. CP-11
+/// entfernt die Legacy-Varianten endgueltig.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum ColorPathPanelPhase {
     /// Warten auf Start.
     Idle,
     /// Farben werden gesammelt.
     Sampling,
-    /// Phase 1: Stage E ist durchgelaufen, Stage F noch nicht; Centerlines liegen vor.
+    /// Single-Step-Editing: Centerlines liegen vor, Junctions koennen bewegt
+    /// werden, Stage F wird live nachgezogen, das Netz ist uebernahmebereit.
+    ///
+    /// Kanonische Phase ab CP-05 (loest `CenterlinePreview`/`JunctionEdit`/
+    /// `Finalize` ab). Der DTO-Layer serialisiert sie als `"editing"`.
+    Editing,
+    /// Legacy-Wizard-Phase (Stage E fertig, Stage F ausstehend).
+    #[deprecated(since = "2.1.0", note = "Single-step wizard: use Editing")]
     CenterlinePreview,
-    /// Phase 2: Junctions koennen bewegt werden, Stage F bleibt zurueckgehalten.
+    /// Legacy-Wizard-Phase (Junction-Trim-Stage).
+    #[deprecated(since = "2.1.0", note = "Single-step wizard: use Editing")]
     JunctionEdit,
-    /// Phase 3: Stage F angewendet; das Netz ist zum Uebernehmen bereit.
+    /// Legacy-Wizard-Phase (Stage F angewendet, uebernahmebereit).
+    #[deprecated(since = "2.1.0", note = "Single-step wizard: use Editing")]
     Finalize,
     /// Legacy-Alias fuer Hosts vor dem Wizard-Umbau.
-    ///
-    /// Wird von der Engine nicht mehr gesetzt. Fuer Einlese-/Serde-Pfade
-    /// weiterhin vorhanden, damit alte FFI-Snapshots geparst werden koennen.
-    #[deprecated(
-        since = "2.1.0",
-        note = "Wizard-Phasen verwenden: CenterlinePreview/JunctionEdit/Finalize"
-    )]
+    #[deprecated(since = "2.1.0", note = "Single-step wizard: use Editing")]
     Preview,
 }
 
@@ -252,12 +257,12 @@ pub struct ColorPathPreviewStats {
 
 /// Panelzustand des Farb-Pfad-Tools.
 ///
-/// Seit CP-04 bildet der Zustand den ColorPath-Wizard ab: neben der aktuellen
-/// [`ColorPathPanelPhase`] liefert er die drei Wizard-Flags `can_next`,
-/// `can_back` und `can_accept`, ueber die Host-/UI-Schichten die
-/// Navigations-Buttons (`NextPhase`, `PrevPhase`, `Accept`) enablen. Das
-/// legacy-kompatible Flag `can_compute` bleibt als Startkriterium fuer die
-/// Sampling→CenterlinePreview-Transition erhalten.
+/// Seit CP-05 bildet der Zustand das Single-Step-Modell des ColorPath-Tools
+/// ab: aus der [`ColorPathPanelPhase`] und den Compute-/Accept-Flags
+/// (`can_compute`, `can_accept`) leiten Host-/UI-Schichten die drei Buttons
+/// `Reset` / `Berechnen` / `Uebernehmen` ab. Die Wizard-Flags `can_next` und
+/// `can_back` bleiben fuer Host-Kompat additiv erhalten, sind aber
+/// `#[deprecated]`: die Engine setzt sie ab CP-06 immer auf `false`.
 #[derive(Debug, Clone, PartialEq)]
 pub struct ColorPathPanelState {
     /// Aktuelle Panel-Phase.
@@ -269,21 +274,24 @@ pub struct ColorPathPanelState {
     /// Farbpalette fuer Matching und Preview.
     pub palette_colors: Vec<[u8; 3]>,
     /// Gibt an, ob die Pipeline aus dem aktuellen Sampling gestartet werden kann.
+    ///
+    /// Kanonisches Compute-Flag: `true` in `Sampling` mit vorhandenen Samples.
     pub can_compute: bool,
-    /// Wizard-Flag: darf der "Weiter"-Button gedrueckt werden?
+    /// Legacy-Wizard-Flag fuer den "Weiter"-Button.
     ///
-    /// Berechnet vom Engine-Layer; Host-/UI-Schichten lesen nur. Semantik:
-    /// - `Sampling` → `can_compute` (Samples liegen vor).
-    /// - `CenterlinePreview`/`JunctionEdit` → `true`.
-    /// - andere Phasen → `false`.
+    /// Engine setzt dieses Flag ab CP-06 immer auf `false`. Hosts sollen
+    /// stattdessen `can_compute` lesen.
+    #[deprecated(since = "2.1.0", note = "Single-step wizard: use can_compute")]
     pub can_next: bool,
-    /// Wizard-Flag: darf der "Zurueck"-Button gedrueckt werden?
+    /// Legacy-Wizard-Flag fuer den "Zurueck"-Button.
     ///
-    /// `true` in jeder Phase ab `CenterlinePreview`; sonst `false`.
+    /// Engine setzt dieses Flag ab CP-06 immer auf `false`. Hosts brauchen
+    /// keinen Back-Button mehr; `Reset` ersetzt den Rueckweg.
+    #[deprecated(since = "2.1.0", note = "Single-step wizard: removed")]
     pub can_back: bool,
     /// Wizard-Flag: darf der "Uebernehmen"-Button gedrueckt werden?
     ///
-    /// Nur in `Finalize` und nur wenn ein uebernahmefaehiges Netz vorliegt.
+    /// Nur in `Editing` und nur wenn ein uebernahmefaehiges Netz vorliegt.
     pub can_accept: bool,
     /// Kennzahlen der Vorschau, falls vorhanden.
     pub preview_stats: Option<ColorPathPreviewStats>,
@@ -305,27 +313,33 @@ pub struct ColorPathPanelState {
 
 /// Panel-Aktion des Farb-Pfad-Tools.
 ///
-/// Der Wizard-Fluss kennt seit CP-04 die additiven Aktionen `NextPhase`,
-/// `PrevPhase` und `Accept`. Die Legacy-Aktionen `ComputePreview` und
-/// `BackToSampling` bleiben als deprecated-Alias bestehen, damit bestehende
-/// Hosts weiter kompilieren; die Engine-Semantik wird erst in CP-05
-/// vollstaendig auf die neuen Varianten gezogen.
+/// Seit CP-05 ist die kanonische Wizard-Aktion `Compute`: sie schaltet aus
+/// `Sampling` direkt nach `Editing` und baut das Netz inklusive Stage F auf.
+/// Die Legacy-Aktionen `ComputePreview`, `BackToSampling`, `NextPhase` und
+/// `PrevPhase` bleiben als `#[deprecated]` Aliase erhalten, damit bestehende
+/// Hosts/FFI-Snapshots weiter deserialisierbar sind. CP-06 zieht die
+/// Engine-Semantik vollstaendig auf `Compute`/`Accept`/`Reset` um.
 #[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
 #[serde(tag = "kind", content = "value", rename_all = "snake_case")]
 pub enum ColorPathPanelAction {
     /// Sampling starten.
     StartSampling,
+    /// Single-Step-Wizard: aus `Sampling` nach `Editing` rechnen und
+    /// Centerlines + Stage F aufbauen. Kanonische Compute-Aktion ab CP-05.
+    Compute,
     /// Legacy-Alias fuer den Uebergang `Sampling` → `CenterlinePreview`.
-    #[deprecated(since = "2.1.0", note = "Wizard-Aktion `NextPhase` verwenden")]
+    #[deprecated(since = "2.1.0", note = "Single-step wizard: use Compute")]
     ComputePreview,
     /// Legacy-Alias fuer den Rueckweg aus einer Preview-Phase in `Sampling`.
-    #[deprecated(since = "2.1.0", note = "Wizard-Aktion `PrevPhase` verwenden")]
+    #[deprecated(since = "2.1.0", note = "Single-step wizard: use Reset")]
     BackToSampling,
-    /// Wizard: eine Phase nach vorn (Sampling→CenterlinePreview→JunctionEdit→Finalize).
+    /// Legacy-Wizard-Aktion: eine Phase nach vorn.
+    #[deprecated(since = "2.1.0", note = "Single-step wizard: use Compute")]
     NextPhase,
-    /// Wizard: eine Phase zurueck (Finalize→JunctionEdit→CenterlinePreview→Sampling).
+    /// Legacy-Wizard-Aktion: eine Phase zurueck.
+    #[deprecated(since = "2.1.0", note = "Single-step wizard: use Reset")]
     PrevPhase,
-    /// Wizard: das fertige Netz aus `Finalize` uebernehmen.
+    /// Wizard: das fertige Netz aus `Editing` uebernehmen.
     Accept,
     /// Tool zurücksetzen.
     Reset,
