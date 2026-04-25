@@ -1,5 +1,6 @@
 //! State-Strukturen fuer das ColorPathTool.
 
+use super::editable::{EditableCenterlines, EditableJunctionId};
 use super::skeleton::SkeletonNetwork;
 use crate::app::tools::common::ToolLifecycleState;
 use crate::core::{ConnectionDirection, ConnectionPriority};
@@ -8,14 +9,33 @@ use image::RgbImage;
 use std::sync::Arc;
 
 /// Aktuelle Phase des ColorPathTool.
+///
+/// Seit CP-01 (Single-Step) ist der Wizard auf drei kanonische Varianten
+/// reduziert: `Idle` (kein Sampling), `Sampling` (Farbsamples sammeln) und
+/// `Editing` (Centerline/Junction-Edit/Stage-F unter einem Dach). Die
+/// frueheren `CenterlinePreview`/`JunctionEdit`/`Finalize` sind in `Editing`
+/// zusammengefasst — Stage F kann darin sowohl leer (noch nicht berechnet)
+/// als auch befuellt sein. Der Helfer [`ColorPathTool::can_execute`]
+/// entscheidet anhand der `prepared_segments`, ob das Ergebnis eingefuegt
+/// werden darf.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum ColorPathPhase {
     /// Leerer Grundzustand ohne aktives Sampling.
     Idle,
     /// User sampelt Farben per Klick oder Alt+Lasso.
     Sampling,
-    /// Teilnetz berechnet, wird als Vorschau angezeigt
-    Preview,
+    /// Centerline-Preview, Junction-Drag und Stage F unter einem Phasen-Label.
+    Editing,
+}
+
+impl ColorPathPhase {
+    /// Wahr, sobald der Wizard in der vereinheitlichten Editing-Phase steht.
+    ///
+    /// Wird von Lifecycle- und Panel-Pfaden genutzt, um Sampling/Idle von der
+    /// Preview-/Stage-F-Phase zu unterscheiden.
+    pub fn is_editing(self) -> bool {
+        matches!(self, ColorPathPhase::Editing)
+    }
 }
 
 /// Wie das erkannte Netz an bestehende Nodes angeschlossen werden soll.
@@ -118,6 +138,12 @@ pub(super) struct PreviewCoreCacheKey {
 pub(super) struct PreparedSegmentsCacheKey {
     /// Revision des Preview-Kerns.
     pub preview_core_revision: u64,
+    /// Revision des editierbaren Zwischenmodells (CP-07).
+    ///
+    /// Wird bei jedem Junction-Drag bzw. Wizard-Phase-Wechsel gebumpt und
+    /// zwingt so einen Stage-F-Rebuild, sobald sich Junction-Positionen
+    /// aendern. `0`, solange kein `EditableCenterlines` vorliegt.
+    pub editable_revision: u64,
     /// Vereinfachung als Bitmuster.
     pub simplify_tolerance_bits: u32,
     /// Node-Abstand als Bitmuster.
@@ -277,6 +303,31 @@ pub struct ColorPathTool {
     pub(super) sampling_preview: Option<SamplingPreviewData>,
     /// Stages D-F: Maskenaufbereitung, Netzextraktion und PreparedSegments.
     pub(super) preview_data: Option<PreviewData>,
+    /// Editierbares Zwischenmodell (CP-06) zwischen Stage E und Stage F.
+    ///
+    /// Wird beim Eintritt in [`ColorPathPhase::Editing`] aus dem aktuellen
+    /// Skelett-Netz erzeugt. Mutationen (Junction-Drag, Zweispur-Selektion)
+    /// bumpen die interne Revision und invalidieren dadurch spaetere
+    /// Stage-F-Caches.
+    pub(super) editable: Option<EditableCenterlines>,
+
+    /// Aktuell per Drag gegriffene Junction (CP-08).
+    ///
+    /// `None`, solange kein Drag laeuft. Wird in [`ColorPathPhase::Editing`]
+    /// beim `on_drag_start` gesetzt und beim `on_drag_end` wieder geleert.
+    pub(super) dragging_junction: Option<EditableJunctionId>,
+
+    /// Markiert, dass der Nutzer das Editable-Modell durch einen Junction-Drag
+    /// veraendert hat (CP-03 / Resync-Schutz).
+    ///
+    /// Solange das Flag gesetzt ist, ueberspringen Matching-/Preview-Core-
+    /// Slider-Resyncs das pauschale `sync_editable_from_network()` und
+    /// versuchen stattdessen, die User-Junction-Positionen anhand der stabilen
+    /// [`EditableJunctionId`] auf das frisch extrahierte Skelett zu mappen.
+    /// Wird ausschliesslich in [`super::ColorPathTool::reset_all`] und
+    /// [`super::ColorPathTool::compute_to_editing`] (sowie in einem nicht
+    /// rettbaren Fallback-Pfad) wieder auf `false` gesetzt.
+    pub(super) editable_user_dirty: bool,
 
     // ── Shared ──────────────────────────────────────────────────────────────
     /// Hintergrundbild fuer die Farberkennung
@@ -309,6 +360,9 @@ impl ColorPathTool {
             matching: MatchingSpec::default(),
             sampling_preview: None,
             preview_data: None,
+            editable: None,
+            dragging_junction: None,
+            editable_user_dirty: false,
             background_image: None,
             map_size: 2048.0,
             direction: ConnectionDirection::Dual,

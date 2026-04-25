@@ -479,11 +479,63 @@ Farb-Pfad-Erkennung: Erkennt zusammenhaengende Teilnetze anhand der Farbe im Hin
 
 **Voraussetzung:** Ein Hintergrundbild muss im `ToolHostContext.background_image` vorhanden sein. Das Tool kann `map_size` zusaetzlich aus `ToolHostContext.farmland_grid` ableiten.
 
-**Phasen (`ColorPathPhase`):**
+**Phasen (`ColorPathPhase` — Single-Step-Editor):**
+
+Seit CP-05 ist der ColorPath-Tool-Flow ein Single-Step-Editor mit drei
+kanonischen Phasen. Die alten Wizard-Phasen `CenterlinePreview`,
+`JunctionEdit` und `Finalize` sind unter `Editing` zusammengefasst; im
+DTO-Layer (`ColorPathPanelPhase`) bleiben sie zusammen mit der noch aelteren
+`Preview`-Variante additiv als `#[deprecated]` erhalten und werden auf den
+Phase-String `"editing"` gefaltet, bis CP-11 die Aliase entfernt.
 
 - **`Idle`** — Leerer Grundzustand ohne aktives Sampling, z.B. nach einem expliziten Reset
 - **`Sampling`** — User sammelt Farbproben per Klick oder Alt+Lasso; ein frisches Tool startet bereits in dieser Phase
-- **`Preview`** — Teilnetz berechnet und als Vorschau angezeigt; ein weiterer Klick fuegt neue Farben hinzu und wechselt zurueck nach `Sampling`
+- **`Editing`** — Centerline-Preview, Junction-Drag und Stage F unter einem Phasenlabel. Stage F kann darin sowohl leer (noch nicht berechnet) als auch befuellt sein; [`ColorPathTool::can_execute`] entscheidet anhand der `prepared_segments`, ob das Ergebnis uebernommen werden darf.
+
+**Single-Step-Actions (`ColorPathPanelAction`):**
+
+Kanonisch sind `StartSampling`, `Compute`, `Accept` und `Reset`. `Compute`
+laeuft nur aus `Sampling` und linearisiert die Pipeline ueber
+[`ColorPathTool::compute_to_editing`] in der strikten Reihenfolge
+`rebuild_preview_core_only` → `sync_editable_from_network` →
+`bump_editable_revision` → `rebuild_stage_f_only` → `phase = Editing`.
+Schlaegt Stage E fehl, bleibt die Phase auf `Sampling`; schlaegt nur Stage F
+fehl, geht das Tool trotzdem nach `Editing` mit leerer
+`prepared_segments`-Liste. Die Legacy-Actions `NextPhase`, `PrevPhase`,
+`ComputePreview` und `BackToSampling` bleiben als `#[deprecated]` Aliase im
+DTO erhalten und mappen Engine-seitig auf `Compute`/`Reset`; die Panel-Flags
+`can_next`/`can_back` sind seit CP-06 dauerhaft `false`.
+
+**Live-Slider in `Editing`:**
+
+Aenderungen an Stage-F-Konfiguration (`node_spacing`, `simplify_tolerance`,
+`junction_radius`) rufen in `Editing` direkt `rebuild_stage_f_only()` auf
+(Live-Slider, kein Phasenwechsel). Aenderungen an Matching- oder
+Stage-D/E-Parametern triggern `rebuild_editing_preview_in_place(...)`, das
+das Editable-Modell resynchronisiert und User-Drags ueber stabile
+`EditableJunctionId`s — soweit moeglich — zurueckmappt.
+
+**Editierbares Zwischenartefakt (`EditableCenterlines`, engine-intern):**
+
+- Eingefuehrt in CP-06 als ID-stabile Sicht zwischen Stage E und Stage F; nicht
+  Teil der oeffentlichen API des Crates (`pub(super)` innerhalb `color_path`).
+- Haelt `EditableJunction`s (mit `origin_world`, `world_pos`, `kind`) und
+  `EditableCenterline`s (mit stabiler `CenterlineId`, `start/end_junction`,
+  Polyline, `LaneSpec`-Platzhalter fuer spaetere zweispurige Strassen).
+- `revision: u64` bumpt bei jeder Mutation (Junction-Drag); `source_core_revision`
+  bindet das Artefakt an die erzeugende Stage-E-Revision.
+- Stage F (`PreparedSegmentsCacheKey`) nimmt `editable_revision` mit auf, damit
+  Drags Stage F sauber, aber lazy invalidieren — Stage F wird erst dann neu
+  berechnet, wenn die Preview wieder gelesen wird oder ein Live-Slider feuert.
+
+**`RouteToolDrag`-Capability (nur in `Editing` aktiv):**
+
+- `drag_targets()` liefert ausserhalb von `Editing` stets `Vec::new()`; in
+  `Editing` die sortierten Junction-Weltpositionen aus `EditableCenterlines`.
+- `on_drag_update(id, pos)` mutiert nur `EditableJunction.world_pos` und bumpt
+  `editable.revision`; Stage F wird **nicht** pro Drag-Frame neu gerechnet.
+  Die Stage-F-Cache-Key-Invalidation greift erst beim naechsten
+  Preview-Build oder Slider-Event (lazy).
 
 **ToolLasso-Mechanismus:**
 
@@ -493,15 +545,15 @@ Das Tool exponiert in Phase `Sampling` die Capability `RouteToolLassoInput` und 
 Polygon wird per `AppIntent::RouteToolLassoCompleted` an `handlers::route_tool::lasso_completed()`
 weitergeleitet, das die Lasso-Capability des aktiven Tools aufruft.
 
-**Interaktionsflow:**
+**Interaktionsflow (Single-Step):**
 
-1. Tool aktivieren → Phase::Sampling mit sofort aktivem Tool-Lasso
+1. Tool aktivieren → `Sampling` mit sofort aktivem Tool-Lasso
 2. Klick oder Alt+Drag sampelt Farben; der erste Sampling-Punkt setzt zugleich den Flood-Fill-Seed
 3. Mehrere Klicks und Lasso-Polygone sind moeglich (Sampling kumulativ)
-4. Sidebar: Berechnen-Button → `compute_pipeline()` → Phase::Preview
-5. Preview-Klick fuegt weitere Farben hinzu, baut Stage C neu auf und wechselt zurueck nach `Sampling`
-6. Sidebar: Netz pruefen (Kreuzungen, offene Enden, Segmente) + Anschlussmodus waehlen
-7. Enter / Uebernehmen-Button → `execute()` → Graph in Road Map einfuegen
+4. Sidebar `Berechnen` (`Compute`) → volle Stage-C-bis-F-Pipeline → `Editing`
+5. In `Editing`: Junctions koennen per Drag verschoben werden, Slider rechnen Stage F live nach
+6. `Reset` leert alles nach `Idle` (einziger autorisierter Reset-Pfad: `RouteToolCore::reset` und `ColorPathPanelAction::Reset` rufen `reset_all()` auf)
+7. `Uebernehmen` (`Accept`) → nur in `Editing` und nur wenn `PreparedSegment`s vorliegen → Graph in Road Map einfuegen
 
 **Interne Stage-Pipeline (`compute_pipeline()`):**
 
@@ -592,7 +644,7 @@ pub struct ColorPathTool {
 
 **Gruppen-Record:** ColorPathTool speichert keinen `GroupRecord` (keine nachträgliche Bearbeitung).
 
-Modulstruktur: `mod.rs` (Re-Export + Benchmark-Fassade), `state.rs` (Stage-Artefakte, Phasen-Enum, Config, Default), `lifecycle.rs` (Phasenwechsel + RouteTool-Adapter), `pipeline.rs` (Stages B-F), `preview.rs` (Preview-/Execute-Aufbereitung mit `PreparedSegment` als gemeinsamer Wahrheit), `config_ui.rs` (semantische Panel-Bruecke), `sampling.rs` (Farb-Sampling + Masken-Erstellung), `skeleton.rs` (Skelett-Extraktion + Graph-Aufbau)
+Modulstruktur: `mod.rs` (Re-Export + Benchmark-Fassade), `state.rs` (Stage-Artefakte, Phasen-Enum, Config, Default), `lifecycle.rs` (Phasenwechsel + RouteTool-Adapter inkl. `RouteToolDrag`-Impl, `compute_to_editing()` als Single-Step-Linearisierung der Pipeline), `pipeline/` (Stage-Pipeline in Submodulen: `mod.rs` — Fassade, `matching.rs` — Stage B, `sampling_stage.rs` — Stage C, `preview_core.rs` — Stages D/E, `prepared.rs` — Stage F), `preview.rs` (Preview-/Execute-Aufbereitung mit `PreparedSegment` als gemeinsamer Wahrheit), `config_ui.rs` (semantische Panel-Bruecke + Single-Step-Action-Mapping), `editable.rs` (engine-internes `EditableCenterlines`-Zwischenmodell, CP-06), `drag.rs` (Drag-Verhalten fuer Junction-Editing in `Editing`, CP-08), `sampling.rs` (Farb-Sampling + Masken-Erstellung), `skeleton.rs` (Skelett-Extraktion + Graph-Aufbau)
 
 ---
 

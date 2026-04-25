@@ -46,7 +46,7 @@ tools:
   - execute/getTerminalOutput
   - execute/runInTerminal
 
-model: Auto (copilot)
+#model: Auto (copilot)
 #model: "GPT-5.4"
 ---
 

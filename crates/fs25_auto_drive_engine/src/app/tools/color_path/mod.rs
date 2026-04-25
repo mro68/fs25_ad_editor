@@ -1,6 +1,8 @@
 //! Farb-Pfad-Tool: erkennt Wege anhand der Farbe im Hintergrundbild.
 
 mod config_ui;
+mod drag;
+pub(crate) mod editable;
 mod lifecycle;
 mod pipeline;
 mod preview;
@@ -98,7 +100,7 @@ pub struct ColorPathBenchmarkStats {
 #[derive(Clone, Copy)]
 enum ColorPathBenchmarkKind {
     SamplingPreviewRebuild,
-    ComputePipelineFromSampling,
+    ComputeToEditing,
     PreviewCoreRebuild,
     PreparedSegmentsRebuild,
 }
@@ -120,8 +122,10 @@ impl ColorPathBenchmarkAction {
             ColorPathBenchmarkKind::SamplingPreviewRebuild => {
                 self.tool.on_matching_config_changed();
             }
-            ColorPathBenchmarkKind::ComputePipelineFromSampling => {
-                self.tool.compute_pipeline();
+            ColorPathBenchmarkKind::ComputeToEditing => {
+                // Simuliert den echten Compute-Button-Fluss `Sampling → Editing`
+                // (Single-Step) anstelle eines Direktsprungs in die Preview.
+                let _ = self.tool.run_to_editing();
             }
             ColorPathBenchmarkKind::PreviewCoreRebuild => {
                 self.tool.on_preview_core_config_changed();
@@ -184,7 +188,11 @@ impl ColorPathBenchmarkHarness {
 
         let sampling_state = tool.clone();
         let mut preview_state = tool;
-        preview_state.compute_pipeline();
+        // Preview-Ausgangszustand entsteht durch den Single-Step-Compute-Pfad
+        // (Sampling → Editing), nicht durch den alten Direktsprung `compute_pipeline`.
+        if !preview_state.run_to_editing() {
+            return Err("Compute-Pfad konnte Editing-Phase nicht erreichen");
+        }
 
         let has_prepared_segments = preview_state
             .preview_data
@@ -217,7 +225,7 @@ impl ColorPathBenchmarkHarness {
     pub fn compute_pipeline_action(&self) -> ColorPathBenchmarkAction {
         ColorPathBenchmarkAction {
             tool: self.sampling_state.clone(),
-            kind: ColorPathBenchmarkKind::ComputePipelineFromSampling,
+            kind: ColorPathBenchmarkKind::ComputeToEditing,
         }
     }
 
