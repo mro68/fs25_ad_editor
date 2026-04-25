@@ -791,8 +791,8 @@ mod tests {
         let value: Value = serde_json::from_str(&json).expect("JSON muss parsebar sein");
         assert_eq!(value["kind"], "compute");
 
-        let parsed: ColorPathPanelAction = serde_json::from_str(&json)
-            .expect("Roundtrip-Deserialisierung muss gelingen");
+        let parsed: ColorPathPanelAction =
+            serde_json::from_str(&json).expect("Roundtrip-Deserialisierung muss gelingen");
         assert_eq!(parsed, ColorPathPanelAction::Compute);
     }
 
