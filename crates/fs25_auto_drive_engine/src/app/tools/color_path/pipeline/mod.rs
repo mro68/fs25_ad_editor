@@ -565,9 +565,7 @@ mod tests {
 
     #[test]
     fn prepare_segments_pulls_polyline_endpoints_to_editable_junctions() {
-        use crate::app::tools::color_path::editable::{
-            EditableCenterlines, EditableJunctionId,
-        };
+        use crate::app::tools::color_path::editable::{EditableCenterlines, EditableJunctionId};
 
         let network = network_with_segment(
             SkeletonGraphNodeKind::Junction,
@@ -668,24 +666,20 @@ mod tests {
         );
         let editable = EditableCenterlines::from_skeleton_network(&network);
 
-        let prepared_with_editable =
-            prepare_segments(&network, Some(&editable), 0.0, 1.0, 3.0);
+        let prepared_with_editable = prepare_segments(&network, Some(&editable), 0.0, 1.0, 3.0);
         let prepared_without_editable = prepare_segments(&network, None, 0.0, 1.0, 3.0);
 
         assert_eq!(prepared_with_editable.len(), 1);
         assert_eq!(prepared_without_editable.len(), 1);
         assert_eq!(
-            prepared_with_editable[0].resampled_nodes,
-            prepared_without_editable[0].resampled_nodes,
+            prepared_with_editable[0].resampled_nodes, prepared_without_editable[0].resampled_nodes,
             "Junction-Radius bleibt auf Junction-Kind beschraenkt — OpenEnds unveraendert"
         );
     }
 
     #[test]
     fn prepare_segments_resample_still_honors_node_spacing_with_editable() {
-        use crate::app::tools::color_path::editable::{
-            EditableCenterlines, EditableJunctionId,
-        };
+        use crate::app::tools::color_path::editable::{EditableCenterlines, EditableJunctionId};
 
         let network = network_with_segment(
             SkeletonGraphNodeKind::Junction,

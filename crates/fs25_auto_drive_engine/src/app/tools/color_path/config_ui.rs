@@ -27,9 +27,7 @@ impl ColorPathTool {
 
         // Wizard-Flags: Engine ist Quelle der Wahrheit, Host liest nur.
         let can_accept = self.phase.is_finalized()
-            && preview_stats
-                .as_ref()
-                .is_some_and(|stats| stats.can_accept);
+            && preview_stats.as_ref().is_some_and(|stats| stats.can_accept);
         let can_back = matches!(
             self.phase,
             ColorPathPhase::CenterlinePreview
@@ -199,9 +197,7 @@ impl ColorPathTool {
                     self.phase = ColorPathPhase::CenterlinePreview;
                     true
                 } else {
-                    log::warn!(
-                        "ColorPathTool: NextPhase abgebrochen — kein exportierbares Netz"
-                    );
+                    log::warn!("ColorPathTool: NextPhase abgebrochen — kein exportierbares Netz");
                     false
                 }
             }

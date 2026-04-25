@@ -569,6 +569,16 @@
   - [x] Sampling-Preview zeigt nach jeder Lasso-Auswahl alle Randsegmente des erkannten Flood-Fill-Bereichs (inkl. Innenkanten/Loecher), nicht nur eine Einzelkontur
   - [x] F7a Stage-Split (2026-04-01) — interne Pipeline in Sampling-Input, Matching, Pixel-Maske, Maskenaufbereitung, Skeleton, Preview-Aufbereitung und Execute getrennt; `lifecycle.rs` auf Orchestrierung reduziert; Preview und Execute teilen `PreparedSegment` als gemeinsame Wahrheit
   - [x] Junction-Radius-Trim (2026-04-24, Branch `feat/colorpath-junction-radius`) — ColorPath-Panel und Host-UI-JSON um `junction_radius` erweitert; Stage-F nutzt den Radius ausschliesslich fuer Junction-Trim/Kreuzungsbegradigung und verteilt die finale Segmentgeometrie danach weiter ueber `node_spacing` (inkl. Fallback auf direkte Endpunktverbindung)
+  - [x] **ColorPath-Wizard (2026-04-24, Branch `feat/colorpath-phase-wizard`)** — Dreistufiger Wizard-Fluss fuer den ColorPath-Tool:
+    - [x] Pipeline-Split: `color_path/pipeline.rs` zerlegt in `pipeline/{mod,matching,sampling_stage,preview_core,prepared}.rs` (Verhalten 1:1; CP-01)
+    - [x] Reset-Konsolidierung: einziger autorisierter Reset-Pfad `reset_all()`, beide Call-Sites (`RouteToolCore::reset`, `ColorPathPanelAction::Reset`) gehen drauf (CP-02)
+    - [x] `ColorPathPhase` auf fuenf Varianten erweitert: `Idle`, `Sampling`, `CenterlinePreview`, `JunctionEdit`, `Finalize`; `compute_pipeline` gesplittet in `rebuild_preview_core_only` und `rebuild_stage_f_only` (CP-03)
+    - [x] DTO-/FFI-Vertrag additiv erweitert: neue Phase-Strings `"centerline_preview"`, `"junction_edit"`, `"finalize"`; `ColorPathPanelState.{can_next, can_back, can_accept}`; Legacy-Phase `Preview` sowie Legacy-Actions `ComputePreview`/`BackToSampling` bleiben `#[deprecated]` (CP-04)
+    - [x] Wizard-Actions `NextPhase`/`PrevPhase`/`Accept` in der Engine verdrahtet; Legacy-Aktionen mappen auf die Wizard-Transitions (CP-05)
+    - [x] Engine-internes Zwischenartefakt `EditableCenterlines` (stabile `JunctionId`/`CenterlineId`, `revision`, `source_core_revision`) zwischen Stage E und Stage F; `LaneSpec`-Platzhalter fuer spaetere Zweispurigkeit vorgesehen (CP-06)
+    - [x] Stage F liest Junction-Positionen aus `EditableCenterlines`; `PreparedSegmentsCacheKey` nimmt `editable_revision` auf und wird durch Junction-Drags invalidiert (CP-07)
+    - [x] `RouteToolDrag`-Capability fuer ColorPath: `drag_targets` nur in `JunctionEdit`, `on_drag_update` bumpt die Editable-Revision ohne pro-Frame-Rebuild von Stage F (CP-08)
+  - [ ] **Zweispurige Strassen aus Selektion (geplant)** — Folgeschritt auf dem ColorPath-Wizard: `EditableCenterline.selected` + `LaneSpec::DualLanes { left_offset, right_offset }` werden vom UI-Layer bedient, Stage F erzeugt pro selektierter Centerline zwei parallele PreparedSegment-Pfade. Datenmodell (`EditableCenterlines`) ist bereits forward-compatible angelegt.
   - [x] I18n-Key `MenuColorPath` (DE: „🎨 Farb-Pfad erkennen", EN: „🎨 Detect Color Path")
   - [x] Menüeintrag in Extras
 

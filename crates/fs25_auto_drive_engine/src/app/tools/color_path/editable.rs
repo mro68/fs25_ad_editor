@@ -251,7 +251,11 @@ mod tests {
                 SkeletonGraphSegment {
                     start_node: 0,
                     end_node: 1,
-                    polyline: vec![Vec2::new(0.0, 0.0), Vec2::new(5.0, 0.0), Vec2::new(10.0, 0.0)],
+                    polyline: vec![
+                        Vec2::new(0.0, 0.0),
+                        Vec2::new(5.0, 0.0),
+                        Vec2::new(10.0, 0.0),
+                    ],
                 },
                 SkeletonGraphSegment {
                     start_node: 1,
@@ -279,7 +283,10 @@ mod tests {
 
         assert_eq!(junction_0.world_pos, junction_0.original_pos);
         assert_eq!(junction_0.incident_centerlines, vec![center_id_0]);
-        assert_eq!(junction_1.incident_centerlines, vec![center_id_0, center_id_1]);
+        assert_eq!(
+            junction_1.incident_centerlines,
+            vec![center_id_0, center_id_1]
+        );
         assert_eq!(junction_2.incident_centerlines, vec![center_id_1]);
 
         let centerline_0 = &editable.centerlines[&center_id_0];
@@ -308,7 +315,10 @@ mod tests {
 
         assert!(editable.move_junction(EditableJunctionId(1), target));
         assert_eq!(editable.junctions[&EditableJunctionId(1)].world_pos, target);
-        assert_eq!(editable.junctions[&EditableJunctionId(1)].original_pos, Vec2::new(10.0, 0.0));
+        assert_eq!(
+            editable.junctions[&EditableJunctionId(1)].original_pos,
+            Vec2::new(10.0, 0.0)
+        );
         assert_eq!(editable.revision, 1);
 
         // Identische Position bumpt nicht erneut.

@@ -932,11 +932,10 @@ mod tests {
         let effect = tool.apply_panel_action(ColorPathPanelAction::ComputePreview);
         assert!(effect.changed);
         assert_eq!(tool.phase, ColorPathPhase::Finalize);
-        assert!(
-            tool.preview_data
-                .as_ref()
-                .is_some_and(|p| !p.prepared_segments.is_empty())
-        );
+        assert!(tool
+            .preview_data
+            .as_ref()
+            .is_some_and(|p| !p.prepared_segments.is_empty()));
     }
 
     // ---------------------------------------------------------------------

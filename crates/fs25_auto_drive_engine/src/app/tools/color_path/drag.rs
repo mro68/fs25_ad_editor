@@ -186,7 +186,12 @@ mod tests {
             .expect("Editable muss existieren")
             .revision;
 
-        assert!(on_drag_start(&mut tool, Vec2::new(10.0, 0.0), &road_map, 1.0));
+        assert!(on_drag_start(
+            &mut tool,
+            Vec2::new(10.0, 0.0),
+            &road_map,
+            1.0
+        ));
         assert_eq!(tool.dragging_junction, Some(EditableJunctionId(1)));
 
         on_drag_update(&mut tool, Vec2::new(12.0, 3.0));
@@ -206,7 +211,12 @@ mod tests {
     fn drag_end_clears_handle_and_bumps_revision() {
         let mut tool = tool_in_junction_edit();
         let road_map = RoadMap::default();
-        assert!(on_drag_start(&mut tool, Vec2::new(10.0, 0.0), &road_map, 1.0));
+        assert!(on_drag_start(
+            &mut tool,
+            Vec2::new(10.0, 0.0),
+            &road_map,
+            1.0
+        ));
         on_drag_update(&mut tool, Vec2::new(11.0, 0.0));
         let pre_end_revision = tool
             .editable
@@ -242,7 +252,12 @@ mod tests {
         use crate::app::ui_contract::ColorPathPanelAction;
         let mut tool = tool_in_junction_edit();
         let road_map = RoadMap::default();
-        assert!(on_drag_start(&mut tool, Vec2::new(10.0, 0.0), &road_map, 1.0));
+        assert!(on_drag_start(
+            &mut tool,
+            Vec2::new(10.0, 0.0),
+            &road_map,
+            1.0
+        ));
         assert!(
             tool.dragging_junction.is_some(),
             "Drag-Handle muss nach on_drag_start gesetzt sein"
@@ -269,8 +284,7 @@ mod tests {
             .map(|(id, junction)| (*id, junction.world_pos))
             .collect();
         expected.sort_by_key(|(id, _)| id.0);
-        let expected_positions: Vec<Vec2> =
-            expected.into_iter().map(|(_, pos)| pos).collect();
+        let expected_positions: Vec<Vec2> = expected.into_iter().map(|(_, pos)| pos).collect();
         assert_eq!(
             targets, expected_positions,
             "drag_targets muss deterministisch nach EditableJunctionId sortiert liefern (F4)"

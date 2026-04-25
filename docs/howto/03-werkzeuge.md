@@ -305,31 +305,42 @@ Berechnet eine Mittellinie zwischen zwei Feldseiten und erzeugt daraus einen Fah
 
 ## Farb-Pfad erkennen (A)
 
-Leitet ein Wegnetz direkt aus Farbstrukturen der Hintergrundkarte ab.
+Leitet ein Wegnetz direkt aus Farbstrukturen der Hintergrundkarte ab. Die Bearbeitung laeuft als Wizard in drei Phasen, gefolgt von **Uebernehmen**.
 
 **Workflow:**
 1. Eine Hintergrundkarte laden.
 2. **Farb-Pfad erkennen** aktivieren.
-3. Das Tool startet sofort im Sampling: per Klick einzelne Farben uebernehmen oder mit **`Alt+Drag`** eine oder mehrere Lasso-Regionen fuer Farbproben zeichnen.
-4. Im Tool-Panel die Berechnung starten.
-5. Netzstatistik und Anschlussmodus pruefen.
-6. Mit **`Enter`** das Netz einfuegen.
+3. **Sampling:** Das Tool startet sofort im Sampling: per Klick einzelne Farben uebernehmen oder mit **`Alt+Drag`** eine oder mehrere Lasso-Regionen fuer Farbproben zeichnen.
+4. Mit **Weiter** die Phase **Mittellinien & Kreuzungen erkennen** starten. Die Vorschau zeigt Mittellinien und automatisch erkannte Kreuzungen.
+5. Mit **Weiter** in die Phase **Kreuzungen feinjustieren** wechseln. Einzelne Kreuzungspunkte koennen per Drag verschoben werden.
+6. Mit **Weiter** in die Phase **Finalize** wechseln. Der eingestellte Radius fuer die Junction-Begradigung wird auf die bestaetigten Kreuzungen angewendet.
+7. Mit **Uebernehmen** das Netz als finale Nodes und Verbindungen einfuegen. **Uebernehmen** ist nur in der Finalize-Phase sichtbar und aktiv.
+
+**Wizard-Steuerung:**
+- **Weiter:** wechselt zur naechsten Phase.
+- **Zurueck:** springt eine Phase zurueck, ohne Sampling oder Feinjustierung zu verlieren.
+- **Reset:** beginnt den Wizard von vorn (neues Sampling).
+- **Uebernehmen:** nur in Finalize verfuegbar; erzeugt das finale Wegnetz.
+- **`Enter`** wirkt wie **Weiter** in den Phasen und wie **Uebernehmen** in Finalize.
 
 **Konfiguration:**
 - Exakter Farbvergleich oder Toleranz-Modus.
 - Farb-Toleranz.
 - Knotenabstand fuer die finale Punktverteilung entlang der erkannten Strecke.
 - Vereinfachungs-Toleranz.
-- Radius Kreuzung (in Metern): kuerzt Segmentenden nur fuer die Kreuzungsbegradigung und das Junction-Trim im Umkreis von Kreuzungen.
+- Radius Kreuzung (in Metern): wird erst in der Finalize-Phase angewendet und kuerzt Segmentenden fuer die Kreuzungsbegradigung im Umkreis der bestaetigten Kreuzungen.
 - Rauschfilter.
 - Anschlussmodus an bestehende Verbindungen.
 
 **Tipps:**
 - Kombinieren Sie Einzelklicks und mehrere Lasso-Regionen, wenn der Zielpfad aus mehreren aehnlichen Farbinseln besteht.
-- Ein Klick in der Preview fuegt weitere Farbproben hinzu und bringt das Tool zurueck in den Sampling-Modus.
+- In der Sampling-Phase fuegt jeder weitere Klick eine Farbprobe hinzu; nutzen Sie **Zurueck**, um aus spaeteren Phasen wieder zum Sampling zurueckzukehren.
+- In der Phase **Kreuzungen feinjustieren** verschieben Sie nur Kreuzungspunkte — die Mittellinien bleiben dabei unveraendert.
 - Mit Radius `0` bleibt das erkannte Netz an Kreuzungen unverkuerzt; groessere Werte trennen Kreuzungsbereiche klarer auf.
 - Die finalen Streckenlaengen und Abstaende der eingefuegten Nodes richten sich weiterhin nach Knotenabstand, nicht nach Radius Kreuzung.
-- Das Ergebnis ist nicht ueber **Tool bearbeiten** rekonstruierbar; fuer andere Parameter muss das Sampling erneut gestartet werden.
+- Das Ergebnis ist nicht ueber **Tool bearbeiten** rekonstruierbar; fuer andere Parameter muss der Wizard neu gestartet werden.
+
+> **Hinweis:** Die erkannte Mittellinien-Form bleibt intern erhalten und dient als Basis fuer eine geplante Funktion **Zweispurige Strassen**, die aus einer Mittellinie zwei parallele Fahrspuren erzeugen wird.
 
 ---
 
