@@ -5,6 +5,7 @@ use glam::Vec2;
 use crate::app::tools::{ToolAnchor, ToolPreview, ToolResult};
 use crate::core::{ConnectionDirection, ConnectionPriority, NodeFlag, RoadMap};
 
+use super::editable::{EditableCenterlineId, EditableJunctionId};
 use super::skeleton::SkeletonGraphNodeKind;
 use super::state::{ColorPathPhase, ColorPathTool, ExistingConnectionMode};
 
@@ -70,50 +71,127 @@ impl ColorPathTool {
         }
     }
 
-    /// Baut die Vorschau fuer die Preview-Phase als Netz aus PreparedSegments.
+    /// Baut die Vorschau fuer die Netz-Phasen (CenterlinePreview, JunctionEdit,
+    /// Finalize) aus PreparedSegments oder den rohen Skelett-Polylines.
+    ///
+    /// In `CenterlinePreview` und `JunctionEdit` liegen noch keine
+    /// `prepared_segments` vor (Stage F laeuft erst beim Eintritt in
+    /// `Finalize`). Damit der User in diesen Phasen trotzdem die erkannten
+    /// Mittellinien sieht, rendern wir die Polylines aus
+    /// [`SkeletonNetwork::segments`] direkt — und ziehen ihre Endpunkte bei
+    /// vorhandenem [`EditableCenterlines`] auf die aktuelle (ggf. gedraggte)
+    /// Junction-Position, analog zum Stage-F-Endpoint-Pull. Junction-Knoten
+    /// werden ebenfalls an die Editable-Position verschoben, damit der Drag
+    /// in `JunctionEdit` sofort sichtbar ist.
+    ///
+    /// In `Finalize` werden die durch Stage F erzeugten `prepared_segments`
+    /// inklusive Resampling und Junction-Trim gerendert.
     pub(super) fn build_network_preview(&self) -> ToolPreview {
         let Some(preview_data) = &self.preview_data else {
             return ToolPreview::default();
         };
-        if preview_data.prepared_segments.is_empty() {
+        if preview_data.prepared_segments.is_empty() && preview_data.network.segments.is_empty() {
             return ToolPreview::default();
         }
 
+        // Basisknoten = Skelett-Knotenpositionen, ggf. an aktuelle
+        // Editable-Junction-Position verschoben (Drag-Sichtbarkeit).
         let mut nodes: Vec<Vec2> = preview_data
             .network
             .nodes
             .iter()
-            .map(|node| node.world_position)
+            .enumerate()
+            .map(|(idx, node)| {
+                self.editable
+                    .as_ref()
+                    .and_then(|editable| {
+                        editable
+                            .junctions
+                            .get(&EditableJunctionId(idx as u32))
+                            .map(|junction| junction.world_pos)
+                    })
+                    .unwrap_or(node.world_position)
+            })
             .collect();
         let mut connections = Vec::new();
         let mut connection_styles = Vec::new();
 
-        for segment in &preview_data.prepared_segments {
-            if segment.resampled_nodes.len() < 2 {
-                continue;
+        if !preview_data.prepared_segments.is_empty() {
+            // Finalize: Stage-F-Resampling rendern.
+            for segment in &preview_data.prepared_segments {
+                if segment.resampled_nodes.len() < 2 {
+                    continue;
+                }
+
+                let mut chain = Vec::with_capacity(segment.resampled_nodes.len());
+                chain.push(segment.start_node);
+
+                for &pos in segment
+                    .resampled_nodes
+                    .iter()
+                    .skip(1)
+                    .take(segment.resampled_nodes.len().saturating_sub(2))
+                {
+                    nodes.push(pos);
+                    chain.push(nodes.len() - 1);
+                }
+
+                chain.push(segment.end_node);
+                if chain.len() < 2 || (chain.len() == 2 && chain[0] == chain[1]) {
+                    continue;
+                }
+
+                for edge in chain.windows(2) {
+                    connections.push((edge[0], edge[1]));
+                    connection_styles.push((self.direction, self.priority));
+                }
+            }
+        } else {
+            // CenterlinePreview / JunctionEdit: rohe Centerlines rendern.
+            for (segment_idx, segment) in preview_data.network.segments.iter().enumerate() {
+                if segment.polyline.len() < 2 {
+                    continue;
+                }
+
+                let mut polyline = segment.polyline.clone();
+                if let Some(editable) = &self.editable
+                    && let Some(centerline) = editable
+                        .centerlines
+                        .get(&EditableCenterlineId(segment_idx as u32))
+                {
+                    let last = polyline.len() - 1;
+                    if let Some(start_id) = centerline.start_junction
+                        && let Some(junction) = editable.junctions.get(&start_id)
+                    {
+                        polyline[0] = junction.world_pos;
+                    }
+                    if let Some(end_id) = centerline.end_junction
+                        && let Some(junction) = editable.junctions.get(&end_id)
+                    {
+                        polyline[last] = junction.world_pos;
+                    }
+                }
+
+                let mut chain = Vec::with_capacity(polyline.len());
+                chain.push(segment.start_node);
+                for &pos in polyline.iter().skip(1).take(polyline.len().saturating_sub(2)) {
+                    nodes.push(pos);
+                    chain.push(nodes.len() - 1);
+                }
+                chain.push(segment.end_node);
+
+                if chain.len() < 2 || (chain.len() == 2 && chain[0] == chain[1]) {
+                    continue;
+                }
+
+                for edge in chain.windows(2) {
+                    connections.push((edge[0], edge[1]));
+                    connection_styles.push((self.direction, self.priority));
+                }
             }
 
-            let mut chain = Vec::with_capacity(segment.resampled_nodes.len());
-            chain.push(segment.start_node);
-
-            for &pos in segment
-                .resampled_nodes
-                .iter()
-                .skip(1)
-                .take(segment.resampled_nodes.len().saturating_sub(2))
-            {
-                nodes.push(pos);
-                chain.push(nodes.len() - 1);
-            }
-
-            chain.push(segment.end_node);
-            if chain.len() < 2 || (chain.len() == 2 && chain[0] == chain[1]) {
-                continue;
-            }
-
-            for edge in chain.windows(2) {
-                connections.push((edge[0], edge[1]));
-                connection_styles.push((self.direction, self.priority));
+            if connections.is_empty() {
+                return ToolPreview::default();
             }
         }
 
