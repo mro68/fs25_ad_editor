@@ -305,40 +305,37 @@ Berechnet eine Mittellinie zwischen zwei Feldseiten und erzeugt daraus einen Fah
 
 ## Farb-Pfad erkennen (A)
 
-Leitet ein Wegnetz direkt aus Farbstrukturen der Hintergrundkarte ab. Die Bearbeitung laeuft als Wizard in drei Phasen, gefolgt von **Uebernehmen**.
+Leitet ein Wegnetz direkt aus Farbstrukturen der Hintergrundkarte ab. Der Ablauf ist ein einfacher Single-Step: Farben sampeln, **Berechnen**, anschliessend in der Editor-Phase live nachjustieren und mit **Uebernehmen** einfuegen.
 
 **Workflow:**
 1. Eine Hintergrundkarte laden.
 2. **Farb-Pfad erkennen** aktivieren.
-3. **Sampling:** Das Tool startet sofort im Sampling: per Klick einzelne Farben uebernehmen oder mit **`Alt+Drag`** eine oder mehrere Lasso-Regionen fuer Farbproben zeichnen.
-4. Mit **Weiter** die Phase **Mittellinien & Kreuzungen erkennen** starten. Die Vorschau zeigt Mittellinien und automatisch erkannte Kreuzungen.
-5. Mit **Weiter** in die Phase **Kreuzungen feinjustieren** wechseln. Einzelne Kreuzungspunkte koennen per Drag verschoben werden.
-6. Mit **Weiter** in die Phase **Finalize** wechseln. Der eingestellte Radius fuer die Junction-Begradigung wird auf die bestaetigten Kreuzungen angewendet.
-7. Mit **Uebernehmen** das Netz als finale Nodes und Verbindungen einfuegen. **Uebernehmen** ist nur in der Finalize-Phase sichtbar und aktiv.
+3. **Sampling:** Per Klick einzelne Farbproben aufnehmen oder mit **`Alt+Drag`** eine oder mehrere Lasso-Regionen zeichnen. Toleranz und Rauschfilter koennen schon hier eingestellt werden.
+4. **Berechnen** (nur in der Sampling-Phase sichtbar) startet die Erkennung von Mittellinien und Kreuzungen.
+5. **Editor-Phase:** Die Vorschau zeigt das erkannte Netz. Alle Geometrie- und Matching-Slider wirken live, Kreuzungspunkte koennen per Drag verschoben werden.
+6. **Uebernehmen** (nur in der Editor-Phase sichtbar) fuegt das Netz als finale Nodes und Verbindungen ein.
 
-**Wizard-Steuerung:**
-- **Weiter:** wechselt zur naechsten Phase.
-- **Zurueck:** springt eine Phase zurueck, ohne Sampling oder Feinjustierung zu verlieren.
-- **Reset:** beginnt den Wizard von vorn (neues Sampling).
-- **Uebernehmen:** nur in Finalize verfuegbar; erzeugt das finale Wegnetz.
-- **`Enter`** wirkt wie **Weiter** in den Phasen und wie **Uebernehmen** in Finalize.
+**Steuerung:**
+- **Reset:** verwirft Sampling und Editor-Stand und beginnt von vorn.
+- **Berechnen:** nur in der Sampling-Phase verfuegbar; wechselt in den Editor.
+- **Uebernehmen:** nur im Editor verfuegbar; erzeugt das finale Wegnetz.
+- **`Enter`** wirkt wie **Berechnen** in der Sampling-Phase und wie **Uebernehmen** im Editor.
 
 **Konfiguration:**
 - Exakter Farbvergleich oder Toleranz-Modus.
 - Farb-Toleranz.
 - Knotenabstand fuer die finale Punktverteilung entlang der erkannten Strecke.
 - Vereinfachungs-Toleranz.
-- Radius Kreuzung (in Metern): wird erst in der Finalize-Phase angewendet und kuerzt Segmentenden fuer die Kreuzungsbegradigung im Umkreis der bestaetigten Kreuzungen.
+- Radius Kreuzung (in Metern): kuerzt Segmentenden im Umkreis der Kreuzungen fuer eine sauberere Begradigung.
 - Rauschfilter.
 - Anschlussmodus an bestehende Verbindungen.
 
 **Tipps:**
 - Kombinieren Sie Einzelklicks und mehrere Lasso-Regionen, wenn der Zielpfad aus mehreren aehnlichen Farbinseln besteht.
-- In der Sampling-Phase fuegt jeder weitere Klick eine Farbprobe hinzu; nutzen Sie **Zurueck**, um aus spaeteren Phasen wieder zum Sampling zurueckzukehren.
-- In der Phase **Kreuzungen feinjustieren** verschieben Sie nur Kreuzungspunkte — die Mittellinien bleiben dabei unveraendert.
+- Im Editor wirken alle Slider live auf die Vorschau — Kreuzungs-Drag und Slider-Aenderungen koennen frei kombiniert werden.
 - Mit Radius `0` bleibt das erkannte Netz an Kreuzungen unverkuerzt; groessere Werte trennen Kreuzungsbereiche klarer auf.
-- Die finalen Streckenlaengen und Abstaende der eingefuegten Nodes richten sich weiterhin nach Knotenabstand, nicht nach Radius Kreuzung.
-- Das Ergebnis ist nicht ueber **Tool bearbeiten** rekonstruierbar; fuer andere Parameter muss der Wizard neu gestartet werden.
+- Die finalen Streckenlaengen und Abstaende der eingefuegten Nodes richten sich nach Knotenabstand, nicht nach Radius Kreuzung.
+- Das Ergebnis ist nicht ueber **Tool bearbeiten** rekonstruierbar; fuer andere Parameter starten Sie das Tool neu oder nutzen **Reset**.
 
 > **Hinweis:** Die erkannte Mittellinien-Form bleibt intern erhalten und dient als Basis fuer eine geplante Funktion **Zweispurige Strassen**, die aus einer Mittellinie zwei parallele Fahrspuren erzeugen wird.
 

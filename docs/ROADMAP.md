@@ -578,7 +578,14 @@
     - [x] Engine-internes Zwischenartefakt `EditableCenterlines` (stabile `JunctionId`/`CenterlineId`, `revision`, `source_core_revision`) zwischen Stage E und Stage F; `LaneSpec`-Platzhalter fuer spaetere Zweispurigkeit vorgesehen (CP-06)
     - [x] Stage F liest Junction-Positionen aus `EditableCenterlines`; `PreparedSegmentsCacheKey` nimmt `editable_revision` auf und wird durch Junction-Drags invalidiert (CP-07)
     - [x] `RouteToolDrag`-Capability fuer ColorPath: `drag_targets` nur in `JunctionEdit`, `on_drag_update` bumpt die Editable-Revision ohne pro-Frame-Rebuild von Stage F (CP-08)
-  - [ ] **Zweispurige Strassen aus Selektion (geplant)** — Folgeschritt auf dem ColorPath-Wizard: `EditableCenterline.selected` + `LaneSpec::DualLanes { left_offset, right_offset }` werden vom UI-Layer bedient, Stage F erzeugt pro selektierter Centerline zwei parallele PreparedSegment-Pfade. Datenmodell (`EditableCenterlines`) ist bereits forward-compatible angelegt.
+  - [x] **ColorPath-Single-Step Editor (2026-04-25)** — Reduktion des Wizards (siehe vorheriger Eintrag) auf einen Single-Step-Editor fuer den ColorPath-Tool:
+    - [x] `ColorPathPhase` auf drei Varianten kollabiert: `Idle`, `Sampling`, `Editing` (CP-04/CP-05); `Editing` haelt Centerline-Preview, Junction-Drag und Stage F unter einem Phasenlabel
+    - [x] Kanonische Actions `StartSampling`, `Compute`, `Accept`, `Reset`; neuer Helper `ColorPathTool::can_execute()` ersetzt das alte `phase.is_finalized()`-Idiom
+    - [x] `ColorPathTool::compute_to_editing()` linearisiert die Pipeline (`rebuild_preview_core_only` → `sync_editable_from_network` → `bump_editable_revision` → `rebuild_stage_f_only`) aus `Sampling` direkt nach `Editing`
+    - [x] Live-Slider in `Editing`: `node_spacing`/`simplify_tolerance`/`junction_radius` triggern `rebuild_stage_f_only()` ohne Phasenwechsel; Junction-Drag invalidiert Stage F lazy via `PreparedSegmentsCacheKey.editable_revision`
+    - [x] Panel-Flags: `can_compute` und `can_accept` sind die kanonischen Buttons; `can_next`/`can_back` deprecated und konstant `false`
+    - [x] DTO-Toleranz: Legacy-Phasen `Preview`/`CenterlinePreview`/`JunctionEdit`/`Finalize` und Legacy-Actions `NextPhase`/`PrevPhase`/`ComputePreview`/`BackToSampling` bleiben `#[deprecated]` deserialisierungstolerant erhalten und mappen Engine-seitig auf `Editing`/`Compute`/`Reset`; Entfernung in CP-11
+  - [ ] **Zweispurige Strassen aus Selektion (geplant)** — Folgeschritt auf dem ColorPath-Single-Step-Editor: `EditableCenterline.selected` + `LaneSpec::DualLanes { left_offset, right_offset }` werden vom UI-Layer bedient, Stage F erzeugt pro selektierter Centerline zwei parallele PreparedSegment-Pfade. Datenmodell (`EditableCenterlines`) ist bereits forward-compatible angelegt.
   - [x] I18n-Key `MenuColorPath` (DE: „🎨 Farb-Pfad erkennen", EN: „🎨 Detect Color Path")
   - [x] Menüeintrag in Extras
 

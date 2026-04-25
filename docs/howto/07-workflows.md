@@ -75,21 +75,20 @@
 
 ## Workflow 6: Farb-Pfad aus einer Hintergrundkarte ableiten
 
-Der Wizard fuehrt in drei Phasen bis zum finalen Netz:
+Der Ablauf ist Single-Step — sampeln, **Berechnen**, im Editor live justieren, **Uebernehmen**:
 
 1. Eine passende Hintergrundkarte laden.
 2. **Farb-Pfad erkennen** ueber **`A`** oder die Command Palette aktivieren.
 3. **Sampling:** Mit Klick oder **`Alt+Drag`** Farbproben sammeln. Toleranz und Rauschfilter im Tool-Panel einstellen.
-4. Mit **Weiter** die Erkennung von **Mittellinien & Kreuzungen** starten und die Vorschau pruefen.
-5. Mit **Weiter** in die **Feinjustierung** wechseln und Kreuzungspunkte per Drag verschieben, wo noetig.
-6. Mit **Weiter** in die Phase **Finalize** wechseln. Dort **Knotenabstand**, **Radius Kreuzung** und Anschlussmodus einstellen.
-7. Mit **Uebernehmen** das Netz als finale Nodes und Verbindungen einfuegen.
+4. **Berechnen** klicken (oder **`Enter`** druecken), um das erkannte Netz zu erzeugen.
+5. **Editor-Phase:** Geometrie- und Matching-Slider wirken live auf die Vorschau, Kreuzungspunkte koennen per Drag verschoben werden. **Knotenabstand**, **Radius Kreuzung** und Anschlussmodus dort einstellen.
+6. Mit **Uebernehmen** das Netz als finale Nodes und Verbindungen einfuegen.
 
-> **Tipp:** **Zurueck** springt jederzeit eine Phase zurueck, **Reset** startet den Wizard komplett neu. Das Tool bleibt im Katalog sichtbar, auch wenn noch keine Hintergrundkarte geladen ist; so sehen Sie sofort, warum es gerade nicht aktivierbar ist.
+> **Tipp:** **Reset** verwirft Sampling und Editor-Stand und beginnt von vorn. **Berechnen** ist nur in der Sampling-Phase sichtbar, **Uebernehmen** nur im Editor. Das Tool bleibt im Katalog sichtbar, auch wenn noch keine Hintergrundkarte geladen ist; so sehen Sie sofort, warum es gerade nicht aktivierbar ist.
 
-> **Hinweis:** **Radius Kreuzung** wird erst in der Finalize-Phase auf die bestaetigten Kreuzungen angewendet und beeinflusst nur die Kreuzungsbegradigung. Die finalen Streckenlaengen und der Abstand der erzeugten Nodes bleiben an **Knotenabstand** gekoppelt.
+> **Hinweis:** **Radius Kreuzung** beeinflusst nur die Kreuzungsbegradigung. Die finalen Streckenlaengen und der Abstand der erzeugten Nodes bleiben an **Knotenabstand** gekoppelt.
 
-> **Zukunftsnotiz:** Die Mittellinien aus Phase 2 bleiben intern erhalten und sind die Grundlage fuer eine geplante Funktion **Zweispurige Strassen**, die aus einer Mittellinie zwei parallele Fahrspuren ableiten wird.
+> **Zukunftsnotiz:** Die erkannten Mittellinien bleiben intern erhalten und sind die Grundlage fuer eine geplante Funktion **Zweispurige Strassen**, die aus einer Mittellinie zwei parallele Fahrspuren ableiten wird.
 
 ---
 
