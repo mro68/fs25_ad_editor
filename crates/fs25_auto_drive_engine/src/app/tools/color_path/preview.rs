@@ -174,7 +174,11 @@ impl ColorPathTool {
 
                 let mut chain = Vec::with_capacity(polyline.len());
                 chain.push(segment.start_node);
-                for &pos in polyline.iter().skip(1).take(polyline.len().saturating_sub(2)) {
+                for &pos in polyline
+                    .iter()
+                    .skip(1)
+                    .take(polyline.len().saturating_sub(2))
+                {
                     nodes.push(pos);
                     chain.push(nodes.len() - 1);
                 }
