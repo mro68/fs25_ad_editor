@@ -7,8 +7,8 @@ use std::sync::Arc;
 
 use crate::app::tools::common::sync_tool_host;
 use crate::app::tools::{
-    RouteTool, RouteToolCore, RouteToolHostSync, RouteToolLassoInput, RouteToolPanelBridge,
-    ToolAction, ToolHostContext, ToolPreview, ToolResult,
+    RouteTool, RouteToolCore, RouteToolDrag, RouteToolHostSync, RouteToolLassoInput,
+    RouteToolPanelBridge, ToolAction, ToolHostContext, ToolPreview, ToolResult,
 };
 use crate::app::ui_contract::{RouteToolConfigState, RouteToolPanelAction, RouteToolPanelEffect};
 use crate::core::{FarmlandGrid, RoadMap};
@@ -41,25 +41,74 @@ impl ColorPathTool {
     }
 
     /// Reagiert auf Aenderungen am Farb-Matching.
+    ///
+    /// In Editing-Phasen (`CenterlinePreview`/`JunctionEdit`/`Finalize`) darf
+    /// ein Matching-Wechsel die Wizard-Phase niemals veraendern. Das Netz wird
+    /// in-place neu aufgebaut und das Editable-Modell nachgezogen; aktive
+    /// Junction-Drags (Handle) werden verworfen, weil die alten IDs nach dem
+    /// Rebuild nicht mehr stabil sind.
     pub(super) fn on_matching_config_changed(&mut self) {
         match self.phase {
             ColorPathPhase::Idle => self.refresh_matching_spec(),
             ColorPathPhase::Sampling => self.rebuild_sampling_preview(),
-            ColorPathPhase::Preview => self.compute_pipeline(),
+            ColorPathPhase::CenterlinePreview | ColorPathPhase::JunctionEdit => {
+                self.rebuild_editing_preview_in_place(false);
+            }
+            ColorPathPhase::Finalize => {
+                self.rebuild_editing_preview_in_place(true);
+            }
         }
     }
 
     /// Reagiert auf Aenderungen der Stage-D/E-Konfiguration.
+    ///
+    /// Wie bei [`Self::on_matching_config_changed`] bleibt die Phase in allen
+    /// Editing-Phasen erhalten; das Editable-Modell wird nach dem Rebuild
+    /// konsistent neu synchronisiert (siehe R1/F1).
     pub(super) fn on_preview_core_config_changed(&mut self) {
-        if self.phase == ColorPathPhase::Preview {
-            let _ = self.rebuild_preview_from_sampling_artifacts();
+        match self.phase {
+            ColorPathPhase::Idle | ColorPathPhase::Sampling => {}
+            ColorPathPhase::CenterlinePreview | ColorPathPhase::JunctionEdit => {
+                self.rebuild_editing_preview_in_place(false);
+            }
+            ColorPathPhase::Finalize => {
+                self.rebuild_editing_preview_in_place(true);
+            }
         }
     }
 
     /// Reagiert auf Aenderungen der Stage-F-Konfiguration.
+    ///
+    /// In `Finalize` wird Stage F direkt neu berechnet. In den Editing-Phasen
+    /// `CenterlinePreview`/`JunctionEdit` wirken Geometrie-Slider erst beim
+    /// naechsten Finalize-Eintritt — hier reicht es, den Stage-F-Cache zu
+    /// invalidieren, ohne Phase oder Drags zu beruehren (F3).
     pub(super) fn on_preview_geometry_config_changed(&mut self) {
-        if self.phase == ColorPathPhase::Preview {
-            self.rebuild_prepared_segments();
+        match self.phase {
+            ColorPathPhase::Finalize => self.rebuild_prepared_segments(),
+            ColorPathPhase::CenterlinePreview | ColorPathPhase::JunctionEdit => {
+                self.cache.prepared_segments_key = None;
+            }
+            ColorPathPhase::Idle | ColorPathPhase::Sampling => {}
+        }
+    }
+
+    /// Baut das Preview-Netz in einer Editing-Phase neu auf, ohne die Phase
+    /// zu veraendern.
+    ///
+    /// Invalidiert den aktiven Junction-Drag-Handle, weil die Editable-IDs
+    /// nach dem Rebuild nicht mehr garantiert zum vorherigen Snapshot
+    /// passen. Wenn `include_stage_f` gesetzt ist (Phase `Finalize`), wird
+    /// anschliessend Stage F direkt neu berechnet.
+    fn rebuild_editing_preview_in_place(&mut self, include_stage_f: bool) {
+        if !self.rebuild_preview_core_only() {
+            return;
+        }
+        self.sync_editable_from_network();
+        self.bump_editable_revision();
+        self.dragging_junction = None;
+        if include_stage_f {
+            let _ = self.rebuild_stage_f_only();
         }
     }
 
@@ -68,11 +117,19 @@ impl ColorPathTool {
         match self.phase {
             ColorPathPhase::Idle => self.clear_sampling_preview(),
             ColorPathPhase::Sampling => self.rebuild_sampling_preview(),
-            ColorPathPhase::Preview => self.compute_pipeline(),
+            ColorPathPhase::CenterlinePreview
+            | ColorPathPhase::JunctionEdit
+            | ColorPathPhase::Finalize => self.compute_pipeline(),
         }
     }
 
-    /// Fuehrt die Stages C-F der Farb-Pfad-Erkennung aus und schaltet bei Erfolg auf Preview.
+    /// Fuehrt die Stages C-F der Farb-Pfad-Erkennung aus und schaltet bei Erfolg auf Finalize.
+    ///
+    /// Seit CP-03 laeuft die Pipeline entlang der drei Wizard-Phasen:
+    /// Stage E → `CenterlinePreview`, danach der Platzhalter-Uebergang
+    /// nach `JunctionEdit` (in CP-03 noch ohne Drag-Logik) und schliesslich
+    /// Stage F → `Finalize`. Schlaegt eine Stufe fehl, bleibt die Phase auf
+    /// dem zuletzt erreichten Zwischenschritt stehen.
     pub(super) fn compute_pipeline(&mut self) {
         let Some(_image) = self.background_image.as_ref() else {
             log::warn!("ColorPathTool: Pipeline abgebrochen — kein Hintergrundbild");
@@ -91,19 +148,28 @@ impl ColorPathTool {
             return;
         }
 
-        let preview_ready = self.rebuild_preview_pipeline();
-        if self.preview_data.is_none() {
+        // Stage C-E: Centerline-Preview ohne Junction-Trim.
+        if !self.rebuild_preview_core_only() {
             log::warn!("ColorPathTool: Kein exportierbares Netz gefunden — Phase bleibt Sampling");
             return;
         }
-        if !preview_ready {
+        self.sync_editable_from_network();
+        self.phase = ColorPathPhase::CenterlinePreview;
+
+        // JunctionEdit: in CP-03 noch ohne echte Drag-Logik, aber als eigener Wizard-Schritt sichtbar.
+        self.bump_editable_revision();
+        self.phase = ColorPathPhase::JunctionEdit;
+
+        // Stage F: Junction-Trim und Resampling; bei Fehlschlag bleibt Phase auf JunctionEdit.
+        if !self.rebuild_stage_f_only() {
             log::warn!(
                 "ColorPathTool: Netz extrahiert, aber keine gueltigen Preview-Segmente erzeugt"
             );
             return;
         }
 
-        self.phase = ColorPathPhase::Preview;
+        self.bump_editable_revision();
+        self.phase = ColorPathPhase::Finalize;
     }
 
     /// Setzt das Hintergrundbild fuer die Sampling-Pipeline.
@@ -140,6 +206,56 @@ impl ColorPathTool {
         }
     }
 
+    /// Setzt das ColorPathTool vollstaendig in den Ausgangszustand zurueck.
+    ///
+    /// Invariante: Einziger autorisierter Reset-Pfad fuer das ColorPathTool.
+    /// Alle Aufrufer (RouteToolCore::reset, ColorPathPanelAction::Reset,
+    /// kuenftige Wizard-Phasen) muessen ueber diese Routine gehen, damit Phase,
+    /// Sampling-Input, Matching-Spec, Previews und Cache-State konsistent
+    /// zurueckgesetzt werden.
+    pub(super) fn reset_all(&mut self) {
+        self.phase = ColorPathPhase::Idle;
+        self.sampling = super::state::SamplingInput::default();
+        self.matching = super::state::MatchingSpec::default();
+        self.sampling_preview = None;
+        self.preview_data = None;
+        self.editable = None;
+        self.dragging_junction = None;
+        self.cache = super::state::ColorPathCacheState::default();
+    }
+
+    /// Synchronisiert das editierbare Zwischenmodell mit dem aktuellen Stage-E-Netz.
+    ///
+    /// Wird beim Eintritt in `CenterlinePreview` aufgerufen und rekonstruiert
+    /// [`super::editable::EditableCenterlines`] aus `preview_data.network`. Fehlt
+    /// das Netz (z. B. vor dem ersten erfolgreichen Stage-E-Durchlauf), wird
+    /// das Editable-Feld geleert. Spaetere Commit-Punkte (CP-07/08) lesen die
+    /// Junction-Positionen hieraus, CP-06 selbst nutzt es noch nicht fuer Stage F.
+    pub(super) fn sync_editable_from_network(&mut self) {
+        let Some(preview) = self.preview_data.as_ref() else {
+            self.editable = None;
+            return;
+        };
+        if preview.network.is_empty() {
+            self.editable = None;
+            return;
+        }
+        self.editable = Some(super::editable::EditableCenterlines::from_skeleton_network(
+            &preview.network,
+        ));
+    }
+
+    /// Bumpt die Editable-Revision, falls ein Editable-Modell vorliegt.
+    ///
+    /// Wird bei Phase-Wechseln (CP-06) und spaeter beim Junction-Drag (CP-08)
+    /// aufgerufen, damit abgeleitete Cache-Keys kuenftiger Stages invalidiert
+    /// werden. Ohne aktives Editable-Modell ist der Aufruf ein No-Op.
+    pub(super) fn bump_editable_revision(&mut self) {
+        if let Some(editable) = self.editable.as_mut() {
+            editable.bump_revision();
+        }
+    }
+
     /// Leitet optionale Farmland-Grid-Infos in die Sampling-Pipeline weiter.
     pub(crate) fn set_farmland_grid(&mut self, grid: Option<Arc<FarmlandGrid>>) {
         if let Some(g) = &grid {
@@ -160,7 +276,11 @@ impl RouteToolPanelBridge for ColorPathTool {
                 "Klick oder Alt+Lasso fuer Farbsample"
             }
             ColorPathPhase::Sampling => "Berechnen fuer Wegenetz",
-            ColorPathPhase::Preview => "Enter zum Einfuegen, Reset zum Zuruecksetzen",
+            ColorPathPhase::CenterlinePreview => {
+                "Centerline-Vorschau — weiter zur Kreuzungsbearbeitung"
+            }
+            ColorPathPhase::JunctionEdit => "Kreuzungen bearbeiten — weiter zu Finalize",
+            ColorPathPhase::Finalize => "Enter zum Einfuegen, Reset zum Zuruecksetzen",
         }
     }
 
@@ -189,7 +309,9 @@ impl RouteToolCore for ColorPathTool {
                 let _ = self.sample_color_from_click(pos);
                 ToolAction::Continue
             }
-            ColorPathPhase::Preview => {
+            ColorPathPhase::CenterlinePreview
+            | ColorPathPhase::JunctionEdit
+            | ColorPathPhase::Finalize => {
                 if self.sample_color_from_click(pos) {
                     self.phase = ColorPathPhase::Sampling;
                 }
@@ -202,12 +324,14 @@ impl RouteToolCore for ColorPathTool {
         match self.phase {
             ColorPathPhase::Idle => ToolPreview::default(),
             ColorPathPhase::Sampling => self.build_sampling_preview(),
-            ColorPathPhase::Preview => self.build_network_preview(),
+            ColorPathPhase::CenterlinePreview
+            | ColorPathPhase::JunctionEdit
+            | ColorPathPhase::Finalize => self.build_network_preview(),
         }
     }
 
     fn execute(&self, road_map: &RoadMap) -> Option<ToolResult> {
-        if self.phase != ColorPathPhase::Preview {
+        if !self.phase.is_finalized() {
             return None;
         }
 
@@ -215,16 +339,11 @@ impl RouteToolCore for ColorPathTool {
     }
 
     fn reset(&mut self) {
-        self.phase = ColorPathPhase::Idle;
-        self.sampling = super::state::SamplingInput::default();
-        self.matching = super::state::MatchingSpec::default();
-        self.sampling_preview = None;
-        self.preview_data = None;
-        self.cache = super::state::ColorPathCacheState::default();
+        self.reset_all();
     }
 
     fn is_ready(&self) -> bool {
-        self.phase == ColorPathPhase::Preview
+        self.phase.is_finalized()
             && self
                 .preview_data
                 .as_ref()
@@ -301,6 +420,40 @@ impl RouteTool for ColorPathTool {
     fn as_lasso_input_mut(&mut self) -> Option<&mut dyn RouteToolLassoInput> {
         Some(self)
     }
+
+    fn as_drag(&self) -> Option<&dyn RouteToolDrag> {
+        if self.phase == ColorPathPhase::JunctionEdit {
+            Some(self)
+        } else {
+            None
+        }
+    }
+
+    fn as_drag_mut(&mut self) -> Option<&mut dyn RouteToolDrag> {
+        if self.phase == ColorPathPhase::JunctionEdit {
+            Some(self)
+        } else {
+            None
+        }
+    }
+}
+
+impl RouteToolDrag for ColorPathTool {
+    fn drag_targets(&self) -> Vec<Vec2> {
+        super::drag::drag_targets(self)
+    }
+
+    fn on_drag_start(&mut self, pos: Vec2, road_map: &RoadMap, pick_radius: f32) -> bool {
+        super::drag::on_drag_start(self, pos, road_map, pick_radius)
+    }
+
+    fn on_drag_update(&mut self, pos: Vec2) {
+        super::drag::on_drag_update(self, pos);
+    }
+
+    fn on_drag_end(&mut self, road_map: &RoadMap) {
+        super::drag::on_drag_end(self, road_map);
+    }
 }
 
 #[cfg(test)]
@@ -369,7 +522,7 @@ mod tests {
 
     fn build_preview_tool(mode: ExistingConnectionMode) -> ColorPathTool {
         let mut tool = ColorPathTool::new();
-        tool.phase = ColorPathPhase::Preview;
+        tool.phase = ColorPathPhase::Finalize;
         tool.direction = ConnectionDirection::Regular;
         tool.priority = ConnectionPriority::Regular;
         tool.config.existing_connection_mode = mode;
@@ -505,7 +658,7 @@ mod tests {
     #[test]
     fn preview_geometry_change_keeps_preview_phase_and_updates_execute_consistently() {
         let mut tool = ColorPathTool::new();
-        tool.phase = ColorPathPhase::Preview;
+        tool.phase = ColorPathPhase::Finalize;
         tool.direction = ConnectionDirection::Regular;
         tool.priority = ConnectionPriority::Regular;
         tool.config.existing_connection_mode = ExistingConnectionMode::Never;
@@ -581,7 +734,7 @@ mod tests {
             })
             .fold(0.0_f32, f32::max);
 
-        assert_eq!(tool.phase, ColorPathPhase::Preview);
+        assert_eq!(tool.phase, ColorPathPhase::Finalize);
         assert_eq!(tool.cache.preview_core_revision, preview_core_revision);
         assert!(tool.cache.prepared_segments_revision > before_prepared_revision);
         assert_eq!(
@@ -591,6 +744,305 @@ mod tests {
         assert!(
             max_after_edge_length <= tool.config.node_spacing + 1e-4,
             "Finale Geometrie muss nach Begradigung auf node_spacing resampled sein"
+        );
+    }
+
+    // ---------------------------------------------------------------------
+    // CP-05 — Wizard-Transition-Tests (Next/Prev/Accept).
+    // ---------------------------------------------------------------------
+
+    /// Baut ein Tool auf, das an der Schwelle JunctionEdit → Finalize steht:
+    /// Netz ist vorhanden, Stage F aber noch nicht berechnet.
+    #[allow(deprecated)]
+    fn build_junction_edit_tool() -> ColorPathTool {
+        // Netz mit echten Polyline-Segmenten, damit Stage F beim Rebuild
+        // auch tatsaechlich `PreparedSegment`s produziert.
+        let mut tool = ColorPathTool::new();
+        tool.phase = ColorPathPhase::JunctionEdit;
+        tool.direction = ConnectionDirection::Regular;
+        tool.priority = ConnectionPriority::Regular;
+        tool.config.existing_connection_mode = ExistingConnectionMode::Never;
+        tool.config.simplify_tolerance = 0.0;
+        tool.config.node_spacing = 1.0;
+        tool.config.junction_radius = 0.0;
+        tool.preview_data = Some(PreviewData {
+            prepared_mask: ColorPathMask::default(),
+            network: SkeletonNetwork {
+                nodes: vec![
+                    SkeletonGraphNode {
+                        kind: SkeletonGraphNodeKind::OpenEnd,
+                        pixel_position: Vec2::new(0.0, 0.0),
+                        world_position: Vec2::new(0.0, 0.0),
+                    },
+                    SkeletonGraphNode {
+                        kind: SkeletonGraphNodeKind::OpenEnd,
+                        pixel_position: Vec2::new(10.0, 0.0),
+                        world_position: Vec2::new(10.0, 0.0),
+                    },
+                ],
+                segments: vec![SkeletonGraphSegment {
+                    start_node: 0,
+                    end_node: 1,
+                    polyline: vec![
+                        Vec2::new(0.0, 0.0),
+                        Vec2::new(2.5, 0.0),
+                        Vec2::new(5.0, 0.0),
+                        Vec2::new(7.5, 0.0),
+                        Vec2::new(10.0, 0.0),
+                    ],
+                }],
+            },
+            prepared_segments: Vec::new(),
+        });
+        tool.lifecycle.snap_radius = 1.0;
+        tool
+    }
+
+    #[test]
+    #[allow(deprecated)]
+    fn wizard_next_phase_junction_edit_rebuilds_stage_f_into_finalize() {
+        use crate::app::ui_contract::ColorPathPanelAction;
+
+        let mut tool = build_junction_edit_tool();
+        assert_eq!(tool.phase, ColorPathPhase::JunctionEdit);
+        assert!(
+            tool.preview_data
+                .as_ref()
+                .is_some_and(|p| p.prepared_segments.is_empty()),
+            "Stage F muss in JunctionEdit leer sein"
+        );
+
+        let effect = tool.apply_panel_action(ColorPathPanelAction::NextPhase);
+
+        assert!(effect.changed, "NextPhase muss einen Uebergang melden");
+        assert!(effect.next_action.is_none());
+        assert_eq!(tool.phase, ColorPathPhase::Finalize);
+        assert!(
+            tool.preview_data
+                .as_ref()
+                .is_some_and(|p| !p.prepared_segments.is_empty()),
+            "Stage F muss nach Finalize-Eintritt befuellt sein"
+        );
+    }
+
+    #[test]
+    #[allow(deprecated)]
+    fn wizard_prev_phase_finalize_drops_stage_f_and_keeps_network() {
+        use crate::app::ui_contract::ColorPathPanelAction;
+
+        let mut tool = build_preview_tool(ExistingConnectionMode::Never);
+        let network_segments_before = tool
+            .preview_data
+            .as_ref()
+            .map(|p| p.network.nodes.len())
+            .unwrap_or_default();
+
+        let effect = tool.apply_panel_action(ColorPathPanelAction::PrevPhase);
+
+        assert!(effect.changed);
+        assert_eq!(tool.phase, ColorPathPhase::JunctionEdit);
+        let preview = tool
+            .preview_data
+            .as_ref()
+            .expect("Netz darf beim PrevPhase aus Finalize nicht verworfen werden");
+        assert!(preview.prepared_segments.is_empty());
+        assert_eq!(preview.network.nodes.len(), network_segments_before);
+        assert!(tool.cache.prepared_segments_key.is_none());
+    }
+
+    #[test]
+    #[allow(deprecated)]
+    fn wizard_prev_phase_centerline_clears_preview_and_returns_to_sampling() {
+        use crate::app::ui_contract::ColorPathPanelAction;
+
+        let mut tool = build_preview_tool(ExistingConnectionMode::Never);
+        // Finalize → JunctionEdit → CenterlinePreview.
+        assert!(
+            tool.apply_panel_action(ColorPathPanelAction::PrevPhase)
+                .changed
+        );
+        assert!(
+            tool.apply_panel_action(ColorPathPanelAction::PrevPhase)
+                .changed
+        );
+        assert_eq!(tool.phase, ColorPathPhase::CenterlinePreview);
+
+        let effect = tool.apply_panel_action(ColorPathPanelAction::PrevPhase);
+
+        assert!(effect.changed);
+        assert_eq!(tool.phase, ColorPathPhase::Sampling);
+        assert!(
+            tool.preview_data.is_none(),
+            "CenterlinePreview → Sampling muss Preview-Pipeline verwerfen"
+        );
+    }
+
+    #[test]
+    #[allow(deprecated)]
+    fn wizard_accept_in_finalize_emits_ready_to_execute() {
+        use crate::app::ui_contract::{ColorPathPanelAction, RouteToolPanelFollowUp};
+
+        let mut tool = build_preview_tool(ExistingConnectionMode::Never);
+        let effect = tool.apply_panel_action(ColorPathPanelAction::Accept);
+
+        assert_eq!(
+            effect.next_action,
+            Some(RouteToolPanelFollowUp::ReadyToExecute),
+            "Accept im Finalize muss den Apply-Pfad anstossen"
+        );
+        assert_eq!(tool.phase, ColorPathPhase::Finalize);
+    }
+
+    #[test]
+    #[allow(deprecated)]
+    fn wizard_accept_outside_finalize_is_noop() {
+        use crate::app::ui_contract::ColorPathPanelAction;
+
+        let mut tool = build_junction_edit_tool();
+        let effect = tool.apply_panel_action(ColorPathPanelAction::Accept);
+        assert!(effect.next_action.is_none());
+        assert!(!effect.changed);
+        assert_eq!(tool.phase, ColorPathPhase::JunctionEdit);
+    }
+
+    #[test]
+    #[allow(deprecated)]
+    fn wizard_legacy_actions_alias_to_wizard_transitions() {
+        use crate::app::ui_contract::ColorPathPanelAction;
+
+        // Ein Tool in Finalize mit echter Netz-Polyline (nicht der leere
+        // `sample_network`-Helper, damit Stage F beim erneuten Rebuild auch
+        // wirklich Segmente produziert).
+        let mut tool = build_junction_edit_tool();
+        assert!(
+            tool.apply_panel_action(ColorPathPanelAction::NextPhase)
+                .changed
+        );
+        assert_eq!(tool.phase, ColorPathPhase::Finalize);
+
+        // BackToSampling wirkt jetzt wie PrevPhase — aus Finalize fuehrt das
+        // in den JunctionEdit und laesst das Netz unberuehrt.
+        let effect = tool.apply_panel_action(ColorPathPanelAction::BackToSampling);
+        assert!(effect.changed);
+        assert_eq!(tool.phase, ColorPathPhase::JunctionEdit);
+        assert!(tool.preview_data.is_some());
+
+        // ComputePreview wirkt jetzt wie NextPhase — aus JunctionEdit fuehrt
+        // das in den Finalize mit frisch berechneter Stage F.
+        let effect = tool.apply_panel_action(ColorPathPanelAction::ComputePreview);
+        assert!(effect.changed);
+        assert_eq!(tool.phase, ColorPathPhase::Finalize);
+        assert!(
+            tool.preview_data
+                .as_ref()
+                .is_some_and(|p| !p.prepared_segments.is_empty())
+        );
+    }
+
+    // ---------------------------------------------------------------------
+    // R1/T1 — Config-Change in Editing-Phase darf Editable nicht veralten lassen.
+    // ---------------------------------------------------------------------
+
+    /// Fuehrt ein Tool von Idle bis `JunctionEdit` ueber den echten Wizard-Pfad.
+    fn drive_tool_to_junction_edit() -> ColorPathTool {
+        let image = Arc::new(build_test_image());
+        let road_map = RoadMap::default();
+        let mut tool = ColorPathTool::new();
+        tool.phase = ColorPathPhase::Idle;
+        tool.set_background_map_image(Some(Arc::clone(&image)));
+
+        let click_pos = pixel_to_world(0, 0, tool.map_size, 10, 10);
+        let _ = tool.on_click(click_pos, &road_map, false);
+        assert_eq!(tool.phase, ColorPathPhase::Sampling);
+
+        use crate::app::ui_contract::ColorPathPanelAction;
+        assert!(
+            tool.apply_panel_action(ColorPathPanelAction::NextPhase)
+                .changed,
+            "Sampling → CenterlinePreview muss gelingen"
+        );
+        assert_eq!(tool.phase, ColorPathPhase::CenterlinePreview);
+        assert!(
+            tool.apply_panel_action(ColorPathPanelAction::NextPhase)
+                .changed,
+            "CenterlinePreview → JunctionEdit muss gelingen"
+        );
+        assert_eq!(tool.phase, ColorPathPhase::JunctionEdit);
+        assert!(tool.editable.is_some());
+        tool
+    }
+
+    #[test]
+    fn noise_filter_change_in_junction_edit_resyncs_editable() {
+        let mut tool = drive_tool_to_junction_edit();
+
+        // Drag-Artefakt simulieren: eine Junction verschieben und den Drag-Handle setzen.
+        let first_id = {
+            let editable = tool
+                .editable
+                .as_ref()
+                .expect("Editable muss in JunctionEdit vorhanden sein");
+            *editable
+                .junctions
+                .keys()
+                .min_by_key(|id| id.0)
+                .expect("Netz braucht mindestens eine Junction")
+        };
+        let original_pos = tool.editable.as_ref().unwrap().junctions[&first_id].world_pos;
+        let dragged_pos = original_pos + Vec2::new(100.0, 100.0);
+        tool.editable
+            .as_mut()
+            .unwrap()
+            .move_junction(first_id, dragged_pos);
+        tool.dragging_junction = Some(first_id);
+
+        // Preview-Core-Config aendern: noise_filter toggeln.
+        tool.config.noise_filter = !tool.config.noise_filter;
+        tool.on_preview_core_config_changed();
+
+        // R1: Phase bleibt JunctionEdit, Editable wurde neu synchronisiert.
+        assert_eq!(tool.phase, ColorPathPhase::JunctionEdit);
+        let editable = tool
+            .editable
+            .as_ref()
+            .expect("Editable muss nach Re-Sync erneut vorhanden sein");
+        let network = &tool
+            .preview_data
+            .as_ref()
+            .expect("Netz muss nach Rebuild vorhanden sein")
+            .network;
+        for id in editable.junctions.keys() {
+            assert!(
+                (id.0 as usize) < network.nodes.len(),
+                "Editable-ID {id:?} muss auf einen gueltigen Netz-Knoten zeigen"
+            );
+        }
+        // Gedraggte Junction wurde durch den Re-Sync auf die Netz-Position zurueckgesetzt.
+        if let Some(refreshed) = editable.junctions.get(&first_id) {
+            assert_ne!(
+                refreshed.world_pos, dragged_pos,
+                "Re-Sync muss die verschobene Junction verwerfen"
+            );
+        }
+        // F3/R2: Drag-Handle wurde verworfen, um Zugriff auf veraltete IDs zu vermeiden.
+        assert!(
+            tool.dragging_junction.is_none(),
+            "dragging_junction muss nach Strukturaenderung geleert sein"
+        );
+    }
+
+    #[test]
+    fn matching_config_change_in_junction_edit_keeps_phase() {
+        let mut tool = drive_tool_to_junction_edit();
+
+        // Farb-Matching aendern (R2): darf Phase nicht auf Finalize schieben.
+        tool.config.color_tolerance = (tool.config.color_tolerance + 5.0).clamp(1.0, 80.0);
+        tool.on_matching_config_changed();
+
+        assert_eq!(
+            tool.phase,
+            ColorPathPhase::JunctionEdit,
+            "Matching-Change darf die Wizard-Phase nicht veraendern"
         );
     }
 }

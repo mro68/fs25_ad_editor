@@ -1,6 +1,8 @@
 //! Farb-Pfad-Tool: erkennt Wege anhand der Farbe im Hintergrundbild.
 
 mod config_ui;
+mod drag;
+pub(crate) mod editable;
 mod lifecycle;
 mod pipeline;
 mod preview;
@@ -121,7 +123,10 @@ impl ColorPathBenchmarkAction {
                 self.tool.on_matching_config_changed();
             }
             ColorPathBenchmarkKind::ComputePipelineFromSampling => {
-                self.tool.compute_pipeline();
+                // Simuliert den echten Wizard-Button-Fluss
+                // `Sampling → CenterlinePreview → JunctionEdit → Finalize`
+                // (vgl. CP-05) anstelle eines Direktsprungs in die Preview.
+                let _ = self.tool.run_wizard_to_finalize();
             }
             ColorPathBenchmarkKind::PreviewCoreRebuild => {
                 self.tool.on_preview_core_config_changed();
@@ -184,7 +189,11 @@ impl ColorPathBenchmarkHarness {
 
         let sampling_state = tool.clone();
         let mut preview_state = tool;
-        preview_state.compute_pipeline();
+        // Preview-Ausgangszustand entsteht durch einen vollstaendigen Wizard-Durchlauf
+        // (CP-10), nicht durch den alten Direktsprung `compute_pipeline`.
+        if !preview_state.run_wizard_to_finalize() {
+            return Err("Wizard-Durchlauf konnte Finalize nicht erreichen");
+        }
 
         let has_prepared_segments = preview_state
             .preview_data

@@ -1,5 +1,6 @@
 //! State-Strukturen fuer das ColorPathTool.
 
+use super::editable::{EditableCenterlines, EditableJunctionId};
 use super::skeleton::SkeletonNetwork;
 use crate::app::tools::common::ToolLifecycleState;
 use crate::core::{ConnectionDirection, ConnectionPriority};
@@ -8,14 +9,44 @@ use image::RgbImage;
 use std::sync::Arc;
 
 /// Aktuelle Phase des ColorPathTool.
+///
+/// Seit CP-03 wird die alte `Preview`-Phase durch einen dreistufigen
+/// Wizard-Fluss ersetzt: `CenterlinePreview` → `JunctionEdit` → `Finalize`.
+/// Die Varianten sind semantisch durchlaufen, auch wenn CP-03 selbst noch
+/// keine UI-Buttons und keine echte Drag-Logik kennt.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum ColorPathPhase {
     /// Leerer Grundzustand ohne aktives Sampling.
     Idle,
     /// User sampelt Farben per Klick oder Alt+Lasso.
     Sampling,
-    /// Teilnetz berechnet, wird als Vorschau angezeigt
-    Preview,
+    /// Stage E fertig: Skelett/Centerline steht, Stage F noch nicht angewendet.
+    CenterlinePreview,
+    /// Junctions koennen editiert werden; Stage F bleibt zurueckgehalten.
+    JunctionEdit,
+    /// Stage F angewendet; Netz ist bereit zum Einfuegen.
+    Finalize,
+}
+
+impl ColorPathPhase {
+    /// Wahr, sobald der Wizard in einer der drei Editier-/Preview-Phasen steht.
+    ///
+    /// Wird von Lifecycle- und Panel-Pfaden genutzt, um zwischen Sampling und
+    /// Preview-artigen Zustaenden zu unterscheiden, ohne jede Variante einzeln
+    /// aufzufuehren.
+    pub fn is_editing(self) -> bool {
+        matches!(
+            self,
+            ColorPathPhase::CenterlinePreview
+                | ColorPathPhase::JunctionEdit
+                | ColorPathPhase::Finalize
+        )
+    }
+
+    /// Wahr, wenn Stage F bereits durchgelaufen ist und das Ergebnis eingefuegt werden darf.
+    pub fn is_finalized(self) -> bool {
+        matches!(self, ColorPathPhase::Finalize)
+    }
 }
 
 /// Wie das erkannte Netz an bestehende Nodes angeschlossen werden soll.
@@ -118,6 +149,12 @@ pub(super) struct PreviewCoreCacheKey {
 pub(super) struct PreparedSegmentsCacheKey {
     /// Revision des Preview-Kerns.
     pub preview_core_revision: u64,
+    /// Revision des editierbaren Zwischenmodells (CP-07).
+    ///
+    /// Wird bei jedem Junction-Drag bzw. Wizard-Phase-Wechsel gebumpt und
+    /// zwingt so einen Stage-F-Rebuild, sobald sich Junction-Positionen
+    /// aendern. `0`, solange kein `EditableCenterlines` vorliegt.
+    pub editable_revision: u64,
     /// Vereinfachung als Bitmuster.
     pub simplify_tolerance_bits: u32,
     /// Node-Abstand als Bitmuster.
@@ -277,6 +314,20 @@ pub struct ColorPathTool {
     pub(super) sampling_preview: Option<SamplingPreviewData>,
     /// Stages D-F: Maskenaufbereitung, Netzextraktion und PreparedSegments.
     pub(super) preview_data: Option<PreviewData>,
+    /// Editierbares Zwischenmodell (CP-06) zwischen Stage E und Stage F.
+    ///
+    /// Wird beim Eintritt in [`ColorPathPhase::CenterlinePreview`] aus dem
+    /// aktuellen Skelett-Netz erzeugt und ueberlebt den Wizard-Schritt
+    /// `JunctionEdit`. Mutationen (Drag in CP-08, Zweispur-Selektion) bumpen
+    /// die interne Revision und invalidieren dadurch spaetere Stage-F-Caches.
+    pub(super) editable: Option<EditableCenterlines>,
+
+    /// Aktuell per Drag gegriffene Junction (CP-08).
+    ///
+    /// `None`, solange kein Drag laeuft. Wird in
+    /// [`ColorPathPhase::JunctionEdit`] beim `on_drag_start` gesetzt und beim
+    /// `on_drag_end` wieder geleert.
+    pub(super) dragging_junction: Option<EditableJunctionId>,
 
     // ── Shared ──────────────────────────────────────────────────────────────
     /// Hintergrundbild fuer die Farberkennung
@@ -309,6 +360,8 @@ impl ColorPathTool {
             matching: MatchingSpec::default(),
             sampling_preview: None,
             preview_data: None,
+            editable: None,
+            dragging_junction: None,
             background_image: None,
             map_size: 2048.0,
             direction: ConnectionDirection::Dual,

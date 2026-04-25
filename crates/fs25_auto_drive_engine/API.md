@@ -8,6 +8,8 @@ Der Application-Layer trennt Mutationen und Read-Projektionen jetzt explizit. `A
 
 Im Route-Tool-UI-Contract des Application-Layers fuehrt das Analyse-Tool `ColorPath` zusaetzlich den Parameter `junction_radius` (Meter). Der Wert wird ueber `ColorPathPanelState.junction_radius` gelesen und per `ColorPathPanelAction::SetJunctionRadius(f32)` (Clamp `0.0..=100.0`) gesetzt; in der Stage-F-Preview-Pipeline steuert er ausschliesslich das radiusbasierte Junction-Trim, waehrend die finale Punktverteilung der `PreparedSegment`s weiterhin `node_spacing` folgt.
 
+`ColorPath` ist seit dem Wizard-Umbau (CP-03..CP-08) als mehrstufiger Wizard modelliert: die Phasen `Idle → Sampling → CenterlinePreview → JunctionEdit → Finalize` liegen als `ColorPathPanelPhase` im UI-Contract und werden ueber `ColorPathPanelAction::NextPhase`/`PrevPhase`/`Accept` geschaltet. `ColorPathPanelState` exponiert dafuer die Wizard-Flags `can_next`, `can_back` und `can_accept`. Die Legacy-Phase `ColorPathPanelPhase::Preview` sowie die Legacy-Actions `ComputePreview` und `BackToSampling` bleiben additiv als `#[deprecated]` erhalten, bis die Host-Migration in CP-11 sie endgueltig entfernt. Das engine-interne Zwischenartefakt `EditableCenterlines` haelt Junction-Positionen und Segment-IDs zwischen Stage E und Stage F und ist nicht Teil der oeffentlichen Crate-API.
+
 Das Root-Package `fs25_auto_drive_editor` re-exportiert die wichtigsten Einstiegspunkte dieser Crate weiter, damit bestehende Tests, Benches und Rust-Konsumenten stabil bleiben.
 
 ## Kompatibilitaet (Stand: 2026-04-05)

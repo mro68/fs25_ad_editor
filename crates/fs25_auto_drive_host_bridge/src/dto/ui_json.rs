@@ -238,6 +238,9 @@ fn color_path_panel_state_to_value(state: &ColorPathPanelState) -> Value {
         "avg_color": state.avg_color,
         "palette_colors": state.palette_colors,
         "can_compute": state.can_compute,
+        "can_next": state.can_next,
+        "can_back": state.can_back,
+        "can_accept": state.can_accept,
         "preview_stats": state.preview_stats.map(color_path_preview_stats_to_value),
         "exact_color_match": state.exact_color_match,
         "color_tolerance": state.color_tolerance,
@@ -474,9 +477,17 @@ fn field_path_preview_status_to_value(value: FieldPathPreviewStatus) -> Value {
 }
 
 fn color_path_panel_phase_to_str(value: ColorPathPanelPhase) -> &'static str {
+    // Kompat-Hinweis: CP-04 erweitert die Phase additiv. Die Legacy-Variante
+    // `Preview` wird vom Engine-Layer nicht mehr emittiert, bleibt aber in
+    // diesem Mapping erreichbar, damit aeltere Hosts/Adapter, die den Zustand
+    // noch per Hand bauen, weiter serialisierbar bleiben (-> CP-11 entfernt).
+    #[allow(deprecated)]
     match value {
         ColorPathPanelPhase::Idle => "idle",
         ColorPathPanelPhase::Sampling => "sampling",
+        ColorPathPanelPhase::CenterlinePreview => "centerline_preview",
+        ColorPathPanelPhase::JunctionEdit => "junction_edit",
+        ColorPathPanelPhase::Finalize => "finalize",
         ColorPathPanelPhase::Preview => "preview",
     }
 }

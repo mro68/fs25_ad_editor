@@ -193,13 +193,33 @@ pub enum FieldPathPanelAction {
 }
 
 /// Panel-Phase des Farb-Pfad-Tools.
+///
+/// Seit CP-04 loest der dreistufige Wizard-Fluss
+/// `CenterlinePreview` → `JunctionEdit` → `Finalize` die alte Sammel-Phase
+/// `Preview` ab. Die Legacy-Variante bleibt additiv erhalten, um bestehende
+/// FFI-Hosts nicht zu brechen, wird aber vom Engine-Layer nicht mehr
+/// emittiert und per `#[deprecated]` zur Migration markiert. CP-11 entfernt
+/// sie endgueltig, sobald die Hosts umgezogen sind.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum ColorPathPanelPhase {
     /// Warten auf Start.
     Idle,
     /// Farben werden gesammelt.
     Sampling,
-    /// Extrahiertes Wegenetz liegt als Vorschau vor.
+    /// Phase 1: Stage E ist durchgelaufen, Stage F noch nicht; Centerlines liegen vor.
+    CenterlinePreview,
+    /// Phase 2: Junctions koennen bewegt werden, Stage F bleibt zurueckgehalten.
+    JunctionEdit,
+    /// Phase 3: Stage F angewendet; das Netz ist zum Uebernehmen bereit.
+    Finalize,
+    /// Legacy-Alias fuer Hosts vor dem Wizard-Umbau.
+    ///
+    /// Wird von der Engine nicht mehr gesetzt. Fuer Einlese-/Serde-Pfade
+    /// weiterhin vorhanden, damit alte FFI-Snapshots geparst werden koennen.
+    #[deprecated(
+        since = "2.1.0",
+        note = "Wizard-Phasen verwenden: CenterlinePreview/JunctionEdit/Finalize"
+    )]
     Preview,
 }
 
@@ -231,6 +251,13 @@ pub struct ColorPathPreviewStats {
 }
 
 /// Panelzustand des Farb-Pfad-Tools.
+///
+/// Seit CP-04 bildet der Zustand den ColorPath-Wizard ab: neben der aktuellen
+/// [`ColorPathPanelPhase`] liefert er die drei Wizard-Flags `can_next`,
+/// `can_back` und `can_accept`, ueber die Host-/UI-Schichten die
+/// Navigations-Buttons (`NextPhase`, `PrevPhase`, `Accept`) enablen. Das
+/// legacy-kompatible Flag `can_compute` bleibt als Startkriterium fuer die
+/// Sampling→CenterlinePreview-Transition erhalten.
 #[derive(Debug, Clone, PartialEq)]
 pub struct ColorPathPanelState {
     /// Aktuelle Panel-Phase.
@@ -243,6 +270,21 @@ pub struct ColorPathPanelState {
     pub palette_colors: Vec<[u8; 3]>,
     /// Gibt an, ob die Pipeline aus dem aktuellen Sampling gestartet werden kann.
     pub can_compute: bool,
+    /// Wizard-Flag: darf der "Weiter"-Button gedrueckt werden?
+    ///
+    /// Berechnet vom Engine-Layer; Host-/UI-Schichten lesen nur. Semantik:
+    /// - `Sampling` → `can_compute` (Samples liegen vor).
+    /// - `CenterlinePreview`/`JunctionEdit` → `true`.
+    /// - andere Phasen → `false`.
+    pub can_next: bool,
+    /// Wizard-Flag: darf der "Zurueck"-Button gedrueckt werden?
+    ///
+    /// `true` in jeder Phase ab `CenterlinePreview`; sonst `false`.
+    pub can_back: bool,
+    /// Wizard-Flag: darf der "Uebernehmen"-Button gedrueckt werden?
+    ///
+    /// Nur in `Finalize` und nur wenn ein uebernahmefaehiges Netz vorliegt.
+    pub can_accept: bool,
     /// Kennzahlen der Vorschau, falls vorhanden.
     pub preview_stats: Option<ColorPathPreviewStats>,
     /// Exaktmodus aktiv?
@@ -262,15 +304,29 @@ pub struct ColorPathPanelState {
 }
 
 /// Panel-Aktion des Farb-Pfad-Tools.
+///
+/// Der Wizard-Fluss kennt seit CP-04 die additiven Aktionen `NextPhase`,
+/// `PrevPhase` und `Accept`. Die Legacy-Aktionen `ComputePreview` und
+/// `BackToSampling` bleiben als deprecated-Alias bestehen, damit bestehende
+/// Hosts weiter kompilieren; die Engine-Semantik wird erst in CP-05
+/// vollstaendig auf die neuen Varianten gezogen.
 #[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
 #[serde(tag = "kind", content = "value", rename_all = "snake_case")]
 pub enum ColorPathPanelAction {
     /// Sampling starten.
     StartSampling,
-    /// Pipeline aus dem aktuellen Sampling berechnen.
+    /// Legacy-Alias fuer den Uebergang `Sampling` → `CenterlinePreview`.
+    #[deprecated(since = "2.1.0", note = "Wizard-Aktion `NextPhase` verwenden")]
     ComputePreview,
-    /// Von der Preview zurueck in das Sampling wechseln.
+    /// Legacy-Alias fuer den Rueckweg aus einer Preview-Phase in `Sampling`.
+    #[deprecated(since = "2.1.0", note = "Wizard-Aktion `PrevPhase` verwenden")]
     BackToSampling,
+    /// Wizard: eine Phase nach vorn (Sampling→CenterlinePreview→JunctionEdit→Finalize).
+    NextPhase,
+    /// Wizard: eine Phase zurueck (Finalize→JunctionEdit→CenterlinePreview→Sampling).
+    PrevPhase,
+    /// Wizard: das fertige Netz aus `Finalize` uebernehmen.
+    Accept,
     /// Tool zurücksetzen.
     Reset,
     /// Exaktmodus setzen.

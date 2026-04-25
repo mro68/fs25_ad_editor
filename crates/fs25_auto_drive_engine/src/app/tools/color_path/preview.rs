@@ -6,7 +6,7 @@ use crate::app::tools::{ToolAnchor, ToolPreview, ToolResult};
 use crate::core::{ConnectionDirection, ConnectionPriority, NodeFlag, RoadMap};
 
 use super::skeleton::SkeletonGraphNodeKind;
-use super::state::{ColorPathTool, ExistingConnectionMode};
+use super::state::{ColorPathPhase, ColorPathTool, ExistingConnectionMode};
 
 impl ColorPathTool {
     /// Kennzahlen fuer die Sidebar-Vorschau.
@@ -121,8 +121,30 @@ impl ColorPathTool {
             nodes,
             connections,
             connection_styles,
-            labels: vec![],
+            labels: self.build_junction_labels(),
         }
+    }
+
+    /// Erzeugt Hinweis-Labels fuer die Junction-Knoten im Preview.
+    ///
+    /// Wird nur in [`ColorPathPhase::JunctionEdit`] befuellt und markiert echte
+    /// Junction-Knoten (kein `OpenEnd`/`LoopAnchor`) mit einem Raute-Symbol,
+    /// damit der User sie als per Drag verschiebbare Griffe wahrnimmt (CP-08).
+    fn build_junction_labels(&self) -> Vec<(usize, String)> {
+        if self.phase != ColorPathPhase::JunctionEdit {
+            return Vec::new();
+        }
+        let Some(preview_data) = &self.preview_data else {
+            return Vec::new();
+        };
+        preview_data
+            .network
+            .nodes
+            .iter()
+            .enumerate()
+            .filter(|(_, node)| node.kind == SkeletonGraphNodeKind::Junction)
+            .map(|(idx, _)| (idx, "◆".to_string()))
+            .collect()
     }
 
     /// Konvertiert Stage F und Bestands-Snaps in ein ausfuehrbares `ToolResult`.
