@@ -100,7 +100,7 @@ pub struct ColorPathBenchmarkStats {
 #[derive(Clone, Copy)]
 enum ColorPathBenchmarkKind {
     SamplingPreviewRebuild,
-    ComputePipelineFromSampling,
+    ComputeToEditing,
     PreviewCoreRebuild,
     PreparedSegmentsRebuild,
 }
@@ -122,11 +122,10 @@ impl ColorPathBenchmarkAction {
             ColorPathBenchmarkKind::SamplingPreviewRebuild => {
                 self.tool.on_matching_config_changed();
             }
-            ColorPathBenchmarkKind::ComputePipelineFromSampling => {
-                // Simuliert den echten Wizard-Button-Fluss
-                // `Sampling → CenterlinePreview → JunctionEdit → Finalize`
-                // (vgl. CP-05) anstelle eines Direktsprungs in die Preview.
-                let _ = self.tool.run_wizard_to_finalize();
+            ColorPathBenchmarkKind::ComputeToEditing => {
+                // Simuliert den echten Compute-Button-Fluss `Sampling → Editing`
+                // (Single-Step) anstelle eines Direktsprungs in die Preview.
+                let _ = self.tool.run_to_editing();
             }
             ColorPathBenchmarkKind::PreviewCoreRebuild => {
                 self.tool.on_preview_core_config_changed();
@@ -189,10 +188,10 @@ impl ColorPathBenchmarkHarness {
 
         let sampling_state = tool.clone();
         let mut preview_state = tool;
-        // Preview-Ausgangszustand entsteht durch einen vollstaendigen Wizard-Durchlauf
-        // (CP-10), nicht durch den alten Direktsprung `compute_pipeline`.
-        if !preview_state.run_wizard_to_finalize() {
-            return Err("Wizard-Durchlauf konnte Finalize nicht erreichen");
+        // Preview-Ausgangszustand entsteht durch den Single-Step-Compute-Pfad
+        // (Sampling → Editing), nicht durch den alten Direktsprung `compute_pipeline`.
+        if !preview_state.run_to_editing() {
+            return Err("Compute-Pfad konnte Editing-Phase nicht erreichen");
         }
 
         let has_prepared_segments = preview_state
@@ -226,7 +225,7 @@ impl ColorPathBenchmarkHarness {
     pub fn compute_pipeline_action(&self) -> ColorPathBenchmarkAction {
         ColorPathBenchmarkAction {
             tool: self.sampling_state.clone(),
-            kind: ColorPathBenchmarkKind::ComputePipelineFromSampling,
+            kind: ColorPathBenchmarkKind::ComputeToEditing,
         }
     }
 

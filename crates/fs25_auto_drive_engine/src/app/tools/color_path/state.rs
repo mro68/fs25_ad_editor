@@ -10,42 +10,31 @@ use std::sync::Arc;
 
 /// Aktuelle Phase des ColorPathTool.
 ///
-/// Seit CP-03 wird die alte `Preview`-Phase durch einen dreistufigen
-/// Wizard-Fluss ersetzt: `CenterlinePreview` → `JunctionEdit` → `Finalize`.
-/// Die Varianten sind semantisch durchlaufen, auch wenn CP-03 selbst noch
-/// keine UI-Buttons und keine echte Drag-Logik kennt.
+/// Seit CP-01 (Single-Step) ist der Wizard auf drei kanonische Varianten
+/// reduziert: `Idle` (kein Sampling), `Sampling` (Farbsamples sammeln) und
+/// `Editing` (Centerline/Junction-Edit/Stage-F unter einem Dach). Die
+/// frueheren `CenterlinePreview`/`JunctionEdit`/`Finalize` sind in `Editing`
+/// zusammengefasst — Stage F kann darin sowohl leer (noch nicht berechnet)
+/// als auch befuellt sein. Der Helfer [`ColorPathTool::can_execute`]
+/// entscheidet anhand der `prepared_segments`, ob das Ergebnis eingefuegt
+/// werden darf.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum ColorPathPhase {
     /// Leerer Grundzustand ohne aktives Sampling.
     Idle,
     /// User sampelt Farben per Klick oder Alt+Lasso.
     Sampling,
-    /// Stage E fertig: Skelett/Centerline steht, Stage F noch nicht angewendet.
-    CenterlinePreview,
-    /// Junctions koennen editiert werden; Stage F bleibt zurueckgehalten.
-    JunctionEdit,
-    /// Stage F angewendet; Netz ist bereit zum Einfuegen.
-    Finalize,
+    /// Centerline-Preview, Junction-Drag und Stage F unter einem Phasen-Label.
+    Editing,
 }
 
 impl ColorPathPhase {
-    /// Wahr, sobald der Wizard in einer der drei Editier-/Preview-Phasen steht.
+    /// Wahr, sobald der Wizard in der vereinheitlichten Editing-Phase steht.
     ///
-    /// Wird von Lifecycle- und Panel-Pfaden genutzt, um zwischen Sampling und
-    /// Preview-artigen Zustaenden zu unterscheiden, ohne jede Variante einzeln
-    /// aufzufuehren.
+    /// Wird von Lifecycle- und Panel-Pfaden genutzt, um Sampling/Idle von der
+    /// Preview-/Stage-F-Phase zu unterscheiden.
     pub fn is_editing(self) -> bool {
-        matches!(
-            self,
-            ColorPathPhase::CenterlinePreview
-                | ColorPathPhase::JunctionEdit
-                | ColorPathPhase::Finalize
-        )
-    }
-
-    /// Wahr, wenn Stage F bereits durchgelaufen ist und das Ergebnis eingefuegt werden darf.
-    pub fn is_finalized(self) -> bool {
-        matches!(self, ColorPathPhase::Finalize)
+        matches!(self, ColorPathPhase::Editing)
     }
 }
 
@@ -316,18 +305,29 @@ pub struct ColorPathTool {
     pub(super) preview_data: Option<PreviewData>,
     /// Editierbares Zwischenmodell (CP-06) zwischen Stage E und Stage F.
     ///
-    /// Wird beim Eintritt in [`ColorPathPhase::CenterlinePreview`] aus dem
-    /// aktuellen Skelett-Netz erzeugt und ueberlebt den Wizard-Schritt
-    /// `JunctionEdit`. Mutationen (Drag in CP-08, Zweispur-Selektion) bumpen
-    /// die interne Revision und invalidieren dadurch spaetere Stage-F-Caches.
+    /// Wird beim Eintritt in [`ColorPathPhase::Editing`] aus dem aktuellen
+    /// Skelett-Netz erzeugt. Mutationen (Junction-Drag, Zweispur-Selektion)
+    /// bumpen die interne Revision und invalidieren dadurch spaetere
+    /// Stage-F-Caches.
     pub(super) editable: Option<EditableCenterlines>,
 
     /// Aktuell per Drag gegriffene Junction (CP-08).
     ///
-    /// `None`, solange kein Drag laeuft. Wird in
-    /// [`ColorPathPhase::JunctionEdit`] beim `on_drag_start` gesetzt und beim
-    /// `on_drag_end` wieder geleert.
+    /// `None`, solange kein Drag laeuft. Wird in [`ColorPathPhase::Editing`]
+    /// beim `on_drag_start` gesetzt und beim `on_drag_end` wieder geleert.
     pub(super) dragging_junction: Option<EditableJunctionId>,
+
+    /// Markiert, dass der Nutzer das Editable-Modell durch einen Junction-Drag
+    /// veraendert hat (CP-03 / Resync-Schutz).
+    ///
+    /// Solange das Flag gesetzt ist, ueberspringen Matching-/Preview-Core-
+    /// Slider-Resyncs das pauschale `sync_editable_from_network()` und
+    /// versuchen stattdessen, die User-Junction-Positionen anhand der stabilen
+    /// [`EditableJunctionId`] auf das frisch extrahierte Skelett zu mappen.
+    /// Wird ausschliesslich in [`super::ColorPathTool::reset_all`] und
+    /// [`super::ColorPathTool::compute_to_editing`] (sowie in einem nicht
+    /// rettbaren Fallback-Pfad) wieder auf `false` gesetzt.
+    pub(super) editable_user_dirty: bool,
 
     // ── Shared ──────────────────────────────────────────────────────────────
     /// Hintergrundbild fuer die Farberkennung
@@ -362,6 +362,7 @@ impl ColorPathTool {
             preview_data: None,
             editable: None,
             dragging_junction: None,
+            editable_user_dirty: false,
             background_image: None,
             map_size: 2048.0,
             direction: ConnectionDirection::Dual,

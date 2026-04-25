@@ -8,6 +8,13 @@ use crate::app::ui_contract::{
 
 impl ColorPathTool {
     /// Liefert den egui-freien Panelzustand des ColorPathTools.
+    ///
+    /// Single-Step-Modell (CP-06): Die Engine ist alleinige Quelle der
+    /// Compute-/Accept-Flags. `can_compute` ist nur in `Sampling` mit
+    /// vorhandenen Farbsamples wahr; `can_accept` haengt direkt an
+    /// [`ColorPathTool::can_execute`]. Die Legacy-Flags `can_next`/`can_back`
+    /// liefert die Engine nicht mehr — sie sind konstant `false`.
+    #[allow(deprecated)] // Legacy-Flags can_next/can_back bleiben fuer DTO-Kompat additiv (CP-11 entfernt sie).
     pub(super) fn panel_state(&self) -> ColorPathPanelState {
         let preview_stats = if self.phase.is_editing() {
             let (junction_count, open_end_count, segment_count) = self.preview_stats();
@@ -25,27 +32,21 @@ impl ColorPathTool {
             None
         };
 
-        // Wizard-Flags: Engine ist Quelle der Wahrheit, Host liest nur.
-        let can_accept = self.phase.is_finalized()
-            && preview_stats.as_ref().is_some_and(|stats| stats.can_accept);
-        let can_back = matches!(
-            self.phase,
-            ColorPathPhase::CenterlinePreview
-                | ColorPathPhase::JunctionEdit
-                | ColorPathPhase::Finalize
-        );
-        let can_next = match self.phase {
-            ColorPathPhase::Sampling => !self.sampling.sampled_colors.is_empty(),
-            ColorPathPhase::CenterlinePreview | ColorPathPhase::JunctionEdit => true,
-            ColorPathPhase::Idle | ColorPathPhase::Finalize => false,
-        };
+        // Single-Step-Wizard: kanonische Flags sind `can_compute` (Sampling)
+        // und `can_accept` (Editing + ausfuehrbar). Legacy-Flags konstant
+        // `false`, damit Hosts auf den Reset/Compute/Accept-Drilldown migrieren.
+        let can_compute = matches!(self.phase, ColorPathPhase::Sampling)
+            && !self.sampling.sampled_colors.is_empty();
+        let can_accept = self.can_execute();
+        let can_back = false;
+        let can_next = false;
 
         ColorPathPanelState {
             phase: panel_phase(self.phase),
             sample_count: self.sampling.sampled_colors.len(),
             avg_color: self.sampling.avg_color,
             palette_colors: self.matching.palette.clone(),
-            can_compute: !self.sampling.sampled_colors.is_empty(),
+            can_compute,
             can_next,
             can_back,
             can_accept,
@@ -61,17 +62,38 @@ impl ColorPathTool {
     }
 
     /// Wendet eine semantische Panel-Aktion auf das ColorPathTool an.
+    ///
+    /// Single-Step-Modell (CP-06): die kanonischen Aktionen sind
+    /// `StartSampling` / `Compute` / `Accept` / `Reset`. Die Legacy-Aktionen
+    /// werden gemaess folgender Mapping-Tabelle uebersetzt:
+    ///
+    /// - `ComputePreview` → wie `Compute`.
+    /// - `NextPhase` in `Sampling` → wie `Compute`; in `Editing` ist es ein
+    ///   No-Op (`changed = false`, kein Effekt — CP-06 hat den Wizard auf
+    ///   einen Schritt verdichtet).
+    /// - `PrevPhase` / `BackToSampling` → wie `Reset`. Begruendung: nach
+    ///   CP-06 existiert kein Zwischenzustand mehr, in den die Pipeline
+    ///   teilweise zurueckgenommen werden koennte; ein Rueckweg aus `Editing`
+    ///   verwirft Editable + Preview ohnehin vollstaendig und ist damit
+    ///   semantisch ein vollstaendiger Reset.
     #[allow(deprecated)] // Legacy-Aktionen bleiben fuer Host-Kompat bis CP-11.
     pub(super) fn apply_panel_action(
         &mut self,
         action: ColorPathPanelAction,
     ) -> RouteToolPanelEffect {
-        // Legacy-Aliasse: ComputePreview/BackToSampling leiten auf die Wizard-Aktionen um,
-        // damit externe Hosts weiter kompilieren. Die neue Semantik ist „ein Phasenschritt
-        // nach vorn/zurueck" und nicht mehr der Sprung ueber mehrere Stages (CP-05).
+        // Schritt 1: Legacy-Aktionen auf die kanonischen Aktionen abbilden.
         let action = match action {
-            ColorPathPanelAction::ComputePreview => ColorPathPanelAction::NextPhase,
-            ColorPathPanelAction::BackToSampling => ColorPathPanelAction::PrevPhase,
+            ColorPathPanelAction::ComputePreview => ColorPathPanelAction::Compute,
+            ColorPathPanelAction::NextPhase => match self.phase {
+                ColorPathPhase::Sampling => ColorPathPanelAction::Compute,
+                // No-Op in Editing/Idle: kein Phasenwechsel mehr moeglich.
+                ColorPathPhase::Idle | ColorPathPhase::Editing => {
+                    return RouteToolPanelEffect::default();
+                }
+            },
+            ColorPathPanelAction::PrevPhase | ColorPathPanelAction::BackToSampling => {
+                ColorPathPanelAction::Reset
+            }
             other => other,
         };
 
@@ -85,23 +107,42 @@ impl ColorPathTool {
                     false
                 }
             }
-            // Wizard-Vorwaerts-Transitions (CP-05).
-            ColorPathPanelAction::NextPhase => self.advance_wizard_phase(),
-            // Wizard-Rueckwaerts-Transitions (CP-05).
-            ColorPathPanelAction::PrevPhase => self.retreat_wizard_phase(),
+            // Kanonische Single-Step-Aktion: aus `Sampling` mit Samples direkt
+            // nach `Editing` rechnen. In allen anderen Phasen No-Op.
+            ColorPathPanelAction::Compute => {
+                if matches!(self.phase, ColorPathPhase::Sampling)
+                    && !self.sampling.sampled_colors.is_empty()
+                    && self.sampling.lasso_start_world.is_some()
+                {
+                    let phase_before = self.phase;
+                    self.compute_to_editing();
+                    let advanced = self.phase != phase_before;
+                    if advanced {
+                        // Compute hat das Netz neu aufgebaut; der Host soll
+                        // die Vorschau neu auswerten.
+                        follow_up = Some(RouteToolPanelFollowUp::UpdatePreview);
+                    }
+                    advanced
+                } else {
+                    false
+                }
+            }
             // Finales Uebernehmen: Hook auf den bestehenden Apply-Pfad via Controller.
             ColorPathPanelAction::Accept => {
-                if self.can_accept_now() {
+                if self.can_execute() {
                     follow_up = Some(RouteToolPanelFollowUp::ReadyToExecute);
-                    // `changed` bleibt false: das Panel wird durch den nachgelagerten
-                    // Apply-/Reset-Pfad des Controllers ohnehin neu bewertet.
+                    // `changed` bleibt false: der nachgelagerte Apply-/Reset-
+                    // Pfad des Controllers bewertet das Panel ohnehin neu.
                     false
                 } else {
                     false
                 }
             }
             // Legacy-Aliasse sind oben bereits umgemappt; diese Arme sind nie erreichbar.
-            ColorPathPanelAction::ComputePreview | ColorPathPanelAction::BackToSampling => false,
+            ColorPathPanelAction::ComputePreview
+            | ColorPathPanelAction::BackToSampling
+            | ColorPathPanelAction::NextPhase
+            | ColorPathPanelAction::PrevPhase => false,
             ColorPathPanelAction::Reset => {
                 let had_pending = self.phase != ColorPathPhase::Idle
                     || !self.sampling.lasso_regions.is_empty()
@@ -171,122 +212,40 @@ impl ColorPathTool {
         }
     }
 
-    /// Liefert `true`, wenn `Accept` gerade einen echten Commit ausloesen darf.
-    fn can_accept_now(&self) -> bool {
-        self.phase.is_finalized()
-            && self
-                .preview_data
-                .as_ref()
-                .is_some_and(|preview| !preview.prepared_segments.is_empty())
-    }
-
-    /// Wizard-Vorwaerts: Idle ist Endstation, Sampling loest Stage E aus,
-    /// CenterlinePreview wechselt in den Junction-Edit, JunctionEdit loest
-    /// Stage F aus, Finalize ist Endstation.
-    fn advance_wizard_phase(&mut self) -> bool {
-        match self.phase {
-            ColorPathPhase::Idle | ColorPathPhase::Finalize => false,
-            ColorPathPhase::Sampling => {
-                if self.sampling.sampled_colors.is_empty()
-                    || self.sampling.lasso_start_world.is_none()
-                {
-                    return false;
-                }
-                if self.rebuild_preview_core_only() {
-                    self.sync_editable_from_network();
-                    self.phase = ColorPathPhase::CenterlinePreview;
-                    true
-                } else {
-                    log::warn!("ColorPathTool: NextPhase abgebrochen — kein exportierbares Netz");
-                    false
-                }
-            }
-            ColorPathPhase::CenterlinePreview => {
-                // F5: reines Phase-Toggle (keine Strukturaenderung) soll den
-                // Stage-F-Cache nicht invalidieren → keinen Revisions-Bump.
-                self.phase = ColorPathPhase::JunctionEdit;
-                true
-            }
-            ColorPathPhase::JunctionEdit => {
-                if self.rebuild_stage_f_only() {
-                    self.bump_editable_revision();
-                    self.phase = ColorPathPhase::Finalize;
-                    true
-                } else {
-                    log::warn!(
-                        "ColorPathTool: NextPhase abgebrochen — Stage F lieferte keine Segmente"
-                    );
-                    false
-                }
-            }
-        }
-    }
-
-    /// Wizard-Rueckwaerts: Finalize verwirft Stage F, JunctionEdit kehrt zur
-    /// reinen Centerline-Preview zurueck, CenterlinePreview geht zurueck ins
-    /// Sampling (und verwirft dabei die Preview-Pipeline). Sampling/Idle sind
-    /// Endstationen.
-    fn retreat_wizard_phase(&mut self) -> bool {
-        match self.phase {
-            ColorPathPhase::Idle | ColorPathPhase::Sampling => false,
-            ColorPathPhase::CenterlinePreview => {
-                self.clear_preview_pipeline();
-                self.editable = None;
-                self.phase = ColorPathPhase::Sampling;
-                true
-            }
-            ColorPathPhase::JunctionEdit => {
-                // F5: reines Phase-Toggle ohne Strukturaenderung — kein Bump.
-                self.phase = ColorPathPhase::CenterlinePreview;
-                true
-            }
-            ColorPathPhase::Finalize => {
-                // Nur Stage F verwerfen — Netz/Skeleton bleibt fuer den erneuten
-                // Eintritt in `Finalize` erhalten.
-                if let Some(preview) = self.preview_data.as_mut() {
-                    preview.prepared_segments.clear();
-                }
-                self.cache.prepared_segments_key = None;
-                self.bump_editable_revision();
-                self.phase = ColorPathPhase::JunctionEdit;
-                true
-            }
-        }
-    }
-
-    /// Fuehrt den Wizard von der aktuellen Phase bis `Finalize` durch.
+    /// Fuehrt das Tool von der aktuellen Phase bis `Editing` durch.
     ///
-    /// Interner Helfer fuer Benchmark- und Testharnische, der den echten
-    /// UI-Fluss `Sampling → CenterlinePreview → JunctionEdit → Finalize`
-    /// ueber wiederholte [`advance_wizard_phase`] nachstellt — ohne reale
-    /// egui-Panels und ohne Junction-Drag. Gibt `true` zurueck, sobald
-    /// `Finalize` erreicht ist; `false`, wenn eine Transition unterwegs
-    /// scheitert (z. B. fehlende Farbsamples oder leeres Stage-F-Resultat).
-    pub(super) fn run_wizard_to_finalize(&mut self) -> bool {
-        while self.phase != ColorPathPhase::Finalize {
-            if !self.advance_wizard_phase() {
+    /// Interner Helfer fuer Benchmark- und Testharnische. Gibt `true` zurueck,
+    /// sobald `Editing` mit fertiger Stage F erreicht ist (Single-Step,
+    /// CP-08 final umbenannt von `run_wizard_to_finalize`).
+    pub(super) fn run_to_editing(&mut self) -> bool {
+        if self.phase != ColorPathPhase::Editing {
+            if !matches!(self.phase, ColorPathPhase::Sampling)
+                || self.sampling.sampled_colors.is_empty()
+                || self.sampling.lasso_start_world.is_none()
+            {
+                return false;
+            }
+            self.compute_to_editing();
+            if self.phase != ColorPathPhase::Editing {
                 return false;
             }
         }
-        true
+        self.can_execute()
     }
 }
 
 /// Bildet die engine-interne Wizard-Phase auf die DTO-Phase ab.
 ///
-/// CP-04 erweitert `ColorPathPanelPhase` additiv um die Wizard-Varianten
-/// `CenterlinePreview`, `JunctionEdit` und `Finalize`. Die Legacy-Variante
-/// `Preview` bleibt fuer alte FFI-Hosts bestehen, wird aber nicht mehr
-/// emittiert. Damit sehen Hosts die echte Wizard-Phase und koennen eigene
-/// Fallbacks (z.B. alles ab `CenterlinePreview` als Legacy-„preview" werten)
-/// waehrend der Migration abbilden.
+/// Single-Step (CP-06): die Engine emittiert nur noch die kanonischen
+/// DTO-Varianten `Idle` / `Sampling` / `Editing`. Die Legacy-DTO-Varianten
+/// `Preview` / `CenterlinePreview` / `JunctionEdit` / `Finalize` werden vom
+/// DTO-Layer fuer eingehende Strings weiterhin tolerant auf `Editing`
+/// gefaltet (additiv), aber von der Engine ausgehend nicht mehr gesetzt.
 fn panel_phase(phase: ColorPathPhase) -> ColorPathPanelPhase {
     match phase {
         ColorPathPhase::Idle => ColorPathPanelPhase::Idle,
         ColorPathPhase::Sampling => ColorPathPanelPhase::Sampling,
-        ColorPathPhase::CenterlinePreview => ColorPathPanelPhase::CenterlinePreview,
-        ColorPathPhase::JunctionEdit => ColorPathPanelPhase::JunctionEdit,
-        ColorPathPhase::Finalize => ColorPathPanelPhase::Finalize,
+        ColorPathPhase::Editing => ColorPathPanelPhase::Editing,
     }
 }
 

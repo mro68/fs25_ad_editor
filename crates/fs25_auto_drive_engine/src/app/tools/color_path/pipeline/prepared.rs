@@ -13,6 +13,11 @@ use crate::shared::spline_geometry::resample_by_distance;
 
 impl ColorPathTool {
     /// Berechnet Stage F mit der aktuellen Preview-Konfiguration neu.
+    ///
+    /// Funktional identisch zu [`Self::rebuild_stage_f_only`], aber im
+    /// Produktionspfad seit CP-02 nicht mehr genutzt; dient nur noch als
+    /// semantischer Test-Hook.
+    #[allow(dead_code)]
     pub(in crate::app::tools::color_path) fn rebuild_prepared_segments(&mut self) {
         let _ = self.ensure_prepared_segments();
     }

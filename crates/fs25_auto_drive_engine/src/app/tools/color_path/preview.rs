@@ -7,7 +7,7 @@ use crate::core::{ConnectionDirection, ConnectionPriority, NodeFlag, RoadMap};
 
 use super::editable::{EditableCenterlineId, EditableJunctionId};
 use super::skeleton::SkeletonGraphNodeKind;
-use super::state::{ColorPathPhase, ColorPathTool, ExistingConnectionMode};
+use super::state::{ColorPathTool, ExistingConnectionMode};
 
 impl ColorPathTool {
     /// Kennzahlen fuer die Sidebar-Vorschau.
@@ -71,21 +71,19 @@ impl ColorPathTool {
         }
     }
 
-    /// Baut die Vorschau fuer die Netz-Phasen (CenterlinePreview, JunctionEdit,
-    /// Finalize) aus PreparedSegments oder den rohen Skelett-Polylines.
+    /// Baut die Vorschau fuer die Editing-Phase aus PreparedSegments oder den
+    /// rohen Skelett-Polylines.
     ///
-    /// In `CenterlinePreview` und `JunctionEdit` liegen noch keine
-    /// `prepared_segments` vor (Stage F laeuft erst beim Eintritt in
-    /// `Finalize`). Damit der User in diesen Phasen trotzdem die erkannten
-    /// Mittellinien sieht, rendern wir die Polylines aus
-    /// [`SkeletonNetwork::segments`] direkt — und ziehen ihre Endpunkte bei
-    /// vorhandenem [`EditableCenterlines`] auf die aktuelle (ggf. gedraggte)
-    /// Junction-Position, analog zum Stage-F-Endpoint-Pull. Junction-Knoten
-    /// werden ebenfalls an die Editable-Position verschoben, damit der Drag
-    /// in `JunctionEdit` sofort sichtbar ist.
+    /// Solange Stage F noch keine `prepared_segments` produziert hat (etwa
+    /// direkt nach dem Eintritt in `Editing` oder nach Junction-Drag), rendern
+    /// wir die Polylines aus [`SkeletonNetwork::segments`] direkt — und ziehen
+    /// ihre Endpunkte bei vorhandenem [`EditableCenterlines`] auf die aktuelle
+    /// (ggf. gedraggte) Junction-Position, analog zum Stage-F-Endpoint-Pull.
+    /// Junction-Knoten werden ebenfalls an die Editable-Position verschoben,
+    /// damit der Drag sofort sichtbar ist.
     ///
-    /// In `Finalize` werden die durch Stage F erzeugten `prepared_segments`
-    /// inklusive Resampling und Junction-Trim gerendert.
+    /// Sind `prepared_segments` befuellt, werden stattdessen die durch Stage F
+    /// erzeugten Resampling-Knoten inklusive Junction-Trim gerendert.
     pub(super) fn build_network_preview(&self) -> ToolPreview {
         let Some(preview_data) = &self.preview_data else {
             return ToolPreview::default();
@@ -117,7 +115,7 @@ impl ColorPathTool {
         let mut connection_styles = Vec::new();
 
         if !preview_data.prepared_segments.is_empty() {
-            // Finalize: Stage-F-Resampling rendern.
+            // Editing mit fertigem Stage F: Resampling rendern.
             for segment in &preview_data.prepared_segments {
                 if segment.resampled_nodes.len() < 2 {
                     continue;
@@ -147,7 +145,7 @@ impl ColorPathTool {
                 }
             }
         } else {
-            // CenterlinePreview / JunctionEdit: rohe Centerlines rendern.
+            // Editing ohne Stage F: rohe Centerlines rendern.
             for (segment_idx, segment) in preview_data.network.segments.iter().enumerate() {
                 if segment.polyline.len() < 2 {
                     continue;
@@ -209,11 +207,11 @@ impl ColorPathTool {
 
     /// Erzeugt Hinweis-Labels fuer die Junction-Knoten im Preview.
     ///
-    /// Wird nur in [`ColorPathPhase::JunctionEdit`] befuellt und markiert echte
+    /// Wird nur in [`ColorPathPhase::Editing`] befuellt und markiert echte
     /// Junction-Knoten (kein `OpenEnd`/`LoopAnchor`) mit einem Raute-Symbol,
     /// damit der User sie als per Drag verschiebbare Griffe wahrnimmt (CP-08).
     fn build_junction_labels(&self) -> Vec<(usize, String)> {
-        if self.phase != ColorPathPhase::JunctionEdit {
+        if !self.phase.is_editing() {
             return Vec::new();
         }
         let Some(preview_data) = &self.preview_data else {

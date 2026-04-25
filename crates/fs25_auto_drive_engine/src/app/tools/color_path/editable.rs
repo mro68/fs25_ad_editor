@@ -102,7 +102,7 @@ pub struct EditableCenterline {
 
 /// Vollstaendiges, editierbares Netz aus Junctions und Centerlines.
 ///
-/// CP-06 befuellt die Struktur einmalig am Uebergang `CenterlinePreview`
+/// CP-06 befuellt die Struktur einmalig am Eintritt in die Editing-Phase
 /// aus dem aktuellen [`SkeletonNetwork`]. Mutationen (Drag in CP-08,
 /// Selektion der Zweispur-Erweiterung) bumpen die [`Self::revision`] und
 /// signalisieren damit spaeteren Stages den Cache-Ungueltig-Stempel.

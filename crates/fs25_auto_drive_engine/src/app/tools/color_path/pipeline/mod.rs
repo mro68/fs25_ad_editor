@@ -37,8 +37,8 @@ impl ColorPathTool {
 
     /// Fuehrt nur Stage C-E aus und ueberspringt den Junction-Trim der Stage F.
     ///
-    /// Zweck: CP-03 trennt die Wizard-Phasen `CenterlinePreview`/`JunctionEdit`
-    /// (reine Skelett-Vorschau) von `Finalize` (mit Junction-Radius-Begradigung).
+    /// Zweck: trennt die reine Centerline-Vorschau (Editing-Phase ohne Stage F)
+    /// von der finalisierten Geometrie mit Junction-Radius-Begradigung.
     /// Die Methode liefert `true`, wenn mindestens Stage E aufgebaut werden konnte.
     pub(super) fn rebuild_preview_core_only(&mut self) -> bool {
         self.rebuild_sampling_preview();
@@ -47,8 +47,8 @@ impl ColorPathTool {
 
     /// Baut Stage F auf den bereits vorliegenden Stage-E-Artefakten neu auf.
     ///
-    /// Wird beim Uebergang `JunctionEdit → Finalize` genutzt, wenn Stage E bereits
-    /// aktuell ist und nur der Junction-Trim ergaenzt werden muss.
+    /// Wird in der Editing-Phase genutzt, wenn Stage E bereits aktuell ist und
+    /// nur der Junction-Trim ergaenzt werden muss.
     pub(super) fn rebuild_stage_f_only(&mut self) -> bool {
         self.ensure_prepared_segments()
     }

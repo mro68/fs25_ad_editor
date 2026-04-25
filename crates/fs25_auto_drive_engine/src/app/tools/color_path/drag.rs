@@ -1,10 +1,8 @@
 //! Drag-Logik fuer das ColorPath-Tool (CP-08).
 //!
 //! Stellt das [`RouteToolDrag`](super::super::RouteToolDrag)-Verhalten fuer die
-//! Wizard-Phase [`ColorPathPhase::JunctionEdit`](super::state::ColorPathPhase::JunctionEdit)
-//! bereit. In allen anderen Phasen bleibt das Tool Drag-inaktiv, damit
-//! Sampling-, CenterlinePreview- und Finalize-Phasen von den Zeiger-Primitiven
-//! unveraendert bedient werden koennen.
+//! Wizard-Phase [`ColorPathPhase::Editing`](super::state::ColorPathPhase::Editing)
+//! bereit. In `Idle`/`Sampling` bleibt das Tool Drag-inaktiv.
 //!
 //! Die eigentliche Zustandsaenderung geschieht ueber
 //! [`super::editable::EditableCenterlines::move_junction`], das
@@ -16,16 +14,16 @@ use glam::Vec2;
 use crate::core::RoadMap;
 
 use super::editable::EditableJunctionId;
-use super::state::{ColorPathPhase, ColorPathTool};
+use super::state::ColorPathTool;
 
 /// Gibt die Weltpositionen aller aktuell draggbaren Junctions zurueck.
 ///
-/// Nur in der Phase [`ColorPathPhase::JunctionEdit`] werden Treffer geliefert;
+/// Nur in der Phase [`ColorPathPhase::Editing`] werden Treffer geliefert;
 /// in allen anderen Phasen bleibt der Vektor leer. Die Reihenfolge ist
 /// deterministisch aufsteigend nach [`EditableJunctionId`], damit Hosts und
 /// UI-Snapshots stabile Indizes beobachten (F4).
 pub(crate) fn drag_targets(tool: &ColorPathTool) -> Vec<Vec2> {
-    if tool.phase != ColorPathPhase::JunctionEdit {
+    if !tool.phase.is_editing() {
         return Vec::new();
     }
     let Some(editable) = tool.editable.as_ref() else {
@@ -43,13 +41,13 @@ pub(crate) fn drag_targets(tool: &ColorPathTool) -> Vec<Vec2> {
 /// Sucht die naechstgelegene Junction innerhalb des Pick-Radius.
 ///
 /// Liefert `None`, wenn keine Junction im Radius liegt oder das Tool nicht
-/// in [`ColorPathPhase::JunctionEdit`] ist.
+/// in [`ColorPathPhase::Editing`] ist.
 pub(crate) fn pick_junction(
     tool: &ColorPathTool,
     pos: Vec2,
     pick_radius: f32,
 ) -> Option<EditableJunctionId> {
-    if tool.phase != ColorPathPhase::JunctionEdit {
+    if !tool.phase.is_editing() {
         return None;
     }
     let editable = tool.editable.as_ref()?;
@@ -81,12 +79,16 @@ pub(crate) fn on_drag_start(
 ///
 /// Ruft [`super::editable::EditableCenterlines::move_junction`] auf; dieser
 /// bumpt die Revision und invalidiert damit den Stage-F-Cache (CP-07).
+/// Setzt zusaetzlich das `editable_user_dirty`-Flag (CP-03), damit
+/// nachfolgende Matching-/Preview-Core-Slider-Resyncs die User-Position
+/// erhalten statt zu ueberschreiben.
 pub(crate) fn on_drag_update(tool: &mut ColorPathTool, pos: Vec2) {
     let Some(id) = tool.dragging_junction else {
         return;
     };
     if let Some(editable) = tool.editable.as_mut() {
         editable.move_junction(id, pos);
+        tool.editable_user_dirty = true;
     }
 }
 
@@ -108,6 +110,7 @@ mod tests {
     use crate::app::tools::color_path::skeleton::{
         SkeletonGraphNode, SkeletonGraphNodeKind, SkeletonGraphSegment, SkeletonNetwork,
     };
+    use crate::app::tools::color_path::state::ColorPathPhase;
 
     fn sample_network() -> SkeletonNetwork {
         SkeletonNetwork {
@@ -145,7 +148,7 @@ mod tests {
 
     fn tool_in_junction_edit() -> ColorPathTool {
         let mut tool = ColorPathTool::new();
-        tool.phase = ColorPathPhase::JunctionEdit;
+        tool.phase = ColorPathPhase::Editing;
         tool.editable = Some(EditableCenterlines::from_skeleton_network(&sample_network()));
         tool
     }
@@ -153,7 +156,7 @@ mod tests {
     #[test]
     fn drag_targets_empty_outside_junction_edit() {
         let mut tool = tool_in_junction_edit();
-        tool.phase = ColorPathPhase::CenterlinePreview;
+        tool.phase = ColorPathPhase::Sampling;
         assert!(drag_targets(&tool).is_empty());
     }
 
@@ -172,7 +175,7 @@ mod tests {
     #[test]
     fn pick_junction_returns_none_outside_junction_edit() {
         let mut tool = tool_in_junction_edit();
-        tool.phase = ColorPathPhase::Finalize;
+        tool.phase = ColorPathPhase::Sampling;
         assert_eq!(pick_junction(&tool, Vec2::new(10.0, 0.0), 1.0), None);
     }
 
@@ -289,5 +292,115 @@ mod tests {
             targets, expected_positions,
             "drag_targets muss deterministisch nach EditableJunctionId sortiert liefern (F4)"
         );
+    }
+
+    /// CP-04: Drag in `Editing` invalidiert den Stage-F-Cache nur lazy.
+    ///
+    /// Ein Junction-Drag bumpt die Editable-Revision (Bestandteil des
+    /// Stage-F-Cache-Keys), schreibt den Cache aber nicht aktiv zurueck. Der
+    /// hinterlegte Schluessel bleibt unveraendert; ein nachfolgender
+    /// `ensure_prepared_segments`-Aufruf erkennt die Diskrepanz und triggert
+    /// erst dann den Rebuild.
+    #[test]
+    fn drag_in_editor_invalidates_stage_f_cache_lazy() {
+        use crate::app::tools::color_path::state::PreparedSegmentsCacheKey;
+
+        let mut tool = tool_in_junction_edit();
+        let road_map = RoadMap::default();
+        let pre_revision = tool
+            .editable
+            .as_ref()
+            .expect("Editable muss existieren")
+            .revision;
+        let stale_key = PreparedSegmentsCacheKey {
+            preview_core_revision: 0,
+            editable_revision: pre_revision,
+            simplify_tolerance_bits: 0,
+            node_spacing_bits: 0,
+            junction_radius_bits: 0,
+        };
+        tool.cache.prepared_segments_key = Some(stale_key);
+
+        assert!(on_drag_start(
+            &mut tool,
+            Vec2::new(10.0, 0.0),
+            &road_map,
+            1.0
+        ));
+        on_drag_update(&mut tool, Vec2::new(15.0, 5.0));
+        on_drag_end(&mut tool, &road_map);
+
+        let post_revision = tool
+            .editable
+            .as_ref()
+            .expect("Editable muss existieren")
+            .revision;
+        assert!(
+            post_revision > pre_revision,
+            "Drag muss die Editable-Revision bumpen (Cache-Key-Bestandteil)"
+        );
+        assert_eq!(
+            tool.cache.prepared_segments_key,
+            Some(stale_key),
+            "Drag darf den Stage-F-Cache nicht eager zurueckschreiben — \
+             Invalidierung erfolgt lazy beim naechsten ensure_prepared_segments()"
+        );
+    }
+
+    /// CP-04: Ausserhalb von `Editing` ist Drag vollstaendig blockiert.
+    ///
+    /// Sowohl `Idle` als auch `Sampling` muessen `on_drag_start` ablehnen,
+    /// `drag_targets`/`pick_junction` leer/`None` liefern und ein
+    /// `on_drag_update` ohne aktiven Handle darf weder die Junction-Position
+    /// noch die Editable-Revision veraendern.
+    #[test]
+    fn drag_blocked_outside_editing() {
+        let road_map = RoadMap::default();
+        for phase in [ColorPathPhase::Idle, ColorPathPhase::Sampling] {
+            let mut tool = tool_in_junction_edit();
+            tool.phase = phase;
+            let pre_revision = tool
+                .editable
+                .as_ref()
+                .expect("Editable muss existieren")
+                .revision;
+
+            assert!(
+                drag_targets(&tool).is_empty(),
+                "drag_targets muss in Phase {:?} leer sein",
+                phase
+            );
+            assert_eq!(
+                pick_junction(&tool, Vec2::new(10.0, 0.0), 1.0),
+                None,
+                "pick_junction muss in Phase {:?} None liefern",
+                phase
+            );
+            assert!(
+                !on_drag_start(&mut tool, Vec2::new(10.0, 0.0), &road_map, 1.0),
+                "on_drag_start muss in Phase {:?} ablehnen",
+                phase
+            );
+            assert_eq!(
+                tool.dragging_junction, None,
+                "dragging_junction muss in Phase {:?} unbesetzt bleiben",
+                phase
+            );
+
+            // on_drag_update ohne aktiven Handle ist no-op
+            on_drag_update(&mut tool, Vec2::new(20.0, 20.0));
+            let editable = tool.editable.as_ref().expect("Editable muss existieren");
+            assert_eq!(
+                editable.revision, pre_revision,
+                "Editable-Revision darf in Phase {:?} nicht steigen",
+                phase
+            );
+            assert_eq!(
+                editable.junctions[&EditableJunctionId(1)].world_pos,
+                Vec2::new(10.0, 0.0),
+                "Junction-Position darf in Phase {:?} unveraendert bleiben",
+                phase
+            );
+        }
     }
 }
