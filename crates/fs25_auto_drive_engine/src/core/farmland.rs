@@ -209,6 +209,11 @@ pub fn simplify_polyline(points: &[Vec2], tolerance: f32) -> Vec<Vec2> {
 /// Fuer CCW-Polygone (positive Flaeche) zeigen die rechten Kantennormalen
 /// nach aussen; fuer CW-Polygone entsprechend die linken.
 ///
+/// **Miter-Limit:** Ueberschreitet der berechnete Miter-Offset das 2-fache
+/// des Offset-Betrags (fast-parallele Kanten), wird auf die einfache
+/// Normalenverschiebung (Bevel) zurueckgefallen, um Zickzack-Artefakte
+/// zu vermeiden.
+///
 /// **Fallback:** Wenn das Ergebnis degeneriert ist (weniger als 3 Punkte,
 /// Flaeche = 0 oder Orientierungswechsel), wird das Original zurueckgegeben.
 pub fn offset_polygon(vertices: &[Vec2], offset: f32) -> Vec<Vec2> {
@@ -259,11 +264,21 @@ pub fn offset_polygon(vertices: &[Vec2], offset: f32) -> Vec<Vec2> {
             }
 
             // Miter-Korrektur: Projektion auf Kanten-Normale darf nicht kollabieren.
+            // Miter-Limit: Bei fast-parallelen Kanten (sehr kleiner Nenner) wuerde der
+            // Miter-Faktor extrem gross → Zickzack-Artefakte. Sobald die resultierende
+            // Verschiebungslänge das 2-fache des Offset-Betrags überschreitet, wird
+            // stattdessen auf die einfache Normalenverschiebung (Bevel) zurueckgefallen.
             let denom = bisector.dot(curr_normal).abs();
             if denom <= 1e-4 {
                 vertices[i] + curr_normal * offset
             } else {
-                vertices[i] + bisector * (offset / denom)
+                let miter_len = offset / denom;
+                if miter_len.abs() > 2.0 * offset.abs() {
+                    // Bevel-Fallback: Kanten zu fast-parallel → Miter würde overshooten
+                    vertices[i] + curr_normal * offset
+                } else {
+                    vertices[i] + bisector * miter_len
+                }
             }
         })
         .collect();
@@ -495,8 +510,16 @@ mod tests {
         // Bei einem achsenparallelen Quadrat muss die Ecke (0,0) auf (-1,-1) liegen,
         // damit der Abstand zu beiden angrenzenden Kanten exakt 1.0 bleibt.
         let first = result[0];
-        assert!((first.x + 1.0).abs() < 1e-4, "Erwartet x=-1.0, bekam {}", first.x);
-        assert!((first.y + 1.0).abs() < 1e-4, "Erwartet y=-1.0, bekam {}", first.y);
+        assert!(
+            (first.x + 1.0).abs() < 1e-4,
+            "Erwartet x=-1.0, bekam {}",
+            first.x
+        );
+        assert!(
+            (first.y + 1.0).abs() < 1e-4,
+            "Erwartet y=-1.0, bekam {}",
+            first.y
+        );
     }
 
     #[test]
