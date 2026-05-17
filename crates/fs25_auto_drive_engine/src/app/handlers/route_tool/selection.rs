@@ -1,6 +1,9 @@
 use crate::app::state::EditorTool;
 use crate::app::tool_contract::RouteToolId;
-use crate::app::tools::{route_tool_descriptor, OrderedNodeChain, ToolAction};
+use crate::app::tools::{
+    route_tool_descriptor, OrderedNodeChain, RouteToolConnectedNeighborSeed,
+    RouteToolSelectionSeed, ToolAction,
+};
 use crate::app::AppState;
 
 /// Aktiviert ein Route-Tool per stabiler Tool-ID.
@@ -14,6 +17,7 @@ pub(super) fn select(state: &mut AppState, tool_id: RouteToolId) {
     state.editor.tool_manager.sync_active_host(&host_context);
 
     init_chain_if_needed(state);
+    init_selection_if_needed(state);
 
     log::info!("Route-Tool aktiviert: {:?}", tool_id);
 }
@@ -71,6 +75,54 @@ pub(super) fn init_chain_if_needed(state: &mut AppState) {
         start_id,
         end_id
     );
+}
+
+/// Laedt die aktuelle Node-Selektion in das aktive Tool,
+/// falls dieses `RouteToolSelectionInput` bereitstellt.
+pub(super) fn init_selection_if_needed(state: &mut AppState) {
+    if state.editor.tool_manager.active_selection_input().is_none() {
+        return;
+    }
+
+    let Some(road_map) = state.road_map.as_deref() else {
+        return;
+    };
+
+    let node_ids: Vec<u64> = state.selection.selected_node_ids.iter().copied().collect();
+    let positions: Vec<glam::Vec2> = node_ids
+        .iter()
+        .filter_map(|id| road_map.node(*id).map(|node| node.position))
+        .collect();
+    let connected_neighbors: Vec<Vec<RouteToolConnectedNeighborSeed>> = node_ids
+        .iter()
+        .map(|id| {
+            road_map
+                .connected_neighbors(*id)
+                .into_iter()
+                .filter_map(|neighbor| {
+                    let position = road_map.node_position(neighbor.neighbor_id)?;
+                    Some(RouteToolConnectedNeighborSeed::new(neighbor, position))
+                })
+                .collect()
+        })
+        .collect();
+
+    if positions.len() != node_ids.len() {
+        log::warn!(
+            "Route-Tool Selektion enthaelt unbekannte Nodes: {} IDs, {} Positionen",
+            node_ids.len(),
+            positions.len()
+        );
+    }
+
+    state
+        .editor
+        .tool_manager
+        .load_active_selection(RouteToolSelectionSeed {
+            node_ids,
+            positions,
+            connected_neighbors,
+        });
 }
 
 /// Aktiviert ein Route-Tool und setzt Start/End-Anker aus zwei selektierten Nodes.

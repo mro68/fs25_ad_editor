@@ -1,53 +1,72 @@
-//! Laufzeit-State fuer die CP-01-Shell des Verrundungs-Tools.
+//! Laufzeit-State fuer den CP-02-Arc-Pfad des Verrundungs-Tools.
 
-use crate::app::tools::{
-    RouteTool, RouteToolCore, RouteToolHostSync, RouteToolPanelBridge, ToolAction, ToolHostContext,
-    ToolPreview, ToolResult,
-};
-use crate::app::ui_contract::{
-    RoundingModeChoice, RoundingPanelAction, RoundingPanelState, RouteToolConfigState,
-    RouteToolPanelAction, RouteToolPanelEffect, ROUNDING_ARC_RADIUS_LIMITS,
-    ROUNDING_SAMPLE_SPACING_LIMITS,
-};
-use crate::core::RoadMap;
+use super::geometry::{recompute_arc_plan, ArcPlan, ArcValidation};
+use crate::app::tools::{RouteToolConnectedNeighborSeed, RouteToolSelectionSeed};
 use glam::Vec2;
 
-const DEFAULT_ARC_RADIUS_M: f32 = 6.0;
-const DEFAULT_SAMPLE_SPACING_M: f32 = 3.0;
-const DEFAULT_SNAP_RADIUS_M: f32 = 3.0;
+pub(crate) const DEFAULT_ARC_RADIUS_M: f32 = 6.0;
+pub(crate) const DEFAULT_SAMPLE_SPACING_M: f32 = 3.0;
 
 /// Interne Moduswahl des Verrundungs-Tools.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum RoundingMode {
-    /// Verrundet einen einzelnen Eckpunkt ueber einen spaeteren Arc-/Fillet-Solver.
+    /// Verrundet einen einzelnen Eckpunkt ueber einen Arc-/Fillet-Solver.
     ArcOnePoint,
-    /// Verrundet eine geordnete 3-Punkt-Kette ueber eine spaetere quadratische Kurve.
+    /// Platzhalter fuer die spaetere 3-Punkt-Quadratic-Verrundung.
     QuadraticThreePoint,
 }
 
-impl RoundingMode {
-    fn panel_choice(self) -> RoundingModeChoice {
-        match self {
-            Self::ArcOnePoint => RoundingModeChoice::ArcOnePoint,
-            Self::QuadraticThreePoint => RoundingModeChoice::QuadraticThreePoint,
-        }
-    }
+/// Laufzeit-State fuer den 1-Punkt-Arc-Modus.
+#[derive(Debug, Clone)]
+pub struct ArcOnePointState {
+    /// Aktuell geladene Selektions-IDs.
+    pub(crate) selected_node_ids: Vec<u64>,
+    /// Positionen der geladenen Selektion parallel zu `selected_node_ids`.
+    pub(crate) selected_positions: Vec<Vec2>,
+    /// Nachbar-Snapshots des selektierten Corner-Nodes.
+    pub(crate) selected_neighbors: Vec<RouteToolConnectedNeighborSeed>,
+    /// Eindeutig selektierter Corner-Node fuer den Arc-Modus.
+    pub(crate) corner_node_id: Option<u64>,
+    /// Position des selektierten Corner-Nodes.
+    pub(crate) corner_position: Option<Vec2>,
+    /// Fester Verrundungsradius in Metern.
+    pub(crate) radius_m: f32,
+    /// Maximale Segmentlaenge fuer die Arc-Approximation.
+    pub(crate) sample_spacing_m: f32,
+    /// Letztes Validierungsergebnis fuer den Arc-Kontext.
+    pub(crate) validation: ArcValidation,
+    /// Zuletzt berechneter Arc-Plan fuer Preview/Execute.
+    pub(crate) plan: Option<ArcPlan>,
+}
 
-    fn from_panel_choice(choice: RoundingModeChoice) -> Self {
-        match choice {
-            RoundingModeChoice::ArcOnePoint => Self::ArcOnePoint,
-            RoundingModeChoice::QuadraticThreePoint => Self::QuadraticThreePoint,
+impl Default for ArcOnePointState {
+    fn default() -> Self {
+        Self {
+            selected_node_ids: Vec::new(),
+            selected_positions: Vec::new(),
+            selected_neighbors: Vec::new(),
+            corner_node_id: None,
+            corner_position: None,
+            radius_m: DEFAULT_ARC_RADIUS_M,
+            sample_spacing_m: DEFAULT_SAMPLE_SPACING_M,
+            validation: ArcValidation::NeedSingleSelection,
+            plan: None,
         }
     }
 }
 
-/// Minimaler Shell-State fuer das oeffentliche Verrundungs-Tool in CP-01.
+/// Gemeinsamer Tool-State fuer das oeffentliche Verrundungs-Tool in CP-02.
 pub struct RoundingTool {
-    mode: RoundingMode,
-    arc_radius_m: f32,
-    arc_sample_spacing_m: f32,
-    quadratic_sample_spacing_m: f32,
-    snap_radius: f32,
+    /// Aktiver interner Modus.
+    pub(crate) mode: RoundingMode,
+    /// Laufzeit-State fuer den Arc-Modus.
+    pub(crate) arc: ArcOnePointState,
+    /// Panelwert fuer den spaeteren Quadratic-Modus.
+    pub(crate) quadratic_sample_spacing_m: f32,
+    /// Anzahl aktuell geladener selektierter Nodes.
+    pub(crate) selected_node_count: usize,
+    /// Zuletzt synchronisierter Snap-Radius aus dem Host.
+    pub(crate) snap_radius: f32,
 }
 
 impl RoundingTool {
@@ -55,11 +74,87 @@ impl RoundingTool {
     pub fn new() -> Self {
         Self {
             mode: RoundingMode::ArcOnePoint,
-            arc_radius_m: DEFAULT_ARC_RADIUS_M,
-            arc_sample_spacing_m: DEFAULT_SAMPLE_SPACING_M,
+            arc: ArcOnePointState::default(),
             quadratic_sample_spacing_m: DEFAULT_SAMPLE_SPACING_M,
-            snap_radius: DEFAULT_SNAP_RADIUS_M,
+            selected_node_count: 0,
+            snap_radius: 3.0,
         }
+    }
+
+    pub(crate) fn reset_runtime_state(&mut self) {
+        let radius_m = self.arc.radius_m;
+        let sample_spacing_m = self.arc.sample_spacing_m;
+        let quadratic_sample_spacing_m = self.quadratic_sample_spacing_m;
+        self.arc = ArcOnePointState {
+            radius_m,
+            sample_spacing_m,
+            ..ArcOnePointState::default()
+        };
+        self.quadratic_sample_spacing_m = quadratic_sample_spacing_m;
+        self.selected_node_count = 0;
+    }
+
+    pub(crate) fn panel_mode(&self) -> crate::app::ui_contract::RoundingModeChoice {
+        match self.mode {
+            RoundingMode::ArcOnePoint => crate::app::ui_contract::RoundingModeChoice::ArcOnePoint,
+            RoundingMode::QuadraticThreePoint => {
+                crate::app::ui_contract::RoundingModeChoice::QuadraticThreePoint
+            }
+        }
+    }
+
+    pub(crate) fn set_panel_mode(
+        &mut self,
+        mode: crate::app::ui_contract::RoundingModeChoice,
+    ) -> bool {
+        let next_mode = match mode {
+            crate::app::ui_contract::RoundingModeChoice::ArcOnePoint => RoundingMode::ArcOnePoint,
+            crate::app::ui_contract::RoundingModeChoice::QuadraticThreePoint => {
+                RoundingMode::QuadraticThreePoint
+            }
+        };
+        if self.mode == next_mode {
+            false
+        } else {
+            self.mode = next_mode;
+            true
+        }
+    }
+
+    pub(crate) fn refresh_arc_state(&mut self) {
+        let (validation, plan) = recompute_arc_plan(&self.arc);
+        self.arc.validation = validation;
+        self.arc.plan = plan;
+    }
+
+    /// Laedt die aktuelle Node-Selektion in den Arc-Modus.
+    pub(crate) fn load_selection_seed(&mut self, selection: RouteToolSelectionSeed) {
+        let RouteToolSelectionSeed {
+            node_ids,
+            positions,
+            connected_neighbors,
+        } = selection;
+
+        self.selected_node_count = node_ids.len();
+        self.arc.selected_node_ids = node_ids.clone();
+        self.arc.selected_positions = positions;
+        self.arc.selected_neighbors = Vec::new();
+
+        let arc_neighbors = match connected_neighbors.as_slice() {
+            [neighbors] if node_ids.len() == 1 => neighbors.clone(),
+            _ => Vec::new(),
+        };
+
+        if let [node_id] = self.arc.selected_node_ids.as_slice() {
+            self.arc.corner_node_id = Some(*node_id);
+            self.arc.corner_position = self.arc.selected_positions.first().copied();
+            self.arc.selected_neighbors = arc_neighbors;
+        } else {
+            self.arc.corner_node_id = None;
+            self.arc.corner_position = None;
+        }
+
+        self.refresh_arc_state();
     }
 }
 
@@ -68,107 +163,3 @@ impl Default for RoundingTool {
         Self::new()
     }
 }
-
-impl RouteToolCore for RoundingTool {
-    fn on_click(&mut self, _pos: Vec2, _road_map: &RoadMap, _ctrl: bool) -> ToolAction {
-        ToolAction::Continue
-    }
-
-    fn preview(&self, _cursor_pos: Vec2, _road_map: &RoadMap) -> ToolPreview {
-        ToolPreview::default()
-    }
-
-    fn execute(&self, _road_map: &RoadMap) -> Option<ToolResult> {
-        None
-    }
-
-    fn reset(&mut self) {}
-
-    fn is_ready(&self) -> bool {
-        false
-    }
-
-    fn has_pending_input(&self) -> bool {
-        false
-    }
-}
-
-impl RouteToolPanelBridge for RoundingTool {
-    fn status_text(&self) -> &str {
-        let _ = self.snap_radius;
-        "Verrundungs-Tool vorbereitet; Arc- und Quadratic-Logik folgen in den naechsten Commits."
-    }
-
-    fn panel_state(&self) -> RouteToolConfigState {
-        RouteToolConfigState::Rounding(RoundingPanelState {
-            mode: self.mode.panel_choice(),
-            mode_locked: false,
-            arc_radius_m: self.arc_radius_m,
-            arc_sample_spacing_m: self.arc_sample_spacing_m,
-            quadratic_sample_spacing_m: self.quadratic_sample_spacing_m,
-            selected_node_count: 0,
-            chain_node_count: 0,
-            preview_node_count: None,
-            is_adjusting: false,
-        })
-    }
-
-    fn apply_panel_action(&mut self, action: RouteToolPanelAction) -> RouteToolPanelEffect {
-        let RouteToolPanelAction::Rounding(action) = action else {
-            return RouteToolPanelEffect::default();
-        };
-
-        let changed = match action {
-            RoundingPanelAction::SetMode(choice) => {
-                let next = RoundingMode::from_panel_choice(choice);
-                if self.mode == next {
-                    false
-                } else {
-                    self.mode = next;
-                    true
-                }
-            }
-            RoundingPanelAction::SetArcRadius(value) => {
-                let next = ROUNDING_ARC_RADIUS_LIMITS.clamp(value);
-                if (self.arc_radius_m - next).abs() < f32::EPSILON {
-                    false
-                } else {
-                    self.arc_radius_m = next;
-                    true
-                }
-            }
-            RoundingPanelAction::SetArcSampleSpacing(value) => {
-                let next = ROUNDING_SAMPLE_SPACING_LIMITS.clamp(value);
-                if (self.arc_sample_spacing_m - next).abs() < f32::EPSILON {
-                    false
-                } else {
-                    self.arc_sample_spacing_m = next;
-                    true
-                }
-            }
-            RoundingPanelAction::SetQuadraticSampleSpacing(value) => {
-                let next = ROUNDING_SAMPLE_SPACING_LIMITS.clamp(value);
-                if (self.quadratic_sample_spacing_m - next).abs() < f32::EPSILON {
-                    false
-                } else {
-                    self.quadratic_sample_spacing_m = next;
-                    true
-                }
-            }
-        };
-
-        RouteToolPanelEffect {
-            changed,
-            needs_recreate: false,
-            next_action: None,
-        }
-    }
-}
-
-impl RouteToolHostSync for RoundingTool {
-    fn sync_host(&mut self, context: &ToolHostContext) {
-        self.snap_radius = context.snap_radius;
-    }
-}
-
-impl RouteTool for RoundingTool {}
