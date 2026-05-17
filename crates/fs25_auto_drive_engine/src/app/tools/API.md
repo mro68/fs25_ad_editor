@@ -315,8 +315,8 @@ pub(super) fn compute_ring(
     rounding_radius: Option<f32>,
 ) -> Vec<(Vec2, RingNodeKind)>
 ```
-1. `offset_polygon()` — Polygon nach innen/aussen verschieben
-2. `simplify_polygon()` — Douglas-Peucker vereinfachen
+1. `simplify_polygon()` — Douglas-Peucker auf der erkannten Feldkontur anwenden; bei aktivem Offset mindestens auf Raster-Schritt-Niveau, damit Treppenkanten nicht in den Versatz laufen
+2. `offset_polygon()` — Versatz auf der bereits geglaetteten Kontur berechnen, damit Raster-Treppenkanten keine Schleifen erzeugen
 3. `detect_corners()` — Eckpunkte anhand Ablenkungswinkel finden
 4. `resample_ring_with_corners()` — Ring segmentweise neu samplen; Ecken als Anker, dazwischen gleichmaessig, optionaler Kreisbogen mit `rounding_radius`
 5. Rückgabe: `Vec<(Vec2, RingNodeKind)>` — jeder Punkt mit geometrischer Klassifikation
