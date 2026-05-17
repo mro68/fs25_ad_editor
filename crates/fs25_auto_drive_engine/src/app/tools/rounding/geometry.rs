@@ -1,14 +1,16 @@
-//! Geometrie und Validierung fuer den Arc-Pfad des Verrundungs-Tools.
+//! Geometrie und Validierung fuer die Arc- und Quadratic-Pfade des Verrundungs-Tools.
 
-use super::state::ArcOnePointState;
+use super::state::{ArcOnePointState, QuadraticThreePointState};
+use crate::app::tools::curve::geometry::{compute_curve_positions, quadratic_bezier};
 use crate::app::tools::RouteToolConnectedNeighborSeed;
 use crate::core::{ConnectionDirection, ConnectionPriority, RoadMap};
 use glam::Vec2;
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 
 const MIN_CORNER_ANGLE_RAD: f32 = 5.0_f32.to_radians();
 const MAX_CORNER_ANGLE_RAD: f32 = std::f32::consts::PI - 5.0_f32.to_radians();
 const EPSILON: f32 = 1e-3;
+const LINE_TOLERANCE_M: f32 = 0.05;
 
 /// Eindeutiger Seitenkontext eines lokalen Replace-Pfads.
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -34,6 +36,18 @@ pub(crate) struct ArcPlan {
     pub arc_positions: Vec<Vec2>,
 }
 
+/// Vorberechneter Quadratic-Plan fuer Preview und Execute.
+#[derive(Debug, Clone, PartialEq)]
+pub(crate) struct QuadraticPlan {
+    pub start_outer_side: ArcSide,
+    pub end_outer_side: ArcSide,
+    pub start_node_id: u64,
+    pub control_node_id: u64,
+    pub end_node_id: u64,
+    pub control_point: Vec2,
+    pub curve_positions: Vec<Vec2>,
+}
+
 /// Klarer Invalid-/Ready-Zustand fuer den Arc-Modus.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub(crate) enum ArcValidation {
@@ -45,6 +59,23 @@ pub(crate) enum ArcValidation {
     DegenerateStretch,
     UnsupportedCornerAngle,
     RadiusTooLarge,
+    Ready,
+}
+
+/// Klarer Invalid-/Ready-Zustand fuer den 3-Punkt-Quadratic-Modus.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(crate) enum QuadraticValidation {
+    NeedOrderedThreeNodeChain,
+    MissingChainNodeContext,
+    MissingOuterStartStretch,
+    AmbiguousOuterStartStretch,
+    MissingOuterEndStretch,
+    AmbiguousOuterEndStretch,
+    ControlHasExternalConnections,
+    BrokenSelectedChain,
+    DegenerateOuterStretch,
+    TangentsMissFixedControl,
+    NoThroughPath,
     Ready,
 }
 
@@ -94,6 +125,37 @@ pub(crate) fn recompute_arc_plan(arc: &ArcOnePointState) -> (ArcValidation, Opti
         Ok(plan) => (ArcValidation::Ready, Some(plan)),
         Err(validation) => (validation, None),
     }
+}
+
+pub(crate) fn build_arc_plan_from_payload(
+    corner_position: Vec2,
+    first_neighbor_id: u64,
+    first_neighbor_position: Vec2,
+    second_neighbor_id: u64,
+    second_neighbor_position: Vec2,
+    radius_m: f32,
+    sample_spacing_m: f32,
+) -> Option<ArcPlan> {
+    build_arc_plan_from_sides(
+        corner_position,
+        ArcSide {
+            neighbor_id: first_neighbor_id,
+            neighbor_position: first_neighbor_position,
+            angle: (first_neighbor_position - corner_position).to_angle(),
+            has_incoming: true,
+            has_outgoing: true,
+        },
+        ArcSide {
+            neighbor_id: second_neighbor_id,
+            neighbor_position: second_neighbor_position,
+            angle: (second_neighbor_position - corner_position).to_angle(),
+            has_incoming: true,
+            has_outgoing: true,
+        },
+        radius_m,
+        sample_spacing_m,
+    )
+    .ok()
 }
 
 fn build_arc_plan_from_sides(
@@ -174,6 +236,231 @@ fn build_arc_plan_from_sides(
     })
 }
 
+pub(crate) fn recompute_quadratic_plan(
+    quadratic: &QuadraticThreePointState,
+) -> (QuadraticValidation, Option<QuadraticPlan>) {
+    let [start_node_id, control_node_id, end_node_id] = quadratic.chain_node_ids.as_slice() else {
+        return (QuadraticValidation::NeedOrderedThreeNodeChain, None);
+    };
+    let [start_position, control_position, end_position] = quadratic.chain_positions.as_slice()
+    else {
+        return (QuadraticValidation::NeedOrderedThreeNodeChain, None);
+    };
+
+    let selected_ids: HashSet<u64> = quadratic.selected_node_ids.iter().copied().collect();
+    if selected_ids.len() != 3
+        || !selected_ids.contains(start_node_id)
+        || !selected_ids.contains(control_node_id)
+        || !selected_ids.contains(end_node_id)
+    {
+        return (QuadraticValidation::NeedOrderedThreeNodeChain, None);
+    }
+
+    let Some(start_neighbors) = quadratic.selected_neighbors.get(start_node_id) else {
+        return (QuadraticValidation::MissingChainNodeContext, None);
+    };
+    let Some(control_neighbors) = quadratic.selected_neighbors.get(control_node_id) else {
+        return (QuadraticValidation::MissingChainNodeContext, None);
+    };
+    let Some(end_neighbors) = quadratic.selected_neighbors.get(end_node_id) else {
+        return (QuadraticValidation::MissingChainNodeContext, None);
+    };
+
+    let start_outer_side = match resolve_outer_side(start_neighbors, &selected_ids) {
+        Ok(side) => side,
+        Err(OuterSideError::Missing) => {
+            return (QuadraticValidation::MissingOuterStartStretch, None)
+        }
+        Err(OuterSideError::Ambiguous) => {
+            return (QuadraticValidation::AmbiguousOuterStartStretch, None)
+        }
+    };
+    let end_outer_side = match resolve_outer_side(end_neighbors, &selected_ids) {
+        Ok(side) => side,
+        Err(OuterSideError::Missing) => return (QuadraticValidation::MissingOuterEndStretch, None),
+        Err(OuterSideError::Ambiguous) => {
+            return (QuadraticValidation::AmbiguousOuterEndStretch, None)
+        }
+    };
+
+    if collect_unique_sides(control_neighbors)
+        .into_iter()
+        .any(|side| !selected_ids.contains(&side.neighbor_id))
+    {
+        return (QuadraticValidation::ControlHasExternalConnections, None);
+    }
+
+    let Some(start_to_control) = find_side(start_neighbors, *control_node_id) else {
+        return (QuadraticValidation::BrokenSelectedChain, None);
+    };
+    let Some(control_to_start) = find_side(control_neighbors, *start_node_id) else {
+        return (QuadraticValidation::BrokenSelectedChain, None);
+    };
+    let Some(end_to_control) = find_side(end_neighbors, *control_node_id) else {
+        return (QuadraticValidation::BrokenSelectedChain, None);
+    };
+    let Some(control_to_end) = find_side(control_neighbors, *end_node_id) else {
+        return (QuadraticValidation::BrokenSelectedChain, None);
+    };
+
+    if start_position.distance(start_outer_side.neighbor_position) <= EPSILON
+        || end_position.distance(end_outer_side.neighbor_position) <= EPSILON
+    {
+        return (QuadraticValidation::DegenerateOuterStretch, None);
+    }
+
+    let start_matches = start_supports_fixed_control(
+        start_outer_side.neighbor_position,
+        *start_position,
+        *control_position,
+    );
+    let end_matches = end_supports_fixed_control(
+        *end_position,
+        end_outer_side.neighbor_position,
+        *control_position,
+    );
+    if !start_matches || !end_matches {
+        return (QuadraticValidation::TangentsMissFixedControl, None);
+    }
+
+    let has_forward = start_to_control.has_outgoing && control_to_end.has_outgoing;
+    let has_reverse = end_to_control.has_outgoing && control_to_start.has_outgoing;
+    if !(has_forward || has_reverse) {
+        return (QuadraticValidation::NoThroughPath, None);
+    }
+
+    let curve_positions = build_quadratic_positions(
+        *start_position,
+        *control_position,
+        *end_position,
+        quadratic.sample_spacing_m,
+    );
+
+    (
+        QuadraticValidation::Ready,
+        Some(QuadraticPlan {
+            start_outer_side,
+            end_outer_side,
+            start_node_id: *start_node_id,
+            control_node_id: *control_node_id,
+            end_node_id: *end_node_id,
+            control_point: *control_position,
+            curve_positions,
+        }),
+    )
+}
+
+pub(crate) fn build_quadratic_plan_from_payload(
+    road_map: &RoadMap,
+    start_node_id: u64,
+    end_node_id: u64,
+    start_outer_neighbor_id: u64,
+    end_outer_neighbor_id: u64,
+    control_point: Vec2,
+    sample_spacing_m: f32,
+) -> Option<QuadraticPlan> {
+    let start_position = road_map.node_position(start_node_id)?;
+    let end_position = road_map.node_position(end_node_id)?;
+    let start_outer_side = payload_outer_side(road_map, start_node_id, start_outer_neighbor_id)?;
+    let end_outer_side = payload_outer_side(road_map, end_node_id, end_outer_neighbor_id)?;
+
+    if start_position.distance(control_point) <= EPSILON
+        || end_position.distance(control_point) <= EPSILON
+    {
+        return None;
+    }
+
+    if start_position.distance(start_outer_side.neighbor_position) <= EPSILON
+        || end_position.distance(end_outer_side.neighbor_position) <= EPSILON
+    {
+        return None;
+    }
+
+    let start_matches = start_supports_fixed_control(
+        start_outer_side.neighbor_position,
+        start_position,
+        control_point,
+    );
+    let end_matches = end_supports_fixed_control(
+        end_position,
+        end_outer_side.neighbor_position,
+        control_point,
+    );
+    if !start_matches || !end_matches {
+        return None;
+    }
+
+    Some(QuadraticPlan {
+        start_outer_side,
+        end_outer_side,
+        start_node_id,
+        control_node_id: 0,
+        end_node_id,
+        control_point,
+        curve_positions: build_quadratic_positions(
+            start_position,
+            control_point,
+            end_position,
+            sample_spacing_m,
+        ),
+    })
+}
+
+fn build_quadratic_positions(
+    start_position: Vec2,
+    control_point: Vec2,
+    end_position: Vec2,
+    sample_spacing_m: f32,
+) -> Vec<Vec2> {
+    let mut curve_positions = compute_curve_positions(
+        |t| quadratic_bezier(start_position, control_point, end_position, t),
+        sample_spacing_m.max(0.5),
+    );
+    if curve_positions.len() < 3 {
+        curve_positions = vec![
+            start_position,
+            quadratic_bezier(start_position, control_point, end_position, 0.5),
+            end_position,
+        ];
+    } else {
+        if let Some(first) = curve_positions.first_mut() {
+            *first = start_position;
+        }
+        if let Some(last) = curve_positions.last_mut() {
+            *last = end_position;
+        }
+    }
+    curve_positions
+}
+
+fn payload_outer_side(road_map: &RoadMap, node_id: u64, neighbor_id: u64) -> Option<ArcSide> {
+    let neighbor_position = road_map.node_position(neighbor_id)?;
+    let mut side = ArcSide {
+        neighbor_id,
+        neighbor_position,
+        angle: (neighbor_position - road_map.node_position(node_id)?).to_angle(),
+        has_incoming: false,
+        has_outgoing: false,
+    };
+    let mut found = false;
+
+    for neighbor in road_map.connected_neighbors(node_id) {
+        if neighbor.neighbor_id != neighbor_id {
+            continue;
+        }
+
+        found = true;
+        side.angle = neighbor.angle;
+        if neighbor.is_outgoing {
+            side.has_outgoing = true;
+        } else {
+            side.has_incoming = true;
+        }
+    }
+
+    found.then_some(side)
+}
+
 pub(crate) fn collect_transitions(
     road_map: &RoadMap,
     corner_id: u64,
@@ -189,34 +476,14 @@ pub(crate) fn collect_transitions(
     )
 }
 
-pub(crate) fn preview_direction(transitions: &[ArcTransition]) -> ConnectionDirection {
-    let has_forward = transitions.iter().any(|transition| transition.forward);
-    let has_reverse = transitions.iter().any(|transition| !transition.forward);
-    match (has_forward, has_reverse) {
-        (true, true) => ConnectionDirection::Dual,
-        (true, false) => transitions
-            .iter()
-            .find(|transition| transition.forward)
-            .map(|transition| transition.direction)
-            .unwrap_or(ConnectionDirection::Regular),
-        (false, true) => transitions
-            .iter()
-            .find(|transition| !transition.forward)
-            .map(|transition| transition.direction)
-            .unwrap_or(ConnectionDirection::Reverse),
-        (false, false) => ConnectionDirection::Regular,
-    }
-}
-
-pub(crate) fn preview_priority(transitions: &[ArcTransition]) -> ConnectionPriority {
-    if transitions
-        .iter()
-        .all(|transition| transition.priority == ConnectionPriority::SubPriority)
-    {
-        ConnectionPriority::SubPriority
-    } else {
-        ConnectionPriority::Regular
-    }
+pub(crate) fn collect_quadratic_transitions(
+    road_map: &RoadMap,
+    plan: &QuadraticPlan,
+) -> Vec<ArcTransition> {
+    collect_path_transitions(
+        road_map,
+        &[plan.start_node_id, plan.control_node_id, plan.end_node_id],
+    )
 }
 
 fn collect_unique_sides(neighbors: &[RouteToolConnectedNeighborSeed]) -> Vec<ArcSide> {
@@ -241,6 +508,12 @@ fn collect_unique_sides(neighbors: &[RouteToolConnectedNeighborSeed]) -> Vec<Arc
     let mut sides: Vec<ArcSide> = by_neighbor.into_values().collect();
     sides.sort_by(|left, right| left.angle.total_cmp(&right.angle));
     sides
+}
+
+fn find_side(neighbors: &[RouteToolConnectedNeighborSeed], neighbor_id: u64) -> Option<ArcSide> {
+    collect_unique_sides(neighbors)
+        .into_iter()
+        .find(|side| side.neighbor_id == neighbor_id)
 }
 
 fn collect_path_transitions(road_map: &RoadMap, node_path: &[u64]) -> Vec<ArcTransition> {
@@ -324,6 +597,46 @@ fn merge_connection_set(
     }
 
     Some((direction, priority))
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum OuterSideError {
+    Missing,
+    Ambiguous,
+}
+
+fn resolve_outer_side(
+    neighbors: &[RouteToolConnectedNeighborSeed],
+    selected_ids: &HashSet<u64>,
+) -> Result<ArcSide, OuterSideError> {
+    let outer_sides: Vec<ArcSide> = collect_unique_sides(neighbors)
+        .into_iter()
+        .filter(|side| !selected_ids.contains(&side.neighbor_id))
+        .collect();
+    match outer_sides.as_slice() {
+        [] => Err(OuterSideError::Missing),
+        [side] => Ok(*side),
+        _ => Err(OuterSideError::Ambiguous),
+    }
+}
+
+fn start_supports_fixed_control(outer_neighbor: Vec2, start: Vec2, control: Vec2) -> bool {
+    line_distance(control, outer_neighbor, start) <= LINE_TOLERANCE_M
+        && (control - start).dot(start - outer_neighbor) > EPSILON
+}
+
+fn end_supports_fixed_control(end: Vec2, outer_neighbor: Vec2, control: Vec2) -> bool {
+    line_distance(control, end, outer_neighbor) <= LINE_TOLERANCE_M
+        && (end - control).dot(outer_neighbor - end) > EPSILON
+}
+
+fn line_distance(point: Vec2, line_start: Vec2, line_end: Vec2) -> f32 {
+    let line = line_end - line_start;
+    let line_length = line.length();
+    if line_length <= EPSILON {
+        return f32::INFINITY;
+    }
+    (point - line_start).perp_dot(line / line_length).abs()
 }
 
 fn merge_directions(a: ConnectionDirection, b: ConnectionDirection) -> ConnectionDirection {

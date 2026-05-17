@@ -49,6 +49,17 @@ pub struct GroupRecordDefaults {
     pub exit_node_id: Option<u64>,
 }
 
+/// Persistierte Durchfahrtsmetadaten einer Verrundungs-Rekonstruktion.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct RoundingTransitionSnapshot {
+    /// `true`, wenn die Durchfahrt entlang des kanonischen Pfads verlaeuft.
+    pub forward: bool,
+    /// Gemergte Verbindungsrichtung dieser Durchfahrt.
+    pub direction: ConnectionDirection,
+    /// Gemergte Prioritaet dieser Durchfahrt.
+    pub priority: ConnectionPriority,
+}
+
 /// Tool-spezifischer Edit-Snapshot fuer gruppenbasierte Route-Tools.
 #[derive(Debug, Clone)]
 pub enum RouteToolEditPayload {
@@ -171,6 +182,38 @@ pub enum RouteToolEditPayload {
         /// Gemeinsame Routing-Basiswerte.
         base: ToolRouteBase,
     },
+    /// Persistenzdaten fuer den Arc-Pfad des Verrundungs-Tools.
+    RoundingArc {
+        /// Erste ueberlebende Anschlussseite des lokalen Replace-Pfads.
+        first_neighbor_id: u64,
+        /// Zweite ueberlebende Anschlussseite des lokalen Replace-Pfads.
+        second_neighbor_id: u64,
+        /// Urspruengliche Position des ersetzten Corner-Nodes.
+        corner_position: Vec2,
+        /// Verrundungsradius in Metern.
+        radius_m: f32,
+        /// Maximale Segmentlaenge fuer die Arc-Approximation.
+        sample_spacing_m: f32,
+        /// Persistierte Durchfahrten ueber den lokalen Replace-Pfad.
+        transitions: Vec<RoundingTransitionSnapshot>,
+    },
+    /// Persistenzdaten fuer den Quadratic-Pfad des Verrundungs-Tools.
+    RoundingQuadratic {
+        /// Ueberlebender Startknoten der Verrundung.
+        start_node_id: u64,
+        /// Ueberlebender Endknoten der Verrundung.
+        end_node_id: u64,
+        /// Persistierte Aussenstrecke an `start_node_id` fuer stabile Tangentenvalidierung.
+        start_outer_neighbor_id: u64,
+        /// Persistierte Aussenstrecke an `end_node_id` fuer stabile Tangentenvalidierung.
+        end_outer_neighbor_id: u64,
+        /// Fester quadratischer Steuerpunkt.
+        control_point: Vec2,
+        /// Maximale Segmentlaenge fuer die Kurven-Approximation.
+        sample_spacing_m: f32,
+        /// Persistierte Durchfahrten ueber den lokalen Replace-Pfad.
+        transitions: Vec<RoundingTransitionSnapshot>,
+    },
 }
 
 impl RouteToolEditPayload {
@@ -199,6 +242,16 @@ impl RouteToolEditPayload {
                 chain_end_id,
                 ..
             } => vec![*chain_start_id, *chain_end_id],
+            Self::RoundingArc {
+                first_neighbor_id,
+                second_neighbor_id,
+                ..
+            } => vec![*first_neighbor_id, *second_neighbor_id],
+            Self::RoundingQuadratic {
+                start_node_id,
+                end_node_id,
+                ..
+            } => vec![*start_node_id, *end_node_id],
             Self::Parking { .. } | Self::FieldBoundary { .. } => Vec::new(),
         }
     }
