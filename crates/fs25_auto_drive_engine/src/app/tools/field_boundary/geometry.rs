@@ -53,6 +53,7 @@ pub(super) fn detect_corners(vertices: &[Vec2], angle_threshold_rad: f32) -> Vec
 /// - `corner`: Eck-Vertex
 /// - `next`: Vertex nach der Ecke
 /// - `radius`: Verrundungsradius in Metern
+/// - `spacing`: Zielabstand fuer Punkte entlang des Bogens in Metern
 /// - `max_angle_deg`: Maximale Winkelabweichung zwischen benachbarten Bogenpunkten in Grad
 ///
 /// Gibt alle Bogenpunkte von t1 bis t2 (inkl.) zurueck.
@@ -63,6 +64,7 @@ pub(super) fn round_corner(
     corner: Vec2,
     next: Vec2,
     radius: f32,
+    spacing: f32,
     max_angle_deg: f32,
 ) -> Vec<Vec2> {
     let dir_in = (corner - prev).normalize_or_zero();
@@ -112,10 +114,6 @@ pub(super) fn round_corner(
     let a1 = (t1 - center).to_angle();
     let a2 = (t2 - center).to_angle();
 
-    // Bogenpunkte gleichmaessig ueber den Bogenwinkel verteilen
-    let arc_angle_rad = 2.0 * half_angle;
-    let n_points = ((arc_angle_rad / max_angle_deg.to_radians()).ceil() as usize).max(2);
-
     // Kuerzestes Winkelintervall (Gegenuhrzeigersinn bei CCW-Polygon)
     use std::f32::consts::PI;
     let mut delta = a2 - a1;
@@ -126,9 +124,15 @@ pub(super) fn round_corner(
         delta += 2.0 * PI;
     }
 
-    let mut points = Vec::with_capacity(n_points + 1);
-    for i in 0..=n_points {
-        let t = i as f32 / n_points as f32;
+    let arc_angle_rad = delta.abs();
+    let arc_length = arc_radius * arc_angle_rad;
+    let angle_segments = (arc_angle_rad / max_angle_deg.to_radians()).ceil() as usize;
+    let spacing_segments = (arc_length / spacing.max(0.1)).ceil() as usize;
+    let segment_count = angle_segments.max(spacing_segments).max(2);
+
+    let mut points = Vec::with_capacity(segment_count + 1);
+    for i in 0..=segment_count {
+        let t = i as f32 / segment_count as f32;
         let angle = a1 + delta * t;
         points.push(center + Vec2::from_angle(angle) * arc_radius);
     }
@@ -139,7 +143,7 @@ pub(super) fn round_corner(
 ///
 /// - `simplified`: Vereinfachtes Polygon (nicht geschlossen, ohne letzten==ersten Punkt)
 /// - `corner_indices`: Sortierte Indizes der Eckpunkte
-/// - `spacing`: Maximaler Segment-Abstand beim Resampling der geraden Segmente
+/// - `spacing`: Maximaler Segment-Abstand beim Resampling des Rings, inklusive Verrundungsboegen
 /// - `rounding_radius`: Wenn angegeben, werden konvexe Ecken mit Kreisbogen verrundet
 /// - `max_angle_deg`: Maximale Winkelabweichung zwischen Bogenpunkten in Grad
 ///
@@ -181,7 +185,7 @@ pub(super) fn resample_ring_with_corners(
                 let prev = simplified[(ci + n - 1) % n];
                 let curr = simplified[ci];
                 let nxt = simplified[(ci + 1) % n];
-                let pts = round_corner(prev, curr, nxt, r, max_angle_deg);
+                let pts = round_corner(prev, curr, nxt, r, sp, max_angle_deg);
                 if pts.len() > 1 {
                     return ArcEntry {
                         t1: pts[0],
@@ -297,7 +301,7 @@ mod tests {
         let prev = Vec2::new(0.0, 0.0);
         let corner = Vec2::new(100.0, 0.0);
         let next = Vec2::new(100.0, 100.0);
-        let pts = round_corner(prev, corner, next, 5.0, 15.0);
+        let pts = round_corner(prev, corner, next, 5.0, 10.0, 15.0);
         assert!(pts.len() > 1, "Konvexe Ecke sollte Bogenpunkte erzeugen");
         // Erster Punkt ist t1 (auf Eingangs-Kante)
         let t1 = pts[0];
@@ -322,7 +326,7 @@ mod tests {
         let prev = Vec2::new(0.0, 0.0);
         let corner = Vec2::new(100.0, 0.0);
         let next = Vec2::new(100.0, -100.0);
-        let pts = round_corner(prev, corner, next, 5.0, 15.0);
+        let pts = round_corner(prev, corner, next, 5.0, 10.0, 15.0);
         assert_eq!(
             pts.len(),
             1,
@@ -337,7 +341,7 @@ mod tests {
         let prev = Vec2::new(0.0, 0.0);
         let corner = Vec2::new(50.0, 0.0);
         let next = Vec2::new(100.0, 0.0);
-        let pts = round_corner(prev, corner, next, 5.0, 15.0);
+        let pts = round_corner(prev, corner, next, 5.0, 10.0, 15.0);
         assert_eq!(
             pts.len(),
             1,
@@ -408,7 +412,7 @@ mod tests {
         // next so gewaehlt, dass dir_out ≈ (0.5, 0.866) → 60°-Drehung nach links
         let next = Vec2::new(150.0, 86.6);
         let radius = 5.0;
-        let pts = round_corner(prev, corner, next, radius, 15.0);
+        let pts = round_corner(prev, corner, next, radius, 10.0, 15.0);
 
         assert!(pts.len() > 1, "60°-Ecke sollte Bogenpunkte erzeugen");
 
@@ -458,7 +462,7 @@ mod tests {
         let corner = Vec2::new(100.0, 0.0);
         let next = Vec2::new(50.0, 86.6);
         let radius = 5.0;
-        let pts = round_corner(prev, corner, next, radius, 15.0);
+        let pts = round_corner(prev, corner, next, radius, 10.0, 15.0);
 
         assert!(pts.len() > 1, "120°-Ecke sollte Bogenpunkte erzeugen");
 

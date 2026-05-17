@@ -296,7 +296,7 @@ impl RouteToolGroupEdit for FieldBoundaryTool {
 ///
 /// - `offset`: Verschiebung der geglaetteten Kontur nach innen (negativ) oder aussen (positiv)
 /// - `tolerance`: Douglas-Peucker-Vereinfachung der erkannten Feldkontur (0 = keine)
-/// - `spacing`: maximaler Segment-Abstand beim Resampling der geraden Segmente
+/// - `spacing`: maximaler Segment-Abstand beim Resampling des gesamten Rings
 /// - `corner_angle_threshold`: Winkel-Schwellwert in Grad fuer Ecken-Erkennung (None = deaktiviert)
 /// - `rounding_radius`: Verrundungsradius fuer konvexe Ecken in Metern (None = deaktiviert)
 /// - `max_angle_deg`: Maximale Winkelabweichung zwischen Bogenpunkten in Grad (None = 15°)
@@ -365,14 +365,6 @@ pub fn compute_ring(
     max_angle_deg: Option<f32>,
 ) -> Vec<(Vec2, RingNodeKind)> {
     use crate::shared::spline_geometry::resample_by_distance;
-
-    // Node-Abstand muss mindestens so gross sein wie der Verrundungsradius,
-    // damit Bogensegmente nicht staerker abgetastet werden als der Bogen lang ist.
-    let spacing = if let Some(r) = rounding_radius {
-        spacing.max(r)
-    } else {
-        spacing
-    };
 
     let simplified = prepare_ring_polygon(vertices, offset, tolerance);
     if simplified.len() < 3 {
@@ -542,6 +534,30 @@ mod tests {
                 ecke
             );
         }
+    }
+
+    #[test]
+    fn test_compute_ring_verrundung_respektiert_node_spacing() {
+        let verts = rectangle_vertices();
+        let coarse = compute_ring(&verts, 0.0, 0.0, 10.0, Some(80.0), Some(5.0), Some(45.0));
+        let fine = compute_ring(&verts, 0.0, 0.0, 2.0, Some(80.0), Some(5.0), Some(45.0));
+
+        assert!(
+            fine.len() > coarse.len(),
+            "Kleineres spacing muss bei aktiver Verrundung mehr Ringpunkte erzeugen"
+        );
+
+        let max_step = fine
+            .iter()
+            .zip(fine.iter().cycle().skip(1))
+            .take(fine.len())
+            .map(|((left, _), (right, _))| left.distance(*right))
+            .fold(0.0_f32, f32::max);
+
+        assert!(
+            max_step <= 2.1,
+            "Alle Ringsegmente muessen das konfigurierte spacing einhalten, max_step={max_step}"
+        );
     }
 
     #[test]
