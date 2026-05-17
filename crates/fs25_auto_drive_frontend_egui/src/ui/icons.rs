@@ -53,6 +53,9 @@ fn route_tool_icon_from_key(icon_key: RouteToolIconKey) -> ImageSource<'static> 
         RouteToolIconKey::RouteOffset => {
             egui::include_image!("../../../../assets/icons/icon_route_offset.svg")
         }
+        RouteToolIconKey::Rounding => {
+            egui::include_image!("../../../../assets/icons/icon_smooth_curve.svg")
+        }
         RouteToolIconKey::ColorPath => {
             egui::include_image!("../../../../assets/icons/icon_color_path.svg")
         }
@@ -78,6 +81,7 @@ pub fn host_route_tool_icon(icon_key: HostRouteToolIconKey) -> ImageSource<'stat
         HostRouteToolIconKey::RouteOffset => {
             route_tool_icon_from_key(RouteToolIconKey::RouteOffset)
         }
+        HostRouteToolIconKey::Rounding => route_tool_icon_from_key(RouteToolIconKey::Rounding),
         HostRouteToolIconKey::ColorPath => route_tool_icon_from_key(RouteToolIconKey::ColorPath),
     }
 }

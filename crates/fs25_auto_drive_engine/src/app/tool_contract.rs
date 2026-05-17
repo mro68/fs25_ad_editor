@@ -27,13 +27,15 @@ pub enum RouteToolId {
     FieldPath,
     /// Strecken-Versatz.
     RouteOffset,
+    /// Verrundungs-Tool.
+    Rounding,
     /// Farb-Pfad-Analyse.
     ColorPath,
 }
 
 impl RouteToolId {
     /// Alle registrierten Route-Tools in kanonischer Slot-Reihenfolge.
-    pub const ALL: [Self; 11] = [
+    pub const ALL: [Self; 12] = [
         Self::Straight,
         Self::CurveQuad,
         Self::CurveCubic,
@@ -44,6 +46,7 @@ impl RouteToolId {
         Self::FieldBoundary,
         Self::FieldPath,
         Self::RouteOffset,
+        Self::Rounding,
         Self::ColorPath,
     ];
 }

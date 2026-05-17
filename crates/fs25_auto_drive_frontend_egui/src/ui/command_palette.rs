@@ -394,6 +394,7 @@ mod tests {
             RouteToolId::Spline,
             RouteToolId::SmoothCurve,
             RouteToolId::Parking,
+            RouteToolId::Rounding,
         ] {
             let (_, entry) = route_tool_entry(&catalog, tool_id);
             assert!(entry.enabled, "{:?} sollte aktivierbar bleiben", tool_id);

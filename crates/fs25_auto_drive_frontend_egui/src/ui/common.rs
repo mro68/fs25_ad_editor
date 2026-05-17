@@ -253,6 +253,7 @@ pub(crate) fn host_route_tool_to_engine(tool: HostRouteToolId) -> RouteToolId {
         HostRouteToolId::FieldBoundary => RouteToolId::FieldBoundary,
         HostRouteToolId::FieldPath => RouteToolId::FieldPath,
         HostRouteToolId::RouteOffset => RouteToolId::RouteOffset,
+        HostRouteToolId::Rounding => RouteToolId::Rounding,
         HostRouteToolId::ColorPath => RouteToolId::ColorPath,
     }
 }

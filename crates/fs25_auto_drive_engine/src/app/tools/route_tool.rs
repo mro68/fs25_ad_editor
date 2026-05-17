@@ -3,7 +3,7 @@
 use super::{
     RouteToolChainInput, RouteToolCore, RouteToolDrag, RouteToolGroupEdit, RouteToolHostSync,
     RouteToolLassoInput, RouteToolPanelBridge, RouteToolRecreate, RouteToolRotate,
-    RouteToolSegmentAdjustments, RouteToolTangent,
+    RouteToolSegmentAdjustments, RouteToolSelectionInput, RouteToolTangent,
 };
 
 /// Object-safe Umbrella ueber den Kernvertrag, Panel-Bruecke und Host-Sync.
@@ -68,6 +68,16 @@ pub trait RouteTool: RouteToolCore + RouteToolPanelBridge + RouteToolHostSync {
 
     /// Liefert die mutable Chain-Input-Capability, falls das Tool sie unterstuetzt.
     fn as_chain_input_mut(&mut self) -> Option<&mut dyn RouteToolChainInput> {
+        None
+    }
+
+    /// Liefert die Selection-Input-Capability, falls das Tool sie unterstuetzt.
+    fn as_selection_input(&self) -> Option<&dyn RouteToolSelectionInput> {
+        None
+    }
+
+    /// Liefert die mutable Selection-Input-Capability, falls das Tool sie unterstuetzt.
+    fn as_selection_input_mut(&mut self) -> Option<&mut dyn RouteToolSelectionInput> {
         None
     }
 

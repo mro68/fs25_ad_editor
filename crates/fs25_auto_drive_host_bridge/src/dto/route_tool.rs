@@ -50,6 +50,8 @@ pub enum HostRouteToolId {
     FieldPath,
     /// Strecken-Versatz.
     RouteOffset,
+    /// Verrundungs-Tool.
+    Rounding,
     /// Farb-Pfad-Analyse.
     ColorPath,
 }
@@ -104,6 +106,8 @@ pub enum HostRouteToolIconKey {
     FieldPath,
     /// Icon fuer Streckenversatz.
     RouteOffset,
+    /// Icon fuer Verrunden.
+    Rounding,
     /// Icon fuer Farbpfad.
     ColorPath,
 }

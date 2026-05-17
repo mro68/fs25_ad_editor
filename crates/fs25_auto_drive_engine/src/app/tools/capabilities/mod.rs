@@ -6,6 +6,7 @@ mod drag;
 mod group_edit;
 mod lasso_input;
 mod recreate;
+mod selection_input;
 mod tangent;
 
 pub use adjustments::{RouteToolRotate, RouteToolSegmentAdjustments};
@@ -14,4 +15,7 @@ pub use drag::RouteToolDrag;
 pub use group_edit::RouteToolGroupEdit;
 pub use lasso_input::RouteToolLassoInput;
 pub use recreate::RouteToolRecreate;
+pub use selection_input::{
+    RouteToolConnectedNeighborSeed, RouteToolSelectionInput, RouteToolSelectionSeed,
+};
 pub use tangent::RouteToolTangent;

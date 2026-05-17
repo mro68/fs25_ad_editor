@@ -6,10 +6,10 @@ use fs25_auto_drive_engine::app::ui_contract::{
     ColorPathPreviewStats, CurvePanelState, CurveTangentsPanelState, FieldBoundaryPanelState,
     FieldPathPanelPhase, FieldPathPanelState, FieldPathPreviewStatus, FieldPathSelectionSummary,
     GroupBoundaryOverlaySnapshot, GroupLockOverlaySnapshot, HostUiSnapshot, PanelState,
-    ParkingPanelState, PolylineOverlaySnapshot, RouteOffsetPanelState, RouteToolConfigState,
-    RouteToolPanelState, SegmentConfigPanelState, SegmentLengthKind, SegmentPanelMode,
-    SmoothCurvePanelState, SmoothCurveSteererState, SplinePanelState, TangentHelpHint,
-    TangentNoneReason, TangentSelectionState, ViewportOverlaySnapshot,
+    ParkingPanelState, PolylineOverlaySnapshot, RoundingPanelState, RouteOffsetPanelState,
+    RouteToolConfigState, RouteToolPanelState, SegmentConfigPanelState, SegmentLengthKind,
+    SegmentPanelMode, SmoothCurvePanelState, SmoothCurveSteererState, SplinePanelState,
+    TangentHelpHint, TangentNoneReason, TangentSelectionState, ViewportOverlaySnapshot,
 };
 use fs25_auto_drive_engine::app::{BoundaryDirection, ConnectionDirection, ConnectionPriority};
 use fs25_auto_drive_engine::shared::I18nKey;
@@ -92,8 +92,24 @@ fn route_tool_config_state_to_value(state: &RouteToolConfigState) -> Value {
         RouteToolConfigState::FieldBoundary(state) => field_boundary_panel_state_to_value(state),
         RouteToolConfigState::FieldPath(state) => field_path_panel_state_to_value(state),
         RouteToolConfigState::RouteOffset(state) => route_offset_panel_state_to_value(state),
+        RouteToolConfigState::Rounding(state) => rounding_panel_state_to_value(state),
         RouteToolConfigState::ColorPath(state) => color_path_panel_state_to_value(state),
     }
+}
+
+fn rounding_panel_state_to_value(state: &RoundingPanelState) -> Value {
+    json!({
+        "kind": "rounding",
+        "mode": state.mode,
+        "mode_locked": state.mode_locked,
+        "arc_radius_m": state.arc_radius_m,
+        "arc_sample_spacing_m": state.arc_sample_spacing_m,
+        "quadratic_sample_spacing_m": state.quadratic_sample_spacing_m,
+        "selected_node_count": state.selected_node_count,
+        "chain_node_count": state.chain_node_count,
+        "preview_node_count": state.preview_node_count,
+        "is_adjusting": state.is_adjusting,
+    })
 }
 
 fn curve_panel_state_to_value(state: &CurvePanelState) -> Value {
@@ -575,9 +591,9 @@ mod tests {
     use fs25_auto_drive_engine::app::ui_contract::{
         ClipboardOverlaySnapshot, ClipboardPreviewNode, CommandPalettePanelState,
         GroupBoundaryOverlaySnapshot, GroupLockOverlaySnapshot, HostUiSnapshot, OptionsPanelState,
-        PanelState, PolylineOverlaySnapshot, RouteToolConfigState, RouteToolPanelState,
-        SegmentConfigPanelState, SegmentLengthKind, SegmentPanelMode, StraightPanelState,
-        ViewportOverlaySnapshot,
+        PanelState, PolylineOverlaySnapshot, RoundingModeChoice, RoundingPanelState,
+        RouteToolConfigState, RouteToolPanelState, SegmentConfigPanelState, SegmentLengthKind,
+        SegmentPanelMode, StraightPanelState, ViewportOverlaySnapshot,
     };
     use fs25_auto_drive_engine::app::BoundaryDirection;
     use fs25_auto_drive_engine::core::{ConnectionDirection, ConnectionPriority};
@@ -631,6 +647,60 @@ mod tests {
         );
         assert_eq!(value["panels"][1]["kind"], "options");
         assert_eq!(value["panels"][2]["kind"], "command_palette");
+    }
+
+    #[test]
+    fn host_ui_snapshot_json_serializes_rounding_panel_details() {
+        let snapshot = HostUiSnapshot {
+            panels: vec![PanelState::RouteTool(Box::new(RouteToolPanelState {
+                active_tool_id: Some(RouteToolId::Rounding),
+                status_text: Some("Nachbearbeitung".to_string()),
+                has_pending_input: true,
+                can_execute: true,
+                config_state: Some(RouteToolConfigState::Rounding(RoundingPanelState {
+                    mode: RoundingModeChoice::ArcOnePoint,
+                    mode_locked: true,
+                    arc_radius_m: 7.5,
+                    arc_sample_spacing_m: 2.5,
+                    quadratic_sample_spacing_m: 3.5,
+                    selected_node_count: 1,
+                    chain_node_count: 0,
+                    preview_node_count: Some(6),
+                    is_adjusting: true,
+                })),
+            }))],
+        };
+
+        let payload = host_ui_snapshot_json(&snapshot)
+            .expect("Rounding-HostUiSnapshot muss als JSON serialisierbar sein");
+        let value: Value = serde_json::from_str(&payload)
+            .expect("Rounding-HostUiSnapshot-JSON muss parsebar sein");
+
+        assert_eq!(value["panels"][0]["state"]["active_tool_id"], "rounding");
+        assert_eq!(
+            value["panels"][0]["state"]["config_state"]["kind"],
+            "rounding"
+        );
+        assert_eq!(
+            value["panels"][0]["state"]["config_state"]["mode"],
+            "arc_one_point"
+        );
+        assert_eq!(
+            value["panels"][0]["state"]["config_state"]["mode_locked"],
+            true
+        );
+        assert_eq!(
+            value["panels"][0]["state"]["config_state"]["arc_radius_m"],
+            7.5
+        );
+        assert_eq!(
+            value["panels"][0]["state"]["config_state"]["preview_node_count"],
+            6
+        );
+        assert_eq!(
+            value["panels"][0]["state"]["config_state"]["is_adjusting"],
+            true
+        );
     }
 
     #[test]

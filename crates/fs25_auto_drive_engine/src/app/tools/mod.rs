@@ -26,6 +26,8 @@ pub mod field_path;
 mod manager;
 /// Parkplatz-Layout-Tool mit Wendekreis und konfigurierbaren Parkreihen.
 pub mod parking;
+/// Verrundungs-Tool mit internem Modusrahmen fuer Arc- und Quadratic-Varianten.
+pub mod rounding;
 /// Strecken-Versatz-Tool — generiert parallele Versatz-Kette(n) zur selektierten Kette.
 pub mod route_offset;
 /// Kleiner Umbrella-Vertrag fuer Route-Tools.
@@ -40,8 +42,9 @@ pub mod straight_line;
 pub use crate::app::tool_contract::ToolAnchor;
 pub use crate::shared::RouteToolGroup;
 pub use capabilities::{
-    OrderedNodeChain, RouteToolChainInput, RouteToolDrag, RouteToolGroupEdit, RouteToolLassoInput,
-    RouteToolRecreate, RouteToolRotate, RouteToolSegmentAdjustments, RouteToolTangent,
+    OrderedNodeChain, RouteToolChainInput, RouteToolConnectedNeighborSeed, RouteToolDrag,
+    RouteToolGroupEdit, RouteToolLassoInput, RouteToolRecreate, RouteToolRotate,
+    RouteToolSegmentAdjustments, RouteToolSelectionInput, RouteToolSelectionSeed, RouteToolTangent,
 };
 pub use catalog::{
     resolve_route_tool_entries, route_tool_catalog, route_tool_defaults_tooltip_key,
