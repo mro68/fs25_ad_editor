@@ -251,7 +251,7 @@ impl RouteToolGroupEdit for FieldBoundaryTool {
             self.corner_angle_threshold_deg = *threshold;
         } else {
             self.corner_detection_enabled = false;
-            self.corner_angle_threshold_deg = 90.0;
+            self.corner_angle_threshold_deg = 45.0;
         }
         if let Some(radius) = corner_rounding_radius {
             self.corner_rounding_enabled = true;
@@ -263,7 +263,7 @@ impl RouteToolGroupEdit for FieldBoundaryTool {
         if let Some(angle) = corner_rounding_max_angle_deg {
             self.corner_rounding_max_angle_deg = *angle;
         } else {
-            self.corner_rounding_max_angle_deg = 15.0;
+            self.corner_rounding_max_angle_deg = 22.5;
         }
         self.direction = base.direction;
         self.priority = base.priority;

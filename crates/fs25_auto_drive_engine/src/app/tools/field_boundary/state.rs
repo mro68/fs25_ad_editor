@@ -30,13 +30,13 @@ pub struct FieldBoundaryTool {
     pub(crate) straighten_tolerance: f32,
     /// Ecken-Erkennung aktiviert?
     pub(crate) corner_detection_enabled: bool,
-    /// Winkel-Schwellwert fuer Ecken-Erkennung in Grad (Standard: 90°).
+    /// Winkel-Schwellwert fuer Ecken-Erkennung in Grad (Standard: 45°).
     pub(crate) corner_angle_threshold_deg: f32,
     /// Eckenverrundung aktiviert?
     pub(crate) corner_rounding_enabled: bool,
     /// Radius der Eckenverrundung in Metern (Standard: 5.0).
     pub(crate) corner_rounding_radius: f32,
-    /// Maximale Winkelabweichung zwischen Bogenpunkten in Grad (Standard: 15.0).
+    /// Maximale Winkelabweichung zwischen Bogenpunkten in Grad (Standard: 22.5).
     pub(crate) corner_rounding_max_angle_deg: f32,
     /// Verbindungsrichtung.
     pub direction: ConnectionDirection,
@@ -60,14 +60,14 @@ impl FieldBoundaryTool {
             farmland_data: None,
             node_spacing: 10.0,
             offset: 0.0,
-            straighten_tolerance: 0.0,
+            straighten_tolerance: 1.5,
             corner_detection_enabled: false,
-            corner_angle_threshold_deg: 90.0,
+            corner_angle_threshold_deg: 45.0,
             corner_rounding_enabled: false,
             corner_rounding_radius: 5.0,
-            corner_rounding_max_angle_deg: 15.0,
+            corner_rounding_max_angle_deg: 22.5,
             direction: ConnectionDirection::Dual,
-            priority: ConnectionPriority::Regular,
+            priority: ConnectionPriority::SubPriority,
             lifecycle: ToolLifecycleState::new(3.0),
         }
     }

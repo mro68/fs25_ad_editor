@@ -1,4 +1,4 @@
-use crate::app::tool_contract::TangentSource;
+use crate::app::tool_contract::{RouteToolId, TangentSource};
 use crate::app::ui_contract::{
     panel_action_to_intent, BypassPanelAction, BypassPanelState, ColorPathPanelAction,
     ColorPathPanelPhase, ColorPathPanelState, CurveDegreeChoice, CurvePanelAction, CurvePanelState,
@@ -66,7 +66,7 @@ pub(super) fn render_route_tool_panel(
         events,
     };
 
-    let mut window = egui::Window::new("📐 Route-Tool")
+    let mut window = egui::Window::new(route_tool_window_title(route_tool.active_tool_id))
         .collapsible(false)
         .resizable(false)
         .default_width(360.0)
@@ -154,6 +154,13 @@ fn render_route_tool_config(
         }
         RouteToolConfigState::RouteOffset(state) => render_route_offset_panel(ui, state, panel_ctx),
         RouteToolConfigState::ColorPath(state) => render_color_path_panel(ui, state, panel_ctx),
+    }
+}
+
+fn route_tool_window_title(active_tool_id: Option<RouteToolId>) -> &'static str {
+    match active_tool_id {
+        Some(RouteToolId::FieldBoundary) => "📐 Felderkennung",
+        _ => "📐 Route-Tool",
     }
 }
 
