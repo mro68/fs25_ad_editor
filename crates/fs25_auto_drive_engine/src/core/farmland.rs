@@ -495,16 +495,8 @@ mod tests {
         // Bei einem achsenparallelen Quadrat muss die Ecke (0,0) auf (-1,-1) liegen,
         // damit der Abstand zu beiden angrenzenden Kanten exakt 1.0 bleibt.
         let first = result[0];
-        assert!(
-            (first.x + 1.0).abs() < 1e-4,
-            "Erwartet x=-1.0, bekam {}",
-            first.x
-        );
-        assert!(
-            (first.y + 1.0).abs() < 1e-4,
-            "Erwartet y=-1.0, bekam {}",
-            first.y
-        );
+        assert!((first.x + 1.0).abs() < 1e-4, "Erwartet x=-1.0, bekam {}", first.x);
+        assert!((first.y + 1.0).abs() < 1e-4, "Erwartet y=-1.0, bekam {}", first.y);
     }
 
     #[test]
