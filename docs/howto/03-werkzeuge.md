@@ -15,7 +15,7 @@ Der Editor nutzt einen gemeinsamen Katalog fuer alle Werkzeugsurfaces. Dieselben
 |--------|----------|-------|------------------|
 | **Werkzeuge** | `T` | Select, Connect, Add Node | nie |
 | **Grundbefehle** | `G` | Gerade Strecke, Bezier Grad 2, Bezier Grad 3, Spline, Geglaettete Kurve | nie |
-| **Bearbeiten** | `B` | Ausweichstrecke, Parkplatz, Strecke versetzen | keine geordnete Kette bei chain-basierten Tools |
+| **Bearbeiten** | `B` | Ausweichstrecke, Parkplatz, Strecke versetzen, Verrunden | keine geordnete Kette bei chain-basierten Tools |
 | **Analyse** | `A` | Feld erkennen, Feldweg erkennen, Farb-Pfad erkennen | fehlende Farmland-Daten oder fehlende Hintergrundkarte |
 
 Wenn ein Tool Voraussetzungen hat, bleibt es sichtbar. Statt zu verschwinden, zeigt es seinen Disabled-Grund an.
@@ -38,7 +38,7 @@ Alle Route-Tools teilen sich denselben Grundablauf:
 
 Nicht jedes Tool erzeugt spaeter denselben Bearbeitungsweg:
 
-- **Mit spaeterem Tool-Edit**: Gerade Strecke, Bezier Grad 2, Bezier Grad 3, Spline, Geglaettete Kurve, Ausweichstrecke, Parkplatz, Strecke versetzen, Feld erkennen
+- **Mit spaeterem Tool-Edit**: Gerade Strecke, Bezier Grad 2, Bezier Grad 3, Spline, Geglaettete Kurve, Ausweichstrecke, Parkplatz, Strecke versetzen, Verrunden, Feld erkennen
 - **Ohne spaeteres Tool-Edit**: Feldweg erkennen und Farb-Pfad erkennen
 
 Fuer Tools ohne spaeteres Tool-Edit gilt:
@@ -257,6 +257,27 @@ Erzeugt einen oder zwei Parallelversatze entlang einer selektierten Kette.
 **Tipps:**
 - Das Tool bleibt sichtbar, auch wenn noch keine Kette selektiert ist; der Disabled-Hinweis zeigt dann den fehlenden Schritt.
 - Wenn **Original behalten** deaktiviert ist, ersetzt die neue Strecke die innere Kette im selben Undo-Schritt.
+
+## Verrunden (B)
+
+Rundet lokale Streckenuebergaenge entweder als echten Kreisbogen oder als quadratische Kurve ab. Das Tool arbeitet auf einer bestehenden Selektion und ersetzt nur den lokalen Uebergang.
+
+**Workflow:**
+1. Je nach Modus entweder genau 1 Corner-Node oder genau 3 Nodes als geordnete Kette selektieren.
+2. Mit **`B`** die Gruppe **Bearbeiten** oeffnen und **Verrunden** waehlen.
+3. Im Route-Tool-Panel den Modus **1 Punkt (Arc)** oder **3 Punkte (Quadratisch)** einstellen.
+4. Radius und Abtastung pruefen; die Vorschau zeigt, wie viele neue Nodes erzeugt werden.
+5. Mit **`Enter`** bestaetigen.
+
+**Konfiguration:**
+- Modus: **1 Punkt (Arc)** fuer genau einen selektierten Corner-Node, **3 Punkte (Quadratisch)** fuer genau drei selektierte Nodes als geordnete Kette.
+- Radius: nur im Arc-Modus; legt den festen Radius des Kreisbogens fest.
+- Abtastung: Abstand der erzeugten Nodes entlang Bogen oder quadratischer Kurve.
+
+**Tipps:**
+- Der Arc-Modus funktioniert nur bei einem lokalen Corner mit genau zwei eindeutigen Anschlussseiten.
+- Der Quadratic-Modus ersetzt die mittlere Node der 3er-Kette; Start und Ende bleiben die Anschlussseiten der Verrundung.
+- Bereits erzeugte Verrundungen koennen spaeter ueber **Tool bearbeiten** erneut aufgebaut werden. In dieser Nachbearbeitung bleibt der Modus gesperrt.
 
 ---
 

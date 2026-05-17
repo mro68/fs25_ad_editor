@@ -241,7 +241,7 @@ Unterstuetzte Menues:
 
 - `FloatingMenuKind::Tools` — Select / Connect / AddNode
 - `FloatingMenuKind::RouteTools(RouteToolGroup::Basics)` — Gerade, Bezier (Grad 2/3), Spline, SmoothCurve
-- `FloatingMenuKind::RouteTools(RouteToolGroup::Section)` — Bypass, Parkplatz, Strecke versetzen
+- `FloatingMenuKind::RouteTools(RouteToolGroup::Section)` — Bypass, Parkplatz, Strecke versetzen, Verrunden
 - `FloatingMenuKind::RouteTools(RouteToolGroup::Analysis)` — FieldBoundary, FieldPath, ColorPath
 - `FloatingMenuKind::DirectionPriority` — Verbindungsrichtung (Regular/Dual/Reverse) und Strassenart (Haupt-/Nebenstrasse)
 - `FloatingMenuKind::Zoom` — Auf komplette Map einpassen, Auf Auswahl einpassen

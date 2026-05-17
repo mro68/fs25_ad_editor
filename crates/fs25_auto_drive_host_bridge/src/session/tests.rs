@@ -4,6 +4,7 @@ use std::time::Instant;
 
 use fs25_auto_drive_engine::app::handlers;
 use fs25_auto_drive_engine::app::tool_contract::RouteToolId;
+use fs25_auto_drive_engine::app::ui_contract::RouteToolConfigState;
 use fs25_auto_drive_engine::app::{
     AppIntent, Connection, ConnectionDirection, ConnectionPriority, FloatingMenuKind,
     GroupEditState, GroupRecord, MapMarker, MapNode, NodeFlag, OverviewSourceContext, RoadMap,
@@ -67,6 +68,31 @@ fn viewport_connected_path_map() -> RoadMap {
         ConnectionPriority::Regular,
         Vec2::new(10.0, 0.0),
         Vec2::new(20.0, 0.0),
+    ));
+    map.ensure_spatial_index();
+    map
+}
+
+fn rounding_corner_map() -> RoadMap {
+    let mut map = RoadMap::new(3);
+    map.add_node(MapNode::new(10, Vec2::new(-20.0, 0.0), NodeFlag::Regular));
+    map.add_node(MapNode::new(1, Vec2::new(0.0, 0.0), NodeFlag::Regular));
+    map.add_node(MapNode::new(20, Vec2::new(0.0, 20.0), NodeFlag::Regular));
+    map.add_connection(Connection::new(
+        10,
+        1,
+        ConnectionDirection::Regular,
+        ConnectionPriority::Regular,
+        Vec2::new(-20.0, 0.0),
+        Vec2::new(0.0, 0.0),
+    ));
+    map.add_connection(Connection::new(
+        1,
+        20,
+        ConnectionDirection::Regular,
+        ConnectionPriority::Regular,
+        Vec2::new(0.0, 0.0),
+        Vec2::new(0.0, 20.0),
     ));
     map.ensure_spatial_index();
     map
@@ -331,6 +357,35 @@ fn host_ui_and_overlay_snapshots_are_available() {
     let overlay = session.build_viewport_overlay_snapshot(None);
     assert!(overlay.route_tool_preview.is_none());
     assert!(overlay.group_boundaries.is_empty());
+}
+
+#[test]
+fn host_ui_snapshot_exposes_rounding_panel_state() {
+    let mut session = HostBridgeSession::new();
+    session.state.road_map = Some(Arc::new(rounding_corner_map()));
+    session.state.selection.ids_mut().insert(1);
+
+    handlers::route_tool::select(&mut session.state, RouteToolId::Rounding);
+
+    let host_ui = session.build_host_ui_snapshot();
+    let panel = host_ui
+        .route_tool_panel_state()
+        .expect("Route-Tool-Panel fuer Rounding erwartet");
+    assert_eq!(panel.active_tool_id, Some(RouteToolId::Rounding));
+
+    let config_state = panel
+        .config_state
+        .as_ref()
+        .expect("Rounding-Config-State erwartet");
+    let RouteToolConfigState::Rounding(state) = config_state else {
+        panic!("Rounding-Panelzustand erwartet");
+    };
+
+    assert_eq!(state.selected_node_count, 1);
+    assert_eq!(state.chain_node_count, 0);
+    assert!(!state.mode_locked);
+    assert!(!state.is_adjusting);
+    assert!(state.preview_node_count.is_some());
 }
 
 #[test]

@@ -144,6 +144,7 @@ Der kanonische Katalog beschreibt jedes Tool ueber `RouteToolId`, Anzeigegruppe,
 | `RouteToolId::FieldBoundary` | `Analysis` | Farmland geladen | `GroupBackedEditable` | `FieldBoundaryTool::new()` |
 | `RouteToolId::FieldPath` | `Analysis` | Farmland geladen | `Ephemeral` | `FieldPathTool::new()` |
 | `RouteToolId::RouteOffset` | `Section` | geordnete Kette | `GroupBackedEditable` | `RouteOffsetTool::new()` |
+| `RouteToolId::Rounding` | `Section` | keine | `GroupBackedEditable` | `RoundingTool::new()` |
 | `RouteToolId::ColorPath` | `Analysis` | Hintergrundbild geladen | `Ephemeral` | `ColorPathTool::new()` |
 
 ### `StraightLineTool`
@@ -405,6 +406,53 @@ Die finale Ausgabe wird ueber `ToolResultBuilder` aufgebaut: interne Offset-Kett
 **Edit-Payload:** `RouteToolEditPayload::RouteOffset { chain_positions, chain_start_id, chain_end_id, offset_left, offset_right, keep_original, base_spacing, base }` fuer `RouteToolId::RouteOffset`
 
 Modulstruktur: `mod.rs` (Re-Exporte), `state.rs` (Struct + OffsetConfig), `lifecycle.rs` (RouteTool-Impl), `geometry.rs` (compute_offset_positions), `config_ui.rs` (semantische Panel-Bruecke), `tests.rs`
+
+---
+
+### `RoundingTool`
+
+Oeffentliche Huelle fuer lokales Verrunden (`RouteToolId::Rounding`). Seit CP-04 sind beide internen Pfade vertikal umgesetzt und ueber denselben Panel-/Persistenzvertrag nachbearbeitbar: `ArcOnePoint` fuer einen einzelnen Corner und `QuadraticThreePoint` fuer eine geordnete 3-Node-Kette.
+
+**Interner Modusrahmen (`RoundingMode`):**
+
+- `ArcOnePoint` — exakt 1 selektierter Corner-Node; nutzt zwei eindeutige Anschlussseiten und ersetzt den Corner lokal durch einen echten Kreisbogen mit festem Radius
+- `QuadraticThreePoint` — genau 3 selektierte Nodes als geordnete Kette `P1 -> P2 -> P3`; `P2` bleibt fester quadratischer Steuerpunkt, Preview/Execute ersetzen die mittlere Node lokal durch eine quadratische Verrundung zwischen `P1` und `P3`
+
+**Panel-Contract:**
+
+- `RoundingPanelState { mode, mode_locked, arc_radius_m, arc_sample_spacing_m, quadratic_sample_spacing_m, selected_node_count, chain_node_count, preview_node_count, is_adjusting }` — egui-freier Panelzustand fuer aktiven Modus, Recreate-/Edit-Lock und Vorschauzaehler
+- `RoundingPanelAction::SetMode(...)` — schaltet zwischen den beiden internen Modi um, solange kein persistierter Edit-Kontext aktiv ist
+- `RoundingPanelAction::SetArcRadius(...)` — aktualisiert den Arc-Radius fuer Preview und Recreate
+- `RoundingPanelAction::SetArcSampleSpacing(...)` — aktualisiert die Arc-Abtastung fuer Preview und Recreate
+- `RoundingPanelAction::SetQuadraticSampleSpacing(...)` — aktualisiert die Quadratic-Abtastung fuer Preview und Recreate
+
+**Selection-Input-Vertrag:**
+
+- `RouteToolSelectionSeed` traegt fuer selection-getriebene Tools neben `node_ids`/`positions` auch `connected_neighbors`
+- `RouteToolConnectedNeighborSeed` kapselt `neighbor_id`, Weltposition, `angle` und `is_outgoing` fuer einen selektierten Node-Nachbarn
+- `OrderedNodeChain` liefert fuer `QuadraticThreePoint` die kanonische Reihenfolge der 3-Node-Kette (`start_id`, genau 1 `inner_id`, `end_id`, Positionen)
+
+**Aktueller Runtime-/Persistenzvertrag in CP-04:**
+
+- `ArcOnePoint` verlangt genau 1 selektierten Node mit genau 2 eindeutigen Anschlussseiten
+- `status_text()` meldet klare Invalid-Faelle (`NeedTwoRouteSides`, `AmbiguousJunction`, `NoThroughPath`, `RadiusTooLarge`, ...)
+- `preview()` zeigt bei gueltigem Corner-Kontext die lokale Ersatz-Polyline zwischen beiden Anschlussseiten
+- `execute()` ersetzt nur den selektierten Corner-Node lokal (`nodes_to_remove = [corner_id]`) und erzeugt `RoundedCorner`-Nodes plus externe Wiederanbindung an die beiden Nachbarseiten
+- Richtungen/Prioritaeten des internen Arc-Pfads werden aus den vorhandenen Corner-Durchfahrten gemerged; externe Side-Verbindungen behalten die Original-Connection-Metadaten
+- `QuadraticThreePoint` verlangt genau 3 selektierte Nodes als geordnete Kette sowie genau eine Aussenstrecke an `P1` und `P3`; `P2` darf keine externen Aeste tragen
+- Die Quadratic-Validierung akzeptiert nur Faelle, in denen die beiden Aussenstrecken mit passender Richtung im festen Steuerpunkt `P2` schneiden und ueber `P1 -> P2 -> P3` mindestens eine gerichtete Durchfahrt existiert
+- `preview()` zeigt bei gueltigem 3-Punkt-Kontext die quadratische Ersatz-Polyline zwischen den Referenzendpunkten `P1` und `P3`
+- `execute()` entfernt im Quadratic-Pfad nur die mittlere Node (`nodes_to_remove = [P2]`) und setzt `RoundedCorner`-Nodes zwischen die bestehenbleibenden Referenzknoten `P1` und `P3`
+- `RouteToolRecreate::on_applied()` merkt sich die zuletzt erzeugten IDs und speichert einen modusspezifischen Edit-Payload fuer Panel-Recreate und Group-Edit
+- `RouteToolGroupEdit::restore_edit_payload()` rehydriert den passenden Modus inklusive Parameter, sperrt die Modusumschaltung (`mode_locked`) und baut Preview/Execute bei Bedarf aus dem Payload auf; `RoundingQuadratic` validiert den Neuaufbau dabei zusaetzlich gegen die persistierten Aussenknoten
+
+**Persistenzvertrag:** `GroupBackedEditable`.
+
+- `RouteToolEditPayload::RoundingArc { first_neighbor_id, second_neighbor_id, corner_position, radius_m, sample_spacing_m, transitions }` speichert den Arc-Pfad ueber die beiden ueberlebenden Anschlussseiten plus gemergte Durchfahrtsmetadaten
+- `RouteToolEditPayload::RoundingQuadratic { start_node_id, end_node_id, start_outer_neighbor_id, end_outer_neighbor_id, control_point, sample_spacing_m, transitions }` speichert den Quadratic-Pfad ueber die beiden ueberlebenden Randknoten plus persistierte Aussenstrecken fuer stabile Tangentenvalidierung
+- Persistente `RoundingTransitionSnapshot`s erlauben Recreate und Group-Edit auch dann, wenn Corner- oder Kontroll-Node des Ursprungs bereits entfernt wurden
+
+Modulstruktur: `mod.rs` (Re-Exporte), `state.rs` (Mode-Enum + Arc-/Quadratic-Runtime-State), `geometry.rs` (Corner-/Chain-Kontext, echter Kreisbogen, quadratischer Replace-Solver), `lifecycle.rs` (modusspezifisches Preview/Execute + lokaler Replace-Pfad), `config_ui.rs` (semantische Panel-Bruecke), `tests.rs`
 
 ---
 

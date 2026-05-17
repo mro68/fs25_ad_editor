@@ -122,6 +122,15 @@ Das schwebende Fenster **"✏ Gruppen-Bearbeitung"** erscheint und zeigt die akt
 
 > **Hinweis:** Wenn du im Gruppen-Bearbeitungsmodus die Struktur einer Gruppe manuell veraenderst und uebernimmst, wird der gespeicherte Tool-Snapshot absichtlich verworfen. Danach bleibt die Gruppe normal bearbeitbar, aber nicht mehr ueber **Tool bearbeiten** rehydrierbar.
 
+### Verrundungen nachbearbeiten
+
+Das Tool **Verrunden** legt eine editierbare Gruppe an. Oeffnen Sie die Gruppe wie gewohnt ueber **Gruppe bearbeiten** und danach ueber **Tool bearbeiten**, solange der gespeicherte Tool-Snapshot noch gueltig ist.
+
+- **Arc-Nachbearbeitung:** Radius und Abtastung anpassen und mit **`Enter`** den Kreisbogen fuer denselben Corner neu aufbauen.
+- **Quadratische Nachbearbeitung:** Abtastung anpassen und mit **`Enter`** die Verrundung fuer dieselbe 3er-Kette neu aufbauen.
+- Der urspruengliche Modus bleibt waehrend dieser Nachbearbeitung gesperrt.
+- Wenn Sie die Gruppenstruktur manuell veraendern und uebernehmen, geht auch bei Verrundungen der gespeicherte Tool-Snapshot verloren.
+
 ### Grenzknoten-Icons (Eingang / Ausgang / Bidirektional)
 
 Wenn eine Gruppe selektiert ist, markiert der Editor automatisch alle **Grenzknoten** — Nodes, die Verbindungen zu Nodes außerhalb der Gruppe haben — mit einem Icon:
