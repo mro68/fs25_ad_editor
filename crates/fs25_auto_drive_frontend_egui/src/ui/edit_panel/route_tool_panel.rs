@@ -1,4 +1,5 @@
-use crate::app::tool_contract::TangentSource;
+use crate::app::tool_contract::{RouteToolId, TangentSource};
+use crate::app::tools::route_tool_label_key;
 use crate::app::ui_contract::{
     panel_action_to_intent, BypassPanelAction, BypassPanelState, ColorPathPanelAction,
     ColorPathPanelPhase, ColorPathPanelState, CurveDegreeChoice, CurvePanelAction, CurvePanelState,
@@ -17,7 +18,7 @@ use crate::app::ui_contract::{
     SMOOTH_CURVE_MIN_DISTANCE_LIMITS,
 };
 use crate::app::{AppIntent, ConnectionDirection, ConnectionPriority};
-use crate::shared::{t, Language};
+use crate::shared::{t, I18nKey, Language};
 use crate::ui::common::{apply_wheel_step_default_enabled, apply_wheel_step_usize};
 use crate::ui::properties::selectors::{
     render_direction_icon_selector, render_priority_icon_selector,
@@ -66,7 +67,7 @@ pub(super) fn render_route_tool_panel(
         events,
     };
 
-    let mut window = egui::Window::new("📐 Route-Tool")
+    let mut window = egui::Window::new(route_tool_window_title(route_tool.active_tool_id, lang))
         .collapsible(false)
         .resizable(false)
         .default_width(360.0)
@@ -155,6 +156,13 @@ fn render_route_tool_config(
         RouteToolConfigState::RouteOffset(state) => render_route_offset_panel(ui, state, panel_ctx),
         RouteToolConfigState::ColorPath(state) => render_color_path_panel(ui, state, panel_ctx),
     }
+}
+
+fn route_tool_window_title(active_tool_id: Option<RouteToolId>, lang: Language) -> String {
+    let title = active_tool_id
+        .map(|tool_id| t(lang, route_tool_label_key(tool_id)))
+        .unwrap_or(t(lang, I18nKey::ToolNameRoute));
+    format!("📐 {title}")
 }
 
 fn render_straight_panel(

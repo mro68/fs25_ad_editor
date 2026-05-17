@@ -202,11 +202,17 @@ pub fn simplify_polyline(points: &[Vec2], tolerance: f32) -> Vec<Vec2> {
 
 /// Verschiebt ein Polygon um `offset` Meter nach innen (negativ) oder aussen (positiv).
 ///
-/// Nutzt Normalen-basiertes Vertex-Offset: jeder Vertex wird entlang des
-/// gemittelten Aussenormalenvektors der anliegenden Kanten verschoben.
+/// Nutzt Normalen-basiertes Vertex-Offset mit Miter-Korrektur: jeder Vertex
+/// wird entlang der Winkelhalbierenden der anliegenden Aussenormalen
+/// verschoben, skaliert mit dem Miter-Faktor fuer konstanten Kantenabstand.
 ///
 /// Fuer CCW-Polygone (positive Flaeche) zeigen die rechten Kantennormalen
 /// nach aussen; fuer CW-Polygone entsprechend die linken.
+///
+/// **Miter-Limit:** Ueberschreitet der berechnete Miter-Offset das 2-fache
+/// des Offset-Betrags (fast-parallele Kanten), wird auf die einfache
+/// Normalenverschiebung (Bevel) zurueckgefallen, um Zickzack-Artefakte
+/// zu vermeiden.
 ///
 /// **Fallback:** Wenn das Ergebnis degeneriert ist (weniger als 3 Punkte,
 /// Flaeche = 0 oder Orientierungswechsel), wird das Original zurueckgegeben.
@@ -243,12 +249,37 @@ pub fn offset_polygon(vertices: &[Vec2], offset: f32) -> Vec<Vec2> {
         })
         .collect();
 
-    // Verschiebe jeden Vertex entlang der gemittelten Normalen der anliegenden Kanten
+    // Verschiebe jeden Vertex entlang der Winkelhalbierenden und skaliere
+    // ueber den Miter-Faktor, damit der Abstand zu beiden Kanten dem Offset entspricht.
     let result: Vec<Vec2> = (0..n)
         .map(|i| {
             let prev = (i + n - 1) % n;
-            let avg_normal = (edge_normals[prev] + edge_normals[i]).normalize_or_zero();
-            vertices[i] + avg_normal * offset
+            let prev_normal = edge_normals[prev];
+            let curr_normal = edge_normals[i];
+            let bisector = (prev_normal + curr_normal).normalize_or_zero();
+
+            // Degenerierter Fall (kollinear oder Gegenrichtung): auf aktuelle Normale zurueckfallen.
+            if bisector.length_squared() <= f32::EPSILON {
+                return vertices[i] + curr_normal * offset;
+            }
+
+            // Miter-Korrektur: Projektion auf Kanten-Normale darf nicht kollabieren.
+            // Miter-Limit: Bei fast-parallelen Kanten (sehr kleiner Nenner) wuerde der
+            // Miter-Faktor extrem gross → Zickzack-Artefakte. Sobald die resultierende
+            // Verschiebungslänge das 2-fache des Offset-Betrags überschreitet, wird
+            // stattdessen auf die einfache Normalenverschiebung (Bevel) zurueckgefallen.
+            let denom = bisector.dot(curr_normal).abs();
+            if denom <= 1e-4 {
+                vertices[i] + curr_normal * offset
+            } else {
+                let miter_len = offset / denom;
+                if miter_len.abs() > 2.0 * offset.abs() {
+                    // Bevel-Fallback: Kanten zu fast-parallel → Miter würde overshooten
+                    vertices[i] + curr_normal * offset
+                } else {
+                    vertices[i] + bisector * miter_len
+                }
+            }
         })
         .collect();
 
@@ -468,6 +499,26 @@ mod tests {
         assert!(
             result_area > original_area,
             "Positiver Offset muss Flaeche vergroessern: {result_area} > {original_area}"
+        );
+    }
+
+    #[test]
+    fn test_offset_miter_haelt_eckabstand_konstant() {
+        let poly = square_ccw();
+        let result = offset_polygon(&poly, 1.0);
+
+        // Bei einem achsenparallelen Quadrat muss die Ecke (0,0) auf (-1,-1) liegen,
+        // damit der Abstand zu beiden angrenzenden Kanten exakt 1.0 bleibt.
+        let first = result[0];
+        assert!(
+            (first.x + 1.0).abs() < 1e-4,
+            "Erwartet x=-1.0, bekam {}",
+            first.x
+        );
+        assert!(
+            (first.y + 1.0).abs() < 1e-4,
+            "Erwartet y=-1.0, bekam {}",
+            first.y
         );
     }
 

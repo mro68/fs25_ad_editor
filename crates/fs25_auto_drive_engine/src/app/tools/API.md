@@ -278,11 +278,14 @@ Felderkennung: Erkennt das GRLE-Farmland-Polygon an der Klickposition und erzeug
 
 - `node_spacing: f32` — Abstand zwischen Nodes (1–50 m; Standard 10 m)
 - `offset: f32` — Versatz nach innen (<0) oder aussen (>0) in Metern (−20..+20)
-- `straighten_tolerance: f32` — Douglas-Peucker-Toleranz (0..10 m; 0 = keine Vereinfachung)
+- `straighten_tolerance: f32` — Douglas-Peucker-Toleranz (0..10 m; Standard 1.5 m)
+- `corner_detection_enabled: bool` — Aktiviert die Ecken-Erkennung
+- `corner_angle_threshold_deg: f32` — Winkel-Schwellwert fuer Ecken-Erkennung (10..170°; Standard 45°)
 - `corner_rounding_enabled: bool` — Aktiviert Kreisbogen-Verrundung erkannter Ecken
 - `corner_rounding_radius: f32` — Verrundungsradius in Metern (0.5–20 m; Standard 5 m)
+- `corner_rounding_max_angle_deg: f32` — Maximale Winkelabweichung beim Verrunden (1..45°; Standard 22.5°)
 - `direction: ConnectionDirection` — Verbindungsrichtung (Standard: Dual)
-- `priority: ConnectionPriority` — Verbindungsprioriaet (Standard: Regular)
+- `priority: ConnectionPriority` — Verbindungsprioriaet (Standard: SubPriority / Nebenstrasse)
 
 **Felder:**
 
@@ -315,8 +318,8 @@ pub(super) fn compute_ring(
     rounding_radius: Option<f32>,
 ) -> Vec<(Vec2, RingNodeKind)>
 ```
-1. `offset_polygon()` — Polygon nach innen/aussen verschieben
-2. `simplify_polygon()` — Douglas-Peucker vereinfachen
+1. `simplify_polygon()` — Douglas-Peucker auf der erkannten Feldkontur anwenden; bei aktivem Offset mindestens auf Raster-Schritt-Niveau, damit Treppenkanten nicht in den Versatz laufen
+2. `offset_polygon()` — Versatz auf der bereits geglaetteten Kontur berechnen, damit Raster-Treppenkanten keine Schleifen erzeugen
 3. `detect_corners()` — Eckpunkte anhand Ablenkungswinkel finden
 4. `resample_ring_with_corners()` — Ring segmentweise neu samplen; Ecken als Anker, dazwischen gleichmaessig, optionaler Kreisbogen mit `rounding_radius`
 5. Rückgabe: `Vec<(Vec2, RingNodeKind)>` — jeder Punkt mit geometrischer Klassifikation

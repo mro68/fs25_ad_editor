@@ -251,7 +251,7 @@ impl RouteToolGroupEdit for FieldBoundaryTool {
             self.corner_angle_threshold_deg = *threshold;
         } else {
             self.corner_detection_enabled = false;
-            self.corner_angle_threshold_deg = 90.0;
+            self.corner_angle_threshold_deg = 45.0;
         }
         if let Some(radius) = corner_rounding_radius {
             self.corner_rounding_enabled = true;
@@ -263,7 +263,7 @@ impl RouteToolGroupEdit for FieldBoundaryTool {
         if let Some(angle) = corner_rounding_max_angle_deg {
             self.corner_rounding_max_angle_deg = *angle;
         } else {
-            self.corner_rounding_max_angle_deg = 15.0;
+            self.corner_rounding_max_angle_deg = 22.5;
         }
         self.direction = base.direction;
         self.priority = base.priority;
@@ -294,14 +294,67 @@ impl RouteToolGroupEdit for FieldBoundaryTool {
 
 /// Berechnet einen gleichmaessig abgetasteten, geschlossenen Ring aus einem Polygon.
 ///
-/// - `offset`: Verschiebung der Vertices nach innen (negativ) oder aussen (positiv)
-/// - `tolerance`: Douglas-Peucker-Vereinfachung (0 = keine)
-/// - `spacing`: maximaler Segment-Abstand beim Resampling der geraden Segmente
+/// - `offset`: Verschiebung der geglaetteten Kontur nach innen (negativ) oder aussen (positiv)
+/// - `tolerance`: Douglas-Peucker-Vereinfachung der erkannten Feldkontur (0 = keine)
+/// - `spacing`: maximaler Segment-Abstand beim Resampling des gesamten Rings
 /// - `corner_angle_threshold`: Winkel-Schwellwert in Grad fuer Ecken-Erkennung (None = deaktiviert)
 /// - `rounding_radius`: Verrundungsradius fuer konvexe Ecken in Metern (None = deaktiviert)
 /// - `max_angle_deg`: Maximale Winkelabweichung zwischen Bogenpunkten in Grad (None = 15°)
 ///
 /// Ruckgabe: Alle Ring-Positionen mit `RingNodeKind`-Markierung.
+fn estimate_contour_step(vertices: &[Vec2]) -> Option<f32> {
+    let n = vertices.len();
+    if n < 2 {
+        return None;
+    }
+
+    (0..n)
+        .map(|index| vertices[index].distance(vertices[(index + 1) % n]))
+        .filter(|distance| *distance > f32::EPSILON)
+        .min_by(|left, right| left.partial_cmp(right).unwrap_or(std::cmp::Ordering::Equal))
+}
+
+fn pre_offset_simplify_tolerance(vertices: &[Vec2], offset: f32, tolerance: f32) -> f32 {
+    if offset.abs() <= f32::EPSILON {
+        return tolerance;
+    }
+
+    let raster_floor = estimate_contour_step(vertices)
+        // Eine 1x1-Treppenkante weicht maximal um knapp 0.71 * Zellgroesse von
+        // ihrer idealen Diagonale ab. 0.75 glättet diese Raster-Artefakte, ohne
+        // echte Makro-Ecken aggressiv wegzudruecken.
+        .map(|step| step * 0.75)
+        .unwrap_or(0.0);
+
+    tolerance.max(raster_floor)
+}
+
+fn prepare_ring_polygon(vertices: &[Vec2], offset: f32, tolerance: f32) -> Vec<Vec2> {
+    let pre_offset_tolerance = pre_offset_simplify_tolerance(vertices, offset, tolerance);
+    let simplified = simplify_polygon(vertices, pre_offset_tolerance);
+    if simplified.len() < 3 {
+        return Vec::new();
+    }
+
+    // Feldkonturen stammen direkt aus dem GRLE-Raster. Der Offset muss auf der
+    // bereits geglaetteten Kontur arbeiten, damit Treppenkanten keine Schleifen
+    // oder Zickzack-Dreiecke in der Preview erzeugen.
+    let offsetted = offset_polygon(&simplified, offset);
+    if offsetted.len() < 3 {
+        return Vec::new();
+    }
+
+    let post_offset_tolerance = tolerance.max(pre_offset_tolerance);
+    if post_offset_tolerance > 0.0 {
+        let resimplified = simplify_polygon(&offsetted, post_offset_tolerance);
+        if resimplified.len() >= 3 {
+            return resimplified;
+        }
+    }
+
+    offsetted
+}
+
 pub fn compute_ring(
     vertices: &[Vec2],
     offset: f32,
@@ -313,16 +366,7 @@ pub fn compute_ring(
 ) -> Vec<(Vec2, RingNodeKind)> {
     use crate::shared::spline_geometry::resample_by_distance;
 
-    // Node-Abstand muss mindestens so gross sein wie der Verrundungsradius,
-    // damit Bogensegmente nicht staerker abgetastet werden als der Bogen lang ist.
-    let spacing = if let Some(r) = rounding_radius {
-        spacing.max(r)
-    } else {
-        spacing
-    };
-
-    let offsetted = offset_polygon(vertices, offset);
-    let simplified = simplify_polygon(&offsetted, tolerance);
+    let simplified = prepare_ring_polygon(vertices, offset, tolerance);
     if simplified.len() < 3 {
         return Vec::new();
     }
@@ -363,6 +407,59 @@ mod tests {
             Vec2::new(100.0, 50.0),
             Vec2::new(0.0, 50.0),
         ]
+    }
+
+    fn staircase_vertices() -> Vec<Vec2> {
+        vec![
+            Vec2::new(0.0, 0.0),
+            Vec2::new(12.0, 0.0),
+            Vec2::new(12.0, 1.0),
+            Vec2::new(11.0, 1.0),
+            Vec2::new(11.0, 2.0),
+            Vec2::new(10.0, 2.0),
+            Vec2::new(10.0, 3.0),
+            Vec2::new(9.0, 3.0),
+            Vec2::new(9.0, 4.0),
+            Vec2::new(8.0, 4.0),
+            Vec2::new(8.0, 5.0),
+            Vec2::new(7.0, 5.0),
+            Vec2::new(7.0, 6.0),
+            Vec2::new(0.0, 6.0),
+        ]
+    }
+
+    fn assert_vec2_slice_approx_eq(actual: &[Vec2], expected: &[Vec2], epsilon: f32) {
+        assert_eq!(
+            actual.len(),
+            expected.len(),
+            "Punktanzahl stimmt nicht: actual={}, expected={}",
+            actual.len(),
+            expected.len()
+        );
+
+        for (index, (actual, expected)) in actual.iter().zip(expected.iter()).enumerate() {
+            assert!(
+                actual.distance(*expected) <= epsilon,
+                "Punkt {index} weicht ab: actual={actual:?}, expected={expected:?}, epsilon={epsilon}"
+            );
+        }
+    }
+
+    #[test]
+    fn test_prepare_ring_polygon_nutzt_rasterglattung_auch_ohne_user_toleranz() {
+        let verts = staircase_vertices();
+        let offset = -0.75;
+        let expected_tolerance = 0.75;
+
+        let processed = prepare_ring_polygon(&verts, offset, 0.0);
+        let expected_offset = offset_polygon(&simplify_polygon(&verts, expected_tolerance), offset);
+        let expected = simplify_polygon(&expected_offset, expected_tolerance);
+
+        assert_vec2_slice_approx_eq(&processed, &expected, 1e-4);
+        assert!(
+            processed.len() < verts.len(),
+            "Aktiver Offset muss die Raster-Treppenkante vor dem Versatz glätten"
+        );
     }
 
     #[test]
@@ -437,6 +534,49 @@ mod tests {
                 ecke
             );
         }
+    }
+
+    #[test]
+    fn test_compute_ring_verrundung_respektiert_node_spacing() {
+        let verts = rectangle_vertices();
+        let coarse = compute_ring(&verts, 0.0, 0.0, 10.0, Some(80.0), Some(5.0), Some(45.0));
+        let fine = compute_ring(&verts, 0.0, 0.0, 2.0, Some(80.0), Some(5.0), Some(45.0));
+
+        assert!(
+            fine.len() > coarse.len(),
+            "Kleineres spacing muss bei aktiver Verrundung mehr Ringpunkte erzeugen"
+        );
+
+        let max_step = fine
+            .iter()
+            .zip(fine.iter().cycle().skip(1))
+            .take(fine.len())
+            .map(|((left, _), (right, _))| left.distance(*right))
+            .fold(0.0_f32, f32::max);
+
+        assert!(
+            max_step <= 2.1,
+            "Alle Ringsegmente muessen das konfigurierte spacing einhalten, max_step={max_step}"
+        );
+    }
+
+    #[test]
+    fn test_prepare_ring_polygon_glattet_treppenkante_vor_negativem_offset() {
+        let verts = staircase_vertices();
+        let tolerance = 1.1;
+        let offset = -0.75;
+
+        let simplified_source = simplify_polygon(&verts, tolerance);
+        assert!(
+            simplified_source.len() < verts.len(),
+            "Die Treppenkante muss vor dem Offset vereinfacht werden"
+        );
+
+        let processed = prepare_ring_polygon(&verts, offset, tolerance);
+        let expected_offset = offset_polygon(&simplified_source, offset);
+        let expected = simplify_polygon(&expected_offset, tolerance);
+
+        assert_vec2_slice_approx_eq(&processed, &expected, 1e-4);
     }
 
     #[test]
