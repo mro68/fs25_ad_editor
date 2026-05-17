@@ -87,6 +87,12 @@ pub fn init_chain_if_needed(state: &mut AppState) {
     selection::init_chain_if_needed(state);
 }
 
+/// Spuelt die aktuelle generische Selektion in die Input-Capabilities des aktiven Route-Tools.
+pub(super) fn sync_active_inputs_from_selection(state: &mut AppState) {
+    selection::init_chain_if_needed(state);
+    selection::init_selection_if_needed(state);
+}
+
 /// Aktiviert ein Route-Tool und setzt Start/End-Anker aus zwei selektierten Nodes.
 ///
 /// Simuliert die beiden on_click()-Aufrufe mit den Node-Positionen.
