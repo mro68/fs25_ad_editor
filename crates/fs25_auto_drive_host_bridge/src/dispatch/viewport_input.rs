@@ -145,7 +145,11 @@ fn apply_primary_tap(
             Ok(true)
         }
         EditorTool::Route => {
-            if state.editor.route_tool_viewport_data().prefers_generic_node_pick {
+            if state
+                .editor
+                .route_tool_viewport_data()
+                .prefers_generic_node_pick
+            {
                 apply_generic_node_pick(controller, state, world_pos, modifiers)
             } else {
                 Ok(false)
