@@ -522,7 +522,7 @@ pub struct ActiveToolEditSession {
 `Straight`, `CurveQuad`, `CurveCubic`, `Spline`, `SmoothCurve`, `Bypass`, `Parking`,
 `FieldBoundary`, `RouteOffset`, `RoundingArc` und `RoundingQuadratic`.
 
-`RoundingTransitionSnapshot` kapselt dabei die gemergten Durchfahrtsmetadaten des lokalen Replace-Pfads, damit Recreate und destruktiver Tool-Edit ohne die entfernte Ursprungs-Node rekonstruierbar bleiben; `RoundingQuadratic` persistiert zusaetzlich die beiden urspruenglichen Aussenknoten zur Tangentenvalidierung beim Neuaufbau.
+`RoundingTransitionSnapshot` kapselt dabei die gemergten Durchfahrtsmetadaten des lokalen Replace-Pfads, damit Recreate und destruktiver Tool-Edit ohne die entfernte Ursprungs-Node rekonstruierbar bleiben; `RoundingQuadratic` persistiert zusaetzlich die beiden urspruenglichen Aussenknoten sowie die historischen Anchor-Pfade `P1 -> P2` und `P2 -> P3`, damit Quadratic-Recreate auch nach entfernten Zwischen-Nodes denselben lokalen Pfadkontext behaelt.
 
 **Service-Funktionen** (`app/tool_editing/service.rs`):
 
