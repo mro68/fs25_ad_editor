@@ -1,18 +1,19 @@
-//! Panel-Bruecke und Status-Texte fuer das Verrundungs-Tool.
+//! Panel-Bruecke und Status-Texte fuer das Arc-only-Verrundungs-Tool.
 
-use super::geometry::{ArcValidation, QuadraticValidation};
-use super::state::{RoundingMode, RoundingTool};
+use super::geometry::ArcValidation;
+use super::state::{clamp_arc_max_angle_deg, RoundingTool};
 use crate::app::tool_editing::RouteToolEditPayload;
 use crate::app::tools::RouteToolPanelBridge;
 use crate::app::ui_contract::{
-    RoundingPanelAction, RoundingPanelState, RouteToolConfigState, RouteToolPanelAction,
-    RouteToolPanelEffect, ROUNDING_ARC_RADIUS_LIMITS, ROUNDING_SAMPLE_SPACING_LIMITS,
+    RoundingModeChoice, RoundingPanelAction, RoundingPanelState, RouteToolConfigState,
+    RouteToolPanelAction, RouteToolPanelEffect, ROUNDING_ARC_RADIUS_LIMITS,
+    ROUNDING_SAMPLE_SPACING_LIMITS,
 };
 
 impl RoundingTool {
     fn arc_status_text(&self) -> &str {
         if self.lifecycle.restored_for_edit {
-            return "Nachbearbeitung — Radius oder Abtastung anpassen und Enter zum Neuaufbau druecken.";
+            return "Nachbearbeitung — Radius oder Max-Winkel anpassen und Enter zum Neuaufbau druecken.";
         }
         if !self.lifecycle.last_created_ids.is_empty() {
             return "Zuletzt erzeugter Arc bleibt fuer Panel-Recreate verknuepft.";
@@ -45,85 +46,19 @@ impl RoundingTool {
         }
     }
 
-    fn quadratic_status_text(&self) -> &str {
-        if self.lifecycle.restored_for_edit {
-            return "Nachbearbeitung — Abtastung anpassen und Enter zum Neuaufbau druecken.";
-        }
-        if !self.lifecycle.last_created_ids.is_empty() {
-            return "Zuletzt erzeugte Quadratic-Verrundung bleibt fuer Panel-Recreate verknuepft.";
-        }
-
-        match self.quadratic.validation {
-            QuadraticValidation::NeedOrderedThreeNodeChain => {
-                "3-Punkt-Modus erwartet genau 3 selektierte Nodes als geordnete Kette."
-            }
-            QuadraticValidation::MissingChainNodeContext => {
-                "Selektionskontext der 3er-Kette konnte nicht geladen werden."
-            }
-            QuadraticValidation::MissingOuterStartStretch => {
-                "P1 braucht genau eine Aussenstrecke ausserhalb der Selektion."
-            }
-            QuadraticValidation::AmbiguousOuterStartStretch => {
-                "P1 hat mehrere Aussenstrecken; CP-03 raet keinen Ast."
-            }
-            QuadraticValidation::MissingOuterEndStretch => {
-                "P3 braucht genau eine Aussenstrecke ausserhalb der Selektion."
-            }
-            QuadraticValidation::AmbiguousOuterEndStretch => {
-                "P3 hat mehrere Aussenstrecken; CP-03 raet keinen Ast."
-            }
-            QuadraticValidation::ControlHasExternalConnections => {
-                "P2 darf in CP-03 keine zusaetzlichen Aussenverbindungen haben."
-            }
-            QuadraticValidation::BrokenSelectedChain => {
-                "Die 3er-Selektion braucht intern eindeutige Anchor-Pfade als P1 -> P2 -> P3."
-            }
-            QuadraticValidation::DegenerateOuterStretch => {
-                "Mindestens eine Aussenstrecke der 3er-Kette ist zu kurz oder degeneriert."
-            }
-            QuadraticValidation::TangentsMissFixedControl => {
-                "Die Aussenstrecken muessen sich mit passender Richtung im festen Steuerpunkt P2 schneiden."
-            }
-            QuadraticValidation::NoThroughPath => {
-                "Ueber P1 -> P2 -> P3 existiert keine gerichtete Durchfahrt fuer die Verrundung."
-            }
-            QuadraticValidation::Ready => {
-                "Bereit — Enter ersetzt die mittlere Node durch eine quadratische Verrundung."
-            }
-        }
-    }
-
     fn preview_node_count(&self) -> Option<usize> {
-        match self.mode {
-            RoundingMode::ArcOnePoint => {
-                self.arc.plan.as_ref().map(|plan| plan.arc_positions.len())
-            }
-            RoundingMode::QuadraticThreePoint => self
-                .quadratic
-                .plan
-                .as_ref()
-                .map(|plan| plan.curve_positions.len()),
-        }
+        self.arc.plan.as_ref().map(|plan| plan.arc_positions.len())
     }
 
     fn update_stored_payload_after_arc_change(&mut self) {
         if let Some(RouteToolEditPayload::RoundingArc {
             radius_m,
-            sample_spacing_m,
+            max_angle_deg,
             ..
         }) = self.lifecycle.edit_payload.as_mut()
         {
             *radius_m = self.arc.radius_m;
-            *sample_spacing_m = self.arc.sample_spacing_m;
-        }
-    }
-
-    fn update_stored_payload_after_quadratic_change(&mut self) {
-        if let Some(RouteToolEditPayload::RoundingQuadratic {
-            sample_spacing_m, ..
-        }) = self.lifecycle.edit_payload.as_mut()
-        {
-            *sample_spacing_m = self.quadratic.sample_spacing_m;
+            *max_angle_deg = self.arc.max_angle_deg;
         }
     }
 
@@ -142,24 +77,18 @@ impl RoundingTool {
 
 impl RouteToolPanelBridge for RoundingTool {
     fn status_text(&self) -> &str {
-        match self.mode {
-            RoundingMode::ArcOnePoint => self.arc_status_text(),
-            RoundingMode::QuadraticThreePoint => self.quadratic_status_text(),
-        }
+        self.arc_status_text()
     }
 
     fn panel_state(&self) -> RouteToolConfigState {
         RouteToolConfigState::Rounding(RoundingPanelState {
-            mode: self.panel_mode(),
-            mode_locked: self.mode_locked(),
+            mode: RoundingModeChoice::ArcOnePoint,
+            mode_locked: self.is_adjusting(),
             arc_radius_m: self.arc.radius_m,
-            arc_sample_spacing_m: self.arc.sample_spacing_m,
-            quadratic_sample_spacing_m: self.quadratic.sample_spacing_m,
-            selected_node_count: match self.mode {
-                RoundingMode::ArcOnePoint => self.arc.selected_node_ids.len(),
-                RoundingMode::QuadraticThreePoint => self.quadratic.selected_node_ids.len(),
-            },
-            chain_node_count: self.quadratic.chain_node_ids.len(),
+            arc_sample_spacing_m: self.arc.max_angle_deg,
+            quadratic_sample_spacing_m: self.arc.max_angle_deg,
+            selected_node_count: self.arc.selected_node_ids.len(),
+            chain_node_count: 0,
             preview_node_count: self.preview_node_count(),
             is_adjusting: self.is_adjusting(),
         })
@@ -171,7 +100,7 @@ impl RouteToolPanelBridge for RoundingTool {
         };
 
         let changed = match action {
-            RoundingPanelAction::SetMode(mode) => self.set_panel_mode(mode),
+            RoundingPanelAction::SetMode(_) => false,
             RoundingPanelAction::SetArcRadius(value) => {
                 let next = ROUNDING_ARC_RADIUS_LIMITS.clamp(value);
                 if (self.arc.radius_m - next).abs() < f32::EPSILON {
@@ -183,25 +112,15 @@ impl RouteToolPanelBridge for RoundingTool {
                     true
                 }
             }
-            RoundingPanelAction::SetArcSampleSpacing(value) => {
-                let next = ROUNDING_SAMPLE_SPACING_LIMITS.clamp(value);
-                if (self.arc.sample_spacing_m - next).abs() < f32::EPSILON {
+            RoundingPanelAction::SetArcSampleSpacing(value)
+            | RoundingPanelAction::SetQuadraticSampleSpacing(value) => {
+                let next = clamp_arc_max_angle_deg(ROUNDING_SAMPLE_SPACING_LIMITS.clamp(value));
+                if (self.arc.max_angle_deg - next).abs() < f32::EPSILON {
                     false
                 } else {
-                    self.arc.sample_spacing_m = next;
+                    self.arc.max_angle_deg = next;
                     self.refresh_arc_state();
                     self.update_stored_payload_after_arc_change();
-                    true
-                }
-            }
-            RoundingPanelAction::SetQuadraticSampleSpacing(value) => {
-                let next = ROUNDING_SAMPLE_SPACING_LIMITS.clamp(value);
-                if (self.quadratic.sample_spacing_m - next).abs() < f32::EPSILON {
-                    false
-                } else {
-                    self.quadratic.sample_spacing_m = next;
-                    self.refresh_quadratic_state();
-                    self.update_stored_payload_after_quadratic_change();
                     true
                 }
             }

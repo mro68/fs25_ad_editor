@@ -26,7 +26,7 @@ pub mod field_path;
 mod manager;
 /// Parkplatz-Layout-Tool mit Wendekreis und konfigurierbaren Parkreihen.
 pub mod parking;
-/// Verrundungs-Tool mit internem Modusrahmen fuer Arc- und Quadratic-Varianten.
+/// Verrundungs-Tool fuer lokale Arc-Verrundungen an einzelnen Corners.
 pub mod rounding;
 /// Strecken-Versatz-Tool — generiert parallele Versatz-Kette(n) zur selektierten Kette.
 pub mod route_offset;
