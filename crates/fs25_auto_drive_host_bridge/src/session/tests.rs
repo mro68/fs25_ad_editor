@@ -1208,6 +1208,45 @@ fn viewport_input_tap_routes_to_add_node_and_connect_without_new_ffi_surface() {
 }
 
 #[test]
+fn viewport_input_tap_routes_to_rounding_selection_when_generic_pick_is_preferred() {
+    let mut session = HostBridgeSession::new();
+    session.state.road_map = Some(Arc::new(rounding_corner_map()));
+    session.state.view.viewport_size = [800.0, 600.0];
+
+    handlers::route_tool::select(&mut session.state, RouteToolId::Rounding);
+
+    let viewport_snapshot = session.build_route_tool_viewport_snapshot();
+    assert!(viewport_snapshot.prefers_generic_node_pick);
+
+    let node_screen = screen_for_world(&session, Vec2::new(0.0, 0.0));
+
+    session
+        .apply_action(HostSessionAction::SubmitViewportInput {
+            batch: HostViewportInputBatch {
+                events: vec![resize_event([800.0, 600.0]), tap_event(node_screen)],
+            },
+        })
+        .expect("Rounding-Tap muss ueber generischen Node-Pick selektieren");
+
+    assert_eq!(session.state.selection.selected_node_ids.len(), 1);
+    assert!(session.state.selection.selected_node_ids.contains(&1));
+
+    let host_ui = session.build_host_ui_snapshot();
+    let panel = host_ui
+        .route_tool_panel_state()
+        .expect("Route-Tool-Panel fuer Rounding erwartet");
+    let config_state = panel
+        .config_state
+        .as_ref()
+        .expect("Rounding-Config-State erwartet");
+    let RouteToolConfigState::Rounding(state) = config_state else {
+        panic!("Rounding-Panelzustand erwartet");
+    };
+
+    assert_eq!(state.selected_node_count, 1);
+}
+
+#[test]
 fn viewport_input_select_rect_and_move_drag_preserve_lifecycle() {
     let mut session = HostBridgeSession::new();
     session.state.road_map = Some(Arc::new(viewport_test_map()));
