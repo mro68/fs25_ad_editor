@@ -260,12 +260,12 @@ Erzeugt einen oder zwei Parallelversatze entlang einer selektierten Kette.
 
 ## Verrunden (B)
 
-Rundet lokale Streckenuebergaenge entweder als echten Kreisbogen oder als quadratische Kurve ab. Das Tool arbeitet auf einer bestehenden Selektion und ersetzt nur den lokalen Uebergang.
+Rundet lokale Streckenuebergaenge entweder als echten Kreisbogen oder als quadratische Kurve ab. Das Tool arbeitet auf einer bestehenden Selektion und ersetzt nur den lokalen Uebergang, bei gueltigen Kontexten auch ueber lineare Zwischen-Nodes hinweg.
 
 **Workflow:**
 1. Je nach Modus entweder genau 1 Corner-Node oder genau 3 Nodes als geordnete Kette selektieren.
 2. Mit **`B`** die Gruppe **Bearbeiten** oeffnen und **Verrunden** waehlen.
-3. Im Route-Tool-Panel den Modus **1 Punkt (Arc)** oder **3 Punkte (Quadratisch)** einstellen.
+3. Im Route-Tool-Panel den Modus **1 Punkt (Arc)** oder **3 Punkte (Quadratisch)** einstellen und die zugrunde liegende Auswahl bei Bedarf direkt per Node-Klick im Viewport nachziehen.
 4. Radius und Abtastung pruefen; die Vorschau zeigt, wie viele neue Nodes erzeugt werden.
 5. Mit **`Enter`** bestaetigen.
 
@@ -275,9 +275,9 @@ Rundet lokale Streckenuebergaenge entweder als echten Kreisbogen oder als quadra
 - Abtastung: Abstand der erzeugten Nodes entlang Bogen oder quadratischer Kurve.
 
 **Tipps:**
-- Der Arc-Modus funktioniert nur bei einem lokalen Corner mit genau zwei eindeutigen Anschlussseiten.
-- Der Quadratic-Modus ersetzt die mittlere Node der 3er-Kette; Start und Ende bleiben die Anschlussseiten der Verrundung.
-- Bereits erzeugte Verrundungen koennen spaeter ueber **Tool bearbeiten** erneut aufgebaut werden. In dieser Nachbearbeitung bleibt der Modus gesperrt.
+- Der Arc-Modus funktioniert nur bei einem lokalen Corner mit genau zwei eindeutigen Anschlussseiten. Zwischen dem Corner und dem eigentlichen Aussenanker duerfen lineare Zwischen-Nodes liegen; Verzweigungen oder nicht gerichtete Durchfahrten invalidieren den Kontext bewusst.
+- Der Quadratic-Modus ersetzt die mittlere Node der 3er-Kette. Zwischen **P1 -> P2 -> P3** duerfen unselektierte Zwischen-Nodes liegen, solange die Anchor-Pfade eindeutig bleiben; bei ambigen Aussenstrecken oder Zusatz-Aesten bricht die Vorschau absichtlich ab.
+- Bereits erzeugte Verrundungen koennen spaeter ueber **Tool bearbeiten** erneut aufgebaut werden, auch wenn beim urspruenglichen Replace-Pfad Zwischen-Nodes mit entfernt wurden. In dieser Nachbearbeitung bleibt der Modus gesperrt.
 
 ---
 
@@ -289,10 +289,12 @@ Zeichnet einen Feldrand aus geladenen Farmland-Daten als geschlossenen Ring nach
 1. Eine Uebersichtskarte mit Farmland-Daten laden oder generieren.
 2. Mit **`A`** die Analyse-Gruppe oeffnen und **Feld erkennen** waehlen.
 3. In das gewuenschte Feld klicken.
-4. Offset, Toleranz, Knotenabstand und optionale Eckenverrundung einstellen.
-5. Mit **`Enter`** bestaetigen.
+4. Richtung und Strassenart bei Bedarf in der Kopfzeile des Route-Tool-Panels setzen.
+5. Offset, Toleranz, Knotenabstand und optionale Eckenverrundung einstellen.
+6. Mit **`Enter`** bestaetigen.
 
 **Konfiguration:**
+- Richtung und Strassenart: global oben im Route-Tool-Panel; im Feld-Unterpanel gibt es dafuer keine separaten Dropdowns.
 - Knotenabstand.
 - Offset nach innen oder aussen.
 - Toleranz fuer die Vereinfachung.

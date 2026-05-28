@@ -144,13 +144,6 @@ pub(super) fn render_field_boundary_panel(
         }
     }
 
-    render_direction_selector(ui, state.direction, panel_ctx, |value| {
-        RouteToolPanelAction::FieldBoundary(FieldBoundaryPanelAction::SetDirection(value))
-    });
-    render_priority_selector(ui, state.priority, panel_ctx, |value| {
-        RouteToolPanelAction::FieldBoundary(FieldBoundaryPanelAction::SetPriority(value))
-    });
-
     if state.show_select_hint {
         ui.small("Erneuter Klick im Viewport → anderes Feld auswählen");
     }

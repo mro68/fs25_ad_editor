@@ -535,54 +535,6 @@ fn render_field_path_selection_summary(
     }
 }
 
-fn render_direction_selector(
-    ui: &mut egui::Ui,
-    current: ConnectionDirection,
-    panel_ctx: &mut RouteToolPanelRenderContext<'_>,
-    map_action: impl Fn(ConnectionDirection) -> RouteToolPanelAction,
-) {
-    ui.horizontal(|ui| {
-        ui.label("Richtung:");
-        let mut value = current;
-        egui::ComboBox::from_id_salt("field_boundary_direction")
-            .selected_text(direction_label(value))
-            .show_ui(ui, |ui| {
-                for choice in [
-                    ConnectionDirection::Regular,
-                    ConnectionDirection::Dual,
-                    ConnectionDirection::Reverse,
-                ] {
-                    ui.selectable_value(&mut value, choice, direction_label(choice));
-                }
-            });
-        if value != current {
-            push_action(panel_ctx.events, map_action(value));
-        }
-    });
-}
-
-fn render_priority_selector(
-    ui: &mut egui::Ui,
-    current: ConnectionPriority,
-    panel_ctx: &mut RouteToolPanelRenderContext<'_>,
-    map_action: impl Fn(ConnectionPriority) -> RouteToolPanelAction,
-) {
-    ui.horizontal(|ui| {
-        ui.label("Strassenart:");
-        let mut value = current;
-        egui::ComboBox::from_id_salt("field_boundary_priority")
-            .selected_text(priority_label(value))
-            .show_ui(ui, |ui| {
-                for choice in [ConnectionPriority::Regular, ConnectionPriority::SubPriority] {
-                    ui.selectable_value(&mut value, choice, priority_label(choice));
-                }
-            });
-        if value != current {
-            push_action(panel_ctx.events, map_action(value));
-        }
-    });
-}
-
 fn render_parking_side_selector(
     ui: &mut egui::Ui,
     label: &str,
@@ -805,20 +757,5 @@ fn parking_side_label(value: ParkingRampSideChoice) -> &'static str {
     match value {
         ParkingRampSideChoice::Left => "Links",
         ParkingRampSideChoice::Right => "Rechts",
-    }
-}
-
-fn direction_label(value: ConnectionDirection) -> &'static str {
-    match value {
-        ConnectionDirection::Regular => "Einbahnstrasse",
-        ConnectionDirection::Dual => "Beidseitig",
-        ConnectionDirection::Reverse => "Rueckwaerts",
-    }
-}
-
-fn priority_label(value: ConnectionPriority) -> &'static str {
-    match value {
-        ConnectionPriority::Regular => "Normal",
-        ConnectionPriority::SubPriority => "Nebenstrecke",
     }
 }
