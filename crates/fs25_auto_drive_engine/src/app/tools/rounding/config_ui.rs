@@ -5,9 +5,8 @@ use super::state::{clamp_arc_max_angle_deg, RoundingTool};
 use crate::app::tool_editing::RouteToolEditPayload;
 use crate::app::tools::RouteToolPanelBridge;
 use crate::app::ui_contract::{
-    RoundingModeChoice, RoundingPanelAction, RoundingPanelState, RouteToolConfigState,
-    RouteToolPanelAction, RouteToolPanelEffect, ROUNDING_ARC_RADIUS_LIMITS,
-    ROUNDING_SAMPLE_SPACING_LIMITS,
+    RoundingPanelAction, RoundingPanelState, RouteToolConfigState, RouteToolPanelAction,
+    RouteToolPanelEffect, ROUNDING_ARC_RADIUS_LIMITS,
 };
 
 impl RoundingTool {
@@ -82,13 +81,9 @@ impl RouteToolPanelBridge for RoundingTool {
 
     fn panel_state(&self) -> RouteToolConfigState {
         RouteToolConfigState::Rounding(RoundingPanelState {
-            mode: RoundingModeChoice::ArcOnePoint,
-            mode_locked: self.is_adjusting(),
             arc_radius_m: self.arc.radius_m,
-            arc_sample_spacing_m: self.arc.max_angle_deg,
-            quadratic_sample_spacing_m: self.arc.max_angle_deg,
+            max_angle_deg: self.arc.max_angle_deg,
             selected_node_count: self.arc.selected_node_ids.len(),
-            chain_node_count: 0,
             preview_node_count: self.preview_node_count(),
             is_adjusting: self.is_adjusting(),
         })
@@ -100,7 +95,6 @@ impl RouteToolPanelBridge for RoundingTool {
         };
 
         let changed = match action {
-            RoundingPanelAction::SetMode(_) => false,
             RoundingPanelAction::SetArcRadius(value) => {
                 let next = ROUNDING_ARC_RADIUS_LIMITS.clamp(value);
                 if (self.arc.radius_m - next).abs() < f32::EPSILON {
@@ -112,9 +106,8 @@ impl RouteToolPanelBridge for RoundingTool {
                     true
                 }
             }
-            RoundingPanelAction::SetArcSampleSpacing(value)
-            | RoundingPanelAction::SetQuadraticSampleSpacing(value) => {
-                let next = clamp_arc_max_angle_deg(ROUNDING_SAMPLE_SPACING_LIMITS.clamp(value));
+            RoundingPanelAction::SetMaxAngleDeg(value) => {
+                let next = clamp_arc_max_angle_deg(value);
                 if (self.arc.max_angle_deg - next).abs() < f32::EPSILON {
                     false
                 } else {

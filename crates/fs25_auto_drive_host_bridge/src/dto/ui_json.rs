@@ -100,13 +100,9 @@ fn route_tool_config_state_to_value(state: &RouteToolConfigState) -> Value {
 fn rounding_panel_state_to_value(state: &RoundingPanelState) -> Value {
     json!({
         "kind": "rounding",
-        "mode": state.mode,
-        "mode_locked": state.mode_locked,
         "arc_radius_m": state.arc_radius_m,
-        "arc_sample_spacing_m": state.arc_sample_spacing_m,
-        "quadratic_sample_spacing_m": state.quadratic_sample_spacing_m,
+        "max_angle_deg": state.max_angle_deg,
         "selected_node_count": state.selected_node_count,
-        "chain_node_count": state.chain_node_count,
         "preview_node_count": state.preview_node_count,
         "is_adjusting": state.is_adjusting,
     })
@@ -591,9 +587,9 @@ mod tests {
     use fs25_auto_drive_engine::app::ui_contract::{
         ClipboardOverlaySnapshot, ClipboardPreviewNode, CommandPalettePanelState,
         GroupBoundaryOverlaySnapshot, GroupLockOverlaySnapshot, HostUiSnapshot, OptionsPanelState,
-        PanelState, PolylineOverlaySnapshot, RoundingModeChoice, RoundingPanelState,
-        RouteToolConfigState, RouteToolPanelState, SegmentConfigPanelState, SegmentLengthKind,
-        SegmentPanelMode, StraightPanelState, ViewportOverlaySnapshot,
+        PanelState, PolylineOverlaySnapshot, RoundingPanelState, RouteToolConfigState,
+        RouteToolPanelState, SegmentConfigPanelState, SegmentLengthKind, SegmentPanelMode,
+        StraightPanelState, ViewportOverlaySnapshot,
     };
     use fs25_auto_drive_engine::app::BoundaryDirection;
     use fs25_auto_drive_engine::core::{ConnectionDirection, ConnectionPriority};
@@ -658,13 +654,9 @@ mod tests {
                 has_pending_input: true,
                 can_execute: true,
                 config_state: Some(RouteToolConfigState::Rounding(RoundingPanelState {
-                    mode: RoundingModeChoice::ArcOnePoint,
-                    mode_locked: true,
                     arc_radius_m: 7.5,
-                    arc_sample_spacing_m: 2.5,
-                    quadratic_sample_spacing_m: 3.5,
+                    max_angle_deg: 22.5,
                     selected_node_count: 1,
-                    chain_node_count: 0,
                     preview_node_count: Some(6),
                     is_adjusting: true,
                 })),
@@ -682,16 +674,16 @@ mod tests {
             "rounding"
         );
         assert_eq!(
-            value["panels"][0]["state"]["config_state"]["mode"],
-            "arc_one_point"
-        );
-        assert_eq!(
-            value["panels"][0]["state"]["config_state"]["mode_locked"],
-            true
-        );
-        assert_eq!(
             value["panels"][0]["state"]["config_state"]["arc_radius_m"],
             7.5
+        );
+        assert_eq!(
+            value["panels"][0]["state"]["config_state"]["max_angle_deg"],
+            22.5
+        );
+        assert_eq!(
+            value["panels"][0]["state"]["config_state"]["selected_node_count"],
+            1
         );
         assert_eq!(
             value["panels"][0]["state"]["config_state"]["preview_node_count"],
@@ -701,6 +693,13 @@ mod tests {
             value["panels"][0]["state"]["config_state"]["is_adjusting"],
             true
         );
+        assert!(value["panels"][0]["state"]["config_state"]["mode"].is_null());
+        assert!(value["panels"][0]["state"]["config_state"]["mode_locked"].is_null());
+        assert!(value["panels"][0]["state"]["config_state"]["arc_sample_spacing_m"].is_null());
+        assert!(
+            value["panels"][0]["state"]["config_state"]["quadratic_sample_spacing_m"].is_null()
+        );
+        assert!(value["panels"][0]["state"]["config_state"]["chain_node_count"].is_null());
     }
 
     #[test]

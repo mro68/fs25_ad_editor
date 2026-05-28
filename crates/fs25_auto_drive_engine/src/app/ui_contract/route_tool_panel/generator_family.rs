@@ -19,51 +19,29 @@ pub enum StraightPanelAction {
     Segment(SegmentConfigPanelAction),
 }
 
-/// Oeffentliche Moduswahl des Verrundungs-Tools.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
-#[serde(rename_all = "snake_case")]
-pub enum RoundingModeChoice {
-    /// Verrunden eines einzelnen Eckpunkts mit Bogen-Solver.
-    ArcOnePoint,
-    /// Verrunden einer geordneten 3-Punkt-Kette mit quadratischer Kurve.
-    QuadraticThreePoint,
-}
-
-/// Panelzustand des Verrundungs-Tools.
+/// Arc-only-Panelzustand des Verrundungs-Tools.
 #[derive(Debug, Clone, PartialEq)]
 pub struct RoundingPanelState {
-    /// Aktuell gewaehler interner Modus.
-    pub mode: RoundingModeChoice,
-    /// Gibt an, ob der Modus wegen persistierter Geometrie fest bleibt.
-    pub mode_locked: bool,
-    /// Verrundungsradius fuer den Arc-Modus.
+    /// Verrundungsradius fuer den Arc-only-Pfad.
     pub arc_radius_m: f32,
-    /// Abtastabstand fuer den Arc-Modus.
-    pub arc_sample_spacing_m: f32,
-    /// Abtastabstand fuer den Quadratic-Modus.
-    pub quadratic_sample_spacing_m: f32,
+    /// Maximaler Winkel pro erzeugtem Arc-Segment in Grad.
+    pub max_angle_deg: f32,
     /// Anzahl aktuell geladener selektierter Nodes.
     pub selected_node_count: usize,
-    /// Anzahl aktuell geladener Nodes der geordneten Kette.
-    pub chain_node_count: usize,
-    /// Anzahl berechneter Vorschau-Nodes im aktiven Modus.
+    /// Anzahl berechneter Vorschau-Nodes.
     pub preview_node_count: Option<usize>,
     /// Gibt an, ob eine bestehende Verrundung nachbearbeitet wird.
     pub is_adjusting: bool,
 }
 
-/// Panel-Aktion des Verrundungs-Tools.
+/// Arc-only-Panel-Aktion des Verrundungs-Tools.
 #[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
 #[serde(tag = "kind", content = "value", rename_all = "snake_case")]
 pub enum RoundingPanelAction {
-    /// Interne Moduswahl umschalten.
-    SetMode(RoundingModeChoice),
     /// Arc-Radius setzen.
     SetArcRadius(f32),
-    /// Arc-Abtastabstand setzen.
-    SetArcSampleSpacing(f32),
-    /// Quadratic-Abtastabstand setzen.
-    SetQuadraticSampleSpacing(f32),
+    /// Maximalen Segmentwinkel setzen.
+    SetMaxAngleDeg(f32),
 }
 
 /// Read-Zustand eines automatisch berechneten Steuerpunkts im SmoothCurve-Tool.

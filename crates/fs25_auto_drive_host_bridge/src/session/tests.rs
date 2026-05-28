@@ -73,118 +73,6 @@ fn viewport_connected_path_map() -> RoadMap {
     map
 }
 
-fn rounding_corner_map() -> RoadMap {
-    let mut map = RoadMap::new(3);
-    map.add_node(MapNode::new(10, Vec2::new(-20.0, 0.0), NodeFlag::Regular));
-    map.add_node(MapNode::new(1, Vec2::new(0.0, 0.0), NodeFlag::Regular));
-    map.add_node(MapNode::new(20, Vec2::new(0.0, 20.0), NodeFlag::Regular));
-    map.add_connection(Connection::new(
-        10,
-        1,
-        ConnectionDirection::Regular,
-        ConnectionPriority::Regular,
-        Vec2::new(-20.0, 0.0),
-        Vec2::new(0.0, 0.0),
-    ));
-    map.add_connection(Connection::new(
-        1,
-        20,
-        ConnectionDirection::Regular,
-        ConnectionPriority::Regular,
-        Vec2::new(0.0, 0.0),
-        Vec2::new(0.0, 20.0),
-    ));
-    map.ensure_spatial_index();
-    map
-}
-
-fn node_details_marker_test_map() -> RoadMap {
-    let mut map = viewport_connected_path_map();
-    map.add_map_marker(MapMarker::new(
-        2,
-        "Hof".to_string(),
-        "All".to_string(),
-        3,
-        false,
-    ));
-    map
-}
-
-fn group_boundary_test_map() -> RoadMap {
-    let mut map = RoadMap::new(3);
-    map.add_node(MapNode::new(1, Vec2::new(0.0, 0.0), NodeFlag::Regular));
-    map.add_node(MapNode::new(2, Vec2::new(10.0, 0.0), NodeFlag::Regular));
-    map.add_node(MapNode::new(3, Vec2::new(20.0, 0.0), NodeFlag::Regular));
-    map.add_node(MapNode::new(10, Vec2::new(-10.0, 0.0), NodeFlag::Regular));
-    map.add_node(MapNode::new(11, Vec2::new(30.0, 0.0), NodeFlag::Regular));
-    map.add_connection(Connection::new(
-        1,
-        2,
-        ConnectionDirection::Regular,
-        ConnectionPriority::Regular,
-        Vec2::new(0.0, 0.0),
-        Vec2::new(10.0, 0.0),
-    ));
-    map.add_connection(Connection::new(
-        2,
-        3,
-        ConnectionDirection::Regular,
-        ConnectionPriority::Regular,
-        Vec2::new(10.0, 0.0),
-        Vec2::new(20.0, 0.0),
-    ));
-    map.add_connection(Connection::new(
-        10,
-        1,
-        ConnectionDirection::Regular,
-        ConnectionPriority::Regular,
-        Vec2::new(-10.0, 0.0),
-        Vec2::new(0.0, 0.0),
-    ));
-    map.add_connection(Connection::new(
-        3,
-        11,
-        ConnectionDirection::Regular,
-        ConnectionPriority::Regular,
-        Vec2::new(20.0, 0.0),
-        Vec2::new(30.0, 0.0),
-    ));
-    map.ensure_spatial_index();
-    map
-}
-
-fn make_group_record(record_id: u64, node_ids: &[u64], road_map: &RoadMap) -> GroupRecord {
-    GroupRecord {
-        id: record_id,
-        node_ids: node_ids.to_vec(),
-        original_positions: node_ids
-            .iter()
-            .filter_map(|node_id| road_map.node(*node_id).map(|node| node.position))
-            .collect(),
-        marker_node_ids: Vec::new(),
-        locked: false,
-        entry_node_id: Some(1),
-        exit_node_id: Some(3),
-    }
-}
-
-fn snapshot_measurement_session(selected_count: usize) -> HostBridgeSession {
-    let mut session = HostBridgeSession::new();
-    let mut map = RoadMap::new(3);
-
-    for id in 1..=selected_count as u64 {
-        let x = id as f32;
-        map.add_node(MapNode::new(id, Vec2::new(x, x * 0.25), NodeFlag::Regular));
-        session.state.selection.ids_mut().insert(id);
-    }
-
-    session.state.road_map = Some(Arc::new(map));
-    session.state.view.viewport_size = [1280.0, 720.0];
-    session.snapshot_dirty = true;
-    let _ = session.snapshot();
-    session
-}
-
 fn resize_event(size_px: [f32; 2]) -> HostViewportInputEvent {
     HostViewportInputEvent::Resize { size_px }
 }
@@ -219,6 +107,83 @@ fn screen_for_world(session: &HostBridgeSession, world_pos: Vec2) -> [f32; 2] {
         .camera
         .world_to_screen(world_pos, Vec2::new(viewport[0], viewport[1]));
     [screen.x, screen.y]
+}
+
+fn assert_rounding_panel_contract(
+    session: &HostBridgeSession,
+    expected_selected_node_count: usize,
+) {
+    let host_ui = session.build_host_ui_snapshot();
+    let panel = host_ui
+        .route_tool_panel_state()
+        .expect("Route-Tool-Panel fuer Rounding erwartet");
+    assert_eq!(panel.active_tool_id, Some(RouteToolId::Rounding));
+
+    let config_state = panel
+        .config_state
+        .as_ref()
+        .expect("Rounding-Config-State erwartet");
+    let RouteToolConfigState::Rounding(state) = config_state else {
+        panic!("Rounding-Panelzustand erwartet");
+    };
+
+    assert!(state.arc_radius_m > 0.0);
+    assert!(state.max_angle_deg > 0.0);
+    assert_eq!(state.selected_node_count, expected_selected_node_count);
+    assert!(!state.is_adjusting);
+    assert!(state.preview_node_count.is_some());
+
+    let payload = crate::dto::host_ui_snapshot_json(&host_ui)
+        .expect("Host-UI-Snapshot muss JSON-serialisierbar sein");
+    let value: serde_json::Value =
+        serde_json::from_str(&payload).expect("Host-UI-JSON muss als Value lesbar sein");
+    let panels = value
+        .get("panels")
+        .and_then(serde_json::Value::as_array)
+        .expect("Host-UI-JSON muss ein Panel-Array enthalten");
+    let route_tool_panel = panels
+        .iter()
+        .find(|panel| panel.get("kind").and_then(serde_json::Value::as_str) == Some("route_tool"))
+        .expect("Route-Tool-Panel muss im Host-UI-JSON vorhanden sein");
+    let rounding = route_tool_panel
+        .get("state")
+        .and_then(|state| state.get("config_state"))
+        .expect("Rounding-Config-State muss im Host-UI-JSON vorhanden sein");
+
+    assert_eq!(
+        rounding.get("kind").and_then(serde_json::Value::as_str),
+        Some("rounding")
+    );
+    assert!(rounding
+        .get("arc_radius_m")
+        .and_then(serde_json::Value::as_f64)
+        .is_some_and(|value| value > 0.0));
+    assert!(rounding
+        .get("max_angle_deg")
+        .and_then(serde_json::Value::as_f64)
+        .is_some_and(|value| value > 0.0));
+    assert_eq!(
+        rounding
+            .get("selected_node_count")
+            .and_then(serde_json::Value::as_u64),
+        Some(expected_selected_node_count as u64)
+    );
+    assert!(rounding
+        .get("preview_node_count")
+        .and_then(serde_json::Value::as_u64)
+        .is_some());
+    assert_eq!(
+        rounding
+            .get("is_adjusting")
+            .and_then(serde_json::Value::as_bool),
+        Some(false)
+    );
+
+    assert!(rounding.get("mode").is_none());
+    assert!(rounding.get("mode_locked").is_none());
+    assert!(rounding.get("arc_sample_spacing_m").is_none());
+    assert!(rounding.get("quadratic_sample_spacing_m").is_none());
+    assert!(rounding.get("chain_node_count").is_none());
 }
 
 #[test]
@@ -367,25 +332,7 @@ fn host_ui_snapshot_exposes_rounding_panel_state() {
 
     handlers::route_tool::select(&mut session.state, RouteToolId::Rounding);
 
-    let host_ui = session.build_host_ui_snapshot();
-    let panel = host_ui
-        .route_tool_panel_state()
-        .expect("Route-Tool-Panel fuer Rounding erwartet");
-    assert_eq!(panel.active_tool_id, Some(RouteToolId::Rounding));
-
-    let config_state = panel
-        .config_state
-        .as_ref()
-        .expect("Rounding-Config-State erwartet");
-    let RouteToolConfigState::Rounding(state) = config_state else {
-        panic!("Rounding-Panelzustand erwartet");
-    };
-
-    assert_eq!(state.selected_node_count, 1);
-    assert_eq!(state.chain_node_count, 0);
-    assert!(!state.mode_locked);
-    assert!(!state.is_adjusting);
-    assert!(state.preview_node_count.is_some());
+    assert_rounding_panel_contract(&session, 1);
 }
 
 #[test]
