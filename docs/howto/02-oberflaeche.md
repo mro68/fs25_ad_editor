@@ -56,7 +56,7 @@ Rechts werden Eigenschaften und modale Bearbeitungsflaechen angezeigt:
 
 Das schwebende Route-Tool-Panel nutzt fuer alle Route-Tool-Familien denselben Aufbau: oben Status, Richtung und Strassenart, darunter die tool-spezifische Konfiguration und am Ende **Ausfuehren** sowie **Abbrechen**.
 
-Beim Tool **Verrunden** zeigt das Panel zusaetzlich den Modus, Auswahl- und Kettenzaehler, die Anzahl der Vorschau-Nodes sowie Radius oder Abtastung. Wird eine bestehende Verrundung ueber **Tool bearbeiten** geoeffnet, bleibt der Modus waehrend der Nachbearbeitung gesperrt.
+Beim Tool **Verrunden** zeigt das Panel zusaetzlich Auswahl- und Vorschauzaehler sowie die Werte **Radius** und **Max-Winkel**. Verrunden arbeitet Arc-only und erwartet genau 1 selektierten Corner-Node. Wird eine bestehende Verrundung ueber **Tool bearbeiten** geoeffnet, kann derselbe Kreisbogen dort mit neuen Werten neu aufgebaut werden.
 
 ### Gemeinsamer Route-Tool-Katalog
 

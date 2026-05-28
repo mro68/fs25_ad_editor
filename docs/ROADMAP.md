@@ -191,18 +191,13 @@
   - [x] Zwei eindeutige Anschlussseiten aus der Selection-/Neighbor-Seeding-Pipeline ableiten
   - [x] Echter Kreisbogen mit festem Radius statt Bézier-Heuristik
   - [x] Lokaler Replace-Pfad: Corner-Node entfernen, `RoundedCorner`-Nodes einsetzen, Side-Verbindungen wieder anbinden
+  - [x] Arc-Segmentierung ueber `max_angle_deg` mit winkelbasierter Approximation
   - [x] Gezielte Engine-Tests fuer gueltige und ungueltige Arc-Kontexte
   - [x] CP-01-Follow-up (2026-05-28, Branch `feat/rounding-tool`): aktives Rounding routed Primarklicks wieder ueber den generischen Node-Pick; ArcOnePoint arbeitet fuer Preview, Execute und Recreate mit linearen Seiten-Stretches und ueberlebenden Aussenankern statt nur mit Direktnachbarn
-- [x] **RoundingTool QuadraticThreePoint vertikal (2026-05-17, Branch `feat/rounding-tool`)**
-  - [x] Geordnete 3-Node-Kette als Eingang fuer `RouteToolId::Rounding`
-  - [x] Fester Steuerpunkt `P2` mit klaren Invalid-Faellen fuer Aussenstrecken, Zusatz-Aeste und gerichtete Durchfahrt
-  - [x] Eigene Quadratic-Preview-/Execute-Logik; lokaler Replace-Pfad entfernt nur die mittlere Node und setzt `RoundedCorner`-Nodes zwischen `P1` und `P3`
-  - [x] Gezielte Engine-Tests fuer loesbare und unloesbare 3-Punkt-Kontexte
-  - [x] CP-02-Follow-up (2026-05-28, Branch `feat/rounding-tool`): QuadraticThreePoint arbeitet fuer Preview, Execute und Recreate mit eindeutigen Anchor-Pfaden zwischen `P1 -> P2 -> P3`, entfernt dabei auch unselektierte Zwischen-Nodes des lokalen Replace-Pfads und invalidiert ambige Pfadspannen konservativ
 - [x] **RoundingTool Persistenz / Panel / Host-Snapshot (2026-05-17, Branch `feat/rounding-tool`)**
-  - [x] `RouteToolId::Rounding` auf `GroupBackedEditable` angehoben; modusspezifische `RouteToolEditPayload::{RoundingArc,RoundingQuadratic}` fuer Recreate und destruktiven Tool-Edit eingefuehrt
-  - [x] Finales Floating-Panel mit Radius-/Abtast-Parametern, `mode_locked`, Vorschauzaehlern und Nachbearbeitungsstatus verdrahtet
-  - [x] Host-UI-/JSON-Snapshots serialisieren den erweiterten `RoundingPanelState` vollstaendig
+  - [x] `RouteToolId::Rounding` auf `GroupBackedEditable` angehoben; Arc-only-`RouteToolEditPayload::RoundingArc` fuer Recreate und destruktiven Tool-Edit eingefuehrt
+  - [x] Finales Floating-Panel mit Radius- und `max_angle_deg`-Parametern, Vorschauzaehlern und Nachbearbeitungsstatus verdrahtet
+  - [x] Host-UI-/JSON-Snapshots serialisieren den Arc-only-`RoundingPanelState` vollstaendig
   - [x] Gezielte Engine- und Host-Tests decken Persistenz, Payload-Restore und Snapshot-Wiring ab
 - [x] Governance: Lint-Ausnahmen inventarisiert und mit Abbaupfaden dokumentiert (2026-04-17, report-only)
 - [x] Governance: Workspace-Lints zentralisiert (2026-04-17, zentrale `workspace.lints` + `lints.workspace = true` fuer alle Workspace-Crates)

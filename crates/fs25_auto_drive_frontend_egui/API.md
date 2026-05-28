@@ -12,6 +12,8 @@ Die gemeinsame Host-Bridge ist in dieser Crate die kanonische Dispatch- und Read
 
 `HostRouteToolViewportSnapshot` fuehrt fuer selektionsgetriebene Route-Tools das explizite Read-Flag `prefers_generic_node_pick`. Der egui-Viewport nutzt dieses Flag aktuell fuer aktives `Rounding`: Primarklicks werden dann bewusst nicht als `HostSessionAction::RouteTool`-Klick emittiert, sondern als generischer `SubmitViewportInput`-Node-Pick ueber die bestehende Selection-Seam geroutet.
 
+Der Floating-Panel-Vertrag fuer `Rounding` ist in der egui-Crate ebenfalls Arc-only: `editor_app` und `ui/edit_panel/route_tool_panel.rs` lesen aus dem Host-Snapshot `arc_radius_m`, `max_angle_deg`, `selected_node_count`, `preview_node_count` und `is_adjusting` und rendern daraus die komplette Verrundungs-Konfiguration.
+
 Chrome-nahe ViewModels und Panels lesen ihre Metadaten inzwischen konsequent ueber `HostChromeSnapshot`. Modale egui-Dialoge und Popup-States arbeiten fuer host-lokale Sichtbarkeit und transienten Widget-Zustand ueber `HostLocalDialogState` statt ueber mutierende Direktzugriffe auf den Engine-`AppState`.
 
 Das Onscreen-Rendering liest Szene und Assets ueber denselben gekoppelten `build_render_frame(...)`-Seam wie der Shared-Texture-Transportpfad; egui nutzt davon nur die Szene fuer den Paint-Callback und wiederverwendet die Assets im selben Frame fuer den revisionsbasierten Background-Sync.

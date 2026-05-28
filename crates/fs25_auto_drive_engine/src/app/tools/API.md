@@ -411,50 +411,36 @@ Modulstruktur: `mod.rs` (Re-Exporte), `state.rs` (Struct + OffsetConfig), `lifec
 
 ### `RoundingTool`
 
-Oeffentliche Huelle fuer lokales Verrunden (`RouteToolId::Rounding`). Seit CP-04 sind beide internen Pfade vertikal umgesetzt und ueber denselben Panel-/Persistenzvertrag nachbearbeitbar: `ArcOnePoint` fuer einen einzelnen Corner und `QuadraticThreePoint` fuer eine geordnete 3-Node-Kette.
-
-**Interner Modusrahmen (`RoundingMode`):**
-
-- `ArcOnePoint` — exakt 1 selektierter Corner-Node; nutzt zwei eindeutige Anschlussseiten und ersetzt den Corner lokal durch einen echten Kreisbogen mit festem Radius
-- `QuadraticThreePoint` — genau 3 selektierte Nodes als geordnete Kette `P1 -> P2 -> P3`; `P2` bleibt fester quadratischer Steuerpunkt, Preview/Execute ersetzen die mittlere Node lokal durch eine quadratische Verrundung zwischen `P1` und `P3`
+Oeffentliche Huelle fuer lokales Verrunden (`RouteToolId::Rounding`). Seit CP-04 ist das Tool bewusst auf einen Arc-only-Pfad zugeschnitten: Genau ein selektierter Corner-Node wird ueber zwei eindeutige lineare Anschlussseiten in einen lokalen Kreisbogen mit festem Radius ueberfuehrt. Die Segmentierung des Ersatzbogens folgt `max_angle_deg`; kleinere Werte erzeugen feinere Approximationen, groessere Werte weniger Zwischenknoten.
 
 **Panel-Contract:**
 
-- `RoundingPanelState { mode, mode_locked, arc_radius_m, arc_sample_spacing_m, quadratic_sample_spacing_m, selected_node_count, chain_node_count, preview_node_count, is_adjusting }` — egui-freier Panelzustand fuer aktiven Modus, Recreate-/Edit-Lock und Vorschauzaehler
-- `RoundingPanelAction::SetMode(...)` — schaltet zwischen den beiden internen Modi um, solange kein persistierter Edit-Kontext aktiv ist
-- `RoundingPanelAction::SetArcRadius(...)` — aktualisiert den Arc-Radius fuer Preview und Recreate
-- `RoundingPanelAction::SetArcSampleSpacing(...)` — aktualisiert die Arc-Abtastung fuer Preview und Recreate
-- `RoundingPanelAction::SetQuadraticSampleSpacing(...)` — aktualisiert die Quadratic-Abtastung fuer Preview und Recreate
+- `RoundingPanelState { arc_radius_m, max_angle_deg, selected_node_count, preview_node_count, is_adjusting }` — egui-freier Panelzustand fuer Radius, Max-Winkel, Auswahl-/Vorschauzaehler und Recreate-/Edit-Status
+- `RoundingPanelAction::SetArcRadius(...)` — aktualisiert den Verrundungsradius fuer Preview und Recreate
+- `RoundingPanelAction::SetMaxAngleDeg(...)` — aktualisiert die maximale Winkelabweichung pro Arc-Segment fuer Preview und Recreate
 
 **Selection-Input-Vertrag:**
 
 - `RouteToolSelectionSeed` traegt fuer selection-getriebene Tools neben `node_ids`/`positions` auch `connected_neighbors`, `linear_stretches` und `anchor_paths`
-- `RouteToolConnectedNeighborSeed` kapselt `neighbor_id`, Weltposition, `angle` und `is_outgoing` fuer einen selektierten Node-Nachbarn
-- `RouteToolLinearStretchSeed` beschreibt lineare Anschlussstrecken eines selektierten Nodes fuer lokale Arc-Replace-Pfade
-- `RouteToolAnchorPathSeed` beschreibt eindeutige Anchor-Pfade inklusive Richtungsinformation zwischen zwei selektierten Nodes fuer lokale Quadratic-Replace-Pfade
-- `OrderedNodeChain` liefert fuer `QuadraticThreePoint` die kanonische Reihenfolge der 3-Node-Kette (`start_id`, genau 1 `inner_id`, `end_id`, Positionen)
+- `RouteToolLinearStretchSeed` beschreibt lineare Anschlussstrecken eines selektierten Nodes; `RoundingTool` nutzt genau diese Strecken fuer den lokalen Arc-Replace-Pfad
+- `RouteToolConnectedNeighborSeed` und `RouteToolAnchorPathSeed` bleiben Teil des gemeinsamen Selection-Seeds, werden vom Arc-only-Rounding aber nicht zur Moduswahl verwendet
 
 **Aktueller Runtime-/Persistenzvertrag in CP-04:**
 
-- `ArcOnePoint` verlangt genau 1 selektierten Node mit genau 2 eindeutigen Anschlussseiten
+- `Rounding` verlangt genau 1 selektierten Node mit genau 2 eindeutigen Anschlussseiten
 - `status_text()` meldet klare Invalid-Faelle (`NeedTwoRouteSides`, `AmbiguousJunction`, `NoThroughPath`, `RadiusTooLarge`, ...)
 - `preview()` zeigt bei gueltigem Corner-Kontext die lokale Ersatz-Polyline zwischen beiden Anschlussseiten
 - `execute()` ersetzt nur den selektierten Corner-Node lokal (`nodes_to_remove = [corner_id]`) und erzeugt `RoundedCorner`-Nodes plus externe Wiederanbindung an die beiden Nachbarseiten
 - Richtungen/Prioritaeten des internen Arc-Pfads werden aus den vorhandenen Corner-Durchfahrten gemerged; externe Side-Verbindungen behalten die Original-Connection-Metadaten
-- `QuadraticThreePoint` verlangt genau 3 selektierte Anchor-Nodes mit zwei eindeutigen Anchor-Pfaden `P1 -> P2` und `P2 -> P3` sowie genau eine Aussenstrecke an `P1` und `P3`; `P2` darf keine externen Aeste tragen
-- Die Quadratic-Validierung akzeptiert nur Faelle, in denen die beiden Aussenstrecken mit passender Richtung im festen Steuerpunkt `P2` schneiden, die beiden Anchor-Pfade intern eindeutig sind und ueber den gesamten Replace-Pfad `P1 ... P2 ... P3` mindestens eine gerichtete Durchfahrt existiert
-- `preview()` zeigt bei gueltigem 3-Punkt-Kontext die quadratische Ersatz-Polyline zwischen den Referenzendpunkten `P1` und `P3`
-- `execute()` entfernt im Quadratic-Pfad den gesamten inneren Replace-Pfad zwischen den bestehenbleibenden Referenzknoten `P1` und `P3` (inklusive `P2` und unselektierter Zwischen-Nodes) und setzt dort `RoundedCorner`-Nodes ein
-- `RouteToolRecreate::on_applied()` merkt sich die zuletzt erzeugten IDs und speichert einen modusspezifischen Edit-Payload fuer Panel-Recreate und Group-Edit
-- `RouteToolGroupEdit::restore_edit_payload()` rehydriert den passenden Modus inklusive Parameter, sperrt die Modusumschaltung (`mode_locked`) und baut Preview/Execute bei Bedarf aus dem Payload auf; `RoundingQuadratic` validiert den Neuaufbau dabei zusaetzlich gegen die persistierten Aussenknoten und historischen Anchor-Pfade
+- `RouteToolRecreate::on_applied()` merkt sich die zuletzt erzeugten IDs und speichert den Arc-Payload fuer Panel-Recreate und Group-Edit
+- `RouteToolGroupEdit::restore_edit_payload()` rehydriert Radius, `max_angle_deg`, ueberlebende Aussenanker und gemergte Durchfahrten fuer denselben Arc-Kontext; der Recreate-Pfad bleibt damit stabil, auch wenn der urspruengliche Corner-Node bereits entfernt wurde
 
 **Persistenzvertrag:** `GroupBackedEditable`.
 
-- `RouteToolEditPayload::RoundingArc { first_anchor_id, second_anchor_id, corner_position, radius_m, sample_spacing_m, transitions }` speichert den Arc-Pfad ueber die beiden ueberlebenden Anschlussseiten plus gemergte Durchfahrtsmetadaten
-- `RouteToolEditPayload::RoundingQuadratic { start_node_id, end_node_id, start_outer_neighbor_id, end_outer_neighbor_id, start_control_path_node_ids, control_end_path_node_ids, control_point, sample_spacing_m, transitions }` speichert den Quadratic-Pfad ueber die beiden ueberlebenden Randknoten plus persistierte Aussenstrecken und historische Anchor-Pfade fuer stabile Tangentenvalidierung und Recreate ueber Zwischen-Nodes
-- Persistente `RoundingTransitionSnapshot`s erlauben Recreate und Group-Edit auch dann, wenn Corner- oder Kontroll-Node des Ursprungs bereits entfernt wurden
+- `RouteToolEditPayload::RoundingArc { first_anchor_id, second_anchor_id, corner_position, radius_m, max_angle_deg, transitions }` speichert den Arc-Pfad ueber die beiden ueberlebenden Anschlussseiten plus gemergte Durchfahrtsmetadaten
+- Persistente `RoundingTransitionSnapshot`s erlauben Recreate und Group-Edit auch dann, wenn der urspruengliche Corner-Node bereits entfernt wurde
 
-Modulstruktur: `mod.rs` (Re-Exporte), `state.rs` (Mode-Enum + Arc-/Quadratic-Runtime-State), `geometry.rs` (Corner-/Chain-Kontext, echter Kreisbogen, quadratischer Replace-Solver), `lifecycle.rs` (modusspezifisches Preview/Execute + lokaler Replace-Pfad), `config_ui.rs` (semantische Panel-Bruecke), `tests.rs`
+Modulstruktur: `mod.rs` (Re-Exporte), `state.rs` (Arc-Runtime-State und Recreate-Status), `geometry.rs` (Corner-Kontext, echter Kreisbogen, winkelbasierte Segmentierung), `lifecycle.rs` (Preview/Execute + lokaler Replace-Pfad), `config_ui.rs` (semantische Panel-Bruecke), `tests.rs`
 
 ---
 

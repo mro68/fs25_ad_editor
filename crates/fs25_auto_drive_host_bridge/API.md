@@ -40,6 +40,8 @@ Mit `HostChromeSnapshot` existiert zusaetzlich ein expliziter host-neutraler Rea
 
 Der Route-Tool-Viewport-Read-Seam `HostRouteToolViewportSnapshot` spiegelt fuer selektionsgetriebene Werkzeuge jetzt auch `prefers_generic_node_pick`. Hosts koennen damit Primarklicks fuer aktives `Rounding` bewusst ueber den generischen Node-Pick und die bestehende Selection-Seam routen, statt sie als direkte Route-Tool-Schreibaktion zu behandeln.
 
+Im serialisierbaren Host-UI-/JSON-Vertrag exponiert `RoundingPanelState` den Arc-only-Zustand `arc_radius_m`, `max_angle_deg`, `selected_node_count`, `preview_node_count` und `is_adjusting` als vollstaendige Verrundungs-Konfiguration fuer Hosts und Transport-Adapter.
+
 ## Session-Grenze (Stand 2026-04-07)
 
 - **bridge-owned:** Explizite Action-/Snapshot-Seams (`HostSessionAction`, `HostRouteToolAction`, `HostSessionSnapshot`, `HostUiSnapshot`, `HostChromeSnapshot`, `HostRouteToolViewportSnapshot`, `ViewportOverlaySnapshot`, Render-Read-Seams inklusive gekoppeltem `build_render_frame(...)`) und die stateful Viewport-Input-Familie (`HostViewportInputBatch`, `HostViewportInputState`) liegen zentral in der Host-Bridge.

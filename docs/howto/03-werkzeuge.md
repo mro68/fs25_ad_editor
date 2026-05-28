@@ -260,24 +260,23 @@ Erzeugt einen oder zwei Parallelversatze entlang einer selektierten Kette.
 
 ## Verrunden (B)
 
-Rundet lokale Streckenuebergaenge entweder als echten Kreisbogen oder als quadratische Kurve ab. Das Tool arbeitet auf einer bestehenden Selektion und ersetzt nur den lokalen Uebergang, bei gueltigen Kontexten auch ueber lineare Zwischen-Nodes hinweg.
+Rundet einen lokalen Streckenuebergang als festen Kreisbogen ab. Das Tool arbeitet Arc-only auf genau einem selektierten Corner-Node und ersetzt nur den lokalen Uebergang, bei gueltigem Kontext auch ueber lineare Zwischen-Nodes hinweg.
 
 **Workflow:**
-1. Je nach Modus entweder genau 1 Corner-Node oder genau 3 Nodes als geordnete Kette selektieren.
+1. Genau 1 Corner-Node selektieren.
 2. Mit **`B`** die Gruppe **Bearbeiten** oeffnen und **Verrunden** waehlen.
-3. Im Route-Tool-Panel den Modus **1 Punkt (Arc)** oder **3 Punkte (Quadratisch)** einstellen und die zugrunde liegende Auswahl bei Bedarf direkt per Node-Klick im Viewport nachziehen.
-4. Radius und Abtastung pruefen; die Vorschau zeigt, wie viele neue Nodes erzeugt werden.
+3. Falls noetig, den Corner bei aktivem Tool per Node-Klick im Viewport wechseln.
+4. Im Route-Tool-Panel **Radius** und **Max-Winkel** einstellen; die Vorschau zeigt, wie viele neue Nodes der Kreisbogen erzeugt.
 5. Mit **`Enter`** bestaetigen.
 
 **Konfiguration:**
-- Modus: **1 Punkt (Arc)** fuer genau einen selektierten Corner-Node, **3 Punkte (Quadratisch)** fuer genau drei selektierte Nodes als geordnete Kette.
-- Radius: nur im Arc-Modus; legt den festen Radius des Kreisbogens fest.
-- Abtastung: Abstand der erzeugten Nodes entlang Bogen oder quadratischer Kurve.
+- Radius: legt den festen Radius des Kreisbogens fest.
+- Max-Winkel: begrenzt den Winkel zwischen zwei erzeugten Arc-Segmenten; kleinere Werte erzeugen mehr Nodes und eine feinere Bogenapproximation.
 
 **Tipps:**
-- Der Arc-Modus funktioniert nur bei einem lokalen Corner mit genau zwei eindeutigen Anschlussseiten. Zwischen dem Corner und dem eigentlichen Aussenanker duerfen lineare Zwischen-Nodes liegen; Verzweigungen oder nicht gerichtete Durchfahrten invalidieren den Kontext bewusst.
-- Der Quadratic-Modus ersetzt die mittlere Node der 3er-Kette. Zwischen **P1 -> P2 -> P3** duerfen unselektierte Zwischen-Nodes liegen, solange die Anchor-Pfade eindeutig bleiben; bei ambigen Aussenstrecken oder Zusatz-Aesten bricht die Vorschau absichtlich ab.
-- Bereits erzeugte Verrundungen koennen spaeter ueber **Tool bearbeiten** erneut aufgebaut werden, auch wenn beim urspruenglichen Replace-Pfad Zwischen-Nodes mit entfernt wurden. In dieser Nachbearbeitung bleibt der Modus gesperrt.
+- Das Tool funktioniert nur, wenn der selektierte Node genau zwei eindeutige Anschlussseiten mit einer gerichteten Durchfahrt ueber den Corner hat. Zwischen dem Corner und den eigentlichen Aussenankern duerfen lineare Zwischen-Nodes liegen; Kreuzungen oder zusaetzliche Aeste machen den Kontext ungueltig.
+- Wenn Radius oder Corner-Winkel keinen stabilen Kreisbogen zulassen, bleibt die Vorschau leer. Verkleinern Sie in diesem Fall den Radius oder waehlen Sie einen anderen Corner.
+- Bereits erzeugte Verrundungen koennen spaeter ueber **Tool bearbeiten** erneut aufgebaut werden. In dieser Nachbearbeitung passen Sie fuer denselben Corner nur noch Radius und Max-Winkel an.
 
 ---
 

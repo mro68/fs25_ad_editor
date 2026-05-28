@@ -19,7 +19,7 @@ Die eframe-Integrationsschale gehoert bewusst nicht zum `app`-Layer. Ihre kanoni
 ## Tool-Vertraege
 
 - `tool_contract.rs` — semantische Route-Tool-Vertraege wie `RouteToolId`, `ToolAnchor` und `TangentSource`
-- `ui_contract.rs` — egui-freie UI-Vertraege wie `TangentMenuData`, `TangentOptionData`, `RouteToolPanelState`, `RouteToolConfigState`, `RouteToolPanelAction`, `RouteToolPanelEffect`, `RouteToolViewportData` sowie den erweiterten `Rounding`-Panel-Vertrag (`RoundingModeChoice`, `RoundingPanelState`, `RoundingPanelAction`, Limits fuer Radius/Abtastung)
+- `ui_contract.rs` — egui-freie UI-Vertraege wie `TangentMenuData`, `TangentOptionData`, `RouteToolPanelState`, `RouteToolConfigState`, `RouteToolPanelAction`, `RouteToolPanelEffect`, `RouteToolViewportData` sowie den Arc-only-Panel-Vertrag des Verrundungs-Tools (`RoundingPanelState`, `RoundingPanelAction`, Limits fuer Radius und `max_angle_deg`)
 - `ui_contract/host_ui.rs` — host-neutrale UI-Vertraege fuer Tool-Fenster und den semantischen Dialog-Lifecycle (`PanelState`, `PanelAction`, `DialogRequest`, `DialogResult`, `HostUiSnapshot`); grosse Optionen-Payloads werden in `OptionsPanelAction::Apply(Box<EditorOptions>)` bewusst indirekt gehalten, damit die Action-Enums kompakt bleiben
 - `ui_contract/viewport_overlay.rs` — host-neutrale Overlay-Vertraege (`ViewportOverlaySnapshot`, Clipboard-/Polyline-/Group-Overlay-DTOs)
 
@@ -520,9 +520,9 @@ pub struct ActiveToolEditSession {
 
 `RouteToolEditPayload` besitzt je eine Variante fuer alle group-backed editierbaren Tools:
 `Straight`, `CurveQuad`, `CurveCubic`, `Spline`, `SmoothCurve`, `Bypass`, `Parking`,
-`FieldBoundary`, `RouteOffset`, `RoundingArc` und `RoundingQuadratic`.
+`FieldBoundary`, `RouteOffset` und `RoundingArc`.
 
-`RoundingTransitionSnapshot` kapselt dabei die gemergten Durchfahrtsmetadaten des lokalen Replace-Pfads, damit Recreate und destruktiver Tool-Edit ohne die entfernte Ursprungs-Node rekonstruierbar bleiben; `RoundingQuadratic` persistiert zusaetzlich die beiden urspruenglichen Aussenknoten sowie die historischen Anchor-Pfade `P1 -> P2` und `P2 -> P3`, damit Quadratic-Recreate auch nach entfernten Zwischen-Nodes denselben lokalen Pfadkontext behaelt.
+`RoundingTransitionSnapshot` kapselt dabei die gemergten Durchfahrtsmetadaten des lokalen Arc-Replace-Pfads, damit Recreate und destruktiver Tool-Edit ohne den entfernten Corner-Node rekonstruierbar bleiben; `RoundingArc` persistiert zusaetzlich die beiden ueberlebenden Aussenanker, die urspruengliche Corner-Position und `max_angle_deg`, damit der Arc-only-Recreate-Pfad auch nach Zwischen-Edits denselben lokalen Kontext behaelt.
 
 **Service-Funktionen** (`app/tool_editing/service.rs`):
 
