@@ -4,7 +4,9 @@ use std::time::Instant;
 
 use fs25_auto_drive_engine::app::handlers;
 use fs25_auto_drive_engine::app::tool_contract::RouteToolId;
-use fs25_auto_drive_engine::app::ui_contract::RouteToolConfigState;
+use fs25_auto_drive_engine::app::ui_contract::{
+    RoundingPanelAction, RouteToolConfigState, RouteToolPanelAction,
+};
 use fs25_auto_drive_engine::app::{
     AppIntent, Connection, ConnectionDirection, ConnectionPriority, FloatingMenuKind,
     GroupEditState, GroupRecord, MapMarker, MapNode, NodeFlag, OverviewSourceContext, RoadMap,
@@ -24,7 +26,7 @@ use crate::dto::{
     EngineSessionAction, HostActiveTool, HostConnectionPairEntry, HostConnectionPairSnapshot,
     HostDefaultConnectionDirection, HostDefaultConnectionPriority, HostDialogRequestKind,
     HostDialogResult, HostInputModifiers, HostMarkerListSnapshot, HostNodeDetails,
-    HostPointerButton, HostSessionAction, HostTapKind, HostViewportInputBatch,
+    HostPointerButton, HostRouteToolAction, HostSessionAction, HostTapKind, HostViewportInputBatch,
     HostViewportInputEvent,
 };
 
@@ -333,6 +335,126 @@ fn host_ui_snapshot_exposes_rounding_panel_state() {
     handlers::route_tool::select(&mut session.state, RouteToolId::Rounding);
 
     assert_rounding_panel_contract(&session, 1);
+}
+
+#[test]
+fn host_ui_snapshot_restores_rounding_adjusting_state_and_panel_updates_max_angle() {
+    let mut session = HostBridgeSession::new();
+    session.state.road_map = Some(Arc::new(rounding_corner_map()));
+    session.state.selection.ids_mut().insert(1);
+
+    apply_test_intent(
+        &mut session,
+        AppIntent::SelectRouteToolRequested {
+            tool_id: RouteToolId::Rounding,
+        },
+    );
+    apply_test_intent(&mut session, AppIntent::RouteToolExecuteRequested);
+
+    let record_id = session
+        .state
+        .group_registry
+        .records()
+        .next()
+        .expect("Persistierter Rounding-Record muss vorhanden sein")
+        .id;
+    assert!(
+        session.state.tool_edit_store.get(record_id).is_some(),
+        "Persistierter Rounding-Record braucht einen Tool-Edit-Payload"
+    );
+
+    session
+        .apply_action(HostSessionAction::StartGroupEdit { record_id })
+        .expect("Persistierter Rounding-Record muss in den Gruppen-Edit wechseln koennen");
+    session
+        .apply_action(HostSessionAction::OpenGroupEditTool { record_id })
+        .expect("Persistierter Rounding-Record muss in den Tool-Edit wechseln koennen");
+
+    let restored_host_ui = session.build_host_ui_snapshot();
+    let restored_panel = restored_host_ui
+        .route_tool_panel_state()
+        .expect("Rounding-Panel nach Restore erwartet");
+    let restored_config_state = restored_panel
+        .config_state
+        .as_ref()
+        .expect("Rounding-Config-State nach Restore erwartet");
+    let RouteToolConfigState::Rounding(restored_state) = restored_config_state else {
+        panic!("Rounding-Panelzustand nach Restore erwartet");
+    };
+
+    assert_eq!(restored_panel.active_tool_id, Some(RouteToolId::Rounding));
+    assert!(restored_state.is_adjusting);
+    assert_eq!(restored_state.max_angle_deg, 22.5);
+    assert_eq!(restored_state.preview_node_count, Some(5));
+
+    session
+        .apply_action(HostSessionAction::RouteTool {
+            action: HostRouteToolAction::PanelAction {
+                action: RouteToolPanelAction::Rounding(RoundingPanelAction::SetMaxAngleDeg(30.0)),
+            },
+        })
+        .expect("Host-Panelaktion fuer max_angle_deg muss verarbeitet werden");
+
+    let host_ui = session.build_host_ui_snapshot();
+    let panel = host_ui
+        .route_tool_panel_state()
+        .expect("Rounding-Panel nach Panelaktion erwartet");
+    let config_state = panel
+        .config_state
+        .as_ref()
+        .expect("Rounding-Config-State nach Panelaktion erwartet");
+    let RouteToolConfigState::Rounding(state) = config_state else {
+        panic!("Rounding-Panelzustand nach Panelaktion erwartet");
+    };
+
+    assert!(state.is_adjusting);
+    assert_eq!(state.max_angle_deg, 30.0);
+    assert_eq!(state.preview_node_count, Some(4));
+
+    let payload = crate::dto::host_ui_snapshot_json(&host_ui)
+        .expect("Rounding-HostUiSnapshot muss als JSON serialisierbar sein");
+    let value: serde_json::Value =
+        serde_json::from_str(&payload).expect("Rounding-HostUiSnapshot-JSON muss parsebar sein");
+    let panels = value
+        .get("panels")
+        .and_then(serde_json::Value::as_array)
+        .expect("Host-UI-JSON muss Panels enthalten");
+    let route_tool_panel = panels
+        .iter()
+        .find(|panel| panel.get("kind").and_then(serde_json::Value::as_str) == Some("route_tool"))
+        .expect("Route-Tool-Panel muss im Host-UI-JSON vorhanden sein");
+    let rounding = route_tool_panel
+        .get("state")
+        .and_then(|state| state.get("config_state"))
+        .expect("Rounding-Config-State muss im Host-UI-JSON vorhanden sein");
+
+    assert_eq!(
+        rounding.get("kind").and_then(serde_json::Value::as_str),
+        Some("rounding")
+    );
+    assert_eq!(
+        rounding
+            .get("max_angle_deg")
+            .and_then(serde_json::Value::as_f64),
+        Some(30.0)
+    );
+    assert_eq!(
+        rounding
+            .get("preview_node_count")
+            .and_then(serde_json::Value::as_u64),
+        Some(4)
+    );
+    assert_eq!(
+        rounding
+            .get("is_adjusting")
+            .and_then(serde_json::Value::as_bool),
+        Some(true)
+    );
+    assert!(rounding.get("mode").is_none());
+    assert!(rounding.get("mode_locked").is_none());
+    assert!(rounding.get("arc_sample_spacing_m").is_none());
+    assert!(rounding.get("quadratic_sample_spacing_m").is_none());
+    assert!(rounding.get("chain_node_count").is_none());
 }
 
 #[test]
@@ -1178,19 +1300,7 @@ fn viewport_input_tap_routes_to_rounding_selection_when_generic_pick_is_preferre
     assert_eq!(session.state.selection.selected_node_ids.len(), 1);
     assert!(session.state.selection.selected_node_ids.contains(&1));
 
-    let host_ui = session.build_host_ui_snapshot();
-    let panel = host_ui
-        .route_tool_panel_state()
-        .expect("Route-Tool-Panel fuer Rounding erwartet");
-    let config_state = panel
-        .config_state
-        .as_ref()
-        .expect("Rounding-Config-State erwartet");
-    let RouteToolConfigState::Rounding(state) = config_state else {
-        panic!("Rounding-Panelzustand erwartet");
-    };
-
-    assert_eq!(state.selected_node_count, 1);
+    assert_rounding_panel_contract(&session, 1);
 }
 
 #[test]
