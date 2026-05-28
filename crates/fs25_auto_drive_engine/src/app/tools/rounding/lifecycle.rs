@@ -1,8 +1,9 @@
 //! RouteTool-Lifecycle fuer die Arc- und Quadratic-Pfade des Verrundungs-Tools.
 
 use super::geometry::{
-    build_arc_plan_from_payload, build_quadratic_plan_from_payload, collect_quadratic_transitions,
-    collect_transitions, ArcPlan, ArcTransition, ArcValidation, QuadraticPlan, QuadraticValidation,
+    arc_replace_path, build_arc_plan_from_payload, build_quadratic_plan_from_payload,
+    collect_quadratic_transitions, collect_transitions, ArcPlan, ArcTransition, ArcValidation,
+    QuadraticPlan, QuadraticValidation,
 };
 use super::state::{ArcOnePointState, QuadraticThreePointState, RoundingMode, RoundingTool};
 use crate::app::tool_editing::{RoundingTransitionSnapshot, RouteToolEditPayload};
@@ -231,9 +232,9 @@ fn preview_arc(tool: &RoundingTool, road_map: &RoadMap) -> ToolPreview {
     }
 
     let mut nodes = Vec::with_capacity(plan.arc_positions.len() + 2);
-    nodes.push(plan.first_side.neighbor_position);
+    nodes.push(plan.first_side.anchor_position);
     nodes.extend(plan.arc_positions.iter().copied());
-    nodes.push(plan.second_side.neighbor_position);
+    nodes.push(plan.second_side.anchor_position);
 
     ToolPreview::from_polyline(
         nodes,
@@ -244,8 +245,8 @@ fn preview_arc(tool: &RoundingTool, road_map: &RoadMap) -> ToolPreview {
 
 fn preview_arc_from_payload(tool: &RoundingTool, road_map: &RoadMap) -> ToolPreview {
     let Some(RouteToolEditPayload::RoundingArc {
-        first_neighbor_id,
-        second_neighbor_id,
+        first_anchor_id,
+        second_anchor_id,
         corner_position,
         radius_m,
         sample_spacing_m,
@@ -255,17 +256,17 @@ fn preview_arc_from_payload(tool: &RoundingTool, road_map: &RoadMap) -> ToolPrev
         return ToolPreview::default();
     };
 
-    let Some(first_position) = road_map.node_position(*first_neighbor_id) else {
+    let Some(first_position) = road_map.node_position(*first_anchor_id) else {
         return ToolPreview::default();
     };
-    let Some(second_position) = road_map.node_position(*second_neighbor_id) else {
+    let Some(second_position) = road_map.node_position(*second_anchor_id) else {
         return ToolPreview::default();
     };
     let Some(plan) = build_arc_plan_from_payload(
         *corner_position,
-        *first_neighbor_id,
+        *first_anchor_id,
         first_position,
-        *second_neighbor_id,
+        *second_anchor_id,
         second_position,
         *radius_m,
         *sample_spacing_m,
@@ -317,6 +318,8 @@ fn preview_quadratic_from_payload(tool: &RoundingTool, road_map: &RoadMap) -> To
         end_node_id,
         start_outer_neighbor_id,
         end_outer_neighbor_id,
+        start_control_path_node_ids,
+        control_end_path_node_ids,
         control_point,
         sample_spacing_m,
         transitions,
@@ -327,10 +330,9 @@ fn preview_quadratic_from_payload(tool: &RoundingTool, road_map: &RoadMap) -> To
 
     let Some(plan) = build_quadratic_plan_from_payload(
         road_map,
-        *start_node_id,
-        *end_node_id,
-        *start_outer_neighbor_id,
-        *end_outer_neighbor_id,
+        [*start_node_id, *end_node_id],
+        [*start_outer_neighbor_id, *end_outer_neighbor_id],
+        [start_control_path_node_ids, control_end_path_node_ids],
         *control_point,
         *sample_spacing_m,
     ) else {
@@ -357,8 +359,8 @@ fn execute_arc(tool: &RoundingTool, road_map: &RoadMap) -> Option<ToolResult> {
     let corner_id = tool.arc.corner_node_id?;
     let plan = tool.arc.plan.as_ref()?;
     if !road_map.contains_node(corner_id)
-        || !road_map.contains_node(plan.first_side.neighbor_id)
-        || !road_map.contains_node(plan.second_side.neighbor_id)
+        || !road_map.contains_node(plan.first_side.anchor_id)
+        || !road_map.contains_node(plan.second_side.anchor_id)
     {
         return None;
     }
@@ -377,9 +379,10 @@ fn execute_quadratic(tool: &RoundingTool, road_map: &RoadMap) -> Option<ToolResu
     }
 
     let plan = tool.quadratic.plan.as_ref()?;
-    if !road_map.contains_node(plan.start_node_id)
-        || !road_map.contains_node(plan.control_node_id)
-        || !road_map.contains_node(plan.end_node_id)
+    if !plan
+        .replace_path
+        .iter()
+        .all(|node_id| road_map.contains_node(*node_id))
     {
         return None;
     }
@@ -395,20 +398,20 @@ fn execute_quadratic(tool: &RoundingTool, road_map: &RoadMap) -> Option<ToolResu
 fn execute_from_payload(tool: &RoundingTool, road_map: &RoadMap) -> Option<ToolResult> {
     match tool.lifecycle.edit_payload.as_ref()? {
         RouteToolEditPayload::RoundingArc {
-            first_neighbor_id,
-            second_neighbor_id,
+            first_anchor_id,
+            second_anchor_id,
             corner_position,
             radius_m,
             sample_spacing_m,
             transitions,
         } => {
-            let first_position = road_map.node_position(*first_neighbor_id)?;
-            let second_position = road_map.node_position(*second_neighbor_id)?;
+            let first_position = road_map.node_position(*first_anchor_id)?;
+            let second_position = road_map.node_position(*second_anchor_id)?;
             let plan = build_arc_plan_from_payload(
                 *corner_position,
-                *first_neighbor_id,
+                *first_anchor_id,
                 first_position,
-                *second_neighbor_id,
+                *second_anchor_id,
                 second_position,
                 *radius_m,
                 *sample_spacing_m,
@@ -416,8 +419,6 @@ fn execute_from_payload(tool: &RoundingTool, road_map: &RoadMap) -> Option<ToolR
 
             Some(build_arc_tool_result_from_transitions(
                 &plan,
-                *first_neighbor_id,
-                *second_neighbor_id,
                 transitions,
                 Vec::new(),
             ))
@@ -427,16 +428,17 @@ fn execute_from_payload(tool: &RoundingTool, road_map: &RoadMap) -> Option<ToolR
             end_node_id,
             start_outer_neighbor_id,
             end_outer_neighbor_id,
+            start_control_path_node_ids,
+            control_end_path_node_ids,
             control_point,
             sample_spacing_m,
             transitions,
         } => {
             let plan = build_quadratic_plan_from_payload(
                 road_map,
-                *start_node_id,
-                *end_node_id,
-                *start_outer_neighbor_id,
-                *end_outer_neighbor_id,
+                [*start_node_id, *end_node_id],
+                [*start_outer_neighbor_id, *end_outer_neighbor_id],
+                [start_control_path_node_ids, control_end_path_node_ids],
                 *control_point,
                 *sample_spacing_m,
             )?;
@@ -465,19 +467,16 @@ fn build_arc_tool_result(
         })
         .collect();
 
-    build_arc_tool_result_from_transitions(
-        plan,
-        plan.first_side.neighbor_id,
-        plan.second_side.neighbor_id,
-        &snapshots,
-        vec![corner_id],
-    )
+    let replace_path = arc_replace_path(corner_id, plan);
+    let nodes_to_remove = replace_path
+        .get(1..replace_path.len().saturating_sub(1))
+        .map_or_else(Vec::new, |inner| inner.to_vec());
+
+    build_arc_tool_result_from_transitions(plan, &snapshots, nodes_to_remove)
 }
 
 fn build_arc_tool_result_from_transitions(
     plan: &ArcPlan,
-    first_neighbor_id: u64,
-    second_neighbor_id: u64,
     transitions: &[RoundingTransitionSnapshot],
     nodes_to_remove: Vec<u64>,
 ) -> ToolResult {
@@ -496,7 +495,7 @@ fn build_arc_tool_result_from_transitions(
         if transition.forward {
             external_connections.push((
                 0,
-                first_neighbor_id,
+                plan.first_side.anchor_id,
                 true,
                 transition.direction,
                 transition.priority,
@@ -511,7 +510,7 @@ fn build_arc_tool_result_from_transitions(
             }
             external_connections.push((
                 last_index,
-                second_neighbor_id,
+                plan.second_side.anchor_id,
                 false,
                 transition.direction,
                 transition.priority,
@@ -519,7 +518,7 @@ fn build_arc_tool_result_from_transitions(
         } else {
             external_connections.push((
                 last_index,
-                second_neighbor_id,
+                plan.second_side.anchor_id,
                 true,
                 transition.direction,
                 transition.priority,
@@ -534,7 +533,7 @@ fn build_arc_tool_result_from_transitions(
             }
             external_connections.push((
                 0,
-                first_neighbor_id,
+                plan.first_side.anchor_id,
                 false,
                 transition.direction,
                 transition.priority,
@@ -558,7 +557,12 @@ fn build_quadratic_tool_result(plan: &QuadraticPlan, transitions: &[ArcTransitio
         })
         .collect();
 
-    build_quadratic_tool_result_from_transitions(plan, &snapshots, vec![plan.control_node_id])
+    let nodes_to_remove = plan
+        .replace_path
+        .get(1..plan.replace_path.len().saturating_sub(1))
+        .map_or_else(Vec::new, |inner| inner.to_vec());
+
+    build_quadratic_tool_result_from_transitions(plan, &snapshots, nodes_to_remove)
 }
 
 fn build_quadratic_tool_result_from_transitions(
@@ -653,8 +657,8 @@ fn build_runtime_edit_payload(
             }
 
             Some(RouteToolEditPayload::RoundingArc {
-                first_neighbor_id: plan.first_side.neighbor_id,
-                second_neighbor_id: plan.second_side.neighbor_id,
+                first_anchor_id: plan.first_side.anchor_id,
+                second_anchor_id: plan.second_side.anchor_id,
                 corner_position,
                 radius_m: tool.arc.radius_m,
                 sample_spacing_m: tool.arc.sample_spacing_m,
@@ -680,6 +684,8 @@ fn build_runtime_edit_payload(
                 end_node_id: plan.end_node_id,
                 start_outer_neighbor_id: plan.start_outer_side.neighbor_id,
                 end_outer_neighbor_id: plan.end_outer_side.neighbor_id,
+                start_control_path_node_ids: plan.start_anchor_path.node_ids.clone(),
+                control_end_path_node_ids: plan.end_anchor_path.node_ids.clone(),
                 control_point: plan.control_point,
                 sample_spacing_m: tool.quadratic.sample_spacing_m,
                 transitions: transitions

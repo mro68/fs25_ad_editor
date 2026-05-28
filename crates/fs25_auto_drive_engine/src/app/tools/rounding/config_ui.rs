@@ -39,7 +39,7 @@ impl RoundingTool {
                 "Corner-Winkel laesst keinen stabilen Kreisbogen mit festem Radius zu."
             }
             ArcValidation::RadiusTooLarge => {
-                "Radius passt nicht in die erste Strecke auf mindestens einer Seite."
+                "Radius passt nicht in mindestens eine Anschlussstrecke des Corner-Pfads."
             }
             ArcValidation::Ready => "Bereit — Enter verrundet den Corner mit festem Kreisbogen.",
         }
@@ -76,7 +76,7 @@ impl RoundingTool {
                 "P2 darf in CP-03 keine zusaetzlichen Aussenverbindungen haben."
             }
             QuadraticValidation::BrokenSelectedChain => {
-                "Die geordnete 3er-Kette muss intern als P1 -> P2 -> P3 verbunden sein."
+                "Die 3er-Selektion braucht intern eindeutige Anchor-Pfade als P1 -> P2 -> P3."
             }
             QuadraticValidation::DegenerateOuterStretch => {
                 "Mindestens eine Aussenstrecke der 3er-Kette ist zu kurz oder degeneriert."

@@ -70,6 +70,8 @@ pub struct RouteToolViewportData {
     pub drag_targets: Vec<Vec2>,
     /// Gibt an, ob das Tool bereits angefangene Eingaben besitzt.
     pub has_pending_input: bool,
+    /// Gibt an, ob Primarklicks ueber den generischen Node-Pick laufen sollen.
+    pub prefers_generic_node_pick: bool,
     /// Gibt an, ob Pfeiltasten aktuell als Segment-Shortcuts geroutet werden.
     pub segment_shortcuts_active: bool,
     /// Optional vorbereitete Tangenten-Daten fuer das Kontextmenue.

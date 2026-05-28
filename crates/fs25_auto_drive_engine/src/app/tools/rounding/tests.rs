@@ -4,8 +4,9 @@ use super::geometry::{
 use super::{RoundingMode, RoundingTool};
 use crate::app::tool_editing::RouteToolEditPayload;
 use crate::app::tools::{
-    OrderedNodeChain, RouteToolChainInput, RouteToolCore, RouteToolGroupEdit, RouteToolPanelBridge,
-    RouteToolRecreate, RouteToolSelectionSeed,
+    OrderedNodeChain, RouteToolAnchorPathSeed, RouteToolChainInput, RouteToolCore,
+    RouteToolGroupEdit, RouteToolLinearStretchSeed, RouteToolPanelBridge, RouteToolRecreate,
+    RouteToolSelectionSeed,
 };
 use crate::app::ui_contract::{RoundingPanelAction, RouteToolPanelAction};
 use crate::core::{
@@ -29,17 +30,116 @@ fn make_neighbor_seed(
         .collect()
 }
 
-fn load_single_corner(tool: &mut RoundingTool, road_map: &RoadMap, node_id: u64) {
+fn single_step_stretch_seeds(road_map: &RoadMap, node_id: u64) -> Vec<RouteToolLinearStretchSeed> {
+    let corner_position = road_map
+        .node_position(node_id)
+        .expect("Corner-Node erwartet");
+    let mut by_neighbor = std::collections::HashMap::<u64, RouteToolLinearStretchSeed>::new();
+
+    for neighbor in make_neighbor_seed(road_map, node_id) {
+        let stretch =
+            by_neighbor
+                .entry(neighbor.neighbor_id)
+                .or_insert(RouteToolLinearStretchSeed {
+                    node_ids: vec![neighbor.neighbor_id],
+                    positions: vec![neighbor.position],
+                    angle: neighbor.angle,
+                    has_incoming: false,
+                    has_outgoing: false,
+                });
+        stretch.angle = neighbor.angle;
+        if neighbor.is_outgoing {
+            stretch.has_outgoing = true;
+        } else {
+            stretch.has_incoming = true;
+        }
+    }
+
+    let mut stretches: Vec<RouteToolLinearStretchSeed> = by_neighbor.into_values().collect();
+    stretches.sort_by(|left, right| left.angle.total_cmp(&right.angle));
+
+    for stretch in &mut stretches {
+        if stretch.positions.is_empty() {
+            continue;
+        }
+        stretch.angle = (stretch.positions[0] - corner_position).to_angle();
+    }
+    stretches.sort_by(|left, right| left.angle.total_cmp(&right.angle));
+    stretches
+}
+
+fn stretch_seed(
+    road_map: &RoadMap,
+    corner_id: u64,
+    node_ids: &[u64],
+    has_incoming: bool,
+    has_outgoing: bool,
+) -> RouteToolLinearStretchSeed {
+    let corner_position = road_map
+        .node_position(corner_id)
+        .expect("Corner-Node erwartet");
+    let positions: Vec<Vec2> = node_ids
+        .iter()
+        .map(|id| road_map.node_position(*id).expect("Stretch-Node erwartet"))
+        .collect();
+
+    RouteToolLinearStretchSeed {
+        node_ids: node_ids.to_vec(),
+        angle: (positions[0] - corner_position).to_angle(),
+        positions,
+        has_incoming,
+        has_outgoing,
+    }
+}
+
+fn load_single_corner_with_stretches(
+    tool: &mut RoundingTool,
+    road_map: &RoadMap,
+    node_id: u64,
+    mut stretches: Vec<RouteToolLinearStretchSeed>,
+) {
+    stretches.sort_by(|left, right| left.angle.total_cmp(&right.angle));
     tool.load_selection_seed(RouteToolSelectionSeed {
         node_ids: vec![node_id],
         positions: vec![road_map
             .node_position(node_id)
             .expect("Corner-Node erwartet")],
         connected_neighbors: vec![make_neighbor_seed(road_map, node_id)],
+        linear_stretches: vec![stretches],
+        anchor_paths: Vec::new(),
     });
 }
 
-fn load_three_point_chain(tool: &mut RoundingTool, road_map: &RoadMap, ordered_ids: [u64; 3]) {
+fn load_single_corner(tool: &mut RoundingTool, road_map: &RoadMap, node_id: u64) {
+    load_single_corner_with_stretches(
+        tool,
+        road_map,
+        node_id,
+        single_step_stretch_seeds(road_map, node_id),
+    );
+}
+
+fn path_seed(road_map: &RoadMap, node_ids: &[u64]) -> RouteToolAnchorPathSeed {
+    let mut reverse_node_ids = node_ids.to_vec();
+    reverse_node_ids.reverse();
+    RouteToolAnchorPathSeed {
+        node_ids: node_ids.to_vec(),
+        has_forward_path: node_ids
+            .windows(2)
+            .all(|segment| road_map.has_connection(segment[0], segment[1])),
+        has_reverse_path: reverse_node_ids
+            .windows(2)
+            .all(|segment| road_map.has_connection(segment[0], segment[1])),
+    }
+}
+
+fn load_three_point_chain_with_paths(
+    tool: &mut RoundingTool,
+    road_map: &RoadMap,
+    ordered_ids: [u64; 3],
+    start_control_path: &[u64],
+    control_end_path: &[u64],
+) {
     let positions: Vec<Vec2> = ordered_ids
         .iter()
         .map(|id| road_map.node_position(*id).expect("Chain-Node erwartet"))
@@ -58,7 +158,24 @@ fn load_three_point_chain(tool: &mut RoundingTool, road_map: &RoadMap, ordered_i
             .iter()
             .map(|id| make_neighbor_seed(road_map, *id))
             .collect(),
+        linear_stretches: vec![Vec::new(); ordered_ids.len()],
+        anchor_paths: vec![
+            path_seed(road_map, start_control_path),
+            path_seed(road_map, control_end_path),
+        ],
     });
+}
+
+fn load_three_point_chain(tool: &mut RoundingTool, road_map: &RoadMap, ordered_ids: [u64; 3]) {
+    let start_control_path = [ordered_ids[0], ordered_ids[1]];
+    let control_end_path = [ordered_ids[1], ordered_ids[2]];
+    load_three_point_chain_with_paths(
+        tool,
+        road_map,
+        ordered_ids,
+        &start_control_path,
+        &control_end_path,
+    );
 }
 
 fn simple_corner_map() -> RoadMap {
@@ -127,6 +244,108 @@ fn quadratic_ready_map() -> RoadMap {
     road_map
 }
 
+fn quadratic_span_map() -> RoadMap {
+    let mut road_map = RoadMap::new(3);
+    road_map.add_node(MapNode::new(10, Vec2::new(-20.0, 0.0), NodeFlag::Regular));
+    road_map.add_node(MapNode::new(1, Vec2::new(-10.0, 0.0), NodeFlag::Regular));
+    road_map.add_node(MapNode::new(2, Vec2::new(-5.0, 0.0), NodeFlag::Regular));
+    road_map.add_node(MapNode::new(3, Vec2::ZERO, NodeFlag::Regular));
+    road_map.add_node(MapNode::new(4, Vec2::new(5.0, 5.0), NodeFlag::Regular));
+    road_map.add_node(MapNode::new(5, Vec2::new(10.0, 10.0), NodeFlag::Regular));
+    road_map.add_node(MapNode::new(30, Vec2::new(20.0, 20.0), NodeFlag::Regular));
+    road_map.add_connection(Connection::new(
+        10,
+        1,
+        ConnectionDirection::Regular,
+        ConnectionPriority::Regular,
+        Vec2::new(-20.0, 0.0),
+        Vec2::new(-10.0, 0.0),
+    ));
+    road_map.add_connection(Connection::new(
+        1,
+        2,
+        ConnectionDirection::Regular,
+        ConnectionPriority::Regular,
+        Vec2::new(-10.0, 0.0),
+        Vec2::new(-5.0, 0.0),
+    ));
+    road_map.add_connection(Connection::new(
+        2,
+        3,
+        ConnectionDirection::Regular,
+        ConnectionPriority::Regular,
+        Vec2::new(-5.0, 0.0),
+        Vec2::ZERO,
+    ));
+    road_map.add_connection(Connection::new(
+        3,
+        4,
+        ConnectionDirection::Regular,
+        ConnectionPriority::Regular,
+        Vec2::ZERO,
+        Vec2::new(5.0, 5.0),
+    ));
+    road_map.add_connection(Connection::new(
+        4,
+        5,
+        ConnectionDirection::Regular,
+        ConnectionPriority::Regular,
+        Vec2::new(5.0, 5.0),
+        Vec2::new(10.0, 10.0),
+    ));
+    road_map.add_connection(Connection::new(
+        5,
+        30,
+        ConnectionDirection::Regular,
+        ConnectionPriority::Regular,
+        Vec2::new(10.0, 10.0),
+        Vec2::new(20.0, 20.0),
+    ));
+    road_map
+}
+
+fn arc_stretch_map() -> RoadMap {
+    let mut road_map = RoadMap::new(3);
+    road_map.add_node(MapNode::new(10, Vec2::new(-20.0, 0.0), NodeFlag::Regular));
+    road_map.add_node(MapNode::new(11, Vec2::new(-10.0, 0.0), NodeFlag::Regular));
+    road_map.add_node(MapNode::new(1, Vec2::ZERO, NodeFlag::Regular));
+    road_map.add_node(MapNode::new(21, Vec2::new(0.0, 10.0), NodeFlag::Regular));
+    road_map.add_node(MapNode::new(20, Vec2::new(0.0, 20.0), NodeFlag::Regular));
+    road_map.add_connection(Connection::new(
+        10,
+        11,
+        ConnectionDirection::Regular,
+        ConnectionPriority::Regular,
+        Vec2::new(-20.0, 0.0),
+        Vec2::new(-10.0, 0.0),
+    ));
+    road_map.add_connection(Connection::new(
+        11,
+        1,
+        ConnectionDirection::Regular,
+        ConnectionPriority::Regular,
+        Vec2::new(-10.0, 0.0),
+        Vec2::ZERO,
+    ));
+    road_map.add_connection(Connection::new(
+        1,
+        21,
+        ConnectionDirection::Regular,
+        ConnectionPriority::Regular,
+        Vec2::ZERO,
+        Vec2::new(0.0, 10.0),
+    ));
+    road_map.add_connection(Connection::new(
+        21,
+        20,
+        ConnectionDirection::Regular,
+        ConnectionPriority::Regular,
+        Vec2::new(0.0, 10.0),
+        Vec2::new(0.0, 20.0),
+    ));
+    road_map
+}
+
 #[test]
 fn arc_plan_builds_true_circle_with_fixed_radius() {
     let road_map = simple_corner_map();
@@ -189,6 +408,42 @@ fn execute_builds_local_replacement_and_removes_corner_node() {
 }
 
 #[test]
+fn arc_stretch_reaches_tangent_points_beyond_first_neighbor_edge() {
+    let road_map = arc_stretch_map();
+    let mut tool = RoundingTool::new();
+    tool.arc.radius_m = 15.0;
+    load_single_corner_with_stretches(
+        &mut tool,
+        &road_map,
+        1,
+        vec![
+            stretch_seed(&road_map, 1, &[11, 10], true, false),
+            stretch_seed(&road_map, 1, &[21, 20], false, true),
+        ],
+    );
+
+    assert_eq!(tool.arc.validation, ArcValidation::Ready);
+    let plan = tool.arc.plan.as_ref().expect("Stretch-Arc-Plan erwartet");
+    assert_eq!(plan.first_side.anchor_id, 20);
+    assert_eq!(plan.second_side.anchor_id, 10);
+    assert_eq!(plan.first_side.consumed_node_ids, vec![21]);
+    assert_eq!(plan.second_side.consumed_node_ids, vec![11]);
+
+    let result = tool
+        .execute(&road_map)
+        .expect("Stretch-Arc-ToolResult erwartet");
+    assert_eq!(result.nodes_to_remove, vec![21, 1, 11]);
+
+    let mut connected_anchors: Vec<u64> = result
+        .external_connections
+        .iter()
+        .map(|(_, anchor_id, _, _, _)| *anchor_id)
+        .collect();
+    connected_anchors.sort_unstable();
+    assert_eq!(connected_anchors, vec![10, 20]);
+}
+
+#[test]
 fn ambiguous_junction_is_invalid_for_cp02() {
     let mut road_map = simple_corner_map();
     road_map.add_node(MapNode::new(30, Vec2::new(20.0, 0.0), NodeFlag::Regular));
@@ -246,7 +501,7 @@ fn radius_too_large_is_reported_clearly() {
     assert!(!tool.is_ready());
     assert_eq!(
         tool.status_text(),
-        "Radius passt nicht in die erste Strecke auf mindestens einer Seite."
+        "Radius passt nicht in mindestens eine Anschlussstrecke des Corner-Pfads."
     );
 }
 
@@ -317,6 +572,90 @@ fn quadratic_three_point_builds_preview_and_local_replace() {
         .iter()
         .all(|(_, flag)| *flag == NodeFlag::RoundedCorner));
     assert_eq!(result.external_connections.len(), 2);
+}
+
+#[test]
+fn quadratic_three_point_accepts_anchor_paths_with_intermediate_nodes() {
+    let road_map = quadratic_span_map();
+    let mut tool = RoundingTool::new();
+    load_three_point_chain_with_paths(&mut tool, &road_map, [1, 3, 5], &[1, 2, 3], &[3, 4, 5]);
+
+    assert_eq!(tool.quadratic.validation, QuadraticValidation::Ready);
+
+    let plan = tool
+        .quadratic
+        .plan
+        .as_ref()
+        .expect("Quadratic-Plan fuer Anchor-Pfade erwartet");
+    assert_eq!(plan.start_node_id, 1);
+    assert_eq!(plan.control_node_id, 3);
+    assert_eq!(plan.end_node_id, 5);
+
+    let result = tool
+        .execute(&road_map)
+        .expect("Quadratic-ToolResult fuer Anchor-Pfade erwartet");
+    assert_eq!(result.nodes_to_remove, vec![2, 3, 4]);
+}
+
+#[test]
+fn restored_quadratic_payload_preserves_anchor_paths_with_intermediate_nodes() {
+    let road_map = quadratic_span_map();
+    let mut source_tool = RoundingTool::new();
+    load_three_point_chain_with_paths(
+        &mut source_tool,
+        &road_map,
+        [1, 3, 5],
+        &[1, 2, 3],
+        &[3, 4, 5],
+    );
+
+    let original_result = source_tool
+        .execute(&road_map)
+        .expect("Originales Quadratic-Result mit Anchor-Pfaden erwartet");
+    assert_eq!(original_result.nodes_to_remove, vec![2, 3, 4]);
+    source_tool.on_applied(&[401, 402, 403], &road_map);
+
+    let payload = source_tool
+        .build_edit_payload()
+        .expect("Persistierter Quadratic-Payload mit Anchor-Pfaden erwartet");
+    match &payload {
+        RouteToolEditPayload::RoundingQuadratic {
+            start_outer_neighbor_id,
+            end_outer_neighbor_id,
+            start_control_path_node_ids,
+            control_end_path_node_ids,
+            ..
+        } => {
+            assert_eq!(*start_outer_neighbor_id, 10);
+            assert_eq!(*end_outer_neighbor_id, 30);
+            assert_eq!(start_control_path_node_ids, &vec![1, 2, 3]);
+            assert_eq!(control_end_path_node_ids, &vec![3, 4, 5]);
+        }
+        other => panic!("unerwarteter Payload-Typ: {other:?}"),
+    }
+
+    let mut recreated_map = quadratic_span_map();
+    recreated_map.remove_node(2);
+    recreated_map.remove_node(3);
+    recreated_map.remove_node(4);
+
+    let mut restored_tool = RoundingTool::new();
+    restored_tool.restore_edit_payload(&payload);
+
+    assert!(
+        restored_tool
+            .preview(Vec2::ZERO, &recreated_map)
+            .nodes
+            .len()
+            >= 3
+    );
+
+    let recreated_result = restored_tool
+        .execute(&recreated_map)
+        .expect("Quadratic-Recreate-Result mit Anchor-Pfaden erwartet");
+    assert!(recreated_result.nodes_to_remove.is_empty());
+    assert_eq!(recreated_result.external_connections.len(), 2);
+    assert!(!recreated_result.new_nodes.is_empty());
 }
 
 #[test]
@@ -419,22 +758,44 @@ fn arc_panel_change_marks_recreate_and_updates_payload() {
 
 #[test]
 fn restored_arc_payload_executes_without_original_corner_node() {
-    let road_map = simple_corner_map();
+    let road_map = arc_stretch_map();
     let mut source_tool = RoundingTool::new();
-    source_tool.arc.radius_m = 5.0;
-    load_single_corner(&mut source_tool, &road_map, 1);
+    source_tool.arc.radius_m = 15.0;
+    load_single_corner_with_stretches(
+        &mut source_tool,
+        &road_map,
+        1,
+        vec![
+            stretch_seed(&road_map, 1, &[11, 10], true, false),
+            stretch_seed(&road_map, 1, &[21, 20], false, true),
+        ],
+    );
 
     let original_result = source_tool
         .execute(&road_map)
         .expect("Originales Arc-Result erwartet");
-    assert_eq!(original_result.nodes_to_remove, vec![1]);
+    assert_eq!(original_result.nodes_to_remove, vec![21, 1, 11]);
     source_tool.on_applied(&[201, 202, 203], &road_map);
 
     let payload = source_tool
         .build_edit_payload()
         .expect("Persistierter Arc-Payload erwartet");
+    match &payload {
+        RouteToolEditPayload::RoundingArc {
+            first_anchor_id,
+            second_anchor_id,
+            ..
+        } => {
+            let mut anchors = vec![*first_anchor_id, *second_anchor_id];
+            anchors.sort_unstable();
+            assert_eq!(anchors, vec![10, 20]);
+        }
+        other => panic!("unerwarteter Payload-Typ: {other:?}"),
+    }
 
-    let mut recreated_map = simple_corner_map();
+    let mut recreated_map = arc_stretch_map();
+    recreated_map.remove_node(11);
+    recreated_map.remove_node(21);
     recreated_map.remove_node(1);
 
     let mut restored_tool = RoundingTool::new();

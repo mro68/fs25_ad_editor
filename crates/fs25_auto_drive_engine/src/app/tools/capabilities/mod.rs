@@ -16,6 +16,7 @@ pub use group_edit::RouteToolGroupEdit;
 pub use lasso_input::RouteToolLassoInput;
 pub use recreate::RouteToolRecreate;
 pub use selection_input::{
-    RouteToolConnectedNeighborSeed, RouteToolSelectionInput, RouteToolSelectionSeed,
+    RouteToolAnchorPathSeed, RouteToolConnectedNeighborSeed, RouteToolLinearStretchSeed,
+    RouteToolSelectionInput, RouteToolSelectionSeed,
 };
 pub use tangent::RouteToolTangent;

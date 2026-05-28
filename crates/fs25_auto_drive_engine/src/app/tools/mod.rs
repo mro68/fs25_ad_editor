@@ -42,9 +42,10 @@ pub mod straight_line;
 pub use crate::app::tool_contract::ToolAnchor;
 pub use crate::shared::RouteToolGroup;
 pub use capabilities::{
-    OrderedNodeChain, RouteToolChainInput, RouteToolConnectedNeighborSeed, RouteToolDrag,
-    RouteToolGroupEdit, RouteToolLassoInput, RouteToolRecreate, RouteToolRotate,
-    RouteToolSegmentAdjustments, RouteToolSelectionInput, RouteToolSelectionSeed, RouteToolTangent,
+    OrderedNodeChain, RouteToolAnchorPathSeed, RouteToolChainInput, RouteToolConnectedNeighborSeed,
+    RouteToolDrag, RouteToolGroupEdit, RouteToolLassoInput, RouteToolLinearStretchSeed,
+    RouteToolRecreate, RouteToolRotate, RouteToolSegmentAdjustments, RouteToolSelectionInput,
+    RouteToolSelectionSeed, RouteToolTangent,
 };
 pub use catalog::{
     resolve_route_tool_entries, route_tool_catalog, route_tool_defaults_tooltip_key,

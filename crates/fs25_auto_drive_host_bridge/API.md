@@ -38,6 +38,8 @@ Die konsolidierte Host-Dialog-Seam bildet die interne Engine-Queue `DialogReques
 
 Mit `HostChromeSnapshot` existiert zusaetzlich ein expliziter host-neutraler Read-Seam fuer Menues, Defaults, Status und Route-Tool-Metadaten. Der Snapshot spiegelt jetzt auch die Verfuegbarkeit gespeicherter Hintergrund-Layer sowie deren aktuelle Runtime-Sichtbarkeit ueber `background_layers_available` und `background_layer_entries`. Egui konsumiert diesen Snapshot lokal; der FFI-Adapter spiegelt dieselbe Surface additiv ueber `fs25ad_host_bridge_session_chrome_snapshot_json(...)`.
 
+Der Route-Tool-Viewport-Read-Seam `HostRouteToolViewportSnapshot` spiegelt fuer selektionsgetriebene Werkzeuge jetzt auch `prefers_generic_node_pick`. Hosts koennen damit Primarklicks fuer aktives `Rounding` bewusst ueber den generischen Node-Pick und die bestehende Selection-Seam routen, statt sie als direkte Route-Tool-Schreibaktion zu behandeln.
+
 ## Session-Grenze (Stand 2026-04-07)
 
 - **bridge-owned:** Explizite Action-/Snapshot-Seams (`HostSessionAction`, `HostRouteToolAction`, `HostSessionSnapshot`, `HostUiSnapshot`, `HostChromeSnapshot`, `HostRouteToolViewportSnapshot`, `ViewportOverlaySnapshot`, Render-Read-Seams inklusive gekoppeltem `build_render_frame(...)`) und die stateful Viewport-Input-Familie (`HostViewportInputBatch`, `HostViewportInputState`) liegen zentral in der Host-Bridge.
@@ -124,7 +126,7 @@ Mit `HostChromeSnapshot` existiert zusaetzlich ein expliziter host-neutraler Rea
 | `HostDefaultConnectionDirection` / `HostDefaultConnectionPriority` | Stabile Default-Enums fuer Verbindungsrichtung und Prioritaet im Chrome-Snapshot |
 | `HostSelectionSnapshot` / `HostViewportSnapshot` | Read-only Detail-Snapshots fuer Auswahl und Kamera |
 | `HostViewportGeometrySnapshot` | Minimaler, serialisierbarer Viewport-Geometry-Snapshot fuer Nodes, Connections, Marker und Kamera-/Viewport-Metadaten |
-| `HostRouteToolViewportSnapshot` / `HostTangentMenuSnapshot` / `HostTangentOptionSnapshot` | Route-Tool-spezifische Read-DTOs fuer Drag-Targets, Segment-Shortcuts und Tangenten-Menues |
+| `HostRouteToolViewportSnapshot` / `HostTangentMenuSnapshot` / `HostTangentOptionSnapshot` | Route-Tool-spezifische Read-DTOs fuer Drag-Targets, generischen Node-Pick, Segment-Shortcuts und Tangenten-Menues |
 | `HostPanelPropertiesState` | Schmaler Rust-Host-Seam fuer Properties/Edit-Panel (Read-Daten + lokale `distanzen`/`options`-Writes) |
 | `HostDialogUiState` | Schmaler Rust-Host-Seam fuer host-lokale Dialog-UI-Mutationen ohne Vollzugriff auf `AppState` |
 | `HostViewportInputContext` | Schmaler Rust-Host-Seam fuer Viewport-Event-Sammler (Read-Daten + lokale `distanzen`-Writes) |

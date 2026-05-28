@@ -5,7 +5,10 @@ use super::geometry::{
     QuadraticValidation,
 };
 use crate::app::tool_editing::RouteToolEditPayload;
-use crate::app::tools::{OrderedNodeChain, RouteToolConnectedNeighborSeed, RouteToolSelectionSeed};
+use crate::app::tools::{
+    OrderedNodeChain, RouteToolAnchorPathSeed, RouteToolConnectedNeighborSeed,
+    RouteToolLinearStretchSeed, RouteToolSelectionSeed,
+};
 use glam::Vec2;
 use std::collections::HashMap;
 
@@ -28,8 +31,8 @@ pub struct ArcOnePointState {
     pub(crate) selected_node_ids: Vec<u64>,
     /// Positionen der geladenen Selektion parallel zu `selected_node_ids`.
     pub(crate) selected_positions: Vec<Vec2>,
-    /// Nachbar-Snapshots des selektierten Corner-Nodes.
-    pub(crate) selected_neighbors: Vec<RouteToolConnectedNeighborSeed>,
+    /// Linear aufgeloeste Anschlussstrecken des selektierten Corner-Nodes.
+    pub(crate) selected_stretches: Vec<RouteToolLinearStretchSeed>,
     /// Eindeutig selektierter Corner-Node fuer den Arc-Modus.
     pub(crate) corner_node_id: Option<u64>,
     /// Position des selektierten Corner-Nodes.
@@ -49,7 +52,7 @@ impl Default for ArcOnePointState {
         Self {
             selected_node_ids: Vec::new(),
             selected_positions: Vec::new(),
-            selected_neighbors: Vec::new(),
+            selected_stretches: Vec::new(),
             corner_node_id: None,
             corner_position: None,
             radius_m: DEFAULT_ARC_RADIUS_M,
@@ -65,8 +68,12 @@ impl Default for ArcOnePointState {
 pub struct QuadraticThreePointState {
     /// Aktuell geladene Selektions-IDs.
     pub(crate) selected_node_ids: Vec<u64>,
+    /// Positionen der selektierten Nodes nach ID fuer Anchor-Pfad-Validierung.
+    pub(crate) selected_positions: HashMap<u64, Vec2>,
     /// Nachbar-Snapshots pro selektiertem Node, indexiert nach Node-ID.
     pub(crate) selected_neighbors: HashMap<u64, Vec<RouteToolConnectedNeighborSeed>>,
+    /// Eindeutig aufgeloeste Anchor-Pfade zwischen den selektierten Nodes.
+    pub(crate) selected_anchor_paths: Vec<RouteToolAnchorPathSeed>,
     /// Geordnete 3-Node-Kette als `[P1, P2, P3]`.
     pub(crate) chain_node_ids: Vec<u64>,
     /// Positionen der geordneten 3-Node-Kette parallel zu `chain_node_ids`.
@@ -83,7 +90,9 @@ impl Default for QuadraticThreePointState {
     fn default() -> Self {
         Self {
             selected_node_ids: Vec::new(),
+            selected_positions: HashMap::new(),
             selected_neighbors: HashMap::new(),
+            selected_anchor_paths: Vec::new(),
             chain_node_ids: Vec::new(),
             chain_positions: Vec::new(),
             sample_spacing_m: DEFAULT_ARC_SAMPLE_SPACING_M,
@@ -238,28 +247,32 @@ impl RoundingTool {
             node_ids,
             positions,
             connected_neighbors,
+            linear_stretches,
+            anchor_paths,
         } = selection;
 
         if !node_ids.is_empty() {
             self.clear_persisted_edit_state();
         }
 
-        let arc_neighbors = match connected_neighbors.as_slice() {
-            [neighbors] if node_ids.len() == 1 => neighbors.clone(),
+        let arc_stretches = match linear_stretches.as_slice() {
+            [stretches] if node_ids.len() == 1 => stretches.clone(),
             _ => Vec::new(),
         };
 
         self.arc.selected_node_ids = node_ids.clone();
-        self.arc.selected_positions = positions;
-        self.arc.selected_neighbors = Vec::new();
+        self.arc.selected_positions = positions.clone();
+        self.arc.selected_stretches = Vec::new();
         self.quadratic.selected_node_ids = node_ids.clone();
+        self.quadratic.selected_positions = node_ids.iter().copied().zip(positions).collect();
         self.quadratic.selected_neighbors =
             node_ids.iter().copied().zip(connected_neighbors).collect();
+        self.quadratic.selected_anchor_paths = anchor_paths;
 
         if let [node_id] = self.arc.selected_node_ids.as_slice() {
             self.arc.corner_node_id = Some(*node_id);
             self.arc.corner_position = self.arc.selected_positions.first().copied();
-            self.arc.selected_neighbors = arc_neighbors;
+            self.arc.selected_stretches = arc_stretches;
         } else {
             self.arc.corner_node_id = None;
             self.arc.corner_position = None;

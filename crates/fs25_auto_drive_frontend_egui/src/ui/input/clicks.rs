@@ -56,16 +56,25 @@ impl InputState {
                         });
                     }
                     EditorTool::Route => {
-                        let world_pos = screen_pos_to_world(
-                            pointer_pos,
-                            ctx.response,
-                            ctx.viewport_size,
-                            ctx.camera,
-                        );
-                        local_intents.push(AppIntent::RouteToolClicked {
-                            world_pos,
-                            ctrl: modifiers.command,
-                        });
+                        if ctx.route_tool_prefers_generic_node_pick {
+                            host_events.push(HostViewportInputEvent::Tap {
+                                button: fs25_auto_drive_host_bridge::HostPointerButton::Primary,
+                                tap_kind: host_tap_kind(false),
+                                screen_pos: to_viewport_screen_pos(pointer_pos, ctx.response),
+                                modifiers: host_modifiers(modifiers),
+                            });
+                        } else {
+                            let world_pos = screen_pos_to_world(
+                                pointer_pos,
+                                ctx.response,
+                                ctx.viewport_size,
+                                ctx.camera,
+                            );
+                            local_intents.push(AppIntent::RouteToolClicked {
+                                world_pos,
+                                ctrl: modifiers.command,
+                            });
+                        }
                     }
                 }
             }

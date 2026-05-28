@@ -184,10 +184,10 @@ pub enum RouteToolEditPayload {
     },
     /// Persistenzdaten fuer den Arc-Pfad des Verrundungs-Tools.
     RoundingArc {
-        /// Erste ueberlebende Anschlussseite des lokalen Replace-Pfads.
-        first_neighbor_id: u64,
-        /// Zweite ueberlebende Anschlussseite des lokalen Replace-Pfads.
-        second_neighbor_id: u64,
+        /// Erster ueberlebender Aussenanker des lokalen Replace-Pfads.
+        first_anchor_id: u64,
+        /// Zweiter ueberlebender Aussenanker des lokalen Replace-Pfads.
+        second_anchor_id: u64,
         /// Urspruengliche Position des ersetzten Corner-Nodes.
         corner_position: Vec2,
         /// Verrundungsradius in Metern.
@@ -207,6 +207,10 @@ pub enum RouteToolEditPayload {
         start_outer_neighbor_id: u64,
         /// Persistierte Aussenstrecke an `end_node_id` fuer stabile Tangentenvalidierung.
         end_outer_neighbor_id: u64,
+        /// Urspruenglicher eindeutiger Anchor-Pfad von `start_node_id` bis zum historischen P2.
+        start_control_path_node_ids: Vec<u64>,
+        /// Urspruenglicher eindeutiger Anchor-Pfad vom historischen P2 bis `end_node_id`.
+        control_end_path_node_ids: Vec<u64>,
         /// Fester quadratischer Steuerpunkt.
         control_point: Vec2,
         /// Maximale Segmentlaenge fuer die Kurven-Approximation.
@@ -243,10 +247,10 @@ impl RouteToolEditPayload {
                 ..
             } => vec![*chain_start_id, *chain_end_id],
             Self::RoundingArc {
-                first_neighbor_id,
-                second_neighbor_id,
+                first_anchor_id,
+                second_anchor_id,
                 ..
-            } => vec![*first_neighbor_id, *second_neighbor_id],
+            } => vec![*first_anchor_id, *second_anchor_id],
             Self::RoundingQuadratic {
                 start_node_id,
                 end_node_id,

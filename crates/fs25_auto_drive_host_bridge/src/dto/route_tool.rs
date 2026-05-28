@@ -183,6 +183,8 @@ pub struct HostRouteToolViewportSnapshot {
     pub drag_targets: Vec<[f32; 2]>,
     /// Gibt an, ob das Tool bereits Eingaben gesammelt hat.
     pub has_pending_input: bool,
+    /// Gibt an, ob Primarklicks ueber den generischen Node-Pick laufen sollen.
+    pub prefers_generic_node_pick: bool,
     /// Gibt an, ob Segment-Shortcuts aktiv sind.
     pub segment_shortcuts_active: bool,
     /// Optionale Tangenten-Menue-Daten fuer Kontextmenues.
