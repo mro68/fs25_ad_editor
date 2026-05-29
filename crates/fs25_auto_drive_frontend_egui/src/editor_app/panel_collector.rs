@@ -100,16 +100,18 @@ impl EditorApp {
                             events.extend(
                                 ui::render_properties_content(
                                     ui,
-                                    panel_state.road_map,
-                                    panel_state.selected_node_ids,
-                                    node_details.as_ref(),
-                                    connection_pair.as_ref(),
-                                    panel_state.default_direction,
-                                    panel_state.default_priority,
-                                    distance_wheel_step_m,
-                                    Some(panel_state.group_registry),
-                                    Some(panel_state.tool_edit_store),
-                                    panel_state.distanzen,
+                                    ui::PropertiesContext {
+                                        road_map: panel_state.road_map,
+                                        selected_node_ids: panel_state.selected_node_ids,
+                                        node_details: node_details.as_ref(),
+                                        connection_pair: connection_pair.as_ref(),
+                                        default_direction: panel_state.default_direction,
+                                        default_priority: panel_state.default_priority,
+                                        distance_wheel_step_m,
+                                        group_registry: Some(panel_state.group_registry),
+                                        tool_edit_store: Some(panel_state.tool_edit_store),
+                                        distance_state: panel_state.distanzen,
+                                    },
                                 )
                                 .into_iter()
                                 .map(map_intent_to_collected_event),

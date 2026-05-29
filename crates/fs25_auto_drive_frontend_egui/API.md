@@ -55,6 +55,7 @@ Das Onscreen-Rendering liest Szene und Assets ueber denselben gekoppelten `build
 | `ui::GroupOverlayEvent` | Rueckkanal fuer Gruppen-Overlay-Interaktionen |
 | `app::ui_contract::HostUiSnapshot` | Host-neutraler Panel-Snapshot, den `editor_app` pro Frame konsumiert |
 | `app::ui_contract::ViewportOverlaySnapshot` | Host-neutraler Overlay-Snapshot fuer Tool-, Clipboard-, Distanzen- und Gruppen-Overlays |
+| `ui::properties::PropertiesContext<'a>` | Kontext-Bundle fuer `render_properties_content()`; fasst RoadMap-Referenz, selektierte Node-IDs, Bridge-DTOs (Node-Details, Connection-Pair, Defaults) und mutable State-Seams zusammen (CP-04) |
 
 ## Oeffentliche Funktionen und Re-Exports
 
