@@ -60,6 +60,12 @@ struct ArcStretchCut {
     tangent_point: Vec2,
 }
 
+#[derive(Debug, Clone, Copy, PartialEq)]
+struct ArcSegmentation {
+    segment_count: usize,
+    segment_angle: f32,
+}
+
 pub(crate) fn recompute_arc_plan(arc: &ArcOnePointState) -> (ArcValidation, Option<ArcPlan>) {
     let Some(corner_position) = arc.corner_position else {
         return if arc.selected_node_ids.len() == 1 {
@@ -190,12 +196,12 @@ fn build_arc_plan_from_stretches(
     let center = corner_position + bisector * center_distance;
 
     let start_angle = (tangent_first - center).to_angle();
-    let sweep_angle = -turn_angle;
-    let segment_count = arc_segment_count(sweep_angle, max_angle_deg);
-    let mut arc_positions = Vec::with_capacity(segment_count + 1);
-    for step in 0..=segment_count {
-        let t = step as f32 / segment_count as f32;
-        let angle = start_angle + sweep_angle * t;
+    let end_angle = (tangent_second - center).to_angle();
+    let sweep_angle = normalized_sweep_angle(start_angle, end_angle);
+    let segmentation = arc_segmentation(sweep_angle, max_angle_deg);
+    let mut arc_positions = Vec::with_capacity(segmentation.segment_count + 1);
+    for step in 0..=segmentation.segment_count {
+        let angle = start_angle + segmentation.segment_angle * step as f32;
         arc_positions.push(center + Vec2::from_angle(angle) * radius_m);
     }
     if let Some(first) = arc_positions.first_mut() {
@@ -226,9 +232,24 @@ fn build_arc_plan_from_stretches(
     })
 }
 
-fn arc_segment_count(sweep_angle: f32, max_angle_deg: f32) -> usize {
+fn arc_segmentation(sweep_angle: f32, max_angle_deg: f32) -> ArcSegmentation {
     let max_angle_rad = clamp_arc_max_angle_deg(max_angle_deg).to_radians();
-    ((sweep_angle.abs() / max_angle_rad).ceil() as usize).max(2)
+    let segment_count = ((sweep_angle.abs() / max_angle_rad).ceil() as usize).max(2);
+    ArcSegmentation {
+        segment_count,
+        segment_angle: sweep_angle / segment_count as f32,
+    }
+}
+
+fn normalized_sweep_angle(start_angle: f32, end_angle: f32) -> f32 {
+    let mut delta = end_angle - start_angle;
+    if delta > std::f32::consts::PI {
+        delta -= std::f32::consts::PI * 2.0;
+    }
+    if delta < -std::f32::consts::PI {
+        delta += std::f32::consts::PI * 2.0;
+    }
+    delta
 }
 
 fn cut_stretch_at_distance(

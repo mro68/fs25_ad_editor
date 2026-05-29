@@ -1,4 +1,4 @@
-use super::geometry::{build_arc_plan_from_payload, collect_transitions, ArcValidation};
+use super::geometry::{build_arc_plan_from_payload, collect_transitions, ArcPlan, ArcValidation};
 use super::state::{DEFAULT_ARC_MAX_ANGLE_DEG, MAX_ARC_MAX_ANGLE_DEG, MIN_ARC_MAX_ANGLE_DEG};
 use super::RoundingTool;
 use crate::app::tool_editing::RouteToolEditPayload;
@@ -170,6 +170,46 @@ fn arc_stretch_map() -> RoadMap {
     road_map
 }
 
+fn normalized_angle_delta(delta: f32) -> f32 {
+    let mut wrapped = delta;
+    if wrapped > std::f32::consts::PI {
+        wrapped -= std::f32::consts::PI * 2.0;
+    }
+    if wrapped < -std::f32::consts::PI {
+        wrapped += std::f32::consts::PI * 2.0;
+    }
+    wrapped
+}
+
+fn arc_segment_angles_deg(plan: &ArcPlan) -> Vec<f32> {
+    plan.arc_positions
+        .windows(2)
+        .map(|pair| {
+            let start_angle = (pair[0] - plan.center).to_angle();
+            let end_angle = (pair[1] - plan.center).to_angle();
+            normalized_angle_delta(end_angle - start_angle)
+                .abs()
+                .to_degrees()
+        })
+        .collect()
+}
+
+fn assert_even_arc_segments(plan: &ArcPlan, max_angle_deg: f32) {
+    let segment_angles = arc_segment_angles_deg(plan);
+    let expected_angle = plan.sweep_angle.abs().to_degrees() / segment_angles.len() as f32;
+
+    for (index, angle) in segment_angles.iter().enumerate() {
+        assert!(
+            (*angle - expected_angle).abs() < 0.01,
+            "Segment {index} sollte gleichmaessig {expected_angle}° gross sein, ist aber {angle}°"
+        );
+        assert!(
+            *angle <= max_angle_deg + 0.01,
+            "Segment {index} ueberschreitet max_angle_deg={max_angle_deg} mit {angle}°"
+        );
+    }
+}
+
 #[test]
 fn arc_defaults_to_max_angle_deg_22_5() {
     let tool = RoundingTool::new();
@@ -208,36 +248,53 @@ fn arc_plan_segments_follow_max_angle_limit() {
     tool.arc.radius_m = 5.0;
     load_single_corner(&mut tool, &road_map, 1);
 
-    let default_positions = tool
-        .arc
-        .plan
-        .as_ref()
-        .expect("Arc-Plan erwartet")
-        .arc_positions
-        .len();
+    let default_plan = tool.arc.plan.as_ref().expect("Arc-Plan erwartet");
+    let default_positions = default_plan.arc_positions.len();
     assert_eq!(default_positions, 5, "90° / 22.5° ergibt 4 Segmente");
+    assert_even_arc_segments(default_plan, DEFAULT_ARC_MAX_ANGLE_DEG);
 
     tool.arc.max_angle_deg = 45.0;
     tool.refresh_arc_state();
-    let coarse_positions = tool
-        .arc
-        .plan
-        .as_ref()
-        .expect("Grober Arc-Plan erwartet")
-        .arc_positions
-        .len();
+    let coarse_plan = tool.arc.plan.as_ref().expect("Grober Arc-Plan erwartet");
+    let coarse_positions = coarse_plan.arc_positions.len();
     assert_eq!(coarse_positions, 3, "90° / 45° ergibt 2 Segmente");
+    assert_even_arc_segments(coarse_plan, 45.0);
 
     tool.arc.max_angle_deg = 15.0;
     tool.refresh_arc_state();
-    let fine_positions = tool
-        .arc
-        .plan
-        .as_ref()
-        .expect("Feiner Arc-Plan erwartet")
-        .arc_positions
-        .len();
+    let fine_plan = tool.arc.plan.as_ref().expect("Feiner Arc-Plan erwartet");
+    let fine_positions = fine_plan.arc_positions.len();
     assert_eq!(fine_positions, 7, "90° / 15° ergibt 6 Segmente");
+    assert_even_arc_segments(fine_plan, 15.0);
+}
+
+#[test]
+fn arc_plan_splits_non_divisible_corner_angle_evenly() {
+    let plan = build_arc_plan_from_payload(
+        Vec2::ZERO,
+        10,
+        Vec2::new(20.0, 0.0),
+        20,
+        Vec2::from_angle(100.0_f32.to_radians()) * 20.0,
+        5.0,
+        30.0,
+    )
+    .expect("100°-Corner muss fuer den Restfall testbar bleiben");
+
+    let segment_angles = arc_segment_angles_deg(&plan);
+    assert_eq!(
+        segment_angles.len(),
+        3,
+        "80° Arc-Sweep / 30° muss auf 3 Segmente aufrunden"
+    );
+    assert_even_arc_segments(&plan, 30.0);
+    let expected_angle = 80.0 / 3.0;
+    for (index, angle) in segment_angles.iter().enumerate() {
+        assert!(
+            (*angle - expected_angle).abs() < 0.01,
+            "Restfall-Segment {index} sollte {expected_angle}° statt ungleichmaessigem Rest haben, ist aber {angle}°"
+        );
+    }
 }
 
 #[test]
@@ -565,16 +622,16 @@ fn arc_plan_keeps_minimum_two_segments_for_small_supported_sweeps() {
         10,
         Vec2::new(20.0, 0.0),
         20,
-        Vec2::from_angle(5.5_f32.to_radians()) * 20.0,
+        Vec2::from_angle(174.5_f32.to_radians()) * 20.0,
         0.5,
         45.0,
     )
-    .expect("5.5°-Corner muss knapp innerhalb des gueltigen Bereichs liegen");
+    .expect("174.5°-Corner muss knapp innerhalb des gueltigen Bereichs liegen");
 
     assert_eq!(
         plan.arc_positions.len(),
         3,
-        "Auch kleine Sweep-Winkel behalten mindestens 2 Segmente"
+        "Auch kleine Arc-Sweeps behalten mindestens 2 Segmente"
     );
 }
 

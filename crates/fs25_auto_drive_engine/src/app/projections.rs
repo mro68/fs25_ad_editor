@@ -50,8 +50,9 @@ fn restored_rounding_preview_node_count(state: &AppState, max_angle_deg: f32) ->
         return None;
     }
 
+    let sweep_angle = std::f32::consts::PI - corner_angle;
     let max_angle_rad = max_angle_deg.clamp(1.0, 45.0).to_radians();
-    let segment_count = ((corner_angle / max_angle_rad).ceil() as usize).max(2);
+    let segment_count = ((sweep_angle / max_angle_rad).ceil() as usize).max(2);
     Some(segment_count + 1)
 }
 
@@ -124,8 +125,14 @@ pub fn build_viewport_overlay_snapshot(
 
 #[cfg(test)]
 mod tests {
-    use super::build_host_ui_snapshot;
+    use super::{build_host_ui_snapshot, restored_rounding_preview_node_count};
+    use crate::app::group_registry::GroupRecord;
+    use crate::app::tool_contract::RouteToolId;
+    use crate::app::tool_editing::{ActiveToolEditSession, RouteToolEditPayload, ToolEditRecord};
     use crate::app::AppState;
+    use crate::core::{MapNode, NodeFlag, RoadMap};
+    use glam::Vec2;
+    use std::sync::Arc;
 
     /// Prüft, dass build_host_ui_snapshot immer das CommandPalette-Panel enthält.
     ///
@@ -172,5 +179,48 @@ mod tests {
             (opts_panel.options.snap_scale_percent - 33.0).abs() < f32::EPSILON,
             "snap_scale_percent muss korrekt übertragen werden"
         );
+    }
+
+    #[test]
+    fn restored_rounding_preview_node_count_uses_actual_arc_sweep() {
+        let mut road_map = RoadMap::new(2);
+        road_map.add_node(MapNode::new(10, Vec2::new(20.0, 0.0), NodeFlag::Regular));
+        road_map.add_node(MapNode::new(
+            20,
+            Vec2::from_angle(100.0_f32.to_radians()) * 20.0,
+            NodeFlag::Regular,
+        ));
+
+        let mut state = AppState::new();
+        state.road_map = Some(Arc::new(road_map));
+        state.active_tool_edit_session = Some(ActiveToolEditSession {
+            record_id: 7,
+            group_record_backup: GroupRecord {
+                id: 7,
+                node_ids: vec![10, 20],
+                original_positions: vec![
+                    Vec2::new(20.0, 0.0),
+                    Vec2::from_angle(100.0_f32.to_radians()) * 20.0,
+                ],
+                marker_node_ids: Vec::new(),
+                locked: true,
+                entry_node_id: None,
+                exit_node_id: None,
+            },
+            tool_edit_backup: ToolEditRecord {
+                group_id: 7,
+                tool_id: RouteToolId::Rounding,
+                payload: RouteToolEditPayload::RoundingArc {
+                    first_anchor_id: 10,
+                    second_anchor_id: 20,
+                    corner_position: Vec2::ZERO,
+                    radius_m: 5.0,
+                    max_angle_deg: 30.0,
+                    transitions: Vec::new(),
+                },
+            },
+        });
+
+        assert_eq!(restored_rounding_preview_node_count(&state, 30.0), Some(4));
     }
 }
