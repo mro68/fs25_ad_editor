@@ -13,6 +13,8 @@ fn map_node_pick(
 
     let mut max_distance = base_max_distance;
     if let Some(rm) = state.road_map.as_ref() {
+        // Ist der Klick in der Naehe eines bereits selektierten Nodes, wird der Radius
+        // vergroessert — erleichtert das Auftrennen eng beieinander liegender Nodes.
         for id in state.selection.selected_node_ids.iter() {
             if let Some(node) = rm.node(*id)
                 && (node.position - world_pos).length() <= increased_max_distance
@@ -34,6 +36,9 @@ fn map_node_pick(
 fn map_segment_pick(state: &AppState, world_pos: glam::Vec2, additive: bool) -> Vec<AppCommand> {
     let max_distance = state.options.hitbox_radius();
 
+    // Vorrang: Wenn der naechste Node bereits einer Gruppe angehoert, wird die gesamte
+    // Gruppe selektiert und das Gruppen-Popup geoeffnet. Andernfalls wird das Segment
+    // zwischen den naechsten Kreuzungen bestimmt (kein Gruppen-Treffer).
     if let Some(rm) = state.road_map.as_deref()
         && let Some(hit) = rm
             .nearest_node(world_pos)
