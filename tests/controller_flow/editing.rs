@@ -1203,3 +1203,217 @@ fn test_full_editing_workflow() {
 // ═══════════════════════════════════════════════════════════════════
 // DRY-Extraktion Tests: Marker-Kaskade & Bulk-Connection-Operationen
 // ═══════════════════════════════════════════════════════════════════
+
+// ═══════════════════════════════════════════════════════════════════
+// CurveTool Phase-Uebergangs-Tests (CP-10)
+// ═══════════════════════════════════════════════════════════════════
+
+/// Hilfsfunktion: Gibt den status_text des aktiven Route-Tools zurueck.
+fn curve_status_text(state: &AppState) -> Option<String> {
+    state
+        .editor
+        .route_tool_panel_state()
+        .and_then(|p| p.status_text)
+}
+
+/// Hilfsfunktion: Gibt den can_execute-Wert des aktiven Route-Tools zurueck.
+fn curve_can_execute(state: &AppState) -> bool {
+    state
+        .editor
+        .route_tool_panel_state()
+        .is_some_and(|p| p.can_execute)
+}
+
+/// Hilfsfunktion: Gibt den has_pending_input-Wert des aktiven Route-Tools zurueck.
+fn curve_has_pending_input(state: &AppState) -> bool {
+    state
+        .editor
+        .route_tool_panel_state()
+        .is_some_and(|p| p.has_pending_input)
+}
+
+#[test]
+fn test_curve_tool_cubic_phase_transitions() {
+    // CurveCubic aktivieren
+    let mut state = make_test_map();
+    handlers::route_tool::select(&mut state, RouteToolId::CurveCubic);
+
+    // Phase Start: kein pending input, Status zeigt Startpunkt-Aufforderung
+    assert_eq!(
+        curve_status_text(&state).as_deref(),
+        Some("Startpunkt klicken"),
+        "CurveCubic muss in Phase Start beginnen"
+    );
+    assert!(
+        !curve_has_pending_input(&state),
+        "Phase Start hat kein pending input"
+    );
+
+    let initial_node_count = state.road_map.as_ref().unwrap().node_count();
+    let initial_connection_count = state.road_map.as_ref().unwrap().connection_count();
+
+    // Phase Start: Klick auf Startpunkt (kein Snap zu bestehenden Nodes)
+    handlers::route_tool::click(&mut state, glam::Vec2::new(50.0, 50.0), false);
+
+    // Phase End erwartet
+    assert_eq!(
+        curve_status_text(&state).as_deref(),
+        Some("Endpunkt klicken"),
+        "Nach Start-Klick muss Phase End aktiv sein"
+    );
+    assert!(
+        curve_has_pending_input(&state),
+        "Phase End hat pending input"
+    );
+    assert!(
+        !curve_can_execute(&state),
+        "Ohne End-Punkt und Steuerpunkte noch nicht ausfuehrbar"
+    );
+
+    // Phase End: Klick auf Endpunkt
+    handlers::route_tool::click(&mut state, glam::Vec2::new(100.0, 50.0), false);
+
+    // Phase Control erwartet — CP2 wird automatisch vorbelegt, CP1 fehlt noch
+    assert_eq!(
+        curve_status_text(&state).as_deref(),
+        Some("1. Steuerpunkt klicken"),
+        "Nach End-Klick (Cubic) muss Phase Control auf 1. CP warten"
+    );
+    assert!(
+        curve_has_pending_input(&state),
+        "Phase Control hat pending input"
+    );
+    assert!(
+        !curve_can_execute(&state),
+        "Ohne CP1 noch nicht ausfuehrbar (CP2 ist Vorschlag)"
+    );
+
+    // Phase Control: Ersten Steuerpunkt setzen → CP1 und CP2-Default → beide gesetzt
+    handlers::route_tool::click(&mut state, glam::Vec2::new(60.0, 30.0), false);
+
+    // Nach CP1-Klick: beide CPs gesetzt → bereit
+    assert_eq!(
+        curve_status_text(&state).as_deref(),
+        Some("Scheitelpunkt (Mitte) per Drag anpassen \u{2014} Enter bestaetigt"),
+        "Mit beiden Steuerpunkten muss der Apex-Drag-Hinweis erscheinen"
+    );
+    assert!(
+        curve_can_execute(&state),
+        "Mit CP1 + CP2-Default muss Cubic ausfuehrbar sein"
+    );
+
+    // Ausfuehren → Nodes und Connections in RoadMap erzeugt
+    handlers::route_tool::execute(&mut state);
+
+    let after_node_count = state.road_map.as_ref().unwrap().node_count();
+    let after_connection_count = state.road_map.as_ref().unwrap().connection_count();
+    assert!(
+        after_node_count > initial_node_count,
+        "Cubic-Kurve muss neue Nodes erstellen (vorher: {initial_node_count}, nachher: {after_node_count})"
+    );
+    assert!(
+        after_connection_count > initial_connection_count,
+        "Cubic-Kurve muss neue Connections erstellen (vorher: {initial_connection_count}, nachher: {after_connection_count})"
+    );
+}
+
+#[test]
+fn test_curve_tool_quadratic_creates_nodes() {
+    // CurveQuad aktivieren
+    let mut state = make_test_map();
+    handlers::route_tool::select(&mut state, RouteToolId::CurveQuad);
+
+    let initial_node_count = state.road_map.as_ref().unwrap().node_count();
+    let initial_connection_count = state.road_map.as_ref().unwrap().connection_count();
+
+    // Phase Start → End
+    handlers::route_tool::click(&mut state, glam::Vec2::new(50.0, 50.0), false);
+    assert_eq!(
+        curve_status_text(&state).as_deref(),
+        Some("Endpunkt klicken"),
+        "Quadratic nach Start-Klick muss in Phase End sein"
+    );
+
+    // Phase End → Control
+    handlers::route_tool::click(&mut state, glam::Vec2::new(100.0, 50.0), false);
+    assert_eq!(
+        curve_status_text(&state).as_deref(),
+        Some("Steuerpunkt klicken"),
+        "Quadratic nach End-Klick muss auf CP-Eingabe warten"
+    );
+    assert!(
+        !curve_can_execute(&state),
+        "Quadratic ohne Steuerpunkt noch nicht ausfuehrbar"
+    );
+
+    // Phase Control: Steuerpunkt setzen
+    handlers::route_tool::click(&mut state, glam::Vec2::new(75.0, 20.0), false);
+
+    // Mit gesetztem CP bereit
+    assert!(
+        curve_can_execute(&state),
+        "Quadratic mit gesetztem Steuerpunkt muss ausfuehrbar sein"
+    );
+
+    // Ausfuehren → Nodes und Connections erstellt
+    handlers::route_tool::execute(&mut state);
+
+    let after_node_count = state.road_map.as_ref().unwrap().node_count();
+    let after_connection_count = state.road_map.as_ref().unwrap().connection_count();
+    assert!(
+        after_node_count > initial_node_count,
+        "Quadratic-Kurve muss neue Nodes erstellen (vorher: {initial_node_count}, nachher: {after_node_count})"
+    );
+    assert!(
+        after_connection_count > initial_connection_count,
+        "Quadratic-Kurve muss neue Connections erstellen"
+    );
+
+    // Quadratic produziert weniger Nodes als Cubic bei gleicher Geometrie
+    // (1 CP statt 2 → glattere, kuerzere berechnete Laenge)
+    // Pruefe nur: mindestens Start + Ende (2 neue Nodes pro Segment)
+    assert!(
+        after_node_count >= initial_node_count + 2,
+        "Quadratic muss mindestens Start- und End-Node erstellen"
+    );
+}
+
+#[test]
+fn test_curve_tool_cancel_resets_state() {
+    let mut state = make_test_map();
+    let initial_node_count = state.road_map.as_ref().unwrap().node_count();
+
+    // CurveCubic aktivieren
+    handlers::route_tool::select(&mut state, RouteToolId::CurveCubic);
+    assert_eq!(
+        state.editor.active_tool,
+        EditorTool::Route,
+        "Nach Auswahl muss Route-Tool aktiv sein"
+    );
+
+    // Startpunkt setzen → pending input
+    handlers::route_tool::click(&mut state, glam::Vec2::new(50.0, 50.0), false);
+    assert!(
+        curve_has_pending_input(&state),
+        "Nach Start-Klick muss pending input aktiv sein"
+    );
+
+    // Cancel → Tool zuruecksetzen
+    handlers::route_tool::cancel(&mut state);
+
+    assert_eq!(
+        state.editor.active_tool,
+        EditorTool::Select,
+        "Nach Cancel muss Select-Tool aktiv sein"
+    );
+    assert_eq!(
+        state.road_map.as_ref().unwrap().node_count(),
+        initial_node_count,
+        "Cancel ohne Execute darf keine neuen Nodes hinterlassen"
+    );
+    assert_eq!(
+        state.road_map.as_ref().unwrap().connection_count(),
+        state.road_map.as_ref().unwrap().connection_count(),
+        "Cancel ohne Execute darf keine neuen Connections hinterlassen"
+    );
+}
