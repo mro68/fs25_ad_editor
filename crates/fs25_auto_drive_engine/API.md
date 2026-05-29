@@ -55,6 +55,7 @@ Das Root-Package `fs25_auto_drive_editor` re-exportiert die wichtigsten Einstieg
 | `pub fn app::projections::build_viewport_overlay_snapshot(state: &mut AppState, cursor_world: Option<Vec2>) -> ViewportOverlaySnapshot` | Baut den host-neutralen Overlay-Snapshot; `&mut AppState` bleibt fuer Cache-Aufwaermung noetig |
 | `pub fn parse_autodrive_config(xml_content: &str) -> Result<RoadMap>` | Liest eine AutoDrive-XML in das Domain-Modell ein |
 | `pub fn write_autodrive_config(road_map: &RoadMap, heightmap: Option<&Heightmap>, terrain_height_scale: f32) -> Result<String>` | Schreibt eine `RoadMap` wieder ins AutoDrive-XML-Format |
+| `pub fn AppIntent::requires_bridge_action(&self) -> bool` | Prueft, ob dieser Intent ueber die kanonische Host-Bridge-Seam geleitet werden muss oder lokal behandelt werden kann; viewport-lokale Intents (Resize, Pan, Zoom) liefern `false` (CP-05) |
 
 ## Beispiel
 
