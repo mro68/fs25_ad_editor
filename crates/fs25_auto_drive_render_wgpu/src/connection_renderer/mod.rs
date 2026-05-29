@@ -28,6 +28,10 @@ pub struct ConnectionRenderer {
     last_fingerprint: Option<RenderFingerprint>,
     /// Vertex-Anzahl des letzten Render-Passes (fuer Draw-Call bei Skip).
     last_vertex_count: u32,
+    /// Spatial-Grid fuer schnelle Viewport-Abfragen (wird bei Render-Map-Wechsel neu aufgebaut).
+    spatial_grid: Option<culling::ConnectionSpatialGrid>,
+    /// Pointer der zuletzt verwendeten Render-Map (fuer Grid-Rebuild-Erkennung).
+    last_grid_map_ptr: usize,
 }
 
 impl ConnectionRenderer {
@@ -120,6 +124,8 @@ impl ConnectionRenderer {
             vertex_scratch: Vec::with_capacity(1024),
             last_fingerprint: None,
             last_vertex_count: 0,
+            spatial_grid: None,
+            last_grid_map_ptr: 0,
         }
     }
 
@@ -170,6 +176,20 @@ impl ConnectionRenderer {
                 }]),
             );
 
+            // Spatial-Grid bei Render-Map-Wechsel neu aufbauen.
+            let current_map_ptr = render_map as *const RenderMap as usize;
+            if current_map_ptr != self.last_grid_map_ptr {
+                self.last_grid_map_ptr = current_map_ptr;
+                let conns = render_map.connections();
+                if conns.len() >= culling::MIN_CONNECTIONS_FOR_GRID {
+                    let pairs: Vec<(glam::Vec2, glam::Vec2)> =
+                        conns.iter().map(|c| (c.start_pos, c.end_pos)).collect();
+                    self.spatial_grid = Some(culling::ConnectionSpatialGrid::build(&pairs, 64.0));
+                } else {
+                    self.spatial_grid = None;
+                }
+            }
+
             // Reuse the scratch buffer and ensure an initial reserve to avoid
             // repeated reallocations for large maps.
             self.vertex_scratch.clear();
@@ -187,9 +207,19 @@ impl ConnectionRenderer {
             let top_right = glam::Vec2::new(visible_max.x, visible_max.y);
             let top_left = glam::Vec2::new(visible_min.x, visible_max.y);
 
-            // TODO(perf): Spatial-Grid als Vorfilter fuer den O(n)-Loop wuerde bei 100k+ Connections
-            // signifikant helfen. Erst nach Profiling implementieren.
-            for connection in render_map.connections() {
+            // Spatial-Grid-Vorfilterung falls verfuegbar, sonst O(n)-Fallback.
+            let connections = render_map.connections();
+            let candidates: Vec<usize> = if let Some(ref grid) = self.spatial_grid {
+                let mut c = grid.query_viewport(visible_min, visible_max);
+                c.sort_unstable();
+                c.dedup();
+                c
+            } else {
+                (0..connections.len()).collect()
+            };
+
+            for idx in candidates {
+                let connection = &connections[idx];
                 if ctx.hidden_node_ids.contains(&connection.start_id)
                     || ctx.hidden_node_ids.contains(&connection.end_id)
                 {
@@ -255,7 +285,7 @@ impl ConnectionRenderer {
                         // die Richtung ist implizit, die Farbe unterscheidet sie bereits.
                     }
                 }
-            }
+            } // Ende candidates-Schleife
 
             if self.vertex_scratch.is_empty() {
                 // Fingerabdruck speichern damit bei naechstem identischen Frame fruehzeitig
