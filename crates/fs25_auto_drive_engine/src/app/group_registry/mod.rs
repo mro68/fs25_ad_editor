@@ -8,6 +8,14 @@
 //! Tool-spezifische Edit-Payloads werden nicht in der Registry gespeichert,
 //! sondern separat im Tool-Editing-Layer gehalten.
 //!
+//! # GroupRegistry Lifecycle
+//!
+//! Typischer Ablauf:
+//! 1. `register()` — neuer `GroupRecord` mit Node-IDs erstellt, Reverse-Index befuellt
+//! 2. Tool aktiviert → `boundary_cache` liefert `BoundaryInfo` fuer Visualisierung
+//! 3. `set_locked()` / `toggle_lock()` — Record wird fuer Gruppen-Move gesperrt
+//! 4. `remove()` / `invalidate_by_node_ids()` — Record entfernt, Reverse-Index bereinigt
+//!
 //! # Modulstruktur
 //! - `types.rs`: Tool-neutrale Datentypen (`BoundaryInfo`, `GroupRecord`)
 //! - `query.rs`: Lookup- und Query-Methoden
@@ -70,6 +78,10 @@ impl GroupRegistry {
     }
 
     /// Entfernt alle Node-IDs eines Records aus dem Reverse-Index.
+    ///
+    /// Fuer jede Node-ID wird die `record_id` aus der zugehoerigen Vec entfernt.
+    /// Ist die Vec danach leer, wird der Eintrag vollstaendig aus `node_to_records` geloescht
+    /// (kein Memory-Leak durch leere Vecs).
     pub(super) fn remove_from_index(&mut self, record_id: u64, node_ids: &[u64]) {
         for &nid in node_ids {
             if let Some(vec) = self.node_to_records.get_mut(&nid) {
