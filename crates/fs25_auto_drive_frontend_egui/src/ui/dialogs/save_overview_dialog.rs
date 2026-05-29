@@ -30,13 +30,13 @@ pub fn show_save_overview_dialog(
                     ui.label("Soll das Hintergrundbild als overview.png");
                     ui.label("im Savegame-Verzeichnis gespeichert werden?");
                 }
-                ui.add_space(4.0);
+                ui.add_space(6.0);
                 ui.label(
                     egui::RichText::new(&ui_state.save_overview_dialog.target_path)
                         .weak()
                         .small(),
                 );
-                ui.add_space(4.0);
+                ui.add_space(6.0);
                 ui.label(
                     egui::RichText::new(
                         "Beim naechsten Laden wird es automatisch als Hintergrund verwendet.",
