@@ -32,7 +32,7 @@ Der v4-Vertrag ist bewusst nur der additive Transport- und Lifecycle-Slice. Echt
 | `marker_renderer.rs` | Marker-Instancing und Pin-Texturpfad |
 | `connection_renderer/` | Linien, Pfeile und Viewport-Culling fuer Verbindungen |
 | `node_renderer.rs` | Node-Instancing und Selektion-Rendering |
-| `texture.rs` | Texture-/Sampler-Erstellung aus `DynamicImage` |
+| `texture.rs` | Texture-/Sampler-Erstellung aus `DynamicImage`; `mip_level_count` wird dynamisch basierend auf der groessten Bildseite berechnet (Grenze: 256 px, maximal 8 Levels, CPU-seitiges Downsampling mit Triangle-Filter; Sampler-Filter bei mehreren Levels: `Linear`) (CP-06) |
 
 ## Oeffentliche Typen
 

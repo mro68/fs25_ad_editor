@@ -1,5 +1,6 @@
 //! Use-Case: Ergebnis eines Route-Tools anwenden (Nodes + Connections erstellen).
 
+use crate::app::group_registry::GroupRegistry;
 use crate::app::tools::ToolResult;
 use crate::app::AppState;
 use crate::core::{Connection, MapMarker, MapNode, RoadMap};
@@ -57,6 +58,20 @@ fn apply_result_inner(state: &mut AppState, result: ToolResult) -> Vec<u64> {
         new_ids.len(),
         result.internal_connections.len() + result.external_connections.len()
     );
+
+    // Gruppen-Vererbung: Neue Nodes in dieselben Gruppen wie die Quell-Nodes eintragen.
+    if !result.source_group_node_ids.is_empty() {
+        extend_groups_for_new_nodes(
+            &mut state.group_registry,
+            &result.source_group_node_ids,
+            &result.nodes_to_remove,
+            &new_ids,
+            state
+                .road_map
+                .as_deref()
+                .expect("RoadMap muss nach dem Apply vorhanden sein"),
+        );
+    }
 
     new_ids
 }
@@ -158,6 +173,51 @@ fn create_nodes_and_connections(
     new_ids
 }
 
+/// Erweitert alle Gruppen, die einen der `source_node_ids` enthalten,
+/// um die `new_node_ids` und entfernt die `removed_node_ids` aus ihnen.
+///
+/// Hintergrund: Wenn das Rounding-Tool einen Corner-Node (in `source_node_ids`)
+/// durch Arc-Nodes ersetzt, sollen die neuen Nodes die Gruppen-Mitgliedschaft erben.
+fn extend_groups_for_new_nodes(
+    group_registry: &mut GroupRegistry,
+    source_node_ids: &[u64],
+    removed_node_ids: &[u64],
+    new_node_ids: &[u64],
+    road_map: &RoadMap,
+) {
+    use std::collections::HashSet as IdSet;
+
+    // Alle betroffenen Gruppen sammeln (Deduplizierung via HashSet)
+    let affected_group_ids: HashSet<u64> = source_node_ids
+        .iter()
+        .flat_map(|&nid| group_registry.groups_for_node(nid))
+        .collect();
+
+    let removed_set: IdSet<u64> = removed_node_ids.iter().copied().collect();
+
+    for group_id in affected_group_ids {
+        let Some(record) = group_registry.get(group_id) else {
+            continue;
+        };
+        // Neue node_ids: bestehende behalten (minus removed), neue hinzufuegen
+        let mut updated_ids: Vec<u64> = record
+            .node_ids
+            .iter()
+            .copied()
+            .filter(|id| !removed_set.contains(id))
+            .collect();
+        updated_ids.extend_from_slice(new_node_ids);
+
+        // Positionen aus der aktuellen RoadMap holen
+        let updated_positions: Vec<glam::Vec2> = updated_ids
+            .iter()
+            .filter_map(|&id| road_map.node(id).map(|n| n.position))
+            .collect();
+
+        group_registry.update_record(group_id, updated_ids, updated_positions);
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::{apply_tool_result_no_snapshot, ToolResult};
@@ -229,6 +289,7 @@ mod tests {
             ],
             markers: Vec::new(),
             nodes_to_remove: vec![1, 2, 3],
+            source_group_node_ids: Vec::new(),
         };
 
         let new_ids = apply_tool_result_no_snapshot(&mut state, result);

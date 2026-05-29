@@ -1,5 +1,6 @@
 //! Route-Tool-Katalog- und Snapshot-DTOs fuer host-neutrale Panels und Menues.
 
+use fs25_auto_drive_engine::core::{ConnectionDirection, ConnectionPriority};
 use serde::{Deserialize, Serialize};
 
 use super::actions::HostTangentSource;
@@ -16,6 +17,26 @@ pub enum HostDefaultConnectionDirection {
     Reverse,
 }
 
+impl From<&HostDefaultConnectionDirection> for ConnectionDirection {
+    fn from(d: &HostDefaultConnectionDirection) -> Self {
+        match d {
+            HostDefaultConnectionDirection::Regular => Self::Regular,
+            HostDefaultConnectionDirection::Dual => Self::Dual,
+            HostDefaultConnectionDirection::Reverse => Self::Reverse,
+        }
+    }
+}
+
+impl From<&ConnectionDirection> for HostDefaultConnectionDirection {
+    fn from(d: &ConnectionDirection) -> Self {
+        match d {
+            ConnectionDirection::Regular => Self::Regular,
+            ConnectionDirection::Dual => Self::Dual,
+            ConnectionDirection::Reverse => Self::Reverse,
+        }
+    }
+}
+
 /// Host-neutrale Prioritaet fuer Verbindungs-Defaults im Chrome-Snapshot.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
@@ -24,6 +45,24 @@ pub enum HostDefaultConnectionPriority {
     Regular,
     /// Subpriorisierte Verbindung.
     SubPriority,
+}
+
+impl From<&HostDefaultConnectionPriority> for ConnectionPriority {
+    fn from(p: &HostDefaultConnectionPriority) -> Self {
+        match p {
+            HostDefaultConnectionPriority::Regular => Self::Regular,
+            HostDefaultConnectionPriority::SubPriority => Self::SubPriority,
+        }
+    }
+}
+
+impl From<&ConnectionPriority> for HostDefaultConnectionPriority {
+    fn from(p: &ConnectionPriority) -> Self {
+        match p {
+            ConnectionPriority::Regular => Self::Regular,
+            ConnectionPriority::SubPriority => Self::SubPriority,
+        }
+    }
 }
 
 /// Stabile Route-Tool-ID fuer host-neutrale Chrome-Snapshots.

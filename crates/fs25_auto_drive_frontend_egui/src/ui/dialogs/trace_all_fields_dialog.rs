@@ -8,6 +8,8 @@ use crate::app::AppIntent;
 use crate::ui::common::apply_wheel_step;
 use fs25_auto_drive_host_bridge::HostLocalDialogState;
 
+use super::dialog_button_row;
+
 /// Rendert den Einstellungsdialog fuer die Batch-Feld-Nachzeichnung.
 ///
 /// Solange `state.trace_all_fields_dialog.visible` gesetzt ist, wird das Fenster
@@ -131,14 +133,10 @@ pub fn show_trace_all_fields_dialog(
             ui.separator();
             ui.add_space(6.0);
 
-            ui.horizontal(|ui| {
-                if ui.button("Erstellen").clicked() {
-                    confirmed = true;
-                }
-                if ui.button("Abbrechen").clicked() {
-                    cancelled = true;
-                }
-            });
+            if let Some(result) = dialog_button_row(ui, "Erstellen", "Abbrechen") {
+                confirmed = result;
+                cancelled = !result;
+            }
         });
 
     if confirmed {

@@ -452,4 +452,92 @@ impl AppIntent {
             Self::UndoRequested | Self::RedoRequested => AppEventFeature::History,
         }
     }
+
+    /// Gibt an, ob dieser Intent ueber die kanonische Host-Bridge-Seam geleitet werden muss
+    /// (`apply_action`) oder direkt lokal behandelt werden kann.
+    ///
+    /// Intents, die rein viewport-lokal sind (z.B. Resize, Pan, Kamera-Zoom),
+    /// muessen nicht durch die Bridge-Schicht.
+    pub fn requires_bridge_action(&self) -> bool {
+        matches!(
+            self,
+            Self::HeightmapCleared
+                | Self::HeightmapWarningConfirmed
+                | Self::HeightmapWarningCancelled
+                | Self::OverviewZipBrowseRequested
+                | Self::GenerateOverviewFromZip { .. }
+                | Self::ZipBackgroundFileSelected { .. }
+                | Self::ZipBrowserCancelled
+                | Self::OverviewOptionsConfirmed
+                | Self::OverviewOptionsCancelled
+                | Self::PostLoadDialogDismissed
+                | Self::SaveBackgroundAsOverviewConfirmed
+                | Self::SaveBackgroundAsOverviewDismissed
+                | Self::DeduplicateConfirmed
+                | Self::DeduplicateCancelled
+                | Self::ZoomInRequested
+                | Self::ZoomOutRequested
+                | Self::CenterOnNodeRequested { .. }
+                | Self::RenderQualityChanged { .. }
+                | Self::ToggleBackgroundVisibility
+                | Self::ScaleBackground { .. }
+                | Self::CommandPaletteToggled
+                | Self::SetEditorToolRequested { .. }
+                | Self::SetDefaultDirectionRequested { .. }
+                | Self::SetDefaultPriorityRequested { .. }
+                | Self::AddConnectionRequested { .. }
+                | Self::RemoveConnectionBetweenRequested { .. }
+                | Self::SetConnectionDirectionRequested { .. }
+                | Self::SetConnectionPriorityRequested { .. }
+                | Self::ConnectSelectedNodesRequested
+                | Self::SetAllConnectionsDirectionBetweenSelectedRequested { .. }
+                | Self::InvertAllConnectionsBetweenSelectedRequested
+                | Self::SetAllConnectionsPriorityBetweenSelectedRequested { .. }
+                | Self::RemoveAllConnectionsBetweenSelectedRequested
+                | Self::OptionsChanged { .. }
+                | Self::ResetOptionsRequested
+                | Self::OpenOptionsDialogRequested
+                | Self::CloseOptionsDialogRequested
+                | Self::UndoRequested
+                | Self::RedoRequested
+                | Self::CreateMarkerRequested { .. }
+                | Self::EditMarkerRequested { .. }
+                | Self::MarkerDialogCancelled
+                | Self::SelectRouteToolRequested { .. }
+                | Self::RouteToolWithAnchorsRequested { .. }
+                | Self::RouteToolPanelActionRequested { .. }
+                | Self::RouteToolExecuteRequested
+                | Self::RouteToolCancelled
+                | Self::RouteToolConfigChanged
+                | Self::RouteToolRecreateRequested
+                | Self::RouteToolTangentSelected { .. }
+                | Self::RouteToolClicked { .. }
+                | Self::RouteToolLassoCompleted { .. }
+                | Self::RouteToolDragStarted { .. }
+                | Self::RouteToolDragUpdated { .. }
+                | Self::RouteToolDragEnded
+                | Self::RouteToolScrollRotated { .. }
+                | Self::IncreaseRouteToolNodeCount
+                | Self::DecreaseRouteToolNodeCount
+                | Self::IncreaseRouteToolSegmentLength
+                | Self::DecreaseRouteToolSegmentLength
+                | Self::InvertSelectionRequested
+                | Self::StreckenteilungAktivieren
+                | Self::ResamplePathRequested
+                | Self::GroupEditStartRequested { .. }
+                | Self::GroupEditApplyRequested
+                | Self::GroupEditCancelRequested
+                | Self::GroupEditToolRequested { .. }
+                | Self::GroupSelectionAsGroupRequested
+                | Self::RemoveSelectedNodesFromGroupRequested
+                | Self::SetGroupBoundaryNodes { .. }
+                | Self::NodeSegmentBetweenIntersectionsRequested { .. }
+                | Self::ToggleGroupLockRequested { .. }
+                | Self::DissolveGroupRequested { .. }
+                | Self::DissolveGroupConfirmed { .. }
+                | Self::OpenTraceAllFieldsDialogRequested
+                | Self::TraceAllFieldsConfirmed { .. }
+                | Self::TraceAllFieldsCancelled
+        )
+    }
 }

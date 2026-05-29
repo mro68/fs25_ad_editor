@@ -153,6 +153,7 @@ mod tests {
                 active_tool,
                 route_tool_is_drawing,
                 false,
+                false,
                 &options,
                 false,
                 ConnectionDirection::default(),

@@ -384,6 +384,7 @@ impl RouteToolCore for FieldPathTool {
             external_connections,
             markers: Vec::new(),
             nodes_to_remove: Vec::new(),
+            source_group_node_ids: Vec::new(),
         })
     }
 

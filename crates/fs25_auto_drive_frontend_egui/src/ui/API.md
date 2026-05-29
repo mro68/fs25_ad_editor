@@ -267,6 +267,27 @@ pub fn route_tool_icon(tool_id: RouteToolId) -> ImageSource<'static>;
 
 ---
 
+### `PropertiesContext<'a>`
+
+Fasst alle Parameter von `render_properties_content()` zusammen.
+
+```rust
+pub struct PropertiesContext<'a> {
+    pub road_map: Option<&'a RoadMap>,
+    pub selected_node_ids: &'a IndexSet<u64>,
+    pub node_details: Option<&'a HostNodeDetails>,
+    pub connection_pair: Option<&'a HostConnectionPairSnapshot>,
+    pub default_direction: ConnectionDirection,
+    pub default_priority: ConnectionPriority,
+    pub distance_wheel_step_m: f32,
+    pub group_registry: Option<&'a GroupRegistry>,
+    pub tool_edit_store: Option<&'a ToolEditStore>,
+    pub distance_state: &'a mut DistanzenState,
+}
+```
+
+---
+
 ### `render_properties_content`
 
 Rendert den Inhalt des Properties-Panels mit Detailanzeige selektierter Nodes.
@@ -285,16 +306,7 @@ Zeigt tool- und selektionsabhängig:
 ```rust
 pub fn render_properties_content(
   ui: &mut egui::Ui,
-  road_map: Option<&RoadMap>,
-  selected_node_ids: &IndexSet<u64>,
-  node_details: Option<&HostNodeDetails>,
-  connection_pair: Option<&HostConnectionPairSnapshot>,
-  default_direction: ConnectionDirection,
-  default_priority: ConnectionPriority,
-  distance_wheel_step_m: f32,
-  group_registry: Option<&GroupRegistry>,
-  tool_edit_store: Option<&ToolEditStore>,
-  distance_state: &mut DistanzenState,
+  ctx: PropertiesContext<'_>,
 ) -> Vec<AppIntent>
 ```
 

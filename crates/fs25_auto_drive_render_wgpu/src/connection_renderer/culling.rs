@@ -59,6 +59,76 @@ fn point_on_segment(point: Vec2, seg_start: Vec2, seg_end: Vec2) -> bool {
         && point.y <= seg_start.y.max(seg_end.y) + EPS
 }
 
+/// Spatial-Grid fuer O(1)-Vorfilterung der sichtbaren Connections.
+///
+/// Teilt den Weltkoordinaten-Raum in gleichmaessige Zellen auf.
+/// Jede Connection wird in alle Zellen eingetragen, die ihr Segment-AABB ueberlappen.
+///
+/// Nur beim Wechsel der Render-Map neu aufgebaut (nicht bei Kamera-Bewegungen).
+/// Wird erst ab `MIN_CONNECTIONS_FOR_GRID` Connections aktiviert.
+#[derive(Debug, Default)]
+pub(super) struct ConnectionSpatialGrid {
+    /// Seite einer Gitter-Zelle in Welteinheiten.
+    cell_size: f32,
+    /// Zell-Koordinate -> Liste der Connection-Indizes in dieser Zelle.
+    cells: std::collections::HashMap<(i32, i32), Vec<usize>>,
+}
+
+/// Minimale Connection-Anzahl fuer Grid-Aktivierung.
+/// Unterhalb dieser Grenze ist der O(n)-Scan schneller.
+pub(super) const MIN_CONNECTIONS_FOR_GRID: usize = 500;
+
+impl ConnectionSpatialGrid {
+    /// Erstellt und befuellt das Grid aus einer Connection-Liste.
+    ///
+    /// `connections` ist ein Slice von (start_pos, end_pos) Paaren in Weltkoordinaten.
+    pub(super) fn build(connections: &[(Vec2, Vec2)], cell_size: f32) -> Self {
+        let mut grid = Self {
+            cell_size,
+            cells: std::collections::HashMap::new(),
+        };
+        for (idx, (start, end)) in connections.iter().enumerate() {
+            let min_x = start.x.min(end.x);
+            let max_x = start.x.max(end.x);
+            let min_y = start.y.min(end.y);
+            let max_y = start.y.max(end.y);
+
+            let cell_min_x = (min_x / cell_size).floor() as i32;
+            let cell_max_x = (max_x / cell_size).floor() as i32;
+            let cell_min_y = (min_y / cell_size).floor() as i32;
+            let cell_max_y = (max_y / cell_size).floor() as i32;
+
+            for cx in cell_min_x..=cell_max_x {
+                for cy in cell_min_y..=cell_max_y {
+                    grid.cells.entry((cx, cy)).or_default().push(idx);
+                }
+            }
+        }
+        grid
+    }
+
+    /// Gibt alle Connection-Indizes zurueck, deren Zellen den Viewport-AABB ueberlappen.
+    ///
+    /// Das Ergebnis kann Duplikate enthalten, wenn ein Segment mehrere Zellen ueberspannt.
+    /// Der Aufrufer muss mit `sort_unstable` + `dedup` deduplizieren.
+    pub(super) fn query_viewport(&self, viewport_min: Vec2, viewport_max: Vec2) -> Vec<usize> {
+        let cell_min_x = (viewport_min.x / self.cell_size).floor() as i32;
+        let cell_max_x = (viewport_max.x / self.cell_size).floor() as i32;
+        let cell_min_y = (viewport_min.y / self.cell_size).floor() as i32;
+        let cell_max_y = (viewport_max.y / self.cell_size).floor() as i32;
+
+        let mut result = Vec::new();
+        for cx in cell_min_x..=cell_max_x {
+            for cy in cell_min_y..=cell_max_y {
+                if let Some(indices) = self.cells.get(&(cx, cy)) {
+                    result.extend_from_slice(indices);
+                }
+            }
+        }
+        result
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::{point_in_rect, segment_intersects_rect_cached};

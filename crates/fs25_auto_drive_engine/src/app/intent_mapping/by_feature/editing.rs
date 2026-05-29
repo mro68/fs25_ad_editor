@@ -12,6 +12,8 @@ pub(super) fn map(state: &AppState, intent: AppIntent) -> Vec<AppCommand> {
         AppIntent::DeleteSelectedRequested => vec![AppCommand::DeleteSelectedNodes],
         AppIntent::ConnectToolNodeClicked { world_pos } => vec![AppCommand::ConnectToolPickNode {
             world_pos,
+            // Snap-Radius aus den globalen Optionen: bestimmt, wie nah der Klick an einem
+            // Node sein muss, um ihn als Verbindungsziel zu akzeptieren.
             max_distance: state.options.hitbox_radius(),
         }],
         AppIntent::AddConnectionRequested {

@@ -926,3 +926,203 @@ fn test_segment_pick_opens_group_settings_popup_and_clear_selection_closes_it() 
 
 // ═══════════════════════════════════════════════════════════════════
 // Editing-Tests: Add Node, Delete, Connections, Direction, Undo/Redo
+
+// ───────────────────────────────────────────────────────────────────
+// CP-09: Spatial-Index-Konsistenz-Tests
+
+/// Prueft, dass der Spatial-Index nach dem Loeschen eines Nodes korrekt aktualisiert wird.
+///
+/// Der geloeschte Node darf nicht mehr ueber nearest_node erreichbar sein.
+#[test]
+fn test_spatial_index_consistent_after_node_delete() {
+    let mut controller = AppController::new();
+    let mut state = AppState::new();
+
+    // 5 Nodes: Nodes 1–4 in der Naehe des Ursprungs, Node 5 weit weg bei (500, 500)
+    let mut map = RoadMap::new(3);
+    map.add_node(MapNode::new(
+        1,
+        glam::Vec2::new(0.0, 0.0),
+        NodeFlag::Regular,
+    ));
+    map.add_node(MapNode::new(
+        2,
+        glam::Vec2::new(10.0, 0.0),
+        NodeFlag::Regular,
+    ));
+    map.add_node(MapNode::new(
+        3,
+        glam::Vec2::new(20.0, 0.0),
+        NodeFlag::Regular,
+    ));
+    map.add_node(MapNode::new(
+        4,
+        glam::Vec2::new(30.0, 0.0),
+        NodeFlag::Regular,
+    ));
+    map.add_node(MapNode::new(
+        5,
+        glam::Vec2::new(500.0, 500.0),
+        NodeFlag::Regular,
+    ));
+    map.ensure_spatial_index();
+    state.road_map = Some(Arc::new(map));
+
+    // Node 5 selektieren und loeschen
+    state.selection.ids_mut().insert(5);
+    controller
+        .handle_intent(&mut state, AppIntent::DeleteSelectedRequested)
+        .expect("DeleteSelectedRequested sollte ohne Fehler funktionieren");
+
+    let road_map = state.road_map.as_ref().expect("RoadMap vorhanden");
+
+    // Spatial-Index muss aktualisiert sein — node_count prueft Konsistenz auf Map-Ebene
+    assert_eq!(
+        road_map.node_count(),
+        4,
+        "Genau 4 Nodes muessen nach dem Loeschen vorhanden sein"
+    );
+
+    // Der naechstgelegene Node an der ehemals geloeschten Position darf nicht Node 5 sein
+    let nearest = road_map
+        .nearest_node(glam::Vec2::new(500.0, 500.0))
+        .expect("Spatial-Index muss nach Delete abfragbar sein");
+    assert_ne!(
+        nearest.node_id, 5,
+        "Geloeschter Node 5 darf nicht mehr im Spatial-Index erscheinen"
+    );
+    // Abstand muss gross sein — naechster verbleibender Node liegt bei x=30
+    assert!(
+        nearest.distance > 100.0,
+        "Naechster Node muss weit entfernt sein (kein Node mehr bei 500,500), war {}",
+        nearest.distance
+    );
+}
+
+/// Prueft, dass der Spatial-Index nach dem Hinzufuegen eines Nodes korrekt aktualisiert wird.
+///
+/// Der neue Node muss unmittelbar ueber nearest_node auffindbar sein.
+#[test]
+fn test_spatial_index_consistent_after_node_add() {
+    let mut controller = AppController::new();
+    let mut state = AppState::new();
+
+    // 3 Nodes nahe dem Ursprung
+    let mut map = RoadMap::new(3);
+    map.add_node(MapNode::new(
+        1,
+        glam::Vec2::new(0.0, 0.0),
+        NodeFlag::Regular,
+    ));
+    map.add_node(MapNode::new(
+        2,
+        glam::Vec2::new(10.0, 0.0),
+        NodeFlag::Regular,
+    ));
+    map.add_node(MapNode::new(
+        3,
+        glam::Vec2::new(20.0, 0.0),
+        NodeFlag::Regular,
+    ));
+    map.ensure_spatial_index();
+    state.road_map = Some(Arc::new(map));
+
+    // Neuen Node weit weg von bestehenden Nodes hinzufuegen
+    let new_pos = glam::Vec2::new(500.0, 500.0);
+    controller
+        .handle_intent(
+            &mut state,
+            AppIntent::AddNodeRequested { world_pos: new_pos },
+        )
+        .expect("AddNodeRequested sollte ohne Fehler funktionieren");
+
+    let road_map = state.road_map.as_ref().expect("RoadMap vorhanden");
+
+    assert_eq!(
+        road_map.node_count(),
+        4,
+        "Genau 4 Nodes muessen nach dem Hinzufuegen vorhanden sein"
+    );
+
+    // Spatial-Index muss den neuen Node liefern
+    let nearest = road_map
+        .nearest_node(new_pos)
+        .expect("Spatial-Index muss nach AddNode abfragbar sein");
+    assert!(
+        nearest.distance < 1.0,
+        "Spatial-Index muss den neuen Node direkt an Position (500,500) finden, war {}",
+        nearest.distance
+    );
+}
+
+/// Prueft, dass der Spatial-Index nach Copy-Paste korrekt aktualisiert wird.
+///
+/// Eingefuegte Nodes muessen ueber nodes_within_radius auffindbar sein.
+#[test]
+fn test_spatial_index_consistent_after_copy_paste() {
+    let mut controller = AppController::new();
+    let mut state = AppState::new();
+
+    // 3 Nodes — Zentroid liegt bei (5, 1.667)
+    let mut map = RoadMap::new(3);
+    map.add_node(MapNode::new(
+        1,
+        glam::Vec2::new(0.0, 0.0),
+        NodeFlag::Regular,
+    ));
+    map.add_node(MapNode::new(
+        2,
+        glam::Vec2::new(10.0, 0.0),
+        NodeFlag::Regular,
+    ));
+    map.add_node(MapNode::new(
+        3,
+        glam::Vec2::new(5.0, 5.0),
+        NodeFlag::Regular,
+    ));
+    map.ensure_spatial_index();
+    state.road_map = Some(Arc::new(map));
+
+    // Alle Nodes selektieren und kopieren
+    state.selection.ids_mut().insert(1);
+    state.selection.ids_mut().insert(2);
+    state.selection.ids_mut().insert(3);
+    controller
+        .handle_intent(&mut state, AppIntent::CopySelectionRequested)
+        .expect("CopySelectionRequested muss erfolgreich sein");
+
+    // Paste-Vorschau starten und weit weg verschieben (200, 200)
+    let paste_target = glam::Vec2::new(200.0, 200.0);
+    controller
+        .handle_intent(&mut state, AppIntent::PasteStartRequested)
+        .expect("PasteStartRequested muss erfolgreich sein");
+    controller
+        .handle_intent(
+            &mut state,
+            AppIntent::PastePreviewMoved {
+                world_pos: paste_target,
+            },
+        )
+        .expect("PastePreviewMoved muss erfolgreich sein");
+    controller
+        .handle_intent(&mut state, AppIntent::PasteConfirmRequested)
+        .expect("PasteConfirmRequested muss erfolgreich sein");
+
+    let road_map = state.road_map.as_ref().expect("RoadMap vorhanden");
+
+    assert_eq!(
+        road_map.node_count(),
+        6,
+        "Nach Paste muessen 6 Nodes vorhanden sein (3 original + 3 eingefuegt)"
+    );
+
+    // Spatial-Index muss die eingefuegten Nodes im Bereich um (200, 200) finden
+    // Offset = paste_target - centroid(5, 1.667) = (195, 198.333)
+    // Neue Positionen: (195, 198.333), (205, 198.333), (200, 203.333) — alle < 10 von (200,200)
+    let found = road_map.nodes_within_radius(paste_target, 20.0);
+    assert!(
+        found.len() >= 3,
+        "Spatial-Index muss alle 3 eingefuegten Nodes im Radius 20 um (200,200) finden, gefunden: {}",
+        found.len()
+    );
+}

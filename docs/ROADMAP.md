@@ -335,8 +335,8 @@
     - [x] Sichtbarkeit normal + bei Min-Zoom + Fade-Start-Zoom einstellbar (EditorOptions)
     - [x] Lineare Interpolation: ab fade_start_zoom → bei min_zoom auf min_zoom-Opacity
     - [x] Konfiguration im Options-Dialog (3 Slider)
-  - [ ] Zoom-abhaengige LOD (Mipmap-Generierung)
-    - [ ] Mip-Level 0..N per Render-Pass herunterskalieren (Custom-Blit-Pipeline, wgpu#661)
+  - [x] Zoom-abhaengige LOD (Mipmap-Generierung)
+    - [x] CPU-seitiges Downsampling via `image::Triangle`-Filter fuer Hintergrundkarten-Texturen > 256 px (2026-05-29)
     - [ ] Alternative: DDS mit vorberechneter Mip-Chain im Asset-Pipeline
 - [x] Kurven-Werkzeuge (Bezier, Spline)
   - [x] Bezier-Interpolation (Grad 2 + 3)
@@ -402,6 +402,7 @@
   - [x] **EditHistory: VecDeque statt Vec** — `pop_front()` O(1) statt O(n) `remove(0)` (2026-02-24)
   - [x] **Properties-Panel:** `selected_node_ids: &HashSet<u64>` direkt uebergeben — eliminiert doppeltes `.collect()` (2026-02-24)
   - [x] **Spline-Preview:** `samples_per_segment` 32→16 via Konstante `SPLINE_SAMPLES_PER_SEGMENT` (2026-02-24)
+  - [ ] Connection-Culling: Spatial-Grid als Vorfilter (O(n) → O(log n)) — erst nach Profiling bei 100k+ Nodes
   - [ ] LOD-System fuer grosse Strecken
   - [ ] Memory-Profiling
   - [x] `ctx.request_repaint()` nur bei Aenderungen (CPU-Idle-Verbrauch reduzieren)
