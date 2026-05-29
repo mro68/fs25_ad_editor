@@ -183,4 +183,11 @@ pub struct ToolResult {
     /// im selben Undo-Snapshot wie die Erstellung der neuen Nodes.
     /// Fuer alle anderen Tools ist dieser Vec leer.
     pub nodes_to_remove: Vec<u64>,
+    /// Node-IDs, die als Quell-Referenz fuer Gruppen-Vererbung dienen.
+    ///
+    /// Die Gruppen dieser Nodes werden nach dem Apply um die neuen Nodes erweitert
+    /// (und die `nodes_to_remove` werden aus den Gruppen entfernt).
+    /// Wird z.B. vom RoundingTool gesetzt, damit Arc-Nodes die Gruppe des Corner-Nodes erben.
+    /// Fuer alle anderen Tools ist dieser Vec leer.
+    pub source_group_node_ids: Vec<u64>,
 }

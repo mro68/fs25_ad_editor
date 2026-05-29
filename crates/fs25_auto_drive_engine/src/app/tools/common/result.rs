@@ -29,6 +29,7 @@ impl ToolResultBuilder {
                 external_connections: Vec::new(),
                 markers: Vec::new(),
                 nodes_to_remove: Vec::new(),
+                source_group_node_ids: Vec::new(),
             },
         }
     }
@@ -51,6 +52,15 @@ impl ToolResultBuilder {
     /// Setzt die zu entfernenden Nodes fuer Tools mit Ersetzungs-Semantik.
     pub(crate) fn with_nodes_to_remove(mut self, nodes_to_remove: Vec<u64>) -> Self {
         self.result.nodes_to_remove = nodes_to_remove;
+        self
+    }
+
+    /// Setzt die Quell-Node-IDs fuer Gruppen-Vererbung nach dem Apply.
+    ///
+    /// Alle Gruppen der angegebenen Nodes erhalten nach dem Apply die neuen Nodes
+    /// als Mitglieder (und die `nodes_to_remove` werden aus den Gruppen entfernt).
+    pub(crate) fn with_source_group_node_ids(mut self, ids: Vec<u64>) -> Self {
+        self.result.source_group_node_ids = ids;
         self
     }
 

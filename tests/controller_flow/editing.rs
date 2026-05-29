@@ -1417,3 +1417,87 @@ fn test_curve_tool_cancel_resets_state() {
         "Cancel ohne Execute darf keine neuen Connections hinterlassen"
     );
 }
+
+#[test]
+fn rounding_tool_adds_arc_nodes_to_group() {
+    // L-foermige Karte: Node 10 (-20,0) → Corner 1 (0,0) → Node 20 (0,20)
+    let mut map = RoadMap::new(3);
+    map.add_node(MapNode::new(
+        10,
+        glam::Vec2::new(-20.0, 0.0),
+        NodeFlag::Regular,
+    ));
+    map.add_node(MapNode::new(1, glam::Vec2::ZERO, NodeFlag::Regular));
+    map.add_node(MapNode::new(
+        20,
+        glam::Vec2::new(0.0, 20.0),
+        NodeFlag::Regular,
+    ));
+    map.add_connection(Connection::new(
+        10,
+        1,
+        ConnectionDirection::Regular,
+        ConnectionPriority::Regular,
+        glam::Vec2::new(-20.0, 0.0),
+        glam::Vec2::ZERO,
+    ));
+    map.add_connection(Connection::new(
+        1,
+        20,
+        ConnectionDirection::Regular,
+        ConnectionPriority::Regular,
+        glam::Vec2::ZERO,
+        glam::Vec2::new(0.0, 20.0),
+    ));
+    map.ensure_spatial_index();
+
+    let mut state = AppState::new();
+    state.road_map = Some(Arc::new(map));
+    state.view.viewport_size = [1280.0, 720.0];
+
+    // Gruppe mit Corner-Node (1) manuell registrieren
+    let record_id = state.group_registry.next_id();
+    state.group_registry.register(GroupRecord {
+        id: record_id,
+        node_ids: vec![1],
+        original_positions: vec![glam::Vec2::ZERO],
+        marker_node_ids: Vec::new(),
+        locked: false,
+        entry_node_id: Some(1),
+        exit_node_id: Some(1),
+    });
+    assert_eq!(
+        state.group_registry.get(record_id).unwrap().node_ids,
+        vec![1],
+        "Vorbedingung: Gruppe muss Corner-Node 1 enthalten"
+    );
+
+    // Rounding-Tool mit selektiertem Corner-Node aktivieren und ausfuehren
+    state.selection.ids_mut().insert(1);
+    handlers::route_tool::select(&mut state, RouteToolId::Rounding);
+    handlers::route_tool::execute(&mut state);
+
+    // Neue Arc-Node-IDs aus der Selektion ermitteln (von apply_tool_result gesetzt)
+    let arc_ids: Vec<u64> = state.selection.selected_node_ids.iter().copied().collect();
+    assert!(
+        !arc_ids.is_empty(),
+        "Rounding muss mindestens einen Arc-Node erstellt haben"
+    );
+
+    // Pruefen: Urspruengliche Gruppe muss Arc-Nodes enthalten, Corner-Node nicht mehr
+    let record = state
+        .group_registry
+        .get(record_id)
+        .expect("Urspruengliche Gruppe muss nach Rounding noch in der Registry existieren");
+
+    assert!(
+        !record.node_ids.contains(&1),
+        "Corner-Node 1 darf nicht mehr in der Gruppe sein"
+    );
+    for &arc_id in &arc_ids {
+        assert!(
+            record.node_ids.contains(&arc_id),
+            "Arc-Node {arc_id} muss in der Gruppe der ererbten Mitgliedschaft sein"
+        );
+    }
+}

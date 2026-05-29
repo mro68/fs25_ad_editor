@@ -378,6 +378,7 @@ fn build_arc_tool_result_from_transitions(
 
     ToolResultBuilder::new(new_nodes, internal_connections)
         .with_external_connections(external_connections)
+        .with_source_group_node_ids(nodes_to_remove.clone())
         .with_nodes_to_remove(nodes_to_remove)
         .build()
 }
