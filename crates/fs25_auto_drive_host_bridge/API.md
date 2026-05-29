@@ -103,7 +103,7 @@ Im serialisierbaren Host-UI-/JSON-Vertrag exponiert `RoundingPanelState` den Arc
 | `HostMarkerInfo` / `HostMarkerListSnapshot` | Serialisierbarer Marker-Vertrag fuer Listen, Details und Filter im Flutter-Marker-Panel |
 | `HostNodeDetails` / `HostNodeNeighbor` / `HostNodeMarkerInfo` | Serialisierbarer Node-Properties-Vertrag fuer Flutter-Properties-Ansichten |
 | `HostConnectionPairSnapshot` / `HostConnectionPairEntry` | Serialisierbarer Verbindungspaar-Vertrag: alle Verbindungen zwischen genau zwei Nodes mit Richtung und Prioritaet |
-| `HostNodeFlag` | Vollstaendiger, host-neutraler NodeFlag-Vertrag fuer Anzeige und Bearbeitung |
+| `HostNodeFlag` | Vollstaendiger, host-neutraler NodeFlag-Vertrag fuer Anzeige und Bearbeitung; implementiert `From<&NodeFlag>` und `From<&HostNodeFlag>` fuer verlustfreie bidirektionale Konvertierung (CP-03) |
 | `HostRouteToolId` / `HostTangentSource` | Stabile Route-Tool- und Tangenten-DTOs fuer Action- und Read-Vertrag |
 | `HostViewportInputBatch` / `HostViewportInputEvent` | Kleine screen-space Viewport-Input-Familie fuer Resize, Pointer- und Scroll-Events |
 | `HostPointerButton` / `HostTapKind` / `HostInputModifiers` | Stabile Transport-DTOs fuer Pointer-Buttons, Tap-Art und Modifiers |
@@ -125,7 +125,7 @@ Im serialisierbaren Host-UI-/JSON-Vertrag exponiert `RoundingPanelState` den Arc
 | `HostHeightmapWarningDialogSnapshot` / `HostMarkerDialogSnapshot` / `HostDedupDialogSnapshot` / `HostZipBrowserSnapshot` / `HostOverviewOptionsDialogSnapshot` / `HostPostLoadDialogSnapshot` / `HostSaveOverviewDialogSnapshot` / `HostTraceAllFieldsDialogSnapshot` / `HostGroupSettingsDialogSnapshot` / `HostConfirmDissolveDialogSnapshot` | Serialisierbare Detail-DTOs der einzelnen Dialogarten inklusive Sichtbarkeit und Draft-Daten |
 | `HostLocalDialogState` | Host-lokaler mutierbarer Chrome-/Dialogzustand; ersetzt einen separaten oeffentlichen `ChromeState`-Typ |
 | `HostRouteToolEntrySnapshot` / `HostRouteToolSelectionSnapshot` | Serialisierbare Route-Tool-Metadaten fuer Surface, Gruppe, Icon-Key, Availability und Gruppen-Memory |
-| `HostDefaultConnectionDirection` / `HostDefaultConnectionPriority` | Stabile Default-Enums fuer Verbindungsrichtung und Prioritaet im Chrome-Snapshot |
+| `HostDefaultConnectionDirection` / `HostDefaultConnectionPriority` | Stabile Default-Enums fuer Verbindungsrichtung und Prioritaet im Chrome-Snapshot; implementieren je `From<&HostDefault*>` fuer Core-Typen und `From<&ConnectionDirection>` / `From<&ConnectionPriority>` fuer verlustfreie bidirektionale Konvertierung (CP-03) |
 | `HostSelectionSnapshot` / `HostViewportSnapshot` | Read-only Detail-Snapshots fuer Auswahl und Kamera |
 | `HostViewportGeometrySnapshot` | Minimaler, serialisierbarer Viewport-Geometry-Snapshot fuer Nodes, Connections, Marker und Kamera-/Viewport-Metadaten |
 | `HostRouteToolViewportSnapshot` / `HostTangentMenuSnapshot` / `HostTangentOptionSnapshot` | Route-Tool-spezifische Read-DTOs fuer Drag-Targets, generischen Node-Pick, Segment-Shortcuts und Tangenten-Menues |

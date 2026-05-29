@@ -188,6 +188,147 @@ fn assert_rounding_panel_contract(
     assert!(rounding.get("chain_node_count").is_none());
 }
 
+/// Erstellt eine RoadMap mit 3 Nodes (IDs 10, 1, 20) in L-Form fuer Rounding-Tests.
+fn rounding_corner_map() -> RoadMap {
+    let mut road_map = RoadMap::new(3);
+    road_map.add_node(MapNode::new(10, Vec2::new(-20.0, 0.0), NodeFlag::Regular));
+    road_map.add_node(MapNode::new(1, Vec2::ZERO, NodeFlag::Regular));
+    road_map.add_node(MapNode::new(20, Vec2::new(0.0, 20.0), NodeFlag::Regular));
+    road_map.add_connection(Connection::new(
+        10,
+        1,
+        ConnectionDirection::Regular,
+        ConnectionPriority::Regular,
+        Vec2::new(-20.0, 0.0),
+        Vec2::ZERO,
+    ));
+    road_map.add_connection(Connection::new(
+        1,
+        20,
+        ConnectionDirection::Regular,
+        ConnectionPriority::Regular,
+        Vec2::ZERO,
+        Vec2::new(0.0, 20.0),
+    ));
+    road_map.ensure_spatial_index();
+    road_map
+}
+
+/// Erstellt eine RoadMap mit 3 Nodes und einem Marker an Node 2 fuer NodeDetails-Tests.
+fn node_details_marker_test_map() -> RoadMap {
+    let mut map = RoadMap::new(3);
+    map.add_node(MapNode::new(1, Vec2::new(0.0, 0.0), NodeFlag::Regular));
+    map.add_node(MapNode::new(2, Vec2::new(10.0, 0.0), NodeFlag::Regular));
+    map.add_node(MapNode::new(3, Vec2::new(20.0, 0.0), NodeFlag::Regular));
+    map.add_connection(Connection::new(
+        1,
+        2,
+        ConnectionDirection::Regular,
+        ConnectionPriority::Regular,
+        Vec2::new(0.0, 0.0),
+        Vec2::new(10.0, 0.0),
+    ));
+    map.add_connection(Connection::new(
+        2,
+        3,
+        ConnectionDirection::Regular,
+        ConnectionPriority::Regular,
+        Vec2::new(10.0, 0.0),
+        Vec2::new(20.0, 0.0),
+    ));
+    let idx = map.next_marker_index();
+    map.add_map_marker(MapMarker::new(
+        2,
+        "Hof".to_string(),
+        "All".to_string(),
+        idx,
+        false,
+    ));
+    map.ensure_spatial_index();
+    map
+}
+
+/// Erstellt eine HostBridgeSession mit `selected_count` selektierten Nodes fuer Snapshot-Messungen.
+fn snapshot_measurement_session(selected_count: usize) -> HostBridgeSession {
+    let mut session = HostBridgeSession::new();
+    let mut map = RoadMap::new(selected_count as u32);
+    for i in 1..=(selected_count as u64) {
+        map.add_node(MapNode::new(
+            i,
+            Vec2::new(i as f32 * 10.0, 0.0),
+            NodeFlag::Regular,
+        ));
+        session.state.selection.ids_mut().insert(i);
+    }
+    map.ensure_spatial_index();
+    session.state.road_map = Some(Arc::new(map));
+    session.snapshot_dirty = false;
+    session
+}
+
+/// Erstellt eine RoadMap mit 5 Nodes (0, 1, 2, 3, 4) fuer Group-Boundary-Tests.
+///
+/// Topologie: Extern-0 → [Gruppe: 1 → 2 → 3] → Extern-4
+fn group_boundary_test_map() -> RoadMap {
+    let mut map = RoadMap::new(5);
+    map.add_node(MapNode::new(0, Vec2::new(-10.0, 0.0), NodeFlag::Regular));
+    map.add_node(MapNode::new(1, Vec2::new(0.0, 0.0), NodeFlag::Regular));
+    map.add_node(MapNode::new(2, Vec2::new(10.0, 0.0), NodeFlag::Regular));
+    map.add_node(MapNode::new(3, Vec2::new(20.0, 0.0), NodeFlag::Regular));
+    map.add_node(MapNode::new(4, Vec2::new(30.0, 0.0), NodeFlag::Regular));
+    map.add_connection(Connection::new(
+        0,
+        1,
+        ConnectionDirection::Regular,
+        ConnectionPriority::Regular,
+        Vec2::new(-10.0, 0.0),
+        Vec2::new(0.0, 0.0),
+    ));
+    map.add_connection(Connection::new(
+        1,
+        2,
+        ConnectionDirection::Regular,
+        ConnectionPriority::Regular,
+        Vec2::new(0.0, 0.0),
+        Vec2::new(10.0, 0.0),
+    ));
+    map.add_connection(Connection::new(
+        2,
+        3,
+        ConnectionDirection::Regular,
+        ConnectionPriority::Regular,
+        Vec2::new(10.0, 0.0),
+        Vec2::new(20.0, 0.0),
+    ));
+    map.add_connection(Connection::new(
+        3,
+        4,
+        ConnectionDirection::Regular,
+        ConnectionPriority::Regular,
+        Vec2::new(20.0, 0.0),
+        Vec2::new(30.0, 0.0),
+    ));
+    map.ensure_spatial_index();
+    map
+}
+
+/// Erstellt einen GroupRecord fuer die gegebene ID und Node-Liste aus der RoadMap.
+fn make_group_record(id: u64, node_ids: &[u64], road_map: &RoadMap) -> GroupRecord {
+    let original_positions = node_ids
+        .iter()
+        .filter_map(|&nid| road_map.node(nid).map(|n| n.position))
+        .collect();
+    GroupRecord {
+        id,
+        node_ids: node_ids.to_vec(),
+        original_positions,
+        marker_node_ids: Vec::new(),
+        locked: false,
+        entry_node_id: node_ids.first().copied(),
+        exit_node_id: node_ids.last().copied(),
+    }
+}
+
 #[test]
 fn new_session_exposes_empty_snapshot() {
     let mut session = HostBridgeSession::new();
