@@ -1,6 +1,8 @@
 use crate::app::AppIntent;
 use fs25_auto_drive_host_bridge::HostLocalDialogState;
 
+use super::dialog_button_row;
+
 /// Zeigt den Duplikat-Bestaetigungsdialog.
 ///
 /// Wird nach dem Laden einer XML-Datei angezeigt, wenn duplizierte Nodes
@@ -35,14 +37,13 @@ pub fn show_dedup_dialog(ctx: &egui::Context, ui_state: &HostLocalDialogState) -
                 ui.label("Das Original-Netzwerk bleibt vollstaendig erhalten.");
                 ui.add_space(12.0);
 
-                ui.horizontal(|ui| {
-                    if ui.button("Bereinigen").clicked() {
-                        events.push(AppIntent::DeduplicateConfirmed);
-                    }
-                    if ui.button("Nicht bereinigen").clicked() {
-                        events.push(AppIntent::DeduplicateCancelled);
-                    }
-                });
+                if let Some(confirmed) = dialog_button_row(ui, "Bereinigen", "Nicht bereinigen") {
+                    events.push(if confirmed {
+                        AppIntent::DeduplicateConfirmed
+                    } else {
+                        AppIntent::DeduplicateCancelled
+                    });
+                }
             });
         });
 

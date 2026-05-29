@@ -2,6 +2,7 @@
 
 mod confirm_dissolve_dialog;
 mod dedup_dialog;
+mod dialog_widgets;
 mod file_dialogs;
 mod group_settings_popup;
 mod heightmap_warning;
@@ -14,6 +15,7 @@ mod zip_browser;
 
 pub use confirm_dissolve_dialog::show_confirm_dissolve_dialog;
 pub use dedup_dialog::show_dedup_dialog;
+pub use dialog_widgets::dialog_button_row;
 pub use file_dialogs::handle_file_dialogs;
 pub use group_settings_popup::show_group_settings_popup;
 pub use heightmap_warning::show_heightmap_warning;
