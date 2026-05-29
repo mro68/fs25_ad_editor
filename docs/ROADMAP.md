@@ -335,8 +335,8 @@
     - [x] Sichtbarkeit normal + bei Min-Zoom + Fade-Start-Zoom einstellbar (EditorOptions)
     - [x] Lineare Interpolation: ab fade_start_zoom → bei min_zoom auf min_zoom-Opacity
     - [x] Konfiguration im Options-Dialog (3 Slider)
-  - [ ] Zoom-abhaengige LOD (Mipmap-Generierung)
-    - [ ] Mip-Level 0..N per Render-Pass herunterskalieren (Custom-Blit-Pipeline, wgpu#661)
+  - [x] Zoom-abhaengige LOD (Mipmap-Generierung)
+    - [x] CPU-seitiges Downsampling via `image::Triangle`-Filter fuer Hintergrundkarten-Texturen > 256 px (2026-05-29)
     - [ ] Alternative: DDS mit vorberechneter Mip-Chain im Asset-Pipeline
 - [x] Kurven-Werkzeuge (Bezier, Spline)
   - [x] Bezier-Interpolation (Grad 2 + 3)
