@@ -660,7 +660,7 @@ fn arc_plan_rejects_corner_angles_just_outside_supported_limits() {
         10,
         Vec2::new(20.0, 0.0),
         20,
-        Vec2::from_angle(174.9_f32.to_radians()) * 20.0,
+        Vec2::from_angle(178.9_f32.to_radians()) * 20.0,
         0.5,
         45.0,
     );
@@ -669,15 +669,15 @@ fn arc_plan_rejects_corner_angles_just_outside_supported_limits() {
         10,
         Vec2::new(20.0, 0.0),
         20,
-        Vec2::from_angle(175.1_f32.to_radians()) * 20.0,
+        Vec2::from_angle(179.1_f32.to_radians()) * 20.0,
         0.5,
         45.0,
     );
 
     assert!(valid_min.is_some(), "5.1° muss noch unterstuetzt werden");
     assert!(invalid_min.is_none(), "4.9° muss verworfen werden");
-    assert!(valid_max.is_some(), "174.9° muss noch unterstuetzt werden");
-    assert!(invalid_max.is_none(), "175.1° muss verworfen werden");
+    assert!(valid_max.is_some(), "178.9° muss noch unterstuetzt werden");
+    assert!(invalid_max.is_none(), "179.1° muss verworfen werden");
 }
 
 #[test]
@@ -748,4 +748,52 @@ fn restored_arc_payload_executes_without_original_corner_node() {
     assert!(recreated_result.nodes_to_remove.is_empty());
     assert_eq!(recreated_result.external_connections.len(), 2);
     assert!(!recreated_result.new_nodes.is_empty());
+}
+
+/// Erstellt einen minimalen Arc-Plan fuer einen synthetischen Corner mit dem angegebenen Winkel.
+///
+/// Legt den Corner in den Ursprung, den ersten Nachbar-Node auf der positiven X-Achse (Abstand 1.0)
+/// und den zweiten Nachbar-Node so, dass der Corner-Winkel exakt `angle_deg` Grad betraegt.
+/// Gibt `Ok(ArcPlan)` zurueck, wenn der Winkel unterstuetzt wird, sonst `Err(UnsupportedCornerAngle)`.
+fn arc_plan_for_corner_angle_deg(angle_deg: f32) -> Result<ArcPlan, ArcValidation> {
+    let second_pos = Vec2::from_angle(angle_deg.to_radians());
+    build_arc_plan_from_payload(Vec2::ZERO, 1, Vec2::new(1.0, 0.0), 2, second_pos, 0.2, 22.5)
+        .ok_or(ArcValidation::UnsupportedCornerAngle)
+}
+
+#[test]
+fn arc_corner_170_degrees_is_valid() {
+    // Non-Regression: 170° liegt deutlich innerhalb der alten Schwelle von 175°
+    assert!(
+        arc_plan_for_corner_angle_deg(170.0).is_ok(),
+        "170°-Corner muss als Arc verrundbar sein"
+    );
+}
+
+#[test]
+fn arc_corner_175_degrees_is_valid() {
+    // An der alten oberen Schwelle (MAX_CORNER_ANGLE_RAD = PI - 5°)
+    assert!(
+        arc_plan_for_corner_angle_deg(175.0).is_ok(),
+        "175°-Corner liegt genau an der alten Schwelle und muss noch gueltig sein"
+    );
+}
+
+#[test]
+fn arc_corner_179_degrees_is_valid() {
+    // Rot bis CP-02: Schwelle wird erst in CP-02 auf nahezu 180° angehoben
+    assert!(
+        arc_plan_for_corner_angle_deg(179.0).is_ok(),
+        "179°-Corner muss nach CP-02 gueltig sein"
+    );
+}
+
+#[test]
+fn arc_corner_180_degrees_is_rejected() {
+    // Perfekt gerade Strecke (kein Corner) — dauerhaft ungueltig
+    assert_eq!(
+        arc_plan_for_corner_angle_deg(180.0),
+        Err(ArcValidation::UnsupportedCornerAngle),
+        "180°-Corner (gerade Linie) muss dauerhaft abgelehnt werden"
+    );
 }

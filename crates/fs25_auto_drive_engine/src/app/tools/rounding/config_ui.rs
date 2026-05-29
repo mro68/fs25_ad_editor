@@ -36,7 +36,7 @@ impl RoundingTool {
                 "Mindestens eine Corner-Strecke ist zu kurz oder degeneriert."
             }
             ArcValidation::UnsupportedCornerAngle => {
-                "Corner-Winkel laesst keinen stabilen Kreisbogen mit festem Radius zu."
+                "Knoten nicht verrundbar: Verbindungswinkel muss zwischen 1\u{00b0} und 179\u{00b0} liegen."
             }
             ArcValidation::RadiusTooLarge => {
                 "Radius passt nicht in mindestens eine Anschlussstrecke des Corner-Pfads."

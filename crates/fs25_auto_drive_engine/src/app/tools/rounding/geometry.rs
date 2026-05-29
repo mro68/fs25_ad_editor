@@ -6,7 +6,9 @@ use crate::core::{ConnectionDirection, ConnectionPriority, RoadMap};
 use glam::Vec2;
 
 const MIN_CORNER_ANGLE_RAD: f32 = 5.0_f32.to_radians();
-const MAX_CORNER_ANGLE_RAD: f32 = std::f32::consts::PI - 5.0_f32.to_radians();
+/// Maximaler Eckwinkel fuer die Arc-Berechnung (179°). Werte nahe 180° werden
+/// durch den nachgelagerten Guard (tangent_distance ≤ EPSILON, bisector == ZERO) abgefangen.
+const MAX_CORNER_ANGLE_RAD: f32 = std::f32::consts::PI - 1.0_f32.to_radians(); // 179°
 const EPSILON: f32 = 1e-3;
 
 /// Vorberechneter Arc-Anker eines lokalen Replace-Pfads.
