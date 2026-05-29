@@ -1,5 +1,6 @@
 //! Dialog: Hintergrundbild als overview.png im Savegame-Verzeichnis speichern.
 
+use super::{dialog_two_action_row_enabled, DialogTwoAction};
 use crate::app::AppIntent;
 use fs25_auto_drive_host_bridge::HostLocalDialogState;
 
@@ -42,20 +43,20 @@ pub fn show_save_overview_dialog(
                     )
                     .weak(),
                 );
-                ui.add_space(12.0);
-                ui.horizontal(|ui| {
-                    let btn_text = if ui_state.save_overview_dialog.is_overwrite {
-                        "Ja, ueberschreiben"
-                    } else {
-                        "Ja, speichern"
-                    };
-                    if ui.button(btn_text).clicked() {
+                let confirm_label = if ui_state.save_overview_dialog.is_overwrite {
+                    "Ja, ueberschreiben"
+                } else {
+                    "Ja, speichern"
+                };
+                if let Some(action) =
+                    dialog_two_action_row_enabled(ui, confirm_label, "Nein", true, true)
+                {
+                    if action == DialogTwoAction::Confirm {
                         events.push(AppIntent::SaveBackgroundAsOverviewConfirmed);
-                    }
-                    if ui.button("Nein").clicked() {
+                    } else {
                         events.push(AppIntent::SaveBackgroundAsOverviewDismissed);
                     }
-                });
+                }
             });
         });
 

@@ -1,5 +1,6 @@
 //! Uebersichtskarten-Options-Dialog: Layer-Auswahl vor der Generierung.
 
+use super::{dialog_two_action_row_enabled, DialogTwoAction};
 use crate::app::state::OverviewOptionsDialogState;
 use crate::app::AppIntent;
 use crate::ui::common::{
@@ -61,14 +62,15 @@ pub fn show_overview_options_dialog(
 
             ui.separator();
 
-            ui.horizontal(|ui| {
-                if ui.button("Generieren").clicked() {
+            if let Some(action) =
+                dialog_two_action_row_enabled(ui, "Generieren", "Abbrechen", true, true)
+            {
+                if action == DialogTwoAction::Confirm {
                     events.push(AppIntent::OverviewOptionsConfirmed);
-                }
-                if ui.button("Abbrechen").clicked() {
+                } else {
                     events.push(AppIntent::OverviewOptionsCancelled);
                 }
-            });
+            }
         });
 
     // Fenster ueber X geschlossen

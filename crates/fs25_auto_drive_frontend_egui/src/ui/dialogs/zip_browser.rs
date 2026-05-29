@@ -1,3 +1,4 @@
+use super::{dialog_two_action_row_enabled, DialogTwoAction};
 use crate::app::{AppIntent, ZipImageEntry};
 use fs25_auto_drive_host_bridge::HostLocalDialogState;
 
@@ -85,23 +86,23 @@ pub fn show_zip_browser(
                 });
 
             ui.add_space(8.0);
-            ui.horizontal(|ui| {
-                let can_confirm = browser.selected.is_some();
-                if ui
-                    .add_enabled(can_confirm, egui::Button::new("Uebernehmen"))
-                    .clicked()
-                    && let Some(idx) = browser.selected
-                    && let Some(entry) = browser.entries.get(idx)
-                {
-                    events.push(AppIntent::ZipBackgroundFileSelected {
-                        zip_path: browser.zip_path.clone(),
-                        entry_name: entry.name.clone(),
-                    });
-                }
-                if ui.button("Abbrechen").clicked() {
+            let can_confirm = browser.selected.is_some();
+            if let Some(action) =
+                dialog_two_action_row_enabled(ui, "Uebernehmen", "Abbrechen", can_confirm, true)
+            {
+                if action == DialogTwoAction::Confirm {
+                    if let Some(idx) = browser.selected
+                        && let Some(entry) = browser.entries.get(idx)
+                    {
+                        events.push(AppIntent::ZipBackgroundFileSelected {
+                            zip_path: browser.zip_path.clone(),
+                            entry_name: entry.name.clone(),
+                        });
+                    }
+                } else {
                     events.push(AppIntent::ZipBrowserCancelled);
                 }
-            });
+            }
         });
 
     if !open {
