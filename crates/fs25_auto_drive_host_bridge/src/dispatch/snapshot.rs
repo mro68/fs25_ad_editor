@@ -110,6 +110,7 @@ fn map_route_tool_viewport_data(data: RouteToolViewportData) -> HostRouteToolVie
             .map(|point| [point.x, point.y])
             .collect(),
         has_pending_input: data.has_pending_input,
+        prefers_generic_node_pick: data.prefers_generic_node_pick,
         segment_shortcuts_active: data.segment_shortcuts_active,
         tangent_menu_data: data.tangent_menu_data.map(map_tangent_menu_data),
         needs_lasso_input: data.needs_lasso_input,

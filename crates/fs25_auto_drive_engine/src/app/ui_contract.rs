@@ -18,19 +18,20 @@ pub use route_tool_panel::{
     CurvePanelState, CurveTangentsPanelState, ExistingConnectionModeChoice,
     FieldBoundaryPanelAction, FieldBoundaryPanelState, FieldPathModeChoice, FieldPathPanelAction,
     FieldPathPanelPhase, FieldPathPanelState, FieldPathPreviewStatus, FieldPathSelectionSummary,
-    ParkingPanelAction, ParkingPanelState, ParkingRampSideChoice, RouteOffsetPanelAction,
-    RouteOffsetPanelState, RouteToolConfigState, RouteToolPanelAction, RouteToolPanelEffect,
-    RouteToolPanelFollowUp, RouteToolPanelState, SegmentConfigPanelAction, SegmentConfigPanelState,
-    SegmentLengthKind, SegmentPanelMode, SmoothCurvePanelAction, SmoothCurvePanelState,
-    SmoothCurveSteererState, SplinePanelAction, SplinePanelState, StraightPanelAction,
-    StraightPanelState, TangentHelpHint, TangentNoneReason, TangentSelectionState,
+    ParkingPanelAction, ParkingPanelState, ParkingRampSideChoice, RoundingPanelAction,
+    RoundingPanelState, RouteOffsetPanelAction, RouteOffsetPanelState, RouteToolConfigState,
+    RouteToolPanelAction, RouteToolPanelEffect, RouteToolPanelFollowUp, RouteToolPanelState,
+    SegmentConfigPanelAction, SegmentConfigPanelState, SegmentLengthKind, SegmentPanelMode,
+    SmoothCurvePanelAction, SmoothCurvePanelState, SmoothCurveSteererState, SplinePanelAction,
+    SplinePanelState, StraightPanelAction, StraightPanelState, TangentHelpHint, TangentNoneReason,
+    TangentSelectionState,
 };
 pub use route_tool_panel::{
     BYPASS_BASE_SPACING_LIMITS, BYPASS_OFFSET_LIMITS, PARKING_BAY_LENGTH_LIMITS,
     PARKING_ENTRY_EXIT_T_LIMITS, PARKING_MAX_NODE_DISTANCE_LIMITS, PARKING_NUM_ROWS_LIMITS,
     PARKING_RAMP_LENGTH_LIMITS, PARKING_ROTATION_STEP_LIMITS, PARKING_ROW_SPACING_LIMITS,
-    ROUTE_OFFSET_BASE_SPACING_LIMITS, ROUTE_OFFSET_DISTANCE_LIMITS, SMOOTH_CURVE_MAX_ANGLE_LIMITS,
-    SMOOTH_CURVE_MIN_DISTANCE_LIMITS,
+    ROUNDING_ARC_RADIUS_LIMITS, ROUNDING_MAX_ANGLE_LIMITS, ROUTE_OFFSET_BASE_SPACING_LIMITS,
+    ROUTE_OFFSET_DISTANCE_LIMITS, SMOOTH_CURVE_MAX_ANGLE_LIMITS, SMOOTH_CURVE_MIN_DISTANCE_LIMITS,
 };
 pub use viewport_overlay::{
     ClipboardOverlaySnapshot, ClipboardPreviewNode, GroupBoundaryOverlaySnapshot,
@@ -69,6 +70,8 @@ pub struct RouteToolViewportData {
     pub drag_targets: Vec<Vec2>,
     /// Gibt an, ob das Tool bereits angefangene Eingaben besitzt.
     pub has_pending_input: bool,
+    /// Gibt an, ob Primarklicks ueber den generischen Node-Pick laufen sollen.
+    pub prefers_generic_node_pick: bool,
     /// Gibt an, ob Pfeiltasten aktuell als Segment-Shortcuts geroutet werden.
     pub segment_shortcuts_active: bool,
     /// Optional vorbereitete Tangenten-Daten fuer das Kontextmenue.

@@ -299,8 +299,10 @@ mod tests {
 
     #[test]
     fn bump_revision_is_monotonic_and_skips_zero() {
-        let mut editable = EditableCenterlines::default();
-        editable.revision = u64::MAX;
+        let mut editable = EditableCenterlines {
+            revision: u64::MAX,
+            ..EditableCenterlines::default()
+        };
         editable.bump_revision();
         assert_eq!(editable.revision, 1);
         editable.bump_revision();

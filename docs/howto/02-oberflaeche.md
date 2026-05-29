@@ -33,7 +33,7 @@ Die linke Seitenleiste ist die dauerhaft sichtbare Schnellsteuerung fuer Werkzeu
 |--------|--------|
 | **Werkzeuge** | Select, Connect, Add Node |
 | **Grundbefehle** | Gerade Strecke, Bezier Grad 2, Bezier Grad 3, Spline, Geglaettete Kurve |
-| **Bearbeiten** | Ausweichstrecke, Parkplatz, Strecke versetzen |
+| **Bearbeiten** | Ausweichstrecke, Parkplatz, Strecke versetzen, Verrunden |
 | **Analyse** | Feld erkennen, Feldweg erkennen, Farb-Pfad erkennen |
 | **Richtung** | Standard-Richtung fuer neue Verbindungen |
 | **Strassenart** | Standard-Prioritaet fuer neue Verbindungen |
@@ -56,12 +56,14 @@ Rechts werden Eigenschaften und modale Bearbeitungsflaechen angezeigt:
 
 Das schwebende Route-Tool-Panel nutzt fuer alle Route-Tool-Familien denselben Aufbau: oben Status, Richtung und Strassenart, darunter die tool-spezifische Konfiguration und am Ende **Ausfuehren** sowie **Abbrechen**.
 
+Beim Tool **Verrunden** zeigt das Panel zusaetzlich Auswahl- und Vorschauzaehler sowie die Werte **Radius** und **Max-Winkel**. Verrunden arbeitet Arc-only und erwartet genau 1 selektierten Corner-Node. Wird eine bestehende Verrundung ueber **Tool bearbeiten** geoeffnet, kann derselbe Kreisbogen dort mit neuen Werten neu aufgebaut werden.
+
 ### Gemeinsamer Route-Tool-Katalog
 
 Die Route-Tools erscheinen ueberall mit demselben Katalog und denselben Gruppen:
 
 - **Grundbefehle**: Gerade Strecke, Bezier Grad 2, Bezier Grad 3, Spline, Geglaettete Kurve
-- **Bearbeiten**: Ausweichstrecke, Parkplatz, Strecke versetzen
+- **Bearbeiten**: Ausweichstrecke, Parkplatz, Strecke versetzen, Verrunden
 - **Analyse**: Feld erkennen, Feldweg erkennen, Farb-Pfad erkennen
 
 Wenn ein Tool Voraussetzungen hat, bleibt es trotzdem sichtbar. Statt zu verschwinden, wird es deaktiviert und zeigt den Grund an, zum Beispiel:
@@ -112,7 +114,7 @@ Jeder Shortcut oeffnet ein kleines Menue an der Mausposition:
 |----------|-------|--------|
 | `T` | Werkzeuge | Select, Connect, Add Node |
 | `G` | Grundbefehle | Gerade Strecke, Bezier Grad 2, Bezier Grad 3, Spline, Geglaettete Kurve |
-| `B` | Bearbeiten | Ausweichstrecke, Parkplatz, Strecke versetzen |
+| `B` | Bearbeiten | Ausweichstrecke, Parkplatz, Strecke versetzen, Verrunden |
 | `A` | Analyse | Feld erkennen, Feldweg erkennen, Farb-Pfad erkennen |
 | `R` | Richtung & Strassenart | Regular, Dual, Reverse, Hauptstrasse, Nebenstrasse |
 | `Z` | Zoom | Hinein, Heraus, Auf komplette Map, Auf Auswahl |

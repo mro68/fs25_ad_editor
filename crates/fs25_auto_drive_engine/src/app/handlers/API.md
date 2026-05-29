@@ -620,7 +620,7 @@ pub fn record_selection_if_changed(
 )
 ```
 
-Vergleicht den übergebenen alten Selektionszustand mit dem aktuellen und legt einen Undo-Snapshot mit der alten Selektion an, falls sich etwas geändert hat. Wird häufig in Selection-Handlern verwendet:
+Vergleicht den übergebenen alten Selektionszustand mit dem aktuellen und legt einen Undo-Snapshot mit der alten Selektion an, falls sich etwas geändert hat. Befindet sich der Editor dabei im aktiven Route-Modus und laeuft kein Tool-Edit, spuelt der Helper die neue generische Selektion zusaetzlich in die Selection-/Chain-Inputs des aktiven Route-Tools. Wird häufig in Selection-Handlern verwendet:
 
 ```rust
 let (old_selected, old_anchor) = helpers::capture_selection_snapshot(state);
@@ -640,7 +640,7 @@ UI-Event (Klick)
   → map_intent_to_commands() → [AppCommand::SelectNearestNode { ... }]
   → controller.handle_intent() wählt handlers::selection::select_nearest_node()
   → snap_to_node() + use_cases::selection::select_nearest_node()
-  → record_selection_if_changed() — Undo-Snapshot falls Selektion sich ändern
+    → record_selection_if_changed() — Undo-Snapshot falls Selektion sich ändern und ggf. Ruecksync ins aktive Route-Tool
   → AppState.selection aktualisiert
     → app::projections::build_render_scene() nutzt die neue Selection
   → Rendering

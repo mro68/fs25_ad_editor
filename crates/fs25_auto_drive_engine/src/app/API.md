@@ -19,11 +19,11 @@ Die eframe-Integrationsschale gehoert bewusst nicht zum `app`-Layer. Ihre kanoni
 ## Tool-Vertraege
 
 - `tool_contract.rs` — semantische Route-Tool-Vertraege wie `RouteToolId`, `ToolAnchor` und `TangentSource`
-- `ui_contract.rs` — egui-freie UI-Vertraege wie `TangentMenuData`, `TangentOptionData`, `RouteToolPanelState`, `RouteToolConfigState`, `RouteToolPanelAction`, `RouteToolPanelEffect` und `RouteToolViewportData`
+- `ui_contract.rs` — egui-freie UI-Vertraege wie `TangentMenuData`, `TangentOptionData`, `RouteToolPanelState`, `RouteToolConfigState`, `RouteToolPanelAction`, `RouteToolPanelEffect`, `RouteToolViewportData` sowie den Arc-only-Panel-Vertrag des Verrundungs-Tools (`RoundingPanelState`, `RoundingPanelAction`, Limits fuer Radius und `max_angle_deg`)
 - `ui_contract/host_ui.rs` — host-neutrale UI-Vertraege fuer Tool-Fenster und den semantischen Dialog-Lifecycle (`PanelState`, `PanelAction`, `DialogRequest`, `DialogResult`, `HostUiSnapshot`); grosse Optionen-Payloads werden in `OptionsPanelAction::Apply(Box<EditorOptions>)` bewusst indirekt gehalten, damit die Action-Enums kompakt bleiben
 - `ui_contract/viewport_overlay.rs` — host-neutrale Overlay-Vertraege (`ViewportOverlaySnapshot`, Clipboard-/Polyline-/Group-Overlay-DTOs)
 
-Die Route-Tool-Panel-DTOs werden intern ueber `ui_contract/route_tool_panel/{common,curve_family,generator_family,analysis_family}.rs` gepflegt. Die Top-Level-Dateien `ui_contract.rs` und `ui_contract/route_tool_panel.rs` bleiben dabei stabile Re-Export-Fassaden fuer UI und Intent-Mapping.
+Die Route-Tool-Panel-DTOs werden intern ueber `ui_contract/route_tool_panel/{common,curve_family,generator_family,analysis_family}.rs` gepflegt. Das `generator_family` enthaelt dabei inzwischen auch die Shell-DTOs des oeffentlichen Verrundungs-Tools. Die Top-Level-Dateien `ui_contract.rs` und `ui_contract/route_tool_panel.rs` bleiben stabile Re-Export-Fassaden fuer UI und Intent-Mapping.
 
 ## Projektionsfunktionen
 
@@ -520,7 +520,9 @@ pub struct ActiveToolEditSession {
 
 `RouteToolEditPayload` besitzt je eine Variante fuer alle group-backed editierbaren Tools:
 `Straight`, `CurveQuad`, `CurveCubic`, `Spline`, `SmoothCurve`, `Bypass`, `Parking`,
-`FieldBoundary` und `RouteOffset`.
+`FieldBoundary`, `RouteOffset` und `RoundingArc`.
+
+`RoundingTransitionSnapshot` kapselt dabei die gemergten Durchfahrtsmetadaten des lokalen Arc-Replace-Pfads, damit Recreate und destruktiver Tool-Edit ohne den entfernten Corner-Node rekonstruierbar bleiben; `RoundingArc` persistiert zusaetzlich die beiden ueberlebenden Aussenanker, die urspruengliche Corner-Position und `max_angle_deg`, damit der Arc-only-Recreate-Pfad auch nach Zwischen-Edits denselben lokalen Kontext behaelt.
 
 **Service-Funktionen** (`app/tool_editing/service.rs`):
 
@@ -532,6 +534,7 @@ pub struct ActiveToolEditSession {
 **Hinweise:**
 
 - `FieldPath` und `ColorPath` bleiben `Ephemeral` und erzeugen bewusst keinen `ToolEditRecord`.
+- `Rounding` ist seit CP-04 `GroupBackedEditable`; Panel-Aenderungen koennen deshalb gezielt `needs_recreate` ausloesen und einen persistierten Tool-Edit wieder aufbauen.
 - Nicht-destruktiver Gruppen-Edit (`group_editing`) und destruktiver Tool-Edit (`active_tool_edit_session`) sind getrennte Flows.
 - Undo-/Redo-Snapshots umfassen `road_map`, `selection`, `group_registry` und `tool_edit_store`; `active_tool_edit_session` bleibt bewusst ausserhalb des Snapshot-Formats und wird nur fuer transiente Restore-/Cancel-Flows genutzt.
 

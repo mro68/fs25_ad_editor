@@ -139,3 +139,59 @@ pub fn invert(state: &mut AppState) {
         helpers::record_selection_if_changed(state, old_selected, old_anchor);
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::app::handlers::route_tool;
+    use crate::app::tool_contract::RouteToolId;
+    use crate::core::{
+        Connection, ConnectionDirection, ConnectionPriority, MapNode, NodeFlag, RoadMap,
+    };
+    use glam::Vec2;
+
+    fn rounding_corner_map() -> RoadMap {
+        let mut road_map = RoadMap::new(3);
+        road_map.add_node(MapNode::new(10, Vec2::new(-20.0, 0.0), NodeFlag::Regular));
+        road_map.add_node(MapNode::new(1, Vec2::ZERO, NodeFlag::Regular));
+        road_map.add_node(MapNode::new(20, Vec2::new(0.0, 20.0), NodeFlag::Regular));
+        road_map.add_connection(Connection::new(
+            10,
+            1,
+            ConnectionDirection::Regular,
+            ConnectionPriority::Regular,
+            Vec2::new(-20.0, 0.0),
+            Vec2::ZERO,
+        ));
+        road_map.add_connection(Connection::new(
+            1,
+            20,
+            ConnectionDirection::Regular,
+            ConnectionPriority::Regular,
+            Vec2::ZERO,
+            Vec2::new(0.0, 20.0),
+        ));
+        road_map.ensure_spatial_index();
+        road_map
+    }
+
+    #[test]
+    fn generic_selection_resyncs_active_rounding_preview() {
+        let mut state = AppState::new();
+        state.road_map = Some(std::sync::Arc::new(rounding_corner_map()));
+        route_tool::select(&mut state, RouteToolId::Rounding);
+
+        select_nearest_node(&mut state, Vec2::new(0.2, 0.1), 2.0, false, false);
+
+        let road_map = state.road_map.as_deref().expect("RoadMap erwartet");
+        let preview = state
+            .editor
+            .route_tool_preview(Vec2::ZERO, road_map)
+            .expect("Aktive Route-Tool-Preview erwartet");
+
+        assert!(
+            !preview.nodes.is_empty(),
+            "Generische Selektionsaenderungen muessen das aktive Rounding-Tool nachziehen"
+        );
+    }
+}

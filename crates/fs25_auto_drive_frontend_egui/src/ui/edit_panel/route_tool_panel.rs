@@ -6,14 +6,15 @@ use crate::app::ui_contract::{
     CurveTangentsPanelState, ExistingConnectionModeChoice, FieldBoundaryPanelAction,
     FieldBoundaryPanelState, FieldPathModeChoice, FieldPathPanelAction, FieldPathPanelPhase,
     FieldPathPanelState, FieldPathPreviewStatus, FieldPathSelectionSummary, PanelAction,
-    ParkingPanelAction, ParkingPanelState, ParkingRampSideChoice, RouteOffsetPanelAction,
-    RouteOffsetPanelState, RouteToolConfigState, RouteToolPanelAction, RouteToolPanelState,
-    SegmentConfigPanelAction, SegmentConfigPanelState, SegmentLengthKind, SmoothCurvePanelAction,
-    SmoothCurvePanelState, SplinePanelAction, SplinePanelState, StraightPanelAction,
-    StraightPanelState, TangentHelpHint, TangentNoneReason, TangentSelectionState,
-    BYPASS_BASE_SPACING_LIMITS, BYPASS_OFFSET_LIMITS, PARKING_BAY_LENGTH_LIMITS,
-    PARKING_ENTRY_EXIT_T_LIMITS, PARKING_MAX_NODE_DISTANCE_LIMITS, PARKING_NUM_ROWS_LIMITS,
-    PARKING_RAMP_LENGTH_LIMITS, PARKING_ROTATION_STEP_LIMITS, PARKING_ROW_SPACING_LIMITS,
+    ParkingPanelAction, ParkingPanelState, ParkingRampSideChoice, RoundingPanelAction,
+    RoundingPanelState, RouteOffsetPanelAction, RouteOffsetPanelState, RouteToolConfigState,
+    RouteToolPanelAction, RouteToolPanelState, SegmentConfigPanelAction, SegmentConfigPanelState,
+    SegmentLengthKind, SmoothCurvePanelAction, SmoothCurvePanelState, SplinePanelAction,
+    SplinePanelState, StraightPanelAction, StraightPanelState, TangentHelpHint, TangentNoneReason,
+    TangentSelectionState, BYPASS_BASE_SPACING_LIMITS, BYPASS_OFFSET_LIMITS,
+    PARKING_BAY_LENGTH_LIMITS, PARKING_ENTRY_EXIT_T_LIMITS, PARKING_MAX_NODE_DISTANCE_LIMITS,
+    PARKING_NUM_ROWS_LIMITS, PARKING_RAMP_LENGTH_LIMITS, PARKING_ROTATION_STEP_LIMITS,
+    PARKING_ROW_SPACING_LIMITS, ROUNDING_ARC_RADIUS_LIMITS, ROUNDING_MAX_ANGLE_LIMITS,
     ROUTE_OFFSET_BASE_SPACING_LIMITS, ROUTE_OFFSET_DISTANCE_LIMITS, SMOOTH_CURVE_MAX_ANGLE_LIMITS,
     SMOOTH_CURVE_MIN_DISTANCE_LIMITS,
 };
@@ -154,6 +155,7 @@ fn render_route_tool_config(
             render_field_path_panel(ui, state, lang, panel_ctx)
         }
         RouteToolConfigState::RouteOffset(state) => render_route_offset_panel(ui, state, panel_ctx),
+        RouteToolConfigState::Rounding(state) => render_rounding_panel(ui, state, panel_ctx),
         RouteToolConfigState::ColorPath(state) => render_color_path_panel(ui, state, panel_ctx),
     }
 }
@@ -237,6 +239,81 @@ fn render_route_offset_panel(
     panel_ctx: &mut RouteToolPanelRenderContext<'_>,
 ) {
     analysis_panel::render_route_offset_panel(ui, state, panel_ctx);
+}
+
+fn render_rounding_panel(
+    ui: &mut egui::Ui,
+    state: &RoundingPanelState,
+    panel_ctx: &mut RouteToolPanelRenderContext<'_>,
+) {
+    ui.group(|ui| {
+        if state.is_adjusting {
+            ui.small("Bestehende Verrundung wird ueber das Panel neu aufgebaut.");
+            ui.add_space(4.0);
+        }
+
+        ui.label(format!("Auswahl: {} Node(s)", state.selected_node_count));
+        if let Some(preview_node_count) = state.preview_node_count {
+            ui.label(format!("Vorschau: {} Node(s)", preview_node_count));
+        }
+
+        ui.separator();
+
+        render_rounding_float_control(
+            ui,
+            panel_ctx,
+            "Radius:",
+            state.arc_radius_m,
+            ROUNDING_ARC_RADIUS_LIMITS.range(),
+            " m",
+            RoundingPanelAction::SetArcRadius,
+        );
+        render_rounding_float_control(
+            ui,
+            panel_ctx,
+            "Max-Winkel:",
+            state.max_angle_deg,
+            ROUNDING_MAX_ANGLE_LIMITS.range(),
+            "°",
+            RoundingPanelAction::SetMaxAngleDeg,
+        );
+        ui.small("Arc-only erwartet genau 1 selektierten Corner-Node.");
+    });
+}
+
+fn render_rounding_float_control(
+    ui: &mut egui::Ui,
+    panel_ctx: &mut RouteToolPanelRenderContext<'_>,
+    label: &str,
+    value: f32,
+    range: std::ops::RangeInclusive<f32>,
+    suffix: &str,
+    map_action: impl Fn(f32) -> RoundingPanelAction,
+) {
+    let mut current = value;
+    ui.horizontal(|ui| {
+        ui.label(label);
+        let response = ui.add(
+            egui::DragValue::new(&mut current)
+                .range(range.clone())
+                .speed(0.1)
+                .suffix(suffix),
+        );
+        if response.changed()
+            | apply_wheel_step_default_enabled(
+                ui,
+                &response,
+                &mut current,
+                range,
+                panel_ctx.wheel_enabled,
+            )
+        {
+            push_action(
+                panel_ctx.events,
+                RouteToolPanelAction::Rounding(map_action(current)),
+            );
+        }
+    });
 }
 
 fn render_color_path_panel(
@@ -405,54 +482,6 @@ fn render_field_path_selection_summary(
     } else {
         ui.label(&summary.text);
     }
-}
-
-fn render_direction_selector(
-    ui: &mut egui::Ui,
-    current: ConnectionDirection,
-    panel_ctx: &mut RouteToolPanelRenderContext<'_>,
-    map_action: impl Fn(ConnectionDirection) -> RouteToolPanelAction,
-) {
-    ui.horizontal(|ui| {
-        ui.label("Richtung:");
-        let mut value = current;
-        egui::ComboBox::from_id_salt("field_boundary_direction")
-            .selected_text(direction_label(value))
-            .show_ui(ui, |ui| {
-                for choice in [
-                    ConnectionDirection::Regular,
-                    ConnectionDirection::Dual,
-                    ConnectionDirection::Reverse,
-                ] {
-                    ui.selectable_value(&mut value, choice, direction_label(choice));
-                }
-            });
-        if value != current {
-            push_action(panel_ctx.events, map_action(value));
-        }
-    });
-}
-
-fn render_priority_selector(
-    ui: &mut egui::Ui,
-    current: ConnectionPriority,
-    panel_ctx: &mut RouteToolPanelRenderContext<'_>,
-    map_action: impl Fn(ConnectionPriority) -> RouteToolPanelAction,
-) {
-    ui.horizontal(|ui| {
-        ui.label("Strassenart:");
-        let mut value = current;
-        egui::ComboBox::from_id_salt("field_boundary_priority")
-            .selected_text(priority_label(value))
-            .show_ui(ui, |ui| {
-                for choice in [ConnectionPriority::Regular, ConnectionPriority::SubPriority] {
-                    ui.selectable_value(&mut value, choice, priority_label(choice));
-                }
-            });
-        if value != current {
-            push_action(panel_ctx.events, map_action(value));
-        }
-    });
 }
 
 fn render_parking_side_selector(
@@ -677,20 +706,5 @@ fn parking_side_label(value: ParkingRampSideChoice) -> &'static str {
     match value {
         ParkingRampSideChoice::Left => "Links",
         ParkingRampSideChoice::Right => "Rechts",
-    }
-}
-
-fn direction_label(value: ConnectionDirection) -> &'static str {
-    match value {
-        ConnectionDirection::Regular => "Einbahnstrasse",
-        ConnectionDirection::Dual => "Beidseitig",
-        ConnectionDirection::Reverse => "Rueckwaerts",
-    }
-}
-
-fn priority_label(value: ConnectionPriority) -> &'static str {
-    match value {
-        ConnectionPriority::Regular => "Normal",
-        ConnectionPriority::SubPriority => "Nebenstrecke",
     }
 }

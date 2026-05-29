@@ -155,6 +155,7 @@
   - [x] Toolbar-Button `🌾 Feld erkennen` — deaktiviert wenn keine Farmland-Daten geladen
   - [x] Context-Menu `⚙ Extras → 🌾 Feld erkennen` — Precondition `FarmlandPolygonsLoaded`
   - [x] `handlers::route_tool`: `FarmlandData-Injection` via `set_farmland_data()` beim Tool-Wechsel
+  - [x] CP-03-Follow-up (2026-05-28, Branch `feat/rounding-tool`): Das FieldBoundary-Unterpanel rendert keine lokalen Dropdowns fuer Richtung und Strassenart mehr; die globale Route-Tool-Kopfzeile bleibt die einzige sichtbare Konfigurationsstelle.
 
 - [x] **Gruppen-Selektions- und Verwaltungs-Erweiterungen (2026-03-21, Branch `refactor/group-unification`)**
   - [x] Doppelklick auf Gruppen-Node → `SelectGroupByNearestNode`-Command selektiert alle Nodes der Gruppe
@@ -185,6 +186,19 @@
   - [x] `render_edit_panel()` erhält neuen Parameter `group_record: Option<&GroupRecord>`
 
 ## Phase 5: Advanced Features
+- [x] **RoundingTool ArcOnePoint vertikal (2026-05-17, Branch `feat/rounding-tool`)**
+  - [x] Genau 1 selektierter Corner-Node als Eingang fuer `RouteToolId::Rounding`
+  - [x] Zwei eindeutige Anschlussseiten aus der Selection-/Neighbor-Seeding-Pipeline ableiten
+  - [x] Echter Kreisbogen mit festem Radius statt Bézier-Heuristik
+  - [x] Lokaler Replace-Pfad: Corner-Node entfernen, `RoundedCorner`-Nodes einsetzen, Side-Verbindungen wieder anbinden
+  - [x] Arc-Segmentierung ueber `max_angle_deg` mit winkelbasierter Approximation
+  - [x] Gezielte Engine-Tests fuer gueltige und ungueltige Arc-Kontexte
+  - [x] CP-01-Follow-up (2026-05-28, Branch `feat/rounding-tool`): aktives Rounding routed Primarklicks wieder ueber den generischen Node-Pick; ArcOnePoint arbeitet fuer Preview, Execute und Recreate mit linearen Seiten-Stretches und ueberlebenden Aussenankern statt nur mit Direktnachbarn
+- [x] **RoundingTool Persistenz / Panel / Host-Snapshot (2026-05-17, Branch `feat/rounding-tool`)**
+  - [x] `RouteToolId::Rounding` auf `GroupBackedEditable` angehoben; Arc-only-`RouteToolEditPayload::RoundingArc` fuer Recreate und destruktiven Tool-Edit eingefuehrt
+  - [x] Finales Floating-Panel mit Radius- und `max_angle_deg`-Parametern, Vorschauzaehlern und Nachbearbeitungsstatus verdrahtet
+  - [x] Host-UI-/JSON-Snapshots serialisieren den Arc-only-`RoundingPanelState` vollstaendig
+  - [x] Gezielte Engine- und Host-Tests decken Persistenz, Payload-Restore und Snapshot-Wiring ab
 - [x] Governance: Lint-Ausnahmen inventarisiert und mit Abbaupfaden dokumentiert (2026-04-17, report-only)
 - [x] Governance: Workspace-Lints zentralisiert (2026-04-17, zentrale `workspace.lints` + `lints.workspace = true` fuer alle Workspace-Crates)
 - [x] Refactor/Audit-Massnahmen-Backlog CP-01..CP-08 abgeschlossen (2026-04-17, Branch `refactor/audit-findings`)

@@ -101,6 +101,26 @@ fn apply_intent(
     controller.handle_intent(state, intent)
 }
 
+fn apply_generic_node_pick(
+    controller: &mut AppController,
+    state: &mut AppState,
+    world_pos: Vec2,
+    modifiers: HostInputModifiers,
+) -> Result<bool> {
+    let extend_path = modifiers.shift;
+    let additive = modifiers.command || extend_path;
+    apply_intent(
+        controller,
+        state,
+        AppIntent::NodePickRequested {
+            world_pos,
+            additive,
+            extend_path,
+        },
+    )?;
+    Ok(true)
+}
+
 fn apply_primary_tap(
     controller: &mut AppController,
     state: &mut AppState,
@@ -111,20 +131,7 @@ fn apply_primary_tap(
     let world_pos = screen_pos_to_world(&state.view.camera, viewport_size, screen_pos)?;
 
     match state.editor.active_tool {
-        EditorTool::Select => {
-            let extend_path = modifiers.shift;
-            let additive = modifiers.command || extend_path;
-            apply_intent(
-                controller,
-                state,
-                AppIntent::NodePickRequested {
-                    world_pos,
-                    additive,
-                    extend_path,
-                },
-            )?;
-            Ok(true)
-        }
+        EditorTool::Select => apply_generic_node_pick(controller, state, world_pos, modifiers),
         EditorTool::AddNode => {
             apply_intent(controller, state, AppIntent::AddNodeRequested { world_pos })?;
             Ok(true)
@@ -137,7 +144,17 @@ fn apply_primary_tap(
             )?;
             Ok(true)
         }
-        EditorTool::Route => Ok(false),
+        EditorTool::Route => {
+            if state
+                .editor
+                .route_tool_viewport_data()
+                .prefers_generic_node_pick
+            {
+                apply_generic_node_pick(controller, state, world_pos, modifiers)
+            } else {
+                Ok(false)
+            }
+        }
     }
 }
 

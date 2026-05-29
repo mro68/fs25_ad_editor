@@ -5,6 +5,7 @@
 //! `selected_node_ids`.
 
 use crate::app::history::Snapshot;
+use crate::app::state::EditorTool;
 use crate::app::state::SelectionState;
 use crate::app::AppState;
 use indexmap::IndexSet;
@@ -32,10 +33,11 @@ pub fn record_selection_if_changed(
 ) {
     let current_selected = &state.selection.selected_node_ids;
     let current_anchor = state.selection.selection_anchor_node_id;
+    let selection_changed = (!Arc::ptr_eq(&old_selected, current_selected)
+        && *old_selected != **current_selected)
+        || old_anchor != current_anchor;
 
-    if !Arc::ptr_eq(&old_selected, current_selected) && *old_selected != **current_selected
-        || old_anchor != current_anchor
-    {
+    if selection_changed {
         let old_selection = SelectionState {
             selected_node_ids: old_selected,
             selection_anchor_node_id: old_anchor,
@@ -48,5 +50,10 @@ pub fn record_selection_if_changed(
             tool_edit_store: state.tool_edit_store.clone(),
         };
         state.history.record_snapshot(snap);
+
+        if state.editor.active_tool == EditorTool::Route && state.active_tool_edit_session.is_none()
+        {
+            crate::app::handlers::route_tool::sync_active_inputs_from_selection(state);
+        }
     }
 }

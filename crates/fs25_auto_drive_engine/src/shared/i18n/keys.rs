@@ -513,6 +513,8 @@ pub enum I18nKey {
     FloatingEditParking,
     /// Tooltip "Strecke versetzen"
     FloatingEditRouteOffset,
+    /// Tooltip "Verrunden"
+    FloatingEditRounding,
     /// Tooltip "Feld erkennen"
     FloatingAnalysisFieldBoundary,
     /// Tooltip "Feldweg erkennen"
@@ -667,6 +669,8 @@ pub enum I18nKey {
     LpParking,
     /// LongPress-Tooltip fuer Strecke versetzen
     LpRouteOffset,
+    /// LongPress-Tooltip fuer Verrunden
+    LpRounding,
     /// LongPress-Tooltip fuer Feld erkennen
     LpFieldBoundary,
     /// LongPress-Tooltip fuer Feldweg erkennen

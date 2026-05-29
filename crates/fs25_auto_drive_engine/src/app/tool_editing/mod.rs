@@ -5,7 +5,9 @@ mod service;
 mod session;
 mod store;
 
-pub(crate) use payload::{RouteToolEditPayload, ToolEditAnchors, ToolRouteBase};
+pub(crate) use payload::{
+    RoundingTransitionSnapshot, RouteToolEditPayload, ToolEditAnchors, ToolRouteBase,
+};
 pub(crate) use service::{
     begin_edit, cancel_active_edit, persist_after_apply, register_persisted_group,
 };

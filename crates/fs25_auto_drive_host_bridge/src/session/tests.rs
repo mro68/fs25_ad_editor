@@ -4,6 +4,9 @@ use std::time::Instant;
 
 use fs25_auto_drive_engine::app::handlers;
 use fs25_auto_drive_engine::app::tool_contract::RouteToolId;
+use fs25_auto_drive_engine::app::ui_contract::{
+    RoundingPanelAction, RouteToolConfigState, RouteToolPanelAction,
+};
 use fs25_auto_drive_engine::app::{
     AppIntent, Connection, ConnectionDirection, ConnectionPriority, FloatingMenuKind,
     GroupEditState, GroupRecord, MapMarker, MapNode, NodeFlag, OverviewSourceContext, RoadMap,
@@ -23,7 +26,7 @@ use crate::dto::{
     EngineSessionAction, HostActiveTool, HostConnectionPairEntry, HostConnectionPairSnapshot,
     HostDefaultConnectionDirection, HostDefaultConnectionPriority, HostDialogRequestKind,
     HostDialogResult, HostInputModifiers, HostMarkerListSnapshot, HostNodeDetails,
-    HostPointerButton, HostSessionAction, HostTapKind, HostViewportInputBatch,
+    HostPointerButton, HostRouteToolAction, HostSessionAction, HostTapKind, HostViewportInputBatch,
     HostViewportInputEvent,
 };
 
@@ -72,93 +75,6 @@ fn viewport_connected_path_map() -> RoadMap {
     map
 }
 
-fn node_details_marker_test_map() -> RoadMap {
-    let mut map = viewport_connected_path_map();
-    map.add_map_marker(MapMarker::new(
-        2,
-        "Hof".to_string(),
-        "All".to_string(),
-        3,
-        false,
-    ));
-    map
-}
-
-fn group_boundary_test_map() -> RoadMap {
-    let mut map = RoadMap::new(3);
-    map.add_node(MapNode::new(1, Vec2::new(0.0, 0.0), NodeFlag::Regular));
-    map.add_node(MapNode::new(2, Vec2::new(10.0, 0.0), NodeFlag::Regular));
-    map.add_node(MapNode::new(3, Vec2::new(20.0, 0.0), NodeFlag::Regular));
-    map.add_node(MapNode::new(10, Vec2::new(-10.0, 0.0), NodeFlag::Regular));
-    map.add_node(MapNode::new(11, Vec2::new(30.0, 0.0), NodeFlag::Regular));
-    map.add_connection(Connection::new(
-        1,
-        2,
-        ConnectionDirection::Regular,
-        ConnectionPriority::Regular,
-        Vec2::new(0.0, 0.0),
-        Vec2::new(10.0, 0.0),
-    ));
-    map.add_connection(Connection::new(
-        2,
-        3,
-        ConnectionDirection::Regular,
-        ConnectionPriority::Regular,
-        Vec2::new(10.0, 0.0),
-        Vec2::new(20.0, 0.0),
-    ));
-    map.add_connection(Connection::new(
-        10,
-        1,
-        ConnectionDirection::Regular,
-        ConnectionPriority::Regular,
-        Vec2::new(-10.0, 0.0),
-        Vec2::new(0.0, 0.0),
-    ));
-    map.add_connection(Connection::new(
-        3,
-        11,
-        ConnectionDirection::Regular,
-        ConnectionPriority::Regular,
-        Vec2::new(20.0, 0.0),
-        Vec2::new(30.0, 0.0),
-    ));
-    map.ensure_spatial_index();
-    map
-}
-
-fn make_group_record(record_id: u64, node_ids: &[u64], road_map: &RoadMap) -> GroupRecord {
-    GroupRecord {
-        id: record_id,
-        node_ids: node_ids.to_vec(),
-        original_positions: node_ids
-            .iter()
-            .filter_map(|node_id| road_map.node(*node_id).map(|node| node.position))
-            .collect(),
-        marker_node_ids: Vec::new(),
-        locked: false,
-        entry_node_id: Some(1),
-        exit_node_id: Some(3),
-    }
-}
-
-fn snapshot_measurement_session(selected_count: usize) -> HostBridgeSession {
-    let mut session = HostBridgeSession::new();
-    let mut map = RoadMap::new(3);
-
-    for id in 1..=selected_count as u64 {
-        let x = id as f32;
-        map.add_node(MapNode::new(id, Vec2::new(x, x * 0.25), NodeFlag::Regular));
-        session.state.selection.ids_mut().insert(id);
-    }
-
-    session.state.road_map = Some(Arc::new(map));
-    session.state.view.viewport_size = [1280.0, 720.0];
-    session.snapshot_dirty = true;
-    let _ = session.snapshot();
-    session
-}
-
 fn resize_event(size_px: [f32; 2]) -> HostViewportInputEvent {
     HostViewportInputEvent::Resize { size_px }
 }
@@ -193,6 +109,83 @@ fn screen_for_world(session: &HostBridgeSession, world_pos: Vec2) -> [f32; 2] {
         .camera
         .world_to_screen(world_pos, Vec2::new(viewport[0], viewport[1]));
     [screen.x, screen.y]
+}
+
+fn assert_rounding_panel_contract(
+    session: &HostBridgeSession,
+    expected_selected_node_count: usize,
+) {
+    let host_ui = session.build_host_ui_snapshot();
+    let panel = host_ui
+        .route_tool_panel_state()
+        .expect("Route-Tool-Panel fuer Rounding erwartet");
+    assert_eq!(panel.active_tool_id, Some(RouteToolId::Rounding));
+
+    let config_state = panel
+        .config_state
+        .as_ref()
+        .expect("Rounding-Config-State erwartet");
+    let RouteToolConfigState::Rounding(state) = config_state else {
+        panic!("Rounding-Panelzustand erwartet");
+    };
+
+    assert!(state.arc_radius_m > 0.0);
+    assert!(state.max_angle_deg > 0.0);
+    assert_eq!(state.selected_node_count, expected_selected_node_count);
+    assert!(!state.is_adjusting);
+    assert!(state.preview_node_count.is_some());
+
+    let payload = crate::dto::host_ui_snapshot_json(&host_ui)
+        .expect("Host-UI-Snapshot muss JSON-serialisierbar sein");
+    let value: serde_json::Value =
+        serde_json::from_str(&payload).expect("Host-UI-JSON muss als Value lesbar sein");
+    let panels = value
+        .get("panels")
+        .and_then(serde_json::Value::as_array)
+        .expect("Host-UI-JSON muss ein Panel-Array enthalten");
+    let route_tool_panel = panels
+        .iter()
+        .find(|panel| panel.get("kind").and_then(serde_json::Value::as_str) == Some("route_tool"))
+        .expect("Route-Tool-Panel muss im Host-UI-JSON vorhanden sein");
+    let rounding = route_tool_panel
+        .get("state")
+        .and_then(|state| state.get("config_state"))
+        .expect("Rounding-Config-State muss im Host-UI-JSON vorhanden sein");
+
+    assert_eq!(
+        rounding.get("kind").and_then(serde_json::Value::as_str),
+        Some("rounding")
+    );
+    assert!(rounding
+        .get("arc_radius_m")
+        .and_then(serde_json::Value::as_f64)
+        .is_some_and(|value| value > 0.0));
+    assert!(rounding
+        .get("max_angle_deg")
+        .and_then(serde_json::Value::as_f64)
+        .is_some_and(|value| value > 0.0));
+    assert_eq!(
+        rounding
+            .get("selected_node_count")
+            .and_then(serde_json::Value::as_u64),
+        Some(expected_selected_node_count as u64)
+    );
+    assert!(rounding
+        .get("preview_node_count")
+        .and_then(serde_json::Value::as_u64)
+        .is_some());
+    assert_eq!(
+        rounding
+            .get("is_adjusting")
+            .and_then(serde_json::Value::as_bool),
+        Some(false)
+    );
+
+    assert!(rounding.get("mode").is_none());
+    assert!(rounding.get("mode_locked").is_none());
+    assert!(rounding.get("arc_sample_spacing_m").is_none());
+    assert!(rounding.get("quadratic_sample_spacing_m").is_none());
+    assert!(rounding.get("chain_node_count").is_none());
 }
 
 #[test]
@@ -331,6 +324,137 @@ fn host_ui_and_overlay_snapshots_are_available() {
     let overlay = session.build_viewport_overlay_snapshot(None);
     assert!(overlay.route_tool_preview.is_none());
     assert!(overlay.group_boundaries.is_empty());
+}
+
+#[test]
+fn host_ui_snapshot_exposes_rounding_panel_state() {
+    let mut session = HostBridgeSession::new();
+    session.state.road_map = Some(Arc::new(rounding_corner_map()));
+    session.state.selection.ids_mut().insert(1);
+
+    handlers::route_tool::select(&mut session.state, RouteToolId::Rounding);
+
+    assert_rounding_panel_contract(&session, 1);
+}
+
+#[test]
+fn host_ui_snapshot_restores_rounding_adjusting_state_and_panel_updates_max_angle() {
+    let mut session = HostBridgeSession::new();
+    session.state.road_map = Some(Arc::new(rounding_corner_map()));
+    session.state.selection.ids_mut().insert(1);
+
+    apply_test_intent(
+        &mut session,
+        AppIntent::SelectRouteToolRequested {
+            tool_id: RouteToolId::Rounding,
+        },
+    );
+    apply_test_intent(&mut session, AppIntent::RouteToolExecuteRequested);
+
+    let record_id = session
+        .state
+        .group_registry
+        .records()
+        .next()
+        .expect("Persistierter Rounding-Record muss vorhanden sein")
+        .id;
+    assert!(
+        session.state.tool_edit_store.get(record_id).is_some(),
+        "Persistierter Rounding-Record braucht einen Tool-Edit-Payload"
+    );
+
+    session
+        .apply_action(HostSessionAction::StartGroupEdit { record_id })
+        .expect("Persistierter Rounding-Record muss in den Gruppen-Edit wechseln koennen");
+    session
+        .apply_action(HostSessionAction::OpenGroupEditTool { record_id })
+        .expect("Persistierter Rounding-Record muss in den Tool-Edit wechseln koennen");
+
+    let restored_host_ui = session.build_host_ui_snapshot();
+    let restored_panel = restored_host_ui
+        .route_tool_panel_state()
+        .expect("Rounding-Panel nach Restore erwartet");
+    let restored_config_state = restored_panel
+        .config_state
+        .as_ref()
+        .expect("Rounding-Config-State nach Restore erwartet");
+    let RouteToolConfigState::Rounding(restored_state) = restored_config_state else {
+        panic!("Rounding-Panelzustand nach Restore erwartet");
+    };
+
+    assert_eq!(restored_panel.active_tool_id, Some(RouteToolId::Rounding));
+    assert!(restored_state.is_adjusting);
+    assert_eq!(restored_state.max_angle_deg, 22.5);
+    assert_eq!(restored_state.preview_node_count, Some(5));
+
+    session
+        .apply_action(HostSessionAction::RouteTool {
+            action: HostRouteToolAction::PanelAction {
+                action: RouteToolPanelAction::Rounding(RoundingPanelAction::SetMaxAngleDeg(30.0)),
+            },
+        })
+        .expect("Host-Panelaktion fuer max_angle_deg muss verarbeitet werden");
+
+    let host_ui = session.build_host_ui_snapshot();
+    let panel = host_ui
+        .route_tool_panel_state()
+        .expect("Rounding-Panel nach Panelaktion erwartet");
+    let config_state = panel
+        .config_state
+        .as_ref()
+        .expect("Rounding-Config-State nach Panelaktion erwartet");
+    let RouteToolConfigState::Rounding(state) = config_state else {
+        panic!("Rounding-Panelzustand nach Panelaktion erwartet");
+    };
+
+    assert!(state.is_adjusting);
+    assert_eq!(state.max_angle_deg, 30.0);
+    assert_eq!(state.preview_node_count, Some(4));
+
+    let payload = crate::dto::host_ui_snapshot_json(&host_ui)
+        .expect("Rounding-HostUiSnapshot muss als JSON serialisierbar sein");
+    let value: serde_json::Value =
+        serde_json::from_str(&payload).expect("Rounding-HostUiSnapshot-JSON muss parsebar sein");
+    let panels = value
+        .get("panels")
+        .and_then(serde_json::Value::as_array)
+        .expect("Host-UI-JSON muss Panels enthalten");
+    let route_tool_panel = panels
+        .iter()
+        .find(|panel| panel.get("kind").and_then(serde_json::Value::as_str) == Some("route_tool"))
+        .expect("Route-Tool-Panel muss im Host-UI-JSON vorhanden sein");
+    let rounding = route_tool_panel
+        .get("state")
+        .and_then(|state| state.get("config_state"))
+        .expect("Rounding-Config-State muss im Host-UI-JSON vorhanden sein");
+
+    assert_eq!(
+        rounding.get("kind").and_then(serde_json::Value::as_str),
+        Some("rounding")
+    );
+    assert_eq!(
+        rounding
+            .get("max_angle_deg")
+            .and_then(serde_json::Value::as_f64),
+        Some(30.0)
+    );
+    assert_eq!(
+        rounding
+            .get("preview_node_count")
+            .and_then(serde_json::Value::as_u64),
+        Some(4)
+    );
+    assert_eq!(
+        rounding
+            .get("is_adjusting")
+            .and_then(serde_json::Value::as_bool),
+        Some(true)
+    );
+    assert!(rounding.get("mode").is_none());
+    assert!(rounding.get("mode_locked").is_none());
+    assert!(rounding.get("arc_sample_spacing_m").is_none());
+    assert!(rounding.get("quadratic_sample_spacing_m").is_none());
+    assert!(rounding.get("chain_node_count").is_none());
 }
 
 #[test]
@@ -1150,6 +1274,33 @@ fn viewport_input_tap_routes_to_add_node_and_connect_without_new_ffi_surface() {
         .expect("Connect-Taps muessen verarbeitet werden");
 
     assert_eq!(session.state.connection_count(), 1);
+}
+
+#[test]
+fn viewport_input_tap_routes_to_rounding_selection_when_generic_pick_is_preferred() {
+    let mut session = HostBridgeSession::new();
+    session.state.road_map = Some(Arc::new(rounding_corner_map()));
+    session.state.view.viewport_size = [800.0, 600.0];
+
+    handlers::route_tool::select(&mut session.state, RouteToolId::Rounding);
+
+    let viewport_snapshot = session.build_route_tool_viewport_snapshot();
+    assert!(viewport_snapshot.prefers_generic_node_pick);
+
+    let node_screen = screen_for_world(&session, Vec2::new(0.0, 0.0));
+
+    session
+        .apply_action(HostSessionAction::SubmitViewportInput {
+            batch: HostViewportInputBatch {
+                events: vec![resize_event([800.0, 600.0]), tap_event(node_screen)],
+            },
+        })
+        .expect("Rounding-Tap muss ueber generischen Node-Pick selektieren");
+
+    assert_eq!(session.state.selection.selected_node_ids.len(), 1);
+    assert!(session.state.selection.selected_node_ids.contains(&1));
+
+    assert_rounding_panel_contract(&session, 1);
 }
 
 #[test]

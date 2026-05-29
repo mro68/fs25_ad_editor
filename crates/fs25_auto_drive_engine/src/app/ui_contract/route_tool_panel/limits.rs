@@ -58,6 +58,10 @@ pub const BYPASS_BASE_SPACING_LIMITS: FloatInputLimits = FloatInputLimits::new(1
 pub const ROUTE_OFFSET_DISTANCE_LIMITS: FloatInputLimits = FloatInputLimits::new(0.5, 200.0);
 /// Eingabegrenzen fuer die Basisschrittweite des Route-Offset-Tools.
 pub const ROUTE_OFFSET_BASE_SPACING_LIMITS: FloatInputLimits = FloatInputLimits::new(1.0, 50.0);
+/// Eingabegrenzen fuer den Arc-Radius des Verrundungs-Tools.
+pub const ROUNDING_ARC_RADIUS_LIMITS: FloatInputLimits = FloatInputLimits::new(0.5, 200.0);
+/// Eingabegrenzen fuer den maximalen Segmentwinkel des Verrundungs-Tools.
+pub const ROUNDING_MAX_ANGLE_LIMITS: FloatInputLimits = FloatInputLimits::new(1.0, 45.0);
 /// Eingabegrenzen fuer den maximalen Lenkwinkel der geglaetteten Kurve.
 pub const SMOOTH_CURVE_MAX_ANGLE_LIMITS: FloatInputLimits = FloatInputLimits::new(5.0, 135.0);
 /// Eingabegrenzen fuer den Minimalabstand der geglaetteten Kurve.

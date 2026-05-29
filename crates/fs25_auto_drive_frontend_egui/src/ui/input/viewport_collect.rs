@@ -23,6 +23,7 @@ pub(crate) struct ViewportContext<'a> {
     pub camera: &'a Camera2D,
     pub selected_node_ids: &'a IndexSet<u64>,
     pub active_tool: EditorTool,
+    pub route_tool_prefers_generic_node_pick: bool,
     pub options: &'a EditorOptions,
     pub drag_targets: &'a [[f32; 2]],
     /// Gibt an, ob das aktive Route-Tool Alt+Drag als Lasso-Eingabe benoetigt.
@@ -59,6 +60,7 @@ impl InputState {
         selected_node_ids: &IndexSet<u64>,
         active_tool: EditorTool,
         route_tool_is_drawing: bool,
+        route_tool_prefers_generic_node_pick: bool,
         route_tool_segment_shortcuts_active: bool,
         options: &EditorOptions,
         command_palette_open: bool,
@@ -81,6 +83,7 @@ impl InputState {
             camera,
             selected_node_ids,
             active_tool,
+            route_tool_prefers_generic_node_pick,
             options,
             drag_targets,
             tool_needs_lasso,

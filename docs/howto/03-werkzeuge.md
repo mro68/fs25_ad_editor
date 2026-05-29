@@ -15,7 +15,7 @@ Der Editor nutzt einen gemeinsamen Katalog fuer alle Werkzeugsurfaces. Dieselben
 |--------|----------|-------|------------------|
 | **Werkzeuge** | `T` | Select, Connect, Add Node | nie |
 | **Grundbefehle** | `G` | Gerade Strecke, Bezier Grad 2, Bezier Grad 3, Spline, Geglaettete Kurve | nie |
-| **Bearbeiten** | `B` | Ausweichstrecke, Parkplatz, Strecke versetzen | keine geordnete Kette bei chain-basierten Tools |
+| **Bearbeiten** | `B` | Ausweichstrecke, Parkplatz, Strecke versetzen, Verrunden | keine geordnete Kette bei chain-basierten Tools |
 | **Analyse** | `A` | Feld erkennen, Feldweg erkennen, Farb-Pfad erkennen | fehlende Farmland-Daten oder fehlende Hintergrundkarte |
 
 Wenn ein Tool Voraussetzungen hat, bleibt es sichtbar. Statt zu verschwinden, zeigt es seinen Disabled-Grund an.
@@ -38,7 +38,7 @@ Alle Route-Tools teilen sich denselben Grundablauf:
 
 Nicht jedes Tool erzeugt spaeter denselben Bearbeitungsweg:
 
-- **Mit spaeterem Tool-Edit**: Gerade Strecke, Bezier Grad 2, Bezier Grad 3, Spline, Geglaettete Kurve, Ausweichstrecke, Parkplatz, Strecke versetzen, Feld erkennen
+- **Mit spaeterem Tool-Edit**: Gerade Strecke, Bezier Grad 2, Bezier Grad 3, Spline, Geglaettete Kurve, Ausweichstrecke, Parkplatz, Strecke versetzen, Verrunden, Feld erkennen
 - **Ohne spaeteres Tool-Edit**: Feldweg erkennen und Farb-Pfad erkennen
 
 Fuer Tools ohne spaeteres Tool-Edit gilt:
@@ -258,6 +258,26 @@ Erzeugt einen oder zwei Parallelversatze entlang einer selektierten Kette.
 - Das Tool bleibt sichtbar, auch wenn noch keine Kette selektiert ist; der Disabled-Hinweis zeigt dann den fehlenden Schritt.
 - Wenn **Original behalten** deaktiviert ist, ersetzt die neue Strecke die innere Kette im selben Undo-Schritt.
 
+## Verrunden (B)
+
+Rundet einen lokalen Streckenuebergang als festen Kreisbogen ab. Das Tool arbeitet Arc-only auf genau einem selektierten Corner-Node und ersetzt nur den lokalen Uebergang, bei gueltigem Kontext auch ueber lineare Zwischen-Nodes hinweg.
+
+**Workflow:**
+1. Genau 1 Corner-Node selektieren.
+2. Mit **`B`** die Gruppe **Bearbeiten** oeffnen und **Verrunden** waehlen.
+3. Falls noetig, den Corner bei aktivem Tool per Node-Klick im Viewport wechseln.
+4. Im Route-Tool-Panel **Radius** und **Max-Winkel** einstellen; die Vorschau zeigt, wie viele neue Nodes der Kreisbogen erzeugt.
+5. Mit **`Enter`** bestaetigen.
+
+**Konfiguration:**
+- Radius: legt den festen Radius des Kreisbogens fest.
+- Max-Winkel: begrenzt den Winkel zwischen zwei erzeugten Arc-Segmenten; kleinere Werte erzeugen mehr Nodes und eine feinere Bogenapproximation.
+
+**Tipps:**
+- Das Tool funktioniert nur, wenn der selektierte Node genau zwei eindeutige Anschlussseiten mit einer gerichteten Durchfahrt ueber den Corner hat. Zwischen dem Corner und den eigentlichen Aussenankern duerfen lineare Zwischen-Nodes liegen; Kreuzungen oder zusaetzliche Aeste machen den Kontext ungueltig.
+- Wenn Radius oder Corner-Winkel keinen stabilen Kreisbogen zulassen, bleibt die Vorschau leer. Verkleinern Sie in diesem Fall den Radius oder waehlen Sie einen anderen Corner.
+- Bereits erzeugte Verrundungen koennen spaeter ueber **Tool bearbeiten** erneut aufgebaut werden. In dieser Nachbearbeitung passen Sie fuer denselben Corner nur noch Radius und Max-Winkel an.
+
 ---
 
 ## Feld erkennen (A)
@@ -268,10 +288,12 @@ Zeichnet einen Feldrand aus geladenen Farmland-Daten als geschlossenen Ring nach
 1. Eine Uebersichtskarte mit Farmland-Daten laden oder generieren.
 2. Mit **`A`** die Analyse-Gruppe oeffnen und **Feld erkennen** waehlen.
 3. In das gewuenschte Feld klicken.
-4. Offset, Toleranz, Knotenabstand und optionale Eckenverrundung einstellen.
-5. Mit **`Enter`** bestaetigen.
+4. Richtung und Strassenart bei Bedarf in der Kopfzeile des Route-Tool-Panels setzen.
+5. Offset, Toleranz, Knotenabstand und optionale Eckenverrundung einstellen.
+6. Mit **`Enter`** bestaetigen.
 
 **Konfiguration:**
+- Richtung und Strassenart: global oben im Route-Tool-Panel; im Feld-Unterpanel gibt es dafuer keine separaten Dropdowns.
 - Knotenabstand.
 - Offset nach innen oder aussen.
 - Toleranz fuer die Vereinfachung.

@@ -10,6 +10,10 @@ Der Ownership-Flip ist fuer den Desktop-Host abgeschlossen: `editor_app::EditorA
 
 Die gemeinsame Host-Bridge ist in dieser Crate die kanonische Dispatch- und Read-Seam fuer stabile Host-Aktionen und bridge-owned Read-Modelle. Generische Viewport-Gesten laufen als `HostSessionAction::SubmitViewportInput`, waehrend Route-Tool-Schreibpfade explizit als `HostSessionAction::RouteTool` modelliert bleiben. Die UI emittiert weiterhin `AppIntent`s; `editor_app` mappt bridge-faehige Intents zentral auf dieselbe Session-Surface und faellt nur fuer bewusst noch ungemappte, nicht-kanonische Restfaelle auf `HostBridgeSession::apply_intent(...)` zurueck.
 
+`HostRouteToolViewportSnapshot` fuehrt fuer selektionsgetriebene Route-Tools das explizite Read-Flag `prefers_generic_node_pick`. Der egui-Viewport nutzt dieses Flag aktuell fuer aktives `Rounding`: Primarklicks werden dann bewusst nicht als `HostSessionAction::RouteTool`-Klick emittiert, sondern als generischer `SubmitViewportInput`-Node-Pick ueber die bestehende Selection-Seam geroutet.
+
+Der Floating-Panel-Vertrag fuer `Rounding` ist in der egui-Crate ebenfalls Arc-only: `editor_app` und `ui/edit_panel/route_tool_panel.rs` lesen aus dem Host-Snapshot `arc_radius_m`, `max_angle_deg`, `selected_node_count`, `preview_node_count` und `is_adjusting` und rendern daraus die komplette Verrundungs-Konfiguration.
+
 Chrome-nahe ViewModels und Panels lesen ihre Metadaten inzwischen konsequent ueber `HostChromeSnapshot`. Modale egui-Dialoge und Popup-States arbeiten fuer host-lokale Sichtbarkeit und transienten Widget-Zustand ueber `HostLocalDialogState` statt ueber mutierende Direktzugriffe auf den Engine-`AppState`.
 
 Das Onscreen-Rendering liest Szene und Assets ueber denselben gekoppelten `build_render_frame(...)`-Seam wie der Shared-Texture-Transportpfad; egui nutzt davon nur die Szene fuer den Paint-Callback und wiederverwendet die Assets im selben Frame fuer den revisionsbasierten Background-Sync.
@@ -109,4 +113,5 @@ flowchart LR
 - Der produktive egui-Pfad nutzt keine direkten `app_state_mut()`-Zugriffe mehr; read-only Checks ueber `app_state()` bleiben lokal auf Exit-/Repaint-Entscheidungen sowie einzelne UI-Reads begrenzt.
 - Das egui-Onscreen-Rendering laeuft bewusst nicht ueber den Shared-Texture-Transport (`SharedTextureRuntime`); es bleibt auf dem gekoppelten `HostRenderFrameSnapshot`-Seam und verwendet lokal nur den `RenderScene`-Teil fuer den Paint-Callback.
 - Tool-Preview-Node-Rendering nutzt degree-basierte Klassifikation: Knoten mit `degree != 2` werden als Kreis mit 3x Durchmesser gezeichnet; isolierte Preview-Knoten (`degree == 0`) bleiben als Control-Point-Diamant dargestellt.
+- Das Floating-Route-Tool-Panel rendert Standard-Richtung und Standard-Strassenart bewusst nur im globalen Header; das FieldBoundary-Unterpanel dupliziert diese beiden Konfigurations-Widgets nicht.
 - Die kanonischen Moduldetails stehen in `src/editor_app/API.md`, `src/render/API.md` und `src/ui/API.md`.

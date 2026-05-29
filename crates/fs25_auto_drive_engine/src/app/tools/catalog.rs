@@ -4,8 +4,8 @@ use crate::app::tool_contract::RouteToolId;
 use crate::shared::{I18nKey, RouteToolGroup};
 
 use super::{
-    bypass, color_path, curve, field_boundary, field_path, parking, route_offset, smooth_curve,
-    spline, straight_line, RouteTool,
+    bypass, color_path, curve, field_boundary, field_path, parking, rounding, route_offset,
+    smooth_curve, spline, straight_line, RouteTool,
 };
 
 /// UI-Surface fuer Route-Tool-Eintraege.
@@ -44,6 +44,8 @@ pub enum RouteToolIconKey {
     FieldPath,
     /// Icon fuer Streckenversatz.
     RouteOffset,
+    /// Icon fuer Verrunden.
+    Rounding,
     /// Icon fuer Farbpfad.
     ColorPath,
 }
@@ -223,12 +225,16 @@ fn make_route_offset() -> Box<dyn RouteTool> {
     Box::new(route_offset::RouteOffsetTool::new())
 }
 
+fn make_rounding() -> Box<dyn RouteTool> {
+    Box::new(rounding::RoundingTool::new())
+}
+
 fn make_color_path() -> Box<dyn RouteTool> {
     Box::new(color_path::ColorPathTool::new())
 }
 
 /// Kanonischer Katalog aller Route-Tools.
-pub const ROUTE_TOOL_CATALOG: [RouteToolDescriptor; 11] = [
+pub const ROUTE_TOOL_CATALOG: [RouteToolDescriptor; 12] = [
     RouteToolDescriptor {
         id: RouteToolId::Straight,
         name: "Gerade Strecke",
@@ -351,6 +357,18 @@ pub const ROUTE_TOOL_CATALOG: [RouteToolDescriptor; 11] = [
         factory: make_route_offset,
     },
     RouteToolDescriptor {
+        id: RouteToolId::Rounding,
+        name: "Verrunden",
+        legacy_icon: "◜",
+        description: "Rundet lokale Streckenuebergaenge als Bogen oder quadratische Kurve ab",
+        icon_key: RouteToolIconKey::Rounding,
+        group: RouteToolGroup::Section,
+        visible_on: &ALL_ROUTE_TOOL_SURFACES,
+        requirements: &REQUIREMENTS_NONE,
+        backing_mode: RouteToolBackingMode::GroupBackedEditable,
+        factory: make_rounding,
+    },
+    RouteToolDescriptor {
         id: RouteToolId::ColorPath,
         name: "Farb-Pfad",
         legacy_icon: "🎨",
@@ -411,6 +429,7 @@ pub fn route_tool_label_key(tool_id: RouteToolId) -> I18nKey {
         RouteToolId::FieldBoundary => I18nKey::FloatingAnalysisFieldBoundary,
         RouteToolId::FieldPath => I18nKey::FloatingAnalysisFieldPath,
         RouteToolId::RouteOffset => I18nKey::FloatingEditRouteOffset,
+        RouteToolId::Rounding => I18nKey::FloatingEditRounding,
         RouteToolId::ColorPath => I18nKey::FloatingAnalysisColorPath,
     }
 }
@@ -428,6 +447,7 @@ pub fn route_tool_defaults_tooltip_key(tool_id: RouteToolId) -> I18nKey {
         RouteToolId::FieldBoundary => I18nKey::LpFieldBoundary,
         RouteToolId::FieldPath => I18nKey::LpFieldPath,
         RouteToolId::RouteOffset => I18nKey::LpRouteOffset,
+        RouteToolId::Rounding => I18nKey::LpRounding,
         RouteToolId::ColorPath => I18nKey::LpColorPath,
     }
 }
@@ -522,6 +542,7 @@ mod tests {
             RouteToolId::Bypass,
             RouteToolId::Parking,
             RouteToolId::RouteOffset,
+            RouteToolId::Rounding,
         ];
         let expected_analysis = vec![
             RouteToolId::FieldBoundary,
@@ -545,17 +566,37 @@ mod tests {
     }
 
     #[test]
-    fn persistenz_und_editierbarkeit_sind_explizit_fuer_analysis_ausnahmen() {
+    fn persistenz_und_editierbarkeit_sind_explizit_fuer_ephemeral_ausnahmen() {
         let field_boundary = route_tool_descriptor(RouteToolId::FieldBoundary);
         assert!(field_boundary.backing_mode.is_group_backed());
         assert!(field_boundary.backing_mode.is_editable());
 
+        let rounding = route_tool_descriptor(RouteToolId::Rounding);
+        assert_eq!(
+            rounding.backing_mode,
+            RouteToolBackingMode::GroupBackedEditable
+        );
+        assert!(rounding.backing_mode.is_group_backed());
+        assert!(rounding.backing_mode.is_editable());
+
         for tool_id in [RouteToolId::FieldPath, RouteToolId::ColorPath] {
             let descriptor = route_tool_descriptor(tool_id);
-            assert_eq!(descriptor.group, RouteToolGroup::Analysis);
             assert_eq!(descriptor.backing_mode, RouteToolBackingMode::Ephemeral);
             assert!(!descriptor.backing_mode.is_group_backed());
             assert!(!descriptor.backing_mode.is_editable());
         }
+
+        assert_eq!(
+            route_tool_descriptor(RouteToolId::FieldPath).group,
+            RouteToolGroup::Analysis
+        );
+        assert_eq!(
+            route_tool_descriptor(RouteToolId::ColorPath).group,
+            RouteToolGroup::Analysis
+        );
+        assert_eq!(
+            route_tool_descriptor(RouteToolId::Rounding).group,
+            RouteToolGroup::Section
+        );
     }
 }

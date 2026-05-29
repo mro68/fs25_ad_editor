@@ -144,6 +144,7 @@ Der kanonische Katalog beschreibt jedes Tool ueber `RouteToolId`, Anzeigegruppe,
 | `RouteToolId::FieldBoundary` | `Analysis` | Farmland geladen | `GroupBackedEditable` | `FieldBoundaryTool::new()` |
 | `RouteToolId::FieldPath` | `Analysis` | Farmland geladen | `Ephemeral` | `FieldPathTool::new()` |
 | `RouteToolId::RouteOffset` | `Section` | geordnete Kette | `GroupBackedEditable` | `RouteOffsetTool::new()` |
+| `RouteToolId::Rounding` | `Section` | keine | `GroupBackedEditable` | `RoundingTool::new()` |
 | `RouteToolId::ColorPath` | `Analysis` | Hintergrundbild geladen | `Ephemeral` | `ColorPathTool::new()` |
 
 ### `StraightLineTool`
@@ -405,6 +406,41 @@ Die finale Ausgabe wird ueber `ToolResultBuilder` aufgebaut: interne Offset-Kett
 **Edit-Payload:** `RouteToolEditPayload::RouteOffset { chain_positions, chain_start_id, chain_end_id, offset_left, offset_right, keep_original, base_spacing, base }` fuer `RouteToolId::RouteOffset`
 
 Modulstruktur: `mod.rs` (Re-Exporte), `state.rs` (Struct + OffsetConfig), `lifecycle.rs` (RouteTool-Impl), `geometry.rs` (compute_offset_positions), `config_ui.rs` (semantische Panel-Bruecke), `tests.rs`
+
+---
+
+### `RoundingTool`
+
+Oeffentliche Huelle fuer lokales Verrunden (`RouteToolId::Rounding`). Seit CP-04 ist das Tool bewusst auf einen Arc-only-Pfad zugeschnitten: Genau ein selektierter Corner-Node wird ueber zwei eindeutige lineare Anschlussseiten in einen lokalen Kreisbogen mit festem Radius ueberfuehrt. Die Segmentierung des Ersatzbogens folgt `max_angle_deg`; kleinere Werte erzeugen feinere Approximationen, groessere Werte weniger Zwischenknoten.
+
+**Panel-Contract:**
+
+- `RoundingPanelState { arc_radius_m, max_angle_deg, selected_node_count, preview_node_count, is_adjusting }` — egui-freier Panelzustand fuer Radius, Max-Winkel, Auswahl-/Vorschauzaehler und Recreate-/Edit-Status
+- `RoundingPanelAction::SetArcRadius(...)` — aktualisiert den Verrundungsradius fuer Preview und Recreate
+- `RoundingPanelAction::SetMaxAngleDeg(...)` — aktualisiert die maximale Winkelabweichung pro Arc-Segment fuer Preview und Recreate
+
+**Selection-Input-Vertrag:**
+
+- `RouteToolSelectionSeed` traegt fuer selection-getriebene Tools neben `node_ids`/`positions` auch `connected_neighbors`, `linear_stretches` und `anchor_paths`
+- `RouteToolLinearStretchSeed` beschreibt lineare Anschlussstrecken eines selektierten Nodes; `RoundingTool` nutzt genau diese Strecken fuer den lokalen Arc-Replace-Pfad
+- `RouteToolConnectedNeighborSeed` und `RouteToolAnchorPathSeed` bleiben Teil des gemeinsamen Selection-Seeds, werden vom Arc-only-Rounding aber nicht zur Moduswahl verwendet
+
+**Aktueller Runtime-/Persistenzvertrag in CP-04:**
+
+- `Rounding` verlangt genau 1 selektierten Node mit genau 2 eindeutigen Anschlussseiten
+- `status_text()` meldet klare Invalid-Faelle (`NeedTwoRouteSides`, `AmbiguousJunction`, `NoThroughPath`, `RadiusTooLarge`, ...)
+- `preview()` zeigt bei gueltigem Corner-Kontext die lokale Ersatz-Polyline zwischen beiden Anschlussseiten
+- `execute()` ersetzt nur den selektierten Corner-Node lokal (`nodes_to_remove = [corner_id]`) und erzeugt `RoundedCorner`-Nodes plus externe Wiederanbindung an die beiden Nachbarseiten
+- Richtungen/Prioritaeten des internen Arc-Pfads werden aus den vorhandenen Corner-Durchfahrten gemerged; externe Side-Verbindungen behalten die Original-Connection-Metadaten
+- `RouteToolRecreate::on_applied()` merkt sich die zuletzt erzeugten IDs und speichert den Arc-Payload fuer Panel-Recreate und Group-Edit
+- `RouteToolGroupEdit::restore_edit_payload()` rehydriert Radius, `max_angle_deg`, ueberlebende Aussenanker und gemergte Durchfahrten fuer denselben Arc-Kontext; der Recreate-Pfad bleibt damit stabil, auch wenn der urspruengliche Corner-Node bereits entfernt wurde
+
+**Persistenzvertrag:** `GroupBackedEditable`.
+
+- `RouteToolEditPayload::RoundingArc { first_anchor_id, second_anchor_id, corner_position, radius_m, max_angle_deg, transitions }` speichert den Arc-Pfad ueber die beiden ueberlebenden Anschlussseiten plus gemergte Durchfahrtsmetadaten
+- Persistente `RoundingTransitionSnapshot`s erlauben Recreate und Group-Edit auch dann, wenn der urspruengliche Corner-Node bereits entfernt wurde
+
+Modulstruktur: `mod.rs` (Re-Exporte), `state.rs` (Arc-Runtime-State und Recreate-Status), `geometry.rs` (Corner-Kontext, echter Kreisbogen, winkelbasierte Segmentierung), `lifecycle.rs` (Preview/Execute + lokaler Replace-Pfad), `config_ui.rs` (semantische Panel-Bruecke), `tests.rs`
 
 ---
 

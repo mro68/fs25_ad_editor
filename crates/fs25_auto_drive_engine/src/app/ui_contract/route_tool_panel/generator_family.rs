@@ -19,6 +19,31 @@ pub enum StraightPanelAction {
     Segment(SegmentConfigPanelAction),
 }
 
+/// Arc-only-Panelzustand des Verrundungs-Tools.
+#[derive(Debug, Clone, PartialEq)]
+pub struct RoundingPanelState {
+    /// Verrundungsradius fuer den Arc-only-Pfad.
+    pub arc_radius_m: f32,
+    /// Maximaler Winkel pro erzeugtem Arc-Segment in Grad.
+    pub max_angle_deg: f32,
+    /// Anzahl aktuell geladener selektierter Nodes.
+    pub selected_node_count: usize,
+    /// Anzahl berechneter Vorschau-Nodes.
+    pub preview_node_count: Option<usize>,
+    /// Gibt an, ob eine bestehende Verrundung nachbearbeitet wird.
+    pub is_adjusting: bool,
+}
+
+/// Arc-only-Panel-Aktion des Verrundungs-Tools.
+#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
+#[serde(tag = "kind", content = "value", rename_all = "snake_case")]
+pub enum RoundingPanelAction {
+    /// Arc-Radius setzen.
+    SetArcRadius(f32),
+    /// Maximalen Segmentwinkel setzen.
+    SetMaxAngleDeg(f32),
+}
+
 /// Read-Zustand eines automatisch berechneten Steuerpunkts im SmoothCurve-Tool.
 #[derive(Debug, Clone, PartialEq)]
 pub struct SmoothCurveSteererState {

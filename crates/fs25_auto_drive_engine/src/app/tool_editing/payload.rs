@@ -49,6 +49,17 @@ pub struct GroupRecordDefaults {
     pub exit_node_id: Option<u64>,
 }
 
+/// Persistierte Durchfahrtsmetadaten einer Arc-only-Verrundungs-Rekonstruktion.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct RoundingTransitionSnapshot {
+    /// `true`, wenn die Durchfahrt entlang des kanonischen Pfads verlaeuft.
+    pub forward: bool,
+    /// Gemergte Verbindungsrichtung dieser Durchfahrt.
+    pub direction: ConnectionDirection,
+    /// Gemergte Prioritaet dieser Durchfahrt.
+    pub priority: ConnectionPriority,
+}
+
 /// Tool-spezifischer Edit-Snapshot fuer gruppenbasierte Route-Tools.
 #[derive(Debug, Clone)]
 pub enum RouteToolEditPayload {
@@ -171,6 +182,21 @@ pub enum RouteToolEditPayload {
         /// Gemeinsame Routing-Basiswerte.
         base: ToolRouteBase,
     },
+    /// Persistenzdaten fuer den Arc-only-Pfad des Verrundungs-Tools.
+    RoundingArc {
+        /// Erster ueberlebender Aussenanker des lokalen Replace-Pfads.
+        first_anchor_id: u64,
+        /// Zweiter ueberlebender Aussenanker des lokalen Replace-Pfads.
+        second_anchor_id: u64,
+        /// Urspruengliche Position des ersetzten Corner-Nodes.
+        corner_position: Vec2,
+        /// Verrundungsradius in Metern.
+        radius_m: f32,
+        /// Maximaler Winkel zwischen zwei Arc-Segmenten in Grad.
+        max_angle_deg: f32,
+        /// Persistierte Durchfahrten ueber den lokalen Replace-Pfad.
+        transitions: Vec<RoundingTransitionSnapshot>,
+    },
 }
 
 impl RouteToolEditPayload {
@@ -199,6 +225,11 @@ impl RouteToolEditPayload {
                 chain_end_id,
                 ..
             } => vec![*chain_start_id, *chain_end_id],
+            Self::RoundingArc {
+                first_anchor_id,
+                second_anchor_id,
+                ..
+            } => vec![*first_anchor_id, *second_anchor_id],
             Self::Parking { .. } | Self::FieldBoundary { .. } => Vec::new(),
         }
     }

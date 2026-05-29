@@ -138,6 +138,8 @@ impl EditorToolState {
                     .map(|tool| tool.drag_targets())
                     .unwrap_or_default(),
                 has_pending_input,
+                prefers_generic_node_pick: self.tool_manager.active_id()
+                    == Some(RouteToolId::Rounding),
                 segment_shortcuts_active: has_pending_input
                     && self.tool_manager.active_segment_adjustments().is_some(),
                 tangent_menu_data: self
@@ -238,6 +240,7 @@ mod tests {
 
         let parking_view = state.route_tool_viewport_data();
         assert!(parking_view.has_pending_input);
+        assert!(!parking_view.prefers_generic_node_pick);
         assert!(!parking_view.segment_shortcuts_active);
 
         state.tool_manager.set_active_by_id(RouteToolId::Straight);
@@ -251,6 +254,23 @@ mod tests {
 
         let straight_view = state.route_tool_viewport_data();
         assert!(straight_view.has_pending_input);
+        assert!(!straight_view.prefers_generic_node_pick);
         assert!(straight_view.segment_shortcuts_active);
+    }
+
+    #[test]
+    fn route_viewport_data_prefers_generic_pick_only_for_rounding() {
+        let mut state = EditorToolState::new();
+
+        state.active_tool = EditorTool::Route;
+        state.tool_manager.set_active_by_id(RouteToolId::Rounding);
+
+        let rounding_view = state.route_tool_viewport_data();
+        assert!(rounding_view.prefers_generic_node_pick);
+
+        state.tool_manager.set_active_by_id(RouteToolId::Bypass);
+
+        let bypass_view = state.route_tool_viewport_data();
+        assert!(!bypass_view.prefers_generic_node_pick);
     }
 }

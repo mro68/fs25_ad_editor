@@ -37,6 +37,7 @@ fn map_route_tool_id(tool_id: RouteToolId) -> HostRouteToolId {
         RouteToolId::FieldBoundary => HostRouteToolId::FieldBoundary,
         RouteToolId::FieldPath => HostRouteToolId::FieldPath,
         RouteToolId::RouteOffset => HostRouteToolId::RouteOffset,
+        RouteToolId::Rounding => HostRouteToolId::Rounding,
         RouteToolId::ColorPath => HostRouteToolId::ColorPath,
     }
 }

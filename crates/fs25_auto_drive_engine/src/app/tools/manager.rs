@@ -6,7 +6,7 @@ use super::{
     route_tool_catalog, route_tool_descriptor, route_tool_slot, OrderedNodeChain, RouteTool,
     RouteToolChainInput, RouteToolDescriptor, RouteToolDrag, RouteToolGroupEdit,
     RouteToolLassoInput, RouteToolRecreate, RouteToolRotate, RouteToolSegmentAdjustments,
-    RouteToolTangent, ToolHostContext,
+    RouteToolSelectionInput, RouteToolSelectionSeed, RouteToolTangent, ToolHostContext,
 };
 
 /// Verwaltet registrierte Route-Tools und den aktiven Tool-Slot.
@@ -185,6 +185,18 @@ impl ToolManager {
             .and_then(|tool| tool.as_chain_input_mut())
     }
 
+    /// Liefert die Selection-Input-Capability des aktiven Tools, falls vorhanden.
+    pub fn active_selection_input(&self) -> Option<&dyn RouteToolSelectionInput> {
+        self.active_tool()
+            .and_then(|tool| tool.as_selection_input())
+    }
+
+    /// Liefert die mutable Selection-Input-Capability des aktiven Tools, falls vorhanden.
+    pub fn active_selection_input_mut(&mut self) -> Option<&mut dyn RouteToolSelectionInput> {
+        self.active_tool_mut()
+            .and_then(|tool| tool.as_selection_input_mut())
+    }
+
     /// Liefert die Lasso-Capability des aktiven Tools, falls vorhanden.
     pub fn active_lasso_input(&self) -> Option<&dyn RouteToolLassoInput> {
         self.active_tool().and_then(|tool| tool.as_lasso_input())
@@ -211,6 +223,13 @@ impl ToolManager {
     pub fn load_active_chain(&mut self, chain: OrderedNodeChain) {
         if let Some(tool) = self.active_chain_input_mut() {
             tool.load_chain(chain);
+        }
+    }
+
+    /// Laedt die aktuelle Selektion in das aktive Tool, falls die Capability vorhanden ist.
+    pub fn load_active_selection(&mut self, selection: RouteToolSelectionSeed) {
+        if let Some(tool) = self.active_selection_input_mut() {
+            tool.load_selection(selection);
         }
     }
 

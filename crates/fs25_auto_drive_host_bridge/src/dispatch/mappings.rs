@@ -161,6 +161,7 @@ pub(super) fn map_route_tool_id(tool_id: RouteToolId) -> HostRouteToolId {
         RouteToolId::FieldBoundary => HostRouteToolId::FieldBoundary,
         RouteToolId::FieldPath => HostRouteToolId::FieldPath,
         RouteToolId::RouteOffset => HostRouteToolId::RouteOffset,
+        RouteToolId::Rounding => HostRouteToolId::Rounding,
         RouteToolId::ColorPath => HostRouteToolId::ColorPath,
     }
 }
@@ -177,6 +178,7 @@ pub(super) fn map_host_route_tool_id(tool_id: HostRouteToolId) -> RouteToolId {
         HostRouteToolId::FieldBoundary => RouteToolId::FieldBoundary,
         HostRouteToolId::FieldPath => RouteToolId::FieldPath,
         HostRouteToolId::RouteOffset => RouteToolId::RouteOffset,
+        HostRouteToolId::Rounding => RouteToolId::Rounding,
         HostRouteToolId::ColorPath => RouteToolId::ColorPath,
     }
 }
@@ -277,6 +279,7 @@ pub(super) fn map_route_tool_icon_key(icon_key: RouteToolIconKey) -> HostRouteTo
         RouteToolIconKey::FieldBoundary => HostRouteToolIconKey::FieldBoundary,
         RouteToolIconKey::FieldPath => HostRouteToolIconKey::FieldPath,
         RouteToolIconKey::RouteOffset => HostRouteToolIconKey::RouteOffset,
+        RouteToolIconKey::Rounding => HostRouteToolIconKey::Rounding,
         RouteToolIconKey::ColorPath => HostRouteToolIconKey::ColorPath,
     }
 }

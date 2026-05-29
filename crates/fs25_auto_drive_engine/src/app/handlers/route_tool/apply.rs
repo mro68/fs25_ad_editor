@@ -12,6 +12,7 @@ pub(super) fn execute_and_apply(state: &mut AppState) {
     };
 
     if let Some(result) = result {
+        let pre_apply_road_map = state.road_map.clone();
         let marker_indices: Vec<usize> = result.markers.iter().map(|(idx, _, _)| *idx).collect();
         let ids = if state.active_tool_edit_session.is_some() {
             use_cases::editing::apply_tool_result_no_snapshot(state, result)
@@ -21,7 +22,7 @@ pub(super) fn execute_and_apply(state: &mut AppState) {
 
         if let (Some(tool), Some(rm)) = (
             state.editor.tool_manager.active_recreate_mut(),
-            state.road_map.as_deref(),
+            pre_apply_road_map.as_deref(),
         ) {
             tool.on_applied(&ids, rm);
         }

@@ -23,15 +23,15 @@ pub use curve_family::{
 };
 pub use generator_family::{
     BypassPanelAction, BypassPanelState, ParkingPanelAction, ParkingPanelState,
-    ParkingRampSideChoice, SmoothCurvePanelAction, SmoothCurvePanelState, SmoothCurveSteererState,
-    StraightPanelAction, StraightPanelState,
+    ParkingRampSideChoice, RoundingPanelAction, RoundingPanelState, SmoothCurvePanelAction,
+    SmoothCurvePanelState, SmoothCurveSteererState, StraightPanelAction, StraightPanelState,
 };
 pub use limits::{
     BYPASS_BASE_SPACING_LIMITS, BYPASS_OFFSET_LIMITS, PARKING_BAY_LENGTH_LIMITS,
     PARKING_ENTRY_EXIT_T_LIMITS, PARKING_MAX_NODE_DISTANCE_LIMITS, PARKING_NUM_ROWS_LIMITS,
     PARKING_RAMP_LENGTH_LIMITS, PARKING_ROTATION_STEP_LIMITS, PARKING_ROW_SPACING_LIMITS,
-    ROUTE_OFFSET_BASE_SPACING_LIMITS, ROUTE_OFFSET_DISTANCE_LIMITS, SMOOTH_CURVE_MAX_ANGLE_LIMITS,
-    SMOOTH_CURVE_MIN_DISTANCE_LIMITS,
+    ROUNDING_ARC_RADIUS_LIMITS, ROUNDING_MAX_ANGLE_LIMITS, ROUTE_OFFSET_BASE_SPACING_LIMITS,
+    ROUTE_OFFSET_DISTANCE_LIMITS, SMOOTH_CURVE_MAX_ANGLE_LIMITS, SMOOTH_CURVE_MIN_DISTANCE_LIMITS,
 };
 use serde::{Deserialize, Serialize};
 
@@ -56,6 +56,8 @@ pub enum RouteToolConfigState {
     FieldPath(FieldPathPanelState),
     /// Panelzustand fuer das Strecken-Versatz-Tool.
     RouteOffset(RouteOffsetPanelState),
+    /// Panelzustand fuer das Verrundungs-Tool.
+    Rounding(RoundingPanelState),
     /// Panelzustand fuer das Farb-Pfad-Tool.
     ColorPath(ColorPathPanelState),
 }
@@ -82,6 +84,8 @@ pub enum RouteToolPanelAction {
     FieldPath(FieldPathPanelAction),
     /// Panel-Aktion fuer das Strecken-Versatz-Tool.
     RouteOffset(RouteOffsetPanelAction),
+    /// Panel-Aktion fuer das Verrundungs-Tool.
+    Rounding(RoundingPanelAction),
     /// Panel-Aktion fuer das Farb-Pfad-Tool.
     ColorPath(ColorPathPanelAction),
 }

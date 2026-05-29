@@ -73,6 +73,7 @@ impl EditorApp {
         let HostRouteToolViewportSnapshot {
             drag_targets,
             has_pending_input: route_tool_is_drawing,
+            prefers_generic_node_pick: route_tool_prefers_generic_node_pick,
             segment_shortcuts_active: route_tool_segment_shortcuts_active,
             tangent_menu_data,
             needs_lasso_input,
@@ -146,6 +147,7 @@ impl EditorApp {
             viewport_state.selected_node_ids,
             viewport_state.active_tool,
             route_tool_is_drawing,
+            route_tool_prefers_generic_node_pick,
             route_tool_segment_shortcuts_active,
             viewport_state.options,
             command_palette_open,

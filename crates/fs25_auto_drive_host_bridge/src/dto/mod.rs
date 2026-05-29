@@ -293,6 +293,7 @@ mod tests {
         let host_snapshot = HostRouteToolViewportSnapshot {
             drag_targets: vec![[1.0, 2.0], [3.0, 4.0]],
             has_pending_input: true,
+            prefers_generic_node_pick: false,
             segment_shortcuts_active: true,
             tangent_menu_data: Some(HostTangentMenuSnapshot {
                 start_options: vec![HostTangentOptionSnapshot {
