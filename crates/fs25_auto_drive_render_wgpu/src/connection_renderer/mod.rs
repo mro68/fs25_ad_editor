@@ -187,6 +187,8 @@ impl ConnectionRenderer {
             let top_right = glam::Vec2::new(visible_max.x, visible_max.y);
             let top_left = glam::Vec2::new(visible_min.x, visible_max.y);
 
+            // TODO(perf): Spatial-Grid als Vorfilter fuer den O(n)-Loop wuerde bei 100k+ Connections
+            // signifikant helfen. Erst nach Profiling implementieren.
             for connection in render_map.connections() {
                 if ctx.hidden_node_ids.contains(&connection.start_id)
                     || ctx.hidden_node_ids.contains(&connection.end_id)

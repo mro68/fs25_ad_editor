@@ -402,6 +402,7 @@
   - [x] **EditHistory: VecDeque statt Vec** — `pop_front()` O(1) statt O(n) `remove(0)` (2026-02-24)
   - [x] **Properties-Panel:** `selected_node_ids: &HashSet<u64>` direkt uebergeben — eliminiert doppeltes `.collect()` (2026-02-24)
   - [x] **Spline-Preview:** `samples_per_segment` 32→16 via Konstante `SPLINE_SAMPLES_PER_SEGMENT` (2026-02-24)
+  - [ ] Connection-Culling: Spatial-Grid als Vorfilter (O(n) → O(log n)) — erst nach Profiling bei 100k+ Nodes
   - [ ] LOD-System fuer grosse Strecken
   - [ ] Memory-Profiling
   - [x] `ctx.request_repaint()` nur bei Aenderungen (CPU-Idle-Verbrauch reduzieren)
