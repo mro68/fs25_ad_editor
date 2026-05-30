@@ -51,10 +51,13 @@ pub fn show_save_overview_dialog(
                 if let Some(action) =
                     dialog_two_action_row_enabled(ui, confirm_label, "Nein", true, true)
                 {
-                    if action == DialogTwoAction::Confirm {
-                        events.push(AppIntent::SaveBackgroundAsOverviewConfirmed);
-                    } else {
-                        events.push(AppIntent::SaveBackgroundAsOverviewDismissed);
+                    match action {
+                        DialogTwoAction::Confirm => {
+                            events.push(AppIntent::SaveBackgroundAsOverviewConfirmed);
+                        }
+                        DialogTwoAction::Cancel => {
+                            events.push(AppIntent::SaveBackgroundAsOverviewDismissed);
+                        }
                     }
                 }
             });

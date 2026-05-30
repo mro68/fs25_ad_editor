@@ -90,17 +90,20 @@ pub fn show_zip_browser(
             if let Some(action) =
                 dialog_two_action_row_enabled(ui, "Uebernehmen", "Abbrechen", can_confirm, true)
             {
-                if action == DialogTwoAction::Confirm {
-                    if let Some(idx) = browser.selected
-                        && let Some(entry) = browser.entries.get(idx)
-                    {
-                        events.push(AppIntent::ZipBackgroundFileSelected {
-                            zip_path: browser.zip_path.clone(),
-                            entry_name: entry.name.clone(),
-                        });
+                match action {
+                    DialogTwoAction::Confirm => {
+                        if let Some(idx) = browser.selected
+                            && let Some(entry) = browser.entries.get(idx)
+                        {
+                            events.push(AppIntent::ZipBackgroundFileSelected {
+                                zip_path: browser.zip_path.clone(),
+                                entry_name: entry.name.clone(),
+                            });
+                        }
                     }
-                } else {
-                    events.push(AppIntent::ZipBrowserCancelled);
+                    DialogTwoAction::Cancel => {
+                        events.push(AppIntent::ZipBrowserCancelled);
+                    }
                 }
             }
         });

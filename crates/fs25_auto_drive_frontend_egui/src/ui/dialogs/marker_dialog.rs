@@ -71,10 +71,13 @@ pub fn show_marker_dialog(
             if let Some(action) =
                 dialog_two_action_row_enabled(ui, "OK", "Abbrechen", confirm_enabled, true)
             {
-                if action == DialogTwoAction::Confirm {
-                    confirmed = true;
-                } else {
-                    cancelled = true;
+                match action {
+                    DialogTwoAction::Confirm => {
+                        confirmed = true;
+                    }
+                    DialogTwoAction::Cancel => {
+                        cancelled = true;
+                    }
                 }
             }
         });

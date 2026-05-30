@@ -36,11 +36,14 @@ pub fn show_confirm_dissolve_dialog(
                 true,
                 true,
             ) {
-                if action == DialogTwoAction::Confirm {
-                    events.push(AppIntent::DissolveGroupConfirmed { segment_id });
-                    *confirm_dissolve_id = None;
-                } else {
-                    *confirm_dissolve_id = None;
+                match action {
+                    DialogTwoAction::Confirm => {
+                        events.push(AppIntent::DissolveGroupConfirmed { segment_id });
+                        *confirm_dissolve_id = None;
+                    }
+                    DialogTwoAction::Cancel => {
+                        *confirm_dissolve_id = None;
+                    }
                 }
             }
         });

@@ -65,10 +65,13 @@ pub fn show_overview_options_dialog(
             if let Some(action) =
                 dialog_two_action_row_enabled(ui, "Generieren", "Abbrechen", true, true)
             {
-                if action == DialogTwoAction::Confirm {
-                    events.push(AppIntent::OverviewOptionsConfirmed);
-                } else {
-                    events.push(AppIntent::OverviewOptionsCancelled);
+                match action {
+                    DialogTwoAction::Confirm => {
+                        events.push(AppIntent::OverviewOptionsConfirmed);
+                    }
+                    DialogTwoAction::Cancel => {
+                        events.push(AppIntent::OverviewOptionsCancelled);
+                    }
                 }
             }
         });
