@@ -1,6 +1,6 @@
 //! Wiederverwendbarer Overview-Source-Dialog fuer Post-Load und Menue-Einstieg.
 
-use super::{dialog_button_row_with_spacing, dialog_three_action_row, DialogThreeAction};
+use super::{dialog_widgets::dialog_three_action_row_enabled, DialogThreeAction};
 use crate::app::{AppIntent, OverviewSourceContext};
 use fs25_auto_drive_host_bridge::HostLocalDialogState;
 
@@ -119,37 +119,28 @@ pub fn show_post_load_dialog(
                     ui.label(egui::RichText::new("Waehlen Sie zuerst eine gueltige ZIP-Datei aus.").weak());
                 }
 
-                if can_generate {
-                    if let Some(action) = dialog_three_action_row(
-                        ui,
-                        "Uebersichtskarte generieren",
-                        "ZIP-Datei auswaehlen",
-                        "Schliessen",
-                    ) {
-                        match action {
-                            DialogThreeAction::Primary => {
-                                if let Some(path) = selected_zip {
-                                    events.push(AppIntent::GenerateOverviewFromZip { path });
-                                }
-                            }
-                            DialogThreeAction::Secondary => {
-                                events.push(AppIntent::OverviewZipBrowseRequested);
-                            }
-                            DialogThreeAction::Tertiary => {
-                                events.push(AppIntent::PostLoadDialogDismissed);
+                if let Some(action) = dialog_three_action_row_enabled(
+                    ui,
+                    "Uebersichtskarte generieren",
+                    "ZIP-Datei auswaehlen",
+                    "Schliessen",
+                    can_generate,
+                    true,
+                    true,
+                ) {
+                    match action {
+                        DialogThreeAction::Primary => {
+                            if let Some(path) = selected_zip {
+                                events.push(AppIntent::GenerateOverviewFromZip { path });
                             }
                         }
-                    }
-                } else {
-                    dialog_button_row_with_spacing(ui, |ui| {
-                        ui.add_enabled(false, egui::Button::new("Uebersichtskarte generieren"));
-                        if ui.button("ZIP-Datei auswaehlen").clicked() {
+                        DialogThreeAction::Secondary => {
                             events.push(AppIntent::OverviewZipBrowseRequested);
                         }
-                        if ui.button("Schliessen").clicked() {
+                        DialogThreeAction::Tertiary => {
                             events.push(AppIntent::PostLoadDialogDismissed);
                         }
-                    });
+                    }
                 }
             });
         });
