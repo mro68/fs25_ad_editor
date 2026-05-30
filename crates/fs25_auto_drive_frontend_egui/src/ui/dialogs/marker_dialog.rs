@@ -1,3 +1,4 @@
+use super::{dialog_two_action_row_enabled, DialogTwoAction};
 use crate::app::AppIntent;
 use fs25_auto_drive_host_bridge::{HostLocalDialogState, HostMarkerListSnapshot};
 
@@ -63,22 +64,22 @@ pub fn show_marker_dialog(
                 });
             }
 
-            ui.add_space(10.0);
+            let name_valid = !ui_state.marker_dialog.name.trim().is_empty();
+            let group_valid = !ui_state.marker_dialog.group.trim().is_empty();
+            let confirm_enabled = name_valid && group_valid;
 
-            ui.horizontal(|ui| {
-                let name_valid = !ui_state.marker_dialog.name.trim().is_empty();
-                let group_valid = !ui_state.marker_dialog.group.trim().is_empty();
-
-                ui.add_enabled_ui(name_valid && group_valid, |ui| {
-                    if ui.button("OK").clicked() {
+            if let Some(action) =
+                dialog_two_action_row_enabled(ui, "OK", "Abbrechen", confirm_enabled, true)
+            {
+                match action {
+                    DialogTwoAction::Confirm => {
                         confirmed = true;
                     }
-                });
-
-                if ui.button("Abbrechen").clicked() {
-                    cancelled = true;
+                    DialogTwoAction::Cancel => {
+                        cancelled = true;
+                    }
                 }
-            });
+            }
         });
 
     if confirmed {

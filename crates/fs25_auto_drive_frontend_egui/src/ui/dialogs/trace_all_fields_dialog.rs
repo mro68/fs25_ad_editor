@@ -8,13 +8,13 @@ use crate::app::AppIntent;
 use crate::ui::common::apply_wheel_step;
 use fs25_auto_drive_host_bridge::HostLocalDialogState;
 
-use super::dialog_button_row;
+use super::{dialog_two_action_row_enabled, DialogTwoAction};
 
 /// Rendert den Einstellungsdialog fuer die Batch-Feld-Nachzeichnung.
 ///
 /// Solange `state.trace_all_fields_dialog.visible` gesetzt ist, wird das Fenster
 /// zentriert angezeigt. Der Dialog mutiert seinen State direkt (Arbeitskopie in
-/// `UiState`), damit die Werte beim naechsten Oeffnen erhalten bleiben.
+/// `HostLocalDialogState`), damit die Werte beim naechsten Oeffnen erhalten bleiben.
 pub fn show_trace_all_fields_dialog(
     ctx: &egui::Context,
     ui_state: &mut HostLocalDialogState,
@@ -25,8 +25,7 @@ pub fn show_trace_all_fields_dialog(
         return events;
     }
 
-    let mut confirmed = false;
-    let mut cancelled = false;
+    let mut action = None;
 
     egui::Window::new("\u{1F4CD} Alle Felder nachzeichnen")
         .collapsible(false)
@@ -133,38 +132,41 @@ pub fn show_trace_all_fields_dialog(
             ui.separator();
             ui.add_space(6.0);
 
-            if let Some(result) = dialog_button_row(ui, "Erstellen", "Abbrechen") {
-                confirmed = result;
-                cancelled = !result;
-            }
+            action = dialog_two_action_row_enabled(ui, "Erstellen", "Abbrechen", true, true);
         });
 
-    if confirmed {
-        let dlg = &ui_state.trace_all_fields_dialog;
-        events.push(AppIntent::TraceAllFieldsConfirmed {
-            spacing: dlg.spacing,
-            offset: dlg.offset,
-            tolerance: dlg.tolerance,
-            corner_angle: if dlg.corner_detection_enabled {
-                Some(dlg.corner_angle_threshold_deg)
-            } else {
-                None
-            },
-            corner_rounding_radius: if dlg.corner_detection_enabled && dlg.corner_rounding_enabled {
-                Some(dlg.corner_rounding_radius)
-            } else {
-                None
-            },
-            corner_rounding_max_angle_deg: if dlg.corner_detection_enabled
-                && dlg.corner_rounding_enabled
-            {
-                Some(dlg.corner_rounding_max_angle_deg)
-            } else {
-                None
-            },
-        });
-    } else if cancelled {
-        events.push(AppIntent::TraceAllFieldsCancelled);
+    match action {
+        Some(DialogTwoAction::Confirm) => {
+            let dlg = &ui_state.trace_all_fields_dialog;
+            events.push(AppIntent::TraceAllFieldsConfirmed {
+                spacing: dlg.spacing,
+                offset: dlg.offset,
+                tolerance: dlg.tolerance,
+                corner_angle: if dlg.corner_detection_enabled {
+                    Some(dlg.corner_angle_threshold_deg)
+                } else {
+                    None
+                },
+                corner_rounding_radius: if dlg.corner_detection_enabled
+                    && dlg.corner_rounding_enabled
+                {
+                    Some(dlg.corner_rounding_radius)
+                } else {
+                    None
+                },
+                corner_rounding_max_angle_deg: if dlg.corner_detection_enabled
+                    && dlg.corner_rounding_enabled
+                {
+                    Some(dlg.corner_rounding_max_angle_deg)
+                } else {
+                    None
+                },
+            });
+        }
+        Some(DialogTwoAction::Cancel) => {
+            events.push(AppIntent::TraceAllFieldsCancelled);
+        }
+        None => {}
     }
 
     events

@@ -1,5 +1,6 @@
 //! Dialog: Hintergrundbild als overview.png im Savegame-Verzeichnis speichern.
 
+use super::{dialog_two_action_row_enabled, DialogTwoAction};
 use crate::app::AppIntent;
 use fs25_auto_drive_host_bridge::HostLocalDialogState;
 
@@ -29,33 +30,36 @@ pub fn show_save_overview_dialog(
                     ui.label("Soll das Hintergrundbild als overview.png");
                     ui.label("im Savegame-Verzeichnis gespeichert werden?");
                 }
-                ui.add_space(4.0);
+                ui.add_space(6.0);
                 ui.label(
                     egui::RichText::new(&ui_state.save_overview_dialog.target_path)
                         .weak()
                         .small(),
                 );
-                ui.add_space(4.0);
+                ui.add_space(6.0);
                 ui.label(
                     egui::RichText::new(
                         "Beim naechsten Laden wird es automatisch als Hintergrund verwendet.",
                     )
                     .weak(),
                 );
-                ui.add_space(12.0);
-                ui.horizontal(|ui| {
-                    let btn_text = if ui_state.save_overview_dialog.is_overwrite {
-                        "Ja, ueberschreiben"
-                    } else {
-                        "Ja, speichern"
-                    };
-                    if ui.button(btn_text).clicked() {
-                        events.push(AppIntent::SaveBackgroundAsOverviewConfirmed);
+                let confirm_label = if ui_state.save_overview_dialog.is_overwrite {
+                    "Ja, ueberschreiben"
+                } else {
+                    "Ja, speichern"
+                };
+                if let Some(action) =
+                    dialog_two_action_row_enabled(ui, confirm_label, "Nein", true, true)
+                {
+                    match action {
+                        DialogTwoAction::Confirm => {
+                            events.push(AppIntent::SaveBackgroundAsOverviewConfirmed);
+                        }
+                        DialogTwoAction::Cancel => {
+                            events.push(AppIntent::SaveBackgroundAsOverviewDismissed);
+                        }
                     }
-                    if ui.button("Nein").clicked() {
-                        events.push(AppIntent::SaveBackgroundAsOverviewDismissed);
-                    }
-                });
+                }
             });
         });
 

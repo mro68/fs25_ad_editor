@@ -1,4 +1,5 @@
 use crate::app::AppIntent;
+use crate::ui::dialogs::{dialog_three_action_row, DialogThreeAction};
 
 /// Zeigt die Heightmap-Warnung als modales Fenster.
 pub fn show_heightmap_warning(ctx: &egui::Context, show: bool) -> Vec<AppIntent> {
@@ -19,19 +20,24 @@ pub fn show_heightmap_warning(ctx: &egui::Context, show: bool) -> Vec<AppIntent>
                 ui.label("Alle Y-Koordinaten werden auf 0 gesetzt (flache Map).");
                 ui.add_space(10.0);
 
-                ui.horizontal(|ui| {
-                    if ui.button("Heightmap auswaehlen").clicked() {
-                        events.push(AppIntent::HeightmapSelectionRequested);
+                if let Some(action) = dialog_three_action_row(
+                    ui,
+                    "Heightmap auswaehlen",
+                    "Ohne Heightmap fortfahren",
+                    "Abbrechen",
+                ) {
+                    match action {
+                        DialogThreeAction::Primary => {
+                            events.push(AppIntent::HeightmapSelectionRequested);
+                        }
+                        DialogThreeAction::Secondary => {
+                            events.push(AppIntent::HeightmapWarningConfirmed);
+                        }
+                        DialogThreeAction::Tertiary => {
+                            events.push(AppIntent::HeightmapWarningCancelled);
+                        }
                     }
-
-                    if ui.button("Ohne Heightmap fortfahren").clicked() {
-                        events.push(AppIntent::HeightmapWarningConfirmed);
-                    }
-
-                    if ui.button("Abbrechen").clicked() {
-                        events.push(AppIntent::HeightmapWarningCancelled);
-                    }
-                });
+                }
             });
         });
 

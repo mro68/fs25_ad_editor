@@ -1,5 +1,6 @@
 //! Wiederverwendbarer Overview-Source-Dialog fuer Post-Load und Menue-Einstieg.
 
+use super::{dialog_widgets::dialog_three_action_row_enabled, DialogThreeAction};
 use crate::app::{AppIntent, OverviewSourceContext};
 use fs25_auto_drive_host_bridge::HostLocalDialogState;
 
@@ -106,26 +107,41 @@ pub fn show_post_load_dialog(
                     }
                 }
 
-                ui.horizontal(|ui| {
-                    if !ui_state.post_load_dialog.matching_zips.is_empty() {
-                        let selected_idx = ui_state.post_load_dialog.selected_zip_index;
-                        if let Some(zip_path) =
-                            ui_state.post_load_dialog.matching_zips.get(selected_idx)
-                            && let Some(zip_str) = zip_path.to_str()
-                            && ui.button("Uebersichtskarte generieren").clicked()
-                        {
-                            events.push(AppIntent::GenerateOverviewFromZip {
-                                path: zip_str.to_string(),
-                            });
+                let selected_zip = ui_state
+                    .post_load_dialog
+                    .matching_zips
+                    .get(ui_state.post_load_dialog.selected_zip_index)
+                    .and_then(|path| path.to_str())
+                    .map(str::to_owned);
+                let can_generate = selected_zip.is_some();
+
+                if !can_generate {
+                    ui.label(egui::RichText::new("Waehlen Sie zuerst eine gueltige ZIP-Datei aus.").weak());
+                }
+
+                if let Some(action) = dialog_three_action_row_enabled(
+                    ui,
+                    "Uebersichtskarte generieren",
+                    "ZIP-Datei auswaehlen",
+                    "Schliessen",
+                    can_generate,
+                    true,
+                    true,
+                ) {
+                    match action {
+                        DialogThreeAction::Primary => {
+                            if let Some(path) = selected_zip {
+                                events.push(AppIntent::GenerateOverviewFromZip { path });
+                            }
+                        }
+                        DialogThreeAction::Secondary => {
+                            events.push(AppIntent::OverviewZipBrowseRequested);
+                        }
+                        DialogThreeAction::Tertiary => {
+                            events.push(AppIntent::PostLoadDialogDismissed);
                         }
                     }
-                    if ui.button("ZIP-Datei auswaehlen").clicked() {
-                        events.push(AppIntent::OverviewZipBrowseRequested);
-                    }
-                    if ui.button("Schliessen").clicked() {
-                        events.push(AppIntent::PostLoadDialogDismissed);
-                    }
-                });
+                }
             });
         });
 

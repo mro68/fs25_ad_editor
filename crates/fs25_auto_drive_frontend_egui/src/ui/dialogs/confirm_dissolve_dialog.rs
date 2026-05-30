@@ -1,5 +1,6 @@
 //! Bestaetigungsdialog fuer das Aufloesen einer Segment-Gruppe.
 
+use super::{dialog_two_action_row_enabled, DialogTwoAction};
 use crate::app::AppIntent;
 use crate::shared::{t, I18nKey, Language};
 
@@ -28,19 +29,23 @@ pub fn show_confirm_dissolve_dialog(
         .open(&mut open)
         .show(ctx, |ui| {
             ui.label(t(language, I18nKey::ConfirmDissolveMessage));
-            ui.add_space(8.0);
-            ui.horizontal(|ui| {
-                if ui.button(t(language, I18nKey::ConfirmDissolveOk)).clicked() {
-                    events.push(AppIntent::DissolveGroupConfirmed { segment_id });
-                    *confirm_dissolve_id = None;
+            if let Some(action) = dialog_two_action_row_enabled(
+                ui,
+                t(language, I18nKey::ConfirmDissolveOk),
+                t(language, I18nKey::ConfirmDissolveCancel),
+                true,
+                true,
+            ) {
+                match action {
+                    DialogTwoAction::Confirm => {
+                        events.push(AppIntent::DissolveGroupConfirmed { segment_id });
+                        *confirm_dissolve_id = None;
+                    }
+                    DialogTwoAction::Cancel => {
+                        *confirm_dissolve_id = None;
+                    }
                 }
-                if ui
-                    .button(t(language, I18nKey::ConfirmDissolveCancel))
-                    .clicked()
-                {
-                    *confirm_dissolve_id = None;
-                }
-            });
+            }
         });
 
     if !open {

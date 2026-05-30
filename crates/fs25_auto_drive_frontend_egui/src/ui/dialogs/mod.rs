@@ -15,7 +15,11 @@ mod zip_browser;
 
 pub use confirm_dissolve_dialog::show_confirm_dissolve_dialog;
 pub use dedup_dialog::show_dedup_dialog;
-pub use dialog_widgets::dialog_button_row;
+pub use dialog_widgets::{
+    dialog_three_action_row, dialog_three_action_row_enabled, dialog_two_action_row_enabled,
+    DialogThreeAction, DialogTwoAction, DIALOG_BUTTON_ROW_ITEM_SPACING,
+    DIALOG_BUTTON_ROW_TOP_SPACING,
+};
 pub use file_dialogs::handle_file_dialogs;
 pub use group_settings_popup::show_group_settings_popup;
 pub use heightmap_warning::show_heightmap_warning;
