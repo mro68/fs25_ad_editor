@@ -1,7 +1,7 @@
 use crate::app::AppIntent;
 use fs25_auto_drive_host_bridge::HostLocalDialogState;
 
-use super::dialog_button_row_with_spacing;
+use super::{dialog_two_action_row_enabled, DialogTwoAction};
 
 /// Zeigt den Duplikat-Bestaetigungsdialog.
 ///
@@ -10,6 +10,7 @@ use super::dialog_button_row_with_spacing;
 /// werden soll.
 pub fn show_dedup_dialog(ctx: &egui::Context, ui_state: &HostLocalDialogState) -> Vec<AppIntent> {
     let mut events = Vec::new();
+    let mut action = None;
 
     if !ui_state.dedup_dialog.visible {
         return events;
@@ -37,25 +38,16 @@ pub fn show_dedup_dialog(ctx: &egui::Context, ui_state: &HostLocalDialogState) -
                 ui.label("Das Original-Netzwerk bleibt vollstaendig erhalten.");
                 ui.add_space(12.0);
 
-                let mut confirmed = None;
-                dialog_button_row_with_spacing(ui, |ui| {
-                    if ui.button("Bereinigen").clicked() {
-                        confirmed = Some(true);
-                    }
-                    if ui.button("Nicht bereinigen").clicked() {
-                        confirmed = Some(false);
-                    }
-                });
-
-                if let Some(confirmed) = confirmed {
-                    events.push(if confirmed {
-                        AppIntent::DeduplicateConfirmed
-                    } else {
-                        AppIntent::DeduplicateCancelled
-                    });
-                }
+                action =
+                    dialog_two_action_row_enabled(ui, "Bereinigen", "Nicht bereinigen", true, true);
             });
         });
+
+    match action {
+        Some(DialogTwoAction::Confirm) => events.push(AppIntent::DeduplicateConfirmed),
+        Some(DialogTwoAction::Cancel) => events.push(AppIntent::DeduplicateCancelled),
+        None => {}
+    }
 
     events
 }
