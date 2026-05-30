@@ -561,6 +561,10 @@
     - [x] `app/tools/API.md`: `ColorPathTool` vollstaendig dokumentiert (Phasen, Pipeline, Felder, Config, Sampling- und Skelett-Funktionen); Tabelle um Slot 10 erweitert; `needs_lasso_input()` + `on_lasso_completed()` in RouteTool-Trait ergaenzt; `ToolManager::new()` aktualisiert
     - [x] `ui/API.md`: `DragSelectionMode::ToolLasso` und `ViewportContext.tool_needs_lasso` dokumentiert
     - [x] ROADMAP.md: ColorPathTool als abgeschlossen eingetragen
+  - [x] **Doku-Sync Dialog-API-Stilkonsolidierung (2026-05-30, Branch `api-style-konsolidierung`)**
+    - [x] `ui/dialogs/dialog_widgets.rs`: oeffentliche 2er/3er-Action-APIs (`DialogTwoAction`, `DialogThreeAction`, `dialog_two_action_row_enabled`, `dialog_three_action_row_enabled`) auf deutschem Docstring-Stand geprueft
+    - [x] `ui/API.md`: Dialog-Widgets als oeffentliche UI-Surface dokumentiert; Signaturen von `show_dedup_dialog`, `show_zip_browser`, `show_save_overview_dialog` auf `HostLocalDialogState` aktualisiert; `overview.jpg` auf `overview.png` korrigiert
+    - [x] `ui/dialogs/trace_all_fields_dialog.rs`: Docstring von `UiState` auf `HostLocalDialogState` korrigiert
 
 - [x] **FieldPathTool — Feldweg-Mittellinie (2026-03-30, Branch `feat/field-path-tool`)**
   - [x] `src/core/centerline.rs` — `VoronoiGrid`, `compute_voronoi_bfs()`, `extract_corridor_centerline()`, `extract_boundary_centerline()` (Multi-Source BFS, 8-Konnektivitaet)

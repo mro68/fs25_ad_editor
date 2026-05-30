@@ -37,13 +37,14 @@ Das `ui`-Modul enthält egui-UI-Komponenten (Menüs, Statusbar, Input-Handling, 
     - `render.rs` — `render_validated_entries()` und weitere Rendern-Helfer (pub(super))
     - `tangent_ui.rs` — `render_tangent_selection()`, `render_node_info_submenu()` (pub(super))
 - `dialogs/` — Datei-Dialoge und modale Fenster
+  - `dialog_widgets.rs` — Wiederverwendbare Action-Buttonzeilen (`DialogTwoAction`, `DialogThreeAction`, 2er/3er-Enabled-Helper)
   - `file_dialogs.rs` — Open/Save-Dateidialoge
   - `heightmap_warning.rs` — Heightmap-Warnung vor dem Speichern
   - `marker_dialog.rs` — Marker erstellen/bearbeiten
   - `dedup_dialog.rs` — Duplikat-Bestätigungsdialog
   - `zip_browser.rs` — ZIP-Browser für Background-Map-Auswahl
   - `post_load_dialog.rs` — wiederverwendbarer Overview-Source-Dialog (Post-Load + Datei-Menue)
-  - `save_overview_dialog.rs` — Dialog: Hintergrundbild als overview.jpg speichern
+  - `save_overview_dialog.rs` — Dialog: Hintergrundbild als overview.png speichern
   - `confirm_dissolve_dialog.rs` — Bestätigungsdialog vor dem Auflösen einer Segment-Gruppe
 - `group_overlay.rs` — Segment-Lock-Icons aus host-neutralen Overlay-Snapshots (`GroupOverlayEvent`, `render_group_overlays()`)
 - `group_boundary_overlay.rs` — Boundary-Icons (Eingang/Ausgang/Bidirektional) aus host-neutralen Overlay-Snapshots (`GroupBoundaryIcons`, `render_group_boundary_overlays()`)
@@ -819,12 +820,67 @@ pub fn show_marker_dialog(
 
 ---
 
+### `DialogTwoAction` / `DialogThreeAction`
+
+Typisierte Rueckgabewerte fuer standardisierte Dialog-Buttonzeilen.
+
+```rust
+pub enum DialogTwoAction {
+  Confirm,
+  Cancel,
+}
+
+pub enum DialogThreeAction {
+  Primary,
+  Secondary,
+  Tertiary,
+}
+```
+
+Die Enums ersetzen bool-basierte Rueckgabemuster und machen Action-Mapping
+in Call-Sites explizit und erschöpfend per `match`.
+
+---
+
+### `dialog_two_action_row_enabled` / `dialog_three_action_row_enabled`
+
+Rendert wiederverwendbare 2er-/3er-Dialogzeilen mit pro Button steuerbarem
+Enabled-Status und typisierter Action-Rueckgabe.
+
+```rust
+pub fn dialog_two_action_row_enabled(
+  ui: &mut egui::Ui,
+  confirm_label: &str,
+  cancel_label: &str,
+  confirm_enabled: bool,
+  cancel_enabled: bool,
+) -> Option<DialogTwoAction>
+
+pub fn dialog_three_action_row_enabled(
+  ui: &mut egui::Ui,
+  primary_label: &str,
+  secondary_label: &str,
+  tertiary_label: &str,
+  primary_enabled: bool,
+  secondary_enabled: bool,
+  tertiary_enabled: bool,
+) -> Option<DialogThreeAction>
+```
+
+`dialog_three_action_row(...)` bleibt als Kurzform erhalten und delegiert intern
+an die Enabled-Variante mit drei aktivierten Buttons.
+
+---
+
 ### `show_dedup_dialog`
 
 Zeigt den Duplikat-Bereinigungsdialog als modales Fenster. Erscheint nach dem Laden einer XML-Datei, wenn duplizierte Nodes erkannt wurden. Der Benutzer kann die Bereinigung bestätigen oder abbrechen.
 
 ```rust
-pub fn show_dedup_dialog(ctx: &egui::Context, ui_state: &UiState) -> Vec<AppIntent>
+pub fn show_dedup_dialog(
+  ctx: &egui::Context,
+  ui_state: &HostLocalDialogState,
+) -> Vec<AppIntent>
 ```
 
 **Emittierte Intents:**
@@ -848,7 +904,10 @@ pub fn show_dedup_dialog(ctx: &egui::Context, ui_state: &UiState) -> Vec<AppInte
 Zeigt den ZIP-Browser-Dialog zur Auswahl einer Bilddatei aus einem ZIP-Archiv. Erscheint wenn eine `.zip`-Datei als Background-Map gewählt wurde und mehrere Bilddateien enthält. Bei genau einem Bild im ZIP wird automatisch geladen (kein Dialog).
 
 ```rust
-pub fn show_zip_browser(ctx: &egui::Context, ui_state: &mut UiState) -> Vec<AppIntent>
+pub fn show_zip_browser(
+  ctx: &egui::Context,
+  ui_state: &mut HostLocalDialogState,
+) -> Vec<AppIntent>
 ```
 
 **Emittierte Intents:**
@@ -929,10 +988,13 @@ pub fn show_overview_options_dialog(
 
 ### `show_save_overview_dialog`
 
-Zeigt den Dialog "Hintergrundbild als overview.jpg speichern?" nach dem Laden eines Hintergrundbildes aus einem ZIP-Archiv oder nach Generierung einer Übersichtskarte. Erscheint nur wenn eine XML-Datei geladen ist und noch keine overview.jpg im selben Verzeichnis existiert.
+Zeigt den Dialog "Hintergrundbild als overview.png speichern?" nach dem Laden eines Hintergrundbildes aus einem ZIP-Archiv oder nach Generierung einer Uebersichtskarte. Erscheint nur wenn eine XML-Datei geladen ist und noch keine overview.png im selben Verzeichnis existiert.
 
 ```rust
-pub fn show_save_overview_dialog(ctx: &egui::Context, ui_state: &mut UiState) -> Vec<AppIntent>
+pub fn show_save_overview_dialog(
+  ctx: &egui::Context,
+  ui_state: &mut HostLocalDialogState,
+) -> Vec<AppIntent>
 ```
 
 **Emittierte Intents:**
@@ -944,9 +1006,9 @@ pub fn show_save_overview_dialog(ctx: &egui::Context, ui_state: &mut UiState) ->
 
 ```
 [Titel: "Hintergrundbild speichern?"]
-  Soll das Hintergrundbild als overview.jpg
+  Soll das Hintergrundbild als overview.png
   im Savegame-Verzeichnis gespeichert werden?
-  /pfad/zur/overview.jpg
+  /pfad/zur/overview.png
   Beim nächsten Laden wird es automatisch als Hintergrund verwendet.
   [Ja, speichern]  [Nein]
 ```
