@@ -39,7 +39,7 @@ pub enum RouteOffsetPanelAction {
     SetBaseSpacing(f32),
     /// Original-Kette beibehalten setzen.
     SetKeepOriginal(bool),
-    /// Bei Einbahn die Fahrtrichtung der aktiven Versatzseiten invertieren.
+    /// Bei Einbahn und beidseitigem Versatz den Links/Rechts-Verkehr umschalten.
     ToggleReversedSide,
 }
 

@@ -395,12 +395,13 @@ pub(super) fn render_route_offset_panel(
         );
     }
 
-    let is_one_way_direction = default_direction != ConnectionDirection::Dual;
+    let can_toggle_traffic_side =
+        default_direction != ConnectionDirection::Dual && state.left_enabled && state.right_enabled;
     ui.separator();
     if ui
         .add_enabled(
-            is_one_way_direction,
-            egui::Button::new("Fahrtrichtung umkehren"),
+            can_toggle_traffic_side,
+            egui::Button::new("Links/Rechts Verkehr"),
         )
         .clicked()
     {
@@ -410,8 +411,8 @@ pub(super) fn render_route_offset_panel(
         );
     }
 
-    if !is_one_way_direction {
-        ui.small("Nur bei Streckenrichtung Einbahn verfuegbar.");
+    if !can_toggle_traffic_side {
+        ui.small("Nur bei Einbahn mit links+rechts Versatz verfuegbar.");
     }
 }
 

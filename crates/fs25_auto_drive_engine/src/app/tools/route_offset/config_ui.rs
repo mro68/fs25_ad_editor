@@ -49,9 +49,12 @@ impl RouteOffsetTool {
                 set_bool(&mut self.config.keep_original, value)
             }
             RouteOffsetPanelAction::ToggleReversedSide => {
-                if self.direction != crate::core::ConnectionDirection::Dual {
-                    let next_value = !self.config.invert_one_way_direction;
-                    set_bool(&mut self.config.invert_one_way_direction, next_value)
+                if self.direction != crate::core::ConnectionDirection::Dual
+                    && self.config.left_enabled
+                    && self.config.right_enabled
+                {
+                    let next_value = !self.config.left_side_follows_one_way;
+                    set_bool(&mut self.config.left_side_follows_one_way, next_value)
                 } else {
                     false
                 }

@@ -39,13 +39,14 @@ pub struct OffsetConfig {
     pub keep_original: bool,
     /// Maximaler Abstand zwischen Nodes auf der Offset-Kette
     pub base_spacing: f32,
-    /// Invertiert die aktive Einbahn-Richtung.
+    /// Legt bei Einbahn+links/rechts fest, ob die linke Seite der gewaehlten
+    /// Einbahn-Richtung folgt.
     ///
-    /// - Bei links+rechts aktiv vertauscht der Schalter, welche Seite in
-    ///   Fahrtrichtung zeigt und welche entgegengesetzt verlaeuft.
-    /// - Bei nur einer aktiven Seite wird die Fahrtrichtung dieser Seite
-    ///   umgekehrt.
-    pub invert_one_way_direction: bool,
+    /// `true`: links folgt der gewaehlten Einbahn-Richtung, rechts verlaeuft
+    /// entgegengesetzt.
+    /// `false`: rechts folgt der gewaehlten Einbahn-Richtung, links verlaeuft
+    /// entgegengesetzt.
+    pub left_side_follows_one_way: bool,
 }
 
 impl Default for OffsetConfig {
@@ -57,7 +58,7 @@ impl Default for OffsetConfig {
             right_distance: 8.0,
             keep_original: true,
             base_spacing: 6.0,
-            invert_one_way_direction: false,
+            left_side_follows_one_way: true,
         }
     }
 }
