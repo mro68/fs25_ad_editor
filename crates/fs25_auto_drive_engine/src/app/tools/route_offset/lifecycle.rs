@@ -75,10 +75,8 @@ impl RouteOffsetTool {
         });
     }
 
-    fn is_split_one_way_forward_case(&self) -> bool {
-        self.direction == ConnectionDirection::Regular
-            && self.config.left_enabled
-            && self.config.right_enabled
+    fn is_one_way(&self) -> bool {
+        self.direction != ConnectionDirection::Dual
     }
 
     fn opposite_direction(direction: ConnectionDirection) -> ConnectionDirection {
@@ -90,14 +88,20 @@ impl RouteOffsetTool {
     }
 
     fn side_directions(&self) -> (ConnectionDirection, ConnectionDirection) {
-        if !self.is_split_one_way_forward_case() {
+        if !self.is_one_way() {
             return (self.direction, self.direction);
         }
 
-        if self.config.reverse_left_in_split_one_way {
-            (Self::opposite_direction(self.direction), self.direction)
+        let one_way_base = if self.config.invert_one_way_direction {
+            Self::opposite_direction(self.direction)
         } else {
-            (self.direction, Self::opposite_direction(self.direction))
+            self.direction
+        };
+
+        if self.config.left_enabled && self.config.right_enabled {
+            (one_way_base, Self::opposite_direction(one_way_base))
+        } else {
+            (one_way_base, one_way_base)
         }
     }
 }

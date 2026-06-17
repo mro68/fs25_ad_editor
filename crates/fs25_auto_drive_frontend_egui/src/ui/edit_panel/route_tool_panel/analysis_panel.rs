@@ -393,19 +393,25 @@ pub(super) fn render_route_offset_panel(
                 keep_original,
             )),
         );
+    }
 
-        let is_split_one_way_forward = default_direction == ConnectionDirection::Regular
-            && state.left_enabled
-            && state.right_enabled;
-        if is_split_one_way_forward {
-            ui.separator();
-            if ui.button("Fahrtrichtung umkehren").clicked() {
-                push_action(
-                    panel_ctx.events,
-                    RouteToolPanelAction::RouteOffset(RouteOffsetPanelAction::ToggleReversedSide),
-                );
-            }
-        }
+    let is_one_way_direction = default_direction != ConnectionDirection::Dual;
+    ui.separator();
+    if ui
+        .add_enabled(
+            is_one_way_direction,
+            egui::Button::new("Fahrtrichtung umkehren"),
+        )
+        .clicked()
+    {
+        push_action(
+            panel_ctx.events,
+            RouteToolPanelAction::RouteOffset(RouteOffsetPanelAction::ToggleReversedSide),
+        );
+    }
+
+    if !is_one_way_direction {
+        ui.small("Nur bei Streckenrichtung Einbahn verfuegbar.");
     }
 }
 
