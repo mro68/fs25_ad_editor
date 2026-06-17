@@ -2,6 +2,8 @@
 
 use super::state::RouteOffsetTool;
 use crate::app::tools::RouteToolCore;
+use crate::app::ui_contract::RouteOffsetPanelAction;
+use crate::core::ConnectionDirection;
 use crate::core::RoadMap;
 use glam::Vec2;
 
@@ -105,6 +107,93 @@ fn test_offset_beide_seiten() {
         r_beide.new_nodes.len() > r_eine.new_nodes.len(),
         "Beide Seiten muss mehr Nodes erzeugen als eine"
     );
+}
+
+/// Spezialfall: Einbahn-vorwaerts + links/rechts aktiv → genau eine Seite ist reverse.
+#[test]
+fn test_offset_beide_seiten_einbahn_vorwaerts_hat_eine_umgedrehte_seite_standard() {
+    let mut tool = RouteOffsetTool::new();
+    let chain = make_chain(5, 10.0);
+    tool.load_chain(chain, 1, 5);
+    tool.direction = ConnectionDirection::Regular;
+    tool.config.left_enabled = true;
+    tool.config.right_enabled = true;
+
+    let road_map = RoadMap::new(3);
+    let result = tool
+        .execute(&road_map)
+        .expect("Ein Ergebnis fuer beide Versatzseiten wird erwartet");
+
+    let regular_count = result
+        .internal_connections
+        .iter()
+        .filter(|(_, _, direction, _)| *direction == ConnectionDirection::Regular)
+        .count();
+    let reverse_count = result
+        .internal_connections
+        .iter()
+        .filter(|(_, _, direction, _)| *direction == ConnectionDirection::Reverse)
+        .count();
+
+    assert!(
+        regular_count > 0,
+        "Eine Versatzseite muss in Vorwaertsrichtung bleiben"
+    );
+    assert!(
+        reverse_count > 0,
+        "Eine Versatzseite muss in Gegenrichtung erzeugt werden"
+    );
+}
+
+/// Toggle im Spezialfall wechselt, welche Seite als reverse erzeugt wird.
+#[test]
+fn test_offset_toggle_reversed_side_wechselt_reverse_seite() {
+    let mut tool = RouteOffsetTool::new();
+    let chain = make_chain(5, 10.0);
+    tool.load_chain(chain, 1, 5);
+    tool.direction = ConnectionDirection::Regular;
+    tool.config.left_enabled = true;
+    tool.config.right_enabled = true;
+
+    let road_map = RoadMap::new(3);
+    let first = tool
+        .execute(&road_map)
+        .expect("Ein Ergebnis vor dem Toggle wird erwartet");
+
+    let first_direction = first
+        .external_connections
+        .iter()
+        .find_map(|(new_idx, existing_id, _existing_to_new, direction, _)| {
+            if *new_idx == 0 && *existing_id == 1 {
+                Some(*direction)
+            } else {
+                None
+            }
+        })
+        .expect("Die linke Start-Ankerverbindung muss vorhanden sein");
+    assert_eq!(first_direction, ConnectionDirection::Regular);
+
+    let effect = tool.apply_panel_action(RouteOffsetPanelAction::ToggleReversedSide);
+    assert!(
+        effect.changed,
+        "Toggle muss im Spezialfall eine Aenderung liefern"
+    );
+
+    let second = tool
+        .execute(&road_map)
+        .expect("Ein Ergebnis nach dem Toggle wird erwartet");
+    let second_direction = second
+        .external_connections
+        .iter()
+        .find_map(|(new_idx, existing_id, _existing_to_new, direction, _)| {
+            if *new_idx == 0 && *existing_id == 1 {
+                Some(*direction)
+            } else {
+                None
+            }
+        })
+        .expect("Die linke Start-Ankerverbindung muss nach Toggle vorhanden sein");
+    assert_eq!(second_direction, ConnectionDirection::Reverse);
 }
 
 /// "Original entfernen" → nodes_to_remove enthaelt Ketten-Node-IDs.
