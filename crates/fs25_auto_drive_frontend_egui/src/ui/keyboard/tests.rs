@@ -208,7 +208,7 @@ fn test_escape_route_tool_drawing_cancels() {
 }
 
 #[test]
-fn test_escape_route_tool_idle_with_selection_clears() {
+fn test_escape_route_tool_idle_with_selection_cancels() {
     let mut selected = IndexSet::new();
     selected.insert(42);
 
@@ -227,14 +227,14 @@ fn test_escape_route_tool_idle_with_selection_clears() {
 
     assert!(events
         .iter()
-        .any(|e| matches!(e, AppIntent::ClearSelectionRequested)));
+        .any(|e| matches!(e, AppIntent::RouteToolCancelled)));
     assert!(!events
         .iter()
-        .any(|e| matches!(e, AppIntent::RouteToolCancelled)));
+        .any(|e| matches!(e, AppIntent::ClearSelectionRequested)));
 }
 
 #[test]
-fn test_escape_route_tool_idle_no_selection_switches_to_select() {
+fn test_escape_route_tool_idle_no_selection_cancels() {
     let events = collect_with_key_event_full(
         egui::Event::Key {
             key: egui::Key::Escape,
@@ -248,7 +248,10 @@ fn test_escape_route_tool_idle_no_selection_switches_to_select() {
         false,
     );
 
-    assert!(events.iter().any(|e| matches!(
+    assert!(events
+        .iter()
+        .any(|e| matches!(e, AppIntent::RouteToolCancelled)));
+    assert!(!events.iter().any(|e| matches!(
         e,
         AppIntent::SetEditorToolRequested {
             tool: EditorTool::Select

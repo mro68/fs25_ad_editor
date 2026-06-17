@@ -437,7 +437,7 @@ let intents = input.collect_viewport_events(
 
 - **`keyboard`:** Verarbeitet Tastatur-Shortcuts
   - `Delete` → Node(s) löschen
-  - `Escape` → Selektion aufheben
+  - `Escape` → aktives Route-Tool abbrechen; ansonsten Selektion aufheben
   - `Ctrl+A` → Alle selektieren
   - `Ctrl+C` → Selektion kopieren
   - `Ctrl+V` → Paste-Vorschau starten

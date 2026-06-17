@@ -35,6 +35,7 @@
 - [x] Keyboard-Shortcuts (Ctrl+O, Ctrl+S, Ctrl+Z, Ctrl+Y, Delete, Escape, etc.)
   - [x] Command-Palette-Toggle per Ctrl+K (Intent/Command-Kette vorbereitet)
   - [x] Keyboard-Guard bei TextEdit-Focus (`wants_keyboard_input`-Pruefung; Ctrl+K und Escape bleiben aktiv)
+  - [x] Escape schliesst im aktiven Route-Tool den Tool-Modus zuverlaessig via `RouteToolCancelled` (auch ohne Pending-Input), statt zuerst nur Selektion zu leeren
     - [x] Floating-Menue-Shortcuts ohne Modifier: `T` (Werkzeuge), `G` (Grundbefehle), `B` (Abschnitt-Tools), `R` (Richtung+Strassenart), `Z` (Zoom), `K` (Command-Palette)
 - [x] Command Palette (Ctrl+K, Suchfeld, Pfeilnavigation, Enter-Ausfuehrung)
 - [x] Options-Dialog (Farben, Groessen, Breiten – Live-Preview)
@@ -94,6 +95,7 @@
   - [x] Checkbox „Nach Loeschen verbinden": Vorgaenger/Nachfolger eines geloeschten Nodes direkt verbinden
   - [x] Checkbox „Verbindung beim Platzieren teilen": neuer Node splittet naechste Verbindung
   - [x] **Distanzen**: selektierte Nodes-Kette per Catmull-Rom-Spline gleichmaessig neu verteilen (Nach Abstand / Nach Anzahl)
+    - [x] Uebernehmen erstellt nur die neue Kette; externe Endpunkt-Nachbarn werden nicht mehr automatisch rueckverdrahtet
   - [x] **Copy/Paste:** Selektierte Nodes + Verbindungen in Zwischenablage kopieren und mit Paste-Vorschau (einstellbare Opacity) einfuegen
     - [x] Vollstaendiger Intent-Flow: `CopySelectionRequested` → `PasteStartRequested` → `PastePreviewMoved` → `PasteConfirmRequested` / `PasteCancelled`
     - [x] Paste-Vorschau-Overlay im Viewport (semi-transparente Preview-Nodes)

@@ -14,20 +14,6 @@ use std::sync::Arc;
 /// Dichte der Catmull-Rom-Interpolation (Punkte je Segment).
 const SAMPLES_PER_SEGMENT: usize = 16;
 
-/// Externe Verbindung eines Ketten-Endpunkts (zu einem Node ausserhalb der Kette).
-struct ExternalConnection {
-    /// Node-ID ausserhalb der Kette
-    external_id: u64,
-    /// Richtung der urspruenglichen Verbindung
-    direction: crate::core::ConnectionDirection,
-    /// Prioritaet der urspruenglichen Verbindung
-    priority: crate::core::ConnectionPriority,
-    /// true = Endpunkt war start_id, false = Endpunkt war end_id
-    endpoint_is_start: bool,
-    /// true = gehoert zum ersten Ketten-Endpunkt, false = zum letzten
-    is_first_endpoint: bool,
-}
-
 /// Ordnet die selektierten Nodes zu einer linearen Kette anhand der Verbindungen.
 ///
 /// Sucht einen Startpunkt (keine eingehenden Verbindungen von selektierten Nodes)
@@ -149,44 +135,6 @@ pub fn resample_selected_path(state: &mut AppState) {
     // Snapshot VOR Mutation
     state.record_undo_snapshot();
 
-    let first_id = ordered[0];
-    let last_id = *ordered
-        .last()
-        .expect("invariant: ordered ist nicht-leer nach order_chain()");
-    let chain_set: HashSet<u64> = ordered.iter().copied().collect();
-
-    // Externe Verbindungen der Endpunkte sichern (Verbindungen zu Nodes ausserhalb der Kette)
-    let external_conns: Vec<ExternalConnection> = {
-        let rm = state
-            .road_map
-            .as_deref()
-            .expect("road_map ist Some nach as_ref()-Guard in resample_selected_path");
-        let mut ext = Vec::new();
-        for conn in rm.connections_iter() {
-            for &(ep_id, is_first) in &[(first_id, true), (last_id, false)] {
-                if conn.start_id == ep_id && !chain_set.contains(&conn.end_id) {
-                    ext.push(ExternalConnection {
-                        external_id: conn.end_id,
-                        direction: conn.direction,
-                        priority: conn.priority,
-                        endpoint_is_start: true,
-                        is_first_endpoint: is_first,
-                    });
-                }
-                if conn.end_id == ep_id && !chain_set.contains(&conn.start_id) {
-                    ext.push(ExternalConnection {
-                        external_id: conn.start_id,
-                        direction: conn.direction,
-                        priority: conn.priority,
-                        endpoint_is_start: false,
-                        is_first_endpoint: is_first,
-                    });
-                }
-            }
-        }
-        ext
-    };
-
     let ids_to_delete: Vec<u64> = ordered;
 
     let Some(road_map_arc) = state.road_map.as_mut() else {
@@ -218,55 +166,8 @@ pub fn resample_selected_path(state: &mut AppState) {
         new_ids.push(id);
     }
 
+    // Flags der neuen Kette aktualisieren.
     road_map.recalculate_node_flags(&new_ids);
-
-    // Externe Verbindungen der Ketten-Endpunkte wiederherstellen
-    let new_first_id = *new_ids
-        .first()
-        .expect("invariant: new_ids ist nicht-leer – new_positions hat mindestens 2 Elemente");
-    let new_last_id = *new_ids
-        .last()
-        .expect("invariant: new_ids ist nicht-leer – new_positions hat mindestens 2 Elemente");
-    let mut reconnected_neighbors = Vec::new();
-    for ec in &external_conns {
-        let new_ep_id = if ec.is_first_endpoint {
-            new_first_id
-        } else {
-            new_last_id
-        };
-        let ep_pos = road_map.node_position(new_ep_id);
-        let ext_pos = road_map.node_position(ec.external_id);
-        if let (Some(ep), Some(ext)) = (ep_pos, ext_pos) {
-            let conn = if ec.endpoint_is_start {
-                // Endpunkt war start_id → new_ep → external
-                Connection::new(
-                    new_ep_id,
-                    ec.external_id,
-                    ec.direction,
-                    ec.priority,
-                    ep,
-                    ext,
-                )
-            } else {
-                // Endpunkt war end_id → external → new_ep
-                Connection::new(
-                    ec.external_id,
-                    new_ep_id,
-                    ec.direction,
-                    ec.priority,
-                    ext,
-                    ep,
-                )
-            };
-            road_map.add_connection(conn);
-            reconnected_neighbors.push(ec.external_id);
-        }
-    }
-
-    // Flags der neuen Endpunkte + wiederverbundenen Nachbarn aktualisieren
-    reconnected_neighbors.push(new_first_id);
-    reconnected_neighbors.push(new_last_id);
-    road_map.recalculate_node_flags(&reconnected_neighbors);
     road_map.ensure_spatial_index();
 
     // Segment-Registry: Records mit alten Nodes invalidieren
@@ -291,4 +192,76 @@ pub fn resample_selected_path(state: &mut AppState) {
         new_ids.len(),
         avg_dist,
     );
+}
+
+#[cfg(test)]
+mod tests {
+    use super::resample_selected_path;
+    use crate::app::AppState;
+    use crate::core::{
+        Connection, ConnectionDirection, ConnectionPriority, MapNode, NodeFlag, RoadMap,
+    };
+    use glam::Vec2;
+    use std::sync::Arc;
+
+    fn test_map_with_external_endpoint_connections() -> RoadMap {
+        let mut map = RoadMap::new(3);
+
+        map.add_node(MapNode::new(10, Vec2::new(-50.0, 0.0), NodeFlag::Regular));
+        map.add_node(MapNode::new(1, Vec2::new(0.0, 0.0), NodeFlag::Regular));
+        map.add_node(MapNode::new(2, Vec2::new(50.0, 0.0), NodeFlag::Regular));
+        map.add_node(MapNode::new(3, Vec2::new(100.0, 0.0), NodeFlag::Regular));
+        map.add_node(MapNode::new(20, Vec2::new(150.0, 0.0), NodeFlag::Regular));
+
+        for (start_id, end_id, start_pos, end_pos) in [
+            (10u64, 1u64, Vec2::new(-50.0, 0.0), Vec2::new(0.0, 0.0)),
+            (1u64, 2u64, Vec2::new(0.0, 0.0), Vec2::new(50.0, 0.0)),
+            (2u64, 3u64, Vec2::new(50.0, 0.0), Vec2::new(100.0, 0.0)),
+            (3u64, 20u64, Vec2::new(100.0, 0.0), Vec2::new(150.0, 0.0)),
+        ] {
+            map.add_connection(Connection::new(
+                start_id,
+                end_id,
+                ConnectionDirection::Regular,
+                ConnectionPriority::Regular,
+                start_pos,
+                end_pos,
+            ));
+        }
+
+        map
+    }
+
+    #[test]
+    fn resample_does_not_reconnect_external_endpoints_automatically() {
+        let mut state = AppState::new();
+        state.road_map = Some(Arc::new(test_map_with_external_endpoint_connections()));
+
+        state.selection.ids_mut().insert(1);
+        state.selection.ids_mut().insert(2);
+        state.selection.ids_mut().insert(3);
+
+        state.ui.distanzen.by_count = true;
+        state.ui.distanzen.count = 3;
+        state.ui.distanzen.distance = 50.0;
+
+        resample_selected_path(&mut state);
+
+        let road_map = state
+            .road_map
+            .as_ref()
+            .expect("RoadMap muss nach Resample vorhanden sein");
+
+        let new_ids: Vec<u64> = state.selection.selected_node_ids.iter().copied().collect();
+        assert_eq!(new_ids.len(), 3);
+        assert_eq!(road_map.connection_count(), 2);
+
+        for new_id in &new_ids {
+            assert!(road_map.contains_node(*new_id));
+            assert!(!road_map.has_connection(10, *new_id));
+            assert!(!road_map.has_connection(*new_id, 10));
+            assert!(!road_map.has_connection(20, *new_id));
+            assert!(!road_map.has_connection(*new_id, 20));
+        }
+    }
 }
