@@ -309,6 +309,7 @@ pub(super) fn render_field_path_panel(
 pub(super) fn render_route_offset_panel(
     ui: &mut egui::Ui,
     state: &RouteOffsetPanelState,
+    default_direction: ConnectionDirection,
     panel_ctx: &mut RouteToolPanelRenderContext<'_>,
 ) {
     if !state.has_chain {
@@ -392,6 +393,26 @@ pub(super) fn render_route_offset_panel(
                 keep_original,
             )),
         );
+    }
+
+    let can_toggle_traffic_side =
+        default_direction != ConnectionDirection::Dual && state.left_enabled && state.right_enabled;
+    ui.separator();
+    if ui
+        .add_enabled(
+            can_toggle_traffic_side,
+            egui::Button::new("Links/Rechts Verkehr"),
+        )
+        .clicked()
+    {
+        push_action(
+            panel_ctx.events,
+            RouteToolPanelAction::RouteOffset(RouteOffsetPanelAction::ToggleReversedSide),
+        );
+    }
+
+    if !can_toggle_traffic_side {
+        ui.small("Nur bei Einbahn mit links+rechts Versatz verfuegbar.");
     }
 }
 

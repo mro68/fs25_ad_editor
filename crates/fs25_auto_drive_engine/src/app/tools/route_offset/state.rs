@@ -39,6 +39,14 @@ pub struct OffsetConfig {
     pub keep_original: bool,
     /// Maximaler Abstand zwischen Nodes auf der Offset-Kette
     pub base_spacing: f32,
+    /// Legt bei Einbahn+links/rechts fest, ob die linke Seite der gewaehlten
+    /// Einbahn-Richtung folgt.
+    ///
+    /// `true`: links folgt der gewaehlten Einbahn-Richtung, rechts verlaeuft
+    /// entgegengesetzt.
+    /// `false`: rechts folgt der gewaehlten Einbahn-Richtung, links verlaeuft
+    /// entgegengesetzt.
+    pub left_side_follows_one_way: bool,
 }
 
 impl Default for OffsetConfig {
@@ -50,6 +58,7 @@ impl Default for OffsetConfig {
             right_distance: 8.0,
             keep_original: true,
             base_spacing: 6.0,
+            left_side_follows_one_way: true,
         }
     }
 }

@@ -74,6 +74,22 @@ impl RouteOffsetTool {
             right_points,
         });
     }
+
+    fn is_one_way(&self) -> bool {
+        self.direction != ConnectionDirection::Dual
+    }
+
+    fn side_reverse_flags(&self) -> (bool, bool) {
+        if !self.is_one_way() || !self.config.left_enabled || !self.config.right_enabled {
+            return (false, false);
+        }
+
+        if self.config.left_side_follows_one_way {
+            (false, true)
+        } else {
+            (true, false)
+        }
+    }
 }
 
 impl RouteToolPanelBridge for RouteOffsetTool {
@@ -125,10 +141,17 @@ impl RouteToolCore for RouteOffsetTool {
         let cached = cache
             .as_ref()
             .expect("invariant: preview cache must exist after ensure_preview_cache");
+        let (left_reverse, right_reverse) = self.side_reverse_flags();
 
         if let Some(pts) = cached.left_points.as_ref() {
             let start = nodes.len();
-            nodes.extend_from_slice(pts);
+            if left_reverse {
+                for point in pts.iter().rev() {
+                    nodes.push(*point);
+                }
+            } else {
+                nodes.extend_from_slice(pts);
+            }
             for i in 0..pts.len().saturating_sub(1) {
                 connections.push((start + i, start + i + 1));
                 styles.push((self.direction, self.priority));
@@ -137,7 +160,13 @@ impl RouteToolCore for RouteOffsetTool {
 
         if let Some(pts) = cached.right_points.as_ref() {
             let start = nodes.len();
-            nodes.extend_from_slice(pts);
+            if right_reverse {
+                for point in pts.iter().rev() {
+                    nodes.push(*point);
+                }
+            } else {
+                nodes.extend_from_slice(pts);
+            }
             for i in 0..pts.len().saturating_sub(1) {
                 connections.push((start + i, start + i + 1));
                 styles.push((self.direction, self.priority));
@@ -174,13 +203,18 @@ impl RouteToolCore for RouteOffsetTool {
             ConnectionDirection,
             ConnectionPriority,
         )> = Vec::new();
+        let (left_reverse, right_reverse) = self.side_reverse_flags();
 
-        let mut add_side = |offset: f32| {
-            let Some(pts) =
+        let mut add_side = |offset: f32, reverse_points: bool| {
+            let Some(mut pts) =
                 compute_offset_positions(&self.chain_positions, offset, self.config.base_spacing)
             else {
                 return;
             };
+            if reverse_points {
+                pts.reverse();
+            }
+
             let base = new_nodes.len();
             for &p in &pts {
                 new_nodes.push((p, NodeFlag::Regular));
@@ -188,29 +222,23 @@ impl RouteToolCore for RouteOffsetTool {
             for i in 0..pts.len().saturating_sub(1) {
                 internal_connections.push((base + i, base + i + 1, self.direction, self.priority));
             }
+
             let first = base;
             let last = base + pts.len() - 1;
-            external_connections.push((
-                first,
-                self.chain_start_id,
-                true,
-                self.direction,
-                self.priority,
-            ));
-            external_connections.push((
-                last,
-                self.chain_end_id,
-                false,
-                self.direction,
-                self.priority,
-            ));
+            let (first_anchor, last_anchor) = if reverse_points {
+                (self.chain_end_id, self.chain_start_id)
+            } else {
+                (self.chain_start_id, self.chain_end_id)
+            };
+            external_connections.push((first, first_anchor, true, self.direction, self.priority));
+            external_connections.push((last, last_anchor, false, self.direction, self.priority));
         };
 
         if self.config.left_enabled {
-            add_side(self.config.left_distance);
+            add_side(self.config.left_distance, left_reverse);
         }
         if self.config.right_enabled {
-            add_side(-self.config.right_distance);
+            add_side(-self.config.right_distance, right_reverse);
         }
 
         if new_nodes.is_empty() {

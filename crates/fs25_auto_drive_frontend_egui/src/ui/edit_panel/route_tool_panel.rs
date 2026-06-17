@@ -115,7 +115,7 @@ pub(super) fn render_route_tool_panel(
         ui.add_space(6.0);
 
         if let Some(config_state) = route_tool.config_state.as_ref() {
-            render_route_tool_config(ui, config_state, lang, &mut panel_ctx);
+            render_route_tool_config(ui, config_state, default_direction, lang, &mut panel_ctx);
         } else {
             ui.small("Kein Route-Tool aktiv.");
         }
@@ -138,6 +138,7 @@ pub(super) fn render_route_tool_panel(
 fn render_route_tool_config(
     ui: &mut egui::Ui,
     config_state: &RouteToolConfigState,
+    default_direction: ConnectionDirection,
     lang: Language,
     panel_ctx: &mut RouteToolPanelRenderContext<'_>,
 ) {
@@ -154,7 +155,9 @@ fn render_route_tool_config(
         RouteToolConfigState::FieldPath(state) => {
             render_field_path_panel(ui, state, lang, panel_ctx)
         }
-        RouteToolConfigState::RouteOffset(state) => render_route_offset_panel(ui, state, panel_ctx),
+        RouteToolConfigState::RouteOffset(state) => {
+            render_route_offset_panel(ui, state, default_direction, panel_ctx)
+        }
         RouteToolConfigState::Rounding(state) => render_rounding_panel(ui, state, panel_ctx),
         RouteToolConfigState::ColorPath(state) => render_color_path_panel(ui, state, panel_ctx),
     }
@@ -236,9 +239,10 @@ fn render_field_path_panel(
 fn render_route_offset_panel(
     ui: &mut egui::Ui,
     state: &RouteOffsetPanelState,
+    default_direction: ConnectionDirection,
     panel_ctx: &mut RouteToolPanelRenderContext<'_>,
 ) {
-    analysis_panel::render_route_offset_panel(ui, state, panel_ctx);
+    analysis_panel::render_route_offset_panel(ui, state, default_direction, panel_ctx);
 }
 
 fn render_rounding_panel(

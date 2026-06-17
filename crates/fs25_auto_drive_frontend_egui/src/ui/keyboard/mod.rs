@@ -41,7 +41,7 @@ impl KeyboardContext {
 fn collect_escape_intents(
     selected_node_ids: &IndexSet<u64>,
     active_tool: EditorTool,
-    route_tool_is_drawing: bool,
+    _route_tool_is_drawing: bool,
     distanzen_active: bool,
 ) -> Vec<AppIntent> {
     if distanzen_active {
@@ -49,8 +49,8 @@ fn collect_escape_intents(
         return vec![];
     }
 
-    if active_tool == EditorTool::Route && route_tool_is_drawing {
-        // Tool zeichnet gerade -> Eingabe abbrechen
+    if active_tool == EditorTool::Route {
+        // Route-Tool aktiv -> Panel/Tool-Eingabe abbrechen
         return vec![AppIntent::RouteToolCancelled];
     }
 
