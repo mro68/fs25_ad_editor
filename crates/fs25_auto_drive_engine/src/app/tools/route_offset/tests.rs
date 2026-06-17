@@ -109,7 +109,7 @@ fn test_offset_beide_seiten() {
     );
 }
 
-/// Spezialfall: Einbahn-vorwaerts + links/rechts aktiv → genau eine Seite ist reverse.
+/// Einbahn + links/rechts aktiv → genau eine Seite ist entgegengesetzt.
 #[test]
 fn test_offset_beide_seiten_einbahn_vorwaerts_hat_eine_umgedrehte_seite_standard() {
     let mut tool = RouteOffsetTool::new();
@@ -145,7 +145,7 @@ fn test_offset_beide_seiten_einbahn_vorwaerts_hat_eine_umgedrehte_seite_standard
     );
 }
 
-/// Toggle im Spezialfall wechselt, welche Seite als reverse erzeugt wird.
+/// Toggle bei Einbahn wechselt, welche Seite als reverse erzeugt wird.
 #[test]
 fn test_offset_toggle_reversed_side_wechselt_reverse_seite() {
     let mut tool = RouteOffsetTool::new();
@@ -194,6 +194,97 @@ fn test_offset_toggle_reversed_side_wechselt_reverse_seite() {
         })
         .expect("Die linke Start-Ankerverbindung muss nach Toggle vorhanden sein");
     assert_eq!(second_direction, ConnectionDirection::Reverse);
+}
+
+/// Einbahn rueckwaerts + links/rechts aktiv → ebenfalls gegensaetzliche Richtungen.
+#[test]
+fn test_offset_beide_seiten_einbahn_rueckwaerts_hat_gegensaetzliche_richtungen() {
+    let mut tool = RouteOffsetTool::new();
+    let chain = make_chain(5, 10.0);
+    tool.load_chain(chain, 1, 5);
+    tool.direction = ConnectionDirection::Reverse;
+    tool.config.left_enabled = true;
+    tool.config.right_enabled = true;
+
+    let road_map = RoadMap::new(3);
+    let result = tool
+        .execute(&road_map)
+        .expect("Ein Ergebnis fuer beide Versatzseiten wird erwartet");
+
+    let regular_count = result
+        .internal_connections
+        .iter()
+        .filter(|(_, _, direction, _)| *direction == ConnectionDirection::Regular)
+        .count();
+    let reverse_count = result
+        .internal_connections
+        .iter()
+        .filter(|(_, _, direction, _)| *direction == ConnectionDirection::Reverse)
+        .count();
+
+    assert!(
+        regular_count > 0,
+        "Eine Versatzseite muss entgegengesetzt erzeugt werden"
+    );
+    assert!(
+        reverse_count > 0,
+        "Eine Versatzseite muss in der Basisrichtung bleiben"
+    );
+}
+
+/// Bei nur einer aktiven Einbahn-Seite invertiert der Toggle die Seitenrichtung.
+#[test]
+fn test_offset_toggle_reversed_side_invertiert_aktive_einbahn_einzelseite() {
+    let mut tool = RouteOffsetTool::new();
+    let chain = make_chain(5, 10.0);
+    tool.load_chain(chain, 1, 5);
+    tool.direction = ConnectionDirection::Regular;
+    tool.config.left_enabled = true;
+    tool.config.right_enabled = false;
+
+    let road_map = RoadMap::new(3);
+    let first = tool
+        .execute(&road_map)
+        .expect("Ein Ergebnis vor dem Toggle wird erwartet");
+    let first_direction = first
+        .internal_connections
+        .first()
+        .map(|(_, _, direction, _)| *direction)
+        .expect("Mindestens eine interne Verbindung wird erwartet");
+    assert_eq!(first_direction, ConnectionDirection::Regular);
+
+    let effect = tool.apply_panel_action(RouteOffsetPanelAction::ToggleReversedSide);
+    assert!(
+        effect.changed,
+        "Toggle muss bei Einbahn eine Aenderung liefern"
+    );
+
+    let second = tool
+        .execute(&road_map)
+        .expect("Ein Ergebnis nach dem Toggle wird erwartet");
+    let second_direction = second
+        .internal_connections
+        .first()
+        .map(|(_, _, direction, _)| *direction)
+        .expect("Mindestens eine interne Verbindung wird erwartet");
+    assert_eq!(second_direction, ConnectionDirection::Reverse);
+}
+
+/// Bei Zweibahn ist der Einbahn-Toggle wirkungslos.
+#[test]
+fn test_offset_toggle_reversed_side_bei_zweibahn_ohne_aenderung() {
+    let mut tool = RouteOffsetTool::new();
+    let chain = make_chain(5, 10.0);
+    tool.load_chain(chain, 1, 5);
+    tool.direction = ConnectionDirection::Dual;
+    tool.config.left_enabled = true;
+    tool.config.right_enabled = true;
+
+    let effect = tool.apply_panel_action(RouteOffsetPanelAction::ToggleReversedSide);
+    assert!(
+        !effect.changed,
+        "Toggle darf bei Zweibahn keine Zustandsaenderung ausloesen"
+    );
 }
 
 /// "Original entfernen" → nodes_to_remove enthaelt Ketten-Node-IDs.
