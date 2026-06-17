@@ -369,15 +369,19 @@ Parallelversatz einer selektierten Kette ohne S-Kurven-Anbindung (`RouteToolId::
 - `right_distance: f32` — Versatz-Distanz rechts in Metern (Standard: 8 m)
 - `keep_original: bool` — Original-Kette beibehalten (false = Original-Nodes entfernen)
 - `base_spacing: f32` — Maximaler Abstand zwischen Nodes auf der Offset-Kette (Standard: 6 m)
-- `invert_one_way_direction: bool` — invertiert die aktive Einbahn-Richtung (bei zwei Seiten werden die Richtungen getauscht, bei einer Seite wird diese umgekehrt)
+- `left_side_follows_one_way: bool` — bei Einbahn+links/rechts steuert diese Flagge die Spurzuordnung: `true` = links folgt der gewaehlten Einbahn-Richtung, `false` = rechts folgt der gewaehlten Einbahn-Richtung
 
 **Einbahn-Richtungslogik:**
 
 - Gilt fuer Einbahn (`ConnectionDirection::Regular` oder `ConnectionDirection::Reverse`).
-- Bei aktivem Links-/Rechts-Versatz werden die beiden Seiten automatisch gegensaetzlich erzeugt.
-- Standard: Linke Seite folgt der gewaehlten Einbahn-Richtung, rechte Seite verlaeuft entgegengesetzt.
-- UI-Toggle: `RouteOffsetPanelAction::ToggleReversedSide` invertiert die aktive Einbahn-Richtung.
-- Bei nur einer aktiven Versatzseite wird deren Richtung umgekehrt.
+- Die gewaehlte Einbahn-Richtung bleibt fuer alle erzeugten Verbindungen erhalten.
+- Bei aktivem Links-/Rechts-Versatz entstehen gegensaetzliche Fahrspuren ueber die
+  Punktreihenfolge der jeweiligen Spur (nicht ueber unterschiedliche
+  `ConnectionDirection`-Flags).
+- Standard: Linke Seite folgt der gewaehlten Einbahn-Richtung, rechte Seite
+  startet am gegenueberliegenden Kettenende.
+- UI-Toggle: `RouteOffsetPanelAction::ToggleReversedSide` schaltet den Links/Rechts-Verkehr um (tausch der Spurzuordnung).
+- Bei nur einer aktiven Versatzseite wird nicht umgeschaltet.
 - Bei `ConnectionDirection::Dual` behalten beide Seiten die globale Richtung `Dual`.
 
 **Felder:**
