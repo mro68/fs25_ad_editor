@@ -39,6 +39,9 @@ pub struct OffsetConfig {
     pub keep_original: bool,
     /// Maximaler Abstand zwischen Nodes auf der Offset-Kette
     pub base_spacing: f32,
+    /// Spezialfall bei Einbahn-vorwaerts mit links+rechts aktiv:
+    /// `false` = rechte Seite wird umgedreht, `true` = linke Seite wird umgedreht.
+    pub reverse_left_in_split_one_way: bool,
 }
 
 impl Default for OffsetConfig {
@@ -50,6 +53,7 @@ impl Default for OffsetConfig {
             right_distance: 8.0,
             keep_original: true,
             base_spacing: 6.0,
+            reverse_left_in_split_one_way: false,
         }
     }
 }

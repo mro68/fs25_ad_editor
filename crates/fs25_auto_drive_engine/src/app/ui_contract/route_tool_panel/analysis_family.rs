@@ -39,6 +39,8 @@ pub enum RouteOffsetPanelAction {
     SetBaseSpacing(f32),
     /// Original-Kette beibehalten setzen.
     SetKeepOriginal(bool),
+    /// Im Spezialfall (Einbahn vorwaerts + links/rechts aktiv) die umgedrehte Seite wechseln.
+    ToggleReversedSide,
 }
 
 /// Panelzustand des Feldgrenz-Tools.

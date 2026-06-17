@@ -309,6 +309,7 @@ pub(super) fn render_field_path_panel(
 pub(super) fn render_route_offset_panel(
     ui: &mut egui::Ui,
     state: &RouteOffsetPanelState,
+    default_direction: ConnectionDirection,
     panel_ctx: &mut RouteToolPanelRenderContext<'_>,
 ) {
     if !state.has_chain {
@@ -392,6 +393,19 @@ pub(super) fn render_route_offset_panel(
                 keep_original,
             )),
         );
+
+        let is_split_one_way_forward = default_direction == ConnectionDirection::Regular
+            && state.left_enabled
+            && state.right_enabled;
+        if is_split_one_way_forward {
+            ui.separator();
+            if ui.button("Fahrtrichtung umkehren").clicked() {
+                push_action(
+                    panel_ctx.events,
+                    RouteToolPanelAction::RouteOffset(RouteOffsetPanelAction::ToggleReversedSide),
+                );
+            }
+        }
     }
 }
 

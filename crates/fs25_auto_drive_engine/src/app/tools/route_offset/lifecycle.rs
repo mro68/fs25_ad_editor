@@ -74,6 +74,32 @@ impl RouteOffsetTool {
             right_points,
         });
     }
+
+    fn is_split_one_way_forward_case(&self) -> bool {
+        self.direction == ConnectionDirection::Regular
+            && self.config.left_enabled
+            && self.config.right_enabled
+    }
+
+    fn opposite_direction(direction: ConnectionDirection) -> ConnectionDirection {
+        match direction {
+            ConnectionDirection::Regular => ConnectionDirection::Reverse,
+            ConnectionDirection::Reverse => ConnectionDirection::Regular,
+            ConnectionDirection::Dual => ConnectionDirection::Dual,
+        }
+    }
+
+    fn side_directions(&self) -> (ConnectionDirection, ConnectionDirection) {
+        if !self.is_split_one_way_forward_case() {
+            return (self.direction, self.direction);
+        }
+
+        if self.config.reverse_left_in_split_one_way {
+            (Self::opposite_direction(self.direction), self.direction)
+        } else {
+            (self.direction, Self::opposite_direction(self.direction))
+        }
+    }
 }
 
 impl RouteToolPanelBridge for RouteOffsetTool {
@@ -125,13 +151,14 @@ impl RouteToolCore for RouteOffsetTool {
         let cached = cache
             .as_ref()
             .expect("invariant: preview cache must exist after ensure_preview_cache");
+        let (left_direction, right_direction) = self.side_directions();
 
         if let Some(pts) = cached.left_points.as_ref() {
             let start = nodes.len();
             nodes.extend_from_slice(pts);
             for i in 0..pts.len().saturating_sub(1) {
                 connections.push((start + i, start + i + 1));
-                styles.push((self.direction, self.priority));
+                styles.push((left_direction, self.priority));
             }
         }
 
@@ -140,7 +167,7 @@ impl RouteToolCore for RouteOffsetTool {
             nodes.extend_from_slice(pts);
             for i in 0..pts.len().saturating_sub(1) {
                 connections.push((start + i, start + i + 1));
-                styles.push((self.direction, self.priority));
+                styles.push((right_direction, self.priority));
             }
         }
 
@@ -174,8 +201,9 @@ impl RouteToolCore for RouteOffsetTool {
             ConnectionDirection,
             ConnectionPriority,
         )> = Vec::new();
+        let (left_direction, right_direction) = self.side_directions();
 
-        let mut add_side = |offset: f32| {
+        let mut add_side = |offset: f32, direction: ConnectionDirection| {
             let Some(pts) =
                 compute_offset_positions(&self.chain_positions, offset, self.config.base_spacing)
             else {
@@ -186,31 +214,19 @@ impl RouteToolCore for RouteOffsetTool {
                 new_nodes.push((p, NodeFlag::Regular));
             }
             for i in 0..pts.len().saturating_sub(1) {
-                internal_connections.push((base + i, base + i + 1, self.direction, self.priority));
+                internal_connections.push((base + i, base + i + 1, direction, self.priority));
             }
             let first = base;
             let last = base + pts.len() - 1;
-            external_connections.push((
-                first,
-                self.chain_start_id,
-                true,
-                self.direction,
-                self.priority,
-            ));
-            external_connections.push((
-                last,
-                self.chain_end_id,
-                false,
-                self.direction,
-                self.priority,
-            ));
+            external_connections.push((first, self.chain_start_id, true, direction, self.priority));
+            external_connections.push((last, self.chain_end_id, false, direction, self.priority));
         };
 
         if self.config.left_enabled {
-            add_side(self.config.left_distance);
+            add_side(self.config.left_distance, left_direction);
         }
         if self.config.right_enabled {
-            add_side(-self.config.right_distance);
+            add_side(-self.config.right_distance, right_direction);
         }
 
         if new_nodes.is_empty() {
