@@ -369,14 +369,16 @@ Parallelversatz einer selektierten Kette ohne S-Kurven-Anbindung (`RouteToolId::
 - `right_distance: f32` — Versatz-Distanz rechts in Metern (Standard: 8 m)
 - `keep_original: bool` — Original-Kette beibehalten (false = Original-Nodes entfernen)
 - `base_spacing: f32` — Maximaler Abstand zwischen Nodes auf der Offset-Kette (Standard: 6 m)
-- `reverse_left_in_split_one_way: bool` — Spezialfall bei `ConnectionDirection::Regular` und beiden Seiten aktiv: `false` dreht rechts um (Standard), `true` dreht links um
+- `invert_one_way_direction: bool` — invertiert die aktive Einbahn-Richtung (bei zwei Seiten werden die Richtungen getauscht, bei einer Seite wird diese umgekehrt)
 
-**Spezialfall Richtungslogik (CP-01):**
+**Einbahn-Richtungslogik:**
 
-- Gilt exakt fuer `ConnectionDirection::Regular` und gleichzeitig aktivem Links-/Rechts-Versatz.
-- Standard: Eine Seite bleibt `Regular`, die andere wird automatisch `Reverse` erzeugt (standardmaessig rechts).
-- UI-Toggle: `RouteOffsetPanelAction::ToggleReversedSide` wechselt, welche Seite umgedreht wird.
-- Ausserhalb dieses Spezialfalls behalten beide Seiten die global gewaehlte `direction`.
+- Gilt fuer Einbahn (`ConnectionDirection::Regular` oder `ConnectionDirection::Reverse`).
+- Bei aktivem Links-/Rechts-Versatz werden die beiden Seiten automatisch gegensaetzlich erzeugt.
+- Standard: Linke Seite folgt der gewaehlten Einbahn-Richtung, rechte Seite verlaeuft entgegengesetzt.
+- UI-Toggle: `RouteOffsetPanelAction::ToggleReversedSide` invertiert die aktive Einbahn-Richtung.
+- Bei nur einer aktiven Versatzseite wird deren Richtung umgekehrt.
+- Bei `ConnectionDirection::Dual` behalten beide Seiten die globale Richtung `Dual`.
 
 **Felder:**
 

@@ -144,6 +144,7 @@
   - [x] `handlers::route_tool::init_chain_if_needed()` — lädt Kette + setzt innere IDs via `set_chain_inner_ids()`
   - [x] Toolbar-Eintrag `⇶ Strecke versetzen` (kanonischer Katalog-Slot 9)
   - [x] Config-Panel: Links/Rechts-Versatz-Checkboxen, Distanz-DragValues mit Mausrad, Original-beibehalten-Checkbox, Knotenabstand
+  - [x] Einbahn-Verhalten fuer beidseitigen Versatz: linke/rechte Spur werden automatisch gegensaetzlich erzeugt; Button `Fahrtrichtung umkehren` invertiert aktive Einbahn-Spuren (nur bei Einbahn aktiv)
 
 - [x] **Felderkennung (FieldBoundaryTool)** (2026-03-05, Branch `feat/field-boundary-detection`)
   - [x] `crates/fs25_map_overview`: Moore-Neighbor-Boundary-Tracing → `FarmlandPolygon` (Pixel-Koordinaten)
