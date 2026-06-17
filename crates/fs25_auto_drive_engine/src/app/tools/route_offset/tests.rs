@@ -109,7 +109,9 @@ fn test_offset_beide_seiten() {
     );
 }
 
-/// Einbahn + links/rechts aktiv → genau eine Seite ist entgegengesetzt.
+/// Einbahn vorwaerts + links/rechts aktiv:
+/// beide Spuren bleiben `Regular`, aber die Startanker liegen auf beiden
+/// Enden der Quellkette (gegensaetzliche Fahrspuren).
 #[test]
 fn test_offset_beide_seiten_einbahn_vorwaerts_hat_eine_umgedrehte_seite_standard() {
     let mut tool = RouteOffsetTool::new();
@@ -137,15 +139,32 @@ fn test_offset_beide_seiten_einbahn_vorwaerts_hat_eine_umgedrehte_seite_standard
 
     assert!(
         regular_count > 0,
-        "Eine Versatzseite muss in Vorwaertsrichtung bleiben"
+        "Bei Einbahn vorwaerts muessen Verbindungen als Regular entstehen"
     );
     assert!(
-        reverse_count > 0,
-        "Eine Versatzseite muss in Gegenrichtung erzeugt werden"
+        reverse_count == 0,
+        "Bei Einbahn vorwaerts darf keine Verbindung als Reverse markiert sein"
+    );
+
+    let start_anchor_ids: Vec<u64> = result
+        .external_connections
+        .iter()
+        .filter_map(|(_, existing_id, existing_to_new, _, _)| {
+            if *existing_to_new {
+                Some(*existing_id)
+            } else {
+                None
+            }
+        })
+        .collect();
+    assert!(
+        start_anchor_ids.contains(&1) && start_anchor_ids.contains(&5),
+        "Die beiden Spuren muessen an entgegengesetzten Enden starten"
     );
 }
 
-/// Toggle bei Einbahn wechselt, welche Seite als reverse erzeugt wird.
+/// Toggle bei Einbahn+links/rechts wechselt die Links/Rechts-Zuordnung,
+/// ohne die gewaehlte Einbahn-Richtung zu aendern.
 #[test]
 fn test_offset_toggle_reversed_side_wechselt_reverse_seite() {
     let mut tool = RouteOffsetTool::new();
@@ -176,27 +195,29 @@ fn test_offset_toggle_reversed_side_wechselt_reverse_seite() {
     let effect = tool.apply_panel_action(RouteOffsetPanelAction::ToggleReversedSide);
     assert!(
         effect.changed,
-        "Toggle muss im Spezialfall eine Aenderung liefern"
+        "Toggle muss bei Einbahn+links/rechts eine Aenderung liefern"
     );
 
     let second = tool
         .execute(&road_map)
         .expect("Ein Ergebnis nach dem Toggle wird erwartet");
-    let second_direction = second
+    let second_anchor = second
         .external_connections
         .iter()
-        .find_map(|(new_idx, existing_id, _existing_to_new, direction, _)| {
-            if *new_idx == 0 && *existing_id == 1 {
-                Some(*direction)
+        .find_map(|(new_idx, existing_id, existing_to_new, direction, _)| {
+            if *new_idx == 0 && *existing_to_new {
+                Some((*existing_id, *direction))
             } else {
                 None
             }
         })
         .expect("Die linke Start-Ankerverbindung muss nach Toggle vorhanden sein");
-    assert_eq!(second_direction, ConnectionDirection::Reverse);
+    assert_eq!(second_anchor.0, 5);
+    assert_eq!(second_anchor.1, ConnectionDirection::Regular);
 }
 
-/// Einbahn rueckwaerts + links/rechts aktiv → ebenfalls gegensaetzliche Richtungen.
+/// Einbahn rueckwaerts + links/rechts aktiv:
+/// beide Spuren bleiben `Reverse`, Startanker liegen auf beiden Enden.
 #[test]
 fn test_offset_beide_seiten_einbahn_rueckwaerts_hat_gegensaetzliche_richtungen() {
     let mut tool = RouteOffsetTool::new();
@@ -223,18 +244,34 @@ fn test_offset_beide_seiten_einbahn_rueckwaerts_hat_gegensaetzliche_richtungen()
         .count();
 
     assert!(
-        regular_count > 0,
-        "Eine Versatzseite muss entgegengesetzt erzeugt werden"
+        regular_count == 0,
+        "Bei Einbahn rueckwaerts darf keine Verbindung als Regular markiert sein"
     );
     assert!(
         reverse_count > 0,
-        "Eine Versatzseite muss in der Basisrichtung bleiben"
+        "Bei Einbahn rueckwaerts muessen Verbindungen als Reverse entstehen"
+    );
+
+    let start_anchor_ids: Vec<u64> = result
+        .external_connections
+        .iter()
+        .filter_map(|(_, existing_id, existing_to_new, _, _)| {
+            if *existing_to_new {
+                Some(*existing_id)
+            } else {
+                None
+            }
+        })
+        .collect();
+    assert!(
+        start_anchor_ids.contains(&1) && start_anchor_ids.contains(&5),
+        "Die beiden Spuren muessen an entgegengesetzten Enden starten"
     );
 }
 
-/// Bei nur einer aktiven Einbahn-Seite invertiert der Toggle die Seitenrichtung.
+/// Bei nur einer aktiven Versatzseite ist der Links/Rechts-Toggle wirkungslos.
 #[test]
-fn test_offset_toggle_reversed_side_invertiert_aktive_einbahn_einzelseite() {
+fn test_offset_toggle_reversed_side_bei_einzelseite_ohne_aenderung() {
     let mut tool = RouteOffsetTool::new();
     let chain = make_chain(5, 10.0);
     tool.load_chain(chain, 1, 5);
@@ -242,32 +279,11 @@ fn test_offset_toggle_reversed_side_invertiert_aktive_einbahn_einzelseite() {
     tool.config.left_enabled = true;
     tool.config.right_enabled = false;
 
-    let road_map = RoadMap::new(3);
-    let first = tool
-        .execute(&road_map)
-        .expect("Ein Ergebnis vor dem Toggle wird erwartet");
-    let first_direction = first
-        .internal_connections
-        .first()
-        .map(|(_, _, direction, _)| *direction)
-        .expect("Mindestens eine interne Verbindung wird erwartet");
-    assert_eq!(first_direction, ConnectionDirection::Regular);
-
     let effect = tool.apply_panel_action(RouteOffsetPanelAction::ToggleReversedSide);
     assert!(
-        effect.changed,
-        "Toggle muss bei Einbahn eine Aenderung liefern"
+        !effect.changed,
+        "Toggle darf ohne beidseitigen Versatz keine Zustandsaenderung ausloesen"
     );
-
-    let second = tool
-        .execute(&road_map)
-        .expect("Ein Ergebnis nach dem Toggle wird erwartet");
-    let second_direction = second
-        .internal_connections
-        .first()
-        .map(|(_, _, direction, _)| *direction)
-        .expect("Mindestens eine interne Verbindung wird erwartet");
-    assert_eq!(second_direction, ConnectionDirection::Reverse);
 }
 
 /// Bei Zweibahn ist der Einbahn-Toggle wirkungslos.
