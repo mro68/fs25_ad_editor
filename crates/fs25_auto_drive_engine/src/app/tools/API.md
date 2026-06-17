@@ -369,6 +369,14 @@ Parallelversatz einer selektierten Kette ohne S-Kurven-Anbindung (`RouteToolId::
 - `right_distance: f32` — Versatz-Distanz rechts in Metern (Standard: 8 m)
 - `keep_original: bool` — Original-Kette beibehalten (false = Original-Nodes entfernen)
 - `base_spacing: f32` — Maximaler Abstand zwischen Nodes auf der Offset-Kette (Standard: 6 m)
+- `reverse_left_in_split_one_way: bool` — Spezialfall bei `ConnectionDirection::Regular` und beiden Seiten aktiv: `false` dreht rechts um (Standard), `true` dreht links um
+
+**Spezialfall Richtungslogik (CP-01):**
+
+- Gilt exakt fuer `ConnectionDirection::Regular` und gleichzeitig aktivem Links-/Rechts-Versatz.
+- Standard: Eine Seite bleibt `Regular`, die andere wird automatisch `Reverse` erzeugt (standardmaessig rechts).
+- UI-Toggle: `RouteOffsetPanelAction::ToggleReversedSide` wechselt, welche Seite umgedreht wird.
+- Ausserhalb dieses Spezialfalls behalten beide Seiten die global gewaehlte `direction`.
 
 **Felder:**
 
