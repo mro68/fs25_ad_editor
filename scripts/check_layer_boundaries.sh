@@ -24,6 +24,12 @@ RENDER_WGPU_DIR="crates/fs25_auto_drive_render_wgpu/src"
 
 echo "=== Architektur-Check: Layer-Grenzen ==="
 
+# Rule 0: ripgrep muss verfuegbar sein, da einzelne Checks darauf basieren.
+if ! command -v rg >/dev/null 2>&1; then
+    echo "FEHLER: ripgrep (rg) wurde nicht gefunden. Bitte installieren, damit alle Guardrails ausgefuehrt werden koennen."
+    exit 1
+fi
+
 find_forbidden_use_imports() {
     local scope_dir="$1"
     local module_segment="$2"
