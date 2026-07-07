@@ -31,6 +31,7 @@ pub struct FarmlandData {
     pub ids: GrayImage,
     /// Dimensionen
     pub width: u32,
+    #[allow(dead_code)]
     pub height: u32,
 }
 
@@ -259,6 +260,7 @@ fn parse_poi(position: &str, filename: &str, map_size: u32) -> Option<Poi> {
 }
 
 /// Zeichnet POI-Marker auf ein RGB-Bild.
+#[allow(dead_code)]
 pub fn draw_pois(image: &mut RgbImage, pois: &[Poi]) {
     let marker_color = Rgb([220, 50, 50]);
     let outline_color = Rgb([255, 255, 255]);

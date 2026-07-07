@@ -20,6 +20,7 @@ pub struct GdmImage {
     /// Dimension (quadratisch: dimension × dimension)
     pub dimension: usize,
     /// Anzahl der Kanaele
+    #[allow(dead_code)]
     pub num_channels: usize,
     /// Pixeldaten als Grayscale-Bytes (1 Byte/Pixel bei ≤8 Kanaelen)
     /// oder RGB-Bytes (3 Bytes/Pixel bei >8 Kanaelen)
