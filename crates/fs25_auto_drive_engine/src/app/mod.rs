@@ -1,7 +1,11 @@
 //! Application-Layer: Controller, State, Events und Use-Cases.
 
 /// Minimales Command-Log fuer Debug-Zwecke.
-pub mod command_log;
+///
+/// Modul ist bewusst `pub(crate)`: Der oeffentliche Zugriff erfolgt ausschliesslich
+/// ueber den re-exportierten Typ `CommandLog` (siehe `pub use command_log::CommandLog`
+/// weiter unten), nicht ueber den Modulpfad selbst.
+pub(crate) mod command_log;
 /// Application Controller fuer zentrales Intent-Command-Dispatch.
 pub mod controller;
 /// AppIntent- und AppCommand-Events des Application-Layers.

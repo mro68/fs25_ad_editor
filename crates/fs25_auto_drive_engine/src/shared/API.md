@@ -458,3 +458,14 @@ ui.label(t(lang, I18nKey::OptSectionGeneral)); // → "Allgemein" oder "General"
 - `shared::I18nKey` — Schlüssel-Enum
 
 **Importrichtung:** `UI → shared::i18n`, `App → shared::i18n` (erlaubt, da `shared` Cross-Layer)
+
+## Erlaubte Nutzungsmuster
+
+- `app` produziert `RenderScene`/`RenderAssetsSnapshot`, `render` konsumiert nur diese read-only Snapshots — nie `RoadMap`/`Camera2D` direkt.
+- Neutrale, layer-uebergreifende Typen (Optionen, i18n, Geometrie-Helfer) duerfen sowohl von `app` als auch von `ui`/`render` importiert werden.
+
+## Anti-Patterns
+
+- Kein Import von `crate::core` innerhalb von `shared` (CI-gepueft ueber `check_layer_boundaries.sh` Regel 4) — `shared` bleibt Cross-Layer-neutral und darf nicht auf Core-Domain-Typen zurueckgreifen.
+- Keine UI-Eingabe-Helfer oder Runtime-/Dateisystem-Policy in `shared` ansiedeln; diese gehoeren in `app::use_cases` bzw. `ui`.
+- Kein direkter Renderer-Zugriff auf Core-Typen ueber `shared` als Umweg — `RenderScene`/`RenderAssetsSnapshot` bleiben die einzigen Uebergabevertraege.

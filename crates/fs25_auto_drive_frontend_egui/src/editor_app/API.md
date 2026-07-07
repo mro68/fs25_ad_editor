@@ -6,7 +6,7 @@ Das `editor_app`-Modul ist die duenne Integrationsschale zwischen dem Binary-Sta
 
 Bridge-owned Read-Seams (`HostUiSnapshot`, `HostChromeSnapshot`, `HostRouteToolViewportSnapshot`, `ViewportOverlaySnapshot`, gekoppelter `HostRenderFrameSnapshot`) und stabile Write-Seams (`HostSessionAction`, inklusive `RouteTool`-Familie und `SubmitViewportInput`) laufen im `editor_app` ausschliesslich ueber diese Session. Fuer verbleibende nicht serialisierte UI-Local-Zustaende nutzt `editor_app` schmale Session-Seams (`panel_properties_state_mut`, `dialog_ui_state_mut`, `viewport_input_context_mut`, `toggle_floating_menu`) statt direkter `app_state_mut()`-Zugriffe; damit existiert im produktiven egui-Pfad kein direkter mutabler `AppState`-Bypass mehr. Der read-only Escape-Hatch `app_state()` bleibt fuer Exit-/Repaint-Checks bestehen. Fuer bereits kanonisierte Route-Tool-/Chrome-Intents ist der Intent-Fallback im `editor_app` explizit gesperrt.
 
-Die Event-Sammlung ist seit der Entflechtung bewusst modularisiert: `event_collection.rs` orchestriert nur noch den Frame-Aufbau, waehrend `panel_collector.rs`, `dialog_collector.rs` und `viewport_collector.rs` die jeweiligen Teilflaechen ueber klar getrennte Session-Seams bedienen.
+Die Event-Sammlung ist seit der Entflechtung bewusst modularisiert: `event_collection.rs` orchestriert nur noch den Frame-Aufbau, waehrend `panel_collector.rs`, `dialog_collector.rs` und `viewport_collector.rs` die jeweiligen Teilflaechen ueber klar getrennte Session-Seams bedienen. Auf der Processor-Seite (nach der Collector-Phase) uebernimmt `processor.rs` symmetrisch dazu `process_events(...)`, `dispatch_intent_via_session(...)` und das Intent→`CollectedEvent`-Mapping, sodass `mod.rs` reiner Orchestrator (Collector-Aufruf → Processor-Aufruf → Background-Sync → Repaint) bleibt.
 
 Das Modul bleibt als `pub mod` fuer stabile Frontend-Importpfade sichtbar, die konkreten Typen wie `EditorApp` sind jedoch crate-intern. Die kanonische Dokumentation liegt hier, damit `src/app/API.md` ausschliesslich den Application-Layer beschreibt und nicht gleichzeitig die eframe-Integrationsschale als zweite Wahrheitsquelle pflegen muss.
 
@@ -14,8 +14,9 @@ Das Modul bleibt als `pub mod` fuer stabile Frontend-Importpfade sichtbar, die k
 
 | Submodul | Verantwortung |
 |---|---|
-| `mod.rs` | `EditorApp`, Konstruktion, `eframe::App::ui()` und Session-basierte Event-Weitergabe |
+| `mod.rs` | `EditorApp`, Konstruktion, `eframe::App::ui()`-Orchestrierung (Collector-Aufruf → Processor-Aufruf → Background-Sync → Repaint) |
 | `event_collection.rs` | Orchestriert den Frame: baut `HostUiSnapshot` und `HostChromeSnapshot`, verteilt an Panel-/Dialog-/Viewport-Collector und fuehrt den zentralen Viewport samt Overlays zusammen |
+| `processor.rs` | Processor-Gegenstueck zu den Collector-Modulen: `process_events(...)`, `dispatch_intent_via_session(...)` (Intent-Routing-Guard) und `map_intent_to_collected_event(...)` |
 | `panel_collector.rs` | Sammelt Menue-, Status-, Defaults-, Marker-, Eigenschaften- und Edit-Panel-Events ueber `HostUiSnapshot`, `HostChromeSnapshot` und `panel_properties_state_mut()` |
 | `dialog_collector.rs` | Drainet Datei-/Pfad-Dialoge ueber `HostBridgeSession::take_dialog_requests()`, mappt Ergebnisse auf Intents zurueck und bedient modale egui-Dialoge ueber `dialog_ui_state_mut()` |
 | `viewport_collector.rs` | Sammelt rohe Viewport-Gesten, konsumiert `HostRouteToolViewportSnapshot` und kombiniert dies mit `viewport_input_context_mut()` fuer den host-lokalen Input-Zustand |
@@ -68,7 +69,7 @@ Die `ui()`-Implementierung bildet den Frame-Zyklus der Integrationsschale:
 |---|---|
 | `pub(crate) fn new(render_state: &egui_wgpu::RenderState) -> Self` | Laedt `EditorOptions`, initialisiert `HostBridgeSession`, schreibt die Optionen ueber `HostSessionAction::ApplyOptions` in den Session-State und baut `render::Renderer` plus `ui::InputState` auf |
 | `fn ui(&mut self, ui: &mut egui::Ui, frame: &mut eframe::Frame)` | Zentraler eframe-Frame-Zyklus der Integrationsschale |
-| `fn process_events(&mut self, ctx: &egui::Context, events: Vec<CollectedEvent>)` | Behandelt gemischte Events: `HostSessionAction` direkt ueber die Session, `AppIntent` ueber `dispatch_intent_via_session(...)` |
+| `fn process_events(&mut self, ctx: &egui::Context, events: Vec<CollectedEvent>)` (in `processor.rs`) | Behandelt gemischte Events: `HostSessionAction` direkt ueber die Session, `AppIntent` ueber `dispatch_intent_via_session(...)` |
 | `fn collect_ui_events(&mut self, ctx: &egui::Context) -> Vec<CollectedEvent>` | Baut Panels ueber `build_host_ui_snapshot()` + `build_host_chrome_snapshot()`, drainet Dialog-Anforderungen ueber `session.take_dialog_requests()`, liest `HostRouteToolViewportSnapshot` und sammelt Viewport-Gesten als `CollectedEvent::HostAction(SubmitViewportInput { ... })` oder `CollectedEvent::Intent(...)` |
 | `fn collect_panel_events(&mut self, ctx: &egui::Context, host_ui_snapshot: &HostUiSnapshot, host_chrome_snapshot: &HostChromeSnapshot, marker_list: &HostMarkerListSnapshot, top_ui: &mut egui::Ui) -> Vec<CollectedEvent>` | Rendert Menues, Status, Defaults-Panel und Edit-Panel; nutzt fuer Properties-/Edit-Local-State ausschliesslich den schmalen Session-Seam `panel_properties_state_mut()` und konsumiert den pro Frame einmal aufgebauten Marker-Snapshot fuer die rechte Sidebar |
 | `fn collect_dialog_events(&mut self, ctx: &egui::Context, host_ui_snapshot: &HostUiSnapshot, marker_list: &HostMarkerListSnapshot) -> Vec<AppIntent>` | Fuehrt semantische Host-Dialoge ueber `session.take_dialog_requests()` und `HostSessionAction::SubmitDialogResult`; modale egui-Fenster mutieren host-lokale Dialog-States ueber `dialog_ui_state_mut()` und teilen sich den im Frame-Loop vorgeladenen Marker-Snapshot mit dem Panel-Collector |
@@ -134,3 +135,13 @@ flowchart LR
 - `editor_app` ist keine zweite Application-Schicht, sondern reine Anbindung
 - Die fachliche API des Controllers, der States und der Use-Cases bleibt in `../app/API.md` dokumentiert
 - `runtime.rs` startet die App; `editor_app` kapselt den laufenden Frame-Betrieb auf Basis einer session-owned `HostBridgeSession`
+
+## Erlaubte Nutzungsmuster
+
+- Collector-Module (`panel_collector.rs`/`dialog_collector.rs`/`viewport_collector.rs`) sammeln Events; `processor.rs` verarbeitet sie; `mod.rs` orchestriert nur den Frame-Zyklus.
+- Fachliche Mutationen ausschliesslich ueber `session.apply_action(...)`, `apply_intent(...)` nur als begrenzter Fallback.
+
+## Anti-Patterns
+
+- Keine eigene Fachlogik oder Duplicate-Use-Cases in `editor_app` — Domain-Mutationen bleiben in `HostBridgeSession`.
+- Kein `&mut AppState`/`app_state_mut()` in diesem Modul (CI-gepueft ueber `check_layer_boundaries.sh` Regel 14).

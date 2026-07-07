@@ -57,5 +57,8 @@ fs25_auto_drive_frontend_egui = { path = "crates/fs25_auto_drive_frontend_egui" 
 [dev-dependencies]
 approx = "0.5"
 criterion = { version = "0.8.2", features = ["html_reports"] }
+fs25_auto_drive_host_bridge = { path = "crates/fs25_auto_drive_host_bridge" }
 glam = { version = "0.32.1", features = ["serde"] }
 image = { version = "0.25", features = ["dds", "png", "jpeg"] }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"

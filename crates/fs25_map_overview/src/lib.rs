@@ -19,16 +19,22 @@
 //! GRLE/GDM-Decoder basieren auf grleconvert von Kim Brandwijk (MIT-Lizenz).
 //! <https://github.com/Paint-a-Farm/grleconvert>
 
-pub mod composite;
-pub mod discovery;
-pub mod farmland;
-pub mod gdm;
-pub mod grle;
-pub mod hillshade;
-pub mod layer_bundle;
-pub mod palette;
-pub mod terrain;
-pub mod text;
+// Alle Submodule sind bewusst crate-intern (kein `pub mod`): Kein anderes Crate im
+// Workspace importiert sie ueber ihren Modulpfad (verifiziert per Workspace-weitem Grep
+// nach `fs25_map_overview::<modul>::`). Die stabile oeffentliche Oberflaeche laeuft
+// ausschliesslich ueber die `pub use`-Reexporte unten sowie die freien Funktionen in
+// diesem lib.rs — analog zum Muster in `fs25_auto_drive_render_wgpu` (private Module,
+// selektive Reexporte).
+mod composite;
+mod discovery;
+mod farmland;
+mod gdm;
+mod grle;
+mod hillshade;
+mod layer_bundle;
+mod palette;
+mod terrain;
+mod text;
 
 use anyhow::{Context, Result};
 use image::{DynamicImage, RgbImage};

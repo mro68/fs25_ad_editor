@@ -10,8 +10,11 @@ dependencies = [
  "criterion",
  "fs25_auto_drive_engine",
  "fs25_auto_drive_frontend_egui",
+ "fs25_auto_drive_host_bridge",
  "glam",
  "image",
+ "serde",
+ "serde_json",
 ]
 
 [[package]]

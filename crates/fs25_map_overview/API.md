@@ -424,3 +424,13 @@ Sobel-artiger Gradient → Lambert-Beleuchtungsmodell:
 ```
 hs = sin(alt) * cos(slope) + cos(alt) * sin(slope) * cos(azimuth - aspect)
 ```
+
+## Erlaubte Nutzungsmuster
+
+- Konsumenten nutzen ausschliesslich die in `lib.rs` re-exportierten Einstiegspunkte (`generate_overview_from_zip`, `generate_overview_layer_bundle_from_zip`, `OverviewOptions`, `FarmlandPolygon`, ...), nicht die internen Submodul-Pfade.
+- Neue Feldquellen werden ueber `FieldDetectionSource`-Varianten erweitert, nicht ueber neue String-Werte im JSON-Vertrag.
+
+## Anti-Patterns
+
+- Kein direkter Zugriff auf `composite`/`discovery`/`farmland`/`gdm`/`grle`/`hillshade`/`layer_bundle`/`palette`/`terrain`/`text` von aussen — diese Module sind bewusst crate-intern (kein `pub mod`).
+- `fruits_gdm` nicht als gueltigen JSON-Wert fuer `FieldDetectionSource` wiederverwenden (seit Release 2.1.0 entfernt).

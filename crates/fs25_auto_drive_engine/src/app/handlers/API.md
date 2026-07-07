@@ -19,6 +19,15 @@ Die Handler-Module liegen unter [`src/app/handlers`](.) und werden intern vom Co
 app::handlers::{dialog, editing, file_io, group, helpers, history, route_tool, selection, view}
 ```
 
+**Bekannte Ausnahme (dokumentiert, kein aktiver Handlungsbedarf):** `app::handlers` bleibt bewusst `pub`
+(statt `pub(crate)`), weil es direkt — nicht ueber `AppIntent`/`AppController` — aus Cross-Crate-Tests
+aufgerufen wird: [`crates/fs25_auto_drive_host_bridge/src/session/tests.rs`](../../../../fs25_auto_drive_host_bridge/src/session/tests.rs)
+(`handlers::route_tool::select`/`select_with_anchors`) und
+[`tests/controller_flow/editing.rs`](../../../../../../tests/controller_flow/editing.rs)
+(`handlers::route_tool::select`/`click`/`execute`/`cancel`, 20 Aufrufe). Eine Verschaerfung auf `pub(crate)`
+wuerde diese Tests brechen und ist erst nach einer Migration dieser Testfaelle auf AppIntent-basiertes
+Dispatch sinnvoll — das ist ein separates, nicht in diesem Zug umgesetztes Follow-up.
+
 ---
 
 ## Handler-Module
@@ -668,3 +677,13 @@ Handler geben typischerweise `anyhow::Result<()>` zurück für I/O-Operationen:
 - `view::load_background_map()` — Bild-Fehler
 
 Der Controller in [`controller.rs`](../controller.rs) fängt Fehler ab und loggt sie.
+
+## Erlaubte Nutzungsmuster
+
+- Handler werden ausschliesslich vom `AppController` ueber `controller/by_feature/*` angesprochen; sie rufen `use_cases/`-Funktionen fuer die eigentliche Geschaeftslogik auf.
+- Handler koordinieren Undo-Snapshots und State-Updates, bleiben selbst aber duenn.
+
+## Anti-Patterns
+
+- Kein direkter Aufruf von `app::handlers::*` aus Frontend- oder Host-Bridge-Code — die dokumentierte Ausnahme (Cross-Crate-Tests) ist bewusst begrenzt und kein Vorbild fuer neuen produktiven Code (siehe Hinweis oben).
+- Keine neue Fachlogik direkt im Handler statt in `use_cases/` implementieren.

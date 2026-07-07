@@ -187,3 +187,13 @@ std::fs::write("export.xml", xml)?;
 ```
 
 **Hinweis:** Der erste Vertex wird am Ende wiederholt (Ring-Marker gemaess Curseplay-Format).
+
+## Erlaubte Nutzungsmuster
+
+- Import/Export ausschliesslich ueber `parse_autodrive_config(...)`/`write_autodrive_config(...)` bzw. die Curseplay-Pendants.
+- Delimiter-Konventionen strikt einhalten: `,` fuer Listen, `;` fuer verschachtelte (`out`/`incoming`).
+
+## Anti-Patterns
+
+- Keine Imports aus `crate::app`, `crate::ui`, `crate::render` oder Frontend-/Host-Bridge-Crates innerhalb von `xml` (CI-gepueft ueber `check_layer_boundaries.sh` Regel 3).
+- Keine Rohflags 2/4 unveraendert uebernehmen — diese werden beim Laden auf 0 bereinigt (FS22/FS25-Kompatibilitaet).

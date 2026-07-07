@@ -252,3 +252,13 @@ fn restore_edit_payload(&mut self, payload: &RouteToolEditPayload);
 ```
 
 Implementierungen: `StraightLineTool`, `CurveTool` (Quad + Cubic), `SplineTool`, `BypassTool`, `SmoothCurveTool`, `ParkingTool`, `RouteOffsetTool`, `FieldBoundaryTool`.
+
+## Erlaubte Nutzungsmuster
+
+- Use-Cases mutieren `AppState` direkt (Business-Logik-Layer); Handler rufen Use-Cases auf und koordinieren Undo-Snapshots.
+- Tool-interne Details werden nur ueber die `ToolResult`/`apply_tool_result`-Facade konsumiert, nicht ueber tools-interne Submodule.
+
+## Anti-Patterns
+
+- Kein Intent-/Command-Durchgriff aus Use-Cases heraus — Use-Cases sind das Ziel des Dispatches, nicht dessen Quelle.
+- Keine direkten Imports aus `app::tools::<tool>::internal_submodule` (CI-gepueft ueber `check_layer_boundaries.sh` Regel 5).
