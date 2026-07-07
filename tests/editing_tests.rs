@@ -427,9 +427,13 @@ fn test_add_node_auf_leerer_flaeche_erstellt_neuen_node() {
 // ─── ResamplePath: Externe Verbindungen erhalten ─────────────────────────────
 
 #[test]
-fn test_resample_path_erhalt_externe_verbindungen() {
+fn test_resample_path_entfernt_externe_verbindungen_ohne_rueckverdrahtung() {
     // Kette: X(10) → A(1) → B(2) → C(3) → D(20)
-    // Resample auf A,B,C → externe Verbindungen X→A und C→D muessen erhalten bleiben
+    // Resample auf A,B,C: Dokumentierter Vertrag (siehe app/use_cases/API.md
+    // "resample_selected_path"): beim Uebernehmen werden nur die neu erzeugten
+    // Kettenverbindungen erstellt, KEINE automatische Rueckverdrahtung an zuvor
+    // externe Endpunkt-Nachbarn. X→A und C→D werden also bewusst nicht auf die
+    // neuen Nodes umgehaengt.
     let mut controller = AppController::new();
     let mut state = AppState::new();
 
@@ -508,25 +512,27 @@ fn test_resample_path_erhalt_externe_verbindungen() {
     assert!(!rm.contains_node(2), "Alter Node B(2) muss geloescht sein");
     assert!(!rm.contains_node(3), "Alter Node C(3) muss geloescht sein");
 
-    // X(10) muss eine ausgehende Verbindung zu einem neuen Node haben
+    // X(10) darf keine ausgehende Verbindung zu einem neuen Node haben
+    // (keine automatische Rueckverdrahtung, dokumentierter Vertrag)
     let x_outgoing: Vec<u64> = rm
         .connections_iter()
         .filter(|c| c.start_id == 10)
         .map(|c| c.end_id)
         .collect();
     assert!(
-        !x_outgoing.is_empty(),
-        "X(10) muss weiterhin eine ausgehende Verbindung haben (war: X→A)"
+        x_outgoing.is_empty(),
+        "X(10) darf nach Resample keine automatisch rueckverdrahtete ausgehende Verbindung haben"
     );
 
-    // D(20) muss eine eingehende Verbindung von einem neuen Node haben
+    // D(20) darf keine eingehende Verbindung von einem neuen Node haben
+    // (keine automatische Rueckverdrahtung, dokumentierter Vertrag)
     let d_incoming: Vec<u64> = rm
         .connections_iter()
         .filter(|c| c.end_id == 20)
         .map(|c| c.start_id)
         .collect();
     assert!(
-        !d_incoming.is_empty(),
-        "D(20) muss weiterhin eine eingehende Verbindung haben (war: C→D)"
+        d_incoming.is_empty(),
+        "D(20) darf nach Resample keine automatisch rueckverdrahtete eingehende Verbindung haben"
     );
 }

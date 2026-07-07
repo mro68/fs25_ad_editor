@@ -557,3 +557,13 @@ pub fn zhang_suen_thinning(mask: &mut [bool], width: usize, height: usize)
 5. **Flag-Neuberechnung:** `recalculate_node_flags()` setzt Flags basierend auf Verbindungsprioriaeten
 6. **Keine UI/Render-Abhaengigkeiten:** Reines Datenmodell + Geometrie
 7. **Privates `connections`-Feld:** Kapselung gewaehrleistet Invarianten; Iterator-Zugriff via `connections_iter()`
+
+## Erlaubte Nutzungsmuster
+
+- Zugriff auf Connections ausschliesslich ueber `connections_iter()`/die oeffentliche `RoadMap`-API, nie ueber das private Feld.
+- Node-IDs als `HashMap`-Keys behandeln (nicht als Array-Index) fuer robuste Persistenz.
+
+## Anti-Patterns
+
+- Keine Imports aus `crate::app`, `crate::ui`, `crate::render` oder Frontend-/Host-Bridge-Crates innerhalb von `core` (CI-gepueft ueber `check_layer_boundaries.sh` Regel 2).
+- `spatial_dirty`-Invalidierung nicht umgehen — immer ueber `ensure_spatial_index()` konsumieren statt den KD-Baum direkt neu zu bauen.

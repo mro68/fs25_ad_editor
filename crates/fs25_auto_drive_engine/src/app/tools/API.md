@@ -805,3 +805,15 @@ Damit bleibt die Richtung (`Regular`/`Dual`/`Reverse`) an Start- und Endrand kon
 ohne implizite Richtungs-Spiegelung.
 
 Die Rueckgabe wird intern ueber `ToolResultBuilder` erzeugt, sodass `markers` und `nodes_to_remove` auch in den einfachen Polyline-Pfaden kanonisch leer initialisiert werden.
+
+## Erlaubte Nutzungsmuster
+
+- Neue Route-Tools implementieren den festen Basisvertrag (`RouteToolCore`, `RouteToolPanelBridge`, `RouteToolHostSync`) und deklarieren zusaetzliche Faehigkeiten ausschliesslich ueber additive Capability-Traits (Drag, Tangent, Rotate, Recreate, Segment, Chain, Lasso).
+- UI und Handler fragen Capabilities ueber den `ToolManager` per Discovery ab (`active_drag()`, `active_tangent()`, ...) statt No-Op-Hooks auf dem Umbrella-Trait aufzurufen.
+- `RouteToolId` wird ausserhalb der Tool-Implementierungen aus `app::tool_contract` importiert, nicht neu dupliziert.
+
+## Anti-Patterns
+
+- `use_cases/` importiert keine tools-internen Submodule ausser der `ToolResult`/`apply_tool_result`-Facade (CI-gepueft ueber `check_layer_boundaries.sh` Regel 5).
+- Keine UI-taugliche Read-DTOs (`TangentMenuData`, `TangentOptionData`) in `app::tools` definieren — die gehoeren nach `app::ui_contract`.
+- Keine neuen slot-/index-basierten Tool-Referenzen; Tools werden ausschliesslich ueber die stabile `RouteToolId` adressiert.

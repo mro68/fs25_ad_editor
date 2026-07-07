@@ -200,6 +200,18 @@ graph BT
 
 > **Regel:** Pfeile zeigen "darf importieren". Gestrichelt = explizit verboten (CI-geprüft via `scripts/check_layer_boundaries.sh`).
 
+Ergaenzende Regressions-Guardrails (Regel 14/15 in `scripts/check_layer_boundaries.sh`):
+
+- **Regel 14 — Keine AppState-Escape-Hatches:** Weder `&mut AppState` noch eine Funktion namens `app_state_mut()`
+  duerfen in `crates/fs25_auto_drive_frontend_egui/src/ui/` oder `.../editor_app/` auftauchen. Mutation laeuft
+  ausschliesslich ueber `AppIntent`/`HostSessionAction` gegen die `HostBridgeSession`.
+- **Regel 15 — Keine Toolkit-/Render-Re-Exports aus der Host-Bridge-Fassade:** `crates/fs25_auto_drive_host_bridge/src/lib.rs`
+  darf keine `pub use`-Zeilen enthalten, die `egui::`, `eframe::`, `wgpu::`, `fs25_auto_drive_render_wgpu` oder
+  `fs25_auto_drive_frontend_egui` re-exportieren (schaerfer als Regel 10, gezielt auf die oeffentliche Facade-Datei).
+
+Zur Deprecation-Policy fuer Kompat-Re-Exports/Typaliase (z. B. `Engine*`-Aliase in `fs25_auto_drive_host_bridge`,
+ColorPath-Legacy-Phasen) siehe [`docs/DEPRECATION_POLICY.md`](DEPRECATION_POLICY.md).
+
 Ergaenzende Guardrails fuer den Shared-Texture-Pfad:
 
 - `fs25_auto_drive_host_bridge` bleibt toolkit- und render-frei; die Session-Bridge darf keine `wgpu`-, `egui`- oder `eframe`-Abhaengigkeiten einziehen.

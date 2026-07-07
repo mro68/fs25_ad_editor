@@ -1075,3 +1075,13 @@ pub fn render_group_overlays(
 3. **State-Zugriff:** Fachzustand wird nicht direkt mutiert; Dialog-/UI-Lifecycle kann `UiState` lokal aktualisieren
 4. **Import-Regel:** UI importiert nur aus `app` und `shared` (nie direkt aus `core`)
 5. **Sub-Modul-Delegation:** `input.rs` orchestriert, Logik steckt in `keyboard`, `drag`, `context_menu`
+
+## Erlaubte Nutzungsmuster
+
+- UI-Komponenten lesen `HostChromeSnapshot`/`HostUiSnapshot` und emittieren `AppIntent`s statt State direkt zu setzen.
+- Lokale, rein UI-seitige Zustaende (z. B. `UiState`-Felder fuer Dialog-Sichtbarkeit) duerfen direkt aktualisiert werden, sofern sie nicht Fachzustand sind.
+
+## Anti-Patterns
+
+- Kein `&mut AppState` in `ui/` (CI-gepueft ueber `check_layer_boundaries.sh` Regel 8/14) und keine direkten `state.*`-Zuweisungen ausserhalb markierter `// layer-ok`-Ausnahmen (Regel 9).
+- Keine direkten Imports aus `crate::xml`, `crate::render`, `crate::core` oder der Root-Fassade (Regel 7).

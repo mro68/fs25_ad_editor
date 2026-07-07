@@ -116,3 +116,15 @@ flowchart LR
 - Tool-Preview-Node-Rendering nutzt degree-basierte Klassifikation: Knoten mit `degree != 2` werden als Kreis mit 3x Durchmesser gezeichnet; isolierte Preview-Knoten (`degree == 0`) bleiben als Control-Point-Diamant dargestellt.
 - Das Floating-Route-Tool-Panel rendert Standard-Richtung und Standard-Strassenart bewusst nur im globalen Header; das FieldBoundary-Unterpanel dupliziert diese beiden Konfigurations-Widgets nicht.
 - Die kanonischen Moduldetails stehen in `src/editor_app/API.md`, `src/render/API.md` und `src/ui/API.md`.
+
+## Erlaubte Nutzungsmuster
+
+- `EditorApp` haelt genau eine `HostBridgeSession`; alle Fach-Mutationen laufen ueber `session.apply_action(...)`/`session.apply_intent(...)`.
+- UI-Komponenten lesen ausschliesslich bridge-owned Snapshots (`HostUiSnapshot`, `HostChromeSnapshot`, `HostRouteToolViewportSnapshot`, `ViewportOverlaySnapshot`) und emittieren `AppIntent`/`HostSessionAction` statt State direkt zu mutieren.
+- Event-Sammlung (Collector-Seite: `panel_collector.rs`/`dialog_collector.rs`/`viewport_collector.rs`) und Event-Verarbeitung (Processor-Seite: `processor.rs`) bleiben getrennt; `editor_app::mod` bleibt reiner Orchestrator.
+
+## Anti-Patterns
+
+- Kein `&mut AppState` und keine Funktion namens `app_state_mut()` in `ui/` oder `editor_app/` (CI-gepueft ueber `check_layer_boundaries.sh` Regel 8/14).
+- Kein Import der Root-Fassade `fs25_auto_drive_editor::` innerhalb dieses Crates (Regel 12) — lokale Re-Exports aus `fs25_auto_drive_engine` direkt nutzen.
+- Keine eigene Fachlogik oder Duplicate-Use-Cases in `editor_app/`; Domain-Mutationen ausschliesslich ueber `HostBridgeSession`.

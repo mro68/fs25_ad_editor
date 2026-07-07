@@ -222,3 +222,15 @@ Implementiert `ExternalTextureExport` fuer Android/Vulkan. Alloziert zuerst eine
 |---|---|
 | `dmabuf_texture_width(t: &VulkanDmaBufTexture) -> u32` | Gibt die Breite der exportierbaren Texture zurueck |
 | `dmabuf_texture_height(t: &VulkanDmaBufTexture) -> u32` | Gibt die Hoehe der exportierbaren Texture zurueck |
+
+## Erlaubte Nutzungsmuster
+
+- Ausschliesslich `RenderScene` + `RenderAssetsSnapshot` (aus `fs25_auto_drive_engine::shared`) als Eingabevertrag konsumieren.
+- Offscreen-Hosts nutzen `SharedTextureRuntime` mit explizitem Acquire/Release-Lifecycle; der egui-Onscreen-Host bleibt ein direkter `RenderPass`-Pfad ueber denselben RenderFrame-Seam.
+- `texture_registration` v4 additiv neben v3 verwenden, nicht v3 ersetzen.
+
+## Anti-Patterns
+
+- Keine Importe von `fs25_auto_drive_engine::app`, `::core`, `::xml` oder `egui`/`eframe`/`egui_wgpu` in diesem Crate (CI-gepueft ueber `check_layer_boundaries.sh` Regel 11) — Core-Domain-Typen wie `RoadMap`/`MapNode`/`Connection` duerfen nicht konsumiert werden.
+- Kein Zugriff auf die Root-Fassade `fs25_auto_drive_editor::`.
+- Keine ABI-Versionierung des Shared-Texture-Vertrags in diesem Crate ansiedeln — das bleibt bewusst im FFI-Adapter.

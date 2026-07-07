@@ -79,3 +79,13 @@ flowchart LR
 - `sync_background_upload()` lebt bewusst in `editor_app`, weil dort `Device`, `Queue`, die letzten Host-Revisionen und die Assets des bereits aufgebauten RenderFrames bereits vorliegen.
 - Die Engine beschreibt Background-Bounds im Domain-System als `RenderBackgroundWorldBounds { min_x, max_x, min_z, max_z }`. Der egui-Host-Adapter mappt diese beim Upload auf `BackgroundWorldBounds { min_x, max_x, min_y, max_y }`, weil der Render-Core auf einer 2D-X/Y-Ebene arbeitet.
 - Das egui-Onscreen-Rendering nutzt bewusst nicht den Shared-Texture-Transport (`SharedTextureRuntime`); es bleibt ein direkter `RenderScene`-Paint-Callback ueber `egui_wgpu` auf Basis des gekoppelten RenderFrame-Seams.
+
+## Erlaubte Nutzungsmuster
+
+- `render::Renderer` bleibt ein duenner Host-Adapter, der Render-Snapshots (`RenderScene`/`RenderAssetsSnapshot`) an `fs25_auto_drive_render_wgpu` weiterreicht.
+- Background-Bounds werden explizit zwischen Domain-System (`RenderBackgroundWorldBounds`) und Render-Core-System (`BackgroundWorldBounds`) gemappt, nie ungeprueft uebernommen.
+
+## Anti-Patterns
+
+- Keine Fachlogik oder State-Mutation in `render/` — das bleibt Aufgabe von `app`/`editor_app`.
+- Kein Import aus `crate::ui`, `crate::core`, `crate::xml` oder der Root-Fassade innerhalb von `render/` (CI-gepueft ueber `check_layer_boundaries.sh` Regel 6).

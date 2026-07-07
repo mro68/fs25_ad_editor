@@ -1228,3 +1228,15 @@ Der Asset-Snapshot enthaelt aktuell den Background-Asset-Vertrag inklusive Arc-B
 Die eframe-Integrationsschale gehoert bewusst nicht zur `app`-API. Die kanonische Dokumentation fuer `EditorApp`, Event-Sammlung, Overlay-Anbindung und Viewport-Rendering steht in [`../../../../crates/fs25_auto_drive_frontend_egui/src/editor_app/API.md`](../../../../crates/fs25_auto_drive_frontend_egui/src/editor_app/API.md).
 
 `app/API.md` dokumentiert nur den eigentlichen Application-Layer: `AppController`, `AppState`, Intents/Commands, Handler, Use-Cases und Tool-Vertraege.
+
+## Erlaubte Nutzungsmuster
+
+- Externe Layer (Frontend, Host-Bridge) mutieren `AppState` ausschliesslich ueber `AppController::handle_intent(...)`/`handle_command(...)`, nie durch direkte Feldzuweisung.
+- Host-neutrale Reads laufen ueber die freien Funktionen in `app::projections` (`RenderScene`, `RenderAssetsSnapshot`, `HostUiSnapshot`, `ViewportOverlaySnapshot`), nicht ueber Controller-Methoden.
+- `app` re-exportiert bewusst nur die stabile Facade (`Camera2D`, `RoadMap`, `ConnectionDirection`, `ConnectionPriority`, `RenderQuality`, `ZipImageEntry`, `compute_ring`); Tool-/Panel-Vertraege werden explizit ueber `app::tool_contract`/`app::ui_contract` importiert.
+
+## Anti-Patterns
+
+- Keine Imports aus `crate::ui`, `crate::render`, `crate::editor_app` oder den Frontend-/Host-Bridge-Crates innerhalb von `app` (CI-gepueft ueber `check_layer_boundaries.sh` Regel 1).
+- `use_cases/` importiert keine tools-internen Submodule ausser der oeffentlichen `ToolResult`/`apply_tool_result`-Facade (Regel 5).
+- Keine neue Controller-Build-Methode fuer Render-/UI-Snapshots wieder einfuehren — diese Projektionen leben ausschliesslich als freie Funktionen in `app::projections`.

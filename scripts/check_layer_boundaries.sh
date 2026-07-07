@@ -216,6 +216,28 @@ if [ -n "$HOST_BRIDGE_FFI_LAYER_VIOLATIONS" ]; then
     VIOLATIONS=$((VIOLATIONS + 1))
 fi
 
+# Regel 14: Keine AppState-Escape-Hatches in UI oder Editor-App-Integrationsschicht
+# Regressionsschutz: Weder &mut AppState noch ein direkter app_state_mut()-Bypass
+# duerfen in den egui-Host-Layern auftauchen (Mutation laeuft ausschliesslich ueber
+# AppIntent/HostSessionAction gegen die HostBridgeSession). Erweitert Regel 8 (nur ui/)
+# um editor_app/ und um das app_state_mut()-Namensmuster.
+APPSTATE_ESCAPE_VIOLATIONS=$(grep -rnE '&mut[[:space:]]+AppState|fn[[:space:]]+app_state_mut\b' "$EGUI_DIR/ui" "$EGUI_DIR/editor_app" --include='*.rs' 2>/dev/null || true)
+if [ -n "$APPSTATE_ESCAPE_VIOLATIONS" ]; then
+    echo "FEHLER: AppState-Escape-Hatch in UI/Editor-App gefunden (Intent/Command-Boundary verletzt):"
+    echo "$APPSTATE_ESCAPE_VIOLATIONS"
+    VIOLATIONS=$((VIOLATIONS + 1))
+fi
+
+# Regel 15: Host-Bridge-Fassade (lib.rs) darf keine Toolkit-/Render-Crates re-exportieren
+# Regressionsschutz zusaetzlich zu Regel 10: verhindert speziell, dass die oeffentliche
+# lib.rs-Fassade versehentlich egui/eframe/wgpu/render_wgpu/frontend_egui-Symbole re-exportiert.
+HOST_BRIDGE_FACADE_REEXPORT_VIOLATIONS=$(grep -nE '^[[:space:]]*pub use.*(egui::|eframe::|wgpu::|fs25_auto_drive_render_wgpu|fs25_auto_drive_frontend_egui)' "$HOST_BRIDGE_DIR/lib.rs" 2>/dev/null || true)
+if [ -n "$HOST_BRIDGE_FACADE_REEXPORT_VIOLATIONS" ]; then
+    echo "FEHLER: Host-Bridge-Fassade (lib.rs) re-exportiert Toolkit-/Render-Symbole:"
+    echo "$HOST_BRIDGE_FACADE_REEXPORT_VIOLATIONS"
+    VIOLATIONS=$((VIOLATIONS + 1))
+fi
+
 if [ "$VIOLATIONS" -eq 0 ]; then
     echo "✓ Alle Layer-Grenzen eingehalten."
     exit 0
