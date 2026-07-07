@@ -8,6 +8,7 @@ use anyhow::{bail, Context, Result};
 use markers::parse_marker_id;
 use quick_xml::events::Event;
 use quick_xml::Reader;
+use quick_xml::XmlVersion;
 use waypoints::build_nodes_and_connections;
 
 /// Haengt Text an eine `Option<String>` an (oder initialisiert sie).
@@ -64,7 +65,12 @@ pub fn parse_autodrive_config(xml_content: &str) -> Result<RoadMap> {
                         let attr = attr?;
                         let key = reader.decoder().decode(attr.key.as_ref())?;
                         if key == "version" {
-                            let value = attr.unescape_value()?.into_owned();
+                            let value = attr
+                                .decoded_and_normalized_value(
+                                    quick_xml::XmlVersion::Implicit1_0,
+                                    reader.decoder(),
+                                )?
+                                .into_owned();
                             version_attr = Some(value);
                         }
                     }
@@ -93,7 +99,7 @@ pub fn parse_autodrive_config(xml_content: &str) -> Result<RoadMap> {
                 let _name = e.name();
             }
             Ok(Event::Text(e)) => {
-                let text = e.xml_content()?.into_owned();
+                let text = e.xml_content(XmlVersion::Implicit1_0)?.into_owned();
 
                 if in_waypoints {
                     match current_tag.as_deref() {

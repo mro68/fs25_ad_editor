@@ -18,13 +18,13 @@ flutter-android = ["dep:ash", "dep:ndk", "dep:ndk-sys", "wgpu/vulkan"]
 [dependencies]
 bytemuck = { version = "1.14", features = ["derive"] }
 fs25_auto_drive_engine = { path = "../fs25_auto_drive_engine" }
-glam = { version = "0.32.1", features = ["serde"] }
+glam = { version = "0.33.2", features = ["serde"] }
 image = { version = "0.25", features = ["dds", "png", "jpeg"] }
 indexmap = "2.13.1"
 log = "0.4"
 resvg = "0.47.0"
 thiserror = "2"
-wgpu = "29.0"
+wgpu = "29.0.4"
 
 ## Direkter Vulkan-Zugriff fuer plattformspezifischen Texture-Export — nur aktiv unter Flutter-Vulkan-Features.
 ash = { version = "0.38", optional = true }

@@ -246,7 +246,7 @@ pub(crate) fn render_route_defaults_panel_inside(
     egui::Panel::left("route_defaults_panel")
         .resizable(false)
         .default_size(80.0)
-        .show_inside(ui_root, |ui| {
+        .show(ui_root, |ui| {
             ui.label(
                 egui::RichText::new(t(lang, I18nKey::SidebarTools))
                     .small()

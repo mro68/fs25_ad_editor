@@ -81,7 +81,7 @@ pub(crate) fn render_menu_inside(
     let mut events = Vec::new();
     let lang = host_chrome_snapshot.options.language;
 
-    egui::Panel::top("menu_bar").show_inside(ui_root, |ui| {
+    egui::Panel::top("menu_bar").show(ui_root, |ui| {
         egui::MenuBar::new().ui(ui, |ui| {
             ui.menu_button(t(lang, I18nKey::MenuFile), |ui| {
                 if ui.button(t(lang, I18nKey::MenuOpen)).clicked() {

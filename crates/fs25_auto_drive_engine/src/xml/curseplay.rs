@@ -9,6 +9,7 @@ use anyhow::{anyhow, Context, Result};
 use glam::Vec2;
 use quick_xml::events::Event;
 use quick_xml::Reader;
+use quick_xml::XmlVersion;
 
 /// Parst eine Curseplay-XML-Datei und gibt die Vertex-Positionen zurueck.
 ///
@@ -33,7 +34,7 @@ pub fn parse_curseplay(xml_content: &str) -> Result<Vec<Vec2>> {
             }
             Ok(Event::Text(ref e)) if in_vertex => {
                 let text = e
-                    .xml_content()
+                    .xml_content(XmlVersion::Implicit1_0)
                     .context("Vertex-Text ungueltig")?
                     .into_owned();
                 let text = text.trim();

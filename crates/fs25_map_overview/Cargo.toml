@@ -17,7 +17,7 @@ image = { version = "0.25", features = ["png", "jpeg"] }
 zip = { version = "8.3.0", default-features = false, features = ["deflate"] }
 
 # XML-Parsing (modDesc.xml, placeables.xml)
-quick-xml = "0.39.2"
+quick-xml = "0.41.0"
 
 # Error Handling
 anyhow = "1.0"

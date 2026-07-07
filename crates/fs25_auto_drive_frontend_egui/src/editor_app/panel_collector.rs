@@ -76,7 +76,7 @@ impl EditorApp {
             .resizable(true)
             .default_size(200.0)
             .min_size(160.0)
-            .show_inside(top_ui, |ui| {
+            .show(top_ui, |ui| {
                 egui::ScrollArea::vertical().show(ui, |ui| {
                     egui::CollapsingHeader::new("Marker")
                         .default_open(true)

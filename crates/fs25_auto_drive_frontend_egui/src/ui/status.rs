@@ -19,7 +19,7 @@ pub(crate) fn render_status_bar_inside(
     let lang = host_chrome_snapshot.options.language;
     let active_tool = host_active_tool_to_editor(host_chrome_snapshot.active_tool);
 
-    egui::Panel::bottom("status_bar").show_inside(ui_root, |ui| {
+    egui::Panel::bottom("status_bar").show(ui_root, |ui| {
         ui.horizontal(|ui| {
             if host_chrome_snapshot.has_map {
                 ui.label(format!(

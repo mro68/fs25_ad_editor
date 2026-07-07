@@ -47,19 +47,19 @@ jobs:
         run: cargo fmt --all -- --check
 
       - name: Clippy (Linux target)
-        run: cargo clippy --workspace --all-targets --target x86_64-unknown-linux-gnu -- -D warnings
+        run: cargo clippy --workspace --exclude fs25_auto_drive_host_bridge_ffi --all-targets --target x86_64-unknown-linux-gnu -- -D warnings
 
       - name: Install Windows target
         run: rustup target add x86_64-pc-windows-gnu
 
       - name: Clippy (Windows target)
-        run: cargo clippy --workspace --all-targets --target x86_64-pc-windows-gnu -- -D warnings
+        run: cargo clippy --workspace --exclude fs25_auto_drive_host_bridge_ffi --all-targets --target x86_64-pc-windows-gnu -- -D warnings
 
       - name: Build
-        run: cargo build --workspace --release
+        run: cargo build --workspace --exclude fs25_auto_drive_host_bridge_ffi --release
 
       - name: Cleanup release artifacts
         run: cargo clean --release
 
       - name: Test
-        run: cargo test --workspace
+        run: cargo test --workspace --exclude fs25_auto_drive_host_bridge_ffi

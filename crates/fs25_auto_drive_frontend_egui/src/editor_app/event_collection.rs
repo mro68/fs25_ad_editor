@@ -49,7 +49,7 @@ impl EditorApp {
         // Zentraler Viewport (Rendering + Input + Overlays)
         egui::CentralPanel::default()
             .frame(egui::Frame::NONE)
-            .show_inside(&mut top_ui, |ui| {
+            .show(&mut top_ui, |ui| {
                 let (rect, response) =
                     ui.allocate_exact_size(ui.available_size(), egui::Sense::click_and_drag());
                 let viewport_size = [rect.width(), rect.height()];

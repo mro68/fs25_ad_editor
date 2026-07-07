@@ -253,7 +253,7 @@ pub(crate) fn build_view_projection(camera: &RenderCamera, viewport_size: [f32; 
     let zoom_scale = 1.0 / camera.zoom;
     let base_extent = CAMERA_BASE_WORLD_EXTENT;
 
-    let projection = Mat4::orthographic_rh(
+    let projection = glam::camera::rh::proj::directx::orthographic(
         -base_extent * aspect * zoom_scale,
         base_extent * aspect * zoom_scale,
         base_extent * zoom_scale,
