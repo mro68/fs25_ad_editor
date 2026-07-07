@@ -9,9 +9,18 @@ cargo fmt --all -- --check || {
 }
 
 echo "=== Pre-Push: cargo clippy ==="
-cargo clippy --all-targets -- -D warnings || {
+cargo clippy --workspace --all-targets --target x86_64-unknown-linux-gnu -- -D warnings || {
     echo "❌ Clippy-Fehler. Bitte beheben."
     exit 1
 }
+
+if rustup target list --installed | grep -q '^x86_64-pc-windows-gnu$'; then
+    cargo clippy --workspace --all-targets --target x86_64-pc-windows-gnu -- -D warnings || {
+        echo "❌ Clippy-Fehler fuer Windows-Target. Bitte beheben."
+        exit 1
+    }
+else
+    echo "ℹ️  Windows-Target x86_64-pc-windows-gnu nicht installiert, Windows-Clippy lokal uebersprungen."
+fi
 
 echo "✅ fmt + clippy OK"
