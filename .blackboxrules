@@ -1,0 +1,114 @@
+# FS25 AutoDrive Editor - Grundregeln
+
+Diese Datei enthaelt ausschliesslich Regeln, die in jedem Zustand dieses
+Repositories immer gelten: Sprachpraeferenzen, Schnittstellen- und
+Architekturgrenzen, Datenmodell- und Formatinvarianten sowie die Pflicht,
+Docstrings, Kommentare und begleitende Dokumentation nachzufuehren.
+
+Aufgaben zum Aufbau der Projektstruktur (Scaffolding fuer ein neues
+Repository) stehen nicht hier, sondern in BLACKBOX_NEW_REPO_PROMPT.md.
+
+## Sprache
+
+- Kommunikation IMMER IN DEUTSCH
+- Code, Variablen, Typen und Funktionen auf Englisch.
+- Kommentare, Docstrings, README und User-Messages auf Deutsch.
+- Debug-Logs auf Englisch.
+- Kommunikation mit dem Nutzer auf Deutsch.
+
+## Ziel-Stack
+
+- Sprache: Rust
+- UI: egui
+- Rendering: wgpu
+- Spatial Index: kiddo
+- XML: quick-xml
+- Bilder und DDS: image crate
+- Keinen dieser Bausteine ohne expliziten Auftrag durch eine andere Technologie ersetzen.
+
+## Schnittstellen- und Architekturgrenzen
+
+- Root-Package:
+  - src/lib.rs ist die Kompat-Fassade des Projekts.
+  - src/main.rs startet die native Anwendung.
+- Engine:
+  - Ort: crates/fs25_auto_drive_engine/src
+  - Verantwortlich fuer app, core, shared und xml.
+  - Geschaeftslogik und Datenmodell gehoeren ausschliesslich hierher.
+- Host-Bridge:
+  - Ort: crates/fs25_auto_drive_host_bridge/src
+  - Toolkit-freie Host-Session-, Action- und Snapshot-Seam.
+  - Darf nur von der Engine abhaengen.
+- Render-Core:
+  - Ort: crates/fs25_auto_drive_render_wgpu/src
+  - Host-neutraler wgpu-Kern.
+  - Darf keine direkten Core-Typen aus der Engine konsumieren.
+- Egui-Frontend:
+  - Ort: crates/fs25_auto_drive_frontend_egui/src
+  - Host-Adapter, UI, Runtime und Glue-Code.
+  - Keine neue Business-Logik im Frontend verankern.
+- Overview-Crate:
+  - Ort: crates/fs25_map_overview/src
+  - Terrain-, Farmland- und Overview-Logik.
+- Keine neuen direkten Escape-Hatches quer durch diese Grenzen einfuehren.
+
+## Event- und Mutationsfluss
+
+- UI emittiert AppIntent.
+- AppController mappt auf AppCommand.
+- Use-Cases mutieren AppState.
+- Host-neutrale Fluesse duerfen keine neuen direkten Escape-Hatches an AppState
+  oder AppController einfuehren.
+- Neue Features muessen sich in diesen Fluss einordnen, statt ihn zu umgehen.
+
+## Datenmodell-Invarianten
+
+- Node-IDs sind HashMap-Keys, keine Array-Indizes.
+- MapNode enthaelt keine Connection-Liste; Connections leben in RoadMap.connections.
+- Connection-Key ist (start_id, end_id).
+- Positionen sind 2D (x, z); y ist nur fuer XML-Einlesen und -Schreiben relevant.
+
+## Rendering-Grenzen
+
+- Render-Core konsumiert nur RenderScene aus shared und render-lokale Upload-Daten.
+- Core-Typen wie RoadMap, Camera2D, BackgroundMap oder WorldBounds duerfen nicht
+  direkt in crates/fs25_auto_drive_render_wgpu/src verwendet werden.
+- Die App baut gecachte Render-Snapshots; der Render-Hotpath arbeitet auf diesen
+  Snapshots statt direkt auf Core-Strukturen.
+- Hintergrund-Sync laeuft ueber background_asset_revision und
+  background_transform_revision statt ueber lose Dirty-Flags.
+- Im Render-Hotpath Allokationen vermeiden; Scratch-Buffer wiederverwenden.
+
+## XML-Format-Regeln
+
+- Das AutoDrive-Format ist Structure of Arrays mit parallelen Listen in XML-Tags.
+- id, x, y, z und flags sind comma-separated.
+- out und incoming sind semicolon-separated auf der aeusseren Ebene und
+  comma-separated auf der inneren Ebene.
+- Beim Laden von FS22- und FS25-Konfigurationen muessen Flags 2 und 4 auf 0
+  normalisiert werden.
+- Laengen-Mismatches zwischen parallelen Waypoint-Listen sind kritische Fehler.
+
+## Stil und Qualitaet
+
+- Standard-Rust-Formatierung mit rustfmt einhalten.
+- Clippy-konform arbeiten, aber keine unverbundenen Gross-Cleanups erzwingen.
+- Benennungen stabil und explizit halten; keine Ein-Buchstaben-Namen.
+- Bestehende Architekturgrenzen nie fuer kurzfristige Bequemlichkeit aufweichen.
+
+## Dokumentations-Pflicht
+
+- Jede oeffentliche Funktion, jedes Struct und Enum braucht einen deutschen
+  Docstring; bei Signaturaenderungen sofort anpassen.
+- Kommentare im Code bei jeder Verhaltensaenderung sofort mit nachfuehren.
+- Aendert sich eine oeffentliche API, das zugehoerige crates/*/API.md im
+  selben Schritt aktualisieren.
+- Abgeschlossene Features in docs/ROADMAP.md als [x] markieren.
+- Architektur-Entscheidungen sofort in docs/ARCHITECTURE_PLAN.md und/oder
+  .windsurf/rules/ nachziehen.
+- Keine Codeaenderung ohne passende Doku-Synchronisation im selben Schritt.
+
+## Validierung
+
+- Nach jeder Aenderung mindestens cargo fmt und cargo check ausfuehren.
+- Von der Aenderung betroffene Tests gezielt mitlaufen lassen.
